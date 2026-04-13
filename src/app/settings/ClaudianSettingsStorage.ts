@@ -33,6 +33,10 @@ import {
   getOpencodeProviderSettings,
   updateOpencodeProviderSettings,
 } from '../../providers/opencode/settings';
+import {
+  getCursorProviderSettings,
+  updateCursorProviderSettings,
+} from '../../providers/cursor/settings';
 import { DEFAULT_CLAUDIAN_SETTINGS } from './defaultSettings';
 
 export {
@@ -323,6 +327,10 @@ export class ClaudianSettingsStorage {
     updateOpencodeProviderSettings(
       merged,
       getOpencodeProviderSettings(legacyProviderSettings),
+    );
+    updateCursorProviderSettings(
+      merged as unknown as Record<string, unknown>,
+      getCursorProviderSettings(legacyProviderSettings),
     );
     const didNormalizeHostScopedProviderConfigs = hasHostScopedProviderConfigNormalization(
       providerConfigs,
