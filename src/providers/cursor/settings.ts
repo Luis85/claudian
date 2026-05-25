@@ -19,6 +19,7 @@ export interface CursorProviderSettings {
   enabled: boolean;
   cliPath: string;
   cliPathsByHost: HostnameCliPaths;
+  lastModel: string;
   environmentVariables: string;
   environmentHash: string;
 }
@@ -27,6 +28,7 @@ export const DEFAULT_CURSOR_PROVIDER_SETTINGS: Readonly<CursorProviderSettings> 
   enabled: false,
   cliPath: '',
   cliPathsByHost: {},
+  lastModel: '',
   environmentVariables: '',
   environmentHash: '',
 });
@@ -38,6 +40,7 @@ export function getCursorProviderSettings(settings: Record<string, unknown>): Cu
     enabled: (config.enabled as boolean | undefined) ?? DEFAULT_CURSOR_PROVIDER_SETTINGS.enabled,
     cliPath: (config.cliPath as string | undefined) ?? DEFAULT_CURSOR_PROVIDER_SETTINGS.cliPath,
     cliPathsByHost: normalizeHostnameCliPaths(config.cliPathsByHost),
+    lastModel: (config.lastModel as string | undefined) ?? DEFAULT_CURSOR_PROVIDER_SETTINGS.lastModel,
     environmentVariables: (config.environmentVariables as string | undefined)
       ?? getProviderEnvironmentVariables(settings, 'cursor')
       ?? DEFAULT_CURSOR_PROVIDER_SETTINGS.environmentVariables,
@@ -63,6 +66,7 @@ export function updateCursorProviderSettings(
     enabled: next.enabled,
     cliPath: next.cliPath,
     cliPathsByHost: next.cliPathsByHost,
+    lastModel: next.lastModel,
     environmentVariables: next.environmentVariables,
     environmentHash: next.environmentHash,
   });

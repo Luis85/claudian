@@ -1,12 +1,14 @@
 import * as fs from 'fs';
-import { Setting } from 'obsidian';
+import { Notice, Setting } from 'obsidian';
 
 import type { ProviderSettingsTabRenderer } from '../../../core/providers/types';
 import { renderEnvironmentSettingsSection } from '../../../features/settings/ui/EnvironmentSettingsSection';
 import { t } from '../../../i18n/i18n';
 import type { TranslationKey } from '../../../i18n/types';
 import { getHostnameKey } from '../../../utils/env';
-import { expandHomePath } from '../../../utils/path';
+import { expandHomePath, getVaultPath } from '../../../utils/path';
+import { buildCursorAgentEnvironment } from '../runtime/cursorAgentEnv';
+import { refreshCursorModelCatalog } from '../runtime/cursorModelCatalog';
 import { getCursorProviderSettings, updateCursorProviderSettings } from '../settings';
 
 export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
@@ -115,6 +117,45 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
 
       updateCliPathValidation(currentValue, text.inputEl);
     });
+
+    const discoverModels = async (announce: boolean): Promise<void> => {
+      const cliPath = context.plugin.getResolvedProviderCliPath('cursor');
+      if (!cliPath) {
+        if (announce) {
+          new Notice('Cursor CLI not found. Configure the CLI path first.');
+        }
+        return;
+      }
+      const env = buildCursorAgentEnvironment(context.plugin);
+      const cwd = getVaultPath(context.plugin.app) ?? process.cwd();
+      try {
+        const ids = await refreshCursorModelCatalog(cliPath, env, cwd);
+        if (announce) {
+          new Notice(`Discovered ${ids.length} Cursor model${ids.length === 1 ? '' : 's'}.`);
+          context.refreshModelSelectors();
+        }
+      } catch {
+        if (announce) {
+          new Notice('Failed to refresh Cursor models.');
+        }
+      }
+    };
+
+    new Setting(container)
+      .setName('Available models')
+      .setDesc('Discover the models exposed by the Cursor CLI (`agent --list-models`).')
+      .addButton((button) =>
+        button
+          .setButtonText('Refresh models')
+          .onClick(async () => {
+            button.setDisabled(true);
+            await discoverModels(true);
+            button.setDisabled(false);
+          })
+      );
+
+    // Best-effort warm discovery so the picker is populated by the time it opens.
+    void discoverModels(false);
 
     new Setting(container).setName(t('settings.safety')).setHeading();
 

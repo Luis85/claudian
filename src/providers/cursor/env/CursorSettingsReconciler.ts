@@ -2,6 +2,7 @@ import { getRuntimeEnvironmentText } from '../../../core/providers/providerEnvir
 import type { ProviderSettingsReconciler } from '../../../core/providers/types';
 import type { Conversation } from '../../../core/types';
 import { parseEnvironmentVariables } from '../../../utils/env';
+import { toCursorModelValue } from '../runtime/cursorModelId';
 import { getCursorProviderSettings, updateCursorProviderSettings } from '../settings';
 import { getCursorState } from '../types';
 import { cursorChatUIConfig } from '../ui/CursorChatUIConfig';
@@ -42,13 +43,16 @@ export const cursorSettingsReconciler: ProviderSettingsReconciler = {
 
     const envVars = parseEnvironmentVariables(envText || '');
     if (envVars.CURSOR_MODEL) {
-      settings.model = envVars.CURSOR_MODEL;
-    } else if (
-      typeof settings.model === 'string'
-      && settings.model.length > 0
-      && !cursorChatUIConfig.isDefaultModel(settings.model)
-    ) {
-      settings.model = cursorChatUIConfig.getModelOptions({})[0]?.value ?? 'auto';
+      // Persist the namespaced value so routing stays unambiguous.
+      settings.model = toCursorModelValue(envVars.CURSOR_MODEL);
+    } else if (typeof settings.model === 'string' && settings.model.length > 0) {
+      // Only reset when the current selection is not a valid current option;
+      // a still-valid selection is preserved.
+      const options = cursorChatUIConfig.getModelOptions(settings);
+      const isValid = options.some(option => option.value === settings.model);
+      if (!isValid) {
+        settings.model = options[0]?.value ?? toCursorModelValue('auto');
+      }
     }
 
     updateCursorProviderSettings(settings, { environmentHash: currentHash });

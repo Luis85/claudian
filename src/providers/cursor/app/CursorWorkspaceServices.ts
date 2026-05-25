@@ -7,20 +7,47 @@ import type {
 import type { HomeFileAdapter } from '../../../core/storage/HomeFileAdapter';
 import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
 import type ClaudianPlugin from '../../../main';
+import { getVaultPath } from '../../../utils/path';
+import { buildCursorAgentEnvironment } from '../runtime/cursorAgentEnv';
 import { CursorCliResolver } from '../runtime/CursorCliResolver';
+import { refreshCursorModelCatalog } from '../runtime/cursorModelCatalog';
+import { getCursorProviderSettings } from '../settings';
 import { cursorSettingsTabRenderer } from '../ui/CursorSettingsTab';
 
 function createCursorCliResolver(): ProviderCliResolver {
   return new CursorCliResolver();
 }
 
+function warmCursorModelCatalog(plugin: ClaudianPlugin, cliResolver: ProviderCliResolver): void {
+  const settings = plugin.settings as unknown as Record<string, unknown>;
+  if (!getCursorProviderSettings(settings).enabled) {
+    return;
+  }
+  const cliPath = cliResolver.resolveFromSettings(settings);
+  if (!cliPath) {
+    return;
+  }
+  const env = buildCursorAgentEnvironment(plugin);
+  const cwd = getVaultPath(plugin.app) ?? process.cwd();
+  void refreshCursorModelCatalog(cliPath, env, cwd).catch((err: unknown) => {
+    const message = err instanceof Error ? err.message : String(err);
+    // Timeouts are expected (slow CLI / offline) and self-recover via cache.
+    if (/timed out/i.test(message)) {
+      return;
+    }
+    console.warn('[cursor] model discovery failed:', err);
+  });
+}
+
 export async function createCursorWorkspaceServices(
-  _plugin: ClaudianPlugin,
+  plugin: ClaudianPlugin,
   _vaultAdapter: VaultFileAdapter,
   _homeAdapter: HomeFileAdapter,
 ): Promise<ProviderWorkspaceServices> {
+  const cliResolver = createCursorCliResolver();
+  warmCursorModelCatalog(plugin, cliResolver);
   return {
-    cliResolver: createCursorCliResolver(),
+    cliResolver,
     settingsTabRenderer: cursorSettingsTabRenderer,
   };
 }

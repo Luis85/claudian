@@ -18,26 +18,143 @@ function capToolResultLength(value: string): string {
   return `${value.slice(0, MAX_TOOL_RESULT_CHARS)}\n… [truncated ${omitted} characters]`;
 }
 
-function extractAssistantText(record: Record<string, unknown>): string {
+function messageContentBlocks(record: Record<string, unknown>): Record<string, unknown>[] {
   const msg = record.message;
   if (!msg || typeof msg !== 'object') {
-    return '';
+    return [];
   }
   const content = (msg as { content?: unknown }).content;
   if (!Array.isArray(content)) {
-    return '';
+    return [];
   }
-  let out = '';
+  const blocks: Record<string, unknown>[] = [];
   for (const block of content) {
-    if (!block || typeof block !== 'object') {
-      continue;
+    if (block && typeof block === 'object') {
+      blocks.push(block as Record<string, unknown>);
     }
-    const b = block as Record<string, unknown>;
+  }
+  return blocks;
+}
+
+function extractAssistantText(record: Record<string, unknown>): string {
+  let out = '';
+  for (const b of messageContentBlocks(record)) {
     if (b.type === 'text' && typeof b.text === 'string') {
       out += b.text;
     }
   }
   return out;
+}
+
+// Reasoning/thinking is undocumented for Cursor. Be liberal about which block
+// shapes carry it: a `thinking` block exposes `.thinking`; `reasoning` /
+// `reasoning_text` blocks expose `.text` or `.reasoning`.
+function extractAssistantThinking(record: Record<string, unknown>): string {
+  let out = '';
+  for (const b of messageContentBlocks(record)) {
+    if (b.type === 'thinking' && typeof b.thinking === 'string') {
+      out += b.thinking;
+    } else if (b.type === 'reasoning' || b.type === 'reasoning_text') {
+      if (typeof b.text === 'string') {
+        out += b.text;
+      } else if (typeof b.reasoning === 'string') {
+        out += b.reasoning;
+      }
+    }
+  }
+  return out;
+}
+
+// Best-effort per-model context windows. Sizes are approximate and matched by
+// case-insensitive substring; real numbers can be tuned later.
+export function cursorContextWindowForModel(model: string | undefined): number {
+  const id = (model ?? '').toLowerCase();
+  if (id.includes('gemini')) {
+    return 1_000_000;
+  }
+  if (id.includes('gpt')) {
+    return 400_000;
+  }
+  if (id.includes('claude') || id.includes('sonnet') || id.includes('opus')) {
+    return 200_000;
+  }
+  if (id.includes('composer') || id.includes('sonic') || id.includes('grok')) {
+    return 200_000;
+  }
+  return 200_000;
+}
+
+function numericField(source: unknown, keys: string[]): number | undefined {
+  if (!source || typeof source !== 'object') {
+    return undefined;
+  }
+  const obj = source as Record<string, unknown>;
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+export interface CursorUsage {
+  inputTokens: number;
+  outputTokens?: number;
+  contextTokens: number;
+  contextWindow: number;
+  percentage: number;
+}
+
+// The shape of Cursor's token/usage data is undocumented, so probe several
+// plausible locations (first match wins) and never throw on odd input.
+export function extractCursorUsage(
+  rec: Record<string, unknown>,
+  model: string | undefined,
+): CursorUsage {
+  const usageObj =
+    rec.usage && typeof rec.usage === 'object'
+      ? (rec.usage as Record<string, unknown>)
+      : rec.message && typeof rec.message === 'object'
+        ? ((rec.message as Record<string, unknown>).usage as unknown)
+        : undefined;
+
+  const input =
+    numericField(usageObj, ['input_tokens', 'inputTokens']) ?? undefined;
+  const output =
+    numericField(usageObj, ['output_tokens', 'outputTokens']) ?? undefined;
+  const total =
+    numericField(usageObj, ['total_tokens', 'totalTokens']) ??
+    numericField(rec, ['num_tokens', 'tokens']);
+  const cacheRead = numericField(usageObj, ['cache_read_input_tokens']);
+
+  // Prefer an explicit total; otherwise sum the pieces we found.
+  let contextTokens = 0;
+  if (typeof total === 'number') {
+    contextTokens = total;
+  } else if (typeof input === 'number' || typeof output === 'number' || typeof cacheRead === 'number') {
+    contextTokens = (input ?? 0) + (output ?? 0) + (cacheRead ?? 0);
+  }
+
+  const explicitWindow =
+    numericField(usageObj, ['context_window', 'contextWindow', 'context_size']) ??
+    numericField(rec, ['context_window', 'contextWindow', 'context_size']);
+  const contextWindow =
+    typeof explicitWindow === 'number' && explicitWindow > 0
+      ? explicitWindow
+      : cursorContextWindowForModel(model);
+
+  const inputTokens = typeof input === 'number' ? input : 0;
+  const percentage =
+    contextTokens > 0 && contextWindow > 0
+      ? Math.max(0, Math.min(100, Math.round((contextTokens / contextWindow) * 100)))
+      : 0;
+
+  const result: CursorUsage = { inputTokens, contextTokens, contextWindow, percentage };
+  if (typeof output === 'number') {
+    result.outputTokens = output;
+  }
+  return result;
 }
 
 function parseToolStart(record: Record<string, unknown>): {
@@ -101,9 +218,12 @@ function stringifyToolResult(record: Record<string, unknown>): string {
 
 export class CursorNdjsonStreamReducer {
   private assistantAcc = '';
+  private thinkingAcc = '';
+  private model: string | undefined;
 
   reset(): void {
     this.assistantAcc = '';
+    this.thinkingAcc = '';
   }
 
   reduceLine(line: string): CursorReduceResult {
@@ -122,17 +242,76 @@ export class CursorNdjsonStreamReducer {
     const sessionId = typeof rec.session_id === 'string' ? rec.session_id : undefined;
     const type = rec.type;
 
-    if (type === 'system' || type === 'user') {
+    if (type === 'system') {
+      if (typeof rec.model === 'string' && rec.model) {
+        this.model = rec.model;
+      }
       return { chunks: [], sessionId };
     }
 
+    if (type === 'user') {
+      return { chunks: [], sessionId };
+    }
+
+    // A standalone reasoning event (if Cursor ever emits one) with a string payload.
+    if (type === 'thinking' || type === 'reasoning') {
+      const payload =
+        typeof rec.content === 'string'
+          ? rec.content
+          : typeof rec.text === 'string'
+            ? rec.text
+            : typeof rec.thinking === 'string'
+              ? rec.thinking
+              : typeof rec.reasoning === 'string'
+                ? rec.reasoning
+                : '';
+      const chunks: StreamChunk[] = payload ? [{ type: 'thinking', content: payload }] : [];
+      return { chunks, sessionId };
+    }
+
+    if (type === 'usage') {
+      const usage = extractCursorUsage(rec, this.model);
+      return {
+        chunks: [
+          {
+            type: 'usage',
+            usage: {
+              inputTokens: usage.inputTokens,
+              contextWindow: usage.contextWindow,
+              contextTokens: usage.contextTokens,
+              percentage: usage.percentage,
+            },
+            sessionId: sessionId ?? null,
+          },
+        ],
+        sessionId,
+      };
+    }
+
     if (type === 'assistant') {
+      const chunks: StreamChunk[] = [];
+
+      // Emit reasoning deltas before the visible text, mirroring the text-delta
+      // dedupe so accumulated thinking is never re-sent.
+      const fullThinking = extractAssistantThinking(rec);
+      if (fullThinking) {
+        const thinkingDelta = fullThinking.startsWith(this.thinkingAcc)
+          ? fullThinking.slice(this.thinkingAcc.length)
+          : fullThinking;
+        this.thinkingAcc = fullThinking;
+        if (thinkingDelta) {
+          chunks.push({ type: 'thinking', content: thinkingDelta });
+        }
+      }
+
       const full = extractAssistantText(rec);
       const delta = full.startsWith(this.assistantAcc)
         ? full.slice(this.assistantAcc.length)
         : full;
       this.assistantAcc = full;
-      const chunks: StreamChunk[] = delta ? [{ type: 'text', content: delta }] : [];
+      if (delta) {
+        chunks.push({ type: 'text', content: delta });
+      }
       return { chunks, sessionId };
     }
 
@@ -170,6 +349,7 @@ export class CursorNdjsonStreamReducer {
 
     if (type === 'result') {
       this.assistantAcc = '';
+      this.thinkingAcc = '';
       if (rec.is_error === true) {
         const msg = typeof rec.result === 'string'
           ? rec.result
@@ -179,14 +359,15 @@ export class CursorNdjsonStreamReducer {
           sessionId,
         };
       }
+      const usage = extractCursorUsage(rec, this.model);
       const chunks: StreamChunk[] = [
         {
           type: 'usage',
           usage: {
-            inputTokens: 0,
-            contextWindow: 200_000,
-            contextTokens: 0,
-            percentage: 0,
+            inputTokens: usage.inputTokens,
+            contextWindow: usage.contextWindow,
+            contextTokens: usage.contextTokens,
+            percentage: usage.percentage,
           },
           sessionId: sessionId ?? null,
         },
