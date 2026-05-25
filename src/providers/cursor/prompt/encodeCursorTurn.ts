@@ -27,7 +27,14 @@ export function encodeCursorTurn(request: ChatTurnRequest): PreparedChatTurn {
   }
 
   if (request.currentNotePath) {
-    sections.push(`\n[Current note: ${request.currentNotePath}]`);
+    // A bare "[Current note: path]" hint is ignored by the agent. Give it an
+    // explicit, actionable instruction; the path is relative to the working
+    // directory (the vault root), which the agent can read with its file tools.
+    sections.push(
+      `\n[The user is currently viewing the note "${request.currentNotePath}" in Obsidian.`
+      + ` This path is relative to your current working directory.`
+      + ` Read it with your file tools and use it as context when it is relevant to the request.]`,
+    );
   }
 
   if (request.editorSelection?.selectedText) {
