@@ -5,6 +5,19 @@ export interface CursorReduceResult {
   sessionId?: string;
 }
 
+// A single tool result (e.g. a whole-vault audit) can be many megabytes.
+// Rendering that synchronously in the chat panel freezes Obsidian's UI thread,
+// so the displayed content is capped. The agent still receives the full result.
+const MAX_TOOL_RESULT_CHARS = 100_000;
+
+function capToolResultLength(value: string): string {
+  if (value.length <= MAX_TOOL_RESULT_CHARS) {
+    return value;
+  }
+  const omitted = value.length - MAX_TOOL_RESULT_CHARS;
+  return `${value.slice(0, MAX_TOOL_RESULT_CHARS)}\n… [truncated ${omitted} characters]`;
+}
+
 function extractAssistantText(record: Record<string, unknown>): string {
   const msg = record.message;
   if (!msg || typeof msg !== 'object') {
@@ -78,12 +91,12 @@ function stringifyToolResult(record: Record<string, unknown>): string {
   const tc = record.tool_call;
   if (tc && typeof tc === 'object') {
     try {
-      return JSON.stringify(tc);
+      return capToolResultLength(JSON.stringify(tc));
     } catch {
-      return String(tc);
+      return capToolResultLength(String(tc));
     }
   }
-  return JSON.stringify(record);
+  return capToolResultLength(JSON.stringify(record));
 }
 
 export class CursorNdjsonStreamReducer {
@@ -126,7 +139,10 @@ export class CursorNdjsonStreamReducer {
     if (type === 'tool_call') {
       const subtype = rec.subtype;
       if (subtype === 'started') {
-        this.assistantAcc = '';
+        // Do not reset assistantAcc here. Cursor emits cumulative assistant text
+        // across the whole turn, so wiping the accumulator makes the next assistant
+        // event (which still contains the pre-tool text) re-emit everything already
+        // shown — the answer would appear twice on any tool-using turn.
         const tool = parseToolStart(rec);
         if (!tool) {
           return { chunks: [], sessionId };
