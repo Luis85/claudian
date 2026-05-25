@@ -1,6 +1,8 @@
 import { spawn } from 'child_process';
 import * as readline from 'readline';
 
+import { resolveCursorSpawnSpec } from './cursorWindowsSpawn';
+
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type { ProviderCapabilities, ProviderId } from '../../../core/providers/types';
 import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
@@ -130,10 +132,12 @@ export class CursorChatRuntime implements ChatRuntime {
     const env = buildCursorAgentEnvironment(this.plugin);
     const reducer = new CursorNdjsonStreamReducer();
     let sawDone = false;
-    const child = spawn(cli, [...flagArgs, turn.prompt], {
+    const spawnSpec = resolveCursorSpawnSpec(cli, [...flagArgs, turn.prompt]);
+    const child = spawn(spawnSpec.command, spawnSpec.args, {
       cwd: workspaceDir,
       env,
       windowsHide: true,
+      ...(spawnSpec.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
     });
     this.child = child;
 

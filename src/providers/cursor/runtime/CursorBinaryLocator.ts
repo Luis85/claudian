@@ -30,8 +30,11 @@ export function findCursorAgentBinaryPath(
   additionalPath?: string,
   platform: NodeJS.Platform = process.platform,
 ): string | null {
+  // On Windows the npm-style install also drops an extensionless `agent` shell
+  // shim that CreateProcess cannot execute (spawn EINVAL); prefer the runnable
+  // `.exe`/`.cmd` variants. `.cmd` is then wrapped via cmd.exe at spawn time.
   const binaryNames = platform === 'win32'
-    ? ['agent.exe', 'agent']
+    ? ['agent.exe', 'agent.cmd', 'agent']
     : ['agent'];
   const searchEntries = parsePathEntries(getEnhancedPath(additionalPath));
 

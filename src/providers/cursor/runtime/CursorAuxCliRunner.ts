@@ -6,6 +6,7 @@ import { getVaultPath } from '../../../utils/path';
 import { buildCursorAgentEnvironment } from './cursorAgentEnv';
 import { resolveCursorModelForCli } from './cursorCliModel';
 import { buildCursorAgentJsonModeFlagArgs, type CursorPermissionMode } from './cursorLaunchArgs';
+import { resolveCursorSpawnSpec } from './cursorWindowsSpawn';
 
 export interface CursorAuxQueryConfig {
   systemPrompt: string;
@@ -108,10 +109,12 @@ export class CursorAuxCliRunner {
     signal?: AbortSignal,
   ): Promise<{ stdout: string; stderr: string; code: number | null; signal: NodeJS.Signals | null }> {
     return new Promise((resolve, reject) => {
-      const child = spawn(command, args, {
+      const spawnSpec = resolveCursorSpawnSpec(command, args);
+      const child = spawn(spawnSpec.command, spawnSpec.args, {
         cwd: options.cwd,
         env: options.env,
         windowsHide: true,
+        ...(spawnSpec.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
       });
 
       let stdout = '';
