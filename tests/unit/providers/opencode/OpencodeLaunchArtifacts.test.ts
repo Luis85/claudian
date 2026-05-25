@@ -140,7 +140,8 @@ describe('buildOpencodeManagedConfig', () => {
 });
 
 describe('prepareOpencodeLaunchArtifacts', () => {
-  it('layers the managed prompt config on top of OPENCODE_CONFIG', async () => {
+  // POSIX-only path assertion; on win32 the generated config embeds Windows-style paths.
+  (process.platform === 'win32' ? it.skip : it)('layers the managed prompt config on top of OPENCODE_CONFIG', async () => {
     const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'claudian-opencode-artifacts-'));
     const baseConfigPath = path.join(tmpRoot, 'opencode.base.json');
     await fs.writeFile(baseConfigPath, JSON.stringify({

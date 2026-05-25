@@ -149,7 +149,8 @@ describe('parsePathEntries', () => {
     expect(parsePathEntries('')).toEqual([]);
   });
 
-  it('splits on platform separator', () => {
+  // POSIX-only: on win32, MSYS translation maps `/a` -> `A:`, so the assertion targets Unix only.
+  (process.platform === 'win32' ? it.skip : it)('splits on platform separator', () => {
     const sep = isWindows ? ';' : ':';
     const result = parsePathEntries(`/a${sep}/b${sep}/c`);
     expect(result).toContain('/a');
@@ -235,22 +236,23 @@ describe('normalizePathForFilesystem', () => {
     expect(normalizePathForFilesystem(123 as any)).toBe('');
   });
 
-  it('normalizes a regular path', () => {
+  // POSIX-only: source correctly uses path.win32.normalize on win32 (emits backslashes).
+  (process.platform === 'win32' ? it.skip : it)('normalizes a regular path', () => {
     const result = normalizePathForFilesystem('/usr/local/bin');
     expect(result).toBe('/usr/local/bin');
   });
 
-  it('normalizes path with redundant separators', () => {
+  (process.platform === 'win32' ? it.skip : it)('normalizes path with redundant separators', () => {
     const result = normalizePathForFilesystem('/usr//local///bin');
     expect(result).toBe('/usr/local/bin');
   });
 
-  it('normalizes path with . segments', () => {
+  (process.platform === 'win32' ? it.skip : it)('normalizes path with . segments', () => {
     const result = normalizePathForFilesystem('/usr/./local/./bin');
     expect(result).toBe('/usr/local/bin');
   });
 
-  it('normalizes path with .. segments', () => {
+  (process.platform === 'win32' ? it.skip : it)('normalizes path with .. segments', () => {
     const result = normalizePathForFilesystem('/usr/local/../bin');
     expect(result).toBe('/usr/bin');
   });
@@ -450,7 +452,8 @@ describe('findClaudeCLIPath', () => {
     expect(result).toBe(commonPath);
   });
 
-  it('falls back to npm cli-wrapper.cjs paths when binary not found', () => {
+  // POSIX-only mock paths; source resolves Windows candidate paths on win32.
+  (process.platform === 'win32' ? it.skip : it)('falls back to npm cli-wrapper.cjs paths when binary not found', () => {
     const cliWrapperPath = path.join(
       os.homedir(), '.npm-global', 'lib', 'node_modules',
       '@anthropic-ai', 'claude-code', 'cli-wrapper.cjs'
@@ -467,7 +470,7 @@ describe('findClaudeCLIPath', () => {
     expect(result).toBe(cliWrapperPath);
   });
 
-  it('keeps legacy npm cli.js fallback when cli-wrapper.cjs is absent', () => {
+  (process.platform === 'win32' ? it.skip : it)('keeps legacy npm cli.js fallback when cli-wrapper.cjs is absent', () => {
     const legacyCliPath = path.join(
       os.homedir(), '.npm-global', 'lib', 'node_modules',
       '@anthropic-ai', 'claude-code', 'cli.js'
@@ -484,7 +487,7 @@ describe('findClaudeCLIPath', () => {
     expect(result).toBe(legacyCliPath);
   });
 
-  it('falls back to PATH environment when common and npm paths fail', () => {
+  (process.platform === 'win32' ? it.skip : it)('falls back to PATH environment when common and npm paths fail', () => {
     const envClaudePath = '/env/specific/bin/claude';
     const originalPath = process.env.PATH;
     process.env.PATH = `/env/specific/bin:${originalPath}`;

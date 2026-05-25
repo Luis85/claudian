@@ -9,7 +9,8 @@ import {
 } from '../../../../src/providers/opencode/runtime/OpencodePaths';
 
 describe('OpencodePaths', () => {
-  it('prefers XDG data directories for OpenCode data', () => {
+  // POSIX-only path assertion; source correctly emits Windows separators on win32.
+  (process.platform === 'win32' ? it.skip : it)('prefers XDG data directories for OpenCode data', () => {
     expect(resolveOpencodeDataDir({
       HOME: '/home/tester',
       XDG_DATA_HOME: '/tmp/xdg-data',

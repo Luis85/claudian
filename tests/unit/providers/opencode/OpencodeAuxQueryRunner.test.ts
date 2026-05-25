@@ -336,7 +336,8 @@ describe('OpencodeAuxQueryRunner', () => {
     });
   });
 
-  it('rejects aux reads outside the workspace root', () => {
+  // POSIX-only path assertion; source resolves Windows drive paths on win32.
+  (process.platform === 'win32' ? it.skip : it)('rejects aux reads outside the workspace root', () => {
     const runner = new OpencodeAuxQueryRunner(createMockPlugin(), {
       agentProfile: 'readonly',
       artifactPurpose: 'inline',

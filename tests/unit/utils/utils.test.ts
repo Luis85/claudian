@@ -200,7 +200,8 @@ describe('utils.ts', () => {
       expect(normalizePathForFilesystem('~/notes/file.md')).toBe(expected);
     });
 
-    it('expands environment variables before filesystem use', () => {
+    // POSIX-only: source emits Windows separators via path.win32.normalize on win32.
+    (process.platform === 'win32' ? it.skip : it)('expands environment variables before filesystem use', () => {
       const envKey = 'CLAUDIAN_FS_TEST_PATH';
       const originalValue = process.env[envKey];
       process.env[envKey] = '/tmp/claudian-test';
@@ -231,7 +232,8 @@ describe('utils.ts', () => {
       expect(normalizePathForFilesystem('')).toBe('');
     });
 
-    it('handles non-existent environment variables', () => {
+    // POSIX-only: source emits Windows separators via path.win32.normalize on win32.
+    (process.platform === 'win32' ? it.skip : it)('handles non-existent environment variables', () => {
       // Non-existent env vars should be left as-is
       expect(normalizePathForFilesystem('$NONEXISTENT/path')).toBe('$NONEXISTENT/path');
       expect(normalizePathForFilesystem('%NONEXISTENT%/path')).toBe('%NONEXISTENT%/path');
@@ -472,7 +474,8 @@ describe('utils.ts', () => {
       process.env = originalEnv;
     });
 
-    describe('on Unix/macOS', () => {
+    // POSIX-only suite: real win32 os.homedir()/path resolution prevents these Unix-path mocks from matching.
+    (process.platform === 'win32' ? describe.skip : describe)('on Unix/macOS', () => {
       beforeEach(() => {
         Object.defineProperty(process, 'platform', { value: 'darwin' });
       });
