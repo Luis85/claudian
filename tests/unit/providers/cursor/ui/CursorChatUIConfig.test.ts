@@ -1,64 +1,89 @@
-import { getCachedCursorModelIds } from '@/providers/cursor/runtime/cursorModelCatalog';
 import { cursorChatUIConfig } from '@/providers/cursor/ui/CursorChatUIConfig';
 
-jest.mock('@/providers/cursor/runtime/cursorModelCatalog', () => {
-  const actual = jest.requireActual('@/providers/cursor/runtime/cursorModelCatalog');
-  return {
-    ...actual,
-    getCachedCursorModelIds: jest.fn(() => ['auto', 'composer-2', 'gpt-5.5']),
-  };
-});
+const TEST_HOST = 'host-a';
 
-const mockedGetCachedIds = getCachedCursorModelIds as jest.MockedFunction<
-  typeof getCachedCursorModelIds
->;
+jest.mock('@/utils/env', () => ({
+  ...jest.requireActual('@/utils/env'),
+  getHostnameKey: () => TEST_HOST,
+}));
 
-function settingsWithEnv(envText: string): Record<string, unknown> {
-  return {
-    providerConfigs: {
-      cursor: { environmentVariables: envText },
-    },
-  };
+function settings(options: {
+  enabled?: string[];
+  env?: string;
+} = {}): Record<string, unknown> {
+  const cursor: Record<string, unknown> = {};
+  if (options.enabled) {
+    cursor.enabledModelsByHost = { [TEST_HOST]: options.enabled };
+  }
+  if (options.env !== undefined) {
+    cursor.environmentVariables = options.env;
+  }
+  return { providerConfigs: { cursor } };
 }
 
-describe('cursorChatUIConfig.getModelOptions', () => {
-  beforeEach(() => {
-    mockedGetCachedIds.mockReturnValue(['auto', 'composer-2', 'gpt-5.5']);
+describe('cursorChatUIConfig.getModelOptions (curated)', () => {
+  it('returns only auto when nothing is curated for the current host', () => {
+    const options = cursorChatUIConfig.getModelOptions(settings());
+    expect(options.map(o => o.value)).toEqual(['cursor:auto']);
   });
 
-  it('namespaces every value with cursor: and puts auto first', () => {
-    const options = cursorChatUIConfig.getModelOptions({});
+  it('does NOT dump the discovered catalog when no curation exists', () => {
+    const options = cursorChatUIConfig.getModelOptions(settings());
+    expect(options.map(o => o.value)).not.toContain('cursor:composer-2');
+    expect(options.map(o => o.value)).not.toContain('cursor:gpt-5.5');
+  });
+
+  it('shows auto first then each curated raw id (namespaced)', () => {
+    const options = cursorChatUIConfig.getModelOptions(
+      settings({ enabled: ['gpt-5.5', 'composer-2'] }),
+    );
     expect(options[0].value).toBe('cursor:auto');
     expect(options.map(o => o.value)).toEqual([
       'cursor:auto',
-      'cursor:composer-2',
       'cursor:gpt-5.5',
+      'cursor:composer-2',
     ]);
   });
 
   it('keeps the pretty label derived from the raw id', () => {
-    const options = cursorChatUIConfig.getModelOptions({});
+    const options = cursorChatUIConfig.getModelOptions(
+      settings({ enabled: ['gpt-5.5'] }),
+    );
     expect(options.find(o => o.value === 'cursor:gpt-5.5')?.label).toBe('GPT-5.5');
   });
 
-  it('prepends auto when discovery omits it', () => {
-    mockedGetCachedIds.mockReturnValue(['composer-2']);
-    const options = cursorChatUIConfig.getModelOptions({});
-    expect(options[0].value).toBe('cursor:auto');
-    expect(options.map(o => o.value)).toEqual(['cursor:auto', 'cursor:composer-2']);
+  it('keeps a stale curated id that is not in the discovered catalog', () => {
+    const options = cursorChatUIConfig.getModelOptions(
+      settings({ enabled: ['no-longer-discovered'] }),
+    );
+    expect(options.map(o => o.value)).toEqual([
+      'cursor:auto',
+      'cursor:no-longer-discovered',
+    ]);
   });
 
-  it('appends a namespaced env CURSOR_MODEL override not present in the discovered list', () => {
-    const options = cursorChatUIConfig.getModelOptions(settingsWithEnv('CURSOR_MODEL=mystery-x'));
+  it('appends a namespaced env CURSOR_MODEL not present in the curated list', () => {
+    const options = cursorChatUIConfig.getModelOptions(
+      settings({ enabled: ['composer-2'], env: 'CURSOR_MODEL=mystery-x' }),
+    );
     const env = options.find(o => o.value === 'cursor:mystery-x');
     expect(env).toBeDefined();
     expect(env?.description).toBe('Custom (env)');
     expect(options[0].value).toBe('cursor:auto');
   });
 
-  it('does not duplicate an env CURSOR_MODEL that is already discovered', () => {
-    const options = cursorChatUIConfig.getModelOptions(settingsWithEnv('CURSOR_MODEL=composer-2'));
+  it('does not duplicate an env CURSOR_MODEL that is already curated', () => {
+    const options = cursorChatUIConfig.getModelOptions(
+      settings({ enabled: ['composer-2'], env: 'CURSOR_MODEL=composer-2' }),
+    );
     expect(options.filter(o => o.value === 'cursor:composer-2')).toHaveLength(1);
+  });
+
+  it('still offers auto + env when curation is empty but env sets a model', () => {
+    const options = cursorChatUIConfig.getModelOptions(
+      settings({ env: 'CURSOR_MODEL=mystery-x' }),
+    );
+    expect(options.map(o => o.value)).toEqual(['cursor:auto', 'cursor:mystery-x']);
   });
 });
 

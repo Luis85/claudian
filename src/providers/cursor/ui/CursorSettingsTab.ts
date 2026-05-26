@@ -7,9 +7,16 @@ import { t } from '../../../i18n/i18n';
 import type { TranslationKey } from '../../../i18n/types';
 import { getHostnameKey } from '../../../utils/env';
 import { expandHomePath, getVaultPath } from '../../../utils/path';
+import { formatCursorModelLabel } from '../modelLabels';
 import { buildCursorAgentEnvironment } from '../runtime/cursorAgentEnv';
-import { refreshCursorModelCatalog } from '../runtime/cursorModelCatalog';
-import { getCursorProviderSettings, updateCursorProviderSettings } from '../settings';
+import { getCachedCursorModelIds, refreshCursorModelCatalog } from '../runtime/cursorModelCatalog';
+import {
+  getCursorEnabledModels,
+  getCursorProviderSettings,
+  setCursorEnabledModels,
+  updateCursorProviderSettings,
+} from '../settings';
+import { matchesCursorModelQuery } from './cursorModelFilter';
 
 export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
   render(container, context) {
@@ -118,6 +125,145 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
       updateCliPathValidation(currentValue, text.inputEl);
     });
 
+    new Setting(container).setName('Models').setHeading();
+
+    new Setting(container)
+      .setName('Visible models')
+      .setDesc('Choose which Cursor models appear in the picker. `auto` is always available.');
+
+    let searchQuery = '';
+
+    const pickerEl = container.createDiv({ cls: 'claudian-cursor-model-picker' });
+    const controlsEl = pickerEl.createDiv({ cls: 'claudian-cursor-model-picker-controls' });
+
+    const searchInput = controlsEl.createEl('input', {
+      cls: 'claudian-cursor-model-picker-search',
+      type: 'search',
+    });
+    searchInput.placeholder = 'Filter models…';
+
+    const selectAllBtn = controlsEl.createEl('button', {
+      cls: 'claudian-cursor-model-picker-action',
+      text: 'Select all',
+    });
+    const selectNoneBtn = controlsEl.createEl('button', {
+      cls: 'claudian-cursor-model-picker-action',
+      text: 'Select none',
+    });
+    const countEl = controlsEl.createSpan({ cls: 'claudian-cursor-model-picker-count' });
+
+    const listEl = pickerEl.createDiv({ cls: 'claudian-cursor-model-picker-list' });
+
+    // Union of discovered ids and currently-enabled ids (so a stale enabled id
+    // can still be unchecked). `auto` is implicit and never listed here.
+    const getAllModelIds = (): string[] => {
+      const discovered = getCachedCursorModelIds().filter((id) => id !== 'auto');
+      const enabled = getCursorEnabledModels(settingsBag).filter((id) => id !== 'auto');
+      const seen = new Set<string>();
+      const result: string[] = [];
+      for (const id of [...discovered, ...enabled]) {
+        if (!seen.has(id)) {
+          seen.add(id);
+          result.push(id);
+        }
+      }
+      return result;
+    };
+
+    const getVisibleModelIds = (): string[] =>
+      getAllModelIds().filter((id) => matchesCursorModelQuery(id, searchQuery));
+
+    const persistEnabledModels = async (ids: string[]): Promise<void> => {
+      setCursorEnabledModels(settingsBag, ids);
+      await context.plugin.saveSettings();
+      context.refreshModelSelectors();
+    };
+
+    const renderCount = (): void => {
+      const total = getAllModelIds().length;
+      const selected = getCursorEnabledModels(settingsBag).filter((id) => id !== 'auto').length;
+      countEl.setText(`${selected} of ${total} selected`);
+    };
+
+    const renderList = (): void => {
+      listEl.empty();
+      const enabled = new Set(getCursorEnabledModels(settingsBag));
+      const visible = getVisibleModelIds();
+
+      if (visible.length === 0) {
+        const emptyEl = listEl.createDiv({ cls: 'claudian-cursor-model-picker-empty' });
+        const allIds = getAllModelIds();
+        if (allIds.length === 0) {
+          emptyEl.setText('No models discovered yet. Set the Cursor CLI path above, then refresh the model list.');
+        } else {
+          emptyEl.setText('No models match your filter.');
+        }
+        return;
+      }
+
+      for (const id of visible) {
+        const rowEl = listEl.createEl('label', { cls: 'claudian-cursor-model-picker-row' });
+        rowEl.title = id;
+
+        const checkboxEl = rowEl.createEl('input', { type: 'checkbox' });
+        checkboxEl.checked = enabled.has(id);
+        checkboxEl.addEventListener('change', () => {
+          const current = getCursorEnabledModels(settingsBag).filter((entry) => entry !== 'auto');
+          const next = checkboxEl.checked
+            ? [...current, id]
+            : current.filter((entry) => entry !== id);
+          void (async () => {
+            await persistEnabledModels(next);
+            renderCount();
+          })();
+        });
+
+        const textEl = rowEl.createDiv({ cls: 'claudian-cursor-model-picker-row-text' });
+        textEl.createDiv({
+          cls: 'claudian-cursor-model-picker-row-name',
+          text: formatCursorModelLabel(id),
+        });
+        textEl.createDiv({
+          cls: 'claudian-cursor-model-picker-row-id',
+          text: id,
+        });
+      }
+    };
+
+    const renderAll = (): void => {
+      renderCount();
+      renderList();
+    };
+
+    searchInput.addEventListener('input', () => {
+      searchQuery = searchInput.value;
+      renderList();
+    });
+
+    selectAllBtn.addEventListener('click', () => {
+      // Operate on the currently-visible (filtered) set, unioned with existing.
+      const current = getCursorEnabledModels(settingsBag).filter((id) => id !== 'auto');
+      const next = [...current];
+      const seen = new Set(next);
+      for (const id of getVisibleModelIds()) {
+        if (!seen.has(id)) {
+          seen.add(id);
+          next.push(id);
+        }
+      }
+      void (async () => {
+        await persistEnabledModels(next);
+        renderAll();
+      })();
+    });
+
+    selectNoneBtn.addEventListener('click', () => {
+      void (async () => {
+        await persistEnabledModels([]);
+        renderAll();
+      })();
+    });
+
     const discoverModels = async (announce: boolean): Promise<void> => {
       const cliPath = context.plugin.getResolvedProviderCliPath('cursor');
       if (!cliPath) {
@@ -132,8 +278,8 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
         const ids = await refreshCursorModelCatalog(cliPath, env, cwd);
         if (announce) {
           new Notice(`Discovered ${ids.length} Cursor model${ids.length === 1 ? '' : 's'}.`);
-          context.refreshModelSelectors();
         }
+        renderAll();
       } catch {
         if (announce) {
           new Notice('Failed to refresh Cursor models.');
@@ -142,7 +288,7 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
     };
 
     new Setting(container)
-      .setName('Available models')
+      .setName('Refresh models')
       .setDesc('Discover the models exposed by the Cursor CLI (`agent --list-models`).')
       .addButton((button) =>
         button
@@ -154,7 +300,9 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
           })
       );
 
-    // Best-effort warm discovery so the picker is populated by the time it opens.
+    renderAll();
+
+    // Best-effort warm discovery so the list is populated by the time it opens.
     void discoverModels(false);
 
     new Setting(container).setName(t('settings.safety')).setHeading();

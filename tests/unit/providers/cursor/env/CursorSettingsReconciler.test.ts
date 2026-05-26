@@ -1,32 +1,26 @@
-import { getCachedCursorModelIds } from '@/providers/cursor/runtime/cursorModelCatalog';
 import { cursorSettingsReconciler } from '@/providers/cursor/env/CursorSettingsReconciler';
 
-jest.mock('@/providers/cursor/runtime/cursorModelCatalog', () => {
-  const actual = jest.requireActual('@/providers/cursor/runtime/cursorModelCatalog');
-  return {
-    ...actual,
-    getCachedCursorModelIds: jest.fn(() => ['auto', 'composer-2', 'gpt-5.5']),
-  };
-});
+const TEST_HOST = 'host-a';
 
-const mockedGetCachedIds = getCachedCursorModelIds as jest.MockedFunction<
-  typeof getCachedCursorModelIds
->;
+jest.mock('@/utils/env', () => ({
+  ...jest.requireActual('@/utils/env'),
+  getHostnameKey: () => TEST_HOST,
+}));
 
 function settings(envText: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     providerConfigs: {
-      cursor: { environmentVariables: envText },
+      cursor: {
+        environmentVariables: envText,
+        // Curated subset for the current host; getModelOptions validates against it.
+        enabledModelsByHost: { [TEST_HOST]: ['composer-2', 'gpt-5.5'] },
+      },
     },
     ...extra,
   };
 }
 
 describe('cursorSettingsReconciler.reconcileModelWithEnvironment', () => {
-  beforeEach(() => {
-    mockedGetCachedIds.mockReturnValue(['auto', 'composer-2', 'gpt-5.5']);
-  });
-
   it('stores the namespaced value when CURSOR_MODEL is set', () => {
     const s = settings('CURSOR_API_KEY=k\nCURSOR_MODEL=gpt-5.5');
     cursorSettingsReconciler.reconcileModelWithEnvironment(s, []);

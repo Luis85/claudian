@@ -12,7 +12,7 @@ import {
   isCursorModelValue,
   toCursorModelValue,
 } from '../runtime/cursorModelId';
-import { updateCursorProviderSettings } from '../settings';
+import { getCursorEnabledModels, updateCursorProviderSettings } from '../settings';
 
 const CURSOR_PERMISSION_MODE_TOGGLE: ProviderPermissionModeToggleConfig = {
   inactiveValue: 'normal',
@@ -46,7 +46,9 @@ function buildModelOption(rawId: string, description?: string): ProviderUIOption
 export const cursorChatUIConfig: ProviderChatUIConfig = {
   getModelOptions(settings: Record<string, unknown>): ProviderUIOption[] {
     const envVars = getRuntimeEnvironmentVariables(settings, 'cursor');
-    const discovered = getCachedCursorModelIds();
+    // Curated subset chosen per-machine in settings. Cursor exposes 100+ models,
+    // so the picker shows only this selection (plus `auto` and env override).
+    const enabled = getCursorEnabledModels(settings);
 
     // Dedupe by final namespaced value so a raw id and its `cursor:` form
     // never both appear.
@@ -69,11 +71,11 @@ export const cursorChatUIConfig: ProviderChatUIConfig = {
     // Always make 'auto' (value `cursor:auto`) available and first.
     add('auto');
 
-    for (const id of discovered) {
+    for (const id of enabled) {
       add(id);
     }
 
-    // Env override and custom additions are kept even if not discovered.
+    // Env override and custom additions are kept even if not curated.
     if (envVars.CURSOR_MODEL) {
       const envValue = toCursorModelValue(envVars.CURSOR_MODEL);
       add(envVars.CURSOR_MODEL, seen.has(envValue) ? undefined : 'Custom (env)');
