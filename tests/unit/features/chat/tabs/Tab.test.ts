@@ -17,6 +17,7 @@ import {
   initializeTabService,
   initializeTabUI,
   onProviderAvailabilityChanged,
+  resolveBlankTabDefaultProviderId,
   setupServiceCallbacks,
   type TabCreateOptions,
   wireTabInputEvents,
@@ -657,6 +658,39 @@ describe('Tab - Creation', () => {
       expect(tab.draftModel).toBe('opus');
       expect(tab.providerId).toBe('claude');
     });
+  });
+});
+
+describe('resolveBlankTabDefaultProviderId', () => {
+  it('honors an enabled settingsProvider', () => {
+    expect(resolveBlankTabDefaultProviderId({
+      settingsProvider: 'codex',
+      providerConfigs: { codex: { enabled: true } },
+    })).toBe('codex');
+  });
+
+  it('ignores a disabled settingsProvider and uses the first enabled provider by order', () => {
+    expect(resolveBlankTabDefaultProviderId({
+      settingsProvider: 'codex',
+      providerConfigs: {
+        claude: { enabled: false },
+        codex: { enabled: false },
+        cursor: { enabled: true },
+      },
+    })).toBe('cursor');
+  });
+
+  it('falls back to the first enabled provider when settingsProvider is absent', () => {
+    expect(resolveBlankTabDefaultProviderId({
+      providerConfigs: {
+        claude: { enabled: false },
+        codex: { enabled: true },
+      },
+    })).toBe('codex');
+  });
+
+  it('returns Claude when only Claude is enabled', () => {
+    expect(resolveBlankTabDefaultProviderId({})).toBe('claude');
   });
 });
 

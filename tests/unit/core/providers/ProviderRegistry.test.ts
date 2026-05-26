@@ -117,6 +117,45 @@ describe('ProviderRegistry', () => {
     })).toEqual(['cursor', 'opencode', 'codex', 'claude']);
   });
 
+  it('excludes Claude from enabled providers when claude.enabled is false', () => {
+    expect(ProviderRegistry.getEnabledProviderIds({
+      providerConfigs: {
+        claude: { enabled: false },
+      },
+    })).toEqual([]);
+    expect(ProviderRegistry.getEnabledProviderIds({
+      providerConfigs: {
+        claude: { enabled: false },
+        cursor: { enabled: true },
+      },
+    })).toEqual(['cursor']);
+  });
+
+  describe('resolveTitleGenerationProviderId', () => {
+    it('returns Claude when Claude is enabled and no title model is set', () => {
+      expect(ProviderRegistry.resolveTitleGenerationProviderId({})).toBe('claude');
+      expect(ProviderRegistry.resolveTitleGenerationProviderId({
+        providerConfigs: { codex: { enabled: true } },
+      })).toBe('claude');
+    });
+
+    it('falls back to the active provider when Claude is disabled and no title model is set', () => {
+      expect(ProviderRegistry.resolveTitleGenerationProviderId({
+        providerConfigs: {
+          claude: { enabled: false },
+          cursor: { enabled: true },
+        },
+      })).toBe('cursor');
+    });
+
+    it('routes an explicit title model to its owning provider', () => {
+      expect(ProviderRegistry.resolveTitleGenerationProviderId({
+        titleGenerationModel: DEFAULT_CODEX_PRIMARY_MODEL,
+        providerConfigs: { codex: { enabled: true } },
+      })).toBe('codex');
+    });
+  });
+
   it('returns the display name from provider registration metadata', () => {
     expect(ProviderRegistry.getProviderDisplayName('claude')).toBe('Claude');
     expect(ProviderRegistry.getProviderDisplayName('codex')).toBe('Codex');

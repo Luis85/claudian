@@ -59,12 +59,17 @@ export class ProviderRegistry {
       ? settings.titleGenerationModel.trim()
       : '';
 
+    // Never route titles to a disabled Claude — fall back to the active provider.
+    const fallbackId = this.isEnabled(DEFAULT_CHAT_PROVIDER_ID, settings)
+      ? DEFAULT_CHAT_PROVIDER_ID
+      : this.resolveSettingsProviderId(settings);
+
     if (!titleModel) {
-      return DEFAULT_CHAT_PROVIDER_ID;
+      return fallbackId;
     }
 
     return this.resolveProviderForModel(titleModel, settings, {
-      fallbackProviderId: DEFAULT_CHAT_PROVIDER_ID,
+      fallbackProviderId: fallbackId,
     });
   }
 

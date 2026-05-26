@@ -14,6 +14,7 @@ import type { Locale, TranslationKey } from '../../i18n/types';
 import type ClaudianPlugin from '../../main';
 import { formatContextLimit, parseContextLimit, parseEnvironmentVariables } from '../../utils/env';
 import { buildNavMappingText, parseNavMappings } from './keyboardNavigation';
+import { getProviderEnableUpdater } from './providerEnableUpdaters';
 import { renderEnvironmentSettingsSection } from './ui/EnvironmentSettingsSection';
 
 type SettingsTabId = string;
@@ -120,7 +121,9 @@ export class ClaudianSettingTab extends PluginSettingTab {
 
     setLocale(this.plugin.settings.locale as Locale);
 
-    const providerTabs = ProviderRegistry.getRegisteredProviderIds();
+    const providerTabs = ProviderRegistry.getEnabledProviderIds(
+      this.plugin.settings as unknown as Record<string, unknown>,
+    );
     const tabIds: SettingsTabId[] = ['general', ...providerTabs];
     if (!tabIds.includes(this.activeTab)) {
       this.activeTab = 'general';
@@ -492,6 +495,10 @@ export class ClaudianSettingTab extends PluginSettingTab {
     addHotkeySettingRow(hotkeyGrid, this.app, 'claudian:new-tab', 'settings.newTabHotkey');
     addHotkeySettingRow(hotkeyGrid, this.app, 'claudian:close-current-tab', 'settings.closeTabHotkey');
 
+    // --- Providers ---
+
+    this.renderProvidersSection(container);
+
     // --- Environment ---
 
     renderEnvironmentSettingsSection({
@@ -504,6 +511,42 @@ export class ClaudianSettingTab extends PluginSettingTab {
       placeholder: 'PATH=/opt/homebrew/bin:/usr/local/bin\nHTTPS_PROXY=http://proxy.example.com:8080\nSSL_CERT_FILE=/path/to/cert.pem',
       renderCustomContextLimits: (target) => this.renderCustomContextLimits(target),
     });
+  }
+
+  /**
+   * Renders the "Providers" section with one enable toggle per registered
+   * provider. Toggling persists the provider's `enabled` flag, refreshes the
+   * model selectors across views, and re-renders the settings tab so the
+   * enabled provider tab list updates.
+   */
+  private renderProvidersSection(container: HTMLElement): void {
+    new Setting(container).setName('Providers').setHeading();
+
+    const settingsBag = this.plugin.settings as unknown as Record<string, unknown>;
+
+    for (const providerId of ProviderRegistry.getRegisteredProviderIds()) {
+      const displayName = ProviderRegistry.getProviderDisplayName(providerId);
+      const updater = getProviderEnableUpdater(providerId);
+      if (!updater) {
+        continue;
+      }
+
+      new Setting(container)
+        .setName(`Enable ${displayName}`)
+        .setDesc(`Show ${displayName} as a chat provider and reveal its settings tab.`)
+        .addToggle((toggle) =>
+          toggle
+            .setValue(ProviderRegistry.isEnabled(providerId, settingsBag))
+            .onChange(async (value) => {
+              updater(settingsBag, value);
+              await this.plugin.saveSettings();
+              for (const view of this.plugin.getAllViews()) {
+                view.refreshModelSelector();
+              }
+              this.display();
+            })
+        );
+    }
   }
 
   private renderHiddenProviderCommandSetting(

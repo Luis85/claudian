@@ -100,6 +100,21 @@ function resolveBlankTabModel(
   return snapshot.model as string;
 }
 
+/**
+ * Resolves the default provider for a blank/first tab when no draft model
+ * dictates the provider. Prefers the active settings provider when it is
+ * enabled, otherwise the first enabled provider by blank-tab order.
+ */
+export function resolveBlankTabDefaultProviderId(settings: Record<string, unknown>): ProviderId {
+  const current = settings.settingsProvider;
+  if (typeof current === 'string'
+    && ProviderRegistry.getRegisteredProviderIds().includes(current as ProviderId)
+    && ProviderRegistry.isEnabled(current as ProviderId, settings)) {
+    return current as ProviderId;
+  }
+  return ProviderRegistry.getEnabledProviderIds(settings)[0] ?? DEFAULT_CHAT_PROVIDER_ID;
+}
+
 export interface TabCreateOptions {
   plugin: ClaudianPlugin;
 
@@ -409,7 +424,7 @@ export function createTab(options: TabCreateOptions): TabData {
   const initialProviderId = conversation?.providerId
     ?? (draftModel
       ? getEnabledProviderForModel(draftModel, plugin.settings)
-      : DEFAULT_CHAT_PROVIDER_ID);
+      : resolveBlankTabDefaultProviderId(plugin.settings as unknown as Record<string, unknown>));
 
   const tab: TabData = {
     id,

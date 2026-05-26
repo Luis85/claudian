@@ -25,6 +25,13 @@ type LoadableView = {
   load: () => Promise<void> | void;
 };
 
+type AppWithSettings = {
+  setting?: {
+    open: () => void;
+    openTabById?: (id: string) => void;
+  };
+};
+
 export class ClaudianView extends ItemView {
   private plugin: ClaudianPlugin;
 
@@ -171,6 +178,16 @@ export class ClaudianView extends ItemView {
     const header = this.viewContainerEl.createDiv({ cls: 'claudian-header' });
     this.buildHeader(header);
 
+    // No enabled provider means there is nothing to chat with. Render a
+    // configure-first placeholder and skip tab manager creation entirely.
+    const enabledProviders = ProviderRegistry.getEnabledProviderIds(
+      this.plugin.settings as unknown as Record<string, unknown>,
+    );
+    if (enabledProviders.length === 0) {
+      this.renderEmptyState(this.viewContainerEl);
+      return;
+    }
+
     this.navRowContent = this.buildNavRowContent();
     this.tabContentEl = this.viewContainerEl.createDiv({ cls: 'claudian-tab-content-container' });
 
@@ -242,6 +259,31 @@ export class ClaudianView extends ItemView {
   // ============================================
   // UI Building
   // ============================================
+
+  /** Renders a configure-first placeholder when no chat provider is enabled. */
+  private renderEmptyState(container: HTMLElement): void {
+    const emptyState = container.createDiv({ cls: 'claudian-empty-state' });
+    emptyState.createEl('h3', {
+      cls: 'claudian-empty-state-title',
+      text: 'No chat provider enabled',
+    });
+    emptyState.createEl('p', {
+      cls: 'claudian-empty-state-message',
+      text: 'Enable and configure a provider in settings before first use.',
+    });
+    const button = emptyState.createEl('button', {
+      cls: 'claudian-empty-state-button mod-cta',
+      text: 'Open settings',
+    });
+    button.addEventListener('click', () => this.openPluginSettings());
+  }
+
+  /** Opens the Obsidian settings dialog focused on the Claudian plugin tab. */
+  private openPluginSettings(): void {
+    const setting = (this.app as AppWithSettings).setting;
+    setting?.open();
+    setting?.openTabById?.(this.plugin.manifest.id);
+  }
 
   private buildHeader(header: HTMLElement) {
     this.headerEl = header;
