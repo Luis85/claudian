@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 
-import { resolveCursorSpawnSpec } from './cursorWindowsSpawn';
+import { resolveCursorLaunch } from './cursorLaunch';
 
 // Minimal, safe set used before any live discovery completes. Never empty so
 // the picker always has something selectable. composer-1 is a real model (not
@@ -129,12 +129,12 @@ function runListModels(
   cwd: string,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    const spawnSpec = resolveCursorSpawnSpec(cliPath, ['--list-models']);
-    const child = spawn(spawnSpec.command, spawnSpec.args, {
+    const launch = resolveCursorLaunch(cliPath, ['--list-models']);
+    const child = spawn(launch.command, launch.args, {
       cwd,
-      env,
+      env: launch.extraEnv ? { ...env, ...launch.extraEnv } : env,
       windowsHide: true,
-      ...(spawnSpec.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
+      ...(launch.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
     });
 
     let stdout = '';

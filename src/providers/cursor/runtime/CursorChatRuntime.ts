@@ -1,8 +1,6 @@
 import { spawn } from 'child_process';
 import * as readline from 'readline';
 
-import { resolveCursorSpawnSpec } from './cursorWindowsSpawn';
-
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type { ProviderCapabilities, ProviderId } from '../../../core/providers/types';
 import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
@@ -29,6 +27,7 @@ import { encodeCursorTurn } from '../prompt/encodeCursorTurn';
 import { getCursorState, resolveCursorSessionId } from '../types';
 import { buildCursorAgentEnvironment } from './cursorAgentEnv';
 import { resolveCursorModelForCli } from './cursorCliModel';
+import { resolveCursorLaunch } from './cursorLaunch';
 import { buildCursorAgentFlagArgs, type CursorPermissionMode } from './cursorLaunchArgs';
 import { CursorNdjsonStreamReducer } from './cursorStreamMapper';
 
@@ -132,12 +131,12 @@ export class CursorChatRuntime implements ChatRuntime {
     const env = buildCursorAgentEnvironment(this.plugin);
     const reducer = new CursorNdjsonStreamReducer();
     let sawDone = false;
-    const spawnSpec = resolveCursorSpawnSpec(cli, [...flagArgs, turn.prompt]);
-    const child = spawn(spawnSpec.command, spawnSpec.args, {
+    const launch = resolveCursorLaunch(cli, [...flagArgs, turn.prompt]);
+    const child = spawn(launch.command, launch.args, {
       cwd: workspaceDir,
-      env,
+      env: launch.extraEnv ? { ...env, ...launch.extraEnv } : env,
       windowsHide: true,
-      ...(spawnSpec.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
+      ...(launch.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
     });
     this.child = child;
 

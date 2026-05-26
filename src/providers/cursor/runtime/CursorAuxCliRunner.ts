@@ -5,8 +5,8 @@ import type ClaudianPlugin from '../../../main';
 import { getVaultPath } from '../../../utils/path';
 import { buildCursorAgentEnvironment } from './cursorAgentEnv';
 import { resolveCursorModelForCli } from './cursorCliModel';
+import { resolveCursorLaunch } from './cursorLaunch';
 import { buildCursorAgentJsonModeFlagArgs, type CursorPermissionMode } from './cursorLaunchArgs';
-import { resolveCursorSpawnSpec } from './cursorWindowsSpawn';
 
 export interface CursorAuxQueryConfig {
   systemPrompt: string;
@@ -109,12 +109,12 @@ export class CursorAuxCliRunner {
     signal?: AbortSignal,
   ): Promise<{ stdout: string; stderr: string; code: number | null; signal: NodeJS.Signals | null }> {
     return new Promise((resolve, reject) => {
-      const spawnSpec = resolveCursorSpawnSpec(command, args);
-      const child = spawn(spawnSpec.command, spawnSpec.args, {
+      const launch = resolveCursorLaunch(command, args);
+      const child = spawn(launch.command, launch.args, {
         cwd: options.cwd,
-        env: options.env,
+        env: launch.extraEnv ? { ...options.env, ...launch.extraEnv } : options.env,
         windowsHide: true,
-        ...(spawnSpec.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
+        ...(launch.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
       });
 
       let stdout = '';
