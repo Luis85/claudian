@@ -28,7 +28,7 @@ export class GitActionButton {
     this.badgeEl = this.buttonEl.createSpan({ cls: 'claudian-git-action-badge' });
 
     this.buttonEl.addEventListener('click', (e) => {
-      e?.stopPropagation();
+      e.stopPropagation();
       this.callbacks.onGitCommit();
     });
 

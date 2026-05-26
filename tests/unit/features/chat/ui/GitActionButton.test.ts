@@ -58,7 +58,7 @@ describe('GitActionButton', () => {
   it('invokes onGitCommit when clicked', () => {
     const { button, emit, onCommit } = setup();
     emit({ isRepo: true, dirtyCount: 1 });
-    (button.buttonEl as any).dispatchEvent('click');
+    button.buttonEl.click();
     expect(onCommit).toHaveBeenCalledTimes(1);
   });
 
