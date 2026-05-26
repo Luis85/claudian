@@ -299,6 +299,13 @@ export interface ProviderChatUIConfig {
   /** Whether the provider enables the shared bang-bash input mode. */
   isBangBashEnabled?(settings: Record<string, unknown>): boolean;
 
+  /**
+   * Whether the provider exposes the git commit & push toolbar action.
+   * Default behavior when omitted is enabled (any agent that can run shell
+   * commands shows the button). Return false to opt out.
+   */
+  isGitActionsEnabled?(settings: Record<string, unknown>): boolean;
+
   /** SVG icon for the provider (shown next to model names in selectors). */
   getProviderIcon?(): ProviderIconSvg | null;
 }
