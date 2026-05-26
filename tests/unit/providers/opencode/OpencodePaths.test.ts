@@ -2,6 +2,8 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+import { itPosix } from '@test/helpers/platform';
+
 import {
   resolveExistingOpencodeDatabasePath,
   resolveOpencodeDatabasePath,
@@ -10,7 +12,7 @@ import {
 
 describe('OpencodePaths', () => {
   // POSIX-only path assertion; source correctly emits Windows separators on win32.
-  (process.platform === 'win32' ? it.skip : it)('prefers XDG data directories for OpenCode data', () => {
+  itPosix('prefers XDG data directories for OpenCode data', () => {
     expect(resolveOpencodeDataDir({
       HOME: '/home/tester',
       XDG_DATA_HOME: '/tmp/xdg-data',

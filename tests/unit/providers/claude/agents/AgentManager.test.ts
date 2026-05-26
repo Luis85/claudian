@@ -7,6 +7,8 @@ jest.mock('os', () => ({
   homedir: jest.fn().mockReturnValue('/home/user'),
 }));
 
+import { itPosix } from '@test/helpers/platform';
+
 import { AgentManager } from '@/providers/claude/agents/AgentManager';
 import type { PluginManager } from '@/providers/claude/plugins/PluginManager';
 
@@ -555,7 +557,7 @@ describe('AgentManager', () => {
     });
 
     // POSIX-only vault path inputs; skipped on win32 where path comparison normalizes separators differently.
-    (process.platform === 'win32' ? it.skip : it)('excludes file-loaded agents from built-in list', async () => {
+    itPosix('excludes file-loaded agents from built-in list', async () => {
       const manager = new AgentManager(VAULT_PATH, createMockPluginManager());
 
       // Vault has an agent file matching an init agent name

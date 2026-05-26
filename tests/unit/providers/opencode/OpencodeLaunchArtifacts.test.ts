@@ -2,6 +2,8 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+import { itPosix } from '@test/helpers/platform';
+
 import {
   OPENCODE_SAFE_MODE_ID,
   OPENCODE_YOLO_MODE_ID,
@@ -141,7 +143,7 @@ describe('buildOpencodeManagedConfig', () => {
 
 describe('prepareOpencodeLaunchArtifacts', () => {
   // POSIX-only path assertion; on win32 the generated config embeds Windows-style paths.
-  (process.platform === 'win32' ? it.skip : it)('layers the managed prompt config on top of OPENCODE_CONFIG', async () => {
+  itPosix('layers the managed prompt config on top of OPENCODE_CONFIG', async () => {
     const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'claudian-opencode-artifacts-'));
     const baseConfigPath = path.join(tmpRoot, 'opencode.base.json');
     await fs.writeFile(baseConfigPath, JSON.stringify({

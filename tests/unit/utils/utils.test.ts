@@ -6,6 +6,8 @@ const fs = jest.requireActual<typeof fsType>('fs');
 const os = jest.requireActual<typeof osType>('os');
 const path = jest.requireActual<typeof pathType>('path');
 
+import { itPosix } from '@test/helpers/platform';
+
 import { findClaudeCLIPath } from '@/providers/claude/cli/findClaudeCLIPath';
 import { getCurrentModelFromEnvironment, getModelsFromEnvironment } from '@/providers/claude/env/claudeModelEnv';
 import { parseEnvironmentVariables } from '@/utils/env';
@@ -201,7 +203,7 @@ describe('utils.ts', () => {
     });
 
     // POSIX-only: source emits Windows separators via path.win32.normalize on win32.
-    (process.platform === 'win32' ? it.skip : it)('expands environment variables before filesystem use', () => {
+    itPosix('expands environment variables before filesystem use', () => {
       const envKey = 'CLAUDIAN_FS_TEST_PATH';
       const originalValue = process.env[envKey];
       process.env[envKey] = '/tmp/claudian-test';
@@ -233,7 +235,7 @@ describe('utils.ts', () => {
     });
 
     // POSIX-only: source emits Windows separators via path.win32.normalize on win32.
-    (process.platform === 'win32' ? it.skip : it)('handles non-existent environment variables', () => {
+    itPosix('handles non-existent environment variables', () => {
       // Non-existent env vars should be left as-is
       expect(normalizePathForFilesystem('$NONEXISTENT/path')).toBe('$NONEXISTENT/path');
       expect(normalizePathForFilesystem('%NONEXISTENT%/path')).toBe('%NONEXISTENT%/path');

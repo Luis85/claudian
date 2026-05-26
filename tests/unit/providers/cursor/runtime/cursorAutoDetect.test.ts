@@ -1,3 +1,4 @@
+import { itWin32 } from '@test/helpers/platform';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -9,10 +10,9 @@ import { findCursorAgentBinaryPath } from '@/providers/cursor/runtime/CursorBina
 // not on PATH (Windows can hand a stale PATH to GUI apps even after a restart).
 // Uses the real env utilities; Windows-only because it exercises the win32
 // extra-path list (%APPDATA%\npm).
-const itWin = process.platform === 'win32' ? it : it.skip;
 
 describe('cursor empty-path auto-detect', () => {
-  itWin('resolves agent.cmd from %APPDATA%\\npm without relying on PATH', () => {
+  itWin32('resolves agent.cmd from %APPDATA%\\npm without relying on PATH', () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'claudian-appdata-'));
     fs.mkdirSync(path.join(tmp, 'npm'));
     const cmd = path.join(tmp, 'npm', 'agent.cmd');

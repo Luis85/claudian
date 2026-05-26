@@ -1,3 +1,4 @@
+import { itPosix } from '@test/helpers/platform';
 import * as fs from 'fs';
 
 import { CodexCliResolver } from '@/providers/codex/runtime/CodexCliResolver';
@@ -54,7 +55,7 @@ describe('CodexCliResolver', () => {
   });
 
   // POSIX-only PATH/path assertion; source resolves Windows paths on win32.
-  (process.platform === 'win32' ? it.skip : it)('auto-detects from the runtime PATH when no configured path is valid', () => {
+  itPosix('auto-detects from the runtime PATH when no configured path is valid', () => {
     mockedExists.mockImplementation((filePath: string) => filePath === '/custom/bin/codex');
     mockedStat.mockImplementation((filePath: string) => ({
       isFile: () => filePath === '/custom/bin/codex',

@@ -1,5 +1,7 @@
 import '@/providers';
 
+import { itPosix } from '@test/helpers/platform';
+
 import { AcpClientConnection, AcpJsonRpcTransport, AcpSubprocess } from '@/providers/acp';
 import { OpencodeAuxQueryRunner } from '@/providers/opencode/runtime/OpencodeAuxQueryRunner';
 import { prepareOpencodeLaunchArtifacts } from '@/providers/opencode/runtime/OpencodeLaunchArtifacts';
@@ -337,7 +339,7 @@ describe('OpencodeAuxQueryRunner', () => {
   });
 
   // POSIX-only path assertion; source resolves Windows drive paths on win32.
-  (process.platform === 'win32' ? it.skip : it)('rejects aux reads outside the workspace root', () => {
+  itPosix('rejects aux reads outside the workspace root', () => {
     const runner = new OpencodeAuxQueryRunner(createMockPlugin(), {
       agentProfile: 'readonly',
       artifactPurpose: 'inline',

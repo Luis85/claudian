@@ -1,3 +1,4 @@
+import { itPosix } from '@test/helpers/platform';
 import { existsSync } from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
@@ -40,18 +41,18 @@ describe('sdkSession', () => {
 
   describe('encodeVaultPathForSDK', () => {
     // POSIX-only: on win32 path.resolve prepends the drive letter (D:) before encoding.
-    (process.platform === 'win32' ? it.skip : it)('encodes vault path by replacing all non-alphanumeric chars with dash', () => {
+    itPosix('encodes vault path by replacing all non-alphanumeric chars with dash', () => {
       const encoded = encodeVaultPathForSDK('/Users/test/vault');
       // SDK replaces ALL non-alphanumeric characters with `-`
       expect(encoded).toBe('-Users-test-vault');
     });
 
-    (process.platform === 'win32' ? it.skip : it)('handles paths with spaces and special characters', () => {
+    itPosix('handles paths with spaces and special characters', () => {
       const encoded = encodeVaultPathForSDK("/Users/test/My Vault's~Data");
       expect(encoded).toBe('-Users-test-My-Vault-s-Data');
     });
 
-    (process.platform === 'win32' ? it.skip : it)('handles Unicode characters (Chinese, Japanese, etc.)', () => {
+    itPosix('handles Unicode characters (Chinese, Japanese, etc.)', () => {
       // Unicode characters should be replaced with `-` to match SDK behavior
       const encoded = encodeVaultPathForSDK('/Volumes/[Work]弘毅之鹰/学习/东京大学/2025年 秋');
       // All non-alphanumeric (including Chinese, brackets) become `-`
@@ -60,7 +61,7 @@ describe('sdkSession', () => {
       expect(encoded).toMatch(/^[a-zA-Z0-9-]+$/);
     });
 
-    (process.platform === 'win32' ? it.skip : it)('handles brackets and other special characters', () => {
+    itPosix('handles brackets and other special characters', () => {
       const encoded = encodeVaultPathForSDK('/Users/test/[my-vault](notes)');
       expect(encoded).toBe('-Users-test--my-vault--notes-');
       expect(encoded).not.toContain('[');
@@ -99,7 +100,7 @@ describe('sdkSession', () => {
 
   describe('getSDKProjectsPath', () => {
     // POSIX-only: source builds the path with Windows separators on win32.
-    (process.platform === 'win32' ? it.skip : it)('returns path under home directory', () => {
+    itPosix('returns path under home directory', () => {
       const projectsPath = getSDKProjectsPath();
       expect(projectsPath).toBe('/Users/test/.claude/projects');
     });
@@ -135,7 +136,7 @@ describe('sdkSession', () => {
 
   describe('getSDKSessionPath', () => {
     // POSIX-only: source builds the path with Windows separators on win32.
-    (process.platform === 'win32' ? it.skip : it)('constructs correct session file path', () => {
+    itPosix('constructs correct session file path', () => {
       const sessionPath = getSDKSessionPath('/Users/test/vault', 'session-123');
       expect(sessionPath).toContain('.claude/projects');
       expect(sessionPath).toContain('session-123.jsonl');
@@ -182,7 +183,7 @@ describe('sdkSession', () => {
 
   describe('deleteSDKSession', () => {
     // POSIX-only: asserts a Unix-style absolute path; source uses Windows separators on win32.
-    (process.platform === 'win32' ? it.skip : it)('deletes session file when it exists', async () => {
+    itPosix('deletes session file when it exists', async () => {
       mockExistsSync.mockReturnValue(true);
       mockFsPromises.unlink.mockResolvedValue(undefined);
 
@@ -283,7 +284,7 @@ describe('sdkSession', () => {
 
   describe('loadSubagentToolCalls', () => {
     // POSIX-only: asserts a Unix-style absolute path; source uses Windows separators on win32.
-    (process.platform === 'win32' ? it.skip : it)('loads tool calls from subagent sidechain JSONL', async () => {
+    itPosix('loads tool calls from subagent sidechain JSONL', async () => {
       mockExistsSync.mockReturnValue(true);
       mockFsPromises.readFile.mockResolvedValue([
         '{"type":"assistant","timestamp":"2024-01-15T10:00:00Z","message":{"content":[{"type":"tool_use","id":"sub-tool-1","name":"Bash","input":{"command":"ls"}}]}}',
@@ -341,7 +342,7 @@ describe('sdkSession', () => {
 
   describe('loadSubagentFinalResult', () => {
     // POSIX-only: asserts a Unix-style absolute path; source uses Windows separators on win32.
-    (process.platform === 'win32' ? it.skip : it)('returns the latest assistant text from sidecar JSONL', async () => {
+    itPosix('returns the latest assistant text from sidecar JSONL', async () => {
       mockExistsSync.mockReturnValue(true);
       mockFsPromises.readFile.mockResolvedValue([
         '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"First"}]}}',
@@ -2331,7 +2332,7 @@ describe('sdkSession', () => {
     });
 
     // POSIX-only: subagent hydration resolves Unix-style paths; source uses Windows separators on win32.
-    (process.platform === 'win32' ? it.skip : it)('loads subagent tool calls from sidecar JSONL', async () => {
+    itPosix('loads subagent tool calls from sidecar JSONL', async () => {
       mockExistsSync.mockReturnValue(true);
       mockFsPromises.readFile.mockImplementation(async (filePath: any) => {
         const p = String(filePath);

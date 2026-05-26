@@ -1,3 +1,4 @@
+import { itPosix } from '@test/helpers/platform';
 import * as fs from 'fs';
 
 import {
@@ -152,7 +153,7 @@ describe('externalContext utilities', () => {
       });
 
       // POSIX-only path inputs; on win32 source maps /a -> A: (MSYS translation), changing conflict order.
-      (process.platform === 'win32' ? it.skip : it)('should return first conflict when multiple exist', () => {
+      itPosix('should return first conflict when multiple exist', () => {
         const result = findConflictingPath('/a/b', ['/a', '/a/b/c']);
         // Should return /a as it appears first and is a parent
         expect(result).toEqual({ path: '/a', type: 'parent' });

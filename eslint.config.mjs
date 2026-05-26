@@ -138,6 +138,10 @@ export default defineConfig([
     rules: {
       ...jestRecommended.rules,
       '@typescript-eslint/no-explicit-any': 'off',
+      'jest/no-standalone-expect': [
+        'error',
+        { additionalTestBlockFunctions: ['itPosix', 'itWin32'] },
+      ],
     },
   },
 ]);
