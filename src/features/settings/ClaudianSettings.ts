@@ -184,6 +184,9 @@ export class ClaudianSettingTab extends PluginSettingTab {
   }
 
   private renderGeneralTab(container: HTMLElement): void {
+    // --- Providers --- (top of settings: enabling a provider is the first step)
+    this.renderProvidersSection(container);
+
     new Setting(container)
       .setName(t('settings.language.name'))
       .setDesc(t('settings.language.desc'))
@@ -494,10 +497,6 @@ export class ClaudianSettingTab extends PluginSettingTab {
     addHotkeySettingRow(hotkeyGrid, this.app, 'claudian:new-session', 'settings.newSessionHotkey');
     addHotkeySettingRow(hotkeyGrid, this.app, 'claudian:new-tab', 'settings.newTabHotkey');
     addHotkeySettingRow(hotkeyGrid, this.app, 'claudian:close-current-tab', 'settings.closeTabHotkey');
-
-    // --- Providers ---
-
-    this.renderProvidersSection(container);
 
     // --- Environment ---
 
