@@ -5,7 +5,7 @@ patchSetMaxListenersForElectron();
 import './providers';
 
 import type { Editor, WorkspaceLeaf } from 'obsidian';
-import { MarkdownView, Notice, Plugin } from 'obsidian';
+import { debounce, MarkdownView, Notice, Plugin } from 'obsidian';
 
 import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
 import { SharedStorageService } from './app/storage/SharedStorageService';
@@ -31,12 +31,15 @@ import {
 } from './core/types';
 import type { ChatViewPlacement, EnvironmentScope } from './core/types/settings';
 import { ClaudianView } from './features/chat/ClaudianView';
+import { GitService } from './features/chat/services/GitService';
+import { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
 import { type InlineEditContext, InlineEditModal } from './features/inline-edit/ui/InlineEditModal';
 import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
 import { setLocale } from './i18n/i18n';
 import type { Locale } from './i18n/types';
 import { OPENCODE_PLAN_MODE_ID, OPENCODE_SAFE_MODE_ID } from './providers/opencode/modes';
 import { buildCursorContext } from './utils/editor';
+import { getEnhancedPath } from './utils/env';
 import { revealWorkspaceLeaf } from './utils/obsidianCompat';
 import { getVaultPath } from './utils/path';
 
@@ -49,11 +52,29 @@ function isClaudianView(value: unknown): value is ClaudianView {
 export default class ClaudianPlugin extends Plugin {
   settings!: ClaudianSettings;
   storage!: SharedAppStorage;
+  gitStatusWatcher: GitStatusWatcher | null = null;
   private conversations: Conversation[] = [];
   private lastKnownTabManagerState: AppTabManagerState | null = null;
 
   async onload() {
     await this.loadSettings();
+
+    const vaultPath = getVaultPath(this.app);
+    if (vaultPath) {
+      this.gitStatusWatcher = new GitStatusWatcher(
+        new GitService(vaultPath, getEnhancedPath()),
+      );
+      const refreshGit = debounce(
+        () => void this.gitStatusWatcher?.refresh(),
+        1500,
+        true,
+      );
+      this.registerEvent(this.app.vault.on('modify', () => refreshGit()));
+      this.registerEvent(this.app.vault.on('create', () => refreshGit()));
+      this.registerEvent(this.app.vault.on('delete', () => refreshGit()));
+      this.registerEvent(this.app.vault.on('rename', () => refreshGit()));
+    }
+
     await ProviderWorkspaceRegistry.initializeAll(this);
 
     this.registerView(
@@ -178,6 +199,8 @@ export default class ClaudianPlugin extends Plugin {
   }
 
   onunload(): void {
+    this.gitStatusWatcher?.stop();
+    this.gitStatusWatcher = null;
     void this.persistOpenTabStates();
   }
 
