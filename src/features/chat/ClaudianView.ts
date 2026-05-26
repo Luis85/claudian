@@ -41,6 +41,7 @@ export class ClaudianView extends ItemView {
   private tabBarContainerEl: HTMLElement | null = null;
   private tabContentEl: HTMLElement | null = null;
   private navRowContent: HTMLElement | null = null;
+  private emptyStateEl: HTMLElement | null = null;
 
   // DOM Elements
   private viewContainerEl: HTMLElement | null = null;
@@ -188,6 +189,17 @@ export class ClaudianView extends ItemView {
       return;
     }
 
+    await this.initTabContent();
+  }
+
+  /** Builds the tab UI + manager. The header must already be rendered. */
+  private async initTabContent(): Promise<void> {
+    if (!this.viewContainerEl) {
+      return;
+    }
+    this.emptyStateEl?.remove();
+    this.emptyStateEl = null;
+
     this.navRowContent = this.buildNavRowContent();
     this.tabContentEl = this.viewContainerEl.createDiv({ cls: 'claudian-tab-content-container' });
 
@@ -235,6 +247,25 @@ export class ClaudianView extends ItemView {
     this.tabManager?.primeProviderRuntime();
   }
 
+  /**
+   * Re-evaluates provider availability. When the panel is showing the
+   * configure-first empty state and a provider has since been enabled (e.g. from
+   * settings), it promotes the panel to the full tab UI without requiring a
+   * close/reopen.
+   */
+  async refreshProviderAvailability(): Promise<void> {
+    if (!this.viewContainerEl || this.tabManager) {
+      return;
+    }
+    const enabledProviders = ProviderRegistry.getEnabledProviderIds(
+      this.plugin.settings as unknown as Record<string, unknown>,
+    );
+    if (enabledProviders.length === 0) {
+      return;
+    }
+    await this.initTabContent();
+  }
+
   async onClose() {
     if (this.pendingTabBarUpdate !== null) {
       cancelScheduledAnimationFrame(this.pendingTabBarUpdate);
@@ -262,7 +293,7 @@ export class ClaudianView extends ItemView {
 
   /** Renders a configure-first placeholder when no chat provider is enabled. */
   private renderEmptyState(container: HTMLElement): void {
-    const emptyState = container.createDiv({ cls: 'claudian-empty-state' });
+    const emptyState = (this.emptyStateEl = container.createDiv({ cls: 'claudian-empty-state' }));
     emptyState.createEl('h3', {
       cls: 'claudian-empty-state-title',
       text: 'Welcome to Claudian',
