@@ -286,6 +286,7 @@ jest.mock('@/features/chat/ui/InputToolbar', () => ({
       mcpServerSelector: mockMcpServerSelector,
       permissionToggle: mockPermissionToggle,
       serviceTierToggle: mockServiceTierToggle,
+      gitActionButton: null,
     };
   }),
 }));
