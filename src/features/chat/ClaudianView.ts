@@ -179,6 +179,11 @@ export class ClaudianView extends ItemView {
     const header = this.viewContainerEl.createDiv({ cls: 'claudian-header' });
     this.buildHeader(header);
 
+    // View-lifecycle event handlers + keyboard scope. These null-guard the tab
+    // manager, so they are safe to register once per open whether or not a
+    // provider is enabled (and survive empty<->content transitions).
+    this.wireEventHandlers();
+
     // No enabled provider means there is nothing to chat with. Render a
     // configure-first placeholder and skip tab manager creation entirely.
     const enabledProviders = ProviderRegistry.getEnabledProviderIds(
@@ -240,11 +245,30 @@ export class ClaudianView extends ItemView {
       }
     );
 
-    this.wireEventHandlers();
     await this.restoreOrCreateTabs();
     this.syncProviderBrandColor();
     this.updateLayoutForPosition();
     this.tabManager?.primeProviderRuntime();
+  }
+
+  /** Tears down the tab UI (manager + tab bar + DOM) without touching the
+   * view-lifecycle event handlers/scope, so the empty state can take over. */
+  private async teardownTabContent(): Promise<void> {
+    if (this.pendingTabBarUpdate !== null) {
+      cancelScheduledAnimationFrame(this.pendingTabBarUpdate);
+      this.pendingTabBarUpdate = null;
+    }
+    await this.persistTabStateImmediate();
+    await this.tabManager?.destroy();
+    this.tabManager = null;
+    this.tabBar?.destroy();
+    this.tabBar = null;
+    this.tabBarContainerEl?.remove();
+    this.tabBarContainerEl = null;
+    this.tabContentEl?.remove();
+    this.tabContentEl = null;
+    this.navRowContent?.remove();
+    this.navRowContent = null;
   }
 
   /**
@@ -254,16 +278,25 @@ export class ClaudianView extends ItemView {
    * close/reopen.
    */
   async refreshProviderAvailability(): Promise<void> {
-    if (!this.viewContainerEl || this.tabManager) {
+    if (!this.viewContainerEl) {
       return;
     }
-    const enabledProviders = ProviderRegistry.getEnabledProviderIds(
+    const hasProviders = ProviderRegistry.getEnabledProviderIds(
       this.plugin.settings as unknown as Record<string, unknown>,
-    );
-    if (enabledProviders.length === 0) {
-      return;
+    ).length > 0;
+
+    if (hasProviders && !this.tabManager) {
+      // A provider was enabled while the empty state was showing.
+      await this.initTabContent();
+    } else if (!hasProviders && this.tabManager) {
+      // The last provider was disabled; drop back to the empty state in place.
+      await this.teardownTabContent();
+      if (this.headerEl) {
+        this.headerEl.empty();
+        this.buildHeader(this.headerEl);
+      }
+      this.renderEmptyState(this.viewContainerEl);
     }
-    await this.initTabContent();
   }
 
   async onClose() {
