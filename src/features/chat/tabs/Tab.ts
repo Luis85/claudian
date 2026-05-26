@@ -1,6 +1,7 @@
 import type { Component } from 'obsidian';
 import { Notice, Platform } from 'obsidian';
 
+import { GIT_COMMIT_PROMPT } from '../../../core/prompt/gitCommit';
 import { getHiddenProviderCommandSet } from '../../../core/providers/commands/hiddenCommands';
 import type { ProviderCommandDropdownConfig } from '../../../core/providers/commands/ProviderCommandCatalog';
 import type { ProviderCommandEntry } from '../../../core/providers/commands/ProviderCommandEntry';
@@ -459,6 +460,7 @@ export function createTab(options: TabCreateOptions): TabData {
       mcpServerSelector: null,
       permissionToggle: null,
       serviceTierToggle: null,
+      gitActionButton: null,
       slashCommandDropdown: null,
       instructionModeManager: null,
       bangBashModeManager: null,
@@ -775,6 +777,18 @@ function initializeInputToolbar(
       return getTabChatUIConfig(tab, plugin);
     },
     getCapabilities: () => getTabCapabilities(tab, plugin),
+    gitActions: plugin.gitStatusWatcher
+      ? {
+          subscribeGitStatus: (cb) => plugin.gitStatusWatcher!.subscribe(cb),
+          isGitActionsEnabled: () =>
+            getTabChatUIConfig(tab, plugin).isGitActionsEnabled?.(
+              getTabSettingsSnapshot(tab, plugin),
+            ) !== false,
+          onGitCommit: () => {
+            void tab.controllers.inputController?.sendMessage({ content: GIT_COMMIT_PROMPT });
+          },
+        }
+      : undefined,
     getSettings: () => getTabSettingsSnapshot(tab, plugin),
     getEnvironmentVariables: () => plugin.getActiveEnvironmentVariables(),
     onModelChange: async (model: string) => {
@@ -897,6 +911,7 @@ function initializeInputToolbar(
   tab.ui.mcpServerSelector = toolbarComponents.mcpServerSelector;
   tab.ui.permissionToggle = toolbarComponents.permissionToggle;
   tab.ui.serviceTierToggle = toolbarComponents.serviceTierToggle;
+  tab.ui.gitActionButton = toolbarComponents.gitActionButton;
 
   tab.ui.mcpServerSelector.setMcpManager(getProviderMcpManager(getTabProviderId(tab, plugin)));
 
@@ -1611,6 +1626,8 @@ export async function destroyTab(tab: TabData): Promise<void> {
   tab.ui.statusPanel = null;
   tab.ui.navigationSidebar?.destroy();
   tab.ui.navigationSidebar = null;
+  tab.ui.gitActionButton?.dispose();
+  tab.ui.gitActionButton = null;
 
   tab.services.subagentManager.orphanAllActive();
   tab.services.subagentManager.clear();
