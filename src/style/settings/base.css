@@ -121,6 +121,13 @@
   color: var(--text-warning);
 }
 
+.claudian-cli-path-validation {
+  color: var(--text-error);
+  font-size: 0.85em;
+  margin-top: -0.5em;
+  margin-bottom: 0.5em;
+}
+
 .claudian-settings-cli-path-input {
   width: 100%;
 }

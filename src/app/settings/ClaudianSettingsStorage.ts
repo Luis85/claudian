@@ -30,13 +30,13 @@ import {
   updateCodexProviderSettings,
 } from '../../providers/codex/settings';
 import {
-  getOpencodeProviderSettings,
-  updateOpencodeProviderSettings,
-} from '../../providers/opencode/settings';
-import {
   getCursorProviderSettings,
   updateCursorProviderSettings,
 } from '../../providers/cursor/settings';
+import {
+  getOpencodeProviderSettings,
+  updateOpencodeProviderSettings,
+} from '../../providers/opencode/settings';
 import { DEFAULT_CLAUDIAN_SETTINGS } from './defaultSettings';
 
 export {

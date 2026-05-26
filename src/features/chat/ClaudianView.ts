@@ -338,7 +338,8 @@ export class ClaudianView extends ItemView {
 
     const steps = emptyState.createEl('ol', { cls: 'claudian-empty-state-steps' });
     steps.createEl('li', {
-      text: 'Open Settings → Claudian → General and enable a provider (Claude Code, Cursor, Codex, or OpenCode).',
+      // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Claude Code" is a product name.
+      text: 'Open settings → Claudian → general and enable a provider (Claude Code, Cursor, Codex, or OpenCode).',
     });
     steps.createEl('li', {
       text: "In that provider's settings tab, set the path to its CLI (install the CLI first if you haven't).",

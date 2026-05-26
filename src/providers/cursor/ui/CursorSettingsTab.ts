@@ -27,7 +27,7 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
     new Setting(container).setName(t('settings.setup')).setHeading();
 
     new Setting(container)
-      .setName('Enable Cursor Agent provider')
+      .setName('Enable Cursor agent provider')
       .setDesc(
         'When enabled, Cursor Agent appears as a provider. Requires the Cursor CLI (`agent`) and authentication (for example CURSOR_API_KEY). Headless mode uses --trust; review permission mode and sandbox settings carefully.',
       )
@@ -45,12 +45,7 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
       .setName(`Cursor Agent CLI path (${hostnameKey})`)
       .setDesc('Path to the `agent` binary, or leave empty to search PATH.');
 
-    const validationEl = container.createDiv({ cls: 'claudian-cli-path-validation' });
-    validationEl.style.color = 'var(--text-error)';
-    validationEl.style.fontSize = '0.85em';
-    validationEl.style.marginTop = '-0.5em';
-    validationEl.style.marginBottom = '0.5em';
-    validationEl.style.display = 'none';
+    const validationEl = container.createDiv({ cls: 'claudian-cli-path-validation claudian-hidden' });
 
     const validatePath = (value: string): string | null => {
       const trimmed = value.trim();
@@ -72,16 +67,16 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
       const error = validatePath(value);
       if (error) {
         validationEl.setText(error);
-        validationEl.style.display = 'block';
+        validationEl.removeClass('claudian-hidden');
         if (inputEl) {
-          inputEl.style.borderColor = 'var(--text-error)';
+          inputEl.addClass('claudian-input-error');
         }
         return false;
       }
 
-      validationEl.style.display = 'none';
+      validationEl.addClass('claudian-hidden');
       if (inputEl) {
-        inputEl.style.borderColor = '';
+        inputEl.removeClass('claudian-input-error');
       }
       return true;
     };
@@ -114,13 +109,13 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
 
     cliPathSetting.addText((text) => {
       text
+        // eslint-disable-next-line obsidianmd/ui/sentence-case -- 'agent' is the literal Cursor CLI binary name, not prose.
         .setPlaceholder('agent')
         .setValue(currentValue)
         .onChange(async (value) => {
           await persistCliPath(value, text.inputEl);
         });
       text.inputEl.addClass('claudian-settings-cli-path-input');
-      text.inputEl.style.width = '100%';
 
       updateCliPathValidation(currentValue, text.inputEl);
     });
