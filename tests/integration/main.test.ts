@@ -58,6 +58,7 @@ describe('ClaudianPlugin', () => {
           stat: jest.fn().mockResolvedValue(null),
           rename: jest.fn().mockResolvedValue(undefined),
         },
+        on: jest.fn().mockReturnValue({}),
       },
       workspace: {
         getLeavesOfType: jest.fn().mockReturnValue([]),

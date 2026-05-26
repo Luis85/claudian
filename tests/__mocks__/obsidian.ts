@@ -13,6 +13,7 @@ export class Plugin {
   addCommand = jest.fn();
   addSettingTab = jest.fn();
   registerView = jest.fn();
+  registerEvent = jest.fn();
   loadData = jest.fn().mockResolvedValue({});
   saveData = jest.fn().mockResolvedValue(undefined);
 }
@@ -97,11 +98,21 @@ export const Platform = {
   isMacOS: true,
 };
 
+// Obsidian's debounce returns a debounced version of the callback.
+export function debounce<T extends unknown[]>(
+  fn: (...args: T) => unknown,
+  _wait?: number,
+  _immediate?: boolean,
+): (...args: T) => void {
+  return (...args: T) => fn(...args);
+}
+
 export class App {
   vault: any = {
     adapter: {
       basePath: '/mock/vault/path',
     },
+    on: jest.fn().mockReturnValue({ id: 'mock-event-ref' }),
   };
   workspace: any = {
     getLeavesOfType: jest.fn().mockReturnValue([]),
