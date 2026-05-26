@@ -1548,5 +1548,6 @@ export class StreamController {
     state.pendingTools.clear();
     // Reset response timer (duration already captured at this point)
     state.responseStartTime = null;
+    void this.deps.plugin.gitStatusWatcher?.refresh();
   }
 }
