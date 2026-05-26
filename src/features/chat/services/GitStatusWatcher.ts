@@ -7,7 +7,7 @@ const DEFAULT_INTERVAL_MS = 7000;
 export class GitStatusWatcher {
   private subscribers = new Set<Subscriber>();
   private lastStatus: GitStatus | null = null;
-  private timer: number | null = null;
+  private timer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private readonly gitService: GitService,
@@ -33,9 +33,10 @@ export class GitStatusWatcher {
     await this.poll();
   }
 
+  /** Final teardown (e.g. plugin unload). Clears the polling interval; does not clear subscribers. */
   stop(): void {
     if (this.timer !== null) {
-      window.clearInterval(this.timer);
+      clearInterval(this.timer);
       this.timer = null;
     }
   }
@@ -43,7 +44,7 @@ export class GitStatusWatcher {
   private start(): void {
     void this.poll();
     if (this.timer === null) {
-      this.timer = window.setInterval(() => void this.poll(), this.intervalMs);
+      this.timer = setInterval(() => void this.poll(), this.intervalMs);
     }
   }
 

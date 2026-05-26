@@ -19,7 +19,8 @@ describe('GitStatusWatcher', () => {
     const seen: GitStatus[] = [];
     watcher.subscribe((s) => seen.push(s));
     await watcher.refresh();
-    expect(seen).toEqual([{ isRepo: true, dirtyCount: 2 }]);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toEqual({ isRepo: true, dirtyCount: 2 });
     watcher.stop();
   });
 
