@@ -100,16 +100,19 @@ describe('ProviderRegistry', () => {
   it('filters enabled provider ids using registration metadata', () => {
     expect(ProviderRegistry.getEnabledProviderIds({
       providerConfigs: {
+        claude: { enabled: true },
         codex: { enabled: false },
       },
     })).toEqual(['claude']);
     expect(ProviderRegistry.getEnabledProviderIds({
       providerConfigs: {
+        claude: { enabled: true },
         codex: { enabled: true },
       },
     })).toEqual(['codex', 'claude']);
     expect(ProviderRegistry.getEnabledProviderIds({
       providerConfigs: {
+        claude: { enabled: true },
         codex: { enabled: true },
         opencode: { enabled: true },
         cursor: { enabled: true },
@@ -133,9 +136,11 @@ describe('ProviderRegistry', () => {
 
   describe('resolveTitleGenerationProviderId', () => {
     it('returns Claude when Claude is enabled and no title model is set', () => {
-      expect(ProviderRegistry.resolveTitleGenerationProviderId({})).toBe('claude');
       expect(ProviderRegistry.resolveTitleGenerationProviderId({
-        providerConfigs: { codex: { enabled: true } },
+        providerConfigs: { claude: { enabled: true } },
+      })).toBe('claude');
+      expect(ProviderRegistry.resolveTitleGenerationProviderId({
+        providerConfigs: { claude: { enabled: true }, codex: { enabled: true } },
       })).toBe('claude');
     });
 
@@ -194,6 +199,7 @@ describe('ProviderRegistry', () => {
       settings: {
         titleGenerationModel: '',
         providerConfigs: {
+          claude: { enabled: true },
           codex: { enabled: true },
         },
       },

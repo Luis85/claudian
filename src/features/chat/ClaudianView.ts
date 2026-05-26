@@ -265,12 +265,24 @@ export class ClaudianView extends ItemView {
     const emptyState = container.createDiv({ cls: 'claudian-empty-state' });
     emptyState.createEl('h3', {
       cls: 'claudian-empty-state-title',
-      text: 'No chat provider enabled',
+      text: 'Welcome to Claudian',
     });
     emptyState.createEl('p', {
       cls: 'claudian-empty-state-message',
-      text: 'Enable and configure a provider in settings before first use.',
+      text: 'Claudian runs a coding-agent CLI inside Obsidian — your vault is its workspace. Set up one provider to get started:',
     });
+
+    const steps = emptyState.createEl('ol', { cls: 'claudian-empty-state-steps' });
+    steps.createEl('li', {
+      text: 'Open Settings → Claudian → General and enable a provider (Claude Code, Cursor, Codex, or OpenCode).',
+    });
+    steps.createEl('li', {
+      text: "In that provider's settings tab, set the path to its CLI (install the CLI first if you haven't).",
+    });
+    steps.createEl('li', {
+      text: 'Come back here and start chatting.',
+    });
+
     const button = emptyState.createEl('button', {
       cls: 'claudian-empty-state-button mod-cta',
       text: 'Open settings',

@@ -5,15 +5,24 @@ import {
 } from '@/providers/claude/settings';
 
 describe('Claude provider enabled flag', () => {
-  it('defaults to enabled when settings are absent', () => {
-    expect(DEFAULT_CLAUDE_PROVIDER_SETTINGS.enabled).toBe(true);
-    expect(getClaudeProviderSettings({}).enabled).toBe(true);
+  it('defaults to disabled when settings are absent (providers are opt-in)', () => {
+    expect(DEFAULT_CLAUDE_PROVIDER_SETTINGS.enabled).toBe(false);
+    expect(getClaudeProviderSettings({}).enabled).toBe(false);
   });
 
-  it('treats a missing enabled field as enabled (backward compat)', () => {
+  it('treats a missing enabled field as disabled (opt-in default)', () => {
     const settings = {
       providerConfigs: {
         claude: { safeMode: 'auto' },
+      },
+    };
+    expect(getClaudeProviderSettings(settings).enabled).toBe(false);
+  });
+
+  it('respects an explicit true', () => {
+    const settings = {
+      providerConfigs: {
+        claude: { enabled: true },
       },
     };
     expect(getClaudeProviderSettings(settings).enabled).toBe(true);

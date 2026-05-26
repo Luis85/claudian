@@ -26,6 +26,7 @@ describe('ProviderSettingsCoordinator', () => {
       const settings: Record<string, unknown> = {
         settingsProvider: 'mystery-provider',
         providerConfigs: {
+          claude: { enabled: true },
           codex: { enabled: true },
         },
       };
@@ -328,6 +329,7 @@ describe('ProviderSettingsCoordinator', () => {
       const settings: Record<string, unknown> = {
         settingsProvider: 'claude',
         providerConfigs: {
+          claude: { enabled: true },
           codex: {
             enabled: true,
             environmentVariables: '',
@@ -439,6 +441,7 @@ describe('ProviderSettingsCoordinator', () => {
       const settings: Record<string, unknown> = {
         settingsProvider: 'claude',
         providerConfigs: {
+          claude: { enabled: true },
           codex: {
             enabled: true,
             environmentVariables: `OPENAI_MODEL=${DEFAULT_CODEX_PRIMARY_MODEL}`,

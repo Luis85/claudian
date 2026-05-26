@@ -10,6 +10,20 @@ jest.mock('fs');
 // Now import the plugin after mocking
 import ClaudianPlugin from '@/main';
 
+/**
+ * Returns a shallow copy with only the enumerable string keys. loadSettings()
+ * seeds provider runtime state (e.g. the OpenCode discovery cache) under symbol
+ * keys on the live settings object; those are not part of the persisted default
+ * shape and must be excluded when comparing against DEFAULT_SETTINGS.
+ */
+function stripInternalState<T extends Record<string, unknown>>(settings: T): T {
+  const result: Record<string, unknown> = {};
+  for (const key of Object.keys(settings)) {
+    result[key] = settings[key];
+  }
+  return result as T;
+}
+
 describe('ClaudianPlugin', () => {
   let plugin: ClaudianPlugin;
   let mockApp: any;
@@ -271,7 +285,11 @@ describe('ClaudianPlugin', () => {
 
       await plugin.loadSettings();
 
-      expect(plugin.settings).toEqual(DEFAULT_SETTINGS);
+      // Providers are opt-in: the default settings ship every provider disabled.
+      expect(plugin.settings.providerConfigs?.claude?.enabled).toBe(false);
+      // Compare persisted settings only; loadSettings seeds internal provider
+      // runtime state under symbol keys that are not part of the saved shape.
+      expect(stripInternalState(plugin.settings)).toEqual(DEFAULT_SETTINGS);
     });
 
     it('should use defaults when loadData returns empty object', async () => {
@@ -281,7 +299,8 @@ describe('ClaudianPlugin', () => {
 
       await plugin.loadSettings();
 
-      expect(plugin.settings).toEqual(DEFAULT_SETTINGS);
+      expect(plugin.settings.providerConfigs?.claude?.enabled).toBe(false);
+      expect(stripInternalState(plugin.settings)).toEqual(DEFAULT_SETTINGS);
     });
 
     it('should migrate legacy openInMainTab true to main-tab placement', async () => {

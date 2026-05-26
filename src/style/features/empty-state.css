@@ -21,6 +21,18 @@
   color: var(--text-muted);
 }
 
+.claudian-empty-state-steps {
+  margin: 0;
+  max-width: 320px;
+  padding-left: 20px;
+  text-align: left;
+  color: var(--text-muted);
+}
+
+.claudian-empty-state-steps li {
+  margin-bottom: 6px;
+}
+
 .claudian-empty-state-button {
   margin-top: 4px;
   cursor: pointer;

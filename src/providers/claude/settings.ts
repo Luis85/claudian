@@ -28,7 +28,7 @@ export interface ClaudeProviderSettings {
 }
 
 export const DEFAULT_CLAUDE_PROVIDER_SETTINGS: Readonly<ClaudeProviderSettings> = Object.freeze({
-  enabled: true,
+  enabled: false,
   safeMode: 'acceptEdits',
   cliPath: '',
   cliPathsByHost: {},

@@ -417,6 +417,9 @@ function createMockPlugin(overrides: Record<string, any> = {}): any {
       persistentExternalContextPaths: [],
       settingsProvider: 'claude',
       codexEnabled: true,
+      providerConfigs: {
+        claude: { enabled: true },
+      },
       savedProviderModel: {
         claude: 'claude-sonnet-4-5',
       },
@@ -1012,6 +1015,9 @@ describe('Tab - Service Initialization', () => {
           persistentExternalContextPaths: [],
           settingsProvider: 'claude',
           codexEnabled: true,
+          providerConfigs: {
+            claude: { enabled: true },
+          },
           savedProviderModel: {
             claude: 'claude-sonnet-4-5',
             codex: DEFAULT_CODEX_PRIMARY_MODEL,
@@ -1078,6 +1084,7 @@ describe('Tab - Service Initialization', () => {
           persistentExternalContextPaths: [],
           settingsProvider: 'claude',
           providerConfigs: {
+            claude: { enabled: true },
             opencode: {
               availableModes: [
                 { id: 'claudian-yolo', name: 'YOLO' },
