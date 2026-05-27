@@ -99,10 +99,12 @@ export class MessageRenderer {
 
   private renderUserContextCard(contentEl: HTMLElement, msg: ChatMessage): void {
     if (msg.isRebuiltContext) return;
-    const textToShow = msg.displayContent ?? msg.content;
-    if (!textToShow) return;
+    // Use msg.content (not displayContent) so that pill-folded @mentions are always
+    // detected — displayContent is clean prose when pills are active.
+    const sourceText = msg.content;
+    if (!sourceText) return;
 
-    const mentions = extractVaultMentions(textToShow, (path) => {
+    const mentions = extractVaultMentions(sourceText, (path) => {
       const entry = this.app.vault.getAbstractFileByPath(path);
       if (entry instanceof TFile) return 'file';
       if (entry instanceof TFolder) return 'folder';

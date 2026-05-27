@@ -1982,6 +1982,23 @@ describe('MessageRenderer', () => {
       expect(messagesEl.querySelectorAll('.claudian-context-card-row')).toHaveLength(2);
     });
 
+    it('derives the context card from content even when displayContent is clean prose', () => {
+      const { renderer, messagesEl } = createRendererWithVault();
+
+      renderer.addMessage({
+        id: 'mc',
+        role: 'user',
+        content: 'explain this @notes.md @src/providers/',
+        displayContent: 'explain this',
+        timestamp: Date.now(),
+      });
+
+      expect(messagesEl.querySelectorAll('.claudian-context-card')).toHaveLength(1);
+      expect(messagesEl.querySelectorAll('.claudian-context-card-row')).toHaveLength(2);
+      const text = messagesEl.querySelector('.claudian-text-block')?.textContent ?? '';
+      expect(text).not.toContain('@notes.md');
+    });
+
     it('renders exactly one context card after two updateLiveUserMessage calls', () => {
       const { renderer, messagesEl } = createRendererWithVault();
       jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
