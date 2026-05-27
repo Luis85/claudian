@@ -1,5 +1,5 @@
 import { createMockEl, type MockElement } from '@test/helpers/mockElement';
-import { TFile } from 'obsidian';
+import { TFile, TFolder } from 'obsidian';
 
 import type { FileContextCallbacks } from '@/features/chat/ui/FileContext';
 import { FileContextManager } from '@/features/chat/ui/FileContext';
@@ -19,6 +19,10 @@ function createMockTFile(filePath: string): TFile {
   const file = new (TFile as any)(filePath) as TFile;
   (file as any).stat = { mtime: Date.now(), ctime: Date.now(), size: 0 };
   return file;
+}
+
+function createMockTFolder(folderPath: string): TFolder {
+  return new (TFolder as any)(folderPath) as TFolder;
 }
 
 let mockVaultPath = '/vault';
@@ -685,6 +689,89 @@ describe('FileContextManager', () => {
 
       deleteHandler(createMockTFile('notes/other.md'));
       expect(manager.getCurrentNotePath()).toBe('notes/a.md');
+      manager.destroy();
+    });
+  });
+
+  describe('folder rename handling', () => {
+    it('should update attached folder path when folder is renamed', () => {
+      const app = createMockApp();
+      const manager = new FileContextManager(
+        app, containerEl as any, inputEl, createMockCallbacks()
+      );
+
+      manager.attachFolderAsPill('src/old');
+      expect(manager.getAttachedFolders().has('src/old')).toBe(true);
+
+      const renameHandler = (app.vault.on as jest.Mock).mock.calls
+        .find((c: any[]) => c[0] === 'rename')?.[1];
+      expect(renameHandler).toBeDefined();
+
+      const renamedFolder = createMockTFolder('src/new');
+      renameHandler(renamedFolder, 'src/old');
+
+      expect(manager.getAttachedFolders().has('src/old')).toBe(false);
+      expect(manager.getAttachedFolders().has('src/new')).toBe(true);
+      manager.destroy();
+    });
+
+    it('should not update if renamed folder is not attached', () => {
+      const app = createMockApp();
+      const manager = new FileContextManager(
+        app, containerEl as any, inputEl, createMockCallbacks()
+      );
+
+      manager.attachFolderAsPill('src/providers');
+
+      const renameHandler = (app.vault.on as jest.Mock).mock.calls
+        .find((c: any[]) => c[0] === 'rename')?.[1];
+
+      const renamedFolder = createMockTFolder('src/unrelated-new');
+      renameHandler(renamedFolder, 'src/unrelated');
+
+      // Unaffected folder should still be present
+      expect(manager.getAttachedFolders().has('src/providers')).toBe(true);
+      manager.destroy();
+    });
+  });
+
+  describe('folder delete handling', () => {
+    it('should remove attached folder when deleted', () => {
+      const app = createMockApp();
+      const manager = new FileContextManager(
+        app, containerEl as any, inputEl, createMockCallbacks()
+      );
+
+      manager.attachFolderAsPill('src/old');
+      expect(manager.getAttachedFolders().has('src/old')).toBe(true);
+
+      const deleteHandler = (app.vault.on as jest.Mock).mock.calls
+        .find((c: any[]) => c[0] === 'delete')?.[1];
+      expect(deleteHandler).toBeDefined();
+
+      const deletedFolder = createMockTFolder('src/old');
+      deleteHandler(deletedFolder);
+
+      expect(manager.getAttachedFolders().has('src/old')).toBe(false);
+      manager.destroy();
+    });
+
+    it('should not update if deleted folder is not attached', () => {
+      const app = createMockApp();
+      const manager = new FileContextManager(
+        app, containerEl as any, inputEl, createMockCallbacks()
+      );
+
+      manager.attachFolderAsPill('src/providers');
+
+      const deleteHandler = (app.vault.on as jest.Mock).mock.calls
+        .find((c: any[]) => c[0] === 'delete')?.[1];
+
+      const deletedFolder = createMockTFolder('src/unrelated');
+      deleteHandler(deletedFolder);
+
+      // Unaffected folder should still be present
+      expect(manager.getAttachedFolders().has('src/providers')).toBe(true);
       manager.destroy();
     });
   });

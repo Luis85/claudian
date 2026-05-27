@@ -190,6 +190,7 @@ export class FileContextManager {
     if (!normalizedPath) return;
 
     if (!this.state.isSessionStarted()) {
+      // Pre-session file switch resets attachments — clears file AND folder pills.
       this.state.clearAttachments();
       if (!this.hasExcludedTag(file)) {
         this.currentNotePath = normalizedPath;
