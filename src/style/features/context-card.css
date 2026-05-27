@@ -1,0 +1,58 @@
+.claudian-context-card {
+  margin-bottom: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-secondary);
+  font-size: var(--font-ui-smaller);
+}
+
+.claudian-context-card-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+}
+
+.claudian-context-card-header-icon {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+}
+
+.claudian-context-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.claudian-context-card-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: var(--text-normal);
+}
+
+.claudian-context-card-row-icon {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+}
+
+.claudian-context-card-row-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.claudian-context-card-row--clickable {
+  cursor: pointer;
+}
+
+.claudian-context-card-row--clickable:hover {
+  background: var(--background-modifier-hover);
+}

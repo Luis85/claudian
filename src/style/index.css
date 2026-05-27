@@ -43,6 +43,7 @@
 @import "./features/ask-user-question.css";
 @import "./features/plan-mode.css";
 @import "./features/empty-state.css";
+@import "./features/context-card.css";
 
 /* Modals */
 @import "./modals/instruction.css";
