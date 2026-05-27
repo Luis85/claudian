@@ -215,41 +215,41 @@ describe('ClaudianPlugin', () => {
       expect(addSpy).toHaveBeenCalledWith(file);
     });
 
-    it('inserts the selected file into the active chat composer', async () => {
+    it('adds the selected file to the active chat as a pill', async () => {
       await plugin.onload();
 
       const inputEl = { focus: jest.fn() };
-      const insertVaultFileMention = jest.fn().mockReturnValue(true);
+      const attachFileAsPill = jest.fn().mockReturnValue(true);
       jest.spyOn(plugin, 'getView').mockReturnValue({
         getActiveTab: jest.fn().mockReturnValue({
           dom: { inputEl },
-          ui: { fileContextManager: { insertVaultFileMention } },
+          ui: { fileContextManager: { attachFileAsPill } },
         }),
       } as any);
 
       const result = await plugin.addFileToActiveChat(createMockTFile('notes/context.md'));
 
       expect(result).toBe(true);
-      expect(insertVaultFileMention).toHaveBeenCalledWith('notes/context.md');
+      expect(attachFileAsPill).toHaveBeenCalledWith('notes/context.md');
       expect(inputEl.focus).toHaveBeenCalled();
     });
 
-    it('inserts the selected folder mention into the active chat composer', async () => {
+    it('adds the selected folder to the active chat as a pill', async () => {
       await plugin.onload();
 
       const inputEl = { focus: jest.fn() };
-      const insertVaultFolderMention = jest.fn().mockReturnValue(true);
+      const attachFolderAsPill = jest.fn().mockReturnValue(true);
       jest.spyOn(plugin, 'getView').mockReturnValue({
         getActiveTab: jest.fn().mockReturnValue({
           dom: { inputEl },
-          ui: { fileContextManager: { insertVaultFolderMention } },
+          ui: { fileContextManager: { attachFolderAsPill } },
         }),
       } as any);
 
       const result = await plugin.addFolderToActiveChat(createMockTFolder('notes/subfolder'));
 
       expect(result).toBe(true);
-      expect(insertVaultFolderMention).toHaveBeenCalledWith('notes/subfolder');
+      expect(attachFolderAsPill).toHaveBeenCalledWith('notes/subfolder');
       expect(inputEl.focus).toHaveBeenCalled();
     });
 

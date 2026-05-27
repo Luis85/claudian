@@ -20,6 +20,8 @@ export interface MentionDropdownOptions {
 
 export interface MentionDropdownCallbacks {
   onAttachFile: (path: string) => void;
+  /** Called when a mention item should be added as a pill rather than inserted as text (Task 4). */
+  onAddContextPill?: (path: string, kind: 'file' | 'folder') => void;
   onMcpMentionChange?: (servers: Set<string>) => void;
   onAgentMentionSelect?: (agentId: string) => void;
   getMentionedMcpServers: () => Set<string>;

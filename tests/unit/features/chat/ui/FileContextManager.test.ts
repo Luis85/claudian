@@ -295,53 +295,6 @@ describe('FileContextManager', () => {
     manager.destroy();
   });
 
-  it('inserts a vault file mention at the cursor', () => {
-    const app = createMockApp();
-    const manager = new FileContextManager(
-      app,
-      containerEl as any,
-      inputEl,
-      createMockCallbacks()
-    );
-
-    inputEl.value = 'Review this';
-    inputEl.selectionStart = inputEl.value.length;
-    inputEl.selectionEnd = inputEl.value.length;
-
-    const inserted = manager.insertVaultFileMention('notes/context.md');
-
-    expect(inserted).toBe(true);
-    expect(inputEl.value).toBe('Review this @notes/context.md ');
-    expect(inputEl.selectionStart).toBe(inputEl.value.length);
-    expect(inputEl.selectionEnd).toBe(inputEl.value.length);
-    expect(inputEl.dispatchEvent).toHaveBeenCalledWith(expect.any(Event));
-    expect(inputEl.focus).toHaveBeenCalled();
-    expect(manager.getAttachedFiles().has('notes/context.md')).toBe(true);
-
-    manager.destroy();
-  });
-
-  it('replaces selected composer text with a vault file mention', () => {
-    const app = createMockApp();
-    const manager = new FileContextManager(
-      app,
-      containerEl as any,
-      inputEl,
-      createMockCallbacks()
-    );
-
-    inputEl.value = 'Read placeholder before answering';
-    inputEl.selectionStart = 'Read '.length;
-    inputEl.selectionEnd = 'Read placeholder'.length;
-
-    const inserted = manager.insertVaultFileMention('notes/brief.md');
-
-    expect(inserted).toBe(true);
-    expect(inputEl.value).toBe('Read @notes/brief.md before answering');
-
-    manager.destroy();
-  });
-
   it('wires getCachedVaultFolders through VaultFolderCache.getFolders', () => {
     const folder = { name: 'src', path: 'src' } as any;
     const getFoldersSpy = jest
@@ -911,39 +864,34 @@ describe('FileContextManager', () => {
     });
   });
 
-  describe('insertVaultFolderMention', () => {
-    it('inserts an @path/ mention and does not attach the folder as a file', () => {
+  describe('context pills', () => {
+    it('attachFileAsPill tracks the file without inserting text', () => {
       const { manager, inputEl } = createManager();
-      inputEl.value = '';
-      inputEl.selectionStart = 0;
-      inputEl.selectionEnd = 0;
-
-      const result = manager.insertVaultFolderMention('src/providers');
-
-      expect(result).toBe(true);
-      expect(inputEl.value).toBe('@src/providers/ ');
-      expect(manager.getAttachedFiles().has('src/providers')).toBe(false);
-      expect(manager.getAttachedFiles().size).toBe(0);
+      inputEl.value = 'hello';
+      expect(manager.attachFileAsPill('a.ts')).toBe(true);
+      expect(inputEl.value).toBe('hello');
+      expect(manager.getAttachedFiles().has('a.ts')).toBe(true);
     });
 
-    it('returns false for an empty / unnormalizable path (vault root)', () => {
+    it('attachFolderAsPill tracks the folder; returns false on empty path', () => {
       const { manager } = createManager();
-      expect(manager.insertVaultFolderMention('')).toBe(false);
+      expect(manager.attachFolderAsPill('src/providers')).toBe(true);
+      expect(manager.getAttachedFolders().has('src/providers')).toBe(true);
+      expect(manager.attachFolderAsPill('')).toBe(false);
     });
-  });
 
-  describe('insertVaultFileMention (regression)', () => {
-    it('still attaches the file to context', () => {
-      const { manager, inputEl } = createManager();
-      inputEl.value = '';
-      inputEl.selectionStart = 0;
-      inputEl.selectionEnd = 0;
+    it('getAttachedMentionSuffix appends file and folder mentions, excluding the current note', () => {
+      const { manager } = createManager();
+      manager.setCurrentNote('note.md');
+      manager.attachFileAsPill('note.md'); // == current note -> excluded
+      manager.attachFileAsPill('a.ts');
+      manager.attachFolderAsPill('src');
+      expect(manager.getAttachedMentionSuffix()).toBe(' @a.ts @src/');
+    });
 
-      const result = manager.insertVaultFileMention('notes.md');
-
-      expect(result).toBe(true);
-      expect(inputEl.value).toBe('@notes.md ');
-      expect(manager.getAttachedFiles().has('notes.md')).toBe(true);
+    it('returns empty suffix when nothing is attached', () => {
+      const { manager } = createManager();
+      expect(manager.getAttachedMentionSuffix()).toBe('');
     });
   });
 

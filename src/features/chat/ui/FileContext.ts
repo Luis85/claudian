@@ -1,5 +1,5 @@
 import type { App, EventRef } from 'obsidian';
-import { Notice, TFile } from 'obsidian';
+import { Notice, TFile, TFolder } from 'obsidian';
 
 import type { McpServerManager } from '../../../core/mcp/McpServerManager';
 import type { AgentMentionProvider } from '../../../shared/mention/MentionDropdownController';
@@ -61,12 +61,16 @@ export class FileContextManager {
     this.mentionDataProvider.initializeInBackground();
 
     this.chipsView = new FileChipsView(this.chipsContainerEl, {
-      onRemoveAttachment: (filePath) => {
-        if (filePath === this.currentNotePath) {
-          this.currentNotePath = null;
-          this.state.detachFile(filePath);
-          this.refreshCurrentNoteChip();
+      onRemove: (path, kind) => {
+        if (kind === 'current') {
+          if (path === this.currentNotePath) this.currentNotePath = null;
+          this.state.detachFile(path);
+        } else if (kind === 'folder') {
+          this.state.detachFolder(path);
+        } else {
+          this.state.detachFile(path);
         }
+        this.refreshChips();
       },
       onOpenFile: (filePath) => {
         void (async (): Promise<void> => {
@@ -89,6 +93,10 @@ export class FileContextManager {
       this.inputEl,
       {
         onAttachFile: (filePath) => this.state.attachFile(filePath),
+        onAddContextPill: (path, kind) => {
+          if (kind === 'folder') this.attachFolderAsPill(path);
+          else this.attachFileAsPill(path);
+        },
         onMcpMentionChange: (servers) => this.onMcpMentionChange?.(servers),
         onAgentMentionSelect: (agentId) => this.callbacks.onAgentMentionSelect?.(agentId),
         getMentionedMcpServers: () => this.state.getMentionedMcpServers(),
@@ -103,10 +111,12 @@ export class FileContextManager {
 
     this.deleteEventRef = this.app.vault.on('delete', (file) => {
       if (file instanceof TFile) this.handleFileDeleted(file.path);
+      else if (file instanceof TFolder) this.handleFolderDeleted(file.path);
     });
 
     this.renameEventRef = this.app.vault.on('rename', (file, oldPath) => {
       if (file instanceof TFile) this.handleFileRenamed(oldPath, file.path);
+      else if (file instanceof TFolder) this.handleFolderRenamed(oldPath, file.path);
     });
   }
 
@@ -142,14 +152,14 @@ export class FileContextManager {
   resetForNewConversation() {
     this.currentNotePath = null;
     this.state.resetForNewConversation();
-    this.refreshCurrentNoteChip();
+    this.refreshChips();
   }
 
   /** Resets state for loading an existing conversation. */
   resetForLoadedConversation(hasMessages: boolean) {
     this.currentNotePath = null;
     this.state.resetForLoadedConversation(hasMessages);
-    this.refreshCurrentNoteChip();
+    this.refreshChips();
   }
 
   /** Sets current note (for restoring persisted state). */
@@ -158,7 +168,7 @@ export class FileContextManager {
     if (notePath) {
       this.state.attachFile(notePath);
     }
-    this.refreshCurrentNoteChip();
+    this.refreshChips();
   }
 
   /** Auto-attaches the currently focused file (for new sessions). */
@@ -169,7 +179,7 @@ export class FileContextManager {
       if (normalizedPath) {
         this.currentNotePath = normalizedPath;
         this.state.attachFile(normalizedPath);
-        this.refreshCurrentNoteChip();
+        this.refreshChips();
       }
     }
   }
@@ -187,7 +197,7 @@ export class FileContextManager {
       } else {
         this.currentNotePath = null;
       }
-      this.refreshCurrentNoteChip();
+      this.refreshChips();
     }
   }
 
@@ -217,48 +227,41 @@ export class FileContextManager {
     this.mentionDropdown.hide();
   }
 
-  /** Splices a mention body into the input at the cursor, with smart spacing. */
-  private insertMentionAtCursor(body: string): void {
-    const start = this.inputEl.selectionStart ?? this.inputEl.value.length;
-    const end = this.inputEl.selectionEnd ?? start;
-    const beforeSelection = this.inputEl.value.slice(0, start);
-    const afterSelection = this.inputEl.value.slice(end);
-    const leadingSpace = beforeSelection.length > 0 && !/\s$/u.test(beforeSelection) ? ' ' : '';
-    const trailingSpace = afterSelection.length > 0
-      ? (/^\s/u.test(afterSelection) ? '' : ' ')
-      : ' ';
-    const mention = `${leadingSpace}${body}${trailingSpace}`;
-
-    this.inputEl.value = beforeSelection + mention + afterSelection;
-    const cursorPosition = beforeSelection.length + mention.length;
-    this.inputEl.selectionStart = cursorPosition;
-    this.inputEl.selectionEnd = cursorPosition;
-
-    if (typeof this.inputEl.dispatchEvent === 'function') {
-      const EventCtor = this.inputEl.ownerDocument?.defaultView?.Event ?? Event;
-      this.inputEl.dispatchEvent(new EventCtor('input', { bubbles: true }));
-    }
-    this.inputEl.focus();
-  }
-
-  /** Inserts a vault @-mention for a file into the chat input. */
-  insertVaultFileMention(filePath: string): boolean {
+  /** Adds a file pill (no text inserted). Returns false if the path can't be normalized. */
+  attachFileAsPill(filePath: string): boolean {
     const normalizedPath = this.normalizePathForVault(filePath);
     if (!normalizedPath) return false;
-
-    // Attach before dispatching `input` so consumers see the updated set.
     this.state.attachFile(normalizedPath);
-    this.insertMentionAtCursor(`@${normalizedPath}`);
+    this.refreshChips();
     return true;
   }
 
-  /** Inserts a vault @-mention for a folder. Folders are not tracked as file chips. */
-  insertVaultFolderMention(folderPath: string): boolean {
+  /** Adds a folder pill (no text inserted). Returns false if the path can't be normalized. */
+  attachFolderAsPill(folderPath: string): boolean {
     const normalizedPath = this.normalizePathForVault(folderPath);
     if (!normalizedPath) return false;
-
-    this.insertMentionAtCursor(`@${normalizedPath}/`);
+    this.state.attachFolder(normalizedPath);
+    this.refreshChips();
     return true;
+  }
+
+  getAttachedFolders(): Set<string> {
+    return this.state.getAttachedFolders();
+  }
+
+  /**
+   * Mentions to fold into the sent content for attached files/folders.
+   * Excludes the current note (sent via currentNotePath). Returns '' when empty.
+   */
+  getAttachedMentionSuffix(): string {
+    const parts: string[] = [];
+    for (const file of this.state.getAttachedFiles()) {
+      if (file !== this.currentNotePath) parts.push(`@${file}`);
+    }
+    for (const folder of this.state.getAttachedFolders()) {
+      parts.push(`@${folder}/`);
+    }
+    return parts.length > 0 ? ` ${parts.join(' ')}` : '';
   }
 
   containsElement(el: Node): boolean {
@@ -311,8 +314,12 @@ export class FileContextManager {
     return normalizePathForVaultUtil(rawPath, vaultPath);
   }
 
-  private refreshCurrentNoteChip(): void {
-    this.chipsView.renderCurrentNote(this.currentNotePath);
+  private refreshChips(): void {
+    this.chipsView.renderPills({
+      currentNote: this.currentNotePath,
+      files: [...this.state.getAttachedFiles()],
+      folders: [...this.state.getAttachedFolders()],
+    });
     this.callbacks.onChipsChanged?.();
   }
 
@@ -339,7 +346,7 @@ export class FileContextManager {
     }
 
     if (needsUpdate) {
-      this.refreshCurrentNoteChip();
+      this.refreshChips();
     }
   }
 
@@ -362,8 +369,24 @@ export class FileContextManager {
     }
 
     if (needsUpdate) {
-      this.refreshCurrentNoteChip();
+      this.refreshChips();
     }
+  }
+
+  private handleFolderRenamed(oldPath: string, newPath: string): void {
+    const normalizedOld = this.normalizePathForVault(oldPath);
+    const normalizedNew = this.normalizePathForVault(newPath);
+    if (!normalizedOld || !this.state.getAttachedFolders().has(normalizedOld)) return;
+    this.state.detachFolder(normalizedOld);
+    if (normalizedNew) this.state.attachFolder(normalizedNew);
+    this.refreshChips();
+  }
+
+  private handleFolderDeleted(deletedPath: string): void {
+    const normalized = this.normalizePathForVault(deletedPath);
+    if (!normalized || !this.state.getAttachedFolders().has(normalized)) return;
+    this.state.detachFolder(normalized);
+    this.refreshChips();
   }
 
   // ========================================

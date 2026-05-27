@@ -249,7 +249,7 @@ export default class ClaudianPlugin extends Plugin {
       return false;
     }
 
-    if (!fileContextManager.insertVaultFileMention(file.path)) {
+    if (!fileContextManager.attachFileAsPill(file.path)) {
       new Notice(`Could not add file to chat: ${file.path}`);
       return false;
     }
@@ -269,7 +269,7 @@ export default class ClaudianPlugin extends Plugin {
       return false;
     }
 
-    if (!fileContextManager.insertVaultFolderMention(folder.path)) {
+    if (!fileContextManager.attachFolderAsPill(folder.path)) {
       new Notice(`Could not add folder to chat: ${folder.path}`);
       return false;
     }
