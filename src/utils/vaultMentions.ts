@@ -41,13 +41,14 @@ export function extractVaultMentions(
       .filter(end => end <= nextMentionAt);
     for (const end of candidates) {
       const raw = text.slice(pathStart, end);
+      // Strip trailing punctuation, then trailing whitespace, before normalizing —
+      // a folder mention sent as the whole message (e.g. "@a/b/ ") carries a trailing space.
       const trailingPunct = raw.match(TRAILING_PUNCTUATION_RE)?.[0] ?? '';
-      const rawClean = trailingPunct ? raw.slice(0, -trailingPunct.length) : raw;
+      const rawClean = (trailingPunct ? raw.slice(0, -trailingPunct.length) : raw).trim();
       const normalized = normalizeMentionPath(rawClean);
       if (!normalized) continue;
 
-      const hasTrailingSlash = /\/\s*$/.test(rawClean);
-      const kind = resolve(normalized) ?? (hasTrailingSlash ? 'folder' : null);
+      const kind = resolve(normalized);
       if (!kind) continue;
 
       const key = `${kind}:${normalized}`;

@@ -50,4 +50,16 @@ describe('extractVaultMentions', () => {
     const r = extractVaultMentions('@notes.md is the file', resolve);
     expect(r.files).toEqual(['notes.md']);
   });
+
+  it('handles a folder mention that is the entire message with a trailing space', () => {
+    const r = extractVaultMentions('@src/providers/ ', resolve);
+    expect(r.folders).toEqual(['src/providers']);
+    expect(r.files).toEqual([]);
+  });
+
+  it('ignores a slash-terminated token that is not a vault folder', () => {
+    const r = extractVaultMentions('see @imaginary/ here', resolve);
+    expect(r.folders).toEqual([]);
+    expect(r.files).toEqual([]);
+  });
 });
