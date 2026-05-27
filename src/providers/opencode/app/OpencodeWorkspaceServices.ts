@@ -1,3 +1,4 @@
+import { CachedCliResolver } from '../../../core/providers/CachedCliResolver';
 import type { ProviderCommandCatalog } from '../../../core/providers/commands/ProviderCommandCatalog';
 import { ProviderWorkspaceRegistry } from '../../../core/providers/ProviderWorkspaceRegistry';
 import type {
@@ -8,7 +9,7 @@ import type {
 import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
 import { OpencodeAgentMentionProvider } from '../agents/OpencodeAgentMentionProvider';
 import { OpencodeCommandCatalog } from '../commands/OpencodeCommandCatalog';
-import { OpencodeCliResolver } from '../runtime/OpencodeCliResolver';
+import { opencodeCliSpec } from '../runtime/OpencodeCliResolver';
 import { OpencodeAgentStorage } from '../storage/OpencodeAgentStorage';
 import { opencodeSettingsTabRenderer } from '../ui/OpencodeSettingsTab';
 import { OpencodeRuntimeCommandLoader } from './OpencodeRuntimeCommandLoader';
@@ -36,7 +37,7 @@ export async function createOpencodeWorkspaceServices(
     agentStorage,
     agentMentionProvider,
     commandCatalog: new OpencodeCommandCatalog(),
-    cliResolver: new OpencodeCliResolver(),
+    cliResolver: new CachedCliResolver(opencodeCliSpec),
     runtimeCommandLoader: new OpencodeRuntimeCommandLoader(),
     settingsTabRenderer: opencodeSettingsTabRenderer,
     tabWarmupPolicy: opencodeTabWarmupPolicy,

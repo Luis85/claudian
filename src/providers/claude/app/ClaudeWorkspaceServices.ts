@@ -1,4 +1,5 @@
 import { McpServerManager } from '../../../core/mcp/McpServerManager';
+import { CachedCliResolver } from '../../../core/providers/CachedCliResolver';
 import type { ProviderCommandCatalog } from '../../../core/providers/commands/ProviderCommandCatalog';
 import { ProviderWorkspaceRegistry } from '../../../core/providers/ProviderWorkspaceRegistry';
 import type {
@@ -17,7 +18,7 @@ import { AgentManager } from '../agents/AgentManager';
 import { ClaudeCommandCatalog } from '../commands/ClaudeCommandCatalog';
 import { probeRuntimeCommands } from '../commands/probeRuntimeCommands';
 import { PluginManager } from '../plugins/PluginManager';
-import { ClaudeCliResolver } from '../runtime/ClaudeCliResolver';
+import { claudeCliSpec } from '../runtime/ClaudeCliResolver';
 import { StorageService } from '../storage/StorageService';
 import { claudeSettingsTabRenderer } from '../ui/ClaudeSettingsTab';
 
@@ -40,7 +41,7 @@ export async function createClaudeWorkspaceServices(
   const claudeStorage = new StorageService(plugin, adapter);
   await claudeStorage.ensureDirectories();
 
-  const cliResolver = new ClaudeCliResolver();
+  const cliResolver = new CachedCliResolver(claudeCliSpec);
   const mcpStorage = claudeStorage.mcp;
   const mcpManager = new McpServerManager(mcpStorage);
   await mcpManager.loadServers();

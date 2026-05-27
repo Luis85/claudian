@@ -1,66 +1,36 @@
 import * as fs from 'fs';
 
-import { OpencodeCliResolver } from '@/providers/opencode/runtime/OpencodeCliResolver';
+import { resolveOpencodeCliPath } from '@/providers/opencode/runtime/OpencodeCliResolver';
 
 jest.mock('fs');
-jest.mock('@/utils/env', () => ({
-  ...jest.requireActual('@/utils/env'),
-  getHostnameKey: () => 'current-host',
-}));
 
 const mockedExists = fs.existsSync as jest.Mock;
 const mockedStat = fs.statSync as jest.Mock;
 
-describe('OpencodeCliResolver', () => {
+// Hostname selection is owned by CachedCliResolver; these target the pure path resolver
+// with an already-selected host path.
+describe('resolveOpencodeCliPath', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('uses the current host path instead of another synced host path', () => {
+  it('returns the configured host path when it is a valid file', () => {
     mockedExists.mockImplementation((filePath: string) => filePath === '/current/opencode');
     mockedStat.mockReturnValue({ isFile: () => true });
 
-    const resolver = new OpencodeCliResolver();
-    const resolved = resolver.resolve(
-      {
-        'other-host': '/other/opencode',
-        'current-host': '/current/opencode',
-      },
-      '/legacy/opencode',
-      '',
-    );
-
-    expect(resolved).toBe('/current/opencode');
+    expect(resolveOpencodeCliPath('/current/opencode', '/legacy/opencode')).toBe('/current/opencode');
   });
 
-  it('falls back to the legacy path when the current host has no custom path', () => {
+  it('falls back to the legacy path when no host path is selected', () => {
     mockedExists.mockImplementation((filePath: string) => filePath === '/legacy/opencode');
     mockedStat.mockReturnValue({ isFile: () => true });
 
-    const resolver = new OpencodeCliResolver();
-    const resolved = resolver.resolve(
-      {
-        'other-host': '/other/opencode',
-      },
-      '/legacy/opencode',
-      '',
-    );
-
-    expect(resolved).toBe('/legacy/opencode');
+    expect(resolveOpencodeCliPath('', '/legacy/opencode')).toBe('/legacy/opencode');
   });
 
-  it('returns null when neither the current host nor the legacy path resolve to a file', () => {
+  it('returns null when neither path resolves to a file', () => {
     mockedExists.mockReturnValue(false);
 
-    const resolver = new OpencodeCliResolver();
-    const resolved = resolver.resolve(
-      {
-        'other-host': '/other/opencode',
-      },
-      '/legacy/opencode',
-      '',
-    );
-
-    expect(resolved).toBeNull();
+    expect(resolveOpencodeCliPath('', '/legacy/opencode')).toBeNull();
   });
 });

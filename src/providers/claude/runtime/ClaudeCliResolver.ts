@@ -1,71 +1,10 @@
 import * as fs from 'fs';
 
-import { getRuntimeEnvironmentText } from '../../../core/providers/providerEnvironment';
-import type { HostnameCliPaths } from '../../../core/types/settings';
-import { getHostnameKey, parseEnvironmentVariables } from '../../../utils/env';
+import type { CliResolutionSpec } from '../../../core/providers/CachedCliResolver';
+import { parseEnvironmentVariables } from '../../../utils/env';
 import { expandHomePath } from '../../../utils/path';
 import { findClaudeCLIPath } from '../cli/findClaudeCLIPath';
 import { getClaudeProviderSettings } from '../settings';
-
-export class ClaudeCliResolver {
-  private resolvedPath: string | null = null;
-  private lastHostnamePath = '';
-  private lastLegacyPath = '';
-  private lastEnvText = '';
-  private readonly cachedHostname = getHostnameKey();
-
-  /**
-   * Resolves CLI path with priority: device-specific -> legacy -> auto-detect.
-   * @param settings Full app settings bag
-   */
-  resolveFromSettings(settings: Record<string, unknown>): string | null {
-    const hostnameKey = this.cachedHostname;
-    const claudeSettings = getClaudeProviderSettings(settings);
-
-    const hostnamePath = (claudeSettings.cliPathsByHost[hostnameKey] ?? '').trim();
-    const normalizedLegacy = claudeSettings.cliPath.trim();
-    const normalizedEnv = getRuntimeEnvironmentText(settings, 'claude');
-
-    if (
-      this.resolvedPath &&
-      hostnamePath === this.lastHostnamePath &&
-      normalizedLegacy === this.lastLegacyPath &&
-      normalizedEnv === this.lastEnvText
-    ) {
-      return this.resolvedPath;
-    }
-
-    this.lastHostnamePath = hostnamePath;
-    this.lastLegacyPath = normalizedLegacy;
-    this.lastEnvText = normalizedEnv;
-
-    this.resolvedPath = resolveClaudeCliPath(hostnamePath, normalizedLegacy, normalizedEnv);
-    return this.resolvedPath;
-  }
-
-  resolve(
-    hostnamePaths: HostnameCliPaths | undefined,
-    legacyPath: string | undefined,
-    envText: string,
-  ): string | null {
-    return this.resolveFromSettings({
-      sharedEnvironmentVariables: envText,
-      providerConfigs: {
-        claude: {
-          cliPath: legacyPath ?? '',
-          cliPathsByHost: hostnamePaths ?? {},
-        },
-      },
-    });
-  }
-
-  reset(): void {
-    this.resolvedPath = null;
-    this.lastHostnamePath = '';
-    this.lastLegacyPath = '';
-    this.lastEnvText = '';
-  }
-}
 
 function resolveConfiguredPath(rawPath: string | undefined): string | null {
   const trimmed = (rawPath ?? '').trim();
@@ -81,6 +20,7 @@ function resolveConfiguredPath(rawPath: string | undefined): string | null {
   return null;
 }
 
+/** Resolves the Claude CLI path with priority: device-specific -> legacy -> PATH auto-detect. */
 export function resolveClaudeCliPath(
   hostnamePath: string | undefined,
   legacyPath: string | undefined,
@@ -92,3 +32,17 @@ export function resolveClaudeCliPath(
     findClaudeCLIPath(parseEnvironmentVariables(envText || '').PATH)
   );
 }
+
+export const claudeCliSpec: CliResolutionSpec = {
+  providerId: 'claude',
+  read: settings => {
+    const claudeSettings = getClaudeProviderSettings(settings);
+    return {
+      cliPath: claudeSettings.cliPath,
+      cliPathsByHost: claudeSettings.cliPathsByHost,
+      extra: undefined,
+    };
+  },
+  resolve: ({ hostnamePath, legacyPath, envText }) =>
+    resolveClaudeCliPath(hostnamePath, legacyPath, envText),
+};

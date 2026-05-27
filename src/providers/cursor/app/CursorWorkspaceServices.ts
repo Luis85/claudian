@@ -1,3 +1,4 @@
+import { CachedCliResolver } from '../../../core/providers/CachedCliResolver';
 import { ProviderWorkspaceRegistry } from '../../../core/providers/ProviderWorkspaceRegistry';
 import type {
   ProviderCliResolver,
@@ -9,13 +10,13 @@ import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
 import type ClaudianPlugin from '../../../main';
 import { getVaultPath } from '../../../utils/path';
 import { buildCursorAgentEnvironment } from '../runtime/cursorAgentEnv';
-import { CursorCliResolver } from '../runtime/CursorCliResolver';
+import { cursorCliSpec } from '../runtime/CursorCliResolver';
 import { refreshCursorModelCatalog } from '../runtime/cursorModelCatalog';
 import { getCursorProviderSettings } from '../settings';
 import { cursorSettingsTabRenderer } from '../ui/CursorSettingsTab';
 
 function createCursorCliResolver(): ProviderCliResolver {
-  return new CursorCliResolver();
+  return new CachedCliResolver(cursorCliSpec);
 }
 
 function warmCursorModelCatalog(plugin: ClaudianPlugin, cliResolver: ProviderCliResolver): void {

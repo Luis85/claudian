@@ -1,57 +1,32 @@
 import { itPosix } from '@test/helpers/platform';
 import * as fs from 'fs';
 
-import { CodexCliResolver } from '@/providers/codex/runtime/CodexCliResolver';
-import { getHostnameKey } from '@/utils/env';
+import { resolveCodexCliPath } from '@/providers/codex/runtime/CodexBinaryLocator';
 
 jest.mock('fs');
-jest.mock('@/utils/env', () => {
-  const actual = jest.requireActual('@/utils/env');
-  return {
-    ...actual,
-    getHostnameKey: jest.fn(() => 'current-host'),
-  };
-});
 
 const mockedExists = fs.existsSync as jest.Mock;
 const mockedStat = fs.statSync as jest.Mock;
-const mockedDeviceKey = getHostnameKey as jest.Mock;
 
-describe('CodexCliResolver', () => {
+// Hostname selection is owned by CachedCliResolver; these target the pure path resolver
+// with an already-selected host path.
+describe('resolveCodexCliPath', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockedDeviceKey.mockReturnValue('current-host');
   });
 
-  it('uses the current host path instead of another synced host path', () => {
+  it('returns the configured host path when it is a valid file', () => {
     mockedExists.mockImplementation((filePath: string) => filePath === '/current/codex');
     mockedStat.mockReturnValue({ isFile: () => true });
 
-    const resolver = new CodexCliResolver();
-    const resolved = resolver.resolve(
-      {
-        'other-host': '/other/codex',
-        'current-host': '/current/codex',
-      },
-      '/legacy/codex',
-      '',
-    );
-
-    expect(resolved).toBe('/current/codex');
+    expect(resolveCodexCliPath('/current/codex', '/legacy/codex', '')).toBe('/current/codex');
   });
 
-  it('falls back to the legacy path when the current host has no custom path', () => {
+  it('falls back to the legacy path when no host path is selected', () => {
     mockedExists.mockImplementation((filePath: string) => filePath === '/legacy/codex');
     mockedStat.mockReturnValue({ isFile: () => true });
 
-    const resolver = new CodexCliResolver();
-    const resolved = resolver.resolve(
-      { 'other-host': '/other/codex' },
-      '/legacy/codex',
-      '',
-    );
-
-    expect(resolved).toBe('/legacy/codex');
+    expect(resolveCodexCliPath('', '/legacy/codex', '')).toBe('/legacy/codex');
   });
 
   // POSIX-only PATH/path assertion; source resolves Windows paths on win32.
@@ -61,28 +36,16 @@ describe('CodexCliResolver', () => {
       isFile: () => filePath === '/custom/bin/codex',
     }));
 
-    const resolver = new CodexCliResolver();
-    const resolved = resolver.resolve(
-      { 'other-host': '/other/codex' },
-      '',
-      'PATH=/custom/bin',
-    );
-
-    expect(resolved).toBe('/custom/bin/codex');
+    expect(resolveCodexCliPath('', '', 'PATH=/custom/bin')).toBe('/custom/bin/codex');
   });
 
   it('returns a Linux-side command in WSL mode without host filesystem validation', () => {
     mockedExists.mockReturnValue(false);
 
-    const resolver = new CodexCliResolver();
-    const resolved = resolver.resolve(
-      {
-        'current-host': 'codex',
-      },
-      '',
-      '',
-      { installationMethod: 'wsl', hostPlatform: 'win32' },
-    );
+    const resolved = resolveCodexCliPath('codex', '', '', {
+      installationMethod: 'wsl',
+      hostPlatform: 'win32',
+    });
 
     expect(resolved).toBe('codex');
   });
@@ -90,11 +53,8 @@ describe('CodexCliResolver', () => {
   it('falls back to the Linux command when a Windows-native CLI path is configured in WSL mode', () => {
     mockedExists.mockReturnValue(false);
 
-    const resolver = new CodexCliResolver();
-    const resolved = resolver.resolve(
-      {
-        'current-host': 'C:\\Users\\user\\AppData\\Roaming\\npm\\codex.exe',
-      },
+    const resolved = resolveCodexCliPath(
+      'C:\\Users\\user\\AppData\\Roaming\\npm\\codex.exe',
       '',
       '',
       { installationMethod: 'wsl', hostPlatform: 'win32' },

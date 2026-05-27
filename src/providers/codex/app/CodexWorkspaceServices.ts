@@ -1,3 +1,4 @@
+import { CachedCliResolver } from '../../../core/providers/CachedCliResolver';
 import type { ProviderCommandCatalog } from '../../../core/providers/commands/ProviderCommandCatalog';
 import { ProviderWorkspaceRegistry } from '../../../core/providers/ProviderWorkspaceRegistry';
 import type {
@@ -11,7 +12,7 @@ import type ClaudianPlugin from '../../../main';
 import { getVaultPath } from '../../../utils/path';
 import { CodexAgentMentionProvider } from '../agents/CodexAgentMentionProvider';
 import { CodexSkillCatalog } from '../commands/CodexSkillCatalog';
-import { CodexCliResolver } from '../runtime/CodexCliResolver';
+import { codexCliSpec } from '../runtime/CodexCliResolver';
 import { CodexSkillListingService } from '../skills/CodexSkillListingService';
 import { CodexSkillStorage } from '../storage/CodexSkillStorage';
 import { CodexSubagentStorage } from '../storage/CodexSubagentStorage';
@@ -25,7 +26,7 @@ export interface CodexWorkspaceServices extends ProviderWorkspaceServices {
 }
 
 function createCodexCliResolver(): ProviderCliResolver {
-  return new CodexCliResolver();
+  return new CachedCliResolver(codexCliSpec);
 }
 
 export async function createCodexWorkspaceServices(
