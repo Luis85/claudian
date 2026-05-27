@@ -46,6 +46,7 @@ export function renderMessageContextCard(
     }
   }
 
+  // Folder rows are display-only: no onOpenFile (no Obsidian API to open a folder).
   for (const path of data.folders) {
     const rowEl = listEl.createDiv({
       cls: 'claudian-context-card-row claudian-context-card-row--folder',

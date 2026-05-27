@@ -46,6 +46,7 @@ describe('renderMessageContextCard', () => {
     renderMessageContextCard(container, { files: ['notes.md'], folders: [] }, { onOpenFile });
 
     const row = findAll(container, 'claudian-context-card-row--file')[0];
+    expect(row.hasClass('claudian-context-card-row--clickable')).toBe(true);
     row.dispatchEvent(new Event('click'));
     expect(onOpenFile).toHaveBeenCalledWith('notes.md');
   });
