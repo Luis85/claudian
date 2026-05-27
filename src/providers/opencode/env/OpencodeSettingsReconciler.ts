@@ -1,7 +1,8 @@
-import { getRuntimeEnvironmentText } from '../../../core/providers/providerEnvironment';
+import {
+  type EnvHashReconcilerSpec,
+  reconcileEnvironmentHash,
+} from '../../../core/providers/EnvHashReconciler';
 import type { ProviderSettingsReconciler } from '../../../core/providers/types';
-import type { Conversation } from '../../../core/types';
-import { parseEnvironmentVariables } from '../../../utils/env';
 import { clearOpencodeDiscoveryState } from '../discoveryState';
 import { sameStringList, sameStringMap } from '../internal/compareCollections';
 import { ensureProviderProjectionMap } from '../internal/providerProjection';
@@ -34,51 +35,32 @@ const OPENCODE_ENV_HASH_KEYS = [
   'XDG_DATA_HOME',
 ] as const;
 
-function computeOpencodeEnvHash(envText: string): string {
-  const envVars = parseEnvironmentVariables(envText || '');
-  return OPENCODE_ENV_HASH_KEYS
-    .filter((key) => envVars[key])
-    .map((key) => `${key}=${envVars[key]}`)
-    .sort()
-    .join('|');
-}
+const opencodeEnvHashSpec: EnvHashReconcilerSpec = {
+  providerId: 'opencode',
+  watchedKeys: OPENCODE_ENV_HASH_KEYS,
+  getSavedHash: settings => getOpencodeProviderSettings(settings).environmentHash,
+  saveHash: (settings, hash) => updateOpencodeProviderSettings(settings, { environmentHash: hash }),
+  invalidateConversation: conversation => {
+    if (conversation.providerId !== 'opencode') {
+      return false;
+    }
+    const state = getOpencodeState(conversation.providerState);
+    if (!conversation.sessionId && !state.databasePath) {
+      return false;
+    }
+    conversation.sessionId = null;
+    conversation.providerState = undefined;
+    return true;
+  },
+};
 
 export const opencodeSettingsReconciler: ProviderSettingsReconciler = {
   handleEnvironmentChange(settings: Record<string, unknown>): boolean {
     return clearOpencodeDiscoveryState(settings);
   },
 
-  reconcileModelWithEnvironment(
-    settings: Record<string, unknown>,
-    conversations: Conversation[],
-  ): { changed: boolean; invalidatedConversations: Conversation[] } {
-    const envText = getRuntimeEnvironmentText(settings, 'opencode');
-    const currentHash = computeOpencodeEnvHash(envText);
-    const savedHash = getOpencodeProviderSettings(settings).environmentHash;
-
-    if (currentHash === savedHash) {
-      return { changed: false, invalidatedConversations: [] };
-    }
-
-    const invalidatedConversations: Conversation[] = [];
-    for (const conversation of conversations) {
-      if (conversation.providerId !== 'opencode') {
-        continue;
-      }
-
-      const state = getOpencodeState(conversation.providerState);
-      if (!conversation.sessionId && !state.databasePath) {
-        continue;
-      }
-
-      conversation.sessionId = null;
-      conversation.providerState = undefined;
-      invalidatedConversations.push(conversation);
-    }
-
-    updateOpencodeProviderSettings(settings, { environmentHash: currentHash });
-    return { changed: true, invalidatedConversations };
-  },
+  reconcileModelWithEnvironment: (settings, conversations) =>
+    reconcileEnvironmentHash(opencodeEnvHashSpec, settings, conversations),
 
   normalizeModelVariantSettings(settings: Record<string, unknown>): boolean {
     const hadLegacyDiscoveryFields = hasLegacyOpencodeDiscoveryFields(settings);

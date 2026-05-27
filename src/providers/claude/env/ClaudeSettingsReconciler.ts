@@ -1,7 +1,8 @@
-import { getRuntimeEnvironmentText } from '../../../core/providers/providerEnvironment';
+import {
+  type EnvHashReconcilerSpec,
+  reconcileEnvironmentHash,
+} from '../../../core/providers/EnvHashReconciler';
 import type { ProviderSettingsReconciler } from '../../../core/providers/types';
-import type { Conversation } from '../../../core/types';
-import { parseEnvironmentVariables } from '../../../utils/env';
 import { resolveClaudeModelSelection } from '../modelOptions';
 import { getClaudeProviderSettings, updateClaudeProviderSettings } from '../settings';
 import { normalizeVisibleModelVariant } from '../types/models';
@@ -14,46 +15,30 @@ const ENV_HASH_MODEL_KEYS = [
 ];
 const ENV_HASH_PROVIDER_KEYS = ['ANTHROPIC_BASE_URL'];
 
-function computeEnvHash(envText: string): string {
-  const envVars = parseEnvironmentVariables(envText || '');
-  const allKeys = [...ENV_HASH_MODEL_KEYS, ...ENV_HASH_PROVIDER_KEYS];
-  return allKeys
-    .filter(key => envVars[key])
-    .map(key => `${key}=${envVars[key]}`)
-    .sort()
-    .join('|');
-}
-
-export const claudeSettingsReconciler: ProviderSettingsReconciler = {
-  reconcileModelWithEnvironment(
-    settings: Record<string, unknown>,
-    conversations: Conversation[],
-  ): { changed: boolean; invalidatedConversations: Conversation[] } {
-    const envText = getRuntimeEnvironmentText(settings, 'claude');
-    const currentHash = computeEnvHash(envText);
-    const savedHash = getClaudeProviderSettings(settings).environmentHash;
-
-    if (currentHash === savedHash) {
-      return { changed: false, invalidatedConversations: [] };
+const claudeEnvHashSpec: EnvHashReconcilerSpec = {
+  providerId: 'claude',
+  watchedKeys: [...ENV_HASH_MODEL_KEYS, ...ENV_HASH_PROVIDER_KEYS],
+  getSavedHash: settings => getClaudeProviderSettings(settings).environmentHash,
+  saveHash: (settings, hash) => updateClaudeProviderSettings(settings, { environmentHash: hash }),
+  invalidateConversation: conversation => {
+    if (!conversation.sessionId) {
+      return false;
     }
-
-    const invalidatedConversations: Conversation[] = [];
-    for (const conv of conversations) {
-      if (conv.sessionId) {
-        conv.sessionId = null;
-        invalidatedConversations.push(conv);
-      }
-    }
-
+    conversation.sessionId = null;
+    return true;
+  },
+  reconcileModel: settings => {
     const currentModel = typeof settings.model === 'string' ? settings.model : '';
     const nextModel = resolveClaudeModelSelection(settings, currentModel);
     if (nextModel) {
       settings.model = nextModel;
     }
-
-    updateClaudeProviderSettings(settings, { environmentHash: currentHash });
-    return { changed: true, invalidatedConversations };
   },
+};
+
+export const claudeSettingsReconciler: ProviderSettingsReconciler = {
+  reconcileModelWithEnvironment: (settings, conversations) =>
+    reconcileEnvironmentHash(claudeEnvHashSpec, settings, conversations),
 
   normalizeModelVariantSettings(settings: Record<string, unknown>): boolean {
     const claudeSettings = getClaudeProviderSettings(settings);

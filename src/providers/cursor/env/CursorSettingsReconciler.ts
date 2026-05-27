@@ -1,6 +1,8 @@
-import { getRuntimeEnvironmentText } from '../../../core/providers/providerEnvironment';
+import {
+  type EnvHashReconcilerSpec,
+  reconcileEnvironmentHash,
+} from '../../../core/providers/EnvHashReconciler';
 import type { ProviderSettingsReconciler } from '../../../core/providers/types';
-import type { Conversation } from '../../../core/types';
 import { parseEnvironmentVariables } from '../../../utils/env';
 import { toCursorModelValue } from '../runtime/cursorModelId';
 import { getCursorProviderSettings, updateCursorProviderSettings } from '../settings';
@@ -9,38 +11,21 @@ import { cursorChatUIConfig } from '../ui/CursorChatUIConfig';
 
 const ENV_HASH_KEYS = ['CURSOR_API_KEY', 'CURSOR_BASE_URL'];
 
-function computeCursorEnvHash(envText: string): string {
-  const envVars = parseEnvironmentVariables(envText || '');
-  return ENV_HASH_KEYS
-    .filter(key => envVars[key])
-    .map(key => `${key}=${envVars[key]}`)
-    .sort()
-    .join('|');
-}
-
-export const cursorSettingsReconciler: ProviderSettingsReconciler = {
-  reconcileModelWithEnvironment(
-    settings: Record<string, unknown>,
-    conversations: Conversation[],
-  ): { changed: boolean; invalidatedConversations: Conversation[] } {
-    const envText = getRuntimeEnvironmentText(settings, 'cursor');
-    const currentHash = computeCursorEnvHash(envText);
-    const savedHash = getCursorProviderSettings(settings).environmentHash;
-
-    if (currentHash === savedHash) {
-      return { changed: false, invalidatedConversations: [] };
+const cursorEnvHashSpec: EnvHashReconcilerSpec = {
+  providerId: 'cursor',
+  watchedKeys: ENV_HASH_KEYS,
+  getSavedHash: settings => getCursorProviderSettings(settings).environmentHash,
+  saveHash: (settings, hash) => updateCursorProviderSettings(settings, { environmentHash: hash }),
+  invalidateConversation: conversation => {
+    const state = getCursorState(conversation.providerState);
+    if (conversation.providerId !== 'cursor' || !(conversation.sessionId || state.chatSessionId)) {
+      return false;
     }
-
-    const invalidatedConversations: Conversation[] = [];
-    for (const conv of conversations) {
-      const state = getCursorState(conv.providerState);
-      if (conv.providerId === 'cursor' && (conv.sessionId || state.chatSessionId)) {
-        conv.sessionId = null;
-        conv.providerState = undefined;
-        invalidatedConversations.push(conv);
-      }
-    }
-
+    conversation.sessionId = null;
+    conversation.providerState = undefined;
+    return true;
+  },
+  reconcileModel: (settings, envText) => {
     const envVars = parseEnvironmentVariables(envText || '');
     if (envVars.CURSOR_MODEL) {
       // Persist the namespaced value so routing stays unambiguous.
@@ -54,10 +39,12 @@ export const cursorSettingsReconciler: ProviderSettingsReconciler = {
         settings.model = options[0]?.value ?? toCursorModelValue('auto');
       }
     }
-
-    updateCursorProviderSettings(settings, { environmentHash: currentHash });
-    return { changed: true, invalidatedConversations };
   },
+};
+
+export const cursorSettingsReconciler: ProviderSettingsReconciler = {
+  reconcileModelWithEnvironment: (settings, conversations) =>
+    reconcileEnvironmentHash(cursorEnvHashSpec, settings, conversations),
 
   normalizeModelVariantSettings(): boolean {
     return false;
