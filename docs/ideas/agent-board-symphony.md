@@ -13,6 +13,16 @@ Research sources:
 - [Routa API contract](https://github.com/phodal/routa/blob/main/api-contract.yaml)
 - [Routa Review Guard workflow](https://github.com/phodal/routa/blob/main/resources/specialists/workflows/kanban/review-guard.yaml)
 - [Routa Fitness docs](https://github.com/phodal/routa/blob/main/docs/fitness/README.md)
+- [Routa design docs overview](https://phodal.github.io/routa/design-docs)
+- [Routa core beliefs](https://phodal.github.io/routa/design-docs/core-beliefs)
+- [Routa golden rules](https://phodal.github.io/routa/design-docs/golden-rules)
+- [Routa execution modes](https://phodal.github.io/routa/design-docs/execution-modes)
+- [Routa workspace-centric redesign](https://phodal.github.io/routa/design-docs/workspace-centric-redesign)
+- [Routa AgentWatch TUI](https://phodal.github.io/routa/design-docs/agentwatch-tui)
+- [Routa Architecture Rule DSL](https://phodal.github.io/routa/design-docs/architecture-rule-dsl)
+- [Routa Product IA Visualization](https://phodal.github.io/routa/design-docs/product-ia-visualization)
+- [Routa Git Commit Safety Mechanism](https://phodal.github.io/routa/design-docs/git-commit-safety-mechanism)
+- [Routa Harness Trace Learning Phase 2](https://phodal.github.io/routa/design-docs/harness-trace-learning-phase2)
 - [Codex App Server article](https://openai.com/index/unlocking-the-codex-harness/)
 - [Codex app-server README](https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md)
 - [Obsidian properties](https://obsidian.md/help/properties)
@@ -105,6 +115,23 @@ Relevant takeaways:
 
 The adaptation for Claudian is to keep these lessons **Markdown-first and plugin-local**. Routa is a broad platform with web, desktop, server, protocol, and API surfaces. Claudian should not copy that platform scope. Claudian should adopt the product contracts: workspace scope, lane contracts, evidence bundles, independent review, and traceability.
 
+
+### Routa design docs
+
+The published Routa design docs add a second layer of guidance beyond the repository source review:
+
+- Durable knowledge belongs in canonical docs, not chat history, oversized agent instructions, or duplicated legacy specs.
+- `AGENTS.md` should route agents to the right canonical docs rather than becoming the whole knowledge base.
+- Execution modes should be described by **orchestration boundary**, not by simple/advanced labels: session-first, board/lane-first, or lead/team-first.
+- Workspace scope should be explicit on all user-visible resources, and codebases should be first-class records rather than hidden fields on a workspace.
+- Observability should answer operator questions in real time: which session is active, which files changed, where attribution is unknown, and whether multiple runs touched the same file.
+- Machine-readable rule packs should separate rule intent from executor implementation, validate strictly, and fail loudly on unsupported semantics.
+- Safety should be layered: application validation, local hooks/checks, push/CI gates, monitoring, and incident records.
+- Trace learning can become playbook-driven preflight guidance, but it must remain opt-out and evidence-backed.
+- ADRs are useful only for decisions that affect long-term boundaries, not every implementation detail.
+
+The Claudian adaptation is to create a **curated, vault-native design record** for Agent Board itself: this idea note can seed a future product spec and ADRs, while individual work orders remain execution artifacts rather than the canonical architecture source.
+
 ## Product principle
 
 Do not build a generic task manager. Build an **agent work-order system**.
@@ -142,6 +169,73 @@ What not to adopt from Routa for the first Claudian version:
 
 A practical compromise is: **manual lane transitions in MVP, lane contracts in the data model, automated lane reactions later**.
 
+
+## Design-doc refinements from Routa
+
+### Execution modes by orchestration boundary
+
+Do not describe Agent Board as an "advanced chat" feature. Use the boundary that starts orchestration:
+
+| Mode | Orchestration starts from | Claudian implication |
+|---|---|---|
+| Sidepanel session | one recoverable conversation thread | current plugin baseline and MVP execution surface |
+| Agent Board | one Markdown work order and status lane | repeatable delivery flow with evidence and review gates |
+| Agent Team | a lead agent that delegates visible child runs | future mode for multi-specialty or multi-codebase work |
+
+This wording matters because it prevents the UI from implying a maturity ladder. A work order is not better than chat; it is better when delivery state, review evidence, and repeatable flow are the actual problem.
+
+### Canonical knowledge and provenance
+
+A work order is an execution artifact, not the long-term home for product truth. If a run discovers durable knowledge, the result should link or propose updates to the right canonical note:
+
+- product intent: `docs/product-specs/` or `docs/ideas/`;
+- architecture decision: `docs/adr/`;
+- implementation plan: short-lived execution plan note;
+- regression/failure: issue or incident note;
+- task result: the work-order handoff.
+
+This is especially important in Obsidian because everything is easy to link. The Agent Board should encourage links to canonical notes instead of letting every task become a mini knowledge silo.
+
+### Operator observability model
+
+Borrow the AgentWatch shape for the board detail pane and sidepanel watcher:
+
+1. **Runs** — active / idle / stopped, model, workspace, branch, last activity.
+2. **Files** — changed files, dirty state, last attributed run, conflict indicator.
+3. **Detail** — selected run/file summary, current command, current approval/input request.
+4. **Event log** — condensed operator timeline, not a full transcript.
+
+The UI should explicitly show `unknown` and `conflicted` attribution. Unknown is safer than pretending the agent owns a file change when the source is ambiguous.
+
+### Rules as validated YAML, not prompt folklore
+
+Workflow notes should be complemented by small machine-readable rule packs over time. Keep them simple and strictly validated:
+
+```yaml
+schema: claudian.agent-board.rules/v1
+model:
+  id: default-agent-board-rules
+selectors:
+  task_workspace:
+    kind: path_scope
+    include:
+      - "{{ task.codebase.worktree }}/**"
+rules:
+  - id: no_main_checkout_writes
+    title: Agent runs must not write to the main checkout
+    kind: path_boundary
+    severity: error
+    from: task_run
+    relation: must_write_within
+    to: task_workspace
+```
+
+Unsupported rule kinds should fail validation rather than being silently ignored. This keeps future automation auditable and LLM-editable without hiding policy inside prompts.
+
+### Playbook learning after evidence exists
+
+Trace learning should be a late-stage enhancement. Once Claudian has enough evidence bundles, it can suggest playbooks such as "UI task with tests and screenshot" or "docs-only PR" before a run starts. The playbook should show confidence, evidence count, and recommended verification, and users must be able to opt out.
+
 ## Proposed user experience
 
 ### Capture
@@ -173,6 +267,7 @@ Inbox | Ready | Running | Needs Input | Needs Approval | Review | Needs Fix | Do
 Each card should show:
 
 - title;
+- workspace/codebase;
 - provider/model;
 - current status;
 - priority;
@@ -180,6 +275,8 @@ Each card should show:
 - latest event and heartbeat age;
 - pending approval/input indicator;
 - verification result;
+- changed-file and attribution summary;
+- conflict/unknown attribution warning;
 - linked conversation/run log;
 - retry count and last error.
 
@@ -250,8 +347,10 @@ mode: plan-first
 workspace:
   id: current-vault
   mode: git-worktree
-  repo: .
   root: .worktrees
+codebase:
+  id: current-repo
+  repo: .
   branch:
   worktree:
   base: main
@@ -451,6 +550,9 @@ workspace:
   id: current-vault
   mode: git-worktree
   root: .worktrees
+codebase:
+  id: current-repo
+  repo: .
 evidence:
   required_sections:
     - dev_evidence
@@ -592,12 +694,16 @@ The scheduler should only decide eligibility and acquire leases. It should not k
 
 | Routa concept | Claudian adaptation |
 |---|---|
-| Workspace-first coordination | frontmatter workspace + vault/repo/worktree allocator |
+| Workspace-first coordination | explicit workspace + first-class codebase + worktree allocator |
 | Kanban lane automation | manual board actions first, lane-triggered workflows later |
 | Specialist workflows | Obsidian workflow notes per lane |
 | Review Guard | independent review gate that routes to `done` or `needs_fix` |
 | Fitness gates | tiered validation commands and required evidence sections |
 | Trace/evidence model | linked note ledger + JSONL run trace + evidence bundle |
+| Execution modes | sidepanel session, board/work-order, future lead/team mode |
+| AgentWatch operator view | runs/files/detail/event-log panes in board detail |
+| Architecture Rule DSL | future `claudian.agent-board.rules/v1` YAML policy packs |
+| Trace learning | future opt-out playbooks from evidence-backed prior runs |
 
 ## Safety model
 
@@ -617,6 +723,8 @@ Required invariants:
 10. Publishing is a separate human gate: push and PR creation require explicit approval in MVP.
 11. Retry limits, stall timeouts, max turns, token/cost ceilings, and max child-agent count are hard limits.
 12. The run UI always shows workspace, branch, effective capabilities, approval mode, and current state.
+13. Commit identity, branch target, and repository root are validated before commit/publish actions.
+14. Mass deletion, large file churn, force-like operations, and unusual dirty-state transitions require explicit human confirmation and a recorded justification.
 
 Recommended MVP permission posture:
 
@@ -627,8 +735,9 @@ file writes: task workspace only
 vault note mutation: only the task's own status/log fields without asking
 network: ask
 package install/scripts: ask or excluded
-commit: ask
+commit: ask and validate git identity
 push/PR: ask every time
+mass deletion/large churn: block until justified
 ```
 
 Capability tiers:
@@ -649,7 +758,7 @@ Exclude from MVP:
 - agent-controlled MCP/plugin installation;
 - edits to `.obsidian/`, `.claude/`, `.codex/`, `.git/`, or `.claudian/` internals except through owned APIs;
 - concurrent agents editing the same files without locking/merge policy;
-- force push, branch deletion, `git clean`, destructive reset, or history rewrite;
+- force push, branch deletion, `git clean`, destructive reset, mass deletion without justification, or history rewrite;
 - automatic recursive task spawning.
 
 ## Observability
@@ -698,13 +807,14 @@ The board should make the operational state obvious:
 
 ## Product review synthesis
 
-Dedicated review passes produced five strong recommendations:
+Dedicated review passes produced six strong recommendations:
 
 1. **Obsidian-native product review**: keep Markdown as the product center. The task note must remain useful and readable if Claudian is uninstalled. Avoid turning YAML into a large hidden database.
 2. **Architecture review**: visible sidepanel execution should ship first. Add a `TaskExecutionSurface` seam immediately so headless execution can be a later adapter.
 3. **Safety review**: default to manual-first, local-only, no-publish. Worktrees are safety boundaries, not security boundaries. Human approval is the strongest practical control.
 4. **Market review**: position around vault-native context-to-agent execution, not generic project management. The ideal initial user already writes specs, implementation notes, and decisions in Obsidian.
 5. **Routa review**: model lane contracts and evidence bundles early, but do not copy Routa's broader platform scope. The smallest valuable Claudian version is still a Markdown work order with visible execution and reviewable evidence.
+6. **Routa design-doc review**: separate canonical knowledge from work-order execution records, describe modes by orchestration boundary, show file attribution/conflicts explicitly, and move repeated rules toward validated YAML/checks instead of prompt folklore.
 
 ## MVP scope
 
@@ -756,11 +866,13 @@ The MVP should answer one question:
 - Capture verification commands/results.
 - Add evidence bundle sections and card-level missing-evidence indicators.
 - Add diff/log/artifact affordances.
+- Add changed-file attribution and `unknown` / `conflicted` file indicators.
 - Add leases and stale-run detection even for manual runs.
 
 ### Phase 3 — Scheduler-lite and review gate
 
 - Add **Run next ready**.
+- Add optional `claudian.agent-board.rules/v1` policy packs for path boundaries, evidence requirements, and transition gates.
 - Add WIP limit of one or configurable small number.
 - Add retry scheduling for known transient failures.
 - Add workflow note parsing and strict prompt templates.
@@ -772,8 +884,9 @@ The MVP should answer one question:
 - Mirror headless runs into the sidepanel when a user clicks **Watch**.
 - Keep approval/input requests visible and bounded by timeouts.
 
-### Phase 5 — External integrations
+### Phase 5 — External integrations and playbooks
 
+- Optional opt-out playbook suggestions derived from successful evidence bundles.
 - Optional GitHub/Linear sync.
 - Optional PR creation/publishing gate.
 - Optional task DAGs.
@@ -792,6 +905,8 @@ The MVP should answer one question:
 - prompt rendering with strict missing-variable failure;
 - evidence bundle completeness calculation;
 - review transition validation, including `review` → `needs_fix`;
+- rule-pack validation with unsupported-rule failure;
+- file attribution/conflict folding;
 - workspace path sanitization.
 
 ### Contract tests
@@ -826,7 +941,8 @@ Use a temporary git repository and verify:
 - branch created from configured base;
 - cwd passed to runtime;
 - cleanup scanner detects orphaned workspaces;
-- path containment rejects escaped paths.
+- path containment rejects escaped paths;
+- mass-deletion and large-churn policies require justification before commit/publish.
 
 ## Open validation questions
 
