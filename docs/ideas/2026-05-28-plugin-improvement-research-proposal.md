@@ -23,6 +23,18 @@ The first implementation wave should prioritize:
 
 This is more strategically useful than starting with broad internal runtime refactors because it improves activation, trust, supportability, and competitive positioning immediately.
 
+## Decision framing
+
+This proposal is intentionally not a grab bag. It separates **what should become visible to users now** from **what should be deepened internally after the visible trust loop exists**.
+
+| Horizon | Primary question | Recommended focus |
+| --- | --- | --- |
+| Now | Can a new user connect a provider and safely get one useful edit? | Setup health, safe defaults, context preview, citations, diff/apply/revert, redacted diagnostics |
+| Next | Can power users trust repeated agent work? | Audit events, MCP risk labels, external path grants, stream/history fixtures, workflow onboarding |
+| Later | Can the architecture keep adding providers without getting shallow? | Runtime capability resolver, invocation catalog facade, session envelope, selective runtime Seams |
+
+The practical test for every initiative should be: **does this reduce time-to-first-trusted-success, reduce support burden, or create a deeper Module with real Leverage and Locality?**
+
 ## Research method
 
 This proposal combines:
@@ -602,6 +614,15 @@ Entries could include:
 - Add explicit-context citations.
 - Add safe diff/apply/revert path for plugin-initiated edits.
 
+**Phase 1 definition of done**
+
+- A fresh user can see provider setup status before the first send.
+- The chat composer can show exactly which context is attached to the next message.
+- The UI separately explains broader workspace/tool access.
+- A current-note answer can cite the note or selected range that grounded it.
+- A plugin-initiated edit can be reviewed as a Markdown diff and reverted.
+- A failed setup or turn can produce redacted diagnostics without note contents by default.
+
 ### Phase 2: Audit and diagnostics
 
 - Add `RuntimeAuditEvent`, `RuntimeAuditSink`, and per-session in-memory audit trail.
@@ -627,6 +648,31 @@ Entries could include:
 - Introduce `RuntimeCapabilityResolver` before splitting `ChatRuntime`.
 - Migrate one real capability Seam at a time.
 - Explore `ConversationSessionEnvelope` once context/audit/session source handles are clearer.
+
+## Candidate PR sequence
+
+The roadmap should be implemented as small, reviewable PRs. A suggested first sequence:
+
+| PR | Goal | Main files likely touched | Verification |
+| --- | --- | --- | --- |
+| 1 | Add CI build/artifact smoke and re-check file-context baseline | `.github/workflows/ci.yml`, `scripts/`, targeted tests | `npm run typecheck`, targeted file-context tests, `npm run build` |
+| 2 | Add trust-baseline copy and safer action-review labels | settings/UI text, provider permission-mode UI | targeted UI tests, manual settings check |
+| 3 | Introduce pure `ComposerContextBuilder` types/tests with no UI behavior change | new context Module, `InputController` tests | builder golden tests, `npm run typecheck` |
+| 4 | Add visible context preview and attached-vs-workspace explanation | chat composer/context UI and styles | context UI tests, keyboard/focus checks |
+| 5 | Add explicit-context source handles and citation rendering | context builder, renderer, tests | citation fixture tests |
+| 6 | Add observe-only audit events and redacted diagnostics | runtime/rendering audit sink, diagnostics snapshot | redaction tests, no note-content export by default |
+| 7 | Add Codex live/history stream fixture harness | Codex runtime/history tests and fixtures | live-vs-history parity fixtures |
+
+Keep each PR to one concern. If a PR needs provider runtime traces, capture them in `.context/` first and promote only durable fixtures.
+
+## Open questions before implementation
+
+- What should be the exact safe default for each provider on new installs, and how should existing high-trust users be migrated without breaking expectations?
+- Which provider settings are genuinely controllable by Claudian versus inherited from provider CLI/user/project config?
+- What is the minimal `ContextSourceHandle` shape needed for citations without committing to a full retrieval system?
+- Which edits can Claudian safely route through Obsidian APIs, and which provider-native writes can only be audited after the fact?
+- Should diagnostics ever include provider transcript paths or session IDs by default, or only after explicit user confirmation?
+- What is the user-facing term for action-review modes across providers: “Review actions,” “Approval mode,” or another phrase?
 
 ## Verification strategy
 
