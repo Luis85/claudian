@@ -1,8 +1,20 @@
 import { setIcon } from 'obsidian';
 
+export type PillKind = 'current' | 'file' | 'folder';
+
 export interface FileChipsViewCallbacks {
-  onRemoveAttachment: (path: string) => void;
+  onRemove: (path: string, kind: PillKind) => void;
   onOpenFile: (path: string) => void;
+}
+
+export interface PillData {
+  currentNote: string | null;
+  files: string[];
+  folders: string[];
+}
+
+function basename(path: string): string {
+  return path.replace(/\\/g, '/').split('/').pop() || path;
 }
 
 export class FileChipsView {
@@ -25,10 +37,15 @@ export class FileChipsView {
     this.fileIndicatorEl.remove();
   }
 
-  renderCurrentNote(filePath: string | null): void {
+  renderPills(data: PillData): void {
     this.fileIndicatorEl.empty();
 
-    if (!filePath) {
+    const current = data.currentNote;
+    // Dedupe: a file equal to the current note renders once, as the current pill.
+    const files = data.files.filter((p) => p !== current);
+
+    const total = (current ? 1 : 0) + files.length + data.folders.length;
+    if (total === 0) {
       this.fileIndicatorEl.removeClass('claudian-visible-flex');
       this.fileIndicatorEl.addClass('claudian-hidden');
       return;
@@ -36,35 +53,50 @@ export class FileChipsView {
 
     this.fileIndicatorEl.addClass('claudian-visible-flex');
     this.fileIndicatorEl.removeClass('claudian-hidden');
-    this.renderFileChip(filePath, () => {
-      this.callbacks.onRemoveAttachment(filePath);
-    });
+
+    if (current) {
+      this.renderPill(current, 'current', 'file-text', basename(current), true);
+    }
+    for (const path of files) {
+      this.renderPill(path, 'file', 'file-text', basename(path), true);
+    }
+    for (const path of data.folders) {
+      this.renderPill(path, 'folder', 'folder', `${basename(path)}/`, false);
+    }
   }
 
-  private renderFileChip(filePath: string, onRemove: () => void): void {
-    const chipEl = this.fileIndicatorEl.createDiv({ cls: 'claudian-file-chip' });
-
-    const iconEl = chipEl.createSpan({ cls: 'claudian-file-chip-icon' });
-    setIcon(iconEl, 'file-text');
-
-    const normalizedPath = filePath.replace(/\\/g, '/');
-    const filename = normalizedPath.split('/').pop() || filePath;
-    const nameEl = chipEl.createSpan({ cls: 'claudian-file-chip-name' });
-    nameEl.setText(filename);
-    nameEl.setAttribute('title', filePath);
-
-    const removeEl = chipEl.createSpan({ cls: 'claudian-file-chip-remove' });
-    removeEl.setText('\u00D7');
-    removeEl.setAttribute('aria-label', 'Remove');
-
-    chipEl.addEventListener('click', (e) => {
-      if (!(e.target as HTMLElement).closest('.claudian-file-chip-remove')) {
-        this.callbacks.onOpenFile(filePath);
-      }
+  private renderPill(
+    path: string,
+    kind: PillKind,
+    iconName: string,
+    label: string,
+    openable: boolean,
+  ): void {
+    const chipEl = this.fileIndicatorEl.createDiv({
+      cls: `claudian-file-chip claudian-file-chip--${kind}`,
     });
 
+    const iconEl = chipEl.createSpan({ cls: 'claudian-file-chip-icon' });
+    setIcon(iconEl, iconName);
+
+    const nameEl = chipEl.createSpan({ cls: 'claudian-file-chip-name' });
+    nameEl.setText(label);
+    nameEl.setAttribute('title', path);
+
+    const removeEl = chipEl.createSpan({ cls: 'claudian-file-chip-remove' });
+    removeEl.setText('×');
+    removeEl.setAttribute('aria-label', 'Remove');
+
+    if (openable) {
+      chipEl.addEventListener('click', (e) => {
+        if (!(e.target as HTMLElement).closest('.claudian-file-chip-remove')) {
+          this.callbacks.onOpenFile(path);
+        }
+      });
+    }
+
     removeEl.addEventListener('click', () => {
-      onRemove();
+      this.callbacks.onRemove(path, kind);
     });
   }
 }
