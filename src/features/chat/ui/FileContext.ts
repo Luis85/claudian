@@ -217,6 +217,36 @@ export class FileContextManager {
     this.mentionDropdown.hide();
   }
 
+  /** Inserts a vault @-mention for a file into the chat input. */
+  insertVaultFileMention(filePath: string): boolean {
+    const normalizedPath = this.normalizePathForVault(filePath);
+    if (!normalizedPath) return false;
+
+    const start = this.inputEl.selectionStart ?? this.inputEl.value.length;
+    const end = this.inputEl.selectionEnd ?? start;
+    const beforeSelection = this.inputEl.value.slice(0, start);
+    const afterSelection = this.inputEl.value.slice(end);
+    const leadingSpace = beforeSelection.length > 0 && !/\s$/u.test(beforeSelection) ? ' ' : '';
+    const trailingSpace = afterSelection.length > 0
+      ? (/^\s/u.test(afterSelection) ? '' : ' ')
+      : ' ';
+    const mention = `${leadingSpace}@${normalizedPath}${trailingSpace}`;
+
+    this.inputEl.value = beforeSelection + mention + afterSelection;
+    const cursorPosition = beforeSelection.length + mention.length;
+    this.inputEl.selectionStart = cursorPosition;
+    this.inputEl.selectionEnd = cursorPosition;
+    this.state.attachFile(normalizedPath);
+
+    if (typeof this.inputEl.dispatchEvent === 'function') {
+      const EventCtor = this.inputEl.ownerDocument?.defaultView?.Event ?? Event;
+      this.inputEl.dispatchEvent(new EventCtor('input', { bubbles: true }));
+    }
+    this.inputEl.focus();
+
+    return true;
+  }
+
   containsElement(el: Node): boolean {
     return this.mentionDropdown.containsElement(el);
   }

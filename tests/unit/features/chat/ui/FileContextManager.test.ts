@@ -124,6 +124,7 @@ describe('FileContextManager', () => {
       selectionStart: 0,
       selectionEnd: 0,
       focus: jest.fn(),
+      dispatchEvent: jest.fn(),
     } as unknown as HTMLTextAreaElement;
   });
 
@@ -271,6 +272,53 @@ describe('FileContextManager', () => {
     expect(inputEl.value).toBe('@clipping/file.md ');
     const attached = manager.getAttachedFiles();
     expect(attached.has('clipping/file.md')).toBe(true);
+
+    manager.destroy();
+  });
+
+  it('inserts a vault file mention at the cursor', () => {
+    const app = createMockApp();
+    const manager = new FileContextManager(
+      app,
+      containerEl as any,
+      inputEl,
+      createMockCallbacks()
+    );
+
+    inputEl.value = 'Review this';
+    inputEl.selectionStart = inputEl.value.length;
+    inputEl.selectionEnd = inputEl.value.length;
+
+    const inserted = manager.insertVaultFileMention('notes/context.md');
+
+    expect(inserted).toBe(true);
+    expect(inputEl.value).toBe('Review this @notes/context.md ');
+    expect(inputEl.selectionStart).toBe(inputEl.value.length);
+    expect(inputEl.selectionEnd).toBe(inputEl.value.length);
+    expect(inputEl.dispatchEvent).toHaveBeenCalledWith(expect.any(Event));
+    expect(inputEl.focus).toHaveBeenCalled();
+    expect(manager.getAttachedFiles().has('notes/context.md')).toBe(true);
+
+    manager.destroy();
+  });
+
+  it('replaces selected composer text with a vault file mention', () => {
+    const app = createMockApp();
+    const manager = new FileContextManager(
+      app,
+      containerEl as any,
+      inputEl,
+      createMockCallbacks()
+    );
+
+    inputEl.value = 'Read placeholder before answering';
+    inputEl.selectionStart = 'Read '.length;
+    inputEl.selectionEnd = 'Read placeholder'.length;
+
+    const inserted = manager.insertVaultFileMention('notes/brief.md');
+
+    expect(inserted).toBe(true);
+    expect(inputEl.value).toBe('Read @notes/brief.md before answering');
 
     manager.destroy();
   });

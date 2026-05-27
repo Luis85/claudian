@@ -80,6 +80,9 @@ npm run dev
 
 # Production build
 npm run build
+
+# Build and copy into vault/.obsidian/plugins/<manifest id> for manual testing
+npm run test-build
 ```
 
 ## Privacy & Data Use
