@@ -1,3 +1,4 @@
+import { Menu, TFile, TFolder } from 'obsidian';
 
 import { TOOL_SUBAGENT } from '@/core/tools/toolNames';
 import { VIEW_TYPE_CLAUDIAN } from '@/core/types';
@@ -9,6 +10,26 @@ jest.mock('fs');
 
 // Now import the plugin after mocking
 import ClaudianPlugin from '@/main';
+
+type MockMenu = Menu & {
+  items: Array<{
+    title: string;
+    icon: string;
+    clickHandler: (() => void) | null;
+  }>;
+};
+
+function createMockMenu(): MockMenu {
+  return new (Menu as any)() as MockMenu;
+}
+
+function createMockTFile(path: string): TFile {
+  return new (TFile as any)(path) as TFile;
+}
+
+function createMockTFolder(path: string): TFolder {
+  return new (TFolder as any)(path) as TFolder;
+}
 
 /**
  * Returns a shallow copy with only the enumerable string keys. loadSettings()
@@ -71,6 +92,7 @@ describe('ClaudianPlugin', () => {
         getLeaf: jest.fn().mockReturnValue({
           setViewState: jest.fn().mockResolvedValue(undefined),
         }),
+        on: jest.fn().mockReturnValue({}),
         setActiveLeaf: jest.fn(),
         revealLeaf: jest.fn(),
       },
@@ -125,6 +147,70 @@ describe('ClaudianPlugin', () => {
         name: 'Open chat view',
         callback: expect.any(Function),
       });
+    });
+
+    it('registers a file explorer menu item for adding files to chat', async () => {
+      await plugin.onload();
+
+      const fileMenuCall = mockApp.workspace.on.mock.calls.find(
+        ([eventName]: [string]) => eventName === 'file-menu',
+      );
+      expect(fileMenuCall).toBeDefined();
+
+      const menu = createMockMenu();
+      const file = createMockTFile('notes/context.md');
+      fileMenuCall![1](menu, file);
+
+      expect(menu.items).toHaveLength(1);
+      expect(menu.items[0].title).toBe('Add file to Claudian chat');
+      expect(menu.items[0].icon).toBe('at-sign');
+    });
+
+    it('does not add the chat context menu item for folders', async () => {
+      await plugin.onload();
+
+      const fileMenuCall = mockApp.workspace.on.mock.calls.find(
+        ([eventName]: [string]) => eventName === 'file-menu',
+      );
+      const menu = createMockMenu();
+      fileMenuCall![1](menu, createMockTFolder('notes'));
+
+      expect(menu.items).toHaveLength(0);
+    });
+
+    it('adds the selected file to the active chat from the file menu', async () => {
+      await plugin.onload();
+
+      const addSpy = jest.spyOn(plugin, 'addFileToActiveChat').mockResolvedValue(true);
+      const fileMenuCall = mockApp.workspace.on.mock.calls.find(
+        ([eventName]: [string]) => eventName === 'file-menu',
+      );
+      const menu = createMockMenu();
+      const file = createMockTFile('notes/context.md');
+      fileMenuCall![1](menu, file);
+
+      menu.items[0].clickHandler?.();
+
+      expect(addSpy).toHaveBeenCalledWith(file);
+    });
+
+    it('inserts the selected file into the active chat composer', async () => {
+      await plugin.onload();
+
+      const inputEl = { focus: jest.fn() };
+      const insertVaultFileMention = jest.fn().mockReturnValue(true);
+      jest.spyOn(plugin, 'getView').mockReturnValue({
+        getActiveTab: jest.fn().mockReturnValue({
+          dom: { inputEl },
+          ui: { fileContextManager: { insertVaultFileMention } },
+        }),
+      } as any);
+
+      const result = await plugin.addFileToActiveChat(createMockTFile('notes/context.md'));
+
+      expect(result).toBe(true);
+      expect(insertVaultFileMention).toHaveBeenCalledWith('notes/context.md');
+      expect(inputEl.focus).toHaveBeenCalled();
     });
 
   });

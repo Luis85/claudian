@@ -4,8 +4,8 @@ patchSetMaxListenersForElectron();
 
 import './providers';
 
-import type { Editor, WorkspaceLeaf } from 'obsidian';
-import { debounce, MarkdownView, Notice, Plugin } from 'obsidian';
+import type { Editor, Menu, TAbstractFile, WorkspaceLeaf } from 'obsidian';
+import { debounce, MarkdownView, Notice, Plugin, TFile } from 'obsidian';
 
 import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
 import { SharedStorageService } from './app/storage/SharedStorageService';
@@ -93,6 +93,21 @@ export default class ClaudianPlugin extends Plugin {
         void this.activateView();
       },
     });
+
+    this.registerEvent(
+      this.app.workspace.on('file-menu', (menu: Menu, file: TAbstractFile) => {
+        if (!(file instanceof TFile)) return;
+
+        menu.addItem((item) => {
+          item
+            .setTitle('Add file to Claudian chat')
+            .setIcon('at-sign')
+            .onClick(() => {
+              void this.addFileToActiveChat(file);
+            });
+        });
+      })
+    );
 
     this.addCommand({
       id: 'inline-edit',
@@ -213,6 +228,26 @@ export default class ClaudianPlugin extends Plugin {
         await this.persistTabManagerState(state);
       }
     }
+  }
+
+  async addFileToActiveChat(file: TFile): Promise<boolean> {
+    const view = await this.ensureViewOpen();
+    const activeTab = view?.getActiveTab();
+    const fileContextManager = activeTab?.ui.fileContextManager;
+
+    if (!activeTab || !fileContextManager) {
+      new Notice('Open Claudian chat and enable a provider before adding file context.');
+      return false;
+    }
+
+    if (!fileContextManager.insertVaultFileMention(file.path)) {
+      new Notice(`Could not add file to chat: ${file.path}`);
+      return false;
+    }
+
+    activeTab.dom.inputEl.focus();
+    new Notice(`Added ${file.path} to Claudian chat`);
+    return true;
   }
 
   async activateView() {
