@@ -1,5 +1,5 @@
 import type { App, Component } from 'obsidian';
-import { MarkdownRenderer, Menu, Notice, setIcon } from 'obsidian';
+import { MarkdownRenderer, Menu, Notice, setIcon, TFile, TFolder } from 'obsidian';
 
 import { DEFAULT_CHAT_PROVIDER_ID, type ProviderCapabilities } from '../../../core/providers/types';
 import type { ChatRewindMode } from '../../../core/runtime/types';
@@ -17,7 +17,9 @@ import { formatDurationMmSs } from '../../../utils/date';
 import { processFileLinks, registerFileLinkHandler } from '../../../utils/fileLink';
 import { replaceImageEmbedsWithHtml } from '../../../utils/imageEmbed';
 import { escapeMathDelimitersForStreaming } from '../../../utils/markdownMath';
+import { extractVaultMentions } from '../../../utils/vaultMentions';
 import { findRewindContext } from '../rewind';
+import { renderMessageContextCard } from './MessageContextCard';
 import { resolveSubagentLifecycleAdapter } from './subagentLifecycleResolution';
 import {
   renderStoredAsyncSubagent,
@@ -95,6 +97,25 @@ export class MessageRenderer {
     return resolveSubagentLifecycleAdapter(this.getCapabilities().providerId, toolName);
   }
 
+  private renderUserContextCard(contentEl: HTMLElement, msg: ChatMessage): void {
+    if (msg.isRebuiltContext) return;
+    const textToShow = msg.displayContent ?? msg.content;
+    if (!textToShow) return;
+
+    const mentions = extractVaultMentions(textToShow, (path) => {
+      const entry = this.app.vault.getAbstractFileByPath(path);
+      if (entry instanceof TFile) return 'file';
+      if (entry instanceof TFolder) return 'folder';
+      return null;
+    });
+
+    renderMessageContextCard(contentEl, mentions, {
+      onOpenFile: (path) => {
+        void this.app.workspace.openLinkText(path, '', false);
+      },
+    });
+  }
+
   // ============================================
   // Streaming Message Rendering
   // ============================================
@@ -130,6 +151,7 @@ export class MessageRenderer {
     const contentEl = msgEl.createDiv({ cls: 'claudian-message-content', attr: { dir: 'auto' } });
 
     if (msg.role === 'user') {
+      this.renderUserContextCard(contentEl, msg);
       const textToShow = msg.displayContent ?? msg.content;
       if (textToShow) {
         const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
@@ -162,6 +184,7 @@ export class MessageRenderer {
     }
 
     contentEl.empty();
+    this.renderUserContextCard(contentEl, msg);
 
     const textToShow = msg.displayContent ?? msg.content;
     if (textToShow) {
@@ -261,6 +284,7 @@ export class MessageRenderer {
     const contentEl = msgEl.createDiv({ cls: 'claudian-message-content', attr: { dir: 'auto' } });
 
     if (msg.role === 'user') {
+      this.renderUserContextCard(contentEl, msg);
       const textToShow = msg.displayContent ?? msg.content;
       if (textToShow) {
         const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });

@@ -1,7 +1,7 @@
 import '@/providers';
 
 import { createMockEl } from '@test/helpers/mockElement';
-import { Menu } from 'obsidian';
+import { Menu, TFile, TFolder } from 'obsidian';
 
 import {
   TOOL_AGENT_OUTPUT,
@@ -1889,6 +1889,79 @@ describe('MessageRenderer', () => {
         undefined,
         expect.any(Function)
       );
+    });
+  });
+
+  // ============================================
+  // user context card
+  // ============================================
+
+  describe('user context card', () => {
+    function createRendererWithVault() {
+      const messagesEl = createMockEl();
+      const comp = createMockComponent();
+      const plugin = {
+        app: {
+          vault: {
+            getAbstractFileByPath: jest.fn((path: string) => {
+              if (path === 'notes.md') {
+                const f = new TFile();
+                f.path = 'notes.md';
+                return f;
+              }
+              if (path === 'src/providers') {
+                const d = new TFolder();
+                d.path = 'src/providers';
+                return d;
+              }
+              return null;
+            }),
+          },
+          workspace: {
+            openLinkText: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+        settings: { mediaFolder: '' },
+      };
+      return {
+        renderer: new MessageRenderer(
+          plugin as any,
+          comp as any,
+          messagesEl,
+          undefined,
+          undefined,
+          mockCapabilities(),
+        ),
+        messagesEl,
+      };
+    }
+
+    it('renders an attached-context card for resolved @mentions in a user message', () => {
+      const { renderer, messagesEl } = createRendererWithVault();
+
+      renderer.addMessage({
+        id: 'm1',
+        role: 'user',
+        content: 'explain @src/providers/ using @notes.md',
+        timestamp: Date.now(),
+      });
+
+      const cards = messagesEl.querySelectorAll('.claudian-context-card');
+      expect(cards).toHaveLength(1);
+      expect(messagesEl.querySelectorAll('.claudian-context-card-row')).toHaveLength(2);
+    });
+
+    it('renders no card when no @mentions resolve to vault entries', () => {
+      const { renderer, messagesEl } = createRendererWithVault();
+
+      renderer.addMessage({
+        id: 'm2',
+        role: 'user',
+        content: 'just a plain message',
+        timestamp: Date.now(),
+      });
+
+      expect(messagesEl.querySelectorAll('.claudian-context-card')).toHaveLength(0);
     });
   });
 });
