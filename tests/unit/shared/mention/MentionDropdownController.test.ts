@@ -48,6 +48,7 @@ function createMockCallbacks(overrides: Partial<MentionDropdownCallbacks> = {}):
   const mentionedServers = new Set<string>();
   return {
     onAttachFile: jest.fn(),
+    onAddContextPill: jest.fn(),
     onMcpMentionChange: jest.fn(),
     onAgentMentionSelect: jest.fn(),
     getMentionedMcpServers: jest.fn().mockReturnValue(mentionedServers),
@@ -820,6 +821,35 @@ describe('MentionDropdownController', () => {
 
       expect(onAddContextPill).toHaveBeenCalledWith('src', 'folder');
       expect(localInput.value).toBe('');
+
+      localController.destroy();
+    });
+
+    it('file selection strips @query even when normalizePathForVault returns null (no pill emitted)', () => {
+      const onAddContextPill = jest.fn();
+      const mockFile = { path: 'src/a.ts', name: 'a.ts', stat: { mtime: Date.now() } } as any;
+      const localCallbacks = createMockCallbacks({
+        onAddContextPill,
+        getCachedVaultFiles: jest.fn().mockReturnValue([mockFile]),
+        // Simulate normalization failure — returns null
+        normalizePathForVault: jest.fn(() => null),
+      });
+      const localInput = createMockInput();
+      const localController = new MentionDropdownController(createMockEl(), localInput, localCallbacks);
+
+      localInput.value = 'hello @a';
+      localInput.selectionStart = 8;
+      localInput.selectionEnd = 8;
+      localController.handleInputChange();
+      jest.advanceTimersByTime(200);
+
+      const enterEvent = { key: 'Enter', preventDefault: jest.fn(), isComposing: false } as any;
+      localController.handleKeydown(enterEvent);
+
+      // @query is stripped unconditionally
+      expect(localInput.value).toBe('hello ');
+      // No pill emitted because normalization returned null
+      expect(onAddContextPill).not.toHaveBeenCalled();
 
       localController.destroy();
     });

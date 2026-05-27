@@ -497,6 +497,19 @@ class InlineEditController {
       {
         // Inline-edit resolves @mentions at send time from input text.
         onAttachFile: () => {},
+        // Re-insert the mention as @path text since inline-edit has no pill tray.
+        onAddContextPill: (path, kind) => {
+          const mention = kind === 'folder' ? `@${path}/ ` : `@${path} `;
+          const el = this.inputEl;
+          if (!el) return;
+          const start = el.selectionStart ?? el.value.length;
+          const end = el.selectionEnd ?? start;
+          el.value = el.value.slice(0, start) + mention + el.value.slice(end);
+          const caret = start + mention.length;
+          el.selectionStart = el.selectionEnd = caret;
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.focus();
+        },
         onMcpMentionChange: () => {},
         getMentionedMcpServers: () => new Set(),
         setMentionedMcpServers: () => false,

@@ -21,7 +21,7 @@ export interface MentionDropdownOptions {
 export interface MentionDropdownCallbacks {
   onAttachFile: (path: string) => void;
   /** Called when a mention item should be added as a pill rather than inserted as text (Task 4). */
-  onAddContextPill?: (path: string, kind: 'file' | 'folder') => void;
+  onAddContextPill: (path: string, kind: 'file' | 'folder') => void;
   onMcpMentionChange?: (servers: Set<string>) => void;
   onAgentMentionSelect?: (agentId: string) => void;
   getMentionedMcpServers: () => Set<string>;
@@ -600,15 +600,15 @@ export class MentionDropdownController {
       case 'folder': {
         const normalizedPath = this.callbacks.normalizePathForVault(selectedItem.path) ?? selectedItem.path;
         this.insertReplacement(beforeAt, '', afterCursor);
-        this.callbacks.onAddContextPill?.(normalizedPath, 'folder');
+        this.callbacks.onAddContextPill(normalizedPath, 'folder');
         break;
       }
       default: {
         const rawPath = selectedItem.file?.path ?? selectedItem.path;
         const normalizedPath = this.callbacks.normalizePathForVault(rawPath);
+        this.insertReplacement(beforeAt, '', afterCursor);
         if (normalizedPath) {
-          this.insertReplacement(beforeAt, '', afterCursor);
-          this.callbacks.onAddContextPill?.(normalizedPath, 'file');
+          this.callbacks.onAddContextPill(normalizedPath, 'file');
         }
         break;
       }
