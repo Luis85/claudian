@@ -19,7 +19,6 @@ import type {
 import { appendCheckIcon, appendMcpIcon, createProviderIconSvg } from '../../../shared/icons';
 import { filterValidPaths, findConflictingPath, isDuplicatePath, isValidDirectoryPath, validateDirectoryPath } from '../../../utils/externalContext';
 import { expandHomePath, normalizePathForFilesystem } from '../../../utils/path';
-import { GitActionButton, type GitActionCallbacks } from './GitActionButton';
 
 interface ElectronOpenDialogResult {
   canceled: boolean;
@@ -58,7 +57,6 @@ export interface ToolbarCallbacks {
   getEnvironmentVariables?: () => string;
   getUIConfig: () => ProviderChatUIConfig;
   getCapabilities: () => ProviderCapabilities;
-  gitActions?: GitActionCallbacks;
 }
 
 export class ModelSelector {
@@ -1223,7 +1221,6 @@ export function createInputToolbar(
   mcpServerSelector: McpServerSelector;
   permissionToggle: PermissionToggle;
   serviceTierToggle: ServiceTierToggle;
-  gitActionButton: GitActionButton | null;
 } {
   const modelSelector = new ModelSelector(parentEl, callbacks);
   const thinkingBudgetSelector = new ThinkingBudgetSelector(parentEl, callbacks);
@@ -1233,9 +1230,6 @@ export function createInputToolbar(
   const mcpServerSelector = new McpServerSelector(parentEl);
   const permissionToggle = new PermissionToggle(parentEl, callbacks);
   const modeSelector = new ModeSelector(parentEl, callbacks);
-  const gitActionButton = callbacks.gitActions
-    ? new GitActionButton(parentEl, callbacks.gitActions)
-    : null;
 
   return {
     modelSelector,
@@ -1246,6 +1240,5 @@ export function createInputToolbar(
     externalContextSelector,
     mcpServerSelector,
     permissionToggle,
-    gitActionButton,
   };
 }

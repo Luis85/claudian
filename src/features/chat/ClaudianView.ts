@@ -1,6 +1,7 @@
 import type { EventRef, WorkspaceLeaf } from 'obsidian';
 import { ItemView, Notice, Scope, setIcon } from 'obsidian';
 
+import { GIT_COMMIT_PROMPT } from '../../core/prompt/gitCommit';
 import { getHiddenProviderCommandSet } from '../../core/providers/commands/hiddenCommands';
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from '../../core/providers/ProviderSettingsCoordinator';
@@ -18,6 +19,7 @@ import { getTabProviderId, onProviderAvailabilityChanged, updatePlanModeUI } fro
 import { TabBar } from './tabs/TabBar';
 import { TabManager } from './tabs/TabManager';
 import type { TabData, TabId } from './tabs/types';
+import { GitActionButton } from './ui/GitActionButton';
 import { recalculateUsageForModel } from './utils/usageInfo';
 
 type LoadableView = {
@@ -52,6 +54,7 @@ export class ClaudianView extends ItemView {
   private headerActionsEl: HTMLElement | null = null;
   private headerActionsContent: HTMLElement | null = null;
   private newTabButtonEl: HTMLElement | null = null;
+  private gitActionButton: GitActionButton | null = null;
 
   // Header elements
   private historyDropdown: HTMLElement | null = null;
@@ -138,6 +141,7 @@ export class ClaudianView extends ItemView {
       );
     }
 
+    this.gitActionButton?.updateDisplay();
     this.tabManager?.primeProviderRuntime();
   }
 
@@ -216,6 +220,7 @@ export class ClaudianView extends ItemView {
         onTabCreated: () => {
           this.updateTabBar();
           this.updateNavRowLocation();
+          this.gitActionButton?.updateDisplay();
           this.persistTabState();
           this.syncProviderBrandColor();
         },
@@ -223,6 +228,7 @@ export class ClaudianView extends ItemView {
           this.updateTabBar();
           this.updateHistoryDropdown();
           this.updateNavRowLocation();
+          this.gitActionButton?.updateDisplay();
           this.persistTabState();
           this.syncProviderBrandColor();
         },
@@ -235,11 +241,13 @@ export class ClaudianView extends ItemView {
         onTabAttentionChanged: () => this.updateTabBar(),
         onTabConversationChanged: () => {
           this.updateTabBar();
+          this.gitActionButton?.updateDisplay();
           this.persistTabState();
           this.syncProviderBrandColor();
         },
         onTabProviderChanged: () => {
           this.updateTabBar();
+          this.gitActionButton?.updateDisplay();
           this.syncProviderBrandColor();
         },
       }
@@ -269,6 +277,12 @@ export class ClaudianView extends ItemView {
     this.tabContentEl = null;
     this.navRowContent?.remove();
     this.navRowContent = null;
+    this.headerActionsContent?.remove();
+    this.headerActionsContent = null;
+    this.newTabButtonEl = null;
+    this.historyDropdown = null;
+    this.gitActionButton?.dispose();
+    this.gitActionButton = null;
   }
 
   /**
@@ -317,6 +331,8 @@ export class ClaudianView extends ItemView {
 
     this.tabBar?.destroy();
     this.tabBar = null;
+    this.gitActionButton?.dispose();
+    this.gitActionButton = null;
     this.scope = null;
   }
 
@@ -377,6 +393,15 @@ export class ClaudianView extends ItemView {
 
     // Header actions container (for header mode - initially hidden)
     this.headerActionsEl = header.createDiv({ cls: 'claudian-header-actions claudian-header-actions-slot claudian-hidden' });
+
+    if (this.plugin.gitStatusWatcher) {
+      this.gitActionButton = new GitActionButton(this.headerActionsEl, {
+        subscribeGitStatus: (cb) => this.plugin.gitStatusWatcher!.subscribe(cb),
+        isGitActionsEnabled: () => this.isActiveTabGitActionEnabled(),
+        onGitCommit: () => this.sendGitCommitPromptToActiveTab(),
+      });
+      this.headerActionsEl.removeClass('claudian-hidden');
+    }
   }
 
   /**
@@ -478,7 +503,7 @@ export class ClaudianView extends ItemView {
       }
       // Hide header actions slot when in input mode
       if (this.headerActionsEl) {
-        this.headerActionsEl.addClass('claudian-hidden');
+        this.headerActionsEl.toggleClass('claudian-hidden', !this.gitActionButton);
       }
     }
   }
@@ -510,6 +535,30 @@ export class ClaudianView extends ItemView {
   // ============================================
   // Tab Management
   // ============================================
+
+  private isActiveTabGitActionEnabled(): boolean {
+    const activeTab = this.tabManager?.getActiveTab();
+    if (!activeTab) {
+      return false;
+    }
+
+    const providerId = getTabProviderId(activeTab, this.plugin);
+    const settings = ProviderSettingsCoordinator.getProviderSettingsSnapshot(
+      this.plugin.settings,
+      providerId,
+    );
+
+    return ProviderRegistry.getChatUIConfig(providerId).isGitActionsEnabled?.(settings) !== false;
+  }
+
+  private sendGitCommitPromptToActiveTab(): void {
+    const inputController = this.tabManager?.getActiveTab()?.controllers.inputController;
+    if (!inputController) {
+      return;
+    }
+
+    void inputController.sendMessage({ content: GIT_COMMIT_PROMPT });
+  }
 
   private handleTabClick(tabId: TabId): void {
     const switched = this.tabManager?.switchToTab(tabId);
