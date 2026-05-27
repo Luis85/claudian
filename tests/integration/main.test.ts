@@ -166,16 +166,37 @@ describe('ClaudianPlugin', () => {
       expect(menu.items[0].icon).toBe('at-sign');
     });
 
-    it('does not add the chat context menu item for folders', async () => {
+    it('adds a folder menu item for TFolder with correct title and icon', async () => {
       await plugin.onload();
 
       const fileMenuCall = mockApp.workspace.on.mock.calls.find(
         ([eventName]: [string]) => eventName === 'file-menu',
       );
-      const menu = createMockMenu();
-      fileMenuCall![1](menu, createMockTFolder('notes'));
+      expect(fileMenuCall).toBeDefined();
 
-      expect(menu.items).toHaveLength(0);
+      const menu = createMockMenu();
+      const folder = createMockTFolder('notes');
+      fileMenuCall![1](menu, folder);
+
+      expect(menu.items).toHaveLength(1);
+      expect(menu.items[0].title).toBe('Add folder to Claudian chat');
+      expect(menu.items[0].icon).toBe('folder');
+    });
+
+    it('adds the selected folder to the active chat from the file menu', async () => {
+      await plugin.onload();
+
+      const addSpy = jest.spyOn(plugin, 'addFolderToActiveChat').mockResolvedValue(true);
+      const fileMenuCall = mockApp.workspace.on.mock.calls.find(
+        ([eventName]: [string]) => eventName === 'file-menu',
+      );
+      const menu = createMockMenu();
+      const folder = createMockTFolder('notes');
+      fileMenuCall![1](menu, folder);
+
+      menu.items[0].clickHandler?.();
+
+      expect(addSpy).toHaveBeenCalledWith(folder);
     });
 
     it('adds the selected file to the active chat from the file menu', async () => {
@@ -211,6 +232,37 @@ describe('ClaudianPlugin', () => {
       expect(result).toBe(true);
       expect(insertVaultFileMention).toHaveBeenCalledWith('notes/context.md');
       expect(inputEl.focus).toHaveBeenCalled();
+    });
+
+    it('inserts the selected folder mention into the active chat composer', async () => {
+      await plugin.onload();
+
+      const inputEl = { focus: jest.fn() };
+      const insertVaultFolderMention = jest.fn().mockReturnValue(true);
+      jest.spyOn(plugin, 'getView').mockReturnValue({
+        getActiveTab: jest.fn().mockReturnValue({
+          dom: { inputEl },
+          ui: { fileContextManager: { insertVaultFolderMention } },
+        }),
+      } as any);
+
+      const result = await plugin.addFolderToActiveChat(createMockTFolder('notes/subfolder'));
+
+      expect(result).toBe(true);
+      expect(insertVaultFolderMention).toHaveBeenCalledWith('notes/subfolder');
+      expect(inputEl.focus).toHaveBeenCalled();
+    });
+
+    it('returns false and shows a notice when no active tab is available for folder add', async () => {
+      await plugin.onload();
+
+      jest.spyOn(plugin, 'getView').mockReturnValue({
+        getActiveTab: jest.fn().mockReturnValue(null),
+      } as any);
+
+      const result = await plugin.addFolderToActiveChat(createMockTFolder('notes'));
+
+      expect(result).toBe(false);
     });
 
   });
