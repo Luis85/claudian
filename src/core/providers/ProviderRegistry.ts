@@ -1,5 +1,6 @@
 import type ClaudianPlugin from '../../main';
 import type { ChatRuntime } from '../runtime/ChatRuntime';
+import { noAsyncTaskInterpreter } from './noAsyncTaskInterpreter';
 import {
   type CreateChatRuntimeOptions,
   DEFAULT_CHAT_PROVIDER_ID,
@@ -90,7 +91,7 @@ export class ProviderRegistry {
   static getTaskResultInterpreter(
     providerId: ProviderId = DEFAULT_CHAT_PROVIDER_ID,
   ): ProviderTaskResultInterpreter {
-    return this.getProviderRegistration(providerId).taskResultInterpreter;
+    return this.getProviderRegistration(providerId).taskResultInterpreter ?? noAsyncTaskInterpreter;
   }
 
   static getSubagentLifecycleAdapter(

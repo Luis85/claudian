@@ -1,7 +1,6 @@
 import type { ProviderRegistration } from '../../core/providers/types';
 import { CursorInlineEditService } from './auxiliary/CursorInlineEditService';
 import { CursorInstructionRefineService } from './auxiliary/CursorInstructionRefineService';
-import { CursorTaskResultInterpreter } from './auxiliary/CursorTaskResultInterpreter';
 import { CursorTitleGenerationService } from './auxiliary/CursorTitleGenerationService';
 import { CURSOR_PROVIDER_CAPABILITIES } from './capabilities';
 import { cursorSettingsReconciler } from './env/CursorSettingsReconciler';
@@ -23,5 +22,4 @@ export const cursorProviderRegistration: ProviderRegistration = {
   createInstructionRefineService: (plugin) => new CursorInstructionRefineService(plugin),
   createInlineEditService: (plugin) => new CursorInlineEditService(plugin),
   historyService: new CursorConversationHistoryService(),
-  taskResultInterpreter: new CursorTaskResultInterpreter(),
 };

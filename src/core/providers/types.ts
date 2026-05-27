@@ -65,7 +65,8 @@ export interface ProviderRegistration {
   createInstructionRefineService: (plugin: ClaudianPlugin) => InstructionRefineService;
   createInlineEditService: (plugin: ClaudianPlugin) => InlineEditService;
   historyService: ProviderConversationHistoryService;
-  taskResultInterpreter: ProviderTaskResultInterpreter;
+  /** Omitted by providers without async subagent tasks; the registry substitutes a neutral default. */
+  taskResultInterpreter?: ProviderTaskResultInterpreter;
   subagentLifecycleAdapter?: ProviderSubagentLifecycleAdapter;
 }
 

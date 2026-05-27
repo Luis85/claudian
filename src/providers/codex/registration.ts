@@ -1,7 +1,6 @@
 import type { ProviderRegistration } from '../../core/providers/types';
 import { CodexInlineEditService } from './auxiliary/CodexInlineEditService';
 import { CodexInstructionRefineService } from './auxiliary/CodexInstructionRefineService';
-import { CodexTaskResultInterpreter } from './auxiliary/CodexTaskResultInterpreter';
 import { CodexTitleGenerationService } from './auxiliary/CodexTitleGenerationService';
 import { CODEX_PROVIDER_CAPABILITIES } from './capabilities';
 import { codexSettingsReconciler } from './env/CodexSettingsReconciler';
@@ -24,6 +23,5 @@ export const codexProviderRegistration: ProviderRegistration = {
   createInstructionRefineService: (plugin) => new CodexInstructionRefineService(plugin),
   createInlineEditService: (plugin) => new CodexInlineEditService(plugin),
   historyService: new CodexConversationHistoryService(),
-  taskResultInterpreter: new CodexTaskResultInterpreter(),
   subagentLifecycleAdapter: codexSubagentLifecycleAdapter,
 };

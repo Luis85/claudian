@@ -1,7 +1,6 @@
 import type { ProviderRegistration } from '../../core/providers/types';
 import { OpencodeInlineEditService } from './auxiliary/OpencodeInlineEditService';
 import { OpencodeInstructionRefineService } from './auxiliary/OpencodeInstructionRefineService';
-import { OpencodeTaskResultInterpreter } from './auxiliary/OpencodeTaskResultInterpreter';
 import { OpencodeTitleGenerationService } from './auxiliary/OpencodeTitleGenerationService';
 import { OPENCODE_PROVIDER_CAPABILITIES } from './capabilities';
 import { opencodeSettingsReconciler } from './env/OpencodeSettingsReconciler';
@@ -23,5 +22,4 @@ export const opencodeProviderRegistration: ProviderRegistration = {
   historyService: new OpencodeConversationHistoryService(),
   isEnabled: (settings) => getOpencodeProviderSettings(settings).enabled,
   settingsReconciler: opencodeSettingsReconciler,
-  taskResultInterpreter: new OpencodeTaskResultInterpreter(),
 };
