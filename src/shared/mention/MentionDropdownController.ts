@@ -598,17 +598,18 @@ export class MentionDropdownController {
         break;
       }
       case 'folder': {
-        const normalizedPath = this.callbacks.normalizePathForVault(selectedItem.path);
-        this.insertReplacement(beforeAt, `@${normalizedPath ?? selectedItem.path}/ `, afterCursor);
+        const normalizedPath = this.callbacks.normalizePathForVault(selectedItem.path) ?? selectedItem.path;
+        this.insertReplacement(beforeAt, '', afterCursor);
+        this.callbacks.onAddContextPill?.(normalizedPath, 'folder');
         break;
       }
       default: {
         const rawPath = selectedItem.file?.path ?? selectedItem.path;
         const normalizedPath = this.callbacks.normalizePathForVault(rawPath);
         if (normalizedPath) {
-          this.callbacks.onAttachFile(normalizedPath);
+          this.insertReplacement(beforeAt, '', afterCursor);
+          this.callbacks.onAddContextPill?.(normalizedPath, 'file');
         }
-        this.insertReplacement(beforeAt, `@${normalizedPath ?? selectedItem.name} `, afterCursor);
         break;
       }
     }

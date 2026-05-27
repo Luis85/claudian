@@ -621,10 +621,12 @@ describe('MentionDropdownController', () => {
       localController.destroy();
     });
 
-    it('inserts folder mention as plain text and does not attach file context', () => {
+    it('folder selection strips the @query and emits onAddContextPill (not inserting @path/ text)', () => {
       const onAttachFile = jest.fn();
+      const onAddContextPill = jest.fn();
       const localCallbacks = createMockCallbacks({
         onAttachFile,
+        onAddContextPill,
         getCachedVaultFolders: jest.fn().mockReturnValue([
           { name: 'src', path: 'src' },
         ]),
@@ -641,7 +643,9 @@ describe('MentionDropdownController', () => {
       const enterEvent = { key: 'Enter', preventDefault: jest.fn(), isComposing: false } as any;
       localController.handleKeydown(enterEvent);
 
-      expect(localInput.value).toBe('@src/ ');
+      // Pill path: @query stripped, no @path/ text inserted
+      expect(localInput.value).toBe('');
+      expect(onAddContextPill).toHaveBeenCalledWith('src', 'folder');
       expect(onAttachFile).not.toHaveBeenCalled();
 
       localController.destroy();
@@ -756,6 +760,66 @@ describe('MentionDropdownController', () => {
         { type: 'file', path: 'old-folder/old.md' },
         { type: 'folder', path: 'old-folder' },
       ]);
+
+      localController.destroy();
+    });
+  });
+
+  describe('vault mention selects to pills', () => {
+    it('file selection strips the @query and emits onAddContextPill(path, "file")', () => {
+      const onAddContextPill = jest.fn();
+      const onAttachFile = jest.fn();
+      const mockFile = { path: 'src/a.ts', name: 'a.ts', stat: { mtime: Date.now() } } as any;
+      const localCallbacks = createMockCallbacks({
+        onAttachFile,
+        onAddContextPill,
+        getCachedVaultFiles: jest.fn().mockReturnValue([mockFile]),
+        // identity normalizer so src/a.ts → src/a.ts
+        normalizePathForVault: jest.fn((p: string | undefined | null) => p ?? null),
+      });
+      const localInput = createMockInput();
+      const localController = new MentionDropdownController(createMockEl(), localInput, localCallbacks);
+
+      localInput.value = 'hi @a';
+      localInput.selectionStart = 5;
+      localInput.selectionEnd = 5;
+      localController.handleInputChange();
+      jest.advanceTimersByTime(200);
+
+      const enterEvent = { key: 'Enter', preventDefault: jest.fn(), isComposing: false } as any;
+      localController.handleKeydown(enterEvent);
+
+      expect(onAddContextPill).toHaveBeenCalledWith('src/a.ts', 'file');
+      // '@a' removed, no '@src/a.ts' inserted — prose is clean
+      expect(localInput.value).toBe('hi ');
+      expect(onAttachFile).not.toHaveBeenCalled();
+
+      localController.destroy();
+    });
+
+    it('folder selection strips the @query and emits onAddContextPill(path, "folder")', () => {
+      const onAddContextPill = jest.fn();
+      const localCallbacks = createMockCallbacks({
+        onAddContextPill,
+        getCachedVaultFolders: jest.fn().mockReturnValue([
+          { name: 'src', path: 'src' },
+        ]),
+        normalizePathForVault: jest.fn((p: string | undefined | null) => p ?? null),
+      });
+      const localInput = createMockInput();
+      const localController = new MentionDropdownController(createMockEl(), localInput, localCallbacks);
+
+      localInput.value = '@sr';
+      localInput.selectionStart = 3;
+      localInput.selectionEnd = 3;
+      localController.handleInputChange();
+      jest.advanceTimersByTime(200);
+
+      const enterEvent = { key: 'Enter', preventDefault: jest.fn(), isComposing: false } as any;
+      localController.handleKeydown(enterEvent);
+
+      expect(onAddContextPill).toHaveBeenCalledWith('src', 'folder');
+      expect(localInput.value).toBe('');
 
       localController.destroy();
     });
