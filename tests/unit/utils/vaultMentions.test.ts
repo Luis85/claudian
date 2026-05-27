@@ -40,4 +40,14 @@ describe('extractVaultMentions', () => {
     const r = extractVaultMentions('email user@notes.md', resolve);
     expect(r.files).toEqual([]);
   });
+
+  it('caps a space-path mention at the next mention so it does not swallow it', () => {
+    const r = extractVaultMentions('open @my notes.md @src/api.ts', resolve);
+    expect(r.files).toEqual(['my notes.md', 'src/api.ts']);
+  });
+
+  it('matches a mention at index 0', () => {
+    const r = extractVaultMentions('@notes.md is the file', resolve);
+    expect(r.files).toEqual(['notes.md']);
+  });
 });

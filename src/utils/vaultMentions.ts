@@ -34,7 +34,7 @@ export function extractVaultMentions(
     // Cap candidates at the next @-mention boundary so a greedy space-containing
     // path does not accidentally consume a subsequent mention.
     let nextMentionAt = text.length;
-    for (let j = pathStart + 1; j < text.length; j++) {
+    for (let j = pathStart; j < text.length; j++) {
       if (isMentionStart(text, j)) { nextMentionAt = j; break; }
     }
     const candidates = collectMentionEndCandidates(text, pathStart)
