@@ -1,0 +1,43 @@
+import { extractVaultMentions } from '@/utils/vaultMentions';
+
+const vault: Record<string, 'file' | 'folder'> = {
+  'notes.md': 'file',
+  'src/api.ts': 'file',
+  'my notes.md': 'file',
+  'src/providers': 'folder',
+};
+const resolve = (p: string) => vault[p] ?? null;
+
+describe('extractVaultMentions', () => {
+  it('separates file and folder mentions', () => {
+    const r = extractVaultMentions('see @notes.md and @src/providers/ now', resolve);
+    expect(r.files).toEqual(['notes.md']);
+    expect(r.folders).toEqual(['src/providers']);
+  });
+
+  it('greedily matches paths containing spaces', () => {
+    const r = extractVaultMentions('open @my notes.md please', resolve);
+    expect(r.files).toEqual(['my notes.md']);
+  });
+
+  it('ignores @tokens that are not vault entries', () => {
+    const r = extractVaultMentions('email me @someone and @nope.txt', resolve);
+    expect(r.files).toEqual([]);
+    expect(r.folders).toEqual([]);
+  });
+
+  it('strips trailing punctuation to find the real file', () => {
+    const r = extractVaultMentions('look at @notes.md.', resolve);
+    expect(r.files).toEqual(['notes.md']);
+  });
+
+  it('de-duplicates repeated mentions', () => {
+    const r = extractVaultMentions('@notes.md and again @notes.md', resolve);
+    expect(r.files).toEqual(['notes.md']);
+  });
+
+  it('only matches mentions at a boundary', () => {
+    const r = extractVaultMentions('email user@notes.md', resolve);
+    expect(r.files).toEqual([]);
+  });
+});

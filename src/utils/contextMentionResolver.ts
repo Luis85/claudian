@@ -14,7 +14,7 @@ function isWhitespace(char: string): boolean {
   return /\s/.test(char);
 }
 
-function collectMentionEndCandidates(text: string, pathStart: number): number[] {
+export function collectMentionEndCandidates(text: string, pathStart: number): number[] {
   const candidates = new Set<number>();
 
   for (let index = pathStart; index < text.length; index++) {
