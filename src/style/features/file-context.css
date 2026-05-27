@@ -1,3 +1,21 @@
+/* File chip modifier accents */
+.claudian-file-chip--folder .claudian-file-chip-icon {
+  color: var(--text-accent);
+}
+
+.claudian-file-chip--current {
+  border-color: var(--interactive-accent);
+}
+
+.claudian-file-chip--folder {
+  cursor: default;
+}
+
+.claudian-file-chip--file,
+.claudian-file-chip--current {
+  cursor: pointer;
+}
+
 /* @ Mention dropdown */
 .claudian-mention-dropdown {
   display: none;
