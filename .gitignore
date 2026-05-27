@@ -92,8 +92,8 @@ dev
 # yarn.lock
 # package-lock.json
 
-.claude/
-.codex/
 
 /.claudian/
 /.specorator/
+/.worktrees/
+/.claude/settings.local.json
