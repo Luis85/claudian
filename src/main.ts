@@ -5,7 +5,7 @@ patchSetMaxListenersForElectron();
 import './providers';
 
 import type { Editor, Menu, TAbstractFile, WorkspaceLeaf } from 'obsidian';
-import { debounce, MarkdownView, Notice, Plugin, TFile } from 'obsidian';
+import { debounce, MarkdownView, Notice, Plugin, TFile, TFolder } from 'obsidian';
 
 import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
 import { SharedStorageService } from './app/storage/SharedStorageService';
@@ -96,16 +96,25 @@ export default class ClaudianPlugin extends Plugin {
 
     this.registerEvent(
       this.app.workspace.on('file-menu', (menu: Menu, file: TAbstractFile) => {
-        if (!(file instanceof TFile)) return;
-
-        menu.addItem((item) => {
-          item
-            .setTitle('Add file to Claudian chat')
-            .setIcon('at-sign')
-            .onClick(() => {
-              void this.addFileToActiveChat(file);
-            });
-        });
+        if (file instanceof TFile) {
+          menu.addItem((item) => {
+            item
+              .setTitle('Add file to Claudian chat')
+              .setIcon('at-sign')
+              .onClick(() => {
+                void this.addFileToActiveChat(file);
+              });
+          });
+        } else if (file instanceof TFolder) {
+          menu.addItem((item) => {
+            item
+              .setTitle('Add folder to Claudian chat')
+              .setIcon('folder')
+              .onClick(() => {
+                void this.addFolderToActiveChat(file);
+              });
+          });
+        }
       })
     );
 
@@ -247,6 +256,26 @@ export default class ClaudianPlugin extends Plugin {
 
     activeTab.dom.inputEl.focus();
     new Notice(`Added ${file.path} to Claudian chat`);
+    return true;
+  }
+
+  async addFolderToActiveChat(folder: TFolder): Promise<boolean> {
+    const view = await this.ensureViewOpen();
+    const activeTab = view?.getActiveTab();
+    const fileContextManager = activeTab?.ui.fileContextManager;
+
+    if (!activeTab || !fileContextManager) {
+      new Notice('Open Claudian chat and enable a provider before adding folder context.');
+      return false;
+    }
+
+    if (!fileContextManager.insertVaultFolderMention(folder.path)) {
+      new Notice(`Could not add folder to chat: ${folder.path}`);
+      return false;
+    }
+
+    activeTab.dom.inputEl.focus();
+    new Notice(`Added ${folder.path}/ to Claudian chat`);
     return true;
   }
 
