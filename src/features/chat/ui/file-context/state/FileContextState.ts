@@ -1,11 +1,31 @@
 export class FileContextState {
   private attachedFiles: Set<string> = new Set();
+  private attachedFolders: Set<string> = new Set();
   private sessionStarted = false;
   private mentionedMcpServers: Set<string> = new Set();
   private currentNoteSent = false;
 
   getAttachedFiles(): Set<string> {
     return new Set(this.attachedFiles);
+  }
+
+  getAttachedFolders(): Set<string> {
+    return new Set(this.attachedFolders);
+  }
+
+  setAttachedFolders(folders: string[]): void {
+    this.attachedFolders.clear();
+    for (const folder of folders) {
+      this.attachedFolders.add(folder);
+    }
+  }
+
+  attachFolder(path: string): void {
+    this.attachedFolders.add(path);
+  }
+
+  detachFolder(path: string): void {
+    this.attachedFolders.delete(path);
   }
 
   hasSentCurrentNote(): boolean {
@@ -28,12 +48,14 @@ export class FileContextState {
     this.sessionStarted = false;
     this.currentNoteSent = false;
     this.attachedFiles.clear();
+    this.attachedFolders.clear();
     this.clearMcpMentions();
   }
 
   resetForLoadedConversation(hasMessages: boolean): void {
     this.currentNoteSent = hasMessages;
     this.attachedFiles.clear();
+    this.attachedFolders.clear();
     this.sessionStarted = hasMessages;
     this.clearMcpMentions();
   }
@@ -55,6 +77,7 @@ export class FileContextState {
 
   clearAttachments(): void {
     this.attachedFiles.clear();
+    this.attachedFolders.clear();
   }
 
   getMentionedMcpServers(): Set<string> {

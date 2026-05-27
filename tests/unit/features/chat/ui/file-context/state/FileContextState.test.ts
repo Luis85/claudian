@@ -109,6 +109,33 @@ describe('FileContextState', () => {
     });
   });
 
+  describe('attachedFolders', () => {
+    it('attaches, reports, and detaches folders independently of files', () => {
+      const state = new FileContextState();
+      state.attachFile('a.md');
+      state.attachFolder('src/providers');
+      expect(state.getAttachedFolders().has('src/providers')).toBe(true);
+      expect(state.getAttachedFiles().has('src/providers')).toBe(false);
+      state.detachFolder('src/providers');
+      expect(state.getAttachedFolders().size).toBe(0);
+      expect(state.getAttachedFiles().has('a.md')).toBe(true);
+    });
+
+    it('clearAttachments clears folders too', () => {
+      const state = new FileContextState();
+      state.attachFolder('src');
+      state.clearAttachments();
+      expect(state.getAttachedFolders().size).toBe(0);
+    });
+
+    it('setAttachedFolders replaces the folder set', () => {
+      const state = new FileContextState();
+      state.attachFolder('old');
+      state.setAttachedFolders(['x', 'y']);
+      expect([...state.getAttachedFolders()].sort()).toEqual(['x', 'y']);
+    });
+  });
+
   describe('MCP server mentions', () => {
     it('should add a mentioned MCP server', () => {
       state.addMentionedMcpServer('server1');
