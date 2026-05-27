@@ -37,6 +37,7 @@ function createMockFileContextManager() {
     shouldSendCurrentNote: jest.fn().mockReturnValue(false),
     markCurrentNoteSent: jest.fn(),
     transformContextMentions: jest.fn().mockImplementation((text: string) => text),
+    getAttachedMentionSuffix: jest.fn().mockReturnValue(''),
   };
 }
 
@@ -175,6 +176,7 @@ function createMockDeps(overrides: Partial<InputControllerDeps> = {}): InputCont
       shouldSendCurrentNote: jest.fn().mockReturnValue(false),
       markCurrentNoteSent: jest.fn(),
       transformContextMentions: jest.fn().mockImplementation((text: string) => text),
+      getAttachedMentionSuffix: jest.fn().mockReturnValue(''),
     }) as any,
     getImageContextManager: () => imageContextManager as any,
     getMcpServerSelector: () => null,
@@ -986,6 +988,7 @@ describe('InputController - Message Queue', () => {
         shouldSendCurrentNote: jest.fn().mockImplementation(() => !currentNoteSent),
         markCurrentNoteSent: jest.fn().mockImplementation(() => { currentNoteSent = true; }),
         transformContextMentions: jest.fn().mockImplementation((text: string) => text),
+        getAttachedMentionSuffix: jest.fn().mockReturnValue(''),
       };
 
       deps.getFileContextManager = () => fileContextManager as any;
@@ -1011,6 +1014,7 @@ describe('InputController - Message Queue', () => {
         shouldSendCurrentNote: jest.fn().mockReturnValue(true),
         markCurrentNoteSent: jest.fn(),
         transformContextMentions: jest.fn().mockImplementation((text: string) => text),
+        getAttachedMentionSuffix: jest.fn().mockReturnValue(''),
       };
 
       deps = createSendableDeps({
@@ -3183,6 +3187,71 @@ describe('InputController - Message Queue', () => {
 
       expect(restoreFn).toHaveBeenCalled();
       expect(mockAgentService.query).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Context pill mention folding', () => {
+    it('folds attached pill mentions into turnRequest.text but keeps displayContent clean', async () => {
+      const fileContextManager = createMockFileContextManager();
+      (fileContextManager.getAttachedMentionSuffix as jest.Mock).mockReturnValue(' @a.ts @src/');
+
+      const localDeps = createSendableDeps({
+        getFileContextManager: () => fileContextManager as any,
+      });
+      const mockAgentService = (localDeps as any).mockAgentService;
+
+      // Capture the request passed to prepareTurn
+      const capturedRequests: any[] = [];
+      mockAgentService.prepareTurn = jest.fn().mockImplementation((request: any) => {
+        capturedRequests.push(request);
+        return encodeClaudeTurn(request, mockMcpForEncoder);
+      });
+      mockAgentService.query = jest.fn().mockReturnValue(createMockStream([{ type: 'done' }]));
+
+      const localInput = localDeps.getInputEl() as ReturnType<typeof createMockInputEl>;
+      localInput.value = 'explain this';
+      const localController = new InputController(localDeps);
+
+      await localController.sendMessage();
+
+      expect(capturedRequests).toHaveLength(1);
+      // turnRequest.text carries the folded mentions
+      expect(capturedRequests[0].text).toBe('explain this @a.ts @src/');
+      // displayContent on the persisted user message stays clean prose
+      const userMsg = localDeps.state.messages.find((m: any) => m.role === 'user');
+      expect(userMsg?.displayContent).toBe('explain this');
+    });
+
+    it('does not fold mentions for a /compact message', async () => {
+      const fileContextManager = createMockFileContextManager();
+      (fileContextManager.getAttachedMentionSuffix as jest.Mock).mockReturnValue(' @a.ts');
+
+      const localDeps = createSendableDeps({
+        getFileContextManager: () => fileContextManager as any,
+      });
+      const mockAgentService = (localDeps as any).mockAgentService;
+
+      const capturedRequests: any[] = [];
+      mockAgentService.prepareTurn = jest.fn().mockImplementation((request: any) => {
+        capturedRequests.push(request);
+        return {
+          request,
+          persistedContent: request.text,
+          prompt: request.text,
+          isCompact: true,
+          mcpMentions: new Set(),
+        };
+      });
+      mockAgentService.query = jest.fn().mockReturnValue(createMockStream([{ type: 'done' }]));
+
+      const localInput = localDeps.getInputEl() as ReturnType<typeof createMockInputEl>;
+      localInput.value = '/compact';
+      const localController = new InputController(localDeps);
+
+      await localController.sendMessage();
+
+      expect(capturedRequests).toHaveLength(1);
+      expect(capturedRequests[0].text).toBe('/compact');
     });
   });
 });

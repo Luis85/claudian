@@ -735,8 +735,15 @@ export class InputController {
 
     const externalContextPaths = externalContextSelector?.getExternalContexts();
     const isCompact = /^\/compact(\s|$)/i.test(options.content);
+    // Fold pill mentions (attached files/folders) into the content sent to the provider.
+    // getAttachedMentionSuffix() already excludes the current note; /compact must pass
+    // through unchanged so the provider recognises its built-in command.
+    const mentionSuffix = !isCompact && fileContextManager
+      ? fileContextManager.getAttachedMentionSuffix()
+      : '';
+    const foldedContent = options.content + mentionSuffix;
     const transformedText = !isCompact && fileContextManager
-      ? fileContextManager.transformContextMentions(options.content)
+      ? fileContextManager.transformContextMentions(foldedContent)
       : options.content;
     const enabledMcpServers = mcpServerSelector?.getEnabledServers();
 
