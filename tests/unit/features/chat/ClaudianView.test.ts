@@ -34,6 +34,29 @@ function createViewHarness(options: {
 }
 
 describe('ClaudianView tab controls', () => {
+  it('creates the git action in the header actions instead of the input nav content', () => {
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.containerEl = createMockEl();
+    view.containerEl.ownerDocument.createDocumentFragment = () => createMockEl('fragment');
+    view.plugin = {
+      gitStatusWatcher: {
+        subscribe: jest.fn(() => jest.fn()),
+      },
+      settings: {},
+    };
+    view.tabManager = {
+      getActiveTab: jest.fn().mockReturnValue(null),
+    };
+    view.syncHeaderLogo = jest.fn();
+    const header = createMockEl();
+    view.buildHeader(header);
+
+    const navContent = view.buildNavRowContent();
+
+    expect(view.headerActionsEl.querySelector('.claudian-git-action')).not.toBeNull();
+    expect(navContent.querySelector('.claudian-git-action')).toBeNull();
+  });
+
   it('hides the new-tab button when the tab manager is at capacity', () => {
     const { newTabButtonEl, view } = createViewHarness({ canCreateTab: false });
 

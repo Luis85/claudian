@@ -39,7 +39,10 @@ describe('GitActionButton', () => {
     const { button, emit } = setup();
     emit({ isRepo: true, dirtyCount: 3 });
     expect(button.containerEl.hasClass('claudian-hidden')).toBe(false);
+    expect(button.labelEl.textContent).toBe('Commit & push');
     expect(button.badgeEl.textContent).toBe('3');
+    expect(button.buttonEl.getAttribute('aria-label')).toBe('Commit and push 3 changes');
+    expect(button.buttonEl.getAttribute('title')).toBe('Ask the active agent to commit and push 3 changes.');
   });
 
   it('hides again when changes are committed away', () => {

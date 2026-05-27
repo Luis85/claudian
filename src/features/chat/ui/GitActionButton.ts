@@ -15,16 +15,27 @@ export function shouldShowGitButton(status: GitStatus | null, enabled: boolean):
 export class GitActionButton {
   readonly containerEl: HTMLElement;
   readonly buttonEl: HTMLElement;
+  readonly labelEl: HTMLElement;
   readonly badgeEl: HTMLElement;
   private readonly unsubscribe: () => void;
   private lastStatus: GitStatus | null = null;
 
   constructor(parentEl: HTMLElement, private readonly callbacks: GitActionCallbacks) {
     this.containerEl = parentEl.createDiv({ cls: 'claudian-git-action' });
-    this.buttonEl = this.containerEl.createDiv({ cls: 'claudian-git-action-btn' });
+    this.buttonEl = this.containerEl.createEl('button', {
+      cls: 'claudian-git-action-btn',
+      attr: {
+        type: 'button',
+        'aria-label': 'Commit and push changes',
+      },
+    });
 
     const iconEl = this.buttonEl.createSpan({ cls: 'claudian-git-action-icon' });
     setIcon(iconEl, 'git-commit-horizontal');
+    this.labelEl = this.buttonEl.createSpan({
+      cls: 'claudian-git-action-label',
+      text: 'Commit & push',
+    });
     this.badgeEl = this.buttonEl.createSpan({ cls: 'claudian-git-action-badge' });
 
     this.buttonEl.addEventListener('click', (e) => {
@@ -46,10 +57,11 @@ export class GitActionButton {
     if (visible && this.lastStatus) {
       this.badgeEl.setText(String(this.lastStatus.dirtyCount));
       const count = this.lastStatus.dirtyCount;
-      this.containerEl.setAttribute(
-        'title',
-        `Commit & push ${count} change${count === 1 ? '' : 's'}`,
-      );
+      const changes = `${count} change${count === 1 ? '' : 's'}`;
+      const label = `Commit and push ${changes}`;
+      const title = `Ask the active agent to commit and push ${changes}.`;
+      this.buttonEl.setAttribute('aria-label', label);
+      this.buttonEl.setAttribute('title', title);
     }
   }
 

@@ -1,29 +1,33 @@
-/* Git commit & push toolbar button */
+/* Git commit & push header action */
 .claudian-git-action {
-  position: relative;
   display: flex;
   align-items: center;
-  margin-left: 8px;
 }
 
 .claudian-git-action-btn {
-  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
-  color: var(--text-muted);
-  background: transparent;
+  gap: 6px;
+  min-height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  color: var(--text-normal);
+  background: var(--background-secondary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
   cursor: pointer;
-  transition: color 0.15s ease, background 0.15s ease;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
   flex-shrink: 0;
 }
 
 .claudian-git-action-btn:hover {
   background: var(--background-modifier-hover);
-  color: var(--text-normal);
+  border-color: var(--background-modifier-border-hover);
+  color: var(--interactive-accent);
 }
 
 .claudian-git-action-icon {
@@ -37,12 +41,21 @@
   height: 14px;
 }
 
+.claudian-git-action-label {
+  white-space: nowrap;
+}
+
 .claudian-git-action-badge {
-  position: absolute;
-  top: 0;
-  right: 0;
-  font-size: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 10px;
   font-weight: 600;
-  color: var(--claudian-brand);
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
   pointer-events: none;
 }
