@@ -1963,5 +1963,46 @@ describe('MessageRenderer', () => {
 
       expect(messagesEl.querySelectorAll('.claudian-context-card')).toHaveLength(0);
     });
+
+    it('renders context card with two rows via the stored render path', () => {
+      const { renderer, messagesEl } = createRendererWithVault();
+      jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+      const msg: ChatMessage = {
+        id: 'm3',
+        role: 'user',
+        content: 'explain @src/providers/ using @notes.md',
+        timestamp: Date.now(),
+      };
+
+      renderer.renderStoredMessage(msg);
+
+      const cards = messagesEl.querySelectorAll('.claudian-context-card');
+      expect(cards).toHaveLength(1);
+      expect(messagesEl.querySelectorAll('.claudian-context-card-row')).toHaveLength(2);
+    });
+
+    it('renders exactly one context card after two updateLiveUserMessage calls', () => {
+      const { renderer, messagesEl } = createRendererWithVault();
+      jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+      const msg: ChatMessage = {
+        id: 'm4',
+        role: 'user',
+        content: 'explain @src/providers/ using @notes.md',
+        timestamp: Date.now(),
+      };
+
+      // addMessage registers the element and renders the first card
+      renderer.addMessage(msg);
+
+      // First update re-renders via contentEl.empty() then re-renders the card
+      renderer.updateLiveUserMessage(msg);
+
+      // Second update must not duplicate the card
+      renderer.updateLiveUserMessage(msg);
+
+      expect(messagesEl.querySelectorAll('.claudian-context-card')).toHaveLength(1);
+    });
   });
 });

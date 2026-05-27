@@ -111,7 +111,8 @@ export class MessageRenderer {
 
     renderMessageContextCard(contentEl, mentions, {
       onOpenFile: (path) => {
-        void this.app.workspace.openLinkText(path, '', false);
+        // Open in a tab so clicking a context reference doesn't replace the active editor.
+        void this.app.workspace.openLinkText(path, '', 'tab');
       },
     });
   }
