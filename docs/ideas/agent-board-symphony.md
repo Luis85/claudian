@@ -8,6 +8,11 @@ Research sources:
 
 - [OpenAI Symphony article](https://openai.com/de-DE/index/open-source-codex-orchestration-symphony/)
 - [OpenAI Symphony SPEC.md](https://github.com/openai/symphony/blob/main/SPEC.md)
+- [Routa repository](https://github.com/phodal/routa) — reviewed at commit `c705c38` on 2026-05-28
+- [Routa architecture](https://github.com/phodal/routa/blob/main/docs/ARCHITECTURE.md)
+- [Routa API contract](https://github.com/phodal/routa/blob/main/api-contract.yaml)
+- [Routa Review Guard workflow](https://github.com/phodal/routa/blob/main/resources/specialists/workflows/kanban/review-guard.yaml)
+- [Routa Fitness docs](https://github.com/phodal/routa/blob/main/docs/fitness/README.md)
 - [Codex App Server article](https://openai.com/index/unlocking-the-codex-harness/)
 - [Codex app-server README](https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md)
 - [Obsidian properties](https://obsidian.md/help/properties)
@@ -84,6 +89,22 @@ Claudian should not compete as "Linear/GitHub, but in Obsidian." The stronger we
 
 Claudian's advantage is the connection between rich vault context and local provider runtimes, not generic project management.
 
+### Routa
+
+Routa is a strong adjacent reference because it treats the board as a **workspace-first multi-agent coordination platform** rather than a decorative task list. Its useful product pattern is that goals, tasks, sessions, traces, evidence, review, and completion state stay visible on the board instead of disappearing inside one long chat thread.
+
+Relevant takeaways:
+
+- The workspace is the top-level boundary for tasks, sessions, notes, boards, codebases, worktrees, memories, and traces.
+- A Kanban card is not only UI state; lane transitions can trigger or route automation.
+- Each lane can have a specialist contract: backlog refinement, todo orchestration, development, review, done reporting, or blocked resolution.
+- Downstream lanes are deliberately stricter than upstream lanes. Review does not trust development self-assessment.
+- Card artifacts grow as the work moves: story YAML, execution brief, dev evidence, review verdict, completion summary.
+- Traces are first-class audit objects, not incidental log output.
+- Fitness gates make validation evidence explicit through tiered checks instead of vague "tests passed" claims.
+
+The adaptation for Claudian is to keep these lessons **Markdown-first and plugin-local**. Routa is a broad platform with web, desktop, server, protocol, and API surfaces. Claudian should not copy that platform scope. Claudian should adopt the product contracts: workspace scope, lane contracts, evidence bundles, independent review, and traceability.
+
 ## Product principle
 
 Do not build a generic task manager. Build an **agent work-order system**.
@@ -100,6 +121,26 @@ A work order is a Markdown note that contains:
 - proof-of-work and final handoff.
 
 The task note owns intent, status, and reviewable outcome. The sidepanel conversation owns live interaction. Provider-native transcripts own detailed execution history. The orchestrator links these sources instead of duplicating all of them into one place.
+
+## Routa lessons to adopt without overbuilding
+
+Routa improves the design in five important ways:
+
+1. **Workspace-first scope**: every work order should know which vault/repo/worktree context it belongs to. The default can be the current vault and current repository, but the domain model should still name the workspace explicitly.
+2. **Board as coordination bus**: the Agent Board should eventually do more than group statuses. Lane changes can run validation, open a review gate, or request missing evidence. MVP should keep these actions manual, but the model should not make the board passive-only.
+3. **Lane-specific contracts**: one generic workflow prompt is not enough long term. Claudian should support separate workflow notes/templates for refinement, execution planning, development, review, done reporting, and blocked resolution.
+4. **Evidence-first review**: a task should not move from `review` to `done` because the implementing agent says it is done. It should provide changed files, verification commands, per-acceptance-criterion results, commit/PR references, artifacts, caveats, and remaining risks.
+5. **First-class traces**: live chat is for observation, task notes are for durable handoff, and structured traces are for audit/debugging. These three surfaces should link to one another instead of collapsing into one transcript.
+
+What not to adopt from Routa for the first Claudian version:
+
+- a separate web platform or API server;
+- protocol aggregation as a product goal;
+- many autonomous lane agents before a single visible run is trusted;
+- hidden databases as the source of truth for task state;
+- board automation that can mutate repositories without explicit user intent.
+
+A practical compromise is: **manual lane transitions in MVP, lane contracts in the data model, automated lane reactions later**.
 
 ## Proposed user experience
 
@@ -126,7 +167,7 @@ Agent Board/tasks/2026-05-28-add-agent-board-mvp.md
 Register a new view, for example `VIEW_TYPE_CLAUDIAN_AGENT_BOARD`, and render cards grouped by frontmatter status:
 
 ```text
-Inbox | Ready | Running | Needs Input | Review | Done | Failed | Canceled
+Inbox | Ready | Running | Needs Input | Needs Approval | Review | Needs Fix | Done | Failed | Canceled
 ```
 
 Each card should show:
@@ -150,6 +191,7 @@ Primary card actions:
 - Stop
 - Retry
 - Open diff/log
+- Request fixes
 - Mark review/done/canceled
 
 ### Execution
@@ -206,6 +248,7 @@ agent: main
 mode: plan-first
 
 workspace:
+  id: current-vault
   mode: git-worktree
   repo: .
   root: .worktrees
@@ -263,10 +306,13 @@ running
 needs_input
 needs_approval
 review
+needs_fix
 done
 failed
 canceled
 ```
+
+`needs_fix` is the review-rejection state: the task has produced an implementation, but the reviewer or review gate found issues that should route it back to development.
 
 Later additions may include:
 
@@ -306,10 +352,22 @@ Relevant notes, files, links, selections, prior decisions, screenshots, or brows
 
 Optional human-authored plan.
 
+## Execution Brief
+
+Optional planner output: scope, key files, assumptions, risk notes, and intended verification.
+
 ## Run Ledger
 
 <!-- claudian:run-ledger-start -->
 <!-- claudian:run-ledger-end -->
+
+## Dev Evidence
+
+Changed files, implementation summary, commands run, per-acceptance-criterion verification, caveats, branch, commit, and PR.
+
+## Review Findings
+
+Independent reviewer verdict, defects, missing evidence, requested fixes, or approval rationale.
 
 ## Verification
 
@@ -319,6 +377,38 @@ Commands, checks, or manual review steps.
 
 Final summary, branch, commit, PR, artifacts, and remaining risks.
 ```
+
+
+### Evidence bundle
+
+Routa's review-gate pattern suggests that Claudian should make proof-of-work a first-class artifact. The task note can remain readable while structured logs retain detail, but every completed run should produce an evidence bundle with at least:
+
+- changed files and whether they are committed;
+- commands run and exit status;
+- per-acceptance-criterion verification;
+- final git status or known dirty files;
+- branch, commit, PR, or artifact links when available;
+- screenshots or rendered outputs when useful;
+- caveats, skipped checks, and remaining risks.
+
+Possible later frontmatter extension:
+
+```yaml
+evidence:
+  required:
+    - changed_files
+    - acceptance_criteria_verification
+    - verification_commands
+  bundle_id:
+  completeness:
+review:
+  verdict:
+  reviewer:
+  findings: []
+  routed_to:
+```
+
+The board should surface missing evidence directly on the card. A review transition can be blocked or routed to `needs_fix` when required evidence is absent.
 
 ### Generated-region ownership
 
@@ -358,8 +448,19 @@ codex:
   turn_timeout_ms: 3600000
   stall_timeout_ms: 300000
 workspace:
+  id: current-vault
   mode: git-worktree
   root: .worktrees
+evidence:
+  required_sections:
+    - dev_evidence
+    - acceptance_criteria_verification
+    - verification
+validation:
+  tiers:
+    fast: []
+    normal: []
+    deep: []
 ---
 
 You are working from an Obsidian work order.
@@ -422,6 +523,24 @@ src/features/tasks/
     └── taskCommands.ts
 ```
 
+
+### Lane contracts
+
+Borrow Routa's specialist-lane idea, but express it as Obsidian workflow notes instead of platform-specific agents. A lane contract is a prompt plus an evidence contract for a particular transition.
+
+Useful default lanes:
+
+| Lane | Purpose | Required output |
+|---|---|---|
+| Backlog Refiner | Turn rough capture into a ready work order | objective, acceptance criteria, constraints |
+| Todo Orchestrator | Produce execution brief | plan, key files, risks, validation approach |
+| Dev Executor | Implement in assigned workspace | changed files, commands, AC verification |
+| Review Guard | Independently verify result | verdict, findings, route to `done` or `needs_fix` |
+| Done Reporter | Produce durable handoff | summary, artifacts, remaining risks |
+| Blocked Resolver | Clarify missing input or dependency | blocking reason, requested human action |
+
+For MVP, these can be documented sections and manual commands. Later, each lane can become an executable workflow note.
+
 ### Boundary rules
 
 - `features/tasks` owns work-order indexing, board UI, scheduling, leases, prompt rendering, run ledgers, and task note updates.
@@ -468,6 +587,17 @@ The scheduler should only decide eligibility and acquire leases. It should not k
 | Runtime events | `StreamChunk`s + `TaskEventLogStore` |
 | Dashboard/status API | Agent Board Obsidian view |
 | Structured logs | `.claudian/tasks/<task-id>/runs/<run-id>.jsonl` |
+
+### Routa mapping
+
+| Routa concept | Claudian adaptation |
+|---|---|
+| Workspace-first coordination | frontmatter workspace + vault/repo/worktree allocator |
+| Kanban lane automation | manual board actions first, lane-triggered workflows later |
+| Specialist workflows | Obsidian workflow notes per lane |
+| Review Guard | independent review gate that routes to `done` or `needs_fix` |
+| Fitness gates | tiered validation commands and required evidence sections |
+| Trace/evidence model | linked note ledger + JSONL run trace + evidence bundle |
 
 ## Safety model
 
@@ -544,6 +674,8 @@ Each event should include:
 - retry/stall/error classification;
 - token/runtime totals when available;
 - verification result;
+- evidence bundle references;
+- policy decision references;
 - commit/PR/artifact references.
 
 ### Human-readable note ledger
@@ -566,12 +698,13 @@ The board should make the operational state obvious:
 
 ## Product review synthesis
 
-Dedicated review passes produced four strong recommendations:
+Dedicated review passes produced five strong recommendations:
 
 1. **Obsidian-native product review**: keep Markdown as the product center. The task note must remain useful and readable if Claudian is uninstalled. Avoid turning YAML into a large hidden database.
 2. **Architecture review**: visible sidepanel execution should ship first. Add a `TaskExecutionSurface` seam immediately so headless execution can be a later adapter.
 3. **Safety review**: default to manual-first, local-only, no-publish. Worktrees are safety boundaries, not security boundaries. Human approval is the strongest practical control.
 4. **Market review**: position around vault-native context-to-agent execution, not generic project management. The ideal initial user already writes specs, implementation notes, and decisions in Obsidian.
+5. **Routa review**: model lane contracts and evidence bundles early, but do not copy Routa's broader platform scope. The smallest valuable Claudian version is still a Markdown work order with visible execution and reviewable evidence.
 
 ## MVP scope
 
@@ -621,15 +754,17 @@ The MVP should answer one question:
 
 - Add `GitWorktreeWorkspaceAllocator`.
 - Capture verification commands/results.
+- Add evidence bundle sections and card-level missing-evidence indicators.
 - Add diff/log/artifact affordances.
 - Add leases and stale-run detection even for manual runs.
 
-### Phase 3 — Scheduler-lite
+### Phase 3 — Scheduler-lite and review gate
 
 - Add **Run next ready**.
 - Add WIP limit of one or configurable small number.
 - Add retry scheduling for known transient failures.
 - Add workflow note parsing and strict prompt templates.
+- Add optional Review Guard workflow that independently checks evidence and routes `review` to `done` or `needs_fix`.
 
 ### Phase 4 — Headless/background execution
 
@@ -655,6 +790,8 @@ The MVP should answer one question:
 - lease acquisition/expiry;
 - retry/backoff math;
 - prompt rendering with strict missing-variable failure;
+- evidence bundle completeness calculation;
+- review transition validation, including `review` → `needs_fix`;
 - workspace path sanitization.
 
 ### Contract tests
