@@ -109,6 +109,25 @@ function createMockCallbacks(options: {
   };
 }
 
+function createManager() {
+  const app = createMockApp();
+  const containerEl = createMockEl();
+  const inputEl = {
+    value: '',
+    selectionStart: 0,
+    selectionEnd: 0,
+    focus: jest.fn(),
+    dispatchEvent: jest.fn(),
+  } as unknown as HTMLTextAreaElement;
+  const manager = new FileContextManager(
+    app,
+    containerEl as any,
+    inputEl,
+    createMockCallbacks()
+  );
+  return { manager, inputEl, containerEl, app };
+}
+
 describe('FileContextManager', () => {
   let containerEl: MockElement;
   let inputEl: HTMLTextAreaElement;
@@ -889,6 +908,42 @@ describe('FileContextManager', () => {
       const unrelatedNode = createMockEl() as unknown as Node;
       expect(manager.containsElement(unrelatedNode)).toBe(false);
       manager.destroy();
+    });
+  });
+
+  describe('insertVaultFolderMention', () => {
+    it('inserts an @path/ mention and does not attach the folder as a file', () => {
+      const { manager, inputEl } = createManager();
+      inputEl.value = '';
+      inputEl.selectionStart = 0;
+      inputEl.selectionEnd = 0;
+
+      const result = manager.insertVaultFolderMention('src/providers');
+
+      expect(result).toBe(true);
+      expect(inputEl.value).toBe('@src/providers/ ');
+      expect(manager.getAttachedFiles().has('src/providers')).toBe(false);
+      expect(manager.getAttachedFiles().size).toBe(0);
+    });
+
+    it('returns false for an empty / unnormalizable path (vault root)', () => {
+      const { manager } = createManager();
+      expect(manager.insertVaultFolderMention('')).toBe(false);
+    });
+  });
+
+  describe('insertVaultFileMention (regression)', () => {
+    it('still attaches the file to context', () => {
+      const { manager, inputEl } = createManager();
+      inputEl.value = '';
+      inputEl.selectionStart = 0;
+      inputEl.selectionEnd = 0;
+
+      const result = manager.insertVaultFileMention('notes.md');
+
+      expect(result).toBe(true);
+      expect(inputEl.value).toBe('@notes.md ');
+      expect(manager.getAttachedFiles().has('notes.md')).toBe(true);
     });
   });
 

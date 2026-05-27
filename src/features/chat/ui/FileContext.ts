@@ -217,11 +217,8 @@ export class FileContextManager {
     this.mentionDropdown.hide();
   }
 
-  /** Inserts a vault @-mention for a file into the chat input. */
-  insertVaultFileMention(filePath: string): boolean {
-    const normalizedPath = this.normalizePathForVault(filePath);
-    if (!normalizedPath) return false;
-
+  /** Splices a mention body into the input at the cursor, with smart spacing. */
+  private insertMentionAtCursor(body: string): void {
     const start = this.inputEl.selectionStart ?? this.inputEl.value.length;
     const end = this.inputEl.selectionEnd ?? start;
     const beforeSelection = this.inputEl.value.slice(0, start);
@@ -230,20 +227,37 @@ export class FileContextManager {
     const trailingSpace = afterSelection.length > 0
       ? (/^\s/u.test(afterSelection) ? '' : ' ')
       : ' ';
-    const mention = `${leadingSpace}@${normalizedPath}${trailingSpace}`;
+    const mention = `${leadingSpace}${body}${trailingSpace}`;
 
     this.inputEl.value = beforeSelection + mention + afterSelection;
     const cursorPosition = beforeSelection.length + mention.length;
     this.inputEl.selectionStart = cursorPosition;
     this.inputEl.selectionEnd = cursorPosition;
-    this.state.attachFile(normalizedPath);
 
     if (typeof this.inputEl.dispatchEvent === 'function') {
       const EventCtor = this.inputEl.ownerDocument?.defaultView?.Event ?? Event;
       this.inputEl.dispatchEvent(new EventCtor('input', { bubbles: true }));
     }
     this.inputEl.focus();
+  }
 
+  /** Inserts a vault @-mention for a file into the chat input. */
+  insertVaultFileMention(filePath: string): boolean {
+    const normalizedPath = this.normalizePathForVault(filePath);
+    if (!normalizedPath) return false;
+
+    // Attach before dispatching `input` so consumers see the updated set.
+    this.state.attachFile(normalizedPath);
+    this.insertMentionAtCursor(`@${normalizedPath}`);
+    return true;
+  }
+
+  /** Inserts a vault @-mention for a folder. Folders are not tracked as file chips. */
+  insertVaultFolderMention(folderPath: string): boolean {
+    const normalizedPath = this.normalizePathForVault(folderPath);
+    if (!normalizedPath) return false;
+
+    this.insertMentionAtCursor(`@${normalizedPath}/`);
     return true;
   }
 
