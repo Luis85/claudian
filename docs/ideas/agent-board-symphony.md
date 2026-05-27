@@ -1,0 +1,715 @@
+# Claudian Agent Board: Obsidian-Native Symphony Orchestration
+
+Status: idea / design draft  
+Date: 2026-05-28  
+Owner: Claudian  
+
+Research sources:
+
+- [OpenAI Symphony article](https://openai.com/de-DE/index/open-source-codex-orchestration-symphony/)
+- [OpenAI Symphony SPEC.md](https://github.com/openai/symphony/blob/main/SPEC.md)
+- [Codex App Server article](https://openai.com/index/unlocking-the-codex-harness/)
+- [Codex app-server README](https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md)
+- [Obsidian properties](https://obsidian.md/help/properties)
+- [Obsidian registerView API](https://obsidian-developer-docs.pages.dev/Reference/TypeScript-API/Plugin/registerView)
+- [Linear AI Agents](https://linear.app/docs/agents-in-linear)
+- [GitHub Copilot cloud agent](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/cloud-agent/start-copilot-sessions)
+
+## Executive summary
+
+Build **Claudian Agent Board**: an Obsidian-native agent operations layer where Markdown notes become durable work orders, Claudian provides the board and orchestration, and existing sidebar chat tabs provide live execution and observability.
+
+This should be **Symphony-inspired, not Symphony-copied**. Symphony turns an external issue tracker such as Linear into a control plane for coding agents. Claudian should turn the Obsidian vault itself into the control plane:
+
+- Work is captured as plain Markdown notes with YAML frontmatter.
+- The board is a view over those notes, not a proprietary database.
+- Agent execution reuses Claudian's existing provider runtimes and sidepanel renderers.
+- The first product loop is manual and visible: create a work order, run it, watch it, review the proof-of-work.
+- Autonomous polling, retries, concurrency, dependency DAGs, and headless execution come later after the note-to-agent loop is proven.
+
+Positioning:
+
+> Plan in Markdown. Run in worktrees. Review with evidence.
+
+## Research inputs
+
+### OpenAI Symphony
+
+OpenAI describes Symphony as an agent orchestrator that turns a project-management board into a control plane for coding agents: every open task gets an agent, agents run continuously, and humans review the results. The key product insight is that teams should manage work units rather than micromanaging sessions. Symphony treats ticket state as a state machine, assigns dedicated workspaces per issue, restarts stalled or failed agents, and preserves enough observability to operate multiple runs.
+
+The Symphony spec is useful because it defines the operational primitives Claudian needs:
+
+- tracker reader
+- workflow loader
+- configuration layer
+- orchestrator
+- workspace manager
+- agent runner
+- status surface
+- structured logs
+- retry/backoff
+- bounded concurrency
+- restart recovery
+- path containment and workspace safety
+
+Important adaptation: Symphony's tracker is Linear. Claudian's tracker should be Markdown notes in the vault.
+
+### Codex App Server
+
+OpenAI's Codex App Server exists specifically to expose Codex as a UI-friendly, bidirectional event stream. Claudian already has a Codex app-server adapter and should reuse it instead of inventing a task-specific Codex integration.
+
+Relevant takeaways:
+
+- Codex app-server is designed for rich UI clients, not only scripts.
+- The protocol has stable and experimental surfaces; clients opt into experimental APIs at initialization.
+- Claudian's existing `CodexChatRuntime` already handles stream projection, approvals, ask-user flows, plan mode, JSONL history, thread resume, and session state.
+- A task orchestrator should call the existing `ChatRuntime` boundary rather than touching provider JSON-RPC directly.
+
+### Obsidian product fit
+
+Obsidian properties are stored as YAML frontmatter in Markdown files, and Obsidian custom views are registered through the plugin API. This makes the proposed board natural for Claudian:
+
+- task metadata can remain readable and editable as frontmatter;
+- the task body can hold human-authored context, acceptance criteria, and handoff notes;
+- a custom Agent Board view can render those notes as a status board;
+- users can still query, link, search, and edit work orders even if Claudian is disabled.
+
+### Competitive context
+
+Linear already supports agents as app users that can be delegated issues and guided with Markdown instructions. GitHub Copilot cloud agent can be started from issues, dashboards, IDEs, GitHub Mobile, CLI, MCP-capable tools, Slack/Jira/Linear, and other entry points; it can work in the background and raise PRs for review.
+
+Claudian should not compete as "Linear/GitHub, but in Obsidian." The stronger wedge is:
+
+> A local-first agent operations board for developers whose specs, plans, context, and working memory already live in Markdown.
+
+Claudian's advantage is the connection between rich vault context and local provider runtimes, not generic project management.
+
+## Product principle
+
+Do not build a generic task manager. Build an **agent work-order system**.
+
+A work order is a Markdown note that contains:
+
+- the goal;
+- acceptance criteria;
+- linked context from the vault;
+- selected files or repository scope;
+- effective permissions;
+- workspace/branch/run metadata;
+- a concise run ledger;
+- proof-of-work and final handoff.
+
+The task note owns intent, status, and reviewable outcome. The sidepanel conversation owns live interaction. Provider-native transcripts own detailed execution history. The orchestrator links these sources instead of duplicating all of them into one place.
+
+## Proposed user experience
+
+### Capture
+
+Users can create an agent work order from:
+
+- a command palette action;
+- the current note;
+- selected editor text;
+- a browser selection;
+- an existing chat message;
+- a file/folder context mention;
+- a failed build or test output pasted into a note.
+
+The result is a normal Markdown note under a configurable folder, for example:
+
+```text
+Agent Board/tasks/2026-05-28-add-agent-board-mvp.md
+```
+
+### Board
+
+Register a new view, for example `VIEW_TYPE_CLAUDIAN_AGENT_BOARD`, and render cards grouped by frontmatter status:
+
+```text
+Inbox | Ready | Running | Needs Input | Review | Done | Failed | Canceled
+```
+
+Each card should show:
+
+- title;
+- provider/model;
+- current status;
+- priority;
+- workspace/branch;
+- latest event and heartbeat age;
+- pending approval/input indicator;
+- verification result;
+- linked conversation/run log;
+- retry count and last error.
+
+Primary card actions:
+
+- Open note
+- Run
+- Watch live run
+- Stop
+- Retry
+- Open diff/log
+- Mark review/done/canceled
+
+### Execution
+
+The first execution surface should be visible sidepanel execution:
+
+1. User clicks **Run** on a work order.
+2. Claudian validates frontmatter and workflow configuration.
+3. Claudian creates or reuses a chat tab bound to the task.
+4. Claudian renders the task prompt from the work order and workflow template.
+5. Existing `ChatRuntime` + chat controllers stream the run.
+6. Existing renderers show text, tool calls, diffs, todo state, plan approval, ask-user prompts, and subagent events.
+7. Claudian updates the task note with run metadata, status, concise ledger entries, and final handoff.
+
+This keeps trust high and avoids duplicating the streaming UI.
+
+### Review
+
+The work order should end with a human-reviewable package:
+
+- summary of what changed;
+- files changed;
+- branch/worktree;
+- commit SHA, if any;
+- PR URL, if any;
+- verification commands and results;
+- screenshots or artifacts, if relevant;
+- remaining risks;
+- next suggested action.
+
+## Markdown work-order contract
+
+### Frontmatter
+
+Keep frontmatter compact and machine-readable. Avoid putting high-frequency stream output in YAML.
+
+```yaml
+---
+type: claudian-work-order
+schema_version: 1
+
+id: task-20260528-add-agent-board-mvp
+title: Add Agent Board MVP
+status: ready
+priority: normal
+
+created: 2026-05-28T01:07:00+02:00
+updated: 2026-05-28T01:07:00+02:00
+due:
+
+provider: codex
+model:
+agent: main
+mode: plan-first
+
+workspace:
+  mode: git-worktree
+  repo: .
+  root: .worktrees
+  branch:
+  worktree:
+  base: main
+
+context:
+  notes:
+    - "[[CLAUDE.md]]"
+  files: []
+  urls: []
+
+permissions:
+  tier: read_only
+  vault_write: ask
+  repo_write: ask
+  shell: ask
+  network: ask
+  publish: ask
+
+execution:
+  run_id:
+  conversation_id:
+  provider_session_id:
+  sidepanel_tab_id:
+  started:
+  finished:
+  attempts: 0
+  max_attempts: 1
+  last_heartbeat:
+
+result:
+  outcome:
+  branch:
+  commit:
+  pr:
+  verification: []
+  artifacts: []
+
+error:
+  code:
+  message:
+---
+```
+
+### Status values
+
+Start with a small lifecycle:
+
+```text
+inbox
+ready
+running
+needs_input
+needs_approval
+review
+done
+failed
+canceled
+```
+
+Later additions may include:
+
+```text
+scheduled
+retry_scheduled
+stalled
+blocked
+```
+
+### Body
+
+```markdown
+# Add Agent Board MVP
+
+## Objective
+
+What should the agent accomplish?
+
+## Acceptance Criteria
+
+- [ ] Ready work orders appear on the Agent Board.
+- [ ] Running a work order opens or links to a Claudian sidepanel conversation.
+- [ ] Final result is written back to the task note.
+
+## Context
+
+Relevant notes, files, links, selections, prior decisions, screenshots, or browser captures.
+
+## Constraints
+
+- Reuse existing `ChatRuntime` and sidepanel rendering.
+- Prefer provider-neutral architecture.
+- Do not edit unrelated files.
+
+## Suggested Plan
+
+Optional human-authored plan.
+
+## Run Ledger
+
+<!-- claudian:run-ledger-start -->
+<!-- claudian:run-ledger-end -->
+
+## Verification
+
+Commands, checks, or manual review steps.
+
+## Result / Handoff
+
+Final summary, branch, commit, PR, artifacts, and remaining risks.
+```
+
+### Generated-region ownership
+
+Everything outside generated regions is user-owned unless the user explicitly asks the agent to edit it.
+
+Use explicit markers:
+
+```markdown
+<!-- claudian:run-ledger-start -->
+- 2026-05-28T01:12:30+02:00 — `running` — Started Codex run in sidepanel tab `abc123`.
+- 2026-05-28T01:14:02+02:00 — `needs_approval` — Plan generated; awaiting approval.
+- 2026-05-28T01:20:44+02:00 — `review` — Implementation finished; verification passed: `npm run typecheck`.
+<!-- claudian:run-ledger-end -->
+```
+
+Raw stream events should go to structured logs, not the note body.
+
+## Workflow notes
+
+Support optional workflow notes as Obsidian-native equivalents of Symphony's `WORKFLOW.md`:
+
+```md
+---
+type: claudian-workflow
+schema_version: 1
+active_states:
+  - ready
+terminal_states:
+  - done
+  - canceled
+agent:
+  max_concurrent_agents: 1
+  max_turns: 10
+  max_retry_backoff_ms: 300000
+codex:
+  approval_policy: on-request
+  turn_timeout_ms: 3600000
+  stall_timeout_ms: 300000
+workspace:
+  mode: git-worktree
+  root: .worktrees
+---
+
+You are working from an Obsidian work order.
+
+Work order note: {{ task.path }}
+Title: {{ task.title }}
+Status: {{ task.status }}
+
+## Objective
+
+{{ task.objective }}
+
+## Body
+
+{{ task.body }}
+
+Follow repository instructions in AGENTS.md and CLAUDE.md. For non-trivial repository changes, use a topic branch/worktree and provide verification plus remaining risks.
+```
+
+Rendering should be strict: unknown variables or filters fail validation. Invalid workflow reloads should keep the last known good workflow and surface an operator-visible error.
+
+## Architecture
+
+### Module layout
+
+```text
+src/features/tasks/
+├── CLAUDE.md
+├── model/
+│   ├── taskTypes.ts
+│   ├── taskStateMachine.ts
+│   └── workflowTypes.ts
+├── storage/
+│   ├── TaskNoteStore.ts
+│   ├── WorkflowNoteStore.ts
+│   └── TaskEventLogStore.ts
+├── indexing/
+│   └── TaskIndexer.ts
+├── scheduling/
+│   ├── TaskScheduler.ts
+│   └── TaskLeaseManager.ts
+├── execution/
+│   ├── TaskRunCoordinator.ts
+│   ├── TaskExecutionSurface.ts
+│   ├── ChatTabExecutionSurface.ts
+│   └── HeadlessExecutionSurface.ts
+├── workspace/
+│   ├── TaskWorkspaceAllocator.ts
+│   ├── VaultWorkspaceAllocator.ts
+│   └── GitWorktreeWorkspaceAllocator.ts
+├── observability/
+│   ├── TaskRunLedger.ts
+│   └── TaskRunSnapshot.ts
+├── ui/
+│   ├── AgentBoardView.ts
+│   ├── AgentBoardRenderer.ts
+│   ├── TaskCard.ts
+│   └── TaskDetailPane.ts
+└── commands/
+    └── taskCommands.ts
+```
+
+### Boundary rules
+
+- `features/tasks` owns work-order indexing, board UI, scheduling, leases, prompt rendering, run ledgers, and task note updates.
+- `features/tasks` must not parse Codex JSON-RPC or provider-native transcripts directly.
+- Provider behavior stays behind `ChatRuntime`, `ProviderRegistry`, and provider history services.
+- The visible execution adapter reuses `TabManager`, `InputController`, `StreamController`, `MessageRenderer`, `ToolCallRenderer`, `WriteEditRenderer`, `InlinePlanApproval`, and `InlineAskUserQuestion`.
+- Worktree allocation is a separate workspace module, not embedded in the scheduler or provider runtime.
+
+### Execution surface seam
+
+Introduce a narrow seam immediately so headless mode can come later without coupling the scheduler to tabs:
+
+```ts
+interface TaskExecutionSurface {
+  startTaskRun(task: TaskSpec, options: TaskRunOptions): Promise<TaskRunHandle>;
+}
+```
+
+First adapter:
+
+```text
+ChatTabExecutionSurface
+```
+
+Later adapter:
+
+```text
+HeadlessExecutionSurface
+```
+
+The scheduler should only decide eligibility and acquire leases. It should not know about sidepanel DOM, Codex sessions, or provider stream details.
+
+### Symphony mapping
+
+| Symphony concept | Claudian Agent Board concept |
+|---|---|
+| Linear issue | Markdown work-order note |
+| Issue tracker reader | `TaskNoteStore` + `TaskIndexer` |
+| `WORKFLOW.md` | Obsidian workflow note or repository workflow file |
+| Active/terminal states | frontmatter `status` + workflow config |
+| Per-issue workspace | vault root or `.worktrees/<slug>` |
+| Orchestrator | `TaskScheduler` + `TaskRunCoordinator` |
+| Agent runner | provider-neutral `ChatRuntime` via execution surface |
+| Runtime events | `StreamChunk`s + `TaskEventLogStore` |
+| Dashboard/status API | Agent Board Obsidian view |
+| Structured logs | `.claudian/tasks/<task-id>/runs/<run-id>.jsonl` |
+
+## Safety model
+
+Treat this feature as local automation with powerful side effects, not a secure sandbox.
+
+Required invariants:
+
+1. A task note can request capabilities but cannot grant itself more privilege.
+2. Effective permissions come from user/global settings and per-run approval, not only YAML.
+3. Main checkout stays clean for non-trivial repository changes.
+4. Worktree paths are canonicalized and verified under the configured root before use.
+5. One running work order owns one run ID, one conversation, one workspace, and one branch.
+6. State transitions are finite, validated, and logged.
+7. Frontmatter updates use a lock or compare-and-swap strategy to avoid overwriting human edits.
+8. The orchestrator, not the agent, owns generated log regions and durable run event logs.
+9. Secrets are deny-by-default: never include `.env*`, credential files, provider configs, private keys, raw environment dumps, or auth headers in prompts/logs without explicit approval.
+10. Publishing is a separate human gate: push and PR creation require explicit approval in MVP.
+11. Retry limits, stall timeouts, max turns, token/cost ceilings, and max child-agent count are hard limits.
+12. The run UI always shows workspace, branch, effective capabilities, approval mode, and current state.
+
+Recommended MVP permission posture:
+
+```text
+auto-run: off
+shell: ask
+file writes: task workspace only
+vault note mutation: only the task's own status/log fields without asking
+network: ask
+package install/scripts: ask or excluded
+commit: ask
+push/PR: ask every time
+```
+
+Capability tiers:
+
+1. `read_only` — read task context, repo status, and diffs; no mutation.
+2. `workspace_write` — write inside assigned worktree only; update task status/log through orchestrator.
+3. `verify_local` — run approved local verification commands; no install/network by default.
+4. `git_local` — stage/commit inside task branch; no push.
+5. `publish` — push branch or create PR; explicit human approval per run.
+
+Exclude from MVP:
+
+- fully unsupervised auto-run from arbitrary Markdown tasks;
+- auto-push, auto-PR, auto-merge;
+- cross-vault or arbitrary external-directory mutation;
+- dependency installation or package manager scripts without explicit approval;
+- agent-controlled permission changes;
+- agent-controlled MCP/plugin installation;
+- edits to `.obsidian/`, `.claude/`, `.codex/`, `.git/`, or `.claudian/` internals except through owned APIs;
+- concurrent agents editing the same files without locking/merge policy;
+- force push, branch deletion, `git clean`, destructive reset, or history rewrite;
+- automatic recursive task spawning.
+
+## Observability
+
+### Structured logs
+
+Store detailed run events under Claudian-owned state:
+
+```text
+.claudian/tasks/<task-id>/runs/<run-id>.jsonl
+```
+
+Each event should include:
+
+- `taskId`, `runId`, provider, model, runtime;
+- workspace, branch, base commit;
+- effective capabilities and approval mode;
+- state transition;
+- command start/end summary;
+- file mutation summary;
+- approval/input request summary;
+- retry/stall/error classification;
+- token/runtime totals when available;
+- verification result;
+- commit/PR/artifact references.
+
+### Human-readable note ledger
+
+The note ledger should be concise and useful if read months later. Do not paste full chat transcripts or raw JSON-RPC events into task notes.
+
+### Board status
+
+The board should make the operational state obvious:
+
+- running / stalled / blocked / failed / review / done;
+- heartbeat age;
+- current workspace;
+- last command summary;
+- pending approval/input;
+- cancel/retry controls;
+- diff/log links;
+- verification status;
+- remaining risks.
+
+## Product review synthesis
+
+Dedicated review passes produced four strong recommendations:
+
+1. **Obsidian-native product review**: keep Markdown as the product center. The task note must remain useful and readable if Claudian is uninstalled. Avoid turning YAML into a large hidden database.
+2. **Architecture review**: visible sidepanel execution should ship first. Add a `TaskExecutionSurface` seam immediately so headless execution can be a later adapter.
+3. **Safety review**: default to manual-first, local-only, no-publish. Worktrees are safety boundaries, not security boundaries. Human approval is the strongest practical control.
+4. **Market review**: position around vault-native context-to-agent execution, not generic project management. The ideal initial user already writes specs, implementation notes, and decisions in Obsidian.
+
+## MVP scope
+
+The MVP should answer one question:
+
+> Can I create a Markdown work order, run it through Claudian, watch it live, and get a durable result back in Obsidian?
+
+### Include
+
+- Configurable work-order folder, with a sensible default such as `Agent Board/tasks/`.
+- Work-order note creation command.
+- Work-order frontmatter validation.
+- Agent Board grouped by status.
+- Manual **Run** action.
+- Manual **Run next ready** action.
+- Visible sidepanel execution through existing chat tab infrastructure.
+- One active run per work order.
+- Concise run ledger written back to generated region.
+- Conversation/run IDs persisted in frontmatter.
+- Manual stop/retry.
+- Basic final handoff section.
+
+### Exclude
+
+- autonomous background daemon;
+- multi-agent concurrency pool;
+- cron-like scheduler;
+- dependency DAG;
+- automatic retries beyond manual retry;
+- automatic worktree cleanup;
+- PR creation/push automation;
+- task sync with GitHub/Linear;
+- full workflow language;
+- headless execution.
+
+## Phased rollout
+
+### Phase 1 — Manual Markdown work orders
+
+- Create `TaskNoteStore` and `TaskStateMachine`.
+- Add commands to create/open/run work orders.
+- Add Agent Board view.
+- Add `ChatTabExecutionSurface`.
+- Persist run metadata and note ledger.
+
+### Phase 2 — Safer workspaces and richer evidence
+
+- Add `GitWorktreeWorkspaceAllocator`.
+- Capture verification commands/results.
+- Add diff/log/artifact affordances.
+- Add leases and stale-run detection even for manual runs.
+
+### Phase 3 — Scheduler-lite
+
+- Add **Run next ready**.
+- Add WIP limit of one or configurable small number.
+- Add retry scheduling for known transient failures.
+- Add workflow note parsing and strict prompt templates.
+
+### Phase 4 — Headless/background execution
+
+- Add `HeadlessExecutionSurface` only after visible mode proves stable.
+- Mirror headless runs into the sidepanel when a user clicks **Watch**.
+- Keep approval/input requests visible and bounded by timeouts.
+
+### Phase 5 — External integrations
+
+- Optional GitHub/Linear sync.
+- Optional PR creation/publishing gate.
+- Optional task DAGs.
+- Optional multi-run comparisons.
+
+## Testing strategy
+
+### Unit tests
+
+- frontmatter parse/write;
+- generated region updates;
+- task state transitions;
+- eligibility calculation;
+- lease acquisition/expiry;
+- retry/backoff math;
+- prompt rendering with strict missing-variable failure;
+- workspace path sanitization.
+
+### Contract tests
+
+Use a fake `ChatRuntime` that emits:
+
+- text chunks;
+- tool use/result chunks;
+- write/edit chunks;
+- approval requests;
+- ask-user requests;
+- plan-completed metadata;
+- cancellation;
+- provider error;
+- resumed session metadata.
+
+### Integration tests
+
+- note → eligible task → lease → visible execution → review state;
+- sidepanel tab closed mid-run;
+- plugin reload during running task;
+- user edits note during run;
+- corrupted frontmatter skipped safely;
+- failed run → retry/manual retry;
+- successful run persists conversation/run IDs.
+
+### Worktree tests
+
+Use a temporary git repository and verify:
+
+- worktree under `.worktrees/<slug>`;
+- branch created from configured base;
+- cwd passed to runtime;
+- cleanup scanner detects orphaned workspaces;
+- path containment rejects escaped paths.
+
+## Open validation questions
+
+1. Do Claudian users already manage coding tasks in Obsidian, GitHub, Linear, or elsewhere?
+2. Which pain is strongest: task capture, context assembly, parallel monitoring, or review/auditability?
+3. Should the primary artifact be one note per work order, checkbox tasks, Kanban cards, or Obsidian Bases compatibility?
+4. How many concurrent local agents do target users realistically want to run?
+5. What proof-of-work is required before users trust a run: diff, tests, transcript, screenshots, PR link, token usage?
+6. Should the first version remain vault-local or sync with GitHub/Linear?
+7. Which default permission tier makes users comfortable enough to try it?
+8. Does "Agent Board" resonate more than "Work Orders", "Run Board", or "Mission Board"?
+
+## Recommendation
+
+Proceed with a thin prototype:
+
+```text
+Markdown work order → Agent Board card → manual Run → visible sidepanel execution → run ledger + handoff
+```
+
+Do not start with the daemon. Do not build a generic PM system. The durable value is making Obsidian's linked Markdown context executable by Claudian's existing local agent runtimes.
+
+
