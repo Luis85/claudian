@@ -21,8 +21,15 @@ interface CursorModelCatalogCache {
 let catalogCache: CursorModelCatalogCache | null = null;
 
 const LIST_MODELS_TIMEOUT_MS = 10_000;
-const MODEL_ID_PATTERN = /^[A-Za-z0-9][\w.:/-]*$/;
+// Cursor model ids are alphanumeric plus `.`, `-`, `/`. Trailing `:` is
+// disallowed so the `Tip:` footer line cursor-agent prints does not leak into
+// the catalog (it would otherwise satisfy the regex).
+const MODEL_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9./-]*$/;
 const TEXT_HEADER_PATTERN = /available models|models?:?$/i;
+// cursor-agent prints a trailing `Tip: use --model <id> ...` hint that must be
+// skipped before id extraction. The check is exact-prefix to avoid matching a
+// plausible model id that happens to contain "tip".
+const TEXT_FOOTER_PATTERN = /^tip\s*:/i;
 
 function extractIdFromObject(entry: Record<string, unknown>): string | null {
   for (const key of ['id', 'name', 'model']) {
@@ -76,6 +83,9 @@ function parseTextModelList(stdout: string): string[] {
     if (!line) {
       continue;
     }
+    if (TEXT_FOOTER_PATTERN.test(line)) {
+      continue;
+    }
 
     // Strip common bullet markers.
     line = line.replace(/^[*\-•]\s*/, '').trim();
@@ -86,8 +96,12 @@ function parseTextModelList(stdout: string): string[] {
       continue;
     }
 
-    // Lines may carry a description after the id; keep only the first token.
-    const token = line.split(/\s+/)[0];
+    // The native format is `<id> - <pretty label>`. Prefer the explicit
+    // separator so labels with their own spaces or hyphens never bleed in.
+    // Fall back to the first whitespace-separated token for lenient parsers.
+    const dashIdx = line.indexOf(' - ');
+    const candidate = dashIdx > 0 ? line.slice(0, dashIdx) : line.split(/\s+/)[0];
+    const token = candidate.trim();
     if (token && MODEL_ID_PATTERN.test(token)) {
       ids.push(token);
     }

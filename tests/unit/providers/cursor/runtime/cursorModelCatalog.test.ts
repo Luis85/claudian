@@ -50,6 +50,33 @@ describe('parseModelListOutput', () => {
   it('returns an empty array for blank output', () => {
     expect(parseModelListOutput('   ')).toEqual([]);
   });
+
+  it('parses the real cursor-agent text format (Available models … Tip footer)', () => {
+    const out = [
+      'Available models',
+      '',
+      'auto - Auto',
+      'composer-2-fast - Composer 2 Fast',
+      'composer-2.5-fast - Composer 2.5 Fast (default)',
+      'gpt-5.5-extra-high - GPT-5.5 1M Extra High',
+      'claude-opus-4-7-thinking-low-fast - Opus 4.7 1M Low Thinking Fast',
+      '',
+      'Tip: use --model <id> (or /model <id> in interactive mode) to switch.',
+    ].join('\n');
+    expect(parseModelListOutput(out)).toEqual([
+      'auto',
+      'composer-2-fast',
+      'composer-2.5-fast',
+      'gpt-5.5-extra-high',
+      'claude-opus-4-7-thinking-low-fast',
+    ]);
+  });
+
+  it('does not capture trailing Tip lines as model ids', () => {
+    const ids = parseModelListOutput('Tip: use --model <id> to switch.');
+    expect(ids).not.toContain('Tip:');
+    expect(ids).not.toContain('Tip');
+  });
 });
 
 describe('getCachedCursorModelIds', () => {
