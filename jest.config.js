@@ -25,12 +25,14 @@ module.exports = {
     {
       ...baseConfig,
       displayName: 'unit',
-      testMatch: ['<rootDir>/tests/unit/**/*.test.ts'],
+      // Suffix glob (no `<rootDir>`) so Windows worktree paths with backslashes
+      // (`.worktrees\...`) don't break micromatch. `roots` already scopes the search.
+      testMatch: ['**/tests/unit/**/*.test.ts'],
     },
     {
       ...baseConfig,
       displayName: 'integration',
-      testMatch: ['<rootDir>/tests/integration/**/*.test.ts'],
+      testMatch: ['**/tests/integration/**/*.test.ts'],
     },
   ],
   collectCoverageFrom: [
