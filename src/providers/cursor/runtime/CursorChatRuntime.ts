@@ -26,7 +26,7 @@ import { CURSOR_PROVIDER_CAPABILITIES } from '../capabilities';
 import { encodeCursorTurn } from '../prompt/encodeCursorTurn';
 import { getCursorState, resolveCursorSessionId } from '../types';
 import { buildCursorAgentEnvironment } from './cursorAgentEnv';
-import { resolveCursorModelForCli } from './cursorCliModel';
+import { resolveCursorModelSelectionForCli } from './cursorCliModel';
 import { resolveCursorLaunch } from './cursorLaunch';
 import { buildCursorAgentFlagArgs, type CursorPermissionMode } from './cursorLaunchArgs';
 import { CursorNdjsonStreamReducer } from './cursorStreamMapper';
@@ -109,9 +109,14 @@ export class CursorChatRuntime implements ChatRuntime {
 
     const workspaceDir = getVaultPath(this.plugin.app) ?? process.cwd();
     const permissionMode = this.plugin.settings.permissionMode as CursorPermissionMode;
-    const model = resolveCursorModelForCli(
-      queryOptions?.model ?? this.resolveProviderModel(),
+    const snapshot = ProviderSettingsCoordinator.getProviderSettingsSnapshot(
+      this.plugin.settings as unknown as Record<string, unknown>,
+      'cursor',
     );
+    const familyValue = queryOptions?.model
+      ?? (typeof snapshot.model === 'string' && snapshot.model.trim() ? snapshot.model.trim() : undefined);
+    const mode = typeof snapshot.effortLevel === 'string' ? snapshot.effortLevel : undefined;
+    const model = resolveCursorModelSelectionForCli(familyValue, mode);
     const resumeId = this.activeResumeId;
 
     yield {
@@ -290,12 +295,4 @@ export class CursorChatRuntime implements ChatRuntime {
     return null;
   }
 
-  private resolveProviderModel(): string | undefined {
-    const providerSettings = ProviderSettingsCoordinator.getProviderSettingsSnapshot(
-      this.plugin.settings as unknown as Record<string, unknown>,
-      'cursor',
-    );
-    const m = providerSettings.model;
-    return typeof m === 'string' && m.trim() ? m.trim() : undefined;
-  }
 }
