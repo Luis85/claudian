@@ -1,3 +1,4 @@
+import { CURSOR_PROVIDER_CAPABILITIES } from '@/providers/cursor/capabilities';
 import { cursorChatUIConfig } from '@/providers/cursor/ui/CursorChatUIConfig';
 
 const TEST_HOST = 'host-a';
@@ -125,5 +126,11 @@ describe('cursorChatUIConfig.normalizeModelVariant', () => {
     expect(cursorChatUIConfig.normalizeModelVariant('cursor:composer-1', {})).toBe('cursor:composer-1');
     expect(cursorChatUIConfig.normalizeModelVariant('cursor:composer-2', {})).toBe('cursor:composer-2');
     expect(cursorChatUIConfig.normalizeModelVariant('cursor:auto', {})).toBe('cursor:auto');
+  });
+});
+
+describe('cursor capabilities', () => {
+  it('exposes the shared effort reasoning control', () => {
+    expect(CURSOR_PROVIDER_CAPABILITIES.reasoningControl).toBe('effort');
   });
 });
