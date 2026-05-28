@@ -1,8 +1,11 @@
 import {
   mapCursorToolName,
+  normalizeCursorPersistedToolCall,
+  normalizeCursorPersistedToolResult,
   normalizeCursorToolCompletion,
   normalizeCursorToolStart,
   readCursorToolEnvelope,
+  resolveCursorToolKind,
 } from '@/providers/cursor/runtime/cursorToolNormalization';
 
 describe('readCursorToolEnvelope', () => {
@@ -144,5 +147,56 @@ describe('normalizeCursorToolCompletion', () => {
     });
     expect(out.isError).toBe(true);
     expect(out.content).toContain('not found');
+  });
+});
+
+describe('resolveCursorToolKind', () => {
+  it('accepts native *ToolCall keys', () => {
+    expect(resolveCursorToolKind('grepToolCall')).toBe('grepToolCall');
+  });
+
+  it('maps SDK tool names back to kinds', () => {
+    expect(resolveCursorToolKind('Read')).toBe('readToolCall');
+    expect(resolveCursorToolKind('Bash')).toBe('shellToolCall');
+  });
+
+  it('disambiguates Write vs Edit from args', () => {
+    expect(resolveCursorToolKind('Write', { streamContent: 'x' })).toBe('editToolCall');
+    expect(resolveCursorToolKind('Write', { oldString: 'a', newString: 'b' })).toBe('replaceEnvToolCall');
+    expect(resolveCursorToolKind('Write', { path: '/x' })).toBe('writeToolCall');
+  });
+});
+
+describe('normalizeCursorPersistedToolCall', () => {
+  it('normalizes history tool-call rows', () => {
+    expect(normalizeCursorPersistedToolCall('readToolCall', { path: 'a.md' })).toEqual({
+      name: 'Read',
+      input: { file_path: 'a.md' },
+    });
+  });
+});
+
+describe('normalizeCursorPersistedToolResult', () => {
+  it('formats history tool-result payloads without raw JSON', () => {
+    const out = normalizeCursorPersistedToolResult(
+      'readToolCall',
+      { success: { content: 'hello' } },
+      { path: 'a.md' },
+    );
+    expect(out).toMatchObject({ name: 'Read', content: 'hello', isError: false });
+  });
+
+  it('accepts a full envelope in the result field', () => {
+    const out = normalizeCursorPersistedToolResult(
+      'tool',
+      {
+        shellToolCall: {
+          args: { command: 'echo hi' },
+          result: { success: { stdout: 'hi\n', stderr: '', exitCode: 0 } },
+        },
+      },
+      {},
+    );
+    expect(out).toMatchObject({ name: 'Bash', content: 'hi', isError: false });
   });
 });

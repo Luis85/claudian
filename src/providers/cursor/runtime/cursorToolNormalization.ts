@@ -46,6 +46,134 @@ export interface NormalizedCursorToolResult {
   toolUseResult?: Record<string, unknown>;
 }
 
+// A single tool result (e.g. a whole-vault audit) can be many megabytes.
+// Rendering that synchronously in the chat panel freezes Obsidian's UI thread,
+// so the displayed content is capped. The agent still receives the full result.
+export const MAX_CURSOR_TOOL_RESULT_CHARS = 100_000;
+
+export function capCursorToolResultLength(value: string): string {
+  if (value.length <= MAX_CURSOR_TOOL_RESULT_CHARS) {
+    return value;
+  }
+  const omitted = value.length - MAX_CURSOR_TOOL_RESULT_CHARS;
+  return `${value.slice(0, MAX_CURSOR_TOOL_RESULT_CHARS)}\n… [truncated ${omitted} characters]`;
+}
+
+const CURSOR_SDK_NAME_TO_KIND: Partial<Record<string, string>> = {
+  [TOOL_READ]: 'readToolCall',
+  [TOOL_BASH]: 'shellToolCall',
+  [TOOL_GLOB]: 'globToolCall',
+  [TOOL_GREP]: 'grepToolCall',
+  [TOOL_LS]: 'lsToolCall',
+  [TOOL_WEB_FETCH]: 'webFetchToolCall',
+  [TOOL_WEB_SEARCH]: 'webSearchToolCall',
+  [TOOL_TODO_WRITE]: 'updateTodosToolCall',
+  [TOOL_ASK_USER_QUESTION]: 'askQuestionToolCall',
+  [TOOL_SUBAGENT]: 'taskToolCall',
+  [TOOL_EDIT]: 'replaceEnvToolCall',
+};
+
+/**
+ * Resolves the Cursor `*ToolCall` kind key from either a native kind
+ * (`readToolCall`) or an already-normalized SDK tool name (`Read`).
+ */
+export function resolveCursorToolKind(
+  toolName: string,
+  args: Record<string, unknown> = {},
+): string | null {
+  const trimmed = toolName.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (trimmed.endsWith('ToolCall')) {
+    return trimmed;
+  }
+
+  if (trimmed === TOOL_WRITE) {
+    if ('oldString' in args || 'old_string' in args || 'newString' in args || 'new_string' in args) {
+      return 'replaceEnvToolCall';
+    }
+    if ('streamContent' in args || 'content' in args) {
+      return 'editToolCall';
+    }
+    return 'writeToolCall';
+  }
+
+  return CURSOR_SDK_NAME_TO_KIND[trimmed] ?? null;
+}
+
+/** Normalizes a tool-call row from Cursor's SQLite history blobs. */
+export function normalizeCursorPersistedToolCall(
+  toolName: string,
+  args: Record<string, unknown>,
+  description?: string,
+): NormalizedCursorTool {
+  const kind = resolveCursorToolKind(toolName, args);
+  if (!kind) {
+    return { name: toolName.trim() || 'tool', input: args };
+  }
+  return normalizeCursorToolStart({
+    kind,
+    args,
+    result: undefined,
+    description,
+  });
+}
+
+function wrapPersistedToolResultPayload(result: unknown): Record<string, unknown> {
+  if (result && typeof result === 'object' && !Array.isArray(result)) {
+    const obj = result as Record<string, unknown>;
+    if ('success' in obj || 'error' in obj || 'failure' in obj || 'failed' in obj) {
+      return obj;
+    }
+    return { success: obj };
+  }
+  if (typeof result === 'string') {
+    return { success: { content: result } };
+  }
+  return { success: { message: String(result ?? '') } };
+}
+
+/** Normalizes a tool-result row from Cursor's SQLite history blobs. */
+export function normalizeCursorPersistedToolResult(
+  toolName: string,
+  result: unknown,
+  args: Record<string, unknown> = {},
+  description?: string,
+): NormalizedCursorToolResult {
+  if (result && typeof result === 'object' && !Array.isArray(result)) {
+    const envelope = readCursorToolEnvelope(result as Record<string, unknown>);
+    if (envelope) {
+      const normalized = normalizeCursorToolCompletion(envelope);
+      return {
+        ...normalized,
+        content: capCursorToolResultLength(normalized.content),
+      };
+    }
+  }
+
+  const kind = resolveCursorToolKind(toolName, args);
+  if (!kind) {
+    const content = typeof result === 'string' ? result : JSON.stringify(result);
+    return {
+      name: toolName.trim() || 'tool',
+      content: capCursorToolResultLength(content),
+      isError: false,
+    };
+  }
+
+  const normalized = normalizeCursorToolCompletion({
+    kind,
+    args,
+    result: wrapPersistedToolResultPayload(result),
+    description,
+  });
+  return {
+    ...normalized,
+    content: capCursorToolResultLength(normalized.content),
+  };
+}
+
 /** Pulls the inner tool envelope (`{readToolCall: {...}}`) out of the wrapper. */
 export function readCursorToolEnvelope(
   toolCall: Record<string, unknown> | undefined,

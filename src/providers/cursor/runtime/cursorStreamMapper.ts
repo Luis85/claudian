@@ -1,6 +1,7 @@
 import type { StreamChunk } from '../../../core/types';
 import type { SDKToolUseResult } from '../../../core/types/diff';
 import {
+  capCursorToolResultLength,
   normalizeCursorToolCompletion,
   normalizeCursorToolStart,
   readCursorToolEnvelope,
@@ -9,19 +10,6 @@ import {
 export interface CursorReduceResult {
   chunks: StreamChunk[];
   sessionId?: string;
-}
-
-// A single tool result (e.g. a whole-vault audit) can be many megabytes.
-// Rendering that synchronously in the chat panel freezes Obsidian's UI thread,
-// so the displayed content is capped. The agent still receives the full result.
-const MAX_TOOL_RESULT_CHARS = 100_000;
-
-function capToolResultLength(value: string): string {
-  if (value.length <= MAX_TOOL_RESULT_CHARS) {
-    return value;
-  }
-  const omitted = value.length - MAX_TOOL_RESULT_CHARS;
-  return `${value.slice(0, MAX_TOOL_RESULT_CHARS)}\n… [truncated ${omitted} characters]`;
 }
 
 function messageContentBlocks(record: Record<string, unknown>): Record<string, unknown>[] {
@@ -213,7 +201,7 @@ function parseToolCompletion(record: Record<string, unknown>): CursorToolComplet
     if (envelope) {
       const normalized = normalizeCursorToolCompletion(envelope);
       return {
-        content: capToolResultLength(normalized.content),
+        content: capCursorToolResultLength(normalized.content),
         isError: normalized.isError,
         ...(normalized.toolUseResult
           ? { toolUseResult: normalized.toolUseResult as SDKToolUseResult }
@@ -222,12 +210,12 @@ function parseToolCompletion(record: Record<string, unknown>): CursorToolComplet
     }
 
     try {
-      return { content: capToolResultLength(JSON.stringify(tc)), isError: false };
+      return { content: capCursorToolResultLength(JSON.stringify(tc)), isError: false };
     } catch {
-      return { content: capToolResultLength(String(tc)), isError: false };
+      return { content: capCursorToolResultLength(String(tc)), isError: false };
     }
   }
-  return { content: capToolResultLength(JSON.stringify(record)), isError: false };
+  return { content: capCursorToolResultLength(JSON.stringify(record)), isError: false };
 }
 
 export class CursorNdjsonStreamReducer {
