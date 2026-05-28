@@ -110,6 +110,13 @@ export interface InputControllerDeps {
   restorePrePlanPermissionModeIfNeeded?: () => void;
 }
 
+/** Result returned for programmatic sends (e.g. Agent Board task runs). User sends ignore it. */
+export interface ProgrammaticSendResult {
+  ok: boolean;
+  finalAssistantContent: string;
+  error?: string;
+}
+
 export class InputController {
   private deps: InputControllerDeps;
   private pendingApprovalInline: InlineAskUserQuestion | null = null;
@@ -196,7 +203,7 @@ export class InputController {
     content?: string;
     images?: ChatMessage['images'];
     turnRequestOverride?: ChatTurnRequest;
-  }): Promise<void> {
+  }): Promise<ProgrammaticSendResult | void> {
     const {
       plugin,
       state,
@@ -207,6 +214,10 @@ export class InputController {
       canvasSelectionController,
       conversationController
     } = this.deps;
+
+    // Set for programmatic (content-override) sends so callers like Agent Board can
+    // observe the final assistant content. User-driven sends leave this undefined.
+    let programmaticResult: ProgrammaticSendResult | undefined;
 
     // During conversation creation/switching, don't send - input is preserved so user can retry
     if (state.isCreatingConversation || state.isSwitchingConversation) return;
@@ -222,7 +233,10 @@ export class InputController {
     const hasImages = imageOverride !== undefined
       ? imageOverride.length > 0
       : (imageContextManager?.hasImages() ?? false);
-    if (!content && !hasImages) return;
+    if (!content && !hasImages) {
+      if (!shouldUseInput) return { ok: false, finalAssistantContent: '', error: 'No content to send' };
+      return;
+    }
 
     // Check for built-in commands first (e.g., /clear, /new, /add-dir)
     const builtInCmd = detectBuiltInCommand(content);
@@ -483,6 +497,12 @@ export class InputController {
         await streamController.finalizeCurrentTextBlock(finalAssistantMsg);
         this.deps.getSubagentManager().resetStreamingState();
 
+        if (!shouldUseInput) {
+          programmaticResult = didCancelThisTurn
+            ? { ok: false, finalAssistantContent: finalAssistantMsg.content, error: 'Canceled' }
+            : { ok: true, finalAssistantContent: finalAssistantMsg.content };
+        }
+
         // Auto-hide completed todo panel on response end
         // Panel reappears only when new TodoWrite tool is called
         if (state.currentTodos && state.currentTodos.every(t => t.status === 'completed')) {
@@ -571,6 +591,8 @@ export class InputController {
       this.activeStreamingAssistantMessage = null;
       this.resetProviderMessageBoundaryState();
     }
+
+    return programmaticResult;
   }
 
   // ============================================

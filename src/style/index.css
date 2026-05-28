@@ -51,6 +51,7 @@
 @import "./shared/lucide-icon-picker.css";
 @import "./features/empty-state.css";
 @import "./features/context-card.css";
+@import "./features/agent-board.css";
 
 /* Modals */
 @import "./modals/instruction.css";

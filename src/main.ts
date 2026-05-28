@@ -28,6 +28,7 @@ import type {
 } from './core/types';
 import {
   VIEW_TYPE_CLAUDIAN,
+  VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
 } from './core/types';
 import type { ChatViewPlacement, EnvironmentScope } from './core/types/settings';
 import { ClaudianView } from './features/chat/ClaudianView';
@@ -35,6 +36,9 @@ import { GitService } from './features/chat/services/GitService';
 import { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
 import { type InlineEditContext, InlineEditModal } from './features/inline-edit/ui/InlineEditModal';
 import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
+import { createWorkOrder, createWorkOrderFromCurrentNote } from './features/tasks/commands/taskCommands';
+import { ChatTabExecutionSurface } from './features/tasks/execution/ChatTabExecutionSurface';
+import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
 import { setLocale } from './i18n/i18n';
 import type { Locale } from './i18n/types';
 import { OPENCODE_PLAN_MODE_ID, OPENCODE_SAFE_MODE_ID } from './providers/opencode/modes';
@@ -91,6 +95,42 @@ export default class ClaudianPlugin extends Plugin {
       name: 'Open chat view',
       callback: () => {
         void this.activateView();
+      },
+    });
+
+    const taskExecutionSurface = new ChatTabExecutionSurface(this);
+    this.registerView(
+      VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
+      (leaf) => new AgentBoardView(leaf, this, taskExecutionSurface),
+    );
+
+    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Board" is the product feature name.
+    this.addRibbonIcon('kanban-square', 'Open Agent Board', () => {
+      void this.activateAgentBoardView();
+    });
+
+    this.addCommand({
+      id: 'open-agent-board',
+      // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Board" is the product feature name.
+      name: 'Open Agent Board',
+      callback: () => {
+        void this.activateAgentBoardView();
+      },
+    });
+
+    this.addCommand({
+      id: 'create-work-order',
+      name: 'Create work order',
+      callback: () => {
+        void createWorkOrder(this);
+      },
+    });
+
+    this.addCommand({
+      id: 'create-work-order-from-current-note',
+      name: 'Create work order from current note',
+      callback: () => {
+        void createWorkOrderFromCurrentNote(this);
       },
     });
 
@@ -297,6 +337,21 @@ export default class ClaudianPlugin extends Plugin {
     if (leaf) {
       await revealWorkspaceLeaf(workspace, leaf);
     }
+  }
+
+  async activateAgentBoardView(): Promise<void> {
+    const { workspace } = this.app;
+    let leaf: WorkspaceLeaf | null = workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN_AGENT_BOARD)[0] ?? null;
+
+    if (!leaf) {
+      leaf = workspace.getLeaf('tab');
+      await leaf.setViewState({
+        type: VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
+        active: true,
+      });
+    }
+
+    await revealWorkspaceLeaf(workspace, leaf);
   }
 
   private getLeafForPlacement(placement: ChatViewPlacement): WorkspaceLeaf | null {

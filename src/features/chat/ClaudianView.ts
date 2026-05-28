@@ -15,6 +15,7 @@ import {
   type ScheduledAnimationFrame,
 } from '../../utils/animationFrame';
 import type { HistoryConversationOpenState } from './controllers/ConversationController';
+import type { ProgrammaticSendResult } from './controllers/InputController';
 import { InlineOrchestratorPlan } from './rendering/InlineOrchestratorPlan';
 import type { OrchestratorPlan } from './rendering/orchestratorPlanParser';
 import { OrchestratorService } from './services/OrchestratorService';
@@ -622,6 +623,70 @@ export class ClaudianView extends ItemView {
         this.orchestratorService.reportResult(tabId, result, isError);
       },
     );
+  }
+
+  /** Opens a fresh chat tab pinned to the work order's provider/model and auto-sends its prompt. */
+  async startTaskRunInFreshTab(options: {
+    providerId: ProviderId;
+    model: string;
+    prompt: string;
+  }): Promise<{
+    status: 'completed' | 'failed' | 'canceled';
+    conversationId: string | null;
+    sidepanelTabId: string | null;
+    finalAssistantContent: string;
+    error?: string;
+  }> {
+    if (!this.tabManager) {
+      return { status: 'failed', conversationId: null, sidepanelTabId: null, finalAssistantContent: '', error: 'Chat view is not ready.' };
+    }
+
+    const tab = await this.tabManager.createTaskRunTab({
+      providerId: options.providerId,
+      model: options.model,
+    });
+    if (!tab) {
+      return {
+        status: 'failed',
+        conversationId: null,
+        sidepanelTabId: null,
+        finalAssistantContent: '',
+        error: 'Could not open a chat tab for the work order (tab limit reached?).',
+      };
+    }
+
+    const inputController = tab.controllers.inputController;
+    if (!inputController) {
+      return {
+        status: 'failed',
+        conversationId: tab.conversationId,
+        sidepanelTabId: tab.id,
+        finalAssistantContent: '',
+        error: 'Chat tab is missing an input controller.',
+      };
+    }
+
+    const result = (await inputController.sendMessage({ content: options.prompt })) as
+      | ProgrammaticSendResult
+      | undefined;
+    const sendResult: ProgrammaticSendResult = result ?? {
+      ok: false,
+      finalAssistantContent: '',
+      error: 'No result from the chat run.',
+    };
+
+    let status: 'completed' | 'failed' | 'canceled' = sendResult.ok ? 'completed' : 'failed';
+    if (!sendResult.ok && sendResult.error === 'Canceled') {
+      status = 'canceled';
+    }
+
+    return {
+      status,
+      conversationId: tab.conversationId,
+      sidepanelTabId: tab.id,
+      finalAssistantContent: sendResult.finalAssistantContent,
+      error: sendResult.ok ? undefined : sendResult.error,
+    };
   }
 
   private handleTabClick(tabId: TabId): void {

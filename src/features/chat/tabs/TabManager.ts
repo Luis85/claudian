@@ -52,6 +52,7 @@ type CreateTabOptions = {
   activate?: boolean;
   draftModel?: string;
   bypassTabLimit?: boolean;
+  defaultProviderId?: ProviderId;
 };
 
 type OpenConversationOptions = {
@@ -169,11 +170,13 @@ export class TabManager implements TabManagerInterface {
       ? await this.plugin.getConversationById(conversationId)
       : undefined;
 
-    // Inherit the active tab's provider so the new blank tab picks up its model
+    // Inherit the active tab's provider so the new blank tab picks up its model,
+    // unless the caller pins an explicit provider (e.g. an Agent Board task run).
     const activeTab = this.getActiveTab();
-    const defaultProviderId = conversation
-      ? undefined
-      : (activeTab ? getTabProviderId(activeTab, this.plugin) : undefined);
+    const defaultProviderId = options.defaultProviderId
+      ?? (conversation
+        ? undefined
+        : (activeTab ? getTabProviderId(activeTab, this.plugin) : undefined));
 
     const tab = createTab({
       plugin: this.plugin,
@@ -231,6 +234,19 @@ export class TabManager implements TabManagerInterface {
     }
 
     return tab;
+  }
+
+  /** Creates a fresh, activated tab pinned to a provider/model for an Agent Board task run. */
+  async createTaskRunTab(options: {
+    providerId: ProviderId;
+    model: string;
+    conversationId?: string | null;
+  }): Promise<TabData | null> {
+    return this.createTab(options.conversationId ?? undefined, undefined, {
+      activate: true,
+      draftModel: options.model,
+      defaultProviderId: options.providerId,
+    });
   }
 
   /**

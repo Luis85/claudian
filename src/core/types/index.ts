@@ -11,6 +11,7 @@ export {
   type StreamChunk,
   type UsageInfo,
   VIEW_TYPE_CLAUDIAN,
+  VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
 } from './chat';
 export { type ProviderId } from './provider';
 

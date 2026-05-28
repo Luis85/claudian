@@ -101,6 +101,9 @@ describe('types.ts', () => {
         enableAutoScroll: true,
         deferMathRenderingDuringStreaming: true,
         chatViewPlacement: 'right-sidebar',
+        agentBoardWorkOrderFolder: 'Agent Board/tasks',
+        agentBoardDefaultProvider: 'codex',
+        agentBoardDefaultModel: '',
         hiddenProviderCommands: {
           claude: [],
           codex: [],
@@ -155,6 +158,9 @@ describe('types.ts', () => {
         enableAutoScroll: true,
         deferMathRenderingDuringStreaming: true,
         chatViewPlacement: 'right-sidebar',
+        agentBoardWorkOrderFolder: 'Agent Board/tasks',
+        agentBoardDefaultProvider: 'codex',
+        agentBoardDefaultModel: '',
         hiddenProviderCommands: {
           claude: [],
           codex: [],
@@ -210,6 +216,9 @@ describe('types.ts', () => {
         enableAutoScroll: false,
         deferMathRenderingDuringStreaming: true,
         chatViewPlacement: 'right-sidebar',
+        agentBoardWorkOrderFolder: 'Agent Board/tasks',
+        agentBoardDefaultProvider: 'codex',
+        agentBoardDefaultModel: '',
         hiddenProviderCommands: {
           claude: [],
           codex: [],

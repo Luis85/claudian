@@ -1,5 +1,7 @@
 import { createMockEl } from '@test/helpers/mockElement';
+import { readdirSync, readFileSync, statSync } from 'fs';
 import { Scope } from 'obsidian';
+import { join } from 'path';
 
 import { ClaudianView } from '@/features/chat/ClaudianView';
 
@@ -78,6 +80,32 @@ describe('ClaudianView tab controls', () => {
     expect(newTabButtonEl.hasClass('claudian-hidden')).toBe(false);
     expect(newTabButtonEl.getAttribute('aria-disabled')).toBeNull();
     expect(newTabButtonEl.getAttribute('aria-hidden')).toBeNull();
+  });
+});
+
+describe('direct chat independence from Agent Board', () => {
+  function collectTsFiles(dir: string): string[] {
+    const out: string[] = [];
+    for (const entry of readdirSync(dir)) {
+      const full = join(dir, entry);
+      if (statSync(full).isDirectory()) {
+        out.push(...collectTsFiles(full));
+      } else if (full.endsWith('.ts')) {
+        out.push(full);
+      }
+    }
+    return out;
+  }
+
+  it('chat feature never imports the tasks/Agent Board feature', () => {
+    const chatDir = join(__dirname, '../../../../src/features/chat');
+    const importsTasks = /\bfrom\s+['"][^'"]*\btasks\//;
+
+    const offenders = collectTsFiles(chatDir).filter((file) =>
+      importsTasks.test(readFileSync(file, 'utf8')),
+    );
+
+    expect(offenders).toEqual([]);
   });
 });
 
