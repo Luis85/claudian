@@ -1,4 +1,8 @@
 import { resolveCursorModelForCli, resolveCursorModelSelectionForCli } from '@/providers/cursor/runtime/cursorCliModel';
+import {
+  resetCursorModelCatalog,
+  seedCursorModelCatalogForTest,
+} from '@/providers/cursor/runtime/cursorModelCatalog';
 
 describe('resolveCursorModelForCli', () => {
   it('strips the cursor: prefix so the raw id reaches --model', () => {
@@ -46,5 +50,24 @@ describe('resolveCursorModelSelectionForCli', () => {
 
   it('passes auto through unchanged', () => {
     expect(resolveCursorModelSelectionForCli('cursor:auto', 'thinking')).toBe('auto');
+  });
+
+  it('falls back to the first valid variant when standard is requested but no bare family exists', () => {
+    // Seed the catalog with a family that has no bare id so the runtime cannot
+    // legitimately send `--model claude-opus-4-7` (cursor-agent rejects it).
+    resetCursorModelCatalog();
+    const cachedSeed = [
+      'claude-opus-4-7-low',
+      'claude-opus-4-7-medium',
+      'claude-opus-4-7-high',
+    ];
+    seedCursorModelCatalogForTest(cachedSeed);
+
+    expect(resolveCursorModelSelectionForCli('cursor:claude-opus-4-7', undefined))
+      .toBe('claude-opus-4-7-low');
+    expect(resolveCursorModelSelectionForCli('cursor:claude-opus-4-7', 'standard'))
+      .toBe('claude-opus-4-7-low');
+
+    resetCursorModelCatalog();
   });
 });

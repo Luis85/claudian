@@ -164,3 +164,29 @@ describe('cursorChatUIConfig families', () => {
     expect(cursorChatUIConfig.normalizeModelVariant('cursor:sonnet-4-thinking', s)).toBe('cursor:sonnet-4');
   });
 });
+
+describe('cursorChatUIConfig defaults for families without a bare variant', () => {
+  it('defaults effortLevel to the first valid mode when bare family is not real', () => {
+    // claude-opus-4-7 has only -low/-medium/-high/... variants, no bare id.
+    const s = settings({
+      enabled: ['claude-opus-4-7-low', 'claude-opus-4-7-medium', 'claude-opus-4-7-high'],
+    });
+    const value = cursorChatUIConfig.getDefaultReasoningValue('cursor:claude-opus-4-7', s);
+    expect(value).not.toBe('standard');
+    expect(['low', 'medium', 'high']).toContain(value);
+  });
+
+  it('applyModelDefaults seeds effortLevel with a runnable mode', () => {
+    const s = settings({
+      enabled: ['claude-opus-4-7-low', 'claude-opus-4-7-medium', 'claude-opus-4-7-high'],
+    });
+    cursorChatUIConfig.applyModelDefaults('cursor:claude-opus-4-7', s);
+    expect(s.effortLevel).not.toBe('standard');
+    expect(['low', 'medium', 'high']).toContain(s.effortLevel as string);
+  });
+
+  it('keeps standard as the default when the bare family IS discovered', () => {
+    const s = settings({ enabled: ['composer-2', 'composer-2-fast'] });
+    expect(cursorChatUIConfig.getDefaultReasoningValue('cursor:composer-2', s)).toBe('standard');
+  });
+});

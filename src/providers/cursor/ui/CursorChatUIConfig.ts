@@ -115,8 +115,17 @@ export const cursorChatUIConfig: ProviderChatUIConfig = {
   getDefaultReasoningValue(model: string, settings: Record<string, unknown>): string {
     const familyId = familyIdFromModelValue(model, settings);
     const preferred = getCursorProviderSettings(settings).preferredModeByFamily[familyId];
-    const valid = new Set(variantsForModelValue(model, settings).map((option) => option.value));
-    return preferred && valid.has(preferred) ? preferred : CURSOR_STANDARD_MODE;
+    const variants = variantsForModelValue(model, settings);
+    const valid = new Set(variants.map((option) => option.value));
+    if (preferred && valid.has(preferred)) {
+      return preferred;
+    }
+    if (valid.has(CURSOR_STANDARD_MODE)) {
+      return CURSOR_STANDARD_MODE;
+    }
+    // Family has no bare id in the discovered set — pick the first runnable
+    // variant so the picker never advertises an unselectable default.
+    return variants[0]?.value ?? CURSOR_STANDARD_MODE;
   },
 
   getContextWindowSize(): number {

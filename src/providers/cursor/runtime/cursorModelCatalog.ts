@@ -223,3 +223,8 @@ export function getCachedCursorModelIds(): string[] {
 export function resetCursorModelCatalog(): void {
   catalogCache = null;
 }
+
+/** Seeds the module cache with explicit ids. Test-only. */
+export function seedCursorModelCatalogForTest(ids: readonly string[]): void {
+  catalogCache = { ids: [...ids], fetchedAt: Date.now() };
+}
