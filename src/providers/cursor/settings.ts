@@ -49,11 +49,30 @@ export function normalizeEnabledModelsByHost(value: unknown): HostnameEnabledMod
   return result;
 }
 
+// Coerces persisted data into a Record<string, string> of family id -> mode.
+// Drops empty keys/values.
+export function normalizePreferredModeByFamily(value: unknown): Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+  const result: Record<string, string> = {};
+  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+    const familyId = typeof key === 'string' ? key.trim() : '';
+    const mode = typeof entry === 'string' ? entry.trim() : '';
+    if (!familyId || !mode) {
+      continue;
+    }
+    result[familyId] = mode;
+  }
+  return result;
+}
+
 export interface CursorProviderSettings {
   enabled: boolean;
   cliPath: string;
   cliPathsByHost: HostnameCliPaths;
   enabledModelsByHost: HostnameEnabledModels;
+  preferredModeByFamily: Record<string, string>;
   lastModel: string;
   environmentVariables: string;
   environmentHash: string;
@@ -64,6 +83,7 @@ export const DEFAULT_CURSOR_PROVIDER_SETTINGS: Readonly<CursorProviderSettings> 
   cliPath: '',
   cliPathsByHost: {},
   enabledModelsByHost: {},
+  preferredModeByFamily: {},
   lastModel: '',
   environmentVariables: '',
   environmentHash: '',
@@ -77,6 +97,7 @@ export function getCursorProviderSettings(settings: Record<string, unknown>): Cu
     cliPath: (config.cliPath as string | undefined) ?? DEFAULT_CURSOR_PROVIDER_SETTINGS.cliPath,
     cliPathsByHost: normalizeHostnameCliPaths(config.cliPathsByHost),
     enabledModelsByHost: normalizeEnabledModelsByHost(config.enabledModelsByHost),
+    preferredModeByFamily: normalizePreferredModeByFamily(config.preferredModeByFamily),
     lastModel: (config.lastModel as string | undefined) ?? DEFAULT_CURSOR_PROVIDER_SETTINGS.lastModel,
     environmentVariables: (config.environmentVariables as string | undefined)
       ?? getProviderEnvironmentVariables(settings, 'cursor')
@@ -100,6 +121,9 @@ export function updateCursorProviderSettings(
     enabledModelsByHost: 'enabledModelsByHost' in updates
       ? normalizeEnabledModelsByHost(updates.enabledModelsByHost)
       : { ...current.enabledModelsByHost },
+    preferredModeByFamily: 'preferredModeByFamily' in updates
+      ? normalizePreferredModeByFamily(updates.preferredModeByFamily)
+      : { ...current.preferredModeByFamily },
   };
 
   setProviderConfig(settings, 'cursor', {
@@ -107,6 +131,7 @@ export function updateCursorProviderSettings(
     cliPath: next.cliPath,
     cliPathsByHost: next.cliPathsByHost,
     enabledModelsByHost: next.enabledModelsByHost,
+    preferredModeByFamily: next.preferredModeByFamily,
     lastModel: next.lastModel,
     environmentVariables: next.environmentVariables,
     environmentHash: next.environmentHash,

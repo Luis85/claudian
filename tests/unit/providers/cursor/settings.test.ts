@@ -3,6 +3,7 @@ import {
   getCursorProviderSettings,
   normalizeEnabledModelsByHost,
   setCursorEnabledModels,
+  updateCursorProviderSettings,
 } from '@/providers/cursor/settings';
 
 const mockGetHostnameKey = jest.fn(() => 'host-a');
@@ -103,6 +104,21 @@ describe('cursor settings — curated models', () => {
         },
       });
       expect(settings.enabledModelsByHost).toEqual({ 'host-a': ['gpt-5.5'] });
+    });
+  });
+
+  describe('preferredModeByFamily', () => {
+    it('defaults to an empty object', () => {
+      const bag: Record<string, unknown> = {};
+      expect(getCursorProviderSettings(bag).preferredModeByFamily).toEqual({});
+    });
+
+    it('persists and normalizes mode preferences, dropping junk', () => {
+      const bag: Record<string, unknown> = {};
+      updateCursorProviderSettings(bag, {
+        preferredModeByFamily: { 'sonnet-4': 'thinking', '  ': 'x', 'gpt-5': '' } as Record<string, string>,
+      });
+      expect(getCursorProviderSettings(bag).preferredModeByFamily).toEqual({ 'sonnet-4': 'thinking' });
     });
   });
 });
