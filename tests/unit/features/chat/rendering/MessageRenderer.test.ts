@@ -518,6 +518,7 @@ describe('MessageRenderer', () => {
 
     expect(renderStoredToolCall).toHaveBeenCalledWith(
       expect.anything(),
+      expect.anything(),
       expect.objectContaining({
         id: 'stdin-1',
         name: TOOL_WRITE_STDIN,
@@ -656,7 +657,8 @@ describe('MessageRenderer', () => {
     expect(renderContentSpy).toHaveBeenCalledWith(expect.anything(), 'Only text block persisted');
     expect(renderStoredToolCall).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ id: 'read-1', name: 'Read' })
+      expect.anything(),
+      expect.objectContaining({ id: 'read-1', name: 'Read' }),
     );
   });
 
@@ -688,6 +690,7 @@ describe('MessageRenderer', () => {
     renderer.renderStoredMessage(msg);
 
     expect(renderStoredSubagent).toHaveBeenCalledWith(
+      expect.anything(),
       expect.anything(),
       expect.objectContaining({
         id: 'task-1',
@@ -737,11 +740,12 @@ describe('MessageRenderer', () => {
 
     expect(renderStoredAsyncSubagent).toHaveBeenCalledWith(
       expect.anything(),
+      expect.anything(),
       expect.objectContaining({
         id: 'task-async-1',
         mode: 'async',
         asyncStatus: 'running',
-      })
+      }),
     );
     expect(renderStoredSubagent).not.toHaveBeenCalled();
   });
@@ -775,10 +779,11 @@ describe('MessageRenderer', () => {
 
     expect(renderStoredAsyncSubagent).toHaveBeenCalledWith(
       expect.anything(),
+      expect.anything(),
       expect.objectContaining({
         id: 'task-async-structured-1',
         asyncStatus: 'running',
-      })
+      }),
     );
   });
 
@@ -818,10 +823,11 @@ describe('MessageRenderer', () => {
 
     expect(renderStoredAsyncSubagent).toHaveBeenCalledWith(
       expect.anything(),
+      expect.anything(),
       expect.objectContaining({
         id: 'task-hint-1',
         mode: 'async',
-      })
+      }),
     );
     expect(renderStoredSubagent).not.toHaveBeenCalled();
   });
@@ -857,8 +863,7 @@ describe('MessageRenderer', () => {
 
   it('should render other tool calls but skip TaskOutput when mixed', () => {
     const messagesEl = createMockEl();
-    const mockComponent = createMockComponent();
-    const renderer = new MessageRenderer({} as any, mockComponent as any, messagesEl);
+    const { renderer } = createRenderer(messagesEl);
 
     (renderStoredToolCall as jest.Mock).mockClear();
 
@@ -884,11 +889,13 @@ describe('MessageRenderer', () => {
     expect(renderStoredToolCall).toHaveBeenCalledTimes(2);
     expect(renderStoredToolCall).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ id: 'read-1', name: 'Read' })
+      expect.anything(),
+      expect.objectContaining({ id: 'read-1', name: 'Read' }),
     );
     expect(renderStoredToolCall).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ id: 'grep-1', name: 'Grep' })
+      expect.anything(),
+      expect.objectContaining({ id: 'grep-1', name: 'Grep' }),
     );
   });
 
@@ -971,6 +978,40 @@ describe('MessageRenderer', () => {
     const msgEl = renderer.addMessage(msg);
 
     expect(msgEl.hasClass('claudian-message-assistant')).toBe(true);
+  });
+
+  it('getMessageEl prefers liveMessageEls when registered', () => {
+    const messagesEl = createMockEl();
+    const rewindCallback = jest.fn();
+    const rendererWithRewind = new MessageRenderer(
+      { app: {}, settings: { mediaFolder: '' } } as any,
+      createMockComponent() as any,
+      messagesEl,
+      rewindCallback,
+      undefined,
+      mockCapabilities(),
+    );
+    const msg: ChatMessage = {
+      id: 'u-rewind',
+      role: 'user',
+      content: 'Hello',
+      timestamp: Date.now(),
+    };
+    const msgEl = rendererWithRewind.addMessage(msg);
+
+    expect(rendererWithRewind.getMessageEl('u-rewind')).toBe(msgEl);
+  });
+
+  it('getMessageEl falls back to data-message-id querySelector for assistant messages', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl);
+    const fallbackEl = createMockEl();
+    const querySpy = jest.spyOn(messagesEl, 'querySelector').mockReturnValue(fallbackEl);
+
+    const result = renderer.getMessageEl('assistant-stream-1');
+
+    expect(querySpy).toHaveBeenCalledWith('[data-message-id="assistant-stream-1"]');
+    expect(result).toBe(fallbackEl);
   });
 
   // ============================================
@@ -1143,14 +1184,14 @@ describe('MessageRenderer', () => {
     expect(el.children.length).toBe(0);
   });
 
-  it('renderContent should skip file-link post-processing when markdown has no wikilinks', async () => {
+  it('renderContent runs file-link post-processing after markdown render', async () => {
     const { processFileLinks } = await import('@/utils/fileLink');
     const { renderer } = createRenderer();
     const el = createMockEl();
 
     await renderer.renderContent(el, 'plain markdown without links');
 
-    expect(processFileLinks).not.toHaveBeenCalled();
+    expect(processFileLinks).toHaveBeenCalledWith(expect.anything(), el);
   });
 
   it('renderContent escapes math delimiters only when requested for streaming', async () => {
@@ -1325,6 +1366,7 @@ describe('MessageRenderer', () => {
 
       expect(renderStoredSubagent).toHaveBeenCalledWith(
         expect.anything(),
+        expect.anything(),
         expect.objectContaining({
           id: 'task-err',
           description: 'Failing task',
@@ -1362,6 +1404,7 @@ describe('MessageRenderer', () => {
 
       expect(renderStoredSubagent).toHaveBeenCalledWith(
         expect.anything(),
+        expect.anything(),
         expect.objectContaining({
           id: 'task-run',
           description: 'Running task',
@@ -1398,6 +1441,7 @@ describe('MessageRenderer', () => {
       renderer.renderStoredMessage(msg);
 
       expect(renderStoredSubagent).toHaveBeenCalledWith(
+        expect.anything(),
         expect.anything(),
         expect.objectContaining({
           id: 'task-no-desc',
@@ -1445,6 +1489,7 @@ describe('MessageRenderer', () => {
       renderer.renderStoredMessage(msg);
 
       expect(renderStoredSubagent).toHaveBeenCalledWith(
+        expect.anything(),
         expect.anything(),
         expect.objectContaining({
           id: 'spawn-1',

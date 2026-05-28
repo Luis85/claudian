@@ -6,6 +6,7 @@ import { CURSOR_PROVIDER_CAPABILITIES } from './capabilities';
 import { cursorSettingsReconciler } from './env/CursorSettingsReconciler';
 import { CursorConversationHistoryService } from './history/CursorConversationHistoryService';
 import { CursorChatRuntime } from './runtime/CursorChatRuntime';
+import { CursorTaskResultInterpreter } from './runtime/CursorTaskResultInterpreter';
 import { getCursorProviderSettings } from './settings';
 import { cursorChatUIConfig } from './ui/CursorChatUIConfig';
 
@@ -22,4 +23,5 @@ export const cursorProviderRegistration: ProviderRegistration = {
   createInstructionRefineService: (plugin) => new CursorInstructionRefineService(plugin),
   createInlineEditService: (plugin) => new CursorInlineEditService(plugin),
   historyService: new CursorConversationHistoryService(),
+  taskResultInterpreter: new CursorTaskResultInterpreter(),
 };

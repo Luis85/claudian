@@ -9,7 +9,7 @@ import { SubagentManager } from '@/features/chat/services/SubagentManager';
 import { createStopSubagentHook } from '@/providers/claude/hooks/SubagentHooks';
 
 jest.mock('@/features/chat/rendering/SubagentRenderer', () => ({
-  createSubagentBlock: jest.fn().mockImplementation((_parentEl: any, toolId: string, input: any) => ({
+  createSubagentBlock: jest.fn().mockImplementation((_app: any, _parentEl: any, toolId: string, input: any) => ({
     wrapperEl: { querySelector: jest.fn().mockReturnValue(null) },
     contentEl: {},
     info: {
@@ -23,7 +23,7 @@ jest.mock('@/features/chat/rendering/SubagentRenderer', () => ({
     },
     toolCallStates: new Map(),
   })),
-  createAsyncSubagentBlock: jest.fn().mockImplementation((_parentEl: any, toolId: string, input: any) => ({
+  createAsyncSubagentBlock: jest.fn().mockImplementation((_app: any, _parentEl: any, toolId: string, input: any) => ({
     wrapperEl: { querySelector: jest.fn().mockReturnValue(null) },
     info: {
       id: toolId,
@@ -45,9 +45,15 @@ jest.mock('@/features/chat/rendering/SubagentRenderer', () => ({
   markAsyncSubagentOrphaned: jest.fn(),
 }));
 
+const mockApp = {
+  workspace: { openLinkText: jest.fn() },
+  metadataCache: { getFirstLinkpathDest: jest.fn(() => null) },
+  vault: { getAbstractFileByPath: jest.fn(() => null) },
+} as never;
+
 const createManager = () => {
   const updates: SubagentInfo[] = [];
-  const manager = new SubagentManager((subagent) => {
+  const manager = new SubagentManager(mockApp, (subagent) => {
     updates.push({ ...subagent });
   });
   return { manager, updates };

@@ -1,3 +1,7 @@
+import type { PlanArtifact } from '../../../core/types/plan';
+import { readPlanMarkdownFromArtifact } from '../../../utils/planArtifact';
+import type { RenderContentFn } from './MessageRenderer';
+
 export type PlanApprovalDecision =
   | { type: 'implement' }
   | { type: 'revise'; text: string }
@@ -5,9 +9,16 @@ export type PlanApprovalDecision =
 
 const HINTS_TEXT = 'Arrow keys to navigate \u00B7 Enter to select \u00B7 Esc to cancel';
 
+export interface InlinePlanApprovalOptions {
+  artifact?: PlanArtifact;
+  planPathPrefix?: string;
+  renderContent?: RenderContentFn;
+}
+
 export class InlinePlanApproval {
   private containerEl: HTMLElement;
   private resolveCallback: (decision: PlanApprovalDecision | null) => void;
+  private options: InlinePlanApprovalOptions;
   private resolved = false;
 
   private rootEl!: HTMLElement;
@@ -20,9 +31,11 @@ export class InlinePlanApproval {
   constructor(
     containerEl: HTMLElement,
     resolve: (decision: PlanApprovalDecision | null) => void,
+    options: InlinePlanApprovalOptions = {},
   ) {
     this.containerEl = containerEl;
     this.resolveCallback = resolve;
+    this.options = options;
     this.boundKeyDown = (event) => this.handleKeyDown(event);
   }
 
@@ -30,6 +43,24 @@ export class InlinePlanApproval {
     this.rootEl = this.containerEl.createDiv({ cls: 'claudian-plan-approval-inline' });
 
     this.rootEl.createDiv({ cls: 'claudian-plan-inline-title', text: 'Plan complete' });
+
+    const { content, error } = readPlanMarkdownFromArtifact(
+      this.options.artifact,
+      this.options.planPathPrefix,
+    );
+    if (content) {
+      const previewEl = this.rootEl.createDiv({ cls: 'claudian-plan-content-preview' });
+      if (this.options.renderContent) {
+        void this.options.renderContent(previewEl, content);
+      } else {
+        previewEl.createDiv({ cls: 'claudian-plan-content-text', text: content });
+      }
+    } else if (error) {
+      this.rootEl.createDiv({
+        cls: 'claudian-plan-content-preview claudian-plan-read-error',
+        text: `Could not read plan file: ${error}`,
+      });
+    }
 
     const actionsEl = this.rootEl.createDiv({ cls: 'claudian-ask-list' });
 

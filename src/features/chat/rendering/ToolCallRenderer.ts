@@ -1,4 +1,4 @@
-import { setIcon } from 'obsidian';
+import { type App,setIcon } from 'obsidian';
 
 import type { TodoItem } from '../../../core/tools/todo';
 import { getToolIcon, MCP_ICON_MARKER } from '../../../core/tools/toolIcons';
@@ -28,6 +28,7 @@ import type { AskUserQuestionItem, AskUserQuestionOption, ToolCallInfo } from '.
 import type { DiffStats } from '../../../core/types/diff';
 import { appendMcpIcon } from '../../../shared/icons';
 import { parseApplyPatchDiffs, parseFileUpdateChangeDiffs } from '../../../utils/diff';
+import { decorateVaultFileLink } from '../../../utils/fileLink';
 import { setupCollapsible } from './collapsible';
 import { renderDiffContent, renderDiffStats } from './DiffRenderer';
 import { renderTodoItems } from './todoUtils';
@@ -451,13 +452,30 @@ function renderWebSearchExpanded(
   container.createDiv({ cls: 'claudian-tool-empty', text: 'No result' });
 }
 
-function renderFileSearchExpanded(container: HTMLElement, result: string): void {
+function isFileSearchHeaderLine(line: string): boolean {
+  const trimmed = line.trim();
+  return /^Found \d+ files?:/i.test(trimmed) || /^\d+ matches across/i.test(trimmed);
+}
+
+function renderFileSearchExpanded(app: App, container: HTMLElement, result: string): void {
   const lines = result.split(/\r?\n/).filter(line => line.trim());
   if (lines.length === 0) {
     container.createDiv({ cls: 'claudian-tool-empty', text: 'No matches found' });
     return;
   }
-  renderLinesExpanded(container, result, 15, true);
+
+  const linesEl = container.createDiv({ cls: 'claudian-tool-lines' });
+  for (const line of lines) {
+    const stripped = line.replace(/^\s*\d+→/, '').trim();
+    const lineEl = linesEl.createDiv({ cls: 'claudian-tool-line' });
+    if (!isFileSearchHeaderLine(stripped)) {
+      lineEl.addClass('hoverable');
+      lineEl.setText(stripped || ' ');
+      decorateVaultFileLink(app, lineEl, stripped);
+    } else {
+      lineEl.setText(stripped || ' ');
+    }
+  }
 }
 
 function renderLinesExpanded(
@@ -671,6 +689,7 @@ function formatToolDisplayValue(value: unknown): string {
 }
 
 export function renderExpandedContent(
+  app: App,
   container: HTMLElement,
   toolName: string,
   result: string | undefined,
@@ -701,7 +720,7 @@ export function renderExpandedContent(
     case TOOL_GLOB:
     case TOOL_GREP:
     case TOOL_LS:
-      renderFileSearchExpanded(container, resolvedResult);
+      renderFileSearchExpanded(app, container, resolvedResult);
       break;
     case TOOL_WEB_SEARCH:
       renderWebSearchExpanded(container, input, result);
@@ -828,9 +847,38 @@ interface ToolElementStructure {
   currentTaskEl: HTMLElement | null;
 }
 
+export function decorateToolSummaryPath(
+  app: App,
+  summaryEl: HTMLElement,
+  toolName: string,
+  input: Record<string, unknown>,
+): void {
+  switch (toolName) {
+    case TOOL_READ:
+    case TOOL_WRITE:
+    case TOOL_EDIT: {
+      const filePath = getInputText(input, 'file_path');
+      if (filePath) {
+        decorateVaultFileLink(app, summaryEl, filePath);
+      }
+      break;
+    }
+    case TOOL_LS: {
+      const path = getInputText(input, 'path', '.');
+      if (path && path !== '.') {
+        decorateVaultFileLink(app, summaryEl, path);
+      }
+      break;
+    }
+    default:
+      break;
+  }
+}
+
 function createToolElementStructure(
+  app: App,
   parentEl: HTMLElement,
-  toolCall: ToolCallInfo
+  toolCall: ToolCallInfo,
 ): ToolElementStructure {
   const toolEl = parentEl.createDiv({ cls: 'claudian-tool-call' });
   if (toolCall.name === TOOL_BASH) {
@@ -850,6 +898,7 @@ function createToolElementStructure(
 
   const summaryEl = header.createSpan({ cls: 'claudian-tool-summary' });
   summaryEl.setText(getToolSummary(toolCall.name, toolCall.input));
+  decorateToolSummaryPath(app, summaryEl, toolCall.name, toolCall.input);
 
   const currentTaskEl = toolCall.name === TOOL_TODO_WRITE
     ? createCurrentTaskPreview(header, toolCall.input)
@@ -1022,9 +1071,10 @@ function createTodoToggleHandler(
 }
 
 function renderToolContent(
+  app: App,
   content: HTMLElement,
   toolCall: ToolCallInfo,
-  initialText?: string
+  initialText?: string,
 ): void {
   if (toolCall.name === TOOL_TODO_WRITE) {
     content.addClass('claudian-tool-content-todo');
@@ -1041,24 +1091,25 @@ function renderToolContent(
   } else if (initialText) {
     contentFallback(content, initialText);
   } else {
-    renderExpandedContent(content, toolCall.name, toolCall.result, toolCall.input);
+    renderExpandedContent(app, content, toolCall.name, toolCall.result, toolCall.input);
   }
 }
 
 export function renderToolCall(
+  app: App,
   parentEl: HTMLElement,
   toolCall: ToolCallInfo,
-  toolCallElements: Map<string, HTMLElement>
+  toolCallElements: Map<string, HTMLElement>,
 ): HTMLElement {
   const { toolEl, header, statusEl, content, currentTaskEl } =
-    createToolElementStructure(parentEl, toolCall);
+    createToolElementStructure(app, parentEl, toolCall);
 
   toolEl.dataset.toolId = toolCall.id;
   toolCallElements.set(toolCall.id, toolEl);
 
   setGenericToolHeaderRight(statusEl, toolCall);
 
-  renderToolContent(content, toolCall, 'Running...');
+  renderToolContent(app, content, toolCall, 'Running...');
 
   const state = { isExpanded: false };
   toolCall.isExpanded = false;
@@ -1075,9 +1126,10 @@ export function renderToolCall(
 }
 
 export function updateToolCallResult(
+  app: App,
   toolId: string,
   toolCall: ToolCallInfo,
-  toolCallElements: Map<string, HTMLElement>
+  toolCallElements: Map<string, HTMLElement>,
 ) {
   const toolEl = toolCallElements.get(toolId);
   if (!toolEl) return;
@@ -1122,17 +1174,18 @@ export function updateToolCallResult(
   const content = toolEl.querySelector('.claudian-tool-content') as HTMLElement;
   if (content) {
     content.empty();
-    renderExpandedContent(content, toolCall.name, toolCall.result, toolCall.input);
+    renderExpandedContent(app, content, toolCall.name, toolCall.result, toolCall.input);
   }
 }
 
 /** For stored (non-streaming) tool calls — collapsed by default. */
 export function renderStoredToolCall(
+  app: App,
   parentEl: HTMLElement,
-  toolCall: ToolCallInfo
+  toolCall: ToolCallInfo,
 ): HTMLElement {
   const { toolEl, header, statusEl, content, currentTaskEl } =
-    createToolElementStructure(parentEl, toolCall);
+    createToolElementStructure(app, parentEl, toolCall);
 
   if (toolCall.name === TOOL_TODO_WRITE) {
     setTodoWriteStatus(statusEl, toolCall.input);
@@ -1140,7 +1193,7 @@ export function renderStoredToolCall(
     setGenericToolHeaderRight(statusEl, toolCall);
   }
 
-  renderToolContent(content, toolCall);
+  renderToolContent(app, content, toolCall);
 
   const state = { isExpanded: false };
   const todoStatusEl = toolCall.name === TOOL_TODO_WRITE ? statusEl : null;

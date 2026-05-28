@@ -40,6 +40,71 @@ function extractAssistantText(record: Record<string, unknown>): string {
   return out;
 }
 
+/** stream-partial-output lines are small deltas; final assistant rows are full snapshots. */
+const CURSOR_PARTIAL_ASSISTANT_FRAGMENT_MAX_LEN = 512;
+
+function longestSuffixPrefixOverlap(accumulated: string, incoming: string): number {
+  const max = Math.min(accumulated.length, incoming.length);
+  for (let length = max; length > 0; length -= 1) {
+    if (accumulated.endsWith(incoming.slice(0, length))) {
+      return length;
+    }
+  }
+  return 0;
+}
+
+/**
+ * Merges Cursor assistant text whether the NDJSON line is a stream-partial fragment
+ * (`"Shell"`, `" output"`, …) or a cumulative snapshot (final assistant row).
+ */
+export function computeCursorAssistantTextDelta(
+  accumulated: string,
+  incoming: string,
+): { delta: string; next: string } {
+  if (!incoming) {
+    return { delta: '', next: accumulated };
+  }
+
+  if (incoming === accumulated) {
+    return { delta: '', next: accumulated };
+  }
+
+  if (incoming.startsWith(accumulated)) {
+    const delta = incoming.slice(accumulated.length);
+    if (delta && accumulated.includes(delta)) {
+      return { delta: '', next: accumulated };
+    }
+    return { delta, next: incoming };
+  }
+
+  if (!accumulated) {
+    return { delta: incoming, next: incoming };
+  }
+
+  if (accumulated.startsWith(incoming) || accumulated.endsWith(incoming)) {
+    return { delta: '', next: accumulated };
+  }
+
+  if (incoming.length <= CURSOR_PARTIAL_ASSISTANT_FRAGMENT_MAX_LEN) {
+    return { delta: incoming, next: accumulated + incoming };
+  }
+
+  const overlap = longestSuffixPrefixOverlap(accumulated, incoming);
+  if (overlap > 0) {
+    const delta = incoming.slice(overlap);
+    if (delta && accumulated.includes(delta)) {
+      return { delta: '', next: accumulated };
+    }
+    return { delta, next: accumulated + delta };
+  }
+
+  if (accumulated.includes(incoming)) {
+    return { delta: '', next: accumulated };
+  }
+
+  return { delta: incoming, next: incoming };
+}
+
 // Reasoning/thinking is undocumented for Cursor. Be liberal about which block
 // shapes carry it: a `thinking` block exposes `.thinking`; `reasoning` /
 // `reasoning_text` blocks expose `.text` or `.reasoning`.
@@ -267,7 +332,9 @@ export class CursorNdjsonStreamReducer {
               : typeof rec.reasoning === 'string'
                 ? rec.reasoning
                 : '';
-      const chunks: StreamChunk[] = payload ? [{ type: 'thinking', content: payload }] : [];
+      const { delta, next } = computeCursorAssistantTextDelta(this.thinkingAcc, payload);
+      this.thinkingAcc = next;
+      const chunks: StreamChunk[] = delta ? [{ type: 'thinking', content: delta }] : [];
       return { chunks, sessionId };
     }
 
@@ -297,20 +364,19 @@ export class CursorNdjsonStreamReducer {
       // dedupe so accumulated thinking is never re-sent.
       const fullThinking = extractAssistantThinking(rec);
       if (fullThinking) {
-        const thinkingDelta = fullThinking.startsWith(this.thinkingAcc)
-          ? fullThinking.slice(this.thinkingAcc.length)
-          : fullThinking;
-        this.thinkingAcc = fullThinking;
+        const { delta: thinkingDelta, next } = computeCursorAssistantTextDelta(
+          this.thinkingAcc,
+          fullThinking,
+        );
+        this.thinkingAcc = next;
         if (thinkingDelta) {
           chunks.push({ type: 'thinking', content: thinkingDelta });
         }
       }
 
-      const full = extractAssistantText(rec);
-      const delta = full.startsWith(this.assistantAcc)
-        ? full.slice(this.assistantAcc.length)
-        : full;
-      this.assistantAcc = full;
+      const incoming = extractAssistantText(rec);
+      const { delta, next } = computeCursorAssistantTextDelta(this.assistantAcc, incoming);
+      this.assistantAcc = next;
       if (delta) {
         chunks.push({ type: 'text', content: delta });
       }

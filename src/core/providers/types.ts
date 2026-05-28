@@ -429,6 +429,8 @@ export interface ProviderTaskResultInterpreter {
     fallbackStatus: ProviderTaskTerminalStatus,
   ): ProviderTaskTerminalStatus;
   extractTagValue(payload: string, tagName: string): string | null;
+  /** Nested tools from a completed sync task payload (Cursor conversationSteps). */
+  extractNestedToolCalls?(toolUseResult: unknown, parentToolUseId: string): ToolCallInfo[];
 }
 
 export interface ProviderSubagentLaunchResult {

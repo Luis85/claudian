@@ -26,6 +26,12 @@ import {
   TOOL_WEB_SEARCH,
   TOOL_WRITE,
 } from '../../../core/tools/toolNames';
+import { cleanToolPathCandidate } from '../../../utils/fileLink';
+import {
+  buildCursorTaskToolUseResult,
+  extractCursorTaskResultText,
+  parseCursorSubagentType,
+} from './cursorTaskSubagent';
 
 interface CursorToolEnvelope {
   kind: string;
@@ -394,8 +400,17 @@ function mapCursorToolInput(
         out.run_in_background = args.run_in_background;
       } else if (typeof args.runInBackground === 'boolean') {
         out.run_in_background = args.runInBackground;
+      } else {
+        const mode = stringValue(args.mode);
+        if (mode === 'TASK_MODE_BACKGROUND') {
+          out.run_in_background = true;
+        } else if (mode === 'TASK_MODE_SYNCHRONOUS' || mode === 'TASK_MODE_SYNC') {
+          out.run_in_background = false;
+        }
       }
-      const subagent = stringValue(args.subagent_type ?? args.subagentType ?? args.agent);
+      const subagent =
+        parseCursorSubagentType(args.subagentType ?? args.subagent_type)
+        ?? stringValue(args.subagent_type ?? args.subagentType ?? args.agent);
       if (subagent) out.subagent_type = subagent;
       return out;
     }
@@ -449,7 +464,7 @@ function formatSuccessContent(
       return stringValue(success.message) || 'Sent';
 
     case 'globToolCall': {
-      const files = stringArray(success.files);
+      const files = stringArray(success.files).map(cleanToolPathCandidate).filter(Boolean);
       if (files.length === 0) {
         return `No files matched ${stringValue(args.globPattern ?? args.pattern) || 'pattern'}`;
       }
@@ -483,8 +498,13 @@ function formatSuccessContent(
     case 'askQuestionToolCall':
       return stringifyResultPayload(success, 'AskUserQuestion');
 
-    case 'taskToolCall':
+    case 'taskToolCall': {
+      const structured = extractCursorTaskResultText(success);
+      if (structured) {
+        return structured;
+      }
       return stringValue(success.result ?? success.output ?? success.message);
+    }
 
     case 'deleteToolCall':
       return stringValue(success.message) || `Deleted ${stringValue(args.path)}`;
@@ -499,6 +519,10 @@ function buildToolUseResult(
   success: Record<string, unknown>,
   args: Record<string, unknown>,
 ): Record<string, unknown> | undefined {
+  if (kind === 'taskToolCall') {
+    return buildCursorTaskToolUseResult(success, args);
+  }
+
   if (kind !== 'writeToolCall' && kind !== 'editToolCall') {
     return undefined;
   }

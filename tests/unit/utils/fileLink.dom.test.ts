@@ -1,18 +1,59 @@
 /**
  * @jest-environment jsdom
  */
+import type * as pathType from 'path';
+
 import { processFileLinks } from '@/utils/fileLink';
+import { getVaultFileByPath } from '@/utils/obsidianCompat';
+
+jest.mock('@/utils/obsidianCompat', () => ({
+  getVaultFileByPath: jest.fn(),
+}));
+
+jest.mock('@/utils/path', () => {
+  const path = jest.requireActual<typeof pathType>('path');
+  const vaultPath = 'C:/Projects/claudian';
+
+  function resolveInsideVault(candidate: string): string {
+    const normalized = candidate.replace(/\\/g, '/');
+    return path.isAbsolute(normalized)
+      ? path.normalize(normalized)
+      : path.resolve(vaultPath, normalized);
+  }
+
+  function isInsideVault(candidate: string): boolean {
+    const absCandidate = resolveInsideVault(candidate);
+    const rel = path.relative(vaultPath, absCandidate);
+    return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
+  }
+
+  return {
+    getVaultPath: () => vaultPath,
+    normalizePathForFilesystem: (raw: string) => raw.replace(/\\/g, '/'),
+    isPathWithinVault: (candidate: string, root: string) =>
+      root === vaultPath && isInsideVault(candidate),
+    normalizePathForVault: (raw: string, root: string | null) => {
+      if (!root) return null;
+      if (!isInsideVault(raw)) {
+        return raw.replace(/\\/g, '/');
+      }
+      const abs = resolveInsideVault(raw);
+      return path.relative(vaultPath, abs).replace(/\\/g, '/');
+    },
+  };
+});
 
 function createMockApp(existingFiles: string[]) {
   const fileSet = new Set(existingFiles.map(f => f.toLowerCase()));
 
-  return {
+  const app = {
     metadataCache: {
       getFirstLinkpathDest: jest.fn((linkPath: string) => {
         return fileSet.has(linkPath.toLowerCase()) ? { path: linkPath } : null;
       }),
     },
     vault: {
+      adapter: { basePath: 'C:/Projects/claudian' },
       getAbstractFileByPath: jest.fn((filePath: string) => {
         if (fileSet.has(filePath.toLowerCase())) return { path: filePath, basename: filePath.replace(/\.md$/, '') };
         if (!filePath.endsWith('.md') && fileSet.has((filePath + '.md').toLowerCase())) {
@@ -22,9 +63,19 @@ function createMockApp(existingFiles: string[]) {
       }),
     },
   } as any;
+
+  jest.mocked(getVaultFileByPath).mockImplementation((_, filePath) =>
+    app.vault.getAbstractFileByPath(filePath) as never,
+  );
+
+  return app;
 }
 
 describe('processFileLinks', () => {
+  beforeEach(() => {
+    jest.mocked(getVaultFileByPath).mockReset();
+  });
+
   describe('null/empty inputs', () => {
     it('handles null app gracefully', () => {
       const container = document.createElement('div');
@@ -116,13 +167,52 @@ describe('processFileLinks', () => {
       const app = createMockApp(['note.md']);
       const container = document.createElement('div');
       const span = document.createElement('span');
-      span.textContent = 'See [[note]] here';
+      span.textContent = 'See [[note.md]] here';
       container.appendChild(span);
 
       processFileLinks(app, container);
 
       const link = container.querySelector('a.claudian-file-link');
       expect(link).not.toBeNull();
+    });
+  });
+
+  describe('inline code vault paths', () => {
+    it('converts inline code absolute vault paths to clickable links', () => {
+      jest.mocked(getVaultFileByPath).mockImplementation((_, filePath) =>
+        filePath === '.context/cursor-async-smoke-summary.md'
+          ? ({ path: filePath } as never)
+          : null,
+      );
+
+      const app = createMockApp(['.context/cursor-async-smoke-summary.md']);
+      const container = document.createElement('div');
+      const code = document.createElement('code');
+      code.textContent = 'C:\\Projects\\claudian\\.context\\cursor-async-smoke-summary.md';
+      container.appendChild(code);
+
+      processFileLinks(app, container);
+
+      const link = code.querySelector('a.claudian-file-link');
+      expect(link).not.toBeNull();
+      expect(link!.getAttribute('data-href')).toBe('.context/cursor-async-smoke-summary.md');
+      expect(link!.textContent).toBe('C:\\Projects\\claudian\\.context\\cursor-async-smoke-summary.md');
+    });
+
+    it('skips vault path linkify inside pre elements', () => {
+      jest.mocked(getVaultFileByPath).mockReturnValue({ path: '.context/note.md' } as never);
+
+      const app = createMockApp(['.context/note.md']);
+      const container = document.createElement('div');
+      const pre = document.createElement('pre');
+      const code = document.createElement('code');
+      code.textContent = 'C:\\vault\\.context\\note.md';
+      pre.appendChild(code);
+      container.appendChild(pre);
+
+      processFileLinks(app, container);
+
+      expect(container.querySelector('a.claudian-file-link')).toBeNull();
     });
   });
 
@@ -217,15 +307,15 @@ describe('processFileLinks', () => {
     it('repairs empty resolved internal-link anchors while leaving missing wikilinks visible', () => {
       const app = createMockApp(['note.md']);
       const container = document.createElement('div');
-      container.innerHTML = '<a class="internal-link" href="note"></a> and [[missing.md]]';
+      container.innerHTML = '<a class="internal-link" href="note.md"></a> and [[missing.md]]';
 
       processFileLinks(app, container);
 
       const internalLink = container.querySelector('a.internal-link');
       expect(internalLink).not.toBeNull();
-      expect(internalLink!.textContent).toBe('note');
+      expect(internalLink!.textContent).toBe('note.md');
       expect(internalLink!.classList.contains('claudian-file-link')).toBe(true);
-      expect(container.textContent).toBe('note and [[missing.md]]');
+      expect(container.textContent).toBe('note.md and [[missing.md]]');
     });
 
     it('processes text nodes in regular elements', () => {

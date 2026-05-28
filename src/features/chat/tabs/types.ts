@@ -22,7 +22,10 @@ import type {
   McpServerSelector,
   ModelSelector,
   ModeSelector,
+  OrchestratorToggle,
   PermissionToggle,
+  PlanModeToggle,
+  QuickActionsToggle,
   ServiceTierToggle,
   ThinkingBudgetSelector,
 } from '../ui/InputToolbar';
@@ -119,6 +122,9 @@ export interface TabUIComponents {
   externalContextSelector: ExternalContextSelector | null;
   mcpServerSelector: McpServerSelector | null;
   permissionToggle: PermissionToggle | null;
+  planModeToggle: PlanModeToggle | null;
+  orchestratorToggle: OrchestratorToggle | null;
+  quickActionsToggle: QuickActionsToggle | null;
   serviceTierToggle: ServiceTierToggle | null;
   slashCommandDropdown: SlashCommandDropdown | null;
   instructionModeManager: InstructionModeManager | null;
@@ -189,6 +195,12 @@ export interface TabData {
 
   /** Conversation ID bound to this tab (null for new/empty tabs). */
   conversationId: string | null;
+
+  /** Parent orchestrator tab when this tab is a worker. */
+  orchestratorTabId?: TabId;
+
+  /** Worker tab IDs spawned by this orchestrator tab. */
+  workerTabIds?: TabId[];
 
   /** Per-tab chat runtime instance for independent streaming. */
   service: ChatRuntime | null;
@@ -276,4 +288,8 @@ export interface TabBarItem {
   isStreaming: boolean;
   needsAttention: boolean;
   canClose: boolean;
+  isOrchestrator?: boolean;
+  isWorker?: boolean;
+  /** 1-based index among workers spawned from the orchestrator tab. */
+  workerIndex?: number;
 }

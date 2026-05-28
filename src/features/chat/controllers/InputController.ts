@@ -34,10 +34,11 @@ import type { CanvasSelectionContext } from '../../../utils/canvas';
 import { formatDurationMmSs } from '../../../utils/date';
 import type { EditorSelectionContext } from '../../../utils/editor';
 import { appendMarkdownSnippet } from '../../../utils/markdown';
+import { buildPlanArtifactFromChatState } from '../../../utils/planArtifact';
 import { COMPLETION_FLAVOR_WORDS } from '../constants';
 import { type InlineAskQuestionConfig, InlineAskUserQuestion } from '../rendering/InlineAskUserQuestion';
 import { InlineExitPlanMode } from '../rendering/InlineExitPlanMode';
-import { InlinePlanApproval,type PlanApprovalDecision } from '../rendering/InlinePlanApproval';
+import { InlinePlanApproval, type PlanApprovalDecision } from '../rendering/InlinePlanApproval';
 import type { MessageRenderer } from '../rendering/MessageRenderer';
 import { setToolIcon, updateToolCallResult } from '../rendering/ToolCallRenderer';
 import type { SubagentManager } from '../services/SubagentManager';
@@ -497,7 +498,12 @@ export class InputController {
             if (tc.name === TOOL_EXIT_PLAN_MODE && !tc.result) {
               tc.status = 'completed';
               tc.result = 'User approved the plan and started a new session.';
-              updateToolCallResult(tc.id, tc, state.toolCallElements);
+              updateToolCallResult(
+                this.deps.plugin.app,
+                tc.id,
+                tc,
+                state.toolCallElements,
+              );
             }
           }
         }
@@ -755,6 +761,11 @@ export class InputController {
       : options.content;
     const enabledMcpServers = mcpServerSelector?.getEnabledServers();
 
+    const conversationId = this.deps.state.currentConversationId;
+    const conversation = conversationId
+      ? this.deps.plugin.getConversationSync(conversationId)
+      : null;
+
     return {
       displayContent: options.content,
       turnRequest: {
@@ -770,6 +781,8 @@ export class InputController {
         enabledMcpServers: enabledMcpServers && enabledMcpServers.size > 0
           ? enabledMcpServers
           : undefined,
+        orchestratorMode: conversation?.orchestratorMode === true
+          || this.deps.state.pendingOrchestratorMode,
       },
     };
   }
@@ -1141,8 +1154,12 @@ export class InputController {
       const conversation = await plugin.createConversation({
         providerId: this.getActiveProviderId(),
         sessionId,
+        orchestratorMode: state.pendingOrchestratorMode || undefined,
       });
       state.currentConversationId = conversation.id;
+      if (state.pendingOrchestratorMode) {
+        state.pendingOrchestratorMode = false;
+      }
     }
 
     // Find first user message by role (not by index)
@@ -1553,6 +1570,13 @@ export class InputController {
     this.hideInputContainer(inputContainerEl);
     this.pendingPlanApprovalInvalidated = false;
 
+    const planPathPrefix = this.getActiveCapabilities().planPathPrefix;
+    const artifact = buildPlanArtifactFromChatState({
+      planFilePath: this.deps.state.planFilePath,
+    });
+    const renderContent = (el: HTMLElement, markdown: string) =>
+      this.deps.renderer.renderContent(el, markdown);
+
     return new Promise<{ decision: PlanApprovalDecision | null; invalidated: boolean }>((resolve, reject) => {
       const inline = new InlinePlanApproval(
         parentEl,
@@ -1563,6 +1587,7 @@ export class InputController {
           this.restoreInputContainer(inputContainerEl);
           resolve({ decision, invalidated });
         },
+        { artifact, planPathPrefix, renderContent },
       );
       this.pendingPlanApproval = inline;
       try {

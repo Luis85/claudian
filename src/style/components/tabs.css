@@ -11,6 +11,7 @@
 }
 
 .claudian-tab-badge {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -26,6 +27,56 @@
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
+/* Orchestrator parent tab (has spawned workers) */
+.claudian-tab-badge-orchestrator {
+  border-color: var(--color-purple);
+  border-style: double;
+  color: color-mix(in srgb, var(--color-purple) 75%, var(--text-normal));
+  background: color-mix(in srgb, var(--color-purple) 10%, var(--background-primary));
+}
+
+.claudian-tab-badge-orchestrator:hover {
+  background: color-mix(in srgb, var(--color-purple) 16%, var(--background-modifier-hover));
+}
+
+.claudian-tab-badge-orchestrator.claudian-tab-badge-active {
+  border-color: var(--color-purple);
+  border-style: double;
+  color: var(--text-normal);
+  background: color-mix(in srgb, var(--color-purple) 18%, var(--background-primary));
+}
+
+/* Worker tabs spawned from an orchestrator */
+.claudian-tab-badge-worker {
+  border-color: color-mix(in srgb, var(--color-purple) 55%, var(--background-modifier-border));
+  border-style: dashed;
+  color: color-mix(in srgb, var(--color-purple) 70%, var(--text-muted));
+  background: color-mix(in srgb, var(--color-purple) 6%, var(--background-primary));
+}
+
+.claudian-tab-badge-worker::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-purple);
+  opacity: 0.85;
+}
+
+.claudian-tab-badge-worker:hover {
+  background: color-mix(in srgb, var(--color-purple) 12%, var(--background-modifier-hover));
+}
+
+.claudian-tab-badge-worker.claudian-tab-badge-active {
+  border-color: var(--color-purple);
+  border-style: dashed;
+  color: var(--text-normal);
+  background: color-mix(in srgb, var(--color-purple) 14%, var(--background-primary));
+}
+
 .claudian-tab-badge:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
@@ -36,28 +87,98 @@
   color: var(--text-normal);
 }
 
-.claudian-tab-badge-streaming {
-  border-color: var(--claudian-brand, #da7756);
-}
-
-.claudian-tab-badge-streaming[data-provider="claude"] {
-  border-color: var(--claudian-brand-claude, #D97757);
-}
-
-.claudian-tab-badge-streaming[data-provider="codex"] {
-  border-color: var(--claudian-brand-codex, #d0d0d0);
-}
-
-.claudian-tab-badge-streaming[data-provider="opencode"] {
-  border-color: var(--claudian-brand-opencode, #C8C8C8);
-}
-
 .claudian-tab-badge-attention {
   border-color: var(--text-error);
 }
 
 .claudian-tab-badge-idle {
   border-color: var(--background-modifier-border);
+}
+
+@keyframes claudian-tab-badge-working-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--claudian-tab-working-color) 45%, transparent);
+  }
+
+  50% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--claudian-tab-working-color) 20%, transparent);
+  }
+}
+
+@keyframes claudian-tab-badge-working-dot-pulse {
+  0%,
+  100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+}
+
+/*
+ * Working state — any tab running an agent turn (stacks with active / role).
+ * Declared after role + active so it wins the cascade for every tab type.
+ */
+.claudian-tab-badge.claudian-tab-badge-working {
+  --claudian-tab-working-color: var(--claudian-brand, #da7756);
+  border-color: var(--claudian-tab-working-color);
+  color: var(--text-normal);
+  animation: claudian-tab-badge-working-pulse 1.35s ease-in-out infinite;
+}
+
+.claudian-tab-badge.claudian-tab-badge-working[data-provider="claude"] {
+  --claudian-tab-working-color: var(--claudian-brand-claude, #d97757);
+}
+
+.claudian-tab-badge.claudian-tab-badge-working[data-provider="codex"] {
+  --claudian-tab-working-color: var(--claudian-brand-codex, #d0d0d0);
+}
+
+.claudian-tab-badge.claudian-tab-badge-working[data-provider="cursor"] {
+  --claudian-tab-working-color: var(--claudian-brand-cursor, #7c6fe6);
+}
+
+.claudian-tab-badge.claudian-tab-badge-working[data-provider="opencode"] {
+  --claudian-tab-working-color: var(--claudian-brand-opencode, #c8c8c8);
+}
+
+.claudian-tab-badge-worker.claudian-tab-badge-working,
+.claudian-tab-badge-orchestrator.claudian-tab-badge-working {
+  --claudian-tab-working-color: var(--color-purple);
+}
+
+/* Universal working dot (all tab types, including plain chats) */
+.claudian-tab-badge.claudian-tab-badge-working::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--claudian-tab-working-color);
+  opacity: 0.9;
+  animation: claudian-tab-badge-working-dot-pulse 1.35s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .claudian-tab-badge.claudian-tab-badge-working {
+    animation: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--claudian-tab-working-color) 30%, transparent);
+  }
+
+  .claudian-tab-badge.claudian-tab-badge-working::after {
+    animation: none;
+  }
+}
+
+/* Legacy alias */
+.claudian-tab-badge-streaming {
+  border-color: var(--claudian-brand, #da7756);
 }
 
 .claudian-tab-content-container {

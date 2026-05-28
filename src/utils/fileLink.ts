@@ -1,13 +1,134 @@
 /**
- * Claudian - File Link Utilities
+ * Claudian - Vault file link utilities (provider-neutral).
  *
- * Detects Obsidian wikilinks [[path/to/file]] in rendered content and makes
- * them clickable to open the file in Obsidian.
+ * One resolution + click path for chat markdown (wikilinks, Cursor inline paths)
+ * and tool UI path chips. Only vault files that exist in Obsidian are linkable.
  */
 
 import type { App, Component } from 'obsidian';
+import * as path from 'path';
 
 import { getVaultFileByPath } from './obsidianCompat';
+import {
+  getVaultPath,
+  isPathWithinVault,
+  normalizePathForFilesystem,
+  normalizePathForVault,
+} from './path';
+
+/** Strips Cursor-style relative prefixes (`../.\\foo.md`) before vault resolution. */
+export function cleanToolPathCandidate(rawPath: string): string {
+  let cleaned = rawPath.trim().replace(/\\/g, '/');
+  cleaned = cleaned.replace(/^(?:\.\.?\/)+/g, '');
+  cleaned = cleaned.replace(/^\/+/, '');
+  return cleaned;
+}
+
+function candidatePathIsInsideVault(candidate: string, vaultPath: string): boolean {
+  const normalized = normalizePathForFilesystem(candidate);
+  if (!normalized) {
+    return false;
+  }
+
+  if (path.isAbsolute(normalized)) {
+    return isPathWithinVault(normalized, vaultPath);
+  }
+
+  const resolved = path.resolve(vaultPath, cleanToolPathCandidate(candidate));
+  return isPathWithinVault(resolved, vaultPath);
+}
+
+function isVaultRelativeOpenPath(relative: string | null): relative is string {
+  if (!relative || relative.startsWith('/')) {
+    return false;
+  }
+  return !/^[A-Za-z]:/.test(relative) && !relative.includes('://');
+}
+
+/**
+ * Resolves a path to a vault-relative file only when it lives in the vault and exists.
+ */
+export function resolveOpenableVaultPath(app: App, rawPath: string): string | null {
+  const trimmed = rawPath.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const vaultPath = getVaultPath(app);
+  if (!vaultPath) {
+    return null;
+  }
+
+  const candidates = [trimmed, cleanToolPathCandidate(trimmed)];
+
+  for (const candidate of candidates) {
+    if (!candidatePathIsInsideVault(candidate, vaultPath)) {
+      continue;
+    }
+
+    const relative = normalizePathForVault(candidate, vaultPath);
+    if (!isVaultRelativeOpenPath(relative)) {
+      continue;
+    }
+
+    if (getVaultFileByPath(app, relative)) {
+      return relative;
+    }
+  }
+
+  return null;
+}
+
+/** Opens a vault file when the target is a resolvable path or wikilink. */
+export function openVaultFileLink(app: App, rawTarget: string): void {
+  const trimmed = rawTarget.trim();
+  if (!trimmed) {
+    return;
+  }
+
+  if (trimmed.includes('[[')) {
+    const linkTarget = extractLinkTarget(trimmed);
+    const basePath = extractLinkPathFromTarget(linkTarget);
+    if (vaultFileIsOpenable(app, basePath)) {
+      void app.workspace.openLinkText(linkTarget, '', 'tab');
+    }
+    return;
+  }
+
+  const hashIndex = trimmed.search(/[#^]/);
+  const pathPart = hashIndex >= 0 ? trimmed.slice(0, hashIndex) : trimmed;
+  const suffix = hashIndex >= 0 ? trimmed.slice(hashIndex) : '';
+
+  const openPath = resolveOpenableVaultPath(app, pathPart);
+  if (openPath) {
+    void app.workspace.openLinkText(openPath + suffix, '', 'tab');
+    return;
+  }
+
+  if (vaultFileIsOpenable(app, pathPart)) {
+    void app.workspace.openLinkText(trimmed, '', 'tab');
+  }
+}
+
+/**
+ * Marks an element clickable when `rawPath` resolves to a vault file.
+ * Uses the same `claudian-file-link` + `data-href` contract as chat wikilinks.
+ */
+export function decorateVaultFileLink(app: App, el: HTMLElement, rawPath: string): void {
+  const trimmed = rawPath.trim();
+  if (!trimmed) {
+    return;
+  }
+
+  const openTarget = resolveOpenableVaultPath(app, trimmed);
+  if (!openTarget) {
+    return;
+  }
+
+  el.classList.add('claudian-file-link');
+  el.dataset.href = openTarget;
+  el.setAttr('role', 'link');
+}
 
 /**
  * Regex pattern to match Obsidian wikilinks in text content.
@@ -25,6 +146,23 @@ const WIKILINK_PATTERN_SOURCE = '(?<!!)\\[\\[([^\\]|#^]+)(?:#[^\\]|]+)?(?:\\^[^\
 /** Creates a fresh regex instance to avoid global state issues */
 function createWikilinkPattern(): RegExp {
   return new RegExp(WIKILINK_PATTERN_SOURCE, 'g');
+}
+
+/** Cursor often cites created files as a single absolute path inside inline `code`. */
+function processInlineCodeVaultPath(app: App, codeEl: HTMLElement): boolean {
+  const text = codeEl.textContent?.trim();
+  if (!text || text.includes('[[')) {
+    return false;
+  }
+
+  const openPath = resolveOpenableVaultPath(app, text);
+  if (!openPath) {
+    return false;
+  }
+
+  codeEl.textContent = '';
+  codeEl.appendChild(createWikilink(codeEl.ownerDocument, openPath, text));
+  return true;
 }
 
 interface WikilinkMatch {
@@ -71,7 +209,7 @@ function findWikilinks(app: App, text: string): WikilinkMatch[] {
     const fullMatch = match[0];
     const linkPath = match[1];
 
-    if (!fileExistsInVault(app, linkPath)) continue;
+    if (!vaultFileIsOpenable(app, linkPath)) continue;
 
     matches.push(buildWikilinkMatch(fullMatch, linkPath, match.index));
   }
@@ -79,7 +217,11 @@ function findWikilinks(app: App, text: string): WikilinkMatch[] {
   return matches.sort((a, b) => b.index - a.index);
 }
 
-function fileExistsInVault(app: App, linkPath: string): boolean {
+function vaultFileIsOpenable(app: App, linkPath: string): boolean {
+  if (resolveOpenableVaultPath(app, linkPath)) {
+    return true;
+  }
+
   const file = app.metadataCache.getFirstLinkpathDest(linkPath, '');
   if (file) {
     return true;
@@ -129,7 +271,7 @@ function repairEmptyInternalLink(app: App, link: HTMLAnchorElement): void {
   if (!linkTarget) return;
 
   const linkPath = extractLinkPathFromTarget(linkTarget);
-  if (!linkPath || !fileExistsInVault(app, linkPath)) return;
+  if (!linkPath || !vaultFileIsOpenable(app, linkPath)) return;
 
   link.classList.add('claudian-file-link');
   if (!link.dataset.href) {
@@ -146,20 +288,28 @@ function repairEmptyInternalLink(app: App, link: HTMLAnchorElement): void {
 export function registerFileLinkHandler(
   app: App,
   container: HTMLElement,
-  component: Component
+  component: Component,
 ): void {
   component.registerDomEvent(container, 'click', (event: MouseEvent) => {
     const target = event.target as HTMLElement;
-    // Handle both our links and Obsidian's internal links
-    const link = target.closest('.claudian-file-link, .internal-link') as HTMLAnchorElement;
+    const link = target.closest(
+      'a.claudian-file-link, a.internal-link, [data-href].claudian-file-link',
+    ) as HTMLElement | null;
 
-    if (link) {
-      event.preventDefault();
-      const linkTarget = link.dataset.href || link.getAttribute('href');
-      if (linkTarget) {
-        void app.workspace.openLinkText(linkTarget, '', 'tab');
-      }
+    if (!link) {
+      return;
     }
+
+    const linkTarget = link.dataset.href || link.getAttribute('href');
+    if (!linkTarget) {
+      return;
+    }
+
+    event.preventDefault();
+    if (link.tagName !== 'A' && typeof event.stopPropagation === 'function') {
+      event.stopPropagation();
+    }
+    void app.workspace.openLinkText(linkTarget, '', 'tab');
   });
 }
 
@@ -214,9 +364,11 @@ export function processFileLinks(app: App, container: HTMLElement): void {
     repairEmptyInternalLink(app, linkEl as HTMLAnchorElement);
   });
 
-  // Wikilinks in inline code aren't rendered by Obsidian's MarkdownRenderer
+  // Inline code: vault paths (Cursor) and raw wikilinks Obsidian does not render
   container.querySelectorAll('code').forEach((codeEl) => {
     if (codeEl.parentElement?.tagName === 'PRE') return;
+
+    if (processInlineCodeVaultPath(app, codeEl)) return;
 
     const text = codeEl.textContent;
     if (!text || !text.includes('[[')) return;
@@ -227,6 +379,10 @@ export function processFileLinks(app: App, container: HTMLElement): void {
     codeEl.textContent = '';
     codeEl.appendChild(buildFragmentWithLinks(container.ownerDocument, text, matches));
   });
+
+  if (!(container.textContent ?? '').includes('[[')) {
+    return;
+  }
 
   const walker = container.ownerDocument.createTreeWalker(
     container,

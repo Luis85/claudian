@@ -67,6 +67,65 @@ export type TranslationKey =
   | 'chat.fork.commandNoMessages'
   | 'chat.fork.commandNoAssistantUuid'
 
+  // Chat - Plan mode
+  | 'chat.planMode.ariaLabel'
+  | 'chat.planMode.titleInactive'
+  | 'chat.planMode.titleActive'
+  | 'chat.planMode.toggleFailed'
+
+  // Chat - Orchestrator
+  | 'chat.orchestrator.titleOpen'
+  | 'chat.orchestrator.titleInactive'
+  | 'chat.orchestrator.titleActive'
+  | 'chat.orchestrator.toggleFailed'
+  | 'chat.orchestrator.spawnHeader'
+  | 'chat.orchestrator.spawnWorkers'
+  | 'chat.orchestrator.modal.title'
+  | 'chat.orchestrator.modal.intro'
+  | 'chat.orchestrator.modal.activeBanner'
+  | 'chat.orchestrator.modal.sectionWhatTitle'
+  | 'chat.orchestrator.modal.sectionWhatBody'
+  | 'chat.orchestrator.modal.sectionGoalTitle'
+  | 'chat.orchestrator.modal.sectionGoalBody'
+  | 'chat.orchestrator.modal.sectionTipsTitle'
+  | 'chat.orchestrator.modal.sectionTipsBody'
+  | 'chat.orchestrator.modal.sectionNextTitle'
+  | 'chat.orchestrator.modal.sectionNextBody'
+  | 'chat.orchestrator.modal.goalLabel'
+  | 'chat.orchestrator.modal.goalDesc'
+  | 'chat.orchestrator.modal.goalPlaceholder'
+  | 'chat.orchestrator.modal.goalRequired'
+  | 'chat.orchestrator.modal.submit'
+  | 'chat.orchestrator.modal.submitFailed'
+  | 'chat.orchestrator.modal.turnOff'
+
+  // Quick Actions
+  | 'quickActions.toolbar.ariaLabel'
+  | 'quickActions.toolbar.title'
+  | 'quickActions.modal.title'
+  | 'quickActions.modal.add'
+  | 'quickActions.modal.intro'
+  | 'quickActions.modal.emptyLead'
+  | 'quickActions.modal.emptyHintVault'
+  | 'quickActions.modal.emptyHintRun'
+  | 'quickActions.modal.emptyHintCreate'
+  | 'quickActions.modal.deleteFailed'
+  | 'quickActions.editor.titleEdit'
+  | 'quickActions.editor.titleAdd'
+  | 'quickActions.editor.name'
+  | 'quickActions.editor.nameDesc'
+  | 'quickActions.editor.description'
+  | 'quickActions.editor.icon'
+  | 'quickActions.editor.iconDesc'
+  | 'quickActions.editor.iconSearch'
+  | 'quickActions.editor.iconNone'
+  | 'quickActions.editor.iconNoResults'
+  | 'quickActions.editor.prompt'
+  | 'quickActions.editor.promptDesc'
+  | 'quickActions.editor.nameRequired'
+  | 'quickActions.editor.promptRequired'
+  | 'quickActions.editor.saveFailed'
+
   // Settings - Section Headings
   | 'settings.title'
   | 'settings.display'
@@ -247,4 +306,18 @@ export type TranslationKey =
 
   // Settings - Language
   | 'settings.language.name'
-  | 'settings.language.desc';
+  | 'settings.language.desc'
+
+  // Settings - Tabs
+  | 'settings.tabs.orchestrator'
+  | 'settings.tabs.quickActions'
+
+  // Settings - Orchestrator
+  | 'settings.orchestrator.enabled.name'
+  | 'settings.orchestrator.enabled.desc'
+  | 'settings.orchestrator.systemPrompt.name'
+  | 'settings.orchestrator.systemPrompt.desc'
+
+  // Settings - Quick Actions
+  | 'settings.quickActions.folder.name'
+  | 'settings.quickActions.folder.desc';

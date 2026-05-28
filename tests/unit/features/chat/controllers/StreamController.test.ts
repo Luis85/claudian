@@ -49,6 +49,7 @@ jest.mock('@/features/chat/rendering/ToolCallRenderer', () => ({
   isBlockedToolResult: jest.fn().mockReturnValue(false),
   renderToolCall: jest.fn(),
   updateToolCallResult: jest.fn(),
+  decorateToolSummaryPath: jest.fn(),
 }));
 
 jest.mock('@/features/chat/rendering/WriteEditRenderer', () => ({
@@ -151,6 +152,7 @@ function createMockDeps(): StreamControllerDeps {
       hasPendingTask: jest.fn().mockReturnValue(false),
       renderPendingTask: jest.fn().mockReturnValue(null),
       renderPendingTaskFromTaskResult: jest.fn().mockReturnValue(null),
+      hydrateNestedSyncToolsFromTaskResult: jest.fn(),
       getSyncSubagent: jest.fn().mockReturnValue(undefined),
       addSyncToolCall: jest.fn(),
       updateSyncToolResult: jest.fn(),
@@ -428,6 +430,70 @@ describe('StreamController - Text Content', () => {
         controller.handleStreamChunk({ type: 'done' }, msg)
       ).resolves.not.toThrow();
     });
+
+    it('calls onOrchestratorPlanDetected when plan JSON is present and message el resolves', async () => {
+      const msgEl = createMockEl();
+      const onOrchestratorPlanDetected = jest.fn();
+      deps.renderer.getMessageEl = jest.fn().mockReturnValue(msgEl);
+      controller.setOrchestratorCallbacks(onOrchestratorPlanDetected);
+
+      const msg = createTestMessage();
+      msg.content = `\`\`\`json
+{
+  "type": "orchestrator_plan",
+  "tasks": [
+    { "id": "1", "description": "Task 1", "prompt": "Do task 1" }
+  ]
+}
+\`\`\``;
+
+      await controller.handleStreamChunk({ type: 'done' }, msg);
+
+      expect(deps.renderer.getMessageEl).toHaveBeenCalledWith(msg.id);
+      expect(onOrchestratorPlanDetected).toHaveBeenCalledWith(
+        msgEl,
+        expect.objectContaining({
+          type: 'orchestrator_plan',
+          tasks: [{ id: '1', description: 'Task 1', prompt: 'Do task 1' }],
+        }),
+      );
+    });
+
+    it('calls onWorkerDone with error text from contentBlocks when msg.content is empty', async () => {
+      const onWorkerDone = jest.fn();
+      controller.setOrchestratorCallbacks(undefined, onWorkerDone);
+
+      const msg = createTestMessage();
+      deps.state.currentTextEl = createMockEl();
+      deps.state.currentTextContent = '\n\n❌ **Error:** EPERM rename failed';
+
+      await controller.handleStreamChunk({ type: 'done' }, msg);
+
+      expect(onWorkerDone).toHaveBeenCalledWith(
+        expect.stringContaining('EPERM rename failed'),
+        true,
+      );
+    });
+
+    it('does not call onOrchestratorPlanDetected when message el is missing', async () => {
+      const onOrchestratorPlanDetected = jest.fn();
+      deps.renderer.getMessageEl = jest.fn().mockReturnValue(null);
+      controller.setOrchestratorCallbacks(onOrchestratorPlanDetected);
+
+      const msg = createTestMessage();
+      msg.content = `\`\`\`json
+{
+  "type": "orchestrator_plan",
+  "tasks": [
+    { "id": "1", "description": "Task 1", "prompt": "Do task 1" }
+  ]
+}
+\`\`\``;
+
+      await controller.handleStreamChunk({ type: 'done' }, msg);
+
+      expect(onOrchestratorPlanDetected).not.toHaveBeenCalled();
+    });
   });
 
   describe('Usage handling', () => {
@@ -588,8 +654,9 @@ describe('StreamController - Text Content', () => {
       expect(deps.state.pendingTools.size).toBe(0);
       expect(renderToolCall).toHaveBeenCalledWith(
         expect.anything(),
+        expect.anything(),
         expect.objectContaining({ id: 'read-1', name: 'Read' }),
-        expect.any(Map)
+        expect.any(Map),
       );
     });
 
@@ -660,13 +727,14 @@ describe('StreamController - Text Content', () => {
       await Promise.resolve();
 
       expect(updateToolCallResult).toHaveBeenCalledWith(
+        expect.anything(),
         'bash-1',
         expect.objectContaining({
           id: 'bash-1',
           status: 'running',
           result: 'line 1\n',
         }),
-        expect.any(Map)
+        expect.any(Map),
       );
 
       await controller.handleStreamChunk(
@@ -682,13 +750,14 @@ describe('StreamController - Text Content', () => {
       await Promise.resolve();
 
       expect(updateToolCallResult).toHaveBeenLastCalledWith(
+        expect.anything(),
         'bash-1',
         expect.objectContaining({
           id: 'bash-1',
           status: 'running',
           result: 'line 1\nline 2\n',
         }),
-        expect.any(Map)
+        expect.any(Map),
       );
     });
 
@@ -717,12 +786,13 @@ describe('StreamController - Text Content', () => {
 
       expect(updateToolCallResult).toHaveBeenCalledTimes(1);
       expect(updateToolCallResult).toHaveBeenCalledWith(
+        expect.anything(),
         'bash-1',
         expect.objectContaining({
           result: 'line 1\nline 2\n',
           status: 'running',
         }),
-        expect.any(Map)
+        expect.any(Map),
       );
     });
 
@@ -748,7 +818,8 @@ describe('StreamController - Text Content', () => {
       expect(deps.state.pendingTools.size).toBe(0);
       expect(createWriteEditBlock).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ id: 'write-1', name: 'Write' })
+        expect.anything(),
+        expect.objectContaining({ id: 'write-1', name: 'Write' }),
       );
       // renderToolCall should NOT be called for Write/Edit tools
       expect(renderToolCall).not.toHaveBeenCalled();
@@ -1038,9 +1109,9 @@ describe('StreamController - Text Content', () => {
 
       // Verify tools were rendered in order (Map preserves insertion order)
       const calls = renderToolCall.mock.calls;
-      expect(calls[0][1].id).toBe('read-1');
-      expect(calls[1][1].id).toBe('grep-1');
-      expect(calls[2][1].id).toBe('glob-1');
+      expect(calls[0][2].id).toBe('read-1');
+      expect(calls[1][2].id).toBe('grep-1');
+      expect(calls[2][2].id).toBe('glob-1');
     });
   });
 
@@ -2123,6 +2194,7 @@ describe('StreamController - Text Content', () => {
       );
 
       expect(createSubagentBlock).toHaveBeenCalledWith(
+        expect.anything(),
         expect.anything(),
         'spawn-1',
         expect.objectContaining({

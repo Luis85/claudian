@@ -9,6 +9,7 @@ describe('registerFileLinkHandler', () => {
     };
 
     const link: any = {
+      tagName: 'A',
       dataset: { href: 'note#section' },
       getAttribute: jest.fn().mockReturnValue('note'),
       closest: jest.fn(),
@@ -40,6 +41,7 @@ describe('registerFileLinkHandler', () => {
     };
 
     const link: any = {
+      tagName: 'A',
       dataset: {},
       getAttribute: jest.fn().mockReturnValue('note^block'),
       closest: jest.fn(),

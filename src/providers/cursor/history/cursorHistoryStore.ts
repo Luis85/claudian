@@ -3,8 +3,10 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+import { isSubagentToolName } from '../../../core/tools/toolNames';
 import type { ChatMessage, ToolCallInfo } from '../../../core/types';
 import { extractDiffData } from '../../../utils/diff';
+import { attachCursorSubagentToTaskToolCall } from '../runtime/cursorTaskSubagent';
 import {
   normalizeCursorPersistedToolCall,
   normalizeCursorPersistedToolResult,
@@ -117,6 +119,10 @@ function applyToolBlob(record: Record<string, unknown>, messages: ChatMessage[])
       if (diffData) {
         tc.diffData = diffData;
       }
+    }
+
+    if (isSubagentToolName(tc.name)) {
+      attachCursorSubagentToTaskToolCall(tc, rawResult);
     }
   }
 }

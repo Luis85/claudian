@@ -1,4 +1,5 @@
 import { createMockEl } from '@test/helpers/mockElement';
+import type { App } from 'obsidian';
 
 import type { ToolCallInfo, ToolDiffData } from '@/core/types';
 import {
@@ -7,6 +8,12 @@ import {
   renderStoredWriteEdit,
   updateWriteEditWithDiff,
 } from '@/features/chat/rendering/WriteEditRenderer';
+
+const mockApp = {
+  workspace: { openLinkText: jest.fn() },
+  metadataCache: { getFirstLinkpathDest: jest.fn(() => null) },
+  vault: { getAbstractFileByPath: jest.fn(() => null) },
+} as unknown as App;
 
 // Helper to create a basic tool call
 function createToolCall(overrides: Partial<ToolCallInfo> = {}): ToolCallInfo {
@@ -39,7 +46,7 @@ describe('WriteEditRenderer', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall();
 
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       expect(state.wrapperEl).toBeDefined();
       expect(state.headerEl).toBeDefined();
@@ -55,7 +62,7 @@ describe('WriteEditRenderer', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall({ id: 'my-tool-id' });
 
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       expect(state.wrapperEl.dataset.toolId).toBe('my-tool-id');
     });
@@ -67,7 +74,7 @@ describe('WriteEditRenderer', () => {
         input: { file_path: 'notes/test.md' },
       });
 
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       expect(state.nameEl.textContent).toBe('Edit');
       expect(state.summaryEl.textContent).toBe('test.md');
@@ -77,7 +84,7 @@ describe('WriteEditRenderer', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall();
 
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       expect(state.statusEl.hasClass('status-running')).toBe(true);
     });
@@ -88,7 +95,7 @@ describe('WriteEditRenderer', () => {
         input: { file_path: '/very/long/path/to/some/deeply/nested/file.md' },
       });
 
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       // Summary should show just the filename
       expect(state.summaryEl.textContent).toBe('file.md');
@@ -98,7 +105,7 @@ describe('WriteEditRenderer', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall({ input: {} });
 
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       expect(state.summaryEl.textContent).toBe('file');
     });
@@ -108,7 +115,7 @@ describe('WriteEditRenderer', () => {
     it('should render diff stats when diff data is provided', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall();
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       const diffData = createDiffData({
         stats: { added: 1, removed: 0 },
@@ -123,7 +130,7 @@ describe('WriteEditRenderer', () => {
     it('should store diffLines in state', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall();
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       const diffData = createDiffData();
 
@@ -136,7 +143,7 @@ describe('WriteEditRenderer', () => {
     it('should show both added and removed counts', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall();
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       const diffData = createDiffData({
         stats: { added: 3, removed: 2 },
@@ -151,7 +158,7 @@ describe('WriteEditRenderer', () => {
     it('should handle empty diffLines with zero stats', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall();
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       const diffData = createDiffData({
         diffLines: [],
@@ -169,7 +176,7 @@ describe('WriteEditRenderer', () => {
     it('should update status to done on success', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall();
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       // Add diff data first
       updateWriteEditWithDiff(state, createDiffData());
@@ -183,7 +190,7 @@ describe('WriteEditRenderer', () => {
     it('should update status to error on failure', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall({ result: 'Error: file not found' });
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       finalizeWriteEditBlock(state, true);
 
@@ -194,7 +201,7 @@ describe('WriteEditRenderer', () => {
     it('should show error message in content when no diff', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall({ result: 'Permission denied' });
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       finalizeWriteEditBlock(state, true);
 
@@ -205,7 +212,7 @@ describe('WriteEditRenderer', () => {
     it('should clear spinner status on finalize', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall();
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       finalizeWriteEditBlock(state, false);
 
@@ -219,7 +226,7 @@ describe('WriteEditRenderer', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall({ status: 'completed' });
 
-      const block = renderStoredWriteEdit(parentEl, toolCall);
+      const block = renderStoredWriteEdit(mockApp, parentEl, toolCall);
 
       expect(block.hasClass('done')).toBe(true);
     });
@@ -228,7 +235,7 @@ describe('WriteEditRenderer', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall({ status: 'error' });
 
-      const block = renderStoredWriteEdit(parentEl, toolCall);
+      const block = renderStoredWriteEdit(mockApp, parentEl, toolCall);
 
       expect(block.hasClass('error')).toBe(true);
     });
@@ -237,7 +244,7 @@ describe('WriteEditRenderer', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall({ status: 'blocked' });
 
-      const block = renderStoredWriteEdit(parentEl, toolCall);
+      const block = renderStoredWriteEdit(mockApp, parentEl, toolCall);
 
       expect(block.hasClass('error')).toBe(true);
     });
@@ -251,7 +258,7 @@ describe('WriteEditRenderer', () => {
         }),
       });
 
-      const block = renderStoredWriteEdit(parentEl, toolCall);
+      const block = renderStoredWriteEdit(mockApp, parentEl, toolCall);
 
       // Block should be created successfully with stats
       expect(block.dataset.toolId).toBe('tool-123');
@@ -267,7 +274,7 @@ describe('WriteEditRenderer', () => {
         }),
       });
 
-      const block = renderStoredWriteEdit(parentEl, toolCall);
+      const block = renderStoredWriteEdit(mockApp, parentEl, toolCall);
 
       expect(block).toBeDefined();
     });
@@ -279,7 +286,7 @@ describe('WriteEditRenderer', () => {
         result: 'File not found',
       });
 
-      const block = renderStoredWriteEdit(parentEl, toolCall);
+      const block = renderStoredWriteEdit(mockApp, parentEl, toolCall);
 
       expect(block.hasClass('error')).toBe(true);
     });
@@ -288,7 +295,7 @@ describe('WriteEditRenderer', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall({ name: 'Edit' });
 
-      const block = renderStoredWriteEdit(parentEl, toolCall);
+      const block = renderStoredWriteEdit(mockApp, parentEl, toolCall);
 
       // Block should render for Edit tool
       expect(block).toBeDefined();
@@ -303,7 +310,7 @@ describe('WriteEditRenderer', () => {
         input: { file_path: 'notes/test.md' },
       });
 
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       expect(state.summaryEl.textContent).toBe('test.md');
     });
@@ -315,7 +322,7 @@ describe('WriteEditRenderer', () => {
         input: { file_path: longPath },
       });
 
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       expect(state.summaryEl.textContent).toBe('ConfirmationDialog.tsx');
     });
@@ -326,7 +333,7 @@ describe('WriteEditRenderer', () => {
         input: { file_path: 'README.md' },
       });
 
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       expect(state.summaryEl.textContent).toBe('README.md');
     });
@@ -336,7 +343,7 @@ describe('WriteEditRenderer', () => {
     it('should render new file correctly (all inserts)', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall();
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       const diffData: ToolDiffData = {
         filePath: 'test.md',
@@ -357,7 +364,7 @@ describe('WriteEditRenderer', () => {
     it('should handle file deletion (all deletes)', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall();
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       const diffData: ToolDiffData = {
         filePath: 'test.md',
@@ -376,7 +383,7 @@ describe('WriteEditRenderer', () => {
     it('should handle mixed changes', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall();
-      const state = createWriteEditBlock(parentEl, toolCall);
+      const state = createWriteEditBlock(mockApp, parentEl, toolCall);
 
       const diffData: ToolDiffData = {
         filePath: 'test.md',

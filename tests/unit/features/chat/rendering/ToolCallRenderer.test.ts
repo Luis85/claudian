@@ -1,5 +1,5 @@
 import { createMockEl } from '@test/helpers/mockElement';
-import { setIcon } from 'obsidian';
+import { type App,setIcon } from 'obsidian';
 
 import type { ToolCallInfo } from '@/core/types';
 import {
@@ -18,6 +18,12 @@ import {
 jest.mock('obsidian', () => ({
   setIcon: jest.fn(),
 }));
+
+const mockApp = {
+  workspace: { openLinkText: jest.fn() },
+  metadataCache: { getFirstLinkpathDest: jest.fn(() => null) },
+  vault: { getAbstractFileByPath: jest.fn(() => null) },
+} as unknown as App;
 
 // Helper to create a basic tool call
 function createToolCall(overrides: Partial<ToolCallInfo> = {}): ToolCallInfo {
@@ -41,7 +47,7 @@ describe('ToolCallRenderer', () => {
       const toolCall = createToolCall({ id: 'test-id' });
       const toolCallElements = new Map<string, HTMLElement>();
 
-      const toolEl = renderToolCall(parentEl, toolCall, toolCallElements);
+      const toolEl = renderToolCall(mockApp, parentEl, toolCall, toolCallElements);
 
       expect(toolCallElements.get('test-id')).toBe(toolEl);
     });
@@ -51,7 +57,7 @@ describe('ToolCallRenderer', () => {
       const toolCall = createToolCall({ id: 'my-tool-id' });
       const toolCallElements = new Map<string, HTMLElement>();
 
-      const toolEl = renderToolCall(parentEl, toolCall, toolCallElements);
+      const toolEl = renderToolCall(mockApp, parentEl, toolCall, toolCallElements);
 
       expect(toolEl.dataset.toolId).toBe('my-tool-id');
     });
@@ -61,7 +67,7 @@ describe('ToolCallRenderer', () => {
       const toolCall = createToolCall();
       const toolCallElements = new Map<string, HTMLElement>();
 
-      const toolEl = renderToolCall(parentEl, toolCall, toolCallElements);
+      const toolEl = renderToolCall(mockApp, parentEl, toolCall, toolCallElements);
 
       const header = (toolEl as any)._children[0];
       expect(header.getAttribute('role')).toBe('button');
@@ -73,7 +79,7 @@ describe('ToolCallRenderer', () => {
       const toolCall = createToolCall();
       const toolCallElements = new Map<string, HTMLElement>();
 
-      renderToolCall(parentEl, toolCall, toolCallElements);
+      renderToolCall(mockApp, parentEl, toolCall, toolCallElements);
 
       expect(toolCall.isExpanded).toBe(false);
     });
@@ -84,7 +90,7 @@ describe('ToolCallRenderer', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall({ status: 'completed' });
 
-      renderStoredToolCall(parentEl, toolCall);
+      renderStoredToolCall(mockApp, parentEl, toolCall);
 
       expect(setIcon).toHaveBeenCalledWith(expect.anything(), 'check');
     });
@@ -93,7 +99,7 @@ describe('ToolCallRenderer', () => {
       const parentEl = createMockEl();
       const toolCall = createToolCall({ status: 'error' });
 
-      renderStoredToolCall(parentEl, toolCall);
+      renderStoredToolCall(mockApp, parentEl, toolCall);
 
       expect(setIcon).toHaveBeenCalledWith(expect.anything(), 'x');
     });
@@ -107,7 +113,7 @@ describe('ToolCallRenderer', () => {
         result: '"Color?"="Blue"',
       });
 
-      const toolEl = renderStoredToolCall(parentEl, toolCall);
+      const toolEl = renderStoredToolCall(mockApp, parentEl, toolCall);
       const answerEls = toolEl.querySelectorAll('.claudian-ask-review-a-text');
 
       expect(answerEls).toHaveLength(1);
@@ -123,7 +129,7 @@ describe('ToolCallRenderer', () => {
         result: '{"answers":{"q1":{"answers":["Blue"]}}}',
       });
 
-      const toolEl = renderStoredToolCall(parentEl, toolCall);
+      const toolEl = renderStoredToolCall(mockApp, parentEl, toolCall);
       const answerEls = toolEl.querySelectorAll('.claudian-ask-review-a-text');
 
       expect(answerEls).toHaveLength(1);
@@ -147,7 +153,7 @@ describe('ToolCallRenderer', () => {
         },
       });
 
-      const toolEl = renderStoredToolCall(parentEl, toolCall);
+      const toolEl = renderStoredToolCall(mockApp, parentEl, toolCall);
       const labelEls = toolEl.querySelectorAll('.claudian-ask-item-label');
       const descEls = toolEl.querySelectorAll('.claudian-ask-item-desc');
       const checkEls = toolEl.querySelectorAll('.claudian-ask-check');
@@ -164,12 +170,12 @@ describe('ToolCallRenderer', () => {
       const toolCall = createToolCall({ id: 'tool-1' });
       const toolCallElements = new Map<string, HTMLElement>();
 
-      const toolEl = renderToolCall(parentEl, toolCall, toolCallElements);
+      const toolEl = renderToolCall(mockApp, parentEl, toolCall, toolCallElements);
 
       // Update with completed result
       toolCall.status = 'completed';
       toolCall.result = 'Success';
-      updateToolCallResult('tool-1', toolCall, toolCallElements);
+      updateToolCallResult(mockApp,'tool-1', toolCall, toolCallElements);
 
       const statusEl = toolEl.querySelector('.claudian-tool-status');
       expect(statusEl?.hasClass('status-completed')).toBe(true);
@@ -184,11 +190,11 @@ describe('ToolCallRenderer', () => {
       });
       const toolCallElements = new Map<string, HTMLElement>();
 
-      const toolEl = renderToolCall(parentEl, toolCall, toolCallElements);
+      const toolEl = renderToolCall(mockApp, parentEl, toolCall, toolCallElements);
       toolCall.status = 'completed';
       toolCall.result = 'Answer submitted successfully.';
 
-      updateToolCallResult('ask-1', toolCall, toolCallElements);
+      updateToolCallResult(mockApp,'ask-1', toolCall, toolCallElements);
 
       const promptEl = toolEl.querySelector('.claudian-ask-review-prompt');
       expect(promptEl?.textContent).toBe('Answer submitted successfully.');
@@ -523,7 +529,7 @@ describe('ToolCallRenderer', () => {
         result: 'Search complete',
       });
 
-      const toolEl = renderStoredToolCall(parentEl, toolCall);
+      const toolEl = renderStoredToolCall(mockApp, parentEl, toolCall);
       const lines = Array.from(toolEl.querySelectorAll('.claudian-tool-line')).map(line => line.textContent);
 
       expect(lines).toContain('Query: obsidian plugin API');
@@ -543,7 +549,7 @@ describe('ToolCallRenderer', () => {
         result: 'Search complete',
       });
 
-      const toolEl = renderStoredToolCall(parentEl, toolCall);
+      const toolEl = renderStoredToolCall(mockApp, parentEl, toolCall);
       const links = toolEl.querySelectorAll('.claudian-tool-link');
       const lines = Array.from(toolEl.querySelectorAll('.claudian-tool-line')).map(line => line.textContent);
 
@@ -573,7 +579,7 @@ describe('ToolCallRenderer', () => {
         result: 'Applied patch',
       });
 
-      const toolEl = renderStoredToolCall(parentEl, toolCall);
+      const toolEl = renderStoredToolCall(mockApp, parentEl, toolCall);
       const headers = Array.from(toolEl.querySelectorAll('.claudian-tool-patch-header')).map(el => el.textContent);
       const statusEl = toolEl.querySelector('.claudian-tool-status');
       const diffTexts = Array.from(toolEl.querySelectorAll('.claudian-diff-text')).map(el => el.textContent);
@@ -605,7 +611,7 @@ describe('ToolCallRenderer', () => {
         result: 'Applied patch',
       });
 
-      const toolEl = renderStoredToolCall(parentEl, toolCall);
+      const toolEl = renderStoredToolCall(mockApp, parentEl, toolCall);
       const headers = Array.from(toolEl.querySelectorAll('.claudian-tool-patch-header')).map(el => el.textContent);
       const statusEl = toolEl.querySelector('.claudian-tool-status');
       const diffTexts = Array.from(toolEl.querySelectorAll('.claudian-diff-text')).map(el => el.textContent);
@@ -641,7 +647,7 @@ describe('ToolCallRenderer', () => {
         result: 'Applied patch',
       });
 
-      const toolEl = renderStoredToolCall(parentEl, toolCall);
+      const toolEl = renderStoredToolCall(mockApp, parentEl, toolCall);
       const statusEl = toolEl.querySelector('.claudian-tool-status');
 
       expect(statusEl?.querySelector('.added')?.textContent).toBe('+3');
@@ -666,7 +672,7 @@ describe('ToolCallRenderer', () => {
         result: 'Error: patch failed',
       });
 
-      const toolEl = renderStoredToolCall(parentEl, toolCall);
+      const toolEl = renderStoredToolCall(mockApp, parentEl, toolCall);
       const statusEl = toolEl.querySelector('.claudian-tool-status');
 
       expect(statusEl?.hasClass('status-error')).toBe(true);
@@ -684,7 +690,7 @@ describe('ToolCallRenderer', () => {
       });
       const toolCallElements = new Map<string, HTMLElement>();
 
-      const toolEl = renderToolCall(parentEl, toolCall, toolCallElements);
+      const toolEl = renderToolCall(mockApp, parentEl, toolCall, toolCallElements);
       jest.clearAllMocks();
 
       toolCall.status = 'completed';
@@ -699,7 +705,7 @@ describe('ToolCallRenderer', () => {
         ],
       };
 
-      updateToolCallResult('patch-1', toolCall, toolCallElements);
+      updateToolCallResult(mockApp,'patch-1', toolCall, toolCallElements);
 
       const statusEl = toolEl.querySelector('.claudian-tool-status');
       const diffTexts = Array.from(toolEl.querySelectorAll('.claudian-diff-text')).map(el => el.textContent);
@@ -723,7 +729,7 @@ describe('ToolCallRenderer', () => {
         result: 'Applied patch',
       });
 
-      const toolEl = renderStoredToolCall(parentEl, toolCall);
+      const toolEl = renderStoredToolCall(mockApp, parentEl, toolCall);
       const lines = Array.from(toolEl.querySelectorAll('.claudian-tool-line')).map(el => el.textContent);
 
       expect(lines).toContain('src/main.ts');
@@ -799,7 +805,7 @@ describe('ToolCallRenderer', () => {
       });
       const toolCallElements = new Map<string, HTMLElement>();
 
-      renderToolCall(parentEl, toolCall, toolCallElements);
+      renderToolCall(mockApp, parentEl, toolCall, toolCallElements);
 
       // Update with all completed
       toolCall.input = {
@@ -807,7 +813,7 @@ describe('ToolCallRenderer', () => {
           { status: 'completed', content: 'Task 1', activeForm: 'Done' },
         ],
       };
-      updateToolCallResult('todo-1', toolCall, toolCallElements);
+      updateToolCallResult(mockApp,'todo-1', toolCall, toolCallElements);
 
       const statusEl = parentEl.querySelector('.claudian-tool-status');
       expect(statusEl?.hasClass('status-completed')).toBe(true);
@@ -815,7 +821,7 @@ describe('ToolCallRenderer', () => {
 
     it('should do nothing for non-existent tool id', () => {
       const toolCallElements = new Map<string, HTMLElement>();
-      updateToolCallResult('nonexistent', createToolCall(), toolCallElements);
+      updateToolCallResult(mockApp,'nonexistent', createToolCall(), toolCallElements);
       expect(toolCallElements.size).toBe(0);
     });
   });
@@ -833,7 +839,7 @@ describe('ToolCallRenderer', () => {
         },
       });
 
-      const toolEl = renderStoredToolCall(parentEl, toolCall);
+      const toolEl = renderStoredToolCall(mockApp, parentEl, toolCall);
       expect(toolEl).toBeDefined();
     });
   });

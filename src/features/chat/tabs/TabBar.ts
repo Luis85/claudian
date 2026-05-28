@@ -46,24 +46,50 @@ export class TabBar {
 
   /** Renders a single tab badge. */
   private renderBadge(item: TabBarItem): void {
-    // Determine state class (priority: active > attention > streaming > idle)
-    let stateClass = 'claudian-tab-badge-idle';
+    const roleClass = item.isWorker
+      ? 'claudian-tab-badge-worker'
+      : item.isOrchestrator
+        ? 'claudian-tab-badge-orchestrator'
+        : '';
+
+    const stateClasses = ['claudian-tab-badge'];
     if (item.isActive) {
-      stateClass = 'claudian-tab-badge-active';
-    } else if (item.needsAttention) {
-      stateClass = 'claudian-tab-badge-attention';
-    } else if (item.isStreaming) {
-      stateClass = 'claudian-tab-badge-streaming';
+      stateClasses.push('claudian-tab-badge-active');
+    }
+    if (item.needsAttention) {
+      stateClasses.push('claudian-tab-badge-attention');
+    }
+    if (item.isStreaming) {
+      stateClasses.push('claudian-tab-badge-working');
+    }
+    if (!item.isActive && !item.needsAttention && !item.isStreaming) {
+      stateClasses.push('claudian-tab-badge-idle');
+    }
+    if (roleClass) {
+      stateClasses.push(roleClass);
     }
 
     const badgeEl = this.containerEl.createDiv({
-      cls: `claudian-tab-badge ${stateClass}`,
+      cls: stateClasses.join(' '),
       text: String(item.index),
     });
 
     // Tooltip with full title (aria-label only; adding title too causes double tooltip)
-    badgeEl.setAttribute('aria-label', item.title);
+    const ariaLabel = item.isStreaming ? `${item.title} (working)` : item.title;
+    badgeEl.setAttribute('aria-label', ariaLabel);
+    if (item.isStreaming) {
+      badgeEl.setAttribute('aria-busy', 'true');
+      badgeEl.setAttribute('data-working', 'true');
+    }
     badgeEl.setAttribute('data-provider', item.providerId);
+    if (item.isWorker) {
+      badgeEl.setAttribute('data-tab-role', 'worker');
+      if (item.workerIndex != null) {
+        badgeEl.setAttribute('data-worker-index', String(item.workerIndex));
+      }
+    } else if (item.isOrchestrator) {
+      badgeEl.setAttribute('data-tab-role', 'orchestrator');
+    }
 
     // Click handler to switch tab
     badgeEl.addEventListener('click', () => {

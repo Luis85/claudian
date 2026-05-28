@@ -1,4 +1,4 @@
-import { setIcon } from 'obsidian';
+import { type App,setIcon } from 'obsidian';
 
 import { getToolIcon } from '../../../core/tools/toolIcons';
 import { TOOL_TASK } from '../../../core/tools/toolNames';
@@ -26,6 +26,7 @@ interface SubagentSection {
 }
 
 export interface SubagentState {
+  app: App;
   wrapperEl: HTMLElement;
   contentEl: HTMLElement;
   headerEl: HTMLElement;
@@ -94,7 +95,7 @@ function updateSyncHeaderAria(state: SubagentState): void {
   state.statusEl.setAttribute('aria-label', `Status: ${state.info.status}`);
 }
 
-function renderSubagentToolContent(contentEl: HTMLElement, toolCall: ToolCallInfo): void {
+function renderSubagentToolContent(app: App, contentEl: HTMLElement, toolCall: ToolCallInfo): void {
   contentEl.empty();
 
   if (!toolCall.result && toolCall.status === 'running') {
@@ -103,7 +104,7 @@ function renderSubagentToolContent(contentEl: HTMLElement, toolCall: ToolCallInf
     return;
   }
 
-  renderExpandedContent(contentEl, toolCall.name, toolCall.result, toolCall.input);
+  renderExpandedContent(app, contentEl, toolCall.name, toolCall.result, toolCall.input);
 }
 
 function setSubagentToolStatus(view: SubagentToolView, status: ToolCallInfo['status']): void {
@@ -118,15 +119,15 @@ function setSubagentToolStatus(view: SubagentToolView, status: ToolCallInfo['sta
   }
 }
 
-function updateSubagentToolView(view: SubagentToolView, toolCall: ToolCallInfo): void {
+function updateSubagentToolView(app: App, view: SubagentToolView, toolCall: ToolCallInfo): void {
   view.wrapperEl.className = `claudian-subagent-tool-item claudian-subagent-tool-${toolCall.status}`;
   view.nameEl.setText(getToolName(toolCall.name, toolCall.input));
   view.summaryEl.setText(getToolSummary(toolCall.name, toolCall.input));
   setSubagentToolStatus(view, toolCall.status);
-  renderSubagentToolContent(view.contentEl, toolCall);
+  renderSubagentToolContent(app, view.contentEl, toolCall);
 }
 
-function createSubagentToolView(parentEl: HTMLElement, toolCall: ToolCallInfo): SubagentToolView {
+function createSubagentToolView(app: App, parentEl: HTMLElement, toolCall: ToolCallInfo): SubagentToolView {
   const wrapperEl = parentEl.createDiv({
     cls: `claudian-subagent-tool-item claudian-subagent-tool-${toolCall.status}`,
   });
@@ -162,7 +163,7 @@ function createSubagentToolView(parentEl: HTMLElement, toolCall: ToolCallInfo): 
     statusEl,
     contentEl,
   };
-  updateSubagentToolView(view, toolCall);
+  updateSubagentToolView(app, view, toolCall);
 
   return view;
 }
@@ -218,9 +219,10 @@ function hydrateSyncSubagentStateFromStored(state: SubagentState, subagent: Suba
 }
 
 export function createSubagentBlock(
+  app: App,
   parentEl: HTMLElement,
   taskToolId: string,
-  taskInput: Record<string, unknown>
+  taskInput: Record<string, unknown>,
 ): SubagentState {
   const description = extractTaskDescription(taskInput);
   const prompt = extractTaskPrompt(taskInput);
@@ -262,6 +264,7 @@ export function createSubagentBlock(
   setupCollapsible(wrapperEl, headerEl, contentEl, info);
 
   const state: SubagentState = {
+    app,
     wrapperEl,
     contentEl,
     headerEl,
@@ -302,7 +305,7 @@ export function addSubagentToolCall(
 
     const existingView = state.toolElements.get(toolCall.id);
     if (existingView) {
-      updateSubagentToolView(existingView, mergedToolCall);
+      updateSubagentToolView(state.app, existingView, mergedToolCall);
     }
 
     updateSyncHeaderAria(state);
@@ -311,7 +314,7 @@ export function addSubagentToolCall(
 
   state.info.toolCalls.push(toolCall);
 
-  const toolView = createSubagentToolView(state.toolsContainerEl, toolCall);
+  const toolView = createSubagentToolView(state.app, state.toolsContainerEl, toolCall);
   state.toolElements.set(toolCall.id, toolView);
 
   updateSyncHeaderAria(state);
@@ -332,7 +335,7 @@ export function updateSubagentToolResult(
     return;
   }
 
-  updateSubagentToolView(toolView, toolCall);
+  updateSubagentToolView(state.app, toolView, toolCall);
 }
 
 export function finalizeSubagentBlock(
@@ -365,10 +368,11 @@ export function finalizeSubagentBlock(
 }
 
 export function renderStoredSubagent(
+  app: App,
   parentEl: HTMLElement,
-  subagent: SubagentInfo
+  subagent: SubagentInfo,
 ): HTMLElement {
-  const state = createSubagentBlock(parentEl, subagent.id, {
+  const state = createSubagentBlock(app, parentEl, subagent.id, {
     description: subagent.description,
     prompt: subagent.prompt,
   });
@@ -378,6 +382,7 @@ export function renderStoredSubagent(
 }
 
 export interface AsyncSubagentState {
+  app: App;
   wrapperEl: HTMLElement;
   contentEl: HTMLElement;
   headerEl: HTMLElement;
@@ -434,9 +439,10 @@ function updateAsyncLabel(state: AsyncSubagentState): void {
 }
 
 function renderAsyncContentLikeSync(
+  app: App,
   contentEl: HTMLElement,
   subagent: SubagentInfo,
-  displayStatus: 'running' | 'completed' | 'error' | 'orphaned'
+  displayStatus: 'running' | 'completed' | 'error' | 'orphaned',
 ): void {
   contentEl.empty();
 
@@ -450,7 +456,7 @@ function renderAsyncContentLikeSync(
       ...originalToolCall,
       input: { ...originalToolCall.input },
     };
-    createSubagentToolView(toolsContainerEl, toolCall);
+    createSubagentToolView(app, toolsContainerEl, toolCall);
   }
 
   if (displayStatus === 'running') {
@@ -476,9 +482,10 @@ function renderAsyncContentLikeSync(
  * Expandable to show the task prompt. Collapsed by default.
  */
 export function createAsyncSubagentBlock(
+  app: App,
   parentEl: HTMLElement,
   taskToolId: string,
-  taskInput: Record<string, unknown>
+  taskInput: Record<string, unknown>,
 ): AsyncSubagentState {
   const description = (taskInput.description as string) || 'Background task';
   const prompt = (taskInput.prompt as string) || '';
@@ -518,11 +525,12 @@ export function createAsyncSubagentBlock(
   statusEl.setAttribute('aria-label', 'Status: running');
 
   const contentEl = wrapperEl.createDiv({ cls: 'claudian-subagent-content' });
-  renderAsyncContentLikeSync(contentEl, info, 'running');
+  renderAsyncContentLikeSync(app, contentEl, info, 'running');
 
   setupCollapsible(wrapperEl, headerEl, contentEl, info);
 
   return {
+    app,
     wrapperEl,
     contentEl,
     headerEl,
@@ -545,7 +553,7 @@ export function updateAsyncSubagentRunning(
 
   state.statusTextEl.setText('Running in background');
 
-  renderAsyncContentLikeSync(state.contentEl, state.info, 'running');
+  renderAsyncContentLikeSync(state.app, state.contentEl, state.info, 'running');
 }
 
 export function finalizeAsyncSubagent(
@@ -577,7 +585,7 @@ export function finalizeAsyncSubagent(
     state.wrapperEl.addClass('done');
   }
 
-  renderAsyncContentLikeSync(state.contentEl, state.info, isError ? 'error' : 'completed');
+  renderAsyncContentLikeSync(state.app, state.contentEl, state.info, isError ? 'error' : 'completed');
 }
 
 export function markAsyncSubagentOrphaned(state: AsyncSubagentState): void {
@@ -597,7 +605,7 @@ export function markAsyncSubagentOrphaned(state: AsyncSubagentState): void {
   state.wrapperEl.addClass('error');
   state.wrapperEl.addClass('orphaned');
 
-  renderAsyncContentLikeSync(state.contentEl, state.info, 'orphaned');
+  renderAsyncContentLikeSync(state.app, state.contentEl, state.info, 'orphaned');
 }
 
 /**
@@ -605,8 +613,9 @@ export function markAsyncSubagentOrphaned(state: AsyncSubagentState): void {
  * Expandable to show the task prompt. Collapsed by default.
  */
 export function renderStoredAsyncSubagent(
+  app: App,
   parentEl: HTMLElement,
-  subagent: SubagentInfo
+  subagent: SubagentInfo,
 ): HTMLElement {
   const wrapperEl = parentEl.createDiv({ cls: 'claudian-subagent-list' });
   const displayStatus = getAsyncDisplayStatus(subagent.asyncStatus);
@@ -669,7 +678,7 @@ export function renderStoredAsyncSubagent(
   }
 
   const contentEl = wrapperEl.createDiv({ cls: 'claudian-subagent-content' });
-  renderAsyncContentLikeSync(contentEl, subagent, displayStatus);
+  renderAsyncContentLikeSync(app, contentEl, subagent, displayStatus);
 
   const state = { isExpanded: false };
   setupCollapsible(wrapperEl, headerEl, contentEl, state);

@@ -1,8 +1,9 @@
-import { setIcon } from 'obsidian';
+import { type App,setIcon } from 'obsidian';
 
 import { getToolIcon } from '../../../core/tools/toolIcons';
 import type { ToolCallInfo, ToolDiffData } from '../../../core/types';
 import type { DiffLine } from '../../../core/types/diff';
+import { decorateVaultFileLink } from '../../../utils/fileLink';
 import { setupCollapsible } from './collapsible';
 import { renderDiffContent, renderDiffStats } from './DiffRenderer';
 import { fileNameOnly } from './ToolCallRenderer';
@@ -44,8 +45,9 @@ function shortenPath(filePath: string, maxLength = 40): string {
 }
 
 export function createWriteEditBlock(
+  app: App,
   parentEl: HTMLElement,
-  toolCall: ToolCallInfo
+  toolCall: ToolCallInfo,
 ): WriteEditState {
   const filePath = (toolCall.input.file_path as string) || 'file';
   const toolName = toolCall.name; // 'Write' or 'Edit'
@@ -68,6 +70,7 @@ export function createWriteEditBlock(
   nameEl.setText(toolName);
   const summaryEl = headerEl.createDiv({ cls: 'claudian-write-edit-summary' });
   summaryEl.setText(fileNameOnly(filePath) || 'file');
+  decorateVaultFileLink(app, summaryEl, filePath);
 
   // Populated when diff is computed
   const statsEl = headerEl.createDiv({ cls: 'claudian-write-edit-stats' });
@@ -151,7 +154,11 @@ export function finalizeWriteEditBlock(state: WriteEditState, isError: boolean):
   }
 }
 
-export function renderStoredWriteEdit(parentEl: HTMLElement, toolCall: ToolCallInfo): HTMLElement {
+export function renderStoredWriteEdit(
+  app: App,
+  parentEl: HTMLElement,
+  toolCall: ToolCallInfo,
+): HTMLElement {
   const filePath = (toolCall.input.file_path as string) || 'file';
   const toolName = toolCall.name;
   const isError = toolCall.status === 'error' || toolCall.status === 'blocked';
@@ -178,6 +185,7 @@ export function renderStoredWriteEdit(parentEl: HTMLElement, toolCall: ToolCallI
   nameEl.setText(toolName);
   const summaryEl = headerEl.createDiv({ cls: 'claudian-write-edit-summary' });
   summaryEl.setText(fileNameOnly(filePath) || 'file');
+  decorateVaultFileLink(app, summaryEl, filePath);
 
   const statsEl = headerEl.createDiv({ cls: 'claudian-write-edit-stats' });
   if (toolCall.diffData) {

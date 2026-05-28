@@ -35,7 +35,9 @@ import { extractDiffData } from '../../../utils/diff';
 import { hasStreamingMathDelimiters } from '../../../utils/markdownMath';
 import { getVaultPath, normalizePathForVault } from '../../../utils/path';
 import { FLAVOR_TEXTS } from '../constants';
+import { collectAssistantReportText } from '../rendering/assistantReportText';
 import type { MessageRenderer, RenderContentOptions } from '../rendering/MessageRenderer';
+import { extractOrchestratorPlan, type OrchestratorPlan } from '../rendering/orchestratorPlanParser';
 import { resolveSubagentLifecycleAdapter } from '../rendering/subagentLifecycleResolution';
 import {
   createSubagentBlock,
@@ -47,6 +49,7 @@ import {
   finalizeThinkingBlock,
 } from '../rendering/ThinkingBlockRenderer';
 import {
+  decorateToolSummaryPath,
   getToolName,
   getToolSummary,
   isBlockedToolResult,
@@ -72,6 +75,10 @@ export interface StreamControllerDeps {
   updateQueueIndicator: () => void;
   /** Get the agent service from the tab. */
   getAgentService?: () => ChatRuntime | null;
+  /** Called when a complete assistant message contains an orchestrator plan block. */
+  onOrchestratorPlanDetected?: (msgEl: HTMLElement, plan: OrchestratorPlan) => void;
+  /** Called when a worker tab finishes streaming. */
+  onWorkerDone?: (result: string, isError: boolean) => void;
 }
 
 export class StreamController {
@@ -95,6 +102,14 @@ export class StreamController {
 
   constructor(deps: StreamControllerDeps) {
     this.deps = deps;
+  }
+
+  setOrchestratorCallbacks(
+    onOrchestratorPlanDetected?: StreamControllerDeps['onOrchestratorPlanDetected'],
+    onWorkerDone?: StreamControllerDeps['onWorkerDone'],
+  ): void {
+    this.deps.onOrchestratorPlanDetected = onOrchestratorPlanDetected;
+    this.deps.onWorkerDone = onWorkerDone;
   }
 
   private getActiveProviderId(): ProviderId {
@@ -197,10 +212,26 @@ export class StreamController {
         await this.appendText(`\n\n❌ **Error:** ${chunk.content}`);
         break;
 
-      case 'done':
+      case 'done': {
         // Flush any remaining pending tools
         this.flushPendingTools();
+        await this.finalizeCurrentTextBlock(msg);
+        const report = collectAssistantReportText(msg);
+        if (this.deps.onOrchestratorPlanDetected && report.text) {
+          const plan = extractOrchestratorPlan(report.text);
+          if (plan) {
+            const msgEl = this.deps.renderer.getMessageEl(msg.id);
+            if (msgEl) {
+              this.deps.onOrchestratorPlanDetected(msgEl, plan);
+            }
+          }
+        }
+        if (this.deps.onWorkerDone) {
+          const toolError = msg.toolCalls?.some((tc) => tc.status === 'error') ?? false;
+          this.deps.onWorkerDone(report.text, toolError || report.hadStreamError);
+        }
         break;
+      }
 
       case 'context_compacted': {
         this.flushPendingTools();
@@ -290,6 +321,12 @@ export class StreamController {
             ?? toolEl.querySelector('.claudian-write-edit-summary');
           if (summaryEl) {
             summaryEl.setText(getToolSummary(existingToolCall.name, existingToolCall.input));
+            decorateToolSummaryPath(
+              this.deps.plugin.app,
+              summaryEl as HTMLElement,
+              existingToolCall.name,
+              existingToolCall.input,
+            );
           }
         }
         // If still pending, the updated input is already in the toolCall object
@@ -398,11 +435,11 @@ export class StreamController {
     const { toolCall, parentEl } = pending;
     if (!parentEl) return;
     if (isWriteEditTool(toolCall.name)) {
-      const writeEditState = createWriteEditBlock(parentEl, toolCall);
+      const writeEditState = createWriteEditBlock(this.deps.plugin.app, parentEl, toolCall);
       state.writeEditStates.set(toolId, writeEditState);
       state.toolCallElements.set(toolId, writeEditState.wrapperEl);
     } else {
-      renderToolCall(parentEl, toolCall, state.toolCallElements);
+      renderToolCall(this.deps.plugin.app, parentEl, toolCall, state.toolCallElements);
     }
     state.pendingTools.delete(toolId);
   }
@@ -455,7 +492,7 @@ export class StreamController {
       this.flushPendingTools();
       const subagentInfo = adapter.buildSubagentInfo(toolCall, msg.toolCalls);
 
-      const subagentState = createSubagentBlock(state.currentContentEl, chunk.id, {
+      const subagentState = createSubagentBlock(this.deps.plugin.app, state.currentContentEl, chunk.id, {
         description: subagentInfo.description,
         prompt: subagentInfo.prompt,
       });
@@ -569,6 +606,7 @@ export class StreamController {
     // Resolve pending Task before processing result.
     if (subagentManager.hasPendingTask(chunk.id)) {
       this.renderPendingTaskFromTaskResultViaManager(chunk, msg);
+      subagentManager.hydrateNestedSyncToolsFromTaskResult(chunk.id, chunk.toolUseResult);
     }
 
     // Check if it's a sync subagent result
@@ -636,7 +674,12 @@ export class StreamController {
         finalizeWriteEditBlock(writeEditState, chunk.isError || isBlocked);
       } else {
         this.cancelPendingToolOutputRender(chunk.id);
-        updateToolCallResult(chunk.id, existingToolCall, state.toolCallElements);
+        updateToolCallResult(
+          this.deps.plugin.app,
+          chunk.id,
+          existingToolCall,
+          state.toolCallElements,
+        );
       }
 
       // Notify Obsidian vault so the file tree refreshes after Write/Edit/NotebookEdit
@@ -780,7 +823,12 @@ export class StreamController {
 
     const frame = scheduleAnimationFrame(() => {
       this.pendingToolOutputFrames.delete(toolId);
-      updateToolCallResult(toolId, toolCall, this.deps.state.toolCallElements);
+      updateToolCallResult(
+        this.deps.plugin.app,
+        toolId,
+        toolCall,
+        this.deps.state.toolCallElements,
+      );
       this.scrollToBottom();
     }, this.getMessagesWindow());
     this.pendingToolOutputFrames.set(toolId, frame);

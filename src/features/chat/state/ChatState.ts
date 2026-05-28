@@ -41,6 +41,7 @@ function createInitialState(): ChatStateData {
     pendingNewSessionPlan: null,
     planFilePath: null,
     prePlanPermissionMode: null,
+    pendingOrchestratorMode: false,
   };
 }
 
@@ -359,6 +360,14 @@ export class ChatState {
 
   set prePlanPermissionMode(value: string | null) {
     this.state.prePlanPermissionMode = value;
+  }
+
+  get pendingOrchestratorMode(): boolean {
+    return this.state.pendingOrchestratorMode;
+  }
+
+  set pendingOrchestratorMode(value: boolean) {
+    this.state.pendingOrchestratorMode = value;
   }
 
   // ============================================

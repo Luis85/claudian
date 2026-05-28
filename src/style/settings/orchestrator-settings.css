@@ -1,0 +1,24 @@
+/* Orchestrator tab — wide system prompt editor (40% labels / 60% textarea) */
+.claudian-settings .claudian-orchestrator-prompt-setting.setting-item {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.claudian-orchestrator-prompt-setting .setting-item-info {
+  flex: 0 0 40%;
+  max-width: 40%;
+  min-width: 0;
+}
+
+.claudian-orchestrator-prompt-setting .setting-item-control {
+  flex: 0 0 60%;
+  max-width: 60%;
+  min-width: 0;
+}
+
+.claudian-orchestrator-prompt-setting .claudian-orchestrator-prompt-textarea {
+  width: 100%;
+  min-height: 280px;
+  resize: vertical;
+}

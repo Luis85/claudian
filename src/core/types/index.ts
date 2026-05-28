@@ -35,6 +35,7 @@ export {
   type SDKToolUseResult,
   type StructuredPatchHunk,
 } from './diff';
+export type { PlanArtifact } from './plan';
 
 // Tool types
 export {

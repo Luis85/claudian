@@ -51,4 +51,8 @@ export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
   chatViewPlacement: 'right-sidebar',
 
   hiddenProviderCommands: getDefaultHiddenProviderCommands(),
+
+  orchestratorEnabled: true,
+  orchestratorSystemPrompt: '',
+  quickActionsFolder: 'Quick Actions',
 };

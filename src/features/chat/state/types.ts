@@ -108,6 +108,9 @@ export interface ChatStateData {
 
   // Saved permission mode before entering plan mode (for Shift+Tab toggle restore)
   prePlanPermissionMode: string | null;
+
+  /** Orchestrator on before first conversation is persisted (blank tab). */
+  pendingOrchestratorMode: boolean;
 }
 
 /** Callbacks for ChatState changes. */

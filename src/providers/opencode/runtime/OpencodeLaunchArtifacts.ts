@@ -5,6 +5,7 @@ import { CLAUDIAN_STORAGE_PATH } from '../../../core/bootstrap/StoragePaths';
 import {
   buildSystemPrompt,
   computeSystemPromptKey,
+  type SystemPromptBuildOptions,
   type SystemPromptSettings,
 } from '../../../core/prompt/mainAgent';
 import { expandHomePath } from '../../../utils/path';
@@ -64,6 +65,7 @@ export interface PrepareOpencodeLaunchArtifactsParams {
   settings?: SystemPromptSettings;
   systemPromptKey?: string;
   systemPromptText?: string;
+  orchestratorPromptOptions?: SystemPromptBuildOptions;
   userName?: string;
   workspaceRoot: string;
 }
@@ -78,13 +80,14 @@ export async function prepareOpencodeLaunchArtifacts(
   );
   const systemPromptPath = path.join(artifactsDir, 'system.md');
   const configPath = path.join(artifactsDir, 'config.json');
+  const promptOptions = params.orchestratorPromptOptions ?? {};
   const systemPrompt = normalizeSystemPrompt(
-    params.systemPromptText ?? buildSystemPrompt(requireSettings(params)),
+    params.systemPromptText ?? buildSystemPrompt(requireSettings(params), promptOptions),
   );
   const promptKey = params.systemPromptKey
     ?? (params.systemPromptText !== undefined
       ? params.systemPromptText
-      : computeSystemPromptKey(requireSettings(params)));
+      : computeSystemPromptKey(requireSettings(params), promptOptions));
   const baseConfig = await loadOpencodeBaseConfig(
     params.runtimeEnv.OPENCODE_CONFIG,
     params.workspaceRoot,

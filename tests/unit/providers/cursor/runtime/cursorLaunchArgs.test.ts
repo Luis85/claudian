@@ -1,6 +1,7 @@
 import {
   buildCursorAgentFlagArgs,
   buildCursorAgentJsonModeFlagArgs,
+  resolveCursorSandboxMode,
 } from '@/providers/cursor/runtime/cursorLaunchArgs';
 
 describe('cursorLaunchArgs', () => {
@@ -20,7 +21,7 @@ describe('cursorLaunchArgs', () => {
     expect(args).toContain(workspace);
     expect(args).toContain('--trust');
     expect(args).toContain('--sandbox');
-    expect(args).toContain('enabled');
+    expect(args).toContain(resolveCursorSandboxMode());
   });
 
   it('adds force and disabled sandbox for yolo', () => {
@@ -39,6 +40,41 @@ describe('cursorLaunchArgs', () => {
     });
     expect(args).toContain('--mode');
     expect(args).toContain('plan');
+  });
+
+  it('uses disabled sandbox on Windows for normal and plan modes', () => {
+    expect(resolveCursorSandboxMode('win32')).toBe('disabled');
+    const normal = buildCursorAgentFlagArgs({
+      workspaceDir: workspace,
+      permissionMode: 'normal',
+      platform: 'win32',
+    });
+    expect(normal).toContain('--sandbox');
+    expect(normal).toContain('disabled');
+    expect(normal).not.toContain('enabled');
+
+    const plan = buildCursorAgentFlagArgs({
+      workspaceDir: workspace,
+      permissionMode: 'plan',
+      platform: 'win32',
+    });
+    expect(plan).toContain('--mode');
+    expect(plan).toContain('plan');
+    expect(plan).toContain('--sandbox');
+    expect(plan).toContain('disabled');
+  });
+
+  it('uses enabled sandbox on macOS and Linux for normal and plan modes', () => {
+    expect(resolveCursorSandboxMode('darwin')).toBe('enabled');
+    expect(resolveCursorSandboxMode('linux')).toBe('enabled');
+
+    const normal = buildCursorAgentFlagArgs({
+      workspaceDir: workspace,
+      permissionMode: 'normal',
+      platform: 'darwin',
+    });
+    expect(normal).toContain('--sandbox');
+    expect(normal).toContain('enabled');
   });
 
   it('appends resume and model when provided', () => {

@@ -24,102 +24,6 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
     const cursorSettings = getCursorProviderSettings(settingsBag);
     const hostnameKey = getHostnameKey();
 
-    new Setting(container).setName(t('settings.setup')).setHeading();
-
-    new Setting(container)
-      .setName('Enable Cursor agent provider')
-      .setDesc(
-        'When enabled, Cursor Agent appears as a provider. Requires the Cursor CLI (`agent`) and authentication (for example CURSOR_API_KEY). Headless mode uses --trust; review permission mode and sandbox settings carefully.',
-      )
-      .addToggle((toggle) =>
-        toggle
-          .setValue(cursorSettings.enabled)
-          .onChange(async (value) => {
-            updateCursorProviderSettings(settingsBag, { enabled: value });
-            await context.plugin.saveSettings();
-            context.refreshModelSelectors();
-          })
-      );
-
-    const cliPathSetting = new Setting(container)
-      .setName(`Cursor Agent CLI path (${hostnameKey})`)
-      .setDesc('Path to the `agent` binary, or leave empty to search PATH.');
-
-    const validationEl = container.createDiv({ cls: 'claudian-cli-path-validation claudian-hidden' });
-
-    const validatePath = (value: string): string | null => {
-      const trimmed = value.trim();
-      if (!trimmed) return null;
-
-      const expandedPath = expandHomePath(trimmed);
-
-      if (!fs.existsSync(expandedPath)) {
-        return t('settings.cliPath.validation.notExist' as TranslationKey);
-      }
-      const stat = fs.statSync(expandedPath);
-      if (!stat.isFile()) {
-        return t('settings.cliPath.validation.isDirectory' as TranslationKey);
-      }
-      return null;
-    };
-
-    const updateCliPathValidation = (value: string, inputEl?: HTMLInputElement): boolean => {
-      const error = validatePath(value);
-      if (error) {
-        validationEl.setText(error);
-        validationEl.removeClass('claudian-hidden');
-        if (inputEl) {
-          inputEl.addClass('claudian-input-error');
-        }
-        return false;
-      }
-
-      validationEl.addClass('claudian-hidden');
-      if (inputEl) {
-        inputEl.removeClass('claudian-input-error');
-      }
-      return true;
-    };
-
-    const cliPathsByHost = { ...cursorSettings.cliPathsByHost };
-
-    const persistCliPath = async (value: string, inputEl?: HTMLInputElement): Promise<boolean> => {
-      const isValid = updateCliPathValidation(value, inputEl);
-      if (!isValid) {
-        return false;
-      }
-
-      const trimmed = value.trim();
-      if (trimmed) {
-        cliPathsByHost[hostnameKey] = trimmed;
-      } else {
-        delete cliPathsByHost[hostnameKey];
-      }
-
-      updateCursorProviderSettings(settingsBag, { cliPathsByHost: { ...cliPathsByHost } });
-      await context.plugin.saveSettings();
-      const view = context.plugin.getView();
-      await view?.getTabManager()?.broadcastToAllTabs(
-        (service) => Promise.resolve(service.cleanup()),
-      );
-      return true;
-    };
-
-    const currentValue = cursorSettings.cliPathsByHost[hostnameKey] || '';
-
-    cliPathSetting.addText((text) => {
-      text
-        // eslint-disable-next-line obsidianmd/ui/sentence-case -- 'agent' is the literal Cursor CLI binary name, not prose.
-        .setPlaceholder('agent')
-        .setValue(currentValue)
-        .onChange(async (value) => {
-          await persistCliPath(value, text.inputEl);
-        });
-      text.inputEl.addClass('claudian-settings-cli-path-input');
-
-      updateCliPathValidation(currentValue, text.inputEl);
-    });
-
     new Setting(container).setName('Models').setHeading();
 
     new Setting(container)
@@ -207,7 +111,7 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
       if (families.length === 0) {
         const emptyEl = listEl.createDiv({ cls: 'claudian-cursor-model-picker-empty' });
         if (buildCursorFamilies(getAllRawIds()).length === 0) {
-          emptyEl.setText('No models discovered yet. Set the Cursor CLI path above, then refresh the model list.');
+          emptyEl.setText('No models discovered yet. Set the Cursor CLI path below, then refresh the model list.');
         } else {
           emptyEl.setText('No models match your filter.');
         }
@@ -323,11 +227,83 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
     // Best-effort warm discovery so the list is populated by the time it opens.
     void discoverModels(false);
 
-    new Setting(container).setName(t('settings.safety')).setHeading();
+    const cliPathSetting = new Setting(container)
+      .setName(`Cursor Agent CLI path (${hostnameKey})`)
+      .setDesc('Path to the `agent` binary, or leave empty to search PATH.');
 
-    const safety = container.createDiv({ cls: 'setting-item-description' });
-    safety.createEl('p', {
-      text: 'Claudian maps toolbar permission mode to Cursor CLI flags: YOLO uses --force and sandbox disabled; Plan uses plan mode with sandbox enabled; Normal uses sandbox enabled without --force. All runs use --trust so the agent can complete non-interactively.',
+    const validationEl = container.createDiv({ cls: 'claudian-cli-path-validation claudian-hidden' });
+
+    const validatePath = (value: string): string | null => {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+
+      const expandedPath = expandHomePath(trimmed);
+
+      if (!fs.existsSync(expandedPath)) {
+        return t('settings.cliPath.validation.notExist' as TranslationKey);
+      }
+      const stat = fs.statSync(expandedPath);
+      if (!stat.isFile()) {
+        return t('settings.cliPath.validation.isDirectory' as TranslationKey);
+      }
+      return null;
+    };
+
+    const updateCliPathValidation = (value: string, inputEl?: HTMLInputElement): boolean => {
+      const error = validatePath(value);
+      if (error) {
+        validationEl.setText(error);
+        validationEl.removeClass('claudian-hidden');
+        if (inputEl) {
+          inputEl.addClass('claudian-input-error');
+        }
+        return false;
+      }
+
+      validationEl.addClass('claudian-hidden');
+      if (inputEl) {
+        inputEl.removeClass('claudian-input-error');
+      }
+      return true;
+    };
+
+    const cliPathsByHost = { ...cursorSettings.cliPathsByHost };
+
+    const persistCliPath = async (value: string, inputEl?: HTMLInputElement): Promise<boolean> => {
+      const isValid = updateCliPathValidation(value, inputEl);
+      if (!isValid) {
+        return false;
+      }
+
+      const trimmed = value.trim();
+      if (trimmed) {
+        cliPathsByHost[hostnameKey] = trimmed;
+      } else {
+        delete cliPathsByHost[hostnameKey];
+      }
+
+      updateCursorProviderSettings(settingsBag, { cliPathsByHost: { ...cliPathsByHost } });
+      await context.plugin.saveSettings();
+      const view = context.plugin.getView();
+      await view?.getTabManager()?.broadcastToAllTabs(
+        (service) => Promise.resolve(service.cleanup()),
+      );
+      return true;
+    };
+
+    const currentValue = cursorSettings.cliPathsByHost[hostnameKey] || '';
+
+    cliPathSetting.addText((text) => {
+      text
+        // eslint-disable-next-line obsidianmd/ui/sentence-case -- 'agent' is the literal Cursor CLI binary name, not prose.
+        .setPlaceholder('agent')
+        .setValue(currentValue)
+        .onChange(async (value) => {
+          await persistCliPath(value, text.inputEl);
+        });
+      text.inputEl.addClass('claudian-settings-cli-path-input');
+
+      updateCliPathValidation(currentValue, text.inputEl);
     });
 
     renderEnvironmentSettingsSection({

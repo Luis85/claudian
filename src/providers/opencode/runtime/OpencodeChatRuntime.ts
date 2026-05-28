@@ -164,6 +164,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
   private supportedCommands: SlashCommand[] = [];
   private sessionCwds = new Map<string, string>();
   private sessionId: string | null = null;
+  private currentOrchestratorMode = false;
   private readonly sessionUpdateNormalizer = new AcpSessionUpdateNormalizer();
   private readonly toolStreamAdapter = createOpencodeToolStreamAdapter();
   private transport: AcpJsonRpcTransport | null = null;
@@ -279,10 +280,12 @@ export class OpencodeChatRuntime implements ChatRuntime {
       this.currentDatabasePath,
     );
     const promptSettings = this.getSystemPromptSettings(cwd);
+    const orchestratorPromptOptions = this.buildOrchestratorPromptOptions(this.currentOrchestratorMode);
     const artifacts = await prepareOpencodeLaunchArtifacts({
       runtimeEnv,
       settings: promptSettings,
       workspaceRoot: cwd,
+      orchestratorPromptOptions,
     });
     this.currentDatabasePath = artifacts.databasePath;
 
@@ -290,7 +293,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
       command: resolvedCliPath,
       configPath: artifacts.configPath,
       envText: getRuntimeEnvironmentText(this.plugin.settings, 'opencode'),
-      promptKey: computeSystemPromptKey(promptSettings),
+      promptKey: computeSystemPromptKey(promptSettings, orchestratorPromptOptions),
       artifactKey: artifacts.launchKey,
     });
 
@@ -340,6 +343,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
     conversationHistory?: ChatMessage[],
     queryOptions?: ChatRuntimeQueryOptions,
   ): AsyncGenerator<StreamChunk> {
+    this.currentOrchestratorMode = turn.request.orchestratorMode === true;
     const previousMessages = conversationHistory ?? [];
     const expectedSessionId = this.sessionId;
     let shouldBootstrapHistory = previousMessages.length > 0
@@ -678,6 +682,16 @@ export class OpencodeChatRuntime implements ChatRuntime {
       mediaFolder: this.plugin.settings.mediaFolder,
       userName: this.plugin.settings.userName,
       vaultPath,
+    };
+  }
+
+  private buildOrchestratorPromptOptions(orchestratorMode: boolean) {
+    if (!orchestratorMode) {
+      return {};
+    }
+    return {
+      orchestratorMode: true,
+      orchestratorSystemPrompt: this.plugin.settings.orchestratorSystemPrompt,
     };
   }
 

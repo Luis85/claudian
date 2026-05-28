@@ -16,6 +16,7 @@ import type {
   ManagedMcpServer,
   UsageInfo,
 } from '../../../core/types';
+import { t } from '../../../i18n/i18n';
 import { appendCheckIcon, appendMcpIcon, createProviderIconSvg } from '../../../shared/icons';
 import { filterValidPaths, findConflictingPath, isDuplicatePath, isValidDirectoryPath, validateDirectoryPath } from '../../../utils/externalContext';
 import { expandHomePath, normalizePathForFilesystem } from '../../../utils/path';
@@ -53,6 +54,12 @@ export interface ToolbarCallbacks {
   onEffortLevelChange: (effort: string) => Promise<void>;
   onServiceTierChange: (serviceTier: string) => Promise<void>;
   onPermissionModeChange: (mode: string) => Promise<void>;
+  /** Toggles plan mode on/off (saves/restores pre-plan permission mode). */
+  onPlanModeToggle?: () => Promise<void>;
+  getOrchestratorMode?: () => boolean;
+  onOrchestratorOpen?: () => void;
+  getOrchestratorEnabled?: () => boolean;
+  onQuickActionsOpen?: () => void;
   getSettings: () => ToolbarSettings;
   getEnvironmentVariables?: () => string;
   getUIConfig: () => ProviderChatUIConfig;
@@ -460,6 +467,157 @@ export class PermissionToggle {
       : toggleConfig.activeValue;
     await this.callbacks.onPermissionModeChange(newMode);
     this.updateDisplay();
+  }
+}
+
+export class PlanModeToggle {
+  private container: HTMLElement;
+  private buttonEl: HTMLElement | null = null;
+  private iconEl: HTMLElement | null = null;
+  private callbacks: ToolbarCallbacks;
+  private visible = true;
+
+  constructor(parentEl: HTMLElement, callbacks: ToolbarCallbacks) {
+    this.callbacks = callbacks;
+    this.container = parentEl.createDiv({ cls: 'claudian-plan-mode-toggle' });
+    this.render();
+  }
+
+  setVisible(visible: boolean): void {
+    this.visible = visible;
+    this.updateDisplay();
+  }
+
+  private render(): void {
+    this.container.empty();
+
+    this.buttonEl = this.container.createDiv({ cls: 'claudian-plan-mode-button' });
+    this.buttonEl.setAttr('aria-label', t('chat.planMode.ariaLabel'));
+    this.buttonEl.setAttr('title', t('chat.planMode.titleInactive'));
+
+    this.iconEl = this.buttonEl.createSpan({ cls: 'claudian-plan-mode-icon' });
+    setIcon(this.iconEl, 'map');
+
+    this.updateDisplay();
+
+    this.buttonEl.addEventListener('click', () => {
+      runToolbarAction(async () => {
+        if (this.callbacks.onPlanModeToggle) {
+          await this.callbacks.onPlanModeToggle();
+        }
+        this.updateDisplay();
+      }, t('chat.planMode.toggleFailed'));
+    });
+  }
+
+  private getPlanValue(): string | null {
+    const toggleConfig = this.callbacks.getUIConfig().getPermissionModeToggle?.();
+    const planValue = toggleConfig?.planValue;
+    return typeof planValue === 'string' && planValue ? planValue : null;
+  }
+
+  updateDisplay(): void {
+    if (!this.buttonEl || !this.iconEl) {
+      return;
+    }
+
+    const capabilities = this.callbacks.getCapabilities();
+    const planValue = this.getPlanValue();
+    const canShow = this.visible
+      && Boolean(this.callbacks.onPlanModeToggle)
+      && capabilities.supportsPlanMode
+      && Boolean(planValue);
+
+    if (!canShow) {
+      this.container.addClass('claudian-hidden');
+      return;
+    }
+
+    this.container.removeClass('claudian-hidden');
+    const isActive = this.callbacks.getSettings().permissionMode === planValue;
+    this.buttonEl.toggleClass('active', isActive);
+    this.buttonEl.setAttr(
+      'aria-pressed',
+      isActive ? 'true' : 'false',
+    );
+    this.buttonEl.setAttr(
+      'title',
+      isActive ? t('chat.planMode.titleActive') : t('chat.planMode.titleInactive'),
+    );
+  }
+}
+
+export class OrchestratorToggle {
+  private container: HTMLElement;
+  private buttonEl: HTMLElement | null = null;
+  private callbacks: ToolbarCallbacks;
+
+  constructor(parentEl: HTMLElement, callbacks: ToolbarCallbacks) {
+    this.callbacks = callbacks;
+    this.container = parentEl.createDiv({ cls: 'claudian-orchestrator-toggle' });
+    this.render();
+  }
+
+  private render(): void {
+    this.container.empty();
+    this.buttonEl = this.container.createDiv({ cls: 'claudian-orchestrator-button' });
+    const iconEl = this.buttonEl.createSpan({ cls: 'claudian-orchestrator-icon' });
+    setIcon(iconEl, 'git-fork');
+    this.updateDisplay();
+    this.buttonEl.addEventListener('click', () => {
+      this.callbacks.onOrchestratorOpen?.();
+    });
+  }
+
+  updateDisplay(): void {
+    if (!this.buttonEl) {
+      return;
+    }
+    const enabled = this.callbacks.getOrchestratorEnabled?.() !== false;
+    const canShow = enabled && Boolean(this.callbacks.onOrchestratorOpen);
+    if (!canShow) {
+      this.container.addClass('claudian-hidden');
+      return;
+    }
+    this.container.removeClass('claudian-hidden');
+    const isActive = this.callbacks.getOrchestratorMode?.() ?? false;
+    this.buttonEl.toggleClass('active', isActive);
+    this.buttonEl.setAttr('aria-pressed', isActive ? 'true' : 'false');
+    this.buttonEl.setAttr(
+      'title',
+      isActive ? t('chat.orchestrator.titleActive') : t('chat.orchestrator.titleOpen'),
+    );
+  }
+}
+
+export class QuickActionsToggle {
+  private container: HTMLElement;
+  private buttonEl: HTMLElement | null = null;
+  private callbacks: ToolbarCallbacks;
+
+  constructor(parentEl: HTMLElement, callbacks: ToolbarCallbacks) {
+    this.callbacks = callbacks;
+    this.container = parentEl.createDiv({ cls: 'claudian-quick-actions-toggle' });
+    this.render();
+  }
+
+  private render(): void {
+    this.container.empty();
+    this.buttonEl = this.container.createDiv({ cls: 'claudian-quick-actions-button' });
+    const iconEl = this.buttonEl.createSpan({ cls: 'claudian-quick-actions-icon' });
+    setIcon(iconEl, 'zap');
+    this.buttonEl.setAttr('aria-label', t('quickActions.toolbar.ariaLabel'));
+    this.buttonEl.setAttr('title', t('quickActions.toolbar.title'));
+    const canShow = Boolean(this.callbacks.onQuickActionsOpen);
+    this.container.toggleClass('claudian-hidden', !canShow);
+    this.buttonEl.addEventListener('click', () => {
+      this.callbacks.onQuickActionsOpen?.();
+    });
+  }
+
+  updateDisplay(): void {
+    const canShow = Boolean(this.callbacks.onQuickActionsOpen);
+    this.container.toggleClass('claudian-hidden', !canShow);
   }
 }
 
@@ -1220,6 +1378,9 @@ export function createInputToolbar(
   externalContextSelector: ExternalContextSelector;
   mcpServerSelector: McpServerSelector;
   permissionToggle: PermissionToggle;
+  planModeToggle: PlanModeToggle;
+  orchestratorToggle: OrchestratorToggle;
+  quickActionsToggle: QuickActionsToggle;
   serviceTierToggle: ServiceTierToggle;
 } {
   const modelSelector = new ModelSelector(parentEl, callbacks);
@@ -1229,6 +1390,9 @@ export function createInputToolbar(
   const externalContextSelector = new ExternalContextSelector(parentEl, callbacks);
   const mcpServerSelector = new McpServerSelector(parentEl);
   const permissionToggle = new PermissionToggle(parentEl, callbacks);
+  const planModeToggle = new PlanModeToggle(parentEl, callbacks);
+  const orchestratorToggle = new OrchestratorToggle(parentEl, callbacks);
+  const quickActionsToggle = new QuickActionsToggle(parentEl, callbacks);
   const modeSelector = new ModeSelector(parentEl, callbacks);
 
   return {
@@ -1240,5 +1404,8 @@ export function createInputToolbar(
     externalContextSelector,
     mcpServerSelector,
     permissionToggle,
+    planModeToggle,
+    orchestratorToggle,
+    quickActionsToggle,
   };
 }

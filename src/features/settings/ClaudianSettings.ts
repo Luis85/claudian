@@ -16,6 +16,8 @@ import { formatContextLimit, parseContextLimit, parseEnvironmentVariables } from
 import { buildNavMappingText, parseNavMappings } from './keyboardNavigation';
 import { getProviderEnableUpdater } from './providerEnableUpdaters';
 import { renderEnvironmentSettingsSection } from './ui/EnvironmentSettingsSection';
+import { renderOrchestratorSettingsTab } from './ui/OrchestratorSettingsTab';
+import { renderQuickActionsSettingsTab } from './ui/QuickActionsSettingsTab';
 
 type SettingsTabId = string;
 type ObsidianHotkey = { modifiers: string[]; key: string };
@@ -124,7 +126,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
     const providerTabs = ProviderRegistry.getEnabledProviderIds(
       this.plugin.settings as unknown as Record<string, unknown>,
     );
-    const tabIds: SettingsTabId[] = ['general', ...providerTabs];
+    const tabIds: SettingsTabId[] = ['general', 'orchestrator', 'quickActions', ...providerTabs];
     if (!tabIds.includes(this.activeTab)) {
       this.activeTab = 'general';
     }
@@ -136,7 +138,11 @@ export class ClaudianSettingTab extends PluginSettingTab {
     for (const id of tabIds) {
       const label = id === 'general'
         ? t('settings.tabs.general' as TranslationKey)
-        : ProviderRegistry.getProviderDisplayName(id);
+        : id === 'orchestrator'
+          ? t('settings.tabs.orchestrator' as TranslationKey)
+          : id === 'quickActions'
+            ? t('settings.tabs.quickActions' as TranslationKey)
+            : ProviderRegistry.getProviderDisplayName(id);
       const button = tabBar.createEl('button', {
         cls: `claudian-settings-tab${id === this.activeTab ? ' claudian-settings-tab--active' : ''}`,
         text: label,
@@ -159,6 +165,16 @@ export class ClaudianSettingTab extends PluginSettingTab {
     }
 
     this.renderGeneralTab(tabContents.get('general')!);
+
+    const orchestratorContent = tabContents.get('orchestrator');
+    if (orchestratorContent) {
+      renderOrchestratorSettingsTab(orchestratorContent, this.plugin);
+    }
+
+    const quickActionsContent = tabContents.get('quickActions');
+    if (quickActionsContent) {
+      renderQuickActionsSettingsTab(quickActionsContent, this.plugin);
+    }
 
     for (const providerId of providerTabs) {
       const content = tabContents.get(providerId);

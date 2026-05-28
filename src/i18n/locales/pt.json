@@ -67,6 +67,40 @@
       "expandOutput": "Expandir a saída do comando",
       "running": "Executando...",
       "copyFailed": "Falha ao copiar para a área de transferência"
+    },
+    "planMode": {
+      "ariaLabel": "Toggle plan mode",
+      "titleInactive": "Plan mode — click or Shift+Tab to enter",
+      "titleActive": "Plan mode on — click or Shift+Tab to exit",
+      "toggleFailed": "Failed to change plan mode"
+    },
+    "orchestrator": {
+      "titleInactive": "Orchestrator mode — parallel worker tabs",
+      "titleActive": "Orchestrator mode on",
+      "toggleFailed": "Failed to change orchestrator mode",
+      "spawnHeader": "Spawn {count} worker tab(s)?",
+      "spawnWorkers": "Spawn workers",
+      "titleOpen": "Open orchestrator goal guide",
+      "modal": {
+        "title": "Orchestrator goal",
+        "intro": "Describe what you want achieved. The main agent will plan parallel work and spawn worker tabs after you approve the plan.",
+        "activeBanner": "Orchestrator mode is on for this chat. Submit a new goal to steer workers, or turn orchestrator off.",
+        "sectionWhatTitle": "What orchestrator does",
+        "sectionWhatBody": "The main tab stays in charge: it breaks work into parallel tracks, proposes a plan, and coordinates worker tabs that run in the background.",
+        "sectionGoalTitle": "Write your goal",
+        "sectionGoalBody": "One clear outcome in plain language.\nScope boundaries (what is in / out).\nConstraints the workers must respect (files, providers, tests).",
+        "sectionTipsTitle": "Tips",
+        "sectionTipsBody": "Prefer independent workstreams the agent can run in parallel.\nMention deliverables (code, docs, tests) not just activities.\nKeep it short; details can live in follow-up messages.",
+        "sectionNextTitle": "What happens next",
+        "sectionNextBody": "Your goal is sent in orchestrator mode.\nThe agent drafts a plan with worker tasks.\nYou approve the plan to spawn worker tabs.",
+        "goalLabel": "Your goal",
+        "goalDesc": "This message is sent when you start orchestrator mode.",
+        "goalPlaceholder": "Example: Refactor the Cursor provider launch args and add unit tests for Windows plan mode, without changing Codex behavior.",
+        "goalRequired": "Enter a goal before starting orchestrator mode.",
+        "submit": "Start orchestrator",
+        "submitFailed": "Could not start orchestrator mode.",
+        "turnOff": "Turn off orchestrator"
+      }
     }
   },
   "settings": {
@@ -74,7 +108,9 @@
     "tabs": {
       "general": "Geral",
       "claude": "Claude",
-      "codex": "Codex"
+      "codex": "Codex",
+      "orchestrator": "Orquestrador",
+      "quickActions": "Acoes rapidas"
     },
     "display": "Exibição",
     "conversations": "Conversas",
@@ -319,6 +355,55 @@
     "language": {
       "name": "Idioma",
       "desc": "Alterar o idioma de exibição da interface do plugin"
+    },
+    "orchestrator": {
+      "enabled": {
+        "name": "Enable orchestrator mode",
+        "desc": "Show the orchestrator toolbar toggle and allow parallel worker tabs from approved plans."
+      },
+      "systemPrompt": {
+        "name": "Orchestrator system prompt",
+        "desc": "Additional instructions when orchestrator mode is on. Leave empty to use the built-in default."
+      }
+    },
+    "quickActions": {
+      "folder": {
+        "name": "Quick actions folder",
+        "desc": "Vault folder containing quick action markdown files (YAML frontmatter with name, description, optional icon)."
+      }
+    }
+  },
+  "quickActions": {
+    "toolbar": {
+      "ariaLabel": "Quick actions",
+      "title": "Quick actions"
+    },
+    "modal": {
+      "title": "Quick Actions",
+      "add": "Add action",
+      "deleteFailed": "Failed to delete quick action",
+      "intro": "Click an action to send its prompt into the current chat. Use Edit or Delete on the right to manage vault files.",
+      "emptyLead": "Quick actions are reusable prompts stored as markdown notes in your vault—handy for workflows you run often.",
+      "emptyHintVault": "Each file uses frontmatter type quick-action, plus name, optional description and icon; the note body is the message sent to the chat.",
+      "emptyHintRun": "After you create actions, open this dialog from the toolbar and click a row to run one instantly.",
+      "emptyHintCreate": "Use Add action below to create your first quick action, or set the vault folder under Settings → Quick Actions."
+    },
+    "editor": {
+      "titleEdit": "Edit quick action",
+      "titleAdd": "Add quick action",
+      "name": "Name",
+      "nameDesc": "Used as the filename (cannot change when editing)",
+      "description": "Description",
+      "icon": "Icon",
+      "iconDesc": "Optional icon shown in the quick actions list",
+      "iconSearch": "Search icons…",
+      "iconNone": "No icon",
+      "iconNoResults": "No matching icons",
+      "prompt": "Prompt",
+      "promptDesc": "Message sent to the chat when you run this action",
+      "nameRequired": "Name is required",
+      "promptRequired": "Prompt is required",
+      "saveFailed": "Failed to save quick action"
     }
   }
 }

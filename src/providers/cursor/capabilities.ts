@@ -5,6 +5,7 @@ export const CURSOR_PROVIDER_CAPABILITIES: Readonly<ProviderCapabilities> = Obje
   supportsPersistentRuntime: false,
   supportsNativeHistory: true,
   supportsPlanMode: true,
+  planPathPrefix: '.cursor/plans',
   supportsRewind: false,
   supportsFork: false,
   supportsProviderCommands: false,

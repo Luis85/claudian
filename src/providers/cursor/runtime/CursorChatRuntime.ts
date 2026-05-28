@@ -23,13 +23,16 @@ import type { ChatMessage, Conversation, SlashCommand, StreamChunk } from '../..
 import type ClaudianPlugin from '../../../main';
 import { getVaultPath } from '../../../utils/path';
 import { CURSOR_PROVIDER_CAPABILITIES } from '../capabilities';
+import { appendOrchestratorInstructionsToCursorPrompt } from '../prompt/cursorOrchestratorPrompt';
 import { encodeCursorTurn } from '../prompt/encodeCursorTurn';
 import { getCursorState, resolveCursorSessionId } from '../types';
 import { buildCursorAgentEnvironment } from './cursorAgentEnv';
+import { acquireCursorAgentSpawnLock } from './cursorAgentSpawnLock';
 import { resolveCursorModelSelectionForCli } from './cursorCliModel';
 import { resolveCursorLaunch } from './cursorLaunch';
 import { buildCursorAgentFlagArgs, type CursorPermissionMode } from './cursorLaunchArgs';
-import { CursorNdjsonStreamReducer } from './cursorStreamMapper';
+import type { CursorQueryChunkTracker } from './cursorQueryLifecycle';
+import { finalizeCursorAgentStream, processCursorAgentNdjsonLines } from './cursorQueryProcessing';
 
 export class CursorChatRuntime implements ChatRuntime {
   readonly providerId: ProviderId = 'cursor';
@@ -42,6 +45,8 @@ export class CursorChatRuntime implements ChatRuntime {
   private lastSessionId: string | null = null;
   private activeResumeId: string | null = null;
   private turnMetadata: ChatTurnMetadata = {};
+  private askUserQuestionCallback: AskUserQuestionCallback | null = null;
+  private askUserQuestionAbortController: AbortController | null = null;
 
   constructor(plugin: ClaudianPlugin) {
     this.plugin = plugin;
@@ -99,6 +104,8 @@ export class CursorChatRuntime implements ChatRuntime {
   ): AsyncGenerator<StreamChunk> {
     this.turnMetadata = {};
     this.canceled = false;
+    this.askUserQuestionAbortController?.abort();
+    this.askUserQuestionAbortController = new AbortController();
 
     const cli = this.plugin.getResolvedProviderCliPath('cursor');
     if (!cli) {
@@ -134,82 +141,94 @@ export class CursorChatRuntime implements ChatRuntime {
     });
 
     const env = buildCursorAgentEnvironment(this.plugin);
-    const reducer = new CursorNdjsonStreamReducer();
-    let sawDone = false;
-    const launch = resolveCursorLaunch(cli, [...flagArgs, turn.prompt]);
-    const child = spawn(launch.command, launch.args, {
-      cwd: workspaceDir,
-      env: launch.extraEnv ? { ...env, ...launch.extraEnv } : env,
-      windowsHide: true,
-      ...(launch.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
-    });
-    this.child = child;
-
+    const isPlanTurn = permissionMode === 'plan';
+    const cliPrompt = appendOrchestratorInstructionsToCursorPrompt(
+      turn.prompt,
+      turn.request.orchestratorMode,
+      this.plugin.settings.orchestratorSystemPrompt,
+    );
+    const launch = resolveCursorLaunch(cli, [...flagArgs, cliPrompt]);
+    const releaseSpawnLock = await acquireCursorAgentSpawnLock();
+    let child: ReturnType<typeof spawn>;
     let stderrAcc = '';
-    child.stderr?.on('data', (d: Buffer) => {
-      stderrAcc += d.toString('utf8');
-    });
-
-    const rl = readline.createInterface({ input: child.stdout });
-
+    let chunkTracker: CursorQueryChunkTracker;
     try {
-      for await (const line of rl) {
-        if (this.canceled) {
-          break;
-        }
-        const { chunks, sessionId } = reducer.reduceLine(line);
-        if (sessionId) {
-          this.lastSessionId = sessionId;
-        }
-        for (const chunk of chunks) {
-          if (chunk.type === 'done') {
-            sawDone = true;
+      child = spawn(launch.command, launch.args, {
+        cwd: workspaceDir,
+        env: launch.extraEnv ? { ...env, ...launch.extraEnv } : env,
+        windowsHide: true,
+        ...(launch.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
+      });
+      this.child = child;
+
+      child.stderr?.on('data', (d: Buffer) => {
+        stderrAcc += d.toString('utf8');
+      });
+
+      const rl = readline.createInterface({ input: child.stdout! });
+
+      try {
+        async function* ndjsonLines(): AsyncGenerator<string> {
+          for await (const line of rl) {
+            yield line;
           }
-          yield chunk;
         }
+
+        const stream = processCursorAgentNdjsonLines(ndjsonLines(), {
+          askCallback: this.askUserQuestionCallback,
+          askSignal: this.askUserQuestionAbortController?.signal,
+          isPlanTurn,
+          isCanceled: () => this.canceled,
+          onSessionId: (sessionId) => {
+            this.lastSessionId = sessionId;
+          },
+        });
+
+        let next = await stream.next();
+        while (!next.done) {
+          yield next.value;
+          next = await stream.next();
+        }
+        chunkTracker = next.value;
+      } finally {
+        rl.close();
       }
+
+      const exitCode = await new Promise<number | null>((resolve) => {
+        child.on('close', (code) => resolve(code));
+      });
+
+      const stderrText = stderrAcc;
+      this.child = null;
+      this.askUserQuestionAbortController?.abort();
+      this.askUserQuestionAbortController = null;
+
+      const { completionChunks, turnMetadata } = finalizeCursorAgentStream(
+        chunkTracker,
+        isPlanTurn,
+        {
+          canceled: this.canceled,
+          sawDone: chunkTracker.sawDone,
+          exitCode,
+          stderr: stderrText,
+        },
+      );
+      yield* completionChunks;
+
+      if (this.lastSessionId) {
+        this.activeResumeId = this.lastSessionId;
+      }
+
+      this.turnMetadata = { ...this.turnMetadata, ...turnMetadata };
     } finally {
-      rl.close();
-    }
-
-    const exitCode = await new Promise<number | null>((resolve) => {
-      child.on('close', (code) => resolve(code));
-    });
-
-    const stderrText = stderrAcc;
-    this.child = null;
-
-    if (this.canceled) {
-      if (!sawDone) {
-        yield { type: 'done' };
-      }
-      return;
-    }
-
-    if (exitCode !== 0) {
-      if (!sawDone) {
-        const msg = stderrText.trim() || `Cursor Agent exited with code ${exitCode}`;
-        yield { type: 'error', content: msg };
-        yield { type: 'done' };
-      }
-      return;
-    }
-
-    if (!sawDone) {
-      yield {
-        type: 'error',
-        content: stderrText.trim() || 'Cursor Agent finished without a terminal result event',
-      };
-      yield { type: 'done' };
-    }
-
-    if (this.lastSessionId) {
-      this.activeResumeId = this.lastSessionId;
+      releaseSpawnLock();
     }
   }
 
   cancel(): void {
     this.canceled = true;
+    this.askUserQuestionAbortController?.abort();
+    this.askUserQuestionAbortController = null;
     if (this.child) {
       this.child.kill('SIGTERM');
       this.child = null;
@@ -253,7 +272,9 @@ export class CursorChatRuntime implements ChatRuntime {
 
   setApprovalDismisser(_dismisser: (() => void) | null): void {}
 
-  setAskUserQuestionCallback(_callback: AskUserQuestionCallback | null): void {}
+  setAskUserQuestionCallback(callback: AskUserQuestionCallback | null): void {
+    this.askUserQuestionCallback = callback;
+  }
 
   setExitPlanModeCallback(_callback: ExitPlanModeCallback | null): void {}
 

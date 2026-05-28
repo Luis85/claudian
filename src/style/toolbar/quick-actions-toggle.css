@@ -1,0 +1,35 @@
+.claudian-quick-actions-toggle {
+  display: flex;
+  align-items: center;
+  padding-left: 2px;
+}
+
+.claudian-quick-actions-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.claudian-quick-actions-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.claudian-quick-actions-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.claudian-quick-actions-button:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}

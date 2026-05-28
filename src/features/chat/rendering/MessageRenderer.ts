@@ -84,7 +84,6 @@ export class MessageRenderer {
       reasoningControl: 'none' as const,
     }));
 
-    // Register delegated click handler for file links
     registerFileLinkHandler(this.app, this.messagesEl, this.component);
   }
 
@@ -203,6 +202,11 @@ export class MessageRenderer {
     if (textToShow) {
       this.addUserCopyButton(msgEl, textToShow);
     }
+  }
+
+  getMessageEl(messageId: string): HTMLElement | null {
+    return this.liveMessageEls.get(messageId)
+      ?? this.messagesEl.querySelector<HTMLElement>(`[data-message-id="${messageId}"]`);
   }
 
   removeMessage(messageId: string): void {
@@ -435,13 +439,13 @@ export class MessageRenderer {
     const subagentLifecycleAdapter = this.getSubagentLifecycleAdapter(toolCall.name);
 
     if (isWriteEditTool(toolCall.name)) {
-      renderStoredWriteEdit(contentEl, toolCall);
+      renderStoredWriteEdit(this.app, contentEl, toolCall);
     } else if (isSubagentToolName(toolCall.name)) {
       this.renderTaskSubagent(contentEl, toolCall);
     } else if (subagentLifecycleAdapter?.isSpawnTool(toolCall.name) && msg) {
       this.renderProviderLifecycleSubagent(contentEl, toolCall, msg);
     } else {
-      renderStoredToolCall(contentEl, toolCall);
+      renderStoredToolCall(this.app, contentEl, toolCall);
     }
   }
 
@@ -467,10 +471,10 @@ export class MessageRenderer {
   ): void {
     const subagentInfo = this.resolveTaskSubagent(toolCall, modeHint);
     if (subagentInfo.mode === 'async') {
-      renderStoredAsyncSubagent(contentEl, subagentInfo);
+      renderStoredAsyncSubagent(this.app, contentEl, subagentInfo);
       return;
     }
-    renderStoredSubagent(contentEl, subagentInfo);
+    renderStoredSubagent(this.app, contentEl, subagentInfo);
   }
 
   /**
@@ -484,7 +488,7 @@ export class MessageRenderer {
   ): void {
     const subagentLifecycleAdapter = this.getSubagentLifecycleAdapter(spawnToolCall.name);
     if (!subagentLifecycleAdapter) {
-      renderStoredToolCall(contentEl, spawnToolCall);
+      renderStoredToolCall(this.app, contentEl, spawnToolCall);
       return;
     }
 
@@ -492,7 +496,7 @@ export class MessageRenderer {
       spawnToolCall,
       msg.toolCalls ?? [],
     );
-    renderStoredSubagent(contentEl, subagentInfo);
+    renderStoredSubagent(this.app, contentEl, subagentInfo);
   }
 
   private resolveTaskSubagent(toolCall: ToolCallInfo, modeHint?: 'sync' | 'async'): SubagentInfo {
@@ -719,10 +723,8 @@ export class MessageRenderer {
         }
       });
 
-      // Process wikilinks only when the source can contain them; the DOM pass is expensive.
-      if (processedMarkdown.includes('[[')) {
-        processFileLinks(this.app, el);
-      }
+      // Wikilinks and vault paths in assistant prose (Cursor often emits absolute paths in inline code).
+      processFileLinks(this.app, el);
     } catch {
       el.createDiv({
         cls: 'claudian-render-error',

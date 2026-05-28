@@ -25,6 +25,9 @@
 @import "./toolbar/mode-selector.css";
 @import "./toolbar/thinking-selector.css";
 @import "./toolbar/permission-toggle.css";
+@import "./toolbar/plan-mode-toggle.css";
+@import "./toolbar/orchestrator-toggle.css";
+@import "./toolbar/quick-actions-toggle.css";
 @import "./toolbar/service-tier-toggle.css";
 @import "./toolbar/external-context.css";
 @import "./toolbar/mcp-selector.css";
@@ -42,6 +45,10 @@
 @import "./features/resume-session.css";
 @import "./features/ask-user-question.css";
 @import "./features/plan-mode.css";
+@import "./features/orchestrator-plan.css";
+@import "./features/orchestrator-goal-modal.css";
+@import "./features/quick-actions.css";
+@import "./shared/lucide-icon-picker.css";
 @import "./features/empty-state.css";
 @import "./features/context-card.css";
 
@@ -59,6 +66,7 @@
 @import "./settings/agent-settings.css";
 @import "./settings/opencode-model-picker.css";
 @import "./settings/cursor-model-picker.css";
+@import "./settings/orchestrator-settings.css";
 
 /* Accessibility */
 @import "./accessibility.css";

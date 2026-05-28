@@ -1,5 +1,5 @@
 import { createMockEl, type MockElement } from '@test/helpers/mockElement';
-import { setIcon } from 'obsidian';
+import { type App,setIcon } from 'obsidian';
 
 import type { SubagentInfo, ToolCallInfo } from '@/core/types';
 import {
@@ -14,6 +14,12 @@ import {
   updateAsyncSubagentRunning,
   updateSubagentToolResult,
 } from '@/features/chat/rendering/SubagentRenderer';
+
+const mockApp = {
+  workspace: { openLinkText: jest.fn() },
+  metadataCache: { getFirstLinkpathDest: jest.fn(() => null) },
+  vault: { getAbstractFileByPath: jest.fn(() => null) },
+} as unknown as App;
 
 const getTextByClass = (el: MockElement, cls: string): string[] => {
   const results: string[] = [];
@@ -37,26 +43,26 @@ describe('Sync Subagent Renderer', () => {
 
   describe('createSubagentBlock', () => {
     it('should start collapsed by default', () => {
-      const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+      const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
       expect(state.info.isExpanded).toBe(false);
       expect((state.wrapperEl as any).hasClass('expanded')).toBe(false);
     });
 
     it('should set aria-expanded to false by default', () => {
-      const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+      const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
       expect(state.headerEl.getAttribute('aria-expanded')).toBe('false');
     });
 
     it('should hide content by default', () => {
-      const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+      const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
       expect((state.contentEl as any).style.display).toBe('none');
     });
 
     it('should set correct ARIA attributes for accessibility', () => {
-      const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+      const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
       expect(state.headerEl.getAttribute('role')).toBe('button');
       expect(state.headerEl.getAttribute('tabindex')).toBe('0');
@@ -65,7 +71,7 @@ describe('Sync Subagent Renderer', () => {
     });
 
     it('should toggle expand/collapse on header click', () => {
-      const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+      const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
       // Initially collapsed
       expect(state.info.isExpanded).toBe(false);
@@ -88,7 +94,7 @@ describe('Sync Subagent Renderer', () => {
     });
 
     it('should update aria-expanded on toggle', () => {
-      const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+      const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
       // Initially collapsed
       expect(state.headerEl.getAttribute('aria-expanded')).toBe('false');
@@ -103,13 +109,13 @@ describe('Sync Subagent Renderer', () => {
     });
 
     it('should show description in label', () => {
-      const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'My task description' });
+      const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'My task description' });
 
       expect(state.labelEl.textContent).toBe('My task description');
     });
 
     it('should not show a tool count badge in the header', () => {
-      const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+      const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
       expect(getTextByClass(state.wrapperEl as any, 'claudian-subagent-count')).toEqual([]);
     });
@@ -125,7 +131,7 @@ describe('Sync Subagent Renderer', () => {
         isExpanded: false,
       };
 
-      const wrapperEl = renderStoredSubagent(parentEl as any, subagent);
+      const wrapperEl = renderStoredSubagent(mockApp, parentEl as any, subagent);
 
       expect((wrapperEl as any).hasClass('expanded')).toBe(false);
     });
@@ -139,7 +145,7 @@ describe('Sync Subagent Renderer', () => {
         isExpanded: false,
       };
 
-      const wrapperEl = renderStoredSubagent(parentEl as any, subagent);
+      const wrapperEl = renderStoredSubagent(mockApp, parentEl as any, subagent);
 
       const headerEl = (wrapperEl as any).children[0];
       expect(headerEl.getAttribute('aria-expanded')).toBe('false');
@@ -154,7 +160,7 @@ describe('Sync Subagent Renderer', () => {
         isExpanded: false,
       };
 
-      const wrapperEl = renderStoredSubagent(parentEl as any, subagent);
+      const wrapperEl = renderStoredSubagent(mockApp, parentEl as any, subagent);
 
       const contentEl = (wrapperEl as any).children[1];
       expect(contentEl.style.display).toBe('none');
@@ -169,7 +175,7 @@ describe('Sync Subagent Renderer', () => {
         isExpanded: false,
       };
 
-      const wrapperEl = renderStoredSubagent(parentEl as any, subagent);
+      const wrapperEl = renderStoredSubagent(mockApp, parentEl as any, subagent);
       const headerEl = (wrapperEl as any).children[0];
       const contentEl = (wrapperEl as any).children[1];
 
@@ -201,7 +207,7 @@ describe('keyboard navigation', () => {
   });
 
   it('should support keyboard navigation (Enter/Space) on createSubagentBlock', () => {
-    const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+    const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
     // Simulate keydown event
     const keydownHandlers: Array<(e: any) => void> = [];
@@ -239,7 +245,7 @@ describe('keyboard navigation', () => {
       isExpanded: false,
     };
 
-    const wrapperEl = renderStoredSubagent(parentEl as any, subagent);
+    const wrapperEl = renderStoredSubagent(mockApp, parentEl as any, subagent);
     const headerEl = (wrapperEl as any).children[0];
 
     // Simulate Enter key
@@ -266,20 +272,20 @@ describe('Async Subagent Renderer', () => {
 
   describe('inline display behavior', () => {
     it('should start collapsed', () => {
-      const state = createAsyncSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+      const state = createAsyncSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
       expect(state.info.isExpanded).toBe(false);
       expect((state.wrapperEl as any).hasClass('expanded')).toBe(false);
     });
 
     it('should have aria-label indicating expand action', () => {
-      const state = createAsyncSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+      const state = createAsyncSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
       expect(state.headerEl.getAttribute('aria-label')).toContain('click to expand');
     });
 
     it('should expand content when header is clicked', () => {
-      const state = createAsyncSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+      const state = createAsyncSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
       // Initially collapsed
       expect(state.info.isExpanded).toBe(false);
@@ -292,7 +298,7 @@ describe('Async Subagent Renderer', () => {
     });
 
     it('should toggle expansion on repeated clicks', () => {
-      const state = createAsyncSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+      const state = createAsyncSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
       // Click to expand
       (state.headerEl as any).click();
@@ -304,7 +310,7 @@ describe('Async Subagent Renderer', () => {
     });
 
     it('should expand when Enter key is pressed', () => {
-      const state = createAsyncSubagentBlock(parentEl as any, 'task-1', { description: 'Test' });
+      const state = createAsyncSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test' });
 
       const enterEvent = { key: 'Enter', preventDefault: jest.fn() };
       (state.headerEl as any).dispatchEvent({ type: 'keydown', ...enterEvent });
@@ -313,7 +319,7 @@ describe('Async Subagent Renderer', () => {
     });
 
     it('should expand when Space key is pressed', () => {
-      const state = createAsyncSubagentBlock(parentEl as any, 'task-1', { description: 'Test' });
+      const state = createAsyncSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test' });
 
       const spaceEvent = { key: ' ', preventDefault: jest.fn() };
       (state.headerEl as any).dispatchEvent({ type: 'keydown', ...spaceEvent });
@@ -323,7 +329,7 @@ describe('Async Subagent Renderer', () => {
   });
 
   it('shows label immediately and initializing status text', () => {
-    const state = createAsyncSubagentBlock(parentEl as any, 'task-1', { description: 'Background job' });
+    const state = createAsyncSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Background job' });
 
     expect(state.labelEl.textContent).toBe('Background job');
     expect(state.statusTextEl.textContent).toBe('Initializing');
@@ -331,7 +337,7 @@ describe('Async Subagent Renderer', () => {
   });
 
   it('shows prompt in content and keeps label visible while running', () => {
-    const state = createAsyncSubagentBlock(parentEl as any, 'task-2', { description: 'Background job', prompt: 'Do the work' });
+    const state = createAsyncSubagentBlock(mockApp, parentEl as any, 'task-2', { description: 'Background job', prompt: 'Do the work' });
 
     updateAsyncSubagentRunning(state, 'agent-xyz');
 
@@ -343,7 +349,7 @@ describe('Async Subagent Renderer', () => {
   });
 
   it('finalizes to completed and reveals description', () => {
-    const state = createAsyncSubagentBlock(parentEl as any, 'task-3', { description: 'Background job' });
+    const state = createAsyncSubagentBlock(mockApp, parentEl as any, 'task-3', { description: 'Background job' });
     state.info.toolCalls.push(
       {
         id: 'tool-1',
@@ -377,7 +383,7 @@ describe('Async Subagent Renderer', () => {
   });
 
   it('finalizes to error and truncates error message', () => {
-    const state = createAsyncSubagentBlock(parentEl as any, 'task-4', { description: 'Background job' });
+    const state = createAsyncSubagentBlock(mockApp, parentEl as any, 'task-4', { description: 'Background job' });
     updateAsyncSubagentRunning(state, 'agent-error');
 
     (setIcon as jest.Mock).mockClear();
@@ -392,7 +398,7 @@ describe('Async Subagent Renderer', () => {
   });
 
   it('marks async subagent as orphaned', () => {
-    const state = createAsyncSubagentBlock(parentEl as any, 'task-5', { description: 'Background job' });
+    const state = createAsyncSubagentBlock(mockApp, parentEl as any, 'task-5', { description: 'Background job' });
 
     markAsyncSubagentOrphaned(state);
 
@@ -414,7 +420,7 @@ describe('Async Subagent Renderer', () => {
         asyncStatus: 'completed',
       };
 
-      const wrapperEl = renderStoredAsyncSubagent(parentEl as any, subagent);
+      const wrapperEl = renderStoredAsyncSubagent(mockApp, parentEl as any, subagent);
 
       expect(wrapperEl).toBeDefined();
       expect((wrapperEl as any).hasClass('claudian-subagent-list')).toBe(true);
@@ -431,7 +437,7 @@ describe('Async Subagent Renderer', () => {
         asyncStatus: 'completed',
       };
 
-      const wrapperEl = renderStoredAsyncSubagent(parentEl as any, subagent);
+      const wrapperEl = renderStoredAsyncSubagent(mockApp, parentEl as any, subagent);
       const headerEl = (wrapperEl as any).children[0];
 
       // Click to expand
@@ -451,7 +457,7 @@ describe('Async Subagent Renderer', () => {
         asyncStatus: 'completed',
       };
 
-      const wrapperEl = renderStoredAsyncSubagent(parentEl as any, subagent);
+      const wrapperEl = renderStoredAsyncSubagent(mockApp, parentEl as any, subagent);
       const headerEl = (wrapperEl as any).children[0];
 
       const enterEvent = { key: 'Enter', preventDefault: jest.fn() };
@@ -471,7 +477,7 @@ describe('Async Subagent Renderer', () => {
         asyncStatus: 'completed',
       };
 
-      const wrapperEl = renderStoredAsyncSubagent(parentEl as any, subagent);
+      const wrapperEl = renderStoredAsyncSubagent(mockApp, parentEl as any, subagent);
       const headerEl = (wrapperEl as any).children[0];
 
       expect(headerEl.getAttribute('aria-label')).toContain('click to expand');
@@ -488,7 +494,7 @@ describe('Async Subagent Renderer', () => {
         asyncStatus: 'completed',
       };
 
-      const wrapperEl = renderStoredAsyncSubagent(parentEl as any, subagent);
+      const wrapperEl = renderStoredAsyncSubagent(mockApp, parentEl as any, subagent);
       const headerEl = (wrapperEl as any).children[0];
 
       // Click to expand
@@ -511,7 +517,7 @@ describe('Async Subagent Renderer', () => {
         asyncStatus: 'error',
       };
 
-      const wrapperEl = renderStoredAsyncSubagent(parentEl as any, subagent);
+      const wrapperEl = renderStoredAsyncSubagent(mockApp, parentEl as any, subagent);
 
       expect((wrapperEl as any).hasClass('error')).toBe(true);
       const contentText = getTextByClass(wrapperEl as any, 'claudian-subagent-result-output')[0];
@@ -530,7 +536,7 @@ describe('Async Subagent Renderer', () => {
       };
 
       (setIcon as jest.Mock).mockClear();
-      const wrapperEl = renderStoredAsyncSubagent(parentEl as any, subagent);
+      const wrapperEl = renderStoredAsyncSubagent(mockApp, parentEl as any, subagent);
 
       expect((wrapperEl as any).hasClass('error')).toBe(true);
       expect((wrapperEl as any).hasClass('orphaned')).toBe(true);
@@ -552,7 +558,7 @@ describe('Async Subagent Renderer', () => {
         prompt: 'Do some work',
       };
 
-      const wrapperEl = renderStoredAsyncSubagent(parentEl as any, subagent);
+      const wrapperEl = renderStoredAsyncSubagent(mockApp, parentEl as any, subagent);
 
       expect((wrapperEl as any).hasClass('running')).toBe(true);
       const contentText = getTextByClass(wrapperEl as any, 'claudian-subagent-prompt-text')[0];
@@ -570,7 +576,7 @@ describe('Async Subagent Renderer', () => {
         asyncStatus: 'pending',
       };
 
-      const wrapperEl = renderStoredAsyncSubagent(parentEl as any, subagent);
+      const wrapperEl = renderStoredAsyncSubagent(mockApp, parentEl as any, subagent);
 
       // pending maps to running display status
       expect((wrapperEl as any).hasClass('running')).toBe(true);
@@ -587,7 +593,7 @@ describe('addSubagentToolCall', () => {
   });
 
   it('adds tool call to state without rendering a header count', () => {
-    const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+    const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
     const toolCall: ToolCallInfo = {
       id: 'tool-1',
@@ -604,7 +610,7 @@ describe('addSubagentToolCall', () => {
   });
 
   it('clears previous content and renders new tool item', () => {
-    const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+    const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
     const toolCall1: ToolCallInfo = {
       id: 'tool-1',
@@ -629,7 +635,7 @@ describe('addSubagentToolCall', () => {
   });
 
   it('merges repeated tool IDs instead of duplicating tool rows', () => {
-    const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+    const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
     addSubagentToolCall(state, {
       id: 'tool-1',
@@ -669,7 +675,7 @@ describe('updateSubagentToolResult', () => {
   });
 
   it('updates tool call status in state', () => {
-    const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+    const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
     const toolCall: ToolCallInfo = {
       id: 'tool-1',
@@ -691,7 +697,7 @@ describe('updateSubagentToolResult', () => {
   });
 
   it('does not update tool call for non-matching tool ID', () => {
-    const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+    const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
     const toolCall: ToolCallInfo = {
       id: 'tool-1',
@@ -717,7 +723,7 @@ describe('finalizeSubagentBlock', () => {
   });
 
   it('sets status to completed and adds done class', () => {
-    const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+    const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
     (setIcon as jest.Mock).mockClear();
     finalizeSubagentBlock(state, 'All done', false);
@@ -729,7 +735,7 @@ describe('finalizeSubagentBlock', () => {
   });
 
   it('sets status to error and adds error class', () => {
-    const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+    const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
     (setIcon as jest.Mock).mockClear();
     finalizeSubagentBlock(state, 'Something failed', true);
@@ -741,7 +747,7 @@ describe('finalizeSubagentBlock', () => {
   });
 
   it('keeps tool history and shows result section text', () => {
-    const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+    const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
     // Add a tool call first to populate content
     addSubagentToolCall(state, {
@@ -759,7 +765,7 @@ describe('finalizeSubagentBlock', () => {
   });
 
   it('shows ERROR text when isError is true', () => {
-    const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+    const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
     finalizeSubagentBlock(state, 'Error occurred', true);
 
@@ -768,7 +774,7 @@ describe('finalizeSubagentBlock', () => {
   });
 
   it('does not restore a tool count badge after finalization', () => {
-    const state = createSubagentBlock(parentEl as any, 'task-1', { description: 'Test task' });
+    const state = createSubagentBlock(mockApp, parentEl as any, 'task-1', { description: 'Test task' });
 
     addSubagentToolCall(state, {
       id: 'tool-1',
@@ -809,7 +815,7 @@ describe('renderStoredSubagent status variants', () => {
     };
 
     (setIcon as jest.Mock).mockClear();
-    const wrapperEl = renderStoredSubagent(parentEl as any, subagent);
+    const wrapperEl = renderStoredSubagent(mockApp, parentEl as any, subagent);
 
     expect((wrapperEl as any).hasClass('done')).toBe(true);
     expect(setIcon).toHaveBeenCalledWith(expect.anything(), 'check');
@@ -827,7 +833,7 @@ describe('renderStoredSubagent status variants', () => {
     };
 
     (setIcon as jest.Mock).mockClear();
-    const wrapperEl = renderStoredSubagent(parentEl as any, subagent);
+    const wrapperEl = renderStoredSubagent(mockApp, parentEl as any, subagent);
 
     expect((wrapperEl as any).hasClass('error')).toBe(true);
     expect(setIcon).toHaveBeenCalledWith(expect.anything(), 'x');
@@ -847,7 +853,7 @@ describe('renderStoredSubagent status variants', () => {
       isExpanded: false,
     };
 
-    const wrapperEl = renderStoredSubagent(parentEl as any, subagent);
+    const wrapperEl = renderStoredSubagent(mockApp, parentEl as any, subagent);
 
     // Should not have done or error class
     expect((wrapperEl as any).hasClass('done')).toBe(false);
@@ -872,7 +878,7 @@ describe('renderStoredSubagent status variants', () => {
       isExpanded: false,
     };
 
-    const wrapperEl = renderStoredSubagent(parentEl as any, subagent);
+    const wrapperEl = renderStoredSubagent(mockApp, parentEl as any, subagent);
     const contentEl = (wrapperEl as any).children[1]; // content area
 
     // Should show result text
@@ -894,7 +900,7 @@ describe('renderStoredSubagent status variants', () => {
       isExpanded: false,
     };
 
-    const wrapperEl = renderStoredSubagent(parentEl as any, subagent);
+    const wrapperEl = renderStoredSubagent(mockApp, parentEl as any, subagent);
 
     expect(getTextByClass(wrapperEl as any, 'claudian-subagent-count')).toEqual([]);
   });
@@ -909,7 +915,7 @@ describe('renderStoredSubagent status variants', () => {
       isExpanded: false,
     };
 
-    const wrapperEl = renderStoredSubagent(parentEl as any, subagent);
+    const wrapperEl = renderStoredSubagent(mockApp, parentEl as any, subagent);
 
     const labelTexts = getTextByClass(wrapperEl as any, 'claudian-subagent-label');
     expect(labelTexts[0]).toBe('A'.repeat(40) + '...');

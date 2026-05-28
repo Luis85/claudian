@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, realpathSync } from 'fs';
+import type { App } from 'obsidian';
 import { tmpdir } from 'os';
 import { isAbsolute, sep } from 'path';
 
@@ -73,13 +74,16 @@ export class SubagentManager {
   private outputToolIdToAgentId: Map<string, string> = new Map();
   private asyncDomStates: Map<string, AsyncSubagentState> = new Map();
 
+  private readonly app: App;
   private onStateChange: SubagentStateChangeCallback;
   private taskResultInterpreter: ProviderTaskResultInterpreter;
 
   constructor(
+    app: App,
     onStateChange: SubagentStateChangeCallback,
     taskResultInterpreter: ProviderTaskResultInterpreter = ProviderRegistry.getTaskResultInterpreter(),
   ) {
+    this.app = app;
     this.onStateChange = onStateChange;
     this.taskResultInterpreter = taskResultInterpreter;
   }
@@ -282,6 +286,32 @@ export class SubagentManager {
 
   public getSyncSubagent(toolId: string): SubagentState | undefined {
     return this.syncSubagents.get(toolId);
+  }
+
+  /**
+   * Cursor embeds sync subagent tool activity inside the Task tool_result payload.
+   * Hydrate those nested tools before finalizeSyncSubagent removes the live state.
+   */
+  public hydrateNestedSyncToolsFromTaskResult(
+    taskToolId: string,
+    toolUseResult?: unknown,
+  ): void {
+    const nested = this.taskResultInterpreter.extractNestedToolCalls?.(
+      toolUseResult,
+      taskToolId,
+    );
+    if (!nested?.length) {
+      return;
+    }
+
+    const subagentState = this.syncSubagents.get(taskToolId);
+    if (!subagentState) {
+      return;
+    }
+
+    for (const toolCall of nested) {
+      addSubagentToolCall(subagentState, toolCall);
+    }
   }
 
   public addSyncToolCall(parentToolUseId: string, toolCall: ToolCallInfo): void {
@@ -573,7 +603,7 @@ export class SubagentManager {
     taskInput: Record<string, unknown>,
     parentEl: HTMLElement
   ): HandleTaskResult {
-    const subagentState = createSubagentBlock(parentEl, taskToolId, taskInput);
+    const subagentState = createSubagentBlock(this.app, parentEl, taskToolId, taskInput);
     this.syncSubagents.set(taskToolId, subagentState);
     return { action: 'created_sync', subagentState };
   }
@@ -599,7 +629,7 @@ export class SubagentManager {
 
     this.pendingAsyncSubagents.set(taskToolId, info);
 
-    const domState = createAsyncSubagentBlock(parentEl, taskToolId, taskInput);
+    const domState = createAsyncSubagentBlock(this.app, parentEl, taskToolId, taskInput);
     this.asyncDomStates.set(taskToolId, domState);
 
     return { action: 'created_async', info, domState };

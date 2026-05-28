@@ -1,0 +1,30 @@
+.claudian-orchestrator-plan {
+  margin: 0.75em 0;
+  padding: 0.75em 1em;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background: var(--background-secondary);
+}
+
+.claudian-orchestrator-plan-header h4 {
+  margin: 0 0 0.5em;
+  font-size: var(--font-ui-medium);
+}
+
+.claudian-orchestrator-plan-tasks {
+  margin: 0 0 0.75em;
+  padding-left: 1.25em;
+}
+
+.claudian-orchestrator-plan-task {
+  margin: 0.25em 0;
+}
+
+.claudian-orchestrator-plan-actions {
+  display: flex;
+  gap: 0.5em;
+}
+
+.claudian-orchestrator-plan-cancel {
+  margin-left: 0;
+}

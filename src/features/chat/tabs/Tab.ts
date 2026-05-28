@@ -26,6 +26,8 @@ import type ClaudianPlugin from '../../../main';
 import { SlashCommandDropdown } from '../../../shared/components/SlashCommandDropdown';
 import { getEnhancedPath } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
+import { QuickActionStorage } from '../../quickActions/QuickActionStorage';
+import { QuickActionsModal } from '../../quickActions/ui/QuickActionsModal';
 import { BrowserSelectionController } from '../controllers/BrowserSelectionController';
 import { CanvasSelectionController } from '../controllers/CanvasSelectionController';
 import { ConversationController } from '../controllers/ConversationController';
@@ -45,6 +47,12 @@ import { ImageContextManager } from '../ui/ImageContext';
 import { createInputToolbar } from '../ui/InputToolbar';
 import { InstructionModeManager as InstructionModeManagerClass } from '../ui/InstructionModeManager';
 import { NavigationSidebar } from '../ui/NavigationSidebar';
+import { OrchestratorGoalModal } from '../ui/OrchestratorGoalModal';
+import {
+  isOrchestratorModeActive,
+  setOrchestratorModeActive,
+  syncOrchestratorModeUI,
+} from '../ui/orchestratorModeUi';
 import { StatusPanel } from '../ui/StatusPanel';
 import { autoResizeTextarea } from '../ui/textareaResize';
 import { recalculateUsageForModel } from '../utils/usageInfo';
@@ -274,11 +282,15 @@ function refreshTabProviderUI(tab: TabData, plugin: ClaudianPlugin): void {
   tab.ui.modeSelector?.renderOptions();
   tab.ui.thinkingBudgetSelector?.updateDisplay();
   tab.ui.permissionToggle?.updateDisplay();
+  tab.ui.planModeToggle?.updateDisplay();
+  tab.ui.orchestratorToggle?.updateDisplay();
+  tab.ui.quickActionsToggle?.updateDisplay();
   tab.ui.serviceTierToggle?.updateDisplay();
   tab.dom.inputWrapper.toggleClass(
     'claudian-input-plan-mode',
     permissionMode === 'plan' && capabilities.supportsPlanMode,
   );
+  syncOrchestratorModeUI(tab, plugin);
 }
 
 /**
@@ -298,6 +310,10 @@ function applyProviderUIGating(tab: TabData, plugin: ClaudianPlugin): void {
   }
   tab.ui.mcpServerSelector?.setVisible(capabilities.supportsMcpTools);
   tab.ui.permissionToggle?.setVisible(hasPermissionToggle);
+  const planValue = uiConfig.getPermissionModeToggle?.()?.planValue;
+  tab.ui.planModeToggle?.setVisible(
+    capabilities.supportsPlanMode && Boolean(planValue),
+  );
   tab.ui.fileContextManager?.setMcpManager(mcpManager);
 
   tab.ui.fileContextManager?.setAgentService(
@@ -409,7 +425,7 @@ export function createTab(options: TabCreateOptions): TabData {
   // This placeholder is replaced in initializeTabControllers() with the actual
   // callback that updates the StreamController. We defer the real callback
   // because StreamController doesn't exist until controllers are initialized.
-  const subagentManager = new SubagentManager(() => {});
+  const subagentManager = new SubagentManager(plugin.app, () => {});
 
   const dom = buildTabDOM(contentEl);
   state.queueIndicatorEl = dom.queueIndicatorEl;
@@ -458,6 +474,9 @@ export function createTab(options: TabCreateOptions): TabData {
       externalContextSelector: null,
       mcpServerSelector: null,
       permissionToggle: null,
+      planModeToggle: null,
+      orchestratorToggle: null,
+      quickActionsToggle: null,
       serviceTierToggle: null,
       slashCommandDropdown: null,
       instructionModeManager: null,
@@ -882,10 +901,64 @@ function initializeInputToolbar(
         }
       });
       tab.ui.permissionToggle?.updateDisplay();
+      tab.ui.planModeToggle?.updateDisplay();
       dom.inputWrapper.toggleClass(
         'claudian-input-plan-mode',
         mode === 'plan' && getTabCapabilities(tab, plugin).supportsPlanMode,
       );
+    },
+    onPlanModeToggle: async () => {
+      const planValue = getTabChatUIConfig(tab, plugin).getPermissionModeToggle?.()?.planValue;
+      if (!planValue || !getTabCapabilities(tab, plugin).supportsPlanMode) {
+        return;
+      }
+      const current = getTabPermissionMode(tab, plugin);
+      if (current === planValue) {
+        const restoreMode = tab.state.prePlanPermissionMode ?? 'normal';
+        tab.state.prePlanPermissionMode = null;
+        await updatePlanModeUI(tab, plugin, restoreMode);
+      } else {
+        tab.state.prePlanPermissionMode = current;
+        await updatePlanModeUI(tab, plugin, planValue);
+      }
+    },
+    getOrchestratorEnabled: () => {
+      if (tab.orchestratorTabId) {
+        return false;
+      }
+      return plugin.settings.orchestratorEnabled !== false;
+    },
+    getOrchestratorMode: () => isOrchestratorModeActive(tab, plugin),
+    onOrchestratorOpen: () => {
+      if (tab.orchestratorTabId) {
+        return;
+      }
+      const isActive = isOrchestratorModeActive(tab, plugin);
+      new OrchestratorGoalModal(plugin.app, {
+        isActive,
+        onTurnOff: async () => {
+          await setOrchestratorModeActive(tab, plugin, false);
+        },
+        onSubmit: async (goal) => {
+          if (!isOrchestratorModeActive(tab, plugin)) {
+            await setOrchestratorModeActive(tab, plugin, true);
+          }
+          syncOrchestratorModeUI(tab, plugin);
+          void tab.controllers.inputController?.sendMessage({ content: goal });
+        },
+      }).open();
+    },
+    onQuickActionsOpen: () => {
+      const storage = new QuickActionStorage(
+        plugin.storage.getAdapter(),
+        () => plugin.settings.quickActionsFolder ?? 'Quick Actions',
+      );
+      new QuickActionsModal(plugin.app, {
+        storage,
+        onRun: (action) => {
+          void tab.controllers.inputController?.sendMessage({ content: action.prompt });
+        },
+      }).open();
     },
   });
 
@@ -896,6 +969,9 @@ function initializeInputToolbar(
   tab.ui.externalContextSelector = toolbarComponents.externalContextSelector;
   tab.ui.mcpServerSelector = toolbarComponents.mcpServerSelector;
   tab.ui.permissionToggle = toolbarComponents.permissionToggle;
+  tab.ui.planModeToggle = toolbarComponents.planModeToggle;
+  tab.ui.orchestratorToggle = toolbarComponents.orchestratorToggle;
+  tab.ui.quickActionsToggle = toolbarComponents.quickActionsToggle;
   tab.ui.serviceTierToggle = toolbarComponents.serviceTierToggle;
 
   tab.ui.mcpServerSelector.setMcpManager(getProviderMcpManager(getTabProviderId(tab, plugin)));
@@ -1828,6 +1904,7 @@ export function updatePlanModeUI(tab: TabData, plugin: ClaudianPlugin, mode: str
   );
   void plugin.saveSettings();
   tab.ui.permissionToggle?.updateDisplay();
+  tab.ui.planModeToggle?.updateDisplay();
   tab.dom.inputWrapper.toggleClass(
     'claudian-input-plan-mode',
     mode === 'plan' && getTabCapabilities(tab, plugin).supportsPlanMode,

@@ -1,11 +1,20 @@
 export type CursorPermissionMode = 'yolo' | 'plan' | 'normal';
 
+/** Cursor CLI sandbox is macOS/Linux only; Windows uses allowlist mode (`disabled`). */
+export function resolveCursorSandboxMode(
+  platform: NodeJS.Platform = process.platform,
+): 'enabled' | 'disabled' {
+  return platform === 'win32' ? 'disabled' : 'enabled';
+}
+
 export interface BuildCursorAgentFlagArgsOptions {
   workspaceDir: string;
   model?: string | null;
   permissionMode: CursorPermissionMode;
   resumeSessionId?: string | null;
   approveMcps?: boolean;
+  /** Override for tests; defaults to `process.platform`. */
+  platform?: NodeJS.Platform;
 }
 
 export function buildCursorAgentFlagArgs(options: BuildCursorAgentFlagArgsOptions): string[] {
@@ -17,13 +26,7 @@ export function buildCursorAgentFlagArgs(options: BuildCursorAgentFlagArgsOption
     '--trust',
   ];
 
-  if (options.permissionMode === 'yolo') {
-    args.push('--force', '--sandbox', 'disabled');
-  } else if (options.permissionMode === 'plan') {
-    args.push('--mode', 'plan', '--sandbox', 'enabled');
-  } else {
-    args.push('--sandbox', 'enabled');
-  }
+  appendCursorPermissionModeArgs(args, options.permissionMode, options.platform);
 
   if (options.model) {
     args.push('--model', options.model);
@@ -40,6 +43,21 @@ export function buildCursorAgentFlagArgs(options: BuildCursorAgentFlagArgsOption
   return args;
 }
 
+function appendCursorPermissionModeArgs(
+  args: string[],
+  permissionMode: CursorPermissionMode,
+  platform: NodeJS.Platform = process.platform,
+): void {
+  const sandbox = resolveCursorSandboxMode(platform);
+  if (permissionMode === 'yolo') {
+    args.push('--force', '--sandbox', 'disabled');
+  } else if (permissionMode === 'plan') {
+    args.push('--mode', 'plan', '--sandbox', sandbox);
+  } else {
+    args.push('--sandbox', sandbox);
+  }
+}
+
 export function buildCursorAgentJsonModeFlagArgs(
   options: BuildCursorAgentFlagArgsOptions,
 ): string[] {
@@ -50,13 +68,7 @@ export function buildCursorAgentJsonModeFlagArgs(
     '--trust',
   ];
 
-  if (options.permissionMode === 'yolo') {
-    args.push('--force', '--sandbox', 'disabled');
-  } else if (options.permissionMode === 'plan') {
-    args.push('--mode', 'plan', '--sandbox', 'enabled');
-  } else {
-    args.push('--sandbox', 'enabled');
-  }
+  appendCursorPermissionModeArgs(args, options.permissionMode, options.platform);
 
   if (options.model) {
     args.push('--model', options.model);
@@ -83,13 +95,7 @@ export function buildCursorAgentTextModeFlagArgs(
     '--trust',
   ];
 
-  if (options.permissionMode === 'yolo') {
-    args.push('--force', '--sandbox', 'disabled');
-  } else if (options.permissionMode === 'plan') {
-    args.push('--mode', 'plan', '--sandbox', 'enabled');
-  } else {
-    args.push('--sandbox', 'enabled');
-  }
+  appendCursorPermissionModeArgs(args, options.permissionMode, options.platform);
 
   if (options.model) {
     args.push('--model', options.model);

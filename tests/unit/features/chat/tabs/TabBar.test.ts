@@ -134,14 +134,48 @@ describe('TabBar', () => {
       expect(containerEl._children[0]._classList.has('claudian-tab-badge-active')).toBe(true);
     });
 
-    it('should apply streaming class for streaming tab', () => {
+    it('should apply working class for streaming tab', () => {
       const containerEl = createMockEl();
       const callbacks = createMockCallbacks();
       const tabBar = new TabBar(containerEl, callbacks);
 
       tabBar.update([createTabBarItem({ isStreaming: true })]);
 
-      expect(containerEl._children[0]._classList.has('claudian-tab-badge-streaming')).toBe(true);
+      expect(containerEl._children[0]._classList.has('claudian-tab-badge-working')).toBe(true);
+    });
+
+    it('should stack working class with active tab', () => {
+      const containerEl = createMockEl();
+      const tabBar = new TabBar(containerEl, createMockCallbacks());
+
+      tabBar.update([createTabBarItem({ isActive: true, isStreaming: true })]);
+
+      const badge = containerEl._children[0];
+      expect(badge._classList.has('claudian-tab-badge-active')).toBe(true);
+      expect(badge._classList.has('claudian-tab-badge-working')).toBe(true);
+      expect(badge.getAttribute('aria-busy')).toBe('true');
+      expect(badge.getAttribute('data-working')).toBe('true');
+      expect(badge.getAttribute('aria-label')).toContain('(working)');
+    });
+
+    it('marks a plain (non-orchestrator) tab as working when streaming', () => {
+      const containerEl = createMockEl();
+      const tabBar = new TabBar(containerEl, createMockCallbacks());
+
+      tabBar.update([
+        createTabBarItem({
+          isStreaming: true,
+          isActive: false,
+          isWorker: false,
+          isOrchestrator: false,
+        }),
+      ]);
+
+      const badge = containerEl._children[0];
+      expect(badge._classList.has('claudian-tab-badge-working')).toBe(true);
+      expect(badge._classList.has('claudian-tab-badge-worker')).toBe(false);
+      expect(badge._classList.has('claudian-tab-badge-orchestrator')).toBe(false);
+      expect(badge.getAttribute('data-working')).toBe('true');
     });
 
     it('should apply attention class for tab needing attention', () => {
@@ -154,7 +188,7 @@ describe('TabBar', () => {
       expect(containerEl._children[0]._classList.has('claudian-tab-badge-attention')).toBe(true);
     });
 
-    it('should prioritize active over attention', () => {
+    it('should stack active and attention classes when both apply', () => {
       const containerEl = createMockEl();
       const callbacks = createMockCallbacks();
       const tabBar = new TabBar(containerEl, callbacks);
@@ -162,10 +196,10 @@ describe('TabBar', () => {
       tabBar.update([createTabBarItem({ isActive: true, needsAttention: true })]);
 
       expect(containerEl._children[0]._classList.has('claudian-tab-badge-active')).toBe(true);
-      expect(containerEl._children[0]._classList.has('claudian-tab-badge-attention')).toBe(false);
+      expect(containerEl._children[0]._classList.has('claudian-tab-badge-attention')).toBe(true);
     });
 
-    it('should prioritize attention over streaming', () => {
+    it('should stack attention and working classes when both apply', () => {
       const containerEl = createMockEl();
       const callbacks = createMockCallbacks();
       const tabBar = new TabBar(containerEl, callbacks);
@@ -173,18 +207,32 @@ describe('TabBar', () => {
       tabBar.update([createTabBarItem({ isStreaming: true, needsAttention: true })]);
 
       expect(containerEl._children[0]._classList.has('claudian-tab-badge-attention')).toBe(true);
-      expect(containerEl._children[0]._classList.has('claudian-tab-badge-streaming')).toBe(false);
+      expect(containerEl._children[0]._classList.has('claudian-tab-badge-working')).toBe(true);
+    });
+  });
+
+  describe('orchestrator tab roles', () => {
+    it('applies worker styling and data attributes', () => {
+      const containerEl = createMockEl();
+      const tabBar = new TabBar(containerEl, createMockCallbacks());
+
+      tabBar.update([createTabBarItem({ isWorker: true, workerIndex: 2, title: 'Worker 2 · New Chat' })]);
+
+      const badge = containerEl._children[0];
+      expect(badge._classList.has('claudian-tab-badge-worker')).toBe(true);
+      expect(badge.getAttribute('data-tab-role')).toBe('worker');
+      expect(badge.getAttribute('data-worker-index')).toBe('2');
     });
 
-    it('should prioritize active over streaming', () => {
+    it('applies orchestrator parent styling', () => {
       const containerEl = createMockEl();
-      const callbacks = createMockCallbacks();
-      const tabBar = new TabBar(containerEl, callbacks);
+      const tabBar = new TabBar(containerEl, createMockCallbacks());
 
-      tabBar.update([createTabBarItem({ isActive: true, isStreaming: true })]);
+      tabBar.update([createTabBarItem({ isOrchestrator: true, title: 'Orchestrator · New Chat' })]);
 
-      expect(containerEl._children[0]._classList.has('claudian-tab-badge-active')).toBe(true);
-      expect(containerEl._children[0]._classList.has('claudian-tab-badge-streaming')).toBe(false);
+      const badge = containerEl._children[0];
+      expect(badge._classList.has('claudian-tab-badge-orchestrator')).toBe(true);
+      expect(badge.getAttribute('data-tab-role')).toBe('orchestrator');
     });
   });
 

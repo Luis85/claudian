@@ -213,9 +213,12 @@ export class CodexChatRuntime implements ChatRuntime {
     // No-op: Codex handles MCP internally
   }
 
+  private currentOrchestratorMode = false;
+
   async ensureReady(options?: ChatRuntimeEnsureReadyOptions): Promise<boolean> {
     const promptSettings = this.getSystemPromptSettings();
-    const promptKey = computeSystemPromptKey(promptSettings);
+    const promptOptions = this.buildOrchestratorPromptOptions(this.currentOrchestratorMode);
+    const promptKey = computeSystemPromptKey(promptSettings, promptOptions);
     const launchSpec = resolveCodexAppServerLaunchSpec(this.plugin, this.providerId);
     const clientConfigKey = [promptKey, JSON.stringify({
       command: launchSpec.command,
@@ -246,6 +249,7 @@ export class CodexChatRuntime implements ChatRuntime {
   ): AsyncGenerator<StreamChunk> {
     this.resetTurnMetadata();
     let turn = originalTurn;
+    this.currentOrchestratorMode = turn.request.orchestratorMode === true;
     await this.ensureReady();
 
     this.canceled = false;
@@ -257,7 +261,10 @@ export class CodexChatRuntime implements ChatRuntime {
 
     const model = this.resolveModel(queryOptions);
     const promptSettings = this.getSystemPromptSettings();
-    const promptText = buildSystemPrompt(promptSettings);
+    const promptText = buildSystemPrompt(
+      promptSettings,
+      this.buildOrchestratorPromptOptions(this.currentOrchestratorMode),
+    );
 
     const enqueueChunk = (chunk: StreamChunk): void => {
       this.chunkBuffer.push(chunk);
@@ -782,6 +789,16 @@ export class CodexChatRuntime implements ChatRuntime {
       customPrompt: settings.systemPrompt,
       vaultPath: getVaultPath(this.plugin.app) ?? undefined,
       userName: settings.userName,
+    };
+  }
+
+  private buildOrchestratorPromptOptions(orchestratorMode: boolean) {
+    if (!orchestratorMode) {
+      return {};
+    }
+    return {
+      orchestratorMode: true,
+      orchestratorSystemPrompt: this.plugin.settings.orchestratorSystemPrompt,
     };
   }
 
