@@ -38,8 +38,12 @@ should match that look, feel, behavior, and functionality.
    mode variants.
 4. **Scope: all families** (cursor-native + third-party routed through Cursor).
    `auto` stays a standalone first entry with no mode dropdown.
-5. **Effort scope: model/mode redesign + cheap look/feel polish only.** Provider
+5. **Effort scope: model/mode redesign + UI/UX coherence polish.** Provider
    commands, MCP management, fork/rewind are out of scope.
+6. **UI/UX coherence:** all four polish items in scope — Cursor flows through the
+   shared composer controls (reasoning selector reuse + stale-selection fix),
+   dropdown descriptions + vendor grouping, auth-aware empty state, and
+   cross-provider plan-label alignment (`'PLAN' → 'Plan'`).
 
 ## Components
 
@@ -139,14 +143,72 @@ unchanged. `resolveCursorModelForCli` is updated or superseded by a new
 - `ownsModel` continues to match `cursor:*`, so an un-migrated full-variant value
   is still routed to Cursor and gets collapsed on next normalization — no broken
   state mid-flight.
+- Normalization must run on settings load / tab activation, **before the first
+  composer render**, so `ModelSelector` shows the correct active family rather than
+  falling back to `auto` (see §8 item 2).
 
-### 8. Cheap polish — `src/providers/cursor/modelLabels.ts`
+### 8. UI/UX coherence
 
-- Family labels already drop nothing harmful; ensure suffix-bearing ids are not
-  labeled with the mode (the family label is derived from the family id).
+Goal: the user sees the **same behavior across every provider**, gated only by
+capabilities. The composer (`InputToolbar`) is already provider-neutral and
+capability-driven — each control auto-hides from `ProviderCapabilities` +
+`ProviderChatUIConfig`. Cursor conforms by declaring the right capabilities/config
+so it flows through the existing shared controls; no Cursor-specific UI widgets.
+
+#### Coherence contract (applies to all providers)
+
+- Model selection: one entry per family in the shared `ModelSelector`; provider
+  icon, optional `group` header, and `description` tooltip per option.
+- Reasoning/mode: the shared `ThinkingBudgetSelector` (the "Effort:" gear control)
+  renders when `reasoningControl !== 'none'` and the model has >1 option, and hides
+  when there is ≤1 option (`InputToolbar.ts` lines 358-359). No provider ships its
+  own reasoning widget.
+- Permission/plan, service tier, MCP, context meter: capability-gated, identical
+  presentation across providers.
+
+#### Item 1+2 — Cursor flows through the shared controls
+
+- `capabilities.reasoningControl: 'none' → 'effort'`. Cursor's mode variants then
+  render in the **shared** "Effort:" gear selector exactly like Claude/Codex. The
+  label stays the shared `"Effort:"` text (coherence over per-provider wording);
+  no special-casing in `ThinkingBudgetSelector`.
+- Stale-selection display fix: a persisted full-variant value
+  (`cursor:sonnet-4-thinking`) must be normalized to its family value
+  **before the first composer render**, not only on env change. `ModelSelector.updateDisplay`
+  falls back to `models[0]` (→ `auto`) for any unmatched value, so without
+  early normalization the toolbar would briefly mislabel the active model.
+  Normalize on settings load / tab activation via `normalizeModelVariant` +
+  reconciler (see §7).
+
+#### Item 3 — dropdown descriptions + vendor grouping
+
+- Each Cursor family option carries a `description` (e.g. mode count or vendor),
+  matching how Claude/Codex populate option tooltips.
+- Optional `group` header per family, bucketed by vendor
+  (`Cursor`, `Anthropic`, `OpenAI`, `Google`, `xAI`, `Other`), mirroring
+  `opencode`'s `groupOpencodeDiscoveredModels`. Keeps a long multi-vendor list
+  readable. `auto` stays ungrouped and first.
+
+#### Item 4 — auth-aware empty state
+
+- When `cursor-agent --list-models` reports no models because the CLI is not
+  authenticated, surface a clear, actionable notice in the settings tab
+  ("Cursor CLI not logged in — run `cursor-agent login`") rather than a generic
+  "Failed to refresh" message. Detection is best-effort string match on the CLI
+  output / exit; the existing fallback model list is still preserved.
+
+#### Item 5 — cross-provider label alignment
+
+- Align Claude's permission plan label `'PLAN'` → `'Plan'` in
+  `ClaudeChatUIConfig` so all providers read identically. Tiny, low-risk, touches
+  only the label constant.
+
+#### Labels — `src/providers/cursor/modelLabels.ts`
+
+- Family labels are derived from the family id (suffix already stripped by family
+  resolution), so a suffix-bearing id is never labeled with its mode.
 - Add `formatCursorModeLabel(mode)` for the dropdown: `thinking → Thinking`,
   `fast → Fast`, `max → Max`, effort levels capitalized (`high → High`).
-- Keep dropdown option descriptions/grouping visually consistent with Claude/Codex.
 
 ## Data flow
 
@@ -181,7 +243,12 @@ Unit tests, mirrored under `tests/unit/providers/cursor/`:
 - `settings.test.ts` — `preferredModeByFamily` normalization; family
   enable/disable expands to variant raw ids.
 - `CursorSettingsReconciler.test.ts` / `cursorCliModel`-equivalent — full-variant
-  and env migration split + CLI combine.
+  and env migration split + CLI combine; normalization collapses a persisted
+  full-variant `settings.model` to its family before render.
+- `modelLabels.test.ts` — `formatCursorModeLabel` mode labels; family labels strip
+  the mode suffix.
+- Coherence checks: `capabilities.reasoningControl === 'effort'`; family options
+  carry `description` and vendor `group`; Claude plan label is `'Plan'`.
 
 Run `npm run typecheck && npm run lint && npm run test && npm run build`.
 </content>
