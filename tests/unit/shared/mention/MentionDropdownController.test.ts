@@ -825,7 +825,7 @@ describe('MentionDropdownController', () => {
       localController.destroy();
     });
 
-    it('file selection strips @query even when normalizePathForVault returns null (no pill emitted)', () => {
+    it('leaves the @query intact when normalizePathForVault returns null', () => {
       const onAddContextPill = jest.fn();
       const mockFile = { path: 'src/a.ts', name: 'a.ts', stat: { mtime: Date.now() } } as any;
       const localCallbacks = createMockCallbacks({
@@ -846,8 +846,8 @@ describe('MentionDropdownController', () => {
       const enterEvent = { key: 'Enter', preventDefault: jest.fn(), isComposing: false } as any;
       localController.handleKeydown(enterEvent);
 
-      // @query is stripped unconditionally
-      expect(localInput.value).toBe('hello ');
+      // @query is preserved — normalization failed so nothing is stripped
+      expect(localInput.value).toBe('hello @a');
       // No pill emitted because normalization returned null
       expect(onAddContextPill).not.toHaveBeenCalled();
 

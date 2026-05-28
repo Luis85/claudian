@@ -3220,6 +3220,9 @@ describe('InputController - Message Queue', () => {
       // displayContent on the persisted user message stays clean prose
       const userMsg = localDeps.state.messages.find((m: any) => m.role === 'user');
       expect(userMsg?.displayContent).toBe('explain this');
+      // content carries the folded @mentions so the context card renders immediately on send
+      expect(userMsg?.content).toBe('explain this @a.ts @src/');
+      expect((localDeps.renderer as any).updateLiveUserMessage).toHaveBeenCalledWith(userMsg);
     });
 
     it('does not fold mentions for a /compact message', async () => {

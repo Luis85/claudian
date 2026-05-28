@@ -398,6 +398,8 @@ export class InputController {
       userMsg.currentNote = preparedTurn.isCompact
         ? undefined
         : preparedTurn.request.currentNotePath;
+      // Re-render now that content carries folded @mentions, so the context card appears immediately.
+      renderer.updateLiveUserMessage(userMsg);
 
       // Pass history WITHOUT current turn (userMsg + assistantMsg we just added)
       // This prevents duplication when rebuilding context for new sessions
