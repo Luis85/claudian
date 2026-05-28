@@ -170,4 +170,10 @@ describe('claudeChatUIConfig', () => {
       expect(settings.effortLevel).toBe('xhigh');
     });
   });
+
+  describe('plan label coherence', () => {
+    it('uses sentence-case Plan to match other providers', () => {
+      expect(claudeChatUIConfig.getPermissionModeToggle?.()?.planLabel).toBe('Plan');
+    });
+  });
 });
