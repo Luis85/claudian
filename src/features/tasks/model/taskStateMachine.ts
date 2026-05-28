@@ -1,6 +1,6 @@
 import type { TaskStatus } from './taskTypes';
 
-export const TASK_STATUSES: TaskStatus[] = [
+export const TASK_STATUSES = Object.freeze([
   'inbox',
   'ready',
   'running',
@@ -11,7 +11,7 @@ export const TASK_STATUSES: TaskStatus[] = [
   'done',
   'failed',
   'canceled',
-];
+] as const satisfies readonly TaskStatus[]);
 
 const LEGAL_TRANSITIONS: ReadonlyMap<TaskStatus, ReadonlySet<TaskStatus>> = new Map([
   ['inbox', new Set(['ready'])],

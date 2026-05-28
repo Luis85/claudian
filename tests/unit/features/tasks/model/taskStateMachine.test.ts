@@ -21,6 +21,10 @@ describe('TaskStateMachine', () => {
     ]);
   });
 
+  it('prevents consumers from mutating the status order', () => {
+    expect(Object.isFrozen(TASK_STATUSES)).toBe(true);
+  });
+
   it.each<[TaskStatus, TaskStatus]>([
     ['inbox', 'ready'],
     ['ready', 'running'],
