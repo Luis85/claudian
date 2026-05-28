@@ -1,4 +1,5 @@
 import { cursorSettingsReconciler } from '@/providers/cursor/env/CursorSettingsReconciler';
+import { getCursorProviderSettings } from '@/providers/cursor/settings';
 
 const TEST_HOST = 'host-a';
 
@@ -43,5 +44,22 @@ describe('cursorSettingsReconciler.reconcileModelWithEnvironment', () => {
     const s = settings('CURSOR_API_KEY=k', { model: 'composer-2' });
     cursorSettingsReconciler.reconcileModelWithEnvironment(s, []);
     expect(s.model).toBe('cursor:auto');
+  });
+});
+
+describe('normalizeModelVariantSettings migration', () => {
+  it('collapses a persisted full-variant model to its family and seeds the mode', () => {
+    const bag: Record<string, unknown> = { model: 'cursor:sonnet-4-thinking' };
+    const changed = cursorSettingsReconciler.normalizeModelVariantSettings(bag);
+    expect(changed).toBe(true);
+    expect(bag.model).toBe('cursor:sonnet-4');
+    expect(bag.effortLevel).toBe('thinking');
+    expect(getCursorProviderSettings(bag).preferredModeByFamily['sonnet-4']).toBe('thinking');
+  });
+
+  it('leaves a bare family model unchanged', () => {
+    const bag: Record<string, unknown> = { model: 'cursor:composer-2' };
+    expect(cursorSettingsReconciler.normalizeModelVariantSettings(bag)).toBe(false);
+    expect(bag.model).toBe('cursor:composer-2');
   });
 });

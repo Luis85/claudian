@@ -4,12 +4,52 @@ import {
 } from '../../../core/providers/EnvHashReconciler';
 import type { ProviderSettingsReconciler } from '../../../core/providers/types';
 import { parseEnvironmentVariables } from '../../../utils/env';
-import { toCursorModelValue } from '../runtime/cursorModelId';
-import { getCursorProviderSettings, updateCursorProviderSettings } from '../settings';
+import { getCachedCursorModelIds } from '../runtime/cursorModelCatalog';
+import {
+  CURSOR_STANDARD_MODE,
+  extractCursorModeValue,
+  resolveCursorFamilyId,
+} from '../runtime/cursorModelFamily';
+import { fromCursorModelValue, isCursorModelValue, toCursorModelValue } from '../runtime/cursorModelId';
+import {
+  getCursorProviderSettings,
+  updateCursorProviderSettings,
+} from '../settings';
 import { getCursorState } from '../types';
 import { cursorChatUIConfig } from '../ui/CursorChatUIConfig';
 
 const ENV_HASH_KEYS = ['CURSOR_API_KEY', 'CURSOR_BASE_URL'];
+
+// Splits a full-variant raw id into family + mode and writes the collapsed
+// family value back to `settings.model`, seeding the per-family mode preference
+// and the shared effortLevel. Returns true when anything changed.
+function collapseModelSelection(settings: Record<string, unknown>): boolean {
+  const model = settings.model;
+  if (typeof model !== 'string' || !isCursorModelValue(model)) {
+    return false;
+  }
+  const rawId = fromCursorModelValue(model);
+  const cachedIds = getCachedCursorModelIds();
+  const familyId = resolveCursorFamilyId(rawId, cachedIds);
+  if (familyId === rawId) {
+    return false;
+  }
+
+  const mode = extractCursorModeValue(rawId, cachedIds);
+  settings.model = toCursorModelValue(familyId);
+  if (mode) {
+    settings.effortLevel = mode;
+    const current = getCursorProviderSettings(settings).preferredModeByFamily;
+    if (current[familyId] !== mode) {
+      updateCursorProviderSettings(settings, {
+        preferredModeByFamily: { ...current, [familyId]: mode },
+      });
+    }
+  } else {
+    settings.effortLevel = CURSOR_STANDARD_MODE;
+  }
+  return true;
+}
 
 const cursorEnvHashSpec: EnvHashReconcilerSpec = {
   providerId: 'cursor',
@@ -28,11 +68,10 @@ const cursorEnvHashSpec: EnvHashReconcilerSpec = {
   reconcileModel: (settings, envText) => {
     const envVars = parseEnvironmentVariables(envText || '');
     if (envVars.CURSOR_MODEL) {
-      // Persist the namespaced value so routing stays unambiguous.
       settings.model = toCursorModelValue(envVars.CURSOR_MODEL);
+      collapseModelSelection(settings);
     } else if (typeof settings.model === 'string' && settings.model.length > 0) {
-      // Only reset when the current selection is not a valid current option;
-      // a still-valid selection is preserved.
+      collapseModelSelection(settings);
       const options = cursorChatUIConfig.getModelOptions(settings);
       const isValid = options.some(option => option.value === settings.model);
       if (!isValid) {
@@ -46,7 +85,7 @@ export const cursorSettingsReconciler: ProviderSettingsReconciler = {
   reconcileModelWithEnvironment: (settings, conversations) =>
     reconcileEnvironmentHash(cursorEnvHashSpec, settings, conversations),
 
-  normalizeModelVariantSettings(): boolean {
-    return false;
+  normalizeModelVariantSettings(settings): boolean {
+    return collapseModelSelection(settings);
   },
 };
