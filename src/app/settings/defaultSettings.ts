@@ -50,5 +50,9 @@ export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
   deferMathRenderingDuringStreaming: true,
   chatViewPlacement: 'right-sidebar',
 
+  agentBoardWorkOrderFolder: 'Agent Board/tasks',
+  agentBoardDefaultProvider: 'codex',
+  agentBoardDefaultModel: '',
+
   hiddenProviderCommands: getDefaultHiddenProviderCommands(),
 };

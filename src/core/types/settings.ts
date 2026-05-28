@@ -147,6 +147,11 @@ export interface ClaudianSettings {
   deferMathRenderingDuringStreaming: boolean;
   chatViewPlacement: ChatViewPlacement;
 
+  // Agent Board
+  agentBoardWorkOrderFolder: string;
+  agentBoardDefaultProvider: string;
+  agentBoardDefaultModel: string;
+
   // Provider command visibility
   hiddenProviderCommands: HiddenProviderCommands;
 

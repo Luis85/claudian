@@ -15,6 +15,7 @@ import type ClaudianPlugin from '../../main';
 import { formatContextLimit, parseContextLimit, parseEnvironmentVariables } from '../../utils/env';
 import { buildNavMappingText, parseNavMappings } from './keyboardNavigation';
 import { getProviderEnableUpdater } from './providerEnableUpdaters';
+import { renderAgentBoardSettingsSection } from './ui/AgentBoardSettingsSection';
 import { renderEnvironmentSettingsSection } from './ui/EnvironmentSettingsSection';
 
 type SettingsTabId = string;
@@ -274,6 +275,8 @@ export class ClaudianSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
+
+    renderAgentBoardSettingsSection(container, this.plugin);
 
     new Setting(container)
       .setName(t('settings.enableAutoScroll.name'))
