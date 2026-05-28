@@ -9,7 +9,7 @@ import { getHostnameKey } from '../../../utils/env';
 import { expandHomePath, getVaultPath } from '../../../utils/path';
 import { buildCursorAgentEnvironment } from '../runtime/cursorAgentEnv';
 import { getCachedCursorModelIds, refreshCursorModelCatalog } from '../runtime/cursorModelCatalog';
-import { buildCursorFamilies, getCursorModelVariants } from '../runtime/cursorModelFamily';
+import { buildCursorFamilies, CURSOR_STANDARD_MODE, getCursorModelVariants } from '../runtime/cursorModelFamily';
 import {
   getCursorEnabledModels,
   getCursorProviderSettings,
@@ -179,7 +179,7 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
       const variantValues = getCursorModelVariants(familyId, all).map((v) => v.value);
       return all.filter((id) =>
         id === familyId
-        || variantValues.some((mode) => mode !== 'standard' && id === `${familyId}-${mode}`));
+        || variantValues.some((mode) => mode !== CURSOR_STANDARD_MODE && id === `${familyId}-${mode}`));
     };
 
     // A family is enabled when any of its member raw ids is enabled.

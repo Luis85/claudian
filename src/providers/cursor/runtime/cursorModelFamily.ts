@@ -1,4 +1,4 @@
-import { formatCursorModelLabel } from '../modelLabels';
+import { formatCursorModeLabel, formatCursorModelLabel } from '../modelLabels';
 
 // The bare family id (no suffix) is represented in the mode dropdown by this
 // sentinel value. It maps back to "no suffix" when recombining for the CLI.
@@ -146,7 +146,7 @@ export function buildCursorFamilies(rawIds: Iterable<string>): CursorModelFamily
       .sort(compareModeValues)
       .map((value) => ({
         value,
-        label: value === CURSOR_STANDARD_MODE ? 'Standard' : formatCursorModeLabelInternal(value),
+        label: formatCursorModeLabel(value),
       }));
 
     families.push({
@@ -167,13 +167,5 @@ export function buildCursorFamilies(rawIds: Iterable<string>): CursorModelFamily
 /** Returns the mode variants for a single family id. */
 export function getCursorModelVariants(familyId: string, rawIds: Iterable<string>): CursorModeVariant[] {
   return buildCursorFamilies(rawIds).find((family) => family.familyId === familyId)?.variants
-    ?? [{ value: CURSOR_STANDARD_MODE, label: 'Standard' }];
-}
-
-// Local copy to avoid a circular import with modelLabels for the mode label only.
-function formatCursorModeLabelInternal(mode: string): string {
-  if (mode.toLowerCase() === 'xhigh') {
-    return 'XHigh';
-  }
-  return mode.charAt(0).toUpperCase() + mode.slice(1).toLowerCase();
+    ?? [{ value: CURSOR_STANDARD_MODE, label: formatCursorModeLabel(CURSOR_STANDARD_MODE) }];
 }

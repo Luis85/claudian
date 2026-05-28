@@ -1,6 +1,7 @@
 import { getCachedCursorModelIds } from './cursorModelCatalog';
 import {
   combineCursorModelSelection,
+  CURSOR_MODE_SUFFIXES,
   CURSOR_STANDARD_MODE,
   getCursorModelVariants,
 } from './cursorModelFamily';
@@ -43,8 +44,7 @@ export function resolveCursorModelSelectionForCli(
   const knownModes = new Set(
     getCursorModelVariants(familyId, getCachedCursorModelIds()).map((variant) => variant.value),
   );
-  const curatedFallback = new Set(['thinking', 'fast', 'max', 'high', 'medium', 'low']);
-  if (knownModes.has(trimmedMode) || curatedFallback.has(trimmedMode.toLowerCase())) {
+  if (knownModes.has(trimmedMode) || CURSOR_MODE_SUFFIXES.has(trimmedMode.toLowerCase())) {
     return combineCursorModelSelection(familyId, trimmedMode);
   }
   return familyId;
