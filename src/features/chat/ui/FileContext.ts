@@ -237,6 +237,16 @@ export class FileContextManager {
     return true;
   }
 
+  /** Clears added file/folder pills after send; keeps the current-note pill. */
+  clearAttachedPills(): void {
+    this.state.clearAttachments();
+    // Re-add the current note so its pill persists (it's the active file, sent via currentNotePath).
+    if (this.currentNotePath) {
+      this.state.attachFile(this.currentNotePath);
+    }
+    this.refreshChips();
+  }
+
   /** Adds a folder pill (no text inserted). Returns false if the path can't be normalized. */
   attachFolderAsPill(folderPath: string): boolean {
     const normalizedPath = this.normalizePathForVault(folderPath);

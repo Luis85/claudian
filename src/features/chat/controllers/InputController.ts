@@ -310,6 +310,8 @@ export class InputController {
     const { displayContent, turnRequest } = turnSubmission;
 
     fileContextManager?.markCurrentNoteSent();
+    // Added file/folder pills are consumed by this turn; clear them (keeps the current note).
+    fileContextManager?.clearAttachedPills();
 
     const userMsg: ChatMessage = {
       id: this.deps.generateId(),

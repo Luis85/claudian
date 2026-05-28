@@ -36,6 +36,7 @@ function createMockFileContextManager() {
     getCurrentNotePath: jest.fn().mockReturnValue(null),
     shouldSendCurrentNote: jest.fn().mockReturnValue(false),
     markCurrentNoteSent: jest.fn(),
+    clearAttachedPills: jest.fn(),
     transformContextMentions: jest.fn().mockImplementation((text: string) => text),
     getAttachedMentionSuffix: jest.fn().mockReturnValue(''),
   };
@@ -175,6 +176,7 @@ function createMockDeps(overrides: Partial<InputControllerDeps> = {}): InputCont
       getCurrentNotePath: jest.fn().mockReturnValue(null),
       shouldSendCurrentNote: jest.fn().mockReturnValue(false),
       markCurrentNoteSent: jest.fn(),
+      clearAttachedPills: jest.fn(),
       transformContextMentions: jest.fn().mockImplementation((text: string) => text),
       getAttachedMentionSuffix: jest.fn().mockReturnValue(''),
     }) as any,
@@ -987,6 +989,7 @@ describe('InputController - Message Queue', () => {
         getCurrentNotePath: jest.fn().mockReturnValue('notes/session.md'),
         shouldSendCurrentNote: jest.fn().mockImplementation(() => !currentNoteSent),
         markCurrentNoteSent: jest.fn().mockImplementation(() => { currentNoteSent = true; }),
+        clearAttachedPills: jest.fn(),
         transformContextMentions: jest.fn().mockImplementation((text: string) => text),
         getAttachedMentionSuffix: jest.fn().mockReturnValue(''),
       };
@@ -1013,6 +1016,7 @@ describe('InputController - Message Queue', () => {
         getCurrentNotePath: jest.fn().mockReturnValue('notes/session.md'),
         shouldSendCurrentNote: jest.fn().mockReturnValue(true),
         markCurrentNoteSent: jest.fn(),
+        clearAttachedPills: jest.fn(),
         transformContextMentions: jest.fn().mockImplementation((text: string) => text),
         getAttachedMentionSuffix: jest.fn().mockReturnValue(''),
       };
@@ -3255,6 +3259,35 @@ describe('InputController - Message Queue', () => {
 
       expect(capturedRequests).toHaveLength(1);
       expect(capturedRequests[0].text).toBe('/compact');
+    });
+
+    it('clears attached pills after send, with folded mentions already captured in turnRequest', async () => {
+      const fileContextManager = createMockFileContextManager();
+      (fileContextManager.getAttachedMentionSuffix as jest.Mock).mockReturnValue(' @a.ts @src/');
+
+      const localDeps = createSendableDeps({
+        getFileContextManager: () => fileContextManager as any,
+      });
+      const mockAgentService = (localDeps as any).mockAgentService;
+
+      const capturedRequests: any[] = [];
+      mockAgentService.prepareTurn = jest.fn().mockImplementation((request: any) => {
+        capturedRequests.push(request);
+        return encodeClaudeTurn(request, mockMcpForEncoder);
+      });
+      mockAgentService.query = jest.fn().mockReturnValue(createMockStream([{ type: 'done' }]));
+
+      const localInput = localDeps.getInputEl() as ReturnType<typeof createMockInputEl>;
+      localInput.value = 'review this';
+      const localController = new InputController(localDeps);
+
+      await localController.sendMessage();
+
+      // turnRequest.text already carries the folded mentions (captured before clear)
+      expect(capturedRequests).toHaveLength(1);
+      expect(capturedRequests[0].text).toBe('review this @a.ts @src/');
+      // Pills are cleared after the send
+      expect(fileContextManager.clearAttachedPills).toHaveBeenCalled();
     });
   });
 });

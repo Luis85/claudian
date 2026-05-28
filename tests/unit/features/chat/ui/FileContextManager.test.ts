@@ -951,6 +951,32 @@ describe('FileContextManager', () => {
     });
   });
 
+  describe('clearAttachedPills', () => {
+    it('clears added files and folders but keeps the current note', () => {
+      const { manager } = createManager();
+      manager.setCurrentNote('note.md');
+      manager.attachFileAsPill('a.ts');
+      manager.attachFolderAsPill('src');
+
+      manager.clearAttachedPills();
+
+      expect(manager.getAttachedFolders().size).toBe(0);
+      expect(manager.getAttachedFiles().has('a.ts')).toBe(false);
+      // current note pill survives (tracked via currentNotePath + re-added to attachedFiles)
+      expect(manager.getCurrentNotePath()).toBe('note.md');
+      expect(manager.getAttachedFiles().has('note.md')).toBe(true);
+    });
+
+    it('clears everything when there is no current note', () => {
+      const { manager } = createManager();
+      manager.attachFileAsPill('a.ts');
+      manager.attachFolderAsPill('src');
+      manager.clearAttachedPills();
+      expect(manager.getAttachedFiles().size).toBe(0);
+      expect(manager.getAttachedFolders().size).toBe(0);
+    });
+  });
+
   describe('context pills', () => {
     it('attachFileAsPill tracks the file without inserting text', () => {
       const { manager, inputEl } = createManager();
