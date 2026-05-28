@@ -9,9 +9,6 @@ export function renderAgentBoardSettingsSection(
   container: HTMLElement,
   plugin: ClaudianPlugin,
 ): void {
-  // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Board" is the product feature name.
-  new Setting(container).setName('Agent Board').setHeading();
-
   new Setting(container)
     .setName('Work order folder')
     // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Board" is the product feature name.

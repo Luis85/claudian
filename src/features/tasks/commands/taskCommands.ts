@@ -10,6 +10,7 @@ interface BuildWorkOrderArgs {
   model: string;
   timestamp: string;
   sourcePath?: string | null;
+  sourceFolderPath?: string | null;
 }
 
 function slugifyTitle(title: string): string {
@@ -25,10 +26,13 @@ function stripMarkdownExtension(path: string): string {
 }
 
 function buildWorkOrderMarkdown(args: BuildWorkOrderArgs): string {
-  const { id, title, provider, model, timestamp, sourcePath } = args;
-  const contextBody = sourcePath
-    ? `Source note: [[${stripMarkdownExtension(sourcePath)}]]`
-    : '_Add the links, files, and scope the agent needs._';
+  const { id, title, provider, model, timestamp, sourcePath, sourceFolderPath } = args;
+  let contextBody = '_Add the links, files, and scope the agent needs._';
+  if (sourcePath) {
+    contextBody = `Source note: [[${stripMarkdownExtension(sourcePath)}]]`;
+  } else if (sourceFolderPath) {
+    contextBody = `Source folder: \`${sourceFolderPath}\``;
+  }
 
   return `---
 type: claudian-work-order
@@ -106,7 +110,7 @@ function uniquePath(plugin: ClaudianPlugin, basePath: string): string {
 
 export async function createWorkOrder(
   plugin: ClaudianPlugin,
-  sourceFile?: TFile | null,
+  source?: TFile | TFolder | null,
 ): Promise<TFile | null> {
   const provider = plugin.settings.agentBoardDefaultProvider;
   const model = plugin.settings.agentBoardDefaultModel;
@@ -125,7 +129,9 @@ export async function createWorkOrder(
   await ensureFolder(plugin, folder);
 
   const now = new Date();
-  const title = sourceFile ? sourceFile.basename : 'New work order';
+  const sourceFile = source instanceof TFile ? source : null;
+  const sourceFolder = source instanceof TFolder ? source : null;
+  const title = sourceFile ? sourceFile.basename : sourceFolder ? sourceFolder.name : 'New work order';
   const slug = slugifyTitle(title) || 'work-order';
   const id = `task-${timestampId(now)}-${slug}`;
   const markdown = buildWorkOrderMarkdown({
@@ -135,11 +141,16 @@ export async function createWorkOrder(
     model,
     timestamp: now.toISOString(),
     sourcePath: sourceFile?.path ?? null,
+    sourceFolderPath: sourceFolder?.path ?? null,
   });
 
   const filePath = uniquePath(plugin, normalizePath(`${folder}/${id}.md`));
   const created = await plugin.app.vault.create(filePath, markdown);
-  return created instanceof TFile ? created : null;
+  if (created instanceof TFile) {
+    await plugin.app.workspace.getLeaf('tab').openFile(created);
+    return created;
+  }
+  return null;
 }
 
 export async function createWorkOrderFromCurrentNote(plugin: ClaudianPlugin): Promise<TFile | null> {

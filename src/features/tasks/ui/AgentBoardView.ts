@@ -8,16 +8,17 @@ import type ClaudianPlugin from '../../../main';
 import type { TaskExecutionSurface } from '../execution/TaskExecutionSurface';
 import { TaskRunCoordinator } from '../execution/TaskRunCoordinator';
 import { TaskIndexer } from '../indexing/TaskIndexer';
-import type { TaskBoardModel, TaskSpec } from '../model/taskTypes';
+import { canTransitionTaskStatus } from '../model/taskStateMachine';
+import type { TaskBoardModel, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { TaskNoteStore } from '../storage/TaskNoteStore';
 import { AgentBoardRenderer } from './AgentBoardRenderer';
+import { WorkOrderDetailModal } from './WorkOrderDetailModal';
 
 export class AgentBoardView extends ItemView {
   private readonly noteStore = new TaskNoteStore();
   private readonly indexer = new TaskIndexer(this.noteStore);
   private readonly renderer = new AgentBoardRenderer();
   private model: TaskBoardModel = { tasks: [], invalidNotes: [] };
-  private selectedPath: string | null = null;
   private refreshTimer: number | null = null;
 
   constructor(
@@ -82,17 +83,25 @@ export class AgentBoardView extends ItemView {
   private render(): void {
     this.renderer.render(
       this.contentEl,
-      { model: this.model, selectedPath: this.selectedPath },
+      { model: this.model },
       {
-        onOpen: (task) => void this.openTask(task),
+        onOpenDetail: (task) => this.openDetail(task),
         onRun: (task) => void this.runTask(task),
         onStop: (task) => this.stopTask(task),
-        onSelect: (task) => {
-          this.selectedPath = task.path;
-          this.render();
-        },
+        onAccept: (task) => void this.transitionTask(task, 'done', 'Accepted from review.'),
+        onRework: (task) => void this.transitionTask(task, 'needs_fix', 'Sent back for rework.'),
       },
     );
+  }
+
+  private openDetail(task: TaskSpec): void {
+    new WorkOrderDetailModal(this.plugin.app, task, {
+      onOpenNote: (target) => void this.openTask(target),
+      onRun: (target) => void this.runTask(target),
+      onStop: (target) => this.stopTask(target),
+      onAccept: (target) => void this.transitionTask(target, 'done', 'Accepted from review.'),
+      onRework: (target) => void this.transitionTask(target, 'needs_fix', 'Sent back for rework.'),
+    }).open();
   }
 
   private async openTask(task: TaskSpec): Promise<void> {
@@ -105,6 +114,38 @@ export class AgentBoardView extends ItemView {
   private stopTask(task: TaskSpec): void {
     this.executionSurface.cancelTaskRun?.(task.frontmatter.run_id ?? '');
     new Notice(`Requested stop for "${task.frontmatter.title}".`);
+  }
+
+  private async transitionTask(task: TaskSpec, to: TaskStatus, message: string): Promise<void> {
+    const file = this.plugin.app.vault.getAbstractFileByPath(task.path);
+    if (!(file instanceof TFile)) {
+      new Notice('Work order file was not found.');
+      await this.refresh();
+      return;
+    }
+
+    let latest: TaskSpec;
+    try {
+      const content = await this.plugin.app.vault.read(file);
+      latest = this.noteStore.parse(task.path, content).task;
+    } catch (error) {
+      new Notice(`Cannot update work order: ${error instanceof Error ? error.message : String(error)}`);
+      await this.refresh();
+      return;
+    }
+
+    if (!canTransitionTaskStatus(latest.frontmatter.status, to)) {
+      new Notice(`Cannot move "${latest.frontmatter.title}" from ${latest.frontmatter.status} to ${to}.`);
+      await this.refresh();
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    await this.applyNoteChange(task.path, (content) => this.noteStore.writeStatus(content, { status: to, timestamp }));
+    await this.applyNoteChange(task.path, (content) =>
+      this.noteStore.appendLedger(content, { timestamp, status: to, message }),
+    );
+    await this.refresh();
   }
 
   private async runTask(task: TaskSpec): Promise<void> {

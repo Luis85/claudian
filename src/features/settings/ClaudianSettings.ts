@@ -127,7 +127,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
     const providerTabs = ProviderRegistry.getEnabledProviderIds(
       this.plugin.settings as unknown as Record<string, unknown>,
     );
-    const tabIds: SettingsTabId[] = ['general', 'orchestrator', 'quickActions', ...providerTabs];
+    const tabIds: SettingsTabId[] = ['general', 'agentBoard', 'orchestrator', ...providerTabs];
     if (!tabIds.includes(this.activeTab)) {
       this.activeTab = 'general';
     }
@@ -137,13 +137,16 @@ export class ClaudianSettingTab extends PluginSettingTab {
     const tabContents = new Map<SettingsTabId, HTMLDivElement>();
 
     for (const id of tabIds) {
-      const label = id === 'general'
-        ? t('settings.tabs.general' as TranslationKey)
-        : id === 'orchestrator'
-          ? t('settings.tabs.orchestrator' as TranslationKey)
-          : id === 'quickActions'
-            ? t('settings.tabs.quickActions' as TranslationKey)
-            : ProviderRegistry.getProviderDisplayName(id);
+      let label: string;
+      if (id === 'general') {
+        label = t('settings.tabs.general' as TranslationKey);
+      } else if (id === 'agentBoard') {
+        label = 'Agent Board';
+      } else if (id === 'orchestrator') {
+        label = t('settings.tabs.orchestrator' as TranslationKey);
+      } else {
+        label = ProviderRegistry.getProviderDisplayName(id);
+      }
       const button = tabBar.createEl('button', {
         cls: `claudian-settings-tab${id === this.activeTab ? ' claudian-settings-tab--active' : ''}`,
         text: label,
@@ -167,14 +170,14 @@ export class ClaudianSettingTab extends PluginSettingTab {
 
     this.renderGeneralTab(tabContents.get('general')!);
 
+    const agentBoardContent = tabContents.get('agentBoard');
+    if (agentBoardContent) {
+      renderAgentBoardSettingsSection(agentBoardContent, this.plugin);
+    }
+
     const orchestratorContent = tabContents.get('orchestrator');
     if (orchestratorContent) {
       renderOrchestratorSettingsTab(orchestratorContent, this.plugin);
-    }
-
-    const quickActionsContent = tabContents.get('quickActions');
-    if (quickActionsContent) {
-      renderQuickActionsSettingsTab(quickActionsContent, this.plugin);
     }
 
     for (const providerId of providerTabs) {
@@ -225,6 +228,10 @@ export class ClaudianSettingTab extends PluginSettingTab {
             this.display();
           });
       });
+
+    // --- Quick actions ---
+
+    renderQuickActionsSettingsTab(container, this.plugin);
 
     // --- Display ---
 
@@ -291,8 +298,6 @@ export class ClaudianSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
-
-    renderAgentBoardSettingsSection(container, this.plugin);
 
     new Setting(container)
       .setName(t('settings.enableAutoScroll.name'))

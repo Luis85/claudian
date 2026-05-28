@@ -1,10 +1,18 @@
+/* Board owns its own layout; the native view titlebar adds nothing here. */
+.workspace-leaf-content[data-type="claudian-agent-board-view"] .view-header {
+  display: none;
+}
+
 .claudian-agent-board {
   display: flex;
   flex-direction: column;
   gap: 12px;
   height: 100%;
+  min-height: 0;
   padding: 12px;
-  overflow: auto;
+  /* Board itself never scrolls; lanes and detail own their own scroll regions
+     so a tall detail pane can't push the columns out of reach. */
+  overflow: hidden;
   background: var(--background-primary);
 }
 
@@ -12,7 +20,9 @@
   display: flex;
   gap: 12px;
   align-items: flex-start;
-  overflow-x: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
   padding-bottom: 8px;
 }
 
@@ -51,7 +61,7 @@
   cursor: pointer;
 }
 
-.claudian-agent-board-card.is-selected {
+.claudian-agent-board-card:hover {
   border-color: var(--interactive-accent);
 }
 
@@ -72,12 +82,16 @@
   gap: 6px;
 }
 
-.claudian-agent-board-detail {
-  border-top: 1px solid var(--background-modifier-border);
-  padding-top: 12px;
+.claudian-work-order-modal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
 }
 
-.claudian-agent-board-detail pre {
+.claudian-work-order-modal-section {
   white-space: pre-wrap;
   word-break: break-word;
   background: var(--background-secondary);
@@ -86,6 +100,9 @@
 }
 
 .claudian-agent-board-errors {
+  flex: 0 0 auto;
+  max-height: 25%;
+  overflow: auto;
   border-top: 1px solid var(--background-modifier-border);
   padding-top: 12px;
   color: var(--text-error);

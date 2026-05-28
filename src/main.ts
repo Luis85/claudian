@@ -145,6 +145,14 @@ export default class ClaudianPlugin extends Plugin {
                 void this.addFileToActiveChat(file);
               });
           });
+          menu.addItem((item) => {
+            item
+              .setTitle('Create work order')
+              .setIcon('kanban-square')
+              .onClick(() => {
+                void createWorkOrder(this, file);
+              });
+          });
         } else if (file instanceof TFolder) {
           menu.addItem((item) => {
             item
@@ -152,6 +160,14 @@ export default class ClaudianPlugin extends Plugin {
               .setIcon('folder')
               .onClick(() => {
                 void this.addFolderToActiveChat(file);
+              });
+          });
+          menu.addItem((item) => {
+            item
+              .setTitle('Create work order')
+              .setIcon('kanban-square')
+              .onClick(() => {
+                void createWorkOrder(this, file);
               });
           });
         }

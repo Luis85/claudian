@@ -161,9 +161,11 @@ describe('ClaudianPlugin', () => {
       const file = createMockTFile('notes/context.md');
       fileMenuCall![1](menu, file);
 
-      expect(menu.items).toHaveLength(1);
+      expect(menu.items).toHaveLength(2);
       expect(menu.items[0].title).toBe('Add file to Claudian chat');
       expect(menu.items[0].icon).toBe('at-sign');
+      expect(menu.items[1].title).toBe('Create work order');
+      expect(menu.items[1].icon).toBe('kanban-square');
     });
 
     it('adds a folder menu item for TFolder with correct title and icon', async () => {
@@ -178,9 +180,11 @@ describe('ClaudianPlugin', () => {
       const folder = createMockTFolder('notes');
       fileMenuCall![1](menu, folder);
 
-      expect(menu.items).toHaveLength(1);
+      expect(menu.items).toHaveLength(2);
       expect(menu.items[0].title).toBe('Add folder to Claudian chat');
       expect(menu.items[0].icon).toBe('folder');
+      expect(menu.items[1].title).toBe('Create work order');
+      expect(menu.items[1].icon).toBe('kanban-square');
     });
 
     it('adds the selected folder to the active chat from the file menu', async () => {
