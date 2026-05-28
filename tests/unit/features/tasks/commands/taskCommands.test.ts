@@ -28,6 +28,8 @@ describe('buildWorkOrderMarkdown', () => {
     expect(markdown).toContain('Source note: [[docs/specs/board]]');
     expect(markdown).toContain('<!-- claudian:run-ledger-start -->');
     expect(markdown).toContain('<!-- claudian:handoff-start -->');
+    // The work order links to the source note but never copies its contents.
+    expect(markdown).toContain('## Context\n\nSource note: [[docs/specs/board]]');
   });
 
   it('omits the source link when no source note is given', () => {
