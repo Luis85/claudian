@@ -1,0 +1,93 @@
+.claudian-agent-board {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  padding: 12px;
+  overflow: auto;
+  background: var(--background-primary);
+}
+
+.claudian-agent-board-lanes {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.claudian-agent-board-lane {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 200px;
+  max-width: 240px;
+  padding: 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background: var(--background-secondary);
+}
+
+.claudian-agent-board-lane-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: var(--font-semibold);
+}
+
+.claudian-agent-board-lane-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.claudian-agent-board-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-primary);
+  cursor: pointer;
+}
+
+.claudian-agent-board-card.is-selected {
+  border-color: var(--interactive-accent);
+}
+
+.claudian-agent-board-card-title {
+  font-weight: var(--font-medium);
+}
+
+.claudian-agent-board-card-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.claudian-agent-board-card-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.claudian-agent-board-detail {
+  border-top: 1px solid var(--background-modifier-border);
+  padding-top: 12px;
+}
+
+.claudian-agent-board-detail pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--background-secondary);
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.claudian-agent-board-errors {
+  border-top: 1px solid var(--background-modifier-border);
+  padding-top: 12px;
+  color: var(--text-error);
+  font-size: var(--font-ui-smaller);
+}
