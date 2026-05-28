@@ -41,8 +41,8 @@ describe('cursorChatUIConfig.getModelOptions (curated)', () => {
     expect(options[0].value).toBe('cursor:auto');
     expect(options.map(o => o.value)).toEqual([
       'cursor:auto',
-      'cursor:gpt-5.5',
       'cursor:composer-2',
+      'cursor:gpt-5.5',
     ]);
   });
 
@@ -132,5 +132,35 @@ describe('cursorChatUIConfig.normalizeModelVariant', () => {
 describe('cursor capabilities', () => {
   it('exposes the shared effort reasoning control', () => {
     expect(CURSOR_PROVIDER_CAPABILITIES.reasoningControl).toBe('effort');
+  });
+});
+
+describe('cursorChatUIConfig families', () => {
+  it('collapses variants into one family option', () => {
+    const options = cursorChatUIConfig.getModelOptions(settings({ enabled: ['sonnet-4', 'sonnet-4-thinking'] }));
+    expect(options.filter(o => o.value === 'cursor:sonnet-4')).toHaveLength(1);
+    expect(options.some(o => o.value === 'cursor:sonnet-4-thinking')).toBe(false);
+    expect(options[0].value).toBe('cursor:auto');
+  });
+
+  it('serves the family mode variants as reasoning options', () => {
+    const s = settings({ enabled: ['sonnet-4', 'sonnet-4-thinking'] });
+    expect(cursorChatUIConfig.getReasoningOptions('cursor:sonnet-4', s).map(o => o.value)).toEqual(['standard', 'thinking']);
+    expect(cursorChatUIConfig.isAdaptiveReasoningModel('cursor:sonnet-4', s)).toBe(true);
+  });
+
+  it('marks a single-mode family as non-adaptive', () => {
+    expect(cursorChatUIConfig.isAdaptiveReasoningModel('cursor:composer-2', settings({ enabled: ['composer-2'] }))).toBe(false);
+  });
+
+  it('persists the selected mode per family', () => {
+    const s = settings({ enabled: ['sonnet-4', 'sonnet-4-thinking'] });
+    cursorChatUIConfig.applyReasoningSelection?.('cursor:sonnet-4', 'thinking', s);
+    expect(cursorChatUIConfig.getDefaultReasoningValue('cursor:sonnet-4', s)).toBe('thinking');
+  });
+
+  it('normalizes a full-variant model value to its family', () => {
+    const s = settings({ enabled: ['sonnet-4', 'sonnet-4-thinking'] });
+    expect(cursorChatUIConfig.normalizeModelVariant('cursor:sonnet-4-thinking', s)).toBe('cursor:sonnet-4');
   });
 });

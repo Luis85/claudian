@@ -6,13 +6,24 @@ import type {
   ProviderUIOption,
 } from '../../../core/providers/types';
 import { CURSOR_PROVIDER_ICON } from '../../../shared/icons';
-import { formatCursorModelLabel } from '../modelLabels';
+import { formatCursorModeLabel, formatCursorModelLabel } from '../modelLabels';
 import { getCachedCursorModelIds, STATIC_FALLBACK_MODEL_IDS } from '../runtime/cursorModelCatalog';
 import {
+  buildCursorFamilies,
+  CURSOR_STANDARD_MODE,
+  getCursorModelVariants,
+  resolveCursorFamilyId,
+} from '../runtime/cursorModelFamily';
+import {
+  fromCursorModelValue,
   isCursorModelValue,
   toCursorModelValue,
 } from '../runtime/cursorModelId';
-import { getCursorEnabledModels, updateCursorProviderSettings } from '../settings';
+import {
+  getCursorEnabledModels,
+  getCursorProviderSettings,
+  updateCursorProviderSettings,
+} from '../settings';
 
 const CURSOR_PERMISSION_MODE_TOGGLE: ProviderPermissionModeToggleConfig = {
   inactiveValue: 'normal',
@@ -25,60 +36,62 @@ const CURSOR_PERMISSION_MODE_TOGGLE: ProviderPermissionModeToggleConfig = {
 
 const DEFAULT_CONTEXT_WINDOW = 200_000;
 
-const REASONING_OFF: ProviderReasoningOption[] = [
-  { value: 'off', label: 'Off' },
-];
-
-// Namespaced fallback values, e.g. `cursor:auto`, `cursor:composer-2`.
 const NAMESPACED_FALLBACK_MODEL_VALUES = new Set(
   STATIC_FALLBACK_MODEL_IDS.map(toCursorModelValue),
 );
 
-// `value` is namespaced (`cursor:<rawId>`) for unambiguous routing; the label
-// stays the pretty name derived from the raw id.
-function buildModelOption(rawId: string, description?: string): ProviderUIOption {
-  const value = toCursorModelValue(rawId);
-  return description
-    ? { value, label: formatCursorModelLabel(rawId), description }
-    : { value, label: formatCursorModelLabel(rawId) };
+// Curated raw ids the user enabled, plus an env CURSOR_MODEL override. This is
+// the source of truth for both the family picker and the per-family mode list.
+function enabledRawIds(settings: Record<string, unknown>): string[] {
+  const envVars = getRuntimeEnvironmentVariables(settings, 'cursor');
+  const ids = [...getCursorEnabledModels(settings)];
+  if (envVars.CURSOR_MODEL?.trim()) {
+    ids.push(envVars.CURSOR_MODEL.trim());
+  }
+  return ids;
+}
+
+function familyIdFromModelValue(model: string, settings: Record<string, unknown>): string {
+  return resolveCursorFamilyId(fromCursorModelValue(model), enabledRawIds(settings));
+}
+
+function variantsForModelValue(
+  model: string,
+  settings: Record<string, unknown>,
+): ProviderReasoningOption[] {
+  const familyId = familyIdFromModelValue(model, settings);
+  if (!familyId || familyId === 'auto') {
+    return [];
+  }
+  return getCursorModelVariants(familyId, enabledRawIds(settings)).map((variant) => ({
+    value: variant.value,
+    label: variant.value === CURSOR_STANDARD_MODE ? 'Standard' : formatCursorModeLabel(variant.value),
+  }));
 }
 
 export const cursorChatUIConfig: ProviderChatUIConfig = {
   getModelOptions(settings: Record<string, unknown>): ProviderUIOption[] {
-    const envVars = getRuntimeEnvironmentVariables(settings, 'cursor');
-    // Curated subset chosen per-machine in settings. Cursor exposes 100+ models,
-    // so the picker shows only this selection (plus `auto` and env override).
-    const enabled = getCursorEnabledModels(settings);
+    const curated = getCursorEnabledModels(settings);
+    const curatedFamilyIds = new Set(buildCursorFamilies(curated).map((family) => family.familyId));
 
-    // Dedupe by final namespaced value so a raw id and its `cursor:` form
-    // never both appear.
-    const seen = new Set<string>();
-    const options: ProviderUIOption[] = [];
+    const autoValue = toCursorModelValue('auto');
+    const options: ProviderUIOption[] = [{ value: autoValue, label: formatCursorModelLabel('auto') }];
+    const seen = new Set<string>([autoValue]);
 
-    const add = (rawId: string, description?: string): void => {
-      const trimmed = rawId.trim();
-      if (!trimmed) {
-        return;
-      }
-      const value = toCursorModelValue(trimmed);
+    for (const family of buildCursorFamilies(enabledRawIds(settings))) {
+      const value = toCursorModelValue(family.familyId);
       if (seen.has(value)) {
-        return;
+        continue;
       }
       seen.add(value);
-      options.push(buildModelOption(trimmed, description));
-    };
-
-    // Always make 'auto' (value `cursor:auto`) available and first.
-    add('auto');
-
-    for (const id of enabled) {
-      add(id);
-    }
-
-    // Env override and custom additions are kept even if not curated.
-    if (envVars.CURSOR_MODEL) {
-      const envValue = toCursorModelValue(envVars.CURSOR_MODEL);
-      add(envVars.CURSOR_MODEL, seen.has(envValue) ? undefined : 'Custom (env)');
+      const isEnvOnly = !curatedFamilyIds.has(family.familyId);
+      const modeCount = family.variants.length;
+      const description = isEnvOnly
+        ? 'Custom (env)'
+        : modeCount > 1
+          ? `${family.vendor} · ${modeCount} modes`
+          : family.vendor;
+      options.push({ value, label: family.label, description, group: family.vendor });
     }
 
     return options;
@@ -88,20 +101,22 @@ export const cursorChatUIConfig: ProviderChatUIConfig = {
     if (isCursorModelValue(model)) {
       return true;
     }
-    // Backward-compat for any pre-namespace persisted values.
     return /^composer-/i.test(model) || model === 'auto';
   },
 
-  isAdaptiveReasoningModel(): boolean {
-    return false;
+  isAdaptiveReasoningModel(model: string, settings: Record<string, unknown>): boolean {
+    return variantsForModelValue(model, settings).length > 1;
   },
 
-  getReasoningOptions(): ProviderReasoningOption[] {
-    return [...REASONING_OFF];
+  getReasoningOptions(model: string, settings: Record<string, unknown>): ProviderReasoningOption[] {
+    return variantsForModelValue(model, settings);
   },
 
-  getDefaultReasoningValue(): string {
-    return 'off';
+  getDefaultReasoningValue(model: string, settings: Record<string, unknown>): string {
+    const familyId = familyIdFromModelValue(model, settings);
+    const preferred = getCursorProviderSettings(settings).preferredModeByFamily[familyId];
+    const valid = new Set(variantsForModelValue(model, settings).map((option) => option.value));
+    return preferred && valid.has(preferred) ? preferred : CURSOR_STANDARD_MODE;
   },
 
   getContextWindowSize(): number {
@@ -113,24 +128,44 @@ export const cursorChatUIConfig: ProviderChatUIConfig = {
   },
 
   applyModelDefaults(model: string, settings: unknown): void {
-    const trimmed = model.trim();
-    if (!trimmed) {
+    const target = settings as Record<string, unknown>;
+    const familyValue = this.normalizeModelVariant(model, target);
+    const familyId = fromCursorModelValue(familyValue);
+    if (!familyId) {
       return;
     }
-    updateCursorProviderSettings(settings as Record<string, unknown>, { lastModel: trimmed });
+    updateCursorProviderSettings(target, { lastModel: familyId });
+    target.effortLevel = this.getDefaultReasoningValue(familyValue, target);
   },
 
-  normalizeModelVariant(model: string): string {
-    return model;
+  applyReasoningSelection(model: string, value: string, settings: unknown): void {
+    const target = settings as Record<string, unknown>;
+    const familyId = familyIdFromModelValue(model, target);
+    if (!familyId || familyId === 'auto') {
+      return;
+    }
+    const valid = new Set(variantsForModelValue(model, target).map((option) => option.value));
+    const current = getCursorProviderSettings(target).preferredModeByFamily;
+    const next = { ...current };
+    if (!value || value === CURSOR_STANDARD_MODE || !valid.has(value)) {
+      delete next[familyId];
+    } else {
+      next[familyId] = value;
+    }
+    updateCursorProviderSettings(target, { preferredModeByFamily: next });
   },
 
-  // Returns RAW env ids (not namespaced). These key the per-model context-limit
-  // and alias maps, which are independent of provider routing — those maps are
-  // looked up by raw env model id, so namespacing here would break them.
+  normalizeModelVariant(model: string, settings: Record<string, unknown>): string {
+    if (!isCursorModelValue(model) && !/^composer-/i.test(model) && model !== 'auto') {
+      return model;
+    }
+    return toCursorModelValue(familyIdFromModelValue(model, settings));
+  },
+
   getCustomModelIds(envVars: Record<string, string>): Set<string> {
     const ids = new Set<string>();
     if (envVars.CURSOR_MODEL && !getCachedCursorModelIds().includes(envVars.CURSOR_MODEL)) {
-      ids.add(envVars.CURSOR_MODEL);
+      ids.add(resolveCursorFamilyId(envVars.CURSOR_MODEL, getCachedCursorModelIds()));
     }
     return ids;
   },
