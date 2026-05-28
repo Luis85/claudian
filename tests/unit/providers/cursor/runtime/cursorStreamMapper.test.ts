@@ -23,7 +23,7 @@ describe('CursorNdjsonStreamReducer', () => {
     expect(b.chunks).toEqual([{ type: 'text', content: 'lo' }]);
   });
 
-  it('emits tool_use on started and tool_result on completed', () => {
+  it('normalizes readToolCall to the shared Read tool with file_path input', () => {
     const r = new CursorNdjsonStreamReducer();
     const start = r.reduceLine(JSON.stringify({
       type: 'tool_call',
@@ -34,8 +34,8 @@ describe('CursorNdjsonStreamReducer', () => {
     expect(start.chunks).toEqual([{
       type: 'tool_use',
       id: 'c1',
-      name: 'read_file',
-      input: { path: 'a.md' },
+      name: 'Read',
+      input: { file_path: 'a.md' },
     }]);
 
     const done = r.reduceLine(JSON.stringify({
@@ -47,8 +47,121 @@ describe('CursorNdjsonStreamReducer', () => {
     expect(done.chunks[0]).toMatchObject({
       type: 'tool_result',
       id: 'c1',
-      content: expect.stringContaining('readToolCall'),
+      content: 'x',
     });
+  });
+
+  it('normalizes shellToolCall to Bash and unwraps stdout in the result', () => {
+    const r = new CursorNdjsonStreamReducer();
+    const start = r.reduceLine(JSON.stringify({
+      type: 'tool_call', subtype: 'started', call_id: 'c2',
+      tool_call: {
+        description: 'Echo hi',
+        shellToolCall: {
+          args: { command: 'echo hi', workingDirectory: '/x' },
+        },
+      },
+    }));
+    expect(start.chunks[0]).toMatchObject({
+      type: 'tool_use',
+      name: 'Bash',
+      input: { command: 'echo hi', cwd: '/x', description: 'Echo hi' },
+    });
+
+    const done = r.reduceLine(JSON.stringify({
+      type: 'tool_call', subtype: 'completed', call_id: 'c2',
+      tool_call: {
+        shellToolCall: {
+          args: { command: 'echo hi' },
+          result: { success: { stdout: 'hi\n', stderr: '', exitCode: 0 } },
+        },
+      },
+    }));
+    expect(done.chunks[0]).toMatchObject({
+      type: 'tool_result',
+      id: 'c2',
+      content: 'hi',
+    });
+  });
+
+  it('normalizes globToolCall and lists matching files in the result content', () => {
+    const r = new CursorNdjsonStreamReducer();
+    const start = r.reduceLine(JSON.stringify({
+      type: 'tool_call', subtype: 'started', call_id: 'g1',
+      tool_call: {
+        globToolCall: { args: { targetDirectory: '/x', globPattern: '*.ts' } },
+      },
+    }));
+    expect(start.chunks[0]).toMatchObject({
+      type: 'tool_use',
+      name: 'Glob',
+      input: { pattern: '*.ts', path: '/x' },
+    });
+
+    const done = r.reduceLine(JSON.stringify({
+      type: 'tool_call', subtype: 'completed', call_id: 'g1',
+      tool_call: {
+        globToolCall: {
+          args: { targetDirectory: '/x', globPattern: '*.ts' },
+          result: { success: { files: ['a.ts', 'b.ts'], totalFiles: 2 } },
+        },
+      },
+    }));
+    expect(done.chunks[0]).toMatchObject({
+      type: 'tool_result',
+      content: expect.stringContaining('a.ts'),
+    });
+    expect((done.chunks[0] as { content: string }).content).toContain('Found 2 files');
+  });
+
+  it('maps editToolCall to Write and surfaces a unified diff for the diff renderer', () => {
+    const r = new CursorNdjsonStreamReducer();
+    const start = r.reduceLine(JSON.stringify({
+      type: 'tool_call', subtype: 'started', call_id: 'e1',
+      tool_call: { editToolCall: { args: { path: '/x/a.txt', streamContent: 'probed' } } },
+    }));
+    expect(start.chunks[0]).toMatchObject({
+      type: 'tool_use',
+      name: 'Write',
+      input: { file_path: '/x/a.txt', content: 'probed' },
+    });
+
+    const done = r.reduceLine(JSON.stringify({
+      type: 'tool_call', subtype: 'completed', call_id: 'e1',
+      tool_call: {
+        editToolCall: {
+          args: { path: '/x/a.txt', streamContent: 'probed' },
+          result: {
+            success: {
+              path: '/x/a.txt',
+              diffString: '--- a/x\n+++ b/x\n@@ -1 +1 @@\n-probe\n+probed',
+              message: 'Updated',
+            },
+          },
+        },
+      },
+    }));
+    const result = done.chunks[0] as { type: string; toolUseResult?: { unifiedDiff?: string; filePath?: string } };
+    expect(result.type).toBe('tool_result');
+    expect(result.toolUseResult?.filePath).toBe('/x/a.txt');
+    expect(result.toolUseResult?.unifiedDiff).toContain('+probed');
+  });
+
+  it('marks tool_result as error when the cursor envelope contains an error payload', () => {
+    const r = new CursorNdjsonStreamReducer();
+    const done = r.reduceLine(JSON.stringify({
+      type: 'tool_call', subtype: 'completed', call_id: 'x1',
+      tool_call: {
+        readToolCall: {
+          args: { path: 'missing.md' },
+          result: { error: { code: 'ENOENT', message: 'File not found' } },
+        },
+      },
+    }));
+    const chunk = done.chunks[0] as { type: string; isError?: boolean; content: string };
+    expect(chunk.type).toBe('tool_result');
+    expect(chunk.isError).toBe(true);
+    expect(chunk.content).toContain('File not found');
   });
 
   it('ends with usage and done on result success', () => {
@@ -77,7 +190,7 @@ describe('CursorNdjsonStreamReducer', () => {
     }));
     r.reduceLine(JSON.stringify({
       type: 'tool_call', subtype: 'completed', call_id: 'c1',
-      tool_call: { readToolCall: { args: { path: 'a.md' }, result: {} } },
+      tool_call: { readToolCall: { args: { path: 'a.md' }, result: { success: { content: '' } } } },
     }));
 
     // Cursor re-sends the cumulative full-turn text, now extended.
@@ -94,7 +207,7 @@ describe('CursorNdjsonStreamReducer', () => {
     const huge = 'x'.repeat(250_000);
     const out = r.reduceLine(JSON.stringify({
       type: 'tool_call', subtype: 'completed', call_id: 'c1',
-      tool_call: { readToolCall: { args: {}, result: { success: { content: huge } } } },
+      tool_call: { readToolCall: { args: { path: 'big.txt' }, result: { success: { content: huge } } } },
     }));
     const chunk = out.chunks[0] as { type: string; content: string };
     expect(chunk.type).toBe('tool_result');

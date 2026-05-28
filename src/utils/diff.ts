@@ -139,6 +139,15 @@ export function extractDiffData(toolUseResult: unknown, toolCall: ToolCallInfo):
       const stats = countLineChanges(diffLines);
       return { filePath: resultFilePath, diffLines, stats };
     }
+
+    // Provider-neutral unified diff (used by Cursor write/edit results).
+    if (typeof result.unifiedDiff === 'string' && result.unifiedDiff.trim().length > 0) {
+      const resultFilePath = (typeof result.filePath === 'string' ? result.filePath : null) || filePath;
+      const diffLines = parseUnifiedDiffLines(result.unifiedDiff);
+      if (diffLines.length > 0) {
+        return { filePath: resultFilePath, diffLines, stats: countLineChanges(diffLines) };
+      }
+    }
   }
 
   return diffFromToolInput(toolCall, filePath);

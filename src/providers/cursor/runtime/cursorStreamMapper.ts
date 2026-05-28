@@ -1,4 +1,10 @@
 import type { StreamChunk } from '../../../core/types';
+import type { SDKToolUseResult } from '../../../core/types/diff';
+import {
+  normalizeCursorToolCompletion,
+  normalizeCursorToolStart,
+  readCursorToolEnvelope,
+} from './cursorToolNormalization';
 
 export interface CursorReduceResult {
   chunks: StreamChunk[];
@@ -157,36 +163,26 @@ export function extractCursorUsage(
   return result;
 }
 
-function parseToolStart(record: Record<string, unknown>): {
+interface CursorToolStartChunk {
   id: string;
   name: string;
   input: Record<string, unknown>;
-} | null {
+}
+
+function parseToolStart(record: Record<string, unknown>): CursorToolStartChunk | null {
   const callId = typeof record.call_id === 'string' ? record.call_id : '';
-  if (!callId) {
-    return null;
-  }
+  if (!callId) return null;
 
   const tc = record.tool_call;
-  if (!tc || typeof tc !== 'object') {
-    return null;
-  }
-  const t = tc as Record<string, unknown>;
+  if (!tc || typeof tc !== 'object') return null;
 
-  const read = t.readToolCall;
-  if (read && typeof read === 'object') {
-    const args = (read as { args?: Record<string, unknown> }).args ?? {};
-    return { id: callId, name: 'read_file', input: { ...args } };
+  const envelope = readCursorToolEnvelope(tc as Record<string, unknown>);
+  if (envelope) {
+    const normalized = normalizeCursorToolStart(envelope);
+    return { id: callId, name: normalized.name, input: normalized.input };
   }
 
-  const write = t.writeToolCall;
-  if (write && typeof write === 'object') {
-    const w = write as { args?: Record<string, unknown> };
-    const args = w.args ?? {};
-    return { id: callId, name: 'write_file', input: { ...args } };
-  }
-
-  const fn = t.function;
+  const fn = (tc as Record<string, unknown>).function;
   if (fn && typeof fn === 'object') {
     const f = fn as { name?: string; arguments?: string };
     const name = typeof f.name === 'string' ? f.name : 'function';
@@ -204,16 +200,34 @@ function parseToolStart(record: Record<string, unknown>): {
   return { id: callId, name: 'tool', input: { tool_call: tc } };
 }
 
-function stringifyToolResult(record: Record<string, unknown>): string {
+interface CursorToolCompletionChunk {
+  content: string;
+  isError: boolean;
+  toolUseResult?: SDKToolUseResult;
+}
+
+function parseToolCompletion(record: Record<string, unknown>): CursorToolCompletionChunk {
   const tc = record.tool_call;
   if (tc && typeof tc === 'object') {
+    const envelope = readCursorToolEnvelope(tc as Record<string, unknown>);
+    if (envelope) {
+      const normalized = normalizeCursorToolCompletion(envelope);
+      return {
+        content: capToolResultLength(normalized.content),
+        isError: normalized.isError,
+        ...(normalized.toolUseResult
+          ? { toolUseResult: normalized.toolUseResult as SDKToolUseResult }
+          : {}),
+      };
+    }
+
     try {
-      return capToolResultLength(JSON.stringify(tc));
+      return { content: capToolResultLength(JSON.stringify(tc)), isError: false };
     } catch {
-      return capToolResultLength(String(tc));
+      return { content: capToolResultLength(String(tc)), isError: false };
     }
   }
-  return capToolResultLength(JSON.stringify(record));
+  return { content: capToolResultLength(JSON.stringify(record)), isError: false };
 }
 
 export class CursorNdjsonStreamReducer {
@@ -337,11 +351,15 @@ export class CursorNdjsonStreamReducer {
         if (!callId) {
           return { chunks: [], sessionId };
         }
-        const content = stringifyToolResult(rec);
-        return {
-          chunks: [{ type: 'tool_result', id: callId, content }],
-          sessionId,
+        const completion = parseToolCompletion(rec);
+        const chunk: StreamChunk = {
+          type: 'tool_result',
+          id: callId,
+          content: completion.content,
+          ...(completion.isError ? { isError: true } : {}),
+          ...(completion.toolUseResult ? { toolUseResult: completion.toolUseResult } : {}),
         };
+        return { chunks: [chunk], sessionId };
       }
 
       return { chunks: [], sessionId };
