@@ -94,3 +94,18 @@ export function formatCursorModelLabel(id: string): string {
 
   return formatGenericLabel(trimmed);
 }
+
+/** Display label for a Cursor mode/effort suffix used in the composer dropdown. */
+export function formatCursorModeLabel(mode: string): string {
+  const trimmed = mode.trim();
+  if (!trimmed) {
+    return mode;
+  }
+  if (trimmed.toLowerCase() === 'standard') {
+    return 'Standard';
+  }
+  if (trimmed.toLowerCase() === 'xhigh') {
+    return 'XHigh';
+  }
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+}

@@ -1,4 +1,4 @@
-import { formatCursorModelLabel } from '@/providers/cursor/modelLabels';
+import { formatCursorModeLabel,formatCursorModelLabel } from '@/providers/cursor/modelLabels';
 
 describe('formatCursorModelLabel', () => {
   it('formats Cursor-native models', () => {
@@ -23,5 +23,15 @@ describe('formatCursorModelLabel', () => {
 
   it('falls back to title-cased generic formatting', () => {
     expect(formatCursorModelLabel('some-new-model')).toBe('Some New Model');
+  });
+});
+
+describe('formatCursorModeLabel', () => {
+  it('formats known modes', () => {
+    expect(formatCursorModeLabel('thinking')).toBe('Thinking');
+    expect(formatCursorModeLabel('fast')).toBe('Fast');
+    expect(formatCursorModeLabel('max')).toBe('Max');
+    expect(formatCursorModeLabel('high')).toBe('High');
+    expect(formatCursorModeLabel('standard')).toBe('Standard');
   });
 });
