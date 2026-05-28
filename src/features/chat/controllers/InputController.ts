@@ -254,6 +254,10 @@ export class InputController {
         this.createQueuedMessage(displayContent, turnRequest),
       );
 
+      // Pill mentions were folded into the queued turnRequest above; clear them now
+      // so they don't linger in the composer after the user hits send while streaming.
+      fileContextManager?.clearAttachedPills();
+
       if (shouldUseInput) {
         inputEl.value = '';
         this.deps.resetInputHeight();
@@ -938,6 +942,9 @@ export class InputController {
       }
 
       this.deps.getFileContextManager()?.markCurrentNoteSent();
+      // Pill mentions were folded into the prepared turn above; clear them so they
+      // don't linger in the composer after the steered message is committed.
+      this.deps.getFileContextManager()?.clearAttachedPills();
 
       this.pendingProviderUserMessages.push({
         displayContent,

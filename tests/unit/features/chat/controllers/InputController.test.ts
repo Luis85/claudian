@@ -3263,7 +3263,17 @@ describe('InputController - Message Queue', () => {
 
     it('clears attached pills after send, with folded mentions already captured in turnRequest', async () => {
       const fileContextManager = createMockFileContextManager();
-      (fileContextManager.getAttachedMentionSuffix as jest.Mock).mockReturnValue(' @a.ts @src/');
+
+      // Track call order: getAttachedMentionSuffix (where pills are folded into the turn text)
+      // must be called before clearAttachedPills (so the queued turn still carries the mentions).
+      const order: string[] = [];
+      (fileContextManager.getAttachedMentionSuffix as jest.Mock).mockImplementation(() => {
+        order.push('capture');
+        return ' @a.ts @src/';
+      });
+      (fileContextManager.clearAttachedPills as jest.Mock).mockImplementation(() => {
+        order.push('clear');
+      });
 
       const localDeps = createSendableDeps({
         getFileContextManager: () => fileContextManager as any,
@@ -3287,6 +3297,81 @@ describe('InputController - Message Queue', () => {
       expect(capturedRequests).toHaveLength(1);
       expect(capturedRequests[0].text).toBe('review this @a.ts @src/');
       // Pills are cleared after the send
+      expect(fileContextManager.clearAttachedPills).toHaveBeenCalled();
+      // Clear must happen AFTER getAttachedMentionSuffix has captured pills into the turn text
+      expect(order.indexOf('capture')).toBeLessThan(order.indexOf('clear'));
+    });
+
+    it('clears attached pills on queued send, with folded mentions captured in the queued turnRequest', async () => {
+      const fileContextManager = createMockFileContextManager();
+      (fileContextManager.getAttachedMentionSuffix as jest.Mock).mockReturnValue(' @b.ts');
+
+      const localDeps = createSendableDeps({
+        getFileContextManager: () => fileContextManager as any,
+      });
+      localDeps.state.isStreaming = true;
+
+      const localInput = localDeps.getInputEl() as ReturnType<typeof createMockInputEl>;
+      localInput.value = 'queued task';
+      const localController = new InputController(localDeps);
+
+      await localController.sendMessage();
+
+      // The queued turn must carry the folded mention
+      expect(localDeps.state.queuedMessage).not.toBeNull();
+      expect(localDeps.state.queuedMessage!.turnRequest?.text).toBe('queued task @b.ts');
+      // Pills must be cleared after queuing
+      expect(fileContextManager.clearAttachedPills).toHaveBeenCalled();
+    });
+
+    it('clears attached pills after a successful steer, with folded mentions already in the prepared turn', async () => {
+      const fileContextManager = createMockFileContextManager();
+      (fileContextManager.getAttachedMentionSuffix as jest.Mock).mockReturnValue(' @c.ts');
+
+      const localDeps = createSendableDeps({
+        getFileContextManager: () => fileContextManager as any,
+      });
+      const mockAgentService = (localDeps as any).mockAgentService;
+      mockAgentService.providerId = 'codex';
+      mockAgentService.getCapabilities = jest.fn().mockReturnValue({
+        providerId: 'codex',
+        supportsPersistentRuntime: true,
+        supportsNativeHistory: true,
+        supportsPlanMode: true,
+        supportsRewind: false,
+        supportsFork: true,
+        supportsProviderCommands: false,
+        supportsTurnSteer: true,
+        reasoningControl: 'effort',
+      });
+      mockAgentService.prepareTurn = jest.fn().mockReturnValue({
+        request: { text: 'steer task @c.ts' },
+        persistedContent: 'steer task @c.ts',
+        prompt: 'steer task @c.ts',
+        isCompact: false,
+        mcpMentions: new Set(),
+      });
+      mockAgentService.steer = jest.fn().mockResolvedValue(true);
+
+      localDeps.state.isStreaming = true;
+      localDeps.state.queuedMessage = {
+        content: 'steer task',
+        images: undefined,
+        editorContext: null,
+        browserContext: null,
+        canvasContext: null,
+      };
+      const localController = new InputController(localDeps);
+      localController.updateQueueIndicator();
+
+      const queueIndicatorEl = localDeps.state.queueIndicatorEl as any;
+      queueIndicatorEl.querySelector('.claudian-queue-indicator-action')?.click();
+      // Allow the async steer to settle
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mockAgentService.steer).toHaveBeenCalled();
+      // Pills must be cleared after successful steer (mentions already captured in prepared turn)
       expect(fileContextManager.clearAttachedPills).toHaveBeenCalled();
     });
   });
