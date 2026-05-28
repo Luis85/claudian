@@ -95,7 +95,20 @@ export function formatCursorModelLabel(id: string): string {
   return formatGenericLabel(trimmed);
 }
 
-/** Display label for a Cursor mode/effort suffix used in the composer dropdown. */
+function formatCursorModeToken(token: string): string {
+  const lower = token.toLowerCase();
+  if (lower === 'xhigh') return 'XHigh';
+  if (!lower) return token;
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+/**
+ * Display label for a Cursor mode/effort suffix used in the composer dropdown.
+ * Compound modes (e.g. `thinking-low-fast`, `extra-high-fast`) render as
+ * space-separated title-cased tokens. Recognises `extra-high` as a single
+ * concept ("Extra High") even though it lives as two hyphen-separated tokens
+ * in the raw id.
+ */
 export function formatCursorModeLabel(mode: string): string {
   const trimmed = mode.trim();
   if (!trimmed) {
@@ -104,8 +117,17 @@ export function formatCursorModeLabel(mode: string): string {
   if (trimmed.toLowerCase() === 'standard') {
     return 'Standard';
   }
-  if (trimmed.toLowerCase() === 'xhigh') {
-    return 'XHigh';
+
+  const tokens = trimmed.split('-').filter(Boolean);
+  const labelTokens: string[] = [];
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i].toLowerCase();
+    if (token === 'extra' && tokens[i + 1]?.toLowerCase() === 'high') {
+      labelTokens.push('Extra High');
+      i += 1;
+      continue;
+    }
+    labelTokens.push(formatCursorModeToken(token));
   }
-  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+  return labelTokens.join(' ');
 }
