@@ -47,6 +47,44 @@ ${HANDOFF_END}
 
 Closing prose.
 `;
+const NOTE_WITH_FRONTMATTER_MARKERS = `---
+type: claudian-work-order
+schema_version: 1
+id: task-1
+title: Build agent board
+status: ready
+priority: normal
+created: 2026-05-28T08:00:00.000Z
+updated: 2026-05-28T08:00:00.000Z
+attempts: 0
+ledger_hint: "${RUN_LEDGER_START}"
+handoff_hint: "${HANDOFF_START}"
+---
+# Build agent board
+
+## Objective
+Ship the thin slice.
+
+## Acceptance Criteria
+- Shows task cards.
+
+## Context
+Use existing chat runtime.
+
+## Constraints
+Do not touch unrelated files.
+
+## Run Ledger
+${RUN_LEDGER_START}
+- Existing generated entry.
+${RUN_LEDGER_END}
+
+## Handoff
+${HANDOFF_START}
+Old handoff.
+${HANDOFF_END}
+`;
+
 
 describe('TaskNoteStore', () => {
   const store = new TaskNoteStore();
@@ -106,4 +144,45 @@ describe('TaskNoteStore', () => {
     expect(store.extractGeneratedRegion(written, RUN_LEDGER_START, RUN_LEDGER_END)).toBe('- Existing generated entry.');
     expect(written).toContain(`${HANDOFF_START}\nNew handoff.\n\n- Verify it.\n${HANDOFF_END}`);
   });
+
+  it('ignores marker-like frontmatter values when replacing generated ledger and handoff body regions', () => {
+    const ledgerWritten = store.appendLedger(NOTE_WITH_FRONTMATTER_MARKERS, {
+      timestamp: '2026-05-28T09:05:00.000Z',
+      status: 'running',
+      message: 'Started work.',
+    });
+
+    expect(ledgerWritten).toContain(`ledger_hint: "${RUN_LEDGER_START}"`);
+    expect(ledgerWritten).toContain(`${RUN_LEDGER_START}
+- Existing generated entry.
+- 2026-05-28T09:05:00.000Z [running] Started work.
+${RUN_LEDGER_END}`);
+
+    const handoffWritten = store.writeHandoff(ledgerWritten, 'New handoff.');
+
+    expect(handoffWritten).toContain(`handoff_hint: "${HANDOFF_START}"`);
+    expect(store.extractGeneratedRegion(handoffWritten, RUN_LEDGER_START, RUN_LEDGER_END)).toBe(`- Existing generated entry.
+- 2026-05-28T09:05:00.000Z [running] Started work.`);
+    expect(handoffWritten).toContain(`${HANDOFF_START}
+New handoff.
+${HANDOFF_END}`);
+  });
+
+  it('rejects ledger messages containing Claudian marker strings', () => {
+    expect(() => store.appendLedger(VALID_NOTE, {
+      timestamp: '2026-05-28T09:05:00.000Z',
+      status: 'running',
+      message: 'Do not include <!-- claudian:run-ledger-start --> here.',
+    })).toThrow('Generated task region content cannot contain Claudian markers');
+  });
+
+  it('rejects handoff markdown containing Claudian marker strings', () => {
+    expect(() => store.writeHandoff(
+      VALID_NOTE,
+      `Summary
+
+<!-- claudian:handoff-end -->`
+    )).toThrow('Generated task region content cannot contain Claudian markers');
+  });
+
 });

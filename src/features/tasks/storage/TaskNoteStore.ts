@@ -8,6 +8,8 @@ export const RUN_LEDGER_END = '<!-- claudian:run-ledger-end -->';
 export const HANDOFF_START = '<!-- claudian:handoff-start -->';
 export const HANDOFF_END = '<!-- claudian:handoff-end -->';
 
+const CLAUDIAN_MARKER_PREFIX = '<!-- claudian:';
+
 type WritableFrontmatter = TaskSpec['frontmatter'] & Record<string, unknown>;
 
 export interface ParsedTaskSpec extends Omit<TaskSpec, 'frontmatter'> {
@@ -89,6 +91,8 @@ export class TaskNoteStore {
   }
 
   appendLedger(content: string, entry: TaskLedgerEntry): string {
+    this.assertNoEmbeddedClaudianMarkers(entry.message);
+
     const currentLedger = this.extractGeneratedRegion(content, RUN_LEDGER_START, RUN_LEDGER_END);
     const nextLine = `- ${entry.timestamp} [${entry.status}] ${entry.message}`;
     const nextLedger = currentLedger.length > 0 ? `${currentLedger}\n${nextLine}` : nextLine;
@@ -96,17 +100,20 @@ export class TaskNoteStore {
   }
 
   writeHandoff(content: string, markdown: string): string {
+    this.assertNoEmbeddedClaudianMarkers(markdown);
+
     return this.replaceGeneratedRegion(content, HANDOFF_START, HANDOFF_END, markdown.trim());
   }
 
   extractGeneratedRegion(content: string, start: string, end: string): string {
-    const startIndex = content.indexOf(start);
-    const endIndex = content.indexOf(end, startIndex + start.length);
+    const body = this.splitFrontmatter(content).body;
+    const startIndex = body.indexOf(start);
+    const endIndex = body.indexOf(end, startIndex + start.length);
     if (startIndex === -1 || endIndex === -1) {
       return '';
     }
 
-    return content.slice(startIndex + start.length, endIndex).trim();
+    return body.slice(startIndex + start.length, endIndex).trim();
   }
 
   private extractSection(body: string, heading: string): string {
@@ -132,14 +139,34 @@ export class TaskNoteStore {
   }
 
   private replaceGeneratedRegion(content: string, start: string, end: string, markdown: string): string {
-    const startIndex = content.indexOf(start);
-    const endIndex = content.indexOf(end, startIndex + start.length);
+    const { prefix, body } = this.splitFrontmatter(content);
+    const startIndex = body.indexOf(start);
+    const endIndex = body.indexOf(end, startIndex + start.length);
     if (startIndex === -1 || endIndex === -1) {
       throw new Error('Missing generated region markers');
     }
 
     const replacement = `${start}\n${markdown.trim()}\n${end}`;
-    return `${content.slice(0, startIndex)}${replacement}${content.slice(endIndex + end.length)}`;
+    const nextBody = `${body.slice(0, startIndex)}${replacement}${body.slice(endIndex + end.length)}`;
+    return `${prefix}${nextBody}`;
+  }
+
+  private splitFrontmatter(content: string): { prefix: string; body: string } {
+    const parsed = parseFrontmatter(content);
+    if (!parsed) {
+      return { prefix: '', body: content };
+    }
+
+    return {
+      prefix: content.slice(0, content.length - parsed.body.length),
+      body: parsed.body,
+    };
+  }
+
+  private assertNoEmbeddedClaudianMarkers(markdown: string): void {
+    if (markdown.includes(CLAUDIAN_MARKER_PREFIX)) {
+      throw new Error('Generated task region content cannot contain Claudian markers');
+    }
   }
 
   private withFrontmatter(frontmatter: Record<string, unknown>, body: string): string {
