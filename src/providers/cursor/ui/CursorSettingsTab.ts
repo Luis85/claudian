@@ -7,9 +7,9 @@ import { t } from '../../../i18n/i18n';
 import type { TranslationKey } from '../../../i18n/types';
 import { getHostnameKey } from '../../../utils/env';
 import { expandHomePath, getVaultPath } from '../../../utils/path';
-import { formatCursorModelLabel } from '../modelLabels';
 import { buildCursorAgentEnvironment } from '../runtime/cursorAgentEnv';
 import { getCachedCursorModelIds, refreshCursorModelCatalog } from '../runtime/cursorModelCatalog';
+import { buildCursorFamilies, getCursorModelVariants } from '../runtime/cursorModelFamily';
 import {
   getCursorEnabledModels,
   getCursorProviderSettings,
@@ -149,9 +149,9 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
 
     const listEl = pickerEl.createDiv({ cls: 'claudian-cursor-model-picker-list' });
 
-    // Union of discovered ids and currently-enabled ids (so a stale enabled id
-    // can still be unchecked). `auto` is implicit and never listed here.
-    const getAllModelIds = (): string[] => {
+    // All discovered + currently-enabled raw ids (auto excluded). Source for the
+    // family grouping shown in the list.
+    const getAllRawIds = (): string[] => {
       const discovered = getCachedCursorModelIds().filter((id) => id !== 'auto');
       const enabled = getCursorEnabledModels(settingsBag).filter((id) => id !== 'auto');
       const seen = new Set<string>();
@@ -165,8 +165,28 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
       return result;
     };
 
-    const getVisibleModelIds = (): string[] =>
-      getAllModelIds().filter((id) => matchesCursorModelQuery(id, searchQuery));
+    const getAllFamilies = () =>
+      buildCursorFamilies(getAllRawIds()).filter((family) =>
+        matchesCursorModelQuery(family.familyId, searchQuery)
+        || matchesCursorModelQuery(family.label, searchQuery));
+
+    const enabledSet = (): Set<string> => new Set(getCursorEnabledModels(settingsBag));
+
+    // The raw ids that make up a family (bare id + its variant ids), restricted
+    // to what is actually discovered/enabled.
+    const familyMemberRawIds = (familyId: string): string[] => {
+      const all = getAllRawIds();
+      const variantValues = getCursorModelVariants(familyId, all).map((v) => v.value);
+      return all.filter((id) =>
+        id === familyId
+        || variantValues.some((mode) => mode !== 'standard' && id === `${familyId}-${mode}`));
+    };
+
+    // A family is enabled when any of its member raw ids is enabled.
+    const isFamilyEnabled = (familyId: string): boolean => {
+      const enabled = enabledSet();
+      return familyMemberRawIds(familyId).some((id) => enabled.has(id));
+    };
 
     const persistEnabledModels = async (ids: string[]): Promise<void> => {
       setCursorEnabledModels(settingsBag, ids);
@@ -175,20 +195,18 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
     };
 
     const renderCount = (): void => {
-      const total = getAllModelIds().length;
-      const selected = getCursorEnabledModels(settingsBag).filter((id) => id !== 'auto').length;
-      countEl.setText(`${selected} of ${total} selected`);
+      const families = buildCursorFamilies(getAllRawIds());
+      const selected = families.filter((family) => isFamilyEnabled(family.familyId)).length;
+      countEl.setText(`${selected} of ${families.length} families selected`);
     };
 
     const renderList = (): void => {
       listEl.empty();
-      const enabled = new Set(getCursorEnabledModels(settingsBag));
-      const visible = getVisibleModelIds();
+      const families = getAllFamilies();
 
-      if (visible.length === 0) {
+      if (families.length === 0) {
         const emptyEl = listEl.createDiv({ cls: 'claudian-cursor-model-picker-empty' });
-        const allIds = getAllModelIds();
-        if (allIds.length === 0) {
+        if (buildCursorFamilies(getAllRawIds()).length === 0) {
           emptyEl.setText('No models discovered yet. Set the Cursor CLI path above, then refresh the model list.');
         } else {
           emptyEl.setText('No models match your filter.');
@@ -196,17 +214,18 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
         return;
       }
 
-      for (const id of visible) {
+      for (const family of families) {
         const rowEl = listEl.createEl('label', { cls: 'claudian-cursor-model-picker-row' });
-        rowEl.title = id;
+        rowEl.title = family.familyId;
 
         const checkboxEl = rowEl.createEl('input', { type: 'checkbox' });
-        checkboxEl.checked = enabled.has(id);
+        checkboxEl.checked = isFamilyEnabled(family.familyId);
         checkboxEl.addEventListener('change', () => {
           const current = getCursorEnabledModels(settingsBag).filter((entry) => entry !== 'auto');
+          const members = new Set(familyMemberRawIds(family.familyId));
           const next = checkboxEl.checked
-            ? [...current, id]
-            : current.filter((entry) => entry !== id);
+            ? [...new Set([...current, ...members])]
+            : current.filter((entry) => !members.has(entry));
           void (async () => {
             await persistEnabledModels(next);
             renderCount();
@@ -216,11 +235,14 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
         const textEl = rowEl.createDiv({ cls: 'claudian-cursor-model-picker-row-text' });
         textEl.createDiv({
           cls: 'claudian-cursor-model-picker-row-name',
-          text: formatCursorModelLabel(id),
+          text: family.label,
         });
+        const modeHint = family.variants.length > 1
+          ? `${family.vendor} · ${family.variants.length} modes`
+          : family.vendor;
         textEl.createDiv({
           cls: 'claudian-cursor-model-picker-row-id',
-          text: id,
+          text: modeHint,
         });
       }
     };
@@ -236,18 +258,15 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
     });
 
     selectAllBtn.addEventListener('click', () => {
-      // Operate on the currently-visible (filtered) set, unioned with existing.
       const current = getCursorEnabledModels(settingsBag).filter((id) => id !== 'auto');
-      const next = [...current];
-      const seen = new Set(next);
-      for (const id of getVisibleModelIds()) {
-        if (!seen.has(id)) {
-          seen.add(id);
-          next.push(id);
+      const next = new Set(current);
+      for (const family of getAllFamilies()) {
+        for (const id of familyMemberRawIds(family.familyId)) {
+          next.add(id);
         }
       }
       void (async () => {
-        await persistEnabledModels(next);
+        await persistEnabledModels([...next]);
         renderAll();
       })();
     });
@@ -272,7 +291,11 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
       try {
         const ids = await refreshCursorModelCatalog(cliPath, env, cwd);
         if (announce) {
-          new Notice(`Discovered ${ids.length} Cursor model${ids.length === 1 ? '' : 's'}.`);
+          if (ids.length === 0) {
+            new Notice('Cursor returned no models. If you are not signed in, run `cursor-agent login`.', 6000);
+          } else {
+            new Notice(`Discovered ${ids.length} Cursor model${ids.length === 1 ? '' : 's'}.`);
+          }
         }
         renderAll();
       } catch {
