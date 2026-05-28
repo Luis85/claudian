@@ -74,6 +74,13 @@ export interface TabManagerInterface {
 
   /** Gets all tabs. */
   getAllTabs(): TabData[];
+
+  /** Creates a fresh, activated tab pinned to a provider/model for an Agent Board task run. */
+  createTaskRunTab(options: {
+    providerId: ProviderId;
+    model: string;
+    conversationId?: string | null;
+  }): Promise<TabData | null>;
 }
 
 /** Tab identifier type. */
