@@ -5,6 +5,7 @@ import {
   getCursorModelVariants,
   resolveCursorFamilyId,
 } from '@/providers/cursor/runtime/cursorModelFamily';
+
 import { REAL_CURSOR_MODEL_IDS } from '../../../../fixtures/providers/cursor/realCatalog';
 
 describe('cursorModelFamily against the real cursor-agent catalog', () => {
