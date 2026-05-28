@@ -1,4 +1,4 @@
-import { resolveCursorModelForCli } from '@/providers/cursor/runtime/cursorCliModel';
+import { resolveCursorModelForCli, resolveCursorModelSelectionForCli } from '@/providers/cursor/runtime/cursorCliModel';
 
 describe('resolveCursorModelForCli', () => {
   it('strips the cursor: prefix so the raw id reaches --model', () => {
@@ -27,5 +27,24 @@ describe('resolveCursorModelForCli', () => {
   it('returns undefined when only the prefix is present', () => {
     expect(resolveCursorModelForCli('cursor:')).toBeUndefined();
     expect(resolveCursorModelForCli('cursor:   ')).toBeUndefined();
+  });
+});
+
+describe('resolveCursorModelSelectionForCli', () => {
+  it('returns undefined for an empty model', () => {
+    expect(resolveCursorModelSelectionForCli(undefined, 'thinking')).toBeUndefined();
+  });
+
+  it('returns the bare family for the standard mode', () => {
+    expect(resolveCursorModelSelectionForCli('cursor:sonnet-4', 'standard')).toBe('sonnet-4');
+    expect(resolveCursorModelSelectionForCli('cursor:sonnet-4', undefined)).toBe('sonnet-4');
+  });
+
+  it('appends a curated-suffix mode even when not in cache', () => {
+    expect(resolveCursorModelSelectionForCli('cursor:sonnet-4', 'thinking')).toBe('sonnet-4-thinking');
+  });
+
+  it('passes auto through unchanged', () => {
+    expect(resolveCursorModelSelectionForCli('cursor:auto', 'thinking')).toBe('auto');
   });
 });
