@@ -182,7 +182,7 @@ export function resolveCursorVendor(familyId: string): string {
   if (/claude|sonnet|opus|haiku/.test(lower)) {
     return 'Anthropic';
   }
-  if (/^gpt|^o\d|kimi/.test(lower)) {
+  if (/^gpt|^o\d/.test(lower)) {
     return 'OpenAI';
   }
   if (/gemini/.test(lower)) {

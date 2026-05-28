@@ -24,6 +24,31 @@ describe('formatCursorModelLabel', () => {
   it('falls back to title-cased generic formatting', () => {
     expect(formatCursorModelLabel('some-new-model')).toBe('Some New Model');
   });
+
+  it('preserves dotted version numbers in generic labels', () => {
+    expect(formatCursorModelLabel('composer-2.5')).toBe('Composer 2.5');
+    expect(formatCursorModelLabel('kimi-k2.5')).toBe('Kimi K2.5');
+    expect(formatCursorModelLabel('grok-build-0.1')).toBe('Grok Build 0.1');
+  });
+
+  it('keeps the size variant for GPT family ids so labels stay distinct', () => {
+    expect(formatCursorModelLabel('gpt-5.4-mini')).toBe('GPT-5.4 Mini');
+    expect(formatCursorModelLabel('gpt-5.4-nano')).toBe('GPT-5.4 Nano');
+    expect(formatCursorModelLabel('gpt-5.1-codex-mini')).toBe('GPT-5.1 Codex Mini');
+    expect(formatCursorModelLabel('gpt-5.1-codex-max')).toBe('GPT-5.1 Codex Max');
+    expect(formatCursorModelLabel('gpt-5.3-codex')).toBe('GPT-5.3 Codex');
+  });
+
+  it('keeps the bare GPT version when there is no extra qualifier', () => {
+    expect(formatCursorModelLabel('gpt-5.1')).toBe('GPT-5.1');
+    expect(formatCursorModelLabel('gpt-5-mini')).toBe('GPT-5 Mini');
+  });
+
+  it('keeps the Gemini tier when present', () => {
+    expect(formatCursorModelLabel('gemini-3-flash')).toBe('Gemini 3 Flash');
+    expect(formatCursorModelLabel('gemini-3.5-flash')).toBe('Gemini 3.5 Flash');
+    expect(formatCursorModelLabel('gemini-3.1-pro')).toBe('Gemini 3.1 Pro');
+  });
 });
 
 describe('formatCursorModeLabel', () => {
