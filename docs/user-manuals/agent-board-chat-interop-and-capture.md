@@ -63,11 +63,10 @@ The page title (or first line) becomes the title. The selection is blockquoted i
 ## Promoting chat into work orders (interop)
 
 ### From a single chat message
-Hover a **user** message in the Claudian chat panel — a **Create work order** button (kanban icon) appears in the message toolbar.
+Hover an **agent** (assistant) message in the Claudian chat panel — a **Create work order** button (kanban icon) appears in the message toolbar. Capture the agent's reply (a plan, a summary, a proposed fix) as the thing you want to act on later.
 
-- The message text becomes the work order's **Objective**.
+- The agent's response text becomes the work order's **Objective**. (Tool-only turns with no prose have no button.)
 - The first line becomes the title.
-- The active note (if any) is linked in **Context** as `Source note: [[…]]`.
 - The chat **conversation id** is written to the work order's `conversation_id` — this is the durable link back to chat.
 - Lands in **`inbox`**.
 
@@ -124,13 +123,13 @@ If nothing is ready, you get a notice: *"No ready work orders to run."*
 | **Create work order from current chat conversation** | Promotes the active conversation; sets `conversation_id`. |
 | **Run next ready work order** | Runs the highest-priority, oldest `ready` work order. |
 
-Per-message **Create work order** button lives in the chat user-message toolbar (not the command palette).
+Per-message **Create work order** button lives in the chat agent-message toolbar (not the command palette).
 
 ---
 
 ## Typical flow
 
-1. While chatting, hit the **Create work order** button on a message you want to act on later → it lands in **`inbox`** with the conversation linked.
+1. While chatting, hit the **Create work order** button on an agent reply you want to act on later → it lands in **`inbox`** with the conversation linked.
 2. Open the board, review the `inbox` order, scope it, set priority, move it to **`ready`**.
 3. Click **Run next ready** — the board picks the top `ready` order and runs it in a free chat tab.
 4. From the work order's detail view, click **Open conversation** any time to jump back to the original chat.

@@ -144,6 +144,7 @@ function createMockDeps(overrides: Partial<InputControllerDeps> = {}): InputCont
         querySelector: jest.fn().mockReturnValue(createMockEl()),
       }),
       refreshActionButtons: jest.fn(),
+      refreshMessageActions: jest.fn(),
       removeMessage: jest.fn(),
       updateLiveUserMessage: jest.fn(),
     } as any,

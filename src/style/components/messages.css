@@ -215,6 +215,15 @@
   opacity: 1;
 }
 
+/* Assistant messages host the same toolbar (e.g. Create work order); anchor + reveal it. */
+.claudian-message-assistant {
+  position: relative;
+}
+
+.claudian-message-assistant:hover .claudian-user-msg-actions {
+  opacity: 1;
+}
+
 .claudian-user-msg-actions span {
   cursor: pointer;
   display: flex;

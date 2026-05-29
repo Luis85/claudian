@@ -58,6 +58,7 @@ import { setLocale } from './i18n/i18n';
 import type { Locale } from './i18n/types';
 import { OPENCODE_PLAN_MODE_ID, OPENCODE_SAFE_MODE_ID } from './providers/opencode/modes';
 import type { BrowserSelectionContext } from './utils/browser';
+import { chatMessageText } from './utils/chatMessageText';
 import { buildCursorContext } from './utils/editor';
 import { getEnhancedPath } from './utils/env';
 import { revealWorkspaceLeaf } from './utils/obsidianCompat';
@@ -198,7 +199,7 @@ export default class ClaudianPlugin extends Plugin {
       id: 'create-work-order-from-message',
       label: 'Create work order',
       icon: 'kanban-square',
-      isEligible: (msg) => msg.role === 'user' && Boolean(msg.content?.trim()),
+      isEligible: (msg) => msg.role === 'assistant' && Boolean(chatMessageText(msg)),
       run: (msg, conversationId) => {
         void chatWorkOrderLinker.promoteMessageToWorkOrder(msg, conversationId);
       },

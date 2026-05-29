@@ -112,6 +112,34 @@ describe('buildWorkOrderMarkdown', () => {
   });
 });
 
+describe('stripMarkdown (title normalization)', () => {
+  const strip = __taskCommandTestUtils.stripMarkdown;
+
+  it.each([
+    ['## Heading title', 'Heading title'],
+    ['### Heading ###', 'Heading'],
+    ['> quoted line', 'quoted line'],
+    ['- bullet item', 'bullet item'],
+    ['* star bullet', 'star bullet'],
+    ['1. first step', 'first step'],
+    ['- [ ] todo title', 'todo title'],
+    ['- [x] done title', 'done title'],
+    ['**Bold heading**', 'Bold heading'],
+    ['_emphasised_', 'emphasised'],
+    ['***strong emphasis***', 'strong emphasis'],
+    ['~~struck~~', 'struck'],
+    ['use `code` here', 'use code here'],
+    ['see [the docs](https://x.dev)', 'see the docs'],
+    ['look ![alt text](img.png)', 'look alt text'],
+    ['ref [[notes/parser|the parser]]', 'ref the parser'],
+    ['ref [[notes/parser]]', 'ref notes/parser'],
+    ['## **Bold** in a [heading](u)', 'Bold in a heading'],
+    ['plain text stays', 'plain text stays'],
+  ])('strips %p -> %p', (input, expected) => {
+    expect(strip(input)).toBe(expected);
+  });
+});
+
 describe('buildSelectionSeed', () => {
   it('blockquotes the selection, links the source, and lands in inbox', () => {
     const seed = __taskCaptureTestUtils.buildSelectionSeed({
@@ -123,6 +151,15 @@ describe('buildSelectionSeed', () => {
     expect(seed.contextMarkdown).toContain('Source note: [[notes/auth]]');
     expect(seed.contextMarkdown).toContain('> Fix the auth bug');
     expect(seed.contextMarkdown).toContain('> in the middleware');
+  });
+
+  it('strips markdown from the title but keeps it in the quoted body', () => {
+    const seed = __taskCaptureTestUtils.buildSelectionSeed({
+      selectionText: '## Refactor the **parser**\ninto smaller units',
+      sourcePath: 'notes/parser.md',
+    });
+    expect(seed.title).toBe('Refactor the parser');
+    expect(seed.contextMarkdown).toContain('> ## Refactor the **parser**');
   });
 });
 
@@ -154,6 +191,16 @@ describe('buildMessageSeed / buildConversationSeed', () => {
     expect(seed.conversationId).toBe('conv-9');
     expect(seed.contextMarkdown).toContain('Source note: [[notes/parser]]');
     expect(seed.contextMarkdown).toContain('Promoted from chat message.');
+  });
+
+  it('strips markdown from a message title while leaving the objective intact', () => {
+    const seed = __taskCaptureTestUtils.buildMessageSeed({
+      messageContent: '## Add focused tests\n\nThen wire CI.',
+      currentNote: null,
+      conversationId: 'conv-md',
+    });
+    expect(seed.title).toBe('Add focused tests');
+    expect(seed.objective).toBe('## Add focused tests\n\nThen wire CI.');
   });
 
   it('conversation seed links the conversation', () => {

@@ -560,6 +560,8 @@ export class InputController {
 
           const userMsgIndex = state.messages.indexOf(userMsg);
           renderer.refreshActionButtons(userMsg, state.messages, userMsgIndex >= 0 ? userMsgIndex : undefined);
+          // Surface the per-message work-order action on the just-completed agent response.
+          renderer.refreshMessageActions(finalAssistantMsg);
 
           // Auto-implement takes precedence over both approve-new-session and queued input
           if (planAutoSendContent) {

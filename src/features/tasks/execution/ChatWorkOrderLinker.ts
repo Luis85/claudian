@@ -2,6 +2,7 @@ import { Notice, type TFile } from 'obsidian';
 
 import type { ChatMessage } from '../../../core/types';
 import type ClaudianPlugin from '../../../main';
+import { chatMessageText } from '../../../utils/chatMessageText';
 import {
   buildConversationSeed,
   buildMessageSeed,
@@ -12,10 +13,15 @@ export class ChatWorkOrderLinker {
   constructor(private readonly plugin: ClaudianPlugin) {}
 
   async promoteMessageToWorkOrder(message: ChatMessage, conversationId: string | null): Promise<TFile | null> {
+    const messageContent = chatMessageText(message);
+    if (!messageContent) {
+      new Notice('Nothing to capture from this message.');
+      return null;
+    }
     const created = await createWorkOrderFromSeed(
       this.plugin,
       buildMessageSeed({
-        messageContent: message.content,
+        messageContent,
         currentNote: message.currentNote ?? null,
         conversationId,
       }),

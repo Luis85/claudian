@@ -372,6 +372,45 @@ function truncate(value: string, max: number): string {
   return trimmed.length > max ? `${trimmed.slice(0, max - 1)}…` : trimmed;
 }
 
+/**
+ * Reduce a single line of Markdown to plain text for use as a work-order title.
+ * Strips leading block markers (heading, blockquote, list, task checkbox) and
+ * common inline markers (emphasis, code, strikethrough, links, wikilinks, images)
+ * so a captured first line like `## Refactor the **parser**` titles as
+ * `Refactor the parser`.
+ */
+function stripMarkdown(line: string): string {
+  let text = line.trim();
+
+  // Leading block-level markers.
+  text = text.replace(/^>+\s*/, '');               // blockquote
+  text = text.replace(/^#{1,6}\s+/, '');           // ATX heading
+  text = text.replace(/\s+#+\s*$/, '');            // closing ATX hashes
+  text = text.replace(/^(?:[-*+]|\d+[.)])\s+/, ''); // unordered/ordered list marker
+  text = text.replace(/^\[[ xX]\]\s+/, '');        // task checkbox (after list marker)
+
+  // Inline markers.
+  text = text.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1'); // image -> alt
+  text = text.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');  // link -> label
+  text = text.replace(
+    /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,
+    (_match, target: string, alias?: string) => alias ?? target,
+  ); // wikilink -> alias or target
+  text = text.replace(/(\*\*\*|___)(.+?)\1/g, '$2');    // bold italic
+  text = text.replace(/(\*\*|__)(.+?)\1/g, '$2');       // bold
+  text = text.replace(/(\*|_)(.+?)\1/g, '$2');          // italic
+  text = text.replace(/~~(.+?)~~/g, '$1');              // strikethrough
+  text = text.replace(/`+([^`]+)`+/g, '$1');            // inline code
+
+  return text.trim();
+}
+
+/** First line of captured text, normalized to a plain-text title (Markdown stripped). */
+function titleFromFirstLine(text: string): string {
+  const firstLine = text.trim().split(/\r?\n/)[0] ?? '';
+  return stripMarkdown(firstLine);
+}
+
 function blockquote(text: string): string {
   return text
     .trim()
@@ -381,25 +420,23 @@ function blockquote(text: string): string {
 }
 
 export function buildSelectionSeed(args: { selectionText: string; sourcePath: string | null }): WorkOrderSeed {
-  const firstLine = args.selectionText.trim().split(/\r?\n/)[0] ?? '';
   const parts: string[] = [];
   if (args.sourcePath) parts.push(`Source note: [[${stripMarkdownExtension(args.sourcePath)}]]`);
   parts.push(blockquote(args.selectionText));
   return {
-    title: truncate(firstLine, 60) || 'Work order from selection',
+    title: truncate(titleFromFirstLine(args.selectionText), 60) || 'Work order from selection',
     contextMarkdown: parts.join('\n\n'),
     status: 'inbox',
   };
 }
 
 export function buildBrowserSeed(context: BrowserSelectionContext): WorkOrderSeed {
-  const firstLine = context.selectedText.trim().split(/\r?\n/)[0] ?? '';
   const parts: string[] = [blockquote(context.selectedText)];
   if (context.url) {
     parts.push(`Source: [${context.title?.trim() || context.url}](${context.url})`);
   }
   return {
-    title: truncate(context.title?.trim() || firstLine, 60) || 'Work order from browser',
+    title: truncate(context.title?.trim() || titleFromFirstLine(context.selectedText), 60) || 'Work order from browser',
     contextMarkdown: parts.join('\n\n'),
     status: 'inbox',
   };
@@ -419,12 +456,11 @@ export function buildMessageSeed(args: {
   currentNote: string | null;
   conversationId: string | null;
 }): WorkOrderSeed {
-  const firstLine = args.messageContent.trim().split(/\r?\n/)[0] ?? '';
   const parts: string[] = [];
   if (args.currentNote) parts.push(`Source note: [[${stripMarkdownExtension(args.currentNote)}]]`);
   parts.push('Promoted from chat message.');
   return {
-    title: truncate(firstLine, 60) || 'Work order from chat',
+    title: truncate(titleFromFirstLine(args.messageContent), 60) || 'Work order from chat',
     objective: args.messageContent.trim(),
     contextMarkdown: parts.join('\n\n'),
     conversationId: args.conversationId,
@@ -449,6 +485,7 @@ export const __taskCommandTestUtils = {
   buildWorkOrderFromTemplate,
   buildExampleTemplateMarkdown,
   slugifyTitle,
+  stripMarkdown,
 };
 
 export const __taskCaptureTestUtils = { buildSelectionSeed, buildBrowserSeed, buildMessageSeed, buildConversationSeed };

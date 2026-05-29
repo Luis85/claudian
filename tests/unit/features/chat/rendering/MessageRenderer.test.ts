@@ -1157,6 +1157,79 @@ describe('MessageRenderer', () => {
       btn!.click();
       expect(run).toHaveBeenCalledWith(msg, null);
     });
+
+    it('renders an action button on a stored assistant message and runs it on click', () => {
+      const messagesEl = createMockEl();
+      const { renderer, plugin } = createRenderer(messagesEl);
+      jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+      const run = jest.fn();
+      plugin.chatMessageActions.push({
+        id: 'wo', label: 'Create work order', icon: 'kanban-square',
+        isEligible: (m) => m.role === 'assistant', run,
+      });
+
+      const msg: ChatMessage = {
+        id: 'a1', role: 'assistant', content: '', timestamp: Date.now(),
+        contentBlocks: [{ type: 'text', content: 'Here is a plan you can act on.' } as any],
+      };
+      renderer.renderStoredMessage(msg);
+
+      const btn = messagesEl.querySelector('.claudian-user-msg-action-btn');
+      expect(btn).not.toBeNull();
+
+      btn!.click();
+      expect(run).toHaveBeenCalledWith(msg, null);
+    });
+
+    it('does not materialize an empty toolbar on assistant messages with no eligible action', () => {
+      const messagesEl = createMockEl();
+      const { renderer, plugin } = createRenderer(messagesEl);
+      jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+      // Action only eligible for messages that have prose text.
+      plugin.chatMessageActions.push({
+        id: 'wo', label: 'Create work order', icon: 'kanban-square',
+        isEligible: (m) => m.role === 'assistant' && Boolean(m.contentBlocks?.some((b: any) => b.type === 'text')),
+        run: jest.fn(),
+      });
+
+      const msg: ChatMessage = {
+        id: 'a-tool-only', role: 'assistant', content: '', timestamp: Date.now(),
+        toolCalls: [{ id: 'read-1', name: 'Read', input: { file_path: 'a.md' }, status: 'completed' } as any],
+        contentBlocks: [{ type: 'tool_use', toolId: 'read-1' } as any],
+      };
+      renderer.renderStoredMessage(msg);
+
+      expect(messagesEl.querySelector('.claudian-user-msg-actions')).toBeNull();
+      expect(messagesEl.querySelector('.claudian-user-msg-action-btn')).toBeNull();
+    });
+
+    it('refreshMessageActions adds the action button to a streamed assistant message', () => {
+      const messagesEl = createMockEl();
+      const { renderer, plugin } = createRenderer(messagesEl);
+
+      const run = jest.fn();
+      plugin.chatMessageActions.push({
+        id: 'wo', label: 'Create work order', icon: 'kanban-square',
+        isEligible: (m) => m.role === 'assistant', run,
+      });
+
+      const msg: ChatMessage = {
+        id: 'a-stream', role: 'assistant', content: '', timestamp: Date.now(),
+        contentBlocks: [{ type: 'text', content: 'Streamed response.' } as any],
+      };
+      // Simulate the streaming path: the assistant bubble exists, then the turn completes.
+      const msgEl = renderer.addMessage(msg);
+      // getMessageEl resolves via data-message-id in real DOM; the mock only matches classes.
+      jest.spyOn(renderer, 'getMessageEl').mockReturnValue(msgEl as any);
+      renderer.refreshMessageActions(msg);
+
+      const btn = messagesEl.querySelector('.claudian-user-msg-action-btn');
+      expect(btn).not.toBeNull();
+      btn!.click();
+      expect(run).toHaveBeenCalledWith(msg, null);
+    });
   });
 
   // ============================================
