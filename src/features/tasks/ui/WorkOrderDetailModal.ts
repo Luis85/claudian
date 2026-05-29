@@ -21,6 +21,7 @@ export interface WorkOrderDetailModalCallbacks {
   onAccept(task: TaskSpec): void;
   onRework(task: TaskSpec): void;
   onMarkReady(task: TaskSpec): void;
+  onRemove(task: TaskSpec): void;
   onSaveFields(task: TaskSpec, fields: WorkOrderFieldUpdate): void | Promise<void>;
   getProviderOptions(): WorkOrderOption[];
   getModelOptions(providerId: string): WorkOrderOption[];
@@ -202,6 +203,18 @@ export class WorkOrderDetailModal extends Modal {
           this.close();
           this.callbacks.onRework(task);
         }),
+      );
+    }
+
+    if (task.frontmatter.status === 'done') {
+      actions.addButton((btn) =>
+        btn
+          .setButtonText('Remove')
+          .setWarning()
+          .onClick(() => {
+            this.close();
+            this.callbacks.onRemove(task);
+          }),
       );
     }
   }

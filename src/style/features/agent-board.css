@@ -82,6 +82,48 @@
   gap: 6px;
 }
 
+.claudian-agent-board-card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.claudian-agent-board-status-badge {
+  flex: 0 0 auto;
+  font-size: var(--font-ui-smaller);
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--background-modifier-border);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.claudian-agent-board-status-badge--running {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.claudian-agent-board-status-badge--review,
+.claudian-agent-board-status-badge--needs_approval,
+.claudian-agent-board-status-badge--needs_input {
+  background: var(--background-modifier-success);
+  color: var(--text-normal);
+}
+
+.claudian-agent-board-status-badge--failed {
+  background: var(--background-modifier-error);
+  color: var(--text-error);
+}
+
+.claudian-agent-board-card--failed {
+  border-color: var(--text-error);
+}
+
+.claudian-agent-board-card--canceled {
+  opacity: 0.65;
+}
+
 .claudian-work-order-modal-meta {
   display: flex;
   flex-wrap: wrap;

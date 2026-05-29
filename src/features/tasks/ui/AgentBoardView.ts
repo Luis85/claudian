@@ -5,6 +5,7 @@ import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import { VIEW_TYPE_CLAUDIAN_AGENT_BOARD } from '../../../core/types/chat';
 import type ClaudianPlugin from '../../../main';
+import { confirmDelete } from '../../../shared/modals/ConfirmModal';
 import { createWorkOrder } from '../commands/taskCommands';
 import { getLaneForStatus, loadBoardConfig } from '../config/BoardConfigStore';
 import type { BoardConfig, ResolvedBoardLayout } from '../config/boardConfigTypes';
@@ -117,6 +118,7 @@ export class AgentBoardView extends ItemView {
       onAccept: (target) => void this.transitionTask(target, 'done', 'Accepted from review.'),
       onRework: (target) => void this.transitionTask(target, 'needs_fix', 'Sent back for rework.'),
       onMarkReady: (target) => void this.transitionTask(target, 'ready', 'Marked ready.'),
+      onRemove: (target) => void this.removeTask(target),
       onSaveFields: (target, fields) => this.saveTaskFields(target, fields),
       getProviderOptions: () =>
         ProviderRegistry.getEnabledProviderIds(settings).map((id) => ({ value: id, label: id })),
@@ -141,6 +143,19 @@ export class AgentBoardView extends ItemView {
 
   private async saveTaskFields(task: TaskSpec, fields: WorkOrderFieldUpdate): Promise<void> {
     await this.applyNoteChange(task.path, (content) => this.noteStore.writeFields(content, fields));
+    await this.refresh();
+  }
+
+  private async removeTask(task: TaskSpec): Promise<void> {
+    const ok = await confirmDelete(
+      this.plugin.app,
+      `Remove work order "${task.frontmatter.title}"? The note will be moved to trash.`,
+    );
+    if (!ok) return;
+    const file = this.plugin.app.vault.getAbstractFileByPath(task.path);
+    if (file instanceof TFile) {
+      await this.plugin.app.fileManager.trashFile(file);
+    }
     await this.refresh();
   }
 

@@ -1,4 +1,4 @@
-import type { ResolvedBoardLayout, ResolvedLane } from '../config/boardConfigTypes';
+import { DEFAULT_LANE_TITLES, type ResolvedBoardLayout, type ResolvedLane } from '../config/boardConfigTypes';
 import type { InvalidTaskNote, TaskSpec } from '../model/taskTypes';
 
 export interface AgentBoardRenderCallbacks {
@@ -65,8 +65,17 @@ export class AgentBoardRenderer {
   }
 
   private renderCard(parent: HTMLElement, task: TaskSpec, callbacks: AgentBoardRenderCallbacks): void {
+    const status = task.frontmatter.status;
     const card = parent.createDiv({ cls: 'claudian-agent-board-card' });
-    card.createDiv({ cls: 'claudian-agent-board-card-title', text: task.frontmatter.title });
+    if (status === 'failed') card.addClass('claudian-agent-board-card--failed');
+    else if (status === 'canceled') card.addClass('claudian-agent-board-card--canceled');
+
+    const titleRow = card.createDiv({ cls: 'claudian-agent-board-card-title-row' });
+    titleRow.createDiv({ cls: 'claudian-agent-board-card-title', text: task.frontmatter.title });
+    titleRow.createSpan({
+      cls: `claudian-agent-board-status-badge claudian-agent-board-status-badge--${status}`,
+      text: DEFAULT_LANE_TITLES[status],
+    });
 
     const meta = card.createDiv({ cls: 'claudian-agent-board-card-meta' });
     meta.createSpan({ text: `${task.frontmatter.provider ?? '—'} / ${task.frontmatter.model ?? '—'}` });
