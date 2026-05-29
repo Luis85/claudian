@@ -99,6 +99,16 @@
   border-radius: 6px;
 }
 
+.claudian-work-order-modal-handoff {
+  background: var(--background-secondary);
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.claudian-work-order-modal-handoff > :first-child {
+  margin-top: 0;
+}
+
 .claudian-agent-board-errors {
   flex: 0 0 auto;
   max-height: 25%;

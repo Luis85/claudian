@@ -1,4 +1,4 @@
-import { type App, type DropdownComponent, Modal, Setting } from 'obsidian';
+import { type App, Component, type DropdownComponent, MarkdownRenderer, Modal, Setting } from 'obsidian';
 
 import type { TaskPriority, TaskSpec } from '../model/taskTypes';
 
@@ -29,6 +29,8 @@ export interface WorkOrderDetailModalCallbacks {
 const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'normal', 'high', 'urgent'];
 
 export class WorkOrderDetailModal extends Modal {
+  private readonly markdownComponent = new Component();
+
   constructor(
     app: App,
     private readonly task: TaskSpec,
@@ -39,6 +41,7 @@ export class WorkOrderDetailModal extends Modal {
 
   onOpen(): void {
     const { task } = this;
+    this.markdownComponent.load();
     this.setTitle(task.frontmatter.title);
     this.modalEl.addClass('claudian-work-order-modal');
 
@@ -51,11 +54,22 @@ export class WorkOrderDetailModal extends Modal {
     this.renderSection('Objective', task.sections.objective);
     this.renderSection('Acceptance criteria', task.sections.acceptanceCriteria);
 
+    if (task.frontmatter.status === 'review' && task.sections.handoff.length > 0) {
+      this.renderHandoff(task.sections.handoff);
+    }
+
     this.renderActions();
   }
 
   onClose(): void {
+    this.markdownComponent.unload();
     this.contentEl.empty();
+  }
+
+  private renderHandoff(markdown: string): void {
+    this.contentEl.createEl('h4', { text: 'Handoff' });
+    const el = this.contentEl.createDiv({ cls: 'claudian-work-order-modal-handoff' });
+    void MarkdownRenderer.render(this.app, markdown, el, this.task.path, this.markdownComponent);
   }
 
   private renderReadOnlyMeta(): void {
@@ -129,8 +143,9 @@ export class WorkOrderDetailModal extends Modal {
     const { task } = this;
     const actions = new Setting(this.contentEl);
 
+    const editLabel = task.frontmatter.status === 'review' ? 'Open note' : 'Edit';
     actions.addButton((btn) =>
-      btn.setButtonText('Edit').onClick(() => {
+      btn.setButtonText(editLabel).onClick(() => {
         this.close();
         this.callbacks.onOpenNote(task);
       }),
