@@ -1,3 +1,6 @@
+---
+status: done
+---
 # Missing event bus makes expanding or integrating harder than it should be
 
 The Board and the chat panel do not emit events both modules can listen and react to. There is no decoupled pub/sub inside the plugin, so cross-feature coordination is wired as ad-hoc direct calls through the plugin (the composition root). Every new reaction means editing the emitter and adding another bespoke method — coupling grows with each feature.

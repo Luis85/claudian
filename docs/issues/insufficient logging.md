@@ -1,3 +1,6 @@
+---
+status: done
+---
 # Insufficient logging
 
 ## Problem

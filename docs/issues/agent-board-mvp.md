@@ -2,7 +2,7 @@
 type: claudian-issue
 id: issue-20260528-agent-board-mvp
 title: Agent Board MVP — optional Markdown workspace with visible sidepanel execution
-status: open
+status: done
 priority: high
 triage: ready-for-agent
 created: 2026-05-28
