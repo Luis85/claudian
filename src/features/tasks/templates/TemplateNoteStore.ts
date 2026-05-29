@@ -1,4 +1,5 @@
-import type { Vault } from 'obsidian';
+import type { App, Vault } from 'obsidian';
+import { TFile } from 'obsidian';
 
 import { extractString, parseFrontmatter } from '../../../utils/frontmatter';
 import type { TaskPriority } from '../model/taskTypes';
@@ -9,6 +10,28 @@ const VALID_PRIORITIES: ReadonlySet<TaskPriority> = new Set<TaskPriority>(['low'
 function fileBaseName(path: string): string {
   const file = path.split('/').pop() ?? path;
   return file.replace(/\.md$/i, '');
+}
+
+function normalizeFolder(folder: string): string {
+  return folder.replace(/^\/+|\/+$/g, '');
+}
+
+function slugify(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+export interface SaveTemplateInput {
+  name: string;
+  description?: string;
+  icon?: string;
+  provider?: string;
+  model?: string;
+  priority?: TaskPriority;
+  body: string;
 }
 
 export class TemplateNoteStore {
@@ -31,6 +54,7 @@ export class TemplateNoteStore {
       path,
       name: extractString(parsed.frontmatter, 'name') ?? fileBaseName(path),
       description: extractString(parsed.frontmatter, 'description'),
+      icon: extractString(parsed.frontmatter, 'icon'),
       provider: extractString(parsed.frontmatter, 'provider'),
       model: extractString(parsed.frontmatter, 'model'),
       priority,
@@ -39,7 +63,7 @@ export class TemplateNoteStore {
   }
 
   async list(vault: Vault, folder: string): Promise<{ templates: WorkOrderTemplate[]; warnings: string[] }> {
-    const normalized = folder.replace(/^\/+|\/+$/g, '');
+    const normalized = normalizeFolder(folder);
     const templates: WorkOrderTemplate[] = [];
     const warnings: string[] = [];
     const files = vault.getMarkdownFiles().filter((file) => file.path.startsWith(`${normalized}/`));
@@ -52,5 +76,56 @@ export class TemplateNoteStore {
     }
     templates.sort((a, b) => a.name.localeCompare(b.name));
     return { templates, warnings };
+  }
+
+  build(input: SaveTemplateInput): string {
+    const lines: string[] = [
+      '---',
+      'type: claudian-work-order-template',
+      'schema_version: 1',
+      `name: ${JSON.stringify(input.name)}`,
+    ];
+    if (input.description) lines.push(`description: ${JSON.stringify(input.description)}`);
+    if (input.icon) lines.push(`icon: ${JSON.stringify(input.icon)}`);
+    if (input.provider) lines.push(`provider: ${JSON.stringify(input.provider)}`);
+    if (input.model) lines.push(`model: ${JSON.stringify(input.model)}`);
+    if (input.priority) lines.push(`priority: ${input.priority}`);
+    lines.push('---', '', input.body.trim(), '');
+    return lines.join('\n');
+  }
+
+  getFilePathForName(folder: string, name: string): string {
+    const slug = slugify(name) || 'template';
+    return `${normalizeFolder(folder)}/${slug}.md`;
+  }
+
+  async save(
+    vault: Vault,
+    folder: string,
+    input: SaveTemplateInput,
+    originalPath?: string,
+  ): Promise<string> {
+    const content = this.build(input);
+    if (originalPath) {
+      const existing = vault.getAbstractFileByPath(originalPath);
+      if (existing instanceof TFile) {
+        await vault.modify(existing, content);
+        return originalPath;
+      }
+    }
+    const normalized = normalizeFolder(folder);
+    if (!vault.getAbstractFileByPath(normalized)) {
+      await vault.createFolder(normalized);
+    }
+    const filePath = this.getFilePathForName(normalized, input.name);
+    await vault.create(filePath, content);
+    return filePath;
+  }
+
+  async delete(app: App, path: string): Promise<void> {
+    const file = app.vault.getAbstractFileByPath(path);
+    if (file) {
+      await app.fileManager.trashFile(file);
+    }
   }
 }

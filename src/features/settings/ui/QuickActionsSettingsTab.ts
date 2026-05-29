@@ -12,6 +12,7 @@ export function renderQuickActionsSettingsTab(
     .setDesc(t('settings.quickActions.folder.desc'))
     .addText((text) => {
       text
+        // eslint-disable-next-line obsidianmd/ui/sentence-case -- folder name default, not prose.
         .setPlaceholder('Quick Actions')
         .setValue(plugin.settings.quickActionsFolder ?? 'Quick Actions')
         .onChange(async (value) => {

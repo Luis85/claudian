@@ -7,7 +7,7 @@ import {
   createWorkOrderFromSeed,
   type CreateWorkOrderOptions,
 } from '../commands/taskCommands';
-import { chooseWorkOrderTemplate } from './WorkOrderTemplateSuggest';
+import { chooseWorkOrderTemplate } from './WorkOrderTemplatePickerModal';
 
 export async function createWorkOrderInteractive(
   plugin: ClaudianPlugin,

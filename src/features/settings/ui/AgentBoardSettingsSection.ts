@@ -1,9 +1,10 @@
 import type { DropdownComponent } from 'obsidian';
-import { Setting } from 'obsidian';
+import { Notice, Setting } from 'obsidian';
 
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import type ClaudianPlugin from '../../../main';
+import { installPresetTemplates } from '../../tasks/templates/installPresetTemplates';
 import { renderAgentBoardLaneEditor } from '../../tasks/ui/AgentBoardLaneEditor';
 
 /**
@@ -73,6 +74,27 @@ export function renderAgentBoardSettingsSection(
 
   folderWarning = new Setting(container).setName('');
   refreshFolderWarning();
+
+  new Setting(container)
+    .setName('Common templates')
+    // eslint-disable-next-line obsidianmd/ui/sentence-case -- preset names match their picker labels verbatim.
+    .setDesc('Install the starter set (Bug fix, Feature, Refactor, Research spike, Documentation, Test backfill). Re-running skips any whose filename already exists.')
+    .addButton((btn) => {
+      btn.setButtonText('Install').onClick(async () => {
+        btn.setDisabled(true);
+        try {
+          const result = await installPresetTemplates(plugin);
+          const parts: string[] = [];
+          if (result.installed > 0) parts.push(`installed ${result.installed}`);
+          if (result.skipped > 0) parts.push(`skipped ${result.skipped} already present`);
+          new Notice(`Common work-order templates: ${parts.join(', ') || 'nothing to do'}.`);
+        } catch (error) {
+          new Notice(`Install failed: ${error instanceof Error ? error.message : String(error)}`);
+        } finally {
+          btn.setDisabled(false);
+        }
+      });
+    });
 
   new Setting(container)
     .setName('Archive folder')

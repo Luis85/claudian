@@ -48,6 +48,7 @@
 @import "./features/orchestrator-plan.css";
 @import "./features/orchestrator-goal-modal.css";
 @import "./features/quick-actions.css";
+@import "./features/work-order-templates.css";
 @import "./shared/lucide-icon-picker.css";
 @import "./features/empty-state.css";
 @import "./features/context-card.css";

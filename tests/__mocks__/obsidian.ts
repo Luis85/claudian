@@ -214,8 +214,8 @@ export class Modal {
 
   open = jest.fn();
   close = jest.fn();
-  onOpen = jest.fn();
-  onClose = jest.fn();
+  onOpen(): void {}
+  onClose(): void {}
 }
 
 export class SuggestModal extends Modal {

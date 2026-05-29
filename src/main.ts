@@ -48,6 +48,7 @@ import {
 } from './features/tasks/commands/taskCommands';
 import { ChatTabExecutionSurface } from './features/tasks/execution/ChatTabExecutionSurface';
 import { ChatWorkOrderLinker } from './features/tasks/execution/ChatWorkOrderLinker';
+import { installPresetTemplates } from './features/tasks/templates/installPresetTemplates';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
 import {
   createWorkOrderFromCurrentNoteInteractive,
@@ -182,6 +183,20 @@ export default class ClaudianPlugin extends Plugin {
       name: 'Create work-order template',
       callback: () => {
         void createWorkOrderTemplate(this);
+      },
+    });
+
+    this.addCommand({
+      id: 'install-common-work-order-templates',
+      name: 'Install common work-order templates',
+      callback: () => {
+        void (async () => {
+          const result = await installPresetTemplates(this);
+          const parts: string[] = [];
+          if (result.installed > 0) parts.push(`installed ${result.installed}`);
+          if (result.skipped > 0) parts.push(`skipped ${result.skipped} already present`);
+          new Notice(`Common work-order templates: ${parts.join(', ') || 'nothing to do'}.`);
+        })();
       },
     });
 

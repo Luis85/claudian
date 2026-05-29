@@ -4,6 +4,7 @@ export interface WorkOrderTemplate {
   path: string;
   name: string;
   description?: string;
+  icon?: string;
   provider?: string;
   model?: string;
   priority?: TaskPriority;

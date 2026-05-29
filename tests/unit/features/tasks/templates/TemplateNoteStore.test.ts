@@ -1,4 +1,5 @@
-import type { Vault } from 'obsidian';
+import type { App, Vault } from 'obsidian';
+import { TFile } from 'obsidian';
 
 import { TemplateNoteStore } from '../../../../../src/features/tasks/templates/TemplateNoteStore';
 
@@ -62,6 +63,160 @@ describe('TemplateNoteStore.parse', () => {
   it('rejects an unsupported schema_version', () => {
     const bad = TEMPLATE.replace('schema_version: 1', 'schema_version: 2');
     expect(() => store.parse('x.md', bad)).toThrow('Unsupported template schema_version');
+  });
+});
+
+describe('TemplateNoteStore icon parse', () => {
+  it('reads icon from frontmatter', () => {
+    const content = TEMPLATE.replace('name: Bug fix', 'name: Bug fix\nicon: bug');
+    const t = new TemplateNoteStore().parse('x.md', content);
+    expect(t.icon).toBe('bug');
+  });
+});
+
+describe('TemplateNoteStore.build', () => {
+  const store = new TemplateNoteStore();
+
+  it('round-trips all fields through parse', () => {
+    const md = store.build({
+      name: 'Bug fix',
+      description: 'Fix a defect.',
+      icon: 'bug',
+      provider: 'claude',
+      model: 'sonnet',
+      priority: 'high',
+      body: '# {{title}}\n\n## Objective\nFix it.',
+    });
+    const parsed = store.parse('x.md', md);
+    expect(parsed).toMatchObject({
+      name: 'Bug fix',
+      description: 'Fix a defect.',
+      icon: 'bug',
+      provider: 'claude',
+      model: 'sonnet',
+      priority: 'high',
+    });
+    expect(parsed.body).toContain('# {{title}}');
+    expect(parsed.body).toContain('## Objective');
+  });
+
+  it('omits optional fields when not provided', () => {
+    const md = store.build({ name: 'Plain', body: '# {{title}}' });
+    const parsed = store.parse('x.md', md);
+    expect(parsed.name).toBe('Plain');
+    expect(parsed.description).toBeUndefined();
+    expect(parsed.icon).toBeUndefined();
+    expect(parsed.provider).toBeUndefined();
+    expect(parsed.model).toBeUndefined();
+    expect(parsed.priority).toBeUndefined();
+  });
+});
+
+describe('TemplateNoteStore.getFilePathForName', () => {
+  const store = new TemplateNoteStore();
+
+  it('slugifies the name under the folder', () => {
+    expect(store.getFilePathForName('Agent Board/templates', 'Bug Fix!')).toBe('Agent Board/templates/bug-fix.md');
+  });
+
+  it('falls back to template when name is empty', () => {
+    expect(store.getFilePathForName('Agent Board/templates', '   ')).toBe('Agent Board/templates/template.md');
+  });
+
+  it('strips leading and trailing slashes from the folder', () => {
+    expect(store.getFilePathForName('/Agent Board/templates/', 'Bug')).toBe('Agent Board/templates/bug.md');
+  });
+});
+
+describe('TemplateNoteStore.save', () => {
+  it('creates a new note when originalPath is not provided', async () => {
+    const created: { path: string; content: string }[] = [];
+    const folderCreated: string[] = [];
+    const vault = {
+      getAbstractFileByPath: jest.fn(() => null),
+      createFolder: jest.fn(async (path: string) => { folderCreated.push(path); }),
+      create: jest.fn(async (path: string, content: string) => {
+        created.push({ path, content });
+        return { path };
+      }),
+      modify: jest.fn(),
+    } as unknown as Vault;
+
+    const path = await new TemplateNoteStore().save(vault, 'Agent Board/templates', {
+      name: 'Bug',
+      body: '# {{title}}',
+    });
+
+    expect(path).toBe('Agent Board/templates/bug.md');
+    expect(created).toHaveLength(1);
+    expect(created[0].path).toBe('Agent Board/templates/bug.md');
+    expect(created[0].content).toContain('claudian-work-order-template');
+    expect(folderCreated).toEqual(['Agent Board/templates']);
+    expect(vault.modify).not.toHaveBeenCalled();
+  });
+
+  it('modifies the existing note when originalPath is provided and exists', async () => {
+    const file = Object.assign(new TFile(), { path: 'Agent Board/templates/old.md' });
+    const vault = {
+      getAbstractFileByPath: jest.fn(() => file),
+      createFolder: jest.fn(),
+      create: jest.fn(),
+      modify: jest.fn(),
+    } as unknown as Vault;
+
+    const path = await new TemplateNoteStore().save(
+      vault,
+      'Agent Board/templates',
+      { name: 'Bug', body: '# {{title}}' },
+      'Agent Board/templates/old.md',
+    );
+
+    expect(path).toBe('Agent Board/templates/old.md');
+    expect(vault.modify).toHaveBeenCalledTimes(1);
+    expect(vault.create).not.toHaveBeenCalled();
+  });
+
+  it('creates when originalPath is provided but the file is missing', async () => {
+    const vault = {
+      getAbstractFileByPath: jest.fn(() => null),
+      createFolder: jest.fn(),
+      create: jest.fn(async (path: string) => ({ path })),
+      modify: jest.fn(),
+    } as unknown as Vault;
+
+    const path = await new TemplateNoteStore().save(
+      vault,
+      'Agent Board/templates',
+      { name: 'Bug', body: '# {{title}}' },
+      'Agent Board/templates/old.md',
+    );
+
+    expect(path).toBe('Agent Board/templates/bug.md');
+    expect(vault.create).toHaveBeenCalledTimes(1);
+    expect(vault.modify).not.toHaveBeenCalled();
+  });
+});
+
+describe('TemplateNoteStore.delete', () => {
+  it('trashes the file when it exists', async () => {
+    const file = { path: 'Agent Board/templates/old.md' };
+    const trashFile = jest.fn();
+    const app = {
+      vault: { getAbstractFileByPath: jest.fn(() => file) },
+      fileManager: { trashFile },
+    } as unknown as App;
+    await new TemplateNoteStore().delete(app, 'Agent Board/templates/old.md');
+    expect(trashFile).toHaveBeenCalledWith(file);
+  });
+
+  it('is a no-op when the file is missing', async () => {
+    const trashFile = jest.fn();
+    const app = {
+      vault: { getAbstractFileByPath: jest.fn(() => null) },
+      fileManager: { trashFile },
+    } as unknown as App;
+    await new TemplateNoteStore().delete(app, 'Agent Board/templates/missing.md');
+    expect(trashFile).not.toHaveBeenCalled();
   });
 });
 

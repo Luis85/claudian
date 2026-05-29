@@ -63,7 +63,7 @@ export class QuickActionEditorModal extends Modal {
       .addTextArea((area) => {
         area.setValue(prompt).onChange((v) => { prompt = v; });
         area.inputEl.rows = 10;
-        area.inputEl.style.width = '100%';
+        area.inputEl.addClass('claudian-quick-action-prompt-input');
       });
 
     new Setting(this.contentEl)
