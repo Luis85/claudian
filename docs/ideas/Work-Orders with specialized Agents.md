@@ -1,0 +1,1 @@
+Work-Orders gain the ability to have agent definitions assigned. If the provider supports agents, the user can also attach an agent definition to a work-order to further specialize the task execution.
