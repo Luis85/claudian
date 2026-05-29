@@ -43,14 +43,17 @@ import { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
 import { type InlineEditContext, InlineEditModal } from './features/inline-edit/ui/InlineEditModal';
 import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
 import {
-  createWorkOrder,
   createWorkOrderFromBrowserSelection,
-  createWorkOrderFromCurrentNote,
-  createWorkOrderFromSelection,
+  createWorkOrderTemplate,
 } from './features/tasks/commands/taskCommands';
 import { ChatTabExecutionSurface } from './features/tasks/execution/ChatTabExecutionSurface';
 import { ChatWorkOrderLinker } from './features/tasks/execution/ChatWorkOrderLinker';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
+import {
+  createWorkOrderFromCurrentNoteInteractive,
+  createWorkOrderFromSelectionInteractive,
+  createWorkOrderInteractive,
+} from './features/tasks/ui/createWorkOrderInteractive';
 import { setLocale } from './i18n/i18n';
 import type { Locale } from './i18n/types';
 import { OPENCODE_PLAN_MODE_ID, OPENCODE_SAFE_MODE_ID } from './providers/opencode/modes';
@@ -153,7 +156,7 @@ export default class ClaudianPlugin extends Plugin {
       id: 'create-work-order',
       name: 'Create work order',
       callback: () => {
-        void createWorkOrder(this);
+        void createWorkOrderInteractive(this);
       },
     });
 
@@ -161,7 +164,7 @@ export default class ClaudianPlugin extends Plugin {
       id: 'create-work-order-from-current-note',
       name: 'Create work order from current note',
       callback: () => {
-        void createWorkOrderFromCurrentNote(this);
+        void createWorkOrderFromCurrentNoteInteractive(this);
       },
     });
 
@@ -169,7 +172,15 @@ export default class ClaudianPlugin extends Plugin {
       id: 'create-work-order-from-selection',
       name: 'Create work order from selection',
       editorCallback: () => {
-        void createWorkOrderFromSelection(this);
+        void createWorkOrderFromSelectionInteractive(this);
+      },
+    });
+
+    this.addCommand({
+      id: 'create-work-order-template',
+      name: 'Create work-order template',
+      callback: () => {
+        void createWorkOrderTemplate(this);
       },
     });
 
@@ -232,7 +243,7 @@ export default class ClaudianPlugin extends Plugin {
               .setTitle('Create work order')
               .setIcon('kanban-square')
               .onClick(() => {
-                void createWorkOrder(this, file);
+                void createWorkOrderInteractive(this, file);
               });
           });
         } else if (file instanceof TFolder) {
@@ -249,7 +260,7 @@ export default class ClaudianPlugin extends Plugin {
               .setTitle('Create work order')
               .setIcon('kanban-square')
               .onClick(() => {
-                void createWorkOrder(this, file);
+                void createWorkOrderInteractive(this, file);
               });
           });
         }
@@ -264,7 +275,7 @@ export default class ClaudianPlugin extends Plugin {
             .setTitle('Create work order from selection')
             .setIcon('kanban-square')
             .onClick(() => {
-              void createWorkOrderFromSelection(this);
+              void createWorkOrderFromSelectionInteractive(this);
             });
         });
       })
