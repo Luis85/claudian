@@ -18,7 +18,7 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
   const persist = async (): Promise<void> => {
     plugin.settings.agentBoardConfig = config;
     await plugin.saveSettings();
-    plugin.refreshAgentBoards();
+    plugin.events.emit('task:board-config-changed');
   };
 
   const swap = (a: number, b: number): void => {

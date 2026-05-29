@@ -1,5 +1,6 @@
 import { createMockEl } from '@test/helpers/mockElement';
 
+import { EventBus } from '@/core/events/EventBus';
 import { ProviderWorkspaceRegistry } from '@/core/providers/ProviderWorkspaceRegistry';
 import { TabManager } from '@/features/chat/tabs/TabManager';
 import {
@@ -120,11 +121,11 @@ function createMockPlugin(overrides: Record<string, any> = {}): any {
       maxTabs: DEFAULT_MAX_TABS,
       ...(overrides.settings || {}),
     },
+    events: new EventBus<any>(),
     getConversationById: jest.fn().mockResolvedValue(null),
     getConversationSync: jest.fn().mockReturnValue(null),
     getConversationList: jest.fn().mockReturnValue([]),
     findConversationAcrossViews: jest.fn().mockReturnValue(null),
-    refreshAgentBoardSlots: jest.fn(),
     ...overrides,
   };
 }
@@ -504,6 +505,22 @@ describe('TabManager - Tab Lifecycle', () => {
       // Should switch to tab-2 (previous tab)
       expect(manager.getActiveTabId()).toBe(tab2!.id);
     });
+  });
+
+  it('emits chat:tabs-changed when a tab is created and closed', async () => {
+    const plugin = createMockPlugin();
+    const manager = new TabManager(plugin, createMockMcpManager(), createMockEl(), createMockView(), {});
+    const counts: number[] = [];
+    plugin.events.on('chat:tabs-changed', (p: { openCount: number }) => counts.push(p.openCount));
+
+    // Create two tabs so the first can be closed (closing the sole blank tab is a no-op).
+    const tab = await manager.createTab(undefined, undefined, { activate: false });
+    await manager.createTab(undefined, undefined, { activate: false });
+    expect(counts.length).toBeGreaterThanOrEqual(1);
+    if (tab) {
+      await manager.closeTab(tab.id, true);
+    }
+    expect(counts[counts.length - 1]).toBe(1);
   });
 });
 
