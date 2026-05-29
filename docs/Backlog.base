@@ -7,6 +7,8 @@ views:
     order:
       - file.name
       - status
+    columnSize:
+      file.name: 353
   - type: table
     name: Specs
     filters:
