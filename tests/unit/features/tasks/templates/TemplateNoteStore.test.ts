@@ -58,6 +58,11 @@ describe('TemplateNoteStore.parse', () => {
   it('rejects a non-template type', () => {
     expect(() => store.parse('x.md', WRONG_TYPE)).toThrow('Invalid template type');
   });
+
+  it('rejects an unsupported schema_version', () => {
+    const bad = TEMPLATE.replace('schema_version: 1', 'schema_version: 2');
+    expect(() => store.parse('x.md', bad)).toThrow('Unsupported template schema_version');
+  });
 });
 
 describe('TemplateNoteStore.list', () => {

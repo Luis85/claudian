@@ -4,7 +4,7 @@ import { extractString, parseFrontmatter } from '../../../utils/frontmatter';
 import type { TaskPriority } from '../model/taskTypes';
 import type { WorkOrderTemplate } from './templateTypes';
 
-const VALID_PRIORITIES: ReadonlySet<string> = new Set(['low', 'normal', 'high', 'urgent']);
+const VALID_PRIORITIES: ReadonlySet<TaskPriority> = new Set<TaskPriority>(['low', 'normal', 'high', 'urgent']);
 
 function fileBaseName(path: string): string {
   const file = path.split('/').pop() ?? path;
@@ -25,7 +25,7 @@ export class TemplateNoteStore {
     }
 
     const rawPriority = extractString(parsed.frontmatter, 'priority');
-    const priority = rawPriority && VALID_PRIORITIES.has(rawPriority) ? (rawPriority as TaskPriority) : undefined;
+    const priority = rawPriority && VALID_PRIORITIES.has(rawPriority as TaskPriority) ? (rawPriority as TaskPriority) : undefined;
 
     return {
       path,
