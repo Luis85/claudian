@@ -15,6 +15,8 @@ Core modules stay provider-neutral. Features depend on `core/`; providers implem
 |--------|---------|-----------|
 | `bootstrap/` | Provider-neutral session metadata storage and shared app-storage contracts | `SessionStorage`, `storage.ts` |
 | `commands/` | Built-in cross-provider commands | `builtInCommands` |
+| `events/` | Typed in-process event bus (synchronous, error-isolated, optional error sink) | `EventBus` |
+| `logging/` | Leveled, namespaced diagnostic logger: console + bounded ring buffer, secret redaction | `Logger`, `types`, `redact`, `consoleSink`, `formatLogEntries` |
 | `mcp/` | Provider-neutral MCP coordination and config parsing | `McpConfigParser`, `McpServerManager`, `McpTester`, `McpStorageAdapter` |
 | `prompt/` | Shared prompt templates | `mainAgent`, `inlineEdit`, `titleGeneration`, `instructionRefine` |
 | `providers/` | Registry, capability, environment, and workspace-service contracts | `ProviderRegistry`, `ProviderWorkspaceRegistry`, `ProviderSettingsCoordinator`, `providerEnvironment`, `providerConfig`, `modelRouting`, `types` |
@@ -82,3 +84,5 @@ const cliResolver = ProviderWorkspaceRegistry.getCliResolver(providerId);
 - Command discovery differs by provider
   - Claude merges runtime-discovered commands with vault commands and skills
   - Codex skill discovery comes from `CodexSkillCatalog` and does not depend on runtime command discovery
+- Logging: never use `console.*` in `src/` (the `no-console` lint rule forbids it; the only sanctioned site is `logging/consoleSink.ts`). Log through `plugin.logger.scope('area')`. Guard expensive arg building with `logger.isEnabled('debug')` on hot paths.
+  - **Redaction contract:** `Logger` redacts every arg before it reaches the console or the ring buffer. Object keys matching `/(token|key|secret|password|credential|api[-_]?key|authorization|cookie)/i` are masked to `[redacted]` (deep, non-mutating). Never log `.env*` contents, provider configs, or private keys. Log prompt/transcript bodies only at `debug`, truncated.
