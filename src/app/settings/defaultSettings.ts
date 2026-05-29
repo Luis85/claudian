@@ -51,6 +51,7 @@ export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
   chatViewPlacement: 'right-sidebar',
 
   agentBoardWorkOrderFolder: 'Agent Board/tasks',
+  agentBoardTemplateFolder: 'Agent Board/templates',
   agentBoardArchiveFolder: 'Agent Board/archive',
   agentBoardDefaultProvider: 'codex',
   agentBoardDefaultModel: '',

@@ -151,6 +151,7 @@ export interface ClaudianSettings {
 
   // Agent Board
   agentBoardWorkOrderFolder: string;
+  agentBoardTemplateFolder: string;
   agentBoardArchiveFolder: string;
   agentBoardDefaultProvider: string;
   agentBoardDefaultModel: string;
