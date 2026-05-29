@@ -1,13 +1,20 @@
 views:
   - type: table
-    name: Ideas
+    name: Plans
     filters:
       and:
-        - file.inFolder("docs/ideas")
+        - file.inFolder("docs/superpowers/plans")
     order:
       - file.name
-    columnSize:
-      file.name: 359
+      - status
+  - type: table
+    name: Specs
+    filters:
+      and:
+        - file.inFolder("docs/superpowers/specs")
+    order:
+      - file.name
+      - status
   - type: table
     name: Issues
     filters:
@@ -21,18 +28,11 @@ views:
     columnSize:
       file.name: 462
   - type: table
-    name: Specs
+    name: Ideas
     filters:
       and:
-        - file.inFolder("docs/superpowers/specs")
+        - file.inFolder("docs/ideas")
     order:
       - file.name
-      - status
-  - type: table
-    name: Plans
-    filters:
-      and:
-        - file.inFolder("docs/superpowers/plans")
-    order:
-      - file.name
-      - status
+    columnSize:
+      file.name: 359
