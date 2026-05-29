@@ -1,3 +1,4 @@
+import type { TaskPriority } from '../../../../../src/features/tasks/model/taskTypes';
 import {
   buildTemplateChoices,
   buildTemplateVars,
@@ -7,7 +8,6 @@ import {
   resolveProviderModel,
 } from '../../../../../src/features/tasks/templates/templateResolution';
 import type { WorkOrderTemplate } from '../../../../../src/features/tasks/templates/templateTypes';
-import type { TaskPriority } from '../../../../../src/features/tasks/model/taskTypes';
 
 const tpl = (over: Partial<WorkOrderTemplate> = {}): WorkOrderTemplate => ({
   path: 'Agent Board/templates/t.md',

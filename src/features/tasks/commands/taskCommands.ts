@@ -1,8 +1,8 @@
 import { normalizePath, Notice, TFile, TFolder } from 'obsidian';
 
-import type ClaudianPlugin from '../../../main';
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
+import type ClaudianPlugin from '../../../main';
 import type { BrowserSelectionContext } from '../../../utils/browser';
 import type { TaskPriority, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { HANDOFF_END, HANDOFF_START, RUN_LEDGER_END, RUN_LEDGER_START } from '../storage/TaskNoteStore';
