@@ -71,8 +71,7 @@ export class AgentBoardView extends ItemView {
     const { config, errors } = loadBoardConfig(settings);
     this.config = config;
     const layout = resolveBoardLayout(config, this.model);
-    layout.errors = [...errors, ...layout.errors];
-    this.layout = layout;
+    this.layout = { ...layout, errors: [...errors, ...layout.errors] };
     this.render();
   }
 
@@ -154,7 +153,7 @@ export class AgentBoardView extends ItemView {
       const { task } = this.noteStore.parse(created.path, content);
       this.openDetail(task);
     } catch {
-      // A freshly created note is well-formed; ignore parse failures defensively.
+      // Best-effort: ignore a vault read or parse failure; the board already refreshed.
     }
   }
 

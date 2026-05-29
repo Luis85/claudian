@@ -87,14 +87,14 @@ export class WorkOrderDetailModal extends Modal {
     });
 
     let modelDropdown: DropdownComponent | null = null;
-    const populateModels = (providerId: string): void => {
+    const populateModels = (providerId: string, resetSelection = false): void => {
       if (!modelDropdown) return;
       modelDropdown.selectEl.empty();
       modelDropdown.addOption('', 'Provider default');
       for (const option of this.callbacks.getModelOptions(providerId)) {
         modelDropdown.addOption(option.value, option.label);
       }
-      modelDropdown.setValue(task.frontmatter.model ?? '');
+      modelDropdown.setValue(resetSelection ? '' : (task.frontmatter.model ?? ''));
     };
 
     new Setting(this.contentEl).setName('Provider').addDropdown((dropdown) => {
@@ -104,7 +104,7 @@ export class WorkOrderDetailModal extends Modal {
       dropdown.setValue(task.frontmatter.provider ?? '');
       dropdown.onChange((value) => {
         void this.callbacks.onSaveFields(task, { provider: value, model: '' });
-        populateModels(value);
+        populateModels(value, true);
       });
     });
 
