@@ -50,8 +50,6 @@ export class WorkOrderDetailModal extends Modal {
 
     this.renderSection('Objective', task.sections.objective);
     this.renderSection('Acceptance criteria', task.sections.acceptanceCriteria);
-    this.renderSection('Run ledger', task.sections.ledger);
-    this.renderSection('Handoff', task.sections.handoff);
 
     this.renderActions();
   }
@@ -132,7 +130,7 @@ export class WorkOrderDetailModal extends Modal {
     const actions = new Setting(this.contentEl);
 
     actions.addButton((btn) =>
-      btn.setButtonText('Open note').onClick(() => {
+      btn.setButtonText('Edit').onClick(() => {
         this.close();
         this.callbacks.onOpenNote(task);
       }),
