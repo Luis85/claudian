@@ -344,7 +344,7 @@ export class InputController {
     state.hasPendingConversationSave = true;
     renderer.addMessage(userMsg);
 
-    await this.triggerTitleGeneration();
+    const deferredAiTitleGeneration = await this.triggerTitleGeneration();
 
     const assistantMsg: ChatMessage = {
       id: this.deps.generateId(),
@@ -384,6 +384,7 @@ export class InputController {
         state.isStreaming = false;
         this.activeStreamingAssistantMessage = null;
         this.resetProviderMessageBoundaryState();
+        deferredAiTitleGeneration?.();
         return;
       }
     }
@@ -393,6 +394,7 @@ export class InputController {
       new Notice('Agent service not available. Please reload the plugin.');
       this.activeStreamingAssistantMessage = null;
       this.resetProviderMessageBoundaryState();
+      deferredAiTitleGeneration?.();
       return;
     }
 
@@ -590,6 +592,7 @@ export class InputController {
 
       this.activeStreamingAssistantMessage = null;
       this.resetProviderMessageBoundaryState();
+      deferredAiTitleGeneration?.();
     }
 
     return programmaticResult;
@@ -1164,11 +1167,11 @@ export class InputController {
    * Triggers AI title generation after first user message.
    * Handles setting fallback title, firing async generation, and updating UI.
    */
-  private async triggerTitleGeneration(): Promise<void> {
+  private async triggerTitleGeneration(): Promise<(() => void) | null> {
     const { plugin, state, conversationController } = this.deps;
 
     if (state.messages.length !== 1) {
-      return;
+      return null;
     }
 
     if (!state.currentConversationId) {
@@ -1188,7 +1191,7 @@ export class InputController {
     const firstUserMsg = state.messages.find(m => m.role === 'user');
 
     if (!firstUserMsg) {
-      return;
+      return null;
     }
 
     const userContent = firstUserMsg.displayContent || firstUserMsg.content;
@@ -1198,14 +1201,14 @@ export class InputController {
     await plugin.renameConversation(state.currentConversationId, fallbackTitle);
 
     if (!plugin.settings.enableAutoTitleGeneration) {
-      return;
+      return null;
     }
 
     // Fire async AI title generation only if service available
     const titleService = this.deps.getTitleGenerationService();
     if (!titleService) {
       // No titleService, just keep the fallback title with no status
-      return;
+      return null;
     }
 
     // Mark as pending only when we're actually starting generation
@@ -1215,32 +1218,34 @@ export class InputController {
     const convId = state.currentConversationId;
     const expectedTitle = fallbackTitle; // Store to check if user renamed during generation
 
-    titleService.generateTitle(
-      convId,
-      userContent,
-      async (conversationId, result) => {
-        // Check if conversation still exists and user hasn't manually renamed
-        const currentConv = await plugin.getConversationById(conversationId);
-        if (!currentConv) return;
+    return () => {
+      titleService.generateTitle(
+        convId,
+        userContent,
+        async (conversationId, result) => {
+          // Check if conversation still exists and user hasn't manually renamed
+          const currentConv = await plugin.getConversationById(conversationId);
+          if (!currentConv) return;
 
-        // Only apply AI title if user hasn't manually renamed (title still matches fallback)
-        const userManuallyRenamed = currentConv.title !== expectedTitle;
+          // Only apply AI title if user hasn't manually renamed (title still matches fallback)
+          const userManuallyRenamed = currentConv.title !== expectedTitle;
 
-        if (result.success && !userManuallyRenamed) {
-          await plugin.renameConversation(conversationId, result.title);
-          await plugin.updateConversation(conversationId, { titleGenerationStatus: 'success' });
-        } else if (!userManuallyRenamed) {
-          // Keep fallback title, mark as failed (only if user hasn't renamed)
-          await plugin.updateConversation(conversationId, { titleGenerationStatus: 'failed' });
-        } else {
-          // User manually renamed, clear the status (user's choice takes precedence)
-          await plugin.updateConversation(conversationId, { titleGenerationStatus: undefined });
-        }
-        conversationController.updateHistoryDropdown();
-      }
-    ).catch(() => {
-      // Silently ignore title generation errors
-    });
+          if (result.success && !userManuallyRenamed) {
+            await plugin.renameConversation(conversationId, result.title);
+            await plugin.updateConversation(conversationId, { titleGenerationStatus: 'success' });
+          } else if (!userManuallyRenamed) {
+            // Keep fallback title, mark as failed (only if user hasn't renamed)
+            await plugin.updateConversation(conversationId, { titleGenerationStatus: 'failed' });
+          } else {
+            // User manually renamed, clear the status (user's choice takes precedence)
+            await plugin.updateConversation(conversationId, { titleGenerationStatus: undefined });
+          }
+          conversationController.updateHistoryDropdown();
+        },
+      ).catch(() => {
+        // Silently ignore title generation errors
+      });
+    };
   }
 
   // ============================================

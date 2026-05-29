@@ -3,7 +3,9 @@ import { spawn } from 'child_process';
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type ClaudianPlugin from '../../../main';
 import { getVaultPath } from '../../../utils/path';
+import { acquireCursorAgentSpawnLock } from './cursorAgentSpawnLock';
 import { buildCursorAgentEnvironment } from './cursorAgentEnv';
+import { resolveCursorCliPromptArg } from './cursorCliPrompt';
 import { resolveCursorModelForCli } from './cursorCliModel';
 import { resolveCursorLaunch } from './cursorLaunch';
 import { buildCursorAgentJsonModeFlagArgs, type CursorPermissionMode } from './cursorLaunchArgs';
@@ -53,14 +55,23 @@ export class CursorAuxCliRunner {
     const fullPrompt = config.systemPrompt
       ? `${config.systemPrompt}\n\n${prompt}`
       : prompt;
+    const { arg: promptArg, cleanup: cleanupPromptFile } = resolveCursorCliPromptArg(fullPrompt);
 
     const env = buildCursorAgentEnvironment(this.plugin);
-    const { stdout, stderr, code, signal } = await this.spawnOnce(
-      cli,
-      [...flagArgs, fullPrompt],
-      { cwd: workspaceDir, env },
-      config.abortController?.signal,
-    );
+    let stdout = '';
+    let stderr = '';
+    let code: number | null = null;
+    let signal: NodeJS.Signals | null = null;
+    try {
+      ({ stdout, stderr, code, signal } = await this.spawnOnce(
+        cli,
+        [...flagArgs, promptArg],
+        { cwd: workspaceDir, env },
+        config.abortController?.signal,
+      ));
+    } finally {
+      cleanupPromptFile?.();
+    }
 
     if (signal === 'SIGTERM' || config.abortController?.signal.aborted) {
       throw new Error('Cancelled');
@@ -102,13 +113,15 @@ export class CursorAuxCliRunner {
     return typeof m === 'string' && m.trim() ? m.trim() : undefined;
   }
 
-  private spawnOnce(
+  private async spawnOnce(
     command: string,
     args: string[],
     options: { cwd: string; env: Record<string, string> },
     signal?: AbortSignal,
   ): Promise<{ stdout: string; stderr: string; code: number | null; signal: NodeJS.Signals | null }> {
-    return new Promise((resolve, reject) => {
+    const releaseSpawnLock = await acquireCursorAgentSpawnLock();
+    try {
+      return await new Promise((resolve, reject) => {
       const launch = resolveCursorLaunch(command, args);
       const child = spawn(launch.command, launch.args, {
         cwd: options.cwd,
@@ -152,5 +165,8 @@ export class CursorAuxCliRunner {
         resolve({ stdout, stderr, code, signal: killSignal });
       });
     });
+    } finally {
+      releaseSpawnLock();
+    }
   }
 }

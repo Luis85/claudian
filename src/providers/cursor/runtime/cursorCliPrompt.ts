@@ -1,0 +1,79 @@
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+
+import type { PreparedChatTurn } from '../../../core/runtime/types';
+import type { ChatMessage } from '../../../core/types';
+import { buildContextFromHistory, buildPromptWithHistoryContext } from '../../../utils/session';
+import { appendOrchestratorInstructionsToCursorPrompt } from '../prompt/cursorOrchestratorPrompt';
+
+// Windows CreateProcess argv and cmd.exe wrappers fail once the full command line
+// grows too large (ENAMETOOLONG). cursor-agent accepts `@/path/to/prompt.txt` to
+// load prompt text from disk instead of argv.
+export const CURSOR_CLI_INLINE_PROMPT_MAX_CHARS = 8_000;
+
+export interface ResolvedCursorCliPrompt {
+  arg: string;
+  cleanup?: () => void;
+}
+
+export interface BuildCursorAgentPromptOptions {
+  turn: PreparedChatTurn;
+  conversationHistory?: ChatMessage[];
+  resumeSessionId?: string | null;
+  orchestratorMode?: boolean;
+  orchestratorSystemPrompt?: string;
+}
+
+/**
+ * Cursor relies on `--resume` for multi-turn context. When that session id is
+ * missing, rebuild prior turns into the prompt (OpenCode-style recovery).
+ */
+export function buildCursorAgentPrompt(options: BuildCursorAgentPromptOptions): string {
+  const {
+    turn,
+    conversationHistory,
+    resumeSessionId,
+    orchestratorMode,
+    orchestratorSystemPrompt,
+  } = options;
+
+  let prompt = turn.prompt;
+
+  if (!resumeSessionId && conversationHistory && conversationHistory.length > 0) {
+    const historyContext = buildContextFromHistory(conversationHistory);
+    prompt = buildPromptWithHistoryContext(
+      historyContext,
+      prompt,
+      turn.request.text,
+      conversationHistory,
+    );
+  }
+
+  return appendOrchestratorInstructionsToCursorPrompt(
+    prompt,
+    orchestratorMode,
+    orchestratorSystemPrompt,
+  );
+}
+
+export function resolveCursorCliPromptArg(prompt: string): ResolvedCursorCliPrompt {
+  if (prompt.length <= CURSOR_CLI_INLINE_PROMPT_MAX_CHARS) {
+    return { arg: prompt };
+  }
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'claudian-cursor-prompt-'));
+  const filePath = path.join(dir, 'prompt.txt');
+  fs.writeFileSync(filePath, prompt, 'utf8');
+
+  return {
+    arg: `@${filePath}`,
+    cleanup: () => {
+      try {
+        fs.rmSync(dir, { recursive: true, force: true });
+      } catch {
+        // best-effort
+      }
+    },
+  };
+}

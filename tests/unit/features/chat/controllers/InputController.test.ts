@@ -1220,6 +1220,50 @@ describe('InputController - Message Queue', () => {
       expect(callArgs[1]).toContain('Hello world');
     });
 
+    it('defers AI title generation until after the chat stream completes (Cursor EPERM regression)', async () => {
+      const mockTitleService = {
+        generateTitle: jest.fn().mockResolvedValue(undefined),
+        cancel: jest.fn(),
+      };
+      let releaseStream: (() => void) | undefined;
+      let queryStarted = false;
+
+      deps = createSendableDeps({
+        getTitleGenerationService: () => mockTitleService as any,
+      });
+
+      ((deps as any).mockAgentService.query as jest.Mock).mockReturnValue((async function* () {
+        queryStarted = true;
+        await new Promise<void>((resolve) => {
+          releaseStream = resolve;
+        });
+        yield { type: 'done' };
+      })());
+
+      inputEl = deps.getInputEl() as ReturnType<typeof createMockInputEl>;
+      inputEl.value = 'Hello world';
+      controller = new InputController(deps);
+
+      const sendPromise = controller.sendMessage();
+      await new Promise<void>((resolve) => {
+        const waitForQuery = (): void => {
+          if (queryStarted) {
+            resolve();
+            return;
+          }
+          setTimeout(waitForQuery, 0);
+        };
+        waitForQuery();
+      });
+
+      expect(mockTitleService.generateTitle).not.toHaveBeenCalled();
+
+      releaseStream?.();
+      await sendPromise;
+
+      expect(mockTitleService.generateTitle).toHaveBeenCalledTimes(1);
+    });
+
     it('should lazily create the conversation with the active runtime provider', async () => {
       const sendableDeps = createSendableDeps({}, null);
       sendableDeps.mockAgentService.providerId = 'codex';

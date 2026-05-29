@@ -23,11 +23,11 @@ import type { ChatMessage, Conversation, SlashCommand, StreamChunk } from '../..
 import type ClaudianPlugin from '../../../main';
 import { getVaultPath } from '../../../utils/path';
 import { CURSOR_PROVIDER_CAPABILITIES } from '../capabilities';
-import { appendOrchestratorInstructionsToCursorPrompt } from '../prompt/cursorOrchestratorPrompt';
 import { encodeCursorTurn } from '../prompt/encodeCursorTurn';
 import { getCursorState, resolveCursorSessionId } from '../types';
 import { buildCursorAgentEnvironment } from './cursorAgentEnv';
 import { acquireCursorAgentSpawnLock } from './cursorAgentSpawnLock';
+import { buildCursorAgentPrompt, resolveCursorCliPromptArg } from './cursorCliPrompt';
 import { resolveCursorModelSelectionForCli } from './cursorCliModel';
 import { resolveCursorLaunch } from './cursorLaunch';
 import { buildCursorAgentFlagArgs, type CursorPermissionMode } from './cursorLaunchArgs';
@@ -99,7 +99,7 @@ export class CursorChatRuntime implements ChatRuntime {
 
   async *query(
     turn: PreparedChatTurn,
-    _conversationHistory?: ChatMessage[],
+    conversationHistory?: ChatMessage[],
     queryOptions?: ChatRuntimeQueryOptions,
   ): AsyncGenerator<StreamChunk> {
     this.turnMetadata = {};
@@ -142,12 +142,15 @@ export class CursorChatRuntime implements ChatRuntime {
 
     const env = buildCursorAgentEnvironment(this.plugin);
     const isPlanTurn = permissionMode === 'plan';
-    const cliPrompt = appendOrchestratorInstructionsToCursorPrompt(
-      turn.prompt,
-      turn.request.orchestratorMode,
-      this.plugin.settings.orchestratorSystemPrompt,
-    );
-    const launch = resolveCursorLaunch(cli, [...flagArgs, cliPrompt]);
+    const cliPrompt = buildCursorAgentPrompt({
+      turn,
+      conversationHistory,
+      resumeSessionId: resumeId,
+      orchestratorMode: turn.request.orchestratorMode,
+      orchestratorSystemPrompt: this.plugin.settings.orchestratorSystemPrompt,
+    });
+    const { arg: promptArg, cleanup: cleanupPromptFile } = resolveCursorCliPromptArg(cliPrompt);
+    const launch = resolveCursorLaunch(cli, [...flagArgs, promptArg]);
     const releaseSpawnLock = await acquireCursorAgentSpawnLock();
     let child: ReturnType<typeof spawn>;
     let stderrAcc = '';
@@ -221,6 +224,7 @@ export class CursorChatRuntime implements ChatRuntime {
 
       this.turnMetadata = { ...this.turnMetadata, ...turnMetadata };
     } finally {
+      cleanupPromptFile?.();
       releaseSpawnLock();
     }
   }

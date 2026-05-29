@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
 
+import { acquireCursorAgentSpawnLock } from './cursorAgentSpawnLock';
 import { resolveCursorLaunch } from './cursorLaunch';
 
 // Minimal, safe set used before any live discovery completes. Never empty so
@@ -137,12 +138,14 @@ export function parseModelListOutput(stdout: string): string[] {
   return dedupe(ids);
 }
 
-function runListModels(
+async function runListModels(
   cliPath: string,
   env: Record<string, string>,
   cwd: string,
 ): Promise<string> {
-  return new Promise((resolve, reject) => {
+  const releaseSpawnLock = await acquireCursorAgentSpawnLock();
+  try {
+    return await new Promise((resolve, reject) => {
     const launch = resolveCursorLaunch(cliPath, ['--list-models']);
     const child = spawn(launch.command, launch.args, {
       cwd,
@@ -182,6 +185,9 @@ function runListModels(
       }
     });
   });
+  } finally {
+    releaseSpawnLock();
+  }
 }
 
 /**

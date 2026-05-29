@@ -3,6 +3,8 @@ import '@/providers';
 import { EventEmitter } from 'events';
 
 import type { PreparedChatTurn } from '@/core/runtime/types';
+import type { ChatMessage } from '@/core/types';
+import { CURSOR_CLI_INLINE_PROMPT_MAX_CHARS } from '@/providers/cursor/runtime/cursorCliPrompt';
 import { CursorChatRuntime } from '@/providers/cursor/runtime/CursorChatRuntime';
 
 jest.mock('@/utils/path', () => ({
@@ -185,6 +187,51 @@ describe('CursorChatRuntime', () => {
 
     expect(chunks).toContainEqual({ type: 'error', content: 'Cursor Agent exited with code 2' });
     expect(chunks[chunks.length - 1]).toEqual({ type: 'done' });
+  });
+
+  it('spills oversized prompts to @file argv (ENAMETOOLONG regression)', async () => {
+    const runtime = new CursorChatRuntime(createMockPlugin());
+    const longPrompt = 'x'.repeat(CURSOR_CLI_INLINE_PROMPT_MAX_CHARS + 1);
+    readlineLines = [
+      JSON.stringify({ type: 'result', subtype: 'success', is_error: false }),
+    ];
+    setupMockChild();
+
+    const gen = runtime.query(createPreparedTurn(longPrompt));
+    for await (const chunk of gen) {
+      void chunk;
+    }
+
+    const launchArgs = mockSpawn.mock.calls[0]?.[1] as string[] | undefined;
+    expect(launchArgs).toBeDefined();
+    const promptArg = launchArgs?.[launchArgs.length - 1];
+    expect(promptArg?.startsWith('@')).toBe(true);
+    expect(promptArg?.length).toBeLessThan(200);
+  });
+
+  it('rebuilds conversation history into the prompt when resume is unavailable', async () => {
+    const runtime = new CursorChatRuntime(createMockPlugin());
+    const history: ChatMessage[] = [
+      { id: 'u1', role: 'user', content: 'first question', timestamp: 1 },
+      { id: 'a1', role: 'assistant', content: 'first answer', timestamp: 2 },
+    ];
+
+    readlineLines = [
+      JSON.stringify({ type: 'result', subtype: 'success', is_error: false }),
+    ];
+    setupMockChild();
+
+    const gen = runtime.query(createPreparedTurn('second question'), history);
+    for await (const chunk of gen) {
+      void chunk;
+    }
+
+    const launchArgs = mockSpawn.mock.calls[0]?.[1] as string[] | undefined;
+    const promptArg = launchArgs?.[launchArgs.length - 1];
+    expect(promptArg).toContain('first question');
+    expect(promptArg).toContain('first answer');
+    expect(promptArg).toContain('second question');
+    expect(launchArgs).not.toContain('--resume');
   });
 
   it('buildSessionUpdates persists session id on the conversation', () => {
