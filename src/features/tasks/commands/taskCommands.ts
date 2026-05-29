@@ -367,15 +367,6 @@ export async function createWorkOrderTemplate(plugin: ClaudianPlugin): Promise<T
   return null;
 }
 
-export async function createWorkOrderFromCurrentNote(plugin: ClaudianPlugin): Promise<TFile | null> {
-  const active = plugin.app.workspace.getActiveFile();
-  if (!active) {
-    new Notice('Open a note to create a work order from it.');
-    return null;
-  }
-  return createWorkOrder(plugin, active);
-}
-
 function truncate(value: string, max: number): string {
   const trimmed = value.trim();
   return trimmed.length > max ? `${trimmed.slice(0, max - 1)}…` : trimmed;
@@ -399,17 +390,6 @@ export function buildSelectionSeed(args: { selectionText: string; sourcePath: st
     contextMarkdown: parts.join('\n\n'),
     status: 'inbox',
   };
-}
-
-export async function createWorkOrderFromSelection(plugin: ClaudianPlugin): Promise<TFile | null> {
-  const editor = plugin.app.workspace.activeEditor?.editor;
-  const selection = editor?.getSelection() ?? '';
-  if (!selection.trim()) {
-    new Notice('Select text in a note to create a work order from it.');
-    return null;
-  }
-  const sourcePath = plugin.app.workspace.getActiveFile()?.path ?? null;
-  return createWorkOrderFromSeed(plugin, buildSelectionSeed({ selectionText: selection, sourcePath }));
 }
 
 export function buildBrowserSeed(context: BrowserSelectionContext): WorkOrderSeed {
