@@ -151,6 +151,8 @@ export interface ClaudianSettings {
   agentBoardWorkOrderFolder: string;
   agentBoardDefaultProvider: string;
   agentBoardDefaultModel: string;
+  // Validated and normalized by BoardConfigStore; stored as raw to keep core free of feature types.
+  agentBoardConfig?: unknown;
 
   // Provider command visibility
   hiddenProviderCommands: HiddenProviderCommands;
