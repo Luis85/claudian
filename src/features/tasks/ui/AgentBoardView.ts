@@ -6,7 +6,7 @@ import type { ProviderId } from '../../../core/providers/types';
 import { VIEW_TYPE_CLAUDIAN_AGENT_BOARD } from '../../../core/types/chat';
 import type ClaudianPlugin from '../../../main';
 import { confirm } from '../../../shared/modals/ConfirmModal';
-import { archiveWorkOrder, createWorkOrder } from '../commands/taskCommands';
+import { archiveWorkOrder } from '../commands/taskCommands';
 import { getLaneForStatus, loadBoardConfig } from '../config/BoardConfigStore';
 import type { BoardConfig, ResolvedBoardLayout } from '../config/boardConfigTypes';
 import { resolveBoardLayout } from '../config/resolveBoardLayout';
@@ -19,6 +19,7 @@ import type { TaskBoardModel, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
 import { TaskNoteStore } from '../storage/TaskNoteStore';
 import { AgentBoardRenderer } from './AgentBoardRenderer';
+import { createWorkOrderInteractive } from './createWorkOrderInteractive';
 import { WorkOrderDetailModal, type WorkOrderFieldUpdate } from './WorkOrderDetailModal';
 
 export class AgentBoardView extends ItemView {
@@ -198,7 +199,7 @@ export class AgentBoardView extends ItemView {
   }
 
   private async addWorkOrderFromBoard(): Promise<void> {
-    const created = await createWorkOrder(this.plugin, null, { status: 'inbox', reveal: 'none' });
+    const created = await createWorkOrderInteractive(this.plugin, null, { status: 'inbox', reveal: 'none' });
     if (!created) return;
     await this.refresh();
     try {
