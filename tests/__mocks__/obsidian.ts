@@ -218,6 +218,23 @@ export class Modal {
   onClose = jest.fn();
 }
 
+export class SuggestModal extends Modal {
+  setPlaceholder = jest.fn();
+  getSuggestions = jest.fn().mockReturnValue([]);
+  renderSuggestion = jest.fn();
+  onChooseSuggestion = jest.fn();
+}
+
+export class FuzzySuggestModal extends SuggestModal {
+  getItems(): any[] {
+    return [];
+  }
+  getItemText(_item: any): string {
+    return '';
+  }
+  onChooseItem(_item: any, _evt?: any): void {}
+}
+
 class MockMenuItem {
   title = '';
   icon = '';
