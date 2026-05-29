@@ -225,10 +225,10 @@ export class AgentBoardView extends ItemView {
 
     const timestamp = new Date().toISOString();
     await this.applyNoteChange(task.path, (content) => this.noteStore.writeStatus(content, { status: to, timestamp }));
-    this.plugin.events.emit('task:status-changed', { taskId: latest.frontmatter.id, path: task.path, status: to });
     await this.applyNoteChange(task.path, (content) =>
       this.noteStore.appendLedger(content, { timestamp, status: to, message }),
     );
+    this.plugin.events.emit('task:status-changed', { taskId: latest.frontmatter.id, path: task.path, status: to });
     await this.refresh();
   }
 
@@ -251,6 +251,7 @@ export class AgentBoardView extends ItemView {
     }
 
     const settings = this.plugin.settings as unknown as Record<string, unknown>;
+    let lastStatus: TaskStatus = latest.frontmatter.status;
     const coordinator = new TaskRunCoordinator({
       executionSurface: this.executionSurface,
       now: () => new Date().toISOString(),
@@ -262,6 +263,7 @@ export class AgentBoardView extends ItemView {
         ProviderRegistry.getChatUIConfig(providerId as ProviderId).ownsModel(model, settings),
       writeTaskStatus: async (_task, options) => {
         await this.applyNoteChange(task.path, (content) => this.noteStore.writeStatus(content, options));
+        lastStatus = options.status;
         this.plugin.events.emit('task:status-changed', {
           taskId: latest.frontmatter.id,
           path: task.path,
@@ -281,7 +283,7 @@ export class AgentBoardView extends ItemView {
     this.plugin.events.emit('task:run-finished', {
       taskId: latest.frontmatter.id,
       path: task.path,
-      status: result.ok ? result.status : 'failed',
+      status: result.ok ? result.status : lastStatus,
     });
     if (!result.ok) {
       new Notice(`Work order run failed: ${result.error}`);
