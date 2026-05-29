@@ -96,7 +96,7 @@ export class AgentBoardView extends ItemView {
   private render(): void {
     this.renderer.render(
       this.contentEl,
-      { layout: this.layout, invalidNotes: this.model.invalidNotes },
+      { layout: this.layout, invalidNotes: this.model.invalidNotes, slots: this.computeSlots() },
       {
         onOpenDetail: (task) => this.openDetail(task),
         onRun: (task) => void this.runTask(task),
@@ -144,6 +144,12 @@ export class AgentBoardView extends ItemView {
   private async saveTaskFields(task: TaskSpec, fields: WorkOrderFieldUpdate): Promise<void> {
     await this.applyNoteChange(task.path, (content) => this.noteStore.writeFields(content, fields));
     await this.refresh();
+  }
+
+  private computeSlots(): { used: number; max: number } {
+    const max = this.plugin.settings.maxTabs;
+    const used = this.plugin.getView()?.getTabManager()?.getTabCount() ?? 0;
+    return { used, max };
   }
 
   private async removeTask(task: TaskSpec): Promise<void> {

@@ -14,6 +14,7 @@ export interface AgentBoardRenderCallbacks {
 export interface AgentBoardRenderState {
   layout: ResolvedBoardLayout;
   invalidNotes: InvalidTaskNote[];
+  slots: { used: number; max: number };
 }
 
 export class AgentBoardRenderer {
@@ -24,6 +25,19 @@ export class AgentBoardRenderer {
     const header = root.createDiv({ cls: 'claudian-agent-board-header' });
     const addButton = header.createEl('button', { cls: 'mod-cta', text: 'Add work order' });
     addButton.addEventListener('click', () => callbacks.onAddWorkOrder());
+
+    const free = Math.max(0, state.slots.max - state.slots.used);
+    const slotsEl = header.createSpan({
+      cls: 'claudian-agent-board-slots',
+      text: `Chat tabs ${state.slots.used}/${state.slots.max} · ${free} free`,
+    });
+    if (free <= 0) {
+      slotsEl.addClass('claudian-agent-board-slots--full');
+      root.createDiv({
+        cls: 'claudian-agent-board-hint',
+        text: 'No free chat tabs. A work order run needs a free tab — close a chat tab in the chat panel, or raise "Maximum tabs" in settings.',
+      });
+    }
 
     const lanesEl = root.createDiv({ cls: 'claudian-agent-board-lanes' });
     for (const lane of state.layout.lanes) {
