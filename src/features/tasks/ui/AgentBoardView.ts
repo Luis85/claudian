@@ -93,6 +93,12 @@ export class AgentBoardView extends ItemView {
     }, 100);
   }
 
+  // Light re-render that recomputes chat-tab slot capacity without re-indexing
+  // the vault. Called when chat tabs open/close.
+  refreshSlots(): void {
+    this.render();
+  }
+
   private render(): void {
     // Preserve lane scroll position across full re-renders so interacting with a
     // card (which triggers refresh) doesn't jump the board back to the left.

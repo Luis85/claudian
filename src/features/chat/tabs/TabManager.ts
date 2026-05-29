@@ -233,10 +233,11 @@ export class TabManager implements TabManagerInterface {
       this.maybePrimeProviderRuntime(tab);
     }
 
+    this.plugin.refreshAgentBoardSlots();
     return tab;
   }
 
-  /** Creates a fresh, activated tab pinned to a provider/model for an Agent Board task run. */
+  /** Creates a background (non-activated) tab pinned to a provider/model for an Agent Board task run. */
   async createTaskRunTab(options: {
     providerId: ProviderId;
     model: string;
@@ -370,6 +371,7 @@ export class TabManager implements TabManagerInterface {
     this.providerCommandCache.delete(tabId);
     this.tabs.delete(tabId);
     this.callbacks.onTabClosed?.(tabId);
+    this.plugin.refreshAgentBoardSlots();
 
     // If we closed the active tab, switch to another
     if (this.activeTabId === tabId) {
