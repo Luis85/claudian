@@ -4,6 +4,7 @@ import { Setting } from 'obsidian';
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import type ClaudianPlugin from '../../../main';
+import { renderAgentBoardLaneEditor } from '../../tasks/ui/AgentBoardLaneEditor';
 
 export function renderAgentBoardSettingsSection(
   container: HTMLElement,
@@ -21,6 +22,7 @@ export function renderAgentBoardSettingsSection(
         .onChange(async (value) => {
           plugin.settings.agentBoardWorkOrderFolder = value.trim();
           await plugin.saveSettings();
+          plugin.refreshAgentBoards();
         }),
     );
 
@@ -70,4 +72,7 @@ export function renderAgentBoardSettingsSection(
         await plugin.saveSettings();
       });
     });
+
+  container.createEl('h4', { text: 'Board lanes' });
+  renderAgentBoardLaneEditor(container, plugin);
 }
