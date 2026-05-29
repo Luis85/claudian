@@ -151,6 +151,7 @@ export interface ClaudianSettings {
 
   // Agent Board
   agentBoardWorkOrderFolder: string;
+  agentBoardArchiveFolder: string;
   agentBoardDefaultProvider: string;
   agentBoardDefaultModel: string;
   // Validated and normalized by BoardConfigStore; stored as raw to keep core free of feature types.

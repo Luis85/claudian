@@ -1,10 +1,21 @@
 import {
   __taskCaptureTestUtils,
   __taskCommandTestUtils,
+  resolveArchiveFolder,
 } from '../../../../../src/features/tasks/commands/taskCommands';
 import { TaskNoteStore } from '../../../../../src/features/tasks/storage/TaskNoteStore';
 
 const { buildWorkOrderMarkdown, slugifyTitle } = __taskCommandTestUtils;
+
+describe('resolveArchiveFolder', () => {
+  it('defaults to Agent Board/archive when unset', () => {
+    expect(resolveArchiveFolder('')).toBe('Agent Board/archive');
+  });
+
+  it('trims surrounding slashes from a custom folder', () => {
+    expect(resolveArchiveFolder('/Custom/Archive/')).toBe('Custom/Archive');
+  });
+});
 
 describe('slugifyTitle', () => {
   it('lowercases, strips symbols, and collapses separators', () => {

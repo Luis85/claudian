@@ -35,6 +35,21 @@ export function renderAgentBoardSettingsSection(
         }),
     );
 
+  new Setting(container)
+    .setName('Archive folder')
+    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Board" is the product feature name.
+    .setDesc('Folder where archived Agent Board work orders are moved. Keep it outside the work order folder.')
+    .addText((text) =>
+      text
+        // eslint-disable-next-line obsidianmd/ui/sentence-case -- folder path, not prose.
+        .setPlaceholder('Agent Board/archive')
+        .setValue(plugin.settings.agentBoardArchiveFolder)
+        .onChange(async (value) => {
+          plugin.settings.agentBoardArchiveFolder = value.trim();
+          await plugin.saveSettings();
+        }),
+    );
+
   const settings = plugin.settings as unknown as Record<string, unknown>;
 
   let modelDropdown: DropdownComponent | null = null;

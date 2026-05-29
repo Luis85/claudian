@@ -102,6 +102,7 @@ describe('types.ts', () => {
         deferMathRenderingDuringStreaming: true,
         chatViewPlacement: 'right-sidebar',
         agentBoardWorkOrderFolder: 'Agent Board/tasks',
+        agentBoardArchiveFolder: 'Agent Board/archive',
         agentBoardDefaultProvider: 'codex',
         agentBoardDefaultModel: '',
         hiddenProviderCommands: {
@@ -159,6 +160,7 @@ describe('types.ts', () => {
         deferMathRenderingDuringStreaming: true,
         chatViewPlacement: 'right-sidebar',
         agentBoardWorkOrderFolder: 'Agent Board/tasks',
+        agentBoardArchiveFolder: 'Agent Board/archive',
         agentBoardDefaultProvider: 'codex',
         agentBoardDefaultModel: '',
         hiddenProviderCommands: {
@@ -217,6 +219,7 @@ describe('types.ts', () => {
         deferMathRenderingDuringStreaming: true,
         chatViewPlacement: 'right-sidebar',
         agentBoardWorkOrderFolder: 'Agent Board/tasks',
+        agentBoardArchiveFolder: 'Agent Board/archive',
         agentBoardDefaultProvider: 'codex',
         agentBoardDefaultModel: '',
         hiddenProviderCommands: {

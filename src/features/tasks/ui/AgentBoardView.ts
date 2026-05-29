@@ -5,8 +5,8 @@ import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import { VIEW_TYPE_CLAUDIAN_AGENT_BOARD } from '../../../core/types/chat';
 import type ClaudianPlugin from '../../../main';
-import { confirmDelete } from '../../../shared/modals/ConfirmModal';
-import { createWorkOrder } from '../commands/taskCommands';
+import { confirm } from '../../../shared/modals/ConfirmModal';
+import { archiveWorkOrder, createWorkOrder } from '../commands/taskCommands';
 import { getLaneForStatus, loadBoardConfig } from '../config/BoardConfigStore';
 import type { BoardConfig, ResolvedBoardLayout } from '../config/boardConfigTypes';
 import { resolveBoardLayout } from '../config/resolveBoardLayout';
@@ -140,12 +140,16 @@ export class AgentBoardView extends ItemView {
         const conversationId = target.frontmatter.conversation_id;
         if (conversationId) void this.plugin.openConversation(conversationId);
       },
+      canOpenConversation: (target) => {
+        const conversationId = target.frontmatter.conversation_id;
+        return Boolean(conversationId && this.plugin.getConversationSync(conversationId));
+      },
       onRun: (target) => void this.runTask(target),
       onStop: (target) => this.stopTask(target),
       onAccept: (target) => void this.transitionTask(target, 'done', 'Accepted from review.'),
       onRework: (target) => void this.transitionTask(target, 'needs_fix', 'Sent back for rework.'),
       onMarkReady: (target) => void this.transitionTask(target, 'ready', 'Marked ready.'),
-      onRemove: (target) => void this.removeTask(target),
+      onArchive: (target) => void this.archiveTask(target),
       onSaveFields: (target, fields) => this.saveTaskFields(target, fields),
       getProviderOptions: () =>
         ProviderRegistry.getEnabledProviderIds(settings).map((id) => ({ value: id, label: id })),
@@ -179,15 +183,16 @@ export class AgentBoardView extends ItemView {
     return { used, max };
   }
 
-  private async removeTask(task: TaskSpec): Promise<void> {
-    const ok = await confirmDelete(
+  private async archiveTask(task: TaskSpec): Promise<void> {
+    const ok = await confirm(
       this.plugin.app,
-      `Remove work order "${task.frontmatter.title}"? The note will be moved to trash.`,
+      `Archive work order "${task.frontmatter.title}"? The note will be moved to the archive folder.`,
+      'Archive',
     );
     if (!ok) return;
-    const file = this.plugin.app.vault.getAbstractFileByPath(task.path);
-    if (file instanceof TFile) {
-      await this.plugin.app.fileManager.trashFile(file);
+    const destination = await archiveWorkOrder(this.plugin, task);
+    if (destination) {
+      new Notice(`Archived "${task.frontmatter.title}".`);
     }
     await this.refresh();
   }

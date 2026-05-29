@@ -2,7 +2,7 @@ import { normalizePath, Notice, TFile, TFolder } from 'obsidian';
 
 import type ClaudianPlugin from '../../../main';
 import type { BrowserSelectionContext } from '../../../utils/browser';
-import type { TaskStatus } from '../model/taskTypes';
+import type { TaskSpec, TaskStatus } from '../model/taskTypes';
 import { HANDOFF_END, HANDOFF_START, RUN_LEDGER_END, RUN_LEDGER_START } from '../storage/TaskNoteStore';
 
 interface BuildWorkOrderArgs {
@@ -122,6 +122,30 @@ function uniquePath(plugin: ClaudianPlugin, basePath: string): string {
     counter += 1;
   }
   return `${withoutExt}-${counter}.md`;
+}
+
+/** Resolve the board archive folder, defaulting and stripping stray slashes (mirrors the board's folder getter). */
+export function resolveArchiveFolder(setting: string): string {
+  return (setting || 'Agent Board/archive').replace(/^\/+|\/+$/g, '');
+}
+
+/**
+ * Move a work-order note into the board archive folder so it leaves the board's scanned folder.
+ * Returns the new path on success, or null if the note was missing.
+ */
+export async function archiveWorkOrder(
+  plugin: ClaudianPlugin,
+  task: TaskSpec,
+): Promise<string | null> {
+  const file = plugin.app.vault.getAbstractFileByPath(task.path);
+  if (!(file instanceof TFile)) return null;
+
+  const archiveFolder = resolveArchiveFolder(plugin.settings.agentBoardArchiveFolder);
+  await ensureFolder(plugin, normalizePath(archiveFolder));
+
+  const destination = uniquePath(plugin, normalizePath(`${archiveFolder}/${file.name}`));
+  await plugin.app.fileManager.renameFile(file, destination);
+  return destination;
 }
 
 export interface CreateWorkOrderOptions {

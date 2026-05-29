@@ -809,6 +809,10 @@ export default class ClaudianPlugin extends Plugin {
   }
 
   async openConversation(conversationId: string): Promise<void> {
+    if (!this.getConversationSync(conversationId)) {
+      new Notice('Linked conversation not found. It may have been deleted.');
+      return;
+    }
     await this.activateView();
     await this.getView()?.getTabManager()?.openConversation(conversationId);
   }
