@@ -17,6 +17,7 @@ import { buildNavMappingText, parseNavMappings } from './keyboardNavigation';
 import { getProviderEnableUpdater } from './providerEnableUpdaters';
 import { renderAgentBoardSettingsSection } from './ui/AgentBoardSettingsSection';
 import { renderEnvironmentSettingsSection } from './ui/EnvironmentSettingsSection';
+import { renderLoggingSettingsSection } from './ui/LoggingSettingsSection';
 import { renderOrchestratorSettingsTab } from './ui/OrchestratorSettingsTab';
 import { renderQuickActionsSettingsTab } from './ui/QuickActionsSettingsTab';
 
@@ -534,6 +535,10 @@ export class ClaudianSettingTab extends PluginSettingTab {
       placeholder: 'PATH=/opt/homebrew/bin:/usr/local/bin\nHTTPS_PROXY=http://proxy.example.com:8080\nSSL_CERT_FILE=/path/to/cert.pem',
       renderCustomContextLimits: (target) => this.renderCustomContextLimits(target),
     });
+
+    // --- Diagnostics ---
+
+    renderLoggingSettingsSection(container, this.plugin);
   }
 
   /**
