@@ -59,4 +59,6 @@ export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
   orchestratorEnabled: true,
   orchestratorSystemPrompt: '',
   quickActionsFolder: 'Quick Actions',
+  loggingEnabled: false,
+  logLevel: 'warn',
 };

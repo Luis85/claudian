@@ -1,3 +1,5 @@
+import type { LogLevel } from '../logging/types';
+
 export type HiddenProviderCommands = Record<string, string[]>;
 
 export interface ApprovalSelectionDecision {
@@ -164,6 +166,11 @@ export interface ClaudianSettings {
 
   /** Vault folder for quick-action markdown files (relative to vault root). */
   quickActionsFolder?: string;
+
+  /** Enable the diagnostic logger (console + ring buffer). */
+  loggingEnabled?: boolean;
+  /** Global log threshold. */
+  logLevel?: LogLevel;
 
   // Allow provider-specific extension fields
   [key: string]: unknown;
