@@ -17,6 +17,7 @@ export interface WorkOrderOption {
 
 export interface WorkOrderDetailModalCallbacks {
   onOpenNote(task: TaskSpec): void;
+  onOpenConversation?(task: TaskSpec): void;
   onRun(task: TaskSpec): void;
   onStop(task: TaskSpec): void;
   onAccept(task: TaskSpec): void;
@@ -160,6 +161,15 @@ export class WorkOrderDetailModal extends Modal {
         this.callbacks.onOpenNote(task);
       }),
     );
+
+    if (task.frontmatter.conversation_id && this.callbacks.onOpenConversation) {
+      actions.addButton((btn) =>
+        btn.setButtonText('Open conversation').onClick(() => {
+          this.close();
+          this.callbacks.onOpenConversation?.(task);
+        }),
+      );
+    }
 
     if (task.frontmatter.status === 'inbox') {
       actions.addButton((btn) =>

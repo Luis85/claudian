@@ -134,6 +134,10 @@ export class AgentBoardView extends ItemView {
     const settings = this.plugin.settings as unknown as Record<string, unknown>;
     new WorkOrderDetailModal(this.plugin.app, task, {
       onOpenNote: (target) => void this.openTask(target),
+      onOpenConversation: (target) => {
+        const conversationId = target.frontmatter.conversation_id;
+        if (conversationId) void this.plugin.openConversation(conversationId);
+      },
       onRun: (target) => void this.runTask(target),
       onStop: (target) => this.stopTask(target),
       onAccept: (target) => void this.transitionTask(target, 'done', 'Accepted from review.'),

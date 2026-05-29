@@ -791,6 +791,11 @@ export default class ClaudianPlugin extends Plugin {
     return { id: conversationId, title };
   }
 
+  async openConversation(conversationId: string): Promise<void> {
+    await this.activateView();
+    await this.getView()?.getTabManager()?.openConversation(conversationId);
+  }
+
   getEnvironmentVariablesForScope(scope: EnvironmentScope): string {
     return getScopedEnvironmentVariables(
       this.settings,
