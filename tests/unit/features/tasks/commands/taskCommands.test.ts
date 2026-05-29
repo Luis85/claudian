@@ -64,4 +64,35 @@ describe('buildWorkOrderMarkdown', () => {
     expect(buildWorkOrderMarkdown(base)).toContain('status: ready');
     expect(buildWorkOrderMarkdown({ ...base, status: 'inbox' })).toContain('status: inbox');
   });
+
+  it('uses seeded objective, context, and conversation id', () => {
+    const markdown = buildWorkOrderMarkdown({
+      id: 'task-seeded',
+      title: 'Seeded order',
+      provider: 'codex',
+      model: 'gpt-5-codex',
+      timestamp: '2026-05-29T10:00:00.000Z',
+      status: 'inbox',
+      objective: 'Implement the linker',
+      contextMarkdown: 'Promoted from chat message.',
+      conversationId: 'conv-123',
+    });
+
+    expect(markdown).toContain('status: inbox');
+    expect(markdown).toContain('conversation_id: "conv-123"');
+    expect(markdown).toContain('## Objective\n\nImplement the linker');
+    expect(markdown).toContain('## Context\n\nPromoted from chat message.');
+  });
+
+  it('leaves conversation_id empty and placeholders intact without a seed', () => {
+    const markdown = buildWorkOrderMarkdown({
+      id: 'task-bare',
+      title: 'Bare',
+      provider: 'claude',
+      model: 'sonnet',
+      timestamp: '2026-05-29T10:00:00.000Z',
+    });
+    expect(markdown).toContain('conversation_id:\n');
+    expect(markdown).toContain('_What should the agent accomplish?_');
+  });
 });

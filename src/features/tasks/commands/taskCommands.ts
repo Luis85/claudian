@@ -13,6 +13,9 @@ interface BuildWorkOrderArgs {
   status?: TaskStatus;
   sourcePath?: string | null;
   sourceFolderPath?: string | null;
+  objective?: string;
+  contextMarkdown?: string;
+  conversationId?: string | null;
 }
 
 function slugifyTitle(title: string): string {
@@ -30,12 +33,21 @@ function stripMarkdownExtension(path: string): string {
 function buildWorkOrderMarkdown(args: BuildWorkOrderArgs): string {
   const { id, title, provider, model, timestamp, sourcePath, sourceFolderPath } = args;
   const status = args.status ?? 'ready';
+
   let contextBody = '_Add the links, files, and scope the agent needs._';
-  if (sourcePath) {
+  if (args.contextMarkdown && args.contextMarkdown.trim()) {
+    contextBody = args.contextMarkdown.trim();
+  } else if (sourcePath) {
     contextBody = `Source note: [[${stripMarkdownExtension(sourcePath)}]]`;
   } else if (sourceFolderPath) {
     contextBody = `Source folder: \`${sourceFolderPath}\``;
   }
+
+  const objectiveBody =
+    args.objective && args.objective.trim() ? args.objective.trim() : '_What should the agent accomplish?_';
+  const conversationLine = args.conversationId
+    ? `conversation_id: ${JSON.stringify(args.conversationId)}`
+    : 'conversation_id:';
 
   return `---
 type: claudian-work-order
@@ -49,7 +61,7 @@ updated: ${timestamp}
 provider: ${provider}
 model: ${model}
 run_id:
-conversation_id:
+${conversationLine}
 sidepanel_tab_id:
 started:
 finished:
@@ -59,7 +71,7 @@ attempts: 0
 
 ## Objective
 
-_What should the agent accomplish?_
+${objectiveBody}
 
 ## Acceptance Criteria
 
@@ -116,9 +128,26 @@ export interface CreateWorkOrderOptions {
   reveal?: 'note' | 'none';
 }
 
-export async function createWorkOrder(
+export interface WorkOrderSeed {
+  title?: string;
+  status?: TaskStatus;
+  sourcePath?: string | null;
+  sourceFolderPath?: string | null;
+  objective?: string;
+  contextMarkdown?: string;
+  conversationId?: string | null;
+}
+
+function buildSeedFromSource(source?: TFile | TFolder | null): WorkOrderSeed {
+  const sourceFile = source instanceof TFile ? source : null;
+  const sourceFolder = source instanceof TFolder ? source : null;
+  const title = sourceFile ? sourceFile.basename : sourceFolder ? sourceFolder.name : 'New work order';
+  return { title, sourcePath: sourceFile?.path ?? null, sourceFolderPath: sourceFolder?.path ?? null };
+}
+
+export async function createWorkOrderFromSeed(
   plugin: ClaudianPlugin,
-  source?: TFile | TFolder | null,
+  seed: WorkOrderSeed,
   options?: CreateWorkOrderOptions,
 ): Promise<TFile | null> {
   const provider = plugin.settings.agentBoardDefaultProvider;
@@ -138,20 +167,22 @@ export async function createWorkOrder(
   await ensureFolder(plugin, folder);
 
   const now = new Date();
-  const sourceFile = source instanceof TFile ? source : null;
-  const sourceFolder = source instanceof TFolder ? source : null;
-  const title = sourceFile ? sourceFile.basename : sourceFolder ? sourceFolder.name : 'New work order';
+  const title = seed.title || 'New work order';
   const slug = slugifyTitle(title) || 'work-order';
   const id = `task-${timestampId(now)}-${slug}`;
+  const status = options?.status ?? seed.status ?? 'ready';
   const markdown = buildWorkOrderMarkdown({
     id,
     title,
     provider,
     model,
     timestamp: now.toISOString(),
-    status: options?.status ?? 'ready',
-    sourcePath: sourceFile?.path ?? null,
-    sourceFolderPath: sourceFolder?.path ?? null,
+    status,
+    sourcePath: seed.sourcePath ?? null,
+    sourceFolderPath: seed.sourceFolderPath ?? null,
+    objective: seed.objective,
+    contextMarkdown: seed.contextMarkdown,
+    conversationId: seed.conversationId ?? null,
   });
 
   const filePath = uniquePath(plugin, normalizePath(`${folder}/${id}.md`));
@@ -163,6 +194,14 @@ export async function createWorkOrder(
     return created;
   }
   return null;
+}
+
+export async function createWorkOrder(
+  plugin: ClaudianPlugin,
+  source?: TFile | TFolder | null,
+  options?: CreateWorkOrderOptions,
+): Promise<TFile | null> {
+  return createWorkOrderFromSeed(plugin, buildSeedFromSource(source), options);
 }
 
 export async function createWorkOrderFromCurrentNote(plugin: ClaudianPlugin): Promise<TFile | null> {
