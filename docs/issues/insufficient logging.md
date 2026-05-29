@@ -10,7 +10,7 @@ Concretely, this already cost us: an intermittent Claude `400 ... thinking block
 
 - **No central logger.** Diagnostics are ad-hoc `console.*` calls added and removed by hand.
 - **`console.*` is discouraged** by the project guideline (CLAUDE.md: "No `console.*` in production code"). Note: the ESLint config does not currently flag `console.warn` as an error, so the guideline is convention-only and unenforced.
-- **Temporary diagnostics live in the tree right now** (uncommitted on `feat/agent-board-configurable-lanes`): three `console.warn('[claudian-diag] claude.query ...')` calls in `src/providers/claude/runtime/ClaudeChatRuntime.ts` (query start + persistent/cold-start error paths). These should migrate to the real logger and then be removed.
+- **Temporary diagnostics were used and reverted:** during the 400 investigation we added three `console.warn('[claudian-diag] claude.query ...')` calls in `src/providers/claude/runtime/ClaudeChatRuntime.ts` (query start + persistent/cold-start error paths), then reverted them during cleanup. Reintroduce equivalent instrumentation through the real logger when implementing this — that path (query start + error) is a good first place to log.
 - Scattered `console.*` likely exists elsewhere and would be migrated too.
 
 ## Requirements
