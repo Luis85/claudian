@@ -1,6 +1,7 @@
 import { normalizePath, Notice, TFile, TFolder } from 'obsidian';
 
 import type ClaudianPlugin from '../../../main';
+import type { BrowserSelectionContext } from '../../../utils/browser';
 import type { TaskStatus } from '../model/taskTypes';
 import { HANDOFF_END, HANDOFF_START, RUN_LEDGER_END, RUN_LEDGER_START } from '../storage/TaskNoteStore';
 
@@ -249,6 +250,28 @@ export async function createWorkOrderFromSelection(plugin: ClaudianPlugin): Prom
   return createWorkOrderFromSeed(plugin, buildSelectionSeed({ selectionText: selection, sourcePath }));
 }
 
+export function buildBrowserSeed(context: BrowserSelectionContext): WorkOrderSeed {
+  const firstLine = context.selectedText.trim().split(/\r?\n/)[0] ?? '';
+  const parts: string[] = [blockquote(context.selectedText)];
+  if (context.url) {
+    parts.push(`Source: [${context.title?.trim() || context.url}](${context.url})`);
+  }
+  return {
+    title: truncate(context.title?.trim() || firstLine, 60) || 'Work order from browser',
+    contextMarkdown: parts.join('\n\n'),
+    status: 'inbox',
+  };
+}
+
+export async function createWorkOrderFromBrowserSelection(plugin: ClaudianPlugin): Promise<TFile | null> {
+  const context = plugin.getActiveBrowserSelection();
+  if (!context || !context.selectedText.trim()) {
+    new Notice('Open Claudian chat and select text in a browser view first.');
+    return null;
+  }
+  return createWorkOrderFromSeed(plugin, buildBrowserSeed(context));
+}
+
 export const __taskCommandTestUtils = { buildWorkOrderMarkdown, slugifyTitle };
 
-export const __taskCaptureTestUtils = { buildSelectionSeed };
+export const __taskCaptureTestUtils = { buildSelectionSeed, buildBrowserSeed };

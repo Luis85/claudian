@@ -113,3 +113,18 @@ describe('buildSelectionSeed', () => {
     expect(seed.contextMarkdown).toContain('> in the middleware');
   });
 });
+
+describe('buildBrowserSeed', () => {
+  it('blockquotes the selection and links the source url', () => {
+    const seed = __taskCaptureTestUtils.buildBrowserSeed({
+      source: 'browser:https://x.dev',
+      selectedText: 'Two Sum problem',
+      title: 'LeetCode',
+      url: 'https://x.dev',
+    });
+    expect(seed.status).toBe('inbox');
+    expect(seed.title).toBe('LeetCode');
+    expect(seed.contextMarkdown).toContain('> Two Sum problem');
+    expect(seed.contextMarkdown).toContain('[LeetCode](https://x.dev)');
+  });
+});

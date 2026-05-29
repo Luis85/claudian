@@ -42,6 +42,7 @@ import { type InlineEditContext, InlineEditModal } from './features/inline-edit/
 import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
 import {
   createWorkOrder,
+  createWorkOrderFromBrowserSelection,
   createWorkOrderFromCurrentNote,
   createWorkOrderFromSelection,
 } from './features/tasks/commands/taskCommands';
@@ -50,6 +51,7 @@ import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
 import { setLocale } from './i18n/i18n';
 import type { Locale } from './i18n/types';
 import { OPENCODE_PLAN_MODE_ID, OPENCODE_SAFE_MODE_ID } from './providers/opencode/modes';
+import type { BrowserSelectionContext } from './utils/browser';
 import { buildCursorContext } from './utils/editor';
 import { getEnhancedPath } from './utils/env';
 import { revealWorkspaceLeaf } from './utils/obsidianCompat';
@@ -155,6 +157,14 @@ export default class ClaudianPlugin extends Plugin {
       name: 'Create work order from selection',
       editorCallback: () => {
         void createWorkOrderFromSelection(this);
+      },
+    });
+
+    this.addCommand({
+      id: 'create-work-order-from-browser-selection',
+      name: 'Create work order from browser selection',
+      callback: () => {
+        void createWorkOrderFromBrowserSelection(this);
       },
     });
 
@@ -739,6 +749,10 @@ export default class ClaudianPlugin extends Plugin {
       this.settings,
       providerId,
     );
+  }
+
+  getActiveBrowserSelection(): BrowserSelectionContext | null {
+    return this.getView()?.getActiveTab()?.controllers.browserSelectionController?.getContext() ?? null;
   }
 
   getEnvironmentVariablesForScope(scope: EnvironmentScope): string {
