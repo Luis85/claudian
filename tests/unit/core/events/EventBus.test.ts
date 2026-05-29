@@ -64,4 +64,21 @@ describe('EventBus', () => {
     bus.emit('thing:pinged');
     expect(count).toBe(1);
   });
+
+  it('routes a throwing handler to the error sink without breaking others', () => {
+    const bus = new EventBus<{ ping: void }>();
+    const seen: Array<{ error: unknown; event: string }> = [];
+    bus.setErrorSink((error, event) => seen.push({ error, event }));
+
+    const ok = jest.fn();
+    bus.on('ping', () => { throw new Error('boom'); });
+    bus.on('ping', ok);
+
+    bus.emit('ping');
+
+    expect(ok).toHaveBeenCalledTimes(1);
+    expect(seen).toHaveLength(1);
+    expect(seen[0].event).toBe('ping');
+    expect((seen[0].error as Error).message).toBe('boom');
+  });
 });

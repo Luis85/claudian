@@ -19,6 +19,7 @@ jest.mock('fs');
 // Now import after all mocks are set up
 import { buildResultErrorMessage } from '@test/helpers/sdkMessages';
 
+import { Logger } from '@/core/logging/Logger';
 import { getActionDescription, getActionPattern } from '@/core/security/ApprovalManager';
 import { getPathFromToolInput } from '@/core/tools/toolInput';
 import { ClaudianService } from '@/providers/claude/runtime/ClaudeChatRuntime';
@@ -130,6 +131,7 @@ function createMockPlugin(settings: Record<string, unknown> = {}) {
       getPluginsKey: jest.fn().mockReturnValue(''),
       hasEnabledPlugins: jest.fn().mockReturnValue(false),
     },
+    logger: new Logger({ enabled: false, level: 'off' }),
   } as any;
   return mockPlugin;
 }

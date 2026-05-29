@@ -7,6 +7,11 @@ export type EventHandler<P> = (payload: P) => void;
  */
 export class EventBus<M extends Record<string, any> = Record<string, unknown>> {
   private readonly handlers = new Map<keyof M, Set<EventHandler<never>>>();
+  private errorSink?: (error: unknown, event: string) => void;
+
+  setErrorSink(sink: (error: unknown, event: string) => void): void {
+    this.errorSink = sink;
+  }
 
   on<K extends keyof M>(event: K, handler: EventHandler<M[K]>): () => void {
     let set = this.handlers.get(event);
@@ -29,9 +34,9 @@ export class EventBus<M extends Record<string, any> = Record<string, unknown>> {
     for (const handler of [...set]) {
       try {
         (handler as EventHandler<M[K]>)(payload);
-      } catch {
-        // Swallow so one bad subscriber cannot break others or the producer.
-        // TODO: route to logger once available.
+      } catch (error) {
+        // One bad subscriber must not break others or the producer.
+        this.errorSink?.(error, String(event));
       }
     }
   }

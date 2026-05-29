@@ -3,6 +3,7 @@ import '@/providers';
 import * as sdkModule from '@anthropic-ai/claude-agent-sdk';
 import { Notice } from 'obsidian';
 
+import { Logger } from '@/core/logging/Logger';
 import type { McpServerManager } from '@/core/mcp/McpServerManager';
 import type ClaudianPlugin from '@/main';
 import { ClaudianService } from '@/providers/claude/runtime/ClaudeChatRuntime';
@@ -64,6 +65,7 @@ describe('ClaudianService', () => {
       pluginManager: {
         getPluginsKey: jest.fn().mockReturnValue(''),
       },
+      logger: new Logger({ enabled: false, level: 'off' }),
     } as unknown as ClaudianPlugin;
 
     mockMcpManager = {
