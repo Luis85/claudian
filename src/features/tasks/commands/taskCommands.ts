@@ -1,9 +1,13 @@
 import { normalizePath, Notice, TFile, TFolder } from 'obsidian';
 
 import type ClaudianPlugin from '../../../main';
+import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
+import type { ProviderId } from '../../../core/providers/types';
 import type { BrowserSelectionContext } from '../../../utils/browser';
-import type { TaskSpec, TaskStatus } from '../model/taskTypes';
+import type { TaskPriority, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { HANDOFF_END, HANDOFF_START, RUN_LEDGER_END, RUN_LEDGER_START } from '../storage/TaskNoteStore';
+import { buildTemplateVars, renderWorkOrderBody, resolvePriority, resolveProviderModel } from '../templates/templateResolution';
+import type { WorkOrderTemplate } from '../templates/templateTypes';
 
 interface BuildWorkOrderArgs {
   id: string;
@@ -12,6 +16,7 @@ interface BuildWorkOrderArgs {
   model: string;
   timestamp: string;
   status?: TaskStatus;
+  priority?: TaskPriority;
   sourcePath?: string | null;
   sourceFolderPath?: string | null;
   objective?: string;
@@ -31,44 +36,79 @@ function stripMarkdownExtension(path: string): string {
   return path.replace(/\.md$/i, '');
 }
 
-function buildWorkOrderMarkdown(args: BuildWorkOrderArgs): string {
-  const { id, title, provider, model, timestamp, sourcePath, sourceFolderPath } = args;
-  const status = args.status ?? 'ready';
+interface FrontmatterArgs {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  timestamp: string;
+  provider: string;
+  model: string;
+  conversationId?: string | null;
+}
 
-  let contextBody = '_Add the links, files, and scope the agent needs._';
-  if (args.contextMarkdown && args.contextMarkdown.trim()) {
-    contextBody = args.contextMarkdown.trim();
-  } else if (sourcePath) {
-    contextBody = `Source note: [[${stripMarkdownExtension(sourcePath)}]]`;
-  } else if (sourceFolderPath) {
-    contextBody = `Source folder: \`${sourceFolderPath}\``;
-  }
-
-  const objectiveBody =
-    args.objective && args.objective.trim() ? args.objective.trim() : '_What should the agent accomplish?_';
+function workOrderFrontmatter(args: FrontmatterArgs): string {
   const conversationLine = args.conversationId
     ? `conversation_id: ${JSON.stringify(args.conversationId)}`
     : 'conversation_id:';
-
   return `---
 type: claudian-work-order
 schema_version: 1
-id: ${id}
-title: ${JSON.stringify(title)}
-status: ${status}
-priority: normal
-created: ${timestamp}
-updated: ${timestamp}
-provider: ${provider}
-model: ${model}
+id: ${args.id}
+title: ${JSON.stringify(args.title)}
+status: ${args.status}
+priority: ${args.priority}
+created: ${args.timestamp}
+updated: ${args.timestamp}
+provider: ${args.provider}
+model: ${args.model}
 run_id:
 ${conversationLine}
 sidepanel_tab_id:
 started:
 finished:
 attempts: 0
----
-# ${title}
+---`;
+}
+
+const GENERATED_REGIONS_TAIL = `## Run Ledger
+
+${RUN_LEDGER_START}
+${RUN_LEDGER_END}
+
+## Result / Handoff
+
+${HANDOFF_START}
+${HANDOFF_END}
+`;
+
+function buildWorkOrderMarkdown(args: BuildWorkOrderArgs): string {
+  const status = args.status ?? 'ready';
+  const priority = args.priority ?? 'normal';
+
+  let contextBody = '_Add the links, files, and scope the agent needs._';
+  if (args.contextMarkdown && args.contextMarkdown.trim()) {
+    contextBody = args.contextMarkdown.trim();
+  } else if (args.sourcePath) {
+    contextBody = `Source note: [[${stripMarkdownExtension(args.sourcePath)}]]`;
+  } else if (args.sourceFolderPath) {
+    contextBody = `Source folder: \`${args.sourceFolderPath}\``;
+  }
+
+  const objectiveBody =
+    args.objective && args.objective.trim() ? args.objective.trim() : '_What should the agent accomplish?_';
+
+  return `${workOrderFrontmatter({
+    id: args.id,
+    title: args.title,
+    status,
+    priority,
+    timestamp: args.timestamp,
+    provider: args.provider,
+    model: args.model,
+    conversationId: args.conversationId,
+  })}
+# ${args.title}
 
 ## Objective
 
@@ -87,15 +127,43 @@ ${contextBody}
 - Keep direct chat behavior intact.
 - Do not modify unrelated files.
 
-## Run Ledger
+${GENERATED_REGIONS_TAIL}`;
+}
 
-${RUN_LEDGER_START}
-${RUN_LEDGER_END}
+function buildWorkOrderFromTemplate(args: FrontmatterArgs & { body: string }): string {
+  return `${workOrderFrontmatter(args)}
+${args.body.trim()}
 
-## Result / Handoff
+${GENERATED_REGIONS_TAIL}`;
+}
 
-${HANDOFF_START}
-${HANDOFF_END}
+function buildExampleTemplateMarkdown(): string {
+  return `---
+type: claudian-work-order-template
+schema_version: 1
+name: Example template
+description: Starting point for a custom work-order template.
+priority: normal
+---
+# {{title}}
+
+## Objective
+
+_Describe what the agent should accomplish._
+
+## Acceptance Criteria
+
+- [ ] _Define what "done" means._
+
+## Context
+
+{{source}}
+
+_Created {{date}}._
+
+## Constraints
+
+- Do not modify unrelated files.
 `;
 }
 
@@ -105,6 +173,11 @@ function timestampId(date: Date): string {
     `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}` +
     `${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`
   );
+}
+
+function isoDate(date: Date): string {
+  const pad = (value: number): string => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 async function ensureFolder(plugin: ClaudianPlugin, folder: string): Promise<void> {
@@ -151,6 +224,7 @@ export async function archiveWorkOrder(
 export interface CreateWorkOrderOptions {
   status?: TaskStatus;
   reveal?: 'note' | 'none';
+  template?: WorkOrderTemplate;
 }
 
 export interface WorkOrderSeed {
@@ -175,8 +249,33 @@ export async function createWorkOrderFromSeed(
   seed: WorkOrderSeed,
   options?: CreateWorkOrderOptions,
 ): Promise<TFile | null> {
-  const provider = plugin.settings.agentBoardDefaultProvider;
-  const model = plugin.settings.agentBoardDefaultModel;
+  const settings = plugin.settings as unknown as Record<string, unknown>;
+  const defaults = {
+    provider: plugin.settings.agentBoardDefaultProvider,
+    model: plugin.settings.agentBoardDefaultModel,
+  };
+  const template = options?.template;
+
+  let provider = defaults.provider;
+  let model = defaults.model;
+  let priority: TaskPriority = 'normal';
+  if (template) {
+    const resolved = resolveProviderModel(template, defaults, {
+      isValidProvider: (id) =>
+        ProviderRegistry.getRegisteredProviderIds().includes(id as ProviderId) &&
+        ProviderRegistry.isEnabled(id as ProviderId, settings),
+      ownsModel: (id, candidate) =>
+        ProviderRegistry.getRegisteredProviderIds().includes(id as ProviderId) &&
+        ProviderRegistry.getChatUIConfig(id as ProviderId).ownsModel(candidate, settings),
+    });
+    provider = resolved.provider;
+    model = resolved.model;
+    priority = resolvePriority(template);
+    for (const warning of resolved.warnings) {
+      new Notice(warning);
+    }
+  }
+
   if (!provider) {
     // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Board" is the product feature name.
     new Notice('Set an Agent Board default provider in settings first.');
@@ -196,19 +295,46 @@ export async function createWorkOrderFromSeed(
   const slug = slugifyTitle(title) || 'work-order';
   const id = `task-${timestampId(now)}-${slug}`;
   const status = options?.status ?? seed.status ?? 'ready';
-  const markdown = buildWorkOrderMarkdown({
-    id,
-    title,
-    provider,
-    model,
-    timestamp: now.toISOString(),
-    status,
-    sourcePath: seed.sourcePath ?? null,
-    sourceFolderPath: seed.sourceFolderPath ?? null,
-    objective: seed.objective,
-    contextMarkdown: seed.contextMarkdown,
-    conversationId: seed.conversationId ?? null,
-  });
+
+  let markdown: string;
+  if (template) {
+    const vars = buildTemplateVars({
+      title,
+      date: isoDate(now),
+      sourcePath: seed.sourcePath ?? null,
+      sourceFolderPath: seed.sourceFolderPath ?? null,
+    });
+    const rendered = renderWorkOrderBody(template, vars);
+    if (rendered.errors.length > 0) {
+      new Notice(`Template "${template.name}" has problems: ${rendered.errors.join('; ')}`);
+      return null;
+    }
+    markdown = buildWorkOrderFromTemplate({
+      id,
+      title,
+      status,
+      priority,
+      timestamp: now.toISOString(),
+      provider,
+      model,
+      conversationId: seed.conversationId ?? null,
+      body: rendered.body,
+    });
+  } else {
+    markdown = buildWorkOrderMarkdown({
+      id,
+      title,
+      provider,
+      model,
+      timestamp: now.toISOString(),
+      status,
+      sourcePath: seed.sourcePath ?? null,
+      sourceFolderPath: seed.sourceFolderPath ?? null,
+      objective: seed.objective,
+      contextMarkdown: seed.contextMarkdown,
+      conversationId: seed.conversationId ?? null,
+    });
+  }
 
   const filePath = uniquePath(plugin, normalizePath(`${folder}/${id}.md`));
   const created = await plugin.app.vault.create(filePath, markdown);
@@ -227,6 +353,18 @@ export async function createWorkOrder(
   options?: CreateWorkOrderOptions,
 ): Promise<TFile | null> {
   return createWorkOrderFromSeed(plugin, buildSeedFromSource(source), options);
+}
+
+export async function createWorkOrderTemplate(plugin: ClaudianPlugin): Promise<TFile | null> {
+  const folder = normalizePath(plugin.settings.agentBoardTemplateFolder || 'Agent Board/templates');
+  await ensureFolder(plugin, folder);
+  const filePath = uniquePath(plugin, normalizePath(`${folder}/work-order-template.md`));
+  const created = await plugin.app.vault.create(filePath, buildExampleTemplateMarkdown());
+  if (created instanceof TFile) {
+    await plugin.app.workspace.getLeaf('tab').openFile(created);
+    return created;
+  }
+  return null;
 }
 
 export async function createWorkOrderFromCurrentNote(plugin: ClaudianPlugin): Promise<TFile | null> {
@@ -326,6 +464,11 @@ export function buildConversationSeed(args: {
   };
 }
 
-export const __taskCommandTestUtils = { buildWorkOrderMarkdown, slugifyTitle };
+export const __taskCommandTestUtils = {
+  buildWorkOrderMarkdown,
+  buildWorkOrderFromTemplate,
+  buildExampleTemplateMarkdown,
+  slugifyTitle,
+};
 
 export const __taskCaptureTestUtils = { buildSelectionSeed, buildBrowserSeed, buildMessageSeed, buildConversationSeed };
