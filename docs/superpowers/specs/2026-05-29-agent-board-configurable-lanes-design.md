@@ -1,4 +1,4 @@
-# Agent Board Configurable Lanes Design
+# Agent Board Configurable Lanes + Board QoL Design
 
 Date: 2026-05-29
 Status: proposed for user review
@@ -7,9 +7,11 @@ Builds on: [[docs/superpowers/specs/2026-05-28-agent-board-thin-slice-design.md]
 
 ## Summary
 
-Make the Agent Board configurable. Replace the hardcoded one-lane-per-status board with user-defined lanes: custom titles, order, visibility, and status-to-lane mapping, plus per-lane definition of ready (DoR) and definition of done (DoD). The current run lane's DoR/DoD are injected into the run prompt as guidance.
+Make the Agent Board configurable and add board quality-of-life. Replace the hardcoded one-lane-per-status board with user-defined lanes: custom titles, order, visibility, and status-to-lane mapping, plus per-lane definition of ready (DoR) and definition of done (DoD). The current run lane's DoR/DoD are injected into the run prompt as guidance.
 
-The internal status set stays fixed (10 statuses) and the state machine is unchanged. Configuration only affects display grouping and prompt context. Roles are out of scope for this increment.
+Quality-of-life: add work orders directly from the board into the Inbox, edit a work order's frontmatter (title, provider, model, priority) inline in the detail modal, and promote an Inbox item to Ready with an explicit action.
+
+The internal status set stays fixed (10 statuses) and the state machine is unchanged. Configuration only affects display grouping and prompt context. Status changes stay action-driven through the state machine. Roles are out of scope for this increment.
 
 ## Goals
 
@@ -21,6 +23,9 @@ The internal status set stays fixed (10 statuses) and the state machine is uncha
 - Inject the current lane's DoR/DoD into the run prompt as guidance.
 - Fall back to a default configuration on invalid config and surface a board-visible error.
 - Preserve current board behavior when configuration is left at default.
+- Add a work order from the board straight into the Inbox.
+- Edit a work order's frontmatter (title, provider, model, priority) inline in the detail modal.
+- Promote an Inbox work order to Ready with an explicit, validated action.
 
 ## Non-goals
 
@@ -30,6 +35,9 @@ The internal status set stays fixed (10 statuses) and the state machine is uncha
 - No automated enforcement of DoR/DoD checklist items.
 - No custom internal statuses or custom transition graph.
 - No vault-file or Markdown-note config storage.
+- No editing of body sections (Objective/Acceptance Criteria/Context/Constraints) in the modal — use "Open note".
+- No free-form status dropdown; status changes stay action-driven.
+- No editing while a work order is running.
 - No changes to capture surfaces or live-run reliability (separate increments).
 
 ## Decisions
@@ -42,6 +50,10 @@ The internal status set stays fixed (10 statuses) and the state machine is uncha
 | Unmapped status | Implicit catch-all "Unsorted" lane (non-fatal warning) |
 | Duplicate status across lanes | Invalid config → fall back to default + board error |
 | Prompt injection target | Current lane only (DoR + DoD), guidance only |
+| Board-add status | New from board → `inbox`; opens editable modal (not the note tab) |
+| Modal edit scope | Frontmatter only: title, provider, model, priority |
+| Inbox → ready | Explicit "Mark ready" action, validated via state machine |
+| Edit while running | Disabled (read-only) |
 
 ## Data Model
 
@@ -174,6 +186,44 @@ Extend `renderAgentBoardSettingsSection` (`src/features/settings/ui/AgentBoardSe
 
 CSS: add styles for the lane editor blocks and the lane DoR/DoD display using existing Obsidian variables.
 
+## Board Quality-of-Life
+
+### Add work order from the board
+
+`AgentBoardView` renders a header button ("Add work order"). It creates a work order with `status: inbox`, the settings default provider/model, title `New work order`, in the configured folder, then opens the editable detail modal for that task — it does **not** open the note in a tab. If no default provider/model is set, it shows the existing Notice guard and aborts.
+
+`taskCommands` is parameterized so the command path and the board path share one builder:
+
+- `buildWorkOrderMarkdown` takes a `status` argument (default `ready`).
+- `createWorkOrder(plugin, source?, options?)` gains `options.status` (default `ready`) and `options.reveal` (`'note'` default, or `'none'`). Command palette entries keep `status: ready` and `reveal: 'note'`. The board path uses `status: 'inbox'` and `reveal: 'none'`, then the view opens the modal.
+
+If the Inbox lane is hidden by config, inbox items appear in the `Unsorted` catch-all — acceptable and consistent with the coverage rule.
+
+### Editable detail modal (frontmatter only)
+
+`WorkOrderDetailModal` keeps its read-only sections (Objective, Acceptance criteria, Run ledger, Handoff) and gains inline frontmatter editors at the top: title (text), provider (enabled-provider dropdown), model (provider-dependent dropdown), priority (dropdown: `low`/`normal`/`high`/`urgent`).
+
+- Edits save on change through a new `onSaveFields(task, fields)` callback → `TaskNoteStore.writeFields` → `vault.modify` → board refresh; `updated` is bumped.
+- Changing provider resets the model selection and repopulates model options.
+- All editors are disabled (read-only display) while `status === 'running'`.
+- The modal stays decoupled from the registry: the view passes `getProviderOptions()`, `getModelOptions(providerId)`, and `onSaveFields`. Option providers wrap `ProviderRegistry` (same pattern as `AgentBoardSettingsSection`).
+
+### Mark ready action
+
+`inbox` cards (renderer) and the modal gain a "Mark ready" button. It routes through the existing `AgentBoardView.transitionTask(task, 'ready', 'Marked ready.')`, which validates with `canTransitionTaskStatus`. No new transition logic; the state machine keeps authority.
+
+### `TaskNoteStore.writeFields`
+
+New method mirroring `writeStatus` mechanics:
+
+```ts
+writeFields(content: string, fields: Partial<{ title: string; provider: string; model: string; priority: TaskPriority }>): string
+```
+
+- Parse frontmatter, set only the provided known keys, bump `updated`.
+- Preserve unknown frontmatter keys, body prose, and generated regions verbatim.
+- Reuse the existing frontmatter parse/`stringifyYaml` path used by `writeStatus`.
+
 ## File Structure
 
 New:
@@ -185,12 +235,15 @@ Modify:
 - `src/core/types/settings.ts` — add `agentBoardConfig?: BoardConfig`.
 - `src/app/settings/defaultSettings.ts` — default `agentBoardConfig`.
 - `src/features/settings/ui/AgentBoardSettingsSection.ts` — lane editor UI.
-- `src/features/tasks/ui/AgentBoardRenderer.ts` — consume `ResolvedBoardLayout`.
-- `src/features/tasks/ui/AgentBoardView.ts` — load config, resolve layout, inject `renderPrompt`.
+- `src/features/tasks/ui/AgentBoardRenderer.ts` — consume `ResolvedBoardLayout`; add "Mark ready" action on inbox cards.
+- `src/features/tasks/ui/AgentBoardView.ts` — load config, resolve layout, inject `renderPrompt`; "Add work order" header button; wire modal edit callbacks.
+- `src/features/tasks/ui/WorkOrderDetailModal.ts` — inline frontmatter editors, "Mark ready" button, running read-only.
+- `src/features/tasks/commands/taskCommands.ts` — parameterize `buildWorkOrderMarkdown`/`createWorkOrder` with `status` + `reveal`.
+- `src/features/tasks/storage/TaskNoteStore.ts` — add `writeFields`.
 - `src/features/tasks/prompt/TaskPromptRenderer.ts` — optional lane param.
 - `src/features/tasks/execution/TaskRunCoordinator.ts` — inject `renderPrompt` dependency.
 - `src/main.ts` — `refreshAgentBoards()` helper.
-- CSS source — lane editor + lane criteria styles.
+- CSS source — lane editor + lane criteria + modal editor styles.
 
 ## Testing Plan
 
@@ -232,6 +285,18 @@ TDD, mirrored under `tests/unit/features/tasks/config/` and existing paths.
 - Renders catch-all lane when present.
 - Shows config errors and invalid notes in the error area.
 
+### `TaskNoteStore.writeFields` (unit)
+
+- Updates title/provider/model/priority and bumps `updated`.
+- Preserves unknown frontmatter keys, body prose, and generated regions verbatim.
+- Omitted fields are left unchanged.
+
+### `taskCommands` (unit)
+
+- Board path builds markdown with `status: inbox`; command path still `status: ready`.
+- `reveal: 'none'` does not open the note; `reveal: 'note'` does (assert via injected/mocked workspace).
+- Existing creation assertions (markers, provider/model, wiki-link) still hold.
+
 ### Non-regression
 
 - Default config reproduces the current ten-lane board.
@@ -256,6 +321,10 @@ Smoke test:
 6. Run a work order from a lane with DoR/DoD; confirm the prompt in the fresh tab includes Definition of Ready/Done sections.
 7. Reset to default; confirm the board returns to the original layout.
 8. Send a direct chat message without a work order; confirm chat still works.
+9. Click "Add work order" on the board; confirm a new Inbox card appears and the editable modal opens (no note tab).
+10. In the modal, change title/provider/model/priority; confirm the card and note frontmatter update.
+11. Click "Mark ready" on the Inbox item; confirm it moves to Ready and gains a Run action.
+12. Open a running work order's modal; confirm editors are read-only.
 
 ## Acceptance Criteria
 
@@ -267,6 +336,10 @@ Smoke test:
 - Duplicate status mapping falls back to the default config with a board-visible error.
 - Default config renders identically to the current board.
 - Direct chat and existing run behavior are unchanged.
+- A work order can be added from the board into the Inbox and opens in the editable modal.
+- Title, provider, model, and priority are editable inline in the modal and persist to frontmatter.
+- An Inbox item can be promoted to Ready with "Mark ready" and then run.
+- Editors are read-only while a work order is running; body sections are never edited in the modal.
 
 ## Risks
 
@@ -274,3 +347,5 @@ Smoke test:
 - Prompt injection changes run output; strict handoff parsing is unaffected but prompt size grows.
 - Settings-save → board-refresh wiring must not couple settings to task internals beyond the `refreshAgentBoards()` helper.
 - Catch-all must guarantee no task ever disappears, even under partial/invalid config.
+- Modal save-on-change must not clobber concurrent note edits — `writeFields` re-reads and preserves unknown keys/body; avoid editing while running.
+- Parameterizing `createWorkOrder` must keep command-palette behavior (status `ready`, opens note) unchanged.
