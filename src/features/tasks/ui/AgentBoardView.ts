@@ -5,20 +5,27 @@ import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import { VIEW_TYPE_CLAUDIAN_AGENT_BOARD } from '../../../core/types/chat';
 import type ClaudianPlugin from '../../../main';
+import { createWorkOrder } from '../commands/taskCommands';
+import { getLaneForStatus, loadBoardConfig } from '../config/BoardConfigStore';
+import type { BoardConfig, ResolvedBoardLayout } from '../config/boardConfigTypes';
+import { resolveBoardLayout } from '../config/resolveBoardLayout';
 import type { TaskExecutionSurface } from '../execution/TaskExecutionSurface';
 import { TaskRunCoordinator } from '../execution/TaskRunCoordinator';
 import { TaskIndexer } from '../indexing/TaskIndexer';
 import { canTransitionTaskStatus } from '../model/taskStateMachine';
 import type { TaskBoardModel, TaskSpec, TaskStatus } from '../model/taskTypes';
+import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
 import { TaskNoteStore } from '../storage/TaskNoteStore';
 import { AgentBoardRenderer } from './AgentBoardRenderer';
-import { WorkOrderDetailModal } from './WorkOrderDetailModal';
+import { WorkOrderDetailModal, type WorkOrderFieldUpdate } from './WorkOrderDetailModal';
 
 export class AgentBoardView extends ItemView {
   private readonly noteStore = new TaskNoteStore();
   private readonly indexer = new TaskIndexer(this.noteStore);
   private readonly renderer = new AgentBoardRenderer();
   private model: TaskBoardModel = { tasks: [], invalidNotes: [] };
+  private config: BoardConfig = loadBoardConfig({}).config;
+  private layout: ResolvedBoardLayout = { lanes: [], errors: [] };
   private refreshTimer: number | null = null;
 
   constructor(
@@ -59,7 +66,13 @@ export class AgentBoardView extends ItemView {
   }
 
   async refresh(): Promise<void> {
+    const settings = this.plugin.settings as unknown as Record<string, unknown>;
     this.model = await this.indexer.indexVaultFolder(this.plugin.app.vault, this.folder);
+    const { config, errors } = loadBoardConfig(settings);
+    this.config = config;
+    const layout = resolveBoardLayout(config, this.model);
+    layout.errors = [...errors, ...layout.errors];
+    this.layout = layout;
     this.render();
   }
 
@@ -83,24 +96,35 @@ export class AgentBoardView extends ItemView {
   private render(): void {
     this.renderer.render(
       this.contentEl,
-      { model: this.model },
+      { layout: this.layout, invalidNotes: this.model.invalidNotes },
       {
         onOpenDetail: (task) => this.openDetail(task),
         onRun: (task) => void this.runTask(task),
         onStop: (task) => this.stopTask(task),
         onAccept: (task) => void this.transitionTask(task, 'done', 'Accepted from review.'),
         onRework: (task) => void this.transitionTask(task, 'needs_fix', 'Sent back for rework.'),
+        onMarkReady: (task) => void this.transitionTask(task, 'ready', 'Marked ready.'),
+        onAddWorkOrder: () => void this.addWorkOrderFromBoard(),
       },
     );
   }
 
   private openDetail(task: TaskSpec): void {
+    const settings = this.plugin.settings as unknown as Record<string, unknown>;
     new WorkOrderDetailModal(this.plugin.app, task, {
       onOpenNote: (target) => void this.openTask(target),
       onRun: (target) => void this.runTask(target),
       onStop: (target) => this.stopTask(target),
       onAccept: (target) => void this.transitionTask(target, 'done', 'Accepted from review.'),
       onRework: (target) => void this.transitionTask(target, 'needs_fix', 'Sent back for rework.'),
+      onMarkReady: (target) => void this.transitionTask(target, 'ready', 'Marked ready.'),
+      onSaveFields: (target, fields) => this.saveTaskFields(target, fields),
+      getProviderOptions: () =>
+        ProviderRegistry.getEnabledProviderIds(settings).map((id) => ({ value: id, label: id })),
+      getModelOptions: (providerId) =>
+        ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId)
+          ? ProviderRegistry.getChatUIConfig(providerId as ProviderId).getModelOptions(settings)
+          : [],
     }).open();
   }
 
@@ -114,6 +138,24 @@ export class AgentBoardView extends ItemView {
   private stopTask(task: TaskSpec): void {
     this.executionSurface.cancelTaskRun?.(task.frontmatter.run_id ?? '');
     new Notice(`Requested stop for "${task.frontmatter.title}".`);
+  }
+
+  private async saveTaskFields(task: TaskSpec, fields: WorkOrderFieldUpdate): Promise<void> {
+    await this.applyNoteChange(task.path, (content) => this.noteStore.writeFields(content, fields));
+    await this.refresh();
+  }
+
+  private async addWorkOrderFromBoard(): Promise<void> {
+    const created = await createWorkOrder(this.plugin, null, { status: 'inbox', reveal: 'none' });
+    if (!created) return;
+    await this.refresh();
+    try {
+      const content = await this.plugin.app.vault.read(created);
+      const { task } = this.noteStore.parse(created.path, content);
+      this.openDetail(task);
+    } catch {
+      // A freshly created note is well-formed; ignore parse failures defensively.
+    }
   }
 
   private async transitionTask(task: TaskSpec, to: TaskStatus, message: string): Promise<void> {
@@ -182,6 +224,8 @@ export class AgentBoardView extends ItemView {
         this.applyNoteChange(task.path, (content) => this.noteStore.appendLedger(content, entry)),
       writeHandoff: (_task, markdown) =>
         this.applyNoteChange(task.path, (content) => this.noteStore.writeHandoff(content, markdown)),
+      renderPrompt: (target) =>
+        renderTaskPrompt(target, getLaneForStatus(this.config, target.frontmatter.status) ?? undefined),
     });
 
     const result = await coordinator.run(latest);
