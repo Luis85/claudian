@@ -58,4 +58,10 @@ describe('buildWorkOrderMarkdown', () => {
     expect(task.frontmatter.provider).toBe('codex');
     expect(task.frontmatter.model).toBe('gpt-5-codex');
   });
+
+  it('emits the requested status, defaulting to ready', () => {
+    const base = { id: 't', title: 'T', provider: 'codex', model: 'm', timestamp: '2026-05-28T18:00:00.000Z' };
+    expect(buildWorkOrderMarkdown(base)).toContain('status: ready');
+    expect(buildWorkOrderMarkdown({ ...base, status: 'inbox' })).toContain('status: inbox');
+  });
 });
