@@ -1,11 +1,11 @@
 # Claudian
 
-An Obsidian plugin that embeds provider-backed chat runtimes in a sidebar and inline-edit flow. Claude is the default, full-feature provider; Codex is opt-in and joins the same conversation model through a provider boundary. This file is the domain glossary: it fixes the vocabulary used across `CLAUDE.md` files, PRDs, and code so that the same concept always has the same name.
+An Obsidian plugin that embeds provider-backed chat runtimes in a sidebar and inline-edit flow. Claude is the default, full-feature provider; Codex, Opencode, and Cursor are opt-in and join the same conversation model through a provider boundary. This file is the domain glossary: it fixes the vocabulary used across `CLAUDE.md` files, PRDs, and code so that the same concept always has the same name.
 
 ## Language
 
 **Provider**:
-A chat backend Claudian can drive — currently Claude (default, full-feature) or Codex (opt-in). A provider is identified by `Conversation.providerId` and owns its own opaque `providerState`.
+A chat backend Claudian can drive — currently Claude (default, full-feature), Codex, Opencode, or Cursor (all opt-in). A provider is identified by `Conversation.providerId` and owns its own opaque `providerState`.
 _Avoid_: backend, vendor, engine, LLM (LLM is the model, not the provider)
 
 **Provider adaptor**:
@@ -17,11 +17,11 @@ The provider-neutral chat-facing seam (`src/core/runtime/`) that streams a run: 
 _Avoid_: session driver, executor, agent runner (reserve "agent runner" for external-system mappings only)
 
 **Conversation**:
-The provider-neutral unit of chat state. Carries `providerId` and opaque `providerState` (typed per provider as `ClaudeProviderState` / `CodexProviderState`).
+The provider-neutral unit of chat state. Carries `providerId` and opaque `providerState` (typed per provider as `ClaudeProviderState`, `CodexProviderState`, `OpencodeProviderState`, or `CursorProviderState`).
 _Avoid_: thread, session (see below), chat log
 
 **Session**:
-A persisted record of a conversation. Provider-neutral metadata lives at `.claudian/sessions/*.meta.json`; provider-native transcripts live under `~/.claude/` or `~/.codex/`.
+A persisted record of a conversation. Provider-neutral metadata lives at `.claudian/sessions/*.meta.json`; provider-native transcripts live under `~/.claude/`, `~/.codex/`, or `~/.cursor/` (Opencode keeps state in its own database).
 _Avoid_: history file, save (use "session metadata" vs "transcript" to disambiguate)
 
 **Transcript**:

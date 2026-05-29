@@ -2,16 +2,23 @@
 
 ## Project Overview
 
-Claudian is an Obsidian plugin that embeds provider-backed chat runtimes in a sidebar and inline-edit flow. Claude is the default provider. Codex is optional and joins the same conversation model through `Conversation.providerId` plus provider-owned `providerState`.
+Claudian is an Obsidian plugin that embeds provider-backed chat runtimes in a sidebar and inline-edit flow. Claude is the default, full-feature provider. Codex, Opencode, and Cursor are opt-in and join the same conversation model through `Conversation.providerId` plus provider-owned `providerState`.
 
 ## Architecture Status
 
-- Product status: Claudian is a multi-provider product. Claude is the full-feature provider. Codex is opt-in and currently supports send, stream, cancel, resume, history reload, fork, plan mode, image attachments, inline edit, `#` instruction mode, `$` skills, and subagents. Unsupported or gated Codex surfaces are rewind, runtime-discovered provider commands, in-app MCP management, and Claude plugin integration.
-- App shell: `src/app/` owns shared settings defaults and plugin-level storage helpers. `src/core/` owns provider-neutral runtime, registry, tool, and type contracts.
+- Product status: Claudian is a multi-provider product hosting four chat backends.
+  - **Claude** is the full-feature provider: send, stream, cancel, resume, history reload, fork, plan mode, image attachments, inline edit, `#` instruction mode, `/` commands, `$` skills, subagents, rewind, MCP management, and Claude plugin integration.
+  - **Codex** supports send, stream, cancel, resume, history reload, fork, plan mode, image attachments, inline edit, `#` instruction mode, `$` skills, and subagents. Unsupported or gated surfaces are rewind, runtime-discovered provider commands, in-app MCP management, and Claude plugin integration.
+  - **Opencode** runs via the Opencode CLI server and supports send, stream, cancel, resume, history reload, fork, image attachments, inline edit, `#` instruction mode, subagents, and Opencode-managed MCP. Plan mode and rewind are gated.
+  - **Cursor** runs via the Cursor Agent CLI through ACP and supports send, stream, cancel, resume, history reload, plan mode, image attachments, and inline edit. Rewind, in-app MCP management, and subagents are gated.
+- App shell: `src/app/` owns shared settings defaults and plugin-level storage helpers. `src/core/` owns provider-neutral runtime, registry, tool, and type contracts plus the shared event bus and leveled logger.
 - Provider boundary: `src/core/runtime/` and `src/core/providers/` define the chat-facing seam. `ProviderRegistry` creates runtimes and provider-owned auxiliary services. `ProviderWorkspaceRegistry` owns workspace services such as command catalogs, agent mention providers, CLI resolution, MCP managers, and provider settings tabs.
+- Shared transport: `src/providers/acp/` packages the Agent Client Protocol JSON-RPC client, subprocess wrapper, session config, tool stream adapter, and update normalizer. Cursor and Opencode build their runtimes on top of it.
 - Claude adaptor: `src/providers/claude/` owns the Claude runtime, prompt encoding, stream transforms, history hydration, CLI resolution, plugin and agent discovery, MCP storage, and Claude-specific settings UI. `ClaudeCommandCatalog` merges vault commands, vault skills, and runtime-supported commands behind the shared command catalog contract.
 - Codex adaptor: `src/providers/codex/` owns the `codex app-server` runtime, JSON-RPC transport, prompt encoding, raw live stream projection, JSONL history reload, settings reconciliation, normalization, skill cataloging, subagent storage, and Codex settings UI. `CodexSkillCatalog` provides `$` skill discovery from `.codex/skills/` and `.agents/skills/` without relying on runtime command discovery.
-- Conversations: `Conversation` carries `providerId` and opaque `providerState`. Claude state is typed behind `ClaudeProviderState`. Codex state is typed behind `CodexProviderState` and currently stores `threadId`, `sessionFilePath`, and optional fork metadata.
+- Opencode adaptor: `src/providers/opencode/` owns the Opencode runtime, ACP-backed transport, prompt encoding, history hydration, settings reconciliation, mode and model catalogs, command and skill discovery, subagent storage under `.opencode/agent/` (with legacy `.opencode/agents/` fallback), Opencode-managed MCP wiring, and Opencode settings UI.
+- Cursor adaptor: `src/providers/cursor/` owns the Cursor Agent runtime, ACP-backed transport with a Windows-safe spawn lock around `~/.cursor/cli-config.json`, prompt encoding, JSONL history hydration from `~/.cursor/chats/<workspace>/<session>/`, settings reconciliation, plan-path conventions under `.cursor/plans/`, and Cursor settings UI.
+- Conversations: `Conversation` carries `providerId` and opaque `providerState`. Claude state is typed behind `ClaudeProviderState`. Codex state is typed behind `CodexProviderState` and stores `threadId`, `sessionFilePath`, and optional fork metadata. Opencode state is typed behind `OpencodeProviderState` and stores an optional `databasePath`. Cursor state is typed behind `CursorProviderState` and stores the Cursor `chatSessionId`.
 
 ## Commands
 
@@ -31,12 +38,17 @@ npm run test:coverage
 | Layer | Purpose | Details |
 |-------|---------|---------|
 | **app** | Shared defaults and plugin-level storage helpers | `defaultSettings`, `ClaudianSettingsStorage`, `SharedStorageService` |
-| **core** | Provider-neutral contracts and infrastructure | See [`src/core/CLAUDE.md`](src/core/CLAUDE.md) |
+| **core** | Provider-neutral contracts and infrastructure | See [`src/core/CLAUDE.md`](src/core/CLAUDE.md). Includes `runtime/`, `providers/`, `auxiliary/`, `bootstrap/`, `commands/`, `events/`, `logging/`, `mcp/`, `prompt/`, `security/`, `storage/`, `tools/`, `types/` |
+| **providers/acp** | Agent Client Protocol shared transport | JSON-RPC client, subprocess wrapper, session config, tool stream adapter, update normalizer |
 | **providers/claude** | Claude SDK adaptor | See [`src/providers/claude/CLAUDE.md`](src/providers/claude/CLAUDE.md) |
 | **providers/codex** | Codex app-server adaptor | See [`src/providers/codex/CLAUDE.md`](src/providers/codex/CLAUDE.md) |
+| **providers/opencode** | Opencode adaptor over ACP | Runtime, prompt encoding, history, settings, modes, models, commands, subagent storage, MCP, settings UI |
+| **providers/cursor** | Cursor Agent adaptor over ACP | Runtime, prompt encoding, JSONL history hydration, settings reconciliation, plan-path conventions, settings UI |
 | **features/chat** | Main sidebar interface | See [`src/features/chat/CLAUDE.md`](src/features/chat/CLAUDE.md) |
 | **features/inline-edit** | Inline edit modal and provider-backed edit services | `InlineEditModal` plus provider-owned inline edit services |
-| **features/settings** | Shared settings shell with provider tabs | General tab plus provider-owned Claude and Codex tab renderers |
+| **features/settings** | Shared settings shell with provider tabs | General tab plus provider-owned Claude, Codex, Opencode, and Cursor tab renderers |
+| **features/tasks** | Agent Board work orders and run coordination | See [`src/features/tasks/CLAUDE.md`](src/features/tasks/CLAUDE.md) |
+| **features/quickActions** | Quick action parsing and storage | Vault-defined quick actions surfaced in chat |
 | **shared** | Reusable UI building blocks | Dropdowns, modals, mention UI, icons |
 | **i18n** | Internationalization | 10 locales |
 | **utils** | Cross-cutting utilities | env, path, markdown, diff, context, file-link, image, browser, canvas, session, subagent helpers |

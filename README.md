@@ -6,11 +6,11 @@
 
 ![Preview](Preview.png)
 
-An Obsidian plugin that embeds AI coding agents (Claude Code, Codex, Opencode and more to come) in your vault. Your vault becomes the agent's working directory — file read/write, search, bash, and multi-step workflows all work out of the box.
+An Obsidian plugin that embeds AI coding agents (Claude Code, Codex, Opencode, Cursor Agent and more to come) in your vault. Your vault becomes the agent's working directory — file read/write, search, bash, and multi-step workflows all work out of the box.
 
 ## Features & Usage
 
-Open the chat sidebar from the ribbon icon or command palette. Select text and use the hotkey for inline edit. Everything works like your familiar coding agent, Claude Code, Codex and Opencode — talk to the agent, and it reads, writes, edits, and searches files in your vault.
+Open the chat sidebar from the ribbon icon or command palette. Select text and use the hotkey for inline edit. Everything works like your familiar coding agent — Claude Code, Codex, Opencode, or Cursor Agent — talk to the agent, and it reads, writes, edits, and searches files in your vault.
 
 **Inline Edit** — Select text or start at the cursor position + hotkey to edit directly in notes with word-level diff preview.
 
@@ -22,14 +22,14 @@ Open the chat sidebar from the ribbon icon or command palette. Select text and u
 
 **Instruction Mode (`#`)** — Refined custom instructions added from the chat input.
 
-**MCP Servers** — Connect external tools via Model Context Protocol (stdio, SSE, HTTP). Claude manages vault MCP in-app; Codex uses its own CLI-managed MCP configuration.
+**MCP Servers** — Connect external tools via Model Context Protocol (stdio, SSE, HTTP). Claude manages vault MCP in-app; Opencode uses Opencode-managed MCP; Codex and Cursor use their own CLI-managed MCP configuration.
 
 **Multi-Tab & Conversations** — Multiple chat tabs, conversation history, fork, resume, and compact.
 
 ## Requirements
 
 - **Claude provider**: [Claude Code CLI](https://code.claude.com/docs/en/overview) installed (native install recommended). Claude subscription/API or compatible provider ([Openrouter](https://openrouter.ai/docs/guides/guides/claude-code-integration), [Kimi](https://platform.moonshot.ai/docs/guide/agent-support), etc.).
-- **Optional providers**: [Codex CLI](https://github.com/openai/codex), [Opencode](https://opencode.ai/).
+- **Optional providers**: [Codex CLI](https://github.com/openai/codex), [Opencode](https://opencode.ai/), [Cursor Agent CLI](https://docs.cursor.com/en/cli/overview).
 - Obsidian v1.7.2+
 - Desktop only (macOS, Linux, Windows)
 
@@ -127,7 +127,7 @@ If different, GUI apps like Obsidian may not find Node.js.
 
 ### Other providers
 
-Codex and Opencode support are live but features might be incomplete, and still need more testing across platforms and installation methods. If you have feature request or run into any bugs, please [submit a GitHub issue](https://github.com/YishenTu/claudian/issues).
+Codex, Opencode, and Cursor support are live but features might be incomplete, and still need more testing across platforms and installation methods. If you have feature request or run into any bugs, please [submit a GitHub issue](https://github.com/YishenTu/claudian/issues).
 
 ## Architecture
 
@@ -145,11 +145,14 @@ src/
 ├── providers/
 │   ├── claude/                  # Claude SDK adaptor, prompt encoding, storage, MCP, plugins
 │   ├── codex/                   # Codex app-server adaptor, JSON-RPC transport, JSONL history
-│   ├── opencode/                # Opencode adaptor
+│   ├── opencode/                # Opencode adaptor over ACP
+│   ├── cursor/                  # Cursor Agent adaptor over ACP, JSONL history hydration
 │   └── acp/                     # Agent Client Protocol shared transport
 ├── features/
 │   ├── chat/                    # Sidebar chat: tabs, controllers, renderers
 │   ├── inline-edit/             # Inline edit modal and provider-backed edit services
+│   ├── tasks/                   # Agent Board work orders and run coordination
+│   ├── quickActions/            # Vault-defined quick actions
 │   └── settings/                # Settings shell with provider tabs
 ├── shared/                      # Reusable UI components and modals
 ├── i18n/                        # Internationalization (10 locales)
@@ -163,6 +166,7 @@ src/
 - [x] 1M Opus and Sonnet models
 - [x] Codex provider integration
 - [x] Opencode support
+- [x] Cursor Agent support
 - [ ] More to come!
 
 ## License
@@ -184,4 +188,6 @@ Licensed under the [MIT License](LICENSE).
 - [Obsidian](https://obsidian.md) for the plugin API
 - [Anthropic](https://anthropic.com) for Claude and the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview)
 - [OpenAI](https://openai.com) for [Codex](https://github.com/openai/codex)
-- [Opencode](https://opencode.ai/) 
+- [Opencode](https://opencode.ai/)
+- [Cursor](https://cursor.com/) for the [Cursor Agent CLI](https://docs.cursor.com/en/cli/overview)
+
