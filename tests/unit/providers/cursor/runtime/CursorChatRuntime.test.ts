@@ -4,8 +4,8 @@ import { EventEmitter } from 'events';
 
 import type { PreparedChatTurn } from '@/core/runtime/types';
 import type { ChatMessage } from '@/core/types';
-import { CURSOR_CLI_INLINE_PROMPT_MAX_CHARS } from '@/providers/cursor/runtime/cursorCliPrompt';
 import { CursorChatRuntime } from '@/providers/cursor/runtime/CursorChatRuntime';
+import { CURSOR_CLI_INLINE_PROMPT_MAX_CHARS } from '@/providers/cursor/runtime/cursorCliPrompt';
 
 jest.mock('@/utils/path', () => ({
   getVaultPath: jest.fn().mockReturnValue('/test/vault'),

@@ -3,10 +3,10 @@ import { spawn } from 'child_process';
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type ClaudianPlugin from '../../../main';
 import { getVaultPath } from '../../../utils/path';
-import { acquireCursorAgentSpawnLock } from './cursorAgentSpawnLock';
 import { buildCursorAgentEnvironment } from './cursorAgentEnv';
-import { resolveCursorCliPromptArg } from './cursorCliPrompt';
+import { acquireCursorAgentSpawnLock } from './cursorAgentSpawnLock';
 import { resolveCursorModelForCli } from './cursorCliModel';
+import { resolveCursorCliPromptArg } from './cursorCliPrompt';
 import { resolveCursorLaunch } from './cursorLaunch';
 import { buildCursorAgentJsonModeFlagArgs, type CursorPermissionMode } from './cursorLaunchArgs';
 
@@ -58,20 +58,18 @@ export class CursorAuxCliRunner {
     const { arg: promptArg, cleanup: cleanupPromptFile } = resolveCursorCliPromptArg(fullPrompt);
 
     const env = buildCursorAgentEnvironment(this.plugin);
-    let stdout = '';
-    let stderr = '';
-    let code: number | null = null;
-    let signal: NodeJS.Signals | null = null;
+    let result: { stdout: string; stderr: string; code: number | null; signal: NodeJS.Signals | null };
     try {
-      ({ stdout, stderr, code, signal } = await this.spawnOnce(
+      result = await this.spawnOnce(
         cli,
         [...flagArgs, promptArg],
         { cwd: workspaceDir, env },
         config.abortController?.signal,
-      ));
+      );
     } finally {
       cleanupPromptFile?.();
     }
+    const { stdout, stderr, code, signal } = result;
 
     if (signal === 'SIGTERM' || config.abortController?.signal.aborted) {
       throw new Error('Cancelled');
