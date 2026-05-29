@@ -42,14 +42,25 @@ export const DEFAULT_LANE_TITLES: Record<TaskStatus, string> = {
   canceled: 'Canceled',
 };
 
-export const DEFAULT_BOARD_CONFIG: BoardConfig = {
+function freezeLane(lane: BoardLaneConfig): BoardLaneConfig {
+  Object.freeze(lane.statuses);
+  Object.freeze(lane.definitionOfReady);
+  Object.freeze(lane.definitionOfDone);
+  return Object.freeze(lane);
+}
+
+export const DEFAULT_BOARD_CONFIG: BoardConfig = Object.freeze({
   schemaVersion: 1,
-  lanes: TASK_STATUSES.map((status) => ({
-    id: status,
-    title: DEFAULT_LANE_TITLES[status],
-    statuses: [status],
-    visible: true,
-    definitionOfReady: [],
-    definitionOfDone: [],
-  })),
-};
+  lanes: Object.freeze(
+    TASK_STATUSES.map((status) =>
+      freezeLane({
+        id: status,
+        title: DEFAULT_LANE_TITLES[status],
+        statuses: [status],
+        visible: true,
+        definitionOfReady: [],
+        definitionOfDone: [],
+      }),
+    ),
+  ) as BoardLaneConfig[],
+}) as BoardConfig;

@@ -44,10 +44,31 @@ describe('loadBoardConfig', () => {
     expect(config.lanes[0].statuses).toEqual(['ready']);
     expect(errors.some((e) => e.includes('bogus'))).toBe(true);
   });
+
+  it('accepts an explicit empty lanes array', () => {
+    const { config, errors } = loadBoardConfig({ agentBoardConfig: { schemaVersion: 1, lanes: [] } });
+    expect(config.lanes).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  it('returns a frozen default that callers cannot mutate', () => {
+    const { config } = loadBoardConfig({});
+    expect(Object.isFrozen(config)).toBe(true);
+    expect(() => config.lanes.push(config.lanes[0])).toThrow();
+    expect(DEFAULT_BOARD_CONFIG.lanes).toHaveLength(10);
+  });
 });
 
 describe('getLaneForStatus', () => {
   it('finds the lane owning a status, else null', () => {
     expect(getLaneForStatus(DEFAULT_BOARD_CONFIG, 'review')?.id).toBe('review');
+  });
+
+  it('returns null when no lane owns the status', () => {
+    const config = {
+      schemaVersion: 1 as const,
+      lanes: [{ id: 'a', title: 'A', statuses: ['ready' as const], visible: true, definitionOfReady: [], definitionOfDone: [] }],
+    };
+    expect(getLaneForStatus(config, 'done')).toBeNull();
   });
 });
