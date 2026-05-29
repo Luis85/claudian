@@ -10,6 +10,7 @@ import { createWorkOrder } from '../commands/taskCommands';
 import { getLaneForStatus, loadBoardConfig } from '../config/BoardConfigStore';
 import type { BoardConfig, ResolvedBoardLayout } from '../config/boardConfigTypes';
 import { resolveBoardLayout } from '../config/resolveBoardLayout';
+import { selectNextReadyTask } from '../execution/selectNextReadyTask';
 import type { TaskExecutionSurface } from '../execution/TaskExecutionSurface';
 import { TaskRunCoordinator } from '../execution/TaskRunCoordinator';
 import { TaskIndexer } from '../indexing/TaskIndexer';
@@ -120,6 +121,7 @@ export class AgentBoardView extends ItemView {
         onRework: (task) => void this.transitionTask(task, 'needs_fix', 'Sent back for rework.'),
         onMarkReady: (task) => void this.transitionTask(task, 'ready', 'Marked ready.'),
         onAddWorkOrder: () => void this.addWorkOrderFromBoard(),
+        onRunNextReady: () => void this.runNextReady(),
       },
     );
 
@@ -293,6 +295,15 @@ export class AgentBoardView extends ItemView {
       new Notice(`Work order run failed: ${result.error}`);
     }
     await this.refresh();
+  }
+
+  async runNextReady(): Promise<void> {
+    const next = selectNextReadyTask(this.model.tasks, (status) => status === 'ready');
+    if (!next) {
+      new Notice('No ready work orders to run.');
+      return;
+    }
+    await this.runTask(next);
   }
 
   private async applyNoteChange(path: string, transform: (content: string) => string): Promise<void> {

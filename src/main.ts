@@ -142,6 +142,14 @@ export default class ClaudianPlugin extends Plugin {
     });
 
     this.addCommand({
+      id: 'run-next-ready-work-order',
+      name: 'Run next ready work order',
+      callback: () => {
+        void this.runNextReadyWorkOrder();
+      },
+    });
+
+    this.addCommand({
       id: 'create-work-order',
       name: 'Create work order',
       callback: () => {
@@ -456,6 +464,15 @@ export default class ClaudianPlugin extends Plugin {
     }
 
     await revealWorkspaceLeaf(workspace, leaf);
+  }
+
+  private async runNextReadyWorkOrder(): Promise<void> {
+    await this.activateAgentBoardView();
+    const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN_AGENT_BOARD)[0];
+    const view = leaf?.view;
+    if (view instanceof AgentBoardView) {
+      await view.runNextReady();
+    }
   }
 
   private getLeafForPlacement(placement: ChatViewPlacement): WorkspaceLeaf | null {

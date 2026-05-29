@@ -10,6 +10,7 @@ export interface AgentBoardRenderCallbacks {
   onRework(task: TaskSpec): void;
   onMarkReady(task: TaskSpec): void;
   onAddWorkOrder(): void;
+  onRunNextReady(): void;
 }
 
 export interface AgentBoardRenderState {
@@ -26,6 +27,9 @@ export class AgentBoardRenderer {
     const header = root.createDiv({ cls: 'claudian-agent-board-header' });
     const addButton = header.createEl('button', { cls: 'mod-cta', text: 'Add work order' });
     addButton.addEventListener('click', () => callbacks.onAddWorkOrder());
+
+    const runNextBtn = header.createEl('button', { text: 'Run next ready' });
+    runNextBtn.addEventListener('click', () => callbacks.onRunNextReady());
 
     const free = Math.max(0, state.slots.max - state.slots.used);
     const slotsEl = header.createSpan({
