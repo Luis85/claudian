@@ -1123,6 +1123,14 @@ export class ClaudianService implements ChatRuntime {
     const conversationHistory = normalized.conversationHistory;
     const queryOptions = normalized.queryOptions;
     this.currentOrchestratorMode = normalized.request.orchestratorMode === true;
+    const log = this.plugin.logger.scope('claude.runtime');
+    if (log.isEnabled('debug')) {
+      log.debug('query start', {
+        orchestratorMode: this.currentOrchestratorMode,
+        hasHistory: (conversationHistory?.length ?? 0) > 0,
+        sessionId: this.sessionManager.getSessionId() ?? null,
+      });
+    }
 
     const vaultPath = getVaultPath(this.plugin.app);
     if (!vaultPath) {
@@ -1232,6 +1240,7 @@ export class ClaudianService implements ChatRuntime {
             return;
           }
 
+          log.error('persistent query failed', error);
           throw error;
         }
       }
@@ -1265,6 +1274,7 @@ export class ClaudianService implements ChatRuntime {
         return;
       }
 
+      log.error('cold-start query failed', error);
       const msg = error instanceof Error ? error.message : 'Unknown error';
       yield { type: 'error', content: msg };
     } finally {
