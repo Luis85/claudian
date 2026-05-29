@@ -32,6 +32,9 @@ ${task.sections.objective}
 ## Acceptance Criteria
 ${task.sections.acceptanceCriteria}
 
+## Progress Tracking
+As you complete each acceptance criterion above, edit this work order note (${task.path}) and change the matching \`- [ ]\` checkbox to \`- [x]\`. Keep the checklist accurate as you make progress. Do not edit the Run Ledger or Result / Handoff sections — Claudian owns those.
+
 ## Context
 ${task.sections.context}
 
