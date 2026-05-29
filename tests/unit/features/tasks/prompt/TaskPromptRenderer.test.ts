@@ -56,6 +56,13 @@ describe('renderTaskPrompt', () => {
     expect(prompt).toContain('- Tests pass');
   });
 
+  it('instructs the agent to tick acceptance-criteria checkboxes in the note during the run', () => {
+    const prompt = renderTaskPrompt(task);
+    expect(prompt).toContain('## Progress Tracking');
+    expect(prompt).toContain('- [x]');
+    expect(prompt).toContain(task.path);
+  });
+
   it('omits criteria sections when the lane is absent or empty', () => {
     expect(renderTaskPrompt(task)).not.toContain('## Definition of Ready');
     expect(renderTaskPrompt(task, { definitionOfReady: [], definitionOfDone: [] })).not.toContain('## Definition of Done');

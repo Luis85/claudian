@@ -233,7 +233,7 @@ export class TabManager implements TabManagerInterface {
       this.maybePrimeProviderRuntime(tab);
     }
 
-    this.plugin.refreshAgentBoardSlots();
+    this.plugin.events.emit('chat:tabs-changed', { openCount: this.tabs.size });
     return tab;
   }
 
@@ -371,7 +371,7 @@ export class TabManager implements TabManagerInterface {
     this.providerCommandCache.delete(tabId);
     this.tabs.delete(tabId);
     this.callbacks.onTabClosed?.(tabId);
-    this.plugin.refreshAgentBoardSlots();
+    this.plugin.events.emit('chat:tabs-changed', { openCount: this.tabs.size });
 
     // If we closed the active tab, switch to another
     if (this.activeTabId === tabId) {

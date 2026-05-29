@@ -22,7 +22,7 @@ export function renderAgentBoardSettingsSection(
         .onChange(async (value) => {
           plugin.settings.agentBoardWorkOrderFolder = value.trim();
           await plugin.saveSettings();
-          plugin.refreshAgentBoards();
+          plugin.events.emit('task:board-config-changed');
         }),
     );
 

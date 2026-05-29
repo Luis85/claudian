@@ -56,6 +56,8 @@ export class AgentBoardView extends ItemView {
     this.registerEvent(vault.on('modify', (file) => this.onVaultChange(file)));
     this.registerEvent(vault.on('delete', (file) => this.onVaultChange(file)));
     this.registerEvent(vault.on('rename', (file) => this.onVaultChange(file)));
+    this.register(this.plugin.events.on('chat:tabs-changed', () => this.refreshSlots()));
+    this.register(this.plugin.events.on('task:board-config-changed', () => void this.refresh()));
     await this.refresh();
   }
 
@@ -226,6 +228,7 @@ export class AgentBoardView extends ItemView {
     await this.applyNoteChange(task.path, (content) =>
       this.noteStore.appendLedger(content, { timestamp, status: to, message }),
     );
+    this.plugin.events.emit('task:status-changed', { taskId: latest.frontmatter.id, path: task.path, status: to });
     await this.refresh();
   }
 
@@ -248,6 +251,7 @@ export class AgentBoardView extends ItemView {
     }
 
     const settings = this.plugin.settings as unknown as Record<string, unknown>;
+    let lastStatus: TaskStatus = latest.frontmatter.status;
     const coordinator = new TaskRunCoordinator({
       executionSurface: this.executionSurface,
       now: () => new Date().toISOString(),
@@ -257,8 +261,15 @@ export class AgentBoardView extends ItemView {
       ownsModel: (providerId, model) =>
         ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId) &&
         ProviderRegistry.getChatUIConfig(providerId as ProviderId).ownsModel(model, settings),
-      writeTaskStatus: (_task, options) =>
-        this.applyNoteChange(task.path, (content) => this.noteStore.writeStatus(content, options)),
+      writeTaskStatus: async (_task, options) => {
+        await this.applyNoteChange(task.path, (content) => this.noteStore.writeStatus(content, options));
+        lastStatus = options.status;
+        this.plugin.events.emit('task:status-changed', {
+          taskId: latest.frontmatter.id,
+          path: task.path,
+          status: options.status,
+        });
+      },
       appendLedger: (_task, entry) =>
         this.applyNoteChange(task.path, (content) => this.noteStore.appendLedger(content, entry)),
       writeHandoff: (_task, markdown) =>
@@ -267,7 +278,13 @@ export class AgentBoardView extends ItemView {
         renderTaskPrompt(target, getLaneForStatus(this.config, target.frontmatter.status) ?? undefined),
     });
 
+    this.plugin.events.emit('task:run-started', { taskId: latest.frontmatter.id, path: task.path });
     const result = await coordinator.run(latest);
+    this.plugin.events.emit('task:run-finished', {
+      taskId: latest.frontmatter.id,
+      path: task.path,
+      status: result.ok ? result.status : lastStatus,
+    });
     if (!result.ok) {
       new Notice(`Work order run failed: ${result.error}`);
     }

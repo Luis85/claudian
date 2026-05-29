@@ -1,4 +1,5 @@
 import { DEFAULT_LANE_TITLES, type ResolvedBoardLayout, type ResolvedLane } from '../config/boardConfigTypes';
+import { parseAcceptanceProgress } from '../model/acceptanceProgress';
 import type { InvalidTaskNote, TaskSpec } from '../model/taskTypes';
 
 export interface AgentBoardRenderCallbacks {
@@ -94,6 +95,18 @@ export class AgentBoardRenderer {
     const meta = card.createDiv({ cls: 'claudian-agent-board-card-meta' });
     meta.createSpan({ text: `${task.frontmatter.provider ?? '—'} / ${task.frontmatter.model ?? '—'}` });
     meta.createSpan({ text: task.frontmatter.priority });
+
+    const progress = parseAcceptanceProgress(task.sections.acceptanceCriteria);
+    if (progress.total > 0) {
+      const progressEl = card.createDiv({ cls: 'claudian-agent-board-card-progress' });
+      const bar = progressEl.createEl('progress');
+      bar.max = progress.total;
+      bar.value = progress.done;
+      progressEl.createSpan({
+        cls: 'claudian-agent-board-card-progress-label',
+        text: `${progress.done}/${progress.total}`,
+      });
+    }
 
     card.addEventListener('click', () => callbacks.onOpenDetail(task));
 

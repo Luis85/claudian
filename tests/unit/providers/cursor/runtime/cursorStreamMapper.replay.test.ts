@@ -1,11 +1,8 @@
-import * as fs from 'fs';
-import * as path from 'path';
-
 import { CursorNdjsonStreamReducer } from '@/providers/cursor/runtime/cursorStreamMapper';
 
-function replayNdjsonFile(relativePath: string): string {
-  const filePath = path.join(__dirname, '../../../../..', relativePath);
-  const lines = fs.readFileSync(filePath, 'utf8').trim().split('\n');
+import { SAMPLE_CURSOR_TOOLS_STREAM_LINES } from '../../../../fixtures/providers/cursor/sampleToolsStream';
+
+function replayLines(lines: readonly string[]): string {
   const reducer = new CursorNdjsonStreamReducer();
   const textChunks: string[] = [];
 
@@ -35,8 +32,8 @@ function countOccurrences(haystack: string, needle: string): number {
 }
 
 describe('CursorNdjsonStreamReducer real NDJSON replays', () => {
-  it('replays cursor-stream-tools.ndjson without doubled assistant text', () => {
-    const text = replayNdjsonFile('.context/cursor-stream-tools.ndjson');
+  it('replays a shell + glob tools turn without doubled assistant text', () => {
+    const text = replayLines(SAMPLE_CURSOR_TOOLS_STREAM_LINES);
     const expected = 'Shell output: `hello-cursor`\n\nTwo JSON files at the root:\n- `versions.json`\n- `manifest.json`';
     expect(text).toBe(expected);
     expect(countOccurrences(text, 'hello-cursor')).toBe(1);
