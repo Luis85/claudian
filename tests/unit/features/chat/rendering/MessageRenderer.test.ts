@@ -1158,7 +1158,7 @@ describe('MessageRenderer', () => {
       expect(run).toHaveBeenCalledWith(msg, null);
     });
 
-    it('renders an action button on a stored assistant message and runs it on click', () => {
+    it('renders an action button beside the copy button on a stored assistant message and runs it on click', () => {
       const messagesEl = createMockEl();
       const { renderer, plugin } = createRenderer(messagesEl);
       jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
@@ -1175,14 +1175,20 @@ describe('MessageRenderer', () => {
       };
       renderer.renderStoredMessage(msg);
 
-      const btn = messagesEl.querySelector('.claudian-user-msg-action-btn');
+      // The action lands inside the same text block as the copy button (beside it),
+      // not in the message-level user toolbar.
+      const textBlock = messagesEl.querySelector('.claudian-text-block');
+      expect(textBlock).not.toBeNull();
+      expect(textBlock!.querySelector('.claudian-text-copy-btn')).not.toBeNull();
+      const btn = textBlock!.querySelector('.claudian-text-action-btn');
       expect(btn).not.toBeNull();
+      expect(messagesEl.querySelector('.claudian-user-msg-actions')).toBeNull();
 
       btn!.click();
       expect(run).toHaveBeenCalledWith(msg, null);
     });
 
-    it('does not materialize an empty toolbar on assistant messages with no eligible action', () => {
+    it('adds no action affordance on assistant messages with no eligible action', () => {
       const messagesEl = createMockEl();
       const { renderer, plugin } = createRenderer(messagesEl);
       jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
@@ -1201,11 +1207,11 @@ describe('MessageRenderer', () => {
       };
       renderer.renderStoredMessage(msg);
 
-      expect(messagesEl.querySelector('.claudian-user-msg-actions')).toBeNull();
-      expect(messagesEl.querySelector('.claudian-user-msg-action-btn')).toBeNull();
+      expect(messagesEl.querySelector('.claudian-text-actions')).toBeNull();
+      expect(messagesEl.querySelector('.claudian-text-action-btn')).toBeNull();
     });
 
-    it('refreshMessageActions adds the action button to a streamed assistant message', () => {
+    it('refreshMessageActions adds the action button beside the copy button on a streamed agent message', () => {
       const messagesEl = createMockEl();
       const { renderer, plugin } = createRenderer(messagesEl);
 
@@ -1219,13 +1225,18 @@ describe('MessageRenderer', () => {
         id: 'a-stream', role: 'assistant', content: '', timestamp: Date.now(),
         contentBlocks: [{ type: 'text', content: 'Streamed response.' } as any],
       };
-      // Simulate the streaming path: the assistant bubble exists, then the turn completes.
-      const msgEl = renderer.addMessage(msg);
+      // Simulate the streamed message DOM: a text block with its copy button already in place.
+      const msgEl = createMockEl();
+      const contentEl = msgEl.createDiv({ cls: 'claudian-message-content' });
+      const textBlock = contentEl.createDiv({ cls: 'claudian-text-block' });
+      renderer.addTextCopyButton(textBlock as any, 'Streamed response.');
       // getMessageEl resolves via data-message-id in real DOM; the mock only matches classes.
       jest.spyOn(renderer, 'getMessageEl').mockReturnValue(msgEl as any);
+
       renderer.refreshMessageActions(msg);
 
-      const btn = messagesEl.querySelector('.claudian-user-msg-action-btn');
+      expect(textBlock.querySelector('.claudian-text-copy-btn')).not.toBeNull();
+      const btn = textBlock.querySelector('.claudian-text-action-btn');
       expect(btn).not.toBeNull();
       btn!.click();
       expect(run).toHaveBeenCalledWith(msg, null);

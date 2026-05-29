@@ -316,7 +316,7 @@ export class MessageRenderer {
       if (msg.isInterrupt) {
         this.appendInterruptIndicator(contentEl);
       }
-      this.addRegisteredMessageActions(msgEl, msg);
+      this.addAssistantMessageActions(msgEl, msg);
     }
   }
 
@@ -845,26 +845,47 @@ export class MessageRenderer {
     });
   }
 
-  /** Adds registered message-action buttons (e.g. Create work order) to a completed message. */
+  /** Adds registered message actions (e.g. Create work order) to a completed agent message. */
   refreshMessageActions(msg: ChatMessage): void {
     const msgEl = this.getMessageEl(msg.id);
     if (!msgEl) return;
-    this.addRegisteredMessageActions(msgEl, msg);
+    this.addAssistantMessageActions(msgEl, msg);
   }
 
   private addRegisteredMessageActions(msgEl: HTMLElement, msg: ChatMessage): void {
-    const actions = eligibleMessageActions(this.plugin.chatMessageActions, msg);
-    // Don't materialize an empty toolbar on messages that have no other affordances
-    // (e.g. a tool-only assistant turn). User messages already own a toolbar via the
-    // copy button, so this only suppresses stray toolbars on assistant messages.
-    const existingToolbar = msgEl.querySelector('.claudian-user-msg-actions');
-    if (actions.length === 0 && !existingToolbar) return;
-
     const toolbar = this.getOrCreateActionsToolbar(msgEl);
     toolbar.querySelectorAll('.claudian-user-msg-action-btn').forEach((el) => el.remove());
 
-    for (const action of actions) {
+    for (const action of eligibleMessageActions(this.plugin.chatMessageActions, msg)) {
       const btn = toolbar.createSpan({ cls: 'claudian-user-msg-action-btn' });
+      setIcon(btn, action.icon);
+      btn.setAttribute('aria-label', action.label);
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        action.run(msg, this.plugin.getActiveConversationSnapshot()?.id ?? null);
+      });
+    }
+  }
+
+  /**
+   * Renders registered message actions (e.g. Create work order) on an agent message,
+   * inline beside the last text block's copy button so they share its hover affordance.
+   */
+  private addAssistantMessageActions(msgEl: HTMLElement, msg: ChatMessage): void {
+    msgEl.querySelector('.claudian-text-actions')?.remove();
+
+    const actions = eligibleMessageActions(this.plugin.chatMessageActions, msg);
+    if (actions.length === 0) return;
+
+    const textBlocks = msgEl.querySelectorAll('.claudian-text-block');
+    const lastTextBlock = textBlocks.length > 0
+      ? (textBlocks[textBlocks.length - 1] as HTMLElement)
+      : null;
+    if (!lastTextBlock) return;
+
+    const container = lastTextBlock.createDiv({ cls: 'claudian-text-actions' });
+    for (const action of actions) {
+      const btn = container.createSpan({ cls: 'claudian-text-action-btn' });
       setIcon(btn, action.icon);
       btn.setAttribute('aria-label', action.label);
       btn.addEventListener('click', (e) => {

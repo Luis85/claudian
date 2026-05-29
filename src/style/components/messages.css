@@ -119,6 +119,40 @@
   color: var(--text-normal);
 }
 
+/* Per-message agent actions (e.g. Create work order) sit just left of the copy button. */
+.claudian-text-actions {
+  position: absolute;
+  bottom: 0;
+  inset-inline-end: 22px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 2;
+}
+
+.claudian-text-block:hover .claudian-text-actions {
+  opacity: 1;
+}
+
+.claudian-text-action-btn {
+  display: flex;
+  align-items: center;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.claudian-text-action-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.claudian-text-action-btn:hover {
+  color: var(--text-normal);
+}
+
 .claudian-text-copy-btn.copied {
   color: var(--text-accent);
   font-size: 11px;
@@ -212,15 +246,6 @@
 }
 
 .claudian-message-user:hover .claudian-user-msg-actions {
-  opacity: 1;
-}
-
-/* Assistant messages host the same toolbar (e.g. Create work order); anchor + reveal it. */
-.claudian-message-assistant {
-  position: relative;
-}
-
-.claudian-message-assistant:hover .claudian-user-msg-actions {
   opacity: 1;
 }
 
