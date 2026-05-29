@@ -47,4 +47,17 @@ describe('renderTaskPrompt', () => {
     expect(prompt).toContain('next_action:');
     expect(prompt).toContain('</claudian_handoff>');
   });
+
+  it('includes definition of ready and done when lane criteria are provided', () => {
+    const prompt = renderTaskPrompt(task, { definitionOfReady: ['Objective is clear'], definitionOfDone: ['Tests pass'] });
+    expect(prompt).toContain('## Definition of Ready');
+    expect(prompt).toContain('- Objective is clear');
+    expect(prompt).toContain('## Definition of Done');
+    expect(prompt).toContain('- Tests pass');
+  });
+
+  it('omits criteria sections when the lane is absent or empty', () => {
+    expect(renderTaskPrompt(task)).not.toContain('## Definition of Ready');
+    expect(renderTaskPrompt(task, { definitionOfReady: [], definitionOfDone: [] })).not.toContain('## Definition of Done');
+  });
 });
