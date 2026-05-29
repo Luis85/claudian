@@ -57,6 +57,19 @@ describe('loadBoardConfig', () => {
     expect(() => config.lanes.push(config.lanes[0])).toThrow();
     expect(DEFAULT_BOARD_CONFIG.lanes).toHaveLength(10);
   });
+
+  it('falls back to default when two lanes share an id', () => {
+    const agentBoardConfig = {
+      schemaVersion: 1,
+      lanes: [
+        { id: 'dup', title: 'A', statuses: ['ready'] },
+        { id: 'dup', title: 'B', statuses: ['done'] },
+      ],
+    };
+    const { config, errors } = loadBoardConfig({ agentBoardConfig });
+    expect(config).toEqual(DEFAULT_BOARD_CONFIG);
+    expect(errors.some((e) => e.includes('Lane id "dup"'))).toBe(true);
+  });
 });
 
 describe('getLaneForStatus', () => {

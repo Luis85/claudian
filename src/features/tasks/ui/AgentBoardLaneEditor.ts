@@ -109,7 +109,7 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
       .addButton((btn) =>
         btn.setButtonText('Add lane').onClick(async () => {
           config.lanes.push({
-            id: `lane-${config.lanes.length + 1}-${TASK_STATUSES.length}`,
+            id: `lane-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
             title: 'New lane',
             statuses: [],
             visible: true,

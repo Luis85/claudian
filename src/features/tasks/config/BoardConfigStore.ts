@@ -21,12 +21,18 @@ export function loadBoardConfig(settings: Record<string, unknown>): LoadBoardCon
   const errors: string[] = [];
   const lanes: BoardLaneConfig[] = [];
   const seen = new Set<TaskStatus>();
+  const seenIds = new Set<string>();
 
   for (const laneRaw of candidate.lanes) {
     const lane = normalizeLane(laneRaw, errors);
     if (!lane) {
       return { config: DEFAULT_BOARD_CONFIG, errors };
     }
+    if (seenIds.has(lane.id)) {
+      errors.push(`Lane id "${lane.id}" is used by more than one lane.`);
+      return { config: DEFAULT_BOARD_CONFIG, errors };
+    }
+    seenIds.add(lane.id);
     for (const status of lane.statuses) {
       if (seen.has(status)) {
         errors.push(`Status "${status}" is mapped to more than one lane.`);
