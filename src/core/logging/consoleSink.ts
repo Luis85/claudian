@@ -12,7 +12,7 @@ interface ConsoleLike {
  * the Logger; the `no-console` lint rule enforces this everywhere else.
  */
 export function createConsoleSink(
-  // eslint-disable-next-line no-console -- the logger's console destination
+   
   target: ConsoleLike = console,
 ): LogSink {
   const methods: Record<EmittableLevel, (...args: unknown[]) => void> = {

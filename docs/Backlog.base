@@ -14,9 +14,9 @@ views:
       and:
         - file.inFolder("docs/issues")
     order:
+      - type
       - file.name
       - status
-      - type
       - tags
     columnSize:
       file.name: 462
