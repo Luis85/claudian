@@ -19,6 +19,25 @@ export function renderAgentBoardSettingsSection(
   container: HTMLElement,
   plugin: ClaudianPlugin,
 ): void {
+  const normalizeFolder = (value: string): string => (value || '').replace(/^\/+|\/+$/g, '');
+
+  const folderWarning = new Setting(container).setName('');
+  const refreshFolderWarning = (): void => {
+    const same =
+      normalizeFolder(plugin.settings.agentBoardTemplateFolder) ===
+      normalizeFolder(plugin.settings.agentBoardWorkOrderFolder);
+    folderWarning.setDesc(
+      same
+        ? 'Warning: the template folder matches the work order folder, so templates will appear as invalid notes on the board.'
+        : '',
+    );
+    if (same) {
+      folderWarning.settingEl.show();
+    } else {
+      folderWarning.settingEl.hide();
+    }
+  };
+
   new Setting(container)
     .setName('Work order folder')
     // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Board" is the product feature name.
@@ -32,8 +51,26 @@ export function renderAgentBoardSettingsSection(
           plugin.settings.agentBoardWorkOrderFolder = value.trim();
           await plugin.saveSettings();
           plugin.events.emit('task:board-config-changed');
+          refreshFolderWarning();
         }),
     );
+
+  new Setting(container)
+    .setName('Template folder')
+    .setDesc('Folder where work-order templates live.')
+    .addText((text) =>
+      text
+        // eslint-disable-next-line obsidianmd/ui/sentence-case -- folder path, not prose.
+        .setPlaceholder('Agent Board/templates')
+        .setValue(plugin.settings.agentBoardTemplateFolder)
+        .onChange(async (value) => {
+          plugin.settings.agentBoardTemplateFolder = value.trim();
+          await plugin.saveSettings();
+          refreshFolderWarning();
+        }),
+    );
+
+  refreshFolderWarning();
 
   new Setting(container)
     .setName('Archive folder')
