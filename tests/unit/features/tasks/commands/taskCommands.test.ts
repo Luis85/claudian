@@ -128,3 +128,29 @@ describe('buildBrowserSeed', () => {
     expect(seed.contextMarkdown).toContain('[LeetCode](https://x.dev)');
   });
 });
+
+describe('buildMessageSeed / buildConversationSeed', () => {
+  it('message seed carries objective, conversation id, and inbox status', () => {
+    const seed = __taskCaptureTestUtils.buildMessageSeed({
+      messageContent: 'Refactor the parser\nfor speed',
+      currentNote: 'notes/parser.md',
+      conversationId: 'conv-9',
+    });
+    expect(seed.status).toBe('inbox');
+    expect(seed.title).toBe('Refactor the parser');
+    expect(seed.objective).toBe('Refactor the parser\nfor speed');
+    expect(seed.conversationId).toBe('conv-9');
+    expect(seed.contextMarkdown).toContain('Source note: [[notes/parser]]');
+    expect(seed.contextMarkdown).toContain('Promoted from chat message.');
+  });
+
+  it('conversation seed links the conversation', () => {
+    const seed = __taskCaptureTestUtils.buildConversationSeed({
+      conversationId: 'conv-9',
+      conversationTitle: 'Auth spike',
+    });
+    expect(seed.title).toBe('Auth spike');
+    expect(seed.conversationId).toBe('conv-9');
+    expect(seed.contextMarkdown).toContain('Promoted from chat conversation.');
+  });
+});

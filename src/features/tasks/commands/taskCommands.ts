@@ -272,6 +272,36 @@ export async function createWorkOrderFromBrowserSelection(plugin: ClaudianPlugin
   return createWorkOrderFromSeed(plugin, buildBrowserSeed(context));
 }
 
+export function buildMessageSeed(args: {
+  messageContent: string;
+  currentNote: string | null;
+  conversationId: string | null;
+}): WorkOrderSeed {
+  const firstLine = args.messageContent.trim().split(/\r?\n/)[0] ?? '';
+  const parts: string[] = [];
+  if (args.currentNote) parts.push(`Source note: [[${stripMarkdownExtension(args.currentNote)}]]`);
+  parts.push('Promoted from chat message.');
+  return {
+    title: truncate(firstLine, 60) || 'Work order from chat',
+    objective: args.messageContent.trim(),
+    contextMarkdown: parts.join('\n\n'),
+    conversationId: args.conversationId,
+    status: 'inbox',
+  };
+}
+
+export function buildConversationSeed(args: {
+  conversationId: string;
+  conversationTitle: string;
+}): WorkOrderSeed {
+  return {
+    title: truncate(args.conversationTitle, 60) || 'Work order from chat',
+    contextMarkdown: 'Promoted from chat conversation.',
+    conversationId: args.conversationId,
+    status: 'inbox',
+  };
+}
+
 export const __taskCommandTestUtils = { buildWorkOrderMarkdown, slugifyTitle };
 
-export const __taskCaptureTestUtils = { buildSelectionSeed, buildBrowserSeed };
+export const __taskCaptureTestUtils = { buildSelectionSeed, buildBrowserSeed, buildMessageSeed, buildConversationSeed };

@@ -49,6 +49,7 @@ import {
   createWorkOrderFromSelection,
 } from './features/tasks/commands/taskCommands';
 import { ChatTabExecutionSurface } from './features/tasks/execution/ChatTabExecutionSurface';
+import { ChatWorkOrderLinker } from './features/tasks/execution/ChatWorkOrderLinker';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
 import { setLocale } from './i18n/i18n';
 import type { Locale } from './i18n/types';
@@ -169,6 +170,26 @@ export default class ClaudianPlugin extends Plugin {
       name: 'Create work order from browser selection',
       callback: () => {
         void createWorkOrderFromBrowserSelection(this);
+      },
+    });
+
+    const chatWorkOrderLinker = new ChatWorkOrderLinker(this);
+
+    this.registerChatMessageAction({
+      id: 'create-work-order-from-message',
+      label: 'Create work order',
+      icon: 'kanban-square',
+      isEligible: (msg) => msg.role === 'user' && Boolean(msg.content?.trim()),
+      run: (msg, conversationId) => {
+        void chatWorkOrderLinker.promoteMessageToWorkOrder(msg, conversationId);
+      },
+    });
+
+    this.addCommand({
+      id: 'create-work-order-from-chat-conversation',
+      name: 'Create work order from current chat conversation',
+      callback: () => {
+        void chatWorkOrderLinker.promoteActiveConversationToWorkOrder();
       },
     });
 
