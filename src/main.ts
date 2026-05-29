@@ -12,6 +12,8 @@ import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
 import { SharedStorageService } from './app/storage/SharedStorageService';
 import type { SharedAppStorage } from './core/bootstrap/storage';
 import { EventBus } from './core/events/EventBus';
+import { formatLogEntries } from './core/logging/formatLogEntries';
+import { Logger } from './core/logging/Logger';
 import {
   getEnvironmentVariablesForScope as getScopedEnvironmentVariables,
   getRuntimeEnvironmentText,
@@ -58,6 +60,7 @@ function isClaudianView(value: unknown): value is ClaudianView {
 export default class ClaudianPlugin extends Plugin {
   settings!: ClaudianSettings;
   readonly events = new EventBus<ClaudianEventMap>();
+  readonly logger = new Logger({ enabled: false, level: 'warn' });
   storage!: SharedAppStorage;
   gitStatusWatcher: GitStatusWatcher | null = null;
   private conversations: Conversation[] = [];
@@ -65,6 +68,12 @@ export default class ClaudianPlugin extends Plugin {
 
   async onload() {
     await this.loadSettings();
+
+    this.logger.setEnabled(this.settings.loggingEnabled ?? false);
+    this.logger.setLevel(this.settings.logLevel ?? 'warn');
+    this.events.setErrorSink((error, event) => {
+      this.logger.scope('events').error(`handler for "${event}" threw`, error);
+    });
 
     const vaultPath = getVaultPath(this.app);
     if (vaultPath) {
@@ -134,6 +143,21 @@ export default class ClaudianPlugin extends Plugin {
       name: 'Create work order from current note',
       callback: () => {
         void createWorkOrderFromCurrentNote(this);
+      },
+    });
+
+    this.addCommand({
+      id: 'copy-diagnostic-logs',
+      name: 'Copy diagnostic logs',
+      callback: () => { void this.copyDiagnosticLogs(); },
+    });
+
+    this.addCommand({
+      id: 'clear-diagnostic-logs',
+      name: 'Clear diagnostic logs',
+      callback: () => {
+        this.logger.clear();
+        new Notice('Diagnostic logs cleared');
       },
     });
 
@@ -542,6 +566,16 @@ export default class ClaudianPlugin extends Plugin {
     return ProviderSettingsCoordinator.normalizeAllModelVariants(
       this.settings,
     );
+  }
+
+  async copyDiagnosticLogs(): Promise<void> {
+    const entries = this.logger.snapshot();
+    if (entries.length === 0) {
+      new Notice('No diagnostic log entries');
+      return;
+    }
+    await navigator.clipboard.writeText(formatLogEntries(entries));
+    new Notice(`Copied ${entries.length} log entries`);
   }
 
   async saveSettings() {
