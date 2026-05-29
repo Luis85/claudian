@@ -1,5 +1,6 @@
 import { type App, Component, type DropdownComponent, MarkdownRenderer, Modal, Setting } from 'obsidian';
 
+import { parseAcceptanceProgress } from '../model/acceptanceProgress';
 import type { TaskPriority, TaskSpec } from '../model/taskTypes';
 
 export interface WorkOrderFieldUpdate {
@@ -53,7 +54,11 @@ export class WorkOrderDetailModal extends Modal {
     }
 
     this.renderSection('Objective', task.sections.objective);
-    this.renderSection('Acceptance criteria', task.sections.acceptanceCriteria);
+    const acProgress = parseAcceptanceProgress(task.sections.acceptanceCriteria);
+    const acLabel = acProgress.total > 0
+      ? `Acceptance criteria (${acProgress.done}/${acProgress.total})`
+      : 'Acceptance criteria';
+    this.renderMarkdownBlock(acLabel, task.sections.acceptanceCriteria || '—');
 
     if (task.frontmatter.status === 'review' && task.sections.handoff.length > 0) {
       this.renderMarkdownBlock('Handoff', task.sections.handoff);

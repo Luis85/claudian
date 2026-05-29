@@ -77,6 +77,23 @@
   font-size: var(--font-ui-smaller);
 }
 
+.claudian-agent-board-card-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.claudian-agent-board-card-progress progress {
+  flex: 1 1 auto;
+  height: 6px;
+}
+
+.claudian-agent-board-card-progress-label {
+  flex: 0 0 auto;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
 .claudian-agent-board-card-actions {
   display: flex;
   gap: 6px;
