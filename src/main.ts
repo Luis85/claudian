@@ -40,7 +40,11 @@ import { GitService } from './features/chat/services/GitService';
 import { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
 import { type InlineEditContext, InlineEditModal } from './features/inline-edit/ui/InlineEditModal';
 import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
-import { createWorkOrder, createWorkOrderFromCurrentNote } from './features/tasks/commands/taskCommands';
+import {
+  createWorkOrder,
+  createWorkOrderFromCurrentNote,
+  createWorkOrderFromSelection,
+} from './features/tasks/commands/taskCommands';
 import { ChatTabExecutionSurface } from './features/tasks/execution/ChatTabExecutionSurface';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
 import { setLocale } from './i18n/i18n';
@@ -147,6 +151,14 @@ export default class ClaudianPlugin extends Plugin {
     });
 
     this.addCommand({
+      id: 'create-work-order-from-selection',
+      name: 'Create work order from selection',
+      editorCallback: () => {
+        void createWorkOrderFromSelection(this);
+      },
+    });
+
+    this.addCommand({
       id: 'copy-diagnostic-logs',
       name: 'Copy diagnostic logs',
       callback: () => { void this.copyDiagnosticLogs(); },
@@ -198,6 +210,20 @@ export default class ClaudianPlugin extends Plugin {
               });
           });
         }
+      })
+    );
+
+    this.registerEvent(
+      this.app.workspace.on('editor-menu', (menu: Menu, editor: Editor) => {
+        if (!editor.getSelection().trim()) return;
+        menu.addItem((item) => {
+          item
+            .setTitle('Create work order from selection')
+            .setIcon('kanban-square')
+            .onClick(() => {
+              void createWorkOrderFromSelection(this);
+            });
+        });
       })
     );
 

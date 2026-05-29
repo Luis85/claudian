@@ -213,4 +213,42 @@ export async function createWorkOrderFromCurrentNote(plugin: ClaudianPlugin): Pr
   return createWorkOrder(plugin, active);
 }
 
+function truncate(value: string, max: number): string {
+  const trimmed = value.trim();
+  return trimmed.length > max ? `${trimmed.slice(0, max - 1)}…` : trimmed;
+}
+
+function blockquote(text: string): string {
+  return text
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => `> ${line}`)
+    .join('\n');
+}
+
+export function buildSelectionSeed(args: { selectionText: string; sourcePath: string | null }): WorkOrderSeed {
+  const firstLine = args.selectionText.trim().split(/\r?\n/)[0] ?? '';
+  const parts: string[] = [];
+  if (args.sourcePath) parts.push(`Source note: [[${stripMarkdownExtension(args.sourcePath)}]]`);
+  parts.push(blockquote(args.selectionText));
+  return {
+    title: truncate(firstLine, 60) || 'Work order from selection',
+    contextMarkdown: parts.join('\n\n'),
+    status: 'inbox',
+  };
+}
+
+export async function createWorkOrderFromSelection(plugin: ClaudianPlugin): Promise<TFile | null> {
+  const editor = plugin.app.workspace.activeEditor?.editor;
+  const selection = editor?.getSelection() ?? '';
+  if (!selection.trim()) {
+    new Notice('Select text in a note to create a work order from it.');
+    return null;
+  }
+  const sourcePath = plugin.app.workspace.getActiveFile()?.path ?? null;
+  return createWorkOrderFromSeed(plugin, buildSelectionSeed({ selectionText: selection, sourcePath }));
+}
+
 export const __taskCommandTestUtils = { buildWorkOrderMarkdown, slugifyTitle };
+
+export const __taskCaptureTestUtils = { buildSelectionSeed };

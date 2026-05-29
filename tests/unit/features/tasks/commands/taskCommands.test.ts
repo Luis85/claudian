@@ -1,4 +1,7 @@
-import { __taskCommandTestUtils } from '../../../../../src/features/tasks/commands/taskCommands';
+import {
+  __taskCaptureTestUtils,
+  __taskCommandTestUtils,
+} from '../../../../../src/features/tasks/commands/taskCommands';
 import { TaskNoteStore } from '../../../../../src/features/tasks/storage/TaskNoteStore';
 
 const { buildWorkOrderMarkdown, slugifyTitle } = __taskCommandTestUtils;
@@ -94,5 +97,19 @@ describe('buildWorkOrderMarkdown', () => {
     });
     expect(markdown).toContain('conversation_id:\n');
     expect(markdown).toContain('_What should the agent accomplish?_');
+  });
+});
+
+describe('buildSelectionSeed', () => {
+  it('blockquotes the selection, links the source, and lands in inbox', () => {
+    const seed = __taskCaptureTestUtils.buildSelectionSeed({
+      selectionText: 'Fix the auth bug\nin the middleware',
+      sourcePath: 'notes/auth.md',
+    });
+    expect(seed.status).toBe('inbox');
+    expect(seed.title).toBe('Fix the auth bug');
+    expect(seed.contextMarkdown).toContain('Source note: [[notes/auth]]');
+    expect(seed.contextMarkdown).toContain('> Fix the auth bug');
+    expect(seed.contextMarkdown).toContain('> in the middleware');
   });
 });
