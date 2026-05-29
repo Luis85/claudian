@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 ---
 # Agent Board — Chat Interop & Capture Implementation Plan
 
