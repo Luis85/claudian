@@ -56,7 +56,11 @@ export class WorkOrderDetailModal extends Modal {
     this.renderSection('Acceptance criteria', task.sections.acceptanceCriteria);
 
     if (task.frontmatter.status === 'review' && task.sections.handoff.length > 0) {
-      this.renderHandoff(task.sections.handoff);
+      this.renderMarkdownBlock('Handoff', task.sections.handoff);
+    }
+
+    if (task.frontmatter.status === 'failed' && task.sections.ledger.length > 0) {
+      this.renderMarkdownBlock('Run ledger', task.sections.ledger);
     }
 
     this.renderActions();
@@ -67,8 +71,8 @@ export class WorkOrderDetailModal extends Modal {
     this.contentEl.empty();
   }
 
-  private renderHandoff(markdown: string): void {
-    this.contentEl.createEl('h4', { text: 'Handoff' });
+  private renderMarkdownBlock(label: string, markdown: string): void {
+    this.contentEl.createEl('h4', { text: label });
     const el = this.contentEl.createDiv({ cls: 'claudian-work-order-modal-handoff' });
     void MarkdownRenderer.render(this.app, markdown, el, this.task.path, this.markdownComponent);
   }
