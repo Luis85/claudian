@@ -26,6 +26,14 @@ describe('selectNextReadyTask', () => {
     expect(selectNextReadyTask(tasks, isReady)?.frontmatter.id).toBe('high-old');
   });
 
+  it('returns the first task when priority and created tie', () => {
+    const tasks = [
+      task('first', 'ready', 'normal', '2026-01-01'),
+      task('second', 'ready', 'normal', '2026-01-01'),
+    ];
+    expect(selectNextReadyTask(tasks, isReady)?.frontmatter.id).toBe('first');
+  });
+
   it('skips non-ready statuses', () => {
     const tasks = [task('r', 'review', 'urgent', '1'), task('ready', 'ready', 'normal', '2')];
     expect(selectNextReadyTask(tasks, isReady)?.frontmatter.id).toBe('ready');

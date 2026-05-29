@@ -298,6 +298,7 @@ export class AgentBoardView extends ItemView {
   }
 
   async runNextReady(): Promise<void> {
+    await this.refresh();
     const next = selectNextReadyTask(this.model.tasks, (status) => status === 'ready');
     if (!next) {
       new Notice('No ready work orders to run.');
