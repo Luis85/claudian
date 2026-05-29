@@ -7,9 +7,11 @@ import './providers';
 import type { Editor, Menu, TAbstractFile, WorkspaceLeaf } from 'obsidian';
 import { debounce, MarkdownView, Notice, Plugin, TFile, TFolder } from 'obsidian';
 
+import type { ClaudianEventMap } from './app/events/claudianEvents';
 import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
 import { SharedStorageService } from './app/storage/SharedStorageService';
 import type { SharedAppStorage } from './core/bootstrap/storage';
+import { EventBus } from './core/events/EventBus';
 import {
   getEnvironmentVariablesForScope as getScopedEnvironmentVariables,
   getRuntimeEnvironmentText,
@@ -55,6 +57,7 @@ function isClaudianView(value: unknown): value is ClaudianView {
 
 export default class ClaudianPlugin extends Plugin {
   settings!: ClaudianSettings;
+  readonly events = new EventBus<ClaudianEventMap>();
   storage!: SharedAppStorage;
   gitStatusWatcher: GitStatusWatcher | null = null;
   private conversations: Conversation[] = [];
