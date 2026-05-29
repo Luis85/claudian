@@ -21,7 +21,8 @@ export function renderAgentBoardSettingsSection(
 ): void {
   const normalizeFolder = (value: string): string => (value || '').replace(/^\/+|\/+$/g, '');
 
-  const folderWarning = new Setting(container).setName('');
+  // eslint-disable-next-line prefer-const -- assigned after creation to render after template folder
+  let folderWarning!: Setting;
   const refreshFolderWarning = (): void => {
     const same =
       normalizeFolder(plugin.settings.agentBoardTemplateFolder) ===
@@ -70,6 +71,7 @@ export function renderAgentBoardSettingsSection(
         }),
     );
 
+  folderWarning = new Setting(container).setName('');
   refreshFolderWarning();
 
   new Setting(container)
