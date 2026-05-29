@@ -53,6 +53,55 @@ function longestSuffixPrefixOverlap(accumulated: string, incoming: string): numb
   return 0;
 }
 
+function isCursorRepeatedSuffixExtension(accumulated: string, suffix: string): boolean {
+  if (!suffix) {
+    return true;
+  }
+  const withoutLeadingWs = suffix.replace(/^[\s\n]+/, '');
+  const accTrimmed = accumulated.trimEnd();
+  if (!withoutLeadingWs) {
+    return true;
+  }
+  if (withoutLeadingWs === accumulated || withoutLeadingWs === accTrimmed) {
+    return true;
+  }
+  return false;
+}
+
+function startsNewAssistantSegmentAfterBreak(accumulated: string, incoming: string): boolean {
+  if (!accumulated || !incoming) {
+    return false;
+  }
+  if (!accumulated.endsWith('\n')) {
+    return false;
+  }
+  if (incoming.length > CURSOR_PARTIAL_ASSISTANT_FRAGMENT_MAX_LEN) {
+    return false;
+  }
+  if (incoming.startsWith(accumulated) || accumulated.startsWith(incoming)) {
+    return false;
+  }
+  return /^[A-Z]/.test(incoming);
+}
+
+function startsNewAssistantSegment(accumulated: string, incoming: string): boolean {
+  if (!accumulated || !incoming) {
+    return false;
+  }
+  if (incoming.length > CURSOR_PARTIAL_ASSISTANT_FRAGMENT_MAX_LEN) {
+    return false;
+  }
+  if (incoming.startsWith(accumulated) || accumulated.startsWith(incoming)) {
+    return false;
+  }
+  if (startsNewAssistantSegmentAfterBreak(accumulated, incoming)) {
+    return true;
+  }
+  const endsParagraph = /[.!?:]\s*$/.test(accumulated) || accumulated.endsWith('\n');
+  const startsNewBlock = /^#{1,6}\s/.test(incoming) || /^[A-Z]/.test(incoming);
+  return endsParagraph && startsNewBlock;
+}
+
 /**
  * Merges Cursor assistant text whether the NDJSON line is a stream-partial fragment
  * (`"Shell"`, `" output"`, …) or a cumulative snapshot (final assistant row).
@@ -71,6 +120,9 @@ export function computeCursorAssistantTextDelta(
 
   if (incoming.startsWith(accumulated)) {
     const delta = incoming.slice(accumulated.length);
+    if (isCursorRepeatedSuffixExtension(accumulated, delta)) {
+      return { delta: '', next: accumulated };
+    }
     if (delta && accumulated.includes(delta)) {
       return { delta: '', next: accumulated };
     }
@@ -86,6 +138,9 @@ export function computeCursorAssistantTextDelta(
   }
 
   if (incoming.length <= CURSOR_PARTIAL_ASSISTANT_FRAGMENT_MAX_LEN) {
+    if (startsNewAssistantSegment(accumulated, incoming)) {
+      return { delta: incoming, next: incoming };
+    }
     return { delta: incoming, next: accumulated + incoming };
   }
 
