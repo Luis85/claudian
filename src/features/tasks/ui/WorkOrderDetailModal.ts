@@ -206,7 +206,11 @@ export class WorkOrderDetailModal extends Modal {
       );
     }
 
-    if (task.frontmatter.status === 'done') {
+    if (
+      task.frontmatter.status === 'done' ||
+      task.frontmatter.status === 'failed' ||
+      task.frontmatter.status === 'canceled'
+    ) {
       actions.addButton((btn) =>
         btn
           .setButtonText('Remove')
