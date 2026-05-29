@@ -1,5 +1,6 @@
 ---
 status: done
+type: issue
 ---
 # Insufficient logging
 

@@ -1,5 +1,6 @@
 ---
 status: done
+type: issue
 ---
 # Missing event bus makes expanding or integrating harder than it should be
 

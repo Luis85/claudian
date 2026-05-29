@@ -1,5 +1,5 @@
 ---
-type: claudian-issue
+type: prd
 id: issue-20260528-agent-board-mvp
 title: Agent Board MVP — optional Markdown workspace with visible sidepanel execution
 status: done

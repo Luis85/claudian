@@ -1,5 +1,5 @@
 ---
-type: claudian-issue
+type: prd
 id: issue-20260529-agent-board-evidence-review
 title: Agent Board Evidence & Review Gate — structured run evidence, changed-file attribution, run leases, and evidence-gated completion
 status: open

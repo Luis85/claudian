@@ -1,0 +1,38 @@
+views:
+  - type: table
+    name: Ideas
+    filters:
+      and:
+        - file.inFolder("docs/ideas")
+    order:
+      - file.name
+    columnSize:
+      file.name: 359
+  - type: table
+    name: Issues
+    filters:
+      and:
+        - file.inFolder("docs/issues")
+    order:
+      - file.name
+      - status
+      - type
+      - tags
+    columnSize:
+      file.name: 462
+  - type: table
+    name: Specs
+    filters:
+      and:
+        - file.inFolder("docs/superpowers/specs")
+    order:
+      - file.name
+      - status
+  - type: table
+    name: Plans
+    filters:
+      and:
+        - file.inFolder("docs/superpowers/plans")
+    order:
+      - file.name
+      - status
