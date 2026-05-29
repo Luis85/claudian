@@ -7,6 +7,7 @@ import {
   resolveProviderModel,
 } from '../../../../../src/features/tasks/templates/templateResolution';
 import type { WorkOrderTemplate } from '../../../../../src/features/tasks/templates/templateTypes';
+import type { TaskPriority } from '../../../../../src/features/tasks/model/taskTypes';
 
 const tpl = (over: Partial<WorkOrderTemplate> = {}): WorkOrderTemplate => ({
   path: 'Agent Board/templates/t.md',
@@ -77,7 +78,7 @@ describe('resolveProviderModel', () => {
       validators(['codex'], { codex: ['gpt'] }),
     );
     expect(r.model).toBe('gpt');
-    expect(r.warnings[0]).toContain('bad');
+    expect(r.warnings[0]).toContain('not valid for');
   });
 
   it('returns an empty model when provider differs from default and template gives none', () => {
@@ -91,8 +92,11 @@ describe('resolveProviderModel', () => {
 });
 
 describe('resolvePriority', () => {
-  it('keeps a valid priority and defaults missing or invalid to normal', () => {
+  it('keeps every valid priority and defaults missing or invalid to normal', () => {
+    expect(resolvePriority({ priority: 'low' })).toBe('low');
     expect(resolvePriority({ priority: 'high' })).toBe('high');
+    expect(resolvePriority({ priority: 'urgent' })).toBe('urgent');
+    expect(resolvePriority({ priority: 'bogus' as TaskPriority })).toBe('normal');
     expect(resolvePriority(undefined)).toBe('normal');
   });
 });
@@ -113,5 +117,9 @@ describe('buildTemplateChoices', () => {
     const choices = buildTemplateChoices([tpl({ name: 'A' })]);
     expect(choices[0]).toEqual({ kind: 'blank' });
     expect(choices[1]).toMatchObject({ kind: 'template', template: { name: 'A' } });
+  });
+
+  it('returns only Blank for an empty template list', () => {
+    expect(buildTemplateChoices([])).toEqual([{ kind: 'blank' }]);
   });
 });

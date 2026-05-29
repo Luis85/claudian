@@ -2,14 +2,16 @@ import type { TaskPriority } from '../model/taskTypes';
 import { ALLOWED_TEMPLATE_PLACEHOLDERS, type TemplateChoice, type TemplateVars, type WorkOrderTemplate } from './templateTypes';
 
 const PLACEHOLDER_PATTERN = /\{\{\s*(\w+)\s*\}\}/g;
+const ALLOWED_PLACEHOLDER_SET = new Set<string>(ALLOWED_TEMPLATE_PLACEHOLDERS);
 const VALID_PRIORITIES: ReadonlySet<TaskPriority> = new Set<TaskPriority>(['low', 'normal', 'high', 'urgent']);
 
 export function findUnknownPlaceholders(body: string): string[] {
-  const allowed = new Set<string>(ALLOWED_TEMPLATE_PLACEHOLDERS);
   const unknown: string[] = [];
+  const seen = new Set<string>();
   for (const match of body.matchAll(PLACEHOLDER_PATTERN)) {
     const name = match[1];
-    if (!allowed.has(name) && !unknown.includes(name)) {
+    if (!ALLOWED_PLACEHOLDER_SET.has(name) && !seen.has(name)) {
+      seen.add(name);
       unknown.push(name);
     }
   }
@@ -24,12 +26,8 @@ export function renderWorkOrderBody(
   if (unknown.length > 0) {
     return { body: template.body, errors: unknown.map((name) => `Unknown placeholder {{${name}}}`) };
   }
-  const body = template.body.replace(PLACEHOLDER_PATTERN, (_full, name: string) => {
-    if (name === 'title') return vars.title;
-    if (name === 'date') return vars.date;
-    if (name === 'source') return vars.source;
-    return '';
-  });
+  const values: Record<string, string> = { title: vars.title, date: vars.date, source: vars.source };
+  const body = template.body.replace(PLACEHOLDER_PATTERN, (_full, name: string) => values[name] ?? '');
   return { body, errors: [] };
 }
 
