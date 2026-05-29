@@ -185,4 +185,30 @@ ${HANDOFF_END}`);
     )).toThrow('Generated task region content cannot contain Claudian markers');
   });
 
+  it('writes frontmatter fields, bumps updated, and preserves unknown keys and body', () => {
+    const written = store.writeFields(
+      VALID_NOTE,
+      { title: 'Renamed', provider: 'claude', model: 'sonnet', priority: 'high' },
+      '2026-06-01T00:00:00.000Z',
+    );
+
+    const parsed = store.parse('tasks/task-1.md', written);
+    expect(parsed.task.frontmatter.title).toBe('Renamed');
+    expect(parsed.task.frontmatter.provider).toBe('claude');
+    expect(parsed.task.frontmatter.model).toBe('sonnet');
+    expect(parsed.task.frontmatter.priority).toBe('high');
+    expect(parsed.task.frontmatter.updated).toBe('2026-06-01T00:00:00.000Z');
+    expect(parsed.task.frontmatter.custom_field).toBe('keep-me');
+    expect(written).toContain('Intro prose that must stay.');
+    expect(written).toContain('Closing prose.');
+  });
+
+  it('leaves omitted fields unchanged', () => {
+    const written = store.writeFields(VALID_NOTE, { title: 'Only title' }, '2026-06-01T00:00:00.000Z');
+    const parsed = store.parse('tasks/task-1.md', written);
+    expect(parsed.task.frontmatter.title).toBe('Only title');
+    expect(parsed.task.frontmatter.priority).toBe('normal');
+    expect(parsed.task.frontmatter.provider).toBeUndefined();
+  });
+
 });
