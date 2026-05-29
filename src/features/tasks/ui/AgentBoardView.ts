@@ -5,20 +5,28 @@ import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import { VIEW_TYPE_CLAUDIAN_AGENT_BOARD } from '../../../core/types/chat';
 import type ClaudianPlugin from '../../../main';
+import { confirmDelete } from '../../../shared/modals/ConfirmModal';
+import { createWorkOrder } from '../commands/taskCommands';
+import { getLaneForStatus, loadBoardConfig } from '../config/BoardConfigStore';
+import type { BoardConfig, ResolvedBoardLayout } from '../config/boardConfigTypes';
+import { resolveBoardLayout } from '../config/resolveBoardLayout';
 import type { TaskExecutionSurface } from '../execution/TaskExecutionSurface';
 import { TaskRunCoordinator } from '../execution/TaskRunCoordinator';
 import { TaskIndexer } from '../indexing/TaskIndexer';
 import { canTransitionTaskStatus } from '../model/taskStateMachine';
 import type { TaskBoardModel, TaskSpec, TaskStatus } from '../model/taskTypes';
+import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
 import { TaskNoteStore } from '../storage/TaskNoteStore';
 import { AgentBoardRenderer } from './AgentBoardRenderer';
-import { WorkOrderDetailModal } from './WorkOrderDetailModal';
+import { WorkOrderDetailModal, type WorkOrderFieldUpdate } from './WorkOrderDetailModal';
 
 export class AgentBoardView extends ItemView {
   private readonly noteStore = new TaskNoteStore();
   private readonly indexer = new TaskIndexer(this.noteStore);
   private readonly renderer = new AgentBoardRenderer();
   private model: TaskBoardModel = { tasks: [], invalidNotes: [] };
+  private config: BoardConfig = loadBoardConfig({}).config;
+  private layout: ResolvedBoardLayout = { lanes: [], errors: [] };
   private refreshTimer: number | null = null;
 
   constructor(
@@ -59,7 +67,12 @@ export class AgentBoardView extends ItemView {
   }
 
   async refresh(): Promise<void> {
+    const settings = this.plugin.settings as unknown as Record<string, unknown>;
     this.model = await this.indexer.indexVaultFolder(this.plugin.app.vault, this.folder);
+    const { config, errors } = loadBoardConfig(settings);
+    this.config = config;
+    const layout = resolveBoardLayout(config, this.model);
+    this.layout = { ...layout, errors: [...errors, ...layout.errors] };
     this.render();
   }
 
@@ -80,27 +93,58 @@ export class AgentBoardView extends ItemView {
     }, 100);
   }
 
+  // Light re-render that recomputes chat-tab slot capacity without re-indexing
+  // the vault. Called when chat tabs open/close.
+  refreshSlots(): void {
+    this.render();
+  }
+
   private render(): void {
+    // Preserve lane scroll position across full re-renders so interacting with a
+    // card (which triggers refresh) doesn't jump the board back to the left.
+    const lanesSelector = '.claudian-agent-board-lanes';
+    const previousLanes = this.contentEl.querySelector(lanesSelector) as HTMLElement | null;
+    const scrollLeft = previousLanes?.scrollLeft ?? 0;
+    const scrollTop = previousLanes?.scrollTop ?? 0;
+
     this.renderer.render(
       this.contentEl,
-      { model: this.model },
+      { layout: this.layout, invalidNotes: this.model.invalidNotes, slots: this.computeSlots() },
       {
         onOpenDetail: (task) => this.openDetail(task),
         onRun: (task) => void this.runTask(task),
         onStop: (task) => this.stopTask(task),
         onAccept: (task) => void this.transitionTask(task, 'done', 'Accepted from review.'),
         onRework: (task) => void this.transitionTask(task, 'needs_fix', 'Sent back for rework.'),
+        onMarkReady: (task) => void this.transitionTask(task, 'ready', 'Marked ready.'),
+        onAddWorkOrder: () => void this.addWorkOrderFromBoard(),
       },
     );
+
+    const nextLanes = this.contentEl.querySelector(lanesSelector) as HTMLElement | null;
+    if (nextLanes) {
+      nextLanes.scrollLeft = scrollLeft;
+      nextLanes.scrollTop = scrollTop;
+    }
   }
 
   private openDetail(task: TaskSpec): void {
+    const settings = this.plugin.settings as unknown as Record<string, unknown>;
     new WorkOrderDetailModal(this.plugin.app, task, {
       onOpenNote: (target) => void this.openTask(target),
       onRun: (target) => void this.runTask(target),
       onStop: (target) => this.stopTask(target),
       onAccept: (target) => void this.transitionTask(target, 'done', 'Accepted from review.'),
       onRework: (target) => void this.transitionTask(target, 'needs_fix', 'Sent back for rework.'),
+      onMarkReady: (target) => void this.transitionTask(target, 'ready', 'Marked ready.'),
+      onRemove: (target) => void this.removeTask(target),
+      onSaveFields: (target, fields) => this.saveTaskFields(target, fields),
+      getProviderOptions: () =>
+        ProviderRegistry.getEnabledProviderIds(settings).map((id) => ({ value: id, label: id })),
+      getModelOptions: (providerId) =>
+        ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId)
+          ? ProviderRegistry.getChatUIConfig(providerId as ProviderId).getModelOptions(settings)
+          : [],
     }).open();
   }
 
@@ -114,6 +158,43 @@ export class AgentBoardView extends ItemView {
   private stopTask(task: TaskSpec): void {
     this.executionSurface.cancelTaskRun?.(task.frontmatter.run_id ?? '');
     new Notice(`Requested stop for "${task.frontmatter.title}".`);
+  }
+
+  private async saveTaskFields(task: TaskSpec, fields: WorkOrderFieldUpdate): Promise<void> {
+    await this.applyNoteChange(task.path, (content) => this.noteStore.writeFields(content, fields));
+    await this.refresh();
+  }
+
+  private computeSlots(): { used: number; max: number } {
+    const max = this.plugin.settings.maxTabs;
+    const used = this.plugin.getView()?.getTabManager()?.getTabCount() ?? 0;
+    return { used, max };
+  }
+
+  private async removeTask(task: TaskSpec): Promise<void> {
+    const ok = await confirmDelete(
+      this.plugin.app,
+      `Remove work order "${task.frontmatter.title}"? The note will be moved to trash.`,
+    );
+    if (!ok) return;
+    const file = this.plugin.app.vault.getAbstractFileByPath(task.path);
+    if (file instanceof TFile) {
+      await this.plugin.app.fileManager.trashFile(file);
+    }
+    await this.refresh();
+  }
+
+  private async addWorkOrderFromBoard(): Promise<void> {
+    const created = await createWorkOrder(this.plugin, null, { status: 'inbox', reveal: 'none' });
+    if (!created) return;
+    await this.refresh();
+    try {
+      const content = await this.plugin.app.vault.read(created);
+      const { task } = this.noteStore.parse(created.path, content);
+      this.openDetail(task);
+    } catch {
+      // Best-effort: ignore a vault read or parse failure; the board already refreshed.
+    }
   }
 
   private async transitionTask(task: TaskSpec, to: TaskStatus, message: string): Promise<void> {
@@ -182,6 +263,8 @@ export class AgentBoardView extends ItemView {
         this.applyNoteChange(task.path, (content) => this.noteStore.appendLedger(content, entry)),
       writeHandoff: (_task, markdown) =>
         this.applyNoteChange(task.path, (content) => this.noteStore.writeHandoff(content, markdown)),
+      renderPrompt: (target) =>
+        renderTaskPrompt(target, getLaneForStatus(this.config, target.frontmatter.status) ?? undefined),
     });
 
     const result = await coordinator.run(latest);

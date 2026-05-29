@@ -11,8 +11,13 @@ export class ChatTabExecutionSurface implements TaskExecutionSurface {
     if (!provider) return this.failed('Work order is missing provider');
     if (!model) return this.failed('Work order is missing model');
 
-    await this.plugin.activateView();
-    const view = this.plugin.getView();
+    // Only open the chat view if it isn't already present; activating an
+    // existing view would steal focus from wherever the user currently is.
+    let view = this.plugin.getView();
+    if (!view) {
+      await this.plugin.activateView();
+      view = this.plugin.getView();
+    }
     if (!view) return this.failed('Could not open the Claudian chat view.');
 
     const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

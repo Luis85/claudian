@@ -160,4 +160,27 @@ describe('TaskRunCoordinator', () => {
     });
     expect(statuses).toEqual(['running', 'canceled']);
   });
+
+  it('uses an injected renderPrompt when provided', async () => {
+    const surface = new FakeSurface({
+      status: 'completed',
+      runId: 'run-1',
+      conversationId: 'conv-1',
+      sidepanelTabId: 'tab-1',
+      finalAssistantContent: VALID_HANDOFF,
+    });
+    const coordinator = new TaskRunCoordinator({
+      executionSurface: surface,
+      now: () => '2026-05-28T18:10:00+02:00',
+      isProviderEnabled: () => true,
+      ownsModel: () => true,
+      writeTaskStatus: async () => {},
+      appendLedger: async () => {},
+      writeHandoff: async () => {},
+      renderPrompt: () => 'INJECTED PROMPT',
+    });
+
+    await coordinator.run(makeTask());
+    expect(surface.prompts[0]).toBe('INJECTED PROMPT');
+  });
 });

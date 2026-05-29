@@ -19,6 +19,7 @@ export interface TaskRunCoordinatorDeps {
   writeTaskStatus: (task: TaskSpec, options: WriteTaskStatusOptions) => Promise<void>;
   appendLedger: (task: TaskSpec, entry: TaskLedgerEntry) => Promise<void>;
   writeHandoff: (task: TaskSpec, markdown: string) => Promise<void>;
+  renderPrompt?: (task: TaskSpec) => string;
 }
 
 export type TaskRunResult =
@@ -57,7 +58,7 @@ export class TaskRunCoordinator {
         message: 'Run started.',
       });
 
-      const prompt = renderTaskPrompt(task);
+      const prompt = (this.deps.renderPrompt ?? renderTaskPrompt)(task);
       const handle = await this.deps.executionSurface.startTaskRun(task, { prompt });
 
       const finishedAt = this.deps.now();

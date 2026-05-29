@@ -233,17 +233,20 @@ export class TabManager implements TabManagerInterface {
       this.maybePrimeProviderRuntime(tab);
     }
 
+    this.plugin.refreshAgentBoardSlots();
     return tab;
   }
 
-  /** Creates a fresh, activated tab pinned to a provider/model for an Agent Board task run. */
+  /** Creates a background (non-activated) tab pinned to a provider/model for an Agent Board task run. */
   async createTaskRunTab(options: {
     providerId: ProviderId;
     model: string;
     conversationId?: string | null;
   }): Promise<TabData | null> {
+    // Do not steal focus: the work order run streams in a background tab so the
+    // user stays on whatever tab/view they were on. They can switch to it manually.
     return this.createTab(options.conversationId ?? undefined, undefined, {
-      activate: true,
+      activate: false,
       draftModel: options.model,
       defaultProviderId: options.providerId,
     });
@@ -368,6 +371,7 @@ export class TabManager implements TabManagerInterface {
     this.providerCommandCache.delete(tabId);
     this.tabs.delete(tabId);
     this.callbacks.onTabClosed?.(tabId);
+    this.plugin.refreshAgentBoardSlots();
 
     // If we closed the active tab, switch to another
     if (this.activeTabId === tabId) {

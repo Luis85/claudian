@@ -1,6 +1,7 @@
 import { normalizePath, Notice, TFile, TFolder } from 'obsidian';
 
 import type ClaudianPlugin from '../../../main';
+import type { TaskStatus } from '../model/taskTypes';
 import { HANDOFF_END, HANDOFF_START, RUN_LEDGER_END, RUN_LEDGER_START } from '../storage/TaskNoteStore';
 
 interface BuildWorkOrderArgs {
@@ -9,6 +10,7 @@ interface BuildWorkOrderArgs {
   provider: string;
   model: string;
   timestamp: string;
+  status?: TaskStatus;
   sourcePath?: string | null;
   sourceFolderPath?: string | null;
 }
@@ -27,6 +29,7 @@ function stripMarkdownExtension(path: string): string {
 
 function buildWorkOrderMarkdown(args: BuildWorkOrderArgs): string {
   const { id, title, provider, model, timestamp, sourcePath, sourceFolderPath } = args;
+  const status = args.status ?? 'ready';
   let contextBody = '_Add the links, files, and scope the agent needs._';
   if (sourcePath) {
     contextBody = `Source note: [[${stripMarkdownExtension(sourcePath)}]]`;
@@ -39,7 +42,7 @@ type: claudian-work-order
 schema_version: 1
 id: ${id}
 title: ${JSON.stringify(title)}
-status: ready
+status: ${status}
 priority: normal
 created: ${timestamp}
 updated: ${timestamp}
@@ -108,9 +111,15 @@ function uniquePath(plugin: ClaudianPlugin, basePath: string): string {
   return `${withoutExt}-${counter}.md`;
 }
 
+export interface CreateWorkOrderOptions {
+  status?: TaskStatus;
+  reveal?: 'note' | 'none';
+}
+
 export async function createWorkOrder(
   plugin: ClaudianPlugin,
   source?: TFile | TFolder | null,
+  options?: CreateWorkOrderOptions,
 ): Promise<TFile | null> {
   const provider = plugin.settings.agentBoardDefaultProvider;
   const model = plugin.settings.agentBoardDefaultModel;
@@ -140,6 +149,7 @@ export async function createWorkOrder(
     provider,
     model,
     timestamp: now.toISOString(),
+    status: options?.status ?? 'ready',
     sourcePath: sourceFile?.path ?? null,
     sourceFolderPath: sourceFolder?.path ?? null,
   });
@@ -147,7 +157,9 @@ export async function createWorkOrder(
   const filePath = uniquePath(plugin, normalizePath(`${folder}/${id}.md`));
   const created = await plugin.app.vault.create(filePath, markdown);
   if (created instanceof TFile) {
-    await plugin.app.workspace.getLeaf('tab').openFile(created);
+    if ((options?.reveal ?? 'note') === 'note') {
+      await plugin.app.workspace.getLeaf('tab').openFile(created);
+    }
     return created;
   }
   return null;

@@ -1,7 +1,7 @@
 import { stringifyYaml } from 'obsidian';
 
 import { parseFrontmatter } from '../../../utils/frontmatter';
-import type { TaskLedgerEntry, TaskSpec, TaskStatus } from '../model/taskTypes';
+import type { TaskLedgerEntry, TaskPriority, TaskSpec, TaskStatus } from '../model/taskTypes';
 
 export const RUN_LEDGER_START = '<!-- claudian:run-ledger-start -->';
 export const RUN_LEDGER_END = '<!-- claudian:run-ledger-end -->';
@@ -26,6 +26,13 @@ export interface WriteStatusOptions {
   runId?: string | null;
   conversationId?: string | null;
   sidepanelTabId?: string | null;
+}
+
+export interface WriteFieldsOptions {
+  title?: string;
+  provider?: string;
+  model?: string;
+  priority?: TaskPriority;
 }
 
 const SECTION_HEADINGS = Object.freeze({
@@ -86,6 +93,19 @@ export class TaskNoteStore {
     if (options.status === 'done' || options.status === 'failed' || options.status === 'canceled') {
       frontmatter.finished = options.timestamp;
     }
+
+    return this.withFrontmatter(frontmatter, parsed.task.body);
+  }
+
+  writeFields(content: string, fields: WriteFieldsOptions, timestamp: string = new Date().toISOString()): string {
+    const parsed = this.parse('', content);
+    const frontmatter: Record<string, unknown> = { ...parsed.task.frontmatter };
+
+    if (fields.title !== undefined) frontmatter.title = fields.title;
+    if (fields.provider !== undefined) frontmatter.provider = fields.provider;
+    if (fields.model !== undefined) frontmatter.model = fields.model;
+    if (fields.priority !== undefined) frontmatter.priority = fields.priority;
+    frontmatter.updated = timestamp;
 
     return this.withFrontmatter(frontmatter, parsed.task.body);
   }
