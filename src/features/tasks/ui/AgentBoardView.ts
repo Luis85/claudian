@@ -94,6 +94,13 @@ export class AgentBoardView extends ItemView {
   }
 
   private render(): void {
+    // Preserve lane scroll position across full re-renders so interacting with a
+    // card (which triggers refresh) doesn't jump the board back to the left.
+    const lanesSelector = '.claudian-agent-board-lanes';
+    const previousLanes = this.contentEl.querySelector(lanesSelector) as HTMLElement | null;
+    const scrollLeft = previousLanes?.scrollLeft ?? 0;
+    const scrollTop = previousLanes?.scrollTop ?? 0;
+
     this.renderer.render(
       this.contentEl,
       { layout: this.layout, invalidNotes: this.model.invalidNotes, slots: this.computeSlots() },
@@ -107,6 +114,12 @@ export class AgentBoardView extends ItemView {
         onAddWorkOrder: () => void this.addWorkOrderFromBoard(),
       },
     );
+
+    const nextLanes = this.contentEl.querySelector(lanesSelector) as HTMLElement | null;
+    if (nextLanes) {
+      nextLanes.scrollLeft = scrollLeft;
+      nextLanes.scrollTop = scrollTop;
+    }
   }
 
   private openDetail(task: TaskSpec): void {
