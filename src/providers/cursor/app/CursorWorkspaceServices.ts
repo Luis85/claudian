@@ -36,7 +36,7 @@ function warmCursorModelCatalog(plugin: ClaudianPlugin, cliResolver: ProviderCli
     if (/timed out/i.test(message)) {
       return;
     }
-    console.warn('[cursor] model discovery failed:', err);
+    plugin.logger.scope('cursor.workspace').warn('model discovery failed', err);
   });
 }
 
