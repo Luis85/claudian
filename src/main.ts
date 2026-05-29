@@ -370,6 +370,15 @@ export default class ClaudianPlugin extends Plugin {
     await revealWorkspaceLeaf(workspace, leaf);
   }
 
+  refreshAgentBoards(): void {
+    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN_AGENT_BOARD)) {
+      const view = leaf.view;
+      if (view instanceof AgentBoardView) {
+        void view.refresh();
+      }
+    }
+  }
+
   private getLeafForPlacement(placement: ChatViewPlacement): WorkspaceLeaf | null {
     const { workspace } = this.app;
     switch (placement) {
