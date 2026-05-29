@@ -10,7 +10,7 @@ import {
   TOOL_WAIT_AGENT,
   TOOL_WRITE_STDIN,
 } from '@/core/tools/toolNames';
-import type { ChatMessage, ImageAttachment } from '@/core/types';
+import type { ChatMessage, ChatMessageAction, ImageAttachment } from '@/core/types';
 import { MessageRenderer } from '@/features/chat/rendering/MessageRenderer';
 import { renderStoredAsyncSubagent, renderStoredSubagent } from '@/features/chat/rendering/SubagentRenderer';
 import { renderStoredThinkingBlock } from '@/features/chat/rendering/ThinkingBlockRenderer';
@@ -48,6 +48,17 @@ function createMockComponent() {
   };
 }
 
+/** Minimal plugin stub with the fields MessageRenderer reads for message actions. */
+function mockRendererPlugin(overrides: Record<string, unknown> = {}) {
+  return {
+    app: {},
+    settings: { mediaFolder: '' },
+    chatMessageActions: [] as ChatMessageAction[],
+    getActiveConversationSnapshot: () => null as { id: string; title: string } | null,
+    ...overrides,
+  };
+}
+
 function mockCapabilities(providerId: 'claude' | 'codex' = 'claude') {
   return () => ({
     providerId,
@@ -67,10 +78,7 @@ function mockCapabilities(providerId: 'claude' | 'codex' = 'claude') {
 function createRenderer(messagesEl?: any, providerId: 'claude' | 'codex' = 'claude') {
   const el = messagesEl ?? createMockEl();
   const comp = createMockComponent();
-  const plugin = {
-    app: {},
-    settings: { mediaFolder: '' },
-  };
+  const plugin = mockRendererPlugin();
   return {
     renderer: new MessageRenderer(
       plugin as any,
@@ -81,6 +89,7 @@ function createRenderer(messagesEl?: any, providerId: 'claude' | 'codex' = 'clau
       mockCapabilities(providerId),
     ),
     messagesEl: el,
+    plugin,
   };
 }
 
@@ -98,7 +107,7 @@ describe('MessageRenderer', () => {
     const messagesEl = createMockEl();
     const emptySpy = jest.spyOn(messagesEl, 'empty');
     const mockComponent = createMockComponent();
-    const renderer = new MessageRenderer({} as any, mockComponent as any, messagesEl);
+    const renderer = new MessageRenderer(mockRendererPlugin() as any, mockComponent as any, messagesEl);
     const renderStoredSpy = jest.spyOn(renderer, 'renderStoredMessage').mockImplementation(() => {});
 
     const messages: ChatMessage[] = [
@@ -130,7 +139,7 @@ describe('MessageRenderer', () => {
   it('renders interrupt messages with interrupt styling instead of user bubble', () => {
     const messagesEl = createMockEl();
     const mockComponent = createMockComponent();
-    const renderer = new MessageRenderer({} as any, mockComponent as any, messagesEl);
+    const renderer = new MessageRenderer(mockRendererPlugin() as any, mockComponent as any, messagesEl);
 
     const interruptMsg: ChatMessage = {
       id: 'interrupt-1',
@@ -185,7 +194,7 @@ describe('MessageRenderer', () => {
   it('renders bare interrupt marker for empty interrupted assistant message', () => {
     const messagesEl = createMockEl();
     const mockComponent = createMockComponent();
-    const renderer = new MessageRenderer({} as any, mockComponent as any, messagesEl);
+    const renderer = new MessageRenderer(mockRendererPlugin() as any, mockComponent as any, messagesEl);
 
     const interruptMsg: ChatMessage = {
       id: 'interrupt-codex-2',
@@ -310,7 +319,7 @@ describe('MessageRenderer', () => {
   it('adds a rewind button for eligible stored user messages', () => {
     const messagesEl = createMockEl();
     const rewindCallback = jest.fn().mockResolvedValue(undefined);
-    const renderer = new MessageRenderer({ app: {}, settings: { mediaFolder: '' } } as any, createMockComponent() as any, messagesEl, rewindCallback, undefined, mockCapabilities());
+    const renderer = new MessageRenderer(mockRendererPlugin() as any, createMockComponent() as any, messagesEl, rewindCallback, undefined, mockCapabilities());
     jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
 
     const allMessages: ChatMessage[] = [
@@ -327,7 +336,7 @@ describe('MessageRenderer', () => {
   it('does not add a rewind button when stored render is called without context', () => {
     const messagesEl = createMockEl();
     const rewindCallback = jest.fn().mockResolvedValue(undefined);
-    const renderer = new MessageRenderer({ app: {}, settings: { mediaFolder: '' } } as any, createMockComponent() as any, messagesEl, rewindCallback, undefined, mockCapabilities());
+    const renderer = new MessageRenderer(mockRendererPlugin() as any, createMockComponent() as any, messagesEl, rewindCallback, undefined, mockCapabilities());
     jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
 
     const msg: ChatMessage = {
@@ -346,7 +355,7 @@ describe('MessageRenderer', () => {
   it('shows rewind mode menu for eligible streamed user messages', async () => {
     const messagesEl = createMockEl();
     const rewindCallback = jest.fn().mockResolvedValue(undefined);
-    const renderer = new MessageRenderer({ app: {}, settings: { mediaFolder: '' } } as any, createMockComponent() as any, messagesEl, rewindCallback, undefined, mockCapabilities());
+    const renderer = new MessageRenderer(mockRendererPlugin() as any, createMockComponent() as any, messagesEl, rewindCallback, undefined, mockCapabilities());
     jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
 
     const userMsg: ChatMessage = {
@@ -389,7 +398,7 @@ describe('MessageRenderer', () => {
   it('renders assistant content blocks using specialized renderers', () => {
     const messagesEl = createMockEl();
     const mockComponent = createMockComponent();
-    const renderer = new MessageRenderer({} as any, mockComponent as any, messagesEl);
+    const renderer = new MessageRenderer(mockRendererPlugin() as any, mockComponent as any, messagesEl);
     const renderContentSpy = jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
 
     const msg: ChatMessage = {
@@ -839,7 +848,7 @@ describe('MessageRenderer', () => {
   it('should skip TaskOutput tool calls (internal async subagent communication)', () => {
     const messagesEl = createMockEl();
     const mockComponent = createMockComponent();
-    const renderer = new MessageRenderer({} as any, mockComponent as any, messagesEl);
+    const renderer = new MessageRenderer(mockRendererPlugin() as any, mockComponent as any, messagesEl);
 
     (renderStoredToolCall as jest.Mock).mockClear();
 
@@ -984,7 +993,7 @@ describe('MessageRenderer', () => {
     const messagesEl = createMockEl();
     const rewindCallback = jest.fn();
     const rendererWithRewind = new MessageRenderer(
-      { app: {}, settings: { mediaFolder: '' } } as any,
+      mockRendererPlugin() as any,
       createMockComponent() as any,
       messagesEl,
       rewindCallback,
@@ -1110,6 +1119,44 @@ describe('MessageRenderer', () => {
     expect(textEl.children.length).toBe(1);
     const copyBtn = textEl.children[0];
     expect(copyBtn.hasClass('claudian-text-copy-btn')).toBe(true);
+  });
+
+  // ============================================
+  // Registered message actions
+  // ============================================
+
+  describe('registered message actions', () => {
+    it('renders no action button when the registry is empty', () => {
+      const messagesEl = createMockEl();
+      const { renderer } = createRenderer(messagesEl);
+      jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+      const msg: ChatMessage = { id: 'u1', role: 'user', content: 'hello', timestamp: Date.now() };
+      renderer.renderStoredMessage(msg);
+
+      expect(messagesEl.querySelector('.claudian-user-msg-action-btn')).toBeNull();
+    });
+
+    it('renders a button per eligible action and runs it on click', () => {
+      const messagesEl = createMockEl();
+      const { renderer, plugin } = createRenderer(messagesEl);
+      jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+      const run = jest.fn();
+      plugin.chatMessageActions.push({
+        id: 'wo', label: 'Create work order', icon: 'kanban-square',
+        isEligible: (m) => m.role === 'user', run,
+      });
+
+      const msg: ChatMessage = { id: 'u1', role: 'user', content: 'hello', timestamp: Date.now() };
+      renderer.renderStoredMessage(msg);
+
+      const btn = messagesEl.querySelector('.claudian-user-msg-action-btn');
+      expect(btn).not.toBeNull();
+
+      btn!.click();
+      expect(run).toHaveBeenCalledWith(msg, null);
+    });
   });
 
   // ============================================
@@ -1945,7 +1992,7 @@ describe('MessageRenderer', () => {
     function createRendererWithVault() {
       const messagesEl = createMockEl();
       const comp = createMockComponent();
-      const plugin = {
+      const plugin = mockRendererPlugin({
         app: {
           vault: {
             getAbstractFileByPath: jest.fn((path: string) => {
@@ -1967,7 +2014,7 @@ describe('MessageRenderer', () => {
           },
         },
         settings: { mediaFolder: '' },
-      };
+      });
       return {
         renderer: new MessageRenderer(
           plugin as any,

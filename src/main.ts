@@ -26,9 +26,11 @@ import type { ProviderId } from './core/providers/types';
 import type { AppTabManagerState } from './core/providers/types';
 import { DEFAULT_CHAT_PROVIDER_ID } from './core/providers/types';
 import type {
+  ChatMessageAction,
   ClaudianSettings,
   Conversation,
   ConversationMeta,
+  ConversationSnapshot,
 } from './core/types';
 import {
   VIEW_TYPE_CLAUDIAN,
@@ -67,6 +69,8 @@ export default class ClaudianPlugin extends Plugin {
   settings!: ClaudianSettings;
   readonly events = new EventBus<ClaudianEventMap>();
   readonly logger = new Logger({ enabled: false, level: 'warn' });
+  /** Optional, registry-driven actions rendered in the chat user-message toolbar. */
+  readonly chatMessageActions: ChatMessageAction[] = [];
   storage!: SharedAppStorage;
   gitStatusWatcher: GitStatusWatcher | null = null;
   private conversations: Conversation[] = [];
@@ -753,6 +757,17 @@ export default class ClaudianPlugin extends Plugin {
 
   getActiveBrowserSelection(): BrowserSelectionContext | null {
     return this.getView()?.getActiveTab()?.controllers.browserSelectionController?.getContext() ?? null;
+  }
+
+  registerChatMessageAction(action: ChatMessageAction): void {
+    this.chatMessageActions.push(action);
+  }
+
+  getActiveConversationSnapshot(): ConversationSnapshot | null {
+    const conversationId = this.getView()?.getActiveTab()?.conversationId;
+    if (!conversationId) return null;
+    const title = this.getConversationSync(conversationId)?.title ?? 'Conversation';
+    return { id: conversationId, title };
   }
 
   getEnvironmentVariablesForScope(scope: EnvironmentScope): string {

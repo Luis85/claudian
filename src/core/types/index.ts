@@ -1,9 +1,11 @@
 // Chat types
 export {
   type ChatMessage,
+  type ChatMessageAction,
   type ContentBlock,
   type Conversation,
   type ConversationMeta,
+  type ConversationSnapshot,
   type ForkSource,
   type ImageAttachment,
   type ImageMediaType,

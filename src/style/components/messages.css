@@ -239,6 +239,17 @@
   font-family: var(--font-monospace);
 }
 
+.claudian-user-msg-action-btn {
+  cursor: pointer;
+  opacity: 0.6;
+  display: inline-flex;
+  align-items: center;
+}
+
+.claudian-user-msg-action-btn:hover {
+  opacity: 1;
+}
+
 /* Compact boundary indicator */
 .claudian-compact-boundary {
   display: flex;

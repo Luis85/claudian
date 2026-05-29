@@ -19,6 +19,7 @@ import { replaceImageEmbedsWithHtml } from '../../../utils/imageEmbed';
 import { escapeMathDelimitersForStreaming } from '../../../utils/markdownMath';
 import { extractVaultMentions } from '../../../utils/vaultMentions';
 import { findRewindContext } from '../rewind';
+import { eligibleMessageActions } from './messageActions';
 import { renderMessageContextCard } from './MessageContextCard';
 import { resolveSubagentLifecycleAdapter } from './subagentLifecycleResolution';
 import {
@@ -159,6 +160,7 @@ export class MessageRenderer {
         const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
         void this.renderContent(textEl, textToShow);
         this.addUserCopyButton(msgEl, textToShow);
+        this.addRegisteredMessageActions(msgEl, msg);
       }
       if (this.rewindCallback || this.forkCallback) {
         this.liveMessageEls.set(msg.id, msgEl);
@@ -197,10 +199,12 @@ export class MessageRenderer {
     const toolbar = msgEl.querySelector<HTMLElement>('.claudian-user-msg-actions');
     if (toolbar) {
       toolbar.querySelectorAll('.claudian-user-msg-copy-btn').forEach((el) => el.remove());
+      toolbar.querySelectorAll('.claudian-user-msg-action-btn').forEach((el) => el.remove());
     }
 
     if (textToShow) {
       this.addUserCopyButton(msgEl, textToShow);
+      this.addRegisteredMessageActions(msgEl, msg);
     }
   }
 
@@ -297,6 +301,7 @@ export class MessageRenderer {
         const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
         void this.renderContent(textEl, textToShow);
         this.addUserCopyButton(msgEl, textToShow);
+        this.addRegisteredMessageActions(msgEl, msg);
       }
       if (msg.userMessageId && this.isRewindEligible(allMessages, index)) {
         if (this.rewindCallback) {
@@ -837,6 +842,21 @@ export class MessageRenderer {
         }, 1500);
       });
     });
+  }
+
+  private addRegisteredMessageActions(msgEl: HTMLElement, msg: ChatMessage): void {
+    const toolbar = this.getOrCreateActionsToolbar(msgEl);
+    toolbar.querySelectorAll('.claudian-user-msg-action-btn').forEach((el) => el.remove());
+
+    for (const action of eligibleMessageActions(this.plugin.chatMessageActions, msg)) {
+      const btn = toolbar.createSpan({ cls: 'claudian-user-msg-action-btn' });
+      setIcon(btn, action.icon);
+      btn.setAttribute('aria-label', action.label);
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        action.run(msg, this.plugin.getActiveConversationSnapshot()?.id ?? null);
+      });
+    }
   }
 
   private addRewindButton(msgEl: HTMLElement, messageId: string): void {

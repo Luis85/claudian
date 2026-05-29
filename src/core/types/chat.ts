@@ -64,6 +64,25 @@ export interface ChatMessage {
   assistantMessageId?: string;
 }
 
+/**
+ * Optional, provider-neutral action surfaced on a chat message (e.g. in the
+ * user-message toolbar). Registered on the plugin so chat never depends on the
+ * feature that supplies the action.
+ */
+export interface ChatMessageAction {
+  id: string;
+  label: string;
+  icon: string;
+  isEligible(message: ChatMessage): boolean;
+  run(message: ChatMessage, conversationId: string | null): void;
+}
+
+/** Minimal identity of the active conversation, exposed to message actions. */
+export interface ConversationSnapshot {
+  id: string;
+  title: string;
+}
+
 /** Persisted conversation with messages and session state. */
 export interface Conversation {
   id: string;
@@ -90,6 +109,8 @@ export interface Conversation {
   orchestratorMode?: boolean;
   /** Assistant checkpoint identifier for resumeAtMessageId after rewind. */
   resumeAtMessageId?: string;
+  /** Optional link to a work-order note path. Absent for ad-hoc chat. In-memory only. */
+  workOrderPath?: string;
 }
 
 /** Lightweight conversation metadata for the history dropdown. */
@@ -129,6 +150,8 @@ export interface SessionMetadata {
   usage?: UsageInfo;
   /** Assistant checkpoint identifier for resumeAtMessageId after rewind. */
   resumeAtMessageId?: string;
+  /** Optional link to a work-order note path. Absent for ad-hoc chat. In-memory only. */
+  workOrderPath?: string;
 }
 
 /**
