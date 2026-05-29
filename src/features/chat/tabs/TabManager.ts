@@ -242,8 +242,10 @@ export class TabManager implements TabManagerInterface {
     model: string;
     conversationId?: string | null;
   }): Promise<TabData | null> {
+    // Do not steal focus: the work order run streams in a background tab so the
+    // user stays on whatever tab/view they were on. They can switch to it manually.
     return this.createTab(options.conversationId ?? undefined, undefined, {
-      activate: true,
+      activate: false,
       draftModel: options.model,
       defaultProviderId: options.providerId,
     });
