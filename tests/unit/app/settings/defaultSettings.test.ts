@@ -6,3 +6,9 @@ describe('logging defaults', () => {
     expect(DEFAULT_CLAUDIAN_SETTINGS.logLevel).toBe('warn');
   });
 });
+
+describe('DEFAULT_CLAUDIAN_SETTINGS', () => {
+  it('seeds firstRunDismissed=false', () => {
+    expect(DEFAULT_CLAUDIAN_SETTINGS.firstRunDismissed).toBe(false);
+  });
+});

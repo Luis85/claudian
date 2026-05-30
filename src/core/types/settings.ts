@@ -148,6 +148,7 @@ export interface ClaudianSettings {
   enableAutoScroll: boolean;
   deferMathRenderingDuringStreaming: boolean;
   chatViewPlacement: ChatViewPlacement;
+  firstRunDismissed: boolean;
 
   // Agent Board
   agentBoardWorkOrderFolder: string;
