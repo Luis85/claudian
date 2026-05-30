@@ -1,3 +1,6 @@
+---
+parent: "[[Agent Kanban Board]]"
+---
 # Claudian — Agent Board
 
 The Agent Board is a kanban-style view for **work orders**: Markdown notes (`type: claudian-work-order`) that Claudian tracks through a set of status lanes and runs through a fresh chat tab. This manual covers the base board — opening it, the work-order note structure, the default lanes, the detail view, and running.

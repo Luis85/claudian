@@ -1,3 +1,6 @@
+---
+parent: "[[Multi Provider Support]]"
+---
 # Claudian — Cursor model families & modes
 
 This manual covers how the Cursor provider exposes **model families** and **modes** in Claudian — what they mean, where to pick them, and how your choices persist.

@@ -1,3 +1,6 @@
+---
+parent: Infrastructure
+---
 # Claudian — Configurable logger
 
 This manual covers Claudian's **diagnostic logger**: a built-in, off-by-default capture of what the plugin is doing internally, so you can troubleshoot a problem or hand a maintainer a clean log when you file a bug report.

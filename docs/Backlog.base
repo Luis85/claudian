@@ -56,3 +56,12 @@ views:
         - type == "feature"
     order:
       - file.name
+      - parent
+  - type: table
+    name: User Manuals
+    filters:
+      and:
+        - file.inFolder("docs/user-manuals")
+    order:
+      - file.name
+      - parent

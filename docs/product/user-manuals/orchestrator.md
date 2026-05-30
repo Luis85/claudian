@@ -1,5 +1,5 @@
 ---
-parent: "[[docs/product/features/Orchestrator|Orchestrator]]"
+parent: "[[docs/features/Orchestrator|Orchestrator]]"
 ---
 # Claudian — Orchestrator
 

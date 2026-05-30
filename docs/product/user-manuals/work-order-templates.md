@@ -1,3 +1,6 @@
+---
+parent: "[[Agent Kanban Board]]"
+---
 # Agent Board — Work-Order Templates
 
 This manual covers **work-order templates**: reusable starting points you pick from when creating an Agent Board work order, so common task types are faster to prepare.

@@ -1,3 +1,6 @@
+---
+parent: "[[Chat]]"
+---
 # Claudian — Git commit & push button
 
 This manual covers the **Commit & push** button in the chat panel header: a one-click way to ask the active chat agent to stage, commit, and push your vault's uncommitted changes with a Conventional Commits message it writes itself.

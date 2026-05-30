@@ -1,3 +1,6 @@
+---
+parent: "[[Chat]]"
+---
 # Claudian — Composer context pills
 
 This manual covers **composer context pills**: the small chips that appear in a row above the chat textarea to represent the vault context attached to your next message. Pills replace the older "raw `@path` text" style — the textarea now holds clean prose, and the pills are the composer's source of truth for which notes and folders go with your turn.

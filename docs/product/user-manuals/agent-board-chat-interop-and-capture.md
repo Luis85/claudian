@@ -1,3 +1,6 @@
+---
+parent: "[[Agent Kanban Board]]"
+---
 # Agent Board — Chat Interop & Capture
 
 This manual covers how to turn ideas, notes, selections, and chat into **work orders** on the Agent Board, run them, and jump back to the chat conversation a work order came from.
