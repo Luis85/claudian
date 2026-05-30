@@ -136,4 +136,128 @@ describe('CustomModelsTable', () => {
     // The original single row should still be the only one.
     expect(ctx.settings.providerConfigs.claude?.customModels).toHaveLength(1);
   });
+
+  it('removes a user row and saves when Delete is clicked', async () => {
+    const host = document.createElement('div');
+    const ctx = makeCtx({
+      providerConfigs: {
+        claude: {
+          customModels: [
+            { id: 'keeper', source: 'user' },
+            { id: 'gone', source: 'user' },
+          ],
+        },
+      },
+    });
+    new CustomModelsTable(host, 'claude', ctx).render();
+
+    const rowEls = host.querySelectorAll('[data-row]');
+    expect(rowEls).toHaveLength(2);
+    const goneRow = rowEls[1] as HTMLElement;
+    const deleteBtn = goneRow.querySelector('button[data-action="delete"]') as HTMLButtonElement;
+    deleteBtn.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(ctx.saveSettings).toHaveBeenCalledTimes(1);
+    expect(ctx.settings.providerConfigs.claude?.customModels).toEqual([
+      { id: 'keeper', source: 'user' },
+    ]);
+    const remainingRows = host.querySelectorAll('[data-row]');
+    expect(remainingRows).toHaveLength(1);
+  });
+
+  it('opens the editor pre-filled with the row id, label, and contextWindow when Edit is clicked', () => {
+    const host = document.createElement('div');
+    const ctx = makeCtx({
+      providerConfigs: {
+        claude: {
+          customModels: [
+            { id: 'my-model', label: 'Mine', contextWindow: 200000, source: 'user' },
+          ],
+        },
+      },
+    });
+    new CustomModelsTable(host, 'claude', ctx).render();
+
+    const editBtn = host.querySelector('button[data-action="edit"]') as HTMLButtonElement;
+    editBtn.click();
+
+    const editor = host.querySelector('[data-role="editor"]') as HTMLElement;
+    expect(editor).not.toBeNull();
+    expect(editor.dataset.mode).toBe('edit');
+    expect(editor.dataset.editId).toBe('my-model');
+    const idInput = editor.querySelector('input[data-field="id"]') as HTMLInputElement;
+    const labelInput = editor.querySelector('input[data-field="label"]') as HTMLInputElement;
+    const ctxWindowInput = editor.querySelector(
+      'input[data-field="contextWindow"]',
+    ) as HTMLInputElement;
+    expect(idInput.value).toBe('my-model');
+    expect(labelInput.value).toBe('Mine');
+    expect(ctxWindowInput.value).toBe('200000');
+  });
+
+  it('replaces the edited row in-place at its existing index and keeps source=user', async () => {
+    const host = document.createElement('div');
+    const ctx = makeCtx({
+      providerConfigs: {
+        claude: {
+          customModels: [
+            { id: 'first', source: 'user' },
+            { id: 'target', label: 'Old', contextWindow: 100000, source: 'user' },
+            { id: 'third', source: 'user' },
+          ],
+        },
+      },
+    });
+    new CustomModelsTable(host, 'claude', ctx).render();
+
+    const rowEls = host.querySelectorAll('[data-row]');
+    const targetRow = rowEls[1] as HTMLElement;
+    const editBtn = targetRow.querySelector('button[data-action="edit"]') as HTMLButtonElement;
+    editBtn.click();
+
+    const editor = host.querySelector('[data-role="editor"]') as HTMLElement;
+    const labelInput = editor.querySelector('input[data-field="label"]') as HTMLInputElement;
+    const ctxWindowInput = editor.querySelector(
+      'input[data-field="contextWindow"]',
+    ) as HTMLInputElement;
+    labelInput.value = 'New Label';
+    ctxWindowInput.value = '250000';
+    (editor.querySelector('button[data-action="save"]') as HTMLButtonElement).click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(ctx.saveSettings).toHaveBeenCalledTimes(1);
+    expect(ctx.settings.providerConfigs.claude?.customModels).toEqual([
+      { id: 'first', source: 'user' },
+      { id: 'target', label: 'New Label', contextWindow: 250000, source: 'user' },
+      { id: 'third', source: 'user' },
+    ]);
+  });
+
+  it('does not render Edit or Delete on env-sourced rows even when user rows are also present', () => {
+    const host = document.createElement('div');
+    const ctx = makeCtx({
+      providerConfigs: {
+        claude: {
+          customModels: [
+            { id: 'env-model', label: 'Env', contextWindow: 64000, source: 'env' },
+            { id: 'user-model', source: 'user' },
+          ],
+        },
+      },
+    });
+    new CustomModelsTable(host, 'claude', ctx).render();
+
+    const envRow = host.querySelector('[data-row="0"]') as HTMLElement;
+    expect(envRow.dataset.source).toBe('env');
+    expect(envRow.querySelector('button[data-action="edit"]')).toBeNull();
+    expect(envRow.querySelector('button[data-action="delete"]')).toBeNull();
+
+    const userRow = host.querySelector('[data-row="1"]') as HTMLElement;
+    expect(userRow.dataset.source).toBe('user');
+    expect(userRow.querySelector('button[data-action="edit"]')).not.toBeNull();
+    expect(userRow.querySelector('button[data-action="delete"]')).not.toBeNull();
+  });
 });

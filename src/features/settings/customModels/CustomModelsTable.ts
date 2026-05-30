@@ -67,39 +67,68 @@ export class CustomModelsTable {
       if (row.source === 'user') {
         const editBtn = rowEl.createEl('button', { text: 'Edit' });
         editBtn.dataset.action = 'edit';
+        editBtn.onclick = () => this.openEditorRow(row);
         const deleteBtn = rowEl.createEl('button', { text: 'Delete' });
         deleteBtn.dataset.action = 'delete';
+        deleteBtn.onclick = () => {
+          void this.deleteRow(row.id);
+        };
       }
     }
   }
 
-  private openEditorRow(): void {
+  private async deleteRow(id: string): Promise<void> {
+    const rows = this.readRows();
+    const target = id.toLowerCase();
+    const updated = rows.filter((row) => row.id.toLowerCase() !== target);
+    if (updated.length === rows.length) {
+      return;
+    }
+    this.ctx.settings = writePath(
+      this.ctx.settings,
+      `providerConfigs.${this.providerId}.customModels`,
+      updated,
+    );
+    await this.ctx.saveSettings();
+    this.render();
+  }
+
+  private openEditorRow(prefill?: ProviderCustomModel): void {
     // Replace any existing editor to keep the surface single-open.
     const existing = this.host.querySelector('[data-role="editor"]');
     if (existing) existing.remove();
 
     const editor = this.host.createDiv({ cls: 'claudian-customModels-editor' });
     editor.dataset.role = 'editor';
+    if (prefill) {
+      editor.dataset.mode = 'edit';
+      editor.dataset.editId = prefill.id;
+    }
 
     const idInput = editor.createEl('input', {
       attr: { type: 'text', placeholder: 'Model ID (required)' },
     }) as HTMLInputElement;
     idInput.dataset.field = 'id';
+    if (prefill) idInput.value = prefill.id;
 
     const labelInput = editor.createEl('input', {
       attr: { type: 'text', placeholder: 'Label (optional)' },
     }) as HTMLInputElement;
     labelInput.dataset.field = 'label';
+    if (prefill?.label) labelInput.value = prefill.label;
 
     const ctxWindowInput = editor.createEl('input', {
       attr: { type: 'number', placeholder: 'Context window' },
     }) as HTMLInputElement;
     ctxWindowInput.dataset.field = 'contextWindow';
+    if (prefill?.contextWindow !== undefined) {
+      ctxWindowInput.value = String(prefill.contextWindow);
+    }
 
     const saveBtn = editor.createEl('button', { text: 'Save' });
     saveBtn.dataset.action = 'save';
     saveBtn.onclick = () => {
-      void this.validateAndSave(idInput, labelInput, ctxWindowInput);
+      void this.validateAndSave(idInput, labelInput, ctxWindowInput, prefill);
     };
 
     const cancelBtn = editor.createEl('button', { text: 'Cancel' });
@@ -115,6 +144,7 @@ export class CustomModelsTable {
     idInput: HTMLInputElement,
     labelInput: HTMLInputElement,
     ctxWindowInput: HTMLInputElement,
+    prefill?: ProviderCustomModel,
   ): Promise<void> {
     const existingError = this.host.querySelector('.claudian-customModels-error');
     if (existingError) existingError.remove();
@@ -130,7 +160,8 @@ export class CustomModelsTable {
 
     const rows = this.readRows();
     const idLower = id.toLowerCase();
-    if (rows.some((row) => row.id.toLowerCase() === idLower)) {
+    const prefillIdLower = prefill?.id.toLowerCase();
+    if (rows.some((row) => row.id.toLowerCase() === idLower && row.id.toLowerCase() !== prefillIdLower)) {
       this.showError(idInput, `A model with id "${id}" already exists.`);
       return;
     }
@@ -148,7 +179,20 @@ export class CustomModelsTable {
       ...(contextWindow !== undefined ? { contextWindow } : {}),
     };
 
-    const updated = [...rows, next];
+    let updated: ProviderCustomModel[];
+    if (prefill) {
+      // Edit in place — replace at the row's existing index, preserving order.
+      const index = rows.findIndex((row) => row.id.toLowerCase() === prefillIdLower);
+      if (index === -1) {
+        updated = [...rows, next];
+      } else {
+        updated = [...rows];
+        updated[index] = next;
+      }
+    } else {
+      updated = [...rows, next];
+    }
+
     this.ctx.settings = writePath(
       this.ctx.settings,
       `providerConfigs.${this.providerId}.customModels`,
