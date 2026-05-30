@@ -3,6 +3,9 @@ type: quick-action
 name: Plan Review
 description: Let your plan be reviewed from different angles
 icon: eye
+tags:
+  - planning
+  - review
 ---
 
 Review the given plan from multiple product perspectives, dispatch dedicated subagents, then update the plan.

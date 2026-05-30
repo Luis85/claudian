@@ -3,6 +3,9 @@ type: quick-action
 name: Grill Me (with Docs)
 description: Stress-test a plan against the domain model, sharpen terminology, and update CONTEXT.md and ADRs inline as decisions crystallise.
 icon: sword
+tags:
+  - engineering
+  - planning
 ---
 
 Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
