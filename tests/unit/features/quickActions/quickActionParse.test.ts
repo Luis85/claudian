@@ -45,6 +45,42 @@ Do the thing.
     });
   });
 
+  it('parses tags from frontmatter', () => {
+    const content = `---
+type: ${QUICK_ACTION_FRONTMATTER_TYPE}
+name: Tagged
+tags:
+  - research
+  - agents
+---
+
+Body.
+`;
+    const action = parseQuickActionContent(content, 'Quick Actions/tagged.md');
+    expect(action?.tags).toEqual(['research', 'agents']);
+  });
+
+  it('serializes tags as YAML list', () => {
+    const content = serializeQuickAction({
+      name: 'Tagged',
+      prompt: 'Body.',
+      tags: ['research', 'agents'],
+    });
+    expect(content).toContain('tags:');
+    expect(content).toContain('  - research');
+    expect(content).toContain('  - agents');
+  });
+
+  it('round-trips tags through parse and serialize', () => {
+    const serialized = serializeQuickAction({
+      name: 'Round',
+      prompt: 'Body.',
+      tags: ['a', 'b'],
+    });
+    const parsed = parseQuickActionContent(serialized, 'Quick Actions/round.md');
+    expect(parsed?.tags).toEqual(['a', 'b']);
+  });
+
   it('ignores markdown with a different type', () => {
     const content = `---
 type: note

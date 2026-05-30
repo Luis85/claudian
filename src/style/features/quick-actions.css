@@ -1,5 +1,68 @@
 .claudian-quick-actions-modal {
-  max-width: 520px;
+  max-width: 720px;
+  width: 90vw;
+}
+
+.claudian-quick-actions-search {
+  margin-bottom: 0.75em;
+}
+
+.claudian-quick-actions-search--hidden {
+  display: none;
+}
+
+.claudian-quick-actions-search-input {
+  width: 100%;
+  padding: 0.4em 0.6em;
+  font-size: var(--font-ui-small);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+}
+
+.claudian-quick-actions-search-input:focus {
+  border-color: var(--interactive-accent);
+  outline: none;
+}
+
+.claudian-quick-actions-empty-results {
+  padding: 0.75em;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  text-align: center;
+}
+
+.claudian-quick-action-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25em;
+  margin-top: 0.35em;
+}
+
+.claudian-quick-action-tag {
+  display: inline-block;
+  padding: 0.05em 0.5em;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-family: inherit;
+  line-height: 1.4;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.claudian-quick-action-tag:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  border-color: var(--background-modifier-border-hover);
+}
+
+.claudian-quick-action-tag:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
 }
 
 .claudian-quick-actions-body {

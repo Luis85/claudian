@@ -108,6 +108,7 @@ export class QuickActionEditorModal extends Modal {
       name: trimmedName,
       description: description.trim() || trimmedName,
       icon: icon.trim() || undefined,
+      tags: this.existing?.tags,
       prompt: trimmedPrompt,
       filePath: this.existing?.filePath ?? '',
     };
