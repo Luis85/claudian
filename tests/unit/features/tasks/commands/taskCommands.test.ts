@@ -220,7 +220,7 @@ describe('buildWorkOrderMarkdown priority + seam', () => {
 
   it('emits the requested priority, defaulting to normal', () => {
     expect(buildWorkOrderMarkdown(base)).toContain('priority: 2 - normal');
-    expect(buildWorkOrderMarkdown({ ...base, priority: 'high' })).toContain('priority: 1 - high');
+    expect(buildWorkOrderMarkdown({ ...base, priority: '1 - high' })).toContain('priority: 1 - high');
   });
 
   it('keeps the constraints-to-ledger seam intact', () => {
@@ -238,7 +238,7 @@ describe('buildWorkOrderFromTemplate', () => {
       id: 'task-tpl',
       title: 'Templated',
       status: 'inbox',
-      priority: 'high',
+      priority: '1 - high',
       timestamp: '2026-05-29T10:00:00.000Z',
       provider: 'claude',
       model: 'sonnet',

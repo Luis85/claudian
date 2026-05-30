@@ -82,14 +82,9 @@ ${HANDOFF_START}
 ${HANDOFF_END}
 `;
 
-function normalizePriority(priority?: string): string {
+function normalizePriority(priority?: TaskPriority): TaskPriority {
   if (!priority) return '2 - normal';
-  // Map old format to new format
-  if (priority === 'urgent') return '0 - urgent';
-  if (priority === 'high') return '1 - high';
-  if (priority === 'normal') return '2 - normal';
-  if (priority === 'low') return '3 - low';
-  // Already in new format or unrecognized, return as-is
+  // Already validated as TaskPriority, return as-is
   return priority;
 }
 
@@ -273,7 +268,7 @@ export async function createWorkOrderFromSeed(
 
   let provider = defaults.provider;
   let model = defaults.model;
-  let priority: TaskPriority = 'normal';
+  let priority: TaskPriority = '2 - normal';
   if (template) {
     const resolved = resolveProviderModel(template, defaults, {
       isValidProvider: (id) =>

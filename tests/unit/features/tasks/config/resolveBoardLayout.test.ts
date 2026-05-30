@@ -13,7 +13,7 @@ function task(id: string, status: TaskStatus): TaskSpec {
       id,
       title: id,
       status,
-      priority: 'normal',
+      priority: '2 - normal',
       created: 't',
       updated: 't',
       attempts: 0,

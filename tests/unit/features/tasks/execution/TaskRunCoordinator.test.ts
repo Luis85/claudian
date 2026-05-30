@@ -13,7 +13,7 @@ function makeTask(overrides: Partial<TaskSpec['frontmatter']> = {}): TaskSpec {
       id: 'task-1',
       title: 'Task 1',
       status: 'ready',
-      priority: 'normal',
+      priority: '2 - normal',
       created: '2026-05-28T18:00:00+02:00',
       updated: '2026-05-28T18:00:00+02:00',
       provider: 'codex',

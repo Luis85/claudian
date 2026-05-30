@@ -3,7 +3,7 @@ import { ALLOWED_TEMPLATE_PLACEHOLDERS, type TemplateChoice, type TemplateVars, 
 
 const PLACEHOLDER_PATTERN = /\{\{\s*(\w+)\s*\}\}/g;
 const ALLOWED_PLACEHOLDER_SET = new Set<string>(ALLOWED_TEMPLATE_PLACEHOLDERS);
-const VALID_PRIORITIES: ReadonlySet<TaskPriority> = new Set<TaskPriority>(['low', 'normal', 'high', 'urgent']);
+const VALID_PRIORITIES: ReadonlySet<TaskPriority> = new Set<TaskPriority>(['0 - urgent', '1 - high', '2 - normal', '3 - low']);
 
 export function findUnknownPlaceholders(body: string): string[] {
   const unknown: string[] = [];
