@@ -47,6 +47,9 @@ interface StubPlugin {
   getAllViews: jest.Mock;
   getView: jest.Mock;
   getActiveEnvironmentVariables: jest.Mock;
+  // Minimum events surface required by registry custom widgets (F4 default-
+  // provider chip subscribes to `task:board-config-changed`).
+  events: { on: jest.Mock; emit: jest.Mock };
 }
 
 export function createStubPlugin(opts: PortTestOptions): StubPlugin {
@@ -64,6 +67,10 @@ export function createStubPlugin(opts: PortTestOptions): StubPlugin {
     getAllViews: jest.fn().mockReturnValue([]),
     getView: jest.fn().mockReturnValue(undefined),
     getActiveEnvironmentVariables: jest.fn().mockReturnValue(''),
+    events: {
+      on: jest.fn(() => () => undefined),
+      emit: jest.fn(),
+    },
   };
 }
 

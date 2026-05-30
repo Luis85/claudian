@@ -1,5 +1,8 @@
 import type { ProviderId } from '../../../../core/providers/types';
+import { resolveAgentBoardDefaultProvider } from '../../../tasks/defaultProviderResolver';
+import { writePath } from '../path';
 import { getSettingsRegistry } from '../registry';
+import type { SettingsCtx } from '../SettingsField';
 
 const PROVIDER_IDS: ProviderId[] = ['claude', 'codex', 'opencode', 'cursor'];
 
@@ -92,15 +95,8 @@ export function registerAgentBoardTabFields(): void {
     sectionId: 'defaults',
     label: 'Default provider',
     type: {
-      kind: 'dropdown',
-      options: (settings) => {
-        const configs = (settings as { providerConfigs?: Record<string, { enabled?: boolean }> })
-          .providerConfigs;
-        return PROVIDER_IDS.filter((id) => configs?.[id]?.enabled).map((id) => ({
-          value: id,
-          label: providerLabel(id),
-        }));
-      },
+      kind: 'custom',
+      render: (ctx, host) => renderDefaultProviderWidget(ctx, host),
     },
     default: null,
   });
@@ -145,4 +141,45 @@ export function registerAgentBoardTabFields(): void {
     },
     default: null,
   });
+}
+
+// Resolver-aware widget for `agentBoardDefaultProvider`. Three modes mirror
+// real provider state so the picker never offers an invalid choice:
+//   0 enabled → disabled hint pointing to the General tab
+//   1 enabled → read-only chip locking the only valid provider
+//   ≥2 enabled → editable dropdown writing through to ctx.settings
+// Re-renders on `task:board-config-changed` so lane edits or General-tab
+// toggles immediately reshape the widget.
+function renderDefaultProviderWidget(ctx: SettingsCtx, host: HTMLElement): () => void {
+  host.empty();
+  const configs = (ctx.settings as { providerConfigs?: Record<string, { enabled?: boolean }> })
+    .providerConfigs;
+  const enabledIds = PROVIDER_IDS.filter((id) => Boolean(configs?.[id]?.enabled));
+  const resolved = resolveAgentBoardDefaultProvider(ctx.settings);
+
+  if (enabledIds.length === 0) {
+    host.createEl('p', {
+      // eslint-disable-next-line obsidianmd/ui/sentence-case -- "General" is the tab name and "Agent Board" is the product feature name.
+      text: 'Enable a provider in General to set a default for Agent Board.',
+      cls: 'setting-item-description',
+    });
+  } else if (enabledIds.length === 1) {
+    const chip = host.createDiv({ cls: 'claudian-default-provider-chip' });
+    chip.createEl('strong', { text: providerLabel(enabledIds[0]) });
+    chip.createEl('span', { text: ' — only enabled provider' });
+  } else {
+    const select = host.createEl('select');
+    for (const id of enabledIds) {
+      const option = select.createEl('option');
+      option.value = id;
+      option.text = providerLabel(id);
+    }
+    select.value = resolved ?? enabledIds[0];
+    select.addEventListener('change', () => {
+      ctx.settings = writePath(ctx.settings, 'agentBoardDefaultProvider', select.value);
+      void ctx.saveSettings().then(() => ctx.refresh());
+    });
+  }
+
+  return ctx.plugin.events.on('task:board-config-changed', () => ctx.refresh());
 }

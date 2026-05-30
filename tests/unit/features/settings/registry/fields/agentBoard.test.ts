@@ -1,5 +1,11 @@
+/**
+ * @jest-environment jsdom
+ */
+import '../../../../../setup/obsidianDom';
+
 import { registerAgentBoardTabFields } from '../../../../../../src/features/settings/registry/fields/agentBoard';
 import { getSettingsRegistry, resetSettingsRegistryForTests } from '../../../../../../src/features/settings/registry/registry';
+import type { SettingsCtx, SettingsField } from '../../../../../../src/features/settings/registry/SettingsField';
 
 describe('Agent Board tab registry fields', () => {
   beforeEach(() => {
@@ -80,5 +86,145 @@ describe('Agent Board tab registry fields', () => {
       throw new Error('installCommonTemplatesButton type must be button');
     }
     expect(type.label).toBe('Install common templates');
+  });
+
+  describe('agentBoardDefaultProvider custom field', () => {
+    function makeCtx(
+      enabled: string[],
+      stored: string | null = null,
+    ): {
+      ctx: SettingsCtx;
+      saveSettings: jest.Mock;
+      refresh: jest.Mock;
+      onSpy: jest.Mock;
+      unsubscribe: jest.Mock;
+    } {
+      const saveSettings = jest.fn().mockResolvedValue(undefined);
+      const refresh = jest.fn();
+      const unsubscribe = jest.fn();
+      const onSpy = jest.fn(() => unsubscribe);
+      const providers = ['claude', 'codex', 'opencode', 'cursor'];
+      const ctx: SettingsCtx = {
+        settings: {
+          agentBoardDefaultProvider: stored,
+          providerConfigs: Object.fromEntries(
+            providers.map((id) => [id, { enabled: enabled.includes(id) }]),
+          ),
+        } as any,
+        saveSettings,
+        refresh,
+        plugin: { events: { on: onSpy } } as any,
+      };
+      return { ctx, saveSettings, refresh, onSpy, unsubscribe };
+    }
+
+    function getField(): SettingsField {
+      registerAgentBoardTabFields();
+      const r = getSettingsRegistry();
+      const fields = r.getFields(
+        'agentBoard',
+        'defaults',
+        { providerConfigs: {} } as any,
+      );
+      const field = fields.find((f) => f.id === 'agentBoardDefaultProvider');
+      if (!field) {
+        throw new Error('agentBoardDefaultProvider field is not registered');
+      }
+      return field;
+    }
+
+    function render(field: SettingsField, ctx: SettingsCtx, host: HTMLElement): void | (() => void) {
+      if (field.type.kind !== 'custom') {
+        throw new Error('expected custom-kind field');
+      }
+      return field.type.render(ctx, host);
+    }
+
+    it('is registered as a custom-kind field with default null', () => {
+      const field = getField();
+      expect(field.type.kind).toBe('custom');
+      expect(field.default).toBeNull();
+    });
+
+    it('0 enabled — renders disabled message without interactive control', () => {
+      const field = getField();
+      const { ctx } = makeCtx([]);
+      const host = document.createElement('div');
+      render(field, ctx, host);
+
+      expect(host.querySelector('select')).toBeNull();
+      const message = host.querySelector('p.setting-item-description');
+      expect(message).not.toBeNull();
+      expect(message?.textContent).toContain('Enable a provider');
+    });
+
+    it('1 enabled — renders read-only chip showing the locked provider name', () => {
+      const field = getField();
+      const { ctx, saveSettings } = makeCtx(['claude']);
+      const host = document.createElement('div');
+      render(field, ctx, host);
+
+      expect(host.querySelector('select')).toBeNull();
+      const chip = host.querySelector('.claudian-default-provider-chip');
+      expect(chip).not.toBeNull();
+      expect(chip?.textContent).toContain('Claude');
+      expect(saveSettings).not.toHaveBeenCalled();
+    });
+
+    it('>=2 enabled — renders editable dropdown with enabled providers as options and writes through on change', async () => {
+      const field = getField();
+      const { ctx, saveSettings, refresh } = makeCtx(['claude', 'codex'], 'claude');
+      const host = document.createElement('div');
+      render(field, ctx, host);
+
+      const select = host.querySelector('select') as HTMLSelectElement | null;
+      expect(select).not.toBeNull();
+      const optionValues = Array.from(select!.options).map((o) => o.value);
+      expect(optionValues).toEqual(['claude', 'codex']);
+      expect(select!.value).toBe('claude');
+
+      select!.value = 'codex';
+      select!.dispatchEvent(new Event('change'));
+      await Promise.resolve();
+      await Promise.resolve();
+      expect((ctx.settings as any).agentBoardDefaultProvider).toBe('codex');
+      expect(saveSettings).toHaveBeenCalledTimes(1);
+      expect(refresh).toHaveBeenCalledTimes(1);
+    });
+
+    it('>=2 enabled — falls back to resolver pick when stored is null', () => {
+      const field = getField();
+      const { ctx } = makeCtx(['codex', 'opencode'], null);
+      const host = document.createElement('div');
+      render(field, ctx, host);
+
+      const select = host.querySelector('select') as HTMLSelectElement | null;
+      expect(select).not.toBeNull();
+      expect(select!.value).toBe('codex');
+    });
+
+    it('subscribes to task:board-config-changed and returns the unsubscribe', () => {
+      const field = getField();
+      const { ctx, onSpy, unsubscribe } = makeCtx(['claude', 'codex']);
+      const host = document.createElement('div');
+      const cleanup = render(field, ctx, host);
+
+      expect(onSpy).toHaveBeenCalledTimes(1);
+      expect(onSpy.mock.calls[0][0]).toBe('task:board-config-changed');
+      expect(typeof cleanup).toBe('function');
+      (cleanup as () => void)();
+      expect(unsubscribe).toHaveBeenCalledTimes(1);
+    });
+
+    it('triggers refresh when task:board-config-changed fires', () => {
+      const field = getField();
+      const { ctx, onSpy, refresh } = makeCtx(['claude', 'codex']);
+      const host = document.createElement('div');
+      render(field, ctx, host);
+
+      const handler = onSpy.mock.calls[0][1] as () => void;
+      handler();
+      expect(refresh).toHaveBeenCalledTimes(1);
+    });
   });
 });
