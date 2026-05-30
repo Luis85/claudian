@@ -96,6 +96,7 @@ dev
 /.claudian/
 /.specorator/
 /.worktrees/
+/.claude/worktrees/
 /.claude/settings.local.json
 
 # Throwaway agent notes, handoff files, and probe scripts (per CLAUDE.md)
