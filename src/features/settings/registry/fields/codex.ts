@@ -1,3 +1,4 @@
+import { CustomModelsTable } from '../../customModels/CustomModelsTable';
 import { registerProviderTab } from '../providers/registerProviderTab';
 import { getSettingsRegistry } from '../registry';
 
@@ -33,5 +34,21 @@ export function registerCodexTabFields(): void {
     description: 'OpenAI API key for Codex requests',
     type: { kind: 'text', placeholder: 'sk-...' },
     default: '',
+  });
+
+  r.registerField({
+    id: 'providerConfigs.codex.customModels',
+    tabId: 'codex',
+    sectionId: 'models',
+    label: 'Custom models',
+    description: 'Add custom model ids with optional aliases and context windows.',
+    type: {
+      kind: 'custom',
+      render: (ctx, host) => {
+        const table = new CustomModelsTable(host, 'codex', ctx);
+        table.render();
+      },
+    },
+    default: null,
   });
 }
