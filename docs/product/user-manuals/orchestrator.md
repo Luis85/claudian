@@ -1,3 +1,6 @@
+---
+parent: "[[docs/product/features/Orchestrator|Orchestrator]]"
+---
 # Claudian — Orchestrator
 
 **Orchestrator mode** turns a chat tab into a coordinator that decomposes a goal into independent worker tasks, proposes them as an inline plan, and — once you approve — spawns one background **worker tab** per task. The orchestrator tab waits for each worker to finish, then synthesizes a combined report.
