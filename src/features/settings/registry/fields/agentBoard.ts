@@ -115,6 +115,12 @@ export function registerAgentBoardTabFields(): void {
       options: () => [],
     },
     default: null,
+    // Hide until the user picks a provider. The model list is provider-scoped
+    // and renders an empty dropdown otherwise. Phase F3 will narrow
+    // `agentBoardDefaultProvider` to `ProviderId | null`; until then read it
+    // through a structural cast.
+    visible: (s) =>
+      Boolean((s as { agentBoardDefaultProvider?: unknown }).agentBoardDefaultProvider),
   });
 
   r.registerField({

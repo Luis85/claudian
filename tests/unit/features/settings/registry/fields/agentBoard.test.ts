@@ -41,6 +41,32 @@ describe('Agent Board tab registry fields', () => {
     expect(workOrderFolder?.type.kind).toBe('folder');
   });
 
+  it('hides agentBoardDefaultModel until agentBoardDefaultProvider is set', () => {
+    registerAgentBoardTabFields();
+    const r = getSettingsRegistry();
+
+    const hiddenFields = r.getFields(
+      'agentBoard',
+      'defaults',
+      { providerConfigs: {}, agentBoardDefaultProvider: null } as any,
+    );
+    expect(hiddenFields.find((f) => f.id === 'agentBoardDefaultModel')).toBeUndefined();
+
+    const undefinedFields = r.getFields(
+      'agentBoard',
+      'defaults',
+      { providerConfigs: {} } as any,
+    );
+    expect(undefinedFields.find((f) => f.id === 'agentBoardDefaultModel')).toBeUndefined();
+
+    const visibleFields = r.getFields(
+      'agentBoard',
+      'defaults',
+      { providerConfigs: { claude: { enabled: true } }, agentBoardDefaultProvider: 'claude' } as any,
+    );
+    expect(visibleFields.find((f) => f.id === 'agentBoardDefaultModel')).toBeDefined();
+  });
+
   it('registers installCommonTemplatesButton in templates section as a button field', () => {
     registerAgentBoardTabFields();
     const r = getSettingsRegistry();
