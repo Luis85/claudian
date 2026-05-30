@@ -278,7 +278,7 @@ The order is chosen to reduce risk on the highest-change paths first. Chat tab c
 
 | Stage | Status | Spec |
 |-------|--------|------|
-| 1 — Chat tab composition | spec proposed (2026-05-30) | [[docs/superpowers/specs/2026-05-30-chat-tab-composition-design.md]] |
+| 1 — Chat tab composition | plan ready (2026-05-30) | spec: [[docs/superpowers/specs/2026-05-30-chat-tab-composition-design.md]] · plan: [[docs/superpowers/plans/2026-05-30-chat-tab-composition.md]] |
 | 2 — Stream projection | not started | — |
 | 3 — Conversation store | not started | — |
 | 4 — Auxiliary query reuse | not started | — |
