@@ -8,13 +8,20 @@ import {
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
 import { ProviderWorkspaceRegistry } from '../../core/providers/ProviderWorkspaceRegistry';
 import type { ProviderId } from '../../core/providers/types';
-import type { ChatViewPlacement } from '../../core/types/settings';
+import type { ChatViewPlacement, ClaudianSettings } from '../../core/types/settings';
 import { getAvailableLocales, getLocaleDisplayName, setLocale, t } from '../../i18n/i18n';
 import type { Locale, TranslationKey } from '../../i18n/types';
 import type ClaudianPlugin from '../../main';
 import { formatContextLimit, parseContextLimit, parseEnvironmentVariables } from '../../utils/env';
 import { buildNavMappingText, parseNavMappings } from './keyboardNavigation';
 import { getProviderEnableUpdater } from './providerEnableUpdaters';
+import {
+  getSettingsRegistry,
+  registerAllSettings,
+  renderTab,
+  type SettingsCtx,
+  useRegistryRenderer,
+} from './registry';
 import { renderAgentBoardSettingsSection } from './ui/AgentBoardSettingsSection';
 import { renderEnvironmentSettingsSection } from './ui/EnvironmentSettingsSection';
 import { renderLoggingSettingsSection } from './ui/LoggingSettingsSection';
@@ -112,6 +119,7 @@ function addHotkeySettingRow(
 export class ClaudianSettingTab extends PluginSettingTab {
   plugin: ClaudianPlugin;
   private activeTab: SettingsTabId = 'general';
+  private registryInitialized = false;
 
   constructor(app: App, plugin: ClaudianPlugin) {
     super(app, plugin);
@@ -132,6 +140,24 @@ export class ClaudianSettingTab extends PluginSettingTab {
     if (!tabIds.includes(this.activeTab)) {
       this.activeTab = 'general';
     }
+
+    // Lazy-init the registry only if any visible tab requires it. The shell
+    // keeps the legacy imperative path when every tab opts out (the default
+    // until D4 flips `general`). The guard prevents `registerAllSettings`
+    // (which throws on duplicate registration) from running twice.
+    if (!this.registryInitialized && tabIds.some(useRegistryRenderer)) {
+      registerAllSettings();
+      this.registryInitialized = true;
+    }
+
+    const ctx: SettingsCtx = {
+      // Cast: `ClaudianPlugin.settings` carries provider-typed extensions
+      // beyond the core `ClaudianSettings` shape. Registry fields only read
+      // through `readPath`/`writePath`, so the wider object is safe.
+      settings: this.plugin.settings as unknown as ClaudianSettings,
+      saveSettings: () => this.plugin.saveSettings(),
+      refresh: () => this.display(),
+    };
 
     const tabBar = containerEl.createDiv({ cls: 'claudian-settings-tabs' });
     const tabButtons = new Map<SettingsTabId, HTMLButtonElement>();
@@ -169,21 +195,38 @@ export class ClaudianSettingTab extends PluginSettingTab {
       tabContents.set(id, content);
     }
 
-    this.renderGeneralTab(tabContents.get('general')!);
+    if (useRegistryRenderer('general')) {
+      renderTab(tabContents.get('general')!, 'general', ctx, getSettingsRegistry());
+    } else {
+      this.renderGeneralTab(tabContents.get('general')!);
+    }
 
     const agentBoardContent = tabContents.get('agentBoard');
     if (agentBoardContent) {
-      renderAgentBoardSettingsSection(agentBoardContent, this.plugin);
+      if (useRegistryRenderer('agentBoard')) {
+        renderTab(agentBoardContent, 'agentBoard', ctx, getSettingsRegistry());
+      } else {
+        renderAgentBoardSettingsSection(agentBoardContent, this.plugin);
+      }
     }
 
     const orchestratorContent = tabContents.get('orchestrator');
     if (orchestratorContent) {
-      renderOrchestratorSettingsTab(orchestratorContent, this.plugin);
+      if (useRegistryRenderer('orchestrator')) {
+        renderTab(orchestratorContent, 'orchestrator', ctx, getSettingsRegistry());
+      } else {
+        renderOrchestratorSettingsTab(orchestratorContent, this.plugin);
+      }
     }
 
     for (const providerId of providerTabs) {
       const content = tabContents.get(providerId);
       if (!content) {
+        continue;
+      }
+
+      if (useRegistryRenderer(providerId)) {
+        renderTab(content, providerId, ctx, getSettingsRegistry());
         continue;
       }
 
