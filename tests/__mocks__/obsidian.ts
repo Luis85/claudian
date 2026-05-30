@@ -140,12 +140,168 @@ export class MarkdownView {
   }
 }
 
+export interface MockToggleComponent {
+  value: boolean;
+  changeHandler: (v: boolean) => void;
+  setValue: (v: boolean) => MockToggleComponent;
+  onChange: (fn: (v: boolean) => void) => MockToggleComponent;
+}
+
+export interface MockTextComponent {
+  value: string;
+  placeholder: string;
+  changeHandler: (v: string) => void;
+  setValue: (v: string) => MockTextComponent;
+  setPlaceholder: (v: string) => MockTextComponent;
+  onChange: (fn: (v: string) => void) => MockTextComponent;
+}
+
+export interface MockDropdownOption {
+  value: string;
+  label: string;
+}
+
+export interface MockDropdownComponent {
+  value: string;
+  options: MockDropdownOption[];
+  changeHandler: (v: string) => void;
+  addOption: (value: string, label: string) => MockDropdownComponent;
+  setValue: (v: string) => MockDropdownComponent;
+  onChange: (fn: (v: string) => void) => MockDropdownComponent;
+}
+
+export interface MockButtonComponent {
+  buttonText: string;
+  clickHandler: () => void | Promise<void>;
+  setButtonText: (v: string) => MockButtonComponent;
+  onClick: (fn: () => void | Promise<void>) => MockButtonComponent;
+}
+
+export type MockSettingComponent =
+  | { kind: 'toggle'; props: MockToggleComponent }
+  | { kind: 'text'; props: MockTextComponent }
+  | { kind: 'textarea'; props: MockTextComponent }
+  | { kind: 'dropdown'; props: MockDropdownComponent }
+  | { kind: 'button'; props: MockButtonComponent };
+
 export class Setting {
-  constructor(containerEl: any) {}
+  static instances: Setting[] = [];
+
+  containerEl: any;
+  components: MockSettingComponent[] = [];
+
+  constructor(containerEl: any) {
+    this.containerEl = containerEl;
+    Setting.instances.push(this);
+  }
+
   setName = jest.fn().mockReturnThis();
   setDesc = jest.fn().mockReturnThis();
-  addToggle = jest.fn().mockReturnThis();
-  addTextArea = jest.fn().mockReturnThis();
+
+  addToggle(cb?: (t: MockToggleComponent) => unknown): this {
+    const component: MockToggleComponent = {
+      value: false,
+      changeHandler: () => undefined,
+      setValue(v: boolean) {
+        this.value = v;
+        return this;
+      },
+      onChange(fn: (v: boolean) => void) {
+        this.changeHandler = fn;
+        return this;
+      },
+    };
+    this.components.push({ kind: 'toggle', props: component });
+    if (cb) cb(component);
+    return this;
+  }
+
+  addText(cb?: (t: MockTextComponent) => unknown): this {
+    const component: MockTextComponent = {
+      value: '',
+      placeholder: '',
+      changeHandler: () => undefined,
+      setValue(v: string) {
+        this.value = v;
+        return this;
+      },
+      setPlaceholder(v: string) {
+        this.placeholder = v;
+        return this;
+      },
+      onChange(fn: (v: string) => void) {
+        this.changeHandler = fn;
+        return this;
+      },
+    };
+    this.components.push({ kind: 'text', props: component });
+    if (cb) cb(component);
+    return this;
+  }
+
+  addTextArea(cb?: (t: MockTextComponent) => unknown): this {
+    const component: MockTextComponent = {
+      value: '',
+      placeholder: '',
+      changeHandler: () => undefined,
+      setValue(v: string) {
+        this.value = v;
+        return this;
+      },
+      setPlaceholder(v: string) {
+        this.placeholder = v;
+        return this;
+      },
+      onChange(fn: (v: string) => void) {
+        this.changeHandler = fn;
+        return this;
+      },
+    };
+    this.components.push({ kind: 'textarea', props: component });
+    if (cb) cb(component);
+    return this;
+  }
+
+  addDropdown(cb?: (d: MockDropdownComponent) => unknown): this {
+    const component: MockDropdownComponent = {
+      value: '',
+      options: [],
+      changeHandler: () => undefined,
+      addOption(value: string, label: string) {
+        this.options.push({ value, label });
+        return this;
+      },
+      setValue(v: string) {
+        this.value = v;
+        return this;
+      },
+      onChange(fn: (v: string) => void) {
+        this.changeHandler = fn;
+        return this;
+      },
+    };
+    this.components.push({ kind: 'dropdown', props: component });
+    if (cb) cb(component);
+    return this;
+  }
+
+  addButton(cb?: (b: MockButtonComponent) => unknown): this {
+    const component: MockButtonComponent = {
+      buttonText: '',
+      clickHandler: () => undefined,
+      setButtonText(v: string) {
+        this.buttonText = v;
+        return this;
+      },
+      onClick(fn: () => void | Promise<void>) {
+        this.clickHandler = fn;
+        return this;
+      },
+    };
+    this.components.push({ kind: 'button', props: component });
+    if (cb) cb(component);
+    return this;
+  }
 }
 
 export class TextAreaComponent {
