@@ -1,4 +1,5 @@
 import type { ClaudianSettings } from '../../../../core/types/settings';
+import type { OpencodeMode } from '../../../../providers/opencode/modes';
 import { registerProviderTab } from '../providers/registerProviderTab';
 import { getSettingsRegistry } from '../registry';
 
@@ -38,10 +39,10 @@ export function registerOpencodeTabFields(): void {
       kind: 'dropdown',
       options: (settings: ClaudianSettings) => {
         const opencode = (settings.providerConfigs?.opencode ?? {}) as Record<string, unknown>;
-        const discovered = (opencode.discoveredModes ?? []) as Array<{ id?: string; name?: string }>;
-        return discovered
+        const available = (opencode.availableModes ?? []) as OpencodeMode[];
+        return available
           .filter((mode) => typeof mode.id === 'string' && mode.id.length > 0)
-          .map((mode) => ({ value: mode.id as string, label: mode.name ?? (mode.id as string) }));
+          .map((mode) => ({ value: mode.id, label: mode.name || mode.id }));
       },
     },
     default: '',
