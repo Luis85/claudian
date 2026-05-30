@@ -12,7 +12,7 @@ export type TaskStatus =
   | 'failed'
   | 'canceled';
 
-export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type TaskPriority = '0 - urgent' | '1 - high' | '2 - normal' | '3 - low';
 
 export interface TaskFrontmatter {
   type: 'claudian-work-order';
