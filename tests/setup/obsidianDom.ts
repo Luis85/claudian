@@ -72,6 +72,38 @@ export function installObsidianDom(): void {
       }
     };
   }
+
+  if (typeof protoRecord.addClass !== 'function') {
+    protoRecord.addClass = function addClass(this: HTMLElement, cls: string): void {
+      this.classList.add(cls);
+    };
+  }
+
+  if (typeof protoRecord.removeClass !== 'function') {
+    protoRecord.removeClass = function removeClass(this: HTMLElement, cls: string): void {
+      this.classList.remove(cls);
+    };
+  }
+
+  if (typeof protoRecord.toggleClass !== 'function') {
+    protoRecord.toggleClass = function toggleClass(
+      this: HTMLElement,
+      cls: string,
+      force?: boolean,
+    ): void {
+      if (force === undefined) {
+        this.classList.toggle(cls);
+      } else {
+        this.classList.toggle(cls, force);
+      }
+    };
+  }
+
+  if (typeof protoRecord.setText !== 'function') {
+    protoRecord.setText = function setText(this: HTMLElement, value: string): void {
+      this.textContent = value;
+    };
+  }
 }
 
 installObsidianDom();

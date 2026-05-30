@@ -3,43 +3,6 @@
  */
 import '../../../setup/obsidianDom';
 
-// The shared obsidianDom helper installs createDiv / createEl / empty.
-// `ClaudianSettings.display()` additionally calls addClass / toggleClass /
-// setText, so polyfill those here for this suite without disturbing the
-// shared helper that other tests rely on.
-function installExtraObsidianDom(): void {
-  const proto = HTMLElement.prototype as unknown as Record<string, unknown>;
-  if (typeof proto.addClass !== 'function') {
-    proto.addClass = function addClass(this: HTMLElement, cls: string): void {
-      this.classList.add(cls);
-    };
-  }
-  if (typeof proto.removeClass !== 'function') {
-    proto.removeClass = function removeClass(this: HTMLElement, cls: string): void {
-      this.classList.remove(cls);
-    };
-  }
-  if (typeof proto.toggleClass !== 'function') {
-    proto.toggleClass = function toggleClass(
-      this: HTMLElement,
-      cls: string,
-      force?: boolean,
-    ): void {
-      if (force === undefined) {
-        this.classList.toggle(cls);
-      } else {
-        this.classList.toggle(cls, force);
-      }
-    };
-  }
-  if (typeof proto.setText !== 'function') {
-    proto.setText = function setText(this: HTMLElement, value: string): void {
-      this.textContent = value;
-    };
-  }
-}
-installExtraObsidianDom();
-
 // Stub the legacy renderer modules so they don't execute their imperative
 // Setting/DOM machinery in jsdom — we are only verifying the per-tab branch
 // behaviour of `display()`, not what each legacy renderer produces.

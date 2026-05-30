@@ -3,42 +3,6 @@
  */
 import '../../setup/obsidianDom';
 
-// The shared obsidianDom helper installs createDiv / createEl / empty.
-// `ClaudianSettings.display()` additionally calls addClass / toggleClass /
-// setText, so polyfill those here without disturbing the shared helper.
-function installExtraObsidianDom(): void {
-  const proto = HTMLElement.prototype as unknown as Record<string, unknown>;
-  if (typeof proto.addClass !== 'function') {
-    proto.addClass = function addClass(this: HTMLElement, cls: string): void {
-      this.classList.add(cls);
-    };
-  }
-  if (typeof proto.removeClass !== 'function') {
-    proto.removeClass = function removeClass(this: HTMLElement, cls: string): void {
-      this.classList.remove(cls);
-    };
-  }
-  if (typeof proto.toggleClass !== 'function') {
-    proto.toggleClass = function toggleClass(
-      this: HTMLElement,
-      cls: string,
-      force?: boolean,
-    ): void {
-      if (force === undefined) {
-        this.classList.toggle(cls);
-      } else {
-        this.classList.toggle(cls, force);
-      }
-    };
-  }
-  if (typeof proto.setText !== 'function') {
-    proto.setText = function setText(this: HTMLElement, value: string): void {
-      this.textContent = value;
-    };
-  }
-}
-installExtraObsidianDom();
-
 // The legacy renderers we don't exercise in this integration; stub them so the
 // shell can still call them for the tabs that aren't part of this port.
 jest.mock('../../../src/features/settings/ui/AgentBoardSettingsSection', () => ({
