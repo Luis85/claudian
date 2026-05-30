@@ -152,8 +152,14 @@ export function assertTabRendersRegistry(
   const sectionIds = Array.from(
     tabContent.querySelectorAll('[data-section-id]'),
   ).map((el) => (el as HTMLElement).dataset.sectionId);
+  // renderTab skips sections with zero visible fields, so only assert sections
+  // that actually carry at least one field for this tab.
   const declaredSectionIds = registry
     .getSections(tabId, plugin.settings as never)
+    .filter(
+      (s) =>
+        registry.getFields(tabId, s.id, plugin.settings as never).length > 0,
+    )
     .map((s) => s.id);
   expect(declaredSectionIds.length).toBeGreaterThan(0);
   for (const declared of declaredSectionIds) {
