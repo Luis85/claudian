@@ -12,7 +12,7 @@ schema_version: 1
 id: task-1
 title: Build agent board
 status: ready
-priority: normal
+priority: 2 - normal
 created: 2026-05-28T08:00:00.000Z
 updated: 2026-05-28T08:00:00.000Z
 attempts: 0
@@ -53,7 +53,7 @@ schema_version: 1
 id: task-1
 title: Build agent board
 status: ready
-priority: normal
+priority: 2 - normal
 created: 2026-05-28T08:00:00.000Z
 updated: 2026-05-28T08:00:00.000Z
 attempts: 0
@@ -188,7 +188,7 @@ ${HANDOFF_END}`);
   it('writes frontmatter fields, bumps updated, and preserves unknown keys and body', () => {
     const written = store.writeFields(
       VALID_NOTE,
-      { title: 'Renamed', provider: 'claude', model: 'sonnet', priority: 'high' },
+      { title: 'Renamed', provider: 'claude', model: 'sonnet', priority: '1 - high' },
       '2026-06-01T00:00:00.000Z',
     );
 
@@ -196,7 +196,7 @@ ${HANDOFF_END}`);
     expect(parsed.task.frontmatter.title).toBe('Renamed');
     expect(parsed.task.frontmatter.provider).toBe('claude');
     expect(parsed.task.frontmatter.model).toBe('sonnet');
-    expect(parsed.task.frontmatter.priority).toBe('high');
+    expect(parsed.task.frontmatter.priority).toBe('1 - high');
     expect(parsed.task.frontmatter.updated).toBe('2026-06-01T00:00:00.000Z');
     expect(parsed.task.frontmatter.custom_field).toBe('keep-me');
     expect(written).toContain('Intro prose that must stay.');
@@ -207,7 +207,7 @@ ${HANDOFF_END}`);
     const written = store.writeFields(VALID_NOTE, { title: 'Only title' }, '2026-06-01T00:00:00.000Z');
     const parsed = store.parse('tasks/task-1.md', written);
     expect(parsed.task.frontmatter.title).toBe('Only title');
-    expect(parsed.task.frontmatter.priority).toBe('normal');
+    expect(parsed.task.frontmatter.priority).toBe('2 - normal');
     expect(parsed.task.frontmatter.provider).toBeUndefined();
   });
 
