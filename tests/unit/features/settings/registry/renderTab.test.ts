@@ -113,6 +113,8 @@ describe('renderTab', () => {
     registry.registerTab(makeTab('general'));
     registry.registerSection(makeSection('general', 's1', 'S1', 10));
     registry.registerSection(makeSection('general', 's2', 'S2', 20));
+    registry.registerField(makeField('general', 's1', 's1.f'));
+    registry.registerField(makeField('general', 's2', 's2.f'));
 
     const host = document.createElement('div');
     renderTab(host, 'general', makeCtx(), registry);
@@ -122,6 +124,22 @@ describe('renderTab', () => {
       's1',
       's2',
     ]);
+  });
+
+  it('skips sections with zero fields', () => {
+    const registry = new SettingsRegistry();
+    registry.registerTab(makeTab('general'));
+    registry.registerSection(makeSection('general', 'withFields', 'With', 10));
+    registry.registerSection(makeSection('general', 'empty', 'Empty', 20));
+    registry.registerField(makeField('general', 'withFields', 'f.one'));
+
+    const host = document.createElement('div');
+    renderTab(host, 'general', makeCtx({ firstRunDismissed: true }), registry);
+
+    const sections = host.querySelectorAll('.claudian-settings-section');
+    expect(sections).toHaveLength(1);
+    expect(sections[0].getAttribute('data-section-id')).toBe('withFields');
+    expect((renderField as jest.Mock)).toHaveBeenCalledTimes(1);
   });
 
   it('sets data-field-id on each field row element', () => {
@@ -148,6 +166,8 @@ describe('renderTab', () => {
       makeSection('general', 's1', 'With desc', 10, { description: 'Details here' }),
     );
     registry.registerSection(makeSection('general', 's2', 'No desc', 20));
+    registry.registerField(makeField('general', 's1', 's1.f'));
+    registry.registerField(makeField('general', 's2', 's2.f'));
 
     const host = document.createElement('div');
     renderTab(host, 'general', makeCtx(), registry);

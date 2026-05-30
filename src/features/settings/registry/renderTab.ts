@@ -16,13 +16,15 @@ export function renderTab(
     new FirstRunBanner(bannerHost, ctx).render();
   }
   for (const section of registry.getSections(tabId, ctx.settings)) {
+    const fields = registry.getFields(tabId, section.id, ctx.settings);
+    if (fields.length === 0) continue;
     const sectionEl = host.createDiv({ cls: 'claudian-settings-section' });
     sectionEl.dataset.sectionId = section.id;
     sectionEl.createEl('h3', { text: section.label });
     if (section.description) {
       sectionEl.createEl('p', { text: section.description, cls: 'setting-item-description' });
     }
-    for (const field of registry.getFields(tabId, section.id, ctx.settings)) {
+    for (const field of fields) {
       const fieldEl = sectionEl.createDiv({ cls: 'claudian-settings-field' });
       fieldEl.dataset.fieldId = field.id;
       renderField(fieldEl, field, ctx);
