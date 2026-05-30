@@ -84,7 +84,7 @@ ${HANDOFF_END}
 
 function buildWorkOrderMarkdown(args: BuildWorkOrderArgs): string {
   const status = args.status ?? 'ready';
-  const priority = args.priority ?? 'normal';
+  const priority = args.priority ?? '2 - normal';
 
   let contextBody = '_Add the links, files, and scope the agent needs._';
   if (args.contextMarkdown && args.contextMarkdown.trim()) {
