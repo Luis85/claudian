@@ -1,6 +1,6 @@
 ---
 status: open
-parent: Product
+parent: "[[Specorator]]"
 ---
 # Specorator Standalone Migration Implementation Plan
 

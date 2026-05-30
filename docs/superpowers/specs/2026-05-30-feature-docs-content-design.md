@@ -1,6 +1,6 @@
 ---
 status: approved
-parent: Product
+parent: "[[Specorator]]"
 ---
 # Feature docs content design
 

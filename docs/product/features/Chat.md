@@ -12,6 +12,7 @@ related:
   - "[[Multi Provider Support]]"
   - "[[docs/product/features/Orchestrator]]"
 user_manual: "[[docs/user-manuals/chat]]"
+parent: "[[Specorator]]"
 ---
 
 # Chat

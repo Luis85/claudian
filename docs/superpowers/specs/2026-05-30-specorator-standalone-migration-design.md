@@ -12,7 +12,7 @@ related:
   - "[[docs/Specorator.md]]"
   - "[[docs/ideas/2026-05-28-standalone-product-vision.md]]"
   - "[[docs/issues/agent-board-mvp.md]]"
-parent: Product
+parent: "[[Specorator]]"
 ---
 
 # Specorator standalone migration — v1.0.0 design

@@ -31,6 +31,9 @@ views:
     filters:
       and:
         - file.inFolder("docs/issues")
+    groupBy:
+      property: status
+      direction: DESC
     order:
       - type
       - file.name
@@ -38,6 +41,9 @@ views:
       - status
       - relations
       - tags
+    sort:
+      - property: priority
+        direction: ASC
     columnSize:
       note.type: 102
       file.name: 462
@@ -60,7 +66,7 @@ views:
       note.priority: 144
       note.relations: 217
       note.tags: 161
-  - type: table
+  - type: cards
     name: Features
     filters:
       and:
@@ -69,8 +75,11 @@ views:
     order:
       - file.name
       - parent
+      - status
+      - personas
     columnSize:
       file.name: 237
+    cardSize: 300
   - type: table
     name: User Manuals
     filters:

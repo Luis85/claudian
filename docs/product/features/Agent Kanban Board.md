@@ -12,6 +12,7 @@ related:
   - "[[docs/product/features/Orchestrator]]"
   - "[[Quick Actions]]"
 user_manual: "[[docs/user-manuals/agent-kanban-board]]"
+parent: "[[Specorator]]"
 ---
 
 # Agent Kanban Board

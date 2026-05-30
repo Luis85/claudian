@@ -1,7 +1,7 @@
 ---
 priority: 1 - high
 relations:
-  - Product
+  - "[[Specorator]]"
 ---
 # Specorator standalone product vision
 
