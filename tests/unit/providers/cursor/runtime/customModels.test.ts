@@ -1,4 +1,4 @@
-import { getCursorProviderSettings, getCursorEnabledModels } from '@/providers/cursor/settings';
+import { getCursorProviderSettings } from '@/providers/cursor/settings';
 
 describe('Cursor customModels', () => {
   describe('model catalog with custom models', () => {

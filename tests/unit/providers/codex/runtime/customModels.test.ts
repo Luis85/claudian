@@ -1,4 +1,4 @@
-import { getCodexModelOptions, resolveCodexModelSelection } from '@/providers/codex/modelOptions';
+import { getCodexModelOptions } from '@/providers/codex/modelOptions';
 import { getCodexProviderSettings } from '@/providers/codex/settings';
 
 describe('Codex customModels', () => {
