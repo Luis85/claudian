@@ -148,6 +148,13 @@ export default defineConfig([
         'error',
         { additionalTestBlockFunctions: ['itPosix', 'itWin32'] },
       ],
+      'jest/expect-expect': [
+        'warn',
+        {
+          // Helper functions that wrap `expect()` for shared test scaffolding.
+          assertFunctionNames: ['expect', 'assertTabRendersRegistry', 'mountSettingsShell'],
+        },
+      ],
     },
   },
 ]);
