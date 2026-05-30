@@ -26,8 +26,6 @@ import type ClaudianPlugin from '../../../main';
 import { SlashCommandDropdown } from '../../../shared/components/SlashCommandDropdown';
 import { getEnhancedPath } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
-import { QuickActionStorage } from '../../quickActions/QuickActionStorage';
-import { QuickActionsModal } from '../../quickActions/ui/QuickActionsModal';
 import { BrowserSelectionController } from '../controllers/BrowserSelectionController';
 import { CanvasSelectionController } from '../controllers/CanvasSelectionController';
 import { ConversationController } from '../controllers/ConversationController';
@@ -284,7 +282,6 @@ function refreshTabProviderUI(tab: TabData, plugin: ClaudianPlugin): void {
   tab.ui.permissionToggle?.updateDisplay();
   tab.ui.planModeToggle?.updateDisplay();
   tab.ui.orchestratorToggle?.updateDisplay();
-  tab.ui.quickActionsToggle?.updateDisplay();
   tab.ui.serviceTierToggle?.updateDisplay();
   tab.dom.inputWrapper.toggleClass(
     'claudian-input-plan-mode',
@@ -476,7 +473,6 @@ export function createTab(options: TabCreateOptions): TabData {
       permissionToggle: null,
       planModeToggle: null,
       orchestratorToggle: null,
-      quickActionsToggle: null,
       serviceTierToggle: null,
       slashCommandDropdown: null,
       instructionModeManager: null,
@@ -948,18 +944,6 @@ function initializeInputToolbar(
         },
       }).open();
     },
-    onQuickActionsOpen: () => {
-      const storage = new QuickActionStorage(
-        plugin.storage.getAdapter(),
-        () => plugin.settings.quickActionsFolder ?? 'Quick Actions',
-      );
-      new QuickActionsModal(plugin.app, {
-        storage,
-        onRun: (action) => {
-          void tab.controllers.inputController?.sendMessage({ content: action.prompt });
-        },
-      }).open();
-    },
   });
 
   tab.ui.modelSelector = toolbarComponents.modelSelector;
@@ -971,7 +955,6 @@ function initializeInputToolbar(
   tab.ui.permissionToggle = toolbarComponents.permissionToggle;
   tab.ui.planModeToggle = toolbarComponents.planModeToggle;
   tab.ui.orchestratorToggle = toolbarComponents.orchestratorToggle;
-  tab.ui.quickActionsToggle = toolbarComponents.quickActionsToggle;
   tab.ui.serviceTierToggle = toolbarComponents.serviceTierToggle;
 
   tab.ui.mcpServerSelector.setMcpManager(getProviderMcpManager(getTabProviderId(tab, plugin)));

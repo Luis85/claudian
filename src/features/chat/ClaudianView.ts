@@ -7,6 +7,7 @@ import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from '../../core/providers/ProviderSettingsCoordinator';
 import { DEFAULT_CHAT_PROVIDER_ID, type ProviderId } from '../../core/providers/types';
 import { VIEW_TYPE_CLAUDIAN } from '../../core/types';
+import { t } from '../../i18n/i18n';
 import type ClaudianPlugin from '../../main';
 import { createProviderIconSvg } from '../../shared/icons';
 import {
@@ -14,6 +15,8 @@ import {
   scheduleAnimationFrame,
   type ScheduledAnimationFrame,
 } from '../../utils/animationFrame';
+import { QuickActionStorage } from '../quickActions/QuickActionStorage';
+import { QuickActionsModal } from '../quickActions/ui/QuickActionsModal';
 import type { HistoryConversationOpenState } from './controllers/ConversationController';
 import type { ProgrammaticSendResult } from './controllers/InputController';
 import { InlineOrchestratorPlan } from './rendering/InlineOrchestratorPlan';
@@ -142,7 +145,6 @@ export class ClaudianView extends ItemView {
       tab.ui.permissionToggle?.updateDisplay();
       tab.ui.planModeToggle?.updateDisplay();
       tab.ui.orchestratorToggle?.updateDisplay();
-      tab.ui.quickActionsToggle?.updateDisplay();
       tab.ui.serviceTierToggle?.updateDisplay();
       tab.dom.inputWrapper.toggleClass(
         'claudian-input-plan-mode',
@@ -452,6 +454,29 @@ export class ClaudianView extends ItemView {
     // Header actions (right side)
     this.headerActionsContent = activeDocument.createElement('div');
     this.headerActionsContent.className = 'claudian-header-actions';
+
+    // Quick actions button (first)
+    const quickActionsBtn = this.headerActionsContent.createDiv({ cls: 'claudian-header-btn' });
+    setIcon(quickActionsBtn, 'zap');
+    quickActionsBtn.setAttribute('aria-label', t('quickActions.toolbar.ariaLabel'));
+    quickActionsBtn.setAttribute('title', t('quickActions.toolbar.title'));
+    quickActionsBtn.addEventListener('click', () => {
+      const activeTab = this.tabManager?.getActiveTab();
+      if (!activeTab) return;
+      const storage = new QuickActionStorage(
+        this.plugin.storage.getAdapter(),
+        () => this.plugin.settings.quickActionsFolder ?? 'Quick Actions',
+      );
+      new QuickActionsModal(this.plugin.app, {
+        storage,
+        onRun: (action) => {
+          // Re-resolve active tab at run time — user may have switched tabs while the modal was open.
+          const targetTab = this.tabManager?.getActiveTab();
+          if (!targetTab) return;
+          void targetTab.controllers.inputController?.sendMessage({ content: action.prompt });
+        },
+      }).open();
+    });
 
     // New tab button (plus icon)
     this.newTabButtonEl = this.headerActionsContent.createDiv({ cls: 'claudian-header-btn claudian-new-tab-btn' });
