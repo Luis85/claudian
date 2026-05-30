@@ -7,6 +7,7 @@ export const REGISTRY_TABS: ReadonlySet<string> = new Set<string>([
   'agentBoard',
   'orchestrator',
   'diagnostics',
+  'claude',
 ]);
 
 export function useRegistryRenderer(tabId: string): boolean {
