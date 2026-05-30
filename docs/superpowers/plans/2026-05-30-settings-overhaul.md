@@ -1,5 +1,5 @@
 ---
-status: draft
+status: in-progress
 ---
 
 # Settings Overhaul Implementation Plan
@@ -13,6 +13,46 @@ status: draft
 **Tech Stack:** TypeScript, Obsidian Plugin API, Jest, ESLint, existing project layout (`src/features/settings/`, `src/providers/{claude,codex,opencode,cursor}/`, `src/app/settings/`, `src/core/bootstrap/`).
 
 **Spec:** [docs/superpowers/specs/2026-05-30-settings-overhaul-design.md](../specs/2026-05-30-settings-overhaul-design.md)
+
+**Branch:** `feat/settings-overhaul-v3` (worktree `.worktrees/feat/settings-overhaul-v3`).
+
+---
+
+## Execution progress
+
+Updated: 2026-05-30. Method: subagent-driven (implementer → spec reviewer → quality reviewer per task).
+
+| Phase | Task | Status | Commit | Notes |
+|-------|------|--------|--------|-------|
+| A | A1 feature flag | ✅ done | `b655546` | |
+| A | A2 SettingsField types | ✅ done | `1524c2f` | |
+| A | A3 dotted-path helpers | ✅ done | `78591b9` | |
+| A | A4 SettingsRegistry + search | ✅ done | `8d85505` | |
+| A | A5 buildDefaultsFromRegistry | ✅ done | `6e32515` | |
+| A | A6 registry singleton | ✅ done | `9b41335` | |
+| A | A7 barrel export | ✅ done | `3f88bf7` | |
+| B | B1 General tab + 8 sections | ✅ done | `fe87be2` | |
+| B | B2 `registerProviderTab` helper | ✅ done | `01f1022` | Late: built after C1/C2; C1+C2 refactored via `358ee65` |
+| C | C1 Claude tab | ✅ done | `40ed01b` + `358ee65` | 3 sections (setup/models/advanced); 2 setup fields (cliPath, safeMode); refactored to use helper |
+| C | C2 Codex tab | ✅ done | `582406d` + `358ee65` | 3 sections (setup/models/skills); 2 setup fields (appServerPath, apiKey); refactored to use helper |
+| C | C3 Opencode tab | ⏳ pending | — | |
+| C | C4 Cursor tab | ⏳ pending | — | |
+| C | C5 Agent Board tab | ⏳ pending | — | |
+| C | C6 Orchestrator tab | ⏳ pending | — | |
+| C | C7 Diagnostics tab | ⏳ pending | — | |
+| C | C8 single entry point | ⏳ pending | — | |
+| D | D1–D4 renderer port | ⏳ pending | — | |
+| E | E1–E7 first-run banner + provider rows | ⏳ pending | — | |
+| F | F1–F9 default-provider resolver + Custom Models | ⏳ pending | — | |
+| G | G1–G3 search bar | ⏳ pending | — | |
+| H | H1–H3 hotkeys | ⏳ pending | — | |
+| I | I1 strip legacy paths | ⏳ pending | — | |
+| J | J1–J4 cleanup + release | ⏳ pending | — | |
+
+**Suite status after last commit (`358ee65`)**: 5859 unit tests pass, 0 fail, 34 skipped. Lint clean. Typecheck clean. Build clean.
+
+**Open divergences from plan:**
+- None outstanding. B2 built late; C1+C2 refactored to consume it. C3-C7 will use helper from the start.
 
 ---
 
