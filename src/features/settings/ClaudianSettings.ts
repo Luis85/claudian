@@ -163,6 +163,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
       settings: this.plugin.settings as unknown as ClaudianSettings,
       saveSettings: () => this.plugin.saveSettings(),
       refresh: () => this.display(),
+      plugin: this.plugin,
     };
 
     const tabBar = containerEl.createDiv({ cls: 'claudian-settings-tabs' });

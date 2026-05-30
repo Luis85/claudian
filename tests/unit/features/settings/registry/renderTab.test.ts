@@ -24,6 +24,9 @@ function makeCtx(initial: Record<string, unknown> = {}): SettingsCtx {
     settings: { ...initial } as unknown as ClaudianSettings,
     saveSettings: jest.fn().mockResolvedValue(undefined),
     refresh: jest.fn(),
+    // Plugin handle is exercised by F4/F5 widget tests; renderTab only
+    // forwards ctx through to renderField, so a stub satisfies the contract.
+    plugin: {} as SettingsCtx['plugin'],
   };
 }
 

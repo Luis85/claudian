@@ -18,6 +18,9 @@ function makeCtx(initial: Record<string, unknown> = {}): {
     settings: { ...initial } as unknown as ClaudianSettings,
     saveSettings,
     refresh,
+    // Plugin handle is exercised by F4/F5 widget tests; renderField only
+    // forwards ctx through, so a stub satisfies the structural contract.
+    plugin: {} as SettingsCtx['plugin'],
   };
   return { ctx, saveSettings, refresh };
 }

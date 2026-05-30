@@ -1,17 +1,15 @@
 import type { ClaudianSettings } from '../../../core/types/settings';
+import type ClaudianPlugin from '../../../main';
 
-// Phase F gap — SettingsCtx does not yet expose a plugin handle. Until it does,
-// these registered fields are stubs / no-ops and the imperative renderers remain
-// the source of truth for these behaviors:
-//   - agentBoard.installCommonTemplatesButton  (command 'claudian:install-common-work-order-templates')
-//   - diagnostics.copyDiagnosticLogs           (command 'claudian:copy-diagnostic-logs')
-//   - diagnostics.clearDiagnosticLogs          (command 'claudian:clear-diagnostic-logs')
-//   - diagnostics.loggingEnabled / logLevel    (runtime sync via plugin.logger.setEnabled/setLevel)
-// See docs/superpowers/plans/2026-05-30-settings-overhaul.md Open Divergences.
+// `plugin` lets F4/F5 custom widgets subscribe to the event bus, dispatch
+// commands, and sync runtime services (logger, MCP). It also unblocks the
+// stubbed onClicks in agentBoard / diagnostics field definitions to invoke
+// the corresponding Claudian commands once their owners wire them up.
 export interface SettingsCtx {
   settings: ClaudianSettings;
   saveSettings: () => Promise<void>;
   refresh: () => void;
+  plugin: ClaudianPlugin;
 }
 
 export type SettingsFieldType =
