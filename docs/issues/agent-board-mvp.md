@@ -3,7 +3,7 @@ type: prd
 id: issue-20260528-agent-board-mvp
 title: Agent Board MVP — optional Markdown workspace with visible sidepanel execution
 status: done
-priority: high
+priority: 1 - high
 triage: ready-for-agent
 created: 2026-05-28
 updated: 2026-05-28

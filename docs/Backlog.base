@@ -25,6 +25,7 @@ views:
     order:
       - type
       - file.name
+      - priority
       - status
       - tags
     columnSize:

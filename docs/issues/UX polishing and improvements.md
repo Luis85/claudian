@@ -3,6 +3,7 @@ type: improvement
 status: open
 tags:
   - ux
+priority: 1 - high
 ---
 
 ## Issues

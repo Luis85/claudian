@@ -3,6 +3,7 @@ status: done
 type: issue
 tags:
   - infrastructure
+priority: 1 - high
 ---
 # Insufficient logging
 
