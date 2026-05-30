@@ -22,4 +22,16 @@ describe('Codex tab registry fields', () => {
     const sections = r.getSections('codex', { providerConfigs: { codex: { enabled: true } } } as any);
     expect(sections.map((s) => s.id)).toEqual(['setup', 'models', 'skills']);
   });
+
+  it('registers appServerPath and apiKey fields in setup section', () => {
+    registerCodexTabFields();
+    const r = getSettingsRegistry();
+    const fields = r.getFields('codex', 'setup', { providerConfigs: { codex: { enabled: true } } } as any);
+    const ids = fields.map((f) => f.id);
+    expect(ids).toContain('providerConfigs.codex.appServerPath');
+    expect(ids).toContain('providerConfigs.codex.apiKey');
+    const appServer = fields.find((f) => f.id === 'providerConfigs.codex.appServerPath');
+    expect(appServer?.label).toBe('App server path');
+    expect(appServer?.default).toBe('');
+  });
 });
