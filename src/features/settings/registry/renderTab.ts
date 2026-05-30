@@ -1,3 +1,5 @@
+import { FirstRunBanner } from '../firstRunBanner/FirstRunBanner';
+import { hasAnyProviderEnabled } from '../firstRunBanner/hasAnyProviderEnabled';
 import { renderField } from './renderField';
 import type { SettingsCtx } from './SettingsField';
 import type { SettingsRegistry } from './SettingsRegistry';
@@ -9,6 +11,10 @@ export function renderTab(
   registry: SettingsRegistry,
 ): void {
   host.empty();
+  if (tabId === 'general' && !ctx.settings.firstRunDismissed && !hasAnyProviderEnabled(ctx.settings)) {
+    const bannerHost = host.createDiv({ cls: 'claudian-first-run-banner-host' });
+    new FirstRunBanner(bannerHost, ctx).render();
+  }
   for (const section of registry.getSections(tabId, ctx.settings)) {
     const sectionEl = host.createDiv({ cls: 'claudian-settings-section' });
     sectionEl.dataset.sectionId = section.id;

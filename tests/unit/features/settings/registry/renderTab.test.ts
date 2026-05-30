@@ -68,7 +68,7 @@ describe('renderTab', () => {
     registry.registerField(makeField('general', 's2', 'x.y.w'));
 
     const host = document.createElement('div');
-    const ctx = makeCtx();
+    const ctx = makeCtx({ firstRunDismissed: true });
 
     renderTab(host, 'general', ctx, registry);
 
@@ -183,9 +183,75 @@ describe('renderTab', () => {
 
     const host = document.createElement('div');
     host.appendChild(document.createElement('span'));
-    renderTab(host, 'general', makeCtx(), registry);
+    renderTab(host, 'general', makeCtx({ firstRunDismissed: true }), registry);
 
     expect(host.children).toHaveLength(0);
     expect((renderField as jest.Mock)).not.toHaveBeenCalled();
+  });
+
+  describe('first-run banner', () => {
+    function setupGeneralWithSection(): SettingsRegistry {
+      const registry = new SettingsRegistry();
+      registry.registerTab(makeTab('general'));
+      registry.registerSection(makeSection('general', 's1', 'Section One', 10));
+      registry.registerField(makeField('general', 's1', 'a.b.c'));
+      return registry;
+    }
+
+    it('mounts banner host above the first section when not dismissed and no provider enabled', () => {
+      const registry = setupGeneralWithSection();
+      const host = document.createElement('div');
+      const ctx = makeCtx({ firstRunDismissed: false, providerConfigs: {} });
+
+      renderTab(host, 'general', ctx, registry);
+
+      const bannerHost = host.querySelector('.claudian-first-run-banner-host');
+      expect(bannerHost).not.toBeNull();
+
+      const firstSection = host.querySelector('.claudian-settings-section');
+      expect(firstSection).not.toBeNull();
+      const children = Array.from(host.children);
+      expect(children.indexOf(bannerHost as Element)).toBeLessThan(
+        children.indexOf(firstSection as Element),
+      );
+      expect(host.querySelector('.claudian-first-run-banner')).not.toBeNull();
+    });
+
+    it('omits the banner when firstRunDismissed is true', () => {
+      const registry = setupGeneralWithSection();
+      const host = document.createElement('div');
+      const ctx = makeCtx({ firstRunDismissed: true, providerConfigs: {} });
+
+      renderTab(host, 'general', ctx, registry);
+
+      expect(host.querySelector('.claudian-first-run-banner-host')).toBeNull();
+    });
+
+    it('omits the banner when any provider is enabled', () => {
+      const registry = setupGeneralWithSection();
+      const host = document.createElement('div');
+      const ctx = makeCtx({
+        firstRunDismissed: false,
+        providerConfigs: { claude: { enabled: true } },
+      });
+
+      renderTab(host, 'general', ctx, registry);
+
+      expect(host.querySelector('.claudian-first-run-banner-host')).toBeNull();
+    });
+
+    it('omits the banner on non-general tabs even when conditions otherwise match', () => {
+      const registry = new SettingsRegistry();
+      registry.registerTab(makeTab('claude'));
+      registry.registerSection(makeSection('claude', 's1', 'Section One', 10));
+      registry.registerField(makeField('claude', 's1', 'a.b.c'));
+
+      const host = document.createElement('div');
+      const ctx = makeCtx({ firstRunDismissed: false, providerConfigs: {} });
+
+      renderTab(host, 'claude', ctx, registry);
+
+      expect(host.querySelector('.claudian-first-run-banner-host')).toBeNull();
+    });
   });
 });
