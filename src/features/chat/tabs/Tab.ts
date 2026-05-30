@@ -28,6 +28,7 @@ import { getEnhancedPath } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
 import { QuickActionStorage } from '../../quickActions/QuickActionStorage';
 import { QuickActionsModal } from '../../quickActions/ui/QuickActionsModal';
+import { resolveModelContextWindow } from '../../settings/customModels/resolveModelContextWindow';
 import { BrowserSelectionController } from '../controllers/BrowserSelectionController';
 import { CanvasSelectionController } from '../controllers/CanvasSelectionController';
 import { ConversationController } from '../controllers/ConversationController';
@@ -859,7 +860,9 @@ function initializeInputToolbar(
       // Recalculate context usage percentage for the new model's context window
       const currentUsage = tab.state.usage;
       if (currentUsage) {
-        const newContextWindow = uiConfig.getContextWindowSize(
+        const newContextWindow = resolveModelContextWindow(
+          uiConfig,
+          providerSettings,
           model,
           providerSettings.customContextLimits,
         );

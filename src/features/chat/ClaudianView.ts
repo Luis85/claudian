@@ -9,6 +9,7 @@ import { DEFAULT_CHAT_PROVIDER_ID, type ProviderId } from '../../core/providers/
 import { VIEW_TYPE_CLAUDIAN } from '../../core/types';
 import type ClaudianPlugin from '../../main';
 import { createProviderIconSvg } from '../../shared/icons';
+import { resolveModelContextWindow } from '../settings/customModels/resolveModelContextWindow';
 import {
   cancelScheduledAnimationFrame,
   scheduleAnimationFrame,
@@ -125,7 +126,9 @@ export class ClaudianView extends ItemView {
       const model = providerSettings.model;
       const uiConfig = ProviderRegistry.getChatUIConfig(providerId);
       const capabilities = ProviderRegistry.getCapabilities(providerId);
-      const contextWindow = uiConfig.getContextWindowSize(
+      const contextWindow = resolveModelContextWindow(
+        uiConfig,
+        providerSettings,
         model,
         providerSettings.customContextLimits,
       );

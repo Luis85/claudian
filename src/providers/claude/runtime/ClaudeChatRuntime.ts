@@ -128,6 +128,21 @@ function isImageAttachmentArray(value: unknown): value is ImageAttachment[] {
     !!value[0] && typeof value[0] === 'object' && 'mediaType' in value[0] && 'data' in value[0];
 }
 
+// Catalog rows override legacy map entries so user-edited customModels[].contextWindow
+// values flow into the usage transform without restructuring the deeper pipeline.
+function mergeCustomModelContextLimits(
+  legacyLimits: Record<string, number> | undefined,
+  customModels: ReadonlyArray<{ id: string; contextWindow?: number }>,
+): Record<string, number> {
+  const merged: Record<string, number> = { ...(legacyLimits ?? {}) };
+  for (const row of customModels) {
+    if (row.contextWindow !== undefined) {
+      merged[row.id] = row.contextWindow;
+    }
+  }
+  return merged;
+}
+
 export class ClaudianService implements ChatRuntime {
   readonly providerId = CLAUDE_PROVIDER_CAPABILITIES.providerId;
   private plugin: ClaudianPlugin;
@@ -823,7 +838,13 @@ export class ClaudianService implements ChatRuntime {
     const settings = this.getScopedSettings();
     return {
       intendedModel: modelOverride ?? settings.model,
-      customContextLimits: settings.customContextLimits,
+      // Merge per-model contextWindow overrides from the customModels catalog
+      // into the legacy limits map so the transform sees catalog-defined limits
+      // without restructuring the deeper usage pipeline.
+      customContextLimits: mergeCustomModelContextLimits(
+        settings.customContextLimits,
+        getClaudeProviderSettings(settings).customModels,
+      ),
       streamState,
       usageState,
     };
