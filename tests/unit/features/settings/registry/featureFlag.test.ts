@@ -10,19 +10,19 @@ describe("settings registry feature flag", () => {
     expect(USE_REGISTRY_RENDERER).toBe(false);
   });
 
-  it("contains exactly the general tab after D4 ports it", () => {
-    expect(REGISTRY_TABS.size).toBe(1);
+  it("contains the general and agentBoard tabs after D5 ports agentBoard", () => {
     expect(REGISTRY_TABS.has("general")).toBe(true);
+    expect(REGISTRY_TABS.has("agentBoard")).toBe(true);
   });
 
-  it("useRegistryRenderer returns true for the general tab now that D4 flipped it", () => {
+  it("useRegistryRenderer returns true for ported tabs", () => {
     expect(useRegistryRenderer("general")).toBe(true);
+    expect(useRegistryRenderer("agentBoard")).toBe(true);
   });
 
   it("useRegistryRenderer returns false for any unported tab id", () => {
     expect(useRegistryRenderer("claude")).toBe(false);
     expect(useRegistryRenderer("codex")).toBe(false);
-    expect(useRegistryRenderer("agentBoard")).toBe(false);
     expect(useRegistryRenderer("anyOtherTab")).toBe(false);
   });
 });
