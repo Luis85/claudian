@@ -11,6 +11,7 @@ related:
   - "[[Chat]]"
   - "[[docs/product/features/Orchestrator]]"
 user_manual: "[[docs/user-manuals/multi-provider]]"
+parent: Infrastructure
 ---
 
 # Multi Provider Support
