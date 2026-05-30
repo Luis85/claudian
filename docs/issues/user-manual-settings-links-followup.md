@@ -12,7 +12,7 @@ relations:
 
 ## Problem
 
-Four new Windows install guides shipped under `docs/user-manuals/`:
+Four new Windows install guides shipped under `docs/product/user-manuals/`:
 
 - [[install-claude]]
 - [[install-codex]]
@@ -66,18 +66,18 @@ New surface. Add a "Searching settings" subsection: `/` focuses, `Esc` clears, r
 
 ## Files to audit
 
-- `docs/user-manuals/install-claude.md`
-- `docs/user-manuals/install-codex.md`
-- `docs/user-manuals/install-opencode.md`
-- `docs/user-manuals/install-cursor.md`
-- `docs/user-manuals/settings.md`
-- Any other `docs/user-manuals/*.md` matching `rg "Settings → Claudian"`
+- `docs/product/user-manuals/install-claude.md`
+- `docs/product/user-manuals/install-codex.md`
+- `docs/product/user-manuals/install-opencode.md`
+- `docs/product/user-manuals/install-cursor.md`
+- `docs/product/user-manuals/settings.md`
+- Any other `docs/product/user-manuals/*.md` matching `rg "Settings → Claudian"`
 - Any manual matching `rg "General → Environment"` (model-override section moves out)
 - Any manual matching `rg "Enable (Codex|OpenCode)"` (toggles removed)
 
 ## Acceptance
 
-- `rg "Settings → Claudian"` in `docs/user-manuals/` shows zero stale paths against the shipped v3 UI.
+- `rg "Settings → Claudian"` in `docs/product/user-manuals/` shows zero stale paths against the shipped v3 UI.
 - `rg "General → Environment"` returns zero hits referring to per-model overrides.
 - `rg -i "enable codex provider|enable opencode"` in install guides returns zero hits.
 - Every wikilink from an install guide into [[settings]] resolves to a real heading post-rename.
