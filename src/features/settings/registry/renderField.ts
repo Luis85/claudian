@@ -26,21 +26,11 @@ export function renderField(host: HTMLElement, field: SettingsField, ctx: Settin
       );
       return;
 
-    case 'text': {
-      const placeholder = fieldType.placeholder;
-      setting.addText((t) => {
-        t.setValue(String(current ?? ''));
-        if (placeholder) t.setPlaceholder(placeholder);
-        t.onChange(async (v: string) => {
-          ctx.settings = writePath(ctx.settings, field.id, v);
-          await ctx.saveSettings();
-        });
-      });
-      return;
-    }
-
+    case 'text':
     case 'folder': {
-      const placeholder = fieldType.placeholder;
+      // Both kinds render the same Setting.addText input; only the placeholder
+      // shape is shared, so widen the discriminant before reading it.
+      const placeholder = (fieldType as { placeholder?: string }).placeholder;
       setting.addText((t) => {
         t.setValue(String(current ?? ''));
         if (placeholder) t.setPlaceholder(placeholder);
