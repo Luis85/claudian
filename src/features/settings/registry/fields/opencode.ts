@@ -1,4 +1,5 @@
 import { getOpencodeProviderSettings } from '../../../../providers/opencode/settings';
+import { CustomModelsTable } from '../../customModels/CustomModelsTable';
 import { registerProviderTab } from '../providers/registerProviderTab';
 import { getSettingsRegistry } from '../registry';
 
@@ -63,6 +64,22 @@ export function registerOpencodeTabFields(): void {
     sectionId: 'models',
     label: 'Model aliases',
     type: { kind: 'custom', render: () => undefined },
+    default: null,
+  });
+
+  r.registerField({
+    id: 'providerConfigs.opencode.customModels',
+    tabId: 'opencode',
+    sectionId: 'models',
+    label: 'Custom models',
+    description: 'Add custom model ids with optional aliases and context windows.',
+    type: {
+      kind: 'custom',
+      render: (ctx, host) => {
+        const table = new CustomModelsTable(host, 'opencode', ctx);
+        table.render();
+      },
+    },
     default: null,
   });
 

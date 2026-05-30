@@ -80,6 +80,17 @@ describe('Opencode tab registry fields', () => {
     expect(type.options(settings)).toEqual([]);
   });
 
+  it('registers providerConfigs.opencode.customModels under models', () => {
+    registerOpencodeTabFields();
+    const r = getSettingsRegistry();
+    const s = { providerConfigs: { opencode: { enabled: true } } } as any;
+    const field = r
+      .getFields('opencode', 'models', s)
+      .find((f) => f.id === 'providerConfigs.opencode.customModels');
+    expect(field).toBeDefined();
+    expect(field?.type.kind).toBe('custom');
+  });
+
   it('does not register a providerConfigs.opencode.enabled field (lives on General tab)', () => {
     resetSettingsRegistryForTests();
     registerOpencodeTabFields();
