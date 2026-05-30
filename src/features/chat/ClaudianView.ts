@@ -9,12 +9,12 @@ import { DEFAULT_CHAT_PROVIDER_ID, type ProviderId } from '../../core/providers/
 import { VIEW_TYPE_CLAUDIAN } from '../../core/types';
 import type ClaudianPlugin from '../../main';
 import { createProviderIconSvg } from '../../shared/icons';
-import { resolveModelContextWindow } from '../settings/customModels/resolveModelContextWindow';
 import {
   cancelScheduledAnimationFrame,
   scheduleAnimationFrame,
   type ScheduledAnimationFrame,
 } from '../../utils/animationFrame';
+import { resolveModelContextWindow } from '../settings/customModels/resolveModelContextWindow';
 import type { HistoryConversationOpenState } from './controllers/ConversationController';
 import type { ProgrammaticSendResult } from './controllers/InputController';
 import { InlineOrchestratorPlan } from './rendering/InlineOrchestratorPlan';
