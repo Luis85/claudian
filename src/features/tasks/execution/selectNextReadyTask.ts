@@ -1,6 +1,9 @@
 import type { TaskPriority, TaskSpec, TaskStatus } from '../model/taskTypes';
 
-const PRIORITY_RANK: Record<TaskPriority, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
+function getPriorityRank(priority: TaskPriority): number {
+  const rank = parseInt(priority, 10);
+  return Number.isNaN(rank) ? Number.POSITIVE_INFINITY : rank;
+}
 
 export function selectNextReadyTask(
   tasks: TaskSpec[],
@@ -12,7 +15,7 @@ export function selectNextReadyTask(
   if (eligible.length === 0) return null;
 
   return [...eligible].sort((a, b) => {
-    const byPriority = PRIORITY_RANK[a.frontmatter.priority] - PRIORITY_RANK[b.frontmatter.priority];
+    const byPriority = getPriorityRank(a.frontmatter.priority) - getPriorityRank(b.frontmatter.priority);
     if (byPriority !== 0) return byPriority;
     return a.frontmatter.created.localeCompare(b.frontmatter.created);
   })[0];
