@@ -55,7 +55,7 @@ export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
   agentBoardTemplateFolder: 'Agent Board/templates',
   agentBoardArchiveFolder: 'Agent Board/archive',
   agentBoardDefaultProvider: null,
-  agentBoardDefaultModel: '',
+  agentBoardDefaultModel: null,
 
   hiddenProviderCommands: getDefaultHiddenProviderCommands(),
 

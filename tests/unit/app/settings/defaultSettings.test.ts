@@ -15,4 +15,8 @@ describe('DEFAULT_CLAUDIAN_SETTINGS', () => {
   it('agentBoardDefaultProvider defaults to null', () => {
     expect(DEFAULT_CLAUDIAN_SETTINGS.agentBoardDefaultProvider).toBeNull();
   });
+
+  it('agentBoardDefaultModel defaults to null', () => {
+    expect(DEFAULT_CLAUDIAN_SETTINGS.agentBoardDefaultModel).toBeNull();
+  });
 });

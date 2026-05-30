@@ -125,7 +125,7 @@ export function renderAgentBoardSettingsSection(
     for (const option of options) {
       modelDropdown.addOption(option.value, option.label);
     }
-    const current = plugin.settings.agentBoardDefaultModel;
+    const current = plugin.settings.agentBoardDefaultModel ?? '';
     modelDropdown.setValue(options.some((option) => option.value === current) ? current : '');
   };
 
