@@ -4,9 +4,13 @@ views:
     filters:
       and:
         - file.inFolder("docs/superpowers/plans")
+    groupBy:
+      property: status
+      direction: DESC
     order:
       - file.name
       - status
+    sort: []
     columnSize:
       file.name: 353
   - type: table
@@ -44,3 +48,11 @@ views:
     columnSize:
       file.name: 359
       note.priority: 144
+  - type: table
+    name: Features
+    filters:
+      and:
+        - file.inFolder("docs/features")
+        - type == "feature"
+    order:
+      - file.name
