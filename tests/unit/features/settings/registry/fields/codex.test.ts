@@ -34,4 +34,17 @@ describe('Codex tab registry fields', () => {
     expect(appServer?.label).toBe('App server path');
     expect(appServer?.default).toBe('');
   });
+
+  it('does not register a providerConfigs.codex.enabled field (lives on General tab)', () => {
+    resetSettingsRegistryForTests();
+    registerCodexTabFields();
+    const r = getSettingsRegistry();
+    const s = { providerConfigs: { codex: { enabled: true } } } as any;
+    const allFields = r.getAllFields ? r.getAllFields() : [];
+    expect(allFields.find((f: any) => f.id === 'providerConfigs.codex.enabled')).toBeUndefined();
+    for (const section of r.getSections('codex', s)) {
+      const fields = r.getFields('codex', section.id, s);
+      expect(fields.find((f) => f.id === 'providerConfigs.codex.enabled')).toBeUndefined();
+    }
+  });
 });

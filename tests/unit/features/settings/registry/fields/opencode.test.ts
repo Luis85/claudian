@@ -79,4 +79,17 @@ describe('Opencode tab registry fields', () => {
     }
     expect(type.options(settings)).toEqual([]);
   });
+
+  it('does not register a providerConfigs.opencode.enabled field (lives on General tab)', () => {
+    resetSettingsRegistryForTests();
+    registerOpencodeTabFields();
+    const r = getSettingsRegistry();
+    const s = { providerConfigs: { opencode: { enabled: true } } } as any;
+    const allFields = r.getAllFields ? r.getAllFields() : [];
+    expect(allFields.find((f: any) => f.id === 'providerConfigs.opencode.enabled')).toBeUndefined();
+    for (const section of r.getSections('opencode', s)) {
+      const fields = r.getFields('opencode', section.id, s);
+      expect(fields.find((f) => f.id === 'providerConfigs.opencode.enabled')).toBeUndefined();
+    }
+  });
 });
