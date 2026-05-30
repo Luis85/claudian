@@ -14,56 +14,92 @@ import { createWorkOrderFromSeed } from '@/features/tasks/commands/taskCommands'
 import type ClaudianPlugin from '@/main';
 
 /**
- * F2 contract: createWorkOrderFromSeed must read the Agent Board default
- * provider through `resolveAgentBoardDefaultProvider`, not directly off
- * `settings.agentBoardDefaultProvider`. When the stored provider is disabled,
- * the resolver falls back to the first enabled provider; the work-order note
- * must therefore stamp the fallback, not the stored (disabled) value.
+ * F5b contract: createWorkOrderFromSeed must read the Agent Board default
+ * model through `resolveAgentBoardDefaultModel`, which validates the stored
+ * model against the resolved provider's owned model set and falls back to
+ * the provider's first model option when the stored value is invalid.
  */
-describe('createWorkOrderFromSeed default-provider resolution (integration)', () => {
-  // Resolver pulls chat UI config via ProviderRegistry; stub Claude and Codex
-  // registrations so the resolver can call `ownsModel` / `getModelOptions`.
-  let priorRegistrations: Record<string, ProviderRegistration> = {};
+describe('createWorkOrderFromSeed default-model resolution (integration)', () => {
+  let priorClaude: ProviderRegistration | undefined;
 
   beforeAll(() => {
-    const registrations = (ProviderRegistry as unknown as { registrations: Record<string, ProviderRegistration> }).registrations;
-    priorRegistrations = { ...registrations };
-    const makeStub = (id: string, models: { value: string; label: string }[]): ProviderRegistration => ({
-      displayName: id,
+    // Stub a Claude registration the resolver can consult during the test.
+    const stub: Partial<ProviderRegistration> = {
+      displayName: 'Claude',
       blankTabOrder: 0,
-      capabilities: { providerId: id } as ProviderRegistration['capabilities'],
-      isEnabled: (settings: Record<string, unknown>) =>
-        Boolean((settings.providerConfigs as Record<string, { enabled?: boolean }>)?.[id]?.enabled),
+      capabilities: { providerId: 'claude' } as ProviderRegistration['capabilities'],
+      isEnabled: (settings) =>
+        Boolean(((settings as Record<string, unknown>).providerConfigs as Record<string, { enabled?: boolean }>)?.claude?.enabled),
       chatUIConfig: {
-        getModelOptions: () => models,
-        ownsModel: (model: string) => models.some((m) => m.value === model),
+        getModelOptions: () => [
+          { value: 'haiku', label: 'Haiku' },
+          { value: 'sonnet', label: 'Sonnet' },
+        ],
+        ownsModel: (model: string) => model === 'haiku' || model === 'sonnet',
       } as unknown as ProviderChatUIConfig,
-    } as unknown as ProviderRegistration);
-    registrations.claude = makeStub('claude', [
-      { value: 'sonnet', label: 'Sonnet' },
-      { value: 'haiku', label: 'Haiku' },
-    ]);
-    registrations.codex = makeStub('codex', [
-      { value: 'gpt-5-codex', label: 'GPT-5 Codex' },
-    ]);
+    };
+    const registrations = (ProviderRegistry as unknown as { registrations: Record<string, ProviderRegistration> }).registrations;
+    priorClaude = registrations.claude;
+    registrations.claude = stub as ProviderRegistration;
   });
 
   afterAll(() => {
     const registrations = (ProviderRegistry as unknown as { registrations: Record<string, ProviderRegistration> }).registrations;
-    for (const key of Object.keys(registrations)) {
-      delete registrations[key];
+    if (priorClaude) {
+      registrations.claude = priorClaude;
+    } else {
+      delete registrations.claude;
     }
-    Object.assign(registrations, priorRegistrations);
   });
 
-  it('stamps the resolver-chosen provider when the stored default is disabled', async () => {
-    // Stored default is codex (disabled); claude is the only enabled provider.
-    // Resolver must fall through tab-strip order and pick claude.
+  it('falls back to the provider default model when the stored model is invalid', async () => {
     const captured: { path: string; markdown: string }[] = [];
 
     const plugin = {
       settings: {
-        agentBoardDefaultProvider: 'codex',
+        agentBoardDefaultProvider: 'claude',
+        agentBoardDefaultModel: 'gpt-4-not-a-claude-model',
+        agentBoardWorkOrderFolder: 'Agent Board/tasks',
+        providerConfigs: {
+          claude: { enabled: true },
+          codex: { enabled: false },
+          opencode: { enabled: false },
+          cursor: { enabled: false },
+        },
+      },
+      app: {
+        vault: {
+          getAbstractFileByPath: jest.fn().mockReturnValue(null),
+          createFolder: jest.fn().mockResolvedValue(undefined),
+          create: jest.fn().mockImplementation(async (path: string, markdown: string) => {
+            captured.push({ path, markdown });
+            return Object.assign(new TFile(), { path });
+          }),
+        },
+        workspace: {
+          getLeaf: jest.fn().mockReturnValue({
+            openFile: jest.fn().mockResolvedValue(undefined),
+          }),
+        },
+      },
+    } as unknown as ClaudianPlugin;
+
+    const file = await createWorkOrderFromSeed(plugin, { title: 'Invalid model falls back' });
+    expect(file).not.toBeNull();
+    expect(captured).toHaveLength(1);
+
+    const { markdown } = captured[0];
+    expect(markdown).toContain('provider: claude');
+    expect(markdown).toContain('model: haiku');
+    expect(markdown).not.toContain('model: gpt-4-not-a-claude-model');
+  });
+
+  it('keeps the stored model when it is valid for the resolved provider', async () => {
+    const captured: { path: string; markdown: string }[] = [];
+
+    const plugin = {
+      settings: {
+        agentBoardDefaultProvider: 'claude',
         agentBoardDefaultModel: 'sonnet',
         agentBoardWorkOrderFolder: 'Agent Board/tasks',
         providerConfigs: {
@@ -90,50 +126,9 @@ describe('createWorkOrderFromSeed default-provider resolution (integration)', ()
       },
     } as unknown as ClaudianPlugin;
 
-    const file = await createWorkOrderFromSeed(plugin, { title: 'Pick the right provider' });
+    const file = await createWorkOrderFromSeed(plugin, { title: 'Stored model kept' });
     expect(file).not.toBeNull();
     expect(captured).toHaveLength(1);
-
-    const { markdown } = captured[0];
-    expect(markdown).toContain('provider: claude');
-    expect(markdown).not.toContain('provider: codex');
-  });
-
-  it('keeps the stored provider when it is enabled', async () => {
-    const captured: { path: string; markdown: string }[] = [];
-
-    const plugin = {
-      settings: {
-        agentBoardDefaultProvider: 'codex',
-        agentBoardDefaultModel: 'gpt-5-codex',
-        agentBoardWorkOrderFolder: 'Agent Board/tasks',
-        providerConfigs: {
-          claude: { enabled: true },
-          codex: { enabled: true },
-          opencode: { enabled: false },
-          cursor: { enabled: false },
-        },
-      },
-      app: {
-        vault: {
-          getAbstractFileByPath: jest.fn().mockReturnValue(null),
-          createFolder: jest.fn().mockResolvedValue(undefined),
-          create: jest.fn().mockImplementation(async (path: string, markdown: string) => {
-            captured.push({ path, markdown });
-            return Object.assign(new TFile(), { path });
-          }),
-        },
-        workspace: {
-          getLeaf: jest.fn().mockReturnValue({
-            openFile: jest.fn().mockResolvedValue(undefined),
-          }),
-        },
-      },
-    } as unknown as ClaudianPlugin;
-
-    const file = await createWorkOrderFromSeed(plugin, { title: 'Keep stored when enabled' });
-    expect(file).not.toBeNull();
-    expect(captured).toHaveLength(1);
-    expect(captured[0].markdown).toContain('provider: codex');
+    expect(captured[0].markdown).toContain('model: sonnet');
   });
 });

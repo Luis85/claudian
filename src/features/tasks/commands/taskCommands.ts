@@ -4,6 +4,7 @@ import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import type ClaudianPlugin from '../../../main';
 import type { BrowserSelectionContext } from '../../../utils/browser';
+import { resolveAgentBoardDefaultModel } from '../defaultModelResolver';
 import { resolveAgentBoardDefaultProvider } from '../defaultProviderResolver';
 import type { TaskPriority, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { HANDOFF_END, HANDOFF_START, RUN_LEDGER_END, RUN_LEDGER_START } from '../storage/TaskNoteStore';
@@ -253,7 +254,7 @@ export async function createWorkOrderFromSeed(
   const settings = plugin.settings as unknown as Record<string, unknown>;
   const defaults = {
     provider: resolveAgentBoardDefaultProvider(plugin.settings) ?? '',
-    model: plugin.settings.agentBoardDefaultModel,
+    model: resolveAgentBoardDefaultModel(plugin.settings) ?? '',
   };
   const template = options?.template;
 
