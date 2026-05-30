@@ -10,6 +10,7 @@ cta_url: https://github.com/Luis85/specorator
 related:
   - "[[Chat]]"
 user_manual: "[[quick-actions]]"
+parent: "[[Chat]]"
 ---
 
 # Quick Actions

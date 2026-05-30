@@ -24,6 +24,8 @@ views:
       - file.name
       - status
       - parent
+    columnSize:
+      file.name: 392
   - type: table
     name: Issues
     filters:
@@ -62,16 +64,18 @@ views:
     name: Features
     filters:
       and:
-        - file.inFolder("docs/features")
+        - file.inFolder("docs/product/features")
         - type == "feature"
     order:
       - file.name
       - parent
+    columnSize:
+      file.name: 237
   - type: table
     name: User Manuals
     filters:
       and:
-        - file.inFolder("docs/user-manuals")
+        - file.inFolder("docs/product/user-manuals")
     order:
       - file.name
       - parent

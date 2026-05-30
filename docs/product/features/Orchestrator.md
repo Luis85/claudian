@@ -12,6 +12,7 @@ related:
   - "[[Multi Provider Support]]"
   - "[[Agent Kanban Board]]"
 user_manual: "[[docs/product/user-manuals/orchestrator]]"
+parent: "[[Chat]]"
 ---
 
 # Orchestrator
