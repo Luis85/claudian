@@ -9,10 +9,13 @@ const PROVIDERS: Array<{ id: ProviderId; name: string; blurb: string; cli: strin
 ];
 
 export class FirstRunBanner {
+  private rows: Array<{ id: ProviderId; cb: HTMLInputElement }> = [];
+
   constructor(private readonly host: HTMLElement, private readonly ctx: SettingsCtx) {}
 
   render(): void {
     this.host.empty();
+    this.rows = [];
     const card = this.host.createDiv({ cls: 'claudian-first-run-banner' });
     card.createEl('h3', { text: 'Welcome to Claudian — pick your providers' });
     card.createEl('p', {
@@ -22,28 +25,22 @@ export class FirstRunBanner {
       const row = card.createDiv({ cls: 'claudian-first-run-row' });
       row.dataset.provider = p.id;
       const cb = row.createEl('input', { attr: { type: 'checkbox' } }) as HTMLInputElement;
+      this.rows.push({ id: p.id, cb });
       const text = row.createDiv();
       text.createEl('strong', { text: p.name });
       text.createEl('span', { text: ` — ${p.blurb} (requires \`${p.cli}\` on PATH)` });
-      void cb;
     }
     const actions = card.createDiv({ cls: 'claudian-first-run-actions' });
     const enableBtn = actions.createEl('button', { text: 'Enable selected' });
     enableBtn.dataset.action = 'enable';
-    enableBtn.onclick = () => this.handleEnable();
+    enableBtn.onclick = () => { void this.handleEnable(); };
     const dismissBtn = actions.createEl('button', { text: 'Dismiss' });
     dismissBtn.dataset.action = 'dismiss';
-    dismissBtn.onclick = () => this.handleDismiss();
+    dismissBtn.onclick = () => { void this.handleDismiss(); };
   }
 
   private async handleEnable(): Promise<void> {
-    const checked: ProviderId[] = [];
-    for (const p of PROVIDERS) {
-      const cb = this.host.querySelector(
-        `[data-provider="${p.id}"] input[type="checkbox"]`,
-      ) as HTMLInputElement | null;
-      if (cb?.checked) checked.push(p.id);
-    }
+    const checked = this.rows.filter((r) => r.cb.checked).map((r) => r.id);
     const next = JSON.parse(JSON.stringify(this.ctx.settings));
     next.providerConfigs = next.providerConfigs ?? {};
     for (const id of checked) {
