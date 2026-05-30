@@ -26,11 +26,56 @@ describe('codex settings', () => {
   it('defaults installationMethod to native-windows and leaves wslDistroOverride empty', () => {
     const settings = getCodexProviderSettings({});
 
-    expect(settings.customModels).toBe('');
+    expect(settings.customModels).toEqual([]);
     expect(settings.installationMethod).toBe('native-windows');
     expect(settings.wslDistroOverride).toBe('');
     expect(settings.installationMethod).toBe(DEFAULT_CODEX_PROVIDER_SETTINGS.installationMethod);
     expect(settings.wslDistroOverride).toBe(DEFAULT_CODEX_PROVIDER_SETTINGS.wslDistroOverride);
+  });
+
+  describe('customModels normalization', () => {
+    it('defaults to an empty array', () => {
+      expect(DEFAULT_CODEX_PROVIDER_SETTINGS.customModels).toEqual([]);
+    });
+
+    it('parses a legacy newline-delimited string into user-sourced rows', () => {
+      const settings = getCodexProviderSettings({
+        providerConfigs: {
+          codex: { customModels: 'gpt-5.4\ngpt-5.3-codex-spark' },
+        },
+      });
+      expect(settings.customModels).toEqual([
+        { id: 'gpt-5.4', source: 'user' },
+        { id: 'gpt-5.3-codex-spark', source: 'user' },
+      ]);
+    });
+
+    it('accepts an array shape unchanged, preserving label and contextWindow', () => {
+      const settings = getCodexProviderSettings({
+        providerConfigs: {
+          codex: {
+            customModels: [
+              { id: 'gpt-5.4', label: 'Work GPT', contextWindow: 300000, source: 'user' },
+              { id: 'gpt-5.5', source: 'env' },
+            ],
+          },
+        },
+      });
+      expect(settings.customModels).toEqual([
+        { id: 'gpt-5.4', label: 'Work GPT', contextWindow: 300000, source: 'user' },
+        { id: 'gpt-5.5', source: 'env' },
+      ]);
+    });
+
+    it('persists array entries through the update writer', () => {
+      const settings: Record<string, unknown> = {};
+      updateCodexProviderSettings(settings, {
+        customModels: [{ id: 'gpt-5.4', contextWindow: 300000, source: 'user' }],
+      });
+      expect(getCodexProviderSettings(settings).customModels).toEqual([
+        { id: 'gpt-5.4', contextWindow: 300000, source: 'user' },
+      ]);
+    });
   });
 
   it('normalizes invalid installationMethod and wslDistroOverride values', () => {

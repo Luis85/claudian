@@ -1,6 +1,7 @@
 import { getProviderConfig, setProviderConfig } from '../../core/providers/providerConfig';
 import { getProviderEnvironmentVariables } from '../../core/providers/providerEnvironment';
 import type { HostnameCliPaths } from '../../core/types/settings';
+import type { ProviderCustomModel } from '../../features/settings/customModels/CustomModelsTable';
 import {
   getHostnameKey,
   getLegacyHostnameKey,
@@ -26,7 +27,7 @@ export interface CodexProviderSettings {
   safeMode: CodexSafeMode;
   cliPath: string;
   cliPathsByHost: HostnameCliPaths;
-  customModels: string;
+  customModels: ProviderCustomModel[];
   reasoningSummary: CodexReasoningSummary;
   environmentVariables: string;
   environmentHash: string;
@@ -41,7 +42,7 @@ export const DEFAULT_CODEX_PROVIDER_SETTINGS: Readonly<CodexProviderSettings> = 
   safeMode: 'workspace-write',
   cliPath: '',
   cliPathsByHost: {},
-  customModels: '',
+  customModels: [] as ProviderCustomModel[],
   reasoningSummary: 'detailed',
   environmentVariables: '',
   environmentHash: '',
@@ -50,6 +51,53 @@ export const DEFAULT_CODEX_PROVIDER_SETTINGS: Readonly<CodexProviderSettings> = 
   wslDistroOverride: '',
   wslDistroOverridesByHost: {},
 });
+
+// Backwards-compatible read: accept both the legacy newline-delimited string
+// form and the new array form. F9 migrates persisted data; F8 must keep
+// existing string-shaped values usable in the meantime.
+function normalizeCustomModels(value: unknown): ProviderCustomModel[] {
+  if (Array.isArray(value)) {
+    const result: ProviderCustomModel[] = [];
+    const seen = new Set<string>();
+    for (const entry of value) {
+      if (!entry || typeof entry !== 'object') continue;
+      const row = entry as Record<string, unknown>;
+      const id = typeof row.id === 'string' ? row.id.trim() : '';
+      if (!id) continue;
+      const key = id.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const normalized: ProviderCustomModel = {
+        id,
+        source: row.source === 'env' ? 'env' : 'user',
+      };
+      if (typeof row.label === 'string' && row.label.trim()) {
+        normalized.label = row.label.trim();
+      }
+      if (typeof row.contextWindow === 'number' && Number.isFinite(row.contextWindow) && row.contextWindow > 0) {
+        normalized.contextWindow = row.contextWindow;
+      }
+      result.push(normalized);
+    }
+    return result;
+  }
+
+  if (typeof value === 'string') {
+    const result: ProviderCustomModel[] = [];
+    const seen = new Set<string>();
+    for (const line of value.split(/\r?\n/)) {
+      const id = line.trim();
+      if (!id) continue;
+      const key = id.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      result.push({ id, source: 'user' });
+    }
+    return result;
+  }
+
+  return [];
+}
 
 export function shouldDisableCodexReasoningSummary(model: string | undefined): boolean {
   return model === CODEX_SPARK_MODEL;
@@ -140,8 +188,7 @@ export function getCodexProviderSettings(
       ?? (settings.codexCliPath as string | undefined)
       ?? DEFAULT_CODEX_PROVIDER_SETTINGS.cliPath,
     cliPathsByHost,
-    customModels: (config.customModels as string | undefined)
-      ?? DEFAULT_CODEX_PROVIDER_SETTINGS.customModels,
+    customModels: normalizeCustomModels(config.customModels),
     reasoningSummary: (config.reasoningSummary as CodexReasoningSummary | undefined)
       ?? (settings.codexReasoningSummary as CodexReasoningSummary | undefined)
       ?? DEFAULT_CODEX_PROVIDER_SETTINGS.reasoningSummary,

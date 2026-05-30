@@ -14,9 +14,16 @@ jest.mock('@/core/providers/ProviderSettingsCoordinator', () => ({
     reconcileTitleGenerationModelSelection: jest.fn((settings: Record<string, unknown>) => {
       const titleGenerationModel = settings.titleGenerationModel;
       const customModels = (
-        settings.providerConfigs as { codex?: { customModels?: string } } | undefined
-      )?.codex?.customModels ?? '';
-      if (titleGenerationModel === 'my-custom-model' && customModels !== 'my-custom-model') {
+        settings.providerConfigs as {
+          codex?: { customModels?: string | { id: string }[] };
+        } | undefined
+      )?.codex?.customModels;
+      const customModelIds = Array.isArray(customModels)
+        ? customModels.map((row) => row.id)
+        : typeof customModels === 'string'
+          ? customModels.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+          : [];
+      if (titleGenerationModel === 'my-custom-model' && !customModelIds.includes('my-custom-model')) {
         settings.titleGenerationModel = '';
         return true;
       }
@@ -541,7 +548,9 @@ describe('CodexSettingsTab', () => {
     await customModelsTextArea.onChangeCallback?.('different-custom-model');
     await customModelsTextArea.trigger('blur');
 
-    expect(plugin.settings.providerConfigs.codex.customModels).toBe('different-custom-model');
+    expect(plugin.settings.providerConfigs.codex.customModels).toEqual([
+      { id: 'different-custom-model', source: 'user' },
+    ]);
     expect(plugin.settings.model).toBe('gpt-5.4-mini');
     expect(plugin.settings.titleGenerationModel).toBe('');
     expect(mockSaveSettings).toHaveBeenCalledTimes(1);

@@ -8,7 +8,7 @@ import { t } from '../../../i18n/i18n';
 import { getHostnameKey } from '../../../utils/env';
 import { expandHomePath } from '../../../utils/path';
 import { getCodexWorkspaceServices } from '../app/CodexWorkspaceServices';
-import { parseConfiguredCustomModelIds, resolveCodexModelSelection } from '../modelOptions';
+import { resolveCodexModelSelection } from '../modelOptions';
 import { isWindowsStyleCliReference } from '../runtime/CodexBinaryLocator';
 import { getCodexProviderSettings, updateCodexProviderSettings } from '../settings';
 import { DEFAULT_CODEX_PRIMARY_MODEL } from '../types/models';
@@ -262,8 +262,12 @@ export const codexSettingsTabRenderer: ProviderSettingsTabRenderer = {
       .setName('Custom models')
       .setDesc('Append additional Codex model ids to the picker, one per line. `OPENAI_MODEL` still takes precedence when set.')
       .addTextArea((text) => {
-        let pendingCustomModels = codexSettings.customModels;
-        let savedCustomModels = codexSettings.customModels;
+        // Dead code path (J1 cleanup pending): the textarea still operates on a
+        // newline-delimited string, while the persisted shape is now ProviderCustomModel[].
+        // Coerce between the two so the legacy UI keeps compiling and roundtripping ids.
+        const serialize = (rows: { id: string }[]): string => rows.map(row => row.id).join('\n');
+        let pendingCustomModels = serialize(codexSettings.customModels);
+        let savedCustomModels = pendingCustomModels;
 
         const reconcileInactiveCodexProjection = (
           previousCustomModels: string,
@@ -285,7 +289,12 @@ export const codexSettingsTabRenderer: ProviderSettingsTabRenderer = {
             return false;
           }
 
-          const previousCustomModelIds = new Set(parseConfiguredCustomModelIds(previousCustomModels));
+          const previousCustomModelIds = new Set(
+            previousCustomModels
+              .split(/\r?\n/)
+              .map((line) => line.trim())
+              .filter(Boolean),
+          );
           if (!previousCustomModelIds.has(currentSavedModel)) {
             return false;
           }
@@ -310,7 +319,13 @@ export const codexSettingsTabRenderer: ProviderSettingsTabRenderer = {
             : '';
 
           if (pendingCustomModels !== savedCustomModels) {
-            updateCodexProviderSettings(settingsBag, { customModels: pendingCustomModels });
+            updateCodexProviderSettings(settingsBag, {
+              customModels: pendingCustomModels
+                .split(/\r?\n/)
+                .map((line) => line.trim())
+                .filter((id, index, list) => id.length > 0 && list.indexOf(id) === index)
+                .map((id) => ({ id, source: 'user' as const })),
+            });
             savedCustomModels = pendingCustomModels;
           }
 
@@ -337,7 +352,7 @@ export const codexSettingsTabRenderer: ProviderSettingsTabRenderer = {
 
         text
           .setPlaceholder('gpt-5.4\ngpt-5.3-codex-spark')
-          .setValue(codexSettings.customModels)
+          .setValue(serialize(codexSettings.customModels))
           .onChange((value) => {
             pendingCustomModels = value;
           });

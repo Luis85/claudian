@@ -8,10 +8,14 @@ import {
   formatCodexModelLabel,
 } from './types/models';
 
-function createCustomCodexModelOption(modelId: string, description: string): ProviderUIOption {
+function createCustomCodexModelOption(
+  modelId: string,
+  description: string,
+  label?: string,
+): ProviderUIOption {
   return {
     value: modelId,
-    label: formatCodexModelLabel(modelId),
+    label: label ?? formatCodexModelLabel(modelId),
     description,
   };
 }
@@ -26,23 +30,6 @@ export function getConfiguredEnvCustomModel(settings: Record<string, unknown>): 
   return modelId && !DEFAULT_CODEX_MODEL_SET.has(modelId) ? modelId : null;
 }
 
-export function parseConfiguredCustomModelIds(value: string): string[] {
-  const modelIds: string[] = [];
-  const seen = new Set<string>();
-
-  for (const line of value.split(/\r?\n/)) {
-    const modelId = line.trim();
-    if (!modelId || seen.has(modelId)) {
-      continue;
-    }
-
-    seen.add(modelId);
-    modelIds.push(modelId);
-  }
-
-  return modelIds;
-}
-
 export function getCodexModelOptions(settings: Record<string, unknown>): ProviderUIOption[] {
   const models = [...DEFAULT_CODEX_MODELS];
   const seenValues = new Set(models.map(model => model.value));
@@ -54,13 +41,13 @@ export function getCodexModelOptions(settings: Record<string, unknown>): Provide
   }
 
   const codexSettings = getCodexProviderSettings(settings);
-  for (const modelId of parseConfiguredCustomModelIds(codexSettings.customModels)) {
-    if (seenValues.has(modelId)) {
+  for (const row of codexSettings.customModels) {
+    if (seenValues.has(row.id)) {
       continue;
     }
 
-    seenValues.add(modelId);
-    models.push(createCustomCodexModelOption(modelId, 'Custom model'));
+    seenValues.add(row.id);
+    models.push(createCustomCodexModelOption(row.id, 'Custom model', row.label));
   }
 
   return models;
