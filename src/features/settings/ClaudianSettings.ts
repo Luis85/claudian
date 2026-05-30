@@ -136,7 +136,13 @@ export class ClaudianSettingTab extends PluginSettingTab {
     const providerTabs = ProviderRegistry.getEnabledProviderIds(
       this.plugin.settings as unknown as Record<string, unknown>,
     );
-    const tabIds: SettingsTabId[] = ['general', 'agentBoard', 'orchestrator', ...providerTabs];
+    const tabIds: SettingsTabId[] = [
+      'general',
+      'agentBoard',
+      'orchestrator',
+      'diagnostics',
+      ...providerTabs,
+    ];
     if (!tabIds.includes(this.activeTab)) {
       this.activeTab = 'general';
     }
@@ -171,6 +177,8 @@ export class ClaudianSettingTab extends PluginSettingTab {
         label = 'Agent Board';
       } else if (id === 'orchestrator') {
         label = t('settings.tabs.orchestrator' as TranslationKey);
+      } else if (id === 'diagnostics') {
+        label = 'Diagnostics';
       } else {
         label = ProviderRegistry.getProviderDisplayName(id);
       }
@@ -217,6 +225,14 @@ export class ClaudianSettingTab extends PluginSettingTab {
       } else {
         renderOrchestratorSettingsTab(orchestratorContent, this.plugin);
       }
+    }
+
+    const diagnosticsContent = tabContents.get('diagnostics');
+    if (diagnosticsContent && useRegistryRenderer('diagnostics')) {
+      // Diagnostics has no legacy tab renderer — its imperative collaborators
+      // still surface inside the General tab's Diagnostics section. Until the
+      // flag flips, the dedicated tab simply renders nothing.
+      renderTab(diagnosticsContent, 'diagnostics', ctx, getSettingsRegistry());
     }
 
     for (const providerId of providerTabs) {
