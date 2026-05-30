@@ -35,13 +35,23 @@ Updated: 2026-05-30. Method: subagent-driven (implementer → spec reviewer → 
 | B | B2 `registerProviderTab` helper | ✅ done | `01f1022` | Late: built after C1/C2; C1+C2 refactored via `358ee65` |
 | C | C1 Claude tab | ✅ done | `40ed01b` + `358ee65` | 3 sections (setup/models/advanced); 2 setup fields (cliPath, safeMode); refactored to use helper |
 | C | C2 Codex tab | ✅ done | `582406d` + `358ee65` | 3 sections (setup/models/skills); 2 setup fields (appServerPath, apiKey); refactored to use helper |
-| C | C3 Opencode tab | ⏳ pending | — | |
-| C | C4 Cursor tab | ⏳ pending | — | |
-| C | C5 Agent Board tab | ⏳ pending | — | |
-| C | C6 Orchestrator tab | ⏳ pending | — | |
-| C | C7 Diagnostics tab | ⏳ pending | — | |
-| C | C8 single entry point | ⏳ pending | — | |
-| D | D1–D4 renderer port | ⏳ pending | — | |
+| C | C3 Opencode tab | ✅ done | `05c9594` + `7709103` + `1359c10` | 5 sections, 7 fields; fixup: selectedMode options sourced via `getOpencodeProviderSettings` |
+| C | C4 Cursor tab | ✅ done | `a41ba2e` | 2 sections (models/environment), 4 fields |
+| C | C5 Agent Board tab | ✅ done | `76e3b33` | 5 sections, 7 fields; button onClick stubbed pending SettingsCtx plugin handle |
+| C | C6 Orchestrator tab | ✅ done | `22ff708` | 2 sections, 2 fields |
+| C | C7 Diagnostics tab | ✅ done | `d15e336` | 2 sections, 4 fields; `logLevel` visibility predicate gated on `loggingEnabled` |
+| C | C8 single entry point | ✅ done | `d8baf2f` | `registerAllSettings()` argless (singleton), divergence from plan's typed-arg signature |
+| D | D1 per-kind field renderer | ✅ done | `9909f99` | Extended `tests/__mocks__/obsidian.ts` Setting class; 12 unit tests |
+| D | D2 tab renderer | ✅ done | `dce10d3` | Added `tests/setup/obsidianDom.ts` HTMLElement polyfill |
+| D | D3 shell branch behind flag | ✅ done | `c99921c` | Per-tab `useRegistryRenderer(tabId)`; lazy-init `registerAllSettings()`; `REGISTRY_TABS` empty |
+| D | D4 flip General | ✅ done | `228702c` | `REGISTRY_TABS = Set(['general'])` |
+| D | D5 port Agent Board | ✅ done | `c2ef3e5` | integration test under `tests/integration/settings/agentBoard-port.test.ts` |
+| D | D6 port Orchestrator | ✅ done | `c788070` | |
+| D | D7 port Diagnostics | ✅ done | `e98853a` | Also added `'diagnostics'` to shell `tabIds`; diagnostics tab newly visible in UI |
+| D | D8 port Claude | ✅ done | `1a4fdb0` | |
+| D | D9 port Codex | ✅ done | `ca6796f` | |
+| D | D10a port Opencode | ✅ done | `34fc058` | |
+| D | D10b port Cursor | ✅ done | `6bbec03` | |
 | E | E1–E7 first-run banner + provider rows | ⏳ pending | — | |
 | F | F1–F9 default-provider resolver + Custom Models | ⏳ pending | — | |
 | G | G1–G3 search bar | ⏳ pending | — | |
@@ -49,10 +59,17 @@ Updated: 2026-05-30. Method: subagent-driven (implementer → spec reviewer → 
 | I | I1 strip legacy paths | ⏳ pending | — | |
 | J | J1–J4 cleanup + release | ⏳ pending | — | |
 
-**Suite status after last commit (`358ee65`)**: 5859 unit tests pass, 0 fail, 34 skipped. Lint clean. Typecheck clean. Build clean.
+**Suite status after last commit (`6bbec03`)**: 5911 unit tests pass + 223 integration tests pass (incl. 7 new tab-port tests), 34 skipped, 0 fail. Lint clean. Typecheck clean. Build clean (styles.css 153.6 KB).
 
 **Open divergences from plan:**
-- None outstanding. B2 built late; C1+C2 refactored to consume it. C3-C7 will use helper from the start.
+- File path convention: provider registrations live at `src/features/settings/registry/fields/<provider>.ts`, NOT the plan's `src/providers/<provider>/settings/registryFields.ts`. C1/C2 set this precedent; C3–C7 followed. Plan text stale.
+- C1/C2/C3/C4 section labels diverge from plan text (e.g. Claude: `setup/models/advanced` shipped vs `setup/safety/models/commands/subagents/mcp/plugins/environment/experimental` planned). Most fields from the plan's per-tab field lists are NOT yet registered — they remain in the legacy imperative renderers as dead code under the registry gate. Phase E/F/G/H must register the missing fields before the legacy renderers are removed in J1.
+- C8 `registerAllSettings()` is argless using the `getSettingsRegistry()` singleton (not the plan's `(registry: SettingsRegistry)` parameter), matching the shipped C1–C7 signature pattern.
+- C5 Agent Board `installCommonTemplatesButton.onClick` and C7 Diagnostics `copyDiagnosticLogs` / `clearDiagnosticLogs` buttons are no-op stubs with `TODO Phase F: invoke command '...' once SettingsCtx exposes plugin handle` comments. Phase F must extend `SettingsCtx` with a plugin handle (or equivalent command dispatcher) and wire the real `onClick` bodies.
+- D3 introduced `useRegistryRenderer(tabId)` per-tab gate; the original plan's `USE_REGISTRY_RENDERER` boolean is retained as deprecated export, removable in Phase J.
+- D7 Diagnostics port added a dedicated Diagnostics tab to the shell `tabIds` (it did not previously exist as a top-level tab — diagnostics fields lived under General → Diagnostics in the imperative path). This is a user-visible UI change: a new Diagnostics tab appears at order 80.
+- **Functional regression — must address in Phase F:** registry-rendered Diagnostics toggle/dropdown write `loggingEnabled` / `logLevel` to settings via `readPath`/`writePath`, but do NOT call `plugin.logger.setEnabled(value)` / `plugin.logger.setLevel(value)` at runtime as the legacy `renderLoggingSettingsSection` did. Logging behavior will not update without an Obsidian reload until the `SettingsCtx` plugin handle is wired.
+- **Empty registry-rendered tabs in production:** General (8 empty sections), Claude (3 sections, only 2 fields), Codex (3 sections, only 2 fields). Phase E/H/F must register the missing fields. Cursor/Opencode/Agent Board/Orchestrator/Diagnostics have most or all of their fields registered already, but several custom slots render as empty divs (`render: () => undefined`) pending Phase F widget wiring.
 
 ---
 
