@@ -1,3 +1,6 @@
+---
+priority: 1 - high
+---
 # Claudian Agent Board: Obsidian-Native Symphony Orchestration
 
 Status: idea / design draft  

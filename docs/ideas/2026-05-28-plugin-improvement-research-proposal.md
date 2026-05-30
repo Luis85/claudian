@@ -1,6 +1,7 @@
 ---
 tags:
   - deferred
+priority: 3 - low
 ---
 # Plugin improvement research proposal
 

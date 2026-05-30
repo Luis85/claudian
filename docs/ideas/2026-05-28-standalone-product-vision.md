@@ -1,3 +1,6 @@
+---
+priority: 1 - high
+---
 # Specorator standalone product vision
 
 Status: idea / product-transition draft  
