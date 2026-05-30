@@ -435,9 +435,13 @@ describe('ClaudianSettingsStorage', () => {
       expect(writtenContent.envSnippets[0].scope).toBeUndefined();
     });
 
-    it('normalizes custom model aliases on load', async () => {
+    it('normalizes env snippet model aliases on load and clears top-level legacy map', async () => {
       mockAdapter.exists.mockResolvedValue(true);
       mockAdapter.read.mockResolvedValue(JSON.stringify({
+        // F9 migration erases the top-level customModelAliases field after
+        // translating entries into per-provider customModels rows. When no
+        // provider owns the model id (no env var present here), the entry is
+        // dropped during migration. Env snippet aliases remain unchanged.
         customModelAliases: {
           ' custom-model ': '  Friendly model  ',
           empty: '   ',
@@ -458,15 +462,11 @@ describe('ClaudianSettingsStorage', () => {
       const result = await storage.load();
       const writtenContent = JSON.parse(mockAdapter.write.mock.calls[0][1]);
 
-      expect(result.customModelAliases).toEqual({
-        'custom-model': 'Friendly model',
-      });
+      expect(result.customModelAliases).toEqual({});
       expect(result.envSnippets[0].modelAliases).toEqual({
         'custom-model': 'Snippet model',
       });
-      expect(writtenContent.customModelAliases).toEqual({
-        'custom-model': 'Friendly model',
-      });
+      expect(writtenContent.customModelAliases).toEqual({});
       expect(writtenContent.envSnippets[0].modelAliases).toEqual({
         'custom-model': 'Snippet model',
       });

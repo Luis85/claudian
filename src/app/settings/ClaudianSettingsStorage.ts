@@ -38,6 +38,7 @@ import {
   updateOpencodeProviderSettings,
 } from '../../providers/opencode/settings';
 import { DEFAULT_CLAUDIAN_SETTINGS } from './defaultSettings';
+import { migrateModelOverrides } from './migrations/migrateModelOverrides';
 
 export {
   CLAUDIAN_SETTINGS_PATH,
@@ -337,6 +338,9 @@ export class ClaudianSettingsStorage {
       merged.providerConfigs,
     );
 
+    const migrated = migrateModelOverrides(merged);
+    const didMigrateModelOverrides = migrated !== merged;
+
     if (
       settingsPath !== CLAUDIAN_SETTINGS_PATH
       || (
@@ -356,12 +360,13 @@ export class ClaudianSettingsStorage {
         && JSON.stringify(customModelAliases) !== JSON.stringify(stored.customModelAliases ?? {})
       )
       || didNormalizeHostScopedProviderConfigs
+      || didMigrateModelOverrides
       )
     ) {
-      await this.save(merged);
+      await this.save(migrated);
     }
 
-    return merged;
+    return migrated;
   }
 
   async save(settings: StoredClaudianSettings): Promise<void> {
