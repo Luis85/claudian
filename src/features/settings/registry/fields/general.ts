@@ -73,4 +73,21 @@ export function registerGeneralTabFields(): void {
     order: 80,
     description: 'Command hotkey bindings.',
   });
+
+  r.registerField({
+    id: 'general.providers.showSetupAgain',
+    tabId: 'general',
+    sectionId: 'providers',
+    label: 'Show setup banner again',
+    type: {
+      kind: 'button',
+      label: 'Show setup',
+      onClick: async (ctx) => {
+        ctx.settings = { ...ctx.settings, firstRunDismissed: false };
+        await ctx.saveSettings();
+        ctx.refresh();
+      },
+    },
+    default: null,
+  });
 }
