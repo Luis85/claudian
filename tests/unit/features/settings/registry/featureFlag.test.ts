@@ -10,7 +10,7 @@ describe("settings registry feature flag", () => {
     expect(USE_REGISTRY_RENDERER).toBe(false);
   });
 
-  it("contains the general, agentBoard, orchestrator, diagnostics, claude, codex, and opencode tabs after D10 ports opencode", () => {
+  it("contains every settings tab after D5–D10 ports the remaining tabs", () => {
     expect(REGISTRY_TABS.has("general")).toBe(true);
     expect(REGISTRY_TABS.has("agentBoard")).toBe(true);
     expect(REGISTRY_TABS.has("orchestrator")).toBe(true);
@@ -18,9 +18,10 @@ describe("settings registry feature flag", () => {
     expect(REGISTRY_TABS.has("claude")).toBe(true);
     expect(REGISTRY_TABS.has("codex")).toBe(true);
     expect(REGISTRY_TABS.has("opencode")).toBe(true);
+    expect(REGISTRY_TABS.has("cursor")).toBe(true);
   });
 
-  it("useRegistryRenderer returns true for ported tabs", () => {
+  it("useRegistryRenderer returns true for every ported tab", () => {
     expect(useRegistryRenderer("general")).toBe(true);
     expect(useRegistryRenderer("agentBoard")).toBe(true);
     expect(useRegistryRenderer("orchestrator")).toBe(true);
@@ -28,10 +29,10 @@ describe("settings registry feature flag", () => {
     expect(useRegistryRenderer("claude")).toBe(true);
     expect(useRegistryRenderer("codex")).toBe(true);
     expect(useRegistryRenderer("opencode")).toBe(true);
+    expect(useRegistryRenderer("cursor")).toBe(true);
   });
 
-  it("useRegistryRenderer returns false for any unported tab id", () => {
-    expect(useRegistryRenderer("cursor")).toBe(false);
+  it("useRegistryRenderer returns false for unknown tab ids", () => {
     expect(useRegistryRenderer("anyOtherTab")).toBe(false);
   });
 });

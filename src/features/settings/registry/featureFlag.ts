@@ -10,6 +10,7 @@ export const REGISTRY_TABS: ReadonlySet<string> = new Set<string>([
   'claude',
   'codex',
   'opencode',
+  'cursor',
 ]);
 
 export function useRegistryRenderer(tabId: string): boolean {
