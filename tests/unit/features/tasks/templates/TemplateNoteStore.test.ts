@@ -10,7 +10,7 @@ name: Bug fix
 description: Fix a defect.
 provider: claude
 model: sonnet
-priority: high
+priority: 1 - high
 ---
 # {{title}}
 
@@ -42,7 +42,7 @@ describe('TemplateNoteStore.parse', () => {
       description: 'Fix a defect.',
       provider: 'claude',
       model: 'sonnet',
-      priority: 'high',
+      priority: '1 - high',
     });
     expect(t.body).toContain('# {{title}}');
   });
@@ -52,7 +52,7 @@ describe('TemplateNoteStore.parse', () => {
   });
 
   it('drops an invalid priority to undefined', () => {
-    const t = store.parse('x.md', TEMPLATE.replace('priority: high', 'priority: bogus'));
+    const t = store.parse('x.md', TEMPLATE.replace('priority: 1 - high', 'priority: bogus'));
     expect(t.priority).toBeUndefined();
   });
 
@@ -84,7 +84,7 @@ describe('TemplateNoteStore.build', () => {
       icon: 'bug',
       provider: 'claude',
       model: 'sonnet',
-      priority: 'high',
+      priority: '1 - high',
       body: '# {{title}}\n\n## Objective\nFix it.',
     });
     const parsed = store.parse('x.md', md);
@@ -94,7 +94,7 @@ describe('TemplateNoteStore.build', () => {
       icon: 'bug',
       provider: 'claude',
       model: 'sonnet',
-      priority: 'high',
+      priority: '1 - high',
     });
     expect(parsed.body).toContain('# {{title}}');
     expect(parsed.body).toContain('## Objective');
