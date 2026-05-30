@@ -1,5 +1,6 @@
 import { registerOpencodeTabFields } from '../../../../../../src/features/settings/registry/fields/opencode';
 import { getSettingsRegistry, resetSettingsRegistryForTests } from '../../../../../../src/features/settings/registry/registry';
+import { updateOpencodeProviderSettings } from '../../../../../../src/providers/opencode/settings';
 
 describe('Opencode tab registry fields', () => {
   beforeEach(() => {
@@ -39,25 +40,22 @@ describe('Opencode tab registry fields', () => {
     expect(cliPath?.default).toBe('');
   });
 
-  it('sources selectedMode dropdown options from providerConfigs.opencode.availableModes', () => {
+  it('sources selectedMode dropdown options from the Opencode discovery state', () => {
     registerOpencodeTabFields();
     const r = getSettingsRegistry();
     const settings = {
-      providerConfigs: {
-        opencode: {
-          enabled: true,
-          availableModes: [
-            { id: 'claudian-yolo', name: 'yolo', description: 'Default agent.' },
-            { id: 'plan', name: 'plan', description: 'Plan mode.' },
-          ],
-        },
-      },
+      providerConfigs: { opencode: { enabled: true } },
     } as any;
+    updateOpencodeProviderSettings(settings, {
+      availableModes: [
+        { id: 'claudian-yolo', name: 'yolo', description: 'Default agent.' },
+        { id: 'plan', name: 'plan', description: 'Plan mode.' },
+      ],
+    });
     const fields = r.getFields('opencode', 'models', settings);
     const selectedMode = fields.find((f) => f.id === 'providerConfigs.opencode.selectedMode');
     expect(selectedMode).toBeDefined();
     const type = selectedMode!.type;
-    expect(type.kind).toBe('dropdown');
     if (type.kind !== 'dropdown') {
       throw new Error('selectedMode type must be dropdown');
     }
