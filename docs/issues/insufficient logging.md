@@ -1,6 +1,8 @@
 ---
 status: done
 type: issue
+tags:
+  - infrastructure
 ---
 # Insufficient logging
 

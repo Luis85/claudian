@@ -1,3 +1,6 @@
+---
+status: approved
+---
 # Composer context pills (Cursor-style attachments)
 
 **Date:** 2026-05-28

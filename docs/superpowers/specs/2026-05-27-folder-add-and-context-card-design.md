@@ -1,3 +1,6 @@
+---
+status: approved
+---
 # Add folders to chat + inline context card
 
 **Date:** 2026-05-27

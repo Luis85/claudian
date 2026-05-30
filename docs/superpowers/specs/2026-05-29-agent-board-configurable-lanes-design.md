@@ -1,3 +1,6 @@
+---
+status: approved
+---
 # Agent Board Configurable Lanes + Board QoL Design
 
 Date: 2026-05-29

@@ -1,3 +1,6 @@
+---
+status: approved
+---
 # Agent Board End-to-End Thin Slice Design
 
 Date: 2026-05-28  

@@ -1,3 +1,6 @@
+---
+status: approved
+---
 # Configurable Logger Design
 
 Date: 2026-05-29

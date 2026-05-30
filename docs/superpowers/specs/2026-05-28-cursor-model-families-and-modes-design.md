@@ -1,3 +1,6 @@
+---
+status: approved
+---
 # Cursor model families and modes — design
 
 Date: 2026-05-28

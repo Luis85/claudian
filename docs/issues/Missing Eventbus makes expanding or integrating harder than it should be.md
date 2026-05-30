@@ -1,6 +1,8 @@
 ---
 status: done
 type: issue
+tags:
+  - infrastructure
 ---
 # Missing event bus makes expanding or integrating harder than it should be
 
