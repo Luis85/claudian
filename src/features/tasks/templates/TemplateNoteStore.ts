@@ -5,7 +5,7 @@ import { extractString, parseFrontmatter } from '../../../utils/frontmatter';
 import type { TaskPriority } from '../model/taskTypes';
 import type { WorkOrderTemplate } from './templateTypes';
 
-const VALID_PRIORITIES: ReadonlySet<TaskPriority> = new Set<TaskPriority>(['low', 'normal', 'high', 'urgent']);
+const VALID_PRIORITIES: ReadonlySet<TaskPriority> = new Set<TaskPriority>(['0 - urgent', '1 - high', '2 - normal', '3 - low']);
 
 function fileBaseName(path: string): string {
   const file = path.split('/').pop() ?? path;
