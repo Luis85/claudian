@@ -3,6 +3,9 @@ type: quick-action
 name: Handoff
 description: Compact the current conversation into a handoff document for the next session.
 icon: hand
+tags:
+  - workflow
+  - session
 ---
 
 Write a handoff document summarising the current conversation so a fresh agent can continue the work. Save it to `docs/handoffs/` inside this vault, using a filename of the format `YYYY-MM-DD-<slug>.md` where the slug is a short kebab-case description of the session's focus.

@@ -3,6 +3,9 @@ type: quick-action
 name: Deep Research
 description: Dispatch parallel research subagents, run deep web research, and produce a cited Obsidian document in docs/research.
 icon: microscope
+tags:
+  - research
+  - agents
 ---
 
 Run a deep research session on the topic or idea I just described. Follow these steps:
