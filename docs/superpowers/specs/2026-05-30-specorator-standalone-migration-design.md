@@ -12,7 +12,6 @@ related:
   - "[[docs/Specorator.md]]"
   - "[[docs/ideas/2026-05-28-standalone-product-vision.md]]"
   - "[[docs/issues/agent-board-mvp.md]]"
-parent: Product
 ---
 
 # Specorator standalone migration — v1.0.0 design
@@ -32,7 +31,6 @@ In scope for v1.0.0:
 - Rename all user-visible Claudian references to Specorator, including in-app strings, README, settings, and command palette entries.
 - Mass-rename internal TypeScript symbols from `Claudian*` to `Specorator*`.
 - Publish provenance honestly: keep MIT, preserve Yishen Tu copyright, add Luis Mendez copyright, ship a `CREDITS.md`.
-- Migrate the whole `docs/` tree into the public repository as part of Specorator's documentation memory.
 - Close out the legacy Specorator workflow-cockpit codebase, issues, and PRs.
 - Freeze the existing `claudian-cursor` fork as a public artifact with a banner pointing to Specorator.
 
@@ -66,7 +64,6 @@ The following decisions are settled and not revisited inside this migration. Cha
 | 11 | Provider identities | Claude, Codex, Opencode, Cursor names and `.claude/`, `.codex/`, `.opencode/`, `.cursor/` vault folders untouched |
 | 12 | Git history | Fresh orphan history at v1.0; CREDITS + LICENSE carry provenance |
 | 13 | TypeScript symbol rename | Mass-rename `Claudian*` → `Specorator*` included in v1.0 |
-| 14 | Docs tree | Whole `docs/` folder ships to public repo (vision doc, design specs, ideas, issues, product, research, quick-actions, superpowers) |
 
 ## Section 1 — Identity and metadata
 
@@ -166,12 +163,12 @@ The Specorator v1.0 commit history starts fresh. Steps:
    - `node_modules/`
    - Build artefacts: `main.js`, `styles.css` (these are produced by `npm run build` and should be excluded from source unless required for BRAT delivery — confirm Obsidian plugin convention before final push)
    - `.context/`
-   - Vault-only root paths that do not belong in the published source tree: `Agent Board/`, `Wikipedia - Signs of AI writing - Wikipedia.md`, `test-output.log`, and any other vault-private root note identified during execution.
-3. **Ship the whole `docs/` tree.** Every subdirectory under `docs/` (`Backlog.base`, `examples/`, `ideas/`, `issues/`, `product/`, `quick-actions/`, `research/`, `superpowers/`) migrates into the public repository as-is. This includes the vision doc, this migration spec at its original `docs/superpowers/specs/` location, prior design specs, brainstorming artefacts, idea notes, research notes, and quick-action templates. The published `docs/` tree becomes part of Specorator's source of truth and product memory. Wikilinks inside those notes (e.g. `[[docs/features/Chat]]`) will render as plain text on GitHub but remain readable; no automated rewrite happens at migration time.
+   - Vault-private paths that should not ship in the plugin distribution: `Agent Board/`, `docs/ideas/`, `Wikipedia - Signs of AI writing - Wikipedia.md`, `test-output.log`, and any other vault-only note tree identified during execution.
+3. **Promote this migration spec** to a stable public location before the orphan commit. Copy the file from `docs/superpowers/specs/2026-05-30-specorator-standalone-migration-design.md` to `docs/migration/v1.0-migration.md` in the scratch tree. The original spec stays in the vault for history; the public copy is the canonical reference the v1.0 release notes link to.
 4. `git add -A`.
 5. `git commit -m "chore: initial Specorator v1.0"`.
 
-The exclusion list is intentionally tight. Apart from `.git/`, `node_modules/`, build artefacts, `.context/`, and the listed vault-only root paths, everything else in the repository ships. The full `docs/` tree is in scope per locked decision (added during spec review): the public Specorator repository carries the same documentation memory the vault carries.
+The exclusion list for vault-only paths is finalised during plan execution by inspecting the current repo against typical plugin distribution conventions. The criterion: only files that belong in a published Obsidian plugin source repository ship. Vault-private notes, throwaway scripts, and development context do not. The `docs/superpowers/` tree in general is vault-private; only the promoted migration doc ships under `docs/migration/`.
 
 ### 3.3 Push to Luis85/specorator
 
@@ -357,18 +354,18 @@ Specorator identity.
 
 If you are coming from the legacy Specorator v0 workflow-cockpit plugin
 or from the `claudian-cursor` fork, please read the
-[migration spec](https://github.com/Luis85/specorator/blob/main/docs/superpowers/specs/2026-05-30-specorator-standalone-migration-design.md)
+[migration spec](https://github.com/Luis85/specorator/blob/main/docs/migration/v1.0-migration.md)
 for context on what changed and why.
 ```
 
-The migration spec ships at its native path under `docs/superpowers/specs/` as part of the full `docs/` tree migration (Section 3.2), so the link resolves once the orphan commit is published.
+The migration spec ships in the v1.0 source tree at `docs/migration/v1.0-migration.md` (promoted from the vault-internal location during Section 3.2), so the link resolves once the orphan commit is published.
 
 ## Section 6 — Post-launch and deferred items
 
 ### 6.1 Day-0 communications
 
 - The `v1.0.0` GitHub release is published as the primary launch artefact.
-- A pinned issue titled "Welcome to Specorator v1.0 — migration notes" is created in the new repository, linking to the migration spec at `docs/superpowers/specs/2026-05-30-specorator-standalone-migration-design.md` and to `CREDITS.md`.
+- A pinned issue titled "Welcome to Specorator v1.0 — migration notes" is created in the new repository, linking to `docs/migration/v1.0-migration.md` and `CREDITS.md`.
 - `docs/Specorator.md` remains the canonical product narrative in the vault and is mirrored as `README.md` in the repository.
 - No social or forum push happens with v1.0. Distribution is BRAT-first and intentionally low-pressure.
 
