@@ -12,9 +12,16 @@ jest.mock('@/core/providers/ProviderSettingsCoordinator', () => ({
     reconcileTitleGenerationModelSelection: jest.fn((settings: Record<string, unknown>) => {
       const titleGenerationModel = settings.titleGenerationModel;
       const customModels = (
-        settings.providerConfigs as { claude?: { customModels?: string } } | undefined
-      )?.claude?.customModels ?? '';
-      if (titleGenerationModel === 'claude-opus-4-6' && customModels !== 'claude-opus-4-6') {
+        settings.providerConfigs as {
+          claude?: { customModels?: string | { id: string }[] };
+        } | undefined
+      )?.claude?.customModels;
+      const customModelIds = Array.isArray(customModels)
+        ? customModels.map((row) => row.id)
+        : typeof customModels === 'string'
+          ? customModels.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+          : [];
+      if (titleGenerationModel === 'claude-opus-4-6' && !customModelIds.includes('claude-opus-4-6')) {
         settings.titleGenerationModel = '';
         return true;
       }
@@ -457,7 +464,9 @@ describe('ClaudeSettingsTab', () => {
     await customModelsTextArea.onChangeCallback?.('claude-opus-4-7');
     await customModelsTextArea.trigger('blur');
 
-    expect(plugin.settings.providerConfigs.claude.customModels).toBe('claude-opus-4-7');
+    expect(plugin.settings.providerConfigs.claude.customModels).toEqual([
+      { id: 'claude-opus-4-7', source: 'user' },
+    ]);
     expect(plugin.settings.model).toBe('sonnet');
     expect(plugin.settings.titleGenerationModel).toBe('');
     expect(mockSaveSettings).toHaveBeenCalledTimes(1);

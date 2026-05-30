@@ -5,22 +5,6 @@ import { formatCustomModelLabel } from './modelLabels';
 import { getClaudeProviderSettings } from './settings';
 import { DEFAULT_CLAUDE_MODELS, filterVisibleModelOptions } from './types/models';
 
-function parseConfiguredCustomModelIds(value: string): string[] {
-  const modelIds: string[] = [];
-  const seen = new Set<string>();
-
-  for (const line of value.split(/\r?\n/)) {
-    const modelId = line.trim();
-    if (!modelId || seen.has(modelId)) {
-      continue;
-    }
-    seen.add(modelId);
-    modelIds.push(modelId);
-  }
-
-  return modelIds;
-}
-
 function normalizeCustomModelAliases(value: unknown): Record<string, string> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {};
@@ -60,15 +44,15 @@ export function getClaudeModelOptions(settings: Record<string, unknown>): Provid
   );
 
   const seenValues = new Set(models.map(model => model.value));
-  for (const modelId of parseConfiguredCustomModelIds(claudeSettings.customModels)) {
-    if (seenValues.has(modelId)) {
+  for (const row of claudeSettings.customModels) {
+    if (seenValues.has(row.id)) {
       continue;
     }
 
-    seenValues.add(modelId);
+    seenValues.add(row.id);
     models.push({
-      value: modelId,
-      label: customModelAliases[modelId] ?? formatCustomModelLabel(modelId),
+      value: row.id,
+      label: row.label ?? customModelAliases[row.id] ?? formatCustomModelLabel(row.id),
       description: 'Custom model',
     });
   }

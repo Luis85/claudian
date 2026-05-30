@@ -56,7 +56,7 @@ describe('types.ts', () => {
     });
 
     it('should have empty custom Claude models by default', () => {
-      expect(getClaudeProviderSettings(DEFAULT_SETTINGS).customModels).toBe('');
+      expect(getClaudeProviderSettings(DEFAULT_SETTINGS).customModels).toEqual([]);
     });
 
     it('should have lastCustomModel as empty string by default', () => {

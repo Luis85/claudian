@@ -209,8 +209,12 @@ export const claudeSettingsTabRenderer: ProviderSettingsTabRenderer = {
       .setName(t('settings.customModels.name'))
       .setDesc(t('settings.customModels.desc'))
       .addTextArea((text) => {
-        let pendingCustomModels = claudeSettings.customModels;
-        let savedCustomModels = claudeSettings.customModels;
+        // Dead code path (J1 cleanup pending): the textarea still operates on a
+        // newline-delimited string, while the persisted shape is now ProviderCustomModel[].
+        // Coerce between the two so the legacy UI keeps compiling and roundtripping ids.
+        const serialize = (rows: { id: string }[]): string => rows.map(row => row.id).join('\n');
+        let pendingCustomModels = serialize(claudeSettings.customModels);
+        let savedCustomModels = pendingCustomModels;
 
         const commitCustomModels = async (): Promise<void> => {
           const previousCustomModels = savedCustomModels;
@@ -220,7 +224,13 @@ export const claudeSettingsTabRenderer: ProviderSettingsTabRenderer = {
             : '';
 
           if (pendingCustomModels !== savedCustomModels) {
-            updateClaudeProviderSettings(settingsBag, { customModels: pendingCustomModels });
+            updateClaudeProviderSettings(settingsBag, {
+              customModels: pendingCustomModels
+                .split(/\r?\n/)
+                .map((line) => line.trim())
+                .filter((id, index, list) => id.length > 0 && list.indexOf(id) === index)
+                .map((id) => ({ id, source: 'user' as const })),
+            });
             savedCustomModels = pendingCustomModels;
           }
 
@@ -245,7 +255,7 @@ export const claudeSettingsTabRenderer: ProviderSettingsTabRenderer = {
 
         text
           .setPlaceholder(t('settings.customModels.placeholder'))
-          .setValue(claudeSettings.customModels)
+          .setValue(serialize(claudeSettings.customModels))
           .onChange((value) => {
             pendingCustomModels = value;
           });
