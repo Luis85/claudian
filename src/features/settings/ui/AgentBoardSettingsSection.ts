@@ -136,7 +136,7 @@ export function renderAgentBoardSettingsSection(
   const enabledProviders = ProviderRegistry.getEnabledProviderIds(settings);
   const selectedProvider = resolveAgentBoardProvider(
     enabledProviders,
-    plugin.settings.agentBoardDefaultProvider,
+    plugin.settings.agentBoardDefaultProvider ?? '',
   );
   if (selectedProvider && selectedProvider !== plugin.settings.agentBoardDefaultProvider) {
     plugin.settings.agentBoardDefaultProvider = selectedProvider;

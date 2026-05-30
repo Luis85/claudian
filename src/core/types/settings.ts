@@ -1,4 +1,5 @@
 import type { LogLevel } from '../logging/types';
+import type { ProviderId } from './provider';
 
 export type HiddenProviderCommands = Record<string, string[]>;
 
@@ -154,7 +155,7 @@ export interface ClaudianSettings {
   agentBoardWorkOrderFolder: string;
   agentBoardTemplateFolder: string;
   agentBoardArchiveFolder: string;
-  agentBoardDefaultProvider: string;
+  agentBoardDefaultProvider: ProviderId | null;
   agentBoardDefaultModel: string;
   // Validated and normalized by BoardConfigStore; stored as raw to keep core free of feature types.
   agentBoardConfig?: unknown;

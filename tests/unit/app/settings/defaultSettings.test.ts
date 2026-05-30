@@ -11,4 +11,8 @@ describe('DEFAULT_CLAUDIAN_SETTINGS', () => {
   it('seeds firstRunDismissed=false', () => {
     expect(DEFAULT_CLAUDIAN_SETTINGS.firstRunDismissed).toBe(false);
   });
+
+  it('agentBoardDefaultProvider defaults to null', () => {
+    expect(DEFAULT_CLAUDIAN_SETTINGS.agentBoardDefaultProvider).toBeNull();
+  });
 });
