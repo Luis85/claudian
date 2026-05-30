@@ -1,6 +1,6 @@
 ---
 type: improvement
-status: open
+status: in-progress
 title: Architecture Deepening Proposal — Chat tab composition, stream projection, conversation store, provider contracts, and auxiliary query reuse
 priority: 1 - high
 triage: ready-for-agent
@@ -11,6 +11,7 @@ scope: architecture-deepening
 related:
   - "[[CLAUDE]]"
   - "[[CONTEXT]]"
+  - "[[docs/superpowers/specs/2026-05-30-chat-tab-composition-design.md]]"
 tags:
   - architecture
   - refactor
@@ -21,6 +22,8 @@ tags:
 relations:
   - "[[Chat]]"
   - Infrastructure
+specs:
+  - stage-1: "[[docs/superpowers/specs/2026-05-30-chat-tab-composition-design.md]]"
 ---
 
 # Architecture Deepening Proposal — Chat tab composition, stream projection, conversation store, provider contracts, and auxiliary query reuse
@@ -262,7 +265,7 @@ The architecture review identified six concrete deepening candidates:
 
 ### Recommended implementation order
 
-1. Chat tab composition.
+1. Chat tab composition — design: [[docs/superpowers/specs/2026-05-30-chat-tab-composition-design.md]] (proposed)
 2. Stream projection.
 3. Conversation store.
 4. Auxiliary query reuse.
@@ -270,6 +273,17 @@ The architecture review identified six concrete deepening candidates:
 6. Provider settings load normalization.
 
 The order is chosen to reduce risk on the highest-change paths first. Chat tab composition and stream projection are the most active seams and should produce immediate locality gains. Conversation store extraction follows because it touches persistence and deletion behavior. Contract splitting and settings normalization can happen after the bigger behavior-preserving extractions establish better test coverage.
+
+### Stage status
+
+| Stage | Status | Spec |
+|-------|--------|------|
+| 1 — Chat tab composition | spec proposed (2026-05-30) | [[docs/superpowers/specs/2026-05-30-chat-tab-composition-design.md]] |
+| 2 — Stream projection | not started | — |
+| 3 — Conversation store | not started | — |
+| 4 — Auxiliary query reuse | not started | — |
+| 5 — Provider contract split | not started | — |
+| 6 — Provider settings load normalization | not started | — |
 
 ### Success criteria
 
