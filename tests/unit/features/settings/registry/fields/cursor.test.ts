@@ -32,4 +32,15 @@ describe('Cursor tab registry fields', () => {
     expect(cliPath?.label).toBe('CLI path');
     expect(cliPath?.default).toBe('');
   });
+
+  it('registers providerConfigs.cursor.customModels under models', () => {
+    registerCursorTabFields();
+    const r = getSettingsRegistry();
+    const s = { providerConfigs: { cursor: { enabled: true } } } as any;
+    const field = r
+      .getFields('cursor', 'models', s)
+      .find((f) => f.id === 'providerConfigs.cursor.customModels');
+    expect(field).toBeDefined();
+    expect(field?.type.kind).toBe('custom');
+  });
 });

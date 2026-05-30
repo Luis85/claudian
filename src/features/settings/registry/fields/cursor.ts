@@ -1,3 +1,4 @@
+import { CustomModelsTable } from '../../customModels/CustomModelsTable';
 import { registerProviderTab } from '../providers/registerProviderTab';
 import { getSettingsRegistry } from '../registry';
 
@@ -39,6 +40,22 @@ export function registerCursorTabFields(): void {
     sectionId: 'models',
     label: 'Model aliases',
     type: { kind: 'custom', render: () => undefined },
+    default: null,
+  });
+
+  r.registerField({
+    id: 'providerConfigs.cursor.customModels',
+    tabId: 'cursor',
+    sectionId: 'models',
+    label: 'Custom models',
+    description: 'Add custom model ids with optional aliases and context windows.',
+    type: {
+      kind: 'custom',
+      render: (ctx, host) => {
+        const table = new CustomModelsTable(host, 'cursor', ctx);
+        table.render();
+      },
+    },
     default: null,
   });
 
