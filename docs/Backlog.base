@@ -10,9 +10,11 @@ views:
     order:
       - file.name
       - status
+      - parent
     sort: []
     columnSize:
       file.name: 353
+      note.status: 128
   - type: table
     name: Specs
     filters:
@@ -21,6 +23,7 @@ views:
     order:
       - file.name
       - status
+      - parent
   - type: table
     name: Issues
     filters:
@@ -31,11 +34,15 @@ views:
       - file.name
       - priority
       - status
+      - relations
       - tags
     columnSize:
       note.type: 102
       file.name: 462
-      note.priority: 144
+      note.priority: 90
+      note.status: 87
+      note.relations: 179
+      note.tags: 327
   - type: table
     name: Ideas
     filters:
@@ -44,10 +51,13 @@ views:
     order:
       - file.name
       - priority
+      - relations
       - tags
     columnSize:
       file.name: 359
       note.priority: 144
+      note.relations: 217
+      note.tags: 161
   - type: table
     name: Features
     filters:

@@ -1,5 +1,6 @@
 ---
-status: draft
+status: approved
+parent: Infrastructure
 ---
 
 # Settings overhaul — design
@@ -31,7 +32,7 @@ These changes are breaking (default-enable behaviour and the `agentBoardDefaultP
 Related context:
 
 - [[docs/user-manuals/settings.md]] — the manual that surfaced the surprises.
-- [[docs/ideas/2026-05-28-standalone-product-vision.md]] — future-direction context for staying provider-neutral.
+- [[2026-05-28-standalone-product-vision]] — future-direction context for staying provider-neutral.
 - Project [[CLAUDE.md]] — multi-provider product status.
 
 ## Goals

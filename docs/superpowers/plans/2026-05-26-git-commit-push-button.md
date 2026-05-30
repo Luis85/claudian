@@ -1,5 +1,6 @@
 ---
 status: done
+parent: "[[Chat]]"
 ---
 # Git commit & push button Implementation Plan
 

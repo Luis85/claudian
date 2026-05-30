@@ -1,5 +1,6 @@
 ---
 status: approved
+parent: "[[Chat]]"
 ---
 # Composer context pills (Cursor-style attachments)
 

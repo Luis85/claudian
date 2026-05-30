@@ -1,5 +1,6 @@
 ---
 status: approved
+parent: Infrastructure
 ---
 # Configurable Logger Design
 

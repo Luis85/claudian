@@ -1,5 +1,6 @@
 ---
 status: done
+parent: Infrastructure
 ---
 # Configurable Logger Implementation Plan
 

@@ -1,5 +1,6 @@
 ---
 status: done
+parent: Cross Cutting
 ---
 # Agent Board — Chat Interop & Capture Implementation Plan
 

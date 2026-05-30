@@ -1,5 +1,6 @@
 ---
 status: approved
+parent: "[[Agent Kanban Board]]"
 ---
 # Work-Order Templates Design
 

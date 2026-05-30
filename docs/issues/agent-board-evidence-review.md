@@ -11,7 +11,7 @@ owner: Claudian
 source: "[[docs/ideas/agent-board-symphony.md]]"
 related:
   - "[[docs/issues/agent-board-mvp.md]]"
-  - "[[docs/ideas/2026-05-28-standalone-product-vision.md]]"
+  - "[[2026-05-28-standalone-product-vision]]"
 scope: phase-2-richer-evidence-before-worktrees
 tags:
   - agent-board
@@ -21,13 +21,15 @@ tags:
   - leases
   - prd
   - specorator-transition
+relations:
+  - "[[Agent Kanban Board]]"
 ---
 
 # Agent Board Evidence & Review Gate — structured run evidence, changed-file attribution, run leases, and evidence-gated completion
 
 > Source idea: [[docs/ideas/agent-board-symphony.md]] (Phase 2 — "Safer workspaces and richer evidence")
 > Builds on: [[docs/issues/agent-board-mvp.md]] (Phase 1 MVP, landing now)
-> Transition context: [[docs/ideas/2026-05-28-standalone-product-vision.md]]
+> Transition context: [[2026-05-28-standalone-product-vision]]
 > Scope: the increment immediately after the Agent Board MVP. This PRD takes the **richer evidence + review trust** half of symphony Phase 2 and explicitly **defers git worktrees** to a following increment.
 
 ## PRD review summary
@@ -303,4 +305,4 @@ This increment is acceptable when:
 - This is the **richer-evidence** half of symphony Phase 2; the **safer-workspaces** half (git worktrees) is intentionally split into the following increment to keep this PRD focused and lower-risk. The workspace/execution seam is kept clean so the worktree allocator drops in behind it without reworking evidence, attribution, or leases.
 - Verification is agent-reported now and Claudian-run later. The `VerificationResult` shape is designed to accept Claudian-executed results later without a schema break (the same `command` / `status` fields apply).
 - This increment locks in long-term boundaries worth recording as ADRs once built: the run-evidence contract and `RunEvidence` shape, the `attributed | unknown | conflicted` attribution semantics, the durable lease/heartbeat model, and `TaskNoteStore` compare-and-swap. `docs/adr/` does not yet exist; create it when these land.
-- Specorator transition context: structured evidence + review gate is the concrete realization of the "review with evidence" pillar and the configurable definition-of-done from [[docs/ideas/2026-05-28-standalone-product-vision.md]]. It strengthens the migration demo without committing to worktrees or autonomy.
+- Specorator transition context: structured evidence + review gate is the concrete realization of the "review with evidence" pillar and the configurable definition-of-done from [[2026-05-28-standalone-product-vision]]. It strengthens the migration demo without committing to worktrees or autonomy.

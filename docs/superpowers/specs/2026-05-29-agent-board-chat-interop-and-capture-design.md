@@ -7,10 +7,11 @@ owner: Claudian
 source: "[[docs/issues/agent-board-mvp.md]]"
 related:
   - "[[docs/ideas/agent-board-symphony.md]]"
-  - "[[docs/ideas/2026-05-28-standalone-product-vision.md]]"
+  - "[[2026-05-28-standalone-product-vision]]"
   - "[[docs/superpowers/specs/2026-05-28-agent-board-thin-slice-design.md]]"
   - "[[docs/superpowers/specs/2026-05-29-agent-board-configurable-lanes-design.md]]"
 scope: mvp-gap-closing-increment-before-specorator-migration
+parent: Cross Cutting
 ---
 
 # Agent Board — chat↔work-order interop, capture sources, run-next-ready

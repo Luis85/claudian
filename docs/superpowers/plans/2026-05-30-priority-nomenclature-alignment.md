@@ -1,5 +1,6 @@
 ---
 status: done
+parent: Cross Cutting
 ---
 # Priority Nomenclature Alignment Implementation Plan
 

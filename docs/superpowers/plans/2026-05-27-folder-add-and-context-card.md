@@ -1,5 +1,6 @@
 ---
 status: done
+parent: "[[Chat]]"
 ---
 # Folder Add-to-Chat + Inline Context Card Implementation Plan
 
