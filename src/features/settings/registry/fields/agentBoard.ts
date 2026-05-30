@@ -1,4 +1,6 @@
+import { ProviderRegistry } from '../../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../../core/providers/types';
+import { resolveAgentBoardDefaultModel } from '../../../tasks/defaultModelResolver';
 import { resolveAgentBoardDefaultProvider } from '../../../tasks/defaultProviderResolver';
 import { writePath } from '../path';
 import { getSettingsRegistry } from '../registry';
@@ -107,16 +109,10 @@ export function registerAgentBoardTabFields(): void {
     sectionId: 'defaults',
     label: 'Default model',
     type: {
-      kind: 'dropdown',
-      options: () => [],
+      kind: 'custom',
+      render: (ctx, host) => renderDefaultModelWidget(ctx, host),
     },
     default: null,
-    // Hide until the user picks a provider. The model list is provider-scoped
-    // and renders an empty dropdown otherwise. Phase F3 will narrow
-    // `agentBoardDefaultProvider` to `ProviderId | null`; until then read it
-    // through a structural cast.
-    visible: (s) =>
-      Boolean((s as { agentBoardDefaultProvider?: unknown }).agentBoardDefaultProvider),
   });
 
   r.registerField({
@@ -179,6 +175,57 @@ function renderDefaultProviderWidget(ctx: SettingsCtx, host: HTMLElement): () =>
       ctx.settings = writePath(ctx.settings, 'agentBoardDefaultProvider', select.value);
       void ctx.saveSettings().then(() => ctx.refresh());
     });
+  }
+
+  return ctx.plugin.events.on('task:board-config-changed', () => ctx.refresh());
+}
+
+// Resolver-aware widget for `agentBoardDefaultModel`. Mirrors the model list
+// of the resolved provider so the picker never offers an invalid model:
+//   no provider resolvable → hint pointing back at the provider choice
+//   provider with 0 models → hint (custom envs may still pick later)
+//   provider with 1 model  → read-only chip locking the only valid model
+//   provider with ≥2 models → editable dropdown writing through to ctx.settings
+// Re-renders on `task:board-config-changed` so provider toggles immediately
+// reshape the widget.
+function renderDefaultModelWidget(ctx: SettingsCtx, host: HTMLElement): () => void {
+  host.empty();
+  const provider = resolveAgentBoardDefaultProvider(ctx.settings);
+
+  if (!provider) {
+    host.createEl('p', {
+      // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Board" is the product feature name.
+      text: 'Pick an Agent Board default provider first to choose a model.',
+      cls: 'setting-item-description',
+    });
+  } else {
+    const settingsBag = ctx.settings as unknown as Record<string, unknown>;
+    const config = ProviderRegistry.getChatUIConfig(provider);
+    const options = config.getModelOptions(settingsBag);
+
+    if (options.length === 0) {
+      host.createEl('p', {
+        text: `No models available for ${providerLabel(provider)}.`,
+        cls: 'setting-item-description',
+      });
+    } else if (options.length === 1) {
+      const chip = host.createDiv({ cls: 'claudian-default-model-chip' });
+      chip.createEl('strong', { text: options[0].label });
+      chip.createEl('span', { text: ' — only available model' });
+    } else {
+      const select = host.createEl('select');
+      for (const option of options) {
+        const optionEl = select.createEl('option');
+        optionEl.value = option.value;
+        optionEl.text = option.label;
+      }
+      const resolvedModel = resolveAgentBoardDefaultModel(ctx.settings);
+      select.value = resolvedModel ?? options[0].value;
+      select.addEventListener('change', () => {
+        ctx.settings = writePath(ctx.settings, 'agentBoardDefaultModel', select.value);
+        void ctx.saveSettings().then(() => ctx.refresh());
+      });
+    }
   }
 
   return ctx.plugin.events.on('task:board-config-changed', () => ctx.refresh());

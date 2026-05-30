@@ -85,11 +85,19 @@ export function configureProviderRegistryMock(opts: PortTestOptions): void {
     getRegisteredProviderIds: jest.Mock;
     getProviderDisplayName: jest.Mock;
     isEnabled: jest.Mock;
+    getChatUIConfig: jest.Mock;
   };
   reg.getEnabledProviderIds.mockReturnValue(providers);
   reg.getRegisteredProviderIds.mockReturnValue(providers);
   reg.getProviderDisplayName.mockImplementation((id: string) => id);
   reg.isEnabled.mockReturnValue(Boolean(opts.providerEnabled));
+  // F5d: the agent-board default-model widget calls getChatUIConfig(provider)
+  // for the resolved provider when one is enabled. Return a minimal stub so
+  // the widget can render without throwing.
+  reg.getChatUIConfig.mockReturnValue({
+    ownsModel: () => false,
+    getModelOptions: () => [],
+  });
 }
 
 export interface MountedShell {
