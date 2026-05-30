@@ -31,7 +31,7 @@ export interface WorkOrderDetailModalCallbacks {
   getModelOptions(providerId: string): WorkOrderOption[];
 }
 
-const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'normal', 'high', 'urgent'];
+const PRIORITY_OPTIONS: TaskPriority[] = ['0 - urgent', '1 - high', '2 - normal', '3 - low'];
 
 export class WorkOrderDetailModal extends Modal {
   private readonly markdownComponent = new Component();
