@@ -66,7 +66,7 @@ export function resolveProviderModel(
 
 export function resolvePriority(template: Pick<WorkOrderTemplate, 'priority'> | undefined): TaskPriority {
   const priority = template?.priority;
-  return priority && VALID_PRIORITIES.has(priority) ? priority : 'normal';
+  return priority && VALID_PRIORITIES.has(priority) ? priority : '2 - normal';
 }
 
 export function buildTemplateVars(args: {
