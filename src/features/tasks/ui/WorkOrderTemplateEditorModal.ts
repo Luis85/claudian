@@ -11,10 +11,10 @@ import type { WorkOrderTemplate } from '../templates/templateTypes';
 
 const PRIORITY_OPTIONS: Array<{ value: '' | TaskPriority; label: string }> = [
   { value: '', label: 'Use default' },
-  { value: 'low', label: 'Low' },
-  { value: 'normal', label: 'Normal' },
-  { value: 'high', label: 'High' },
-  { value: 'urgent', label: 'Urgent' },
+  { value: '0 - urgent', label: '0 - urgent' },
+  { value: '1 - high', label: '1 - high' },
+  { value: '2 - normal', label: '2 - normal' },
+  { value: '3 - low', label: '3 - low' },
 ];
 
 export interface WorkOrderTemplateEditorPayload extends SaveTemplateInput {
