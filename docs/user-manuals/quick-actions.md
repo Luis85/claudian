@@ -1,3 +1,6 @@
+---
+parent: "[[Quick Actions]]"
+---
 # Claudian — Quick actions
 
 This manual covers **quick actions**: reusable one-tap prompts authored as vault notes and surfaced as a picker in the chat composer.

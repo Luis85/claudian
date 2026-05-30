@@ -1,3 +1,4 @@
 ---
 type: feature
+parent: "[[Chat]]"
 ---

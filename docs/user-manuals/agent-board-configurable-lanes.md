@@ -1,3 +1,6 @@
+---
+parent: "[[Agent Kanban Board]]"
+---
 # Claudian — Agent Board configurable lanes
 
 This manual covers how to customize the Agent Board's **lanes** (status columns): rename them, reorder them, add or remove them, hide them, change which statuses each lane shows, and attach per-lane **Definition of ready** / **Definition of done** notes that get injected into the run prompt.

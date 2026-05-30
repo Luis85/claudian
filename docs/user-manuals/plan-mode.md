@@ -1,3 +1,6 @@
+---
+parent: "[[Chat]]"
+---
 # Claudian — Plan mode
 
 This manual covers **plan mode**: a per-tab toggle that asks the agent to draft a plan and *not* run write-side tools until you approve it. Each provider implements plan mode against its own runtime, so the same toggle gives you different guarantees and surfaces depending on which provider is active in the tab.

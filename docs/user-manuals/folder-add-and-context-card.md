@@ -1,3 +1,6 @@
+---
+parent: "[[Chat]]"
+---
 # Add folders to chat & attached-context card
 
 This manual covers two related pieces of the Claudian chat **context** flow:
