@@ -10,14 +10,16 @@ describe("settings registry feature flag", () => {
     expect(USE_REGISTRY_RENDERER).toBe(false);
   });
 
-  it("contains the general and agentBoard tabs after D5 ports agentBoard", () => {
+  it("contains the general, agentBoard, and orchestrator tabs after D6 ports orchestrator", () => {
     expect(REGISTRY_TABS.has("general")).toBe(true);
     expect(REGISTRY_TABS.has("agentBoard")).toBe(true);
+    expect(REGISTRY_TABS.has("orchestrator")).toBe(true);
   });
 
   it("useRegistryRenderer returns true for ported tabs", () => {
     expect(useRegistryRenderer("general")).toBe(true);
     expect(useRegistryRenderer("agentBoard")).toBe(true);
+    expect(useRegistryRenderer("orchestrator")).toBe(true);
   });
 
   it("useRegistryRenderer returns false for any unported tab id", () => {
