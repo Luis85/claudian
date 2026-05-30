@@ -31,6 +31,7 @@ views:
     columnSize:
       note.type: 102
       file.name: 462
+      note.priority: 144
   - type: table
     name: Ideas
     filters:
