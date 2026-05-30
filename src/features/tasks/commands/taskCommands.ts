@@ -82,9 +82,20 @@ ${HANDOFF_START}
 ${HANDOFF_END}
 `;
 
+function normalizePriority(priority?: string): string {
+  if (!priority) return '2 - normal';
+  // Map old format to new format
+  if (priority === 'urgent') return '0 - urgent';
+  if (priority === 'high') return '1 - high';
+  if (priority === 'normal') return '2 - normal';
+  if (priority === 'low') return '3 - low';
+  // Already in new format or unrecognized, return as-is
+  return priority;
+}
+
 function buildWorkOrderMarkdown(args: BuildWorkOrderArgs): string {
   const status = args.status ?? 'ready';
-  const priority = args.priority ?? '2 - normal';
+  const priority = normalizePriority(args.priority);
 
   let contextBody = '_Add the links, files, and scope the agent needs._';
   if (args.contextMarkdown && args.contextMarkdown.trim()) {
@@ -131,7 +142,11 @@ ${GENERATED_REGIONS_TAIL}`;
 }
 
 function buildWorkOrderFromTemplate(args: FrontmatterArgs & { body: string }): string {
-  return `${workOrderFrontmatter(args)}
+  const normalizedArgs = {
+    ...args,
+    priority: normalizePriority(args.priority),
+  };
+  return `${workOrderFrontmatter(normalizedArgs)}
 ${args.body.trim()}
 
 ${GENERATED_REGIONS_TAIL}`;
