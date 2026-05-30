@@ -1,4 +1,5 @@
 import {
+  DEFAULT_CURSOR_PROVIDER_SETTINGS,
   getCursorEnabledModels,
   getCursorProviderSettings,
   normalizeEnabledModelsByHost,
@@ -120,5 +121,48 @@ describe('cursor settings — curated models', () => {
       });
       expect(getCursorProviderSettings(bag).preferredModeByFamily).toEqual({ 'sonnet-4': 'thinking' });
     });
+  });
+});
+
+describe('cursor customModels normalization', () => {
+  it('defaults to an empty array', () => {
+    expect(DEFAULT_CURSOR_PROVIDER_SETTINGS.customModels).toEqual([]);
+    expect(getCursorProviderSettings({}).customModels).toEqual([]);
+  });
+
+  it('accepts an array shape unchanged, preserving label and contextWindow', () => {
+    const settings = getCursorProviderSettings({
+      providerConfigs: {
+        cursor: {
+          customModels: [
+            { id: 'cursor-fast', label: 'Cursor Fast', contextWindow: 250000, source: 'user' },
+            { id: 'cursor-slow', source: 'env' },
+          ],
+        },
+      },
+    });
+    expect(settings.customModels).toEqual([
+      { id: 'cursor-fast', label: 'Cursor Fast', contextWindow: 250000, source: 'user' },
+      { id: 'cursor-slow', source: 'env' },
+    ]);
+  });
+
+  it('returns an empty array for malformed values', () => {
+    const settings = getCursorProviderSettings({
+      providerConfigs: {
+        cursor: { customModels: 'unsupported-string' },
+      },
+    });
+    expect(settings.customModels).toEqual([]);
+  });
+
+  it('persists array entries through the update writer', () => {
+    const settings: Record<string, unknown> = {};
+    updateCursorProviderSettings(settings, {
+      customModels: [{ id: 'cursor-fast', contextWindow: 250000, source: 'user' }],
+    });
+    expect(getCursorProviderSettings(settings).customModels).toEqual([
+      { id: 'cursor-fast', contextWindow: 250000, source: 'user' },
+    ]);
   });
 });

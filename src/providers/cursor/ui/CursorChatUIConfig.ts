@@ -71,6 +71,7 @@ function variantsForModelValue(
 
 export const cursorChatUIConfig: ProviderChatUIConfig = {
   getModelOptions(settings: Record<string, unknown>): ProviderUIOption[] {
+    const cursorSettings = getCursorProviderSettings(settings);
     const curated = getCursorEnabledModels(settings);
     const curatedFamilyIds = new Set(buildCursorFamilies(curated).map((family) => family.familyId));
 
@@ -92,6 +93,20 @@ export const cursorChatUIConfig: ProviderChatUIConfig = {
           ? `${family.vendor} · ${modeCount} modes`
           : family.vendor;
       options.push({ value, label: family.label, description, group: family.vendor });
+    }
+
+    for (const row of cursorSettings.customModels) {
+      const value = toCursorModelValue(row.id);
+      if (seen.has(value)) {
+        continue;
+      }
+      seen.add(value);
+      options.push({
+        value,
+        label: row.label ?? formatCursorModelLabel(row.id),
+        description: 'Custom model',
+        ...(row.contextWindow !== undefined ? { contextWindow: row.contextWindow } : {}),
+      });
     }
 
     return options;

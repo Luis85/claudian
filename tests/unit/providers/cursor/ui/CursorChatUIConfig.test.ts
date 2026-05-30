@@ -86,6 +86,23 @@ describe('cursorChatUIConfig.getModelOptions (curated)', () => {
     );
     expect(options.map(o => o.value)).toEqual(['cursor:auto', 'cursor:mystery-x']);
   });
+
+  it('merges customModels rows into the selector with contextWindow on the catalog entry', () => {
+    const options = cursorChatUIConfig.getModelOptions({
+      providerConfigs: {
+        cursor: {
+          customModels: [
+            { id: 'cursor-fast', label: 'Cursor Fast', contextWindow: 500000, source: 'user' },
+          ],
+        },
+      },
+    });
+
+    const customOption = options.find((option) => option.value === 'cursor:cursor-fast');
+    expect(customOption).toBeDefined();
+    expect(customOption?.label).toBe('Cursor Fast');
+    expect(customOption?.contextWindow).toBe(500000);
+  });
 });
 
 describe('cursorChatUIConfig.ownsModel', () => {

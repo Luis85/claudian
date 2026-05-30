@@ -1,6 +1,7 @@
 import { getProviderConfig, setProviderConfig } from '../../core/providers/providerConfig';
 import { getProviderEnvironmentVariables } from '../../core/providers/providerEnvironment';
 import type { HostnameCliPaths } from '../../core/types/settings';
+import type { ProviderCustomModel } from '../../features/settings/customModels/CustomModelsTable';
 import { getHostnameKey } from '../../utils/env';
 
 export type HostnameEnabledModels = Record<string, string[]>;
@@ -71,6 +72,7 @@ export interface CursorProviderSettings {
   enabled: boolean;
   cliPath: string;
   cliPathsByHost: HostnameCliPaths;
+  customModels: ProviderCustomModel[];
   enabledModelsByHost: HostnameEnabledModels;
   preferredModeByFamily: Record<string, string>;
   lastModel: string;
@@ -82,12 +84,45 @@ export const DEFAULT_CURSOR_PROVIDER_SETTINGS: Readonly<CursorProviderSettings> 
   enabled: false,
   cliPath: '',
   cliPathsByHost: {},
+  customModels: [] as ProviderCustomModel[],
   enabledModelsByHost: {},
   preferredModeByFamily: {},
   lastModel: '',
   environmentVariables: '',
   environmentHash: '',
 });
+
+// Cursor never persisted a legacy string-shaped customModels field, but we keep
+// the same defensive normalizer for symmetry with Claude/Codex and to drop any
+// junk entries that might appear in malformed configs.
+function normalizeCustomModels(value: unknown): ProviderCustomModel[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const result: ProviderCustomModel[] = [];
+  const seen = new Set<string>();
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') continue;
+    const row = entry as Record<string, unknown>;
+    const id = typeof row.id === 'string' ? row.id.trim() : '';
+    if (!id) continue;
+    const key = id.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const normalized: ProviderCustomModel = {
+      id,
+      source: row.source === 'env' ? 'env' : 'user',
+    };
+    if (typeof row.label === 'string' && row.label.trim()) {
+      normalized.label = row.label.trim();
+    }
+    if (typeof row.contextWindow === 'number' && Number.isFinite(row.contextWindow) && row.contextWindow > 0) {
+      normalized.contextWindow = row.contextWindow;
+    }
+    result.push(normalized);
+  }
+  return result;
+}
 
 export function getCursorProviderSettings(settings: Record<string, unknown>): CursorProviderSettings {
   const config = getProviderConfig(settings, 'cursor');
@@ -96,6 +131,7 @@ export function getCursorProviderSettings(settings: Record<string, unknown>): Cu
     enabled: (config.enabled as boolean | undefined) ?? DEFAULT_CURSOR_PROVIDER_SETTINGS.enabled,
     cliPath: (config.cliPath as string | undefined) ?? DEFAULT_CURSOR_PROVIDER_SETTINGS.cliPath,
     cliPathsByHost: normalizeHostnameCliPaths(config.cliPathsByHost),
+    customModels: normalizeCustomModels(config.customModels),
     enabledModelsByHost: normalizeEnabledModelsByHost(config.enabledModelsByHost),
     preferredModeByFamily: normalizePreferredModeByFamily(config.preferredModeByFamily),
     lastModel: (config.lastModel as string | undefined) ?? DEFAULT_CURSOR_PROVIDER_SETTINGS.lastModel,
@@ -118,6 +154,9 @@ export function updateCursorProviderSettings(
     cliPathsByHost: updates.cliPathsByHost
       ? normalizeHostnameCliPaths(updates.cliPathsByHost)
       : { ...current.cliPathsByHost },
+    customModels: 'customModels' in updates
+      ? normalizeCustomModels(updates.customModels)
+      : current.customModels,
     enabledModelsByHost: 'enabledModelsByHost' in updates
       ? normalizeEnabledModelsByHost(updates.enabledModelsByHost)
       : { ...current.enabledModelsByHost },
@@ -130,6 +169,7 @@ export function updateCursorProviderSettings(
     enabled: next.enabled,
     cliPath: next.cliPath,
     cliPathsByHost: next.cliPathsByHost,
+    customModels: next.customModels,
     enabledModelsByHost: next.enabledModelsByHost,
     preferredModeByFamily: next.preferredModeByFamily,
     lastModel: next.lastModel,
