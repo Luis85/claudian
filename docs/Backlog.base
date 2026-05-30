@@ -28,6 +28,7 @@ views:
       - status
       - tags
     columnSize:
+      note.type: 102
       file.name: 462
   - type: table
     name: Ideas
@@ -36,5 +37,8 @@ views:
         - file.inFolder("docs/ideas")
     order:
       - file.name
+      - priority
+      - tags
     columnSize:
       file.name: 359
+      note.priority: 144

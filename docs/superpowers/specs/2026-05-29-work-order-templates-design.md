@@ -1,3 +1,6 @@
+---
+status: approved
+---
 # Work-Order Templates Design
 
 Date: 2026-05-29

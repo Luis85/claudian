@@ -1,3 +1,6 @@
+---
+status: approved
+---
 # Internal Event Bus Design
 
 Date: 2026-05-29

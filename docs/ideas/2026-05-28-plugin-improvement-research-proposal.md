@@ -1,3 +1,7 @@
+---
+tags:
+  - deferred
+---
 # Plugin improvement research proposal
 
 Date: 2026-05-28
