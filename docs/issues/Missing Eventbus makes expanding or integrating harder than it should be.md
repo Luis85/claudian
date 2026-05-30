@@ -3,6 +3,7 @@ status: done
 type: issue
 tags:
   - infrastructure
+priority: 1 - high
 ---
 # Missing event bus makes expanding or integrating harder than it should be
 
