@@ -1,5 +1,13 @@
 import type { ClaudianSettings } from '../../../core/types/settings';
 
+// Phase F gap — SettingsCtx does not yet expose a plugin handle. Until it does,
+// these registered fields are stubs / no-ops and the imperative renderers remain
+// the source of truth for these behaviors:
+//   - agentBoard.installCommonTemplatesButton  (command 'claudian:install-common-work-order-templates')
+//   - diagnostics.copyDiagnosticLogs           (command 'claudian:copy-diagnostic-logs')
+//   - diagnostics.clearDiagnosticLogs          (command 'claudian:clear-diagnostic-logs')
+//   - diagnostics.loggingEnabled / logLevel    (runtime sync via plugin.logger.setEnabled/setLevel)
+// See docs/superpowers/plans/2026-05-30-settings-overhaul.md Open Divergences.
 export interface SettingsCtx {
   settings: ClaudianSettings;
   saveSettings: () => Promise<void>;
