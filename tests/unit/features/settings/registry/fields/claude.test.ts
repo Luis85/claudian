@@ -31,4 +31,15 @@ describe('Claude tab registry fields', () => {
     expect(fields.map((f) => f.id)).toContain('providerConfigs.claude.cliPath');
     expect(fields.map((f) => f.id)).toContain('providerConfigs.claude.safeMode');
   });
+
+  it('registers providerConfigs.claude.customModels under models', () => {
+    registerClaudeTabFields();
+    const r = getSettingsRegistry();
+    const s = { providerConfigs: { claude: { enabled: true } } } as any;
+    const field = r
+      .getFields('claude', 'models', s)
+      .find((f) => f.id === 'providerConfigs.claude.customModels');
+    expect(field).toBeDefined();
+    expect(field?.type.kind).toBe('custom');
+  });
 });

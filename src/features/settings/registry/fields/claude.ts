@@ -1,3 +1,4 @@
+import { CustomModelsTable } from '../../customModels/CustomModelsTable';
 import { registerProviderTab } from '../providers/registerProviderTab';
 import { getSettingsRegistry } from '../registry';
 
@@ -40,5 +41,21 @@ export function registerClaudeTabFields(): void {
       ],
     },
     default: 'acceptEdits',
+  });
+
+  r.registerField({
+    id: 'providerConfigs.claude.customModels',
+    tabId: 'claude',
+    sectionId: 'models',
+    label: 'Custom models',
+    description: 'Add custom model ids with optional aliases and context windows.',
+    type: {
+      kind: 'custom',
+      render: (ctx, host) => {
+        const table = new CustomModelsTable(host, 'claude', ctx);
+        table.render();
+      },
+    },
+    default: null,
   });
 }
