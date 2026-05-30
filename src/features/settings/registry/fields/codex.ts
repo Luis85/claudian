@@ -1,35 +1,18 @@
-import type { ClaudianSettings } from '../../../../core/types/settings';
+import { registerProviderTab } from '../providers/registerProviderTab';
 import { getSettingsRegistry } from '../registry';
 
 export function registerCodexTabFields(): void {
   const r = getSettingsRegistry();
 
-  r.registerTab({
-    id: 'codex',
+  registerProviderTab(r, {
+    providerId: 'codex',
     label: 'Codex',
     order: 20,
-    visible: (s: ClaudianSettings): boolean => (s.providerConfigs?.codex?.enabled as boolean) ?? false,
-  });
-
-  r.registerSection({
-    id: 'setup',
-    tabId: 'codex',
-    label: 'Setup',
-    order: 10,
-  });
-
-  r.registerSection({
-    id: 'models',
-    tabId: 'codex',
-    label: 'Models',
-    order: 20,
-  });
-
-  r.registerSection({
-    id: 'skills',
-    tabId: 'codex',
-    label: 'Skills',
-    order: 30,
+    sections: [
+      { id: 'setup', label: 'Setup', order: 10 },
+      { id: 'models', label: 'Models', order: 20 },
+      { id: 'skills', label: 'Skills', order: 30 },
+    ],
   });
 
   r.registerField({

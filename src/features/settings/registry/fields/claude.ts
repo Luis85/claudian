@@ -1,35 +1,18 @@
-import type { ClaudianSettings } from '../../../../core/types/settings';
+import { registerProviderTab } from '../providers/registerProviderTab';
 import { getSettingsRegistry } from '../registry';
 
 export function registerClaudeTabFields(): void {
   const r = getSettingsRegistry();
 
-  r.registerTab({
-    id: 'claude',
+  registerProviderTab(r, {
+    providerId: 'claude',
     label: 'Claude',
     order: 10,
-    visible: (s: ClaudianSettings): boolean => (s.providerConfigs?.claude?.enabled as boolean) ?? false,
-  });
-
-  r.registerSection({
-    id: 'setup',
-    tabId: 'claude',
-    label: 'Setup',
-    order: 10,
-  });
-
-  r.registerSection({
-    id: 'models',
-    tabId: 'claude',
-    label: 'Models',
-    order: 20,
-  });
-
-  r.registerSection({
-    id: 'advanced',
-    tabId: 'claude',
-    label: 'Advanced',
-    order: 30,
+    sections: [
+      { id: 'setup', label: 'Setup', order: 10 },
+      { id: 'models', label: 'Models', order: 20 },
+      { id: 'advanced', label: 'Advanced', order: 30 },
+    ],
   });
 
   r.registerField({
