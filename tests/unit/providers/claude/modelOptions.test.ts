@@ -78,4 +78,40 @@ describe('getClaudeModelOptions with customModels array shape', () => {
       'claude-opus-4-6[1m]',
     ]);
   });
+
+  it('surfaces contextWindow on the option when the custom row sets one', () => {
+    const options = getClaudeModelOptions({
+      providerConfigs: {
+        claude: {
+          customModels: [
+            { id: 'claude-opus-4-6', label: 'Big Opus', contextWindow: 500000, source: 'user' },
+          ],
+        },
+      },
+    });
+
+    const opt = options.find(option => option.value === 'claude-opus-4-6');
+    expect(opt).toEqual({
+      value: 'claude-opus-4-6',
+      label: 'Big Opus',
+      description: 'Custom model',
+      contextWindow: 500000,
+    });
+  });
+
+  it('omits contextWindow on the option when the custom row does not set one', () => {
+    const options = getClaudeModelOptions({
+      providerConfigs: {
+        claude: {
+          customModels: [
+            { id: 'claude-opus-4-6', source: 'user' },
+          ],
+        },
+      },
+    });
+
+    const opt = options.find(option => option.value === 'claude-opus-4-6');
+    expect(opt).toBeDefined();
+    expect(opt).not.toHaveProperty('contextWindow');
+  });
 });

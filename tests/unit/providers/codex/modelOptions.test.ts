@@ -50,4 +50,38 @@ describe('getCodexModelOptions with customModels array shape', () => {
     const customCount = options.filter(option => option.value === 'my-custom-model').length;
     expect(customCount).toBe(1);
   });
+
+  it('surfaces contextWindow on the option when the custom row sets one', () => {
+    const options = getCodexModelOptions({
+      providerConfigs: {
+        codex: {
+          customModels: [
+            { id: 'gpt-custom', label: 'Custom GPT', contextWindow: 256000, source: 'user' },
+          ],
+        },
+      },
+    });
+
+    const opt = options.find(option => option.value === 'gpt-custom');
+    expect(opt).toBeDefined();
+    expect(opt?.contextWindow).toBe(256000);
+    expect(opt?.label).toBe('Custom GPT');
+    expect(opt?.description).toBe('Custom model');
+  });
+
+  it('omits contextWindow on the option when the custom row does not set one', () => {
+    const options = getCodexModelOptions({
+      providerConfigs: {
+        codex: {
+          customModels: [
+            { id: 'gpt-custom', source: 'user' },
+          ],
+        },
+      },
+    });
+
+    const opt = options.find(option => option.value === 'gpt-custom');
+    expect(opt).toBeDefined();
+    expect(opt).not.toHaveProperty('contextWindow');
+  });
 });

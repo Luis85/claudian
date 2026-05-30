@@ -12,11 +12,13 @@ function createCustomCodexModelOption(
   modelId: string,
   description: string,
   label?: string,
+  contextWindow?: number,
 ): ProviderUIOption {
   return {
     value: modelId,
     label: label ?? formatCodexModelLabel(modelId),
     description,
+    ...(contextWindow !== undefined ? { contextWindow } : {}),
   };
 }
 
@@ -47,7 +49,7 @@ export function getCodexModelOptions(settings: Record<string, unknown>): Provide
     }
 
     seenValues.add(row.id);
-    models.push(createCustomCodexModelOption(row.id, 'Custom model', row.label));
+    models.push(createCustomCodexModelOption(row.id, 'Custom model', row.label, row.contextWindow));
   }
 
   return models;

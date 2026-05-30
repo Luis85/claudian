@@ -54,6 +54,7 @@ export function getClaudeModelOptions(settings: Record<string, unknown>): Provid
       value: row.id,
       label: row.label ?? customModelAliases[row.id] ?? formatCustomModelLabel(row.id),
       description: 'Custom model',
+      ...(row.contextWindow !== undefined ? { contextWindow: row.contextWindow } : {}),
     });
   }
 
