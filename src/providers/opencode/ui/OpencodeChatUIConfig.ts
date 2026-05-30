@@ -108,6 +108,21 @@ export const opencodeChatUIConfig: ProviderChatUIConfig = {
       );
     }
 
+    for (const row of opencodeSettings.customModels) {
+      const encodedModelId = encodeOpencodeModelId(row.id);
+      pushOption(
+        options,
+        seenValues,
+        encodedModelId,
+        {
+          description: 'Custom model',
+          label: row.label ?? opencodeSettings.modelAliases[row.id] ?? row.id,
+          value: encodedModelId,
+          ...(row.contextWindow !== undefined ? { contextWindow: row.contextWindow } : {}),
+        },
+      );
+    }
+
     return options.length > 0 ? options : [...OPENCODE_MODELS];
   },
 

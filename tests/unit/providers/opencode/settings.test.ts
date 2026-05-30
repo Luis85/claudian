@@ -467,3 +467,46 @@ describe('OpenCode settings normalization', () => {
     });
   });
 });
+
+describe('OpenCode customModels normalization', () => {
+  it('defaults to an empty array', () => {
+    expect(DEFAULT_OPENCODE_PROVIDER_SETTINGS.customModels).toEqual([]);
+    expect(getOpencodeProviderSettings({}).customModels).toEqual([]);
+  });
+
+  it('accepts an array shape unchanged, preserving label and contextWindow', () => {
+    const settings = getOpencodeProviderSettings({
+      providerConfigs: {
+        opencode: {
+          customModels: [
+            { id: 'custom/model-a', label: 'Model A', contextWindow: 300000, source: 'user' },
+            { id: 'custom/model-b', source: 'env' },
+          ],
+        },
+      },
+    });
+    expect(settings.customModels).toEqual([
+      { id: 'custom/model-a', label: 'Model A', contextWindow: 300000, source: 'user' },
+      { id: 'custom/model-b', source: 'env' },
+    ]);
+  });
+
+  it('returns an empty array for malformed values', () => {
+    const settings = getOpencodeProviderSettings({
+      providerConfigs: {
+        opencode: { customModels: 'unsupported-string' },
+      },
+    });
+    expect(settings.customModels).toEqual([]);
+  });
+
+  it('persists array entries through the update writer', () => {
+    const settings: Record<string, unknown> = {};
+    updateOpencodeProviderSettings(settings, {
+      customModels: [{ id: 'custom/model-a', contextWindow: 300000, source: 'user' }],
+    });
+    expect(getOpencodeProviderSettings(settings).customModels).toEqual([
+      { id: 'custom/model-a', contextWindow: 300000, source: 'user' },
+    ]);
+  });
+});

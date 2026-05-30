@@ -176,6 +176,12 @@ export interface ProviderUIOption {
   group?: string;
   /** Per-option icon override (e.g. when mixing providers in a single dropdown). */
   providerIcon?: ProviderIconSvg;
+  /**
+   * Optional per-option context window override. When a custom model row carries
+   * a contextWindow, the catalog surfaces it here so callers can prefer this
+   * value over provider defaults.
+   */
+  contextWindow?: number;
 }
 
 export interface ProviderPathIconSvg {

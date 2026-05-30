@@ -198,6 +198,35 @@ describe('opencodeChatUIConfig', () => {
     ]);
   });
 
+  it('merges customModels rows into the model selector', () => {
+    const options = opencodeChatUIConfig.getModelOptions({
+      providerConfigs: {
+        opencode: {
+          customModels: [
+            { id: 'custom/model-a', label: 'Model A', source: 'user' },
+          ],
+        },
+      },
+    });
+
+    expect(options.map((option) => option.value)).toContain('opencode:custom/model-a');
+  });
+
+  it('surfaces contextWindow from custom model rows on the catalog entry', () => {
+    const options = opencodeChatUIConfig.getModelOptions({
+      providerConfigs: {
+        opencode: {
+          customModels: [
+            { id: 'custom/model-a', label: 'Model A', contextWindow: 500000, source: 'user' },
+          ],
+        },
+      },
+    });
+
+    const customOption = options.find((option) => option.value === 'opencode:custom/model-a');
+    expect(customOption?.contextWindow).toBe(500000);
+  });
+
   it('returns per-model thinking options from ACP thought-level discovery', () => {
     const settings = {
       model: 'opencode:anthropic/claude-sonnet-4',

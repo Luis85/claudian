@@ -1,6 +1,7 @@
 import { getProviderConfig, setProviderConfig } from '../../core/providers/providerConfig';
 import { getProviderEnvironmentVariables } from '../../core/providers/providerEnvironment';
 import type { HostnameCliPaths } from '../../core/types/settings';
+import type { ProviderCustomModel } from '../../features/settings/customModels/CustomModelsTable';
 import {
   getHostnameKey,
   getLegacyHostnameKey,
@@ -30,6 +31,7 @@ import {
 export interface PersistedOpencodeProviderSettings {
   cliPath: string;
   cliPathsByHost: HostnameCliPaths;
+  customModels: ProviderCustomModel[];
   enabled: boolean;
   environmentHash: string;
   environmentVariables: string;
@@ -50,6 +52,7 @@ export const OPENCODE_DEFAULT_ENVIRONMENT_VARIABLES = 'OPENCODE_ENABLE_EXA=1';
 export const DEFAULT_OPENCODE_PROVIDER_SETTINGS: Readonly<PersistedOpencodeProviderSettings> = Object.freeze({
   cliPath: '',
   cliPathsByHost: {},
+  customModels: [] as ProviderCustomModel[],
   enabled: false,
   environmentHash: '',
   environmentVariables: OPENCODE_DEFAULT_ENVIRONMENT_VARIABLES,
@@ -59,6 +62,38 @@ export const DEFAULT_OPENCODE_PROVIDER_SETTINGS: Readonly<PersistedOpencodeProvi
   thinkingOptionsByModel: {},
   visibleModels: [],
 });
+
+// Opencode never persisted a legacy string-shaped customModels field, but we
+// keep the same defensive normalizer for symmetry with Claude/Codex and to
+// drop any junk entries that might appear in malformed configs.
+function normalizeCustomModels(value: unknown): ProviderCustomModel[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const result: ProviderCustomModel[] = [];
+  const seen = new Set<string>();
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') continue;
+    const row = entry as Record<string, unknown>;
+    const id = typeof row.id === 'string' ? row.id.trim() : '';
+    if (!id) continue;
+    const key = id.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const normalized: ProviderCustomModel = {
+      id,
+      source: row.source === 'env' ? 'env' : 'user',
+    };
+    if (typeof row.label === 'string' && row.label.trim()) {
+      normalized.label = row.label.trim();
+    }
+    if (typeof row.contextWindow === 'number' && Number.isFinite(row.contextWindow) && row.contextWindow > 0) {
+      normalized.contextWindow = row.contextWindow;
+    }
+    result.push(normalized);
+  }
+  return result;
+}
 
 function normalizeHostnameCliPaths(value: unknown): HostnameCliPaths {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -183,6 +218,7 @@ export function getOpencodeProviderSettings(
     cliPath: (config.cliPath as string | undefined)
       ?? DEFAULT_OPENCODE_PROVIDER_SETTINGS.cliPath,
     cliPathsByHost,
+    customModels: normalizeCustomModels(config.customModels),
     discoveredModels,
     enabled: (config.enabled as boolean | undefined)
       ?? DEFAULT_OPENCODE_PROVIDER_SETTINGS.enabled,
@@ -262,12 +298,17 @@ export function updateOpencodeProviderSettings(
     nextCliPath = DEFAULT_OPENCODE_PROVIDER_SETTINGS.cliPath;
   }
 
+  const nextCustomModels = 'customModels' in updates
+    ? normalizeCustomModels(updates.customModels)
+    : current.customModels;
+
   const next: OpencodeProviderSettings = {
     ...current,
     ...updates,
     availableModes: nextAvailableModes,
     cliPath: nextCliPath,
     cliPathsByHost: nextCliPathsByHost,
+    customModels: nextCustomModels,
     discoveredModels: nextDiscoveredModels,
     modelAliases: nextModelAliases,
     preferredThinkingByModel: normalizeOpencodePreferredThinkingByModel(
@@ -291,6 +332,7 @@ export function updateOpencodeProviderSettings(
   setProviderConfig(settings, 'opencode', {
     cliPath: next.cliPath,
     cliPathsByHost: next.cliPathsByHost,
+    customModels: next.customModels,
     enabled: next.enabled,
     environmentHash: next.environmentHash,
     environmentVariables: next.environmentVariables,
