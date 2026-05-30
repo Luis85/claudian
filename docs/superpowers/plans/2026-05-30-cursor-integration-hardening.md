@@ -1,5 +1,6 @@
 ---
 status: open
+parent: "[[Multi Provider Support]]"
 ---
 # Cursor Integration Hardening Implementation Plan
 

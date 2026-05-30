@@ -1,5 +1,6 @@
 ---
 status: done
+parent: "[[Multi Provider Support]]"
 ---
 # Cursor Model Families and Modes Implementation Plan
 

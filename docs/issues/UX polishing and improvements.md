@@ -4,6 +4,8 @@ status: open
 tags:
   - ux
 priority: 1 - high
+relations:
+  - User Experience
 ---
 
 ## Issues

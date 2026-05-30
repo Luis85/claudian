@@ -1,5 +1,6 @@
 ---
 status: done
+parent: "[[Chat]]"
 ---
 # Composer Context Pills Implementation Plan
 

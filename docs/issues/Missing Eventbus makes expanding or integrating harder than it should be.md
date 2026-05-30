@@ -4,6 +4,8 @@ type: issue
 tags:
   - infrastructure
 priority: 1 - high
+relations:
+  - Infrastructure
 ---
 # Missing event bus makes expanding or integrating harder than it should be
 

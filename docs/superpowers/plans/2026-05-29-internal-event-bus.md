@@ -1,5 +1,6 @@
 ---
 status: done
+parent: Infrastructure
 ---
 # Internal Event Bus Implementation Plan
 

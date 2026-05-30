@@ -1,5 +1,7 @@
 ---
 priority: 1 - high
+relations:
+  - "[[Agent Kanban Board]]"
 ---
 # Claudian Agent Board: Obsidian-Native Symphony Orchestration
 

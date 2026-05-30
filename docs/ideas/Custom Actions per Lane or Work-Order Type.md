@@ -1,5 +1,7 @@
 ---
 priority: 2 - normal
+relations:
+  - "[[Agent Kanban Board]]"
 ---
 As a User I want to automate chores for each lane.
 

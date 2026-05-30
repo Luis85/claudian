@@ -5,6 +5,8 @@ target-version: 3.0.0
 tags:
   - ux
 priority: 1 - high
+relations:
+  - User Experience
 ---
 # User-manual settings cross-links — follow-up after settings overhaul (v3.0.0)
 

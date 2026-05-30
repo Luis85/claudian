@@ -1,5 +1,7 @@
 ---
 priority: 1 - high
+relations:
+  - Product
 ---
 # Specorator standalone product vision
 

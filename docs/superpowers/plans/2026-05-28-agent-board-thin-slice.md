@@ -1,5 +1,6 @@
 ---
 status: done
+parent: "[[Agent Kanban Board]]"
 ---
 # Agent Board Thin Slice Implementation Plan
 

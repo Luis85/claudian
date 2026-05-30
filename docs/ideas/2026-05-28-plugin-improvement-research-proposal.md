@@ -2,6 +2,8 @@
 tags:
   - deferred
 priority: 3 - low
+relations:
+  - Quality
 ---
 # Plugin improvement research proposal
 

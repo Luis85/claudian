@@ -1,5 +1,6 @@
 ---
 status: approved
+parent: Infrastructure
 ---
 # Internal Event Bus Design
 

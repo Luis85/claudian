@@ -1,5 +1,6 @@
 ---
 status: approved
+parent: "[[Chat]]"
 ---
 # Git commit & push button — design
 

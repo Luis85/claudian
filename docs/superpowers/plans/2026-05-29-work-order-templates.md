@@ -1,5 +1,6 @@
 ---
 status: done
+parent: "[[Agent Kanban Board]]"
 ---
 # Work-Order Templates Implementation Plan
 

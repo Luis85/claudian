@@ -4,6 +4,8 @@ type: issue
 tags:
   - infrastructure
 priority: 1 - high
+relations:
+  - Infrastructure
 ---
 # Insufficient logging
 
