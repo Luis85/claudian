@@ -60,4 +60,18 @@ describe('General tab registry fields', () => {
     expect(save).toHaveBeenCalledTimes(1);
     expect(refresh).toHaveBeenCalledTimes(1);
   });
+
+  describe('provider enable toggles in General > Providers section', () => {
+    const providers = ['claude', 'codex', 'opencode', 'cursor'] as const;
+
+    it.each(providers)('registers providerConfigs.%s.enabled toggle', (id) => {
+      resetSettingsRegistryForTests();
+      registerGeneralTabFields();
+      const r = getSettingsRegistry();
+      const fields = r.getFields('general', 'providers', { providerConfigs: {} } as any);
+      const field = fields.find((f) => f.id === `providerConfigs.${id}.enabled`);
+      expect(field).toBeDefined();
+      expect(field?.type.kind).toBe('toggle');
+    });
+  });
 });

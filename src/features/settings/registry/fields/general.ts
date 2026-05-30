@@ -90,4 +90,22 @@ export function registerGeneralTabFields(): void {
     },
     default: null,
   });
+
+  const PROVIDERS = [
+    { id: 'claude', label: 'Claude' },
+    { id: 'codex', label: 'Codex' },
+    { id: 'opencode', label: 'Opencode' },
+    { id: 'cursor', label: 'Cursor' },
+  ] as const;
+
+  for (const p of PROVIDERS) {
+    r.registerField({
+      id: `providerConfigs.${p.id}.enabled`,
+      tabId: 'general',
+      sectionId: 'providers',
+      label: `Enable ${p.label}`,
+      type: { kind: 'toggle' },
+      default: false,
+    });
+  }
 }
