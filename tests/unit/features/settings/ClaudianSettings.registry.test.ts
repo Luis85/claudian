@@ -69,19 +69,28 @@ jest.mock('../../../../src/features/settings/providerEnableUpdaters', () => ({
 // Stub the registry barrel so we can spy on `renderTab` and override
 // `useRegistryRenderer` per test. Real `registerAllSettings` /
 // `getSettingsRegistry` / `SettingsCtx` types remain available because we
-// re-import them from the real module inside the factory.
+// re-import them from the real module inside the factory. By default
+// `useRegistryRendererMock` delegates to the real feature-flag implementation
+// so tests reflect production behaviour (D4 ported `general`); individual
+// tests can override via `mockImplementation` for defensive/legacy paths.
 const renderTabMock = jest.fn();
 const useRegistryRendererMock = jest.fn<boolean, [string]>();
 const registerAllSettingsMock = jest.fn();
 const getSettingsRegistryMock = jest.fn();
 
-jest.mock('../../../../src/features/settings/registry', () => ({
-  __esModule: true,
-  renderTab: (...args: unknown[]) => renderTabMock(...args),
-  useRegistryRenderer: (tabId: string) => useRegistryRendererMock(tabId),
-  registerAllSettings: () => registerAllSettingsMock(),
-  getSettingsRegistry: () => getSettingsRegistryMock(),
-}));
+jest.mock('../../../../src/features/settings/registry', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const featureFlag = require('../../../../src/features/settings/registry/featureFlag');
+  return {
+    __esModule: true,
+    renderTab: (...args: unknown[]) => renderTabMock(...args),
+    useRegistryRenderer: (tabId: string) => useRegistryRendererMock(tabId),
+    registerAllSettings: () => registerAllSettingsMock(),
+    getSettingsRegistry: () => getSettingsRegistryMock(),
+    REGISTRY_TABS: featureFlag.REGISTRY_TABS,
+    USE_REGISTRY_RENDERER: featureFlag.USE_REGISTRY_RENDERER,
+  };
+});
 
 // ProviderWorkspaceRegistry's per-provider settings tab renderer call would
 // require the full provider stack; stub it out so provider tabs are no-ops.
@@ -144,19 +153,24 @@ function createTab(plugin: StubPlugin): ClaudianSettingTab {
   return tab;
 }
 
+// Re-import the real feature-flag gate so the default mock implementation can
+// delegate to production behaviour. Tests that need to assert legacy fallback
+// or selectively flip other tabs override via `mockImplementation` directly.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const realUseRegistryRenderer: (tabId: string) => boolean = require('../../../../src/features/settings/registry/featureFlag').useRegistryRenderer;
+
 beforeEach(() => {
   renderTabMock.mockClear();
   useRegistryRendererMock.mockReset();
+  useRegistryRendererMock.mockImplementation((tabId: string) => realUseRegistryRenderer(tabId));
   registerAllSettingsMock.mockReset();
   getSettingsRegistryMock.mockReset().mockReturnValue({} as unknown);
 });
 
 describe('ClaudianSettingTab.display() registry gate', () => {
-  it('routes the general tab through renderTab when useRegistryRenderer returns true for it', () => {
+  it('routes the general tab through renderTab by default (D4 flipped the flag on)', () => {
     const plugin = createStubPlugin();
     const tab = createTab(plugin);
-
-    useRegistryRendererMock.mockImplementation((tabId: string) => tabId === 'general');
 
     tab.display();
 
@@ -176,10 +190,12 @@ describe('ClaudianSettingTab.display() registry gate', () => {
     expect(registerAllSettingsMock).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps every tab on the legacy renderer when useRegistryRenderer returns false', () => {
+  it('falls back to the legacy renderer when the gate returns false everywhere (defensive)', () => {
     const plugin = createStubPlugin();
     const tab = createTab(plugin);
 
+    // Defensive: pin every tab to the legacy renderer to verify the imperative
+    // path still works if a future regression flips REGISTRY_TABS empty.
     useRegistryRendererMock.mockReturnValue(false);
 
     tab.display();
@@ -193,8 +209,6 @@ describe('ClaudianSettingTab.display() registry gate', () => {
     const plugin = createStubPlugin();
     const tab = createTab(plugin);
 
-    useRegistryRendererMock.mockImplementation((tabId: string) => tabId === 'general');
-
     tab.display();
     tab.display();
     tab.display();
@@ -207,6 +221,8 @@ describe('ClaudianSettingTab.display() registry gate', () => {
     const plugin = createStubPlugin();
     const tab = createTab(plugin);
 
+    // Force only agentBoard onto the registry path; general stays on legacy
+    // for this test so we can isolate the agentBoard branch.
     useRegistryRendererMock.mockImplementation((tabId: string) => tabId === 'agentBoard');
 
     tab.display();

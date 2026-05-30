@@ -10,12 +10,13 @@ describe("settings registry feature flag", () => {
     expect(USE_REGISTRY_RENDERER).toBe(false);
   });
 
-  it("starts with an empty REGISTRY_TABS set (no tabs ported in D3)", () => {
-    expect(REGISTRY_TABS.size).toBe(0);
+  it("contains exactly the general tab after D4 ports it", () => {
+    expect(REGISTRY_TABS.size).toBe(1);
+    expect(REGISTRY_TABS.has("general")).toBe(true);
   });
 
-  it("useRegistryRenderer returns false for the general tab until D4 flips it", () => {
-    expect(useRegistryRenderer("general")).toBe(false);
+  it("useRegistryRenderer returns true for the general tab now that D4 flipped it", () => {
+    expect(useRegistryRenderer("general")).toBe(true);
   });
 
   it("useRegistryRenderer returns false for any unported tab id", () => {
