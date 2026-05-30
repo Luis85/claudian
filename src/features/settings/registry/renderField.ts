@@ -3,12 +3,20 @@ import { Setting } from 'obsidian';
 import { readPath, writePath } from './path';
 import type { SettingsCtx, SettingsField } from './SettingsField';
 
-export function renderField(host: HTMLElement, field: SettingsField, ctx: SettingsCtx): void {
+// Returns the custom-field disposer when the field is `kind: 'custom'` and its
+// render function returned one. F4/F5 widgets subscribe to the event bus and
+// return an unsubscribe handle here; renderTab is responsible for invoking it
+// before the next re-render so listeners don't accumulate exponentially.
+export function renderField(
+  host: HTMLElement,
+  field: SettingsField,
+  ctx: SettingsCtx,
+): (() => void) | undefined {
   const fieldType = field.type;
 
   if (fieldType.kind === 'custom') {
-    fieldType.render(ctx, host);
-    return;
+    const result = fieldType.render(ctx, host);
+    return typeof result === 'function' ? result : undefined;
   }
 
   const current = readPath(ctx.settings, field.id) ?? field.default;
@@ -24,7 +32,7 @@ export function renderField(host: HTMLElement, field: SettingsField, ctx: Settin
           ctx.refresh();
         }),
       );
-      return;
+      return undefined;
 
     case 'text':
     case 'folder': {
@@ -39,7 +47,7 @@ export function renderField(host: HTMLElement, field: SettingsField, ctx: Settin
           await ctx.saveSettings();
         });
       });
-      return;
+      return undefined;
     }
 
     case 'textarea': {
@@ -52,7 +60,7 @@ export function renderField(host: HTMLElement, field: SettingsField, ctx: Settin
           await ctx.saveSettings();
         });
       });
-      return;
+      return undefined;
     }
 
     case 'number':
@@ -64,7 +72,7 @@ export function renderField(host: HTMLElement, field: SettingsField, ctx: Settin
           await ctx.saveSettings();
         }),
       );
-      return;
+      return undefined;
 
     case 'dropdown': {
       const opts = fieldType.options(ctx.settings);
@@ -77,7 +85,7 @@ export function renderField(host: HTMLElement, field: SettingsField, ctx: Settin
           ctx.refresh();
         });
       });
-      return;
+      return undefined;
     }
 
     case 'button': {
@@ -87,7 +95,9 @@ export function renderField(host: HTMLElement, field: SettingsField, ctx: Settin
           await onClick(ctx);
         }),
       );
-      return;
+      return undefined;
     }
   }
+
+  return undefined;
 }

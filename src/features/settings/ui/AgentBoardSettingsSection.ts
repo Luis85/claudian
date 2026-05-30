@@ -4,6 +4,7 @@ import { Notice, Setting } from 'obsidian';
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import type ClaudianPlugin from '../../../main';
+import { resolveAgentBoardDefaultProvider } from '../../tasks/defaultProviderResolver';
 import { installPresetTemplates } from '../../tasks/templates/installPresetTemplates';
 import { renderAgentBoardLaneEditor } from '../../tasks/ui/AgentBoardLaneEditor';
 
@@ -133,11 +134,7 @@ export function renderAgentBoardSettingsSection(
   // Without this, a stored-but-disabled provider (e.g. the default codex when only cursor is
   // enabled) would be shown via setValue without persisting, so models populated for the stale
   // provider and never refreshed for the displayed one.
-  const enabledProviders = ProviderRegistry.getEnabledProviderIds(settings);
-  const selectedProvider = resolveAgentBoardProvider(
-    enabledProviders,
-    plugin.settings.agentBoardDefaultProvider ?? '',
-  );
+  const selectedProvider = resolveAgentBoardDefaultProvider(plugin.settings) ?? '';
   if (selectedProvider && selectedProvider !== plugin.settings.agentBoardDefaultProvider) {
     plugin.settings.agentBoardDefaultProvider = selectedProvider;
     void plugin.saveSettings();
@@ -147,7 +144,7 @@ export function renderAgentBoardSettingsSection(
     .setName('Default provider')
     .setDesc('Provider used to run new work orders.')
     .addDropdown((dropdown) => {
-      for (const providerId of enabledProviders) {
+      for (const providerId of ProviderRegistry.getEnabledProviderIds(settings)) {
         dropdown.addOption(providerId, providerId);
       }
       dropdown.setValue(selectedProvider);

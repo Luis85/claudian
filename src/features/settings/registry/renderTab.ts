@@ -4,12 +4,32 @@ import { renderField } from './renderField';
 import type { SettingsCtx } from './SettingsField';
 import type { SettingsRegistry } from './SettingsRegistry';
 
+// Custom-field render functions can return an unsubscribe handle (event-bus
+// subscriptions, observers, etc.). Without disposal on re-render those handlers
+// accumulate every time renderTab fires. This WeakMap keeps the disposers per
+// host so each renderTab call disposes the previous round before re-mounting.
+const tabDisposers = new WeakMap<HTMLElement, Array<() => void>>();
+
 export function renderTab(
   host: HTMLElement,
   tabId: string,
   ctx: SettingsCtx,
   registry: SettingsRegistry,
 ): void {
+  const previous = tabDisposers.get(host);
+  if (previous) {
+    for (const dispose of previous) {
+      try {
+        dispose();
+      } catch {
+        // Disposers should be defensive themselves; swallow errors so a single
+        // bad widget cannot block the rest of the tab from re-rendering.
+      }
+    }
+  }
+  const next: Array<() => void> = [];
+  tabDisposers.set(host, next);
+
   host.empty();
   if (tabId === 'general' && !ctx.settings.firstRunDismissed && !hasAnyProviderEnabled(ctx.settings)) {
     const bannerHost = host.createDiv({ cls: 'claudian-first-run-banner-host' });
@@ -27,7 +47,10 @@ export function renderTab(
     for (const field of fields) {
       const fieldEl = sectionEl.createDiv({ cls: 'claudian-settings-field' });
       fieldEl.dataset.fieldId = field.id;
-      renderField(fieldEl, field, ctx);
+      const disposer = renderField(fieldEl, field, ctx);
+      if (disposer) {
+        next.push(disposer);
+      }
     }
   }
 }
