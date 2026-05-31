@@ -1,5 +1,6 @@
 import type { ChatRuntime } from '../runtime/ChatRuntime';
 import type { PluginContext } from '../types/PluginContext';
+import type { ProviderConfigMap } from '../types/settings';
 import { noAsyncTaskInterpreter } from './noAsyncTaskInterpreter';
 import {
   type CreateChatRuntimeOptions,
@@ -118,6 +119,19 @@ export class ProviderRegistry {
 
   static getRegisteredProviderIds(): ProviderId[] {
     return Object.keys(this.registrations);
+  }
+
+  /**
+   * Assembles the default `providerConfigs` map from each registered provider's
+   * contributed `defaultConfig` (ARCH-2). Returns fresh, shallow-cloned config
+   * objects so callers can mutate the result without touching the registration.
+   */
+  static getDefaultProviderConfigs(): ProviderConfigMap {
+    const configs: ProviderConfigMap = {};
+    for (const providerId of this.getRegisteredProviderIds()) {
+      configs[providerId] = { ...this.getProviderRegistration(providerId).defaultConfig };
+    }
+    return configs;
   }
 
   static getEnabledProviderIds(settings: Record<string, unknown>): ProviderId[] {

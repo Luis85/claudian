@@ -56,6 +56,13 @@ export interface ProviderRegistration {
   displayName: string;
   blankTabOrder: number;
   isEnabled: (settings: Record<string, unknown>) => boolean;
+  /**
+   * The provider's default settings bag, contributed at registration time so
+   * the app shell can assemble `providerConfigs` defaults without statically
+   * importing each provider's settings module (ARCH-2: breaks the
+   * `core -> app -> all-providers -> core` cycle class).
+   */
+  defaultConfig: Record<string, unknown>;
   capabilities: ProviderCapabilities;
   environmentKeyPatterns?: RegExp[];
   chatUIConfig: ProviderChatUIConfig;

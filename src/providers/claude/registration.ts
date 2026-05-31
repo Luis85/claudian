@@ -8,13 +8,14 @@ import { claudeSettingsReconciler } from './env/ClaudeSettingsReconciler';
 import { ClaudeConversationHistoryService } from './history/ClaudeConversationHistoryService';
 import { ClaudianService as ClaudeChatRuntime } from './runtime/ClaudeChatRuntime';
 import { ClaudeTaskResultInterpreter } from './runtime/ClaudeTaskResultInterpreter';
-import { getClaudeProviderSettings } from './settings';
+import { DEFAULT_CLAUDE_PROVIDER_SETTINGS, getClaudeProviderSettings } from './settings';
 import { claudeChatUIConfig } from './ui/ClaudeChatUIConfig';
 
 export const claudeProviderRegistration: ProviderRegistration = {
   displayName: 'Claude',
   blankTabOrder: 20,
   isEnabled: (settings) => getClaudeProviderSettings(settings).enabled,
+  defaultConfig: { ...DEFAULT_CLAUDE_PROVIDER_SETTINGS },
   capabilities: CLAUDE_PROVIDER_CAPABILITIES,
   environmentKeyPatterns: [/^ANTHROPIC_/i, /^CLAUDE_/i],
   chatUIConfig: claudeChatUIConfig,
