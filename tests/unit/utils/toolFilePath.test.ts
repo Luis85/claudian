@@ -80,4 +80,25 @@ describe('resolveOpenableVaultPath', () => {
     expect(resolveOpenableVaultPath(app, 'C:/outside-vault/note.md')).toBeNull();
     expect(resolveOpenableVaultPath(app, 'C:\\outside-vault\\note.md')).toBeNull();
   });
+
+  it('never queries the vault with an escaping path (containment invariant)', () => {
+    // Even though leading-slash cleaning can reshape `/x/y.md` into a
+    // vault-relative candidate, resolution must never reach the vault lookup
+    // with a path that escapes the vault (leading `/`, `..`, or drive letter).
+    const queried: string[] = [];
+    jest.mocked(getVaultFileByPath).mockImplementation((_, filePath) => {
+      queried.push(filePath as string);
+      return null; // nothing exists in the vault
+    });
+
+    expect(resolveOpenableVaultPath(app, '/outside-vault/note.md')).toBeNull();
+    expect(resolveOpenableVaultPath(app, '/../../etc/passwd')).toBeNull();
+    expect(resolveOpenableVaultPath(app, '../../etc/passwd')).toBeNull();
+
+    for (const filePath of queried) {
+      expect(filePath.startsWith('/')).toBe(false);
+      expect(filePath.split('/')).not.toContain('..');
+      expect(/^[A-Za-z]:/.test(filePath)).toBe(false);
+    }
+  });
 });

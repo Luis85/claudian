@@ -42,6 +42,11 @@ function isVaultRelativeOpenPath(relative: string | null): relative is string {
   if (!relative || relative.startsWith('/')) {
     return false;
   }
+  // Reject any `..` segment so an escaping candidate can never reach the vault
+  // lookup, keeping this gate consistent with candidatePathIsInsideVault.
+  if (relative.split('/').some(segment => segment === '..')) {
+    return false;
+  }
   return !/^[A-Za-z]:/.test(relative) && !relative.includes('://');
 }
 
