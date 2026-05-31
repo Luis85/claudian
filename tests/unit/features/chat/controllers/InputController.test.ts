@@ -904,14 +904,16 @@ describe('InputController - Message Queue', () => {
 
     it('should restore a pending steer message to input on cancel', () => {
       deps.state.isStreaming = true;
-      (controller as any).pendingSteerMessage = {
+      // Steering state moved into QueuedMessageController; reach it through the
+      // InputController's delegate to preserve the original behavior assertion.
+      (controller as any).queuedMessages.pendingSteerMessage = {
         content: 'steered follow-up',
         images: undefined,
         editorContext: null,
         browserContext: null,
         canvasContext: null,
       };
-      (controller as any).steerInFlight = true;
+      (controller as any).queuedMessages.steerInFlight = true;
 
       controller.cancelStreaming();
 
