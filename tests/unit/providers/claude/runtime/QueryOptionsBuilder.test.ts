@@ -1,7 +1,30 @@
+import type { VaultFileAdapter } from '@/core/storage/VaultFileAdapter';
+import type { PluginContext } from '@/core/types/PluginContext';
 import type { ClaudianSettings } from '@/core/types/settings';
+import {
+  __resetVaultProjectRiskCacheForTests,
+  detectVaultProjectRisk,
+  setClaudeVaultTrusted,
+} from '@/providers/claude/runtime/claudeProjectTrust';
 import type { QueryOptionsContext } from '@/providers/claude/runtime/ClaudeQueryOptionsBuilder';
 import { QueryOptionsBuilder } from '@/providers/claude/runtime/ClaudeQueryOptionsBuilder';
 import type { PersistentQueryConfig } from '@/providers/claude/runtime/types';
+
+jest.mock('@/utils/path', () => ({
+  getVaultPath: jest.fn(() => '/test/vault'),
+  expandHomePath: jest.fn((p: string) => p),
+}));
+
+function riskyAdapter(): VaultFileAdapter {
+  return {
+    exists: jest.fn(async () => true),
+    read: jest.fn(async () => JSON.stringify({ hooks: { SessionStart: [{ command: 'x' }] } })),
+  } as unknown as VaultFileAdapter;
+}
+
+function trustPlugin(settings: Record<string, unknown> = {}): PluginContext {
+  return { app: {}, settings, saveSettings: jest.fn(async () => undefined) } as unknown as PluginContext;
+}
 
 // Create a mock MCP server manager
 function createMockMcpManager() {
@@ -770,6 +793,49 @@ describe('QueryOptionsBuilder', () => {
       });
 
       expect(options.agents).toBeUndefined();
+    });
+  });
+
+  describe('SEC-2 project-settings trust gate', () => {
+    afterEach(() => {
+      __resetVaultProjectRiskCacheForTests();
+    });
+
+    it('keeps project/local sources when no risk is detected (safe vault unchanged)', () => {
+      const ctx = createMockContext();
+      const config = QueryOptionsBuilder.buildPersistentQueryConfig(ctx);
+      expect(config.settingSources).toBe('project,local');
+    });
+
+    it('withholds project/local sources for a risky, untrusted vault', async () => {
+      await detectVaultProjectRisk(trustPlugin(), riskyAdapter());
+
+      const ctx = createMockContext();
+      const config = QueryOptionsBuilder.buildPersistentQueryConfig(ctx);
+      expect(config.settingSources).toBe('');
+
+      const options = QueryOptionsBuilder.buildColdStartQueryOptions({
+        ...ctx, abortController: new AbortController(), hooks: {}, hasEditorContext: false,
+      });
+      expect(options.settingSources).toEqual([]);
+    });
+
+    it('honors project/local sources once the risky vault is trusted', async () => {
+      await detectVaultProjectRisk(trustPlugin(), riskyAdapter());
+
+      const ctx = createMockContext({
+        settings: createMockSettings({
+          trustedVaults: { '/test/vault': true },
+        } as Partial<ClaudianSettings>),
+      });
+      const config = QueryOptionsBuilder.buildPersistentQueryConfig(ctx);
+      expect(config.settingSources).toBe('project,local');
+    });
+
+    it('persists trust through setClaudeVaultTrusted keyed on the vault path', async () => {
+      const settings: Record<string, unknown> = {};
+      await setClaudeVaultTrusted(trustPlugin(settings), true);
+      expect((settings.trustedVaults as Record<string, boolean>)['/test/vault']).toBe(true);
     });
   });
 });

@@ -242,6 +242,9 @@ export type TranslationKey =
   | 'settings.safety'
   | 'settings.loadUserSettings.name'
   | 'settings.loadUserSettings.desc'
+  | 'settings.trustVault.name'
+  | 'settings.trustVault.descRisky'
+  | 'settings.trustVault.descSafe'
   | 'settings.claudeSafeMode.name'
   | 'settings.claudeSafeMode.desc'
   | 'settings.codexSafeMode.name'
@@ -326,4 +329,9 @@ export type TranslationKey =
 
   // Settings - Quick Actions
   | 'settings.quickActions.folder.name'
-  | 'settings.quickActions.folder.desc';
+  | 'settings.quickActions.folder.desc'
+  | 'security.vaultTrust.title'
+  | 'security.vaultTrust.body'
+  | 'security.vaultTrust.detail'
+  | 'security.vaultTrust.trust'
+  | 'security.vaultTrust.keepBlocked';

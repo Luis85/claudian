@@ -5,6 +5,7 @@ import type { SlashCommand } from '../../../core/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
 import { getEnhancedPath, parseEnvironmentVariables } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
+import { shouldHonorClaudeProjectSettings } from '../runtime/claudeProjectTrust';
 import { createCustomSpawnFunction } from '../runtime/customSpawn';
 import {
   getClaudeProviderSettings,
@@ -61,7 +62,12 @@ export async function probeRuntimeCommands(plugin: PluginContext): Promise<Slash
         env: { ...process.env, ...customEnv, PATH: enhancedPath },
         permissionMode: 'bypassPermissions',
         allowDangerouslySkipPermissions: true,
-        settingSources: resolveClaudeSettingSources(claudeSettings.loadUserSettings),
+        // SEC-2: the command probe parses local config (incl. project settings);
+        // gate untrusted risky settings here too so discovery cannot trigger them.
+        settingSources: resolveClaudeSettingSources(
+          claudeSettings.loadUserSettings,
+          shouldHonorClaudeProjectSettings(plugin),
+        ),
         ...(Object.keys(extraArgs).length > 0 ? { extraArgs } : {}),
         spawnClaudeCodeProcess: createCustomSpawnFunction(enhancedPath),
         persistSession: false,
