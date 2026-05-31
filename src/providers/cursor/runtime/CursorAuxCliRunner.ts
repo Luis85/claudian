@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
 
+import type { AuxQueryConfig, AuxQueryRunner } from '../../../core/auxiliary/AuxQueryRunner';
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type ClaudianPlugin from '../../../main';
 import { getVaultPath } from '../../../utils/path';
@@ -10,11 +11,7 @@ import { resolveCursorCliPromptArg } from './cursorCliPrompt';
 import { resolveCursorLaunch } from './cursorLaunch';
 import { buildCursorAgentJsonModeFlagArgs, type CursorPermissionMode } from './cursorLaunchArgs';
 
-export interface CursorAuxQueryConfig {
-  systemPrompt: string;
-  model?: string;
-  abortController?: AbortController;
-}
+export type CursorAuxQueryConfig = AuxQueryConfig;
 
 interface CursorJsonResult {
   type?: string;
@@ -24,7 +21,7 @@ interface CursorJsonResult {
   is_error?: boolean;
 }
 
-export class CursorAuxCliRunner {
+export class CursorAuxCliRunner implements AuxQueryRunner {
   private sessionId: string | null = null;
 
   constructor(private readonly plugin: ClaudianPlugin) {}
@@ -33,7 +30,7 @@ export class CursorAuxCliRunner {
     this.sessionId = null;
   }
 
-  async query(config: CursorAuxQueryConfig, prompt: string): Promise<string> {
+  async query(config: AuxQueryConfig, prompt: string): Promise<string> {
     const cli = this.plugin.getResolvedProviderCliPath('cursor');
     if (!cli) {
       throw new Error('Cursor Agent CLI not found. Install the Cursor CLI and configure its path in settings.');
@@ -99,7 +96,11 @@ export class CursorAuxCliRunner {
       throw new Error(parsed.result?.trim() || 'Cursor Agent reported an error');
     }
 
-    return typeof parsed.result === 'string' ? parsed.result : '';
+    const resultText = typeof parsed.result === 'string' ? parsed.result : '';
+    // The CLI is one-shot (no streaming), so surface the final text once to
+    // match the single end-of-turn progress callback of the prior service.
+    config.onTextChunk?.(resultText);
+    return resultText;
   }
 
   private resolveProviderModel(): string | undefined {
