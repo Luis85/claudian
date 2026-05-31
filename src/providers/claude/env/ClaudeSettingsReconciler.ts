@@ -40,6 +40,14 @@ export const claudeSettingsReconciler: ProviderSettingsReconciler = {
   reconcileModelWithEnvironment: (settings, conversations) =>
     reconcileEnvironmentHash(claudeEnvHashSpec, settings, conversations),
 
+  persistLastModel(settings, model) {
+    updateClaudeProviderSettings(settings, { lastModel: model });
+  },
+
+  persistEnvironmentHash(settings, hash) {
+    updateClaudeProviderSettings(settings, { environmentHash: hash });
+  },
+
   normalizeModelVariantSettings(settings: Record<string, unknown>): boolean {
     const claudeSettings = getClaudeProviderSettings(settings);
     let changed = false;
