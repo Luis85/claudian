@@ -249,6 +249,12 @@ checks; i18n keys perfectly synced.
   `core→features` import). Type-only, behavior-preserving. **Madge circular deps 181 → 64.**
   Independently reviewed (faithful, minimal, no cast-hacks); `ClaudianView` impl widened to match
   the handle (removes bivariance reliance).
+- **Phase 2 (round 3)** — ARCH-2: providers contribute their `defaultConfig` at registration;
+  `defaultSettings` resolves `providerConfigs` lazily via the registry and the static
+  `defaultProviderConfigs` barrel is deleted (cuts the `core→app→providers→core` cycle class).
+  **Madge circular deps 64 → 52.** Q-2: `asSettingsBag()` helper centralizes the lone settings-bag
+  cast; 34 sites replaced (3 non-settings casts left). Both type-only/behavior-preserving,
+  independently reviewed (no init-order hazard, all replacements correct).
 
 **Tracked follow-ups (from the cross-phase reviews):**
 - **ARCH-8** — `persistProviderLastModel`/`persistProviderEnvironmentHash` are implemented only on
@@ -259,11 +265,8 @@ checks; i18n keys perfectly synced.
 - **Phase 2 (remaining, dedicated rounds — too entangled to parallelize):** ARCH-3
   `ConversationStore` (move conversation/session CRUD out of `main.ts`), ARCH-5 god-file splits
   (`Tab.ts`/`InputController.ts`), ARCH-6 stream-projection extraction (pair with the Phase 1b
-  rendering adapter). ARCH-2 (route provider default configs through registration) would clear
-  most of the remaining 64 cycles (the `defaultProviderConfigs` barrel). *(ARCH-1 PluginContext —
-  done, round 2.)*
-- **Q-2** — `asSettingsBag()` helper replacing the 34 `settings as unknown as Record<…>` casts
-  (deferred until the auxiliary/settings refactors landed; now unblocked).
+  rendering adapter). *(ARCH-1 done round 2; ARCH-2 + Q-2 done round 3 — cycles now 52, the
+  remainder route through the `features/` layer, which is allowed to know the app shell.)*
 - **SEC-2** — wire `vaultTrust.shouldHonorProjectSettings` into the live `resolveClaudeSettingSources`
   call sites + a confirmation modal. Until then, risky project `.claude/settings.json` (hooks /
   `permissions.allow`) is still honored. This is also the proper close for the SEC-3 residual
