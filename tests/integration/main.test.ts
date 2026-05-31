@@ -1,5 +1,6 @@
 import { Menu, TFile, TFolder } from 'obsidian';
 
+import { resetCommandHotkeysForTests } from '@/core/commands/commandHotkeyRegistry';
 import { TOOL_SUBAGENT } from '@/core/tools/toolNames';
 import { VIEW_TYPE_CLAUDIAN } from '@/core/types';
 import * as sdkSession from '@/providers/claude/history/ClaudeHistoryStore';
@@ -65,6 +66,7 @@ describe('ClaudianPlugin', () => {
   beforeEach(() => {
     // Reset mocks
     jest.clearAllMocks();
+    resetCommandHotkeysForTests();
 
     mockApp = {
       vault: {

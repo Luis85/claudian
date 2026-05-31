@@ -11,6 +11,7 @@ import type { ClaudianEventMap } from './app/events/claudianEvents';
 import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
 import { SharedStorageService } from './app/storage/SharedStorageService';
 import type { SharedAppStorage } from './core/bootstrap/storage';
+import { registerCommandHotkey } from './core/commands/commandHotkeyRegistry';
 import { EventBus } from './core/events/EventBus';
 import { formatLogEntries } from './core/logging/formatLogEntries';
 import { Logger } from './core/logging/Logger';
@@ -118,12 +119,17 @@ export default class ClaudianPlugin extends Plugin {
       void this.activateView();
     });
 
-    this.addCommand({
+    const openViewCmd = {
       id: 'open-view',
       name: 'Open chat view',
       callback: () => {
         void this.activateView();
       },
+    };
+    this.addCommand(openViewCmd);
+    registerCommandHotkey({
+      commandId: openViewCmd.id,
+      label: openViewCmd.name,
     });
 
     const taskExecutionSurface = new ChatTabExecutionSurface(this);
@@ -137,56 +143,86 @@ export default class ClaudianPlugin extends Plugin {
       void this.activateAgentBoardView();
     });
 
-    this.addCommand({
+    const openAgentBoardCmd = {
       id: 'open-agent-board',
-      // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Board" is the product feature name.
+       
       name: 'Open Agent Board',
       callback: () => {
         void this.activateAgentBoardView();
       },
+    };
+    this.addCommand(openAgentBoardCmd);
+    registerCommandHotkey({
+      commandId: openAgentBoardCmd.id,
+      label: openAgentBoardCmd.name,
     });
 
-    this.addCommand({
+    const runNextReadyCmd = {
       id: 'run-next-ready-work-order',
       name: 'Run next ready work order',
       callback: () => {
         void this.runNextReadyWorkOrder();
       },
+    };
+    this.addCommand(runNextReadyCmd);
+    registerCommandHotkey({
+      commandId: runNextReadyCmd.id,
+      label: runNextReadyCmd.name,
     });
 
-    this.addCommand({
+    const createWorkOrderCmd = {
       id: 'create-work-order',
       name: 'Create work order',
       callback: () => {
         void createWorkOrderInteractive(this);
       },
+    };
+    this.addCommand(createWorkOrderCmd);
+    registerCommandHotkey({
+      commandId: createWorkOrderCmd.id,
+      label: createWorkOrderCmd.name,
     });
 
-    this.addCommand({
+    const createWorkOrderFromCurrentNoteCmd = {
       id: 'create-work-order-from-current-note',
       name: 'Create work order from current note',
       callback: () => {
         void createWorkOrderFromCurrentNoteInteractive(this);
       },
+    };
+    this.addCommand(createWorkOrderFromCurrentNoteCmd);
+    registerCommandHotkey({
+      commandId: createWorkOrderFromCurrentNoteCmd.id,
+      label: createWorkOrderFromCurrentNoteCmd.name,
     });
 
-    this.addCommand({
+    const createWorkOrderFromSelectionCmd = {
       id: 'create-work-order-from-selection',
       name: 'Create work order from selection',
       editorCallback: () => {
         void createWorkOrderFromSelectionInteractive(this);
       },
+    };
+    this.addCommand(createWorkOrderFromSelectionCmd);
+    registerCommandHotkey({
+      commandId: createWorkOrderFromSelectionCmd.id,
+      label: createWorkOrderFromSelectionCmd.name,
     });
 
-    this.addCommand({
+    const createWorkOrderTemplateCmd = {
       id: 'create-work-order-template',
       name: 'Create work-order template',
       callback: () => {
         void createWorkOrderTemplate(this);
       },
+    };
+    this.addCommand(createWorkOrderTemplateCmd);
+    registerCommandHotkey({
+      commandId: createWorkOrderTemplateCmd.id,
+      label: createWorkOrderTemplateCmd.name,
     });
 
-    this.addCommand({
+    const installCommonTemplatesCmd = {
       id: 'install-common-work-order-templates',
       name: 'Install common work-order templates',
       callback: () => {
@@ -198,14 +234,24 @@ export default class ClaudianPlugin extends Plugin {
           new Notice(`Common work-order templates: ${parts.join(', ') || 'nothing to do'}.`);
         })();
       },
+    };
+    this.addCommand(installCommonTemplatesCmd);
+    registerCommandHotkey({
+      commandId: installCommonTemplatesCmd.id,
+      label: installCommonTemplatesCmd.name,
     });
 
-    this.addCommand({
+    const createWorkOrderFromBrowserSelectionCmd = {
       id: 'create-work-order-from-browser-selection',
       name: 'Create work order from browser selection',
       callback: () => {
         void createWorkOrderFromBrowserSelection(this);
       },
+    };
+    this.addCommand(createWorkOrderFromBrowserSelectionCmd);
+    registerCommandHotkey({
+      commandId: createWorkOrderFromBrowserSelectionCmd.id,
+      label: createWorkOrderFromBrowserSelectionCmd.name,
     });
 
     const chatWorkOrderLinker = new ChatWorkOrderLinker(this);
@@ -220,27 +266,42 @@ export default class ClaudianPlugin extends Plugin {
       },
     });
 
-    this.addCommand({
+    const createWorkOrderFromChatConvCmd = {
       id: 'create-work-order-from-chat-conversation',
       name: 'Create work order from current chat conversation',
       callback: () => {
         void chatWorkOrderLinker.promoteActiveConversationToWorkOrder();
       },
+    };
+    this.addCommand(createWorkOrderFromChatConvCmd);
+    registerCommandHotkey({
+      commandId: createWorkOrderFromChatConvCmd.id,
+      label: createWorkOrderFromChatConvCmd.name,
     });
 
-    this.addCommand({
+    const copyDiagnosticLogsCmd = {
       id: 'copy-diagnostic-logs',
       name: 'Copy diagnostic logs',
       callback: () => { void this.copyDiagnosticLogs(); },
+    };
+    this.addCommand(copyDiagnosticLogsCmd);
+    registerCommandHotkey({
+      commandId: copyDiagnosticLogsCmd.id,
+      label: copyDiagnosticLogsCmd.name,
     });
 
-    this.addCommand({
+    const clearDiagnosticLogsCmd = {
       id: 'clear-diagnostic-logs',
       name: 'Clear diagnostic logs',
       callback: () => {
         this.logger.clear();
         new Notice('Diagnostic logs cleared');
       },
+    };
+    this.addCommand(clearDiagnosticLogsCmd);
+    registerCommandHotkey({
+      commandId: clearDiagnosticLogsCmd.id,
+      label: clearDiagnosticLogsCmd.name,
     });
 
     this.registerEvent(
@@ -297,10 +358,10 @@ export default class ClaudianPlugin extends Plugin {
       })
     );
 
-    this.addCommand({
+    const inlineEditCmd = {
       id: 'inline-edit',
       name: 'Inline edit',
-      editorCallback: async (editor: Editor, ctx) => {
+      editorCallback: async (editor: Editor, ctx: unknown) => {
         const view = ctx instanceof MarkdownView
           ? ctx
           : this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -341,9 +402,14 @@ export default class ClaudianPlugin extends Plugin {
           new Notice(editContext.mode === 'cursor' ? 'Inserted' : 'Edit applied');
         }
       },
+    };
+    this.addCommand(inlineEditCmd);
+    registerCommandHotkey({
+      commandId: inlineEditCmd.id,
+      label: inlineEditCmd.name,
     });
 
-    this.addCommand({
+    const newTabCmd = {
       id: 'new-tab',
       name: 'New tab',
       checkCallback: (checking: boolean) => {
@@ -354,9 +420,14 @@ export default class ClaudianPlugin extends Plugin {
         }
         return true;
       },
+    };
+    this.addCommand(newTabCmd);
+    registerCommandHotkey({
+      commandId: newTabCmd.id,
+      label: newTabCmd.name,
     });
 
-    this.addCommand({
+    const newSessionCmd = {
       id: 'new-session',
       name: 'New session (in current tab)',
       checkCallback: (checking: boolean) => {
@@ -376,9 +447,14 @@ export default class ClaudianPlugin extends Plugin {
         }
         return true;
       },
+    };
+    this.addCommand(newSessionCmd);
+    registerCommandHotkey({
+      commandId: newSessionCmd.id,
+      label: newSessionCmd.name,
     });
 
-    this.addCommand({
+    const closeCurrentTabCmd = {
       id: 'close-current-tab',
       name: 'Close current tab',
       checkCallback: (checking: boolean) => {
@@ -396,6 +472,11 @@ export default class ClaudianPlugin extends Plugin {
         }
         return true;
       },
+    };
+    this.addCommand(closeCurrentTabCmd);
+    registerCommandHotkey({
+      commandId: closeCurrentTabCmd.id,
+      label: closeCurrentTabCmd.name,
     });
 
     this.addSettingTab(new ClaudianSettingTab(this.app, this));
