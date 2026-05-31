@@ -50,6 +50,8 @@ export class CursorChatRuntime implements ChatRuntime {
   private turnMetadata: ChatTurnMetadata = {};
   private askUserQuestionCallback: AskUserQuestionCallback | null = null;
   private askUserQuestionAbortController: AbortController | null = null;
+  /** In-flight child termination, so a later cleanup() can await a cancel()-started kill. */
+  private pendingTermination: Promise<void> | null = null;
 
   constructor(plugin: PluginContext) {
     this.plugin = plugin;
@@ -251,11 +253,14 @@ export class CursorChatRuntime implements ChatRuntime {
     const child = this.child;
     if (!child || child.exitCode !== null) {
       this.child = null;
-      return Promise.resolve();
+      // A termination may already be in flight from a prior cancel(); return it so
+      // cleanup() awaits the real child exit instead of resolving early (which would
+      // re-introduce the switch/reinit overlap this guards against).
+      return this.pendingTermination ?? Promise.resolve();
     }
     this.child = null;
 
-    return new Promise<void>((resolve) => {
+    const termination = new Promise<void>((resolve) => {
       let settled = false;
       const finish = () => {
         if (settled) return;
@@ -288,6 +293,8 @@ export class CursorChatRuntime implements ChatRuntime {
         finish();
       }
     });
+    this.pendingTermination = termination;
+    return termination;
   }
 
   resetSession(): void {

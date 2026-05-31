@@ -236,6 +236,32 @@ describe('CursorChatRuntime', () => {
     await expect(runtime.cleanup()).resolves.toBeUndefined();
   });
 
+  it('cleanup after cancel awaits the in-flight termination (no switch overlap)', async () => {
+    // cancel() starts terminateChild() and nulls this.child; a following cleanup()
+    // (e.g. immediate provider switch) must await that in-flight kill rather than
+    // resolving early while cursor-agent is still alive.
+    const runtime = new CursorChatRuntime(createMockPlugin());
+    const child = setupMockChild();
+    (child as any).exitCode = null;
+    (runtime as any).child = child;
+
+    runtime.cancel();
+    expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+    expect((runtime as any).child).toBeNull();
+
+    let resolved = false;
+    const cleanupPromise = runtime.cleanup().then(() => {
+      resolved = true;
+    });
+
+    await Promise.resolve();
+    expect(resolved).toBe(false); // still waiting on the cancel-initiated exit
+
+    child.emit('exit', 0);
+    await cleanupPromise;
+    expect(resolved).toBe(true);
+  });
+
   it('consumeTurnMetadata returns planCompleted after a plan turn', async () => {
     const runtime = new CursorChatRuntime(createMockPlugin({
       settings: { permissionMode: 'plan' },
