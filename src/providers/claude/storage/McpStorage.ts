@@ -144,6 +144,56 @@ export class McpStorage {
     await this.adapter.write(MCP_CONFIG_PATH, content);
   }
 
+  /**
+   * One-time SEC-3 grandfather migration. Marks every server currently present
+   * in the vault `.claude/mcp.json` as user-trusted (enabled) by writing Claudian
+   * metadata, so a config that predates default-untrusted loading is not silently
+   * disabled on upgrade. Only servers lacking metadata are touched; servers the
+   * user already configured keep their explicit state.
+   *
+   * The caller gates this on a per-install settings flag so it runs once and does
+   * not re-trust servers synced into the vault after the upgrade. (A fresh install
+   * whose first-opened vault already contains untrusted servers is the residual
+   * case closed only by the SEC-2 interactive trust prompt.)
+   */
+  async grandfatherExistingServers(): Promise<void> {
+    if (!(await this.adapter.exists(MCP_CONFIG_PATH))) {
+      return;
+    }
+
+    let file: ManagedMcpConfigFile;
+    try {
+      file = JSON.parse(await this.adapter.read(MCP_CONFIG_PATH)) as ManagedMcpConfigFile;
+    } catch {
+      return;
+    }
+
+    if (!file.mcpServers || typeof file.mcpServers !== 'object') {
+      return;
+    }
+
+    const existingMeta = file._claudian?.servers ?? {};
+    const servers: typeof existingMeta = { ...existingMeta };
+    let changed = false;
+
+    for (const name of Object.keys(file.mcpServers)) {
+      if (!Object.prototype.hasOwnProperty.call(servers, name)) {
+        servers[name] = { ...servers[name], enabled: true };
+        changed = true;
+      }
+    }
+
+    if (!changed) {
+      return;
+    }
+
+    const updated: ManagedMcpConfigFile = {
+      ...file,
+      _claudian: { ...file._claudian, servers },
+    };
+    await this.adapter.write(MCP_CONFIG_PATH, JSON.stringify(updated, null, 2));
+  }
+
   async exists(): Promise<boolean> {
     return this.adapter.exists(MCP_CONFIG_PATH);
   }

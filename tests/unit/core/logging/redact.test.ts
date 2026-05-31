@@ -37,6 +37,17 @@ describe('redactArgs', () => {
     expect(out.plain).toBe('ok');
   });
 
+  it('anchors `pin` so it does not redact innocuous keys containing the substring', () => {
+    const [out] = redactArgs([
+      { mapping: 'm', shipping: 's', spinner: 'sp', user_pin: '9', 'pin-code': '7' },
+    ]) as [Record<string, unknown>];
+    expect(out.mapping).toBe('m');
+    expect(out.shipping).toBe('s');
+    expect(out.spinner).toBe('sp');
+    expect(out.user_pin).toBe('[redacted]');
+    expect(out['pin-code']).toBe('[redacted]');
+  });
+
   it('does not mutate the caller object', () => {
     const original = { secret: 's' };
     redactArgs([original]);

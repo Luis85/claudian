@@ -513,6 +513,61 @@ describe('McpStorage', () => {
     });
   });
 
+  describe('grandfatherExistingServers (SEC-3 one-time migration)', () => {
+    it('marks metadata-less servers trusted so they survive default-untrusted loading', async () => {
+      const adapter = createMockAdapter({
+        '.claude/mcp.json': JSON.stringify({
+          mcpServers: { alpha: { command: 'a' }, beta: { command: 'b' } },
+        }),
+      });
+      const storage = new McpStorage(adapter);
+
+      // Pre-migration: no metadata → both load disabled.
+      const before = await storage.load();
+      expect(before.every((s) => s.enabled === false)).toBe(true);
+
+      await storage.grandfatherExistingServers();
+
+      const after = await storage.load();
+      expect(after.find((s) => s.name === 'alpha')?.enabled).toBe(true);
+      expect(after.find((s) => s.name === 'beta')?.enabled).toBe(true);
+    });
+
+    it('preserves explicit user state and only touches metadata-less servers', async () => {
+      const adapter = createMockAdapter({
+        '.claude/mcp.json': JSON.stringify({
+          mcpServers: { keep: { command: 'k' }, off: { command: 'o' } },
+          _claudian: { servers: { off: { enabled: false } } },
+        }),
+      });
+      const storage = new McpStorage(adapter);
+
+      await storage.grandfatherExistingServers();
+
+      const after = await storage.load();
+      expect(after.find((s) => s.name === 'keep')?.enabled).toBe(true); // grandfathered
+      expect(after.find((s) => s.name === 'off')?.enabled).toBe(false); // user choice kept
+    });
+
+    it('is a no-op when there is no config file', async () => {
+      const adapter = createMockAdapter();
+      const storage = new McpStorage(adapter);
+      await expect(storage.grandfatherExistingServers()).resolves.toBeUndefined();
+      expect('.claude/mcp.json' in adapter._store).toBe(false);
+    });
+
+    it('does not rewrite the file when every server already has metadata', async () => {
+      const content = JSON.stringify({
+        mcpServers: { a: { command: 'a' } },
+        _claudian: { servers: { a: { enabled: true } } },
+      });
+      const adapter = createMockAdapter({ '.claude/mcp.json': content });
+      const storage = new McpStorage(adapter);
+      await storage.grandfatherExistingServers();
+      expect(adapter._store['.claude/mcp.json']).toBe(content);
+    });
+  });
+
   describe('parseClipboardConfig', () => {
     it('parses full Claude Code format (mcpServers wrapper)', () => {
       const json = JSON.stringify({
