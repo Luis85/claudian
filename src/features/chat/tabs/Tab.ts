@@ -344,12 +344,25 @@ function ensureTitleGenerationService(tab: TabData, plugin: ClaudianPlugin): voi
   }
 }
 
-function cleanupTabRuntime(tab: TabData): void {
-  if (tab.service && typeof tab.service.cleanup === 'function') {
-    tab.service.cleanup();
-  }
+async function cleanupTabRuntime(tab: TabData): Promise<void> {
+  const outgoing = tab.service;
+  // Detach the runtime before awaiting so concurrent callers can't observe a
+  // half-torn-down service, then await its cleanup so the outgoing CLI process
+  // has actually exited before any replacement runtime is constructed.
   tab.service = null;
   tab.serviceInitialized = false;
+  if (!outgoing || typeof outgoing.cleanup !== 'function') {
+    return;
+  }
+  // Track the in-flight teardown so initializeTabService can await it even when
+  // this cleanup was launched fire-and-forget from a non-async framework callback.
+  const cleanupPromise = Promise.resolve(outgoing.cleanup()).finally(() => {
+    if (tab.pendingRuntimeCleanup === cleanupPromise) {
+      tab.pendingRuntimeCleanup = null;
+    }
+  });
+  tab.pendingRuntimeCleanup = cleanupPromise;
+  await cleanupPromise;
 }
 
 /**
@@ -357,7 +370,10 @@ function cleanupTabRuntime(tab: TabData): void {
  * that is now disabled, it falls back to the first enabled provider's default
  * blank-tab model. Refreshes model selector options for all blank tabs.
  */
-export function onProviderAvailabilityChanged(tab: TabData, plugin: ClaudianPlugin): void {
+export async function onProviderAvailabilityChanged(
+  tab: TabData,
+  plugin: ClaudianPlugin,
+): Promise<void> {
   if (tab.lifecycleState !== 'blank') return;
 
   const settingsSnapshot = asSettingsBag(plugin.settings);
@@ -382,14 +398,14 @@ export function onProviderAvailabilityChanged(tab: TabData, plugin: ClaudianPlug
 
   tab.providerId = nextProviderId;
 
-  // Clean up stale service if provider changed
+  // Clean up stale service if provider changed. Await the outgoing runtime's
+  // cleanup so its CLI process has exited before the next send constructs a
+  // replacement runtime for the new provider (no overlapping processes).
   if (
     tab.service
     && tab.service.providerId !== nextProviderId
   ) {
-    tab.service.cleanup();
-    tab.service = null;
-    tab.serviceInitialized = false;
+    await cleanupTabRuntime(tab);
   }
 
   syncTabProviderServices(tab, plugin);
@@ -585,11 +601,19 @@ export async function initializeTabService(
   const previousService = tab.service;
 
   try {
-    if (typeof previousService?.cleanup === 'function') {
-      previousService.cleanup();
-    }
     tab.service = null;
     tab.serviceInitialized = false;
+    // Await the outgoing runtime's cleanup before constructing the replacement
+    // so the old provider's CLI process exits first (no overlapping processes).
+    if (typeof previousService?.cleanup === 'function') {
+      await previousService.cleanup();
+    }
+    // A previous switch path may have detached and torn down a runtime
+    // fire-and-forget (e.g. the new-conversation reset). Await that too so the
+    // old process is fully gone before we construct a replacement.
+    if (tab.pendingRuntimeCleanup) {
+      await tab.pendingRuntimeCleanup;
+    }
 
     const runtime = ProviderRegistry.createChatRuntime({ plugin, providerId });
     service = runtime;
@@ -610,7 +634,7 @@ export async function initializeTabService(
     // Re-check after async operations — tab may have been closed during init
     if (isClosingLifecycleState(tab.lifecycleState)) {
       unsubscribeReadyState?.();
-      service?.cleanup();
+      await service?.cleanup();
       return;
     }
 
@@ -627,7 +651,7 @@ export async function initializeTabService(
   } catch (error) {
     // Clean up partial state on failure
     unsubscribeReadyState?.();
-    service?.cleanup();
+    await service?.cleanup();
     tab.service = null;
     tab.serviceInitialized = false;
 
@@ -809,7 +833,9 @@ function initializeInputToolbar(
         );
         const didProviderChange = newProvider !== previousProvider;
         if (tab.service) {
-          cleanupTabRuntime(tab);
+          // Await so the outgoing runtime's CLI process exits before the next
+          // send constructs a replacement for the newly selected provider.
+          await cleanupTabRuntime(tab);
         }
         tab.providerId = newProvider;
         if (didProviderChange) {
@@ -1393,8 +1419,12 @@ export function initializeTabControllers(
       onNewConversation: () => {
         // Reset to blank state and drop the bound runtime so the next send
         // reinitializes against the currently selected blank-tab provider.
+        // cleanupTabRuntime detaches the service synchronously, then awaits the
+        // outgoing CLI process exit; the framework callback can't be async, so
+        // run the teardown in a contained async IIFE so the old process is gone
+        // before the next send constructs a replacement.
         const previousProviderId = tab.providerId;
-        cleanupTabRuntime(tab);
+        void cleanupTabRuntime(tab);
         tab.lifecycleState = 'blank';
         tab.draftModel = resolveBlankTabModel(plugin, previousProviderId);
         tab.conversationId = null;

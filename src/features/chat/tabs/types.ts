@@ -215,6 +215,15 @@ export interface TabData {
   /** Whether the service has been initialized (lazy start). */
   serviceInitialized: boolean;
 
+  /**
+   * In-flight cleanup of a detached runtime. Set while an outgoing runtime is
+   * still shutting down (its CLI process has not yet exited). initializeTabService
+   * awaits this before constructing a replacement so provider switch/reinit can
+   * never overlap the old process with a new one, even when the cleanup was
+   * launched from a non-awaitable (fire-and-forget) framework callback.
+   */
+  pendingRuntimeCleanup?: Promise<void> | null;
+
   /** Per-tab chat state. */
   state: ChatState;
 

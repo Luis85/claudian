@@ -796,6 +796,96 @@ describe('Tab - Service Initialization', () => {
       expect(tab.service).toBe(newService);
     });
 
+    it('awaits the outgoing runtime cleanup before constructing the replacement', async () => {
+      const createChatRuntimeSpy = jest.spyOn(ProviderRegistry, 'createChatRuntime');
+      const newService = createMockClaudianService({ providerId: 'codex' });
+      createChatRuntimeSpy.mockReturnValue(newService as any);
+
+      // Old runtime cleanup blocks on a deferred promise that resolves only when
+      // we release it; the new runtime must not be constructed before then.
+      let releaseCleanup!: () => void;
+      const cleanupGate = new Promise<void>((resolve) => {
+        releaseCleanup = resolve;
+      });
+      let cleanupResolved = false;
+      const oldService = createMockClaudianService({ providerId: 'claude' });
+      oldService.cleanup = jest.fn().mockReturnValue(
+        cleanupGate.then(() => {
+          cleanupResolved = true;
+        }),
+      ) as any;
+
+      const conversation = {
+        id: 'conv-codex-order',
+        providerId: 'codex' as const,
+        title: 'Codex Conversation',
+        messages: [],
+        sessionId: null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      const plugin = createMockPlugin({
+        getConversationById: jest.fn().mockResolvedValue(conversation),
+      });
+      const tab = createTab(createMockOptions({ plugin, conversation }));
+      tab.service = oldService as any;
+      tab.serviceInitialized = true;
+
+      const initPromise = initializeTabService(tab, plugin, createMockMcpManager());
+
+      // Let the synchronous prefix + the awaited getConversationById settle.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(oldService.cleanup).toHaveBeenCalled();
+      // Cleanup is still pending → the replacement runtime must not exist yet.
+      expect(cleanupResolved).toBe(false);
+      expect(createChatRuntimeSpy).not.toHaveBeenCalled();
+
+      releaseCleanup();
+      await initPromise;
+
+      expect(cleanupResolved).toBe(true);
+      expect(createChatRuntimeSpy).toHaveBeenCalledWith(expect.objectContaining({
+        plugin,
+        providerId: 'codex',
+      }));
+      expect(tab.service).toBe(newService);
+    });
+
+    it('awaits a fire-and-forget pending cleanup before constructing a replacement', async () => {
+      const createChatRuntimeSpy = jest.spyOn(ProviderRegistry, 'createChatRuntime');
+      const newService = createMockClaudianService({ providerId: 'claude' });
+      createChatRuntimeSpy.mockReturnValue(newService as any);
+
+      let releaseCleanup!: () => void;
+      const cleanupGate = new Promise<void>((resolve) => {
+        releaseCleanup = resolve;
+      });
+      let cleanupResolved = false;
+
+      const plugin = createMockPlugin();
+      const tab = createTab(createMockOptions({ plugin }));
+      // Simulate a prior switch that detached a runtime and left its teardown
+      // in flight (e.g. the new-conversation reset launched fire-and-forget).
+      tab.pendingRuntimeCleanup = cleanupGate.then(() => {
+        cleanupResolved = true;
+      });
+
+      const initPromise = initializeTabService(tab, plugin, createMockMcpManager());
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(cleanupResolved).toBe(false);
+      expect(createChatRuntimeSpy).not.toHaveBeenCalled();
+
+      releaseCleanup();
+      await initPromise;
+
+      expect(cleanupResolved).toBe(true);
+      expect(createChatRuntimeSpy).toHaveBeenCalled();
+    });
+
     it('should NOT call ensureReady for blank tabs (lazy start)', async () => {
       const mockEnsureReady = jest.fn().mockResolvedValue(true);
       const runtimeModule = jest.requireMock('@/providers/claude/runtime/ClaudeChatRuntime') as { ClaudianService: jest.Mock };
@@ -932,7 +1022,7 @@ describe('Tab - Service Initialization', () => {
       expect(mockFileContextManager.setAgentService).toHaveBeenCalledWith(codexAgentMentionProvider);
     });
 
-    it('falls back blank Codex draft to Claude when Codex is disabled', () => {
+    it('falls back blank Codex draft to Claude when Codex is disabled', async () => {
       jest.spyOn(ProviderRegistry, 'createInstructionRefineService').mockReturnValue({ cancel: jest.fn(), resetConversation: jest.fn() } as any);
       jest.spyOn(ProviderRegistry, 'createTitleGenerationService').mockReturnValue({ cancel: jest.fn() } as any);
       jest.spyOn(ProviderRegistry, 'getTaskResultInterpreter').mockReturnValue({} as any);
@@ -953,7 +1043,7 @@ describe('Tab - Service Initialization', () => {
       // Disable Codex
       plugin.settings.codexEnabled = false;
 
-      onProviderAvailabilityChanged(tab, plugin);
+      await onProviderAvailabilityChanged(tab, plugin);
 
       expect(staleService.cleanup).toHaveBeenCalled();
       expect(tab.providerId).toBe('claude');
@@ -962,7 +1052,7 @@ describe('Tab - Service Initialization', () => {
       expect(mockSlashCommandDropdown.resetSdkSkillsCache).toHaveBeenCalled();
     });
 
-    it('rebinds provider-scoped helper services when a newly enabled provider takes over the draft model', () => {
+    it('rebinds provider-scoped helper services when a newly enabled provider takes over the draft model', async () => {
       const createInstructionRefineServiceSpy = jest.spyOn(ProviderRegistry, 'createInstructionRefineService')
         .mockReturnValue({ cancel: jest.fn(), resetConversation: jest.fn() } as any);
       const createTitleGenerationServiceSpy = jest.spyOn(ProviderRegistry, 'createTitleGenerationService')
@@ -994,7 +1084,7 @@ describe('Tab - Service Initialization', () => {
         },
       };
 
-      onProviderAvailabilityChanged(tab, plugin);
+      await onProviderAvailabilityChanged(tab, plugin);
 
       expect(tab.providerId).toBe('codex');
       expect(createInstructionRefineServiceSpy).toHaveBeenLastCalledWith(plugin, 'codex');
