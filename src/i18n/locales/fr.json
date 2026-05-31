@@ -22,6 +22,7 @@
     "rewind": "Rembobiner"
   },
   "chat": {
+    "loadEarlier": "Charger les messages précédents",
     "rewind": {
       "confirmMessage": "Rembobiner jusqu'à ce point ? Les modifications de fichiers après ce message seront annulées. Le rembobinage n'affecte pas les fichiers modifiés manuellement ou via bash.",
       "confirmMessageConversationOnly": "Rembobiner la conversation jusqu'à ce point ? Les modifications de fichiers seront conservées.",

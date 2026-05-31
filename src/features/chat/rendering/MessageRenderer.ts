@@ -31,6 +31,20 @@ import { renderStoredThinkingBlock } from './ThinkingBlockRenderer';
 import { renderStoredToolCall } from './ToolCallRenderer';
 import { renderStoredWriteEdit } from './WriteEditRenderer';
 
+/**
+ * Trailing window of stored messages mounted on conversation load / switch / rewind.
+ * Long chats otherwise mount unbounded DOM (~56 nodes + ~7 listeners per message),
+ * making each re-mount O(N). Windowing bounds it to O(K): the trailing region — where
+ * streaming and the bottom anchor live — is always mounted, and earlier messages mount
+ * on demand through the "load earlier" control.
+ */
+const RENDER_WINDOW_SIZE = 80;
+
+/** First message index to mount, capping to the trailing window of {@link windowSize}. */
+export function windowStartIndex(total: number, windowSize = RENDER_WINDOW_SIZE): number {
+  return Math.max(0, total - windowSize);
+}
+
 export interface RenderContentOptions {
   deferMath?: boolean;
 }
@@ -56,6 +70,9 @@ export class MessageRenderer {
   private getCapabilities: () => ProviderCapabilities;
   private forkCallback?: (messageId: string) => Promise<void>;
   private liveMessageEls = new Map<string, HTMLElement>();
+  private windowedMessages: ChatMessage[] = [];
+  private renderWindowStart = 0;
+  private loadEarlierEl: HTMLElement | null = null;
 
   constructor(
     plugin: ClaudianPlugin,
@@ -241,17 +258,81 @@ export class MessageRenderer {
   ): HTMLElement {
     this.messagesEl.empty();
     this.liveMessageEls.clear();
+    this.loadEarlierEl = null;
+    this.windowedMessages = messages;
 
     // Recreate welcome element after clearing
     const newWelcomeEl = this.messagesEl.createDiv({ cls: 'claudian-welcome' });
     newWelcomeEl.createDiv({ cls: 'claudian-welcome-greeting', text: getGreeting() });
 
-    for (let i = 0; i < messages.length; i++) {
+    const start = windowStartIndex(messages.length);
+    this.renderWindowStart = start;
+    if (start > 0) {
+      this.renderLoadEarlierControl();
+    }
+
+    for (let i = start; i < messages.length; i++) {
       this.renderStoredMessage(messages[i], messages, i);
     }
 
     this.scrollToBottom();
     return newWelcomeEl;
+  }
+
+  private renderLoadEarlierControl(): void {
+    const el = this.messagesEl.createDiv({ cls: 'claudian-load-earlier' });
+    const btn = el.createEl('button', {
+      cls: 'claudian-load-earlier-btn',
+      text: t('chat.loadEarlier'),
+      attr: { type: 'button' },
+    });
+    btn.addEventListener('click', () => this.loadEarlierMessages());
+    this.loadEarlierEl = el;
+  }
+
+  /**
+   * Mounts the previous chunk of earlier messages above the current window.
+   * Renders into a detached node first, then splices it in right after the control
+   * so global message indices (rewind eligibility via {@link isRewindEligible}) and
+   * document order are preserved.
+   */
+  private loadEarlierMessages(): void {
+    const control = this.loadEarlierEl;
+    const oldStart = this.renderWindowStart;
+    if (!control || oldStart <= 0) return;
+
+    const newStart = Math.max(0, oldStart - RENDER_WINDOW_SIZE);
+
+    // Inserting content above the viewport shifts everything down; capture pre-insert
+    // metrics so the user's scroll position stays anchored to the same message.
+    const prevScrollHeight = this.messagesEl.scrollHeight;
+    const prevScrollTop = this.messagesEl.scrollTop;
+
+    const target = this.messagesEl;
+    const staging = target.ownerDocument.createElement('div');
+    this.messagesEl = staging;
+    try {
+      for (let i = newStart; i < oldStart; i++) {
+        this.renderStoredMessage(this.windowedMessages[i], this.windowedMessages, i);
+      }
+    } finally {
+      this.messagesEl = target;
+    }
+
+    // Snapshot before moving: inserting a node detaches it from `staging`, and a
+    // captured array also avoids relying on a live `firstChild` loop.
+    const anchor = control.nextSibling;
+    for (const node of Array.from(staging.children)) {
+      target.insertBefore(node, anchor);
+    }
+
+    this.renderWindowStart = newStart;
+    if (newStart === 0) {
+      control.remove();
+      this.loadEarlierEl = null;
+    }
+
+    target.scrollTop = prevScrollTop + (target.scrollHeight - prevScrollHeight);
   }
 
   renderStoredMessage(msg: ChatMessage, allMessages?: ChatMessage[], index?: number): void {

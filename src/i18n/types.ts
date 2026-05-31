@@ -23,6 +23,9 @@ export type TranslationKey =
   | 'common.refresh'
   | 'common.rewind'
 
+  // Chat
+  | 'chat.loadEarlier'
+
   // Chat - Rewind
   | 'chat.rewind.confirmMessage'
   | 'chat.rewind.confirmMessageConversationOnly'

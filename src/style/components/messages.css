@@ -23,6 +23,27 @@
 }
 
 /* Welcome message - claude.ai style */
+.claudian-load-earlier {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.claudian-load-earlier-btn {
+  cursor: pointer;
+  color: var(--text-muted);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  padding: 4px 12px;
+  font-size: var(--font-ui-small);
+}
+
+.claudian-load-earlier-btn:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
 .claudian-welcome {
   flex: 1;
   display: flex;

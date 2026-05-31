@@ -22,6 +22,7 @@
     "rewind": "巻き戻し"
   },
   "chat": {
+    "loadEarlier": "以前のメッセージを読み込む",
     "rewind": {
       "confirmMessage": "この時点に巻き戻しますか？このメッセージ以降のファイル変更が元に戻されます。手動またはbashで編集されたファイルには影響しません。",
       "confirmMessageConversationOnly": "会話をこの時点に巻き戻しますか？ファイル変更は保持されます。",
