@@ -1885,6 +1885,40 @@ describe('StreamController - Text Content', () => {
         expect.objectContaining({ type: 'thinking', content: 'Reasoning...' })
       );
     });
+
+    it('applies a block transition in flush → finalizeThinking → finalizeText order (ARCH-6 applier invariant)', async () => {
+      // The projection decides WHICH blocks finalize; the controller's applier
+      // must invoke them in this fixed order. A future reorder of the applier
+      // would silently mis-order rendered content while projection tests stay
+      // green — so assert the order directly here. A context_compacted chunk
+      // projects all three (flush + finalizeThinking-if-open + unconditional
+      // finalizeText), so it exercises the full sequence.
+      const msg = createTestMessage();
+      deps.state.currentContentEl = createMockEl();
+      deps.state.currentTextEl = createMockEl();
+      deps.state.currentTextContent = 'text';
+      deps.state.currentThinkingState = {
+        content: 'thinking',
+        container: createMockEl(),
+        contentEl: createMockEl(),
+        startTime: Date.now(),
+      } as any;
+
+      const order: string[] = [];
+      jest.spyOn(controller as any, 'flushPendingTools').mockImplementation(() => {
+        order.push('flush');
+      });
+      jest.spyOn(controller, 'finalizeCurrentThinkingBlock').mockImplementation(async () => {
+        order.push('thinking');
+      });
+      jest.spyOn(controller, 'finalizeCurrentTextBlock').mockImplementation(async () => {
+        order.push('text');
+      });
+
+      await controller.handleStreamChunk({ type: 'context_compacted' }, msg);
+
+      expect(order).toEqual(['flush', 'thinking', 'text']);
+    });
   });
 
   describe('Agent output tool use/result', () => {

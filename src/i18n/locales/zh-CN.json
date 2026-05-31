@@ -104,6 +104,9 @@
         "submitFailed": "Could not start orchestrator mode.",
         "turnOff": "Turn off orchestrator"
       }
+    },
+    "queue": {
+      "steerFailed": "Failed to steer the queued message. It is still available."
     }
   },
   "settings": {

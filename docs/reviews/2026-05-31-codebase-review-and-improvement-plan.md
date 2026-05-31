@@ -316,6 +316,15 @@ checks; i18n keys perfectly synced.
 - **Perf hygiene** — wire `StreamController.resetStreamingState()` into the force session-reset
   teardown (removes dead code + closes a benign stale-timer window); route the two remaining
   non-hot-path `scrollHeight` reads through `scrollMessagesToBottom`.
-- **i18n** — translate the `chat.permissionMode.yoloWarning` string (currently English in all
-  locales).
-- **Phase 2 (architecture)** and **Phase 3 (guardrails)** remain as planned above.
+- **i18n** — `chat.permissionMode.yoloWarning` and `chat.queue.steerFailed` are wired through
+  `t()` and present in all 10 locales, but non-en values are still English placeholders awaiting
+  real translation.
+- **Cleanup batch** — *(done)* localized the steer-failure Notice (`chat.queue.steerFailed`,
+  dropping the provider-specific "Codex" wording in the now provider-neutral controller); removed
+  the dead-public `InputController.withdrawQueuedMessageToComposer` delegate; added the ARCH-6
+  applier-ordering spy test (asserts `applyBlockTransition` invokes flush → finalizeThinking →
+  finalizeText, locking the hot-path render order directly rather than only via the end-to-end
+  StreamController suite).
+- **Phase 2 (architecture)** is complete (ARCH-1/-2/-3/-4/-5a/-5b/-6 + Q-2 landed); the only
+  deliberately-deferred architecture follow-up is **`ApprovalPromptController`** (entangled with
+  the `inputContainerHideDepth` send-path counter). **Phase 3 (guardrails)** landed.

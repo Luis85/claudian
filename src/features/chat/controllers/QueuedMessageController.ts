@@ -9,6 +9,7 @@ import {
 } from '../../../core/runtime/QueuedTurn';
 import type { ChatTurnRequest } from '../../../core/runtime/types';
 import type { ChatMessage } from '../../../core/types';
+import { t } from '../../../i18n/i18n';
 import { appendMarkdownSnippet } from '../../../utils/markdown';
 import type { ChatState } from '../state/ChatState';
 import type { QueuedMessage } from '../state/types';
@@ -380,7 +381,7 @@ export class QueuedMessageController {
       });
     } catch {
       this.restoreQueuedMessageAfterSteerFailure(queuedMessage);
-      new Notice('Failed to steer the queued Codex message. It is still available.');
+      new Notice(t('chat.queue.steerFailed'));
     }
   }
 

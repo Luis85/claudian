@@ -76,6 +76,9 @@ export type TranslationKey =
   // Chat - Permission mode
   | 'chat.permissionMode.yoloWarning'
 
+  // Chat - Queued message
+  | 'chat.queue.steerFailed'
+
   // Chat - Orchestrator
   | 'chat.orchestrator.titleOpen'
   | 'chat.orchestrator.titleInactive'
