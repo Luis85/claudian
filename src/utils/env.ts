@@ -385,6 +385,19 @@ const SYSTEM_ESSENTIAL_ENV_KEYS: readonly string[] = [
   // GUI/X11 plumbing some CLIs probe.
   'DISPLAY',
   'XAUTHORITY',
+  // Network plumbing (non-secret): proxy + custom-CA config that network-fetching
+  // MCP servers rely on in corporate environments. Withholding these would break
+  // TLS/connectivity for servers that previously inherited them; they are config,
+  // not credentials, so passing them through does not reopen the secret-leak.
+  'HTTP_PROXY',
+  'HTTPS_PROXY',
+  'NO_PROXY',
+  'http_proxy',
+  'https_proxy',
+  'no_proxy',
+  'NODE_EXTRA_CA_CERTS',
+  'NODE_OPTIONS',
+  'NODE_TLS_REJECT_UNAUTHORIZED',
 ];
 
 /**

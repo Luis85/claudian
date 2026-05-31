@@ -89,6 +89,20 @@ describe('buildCuratedChildEnv (SEC-4)', () => {
     expect(result.GITHUB_TOKEN).toBeUndefined();
   });
 
+  it('forwards non-secret network plumbing (proxy / custom CA) so corporate MCP servers keep connectivity', () => {
+    process.env.HTTPS_PROXY = 'http://proxy.corp:8080';
+    process.env.NO_PROXY = 'localhost';
+    process.env.NODE_EXTRA_CA_CERTS = '/etc/corp/ca.pem';
+    process.env.AWS_SECRET_ACCESS_KEY = 'super-secret';
+
+    const result = buildCuratedChildEnv();
+
+    expect(result.HTTPS_PROXY).toBe('http://proxy.corp:8080');
+    expect(result.NO_PROXY).toBe('localhost');
+    expect(result.NODE_EXTRA_CA_CERTS).toBe('/etc/corp/ca.pem');
+    expect(result.AWS_SECRET_ACCESS_KEY).toBeUndefined();
+  });
+
   it('lets caller-supplied overrides pass through and win over host values', () => {
     process.env.PATH = '/usr/bin';
 
