@@ -236,8 +236,26 @@ checks; i18n keys perfectly synced.
   (curated env for MCP *test* spawns), SEC-6 (broadened + anchored redaction).
 - **Phase 1b** — PERF-1 (no per-chunk reflow; O(N·T)→O(1)), PERF-3 (size-aware streaming
   throttle, byte-exact final render), PERF-2 lazy image attrs.
+- **Phase 2 (round 1)** — ARCH-7 (Claude & Cursor auxiliary folded onto shared `QueryBacked*`,
+  −450 LOC, 4 adapters), ARCH-8 (provider settings load-normalization hook; app shell no longer
+  imports provider-specific settings logic), ARCH-4 (Cursor "ACP" docs corrected). Each
+  independently reviewed: behavior-preserving, nothing blocking.
+- **Phase 3 (guardrails)** — `no-explicit-any → warn` (src; the lone `EventBus` `any` is now an
+  explained, justified disable → **zero lint warnings**), `coverageThreshold` floors (global +
+  higher on security/runtime paths), CI coverage job.
 
-**Tracked follow-ups (from the cross-phase review):**
+**Tracked follow-ups (from the cross-phase reviews):**
+- **ARCH-8** — `persistProviderLastModel`/`persistProviderEnvironmentHash` are implemented only on
+  Claude's reconciler; if a future caller invokes them while a non-Claude provider is the active
+  settings provider, the write silently no-ops. Implement the hooks on the other reconcilers (or
+  fall back/log) before wiring a real caller. `normalizeOnLoad` is a forward-looking seam with no
+  implementer yet (justified by the decoupling; harmless).
+- **Phase 2 (remaining, dedicated rounds — too entangled to parallelize):** ARCH-1 `PluginContext`
+  extraction (collapses the 184 cycles), ARCH-3 `ConversationStore`, ARCH-5 god-file splits
+  (`Tab.ts`/`InputController.ts`), ARCH-6 stream-projection extraction (pair with the Phase 1b
+  rendering adapter).
+- **Q-2** — `asSettingsBag()` helper replacing the 34 `settings as unknown as Record<…>` casts
+  (deferred until the auxiliary/settings refactors landed; now unblocked).
 - **SEC-2** — wire `vaultTrust.shouldHonorProjectSettings` into the live `resolveClaudeSettingSources`
   call sites + a confirmation modal. Until then, risky project `.claude/settings.json` (hooks /
   `permissions.allow`) is still honored. This is also the proper close for the SEC-3 residual

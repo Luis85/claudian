@@ -5,6 +5,11 @@ export type EventHandler<P> = (payload: P) => void;
  * Minimal typed, synchronous, in-process event bus.
  * No Obsidian dependency so it can be unit-tested in isolation.
  */
+// `any` (not `unknown`) is required in the constraint: concrete event maps are
+// declared as `interface`s (ChatEventMap, TaskEventMap, ...), which lack an
+// implicit index signature and so satisfy `Record<string, any>` but not
+// `Record<string, unknown>`. The default and all member signatures stay precise.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class EventBus<M extends Record<string, any> = Record<string, unknown>> {
   private readonly handlers = new Map<keyof M, Set<EventHandler<never>>>();
   private errorSink?: (error: unknown, event: string) => void;
