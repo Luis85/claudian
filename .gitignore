@@ -92,7 +92,7 @@ dev
 # yarn.lock
 # package-lock.json
 
-
+.claude/
 /.claudian/
 /.specorator/
 /.worktrees/
