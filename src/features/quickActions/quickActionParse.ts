@@ -1,4 +1,4 @@
-import { extractString, parseFrontmatter } from '../../utils/frontmatter';
+import { extractString, extractStringArray, parseFrontmatter } from '../../utils/frontmatter';
 import {
   QUICK_ACTION_FRONTMATTER_TYPE,
   type QuickAction,
@@ -25,12 +25,14 @@ export function parseQuickActionContent(
     ?? filePathToDefaultName(filePath);
   const description = extractString(fm, 'description')?.trim() ?? name;
   const icon = extractString(fm, 'icon')?.trim() || undefined;
+  const tags = extractStringArray(fm, 'tags');
 
   return {
     id: filePathToId(filePath),
     name,
     description,
     icon,
+    tags: tags && tags.length > 0 ? tags : undefined,
     prompt: body,
     filePath,
   };
@@ -45,6 +47,13 @@ export function serializeQuickAction(action: QuickActionFrontmatter & { prompt: 
   }
   if (action.icon?.trim()) {
     lines.push(`icon: ${yamlQuote(action.icon.trim())}`);
+  }
+  const tags = action.tags?.map((t) => t.trim()).filter(Boolean) ?? [];
+  if (tags.length > 0) {
+    lines.push('tags:');
+    for (const tag of tags) {
+      lines.push(`  - ${yamlQuote(tag)}`);
+    }
   }
   lines.push('---', '', action.prompt.trim(), '');
   return lines.join('\n');

@@ -49,6 +49,7 @@ export class QuickActionStorage {
       name: action.name,
       description: action.description,
       icon: action.icon,
+      tags: action.tags,
       prompt: action.prompt,
     });
     await this.adapter.ensureFolder(this.getFolderPath());

@@ -6,6 +6,7 @@ export interface QuickAction {
   name: string;
   description: string;
   icon?: string;
+  tags?: string[];
   prompt: string;
   filePath: string;
 }
@@ -14,4 +15,5 @@ export interface QuickActionFrontmatter {
   name: string;
   description?: string;
   icon?: string;
+  tags?: string[];
 }

@@ -116,7 +116,10 @@
       "emptyHintVault": "Each file uses frontmatter type quick-action, plus name, optional description and icon; the note body is the message sent to the chat.",
       "emptyHintRun": "After you create actions, open this dialog from the toolbar and click a row to run one instantly.",
       "emptyHintCreate": "Use Add action below to create your first quick action, or set the vault folder under Settings → Quick Actions.",
-      "deleteFailed": "Failed to delete quick action"
+      "deleteFailed": "Failed to delete quick action",
+      "searchPlaceholder": "Search actions by name, description, or tag…",
+      "noResults": "No quick actions match your search.",
+      "filterByTag": "Filter by tag {tag}"
     },
     "editor": {
       "titleEdit": "Edit quick action",
