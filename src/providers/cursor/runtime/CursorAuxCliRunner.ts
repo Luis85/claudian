@@ -3,6 +3,7 @@ import { spawn } from 'child_process';
 import type { AuxQueryConfig, AuxQueryRunner } from '../../../core/auxiliary/AuxQueryRunner';
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type { PluginContext } from '../../../core/types/PluginContext';
+import { asSettingsBag } from '../../../core/types/settings';
 import { getVaultPath } from '../../../utils/path';
 import { buildCursorAgentEnvironment } from './cursorAgentEnv';
 import { acquireCursorAgentSpawnLock } from './cursorAgentSpawnLock';
@@ -105,7 +106,7 @@ export class CursorAuxCliRunner implements AuxQueryRunner {
 
   private resolveProviderModel(): string | undefined {
     const providerSettings = ProviderSettingsCoordinator.getProviderSettingsSnapshot(
-      this.plugin.settings as unknown as Record<string, unknown>,
+      asSettingsBag(this.plugin.settings),
       'cursor',
     );
     const m = providerSettings.model;

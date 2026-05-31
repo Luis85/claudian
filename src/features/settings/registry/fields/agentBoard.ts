@@ -2,6 +2,7 @@ import { Notice, Setting } from 'obsidian';
 
 import { ProviderRegistry } from '../../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../../core/providers/types';
+import { asSettingsBag } from '../../../../core/types/settings';
 import { resolveAgentBoardDefaultModel } from '../../../tasks/defaultModelResolver';
 import { resolveAgentBoardDefaultProvider } from '../../../tasks/defaultProviderResolver';
 import { installPresetTemplates } from '../../../tasks/templates/installPresetTemplates';
@@ -307,7 +308,7 @@ function renderDefaultModelWidget(ctx: SettingsCtx, host: HTMLElement): () => vo
       cls: 'claudian-agent-board-hint',
     });
   } else {
-    const settingsBag = ctx.settings as unknown as Record<string, unknown>;
+    const settingsBag = asSettingsBag(ctx.settings);
     const config = ProviderRegistry.getChatUIConfig(provider);
     const options = config.getModelOptions(settingsBag);
 

@@ -37,6 +37,7 @@ import type {
   ToolCallInfo,
 } from '../../../core/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
+import { asSettingsBag } from '../../../core/types/settings';
 import { getEnhancedPath } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
 import {
@@ -895,7 +896,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
       this.currentSessionModelId = currentRawModelId;
     }
 
-    const settingsBag = this.plugin.settings as unknown as Record<string, unknown>;
+    const settingsBag = asSettingsBag(this.plugin.settings);
     const currentSettings = getOpencodeProviderSettings(settingsBag);
     const currentBaseRawModelId = currentRawModelId
       ? resolveOpencodeBaseModelRawId(currentRawModelId, discoveredModels)
@@ -1047,7 +1048,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
       this.emitPermissionModeSync(currentModeId);
     }
 
-    const settingsBag = this.plugin.settings as unknown as Record<string, unknown>;
+    const settingsBag = asSettingsBag(this.plugin.settings);
     const currentSettings = getOpencodeProviderSettings(settingsBag);
     const shouldSeedSelectedMode = typeof currentModeId === 'string'
       && !currentSettings.selectedMode

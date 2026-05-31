@@ -3,6 +3,7 @@ import { Setting } from 'obsidian';
 
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type { ProviderSettingsTabRenderer } from '../../../core/providers/types';
+import { asSettingsBag } from '../../../core/types';
 import { renderEnvironmentSettingsSection } from '../../../features/settings/ui/EnvironmentSettingsSection';
 import { McpSettingsManager } from '../../../features/settings/ui/McpSettingsManager';
 import { t } from '../../../i18n/i18n';
@@ -24,7 +25,7 @@ import { SlashCommandSettings } from './SlashCommandSettings';
 export const claudeSettingsTabRenderer: ProviderSettingsTabRenderer = {
   render(container, context) {
     const claudeWorkspace = getClaudeWorkspaceServices();
-    const settingsBag = context.plugin.settings as unknown as Record<string, unknown>;
+    const settingsBag = asSettingsBag(context.plugin.settings);
     const claudeSettings = getClaudeProviderSettings(settingsBag);
 
     const reconcileActiveClaudeModelSelection = (): void => {

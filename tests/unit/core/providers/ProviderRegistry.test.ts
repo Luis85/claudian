@@ -97,6 +97,28 @@ describe('ProviderRegistry', () => {
     expect(ids).toContain('cursor');
   });
 
+  describe('getDefaultProviderConfigs', () => {
+    it('assembles fresh default config objects contributed by each registration', () => {
+      const first = ProviderRegistry.getDefaultProviderConfigs();
+      const second = ProviderRegistry.getDefaultProviderConfigs();
+
+      expect(first).toHaveProperty('claude');
+      expect(first).toHaveProperty('codex');
+      expect(first).toHaveProperty('cursor');
+      expect(first).toHaveProperty('opencode');
+
+      // Fresh clones each call so callers can mutate without touching defaults.
+      expect(first).not.toBe(second);
+      expect(first.claude).not.toBe(second.claude);
+      expect(first.codex).not.toBe(second.codex);
+      expect(first.opencode).not.toBe(second.opencode);
+      expect(first.cursor).not.toBe(second.cursor);
+
+      // Values match the providers' registered defaults.
+      expect(first).toEqual(second);
+    });
+  });
+
   it('filters enabled provider ids using registration metadata', () => {
     expect(ProviderRegistry.getEnabledProviderIds({
       providerConfigs: {

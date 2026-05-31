@@ -194,3 +194,18 @@ export interface ClaudianSettings {
   // Allow provider-specific extension fields
   [key: string]: unknown;
 }
+
+/**
+ * Views `ClaudianSettings` as an opaque string-keyed bag.
+ *
+ * This is the provider-UI-config seam: provider-owned code (chat UI configs,
+ * settings reconcilers, auxiliary services, settings tabs) reads/writes its own
+ * namespaced fields out of `providerConfigs` and top-level provider fields
+ * without the provider-neutral contracts having to know each provider's concrete
+ * settings shape. Centralizing the single `as unknown as Record<string, unknown>`
+ * cast here keeps that one structural escape hatch named, searchable, and the
+ * lone sanctioned `as unknown as` cast (no `any`).
+ */
+export function asSettingsBag(settings: ClaudianSettings): Record<string, unknown> {
+  return settings as unknown as Record<string, unknown>;
+}

@@ -1,5 +1,6 @@
 import type { ChatRuntime } from '../runtime/ChatRuntime';
 import type { PluginContext } from '../types/PluginContext';
+import { asSettingsBag, type ProviderConfigMap } from '../types/settings';
 import { noAsyncTaskInterpreter } from './noAsyncTaskInterpreter';
 import {
   type CreateChatRuntimeOptions,
@@ -120,6 +121,19 @@ export class ProviderRegistry {
     return Object.keys(this.registrations);
   }
 
+  /**
+   * Assembles the default `providerConfigs` map from each registered provider's
+   * contributed `defaultConfig` (ARCH-2). Returns fresh, shallow-cloned config
+   * objects so callers can mutate the result without touching the registration.
+   */
+  static getDefaultProviderConfigs(): ProviderConfigMap {
+    const configs: ProviderConfigMap = {};
+    for (const providerId of this.getRegisteredProviderIds()) {
+      configs[providerId] = { ...this.getProviderRegistration(providerId).defaultConfig };
+    }
+    return configs;
+  }
+
   static getEnabledProviderIds(settings: Record<string, unknown>): ProviderId[] {
     return this.getRegisteredProviderIds()
       .filter(providerId => this.getProviderRegistration(providerId).isEnabled(settings))
@@ -214,7 +228,7 @@ class RoutedTitleGenerationService implements TitleGenerationService {
     callback: TitleGenerationCallback,
   ): Promise<void> {
     const providerId = ProviderRegistry.resolveTitleGenerationProviderId(
-      this.plugin.settings as unknown as Record<string, unknown>,
+      asSettingsBag(this.plugin.settings),
     );
     const service = ProviderRegistry.createTitleGenerationService(this.plugin, providerId);
     const generation = { service };
