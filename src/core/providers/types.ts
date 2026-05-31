@@ -79,6 +79,28 @@ export interface ProviderSettingsReconciler {
   ): { changed: boolean; invalidatedConversations: Conversation[] };
 
   normalizeModelVariantSettings(settings: Record<string, unknown>): boolean;
+
+  /**
+   * Settings cleanup applied when settings are loaded from disk. Lets a
+   * provider repair its own persisted state (e.g. reset a stale mode to a
+   * safe default) without the provider-neutral app shell importing
+   * provider-specific constants. Returns true when settings were mutated.
+   */
+  normalizeOnLoad?(settings: Record<string, unknown>): boolean;
+
+  /**
+   * Persist the provider's "last used model" into its own config namespace.
+   * Lets the app shell record model selection without importing a specific
+   * provider's settings helpers.
+   */
+  persistLastModel?(settings: Record<string, unknown>, model: string): void;
+
+  /**
+   * Persist the provider's environment hash into its own config namespace.
+   * Lets the app shell record env reconciliation state without importing a
+   * specific provider's settings helpers.
+   */
+  persistEnvironmentHash?(settings: Record<string, unknown>, hash: string): void;
 }
 
 // ---------------------------------------------------------------------------

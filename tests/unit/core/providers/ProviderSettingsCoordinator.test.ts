@@ -83,6 +83,54 @@ describe('ProviderSettingsCoordinator', () => {
     });
   });
 
+  describe('normalizeOnLoad', () => {
+    it('invokes each registered provider reconciler load-normalization hook', () => {
+      const settings: Record<string, unknown> = { settingsProvider: 'claude' };
+      const hook = jest.fn().mockReturnValue(true);
+      const getReconcilerSpy = jest
+        .spyOn(ProviderRegistry, 'getSettingsReconciler')
+        .mockReturnValue({
+          reconcileModelWithEnvironment: () => ({ changed: false, invalidatedConversations: [] }),
+          normalizeModelVariantSettings: () => false,
+          normalizeOnLoad: hook,
+        });
+
+      const changed = ProviderSettingsCoordinator.normalizeOnLoad(settings);
+
+      expect(hook).toHaveBeenCalledWith(settings);
+      expect(changed).toBe(true);
+
+      getReconcilerSpy.mockRestore();
+    });
+
+    it('returns false when no provider mutates settings', () => {
+      const settings: Record<string, unknown> = { settingsProvider: 'claude' };
+      expect(ProviderSettingsCoordinator.normalizeOnLoad(settings)).toBe(false);
+    });
+  });
+
+  describe('persistProviderLastModel', () => {
+    it('records the model through the provider reconciler', () => {
+      const settings: Record<string, unknown> = {};
+
+      ProviderSettingsCoordinator.persistProviderLastModel(settings, 'claude', 'claude-sonnet-4-5');
+
+      const providerConfigs = settings.providerConfigs as Record<string, Record<string, unknown>>;
+      expect(providerConfigs.claude.lastModel).toBe('claude-sonnet-4-5');
+    });
+  });
+
+  describe('persistProviderEnvironmentHash', () => {
+    it('records the hash through the provider reconciler', () => {
+      const settings: Record<string, unknown> = {};
+
+      ProviderSettingsCoordinator.persistProviderEnvironmentHash(settings, 'claude', 'abc123');
+
+      const providerConfigs = settings.providerConfigs as Record<string, Record<string, unknown>>;
+      expect(providerConfigs.claude.environmentHash).toBe('abc123');
+    });
+  });
+
   describe('normalizeAllModelVariants', () => {
     it('delegates to registered providers', () => {
       const settings: Record<string, unknown> = { model: 'haiku' };

@@ -99,6 +99,41 @@ function normalizeProviderModel(
 }
 
 export class ProviderSettingsCoordinator {
+  /**
+   * Run every registered provider's load-time settings normalization. Keeps
+   * the app-shell settings loader provider-neutral: providers repair their
+   * own persisted state behind the reconciler contract instead of the loader
+   * importing provider-specific helpers.
+   */
+  static normalizeOnLoad(settings: Record<string, unknown>): boolean {
+    let anyChanged = false;
+    for (const providerId of ProviderRegistry.getRegisteredProviderIds()) {
+      const reconciler = ProviderRegistry.getSettingsReconciler(providerId);
+      if (reconciler.normalizeOnLoad?.(settings)) {
+        anyChanged = true;
+      }
+    }
+    return anyChanged;
+  }
+
+  /** Record the given provider's last-used model via its own reconciler. */
+  static persistProviderLastModel(
+    settings: Record<string, unknown>,
+    providerId: ProviderId,
+    model: string,
+  ): void {
+    ProviderRegistry.getSettingsReconciler(providerId).persistLastModel?.(settings, model);
+  }
+
+  /** Record the given provider's environment hash via its own reconciler. */
+  static persistProviderEnvironmentHash(
+    settings: Record<string, unknown>,
+    providerId: ProviderId,
+    hash: string,
+  ): void {
+    ProviderRegistry.getSettingsReconciler(providerId).persistEnvironmentHash?.(settings, hash);
+  }
+
   static handleEnvironmentChange(
     settings: Record<string, unknown>,
     providerIds: ProviderId[],
