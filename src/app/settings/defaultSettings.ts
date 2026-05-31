@@ -5,7 +5,12 @@ import { getBuiltInProviderDefaultConfigs } from '../../providers/defaultProvide
 export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
   userName: '',
 
-  permissionMode: 'yolo',
+  // SECURITY (SEC-1): Default to a prompting mode so tools require approval out of
+  // the box. 'yolo' (SDK bypassPermissions) stays an explicit opt-in surfaced
+  // through the toolbar toggle, guarded by a one-time warning.
+  permissionMode: 'normal',
+  yoloModeWarningShown: false,
+  trustedVaults: {},
 
   model: 'haiku',
   thinkingBudget: 'off',

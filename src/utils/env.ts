@@ -344,6 +344,74 @@ export function parseEnvironmentVariables(input: string): Record<string, string>
   return result;
 }
 
+/**
+ * System-essential environment variables that legitimate child processes need
+ * to function (locate the user/home, temp dirs, locale, terminal, display).
+ * Anything outside this set — and outside explicit user-configured vars — is
+ * withheld so untrusted child processes (e.g. vault-defined MCP servers) cannot
+ * harvest the host's full environment (cloud creds, tokens, ssh-agent sockets).
+ */
+const SYSTEM_ESSENTIAL_ENV_KEYS: readonly string[] = [
+  'PATH',
+  'HOME',
+  'USER',
+  'USERNAME',
+  'LOGNAME',
+  'SHELL',
+  'LANG',
+  'LC_ALL',
+  'LC_CTYPE',
+  'TERM',
+  'TMPDIR',
+  'TEMP',
+  'TMP',
+  'PWD',
+  'TZ',
+  'COLORTERM',
+  // Windows path/loader essentials.
+  'SYSTEMROOT',
+  'WINDIR',
+  'SYSTEMDRIVE',
+  'HOMEDRIVE',
+  'HOMEPATH',
+  'USERPROFILE',
+  'APPDATA',
+  'LOCALAPPDATA',
+  'PROGRAMDATA',
+  'PROGRAMFILES',
+  'PROGRAMFILES(X86)',
+  'COMSPEC',
+  'PATHEXT',
+  // GUI/X11 plumbing some CLIs probe.
+  'DISPLAY',
+  'XAUTHORITY',
+];
+
+/**
+ * SECURITY (SEC-4): Build a curated environment for spawning an untrusted child
+ * process instead of forwarding all of `process.env`. Only system-essential keys
+ * pass through from the host; the caller supplies any additional process-specific
+ * vars (user-configured MCP `env`, an enhanced PATH) via `overrides`, which always
+ * win. Use this for vault-defined MCP servers and other untrusted spawn surfaces.
+ */
+export function buildCuratedChildEnv(
+  overrides: Record<string, string | undefined> = {},
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const key of SYSTEM_ESSENTIAL_ENV_KEYS) {
+    const value = process.env[key];
+    if (typeof value === 'string') {
+      result[key] = value;
+    }
+  }
+  for (const [key, value] of Object.entries(overrides)) {
+    if (typeof value === 'string') {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
 function getDeviceSettingsStorage(): Storage | null {
   try {
     return typeof window === 'undefined' ? null : window.localStorage;

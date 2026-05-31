@@ -14,6 +14,29 @@ describe('redactArgs', () => {
     expect(out.auth.ok).toBe(1);
   });
 
+  it('masks broadened secret-shaped keys', () => {
+    const [out] = redactArgs([
+      {
+        bearer: 'b',
+        passwd: 'p',
+        pwd: 'q',
+        signature: 'sig',
+        privateKey: 'pk',
+        'private-key': 'pk2',
+        pin: '1234',
+        plain: 'ok',
+      },
+    ]) as [Record<string, unknown>];
+    expect(out.bearer).toBe('[redacted]');
+    expect(out.passwd).toBe('[redacted]');
+    expect(out.pwd).toBe('[redacted]');
+    expect(out.signature).toBe('[redacted]');
+    expect(out.privateKey).toBe('[redacted]');
+    expect(out['private-key']).toBe('[redacted]');
+    expect(out.pin).toBe('[redacted]');
+    expect(out.plain).toBe('ok');
+  });
+
   it('does not mutate the caller object', () => {
     const original = { secret: 's' };
     redactArgs([original]);

@@ -1,4 +1,5 @@
-const SECRET_KEY = /(token|key|secret|password|credential|api[-_]?key|authorization|cookie)/i;
+const SECRET_KEY =
+  /(token|key|secret|password|passwd|pwd|credential|api[-_]?key|authorization|bearer|cookie|signature|private[-_]?key|pin)/i;
 const REDACTED = '[redacted]';
 
 /** Deep-clone args, masking secret-shaped object keys. Never mutates inputs. */
