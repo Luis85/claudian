@@ -1,6 +1,16 @@
 import { McpServerManager } from '@/core/mcp/McpServerManager';
 import type { ManagedMcpServer } from '@/core/types';
 
+// SEC-4: keep the curation deterministic so assertions can verify host vars are
+// withheld while configured vars + an enhanced PATH survive.
+jest.mock('@/utils/env', () => ({
+  curateStdioMcpEnv: jest.fn((configuredEnv: Record<string, string> = {}) => ({
+    HOME: '/home/tester',
+    ...configuredEnv,
+    PATH: `${configuredEnv.PATH ?? ''}:/usr/bin`,
+  })),
+}));
+
 const createManager = async (servers: ManagedMcpServer[]) => {
   const manager = new McpServerManager({
     load: async () => servers,
@@ -132,7 +142,11 @@ describe('McpServerManager', () => {
 
       const result = manager.getActiveServers(new Set());
       expect(result).toEqual({
-        alpha: { command: 'alpha-cmd', args: ['--flag'] },
+        alpha: {
+          command: 'alpha-cmd',
+          args: ['--flag'],
+          env: { HOME: '/home/tester', PATH: ':/usr/bin' },
+        },
       });
     });
 
@@ -187,7 +201,55 @@ describe('McpServerManager', () => {
       ]);
 
       const result = manager.getActiveServers(new Set(['ctx-server']));
-      expect(result).toEqual({ 'ctx-server': { command: 'ctx-cmd' } });
+      expect(result).toEqual({
+        'ctx-server': {
+          command: 'ctx-cmd',
+          env: { HOME: '/home/tester', PATH: ':/usr/bin' },
+        },
+      });
+    });
+
+    describe('SEC-4 curated env for live stdio MCP spawns', () => {
+      it('pins a curated env on stdio servers: configured vars + PATH survive, host vars are withheld', async () => {
+        const manager = await createManager([
+          {
+            name: 'fs',
+            config: {
+              command: 'mcp-fs',
+              env: { MY_SERVER_TOKEN: 'configured', PATH: '/server/bin' },
+            },
+            enabled: true,
+            contextSaving: false,
+          },
+        ]);
+
+        const config = manager.getActiveServers(new Set()).fs as {
+          command: string;
+          env?: Record<string, string>;
+        };
+
+        // Configured var preserved, PATH enhanced, an essential present...
+        expect(config.env?.MY_SERVER_TOKEN).toBe('configured');
+        expect(config.env?.PATH).toContain('/server/bin');
+        expect(config.env?.HOME).toBe('/home/tester');
+        // ...but an arbitrary host var the user never configured does NOT leak.
+        expect(config.env?.AWS_SECRET_ACCESS_KEY).toBeUndefined();
+      });
+
+      it('leaves SSE/HTTP servers untouched (no child env)', async () => {
+        const manager = await createManager([
+          {
+            name: 'remote',
+            config: { type: 'http', url: 'https://example.com/mcp' },
+            enabled: true,
+            contextSaving: false,
+          },
+        ]);
+
+        const result = manager.getActiveServers(new Set());
+        expect(result.remote).toEqual({ type: 'http', url: 'https://example.com/mcp' });
+        expect('env' in result.remote).toBe(false);
+      });
     });
   });
 

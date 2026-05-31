@@ -1,5 +1,7 @@
+import { curateStdioMcpEnv } from '../../utils/env';
 import { extractMcpMentions, transformMcpMentions } from '../../utils/mcp';
-import type { ManagedMcpServer, McpServerConfig } from '../types';
+import type { ManagedMcpServer, McpServerConfig, McpStdioServerConfig } from '../types';
+import { getMcpServerType } from '../types';
 
 /** Storage interface for loading MCP servers. */
 export interface McpStorageAdapter {
@@ -46,10 +48,26 @@ export class McpServerManager {
         continue;
       }
 
-      result[server.name] = server.config;
+      result[server.name] = McpServerManager.curateServerConfig(server.config);
     }
 
     return result;
+  }
+
+  /**
+   * SECURITY (SEC-4): stdio MCP servers are vault-defined/untrusted and the
+   * Claude CLI spawns them with `{ ...process.env, ...server.env }` (it does not
+   * use the MCP SDK's restricted default env unless `CLAUDE_CODE_ENTRYPOINT` is
+   * `local-agent`). Pinning a curated `env` — system-essentials + the server's
+   * own configured vars + an enhanced PATH — keeps the host's broad environment
+   * (cloud creds, tokens) out of the spawn. SSE/HTTP servers have no child env.
+   */
+  private static curateServerConfig(config: McpServerConfig): McpServerConfig {
+    if (getMcpServerType(config) !== 'stdio') {
+      return config;
+    }
+    const stdio = config as McpStdioServerConfig;
+    return { ...stdio, env: curateStdioMcpEnv(stdio.env) };
   }
 
   /**
