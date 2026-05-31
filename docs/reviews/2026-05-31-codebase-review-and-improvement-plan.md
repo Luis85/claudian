@@ -266,11 +266,12 @@ checks; i18n keys perfectly synced.
   only honored after explicit per-vault trust (modal + settings toggle), gated at all four SDK
   setting-source call sites. Security-reviewed; fixed the review's HIGH (local-file detection gap)
   and LOW (broader risky-key detection) before integration.
-  - *Remaining SEC-2 follow-ups (from the review):* **stale risk cache (MEDIUM)** — risk is detected
-    once at workspace init; a `.claude/settings.json` made risky *after* init is honored by the stale
-    `false` until reload. Fix: re-detect on a settings-file vault-change event (blocked today because
-    `PluginContext` doesn't expose `registerEvent`). **Module-global cache (LOW)** — non-reentrant if
-    multi-vault/multi-window is ever added.
+  - *PR #11 review follow-ups (resolved):* **P1 stale risk cache** — the gate now reads project-settings
+    risk **fresh from disk** on every honor-decision (no init-time cache), so settings created/changed
+    after init can't slip past; this also removed the module-global cache (the prior LOW). **P2
+    cancel-then-cleanup** — Cursor `cleanup()` after `cancel()` now awaits the in-flight termination.
+    **P2 overlapping inits** — `initializeTabService` records its direct cleanup on
+    `tab.pendingRuntimeCleanup` before awaiting, so a concurrent init waits on it.
 
 **PR #9 automated-review fixes (chatgpt-codex-connector):**
 - **P1 — MCP trust bypass (SEC-3):** mere presence of `_claudian.servers.<name>` metadata (even `{}`)

@@ -603,10 +603,18 @@ export async function initializeTabService(
   try {
     tab.service = null;
     tab.serviceInitialized = false;
-    // Await the outgoing runtime's cleanup before constructing the replacement
-    // so the old provider's CLI process exits first (no overlapping processes).
+    // Record the outgoing cleanup on the tab before awaiting (same pattern as
+    // cleanupTabRuntime) so an overlapping initializeTabService awaits it via
+    // tab.pendingRuntimeCleanup instead of constructing a replacement while the
+    // old CLI process is still exiting.
     if (typeof previousService?.cleanup === 'function') {
-      await previousService.cleanup();
+      const cleanupPromise = Promise.resolve(previousService.cleanup()).finally(() => {
+        if (tab.pendingRuntimeCleanup === cleanupPromise) {
+          tab.pendingRuntimeCleanup = null;
+        }
+      });
+      tab.pendingRuntimeCleanup = cleanupPromise;
+      await cleanupPromise;
     }
     // A previous switch path may have detached and torn down a runtime
     // fire-and-forget (e.g. the new-conversation reset). Await that too so the

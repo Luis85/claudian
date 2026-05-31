@@ -21,7 +21,6 @@ import { probeRuntimeCommands } from '../commands/probeRuntimeCommands';
 import { PluginManager } from '../plugins/PluginManager';
 import { claudeCliSpec } from '../runtime/ClaudeCliResolver';
 import {
-  detectVaultProjectRisk,
   isClaudeVaultTrusted,
   setClaudeVaultTrusted,
   vaultProjectSettingsRisky,
@@ -48,11 +47,10 @@ export async function createClaudeWorkspaceServices(
   const claudeStorage = new StorageService(plugin, adapter);
   await claudeStorage.ensureDirectories();
 
-  // SEC-2: detect risky project `.claude/settings.json` (hooks / permissions.allow)
-  // once at init and cache it. The cache feeds the synchronous per-turn setting-
-  // source gate; until the vault is trusted those sources are withheld. If risk is
-  // present and the vault is untrusted, prompt once (non-blocking) to trust it.
-  await detectVaultProjectRisk(plugin, adapter);
+  // SEC-2: the per-turn setting-source gate reads project-settings risk fresh from
+  // disk, so it always reflects the current `.claude/settings.json`. Here we only
+  // surface a one-time (non-blocking) trust prompt when risk is present at init and
+  // the vault is untrusted; until trusted the gate withholds the project/local sources.
   if (vaultProjectSettingsRisky(plugin) && !isClaudeVaultTrusted(plugin)) {
     void maybePromptVaultTrust(plugin);
   }

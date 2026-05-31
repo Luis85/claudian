@@ -1,10 +1,12 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
 import {
   detectRiskyProjectSettings,
   isVaultTrusted,
   setVaultTrusted,
   shouldHonorProjectSettingsForRisk,
 } from '../../../core/security/vaultTrust';
-import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
 import { asSettingsBag } from '../../../core/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
 import { getVaultPath } from '../../../utils/path';
@@ -23,51 +25,28 @@ const CC_LOCAL_SETTINGS_PATH = CC_SETTINGS_PATH.replace(/settings\.json$/, 'sett
  * The Claude query paths use the vault as cwd and include the `project`/`local`
  * setting sources, so a vault-committed `hooks` block (arbitrary shell on turn
  * start) or `permissions.allow` (auto-approve dangerous tools) would otherwise be
- * honored with no consent. This module detects that risk once (an async read of
- * `.claude/settings.json` at workspace init), caches the boolean, and exposes a
- * synchronous honor-decision so per-turn source resolution stays cheap while still
- * re-evaluating trust against the live `trustedVaults` map.
+ * honored with no consent. Risk is read FRESH from disk on every honor-decision
+ * (the settings files are tiny) rather than cached at init, so a file
+ * created/changed after workspace init — e.g. pulled vault updates before the
+ * first turn — can never slip past the gate via a stale flag. The decision stays
+ * synchronous and re-evaluates trust against the live `trustedVaults` map.
  *
  * The vault key is the vault path (opaque, per-vault) — the same identity the
  * `trustedVaults` map keys on.
  */
-
-/** Cached risk flag for the active vault. Detected once at workspace init. */
-let cachedRiskyProjectSettings = false;
-
-/** Vault path whose risk flag is currently cached, to guard stale reads. */
-let cachedVaultKey = '';
 
 /** The opaque per-vault trust key: the vault's absolute path. */
 export function getVaultTrustKey(plugin: PluginContext): string {
   return getVaultPath(plugin.app) ?? '';
 }
 
-/**
- * Read the vault's `.claude/settings.json` and cache whether it carries risky
- * settings (hooks / non-empty permissions.allow). Best-effort: a missing or
- * unparsable file is treated as non-risky. Run once at Claude workspace init.
- */
-export async function detectVaultProjectRisk(
-  plugin: PluginContext,
-  adapter: VaultFileAdapter,
-): Promise<boolean> {
-  cachedVaultKey = getVaultTrustKey(plugin);
-  // Risky if EITHER the project or the local settings file is risky — both feed
-  // the same `project`/`local` SDK sources the gate withholds for untrusted vaults.
-  cachedRiskyProjectSettings =
-    (await readProjectSettingsRisk(adapter, CC_SETTINGS_PATH))
-    || (await readProjectSettingsRisk(adapter, CC_LOCAL_SETTINGS_PATH));
-  return cachedRiskyProjectSettings;
-}
-
-/** Read one settings file and report whether it carries risky settings (fail-safe). */
-async function readProjectSettingsRisk(adapter: VaultFileAdapter, path: string): Promise<boolean> {
+/** Read one settings file from disk and report whether it is risky (fail-safe). */
+function readSettingsFileRisk(absPath: string): boolean {
   try {
-    if (!(await adapter.exists(path))) {
+    if (!fs.existsSync(absPath)) {
       return false;
     }
-    const parsed = JSON.parse(await adapter.read(path)) as Record<string, unknown>;
+    const parsed = JSON.parse(fs.readFileSync(absPath, 'utf8')) as Record<string, unknown>;
     return detectRiskyProjectSettings(parsed);
   } catch {
     // Unreadable/unparsable settings cannot be honored anyway; the SDK would also
@@ -76,15 +55,20 @@ async function readProjectSettingsRisk(adapter: VaultFileAdapter, path: string):
   }
 }
 
-/** Whether the cached project settings for `vaultKey` were flagged risky. */
+/**
+ * Whether the vault at `vaultKey` currently carries risky project settings —
+ * read fresh from `.claude/settings.json` AND `.claude/settings.local.json`
+ * (both feed the gated `project`/`local` SDK sources) on every call.
+ */
 export function vaultProjectSettingsRiskyForKey(vaultKey: string): boolean {
-  // Guard against a vault switch the cache hasn't caught up with: an unknown
-  // vault is treated as not-yet-detected (non-risky) rather than reusing a stale
-  // risk flag from a different vault.
-  return !!vaultKey && cachedVaultKey === vaultKey && cachedRiskyProjectSettings;
+  if (!vaultKey) {
+    return false;
+  }
+  return readSettingsFileRisk(path.join(vaultKey, CC_SETTINGS_PATH))
+    || readSettingsFileRisk(path.join(vaultKey, CC_LOCAL_SETTINGS_PATH));
 }
 
-/** Whether the active vault's cached project settings were flagged risky. */
+/** Whether the active vault currently carries risky project settings. */
 export function vaultProjectSettingsRisky(plugin: PluginContext): boolean {
   return vaultProjectSettingsRiskyForKey(getVaultTrustKey(plugin));
 }
@@ -128,10 +112,4 @@ export async function setClaudeVaultTrusted(
 ): Promise<void> {
   setVaultTrusted(asSettingsBag(plugin.settings), getVaultTrustKey(plugin), trusted);
   await plugin.saveSettings();
-}
-
-/** Test-only: reset the module-level cache between cases. */
-export function __resetVaultProjectRiskCacheForTests(): void {
-  cachedRiskyProjectSettings = false;
-  cachedVaultKey = '';
 }

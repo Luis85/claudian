@@ -1,9 +1,6 @@
-import type { VaultFileAdapter } from '@/core/storage/VaultFileAdapter';
 import type { PluginContext } from '@/core/types/PluginContext';
 import type { ClaudianSettings } from '@/core/types/settings';
 import {
-  __resetVaultProjectRiskCacheForTests,
-  detectVaultProjectRisk,
   setClaudeVaultTrusted,
 } from '@/providers/claude/runtime/claudeProjectTrust';
 import type { QueryOptionsContext } from '@/providers/claude/runtime/ClaudeQueryOptionsBuilder';
@@ -15,11 +12,27 @@ jest.mock('@/utils/path', () => ({
   expandHomePath: jest.fn((p: string) => p),
 }));
 
-function riskyAdapter(): VaultFileAdapter {
+// The SEC-2 gate reads project-settings risk fresh from disk; drive it via a
+// synchronous fs mock keyed on absolute path (override only the readers).
+let mockFiles: Record<string, string> = {};
+jest.mock('fs', () => {
+  const actual = jest.requireActual('fs');
   return {
-    exists: jest.fn(async () => true),
-    read: jest.fn(async () => JSON.stringify({ hooks: { SessionStart: [{ command: 'x' }] } })),
-  } as unknown as VaultFileAdapter;
+    ...actual,
+    existsSync: (p: string) =>
+      Object.prototype.hasOwnProperty.call(mockFiles, p) || actual.existsSync(p),
+    readFileSync: (p: string, ...rest: unknown[]) =>
+      Object.prototype.hasOwnProperty.call(mockFiles, p)
+        ? mockFiles[p]
+        : actual.readFileSync(p, ...rest),
+  };
+});
+
+const PROJECT_SETTINGS_PATH = '/test/vault/.claude/settings.json';
+
+/** Mark the vault's project settings as risky for the fresh-read gate. */
+function setVaultRisky(): void {
+  mockFiles[PROJECT_SETTINGS_PATH] = JSON.stringify({ hooks: { SessionStart: [{ command: 'x' }] } });
 }
 
 function trustPlugin(settings: Record<string, unknown> = {}): PluginContext {
@@ -797,8 +810,8 @@ describe('QueryOptionsBuilder', () => {
   });
 
   describe('SEC-2 project-settings trust gate', () => {
-    afterEach(() => {
-      __resetVaultProjectRiskCacheForTests();
+    beforeEach(() => {
+      mockFiles = {};
     });
 
     it('keeps project/local sources when no risk is detected (safe vault unchanged)', () => {
@@ -807,8 +820,8 @@ describe('QueryOptionsBuilder', () => {
       expect(config.settingSources).toBe('project,local');
     });
 
-    it('withholds project/local sources for a risky, untrusted vault', async () => {
-      await detectVaultProjectRisk(trustPlugin(), riskyAdapter());
+    it('withholds project/local sources for a risky, untrusted vault', () => {
+      setVaultRisky();
 
       const ctx = createMockContext();
       const config = QueryOptionsBuilder.buildPersistentQueryConfig(ctx);
@@ -820,8 +833,8 @@ describe('QueryOptionsBuilder', () => {
       expect(options.settingSources).toEqual([]);
     });
 
-    it('honors project/local sources once the risky vault is trusted', async () => {
-      await detectVaultProjectRisk(trustPlugin(), riskyAdapter());
+    it('honors project/local sources once the risky vault is trusted', () => {
+      setVaultRisky();
 
       const ctx = createMockContext({
         settings: createMockSettings({
