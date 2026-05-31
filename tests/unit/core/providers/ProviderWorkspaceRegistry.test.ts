@@ -81,4 +81,17 @@ describe('ProviderWorkspaceRegistry', () => {
 
     expect(ProviderWorkspaceRegistry.getTabWarmupPolicy('opencode')).toBe(tabWarmupPolicy);
   });
+
+  it('returns the settings tab renderer for a provider', () => {
+    const settingsTabRenderer = { render: jest.fn() };
+
+    ProviderWorkspaceRegistry.setServices('claude', {
+      settingsTabRenderer: settingsTabRenderer as any,
+    });
+    expect(ProviderWorkspaceRegistry.getSettingsTabRenderer('claude')).toBe(settingsTabRenderer);
+  });
+
+  it('returns null when no settings tab renderer is registered', () => {
+    expect(ProviderWorkspaceRegistry.getSettingsTabRenderer('claude')).toBeNull();
+  });
 });

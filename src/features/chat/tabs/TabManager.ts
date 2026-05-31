@@ -703,7 +703,21 @@ export class TabManager implements TabManagerInterface {
   async restoreState(state: PersistedTabManagerState): Promise<void> {
     this.isRestoringState = true;
     try {
-      // Create tabs from persisted state with error handling.
+      // Pre-warm conversation hydration in parallel. createTab below will call
+      // getConversationById again, but hydrateConversationHistory keeps a
+      // hydrated-id set and the second call is a no-op. Without this the UI
+      // freezes for the sum of every tab's transcript load.
+      await Promise.all(
+        state.openTabs
+          .map((tabState) => tabState.conversationId)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0)
+          .map((id) => this.plugin.getConversationById(id).catch(() => null)),
+      );
+
+      // Create tabs from persisted state with error handling. createTab is
+      // kept sequential because it mutates shared `this.tabs` and `TabBar`
+      // ordering, but the slow await (conversation hydration) is already
+      // resolved above so each iteration is now bound by sync DOM work only.
       for (const tabState of state.openTabs) {
         try {
           await this.createTab(tabState.conversationId, tabState.tabId, {

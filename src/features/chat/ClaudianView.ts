@@ -459,7 +459,8 @@ export class ClaudianView extends ItemView {
     this.headerActionsContent = activeDocument.createElement('div');
     this.headerActionsContent.className = 'claudian-header-actions';
 
-    // Quick actions button (first)
+    // Quick actions button (first) — opens the QuickActionsModal scoped to the active tab.
+    // Lives above the textarea in nav row mode and at the top of the header in header mode.
     const quickActionsBtn = this.headerActionsContent.createDiv({ cls: 'claudian-header-btn' });
     setIcon(quickActionsBtn, 'zap');
     quickActionsBtn.setAttribute('aria-label', t('quickActions.toolbar.ariaLabel'));
@@ -474,7 +475,7 @@ export class ClaudianView extends ItemView {
       new QuickActionsModal(this.plugin.app, {
         storage,
         onRun: (action) => {
-          // Re-resolve active tab at run time — user may have switched tabs while the modal was open.
+          // Resolve the active tab at run time — user may have switched tabs while the modal was open.
           const targetTab = this.tabManager?.getActiveTab();
           if (!targetTab) return;
           void targetTab.controllers.inputController?.sendMessage({ content: action.prompt });

@@ -55,7 +55,7 @@ describe('SearchBar', () => {
     const inputEl = hostEl.children[0];
     inputEl.value = 'test query';
 
-    const escapeEvent = { key: 'Escape' };
+    const escapeEvent = { key: 'Escape', stopPropagation: jest.fn() };
     inputEl.dispatchEvent('keydown', escapeEvent);
 
     expect(inputEl.value).toBe('');

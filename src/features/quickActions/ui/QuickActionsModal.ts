@@ -33,8 +33,9 @@ export class QuickActionsModal extends Modal {
     this.introEl = body.createDiv({ cls: 'claudian-quick-actions-intro' });
 
     this.searchWrapEl = body.createDiv({ cls: 'claudian-quick-actions-search' });
+    const inputContainer = this.searchWrapEl.createDiv({ cls: 'claudian-quick-actions-search-container' });
     const placeholder = t('quickActions.modal.searchPlaceholder');
-    this.searchInputEl = this.searchWrapEl.createEl('input', {
+    this.searchInputEl = inputContainer.createEl('input', {
       type: 'search',
       cls: 'claudian-quick-actions-search-input',
       attr: { placeholder, 'aria-label': placeholder },
@@ -54,6 +55,16 @@ export class QuickActionsModal extends Modal {
         this.filter = '';
         this.renderList();
       }
+    });
+
+    // Reset button on right side of search
+    const resetBtn = inputContainer.createEl('button', {
+      cls: 'claudian-quick-actions-search-reset',
+      text: '✕',
+      attr: { title: 'Clear search', 'aria-label': 'Clear search' },
+    });
+    resetBtn.addEventListener('click', () => {
+      this.setFilter('');
     });
 
     this.listEl = body.createDiv({ cls: 'claudian-quick-actions-list' });
@@ -185,14 +196,21 @@ export class QuickActionsModal extends Modal {
     if (action.tags && action.tags.length > 0) {
       const tagsEl = textCol.createDiv({ cls: 'claudian-quick-action-tags' });
       for (const tag of action.tags) {
-        const chip = tagsEl.createEl('button', {
+        const chip = tagsEl.createSpan({
           cls: 'claudian-quick-action-tag',
           text: `#${tag}`,
-          attr: { type: 'button', 'aria-label': t('quickActions.modal.filterByTag', { tag }) },
+          attr: { role: 'button', tabindex: '0', 'aria-label': t('quickActions.modal.filterByTag', { tag }) },
         });
         chip.addEventListener('click', (e) => {
           e.stopPropagation();
           this.setFilter(tag);
+        });
+        chip.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            this.setFilter(tag);
+          }
         });
       }
     }

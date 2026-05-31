@@ -92,11 +92,14 @@ dev
 # yarn.lock
 # package-lock.json
 
+# Claude session config + worktrees (never commit these — worktrees show up as gitlinks)
 .claude/
+/.claude/worktrees/
+/.claude/worktrees/**
 /.claudian/
 /.specorator/
 /.worktrees/
-/.claude/settings.local.json
+/.worktrees/**
 
 # Throwaway agent notes, handoff files, and probe scripts (per CLAUDE.md)
 /.context/

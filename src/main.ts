@@ -489,14 +489,16 @@ export default class ClaudianPlugin extends Plugin {
   }
 
   private async persistOpenTabStates(): Promise<void> {
-    // Ensures state is saved even if Obsidian quits without calling onClose()
-    for (const view of this.getAllViews()) {
-      const tabManager = view.getTabManager();
-      if (tabManager) {
-        const state = tabManager.getPersistedState();
-        await this.persistTabManagerState(state);
-      }
-    }
+    // Ensures state is saved even if Obsidian quits without calling onClose().
+    // Saves are independent per view — run them in parallel so plugin unload
+    // does not block on the sum of every view's storage write.
+    await Promise.all(
+      this.getAllViews().map((view) => {
+        const tabManager = view.getTabManager();
+        if (!tabManager) return Promise.resolve();
+        return this.persistTabManagerState(tabManager.getPersistedState());
+      }),
+    );
   }
 
   async addFileToActiveChat(file: TFile): Promise<boolean> {

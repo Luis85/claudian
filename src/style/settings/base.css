@@ -7,6 +7,135 @@
   margin-bottom: 16px;
 }
 
+/* ── Registry-driven sections and fields ──
+ * Registry renderTab emits a Setting().setHeading() per section so the
+ * heading row matches the legacy `setHeading()` rows in renderGeneralTab.
+ * Field rows wrap their Obsidian Setting and inherit the panel-wide
+ * `.claudian-settings .setting-item` styles defined further down. */
+
+.claudian-settings-section {
+  margin-bottom: 0;
+}
+
+.claudian-settings-field {
+  margin-bottom: 0;
+}
+
+/* First-run banner */
+.claudian-first-run-banner-host {
+  margin-bottom: 20px;
+}
+
+.claudian-first-run-banner {
+  padding: 16px 20px;
+  border: 1px solid var(--interactive-accent);
+  border-radius: 8px;
+  background: var(--background-secondary);
+}
+
+.claudian-first-run-banner h2,
+.claudian-first-run-banner h3 {
+  margin: 0 0 6px;
+  color: var(--text-normal);
+  font-size: var(--font-ui-large);
+}
+
+.claudian-first-run-banner > p {
+  margin: 0 0 16px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.claudian-first-run-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.claudian-first-run-row + .claudian-first-run-row {
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.claudian-first-run-row input[type="checkbox"] {
+  margin: 4px 0 0;
+}
+
+.claudian-first-run-row > div {
+  flex: 1;
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+  line-height: 1.4;
+}
+
+.claudian-first-run-row strong {
+  font-weight: var(--font-semibold);
+}
+
+.claudian-first-run-row code {
+  padding: 1px 5px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 3px;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+}
+
+.claudian-first-run-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.claudian-first-run-actions button {
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.claudian-first-run-actions button[data-action="enable"] {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: 1px solid var(--interactive-accent);
+}
+
+.claudian-first-run-actions button[data-action="enable"]:hover {
+  background: var(--interactive-accent-hover);
+}
+
+.claudian-first-run-actions button[data-action="dismiss"] {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--background-modifier-border);
+}
+
+.claudian-first-run-actions button[data-action="dismiss"]:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+/* Agent Board tab — registry-rendered settings */
+.claudian-agent-board-folder-warning {
+  margin: 8px 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--text-warning);
+  background: var(--background-modifier-warning);
+  border-radius: 0 4px 4px 0;
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+}
+
+.claudian-agent-board-hint {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 .claudian-settings-tab {
   padding: 8px 16px;
   border: none;

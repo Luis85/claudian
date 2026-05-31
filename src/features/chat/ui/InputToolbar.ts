@@ -1392,7 +1392,15 @@ export function createInputToolbar(
   const permissionToggle = new PermissionToggle(parentEl, callbacks);
   const planModeToggle = new PlanModeToggle(parentEl, callbacks);
   const orchestratorToggle = new OrchestratorToggle(parentEl, callbacks);
-  const quickActionsToggle = new QuickActionsToggle(parentEl, callbacks);
+  // Quick-actions button is rendered above the textarea in `ClaudianView`,
+  // not inside the input toolbar. The toggle class stays around because
+  // `tab.ui.quickActionsToggle?.updateDisplay()` is still called from
+  // provider-availability hooks; resolve to a no-op stub at the same
+  // shape as the real widget.
+  const quickActionsToggle: QuickActionsToggle = new QuickActionsToggle(
+    parentEl.ownerDocument.createElement('div'),
+    callbacks,
+  );
   const modeSelector = new ModeSelector(parentEl, callbacks);
 
   return {

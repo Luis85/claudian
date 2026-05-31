@@ -20,6 +20,7 @@ import { probeRuntimeCommands } from '../commands/probeRuntimeCommands';
 import { PluginManager } from '../plugins/PluginManager';
 import { claudeCliSpec } from '../runtime/ClaudeCliResolver';
 import { StorageService } from '../storage/StorageService';
+import { claudeSettingsTabRenderer } from '../ui/ClaudeSettingsTab';
 
 export interface ClaudeWorkspaceServices extends ProviderWorkspaceServices {
   claudeStorage: StorageService;
@@ -70,6 +71,7 @@ export async function createClaudeWorkspaceServices(
     agentManager,
     commandCatalog,
     agentMentionProvider: agentManager,
+    settingsTabRenderer: claudeSettingsTabRenderer,
     refreshAgentMentions: async () => {
       await agentManager.loadAgents();
     },

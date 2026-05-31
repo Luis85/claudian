@@ -31,6 +31,9 @@ views:
     filters:
       and:
         - file.inFolder("docs/issues")
+    groupBy:
+      property: status
+      direction: DESC
     order:
       - type
       - file.name
@@ -38,6 +41,9 @@ views:
       - status
       - relations
       - tags
+    sort:
+      - property: priority
+        direction: ASC
     columnSize:
       note.type: 102
       file.name: 462

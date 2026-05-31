@@ -1,5 +1,5 @@
 import type { ProviderId } from '../../../core/providers/types';
-import { writePath } from '../registry/path';
+import { writePathInPlace } from '../registry/path';
 import type { SettingsCtx } from '../registry/SettingsField';
 
 export interface ProviderCustomModel {
@@ -84,8 +84,8 @@ export class CustomModelsTable {
     if (updated.length === rows.length) {
       return;
     }
-    this.ctx.settings = writePath(
-      this.ctx.settings,
+    writePathInPlace(
+      this.ctx.settings as object,
       `providerConfigs.${this.providerId}.customModels`,
       updated,
     );
@@ -94,6 +94,8 @@ export class CustomModelsTable {
   }
 
   private openEditorRow(prefill?: ProviderCustomModel): void {
+    // Env-sourced rows are read-only — id/alias come from snippet parsing.
+    if (prefill?.source === 'env') return;
     // Replace any existing editor to keep the surface single-open.
     const existing = this.host.querySelector('[data-role="editor"]');
     if (existing) existing.remove();
@@ -193,8 +195,8 @@ export class CustomModelsTable {
       updated = [...rows, next];
     }
 
-    this.ctx.settings = writePath(
-      this.ctx.settings,
+    writePathInPlace(
+      this.ctx.settings as object,
       `providerConfigs.${this.providerId}.customModels`,
       updated,
     );

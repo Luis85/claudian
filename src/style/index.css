@@ -69,6 +69,8 @@
 @import "./settings/opencode-model-picker.css";
 @import "./settings/cursor-model-picker.css";
 @import "./settings/orchestrator-settings.css";
+@import "./settings/custom-models.css";
+@import "./settings/hotkeys-section.css";
 @import "./features/settings-search.css";
 
 /* Accessibility */

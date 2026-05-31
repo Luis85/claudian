@@ -1,8 +1,12 @@
+import { Notice, Setting } from 'obsidian';
+
 import { ProviderRegistry } from '../../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../../core/providers/types';
 import { resolveAgentBoardDefaultModel } from '../../../tasks/defaultModelResolver';
 import { resolveAgentBoardDefaultProvider } from '../../../tasks/defaultProviderResolver';
-import { writePath } from '../path';
+import { installPresetTemplates } from '../../../tasks/templates/installPresetTemplates';
+import { renderAgentBoardLaneEditor } from '../../../tasks/ui/AgentBoardLaneEditor';
+import { writePathInPlace } from '../path';
 import { getSettingsRegistry } from '../registry';
 import type { SettingsCtx } from '../SettingsField';
 
@@ -17,6 +21,10 @@ const PROVIDER_LABELS: Record<string, string> = {
 
 function providerLabel(id: ProviderId): string {
   return PROVIDER_LABELS[id] ?? id;
+}
+
+function normalizeFolder(value: string): string {
+  return (value || '').replace(/^\/+|\/+$/g, '');
 }
 
 export function registerAgentBoardTabFields(): void {
@@ -34,6 +42,7 @@ export function registerAgentBoardTabFields(): void {
     tabId: 'agentBoard',
     label: 'Folders',
     order: 10,
+    description: 'Vault locations for Agent Board work orders, templates, and archive.',
   });
 
   r.registerSection({
@@ -41,6 +50,7 @@ export function registerAgentBoardTabFields(): void {
     tabId: 'agentBoard',
     label: 'Defaults',
     order: 20,
+    description: 'Provider and model used to run new work orders.',
   });
 
   r.registerSection({
@@ -48,6 +58,7 @@ export function registerAgentBoardTabFields(): void {
     tabId: 'agentBoard',
     label: 'Lanes',
     order: 30,
+    description: 'Configure board columns shown in the Agent Board view.',
   });
 
   r.registerSection({
@@ -55,6 +66,7 @@ export function registerAgentBoardTabFields(): void {
     tabId: 'agentBoard',
     label: 'Templates',
     order: 40,
+    description: 'Pre-built work-order templates you can install in one click.',
   });
 
   r.registerSection({
@@ -69,8 +81,10 @@ export function registerAgentBoardTabFields(): void {
     tabId: 'agentBoard',
     sectionId: 'folders',
     label: 'Work order folder',
-    type: { kind: 'folder' },
+    description: 'Folder where new Agent Board work orders are created.',
+    type: { kind: 'folder', placeholder: 'Agent Board/tasks' },
     default: 'Agent Board/tasks',
+    keywords: ['agent board', 'work order', 'folder'],
   });
 
   r.registerField({
@@ -78,8 +92,25 @@ export function registerAgentBoardTabFields(): void {
     tabId: 'agentBoard',
     sectionId: 'folders',
     label: 'Template folder',
-    type: { kind: 'folder' },
+    description: 'Folder where work-order templates live.',
+    type: { kind: 'folder', placeholder: 'Agent Board/templates' },
     default: 'Agent Board/templates',
+    keywords: ['template', 'folder'],
+  });
+
+  // Folder-collision warning — re-renders whenever folder settings change so it
+  // tracks the latest values. Sits under the folders section so it shows
+  // directly below the two folder inputs that drive it.
+  r.registerField({
+    id: 'agentBoardFolderWarning',
+    tabId: 'agentBoard',
+    sectionId: 'folders',
+    label: 'Folder warning',
+    type: {
+      kind: 'custom',
+      render: (ctx, host) => renderFolderWarning(ctx, host),
+    },
+    default: null,
   });
 
   r.registerField({
@@ -87,8 +118,10 @@ export function registerAgentBoardTabFields(): void {
     tabId: 'agentBoard',
     sectionId: 'archive',
     label: 'Archive folder',
-    type: { kind: 'folder' },
+    description: 'Folder where archived Agent Board work orders are moved. Keep it outside the work order folder.',
+    type: { kind: 'folder', placeholder: 'Agent Board/archive' },
     default: 'Agent Board/archive',
+    keywords: ['archive', 'folder'],
   });
 
   r.registerField({
@@ -96,11 +129,13 @@ export function registerAgentBoardTabFields(): void {
     tabId: 'agentBoard',
     sectionId: 'defaults',
     label: 'Default provider',
+    description: 'Provider used to run new work orders.',
     type: {
       kind: 'custom',
       render: (ctx, host) => renderDefaultProviderWidget(ctx, host),
     },
     default: null,
+    keywords: ['default', 'provider'],
   });
 
   r.registerField({
@@ -108,20 +143,29 @@ export function registerAgentBoardTabFields(): void {
     tabId: 'agentBoard',
     sectionId: 'defaults',
     label: 'Default model',
+    description: 'Model used to run new work orders.',
     type: {
       kind: 'custom',
       render: (ctx, host) => renderDefaultModelWidget(ctx, host),
     },
     default: null,
+    keywords: ['default', 'model'],
   });
 
   r.registerField({
     id: 'lanesEditor',
     tabId: 'agentBoard',
     sectionId: 'lanes',
-    label: 'Lanes',
-    type: { kind: 'custom', render: () => undefined },
+    label: 'Board lanes',
+    type: {
+      kind: 'custom',
+      render: (ctx, host) => {
+        renderAgentBoardLaneEditor(host, ctx.plugin);
+        return undefined;
+      },
+    },
     default: null,
+    keywords: ['lanes', 'columns', 'board'],
   });
 
   r.registerField({
@@ -129,14 +173,62 @@ export function registerAgentBoardTabFields(): void {
     tabId: 'agentBoard',
     sectionId: 'templates',
     label: 'Common templates',
+     
+    description: 'Install the starter set (Bug fix, Feature, Refactor, Research spike, Documentation, Test backfill). Re-running skips any whose filename already exists.',
     type: {
       kind: 'button',
       label: 'Install common templates',
-      // TODO Phase F: invoke command 'claudian:install-common-work-order-templates' via plugin handle once SettingsCtx exposes it
-      onClick: () => undefined,
+      onClick: async (ctx) => {
+        try {
+          const result = await installPresetTemplates(ctx.plugin);
+          const parts: string[] = [];
+          if (result.installed > 0) parts.push(`installed ${result.installed}`);
+          if (result.skipped > 0) parts.push(`skipped ${result.skipped} already present`);
+          new Notice(`Common work-order templates: ${parts.join(', ') || 'nothing to do'}.`);
+        } catch (error) {
+          new Notice(`Install failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      },
     },
     default: null,
+    keywords: ['template', 'install', 'preset'],
   });
+}
+
+function renderFolderWarning(ctx: SettingsCtx, host: HTMLElement): () => void {
+  let lastSame: boolean | null = null;
+  const refresh = (): void => {
+    const same =
+      normalizeFolder(String((ctx.settings as Record<string, unknown>).agentBoardTemplateFolder ?? '')) ===
+      normalizeFolder(String((ctx.settings as Record<string, unknown>).agentBoardWorkOrderFolder ?? ''));
+    if (same === lastSame) return;
+    lastSame = same;
+    host.empty();
+    if (!same) return;
+    const warning = host.createDiv({ cls: 'claudian-agent-board-folder-warning' });
+    warning.setText(
+      'Warning: the template folder matches the work order folder, so templates will appear as invalid notes on the board.',
+    );
+  };
+  refresh();
+
+  // Folder fields use the `folder` renderer which does not emit a board-config
+  // event on every keystroke (would steal focus on refresh). Poll the two
+  // values once per second while the panel is open; cheap, and self-cancels
+  // when the host is detached from the DOM.
+  const intervalId = window.setInterval(() => {
+    if (!host.isConnected) {
+      window.clearInterval(intervalId);
+      return;
+    }
+    refresh();
+  }, 1000);
+
+  const unsubscribe = ctx.plugin.events.on('task:board-config-changed', refresh);
+  return () => {
+    window.clearInterval(intervalId);
+    unsubscribe();
+  };
 }
 
 // Resolver-aware widget for `agentBoardDefaultProvider`. Three modes mirror
@@ -153,27 +245,38 @@ function renderDefaultProviderWidget(ctx: SettingsCtx, host: HTMLElement): () =>
   const enabledIds = PROVIDER_IDS.filter((id) => Boolean(configs?.[id]?.enabled));
   const resolved = resolveAgentBoardDefaultProvider(ctx.settings);
 
+  const setting = new Setting(host)
+    .setName('Default provider')
+    .setDesc('Provider used to run new work orders.');
+
   if (enabledIds.length === 0) {
-    host.createEl('p', {
-      // eslint-disable-next-line obsidianmd/ui/sentence-case -- "General" is the tab name and "Agent Board" is the product feature name.
+    setting.descEl.createEl('br');
+    setting.descEl.createSpan({
+       
       text: 'Enable a provider in General to set a default for Agent Board.',
-      cls: 'setting-item-description',
+      cls: 'claudian-agent-board-hint',
     });
   } else if (enabledIds.length === 1) {
-    const chip = host.createDiv({ cls: 'claudian-default-provider-chip' });
-    chip.createEl('strong', { text: providerLabel(enabledIds[0]) });
-    chip.createEl('span', { text: ' — only enabled provider' });
+    setting.addText((text) => {
+      text.setValue(providerLabel(enabledIds[0])).setDisabled(true);
+    });
+    setting.descEl.createEl('br');
+    setting.descEl.createSpan({
+      text: 'Only one provider is enabled — locked to it.',
+      cls: 'claudian-agent-board-hint',
+    });
   } else {
-    const select = host.createEl('select');
-    for (const id of enabledIds) {
-      const option = select.createEl('option');
-      option.value = id;
-      option.text = providerLabel(id);
-    }
-    select.value = resolved ?? enabledIds[0];
-    select.addEventListener('change', () => {
-      ctx.settings = writePath(ctx.settings, 'agentBoardDefaultProvider', select.value);
-      void ctx.saveSettings().then(() => ctx.refresh());
+    setting.addDropdown((dropdown) => {
+      for (const id of enabledIds) {
+        dropdown.addOption(id, providerLabel(id));
+      }
+      dropdown.setValue(resolved ?? enabledIds[0]);
+      dropdown.onChange(async (value) => {
+        writePathInPlace(ctx.settings as object, 'agentBoardDefaultProvider', value);
+        writePathInPlace(ctx.settings as object, 'agentBoardDefaultModel', null);
+        await ctx.saveSettings();
+        ctx.refresh();
+      });
     });
   }
 
@@ -192,11 +295,16 @@ function renderDefaultModelWidget(ctx: SettingsCtx, host: HTMLElement): () => vo
   host.empty();
   const provider = resolveAgentBoardDefaultProvider(ctx.settings);
 
+  const setting = new Setting(host)
+    .setName('Default model')
+    .setDesc('Model used to run new work orders.');
+
   if (!provider) {
-    host.createEl('p', {
-      // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Board" is the product feature name.
+    setting.descEl.createEl('br');
+    setting.descEl.createSpan({
+       
       text: 'Pick an Agent Board default provider first to choose a model.',
-      cls: 'setting-item-description',
+      cls: 'claudian-agent-board-hint',
     });
   } else {
     const settingsBag = ctx.settings as unknown as Record<string, unknown>;
@@ -204,26 +312,27 @@ function renderDefaultModelWidget(ctx: SettingsCtx, host: HTMLElement): () => vo
     const options = config.getModelOptions(settingsBag);
 
     if (options.length === 0) {
-      host.createEl('p', {
+      setting.descEl.createEl('br');
+      setting.descEl.createSpan({
         text: `No models available for ${providerLabel(provider)}.`,
-        cls: 'setting-item-description',
+        cls: 'claudian-agent-board-hint',
       });
     } else if (options.length === 1) {
-      const chip = host.createDiv({ cls: 'claudian-default-model-chip' });
-      chip.createEl('strong', { text: options[0].label });
-      chip.createEl('span', { text: ' — only available model' });
+      setting.addText((text) => {
+        text.setValue(options[0].label).setDisabled(true);
+      });
     } else {
-      const select = host.createEl('select');
-      for (const option of options) {
-        const optionEl = select.createEl('option');
-        optionEl.value = option.value;
-        optionEl.text = option.label;
-      }
-      const resolvedModel = resolveAgentBoardDefaultModel(ctx.settings);
-      select.value = resolvedModel ?? options[0].value;
-      select.addEventListener('change', () => {
-        ctx.settings = writePath(ctx.settings, 'agentBoardDefaultModel', select.value);
-        void ctx.saveSettings().then(() => ctx.refresh());
+      setting.addDropdown((dropdown) => {
+        dropdown.addOption('', 'Provider default');
+        for (const option of options) {
+          dropdown.addOption(option.value, option.label);
+        }
+        const resolvedModel = resolveAgentBoardDefaultModel(ctx.settings);
+        dropdown.setValue(resolvedModel ?? '');
+        dropdown.onChange(async (value) => {
+          writePathInPlace(ctx.settings as object, 'agentBoardDefaultModel', value || null);
+          await ctx.saveSettings();
+        });
       });
     }
   }

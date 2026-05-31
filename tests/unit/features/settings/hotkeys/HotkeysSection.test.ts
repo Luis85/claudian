@@ -64,12 +64,13 @@ describe('HotkeysSection', () => {
       label: 'Test Command 2',
     });
 
-    renderHotkeysSection(ctx, host);
+    const dispose = renderHotkeysSection(ctx, host);
 
-    const rows = host.querySelectorAll('.hotkey-row');
+    const rows = host.querySelectorAll('.claudian-hotkey-row');
     expect(rows).toHaveLength(2);
-    expect(rows[0].querySelector('.hotkey-command-label')?.textContent).toContain('Test Command 1');
-    expect(rows[1].querySelector('.hotkey-command-label')?.textContent).toContain('Test Command 2');
+    expect(rows[0].querySelector('.claudian-hotkey-command-label')?.textContent).toContain('Test Command 1');
+    expect(rows[1].querySelector('.claudian-hotkey-command-label')?.textContent).toContain('Test Command 2');
+    dispose();
   });
 
   it('shows "Unbound" when no binding exists', () => {
@@ -78,10 +79,12 @@ describe('HotkeysSection', () => {
       label: 'Unbound Command',
     });
 
-    renderHotkeysSection(ctx, host);
+    const dispose = renderHotkeysSection(ctx, host);
 
-    const chip = host.querySelector('.hotkey-binding-chip');
+    const chip = host.querySelector('.claudian-hotkey-binding-chip');
     expect(chip?.textContent).toContain('Unbound');
+    expect(chip?.classList.contains('claudian-hotkey-binding-chip--unbound')).toBe(true);
+    dispose();
   });
 
   it('shows formatted hotkey when bound', () => {
@@ -101,11 +104,12 @@ describe('HotkeysSection', () => {
     };
     mockPlugin.app = mockAppWithHotkeys as any;
 
-    renderHotkeysSection(ctx, host);
+    const dispose = renderHotkeysSection(ctx, host);
 
-    const chip = host.querySelector('.hotkey-binding-chip');
+    const chip = host.querySelector('.claudian-hotkey-binding-chip');
     // Accept both Windows (Ctrl+K) and macOS (⌃K) formats depending on platform
     expect(chip?.textContent).toMatch(/Ctrl\+K|⌃K/);
+    dispose();
   });
 
   it('calls openHotkeySettingsFor when edit button clicked', () => {
@@ -115,29 +119,28 @@ describe('HotkeysSection', () => {
     });
 
     const openHotkeySettingsFor = jest.fn();
-    renderHotkeysSection(ctx, host, openHotkeySettingsFor);
+    const dispose = renderHotkeysSection(ctx, host, openHotkeySettingsFor);
 
-    const editBtn = host.querySelector('.hotkey-edit-button') as HTMLButtonElement;
+    const editBtn = host.querySelector('.claudian-hotkey-edit-button') as HTMLButtonElement;
     expect(editBtn).toBeTruthy();
 
     editBtn?.click();
 
     expect(openHotkeySettingsFor).toHaveBeenCalledWith('claudian:edit-test');
+    dispose();
   });
 
-  it('subscribes to hotkey-changed event and re-renders', () => {
+  it('returns a disposer that clears the poll interval', () => {
     registerCommandHotkey({
       commandId: 'claudian:reactive-cmd',
       label: 'Reactive Command',
     });
 
-    renderHotkeysSection(ctx, host);
-
-    // Verify event subscription was set up
-    expect(mockPlugin.events.on).toHaveBeenCalledWith('hotkey-changed', expect.any(Function));
-
-    // Verify initial render has one row
-    const rows = host.querySelectorAll('.hotkey-row');
-    expect(rows).toHaveLength(1);
+    const clearSpy = jest.spyOn(window, 'clearInterval');
+    const dispose = renderHotkeysSection(ctx, host);
+    expect(typeof dispose).toBe('function');
+    dispose();
+    expect(clearSpy).toHaveBeenCalled();
+    clearSpy.mockRestore();
   });
 });

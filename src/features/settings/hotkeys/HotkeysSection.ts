@@ -9,8 +9,19 @@ export type ObsidianHotkeyManager = {
   customKeys?: Record<string, ObsidianHotkey[] | undefined>;
   defaultKeys?: Record<string, ObsidianHotkey[] | undefined>;
 };
+type ObsidianHotkeyTab = {
+  searchInputEl?: HTMLInputElement;
+  searchComponent?: { inputEl?: HTMLInputElement };
+  updateHotkeyVisibility?: () => void;
+};
+type ObsidianSettingsController = {
+  activeTab?: ObsidianHotkeyTab;
+  open: () => void;
+  openTabById: (id: string) => void;
+};
 export type AppWithHotkeyInternals = App & {
   hotkeyManager?: ObsidianHotkeyManager;
+  setting?: ObsidianSettingsController;
 };
 
 /**
@@ -58,7 +69,7 @@ export function renderHotkeysSection(
 ): () => void {
   // Default implementation opens Obsidian's hotkey settings
   const openSettings = openHotkeySettingsFor || ((commandId: string) => {
-    const setting = (ctx.plugin.app as any).setting;
+    const setting = (ctx.plugin.app as AppWithHotkeyInternals).setting;
     if (!setting) {
       return;
     }
@@ -82,26 +93,29 @@ export function renderHotkeysSection(
   });
 
   host.empty();
-  const container = host.createDiv({ cls: 'hotkeys-section' });
+  const container = host.createDiv({ cls: 'claudian-hotkeys-section' });
 
   const hotkeys = getCommandHotkeys();
 
   for (const hotkey of hotkeys) {
-    const row = container.createDiv({ cls: 'hotkey-row' });
+    const row = container.createDiv({ cls: 'claudian-hotkey-row' });
 
     // Command label
-    row.createSpan({ cls: 'hotkey-command-label', text: hotkey.label });
+    row.createSpan({ cls: 'claudian-hotkey-command-label', text: hotkey.label });
 
     // Binding display
     const bindingText = getHotkeyForCommand(ctx.plugin.app, hotkey.commandId) || 'Unbound';
-    row.createSpan({
-      cls: 'hotkey-binding-chip',
+    const bindingEl = row.createSpan({
+      cls: 'claudian-hotkey-binding-chip',
       text: bindingText,
     });
+    if (bindingText === 'Unbound') {
+      bindingEl.addClass('claudian-hotkey-binding-chip--unbound');
+    }
 
     // Edit button
     const editBtn = row.createEl('button', {
-      cls: 'hotkey-edit-button',
+      cls: 'claudian-hotkey-edit-button',
       text: 'Edit',
     });
     editBtn.addEventListener('click', () => {
@@ -109,12 +123,36 @@ export function renderHotkeysSection(
     });
   }
 
-  // Subscribe to hotkey-changed event to re-render when bindings change
-  const unsubscribe = ctx.plugin.events.on('hotkey-changed', (commandId: string) => {
-    // Re-render the entire section when hotkeys change
-    renderHotkeysSection(ctx, host, openHotkeySettingsFor);
-  });
+  // Poll for hotkey changes — Obsidian doesn't emit a hotkey-changed event,
+  // and the plugin's event bus is never wired to detect Obsidian-side hotkey
+  // edits. Refresh bindings every 2s while the settings panel is open; the
+  // cost is one map lookup per registered command. Self-cancels once the
+  // host element is no longer connected to the DOM (settings panel closed
+  // without re-render).
+  const lastSeen = new Map<string, string>();
+  for (const hotkey of hotkeys) {
+    lastSeen.set(hotkey.commandId, getHotkeyForCommand(ctx.plugin.app, hotkey.commandId) ?? 'Unbound');
+  }
+  const intervalId = window.setInterval(() => {
+    if (!host.isConnected) {
+      window.clearInterval(intervalId);
+      return;
+    }
+    let changed = false;
+    for (const hotkey of hotkeys) {
+      const current = getHotkeyForCommand(ctx.plugin.app, hotkey.commandId) ?? 'Unbound';
+      if (lastSeen.get(hotkey.commandId) !== current) {
+        changed = true;
+        break;
+      }
+    }
+    if (changed) {
+      window.clearInterval(intervalId);
+      renderHotkeysSection(ctx, host, openHotkeySettingsFor);
+    }
+  }, 2000);
 
-  // Return cleanup function
-  return unsubscribe;
+  return () => {
+    window.clearInterval(intervalId);
+  };
 }

@@ -44,14 +44,22 @@ export class ProviderWorkspaceRegistry {
     const vaultAdapter = storage.getAdapter();
     const homeAdapter = new HomeFileAdapter();
 
-    for (const providerId of providerIds) {
-      this.services[providerId] = await this.getWorkspaceRegistration(providerId).initialize({
-        plugin,
-        storage,
-        vaultAdapter,
-        homeAdapter,
-      });
-    }
+    // Provider initializations do their own filesystem I/O (Claude scans MCP +
+    // plugins + agents, Codex scans skills + subagents, Cursor warms its model
+    // catalog). Running them sequentially blocks plugin onload for the sum of
+    // every provider's startup cost — visible as a UI freeze when the user
+    // clicks the ribbon icon. Run them concurrently so the wall-clock cost is
+    // just the slowest single provider.
+    await Promise.all(
+      providerIds.map(async (providerId) => {
+        this.services[providerId] = await this.getWorkspaceRegistration(providerId).initialize({
+          plugin,
+          storage,
+          vaultAdapter,
+          homeAdapter,
+        });
+      }),
+    );
   }
 
   static setServices(

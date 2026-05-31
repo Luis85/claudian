@@ -1,7 +1,18 @@
 import { Setting } from 'obsidian';
 
-import { readPath, writePath } from './path';
+import { readPath, writePathInPlace } from './path';
 import type { SettingsCtx, SettingsField } from './SettingsField';
+
+// All input handlers mutate `ctx.settings` in place via `writePathInPlace`.
+// The original code reassigned `ctx.settings = writePath(...)` which created
+// a new object that `ctx.saveSettings()` never serialized — the plugin still
+// owned the old reference, so user edits silently vanished on save. Mutating
+// the live object (passed by reference from `plugin.settings`) keeps the
+// persisted state in sync.
+function writeAndSave(ctx: SettingsCtx, id: string, value: unknown): Promise<void> {
+  writePathInPlace(ctx.settings as object, id, value);
+  return ctx.saveSettings();
+}
 
 // Returns the custom-field disposer when the field is `kind: 'custom'` and its
 // render function returned one. F4/F5 widgets subscribe to the event bus and
@@ -27,8 +38,7 @@ export function renderField(
     case 'toggle':
       setting.addToggle((t) =>
         t.setValue(Boolean(current)).onChange(async (v: boolean) => {
-          ctx.settings = writePath(ctx.settings, field.id, v);
-          await ctx.saveSettings();
+          await writeAndSave(ctx, field.id, v);
           ctx.refresh();
         }),
       );
@@ -43,8 +53,7 @@ export function renderField(
         t.setValue(String(current ?? ''));
         if (placeholder) t.setPlaceholder(placeholder);
         t.onChange(async (v: string) => {
-          ctx.settings = writePath(ctx.settings, field.id, v);
-          await ctx.saveSettings();
+          await writeAndSave(ctx, field.id, v);
         });
       });
       return undefined;
@@ -56,23 +65,33 @@ export function renderField(
         t.setValue(String(current ?? ''));
         if (placeholder) t.setPlaceholder(placeholder);
         t.onChange(async (v: string) => {
-          ctx.settings = writePath(ctx.settings, field.id, v);
-          await ctx.saveSettings();
+          await writeAndSave(ctx, field.id, v);
         });
       });
       return undefined;
     }
 
-    case 'number':
-      setting.addText((t) =>
+    case 'number': {
+      const { min, max, step } = fieldType;
+      setting.addText((t) => {
+        t.inputEl.type = 'number';
+        if (min !== undefined) t.inputEl.min = String(min);
+        if (max !== undefined) t.inputEl.max = String(max);
+        if (step !== undefined) t.inputEl.step = String(step);
         t.setValue(String(current ?? '')).onChange(async (v: string) => {
+          if (v === '') {
+            await writeAndSave(ctx, field.id, undefined);
+            return;
+          }
           const n = Number(v);
           if (Number.isNaN(n)) return;
-          ctx.settings = writePath(ctx.settings, field.id, n);
-          await ctx.saveSettings();
-        }),
-      );
+          if (min !== undefined && n < min) return;
+          if (max !== undefined && n > max) return;
+          await writeAndSave(ctx, field.id, n);
+        });
+      });
       return undefined;
+    }
 
     case 'dropdown': {
       const opts = fieldType.options(ctx.settings);
@@ -80,8 +99,7 @@ export function renderField(
         opts.forEach((o) => d.addOption(o.value, o.label));
         d.setValue(String(current ?? ''));
         d.onChange(async (v: string) => {
-          ctx.settings = writePath(ctx.settings, field.id, v);
-          await ctx.saveSettings();
+          await writeAndSave(ctx, field.id, v);
           ctx.refresh();
         });
       });

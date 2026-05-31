@@ -11,6 +11,7 @@ import { OpencodeAgentMentionProvider } from '../agents/OpencodeAgentMentionProv
 import { OpencodeCommandCatalog } from '../commands/OpencodeCommandCatalog';
 import { opencodeCliSpec } from '../runtime/OpencodeCliResolver';
 import { OpencodeAgentStorage } from '../storage/OpencodeAgentStorage';
+import { opencodeSettingsTabRenderer } from '../ui/OpencodeSettingsTab';
 import { OpencodeRuntimeCommandLoader } from './OpencodeRuntimeCommandLoader';
 
 export interface OpencodeWorkspaceServices extends ProviderWorkspaceServices {
@@ -38,6 +39,7 @@ export async function createOpencodeWorkspaceServices(
     commandCatalog: new OpencodeCommandCatalog(),
     cliResolver: new CachedCliResolver(opencodeCliSpec),
     runtimeCommandLoader: new OpencodeRuntimeCommandLoader(),
+    settingsTabRenderer: opencodeSettingsTabRenderer,
     tabWarmupPolicy: opencodeTabWarmupPolicy,
     refreshAgentMentions: async () => {
       await agentMentionProvider.loadAgents();

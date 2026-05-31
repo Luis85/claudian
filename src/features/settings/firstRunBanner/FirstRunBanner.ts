@@ -24,11 +24,16 @@ export class FirstRunBanner {
     for (const p of PROVIDERS) {
       const row = card.createDiv({ cls: 'claudian-first-run-row' });
       row.dataset.provider = p.id;
-      const cb = row.createEl('input', { attr: { type: 'checkbox' } }) as HTMLInputElement;
+      const cb = row.createEl('input', {
+        attr: { type: 'checkbox', 'aria-label': `Enable ${p.name}` },
+      }) as HTMLInputElement;
       this.rows.push({ id: p.id, cb });
       const text = row.createDiv();
       text.createEl('strong', { text: p.name });
-      text.createEl('span', { text: ` — ${p.blurb} (requires \`${p.cli}\` on PATH)` });
+      text.createEl('span', { text: ` — ${p.blurb}. Requires ` });
+      text.createEl('code', { text: p.cli });
+      // eslint-disable-next-line obsidianmd/ui/sentence-case -- trailing fragment of "requires `cli` on path."
+      text.createEl('span', { text: ' on path.' });
     }
     const actions = card.createDiv({ cls: 'claudian-first-run-actions' });
     const enableBtn = actions.createEl('button', { text: 'Enable selected' });
@@ -41,19 +46,21 @@ export class FirstRunBanner {
 
   private async handleEnable(): Promise<void> {
     const checked = this.rows.filter((r) => r.cb.checked).map((r) => r.id);
-    const next = JSON.parse(JSON.stringify(this.ctx.settings));
-    next.providerConfigs = next.providerConfigs ?? {};
+    const live = this.ctx.settings as unknown as {
+      providerConfigs?: Record<string, { enabled?: boolean }>;
+      firstRunDismissed?: boolean;
+    };
+    live.providerConfigs = live.providerConfigs ?? {};
     for (const id of checked) {
-      next.providerConfigs[id] = { ...(next.providerConfigs[id] ?? {}), enabled: true };
+      live.providerConfigs[id] = { ...(live.providerConfigs[id] ?? {}), enabled: true };
     }
-    next.firstRunDismissed = true;
-    this.ctx.settings = next;
+    live.firstRunDismissed = true;
     await this.ctx.saveSettings();
     this.ctx.refresh();
   }
 
   private async handleDismiss(): Promise<void> {
-    this.ctx.settings = { ...this.ctx.settings, firstRunDismissed: true };
+    (this.ctx.settings as { firstRunDismissed?: boolean }).firstRunDismissed = true;
     await this.ctx.saveSettings();
     this.ctx.refresh();
   }

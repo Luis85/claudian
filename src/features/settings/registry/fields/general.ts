@@ -85,7 +85,7 @@ export function registerGeneralTabFields(): void {
       kind: 'button',
       label: 'Show setup',
       onClick: async (ctx) => {
-        ctx.settings = { ...ctx.settings, firstRunDismissed: false };
+        (ctx.settings as { firstRunDismissed?: boolean }).firstRunDismissed = false;
         await ctx.saveSettings();
         ctx.refresh();
       },

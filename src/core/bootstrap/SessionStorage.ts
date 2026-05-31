@@ -47,26 +47,29 @@ export class SessionStorage {
   }
 
   async listMetadata(): Promise<SessionMetadata[]> {
-    const metas: SessionMetadata[] = [];
-
     try {
       const files = await this.adapter.listFiles(SESSIONS_PATH);
       const metaFiles = files.filter((filePath) => filePath.endsWith('.meta.json'));
 
-      for (const filePath of metaFiles) {
-        try {
-          const content = await this.adapter.read(filePath);
-          const raw = JSON.parse(content) as SessionMetadata;
-          metas.push(raw);
-        } catch {
-          // Skip files that fail to load.
-        }
-      }
+      // Read all metadata files in parallel. Plugin onload + chat-view open
+      // both await this list; serial reads turn into an N×read-latency stall
+      // that freezes the UI on vaults with many conversations.
+      const results = await Promise.all(
+        metaFiles.map(async (filePath) => {
+          try {
+            const content = await this.adapter.read(filePath);
+            return JSON.parse(content) as SessionMetadata;
+          } catch {
+            return null;
+          }
+        }),
+      );
+
+      return results.filter((meta): meta is SessionMetadata => meta !== null);
     } catch {
       // Folder doesn't exist yet.
+      return [];
     }
-
-    return metas;
   }
 
   async listAllConversations(): Promise<ConversationMeta[]> {

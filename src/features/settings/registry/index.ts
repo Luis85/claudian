@@ -1,4 +1,5 @@
 export { buildDefaultsFromRegistry } from './buildDefaultsFromRegistry';
+export { useRegistryRenderer } from './featureFlag';
 export { readPath, writePath } from './path';
 export { registerAllSettings } from './registerAll';
 export { getSettingsRegistry, resetSettingsRegistryForTests } from './registry';

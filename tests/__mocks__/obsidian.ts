@@ -151,8 +151,11 @@ export interface MockTextComponent {
   value: string;
   placeholder: string;
   changeHandler: (v: string) => void;
+  disabled: boolean;
+  inputEl: { type: string; min: string; max: string; step: string };
   setValue: (v: string) => MockTextComponent;
   setPlaceholder: (v: string) => MockTextComponent;
+  setDisabled: (v: boolean) => MockTextComponent;
   onChange: (fn: (v: string) => void) => MockTextComponent;
 }
 
@@ -184,11 +187,39 @@ export type MockSettingComponent =
   | { kind: 'dropdown'; props: MockDropdownComponent }
   | { kind: 'button'; props: MockButtonComponent };
 
+function createStubEl(tag: string): any {
+  const el: any = {
+    tagName: tag.toUpperCase(),
+    children: [] as any[],
+    textContent: '',
+    setText(text: string) {
+      this.textContent = text;
+    },
+    createEl(childTag: string, opts?: { text?: string; cls?: string }) {
+      const child = createStubEl(childTag);
+      if (opts?.text) child.textContent = opts.text;
+      if (opts?.cls) child.className = opts.cls;
+      this.children.push(child);
+      return child;
+    },
+    createSpan(opts?: { text?: string; cls?: string }) {
+      return this.createEl('span', opts);
+    },
+    createDiv(opts?: { text?: string; cls?: string }) {
+      return this.createEl('div', opts);
+    },
+  };
+  return el;
+}
+
 export class Setting {
   static instances: Setting[] = [];
 
   containerEl: any;
   components: MockSettingComponent[] = [];
+  nameEl: any = createStubEl('div');
+  descEl: any = createStubEl('div');
+  settingEl: any = createStubEl('div');
 
   constructor(containerEl: any) {
     this.containerEl = containerEl;
@@ -197,6 +228,10 @@ export class Setting {
 
   setName = jest.fn().mockReturnThis();
   setDesc = jest.fn().mockReturnThis();
+  setHeading = jest.fn().mockReturnThis();
+  setClass = jest.fn().mockReturnThis();
+  setTooltip = jest.fn().mockReturnThis();
+  setDisabled = jest.fn().mockReturnThis();
 
   addToggle(cb?: (t: MockToggleComponent) => unknown): this {
     const component: MockToggleComponent = {
@@ -221,12 +256,18 @@ export class Setting {
       value: '',
       placeholder: '',
       changeHandler: () => undefined,
+      disabled: false,
+      inputEl: { type: 'text', min: '', max: '', step: '' },
       setValue(v: string) {
         this.value = v;
         return this;
       },
       setPlaceholder(v: string) {
         this.placeholder = v;
+        return this;
+      },
+      setDisabled(v: boolean) {
+        this.disabled = v;
         return this;
       },
       onChange(fn: (v: string) => void) {
@@ -244,12 +285,18 @@ export class Setting {
       value: '',
       placeholder: '',
       changeHandler: () => undefined,
+      disabled: false,
+      inputEl: { type: 'textarea', min: '', max: '', step: '' },
       setValue(v: string) {
         this.value = v;
         return this;
       },
       setPlaceholder(v: string) {
         this.placeholder = v;
+        return this;
+      },
+      setDisabled(v: boolean) {
+        this.disabled = v;
         return this;
       },
       onChange(fn: (v: string) => void) {
@@ -297,6 +344,30 @@ export class Setting {
         this.clickHandler = fn;
         return this;
       },
+      // Obsidian's ButtonComponent additionally exposes these chainable
+      // helpers; tests don't assert on them but the production code calls
+      // them and would crash without the stubs.
+      setWarning() { return this; },
+      setCta() { return this; },
+      setClass() { return this; },
+      setDisabled(_: boolean) { return this; },
+      setIcon(_: string) { return this; },
+      setTooltip(_: string) { return this; },
+    } as any;
+    this.components.push({ kind: 'button', props: component });
+    if (cb) cb(component);
+    return this;
+  }
+
+  addExtraButton(cb?: (b: any) => unknown): this {
+    const component: any = {
+      icon: '',
+      tooltip: '',
+      clickHandler: () => undefined,
+      setIcon(v: string) { this.icon = v; return this; },
+      setTooltip(v: string) { this.tooltip = v; return this; },
+      setDisabled(_: boolean) { return this; },
+      onClick(fn: () => void) { this.clickHandler = fn; return this; },
     };
     this.components.push({ kind: 'button', props: component });
     if (cb) cb(component);

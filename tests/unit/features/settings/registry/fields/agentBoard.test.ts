@@ -9,6 +9,8 @@ jest.mock('../../../../../../src/core/providers/ProviderRegistry', () => ({
   },
 }));
 
+import { Setting } from 'obsidian';
+
 import { ProviderRegistry } from '../../../../../../src/core/providers/ProviderRegistry';
 import { registerAgentBoardTabFields } from '../../../../../../src/features/settings/registry/fields/agentBoard';
 import { getSettingsRegistry, resetSettingsRegistryForTests } from '../../../../../../src/features/settings/registry/registry';
@@ -16,10 +18,37 @@ import type { SettingsCtx, SettingsField } from '../../../../../../src/features/
 
 const getChatUIConfig = ProviderRegistry.getChatUIConfig as jest.Mock;
 
+function lastSetting(): Setting {
+  const instances = (Setting as any).instances as Setting[];
+  return instances[instances.length - 1];
+}
+
+function lastDropdown(): { value: string; options: Array<{ value: string; label: string }>; changeHandler: (v: string) => void } | null {
+  const components = (lastSetting() as any).components as Array<{ kind: string; props: any }>;
+  for (let i = components.length - 1; i >= 0; i -= 1) {
+    if (components[i].kind === 'dropdown') return components[i].props;
+  }
+  return null;
+}
+
+function lastText(): { value: string; disabled: boolean } | null {
+  const components = (lastSetting() as any).components as Array<{ kind: string; props: any }>;
+  for (let i = components.length - 1; i >= 0; i -= 1) {
+    if (components[i].kind === 'text') return components[i].props;
+  }
+  return null;
+}
+
+function settingHasDropdown(): boolean {
+  const components = (lastSetting() as any).components as Array<{ kind: string }>;
+  return components.some((c) => c.kind === 'dropdown');
+}
+
 describe('Agent Board tab registry fields', () => {
   beforeEach(() => {
     resetSettingsRegistryForTests();
     getChatUIConfig.mockReset();
+    (Setting as any).instances = [];
   });
 
   it('registers the Agent Board tab as always visible', () => {
@@ -144,45 +173,44 @@ describe('Agent Board tab registry fields', () => {
       expect(field.default).toBeNull();
     });
 
-    it('0 enabled — renders disabled message without interactive control', () => {
+    it('0 enabled — renders Setting row without interactive control', () => {
       const field = getField();
       const { ctx } = makeCtx([]);
       const host = document.createElement('div');
       render(field, ctx, host);
 
-      expect(host.querySelector('select')).toBeNull();
-      const message = host.querySelector('p.setting-item-description');
-      expect(message).not.toBeNull();
-      expect(message?.textContent).toContain('Enable a provider');
+      expect(settingHasDropdown()).toBe(false);
+      expect(lastText()).toBeNull();
+      expect(lastSetting().setName).toHaveBeenCalledWith('Default provider');
     });
 
-    it('1 enabled — renders read-only chip showing the locked provider name', () => {
+    it('1 enabled — renders disabled text input locking the only valid provider', () => {
       const field = getField();
       const { ctx, saveSettings } = makeCtx(['claude']);
       const host = document.createElement('div');
       render(field, ctx, host);
 
-      expect(host.querySelector('select')).toBeNull();
-      const chip = host.querySelector('.claudian-default-provider-chip');
-      expect(chip).not.toBeNull();
-      expect(chip?.textContent).toContain('Claude');
+      expect(settingHasDropdown()).toBe(false);
+      const text = lastText();
+      expect(text).not.toBeNull();
+      expect(text!.value).toBe('Claude');
+      expect(text!.disabled).toBe(true);
       expect(saveSettings).not.toHaveBeenCalled();
     });
 
-    it('>=2 enabled — renders editable dropdown with enabled providers as options and writes through on change', async () => {
+    it('>=2 enabled — renders dropdown with enabled providers as options and writes through on change', async () => {
       const field = getField();
       const { ctx, saveSettings, refresh } = makeCtx(['claude', 'codex'], 'claude');
       const host = document.createElement('div');
       render(field, ctx, host);
 
-      const select = host.querySelector('select') as HTMLSelectElement | null;
-      expect(select).not.toBeNull();
-      const optionValues = Array.from(select!.options).map((o) => o.value);
+      const dropdown = lastDropdown();
+      expect(dropdown).not.toBeNull();
+      const optionValues = dropdown!.options.map((o) => o.value);
       expect(optionValues).toEqual(['claude', 'codex']);
-      expect(select!.value).toBe('claude');
+      expect(dropdown!.value).toBe('claude');
 
-      select!.value = 'codex';
-      select!.dispatchEvent(new Event('change'));
+      dropdown!.changeHandler('codex');
       await Promise.resolve();
       await Promise.resolve();
       expect((ctx.settings as any).agentBoardDefaultProvider).toBe('codex');
@@ -196,9 +224,9 @@ describe('Agent Board tab registry fields', () => {
       const host = document.createElement('div');
       render(field, ctx, host);
 
-      const select = host.querySelector('select') as HTMLSelectElement | null;
-      expect(select).not.toBeNull();
-      expect(select!.value).toBe('codex');
+      const dropdown = lastDropdown();
+      expect(dropdown).not.toBeNull();
+      expect(dropdown!.value).toBe('codex');
     });
 
     it('subscribes to task:board-config-changed and returns the unsubscribe', () => {
@@ -286,20 +314,19 @@ describe('Agent Board tab registry fields', () => {
       expect(field.default).toBeNull();
     });
 
-    it('no provider resolvable — renders hint without interactive control', () => {
+    it('no provider resolvable — renders Setting row without interactive control', () => {
       const field = getField();
       const { ctx } = makeCtx([]);
       const host = document.createElement('div');
       render(field, ctx, host);
 
-      expect(host.querySelector('select')).toBeNull();
-      const message = host.querySelector('p.setting-item-description');
-      expect(message).not.toBeNull();
-      expect(message?.textContent).toContain('provider');
+      expect(settingHasDropdown()).toBe(false);
+      expect(lastText()).toBeNull();
+      expect(lastSetting().setName).toHaveBeenCalledWith('Default model');
       expect(getChatUIConfig).not.toHaveBeenCalled();
     });
 
-    it('provider with 0 models — renders hint', () => {
+    it('provider with 0 models — renders Setting row without interactive control', () => {
       getChatUIConfig.mockReturnValue({
         ownsModel: () => false,
         getModelOptions: () => [],
@@ -309,12 +336,12 @@ describe('Agent Board tab registry fields', () => {
       const host = document.createElement('div');
       render(field, ctx, host);
 
-      expect(host.querySelector('select')).toBeNull();
-      const message = host.querySelector('p.setting-item-description');
-      expect(message).not.toBeNull();
+      expect(settingHasDropdown()).toBe(false);
+      expect(lastText()).toBeNull();
+      expect(lastSetting().setName).toHaveBeenCalledWith('Default model');
     });
 
-    it('provider with 1 model — renders read-only chip locking the only valid model', () => {
+    it('provider with 1 model — renders disabled text input locking the only valid model', () => {
       getChatUIConfig.mockReturnValue({
         ownsModel: (m: string) => m === 'sonnet',
         getModelOptions: () => [{ value: 'sonnet', label: 'Sonnet' }],
@@ -324,14 +351,15 @@ describe('Agent Board tab registry fields', () => {
       const host = document.createElement('div');
       render(field, ctx, host);
 
-      expect(host.querySelector('select')).toBeNull();
-      const chip = host.querySelector('.claudian-default-model-chip');
-      expect(chip).not.toBeNull();
-      expect(chip?.textContent).toContain('Sonnet');
+      expect(settingHasDropdown()).toBe(false);
+      const text = lastText();
+      expect(text).not.toBeNull();
+      expect(text!.value).toBe('Sonnet');
+      expect(text!.disabled).toBe(true);
       expect(saveSettings).not.toHaveBeenCalled();
     });
 
-    it('provider with >=2 models — renders editable dropdown and writes through on change', async () => {
+    it('provider with >=2 models — renders dropdown and writes through on change', async () => {
       getChatUIConfig.mockReturnValue({
         ownsModel: (m: string) => m === 'haiku' || m === 'sonnet',
         getModelOptions: () => [
@@ -340,23 +368,21 @@ describe('Agent Board tab registry fields', () => {
         ],
       });
       const field = getField();
-      const { ctx, saveSettings, refresh } = makeCtx(['claude'], 'claude', 'haiku');
+      const { ctx, saveSettings } = makeCtx(['claude'], 'claude', 'haiku');
       const host = document.createElement('div');
       render(field, ctx, host);
 
-      const select = host.querySelector('select') as HTMLSelectElement | null;
-      expect(select).not.toBeNull();
-      const optionValues = Array.from(select!.options).map((o) => o.value);
-      expect(optionValues).toEqual(['haiku', 'sonnet']);
-      expect(select!.value).toBe('haiku');
+      const dropdown = lastDropdown();
+      expect(dropdown).not.toBeNull();
+      const optionValues = dropdown!.options.map((o) => o.value);
+      expect(optionValues).toEqual(['', 'haiku', 'sonnet']);
+      expect(dropdown!.value).toBe('haiku');
 
-      select!.value = 'sonnet';
-      select!.dispatchEvent(new Event('change'));
+      dropdown!.changeHandler('sonnet');
       await Promise.resolve();
       await Promise.resolve();
       expect((ctx.settings as any).agentBoardDefaultModel).toBe('sonnet');
       expect(saveSettings).toHaveBeenCalledTimes(1);
-      expect(refresh).toHaveBeenCalledTimes(1);
     });
 
     it('provider with >=2 models — falls back to resolver-picked default when stored model is invalid', () => {
@@ -372,9 +398,11 @@ describe('Agent Board tab registry fields', () => {
       const host = document.createElement('div');
       render(field, ctx, host);
 
-      const select = host.querySelector('select') as HTMLSelectElement | null;
-      expect(select).not.toBeNull();
-      expect(select!.value).toBe('haiku');
+      const dropdown = lastDropdown();
+      expect(dropdown).not.toBeNull();
+      // resolveAgentBoardDefaultModel falls back to the first available option
+      // when the stored model is not in the provider's catalog.
+      expect(dropdown!.value).toBe('haiku');
     });
 
     it('subscribes to task:board-config-changed and returns the unsubscribe', () => {

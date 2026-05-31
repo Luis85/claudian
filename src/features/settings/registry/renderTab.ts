@@ -1,3 +1,5 @@
+import { Setting } from 'obsidian';
+
 import { FirstRunBanner } from '../firstRunBanner/FirstRunBanner';
 import { hasAnyProviderEnabled } from '../firstRunBanner/hasAnyProviderEnabled';
 import { renderField } from './renderField';
@@ -40,9 +42,12 @@ export function renderTab(
     if (fields.length === 0) continue;
     const sectionEl = host.createDiv({ cls: 'claudian-settings-section' });
     sectionEl.dataset.sectionId = section.id;
-    sectionEl.createEl('h3', { text: section.label });
+    // Use Obsidian's native heading row so registry tabs visually match the
+    // imperative General tab. setHeading() applies `.setting-item-heading` —
+    // the same class the legacy ClaudianSettings.renderGeneralTab uses.
+    const heading = new Setting(sectionEl).setName(section.label).setHeading();
     if (section.description) {
-      sectionEl.createEl('p', { text: section.description, cls: 'setting-item-description' });
+      heading.setDesc(section.description);
     }
     for (const field of fields) {
       const fieldEl = sectionEl.createDiv({ cls: 'claudian-settings-field' });

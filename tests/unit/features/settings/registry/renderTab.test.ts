@@ -3,6 +3,8 @@
  */
 import '../../../../setup/obsidianDom';
 
+import { Setting } from 'obsidian';
+
 import type { ClaudianSettings } from '../../../../../src/core/types/settings';
 import { renderTab } from '../../../../../src/features/settings/registry/renderTab';
 import type {
@@ -73,16 +75,16 @@ describe('renderTab', () => {
     const host = document.createElement('div');
     const ctx = makeCtx({ firstRunDismissed: true });
 
+    (Setting as any).instances = [];
     renderTab(host, 'general', ctx, registry);
 
     const sections = host.querySelectorAll('.claudian-settings-section');
     expect(sections).toHaveLength(2);
 
-    const headings = host.querySelectorAll('h3');
-    expect(Array.from(headings).map((h) => h.textContent)).toEqual([
-      'Section One',
-      'Section Two',
-    ]);
+    const headingCalls = (Setting as any).instances
+      .filter((s: any) => s.setHeading.mock.calls.length > 0)
+      .map((s: any) => s.setName.mock.calls[0][0]);
+    expect(headingCalls).toEqual(['Section One', 'Section Two']);
 
     const fieldsInS1 = sections[0].querySelectorAll('.claudian-settings-field');
     expect(fieldsInS1).toHaveLength(2);
@@ -162,7 +164,7 @@ describe('renderTab', () => {
     ]);
   });
 
-  it('renders section description as p.setting-item-description when present', () => {
+  it('passes section description to Setting.setDesc when present', () => {
     const registry = new SettingsRegistry();
     registry.registerTab(makeTab('general'));
     registry.registerSection(
@@ -173,15 +175,13 @@ describe('renderTab', () => {
     registry.registerField(makeField('general', 's2', 's2.f'));
 
     const host = document.createElement('div');
+    (Setting as any).instances = [];
     renderTab(host, 'general', makeCtx(), registry);
 
-    const sections = host.querySelectorAll('.claudian-settings-section');
-    const descInS1 = sections[0].querySelector('p.setting-item-description');
-    expect(descInS1).not.toBeNull();
-    expect(descInS1?.textContent).toBe('Details here');
-
-    const descInS2 = sections[1].querySelector('p.setting-item-description');
-    expect(descInS2).toBeNull();
+    const headingsWithDesc = (Setting as any).instances
+      .filter((s: any) => s.setHeading.mock.calls.length > 0);
+    expect(headingsWithDesc[0].setDesc).toHaveBeenCalledWith('Details here');
+    expect(headingsWithDesc[1].setDesc).not.toHaveBeenCalled();
   });
 
   it('empties host before rendering on each call (no double-render)', () => {

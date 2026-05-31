@@ -11,8 +11,14 @@
   display: none;
 }
 
+.claudian-quick-actions-search-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
 .claudian-quick-actions-search-input {
-  width: 100%;
+  flex: 1;
   padding: 0.4em 0.6em;
   font-size: var(--font-ui-small);
   border: 1px solid var(--background-modifier-border);
@@ -24,6 +30,38 @@
 .claudian-quick-actions-search-input:focus {
   border-color: var(--interactive-accent);
   outline: none;
+}
+
+.claudian-quick-actions-search-reset {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-primary);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.claudian-quick-actions-search-reset:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  border-color: var(--background-modifier-border-hover);
+}
+
+.claudian-quick-actions-search-reset:active {
+  transform: scale(0.95);
+}
+
+.claudian-quick-actions-search-reset:focus {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -1px;
 }
 
 .claudian-quick-actions-empty-results {
@@ -42,16 +80,17 @@
 
 .claudian-quick-action-tag {
   display: inline-block;
-  padding: 0.05em 0.5em;
+  padding: 0.3em 0.6em;
   border: 1px solid var(--background-modifier-border);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--background-secondary);
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   font-family: inherit;
   line-height: 1.4;
   cursor: pointer;
-  box-shadow: none;
+  user-select: none;
+  transition: all 0.15s ease;
 }
 
 .claudian-quick-action-tag:hover {
@@ -69,6 +108,8 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 .claudian-quick-actions-intro {

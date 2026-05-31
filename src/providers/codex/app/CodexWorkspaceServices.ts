@@ -16,6 +16,7 @@ import { codexCliSpec } from '../runtime/CodexCliResolver';
 import { CodexSkillListingService } from '../skills/CodexSkillListingService';
 import { CodexSkillStorage } from '../storage/CodexSkillStorage';
 import { CodexSubagentStorage } from '../storage/CodexSubagentStorage';
+import { codexSettingsTabRenderer } from '../ui/CodexSettingsTab';
 
 export interface CodexWorkspaceServices extends ProviderWorkspaceServices {
   subagentStorage: CodexSubagentStorage;
@@ -52,6 +53,7 @@ export async function createCodexWorkspaceServices(
     commandCatalog,
     agentMentionProvider,
     cliResolver: createCodexCliResolver(),
+    settingsTabRenderer: codexSettingsTabRenderer,
     refreshAgentMentions: async () => {
       await agentMentionProvider.loadAgents();
     },
