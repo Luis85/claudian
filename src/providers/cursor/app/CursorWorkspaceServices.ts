@@ -13,7 +13,6 @@ import { buildCursorAgentEnvironment } from '../runtime/cursorAgentEnv';
 import { cursorCliSpec } from '../runtime/CursorCliResolver';
 import { refreshCursorModelCatalog } from '../runtime/cursorModelCatalog';
 import { getCursorProviderSettings } from '../settings';
-import { cursorSettingsTabRenderer } from '../ui/CursorSettingsTab';
 
 function createCursorCliResolver(): ProviderCliResolver {
   return new CachedCliResolver(cursorCliSpec);
@@ -49,7 +48,6 @@ export async function createCursorWorkspaceServices(
   warmCursorModelCatalog(plugin, cliResolver);
   return {
     cliResolver,
-    settingsTabRenderer: cursorSettingsTabRenderer,
   };
 }
 
