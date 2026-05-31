@@ -21,6 +21,7 @@ import { extractVaultMentions } from '../../../utils/vaultMentions';
 import { findRewindContext } from '../rewind';
 import { eligibleMessageActions } from './messageActions';
 import { renderMessageContextCard } from './MessageContextCard';
+import { scrollMessagesToBottom } from './scrollToBottom';
 import { resolveSubagentLifecycleAdapter } from './subagentLifecycleResolution';
 import {
   renderStoredAsyncSubagent,
@@ -594,6 +595,10 @@ export class MessageRenderer {
       const imgEl = imageWrapper.createEl('img', {
         attr: {
           alt: image.name,
+          // Defer decode/paint of off-screen image data URIs so long chats with many
+          // attachments don't pay the full cost up front (PERF-2 safe win).
+          loading: 'lazy',
+          decoding: 'async',
         },
       });
 
@@ -959,9 +964,14 @@ export class MessageRenderer {
   // Utilities
   // ============================================
 
-  /** Scrolls messages container to bottom. */
+  /**
+   * Scrolls the messages container to the bottom.
+   *
+   * Uses the trailing element's `scrollIntoView` instead of reading `scrollHeight`,
+   * which would force a synchronous layout of the entire (unbounded) message DOM.
+   */
   scrollToBottom(): void {
-    this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
+    scrollMessagesToBottom(this.messagesEl);
   }
 
   /** Scrolls to bottom if already near bottom (within threshold). */

@@ -24,10 +24,11 @@ export interface MockElement {
   appendChild: (child: any) => any;
   insertBefore: (el: MockElement, ref: MockElement | null) => void;
   firstChild: MockElement | null;
+  lastElementChild: MockElement | null;
   remove: () => void;
   empty: () => void;
   contains: (node: any) => boolean;
-  scrollIntoView: () => void;
+  scrollIntoView: (options?: ScrollIntoViewOptions | boolean) => void;
   setAttribute: (name: string, value: string) => void;
   getAttribute: (name: string) => string | undefined | null;
   removeAttribute: (name: string) => void;
@@ -275,6 +276,7 @@ export function createMockEl(tag = 'div'): any {
     appendChild(child: any) { children.push(child); return child; },
     insertBefore(el: MockElement, _ref: MockElement | null) { children.unshift(el); },
     get firstChild() { return children[0] || null; },
+    get lastElementChild() { return children[children.length - 1] || null; },
     remove() {},
     empty() {
       children.length = 0;
@@ -285,7 +287,7 @@ export function createMockEl(tag = 'div'): any {
       if (node === element) return true;
       return children.some(child => (child as any).contains?.(node));
     },
-    scrollIntoView() {},
+    scrollIntoView(_options?: ScrollIntoViewOptions | boolean) {},
     focus() {
       const handlers = eventListeners.get('focus') || [];
       handlers.forEach(h => h({ type: 'focus', target: element }));

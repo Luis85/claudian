@@ -1061,6 +1061,11 @@ describe('MessageRenderer', () => {
     const imagesContainer = containerEl.children[0];
     expect(imagesContainer.hasClass('claudian-message-images')).toBe(true);
     expect(imagesContainer.children.length).toBe(2);
+
+    // PERF-2 safe win: off-screen image data URIs are lazily decoded/painted.
+    const imgEl = imagesContainer.children[0].children[0];
+    expect(imgEl.getAttribute('loading')).toBe('lazy');
+    expect(imgEl.getAttribute('decoding')).toBe('async');
   });
 
   it('setImageSrc sets data URI on image element', () => {
