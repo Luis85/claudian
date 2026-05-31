@@ -140,6 +140,40 @@ describe('ConversationStore', () => {
 
       expect(store.getConversationSync(conv.id)?.providerState).toEqual(opaque);
     });
+
+    it('clears in-memory image data after save, but keeps it for a pending fork', async () => {
+      const { store } = createStore();
+
+      // Non-fork: image data is cleared after the metadata save (SDK owns it).
+      const conv = await store.createConversation();
+      conv.messages.push({
+        role: 'user',
+        content: 'see image',
+        timestamp: Date.now(),
+        images: [{ data: 'base64-bytes', mimeType: 'image/png' }],
+      } as never);
+      await store.updateConversation(conv.id, { title: 'with image' });
+      expect(conv.messages[0].images?.[0].data).toBe('');
+
+      // Pending fork: deep-cloned images aren't in SDK storage yet → keep them.
+      jest
+        .spyOn(ProviderRegistry, 'getConversationHistoryService')
+        .mockReturnValue({
+          hydrateConversationHistory: jest.fn().mockResolvedValue(undefined),
+          deleteConversationSession: jest.fn().mockResolvedValue(undefined),
+          resolveSessionIdForConversation: jest.fn().mockReturnValue(null),
+          isPendingForkConversation: jest.fn().mockReturnValue(true),
+        } as never);
+      const fork = await store.createConversation();
+      fork.messages.push({
+        role: 'user',
+        content: 'fork image',
+        timestamp: Date.now(),
+        images: [{ data: 'fork-bytes', mimeType: 'image/png' }],
+      } as never);
+      await store.updateConversation(fork.id, { title: 'fork' });
+      expect(fork.messages[0].images?.[0].data).toBe('fork-bytes');
+    });
   });
 
   describe('renameConversation', () => {
