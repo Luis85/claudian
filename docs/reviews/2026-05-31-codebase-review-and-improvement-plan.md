@@ -109,6 +109,11 @@ before new features land:
 | ARCH-3 | **`ClaudianPlugin` service-locator god object** (`settings` ×222, `app` ×99) mixing command registration, conversation CRUD, settings migration, env resolution, view lifecycle. | `main.ts` (1177 lines) |
 | ARCH-4 | **Docs mislabel Cursor as "ACP-backed."** Only Opencode uses `providers/acp`; Cursor reimplements stream/tool mapping (`cursorStreamMapper` 508 + `cursorToolNormalization` 689 lines). Fix docs or converge. | `CursorChatRuntime.ts:1-2,171-176`; root `CLAUDE.md`, `core/CLAUDE.md` |
 | ARCH-5 | **God files** `Tab.ts` (1915, 18 free functions over a shared mutable struct), `InputController.ts` (1776, 4 subsystems incl. a ~400-line steering state machine). Split along existing seams. | `features/chat/tabs/Tab.ts`; `features/chat/controllers/InputController.ts` |
+| ARCH-6 | **`StreamController` fuses provider-neutral stream projection with DOM rendering.** Extract a `StreamChunk → message-state operations` projection layer with DOM rendering as a thin adapter, so streaming correctness (block ordering, tool/thinking finalization, compact boundaries, usage) is unit-testable without a DOM. Pair with Phase 1b (which already moves rendering toward an adapter). | `features/chat/controllers/StreamController.ts` (1601); from PR #10 PRD |
+| ARCH-7 | **Claude/Cursor auxiliary services not yet on the shared query-backed modules.** Codex & Opencode use `QueryBacked*` + `AuxQueryRunner`; Claude & Cursor still ship standalone title/refine/inline-edit services duplicating continuation/cancellation/callback-safety. Add Claude (cold-start) and Cursor query-runner adapters. | `providers/claude/auxiliary/*`, `providers/cursor/auxiliary/*` vs `core/auxiliary/QueryBacked*`; from PR #10 PRD |
+| ARCH-8 | **App shell imports provider-specific settings logic.** `ClaudianSettingsStorage` imports `updateClaudeProviderSettings` from `providers/claude`. Generalize via a provider settings load-normalization hook so the app shell stays provider-neutral. (Opencode's former plan-mode leak is already resolved.) | `app/settings/ClaudianSettingsStorage.ts:10`; from PR #10 PRD |
+
+> Cross-reference: ARCH-6/-7/-8 and the Conversation-store split (ARCH-3) consolidate the still-valid findings from the **PR #10 architecture-deepening PRD** (`docs/issues/architecture-deepening-proposal.md`), now closed in favor of this plan. The PRD's "deletion test" discipline (two adapters make a seam real; don't build speculative seams) governs Phase 2.
 
 ### P3 — Code quality & test hardening
 
@@ -175,18 +180,27 @@ orphaned provider processes (verify with `ps`).
 17. **Route provider default configs through registration** instead of the static
     `defaultProviderConfigs` barrel (ARCH-2).
 18. **Split the god files** along existing seams: `Tab.ts` → lifecycle/provider-sync/fork-rewind/
-    input-wiring; extract `QueuedMessageController` + `ApprovalPromptController` from
-    `InputController.ts` (ARCH-5).
-19. **Realign the Cursor "ACP" docs** (correct both CLAUDE.md files now; schedule Cursor→ACP
+    input-wiring (a "Chat tab composition" module with one small interface); extract
+    `QueuedMessageController` + `ApprovalPromptController` from `InputController.ts` (ARCH-5).
+19. **Extract a provider-neutral stream-projection layer** from `StreamController` with DOM
+    rendering as a thin adapter (ARCH-6). Design this **with** Phase 1b — both reshape the
+    rendering boundary; doing them together avoids reworking the same seam twice.
+20. **Move conversation/session CRUD into a `ConversationStore`** so the plugin shell becomes an
+    Obsidian-lifecycle adapter (ARCH-3); keep `providerState` opaque behind provider history
+    helpers.
+21. **Fold Claude & Cursor auxiliary services onto the shared `QueryBacked*` modules** via
+    provider query-runner adapters (ARCH-7); add a provider settings load-normalization hook so
+    the app shell stops importing provider-specific settings logic (ARCH-8).
+22. **Realign the Cursor "ACP" docs** (correct both CLAUDE.md files now; schedule Cursor→ACP
     convergence to delete ~1,200 duplicate lines later) (ARCH-4).
 
 ### Phase 3 — Lock in quality (1–2 days; prevents regression)
-20. **Add guardrails:** `no-explicit-any: 'warn'`, a `coverageThreshold` floor (higher on
+23. **Add guardrails:** `no-explicit-any: 'warn'`, a `coverageThreshold` floor (higher on
     `src/utils`, `src/providers/*/runtime`, security paths), wire `test:coverage` into CI (Q-3).
-21. **Add `asSettingsBag()` helper**, replace the 34 casts (Q-2).
-22. **Cover the untested security/robustness paths** — `ClaudeApprovalHandler`,
+24. **Add `asSettingsBag()` helper**, replace the 34 casts (Q-2).
+25. **Cover the untested security/robustness paths** — `ClaudeApprovalHandler`,
     `AcpToolStreamAdapter`, `HomeFileAdapter`, deny/error/cancellation branches (Q-4).
-23. **Route hardcoded Notices through `t()`** — start with `InputController.ts` + `main.ts`,
+26. **Route hardcoded Notices through `t()`** — start with `InputController.ts` + `main.ts`,
     then sweep `features/tasks`/settings/provider UIs (Q-1). Resolve the two `Phase F` TODOs.
 
 ---
