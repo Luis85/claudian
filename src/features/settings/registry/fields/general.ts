@@ -1,3 +1,5 @@
+import { renderHotkeysSection } from '@/features/settings/hotkeys/HotkeysSection';
+
 import { getSettingsRegistry } from '../registry';
 
 export function registerGeneralTabFields(): void {
@@ -108,4 +110,17 @@ export function registerGeneralTabFields(): void {
       default: false,
     });
   }
+
+  // Hotkeys section custom field
+  r.registerField({
+    id: 'general.hotkeys.list',
+    tabId: 'general',
+    sectionId: 'hotkeys',
+    label: 'Command hotkeys',
+    type: {
+      kind: 'custom',
+      render: (ctx, host) => renderHotkeysSection(ctx, host),
+    },
+    default: null,
+  });
 }
