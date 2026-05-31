@@ -388,7 +388,12 @@ const SYSTEM_ESSENTIAL_ENV_KEYS: readonly string[] = [
   // Network plumbing (non-secret): proxy + custom-CA config that network-fetching
   // MCP servers rely on in corporate environments. Withholding these would break
   // TLS/connectivity for servers that previously inherited them; they are config,
-  // not credentials, so passing them through does not reopen the secret-leak.
+  // not credentials (proxy credentials are stripped below), so passing them
+  // through does not reopen the secret-leak. NOTE: deliberately NOT forwarding
+  // NODE_OPTIONS / NODE_TLS_REJECT_UNAUTHORIZED — a parent/Electron NODE_OPTIONS
+  // flag can be rejected by a child `node` ("not allowed in NODE_OPTIONS") and
+  // break unrelated MCP servers, and the custom-CA case is already covered by
+  // NODE_EXTRA_CA_CERTS without forwarding arbitrary Node startup flags.
   'HTTP_PROXY',
   'HTTPS_PROXY',
   'NO_PROXY',
@@ -396,8 +401,6 @@ const SYSTEM_ESSENTIAL_ENV_KEYS: readonly string[] = [
   'https_proxy',
   'no_proxy',
   'NODE_EXTRA_CA_CERTS',
-  'NODE_OPTIONS',
-  'NODE_TLS_REJECT_UNAUTHORIZED',
 ];
 
 /** Proxy env vars whose values are URLs that may embed `user:pass@` credentials. */
