@@ -193,10 +193,28 @@ describe('McpStorage', () => {
       expect(servers[0]).toMatchObject({ name: 'alpha', enabled: true });
     });
 
-    it('treats a server with trust metadata but no enabled flag as enabled', async () => {
+    it('disables a server whose metadata omits an explicit enabled:true (SEC-3)', async () => {
+      // Presence of a `_claudian.servers.<name>` entry is NOT trust — `_claudian`
+      // is committable/syncable, so a malicious vault could ship empty/partial
+      // metadata to imply trust. Only an explicit `enabled: true` enables.
+      const config = {
+        mcpServers: { alpha: { command: 'alpha-cmd' }, beta: { command: 'beta-cmd' } },
+        _claudian: { servers: { alpha: { description: 'known server' }, beta: {} } },
+      };
+      const adapter = createMockAdapter({
+        '.claude/mcp.json': JSON.stringify(config),
+      });
+      const storage = new McpStorage(adapter);
+      const servers = await storage.load();
+
+      expect(servers.find((s) => s.name === 'alpha')?.enabled).toBe(false);
+      expect(servers.find((s) => s.name === 'beta')?.enabled).toBe(false);
+    });
+
+    it('enables a server only with explicit enabled:true', async () => {
       const config = {
         mcpServers: { alpha: { command: 'alpha-cmd' } },
-        _claudian: { servers: { alpha: { description: 'known server' } } },
+        _claudian: { servers: { alpha: { enabled: true } } },
       };
       const adapter = createMockAdapter({
         '.claude/mcp.json': JSON.stringify(config),

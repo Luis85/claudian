@@ -32,14 +32,16 @@ export class McpStorage {
           continue;
         }
 
-        // SECURITY (SEC-3): A server present in `mcpServers` but absent from the
-        // Claudian `_claudian.servers` trust metadata was placed there by vault
-        // config (e.g. a committed/synced `.claude/mcp.json`), not enabled through
-        // the Claudian UI. Default such untrusted servers to DISABLED so opening an
-        // untrusted vault never auto-launches MCP processes on the first turn.
-        // Servers the user has interacted with carry a metadata entry (see save())
-        // and keep their explicit enabled state.
-        const hasTrustMetadata = Object.prototype.hasOwnProperty.call(claudianMeta, name);
+        // SECURITY (SEC-3): A vault MCP server is enabled ONLY when its Claudian
+        // metadata explicitly sets `enabled: true`. The mere *presence* of a
+        // `_claudian.servers.<name>` entry is not trust — `_claudian` lives in the
+        // same committable/syncable `.claude/mcp.json`, so an attacker could ship
+        // empty/partial metadata to imply trust. Anything else (no metadata,
+        // `{}`, `enabled` absent/false) defaults to DISABLED, so opening an
+        // untrusted vault never auto-launches MCP processes. User-enabled servers
+        // round-trip because save() always writes the explicit `enabled` flag, and
+        // the one-time grandfather migration writes `enabled: true` for pre-existing
+        // servers.
         const meta = claudianMeta[name] ?? {};
         const disabledTools = Array.isArray(meta.disabledTools)
           ? meta.disabledTools.filter((tool) => typeof tool === 'string')
@@ -50,7 +52,7 @@ export class McpStorage {
         servers.push({
           name,
           config,
-          enabled: meta.enabled ?? (hasTrustMetadata ? DEFAULT_MCP_SERVER.enabled : false),
+          enabled: meta.enabled === true,
           contextSaving: meta.contextSaving ?? DEFAULT_MCP_SERVER.contextSaving,
           disabledTools: normalizedDisabledTools,
           description: meta.description,

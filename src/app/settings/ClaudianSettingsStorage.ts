@@ -129,6 +129,11 @@ export class ClaudianSettingsStorage {
   }
 
   private getDefaults(): StoredClaudianSettings {
-    return DEFAULT_CLAUDIAN_SETTINGS;
+    // Spread (not the shared reference) so `providerConfigs` is materialized as a
+    // writable data property here — DEFAULT_CLAUDIAN_SETTINGS exposes it as a
+    // getter (ARCH-2 cycle avoidance), and returning that object directly would
+    // make `settings.providerConfigs = ...` throw (getter-only) on a fresh install
+    // and would let mutations clobber the shared module-level default.
+    return { ...DEFAULT_CLAUDIAN_SETTINGS };
   }
 }

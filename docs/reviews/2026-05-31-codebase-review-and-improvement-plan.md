@@ -256,7 +256,23 @@ checks; i18n keys perfectly synced.
   cast; 34 sites replaced (3 non-settings casts left). Both type-only/behavior-preserving,
   independently reviewed (no init-order hazard, all replacements correct).
 
-**Tracked follow-ups (from the cross-phase reviews):**
+**PR #9 automated-review fixes (chatgpt-codex-connector):**
+- **P1 — MCP trust bypass (SEC-3):** mere presence of `_claudian.servers.<name>` metadata (even `{}`)
+  no longer implies trust; a vault server is enabled only with an explicit `enabled: true`
+  (`McpStorage.load`). Closes a malicious-vault auto-enable path.
+- **P1 — getter-only `providerConfigs` crash:** `ClaudianSettingsStorage.getDefaults()` now returns a
+  spread (materialized `providerConfigs` data property) instead of the shared `DEFAULT_CLAUDIAN_SETTINGS`
+  reference, so first-run `setProviderConfig`/`FirstRunBanner` assignment no longer throws on a fresh
+  install (ARCH-2 getter regression).
+
+**Tracked follow-ups (from the cross-phase reviews + PR #9 review):**
+- **Awaitable cleanup on provider switch/reinit (P2):** Phase 0 made `cleanup()` awaitable and awaited it
+  on tab *destruction* (orphan prevention). The provider-*switch*/reinit paths (`cleanupTabRuntime`,
+  `onProviderAvailabilityChanged`, the reinit in `initializeChatService`) and Cursor's `cleanup()`
+  (which calls `cancel()` without awaiting child exit) still fire cleanup synchronously, so switching
+  providers can briefly overlap the outgoing CLI process before it dies. (Brief overlap, not an orphan —
+  the old process *is* killed.) Completing the contract requires threading `async` through those
+  synchronous event handlers + having Cursor `cleanup()` await child exit — a focused lifecycle round.
 - **ARCH-8** — `persistProviderLastModel`/`persistProviderEnvironmentHash` are implemented only on
   Claude's reconciler; if a future caller invokes them while a non-Claude provider is the active
   settings provider, the write silently no-ops. Implement the hooks on the other reconcilers (or
