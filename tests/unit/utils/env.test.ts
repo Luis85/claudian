@@ -103,6 +103,19 @@ describe('buildCuratedChildEnv (SEC-4)', () => {
     expect(result.AWS_SECRET_ACCESS_KEY).toBeUndefined();
   });
 
+  it('strips embedded credentials from host proxy URLs (no host-secret leak via proxy)', () => {
+    process.env.HTTPS_PROXY = 'http://user:s3cret@proxy.corp:8080';
+    process.env.HTTP_PROXY = 'http://plain.corp:3128';
+
+    const result = buildCuratedChildEnv();
+
+    expect(result.HTTPS_PROXY).not.toContain('s3cret');
+    expect(result.HTTPS_PROXY).not.toContain('user');
+    expect(result.HTTPS_PROXY).toContain('proxy.corp:8080');
+    // Credential-free proxy URLs are preserved as-is (host:port intact).
+    expect(result.HTTP_PROXY).toContain('plain.corp:3128');
+  });
+
   it('lets caller-supplied overrides pass through and win over host values', () => {
     process.env.PATH = '/usr/bin';
 

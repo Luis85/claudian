@@ -400,6 +400,30 @@ const SYSTEM_ESSENTIAL_ENV_KEYS: readonly string[] = [
   'NODE_TLS_REJECT_UNAUTHORIZED',
 ];
 
+/** Proxy env vars whose values are URLs that may embed `user:pass@` credentials. */
+const CREDENTIALED_PROXY_KEYS = new Set(['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']);
+
+/**
+ * SECURITY (SEC-4): strip embedded `user:pass@` userinfo from a host proxy URL so
+ * the credentials aren't handed to an untrusted child while still preserving
+ * proxy connectivity (host:port survive). A user who genuinely needs an
+ * authenticated proxy inside a server sets it explicitly in that server's `env`.
+ */
+function stripProxyCredentials(value: string): string {
+  try {
+    const url = new URL(value);
+    if (url.username || url.password) {
+      url.username = '';
+      url.password = '';
+      return url.toString();
+    }
+    return value;
+  } catch {
+    // Not a parseable URL — best-effort strip of a leading `scheme://user:pass@`.
+    return value.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/@]*@/i, '$1');
+  }
+}
+
 /**
  * SECURITY (SEC-4): Build a curated environment for spawning an untrusted child
  * process instead of forwarding all of `process.env`. Only system-essential keys
@@ -414,7 +438,8 @@ export function buildCuratedChildEnv(
   for (const key of SYSTEM_ESSENTIAL_ENV_KEYS) {
     const value = process.env[key];
     if (typeof value === 'string') {
-      result[key] = value;
+      // Host proxy URLs may embed credentials — never leak those to the child.
+      result[key] = CREDENTIALED_PROXY_KEYS.has(key) ? stripProxyCredentials(value) : value;
     }
   }
   for (const [key, value] of Object.entries(overrides)) {
