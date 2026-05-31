@@ -243,6 +243,12 @@ checks; i18n keys perfectly synced.
 - **Phase 3 (guardrails)** — `no-explicit-any → warn` (src; the lone `EventBus` `any` is now an
   explained, justified disable → **zero lint warnings**), `coverageThreshold` floors (global +
   higher on security/runtime paths), CI coverage job.
+- **Phase 2 (round 2)** — ARCH-1 `PluginContext` extraction: `core/` and `providers/` no longer
+  import the concrete `ClaudianPlugin` (a narrow `PluginContext` interface it implements replaces
+  it; `ChatViewHandle`/`ChatTabManagerHandle` give providers view/tab access without a
+  `core→features` import). Type-only, behavior-preserving. **Madge circular deps 181 → 64.**
+  Independently reviewed (faithful, minimal, no cast-hacks); `ClaudianView` impl widened to match
+  the handle (removes bivariance reliance).
 
 **Tracked follow-ups (from the cross-phase reviews):**
 - **ARCH-8** — `persistProviderLastModel`/`persistProviderEnvironmentHash` are implemented only on
@@ -250,10 +256,12 @@ checks; i18n keys perfectly synced.
   settings provider, the write silently no-ops. Implement the hooks on the other reconcilers (or
   fall back/log) before wiring a real caller. `normalizeOnLoad` is a forward-looking seam with no
   implementer yet (justified by the decoupling; harmless).
-- **Phase 2 (remaining, dedicated rounds — too entangled to parallelize):** ARCH-1 `PluginContext`
-  extraction (collapses the 184 cycles), ARCH-3 `ConversationStore`, ARCH-5 god-file splits
+- **Phase 2 (remaining, dedicated rounds — too entangled to parallelize):** ARCH-3
+  `ConversationStore` (move conversation/session CRUD out of `main.ts`), ARCH-5 god-file splits
   (`Tab.ts`/`InputController.ts`), ARCH-6 stream-projection extraction (pair with the Phase 1b
-  rendering adapter).
+  rendering adapter). ARCH-2 (route provider default configs through registration) would clear
+  most of the remaining 64 cycles (the `defaultProviderConfigs` barrel). *(ARCH-1 PluginContext —
+  done, round 2.)*
 - **Q-2** — `asSettingsBag()` helper replacing the 34 `settings as unknown as Record<…>` casts
   (deferred until the auxiliary/settings refactors landed; now unblocked).
 - **SEC-2** — wire `vaultTrust.shouldHonorProjectSettings` into the live `resolveClaudeSettingSources`

@@ -160,7 +160,7 @@ export class ClaudianView extends ItemView {
     this.tabManager?.primeProviderRuntime();
   }
 
-  invalidateProviderCommandCaches(providerIds?: ProviderId[]): void {
+  invalidateProviderCommandCaches(providerIds?: ProviderId | ProviderId[]): void {
     this.tabManager?.invalidateProviderCommandCaches(providerIds);
   }
 
