@@ -222,3 +222,32 @@ correctly does not detach leaves; no long-lived view references; per-provider se
 genuinely shared not copy-pasted; history is **not** re-encoded/re-read per turn; regexes are
 linear; subprocess args are arrays (no `shell:true`); path containment uses realpath + segment
 checks; i18n keys perfectly synced.
+
+---
+
+## Implementation status (branch `claude/codebase-review-improvements-nwhg5`, PR #9)
+
+**Landed & verified (typecheck/lint/test/build green):**
+- **Phase 0** — CI green (platform-coupled tests fixed + win32/ubuntu matrix); subprocess-leak
+  fixes (awaitable `cleanup()`, `onunload` disposal, hardened `shutdown()`, Cursor SIGKILL).
+- **fileLink** containment hardening (reject `..` candidates).
+- **Phase 1a** — SEC-1 (safe default `'normal'`, YOLO opt-in + one-time warning), SEC-3 (vault
+  MCP default-disabled **with a one-time grandfather migration** for existing installs), SEC-4
+  (curated env for MCP *test* spawns), SEC-6 (broadened + anchored redaction).
+- **Phase 1b** — PERF-1 (no per-chunk reflow; O(N·T)→O(1)), PERF-3 (size-aware streaming
+  throttle, byte-exact final render), PERF-2 lazy image attrs.
+
+**Tracked follow-ups (from the cross-phase review):**
+- **SEC-2** — wire `vaultTrust.shouldHonorProjectSettings` into the live `resolveClaudeSettingSources`
+  call sites + a confirmation modal. Until then, risky project `.claude/settings.json` (hooks /
+  `permissions.allow`) is still honored. This is also the proper close for the SEC-3 residual
+  (a fresh install whose first-opened vault contains untrusted MCP servers).
+- **SEC-4** — extend the curated child env to **live** chat MCP spawns (currently only the
+  in-app test-connection flow), e.g. per-server `env` via the SDK `mcpServers` option.
+- **PERF-2** — full message-list virtualization (deferred; design note captured).
+- **Perf hygiene** — wire `StreamController.resetStreamingState()` into the force session-reset
+  teardown (removes dead code + closes a benign stale-timer window); route the two remaining
+  non-hot-path `scrollHeight` reads through `scrollMessagesToBottom`.
+- **i18n** — translate the `chat.permissionMode.yoloWarning` string (currently English in all
+  locales).
+- **Phase 2 (architecture)** and **Phase 3 (guardrails)** remain as planned above.
