@@ -3,6 +3,7 @@ import {
   isVaultTrusted,
   setVaultTrusted,
   shouldHonorProjectSettings,
+  shouldHonorProjectSettingsForRisk,
 } from '@/core/security/vaultTrust';
 
 describe('detectRiskyProjectSettings (SEC-2)', () => {
@@ -74,5 +75,28 @@ describe('shouldHonorProjectSettings (SEC-2)', () => {
     setVaultTrusted(settings, 'vault-a', true);
     const risky = { permissions: { allow: ['Bash(*)'] } };
     expect(shouldHonorProjectSettings(settings, 'vault-a', risky)).toBe(true);
+  });
+});
+
+describe('shouldHonorProjectSettingsForRisk (SEC-2)', () => {
+  it('honors when risk is not flagged regardless of trust', () => {
+    expect(shouldHonorProjectSettingsForRisk({}, 'vault-a', false)).toBe(true);
+  });
+
+  it('withholds when risky and untrusted', () => {
+    expect(shouldHonorProjectSettingsForRisk({}, 'vault-a', true)).toBe(false);
+  });
+
+  it('honors when risky and trusted', () => {
+    const settings: Record<string, unknown> = {};
+    setVaultTrusted(settings, 'vault-a', true);
+    expect(shouldHonorProjectSettingsForRisk(settings, 'vault-a', true)).toBe(true);
+  });
+
+  it('re-evaluates live trust without re-detecting risk', () => {
+    const settings: Record<string, unknown> = {};
+    expect(shouldHonorProjectSettingsForRisk(settings, 'vault-a', true)).toBe(false);
+    setVaultTrusted(settings, 'vault-a', true);
+    expect(shouldHonorProjectSettingsForRisk(settings, 'vault-a', true)).toBe(true);
   });
 });

@@ -13,12 +13,19 @@ import type {
 } from '../../../core/providers/types';
 import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
 import type { PluginContext } from '../../../core/types/PluginContext';
+import { promptVaultTrust } from '../../../shared/modals/VaultTrustModal';
 import { getVaultPath } from '../../../utils/path';
 import { AgentManager } from '../agents/AgentManager';
 import { ClaudeCommandCatalog } from '../commands/ClaudeCommandCatalog';
 import { probeRuntimeCommands } from '../commands/probeRuntimeCommands';
 import { PluginManager } from '../plugins/PluginManager';
 import { claudeCliSpec } from '../runtime/ClaudeCliResolver';
+import {
+  detectVaultProjectRisk,
+  isClaudeVaultTrusted,
+  setClaudeVaultTrusted,
+  vaultProjectSettingsRisky,
+} from '../runtime/claudeProjectTrust';
 import { StorageService } from '../storage/StorageService';
 import { claudeSettingsTabRenderer } from '../ui/ClaudeSettingsTab';
 
@@ -40,6 +47,15 @@ export async function createClaudeWorkspaceServices(
 ): Promise<ClaudeWorkspaceServices> {
   const claudeStorage = new StorageService(plugin, adapter);
   await claudeStorage.ensureDirectories();
+
+  // SEC-2: detect risky project `.claude/settings.json` (hooks / permissions.allow)
+  // once at init and cache it. The cache feeds the synchronous per-turn setting-
+  // source gate; until the vault is trusted those sources are withheld. If risk is
+  // present and the vault is untrusted, prompt once (non-blocking) to trust it.
+  await detectVaultProjectRisk(plugin, adapter);
+  if (vaultProjectSettingsRisky(plugin) && !isClaudeVaultTrusted(plugin)) {
+    void maybePromptVaultTrust(plugin);
+  }
 
   const cliResolver = new CachedCliResolver(claudeCliSpec);
   const mcpStorage = claudeStorage.mcp;
@@ -91,6 +107,24 @@ export async function createClaudeWorkspaceServices(
       await agentManager.loadAgents();
     },
   };
+}
+
+/**
+ * SEC-2: surface the one-time trust prompt for an untrusted, risky vault. Runs
+ * outside workspace init so it never blocks startup; the gate already withholds
+ * the risky sources, so a deferred/declined answer is safe. On trust the change
+ * is persisted — the next turn rebuilds the query config (settingSources flips),
+ * which `QueryOptionsBuilder.needsRestart` detects and restarts to honor them.
+ */
+async function maybePromptVaultTrust(plugin: PluginContext): Promise<void> {
+  try {
+    const trusted = await promptVaultTrust(plugin.app);
+    if (trusted) {
+      await setClaudeVaultTrusted(plugin, true);
+    }
+  } catch {
+    // A modal failure must never break workspace init; the vault stays untrusted.
+  }
 }
 
 export const claudeWorkspaceRegistration: ProviderWorkspaceRegistration<ClaudeWorkspaceServices> = {

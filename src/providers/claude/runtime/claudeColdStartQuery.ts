@@ -13,6 +13,7 @@ import {
 import {
   resolveEffortLevel,
 } from '../types/models';
+import { shouldHonorClaudeProjectSettings } from './claudeProjectTrust';
 import { createCustomSpawnFunction } from './customSpawn';
 
 export interface ColdStartQueryConfig {
@@ -98,7 +99,12 @@ export async function runColdStartQuery(
     // honors the configured permissionMode instead.
     permissionMode: 'bypassPermissions',
     allowDangerouslySkipPermissions: true,
-    settingSources: resolveClaudeSettingSources(claudeSettings.loadUserSettings),
+    // SEC-2: gate untrusted risky project settings even on background cold-start
+    // queries (title/refine/inline-edit), which run with bypassPermissions.
+    settingSources: resolveClaudeSettingSources(
+      claudeSettings.loadUserSettings,
+      shouldHonorClaudeProjectSettings(config.plugin),
+    ),
     spawnClaudeCodeProcess: createCustomSpawnFunction(enhancedPath),
   };
 

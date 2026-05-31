@@ -12,6 +12,11 @@ import { expandHomePath } from '../../../utils/path';
 import { getClaudeWorkspaceServices } from '../app/ClaudeWorkspaceServices';
 import { resolveClaudeModelSelection } from '../modelOptions';
 import {
+  isClaudeVaultTrusted,
+  setClaudeVaultTrusted,
+  vaultProjectSettingsRisky,
+} from '../runtime/claudeProjectTrust';
+import {
   CLAUDE_SAFE_MODES,
   type ClaudeSafeMode,
   getClaudeProviderSettings,
@@ -173,6 +178,26 @@ export const claudeSettingsTabRenderer: ProviderSettingsTabRenderer = {
             await context.plugin.saveSettings();
           })
       );
+
+    // SEC-2: per-vault trust gate. When the vault's `.claude/settings.json` ships
+    // risky hooks / permissions.allow, those sources are withheld until trusted.
+    // The toggle reflects the live trust state and lets the user grant or revoke it.
+    const vaultRisky = vaultProjectSettingsRisky(context.plugin);
+    const trustSetting = new Setting(container)
+      .setName(t('settings.trustVault.name'))
+      .setDesc(
+        vaultRisky
+          ? t('settings.trustVault.descRisky')
+          : t('settings.trustVault.descSafe'),
+      );
+    trustSetting.addToggle((toggle) =>
+      toggle
+        .setValue(isClaudeVaultTrusted(context.plugin))
+        .setDisabled(!vaultRisky && !isClaudeVaultTrusted(context.plugin))
+        .onChange(async (value) => {
+          await setClaudeVaultTrusted(context.plugin, value);
+        }),
+    );
 
     // --- Models ---
 

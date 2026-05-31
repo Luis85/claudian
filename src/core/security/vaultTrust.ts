@@ -9,15 +9,11 @@
  *
  * This module is provider-neutral and stateless about UI: it detects whether
  * project settings are "risky", and reads/writes a per-vault trust flag persisted
- * in the app settings. The provider runtime is responsible for (a) consulting
- * `shouldHonorProjectSettings()` before adding project/local setting sources, and
- * (b) surfacing a one-time confirmation modal that calls `setVaultTrusted()`.
- *
- * TODO(SEC-2): Wire `shouldHonorProjectSettings()` into the Claude setting-source
- * resolution (ClaudeQueryOptionsBuilder + claudeColdStartQuery + probeRuntimeCommands)
- * and add the confirmation modal (shared/modals + i18n) that flips the trust flag
- * on first encounter. Detection, persistence, and gating logic land here first so
- * the modal can be added without re-deriving the trust contract.
+ * in the app settings. The Claude provider wires this in via `claudeProjectTrust`,
+ * which (a) consults `shouldHonorProjectSettingsForRisk()` before adding the
+ * project/local setting sources in every live query path
+ * (ClaudeQueryOptionsBuilder, claudeColdStartQuery, probeRuntimeCommands), and
+ * (b) surfaces a one-time confirmation modal that calls `setVaultTrusted()`.
  */
 
 /** Minimal shape of project `.claude/settings.json` needed for risk detection. */
@@ -106,7 +102,25 @@ export function shouldHonorProjectSettings(
   vaultKey: string,
   projectSettings: ProjectSettingsLike | null | undefined,
 ): boolean {
-  if (!detectRiskyProjectSettings(projectSettings)) {
+  return shouldHonorProjectSettingsForRisk(
+    settings,
+    vaultKey,
+    detectRiskyProjectSettings(projectSettings),
+  );
+}
+
+/**
+ * Same decision as `shouldHonorProjectSettings` but with risk precomputed. The
+ * live query path detects risk once (an async `.claude/settings.json` read) at
+ * workspace init and caches the boolean, so per-turn source resolution stays
+ * synchronous and re-evaluates trust against the live `trustedVaults` map.
+ */
+export function shouldHonorProjectSettingsForRisk(
+  settings: Record<string, unknown>,
+  vaultKey: string,
+  risky: boolean,
+): boolean {
+  if (!risky) {
     return true;
   }
   return isVaultTrusted(settings, vaultKey);

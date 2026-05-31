@@ -163,12 +163,26 @@ export function getClaudeProviderSettings(
   };
 }
 
+/**
+ * SECURITY (SEC-2): `project`/`local` setting sources load the vault's
+ * `.claude/settings.json` (cwd is the vault), which can carry `hooks` and
+ * `permissions.allow`. When the vault is untrusted and those settings are risky,
+ * callers pass `honorProjectSettings: false` to withhold `project`/`local` so the
+ * risky settings never reach the SDK. Vaults with no risky settings — and trusted
+ * vaults — pass `true` (the default) and behave exactly as before.
+ */
 export function resolveClaudeSettingSources(
   loadUserSettings: boolean,
+  honorProjectSettings = true,
 ): ClaudeSettingSource[] {
-  return loadUserSettings
-    ? ['user', 'project', 'local']
-    : ['project', 'local'];
+  const sources: ClaudeSettingSource[] = [];
+  if (loadUserSettings) {
+    sources.push('user');
+  }
+  if (honorProjectSettings) {
+    sources.push('project', 'local');
+  }
+  return sources;
 }
 
 export function updateClaudeProviderSettings(

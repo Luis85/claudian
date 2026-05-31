@@ -12,6 +12,7 @@ import {
   type SystemPromptSettings,
 } from '../../../core/prompt/mainAgent';
 import type { AppPluginManager } from '../../../core/providers/types';
+import { asSettingsBag } from '../../../core/types';
 import type { ClaudianSettings, PermissionMode } from '../../../core/types/settings';
 import {
   type ClaudeSafeMode,
@@ -21,6 +22,7 @@ import {
 import {
   resolveEffortLevel,
 } from '../types/models';
+import { shouldHonorClaudeProjectSettingsFor } from './claudeProjectTrust';
 import { createCustomSpawnFunction } from './customSpawn';
 import {
   DISABLED_BUILTIN_SUBAGENTS,
@@ -127,7 +129,14 @@ export class QueryOptionsBuilder {
     const disallowedToolsKey = ctx.mcpManager.getAllDisallowedMcpTools().join('|');
     const pluginsKey = ctx.pluginManager.getPluginsKey();
 
-    const settingSources = resolveClaudeSettingSources(claudeSettings.loadUserSettings);
+    // SEC-2: withhold project/local sources when the vault's risky
+    // `.claude/settings.json` (hooks / permissions.allow) is untrusted. A change
+    // here flips `settingSources`, which `needsRestart` watches, so trusting a
+    // vault mid-session restarts the persistent query and re-honors them.
+    const settingSources = resolveClaudeSettingSources(
+      claudeSettings.loadUserSettings,
+      shouldHonorClaudeProjectSettingsFor(asSettingsBag(ctx.settings), ctx.vaultPath),
+    );
 
     return {
       model: ctx.settings.model,
@@ -300,7 +309,12 @@ export class QueryOptionsBuilder {
       model,
       abortController,
       pathToClaudeCodeExecutable: ctx.cliPath,
-      settingSources: resolveClaudeSettingSources(claudeSettings.loadUserSettings),
+      // SEC-2: same gate as buildPersistentQueryConfig — untrusted risky project
+      // settings (hooks / permissions.allow) never reach the SDK.
+      settingSources: resolveClaudeSettingSources(
+        claudeSettings.loadUserSettings,
+        shouldHonorClaudeProjectSettingsFor(asSettingsBag(ctx.settings), ctx.vaultPath),
+      ),
       env: {
         ...process.env,
         ...ctx.customEnv,
