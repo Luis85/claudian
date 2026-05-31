@@ -66,6 +66,15 @@ import {
 import type { SubagentManager } from '../services/SubagentManager';
 import type { ChatState } from '../state/ChatState';
 import type { FileContextManager } from '../ui/FileContext';
+import {
+  type BlockTransitionDecision,
+  projectBlockTransition,
+  projectCompactBoundary,
+  projectErrorText,
+  type ProjectionBlockState,
+  projectNoticeText,
+  projectUsage,
+} from './StreamProjection';
 
 export interface StreamControllerDeps {
   plugin: ClaudianPlugin;
@@ -142,29 +151,18 @@ export class StreamController {
 
     switch (chunk.type) {
       case 'thinking':
-        // Flush pending tools before rendering new content type
-        this.flushPendingTools();
-        if (state.currentTextEl) {
-          await this.finalizeCurrentTextBlock(msg);
-        }
+        await this.applyBlockTransition(projectBlockTransition('thinking', this.blockState()), msg);
         await this.appendThinking(chunk.content);
         break;
 
       case 'text':
-        // Flush pending tools before rendering new content type
-        this.flushPendingTools();
-        if (state.currentThinkingState) {
-          await this.finalizeCurrentThinkingBlock(msg);
-        }
+        await this.applyBlockTransition(projectBlockTransition('text', this.blockState()), msg);
         msg.content += chunk.content;
         await this.appendText(chunk.content);
         break;
 
       case 'tool_use': {
-        if (state.currentThinkingState) {
-          await this.finalizeCurrentThinkingBlock(msg);
-        }
-        await this.finalizeCurrentTextBlock(msg);
+        await this.applyBlockTransition(projectBlockTransition('tool_use', this.blockState()), msg);
 
         if (isSubagentToolName(chunk.name)) {
           // Flush pending tools before Agent
@@ -212,13 +210,13 @@ export class StreamController {
 
       case 'notice':
         this.flushPendingTools();
-        await this.appendText(`\n\n⚠️ **${chunk.level === 'warning' ? 'Blocked' : 'Notice'}:** ${chunk.content}`);
+        await this.appendText(projectNoticeText(chunk));
         break;
 
       case 'error':
         // Flush pending tools before rendering error message
         this.flushPendingTools();
-        await this.appendText(`\n\n❌ **Error:** ${chunk.content}`);
+        await this.appendText(projectErrorText(chunk.content));
         break;
 
       case 'done': {
@@ -243,11 +241,7 @@ export class StreamController {
       }
 
       case 'context_compacted': {
-        this.flushPendingTools();
-        if (state.currentThinkingState) {
-          await this.finalizeCurrentThinkingBlock(msg);
-        }
-        await this.finalizeCurrentTextBlock(msg);
+        await this.applyBlockTransition(projectCompactBoundary(this.blockState()), msg);
         msg.contentBlocks = msg.contentBlocks || [];
         msg.contentBlocks.push({ type: 'context_compacted' });
         this.renderCompactBoundary();
@@ -255,24 +249,14 @@ export class StreamController {
       }
 
       case 'usage': {
-        // Skip usage updates from other sessions or when flagged (during session reset)
-        const currentSessionId = this.deps.getAgentService?.()?.getSessionId() ?? null;
-        const chunkSessionId = chunk.sessionId ?? null;
-        if (
-          (chunkSessionId && currentSessionId && chunkSessionId !== currentSessionId) ||
-          (chunkSessionId && !currentSessionId)
-        ) {
-          break;
-        }
-        // Skip usage updates when subagents ran (SDK reports cumulative usage including subagents)
-        if (this.deps.subagentManager.subagentsSpawnedThisStream > 0) {
-          break;
-        }
-        if (!state.ignoreUsageUpdates) {
-          const activeModel = this.getActiveProviderModel();
-          state.usage = activeModel && !chunk.usage.model
-            ? { ...chunk.usage, model: activeModel }
-            : chunk.usage;
+        const decision = projectUsage(chunk, {
+          currentSessionId: this.deps.getAgentService?.()?.getSessionId() ?? null,
+          subagentsSpawnedThisStream: this.deps.subagentManager.subagentsSpawnedThisStream,
+          ignoreUsageUpdates: state.ignoreUsageUpdates,
+          activeProviderModel: this.getActiveProviderModel(),
+        });
+        if (decision.action === 'update') {
+          state.usage = decision.usage;
         }
         break;
       }
@@ -282,6 +266,31 @@ export class StreamController {
     }
 
     this.scrollToBottom();
+  }
+
+  /** Current open-block snapshot the projection's block-transition decisions read. */
+  private blockState(): ProjectionBlockState {
+    const { state } = this.deps;
+    return {
+      hasOpenTextBlock: state.currentTextEl !== null,
+      hasOpenThinkingBlock: state.currentThinkingState !== null,
+    };
+  }
+
+  /** Applies a projection block-transition decision through the existing finalize/flush paths. */
+  private async applyBlockTransition(
+    decision: BlockTransitionDecision,
+    msg: ChatMessage,
+  ): Promise<void> {
+    if (decision.flushPendingTools) {
+      this.flushPendingTools();
+    }
+    if (decision.finalizeThinking) {
+      await this.finalizeCurrentThinkingBlock(msg);
+    }
+    if (decision.finalizeText) {
+      await this.finalizeCurrentTextBlock(msg);
+    }
   }
 
   // ============================================
