@@ -31,6 +31,22 @@ describe('detectRiskyProjectSettings (SEC-2)', () => {
     expect(detectRiskyProjectSettings({ permissions: { allow: [] } })).toBe(false);
     expect(detectRiskyProjectSettings({ permissions: {} })).toBe(false);
   });
+
+  it('flags a privilege-widening defaultMode (acceptEdits / bypassPermissions)', () => {
+    expect(detectRiskyProjectSettings({ permissions: { defaultMode: 'acceptEdits' } })).toBe(true);
+    expect(detectRiskyProjectSettings({ permissions: { defaultMode: 'bypassPermissions' } })).toBe(true);
+  });
+
+  it('does not flag a safe or restrictive defaultMode (default / plan)', () => {
+    expect(detectRiskyProjectSettings({ permissions: { defaultMode: 'default' } })).toBe(false);
+    expect(detectRiskyProjectSettings({ permissions: { defaultMode: 'plan' } })).toBe(false);
+  });
+
+  it('flags non-empty additionalDirectories but not deny-only', () => {
+    expect(detectRiskyProjectSettings({ permissions: { additionalDirectories: ['/etc'] } })).toBe(true);
+    expect(detectRiskyProjectSettings({ permissions: { additionalDirectories: [] } })).toBe(false);
+    expect(detectRiskyProjectSettings({ permissions: { deny: ['Bash(*)'] } })).toBe(false);
+  });
 });
 
 describe('vault trust persistence (SEC-2)', () => {

@@ -11,6 +11,13 @@ import { getVaultPath } from '../../../utils/path';
 import { CC_SETTINGS_PATH } from '../storage/CCSettingsStorage';
 
 /**
+ * The `local` SDK setting source loads `.claude/settings.local.json`, which is
+ * exactly as capable (hooks / allow-rules) as `.claude/settings.json` and is
+ * enabled by the same gate — so its risk must be detected too (SEC-2).
+ */
+const CC_LOCAL_SETTINGS_PATH = CC_SETTINGS_PATH.replace(/settings\.json$/, 'settings.local.json');
+
+/**
  * SECURITY (SEC-2): per-vault trust gate for risky project `.claude/settings.json`.
  *
  * The Claude query paths use the vault as cwd and include the `project`/`local`
@@ -46,19 +53,27 @@ export async function detectVaultProjectRisk(
   adapter: VaultFileAdapter,
 ): Promise<boolean> {
   cachedVaultKey = getVaultTrustKey(plugin);
-  cachedRiskyProjectSettings = false;
-  try {
-    if (await adapter.exists(CC_SETTINGS_PATH)) {
-      const raw = await adapter.read(CC_SETTINGS_PATH);
-      const parsed = JSON.parse(raw) as Record<string, unknown>;
-      cachedRiskyProjectSettings = detectRiskyProjectSettings(parsed);
-    }
-  } catch {
-    // Unreadable/unparsable project settings cannot be honored anyway; the SDK
-    // would also reject them. Treat as non-risky so a corrupt file never blocks.
-    cachedRiskyProjectSettings = false;
-  }
+  // Risky if EITHER the project or the local settings file is risky — both feed
+  // the same `project`/`local` SDK sources the gate withholds for untrusted vaults.
+  cachedRiskyProjectSettings =
+    (await readProjectSettingsRisk(adapter, CC_SETTINGS_PATH))
+    || (await readProjectSettingsRisk(adapter, CC_LOCAL_SETTINGS_PATH));
   return cachedRiskyProjectSettings;
+}
+
+/** Read one settings file and report whether it carries risky settings (fail-safe). */
+async function readProjectSettingsRisk(adapter: VaultFileAdapter, path: string): Promise<boolean> {
+  try {
+    if (!(await adapter.exists(path))) {
+      return false;
+    }
+    const parsed = JSON.parse(await adapter.read(path)) as Record<string, unknown>;
+    return detectRiskyProjectSettings(parsed);
+  } catch {
+    // Unreadable/unparsable settings cannot be honored anyway; the SDK would also
+    // reject them. Treat as non-risky so a corrupt file never blocks.
+    return false;
+  }
 }
 
 /** Whether the cached project settings for `vaultKey` were flagged risky. */

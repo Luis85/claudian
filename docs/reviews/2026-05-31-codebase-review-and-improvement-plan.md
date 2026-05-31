@@ -256,6 +256,22 @@ checks; i18n keys perfectly synced.
   cast; 34 sites replaced (3 non-settings casts left). Both type-only/behavior-preserving,
   independently reviewed (no init-order hazard, all replacements correct).
 
+**Post-merge follow-up branch (`claude/lifecycle-and-sec2-followups`):**
+- **Awaitable cleanup on provider switch/reinit + Cursor** — completes the Phase 0 contract: the
+  outgoing runtime's `cleanup()` resolves before a replacement is constructed (a
+  `tab.pendingRuntimeCleanup` invariant awaited at the sole construction site); Cursor `cleanup()`
+  now awaits child exit. Reviewed: invariant sound, hang/leak-free.
+- **SEC-2 vault-trust gate** — risky project `.claude/settings.json` (hooks / `permissions.allow` /
+  privilege-widening `defaultMode` / `additionalDirectories`) AND `.claude/settings.local.json` are
+  only honored after explicit per-vault trust (modal + settings toggle), gated at all four SDK
+  setting-source call sites. Security-reviewed; fixed the review's HIGH (local-file detection gap)
+  and LOW (broader risky-key detection) before integration.
+  - *Remaining SEC-2 follow-ups (from the review):* **stale risk cache (MEDIUM)** — risk is detected
+    once at workspace init; a `.claude/settings.json` made risky *after* init is honored by the stale
+    `false` until reload. Fix: re-detect on a settings-file vault-change event (blocked today because
+    `PluginContext` doesn't expose `registerEvent`). **Module-global cache (LOW)** — non-reentrant if
+    multi-vault/multi-window is ever added.
+
 **PR #9 automated-review fixes (chatgpt-codex-connector):**
 - **P1 — MCP trust bypass (SEC-3):** mere presence of `_claudian.servers.<name>` metadata (even `{}`)
   no longer implies trust; a vault server is enabled only with an explicit `enabled: true`

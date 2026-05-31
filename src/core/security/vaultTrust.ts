@@ -21,14 +21,23 @@ export interface ProjectSettingsLike {
   hooks?: unknown;
   permissions?: {
     allow?: unknown;
+    deny?: unknown;
+    defaultMode?: unknown;
+    additionalDirectories?: unknown;
   } | undefined;
   [key: string]: unknown;
 }
 
+/** Permission `defaultMode` values that widen auto-approval beyond the default. */
+const PRIVILEGE_WIDENING_MODES = new Set(['acceptEdits', 'bypassPermissions']);
+
 /**
  * True when the project settings carry capabilities that can execute code or
- * silently widen tool permissions on the first turn: any `hooks` definition, or a
- * non-empty `permissions.allow` list.
+ * silently widen tool permissions on the first turn: any `hooks` definition, a
+ * non-empty `permissions.allow` list, a privilege-widening `permissions.defaultMode`
+ * (acceptEdits / bypassPermissions), or non-empty `permissions.additionalDirectories`
+ * (expanded filesystem reach). `permissions.deny` is intentionally NOT risky
+ * (deny-only is strictly safer than the default).
  */
 export function detectRiskyProjectSettings(settings: ProjectSettingsLike | null | undefined): boolean {
   if (!settings || typeof settings !== 'object') {
@@ -39,8 +48,22 @@ export function detectRiskyProjectSettings(settings: ProjectSettingsLike | null 
     return true;
   }
 
-  const allow = settings.permissions?.allow;
-  return Array.isArray(allow) && allow.length > 0;
+  const permissions = settings.permissions;
+  if (permissions && typeof permissions === 'object') {
+    const allow = permissions.allow;
+    if (Array.isArray(allow) && allow.length > 0) {
+      return true;
+    }
+    if (typeof permissions.defaultMode === 'string' && PRIVILEGE_WIDENING_MODES.has(permissions.defaultMode)) {
+      return true;
+    }
+    const extraDirs = permissions.additionalDirectories;
+    if (Array.isArray(extraDirs) && extraDirs.length > 0) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function hasNonEmptyHooks(hooks: unknown): boolean {

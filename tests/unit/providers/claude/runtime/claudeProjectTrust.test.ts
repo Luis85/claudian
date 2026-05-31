@@ -70,6 +70,23 @@ describe('claudeProjectTrust (SEC-2 gate wiring)', () => {
     expect(shouldHonorClaudeProjectSettings(plugin)).toBe(true);
   });
 
+  it('flags risk from .claude/settings.local.json even when settings.json is absent (HIGH-1)', async () => {
+    // The `local` source loads settings.local.json, which is gated by the same
+    // flag — so its risk must be detected even if settings.json is clean/absent.
+    const files: Record<string, string> = {
+      '.claude/settings.local.json': HOOKS_SETTINGS,
+    };
+    const adapter = {
+      exists: jest.fn(async (p: string) => p in files),
+      read: jest.fn(async (p: string) => files[p] ?? ''),
+    } as unknown as VaultFileAdapter;
+
+    const plugin = makePlugin();
+    const risky = await detectVaultProjectRisk(plugin, adapter);
+    expect(risky).toBe(true);
+    expect(vaultProjectSettingsRisky(plugin)).toBe(true);
+  });
+
   it('treats unparsable project settings as non-risky (never blocks on corruption)', async () => {
     const plugin = makePlugin();
     await detectVaultProjectRisk(plugin, makeAdapter('{ not json'));
