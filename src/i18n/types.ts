@@ -73,6 +73,9 @@ export type TranslationKey =
   | 'chat.planMode.titleActive'
   | 'chat.planMode.toggleFailed'
 
+  // Chat - Permission mode
+  | 'chat.permissionMode.yoloWarning'
+
   // Chat - Orchestrator
   | 'chat.orchestrator.titleOpen'
   | 'chat.orchestrator.titleInactive'

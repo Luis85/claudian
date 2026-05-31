@@ -32,6 +32,14 @@ export class McpStorage {
           continue;
         }
 
+        // SECURITY (SEC-3): A server present in `mcpServers` but absent from the
+        // Claudian `_claudian.servers` trust metadata was placed there by vault
+        // config (e.g. a committed/synced `.claude/mcp.json`), not enabled through
+        // the Claudian UI. Default such untrusted servers to DISABLED so opening an
+        // untrusted vault never auto-launches MCP processes on the first turn.
+        // Servers the user has interacted with carry a metadata entry (see save())
+        // and keep their explicit enabled state.
+        const hasTrustMetadata = Object.prototype.hasOwnProperty.call(claudianMeta, name);
         const meta = claudianMeta[name] ?? {};
         const disabledTools = Array.isArray(meta.disabledTools)
           ? meta.disabledTools.filter((tool) => typeof tool === 'string')
@@ -42,7 +50,7 @@ export class McpStorage {
         servers.push({
           name,
           config,
-          enabled: meta.enabled ?? DEFAULT_MCP_SERVER.enabled,
+          enabled: meta.enabled ?? (hasTrustMetadata ? DEFAULT_MCP_SERVER.enabled : false),
           contextSaving: meta.contextSaving ?? DEFAULT_MCP_SERVER.contextSaving,
           disabledTools: normalizedDisabledTools,
           description: meta.description,
@@ -65,7 +73,6 @@ export class McpStorage {
     for (const server of servers) {
       mcpServers[server.name] = server.config;
 
-      // Only store Claudian metadata if different from defaults
       const meta: {
         enabled?: boolean;
         contextSaving?: boolean;
@@ -73,9 +80,13 @@ export class McpStorage {
         description?: string;
       } = {};
 
-      if (server.enabled !== DEFAULT_MCP_SERVER.enabled) {
-        meta.enabled = server.enabled;
-      }
+      // SECURITY (SEC-3): Always persist the `enabled` flag. The presence of a
+      // metadata entry is what marks a server as user-trusted on reload; without
+      // it, a re-saved enabled server would be re-classified as untrusted
+      // vault-config and silently disabled. Writing the explicit flag keeps
+      // enabled state stable across reloads while still defaulting unknown
+      // vault-sourced servers (no metadata) to disabled.
+      meta.enabled = server.enabled;
       if (server.contextSaving !== DEFAULT_MCP_SERVER.contextSaving) {
         meta.contextSaving = server.contextSaving;
       }

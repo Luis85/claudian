@@ -177,6 +177,12 @@ export function getSharedEnvironmentVariables(settings: Record<string, unknown>)
   return getLegacyEnvironmentClassification(settings).shared;
 }
 
+// SECURITY: Environment variables (including secrets such as API keys/tokens)
+// are persisted in cleartext into the in-vault `.claudian/claudian-settings.json`,
+// which is typically committed and/or synced. Anyone with the vault gets the
+// secrets — there is no app-level encryption-at-rest. Treat these as
+// vault-trust-scoped. Logging redaction (core/logging/redact.ts) only masks
+// secret-shaped keys in log output; it does not protect the on-disk file.
 export function setSharedEnvironmentVariables(
   settings: Record<string, unknown>,
   envText: string,

@@ -903,6 +903,7 @@ function initializeInputToolbar(
           settings.permissionMode = mode;
         }
       });
+      await maybeWarnYoloMode(plugin, mode);
       tab.ui.permissionToggle?.updateDisplay();
       tab.ui.planModeToggle?.updateDisplay();
       dom.inputWrapper.toggleClass(
@@ -1889,6 +1890,18 @@ async function renderAutoTriggeredTurn(tab: TabData, result: AutoTurnResult): Pr
       tab.renderer?.scrollToBottom();
     }
   }
+}
+
+// SECURITY (SEC-1): 'yolo' maps to SDK bypassPermissions — tools run with no
+// approval UI. Warn the user the first time they opt in, then persist a flag so
+// the Notice shows only once.
+export async function maybeWarnYoloMode(plugin: ClaudianPlugin, mode: string): Promise<void> {
+  if (mode !== 'yolo' || plugin.settings.yoloModeWarningShown) {
+    return;
+  }
+  plugin.settings.yoloModeWarningShown = true;
+  await plugin.saveSettings();
+  new Notice(t('chat.permissionMode.yoloWarning'), 12000);
 }
 
 export function updatePlanModeUI(tab: TabData, plugin: ClaudianPlugin, mode: string): void {

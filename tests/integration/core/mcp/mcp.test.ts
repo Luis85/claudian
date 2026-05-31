@@ -326,7 +326,7 @@ describe('McpStorage', () => {
       });
     });
 
-    it('should keep existing _claudian fields when metadata is defaulted', async () => {
+    it('should keep existing _claudian fields and persist trust when metadata is defaulted', async () => {
       const initial = {
         mcpServers: {
           legacy: { command: 'node' },
@@ -349,7 +349,11 @@ describe('McpStorage', () => {
       await storage.save(servers);
 
       const saved = JSON.parse(files.get(MCP_CONFIG_PATH) || '{}') as Record<string, unknown>;
-      expect(saved._claudian).toEqual({ extra: { keep: true } });
+      // SEC-3: enabled is always persisted so the server is remembered as trusted.
+      expect(saved._claudian).toEqual({
+        extra: { keep: true },
+        servers: { 'default-meta': { enabled: true } },
+      });
       expect(saved.mcpServers).toEqual({ 'default-meta': { command: 'npx' } });
     });
 
@@ -377,7 +381,8 @@ describe('McpStorage', () => {
       expect(stdio.contextSaving).toBe(false);
       expect(stdio.description).toBe('Local tools');
 
-      expect(remote.enabled).toBe(true);
+      // SEC-3: `remote` has no trust metadata, so it loads disabled.
+      expect(remote.enabled).toBe(false);
       expect(remote.contextSaving).toBe(true);
     });
 
@@ -399,11 +404,12 @@ describe('McpStorage', () => {
 
       expect(servers).toHaveLength(1);
       expect(servers[0].name).toBe('valid');
-      expect(servers[0].enabled).toBe(true);
+      // SEC-3: `valid` has no trust metadata, so it loads disabled.
+      expect(servers[0].enabled).toBe(false);
       expect(servers[0].contextSaving).toBe(true);
     });
 
-    it('should remove _claudian when only servers metadata exists', async () => {
+    it('should persist enabled trust metadata for an enabled server', async () => {
       const initial = {
         mcpServers: {
           legacy: { command: 'node' },
@@ -428,7 +434,8 @@ describe('McpStorage', () => {
       await storage.save(servers);
 
       const saved = JSON.parse(files.get(MCP_CONFIG_PATH) || '{}') as Record<string, unknown>;
-      expect(saved._claudian).toBeUndefined();
+      // SEC-3: enabled state is always recorded, so _claudian.servers survives.
+      expect(saved._claudian).toEqual({ servers: { legacy: { enabled: true } } });
     });
   });
 });

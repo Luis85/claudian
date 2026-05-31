@@ -16,6 +16,7 @@ import {
   initializeTabControllers,
   initializeTabService,
   initializeTabUI,
+  maybeWarnYoloMode,
   onProviderAvailabilityChanged,
   resolveBlankTabDefaultProviderId,
   setupServiceCallbacks,
@@ -4279,5 +4280,42 @@ describe('Tab - InputController getTabProviderId wiring', () => {
     // For a blank tab with default model, should resolve to claude
     const result = config.getTabProviderId();
     expect(result).toBe('claude');
+  });
+});
+
+describe('maybeWarnYoloMode (SEC-1)', () => {
+  beforeEach(() => {
+    (Notice as jest.Mock).mockClear();
+  });
+
+  it('warns once when yolo is first selected and persists the flag', async () => {
+    const plugin = createMockPlugin();
+    plugin.settings.yoloModeWarningShown = false;
+
+    await maybeWarnYoloMode(plugin, 'yolo');
+
+    expect(Notice).toHaveBeenCalledTimes(1);
+    expect(plugin.settings.yoloModeWarningShown).toBe(true);
+    expect(plugin.saveSettings).toHaveBeenCalled();
+  });
+
+  it('does not warn again once the flag is set', async () => {
+    const plugin = createMockPlugin();
+    plugin.settings.yoloModeWarningShown = true;
+
+    await maybeWarnYoloMode(plugin, 'yolo');
+
+    expect(Notice).not.toHaveBeenCalled();
+  });
+
+  it('never warns for non-yolo modes', async () => {
+    const plugin = createMockPlugin();
+    plugin.settings.yoloModeWarningShown = false;
+
+    await maybeWarnYoloMode(plugin, 'normal');
+    await maybeWarnYoloMode(plugin, 'plan');
+
+    expect(Notice).not.toHaveBeenCalled();
+    expect(plugin.settings.yoloModeWarningShown).toBe(false);
   });
 });

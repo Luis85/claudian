@@ -74,6 +74,9 @@
       "titleActive": "Plan mode on — click or Shift+Tab to exit",
       "toggleFailed": "Failed to change plan mode"
     },
+    "permissionMode": {
+      "yoloWarning": "YOLO mode lets the agent run commands and edit files with no approval prompts. A malicious or prompt-injected note could execute code. Only use YOLO in vaults you fully trust."
+    },
     "orchestrator": {
       "titleInactive": "Orchestrator mode — parallel worker tabs",
       "titleActive": "Orchestrator mode on",
