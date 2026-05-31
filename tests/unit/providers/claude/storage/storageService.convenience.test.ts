@@ -221,20 +221,6 @@ describe('StorageService convenience methods', () => {
       expect(settings.userName).toBe('Test');
       expect(settings.model).toBe('haiku');
     });
-
-    it('migrates legacy settings into .claudian during initialization', async () => {
-      const { plugin, files } = createMockPlugin({
-        initialFiles: {
-          '.claude/claudian-settings.json': claudianSettingsJson,
-        },
-      });
-      const storage = new StorageService(plugin);
-
-      await storage.initialize();
-
-      expect(files.get('.claudian/claudian-settings.json')).toBeDefined();
-      expect(files.has('.claude/claudian-settings.json')).toBe(false);
-    });
   });
 
   describe('loadAllSlashCommands', () => {

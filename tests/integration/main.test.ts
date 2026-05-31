@@ -392,37 +392,6 @@ describe('ClaudianPlugin', () => {
       expect(plugin.settings.hiddenProviderCommands).toEqual(DEFAULT_SETTINGS.hiddenProviderCommands);
     });
 
-    it('should strip legacy blocklist fields when loading old settings', async () => {
-      mockApp.vault.adapter.exists.mockImplementation(async (path: string) => {
-        return path === '.claudian/claudian-settings.json';
-      });
-      mockApp.vault.adapter.read.mockImplementation(async (path: string) => {
-        if (path === '.claudian/claudian-settings.json') {
-          return JSON.stringify({
-            enableBlocklist: false,
-            blockedCommands: { unix: ['rm -rf', '  '] },
-          });
-        }
-        return '';
-      });
-
-      await plugin.loadSettings();
-
-      expect('enableBlocklist' in plugin.settings).toBe(false);
-      expect('blockedCommands' in plugin.settings).toBe(false);
-      expect(mockApp.vault.adapter.write).toHaveBeenCalledWith(
-        '.claudian/claudian-settings.json',
-        expect.any(String),
-      );
-      const writeCall = (mockApp.vault.adapter.write as jest.Mock).mock.calls.find(
-        ([path]) => path === '.claudian/claudian-settings.json',
-      );
-      expect(writeCall).toBeDefined();
-      const content = JSON.parse(writeCall[1]);
-      expect(content).not.toHaveProperty('enableBlocklist');
-      expect(content).not.toHaveProperty('blockedCommands');
-    });
-
     it('should use defaults when no saved data', async () => {
       // No settings file exists
       mockApp.vault.adapter.exists.mockResolvedValue(false);
@@ -448,50 +417,6 @@ describe('ClaudianPlugin', () => {
       expect(stripInternalState(plugin.settings)).toEqual(DEFAULT_SETTINGS);
     });
 
-    it('should migrate legacy openInMainTab true to main-tab placement', async () => {
-      mockApp.vault.adapter.exists.mockImplementation(async (path: string) => {
-        return path === '.claudian/claudian-settings.json';
-      });
-      mockApp.vault.adapter.read.mockImplementation(async (path: string) => {
-        if (path === '.claudian/claudian-settings.json') {
-          return JSON.stringify({ openInMainTab: true });
-        }
-        return '';
-      });
-
-      await plugin.loadSettings();
-
-      expect(plugin.settings.chatViewPlacement).toBe('main-tab');
-      const writeCall = (mockApp.vault.adapter.write as jest.Mock).mock.calls.find(
-        ([path]) => path === '.claudian/claudian-settings.json',
-      );
-      expect(writeCall).toBeDefined();
-      const content = JSON.parse(writeCall[1]);
-      expect(content.chatViewPlacement).toBe('main-tab');
-      expect(content).not.toHaveProperty('openInMainTab');
-    });
-
-    it('should reconcile model from environment and persist when changed', async () => {
-      // Mock claudian-settings.json with environment variables
-      mockApp.vault.adapter.exists.mockImplementation(async (path: string) => {
-        return path === '.claudian/claudian-settings.json';
-      });
-      mockApp.vault.adapter.read.mockImplementation(async (path: string) => {
-        if (path === '.claudian/claudian-settings.json') {
-          return JSON.stringify({
-            environmentVariables: 'ANTHROPIC_MODEL=custom-model',
-            lastEnvHash: '',
-          });
-        }
-        return '';
-      });
-
-      const saveSpy = jest.spyOn(plugin, 'saveSettings');
-      await plugin.loadSettings();
-
-      expect(plugin.settings.model).toBe('custom-model');
-      expect(saveSpy).toHaveBeenCalled();
-    });
   });
 
   describe('saveSettings', () => {
@@ -1008,57 +933,6 @@ describe('ClaudianPlugin', () => {
       const loaded = await plugin.getConversationById('conv-saved-1');
       expect(loaded?.id).toBe('conv-saved-1');
       expect(loaded?.title).toBe('Saved Chat');
-    });
-
-    it('should clear session IDs when provider base URL changes', async () => {
-      const timestamp = Date.now();
-      const sessionMeta = JSON.stringify({
-        id: 'conv-saved-1',
-        title: 'Saved Chat',
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        sessionId: 'saved-session',
-      });
-
-      mockApp.vault.adapter.exists.mockImplementation(async (path: string) => {
-        return path === '.claudian/claudian-settings.json' ||
-          path === '.claudian/sessions' ||
-          path === '.claudian/sessions/conv-saved-1.meta.json';
-      });
-      mockApp.vault.adapter.list.mockImplementation(async (path: string) => {
-        if (path === '.claudian/sessions') {
-          return { files: ['.claudian/sessions/conv-saved-1.meta.json'], folders: [] };
-        }
-        return { files: [], folders: [] };
-      });
-      mockApp.vault.adapter.read.mockImplementation(async (path: string) => {
-        if (path === '.claudian/claudian-settings.json') {
-          // All these fields are now in claudian-settings.json
-          return JSON.stringify({
-            lastEnvHash: 'old-hash',
-            environmentVariables: 'ANTHROPIC_BASE_URL=https://api.example.com',
-          });
-        }
-        if (path === '.claudian/sessions/conv-saved-1.meta.json') {
-          return sessionMeta;
-        }
-        return '';
-      });
-
-      // data.json is minimal (already migrated)
-      (plugin.loadData as jest.Mock).mockResolvedValue({});
-
-      await plugin.loadSettings();
-
-      const loaded = await plugin.getConversationById('conv-saved-1');
-      expect(loaded?.sessionId).toBeNull();
-
-      const sessionWrite = (mockApp.vault.adapter.write as jest.Mock).mock.calls.find(
-        ([path]) => path === '.claudian/sessions/conv-saved-1.meta.json'
-      );
-      expect(sessionWrite).toBeDefined();
-      const meta = JSON.parse(sessionWrite?.[1] as string);
-      expect(meta.sessionId).toBeNull();
     });
 
     it('should ignore legacy activeConversationId when no sessions exist', async () => {

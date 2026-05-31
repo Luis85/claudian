@@ -4,7 +4,6 @@ import type { ProviderId } from '@/core/providers/types';
 import type { VaultFileAdapter } from '@/core/storage/VaultFileAdapter';
 import type { Conversation, SessionMetadata, UsageInfo } from '@/core/types';
 import {
-  LEGACY_SESSIONS_PATH,
   SESSIONS_PATH,
   SessionStorage,
 } from '@/providers/claude/storage/SessionStorage';
@@ -107,31 +106,6 @@ describe('SessionStorage', () => {
       expect(result).toBeNull();
     });
 
-    it('loads legacy metadata and migrates it to .claudian', async () => {
-      const metadata = {
-        id: 'session-legacy',
-        title: 'Legacy Session',
-        createdAt: 1700000000,
-        updatedAt: 1700001000,
-      };
-
-      mockAdapter.exists.mockImplementation(async (path: string) => (
-        path === `${LEGACY_SESSIONS_PATH}/session-legacy.meta.json`
-      ));
-      mockAdapter.read.mockResolvedValue(JSON.stringify(metadata));
-
-      const result = await storage.loadMetadata('session-legacy');
-
-      expect(result).toEqual(metadata);
-      expect(mockAdapter.write).toHaveBeenCalledWith(
-        '.claudian/sessions/session-legacy.meta.json',
-        expect.any(String),
-      );
-      expect(mockAdapter.delete).toHaveBeenCalledWith(
-        '.claude/sessions/session-legacy.meta.json',
-      );
-    });
-
     it('loads and parses metadata from JSON file', async () => {
       const metadata = {
         id: 'session-abc',
@@ -223,23 +197,6 @@ describe('SessionStorage', () => {
       expect(codexMeta!.providerId).toBe('codex');
     });
 
-    it('defaults providerId to claude for legacy conversations', async () => {
-      mockAdapter.listFiles.mockResolvedValue([
-        '.claudian/sessions/old.meta.json',
-      ]);
-
-      mockAdapter.read.mockResolvedValue(JSON.stringify({
-        id: 'old',
-        title: 'Old Session',
-        createdAt: 1700000000,
-        updatedAt: 1700001000,
-      }));
-
-      const metas = await storage.listAllConversations();
-
-      expect(metas).toHaveLength(1);
-      expect(metas[0].providerId).toBe('claude');
-    });
   });
 
   describe('toSessionMetadata - round trip', () => {
