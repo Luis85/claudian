@@ -1424,7 +1424,9 @@ export function initializeTabControllers(
         // run the teardown in a contained async IIFE so the old process is gone
         // before the next send constructs a replacement.
         const previousProviderId = tab.providerId;
-        void cleanupTabRuntime(tab);
+        cleanupTabRuntime(tab).catch((error) =>
+          plugin.logger.scope('chat').error('tab runtime cleanup failed', error),
+        );
         tab.lifecycleState = 'blank';
         tab.draftModel = resolveBlankTabModel(plugin, previousProviderId);
         tab.conversationId = null;

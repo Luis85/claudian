@@ -124,7 +124,9 @@ export class ClaudianView extends ItemView {
       // and tracks its async cleanup on the tab; initializeTabService awaits that
       // pending cleanup before constructing a replacement, so this fire-and-forget
       // call can never overlap the old CLI process with a new one.
-      void onProviderAvailabilityChanged(tab, this.plugin);
+      onProviderAvailabilityChanged(tab, this.plugin).catch((error) =>
+        this.plugin.logger.scope('chat').error('provider-availability runtime cleanup failed', error),
+      );
       const providerId = getTabProviderId(tab, this.plugin);
       const providerSettings = ProviderSettingsCoordinator.getProviderSettingsSnapshot(
         this.plugin.settings,
