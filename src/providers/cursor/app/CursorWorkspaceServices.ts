@@ -7,7 +7,7 @@ import type {
 } from '../../../core/providers/types';
 import type { HomeFileAdapter } from '../../../core/storage/HomeFileAdapter';
 import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { getVaultPath } from '../../../utils/path';
 import { buildCursorAgentEnvironment } from '../runtime/cursorAgentEnv';
 import { cursorCliSpec } from '../runtime/CursorCliResolver';
@@ -19,7 +19,7 @@ function createCursorCliResolver(): ProviderCliResolver {
   return new CachedCliResolver(cursorCliSpec);
 }
 
-function warmCursorModelCatalog(plugin: ClaudianPlugin, cliResolver: ProviderCliResolver): void {
+function warmCursorModelCatalog(plugin: PluginContext, cliResolver: ProviderCliResolver): void {
   const settings = plugin.settings as unknown as Record<string, unknown>;
   if (!getCursorProviderSettings(settings).enabled) {
     return;
@@ -41,7 +41,7 @@ function warmCursorModelCatalog(plugin: ClaudianPlugin, cliResolver: ProviderCli
 }
 
 export async function createCursorWorkspaceServices(
-  plugin: ClaudianPlugin,
+  plugin: PluginContext,
   _vaultAdapter: VaultFileAdapter,
   _homeAdapter: HomeFileAdapter,
 ): Promise<ProviderWorkspaceServices> {

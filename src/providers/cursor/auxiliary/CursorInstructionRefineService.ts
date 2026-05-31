@@ -1,9 +1,9 @@
 import { QueryBackedInstructionRefineService } from '../../../core/auxiliary/QueryBackedInstructionRefineService';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { CursorAuxCliRunner } from '../runtime/CursorAuxCliRunner';
 
 export class CursorInstructionRefineService extends QueryBackedInstructionRefineService {
-  constructor(plugin: ClaudianPlugin) {
+  constructor(plugin: PluginContext) {
     super(new CursorAuxCliRunner(plugin));
   }
 }

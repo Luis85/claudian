@@ -55,8 +55,8 @@ import type {
   StreamChunk,
   ToolCallInfo,
 } from '../../../core/types';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import type { ClaudianSettings, PermissionMode } from '../../../core/types/settings';
-import type ClaudianPlugin from '../../../main';
 import { stripCurrentNoteContext } from '../../../utils/context';
 import { getEnhancedPath, getMissingNodeError, parseEnvironmentVariables } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
@@ -145,7 +145,7 @@ function mergeCustomModelContextLimits(
 
 export class ClaudianService implements ChatRuntime {
   readonly providerId = CLAUDE_PROVIDER_CAPABILITIES.providerId;
-  private plugin: ClaudianPlugin;
+  private plugin: PluginContext;
   private agentManager: Pick<AppAgentManager, 'setBuiltinAgentNames'> | null;
   private pluginManager: AppPluginManager | null;
   private abortController: AbortController | null = null;
@@ -202,14 +202,14 @@ export class ClaudianService implements ChatRuntime {
   private streamTransformState = createTransformStreamState();
   private usageTransformState = createTransformUsageState();
 
-  private getLegacyPluginDeps(): ClaudianPlugin & {
+  private getLegacyPluginDeps(): PluginContext & {
     agentManager?: Pick<AppAgentManager, 'setBuiltinAgentNames'>;
     pluginManager?: AppPluginManager;
   } {
     return this.plugin;
   }
 
-  constructor(plugin: ClaudianPlugin, services: ClaudeRuntimeServices | McpServerManager) {
+  constructor(plugin: PluginContext, services: ClaudeRuntimeServices | McpServerManager) {
     this.plugin = plugin;
     const legacyPlugin = this.getLegacyPluginDeps();
 

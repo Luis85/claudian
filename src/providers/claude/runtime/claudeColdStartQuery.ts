@@ -2,7 +2,7 @@ import type { Options } from '@anthropic-ai/claude-agent-sdk';
 import { query as agentQuery } from '@anthropic-ai/claude-agent-sdk';
 
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { getEnhancedPath, getMissingNodeError, parseEnvironmentVariables } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
 import { extractAssistantText } from '../auxiliary/extractAssistantText';
@@ -16,7 +16,7 @@ import {
 import { createCustomSpawnFunction } from './customSpawn';
 
 export interface ColdStartQueryConfig {
-  plugin: ClaudianPlugin;
+  plugin: PluginContext;
   systemPrompt: string;
   /** Tools available to the model. Omit for SDK default (all tools). */
   tools?: string[];

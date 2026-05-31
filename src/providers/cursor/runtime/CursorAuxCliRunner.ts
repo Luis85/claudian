@@ -2,7 +2,7 @@ import { spawn } from 'child_process';
 
 import type { AuxQueryConfig, AuxQueryRunner } from '../../../core/auxiliary/AuxQueryRunner';
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { getVaultPath } from '../../../utils/path';
 import { buildCursorAgentEnvironment } from './cursorAgentEnv';
 import { acquireCursorAgentSpawnLock } from './cursorAgentSpawnLock';
@@ -24,7 +24,7 @@ interface CursorJsonResult {
 export class CursorAuxCliRunner implements AuxQueryRunner {
   private sessionId: string | null = null;
 
-  constructor(private readonly plugin: ClaudianPlugin) {}
+  constructor(private readonly plugin: PluginContext) {}
 
   reset(): void {
     this.sessionId = null;

@@ -1,9 +1,9 @@
 import { QueryBackedTitleGenerationService } from '../../../core/auxiliary/QueryBackedTitleGenerationService';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { CursorAuxCliRunner } from '../runtime/CursorAuxCliRunner';
 
 export class CursorTitleGenerationService extends QueryBackedTitleGenerationService {
-  constructor(plugin: ClaudianPlugin) {
+  constructor(plugin: PluginContext) {
     super({
       createRunner: () => new CursorAuxCliRunner(plugin),
       resolveModel: () => plugin.settings.titleGenerationModel || undefined,

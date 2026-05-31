@@ -7,7 +7,7 @@ import {
   isReadOnlyTool,
   READ_ONLY_TOOLS,
 } from '../../../core/tools/toolNames';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { ClaudeAuxQueryRunner } from '../runtime/ClaudeAuxQueryRunner';
 
 export type { InlineEditRequest };
@@ -40,7 +40,7 @@ export function createReadOnlyHook(): HookCallbackMatcher {
 }
 
 export class InlineEditService extends QueryBackedInlineEditService {
-  constructor(plugin: ClaudianPlugin) {
+  constructor(plugin: PluginContext) {
     super(new ClaudeAuxQueryRunner(plugin, {
       hooks: { PreToolUse: [createReadOnlyHook()] },
       resolveProviderSettings: () => ProviderSettingsCoordinator.getProviderSettingsSnapshot(

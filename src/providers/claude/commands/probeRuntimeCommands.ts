@@ -2,7 +2,7 @@ import type { SlashCommand as SDKSlashCommand } from '@anthropic-ai/claude-agent
 import { query as agentQuery } from '@anthropic-ai/claude-agent-sdk';
 
 import type { SlashCommand } from '../../../core/types';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { getEnhancedPath, parseEnvironmentVariables } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
 import { createCustomSpawnFunction } from '../runtime/customSpawn';
@@ -29,7 +29,7 @@ function mapSdkCommands(sdkCommands: SDKSlashCommand[]): SlashCommand[] {
  * event from local config parsing alone (no API call, no cost). The probe
  * captures that event, calls supportedCommands() for full metadata, then aborts.
  */
-export async function probeRuntimeCommands(plugin: ClaudianPlugin): Promise<SlashCommand[]> {
+export async function probeRuntimeCommands(plugin: PluginContext): Promise<SlashCommand[]> {
   const vaultPath = getVaultPath(plugin.app);
   if (!vaultPath) return [];
 

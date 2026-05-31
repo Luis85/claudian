@@ -36,7 +36,7 @@ import type {
   StreamChunk,
   ToolCallInfo,
 } from '../../../core/types';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { getEnhancedPath } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
 import {
@@ -171,7 +171,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
   private unregisterTransportClose: (() => void) | null = null;
 
   constructor(
-    private readonly plugin: ClaudianPlugin,
+    private readonly plugin: PluginContext,
   ) {}
 
   getCapabilities(): Readonly<ProviderCapabilities> {
