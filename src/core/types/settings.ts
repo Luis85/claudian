@@ -110,10 +110,10 @@ export interface ClaudianSettings {
    */
   trustedVaults?: Record<string, boolean>;
   /**
-   * SEC-3: set once the one-time grandfather migration has run for this install,
-   * so vault MCP servers already present at upgrade are trusted while servers
-   * synced in afterwards default to disabled. Per-install (not per-file) so the
-   * migration does not silently re-trust newly-synced servers.
+   * SEC-3: set once the one-time grandfather migration has run for this vault
+   * (this settings object persists per-vault), so vault MCP servers already
+   * present at upgrade are trusted while servers synced in afterwards default to
+   * disabled — the migration does not silently re-trust newly-synced servers.
    */
   mcpVaultServersGrandfathered?: boolean;
 

@@ -47,7 +47,8 @@ export async function createClaudeWorkspaceServices(
 
   // SEC-3 one-time grandfather: trust vault MCP servers already present at upgrade
   // so an existing config is not silently disabled, while newly-synced servers
-  // still default to disabled. Per-install flag so it runs once.
+  // still default to disabled. The flag lives in the per-vault settings file, so
+  // it runs once per vault on first post-upgrade init.
   if (!plugin.settings.mcpVaultServersGrandfathered) {
     try {
       await mcpStorage.grandfatherExistingServers();
