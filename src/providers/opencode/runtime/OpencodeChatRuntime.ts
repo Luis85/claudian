@@ -36,7 +36,8 @@ import type {
   StreamChunk,
   ToolCallInfo,
 } from '../../../core/types';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
+import { asSettingsBag } from '../../../core/types/settings';
 import { getEnhancedPath } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
 import {
@@ -171,7 +172,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
   private unregisterTransportClose: (() => void) | null = null;
 
   constructor(
-    private readonly plugin: ClaudianPlugin,
+    private readonly plugin: PluginContext,
   ) {}
 
   getCapabilities(): Readonly<ProviderCapabilities> {
@@ -507,9 +508,9 @@ export class OpencodeChatRuntime implements ChatRuntime {
     return this.waitForSupportedCommands();
   }
 
-  cleanup(): void {
+  async cleanup(): Promise<void> {
     this.activeTurn?.queue.close();
-    void this.shutdownProcess();
+    await this.shutdownProcess();
   }
 
   async rewind(
@@ -895,7 +896,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
       this.currentSessionModelId = currentRawModelId;
     }
 
-    const settingsBag = this.plugin.settings as unknown as Record<string, unknown>;
+    const settingsBag = asSettingsBag(this.plugin.settings);
     const currentSettings = getOpencodeProviderSettings(settingsBag);
     const currentBaseRawModelId = currentRawModelId
       ? resolveOpencodeBaseModelRawId(currentRawModelId, discoveredModels)
@@ -1047,7 +1048,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
       this.emitPermissionModeSync(currentModeId);
     }
 
-    const settingsBag = this.plugin.settings as unknown as Record<string, unknown>;
+    const settingsBag = asSettingsBag(this.plugin.settings);
     const currentSettings = getOpencodeProviderSettings(settingsBag);
     const shouldSeedSelectedMode = typeof currentModeId === 'string'
       && !currentSettings.selectedMode

@@ -1,0 +1,101 @@
+import type { Plugin } from 'obsidian';
+
+import type { ClaudianEventMap } from '../../app/events/claudianEvents';
+import type { BrowserSelectionContext } from '../../utils/browser';
+import type { SharedAppStorage } from '../bootstrap/storage';
+import type { EventBus } from '../events/EventBus';
+import type { Logger } from '../logging/Logger';
+import type { AppTabManagerState } from '../providers/types';
+import type { ChatRuntime } from '../runtime/ChatRuntime';
+import type {
+  ChatMessageAction,
+  ClaudianSettings,
+  Conversation,
+  ConversationMeta,
+  ConversationSnapshot,
+} from './index';
+import type { ProviderId } from './provider';
+import type { EnvironmentScope } from './settings';
+
+/**
+ * Narrow chat-tab manager surface consumed by the provider boundary.
+ *
+ * Providers broadcast runtime lifecycle work across open tabs without
+ * importing the concrete `TabManager` from `features/`, keeping the core
+ * contracts free of feature dependencies.
+ */
+export interface ChatTabManagerHandle {
+  broadcastToAllTabs(fn: (service: ChatRuntime) => Promise<void>): Promise<void>;
+  broadcastToProviderTabs(
+    providerIds: ProviderId | ProviderId[],
+    fn: (service: ChatRuntime) => Promise<void>,
+  ): Promise<void>;
+}
+
+/**
+ * Narrow chat-view surface consumed by the provider boundary. The concrete
+ * `ClaudianView` implements this so provider settings tabs and runtimes can
+ * refresh UI and reach the tab manager without `core/` depending on the view.
+ */
+export interface ChatViewHandle {
+  getTabManager(): ChatTabManagerHandle | null;
+  refreshModelSelector(): void;
+  invalidateProviderCommandCaches(providerIds?: ProviderId | ProviderId[]): void;
+}
+
+/**
+ * Narrow plugin surface the provider-neutral core and provider adaptors depend
+ * on, replacing the concrete `ClaudianPlugin` at the chat-facing boundary.
+ *
+ * `ClaudianPlugin implements PluginContext`, so real plugins pass everywhere
+ * this is required. Members mirror the concrete implementation exactly; the
+ * interface adapts to `ClaudianPlugin`, never the reverse. Inverting the
+ * dependency here keeps `core/` and `providers/` independent of `src/main`.
+ */
+export interface PluginContext
+  extends Pick<Plugin, 'app' | 'manifest' | 'loadData' | 'saveData'> {
+  settings: ClaudianSettings;
+  storage: SharedAppStorage;
+  readonly events: EventBus<ClaudianEventMap>;
+  readonly logger: Logger;
+  readonly chatMessageActions: ChatMessageAction[];
+  gitStatusWatcher: { refresh(): Promise<void> } | null;
+
+  saveSettings(): Promise<void>;
+  normalizeModelVariantSettings(): boolean;
+  copyDiagnosticLogs(): Promise<void>;
+
+  applyEnvironmentVariables(scope: EnvironmentScope, envText: string): Promise<void>;
+  applyEnvironmentVariablesBatch(
+    updates: Array<{ scope: EnvironmentScope; envText: string }>,
+  ): Promise<void>;
+  getActiveEnvironmentVariables(providerId?: ProviderId): string;
+  getEnvironmentVariablesForScope(scope: EnvironmentScope): string;
+  getResolvedProviderCliPath(providerId: ProviderId): string | null;
+
+  getActiveBrowserSelection(): BrowserSelectionContext | null;
+  getActiveConversationSnapshot(): ConversationSnapshot | null;
+  openConversation(conversationId: string): Promise<void>;
+  activateView(): Promise<void>;
+
+  createConversation(options?: {
+    providerId?: ProviderId;
+    sessionId?: string;
+    orchestratorMode?: boolean;
+  }): Promise<Conversation>;
+  switchConversation(id: string): Promise<Conversation | null>;
+  deleteConversation(id: string): Promise<void>;
+  renameConversation(id: string, title: string): Promise<void>;
+  updateConversation(id: string, updates: Partial<Conversation>): Promise<void>;
+  getConversationById(id: string): Promise<Conversation | null>;
+  getConversationSync(id: string): Conversation | null;
+  getConversationList(): ConversationMeta[];
+
+  persistTabManagerState(state: AppTabManagerState): Promise<void>;
+
+  getView(): ChatViewHandle | null;
+  getAllViews(): ChatViewHandle[];
+  findConversationAcrossViews(
+    conversationId: string,
+  ): { view: ChatViewHandle; tabId: string } | null;
+}

@@ -43,7 +43,7 @@ export interface ChatRuntime {
   isReady(): boolean;
   getSupportedCommands(): Promise<SlashCommand[]>;
   getAuxiliaryModel?(): string | null;
-  cleanup(): void;
+  cleanup(): void | Promise<void>;
   rewind(userMessageId: string, assistantMessageId: string, mode?: ChatRewindMode): Promise<ChatRewindResult>;
   setApprovalCallback(callback: ApprovalCallback | null): void;
   setApprovalDismisser(dismisser: (() => void) | null): void;

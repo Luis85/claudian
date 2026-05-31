@@ -30,6 +30,13 @@ jest.mock('@modelcontextprotocol/sdk/client/streamableHttp', () => ({
 
 jest.mock('@/utils/env', () => ({
   getEnhancedPath: jest.fn((p?: string) => p || '/usr/bin'),
+  buildCuratedChildEnv: jest.fn((overrides: Record<string, string | undefined> = {}) => {
+    const result: Record<string, string> = {};
+    for (const [key, value] of Object.entries(overrides)) {
+      if (typeof value === 'string') result[key] = value;
+    }
+    return result;
+  }),
 }));
 
 jest.mock('@/utils/mcp', () => ({

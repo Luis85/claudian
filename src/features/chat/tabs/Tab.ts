@@ -21,6 +21,7 @@ import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
 import type { AutoTurnResult } from '../../../core/runtime/types';
 import { TOOL_AGENT_OUTPUT } from '../../../core/tools/toolNames';
 import type { ChatMessage, ClaudianSettings, Conversation, StreamChunk } from '../../../core/types';
+import { asSettingsBag } from '../../../core/types/settings';
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { SlashCommandDropdown } from '../../../shared/components/SlashCommandDropdown';
@@ -97,7 +98,7 @@ function resolveBlankTabModel(
   plugin: ClaudianPlugin,
   providerId?: ProviderId,
 ): string {
-  const settings = plugin.settings as unknown as Record<string, unknown>;
+  const settings = asSettingsBag(plugin.settings);
   if (!providerId) {
     return settings.model as string;
   }
@@ -359,7 +360,7 @@ function cleanupTabRuntime(tab: TabData): void {
 export function onProviderAvailabilityChanged(tab: TabData, plugin: ClaudianPlugin): void {
   if (tab.lifecycleState !== 'blank') return;
 
-  const settingsSnapshot = plugin.settings as unknown as Record<string, unknown>;
+  const settingsSnapshot = asSettingsBag(plugin.settings);
   const enabledProviderIds = ProviderRegistry.getEnabledProviderIds(settingsSnapshot);
   let nextProviderId = tab.providerId;
 
@@ -441,7 +442,7 @@ export function createTab(options: TabCreateOptions): TabData {
   const initialProviderId = conversation?.providerId
     ?? (draftModel
       ? getEnabledProviderForModel(draftModel, plugin.settings)
-      : resolveBlankTabDefaultProviderId(plugin.settings as unknown as Record<string, unknown>));
+      : resolveBlankTabDefaultProviderId(asSettingsBag(plugin.settings)));
 
   const tab: TabData = {
     id,
@@ -903,6 +904,7 @@ function initializeInputToolbar(
           settings.permissionMode = mode;
         }
       });
+      await maybeWarnYoloMode(plugin, mode);
       tab.ui.permissionToggle?.updateDisplay();
       tab.ui.planModeToggle?.updateDisplay();
       dom.inputWrapper.toggleClass(
@@ -1699,8 +1701,9 @@ export async function destroyTab(tab: TabData): Promise<void> {
   }
   tab.dom.eventCleanups.length = 0;
 
-  // Clean up runtime before removing DOM
-  tab.service?.cleanup();
+  // Clean up runtime before removing DOM. Await so the provider subprocess is
+  // actually killed before teardown completes (prevents orphaned CLI processes).
+  await tab.service?.cleanup();
   tab.service = null;
   tab.dom.contentEl.remove();
 }
@@ -1889,6 +1892,18 @@ async function renderAutoTriggeredTurn(tab: TabData, result: AutoTurnResult): Pr
       tab.renderer?.scrollToBottom();
     }
   }
+}
+
+// SECURITY (SEC-1): 'yolo' maps to SDK bypassPermissions — tools run with no
+// approval UI. Warn the user the first time they opt in, then persist a flag so
+// the Notice shows only once.
+export async function maybeWarnYoloMode(plugin: ClaudianPlugin, mode: string): Promise<void> {
+  if (mode !== 'yolo' || plugin.settings.yoloModeWarningShown) {
+    return;
+  }
+  plugin.settings.yoloModeWarningShown = true;
+  await plugin.saveSettings();
+  new Notice(t('chat.permissionMode.yoloWarning'), 12000);
 }
 
 export function updatePlanModeUI(tab: TabData, plugin: ClaudianPlugin, mode: string): void {

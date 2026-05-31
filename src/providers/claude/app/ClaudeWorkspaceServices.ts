@@ -12,7 +12,7 @@ import type {
   ProviderWorkspaceServices,
 } from '../../../core/providers/types';
 import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { getVaultPath } from '../../../utils/path';
 import { AgentManager } from '../agents/AgentManager';
 import { ClaudeCommandCatalog } from '../commands/ClaudeCommandCatalog';
@@ -35,7 +35,7 @@ export interface ClaudeWorkspaceServices extends ProviderWorkspaceServices {
 }
 
 export async function createClaudeWorkspaceServices(
-  plugin: ClaudianPlugin,
+  plugin: PluginContext,
   adapter: VaultFileAdapter,
 ): Promise<ClaudeWorkspaceServices> {
   const claudeStorage = new StorageService(plugin, adapter);
@@ -44,6 +44,21 @@ export async function createClaudeWorkspaceServices(
   const cliResolver = new CachedCliResolver(claudeCliSpec);
   const mcpStorage = claudeStorage.mcp;
   const mcpManager = new McpServerManager(mcpStorage);
+
+  // SEC-3 one-time grandfather: trust vault MCP servers already present at upgrade
+  // so an existing config is not silently disabled, while newly-synced servers
+  // still default to disabled. The flag lives in the per-vault settings file, so
+  // it runs once per vault on first post-upgrade init.
+  if (!plugin.settings.mcpVaultServersGrandfathered) {
+    try {
+      await mcpStorage.grandfatherExistingServers();
+    } catch {
+      // best-effort migration; never block workspace init
+    }
+    plugin.settings.mcpVaultServersGrandfathered = true;
+    await plugin.saveSettings();
+  }
+
   await mcpManager.loadServers();
 
   const vaultPath = getVaultPath(plugin.app) ?? '';

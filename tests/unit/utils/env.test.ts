@@ -9,6 +9,7 @@ import { itPosix } from '@test/helpers/platform';
 import * as env from '../../../src/utils/env';
 
 const {
+  buildCuratedChildEnv,
   cliPathRequiresNode,
   findNodeDirectory,
   findNodeExecutable,
@@ -63,6 +64,45 @@ describe('parseEnvironmentVariables', () => {
   it('handles mixed export and non-export lines', () => {
     const input = 'FOO=bar\nexport BAZ=qux\nQUX=123';
     expect(parseEnvironmentVariables(input)).toEqual({ FOO: 'bar', BAZ: 'qux', QUX: '123' });
+  });
+});
+
+describe('buildCuratedChildEnv (SEC-4)', () => {
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it('forwards system-essential vars but drops arbitrary host secrets', () => {
+    process.env.PATH = '/usr/bin';
+    process.env.HOME = '/home/tester';
+    process.env.AWS_SECRET_ACCESS_KEY = 'super-secret';
+    process.env.GITHUB_TOKEN = 'ghp_xxx';
+
+    const result = buildCuratedChildEnv();
+
+    expect(result.PATH).toBe('/usr/bin');
+    expect(result.HOME).toBe('/home/tester');
+    expect(result.AWS_SECRET_ACCESS_KEY).toBeUndefined();
+    expect(result.GITHUB_TOKEN).toBeUndefined();
+  });
+
+  it('lets caller-supplied overrides pass through and win over host values', () => {
+    process.env.PATH = '/usr/bin';
+
+    const result = buildCuratedChildEnv({
+      PATH: '/custom/bin:/usr/bin',
+      MY_SERVER_TOKEN: 'configured',
+    });
+
+    expect(result.PATH).toBe('/custom/bin:/usr/bin');
+    expect(result.MY_SERVER_TOKEN).toBe('configured');
+  });
+
+  it('skips undefined override values', () => {
+    const result = buildCuratedChildEnv({ MAYBE: undefined });
+    expect('MAYBE' in result).toBe(false);
   });
 });
 

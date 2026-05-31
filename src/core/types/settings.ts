@@ -101,6 +101,21 @@ export interface ClaudianSettings {
 
   // Security
   permissionMode: PermissionMode;
+  /** SEC-1: set once the YOLO (bypass-permissions) warning Notice has been shown. */
+  yoloModeWarningShown?: boolean;
+  /**
+   * SEC-2: Per-vault trust flags keyed by an opaque vault key. A vault is honored
+   * for risky project settings (hooks / permissions.allow) only after the user
+   * explicitly trusts it.
+   */
+  trustedVaults?: Record<string, boolean>;
+  /**
+   * SEC-3: set once the one-time grandfather migration has run for this vault
+   * (this settings object persists per-vault), so vault MCP servers already
+   * present at upgrade are trusted while servers synced in afterwards default to
+   * disabled — the migration does not silently re-trust newly-synced servers.
+   */
+  mcpVaultServersGrandfathered?: boolean;
 
   // Model & thinking (provider interprets values)
   model: string;
@@ -178,4 +193,19 @@ export interface ClaudianSettings {
 
   // Allow provider-specific extension fields
   [key: string]: unknown;
+}
+
+/**
+ * Views `ClaudianSettings` as an opaque string-keyed bag.
+ *
+ * This is the provider-UI-config seam: provider-owned code (chat UI configs,
+ * settings reconcilers, auxiliary services, settings tabs) reads/writes its own
+ * namespaced fields out of `providerConfigs` and top-level provider fields
+ * without the provider-neutral contracts having to know each provider's concrete
+ * settings shape. Centralizing the single `as unknown as Record<string, unknown>`
+ * cast here keeps that one structural escape hatch named, searchable, and the
+ * lone sanctioned `as unknown as` cast (no `any`).
+ */
+export function asSettingsBag(settings: ClaudianSettings): Record<string, unknown> {
+  return settings as unknown as Record<string, unknown>;
 }

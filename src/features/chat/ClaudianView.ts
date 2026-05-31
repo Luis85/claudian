@@ -6,7 +6,7 @@ import { getHiddenProviderCommandSet } from '../../core/providers/commands/hidde
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from '../../core/providers/ProviderSettingsCoordinator';
 import { DEFAULT_CHAT_PROVIDER_ID, type ProviderId } from '../../core/providers/types';
-import { VIEW_TYPE_CLAUDIAN } from '../../core/types';
+import { asSettingsBag, VIEW_TYPE_CLAUDIAN } from '../../core/types';
 import { t } from '../../i18n/i18n';
 import type ClaudianPlugin from '../../main';
 import { createProviderIconSvg } from '../../shared/icons';
@@ -160,7 +160,7 @@ export class ClaudianView extends ItemView {
     this.tabManager?.primeProviderRuntime();
   }
 
-  invalidateProviderCommandCaches(providerIds?: ProviderId[]): void {
+  invalidateProviderCommandCaches(providerIds?: ProviderId | ProviderId[]): void {
     this.tabManager?.invalidateProviderCommandCaches(providerIds);
   }
 
@@ -206,7 +206,7 @@ export class ClaudianView extends ItemView {
     // No enabled provider means there is nothing to chat with. Render a
     // configure-first placeholder and skip tab manager creation entirely.
     const enabledProviders = ProviderRegistry.getEnabledProviderIds(
-      this.plugin.settings as unknown as Record<string, unknown>,
+      asSettingsBag(this.plugin.settings),
     );
     if (enabledProviders.length === 0) {
       this.renderEmptyState(this.viewContainerEl);
@@ -323,7 +323,7 @@ export class ClaudianView extends ItemView {
       return;
     }
     const hasProviders = ProviderRegistry.getEnabledProviderIds(
-      this.plugin.settings as unknown as Record<string, unknown>,
+      asSettingsBag(this.plugin.settings),
     ).length > 0;
 
     if (hasProviders && !this.tabManager) {

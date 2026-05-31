@@ -49,25 +49,29 @@ export function resolveCursorNodeEntry(
   cliPath: string,
   platform: NodeJS.Platform = process.platform,
 ): CursorNodeEntry | null {
+  // Use platform-specific path semantics so win32 shim paths resolve correctly
+  // even when the host (e.g. CI) runs POSIX. On the real target platform this is
+  // identical to the host `path`.
+  const p = platform === 'win32' ? path.win32 : path.posix;
   const nodeName = platform === 'win32' ? 'node.exe' : 'node';
-  const dir = path.dirname(cliPath);
+  const dir = p.dirname(cliPath);
 
-  const adjacentNode = path.join(dir, nodeName);
-  const adjacentEntry = path.join(dir, 'index.js');
+  const adjacentNode = p.join(dir, nodeName);
+  const adjacentEntry = p.join(dir, 'index.js');
   if (isFileSafe(adjacentNode) && isFileSafe(adjacentEntry)) {
     return { node: adjacentNode, entry: adjacentEntry };
   }
 
   try {
-    const versionsDir = path.join(dir, 'versions');
+    const versionsDir = p.join(dir, 'versions');
     const candidates = fs
       .readdirSync(versionsDir)
       .filter(name => VERSION_DIR_PATTERN.test(name))
       .sort((a, b) => versionSortKey(b).localeCompare(versionSortKey(a)));
 
     for (const version of candidates) {
-      const node = path.join(versionsDir, version, nodeName);
-      const entry = path.join(versionsDir, version, 'index.js');
+      const node = p.join(versionsDir, version, nodeName);
+      const entry = p.join(versionsDir, version, 'index.js');
       if (isFileSafe(node) && isFileSafe(entry)) {
         return { node, entry };
       }
@@ -79,8 +83,9 @@ export function resolveCursorNodeEntry(
   return null;
 }
 
-function deriveInvokedAs(cliPath: string): string {
-  const base = path.basename(cliPath);
+function deriveInvokedAs(cliPath: string, platform: NodeJS.Platform): string {
+  const p = platform === 'win32' ? path.win32 : path.posix;
+  const base = p.basename(cliPath);
   const stripped = base.replace(/\.(cmd|bat|ps1|exe)$/i, '');
   return stripped || 'cursor-agent';
 }
@@ -100,7 +105,7 @@ export function resolveCursorLaunch(
     return {
       command: entry.node,
       args: [entry.entry, ...args],
-      extraEnv: { CURSOR_INVOKED_AS: deriveInvokedAs(cliPath) },
+      extraEnv: { CURSOR_INVOKED_AS: deriveInvokedAs(cliPath, platform) },
     };
   }
 

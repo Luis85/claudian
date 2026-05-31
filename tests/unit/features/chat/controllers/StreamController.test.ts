@@ -328,6 +328,58 @@ describe('StreamController - Text Content', () => {
     });
   });
 
+  describe('Size-aware streaming backoff (PERF-3)', () => {
+    // The threshold is 4096 chars; past it continuation re-renders are throttled to ~200ms
+    // instead of every 16ms animation frame, capping the O(C²) full re-parse cost.
+    const BIG = 'x'.repeat(5000);
+
+    it('re-renders the next animation frame for small live blocks', async () => {
+      deps.state.currentTextEl = createMockEl();
+
+      await controller.appendText('small');
+      jest.advanceTimersByTime(16);
+      await Promise.resolve();
+      expect(deps.renderer.renderContent).toHaveBeenCalledTimes(1);
+
+      // More content arrives mid-render: a continuation should fire on the next frame.
+      await controller.appendText(' more');
+      jest.advanceTimersByTime(16);
+      await Promise.resolve();
+      expect(deps.renderer.renderContent).toHaveBeenCalledTimes(2);
+    });
+
+    it('throttles re-renders once the live block is large', async () => {
+      deps.state.currentTextEl = createMockEl();
+
+      await controller.appendText(BIG);
+
+      // Past the threshold the render is scheduled behind the backoff delay, so it must NOT
+      // fire on the next animation frame.
+      jest.advanceTimersByTime(16);
+      await Promise.resolve();
+      expect(deps.renderer.renderContent).not.toHaveBeenCalled();
+
+      // It fires once the backoff delay elapses.
+      jest.advanceTimersByTime(200);
+      await Promise.resolve();
+      expect(deps.renderer.renderContent).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders the exact final content when finalizing regardless of size', async () => {
+      const msg = createTestMessage();
+      deps.state.currentTextEl = createMockEl();
+
+      await controller.appendText(BIG);
+      await controller.finalizeCurrentTextBlock(msg);
+
+      expect(deps.renderer.renderContent).toHaveBeenLastCalledWith(
+        expect.anything(),
+        BIG,
+      );
+      expect(msg.contentBlocks).toContainEqual({ type: 'text', content: BIG });
+    });
+  });
+
   describe('Text block finalization', () => {
     it('should add copy button when finalizing text block with content', async () => {
       const msg = createTestMessage();
@@ -1213,30 +1265,82 @@ describe('StreamController - Text Content', () => {
   });
 
   describe('scrollToBottom - settings', () => {
+    // PERF-1: the bottom-anchor element is scrolled into view instead of reading
+    // scrollHeight, so we assert on scrollIntoView rather than scrollTop.
+    function trackScrollHeightReads(messagesEl: any): { count: () => number } {
+      let reads = 0;
+      Object.defineProperty(messagesEl, 'scrollHeight', {
+        configurable: true,
+        get() {
+          reads += 1;
+          return 1000;
+        },
+      });
+      return { count: () => reads };
+    }
+
     it('should not scroll when enableAutoScroll setting is false', async () => {
       (deps.plugin.settings as any).enableAutoScroll = false;
       const messagesEl = deps.getMessagesEl();
-      Object.defineProperty(messagesEl, 'scrollHeight', { value: 1000, configurable: true });
-      messagesEl.scrollTop = 0;
+      const anchor = messagesEl.createDiv({ cls: 'claudian-message' });
+      const scrollSpy = jest.spyOn(anchor, 'scrollIntoView');
 
       const msg = createTestMessage();
       deps.state.currentTextEl = createMockEl();
       await controller.handleStreamChunk({ type: 'text', content: 'Hello' }, msg);
+      jest.advanceTimersByTime(16);
+      await Promise.resolve();
 
-      expect(messagesEl.scrollTop).toBe(0);
+      expect(scrollSpy).not.toHaveBeenCalled();
     });
 
     it('should not scroll when autoScrollEnabled state is false', async () => {
       deps.state.autoScrollEnabled = false;
       const messagesEl = deps.getMessagesEl();
-      Object.defineProperty(messagesEl, 'scrollHeight', { value: 1000, configurable: true });
-      messagesEl.scrollTop = 0;
+      const anchor = messagesEl.createDiv({ cls: 'claudian-message' });
+      const scrollSpy = jest.spyOn(anchor, 'scrollIntoView');
 
       const msg = createTestMessage();
       deps.state.currentTextEl = createMockEl();
       await controller.handleStreamChunk({ type: 'text', content: 'Hello' }, msg);
+      jest.advanceTimersByTime(16);
+      await Promise.resolve();
 
-      expect(messagesEl.scrollTop).toBe(0);
+      expect(scrollSpy).not.toHaveBeenCalled();
+    });
+
+    it('should scroll the bottom anchor into view when pinned to bottom', async () => {
+      deps.state.autoScrollEnabled = true;
+      const messagesEl = deps.getMessagesEl();
+      const anchor = messagesEl.createDiv({ cls: 'claudian-message' });
+      const scrollSpy = jest.spyOn(anchor, 'scrollIntoView');
+
+      const msg = createTestMessage();
+      deps.state.currentTextEl = createMockEl();
+      await controller.handleStreamChunk({ type: 'text', content: 'Hello' }, msg);
+      jest.advanceTimersByTime(16);
+      await Promise.resolve();
+
+      expect(scrollSpy).toHaveBeenCalled();
+    });
+
+    it('should not read scrollHeight per chunk while streaming (no forced reflow)', async () => {
+      deps.state.autoScrollEnabled = true;
+      const messagesEl = deps.getMessagesEl();
+      messagesEl.createDiv({ cls: 'claudian-message' });
+      const tracker = trackScrollHeightReads(messagesEl);
+
+      const msg = createTestMessage();
+      deps.state.currentTextEl = createMockEl();
+
+      for (const chunk of ['a', 'b', 'c', 'd']) {
+        await controller.handleStreamChunk({ type: 'text', content: chunk }, msg);
+      }
+      jest.advanceTimersByTime(16);
+      await Promise.resolve();
+
+      // The anchor's scrollIntoView path must never measure the container.
+      expect(tracker.count()).toBe(0);
     });
   });
 

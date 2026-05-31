@@ -1,13 +1,13 @@
 import { Setting } from 'obsidian';
 
 import { getEnvironmentReviewKeysForScope } from '../../../core/providers/providerEnvironment';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import type { EnvironmentScope } from '../../../core/types/settings';
-import type ClaudianPlugin from '../../../main';
 import { EnvSnippetManager } from './EnvSnippetManager';
 
 interface EnvironmentSettingsSectionOptions {
   container: HTMLElement;
-  plugin: ClaudianPlugin;
+  plugin: PluginContext;
   scope: EnvironmentScope;
   heading?: string;
   name: string;

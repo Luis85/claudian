@@ -18,6 +18,8 @@ interface ActiveGeneration {
 export interface QueryBackedTitleGenerationServiceOptions {
   createRunner: () => AuxQueryRunner;
   resolveModel?: () => string | undefined;
+  /** Override title parsing. Defaults to the shared parseTitleGenerationResponse. */
+  parseTitle?: (responseText: string) => string | null;
 }
 
 export class QueryBackedTitleGenerationService implements TitleGenerationService {
@@ -47,7 +49,7 @@ export class QueryBackedTitleGenerationService implements TitleGenerationService
         model: this.options.resolveModel?.(),
         systemPrompt: TITLE_GENERATION_SYSTEM_PROMPT,
       }, buildTitleGenerationPrompt(userMessage));
-      const title = parseTitleGenerationResponse(text);
+      const title = (this.options.parseTitle ?? parseTitleGenerationResponse)(text);
       await this.safeCallback(
         callback,
         conversationId,

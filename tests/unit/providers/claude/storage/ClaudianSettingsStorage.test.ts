@@ -1,5 +1,6 @@
 import '@/providers';
 
+import { ProviderSettingsCoordinator } from '@/core/providers/ProviderSettingsCoordinator';
 import type { VaultFileAdapter } from '@/core/storage/VaultFileAdapter';
 import {
   CLAUDIAN_SETTINGS_PATH,
@@ -54,6 +55,30 @@ describe('ClaudianSettingsStorage', () => {
       expect(result.userName).toBe('TestUser');
       // Defaults should still be present for unspecified fields
       expect(result.thinkingBudget).toBe(DEFAULT_SETTINGS.thinkingBudget);
+    });
+
+    it('should run generic provider load normalization', async () => {
+      mockAdapter.exists.mockResolvedValue(true);
+      mockAdapter.read.mockResolvedValue('{}');
+      const normalizeSpy = jest.spyOn(ProviderSettingsCoordinator, 'normalizeOnLoad');
+
+      await storage.load();
+
+      expect(normalizeSpy).toHaveBeenCalledTimes(1);
+      normalizeSpy.mockRestore();
+    });
+
+    it('should persist when provider load normalization mutates settings', async () => {
+      mockAdapter.exists.mockResolvedValue(true);
+      mockAdapter.read.mockResolvedValue('{}');
+      const normalizeSpy = jest
+        .spyOn(ProviderSettingsCoordinator, 'normalizeOnLoad')
+        .mockReturnValue(true);
+
+      await storage.load();
+
+      expect(mockAdapter.write).toHaveBeenCalledTimes(1);
+      normalizeSpy.mockRestore();
     });
 
     it('should throw on JSON parse error', async () => {

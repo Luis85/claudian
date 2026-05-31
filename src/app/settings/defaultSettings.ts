@@ -1,11 +1,16 @@
 import { getDefaultHiddenProviderCommands } from '../../core/providers/commands/hiddenCommands';
+import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
 import { type ClaudianSettings } from '../../core/types/settings';
-import { getBuiltInProviderDefaultConfigs } from '../../providers/defaultProviderConfigs';
 
 export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
   userName: '',
 
-  permissionMode: 'yolo',
+  // SECURITY (SEC-1): Default to a prompting mode so tools require approval out of
+  // the box. 'yolo' (SDK bypassPermissions) stays an explicit opt-in surfaced
+  // through the toolbar toggle, guarded by a one-time warning.
+  permissionMode: 'normal',
+  yoloModeWarningShown: false,
+  trustedVaults: {},
 
   model: 'haiku',
   thinkingBudget: 'off',
@@ -33,7 +38,15 @@ export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
 
   locale: 'en',
 
-  providerConfigs: getBuiltInProviderDefaultConfigs(),
+  // ARCH-2: providers contribute their default config at registration time;
+  // the registry assembles them here. Resolved lazily (via a getter) so this
+  // module no longer statically imports each provider's settings module — that
+  // static barrel was the root of the `core -> app -> all-providers -> core`
+  // cycle class. Spread/access of DEFAULT_CLAUDIAN_SETTINGS happens at runtime,
+  // after the built-in providers have registered.
+  get providerConfigs() {
+    return ProviderRegistry.getDefaultProviderConfigs();
+  },
 
   settingsProvider: 'claude',
   savedProviderModel: {},

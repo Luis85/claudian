@@ -7,21 +7,21 @@ import {
 } from '../../../core/providers/providerEnvironment';
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { EnvironmentScope, EnvSnippet } from '../../../core/types';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
 import { confirmDelete } from '../../../shared/modals/ConfirmModal';
 import { formatContextLimit, parseContextLimit, parseEnvironmentVariables } from '../../../utils/env';
 import type { ClaudianView } from '../../chat/ClaudianView';
 
 export class EnvSnippetModal extends Modal {
-  plugin: ClaudianPlugin;
+  plugin: PluginContext;
   snippet: EnvSnippet | null;
   snippetScope: EnvironmentScope;
   onSave: (snippet: EnvSnippet) => void;
 
   constructor(
     app: App,
-    plugin: ClaudianPlugin,
+    plugin: PluginContext,
     snippet: EnvSnippet | null,
     scope: EnvironmentScope,
     onSave: (snippet: EnvSnippet) => void,
@@ -214,13 +214,13 @@ export class EnvSnippetModal extends Modal {
 
 export class EnvSnippetManager {
   private containerEl: HTMLElement;
-  private plugin: ClaudianPlugin;
+  private plugin: PluginContext;
   private scope: EnvironmentScope;
   private onContextLimitsChange?: () => void;
 
   constructor(
     containerEl: HTMLElement,
-    plugin: ClaudianPlugin,
+    plugin: PluginContext,
     scope: EnvironmentScope,
     onContextLimitsChange?: () => void,
   ) {

@@ -1,4 +1,3 @@
-import type ClaudianPlugin from '../../main';
 import type { CursorContext } from '../../utils/editor';
 import type { SharedAppStorage } from '../bootstrap/storage';
 import type { McpServerManager } from '../mcp/McpServerManager';
@@ -16,6 +15,7 @@ import type {
   SubagentInfo,
   ToolCallInfo,
 } from '../types';
+import type { PluginContext } from '../types/PluginContext';
 import type { ProviderId } from '../types/provider';
 import type { ProviderCommandCatalog } from './commands/ProviderCommandCatalog';
 
@@ -40,7 +40,7 @@ export interface ProviderCapabilities {
 export const DEFAULT_CHAT_PROVIDER_ID = 'claude' as const satisfies ProviderId;
 
 export interface CreateChatRuntimeOptions {
-  plugin: ClaudianPlugin;
+  plugin: PluginContext;
   providerId?: ProviderId;
 }
 
@@ -56,14 +56,21 @@ export interface ProviderRegistration {
   displayName: string;
   blankTabOrder: number;
   isEnabled: (settings: Record<string, unknown>) => boolean;
+  /**
+   * The provider's default settings bag, contributed at registration time so
+   * the app shell can assemble `providerConfigs` defaults without statically
+   * importing each provider's settings module (ARCH-2: breaks the
+   * `core -> app -> all-providers -> core` cycle class).
+   */
+  defaultConfig: Record<string, unknown>;
   capabilities: ProviderCapabilities;
   environmentKeyPatterns?: RegExp[];
   chatUIConfig: ProviderChatUIConfig;
   settingsReconciler: ProviderSettingsReconciler;
   createRuntime: (options: Omit<CreateChatRuntimeOptions, 'providerId'>) => ChatRuntime;
-  createTitleGenerationService: (plugin: ClaudianPlugin) => TitleGenerationService;
-  createInstructionRefineService: (plugin: ClaudianPlugin) => InstructionRefineService;
-  createInlineEditService: (plugin: ClaudianPlugin) => InlineEditService;
+  createTitleGenerationService: (plugin: PluginContext) => TitleGenerationService;
+  createInstructionRefineService: (plugin: PluginContext) => InstructionRefineService;
+  createInlineEditService: (plugin: PluginContext) => InlineEditService;
   historyService: ProviderConversationHistoryService;
   /** Omitted by providers without async subagent tasks; the registry substitutes a neutral default. */
   taskResultInterpreter?: ProviderTaskResultInterpreter;
@@ -79,6 +86,28 @@ export interface ProviderSettingsReconciler {
   ): { changed: boolean; invalidatedConversations: Conversation[] };
 
   normalizeModelVariantSettings(settings: Record<string, unknown>): boolean;
+
+  /**
+   * Settings cleanup applied when settings are loaded from disk. Lets a
+   * provider repair its own persisted state (e.g. reset a stale mode to a
+   * safe default) without the provider-neutral app shell importing
+   * provider-specific constants. Returns true when settings were mutated.
+   */
+  normalizeOnLoad?(settings: Record<string, unknown>): boolean;
+
+  /**
+   * Persist the provider's "last used model" into its own config namespace.
+   * Lets the app shell record model selection without importing a specific
+   * provider's settings helpers.
+   */
+  persistLastModel?(settings: Record<string, unknown>, model: string): void;
+
+  /**
+   * Persist the provider's environment hash into its own config namespace.
+   * Lets the app shell record env reconciliation state without importing a
+   * specific provider's settings helpers.
+   */
+  persistEnvironmentHash?(settings: Record<string, unknown>, hash: string): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -273,7 +302,7 @@ export interface ProviderChatUIConfig {
   prepareModelMetadata?(
     model: string,
     settings: Record<string, unknown>,
-    context: { plugin: ClaudianPlugin },
+    context: { plugin: PluginContext },
   ): Promise<void>;
 
   /** Optional hook when the toolbar changes a reasoning selection. */
@@ -332,7 +361,7 @@ export interface ProviderRuntimeCommandLoaderContext {
   allowSessionCreation?: boolean;
   conversation: Conversation | null;
   externalContextPaths: string[];
-  plugin: ClaudianPlugin;
+  plugin: PluginContext;
   runtime: ChatRuntime | null;
 }
 
@@ -350,7 +379,7 @@ export type ProviderTabWarmupLifecycleState = 'blank' | 'bound_cold' | 'bound_ac
 export interface ProviderTabWarmupContext {
   conversation: Conversation | null;
   externalContextPaths: string[];
-  plugin: ClaudianPlugin;
+  plugin: PluginContext;
   runtime: ChatRuntime | null;
   tab: {
     conversationId: string | null;
@@ -376,7 +405,7 @@ export interface ProviderWorkspaceServices {
 }
 
 export interface ProviderSettingsTabRendererContext {
-  plugin: ClaudianPlugin;
+  plugin: PluginContext;
   renderHiddenProviderCommandSetting(
     container: HTMLElement,
     providerId: ProviderId,
@@ -391,7 +420,7 @@ export interface ProviderSettingsTabRenderer {
 }
 
 export interface ProviderWorkspaceInitContext {
-  plugin: ClaudianPlugin;
+  plugin: PluginContext;
   storage: SharedAppStorage;
   vaultAdapter: VaultFileAdapter;
   homeAdapter: HomeFileAdapter;

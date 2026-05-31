@@ -27,7 +27,7 @@ import type {
   SubagentRuntimeState,
 } from '../../../core/runtime/types';
 import type { ChatMessage, Conversation, ForkSource, SlashCommand, StreamChunk } from '../../../core/types';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { getVaultPath } from '../../../utils/path';
 import { buildContextFromHistory } from '../../../utils/session';
 import { CODEX_PROVIDER_CAPABILITIES } from '../capabilities';
@@ -106,7 +106,7 @@ const EFFORT_MAP: Record<string, string> = {
 export class CodexChatRuntime implements ChatRuntime {
   readonly providerId: ProviderId = 'codex';
 
-  private plugin: ClaudianPlugin;
+  private plugin: PluginContext;
   private session = new CodexSessionManager();
   private process: CodexAppServerProcess | null = null;
   private transport: CodexRpcTransport | null = null;
@@ -144,7 +144,7 @@ export class CodexChatRuntime implements ChatRuntime {
   private canceled = false;
   private turnMetadata: ChatTurnMetadata = {};
 
-  constructor(plugin: ClaudianPlugin) {
+  constructor(plugin: PluginContext) {
     this.plugin = plugin;
   }
 
@@ -595,6 +595,7 @@ export class CodexChatRuntime implements ChatRuntime {
 
   resetSession(): void {
     this.teardownState();
+    this.shutdownProcess().catch(() => {});
   }
 
   getSessionId(): string | null {
@@ -624,10 +625,13 @@ export class CodexChatRuntime implements ChatRuntime {
     return [];
   }
 
-  cleanup(): void {
+  async cleanup(): Promise<void> {
     this.cancel();
     this.teardownState();
     this.readyListeners.clear();
+    // Await the subprocess kill so tab/plugin teardown does not return before
+    // the codex app-server process has actually exited (avoids orphans).
+    await this.shutdownProcess();
   }
 
   async rewind(
@@ -740,7 +744,6 @@ export class CodexChatRuntime implements ChatRuntime {
     this.pendingTurnNotifications = [];
     this.pendingFork = null;
     this.clientConfigKey = null;
-    this.shutdownProcess().catch(() => {});
     this.setReady(false);
   }
 

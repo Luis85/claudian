@@ -7,13 +7,14 @@ import { cursorSettingsReconciler } from './env/CursorSettingsReconciler';
 import { CursorConversationHistoryService } from './history/CursorConversationHistoryService';
 import { CursorChatRuntime } from './runtime/CursorChatRuntime';
 import { CursorTaskResultInterpreter } from './runtime/CursorTaskResultInterpreter';
-import { getCursorProviderSettings } from './settings';
+import { DEFAULT_CURSOR_PROVIDER_SETTINGS, getCursorProviderSettings } from './settings';
 import { cursorChatUIConfig } from './ui/CursorChatUIConfig';
 
 export const cursorProviderRegistration: ProviderRegistration = {
   displayName: 'Cursor Agent',
   blankTabOrder: 8,
   isEnabled: (settings) => getCursorProviderSettings(settings).enabled,
+  defaultConfig: { ...DEFAULT_CURSOR_PROVIDER_SETTINGS },
   capabilities: CURSOR_PROVIDER_CAPABILITIES,
   environmentKeyPatterns: [/^CURSOR_/i],
   chatUIConfig: cursorChatUIConfig,

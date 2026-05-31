@@ -1,13 +1,12 @@
 import {
   CLAUDIAN_SETTINGS_PATH,
 } from '../../core/bootstrap/StoragePaths';
+import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
+import { ProviderSettingsCoordinator } from '../../core/providers/ProviderSettingsCoordinator';
 import type { VaultFileAdapter } from '../../core/storage/VaultFileAdapter';
 import type {
   ClaudianSettings,
 } from '../../core/types/settings';
-import {
-  updateClaudeProviderSettings,
-} from '../../providers/claude/settings';
 import { DEFAULT_CLAUDIAN_SETTINGS } from './defaultSettings';
 import { migrateModelOverrides } from './migrations/migrateModelOverrides';
 
@@ -73,7 +72,13 @@ export class ClaudianSettingsStorage {
     const migrated = migrateModelOverrides(merged);
     const didMigrateModelOverrides = migrated !== merged;
 
-    if (didMigrateModelOverrides) {
+    // Providers repair their own persisted state on load behind the generic
+    // coordinator hook, so the app shell stays provider-neutral.
+    const didNormalizeProviders = ProviderSettingsCoordinator.normalizeOnLoad(
+      migrated as Record<string, unknown>,
+    );
+
+    if (didMigrateModelOverrides || didNormalizeProviders) {
       await this.save(migrated);
     }
 
@@ -105,23 +110,30 @@ export class ClaudianSettingsStorage {
     }
 
     const current = await this.load();
-    updateClaudeProviderSettings(
-      current,
-      { lastModel: model },
+    ProviderSettingsCoordinator.persistProviderLastModel(
+      current as Record<string, unknown>,
+      ProviderRegistry.resolveSettingsProviderId(current as Record<string, unknown>),
+      model,
     );
     await this.save(current);
   }
 
   async setLastEnvHash(hash: string): Promise<void> {
     const current = await this.load();
-    updateClaudeProviderSettings(
-      current,
-      { environmentHash: hash },
+    ProviderSettingsCoordinator.persistProviderEnvironmentHash(
+      current as Record<string, unknown>,
+      ProviderRegistry.resolveSettingsProviderId(current as Record<string, unknown>),
+      hash,
     );
     await this.save(current);
   }
 
   private getDefaults(): StoredClaudianSettings {
-    return DEFAULT_CLAUDIAN_SETTINGS;
+    // Spread (not the shared reference) so `providerConfigs` is materialized as a
+    // writable data property here — DEFAULT_CLAUDIAN_SETTINGS exposes it as a
+    // getter (ARCH-2 cycle avoidance), and returning that object directly would
+    // make `settings.providerConfigs = ...` throw (getter-only) on a fresh install
+    // and would let mutations clobber the shared module-level default.
+    return { ...DEFAULT_CLAUDIAN_SETTINGS };
   }
 }

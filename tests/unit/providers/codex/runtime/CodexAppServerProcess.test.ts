@@ -217,6 +217,30 @@ describe('CodexAppServerProcess', () => {
       await server.shutdown();
       expect(server.isAlive()).toBe(false);
     });
+
+    it('resolves instead of hanging when SIGTERM kill throws', async () => {
+      const server = new CodexAppServerProcess(createLaunchSpec());
+      server.start();
+      (mockProc.kill as jest.Mock).mockImplementation(() => {
+        throw new Error('ESRCH');
+      });
+
+      // Must settle even though the process never emits exit.
+      await expect(server.shutdown()).resolves.toBeUndefined();
+    });
+
+    it('resolves via the give-up ceiling if exit never fires', async () => {
+      jest.useFakeTimers();
+      const server = new CodexAppServerProcess(createLaunchSpec());
+      server.start();
+
+      const shutdownPromise = server.shutdown();
+      // Past SIGKILL timeout and the hard ceiling, with no exit event.
+      jest.advanceTimersByTime(10_000);
+      await expect(shutdownPromise).resolves.toBeUndefined();
+
+      jest.useRealTimers();
+    });
   });
 
   describe('error handling', () => {

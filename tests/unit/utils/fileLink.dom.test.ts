@@ -12,7 +12,10 @@ jest.mock('@/utils/obsidianCompat', () => ({
 
 jest.mock('@/utils/path', () => {
   const path = jest.requireActual<typeof pathType>('path');
-  const vaultPath = 'C:/Projects/claudian';
+  // Host-absolute so absolute-path resolution exercises real semantics on the
+  // running OS (POSIX `/Projects/claudian` on Linux, `C:\Projects\claudian` on
+  // win32) instead of hardcoding a single platform.
+  const vaultPath = path.resolve('/Projects/claudian');
 
   function resolveInsideVault(candidate: string): string {
     const normalized = candidate.replace(/\\/g, '/');
@@ -185,10 +188,19 @@ describe('processFileLinks', () => {
           : null,
       );
 
+      // Build a host-absolute path inside the (host-derived) vault so the
+      // absolute-inside-vault resolution runs on whatever OS executes the test.
+      const pathMod = jest.requireActual<typeof pathType>('path');
+      const absInput = pathMod.join(
+        pathMod.resolve('/Projects/claudian'),
+        '.context',
+        'cursor-async-smoke-summary.md',
+      );
+
       const app = createMockApp(['.context/cursor-async-smoke-summary.md']);
       const container = document.createElement('div');
       const code = document.createElement('code');
-      code.textContent = 'C:\\Projects\\claudian\\.context\\cursor-async-smoke-summary.md';
+      code.textContent = absInput;
       container.appendChild(code);
 
       processFileLinks(app, container);
@@ -196,7 +208,7 @@ describe('processFileLinks', () => {
       const link = code.querySelector('a.claudian-file-link');
       expect(link).not.toBeNull();
       expect(link!.getAttribute('data-href')).toBe('.context/cursor-async-smoke-summary.md');
-      expect(link!.textContent).toBe('C:\\Projects\\claudian\\.context\\cursor-async-smoke-summary.md');
+      expect(link!.textContent).toBe(absInput);
     });
 
     it('skips vault path linkify inside pre elements', () => {

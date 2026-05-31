@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import { Setting } from 'obsidian';
 
 import type { ProviderSettingsTabRenderer } from '../../../core/providers/types';
+import { asSettingsBag } from '../../../core/types';
 import { renderEnvironmentSettingsSection } from '../../../features/settings/ui/EnvironmentSettingsSection';
 import { getHostnameKey } from '../../../utils/env';
 import { expandHomePath } from '../../../utils/path';
@@ -38,7 +39,7 @@ interface EnrichedModel {
 export const opencodeSettingsTabRenderer: ProviderSettingsTabRenderer = {
   render(container, context) {
     const opencodeWorkspace = maybeGetOpencodeWorkspaceServices();
-    const settingsBag = context.plugin.settings as unknown as Record<string, unknown>;
+    const settingsBag = asSettingsBag(context.plugin.settings);
     const opencodeSettings = getOpencodeProviderSettings(settingsBag);
     const hostnameKey = getHostnameKey();
 

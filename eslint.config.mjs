@@ -85,7 +85,11 @@ export default defineConfig([
         'error',
         { args: 'none', ignoreRestSiblings: true },
       ],
-      '@typescript-eslint/no-explicit-any': 'off',
+      // Guardrail (Q-3): the codebase is near-zero explicit `any`. Surface new
+      // ones as warnings to lock in the hygiene without failing CI (the lint
+      // script has no --max-warnings, and legitimate browser/SDK-shim `any`s
+      // remain acceptable as warnings).
+      '@typescript-eslint/no-explicit-any': 'warn',
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
     },
@@ -143,6 +147,9 @@ export default defineConfig([
     ...jestRecommended,
     rules: {
       ...jestRecommended.rules,
+      // Tests legitimately use `any` for mocking provider/SDK shapes; the
+      // near-zero-any guardrail (Q-3) only targets production `src/`, so keep
+      // this off here to avoid thousands of low-signal test warnings.
       '@typescript-eslint/no-explicit-any': 'off',
       'jest/no-standalone-expect': [
         'error',

@@ -8,7 +8,7 @@ import {
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
 import { ProviderWorkspaceRegistry } from '../../core/providers/ProviderWorkspaceRegistry';
 import type { ProviderId } from '../../core/providers/types';
-import type { ChatViewPlacement, ClaudianSettings } from '../../core/types/settings';
+import { asSettingsBag, type ChatViewPlacement, type ClaudianSettings } from '../../core/types/settings';
 import { getAvailableLocales, getLocaleDisplayName, setLocale, t } from '../../i18n/i18n';
 import type { Locale, TranslationKey } from '../../i18n/types';
 import type ClaudianPlugin from '../../main';
@@ -140,7 +140,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
     setLocale(this.plugin.settings.locale as Locale);
 
     const providerTabs = ProviderRegistry.getEnabledProviderIds(
-      this.plugin.settings as unknown as Record<string, unknown>,
+      asSettingsBag(this.plugin.settings),
     );
     const tabIds: SettingsTabId[] = [
       'general',
@@ -431,7 +431,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
         .addDropdown((dropdown) => {
           dropdown.addOption('', t('settings.titleModel.auto'));
 
-          const settingsBag = this.plugin.settings as unknown as Record<string, unknown>;
+          const settingsBag = asSettingsBag(this.plugin.settings);
           const seenValues = new Set<string>();
           for (const providerId of ProviderRegistry.getRegisteredProviderIds()) {
             const uiConfig = ProviderRegistry.getChatUIConfig(providerId);
@@ -633,7 +633,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
   private renderProvidersSection(container: HTMLElement): void {
     new Setting(container).setName('Providers').setHeading();
 
-    const settingsBag = this.plugin.settings as unknown as Record<string, unknown>;
+    const settingsBag = asSettingsBag(this.plugin.settings);
 
     for (const providerId of ProviderRegistry.getRegisteredProviderIds()) {
       const displayName = ProviderRegistry.getProviderDisplayName(providerId);

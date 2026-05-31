@@ -1,4 +1,7 @@
-const SECRET_KEY = /(token|key|secret|password|credential|api[-_]?key|authorization|cookie)/i;
+// `pin` is anchored to a delimited token so it does not match innocuous keys
+// that merely contain the substring (shipping, mapping, spinner, ...).
+const SECRET_KEY =
+  /(token|key|secret|password|passwd|pwd|credential|api[-_]?key|authorization|bearer|cookie|signature|private[-_]?key|(?<![a-z])pin(?![a-z]))/i;
 const REDACTED = '[redacted]';
 
 /** Deep-clone args, masking secret-shaped object keys. Never mutates inputs. */

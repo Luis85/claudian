@@ -2,7 +2,7 @@ import type { Options } from '@anthropic-ai/claude-agent-sdk';
 import { query as agentQuery } from '@anthropic-ai/claude-agent-sdk';
 
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { getEnhancedPath, getMissingNodeError, parseEnvironmentVariables } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
 import { extractAssistantText } from '../auxiliary/extractAssistantText';
@@ -16,7 +16,7 @@ import {
 import { createCustomSpawnFunction } from './customSpawn';
 
 export interface ColdStartQueryConfig {
-  plugin: ClaudianPlugin;
+  plugin: PluginContext;
   systemPrompt: string;
   /** Tools available to the model. Omit for SDK default (all tools). */
   tools?: string[];
@@ -88,6 +88,14 @@ export async function runColdStartQuery(
       ...customEnv,
       PATH: enhancedPath,
     },
+    // SECURITY (SEC-1): bypassPermissions is intentional here, NOT a leak of the
+    // user's interactive permission setting. Cold-start queries are non-interactive
+    // background tasks (title generation, instruction refine, inline edit) with no
+    // UI to surface an approval prompt against, and every caller already constrains
+    // the tool surface: title/refine pass `tools: []` and inline edit passes
+    // READ_ONLY_TOOLS plus a read-only PreToolUse hook. Prompting modes would just
+    // deadlock these flows. The interactive runtime (ClaudeQueryOptionsBuilder)
+    // honors the configured permissionMode instead.
     permissionMode: 'bypassPermissions',
     allowDangerouslySkipPermissions: true,
     settingSources: resolveClaudeSettingSources(claudeSettings.loadUserSettings),

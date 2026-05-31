@@ -7,13 +7,14 @@ import { codexSettingsReconciler } from './env/CodexSettingsReconciler';
 import { CodexConversationHistoryService } from './history/CodexConversationHistoryService';
 import { codexSubagentLifecycleAdapter } from './normalization/codexSubagentNormalization';
 import { CodexChatRuntime } from './runtime/CodexChatRuntime';
-import { getCodexProviderSettings } from './settings';
+import { DEFAULT_CODEX_PROVIDER_SETTINGS, getCodexProviderSettings } from './settings';
 import { codexChatUIConfig } from './ui/CodexChatUIConfig';
 
 export const codexProviderRegistration: ProviderRegistration = {
   displayName: 'Codex',
   blankTabOrder: 15,
   isEnabled: (settings) => getCodexProviderSettings(settings).enabled,
+  defaultConfig: { ...DEFAULT_CODEX_PROVIDER_SETTINGS },
   capabilities: CODEX_PROVIDER_CAPABILITIES,
   environmentKeyPatterns: [/^OPENAI_/i, /^CODEX_/i],
   chatUIConfig: codexChatUIConfig,

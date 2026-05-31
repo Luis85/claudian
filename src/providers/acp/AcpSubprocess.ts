@@ -91,26 +91,39 @@ export class AcpSubprocess {
   }
 
   async shutdown(): Promise<void> {
-    if (!this.proc || this.proc.exitCode !== null) {
+    const proc = this.proc;
+    if (!proc || proc.exitCode !== null) {
       return;
     }
 
     await new Promise<void>((resolve) => {
-      const proc = this.proc!;
-      const onClose = () => {
-        cleanup();
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(killTimer);
+        window.clearTimeout(giveUpTimer);
+        proc.off('exit', onClose);
         resolve();
       };
+      const onClose = () => finish();
       const killTimer = window.setTimeout(() => {
-        proc.kill('SIGKILL');
+        try {
+          proc.kill('SIGKILL');
+        } catch {
+          // already exited / not killable — the give-up timer will resolve
+        }
       }, SIGKILL_TIMEOUT_MS);
-      const cleanup = () => {
-        window.clearTimeout(killTimer);
-        proc.off('exit', onClose);
-      };
+      // Hard ceiling: never let teardown hang if 'exit' never fires.
+      const giveUpTimer = window.setTimeout(finish, SIGKILL_TIMEOUT_MS * 2);
 
       proc.once('exit', onClose);
-      proc.kill('SIGTERM');
+      try {
+        proc.kill('SIGTERM');
+      } catch {
+        // Process already gone between the guard and the kill — nothing to await.
+        finish();
+      }
     });
   }
 

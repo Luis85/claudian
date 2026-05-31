@@ -34,9 +34,11 @@ import type {
   ConversationSnapshot,
 } from './core/types';
 import {
+  asSettingsBag,
   VIEW_TYPE_CLAUDIAN,
   VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
 } from './core/types';
+import type { PluginContext } from './core/types/PluginContext';
 import type { ChatViewPlacement, EnvironmentScope } from './core/types/settings';
 import { ClaudianView } from './features/chat/ClaudianView';
 import { GitService } from './features/chat/services/GitService';
@@ -72,7 +74,7 @@ function isClaudianView(value: unknown): value is ClaudianView {
     && typeof (value as { getTabManager?: unknown }).getTabManager === 'function';
 }
 
-export default class ClaudianPlugin extends Plugin {
+export default class ClaudianPlugin extends Plugin implements PluginContext {
   settings!: ClaudianSettings;
   readonly events = new EventBus<ClaudianEventMap>();
   readonly logger = new Logger({ enabled: false, level: 'warn' });
@@ -485,7 +487,26 @@ export default class ClaudianPlugin extends Plugin {
   onunload(): void {
     this.gitStatusWatcher?.stop();
     this.gitStatusWatcher = null;
+    this.shutdownActiveRuntimes();
     void this.persistOpenTabStates();
+  }
+
+  // Best-effort synchronous teardown of provider subprocesses on plugin unload
+  // (disable/update/hot-reload). onunload cannot await, but each runtime's
+  // cleanup() dispatches SIGTERM synchronously before its first await point, so
+  // firing it here prevents orphaned provider CLI processes.
+  private shutdownActiveRuntimes(): void {
+    for (const view of this.getAllViews()) {
+      const tabManager = view.getTabManager();
+      if (!tabManager) continue;
+      for (const tab of tabManager.getAllTabs()) {
+        try {
+          void tab.service?.cleanup();
+        } catch {
+          // best-effort: keep tearing down remaining runtimes
+        }
+      }
+    }
   }
 
   private async persistOpenTabStates(): Promise<void> {
@@ -785,7 +806,7 @@ export default class ClaudianPlugin extends Plugin {
   async applyEnvironmentVariablesBatch(
     updates: Array<{ scope: EnvironmentScope; envText: string }>,
   ): Promise<void> {
-    const settingsBag = this.settings as unknown as Record<string, unknown>;
+    const settingsBag = asSettingsBag(this.settings);
     const nextEnvironmentByScope = new Map<EnvironmentScope, string>();
     for (const update of updates) {
       nextEnvironmentByScope.set(update.scope, update.envText);

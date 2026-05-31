@@ -20,7 +20,8 @@ import type {
   SubagentRuntimeState,
 } from '../../../core/runtime/types';
 import type { ChatMessage, Conversation, SlashCommand, StreamChunk } from '../../../core/types';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
+import { asSettingsBag } from '../../../core/types/settings';
 import { getVaultPath } from '../../../utils/path';
 import { CURSOR_PROVIDER_CAPABILITIES } from '../capabilities';
 import { encodeCursorTurn } from '../prompt/encodeCursorTurn';
@@ -34,10 +35,12 @@ import { buildCursorAgentFlagArgs, type CursorPermissionMode } from './cursorLau
 import type { CursorQueryChunkTracker } from './cursorQueryLifecycle';
 import { finalizeCursorAgentStream, processCursorAgentNdjsonLines } from './cursorQueryProcessing';
 
+const SIGKILL_TIMEOUT_MS = 3_000;
+
 export class CursorChatRuntime implements ChatRuntime {
   readonly providerId: ProviderId = 'cursor';
 
-  private plugin: ClaudianPlugin;
+  private plugin: PluginContext;
   private ready = false;
   private readyListeners = new Set<(ready: boolean) => void>();
   private canceled = false;
@@ -48,7 +51,7 @@ export class CursorChatRuntime implements ChatRuntime {
   private askUserQuestionCallback: AskUserQuestionCallback | null = null;
   private askUserQuestionAbortController: AbortController | null = null;
 
-  constructor(plugin: ClaudianPlugin) {
+  constructor(plugin: PluginContext) {
     this.plugin = plugin;
   }
 
@@ -117,7 +120,7 @@ export class CursorChatRuntime implements ChatRuntime {
     const workspaceDir = getVaultPath(this.plugin.app) ?? process.cwd();
     const permissionMode = this.plugin.settings.permissionMode as CursorPermissionMode;
     const snapshot = ProviderSettingsCoordinator.getProviderSettingsSnapshot(
-      this.plugin.settings as unknown as Record<string, unknown>,
+      asSettingsBag(this.plugin.settings),
       'cursor',
     );
     const familyValue = queryOptions?.model
@@ -233,10 +236,28 @@ export class CursorChatRuntime implements ChatRuntime {
     this.canceled = true;
     this.askUserQuestionAbortController?.abort();
     this.askUserQuestionAbortController = null;
-    if (this.child) {
-      this.child.kill('SIGTERM');
-      this.child = null;
+    const child = this.child;
+    if (!child) {
+      return;
     }
+    this.child = null;
+    try {
+      child.kill('SIGTERM');
+    } catch {
+      return;
+    }
+    // Escalate to SIGKILL if cursor-agent (or a descendant holding a pipe open)
+    // ignores SIGTERM, so cancel/teardown can't hang on child exit.
+    const killTimer = window.setTimeout(() => {
+      try {
+        if (child.exitCode === null && child.signalCode === null) {
+          child.kill('SIGKILL');
+        }
+      } catch {
+        // already exited
+      }
+    }, SIGKILL_TIMEOUT_MS);
+    child.once('exit', () => window.clearTimeout(killTimer));
   }
 
   resetSession(): void {

@@ -23,7 +23,7 @@ describe('OpencodeRuntimeCommandLoader', () => {
     const syncSpy = jest.spyOn(OpencodeChatRuntime.prototype, 'syncConversationState').mockImplementation(() => {});
     const ensureReadySpy = jest.spyOn(OpencodeChatRuntime.prototype, 'ensureReady').mockResolvedValue(true);
     const getSupportedCommandsSpy = jest.spyOn(OpencodeChatRuntime.prototype, 'getSupportedCommands').mockResolvedValue(commands);
-    const cleanupSpy = jest.spyOn(OpencodeChatRuntime.prototype, 'cleanup').mockImplementation(() => {});
+    const cleanupSpy = jest.spyOn(OpencodeChatRuntime.prototype, 'cleanup').mockResolvedValue(undefined);
     const loader = new OpencodeRuntimeCommandLoader();
 
     await expect(loader.loadCommands({
@@ -91,7 +91,7 @@ describe('OpencodeRuntimeCommandLoader', () => {
     const syncSpy = jest.spyOn(OpencodeChatRuntime.prototype, 'syncConversationState').mockImplementation(() => {});
     const ensureReadySpy = jest.spyOn(OpencodeChatRuntime.prototype, 'ensureReady').mockResolvedValue(true);
     const getSupportedCommandsSpy = jest.spyOn(OpencodeChatRuntime.prototype, 'getSupportedCommands').mockResolvedValue(commands);
-    const cleanupSpy = jest.spyOn(OpencodeChatRuntime.prototype, 'cleanup').mockImplementation(() => {});
+    const cleanupSpy = jest.spyOn(OpencodeChatRuntime.prototype, 'cleanup').mockResolvedValue(undefined);
     const boundRuntime = {
       providerId: 'opencode',
       cleanup: jest.fn(),

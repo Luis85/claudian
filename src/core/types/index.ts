@@ -20,6 +20,7 @@ export { type ProviderId } from './provider';
 // Settings and command types
 export {
   type ApprovalDecision,
+  asSettingsBag,
   type ClaudianSettings,
   type EnvironmentScope,
   type EnvSnippet,

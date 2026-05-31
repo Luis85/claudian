@@ -14,6 +14,40 @@ describe('redactArgs', () => {
     expect(out.auth.ok).toBe(1);
   });
 
+  it('masks broadened secret-shaped keys', () => {
+    const [out] = redactArgs([
+      {
+        bearer: 'b',
+        passwd: 'p',
+        pwd: 'q',
+        signature: 'sig',
+        privateKey: 'pk',
+        'private-key': 'pk2',
+        pin: '1234',
+        plain: 'ok',
+      },
+    ]) as [Record<string, unknown>];
+    expect(out.bearer).toBe('[redacted]');
+    expect(out.passwd).toBe('[redacted]');
+    expect(out.pwd).toBe('[redacted]');
+    expect(out.signature).toBe('[redacted]');
+    expect(out.privateKey).toBe('[redacted]');
+    expect(out['private-key']).toBe('[redacted]');
+    expect(out.pin).toBe('[redacted]');
+    expect(out.plain).toBe('ok');
+  });
+
+  it('anchors `pin` so it does not redact innocuous keys containing the substring', () => {
+    const [out] = redactArgs([
+      { mapping: 'm', shipping: 's', spinner: 'sp', user_pin: '9', 'pin-code': '7' },
+    ]) as [Record<string, unknown>];
+    expect(out.mapping).toBe('m');
+    expect(out.shipping).toBe('s');
+    expect(out.spinner).toBe('sp');
+    expect(out.user_pin).toBe('[redacted]');
+    expect(out['pin-code']).toBe('[redacted]');
+  });
+
   it('does not mutate the caller object', () => {
     const original = { secret: 's' };
     redactArgs([original]);

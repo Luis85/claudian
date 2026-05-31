@@ -6,11 +6,12 @@ import { OPENCODE_PROVIDER_CAPABILITIES } from './capabilities';
 import { opencodeSettingsReconciler } from './env/OpencodeSettingsReconciler';
 import { OpencodeConversationHistoryService } from './history/OpencodeConversationHistoryService';
 import { OpencodeChatRuntime } from './runtime/OpencodeChatRuntime';
-import { getOpencodeProviderSettings } from './settings';
+import { DEFAULT_OPENCODE_PROVIDER_SETTINGS, getOpencodeProviderSettings } from './settings';
 import { opencodeChatUIConfig } from './ui/OpencodeChatUIConfig';
 
 export const opencodeProviderRegistration: ProviderRegistration = {
   blankTabOrder: 10,
+  defaultConfig: { ...DEFAULT_OPENCODE_PROVIDER_SETTINGS },
   capabilities: OPENCODE_PROVIDER_CAPABILITIES,
   chatUIConfig: opencodeChatUIConfig,
   createInlineEditService: (plugin) => new OpencodeInlineEditService(plugin),
