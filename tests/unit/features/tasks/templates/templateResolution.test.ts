@@ -93,11 +93,11 @@ describe('resolveProviderModel', () => {
 
 describe('resolvePriority', () => {
   it('keeps every valid priority and defaults missing or invalid to normal', () => {
-    expect(resolvePriority({ priority: 'low' })).toBe('low');
-    expect(resolvePriority({ priority: 'high' })).toBe('high');
-    expect(resolvePriority({ priority: 'urgent' })).toBe('urgent');
-    expect(resolvePriority({ priority: 'bogus' as TaskPriority })).toBe('normal');
-    expect(resolvePriority(undefined)).toBe('normal');
+    expect(resolvePriority({ priority: '3 - low' })).toBe('3 - low');
+    expect(resolvePriority({ priority: '1 - high' })).toBe('1 - high');
+    expect(resolvePriority({ priority: '0 - urgent' })).toBe('0 - urgent');
+    expect(resolvePriority({ priority: 'bogus' as TaskPriority })).toBe('2 - normal');
+    expect(resolvePriority(undefined)).toBe('2 - normal');
   });
 });
 

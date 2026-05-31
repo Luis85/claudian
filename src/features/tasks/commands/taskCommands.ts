@@ -84,9 +84,15 @@ ${HANDOFF_START}
 ${HANDOFF_END}
 `;
 
+function normalizePriority(priority?: TaskPriority): TaskPriority {
+  if (!priority) return '2 - normal';
+  // Already validated as TaskPriority, return as-is
+  return priority;
+}
+
 function buildWorkOrderMarkdown(args: BuildWorkOrderArgs): string {
   const status = args.status ?? 'ready';
-  const priority = args.priority ?? 'normal';
+  const priority = normalizePriority(args.priority);
 
   let contextBody = '_Add the links, files, and scope the agent needs._';
   if (args.contextMarkdown && args.contextMarkdown.trim()) {
@@ -133,7 +139,11 @@ ${GENERATED_REGIONS_TAIL}`;
 }
 
 function buildWorkOrderFromTemplate(args: FrontmatterArgs & { body: string }): string {
-  return `${workOrderFrontmatter(args)}
+  const normalizedArgs = {
+    ...args,
+    priority: normalizePriority(args.priority),
+  };
+  return `${workOrderFrontmatter(normalizedArgs)}
 ${args.body.trim()}
 
 ${GENERATED_REGIONS_TAIL}`;
@@ -260,7 +270,7 @@ export async function createWorkOrderFromSeed(
 
   let provider = defaults.provider;
   let model = defaults.model;
-  let priority: TaskPriority = 'normal';
+  let priority: TaskPriority = '2 - normal';
   if (template) {
     const resolved = resolveProviderModel(template, defaults, {
       isValidProvider: (id) =>

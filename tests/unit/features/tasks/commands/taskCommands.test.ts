@@ -219,8 +219,8 @@ describe('buildWorkOrderMarkdown priority + seam', () => {
   const base = { id: 't', title: 'T', provider: 'codex', model: 'm', timestamp: '2026-05-29T10:00:00.000Z' };
 
   it('emits the requested priority, defaulting to normal', () => {
-    expect(buildWorkOrderMarkdown(base)).toContain('priority: normal');
-    expect(buildWorkOrderMarkdown({ ...base, priority: 'high' })).toContain('priority: high');
+    expect(buildWorkOrderMarkdown(base)).toContain('priority: 2 - normal');
+    expect(buildWorkOrderMarkdown({ ...base, priority: '1 - high' })).toContain('priority: 1 - high');
   });
 
   it('keeps the constraints-to-ledger seam intact', () => {
@@ -238,7 +238,7 @@ describe('buildWorkOrderFromTemplate', () => {
       id: 'task-tpl',
       title: 'Templated',
       status: 'inbox',
-      priority: 'high',
+      priority: '1 - high',
       timestamp: '2026-05-29T10:00:00.000Z',
       provider: 'claude',
       model: 'sonnet',
@@ -246,7 +246,7 @@ describe('buildWorkOrderFromTemplate', () => {
       body: '# Templated\n\n## Objective\n\nDo the thing.',
     });
 
-    expect(md).toContain('priority: high');
+    expect(md).toContain('priority: 1 - high');
     expect(md).toContain('provider: claude');
     expect(md).toContain('## Objective\n\nDo the thing.');
     expect(md).toContain('## Run Ledger');
@@ -254,7 +254,7 @@ describe('buildWorkOrderFromTemplate', () => {
 
     const { task } = new TaskNoteStore().parse('Agent Board/tasks/tpl.md', md);
     expect(task.frontmatter.status).toBe('inbox');
-    expect(task.frontmatter.priority).toBe('high');
+    expect(task.frontmatter.priority).toBe('1 - high');
   });
 });
 
