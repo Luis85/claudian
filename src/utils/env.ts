@@ -385,7 +385,47 @@ const SYSTEM_ESSENTIAL_ENV_KEYS: readonly string[] = [
   // GUI/X11 plumbing some CLIs probe.
   'DISPLAY',
   'XAUTHORITY',
+  // Network plumbing (non-secret): proxy + custom-CA config that network-fetching
+  // MCP servers rely on in corporate environments. Withholding these would break
+  // TLS/connectivity for servers that previously inherited them; they are config,
+  // not credentials (proxy credentials are stripped below), so passing them
+  // through does not reopen the secret-leak. NOTE: deliberately NOT forwarding
+  // NODE_OPTIONS / NODE_TLS_REJECT_UNAUTHORIZED — a parent/Electron NODE_OPTIONS
+  // flag can be rejected by a child `node` ("not allowed in NODE_OPTIONS") and
+  // break unrelated MCP servers, and the custom-CA case is already covered by
+  // NODE_EXTRA_CA_CERTS without forwarding arbitrary Node startup flags.
+  'HTTP_PROXY',
+  'HTTPS_PROXY',
+  'NO_PROXY',
+  'http_proxy',
+  'https_proxy',
+  'no_proxy',
+  'NODE_EXTRA_CA_CERTS',
 ];
+
+/** Proxy env vars whose values are URLs that may embed `user:pass@` credentials. */
+const CREDENTIALED_PROXY_KEYS = new Set(['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']);
+
+/**
+ * SECURITY (SEC-4): strip embedded `user:pass@` userinfo from a host proxy URL so
+ * the credentials aren't handed to an untrusted child while still preserving
+ * proxy connectivity (host:port survive). A user who genuinely needs an
+ * authenticated proxy inside a server sets it explicitly in that server's `env`.
+ */
+function stripProxyCredentials(value: string): string {
+  try {
+    const url = new URL(value);
+    if (url.username || url.password) {
+      url.username = '';
+      url.password = '';
+      return url.toString();
+    }
+    return value;
+  } catch {
+    // Not a parseable URL — best-effort strip of a leading `scheme://user:pass@`.
+    return value.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/@]*@/i, '$1');
+  }
+}
 
 /**
  * SECURITY (SEC-4): Build a curated environment for spawning an untrusted child
@@ -401,7 +441,8 @@ export function buildCuratedChildEnv(
   for (const key of SYSTEM_ESSENTIAL_ENV_KEYS) {
     const value = process.env[key];
     if (typeof value === 'string') {
-      result[key] = value;
+      // Host proxy URLs may embed credentials — never leak those to the child.
+      result[key] = CREDENTIALED_PROXY_KEYS.has(key) ? stripProxyCredentials(value) : value;
     }
   }
   for (const [key, value] of Object.entries(overrides)) {
@@ -410,6 +451,21 @@ export function buildCuratedChildEnv(
     }
   }
   return result;
+}
+
+/**
+ * SECURITY (SEC-4): Curate the env for a vault-defined stdio MCP server. The
+ * server gets system-essentials plus its own configured vars and an enhanced
+ * PATH — never the host's full environment. Used both by the in-app connection
+ * test (`McpTester`) and the live chat spawn path (`options.mcpServers`).
+ */
+export function curateStdioMcpEnv(
+  configuredEnv?: Record<string, string>,
+): Record<string, string> {
+  return buildCuratedChildEnv({
+    ...configuredEnv,
+    PATH: getEnhancedPath(configuredEnv?.PATH),
+  });
 }
 
 function getDeviceSettingsStorage(): Storage | null {

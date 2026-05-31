@@ -7,6 +7,7 @@ import './providers';
 import type { Editor, Menu, TAbstractFile, WorkspaceLeaf } from 'obsidian';
 import { debounce, MarkdownView, Notice, Plugin, TFile, TFolder } from 'obsidian';
 
+import { ConversationStore } from './app/conversations/ConversationStore';
 import type { ClaudianEventMap } from './app/events/claudianEvents';
 import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
 import { SharedStorageService } from './app/storage/SharedStorageService';
@@ -82,7 +83,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   readonly chatMessageActions: ChatMessageAction[] = [];
   storage!: SharedAppStorage;
   gitStatusWatcher: GitStatusWatcher | null = null;
-  private conversations: Conversation[] = [];
+  private conversationStore!: ConversationStore;
   private lastKnownTabManagerState: AppTabManagerState | null = null;
 
   async onload() {
@@ -668,6 +669,11 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
   async loadSettings() {
     this.storage = new SharedStorageService(this);
+    this.conversationStore = new ConversationStore({
+      storage: this.storage,
+      getVaultPath: () => getVaultPath(this.app),
+      repairViewsAfterDelete: (conversationId) => this.repairViewsAfterConversationDelete(conversationId),
+    });
     const { claudian } = await this.storage.initialize();
     this.lastKnownTabManagerState = await this.storage.getTabManagerState();
 
@@ -707,33 +713,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     );
     const didNormalizeModelVariants = this.normalizeModelVariantSettings();
 
-    const allMetadata = await this.storage.sessions.listMetadata();
-    this.conversations = allMetadata.map(meta => {
-      const resumeSessionId = meta.sessionId !== undefined ? meta.sessionId : meta.id;
-
-      return {
-        id: meta.id,
-        providerId: meta.providerId ?? DEFAULT_CHAT_PROVIDER_ID,
-        title: meta.title,
-        createdAt: meta.createdAt,
-        updatedAt: meta.updatedAt,
-        lastResponseAt: meta.lastResponseAt,
-        sessionId: resumeSessionId,
-        providerState: meta.providerState,
-        messages: [],
-        currentNote: meta.currentNote,
-        externalContextPaths: meta.externalContextPaths,
-        enabledMcpServers: meta.enabledMcpServers,
-        usage: meta.usage,
-        titleGenerationStatus: meta.titleGenerationStatus,
-        resumeAtMessageId: meta.resumeAtMessageId,
-      };
-    }).sort(
-      (a, b) => (b.lastResponseAt ?? b.updatedAt) - (a.lastResponseAt ?? a.updatedAt)
-    );
+    const backfilledConversations = await this.conversationStore.loadConversations();
     setLocale(this.settings.locale as Locale);
-
-    const backfilledConversations = this.backfillConversationResponseTimestamps();
 
     const { changed, invalidatedConversations } = this.reconcileModelWithEnvironment();
 
@@ -751,24 +732,6 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
         this.storage.sessions.toSessionMetadata(conv)
       );
     }
-  }
-
-  private backfillConversationResponseTimestamps(): Conversation[] {
-    const updated: Conversation[] = [];
-    for (const conv of this.conversations) {
-      if (conv.lastResponseAt != null) continue;
-      if (!conv.messages || conv.messages.length === 0) continue;
-
-      for (let i = conv.messages.length - 1; i >= 0; i--) {
-        const msg = conv.messages[i];
-        if (msg.role === 'assistant') {
-          conv.lastResponseAt = msg.timestamp;
-          updated.push(conv);
-          break;
-        }
-      }
-    }
-    return updated;
   }
 
   normalizeModelVariantSettings(): boolean {
@@ -970,7 +933,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   } {
     return ProviderSettingsCoordinator.reconcileProviders(
       this.settings,
-      this.conversations,
+      this.conversationStore.getConversations(),
       providerIds,
     );
   }
@@ -996,89 +959,17 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     return Array.from(affectedProviderIds);
   }
 
-  private generateConversationId(): string {
-    return `conv-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-  }
-
-  private generateDefaultTitle(): string {
-    const now = new Date();
-    return now.toLocaleString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
-
-  private getConversationPreview(conv: Conversation): string {
-    const firstUserMsg = conv.messages.find(m => m.role === 'user');
-    if (!firstUserMsg) {
-      return 'New conversation';
-    }
-    return firstUserMsg.content.substring(0, 50) + (firstUserMsg.content.length > 50 ? '...' : '');
-  }
-
-  private async loadSdkMessagesForConversation(conversation: Conversation): Promise<void> {
-    await ProviderRegistry
-      .getConversationHistoryService(conversation.providerId)
-      .hydrateConversationHistory(conversation, getVaultPath(this.app));
-  }
-
-  async createConversation(options?: {
-    providerId?: ProviderId;
-    sessionId?: string;
-    orchestratorMode?: boolean;
-  }): Promise<Conversation> {
-    const providerId = options?.providerId ?? DEFAULT_CHAT_PROVIDER_ID;
-    const sessionId = options?.sessionId;
-    const conversationId = sessionId ?? this.generateConversationId();
-    const conversation: Conversation = {
-      id: conversationId,
-      providerId,
-      title: this.generateDefaultTitle(),
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      sessionId: sessionId ?? null,
-      messages: [],
-      ...(options?.orchestratorMode ? { orchestratorMode: true } : {}),
-    };
-
-    this.conversations.unshift(conversation);
-    await this.storage.sessions.saveMetadata(
-      this.storage.sessions.toSessionMetadata(conversation)
-    );
-
-    return conversation;
-  }
-
-  async switchConversation(id: string): Promise<Conversation | null> {
-    const conversation = this.conversations.find(c => c.id === id);
-    if (!conversation) return null;
-
-    await this.loadSdkMessagesForConversation(conversation);
-
-    return conversation;
-  }
-
-  async deleteConversation(id: string): Promise<void> {
-    const index = this.conversations.findIndex(c => c.id === id);
-    if (index === -1) return;
-
-    const conversation = this.conversations[index];
-    this.conversations.splice(index, 1);
-
-    await ProviderRegistry
-      .getConversationHistoryService(conversation.providerId)
-      .deleteConversationSession(conversation, getVaultPath(this.app));
-
-    await this.storage.sessions.deleteMetadata(id);
-
+  // Cancels any active stream and resets every open tab bound to a deleted
+  // conversation back to a fresh conversation. Lives on the shell because it
+  // reaches concrete view/tab controllers; the store invokes it through a
+  // narrow callback so it stays free of feature dependencies.
+  private async repairViewsAfterConversationDelete(conversationId: string): Promise<void> {
     for (const view of this.getAllViews()) {
       const tabManager = view.getTabManager();
       if (!tabManager) continue;
 
       for (const tab of tabManager.getAllTabs()) {
-        if (tab.conversationId === id) {
+        if (tab.conversationId === conversationId) {
           tab.controllers.inputController?.cancelStreaming();
           await tab.controllers.conversationController?.createNew({ force: true });
         }
@@ -1086,74 +977,44 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     }
   }
 
-  async renameConversation(id: string, title: string): Promise<void> {
-    const conversation = this.conversations.find(c => c.id === id);
-    if (!conversation) return;
-
-    conversation.title = title.trim() || this.generateDefaultTitle();
-    conversation.updatedAt = Date.now();
-
-    await this.storage.sessions.saveMetadata(
-      this.storage.sessions.toSessionMetadata(conversation)
-    );
+  createConversation(options?: {
+    providerId?: ProviderId;
+    sessionId?: string;
+    orchestratorMode?: boolean;
+  }): Promise<Conversation> {
+    return this.conversationStore.createConversation(options);
   }
 
-  async updateConversation(id: string, updates: Partial<Conversation>): Promise<void> {
-    const conversation = this.conversations.find(c => c.id === id);
-    if (!conversation) return;
-
-    // providerId is immutable — strip it from updates to prevent accidental mutation
-    const safeUpdates = { ...updates };
-    delete safeUpdates.providerId;
-    Object.assign(conversation, safeUpdates, { updatedAt: Date.now() });
-
-    await this.storage.sessions.saveMetadata(
-      this.storage.sessions.toSessionMetadata(conversation)
-    );
-
-    // Clear image data from memory after save (data is persisted by SDK).
-    // Skip for pending forks: their deep-cloned images aren't in SDK storage yet.
-    if (!ProviderRegistry.getConversationHistoryService(conversation.providerId).isPendingForkConversation(conversation)) {
-      for (const msg of conversation.messages) {
-        if (msg.images) {
-          for (const img of msg.images) {
-            img.data = '';
-          }
-        }
-      }
-    }
+  switchConversation(id: string): Promise<Conversation | null> {
+    return this.conversationStore.switchConversation(id);
   }
 
-  async getConversationById(id: string): Promise<Conversation | null> {
-    const conversation = this.conversations.find(c => c.id === id) || null;
+  deleteConversation(id: string): Promise<void> {
+    return this.conversationStore.deleteConversation(id);
+  }
 
-    if (conversation) {
-      await this.loadSdkMessagesForConversation(conversation);
-    }
+  renameConversation(id: string, title: string): Promise<void> {
+    return this.conversationStore.renameConversation(id, title);
+  }
 
-    return conversation;
+  updateConversation(id: string, updates: Partial<Conversation>): Promise<void> {
+    return this.conversationStore.updateConversation(id, updates);
+  }
+
+  getConversationById(id: string): Promise<Conversation | null> {
+    return this.conversationStore.getConversationById(id);
   }
 
   getConversationSync(id: string): Conversation | null {
-    return this.conversations.find(c => c.id === id) || null;
+    return this.conversationStore.getConversationSync(id);
   }
 
   findEmptyConversation(): Conversation | null {
-    return this.conversations.find(c => c.messages.length === 0) || null;
+    return this.conversationStore.findEmptyConversation();
   }
 
   getConversationList(): ConversationMeta[] {
-    return this.conversations.map(c => ({
-      id: c.id,
-      providerId: c.providerId,
-      title: c.title,
-      createdAt: c.createdAt,
-      updatedAt: c.updatedAt,
-      lastResponseAt: c.lastResponseAt,
-      messageCount: c.messages.length,
-      preview: this.getConversationPreview(c),
-      titleGenerationStatus: c.titleGenerationStatus,
-    }));
+    return this.conversationStore.getConversationList();
   }
 
   async persistTabManagerState(state: AppTabManagerState): Promise<void> {

@@ -304,8 +304,14 @@ checks; i18n keys perfectly synced.
   call sites + a confirmation modal. Until then, risky project `.claude/settings.json` (hooks /
   `permissions.allow`) is still honored. This is also the proper close for the SEC-3 residual
   (a fresh install whose first-opened vault contains untrusted MCP servers).
-- **SEC-4** — extend the curated child env to **live** chat MCP spawns (currently only the
-  in-app test-connection flow), e.g. per-server `env` via the SDK `mcpServers` option.
+- **SEC-4** — *(done)* the curated child env now also covers **live** chat MCP spawns, not just
+  the in-app test-connection flow. Investigation confirmed the live path was leaking: the Claude
+  CLI spawns stdio MCP servers with `{ ...process.env, ...server.env }` (it only falls back to the
+  MCP SDK's restricted default env when `CLAUDE_CODE_ENTRYPOINT === 'local-agent'`, but the agent
+  SDK sets it to `sdk-ts`), so vault-defined servers received the host's full environment. Fix:
+  `McpServerManager.getActiveServers` now pins a curated `env` (`curateStdioMcpEnv` =
+  system-essentials + the server's own configured vars + an enhanced PATH) on **stdio** servers
+  before they reach `options.mcpServers` / `setMcpServers`; SSE/HTTP servers are untouched.
 - **PERF-2** — full message-list virtualization (deferred; design note captured).
 - **Perf hygiene** — wire `StreamController.resetStreamingState()` into the force session-reset
   teardown (removes dead code + closes a benign stale-timer window); route the two remaining

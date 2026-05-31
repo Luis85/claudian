@@ -10,6 +10,7 @@ import * as env from '../../../src/utils/env';
 
 const {
   buildCuratedChildEnv,
+  curateStdioMcpEnv,
   cliPathRequiresNode,
   findNodeDirectory,
   findNodeExecutable,
@@ -88,6 +89,33 @@ describe('buildCuratedChildEnv (SEC-4)', () => {
     expect(result.GITHUB_TOKEN).toBeUndefined();
   });
 
+  it('forwards non-secret network plumbing (proxy / custom CA) so corporate MCP servers keep connectivity', () => {
+    process.env.HTTPS_PROXY = 'http://proxy.corp:8080';
+    process.env.NO_PROXY = 'localhost';
+    process.env.NODE_EXTRA_CA_CERTS = '/etc/corp/ca.pem';
+    process.env.AWS_SECRET_ACCESS_KEY = 'super-secret';
+
+    const result = buildCuratedChildEnv();
+
+    expect(result.HTTPS_PROXY).toBe('http://proxy.corp:8080');
+    expect(result.NO_PROXY).toBe('localhost');
+    expect(result.NODE_EXTRA_CA_CERTS).toBe('/etc/corp/ca.pem');
+    expect(result.AWS_SECRET_ACCESS_KEY).toBeUndefined();
+  });
+
+  it('strips embedded credentials from host proxy URLs (no host-secret leak via proxy)', () => {
+    process.env.HTTPS_PROXY = 'http://user:s3cret@proxy.corp:8080';
+    process.env.HTTP_PROXY = 'http://plain.corp:3128';
+
+    const result = buildCuratedChildEnv();
+
+    expect(result.HTTPS_PROXY).not.toContain('s3cret');
+    expect(result.HTTPS_PROXY).not.toContain('user');
+    expect(result.HTTPS_PROXY).toContain('proxy.corp:8080');
+    // Credential-free proxy URLs are preserved as-is (host:port intact).
+    expect(result.HTTP_PROXY).toContain('plain.corp:3128');
+  });
+
   it('lets caller-supplied overrides pass through and win over host values', () => {
     process.env.PATH = '/usr/bin';
 
@@ -103,6 +131,39 @@ describe('buildCuratedChildEnv (SEC-4)', () => {
   it('skips undefined override values', () => {
     const result = buildCuratedChildEnv({ MAYBE: undefined });
     expect('MAYBE' in result).toBe(false);
+  });
+});
+
+describe('curateStdioMcpEnv (SEC-4)', () => {
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it('drops arbitrary host secrets while keeping essentials, configured vars, and PATH', () => {
+    process.env.PATH = '/usr/bin';
+    process.env.HOME = '/home/tester';
+    process.env.AWS_SECRET_ACCESS_KEY = 'super-secret';
+
+    const result = curateStdioMcpEnv({ MY_SERVER_TOKEN: 'configured' });
+
+    expect(result.MY_SERVER_TOKEN).toBe('configured');
+    expect(result.HOME).toBe('/home/tester');
+    expect(result.PATH).toContain('/usr/bin');
+    expect(result.AWS_SECRET_ACCESS_KEY).toBeUndefined();
+  });
+
+  it('enhances a configured PATH rather than discarding it', () => {
+    const result = curateStdioMcpEnv({ PATH: '/server/bin' });
+    expect(result.PATH).toContain('/server/bin');
+  });
+
+  it('produces a curated env when no configured env is provided', () => {
+    process.env.GITHUB_TOKEN = 'ghp_xxx';
+    const result = curateStdioMcpEnv();
+    expect(result.GITHUB_TOKEN).toBeUndefined();
+    expect(typeof result.PATH).toBe('string');
   });
 });
 
