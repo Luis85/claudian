@@ -104,6 +104,18 @@ export function installObsidianDom(): void {
       this.textContent = value;
     };
   }
+
+  if (typeof protoRecord.createSpan !== 'function') {
+    protoRecord.createSpan = function createSpan(
+      this: HTMLElement,
+      opts?: CreateOpts | string,
+    ): HTMLSpanElement {
+      const child = this.ownerDocument.createElement('span');
+      applyCreateOpts(child, opts);
+      this.appendChild(child);
+      return child;
+    };
+  }
 }
 
 installObsidianDom();
