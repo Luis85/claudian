@@ -1,6 +1,6 @@
 import { QueryBackedTitleGenerationService } from '../../../core/auxiliary/QueryBackedTitleGenerationService';
 import type { TitleGenerationResult } from '../../../core/providers/types';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { parseEnvironmentVariables } from '../../../utils/env';
 import { ClaudeAuxQueryRunner } from '../runtime/ClaudeAuxQueryRunner';
 import { claudeChatUIConfig } from '../ui/ClaudeChatUIConfig';
@@ -8,7 +8,7 @@ import { claudeChatUIConfig } from '../ui/ClaudeChatUIConfig';
 export type { TitleGenerationResult };
 
 export class TitleGenerationService extends QueryBackedTitleGenerationService {
-  constructor(plugin: ClaudianPlugin) {
+  constructor(plugin: PluginContext) {
     super({
       createRunner: () => new ClaudeAuxQueryRunner(plugin, {
         disableThinking: true,
@@ -20,7 +20,7 @@ export class TitleGenerationService extends QueryBackedTitleGenerationService {
   }
 }
 
-function resolveTitleModel(plugin: ClaudianPlugin): string {
+function resolveTitleModel(plugin: PluginContext): string {
   const envVars = parseEnvironmentVariables(
     plugin.getActiveEnvironmentVariables('claude'),
   );

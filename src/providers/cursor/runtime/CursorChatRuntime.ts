@@ -20,7 +20,7 @@ import type {
   SubagentRuntimeState,
 } from '../../../core/runtime/types';
 import type { ChatMessage, Conversation, SlashCommand, StreamChunk } from '../../../core/types';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { getVaultPath } from '../../../utils/path';
 import { CURSOR_PROVIDER_CAPABILITIES } from '../capabilities';
 import { encodeCursorTurn } from '../prompt/encodeCursorTurn';
@@ -39,7 +39,7 @@ const SIGKILL_TIMEOUT_MS = 3_000;
 export class CursorChatRuntime implements ChatRuntime {
   readonly providerId: ProviderId = 'cursor';
 
-  private plugin: ClaudianPlugin;
+  private plugin: PluginContext;
   private ready = false;
   private readyListeners = new Set<(ready: boolean) => void>();
   private canceled = false;
@@ -50,7 +50,7 @@ export class CursorChatRuntime implements ChatRuntime {
   private askUserQuestionCallback: AskUserQuestionCallback | null = null;
   private askUserQuestionAbortController: AbortController | null = null;
 
-  constructor(plugin: ClaudianPlugin) {
+  constructor(plugin: PluginContext) {
     this.plugin = plugin;
   }
 

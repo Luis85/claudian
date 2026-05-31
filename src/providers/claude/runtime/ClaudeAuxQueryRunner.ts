@@ -1,7 +1,7 @@
 import type { Options } from '@anthropic-ai/claude-agent-sdk';
 
 import type { AuxQueryConfig, AuxQueryRunner } from '../../../core/auxiliary/AuxQueryRunner';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { runColdStartQuery } from './claudeColdStartQuery';
 
 export interface ClaudeAuxQueryRunnerOptions {
@@ -35,7 +35,7 @@ export class ClaudeAuxQueryRunner implements AuxQueryRunner {
   private sessionId: string | null = null;
 
   constructor(
-    private readonly plugin: ClaudianPlugin,
+    private readonly plugin: PluginContext,
     private readonly options: ClaudeAuxQueryRunnerOptions = {},
   ) {}
 

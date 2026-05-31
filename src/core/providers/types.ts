@@ -1,4 +1,3 @@
-import type ClaudianPlugin from '../../main';
 import type { CursorContext } from '../../utils/editor';
 import type { SharedAppStorage } from '../bootstrap/storage';
 import type { McpServerManager } from '../mcp/McpServerManager';
@@ -16,6 +15,7 @@ import type {
   SubagentInfo,
   ToolCallInfo,
 } from '../types';
+import type { PluginContext } from '../types/PluginContext';
 import type { ProviderId } from '../types/provider';
 import type { ProviderCommandCatalog } from './commands/ProviderCommandCatalog';
 
@@ -40,7 +40,7 @@ export interface ProviderCapabilities {
 export const DEFAULT_CHAT_PROVIDER_ID = 'claude' as const satisfies ProviderId;
 
 export interface CreateChatRuntimeOptions {
-  plugin: ClaudianPlugin;
+  plugin: PluginContext;
   providerId?: ProviderId;
 }
 
@@ -61,9 +61,9 @@ export interface ProviderRegistration {
   chatUIConfig: ProviderChatUIConfig;
   settingsReconciler: ProviderSettingsReconciler;
   createRuntime: (options: Omit<CreateChatRuntimeOptions, 'providerId'>) => ChatRuntime;
-  createTitleGenerationService: (plugin: ClaudianPlugin) => TitleGenerationService;
-  createInstructionRefineService: (plugin: ClaudianPlugin) => InstructionRefineService;
-  createInlineEditService: (plugin: ClaudianPlugin) => InlineEditService;
+  createTitleGenerationService: (plugin: PluginContext) => TitleGenerationService;
+  createInstructionRefineService: (plugin: PluginContext) => InstructionRefineService;
+  createInlineEditService: (plugin: PluginContext) => InlineEditService;
   historyService: ProviderConversationHistoryService;
   /** Omitted by providers without async subagent tasks; the registry substitutes a neutral default. */
   taskResultInterpreter?: ProviderTaskResultInterpreter;
@@ -295,7 +295,7 @@ export interface ProviderChatUIConfig {
   prepareModelMetadata?(
     model: string,
     settings: Record<string, unknown>,
-    context: { plugin: ClaudianPlugin },
+    context: { plugin: PluginContext },
   ): Promise<void>;
 
   /** Optional hook when the toolbar changes a reasoning selection. */
@@ -354,7 +354,7 @@ export interface ProviderRuntimeCommandLoaderContext {
   allowSessionCreation?: boolean;
   conversation: Conversation | null;
   externalContextPaths: string[];
-  plugin: ClaudianPlugin;
+  plugin: PluginContext;
   runtime: ChatRuntime | null;
 }
 
@@ -372,7 +372,7 @@ export type ProviderTabWarmupLifecycleState = 'blank' | 'bound_cold' | 'bound_ac
 export interface ProviderTabWarmupContext {
   conversation: Conversation | null;
   externalContextPaths: string[];
-  plugin: ClaudianPlugin;
+  plugin: PluginContext;
   runtime: ChatRuntime | null;
   tab: {
     conversationId: string | null;
@@ -398,7 +398,7 @@ export interface ProviderWorkspaceServices {
 }
 
 export interface ProviderSettingsTabRendererContext {
-  plugin: ClaudianPlugin;
+  plugin: PluginContext;
   renderHiddenProviderCommandSetting(
     container: HTMLElement,
     providerId: ProviderId,
@@ -413,7 +413,7 @@ export interface ProviderSettingsTabRenderer {
 }
 
 export interface ProviderWorkspaceInitContext {
-  plugin: ClaudianPlugin;
+  plugin: PluginContext;
   storage: SharedAppStorage;
   vaultAdapter: VaultFileAdapter;
   homeAdapter: HomeFileAdapter;

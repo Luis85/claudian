@@ -37,6 +37,7 @@ import {
   VIEW_TYPE_CLAUDIAN,
   VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
 } from './core/types';
+import type { PluginContext } from './core/types/PluginContext';
 import type { ChatViewPlacement, EnvironmentScope } from './core/types/settings';
 import { ClaudianView } from './features/chat/ClaudianView';
 import { GitService } from './features/chat/services/GitService';
@@ -72,7 +73,7 @@ function isClaudianView(value: unknown): value is ClaudianView {
     && typeof (value as { getTabManager?: unknown }).getTabManager === 'function';
 }
 
-export default class ClaudianPlugin extends Plugin {
+export default class ClaudianPlugin extends Plugin implements PluginContext {
   settings!: ClaudianSettings;
   readonly events = new EventBus<ClaudianEventMap>();
   readonly logger = new Logger({ enabled: false, level: 'warn' });

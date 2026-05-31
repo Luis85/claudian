@@ -27,7 +27,7 @@ import type {
   SubagentRuntimeState,
 } from '../../../core/runtime/types';
 import type { ChatMessage, Conversation, ForkSource, SlashCommand, StreamChunk } from '../../../core/types';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { getVaultPath } from '../../../utils/path';
 import { buildContextFromHistory } from '../../../utils/session';
 import { CODEX_PROVIDER_CAPABILITIES } from '../capabilities';
@@ -106,7 +106,7 @@ const EFFORT_MAP: Record<string, string> = {
 export class CodexChatRuntime implements ChatRuntime {
   readonly providerId: ProviderId = 'codex';
 
-  private plugin: ClaudianPlugin;
+  private plugin: PluginContext;
   private session = new CodexSessionManager();
   private process: CodexAppServerProcess | null = null;
   private transport: CodexRpcTransport | null = null;
@@ -144,7 +144,7 @@ export class CodexChatRuntime implements ChatRuntime {
   private canceled = false;
   private turnMetadata: ChatTurnMetadata = {};
 
-  constructor(plugin: ClaudianPlugin) {
+  constructor(plugin: PluginContext) {
     this.plugin = plugin;
   }
 

@@ -1,11 +1,11 @@
 import { QueryBackedTitleGenerationService } from '../../../core/auxiliary/QueryBackedTitleGenerationService';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { decodeOpencodeModelId } from '../models';
 import { OpencodeAuxQueryRunner } from '../runtime/OpencodeAuxQueryRunner';
 import { opencodeChatUIConfig } from '../ui/OpencodeChatUIConfig';
 
 export class OpencodeTitleGenerationService extends QueryBackedTitleGenerationService {
-  constructor(plugin: ClaudianPlugin) {
+  constructor(plugin: PluginContext) {
     super({
       createRunner: () => new OpencodeAuxQueryRunner(plugin, {
         agentProfile: 'passive',

@@ -1,7 +1,7 @@
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { getEnhancedPath, parseEnvironmentVariables } from '../../../utils/env';
 
-export function buildCursorAgentEnvironment(plugin: ClaudianPlugin): Record<string, string> {
+export function buildCursorAgentEnvironment(plugin: PluginContext): Record<string, string> {
   const customEnv = parseEnvironmentVariables(plugin.getActiveEnvironmentVariables('cursor'));
   const baseEnv = Object.fromEntries(
     Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),

@@ -1,5 +1,5 @@
 import type { ProviderId } from '../../../core/providers/types';
-import type ClaudianPlugin from '../../../main';
+import type { PluginContext } from '../../../core/types/PluginContext';
 import { getEnhancedPath, parseEnvironmentVariables } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
 import type { InitializeResult } from './codexAppServerTypes';
@@ -12,12 +12,12 @@ const CODEX_APP_SERVER_CLIENT_INFO = Object.freeze({
   version: '1.0.0',
 });
 
-export function getCodexAppServerWorkingDirectory(plugin: ClaudianPlugin): string {
+export function getCodexAppServerWorkingDirectory(plugin: PluginContext): string {
   return getVaultPath(plugin.app) ?? process.cwd();
 }
 
 export function buildCodexAppServerEnvironment(
-  plugin: ClaudianPlugin,
+  plugin: PluginContext,
   providerId: ProviderId = 'codex',
 ): Record<string, string> {
   const customEnv = parseEnvironmentVariables(plugin.getActiveEnvironmentVariables(providerId));
@@ -34,7 +34,7 @@ export function buildCodexAppServerEnvironment(
 }
 
 export function resolveCodexAppServerLaunchSpec(
-  plugin: ClaudianPlugin,
+  plugin: PluginContext,
   providerId: ProviderId = 'codex',
 ): CodexLaunchSpec {
   return buildCodexLaunchSpec({
