@@ -410,6 +410,20 @@
         "name": "Quick actions folder",
         "desc": "Vault folder containing quick action markdown files (YAML frontmatter: type quick-action, name, description, optional icon)."
       }
+    },
+    "trustVault": {
+      "name": "Trust this vault's project settings",
+      "descRisky": "This vault's .claude/settings.json defines hooks or permission allow-rules that can run commands or auto-approve tools. They are withheld until you trust this vault.",
+      "descSafe": "Honor this vault's project .claude/settings.json (hooks / permission allow-rules). Only enable for vaults you trust."
+    }
+  },
+  "security": {
+    "vaultTrust": {
+      "title": "Trust this vault?",
+      "body": "This vault's .claude/settings.json defines hooks or permission allow-rules. These can run shell commands on every turn or auto-approve dangerous tools.",
+      "detail": "They stay disabled until you trust this vault. Only trust vaults whose contents you control.",
+      "trust": "Trust vault",
+      "keepBlocked": "Keep blocked"
     }
   }
 }

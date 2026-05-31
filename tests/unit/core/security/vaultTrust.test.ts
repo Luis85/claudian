@@ -3,6 +3,7 @@ import {
   isVaultTrusted,
   setVaultTrusted,
   shouldHonorProjectSettings,
+  shouldHonorProjectSettingsForRisk,
 } from '@/core/security/vaultTrust';
 
 describe('detectRiskyProjectSettings (SEC-2)', () => {
@@ -29,6 +30,22 @@ describe('detectRiskyProjectSettings (SEC-2)', () => {
   it('does not flag an empty or missing allow list', () => {
     expect(detectRiskyProjectSettings({ permissions: { allow: [] } })).toBe(false);
     expect(detectRiskyProjectSettings({ permissions: {} })).toBe(false);
+  });
+
+  it('flags a privilege-widening defaultMode (acceptEdits / bypassPermissions)', () => {
+    expect(detectRiskyProjectSettings({ permissions: { defaultMode: 'acceptEdits' } })).toBe(true);
+    expect(detectRiskyProjectSettings({ permissions: { defaultMode: 'bypassPermissions' } })).toBe(true);
+  });
+
+  it('does not flag a safe or restrictive defaultMode (default / plan)', () => {
+    expect(detectRiskyProjectSettings({ permissions: { defaultMode: 'default' } })).toBe(false);
+    expect(detectRiskyProjectSettings({ permissions: { defaultMode: 'plan' } })).toBe(false);
+  });
+
+  it('flags non-empty additionalDirectories but not deny-only', () => {
+    expect(detectRiskyProjectSettings({ permissions: { additionalDirectories: ['/etc'] } })).toBe(true);
+    expect(detectRiskyProjectSettings({ permissions: { additionalDirectories: [] } })).toBe(false);
+    expect(detectRiskyProjectSettings({ permissions: { deny: ['Bash(*)'] } })).toBe(false);
   });
 });
 
@@ -74,5 +91,28 @@ describe('shouldHonorProjectSettings (SEC-2)', () => {
     setVaultTrusted(settings, 'vault-a', true);
     const risky = { permissions: { allow: ['Bash(*)'] } };
     expect(shouldHonorProjectSettings(settings, 'vault-a', risky)).toBe(true);
+  });
+});
+
+describe('shouldHonorProjectSettingsForRisk (SEC-2)', () => {
+  it('honors when risk is not flagged regardless of trust', () => {
+    expect(shouldHonorProjectSettingsForRisk({}, 'vault-a', false)).toBe(true);
+  });
+
+  it('withholds when risky and untrusted', () => {
+    expect(shouldHonorProjectSettingsForRisk({}, 'vault-a', true)).toBe(false);
+  });
+
+  it('honors when risky and trusted', () => {
+    const settings: Record<string, unknown> = {};
+    setVaultTrusted(settings, 'vault-a', true);
+    expect(shouldHonorProjectSettingsForRisk(settings, 'vault-a', true)).toBe(true);
+  });
+
+  it('re-evaluates live trust without re-detecting risk', () => {
+    const settings: Record<string, unknown> = {};
+    expect(shouldHonorProjectSettingsForRisk(settings, 'vault-a', true)).toBe(false);
+    setVaultTrusted(settings, 'vault-a', true);
+    expect(shouldHonorProjectSettingsForRisk(settings, 'vault-a', true)).toBe(true);
   });
 });

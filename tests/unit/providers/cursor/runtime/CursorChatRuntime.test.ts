@@ -81,6 +81,9 @@ function setupMockChild(exitCode = 0): EventEmitter & { stdout: EventEmitter; st
   child.stdout = new EventEmitter();
   child.stderr = new EventEmitter();
   child.kill = jest.fn();
+  // Real ChildProcess exposes exitCode === null while running; terminateChild
+  // relies on that to distinguish a live child from an already-exited one.
+  (child as unknown as { exitCode: number | null }).exitCode = null;
   const baseOn = child.on.bind(child);
   child.on = (event: string | symbol, listener: (...args: unknown[]) => void) => {
     const subscription = baseOn(event, listener);
@@ -174,6 +177,89 @@ describe('CursorChatRuntime', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it('cleanup resolves once the child emits exit', async () => {
+    const runtime = new CursorChatRuntime(createMockPlugin());
+    const child = setupMockChild();
+    (runtime as any).child = child;
+
+    let resolved = false;
+    const cleanupPromise = runtime.cleanup().then(() => {
+      resolved = true;
+    });
+
+    expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+    // cleanup must not resolve until the child actually exits.
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+
+    child.emit('exit', 0);
+    await cleanupPromise;
+    expect(resolved).toBe(true);
+    expect((runtime as any).child).toBeNull();
+  });
+
+  it('cleanup escalates to SIGKILL and then resolves on the give-up ceiling', async () => {
+    jest.useFakeTimers();
+    try {
+      const runtime = new CursorChatRuntime(createMockPlugin());
+      const child = setupMockChild();
+      (child as any).exitCode = null;
+      (child as any).signalCode = null;
+      (runtime as any).child = child;
+
+      let resolved = false;
+      const cleanupPromise = runtime.cleanup().then(() => {
+        resolved = true;
+      });
+
+      expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+
+      // Child ignores SIGTERM → escalate to SIGKILL after the timeout.
+      jest.advanceTimersByTime(3_000);
+      expect(child.kill).toHaveBeenCalledWith('SIGKILL');
+
+      // Still no exit → the hard give-up ceiling resolves so teardown can't hang.
+      expect(resolved).toBe(false);
+      jest.advanceTimersByTime(3_000);
+      await Promise.resolve();
+      await cleanupPromise;
+      expect(resolved).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('cleanup resolves immediately when there is no live child', async () => {
+    const runtime = new CursorChatRuntime(createMockPlugin());
+    await expect(runtime.cleanup()).resolves.toBeUndefined();
+  });
+
+  it('cleanup after cancel awaits the in-flight termination (no switch overlap)', async () => {
+    // cancel() starts terminateChild() and nulls this.child; a following cleanup()
+    // (e.g. immediate provider switch) must await that in-flight kill rather than
+    // resolving early while cursor-agent is still alive.
+    const runtime = new CursorChatRuntime(createMockPlugin());
+    const child = setupMockChild();
+    (child as any).exitCode = null;
+    (runtime as any).child = child;
+
+    runtime.cancel();
+    expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+    expect((runtime as any).child).toBeNull();
+
+    let resolved = false;
+    const cleanupPromise = runtime.cleanup().then(() => {
+      resolved = true;
+    });
+
+    await Promise.resolve();
+    expect(resolved).toBe(false); // still waiting on the cancel-initiated exit
+
+    child.emit('exit', 0);
+    await cleanupPromise;
+    expect(resolved).toBe(true);
   });
 
   it('consumeTurnMetadata returns planCompleted after a plan turn', async () => {

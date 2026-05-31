@@ -1,8 +1,26 @@
 import {
   DEFAULT_CLAUDE_PROVIDER_SETTINGS,
   getClaudeProviderSettings,
+  resolveClaudeSettingSources,
   updateClaudeProviderSettings,
 } from '@/providers/claude/settings';
+
+describe('resolveClaudeSettingSources (SEC-2 gate)', () => {
+  it('includes project/local by default (non-risky vault unaffected)', () => {
+    expect(resolveClaudeSettingSources(true)).toEqual(['user', 'project', 'local']);
+    expect(resolveClaudeSettingSources(false)).toEqual(['project', 'local']);
+  });
+
+  it('honors project/local explicitly when honorProjectSettings is true', () => {
+    expect(resolveClaudeSettingSources(true, true)).toEqual(['user', 'project', 'local']);
+    expect(resolveClaudeSettingSources(false, true)).toEqual(['project', 'local']);
+  });
+
+  it('withholds project/local when honorProjectSettings is false', () => {
+    expect(resolveClaudeSettingSources(true, false)).toEqual(['user']);
+    expect(resolveClaudeSettingSources(false, false)).toEqual([]);
+  });
+});
 
 describe('Claude provider enabled flag', () => {
   it('defaults to disabled when settings are absent (providers are opt-in)', () => {

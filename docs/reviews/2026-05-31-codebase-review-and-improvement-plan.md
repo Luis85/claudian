@@ -256,6 +256,23 @@ checks; i18n keys perfectly synced.
   cast; 34 sites replaced (3 non-settings casts left). Both type-only/behavior-preserving,
   independently reviewed (no init-order hazard, all replacements correct).
 
+**Post-merge follow-up branch (`claude/lifecycle-and-sec2-followups`):**
+- **Awaitable cleanup on provider switch/reinit + Cursor** — completes the Phase 0 contract: the
+  outgoing runtime's `cleanup()` resolves before a replacement is constructed (a
+  `tab.pendingRuntimeCleanup` invariant awaited at the sole construction site); Cursor `cleanup()`
+  now awaits child exit. Reviewed: invariant sound, hang/leak-free.
+- **SEC-2 vault-trust gate** — risky project `.claude/settings.json` (hooks / `permissions.allow` /
+  privilege-widening `defaultMode` / `additionalDirectories`) AND `.claude/settings.local.json` are
+  only honored after explicit per-vault trust (modal + settings toggle), gated at all four SDK
+  setting-source call sites. Security-reviewed; fixed the review's HIGH (local-file detection gap)
+  and LOW (broader risky-key detection) before integration.
+  - *PR #11 review follow-ups (resolved):* **P1 stale risk cache** — the gate now reads project-settings
+    risk **fresh from disk** on every honor-decision (no init-time cache), so settings created/changed
+    after init can't slip past; this also removed the module-global cache (the prior LOW). **P2
+    cancel-then-cleanup** — Cursor `cleanup()` after `cancel()` now awaits the in-flight termination.
+    **P2 overlapping inits** — `initializeTabService` records its direct cleanup on
+    `tab.pendingRuntimeCleanup` before awaiting, so a concurrent init waits on it.
+
 **PR #9 automated-review fixes (chatgpt-codex-connector):**
 - **P1 — MCP trust bypass (SEC-3):** mere presence of `_claudian.servers.<name>` metadata (even `{}`)
   no longer implies trust; a vault server is enabled only with an explicit `enabled: true`

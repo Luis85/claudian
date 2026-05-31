@@ -50,6 +50,8 @@ export class CursorChatRuntime implements ChatRuntime {
   private turnMetadata: ChatTurnMetadata = {};
   private askUserQuestionCallback: AskUserQuestionCallback | null = null;
   private askUserQuestionAbortController: AbortController | null = null;
+  /** In-flight child termination, so a later cleanup() can await a cancel()-started kill. */
+  private pendingTermination: Promise<void> | null = null;
 
   constructor(plugin: PluginContext) {
     this.plugin = plugin;
@@ -233,31 +235,66 @@ export class CursorChatRuntime implements ChatRuntime {
   }
 
   cancel(): void {
+    // Fire-and-forget mid-turn cancellation: tear the child down without making
+    // callers wait. cleanup() reuses the same termination flow but awaits exit.
+    void this.terminateChild();
+  }
+
+  /**
+   * Sends SIGTERM, escalates to SIGKILL if the child ignores it, and resolves
+   * once the child has actually exited. A hard give-up ceiling guarantees the
+   * promise can never hang teardown even if 'exit' never fires. Mirrors
+   * AcpSubprocess.shutdown() so provider switch/reinit can await child exit.
+   */
+  private terminateChild(): Promise<void> {
     this.canceled = true;
     this.askUserQuestionAbortController?.abort();
     this.askUserQuestionAbortController = null;
     const child = this.child;
-    if (!child) {
-      return;
+    if (!child || child.exitCode !== null) {
+      this.child = null;
+      // A termination may already be in flight from a prior cancel(); return it so
+      // cleanup() awaits the real child exit instead of resolving early (which would
+      // re-introduce the switch/reinit overlap this guards against).
+      return this.pendingTermination ?? Promise.resolve();
     }
     this.child = null;
-    try {
-      child.kill('SIGTERM');
-    } catch {
-      return;
-    }
-    // Escalate to SIGKILL if cursor-agent (or a descendant holding a pipe open)
-    // ignores SIGTERM, so cancel/teardown can't hang on child exit.
-    const killTimer = window.setTimeout(() => {
-      try {
-        if (child.exitCode === null && child.signalCode === null) {
-          child.kill('SIGKILL');
+
+    const termination = new Promise<void>((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(killTimer);
+        window.clearTimeout(giveUpTimer);
+        child.off('exit', onExit);
+        resolve();
+      };
+      const onExit = () => finish();
+      // Escalate to SIGKILL if cursor-agent (or a descendant holding a pipe
+      // open) ignores SIGTERM, so cancel/teardown can't hang on child exit.
+      const killTimer = window.setTimeout(() => {
+        try {
+          if (child.exitCode === null && child.signalCode === null) {
+            child.kill('SIGKILL');
+          }
+        } catch {
+          // already exited / not killable — the give-up timer will resolve
         }
+      }, SIGKILL_TIMEOUT_MS);
+      // Hard ceiling: never let teardown hang if 'exit' never fires.
+      const giveUpTimer = window.setTimeout(finish, SIGKILL_TIMEOUT_MS * 2);
+
+      child.once('exit', onExit);
+      try {
+        child.kill('SIGTERM');
       } catch {
-        // already exited
+        // Process already gone between the guard and the kill — nothing to await.
+        finish();
       }
-    }, SIGKILL_TIMEOUT_MS);
-    child.once('exit', () => window.clearTimeout(killTimer));
+    });
+    this.pendingTermination = termination;
+    return termination;
   }
 
   resetSession(): void {
@@ -281,8 +318,10 @@ export class CursorChatRuntime implements ChatRuntime {
     return [];
   }
 
-  cleanup(): void {
-    this.cancel();
+  async cleanup(): Promise<void> {
+    // Await the child's actual exit so provider switch/reinit never overlaps the
+    // outgoing CLI process with a freshly constructed replacement runtime.
+    await this.terminateChild();
     this.readyListeners.clear();
   }
 
