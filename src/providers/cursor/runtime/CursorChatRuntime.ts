@@ -34,6 +34,8 @@ import { buildCursorAgentFlagArgs, type CursorPermissionMode } from './cursorLau
 import type { CursorQueryChunkTracker } from './cursorQueryLifecycle';
 import { finalizeCursorAgentStream, processCursorAgentNdjsonLines } from './cursorQueryProcessing';
 
+const SIGKILL_TIMEOUT_MS = 3_000;
+
 export class CursorChatRuntime implements ChatRuntime {
   readonly providerId: ProviderId = 'cursor';
 
@@ -233,10 +235,28 @@ export class CursorChatRuntime implements ChatRuntime {
     this.canceled = true;
     this.askUserQuestionAbortController?.abort();
     this.askUserQuestionAbortController = null;
-    if (this.child) {
-      this.child.kill('SIGTERM');
-      this.child = null;
+    const child = this.child;
+    if (!child) {
+      return;
     }
+    this.child = null;
+    try {
+      child.kill('SIGTERM');
+    } catch {
+      return;
+    }
+    // Escalate to SIGKILL if cursor-agent (or a descendant holding a pipe open)
+    // ignores SIGTERM, so cancel/teardown can't hang on child exit.
+    const killTimer = window.setTimeout(() => {
+      try {
+        if (child.exitCode === null && child.signalCode === null) {
+          child.kill('SIGKILL');
+        }
+      } catch {
+        // already exited
+      }
+    }, SIGKILL_TIMEOUT_MS);
+    child.once('exit', () => window.clearTimeout(killTimer));
   }
 
   resetSession(): void {

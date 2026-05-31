@@ -595,6 +595,7 @@ export class CodexChatRuntime implements ChatRuntime {
 
   resetSession(): void {
     this.teardownState();
+    this.shutdownProcess().catch(() => {});
   }
 
   getSessionId(): string | null {
@@ -624,10 +625,13 @@ export class CodexChatRuntime implements ChatRuntime {
     return [];
   }
 
-  cleanup(): void {
+  async cleanup(): Promise<void> {
     this.cancel();
     this.teardownState();
     this.readyListeners.clear();
+    // Await the subprocess kill so tab/plugin teardown does not return before
+    // the codex app-server process has actually exited (avoids orphans).
+    await this.shutdownProcess();
   }
 
   async rewind(
@@ -740,7 +744,6 @@ export class CodexChatRuntime implements ChatRuntime {
     this.pendingTurnNotifications = [];
     this.pendingFork = null;
     this.clientConfigKey = null;
-    this.shutdownProcess().catch(() => {});
     this.setReady(false);
   }
 

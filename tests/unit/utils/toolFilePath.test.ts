@@ -72,9 +72,12 @@ describe('resolveOpenableVaultPath', () => {
   });
 
   it('returns null for absolute paths outside the vault', () => {
-    const pathMod = jest.requireActual<typeof pathType>('path');
+    // A drive-letter absolute path is unambiguously outside the vault on every
+    // host: the cleaner never strips the `C:` prefix, and isVaultRelativeOpenPath
+    // rejects drive-letter paths. (A bare POSIX `/x` would be cleaned into a
+    // vault-relative path, which is intended behavior, not an escape.)
     jest.mocked(getVaultFileByPath).mockReturnValue({ path: 'outside.md' } as never);
-    const outside = pathMod.resolve('/outside-vault/note.md');
-    expect(resolveOpenableVaultPath(app, outside)).toBeNull();
+    expect(resolveOpenableVaultPath(app, 'C:/outside-vault/note.md')).toBeNull();
+    expect(resolveOpenableVaultPath(app, 'C:\\outside-vault\\note.md')).toBeNull();
   });
 });

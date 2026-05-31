@@ -139,6 +139,43 @@ describe('CursorChatRuntime', () => {
     expect((runtime as any).child).toBeNull();
   });
 
+  it('cancel escalates to SIGKILL when the child ignores SIGTERM', () => {
+    jest.useFakeTimers();
+    try {
+      const runtime = new CursorChatRuntime(createMockPlugin());
+      const child = setupMockChild();
+      (child as any).exitCode = null;
+      (child as any).signalCode = null;
+      (runtime as any).child = child;
+
+      runtime.cancel();
+      expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+
+      // Child never emits exit → escalate after the timeout.
+      jest.advanceTimersByTime(3_000);
+      expect(child.kill).toHaveBeenCalledWith('SIGKILL');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('cancel does not SIGKILL a child that already exited', () => {
+    jest.useFakeTimers();
+    try {
+      const runtime = new CursorChatRuntime(createMockPlugin());
+      const child = setupMockChild();
+      (child as any).exitCode = 0;
+      (child as any).signalCode = null;
+      (runtime as any).child = child;
+
+      runtime.cancel();
+      jest.advanceTimersByTime(3_000);
+      expect(child.kill).not.toHaveBeenCalledWith('SIGKILL');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('consumeTurnMetadata returns planCompleted after a plan turn', async () => {
     const runtime = new CursorChatRuntime(createMockPlugin({
       settings: { permissionMode: 'plan' },

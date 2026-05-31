@@ -1699,8 +1699,9 @@ export async function destroyTab(tab: TabData): Promise<void> {
   }
   tab.dom.eventCleanups.length = 0;
 
-  // Clean up runtime before removing DOM
-  tab.service?.cleanup();
+  // Clean up runtime before removing DOM. Await so the provider subprocess is
+  // actually killed before teardown completes (prevents orphaned CLI processes).
+  await tab.service?.cleanup();
   tab.service = null;
   tab.dom.contentEl.remove();
 }

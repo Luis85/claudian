@@ -507,9 +507,9 @@ export class OpencodeChatRuntime implements ChatRuntime {
     return this.waitForSupportedCommands();
   }
 
-  cleanup(): void {
+  async cleanup(): Promise<void> {
     this.activeTurn?.queue.close();
-    void this.shutdownProcess();
+    await this.shutdownProcess();
   }
 
   async rewind(

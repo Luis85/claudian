@@ -42,7 +42,13 @@ jobs:
         run: npm run typecheck
 
   test:
-    runs-on: ubuntu-latest
+    # Run on both Linux and Windows so platform-coupled path/spawn logic is
+    # exercised on each target OS (POSIX vs win32 path semantics).
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
 

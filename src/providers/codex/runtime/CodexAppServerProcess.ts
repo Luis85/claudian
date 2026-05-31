@@ -121,22 +121,39 @@ export class CodexAppServerProcess {
   }
 
   async shutdown(): Promise<void> {
-    if (!this.proc || !this.alive) return;
+    const proc = this.proc;
+    if (!proc || !this.alive) return;
 
     return new Promise<void>((resolve) => {
-      const onExit = () => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
         window.clearTimeout(killTimer);
+        window.clearTimeout(giveUpTimer);
+        proc.off('exit', onExit);
         resolve();
       };
-
-      this.proc!.once('exit', onExit);
-      this.proc!.kill('SIGTERM');
-
+      const onExit = () => finish();
       const killTimer = window.setTimeout(() => {
-        if (this.alive) {
-          this.proc!.kill('SIGKILL');
+        try {
+          if (this.alive) {
+            proc.kill('SIGKILL');
+          }
+        } catch {
+          // already exited — the give-up timer will resolve
         }
       }, SIGKILL_TIMEOUT_MS);
+      // Hard ceiling: never let teardown hang if 'exit' never fires.
+      const giveUpTimer = window.setTimeout(finish, SIGKILL_TIMEOUT_MS * 2);
+
+      proc.once('exit', onExit);
+      try {
+        proc.kill('SIGTERM');
+      } catch {
+        // Process already gone between the guard and the kill.
+        finish();
+      }
     });
   }
 }

@@ -485,7 +485,26 @@ export default class ClaudianPlugin extends Plugin {
   onunload(): void {
     this.gitStatusWatcher?.stop();
     this.gitStatusWatcher = null;
+    this.shutdownActiveRuntimes();
     void this.persistOpenTabStates();
+  }
+
+  // Best-effort synchronous teardown of provider subprocesses on plugin unload
+  // (disable/update/hot-reload). onunload cannot await, but each runtime's
+  // cleanup() dispatches SIGTERM synchronously before its first await point, so
+  // firing it here prevents orphaned provider CLI processes.
+  private shutdownActiveRuntimes(): void {
+    for (const view of this.getAllViews()) {
+      const tabManager = view.getTabManager();
+      if (!tabManager) continue;
+      for (const tab of tabManager.getAllTabs()) {
+        try {
+          void tab.service?.cleanup();
+        } catch {
+          // best-effort: keep tearing down remaining runtimes
+        }
+      }
+    }
   }
 
   private async persistOpenTabStates(): Promise<void> {
