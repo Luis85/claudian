@@ -1,3 +1,4 @@
+import { asSettingsBag } from '../../../../core/types/settings';
 import { getOpencodeProviderSettings } from '../../../../providers/opencode/settings';
 import { CustomModelsTable } from '../../customModels/CustomModelsTable';
 import { registerProviderTab } from '../providers/registerProviderTab';
@@ -39,7 +40,7 @@ export function registerOpencodeTabFields(): void {
       kind: 'dropdown',
       options: (settings) => {
         const { availableModes } = getOpencodeProviderSettings(
-          settings as unknown as Record<string, unknown>,
+          asSettingsBag(settings),
         );
         return availableModes
           .filter((mode) => typeof mode.id === 'string' && mode.id.length > 0)

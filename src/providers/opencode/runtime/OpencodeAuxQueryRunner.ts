@@ -5,6 +5,7 @@ import type { AuxQueryConfig, AuxQueryRunner } from '../../../core/auxiliary/Aux
 import { getRuntimeEnvironmentText } from '../../../core/providers/providerEnvironment';
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type { PluginContext } from '../../../core/types/PluginContext';
+import { asSettingsBag } from '../../../core/types/settings';
 import { getVaultPath } from '../../../utils/path';
 import {
   AcpClientConnection,
@@ -168,7 +169,7 @@ export class OpencodeAuxQueryRunner implements AuxQueryRunner {
   private async ensureReady(cwd: string, systemPrompt: string): Promise<void> {
     const resolvedCliPath = this.plugin.getResolvedProviderCliPath('opencode') ?? 'opencode';
 
-    const settings = this.plugin.settings as unknown as Record<string, unknown>;
+    const settings = asSettingsBag(this.plugin.settings);
     const runtimeEnv = buildOpencodeRuntimeEnv(settings, resolvedCliPath);
     const auxAgentId = OPENCODE_AUX_AGENT_IDS[this.options.agentProfile];
     const artifacts = await prepareOpencodeLaunchArtifacts({

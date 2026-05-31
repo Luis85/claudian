@@ -3,6 +3,7 @@ import { Setting } from 'obsidian';
 
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type { ProviderSettingsTabRenderer } from '../../../core/providers/types';
+import { asSettingsBag } from '../../../core/types';
 import { renderEnvironmentSettingsSection } from '../../../features/settings/ui/EnvironmentSettingsSection';
 import { t } from '../../../i18n/i18n';
 import { getHostnameKey } from '../../../utils/env';
@@ -18,7 +19,7 @@ import { CodexSubagentSettings } from './CodexSubagentSettings';
 export const codexSettingsTabRenderer: ProviderSettingsTabRenderer = {
   render(container, context) {
     const codexWorkspace = getCodexWorkspaceServices();
-    const settingsBag = context.plugin.settings as unknown as Record<string, unknown>;
+    const settingsBag = asSettingsBag(context.plugin.settings);
     const codexSettings = getCodexProviderSettings(settingsBag);
     const hostnameKey = getHostnameKey();
     const isWindowsHost = process.platform === 'win32';

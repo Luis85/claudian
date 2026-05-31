@@ -1,6 +1,6 @@
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
-import type { ClaudianSettings, ProviderConfigMap } from '../../../core/types/settings';
+import { asSettingsBag, type ClaudianSettings, type ProviderConfigMap } from '../../../core/types/settings';
 import type { ProviderCustomModel } from '../../../features/settings/customModels/CustomModelsTable';
 
 // Legacy maps lived as top-level fields on ClaudianSettings. F9 erases them
@@ -167,7 +167,7 @@ function resolveOwningProvider(
 ): ProviderId | null {
   for (const providerId of ProviderRegistry.getRegisteredProviderIds()) {
     const uiConfig = ProviderRegistry.getChatUIConfig(providerId);
-    if (uiConfig.ownsModel(modelId, settings as unknown as Record<string, unknown>)) {
+    if (uiConfig.ownsModel(modelId, asSettingsBag(settings))) {
       return providerId;
     }
   }

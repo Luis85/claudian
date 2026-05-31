@@ -4,6 +4,7 @@ import { ItemView, Notice, TFile } from 'obsidian';
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import { VIEW_TYPE_CLAUDIAN_AGENT_BOARD } from '../../../core/types/chat';
+import { asSettingsBag } from '../../../core/types/settings';
 import type ClaudianPlugin from '../../../main';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { archiveWorkOrder } from '../commands/taskCommands';
@@ -71,7 +72,7 @@ export class AgentBoardView extends ItemView {
   }
 
   async refresh(): Promise<void> {
-    const settings = this.plugin.settings as unknown as Record<string, unknown>;
+    const settings = asSettingsBag(this.plugin.settings);
     this.model = await this.indexer.indexVaultFolder(this.plugin.app.vault, this.folder);
     const { config, errors } = loadBoardConfig(settings);
     this.config = config;
@@ -134,7 +135,7 @@ export class AgentBoardView extends ItemView {
   }
 
   private openDetail(task: TaskSpec): void {
-    const settings = this.plugin.settings as unknown as Record<string, unknown>;
+    const settings = asSettingsBag(this.plugin.settings);
     new WorkOrderDetailModal(this.plugin.app, task, {
       onOpenNote: (target) => void this.openTask(target),
       onOpenConversation: (target) => {
@@ -262,7 +263,7 @@ export class AgentBoardView extends ItemView {
       return;
     }
 
-    const settings = this.plugin.settings as unknown as Record<string, unknown>;
+    const settings = asSettingsBag(this.plugin.settings);
     let lastStatus: TaskStatus = latest.frontmatter.status;
     const coordinator = new TaskRunCoordinator({
       executionSurface: this.executionSurface,

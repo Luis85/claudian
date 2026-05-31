@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import { Notice, Setting } from 'obsidian';
 
 import type { ProviderSettingsTabRenderer } from '../../../core/providers/types';
+import { asSettingsBag } from '../../../core/types';
 import { renderEnvironmentSettingsSection } from '../../../features/settings/ui/EnvironmentSettingsSection';
 import { t } from '../../../i18n/i18n';
 import type { TranslationKey } from '../../../i18n/types';
@@ -20,7 +21,7 @@ import { matchesCursorModelQuery } from './cursorModelFilter';
 
 export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
   render(container, context) {
-    const settingsBag = context.plugin.settings as unknown as Record<string, unknown>;
+    const settingsBag = asSettingsBag(context.plugin.settings);
     const cursorSettings = getCursorProviderSettings(settingsBag);
     const hostnameKey = getHostnameKey();
 

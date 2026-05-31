@@ -3,6 +3,7 @@ import { Notice, Setting } from 'obsidian';
 
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
+import { asSettingsBag } from '../../../core/types/settings';
 import type ClaudianPlugin from '../../../main';
 import { resolveAgentBoardDefaultProvider } from '../../tasks/defaultProviderResolver';
 import { installPresetTemplates } from '../../tasks/templates/installPresetTemplates';
@@ -112,7 +113,7 @@ export function renderAgentBoardSettingsSection(
         }),
     );
 
-  const settings = plugin.settings as unknown as Record<string, unknown>;
+  const settings = asSettingsBag(plugin.settings);
 
   let modelDropdown: DropdownComponent | null = null;
 

@@ -21,6 +21,7 @@ import type {
 } from '../../../core/runtime/types';
 import type { ChatMessage, Conversation, SlashCommand, StreamChunk } from '../../../core/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
+import { asSettingsBag } from '../../../core/types/settings';
 import { getVaultPath } from '../../../utils/path';
 import { CURSOR_PROVIDER_CAPABILITIES } from '../capabilities';
 import { encodeCursorTurn } from '../prompt/encodeCursorTurn';
@@ -119,7 +120,7 @@ export class CursorChatRuntime implements ChatRuntime {
     const workspaceDir = getVaultPath(this.plugin.app) ?? process.cwd();
     const permissionMode = this.plugin.settings.permissionMode as CursorPermissionMode;
     const snapshot = ProviderSettingsCoordinator.getProviderSettingsSnapshot(
-      this.plugin.settings as unknown as Record<string, unknown>,
+      asSettingsBag(this.plugin.settings),
       'cursor',
     );
     const familyValue = queryOptions?.model

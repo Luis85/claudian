@@ -1,6 +1,7 @@
 import { QueryBackedTitleGenerationService } from '../../../core/auxiliary/QueryBackedTitleGenerationService';
 import type { TitleGenerationResult } from '../../../core/providers/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
+import { asSettingsBag } from '../../../core/types/settings';
 import { parseEnvironmentVariables } from '../../../utils/env';
 import { ClaudeAuxQueryRunner } from '../runtime/ClaudeAuxQueryRunner';
 import { claudeChatUIConfig } from '../ui/ClaudeChatUIConfig';
@@ -27,7 +28,7 @@ function resolveTitleModel(plugin: PluginContext): string {
   const titleModel = plugin.settings.titleGenerationModel;
   if (titleModel && claudeChatUIConfig.ownsModel(
     titleModel,
-    plugin.settings as unknown as Record<string, unknown>,
+    asSettingsBag(plugin.settings),
   )) {
     return titleModel;
   }

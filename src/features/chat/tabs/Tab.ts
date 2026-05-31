@@ -21,6 +21,7 @@ import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
 import type { AutoTurnResult } from '../../../core/runtime/types';
 import { TOOL_AGENT_OUTPUT } from '../../../core/tools/toolNames';
 import type { ChatMessage, ClaudianSettings, Conversation, StreamChunk } from '../../../core/types';
+import { asSettingsBag } from '../../../core/types/settings';
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { SlashCommandDropdown } from '../../../shared/components/SlashCommandDropdown';
@@ -97,7 +98,7 @@ function resolveBlankTabModel(
   plugin: ClaudianPlugin,
   providerId?: ProviderId,
 ): string {
-  const settings = plugin.settings as unknown as Record<string, unknown>;
+  const settings = asSettingsBag(plugin.settings);
   if (!providerId) {
     return settings.model as string;
   }
@@ -359,7 +360,7 @@ function cleanupTabRuntime(tab: TabData): void {
 export function onProviderAvailabilityChanged(tab: TabData, plugin: ClaudianPlugin): void {
   if (tab.lifecycleState !== 'blank') return;
 
-  const settingsSnapshot = plugin.settings as unknown as Record<string, unknown>;
+  const settingsSnapshot = asSettingsBag(plugin.settings);
   const enabledProviderIds = ProviderRegistry.getEnabledProviderIds(settingsSnapshot);
   let nextProviderId = tab.providerId;
 
@@ -441,7 +442,7 @@ export function createTab(options: TabCreateOptions): TabData {
   const initialProviderId = conversation?.providerId
     ?? (draftModel
       ? getEnabledProviderForModel(draftModel, plugin.settings)
-      : resolveBlankTabDefaultProviderId(plugin.settings as unknown as Record<string, unknown>));
+      : resolveBlankTabDefaultProviderId(asSettingsBag(plugin.settings)));
 
   const tab: TabData = {
     id,

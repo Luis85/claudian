@@ -3,6 +3,7 @@ import { Modal, Notice, Setting } from 'obsidian';
 
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
+import { asSettingsBag } from '../../../core/types/settings';
 import type ClaudianPlugin from '../../../main';
 import { LucideIconPicker } from '../../../shared/components/LucideIconPicker';
 import type { TaskPriority } from '../model/taskTypes';
@@ -74,7 +75,7 @@ export class WorkOrderTemplateEditorModal extends Modal {
       onChange: (v) => { icon = v; },
     });
 
-    const settings = this.plugin.settings as unknown as Record<string, unknown>;
+    const settings = asSettingsBag(this.plugin.settings);
     const providerOptions = providerOptionList(settings);
 
     new Setting(this.contentEl)

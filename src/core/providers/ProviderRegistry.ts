@@ -1,6 +1,6 @@
 import type { ChatRuntime } from '../runtime/ChatRuntime';
 import type { PluginContext } from '../types/PluginContext';
-import type { ProviderConfigMap } from '../types/settings';
+import { asSettingsBag, type ProviderConfigMap } from '../types/settings';
 import { noAsyncTaskInterpreter } from './noAsyncTaskInterpreter';
 import {
   type CreateChatRuntimeOptions,
@@ -228,7 +228,7 @@ class RoutedTitleGenerationService implements TitleGenerationService {
     callback: TitleGenerationCallback,
   ): Promise<void> {
     const providerId = ProviderRegistry.resolveTitleGenerationProviderId(
-      this.plugin.settings as unknown as Record<string, unknown>,
+      asSettingsBag(this.plugin.settings),
     );
     const service = ProviderRegistry.createTitleGenerationService(this.plugin, providerId);
     const generation = { service };

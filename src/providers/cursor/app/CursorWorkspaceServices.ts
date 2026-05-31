@@ -8,6 +8,7 @@ import type {
 import type { HomeFileAdapter } from '../../../core/storage/HomeFileAdapter';
 import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
 import type { PluginContext } from '../../../core/types/PluginContext';
+import { asSettingsBag } from '../../../core/types/settings';
 import { getVaultPath } from '../../../utils/path';
 import { buildCursorAgentEnvironment } from '../runtime/cursorAgentEnv';
 import { cursorCliSpec } from '../runtime/CursorCliResolver';
@@ -20,7 +21,7 @@ function createCursorCliResolver(): ProviderCliResolver {
 }
 
 function warmCursorModelCatalog(plugin: PluginContext, cliResolver: ProviderCliResolver): void {
-  const settings = plugin.settings as unknown as Record<string, unknown>;
+  const settings = asSettingsBag(plugin.settings);
   if (!getCursorProviderSettings(settings).enabled) {
     return;
   }

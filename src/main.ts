@@ -34,6 +34,7 @@ import type {
   ConversationSnapshot,
 } from './core/types';
 import {
+  asSettingsBag,
   VIEW_TYPE_CLAUDIAN,
   VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
 } from './core/types';
@@ -805,7 +806,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   async applyEnvironmentVariablesBatch(
     updates: Array<{ scope: EnvironmentScope; envText: string }>,
   ): Promise<void> {
-    const settingsBag = this.settings as unknown as Record<string, unknown>;
+    const settingsBag = asSettingsBag(this.settings);
     const nextEnvironmentByScope = new Map<EnvironmentScope, string>();
     for (const update of updates) {
       nextEnvironmentByScope.set(update.scope, update.envText);

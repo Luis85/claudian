@@ -2,6 +2,7 @@ import { normalizePath, Notice, TFile, TFolder } from 'obsidian';
 
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
+import { asSettingsBag } from '../../../core/types/settings';
 import type ClaudianPlugin from '../../../main';
 import type { BrowserSelectionContext } from '../../../utils/browser';
 import { resolveAgentBoardDefaultModel } from '../defaultModelResolver';
@@ -261,7 +262,7 @@ export async function createWorkOrderFromSeed(
   seed: WorkOrderSeed,
   options?: CreateWorkOrderOptions,
 ): Promise<TFile | null> {
-  const settings = plugin.settings as unknown as Record<string, unknown>;
+  const settings = asSettingsBag(plugin.settings);
   const defaults = {
     provider: resolveAgentBoardDefaultProvider(plugin.settings) ?? '',
     model: resolveAgentBoardDefaultModel(plugin.settings) ?? '',

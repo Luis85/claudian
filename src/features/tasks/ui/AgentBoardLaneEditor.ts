@@ -1,5 +1,6 @@
 import { Setting } from 'obsidian';
 
+import { asSettingsBag } from '../../../core/types/settings';
 import type ClaudianPlugin from '../../../main';
 import { loadBoardConfig } from '../config/BoardConfigStore';
 import { type BoardConfig, type BoardLaneConfig,DEFAULT_BOARD_CONFIG } from '../config/boardConfigTypes';
@@ -10,7 +11,7 @@ function cloneConfig(config: BoardConfig): BoardConfig {
 }
 
 export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: ClaudianPlugin): void {
-  const settings = plugin.settings as unknown as Record<string, unknown>;
+  const settings = asSettingsBag(plugin.settings);
   let config = cloneConfig(loadBoardConfig(settings).config);
 
   const wrap = container.createDiv({ cls: 'claudian-lane-editor' });

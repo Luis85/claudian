@@ -1,5 +1,5 @@
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
-import type { ClaudianSettings } from '../../core/types/settings';
+import { asSettingsBag, type ClaudianSettings } from '../../core/types/settings';
 import { resolveAgentBoardDefaultProvider } from './defaultProviderResolver';
 
 /**
@@ -15,7 +15,7 @@ export function resolveAgentBoardDefaultModel(settings: ClaudianSettings): strin
   const provider = resolveAgentBoardDefaultProvider(settings);
   if (!provider) return null;
 
-  const settingsBag = settings as unknown as Record<string, unknown>;
+  const settingsBag = asSettingsBag(settings);
   const config = ProviderRegistry.getChatUIConfig(provider);
 
   const stored = typeof settings.agentBoardDefaultModel === 'string'
