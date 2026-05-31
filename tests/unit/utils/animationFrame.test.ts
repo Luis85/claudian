@@ -1,6 +1,7 @@
 import {
   cancelScheduledAnimationFrame,
   scheduleAnimationFrame,
+  scheduleDelayedFrame,
 } from '@/utils/animationFrame';
 
 describe('animationFrame scheduling', () => {
@@ -55,5 +56,25 @@ describe('animationFrame scheduling', () => {
 
     expect(ownerClearTimeout).toHaveBeenCalledWith(456);
     expect(globalClearTimeout).not.toHaveBeenCalled();
+  });
+
+  it('schedules a delayed frame via the owner window timeout and is cancellable', () => {
+    const callback = jest.fn();
+    const ownerSetTimeout = jest.fn<ReturnType<Window['setTimeout']>, Parameters<Window['setTimeout']>>()
+      .mockReturnValue(789);
+    const ownerClearTimeout = jest.fn<void, [number]>();
+    const ownerWindow = {
+      setTimeout: ownerSetTimeout,
+      clearTimeout: ownerClearTimeout,
+    } as unknown as Window;
+
+    const frame = scheduleDelayedFrame(callback, 200, ownerWindow);
+
+    expect(frame).toEqual({ kind: 'timeout', id: 789, ownerWindow });
+    expect(ownerSetTimeout).toHaveBeenCalledWith(callback, 200);
+
+    cancelScheduledAnimationFrame(frame);
+
+    expect(ownerClearTimeout).toHaveBeenCalledWith(789);
   });
 });

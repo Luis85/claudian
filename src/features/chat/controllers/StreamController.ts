@@ -29,6 +29,7 @@ import {
   cancelScheduledAnimationFrame,
   scheduleAnimationFrame,
   type ScheduledAnimationFrame,
+  scheduleDelayedFrame,
 } from '../../../utils/animationFrame';
 import { formatDurationMmSs } from '../../../utils/date';
 import { extractDiffData } from '../../../utils/diff';
@@ -38,6 +39,7 @@ import { FLAVOR_TEXTS } from '../constants';
 import { collectAssistantReportText } from '../rendering/assistantReportText';
 import type { MessageRenderer, RenderContentOptions } from '../rendering/MessageRenderer';
 import { extractOrchestratorPlan, type OrchestratorPlan } from '../rendering/orchestratorPlanParser';
+import { scrollMessagesToBottom } from '../rendering/scrollToBottom';
 import { resolveSubagentLifecycleAdapter } from '../rendering/subagentLifecycleResolution';
 import {
   createSubagentBlock,
@@ -83,6 +85,13 @@ export interface StreamControllerDeps {
 
 export class StreamController {
   private static readonly ASYNC_SUBAGENT_RESULT_RETRY_DELAYS_MS = [200, 600, 1500] as const;
+
+  // Size-aware streaming backoff (PERF-3): full markdown re-parse of the live block is
+  // O(C²) as it grows. Below the threshold we re-render every frame for snappy feedback;
+  // past it we coalesce continuation renders behind a delay to cap the re-parse rate.
+  // The final render is always exact because finalize flushes synchronously.
+  private static readonly STREAM_REPARSE_BACKOFF_THRESHOLD_CHARS = 4096;
+  private static readonly STREAM_REPARSE_BACKOFF_MS = 200;
 
   private deps: StreamControllerDeps;
   private pendingTextRenderFrame: ScheduledAnimationFrame | null = null;
@@ -746,10 +755,14 @@ export class StreamController {
     }
 
     if (this.pendingTextRenderFrame === null && !this.isTextRenderRunning) {
-      this.pendingTextRenderFrame = scheduleAnimationFrame(() => {
-        this.pendingTextRenderFrame = null;
-        void this.renderPendingText();
-      }, this.getStreamingRenderWindow());
+      this.pendingTextRenderFrame = this.scheduleStreamContinuation(
+        this.deps.state.currentTextContent,
+        this.getStreamingRenderWindow(),
+        () => {
+          this.pendingTextRenderFrame = null;
+          void this.renderPendingText();
+        },
+      );
     }
 
     return this.pendingTextRenderPromise;
@@ -793,10 +806,14 @@ export class StreamController {
     }
 
     if (state.currentTextEl === textEl && state.currentTextContent !== content) {
-      this.pendingTextRenderFrame = scheduleAnimationFrame(() => {
-        this.pendingTextRenderFrame = null;
-        void this.renderPendingText();
-      }, this.getStreamingRenderWindow());
+      this.pendingTextRenderFrame = this.scheduleStreamContinuation(
+        state.currentTextContent,
+        this.getStreamingRenderWindow(),
+        () => {
+          this.pendingTextRenderFrame = null;
+          void this.renderPendingText();
+        },
+      );
       return;
     }
 
@@ -804,6 +821,22 @@ export class StreamController {
     this.pendingTextRenderPromise = null;
     this.resolvePendingTextRender = null;
     resolve?.();
+  }
+
+  /**
+   * Schedules the next streaming render of a growing block. Small blocks re-render every
+   * animation frame; large blocks coalesce behind a delay so the O(C²) full re-parse cost
+   * stays bounded. Either way the trailing render is exact via the synchronous flush path.
+   */
+  private scheduleStreamContinuation(
+    content: string,
+    renderWindow: Window | null,
+    callback: () => void,
+  ): ScheduledAnimationFrame {
+    if (content.length >= StreamController.STREAM_REPARSE_BACKOFF_THRESHOLD_CHARS) {
+      return scheduleDelayedFrame(callback, StreamController.STREAM_REPARSE_BACKOFF_MS, renderWindow);
+    }
+    return scheduleAnimationFrame(callback, renderWindow);
   }
 
   private cancelPendingTextRender(): void {
@@ -821,7 +854,11 @@ export class StreamController {
   private scheduleToolOutputRender(toolId: string, toolCall: ToolCallInfo): void {
     if (this.pendingToolOutputFrames.has(toolId)) return;
 
-    const frame = scheduleAnimationFrame(() => {
+    // Large tool output (e.g. long Bash logs) re-renders the whole growing result every
+    // frame. The structured tool renderers (line clamping, expand/collapse) make a safe
+    // delta-append impractical, so we apply the same size-aware backoff used for text to
+    // cap the re-render rate; the final result is rendered exactly on tool_result.
+    const render = () => {
       this.pendingToolOutputFrames.delete(toolId);
       updateToolCallResult(
         this.deps.plugin.app,
@@ -830,7 +867,12 @@ export class StreamController {
         this.deps.state.toolCallElements,
       );
       this.scrollToBottom();
-    }, this.getMessagesWindow());
+    };
+    const frame = this.scheduleStreamContinuation(
+      toolCall.result ?? '',
+      this.getMessagesWindow(),
+      render,
+    );
     this.pendingToolOutputFrames.set(toolId, frame);
   }
 
@@ -901,10 +943,14 @@ export class StreamController {
     }
 
     if (this.pendingThinkingRenderFrame === null && !this.isThinkingRenderRunning) {
-      this.pendingThinkingRenderFrame = scheduleAnimationFrame(() => {
-        this.pendingThinkingRenderFrame = null;
-        void this.renderPendingThinking();
-      }, this.getThinkingRenderWindow());
+      this.pendingThinkingRenderFrame = this.scheduleStreamContinuation(
+        this.deps.state.currentThinkingState?.content ?? '',
+        this.getThinkingRenderWindow(),
+        () => {
+          this.pendingThinkingRenderFrame = null;
+          void this.renderPendingThinking();
+        },
+      );
     }
 
     return this.pendingThinkingRenderPromise;
@@ -948,10 +994,14 @@ export class StreamController {
     }
 
     if (state.currentThinkingState === thinkingState && thinkingState && thinkingState.content !== content) {
-      this.pendingThinkingRenderFrame = scheduleAnimationFrame(() => {
-        this.pendingThinkingRenderFrame = null;
-        void this.renderPendingThinking();
-      }, this.getThinkingRenderWindow());
+      this.pendingThinkingRenderFrame = this.scheduleStreamContinuation(
+        thinkingState.content,
+        this.getThinkingRenderWindow(),
+        () => {
+          this.pendingThinkingRenderFrame = null;
+          void this.renderPendingThinking();
+        },
+      );
       return;
     }
 
@@ -1550,10 +1600,12 @@ export class StreamController {
   private applyScrollToBottom(): void {
     const { state, plugin } = this.deps;
     if (!(plugin.settings.enableAutoScroll ?? true)) return;
+    // `autoScrollEnabled` is the pinned-to-bottom flag: the scroll handler flips it off
+    // when the user scrolls up and back on when they return to the bottom. Gating on it here
+    // (instead of measuring scrollHeight every chunk) keeps streaming off the layout hot path.
     if (!state.autoScrollEnabled) return;
 
-    const messagesEl = this.deps.getMessagesEl();
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    scrollMessagesToBottom(this.deps.getMessagesEl());
   }
 
   private cancelPendingScroll(): void {
