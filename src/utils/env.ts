@@ -412,6 +412,21 @@ export function buildCuratedChildEnv(
   return result;
 }
 
+/**
+ * SECURITY (SEC-4): Curate the env for a vault-defined stdio MCP server. The
+ * server gets system-essentials plus its own configured vars and an enhanced
+ * PATH — never the host's full environment. Used both by the in-app connection
+ * test (`McpTester`) and the live chat spawn path (`options.mcpServers`).
+ */
+export function curateStdioMcpEnv(
+  configuredEnv?: Record<string, string>,
+): Record<string, string> {
+  return buildCuratedChildEnv({
+    ...configuredEnv,
+    PATH: getEnhancedPath(configuredEnv?.PATH),
+  });
+}
+
 function getDeviceSettingsStorage(): Storage | null {
   try {
     return typeof window === 'undefined' ? null : window.localStorage;

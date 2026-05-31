@@ -5,7 +5,7 @@ import type { Transport } from '@modelcontextprotocol/sdk/shared/transport';
 import * as http from 'http';
 import * as https from 'https';
 
-import { buildCuratedChildEnv, getEnhancedPath } from '../../utils/env';
+import { curateStdioMcpEnv } from '../../utils/env';
 import { parseCommand } from '../../utils/mcp';
 import type { ManagedMcpServer } from '../types';
 import { getMcpServerType } from '../types';
@@ -245,7 +245,7 @@ export async function testMcpServer(server: ManagedMcpServer): Promise<McpTestRe
         // SECURITY (SEC-4): MCP servers can be vault-defined/untrusted. Spawn them
         // with a curated env (system-essentials + the server's own configured vars)
         // rather than forwarding the host's full process.env.
-        env: buildCuratedChildEnv({ ...config.env, PATH: getEnhancedPath(config.env?.PATH) }),
+        env: curateStdioMcpEnv(config.env),
         stderr: 'ignore',
       });
     } else {

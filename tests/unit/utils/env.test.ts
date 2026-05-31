@@ -10,6 +10,7 @@ import * as env from '../../../src/utils/env';
 
 const {
   buildCuratedChildEnv,
+  curateStdioMcpEnv,
   cliPathRequiresNode,
   findNodeDirectory,
   findNodeExecutable,
@@ -103,6 +104,39 @@ describe('buildCuratedChildEnv (SEC-4)', () => {
   it('skips undefined override values', () => {
     const result = buildCuratedChildEnv({ MAYBE: undefined });
     expect('MAYBE' in result).toBe(false);
+  });
+});
+
+describe('curateStdioMcpEnv (SEC-4)', () => {
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it('drops arbitrary host secrets while keeping essentials, configured vars, and PATH', () => {
+    process.env.PATH = '/usr/bin';
+    process.env.HOME = '/home/tester';
+    process.env.AWS_SECRET_ACCESS_KEY = 'super-secret';
+
+    const result = curateStdioMcpEnv({ MY_SERVER_TOKEN: 'configured' });
+
+    expect(result.MY_SERVER_TOKEN).toBe('configured');
+    expect(result.HOME).toBe('/home/tester');
+    expect(result.PATH).toContain('/usr/bin');
+    expect(result.AWS_SECRET_ACCESS_KEY).toBeUndefined();
+  });
+
+  it('enhances a configured PATH rather than discarding it', () => {
+    const result = curateStdioMcpEnv({ PATH: '/server/bin' });
+    expect(result.PATH).toContain('/server/bin');
+  });
+
+  it('produces a curated env when no configured env is provided', () => {
+    process.env.GITHUB_TOKEN = 'ghp_xxx';
+    const result = curateStdioMcpEnv();
+    expect(result.GITHUB_TOKEN).toBeUndefined();
+    expect(typeof result.PATH).toBe('string');
   });
 });
 
