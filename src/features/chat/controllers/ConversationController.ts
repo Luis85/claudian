@@ -585,6 +585,19 @@ export class ConversationController {
       return (b.lastResponseAt ?? b.createdAt) - (a.lastResponseAt ?? a.createdAt);
     });
 
+    // Windowing hides everything past the first chunk behind "Show more". If the
+    // active conversation is older than that cut (e.g. an old thread was just
+    // reopened without a new response), pin it to the top so its "Current
+    // session" row stays visible; otherwise recency order is untouched.
+    const currentId = this.deps.state.currentConversationId;
+    if (currentId) {
+      const currentIdx = conversations.findIndex((c) => c.id === currentId);
+      if (currentIdx >= HISTORY_RENDER_WINDOW_SIZE) {
+        const [current] = conversations.splice(currentIdx, 1);
+        conversations.unshift(current);
+      }
+    }
+
     // Window the list: mount only a trailing chunk and reveal older
     // conversations on demand, bounding DOM/listeners to O(window). Items stay
     // direct children of the list; the "show more" control is moved to the end

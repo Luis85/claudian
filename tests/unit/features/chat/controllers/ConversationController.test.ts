@@ -786,6 +786,50 @@ describe('ConversationController', () => {
         const list = dropdown.children[1];
         expect(list.children.find((c: any) => c.hasClass('claudian-history-show-more'))).toBeUndefined();
       });
+
+      it('keeps the active conversation in the initial window when it sorts past the cap', () => {
+        // 130 conversations, recency ascending with i, so the active one (oldest)
+        // sorts to the very end — well past the 50-item window.
+        const many = Array.from({ length: 130 }, (_, i) => ({
+          id: `conv-${i}`,
+          title: `Conversation ${i}`,
+          createdAt: i,
+          lastResponseAt: i,
+        }));
+        deps.state.currentConversationId = 'conv-0'; // oldest => last after sort
+        (deps.plugin.getConversationList as jest.Mock).mockReturnValue(many);
+
+        controller.updateHistoryDropdown();
+
+        const list = dropdown.children[1];
+        const items = list.children.filter((c: any) => c.hasClass('claudian-history-item'));
+        expect(items).toHaveLength(50);
+        // Pinned to the top so its "Current session" row is visible without "Show more".
+        expect(items[0].hasClass('active')).toBe(true);
+        const activeItems = items.filter((c: any) => c.hasClass('active'));
+        expect(activeItems).toHaveLength(1);
+      });
+
+      it('does not reorder the active conversation when it already sorts within the window', () => {
+        const many = Array.from({ length: 130 }, (_, i) => ({
+          id: `conv-${i}`,
+          title: `Conversation ${i}`,
+          createdAt: i,
+          lastResponseAt: i,
+        }));
+        // conv-129 is newest => sorts first; already inside the window.
+        deps.state.currentConversationId = 'conv-129';
+        (deps.plugin.getConversationList as jest.Mock).mockReturnValue(many);
+
+        controller.updateHistoryDropdown();
+
+        const list = dropdown.children[1];
+        const items = list.children.filter((c: any) => c.hasClass('claudian-history-item'));
+        // Natural recency order preserved: newest first, and it is the active one.
+        expect(items[0].hasClass('active')).toBe(true);
+        const title = items[0].querySelector('.claudian-history-item-title');
+        expect(title?.textContent).toBe('Conversation 129');
+      });
     });
 
     describe('renderHistoryDropdown', () => {
