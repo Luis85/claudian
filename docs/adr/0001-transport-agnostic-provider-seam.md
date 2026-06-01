@@ -148,11 +148,14 @@ on day one.
 | Import site | Provider internal | Clean home (already exists) |
 |-------------|-------------------|------------------------------|
 | `src/features/settings/providerEnableUpdaters.ts:2-5` | `providers/{claude,codex,cursor,opencode}/settings` | a `setEnabled()` method on `ProviderSettingsReconciler`, routed via `getSettingsReconciler(id)` |
-| `src/features/settings/registry/fields/opencode.ts:2` | `providers/opencode/settings` (`getOpencodeProviderSettings`) | a mode-options accessor (the registration's `chatUIConfig.getModeSelector` already exists) |
+| `src/features/settings/registry/fields/opencode.ts:2` | `providers/opencode/settings` (`getOpencodeProviderSettings`) | **needs a new** registration-level mode-options accessor returning `availableModes`. Note: `chatUIConfig.getModeSelector` does **not** cover this — Opencode's impl returns `null` (`OpencodeChatUIConfig.ts:255`) and the settings field reads `availableModes` (`opencode.ts:42-45`), which the selector never exposes. This is the one Phase 0 site that is not pure indirection. |
 | `src/main.ts:64` / `:706` | `providers/opencode/modes` (`OPENCODE_PLAN_MODE_ID`, `OPENCODE_SAFE_MODE_ID`) | the reconciler's existing `normalizeOnLoad?()` hook (already wired through `ProviderSettingsCoordinator`) |
 
-This needs **no new type**. It captures the "no `providerId` branch, no hardcoded provider list"
-half of the goal immediately and guards it against regression.
+This needs **no new type** (methods on the existing registration/reconciler, not a new struct).
+Two of the three import sites are pure indirection; the Opencode mode-options site is the lone
+exception — it needs a small new `availableModes` accessor (see the table note). It captures the
+"no `providerId` branch, no hardcoded provider list" half of the goal immediately and guards it
+against regression.
 
 ### Move 2 — Extract the shared transport plumbing *(the most concretely justified de-dup)*
 
