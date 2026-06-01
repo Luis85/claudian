@@ -4,16 +4,16 @@ patchSetMaxListenersForElectron();
 
 import './providers';
 
-import type { Editor, TFile, TFolder, WorkspaceLeaf } from 'obsidian';
-import { debounce, MarkdownView, Notice, Plugin } from 'obsidian';
+import type { TFile, TFolder, WorkspaceLeaf } from 'obsidian';
+import { debounce, Notice, Plugin } from 'obsidian';
 
+import { registerPluginCommands } from './app/commands/registerPluginCommands';
 import { registerWorkspaceMenus } from './app/commands/registerWorkspaceMenus';
 import { ConversationStore } from './app/conversations/ConversationStore';
 import type { ClaudianEventMap } from './app/events/claudianEvents';
 import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
 import { SharedStorageService } from './app/storage/SharedStorageService';
 import type { SharedAppStorage } from './core/bootstrap/storage';
-import { registerCommandHotkey } from './core/commands/commandHotkeyRegistry';
 import { EventBus } from './core/events/EventBus';
 import { formatLogEntries } from './core/logging/formatLogEntries';
 import { Logger } from './core/logging/Logger';
@@ -45,27 +45,15 @@ import type { ChatViewPlacement, EnvironmentScope } from './core/types/settings'
 import { ClaudianView } from './features/chat/ClaudianView';
 import { GitService } from './features/chat/services/GitService';
 import { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
-import { type InlineEditContext, InlineEditModal } from './features/inline-edit/ui/InlineEditModal';
 import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
-import {
-  createWorkOrderFromBrowserSelection,
-  createWorkOrderTemplate,
-} from './features/tasks/commands/taskCommands';
 import { ChatTabExecutionSurface } from './features/tasks/execution/ChatTabExecutionSurface';
 import { ChatWorkOrderLinker } from './features/tasks/execution/ChatWorkOrderLinker';
-import { installPresetTemplates } from './features/tasks/templates/installPresetTemplates';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
-import {
-  createWorkOrderFromCurrentNoteInteractive,
-  createWorkOrderFromSelectionInteractive,
-  createWorkOrderInteractive,
-} from './features/tasks/ui/createWorkOrderInteractive';
 import { setLocale } from './i18n/i18n';
 import type { Locale } from './i18n/types';
 import { OPENCODE_PLAN_MODE_ID, OPENCODE_SAFE_MODE_ID } from './providers/opencode/modes';
 import type { BrowserSelectionContext } from './utils/browser';
 import { chatMessageText } from './utils/chatMessageText';
-import { buildCursorContext } from './utils/editor';
 import { getEnhancedPath } from './utils/env';
 import { revealWorkspaceLeaf } from './utils/obsidianCompat';
 import { getVaultPath } from './utils/path';
@@ -123,19 +111,6 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       void this.activateView();
     });
 
-    const openViewCmd = {
-      id: 'open-view',
-      name: 'Open chat view',
-      callback: () => {
-        void this.activateView();
-      },
-    };
-    this.addCommand(openViewCmd);
-    registerCommandHotkey({
-      commandId: openViewCmd.id,
-      label: openViewCmd.name,
-    });
-
     const taskExecutionSurface = new ChatTabExecutionSurface(this);
     this.registerView(
       VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
@@ -147,116 +122,6 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       void this.activateAgentBoardView();
     });
 
-    const openAgentBoardCmd = {
-      id: 'open-agent-board',
-       
-      name: 'Open Agent Board',
-      callback: () => {
-        void this.activateAgentBoardView();
-      },
-    };
-    this.addCommand(openAgentBoardCmd);
-    registerCommandHotkey({
-      commandId: openAgentBoardCmd.id,
-      label: openAgentBoardCmd.name,
-    });
-
-    const runNextReadyCmd = {
-      id: 'run-next-ready-work-order',
-      name: 'Run next ready work order',
-      callback: () => {
-        void this.runNextReadyWorkOrder();
-      },
-    };
-    this.addCommand(runNextReadyCmd);
-    registerCommandHotkey({
-      commandId: runNextReadyCmd.id,
-      label: runNextReadyCmd.name,
-    });
-
-    const createWorkOrderCmd = {
-      id: 'create-work-order',
-      name: 'Create work order',
-      callback: () => {
-        void createWorkOrderInteractive(this);
-      },
-    };
-    this.addCommand(createWorkOrderCmd);
-    registerCommandHotkey({
-      commandId: createWorkOrderCmd.id,
-      label: createWorkOrderCmd.name,
-    });
-
-    const createWorkOrderFromCurrentNoteCmd = {
-      id: 'create-work-order-from-current-note',
-      name: 'Create work order from current note',
-      callback: () => {
-        void createWorkOrderFromCurrentNoteInteractive(this);
-      },
-    };
-    this.addCommand(createWorkOrderFromCurrentNoteCmd);
-    registerCommandHotkey({
-      commandId: createWorkOrderFromCurrentNoteCmd.id,
-      label: createWorkOrderFromCurrentNoteCmd.name,
-    });
-
-    const createWorkOrderFromSelectionCmd = {
-      id: 'create-work-order-from-selection',
-      name: 'Create work order from selection',
-      editorCallback: () => {
-        void createWorkOrderFromSelectionInteractive(this);
-      },
-    };
-    this.addCommand(createWorkOrderFromSelectionCmd);
-    registerCommandHotkey({
-      commandId: createWorkOrderFromSelectionCmd.id,
-      label: createWorkOrderFromSelectionCmd.name,
-    });
-
-    const createWorkOrderTemplateCmd = {
-      id: 'create-work-order-template',
-      name: 'Create work-order template',
-      callback: () => {
-        void createWorkOrderTemplate(this);
-      },
-    };
-    this.addCommand(createWorkOrderTemplateCmd);
-    registerCommandHotkey({
-      commandId: createWorkOrderTemplateCmd.id,
-      label: createWorkOrderTemplateCmd.name,
-    });
-
-    const installCommonTemplatesCmd = {
-      id: 'install-common-work-order-templates',
-      name: 'Install common work-order templates',
-      callback: () => {
-        void (async () => {
-          const result = await installPresetTemplates(this);
-          const parts: string[] = [];
-          if (result.installed > 0) parts.push(`installed ${result.installed}`);
-          if (result.skipped > 0) parts.push(`skipped ${result.skipped} already present`);
-          new Notice(`Common work-order templates: ${parts.join(', ') || 'nothing to do'}.`);
-        })();
-      },
-    };
-    this.addCommand(installCommonTemplatesCmd);
-    registerCommandHotkey({
-      commandId: installCommonTemplatesCmd.id,
-      label: installCommonTemplatesCmd.name,
-    });
-
-    const createWorkOrderFromBrowserSelectionCmd = {
-      id: 'create-work-order-from-browser-selection',
-      name: 'Create work order from browser selection',
-      callback: () => {
-        void createWorkOrderFromBrowserSelection(this);
-      },
-    };
-    this.addCommand(createWorkOrderFromBrowserSelectionCmd);
-    registerCommandHotkey({
-      commandId: createWorkOrderFromBrowserSelectionCmd.id,
-      label: createWorkOrderFromBrowserSelectionCmd.name,
-    });
 
     const chatWorkOrderLinker = new ChatWorkOrderLinker(this);
 
@@ -270,166 +135,10 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       },
     });
 
-    const createWorkOrderFromChatConvCmd = {
-      id: 'create-work-order-from-chat-conversation',
-      name: 'Create work order from current chat conversation',
-      callback: () => {
-        void chatWorkOrderLinker.promoteActiveConversationToWorkOrder();
-      },
-    };
-    this.addCommand(createWorkOrderFromChatConvCmd);
-    registerCommandHotkey({
-      commandId: createWorkOrderFromChatConvCmd.id,
-      label: createWorkOrderFromChatConvCmd.name,
-    });
-
-    const copyDiagnosticLogsCmd = {
-      id: 'copy-diagnostic-logs',
-      name: 'Copy diagnostic logs',
-      callback: () => { void this.copyDiagnosticLogs(); },
-    };
-    this.addCommand(copyDiagnosticLogsCmd);
-    registerCommandHotkey({
-      commandId: copyDiagnosticLogsCmd.id,
-      label: copyDiagnosticLogsCmd.name,
-    });
-
-    const clearDiagnosticLogsCmd = {
-      id: 'clear-diagnostic-logs',
-      name: 'Clear diagnostic logs',
-      callback: () => {
-        this.logger.clear();
-        new Notice('Diagnostic logs cleared');
-      },
-    };
-    this.addCommand(clearDiagnosticLogsCmd);
-    registerCommandHotkey({
-      commandId: clearDiagnosticLogsCmd.id,
-      label: clearDiagnosticLogsCmd.name,
-    });
+    registerPluginCommands({ plugin: this, taskExecutionSurface, chatWorkOrderLinker });
 
     registerWorkspaceMenus(this);
 
-    const inlineEditCmd = {
-      id: 'inline-edit',
-      name: 'Inline edit',
-      editorCallback: async (editor: Editor, ctx: unknown) => {
-        const view = ctx instanceof MarkdownView
-          ? ctx
-          : this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!view) {
-          new Notice('Inline edit unavailable: could not access the active Markdown view.');
-          return;
-        }
-
-        const selectedText = editor.getSelection();
-        const notePath = view.file?.path || 'unknown';
-
-        let editContext: InlineEditContext;
-        if (selectedText.trim()) {
-          editContext = { mode: 'selection', selectedText };
-        } else {
-          const cursor = editor.getCursor();
-          const cursorContext = buildCursorContext(
-            (line) => editor.getLine(line),
-            editor.lineCount(),
-            cursor.line,
-            cursor.ch
-          );
-          editContext = { mode: 'cursor', cursorContext };
-        }
-
-        const modal = new InlineEditModal(
-          this.app,
-          this,
-          editor,
-          view,
-          editContext,
-          notePath,
-          () => this.getView()?.getActiveTab()?.ui.externalContextSelector?.getExternalContexts() ?? []
-        );
-        const result = await modal.openAndWait();
-
-        if (result.decision === 'accept' && result.editedText !== undefined) {
-          new Notice(editContext.mode === 'cursor' ? 'Inserted' : 'Edit applied');
-        }
-      },
-    };
-    this.addCommand(inlineEditCmd);
-    registerCommandHotkey({
-      commandId: inlineEditCmd.id,
-      label: inlineEditCmd.name,
-    });
-
-    const newTabCmd = {
-      id: 'new-tab',
-      name: 'New tab',
-      checkCallback: (checking: boolean) => {
-        if (!this.canCreateNewTab()) return false;
-
-        if (!checking) {
-          void this.openNewTab();
-        }
-        return true;
-      },
-    };
-    this.addCommand(newTabCmd);
-    registerCommandHotkey({
-      commandId: newTabCmd.id,
-      label: newTabCmd.name,
-    });
-
-    const newSessionCmd = {
-      id: 'new-session',
-      name: 'New session (in current tab)',
-      checkCallback: (checking: boolean) => {
-        const view = this.getView();
-        if (!view) return false;
-
-        const tabManager = view.getTabManager();
-        if (!tabManager) return false;
-
-        const activeTab = tabManager.getActiveTab();
-        if (!activeTab) return false;
-
-        if (activeTab.state.isStreaming) return false;
-
-        if (!checking) {
-          void tabManager.createNewConversation();
-        }
-        return true;
-      },
-    };
-    this.addCommand(newSessionCmd);
-    registerCommandHotkey({
-      commandId: newSessionCmd.id,
-      label: newSessionCmd.name,
-    });
-
-    const closeCurrentTabCmd = {
-      id: 'close-current-tab',
-      name: 'Close current tab',
-      checkCallback: (checking: boolean) => {
-        const view = this.getView();
-        if (!view) return false;
-
-        const tabManager = view.getTabManager();
-        if (!tabManager) return false;
-
-        if (!checking) {
-          const activeTabId = tabManager.getActiveTabId();
-          if (activeTabId) {
-            void tabManager.closeTab(activeTabId);
-          }
-        }
-        return true;
-      },
-    };
-    this.addCommand(closeCurrentTabCmd);
-    registerCommandHotkey({
-      commandId: closeCurrentTabCmd.id,
-      label: closeCurrentTabCmd.name,
-    });
 
     this.addSettingTab(new ClaudianSettingTab(this.app, this));
   }
@@ -547,7 +256,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     await revealWorkspaceLeaf(workspace, leaf);
   }
 
-  private async runNextReadyWorkOrder(): Promise<void> {
+  async runNextReadyWorkOrder(): Promise<void> {
     await this.activateAgentBoardView();
     const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN_AGENT_BOARD)[0];
     const view = leaf?.view;
@@ -568,7 +277,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     }
   }
 
-  private canCreateNewTab(): boolean {
+  canCreateNewTab(): boolean {
     const hasClaudianLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN).length > 0;
     const view = this.getView();
     const tabManager = view?.getTabManager();
@@ -594,7 +303,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     return this.getView();
   }
 
-  private async openNewTab(): Promise<void> {
+  async openNewTab(): Promise<void> {
     const existingView = this.getView();
     if (existingView) {
       await existingView.createNewTab();
