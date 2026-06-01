@@ -10,6 +10,7 @@ import { Notice, Plugin } from 'obsidian';
 import { registerPluginCommands } from './app/commands/registerPluginCommands';
 import { registerWorkspaceMenus } from './app/commands/registerWorkspaceMenus';
 import { ConversationStore } from './app/conversations/ConversationStore';
+import { EnvironmentApplyService } from './app/environment/EnvironmentApplyService';
 import type { ClaudianEventMap } from './app/events/claudianEvents';
 import { PluginLifecycle } from './app/lifecycle/PluginLifecycle';
 import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
@@ -22,14 +23,12 @@ import { Logger } from './core/logging/Logger';
 import {
   getEnvironmentVariablesForScope as getScopedEnvironmentVariables,
   getRuntimeEnvironmentText,
-  setEnvironmentVariablesForScope,
 } from './core/providers/providerEnvironment';
 import { ProviderRegistry } from './core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from './core/providers/ProviderSettingsCoordinator';
 import { ProviderWorkspaceRegistry } from './core/providers/ProviderWorkspaceRegistry';
 import type { ProviderId } from './core/providers/types';
 import type { AppTabManagerState } from './core/providers/types';
-import { DEFAULT_CHAT_PROVIDER_ID } from './core/providers/types';
 import type {
   ChatMessageAction,
   ClaudianSettings,
@@ -38,7 +37,6 @@ import type {
   ConversationSnapshot,
 } from './core/types';
 import {
-  asSettingsBag,
   VIEW_TYPE_CLAUDIAN,
   VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
 } from './core/types';
@@ -71,9 +69,10 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   readonly chatMessageActions: ChatMessageAction[] = [];
   storage!: SharedAppStorage;
   gitStatusWatcher: GitStatusWatcher | null = null;
-  private conversationStore!: ConversationStore;
+  conversationStore!: ConversationStore;
   private lifecycle!: PluginLifecycle;
   private viewActivator!: PluginViewActivator;
+  private envApply!: EnvironmentApplyService;
   lastKnownTabManagerState: AppTabManagerState | null = null;
 
   async onload() {
@@ -89,6 +88,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     this.lifecycle.installGitWatcher();
 
     this.viewActivator = new PluginViewActivator(this);
+
+    this.envApply = new EnvironmentApplyService(this);
 
     await ProviderWorkspaceRegistry.initializeAll(this);
 
@@ -301,116 +302,13 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
   /** Updates and persists environment variables, restarting processes to apply changes. */
   async applyEnvironmentVariables(scope: EnvironmentScope, envText: string): Promise<void> {
-    await this.applyEnvironmentVariablesBatch([{ scope, envText }]);
+    return this.envApply.apply(scope, envText);
   }
 
   async applyEnvironmentVariablesBatch(
     updates: Array<{ scope: EnvironmentScope; envText: string }>,
   ): Promise<void> {
-    const settingsBag = asSettingsBag(this.settings);
-    const nextEnvironmentByScope = new Map<EnvironmentScope, string>();
-    for (const update of updates) {
-      nextEnvironmentByScope.set(update.scope, update.envText);
-    }
-
-    const changedScopes: EnvironmentScope[] = [];
-    for (const [scope, envText] of nextEnvironmentByScope) {
-      const currentValue = getScopedEnvironmentVariables(settingsBag, scope);
-      if (currentValue !== envText) {
-        changedScopes.push(scope);
-      }
-      setEnvironmentVariablesForScope(settingsBag, scope, envText);
-    }
-
-    if (changedScopes.length === 0) {
-      await this.saveSettings();
-      return;
-    }
-
-    const affectedProviderIds = this.getAffectedEnvironmentProviders(changedScopes);
-    ProviderSettingsCoordinator.handleEnvironmentChange(settingsBag, affectedProviderIds);
-    const { changed, invalidatedConversations } = this.reconcileModelWithEnvironment(affectedProviderIds);
-    await this.saveSettings();
-
-    if (invalidatedConversations.length > 0) {
-      for (const conv of invalidatedConversations) {
-        await this.storage.sessions.saveMetadata(
-          this.storage.sessions.toSessionMetadata(conv)
-        );
-      }
-    }
-
-    const view = this.getView();
-    const tabManager = view?.getTabManager();
-
-    if (tabManager) {
-      const affectedTabs = tabManager.getAllTabs().filter((tab) => (
-        affectedProviderIds.includes(tab.providerId ?? DEFAULT_CHAT_PROVIDER_ID)
-      ));
-      const syncTabRuntimeState = (tab: (typeof affectedTabs)[number]): void => {
-        if (!tab.service || !tab.serviceInitialized) {
-          return;
-        }
-
-        const conversation = tab.conversationId
-          ? this.getConversationSync(tab.conversationId)
-          : null;
-        const hasConversationContext = (conversation?.messages.length ?? 0) > 0;
-        const externalContextPaths = tab.ui.externalContextSelector?.getExternalContexts()
-          ?? (hasConversationContext
-            ? conversation?.externalContextPaths ?? []
-            : this.settings.persistentExternalContextPaths ?? []);
-
-        tab.service.syncConversationState(conversation, externalContextPaths);
-      };
-
-      for (const tab of affectedTabs) {
-        if (tab.state.isStreaming) {
-          tab.controllers.inputController?.cancelStreaming();
-        }
-      }
-
-      let failedTabs = 0;
-      if (changed) {
-        for (const tab of affectedTabs) {
-          if (!tab.service || !tab.serviceInitialized) {
-            continue;
-          }
-          try {
-            syncTabRuntimeState(tab);
-            tab.service.resetSession();
-            await tab.service.ensureReady();
-          } catch {
-            failedTabs++;
-          }
-        }
-      } else {
-        for (const tab of affectedTabs) {
-          if (!tab.service || !tab.serviceInitialized) {
-            continue;
-          }
-          try {
-            syncTabRuntimeState(tab);
-            await tab.service.ensureReady({ force: true });
-          } catch {
-            failedTabs++;
-          }
-        }
-      }
-      if (failedTabs > 0) {
-        new Notice(`Environment changes applied, but ${failedTabs} affected tab(s) failed to restart.`);
-      }
-    }
-
-    for (const openView of this.getAllViews()) {
-      openView.invalidateProviderCommandCaches(affectedProviderIds);
-      openView.refreshModelSelector();
-    }
-
-    const noticeText = changed
-      ? 'Environment variables applied. Sessions will be rebuilt on next message.'
-      : 'Environment variables applied.';
-    new Notice(noticeText);
+    return this.envApply.applyBatch(updates);
   }
 
   /** Returns the runtime environment variables (fixed at plugin load). */
