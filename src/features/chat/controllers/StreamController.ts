@@ -75,6 +75,7 @@ import {
   projectNoticeText,
   projectUsage,
 } from './StreamProjection';
+import { ToolCallIndex } from './toolCallIndex';
 
 export interface StreamControllerDeps {
   plugin: ClaudianPlugin;
@@ -118,8 +119,37 @@ export class StreamController {
   private lifecycleSubagentStates = new Map<string, SubagentState>(); // spawn callId → SubagentState
   private lifecycleAgentIdToSpawnId = new Map<string, string>();      // agentId → spawn callId
 
+  // O(1) tool-call lookup accelerator for the streaming hot path (avoids
+  // per-chunk linear scans over a turn's accumulated tool calls). Lazily kept
+  // in sync per message; always backed by the authoritative `msg.toolCalls`.
+  private toolCallIndex = new ToolCallIndex();
+  private indexedToolCallsMsg: ChatMessage | null = null;
+  private indexedToolCallsCount = 0;
+
   constructor(deps: StreamControllerDeps) {
     this.deps = deps;
+  }
+
+  /**
+   * Resolves a tool call by id in O(1). Lazily reindexes when the active
+   * message changes and tail-indexes newly appended tool calls, so the cost is
+   * amortized constant. Falls back to a linear scan via {@link ToolCallIndex},
+   * keeping results correct regardless of index state.
+   */
+  private findToolCall(msg: ChatMessage, id: string): ToolCallInfo | undefined {
+    const toolCalls = msg.toolCalls;
+    const count = toolCalls?.length ?? 0;
+    if (this.indexedToolCallsMsg !== msg) {
+      this.toolCallIndex.reindex(toolCalls);
+      this.indexedToolCallsMsg = msg;
+      this.indexedToolCallsCount = count;
+    } else if (count > this.indexedToolCallsCount) {
+      for (let i = this.indexedToolCallsCount; i < count; i++) {
+        this.toolCallIndex.add(toolCalls![i]);
+      }
+      this.indexedToolCallsCount = count;
+    }
+    return this.toolCallIndex.get(id, toolCalls);
   }
 
   setOrchestratorCallbacks(
@@ -308,7 +338,7 @@ export class StreamController {
     const { state } = this.deps;
 
     // Check if this is an update to an existing tool call
-    const existingToolCall = msg.toolCalls?.find(tc => tc.id === chunk.id);
+    const existingToolCall = this.findToolCall(msg, chunk.id);
     if (existingToolCall) {
       const newInput = chunk.input || {};
       if (Object.keys(newInput).length > 0) {
@@ -472,7 +502,7 @@ export class StreamController {
       this.renderPendingTool(chunk.id);
     }
 
-    const existingToolCall = msg.toolCalls?.find(tc => tc.id === chunk.id);
+    const existingToolCall = this.findToolCall(msg, chunk.id);
     if (!existingToolCall) {
       return;
     }
@@ -542,7 +572,7 @@ export class StreamController {
     chunk: { type: 'tool_result'; id: string; content: string; isError?: boolean },
     msg: ChatMessage
   ): boolean {
-    const existingToolCall = msg.toolCalls?.find(tc => tc.id === chunk.id);
+    const existingToolCall = this.findToolCall(msg, chunk.id);
     if (!existingToolCall) return false;
     const normalizedContent = this.normalizeToolResultContent(chunk.content);
 
@@ -586,7 +616,7 @@ export class StreamController {
         existingToolCall,
         this.lifecycleAgentIdToSpawnId,
       )) {
-        const spawnToolCall = msg.toolCalls?.find(tc => tc.id === spawnId);
+        const spawnToolCall = this.findToolCall(msg, spawnId);
         const subagentState = this.lifecycleSubagentStates.get(spawnId);
         if (!spawnToolCall || !subagentState) continue;
 
@@ -656,7 +686,7 @@ export class StreamController {
       this.renderPendingTool(chunk.id);
     }
 
-    const existingToolCall = msg.toolCalls?.find(tc => tc.id === chunk.id);
+    const existingToolCall = this.findToolCall(msg, chunk.id);
 
     // Regular tool result
     const isBlocked = isBlockedToolResult(normalizedContent, chunk.isError);
@@ -1386,9 +1416,10 @@ export class StreamController {
     input?: Record<string, unknown>
   ): ToolCallInfo {
     msg.toolCalls = msg.toolCalls || [];
-    const existing = msg.toolCalls.find(
-      tc => tc.id === toolId && isSubagentToolName(tc.name)
-    );
+    const existingById = this.findToolCall(msg, toolId);
+    const existing = existingById && isSubagentToolName(existingById.name)
+      ? existingById
+      : undefined;
     if (existing) {
       if (input && Object.keys(input).length > 0) {
         existing.input = { ...existing.input, ...input };
@@ -1418,9 +1449,10 @@ export class StreamController {
   }
 
   private linkTaskToolCallToSubagent(msg: ChatMessage, subagent: SubagentInfo): boolean {
-    const taskToolCall = msg.toolCalls?.find(
-      tc => tc.id === subagent.id && isSubagentToolName(tc.name)
-    );
+    const taskToolCallById = this.findToolCall(msg, subagent.id);
+    const taskToolCall = taskToolCallById && isSubagentToolName(taskToolCallById.name)
+      ? taskToolCallById
+      : undefined;
     if (!taskToolCall) return false;
     this.applySubagentToTaskToolCall(taskToolCall, subagent);
     return true;

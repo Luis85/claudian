@@ -73,9 +73,19 @@ CLAUDIAN_PERF_JSON=perf.jsonl npm run test:perf     # also append trend records
 
 `tests/perf/*.perf.test.ts` run via `jest.perf.config.js` and are deliberately
 excluded from `npm test`, CI, and coverage. Each spec pairs deterministic
-scaling assertions (cost must track the render window, not conversation length)
+scaling assertions (cost must track a bounded window, not unbounded input)
 with a report-only metrics table for long-term trend tracking; timings are never
 asserted, so the suite stays stable on noisy machines.
+
+Current coverage, by user-visible path:
+
+| Spec | Guards | Scales with |
+|------|--------|-------------|
+| `messageRenderer.perf` | mounted DOM/listeners stay O(render window) | conversation length |
+| `toolCallIndex.perf` | streaming tool lookup stays O(1)/chunk | tools per turn |
+| `claudeHistory.perf` | `filterActiveBranch` stays ~linear | transcript length |
+| `codexHistory.perf` | `parseCodexSessionContent` stays ~linear | transcript length |
+| `conversationHistory.perf` | history-dropdown DOM growth (monitored, unwindowed) + `loadConversations` load/sort | conversation count |
 
 ## Storage
 
