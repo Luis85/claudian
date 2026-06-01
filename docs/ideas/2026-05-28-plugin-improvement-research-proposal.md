@@ -8,8 +8,10 @@ relations:
 # Plugin improvement research proposal
 
 Date: 2026-05-28
+Revised: 2026-06-01 (status reconciliation against work landed since the original draft)
 Branch: `docs/plugin-improvement-proposal`
 Scope: Claudian Obsidian plugin, with emphasis on provider-backed agent chat, vault context, safety, MCP, reliability, and market positioning.
+Related: [`docs/reviews/2026-05-31-codebase-review-and-improvement-plan.md`](../reviews/2026-05-31-codebase-review-and-improvement-plan.md), [`docs/adr/0001-transport-agnostic-provider-seam.md`](../adr/0001-transport-agnostic-provider-seam.md)
 
 ## Executive summary
 
@@ -29,6 +31,52 @@ The first implementation wave should prioritize:
 4. **Provider stream/history fixtures:** golden tests that protect provider-native stream and replay behavior before deeper refactors.
 
 This is more strategically useful than starting with broad internal runtime refactors because it improves activation, trust, supportability, and competitive positioning immediately.
+
+## Status reconciliation (revised 2026-06-01)
+
+This proposal was drafted 2026-05-28. In the days since, two companion documents drove work that overlaps large parts of it, so this section records what now **holds**, what is **done**, and what is **superseded** — and the rest of the document is annotated inline to match.
+
+- [`docs/reviews/2026-05-31-codebase-review-and-improvement-plan.md`](../reviews/2026-05-31-codebase-review-and-improvement-plan.md) — a seven-pass whole-codebase review. Its Phase 0 (CI green + lifecycle), Phase 1a (security defaults), Phase 1b (long-chat perf), Phase 1c (Obsidian conformance), Phase 2 (architecture de-coupling), and Phase 3 (guardrails) have **largely landed** across PRs #9–#19. It executed most of this proposal's Wave 0 trust/security defaults and its architecture-deepening items.
+- [`docs/adr/0001-transport-agnostic-provider-seam.md`](../adr/0001-transport-agnostic-provider-seam.md) (proposed, 2026-06-01) — **supersedes** this proposal's "runtime capability resolver before splitting `ChatRuntime`" framing (Wave 3 §9) with a concrete, agreed seam design: a slim `ChatRuntimeCore` plus opt-in capability mixins, a declarative nested capability **descriptor**, a single `RuntimeHost` replacing the seven `setXxxCallback()` setters, a declarative tool manifest, and optional shared transport helpers.
+
+**Net effect:** the trust-baseline and most of the internal architecture work this proposal called for is now done or governed by a more specific document. The **product/UX trust layer this proposal uniquely owns — visible context envelope, citations, Obsidian-safe edit routing, the audit/diagnostics center, the MCP workspace, the invocation catalog, and onboarding — is the still-open, highest-leverage remainder.** Build/release hygiene (CI build, Node alignment, repo naming, contributor docs) also remains open and is cheap.
+
+### Initiative status
+
+| Initiative | Section | Status (2026-06-01) | Evidence / cross-reference |
+| --- | --- | --- | --- |
+| Safe permission defaults (Claude `normal`, Codex `workspace-write`) | 0.1 | **Done** | `src/app/settings/defaultSettings.ts:11`; review SEC-1. Bypass/danger now require explicit `yolo` opt-in. |
+| One-time danger-mode warning before YOLO | 0.1 | **Done** | `src/features/chat/tabs/tabUi.ts:484-490`; `yoloModeWarningShown` flag. |
+| Per-vault trust gate for risky project settings + vault MCP default-disabled | 0.1 (implied) | **Done (stronger than proposed)** | `src/core/security/vaultTrust.ts`; review SEC-2/SEC-3. |
+| Curated child env for stdio MCP spawns | 0.1 / 2.6 | **Done** | `McpServerManager.getActiveServers` (`curateStdioMcpEnv`); review SEC-4; proxy-URL credential stripping. |
+| Replace user-facing "YOLO" label with clearer terms | 0.1 | **Open** | `*ChatUIConfig.ts` still show the `YOLO`/`Safe` toggle label. |
+| Per-tab safety summary card | 0.1 / 4 | **Open** | No `SafetySummary` surface; data exists but is not assembled into a per-tab card. |
+| CI runs `npm run build` | 0.2 | **Open** | `.github/workflows/ci.yml` runs lint/typecheck/test/coverage only. |
+| Align CI/release Node versions | 0.2 | **Open** | CI Node 22 vs release Node 20. |
+| Package allowlist / `npm pack` guard | 0.2 | **Open (low priority)** | No `files` field / `.npmignore` (1070 files in a dry run) — but this package is never published to npm, so the bloat is theoretical. |
+| Release-artifact smoke (version sync, size, `minAppVersion`) | 0.2 | **Partial** | `scripts/release.mjs` + `scripts/test-build.mjs` assert the three assets exist; no size/version-sync check and not wired into CI. |
+| `CONTRIBUTING.md` / `SECURITY.md` / PR template | 0.2 | **Open** | All absent. |
+| Resolve fork/upstream repo naming | 0.2 / Risks | **Open (confirmed defect)** | `manifest.json` id `claudian-cursor`, author `YishenTu`; `README.md` links to `YishenTu/claudian`; `scripts/release.mjs` targets `Luis85/claudian`. Three-way mismatch. |
+| `ComposerContextBuilder` normalized context envelope | 1.1 | **Open** | Not present; context still assembled across `InputController`, file-context state/view, selection controllers, and prompt encoders. |
+| Explicit-context citations via `ContextSourceHandle` | 1.2 | **Open** | No `ContextSourceHandle` type. |
+| `VaultEditRouter` / Markdown-safe edit routing | 1.3 | **Open (partial)** | OBS-4 moved work-order note writes to `vault.process()`; no general edit router. |
+| Agent Safety & Audit Center | 2.4 | **Partial (scaffolded)** | `src/core/logging/` (leveled logger + redaction + ring buffer) and a diagnostics settings tab exist; copy/clear are stubbed (`diagnostics.ts` `TODO Phase F`). No `RuntimeAuditSink` / `RuntimeAuditEvent` / `RuntimeDiagnosticsSnapshot`. |
+| Secret references / Obsidian `SecretStorage` | 2.5 | **Open** | API keys, MCP env, and HTTP headers persist as plaintext; `redact.ts` covers logs only (broadened by SEC-6). |
+| MCP threat-model controls (risk labels, health, provenance, HTTPS/SSRF) | 2.6 | **Partial** | SEC-3/SEC-4 hardening done; per-server/per-tool enablement metadata exists; risk labels, health panel, provenance UI, and non-HTTPS/SSRF warnings open. `supportsMcpTools` is `true` only for Claude (Codex/Opencode/Cursor `false`). |
+| `ExternalPathGrant` + network egress policy | 2.7 | **Partial** | External paths are a flat string list; SEC-5 added ACP vault containment; Codex has reactive per-session network approval. No grant model or configurable egress policy. |
+| Provider stream/history golden fixtures | 3.8 | **Open** | No `ProviderStreamFixtureHarness`; the perf monitoring suite is a separate concern. |
+| Runtime capability resolver / split `ChatRuntime` | 3.9 | **Superseded** | See ADR 0001. The broad interface and Opencode/Cursor no-op `rewind()` are confirmed; the agreed design is `ChatRuntimeCore` + mixins + descriptor + `RuntimeHost`, not a `RuntimeCapabilityResolver`. |
+| `ConversationSessionEnvelope` | 3.10 | **Open (partial)** | `ConversationStore` extracted (ARCH-3) moved session/conversation CRUD out of `main.ts`; the envelope itself is unbuilt. |
+| Provider setup / onboarding wizard + comfort profiles | 4.11 | **Partial** | A first-run banner exists; the wizard, comfort profiles, and instruction viewer/validator are open. |
+| `ProviderInvocationCatalog` facade | 4.12 | **Open** | Not present. |
+| Settings IA reorg + accessibility audit | 4.13 | **Open (partial)** | A diagnostics tab exists; the four-bucket IA reorg and a11y audit are open. Q-3 added `no-explicit-any` warn + coverage thresholds. |
+
+### Corrections to the original findings
+
+- **`Tab.ts` is no longer a god file.** It is now a 45-line re-export barrel; tab coordination was split into `src/features/chat/tabs/tabControllers.ts`, `tabFactory.ts`, `tabLifecycle.ts`, `tabUi.ts`, and `tabInputWiring.ts` (review ARCH-5a). `InputController.ts` (~1463 lines) and `StreamController.ts` (~1694 lines) remain large, but `QueuedMessageController` was extracted from the former and a provider-neutral stream-projection layer (ARCH-6) from the latter; only `ApprovalPromptController` is still pending.
+- **"No central diagnostics/logging Module" was inaccurate.** `src/core/logging/` (a leveled, namespaced logger with redaction and a bounded ring buffer) and a typed `EventBus` already existed, and a "Diagnostics" settings tab with copy/clear log actions is scaffolded. Wave 2's diagnostics work is therefore an *extension* (audit events + redacted snapshot export), not greenfield.
+- **The Phase 0 "baseline caveat" is resolved.** The file-context typecheck/test failures seen during research were not a real source defect — the review traced them to platform-coupled tests (win32 assertions running on POSIX CI), fixed them, and added a win32 + ubuntu CI matrix (review S0-1). The "re-run the targeted file-context suite before claiming a baseline failure" step is now moot.
+- **The `core/` → `main.ts` coupling is being closed.** ARCH-1 extracted a narrow `PluginContext` interface and ARCH-2 routed provider defaults through registration; `madge` circular dependencies dropped 184 → 52.
 
 ## Decision framing
 
@@ -55,17 +103,18 @@ No product code was changed for this proposal.
 
 ## Local repository findings
 
-Dedicated subagents inspected the repository without editing files and found these recurring friction points:
+Dedicated subagents inspected the repository without editing files and found these recurring friction points. *(See [Status reconciliation](#status-reconciliation-revised-2026-06-01) for what has since changed; corrections are noted inline below.)*
 
-- `src/features/chat/controllers/InputController.ts`, `src/features/chat/controllers/StreamController.ts`, `src/features/chat/tabs/Tab.ts`, and provider runtimes are large coordination Modules with many ordering constraints.
-- Context assembly is scattered across the composer, `src/features/chat/ui/FileContext.ts`, file-context state/view submodules, selection controllers, provider prompt encoders, MCP mention handling, image handling, and session persistence.
-- The `ChatRuntime` Interface is broad enough that newer provider Adapters implement no-op or unsupported methods.
-- Provider stream projection is powerful but brittle: live provider events, history replay, renderer expectations, and tool/subagent normalization need golden parity tests.
-- CI runs lint/typecheck/test but does not run `npm run build`; release uses Node 20 while CI uses Node 22.
-- A package dry run includes far more files than the Obsidian release needs.
-- There is no central diagnostics/logging Module, no automated accessibility audit, no release-artifact smoke test, and no contributor-facing `CONTRIBUTING.md`.
+- `src/features/chat/controllers/InputController.ts` (~1463 lines) and `src/features/chat/controllers/StreamController.ts` (~1694 lines), plus provider runtimes, are large coordination Modules with many ordering constraints. *(Update: `Tab.ts` is no longer one of these — it is now a 45-line barrel after the ARCH-5a split; `QueuedMessageController` and a stream-projection layer have already been extracted.)*
+- Context assembly is scattered across the composer, `src/features/chat/ui/FileContext.ts`, file-context state/view submodules, selection controllers, provider prompt encoders, MCP mention handling, image handling, and session persistence. *(Still holds — no `ComposerContextBuilder` exists.)*
+- The `ChatRuntime` Interface is broad enough that newer provider Adapters implement no-op or unsupported methods (confirmed: Opencode/Cursor `rewind()` return `canRewind: false`). *(Now governed by ADR 0001.)*
+- Provider stream projection is powerful but brittle: live provider events, history replay, renderer expectations, and tool/subagent normalization need golden parity tests. *(Still holds — no fixture harness exists.)*
+- CI runs lint/typecheck/test (and now a coverage job) but does not run `npm run build`; release uses Node 20 while CI uses Node 22. *(Both still hold.)*
+- A package dry run includes far more files than the Obsidian release needs (no `files`/`.npmignore`). *(Still holds, but low priority — the package is not published to npm.)*
+- There is no automated accessibility audit, no CI-wired release-artifact smoke test, and no contributor-facing `CONTRIBUTING.md`/`SECURITY.md`. *(Correction: a central logging Module **does** exist — `src/core/logging/` with a leveled logger, redaction, and a ring buffer — plus a scaffolded Diagnostics settings tab; the original "no central diagnostics/logging Module" claim was inaccurate.)*
+- Repository naming is inconsistent across the fork: `manifest.json` id `claudian-cursor` (author `YishenTu`), `README.md` links to `YishenTu/claudian`, and `scripts/release.mjs` targets `Luis85/claudian`. This is a concrete defect to resolve before release-facing work.
 
-Baseline caveat: during research, one explorer saw file-context-related typecheck/test failures in a dirty checkout, while a later engineering reviewer reported `npm run typecheck` passing in the proposal worktree. Phase 0 should re-run the targeted file-context test suite before claiming a current baseline failure.
+Baseline caveat *(resolved)*: the file-context typecheck/test failures one explorer saw were traced by the 2026-05-31 review to platform-coupled tests (win32 path assertions running on POSIX CI), not a source defect. They were fixed and a win32 + ubuntu CI matrix was added (review S0-1), so there is no current baseline failure to re-confirm.
 
 ## Web research themes
 
@@ -159,6 +208,8 @@ This positions Claudian against three alternatives:
 
 **Recommendation strength:** Strong / P0
 
+**Status (2026-06-01): mostly done.** Safe defaults (Claude `normal`, Codex `workspace-write`), a one-time danger-mode warning, a per-vault trust gate for risky project settings, vault MCP default-disabled, and curated child env all landed (review SEC-1/2/3/4). **Remaining:** replace the user-facing "YOLO" toggle label with clearer terms, add a per-tab safety summary card, and enrich approval cards (data-may-leave flag, diff preview).
+
 **Problem**
 
 Agent runtimes can be configured in high-trust modes. A new user should not silently start in a mode equivalent to bypassing permissions or using danger-full-access. Existing power users can keep high-trust modes, but the UI should make the risk explicit.
@@ -179,6 +230,8 @@ Agent runtimes can be configured in high-trust modes. A new user should not sile
 ### 0.2 Build/release/packaging guardrails
 
 **Recommendation strength:** Strong / P0
+
+**Status (2026-06-01): open.** None of these guardrails have landed yet, and the fork/upstream naming mismatch is now a confirmed three-way defect (see below). `scripts/release.mjs` and `scripts/test-build.mjs` already assert the three release assets exist, but no version-sync/size smoke check is wired into CI. Version-sync tooling is `scripts/sync-version.js` (not the upstream template's `version-bump.mjs`).
 
 **Issues found**
 
@@ -201,6 +254,8 @@ Agent runtimes can be configured in high-trust modes. A new user should not sile
 ### 1. Deepen the `ComposerContextBuilder` Module
 
 **Recommendation strength:** Strong / P0
+
+**Status (2026-06-01): open — now the single highest-leverage remaining bet.** No `ComposerContextBuilder` or `ContextSourceHandle` exists; context is still assembled imperatively across `InputController`, file-context state/view, selection controllers, and the provider prompt encoders. With Wave 0 trust defaults and most architecture de-coupling already done, this is the recommended next initiative.
 
 **Problem**
 
@@ -315,6 +370,8 @@ Possible routing:
 
 **Recommendation strength:** Strong / P0-P1
 
+**Status (2026-06-01): partially scaffolded.** The substrate exists — `src/core/logging/` (leveled logger, `redact.ts`, bounded ring buffer), a typed `EventBus`, and a Diagnostics settings tab with copy/clear actions (currently stubbed: `diagnostics.ts` `TODO Phase F`). What remains is the audit layer proper: `RuntimeAuditEvent`/`RuntimeAuditSink`, a redacted `RuntimeDiagnosticsSnapshot`, and the per-tab safety summary. Build these as extensions of the existing logging Module rather than new infrastructure.
+
 **Problem**
 
 A vault agent can read/write notes, execute shell commands, access external paths, use provider CLIs, call MCP tools, and contact cloud providers. The product should make these powers visible and controllable in the workflow.
@@ -359,6 +416,8 @@ Start observe-only. Feed audit events from existing approval/tool-call/rendering
 
 **Recommendation strength:** Strong / P1
 
+**Status (2026-06-01): open (redaction partially done).** Log redaction was broadened (review SEC-6), but API keys, MCP env vars, and HTTP headers still persist as plaintext in `.claudian/claudian-settings.json` / `.claude/mcp.json`, and Obsidian `SecretStorage`/`SecretComponent` is not used anywhere. The secret-reference work and plaintext-migration scan remain.
+
 **Proposal**
 
 - Store provider API keys, MCP env vars, HTTP authorization headers, and env snippets as secret references where possible, not plaintext in `.claudian/claudian-settings.json` or `.claude/mcp.json`.
@@ -370,6 +429,8 @@ Start observe-only. Feed audit events from existing approval/tool-call/rendering
 ### 6. MCP threat model and workspace experience
 
 **Recommendation strength:** Strong / P1
+
+**Status (2026-06-01): partially done.** Hardening landed (vault MCP default-disabled, per-vault trust gate, curated child env, proxy-credential stripping — review SEC-3/SEC-4), and per-server/per-tool enablement metadata exists via `_claudian.servers`. Still open: per-tool risk labels, a server health/status panel, provenance display, and non-HTTPS/SSRF warnings. Note `supportsMcpTools` is `true` only for Claude; Codex, Opencode, and Cursor all report `false`, so for those providers this stays audit/rendering visibility rather than config/control parity.
 
 **Problem**
 
@@ -401,6 +462,8 @@ MCP is becoming a default agent integration layer. Claudian currently has provid
 
 **Recommendation strength:** Strong / P1
 
+**Status (2026-06-01): partially done.** External paths are still a flat string list (`persistentExternalContextPaths`), with no grant metadata; SEC-5 added defense-in-depth vault containment to ACP `read/writeTextFile`, and Codex already has reactive per-session network approval (`ApprovalNetworkContext`). The `ExternalPathGrant` model and a configurable egress policy remain to be built.
+
 **ExternalPathGrant model**
 
 - resolved absolute host path;
@@ -427,6 +490,8 @@ On Windows, warn about UNC/WebDAV-style paths because provider file access can t
 ### 8. Build provider stream/history golden fixtures
 
 **Recommendation strength:** Strong / P1
+
+**Status (2026-06-01): open.** No `ProviderStreamFixtureHarness` or cross-provider stream-parity test exists. The report-only perf monitoring suite that landed (`tests/perf/*`) is a separate concern and does not provide projection parity coverage. This becomes more valuable now that the ARCH-6 stream-projection extraction has separated projection from DOM rendering — projection can be fixture-tested without a DOM.
 
 **Problem**
 
@@ -464,6 +529,8 @@ Start with Codex because it has both live raw JSON-RPC and JSONL replay paths, t
 
 **Recommendation strength:** Worth exploring / P2
 
+**Status (2026-06-01): superseded by [ADR 0001](../adr/0001-transport-agnostic-provider-seam.md).** The diagnosis here was right (the broad interface and Opencode/Cursor no-op `rewind()` are confirmed), but the agreed direction is no longer a `RuntimeCapabilityResolver`. ADR 0001 instead splits `ChatRuntime` into a slim `ChatRuntimeCore` plus opt-in capability mixins (`RewindCapable`, `SteerCapable`, `ForkCapable`, `SubagentCapable`), a declarative nested capability **descriptor** (presence-gates-feature, LSP/MCP/ACP convention), a single `RuntimeHost` replacing the seven `setXxxCallback()` setters, and a declarative tool manifest. Treat the ADR as the source of truth for this work; the text below is retained for the original rationale.
+
 **Problem**
 
 `ChatRuntime` has become a broad Interface. Providers that do not support a feature still need to implement stubs or negative behavior. However, splitting it into many tiny Interfaces too early can increase call-site complexity and create hypothetical Seams.
@@ -484,6 +551,8 @@ Start with Codex because it has both live raw JSON-RPC and JSONL replay paths, t
 ### 10. Deepen sessions into a `ConversationSessionEnvelope`
 
 **Recommendation strength:** Worth exploring / P2
+
+**Status (2026-06-01): open (partial).** ARCH-3 extracted a `ConversationStore`, moving conversation/session CRUD out of `main.ts`, so the "scattered in the UI controller" framing is partly addressed. The provider-neutral envelope itself is still unbuilt; revisit once context source handles (§1) and audit (§4) clarify what session state must carry.
 
 **Problem**
 
@@ -512,6 +581,8 @@ Session persistence mixes UI metadata, provider-native session IDs, providerStat
 ### 11. Provider setup, instruction, and workflow onboarding
 
 **Recommendation strength:** Strong / P0-P1
+
+**Status (2026-06-01): partially done.** A first-run banner exists; the setup wizard, comfort profiles, provider health card, and instruction viewer/validator remain open.
 
 **Problem**
 
@@ -607,12 +678,14 @@ Entries could include:
 
 ## Suggested implementation order
 
-### Phase 0: Stabilize and gate trust
+### Phase 0: Stabilize and gate trust — *mostly complete (2026-06-01)*
 
-- Confirm clean worktree from the integration branch.
-- Re-run targeted file-context typecheck/tests and document current baseline.
-- Add trust baseline gate for new installs and dangerous modes.
-- Add CI build and artifact/package smoke checks.
+The 2026-05-31 review already landed the substance of this phase. Remaining items are narrow:
+
+- ~~Confirm clean worktree; re-run file-context typecheck/tests.~~ Done — CI is green on win32 + ubuntu (S0-1); the prior failure was platform-coupled tests, not a source defect.
+- ~~Add trust baseline gate for new installs and dangerous modes.~~ Done — safe defaults, one-time danger warning, per-vault trust gate (SEC-1/2/3).
+- **Still open:** add `npm run build` to CI; align CI/release Node versions; add a CI-wired artifact smoke (version sync, size, `minAppVersion`); add `CONTRIBUTING.md`/`SECURITY.md`; **resolve the `claudian-cursor` / `YishenTu` / `Luis85` naming mismatch** across `manifest.json`, `README.md`, and `scripts/release.mjs`.
+- **Carried into Phase 1:** replace the user-facing "YOLO" label with clearer terms.
 
 ### Phase 1: First trusted successful edit
 
@@ -658,12 +731,12 @@ Entries could include:
 
 ## Candidate PR sequence
 
-The roadmap should be implemented as small, reviewable PRs. A suggested first sequence:
+The roadmap should be implemented as small, reviewable PRs. A suggested sequence, **re-based on what has landed** (PRs 1–2 are now reduced to their remaining slices):
 
 | PR | Goal | Main files likely touched | Verification |
 | --- | --- | --- | --- |
-| 1 | Add CI build/artifact smoke and re-check file-context baseline | `.github/workflows/ci.yml`, `scripts/`, targeted tests | `npm run typecheck`, targeted file-context tests, `npm run build` |
-| 2 | Add trust-baseline copy and safer action-review labels | settings/UI text, provider permission-mode UI | targeted UI tests, manual settings check |
+| 1 | Add `npm run build` + artifact smoke to CI; align Node versions; fix repo naming (`manifest.json`/`README.md`/`scripts/release.mjs`) | `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `scripts/`, `manifest.json`, `README.md` | `npm run build`, artifact smoke, manual naming audit |
+| 2 | Replace user-facing "YOLO" label with clearer action-review terms (internal `yolo` value kept) | `src/providers/*/ui/*ChatUIConfig.ts`, i18n | targeted UI tests, manual settings check |
 | 3 | Introduce pure `ComposerContextBuilder` types/tests with no UI behavior change | new context Module, `InputController` tests | builder golden tests, `npm run typecheck` |
 | 4 | Add visible context preview and attached-vs-workspace explanation | chat composer/context UI and styles | context UI tests, keyboard/focus checks |
 | 5 | Add explicit-context source handles and citation rendering | context builder, renderer, tests | citation fixture tests |
@@ -674,7 +747,9 @@ Keep each PR to one concern. If a PR needs provider runtime traces, capture them
 
 ## Open questions before implementation
 
-- What should be the exact safe default for each provider on new installs, and how should existing high-trust users be migrated without breaking expectations?
+*Update (2026-06-01): the first question is now largely answered in code — see below.*
+
+- ~~What should be the exact safe default for each provider on new installs, and how should existing high-trust users be migrated?~~ **Answered:** Claude defaults to `normal`, Codex to `workspace-write`; `yolo` is explicit opt-in with a one-time warning, and existing installs are handled by the per-vault trust gate plus the SEC-3 grandfather migration. The remaining sub-question is the user-facing *label* for these modes (last bullet below).
 - Which provider settings are genuinely controllable by Claudian versus inherited from provider CLI/user/project config?
 - What is the minimal `ContextSourceHandle` shape needed for citations without committing to a full retrieval system?
 - Which edits can Claudian safely route through Obsidian APIs, and which provider-native writes can only be audited after the fact?
@@ -753,4 +828,4 @@ Official and primary sources used during research:
 
 ## Decision request
 
-If we implement only one initiative first, choose **trust-gated `ComposerContextBuilder` + visible context preview + source-handle tests**. It has the highest Leverage because it feeds context UX, prompt Adapter input, citations, session reload, safety disclosure, diagnostics, and future provider Adapter simplification.
+With the trust baseline already in place (Wave 0 SEC-1/2/3/4), the single next initiative should be **`ComposerContextBuilder` + visible context preview + source-handle tests**. It has the highest Leverage because it feeds context UX, prompt Adapter input, citations, session reload, safety disclosure, diagnostics, and future provider Adapter simplification — and it is the largest remaining product-trust gap now that defaults, lifecycle, and architecture de-coupling have been addressed elsewhere.
