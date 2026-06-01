@@ -64,6 +64,19 @@ npm run test:coverage -- --selectProjects unit
 
 Tests mirror the `src/` layout under `tests/unit/` and `tests/integration/`.
 
+### Performance suite (monitoring, not a gate)
+
+```bash
+npm run test:perf                                   # run scaling guard rails + metrics
+CLAUDIAN_PERF_JSON=perf.jsonl npm run test:perf     # also append trend records
+```
+
+`tests/perf/*.perf.test.ts` run via `jest.perf.config.js` and are deliberately
+excluded from `npm test`, CI, and coverage. Each spec pairs deterministic
+scaling assertions (cost must track the render window, not conversation length)
+with a report-only metrics table for long-term trend tracking; timings are never
+asserted, so the suite stays stable on noisy machines.
+
 ## Storage
 
 | Path | Contents |
