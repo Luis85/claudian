@@ -23,6 +23,9 @@
   },
   "chat": {
     "loadEarlier": "Load earlier messages",
+    "history": {
+      "showMore": "Show more"
+    },
     "rewind": {
       "confirmMessage": "Rewind to this point? File changes after this message will be reverted. Rewinding does not affect files edited manually or via bash.",
       "confirmMessageConversationOnly": "Rewind conversation to this point? File changes will be kept.",

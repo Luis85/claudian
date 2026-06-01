@@ -23,6 +23,9 @@
   },
   "chat": {
     "loadEarlier": "Carregar mensagens anteriores",
+    "history": {
+      "showMore": "Mostrar mais"
+    },
     "rewind": {
       "confirmMessage": "Retroceder até este ponto? As alterações de arquivos após esta mensagem serão revertidas. O retrocesso não afeta arquivos editados manualmente ou via bash.",
       "confirmMessageConversationOnly": "Retroceder a conversa até este ponto? As alterações de arquivos serão mantidas.",

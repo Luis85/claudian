@@ -745,6 +745,47 @@ describe('ConversationController', () => {
 
         expect(deps.plugin.deleteConversation).not.toHaveBeenCalled();
       });
+
+      it('caps the initial render and reveals more on "Show more"', () => {
+        const many = Array.from({ length: 130 }, (_, i) => ({
+          id: `conv-${i}`,
+          title: `Conversation ${i}`,
+          createdAt: i,
+          lastResponseAt: i,
+        }));
+        (deps.plugin.getConversationList as jest.Mock).mockReturnValue(many);
+
+        controller.updateHistoryDropdown();
+
+        const list = dropdown.children[1];
+        const items = () => list.children.filter((c: any) => c.hasClass('claudian-history-item'));
+        // Only the first window is mounted up front (50), not all 130.
+        expect(items()).toHaveLength(50);
+
+        const showMore = list.children.find((c: any) => c.hasClass('claudian-history-show-more'));
+        expect(showMore).toBeDefined();
+
+        const reveal = () => showMore._children[0]._eventListeners.get('click')[0]({ stopPropagation: jest.fn() });
+        reveal();
+        expect(items()).toHaveLength(100);
+        reveal();
+        expect(items()).toHaveLength(130);
+      });
+
+      it('does not render a "Show more" control below the window cap', () => {
+        const few = Array.from({ length: 10 }, (_, i) => ({
+          id: `conv-${i}`,
+          title: `Conversation ${i}`,
+          createdAt: i,
+          lastResponseAt: i,
+        }));
+        (deps.plugin.getConversationList as jest.Mock).mockReturnValue(few);
+
+        controller.updateHistoryDropdown();
+
+        const list = dropdown.children[1];
+        expect(list.children.find((c: any) => c.hasClass('claudian-history-show-more'))).toBeUndefined();
+      });
     });
 
     describe('renderHistoryDropdown', () => {

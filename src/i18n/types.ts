@@ -25,6 +25,7 @@ export type TranslationKey =
 
   // Chat
   | 'chat.loadEarlier'
+  | 'chat.history.showMore'
 
   // Chat - Rewind
   | 'chat.rewind.confirmMessage'
