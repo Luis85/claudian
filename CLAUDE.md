@@ -85,7 +85,8 @@ Current coverage, by user-visible path:
 | `toolCallIndex.perf` | streaming tool lookup stays O(1)/chunk | tools per turn |
 | `claudeHistory.perf` | `filterActiveBranch` stays ~linear | transcript length |
 | `codexHistory.perf` | `parseCodexSessionContent` stays ~linear | transcript length |
-| `conversationHistory.perf` | history-dropdown DOM growth (monitored, unwindowed) + `loadConversations` load/sort | conversation count |
+| `conversationHistory.perf` | history-dropdown DOM growth (windowed) + `loadConversations` load/sort | conversation count |
+| `navigationSidebar.perf` | prev/next scan stays O(mounted), bounded by render window | mounted messages |
 
 ## Storage
 
