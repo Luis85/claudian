@@ -64,7 +64,7 @@ Figures below are post-review counts (verified against the tree).
 
 | # | Problem | Evidence |
 |---|---------|----------|
-| P1 | `ChatRuntime` is a wide interface (**38 members**) mixing turn lifecycle, session/fork/rewind, command discovery, subagent hooks, and **6** callback-wiring setters. A provider must implement the whole surface even for unsupported capabilities (`supportsRewind: false` still ships a `rewind()` stub). *Caveat: the feature layer already capability-gates these calls, so this is interface width, not a live hazard.* | `src/core/runtime/ChatRuntime.ts:20-66` |
+| P1 | `ChatRuntime` is a wide interface (**38 members**) mixing turn lifecycle, session/fork/rewind, command discovery, subagent hooks, and **7** callback-wiring setters. A provider must implement the whole surface even for unsupported capabilities (`supportsRewind: false` still ships a `rewind()` stub). *Caveat: the feature layer already capability-gates these calls, so this is interface width, not a live hazard.* | `src/core/runtime/ChatRuntime.ts:20-66` |
 | P2 | The CLI providers duplicate subprocess plumbing — spawn, JSON-RPC/NDJSON framing, bounded-stderr buffering, SIGTERM→SIGKILL cancellation. `CodexRpcTransport` is a near-clone of `AcpJsonRpcTransport`; `CodexAppServerProcess` and `AcpSubprocess` are ~80% identical. Only Opencode currently reuses `src/providers/acp/`. | `CodexAppServerProcess`, `CodexRpcTransport`, `CursorChatRuntime` query loop, `AcpSubprocess`, `AcpJsonRpcTransport` |
 | P3 | Static cross-boundary imports and hardcoded provider lists: **5+** hardcoded `['claude','codex','opencode','cursor']` arrays / label maps, plus three outside-provider imports from `src/providers/<id>/`. `DEFAULT_CHAT_PROVIDER_ID='claude'` is threaded through **42** sites. | `src/features/tasks/defaultProviderResolver.ts:4`; `src/features/settings/firstRunBanner/hasAnyProviderEnabled.ts:4`; `src/features/settings/registry/fields/agentBoard.ts:14,16-21`; `src/features/.../SearchResultsView.ts:40`; `featureFlag.ts`; leak inventory in [Move 4](#move-4--close-the-leaks-lock-the-boundary) |
 | P4 | Tool *naming* differs per provider: each adaptor maps native tool names to a shared vocabulary inside its `*ToolNormalization` module. The **name tables** are data; the surrounding **reshaping is logic** (see Move 5 scope note). | `codexToolNormalization`, `cursorToolNormalization`, `opencodeToolNormalization` |
@@ -174,15 +174,17 @@ encodes the corrected cancellation behavior once.
 
 ### Move 3 — Slim the runtime: a single `RuntimeHost` *(endorsed)*; mixins are a minor tidy
 
-Replace the **6** callback setters (`setApprovalCallback`, `setAskUserQuestionCallback`,
-`setExitPlanModeCallback`, `setPermissionModeSyncCallback`, `setSubagentHookProvider`,
-`setAutoTurnCallback`) with a single `RuntimeHost` object passed at construction. This is safe:
-the setters are wired at exactly one site (`features/chat/tabs/tabControllers.ts:471-528`),
-**set once per runtime, never reset to null**, with closures reading live state.
+Replace the **7** callback setters (`setApprovalCallback`, `setApprovalDismisser`,
+`setAskUserQuestionCallback`, `setExitPlanModeCallback`, `setPermissionModeSyncCallback`,
+`setSubagentHookProvider`, `setAutoTurnCallback`) with a single `RuntimeHost` object passed at
+construction. This is safe: the setters are wired at exactly one site
+(`features/chat/tabs/tabControllers.ts:471-528`), **set once per runtime, never reset to null**,
+with closures reading live state.
 
 ```ts
 interface RuntimeHost {
   approval: ApprovalCallback;
+  dismissApproval(): void;           // clears pending approval UI on cancel/reset
   askUser: AskUserQuestionCallback;
   exitPlanMode: ExitPlanModeCallback;
   permissionModeSync(mode: string): void;
@@ -190,6 +192,11 @@ interface RuntimeHost {
   subagentState(): SubagentRuntimeState;
 }
 ```
+
+`dismissApproval` is load-bearing, not cosmetic: Claude (`ClaudeChatRuntime.ts:1816`) and Codex
+(`CodexChatRuntime.ts:650`) call the current `setApprovalDismisser` hook on cancellation/reset to
+tear down a visible approval prompt. Omitting it from `RuntimeHost` would leave approval prompts
+stuck on screen after a cancel.
 
 The original "split into core + capability mixins" idea is **demoted to a same-PR type tidy**: the
 feature layer *already* capability-gates optional methods (`supportsRewind` before `rewind()`,
@@ -278,7 +285,7 @@ rationale:
 
 | Change | Why |
 |--------|-----|
-| Corrected figures: ~40→**38** members, "seven"→**6** setters, "~40"→**≈12 files/≈30** gate sites, "54"→**42** `DEFAULT_CHAT_PROVIDER_ID`, "3"→**5+** hardcoded arrays | Claim-verification pass found the originals inflated/imprecise; the corrected counts still support the thesis. |
+| Corrected figures: ~40→**38** members, "~40"→**≈12 files/≈30** gate sites, "54"→**42** `DEFAULT_CHAT_PROVIDER_ID`, "3"→**5+** hardcoded arrays | Claim-verification pass found these inflated/imprecise; the corrected counts still support the thesis. (The "seven setters" figure was **correct** — an interim "6" was a miscount that dropped `setApprovalDismisser`; restored to 7 and added to `RuntimeHost` after PR review.) |
 | **Dropped `protocolVersion`** (was on the descriptor + stored in `providerState`) | Three reviewers independently flagged it as cargo-culting: nothing to negotiate in an in-process bundle, and it contradicted the "providerState unchanged" promise. |
 | **Dropped the parallel `ProviderDescriptor`; extend `ProviderRegistration` instead; keep capabilities flat** | The descriptor duplicated the existing registration; nested capabilities would churn ~30 gate sites for no functional gain. |
 | **Rescoped the tool manifest** from "data the UI reads" to "lift the name table; normalization stays code" | The `*ToolNormalization` modules are argument-shape-dependent logic, not static maps, and the UI consumes already-normalized chunks. |
