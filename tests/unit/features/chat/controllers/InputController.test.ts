@@ -600,7 +600,7 @@ describe('InputController - Message Queue', () => {
         canvasContext: null,
       });
       expect(mockNotice).toHaveBeenCalledWith(
-        'Failed to steer the queued Codex message. It is still available.',
+        'Failed to steer the queued message. It is still available.',
       );
     });
 

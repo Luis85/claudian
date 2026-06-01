@@ -628,10 +628,6 @@ export class InputController {
     this.queuedMessages.clearQueuedMessage();
   }
 
-  withdrawQueuedMessageToComposer(): void {
-    this.queuedMessages.withdrawQueuedMessageToComposer();
-  }
-
   private restorePendingMessagesToInput(): void {
     this.queuedMessages.restorePendingMessagesToInput();
   }
