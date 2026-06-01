@@ -5,12 +5,13 @@ patchSetMaxListenersForElectron();
 import './providers';
 
 import type { TFile, TFolder, WorkspaceLeaf } from 'obsidian';
-import { debounce, Notice, Plugin } from 'obsidian';
+import { Notice, Plugin } from 'obsidian';
 
 import { registerPluginCommands } from './app/commands/registerPluginCommands';
 import { registerWorkspaceMenus } from './app/commands/registerWorkspaceMenus';
 import { ConversationStore } from './app/conversations/ConversationStore';
 import type { ClaudianEventMap } from './app/events/claudianEvents';
+import { PluginLifecycle } from './app/lifecycle/PluginLifecycle';
 import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
 import { SharedStorageService } from './app/storage/SharedStorageService';
 import type { SharedAppStorage } from './core/bootstrap/storage';
@@ -43,8 +44,7 @@ import {
 import type { PluginContext } from './core/types/PluginContext';
 import type { ChatViewPlacement, EnvironmentScope } from './core/types/settings';
 import { ClaudianView } from './features/chat/ClaudianView';
-import { GitService } from './features/chat/services/GitService';
-import { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
+import type { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
 import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
 import { ChatTabExecutionSurface } from './features/tasks/execution/ChatTabExecutionSurface';
 import { ChatWorkOrderLinker } from './features/tasks/execution/ChatWorkOrderLinker';
@@ -54,7 +54,6 @@ import type { Locale } from './i18n/types';
 import { OPENCODE_PLAN_MODE_ID, OPENCODE_SAFE_MODE_ID } from './providers/opencode/modes';
 import type { BrowserSelectionContext } from './utils/browser';
 import { chatMessageText } from './utils/chatMessageText';
-import { getEnhancedPath } from './utils/env';
 import { revealWorkspaceLeaf } from './utils/obsidianCompat';
 import { getVaultPath } from './utils/path';
 
@@ -73,6 +72,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   storage!: SharedAppStorage;
   gitStatusWatcher: GitStatusWatcher | null = null;
   private conversationStore!: ConversationStore;
+  private lifecycle!: PluginLifecycle;
   private lastKnownTabManagerState: AppTabManagerState | null = null;
 
   async onload() {
@@ -84,21 +84,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.logger.scope('events').error(`handler for "${event}" threw`, error);
     });
 
-    const vaultPath = getVaultPath(this.app);
-    if (vaultPath) {
-      this.gitStatusWatcher = new GitStatusWatcher(
-        new GitService(vaultPath, getEnhancedPath()),
-      );
-      const refreshGit = debounce(
-        () => void this.gitStatusWatcher?.refresh(),
-        1500,
-        true,
-      );
-      this.registerEvent(this.app.vault.on('modify', () => refreshGit()));
-      this.registerEvent(this.app.vault.on('create', () => refreshGit()));
-      this.registerEvent(this.app.vault.on('delete', () => refreshGit()));
-      this.registerEvent(this.app.vault.on('rename', () => refreshGit()));
-    }
+    this.lifecycle = new PluginLifecycle(this);
+    this.lifecycle.installGitWatcher();
 
     await ProviderWorkspaceRegistry.initializeAll(this);
 
@@ -146,40 +133,10 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   onunload(): void {
     this.gitStatusWatcher?.stop();
     this.gitStatusWatcher = null;
-    this.shutdownActiveRuntimes();
-    void this.persistOpenTabStates();
+    this.lifecycle.shutdownActiveRuntimes();
+    void this.lifecycle.persistOpenTabStates();
   }
 
-  // Best-effort synchronous teardown of provider subprocesses on plugin unload
-  // (disable/update/hot-reload). onunload cannot await, but each runtime's
-  // cleanup() dispatches SIGTERM synchronously before its first await point, so
-  // firing it here prevents orphaned provider CLI processes.
-  private shutdownActiveRuntimes(): void {
-    for (const view of this.getAllViews()) {
-      const tabManager = view.getTabManager();
-      if (!tabManager) continue;
-      for (const tab of tabManager.getAllTabs()) {
-        try {
-          void tab.service?.cleanup();
-        } catch {
-          // best-effort: keep tearing down remaining runtimes
-        }
-      }
-    }
-  }
-
-  private async persistOpenTabStates(): Promise<void> {
-    // Ensures state is saved even if Obsidian quits without calling onClose().
-    // Saves are independent per view — run them in parallel so plugin unload
-    // does not block on the sum of every view's storage write.
-    await Promise.all(
-      this.getAllViews().map((view) => {
-        const tabManager = view.getTabManager();
-        if (!tabManager) return Promise.resolve();
-        return this.persistTabManagerState(tabManager.getPersistedState());
-      }),
-    );
-  }
 
   async addFileToActiveChat(file: TFile): Promise<boolean> {
     const view = await this.ensureViewOpen();
