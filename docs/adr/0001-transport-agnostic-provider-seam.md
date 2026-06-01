@@ -184,9 +184,22 @@ concern, not per-provider.
 
 ### Move 5 — Close the leaks, lock the boundary
 
-Remove the hardcoded provider lists, move provider-settings updaters behind registry-registered
-functions (no cross-boundary import), centralize display names on the descriptor, and add the
-ESLint boundary rule.
+Remove the hardcoded provider lists, centralize display names on the descriptor, and route every
+provider-internal access through `ProviderRegistry` / `ProviderWorkspaceRegistry`. **The ESLint
+boundary rule must only be enabled once every outside-provider import is moved behind the
+registry** — otherwise lint fails on day one. Complete leak inventory (repo-wide, must all be
+closed in this phase):
+
+| Import site | Provider internal |
+|-------------|-------------------|
+| `src/features/settings/providerEnableUpdaters.ts:2-5` | `providers/{claude,codex,cursor,opencode}/settings` (the `PROVIDER_ENABLE_UPDATERS` map) |
+| `src/features/settings/registry/fields/opencode.ts:2` | `providers/opencode/settings` (`getOpencodeProviderSettings`) |
+| `src/main.ts:64` | `providers/opencode/modes` (`OPENCODE_PLAN_MODE_ID`, `OPENCODE_SAFE_MODE_ID`) |
+
+The settings-updater and `getOpencodeProviderSettings` leaks move behind registry-registered
+settings accessors; the `main.ts` mode-id constants move behind the descriptor (or a registry
+mode accessor) so no consumer imports an Opencode-specific module. Enable the rule only after all
+three are closed.
 
 ## Consequences
 
