@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 import type { PluginContext } from '@/core/types/PluginContext';
 import type { ClaudianSettings } from '@/core/types/settings';
 import {
@@ -28,7 +30,9 @@ jest.mock('fs', () => {
   };
 });
 
-const PROJECT_SETTINGS_PATH = '/test/vault/.claude/settings.json';
+// Production resolves this via path.join(vaultKey, '.claude/settings.json'),
+// so the fs mock key must use the platform separator to match on Windows.
+const PROJECT_SETTINGS_PATH = path.join('/test/vault', '.claude', 'settings.json');
 
 /** Mark the vault's project settings as risky for the fresh-read gate. */
 function setVaultRisky(): void {
