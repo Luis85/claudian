@@ -7,9 +7,13 @@
  * upstream parent). Always targets RELEASE_REPO explicitly.
  *
  * Usage:
- *   node scripts/release.mjs <version|patch|minor|major> [--dry-run] [--skip-tests]
+ *   node scripts/release.mjs <version|patch|minor|major> [--dry-run] [--skip-tests] [--allow-non-main]
  *   npm run release -- 2.5.1
  *   npm run release -- minor
+ *
+ * Releases must be cut from `main` so the version files committed by this
+ * script and the GitHub release artifacts never disagree. Pass
+ * --allow-non-main only when an off-main release is genuinely intended.
  *
  * Steps: validate -> bump (package.json + manifest.json + versions.json)
  *        -> typecheck -> test -> build -> commit -> tag -> push -> gh release.
@@ -28,6 +32,7 @@ const ASSETS = ['main.js', 'manifest.json', 'styles.css'];
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
 const skipTests = args.includes('--skip-tests');
+const allowNonMain = args.includes('--allow-non-main');
 const versionArg = args.find((a) => !a.startsWith('--'));
 
 function fail(message) {
@@ -87,9 +92,16 @@ if (existingTags.includes(nextVersion)) {
   fail(`Tag ${nextVersion} already exists.`);
 }
 
+// Guard: only main may cut a release. A previous 3.0.0 cut from a feature
+// branch left main's version files trailing the GitHub release artifacts,
+// so test builds from main showed the prior version. Hard-fail by default;
+// pass --allow-non-main when an off-main release is genuinely intended.
 const branch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: ROOT, encoding: 'utf8' }).trim();
 if (branch !== 'main') {
-  console.warn(`⚠ Releasing from "${branch}", not main.`);
+  if (!allowNonMain) {
+    fail(`Refusing to release from "${branch}". Switch to main, or pass --allow-non-main to override.`);
+  }
+  console.warn(`⚠ Releasing from "${branch}", not main (--allow-non-main).`);
 }
 
 console.log(`Releasing ${pkg.version} → ${nextVersion} on ${RELEASE_REPO}${dryRun ? ' (dry-run)' : ''}`);
