@@ -116,10 +116,17 @@ value in the cheapest order.
 
 The rule is narrowly scoped to provider imports: **nothing outside `src/providers/<id>/` may
 import from `src/providers/<id>/`** (a provider's internals are reachable only through
-`ProviderRegistry` / `ProviderWorkspaceRegistry`). It does **not** restrict the existing,
-legitimate `features/` dependencies on `i18n`, `shared`, `utils`, `core/`, or `main`, and it must
-**not** fire on legitimate *intra-provider* imports (e.g. Opencode importing its own `../modes`) —
-scope it precisely to "imported from outside the owning `src/providers/<id>/` directory."
+`ProviderRegistry` / `ProviderWorkspaceRegistry`). Three exemptions keep it from firing on
+legitimate code:
+
+1. It does **not** restrict the existing `features/` dependencies on `i18n`, `shared`, `utils`,
+   `core/`, or `main`.
+2. It must **not** fire on *intra-provider* imports (e.g. Opencode importing its own `../modes`) —
+   scope it to "imported from outside the owning `src/providers/<id>/` directory."
+3. It must **exempt the bootstrap aggregator `src/providers/index.ts`**, the one sanctioned place
+   that imports each provider's `registration` / workspace module to call
+   `ProviderRegistry.register` / `ProviderWorkspaceRegistry.register`. Without this exemption the
+   rule would ban the registration wiring itself.
 
 Enforced by extending the existing ESLint `no-restricted-imports` config (`eslint.config.mjs`).
 That config currently has **stale globs pointing at deleted files** (`src/ClaudianService.ts`,
