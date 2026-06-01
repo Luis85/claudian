@@ -4,9 +4,10 @@ patchSetMaxListenersForElectron();
 
 import './providers';
 
-import type { Editor, Menu, TAbstractFile, WorkspaceLeaf } from 'obsidian';
-import { debounce, MarkdownView, Notice, Plugin, TFile, TFolder } from 'obsidian';
+import type { Editor, TFile, TFolder, WorkspaceLeaf } from 'obsidian';
+import { debounce, MarkdownView, Notice, Plugin } from 'obsidian';
 
+import { registerWorkspaceMenus } from './app/commands/registerWorkspaceMenus';
 import { ConversationStore } from './app/conversations/ConversationStore';
 import type { ClaudianEventMap } from './app/events/claudianEvents';
 import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
@@ -307,59 +308,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       label: clearDiagnosticLogsCmd.name,
     });
 
-    this.registerEvent(
-      this.app.workspace.on('file-menu', (menu: Menu, file: TAbstractFile) => {
-        if (file instanceof TFile) {
-          menu.addItem((item) => {
-            item
-              .setTitle('Add file to Claudian chat')
-              .setIcon('at-sign')
-              .onClick(() => {
-                void this.addFileToActiveChat(file);
-              });
-          });
-          menu.addItem((item) => {
-            item
-              .setTitle('Create work order')
-              .setIcon('kanban-square')
-              .onClick(() => {
-                void createWorkOrderInteractive(this, file);
-              });
-          });
-        } else if (file instanceof TFolder) {
-          menu.addItem((item) => {
-            item
-              .setTitle('Add folder to Claudian chat')
-              .setIcon('folder')
-              .onClick(() => {
-                void this.addFolderToActiveChat(file);
-              });
-          });
-          menu.addItem((item) => {
-            item
-              .setTitle('Create work order')
-              .setIcon('kanban-square')
-              .onClick(() => {
-                void createWorkOrderInteractive(this, file);
-              });
-          });
-        }
-      })
-    );
-
-    this.registerEvent(
-      this.app.workspace.on('editor-menu', (menu: Menu, editor: Editor) => {
-        if (!editor.getSelection().trim()) return;
-        menu.addItem((item) => {
-          item
-            .setTitle('Create work order from selection')
-            .setIcon('kanban-square')
-            .onClick(() => {
-              void createWorkOrderFromSelectionInteractive(this);
-            });
-        });
-      })
-    );
+    registerWorkspaceMenus(this);
 
     const inlineEditCmd = {
       id: 'inline-edit',
