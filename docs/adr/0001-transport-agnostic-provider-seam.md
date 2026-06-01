@@ -91,9 +91,12 @@ recommends**, with shared plumbing available but never mandatory.
 
 ### Boundary rule
 
-`features/` and `core/` depend on `core/*` only. Nothing outside `src/providers/<id>/` may
-import from `src/providers/<id>/`. Enforced by an ESLint boundaries rule so the P3 leak class
-cannot regrow.
+The rule is narrowly scoped to provider imports: **nothing outside `src/providers/<id>/` may
+import from `src/providers/<id>/`** (a provider's internals are reachable only through
+`ProviderRegistry` / `ProviderWorkspaceRegistry`). It does **not** restrict the existing,
+legitimate `features/` dependencies on `i18n`, `shared`, `utils`, `core/`, or `main` — those
+stay as-is. Enforced by an ESLint `no-restricted-imports` (or import-boundaries) rule so the P3
+leak class cannot regrow.
 
 ```
 features/  ── reads declared data (descriptor: capabilities, tools, UI) ──┐
