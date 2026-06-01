@@ -4,7 +4,7 @@ patchSetMaxListenersForElectron();
 
 import './providers';
 
-import type { TFile, TFolder, WorkspaceLeaf } from 'obsidian';
+import type { TFile, TFolder } from 'obsidian';
 import { Notice, Plugin } from 'obsidian';
 
 import { registerPluginCommands } from './app/commands/registerPluginCommands';
@@ -14,6 +14,7 @@ import type { ClaudianEventMap } from './app/events/claudianEvents';
 import { PluginLifecycle } from './app/lifecycle/PluginLifecycle';
 import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
 import { SharedStorageService } from './app/storage/SharedStorageService';
+import { PluginViewActivator } from './app/views/PluginViewActivator';
 import type { SharedAppStorage } from './core/bootstrap/storage';
 import { EventBus } from './core/events/EventBus';
 import { formatLogEntries } from './core/logging/formatLogEntries';
@@ -42,7 +43,7 @@ import {
   VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
 } from './core/types';
 import type { PluginContext } from './core/types/PluginContext';
-import type { ChatViewPlacement, EnvironmentScope } from './core/types/settings';
+import type { EnvironmentScope } from './core/types/settings';
 import { ClaudianView } from './features/chat/ClaudianView';
 import type { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
 import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
@@ -54,7 +55,6 @@ import type { Locale } from './i18n/types';
 import { OPENCODE_PLAN_MODE_ID, OPENCODE_SAFE_MODE_ID } from './providers/opencode/modes';
 import type { BrowserSelectionContext } from './utils/browser';
 import { chatMessageText } from './utils/chatMessageText';
-import { revealWorkspaceLeaf } from './utils/obsidianCompat';
 import { getVaultPath } from './utils/path';
 
 function isClaudianView(value: unknown): value is ClaudianView {
@@ -73,7 +73,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   gitStatusWatcher: GitStatusWatcher | null = null;
   private conversationStore!: ConversationStore;
   private lifecycle!: PluginLifecycle;
-  private lastKnownTabManagerState: AppTabManagerState | null = null;
+  private viewActivator!: PluginViewActivator;
+  lastKnownTabManagerState: AppTabManagerState | null = null;
 
   async onload() {
     await this.loadSettings();
@@ -86,6 +87,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
     this.lifecycle = new PluginLifecycle(this);
     this.lifecycle.installGitWatcher();
+
+    this.viewActivator = new PluginViewActivator(this);
 
     await ProviderWorkspaceRegistry.initializeAll(this);
 
@@ -178,108 +181,28 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     return true;
   }
 
-  async activateView() {
-    const { workspace } = this.app;
-    let leaf = workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN)[0];
-
-    if (!leaf) {
-      const newLeaf = this.getLeafForPlacement(this.settings.chatViewPlacement);
-      if (newLeaf) {
-        await newLeaf.setViewState({
-          type: VIEW_TYPE_CLAUDIAN,
-          active: true,
-        });
-        leaf = newLeaf;
-      }
-    }
-
-    if (leaf) {
-      await revealWorkspaceLeaf(workspace, leaf);
-    }
+  async activateView(): Promise<void> {
+    return this.viewActivator.activateView();
   }
 
   async activateAgentBoardView(): Promise<void> {
-    const { workspace } = this.app;
-    let leaf: WorkspaceLeaf | null = workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN_AGENT_BOARD)[0] ?? null;
-
-    if (!leaf) {
-      leaf = workspace.getLeaf('tab');
-      await leaf.setViewState({
-        type: VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
-        active: true,
-      });
-    }
-
-    await revealWorkspaceLeaf(workspace, leaf);
+    return this.viewActivator.activateAgentBoardView();
   }
 
   async runNextReadyWorkOrder(): Promise<void> {
-    await this.activateAgentBoardView();
-    const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN_AGENT_BOARD)[0];
-    const view = leaf?.view;
-    if (view instanceof AgentBoardView) {
-      await view.runNextReady();
-    }
-  }
-
-  private getLeafForPlacement(placement: ChatViewPlacement): WorkspaceLeaf | null {
-    const { workspace } = this.app;
-    switch (placement) {
-      case 'main-tab':
-        return workspace.getLeaf('tab');
-      case 'left-sidebar':
-        return workspace.getLeftLeaf(false);
-      case 'right-sidebar':
-        return workspace.getRightLeaf(false);
-    }
+    return this.viewActivator.runNextReadyWorkOrder();
   }
 
   canCreateNewTab(): boolean {
-    const hasClaudianLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN).length > 0;
-    const view = this.getView();
-    const tabManager = view?.getTabManager();
-
-    if (tabManager) {
-      return tabManager.canCreateTab();
-    }
-
-    if (hasClaudianLeaf) {
-      return false;
-    }
-
-    return this.getLastKnownOpenTabCount() < this.getMaxTabsLimit();
+    return this.viewActivator.canCreateNewTab();
   }
 
   private async ensureViewOpen(): Promise<ClaudianView | null> {
-    const existingView = this.getView();
-    if (existingView) {
-      return existingView;
-    }
-
-    await this.activateView();
-    return this.getView();
+    return this.viewActivator.ensureViewOpen();
   }
 
   async openNewTab(): Promise<void> {
-    const existingView = this.getView();
-    if (existingView) {
-      await existingView.createNewTab();
-      return;
-    }
-
-    const restoredTabCount = this.getLastKnownOpenTabCount();
-    const view = await this.ensureViewOpen();
-    if (!view) {
-      return;
-    }
-
-    // A cold-open view creates its initial tab during restore. Avoid stacking
-    // an extra blank tab on top when there was no prior layout to restore.
-    if (restoredTabCount === 0) {
-      return;
-    }
-
-    await view.createNewTab();
+    return this.viewActivator.openNewTab();
   }
 
   async loadSettings() {
@@ -660,15 +583,6 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       }
     }
     return null;
-  }
-
-  private getLastKnownOpenTabCount(): number {
-    return this.lastKnownTabManagerState?.openTabs.length ?? 0;
-  }
-
-  private getMaxTabsLimit(): number {
-    const maxTabs = this.settings.maxTabs ?? 3;
-    return Math.max(3, Math.min(10, maxTabs));
   }
 
 }
