@@ -16,6 +16,7 @@
     "test": "node scripts/run-jest.js",
     "test:watch": "node scripts/run-jest.js --watch",
     "test:coverage": "node scripts/run-jest.js --coverage",
+    "test:perf": "node scripts/run-jest.js --config jest.perf.config.js",
     "version": "node scripts/sync-version.js && git add manifest.json"
   },
   "keywords": [

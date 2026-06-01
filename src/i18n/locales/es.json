@@ -23,6 +23,9 @@
   },
   "chat": {
     "loadEarlier": "Cargar mensajes anteriores",
+    "history": {
+      "showMore": "Mostrar más"
+    },
     "rewind": {
       "confirmMessage": "¿Rebobinar a este punto? Los cambios de archivos después de este mensaje serán revertidos. El rebobinado no afecta archivos editados manualmente o mediante bash.",
       "confirmMessageConversationOnly": "¿Rebobinar la conversación hasta este punto? Se conservarán los cambios de archivos.",

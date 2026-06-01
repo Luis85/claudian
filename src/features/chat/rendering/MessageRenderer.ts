@@ -38,7 +38,7 @@ import { renderStoredWriteEdit } from './WriteEditRenderer';
  * streaming and the bottom anchor live — is always mounted, and earlier messages mount
  * on demand through the "load earlier" control.
  */
-const RENDER_WINDOW_SIZE = 80;
+export const RENDER_WINDOW_SIZE = 80;
 
 /** First message index to mount, capping to the trailing window of {@link windowSize}. */
 export function windowStartIndex(total: number, windowSize = RENDER_WINDOW_SIZE): number {

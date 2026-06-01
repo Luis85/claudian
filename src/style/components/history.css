@@ -56,6 +56,27 @@
   font-size: 13px;
 }
 
+.claudian-history-show-more {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.claudian-history-show-more-btn {
+  cursor: pointer;
+  color: var(--text-muted);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  padding: 4px 12px;
+  font-size: 13px;
+}
+
+.claudian-history-show-more-btn:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
 .claudian-history-item {
   display: flex;
   align-items: center;

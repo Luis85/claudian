@@ -23,6 +23,9 @@
   },
   "chat": {
     "loadEarlier": "Frühere Nachrichten laden",
+    "history": {
+      "showMore": "Mehr anzeigen"
+    },
     "rewind": {
       "confirmMessage": "Zu diesem Punkt zurückspulen? Dateiänderungen nach dieser Nachricht werden rückgängig gemacht. Das Zurückspulen betrifft keine manuell oder über Bash bearbeiteten Dateien.",
       "confirmMessageConversationOnly": "Konversation zu diesem Punkt zurückspulen? Dateiänderungen bleiben erhalten.",

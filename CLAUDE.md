@@ -64,6 +64,30 @@ npm run test:coverage -- --selectProjects unit
 
 Tests mirror the `src/` layout under `tests/unit/` and `tests/integration/`.
 
+### Performance suite (monitoring, not a gate)
+
+```bash
+npm run test:perf                                   # run scaling guard rails + metrics
+CLAUDIAN_PERF_JSON=perf.jsonl npm run test:perf     # also append trend records
+```
+
+`tests/perf/*.perf.test.ts` run via `jest.perf.config.js` and are deliberately
+excluded from `npm test`, CI, and coverage. Each spec pairs deterministic
+scaling assertions (cost must track a bounded window, not unbounded input)
+with a report-only metrics table for long-term trend tracking; timings are never
+asserted, so the suite stays stable on noisy machines.
+
+Current coverage, by user-visible path:
+
+| Spec | Guards | Scales with |
+|------|--------|-------------|
+| `messageRenderer.perf` | mounted DOM/listeners stay O(render window) | conversation length |
+| `toolCallIndex.perf` | streaming tool lookup stays O(1)/chunk | tools per turn |
+| `claudeHistory.perf` | `filterActiveBranch` stays ~linear | transcript length |
+| `codexHistory.perf` | `parseCodexSessionContent` stays ~linear | transcript length |
+| `conversationHistory.perf` | history-dropdown DOM growth (windowed) + `loadConversations` load/sort | conversation count |
+| `navigationSidebar.perf` | prev/next scan stays O(mounted), bounded by render window | mounted messages |
+
 ## Storage
 
 | Path | Contents |

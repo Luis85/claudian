@@ -3,7 +3,7 @@ import { Menu, Notice, setIcon } from 'obsidian';
 import type { TitleGenerationService } from '../../../core/providers/types';
 import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
 import type { ChatRewindMode } from '../../../core/runtime/types';
-import type { Conversation } from '../../../core/types';
+import type { Conversation, ConversationMeta } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { confirm } from '../../../shared/modals/ConfirmModal';
@@ -22,6 +22,13 @@ function runConversationAction(action: () => Promise<void>, failureMessage: stri
     new Notice(failureMessage);
   });
 }
+
+/**
+ * Conversations mounted per history-dropdown chunk. Like the message-list window
+ * (PERF-2), this bounds DOM nodes + per-row listeners to O(window) instead of
+ * O(conversation count); older conversations mount on demand via "Show more".
+ */
+const HISTORY_RENDER_WINDOW_SIZE = 50;
 
 export interface ConversationCallbacks {
   onNewConversation?: () => void;
@@ -558,7 +565,7 @@ export class ConversationController {
     container: HTMLElement,
     options: HistoryRenderOptions
   ): void {
-    const { plugin, state } = this.deps;
+    const { plugin } = this.deps;
 
     container.empty();
 
@@ -578,111 +585,163 @@ export class ConversationController {
       return (b.lastResponseAt ?? b.createdAt) - (a.lastResponseAt ?? a.createdAt);
     });
 
-    for (const conv of conversations) {
-      const isCurrent = conv.id === state.currentConversationId;
-      const item = list.createDiv({
-        cls: `claudian-history-item${isCurrent ? ' active' : ''}`,
+    // Windowing hides everything past the first chunk behind "Show more". If the
+    // active conversation is older than that cut (e.g. an old thread was just
+    // reopened without a new response), pin it to the top so its "Current
+    // session" row stays visible; otherwise recency order is untouched.
+    const currentId = this.deps.state.currentConversationId;
+    if (currentId) {
+      const currentIdx = conversations.findIndex((c) => c.id === currentId);
+      if (currentIdx >= HISTORY_RENDER_WINDOW_SIZE) {
+        const [current] = conversations.splice(currentIdx, 1);
+        conversations.unshift(current);
+      }
+    }
+
+    // Window the list: mount only a trailing chunk and reveal older
+    // conversations on demand, bounding DOM/listeners to O(window). Items stay
+    // direct children of the list; the "show more" control is moved to the end
+    // after each chunk so it always trails the revealed rows.
+    let rendered = 0;
+    const renderChunk = () => {
+      const next = Math.min(rendered + HISTORY_RENDER_WINDOW_SIZE, conversations.length);
+      for (let i = rendered; i < next; i++) {
+        this.renderHistoryItem(list, conversations[i], options);
+      }
+      rendered = next;
+    };
+
+    renderChunk();
+
+    if (rendered < conversations.length) {
+      const showMore = list.createDiv({ cls: 'claudian-history-show-more' });
+      const btn = showMore.createEl('button', {
+        cls: 'claudian-history-show-more-btn',
+        text: t('chat.history.showMore'),
+        attr: { type: 'button' },
       });
-
-      const iconEl = item.createDiv({ cls: 'claudian-history-item-icon' });
-      setIcon(iconEl, isCurrent ? 'message-square-dot' : 'message-square');
-
-      const content = item.createDiv({ cls: 'claudian-history-item-content' });
-      const titleEl = content.createDiv({ cls: 'claudian-history-item-title', text: conv.title });
-      titleEl.setAttribute('title', conv.title);
-      content.createDiv({
-        cls: 'claudian-history-item-date',
-        text: isCurrent ? 'Current session' : this.formatDate(conv.lastResponseAt ?? conv.createdAt),
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        renderChunk();
+        if (rendered < conversations.length) {
+          // Re-append to keep the control after the freshly revealed rows.
+          list.appendChild(showMore);
+        } else {
+          showMore.remove();
+        }
       });
+    }
+  }
 
-      if (!isCurrent) {
-        content.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (this.isHistoryNewTabModifierClick(e) && options.onOpenConversationInNewTab) {
-            e.preventDefault();
-            runConversationAction(
-              () => this.runHistoryAction(
-                () => options.onOpenConversationInNewTab?.(conv.id, true),
-                'Failed to load conversation',
-              ),
-              'Failed to load conversation',
-            );
-            return;
-          }
+  private renderHistoryItem(
+    list: HTMLElement,
+    conv: ConversationMeta,
+    options: HistoryRenderOptions,
+  ): void {
+    const { state } = this.deps;
+    const isCurrent = conv.id === state.currentConversationId;
+    const item = list.createDiv({
+      cls: `claudian-history-item${isCurrent ? ' active' : ''}`,
+    });
 
+    const iconEl = item.createDiv({ cls: 'claudian-history-item-icon' });
+    setIcon(iconEl, isCurrent ? 'message-square-dot' : 'message-square');
+
+    const content = item.createDiv({ cls: 'claudian-history-item-content' });
+    const titleEl = content.createDiv({ cls: 'claudian-history-item-title', text: conv.title });
+    titleEl.setAttribute('title', conv.title);
+    content.createDiv({
+      cls: 'claudian-history-item-date',
+      text: isCurrent ? 'Current session' : this.formatDate(conv.lastResponseAt ?? conv.createdAt),
+    });
+
+    if (!isCurrent) {
+      content.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.isHistoryNewTabModifierClick(e) && options.onOpenConversationInNewTab) {
+          e.preventDefault();
           runConversationAction(
             () => this.runHistoryAction(
-              () => options.onSelectConversation(conv.id),
+              () => options.onOpenConversationInNewTab?.(conv.id, true),
+              'Failed to load conversation',
+            ),
+            'Failed to load conversation',
+          );
+          return;
+        }
+
+        runConversationAction(
+          () => this.runHistoryAction(
+            () => options.onSelectConversation(conv.id),
+            'Failed to load conversation',
+          ),
+          'Failed to load conversation',
+        );
+      });
+
+      if (options.onOpenConversationInNewTab) {
+        content.addEventListener('auxclick', (e) => {
+          if (e.button !== 1) return;
+          e.preventDefault();
+          e.stopPropagation();
+          runConversationAction(
+            () => this.runHistoryAction(
+              () => options.onOpenConversationInNewTab?.(conv.id, true),
               'Failed to load conversation',
             ),
             'Failed to load conversation',
           );
         });
-
-        if (options.onOpenConversationInNewTab) {
-          content.addEventListener('auxclick', (e) => {
-            if (e.button !== 1) return;
-            e.preventDefault();
-            e.stopPropagation();
-            runConversationAction(
-              () => this.runHistoryAction(
-                () => options.onOpenConversationInNewTab?.(conv.id, true),
-                'Failed to load conversation',
-              ),
-              'Failed to load conversation',
-            );
-          });
-        }
       }
+    }
 
-      item.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.showHistoryContextMenu(item, conv.id, conv.title, isCurrent, options, e);
-      });
+    item.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.showHistoryContextMenu(item, conv.id, conv.title, isCurrent, options, e);
+    });
 
-      const actions = item.createDiv({ cls: 'claudian-history-item-actions' });
+    const actions = item.createDiv({ cls: 'claudian-history-item-actions' });
 
-      // Show regenerate button if title generation failed, or loading indicator if pending
-      if (conv.titleGenerationStatus === 'pending') {
-        const loadingEl = actions.createEl('span', { cls: 'claudian-action-btn claudian-action-loading' });
-        setIcon(loadingEl, 'loader-2');
-        loadingEl.setAttribute('aria-label', 'Generating title...');
-      } else if (conv.titleGenerationStatus === 'failed') {
-        const regenerateBtn = actions.createEl('button', { cls: 'claudian-action-btn' });
-        setIcon(regenerateBtn, 'refresh-cw');
-        regenerateBtn.setAttribute('aria-label', 'Regenerate title');
-        regenerateBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          runConversationAction(
-            () => this.regenerateTitle(conv.id),
-            'Failed to regenerate response',
-          );
-        });
-      }
-
-      const renameBtn = actions.createEl('button', { cls: 'claudian-action-btn' });
-      setIcon(renameBtn, 'pencil');
-      renameBtn.setAttribute('aria-label', 'Rename');
-      renameBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.showRenameInput(item, conv.id, conv.title);
-      });
-
-      const deleteBtn = actions.createEl('button', { cls: 'claudian-action-btn claudian-delete-btn' });
-      setIcon(deleteBtn, 'trash-2');
-      deleteBtn.setAttribute('aria-label', 'Delete');
-      deleteBtn.addEventListener('click', (e) => {
+    // Show regenerate button if title generation failed, or loading indicator if pending
+    if (conv.titleGenerationStatus === 'pending') {
+      const loadingEl = actions.createEl('span', { cls: 'claudian-action-btn claudian-action-loading' });
+      setIcon(loadingEl, 'loader-2');
+      loadingEl.setAttribute('aria-label', 'Generating title...');
+    } else if (conv.titleGenerationStatus === 'failed') {
+      const regenerateBtn = actions.createEl('button', { cls: 'claudian-action-btn' });
+      setIcon(regenerateBtn, 'refresh-cw');
+      regenerateBtn.setAttribute('aria-label', 'Regenerate title');
+      regenerateBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         runConversationAction(
-          () => this.runHistoryAction(
-            () => this.deleteHistoryConversation(conv.id, options),
-            'Failed to delete conversation',
-          ),
-          'Failed to delete conversation',
+          () => this.regenerateTitle(conv.id),
+          'Failed to regenerate response',
         );
       });
     }
+
+    const renameBtn = actions.createEl('button', { cls: 'claudian-action-btn' });
+    setIcon(renameBtn, 'pencil');
+    renameBtn.setAttribute('aria-label', 'Rename');
+    renameBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.showRenameInput(item, conv.id, conv.title);
+    });
+
+    const deleteBtn = actions.createEl('button', { cls: 'claudian-action-btn claudian-delete-btn' });
+    setIcon(deleteBtn, 'trash-2');
+    deleteBtn.setAttribute('aria-label', 'Delete');
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      runConversationAction(
+        () => this.runHistoryAction(
+          () => this.deleteHistoryConversation(conv.id, options),
+          'Failed to delete conversation',
+        ),
+        'Failed to delete conversation',
+      );
+    });
   }
 
   private isHistoryNewTabModifierClick(event: MouseEvent): boolean {
