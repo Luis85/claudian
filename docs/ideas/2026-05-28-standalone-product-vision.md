@@ -2,6 +2,7 @@
 priority: 1 - high
 relations:
   - Product
+status: open
 ---
 # Specorator standalone product vision
 

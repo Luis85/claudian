@@ -56,13 +56,17 @@ views:
     filters:
       and:
         - file.inFolder("docs/ideas")
+    groupBy:
+      property: status
+      direction: DESC
     order:
       - file.name
       - priority
+      - status
       - relations
       - tags
     columnSize:
-      file.name: 359
+      file.name: 332
       note.priority: 144
       note.relations: 217
       note.tags: 161

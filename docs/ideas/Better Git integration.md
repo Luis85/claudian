@@ -2,6 +2,7 @@
 priority: 2 - normal
 relations:
   - Product
+status:
 ---
 The current git integration is lacking a dedicated view to inspect or list the changed files. Although it's possible to just ask the agent to give an Overview, this is not token friendly and can be accomplished programmatically. 
 

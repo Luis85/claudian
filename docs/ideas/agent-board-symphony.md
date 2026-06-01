@@ -1,5 +1,5 @@
 ---
-status: draft
+status: open
 priority: 1 - high
 relations:
   - "[[Agent Kanban Board]]"
