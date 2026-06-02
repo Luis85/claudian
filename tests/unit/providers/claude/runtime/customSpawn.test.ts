@@ -290,20 +290,28 @@ describe('createCustomSpawnFunction', () => {
     const controller = new AbortController();
 
     // Capture addEventListener/removeEventListener calls on the signal
-    const addEventListenerCalls: Array<[string, Function]> = [];
-    const removeEventListenerCalls: Array<[string, Function]> = [];
+    const addEventListenerCalls: Array<[string, any]> = [];
+    const removeEventListenerCalls: Array<[string, any]> = [];
 
     const originalAddEventListener = controller.signal.addEventListener.bind(controller.signal);
     const originalRemoveEventListener = controller.signal.removeEventListener.bind(controller.signal);
 
-    jest.spyOn(controller.signal, 'addEventListener').mockImplementation((event: string, handler: EventListener) => {
-      addEventListenerCalls.push([event, handler as Function]);
-      originalAddEventListener(event, handler);
+    jest.spyOn(controller.signal, 'addEventListener').mockImplementation((
+      event: string,
+      handler: EventListenerOrEventListenerObject,
+      options?: boolean | AddEventListenerOptions,
+    ) => {
+      addEventListenerCalls.push([event, handler]);
+      originalAddEventListener(event, handler, options);
     });
 
-    jest.spyOn(controller.signal, 'removeEventListener').mockImplementation((event: string, handler: EventListener) => {
-      removeEventListenerCalls.push([event, handler as Function]);
-      originalRemoveEventListener(event, handler);
+    jest.spyOn(controller.signal, 'removeEventListener').mockImplementation((
+      event: string,
+      handler: EventListenerOrEventListenerObject,
+      options?: boolean | EventListenerOptions,
+    ) => {
+      removeEventListenerCalls.push([event, handler]);
+      originalRemoveEventListener(event, handler, options);
     });
 
     const spawnFn = createCustomSpawnFunction('/enhanced/path');
@@ -325,7 +333,7 @@ describe('createCustomSpawnFunction', () => {
     // Simulate child exit normally (no abort)
     expect(exitHandler).toBeDefined();
     if (exitHandler) {
-      (exitHandler as Function)();
+      (exitHandler as () => void)();
     }
 
     // Verify removeEventListener was called with the same abort handler

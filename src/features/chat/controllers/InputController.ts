@@ -578,7 +578,9 @@ export class InputController {
           // Auto-implement takes precedence over both approve-new-session and queued input
           if (planAutoSendContent) {
             this.deps.getInputEl().value = planAutoSendContent;
-            this.sendMessage().catch(() => {});
+            this.sendMessage().catch((err: unknown) => {
+              this.deps.plugin.logger.scope('input').error('sendMessage failed unexpectedly', err);
+            });
           } else {
             // approve-new-session: create fresh conversation and send plan content
             // Must be inside the invalidation guard — if the tab was closed or
@@ -588,9 +590,8 @@ export class InputController {
               state.pendingNewSessionPlan = null;
               await conversationController.createNew();
               this.deps.getInputEl().value = planContent;
-              this.sendMessage().catch(() => {
-                // sendMessage() handles its own errors internally; this prevents
-                // unhandled rejection if an unexpected error slips through.
+              this.sendMessage().catch((err: unknown) => {
+                this.deps.plugin.logger.scope('input').error('sendMessage failed unexpectedly', err);
               });
             } else if (shouldProcessQueuedMessage) {
               this.queuedMessages.processQueuedMessage();
