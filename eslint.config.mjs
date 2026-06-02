@@ -114,6 +114,36 @@ export default defineConfig([
     rules: stagedObsidianRules,
   },
   {
+    files: ['src/**/*.ts'],
+    ignores: [
+      // Provider-internal files own their own internals.
+      'src/providers/*/**/*.ts',
+      // The bootstrap aggregator(s) that call ProviderRegistry.register /
+      // ProviderWorkspaceRegistry.register are the one sanctioned outside
+      // importer of `src/providers/<id>/registration` and workspace modules.
+      'src/providers/index.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/providers/claude/**',
+                '**/providers/codex/**',
+                '**/providers/cursor/**',
+                '**/providers/opencode/**',
+              ],
+              message:
+                'Provider internals are reachable only through ProviderRegistry / ProviderWorkspaceRegistry. Add a method to ProviderRegistration / ProviderChatUIConfig / ProviderSettingsReconciler instead of importing from src/providers/<id>/. See ADR 0001 § Boundary rule.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['tests/**/*.ts'],
     ...jestRecommended,
     rules: {
