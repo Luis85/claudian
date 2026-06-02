@@ -55,6 +55,10 @@ const opencodeEnvHashSpec: EnvHashReconcilerSpec = {
 };
 
 export const opencodeSettingsReconciler: ProviderSettingsReconciler = {
+  setEnabled(settings, enabled) {
+    updateOpencodeProviderSettings(settings, { enabled });
+  },
+
   handleEnvironmentChange(settings: Record<string, unknown>): boolean {
     return clearOpencodeDiscoveryState(settings);
   },
