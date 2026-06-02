@@ -84,8 +84,23 @@ const SUBPROCESS_ENV_DENYLIST_UPPER: ReadonlySet<string> = new Set(
   [...SUBPROCESS_ENV_DENYLIST].map((k) => k.toUpperCase()),
 );
 
+/**
+ * Uppercase shadow of the allowlist for case-insensitive matching. Mirrors
+ * the denylist shape and exists for the same reason: Windows env-var names
+ * are case-insensitive, and `Object.entries(process.env)` on Windows often
+ * yields mixed-case keys (`ComSpec`, `ProgramFiles`, `ProgramData`, `windir`)
+ * that an exact-case Set lookup would silently drop.
+ */
+const SUBPROCESS_ENV_ALLOWLIST_UPPER: ReadonlySet<string> = new Set(
+  [...SUBPROCESS_ENV_ALLOWLIST].map((k) => k.toUpperCase()),
+);
+
 function isDeniedKey(key: string): boolean {
   return SUBPROCESS_ENV_DENYLIST_UPPER.has(key.toUpperCase());
+}
+
+function isAllowedKey(key: string): boolean {
+  return SUBPROCESS_ENV_ALLOWLIST_UPPER.has(key.toUpperCase());
 }
 
 export interface BuildAllowlistedSubprocessEnvironmentOptions {
@@ -104,7 +119,7 @@ export function buildAllowlistedSubprocessEnvironment(
   for (const [key, value] of Object.entries(opts.processEnv)) {
     if (value === undefined) continue;
     if (isDeniedKey(key)) continue;
-    const passesAllowlist = SUBPROCESS_ENV_ALLOWLIST.has(key);
+    const passesAllowlist = isAllowedKey(key);
     const passesPrefix = opts.providerPrefixPattern.test(key);
     if (!passesAllowlist && !passesPrefix) continue;
     out[key] = value;

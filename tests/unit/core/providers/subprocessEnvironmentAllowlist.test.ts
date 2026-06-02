@@ -99,6 +99,29 @@ describe('buildAllowlistedSubprocessEnvironment', () => {
     expect(SUBPROCESS_ENV_ALLOWLIST.has('SECRET_TOKEN')).toBe(false);
   });
 
+  it('matches the allowlist case-insensitively for Windows-style mixed-case env keys', () => {
+    // On Windows, `Object.entries(process.env)` typically yields mixed-case
+    // keys such as `ComSpec`, `ProgramFiles`, `ProgramData`, `windir`. The
+    // canonical allowlist entries are uppercase. An exact-case Set lookup
+    // would drop them and the spawned CLI would lose standard Windows vars.
+    const result = buildAllowlistedSubprocessEnvironment({
+      processEnv: {
+        ComSpec: 'C:\\Windows\\System32\\cmd.exe',
+        ProgramFiles: 'C:\\Program Files',
+        ProgramData: 'C:\\ProgramData',
+        windir: 'C:\\Windows',
+        Path: 'C:\\Windows\\System32',
+      },
+      customEnv: {},
+      providerPrefixPattern: /^CURSOR_/i,
+    });
+    expect(result.ComSpec).toBe('C:\\Windows\\System32\\cmd.exe');
+    expect(result.ProgramFiles).toBe('C:\\Program Files');
+    expect(result.ProgramData).toBe('C:\\ProgramData');
+    expect(result.windir).toBe('C:\\Windows');
+    expect(result.Path).toBe('C:\\Windows\\System32');
+  });
+
   it('forwards XDG base-dir keys so host XDG_DATA_HOME flows through to the CLI', () => {
     // Opencode reads XDG_DATA_HOME to locate its database under
     // $XDG_DATA_HOME/opencode/. Our DB-path resolution and the CLI must see
