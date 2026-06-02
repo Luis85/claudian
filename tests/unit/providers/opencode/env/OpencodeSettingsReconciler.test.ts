@@ -26,6 +26,26 @@ describe('opencodeSettingsReconciler.normalizeOnLoad', () => {
   it('returns false when providerConfigs.opencode is missing', () => {
     expect(opencodeSettingsReconciler.normalizeOnLoad?.({})).toBe(false);
   });
+
+  it('returns false when providerConfigs is an array (malformed)', () => {
+    const settings: Record<string, unknown> = { providerConfigs: [] };
+    expect(opencodeSettingsReconciler.normalizeOnLoad?.(settings)).toBe(false);
+  });
+
+  it('returns false when providerConfigs is null', () => {
+    const settings: Record<string, unknown> = { providerConfigs: null };
+    expect(opencodeSettingsReconciler.normalizeOnLoad?.(settings)).toBe(false);
+  });
+
+  it('returns false when providerConfigs.opencode is an array (malformed)', () => {
+    const settings: Record<string, unknown> = { providerConfigs: { opencode: [] } };
+    expect(opencodeSettingsReconciler.normalizeOnLoad?.(settings)).toBe(false);
+  });
+
+  it('returns false when providerConfigs.opencode is null', () => {
+    const settings: Record<string, unknown> = { providerConfigs: { opencode: null } };
+    expect(opencodeSettingsReconciler.normalizeOnLoad?.(settings)).toBe(false);
+  });
 });
 
 describe('opencodeSettingsReconciler.setEnabled', () => {

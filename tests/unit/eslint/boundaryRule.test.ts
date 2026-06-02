@@ -1,4 +1,5 @@
 import { ESLint, type Linter } from 'eslint';
+import * as fs from 'fs';
 import * as path from 'path';
 
 const REPO_ROOT = path.resolve(__dirname, '../../..');
@@ -68,5 +69,30 @@ describe('provider boundary ESLint rule', () => {
     });
     const messages = results[0]?.messages ?? [];
     expect(messages.some((m) => m.ruleId === 'no-restricted-imports')).toBe(false);
+  });
+});
+
+describe('eslint.config.mjs boundary block — drift guard', () => {
+  // Cheap text-level check: assert the live config still contains the four
+  // provider-internal patterns + both exemption paths. Catches drift between
+  // the inlined BOUNDARY_CONFIG above and the real eslint.config.mjs without
+  // requiring --experimental-vm-modules to load the .mjs config.
+  const configText = fs.readFileSync(path.join(REPO_ROOT, 'eslint.config.mjs'), 'utf8');
+
+  it.each([
+    '**/providers/claude/**',
+    '**/providers/codex/**',
+    '**/providers/cursor/**',
+    '**/providers/opencode/**',
+  ])('contains pattern %s', (pattern) => {
+    expect(configText).toContain(pattern);
+  });
+
+  it('contains intra-provider ignore', () => {
+    expect(configText).toContain('src/providers/*/**/*.ts');
+  });
+
+  it('contains bootstrap-aggregator ignore', () => {
+    expect(configText).toContain('src/providers/index.ts');
   });
 });
