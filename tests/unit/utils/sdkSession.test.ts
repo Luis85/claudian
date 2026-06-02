@@ -280,6 +280,47 @@ describe('sdkSession', () => {
       expect(result.messages).toEqual([]);
       expect(result.error).toBe('Read error');
     });
+
+    // PERF-4 — Loading a long chat from history must not block the event loop.
+    // The parse loop scales with line count; without periodic yields, a 1000-line
+    // session can freeze the UI for hundreds of ms. We verify the BEHAVIOR
+    // (other macrotasks get scheduled time during the call) rather than the
+    // MECHANISM (setTimeout being called), so the test stays meaningful even if
+    // the yield strategy changes.
+    it('yields the event loop during large-session parsing', async () => {
+      const lineCount = 500;
+      const lines: string[] = [];
+      for (let i = 0; i < lineCount; i++) {
+        lines.push(
+          `{"type":"user","uuid":"u${i}","timestamp":"2024-01-15T10:00:00Z","message":{"content":"msg ${i}"}}`,
+        );
+      }
+
+      mockExistsSync.mockReturnValue(true);
+      mockFsPromises.readFile.mockResolvedValue(lines.join('\n'));
+
+      // A self-rescheduling macrotask: each tick increments the counter and
+      // schedules the next tick. If readSDKSession blocks the event loop
+      // synchronously, no ticks fire until the call resolves. If it yields
+      // via setTimeout(0), ticks fire during the call.
+      let counter = 0;
+      let stop = false;
+      const tick = (): void => {
+        if (stop) return;
+        counter++;
+        setTimeout(tick, 0);
+      };
+      setTimeout(tick, 0);
+
+      const result = await readSDKSession('/Users/test/vault', 'session-large');
+      stop = true;
+
+      expect(result.messages).toHaveLength(lineCount);
+      expect(result.skippedLines).toBe(0);
+      // With YIELD_EVERY=100 and 500 lines, the loop yields ~5 times. Each
+      // yield gives the macrotask queue at least one tick.
+      expect(counter).toBeGreaterThanOrEqual(3);
+    });
   });
 
   describe('loadSubagentToolCalls', () => {
@@ -1148,6 +1189,46 @@ describe('sdkSession', () => {
       expect(assistant.role).toBe('assistant');
       // Must be the last UUID so rewind targets the end of the turn
       expect(assistant.assistantMessageId).toBe('a1-last');
+    });
+
+    // PERF-4 — the merge loop converts every filtered SDK entry into a ChatMessage
+    // and merges consecutive assistant messages. For a long history it dominates
+    // wall time after the file read. Without yields the UI freezes for the
+    // duration of the merge; verify scheduler progress during the call.
+    it('yields the event loop during large-session merge', async () => {
+      const turnCount = 250; // 500 SDK entries → 250 user + 250 assistant
+      const lines: string[] = [];
+      for (let i = 0; i < turnCount; i++) {
+        const ts = new Date(i * 2 * 1000).toISOString();
+        lines.push(
+          `{"type":"user","uuid":"u${i}","timestamp":"${ts}","message":{"content":"q ${i}"}}`,
+        );
+        const ts2 = new Date((i * 2 + 1) * 1000).toISOString();
+        lines.push(
+          `{"type":"assistant","uuid":"a${i}","timestamp":"${ts2}","message":{"content":[{"type":"text","text":"a ${i}"}]}}`,
+        );
+      }
+
+      mockExistsSync.mockReturnValue(true);
+      mockFsPromises.readFile.mockResolvedValue(lines.join('\n'));
+
+      let counter = 0;
+      let stop = false;
+      const tick = (): void => {
+        if (stop) return;
+        counter++;
+        setTimeout(tick, 0);
+      };
+      setTimeout(tick, 0);
+
+      const result = await loadSDKSessionMessages('/Users/test/vault', 'session-large-merge');
+      stop = true;
+
+      // 500 entries; user and assistant alternate, so each turn produces 2 messages.
+      expect(result.messages).toHaveLength(turnCount * 2);
+      // Parse loop yields ~5 times (500/100), merge yields ~10 times (500/50).
+      // Be lenient: just confirm meaningful scheduler progress occurred.
+      expect(counter).toBeGreaterThanOrEqual(5);
     });
   });
 

@@ -57,6 +57,12 @@ export {
   resolveToolUseResultStatus,
 } from './sdkAsyncSubagent';
 
+// The merge loop is heavier per-iteration than the JSONL parse loop
+// (parseSDKMessageToChat does content-block extraction + tool-result hydration)
+// so we yield more often. Same rationale as readSDKSession: PERF-4 — block
+// the loop in batches, not in one synchronous sweep.
+const YIELD_EVERY_MERGED_ENTRIES = 50;
+
 export async function loadSDKSessionMessages(
   vaultPath: string,
   sessionId: string,
@@ -78,7 +84,8 @@ export async function loadSDKSessionMessages(
   let pendingAssistant: ChatMessage | null = null;
 
   // Merge consecutive assistant messages until an actual user message appears
-  for (const sdkMsg of filteredEntries) {
+  for (let i = 0; i < filteredEntries.length; i++) {
+    const sdkMsg = filteredEntries[i];
     if (isSystemInjectedMessage(sdkMsg)) continue;
 
     // Skip synthetic assistant messages (e.g., "No response requested." after /compact)
@@ -107,6 +114,13 @@ export async function loadSDKSessionMessages(
         pendingAssistant = null;
       }
       chatMessages.push(chatMsg);
+    }
+
+    if (
+      (i + 1) % YIELD_EVERY_MERGED_ENTRIES === 0 &&
+      i + 1 < filteredEntries.length
+    ) {
+      await new Promise(resolve => window.setTimeout(resolve, 0));
     }
   }
 

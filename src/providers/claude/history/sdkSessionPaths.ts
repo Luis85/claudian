@@ -5,6 +5,14 @@ import * as path from 'path';
 
 import type { SDKNativeMessage, SDKSessionReadResult } from './sdkHistoryTypes';
 
+// Long history files can contain thousands of JSONL lines. Parsing them in a
+// single tight loop blocks the renderer (PERF-4: "Loading a long chat from
+// history makes the UI unresponsive"). Yielding via a macrotask every N parsed
+// lines gives Obsidian and the renderer a chance to run between batches.
+// `setTimeout(0)` is intentional — microtask yields (queueMicrotask) do not
+// release the event loop.
+const YIELD_EVERY_PARSED_LINES = 100;
+
 /**
  * Encodes a vault path for the SDK project directory name.
  * The SDK replaces ALL non-alphanumeric characters with `-`.
@@ -81,12 +89,15 @@ export async function readSDKSession(
     const messages: SDKNativeMessage[] = [];
     let skippedLines = 0;
 
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
       try {
-        const msg = JSON.parse(line) as SDKNativeMessage;
+        const msg = JSON.parse(lines[i]) as SDKNativeMessage;
         messages.push(msg);
       } catch {
         skippedLines++;
+      }
+      if ((i + 1) % YIELD_EVERY_PARSED_LINES === 0 && i + 1 < lines.length) {
+        await new Promise(resolve => window.setTimeout(resolve, 0));
       }
     }
 
