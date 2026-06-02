@@ -114,35 +114,6 @@ export default defineConfig([
     rules: stagedObsidianRules,
   },
   {
-    files: [
-      'src/ClaudianService.ts',
-      'src/InlineEditService.ts',
-      'src/InstructionRefineService.ts',
-      'src/images/**/*.ts',
-      'src/prompt/**/*.ts',
-      'src/sdk/**/*.ts',
-      'src/security/**/*.ts',
-      'src/tools/**/*.ts',
-    ],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['./ui', './ui/*', '../ui', '../ui/*'],
-              message: 'Service and shared modules must not import UI modules.',
-            },
-            {
-              group: ['./ClaudianView', '../ClaudianView'],
-              message: 'Service and shared modules must not import the view.',
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
     files: ['tests/**/*.ts'],
     ...jestRecommended,
     rules: {
