@@ -1,7 +1,7 @@
 ---
 type: feature
 name: Multi Provider Support
-tagline: Different engines for different jobs. Pick the one that fits the moment.
+tagline: Use the AI providers you already have, side by side in one workspace.
 status: draft
 personas:
   - knowledge-worker
@@ -22,9 +22,9 @@ You may already have access to one or more AI providers. Claude through Anthropi
 
 ---
 
-This is not a model picker that swaps engines behind a single chat. Each provider keeps its own settings, its own commands, and its own saved record on disk. A chat tab belongs to the provider you opened it with until you close it. To work with a different provider on a related topic, open a new chat tab and pick that provider when you do.
+This is not a model picker that swaps engines behind a single chat. Each provider keeps its own settings, its own commands, and its own saved record on disk. A chat tab belongs to the provider you opened it with until you close it. To switch, open a new tab and pick a different provider.
 
-Point Specorator at the providers you have once, and each gets its own chat tab and its own settings page under **Settings → Specorator**. Open a Claude tab for a long writing job. Open a Codex tab for a quick technical question. The tabs run side by side; your work stays in your vault whichever provider runs it.
+Point Specorator at the providers you have once, and each gets its own chat tab and its own settings page under **Settings → Specorator**. If you only have one subscription, use that one. If you have several, open them in parallel. The tabs run side by side; your work stays in your vault whichever provider runs it.
 
 <!-- screenshot: chat tab header showing the provider switcher with the four options, transcripts panel visible -->
 
@@ -69,7 +69,6 @@ Claude is wired up the most fully today. Codex covers most of the same ground. O
 ### Goes well with
 
 - [[Chat]]: the chat surface looks and feels the same across all four providers; the matrix shows what actually differs
-- [[docs/product/features/Orchestrator]]: run several questions at once across different providers and let Orchestrator pull the answers together
 
 ---
 
