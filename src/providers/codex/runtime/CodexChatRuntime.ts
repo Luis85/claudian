@@ -603,7 +603,7 @@ export class CodexChatRuntime implements ChatRuntime {
 
   resetSession(): void {
     this.teardownState();
-    this.shutdownProcess().catch(() => {});
+    this.shutdownProcess().catch(() => {}); // best-effort
   }
 
   getSessionId(): string | null {

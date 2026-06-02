@@ -661,7 +661,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
     this.transport = null;
 
     if (this.process) {
-      await this.process.shutdown().catch(() => {});
+      await this.process.shutdown().catch(() => {}); // best-effort
       this.process = null;
     }
   }

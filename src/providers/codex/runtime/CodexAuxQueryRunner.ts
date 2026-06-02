@@ -146,7 +146,7 @@ export class CodexAuxQueryRunner {
       this.transport = null;
     }
     if (this.process) {
-      this.process.shutdown().catch(() => {});
+      this.process.shutdown().catch(() => {}); // best-effort
       this.process = null;
     }
   }
