@@ -35,4 +35,17 @@ describe('isValidCursorSessionId', () => {
     expect(isValidCursorSessionId('...')).toBe(false);
     expect(isValidCursorSessionId('....')).toBe(false);
   });
+
+  it('rejects trailing-dot ids that Win32 path handling would alias to a sibling directory', () => {
+    // On Windows, `~/.cursor/chats/<hash>/sess.` is normalized to
+    // `~/.cursor/chats/<hash>/sess`. Without this guard, a corrupted/imported
+    // chatSessionId of "sess." would silently delete the unrelated "sess"
+    // session's transcript.
+    expect(isValidCursorSessionId('sess.')).toBe(false);
+    expect(isValidCursorSessionId('abc-123-def.')).toBe(false);
+    expect(isValidCursorSessionId('a1b2c3d4-e5f6-7890-abcd-1234567890ab.')).toBe(false);
+    // Leading dot still allowed (Win32 doesn't trim leading dots; UUID-style
+    // ids don't have them but a legacy non-UUID id of ".foo" is structurally fine).
+    expect(isValidCursorSessionId('.foo')).toBe(true);
+  });
 });

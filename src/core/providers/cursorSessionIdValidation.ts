@@ -14,6 +14,11 @@ export function isValidCursorSessionId(sessionId: unknown): sessionId is string 
   // turning `deleteConversationSession` into "wipe every session for the workspace".
   if (DOTS_ONLY.test(sessionId)) return false;
   if (sessionId.includes('..')) return false;
+  // Reject trailing dot: Win32 path handling silently trims trailing periods
+  // (and spaces) from path components, so `"sess."` would resolve to the
+  // sibling `"sess"` directory. Real Cursor session ids are UUID-style and
+  // never end in `.`, so reject before the path join can alias.
+  if (sessionId.endsWith('.')) return false;
   if (!VALID_SESSION_ID.test(sessionId)) return false;
   return true;
 }
