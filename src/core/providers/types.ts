@@ -108,6 +108,14 @@ export interface ProviderSettingsReconciler {
    * specific provider's settings helpers.
    */
   persistEnvironmentHash?(settings: Record<string, unknown>, hash: string): void;
+
+  /**
+   * Toggles the provider's `enabled` flag inside its own config namespace.
+   * Optional so the app shell can route enable toggles through the reconciler
+   * without importing the per-provider settings module. Each implementation
+   * delegates to its existing `update<Provider>ProviderSettings(s, { enabled })`.
+   */
+  setEnabled?(settings: Record<string, unknown>, enabled: boolean): void;
 }
 
 // ---------------------------------------------------------------------------
