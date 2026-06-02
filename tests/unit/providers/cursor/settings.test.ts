@@ -166,3 +166,32 @@ describe('cursor customModels normalization', () => {
     ]);
   });
 });
+
+describe('updateCursorProviderSettings — env shadowing', () => {
+  it('does not write environmentVariables back into providerConfigs.cursor', () => {
+    const settings: Record<string, unknown> = {
+      providerConfigs: {
+        cursor: {
+          enabled: false,
+          // explicitly NO environmentVariables here
+        },
+      },
+    };
+
+    updateCursorProviderSettings(settings, { enabled: true });
+
+    // After the update, providerConfigs.cursor must NOT carry environmentVariables.
+    const providerConfigs = (settings.providerConfigs as Record<string, unknown>) ?? {};
+    const cursorConfig = (providerConfigs.cursor as Record<string, unknown>) ?? {};
+    expect(cursorConfig.environmentVariables).toBeUndefined();
+  });
+
+  it('defaults environmentVariables to "" after an update on an empty bag', () => {
+    // With no centralized env source, the read-side fallback returns the
+    // default empty string. This is the contract; the legacy read fallback in
+    // getCursorProviderSettings stays for back-compat with pre-migration data.
+    const settings: Record<string, unknown> = {};
+    updateCursorProviderSettings(settings, { enabled: true });
+    expect(getCursorProviderSettings(settings).environmentVariables).toBe('');
+  });
+});
