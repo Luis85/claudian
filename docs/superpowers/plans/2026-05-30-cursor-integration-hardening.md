@@ -1,8 +1,20 @@
 ---
-status: open
+status: in-progress
 parent: "[[Multi Provider Support]]"
 ---
 # Cursor Integration Hardening Implementation Plan
+
+> **PR1 status (shipped in PR #24, merged into `main` 2026-06-02):**
+> - Fixed: C3, C4, H5+ARC1, H6, H7+SEC3, SEC1, SEC2 (Tasks 1, 2, 3, 4, 9, 19, 20, 21)
+> - Already-fixed (audit-skipped vs. plan): H1, H3, H9, H10 (Tasks 5 reduced, 7, 12, 10)
+> - Dismissed on review: H8 (Task 11 reverted — full-block `setProviderConfig` makes the writeback load-bearing)
+> - Review-driven additions: pure-dot sessionId rejection, trailing-dot sessionId rejection, legacy-hash deletion in `deleteConversationSession`, case-insensitive allowlist/denylist matching (Windows env-var aliasing), `XDG_*` keys forwarded
+> - C1 / C2 / C5 reaffirmed dismissed
+>
+> **PR2 scope still open:** T5 (cosmetic close-listener cleanup), T6 (H2 platform-aware kill signal), T8 (H4 bounded request id), T13 (H11 tool_result dedup), T14 (H12 tool fallback content), T22 (integration smoke test), T25 (telemetry log codes — plumbing fits with PR2's AcpSubprocess/AcpJsonRpcTransport touches), T26/T27 (verification + summary).
+>
+> Manual smoke (Task 24) is owed before PR2 ships per the original release-gate plan.
+
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

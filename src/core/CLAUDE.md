@@ -19,7 +19,7 @@ Core modules stay provider-neutral. Features depend on `core/`; providers implem
 | `logging/` | Leveled, namespaced diagnostic logger: console + bounded ring buffer, secret redaction | `Logger`, `types`, `redact`, `consoleSink`, `formatLogEntries` |
 | `mcp/` | Provider-neutral MCP coordination and config parsing | `McpConfigParser`, `McpServerManager`, `McpTester`, `McpStorageAdapter` |
 | `prompt/` | Shared prompt templates | `mainAgent`, `inlineEdit`, `titleGeneration`, `instructionRefine` |
-| `providers/` | Registry, capability, environment, and workspace-service contracts | `ProviderRegistry`, `ProviderWorkspaceRegistry`, `ProviderSettingsCoordinator`, `providerEnvironment`, `providerConfig`, `modelRouting`, `types` |
+| `providers/` | Registry, capability, environment, and workspace-service contracts | `ProviderRegistry`, `ProviderWorkspaceRegistry`, `ProviderSettingsCoordinator`, `providerEnvironment`, `providerConfig`, `modelRouting`, `subprocessEnvironmentAllowlist`, `cursorSessionIdValidation`, `types` |
 | `providers/commands/` | Shared command catalog contracts | `ProviderCommandCatalog`, `ProviderCommandEntry`, `hiddenCommands` |
 | `runtime/` | Provider-neutral runtime contracts | `ChatRuntime`, `ChatTurnRequest`, `PreparedChatTurn`, `SessionUpdateResult`, approval/query types |
 | `security/` | Permission and approval helpers | `ApprovalManager` |
@@ -86,3 +86,8 @@ const cliResolver = ProviderWorkspaceRegistry.getCliResolver(providerId);
   - Codex skill discovery comes from `CodexSkillCatalog` and does not depend on runtime command discovery
 - Logging: never use `console.*` in `src/` (the `no-console` lint rule forbids it; the only sanctioned site is `logging/consoleSink.ts`). Log through `plugin.logger.scope('area')`. Guard expensive arg building with `logger.isEnabled('debug')` on hot paths.
   - **Redaction contract:** `Logger` redacts every arg before it reaches the console or the ring buffer. Object keys matching `/(token|key|secret|password|credential|api[-_]?key|authorization|cookie)/i` are masked to `[redacted]` (deep, non-mutating). Never log `.env*` contents, provider configs, or private keys. Log prompt/transcript bodies only at `debug`, truncated.
+- Subprocess env: every provider that spawns a CLI subprocess (Cursor, Opencode) MUST route the child env through `providers/subprocessEnvironmentAllowlist` and pass the allowlisted result as the **base** of the `spawn`/`AcpSubprocess` env (do NOT spread `process.env` on top of it — that reintroduces every host var and defeats the allowlist).
+  - The allowlist + denylist are case-insensitive (Windows env-var names are case-insensitive; `Object.entries(process.env)` yields mixed-case keys).
+  - Provider-prefix keys (`/^CURSOR_/i`, `/^OPENCODE_/i`) pass through alongside the allowlist; `NODE_TLS_REJECT_UNAUTHORIZED` is denied in every casing.
+  - Custom user-entered env (provider settings → Environment) is opt-in and passes outside the allowlist, but the denylist still applies.
+- Cursor-style session ids land in `path.join` against `~/.cursor/chats/...`. Validate every id through `providers/cursorSessionIdValidation` (`isValidCursorSessionId`) before any path operation. Rejects path-traversal (`..`), pure-dot ids (`.`, `..`, etc. that would collapse to parent dir), trailing-dot ids (Win32 silently trims trailing periods), separators, and overlong inputs.
