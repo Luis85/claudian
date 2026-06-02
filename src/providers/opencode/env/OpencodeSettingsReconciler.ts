@@ -14,6 +14,7 @@ import {
   OPENCODE_DEFAULT_THINKING_LEVEL,
   resolveOpencodeBaseModelRawId,
 } from '../models';
+import { OPENCODE_PLAN_MODE_ID, OPENCODE_SAFE_MODE_ID } from '../modes';
 import {
   getOpencodeProviderSettings,
   hasLegacyOpencodeDiscoveryFields,
@@ -61,6 +62,23 @@ export const opencodeSettingsReconciler: ProviderSettingsReconciler = {
 
   handleEnvironmentChange(settings: Record<string, unknown>): boolean {
     return clearOpencodeDiscoveryState(settings);
+  },
+
+  normalizeOnLoad(settings: Record<string, unknown>): boolean {
+    const configs = settings.providerConfigs;
+    if (!configs || typeof configs !== 'object' || Array.isArray(configs)) {
+      return false;
+    }
+    const opencodeConfig = (configs as Record<string, unknown>).opencode;
+    if (!opencodeConfig || typeof opencodeConfig !== 'object' || Array.isArray(opencodeConfig)) {
+      return false;
+    }
+    const bag = opencodeConfig as { selectedMode?: unknown };
+    if (bag.selectedMode === OPENCODE_PLAN_MODE_ID) {
+      bag.selectedMode = OPENCODE_SAFE_MODE_ID;
+      return true;
+    }
+    return false;
   },
 
   reconcileModelWithEnvironment: (settings, conversations) =>
