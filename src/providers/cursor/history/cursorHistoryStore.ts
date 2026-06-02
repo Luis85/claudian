@@ -13,7 +13,23 @@ import {
   normalizeCursorPersistedToolResult,
 } from '../runtime/cursorToolNormalization';
 
+function normalizeWorkspacePathForHash(absoluteVaultPath: string): string {
+  let normalized = path.resolve(absoluteVaultPath);
+  while (normalized.length > 1 && (normalized.endsWith(path.sep) || normalized.endsWith('/'))) {
+    normalized = normalized.slice(0, -1);
+  }
+  if (process.platform === 'win32') {
+    normalized = normalized.toLowerCase();
+  }
+  return normalized;
+}
+
 export function cursorWorkspaceHash(absoluteVaultPath: string): string {
+  return crypto.createHash('md5').update(normalizeWorkspacePathForHash(absoluteVaultPath)).digest('hex');
+}
+
+/** Legacy (pre-normalization) hash; kept only for one-shot upgrade fallback. */
+export function cursorWorkspaceHashLegacy(absoluteVaultPath: string): string {
   return crypto.createHash('md5').update(absoluteVaultPath).digest('hex');
 }
 
@@ -22,9 +38,15 @@ export function resolveCursorStoreDbPath(
   sessionId: string,
 ): string | null {
   if (!isValidCursorSessionId(sessionId)) return null;
-  const hash = cursorWorkspaceHash(absoluteVaultPath);
-  const candidate = path.join(os.homedir(), '.cursor', 'chats', hash, sessionId, 'store.db');
-  return fs.existsSync(candidate) ? candidate : null;
+  const candidates = [
+    cursorWorkspaceHash(absoluteVaultPath),
+    cursorWorkspaceHashLegacy(absoluteVaultPath),
+  ];
+  for (const hash of candidates) {
+    const candidate = path.join(os.homedir(), '.cursor', 'chats', hash, sessionId, 'store.db');
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
 }
 
 function isIdeBootstrapUser(content: string): boolean {

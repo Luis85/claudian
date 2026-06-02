@@ -1,15 +1,22 @@
 import * as crypto from 'crypto';
+import * as fs from 'fs';
+import type * as osType from 'os';
+import * as path from 'path';
+
+const os = jest.requireActual<typeof osType>('os');
 
 import { TOOL_READ, TOOL_WRITE } from '@/core/tools/toolNames';
 import {
   buildChatMessagesFromCursorHistoryRecords,
   cursorWorkspaceHash,
+  cursorWorkspaceHashLegacy,
+  resolveCursorStoreDbPath,
 } from '@/providers/cursor/history/cursorHistoryStore';
 
 describe('cursorHistoryStore', () => {
-  it('hashes workspace path with md5 hex like Cursor CLI', () => {
+  it('legacy hash matches raw md5 of workspace path (pre-normalization Cursor CLI behavior)', () => {
     const vaultPath = '/tmp/claudian-test-vault-path';
-    expect(cursorWorkspaceHash(vaultPath)).toBe(
+    expect(cursorWorkspaceHashLegacy(vaultPath)).toBe(
       crypto.createHash('md5').update(vaultPath).digest('hex'),
     );
   });
@@ -118,5 +125,52 @@ describe('buildChatMessagesFromCursorHistoryRecords', () => {
     ]);
     expect(messages).toHaveLength(1);
     expect(messages[0].content).toBe('hello');
+  });
+});
+
+describe('cursorWorkspaceHash (normalized)', () => {
+  const realPlatform = process.platform;
+  function setPlatform(p: NodeJS.Platform) {
+    Object.defineProperty(process, 'platform', { value: p, configurable: true });
+  }
+  afterEach(() => setPlatform(realPlatform));
+
+  it('produces the same hash for differently-cased Windows paths', () => {
+    setPlatform('win32');
+    expect(cursorWorkspaceHash('D:\\Projects\\Claudian'))
+      .toBe(cursorWorkspaceHash('d:\\projects\\claudian'));
+  });
+
+  it('keeps POSIX paths case-sensitive', () => {
+    setPlatform('linux');
+    expect(cursorWorkspaceHash('/home/user/Vault'))
+      .not.toBe(cursorWorkspaceHash('/home/user/vault'));
+  });
+
+  it('normalizes trailing slashes', () => {
+    setPlatform('linux');
+    expect(cursorWorkspaceHash('/home/user/vault'))
+      .toBe(cursorWorkspaceHash('/home/user/vault/'));
+  });
+});
+
+describe('resolveCursorStoreDbPath two-hash fallback', () => {
+  const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'claudian-test-home-'));
+  let homedirSpy: jest.SpyInstance;
+  beforeAll(() => { homedirSpy = jest.spyOn(os, 'homedir').mockReturnValue(tmpHome); });
+  afterAll(() => {
+    homedirSpy.mockRestore();
+    fs.rmSync(tmpHome, { recursive: true, force: true });
+  });
+
+  it('falls back to the legacy hash when the normalized hash has no store', () => {
+    const vault = 'D:\\Projects\\Claudian';
+    const legacy = cursorWorkspaceHashLegacy(vault);
+    const legacyDir = path.join(tmpHome, '.cursor', 'chats', legacy, 'sess-123');
+    fs.mkdirSync(legacyDir, { recursive: true });
+    fs.writeFileSync(path.join(legacyDir, 'store.db'), '');
+
+    const resolved = resolveCursorStoreDbPath(vault, 'sess-123');
+    expect(resolved).toBe(path.join(legacyDir, 'store.db'));
   });
 });
