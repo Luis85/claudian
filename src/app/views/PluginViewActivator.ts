@@ -43,7 +43,9 @@ export class PluginViewActivator {
   async ensureViewOpen(): Promise<ClaudianView | null> {
     const existingView = this.plugin.getView();
     if (existingView) return existingView;
-    await this.activateView();
+    // Route through plugin.activateView() — tests + external consumers
+    // observe the plugin-level method, not this collaborator's instance method.
+    await this.plugin.activateView();
     return this.plugin.getView();
   }
 
