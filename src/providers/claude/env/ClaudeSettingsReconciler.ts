@@ -40,6 +40,10 @@ export const claudeSettingsReconciler: ProviderSettingsReconciler = {
   reconcileModelWithEnvironment: (settings, conversations) =>
     reconcileEnvironmentHash(claudeEnvHashSpec, settings, conversations),
 
+  setEnabled(settings, enabled) {
+    updateClaudeProviderSettings(settings, { enabled });
+  },
+
   persistLastModel(settings, model) {
     updateClaudeProviderSettings(settings, { lastModel: model });
   },

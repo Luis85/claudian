@@ -33,6 +33,9 @@ function createPlugin(opts: {
     },
     getView: jest.fn().mockReturnValue(view),
     lastKnownTabManagerState: { openTabs: new Array(opts.lastKnownOpenTabCount ?? 0).fill({}) },
+    // Plugin delegates activateView to the activator; mirror that here so
+    // ensureViewOpen's plugin.activateView() call lands on the activator's method.
+    activateView: jest.fn(),
   } as unknown as ClaudianPlugin;
   return { plugin, newLeafTab };
 }
@@ -87,6 +90,8 @@ describe('PluginViewActivator.openNewTab', () => {
       .mockReturnValueOnce(null)
       .mockReturnValue(liveView);
     const activator = new PluginViewActivator(plugin);
+    // plugin.activateView delegates to the activator (mirrors production wiring).
+    (plugin.activateView as jest.Mock).mockImplementation(() => activator.activateView());
 
     await activator.openNewTab();
 

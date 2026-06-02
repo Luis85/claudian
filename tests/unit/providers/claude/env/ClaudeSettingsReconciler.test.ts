@@ -54,4 +54,18 @@ describe('claudeSettingsReconciler', () => {
       expect(settings.model).toBe('sonnet');
     });
   });
+
+  describe('setEnabled', () => {
+    it('writes enabled=true into providerConfigs.claude', () => {
+      const settings: Record<string, unknown> = { providerConfigs: { claude: { enabled: false } } };
+      claudeSettingsReconciler.setEnabled?.(settings, true);
+      expect(getClaudeProviderSettings(settings).enabled).toBe(true);
+    });
+
+    it('writes enabled=false into providerConfigs.claude', () => {
+      const settings: Record<string, unknown> = { providerConfigs: { claude: { enabled: true } } };
+      claudeSettingsReconciler.setEnabled?.(settings, false);
+      expect(getClaudeProviderSettings(settings).enabled).toBe(false);
+    });
+  });
 });
