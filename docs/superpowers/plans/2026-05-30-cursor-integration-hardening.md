@@ -116,6 +116,8 @@ PR1 ships first; wait ~24h for telemetry/feedback; then PR2.
 
 ## Task 0: Setup tracker + baseline + feature-flag scaffolding
 
+> **Status: DONE in PR1.** Tracker lives at `.context/cursor-hardening-verified.md` (gitignored per project convention). `.context/cursor-hardening-telemetry.md` documents the deferred log codes. Release notes were inlined into the PR #24 body since the project has no `CHANGELOG.md`.
+
 **Files:**
 - Create: `.context/cursor-hardening-verified.md`, `.context/cursor-hardening-deferred.md`, `.context/cursor-hardening-release-notes.md`
 
@@ -219,6 +221,8 @@ git commit -m "chore(cursor): add hardening plan, verification tracker, deferred
 ---
 
 ## Task 1: H5 (+ARC1) — Shared subprocess env allowlist
+
+> **Status: DONE in PR1** (`9e51066`). Hardened on review: `3cf949b` made allowlist load-bearing at spawn site (dropped `...process.env` spread in both Opencode `startProcess` paths) + added `XDG_*` keys; `8e45914` case-insensitive denylist; `551a6dc` case-insensitive allowlist.
 
 Finding: `buildCursorAgentEnvironment` (Cursor) and `OpencodeRuntimeEnvironment` (Opencode) both spread all of `process.env` into the subprocess. Host secrets, debug flags, and unrelated keys leak. Fix is extracted to a shared utility so both providers stay in sync.
 
@@ -541,6 +545,8 @@ git commit -m "fix(providers): extract shared subprocess env allowlist; apply to
 
 ## Task 2: C3 — Close SQLite handle in history store
 
+> **Status: DONE in PR1** (`0b0eaa9`). `loadCursorChatMessagesFromStore` uses `try { … } finally { db.close() }`; handle released on success + on `stmt.all()` throw.
+
 Finding: `openCursorSqliteReadonly` returns a `DatabaseSync` instance never closed by `loadCursorChatMessagesFromStore`. On Windows the handle holds an exclusive read lock that blocks the Cursor CLI from writing.
 
 **Files:**
@@ -661,6 +667,8 @@ git commit -m "fix(cursor): close SQLite handle after history hydration"
 ---
 
 ## Task 3: H6 — Normalize workspace path + two-hash migration fallback
+
+> **Status: DONE in PR1** (`8940702`). `cursorWorkspaceHash` hashes normalized path (lowercased on win32, trailing separators stripped). `cursorWorkspaceHashLegacy` exported; `resolveCursorStoreDbPath` falls back to it. Delete path also iterates both hashes after review (`a949703`).
 
 Finding: Workspace hash drifts across Windows path casing → silent empty history on upgrade. Without a migration, every Windows user loses history mapping. We add normalization AND a one-shot fallback that tries the legacy hash if the normalized hash returns no store.
 
@@ -796,6 +804,8 @@ git commit -m "fix(cursor): normalize workspace hash and fall back to legacy has
 
 ## Task 4: H7 + SEC3 — Surface history hydration errors with redacted paths
 
+> **Status: DONE in PR1** (`b27b4a1`). Added `loadCursorChatMessagesFromStoreResult` returning `{ messages, error? }`. `redactHomeInPath` handles both `\\` and `/` forms. Service exposes `getLastHistoryLoadError(conversationId)` as a queryable field (logger plumbing deferred — narrow PR1 scope). `loadCursorChatMessagesFromStore` preserved as back-compat wrapper.
+
 Finding: History load errors silently return `[]`. Add an explicit error path AND redact `$HOME` from the error string before it surfaces.
 
 **Files:**
@@ -902,6 +912,8 @@ git commit -m "fix(cursor): surface history hydration errors with redacted home-
 
 ## Task 5: H1 — Attach close listener before stream pumping + feature flag
 
+> **Status: ALREADY-FIXED before plan execution.** `631ec40` (`terminateChild()` attaches `exit` before `kill()`) + `5fe877d` (SIGKILL escalation) landed after plan was drafted. Cancel→kill race no longer exists. The remaining close-listener timing in `query()` is cosmetic — feature flag unnecessary. Optional cleanup may roll into PR2.
+
 Finding: `CursorChatRuntime.query` attaches `child.on('close', ...)` only after `processCursorAgentNdjsonLines` completes. Cancel can race with kill. Fix: attach close/exit handlers immediately after spawn. Adds `CLAUDIAN_CURSOR_LEGACY_CLOSE_LISTENER=1` rollback flag.
 
 **Files:**
@@ -998,6 +1010,8 @@ git commit -m "fix(cursor): attach close listener before stream pumping; add leg
 ---
 
 ## Task 6: H2 + ARC2 — Platform-aware kill signal + Opencode regression test
+
+> **Status: PENDING-PR2.** Symptom still present: `AcpSubprocess.ts:122` sends `SIGTERM` unconditionally; silently ignored on Windows. Plan body below stays accurate.
 
 Finding: `AcpSubprocess` always sends SIGTERM; on Windows that is silently ignored. Adds `CLAUDIAN_ACP_FORCE_SIGTERM=1` rollback flag. Adds an Opencode regression test because Opencode rides on the same shared subprocess.
 
@@ -1113,6 +1127,8 @@ git commit -m "fix(acp): use SIGKILL on Windows by default; idempotent exit; CLA
 
 ## Task 7: H3 — Reject pending zero-timeout requests on transport close
 
+> **Status: ALREADY-FIXED.** `AcpJsonRpcTransport.dispose()` already iterates `this.pending` and rejects on close (wired into `readline.on('close')` + stream error/close paths). No work needed.
+
 Finding: `timeoutMs=0` (used by the prompt RPC) means no timer is registered. If the remote crashes after receiving the request, the promise stays pending forever.
 
 **Files:**
@@ -1193,6 +1209,8 @@ git commit -m "fix(acp): reject pending requests on transport close (covers time
 
 ## Task 8: H4 — Bounded request id allocation
 
+> **Status: PENDING-PR2.** Symptom still present; defensive fix. Plan body below stays accurate.
+
 Finding: `nextId` unbounded. Defensive fix.
 
 **Files:**
@@ -1243,6 +1261,8 @@ git commit -m "fix(acp): bound request id allocation to avoid pending-map collis
 ---
 
 ## Task 9: C4 — Spawn lock helper + Cursor adaptor migration
+
+> **Status: DONE in PR1** (`dfc3e30`). `runWithCursorAgentSpawnLock` exported. `CursorAuxCliRunner.spawnOnce` migrated. `CursorChatRuntime` and `cursorModelCatalog` keep manual acquire/release per plan.
 
 Finding: Cross-process lock deferred. Within-process: provide a try-finally-guaranteed helper; migrate `CursorAuxCliRunner` as a sample.
 
@@ -1346,6 +1366,8 @@ git commit -m "fix(cursor): add runWithCursorAgentSpawnLock helper; migrate aux 
 
 ## Task 10: H10 — Inline edit cancel propagates abort signal to runner
 
+> **Status: ALREADY-FIXED.** `ff3a179` refactored onto shared `QueryBackedInlineEditService` which constructs an `AbortController` and threads it into `runner.query(...)`. Cancel aborts spawn. No work needed.
+
 Finding: `CursorInlineEditService.cancel()` aborts the controller but does not pass that signal into the runner config, so the spawned process keeps running until natural exit, blocking the spawn lock.
 
 **Files:**
@@ -1412,6 +1434,8 @@ git commit -m "fix(cursor): propagate inline edit cancel into Cursor Agent spawn
 
 ## Task 11: H8 — Stop shadowing environmentVariables in settings
 
+> **Status: DISMISSED-ON-REVIEW.** Initially landed as `3cc5fbd`; reverted in `8bd097c` after Codex P1 review on PR #24. The "shadowing" was wrong: `setProviderConfig` does full-block replacement, so the writeback is load-bearing — `EnvironmentApplyService` writes `providerConfigs.cursor.environmentVariables`, then `saveHash` calls `updateCursorProviderSettings({ environmentHash })`, and dropping the writeback wipes user env. The underlying merge-vs-replace concern is real but out of scope.
+
 Finding: `updateCursorProviderSettings` writes the legacy fallback value back into `providerConfig.environmentVariables` on every save, shadowing the authoritative source.
 
 **Files:**
@@ -1466,6 +1490,8 @@ git commit -m "fix(cursor): stop shadowing environmentVariables in provider conf
 
 ## Task 12: H9 — Treat any saved-vs-next hash mismatch as "needs recompute"
 
+> **Status: ALREADY-FIXED.** Generic `EnvHashReconciler.ts:41` already does `saved === next` and invalidates on any mismatch.
+
 Finding: Empty saved hash should invalidate when the next hash is non-empty. The original draft's special-case condition is redundant — a single `saved !== next` covers the failure.
 
 **Files:**
@@ -1501,6 +1527,8 @@ git commit -m "fix(cursor): invalidate conversations on any environmentHash mism
 ---
 
 ## Task 13: H11 — Dedup tool_result in ACP normalizer + Opencode fixture
+
+> **Status: PENDING-PR2.** `AcpSessionUpdateNormalizer.ts:167-174, 217-224` can emit `tool_result` twice; no per-id dedup. Plan body below stays accurate.
 
 Finding: `AcpSessionUpdateNormalizer` can emit `tool_result` twice for one tool call (once on `tool_call` completed, once on `tool_call_update` completed). Adds per-id dedup AND a quick Opencode regression fixture because the normalizer is shared.
 
@@ -1567,6 +1595,8 @@ git commit -m "fix(acp): emit tool_result at most once per tool call id"
 
 ## Task 14: H12 — Fallback tool result content from args
 
+> **Status: PENDING-PR2.** `cursorToolNormalization.ts:228-230` returns empty content with no args fallback when `result` is missing. Plan body below stays accurate.
+
 **Files:**
 - Modify: `src/providers/cursor/runtime/cursorToolNormalization.ts`
 - Modify: `tests/unit/providers/cursor/runtime/cursorToolNormalization.test.ts`
@@ -1597,6 +1627,8 @@ git commit -m "fix(cursor): fall back to args when tool result is missing"
 
 ## Task 15: Aux service test — Title generation
 
+> **Status: PENDING-PR2.** Not executed in PR1.
+
 (Same as draft 1 Task 15 — see file. Bodies inlined; see the original draft for the test code. Engineer reads the file first to confirm method names.)
 
 - [ ] Steps 1–4 unchanged from previous version. Commit message: `test(cursor): cover CursorTitleGenerationService`.
@@ -1604,6 +1636,8 @@ git commit -m "fix(cursor): fall back to args when tool result is missing"
 ---
 
 ## Task 16: Aux service test — Instruction refine
+
+> **Status: PENDING-PR2.** Not executed in PR1.
 
 (Same as draft 1 Task 16. The behavioral change — only mark `success: true` when at least one tag matched — stays as part of this task.)
 
@@ -1613,6 +1647,8 @@ git commit -m "fix(cursor): fall back to args when tool result is missing"
 
 ## Task 17: Aux service test — Inline edit (additional)
 
+> **Status: PENDING-PR2.** Not executed in PR1. (T10's cancel coverage is already in via `ff3a179`'s shared `QueryBackedInlineEditService` tests.)
+
 (Beyond Task 10 cancel coverage: happy path, frontmatter-spanning selection, empty selection, runner throws.)
 
 - [ ] Steps 1–4 unchanged from draft 1.
@@ -1620,6 +1656,8 @@ git commit -m "fix(cursor): fall back to args when tool result is missing"
 ---
 
 ## Task 18: Build + suite + tracker close-out (interim)
+
+> **Status: PENDING-PR2.** PR1 ran its own close-out: typecheck/lint/test/build all 0; 356 suites / 6613 passed / 35 skipped at PR1 tip `d101639`. Repeat for PR2 after Tasks 6-17 land.
 
 Run after Tasks 1–17:
 
@@ -1637,6 +1675,8 @@ git commit -m "chore(cursor): finalize verification tracker through Task 17" || 
 ---
 
 ## Task 19: SEC1 — sessionId path traversal validator
+
+> **Status: DONE in PR1** (`5a7f0d2`). Hardened on review: `a949703` rejects pure-dot ids (`.`, `..`, `...` collapse to parent dir, letting `deleteConversationSession` wipe everything); `d101639` rejects trailing-dot ids (Win32 trims trailing periods → `sess.` aliases sibling `sess`). Wired into `resolveCursorStoreDbPath` and `deleteConversationSession`.
 
 **Critical security blocker added in draft 2 after the security review.** A malicious or corrupted `sessionId` like `../../evil` allows `path.join` to escape the chats jail. We validate the id before constructing any path.
 
@@ -1727,6 +1767,8 @@ git commit -m "fix(cursor): validate sessionId before path construction (path-tr
 ---
 
 ## Task 20: SEC2 — Prompt temp file mode 0o600 + guaranteed cleanup
+
+> **Status: DONE in PR1** (`4babf11`). Dir `chmodSync(dir, 0o700)` (POSIX only — best-effort on Windows); file written with `{ mode: 0o600 }`; write failure rm-syncs the dir before rethrowing.
 
 Finding: `resolveCursorCliPromptArg` writes the prompt (which may contain conversation history, tool results, API responses) to a temp file with default permissions. World-readable on Linux. Cleanup is best-effort.
 
@@ -1822,6 +1864,8 @@ git commit -m "fix(cursor): tighten prompt temp file permissions and clean up on
 
 ## Task 21: ARC2 — Opencode parallel ACP regression sanity check
 
+> **Status: DONE in PR1.** Opencode test suite (23 suites / 170 passed / 3 skipped) ran clean against PR1 changes. Real mock-capture coverage for shared ACP fixes lands with PR2 when those fixes touch `AcpSubprocess`/`AcpJsonRpcTransport`/`AcpSessionUpdateNormalizer`.
+
 Added because Tasks 6, 7, 8, 13 modify shared ACP code that Opencode depends on.
 
 **Files:**
@@ -1849,6 +1893,8 @@ git commit -m "test(opencode): align fixtures with shared ACP hardening" || echo
 ---
 
 ## Task 22: Integration smoke test — full Cursor turn lifecycle
+
+> **Status: PENDING-PR2.** Best executed alongside hot-path fixes (T6/T8/T13/T14) so the smoke catches their combined behavior. Plan body below stays accurate.
 
 QA review flagged the lack of an integration test. We add ONE focused test that exercises spawn → prompt → tool → cancel → close. It would catch regressions in Tasks 5, 6, 7, 9, 10, 13 simultaneously.
 
@@ -1886,6 +1932,8 @@ git commit -m "test(cursor): integration smoke for spawn → prompt → tool →
 
 ## Task 23: CHANGELOG entry
 
+> **Status: NO-OP.** Project does not maintain `CHANGELOG.md`; releases use `gh release create --generate-notes` auto-built from conventional commit messages. PR1 release notes effectively live in the PR #24 body + per-commit messages on `main`. For PR2, do the same — write a comprehensive PR body.
+
 Plan flagged missing release-notes coverage.
 
 **Files:**
@@ -1905,6 +1953,8 @@ git commit -m "docs: changelog for cursor integration hardening"
 ---
 
 ## Task 24: Manual smoke test (required before PR2 merge)
+
+> **Status: PENDING-USER.** Required gate before PR2 merges. PR1 not yet manually smoked on Windows + macOS/Linux — user owns this. Plan body below is the canonical script.
 
 Release reviewer flagged the lack of a manual gate.
 
@@ -1928,6 +1978,8 @@ Release reviewer flagged the lack of a manual gate.
 
 ## Task 25: Telemetry / observability stubs
 
+> **Status: DEFERRED-TO-PR2.** Three of four log sites (`cursor.history.load_failed`, `acp.transport.close_with_pending`, `acp.subprocess.kill_escalated`) have no `plugin.logger` reference in their constructors; plumbing touches constructor signatures, which is hot-path adjacent and outside PR1's risk tier. PR2 already touches `AcpSubprocess` + `AcpJsonRpcTransport` — right time to plumb the logger. Planned codes documented in `.context/cursor-hardening-telemetry.md`.
+
 Release review flagged no way to confirm the fixes after deploy.
 
 - [ ] **Step 1:** Add log lines at the leveled-logger `info` level in:
@@ -1948,6 +2000,8 @@ git commit -m "chore(cursor): add log lines for post-deploy verification"
 ---
 
 ## Task 26: Final verification and merge
+
+> **Status: PENDING-PR2.** PR1 ran its own version at the PR #24 tip. Repeat for PR2 once Tasks 6-17 land.
 
 - [ ] **Step 1:** Confirm every PENDING row in `.context/cursor-hardening-verified.md` is now CONFIRMED+fixed or DISMISSED.
 
@@ -1974,6 +2028,8 @@ Expected: no Cursor aux service at 0% statement coverage.
 ---
 
 ## Task 27: Summary artifact
+
+> **Status: PENDING-PR2.** PR1 summary lives in the PR #24 body and the `.context/cursor-hardening-verified.md` tracker (gitignored). PR2 should produce a combined PR1+PR2 summary for the reviewer.
 
 - [ ] Write `.context/cursor-hardening-summary.md` listing each task, the commit hash (from `git log --oneline -40`), verified/dismissed status, and the manual smoke result. This is what the reviewer reads.
 
