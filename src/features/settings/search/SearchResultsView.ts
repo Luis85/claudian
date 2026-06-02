@@ -1,3 +1,4 @@
+import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { SettingsField } from '../registry/SettingsField';
 
 interface GroupedResults {
@@ -36,8 +37,15 @@ export class SearchResultsView {
   private renderResults(): void {
     const grouped = this.groupByTabAndSection();
 
-    // Tab order: general, claude, codex, opencode, cursor, agentBoard, orchestrator, diagnostics
-    const tabOrder = ['general', 'claude', 'codex', 'opencode', 'cursor', 'agentBoard', 'orchestrator', 'diagnostics'];
+    // Tab order: general, <registered providers in registration order>, agentBoard, orchestrator, diagnostics.
+    // Provider tab ids match provider ids by convention (see registry/providers/registerProviderTab.ts).
+    const tabOrder = [
+      'general',
+      ...ProviderRegistry.getRegisteredProviderIds(),
+      'agentBoard',
+      'orchestrator',
+      'diagnostics',
+    ];
     const sortedTabIds = Object.keys(grouped).sort((a, b) => {
       const aIdx = tabOrder.indexOf(a);
       const bIdx = tabOrder.indexOf(b);
