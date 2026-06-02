@@ -337,6 +337,15 @@ export interface ProviderChatUIConfig {
   /** Optional provider-owned mode selector descriptor. */
   getModeSelector?(settings: Record<string, unknown>): ProviderModeSelectorConfig | null;
 
+  /**
+   * Optional list of provider-owned modes for settings UIs that surface a
+   * mode dropdown outside an active selector. Returned modes are stable {id,
+   * label} pairs sourced from the provider's own settings bag. Opencode is
+   * the canonical user — its `selectedMode` setting field reads this so the
+   * field code never imports `getOpencodeProviderSettings` directly.
+   */
+  getAvailableModes?(settings: Record<string, unknown>): Array<{ id: string; label: string }>;
+
   /** Optional hook when the toolbar changes a provider-owned mode selection. */
   applyModeSelection?(value: string, settings: unknown): void;
 
