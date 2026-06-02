@@ -7,12 +7,12 @@ views:
         - type == "feature"
     order:
       - file.name
-      - parent
       - tagline
       - personas
       - status
     columnSize:
       file.name: 237
+    cardSize: 320
   - type: table
     name: User Manuals
     filters:
