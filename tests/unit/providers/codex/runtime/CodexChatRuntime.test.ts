@@ -35,6 +35,7 @@ const mockProcessStart = jest.fn();
 const mockProcessShutdown = jest.fn().mockResolvedValue(undefined);
 const mockProcessIsAlive = jest.fn().mockReturnValue(true);
 const mockProcessOnExit = jest.fn();
+const mockProcessOffExit = jest.fn();
 const mockProcessStdin = { write: jest.fn((_c: any, _e: any, cb: any) => cb?.()) };
 const mockProcessStdout = {};
 const mockProcessStderr = {};
@@ -45,6 +46,7 @@ jest.mock('@/providers/codex/runtime/CodexAppServerProcess', () => ({
     shutdown: mockProcessShutdown,
     isAlive: mockProcessIsAlive,
     onExit: mockProcessOnExit,
+    offExit: mockProcessOffExit,
     get stdin() { return mockProcessStdin; },
     get stdout() { return mockProcessStdout; },
     get stderr() { return mockProcessStderr; },
@@ -2439,6 +2441,60 @@ describe('CodexChatRuntime', () => {
       // The buffered text should have been flushed after turn/started
       expect(chunks).toContainEqual({ type: 'text', content: 'Buffered text' });
       expect(chunks).toContainEqual({ type: 'done' });
+    });
+  });
+
+  describe('CON-3: subprocess-death watchdog', () => {
+    it('yields error when process exits mid-stream without turn/completed', async () => {
+      let capturedExitHandler: (() => void) | null = null;
+
+      mockProcessOnExit.mockImplementation((handler: () => void) => {
+        capturedExitHandler = handler;
+      });
+
+      mockTransportRequest.mockImplementation(buildRequestHandler({
+        'thread/start': () => threadStartResponse('thread-con3'),
+        'turn/start': () => {
+          // Schedule process exit BEFORE turn/completed would arrive
+          setTimeout(() => {
+            if (capturedExitHandler) capturedExitHandler();
+          }, 10);
+          return turnStartResponse('turn-con3');
+        },
+      }));
+
+      const chunks = await collectChunks(runtime.query(createTurn('test')));
+
+      // Generator should yield error and done chunks
+      expect(chunks).toContainEqual({ type: 'error', content: 'Codex app-server process exited unexpectedly' });
+      expect(chunks).toContainEqual({ type: 'done' });
+    });
+
+    it('cleans up exit handler in finally block', async () => {
+      const exitHandlers: Array<() => void> = [];
+
+      mockProcessOnExit.mockImplementation((handler: () => void) => {
+        exitHandlers.push(handler);
+      });
+
+      mockTransportRequest.mockImplementation(buildRequestHandler({
+        'thread/start': () => threadStartResponse('thread-cleanup'),
+        'turn/start': () => {
+          setTimeout(() => {
+            emitNotification('turn/completed', {
+              threadId: 'thread-cleanup',
+              turn: { id: 'turn-cleanup', items: [], status: 'completed', error: null },
+            });
+          }, 0);
+          return turnStartResponse('turn-cleanup');
+        },
+      }));
+
+      mockProcessOffExit.mockClear();
+      await collectChunks(runtime.query(createTurn('test')));
+
+      // offExit should have been called to clean up the handler
+      expect(mockProcessOffExit).toHaveBeenCalledTimes(1);
     });
   });
 });

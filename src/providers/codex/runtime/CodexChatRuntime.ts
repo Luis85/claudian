@@ -282,6 +282,13 @@ export class CodexChatRuntime implements ChatRuntime {
 
     this.wireTransportHandlers();
 
+    // Subprocess-death watchdog: if app-server exits unexpectedly, yield error
+    const exitHandler = (): void => {
+      enqueueChunk({ type: 'error', content: 'Codex app-server process exited unexpectedly' });
+      enqueueChunk({ type: 'done' });
+    };
+    this.process?.onExit(exitHandler);
+
     const compactValidationError = this.validateCompactTurn(originalTurn);
     if (compactValidationError) {
       yield { type: 'error', content: compactValidationError };
@@ -514,6 +521,7 @@ export class CodexChatRuntime implements ChatRuntime {
       yield { type: 'done' };
       return;
     } finally {
+      this.process?.offExit(exitHandler);
       this.notificationRouter?.endTurn();
 
       this.cleanupActiveInputBundles();
