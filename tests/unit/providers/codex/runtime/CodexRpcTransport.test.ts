@@ -217,4 +217,32 @@ describe('CodexRpcTransport', () => {
       jest.useRealTimers();
     });
   });
+
+  describe('dispose', () => {
+    it('stops routing notifications after dispose even if the stream emits more lines', async () => {
+      const handler = jest.fn();
+      transport.onNotification('item/agentMessage/delta', handler);
+
+      // Sanity: pre-dispose notifications still route.
+      proc._pushLine({
+        jsonrpc: '2.0',
+        method: 'item/agentMessage/delta',
+        params: { delta: 'before' },
+      });
+      await new Promise(r => setTimeout(r, 10));
+      expect(handler).toHaveBeenCalledTimes(1);
+
+      transport.dispose();
+
+      // Stale stdout from the prior subprocess keeps emitting; transport must ignore it.
+      proc._pushLine({
+        jsonrpc: '2.0',
+        method: 'item/agentMessage/delta',
+        params: { delta: 'after' },
+      });
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+  });
 });

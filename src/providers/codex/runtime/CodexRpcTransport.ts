@@ -1,4 +1,4 @@
-import { createInterface } from 'readline';
+import { createInterface, type Interface as ReadlineInterface } from 'readline';
 
 import type { CodexAppServerProcess } from './CodexAppServerProcess';
 import type { JsonRpcError } from './codexAppServerTypes';
@@ -20,12 +20,13 @@ export class CodexRpcTransport {
   private notificationHandlers = new Map<string, NotificationHandler>();
   private serverRequestHandlers = new Map<string, ServerRequestHandler>();
   private disposed = false;
+  private rl: ReadlineInterface | null = null;
 
   constructor(private readonly proc: CodexAppServerProcess) {}
 
   start(): void {
-    const rl = createInterface({ input: this.proc.stdout });
-    rl.on('line', (line) => this.handleLine(line));
+    this.rl = createInterface({ input: this.proc.stdout });
+    this.rl.on('line', (line) => this.handleLine(line));
 
     this.proc.onExit(() => {
       this.rejectAllPending(new Error('App-server process exited'));
@@ -75,6 +76,8 @@ export class CodexRpcTransport {
   dispose(): void {
     this.disposed = true;
     this.rejectAllPending(new Error('Transport disposed'));
+    this.rl?.close();
+    this.rl = null;
   }
 
   // -----------------------------------------------------------------------
