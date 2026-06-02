@@ -181,7 +181,11 @@ export const claudeSettingsTabRenderer: ProviderSettingsTabRenderer = {
 
     // SEC-2: per-vault trust gate. When the vault's `.claude/settings.json` ships
     // risky hooks / permissions.allow, those sources are withheld until trusted.
-    // The toggle reflects the live trust state and lets the user grant or revoke it.
+    // The toggle reflects the live trust state and lets the user grant trust
+    // pre-emptively (before risky settings exist) or revoke it. The previous
+    // `setDisabled(!vaultRisky && !isTrusted)` guard blocked toggling on clean
+    // vaults — but the trust-map write is harmless and the `descSafe` copy
+    // already encourages pre-emptive trust.
     const vaultRisky = vaultProjectSettingsRisky(context.plugin);
     const trustSetting = new Setting(container)
       .setName(t('settings.trustVault.name'))
@@ -193,7 +197,6 @@ export const claudeSettingsTabRenderer: ProviderSettingsTabRenderer = {
     trustSetting.addToggle((toggle) =>
       toggle
         .setValue(isClaudeVaultTrusted(context.plugin))
-        .setDisabled(!vaultRisky && !isClaudeVaultTrusted(context.plugin))
         .onChange(async (value) => {
           await setClaudeVaultTrusted(context.plugin, value);
         }),
