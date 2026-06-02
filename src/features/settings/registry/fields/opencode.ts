@@ -1,5 +1,4 @@
-import { asSettingsBag } from '../../../../core/types/settings';
-import { getOpencodeProviderSettings } from '../../../../providers/opencode/settings';
+import { ProviderRegistry } from '../../../../core/providers/ProviderRegistry';
 import { CustomModelsTable } from '../../customModels/CustomModelsTable';
 import { registerProviderTab } from '../providers/registerProviderTab';
 import { getSettingsRegistry } from '../registry';
@@ -39,12 +38,9 @@ export function registerOpencodeTabFields(): void {
     type: {
       kind: 'dropdown',
       options: (settings) => {
-        const { availableModes } = getOpencodeProviderSettings(
-          asSettingsBag(settings),
-        );
-        return availableModes
-          .filter((mode) => typeof mode.id === 'string' && mode.id.length > 0)
-          .map((mode) => ({ value: mode.id, label: mode.name || mode.id }));
+        const config = ProviderRegistry.getChatUIConfig('opencode');
+        const modes = config.getAvailableModes?.(settings as Record<string, unknown>) ?? [];
+        return modes.map((mode) => ({ value: mode.id, label: mode.label }));
       },
     },
     default: '',

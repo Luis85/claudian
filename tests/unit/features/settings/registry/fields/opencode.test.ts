@@ -1,3 +1,6 @@
+// Bootstraps provider registrations so ProviderRegistry.getChatUIConfig('opencode') resolves.
+import '../../../../../../src/providers';
+
 import { registerOpencodeTabFields } from '../../../../../../src/features/settings/registry/fields/opencode';
 import { getSettingsRegistry, resetSettingsRegistryForTests } from '../../../../../../src/features/settings/registry/registry';
 import { updateOpencodeProviderSettings } from '../../../../../../src/providers/opencode/settings';
