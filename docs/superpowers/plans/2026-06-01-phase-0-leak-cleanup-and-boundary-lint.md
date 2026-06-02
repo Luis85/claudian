@@ -1,5 +1,6 @@
 ---
 status: done
+parent: Infrastructure
 ---
 # Phase 0 — Leak cleanup + boundary lint Implementation Plan
 
