@@ -282,4 +282,53 @@ describe('createCustomSpawnFunction', () => {
 
     expect(mockProcess.kill).not.toHaveBeenCalled();
   });
+
+  it('removes abort listener when child exits normally (CON-4)', () => {
+    const mockProcess = createMockProcess();
+    spawnMock.mockReturnValue(mockProcess as unknown as ReturnType<typeof spawn>);
+
+    const controller = new AbortController();
+
+    // Capture addEventListener/removeEventListener calls on the signal
+    const addEventListenerCalls: Array<[string, Function]> = [];
+    const removeEventListenerCalls: Array<[string, Function]> = [];
+
+    const originalAddEventListener = controller.signal.addEventListener.bind(controller.signal);
+    const originalRemoveEventListener = controller.signal.removeEventListener.bind(controller.signal);
+
+    jest.spyOn(controller.signal, 'addEventListener').mockImplementation((event: string, handler: EventListener) => {
+      addEventListenerCalls.push([event, handler as Function]);
+      originalAddEventListener(event, handler);
+    });
+
+    jest.spyOn(controller.signal, 'removeEventListener').mockImplementation((event: string, handler: EventListener) => {
+      removeEventListenerCalls.push([event, handler as Function]);
+      originalRemoveEventListener(event, handler);
+    });
+
+    const spawnFn = createCustomSpawnFunction('/enhanced/path');
+    spawnFn({
+      command: 'node',
+      args: ['cli.js'],
+      cwd: '/tmp',
+      env: {},
+      signal: controller.signal,
+    });
+
+    // Verify abort listener was registered
+    expect(addEventListenerCalls).toContainEqual(['abort', expect.any(Function)]);
+    const abortListener = addEventListenerCalls.find(([e]) => e === 'abort')?.[1];
+
+    // Capture the exit handler that was registered on the process
+    const exitHandler = (mockProcess.once as jest.Mock).mock.calls.find((call) => call[0] === 'exit')?.[1];
+
+    // Simulate child exit normally (no abort)
+    expect(exitHandler).toBeDefined();
+    if (exitHandler) {
+      (exitHandler as Function)();
+    }
+
+    // Verify removeEventListener was called with the same abort handler
+    expect(removeEventListenerCalls).toContainEqual(['abort', abortListener]);
+  });
 });

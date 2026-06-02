@@ -40,7 +40,11 @@ export function createCustomSpawnFunction(
       if (signal.aborted) {
         child.kill();
       } else {
-        signal.addEventListener('abort', () => child.kill(), { once: true });
+        const onAbort = (): void => child.kill();
+        signal.addEventListener('abort', onAbort, { once: true });
+        child.once('exit', () => {
+          signal.removeEventListener('abort', onAbort);
+        });
       }
     }
 
