@@ -173,6 +173,7 @@ export function updateCursorProviderSettings(
     enabledModelsByHost: next.enabledModelsByHost,
     preferredModeByFamily: next.preferredModeByFamily,
     lastModel: next.lastModel,
+    environmentVariables: next.environmentVariables,
     environmentHash: next.environmentHash,
   });
   return next;
