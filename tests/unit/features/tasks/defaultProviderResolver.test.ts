@@ -1,3 +1,7 @@
+// Bootstraps provider registrations so ProviderRegistry.getEnabledProviderIds resolves.
+import '../../../../src/providers';
+
+import { ProviderRegistry } from '../../../../src/core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../../src/core/providers/types';
 import type { ClaudianSettings } from '../../../../src/core/types/settings';
 import { resolveAgentBoardDefaultProvider } from '../../../../src/features/tasks/defaultProviderResolver';
@@ -27,5 +31,17 @@ describe('resolveAgentBoardDefaultProvider', () => {
   });
   it('falls through to tab-strip-first when stored is disabled', () => {
     expect(resolveAgentBoardDefaultProvider(settings(['claude'], 'codex'))).toBe('claude');
+  });
+});
+
+describe('resolveAgentBoardDefaultProvider — ordering source', () => {
+  it('iterates ProviderRegistry.getRegisteredProviderIds (registration order), not a hardcoded ORDER', () => {
+    const spy = jest.spyOn(ProviderRegistry, 'getRegisteredProviderIds');
+    const s = {
+      providerConfigs: { codex: { enabled: true }, claude: { enabled: true } },
+    };
+    resolveAgentBoardDefaultProvider(s as never);
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });

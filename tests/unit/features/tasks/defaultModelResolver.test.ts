@@ -4,6 +4,7 @@ import type { ClaudianSettings } from '../../../../src/core/types/settings';
 jest.mock('../../../../src/core/providers/ProviderRegistry', () => ({
   ProviderRegistry: {
     getChatUIConfig: jest.fn(),
+    getRegisteredProviderIds: jest.fn().mockReturnValue(['claude', 'codex', 'opencode', 'cursor']),
   },
 }));
 

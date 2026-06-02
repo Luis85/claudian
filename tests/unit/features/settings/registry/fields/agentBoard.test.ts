@@ -6,6 +6,10 @@ import '../../../../../setup/obsidianDom';
 jest.mock('../../../../../../src/core/providers/ProviderRegistry', () => ({
   ProviderRegistry: {
     getChatUIConfig: jest.fn(),
+    getRegisteredProviderIds: jest.fn().mockReturnValue(['claude', 'codex', 'opencode', 'cursor']),
+    getProviderDisplayName: jest.fn().mockImplementation((id: string) =>
+      ({ claude: 'Claude', codex: 'Codex', opencode: 'Opencode', cursor: 'Cursor' })[id] ?? id,
+    ),
   },
 }));
 
