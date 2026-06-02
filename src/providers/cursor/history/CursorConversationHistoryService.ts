@@ -6,10 +6,11 @@ import { isValidCursorSessionId } from '../../../core/providers/cursorSessionIdV
 import type { ProviderConversationHistoryService } from '../../../core/providers/types';
 import type { Conversation } from '../../../core/types';
 import { getCursorState, resolveCursorSessionId } from '../types';
-import { cursorWorkspaceHash, loadCursorChatMessagesFromStore, resolveCursorStoreDbPath } from './cursorHistoryStore';
+import { cursorWorkspaceHash, loadCursorChatMessagesFromStoreResult, resolveCursorStoreDbPath } from './cursorHistoryStore';
 
 export class CursorConversationHistoryService implements ProviderConversationHistoryService {
   private hydratedConversationKeys = new Map<string, string>();
+  private historyLoadErrors = new Map<string, string>();
 
   async hydrateConversationHistory(
     conversation: Conversation,
@@ -35,7 +36,13 @@ export class CursorConversationHistoryService implements ProviderConversationHis
       return;
     }
 
-    const loaded = loadCursorChatMessagesFromStore(dbPath);
+    const result = loadCursorChatMessagesFromStoreResult(dbPath);
+    if (result.error) {
+      this.historyLoadErrors.set(conversation.id, result.error);
+    } else {
+      this.historyLoadErrors.delete(conversation.id);
+    }
+    const loaded = result.messages;
     if (loaded.length === 0) {
       this.hydratedConversationKeys.delete(conversation.id);
       return;
@@ -43,6 +50,10 @@ export class CursorConversationHistoryService implements ProviderConversationHis
 
     conversation.messages = loaded;
     this.hydratedConversationKeys.set(conversation.id, hydrationKey);
+  }
+
+  getLastHistoryLoadError(conversationId: string): string | undefined {
+    return this.historyLoadErrors.get(conversationId);
   }
 
   async deleteConversationSession(

@@ -10,6 +10,7 @@ import {
   buildChatMessagesFromCursorHistoryRecords,
   cursorWorkspaceHash,
   cursorWorkspaceHashLegacy,
+  loadCursorChatMessagesFromStoreResult,
   resolveCursorStoreDbPath,
 } from '@/providers/cursor/history/cursorHistoryStore';
 
@@ -151,6 +152,23 @@ describe('cursorWorkspaceHash (normalized)', () => {
     setPlatform('linux');
     expect(cursorWorkspaceHash('/home/user/vault'))
       .toBe(cursorWorkspaceHash('/home/user/vault/'));
+  });
+});
+
+describe('loadCursorChatMessagesFromStoreResult', () => {
+  it('returns an error when the database cannot be opened', () => {
+    const result = loadCursorChatMessagesFromStoreResult('/definitely/does/not/exist.db');
+    expect(result.messages).toEqual([]);
+    expect(result.error).toBeDefined();
+  });
+
+  it('redacts the home directory from the error message', () => {
+    const home = os.homedir();
+    const dbPath = `${home}/.cursor/chats/abc/xyz/store.db`;
+    const result = loadCursorChatMessagesFromStoreResult(dbPath);
+    expect(result.error).toBeDefined();
+    expect(result.error).not.toContain(home);
+    expect(result.error).toContain('[HOME]');
   });
 });
 

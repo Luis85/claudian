@@ -216,18 +216,33 @@ export function buildChatMessagesFromCursorHistoryRecords(
   return messages;
 }
 
-export function loadCursorChatMessagesFromStore(dbPath: string): ChatMessage[] {
+function redactHomeInPath(s: string): string {
+  const home = os.homedir();
+  if (!home) return s;
+  const normalizedSlashes = home.replace(/\\/g, '/');
+  return s
+    .split(home).join('[HOME]')
+    .split(normalizedSlashes).join('[HOME]');
+}
+
+export interface CursorHistoryLoadResult {
+  messages: ChatMessage[];
+  error?: string;
+}
+
+export function loadCursorChatMessagesFromStoreResult(dbPath: string): CursorHistoryLoadResult {
   const db = openCursorSqliteReadonly(dbPath);
   if (!db) {
-    return [];
+    return { messages: [], error: `Cursor history: could not open ${redactHomeInPath(dbPath)}` };
   }
   try {
     let rows: Array<{ rowid: number; id: string; data: Buffer | Uint8Array }>;
     try {
       const stmt = db.prepare('SELECT rowid, id, data FROM blobs ORDER BY rowid');
       rows = stmt.all() as Array<{ rowid: number; id: string; data: Buffer | Uint8Array }>;
-    } catch {
-      return [];
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { messages: [], error: `Cursor history: SQL read failed (${redactHomeInPath(msg)})` };
     }
 
     const records: Array<{ rowId: string; record: Record<string, unknown> }> = [];
@@ -249,8 +264,13 @@ export function loadCursorChatMessagesFromStore(dbPath: string): ChatMessage[] {
       records.push({ rowId: row.id, record });
     }
 
-    return buildChatMessagesFromCursorHistoryRecords(records);
+    return { messages: buildChatMessagesFromCursorHistoryRecords(records) };
   } finally {
     try { db.close(); } catch { /* ignore close errors */ }
   }
+}
+
+/** Back-compat wrapper. Prefer `loadCursorChatMessagesFromStoreResult` for new callers. */
+export function loadCursorChatMessagesFromStore(dbPath: string): ChatMessage[] {
+  return loadCursorChatMessagesFromStoreResult(dbPath).messages;
 }
