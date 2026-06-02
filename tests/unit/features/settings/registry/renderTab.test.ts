@@ -3,6 +3,15 @@
  */
 import '../../../../setup/obsidianDom';
 
+// Stub ProviderRegistry so hasAnyProviderEnabled iterates the four built-in
+// providers without pulling the full provider bootstrap (which transitively
+// imports the MCP SDK ESM that breaks this jsdom suite).
+jest.mock('../../../../../src/core/providers/ProviderRegistry', () => ({
+  ProviderRegistry: {
+    getRegisteredProviderIds: () => ['claude', 'codex', 'opencode', 'cursor'],
+  },
+}));
+
 import { Setting } from 'obsidian';
 
 import type { ClaudianSettings } from '../../../../../src/core/types/settings';
