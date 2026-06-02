@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 parent: Infrastructure
 ---
 # Upstream Sync to YishenTu/claudian 2.0.21 Implementation Plan
