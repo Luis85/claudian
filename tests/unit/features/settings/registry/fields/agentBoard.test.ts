@@ -427,3 +427,13 @@ describe('Agent Board tab registry fields', () => {
     });
   });
 });
+
+describe('agentBoard.ts boundary', () => {
+  it('does not export hardcoded PROVIDER_IDS or PROVIDER_LABELS', async () => {
+    const agentBoardFields = await import(
+      '../../../../../../src/features/settings/registry/fields/agentBoard'
+    );
+    expect((agentBoardFields as Record<string, unknown>).PROVIDER_IDS).toBeUndefined();
+    expect((agentBoardFields as Record<string, unknown>).PROVIDER_LABELS).toBeUndefined();
+  });
+});

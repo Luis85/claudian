@@ -11,17 +11,8 @@ import { writePathInPlace } from '../path';
 import { getSettingsRegistry } from '../registry';
 import type { SettingsCtx } from '../SettingsField';
 
-const PROVIDER_IDS: ProviderId[] = ['claude', 'codex', 'opencode', 'cursor'];
-
-const PROVIDER_LABELS: Record<string, string> = {
-  claude: 'Claude',
-  codex: 'Codex',
-  opencode: 'Opencode',
-  cursor: 'Cursor',
-};
-
 function providerLabel(id: ProviderId): string {
-  return PROVIDER_LABELS[id] ?? id;
+  return ProviderRegistry.getProviderDisplayName(id);
 }
 
 function normalizeFolder(value: string): string {
@@ -243,7 +234,9 @@ function renderDefaultProviderWidget(ctx: SettingsCtx, host: HTMLElement): () =>
   host.empty();
   const configs = (ctx.settings as { providerConfigs?: Record<string, { enabled?: boolean }> })
     .providerConfigs;
-  const enabledIds = PROVIDER_IDS.filter((id) => Boolean(configs?.[id]?.enabled));
+  const enabledIds = ProviderRegistry.getRegisteredProviderIds().filter(
+    (id) => Boolean(configs?.[id]?.enabled),
+  );
   const resolved = resolveAgentBoardDefaultProvider(ctx.settings);
 
   const setting = new Setting(host)
