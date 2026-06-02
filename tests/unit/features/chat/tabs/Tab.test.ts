@@ -2204,6 +2204,30 @@ describe('Tab - Event Handler Behavior', () => {
       expect(mockSlashCommandDropdown.handleKeydown).not.toHaveBeenCalled();
     });
 
+    it('should let explicit Ctrl+Enter send before slash dropdown handles Enter on non-mac', () => {
+      mockInstructionModeManager.handleTriggerKey.mockReturnValue(false);
+      mockInstructionModeManager.handleKeydown.mockReturnValue(false);
+      mockSlashCommandDropdown.handleKeydown.mockReturnValue(true);
+      mockFileContextManager.handleMentionKeydown.mockReturnValue(false);
+      const { fireKeydown } = setupKeydownTab();
+      Platform.isMacOS = false;
+
+      const event = {
+        key: 'Enter',
+        shiftKey: false,
+        ctrlKey: true,
+        metaKey: false,
+        altKey: false,
+        isComposing: false,
+        preventDefault: jest.fn(),
+      };
+      fireKeydown(event);
+
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(mockInputController.sendMessage).toHaveBeenCalled();
+      expect(mockSlashCommandDropdown.handleKeydown).not.toHaveBeenCalled();
+    });
+
     it('should keep plain Enter routed to visible slash dropdown before sending', () => {
       mockInstructionModeManager.handleTriggerKey.mockReturnValue(false);
       mockInstructionModeManager.handleKeydown.mockReturnValue(false);
