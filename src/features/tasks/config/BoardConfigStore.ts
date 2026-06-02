@@ -29,14 +29,24 @@ export function loadBoardConfig(settings: Record<string, unknown>): LoadBoardCon
       return { config: DEFAULT_BOARD_CONFIG, errors };
     }
     if (seenIds.has(lane.id)) {
+      // Lane-id collisions are structural — two lanes claiming the same id make
+      // ordering, deletion, and lookup ambiguous, so we fall back to the safe
+      // default. This is the only remaining fallback path; status duplicates
+      // are surfaced as soft warnings further down.
       errors.push(`Lane id "${lane.id}" is used by more than one lane.`);
       return { config: DEFAULT_BOARD_CONFIG, errors };
     }
     seenIds.add(lane.id);
+    // Cross-lane status duplicates are tolerated: the user's lanes survive
+    // verbatim and each duplicate occurrence emits a warning so the lane
+    // editor can show an inline hint and the board can surface a notice.
+    // `seen` is updated unconditionally so a later legitimate occurrence is
+    // still recognised as a duplicate even when the duplicate detection short-
+    // circuits earlier. (`normalizeLane` already strips intra-lane duplicates
+    // before this loop runs, so `lane.statuses` is unique within itself.)
     for (const status of lane.statuses) {
       if (seen.has(status)) {
         errors.push(`Status "${status}" is mapped to more than one lane.`);
-        return { config: DEFAULT_BOARD_CONFIG, errors };
       }
       seen.add(status);
     }
@@ -68,11 +78,22 @@ function normalizeLane(raw: unknown, errors: string[]): BoardLaneConfig | null {
     return null;
   }
 
+  // Intra-lane duplicates collapse silently — a lane that lists the same
+  // status twice is malformed only at storage level, never user-meaningful.
+  // The cross-lane duplicate detection below only sees a clean per-lane set,
+  // so a hand-edited `['ready','ready']` cannot poison `seen` for legitimate
+  // owners further down the array.
   const statuses: TaskStatus[] = [];
   if (Array.isArray(lane.statuses)) {
+    const dedupe = new Set<TaskStatus>();
     for (const status of lane.statuses) {
-      if (isTaskStatus(status)) statuses.push(status);
-      else errors.push(`Lane "${id}" has unknown status "${String(status)}" (ignored).`);
+      if (!isTaskStatus(status)) {
+        errors.push(`Lane "${id}" has unknown status "${String(status)}" (ignored).`);
+        continue;
+      }
+      if (dedupe.has(status)) continue;
+      dedupe.add(status);
+      statuses.push(status);
     }
   }
 
