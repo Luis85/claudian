@@ -1,3 +1,6 @@
+// Bootstraps provider registrations so ProviderRegistry queries resolve.
+import '../../../../../../src/providers';
+
 import { registerGeneralTabFields } from '../../../../../../src/features/settings/registry/fields/general';
 import { getSettingsRegistry, resetSettingsRegistryForTests } from '../../../../../../src/features/settings/registry/registry';
 

@@ -1,5 +1,6 @@
 import { renderHotkeysSection } from '@/features/settings/hotkeys/HotkeysSection';
 
+import { ProviderRegistry } from '../../../../core/providers/ProviderRegistry';
 import { getSettingsRegistry } from '../registry';
 
 export function registerGeneralTabFields(): void {
@@ -93,19 +94,13 @@ export function registerGeneralTabFields(): void {
     default: null,
   });
 
-  const PROVIDERS = [
-    { id: 'claude', label: 'Claude' },
-    { id: 'codex', label: 'Codex' },
-    { id: 'opencode', label: 'Opencode' },
-    { id: 'cursor', label: 'Cursor' },
-  ] as const;
-
-  for (const p of PROVIDERS) {
+  for (const providerId of ProviderRegistry.getRegisteredProviderIds()) {
+    const displayName = ProviderRegistry.getProviderDisplayName(providerId);
     r.registerField({
-      id: `providerConfigs.${p.id}.enabled`,
+      id: `providerConfigs.${providerId}.enabled`,
       tabId: 'general',
       sectionId: 'providers',
-      label: `Enable ${p.label}`,
+      label: `Enable ${displayName}`,
       type: { kind: 'toggle' },
       default: false,
     });
