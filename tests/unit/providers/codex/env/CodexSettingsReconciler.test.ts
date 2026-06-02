@@ -1,5 +1,6 @@
 import type { Conversation } from '@/core/types';
 import { codexSettingsReconciler } from '@/providers/codex/env/CodexSettingsReconciler';
+import { getCodexProviderSettings } from '@/providers/codex/settings';
 import { DEFAULT_CODEX_PRIMARY_MODEL } from '@/providers/codex/types/models';
 
 describe('codexSettingsReconciler', () => {
@@ -85,5 +86,19 @@ describe('codexSettingsReconciler', () => {
     expect((settings.providerConfigs as any).codex.environmentHash).toBe(
       'OPENAI_BASE_URL=https://api.example.com/v1',
     );
+  });
+
+  describe('setEnabled', () => {
+    it('writes enabled=true into providerConfigs.codex', () => {
+      const settings: Record<string, unknown> = { providerConfigs: { codex: { enabled: false } } };
+      codexSettingsReconciler.setEnabled?.(settings, true);
+      expect(getCodexProviderSettings(settings).enabled).toBe(true);
+    });
+
+    it('writes enabled=false into providerConfigs.codex', () => {
+      const settings: Record<string, unknown> = { providerConfigs: { codex: { enabled: true } } };
+      codexSettingsReconciler.setEnabled?.(settings, false);
+      expect(getCodexProviderSettings(settings).enabled).toBe(false);
+    });
   });
 });

@@ -37,6 +37,10 @@ export const codexSettingsReconciler: ProviderSettingsReconciler = {
   reconcileModelWithEnvironment: (settings, conversations) =>
     reconcileEnvironmentHash(codexEnvHashSpec, settings, conversations),
 
+  setEnabled(settings, enabled) {
+    updateCodexProviderSettings(settings, { enabled });
+  },
+
   normalizeModelVariantSettings(settings: Record<string, unknown>): boolean {
     const model = settings.model as string;
     if (!model) {
