@@ -1,5 +1,5 @@
 ---
-status: open
+status: done
 ---
 # Phase 0 — Leak cleanup + boundary lint Implementation Plan
 

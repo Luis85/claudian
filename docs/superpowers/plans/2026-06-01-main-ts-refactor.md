@@ -1,5 +1,5 @@
 ---
-status: open
+status: done
 ---
 # main.ts refactor — implementation plan
 
