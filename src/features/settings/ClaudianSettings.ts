@@ -14,7 +14,7 @@ import type { Locale, TranslationKey } from '../../i18n/types';
 import type ClaudianPlugin from '../../main';
 import { formatContextLimit, parseContextLimit, parseEnvironmentVariables } from '../../utils/env';
 import { buildNavMappingText, parseNavMappings } from './keyboardNavigation';
-import { getProviderEnableUpdater } from './providerEnableUpdaters';
+// setEnabled is provided by the registered ProviderSettingsReconciler.
 import {
   getSettingsRegistry,
   registerAllSettings,
@@ -637,8 +637,8 @@ export class ClaudianSettingTab extends PluginSettingTab {
 
     for (const providerId of ProviderRegistry.getRegisteredProviderIds()) {
       const displayName = ProviderRegistry.getProviderDisplayName(providerId);
-      const updater = getProviderEnableUpdater(providerId);
-      if (!updater) {
+      const reconciler = ProviderRegistry.getSettingsReconciler(providerId);
+      if (!reconciler.setEnabled) {
         continue;
       }
 
@@ -649,7 +649,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
           toggle
             .setValue(ProviderRegistry.isEnabled(providerId, settingsBag))
             .onChange(async (value) => {
-              updater(settingsBag, value);
+              reconciler.setEnabled!(settingsBag, value);
               await this.plugin.saveSettings();
               for (const view of this.plugin.getAllViews()) {
                 view.refreshModelSelector();
