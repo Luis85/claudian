@@ -129,14 +129,16 @@ function applyToolBlob(record: Record<string, unknown>, messages: ChatMessage[])
   }
 }
 
-function openCursorSqliteReadonly(dbPath: string):
-  | { prepare: (sql: string) => { all: () => unknown[] } }
-  | null {
+interface CursorSqliteHandle {
+  prepare: (sql: string) => { all: () => unknown[] };
+  close: () => void;
+}
+
+function openCursorSqliteReadonly(dbPath: string): CursorSqliteHandle | null {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/consistent-type-imports
     const { DatabaseSync } = require('node:sqlite') as typeof import('node:sqlite');
-    const db = new DatabaseSync(dbPath, { readOnly: true });
-    return db;
+    return new DatabaseSync(dbPath, { readOnly: true }) as unknown as CursorSqliteHandle;
   } catch {
     return null;
   }
@@ -197,33 +199,36 @@ export function loadCursorChatMessagesFromStore(dbPath: string): ChatMessage[] {
   if (!db) {
     return [];
   }
-
-  let rows: Array<{ rowid: number; id: string; data: Buffer | Uint8Array }>;
   try {
-    const stmt = db.prepare('SELECT rowid, id, data FROM blobs ORDER BY rowid');
-    rows = stmt.all() as Array<{ rowid: number; id: string; data: Buffer | Uint8Array }>;
-  } catch {
-    return [];
-  }
-
-  const records: Array<{ rowId: string; record: Record<string, unknown> }> = [];
-
-  for (const row of rows) {
-    const buf = Buffer.isBuffer(row.data) ? row.data : Buffer.from(row.data);
-    const raw = buf.toString('utf8');
-    if (!raw.startsWith('{')) {
-      continue;
-    }
-
-    let record: Record<string, unknown>;
+    let rows: Array<{ rowid: number; id: string; data: Buffer | Uint8Array }>;
     try {
-      record = JSON.parse(raw) as Record<string, unknown>;
+      const stmt = db.prepare('SELECT rowid, id, data FROM blobs ORDER BY rowid');
+      rows = stmt.all() as Array<{ rowid: number; id: string; data: Buffer | Uint8Array }>;
     } catch {
-      continue;
+      return [];
     }
 
-    records.push({ rowId: row.id, record });
-  }
+    const records: Array<{ rowId: string; record: Record<string, unknown> }> = [];
 
-  return buildChatMessagesFromCursorHistoryRecords(records);
+    for (const row of rows) {
+      const buf = Buffer.isBuffer(row.data) ? row.data : Buffer.from(row.data);
+      const raw = buf.toString('utf8');
+      if (!raw.startsWith('{')) {
+        continue;
+      }
+
+      let record: Record<string, unknown>;
+      try {
+        record = JSON.parse(raw) as Record<string, unknown>;
+      } catch {
+        continue;
+      }
+
+      records.push({ rowId: row.id, record });
+    }
+
+    return buildChatMessagesFromCursorHistoryRecords(records);
+  } finally {
+    try { db.close(); } catch { /* ignore close errors */ }
+  }
 }
