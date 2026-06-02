@@ -64,10 +64,29 @@ export const SUBPROCESS_ENV_ALLOWLIST: ReadonlySet<string> = new Set([
 /**
  * Keys we always refuse to forward, even if a future allowlist change picks
  * them up by accident. Acts as a kill-switch.
+ *
+ * Matched case-insensitively because Windows env-var names are themselves
+ * case-insensitive: `process.env.node_tls_reject_unauthorized` and
+ * `process.env.NODE_TLS_REJECT_UNAUTHORIZED` refer to the same OS variable on
+ * Windows. An exact-case check would let a user enter the lowercase form in
+ * the provider custom env (or the host could carry it pre-canonicalized) and
+ * re-enable the TLS bypass this kill-switch is meant to block.
+ *
+ * On POSIX env-var names are case-sensitive, but no legitimate variable
+ * shares a case-insensitive collision with the canonical name here, so the
+ * normalization is safe to apply on every platform.
  */
 export const SUBPROCESS_ENV_DENYLIST: ReadonlySet<string> = new Set([
   'NODE_TLS_REJECT_UNAUTHORIZED',
 ]);
+
+const SUBPROCESS_ENV_DENYLIST_UPPER: ReadonlySet<string> = new Set(
+  [...SUBPROCESS_ENV_DENYLIST].map((k) => k.toUpperCase()),
+);
+
+function isDeniedKey(key: string): boolean {
+  return SUBPROCESS_ENV_DENYLIST_UPPER.has(key.toUpperCase());
+}
 
 export interface BuildAllowlistedSubprocessEnvironmentOptions {
   processEnv: Record<string, string | undefined>;
@@ -84,7 +103,7 @@ export function buildAllowlistedSubprocessEnvironment(
   const out: Record<string, string> = {};
   for (const [key, value] of Object.entries(opts.processEnv)) {
     if (value === undefined) continue;
-    if (SUBPROCESS_ENV_DENYLIST.has(key)) continue;
+    if (isDeniedKey(key)) continue;
     const passesAllowlist = SUBPROCESS_ENV_ALLOWLIST.has(key);
     const passesPrefix = opts.providerPrefixPattern.test(key);
     if (!passesAllowlist && !passesPrefix) continue;
@@ -93,7 +112,7 @@ export function buildAllowlistedSubprocessEnvironment(
   // customEnv is user-opt-in; pass everything in it (including unlisted keys)
   // but still apply the denylist so users cannot accidentally re-enable TLS bypass.
   for (const [key, value] of Object.entries(opts.customEnv)) {
-    if (SUBPROCESS_ENV_DENYLIST.has(key)) continue;
+    if (isDeniedKey(key)) continue;
     out[key] = value;
   }
   if (opts.pathOverride !== undefined) {

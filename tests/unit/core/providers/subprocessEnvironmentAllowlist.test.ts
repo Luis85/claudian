@@ -32,6 +32,24 @@ describe('buildAllowlistedSubprocessEnvironment', () => {
     expect(result.NODE_TLS_REJECT_UNAUTHORIZED).toBeUndefined();
   });
 
+  it('refuses NODE_TLS_REJECT_UNAUTHORIZED in any letter case (Windows env-var names are case-insensitive)', () => {
+    const result = buildAllowlistedSubprocessEnvironment({
+      processEnv: {
+        node_tls_reject_unauthorized: '0',
+        Node_TLS_REJECT_UNAUTHORIZED: '0',
+        PATH: '/usr/bin',
+      },
+      customEnv: {
+        node_tls_reject_unauthorized: '0',
+        Node_TLS_REJECT_UNAUTHORIZED: '0',
+      },
+      providerPrefixPattern: /^CURSOR_/i,
+    });
+    expect(result.node_tls_reject_unauthorized).toBeUndefined();
+    expect(result.Node_TLS_REJECT_UNAUTHORIZED).toBeUndefined();
+    expect(result.NODE_TLS_REJECT_UNAUTHORIZED).toBeUndefined();
+  });
+
   it('passes through GIT_SSH_COMMAND, SSH_AUTH_SOCK, NODE_OPTIONS, NODE_EXTRA_CA_CERTS', () => {
     const result = buildAllowlistedSubprocessEnvironment({
       processEnv: {
