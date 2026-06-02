@@ -23,6 +23,12 @@ export const SUBPROCESS_ENV_ALLOWLIST: ReadonlySet<string> = new Set([
   'TMPDIR',
   'TMP',
   'TEMP',
+  // XDG base dirs (apps look here for config/data/cache/state locations)
+  'XDG_CONFIG_HOME',
+  'XDG_DATA_HOME',
+  'XDG_CACHE_HOME',
+  'XDG_STATE_HOME',
+  'XDG_RUNTIME_DIR',
   // Windows
   'COMSPEC',
   'SystemRoot',

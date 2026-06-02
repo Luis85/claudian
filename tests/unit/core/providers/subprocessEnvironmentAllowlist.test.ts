@@ -80,4 +80,26 @@ describe('buildAllowlistedSubprocessEnvironment', () => {
     expect(SUBPROCESS_ENV_ALLOWLIST.has('PATH')).toBe(true);
     expect(SUBPROCESS_ENV_ALLOWLIST.has('SECRET_TOKEN')).toBe(false);
   });
+
+  it('forwards XDG base-dir keys so host XDG_DATA_HOME flows through to the CLI', () => {
+    // Opencode reads XDG_DATA_HOME to locate its database under
+    // $XDG_DATA_HOME/opencode/. Our DB-path resolution and the CLI must see
+    // the same value, otherwise hydration points at the wrong DB.
+    const result = buildAllowlistedSubprocessEnvironment({
+      processEnv: {
+        XDG_DATA_HOME: '/home/u/data',
+        XDG_CONFIG_HOME: '/home/u/cfg',
+        XDG_CACHE_HOME: '/home/u/cache',
+        XDG_STATE_HOME: '/home/u/state',
+        XDG_RUNTIME_DIR: '/run/u',
+      },
+      customEnv: {},
+      providerPrefixPattern: /^OPENCODE_/i,
+    });
+    expect(result.XDG_DATA_HOME).toBe('/home/u/data');
+    expect(result.XDG_CONFIG_HOME).toBe('/home/u/cfg');
+    expect(result.XDG_CACHE_HOME).toBe('/home/u/cache');
+    expect(result.XDG_STATE_HOME).toBe('/home/u/state');
+    expect(result.XDG_RUNTIME_DIR).toBe('/run/u');
+  });
 });

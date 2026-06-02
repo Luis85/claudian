@@ -592,8 +592,11 @@ export class OpencodeChatRuntime implements ChatRuntime {
     cwd: string;
     runtimeEnv: NodeJS.ProcessEnv;
   }): Promise<void> {
+    // params.runtimeEnv is already the allowlisted env from
+    // buildOpencodeRuntimeEnv. Spreading process.env here would reintroduce
+    // every host var (including denied keys like NODE_TLS_REJECT_UNAUTHORIZED),
+    // defeating the allowlist contract.
     const processEnv: NodeJS.ProcessEnv = {
-      ...process.env,
       ...params.runtimeEnv,
       OPENCODE_CONFIG: params.configPath,
       PATH: getEnhancedPath(
