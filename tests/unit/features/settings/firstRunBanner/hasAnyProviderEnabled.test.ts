@@ -1,3 +1,7 @@
+// Bootstraps provider registrations so ProviderRegistry.getRegisteredProviderIds resolves.
+import '../../../../../src/providers';
+
+import { ProviderRegistry } from '../../../../../src/core/providers/ProviderRegistry';
 import type { ClaudianSettings } from '../../../../../src/core/types/settings';
 import { hasAnyProviderEnabled } from '../../../../../src/features/settings/firstRunBanner/hasAnyProviderEnabled';
 
@@ -21,5 +25,14 @@ describe('hasAnyProviderEnabled', () => {
   });
   it('returns true if any single provider is enabled', () => {
     expect(hasAnyProviderEnabled(s(false, false, true, false))).toBe(true);
+  });
+});
+
+describe('hasAnyProviderEnabled — ordering source', () => {
+  it('iterates ProviderRegistry.getRegisteredProviderIds', () => {
+    const spy = jest.spyOn(ProviderRegistry, 'getRegisteredProviderIds');
+    hasAnyProviderEnabled({ providerConfigs: {} } as never);
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });

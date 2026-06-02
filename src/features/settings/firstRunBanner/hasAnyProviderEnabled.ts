@@ -1,10 +1,8 @@
-import type { ProviderId } from '../../../core/providers/types';
+import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ClaudianSettings } from '../../../core/types/settings';
 
-const PROVIDERS: ProviderId[] = ['claude', 'codex', 'opencode', 'cursor'];
-
 export function hasAnyProviderEnabled(settings: ClaudianSettings): boolean {
-  for (const id of PROVIDERS) {
+  for (const id of ProviderRegistry.getRegisteredProviderIds()) {
     const cfg = settings.providerConfigs?.[id] as { enabled?: boolean } | undefined;
     if (cfg?.enabled) return true;
   }
