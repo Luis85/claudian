@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+import { isValidCursorSessionId } from '../../../core/providers/cursorSessionIdValidation';
 import type { ProviderConversationHistoryService } from '../../../core/providers/types';
 import type { Conversation } from '../../../core/types';
 import { getCursorState, resolveCursorSessionId } from '../types';
@@ -50,6 +51,9 @@ export class CursorConversationHistoryService implements ProviderConversationHis
   ): Promise<void> {
     const sessionId = resolveCursorSessionId(conversation);
     if (!sessionId || !vaultPath) {
+      return;
+    }
+    if (!isValidCursorSessionId(sessionId)) {
       return;
     }
 

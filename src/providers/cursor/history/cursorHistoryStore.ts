@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+import { isValidCursorSessionId } from '../../../core/providers/cursorSessionIdValidation';
 import { isSubagentToolName } from '../../../core/tools/toolNames';
 import type { ChatMessage, ToolCallInfo } from '../../../core/types';
 import { extractDiffData } from '../../../utils/diff';
@@ -20,6 +21,7 @@ export function resolveCursorStoreDbPath(
   absoluteVaultPath: string,
   sessionId: string,
 ): string | null {
+  if (!isValidCursorSessionId(sessionId)) return null;
   const hash = cursorWorkspaceHash(absoluteVaultPath);
   const candidate = path.join(os.homedir(), '.cursor', 'chats', hash, sessionId, 'store.db');
   return fs.existsSync(candidate) ? candidate : null;
