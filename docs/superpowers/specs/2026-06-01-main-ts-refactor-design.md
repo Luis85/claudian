@@ -1,3 +1,7 @@
+---
+status: approved
+parent: Quality
+---
 # main.ts refactor — design
 
 **Status**: draft

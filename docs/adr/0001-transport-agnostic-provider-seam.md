@@ -2,7 +2,7 @@
 title: Transport-agnostic provider seam
 date: 2026-06-01
 revised: 2026-06-01 (r2)
-status: proposed (revised twice)
+status: design / approved
 scope: src/core/providers, src/core/runtime, src/providers/*, src/features (boundary)
 supersedes: none
 method: 3 parallel codebase review passes (core seam, coupling-leak audit, adaptor comparison) + external pattern research (ACP, LSP/MCP capability negotiation, Vercel AI SDK, Cline, continue.dev), then a 4-pass design review (claim verification, design red-team, external-pattern fact-check, migration feasibility), then a 6-perspective independent verification pass (architect, Phase-0 implementer, red-team skeptic, external-pattern fact-check, test/maintainability, migration sequencer)

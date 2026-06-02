@@ -1,4 +1,26 @@
 views:
+  - type: cards
+    name: Features
+    filters:
+      and:
+        - file.inFolder("docs/product/features")
+        - type == "feature"
+    order:
+      - file.name
+      - parent
+      - tagline
+      - personas
+      - status
+    columnSize:
+      file.name: 237
+  - type: table
+    name: User Manuals
+    filters:
+      and:
+        - file.inFolder("docs/product/user-manuals")
+    order:
+      - file.name
+      - parent
   - type: table
     name: Plans
     filters:
@@ -61,8 +83,8 @@ views:
       direction: DESC
     order:
       - file.name
-      - priority
       - status
+      - priority
       - relations
       - tags
     columnSize:
@@ -71,21 +93,23 @@ views:
       note.relations: 217
       note.tags: 161
   - type: table
-    name: Features
+    name: Reviews
     filters:
       and:
-        - file.inFolder("docs/product/features")
-        - type == "feature"
+        - file.inFolder("docs/reviews")
     order:
       - file.name
-      - parent
+      - status
     columnSize:
-      file.name: 237
+      file.name: 369
   - type: table
-    name: User Manuals
+    name: ADRs
     filters:
       and:
-        - file.inFolder("docs/product/user-manuals")
+        - file.inFolder("docs/adr")
     order:
       - file.name
-      - parent
+      - status
+    columnSize:
+      file.name: 353
+      note.status: 176

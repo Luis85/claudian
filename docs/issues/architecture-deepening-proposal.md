@@ -2,13 +2,13 @@
 type: prd
 id: issue-20260530-architecture-deepening-proposal
 title: Architecture Deepening Proposal — Chat tab composition, stream projection, conversation store, provider contracts, and auxiliary query reuse
-status: open
+status: done
 priority: 1 - high
 triage: ready-for-agent
 created: 2026-05-30
-updated: 2026-05-31
+updated: 2026-06-02
 owner: Claudian
-source: "Architecture review 2026-05-30; consolidated into docs/reviews/2026-05-31-codebase-review-and-improvement-plan.md (PR #9), originally proposed in PR #10 (closed)"
+source: "Architecture review 2026-05-30; consolidated into docs/reviews/2026-05-31-codebase-review-and-improvement-plan.md (PR #9); transport residuals tracked in docs/adr/0001-transport-agnostic-provider-seam.md"
 scope: architecture-deepening
 related:
   - "[[CLAUDE]]"
@@ -28,15 +28,20 @@ relations:
 
 # Architecture Deepening Proposal — Chat tab composition, stream projection, conversation store, provider contracts, and auxiliary query reuse
 
-> **Status note (2026-05-31):** This PRD originated in PR #10, which has been closed in favor of
-> the consolidated review in `docs/reviews/2026-05-31-codebase-review-and-improvement-plan.md`
-> (PR #9). Its still-valid findings are carried into that plan's Phase 2 as ARCH-3 (conversation
-> store), ARCH-6 (stream projection), ARCH-7 (Claude/Cursor auxiliary reuse), and ARCH-8 (provider
-> settings load normalization). Verified against current `main`: the auxiliary-reuse work is
-> partially done (Codex & Opencode already use the shared `QueryBacked*` modules; Claude & Cursor
-> do not), and the Opencode plan-mode settings leak is already resolved (a Claude settings leak
-> remains). The original PR's code diff diverged from main's settings-registry work and was not
-> integrated; wanted pieces are to be re-landed fresh.
+> **Status note (2026-06-02): CLOSED.** All six deepening candidates landed via the consolidated
+> 2026-05-31 plan: Chat tab composition (ARCH-5a, `Tab.ts` 1915 → 45-line barrel), Stream
+> projection (ARCH-6, `controllers/StreamProjection.ts` extracted), Conversation store (ARCH-3,
+> `core/conversations/ConversationStore.ts`), Auxiliary query reuse (ARCH-7, Claude & Cursor
+> folded onto `QueryBacked*`, −450 LOC), Provider settings load normalization (ARCH-8, hook
+> shipped). Provider contract split (Decision 7) was not adopted as written — ADR-0001 r2
+> instead decided to extend `ProviderRegistration` and keep capabilities flat. Remaining
+> transport-layer deepening (extract `core/transport/`, narrow `ChatRuntime` via `RuntimeHost`,
+> lift tool-name set) is tracked in `docs/adr/0001-transport-agnostic-provider-seam.md`
+> Phases 1–3 and gated on CON-3 (Codex transport readline-close watchdog).
+>
+> Verification: see "Implementation status" section of
+> `docs/reviews/2026-05-31-codebase-review-and-improvement-plan.md` and the 2026-06-02 follow-up
+> review `docs/reviews/2026-06-02-codebase-review-and-improvement-plan.md`.
 
 ## Problem Statement
 

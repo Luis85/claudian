@@ -6,7 +6,13 @@ tags:
 priority: 1 - high
 relations:
   - Infrastructure
+verified: 2026-06-02
 ---
+
+> **Status note (2026-06-02):** Shipped. Typed `EventBus` lives at `src/core/events/`. Chat
+> and tasks now coordinate via events instead of `plugin.refreshAgentBoardSlots()`-style
+> ad-hoc methods. Body below is the original deferred-state authoring note kept for history.
+
 # Missing event bus makes expanding or integrating harder than it should be
 
 The Board and the chat panel do not emit events both modules can listen and react to. There is no decoupled pub/sub inside the plugin, so cross-feature coordination is wired as ad-hoc direct calls through the plugin (the composition root). Every new reaction means editing the emitter and adding another bespoke method — coupling grows with each feature.

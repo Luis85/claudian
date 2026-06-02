@@ -6,7 +6,15 @@ tags:
 priority: 1 - high
 relations:
   - Infrastructure
+verified: 2026-06-02
 ---
+
+> **Status note (2026-06-02):** Shipped. Leveled, scoped, redacted logger at
+> `src/core/logging/` (`Logger`, `logger.scope('...')`, `src/core/logging/redact.ts`).
+> Configurable log level in general settings. `0` `console.*` in production code per the
+> 2026-05-31 review. Body below is the original deferred-state authoring note kept for
+> history.
+
 # Insufficient logging
 
 ## Problem
