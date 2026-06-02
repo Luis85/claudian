@@ -85,6 +85,10 @@ export const cursorSettingsReconciler: ProviderSettingsReconciler = {
   reconcileModelWithEnvironment: (settings, conversations) =>
     reconcileEnvironmentHash(cursorEnvHashSpec, settings, conversations),
 
+  setEnabled(settings, enabled) {
+    updateCursorProviderSettings(settings, { enabled });
+  },
+
   normalizeModelVariantSettings(settings): boolean {
     return collapseModelSelection(settings);
   },

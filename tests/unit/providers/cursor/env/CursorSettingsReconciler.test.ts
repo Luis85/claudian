@@ -62,4 +62,18 @@ describe('normalizeModelVariantSettings migration', () => {
     expect(cursorSettingsReconciler.normalizeModelVariantSettings(bag)).toBe(false);
     expect(bag.model).toBe('cursor:composer-2');
   });
+
+  describe('setEnabled', () => {
+    it('writes enabled=true into providerConfigs.cursor', () => {
+      const settings: Record<string, unknown> = { providerConfigs: { cursor: { enabled: false } } };
+      cursorSettingsReconciler.setEnabled?.(settings, true);
+      expect(getCursorProviderSettings(settings).enabled).toBe(true);
+    });
+
+    it('writes enabled=false into providerConfigs.cursor', () => {
+      const settings: Record<string, unknown> = { providerConfigs: { cursor: { enabled: true } } };
+      cursorSettingsReconciler.setEnabled?.(settings, false);
+      expect(getCursorProviderSettings(settings).enabled).toBe(false);
+    });
+  });
 });
