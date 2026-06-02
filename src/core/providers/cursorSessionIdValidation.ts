@@ -4,10 +4,15 @@
  * Cursor itself uses UUID-style ids; this is intentionally strict.
  */
 const VALID_SESSION_ID = /^[A-Za-z0-9._-]+$/;
+const DOTS_ONLY = /^\.+$/;
 
 export function isValidCursorSessionId(sessionId: unknown): sessionId is string {
   if (typeof sessionId !== 'string') return false;
   if (sessionId.length === 0 || sessionId.length > 256) return false;
+  // Reject "." or ".." (or any all-dots id): when joined into
+  // `~/.cursor/chats/<hash>/<sessionId>` they collapse to the parent dir,
+  // turning `deleteConversationSession` into "wipe every session for the workspace".
+  if (DOTS_ONLY.test(sessionId)) return false;
   if (sessionId.includes('..')) return false;
   if (!VALID_SESSION_ID.test(sessionId)) return false;
   return true;

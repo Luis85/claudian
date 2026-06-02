@@ -25,4 +25,14 @@ describe('isValidCursorSessionId', () => {
     expect(isValidCursorSessionId('/etc')).toBe(false);
     expect(isValidCursorSessionId('C:\\Windows')).toBe(false);
   });
+
+  it('rejects pure-dot ids that would collapse to the parent directory', () => {
+    // `.` joined into `~/.cursor/chats/<hash>/<sessionId>` collapses to the
+    // workspace chat dir itself — a deletion target for `deleteConversationSession`
+    // would wipe every session for the vault. Reject `.` / `..` / `...` outright.
+    expect(isValidCursorSessionId('.')).toBe(false);
+    expect(isValidCursorSessionId('..')).toBe(false);
+    expect(isValidCursorSessionId('...')).toBe(false);
+    expect(isValidCursorSessionId('....')).toBe(false);
+  });
 });

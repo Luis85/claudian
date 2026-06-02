@@ -6,7 +6,12 @@ import { isValidCursorSessionId } from '../../../core/providers/cursorSessionIdV
 import type { ProviderConversationHistoryService } from '../../../core/providers/types';
 import type { Conversation } from '../../../core/types';
 import { getCursorState, resolveCursorSessionId } from '../types';
-import { cursorWorkspaceHash, loadCursorChatMessagesFromStoreResult, resolveCursorStoreDbPath } from './cursorHistoryStore';
+import {
+  cursorWorkspaceHash,
+  cursorWorkspaceHashLegacy,
+  loadCursorChatMessagesFromStoreResult,
+  resolveCursorStoreDbPath,
+} from './cursorHistoryStore';
 
 export class CursorConversationHistoryService implements ProviderConversationHistoryService {
   private hydratedConversationKeys = new Map<string, string>();
@@ -68,16 +73,26 @@ export class CursorConversationHistoryService implements ProviderConversationHis
       return;
     }
 
-    const hash = cursorWorkspaceHash(vaultPath);
-    const chatDir = path.join(os.homedir(), '.cursor', 'chats', hash, sessionId);
-    if (!chatDir.startsWith(path.join(os.homedir(), '.cursor', 'chats'))) {
-      return;
-    }
-
-    try {
-      fs.rmSync(chatDir, { recursive: true, force: true });
-    } catch {
-      // best-effort
+    // Mirror resolveCursorStoreDbPath's two-hash fallback: hydration can
+    // surface conversations keyed under either the normalized hash or the
+    // legacy (pre-normalization) hash. Deleting only the normalized path
+    // would leave the legacy-hash transcript on disk.
+    const chatsRoot = path.join(os.homedir(), '.cursor', 'chats');
+    const candidateHashes = [
+      cursorWorkspaceHash(vaultPath),
+      cursorWorkspaceHashLegacy(vaultPath),
+    ];
+    const seenDirs = new Set<string>();
+    for (const hash of candidateHashes) {
+      const chatDir = path.join(chatsRoot, hash, sessionId);
+      if (!chatDir.startsWith(chatsRoot)) continue;
+      if (seenDirs.has(chatDir)) continue;
+      seenDirs.add(chatDir);
+      try {
+        fs.rmSync(chatDir, { recursive: true, force: true });
+      } catch {
+        // best-effort
+      }
     }
   }
 
