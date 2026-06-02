@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+import { isValidCursorSessionId } from '../../../core/providers/cursorSessionIdValidation';
 import { isSubagentToolName } from '../../../core/tools/toolNames';
 import type { ChatMessage, ToolCallInfo } from '../../../core/types';
 import { extractDiffData } from '../../../utils/diff';
@@ -12,7 +13,23 @@ import {
   normalizeCursorPersistedToolResult,
 } from '../runtime/cursorToolNormalization';
 
+function normalizeWorkspacePathForHash(absoluteVaultPath: string): string {
+  let normalized = path.resolve(absoluteVaultPath);
+  while (normalized.length > 1 && (normalized.endsWith(path.sep) || normalized.endsWith('/'))) {
+    normalized = normalized.slice(0, -1);
+  }
+  if (process.platform === 'win32') {
+    normalized = normalized.toLowerCase();
+  }
+  return normalized;
+}
+
 export function cursorWorkspaceHash(absoluteVaultPath: string): string {
+  return crypto.createHash('md5').update(normalizeWorkspacePathForHash(absoluteVaultPath)).digest('hex');
+}
+
+/** Legacy (pre-normalization) hash; kept only for one-shot upgrade fallback. */
+export function cursorWorkspaceHashLegacy(absoluteVaultPath: string): string {
   return crypto.createHash('md5').update(absoluteVaultPath).digest('hex');
 }
 
@@ -20,9 +37,16 @@ export function resolveCursorStoreDbPath(
   absoluteVaultPath: string,
   sessionId: string,
 ): string | null {
-  const hash = cursorWorkspaceHash(absoluteVaultPath);
-  const candidate = path.join(os.homedir(), '.cursor', 'chats', hash, sessionId, 'store.db');
-  return fs.existsSync(candidate) ? candidate : null;
+  if (!isValidCursorSessionId(sessionId)) return null;
+  const candidates = [
+    cursorWorkspaceHash(absoluteVaultPath),
+    cursorWorkspaceHashLegacy(absoluteVaultPath),
+  ];
+  for (const hash of candidates) {
+    const candidate = path.join(os.homedir(), '.cursor', 'chats', hash, sessionId, 'store.db');
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
 }
 
 function isIdeBootstrapUser(content: string): boolean {
@@ -127,14 +151,16 @@ function applyToolBlob(record: Record<string, unknown>, messages: ChatMessage[])
   }
 }
 
-function openCursorSqliteReadonly(dbPath: string):
-  | { prepare: (sql: string) => { all: () => unknown[] } }
-  | null {
+interface CursorSqliteHandle {
+  prepare: (sql: string) => { all: () => unknown[] };
+  close: () => void;
+}
+
+function openCursorSqliteReadonly(dbPath: string): CursorSqliteHandle | null {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/consistent-type-imports
     const { DatabaseSync } = require('node:sqlite') as typeof import('node:sqlite');
-    const db = new DatabaseSync(dbPath, { readOnly: true });
-    return db;
+    return new DatabaseSync(dbPath, { readOnly: true }) as unknown as CursorSqliteHandle;
   } catch {
     return null;
   }
@@ -190,38 +216,61 @@ export function buildChatMessagesFromCursorHistoryRecords(
   return messages;
 }
 
-export function loadCursorChatMessagesFromStore(dbPath: string): ChatMessage[] {
+function redactHomeInPath(s: string): string {
+  const home = os.homedir();
+  if (!home) return s;
+  const normalizedSlashes = home.replace(/\\/g, '/');
+  return s
+    .split(home).join('[HOME]')
+    .split(normalizedSlashes).join('[HOME]');
+}
+
+export interface CursorHistoryLoadResult {
+  messages: ChatMessage[];
+  error?: string;
+}
+
+export function loadCursorChatMessagesFromStoreResult(dbPath: string): CursorHistoryLoadResult {
   const db = openCursorSqliteReadonly(dbPath);
   if (!db) {
-    return [];
+    return { messages: [], error: `Cursor history: could not open ${redactHomeInPath(dbPath)}` };
   }
-
-  let rows: Array<{ rowid: number; id: string; data: Buffer | Uint8Array }>;
   try {
-    const stmt = db.prepare('SELECT rowid, id, data FROM blobs ORDER BY rowid');
-    rows = stmt.all() as Array<{ rowid: number; id: string; data: Buffer | Uint8Array }>;
-  } catch {
-    return [];
-  }
-
-  const records: Array<{ rowId: string; record: Record<string, unknown> }> = [];
-
-  for (const row of rows) {
-    const buf = Buffer.isBuffer(row.data) ? row.data : Buffer.from(row.data);
-    const raw = buf.toString('utf8');
-    if (!raw.startsWith('{')) {
-      continue;
-    }
-
-    let record: Record<string, unknown>;
+    let rows: Array<{ rowid: number; id: string; data: Buffer | Uint8Array }>;
     try {
-      record = JSON.parse(raw) as Record<string, unknown>;
-    } catch {
-      continue;
+      const stmt = db.prepare('SELECT rowid, id, data FROM blobs ORDER BY rowid');
+      rows = stmt.all() as Array<{ rowid: number; id: string; data: Buffer | Uint8Array }>;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { messages: [], error: `Cursor history: SQL read failed (${redactHomeInPath(msg)})` };
     }
 
-    records.push({ rowId: row.id, record });
-  }
+    const records: Array<{ rowId: string; record: Record<string, unknown> }> = [];
 
-  return buildChatMessagesFromCursorHistoryRecords(records);
+    for (const row of rows) {
+      const buf = Buffer.isBuffer(row.data) ? row.data : Buffer.from(row.data);
+      const raw = buf.toString('utf8');
+      if (!raw.startsWith('{')) {
+        continue;
+      }
+
+      let record: Record<string, unknown>;
+      try {
+        record = JSON.parse(raw) as Record<string, unknown>;
+      } catch {
+        continue;
+      }
+
+      records.push({ rowId: row.id, record });
+    }
+
+    return { messages: buildChatMessagesFromCursorHistoryRecords(records) };
+  } finally {
+    try { db.close(); } catch { /* ignore close errors */ }
+  }
+}
+
+/** Back-compat wrapper. Prefer `loadCursorChatMessagesFromStoreResult` for new callers. */
+export function loadCursorChatMessagesFromStore(dbPath: string): ChatMessage[] {
+  return loadCursorChatMessagesFromStoreResult(dbPath).messages;
 }

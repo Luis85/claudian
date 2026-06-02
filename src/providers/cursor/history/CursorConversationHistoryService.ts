@@ -2,13 +2,20 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+import { isValidCursorSessionId } from '../../../core/providers/cursorSessionIdValidation';
 import type { ProviderConversationHistoryService } from '../../../core/providers/types';
 import type { Conversation } from '../../../core/types';
 import { getCursorState, resolveCursorSessionId } from '../types';
-import { cursorWorkspaceHash, loadCursorChatMessagesFromStore, resolveCursorStoreDbPath } from './cursorHistoryStore';
+import {
+  cursorWorkspaceHash,
+  cursorWorkspaceHashLegacy,
+  loadCursorChatMessagesFromStoreResult,
+  resolveCursorStoreDbPath,
+} from './cursorHistoryStore';
 
 export class CursorConversationHistoryService implements ProviderConversationHistoryService {
   private hydratedConversationKeys = new Map<string, string>();
+  private historyLoadErrors = new Map<string, string>();
 
   async hydrateConversationHistory(
     conversation: Conversation,
@@ -34,7 +41,13 @@ export class CursorConversationHistoryService implements ProviderConversationHis
       return;
     }
 
-    const loaded = loadCursorChatMessagesFromStore(dbPath);
+    const result = loadCursorChatMessagesFromStoreResult(dbPath);
+    if (result.error) {
+      this.historyLoadErrors.set(conversation.id, result.error);
+    } else {
+      this.historyLoadErrors.delete(conversation.id);
+    }
+    const loaded = result.messages;
     if (loaded.length === 0) {
       this.hydratedConversationKeys.delete(conversation.id);
       return;
@@ -42,6 +55,10 @@ export class CursorConversationHistoryService implements ProviderConversationHis
 
     conversation.messages = loaded;
     this.hydratedConversationKeys.set(conversation.id, hydrationKey);
+  }
+
+  getLastHistoryLoadError(conversationId: string): string | undefined {
+    return this.historyLoadErrors.get(conversationId);
   }
 
   async deleteConversationSession(
@@ -52,17 +69,30 @@ export class CursorConversationHistoryService implements ProviderConversationHis
     if (!sessionId || !vaultPath) {
       return;
     }
-
-    const hash = cursorWorkspaceHash(vaultPath);
-    const chatDir = path.join(os.homedir(), '.cursor', 'chats', hash, sessionId);
-    if (!chatDir.startsWith(path.join(os.homedir(), '.cursor', 'chats'))) {
+    if (!isValidCursorSessionId(sessionId)) {
       return;
     }
 
-    try {
-      fs.rmSync(chatDir, { recursive: true, force: true });
-    } catch {
-      // best-effort
+    // Mirror resolveCursorStoreDbPath's two-hash fallback: hydration can
+    // surface conversations keyed under either the normalized hash or the
+    // legacy (pre-normalization) hash. Deleting only the normalized path
+    // would leave the legacy-hash transcript on disk.
+    const chatsRoot = path.join(os.homedir(), '.cursor', 'chats');
+    const candidateHashes = [
+      cursorWorkspaceHash(vaultPath),
+      cursorWorkspaceHashLegacy(vaultPath),
+    ];
+    const seenDirs = new Set<string>();
+    for (const hash of candidateHashes) {
+      const chatDir = path.join(chatsRoot, hash, sessionId);
+      if (!chatDir.startsWith(chatsRoot)) continue;
+      if (seenDirs.has(chatDir)) continue;
+      seenDirs.add(chatDir);
+      try {
+        fs.rmSync(chatDir, { recursive: true, force: true });
+      } catch {
+        // best-effort
+      }
     }
   }
 

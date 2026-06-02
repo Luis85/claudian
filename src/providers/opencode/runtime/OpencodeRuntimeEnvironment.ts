@@ -1,4 +1,5 @@
 import { getRuntimeEnvironmentText } from '../../../core/providers/providerEnvironment';
+import { buildAllowlistedSubprocessEnvironment } from '../../../core/providers/subprocessEnvironmentAllowlist';
 import { getEnhancedPath, parseEnvironmentVariables } from '../../../utils/env';
 
 export function buildOpencodeRuntimeEnv(
@@ -7,12 +8,15 @@ export function buildOpencodeRuntimeEnv(
   databasePathOverride?: string | null,
 ): NodeJS.ProcessEnv {
   const envText = getRuntimeEnvironmentText(settings, 'opencode');
-  const envVars = parseEnvironmentVariables(envText);
-  return {
-    ...process.env,
-    ...envVars,
+  const customEnv = parseEnvironmentVariables(envText);
+  const opencodeExtras: Record<string, string> = {
     OPENCODE_DISABLE_CLAUDE_CODE_PROMPT: 'true',
     ...(databasePathOverride ? { OPENCODE_DB: databasePathOverride } : {}),
-    PATH: getEnhancedPath(envVars.PATH, cliPath || undefined),
   };
+  return buildAllowlistedSubprocessEnvironment({
+    processEnv: process.env,
+    customEnv: { ...customEnv, ...opencodeExtras },
+    providerPrefixPattern: /^OPENCODE_/i,
+    pathOverride: getEnhancedPath(customEnv.PATH, cliPath || undefined),
+  });
 }

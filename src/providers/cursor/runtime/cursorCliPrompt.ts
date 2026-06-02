@@ -63,8 +63,25 @@ export function resolveCursorCliPromptArg(prompt: string): ResolvedCursorCliProm
   }
 
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'claudian-cursor-prompt-'));
+  if (process.platform !== 'win32') {
+    try {
+      fs.chmodSync(dir, 0o700);
+    } catch {
+      // best-effort; mode bits on Windows are not meaningful and POSIX EPERM is tolerated
+    }
+  }
+
   const filePath = path.join(dir, 'prompt.txt');
-  fs.writeFileSync(filePath, prompt, 'utf8');
+  try {
+    fs.writeFileSync(filePath, prompt, { encoding: 'utf8', mode: 0o600 });
+  } catch (err) {
+    try {
+      fs.rmSync(dir, { recursive: true, force: true });
+    } catch {
+      // best-effort cleanup; rethrow the original write error
+    }
+    throw err;
+  }
 
   return {
     arg: `@${filePath}`,

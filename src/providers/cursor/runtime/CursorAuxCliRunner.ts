@@ -6,7 +6,7 @@ import type { PluginContext } from '../../../core/types/PluginContext';
 import { asSettingsBag } from '../../../core/types/settings';
 import { getVaultPath } from '../../../utils/path';
 import { buildCursorAgentEnvironment } from './cursorAgentEnv';
-import { acquireCursorAgentSpawnLock } from './cursorAgentSpawnLock';
+import { runWithCursorAgentSpawnLock } from './cursorAgentSpawnLock';
 import { resolveCursorModelForCli } from './cursorCliModel';
 import { resolveCursorCliPromptArg } from './cursorCliPrompt';
 import { resolveCursorLaunch } from './cursorLaunch';
@@ -119,54 +119,51 @@ export class CursorAuxCliRunner implements AuxQueryRunner {
     options: { cwd: string; env: Record<string, string> },
     signal?: AbortSignal,
   ): Promise<{ stdout: string; stderr: string; code: number | null; signal: NodeJS.Signals | null }> {
-    const releaseSpawnLock = await acquireCursorAgentSpawnLock();
-    try {
-      return await new Promise((resolve, reject) => {
-      const launch = resolveCursorLaunch(command, args);
-      const child = spawn(launch.command, launch.args, {
-        cwd: options.cwd,
-        env: launch.extraEnv ? { ...options.env, ...launch.extraEnv } : options.env,
-        windowsHide: true,
-        ...(launch.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
-      });
+    return runWithCursorAgentSpawnLock(async () => {
+      return new Promise((resolve, reject) => {
+        const launch = resolveCursorLaunch(command, args);
+        const child = spawn(launch.command, launch.args, {
+          cwd: options.cwd,
+          env: launch.extraEnv ? { ...options.env, ...launch.extraEnv } : options.env,
+          windowsHide: true,
+          ...(launch.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
+        });
 
-      let stdout = '';
-      let stderr = '';
+        let stdout = '';
+        let stderr = '';
 
-      child.stdout?.on('data', (chunk: Buffer) => {
-        stdout += chunk.toString('utf8');
-      });
-      child.stderr?.on('data', (chunk: Buffer) => {
-        stderr += chunk.toString('utf8');
-      });
+        child.stdout?.on('data', (chunk: Buffer) => {
+          stdout += chunk.toString('utf8');
+        });
+        child.stderr?.on('data', (chunk: Buffer) => {
+          stderr += chunk.toString('utf8');
+        });
 
-      const onAbort = (): void => {
-        child.kill('SIGTERM');
-      };
-      if (signal) {
-        if (signal.aborted) {
-          onAbort();
-        } else {
-          signal.addEventListener('abort', onAbort, { once: true });
-        }
-      }
-
-      child.on('error', (err) => {
+        const onAbort = (): void => {
+          child.kill('SIGTERM');
+        };
         if (signal) {
-          signal.removeEventListener('abort', onAbort);
+          if (signal.aborted) {
+            onAbort();
+          } else {
+            signal.addEventListener('abort', onAbort, { once: true });
+          }
         }
-        reject(err);
-      });
 
-      child.on('close', (code, killSignal) => {
-        if (signal) {
-          signal.removeEventListener('abort', onAbort);
-        }
-        resolve({ stdout, stderr, code, signal: killSignal });
+        child.on('error', (err) => {
+          if (signal) {
+            signal.removeEventListener('abort', onAbort);
+          }
+          reject(err);
+        });
+
+        child.on('close', (code, killSignal) => {
+          if (signal) {
+            signal.removeEventListener('abort', onAbort);
+          }
+          resolve({ stdout, stderr, code, signal: killSignal });
+        });
       });
     });
-    } finally {
-      releaseSpawnLock();
-    }
   }
 }
