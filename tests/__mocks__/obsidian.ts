@@ -152,7 +152,15 @@ export interface MockTextComponent {
   placeholder: string;
   changeHandler: (v: string) => void;
   disabled: boolean;
-  inputEl: { type: string; min: string; max: string; step: string };
+  inputEl: {
+    type: string;
+    min: string;
+    max: string;
+    step: string;
+    dataset: Record<string, string>;
+    addEventListener: jest.Mock;
+    removeEventListener: jest.Mock;
+  };
   setValue: (v: string) => MockTextComponent;
   setPlaceholder: (v: string) => MockTextComponent;
   setDisabled: (v: boolean) => MockTextComponent;
@@ -257,7 +265,7 @@ export class Setting {
       placeholder: '',
       changeHandler: () => undefined,
       disabled: false,
-      inputEl: { type: 'text', min: '', max: '', step: '' },
+      inputEl: { type: 'text', min: '', max: '', step: '', dataset: {}, addEventListener: jest.fn(), removeEventListener: jest.fn() },
       setValue(v: string) {
         this.value = v;
         return this;
@@ -286,7 +294,7 @@ export class Setting {
       placeholder: '',
       changeHandler: () => undefined,
       disabled: false,
-      inputEl: { type: 'textarea', min: '', max: '', step: '' },
+      inputEl: { type: 'textarea', min: '', max: '', step: '', dataset: {}, addEventListener: jest.fn(), removeEventListener: jest.fn() },
       setValue(v: string) {
         this.value = v;
         return this;

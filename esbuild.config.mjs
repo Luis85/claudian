@@ -11,11 +11,13 @@ import {
   rmSync,
 } from 'fs';
 import rendererSafeUnrefHelpers from './scripts/rendererSafeUnref.js';
+import patchSdkImportMetaUrlModule from './scripts/patchSdkImportMetaUrl.js';
 
 const {
   findUnsafeTimerUnrefSites,
   patchRendererUnsafeUnrefSites,
 } = rendererSafeUnrefHelpers;
+const { patchSdkImportMetaUrl } = patchSdkImportMetaUrlModule;
 
 // Load .env.local if it exists
 if (existsSync('.env.local')) {
@@ -30,15 +32,17 @@ if (existsSync('.env.local')) {
 
 const prod = process.argv[2] === 'production';
 
-const patchCodexSdkImportMeta = {
-  name: 'patch-codex-sdk-import-meta',
+const patchSdkImportMeta = {
+  name: 'patch-sdk-import-meta',
   setup(build) {
     build.onLoad(
-      { filter: /[\\/]node_modules[\\/]@openai[\\/]codex-sdk[\\/]dist[\\/]index\.js$/ },
+      {
+        filter: /[\\/]node_modules[\\/](?:@openai[\\/]codex-sdk[\\/]dist[\\/]index\.js|@anthropic-ai[\\/]claude-agent-sdk[\\/]sdk\.mjs)$/,
+      },
       async (args) => {
         const contents = await fsPromises.readFile(args.path, 'utf8');
         return {
-          contents: contents.replace('createRequire(import.meta.url)', 'createRequire(__filename)'),
+          contents: patchSdkImportMetaUrl(contents),
           loader: 'js',
         };
       },
@@ -115,7 +119,7 @@ const copyToObsidian = {
 const context = await esbuild.context({
   entryPoints: ['src/main.ts'],
   bundle: true,
-  plugins: [patchCodexSdkImportMeta, patchRendererUnsafeUnref, copyToObsidian],
+  plugins: [patchSdkImportMeta, patchRendererUnsafeUnref, copyToObsidian],
   external: [
     'obsidian',
     'electron',

@@ -11,7 +11,7 @@ export {
   createTab,
   type TabCreateOptions,
 } from './tabFactory';
-export { wireTabInputEvents } from './tabInputWiring';
+export { sendTabInputMessageFromExplicitEnterShortcut, wireTabInputEvents } from './tabInputWiring';
 export {
   activateTab,
   deactivateTab,

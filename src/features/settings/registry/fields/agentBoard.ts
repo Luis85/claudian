@@ -228,53 +228,70 @@ function renderFolderWarning(ctx: SettingsCtx, host: HTMLElement): () => void {
 //   0 enabled → disabled hint pointing to the General tab
 //   1 enabled → read-only chip locking the only valid provider
 //   ≥2 enabled → editable dropdown writing through to ctx.settings
-// Re-renders on `task:board-config-changed` so lane edits or General-tab
-// toggles immediately reshape the widget.
+// Re-renders only its own host on `task:board-config-changed` so a lane edit
+// upstream cannot wipe the entire settings tab (which used to destroy the
+// lane editor's checkbox mid-event and caused the freeze).
 function renderDefaultProviderWidget(ctx: SettingsCtx, host: HTMLElement): () => void {
-  host.empty();
-  const configs = (ctx.settings as { providerConfigs?: Record<string, { enabled?: boolean }> })
-    .providerConfigs;
-  const enabledIds = ProviderRegistry.getRegisteredProviderIds().filter(
-    (id) => Boolean(configs?.[id]?.enabled),
-  );
-  const resolved = resolveAgentBoardDefaultProvider(ctx.settings);
+  const renderInto = (target: HTMLElement): void => {
+    target.empty();
+    const configs = (ctx.settings as { providerConfigs?: Record<string, { enabled?: boolean }> })
+      .providerConfigs;
+    const enabledIds = ProviderRegistry.getRegisteredProviderIds().filter(
+      (id) => Boolean(configs?.[id]?.enabled),
+    );
+    const resolved = resolveAgentBoardDefaultProvider(ctx.settings);
 
-  const setting = new Setting(host)
-    .setName('Default provider')
-    .setDesc('Provider used to run new work orders.');
+    const setting = new Setting(target)
+      .setName('Default provider')
+      .setDesc('Provider used to run new work orders.');
 
-  if (enabledIds.length === 0) {
-    setting.descEl.createEl('br');
-    setting.descEl.createSpan({
-       
-      text: 'Enable a provider in General to set a default for Agent Board.',
-      cls: 'claudian-agent-board-hint',
-    });
-  } else if (enabledIds.length === 1) {
-    setting.addText((text) => {
-      text.setValue(providerLabel(enabledIds[0])).setDisabled(true);
-    });
-    setting.descEl.createEl('br');
-    setting.descEl.createSpan({
-      text: 'Only one provider is enabled — locked to it.',
-      cls: 'claudian-agent-board-hint',
-    });
-  } else {
-    setting.addDropdown((dropdown) => {
-      for (const id of enabledIds) {
-        dropdown.addOption(id, providerLabel(id));
-      }
-      dropdown.setValue(resolved ?? enabledIds[0]);
-      dropdown.onChange(async (value) => {
-        writePathInPlace(ctx.settings as object, 'agentBoardDefaultProvider', value);
-        writePathInPlace(ctx.settings as object, 'agentBoardDefaultModel', null);
-        await ctx.saveSettings();
-        ctx.refresh();
+    if (enabledIds.length === 0) {
+      setting.descEl.createEl('br');
+      setting.descEl.createSpan({
+
+        text: 'Enable a provider in General to set a default for Agent Board.',
+        cls: 'claudian-agent-board-hint',
       });
-    });
-  }
+    } else if (enabledIds.length === 1) {
+      setting.addText((text) => {
+        text.setValue(providerLabel(enabledIds[0])).setDisabled(true);
+      });
+      setting.descEl.createEl('br');
+      setting.descEl.createSpan({
+        text: 'Only one provider is enabled — locked to it.',
+        cls: 'claudian-agent-board-hint',
+      });
+    } else {
+      setting.addDropdown((dropdown) => {
+        for (const id of enabledIds) {
+          dropdown.addOption(id, providerLabel(id));
+        }
+        dropdown.setValue(resolved ?? enabledIds[0]);
+        dropdown.onChange(async (value) => {
+          writePathInPlace(ctx.settings as object, 'agentBoardDefaultProvider', value);
+          writePathInPlace(ctx.settings as object, 'agentBoardDefaultModel', null);
+          await ctx.saveSettings();
+          // User-initiated change in the defaults section. Full refresh is
+          // acceptable here because the user is not interacting with the lane
+          // editor and the model widget needs to repopulate its option list.
+          ctx.refresh();
+        });
+      });
+    }
+  };
 
-  return ctx.plugin.events.on('task:board-config-changed', () => ctx.refresh());
+  renderInto(host);
+  return ctx.plugin.events.on('task:board-config-changed', () => {
+    // Defensive: between event dispatch and this listener executing,
+    // ClaudianSettings.display() may have replaced `containerEl` and detached
+    // the host. Re-rendering into a detached node is wasted DOM work and risks
+    // mutating a host that the EventBus snapshot still holds a stale closure
+    // for. The unsubscribe in renderTab's disposer runs at the top of the
+    // next display(), so this guard only matters when the listener fires from
+    // the same emit() that triggered the display.
+    if (!host.isConnected) return;
+    renderInto(host);
+  });
 }
 
 // Resolver-aware widget for `agentBoardDefaultModel`. Mirrors the model list
@@ -283,53 +300,59 @@ function renderDefaultProviderWidget(ctx: SettingsCtx, host: HTMLElement): () =>
 //   provider with 0 models → hint (custom envs may still pick later)
 //   provider with 1 model  → read-only chip locking the only valid model
 //   provider with ≥2 models → editable dropdown writing through to ctx.settings
-// Re-renders on `task:board-config-changed` so provider toggles immediately
-// reshape the widget.
+// Re-renders only its own host on `task:board-config-changed` so a lane edit
+// upstream cannot trigger a full settings re-render that wipes the lane editor.
 function renderDefaultModelWidget(ctx: SettingsCtx, host: HTMLElement): () => void {
-  host.empty();
-  const provider = resolveAgentBoardDefaultProvider(ctx.settings);
+  const renderInto = (target: HTMLElement): void => {
+    target.empty();
+    const provider = resolveAgentBoardDefaultProvider(ctx.settings);
 
-  const setting = new Setting(host)
-    .setName('Default model')
-    .setDesc('Model used to run new work orders.');
+    const setting = new Setting(target)
+      .setName('Default model')
+      .setDesc('Model used to run new work orders.');
 
-  if (!provider) {
-    setting.descEl.createEl('br');
-    setting.descEl.createSpan({
-       
-      text: 'Pick an Agent Board default provider first to choose a model.',
-      cls: 'claudian-agent-board-hint',
-    });
-  } else {
-    const settingsBag = asSettingsBag(ctx.settings);
-    const config = ProviderRegistry.getChatUIConfig(provider);
-    const options = config.getModelOptions(settingsBag);
-
-    if (options.length === 0) {
+    if (!provider) {
       setting.descEl.createEl('br');
       setting.descEl.createSpan({
-        text: `No models available for ${providerLabel(provider)}.`,
+
+        text: 'Pick an Agent Board default provider first to choose a model.',
         cls: 'claudian-agent-board-hint',
       });
-    } else if (options.length === 1) {
-      setting.addText((text) => {
-        text.setValue(options[0].label).setDisabled(true);
-      });
     } else {
-      setting.addDropdown((dropdown) => {
-        dropdown.addOption('', 'Provider default');
-        for (const option of options) {
-          dropdown.addOption(option.value, option.label);
-        }
-        const resolvedModel = resolveAgentBoardDefaultModel(ctx.settings);
-        dropdown.setValue(resolvedModel ?? '');
-        dropdown.onChange(async (value) => {
-          writePathInPlace(ctx.settings as object, 'agentBoardDefaultModel', value || null);
-          await ctx.saveSettings();
-        });
-      });
-    }
-  }
+      const settingsBag = asSettingsBag(ctx.settings);
+      const config = ProviderRegistry.getChatUIConfig(provider);
+      const options = config.getModelOptions(settingsBag);
 
-  return ctx.plugin.events.on('task:board-config-changed', () => ctx.refresh());
+      if (options.length === 0) {
+        setting.descEl.createEl('br');
+        setting.descEl.createSpan({
+          text: `No models available for ${providerLabel(provider)}.`,
+          cls: 'claudian-agent-board-hint',
+        });
+      } else if (options.length === 1) {
+        setting.addText((text) => {
+          text.setValue(options[0].label).setDisabled(true);
+        });
+      } else {
+        setting.addDropdown((dropdown) => {
+          dropdown.addOption('', 'Provider default');
+          for (const option of options) {
+            dropdown.addOption(option.value, option.label);
+          }
+          const resolvedModel = resolveAgentBoardDefaultModel(ctx.settings);
+          dropdown.setValue(resolvedModel ?? '');
+          dropdown.onChange(async (value) => {
+            writePathInPlace(ctx.settings as object, 'agentBoardDefaultModel', value || null);
+            await ctx.saveSettings();
+          });
+        });
+      }
+    }
+  };
+
+  renderInto(host);
+  return ctx.plugin.events.on('task:board-config-changed', () => {
+    if (!host.isConnected) return;
+    renderInto(host);
+  });
 }

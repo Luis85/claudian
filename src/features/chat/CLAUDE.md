@@ -134,3 +134,6 @@ for await (const chunk of runtime.query(preparedTurn, history)) {
 - Forking is provider-owned under the hood
   - Both Claude and Codex support fork
   - `ChatRuntime.resolveSessionIdForFork()` and provider history services own the provider-specific fork/session mapping
+- Mod+Enter composer send fires from two places by design
+  - Textarea-level handler in `tabInputWiring.ts` runs first and short-circuits via `sendTabInputMessageFromExplicitEnterShortcut` before the slash dropdown / resume / mention handlers, so the dropdown can't swallow the shortcut
+  - Vault-level `ClaudianView.scope.register(['Mod'], 'Enter', ...)` is the safety net; gated by `requireInputFocus: true` so it only sends when the composer textarea is `document.activeElement`, and guards `e.isComposing` (IME) and `e.defaultPrevented`. Returns `false` on send (Obsidian "stop bubbling") and `undefined` on miss

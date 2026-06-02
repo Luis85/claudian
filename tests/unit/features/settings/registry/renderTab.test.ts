@@ -221,6 +221,143 @@ describe('renderTab', () => {
     expect((renderField as jest.Mock)).not.toHaveBeenCalled();
   });
 
+  describe('field disposer lifecycle', () => {
+    it('returns a disposer that runs every field-level disposer in order', () => {
+      const registry = new SettingsRegistry();
+      registry.registerTab(makeTab('agentBoard'));
+      registry.registerSection(makeSection('agentBoard', 's1', 'S1', 10));
+      registry.registerField(makeField('agentBoard', 's1', 'a'));
+      registry.registerField(makeField('agentBoard', 's1', 'b'));
+
+      const disposeA = jest.fn();
+      const disposeB = jest.fn();
+      (renderField as jest.Mock)
+        .mockReturnValueOnce(disposeA)
+        .mockReturnValueOnce(disposeB);
+
+      const host = document.createElement('div');
+      const disposer = renderTab(host, 'agentBoard', makeCtx({ firstRunDismissed: true }), registry);
+
+      expect(typeof disposer).toBe('function');
+      (disposer as () => void)();
+      expect(disposeA).toHaveBeenCalledTimes(1);
+      expect(disposeB).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns a no-op disposer when no field provided one', () => {
+      const registry = new SettingsRegistry();
+      registry.registerTab(makeTab('agentBoard'));
+      registry.registerSection(makeSection('agentBoard', 's1', 'S1', 10));
+      registry.registerField(makeField('agentBoard', 's1', 'a'));
+
+      (renderField as jest.Mock).mockReturnValueOnce(undefined);
+
+      const host = document.createElement('div');
+      const disposer = renderTab(host, 'agentBoard', makeCtx({ firstRunDismissed: true }), registry);
+      expect(typeof disposer).toBe('function');
+      expect(() => (disposer as () => void)()).not.toThrow();
+    });
+
+    it('disposers from a prior render do not leak into a new render on a different host', () => {
+      // Repro of the Agent Board lane-editor freeze: each ClaudianSettings.display()
+      // creates a fresh tab-content div, so a WeakMap keyed by host can never find
+      // the previous disposers. The caller must hold the returned disposers and run
+      // them before destroying the old host.
+      const registry = new SettingsRegistry();
+      registry.registerTab(makeTab('agentBoard'));
+      registry.registerSection(makeSection('agentBoard', 's1', 'S1', 10));
+      registry.registerField(makeField('agentBoard', 's1', 'a'));
+
+      const disposeFirst = jest.fn();
+      const disposeSecond = jest.fn();
+      (renderField as jest.Mock)
+        .mockReturnValueOnce(disposeFirst)
+        .mockReturnValueOnce(disposeSecond);
+
+      const firstHost = document.createElement('div');
+      const firstDisposer = renderTab(firstHost, 'agentBoard', makeCtx({ firstRunDismissed: true }), registry);
+
+      const secondHost = document.createElement('div');
+      renderTab(secondHost, 'agentBoard', makeCtx({ firstRunDismissed: true }), registry);
+
+      // Caller is responsible for running firstDisposer when the first host is gone.
+      // Run it explicitly here; the second render must not auto-dispose it.
+      expect(disposeFirst).not.toHaveBeenCalled();
+      (firstDisposer as () => void)();
+      expect(disposeFirst).toHaveBeenCalledTimes(1);
+      expect(disposeSecond).not.toHaveBeenCalled();
+    });
+
+    it('does NOT auto-dispose when the same host is re-rendered (caller owns lifecycle)', () => {
+      // The previous WeakMap implementation auto-disposed prior disposers when
+      // a host was re-rendered. That coupling masked the cross-host bug because
+      // callers never had to think about lifecycle. The new contract puts the
+      // caller in charge: ClaudianSettings.display() drains its own disposer
+      // array at the top before re-rendering, and tests must lock that
+      // ownership in so a future "convenience" auto-dispose cannot silently
+      // come back.
+      const registry = new SettingsRegistry();
+      registry.registerTab(makeTab('agentBoard'));
+      registry.registerSection(makeSection('agentBoard', 's1', 'S1', 10));
+      registry.registerField(makeField('agentBoard', 's1', 'a'));
+
+      const disposeA = jest.fn();
+      const disposeB = jest.fn();
+      (renderField as jest.Mock)
+        .mockReturnValueOnce(disposeA)
+        .mockReturnValueOnce(disposeB);
+
+      const host = document.createElement('div');
+      const ctx = makeCtx({ firstRunDismissed: true });
+
+      const firstDisposer = renderTab(host, 'agentBoard', ctx, registry);
+      renderTab(host, 'agentBoard', ctx, registry);
+
+      expect(disposeA).not.toHaveBeenCalled();
+      (firstDisposer as () => void)();
+      expect(disposeA).toHaveBeenCalledTimes(1);
+      expect(disposeB).not.toHaveBeenCalled();
+    });
+
+    it('keeps the registered event-bus listener count flat across many renders when the caller drains disposers', () => {
+      // This is the regression guard for the exponential listener leak that
+      // froze the Agent Board lane editor. A field that subscribes to a real
+      // event bus must, when its disposer is invoked, fully release that
+      // subscription so the bus's listener set does not grow over time.
+      const registry = new SettingsRegistry();
+      registry.registerTab(makeTab('agentBoard'));
+      registry.registerSection(makeSection('agentBoard', 's1', 'S1', 10));
+      registry.registerField(makeField('agentBoard', 's1', 'a'));
+
+      const handlers = new Set<() => void>();
+      const subscribe = (): (() => void) => {
+        const handler = () => undefined;
+        handlers.add(handler);
+        return () => handlers.delete(handler);
+      };
+      (renderField as jest.Mock).mockImplementation(() => subscribe());
+
+      const ctx = makeCtx({ firstRunDismissed: true });
+
+      const RENDER_ROUNDS = 20;
+      const disposers: Array<() => void> = [];
+      for (let i = 0; i < RENDER_ROUNDS; i += 1) {
+        if (disposers.length > 0) {
+          const dispose = disposers.shift()!;
+          dispose();
+        }
+        const host = document.createElement('div');
+        disposers.push(renderTab(host, 'agentBoard', ctx, registry));
+      }
+
+      // After the loop one disposer remains undrained. Every prior render must
+      // have released its subscription.
+      expect(handlers.size).toBe(1);
+      for (const dispose of disposers) dispose();
+      expect(handlers.size).toBe(0);
+    });
+  });
+
   describe('first-run banner', () => {
     function setupGeneralWithSection(): SettingsRegistry {
       const registry = new SettingsRegistry();

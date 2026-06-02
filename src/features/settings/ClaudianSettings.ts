@@ -126,13 +126,61 @@ export class ClaudianSettingTab extends PluginSettingTab {
   private searchBar: SearchBar | null = null;
   private searchResultsView: SearchResultsView | null = null;
   private highlightTimeouts: Map<HTMLElement, number> = new Map();
+  // Field-level disposers (event-bus unsubscribes, observers, …) returned by
+  // `renderTab`. `display()` empties `containerEl` and creates fresh tab
+  // content divs each call, so disposers cannot be keyed by host element. We
+  // hold them on the tab instance and drain them at the top of every
+  // `display()` before the previous DOM is destroyed. Skipping this caused an
+  // exponential listener leak in the event bus and froze the settings UI on
+  // the Agent Board lane editor after a few rapid clicks.
+  private tabDisposers: Array<() => void> = [];
+  // Re-entrancy guard. A widget disposer that synchronously triggers another
+  // `display()` (e.g. an unsubscribe callback that calls `ctx.refresh()`)
+  // would otherwise interleave drains and renders; the nested render's
+  // disposers would land in the outer call's `tabDisposers` array and
+  // listeners on the orphaned hosts would stay live until the next display.
+  // We drop the re-entrant call instead — the outer render is about to
+  // replace the DOM anyway.
+  private displaying = false;
 
   constructor(app: App, plugin: ClaudianPlugin) {
     super(app, plugin);
     this.plugin = plugin;
   }
 
+  hide(): void {
+    this.drainTabDisposers();
+  }
+
+  private drainTabDisposers(): void {
+    const pending = this.tabDisposers;
+    this.tabDisposers = [];
+    for (const dispose of pending) {
+      try {
+        dispose();
+      } catch {
+        // Disposers must be defensive — swallow so one bad widget cannot stop
+        // the rest from cleaning up.
+      }
+    }
+  }
+
   display(): void {
+    if (this.displaying) {
+      // Re-entrant call. Outer render is in flight and will produce the next
+      // canonical DOM; dropping this call avoids interleaved drains.
+      return;
+    }
+    this.displaying = true;
+    try {
+      this.drainTabDisposers();
+      this.renderTabs();
+    } finally {
+      this.displaying = false;
+    }
+  }
+
+  private renderTabs(): void {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.addClass('claudian-settings');
@@ -228,7 +276,9 @@ export class ClaudianSettingTab extends PluginSettingTab {
     }
 
     if (useRegistryRenderer('general')) {
-      renderTab(tabContents.get('general')!, 'general', ctx, getSettingsRegistry());
+      this.tabDisposers.push(
+        renderTab(tabContents.get('general')!, 'general', ctx, getSettingsRegistry()),
+      );
     } else {
       this.renderGeneralTab(tabContents.get('general')!);
     }
@@ -236,7 +286,9 @@ export class ClaudianSettingTab extends PluginSettingTab {
     const agentBoardContent = tabContents.get('agentBoard');
     if (agentBoardContent) {
       if (useRegistryRenderer('agentBoard')) {
-        renderTab(agentBoardContent, 'agentBoard', ctx, getSettingsRegistry());
+        this.tabDisposers.push(
+          renderTab(agentBoardContent, 'agentBoard', ctx, getSettingsRegistry()),
+        );
       } else {
         renderAgentBoardSettingsSection(agentBoardContent, this.plugin);
       }
@@ -245,7 +297,9 @@ export class ClaudianSettingTab extends PluginSettingTab {
     const orchestratorContent = tabContents.get('orchestrator');
     if (orchestratorContent) {
       if (useRegistryRenderer('orchestrator')) {
-        renderTab(orchestratorContent, 'orchestrator', ctx, getSettingsRegistry());
+        this.tabDisposers.push(
+          renderTab(orchestratorContent, 'orchestrator', ctx, getSettingsRegistry()),
+        );
       } else {
         renderOrchestratorSettingsTab(orchestratorContent, this.plugin);
       }
@@ -256,7 +310,9 @@ export class ClaudianSettingTab extends PluginSettingTab {
       // Diagnostics has no legacy tab renderer — its imperative collaborators
       // still surface inside the General tab's Diagnostics section. Until the
       // flag flips, the dedicated tab simply renders nothing.
-      renderTab(diagnosticsContent, 'diagnostics', ctx, getSettingsRegistry());
+      this.tabDisposers.push(
+        renderTab(diagnosticsContent, 'diagnostics', ctx, getSettingsRegistry()),
+      );
     }
 
     for (const providerId of providerTabs) {
@@ -266,7 +322,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
       }
 
       if (useRegistryRenderer(providerId)) {
-        renderTab(content, providerId, ctx, getSettingsRegistry());
+        this.tabDisposers.push(renderTab(content, providerId, ctx, getSettingsRegistry()));
         continue;
       }
 

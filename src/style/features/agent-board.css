@@ -243,3 +243,25 @@
   gap: 4px;
   font-size: var(--font-ui-smaller);
 }
+
+.claudian-lane-editor-status--duplicate {
+  /* Outline + colour together so colour is not the only signal of a duplicate
+     (accessibility: red/green colourblind users should still see the marker). */
+  color: var(--text-warning);
+  outline: 1px dashed var(--text-warning);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.claudian-lane-editor-status-hint {
+  /* Per-lane combined hint — single block rather than one span per duplicate
+     checkbox so a lane with many conflicts does not render as an unreadable
+     wall of italics. `role="note"` set in code keeps it out of the label tree
+     for screen readers. */
+  color: var(--text-warning);
+  font-size: var(--font-ui-smaller);
+  margin-top: 4px;
+  padding: 2px 6px;
+  border-left: 2px solid var(--text-warning);
+  background-color: var(--background-modifier-error-hover, transparent);
+}

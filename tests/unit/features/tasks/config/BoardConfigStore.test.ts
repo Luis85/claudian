@@ -18,17 +18,67 @@ describe('loadBoardConfig', () => {
     expect(config.lanes[0].definitionOfDone).toEqual([]);
   });
 
-  it('falls back to default when a status maps to two lanes', () => {
+  it('preserves user intent across duplicate statuses with a warning per duplicate', () => {
     const agentBoardConfig = {
       schemaVersion: 1,
       lanes: [
-        { id: 'a', title: 'A', statuses: ['ready'] },
+        { id: 'a', title: 'A', statuses: ['ready', 'running'] },
+        { id: 'b', title: 'B', statuses: ['ready', 'done'] },
+      ],
+    };
+    const { config, errors } = loadBoardConfig({ agentBoardConfig });
+    // Tolerant store: the user's lanes survive verbatim so the lane editor can
+    // show inline duplicate hints. Earlier behavior fell back to
+    // DEFAULT_BOARD_CONFIG, which silently reverted the user's edits on every
+    // settings re-render and made the UI feel frozen.
+    expect(config.lanes.map((lane) => lane.id)).toEqual(['a', 'b']);
+    expect(config.lanes[0].statuses).toEqual(['ready', 'running']);
+    expect(config.lanes[1].statuses).toEqual(['ready', 'done']);
+    expect(errors.some((e) => e.includes('"ready"') && e.includes('more than one lane'))).toBe(true);
+  });
+
+  it('reports exactly one warning per cross-lane duplicate without collapsing lanes', () => {
+    const agentBoardConfig = {
+      schemaVersion: 1,
+      lanes: [
+        { id: 'a', title: 'A', statuses: ['ready', 'running'] },
+        { id: 'b', title: 'B', statuses: ['ready', 'running', 'done'] },
+        { id: 'c', title: 'C', statuses: ['ready', 'failed'] },
+      ],
+    };
+    const { config, errors } = loadBoardConfig({ agentBoardConfig });
+    expect(config.lanes.map((lane) => lane.statuses)).toEqual([
+      ['ready', 'running'],
+      ['ready', 'running', 'done'],
+      ['ready', 'failed'],
+    ]);
+    // Exactly 3 warnings expected: lane b duplicates `ready` and `running`,
+    // lane c duplicates `ready`. Stricter than `>= 3` so a future regression
+    // that emits per-status-per-lane (or over-counts intra-lane) is caught.
+    expect(errors.length).toBe(3);
+  });
+
+  it('collapses intra-lane duplicate statuses silently and still detects later cross-lane duplicates', () => {
+    // A hand-edited config with `['ready', 'ready']` in one lane used to poison
+    // the cross-lane duplicate detector: the first occurrence pushed a warning
+    // and skipped `seen.add(...)`, so a later legitimate lane claiming `ready`
+    // was wrongly accepted as unique. Now `normalizeLane` dedupes intra-lane
+    // first, and `seen.add(...)` runs unconditionally.
+    const agentBoardConfig = {
+      schemaVersion: 1,
+      lanes: [
+        { id: 'a', title: 'A', statuses: ['ready', 'ready', 'running'] },
         { id: 'b', title: 'B', statuses: ['ready'] },
       ],
     };
     const { config, errors } = loadBoardConfig({ agentBoardConfig });
-    expect(config).toEqual(DEFAULT_BOARD_CONFIG);
-    expect(errors.some((e) => e.includes('more than one lane'))).toBe(true);
+    expect(config.lanes[0].statuses).toEqual(['ready', 'running']);
+    expect(config.lanes[1].statuses).toEqual(['ready']);
+    // Exactly one cross-lane warning: lane b's `ready` conflicts with lane a.
+    // The intra-lane duplicate must NOT show up as a warning of its own.
+    const dupWarnings = errors.filter((e) => e.includes('more than one lane'));
+    expect(dupWarnings).toHaveLength(1);
+    expect(dupWarnings[0]).toContain('ready');
   });
 
   it('falls back to default when a lane has no title', () => {

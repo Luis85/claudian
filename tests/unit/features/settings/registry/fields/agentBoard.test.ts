@@ -246,15 +246,48 @@ describe('Agent Board tab registry fields', () => {
       expect(unsubscribe).toHaveBeenCalledTimes(1);
     });
 
-    it('triggers refresh when task:board-config-changed fires', () => {
+    it('re-renders only its own host (does not call ctx.refresh) when task:board-config-changed fires', () => {
       const field = getField();
       const { ctx, onSpy, refresh } = makeCtx(['claude', 'codex']);
+      // Attach host to the document so `host.isConnected` is true, matching
+      // production where ClaudianSettings.display() always mounts hosts. The
+      // production listener skips re-rendering when the host is detached, to
+      // prevent wasted work on hosts that display() already discarded.
       const host = document.createElement('div');
+      document.body.appendChild(host);
+      try {
+        render(field, ctx, host);
+
+        // Baseline: render produced one Setting row inside the host.
+        const settingsBefore = (Setting as any).instances.length;
+
+        const handler = onSpy.mock.calls[0][1] as () => void;
+        handler();
+
+        // Fix 2: full ctx.refresh() (i.e. ClaudianSettings.display()) wiped the lane
+        // editor mid-event. The widget must only re-render its own host.
+        expect(refresh).not.toHaveBeenCalled();
+        expect((Setting as any).instances.length).toBeGreaterThan(settingsBefore);
+      } finally {
+        document.body.removeChild(host);
+      }
+    });
+
+    it('skips re-rendering when the host has been detached (stale listener after display)', () => {
+      // Regression guard for the `host.isConnected` defensive check: a listener
+      // that fires from a snapshotted handler set after ClaudianSettings.display()
+      // has detached the old host must not re-render into the dead DOM.
+      const field = getField();
+      const { ctx, onSpy } = makeCtx(['claude', 'codex']);
+      const host = document.createElement('div');
+      // Never attach `host` — simulates a host that display() already detached.
       render(field, ctx, host);
+      const settingsBefore = (Setting as any).instances.length;
 
       const handler = onSpy.mock.calls[0][1] as () => void;
       handler();
-      expect(refresh).toHaveBeenCalledTimes(1);
+
+      expect((Setting as any).instances.length).toBe(settingsBefore);
     });
   });
 
@@ -424,6 +457,46 @@ describe('Agent Board tab registry fields', () => {
       expect(typeof cleanup).toBe('function');
       (cleanup as () => void)();
       expect(unsubscribe).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-renders only its own host (does not call ctx.refresh) when task:board-config-changed fires', () => {
+      getChatUIConfig.mockReturnValue({
+        ownsModel: () => false,
+        getModelOptions: () => [],
+      });
+      const field = getField();
+      const { ctx, onSpy, refresh } = makeCtx(['claude'], 'claude');
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      try {
+        render(field, ctx, host);
+
+        const settingsBefore = (Setting as any).instances.length;
+        const handler = onSpy.mock.calls[0][1] as () => void;
+        handler();
+
+        expect(refresh).not.toHaveBeenCalled();
+        expect((Setting as any).instances.length).toBeGreaterThan(settingsBefore);
+      } finally {
+        document.body.removeChild(host);
+      }
+    });
+
+    it('skips re-rendering when the host has been detached (stale listener after display)', () => {
+      getChatUIConfig.mockReturnValue({
+        ownsModel: () => false,
+        getModelOptions: () => [],
+      });
+      const field = getField();
+      const { ctx, onSpy } = makeCtx(['claude'], 'claude');
+      const host = document.createElement('div');
+      render(field, ctx, host);
+      const settingsBefore = (Setting as any).instances.length;
+
+      const handler = onSpy.mock.calls[0][1] as () => void;
+      handler();
+
+      expect((Setting as any).instances.length).toBe(settingsBefore);
     });
   });
 });

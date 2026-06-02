@@ -29,6 +29,37 @@ describe('rendererSafeUnref helpers', () => {
     expect(findUnsafeTimerUnrefSites(result.contents)).toEqual([]);
   });
 
+  it('patches the latest claude-sdk async close callback shape', () => {
+    const input = [
+      'if (Q && !Q.killed && Q.exitCode === null) setTimeout((J, Y) => {',
+      '  if (J.exitCode !== null) {',
+      '    Y();',
+      '    return;',
+      '  }',
+      '  if (process.platform === "win32") {',
+      '    setTimeout((X, W) => {',
+      '      if (X.exitCode === null) X.kill("SIGKILL");',
+      '      W();',
+      '    }, 5e3, J, Y).unref();',
+      '    return;',
+      '  }',
+      '  J.kill("SIGTERM"), setTimeout((X) => {',
+      '    if (X.exitCode === null) X.kill("SIGKILL");',
+      '  }, 5e3, J).unref(), Y();',
+      '}, Tx, Q, $).unref(), Q.once("exit", () => VX.delete(Q));',
+    ].join('\n');
+
+    const result = patchRendererUnsafeUnrefSites(input);
+
+    expect(result.appliedPatches).toEqual([
+      { name: 'claude-sdk-process-transport-close-async', count: 1 },
+    ]);
+    expect(result.contents).toContain('processKillTimer.unref?.();');
+    expect(result.contents).toContain('windowsForceKillTimer.unref?.();');
+    expect(result.contents).toContain('forceKillTimer.unref?.();');
+    expect(findUnsafeTimerUnrefSites(result.contents)).toEqual([]);
+  });
+
   it('patches the current claude-sdk shape with a block-bodied exit handler', () => {
     const input = [
       'if ($ && !$.killed && $.exitCode === null) setTimeout((X) => {',
