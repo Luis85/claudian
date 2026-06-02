@@ -252,6 +252,13 @@ export const opencodeChatUIConfig: ProviderChatUIConfig = {
     return new Set<string>();
   },
 
+  getAvailableModes(settings: Record<string, unknown>): Array<{ id: string; label: string }> {
+    const { availableModes } = getOpencodeProviderSettings(settings);
+    return availableModes
+      .filter((mode) => typeof mode.id === 'string' && mode.id.length > 0)
+      .map((mode) => ({ id: mode.id, label: mode.name || mode.id }));
+  },
+
   getModeSelector(): null {
     return null;
   },
