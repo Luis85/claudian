@@ -7,6 +7,7 @@ import { cursorSettingsReconciler } from './env/CursorSettingsReconciler';
 import { CursorConversationHistoryService } from './history/CursorConversationHistoryService';
 import { CursorChatRuntime } from './runtime/CursorChatRuntime';
 import { CursorTaskResultInterpreter } from './runtime/CursorTaskResultInterpreter';
+import { CURSOR_CANONICAL_TOOL_NAMES } from './runtime/cursorToolNormalization';
 import { DEFAULT_CURSOR_PROVIDER_SETTINGS, getCursorProviderSettings } from './settings';
 import { cursorChatUIConfig } from './ui/CursorChatUIConfig';
 
@@ -16,6 +17,7 @@ export const cursorProviderRegistration: ProviderRegistration = {
   isEnabled: (settings) => getCursorProviderSettings(settings).enabled,
   defaultConfig: { ...DEFAULT_CURSOR_PROVIDER_SETTINGS },
   capabilities: CURSOR_PROVIDER_CAPABILITIES,
+  canonicalToolNames: CURSOR_CANONICAL_TOOL_NAMES,
   environmentKeyPatterns: [/^CURSOR_/i],
   chatUIConfig: cursorChatUIConfig,
   settingsReconciler: cursorSettingsReconciler,

@@ -80,6 +80,21 @@ const CURSOR_SDK_NAME_TO_KIND: Partial<Record<string, string>> = {
 };
 
 /**
+ * Canonical tool names Cursor can emit through `resolveCursorToolKind`.
+ *
+ * Includes every key in `CURSOR_SDK_NAME_TO_KIND` plus `TOOL_WRITE`, which is
+ * resolved by argument-shape logic in `resolveCursorToolKind` (oldString /
+ * newString → `replaceEnvToolCall`; streamContent / content → `editToolCall`;
+ * default → `writeToolCall`) rather than appearing in the direct map. Wired
+ * onto `ProviderRegistration.canonicalToolNames` so the seam can enumerate
+ * Cursor tools without a provider-id branch (ADR-0001 Phase 1).
+ */
+export const CURSOR_CANONICAL_TOOL_NAMES: ReadonlySet<string> = new Set<string>([
+  ...Object.keys(CURSOR_SDK_NAME_TO_KIND),
+  TOOL_WRITE,
+]);
+
+/**
  * Resolves the Cursor `*ToolCall` kind key from either a native kind
  * (`readToolCall`) or an already-normalized SDK tool name (`Read`).
  */

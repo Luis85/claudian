@@ -6,6 +6,7 @@ import { CODEX_PROVIDER_CAPABILITIES } from './capabilities';
 import { codexSettingsReconciler } from './env/CodexSettingsReconciler';
 import { CodexConversationHistoryService } from './history/CodexConversationHistoryService';
 import { codexSubagentLifecycleAdapter } from './normalization/codexSubagentNormalization';
+import { CODEX_CANONICAL_TOOL_NAMES } from './normalization/codexToolNormalization';
 import { CodexChatRuntime } from './runtime/CodexChatRuntime';
 import { DEFAULT_CODEX_PROVIDER_SETTINGS, getCodexProviderSettings } from './settings';
 import { codexChatUIConfig } from './ui/CodexChatUIConfig';
@@ -16,6 +17,7 @@ export const codexProviderRegistration: ProviderRegistration = {
   isEnabled: (settings) => getCodexProviderSettings(settings).enabled,
   defaultConfig: { ...DEFAULT_CODEX_PROVIDER_SETTINGS },
   capabilities: CODEX_PROVIDER_CAPABILITIES,
+  canonicalToolNames: CODEX_CANONICAL_TOOL_NAMES,
   environmentKeyPatterns: [/^OPENAI_/i, /^CODEX_/i],
   chatUIConfig: codexChatUIConfig,
   settingsReconciler: codexSettingsReconciler,

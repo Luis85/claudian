@@ -97,6 +97,65 @@ describe('ProviderRegistry', () => {
     expect(ids).toContain('cursor');
   });
 
+  describe('getCanonicalToolNames (ADR-0001 Phase 1)', () => {
+    it('exposes a non-empty canonical tool set for every registered provider', () => {
+      for (const providerId of ProviderRegistry.getRegisteredProviderIds()) {
+        const tools = ProviderRegistry.getCanonicalToolNames(providerId);
+        expect(tools).toBeInstanceOf(Set);
+        expect(tools.size).toBeGreaterThan(0);
+      }
+    });
+
+    it('claude emits the SDK core file tools', () => {
+      const tools = ProviderRegistry.getCanonicalToolNames('claude');
+      expect(tools.has('Read')).toBe(true);
+      expect(tools.has('Write')).toBe(true);
+      expect(tools.has('Edit')).toBe(true);
+      expect(tools.has('Bash')).toBe(true);
+      expect(tools.has('TodoWrite')).toBe(true);
+    });
+
+    it('codex includes its normalized tools and native pass-through set', () => {
+      const tools = ProviderRegistry.getCanonicalToolNames('codex');
+      // Normalized from TOOL_NAME_MAP values
+      expect(tools.has('Bash')).toBe(true);
+      expect(tools.has('TodoWrite')).toBe(true);
+      expect(tools.has('AskUserQuestion')).toBe(true);
+      expect(tools.has('Read')).toBe(true);
+      expect(tools.has('WebSearch')).toBe(true);
+      // Native Codex pass-through tools
+      expect(tools.has('apply_patch')).toBe(true);
+      expect(tools.has('spawn_agent')).toBe(true);
+      expect(tools.has('wait_agent')).toBe(true);
+    });
+
+    it('opencode lifts the value-set of its tool-name map', () => {
+      const tools = ProviderRegistry.getCanonicalToolNames('opencode');
+      expect(tools.has('Bash')).toBe(true);
+      expect(tools.has('Edit')).toBe(true);
+      expect(tools.has('Glob')).toBe(true);
+      expect(tools.has('Grep')).toBe(true);
+      expect(tools.has('Read')).toBe(true);
+      expect(tools.has('Write')).toBe(true);
+      expect(tools.has('WebFetch')).toBe(true);
+      expect(tools.has('WebSearch')).toBe(true);
+    });
+
+    it('cursor includes the direct-map keys plus Write (argument-shape resolved)', () => {
+      const tools = ProviderRegistry.getCanonicalToolNames('cursor');
+      // Direct map keys
+      expect(tools.has('Read')).toBe(true);
+      expect(tools.has('Bash')).toBe(true);
+      expect(tools.has('Glob')).toBe(true);
+      expect(tools.has('Grep')).toBe(true);
+      expect(tools.has('LS')).toBe(true);
+      expect(tools.has('Edit')).toBe(true);
+      // Write is resolved by argument-shape (oldString / content) inside
+      // resolveCursorToolKind, not via the direct map — still surface it.
+      expect(tools.has('Write')).toBe(true);
+    });
+  });
+
   describe('getDefaultProviderConfigs', () => {
     it('assembles fresh default config objects contributed by each registration', () => {
       const first = ProviderRegistry.getDefaultProviderConfigs();

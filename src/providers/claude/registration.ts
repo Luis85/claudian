@@ -3,6 +3,7 @@ import { getClaudeWorkspaceServices } from './app/ClaudeWorkspaceServices';
 import { InlineEditService as ClaudeInlineEditService } from './auxiliary/ClaudeInlineEditService';
 import { InstructionRefineService as ClaudeInstructionRefineService } from './auxiliary/ClaudeInstructionRefineService';
 import { TitleGenerationService as ClaudeTitleGenerationService } from './auxiliary/ClaudeTitleGenerationService';
+import { CLAUDE_CANONICAL_TOOL_NAMES } from './canonicalTools';
 import { CLAUDE_PROVIDER_CAPABILITIES } from './capabilities';
 import { claudeSettingsReconciler } from './env/ClaudeSettingsReconciler';
 import { ClaudeConversationHistoryService } from './history/ClaudeConversationHistoryService';
@@ -17,6 +18,7 @@ export const claudeProviderRegistration: ProviderRegistration = {
   isEnabled: (settings) => getClaudeProviderSettings(settings).enabled,
   defaultConfig: { ...DEFAULT_CLAUDE_PROVIDER_SETTINGS },
   capabilities: CLAUDE_PROVIDER_CAPABILITIES,
+  canonicalToolNames: CLAUDE_CANONICAL_TOOL_NAMES,
   environmentKeyPatterns: [/^ANTHROPIC_/i, /^CLAUDE_/i],
   chatUIConfig: claudeChatUIConfig,
   settingsReconciler: claudeSettingsReconciler,

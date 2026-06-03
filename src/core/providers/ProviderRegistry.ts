@@ -105,6 +105,16 @@ export class ProviderRegistry {
     return this.getProviderRegistration(providerId).capabilities;
   }
 
+  /**
+   * Canonical (Claudian-vocabulary) tool names the provider can emit after
+   * normalization. Backed by `ProviderRegistration.canonicalToolNames`,
+   * lifted as flat data per ADR-0001 Phase 1 / Move 4. Use this to enumerate
+   * provider tools without a `providerId === 'x'` branch.
+   */
+  static getCanonicalToolNames(providerId: ProviderId): ReadonlySet<string> {
+    return this.getProviderRegistration(providerId).canonicalToolNames;
+  }
+
   static getEnvironmentKeyPatterns(providerId: ProviderId): RegExp[] {
     return this.getProviderRegistration(providerId).environmentKeyPatterns ?? [];
   }

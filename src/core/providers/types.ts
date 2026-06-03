@@ -64,6 +64,15 @@ export interface ProviderRegistration {
    */
   defaultConfig: Record<string, unknown>;
   capabilities: ProviderCapabilities;
+  /**
+   * Canonical (Claudian-vocabulary) tool names a provider can emit after its
+   * normalization layer. Lifted as flat data so the seam can enumerate
+   * provider tools without a `providerId === 'x'` branch (ADR-0001 Phase 1 /
+   * Move 4). Cursor and Codex have argument-shape resolution that stays as
+   * logic in their normalization modules; this set is the produce-side
+   * artifact, not a bidirectional name table.
+   */
+  canonicalToolNames: ReadonlySet<string>;
   environmentKeyPatterns?: RegExp[];
   chatUIConfig: ProviderChatUIConfig;
   settingsReconciler: ProviderSettingsReconciler;

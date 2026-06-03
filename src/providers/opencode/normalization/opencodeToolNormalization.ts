@@ -31,6 +31,17 @@ const TOOL_NAME_MAP: Record<string, string> = {
   write: TOOL_WRITE,
 };
 
+/**
+ * Canonical tool names Opencode can emit after normalization.
+ *
+ * Derived as the value-set of `TOOL_NAME_MAP`. Wired onto
+ * `ProviderRegistration.canonicalToolNames` so the seam can enumerate Opencode
+ * tools without a provider-id branch (ADR-0001 Phase 1).
+ */
+export const OPENCODE_CANONICAL_TOOL_NAMES: ReadonlySet<string> = new Set<string>(
+  Object.values(TOOL_NAME_MAP),
+);
+
 type OpencodeKnownToolName = keyof typeof TOOL_NAME_MAP;
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

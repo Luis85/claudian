@@ -34,6 +34,22 @@ const NATIVE_TOOLS = new Set([
   'close_agent',
 ]);
 
+/**
+ * Canonical tool names Codex can emit after normalization.
+ *
+ * Derived from `TOOL_NAME_MAP` values (raw → canonical) plus the `NATIVE_TOOLS`
+ * pass-through set. This is the lifted artifact ADR-0001 Phase 1 wires onto
+ * `ProviderRegistration.canonicalToolNames` so the seam can enumerate what a
+ * provider produces without a `providerId === 'codex'` branch. Names not in
+ * either set fall through `normalizeCodexToolName` unchanged, so the live
+ * stream can in principle surface additional tool names; this set covers the
+ * names Codex normalization is explicitly aware of.
+ */
+export const CODEX_CANONICAL_TOOL_NAMES: ReadonlySet<string> = new Set<string>([
+  ...Object.values(TOOL_NAME_MAP),
+  ...NATIVE_TOOLS,
+]);
+
 export function normalizeCodexToolName(rawName: string | undefined): string {
   if (!rawName) return 'tool';
   if (NATIVE_TOOLS.has(rawName)) return rawName;

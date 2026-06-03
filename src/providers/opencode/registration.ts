@@ -5,12 +5,14 @@ import { OpencodeTitleGenerationService } from './auxiliary/OpencodeTitleGenerat
 import { OPENCODE_PROVIDER_CAPABILITIES } from './capabilities';
 import { opencodeSettingsReconciler } from './env/OpencodeSettingsReconciler';
 import { OpencodeConversationHistoryService } from './history/OpencodeConversationHistoryService';
+import { OPENCODE_CANONICAL_TOOL_NAMES } from './normalization/opencodeToolNormalization';
 import { OpencodeChatRuntime } from './runtime/OpencodeChatRuntime';
 import { DEFAULT_OPENCODE_PROVIDER_SETTINGS, getOpencodeProviderSettings } from './settings';
 import { opencodeChatUIConfig } from './ui/OpencodeChatUIConfig';
 
 export const opencodeProviderRegistration: ProviderRegistration = {
   blankTabOrder: 10,
+  canonicalToolNames: OPENCODE_CANONICAL_TOOL_NAMES,
   defaultConfig: { ...DEFAULT_OPENCODE_PROVIDER_SETTINGS },
   capabilities: OPENCODE_PROVIDER_CAPABILITIES,
   chatUIConfig: opencodeChatUIConfig,
