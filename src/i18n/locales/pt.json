@@ -586,7 +586,14 @@
         "deleted": "Subagent \"{name}\" deleted",
         "deleteFailed": "Failed to delete subagent",
         "updated": "Subagent \"{name}\" updated",
-        "created": "Subagent \"{name}\" created"
+        "created": "Subagent \"{name}\" created",
+        "validation": {
+          "required": "Subagent name is required",
+          "tooLong": "Subagent name must be {max} characters or fewer",
+          "invalidChars": "Subagent name can only contain lowercase letters, numbers, hyphens, and underscores",
+          "nicknameInvalidChars": "Nickname candidates can only contain ASCII letters, numbers, spaces, hyphens, and underscores",
+          "nicknameDuplicate": "Nickname candidates must be unique"
+        }
       },
       "skill": {
         "instructionsRequired": "Instructions are required",

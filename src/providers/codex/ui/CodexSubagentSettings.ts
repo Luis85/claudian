@@ -2,6 +2,7 @@ import type { App } from 'obsidian';
 import { Modal, Notice, setIcon, Setting } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
+import type { ValidationError } from '../../../i18n/types';
 import { confirmDelete } from '../../../shared/modals/ConfirmModal';
 import type { CodexSubagentStorage } from '../storage/CodexSubagentStorage';
 import { DEFAULT_CODEX_PRIMARY_MODEL } from '../types/models';
@@ -26,26 +27,35 @@ const MAX_NAME_LENGTH = 64;
 const CODEX_AGENT_NAME_PATTERN = /^[a-z0-9_-]+$/;
 const CODEX_NICKNAME_PATTERN = /^[A-Za-z0-9 _-]+$/;
 
-export function validateCodexSubagentName(name: string): string | null {
-  if (!name) return 'Subagent name is required';
-  if (name.length > MAX_NAME_LENGTH) return `Subagent name must be ${MAX_NAME_LENGTH} characters or fewer`;
-  if (!CODEX_AGENT_NAME_PATTERN.test(name)) return 'Subagent name can only contain lowercase letters, numbers, hyphens, and underscores';
+export function validateCodexSubagentName(name: string): ValidationError | null {
+  if (!name) {
+    return { key: 'provider.codex.subagent.validation.required' };
+  }
+  if (name.length > MAX_NAME_LENGTH) {
+    return {
+      key: 'provider.codex.subagent.validation.tooLong',
+      params: { max: MAX_NAME_LENGTH },
+    };
+  }
+  if (!CODEX_AGENT_NAME_PATTERN.test(name)) {
+    return { key: 'provider.codex.subagent.validation.invalidChars' };
+  }
   return null;
 }
 
-export function validateCodexNicknameCandidates(candidates: string[]): string | null {
+export function validateCodexNicknameCandidates(candidates: string[]): ValidationError | null {
   const normalized = candidates.map(candidate => candidate.trim()).filter(Boolean);
   if (normalized.length === 0) return null;
 
   const seen = new Set<string>();
   for (const candidate of normalized) {
     if (!CODEX_NICKNAME_PATTERN.test(candidate)) {
-      return 'Nickname candidates can only contain ASCII letters, numbers, spaces, hyphens, and underscores';
+      return { key: 'provider.codex.subagent.validation.nicknameInvalidChars' };
     }
 
     const dedupeKey = candidate.toLowerCase();
     if (seen.has(dedupeKey)) {
-      return 'Nickname candidates must be unique';
+      return { key: 'provider.codex.subagent.validation.nicknameDuplicate' };
     }
     seen.add(dedupeKey);
   }
@@ -192,7 +202,7 @@ class CodexSubagentModal extends Modal {
       const name = this._nameInput.value.trim();
       const nameError = validateCodexSubagentName(name);
       if (nameError) {
-        new Notice(nameError);
+        new Notice(t(nameError.key, nameError.params));
         return;
       }
 
@@ -214,7 +224,7 @@ class CodexSubagentModal extends Modal {
         .filter(Boolean);
       const nicknameError = validateCodexNicknameCandidates(nicknameCandidates);
       if (nicknameError) {
-        new Notice(nicknameError);
+        new Notice(t(nicknameError.key, nicknameError.params));
         return;
       }
 

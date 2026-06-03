@@ -145,18 +145,20 @@ describe('CodexSubagentSettings', () => {
       ).toBeNull();
     });
 
-    it('rejects duplicate nickname candidates', () => {
+    it('rejects duplicate nickname candidates with the "nicknameDuplicate" key', () => {
       expect(
         validateCodexNicknameCandidates(['Atlas', 'atlas']),
-      ).toBe('Nickname candidates must be unique');
+      ).toEqual({
+        key: 'provider.codex.subagent.validation.nicknameDuplicate',
+      });
     });
 
-    it('rejects nickname candidates with invalid characters', () => {
+    it('rejects nickname candidates with invalid characters using the "nicknameInvalidChars" key', () => {
       expect(
         validateCodexNicknameCandidates(['Atlas', 'Delta!']),
-      ).toBe(
-        'Nickname candidates can only contain ASCII letters, numbers, spaces, hyphens, and underscores',
-      );
+      ).toEqual({
+        key: 'provider.codex.subagent.validation.nicknameInvalidChars',
+      });
     });
   });
 

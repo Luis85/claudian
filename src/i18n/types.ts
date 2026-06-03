@@ -568,6 +568,13 @@ export type TranslationKey =
   | 'provider.codex.subagent.updated'
   | 'provider.codex.subagent.created'
 
+  // Provider - Codex subagent name + nickname validation (Q-1 follow-up)
+  | 'provider.codex.subagent.validation.required'
+  | 'provider.codex.subagent.validation.tooLong'
+  | 'provider.codex.subagent.validation.invalidChars'
+  | 'provider.codex.subagent.validation.nicknameInvalidChars'
+  | 'provider.codex.subagent.validation.nicknameDuplicate'
+
   // Provider - Codex skill notices (Q-1 chunk 11)
   | 'provider.codex.skill.instructionsRequired'
   | 'provider.codex.skill.saveFailed'
