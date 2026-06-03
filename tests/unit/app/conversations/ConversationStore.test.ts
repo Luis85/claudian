@@ -344,14 +344,12 @@ describe('ConversationStore', () => {
       outcome: HistoryLoadOutcome,
     ): StoreHarness {
       jest.spyOn(ProviderRegistry, 'getConversationHistoryService').mockReturnValue({
-        hydrateConversationHistory: jest.fn().mockResolvedValue(undefined),
-        deleteConversationSession: jest.fn().mockResolvedValue(undefined),
         hydrateConversationHistoryV2: jest.fn().mockResolvedValue(outcome),
         deleteConversationSessionV2: jest
           .fn()
           .mockResolvedValue({ kind: 'no-op', reason: 'no-session' }),
         resolveSessionIdForConversation: jest.fn().mockReturnValue(null),
-      } as never);
+      });
       const emit = jest.fn();
       const sessions = createMockSessions();
       const storage = { sessions } as unknown as SharedAppStorage;
@@ -444,12 +442,10 @@ describe('ConversationStore', () => {
     it('passes HydrationContext with vaultPath and reason to v2', async () => {
       const hydrateV2 = jest.fn().mockResolvedValue({ kind: 'cached', sourceRef: 'k' });
       jest.spyOn(ProviderRegistry, 'getConversationHistoryService').mockReturnValue({
-        hydrateConversationHistory: jest.fn().mockResolvedValue(undefined),
-        deleteConversationSession: jest.fn().mockResolvedValue(undefined),
         hydrateConversationHistoryV2: hydrateV2,
         deleteConversationSessionV2: jest.fn().mockResolvedValue({ kind: 'no-op', reason: 'no-session' }),
         resolveSessionIdForConversation: jest.fn().mockReturnValue(null),
-      } as never);
+      });
 
       const { store } = createStore();
       const conv = await store.createConversation();
@@ -477,14 +473,12 @@ describe('ConversationStore', () => {
     ): DeleteHarness {
       const deleteV2 = jest.fn().mockResolvedValue(outcome);
       jest.spyOn(ProviderRegistry, 'getConversationHistoryService').mockReturnValue({
-        hydrateConversationHistory: jest.fn().mockResolvedValue(undefined),
-        deleteConversationSession: jest.fn().mockResolvedValue(undefined),
         hydrateConversationHistoryV2: jest
           .fn()
           .mockResolvedValue({ kind: 'cached', sourceRef: 'k' }),
         deleteConversationSessionV2: deleteV2,
         resolveSessionIdForConversation: jest.fn().mockReturnValue(null),
-      } as never);
+      });
       const emit = jest.fn();
       const sessions = createMockSessions();
       const storage = { sessions } as unknown as SharedAppStorage;
@@ -558,13 +552,11 @@ describe('ConversationStore', () => {
   describe('updateConversation routes fork detection via hasForkSupport', () => {
     it('clears images when service has no forkSupport slot', async () => {
       jest.spyOn(ProviderRegistry, 'getConversationHistoryService').mockReturnValue({
-        hydrateConversationHistory: jest.fn().mockResolvedValue(undefined),
-        deleteConversationSession: jest.fn().mockResolvedValue(undefined),
         hydrateConversationHistoryV2: jest.fn().mockResolvedValue({ kind: 'cached', sourceRef: 'k' }),
         deleteConversationSessionV2: jest.fn().mockResolvedValue({ kind: 'no-op', reason: 'no-session' }),
         resolveSessionIdForConversation: jest.fn().mockReturnValue(null),
         // forkSupport intentionally absent.
-      } as never);
+      });
 
       const { store } = createStore();
       const conv = await store.createConversation();
