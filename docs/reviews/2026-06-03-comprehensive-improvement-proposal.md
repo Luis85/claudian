@@ -201,7 +201,7 @@ The four runtimes have advanced; Claudian under-uses several now-available surfa
 | PN-2 | P1 | **Cursor MCP support** — CLI auto-detects `.cursor/mcp.json`; `agent mcp list/list-tools`, `--approve-mcps`, in-session `/mcp`. | Cursor | cursor.com/docs/cli/mcp **[DOCS]** |
 | PN-3 | P1 | **Cursor subagents** (first-class in Cursor 2.4, Jan 2026) — parallel isolated context, custom prompts/tools/models. Currently gated in Claudian. | Cursor | cursor.com/changelog/2-4 **[DOCS]** |
 | PN-4 | P1 | **Opencode plan mode** — Plan is a native restricted primary agent (edits/bash → `ask`); switch via ACP `session/set_mode`. Currently gated. | Opencode | opencode.ai/docs/agents + ACP modes **[DOCS]** |
-| PN-5 | P2 | **Codex rollback/rewind** — app-server can "interrupt turns and roll back recent history"; native `/rewind` landing. Wire to Claudian's rewind UI → closes UX-D for Codex. | Codex | developers.openai.com/codex/app-server **[DOCS]** |
+| PN-5 | P2 | **Codex transcript rollback** — app-server `thread/rollback` drops the last N turns from in-memory context + persists a rollback marker; `turn/interrupt` only cancels an active turn. **Neither restores already-applied file edits**, so this does *not* by itself close UX-D for Codex — a file-level revert needs a separate snapshot/patch-revert path (Claudian-side, or a confirmed Codex file-checkpoint primitive if the landing native `/rewind` exposes one). Surface transcript rollback under a clearly transcript-only affordance, distinct from file rewind. | Codex | developers.openai.com/codex/app-server **[DOCS]** |
 | PN-6 | P2 | **Claude lifecycle hooks** — `PreToolUse`/`PostToolUse`/`Stop`/`Session*` as in-process callbacks; feeds audit/gating (and the evidence gate). | Claude | code.claude.com/docs/en/agent-sdk/hooks **[DOCS]** |
 | PN-7 | P2 | **Verify Claude file-checkpointing API** — ensure rewind uses official `enableFileCheckpointing`+`rewindFiles()` (handles created files + NotebookEdit) vs a custom impl. | Claude | code.claude.com agent-sdk/file-checkpointing **[DOCS]** |
 | PN-8 | P2 | **ACP slash commands + modes for Opencode** — `available_commands_update` gives runtime-discovered `/commands`; `current_mode_update` for plan/build. | Opencode | agentclientprotocol.com **[DOCS]** |
@@ -278,7 +278,7 @@ that build the moat). Run them in parallel — they touch different files and re
 | **D2 — Visible context & citations** | UX-B (pre-send preview + workspace disclosure), UX-C (explicit-context citations) | The 2026-05-28 proposal's designated #1 bet; closes the "table stakes" competitive gap. Formalize as the `ComposerContextBuilder` envelope + `ContextSourceHandle`. | M–L / L |
 | **D3 — Provider parity (MCP unification)** | PN-1 (Codex MCP), PN-2 (Cursor MCP), PN-4 (Opencode plan mode), PN-3 (Cursor subagents) | A **unified MCP control plane across all 4 providers** is a concrete differentiator (rivals punt MCP to each CLI). Plan/subagent parity deepens the "depth" moat. | M each |
 | **D4 — Agent Board as orchestration surface** | Evidence & Review Gate PRD (run leases, structured evidence, changed-file attribution, evidence-gated completion); **background/long-running runs** streaming into cards; Orchestrator↔Board integration; UX-G (drag-drop + ARIA) | The headline moat: nothing else in the Obsidian space runs work orders as background/multi-agent workers with evidence review. Spine of the Specorator thesis. | L (multi-PR) |
-| **D5 — Unified safe-edit/revert** | UX-D + PN-5 (Codex rollback), PN-7 (verify Claude checkpointing), PN-6 (Claude hooks → snapshot-before-edit) | "Approve changes like a writer" across all providers, not just Claude. | M + provider work |
+| **D5 — Unified safe-edit/revert** | UX-D + PN-7 (verify Claude file-checkpointing), PN-6 (Claude hooks → snapshot-before-edit), PN-5 (Codex transcript rollback — pair with a **separate file snapshot/patch-revert path**; rollback alone leaves edits on disk) | "Approve changes like a writer" across all providers. **File revert is provider-uneven**: Claude has a real file-checkpoint primitive; Codex app-server rollback is transcript-only; Opencode file undo is ACP-blocked; Cursor is auto-checkpoint only. For non-Claude providers, the durable answer is a Claudian-owned pre-edit snapshot (feasible because edits flow through the tool stream), not a provider transcript-rollback dressed up as file revert. | M + provider work |
 
 ### Sequencing rationale
 
@@ -300,7 +300,7 @@ that build the moat). Run them in parallel — they touch different files and re
 | MCP management | ✅ | ❌→PN-1 | ✅ | ❌→PN-2 | unify control plane (D3) |
 | Plan mode | ✅ | ✅ | gated→PN-4 | ✅ | ungate Opencode (D3) |
 | Subagents | ✅ | ✅ | ✅ | gated→PN-3 | ungate Cursor (D3) |
-| Rewind / checkpoint | ✅ | ❌→PN-5 | ACP-blocked | ❌ (auto only) | Codex via app-server (D5) |
+| Rewind / checkpoint (files) | ✅ (file API) | transcript-only (PN-5) | ACP-blocked | auto only | non-Claude needs a Claudian pre-edit snapshot (D5) |
 | Hooks | ❌→PN-6 | — | permissions | 2.4 (post-cutoff) | Claude first (D5) |
 | Citations | ❌ | ❌ | ❌ | ❌ | all via D2 |
 | Secret storage | plaintext | plaintext | plaintext | plaintext | all via H1 |
