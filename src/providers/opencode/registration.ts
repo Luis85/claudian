@@ -1,4 +1,7 @@
-import type { ProviderRegistration } from '../../core/providers/types';
+import type {
+  ProviderConversationHistoryService,
+  ProviderRegistration,
+} from '../../core/providers/types';
 import { OpencodeInlineEditService } from './auxiliary/OpencodeInlineEditService';
 import { OpencodeInstructionRefineService } from './auxiliary/OpencodeInstructionRefineService';
 import { OpencodeTitleGenerationService } from './auxiliary/OpencodeTitleGenerationService';
@@ -22,7 +25,11 @@ export const opencodeProviderRegistration: ProviderRegistration = {
   createTitleGenerationService: (plugin) => new OpencodeTitleGenerationService(plugin),
   displayName: 'OpenCode',
   environmentKeyPatterns: [/^OPENCODE_/i],
-  historyService: new OpencodeConversationHistoryService(),
+  // The typed subclass narrows TPersistedState to OpencodeProviderState; the
+  // registration field uses the default-instantiated interface. The shape is
+  // structurally compatible (databasePath: string | undefined) but lacks the
+  // index signature that Record<string, unknown> demands.
+  historyService: new OpencodeConversationHistoryService() as unknown as ProviderConversationHistoryService,
   isEnabled: (settings) => getOpencodeProviderSettings(settings).enabled,
   settingsReconciler: opencodeSettingsReconciler,
 };

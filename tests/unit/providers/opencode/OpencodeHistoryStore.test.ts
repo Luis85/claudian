@@ -392,25 +392,27 @@ describe('loadOpencodeSessionMessages', () => {
         JSON.stringify({ text: 'Session restored.', type: 'text' }),
       );
 
-      await expect(loadOpencodeSessionMessages(sessionId, { databasePath: dbPath })).resolves.toEqual([
-        {
-          assistantMessageId: undefined,
-          content: 'Restore this session',
-          id: 'msg-user',
-          role: 'user',
-          timestamp: 1_000,
-          userMessageId: 'msg-user',
-        },
-        {
-          assistantMessageId: 'msg-assistant',
-          content: 'Session restored.',
-          contentBlocks: [{ content: 'Session restored.', type: 'text' }],
-          durationSeconds: 2,
-          id: 'msg-assistant',
-          role: 'assistant',
-          timestamp: 2_000,
-        },
-      ]);
+      await expect(loadOpencodeSessionMessages(sessionId, { databasePath: dbPath })).resolves.toEqual({
+        messages: [
+          {
+            assistantMessageId: undefined,
+            content: 'Restore this session',
+            id: 'msg-user',
+            role: 'user',
+            timestamp: 1_000,
+            userMessageId: 'msg-user',
+          },
+          {
+            assistantMessageId: 'msg-assistant',
+            content: 'Session restored.',
+            contentBlocks: [{ content: 'Session restored.', type: 'text' }],
+            durationSeconds: 2,
+            id: 'msg-assistant',
+            role: 'assistant',
+            timestamp: 2_000,
+          },
+        ],
+      });
     } finally {
       db.close();
     }
