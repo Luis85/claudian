@@ -148,7 +148,7 @@ clipboard export path.
 
 | ID | Sev | Finding | Evidence | Fix / effort |
 |----|-----|---------|----------|--------------|
-| SEC-A | **P1** | **Provider API keys, MCP HTTP auth headers, and env vars stored plaintext at rest** in in-vault `.claudian/claudian-settings.json` and `.claude/mcp.json` — both routinely committed/synced (Obsidian Sync, iCloud, git). `SecretStorage` is unused (0 hits). Anyone with the vault or its sync target gets every long-lived secret. **Highest-impact privacy gap for the target audience + an automated-review flag.** | `providerEnvironment.ts:180-185`; `McpStorage.save` → `.claude/mcp.json`; `core/types/mcp.ts:15,22` | Adopt Obsidian `SecretStorage` for keys + MCP auth headers; keep `.claude/mcp.json` as `${env:VAR}` references. **Stopgap (S):** move secrets to non-synced plugin `data.json` + loud warning + `.gitignore` guidance. Full: **L** |
+| SEC-A | **P1** | **Provider API keys, MCP HTTP auth headers, and env vars stored plaintext at rest** in in-vault `.claudian/claudian-settings.json` and `.claude/mcp.json` — both routinely committed/synced (Obsidian Sync, iCloud, git). `SecretStorage` is unused (0 hits). Anyone with the vault or its sync target gets every long-lived secret. **Highest-impact privacy gap for the target audience + an automated-review flag.** | `providerEnvironment.ts:180-185`; `McpStorage.save` → `.claude/mcp.json`; `core/types/mcp.ts:15,22` | Adopt Obsidian `SecretStorage` (Electron `safeStorage`-backed, OS-keychain, out-of-vault) for keys + MCP auth headers; keep `.claude/mcp.json` as `${env:VAR}` references. **Stopgap (S):** prominent in-settings plaintext-at-rest warning + sync/git-exclusion guidance — note there is **no reliably-unsynced vault path** (`Plugin.saveData`'s `data.json` lives under `.obsidian/plugins/<id>/`, which Obsidian Sync/iCloud and committed `.obsidian` also capture), so the stopgap is disclosure, **not** relocation. Full: **L** |
 | SEC-B | P2 | **Opencode main runtime `read/writeTextFile` has no vault-containment check** — `resolveSessionPath` passes absolute paths verbatim and resolves relative paths with no `..` rejection. The aux runner already enforces containment; the primary path doesn't. | `OpencodeChatRuntime.ts:1281-1320` vs `OpencodeAuxQueryRunner.ts:373-382` | Hoist the aux runner's `path.relative` containment check into `resolveSessionPath`. **S** |
 | SEC-C | P2 | **Codex CLI spawned with full `process.env`**, bypassing the allowlist Cursor/Opencode use. A third-party CLI inherits every host secret. | `codexAppServerSupport.ts:24-33` | Route Codex through `buildAllowlistedSubprocessEnvironment` with `/^(OPENAI|CODEX)_/i` prefix; update the CLAUDE.md mandate. **S** |
 | SEC-D | P2 | **No remote-MCP transport hygiene** — plaintext `http://` connected with no warning; no SSRF guard (`new URL` direct, custom fetch will hit `169.254.169.254`/localhost); no provenance/risk labels; tool descriptions treated as fully trusted. | `McpTester.ts:50-113,253`; MCP UI files | Warn on non-loopback `http://`; show destination host + provenance (vault vs user-added); render tool descriptions as untrusted; link-local/metadata SSRF notice. **M** |
@@ -264,7 +264,7 @@ that build the moat). Run them in parallel — they touch different files and re
 
 | Phase | Items | Why first | Size |
 |-------|-------|-----------|------|
-| **H1 — Secrets & store compliance** | SEC-A (`SecretStorage`), OBS-B (`innerHTML` audit), OBS-C (`normalizePath` sweep), OBS-D (deferred-view confirm), OBS-E (resolve the 3-way naming defect), UX-I (YOLO rename) | Continuous automated review + biggest privacy gap. Ship the SEC-A **stopgap** (non-synced storage + warning + `.gitignore`) immediately; full `SecretStorage` follows. | S→L |
+| **H1 — Secrets & store compliance** | SEC-A (`SecretStorage`), OBS-B (`innerHTML` audit), OBS-C (`normalizePath` sweep), OBS-D (deferred-view confirm), OBS-E (resolve the 3-way naming defect), UX-I (YOLO rename) | Continuous automated review + biggest privacy gap. Ship the SEC-A **stopgap** (loud warning + sync/git-exclusion guidance — disclosure only, since no vault path is reliably unsynced) immediately; full `SecretStorage` migration follows. | S→L |
 | **H2 — Security follow-through** | SEC-B (Opencode path containment), SEC-C (Codex env allowlist), SEC-D (remote-MCP hygiene), SEC-E (value-level redaction) | Cheap, high-confidence closes. SEC-B/C are **S** each. | S–M |
 | **H3 — Reliability gates** | PR-1 (`onunload` kill audit), PR-2 (Agent Board + multi-tab perf gates) | Prevent orphaned processes + catch the untested scaling surface. | S–M |
 | **H4 — ADR-0001 finish** | ARCH-1 (Phase 2b `RuntimeHost`), then ARCH-2 (Phase 3 transport, after cursor-hardening PR2) | Deletes dead code + the interface-width tax; last unstarted ADR moves. | M / M–L |
@@ -322,8 +322,9 @@ makes the "review every change with evidence" pitch real). Do not begin a broad 
 
 ## Recommended next 3 PRs
 
-1. **H1 secrets stopgap + store-compliance sweep** — move secrets out of synced paths + loud
-   warning + `.gitignore` guidance (SEC-A stopgap); `innerHTML`/`normalizePath` audit (OBS-B/C);
+1. **H1 secrets stopgap + store-compliance sweep** — prominent plaintext-at-rest warning + sync/git-exclusion
+   guidance (SEC-A stopgap — disclosure, not relocation, since `data.json` under `.obsidian/plugins/` is also
+   synced); `innerHTML`/`normalizePath` audit (OBS-B/C);
    resolve the 3-way naming defect (OBS-E); YOLO→clear-label rename (UX-I). *Verification:* build +
    manual settings check + grep audits.
 2. **D1 trust UX** — per-provider "Detect & Test" button (UX-A) + actionable runtime-error cards
