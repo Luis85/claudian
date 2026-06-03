@@ -2,6 +2,7 @@ import type { App } from 'obsidian';
 import { Platform } from 'obsidian';
 
 import { getCommandHotkeys } from '@/core/commands/commandHotkeyRegistry';
+import { HOTKEY_BINDING_POLL_INTERVAL_MS } from '@/core/constants';
 import type { SettingsCtx } from '@/features/settings/registry/SettingsField';
 import {
   getHotkeysForCommand,
@@ -108,7 +109,7 @@ export function renderHotkeysSection(
       window.clearInterval(intervalId);
       renderHotkeysSection(ctx, host, openHotkeySettingsFor);
     }
-  }, 2000);
+  }, HOTKEY_BINDING_POLL_INTERVAL_MS);
 
   return () => {
     window.clearInterval(intervalId);

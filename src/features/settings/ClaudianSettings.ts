@@ -1,6 +1,7 @@
 import type { App } from 'obsidian';
 import { Notice, Platform, PluginSettingTab, Setting } from 'obsidian';
 
+import { SETTINGS_FIELD_HIGHLIGHT_MS } from '../../core/constants';
 import {
   getHiddenProviderCommands,
   normalizeHiddenCommandList,
@@ -947,12 +948,11 @@ export class ClaudianSettingTab extends PluginSettingTab {
           }
         }
 
-        // Remove highlight after 1500ms
         const timeout = window.setTimeout(() => {
           fieldRow.classList.remove('claudian-settings-field--highlight');
           fieldRow.removeAttribute('aria-highlighted');
           this.highlightTimeouts.delete(fieldRow);
-        }, 1500);
+        }, SETTINGS_FIELD_HIGHLIGHT_MS);
 
         this.highlightTimeouts.set(fieldRow, timeout);
       }

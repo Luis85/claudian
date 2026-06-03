@@ -1,9 +1,8 @@
 import type { App, ItemView } from 'obsidian';
 
+import { SELECTION_POLL_INTERVAL_MS } from '../../../core/constants';
 import type { BrowserSelectionContext } from '../../../utils/browser';
 import { updateContextRowHasContent } from './contextRowVisibility';
-
-const BROWSER_SELECTION_POLL_INTERVAL = 250;
 
 type BrowserLikeWebview = HTMLElement & {
   executeJavaScript?: (code: string, userGesture?: boolean) => Promise<unknown>;
@@ -37,7 +36,7 @@ export class BrowserSelectionController {
     if (this.pollInterval) return;
     this.pollInterval = window.setInterval(() => {
       void this.poll();
-    }, BROWSER_SELECTION_POLL_INTERVAL);
+    }, SELECTION_POLL_INTERVAL_MS);
   }
 
   stop(): void {

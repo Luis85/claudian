@@ -1,13 +1,12 @@
 import type { App } from 'obsidian';
 import { MarkdownView } from 'obsidian';
 
+import { INPUT_HANDOFF_GRACE_MS, SELECTION_POLL_INTERVAL_MS } from '../../../core/constants';
 import { hideSelectionHighlight, showSelectionHighlight } from '../../../shared/components/SelectionHighlight';
 import { type EditorSelectionContext, getEditorView } from '../../../utils/editor';
 import type { StoredSelection } from '../state/types';
 import { updateContextRowHasContent } from './contextRowVisibility';
 
-const SELECTION_POLL_INTERVAL = 250;
-const INPUT_HANDOFF_GRACE_MS = 1500;
 const HIGHLIGHT_KEY = 'claudian-selection';
 
 type CustomHighlightRegistry = {
@@ -53,7 +52,7 @@ export class SelectionController {
     if (this.focusScopeEl !== this.inputEl) {
       this.focusScopeEl.addEventListener('pointerdown', this.focusScopePointerDownHandler);
     }
-    this.pollInterval = window.setInterval(() => this.poll(), SELECTION_POLL_INTERVAL);
+    this.pollInterval = window.setInterval(() => this.poll(), SELECTION_POLL_INTERVAL_MS);
   }
 
   stop(): void {

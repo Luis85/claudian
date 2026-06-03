@@ -1,9 +1,8 @@
 import type { App, ItemView } from 'obsidian';
 
+import { SELECTION_POLL_INTERVAL_MS } from '../../../core/constants';
 import type { CanvasSelectionContext } from '../../../utils/canvas';
 import { updateContextRowHasContent } from './contextRowVisibility';
-
-const CANVAS_POLL_INTERVAL = 250;
 
 type CanvasSelectionNode = { id?: unknown };
 
@@ -41,7 +40,7 @@ export class CanvasSelectionController {
 
   start(): void {
     if (this.pollInterval) return;
-    this.pollInterval = window.setInterval(() => this.poll(), CANVAS_POLL_INTERVAL);
+    this.pollInterval = window.setInterval(() => this.poll(), SELECTION_POLL_INTERVAL_MS);
   }
 
   stop(): void {

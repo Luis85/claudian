@@ -1,5 +1,7 @@
 import type { App } from 'obsidian';
 
+import { PRIVATE_SETTINGS_RENDER_DELAY_MS } from '../core/constants';
+
 /**
  * Feature-detecting wrappers for Obsidian's undocumented internal APIs.
  *
@@ -98,7 +100,7 @@ export function openHotkeySettingsWithFilter(app: App, filter: string): boolean 
 
     searchEl.value = filter;
     tab.updateHotkeyVisibility?.();
-  }, 100);
+  }, PRIVATE_SETTINGS_RENDER_DELAY_MS);
   return true;
 }
 
