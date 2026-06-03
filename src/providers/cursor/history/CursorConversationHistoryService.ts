@@ -2,15 +2,15 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+import { BaseHistoryService } from '../../../core/providers/BaseHistoryService';
 import { isValidCursorSessionId } from '../../../core/providers/cursorSessionIdValidation';
 import type {
   DeleteHistoryOutcome,
   HistoryLoadOutcome,
   HydrationContext,
-  ProviderConversationHistoryService,
 } from '../../../core/providers/types';
 import type { Conversation } from '../../../core/types';
-import { getCursorState, resolveCursorSessionId } from '../types';
+import { type CursorProviderState,getCursorState, resolveCursorSessionId } from '../types';
 import {
   cursorWorkspaceHash,
   cursorWorkspaceHashLegacy,
@@ -18,75 +18,74 @@ import {
   resolveCursorStoreDbPath,
 } from './cursorHistoryStore';
 
-export class CursorConversationHistoryService implements ProviderConversationHistoryService {
-  private hydratedConversationKeys = new Map<string, string>();
-  private historyLoadErrors = new Map<string, string>();
+export class CursorConversationHistoryService extends BaseHistoryService<CursorProviderState> {
+  // forkSupport intentionally omitted — Cursor capabilities.supportsFork === false.
 
-  async hydrateConversationHistory(
+  protected computeCacheKey(
     conversation: Conversation,
-    vaultPath: string | null,
-  ): Promise<void> {
+    ctx: HydrationContext,
+  ): string | null {
     const sessionId = resolveCursorSessionId(conversation);
-    if (!sessionId || !vaultPath) {
-      this.hydratedConversationKeys.delete(conversation.id);
-      return;
-    }
+    if (!sessionId || !ctx.vaultPath) return null;
+    const dbPath = resolveCursorStoreDbPath(ctx.vaultPath, sessionId);
+    return dbPath ? `${sessionId}::${dbPath}` : null;
+  }
 
-    const dbPath = resolveCursorStoreDbPath(vaultPath, sessionId);
+  protected async loadMessages(
+    conversation: Conversation,
+    ctx: HydrationContext,
+  ): Promise<HistoryLoadOutcome> {
+    const sessionId = resolveCursorSessionId(conversation);
+    if (!sessionId || !ctx.vaultPath) {
+      return { kind: 'empty', reason: 'no-session', sourceRef: null };
+    }
+    const dbPath = resolveCursorStoreDbPath(ctx.vaultPath, sessionId);
     if (!dbPath) {
-      this.hydratedConversationKeys.delete(conversation.id);
-      return;
+      return { kind: 'empty', reason: 'no-store', sourceRef: null };
     }
 
-    const hydrationKey = `${sessionId}::${dbPath}`;
-    if (
-      conversation.messages.length > 0
-      && this.hydratedConversationKeys.get(conversation.id) === hydrationKey
-    ) {
-      return;
-    }
-
+    const sourceRef = `${sessionId}::${dbPath}`;
     const result = loadCursorChatMessagesFromStoreResult(dbPath);
     if (result.error) {
-      this.historyLoadErrors.set(conversation.id, result.error);
-    } else {
-      this.historyLoadErrors.delete(conversation.id);
+      const error = typeof result.error === 'string'
+        ? { code: 'store-unreadable' as const, message: result.error }
+        : result.error;
+      return { kind: 'error', error, sourceRef };
     }
-    const loaded = result.messages;
-    if (loaded.length === 0) {
-      this.hydratedConversationKeys.delete(conversation.id);
-      return;
+    if (result.messages.length === 0) {
+      return { kind: 'empty', reason: 'no-rows', sourceRef };
     }
-
-    conversation.messages = loaded;
-    this.hydratedConversationKeys.set(conversation.id, hydrationKey);
+    return { kind: 'loaded', messages: result.messages, sourceRef };
   }
 
-  getLastHistoryLoadError(conversationId: string): string | undefined {
-    return this.historyLoadErrors.get(conversationId);
+  resolveSessionIdForConversation(conversation: Conversation | null): string | null {
+    return resolveCursorSessionId(conversation);
   }
 
-  async deleteConversationSession(
+  async deleteConversationSessionV2(
     conversation: Conversation,
-    vaultPath: string | null,
-  ): Promise<void> {
+    ctx: HydrationContext,
+  ): Promise<DeleteHistoryOutcome> {
     const sessionId = resolveCursorSessionId(conversation);
-    if (!sessionId || !vaultPath) {
-      return;
+    if (!sessionId || !ctx.vaultPath) {
+      return { kind: 'no-op', reason: 'no-session' };
     }
     if (!isValidCursorSessionId(sessionId)) {
-      return;
+      return {
+        kind: 'error',
+        error: {
+          code: 'invalid-session-id',
+          message: 'Cursor session id failed validation; refusing to delete.',
+        },
+      };
     }
 
-    // Mirror resolveCursorStoreDbPath's two-hash fallback: hydration can
-    // surface conversations keyed under either the normalized hash or the
-    // legacy (pre-normalization) hash. Deleting only the normalized path
-    // would leave the legacy-hash transcript on disk.
     const chatsRoot = path.join(os.homedir(), '.cursor', 'chats');
     const candidateHashes = [
-      cursorWorkspaceHash(vaultPath),
-      cursorWorkspaceHashLegacy(vaultPath),
+      cursorWorkspaceHash(ctx.vaultPath),
+      cursorWorkspaceHashLegacy(ctx.vaultPath),
     ];
+    const removedPaths: string[] = [];
     const seenDirs = new Set<string>();
     for (const hash of candidateHashes) {
       const chatDir = path.join(chatsRoot, hash, sessionId);
@@ -94,53 +93,24 @@ export class CursorConversationHistoryService implements ProviderConversationHis
       if (seenDirs.has(chatDir)) continue;
       seenDirs.add(chatDir);
       try {
-        fs.rmSync(chatDir, { recursive: true, force: true });
+        if (fs.existsSync(chatDir)) {
+          fs.rmSync(chatDir, { recursive: true, force: true });
+          removedPaths.push(chatDir);
+        }
       } catch {
         // best-effort
       }
     }
+
+    return { kind: 'deleted', paths: removedPaths };
   }
 
-  resolveSessionIdForConversation(conversation: Conversation | null): string | null {
-    return resolveCursorSessionId(conversation);
-  }
-
-  isPendingForkConversation(_conversation: Conversation): boolean {
-    return false;
-  }
-
-  buildForkProviderState(
-    _sourceSessionId: string,
-    _resumeAt: string,
-    _sourceProviderState?: Record<string, unknown>,
-  ): Record<string, unknown> {
-    return {};
-  }
-
-  buildPersistedProviderState(
-    conversation: Conversation,
-  ): Record<string, unknown> | undefined {
+  buildPersistedProviderState(conversation: Conversation): CursorProviderState | undefined {
     const state = getCursorState(conversation.providerState);
     const sid = state.chatSessionId ?? conversation.sessionId ?? undefined;
-    const merged: Record<string, unknown> = { ...state };
-    if (sid) {
-      merged.chatSessionId = sid;
-    }
+    const merged: CursorProviderState = { ...state };
+    if (sid) merged.chatSessionId = sid;
     const entries = Object.entries(merged).filter(([, value]) => value !== undefined);
-    return entries.length > 0 ? Object.fromEntries(entries) : undefined;
-  }
-
-  async hydrateConversationHistoryV2(
-    _c: Conversation,
-    _ctx: HydrationContext,
-  ): Promise<HistoryLoadOutcome> {
-    throw new Error('History v2 not yet implemented for this provider');
-  }
-
-  async deleteConversationSessionV2(
-    _c: Conversation,
-    _ctx: HydrationContext,
-  ): Promise<DeleteHistoryOutcome> {
-    throw new Error('History v2 delete not yet implemented for this provider');
+    return entries.length > 0 ? Object.fromEntries(entries) as CursorProviderState : undefined;
   }
 }

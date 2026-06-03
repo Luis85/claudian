@@ -2,29 +2,61 @@ import * as fs from 'fs';
 import type * as osTypes from 'os';
 import * as path from 'path';
 
+import type { HydrationContext } from '@/core/providers/types';
 import type { Conversation } from '@/core/types';
 import { CursorConversationHistoryService } from '@/providers/cursor/history/CursorConversationHistoryService';
 import {
   cursorWorkspaceHash,
   cursorWorkspaceHashLegacy,
 } from '@/providers/cursor/history/cursorHistoryStore';
+import * as Store from '@/providers/cursor/history/cursorHistoryStore';
 
-describe('CursorConversationHistoryService getLastHistoryLoadError', () => {
-  it('returns no error before hydration runs', () => {
-    const service = new CursorConversationHistoryService();
-    expect(service.getLastHistoryLoadError('conv-1')).toBeUndefined();
+function makeConversation(sessionId: string): Conversation {
+  return {
+    id: 'conv-1',
+    title: 'Test',
+    messages: [],
+    createdAt: 0,
+    lastActiveAt: 0,
+    sessionId: null,
+    providerId: 'cursor',
+    providerState: { chatSessionId: sessionId },
+  } as unknown as Conversation;
+}
+
+describe('CursorConversationHistoryService — no out-of-band error getter', () => {
+  it('does not expose getLastHistoryLoadError', () => {
+    const svc = new CursorConversationHistoryService();
+    expect((svc as unknown as { getLastHistoryLoadError?: unknown }).getLastHistoryLoadError).toBeUndefined();
   });
 
-  // Engineer note: end-to-end coverage of the redaction contract lives in
-  // tests/unit/providers/cursor/history/cursorHistoryStore.test.ts, which
-  // already asserts that loadCursorChatMessagesFromStoreResult never leaks
-  // the raw home directory. Arranging a real Conversation + on-disk DB layout
-  // inside the service test would require duplicating that surface area, so
-  // we gate the getter contract here and rely on the store-level test for
-  // the redaction guarantee.
+  it('does not expose forkSupport (Cursor capabilities.supportsFork === false)', () => {
+    const svc = new CursorConversationHistoryService();
+    expect(svc.forkSupport).toBeUndefined();
+  });
 });
 
-describe('CursorConversationHistoryService.deleteConversationSession', () => {
+describe('CursorConversationHistoryService.hydrateConversationHistoryV2', () => {
+  afterEach(() => { jest.restoreAllMocks(); });
+
+  it('returns error:sqlite-unavailable when node:sqlite cannot be required', async () => {
+    jest.spyOn(Store, 'resolveCursorStoreDbPath').mockReturnValue('/tmp/cursor.db');
+    jest.spyOn(Store, 'loadCursorChatMessagesFromStoreResult').mockReturnValue({
+      messages: [],
+      error: { code: 'sqlite-unavailable', message: 'Cursor history requires node:sqlite.' },
+    });
+    const svc = new CursorConversationHistoryService();
+    const out = await svc.hydrateConversationHistoryV2(makeConversation('s'), {
+      vaultPath: '/vault',
+      reason: 'open',
+    });
+    expect(out.kind).toBe('error');
+    // eslint-disable-next-line jest/no-conditional-expect
+    if (out.kind === 'error') expect(out.error.code).toBe('sqlite-unavailable');
+  });
+});
+
+describe('CursorConversationHistoryService.deleteConversationSessionV2', () => {
   const realOs = jest.requireActual<typeof osTypes>('os');
   let tmpHome: string;
   let homedirSpy: jest.SpyInstance;
@@ -33,7 +65,6 @@ describe('CursorConversationHistoryService.deleteConversationSession', () => {
     tmpHome = fs.mkdtempSync(path.join(realOs.tmpdir(), 'claudian-cursor-delete-'));
     homedirSpy = jest.spyOn(realOs, 'homedir').mockReturnValue(tmpHome);
   });
-
   afterEach(() => {
     homedirSpy.mockRestore();
     fs.rmSync(tmpHome, { recursive: true, force: true });
@@ -46,58 +77,57 @@ describe('CursorConversationHistoryService.deleteConversationSession', () => {
     return dir;
   }
 
-  function makeConversation(sessionId: string): Conversation {
-    return {
-      id: 'conv-1',
-      title: 'Test',
-      messages: [],
-      createdAt: 0,
-      lastActiveAt: 0,
-      sessionId: null,
-      providerId: 'cursor',
-      providerState: { chatSessionId: sessionId },
-    } as unknown as Conversation;
+  function ctxFor(vaultPath: string): HydrationContext {
+    return { vaultPath, reason: 'open' };
   }
 
-  it('removes the normalized-hash chat directory', async () => {
+  it('returns deleted with the normalized-hash directory in paths', async () => {
     const vault = '/vault/Test';
     const sessionId = 'sess-normalized';
     const dir = plantChatDir(cursorWorkspaceHash(vault), sessionId);
-    expect(fs.existsSync(dir)).toBe(true);
 
-    const service = new CursorConversationHistoryService();
-    await service.deleteConversationSession(makeConversation(sessionId), vault);
+    const svc = new CursorConversationHistoryService();
+    const out = await svc.deleteConversationSessionV2(makeConversation(sessionId), ctxFor(vault));
 
+    expect(out.kind).toBe('deleted');
+    // eslint-disable-next-line jest/no-conditional-expect
+    if (out.kind === 'deleted') expect(out.paths).toContain(dir);
     expect(fs.existsSync(dir)).toBe(false);
   });
 
-  it('also removes the legacy-hash chat directory so transcripts are not left behind on upgrade', async () => {
-    // Mirrors resolveCursorStoreDbPath's two-hash fallback. If a session was
-    // created with the pre-normalization hash, deleting only the normalized
-    // path would orphan the on-disk transcript.
-    const vault = 'D:\\Projects\\Test';
+  it('also removes the legacy-hash directory and reports both paths', async () => {
+    const vault = 'D:\\\\Projects\\\\Test';
     const sessionId = 'sess-legacy';
     const legacyDir = plantChatDir(cursorWorkspaceHashLegacy(vault), sessionId);
-    expect(fs.existsSync(legacyDir)).toBe(true);
 
-    const service = new CursorConversationHistoryService();
-    await service.deleteConversationSession(makeConversation(sessionId), vault);
+    const svc = new CursorConversationHistoryService();
+    const out = await svc.deleteConversationSessionV2(makeConversation(sessionId), ctxFor(vault));
 
+    expect(out.kind).toBe('deleted');
+    // eslint-disable-next-line jest/no-conditional-expect
+    if (out.kind === 'deleted') expect(out.paths).toContain(legacyDir);
     expect(fs.existsSync(legacyDir)).toBe(false);
   });
 
-  it('does nothing when sessionId is "." (validator rejects pure-dot ids)', async () => {
-    // Defense-in-depth: even though `.` was caught by the validator, assert
-    // here that the service genuinely bails — the workspace chat root must
-    // not be deleted under any circumstance.
+  it('returns error:invalid-session-id when sessionId fails validation', async () => {
     const vault = '/vault/Test';
     const chatsRoot = path.join(tmpHome, '.cursor', 'chats');
     fs.mkdirSync(chatsRoot, { recursive: true });
     fs.writeFileSync(path.join(chatsRoot, 'sentinel'), '');
 
-    const service = new CursorConversationHistoryService();
-    await service.deleteConversationSession(makeConversation('.'), vault);
+    const svc = new CursorConversationHistoryService();
+    const out = await svc.deleteConversationSessionV2(makeConversation('.'), ctxFor(vault));
 
+    expect(out.kind).toBe('error');
+    // eslint-disable-next-line jest/no-conditional-expect
+    if (out.kind === 'error') expect(out.error.code).toBe('invalid-session-id');
     expect(fs.existsSync(path.join(chatsRoot, 'sentinel'))).toBe(true);
+  });
+
+  it('returns no-op:no-session when sessionId is null or vaultPath is null', async () => {
+    const svc = new CursorConversationHistoryService();
+    const conv = { ...makeConversation('s'), providerState: {} } as Conversation;
+    const out = await svc.deleteConversationSessionV2(conv, { vaultPath: null, reason: 'open' });
+    expect(out).toEqual({ kind: 'no-op', reason: 'no-session' });
   });
 });

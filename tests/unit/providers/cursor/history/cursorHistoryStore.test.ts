@@ -160,15 +160,35 @@ describe('loadCursorChatMessagesFromStoreResult', () => {
     const result = loadCursorChatMessagesFromStoreResult('/definitely/does/not/exist.db');
     expect(result.messages).toEqual([]);
     expect(result.error).toBeDefined();
+    // After Task 5 the open path emits a structured HistoryLoadError.
+    expect(typeof result.error).toBe('object');
+    // eslint-disable-next-line jest/no-conditional-expect
+    if (result.error && typeof result.error === 'object') expect(result.error.code).toBe('store-unreadable');
   });
 
-  it('redacts the home directory from the error message', () => {
+  it('does not leak the home directory through the structured error', () => {
     const home = os.homedir();
     const dbPath = `${home}/.cursor/chats/abc/xyz/store.db`;
     const result = loadCursorChatMessagesFromStoreResult(dbPath);
     expect(result.error).toBeDefined();
-    expect(result.error).not.toContain(home);
-    expect(result.error).toContain('[HOME]');
+    // Structured error: HOME must not leak through the user-facing message OR
+    // the debug-only detail field that the leveled logger consumes. Detail
+    // passes through `redactHomeInPath` before reaching callers; the underlying
+    // node:sqlite open error doesn't always embed the path itself (depends on
+    // Node build), so we assert non-leak rather than the sentinel presence.
+    const err = result.error;
+    if (err && typeof err === 'object') {
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(err.message).not.toContain(home);
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(err.detail ?? '').not.toContain(home);
+    } else {
+      // Legacy string path (kept for SQL-read inline failures).
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(err).not.toContain(home);
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(err).toContain('[HOME]');
+    }
   });
 });
 
