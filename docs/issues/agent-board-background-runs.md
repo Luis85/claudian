@@ -21,26 +21,39 @@ tags:
 
 # Agent Board background / long-running runs
 
-## Problem
+## Already shipped (do NOT rebuild)
 
-Agent Board work orders run through a foreground chat tab. The strongest differentiator vs every chat-only
-rival — and the direction of travel for the coding-agent ecosystem (Claude Code `/bg` background tasks,
-Codex Automations) — is running each work order as a **non-blocking background agent** that streams
-progress into its card. Nothing else in the Obsidian space does this.
+Work orders **already run in a non-activated background tab** — `ChatTabExecutionSurface.startTaskRun` →
+`ClaudianView.startTaskRunInFreshTab` → `TabManager.createTaskRunTab`, which creates the run tab with
+`activate: false` (`TabManager.ts:249,260`), so a run does not steal focus. This issue is **not** about
+re-implementing background execution.
+
+## Problem (narrowed)
+
+Two gaps remain beyond the non-activated tab:
+
+1. **Live progress streaming into the board card.** The user must still open the run's tab to see what's
+   happening; the Agent Board card does not stream live status/progress. (Verify: no live progress feed
+   from the run tab into `AgentBoardRenderer`.)
+2. **Truly detached / provider-native background runs.** Each run still occupies a (hidden) chat tab.
+   The ecosystem direction is provider-native background tasks — Claude Code `/bg`, Codex Automations —
+   that run without a tab at all. This is the differentiator vs chat-only rivals.
 
 Sources: anthropic.com/news enabling-claude-code-to-work-more-autonomously; developers.openai.com/codex/changelog.
 
 ## Proposed change
 
-Allow a work order to run as a background, non-blocking agent (provider-native background task where
-available, otherwise a detached chat session) that streams status/progress into its Agent Board card,
-without occupying a foreground tab. Preserve the non-regression rule: ad-hoc chat stays first-class.
+- Stream live run status/progress from the execution surface into the work order's Agent Board card
+  (no need to open the tab).
+- Investigate a truly-detached run path using provider-native background tasks where available
+  (`/bg`, Automations), falling back to the existing non-activated tab otherwise.
+- Preserve the non-regression rule: ad-hoc chat stays first-class.
 
 ## Acceptance criteria
 
-- A work order can run in the background; its card shows live progress without a foreground tab.
-- Run lifecycle (start/stop/retry) works on background runs; one-active-run-per-work-order still enforced.
-- Chat sidepanel behavior is unchanged for users who don't use the board.
+- An Agent Board card shows live progress for an in-flight run **without opening its tab**.
+- Where a provider exposes background tasks, a run can execute without occupying a chat tab.
+- Run lifecycle (start/stop/retry) and one-active-run-per-work-order still hold; chat sidepanel unchanged.
 
 ## Related
 
