@@ -2,7 +2,7 @@
 title: Codebase Review & Improvement Plan
 date: 2026-06-02
 updated: 2026-06-03
-status: phases-1a-1b-1c-shipped + adr-p1-p2a-shipped + q-new-1-shipped + q-1-partial
+status: phases-1a-1b-1c-shipped + adr-p1-p2a-shipped + q-new-1-shipped + q-1-shipped
 version: v3.2.0 (just shipped)
 scope: whole-codebase (architecture, concurrency, security, performance, quality, Obsidian conformance, backlog reconciliation)
 method: 7 parallel dedicated review passes (architecture, concurrency/lifecycle, security, performance, code quality + testing, Obsidian API conformance, backlog reconciliation) against `main` at 9541ab9
@@ -10,6 +10,7 @@ supersedes: docs/reviews/2026-05-31-codebase-review-and-improvement-plan.md (inc
 related:
   - "[[docs/adr/0001-transport-agnostic-provider-seam.md]]"
   - "[[docs/reviews/2026-05-31-codebase-review-and-improvement-plan.md]]"
+  - "[[docs/handoffs/2026-06-04-q1-complete.md]]"
 ---
 
 # Claudian Codebase Review & Improvement Plan — 2026-06-02
@@ -34,13 +35,17 @@ Remaining issues are **narrow but real**:
    surfaced: total wall-clock grows with N (PERF-8 metric); individual frames stay responsive.
    F1 + F4 follow-ups shipped 2026-06-03 (`1bc8483`); F2 + F3 still deferred (need prod vault
    measurement).
-3. **Q-1 Notice i18n regressed** — 137 → 214 hardcoded `new Notice()` (56% increase since the
-   2026-05-31 baseline). **Partially shipped 2026-06-03:** chunks 1+2+3 routed
-   InputController (`aef981c`), ConversationController (`86b93a0`), McpSettingsManager
-   (`c4ca6ad`) — ~45 sites done. Remaining: OpencodeAgentSettings (14), AgentSettings claude
-   (11), tabControllers (11), SlashCommandSettings (10), CodexSubagentSettings (9), main.ts (9),
-   AgentBoardView (9), CodexSkillSettings (6), EnvSnippetManager (6), InputToolbar (6),
-   ClaudianView (6), and ~70 others. Lint rule blocking new `new Notice()` still pending.
+3. ~~**Q-1 Notice i18n regressed**~~ — **fully shipped 2026-06-03**, chunks 1–16 plus the
+   ESLint rule that blocks regressions. Zero hardcoded `new Notice('...')` or
+   ``new Notice(`...`)`` sites remain in `src/`. Identifier pass-throughs
+   (`new Notice(nameError)`, `new Notice(parseResult.error)`,
+   `new Notice(failureMessage)`) stay allowed by design and are tracked under
+   `docs/issues/translate-validator-helper-strings.md` for a follow-up chunk that
+   migrates helper return contracts to `{ key, params } | null`. Final review
+   surface: 17 commits, ~110 sites routed across ~30 files in chunks 4–16, plus
+   chunks 1–3 from earlier the same day. Review fixes shipped 2026-06-03
+   (`adfb6d8`) consolidated the `inlineEdit.*` subspace and corrected
+   `tasks.create.needsBrowserSelection` placement.
 4. **Q-4 four untested security paths** — `ClaudeApprovalHandler`, `AcpToolStreamAdapter`,
    `HomeFileAdapter`, `ClaudeRewindService` still have **zero** unit tests.
 5. ~~**OBS-1/-2/-3/-4/-5 entirely deferred**~~ — **all shipped 2026-06-03** (Phase 1a,
@@ -85,6 +90,40 @@ I/O overlap likely reduces the stark gap. Tuning + measurement tracked as **Phas
 
 **Verification at ship time:** typecheck pass, lint clean, 6623 tests pass / 35 skipped / 356 suites, build pass (every commit independently verified before push).
 
+### Phase 3 Q-1 — fully shipped 2026-06-03
+
+| Phase / item | Commit | Notes |
+|---|---|---|
+| **Q-1 chunk 4** | `d583585 refactor(opencode): land Q-1 chunk 4 (OpencodeAgentSettings Notice i18n)` | 7/14 routed under new `provider.opencode.subagent.*` (first use of `provider.<id>.<feature>.*` convention). 7 pass-through sites stay (validator/parser helpers). |
+| **Q-1 chunk 5** | `4d68527 refactor(claude): land Q-1 chunk 5 (AgentSettings Notice i18n)` | 1/11 routed (10 prior). Adds `settings.subagents.loadFailed` to grandfathered Claude subagent subspace. |
+| **Q-1 chunk 6** | `e7afc33 refactor(chat): land Q-1 chunk 6 (tabControllers Notice i18n)` | 3/11 routed. Adds `chat.fork.unsupportedProvider`, `chat.input.chatServiceInitFailed`. |
+| **Q-1 chunk 7** | `82aa187 refactor(claude): land Q-1 chunk 7 (SlashCommandSettings Notice i18n)` | 9/10 routed. Adds 15 keys under `settings.slashCommands.*` — per-message keys to avoid `{label}` locale word-order traps. |
+| **Q-1 docs** | `5a224e9 docs(plan): codify Q-1 subspace policy and validator-helper translation follow-up` | Subspace policy codified; validator-helper translation tracked at `docs/issues/translate-validator-helper-strings.md`. |
+| **Q-1 chunk 8** | `a7a77dc refactor(codex): land Q-1 chunk 8 (CodexSubagentSettings Notice i18n)` | 7/9 routed under new `provider.codex.subagent.*`. First exercise of duplication policy: 8 keys mirror opencode + 1 codex-specific `developerInstructionsRequired`. |
+| **Q-1 chunk 9** | `96e30e4 refactor(main): land Q-1 chunk 9 (main.ts Notice i18n)` | 9/9 routed. New `chat.context.*` + new top-level `diagnostics.*`. |
+| **Q-1 chunk 10** | `417d6db refactor(tasks): land Q-1 chunk 10 (AgentBoardView Notice i18n)` | 9/9 routed under new top-level `tasks.*` (mirroring `chat.*` / `settings.*` / `provider.*` / `security.*` / `diagnostics.*`). |
+| **Q-1 chunk 11** | `0e53e19 refactor(codex): land Q-1 chunk 11 (CodexSkillSettings Notice i18n)` | 5/6 routed under new `provider.codex.skill.*`. Literal `$` prefix preserved in JSON values (outside `{name}` regex). |
+| **Q-1 chunk 12** | `a870d57 refactor(settings): land Q-1 chunk 12 (EnvSnippetManager Notice i18n)` | 5/6 routed extending `settings.envSnippets.*`. |
+| **Q-1 chunk 13** | `d1d2b1e refactor(chat): land Q-1 chunk 13 (chat-misc Notice i18n sweep)` | 13 sites across 5 files (ClaudianView, InputToolbar, ImageContext, FileContext, tabUi). New `chat.tab.*`, `chat.externalContext.*`, `chat.image.*`, `chat.fileOpen.*`. |
+| **Q-1 chunk 14** | `6c69d4a refactor(tasks): land Q-1 chunk 14 (tasks-misc Notice i18n sweep)` | 15 sites across 6 files. Extended `tasks.board.*`; new `tasks.template.*`, `tasks.create.*`, `tasks.fromChat.*`, `tasks.run.*`. |
+| **Q-1 chunk 15** | `e987f03 refactor(settings): land Q-1 chunk 15 (settings + app-commands Notice i18n sweep)` | 18 sites across 8 files. New `settings.mcp.modal.*`, `settings.agentBoard.*`, `env.*`, `chat.storage.*`; extended `diagnostics.*`. |
+| **Q-1 chunk 16** | `eac33ff refactor(providers): land Q-1 chunk 16 (providers + inline-edit + bang-bash Notice i18n sweep)` | 15 sites across 6 files. New `provider.claude.plugin.*`, `provider.claude.task.*`, `provider.cursor.cli.*`, `provider.cursor.models.*`, `inlineEdit.*`; extended `chat.bangBash.*`. Cursor model count split into `discoveredOne` / `discoveredMany` for locale pluralization. |
+| **Q-1 final (ESLint rule)** | `ad1d5ce feat(lint): block hardcoded \`new Notice()\` strings (Q-1 final)` | `no-restricted-syntax` rule blocks `NewExpression[callee.name="Notice"]` with `Literal` or `TemplateLiteral` first argument. Identifier pass-throughs (`new Notice(nameError)`) and `new Notice(t(...))` calls remain allowed. Two pre-existing composed-template sites fold into a new shared `common.errorWithDetail` = "Error: {error}". |
+| **Q-1 review fixes** | `adfb6d8 refactor(i18n): apply Q-1 review fixes (subspace cohesion + orphan whitespace)` | Moved `tasks.run.needsBrowserSelection` → `tasks.create.needsBrowserSelection` (create-flow not run-flow). Consolidated `diagnostics.inlineEdit*` → `inlineEdit.noView` / `.inserted` / `.applied`. Removed orphan whitespace in `taskCommands.ts:294, 299`. Extended `docs/issues/translate-validator-helper-strings.md` with the helper-parameter pass-through pattern (`runToolbarAction`, `notifyImageError`). |
+
+**Q-1 closure summary:**
+
+- 17 commits, ~155 sites routed across ~30 files (chunks 1–16) plus the ESLint
+  rule.
+- Zero hardcoded `new Notice('...')` / ``new Notice(`...`)`` in `src/`.
+- ~25 identifier pass-throughs remain (validator/parser helpers,
+  `runToolbarAction` / `notifyImageError` / `warnings[]` helper parameters)
+  tracked at `docs/issues/translate-validator-helper-strings.md`.
+- ESLint rule enforces the no-hardcoded-Notice contract forward.
+- Locale parity holds (all 10 locales, structural-alignment test passes).
+- Each commit independently verified: typecheck clean, lint clean, 6623 tests
+  pass / 35 skipped / 356 suites, build pass.
+
 ---
 
 ## Findings by severity
@@ -105,7 +144,7 @@ I/O overlap likely reduces the stark gap. Tuning + measurement tracked as **Phas
 | OBS-3 | Deferred-view cast in `EnvSnippetManager.ts:379` (`.view as ClaudianView`). No `loadIfDeferred()` call; safe `isClaudianView()` predicate exists at `main.ts:57-61` but unused here. | `src/features/settings/ui/EnvSnippetManager.ts:379` |
 | OBS-4 | Non-atomic note writes (`vault.modify` + `vault.read` pairs); zero `vault.process` usage in `src/`. Concurrent agent-board edits can clobber. | grep: 0 matches for `vault.process` in `src/` |
 | OBS-5 | `ClaudianView.ts:983-987` registers 4 `vault.on(...)` handlers in a manual `eventRefs[]` array instead of `registerEvent(...)`. Cleanup works but is non-idiomatic. | `src/features/chat/ClaudianView.ts:983-987` |
-| Q-1 | **Notice i18n regressed** — `new Notice()` count 137 → 214 since 2026-05-31. New code skips `t()`. Hot offenders: `InputController` (17), `ConversationController` (14), `McpSettingsManager` (14), `OpencodeAgentSettings` (14). | grep counts (see Quality review) |
+| ~~Q-1~~ | ~~Notice i18n regressed.~~ ✅ shipped 2026-06-03 (chunks 1–16 + ESLint rule + review fixes `adfb6d8`). | — |
 | Q-4 | Four security/robustness classes still untested: `ClaudeApprovalHandler`, `AcpToolStreamAdapter` (132 LOC), `HomeFileAdapter` (75), `ClaudeRewindService` (220). All are core seam handlers. | `tests/unit/` grep |
 | PERF-8 | **No perf gate for history hydration.** Existing perf suite covers `messageRenderer`, `toolCallIndex`, history *filter*/*parse* — but **not** the full disk-→hydrate-→render path that PERF-4 sits on. The gap masked the live symptom. ✅ **shipped 2026-06-03** (`c9c5f03`). | `tests/perf/conversationLoad.perf.test.ts` |
 | UX-1 | Active tab unclear when multiple tabs are streaming. | `docs/issues/UX polishing and improvements.md` (item 1) |
@@ -249,9 +288,11 @@ After CON-3 lands:
 16. **ARCH-5 residual** — split `InputController.ts` (1464 LOC) along its three remaining seams: input wiring, mention dispatch, steering state machine. Pair with the `RuntimeHost` work in Phase 2 to amortize the test churn.
 17. **ARCH-NEW-1** — apply the deletion test to the 15 files >800 LOC. Only act when complexity would consolidate. `ClaudeChatRuntime` and `CodexHistoryStore` are likely candidates (they fuse multiple concerns); `StreamController` is mostly DOM rendering after ARCH-6.
 
-### Phase 3 — Quality follow-through (Q-NEW-1 ✅ `4e420c9`; Q-1 partial ✅ `aef981c` + `86b93a0` + `c4ca6ad`; Q-4/Q-7/Q-NEW-2 pending)
+### Phase 3 — Quality follow-through (Q-NEW-1 ✅ `4e420c9`; Q-1 ✅ chunks 1–16 + `ad1d5ce` ESLint rule + `adfb6d8` review fixes; Q-4/Q-7/Q-NEW-2 pending)
 
-18. **Q-1 (regressed)** — sweep 214 hardcoded `new Notice()` through `t()`. Priority order: `InputController` (17), `ConversationController` (14), `McpSettingsManager` (14), `OpencodeAgentSettings` (14), then `features/tasks`. Add a lint rule blocking new `new Notice()` outside an allowlist.
+18. ~~**Q-1 (regressed)**~~ — ✅ closed 2026-06-03. Chunks 1–16 + ESLint rule
+   (`ad1d5ce`) + review fixes (`adfb6d8`). See "Phase 3 Q-1 — fully shipped
+   2026-06-03" block above.
 
 **Subspace policy** (codified 2026-06-03 after chunk-4/5/6 review):
 
@@ -268,14 +309,13 @@ After CON-3 lands:
   is accepted.** Convention consistency wins over translator-burden minimization.
   Documented for translator awareness.
 
-**ESLint rule design** (when chunk sweep finishes):
-
-- Block `new Notice('...')` and ``new Notice(`...${x}...`)`` outside an
-  explicit allowlist file.
-- Allow `new Notice(t(...))`.
-- Allow pure-identifier pass-throughs (`new Notice(err.error)`,
-  `new Notice(nameError)`) — these depend on the validator-helper translation
-  chunk tracked at `docs/issues/translate-validator-helper-strings.md`.
+**ESLint rule** — shipped 2026-06-03 (`ad1d5ce`). `no-restricted-syntax` blocks
+`NewExpression[callee.name="Notice"]` with `Literal` or `TemplateLiteral`
+first argument. Identifier pass-throughs (`new Notice(nameError)`,
+`new Notice(err.error)`) and `new Notice(t(...))` calls remain allowed.
+Known minor gaps documented in the chunk 8-16 review report: aliased
+imports (`Notice as N`) and parenthesized callees are not currently
+caught; the codebase doesn't use these patterns.
 
 **Validator helper translation** — tracked separately at
 `docs/issues/translate-validator-helper-strings.md`. Land after the main sweep
