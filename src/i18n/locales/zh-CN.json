@@ -24,7 +24,11 @@
   "chat": {
     "loadEarlier": "加载更早的消息",
     "history": {
-      "showMore": "显示更多"
+      "showMore": "显示更多",
+      "loadFailed": "Failed to load conversation",
+      "regenerateFailed": "Failed to regenerate response",
+      "deleteFailed": "Failed to delete conversation",
+      "renameFailed": "Failed to rename conversation"
     },
     "rewind": {
       "confirmMessage": "回退到此处？此消息之后的文件更改将被还原。回退不会影响手动或通过 bash 编辑的文件。",
@@ -40,7 +44,11 @@
       "failed": "回退失败：{error}",
       "cannot": "无法回退：{error}",
       "unavailableStreaming": "流式响应中无法回退",
-      "unavailableNoUuid": "无法回退：缺少消息标识符"
+      "unavailableNoUuid": "无法回退：缺少消息标识符",
+      "errMessageNotFound": "Message not found",
+      "errServiceUnavailable": "Agent service not available",
+      "errUnknown": "Unknown error",
+      "errUnsupported": "Rewind is not supported by this provider."
     },
     "fork": {
       "ariaLabel": "分叉对话",

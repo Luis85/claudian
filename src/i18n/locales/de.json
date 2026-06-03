@@ -24,7 +24,11 @@
   "chat": {
     "loadEarlier": "Frühere Nachrichten laden",
     "history": {
-      "showMore": "Mehr anzeigen"
+      "showMore": "Mehr anzeigen",
+      "loadFailed": "Failed to load conversation",
+      "regenerateFailed": "Failed to regenerate response",
+      "deleteFailed": "Failed to delete conversation",
+      "renameFailed": "Failed to rename conversation"
     },
     "rewind": {
       "confirmMessage": "Zu diesem Punkt zurückspulen? Dateiänderungen nach dieser Nachricht werden rückgängig gemacht. Das Zurückspulen betrifft keine manuell oder über Bash bearbeiteten Dateien.",
@@ -40,7 +44,11 @@
       "failed": "Zurückspulen fehlgeschlagen: {error}",
       "cannot": "Zurückspulen nicht möglich: {error}",
       "unavailableStreaming": "Zurückspulen während des Streamings nicht möglich",
-      "unavailableNoUuid": "Zurückspulen nicht möglich: Nachrichtenkennungen fehlen"
+      "unavailableNoUuid": "Zurückspulen nicht möglich: Nachrichtenkennungen fehlen",
+      "errMessageNotFound": "Message not found",
+      "errServiceUnavailable": "Agent service not available",
+      "errUnknown": "Unknown error",
+      "errUnsupported": "Rewind is not supported by this provider."
     },
     "fork": {
       "ariaLabel": "Konversation verzweigen",

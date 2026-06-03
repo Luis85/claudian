@@ -26,6 +26,10 @@ export type TranslationKey =
   // Chat
   | 'chat.loadEarlier'
   | 'chat.history.showMore'
+  | 'chat.history.loadFailed'
+  | 'chat.history.regenerateFailed'
+  | 'chat.history.deleteFailed'
+  | 'chat.history.renameFailed'
 
   // Chat - Rewind
   | 'chat.rewind.confirmMessage'
@@ -42,6 +46,10 @@ export type TranslationKey =
   | 'chat.rewind.cannot'
   | 'chat.rewind.unavailableStreaming'
   | 'chat.rewind.unavailableNoUuid'
+  | 'chat.rewind.errMessageNotFound'
+  | 'chat.rewind.errServiceUnavailable'
+  | 'chat.rewind.errUnknown'
+  | 'chat.rewind.errUnsupported'
   | 'chat.bangBash.placeholder'
   | 'chat.bangBash.commandPanel'
   | 'chat.bangBash.copyAriaLabel'

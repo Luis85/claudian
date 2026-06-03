@@ -24,7 +24,11 @@
   "chat": {
     "loadEarlier": "Load earlier messages",
     "history": {
-      "showMore": "Show more"
+      "showMore": "Show more",
+      "loadFailed": "Failed to load conversation",
+      "regenerateFailed": "Failed to regenerate response",
+      "deleteFailed": "Failed to delete conversation",
+      "renameFailed": "Failed to rename conversation"
     },
     "rewind": {
       "confirmMessage": "Rewind to this point? File changes after this message will be reverted. Rewinding does not affect files edited manually or via bash.",
@@ -40,7 +44,11 @@
       "failed": "Rewind failed: {error}",
       "cannot": "Cannot rewind: {error}",
       "unavailableStreaming": "Cannot rewind while streaming",
-      "unavailableNoUuid": "Cannot rewind: missing message identifiers"
+      "unavailableNoUuid": "Cannot rewind: missing message identifiers",
+      "errMessageNotFound": "Message not found",
+      "errServiceUnavailable": "Agent service not available",
+      "errUnknown": "Unknown error",
+      "errUnsupported": "Rewind is not supported by this provider."
     },
     "fork": {
       "ariaLabel": "Fork conversation",

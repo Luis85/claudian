@@ -24,7 +24,11 @@
   "chat": {
     "loadEarlier": "以前のメッセージを読み込む",
     "history": {
-      "showMore": "もっと見る"
+      "showMore": "もっと見る",
+      "loadFailed": "Failed to load conversation",
+      "regenerateFailed": "Failed to regenerate response",
+      "deleteFailed": "Failed to delete conversation",
+      "renameFailed": "Failed to rename conversation"
     },
     "rewind": {
       "confirmMessage": "この時点に巻き戻しますか？このメッセージ以降のファイル変更が元に戻されます。手動またはbashで編集されたファイルには影響しません。",
@@ -40,7 +44,11 @@
       "failed": "巻き戻しに失敗：{error}",
       "cannot": "巻き戻しできません：{error}",
       "unavailableStreaming": "ストリーミング中は巻き戻しできません",
-      "unavailableNoUuid": "巻き戻しできません：メッセージ識別子がありません"
+      "unavailableNoUuid": "巻き戻しできません：メッセージ識別子がありません",
+      "errMessageNotFound": "Message not found",
+      "errServiceUnavailable": "Agent service not available",
+      "errUnknown": "Unknown error",
+      "errUnsupported": "Rewind is not supported by this provider."
     },
     "fork": {
       "ariaLabel": "会話を分岐",

@@ -24,7 +24,11 @@
   "chat": {
     "loadEarlier": "Charger les messages précédents",
     "history": {
-      "showMore": "Afficher plus"
+      "showMore": "Afficher plus",
+      "loadFailed": "Failed to load conversation",
+      "regenerateFailed": "Failed to regenerate response",
+      "deleteFailed": "Failed to delete conversation",
+      "renameFailed": "Failed to rename conversation"
     },
     "rewind": {
       "confirmMessage": "Rembobiner jusqu'à ce point ? Les modifications de fichiers après ce message seront annulées. Le rembobinage n'affecte pas les fichiers modifiés manuellement ou via bash.",
@@ -40,7 +44,11 @@
       "failed": "Échec du rembobinage : {error}",
       "cannot": "Impossible de rembobiner : {error}",
       "unavailableStreaming": "Impossible de rembobiner pendant le streaming",
-      "unavailableNoUuid": "Impossible de rembobiner : identifiants de message manquants"
+      "unavailableNoUuid": "Impossible de rembobiner : identifiants de message manquants",
+      "errMessageNotFound": "Message not found",
+      "errServiceUnavailable": "Agent service not available",
+      "errUnknown": "Unknown error",
+      "errUnsupported": "Rewind is not supported by this provider."
     },
     "fork": {
       "ariaLabel": "Bifurquer la conversation",

@@ -24,7 +24,11 @@
   "chat": {
     "loadEarlier": "Carregar mensagens anteriores",
     "history": {
-      "showMore": "Mostrar mais"
+      "showMore": "Mostrar mais",
+      "loadFailed": "Failed to load conversation",
+      "regenerateFailed": "Failed to regenerate response",
+      "deleteFailed": "Failed to delete conversation",
+      "renameFailed": "Failed to rename conversation"
     },
     "rewind": {
       "confirmMessage": "Retroceder até este ponto? As alterações de arquivos após esta mensagem serão revertidas. O retrocesso não afeta arquivos editados manualmente ou via bash.",
@@ -40,7 +44,11 @@
       "failed": "Falha ao retroceder: {error}",
       "cannot": "Não é possível retroceder: {error}",
       "unavailableStreaming": "Não é possível retroceder durante a transmissão",
-      "unavailableNoUuid": "Não é possível retroceder: identificadores de mensagem ausentes"
+      "unavailableNoUuid": "Não é possível retroceder: identificadores de mensagem ausentes",
+      "errMessageNotFound": "Message not found",
+      "errServiceUnavailable": "Agent service not available",
+      "errUnknown": "Unknown error",
+      "errUnsupported": "Rewind is not supported by this provider."
     },
     "fork": {
       "ariaLabel": "Bifurcar conversa",

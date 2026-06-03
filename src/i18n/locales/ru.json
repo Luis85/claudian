@@ -24,7 +24,11 @@
   "chat": {
     "loadEarlier": "Загрузить предыдущие сообщения",
     "history": {
-      "showMore": "Показать ещё"
+      "showMore": "Показать ещё",
+      "loadFailed": "Failed to load conversation",
+      "regenerateFailed": "Failed to regenerate response",
+      "deleteFailed": "Failed to delete conversation",
+      "renameFailed": "Failed to rename conversation"
     },
     "rewind": {
       "confirmMessage": "Откатить до этой точки? Изменения файлов после этого сообщения будут отменены. Откат не затрагивает файлы, отредактированные вручную или через bash.",
@@ -40,7 +44,11 @@
       "failed": "Ошибка отката: {error}",
       "cannot": "Невозможно откатить: {error}",
       "unavailableStreaming": "Невозможно откатить во время потоковой передачи",
-      "unavailableNoUuid": "Невозможно откатить: отсутствуют идентификаторы сообщений"
+      "unavailableNoUuid": "Невозможно откатить: отсутствуют идентификаторы сообщений",
+      "errMessageNotFound": "Message not found",
+      "errServiceUnavailable": "Agent service not available",
+      "errUnknown": "Unknown error",
+      "errUnsupported": "Rewind is not supported by this provider."
     },
     "fork": {
       "ariaLabel": "Ответвить разговор",

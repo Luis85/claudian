@@ -286,7 +286,7 @@ export class ConversationController {
 
     const agentServiceForCheck = this.getAgentService();
     if (agentServiceForCheck && !agentServiceForCheck.getCapabilities().supportsRewind) {
-      new Notice(t('chat.rewind.failed', { error: 'Rewind is not supported by this provider.' }));
+      new Notice(t('chat.rewind.failed', { error: t('chat.rewind.errUnsupported') }));
       return;
     }
 
@@ -298,7 +298,7 @@ export class ConversationController {
     const msgs = state.messages;
     const userIdx = msgs.findIndex(m => m.id === userMessageId);
     if (userIdx === -1) {
-      new Notice(t('chat.rewind.failed', { error: 'Message not found' }));
+      new Notice(t('chat.rewind.failed', { error: t('chat.rewind.errMessageNotFound') }));
       return;
     }
     const userMsg = msgs[userIdx];
@@ -330,7 +330,7 @@ export class ConversationController {
 
     const agentService = this.getAgentService();
     if (!agentService) {
-      new Notice(t('chat.rewind.failed', { error: 'Agent service not available' }));
+      new Notice(t('chat.rewind.failed', { error: t('chat.rewind.errServiceUnavailable') }));
       return;
     }
     // rewind is optional on ChatRuntime (ADR-0001 Phase 2); providers without
@@ -338,7 +338,7 @@ export class ConversationController {
     // already prevents this path on unsupported providers — this is the TS
     // narrowing for the runtime-side optional signature.
     if (typeof agentService.rewind !== 'function') {
-      new Notice(t('chat.rewind.failed', { error: 'Rewind is not supported by this provider.' }));
+      new Notice(t('chat.rewind.failed', { error: t('chat.rewind.errUnsupported') }));
       return;
     }
 
@@ -346,11 +346,11 @@ export class ConversationController {
     try {
       result = await agentService.rewind(userMsg.userMessageId, prevAssistantUuid, mode);
     } catch (e) {
-      new Notice(t('chat.rewind.failed', { error: e instanceof Error ? e.message : 'Unknown error' }));
+      new Notice(t('chat.rewind.failed', { error: e instanceof Error ? e.message : t('chat.rewind.errUnknown') }));
       return;
     }
     if (!result.canRewind) {
-      new Notice(t('chat.rewind.cannot', { error: result.error ?? 'Unknown error' }));
+      new Notice(t('chat.rewind.cannot', { error: result.error ?? t('chat.rewind.errUnknown') }));
       return;
     }
 
@@ -671,9 +671,9 @@ export class ConversationController {
           runConversationAction(
             () => this.runHistoryAction(
               () => options.onOpenConversationInNewTab?.(conv.id, true),
-              'Failed to load conversation',
+              t('chat.history.loadFailed'),
             ),
-            'Failed to load conversation',
+            t('chat.history.loadFailed'),
           );
           return;
         }
@@ -681,9 +681,9 @@ export class ConversationController {
         runConversationAction(
           () => this.runHistoryAction(
             () => options.onSelectConversation(conv.id),
-            'Failed to load conversation',
+            t('chat.history.loadFailed'),
           ),
-          'Failed to load conversation',
+          t('chat.history.loadFailed'),
         );
       });
 
@@ -695,9 +695,9 @@ export class ConversationController {
           runConversationAction(
             () => this.runHistoryAction(
               () => options.onOpenConversationInNewTab?.(conv.id, true),
-              'Failed to load conversation',
+              t('chat.history.loadFailed'),
             ),
-            'Failed to load conversation',
+            t('chat.history.loadFailed'),
           );
         });
       }
@@ -724,7 +724,7 @@ export class ConversationController {
         e.stopPropagation();
         runConversationAction(
           () => this.regenerateTitle(conv.id),
-          'Failed to regenerate response',
+          t('chat.history.regenerateFailed'),
         );
       });
     }
@@ -745,9 +745,9 @@ export class ConversationController {
       runConversationAction(
         () => this.runHistoryAction(
           () => this.deleteHistoryConversation(conv.id, options),
-          'Failed to delete conversation',
+          t('chat.history.deleteFailed'),
         ),
-        'Failed to delete conversation',
+        t('chat.history.deleteFailed'),
       );
     });
   }
@@ -860,12 +860,12 @@ export class ConversationController {
         await this.deps.plugin.renameConversation(convId, newTitle);
         this.updateHistoryDropdown();
       } catch {
-        new Notice('Failed to rename conversation');
+        new Notice(t('chat.history.renameFailed'));
       }
     };
 
     input.addEventListener('blur', () => {
-      runConversationAction(finishRename, 'Failed to rename conversation');
+      runConversationAction(finishRename, t('chat.history.renameFailed'));
     });
     input.addEventListener('keydown', (e) => {
       // Check !e.isComposing for IME support (Chinese, Japanese, Korean, etc.)
