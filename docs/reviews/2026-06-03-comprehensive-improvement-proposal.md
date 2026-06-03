@@ -40,8 +40,9 @@ defensible product value**.
 4. **The open product work is the trust-UX layer the 2026-05-28 proposal called for** — provider
    health check, pre-send context preview, citations, unified safe-edit/revert — plus the
    **Agent Board Evidence & Review Gate** (the spine of the Specorator "review with evidence"
-   thesis), and **provider-native capability parity** (Codex/Cursor MCP, Cursor subagents,
-   Opencode plan mode).
+   thesis), and **provider-native capability parity** (Codex/Cursor in-app MCP management, Cursor
+   subagents, and the Opencode post-plan approval card — `planCompleted`; note Opencode plan *mode*
+   itself already ships, see the PN-4 correction).
 5. **Two unstarted architecture moves remain from ADR-0001**: Phase 2b (`RuntimeHost` — currently
    dead code) and Phase 3 (shared `core/transport/`).
 
@@ -152,7 +153,7 @@ clipboard export path.
 | SEC-B | P2 | **Opencode main runtime `read/writeTextFile` has no vault-containment check** — `resolveSessionPath` passes absolute paths verbatim and resolves relative paths with no `..` rejection. The aux runner already enforces containment; the primary path doesn't. | `OpencodeChatRuntime.ts:1281-1320` vs `OpencodeAuxQueryRunner.ts:373-382` | Hoist the aux runner's `path.relative` containment check into `resolveSessionPath`. **S** |
 | SEC-C | P2 | **Codex CLI spawned with full `process.env`**, bypassing the allowlist Cursor/Opencode use. A third-party CLI inherits every host secret. | `codexAppServerSupport.ts:24-33` | Route Codex through `buildAllowlistedSubprocessEnvironment` with `/^(OPENAI|CODEX)_/i` prefix; update the CLAUDE.md mandate. **S** |
 | SEC-D | P2 | **No remote-MCP transport hygiene** — plaintext `http://` connected with no warning; **no SSRF guard** (`new URL` direct → SDK transport + custom Node fetch), so pressing Test on a vault-supplied URL server can make the machine contact `169.254.169.254`/localhost/private services; no provenance/risk labels; tool descriptions treated as fully trusted. | `McpTester.ts:50-113,253`; MCP UI files | **Block before connect, don't just warn:** resolve the target host and **deny link-local (`169.254.0.0/16`, incl. cloud-metadata `169.254.169.254`), loopback, RFC1918/IPv6-ULA private ranges, and internal-only hosts before opening the socket** in `McpTester`/the SDK transport — for vault-provenance servers this deny decision is mandatory (a warning a malicious vault can pre-acknowledge is not a control). Check the **resolved IP**, not just the hostname (DNS-rebinding-safe). Layer UX on top: non-loopback `http://` warning, destination host + provenance (vault vs user-added), untrusted tool-description framing. **Do not mark SEC-D done while the Test path can still reach private services.** **M** |
-| SEC-E | P3 | **Redaction is key-name-only** — secret-bearing *values* (`user:pass@` in URLs/commands) and home/absolute paths leak into diagnostics export. | `redact.ts:22-25` | Value-level scrub for `user:pass@`; normalize `os.homedir()` → `~` before clipboard. **M** |
+| SEC-E | P3 | **Redaction is key-name-only** (`redactValue` masks by object key) — secret-bearing *values* leak into diagnostics export: bearer tokens / API keys embedded in non-secret values (`Authorization: Bearer …`, `api_key=…`, an MCP header value under `message`/`endpoint`), `user:pass@` URLs, and home/absolute paths. | `redact.ts:22-25` | Recursive **value-level** scrubbing: bearer/auth-header + `api_key=`/`sk-`-style token patterns regardless of surrounding key, **plus** known configured secret-value redaction (verbatim-leak catch), `user:pass@`, and `os.homedir()`→`~` before clipboard. Not done while a `Bearer`/`api_key=` pattern or known secret value can still appear in exports. **M** |
 | SEC-F | P3 | **No prompt-injection demarcation** — vault notes, browser selections, MCP outputs, OCR flow into prompts as fully trusted text. The approval gate is the real defense; meaningful for auto-approved/YOLO sessions. | `core/prompt/`, selection controllers | Doc + wrap externally-sourced content in labeled blocks in the prompt template. **M** |
 
 ### C. UX & product
