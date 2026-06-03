@@ -333,6 +333,14 @@ export class ConversationController {
       new Notice(t('chat.rewind.failed', { error: 'Agent service not available' }));
       return;
     }
+    // rewind is optional on ChatRuntime (ADR-0001 Phase 2); providers without
+    // the capability omit the method entirely. The supportsRewind gate above
+    // already prevents this path on unsupported providers — this is the TS
+    // narrowing for the runtime-side optional signature.
+    if (typeof agentService.rewind !== 'function') {
+      new Notice(t('chat.rewind.failed', { error: 'Rewind is not supported by this provider.' }));
+      return;
+    }
 
     let result;
     try {

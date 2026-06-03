@@ -14,8 +14,6 @@ import type {
   ApprovalCallback,
   AskUserQuestionCallback,
   AutoTurnCallback,
-  ChatRewindMode,
-  ChatRewindResult,
   ChatRuntimeConversationState,
   ChatRuntimeEnsureReadyOptions,
   ChatRuntimeQueryOptions,
@@ -642,13 +640,8 @@ export class CodexChatRuntime implements ChatRuntime {
     await this.shutdownProcess();
   }
 
-  async rewind(
-    _userMessageId: string,
-    _assistantMessageId: string,
-    _mode?: ChatRewindMode,
-  ): Promise<ChatRewindResult> {
-    return { canRewind: false, error: 'Codex does not support rewind' };
-  }
+  // rewind() omitted — Codex does not support rewind (supportsRewind: false).
+  // Callers gate on capability before invoking; ADR-0001 Phase 2.
 
   setApprovalCallback(callback: ApprovalCallback | null): void {
     this.approvalCallback = callback;

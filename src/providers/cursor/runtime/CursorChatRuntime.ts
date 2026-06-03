@@ -8,7 +8,6 @@ import type {
   ApprovalCallback,
   AskUserQuestionCallback,
   AutoTurnResult,
-  ChatRewindResult,
   ChatRuntimeConversationState,
   ChatRuntimeEnsureReadyOptions,
   ChatRuntimeQueryOptions,
@@ -325,12 +324,8 @@ export class CursorChatRuntime implements ChatRuntime {
     this.readyListeners.clear();
   }
 
-  async rewind(
-    _userMessageId: string,
-    _assistantMessageId: string,
-  ): Promise<ChatRewindResult> {
-    return { canRewind: false, error: 'Cursor Agent does not support rewind' };
-  }
+  // rewind() omitted — Cursor Agent does not support rewind
+  // (supportsRewind: false). Callers gate on capability; ADR-0001 Phase 2.
 
   setApprovalCallback(_callback: ApprovalCallback | null): void {}
 

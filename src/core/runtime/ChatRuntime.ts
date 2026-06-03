@@ -44,7 +44,13 @@ export interface ChatRuntime {
   getSupportedCommands(): Promise<SlashCommand[]>;
   getAuxiliaryModel?(): string | null;
   cleanup(): void | Promise<void>;
-  rewind(userMessageId: string, assistantMessageId: string, mode?: ChatRewindMode): Promise<ChatRewindResult>;
+  /**
+   * Optional rewind support. Providers without rewind capability
+   * (`supportsRewind: false`) omit this method entirely. Callers must guard
+   * via `getCapabilities().supportsRewind` or `typeof runtime.rewind ===
+   * 'function'` (ADR-0001 Phase 2).
+   */
+  rewind?(userMessageId: string, assistantMessageId: string, mode?: ChatRewindMode): Promise<ChatRewindResult>;
   setApprovalCallback(callback: ApprovalCallback | null): void;
   setApprovalDismisser(dismisser: (() => void) | null): void;
   setAskUserQuestionCallback(callback: AskUserQuestionCallback | null): void;

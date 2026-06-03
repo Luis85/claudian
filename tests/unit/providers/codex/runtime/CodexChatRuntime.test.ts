@@ -388,8 +388,11 @@ describe('CodexChatRuntime', () => {
     expect(await runtime.getSupportedCommands()).toEqual([]);
   });
 
-  it('should return canRewind: false', async () => {
-    expect((await runtime.rewind('u1', 'a1')).canRewind).toBe(false);
+  it('does not implement rewind (ADR-0001 Phase 2 — optional method)', () => {
+    // Codex declares supportsRewind: false and omits the rewind method.
+    // Feature code gates on the capability flag before invoking; the
+    // optional method signature on ChatRuntime ensures TS narrows correctly.
+    expect((runtime as { rewind?: unknown }).rewind).toBeUndefined();
   });
 
   describe('ensureReady - app-server lifecycle', () => {

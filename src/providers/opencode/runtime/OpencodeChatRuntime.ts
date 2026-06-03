@@ -17,8 +17,6 @@ import type {
   ApprovalDecisionOption,
   AskUserQuestionCallback,
   AutoTurnCallback,
-  ChatRewindMode,
-  ChatRewindResult,
   ChatRuntimeEnsureReadyOptions,
   ChatRuntimeQueryOptions,
   ChatTurnMetadata,
@@ -513,13 +511,8 @@ export class OpencodeChatRuntime implements ChatRuntime {
     await this.shutdownProcess();
   }
 
-  async rewind(
-    _userMessageId: string,
-    _assistantMessageId: string,
-    _mode?: ChatRewindMode,
-  ): Promise<ChatRewindResult> {
-    return { canRewind: false };
-  }
+  // rewind() omitted — Opencode does not support rewind
+  // (supportsRewind: false). Callers gate on capability; ADR-0001 Phase 2.
 
   setApprovalCallback(callback: ApprovalCallback | null): void {
     this.approvalCallback = callback;
