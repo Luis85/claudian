@@ -252,6 +252,37 @@ After CON-3 lands:
 ### Phase 3 — Quality follow-through (Q-NEW-1 ✅ `4e420c9`; Q-1 partial ✅ `aef981c` + `86b93a0` + `c4ca6ad`; Q-4/Q-7/Q-NEW-2 pending)
 
 18. **Q-1 (regressed)** — sweep 214 hardcoded `new Notice()` through `t()`. Priority order: `InputController` (17), `ConversationController` (14), `McpSettingsManager` (14), `OpencodeAgentSettings` (14), then `features/tasks`. Add a lint rule blocking new `new Notice()` outside an allowlist.
+
+**Subspace policy** (codified 2026-06-03 after chunk-4/5/6 review):
+
+- Chat-side keys: `chat.input.*`, `chat.history.*`, `chat.rewind.err*`, `chat.fork.*`.
+- Generic settings keys with no provider scope: `settings.<feature>.*` (e.g. `settings.mcp.*`).
+- Provider-specific keys: `provider.<id>.<feature>.*`. Established by chunk 4
+  (`provider.opencode.subagent.*`).
+- **Pre-existing `settings.subagents.*` is grandfathered as Claude's de-facto
+  provider subspace.** Future Claude subagent strings extend it. Future
+  non-Claude subagent strings go under `provider.<id>.subagent.*`. The naming
+  asymmetry is accepted; a later refactor could rename for symmetry but is out
+  of scope for Q-1.
+- **String duplication across `settings.subagents.*` and `provider.<id>.subagent.*`
+  is accepted.** Convention consistency wins over translator-burden minimization.
+  Documented for translator awareness.
+
+**ESLint rule design** (when chunk sweep finishes):
+
+- Block `new Notice('...')` and ``new Notice(`...${x}...`)`` outside an
+  explicit allowlist file.
+- Allow `new Notice(t(...))`.
+- Allow pure-identifier pass-throughs (`new Notice(err.error)`,
+  `new Notice(nameError)`) — these depend on the validator-helper translation
+  chunk tracked at `docs/issues/translate-validator-helper-strings.md`.
+
+**Validator helper translation** — tracked separately at
+`docs/issues/translate-validator-helper-strings.md`. Land after the main sweep
+finishes; will return contracts from `validateOpencodeAgentName`,
+`validateAgentName`, `validateCommandName`, and the `parseOptional*` family
+through a `{ key, params }` shape so call sites translate at the Notice
+boundary.
 19. **Q-4** — unit tests for `ClaudeApprovalHandler`, `AcpToolStreamAdapter`, `HomeFileAdapter`, `ClaudeRewindService`. At minimum: smoke + error paths + cancellation.
 20. **Q-7** — finish the settings registry port. Phase K: register the remaining 5 tabs (~53 fields). Delete the legacy fallback renderers.
 21. **Q-NEW-1** — `src/core/constants.ts` for coalesce limits, queue overflow, poll intervals, timeout durations.
