@@ -503,25 +503,56 @@ export interface ProviderForkSupport {
   ): Record<string, unknown>;
 }
 
-export interface ProviderConversationHistoryService {
+export interface ProviderConversationHistoryService<
+  TPersistedState = Record<string, unknown>,
+> {
+  /**
+   * @deprecated Use {@link ProviderConversationHistoryService.hydrateConversationHistoryV2}.
+   * v1 will be removed in Task 13 after every caller migrates.
+   */
   hydrateConversationHistory(
     conversation: Conversation,
     vaultPath: string | null,
   ): Promise<void>;
+  /**
+   * @deprecated Use {@link ProviderConversationHistoryService.deleteConversationSessionV2}.
+   */
   deleteConversationSession(
     conversation: Conversation,
     vaultPath: string | null,
   ): Promise<void>;
-  resolveSessionIdForConversation(conversation: Conversation | null): string | null;
-  isPendingForkConversation(conversation: Conversation): boolean;
-  /** Builds opaque provider state for a forked conversation. */
-  buildForkProviderState(
+  /**
+   * @deprecated Moved under `forkSupport.isPendingForkConversation`. v1 stays until Task 13.
+   */
+  isPendingForkConversation?(conversation: Conversation): boolean;
+  /**
+   * @deprecated Moved under `forkSupport.buildForkProviderState`.
+   */
+  buildForkProviderState?(
     sourceSessionId: string,
     resumeAt: string,
     sourceProviderState?: Record<string, unknown>,
   ): Record<string, unknown>;
-  /** Adds provider-owned persisted metadata to Conversation.providerState before session save. */
-  buildPersistedProviderState?(conversation: Conversation): Record<string, unknown> | undefined;
+
+  /** Outcome-typed hydration. Returns the outcome; never mutates `conversation.messages`. */
+  hydrateConversationHistoryV2(
+    conversation: Conversation,
+    ctx: HydrationContext,
+  ): Promise<HistoryLoadOutcome>;
+
+  /** Outcome-typed delete. */
+  deleteConversationSessionV2(
+    conversation: Conversation,
+    ctx: HydrationContext,
+  ): Promise<DeleteHistoryOutcome>;
+
+  resolveSessionIdForConversation(conversation: Conversation | null): string | null;
+
+  /** Present only when `capabilities.supportsFork === true`. Enforced by the registry invariant test (Task 8). */
+  forkSupport?: ProviderForkSupport;
+
+  /** Provider-owned persisted metadata added to `Conversation.providerState` before session save. */
+  buildPersistedProviderState?(conversation: Conversation): TPersistedState | undefined;
 }
 
 export type ProviderTaskTerminalStatus = Extract<ToolCallInfo['status'], 'completed' | 'error'>;

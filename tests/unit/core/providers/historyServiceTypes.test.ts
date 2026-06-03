@@ -4,6 +4,7 @@ import type {
   HistoryLoadErrorCode,
   HistoryLoadOutcome,
   HydrationContext,
+  ProviderConversationHistoryService,
   ProviderForkSupport,
 } from '@/core/providers/types';
 import type { ChatMessage, Conversation } from '@/core/types';
@@ -94,5 +95,30 @@ describe('history service types', () => {
       buildForkProviderState(): Record<string, unknown> { return {}; },
     };
     expect(typeof fork.isPendingForkConversation).toBe('function');
+  });
+});
+
+describe('ProviderConversationHistoryService v2 surface', () => {
+  it('accepts generic TPersistedState; v1 and v2 coexist; forkSupport is optional', () => {
+    type PinnedState = { databasePath: string };
+    const service: ProviderConversationHistoryService<PinnedState> = {
+      // v1 (deprecated, kept until Task 13)
+      async hydrateConversationHistory(_c, _v) { /* legacy */ },
+      async deleteConversationSession(_c, _v) { /* legacy */ },
+      isPendingForkConversation(_c) { return false; },
+      buildForkProviderState() { return {}; },
+      // v2
+      async hydrateConversationHistoryV2(_c, _ctx) {
+        return { kind: 'empty', reason: 'no-store', sourceRef: null };
+      },
+      async deleteConversationSessionV2(_c, _ctx) {
+        return { kind: 'no-op', reason: 'provider-owned' };
+      },
+      resolveSessionIdForConversation(_c) { return null; },
+      buildPersistedProviderState(_c) { return { databasePath: '/tmp/db' }; },
+    };
+    expect(service.forkSupport).toBeUndefined();
+    expect(typeof service.hydrateConversationHistoryV2).toBe('function');
+    expect(typeof service.deleteConversationSessionV2).toBe('function');
   });
 });

@@ -1,4 +1,9 @@
-import type { ProviderConversationHistoryService } from '../../../core/providers/types';
+import type {
+  DeleteHistoryOutcome,
+  HistoryLoadOutcome,
+  HydrationContext,
+  ProviderConversationHistoryService,
+} from '../../../core/providers/types';
 import { isSubagentToolName, TOOL_TASK } from '../../../core/tools/toolNames';
 import type {
   AsyncSubagentStatus,
@@ -442,5 +447,19 @@ export class ClaudeConversationHistoryService implements ProviderConversationHis
     }
 
     await deleteSDKSession(vaultPath, sessionId);
+  }
+
+  async hydrateConversationHistoryV2(
+    _c: Conversation,
+    _ctx: HydrationContext,
+  ): Promise<HistoryLoadOutcome> {
+    throw new Error('History v2 not yet implemented for this provider');
+  }
+
+  async deleteConversationSessionV2(
+    _c: Conversation,
+    _ctx: HydrationContext,
+  ): Promise<DeleteHistoryOutcome> {
+    throw new Error('History v2 delete not yet implemented for this provider');
   }
 }

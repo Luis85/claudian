@@ -637,13 +637,15 @@ export class TabManager implements TabManagerInterface {
       ? this.buildForkTitle(context.sourceTitle, context.forkAtUserMessage)
       : undefined;
 
+    // v1 builder is optional on the interface (will move to `forkSupport` in Task 13);
+    // absent means the provider does not support fork — emit an empty provider state.
     const forkProviderState = ProviderRegistry
       .getConversationHistoryService(conversation.providerId)
-      .buildForkProviderState(
+      .buildForkProviderState?.(
         context.sourceSessionId,
         context.resumeAt,
         context.sourceProviderState,
-      );
+      ) ?? {};
 
     await this.plugin.updateConversation(conversation.id, {
       messages: context.messages,

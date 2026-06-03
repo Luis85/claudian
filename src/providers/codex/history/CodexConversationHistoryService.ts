@@ -1,6 +1,11 @@
 import * as fs from 'fs';
 
-import type { ProviderConversationHistoryService } from '../../../core/providers/types';
+import type {
+  DeleteHistoryOutcome,
+  HistoryLoadOutcome,
+  HydrationContext,
+  ProviderConversationHistoryService,
+} from '../../../core/providers/types';
 import type { Conversation } from '../../../core/types';
 import type { CodexProviderState } from '../types';
 import { getCodexState } from '../types';
@@ -184,6 +189,20 @@ export class CodexConversationHistoryService implements ProviderConversationHist
     const entries = Object.entries(getCodexState(conversation.providerState))
       .filter(([, value]) => value !== undefined);
     return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+  }
+
+  async hydrateConversationHistoryV2(
+    _c: Conversation,
+    _ctx: HydrationContext,
+  ): Promise<HistoryLoadOutcome> {
+    throw new Error('History v2 not yet implemented for this provider');
+  }
+
+  async deleteConversationSessionV2(
+    _c: Conversation,
+    _ctx: HydrationContext,
+  ): Promise<DeleteHistoryOutcome> {
+    throw new Error('History v2 delete not yet implemented for this provider');
   }
 
   // ---------------------------------------------------------------------------

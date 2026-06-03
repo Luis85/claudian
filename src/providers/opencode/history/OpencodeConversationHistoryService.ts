@@ -1,4 +1,9 @@
-import type { ProviderConversationHistoryService } from '../../../core/providers/types';
+import type {
+  DeleteHistoryOutcome,
+  HistoryLoadOutcome,
+  HydrationContext,
+  ProviderConversationHistoryService,
+} from '../../../core/providers/types';
 import type { Conversation } from '../../../core/types';
 import { getOpencodeState, type OpencodeProviderState } from '../types';
 import {
@@ -80,5 +85,19 @@ export class OpencodeConversationHistoryService implements ProviderConversationH
     return Object.keys(providerState).length > 0
       ? providerState as Record<string, unknown>
       : undefined;
+  }
+
+  async hydrateConversationHistoryV2(
+    _c: Conversation,
+    _ctx: HydrationContext,
+  ): Promise<HistoryLoadOutcome> {
+    throw new Error('History v2 not yet implemented for this provider');
+  }
+
+  async deleteConversationSessionV2(
+    _c: Conversation,
+    _ctx: HydrationContext,
+  ): Promise<DeleteHistoryOutcome> {
+    throw new Error('History v2 delete not yet implemented for this provider');
   }
 }
