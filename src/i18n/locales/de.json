@@ -19,7 +19,8 @@
     "disabled": "Deaktiviert",
     "platform": "Plattform",
     "refresh": "Aktualisieren",
-    "rewind": "Zurückspulen"
+    "rewind": "Zurückspulen",
+    "errorWithDetail": "Error: {error}"
   },
   "chat": {
     "loadEarlier": "Frühere Nachrichten laden",

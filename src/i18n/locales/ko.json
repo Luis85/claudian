@@ -19,7 +19,8 @@
     "disabled": "비활성화",
     "platform": "플랫폼",
     "refresh": "새로고침",
-    "rewind": "되감기"
+    "rewind": "되감기",
+    "errorWithDetail": "Error: {error}"
   },
   "chat": {
     "loadEarlier": "이전 메시지 불러오기",

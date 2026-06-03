@@ -19,7 +19,8 @@
     "disabled": "已禁用",
     "platform": "平台",
     "refresh": "重新整理",
-    "rewind": "回退"
+    "rewind": "回退",
+    "errorWithDetail": "Error: {error}"
   },
   "chat": {
     "loadEarlier": "載入較早的訊息",

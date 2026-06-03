@@ -98,6 +98,27 @@ export default defineConfig([
     files: ['src/**/*.ts'],
     rules: {
       'no-console': 'error',
+      // Q-1 (Notice i18n sweep). Block hardcoded English in `new Notice()`:
+      // every user-visible notice must go through `t('key')` or `t('key', params)`
+      // so the 10 supported locales can override it. Identifier pass-throughs
+      // like `new Notice(nameError)` stay allowed — those carry strings that
+      // helper functions return (see docs/issues/translate-validator-helper-strings.md
+      // for the planned next step that translates those helpers).
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'NewExpression[callee.name="Notice"][arguments.0.type="Literal"]',
+          message:
+            "Hardcoded English in `new Notice('...')` is not allowed. Use `t('key.path')` instead, adding the canonical string to src/i18n/locales/en.json. See docs/reviews/2026-06-02-codebase-review-and-improvement-plan.md `Subspace policy` for naming.",
+        },
+        {
+          selector:
+            'NewExpression[callee.name="Notice"][arguments.0.type="TemplateLiteral"]',
+          message:
+            "Hardcoded English in `new Notice(`...`)` is not allowed. Use `t('key.path', { param: value })` instead, adding the canonical string with `{param}` placeholders to src/i18n/locales/en.json.",
+        },
+      ],
     },
   },
   {

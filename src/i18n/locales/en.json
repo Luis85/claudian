@@ -19,7 +19,8 @@
     "disabled": "Disabled",
     "platform": "Platform",
     "refresh": "Refresh",
-    "rewind": "Rewind"
+    "rewind": "Rewind",
+    "errorWithDetail": "Error: {error}"
   },
   "chat": {
     "loadEarlier": "Load earlier messages",

@@ -19,7 +19,8 @@
     "disabled": "Deshabilitado",
     "platform": "Plataforma",
     "refresh": "Actualizar",
-    "rewind": "Rebobinar"
+    "rewind": "Rebobinar",
+    "errorWithDetail": "Error: {error}"
   },
   "chat": {
     "loadEarlier": "Cargar mensajes anteriores",

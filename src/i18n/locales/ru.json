@@ -19,7 +19,8 @@
     "disabled": "Отключено",
     "platform": "Платформа",
     "refresh": "Обновить",
-    "rewind": "Откатить"
+    "rewind": "Откатить",
+    "errorWithDetail": "Error: {error}"
   },
   "chat": {
     "loadEarlier": "Загрузить предыдущие сообщения",

@@ -19,7 +19,8 @@
     "disabled": "無効",
     "platform": "プラットフォーム",
     "refresh": "更新",
-    "rewind": "巻き戻し"
+    "rewind": "巻き戻し",
+    "errorWithDetail": "Error: {error}"
   },
   "chat": {
     "loadEarlier": "以前のメッセージを読み込む",

@@ -22,6 +22,7 @@ export type TranslationKey =
   | 'common.platform'
   | 'common.refresh'
   | 'common.rewind'
+  | 'common.errorWithDetail'
 
   // Chat
   | 'chat.loadEarlier'

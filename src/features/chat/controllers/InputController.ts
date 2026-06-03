@@ -1063,7 +1063,7 @@ export class InputController {
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      new Notice(`${t('common.error')}: ${errorMsg}`);
+      new Notice(t('common.errorWithDetail', { error: errorMsg }));
       modal?.showError(errorMsg);
       instructionModeManager?.clear();
     }

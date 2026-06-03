@@ -570,7 +570,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
           const result = parseNavMappings(pendingValue);
           if (!result.settings) {
             if (showError) {
-              new Notice(`${t('common.error')}: ${result.error}`);
+              new Notice(t('common.errorWithDetail', { error: result.error ?? '' }));
               pendingValue = buildNavMappingText(this.plugin.settings.keyboardNavigation);
               text.setValue(pendingValue);
             }
