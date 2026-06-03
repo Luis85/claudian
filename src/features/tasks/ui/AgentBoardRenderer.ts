@@ -28,8 +28,13 @@ export class AgentBoardRenderer {
     const addButton = header.createEl('button', { cls: 'mod-cta', text: 'Add work order' });
     addButton.addEventListener('click', () => callbacks.onAddWorkOrder());
 
-    const runNextBtn = header.createEl('button', { text: 'Run next ready' });
-    runNextBtn.addEventListener('click', () => callbacks.onRunNextReady());
+    const hasReady = state.layout.lanes.some((lane) =>
+      lane.tasks.some((task) => task.frontmatter.status === 'ready'),
+    );
+    if (hasReady) {
+      const runNextBtn = header.createEl('button', { text: 'Run next ready' });
+      runNextBtn.addEventListener('click', () => callbacks.onRunNextReady());
+    }
 
     const free = Math.max(0, state.slots.max - state.slots.used);
     const slotsEl = header.createSpan({
