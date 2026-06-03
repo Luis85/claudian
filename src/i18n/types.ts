@@ -53,6 +53,23 @@ export type TranslationKey =
   | 'tasks.board.runParseFailed'
   | 'tasks.board.runFailed'
   | 'tasks.board.noReady'
+  | 'tasks.board.laneSaveFailed'
+
+  // Tasks - Templates / create / fromChat / run (Q-1 chunk 14)
+  | 'tasks.template.nameRequired'
+  | 'tasks.template.bodyRequired'
+  | 'tasks.template.saveFailed'
+  | 'tasks.template.deleteFailed'
+  | 'tasks.create.noActiveNote'
+  | 'tasks.create.noSelection'
+  | 'tasks.fromChat.nothingToCapture'
+  | 'tasks.fromChat.createdFromMessage'
+  | 'tasks.fromChat.noActiveChat'
+  | 'tasks.fromChat.createdFromConversation'
+  | 'tasks.run.needsProvider'
+  | 'tasks.run.needsModel'
+  | 'tasks.run.templateProblems'
+  | 'tasks.run.needsBrowserSelection'
 
   // Chat - Tabs (Q-1 chunk 13)
   | 'chat.tab.createFailed'

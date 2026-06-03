@@ -541,7 +541,30 @@
       "transitionInvalid": "Cannot move \"{title}\" from {from} to {to}.",
       "runParseFailed": "Cannot run work order: {error}",
       "runFailed": "Work order run failed: {error}",
-      "noReady": "No ready work orders to run."
+      "noReady": "No ready work orders to run.",
+      "laneSaveFailed": "Could not save lane change: {error}"
+    },
+    "template": {
+      "nameRequired": "Template name is required.",
+      "bodyRequired": "Template body is required.",
+      "saveFailed": "Save failed: {error}",
+      "deleteFailed": "Delete failed: {error}"
+    },
+    "create": {
+      "noActiveNote": "Open a note to create a work order from it.",
+      "noSelection": "Select text in a note to create a work order from it."
+    },
+    "fromChat": {
+      "nothingToCapture": "Nothing to capture from this message.",
+      "createdFromMessage": "Work order created from chat message.",
+      "noActiveChat": "Open a chat conversation first.",
+      "createdFromConversation": "Work order created from chat conversation."
+    },
+    "run": {
+      "needsProvider": "Set an Agent Board default provider in settings first.",
+      "needsModel": "Set an Agent Board default model in settings first.",
+      "templateProblems": "Template \"{name}\" has problems: {errors}",
+      "needsBrowserSelection": "Open Claudian chat and select text in a browser view first."
     }
   },
   "provider": {

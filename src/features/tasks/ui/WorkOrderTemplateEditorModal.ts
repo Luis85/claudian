@@ -4,6 +4,7 @@ import { Modal, Notice, Setting } from 'obsidian';
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import { asSettingsBag } from '../../../core/types/settings';
+import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { LucideIconPicker } from '../../../shared/components/LucideIconPicker';
 import type { TaskPriority } from '../model/taskTypes';
@@ -171,11 +172,11 @@ export class WorkOrderTemplateEditorModal extends Modal {
     const trimmedName = form.name.trim();
     const trimmedBody = form.body.trim();
     if (!trimmedName) {
-      new Notice('Template name is required.');
+      new Notice(t('tasks.template.nameRequired'));
       return;
     }
     if (!trimmedBody) {
-      new Notice('Template body is required.');
+      new Notice(t('tasks.template.bodyRequired'));
       return;
     }
 
@@ -194,7 +195,7 @@ export class WorkOrderTemplateEditorModal extends Modal {
       await this.onSave(payload);
       this.close();
     } catch (error) {
-      new Notice(`Save failed: ${error instanceof Error ? error.message : String(error)}`);
+      new Notice(t('tasks.template.saveFailed', { error: error instanceof Error ? error.message : String(error) }));
     }
   }
 }

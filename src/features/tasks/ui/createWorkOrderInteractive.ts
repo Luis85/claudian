@@ -1,5 +1,6 @@
 import { Notice, type TFile, type TFolder } from 'obsidian';
 
+import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import {
   buildSelectionSeed,
@@ -24,7 +25,7 @@ export async function createWorkOrderInteractive(
 export async function createWorkOrderFromCurrentNoteInteractive(plugin: ClaudianPlugin): Promise<TFile | null> {
   const active = plugin.app.workspace.getActiveFile();
   if (!active) {
-    new Notice('Open a note to create a work order from it.');
+    new Notice(t('tasks.create.noActiveNote'));
     return null;
   }
   const picked = await chooseWorkOrderTemplate(plugin);
@@ -38,7 +39,7 @@ export async function createWorkOrderFromSelectionInteractive(plugin: ClaudianPl
   const editor = plugin.app.workspace.activeEditor?.editor;
   const selection = editor?.getSelection() ?? '';
   if (!selection.trim()) {
-    new Notice('Select text in a note to create a work order from it.');
+    new Notice(t('tasks.create.noSelection'));
     return null;
   }
   const sourcePath = plugin.app.workspace.getActiveFile()?.path ?? null;

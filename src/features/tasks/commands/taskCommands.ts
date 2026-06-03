@@ -3,6 +3,7 @@ import { normalizePath, Notice, TFile, TFolder } from 'obsidian';
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import { asSettingsBag } from '../../../core/types/settings';
+import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import type { BrowserSelectionContext } from '../../../utils/browser';
 import { resolveAgentBoardDefaultModel } from '../defaultModelResolver';
@@ -290,13 +291,13 @@ export async function createWorkOrderFromSeed(
   }
 
   if (!provider) {
-    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Board" is the product feature name.
-    new Notice('Set an Agent Board default provider in settings first.');
+     
+    new Notice(t('tasks.run.needsProvider'));
     return null;
   }
   if (!model) {
-    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Board" is the product feature name.
-    new Notice('Set an Agent Board default model in settings first.');
+     
+    new Notice(t('tasks.run.needsModel'));
     return null;
   }
 
@@ -319,7 +320,7 @@ export async function createWorkOrderFromSeed(
     });
     const rendered = renderWorkOrderBody(template, vars);
     if (rendered.errors.length > 0) {
-      new Notice(`Template "${template.name}" has problems: ${rendered.errors.join('; ')}`);
+      new Notice(t('tasks.run.templateProblems', { name: template.name, errors: rendered.errors.join('; ') }));
       return null;
     }
     markdown = buildWorkOrderFromTemplate({
@@ -458,7 +459,7 @@ export function buildBrowserSeed(context: BrowserSelectionContext): WorkOrderSee
 export async function createWorkOrderFromBrowserSelection(plugin: ClaudianPlugin): Promise<TFile | null> {
   const context = plugin.getActiveBrowserSelection();
   if (!context || !context.selectedText.trim()) {
-    new Notice('Open Claudian chat and select text in a browser view first.');
+    new Notice(t('tasks.run.needsBrowserSelection'));
     return null;
   }
   return createWorkOrderFromSeed(plugin, buildBrowserSeed(context));

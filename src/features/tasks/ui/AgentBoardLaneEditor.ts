@@ -1,6 +1,7 @@
 import { Notice, Setting } from 'obsidian';
 
 import { asSettingsBag } from '../../../core/types/settings';
+import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { loadBoardConfig } from '../config/BoardConfigStore';
 import { type BoardConfig, type BoardLaneConfig,DEFAULT_BOARD_CONFIG } from '../config/boardConfigTypes';
@@ -66,7 +67,7 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
       config = snapshot;
       plugin.settings.agentBoardConfig = snapshot;
       const message = error instanceof Error ? error.message : String(error);
-      new Notice(`Could not save lane change: ${message}`);
+      new Notice(t('tasks.board.laneSaveFailed', { error: message }));
       return false;
     }
   };

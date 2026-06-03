@@ -1,6 +1,7 @@
 import type { App } from 'obsidian';
 import { Modal, Notice, setIcon } from 'obsidian';
 
+import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { TemplateNoteStore } from '../templates/TemplateNoteStore';
 import type { WorkOrderTemplate } from '../templates/templateTypes';
@@ -156,7 +157,7 @@ export class WorkOrderTemplatePickerModal extends Modal {
       await this.store.delete(this.plugin.app, template.path);
       await this.refreshList();
     } catch (error) {
-      new Notice(`Delete failed: ${error instanceof Error ? error.message : String(error)}`);
+      new Notice(t('tasks.template.deleteFailed', { error: error instanceof Error ? error.message : String(error) }));
     }
   }
 }

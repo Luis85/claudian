@@ -1,6 +1,7 @@
 import { Notice, type TFile } from 'obsidian';
 
 import type { ChatMessage } from '../../../core/types';
+import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { chatMessageText } from '../../../utils/chatMessageText';
 import {
@@ -15,7 +16,7 @@ export class ChatWorkOrderLinker {
   async promoteMessageToWorkOrder(message: ChatMessage, conversationId: string | null): Promise<TFile | null> {
     const messageContent = chatMessageText(message);
     if (!messageContent) {
-      new Notice('Nothing to capture from this message.');
+      new Notice(t('tasks.fromChat.nothingToCapture'));
       return null;
     }
     const created = await createWorkOrderFromSeed(
@@ -26,21 +27,21 @@ export class ChatWorkOrderLinker {
         conversationId,
       }),
     );
-    if (created) new Notice('Work order created from chat message.');
+    if (created) new Notice(t('tasks.fromChat.createdFromMessage'));
     return created;
   }
 
   async promoteActiveConversationToWorkOrder(): Promise<TFile | null> {
     const snapshot = this.plugin.getActiveConversationSnapshot();
     if (!snapshot) {
-      new Notice('Open a chat conversation first.');
+      new Notice(t('tasks.fromChat.noActiveChat'));
       return null;
     }
     const created = await createWorkOrderFromSeed(
       this.plugin,
       buildConversationSeed({ conversationId: snapshot.id, conversationTitle: snapshot.title }),
     );
-    if (created) new Notice('Work order created from chat conversation.');
+    if (created) new Notice(t('tasks.fromChat.createdFromConversation'));
     return created;
   }
 }
