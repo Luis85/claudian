@@ -340,7 +340,12 @@
         "save": "Сохранить",
         "update": "Обновить",
         "cancel": "Отмена"
-      }
+      },
+      "insertFailed": "Failed to insert snippet",
+      "deleteFailed": "Failed to delete snippet",
+      "saved": "Environment snippet \"{name}\" saved",
+      "updated": "Environment snippet \"{name}\" updated",
+      "deleted": "Environment snippet \"{name}\" deleted"
     },
     "customModelOverrides": {
       "name": "Переопределения пользовательских моделей",

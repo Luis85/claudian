@@ -381,6 +381,11 @@
       "addBtn": "Add snippet",
       "noSnippets": "No saved environment snippets yet. Click + to save your current environment configuration.",
       "nameRequired": "Please enter a name for the snippet",
+      "insertFailed": "Failed to insert snippet",
+      "deleteFailed": "Failed to delete snippet",
+      "saved": "Environment snippet \"{name}\" saved",
+      "updated": "Environment snippet \"{name}\" updated",
+      "deleted": "Environment snippet \"{name}\" deleted",
       "modal": {
         "titleEdit": "Edit snippet",
         "titleSave": "Save snippet",
