@@ -5,6 +5,7 @@ import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import { VIEW_TYPE_CLAUDIAN_AGENT_BOARD } from '../../../core/types/chat';
 import { asSettingsBag } from '../../../core/types/settings';
+import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { archiveWorkOrder } from '../commands/taskCommands';
@@ -171,7 +172,7 @@ export class AgentBoardView extends ItemView {
 
   private stopTask(task: TaskSpec): void {
     this.executionSurface.cancelTaskRun?.(task.frontmatter.run_id ?? '');
-    new Notice(`Requested stop for "${task.frontmatter.title}".`);
+    new Notice(t('tasks.board.stopRequested', { title: task.frontmatter.title }));
   }
 
   private async saveTaskFields(task: TaskSpec, fields: WorkOrderFieldUpdate): Promise<void> {
@@ -194,7 +195,7 @@ export class AgentBoardView extends ItemView {
     if (!ok) return;
     const destination = await archiveWorkOrder(this.plugin, task);
     if (destination) {
-      new Notice(`Archived "${task.frontmatter.title}".`);
+      new Notice(t('tasks.board.archived', { title: task.frontmatter.title }));
     }
     await this.refresh();
   }
@@ -215,7 +216,7 @@ export class AgentBoardView extends ItemView {
   private async transitionTask(task: TaskSpec, to: TaskStatus, message: string): Promise<void> {
     const file = this.plugin.app.vault.getAbstractFileByPath(task.path);
     if (!(file instanceof TFile)) {
-      new Notice('Work order file was not found.');
+      new Notice(t('tasks.board.fileNotFound'));
       await this.refresh();
       return;
     }
@@ -225,13 +226,17 @@ export class AgentBoardView extends ItemView {
       const content = await this.plugin.app.vault.read(file);
       latest = this.noteStore.parse(task.path, content).task;
     } catch (error) {
-      new Notice(`Cannot update work order: ${error instanceof Error ? error.message : String(error)}`);
+      new Notice(t('tasks.board.updateFailed', { error: error instanceof Error ? error.message : String(error) }));
       await this.refresh();
       return;
     }
 
     if (!canTransitionTaskStatus(latest.frontmatter.status, to)) {
-      new Notice(`Cannot move "${latest.frontmatter.title}" from ${latest.frontmatter.status} to ${to}.`);
+      new Notice(t('tasks.board.transitionInvalid', {
+        title: latest.frontmatter.title,
+        from: latest.frontmatter.status,
+        to,
+      }));
       await this.refresh();
       return;
     }
@@ -248,7 +253,7 @@ export class AgentBoardView extends ItemView {
   private async runTask(task: TaskSpec): Promise<void> {
     const file = this.plugin.app.vault.getAbstractFileByPath(task.path);
     if (!(file instanceof TFile)) {
-      new Notice('Work order file was not found.');
+      new Notice(t('tasks.board.fileNotFound'));
       await this.refresh();
       return;
     }
@@ -258,7 +263,7 @@ export class AgentBoardView extends ItemView {
       const content = await this.plugin.app.vault.read(file);
       latest = this.noteStore.parse(task.path, content).task;
     } catch (error) {
-      new Notice(`Cannot run work order: ${error instanceof Error ? error.message : String(error)}`);
+      new Notice(t('tasks.board.runParseFailed', { error: error instanceof Error ? error.message : String(error) }));
       await this.refresh();
       return;
     }
@@ -299,7 +304,7 @@ export class AgentBoardView extends ItemView {
       status: result.ok ? result.status : lastStatus,
     });
     if (!result.ok) {
-      new Notice(`Work order run failed: ${result.error}`);
+      new Notice(t('tasks.board.runFailed', { error: result.error }));
     }
     await this.refresh();
   }
@@ -308,7 +313,7 @@ export class AgentBoardView extends ItemView {
     await this.refresh();
     const next = selectNextReadyTask(this.model.tasks, (status) => status === 'ready');
     if (!next) {
-      new Notice('No ready work orders to run.');
+      new Notice(t('tasks.board.noReady'));
       return;
     }
     await this.runTask(next);

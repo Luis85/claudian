@@ -44,6 +44,16 @@ export type TranslationKey =
   | 'diagnostics.logsEmpty'
   | 'diagnostics.logsCopied'
 
+  // Agent Board (Q-1 chunk 10, features/tasks/ui/AgentBoardView.ts)
+  | 'tasks.board.stopRequested'
+  | 'tasks.board.archived'
+  | 'tasks.board.fileNotFound'
+  | 'tasks.board.updateFailed'
+  | 'tasks.board.transitionInvalid'
+  | 'tasks.board.runParseFailed'
+  | 'tasks.board.runFailed'
+  | 'tasks.board.noReady'
+
   // Chat - Rewind
   | 'chat.rewind.confirmMessage'
   | 'chat.rewind.confirmMessageConversationOnly'

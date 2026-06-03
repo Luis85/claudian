@@ -531,5 +531,17 @@
   "diagnostics": {
     "logsEmpty": "No diagnostic log entries",
     "logsCopied": "Copied {count} log entries"
+  },
+  "tasks": {
+    "board": {
+      "stopRequested": "Requested stop for \"{title}\".",
+      "archived": "Archived \"{title}\".",
+      "fileNotFound": "Work order file was not found.",
+      "updateFailed": "Cannot update work order: {error}",
+      "transitionInvalid": "Cannot move \"{title}\" from {from} to {to}.",
+      "runParseFailed": "Cannot run work order: {error}",
+      "runFailed": "Work order run failed: {error}",
+      "noReady": "No ready work orders to run."
+    }
   }
 }
