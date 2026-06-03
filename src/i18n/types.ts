@@ -1,5 +1,15 @@
 export type Locale = 'en' | 'zh-CN' | 'zh-TW' | 'ja' | 'ko' | 'de' | 'fr' | 'es' | 'ru' | 'pt';
 
+/**
+ * Structured validation error returned by `validate*` / `parseOptional*` helpers
+ * so callers can defer translation to the Notice boundary. See
+ * docs/issues/translate-validator-helper-strings.md for the rollout plan.
+ */
+export interface ValidationError {
+  key: TranslationKey;
+  params?: Record<string, string | number>;
+}
+
 export type TranslationKey =
   // Common UI elements
   | 'common.save'
@@ -527,6 +537,14 @@ export type TranslationKey =
   | 'provider.opencode.subagent.deleteFailed'
   | 'provider.opencode.subagent.updated'
   | 'provider.opencode.subagent.created'
+
+  // Provider - Opencode subagent name validation (Q-1 follow-up)
+  | 'provider.opencode.subagent.validation.required'
+  | 'provider.opencode.subagent.validation.slashSegments'
+  | 'provider.opencode.subagent.validation.emptySegment'
+  | 'provider.opencode.subagent.validation.whitespaceSegment'
+  | 'provider.opencode.subagent.validation.dotSegment'
+  | 'provider.opencode.subagent.validation.reservedChars'
 
   // Provider - Codex subagent notices (Q-1 chunk 8)
   | 'provider.codex.subagent.descriptionRequired'

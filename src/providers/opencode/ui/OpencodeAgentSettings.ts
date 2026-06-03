@@ -2,35 +2,38 @@ import type { App } from 'obsidian';
 import { Modal, Notice, setIcon, Setting } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
+import type { ValidationError } from '../../../i18n/types';
 import { confirmDelete } from '../../../shared/modals/ConfirmModal';
 import type { OpencodeAgentStorage } from '../storage/OpencodeAgentStorage';
 import type { OpencodeAgentDefinition } from '../types/agent';
 
 const OPENCODE_AGENT_INVALID_SEGMENT_PATTERN = /[<>:"\\|?*]/;
 
-export function validateOpencodeAgentName(name: string): string | null {
-  if (!name) return 'Agent name is required';
+export function validateOpencodeAgentName(name: string): ValidationError | null {
+  if (!name) {
+    return { key: 'provider.opencode.subagent.validation.required' };
+  }
 
   const segments = name.split('/');
   if (segments.length === 0 || segments.some((segment) => segment.length === 0)) {
-    return 'Agent name must use slash-separated path segments without leading or trailing slashes';
+    return { key: 'provider.opencode.subagent.validation.slashSegments' };
   }
 
   for (const segment of segments) {
     if (!segment.trim()) {
-      return 'Agent name path segments cannot be empty or whitespace-only';
+      return { key: 'provider.opencode.subagent.validation.emptySegment' };
     }
 
     if (segment !== segment.trim()) {
-      return 'Agent name path segments cannot start or end with whitespace';
+      return { key: 'provider.opencode.subagent.validation.whitespaceSegment' };
     }
 
     if (segment === '.' || segment === '..') {
-      return 'Agent name cannot include "." or ".." path segments';
+      return { key: 'provider.opencode.subagent.validation.dotSegment' };
     }
 
     if (segment.includes('\0') || OPENCODE_AGENT_INVALID_SEGMENT_PATTERN.test(segment)) {
-      return 'Agent name path segments cannot contain Windows-reserved filename characters';
+      return { key: 'provider.opencode.subagent.validation.reservedChars' };
     }
   }
 
@@ -254,7 +257,7 @@ class OpencodeAgentModal extends Modal {
       const name = nameInput.value.trim();
       const nameError = validateOpencodeAgentName(name);
       if (nameError) {
-        new Notice(nameError);
+        new Notice(t(nameError.key, nameError.params));
         return;
       }
 

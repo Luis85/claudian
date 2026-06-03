@@ -30,31 +30,43 @@ describe('validateOpencodeAgentName', () => {
     expect(validateOpencodeAgentName('Security Review/Builder')).toBeNull();
   });
 
-  it('rejects leading or trailing slashes', () => {
-    expect(validateOpencodeAgentName('/review')).toBe(
-      'Agent name must use slash-separated path segments without leading or trailing slashes',
-    );
-    expect(validateOpencodeAgentName('review/')).toBe(
-      'Agent name must use slash-separated path segments without leading or trailing slashes',
-    );
+  it('rejects an empty name with the "required" validation key', () => {
+    expect(validateOpencodeAgentName('')).toEqual({
+      key: 'provider.opencode.subagent.validation.required',
+    });
   });
 
-  it('rejects dot path segments', () => {
-    expect(validateOpencodeAgentName('review/../builder')).toBe(
-      'Agent name cannot include "." or ".." path segments',
-    );
+  it('rejects leading or trailing slashes with the "slashSegments" key', () => {
+    expect(validateOpencodeAgentName('/review')).toEqual({
+      key: 'provider.opencode.subagent.validation.slashSegments',
+    });
+    expect(validateOpencodeAgentName('review/')).toEqual({
+      key: 'provider.opencode.subagent.validation.slashSegments',
+    });
   });
 
-  it('rejects Windows-reserved filename characters', () => {
-    expect(validateOpencodeAgentName('review:builder')).toBe(
-      'Agent name path segments cannot contain Windows-reserved filename characters',
-    );
+  it('rejects whitespace-only segments with the "emptySegment" key', () => {
+    expect(validateOpencodeAgentName('review/   /builder')).toEqual({
+      key: 'provider.opencode.subagent.validation.emptySegment',
+    });
   });
 
-  it('rejects leading or trailing whitespace inside a segment', () => {
-    expect(validateOpencodeAgentName('review /builder')).toBe(
-      'Agent name path segments cannot start or end with whitespace',
-    );
+  it('rejects dot path segments with the "dotSegment" key', () => {
+    expect(validateOpencodeAgentName('review/../builder')).toEqual({
+      key: 'provider.opencode.subagent.validation.dotSegment',
+    });
+  });
+
+  it('rejects Windows-reserved filename characters with the "reservedChars" key', () => {
+    expect(validateOpencodeAgentName('review:builder')).toEqual({
+      key: 'provider.opencode.subagent.validation.reservedChars',
+    });
+  });
+
+  it('rejects leading or trailing whitespace inside a segment with the "whitespaceSegment" key', () => {
+    expect(validateOpencodeAgentName('review /builder')).toEqual({
+      key: 'provider.opencode.subagent.validation.whitespaceSegment',
+    });
   });
 });
 

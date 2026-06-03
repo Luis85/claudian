@@ -554,7 +554,15 @@
         "deleted": "Subagent \"{name}\" deleted",
         "deleteFailed": "Failed to delete subagent",
         "updated": "Subagent \"{name}\" updated",
-        "created": "Subagent \"{name}\" created"
+        "created": "Subagent \"{name}\" created",
+        "validation": {
+          "required": "Agent name is required",
+          "slashSegments": "Agent name must use slash-separated path segments without leading or trailing slashes",
+          "emptySegment": "Agent name path segments cannot be empty or whitespace-only",
+          "whitespaceSegment": "Agent name path segments cannot start or end with whitespace",
+          "dotSegment": "Agent name cannot include \".\" or \"..\" path segments",
+          "reservedChars": "Agent name path segments cannot contain Windows-reserved filename characters"
+        }
       }
     },
     "codex": {
