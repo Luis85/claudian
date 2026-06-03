@@ -1,8 +1,8 @@
 ---
-title: Session handoff — 2026-06-03 (Q-NEW-2 closed + validator Phase A in flight)
+title: Session handoff — 2026-06-03 (Q-NEW-2 closed + validator Phase A closed)
 date: 2026-06-03
 status: open
-scope: pickup of validator-helper translation Phase A and Phase B
+scope: pickup of validator-helper translation Phase B
 related:
   - "[[docs/handoffs/2026-06-04-q1-complete.md]]"
   - "[[docs/issues/translate-validator-helper-strings.md]]"
@@ -11,18 +11,19 @@ supersedes:
   - "Q-NEW-2 section of 2026-06-04-q1-complete.md"
 ---
 
-# Session handoff — 2026-06-03 (Q-NEW-2 closed + validator Phase A in flight)
+# Session handoff — 2026-06-03 (Q-NEW-2 closed + validator Phase A closed)
 
 Picks up from the 2026-06-04 Q-1-complete handoff. Two queue items moved
 this session.
 
-## What shipped this session (2 commits on main)
+## What shipped this session (4 commits on main)
 
 | Commit | Item | Verified |
 |--------|------|----------|
 | `cce9b47` | Q-NEW-2 — Opencode approval helpers extracted to a sibling module + 35 unit tests | tc/lint/test/build |
 | `8c00618` | Validator Phase A chunk 1 — `validateOpencodeAgentName` → `ValidationError \| null` (6 keys under `provider.opencode.subagent.validation.*`) | tc/lint/test/build |
 | `c8fad1b` | Validator Phase A chunk 2 — shared `validateSlugName` returns `{ rule, params? }`; `validateAgentName` + `validateCommandName` route into their own subspaces (8 keys total) | tc/lint/test/build |
+| `19cdbd3` | Validator Phase A chunk 3 — `validateCodexSubagentName` + `validateCodexNicknameCandidates` (5 keys under `provider.codex.subagent.validation.*`) | tc/lint/test/build |
 
 All verified with `npx tsc --noEmit && npm run lint && npm run test && npm run build`
 before commit. Current state: 6749 tests pass / 36 skipped / 361 suites.
@@ -112,16 +113,27 @@ Helper scripts (gitignored under `.context/`):
 
 Both follow the chunks 1–16 pattern (idempotent Python `setdefault`).
 
-### Phase A — what's still open
+### Phase A — finished (`19cdbd3`)
 
-Two Codex validators per the issue doc. Same pattern as `validateAgentName`:
+Both Codex validators landed in one commit:
 
-- `validateCodexSubagentName` — referenced from `CodexSubagentSettings.ts:194`
-- `validateCodexNicknameCandidates` — referenced from `CodexSubagentSettings.ts:216`
+- `validateCodexSubagentName` — three rules (`required`, `tooLong` with
+  `{max}=64`, `invalidChars`). Codex subagent names allow underscores in
+  addition to lowercase/numbers/hyphens (Codex convention), so they can't
+  share `validateSlugName`'s keyspace.
+- `validateCodexNicknameCandidates` — two rules
+  (`nicknameInvalidChars`, `nicknameDuplicate`).
 
-Neither has been read yet this session. The shape will mirror the
-slug-validation pattern: structured result, per-caller key routing under
-`provider.codex.subagent.validation.*`.
+Five keys live under `provider.codex.subagent.validation.*`. Call sites
+at `CodexSubagentSettings.ts:204` and `:226` translate at the Notice
+boundary. Nickname-validator tests updated to the structured shape;
+subagent-name tests already used `toBeNull` / `not.toBeNull` only.
+
+Helper script: `.context/add-codex-subagent-validation-keys.sh`.
+
+Phase A is now closed. Every `validate*` helper that previously emitted
+raw English now returns a `ValidationError | null` and routes through a
+translation key.
 
 ### Phase B — not started
 
@@ -148,24 +160,22 @@ Per the issue doc:
 
 ## Pickup queue — current snapshot
 
-Linear order. Items 1–2 are immediate follow-up; 3–6 are pre-existing
-queue from the prior handoff.
+Linear order. Phase A is closed. Item 1 is the immediate follow-up;
+2–5 are pre-existing queue from the prior handoff.
 
-1. **Validator Phase A finish** — `validateCodexSubagentName` +
-   `validateCodexNicknameCandidates`. Estimated ≤2 commits.
-2. **Validator Phase B** — `parseOptional*` + `runToolbarAction` +
+1. **Validator Phase B** — `parseOptional*` + `runToolbarAction` +
    `notifyImageError` + `taskCommands.ts` warnings. Estimated 4–6
    commits depending on the label-translation design call for
    `parseOptional*`.
-3. **Phase 1c F2 + F3 (PERF-4 tuning)** — needs real ≥1000-msg
+2. **Phase 1c F2 + F3 (PERF-4 tuning)** — needs real ≥1000-msg
    transcript measurement. Capture in
    `docs/research/2026-06-04-perf4-prod-measurement.md`.
-4. **Q-7** — finish settings registry port. 5 imperative tabs
+3. **Q-7** — finish settings registry port. 5 imperative tabs
    (`general`, `claude`, `codex`, `opencode`, `cursor`), ~53 fields per
    `docs/issues/settings-registry-port-followup.md`.
-5. **ADR-0001 Phase 2b** — RuntimeHost migration. ~500 LOC mechanical
+4. **ADR-0001 Phase 2b** — RuntimeHost migration. ~500 LOC mechanical
    refactor across 4 provider runtimes + `tabControllers` + 5 test files.
-6. **Phase 2b ARCH-5** — split `InputController.ts` (1464 LOC). Pair
+5. **Phase 2b ARCH-5** — split `InputController.ts` (1464 LOC). Pair
    with the RuntimeHost work to amortize test churn.
 
 ADR-0001 Phase 3 (`core/transport/` extraction) is still blocked on the
