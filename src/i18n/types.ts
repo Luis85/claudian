@@ -54,6 +54,27 @@ export type TranslationKey =
   | 'tasks.board.runFailed'
   | 'tasks.board.noReady'
 
+  // Chat - Tabs (Q-1 chunk 13)
+  | 'chat.tab.createFailed'
+  | 'chat.tab.createConversationFailed'
+  | 'chat.tab.switchFailed'
+  | 'chat.tab.closeFailed'
+  | 'chat.tab.maxReached'
+  | 'chat.tab.providerSwitchBlocked'
+
+  // Chat - External context (Q-1 chunk 13)
+  | 'chat.externalContext.invalidRemoved'
+  | 'chat.externalContext.persistFailed'
+  | 'chat.externalContext.duplicate'
+  | 'chat.externalContext.pickerFailed'
+
+  // Chat - Image attachments (Q-1 chunk 13)
+  | 'chat.image.unsupported'
+
+  // Chat - File open (Q-1 chunk 13)
+  | 'chat.fileOpen.notFound'
+  | 'chat.fileOpen.failed'
+
   // Chat - Rewind
   | 'chat.rewind.confirmMessage'
   | 'chat.rewind.confirmMessageConversationOnly'

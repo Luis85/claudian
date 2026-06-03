@@ -456,7 +456,7 @@ export class ClaudianView extends ItemView {
         void this.handleTabClose(tabId);
       },
       onNewTab: () => {
-        void this.createNewTab().catch(() => new Notice('Failed to create tab'));
+        void this.createNewTab().catch(() => new Notice(t('chat.tab.createFailed')));
       },
     });
     fragment.appendChild(this.tabBarContainerEl);
@@ -494,7 +494,7 @@ export class ClaudianView extends ItemView {
     setIcon(this.newTabButtonEl, 'square-plus');
     this.newTabButtonEl.setAttribute('aria-label', 'New tab');
     this.newTabButtonEl.addEventListener('click', () => {
-      void this.createNewTab().catch(() => new Notice('Failed to create tab'));
+      void this.createNewTab().catch(() => new Notice(t('chat.tab.createFailed')));
     });
 
     // New conversation button (square-pen icon - new conversation in current tab)
@@ -505,7 +505,7 @@ export class ClaudianView extends ItemView {
       void (async () => {
         await this.tabManager?.createNewConversation();
         this.updateHistoryDropdown();
-      })().catch(() => new Notice('Failed to create conversation'));
+      })().catch(() => new Notice(t('chat.tab.createConversationFailed')));
     });
 
     // History dropdown
@@ -728,7 +728,7 @@ export class ClaudianView extends ItemView {
   private handleTabClick(tabId: TabId): void {
     const switched = this.tabManager?.switchToTab(tabId);
     if (switched) {
-      void switched.catch(() => new Notice('Failed to switch tab'));
+      void switched.catch(() => new Notice(t('chat.tab.switchFailed')));
     }
   }
 
@@ -740,7 +740,7 @@ export class ClaudianView extends ItemView {
       await this.tabManager?.closeTab(tabId, force);
       this.updateTabBarVisibility();
     } catch {
-      new Notice('Failed to close tab');
+      new Notice(t('chat.tab.closeFailed'));
     }
   }
 
@@ -748,7 +748,7 @@ export class ClaudianView extends ItemView {
     const tab = await this.tabManager?.createTab();
     if (!tab) {
       const maxTabs = this.plugin.settings.maxTabs ?? 3;
-      new Notice(`Maximum ${maxTabs} tabs allowed`);
+      new Notice(t('chat.tab.maxReached', { count: maxTabs }));
       this.updateTabBarVisibility();
       return;
     }

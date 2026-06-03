@@ -252,7 +252,7 @@ function initializeInputToolbar(
       const boundProvider = tab.providerId;
       const modelProvider = getProviderForModel(model, plugin.settings);
       if (modelProvider !== boundProvider) {
-        new Notice('Cannot switch provider on a bound session. Start a new tab instead.');
+        new Notice(t('chat.tab.providerSwitchBlocked'));
         tab.ui.modelSelector?.updateDisplay();
         return;
       }
