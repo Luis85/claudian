@@ -11,7 +11,7 @@ related:
   - "[[Chat]]"
   - "[[docs/product/features/Orchestrator]]"
   - "[[Quick Actions]]"
-user_manual: "[[docs/user-manuals/agent-kanban-board]]"
+user_manual: "[[docs/product/user-manuals/agent-board]]"
 ---
 
 # Agent Kanban Board

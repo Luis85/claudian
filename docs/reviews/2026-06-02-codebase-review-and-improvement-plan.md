@@ -15,6 +15,13 @@ related:
 
 # Claudian Codebase Review & Improvement Plan — 2026-06-02
 
+> **Superseded (2026-06-03) by [[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]].** Several
+> status rows below are now stale: **Q-4** (four untested security paths) and **Q-NEW-2** (provider test
+> parity) have since **shipped**; **PERF-5** was already `Promise.all`; **Q-7** is still **3/8** tabs (not
+> "finish soon"); madge cycles are **58**, not 52; and **PERF-1** is `scrollIntoView`, not an
+> IntersectionObserver. See the superseding proposal's "What shipped since 2026-06-02" table for the
+> reconciled state.
+
 Second consolidated review after the 2026-05-31 plan and v3.2.0 ship. Goal: keep the bar for
 **robust, stable, high-quality** while closing the live user-reported performance regression and
 finishing the architecture/Obsidian-conformance work the prior plan deferred.

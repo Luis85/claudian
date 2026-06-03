@@ -1,7 +1,8 @@
 ---
 title: Session handoff — 2026-06-03 (Q-NEW-2 closed + validator Phase A closed)
 date: 2026-06-03
-status: open
+status: superseded
+superseded-by: "[[docs/handoffs/2026-06-04-q1-complete.md]]"
 scope: pickup of validator-helper translation Phase B
 related:
   - "[[docs/handoffs/2026-06-04-q1-complete.md]]"

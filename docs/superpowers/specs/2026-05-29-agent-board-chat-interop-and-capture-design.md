@@ -2,7 +2,7 @@
 type: claudian-design-spec
 title: Agent Board — chat↔work-order interop, capture sources, run-next-ready
 date: 2026-05-29
-status: approved
+status: shipped
 owner: Claudian
 source: "[[docs/issues/agent-board-mvp.md]]"
 related:

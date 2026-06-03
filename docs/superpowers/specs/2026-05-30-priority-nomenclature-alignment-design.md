@@ -1,5 +1,5 @@
 ---
-status: approved
+status: shipped
 parent: Cross Cutting
 ---
 # Priority Nomenclature Alignment — Design

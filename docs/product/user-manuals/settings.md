@@ -121,7 +121,7 @@ Cross-link: [[agent-board]] for the board UI, [[work-order-templates]] for templ
 | **Template folder** | Folder where work-order template notes live. If it matches the work order folder, an inline warning is shown — templates would otherwise render as invalid work orders on the board. | `Agent Board/templates` |
 | **Common templates → Install** | Writes the starter set (Bug fix, Feature, Refactor, Research spike, Documentation, Test backfill) into the template folder. Skips any whose filename already exists. Detail in [[work-order-templates]]. | — |
 | **Archive folder** | Where archived work orders move. Keep it outside the work order folder. | `Agent Board/archive` |
-| **Default provider** | Provider stamped on captured work orders. Dropdown lists only enabled providers; selection is auto-corrected to the first enabled provider if the stored choice is now disabled. | `codex` (if enabled, otherwise first enabled) |
+| **Default provider** | Provider stamped on captured work orders. Dropdown lists only enabled providers; selection is auto-corrected to the first enabled provider if the stored choice is now disabled. | unset (`null`) until a provider is enabled, then the first enabled provider in registration order (Claude, Codex, Opencode, Cursor) |
 | **Default model** | Model stamped on captured work orders. Resets to **Provider default** whenever the provider changes. | Provider default |
 
 ### Board lanes
@@ -354,4 +354,4 @@ All paths are relative to your vault root unless noted.
 | `~/.codex/sessions/**/*.jsonl` | Codex CLI | Codex-native transcripts. |
 | `.claudian/sessions/*.meta.json` | Claudian | Provider-neutral session metadata. |
 
-The legacy path `.claude/claudian-settings.json` is still read for migration; new writes always go to `.claudian/claudian-settings.json`.
+Settings are read and written only at `.claudian/claudian-settings.json`. There is no legacy file path; legacy in-file fields are stripped on load (`LEGACY_STRIPPED_SETTING_FIELDS`) rather than read from another location.

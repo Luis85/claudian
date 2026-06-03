@@ -1,7 +1,14 @@
 ---
-status: in-progress
+status: partially-shipped
 parent: Infrastructure
 ---
+
+> **Status (2026-06-03): mostly shipped.** The registry, search bar, first-run banner, custom-models table,
+> resolver-aware default provider, and live hotkeys all shipped (Claudian is now 3.2.0). The residual tail —
+> porting the remaining 5 imperative tabs onto the registry (only `{agentBoard, orchestrator, diagnostics}`
+> are feature-flagged on via `registry/featureFlag.ts`) — is tracked as
+> [[docs/issues/settings-registry-port-followup.md]], and the 4-bucket IA reorg as
+> [[docs/issues/settings-information-architecture.md]]. The `USE_REGISTRY_RENDERER` flag is vestigial.
 
 # Settings Overhaul Implementation Plan
 

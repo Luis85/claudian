@@ -1,6 +1,6 @@
 # Claudian — Install Cursor (Windows)
 
-This manual walks Windows users through installing the **Cursor Agent CLI** (`cursor-agent` / `agent`), the runtime Claudian drives when the Cursor provider is enabled. Claudian talks to it over ACP (Agent Client Protocol); you only need the CLI on `PATH` (or pointed at explicitly).
+This manual walks Windows users through installing the **Cursor Agent CLI** (`cursor-agent` / `agent`), the runtime Claudian drives when the Cursor provider is enabled. Claudian drives it by spawning the `cursor-agent` CLI directly (`--output-format stream-json`, parsed as NDJSON) — **not** ACP; you only need the CLI on `PATH` (or pointed at explicitly).
 
 See [[settings]] for the Cursor tab layout, and [[cursor-model-families-and-modes]] for how Cursor model families and modes show up in chat.
 

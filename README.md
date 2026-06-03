@@ -146,7 +146,7 @@ src/
 │   ├── claude/                  # Claude SDK adaptor, prompt encoding, storage, MCP, plugins
 │   ├── codex/                   # Codex app-server adaptor, JSON-RPC transport, JSONL history
 │   ├── opencode/                # Opencode adaptor over ACP
-│   ├── cursor/                  # Cursor Agent adaptor over ACP, JSONL history hydration
+│   ├── cursor/                  # Cursor Agent adaptor over the cursor-agent stream-json CLI (not ACP), JSONL history hydration
 │   └── acp/                     # Agent Client Protocol shared transport
 ├── features/
 │   ├── chat/                    # Sidebar chat: tabs, controllers, renderers

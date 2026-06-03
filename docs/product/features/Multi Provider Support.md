@@ -10,7 +10,7 @@ cta_url: https://github.com/Luis85/specorator
 related:
   - "[[Chat]]"
   - "[[docs/product/features/Orchestrator]]"
-user_manual: "[[docs/user-manuals/multi-provider]]"
+user_manual: "[[docs/product/user-manuals/multi-provider]]"
 parent: Infrastructure
 ---
 
@@ -46,12 +46,12 @@ Specorator keeps its own record of every conversation under `.specorator/session
 | Send, stream, stop | Full | Full | Full | Full |
 | Pick up earlier sessions | Full | Full | Full | Full |
 | Reload past Specorator sessions | Full | Full | Full | Full |
-| Split a conversation (fork) | Full | Full | Full | Full |
+| Split a conversation (fork) | Full | Full | Not supported | Not supported |
 | Attach images | Full | Full | Full | Full |
 | Inline edit (rewrite a passage in place) | Full | Full | Full | Full |
-| Plan mode (see the plan before running) | Full | Full | Not supported | Full |
+| Plan mode (see the plan before running) | Full | Full | Partial, mode runs but no approval card | Full |
 | `#` instruction mode (facts the helper should always know) | Full | Full | Full | Not supported |
-| `/` commands (saved shortcuts) | Full | Not supported | Not supported | Not supported |
+| `/` commands (saved shortcuts) | Full | Not supported | Partial, runtime-discovered | Not supported |
 | `$` skills (saved workflows) | Full | Full | Not supported | Not supported |
 | Helpers running sub-tasks (subagents) | Full | Full | Full | Not supported |
 | Rewind (jump back to an earlier point in the conversation) | Full | Not supported | Not supported | Not supported |

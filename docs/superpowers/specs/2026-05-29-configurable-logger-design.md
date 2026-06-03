@@ -1,5 +1,5 @@
 ---
-status: approved
+status: shipped
 parent: Infrastructure
 ---
 # Configurable Logger Design
