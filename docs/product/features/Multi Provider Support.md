@@ -46,7 +46,7 @@ Specorator keeps its own record of every conversation under `.specorator/session
 | Send, stream, stop | Full | Full | Full | Full |
 | Pick up earlier sessions | Full | Full | Full | Full |
 | Reload past Specorator sessions | Full | Full | Full | Full |
-| Split a conversation (fork) | Full | Full | Full | Full |
+| Split a conversation (fork) | Full | Full | Not supported | Not supported |
 | Attach images | Full | Full | Full | Full |
 | Inline edit (rewrite a passage in place) | Full | Full | Full | Full |
 | Plan mode (see the plan before running) | Full | Full | Not supported | Full |
