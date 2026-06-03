@@ -21,6 +21,10 @@ import { QuickActionsModal } from '../quickActions/ui/QuickActionsModal';
 import { resolveModelContextWindow } from '../settings/customModels/resolveModelContextWindow';
 import type { HistoryConversationOpenState } from './controllers/ConversationController';
 import type { ProgrammaticSendResult } from './controllers/InputController';
+import {
+  type HydrationFailedBannerPayload,
+  registerHydrationFailedSubscriber,
+} from './hydration/hydrationFailedSubscriber';
 import { InlineOrchestratorPlan } from './rendering/InlineOrchestratorPlan';
 import type { OrchestratorPlan } from './rendering/orchestratorPlanParser';
 import { OrchestratorService } from './services/OrchestratorService';
@@ -841,6 +845,26 @@ export class ClaudianView extends ItemView {
     this.titleTextEl.title = title;
   }
 
+  /**
+   * Renders an inline error banner inside the conversation pane when history
+   * hydration fails. Replaces the in-stream sentinel that Opencode used before
+   * Task 4 (history-service-contract). No-op when no tab matches the id —
+   * the `Notice` toast from `registerHydrationFailedSubscriber` is still shown.
+   */
+  private renderHydrationErrorBanner(
+    conversationId: string,
+    payload: HydrationFailedBannerPayload,
+  ): void {
+    const tab = this.tabManager?.getAllTabs().find((t) => t.conversationId === conversationId);
+    if (!tab) return;
+    const messagesEl = tab.dom.messagesEl;
+    // Dedupe: a refresh might re-emit; keep only the latest banner.
+    messagesEl.querySelector('.claudian-hydration-error')?.remove();
+    const banner = messagesEl.createDiv({ cls: 'claudian-hydration-error' });
+    banner.setText(payload.message);
+    banner.dataset.errorCode = payload.code;
+  }
+
   /** Rebuilds the header logo SVG to match the given provider. */
   private syncHeaderLogo(providerId: ProviderId): void {
     if (!this.logoEl) return;
@@ -1010,6 +1034,14 @@ export class ClaudianView extends ItemView {
         this.syncHeaderTitle();
       }
       this.updateTabBar();
+    }));
+
+    // History Service Contract (Task 11): surface a Notice + inline banner when
+    // `ConversationStore` reports a hydration / delete failure. Without this,
+    // Opencode users with corrupt SQLite would see a blank pane (Task 4
+    // removed the in-stream sentinel that used to render the error there).
+    this.register(registerHydrationFailedSubscriber(this.plugin.events, (conversationId, payload) => {
+      this.renderHydrationErrorBanner(conversationId, payload);
     }));
 
     // File open event

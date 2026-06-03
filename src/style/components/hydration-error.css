@@ -1,0 +1,14 @@
+/* Inline error banner shown in the conversation pane when history hydration
+   or session deletion fails. Pairs with the Obsidian Notice toast surfaced by
+   `registerHydrationFailedSubscriber` (Task 11). */
+
+.claudian-hydration-error {
+  margin: 8px 12px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--color-red);
+  background: var(--background-modifier-error);
+  color: var(--text-on-accent);
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-small);
+  line-height: 1.4;
+}
