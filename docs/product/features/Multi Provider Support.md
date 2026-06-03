@@ -10,7 +10,7 @@ cta_url: https://github.com/Luis85/specorator
 related:
   - "[[Chat]]"
   - "[[docs/product/features/Orchestrator]]"
-user_manual: "[[docs/user-manuals/multi-provider]]"
+user_manual: "[[docs/product/user-manuals/multi-provider]]"
 parent: Infrastructure
 ---
 
