@@ -317,7 +317,10 @@ export class AgentBoardView extends ItemView {
   private async applyNoteChange(path: string, transform: (content: string) => string): Promise<void> {
     const file = this.plugin.app.vault.getAbstractFileByPath(path);
     if (!(file instanceof TFile)) return;
-    const content = await this.plugin.app.vault.read(file);
-    await this.plugin.app.vault.modify(file, transform(content));
+    // vault.process is an atomic read-transform-write: Obsidian serializes
+    // concurrent processors so multi-agent runs cannot clobber each other's
+    // edits to the same work-order note. The previous read+modify pair was
+    // a TOCTOU race under the Agent Board's parallel run coordinator.
+    await this.plugin.app.vault.process(file, transform);
   }
 }

@@ -43,6 +43,7 @@ import {
 import type { PluginContext } from './core/types/PluginContext';
 import type { EnvironmentScope } from './core/types/settings';
 import { ClaudianView } from './features/chat/ClaudianView';
+import { isClaudianView } from './features/chat/isClaudianView';
 import type { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
 import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
 import { ChatTabExecutionSurface } from './features/tasks/execution/ChatTabExecutionSurface';
@@ -53,12 +54,6 @@ import type { Locale } from './i18n/types';
 import type { BrowserSelectionContext } from './utils/browser';
 import { chatMessageText } from './utils/chatMessageText';
 import { getVaultPath } from './utils/path';
-
-function isClaudianView(value: unknown): value is ClaudianView {
-  return !!value
-    && typeof value === 'object'
-    && typeof (value as { getTabManager?: unknown }).getTabManager === 'function';
-}
 
 export default class ClaudianPlugin extends Plugin implements PluginContext {
   settings!: ClaudianSettings;
@@ -84,13 +79,14 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     });
 
     this.lifecycle = new PluginLifecycle(this);
+    // installGitWatcher is light (object construction + 4 event registrations,
+    // no IO until first subscriber attaches) but view restoration reads
+    // `gitStatusWatcher` synchronously in `buildHeader`, so it stays here to
+    // keep the git button wired on a restored leaf.
     this.lifecycle.installGitWatcher();
 
     this.viewActivator = new PluginViewActivator(this);
-
     this.envApply = new EnvironmentApplyService(this);
-
-    await ProviderWorkspaceRegistry.initializeAll(this);
 
     this.registerView(
       VIEW_TYPE_CLAUDIAN,
@@ -131,6 +127,36 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
 
     this.addSettingTab(new ClaudianSettingTab(this.app, this));
+
+    // Heavy provider workspace initialization is deferred until the workspace
+    // finishes restoring leaves. ProviderWorkspaceRegistry.initializeAll walks
+    // Claude MCP/plugins/agents, Codex skills/subagents, and Cursor's model
+    // catalog — running these concurrently still costs hundreds of ms of
+    // sync-blocking work on cold start. onLayoutReady is Obsidian's "boot
+    // finished" signal; provider services don't have to exist for view
+    // restoration since runtime services are lazy-initialized per tab.
+    this.app.workspace.onLayoutReady(() => {
+      void this.completeDeferredOnload();
+    });
+  }
+
+  private async completeDeferredOnload(): Promise<void> {
+    try {
+      await ProviderWorkspaceRegistry.initializeAll(this);
+    } catch (error) {
+      this.logger.scope('onload').error('provider workspace init failed', error);
+      return;
+    }
+    // Restored views constructed before provider services were ready may have
+    // mounted the empty-state placeholder; reprobe so they can promote to the
+    // full tab UI now that providers are available.
+    for (const view of this.getAllViews()) {
+      try {
+        await view.refreshProviderAvailability();
+      } catch (error) {
+        this.logger.scope('onload').error('view refresh after deferred init failed', error);
+      }
+    }
   }
 
   onunload(): void {

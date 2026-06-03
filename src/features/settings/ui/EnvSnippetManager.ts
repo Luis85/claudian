@@ -7,11 +7,12 @@ import {
 } from '../../../core/providers/providerEnvironment';
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { EnvironmentScope, EnvSnippet } from '../../../core/types';
+import { VIEW_TYPE_CLAUDIAN } from '../../../core/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
 import { t } from '../../../i18n/i18n';
 import { confirmDelete } from '../../../shared/modals/ConfirmModal';
 import { formatContextLimit, parseContextLimit, parseEnvironmentVariables } from '../../../utils/env';
-import type { ClaudianView } from '../../chat/ClaudianView';
+import { isClaudianView } from '../../chat/isClaudianView';
 
 export class EnvSnippetModal extends Modal {
   plugin: PluginContext;
@@ -376,8 +377,17 @@ export class EnvSnippetManager {
     await this.plugin.saveSettings();
 
     this.onContextLimitsChange?.();
-    const view = this.plugin.app.workspace.getLeavesOfType('claudian-view')[0]?.view as ClaudianView | undefined;
-    view?.refreshModelSelector();
+    // Use the safe predicate + loadIfDeferred() instead of an unchecked cast:
+    // workspace.getLeavesOfType can hand back deferred leaves whose .view is a
+    // stub until activation, and the cast would silently no-op (or worse,
+    // crash on method call) in that window.
+    const leaf = this.plugin.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN)[0];
+    if (leaf) {
+      await leaf.loadIfDeferred();
+      if (isClaudianView(leaf.view)) {
+        leaf.view.refreshModelSelector();
+      }
+    }
   }
 
   private editSnippet(snippet: EnvSnippet) {

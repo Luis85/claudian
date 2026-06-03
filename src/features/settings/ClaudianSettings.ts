@@ -13,6 +13,11 @@ import { getAvailableLocales, getLocaleDisplayName, setLocale, t } from '../../i
 import type { Locale, TranslationKey } from '../../i18n/types';
 import type ClaudianPlugin from '../../main';
 import { formatContextLimit, parseContextLimit, parseEnvironmentVariables } from '../../utils/env';
+import {
+  getHotkeysForCommand,
+  type ObsidianHotkey,
+  openHotkeySettingsWithFilter,
+} from '../../utils/obsidianPrivateApi';
 import { buildNavMappingText, parseNavMappings } from './keyboardNavigation';
 // setEnabled is provided by the registered ProviderSettingsReconciler.
 import {
@@ -32,25 +37,6 @@ import { renderOrchestratorSettingsTab } from './ui/OrchestratorSettingsTab';
 import { renderQuickActionsSettingsTab } from './ui/QuickActionsSettingsTab';
 
 type SettingsTabId = string;
-type ObsidianHotkey = { modifiers: string[]; key: string };
-type ObsidianHotkeyManager = {
-  customKeys?: Record<string, ObsidianHotkey[] | undefined>;
-  defaultKeys?: Record<string, ObsidianHotkey[] | undefined>;
-};
-type ObsidianHotkeyTab = {
-  searchInputEl?: HTMLInputElement;
-  searchComponent?: { inputEl?: HTMLInputElement };
-  updateHotkeyVisibility?: () => void;
-};
-type ObsidianSettingsController = {
-  activeTab?: ObsidianHotkeyTab;
-  open: () => void;
-  openTabById: (id: string) => void;
-};
-type AppWithHotkeyInternals = App & {
-  hotkeyManager?: ObsidianHotkeyManager;
-  setting?: ObsidianSettingsController;
-};
 
 function formatHotkey(hotkey: ObsidianHotkey): string {
   const isMac = Platform.isMacOS;
@@ -64,41 +50,9 @@ function formatHotkey(hotkey: ObsidianHotkey): string {
   return isMac ? [...mods, key].join('') : [...mods, key].join('+');
 }
 
-function openHotkeySettings(app: App): void {
-  const setting = (app as AppWithHotkeyInternals).setting;
-  if (!setting) {
-    return;
-  }
-
-  setting.open();
-  setting.openTabById('hotkeys');
-  window.setTimeout(() => {
-    const tab = setting.activeTab;
-    if (!tab) {
-      return;
-    }
-
-    const searchEl = tab.searchInputEl ?? tab.searchComponent?.inputEl;
-    if (!searchEl) {
-      return;
-    }
-
-    searchEl.value = 'Claudian';
-    tab.updateHotkeyVisibility?.();
-  }, 100);
-}
-
-function getHotkeyForCommand(app: App, commandId: string): string | null {
-  const hotkeyManager = (app as AppWithHotkeyInternals).hotkeyManager;
-  if (!hotkeyManager) return null;
-
-  const customHotkeys = hotkeyManager.customKeys?.[commandId];
-  const defaultHotkeys = hotkeyManager.defaultKeys?.[commandId];
-  const hotkeys = customHotkeys && customHotkeys.length > 0 ? customHotkeys : defaultHotkeys;
-
-  if (!hotkeys || hotkeys.length === 0) return null;
-
-  return hotkeys.map(formatHotkey).join(', ');
+function formatBoundHotkeys(app: App, commandId: string): string | null {
+  const hotkeys = getHotkeysForCommand(app, commandId);
+  return hotkeys ? hotkeys.map(formatHotkey).join(', ') : null;
 }
 
 function addHotkeySettingRow(
@@ -107,7 +61,7 @@ function addHotkeySettingRow(
   commandId: string,
   translationPrefix: string,
 ): void {
-  const hotkey = getHotkeyForCommand(app, commandId);
+  const hotkey = formatBoundHotkeys(app, commandId);
   const item = containerEl.createDiv({ cls: 'claudian-hotkey-item' });
   item.createSpan({
     cls: 'claudian-hotkey-name',
@@ -116,7 +70,9 @@ function addHotkeySettingRow(
   if (hotkey) {
     item.createSpan({ cls: 'claudian-hotkey-badge', text: hotkey });
   }
-  item.addEventListener('click', () => openHotkeySettings(app));
+  item.addEventListener('click', () => {
+    openHotkeySettingsWithFilter(app, 'Claudian');
+  });
 }
 
 export class ClaudianSettingTab extends PluginSettingTab {

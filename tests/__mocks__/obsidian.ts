@@ -127,6 +127,11 @@ export class App {
     }),
     setActiveLeaf: jest.fn(),
     revealLeaf: jest.fn(),
+    // onLayoutReady runs the callback synchronously in tests so that deferred
+    // onload work executes within the same microtask the plugin booted in.
+    // Production semantics fire after Obsidian finishes restoring leaves; here
+    // there are no leaves to restore, so immediate dispatch is equivalent.
+    onLayoutReady: jest.fn((cb: () => void) => cb()),
   };
 }
 

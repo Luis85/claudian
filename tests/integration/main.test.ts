@@ -97,6 +97,7 @@ describe('ClaudianPlugin', () => {
         on: jest.fn().mockReturnValue({}),
         setActiveLeaf: jest.fn(),
         revealLeaf: jest.fn(),
+        onLayoutReady: jest.fn((cb: () => void) => cb()),
       },
     };
 

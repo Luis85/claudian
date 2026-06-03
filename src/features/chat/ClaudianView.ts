@@ -1,4 +1,4 @@
-import type { EventRef, WorkspaceLeaf } from 'obsidian';
+import type { WorkspaceLeaf } from 'obsidian';
 import { ItemView, Notice, Scope, setIcon } from 'obsidian';
 
 import { GIT_COMMIT_PROMPT } from '../../core/prompt/gitCommit';
@@ -15,6 +15,7 @@ import {
   scheduleAnimationFrame,
   type ScheduledAnimationFrame,
 } from '../../utils/animationFrame';
+import { openPluginSettingsTab } from '../../utils/obsidianPrivateApi';
 import { QuickActionStorage } from '../quickActions/QuickActionStorage';
 import { QuickActionsModal } from '../quickActions/ui/QuickActionsModal';
 import { resolveModelContextWindow } from '../settings/customModels/resolveModelContextWindow';
@@ -38,13 +39,6 @@ import { recalculateUsageForModel } from './utils/usageInfo';
 type LoadableView = {
   containerEl?: HTMLElement;
   load: () => Promise<void> | void;
-};
-
-type AppWithSettings = {
-  setting?: {
-    open: () => void;
-    openTabById?: (id: string) => void;
-  };
 };
 
 export class ClaudianView extends ItemView {
@@ -71,9 +65,6 @@ export class ClaudianView extends ItemView {
 
   // Header elements
   private historyDropdown: HTMLElement | null = null;
-
-  // Event refs for cleanup
-  private eventRefs: EventRef[] = [];
 
   // Debouncing for tab bar updates
   private pendingTabBarUpdate: ScheduledAnimationFrame | null = null;
@@ -357,10 +348,8 @@ export class ClaudianView extends ItemView {
       this.pendingTabBarUpdate = null;
     }
 
-    for (const ref of this.eventRefs) {
-      this.plugin.app.vault.offref(ref);
-    }
-    this.eventRefs = [];
+    // Vault events registered via registerEvent are auto-released by the
+    // Component lifecycle — no manual offref sweep needed.
 
     await this.persistTabStateImmediate();
 
@@ -411,9 +400,7 @@ export class ClaudianView extends ItemView {
 
   /** Opens the Obsidian settings dialog focused on the Claudian plugin tab. */
   private openPluginSettings(): void {
-    const setting = (this.app as AppWithSettings).setting;
-    setting?.open();
-    setting?.openTabById?.(this.plugin.manifest.id);
+    openPluginSettingsTab(this.app, this.plugin.manifest.id);
   }
 
   private buildHeader(header: HTMLElement) {
@@ -972,19 +959,19 @@ export class ClaudianView extends ItemView {
       }
     });
 
-    // Vault events - forward to active tab's file context manager
+    // Vault events - forward to active tab's file context manager.
+    // registerEvent ties the ref to this Component's lifecycle so cleanup
+    // happens automatically on onunload — no need to track via eventRefs[].
     const markCacheDirty = (includesFolders: boolean): void => {
       const mgr = this.tabManager?.getActiveTab()?.ui.fileContextManager;
       if (!mgr) return;
       mgr.markFileCacheDirty();
       if (includesFolders) mgr.markFolderCacheDirty();
     };
-    this.eventRefs.push(
-      this.plugin.app.vault.on('create', () => markCacheDirty(true)),
-      this.plugin.app.vault.on('delete', () => markCacheDirty(true)),
-      this.plugin.app.vault.on('rename', () => markCacheDirty(true)),
-      this.plugin.app.vault.on('modify', () => markCacheDirty(false))
-    );
+    this.registerEvent(this.plugin.app.vault.on('create', () => markCacheDirty(true)));
+    this.registerEvent(this.plugin.app.vault.on('delete', () => markCacheDirty(true)));
+    this.registerEvent(this.plugin.app.vault.on('rename', () => markCacheDirty(true)));
+    this.registerEvent(this.plugin.app.vault.on('modify', () => markCacheDirty(false)));
 
     // File open event
     this.registerEvent(
