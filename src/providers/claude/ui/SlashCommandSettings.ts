@@ -223,7 +223,7 @@ export class SlashCommandModal extends Modal {
       const name = nameInput.value.trim();
       const nameError = validateCommandName(name);
       if (nameError) {
-        new Notice(nameError);
+        new Notice(t(nameError.key, nameError.params));
         return;
       }
 

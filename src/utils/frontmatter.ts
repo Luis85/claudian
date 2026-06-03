@@ -177,18 +177,30 @@ const MAX_SLUG_LENGTH = 64;
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
 const YAML_RESERVED_WORDS = new Set(['true', 'false', 'null', 'yes', 'no', 'on', 'off']);
 
-export function validateSlugName(name: string, label: string): string | null {
+export type SlugValidationRule = 'required' | 'tooLong' | 'invalidChars' | 'yamlReserved';
+
+export interface SlugValidationResult {
+  rule: SlugValidationRule;
+  params?: Record<string, string | number>;
+}
+
+/**
+ * Structured slug-name validation. Returns null on success or a `{ rule, params? }`
+ * object so each caller can map the rule to its own translation subspace
+ * (e.g. settings.subagents.validation.* vs settings.slashCommands.validation.*).
+ */
+export function validateSlugName(name: string): SlugValidationResult | null {
   if (!name) {
-    return `${label} name is required`;
+    return { rule: 'required' };
   }
   if (name.length > MAX_SLUG_LENGTH) {
-    return `${label} name must be ${MAX_SLUG_LENGTH} characters or fewer`;
+    return { rule: 'tooLong', params: { max: MAX_SLUG_LENGTH } };
   }
   if (!SLUG_PATTERN.test(name)) {
-    return `${label} name can only contain lowercase letters, numbers, and hyphens`;
+    return { rule: 'invalidChars' };
   }
   if (YAML_RESERVED_WORDS.has(name)) {
-    return `${label} name cannot be a YAML reserved word (true, false, null, yes, no, on, off)`;
+    return { rule: 'yamlReserved' };
   }
   return null;
 }

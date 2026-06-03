@@ -15,13 +15,18 @@ describe('validateAgentName', () => {
     expect(validateAgentName('agent-v2')).toBeNull();
   });
 
-  it('returns error for empty name', () => {
-    expect(validateAgentName('')).toBe('Agent name is required');
+  it('returns the "required" validation key for an empty name', () => {
+    expect(validateAgentName('')).toEqual({
+      key: 'settings.subagents.validation.required',
+    });
   });
 
-  it('returns error for name exceeding max length', () => {
+  it('returns the "tooLong" validation key with the max-length param when over 64 chars', () => {
     const longName = 'a'.repeat(65);
-    expect(validateAgentName(longName)).toBe('Agent name must be 64 characters or fewer');
+    expect(validateAgentName(longName)).toEqual({
+      key: 'settings.subagents.validation.tooLong',
+      params: { max: 64 },
+    });
   });
 
   it('returns null for exactly max length', () => {
@@ -29,37 +34,37 @@ describe('validateAgentName', () => {
     expect(validateAgentName(maxName)).toBeNull();
   });
 
-  it('returns error for uppercase letters', () => {
-    expect(validateAgentName('CodeReviewer')).toBe(
-      'Agent name can only contain lowercase letters, numbers, and hyphens'
-    );
+  it('returns the "invalidChars" validation key for uppercase letters', () => {
+    expect(validateAgentName('CodeReviewer')).toEqual({
+      key: 'settings.subagents.validation.invalidChars',
+    });
   });
 
-  it('returns error for spaces', () => {
-    expect(validateAgentName('code reviewer')).toBe(
-      'Agent name can only contain lowercase letters, numbers, and hyphens'
-    );
+  it('returns the "invalidChars" validation key for spaces', () => {
+    expect(validateAgentName('code reviewer')).toEqual({
+      key: 'settings.subagents.validation.invalidChars',
+    });
   });
 
-  it('returns error for underscores', () => {
-    expect(validateAgentName('code_reviewer')).toBe(
-      'Agent name can only contain lowercase letters, numbers, and hyphens'
-    );
+  it('returns the "invalidChars" validation key for underscores', () => {
+    expect(validateAgentName('code_reviewer')).toEqual({
+      key: 'settings.subagents.validation.invalidChars',
+    });
   });
 
-  it('returns error for special characters', () => {
-    expect(validateAgentName('code@reviewer')).toBe(
-      'Agent name can only contain lowercase letters, numbers, and hyphens'
-    );
+  it('returns the "invalidChars" validation key for special characters', () => {
+    expect(validateAgentName('code@reviewer')).toEqual({
+      key: 'settings.subagents.validation.invalidChars',
+    });
   });
 
   it.each(['true', 'false', 'null', 'yes', 'no', 'on', 'off'])(
-    'returns error for YAML reserved word "%s"',
+    'returns the "yamlReserved" validation key for "%s"',
     (word) => {
-      expect(validateAgentName(word)).toBe(
-        'Agent name cannot be a YAML reserved word (true, false, null, yes, no, on, off)'
-      );
-    }
+      expect(validateAgentName(word)).toEqual({
+        key: 'settings.subagents.validation.yamlReserved',
+      });
+    },
   );
 });
 

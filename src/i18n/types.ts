@@ -425,6 +425,18 @@ export type TranslationKey =
   | 'settings.subagents.modal.promptDesc'
   | 'settings.subagents.modal.promptPlaceholder'
 
+  // Settings - Subagent name validation (Q-1 follow-up)
+  | 'settings.subagents.validation.required'
+  | 'settings.subagents.validation.tooLong'
+  | 'settings.subagents.validation.invalidChars'
+  | 'settings.subagents.validation.yamlReserved'
+
+  // Settings - Slash command name validation (Q-1 follow-up)
+  | 'settings.slashCommands.validation.required'
+  | 'settings.slashCommands.validation.tooLong'
+  | 'settings.slashCommands.validation.invalidChars'
+  | 'settings.slashCommands.validation.yamlReserved'
+
   // Settings - Safety
   | 'settings.safety'
   | 'settings.loadUserSettings.name'

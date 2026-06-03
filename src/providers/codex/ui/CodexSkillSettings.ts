@@ -92,7 +92,7 @@ export class CodexSkillModal extends Modal {
       const name = this._nameInput.value.trim();
       const nameError = validateCommandName(name);
       if (nameError) {
-        new Notice(nameError);
+        new Notice(t(nameError.key, nameError.params));
         return;
       }
 

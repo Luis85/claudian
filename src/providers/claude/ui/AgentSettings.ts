@@ -147,7 +147,7 @@ class AgentModal extends Modal {
       const name = nameInput.value.trim();
       const nameError = validateAgentName(name);
       if (nameError) {
-        new Notice(nameError);
+        new Notice(t(nameError.key, nameError.params));
         return;
       }
 

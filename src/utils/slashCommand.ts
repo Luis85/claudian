@@ -1,10 +1,12 @@
 import type { SlashCommand } from '../core/types';
+import type { TranslationKey, ValidationError } from '../i18n/types';
 import {
   extractBoolean,
   extractString,
   extractStringArray,
   isRecord,
   parseFrontmatter,
+  type SlugValidationRule,
   validateSlugName,
 } from './frontmatter';
 
@@ -28,8 +30,20 @@ export function extractFirstParagraph(content: string): string | undefined {
   return paragraph.trim().replace(/\n/g, ' ');
 }
 
-export function validateCommandName(name: string): string | null {
-  return validateSlugName(name, 'Command');
+const COMMAND_NAME_VALIDATION_KEYS: Record<SlugValidationRule, TranslationKey> = {
+  required: 'settings.slashCommands.validation.required',
+  tooLong: 'settings.slashCommands.validation.tooLong',
+  invalidChars: 'settings.slashCommands.validation.invalidChars',
+  yamlReserved: 'settings.slashCommands.validation.yamlReserved',
+};
+
+export function validateCommandName(name: string): ValidationError | null {
+  const result = validateSlugName(name);
+  if (!result) return null;
+  return {
+    key: COMMAND_NAME_VALIDATION_KEYS[result.rule],
+    params: result.params,
+  };
 }
 
 export function isSkill(cmd: SlashCommand): boolean {

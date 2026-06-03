@@ -1,9 +1,22 @@
 import type { AgentDefinition } from '../core/types';
-import { validateSlugName } from './frontmatter';
+import type { TranslationKey, ValidationError } from '../i18n/types';
+import { type SlugValidationRule, validateSlugName } from './frontmatter';
 import { yamlString } from './slashCommand';
 
-export function validateAgentName(name: string): string | null {
-  return validateSlugName(name, 'Agent');
+const AGENT_NAME_VALIDATION_KEYS: Record<SlugValidationRule, TranslationKey> = {
+  required: 'settings.subagents.validation.required',
+  tooLong: 'settings.subagents.validation.tooLong',
+  invalidChars: 'settings.subagents.validation.invalidChars',
+  yamlReserved: 'settings.subagents.validation.yamlReserved',
+};
+
+export function validateAgentName(name: string): ValidationError | null {
+  const result = validateSlugName(name);
+  if (!result) return null;
+  return {
+    key: AGENT_NAME_VALIDATION_KEYS[result.rule],
+    params: result.params,
+  };
 }
 
 function pushYamlList(lines: string[], key: string, items?: string[]): void {

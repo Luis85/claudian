@@ -277,7 +277,13 @@
       "skillCreated": "Skill \"/{name}\" created",
       "skillUpdated": "Skill \"/{name}\" updated",
       "skillDeleted": "Skill \"/{name}\" deleted",
-      "converted": "Converted \"/{name}\" to skill"
+      "converted": "Converted \"/{name}\" to skill",
+      "validation": {
+        "required": "Command name is required",
+        "tooLong": "Command name must be {max} characters or fewer",
+        "invalidChars": "Command name can only contain lowercase letters, numbers, and hyphens",
+        "yamlReserved": "Command name cannot be a YAML reserved word (true, false, null, yes, no, on, off)"
+      }
     },
     "hiddenSlashCommands": {
       "name": "Скрытые команды и навыки",
@@ -329,7 +335,13 @@
         "promptDesc": "Инструкции для агента",
         "promptPlaceholder": "Вы специалист по проверке кода. Проанализируйте предоставленный код на предмет..."
       },
-      "loadFailed": "Failed to load subagent \"{name}\": {message}"
+      "loadFailed": "Failed to load subagent \"{name}\": {message}",
+      "validation": {
+        "required": "Agent name is required",
+        "tooLong": "Agent name must be {max} characters or fewer",
+        "invalidChars": "Agent name can only contain lowercase letters, numbers, and hyphens",
+        "yamlReserved": "Agent name cannot be a YAML reserved word (true, false, null, yes, no, on, off)"
+      }
     },
     "safety": "Безопасность",
     "loadUserSettings": {
