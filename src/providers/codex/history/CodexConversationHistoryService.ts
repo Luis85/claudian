@@ -56,6 +56,24 @@ export class CodexConversationHistoryService extends BaseHistoryService<CodexPro
     },
   };
 
+  /**
+   * @deprecated Root v1 shim — delegates to {@link forkSupport}. Kept until Task 10 migrates
+   * `TabManager` and `ConversationStore` to the `hasForkSupport(service)` type guard, after
+   * which Task 13 deletes both shims and the interface's deprecated v1 fork surface.
+   */
+  isPendingForkConversation(conversation: Conversation): boolean {
+    return this.forkSupport!.isPendingForkConversation(conversation);
+  }
+
+  /** @deprecated Root v1 shim — see {@link isPendingForkConversation}. */
+  buildForkProviderState(
+    sourceSessionId: string,
+    resumeAt: string,
+    sourceProviderState?: Record<string, unknown>,
+  ): Record<string, unknown> {
+    return this.forkSupport!.buildForkProviderState(sourceSessionId, resumeAt, sourceProviderState);
+  }
+
   protected computeCacheKey(conversation: Conversation): string | null {
     const state = getCodexState(conversation.providerState);
     if (state.forkSource && state.threadId) {
