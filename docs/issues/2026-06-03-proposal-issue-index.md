@@ -69,7 +69,6 @@ duplication. Pre-existing issues that already cover an open item are **reference
 |-------|-----|---------|
 | [[unified-in-app-mcp-control-plane]] | P1 | **PN-1 + PN-2 + Opencode in-app combined** |
 | [[cursor-subagents]] | P1 | PN-3 |
-| [[opencode-acp-modes-and-slash-commands]] | P1 | **PN-4 + PN-8 combined** |
 | [[claude-lifecycle-hooks]] | P2 | PN-6 |
 | [[context-compaction-surface]] | P3 | PN-9 |
 | [[gemini-cli-provider]] | P3 | PN-10 |
@@ -98,6 +97,15 @@ duplication. Pre-existing issues that already cover an open item are **reference
   `claude-lifecycle-hooks` feed it.
 - [[translate-validator-helper-strings]] — Phase B open (Phase A shipped).
 - [[agent-board-symphony]] (idea) — umbrella for the evidence gate + orchestrator integration.
+
+## Corrections (findings that were stale against the tree)
+
+- **PN-4 + PN-8 (Opencode plan mode + ACP slash commands) — withdrawn.** Verified already shipped at
+  `252929d`: `supportsPlanMode: true` (`opencode/capabilities.ts:7`), `permissionMode 'plan'` → native
+  plan mode (`opencode/modes.ts:124-147`), and `available_commands_update` → runtime slash commands
+  (`AcpSessionUpdateNormalizer.ts:97-99` → `OpencodeRuntimeCommandLoader`). The originally-filed issue was
+  deleted. Root cause: a stale CLAUDE.md line ("Plan mode and rewind are gated") — only *rewind* is still
+  gated for Opencode (ACP has no rewind primitive).
 
 ## Backlog status flips noted by the proposal (not extracted)
 
