@@ -442,4 +442,12 @@ export type TranslationKey =
   | 'provider.codex.subagent.deleted'
   | 'provider.codex.subagent.deleteFailed'
   | 'provider.codex.subagent.updated'
-  | 'provider.codex.subagent.created';
+  | 'provider.codex.subagent.created'
+
+  // Provider - Codex skill notices (Q-1 chunk 11)
+  | 'provider.codex.skill.instructionsRequired'
+  | 'provider.codex.skill.saveFailed'
+  | 'provider.codex.skill.deleteFailed'
+  | 'provider.codex.skill.deleted'
+  | 'provider.codex.skill.updated'
+  | 'provider.codex.skill.created';

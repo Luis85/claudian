@@ -541,6 +541,14 @@
         "deleteFailed": "Failed to delete subagent",
         "updated": "Subagent \"{name}\" updated",
         "created": "Subagent \"{name}\" created"
+      },
+      "skill": {
+        "instructionsRequired": "Instructions are required",
+        "saveFailed": "Failed to save Codex skill",
+        "deleteFailed": "Failed to delete Codex skill",
+        "deleted": "Codex skill \"${name}\" deleted",
+        "updated": "Codex skill \"${name}\" updated",
+        "created": "Codex skill \"${name}\" created"
       }
     }
   }

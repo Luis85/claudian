@@ -2,6 +2,7 @@ import { type App, Modal, Notice, setIcon, Setting } from 'obsidian';
 
 import type { ProviderCommandCatalog } from '../../../core/providers/commands/ProviderCommandCatalog';
 import type { ProviderCommandEntry } from '../../../core/providers/commands/ProviderCommandEntry';
+import { t } from '../../../i18n/i18n';
 import { validateCommandName } from '../../../utils/slashCommand';
 import {
   CODEX_SKILL_ROOT_OPTIONS,
@@ -97,7 +98,7 @@ export class CodexSkillModal extends Modal {
 
       const content = this._contentArea.value;
       if (!content.trim()) {
-        new Notice('Instructions are required');
+        new Notice(t('provider.codex.skill.instructionsRequired'));
         return;
       }
 
@@ -123,7 +124,7 @@ export class CodexSkillModal extends Modal {
       try {
         await this.onSave(entry);
       } catch {
-        new Notice('Failed to save Codex skill');
+        new Notice(t('provider.codex.skill.saveFailed'));
         return;
       }
       this.close();
@@ -249,9 +250,9 @@ export class CodexSkillSettings {
         void (async (): Promise<void> => {
         try {
           await this.deleteEntry(entry);
-          new Notice(`Codex skill "$${entry.name}" deleted`);
+          new Notice(t('provider.codex.skill.deleted', { name: entry.name }));
         } catch {
-          new Notice('Failed to delete Codex skill');
+          new Notice(t('provider.codex.skill.deleteFailed'));
         }
         })();
       });
@@ -267,7 +268,10 @@ export class CodexSkillSettings {
       async (entry) => {
         await this.catalog.saveVaultEntry(entry);
         await this.render();
-        new Notice(`Codex skill "$${entry.name}" ${existing ? 'updated' : 'created'}`);
+        new Notice(t(
+          existing ? 'provider.codex.skill.updated' : 'provider.codex.skill.created',
+          { name: entry.name },
+        ));
       }
     );
     modal.open();
