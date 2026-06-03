@@ -409,4 +409,14 @@ export type TranslationKey =
   | 'provider.opencode.subagent.deleted'
   | 'provider.opencode.subagent.deleteFailed'
   | 'provider.opencode.subagent.updated'
-  | 'provider.opencode.subagent.created';
+  | 'provider.opencode.subagent.created'
+
+  // Provider - Codex subagent notices (Q-1 chunk 8)
+  | 'provider.codex.subagent.descriptionRequired'
+  | 'provider.codex.subagent.developerInstructionsRequired'
+  | 'provider.codex.subagent.duplicate'
+  | 'provider.codex.subagent.saveFailed'
+  | 'provider.codex.subagent.deleted'
+  | 'provider.codex.subagent.deleteFailed'
+  | 'provider.codex.subagent.updated'
+  | 'provider.codex.subagent.created';

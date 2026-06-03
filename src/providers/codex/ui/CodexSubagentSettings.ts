@@ -1,6 +1,7 @@
 import type { App } from 'obsidian';
 import { Modal, Notice, setIcon, Setting } from 'obsidian';
 
+import { t } from '../../../i18n/i18n';
 import { confirmDelete } from '../../../shared/modals/ConfirmModal';
 import type { CodexSubagentStorage } from '../storage/CodexSubagentStorage';
 import { DEFAULT_CODEX_PRIMARY_MODEL } from '../types/models';
@@ -197,13 +198,13 @@ class CodexSubagentModal extends Modal {
 
       const description = this._descInput.value.trim();
       if (!description) {
-        new Notice('Description is required');
+        new Notice(t('provider.codex.subagent.descriptionRequired'));
         return;
       }
 
       const developerInstructions = this._instructionsArea.value;
       if (!developerInstructions.trim()) {
-        new Notice('Developer instructions are required');
+        new Notice(t('provider.codex.subagent.developerInstructionsRequired'));
         return;
       }
 
@@ -222,7 +223,7 @@ class CodexSubagentModal extends Modal {
              a.persistenceKey !== this.existing?.persistenceKey,
       );
       if (duplicate) {
-        new Notice(`A subagent named "${name}" already exists`);
+        new Notice(t('provider.codex.subagent.duplicate', { name }));
         return;
       }
 
@@ -242,7 +243,7 @@ class CodexSubagentModal extends Modal {
         await this.onSave(agent);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
-        new Notice(`Failed to save subagent: ${message}`);
+        new Notice(t('provider.codex.subagent.saveFailed', { message }));
         return;
       }
       this.close();
@@ -369,9 +370,9 @@ export class CodexSubagentSettings {
         await this.storage.delete(agent);
         await this.render();
         this.onChanged?.();
-        new Notice(`Subagent "${agent.name}" deleted`);
+        new Notice(t('provider.codex.subagent.deleted', { name: agent.name }));
       } catch {
-        new Notice('Failed to delete subagent');
+        new Notice(t('provider.codex.subagent.deleteFailed'));
       }
       })();
     });
@@ -390,8 +391,8 @@ export class CodexSubagentSettings {
         this.onChanged?.();
         new Notice(
           existing
-            ? `Subagent "${agent.name}" updated`
-            : `Subagent "${agent.name}" created`,
+            ? t('provider.codex.subagent.updated', { name: agent.name })
+            : t('provider.codex.subagent.created', { name: agent.name }),
         );
       },
     );
