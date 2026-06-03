@@ -52,6 +52,33 @@ Identified during chunks 4 and 5:
 - `validateCommandName(name)` — produces English validation errors for slash command
   names.
 
+### Helper-parameter pass-through pattern (surfaced by Q-1 final review 2026-06-03)
+
+Two helper functions accept a `failureMessage` / `error` *parameter* as English
+and surface it through `new Notice()` without going through `t()`:
+
+- `runToolbarAction(action, { failureMessage })` in
+  `src/features/chat/ui/InputToolbar.ts` — callers at lines 154, 183, 311, 347,
+  418, 646 pass hardcoded English strings (e.g. `'Failed to refresh mention
+  catalog'`, `'Could not open external context picker'`). The Notice itself
+  fires from a single site at line 37 (`new Notice(failureMessage)`).
+- `notifyImageError(message)` in `src/features/chat/ui/ImageContext.ts` —
+  callers at lines 211, 217, 238, 360, 362 pass hardcoded English plus
+  composed suffixes like `' (File not found)'` and `' (Permission denied)'`.
+
+These are not caught by the chunk-16 ESLint rule (the call sites are
+`new Notice(failureMessage)` / `new Notice(message)` — identifier
+pass-throughs, which the rule deliberately allows). The follow-up should
+extend the contract:
+
+```ts
+runToolbarAction(action, { failureMessageKey: TranslationKey, failureMessageParams?: Record<string, string | number> })
+notifyImageError({ key: TranslationKey, params?: Record<string, string | number> })
+```
+
+so callers pass a key + params and the Notice fires through `t(key, params)`
+at the helper boundary.
+
 ## Pass-through Notice sites that depend on these helpers
 
 | Source file | Line | Helper |
@@ -60,6 +87,12 @@ Identified during chunks 4 and 5:
 | `OpencodeAgentSettings.ts` | 285, 291, 297, 303, 309, 315 | `parseOptional*` |
 | `AgentSettings.ts` (claude) | 150 | `validateAgentName` |
 | `SlashCommandSettings.ts` | 226 | `validateCommandName` |
+| `CodexSubagentSettings.ts` | 194 | `validateCodexSubagentName` |
+| `CodexSubagentSettings.ts` | 216 | `validateCodexNicknameCandidates` |
+| `CodexSkillSettings.ts` | 95 | `validateCommandName` |
+| `InputToolbar.ts` | 37 | `runToolbarAction` (callers at 154, 183, 311, 347, 418, 646 pass English strings as `failureMessage`) |
+| `ImageContext.ts` | various | `notifyImageError` (callers at 211, 217, 238, 360, 362 pass English strings) |
+| `taskCommands.ts` | 289 | `for (const warning of resolved.warnings) new Notice(warning)` — `warnings[]` populated upstream by `resolveProviderModel` / `buildTemplateVars` |
 
 ## Why this is a separate chunk
 

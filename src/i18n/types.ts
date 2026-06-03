@@ -45,9 +45,6 @@ export type TranslationKey =
   | 'diagnostics.logsEmpty'
   | 'diagnostics.logsCopied'
   | 'diagnostics.logsCleared'
-  | 'diagnostics.inlineEditNoView'
-  | 'diagnostics.inlineEditInserted'
-  | 'diagnostics.inlineEditApplied'
 
   // Settings - Mcp server modal validations (Q-1 chunk 15)
   | 'settings.mcp.modal.serverNameRequired'
@@ -90,10 +87,13 @@ export type TranslationKey =
   | 'provider.cursor.models.discoveredMany'
   | 'provider.cursor.models.refreshFailed'
 
-  // Inline edit (Q-1 chunk 16)
+  // Inline edit (Q-1 chunk 16 + chunk 17 consolidation)
   | 'inlineEdit.unavailable'
   | 'inlineEdit.filesLoadFailed'
   | 'inlineEdit.attachInvalidPath'
+  | 'inlineEdit.noView'
+  | 'inlineEdit.inserted'
+  | 'inlineEdit.applied'
 
   // Agent Board (Q-1 chunk 10, features/tasks/ui/AgentBoardView.ts)
   | 'tasks.board.stopRequested'
@@ -113,6 +113,7 @@ export type TranslationKey =
   | 'tasks.template.deleteFailed'
   | 'tasks.create.noActiveNote'
   | 'tasks.create.noSelection'
+  | 'tasks.create.needsBrowserSelection'
   | 'tasks.fromChat.nothingToCapture'
   | 'tasks.fromChat.createdFromMessage'
   | 'tasks.fromChat.noActiveChat'
@@ -120,7 +121,6 @@ export type TranslationKey =
   | 'tasks.run.needsProvider'
   | 'tasks.run.needsModel'
   | 'tasks.run.templateProblems'
-  | 'tasks.run.needsBrowserSelection'
 
   // Chat - Tabs (Q-1 chunk 13)
   | 'chat.tab.createFailed'

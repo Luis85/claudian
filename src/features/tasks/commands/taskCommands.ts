@@ -291,12 +291,10 @@ export async function createWorkOrderFromSeed(
   }
 
   if (!provider) {
-     
     new Notice(t('tasks.run.needsProvider'));
     return null;
   }
   if (!model) {
-     
     new Notice(t('tasks.run.needsModel'));
     return null;
   }
@@ -459,7 +457,7 @@ export function buildBrowserSeed(context: BrowserSelectionContext): WorkOrderSee
 export async function createWorkOrderFromBrowserSelection(plugin: ClaudianPlugin): Promise<TFile | null> {
   const context = plugin.getActiveBrowserSelection();
   if (!context || !context.selectedText.trim()) {
-    new Notice(t('tasks.run.needsBrowserSelection'));
+    new Notice(t('tasks.create.needsBrowserSelection'));
     return null;
   }
   return createWorkOrderFromSeed(plugin, buildBrowserSeed(context));

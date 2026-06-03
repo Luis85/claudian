@@ -194,7 +194,7 @@ export function registerPluginCommands(deps: PluginCommandDeps): void {
         ? ctx
         : plugin.app.workspace.getActiveViewOfType(MarkdownView);
       if (!view) {
-        new Notice(t('diagnostics.inlineEditNoView'));
+        new Notice(t('inlineEdit.noView'));
         return;
       }
 
@@ -227,7 +227,7 @@ export function registerPluginCommands(deps: PluginCommandDeps): void {
       const result = await modal.openAndWait();
 
       if (result.decision === 'accept' && result.editedText !== undefined) {
-        new Notice(t(editContext.mode === 'cursor' ? 'diagnostics.inlineEditInserted' : 'diagnostics.inlineEditApplied'));
+        new Notice(t(editContext.mode === 'cursor' ? 'inlineEdit.inserted' : 'inlineEdit.applied'));
       }
     },
   };

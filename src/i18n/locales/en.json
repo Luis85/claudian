@@ -547,10 +547,7 @@
   "diagnostics": {
     "logsEmpty": "No diagnostic log entries",
     "logsCopied": "Copied {count} log entries",
-    "logsCleared": "Diagnostic logs cleared",
-    "inlineEditNoView": "Inline edit unavailable: could not access the active Markdown view.",
-    "inlineEditInserted": "Inserted",
-    "inlineEditApplied": "Edit applied"
+    "logsCleared": "Diagnostic logs cleared"
   },
   "env": {
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
@@ -577,7 +574,8 @@
     },
     "create": {
       "noActiveNote": "Open a note to create a work order from it.",
-      "noSelection": "Select text in a note to create a work order from it."
+      "noSelection": "Select text in a note to create a work order from it.",
+      "needsBrowserSelection": "Open Claudian chat and select text in a browser view first."
     },
     "fromChat": {
       "nothingToCapture": "Nothing to capture from this message.",
@@ -588,8 +586,7 @@
     "run": {
       "needsProvider": "Set an Agent Board default provider in settings first.",
       "needsModel": "Set an Agent Board default model in settings first.",
-      "templateProblems": "Template \"{name}\" has problems: {errors}",
-      "needsBrowserSelection": "Open Claudian chat and select text in a browser view first."
+      "templateProblems": "Template \"{name}\" has problems: {errors}"
     }
   },
   "provider": {
@@ -654,6 +651,9 @@
   "inlineEdit": {
     "unavailable": "Inline edit unavailable: could not access the active editor. Try reopening the note.",
     "filesLoadFailed": "Failed to load vault files. Vault @-mentions may be unavailable.",
-    "attachInvalidPath": "Failed to attach file: invalid path"
+    "attachInvalidPath": "Failed to attach file: invalid path",
+    "noView": "Inline edit unavailable: could not access the active Markdown view.",
+    "inserted": "Inserted",
+    "applied": "Edit applied"
   }
 }
