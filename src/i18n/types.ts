@@ -67,6 +67,33 @@ export type TranslationKey =
   // Chat - Storage (Q-1 chunk 15)
   | 'chat.storage.tabLayoutSaveFailed'
 
+  // Chat - Bang-bash command (Q-1 chunk 16)
+  | 'chat.bangBash.commandFailed'
+
+  // Provider - Claude plugin manager notices (Q-1 chunk 16)
+  | 'provider.claude.plugin.toggleTabRestartFailed'
+  | 'provider.claude.plugin.enabled'
+  | 'provider.claude.plugin.disabled'
+  | 'provider.claude.plugin.toggleFailed'
+  | 'provider.claude.plugin.listRefreshed'
+  | 'provider.claude.plugin.refreshFailed'
+  | 'provider.claude.plugin.malformedEntry'
+
+  // Provider - Claude background task notices (Q-1 chunk 16)
+  | 'provider.claude.task.resultRenderFailed'
+
+  // Provider - Cursor CLI + model discovery notices (Q-1 chunk 16)
+  | 'provider.cursor.cli.notFound'
+  | 'provider.cursor.models.noModels'
+  | 'provider.cursor.models.discoveredOne'
+  | 'provider.cursor.models.discoveredMany'
+  | 'provider.cursor.models.refreshFailed'
+
+  // Inline edit (Q-1 chunk 16)
+  | 'inlineEdit.unavailable'
+  | 'inlineEdit.filesLoadFailed'
+  | 'inlineEdit.attachInvalidPath'
+
   // Agent Board (Q-1 chunk 10, features/tasks/ui/AgentBoardView.ts)
   | 'tasks.board.stopRequested'
   | 'tasks.board.archived'

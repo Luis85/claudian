@@ -80,7 +80,8 @@
       "collapseOutput": "Réduire la sortie de la commande",
       "expandOutput": "Développer la sortie de la commande",
       "running": "Exécution...",
-      "copyFailed": "Échec de la copie dans le presse-papiers"
+      "copyFailed": "Échec de la copie dans le presse-papiers",
+      "commandFailed": "Command failed: {error}"
     },
     "planMode": {
       "ariaLabel": "Toggle plan mode",
@@ -574,6 +575,31 @@
         "updated": "Codex skill \"${name}\" updated",
         "created": "Codex skill \"${name}\" created"
       }
+    },
+    "claude": {
+      "plugin": {
+        "toggleTabRestartFailed": "Plugin toggled, but some tabs failed to restart.",
+        "enabled": "Plugin \"{id}\" enabled",
+        "disabled": "Plugin \"{id}\" disabled",
+        "toggleFailed": "Failed to toggle plugin: {error}",
+        "listRefreshed": "Plugin list refreshed",
+        "refreshFailed": "Failed to refresh plugins: {error}",
+        "malformedEntry": "Claudian: plugin \"{id}\" has malformed entry in installed_plugins.json (expected array, got {type})"
+      },
+      "task": {
+        "resultRenderFailed": "Background task completed, but the result could not be rendered."
+      }
+    },
+    "cursor": {
+      "cli": {
+        "notFound": "Cursor CLI not found. Configure the CLI path first."
+      },
+      "models": {
+        "noModels": "Cursor returned no models. If you are not signed in, run `cursor-agent login`.",
+        "discoveredOne": "Discovered 1 Cursor model.",
+        "discoveredMany": "Discovered {count} Cursor models.",
+        "refreshFailed": "Failed to refresh Cursor models."
+      }
     }
   },
   "diagnostics": {
@@ -623,5 +649,10 @@
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."
+  },
+  "inlineEdit": {
+    "unavailable": "Inline edit unavailable: could not access the active editor. Try reopening the note.",
+    "filesLoadFailed": "Failed to load vault files. Vault @-mentions may be unavailable.",
+    "attachInvalidPath": "Failed to attach file: invalid path"
   }
 }

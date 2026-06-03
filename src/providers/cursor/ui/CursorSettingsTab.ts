@@ -187,7 +187,7 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
       const cliPath = context.plugin.getResolvedProviderCliPath('cursor');
       if (!cliPath) {
         if (announce) {
-          new Notice('Cursor CLI not found. Configure the CLI path first.');
+          new Notice(t('provider.cursor.cli.notFound'));
         }
         return;
       }
@@ -197,15 +197,20 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
         const ids = await refreshCursorModelCatalog(cliPath, env, cwd);
         if (announce) {
           if (ids.length === 0) {
-            new Notice('Cursor returned no models. If you are not signed in, run `cursor-agent login`.', 6000);
+            new Notice(t('provider.cursor.models.noModels'), 6000);
           } else {
-            new Notice(`Discovered ${ids.length} Cursor model${ids.length === 1 ? '' : 's'}.`);
+            new Notice(t(
+              ids.length === 1
+                ? 'provider.cursor.models.discoveredOne'
+                : 'provider.cursor.models.discoveredMany',
+              { count: ids.length },
+            ));
           }
         }
         renderAll();
       } catch {
         if (announce) {
-          new Notice('Failed to refresh Cursor models.');
+          new Notice(t('provider.cursor.models.refreshFailed'));
         }
       }
     };

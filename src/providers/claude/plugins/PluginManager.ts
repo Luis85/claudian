@@ -12,6 +12,7 @@ import * as os from 'os';
 import * as path from 'path';
 
 import type { PluginInfo, PluginScope } from '../../../core/types';
+import { t } from '../../../i18n/i18n';
 import type { CCSettingsStorage } from '../storage/CCSettingsStorage';
 import type { InstalledPluginEntry, InstalledPluginsFile } from '../types/plugins';
 
@@ -97,7 +98,7 @@ export class PluginManager {
 
         const entriesArray = Array.isArray(entries) ? entries : [entries];
         if (!Array.isArray(entries)) {
-          new Notice(`Claudian: plugin "${pluginId}" has malformed entry in installed_plugins.json (expected array, got ${typeof entries})`);
+          new Notice(t('provider.claude.plugin.malformedEntry', { id: pluginId, type: typeof entries }));
         }
         const entry = selectInstalledPluginEntry(entriesArray, normalizedVaultPath);
         if (!entry) continue;

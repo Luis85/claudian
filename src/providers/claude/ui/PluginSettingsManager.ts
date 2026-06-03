@@ -5,6 +5,7 @@ import type {
   AppPluginManager,
 } from '../../../core/providers/types';
 import type { PluginInfo } from '../../../core/types';
+import { t } from '../../../i18n/i18n';
 
 export interface PluginSettingsManagerDeps {
   pluginManager: AppPluginManager;
@@ -116,14 +117,17 @@ export class PluginSettingsManager {
       try {
         await this.restartTabs();
       } catch {
-        new Notice('Plugin toggled, but some tabs failed to restart.');
+        new Notice(t('provider.claude.plugin.toggleTabRestartFailed'));
       }
 
-      new Notice(`Plugin "${pluginId}" ${wasEnabled ? 'disabled' : 'enabled'}`);
+      new Notice(t(
+        wasEnabled ? 'provider.claude.plugin.disabled' : 'provider.claude.plugin.enabled',
+        { id: pluginId },
+      ));
     } catch (err) {
       await this.pluginManager.togglePlugin(pluginId);
       const message = err instanceof Error ? err.message : 'Unknown error';
-      new Notice(`Failed to toggle plugin: ${message}`);
+      new Notice(t('provider.claude.plugin.toggleFailed', { error: message }));
     } finally {
       this.render();
     }
@@ -134,10 +138,10 @@ export class PluginSettingsManager {
       await this.pluginManager.loadPlugins();
       await this.agentManager.loadAgents();
 
-      new Notice('Plugin list refreshed');
+      new Notice(t('provider.claude.plugin.listRefreshed'));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
-      new Notice(`Failed to refresh plugins: ${message}`);
+      new Notice(t('provider.claude.plugin.refreshFailed', { error: message }));
     } finally {
       this.render();
     }

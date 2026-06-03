@@ -57,6 +57,7 @@ import type {
 } from '../../../core/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
 import type { ClaudianSettings, PermissionMode } from '../../../core/types/settings';
+import { t } from '../../../i18n/i18n';
 import { stripCurrentNoteContext } from '../../../utils/context';
 import { getEnhancedPath, getMissingNodeError, parseEnvironmentVariables } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
@@ -997,7 +998,7 @@ export class ClaudianService implements ChatRuntime {
     try {
       await this._autoTurnCallback?.({ chunks, metadata });
     } catch {
-      new Notice('Background task completed, but the result could not be rendered.');
+      new Notice(t('provider.claude.task.resultRenderFailed'));
     }
   }
 
