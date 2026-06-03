@@ -229,7 +229,7 @@ export class SlashCommandModal extends Modal {
 
       const content = contentArea.value;
       if (!content.trim()) {
-        new Notice('Prompt template is required');
+        new Notice(t('settings.slashCommands.promptRequired'));
         return;
       }
 
@@ -238,7 +238,7 @@ export class SlashCommandModal extends Modal {
           && entry.id !== this.existingEntry?.id,
       );
       if (existing) {
-        new Notice(`A command named "/${name}" already exists`);
+        new Notice(t('settings.slashCommands.commandDuplicate', { name }));
         return;
       }
 
@@ -277,8 +277,11 @@ export class SlashCommandModal extends Modal {
       try {
         await this.onSave(entry);
       } catch {
-        const label = isSkillType ? 'skill' : 'slash command';
-        new Notice(`Failed to save ${label}`);
+        new Notice(t(
+          isSkillType
+            ? 'settings.slashCommands.skillSaveFailed'
+            : 'settings.slashCommands.commandSaveFailed',
+        ));
         return;
       }
       this.close();
@@ -406,7 +409,7 @@ export class SlashCommandSettings {
         try {
           await this.transformToSkill(cmd);
         } catch {
-          new Notice('Failed to convert to skill');
+          new Notice(t('settings.slashCommands.convertFailed'));
         }
         })();
       });
@@ -423,8 +426,11 @@ export class SlashCommandSettings {
         try {
           await this.deleteCommand(cmd);
         } catch {
-          const label = isSkillEntry(cmd) ? 'skill' : 'slash command';
-          new Notice(`Failed to delete ${label}`);
+          new Notice(t(
+            isSkillEntry(cmd)
+              ? 'settings.slashCommands.skillDeleteFailed'
+              : 'settings.slashCommands.commandDeleteFailed',
+          ));
         }
         })();
       });
@@ -457,8 +463,11 @@ export class SlashCommandSettings {
     await this.reloadCommands();
 
     this.render();
-    const label = isSkillEntry(cmd) ? 'Skill' : 'Slash command';
-    new Notice(`${label} "/${cmd.name}" ${existing ? 'updated' : 'created'}`);
+    const isSkill = isSkillEntry(cmd);
+    const key = isSkill
+      ? (existing ? 'settings.slashCommands.skillUpdated' : 'settings.slashCommands.skillCreated')
+      : (existing ? 'settings.slashCommands.commandUpdated' : 'settings.slashCommands.commandCreated');
+    new Notice(t(key, { name: cmd.name }));
   }
 
   private async deleteCommand(cmd: ProviderCommandEntry): Promise<void> {
@@ -471,8 +480,12 @@ export class SlashCommandSettings {
     await this.reloadCommands();
 
     this.render();
-    const label = isSkillEntry(cmd) ? 'Skill' : 'Slash command';
-    new Notice(`${label} "/${cmd.name}" deleted`);
+    new Notice(t(
+      isSkillEntry(cmd)
+        ? 'settings.slashCommands.skillDeleted'
+        : 'settings.slashCommands.commandDeleted',
+      { name: cmd.name },
+    ));
   }
 
   private async transformToSkill(cmd: ProviderCommandEntry): Promise<void> {
@@ -486,7 +499,7 @@ export class SlashCommandSettings {
       entry => isSkillEntry(entry) && entry.name === skillName,
     );
     if (existingSkill) {
-      new Notice(`A skill named "/${skillName}" already exists`);
+      new Notice(t('settings.slashCommands.skillDuplicate', { name: skillName }));
       return;
     }
 
@@ -509,7 +522,7 @@ export class SlashCommandSettings {
 
     await this.reloadCommands();
     this.render();
-    new Notice(`Converted "/${cmd.name}" to skill`);
+    new Notice(t('settings.slashCommands.converted', { name: cmd.name }));
   }
 
   private async reloadCommands(): Promise<void> {

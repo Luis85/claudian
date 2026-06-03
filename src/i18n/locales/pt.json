@@ -227,7 +227,22 @@
     },
     "slashCommands": {
       "name": "Comandos e habilidades",
-      "desc": "Gerencie comandos e habilidades a nível de vault armazenados em .claude/commands/ e .claude/skills/. Acionados por /nome."
+      "desc": "Gerencie comandos e habilidades a nível de vault armazenados em .claude/commands/ e .claude/skills/. Acionados por /nome.",
+      "promptRequired": "Prompt template is required",
+      "commandDuplicate": "A command named \"/{name}\" already exists",
+      "skillDuplicate": "A skill named \"/{name}\" already exists",
+      "commandSaveFailed": "Failed to save slash command",
+      "skillSaveFailed": "Failed to save skill",
+      "convertFailed": "Failed to convert to skill",
+      "commandDeleteFailed": "Failed to delete slash command",
+      "skillDeleteFailed": "Failed to delete skill",
+      "commandCreated": "Slash command \"/{name}\" created",
+      "commandUpdated": "Slash command \"/{name}\" updated",
+      "commandDeleted": "Slash command \"/{name}\" deleted",
+      "skillCreated": "Skill \"/{name}\" created",
+      "skillUpdated": "Skill \"/{name}\" updated",
+      "skillDeleted": "Skill \"/{name}\" deleted",
+      "converted": "Converted \"/{name}\" to skill"
     },
     "hiddenSlashCommands": {
       "name": "Comandos e habilidades ocultos",

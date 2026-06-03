@@ -227,7 +227,22 @@
     },
     "slashCommands": {
       "name": "命令與技能",
-      "desc": "管理儲存在 .claude/commands/ 和 .claude/skills/ 中的 Vault 級命令與技能。由 /名稱 觸發。"
+      "desc": "管理儲存在 .claude/commands/ 和 .claude/skills/ 中的 Vault 級命令與技能。由 /名稱 觸發。",
+      "promptRequired": "Prompt template is required",
+      "commandDuplicate": "A command named \"/{name}\" already exists",
+      "skillDuplicate": "A skill named \"/{name}\" already exists",
+      "commandSaveFailed": "Failed to save slash command",
+      "skillSaveFailed": "Failed to save skill",
+      "convertFailed": "Failed to convert to skill",
+      "commandDeleteFailed": "Failed to delete slash command",
+      "skillDeleteFailed": "Failed to delete skill",
+      "commandCreated": "Slash command \"/{name}\" created",
+      "commandUpdated": "Slash command \"/{name}\" updated",
+      "commandDeleted": "Slash command \"/{name}\" deleted",
+      "skillCreated": "Skill \"/{name}\" created",
+      "skillUpdated": "Skill \"/{name}\" updated",
+      "skillDeleted": "Skill \"/{name}\" deleted",
+      "converted": "Converted \"/{name}\" to skill"
     },
     "hiddenSlashCommands": {
       "name": "隱藏命令與技能",

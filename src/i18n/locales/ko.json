@@ -227,7 +227,22 @@
     },
     "slashCommands": {
       "name": "명령어와 스킬",
-      "desc": ".claude/commands/ 및 .claude/skills/에 저장된 Vault 수준의 명령어와 스킬을 관리합니다. /이름으로 트리거됩니다."
+      "desc": ".claude/commands/ 및 .claude/skills/에 저장된 Vault 수준의 명령어와 스킬을 관리합니다. /이름으로 트리거됩니다.",
+      "promptRequired": "Prompt template is required",
+      "commandDuplicate": "A command named \"/{name}\" already exists",
+      "skillDuplicate": "A skill named \"/{name}\" already exists",
+      "commandSaveFailed": "Failed to save slash command",
+      "skillSaveFailed": "Failed to save skill",
+      "convertFailed": "Failed to convert to skill",
+      "commandDeleteFailed": "Failed to delete slash command",
+      "skillDeleteFailed": "Failed to delete skill",
+      "commandCreated": "Slash command \"/{name}\" created",
+      "commandUpdated": "Slash command \"/{name}\" updated",
+      "commandDeleted": "Slash command \"/{name}\" deleted",
+      "skillCreated": "Skill \"/{name}\" created",
+      "skillUpdated": "Skill \"/{name}\" updated",
+      "skillDeleted": "Skill \"/{name}\" deleted",
+      "converted": "Converted \"/{name}\" to skill"
     },
     "hiddenSlashCommands": {
       "name": "숨겨진 명령어와 스킬",
