@@ -1191,6 +1191,55 @@ describe('sdkSession', () => {
       expect(assistant.assistantMessageId).toBe('a1-last');
     });
 
+    // F1 (Phase 1c follow-up to PERF-4) — the merge loop has three early-
+    // continue skip paths (`isSystemInjectedMessage`, `<synthetic>` assistant,
+    // null parse result). The original bottom-of-loop yield check fired only
+    // on iterations that ran the full merge body, so any consecutive run of
+    // skip-path entries blocked the event loop. The fix moved the yield
+    // check above the skips so cadence tracks raw iteration count. Verify
+    // the contract by feeding a transcript whose every entry hits a skip
+    // path and asserting yields still fire.
+    it('yields during merge even when every entry hits a skip path', async () => {
+      const entryCount = 500;
+      const lines: string[] = [];
+      let parentUuid: string | null = null;
+      for (let i = 0; i < entryCount; i++) {
+        const ts = new Date(i * 1000).toISOString();
+        const uuid = `syn-${i}`;
+        // Synthetic assistant entries trigger the second `continue` in the
+        // merge loop. Linear parentUuid chain keeps every entry on the
+        // active branch so filterActiveBranch preserves all 500 inputs.
+        lines.push(
+          `{"type":"assistant","uuid":"${uuid}","parentUuid":${JSON.stringify(parentUuid)},"timestamp":"${ts}","message":{"model":"<synthetic>","content":[]}}`,
+        );
+        parentUuid = uuid;
+      }
+
+      mockExistsSync.mockReturnValue(true);
+      mockFsPromises.readFile.mockResolvedValue(lines.join('\n'));
+
+      let counter = 0;
+      let stop = false;
+      const tick = (): void => {
+        if (stop) return;
+        counter++;
+        setTimeout(tick, 0);
+      };
+      setTimeout(tick, 0);
+
+      const result = await loadSDKSessionMessages('/Users/test/vault', 'session-all-skip');
+      stop = true;
+
+      // Every entry hit the synthetic-assistant skip path, so no merged
+      // ChatMessage emerged.
+      expect(result.messages).toEqual([]);
+      // With YIELD_EVERY=50 over 500 raw iterations, the merge loop should
+      // yield ~9 times. Be lenient on the lower bound; the prior bottom-of-
+      // loop check would have fired 0 times here, so any non-zero value is
+      // already a regression catcher.
+      expect(counter).toBeGreaterThanOrEqual(3);
+    });
+
     // PERF-4 — the merge loop converts every filtered SDK entry into a ChatMessage
     // and merges consecutive assistant messages. For a long history it dominates
     // wall time after the file read. Without yields the UI freezes for the

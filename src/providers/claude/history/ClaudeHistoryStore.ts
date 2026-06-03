@@ -85,6 +85,17 @@ export async function loadSDKSessionMessages(
 
   // Merge consecutive assistant messages until an actual user message appears
   for (let i = 0; i < filteredEntries.length; i++) {
+    // Yield-above-continue (F1): the loop body has three early-continue
+    // paths (`isSystemInjectedMessage`, `<synthetic>` assistant, null parse
+    // result). A bottom-of-loop yield check would be skipped on any
+    // consecutive skip-only run, leaving the event loop blocked when the
+    // skip distribution clusters. Checking at the top ties the yield
+    // cadence to raw iteration count (the actual wall-time driver) so
+    // the contract holds regardless of transcript shape.
+    if (i > 0 && i % YIELD_EVERY_MERGED_ENTRIES === 0) {
+      await new Promise(resolve => window.setTimeout(resolve, 0));
+    }
+
     const sdkMsg = filteredEntries[i];
     if (isSystemInjectedMessage(sdkMsg)) continue;
 
@@ -114,13 +125,6 @@ export async function loadSDKSessionMessages(
         pendingAssistant = null;
       }
       chatMessages.push(chatMsg);
-    }
-
-    if (
-      (i + 1) % YIELD_EVERY_MERGED_ENTRIES === 0 &&
-      i + 1 < filteredEntries.length
-    ) {
-      await new Promise(resolve => window.setTimeout(resolve, 0));
     }
   }
 
