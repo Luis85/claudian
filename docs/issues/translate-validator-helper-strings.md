@@ -1,6 +1,6 @@
 ---
 title: Translate validator and parser helper strings used by Notice sites
-status: open
+status: partially-shipped
 priority: P2
 related:
   - "[[docs/reviews/2026-06-02-codebase-review-and-improvement-plan.md]]"
