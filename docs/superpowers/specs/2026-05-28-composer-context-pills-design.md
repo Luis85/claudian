@@ -1,5 +1,5 @@
 ---
-status: approved
+status: shipped
 parent: "[[Chat]]"
 ---
 # Composer context pills (Cursor-style attachments)

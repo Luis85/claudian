@@ -1,5 +1,5 @@
 ---
-status: approved
+status: shipped
 parent: "[[Agent Kanban Board]]"
 ---
 # Agent Board End-to-End Thin Slice Design

@@ -1,5 +1,5 @@
 ---
-status: approved
+status: shipped
 parent: Product
 ---
 # Feature docs content design
