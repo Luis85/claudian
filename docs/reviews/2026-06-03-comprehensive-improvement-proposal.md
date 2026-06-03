@@ -276,7 +276,7 @@ that build the moat). Run them in parallel — they touch different files and re
 |-------|-------|-----|------|
 | **D1 — Trust UX layer** | UX-A (provider Detect & Test), UX-F (actionable error cards), UX-E (composer a11y + stream live region) | Fixes the #1 onboarding journey + the largest support category; low-risk, broad reach. Start here — cheapest high-leverage product win. | M |
 | **D2 — Visible context & citations** | UX-B (pre-send preview + workspace disclosure), UX-C (explicit-context citations) | The 2026-05-28 proposal's designated #1 bet; closes the "table stakes" competitive gap. Formalize as the `ComposerContextBuilder` envelope + `ContextSourceHandle`. | M–L / L |
-| **D3 — Provider parity (MCP unification)** | PN-1 (Codex MCP), PN-2 (Cursor MCP), PN-4 (Opencode plan mode), PN-3 (Cursor subagents) | A **unified MCP control plane across all 4 providers** is a concrete differentiator (rivals punt MCP to each CLI). Plan/subagent parity deepens the "depth" moat. | M each |
+| **D3 — Provider parity (MCP unification)** | PN-1 (Codex MCP), PN-2 (Cursor MCP), **Opencode in-app MCP management** (today `supportsMcpTools:false` → runtime-only; needs a management surface to reach Claude parity), PN-4 (Opencode plan mode), PN-3 (Cursor subagents) | A **unified in-app MCP control plane across all 4 providers** is a concrete differentiator (rivals punt MCP to each CLI). Note only Claude exposes in-app MCP management today; the other three (incl. Opencode) need work. Plan/subagent parity deepens the "depth" moat. | M each |
 | **D4 — Agent Board as orchestration surface** | Evidence & Review Gate PRD (run leases, structured evidence, changed-file attribution, evidence-gated completion); **background/long-running runs** streaming into cards; Orchestrator↔Board integration; UX-G (drag-drop + ARIA) | The headline moat: nothing else in the Obsidian space runs work orders as background/multi-agent workers with evidence review. Spine of the Specorator thesis. | L (multi-PR) |
 | **D5 — Unified safe-edit/revert** | UX-D + PN-7 (verify Claude file-checkpointing), PN-6 (Claude hooks → snapshot-before-edit), PN-5 (Codex transcript rollback — pair with a **separate file snapshot/patch-revert path**; rollback alone leaves edits on disk) | "Approve changes like a writer" across all providers. **File revert is provider-uneven**: Claude has a real file-checkpoint primitive; Codex app-server rollback is transcript-only; Opencode file undo is ACP-blocked; Cursor is auto-checkpoint only. For non-Claude providers, the durable answer is a Claudian-owned pre-edit snapshot (feasible because edits flow through the tool stream), not a provider transcript-rollback dressed up as file revert. | M + provider work |
 
@@ -297,13 +297,20 @@ that build the moat). Run them in parallel — they touch different files and re
 
 | Capability | Claude | Codex | Opencode | Cursor | Action |
 |---|---|---|---|---|---|
-| MCP management | ✅ | ❌→PN-1 | ✅ | ❌→PN-2 | unify control plane (D3) |
+| MCP management (in-app) | ✅ | ❌→PN-1 | runtime-only* | ❌→PN-2 | unify in-app control plane across **all 4** (D3) |
 | Plan mode | ✅ | ✅ | gated→PN-4 | ✅ | ungate Opencode (D3) |
 | Subagents | ✅ | ✅ | ✅ | gated→PN-3 | ungate Cursor (D3) |
 | Rewind / checkpoint (files) | ✅ (file API) | transcript-only (PN-5) | ACP-blocked | auto only | non-Claude needs a Claudian pre-edit snapshot (D5) |
 | Hooks | ❌→PN-6 | — | permissions | 2.4 (post-cutoff) | Claude first (D5) |
 | Citations | ❌ | ❌ | ❌ | ❌ | all via D2 |
 | Secret storage | plaintext | plaintext | plaintext | plaintext | all via H1 |
+
+\* **Opencode MCP is runtime-only, not in-app-managed.** Opencode runs MCP via its own
+Opencode-managed config, but `supportsMcpTools: false` (`src/providers/opencode/capabilities.ts:13`)
+so Claudian shows **no in-app MCP selector/management surface** for it — the selector is gated off at
+`src/features/chat/tabs/tabShared.ts:189-197`. Only Claude is `true`. A genuinely unified in-app
+control plane (D3) must add a management path for **Opencode too**, not just Codex/Cursor — otherwise
+"unified across all four" overstates what ships.
 
 ---
 
