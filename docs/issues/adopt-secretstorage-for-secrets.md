@@ -43,6 +43,11 @@ automated-review anti-pattern.
 - Keep `.claude/mcp.json` referencing secrets via Claude Code's documented `.mcp.json` expansion syntax
   **`${VAR}` / `${VAR:-default}`** (NOT an `env:` namespace — that form will not resolve and would break
   authenticated servers). Claudian injects the resolved values into the child process env at launch.
+- **Resolve secret refs for the in-app MCP transport too, not just provider child spawns.** The in-app MCP
+  Test/management path (`McpTester`/manager) runs in the **plugin process** and passes `config.headers`
+  **directly** into the MCP SDK transport — it does not go through the provider CLI child. So once plaintext
+  headers are removed, the Test/management path must resolve the SecretStorage-backed header/`${VAR}` refs
+  before constructing the transport, or the Test button will send literal placeholders / missing auth.
 - Add a migration scan for existing plaintext secrets.
 
 ## Compatibility requirement

@@ -38,7 +38,12 @@ A warning a malicious vault can pre-acknowledge is not a control. **Before openi
 
 - Resolve the target host and **deny** link-local (`169.254.0.0/16`, incl. metadata `169.254.169.254`),
   loopback, RFC1918/IPv6-ULA private ranges, and internal-only hosts.
-- Check the **resolved IP**, not just the hostname (DNS-rebinding-safe).
+- **Pin the connection to the vetted IP** — a preflight resolve + separate connect is *still*
+  DNS-rebinding-vulnerable (TOCTOU): Node/the MCP SDK's `http.request` performs its **own** lookup when it
+  opens the socket, so a hostname can pass the guard with a public answer and then rebind to a private
+  address for the real connection. Enforce the vetted IP via a custom `lookup` on the agent/transport (or
+  connect directly to the checked IP while preserving `Host`/SNI), so the IP that was checked is the IP that
+  receives the socket.
 - This deny is mandatory for vault-provenance servers.
 
 Then layer UX on top: non-loopback `http://` warning, destination host + provenance (vault vs user-added),
@@ -48,5 +53,6 @@ untrusted-tool-description framing.
 
 - A Test against a link-local/loopback/private host is **refused before any socket opens** (with a clear message).
 - Provenance + destination host shown in the enable/test UI; tool descriptions rendered as untrusted.
-- Unit tests cover the deny ranges incl. a DNS-rebinding (hostname→private IP) case.
+- Unit tests cover the deny ranges incl. a DNS-rebinding (hostname→private IP) case, asserting the socket
+  connects to the **vetted** IP (not a re-resolved one).
 - **Not done while the Test path can still reach private services.**
