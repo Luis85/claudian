@@ -56,8 +56,6 @@ describe('ConversationStore', () => {
     jest
       .spyOn(ProviderRegistry, 'getConversationHistoryService')
       .mockReturnValue({
-        hydrateConversationHistory: jest.fn().mockResolvedValue(undefined),
-        deleteConversationSession: jest.fn().mockResolvedValue(undefined),
         hydrateConversationHistoryV2: jest
           .fn()
           .mockResolvedValue({ kind: 'cached', sourceRef: 'k' }),
@@ -176,8 +174,6 @@ describe('ConversationStore', () => {
       jest
         .spyOn(ProviderRegistry, 'getConversationHistoryService')
         .mockReturnValue({
-          hydrateConversationHistory: jest.fn().mockResolvedValue(undefined),
-          deleteConversationSession: jest.fn().mockResolvedValue(undefined),
           hydrateConversationHistoryV2: jest
             .fn()
             .mockResolvedValue({ kind: 'cached', sourceRef: 'k' }),
@@ -587,8 +583,6 @@ describe('ConversationStore', () => {
     it('preserves images for a pending fork via forkSupport.isPendingForkConversation', async () => {
       const isPendingForkConversation = jest.fn().mockReturnValue(true);
       jest.spyOn(ProviderRegistry, 'getConversationHistoryService').mockReturnValue({
-        hydrateConversationHistory: jest.fn().mockResolvedValue(undefined),
-        deleteConversationSession: jest.fn().mockResolvedValue(undefined),
         hydrateConversationHistoryV2: jest.fn().mockResolvedValue({ kind: 'cached', sourceRef: 'k' }),
         deleteConversationSessionV2: jest.fn().mockResolvedValue({ kind: 'no-op', reason: 'no-session' }),
         resolveSessionIdForConversation: jest.fn().mockReturnValue(null),

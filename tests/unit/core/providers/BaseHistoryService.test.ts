@@ -44,10 +44,6 @@ class FakeHistoryService extends BaseHistoryService {
   async deleteConversationSessionV2(): Promise<DeleteHistoryOutcome> {
     return { kind: 'no-op', reason: 'no-session' };
   }
-
-  // v1 bridge inherited from BaseHistoryService — no override needed.
-  async hydrateConversationHistory(): Promise<void> { /* v1 bridge handled by base */ }
-  async deleteConversationSession(): Promise<void> { /* v1 bridge handled by base */ }
 }
 
 const ctx: HydrationContext = { vaultPath: '/vault', reason: 'open' };

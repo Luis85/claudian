@@ -92,6 +92,10 @@ export function mapOpencodeMessages(
         mappedMessages.push(mappedMessage);
       }
     } catch (error) {
+      // Per-row sentinel stays for individual malformed messages; session-level
+      // failures are reported through HistoryLoadOutcome.error. Lifting per-row
+      // signals into the outcome (e.g. `outcomes: HistoryLoadError[]` on the
+      // loaded variant) is a follow-up.
       mappedMessages.push(createOpencodeHydrationDiagnosticMessage({
         ...context,
         messageId: getString(message.info.id) ?? undefined,
@@ -312,12 +316,6 @@ function buildOpencodeHydrationDiagnosticId(params: {
   const rawId = params.messageId ?? params.sessionId ?? String(Date.now());
   const safeId = rawId.replace(/[^a-zA-Z0-9._-]/g, '-').slice(0, 120) || String(Date.now());
   return `${OPENCODE_HYDRATION_DIAGNOSTIC_ID_PREFIX}-${scope}-${safeId}`;
-}
-
-// Kept as a placeholder until Task 13 removes the sentinel helpers entirely.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function isOpencodeSessionHydrationDiagnosticMessage(message: ChatMessage): boolean {
-  return message.id.startsWith(`${OPENCODE_HYDRATION_DIAGNOSTIC_ID_PREFIX}-session-`);
 }
 
 function isOpencodeHydrationDiagnosticMessage(message: ChatMessage): boolean {

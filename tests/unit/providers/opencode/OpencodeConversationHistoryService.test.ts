@@ -113,15 +113,3 @@ describe('OpencodeConversationHistoryService.forkSupport', () => {
     expect(svc.forkSupport).toBeUndefined();
   });
 });
-
-describe('OpencodeConversationHistoryService.hydrateConversationHistory (v1 bridge)', () => {
-  it('writes to conversation.messages via the BaseHistoryService bridge', async () => {
-    jest.spyOn(Store, 'loadOpencodeSessionMessages').mockResolvedValue({
-      messages: [{ id: 'm1', role: 'user', content: 'hi', timestamp: 1 } as never],
-    });
-    const svc = new OpencodeConversationHistoryService();
-    const conv = makeConversation();
-    await svc.hydrateConversationHistory(conv, null);
-    expect(conv.messages.length).toBe(1);
-  });
-});

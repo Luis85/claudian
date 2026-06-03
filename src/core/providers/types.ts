@@ -506,34 +506,6 @@ export interface ProviderForkSupport {
 export interface ProviderConversationHistoryService<
   TPersistedState = Record<string, unknown>,
 > {
-  /**
-   * @deprecated Use {@link ProviderConversationHistoryService.hydrateConversationHistoryV2}.
-   * v1 will be removed in Task 13 after every caller migrates.
-   */
-  hydrateConversationHistory(
-    conversation: Conversation,
-    vaultPath: string | null,
-  ): Promise<void>;
-  /**
-   * @deprecated Use {@link ProviderConversationHistoryService.deleteConversationSessionV2}.
-   */
-  deleteConversationSession(
-    conversation: Conversation,
-    vaultPath: string | null,
-  ): Promise<void>;
-  /**
-   * @deprecated Moved under `forkSupport.isPendingForkConversation`. v1 stays until Task 13.
-   */
-  isPendingForkConversation?(conversation: Conversation): boolean;
-  /**
-   * @deprecated Moved under `forkSupport.buildForkProviderState`.
-   */
-  buildForkProviderState?(
-    sourceSessionId: string,
-    resumeAt: string,
-    sourceProviderState?: Record<string, unknown>,
-  ): Record<string, unknown>;
-
   /** Outcome-typed hydration. Returns the outcome; never mutates `conversation.messages`. */
   hydrateConversationHistoryV2(
     conversation: Conversation,

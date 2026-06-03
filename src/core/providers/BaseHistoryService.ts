@@ -16,7 +16,6 @@ import type {
  *   - the `forceRefresh` bypass
  *   - cache invalidation on `empty` / `error` outcomes
  *   - concurrent-hydration dedupe (inflight map keyed by conversation id)
- *   - a default v1 -> v2 bridge so subclasses that have only migrated v2 still satisfy v1
  *
  * The base **never** mutates `conversation.messages`. Callers (`ConversationStore`)
  * branch on the outcome and own the assignment so the loaded/error asymmetry that
@@ -99,41 +98,6 @@ export abstract class BaseHistoryService<
     } finally {
       this.inflight.delete(conversation.id);
     }
-  }
-
-  /**
-   * Default v1 bridge: delegate to v2, perform the messages assignment that v1
-   * callers expect. Subclasses MAY override to short-circuit v1 paths (Tasks 4-7
-   * use this default).
-   *
-   * @deprecated Use {@link hydrateConversationHistoryV2}.
-   */
-  async hydrateConversationHistory(
-    conversation: Conversation,
-    vaultPath: string | null,
-  ): Promise<void> {
-    const outcome = await this.hydrateConversationHistoryV2(conversation, {
-      vaultPath,
-      reason: 'open',
-    });
-    if (outcome.kind === 'loaded') {
-      conversation.messages = outcome.messages;
-    }
-  }
-
-  /**
-   * Default v1 bridge: delegate to v2, ignore the outcome.
-   *
-   * @deprecated Use {@link deleteConversationSessionV2}.
-   */
-  async deleteConversationSession(
-    conversation: Conversation,
-    vaultPath: string | null,
-  ): Promise<void> {
-    await this.deleteConversationSessionV2(conversation, {
-      vaultPath,
-      reason: 'open',
-    });
   }
 
   /** Test-only: clears the cache. Subclasses may expose this for white-box tests. */

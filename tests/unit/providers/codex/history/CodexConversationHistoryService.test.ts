@@ -100,18 +100,4 @@ describe('CodexConversationHistoryService.forkSupport', () => {
     });
     expect(svc.forkSupport?.isPendingForkConversation(conv)).toBe(true);
   });
-
-  it('exposes isPendingForkConversation and buildForkProviderState at the root as v1 shims that delegate to forkSupport (until Task 10 migrates callers)', () => {
-    const svc = new CodexConversationHistoryService();
-    expect(typeof svc.isPendingForkConversation).toBe('function');
-    expect(typeof svc.buildForkProviderState).toBe('function');
-    // Behavior parity check.
-    const conv = {
-      id: 'c', title: 't', messages: [], providerId: 'codex', sessionId: null,
-      providerState: { forkSource: { sessionId: 'src', resumeAt: 't1' } },
-      createdAt: 0, updatedAt: 0,
-    } as never;
-    expect(svc.isPendingForkConversation(conv)).toBe(true);
-    expect(svc.forkSupport?.isPendingForkConversation(conv)).toBe(true);
-  });
 });

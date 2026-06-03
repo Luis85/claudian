@@ -99,15 +99,9 @@ describe('history service types', () => {
 });
 
 describe('ProviderConversationHistoryService v2 surface', () => {
-  it('accepts generic TPersistedState; v1 and v2 coexist; forkSupport is optional', () => {
+  it('accepts generic TPersistedState; forkSupport is optional', () => {
     type PinnedState = { databasePath: string };
     const service: ProviderConversationHistoryService<PinnedState> = {
-      // v1 (deprecated, kept until Task 13)
-      async hydrateConversationHistory(_c, _v) { /* legacy */ },
-      async deleteConversationSession(_c, _v) { /* legacy */ },
-      isPendingForkConversation(_c) { return false; },
-      buildForkProviderState() { return {}; },
-      // v2
       async hydrateConversationHistoryV2(_c, _ctx) {
         return { kind: 'empty', reason: 'no-store', sourceRef: null };
       },
