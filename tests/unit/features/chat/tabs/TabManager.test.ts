@@ -338,6 +338,35 @@ describe('TabManager - Tab Lifecycle', () => {
       // Service initialization is now lazy (on first query), not on switch
       expect(mockInitializeTabService).not.toHaveBeenCalled();
     });
+
+    // UX-3 — pending input prompts (approval / ask-user / post-plan approval)
+    // must not block tab switching. A long-running prompt on tab A would
+    // otherwise strand the user; UX-1/-2 make the background tabs visible
+    // and UX-3 guarantees they actually become reachable. The contract:
+    // switchToTab activates the target regardless of any tab's
+    // state.needsAttention flag (the flag is purely a presentation cue).
+    it('switches tabs even when the current tab is waiting on a pending prompt', async () => {
+      const manager = createManager({ callbacks });
+
+      const tab1 = await manager.createTab();
+      const tab2 = await manager.createTab();
+      // First make tab2 active so we can switch back to tab1 below.
+      await manager.switchToTab(tab2!.id);
+
+      // Simulate tab1 blocking on a pending approval / ask prompt.
+      tab1!.state.needsAttention = true;
+
+      jest.clearAllMocks();
+      await manager.switchToTab(tab1!.id);
+
+      expect(mockDeactivateTab).toHaveBeenCalled();
+      expect(mockActivateTab).toHaveBeenCalled();
+      expect(callbacks.onTabSwitched).toHaveBeenCalled();
+      expect(manager.getActiveTab()?.id).toBe(tab1!.id);
+      // needsAttention is a presentation flag — the switch must not clear it
+      // or the badge would vanish the moment the user looks at the blocked tab.
+      expect(tab1!.state.needsAttention).toBe(true);
+    });
   });
 
   describe('closeTab', () => {

@@ -136,6 +136,7 @@ describe('ConversationStore.loadConversations (activation proxy)', () => {
       storage,
       getVaultPath: () => '/vault',
       repairViewsAfterDelete: async () => undefined,
+      events: { emit: jest.fn(), on: jest.fn(), off: jest.fn(), setErrorSink: jest.fn() } as any,
     });
   }
 

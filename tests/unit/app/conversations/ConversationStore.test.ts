@@ -41,6 +41,7 @@ function createStore(options?: {
     getVaultPath: () => (options?.vaultPath !== undefined ? options.vaultPath : '/vault'),
     repairViewsAfterDelete:
       options?.repairViewsAfterDelete ?? (async () => undefined),
+    events: { emit: jest.fn(), on: jest.fn(), off: jest.fn(), setErrorSink: jest.fn() } as any,
   });
   return { store, sessions };
 }

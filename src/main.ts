@@ -237,6 +237,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       storage: this.storage,
       getVaultPath: () => getVaultPath(this.app),
       repairViewsAfterDelete: (conversationId) => this.repairViewsAfterConversationDelete(conversationId),
+      events: this.events,
     });
     const { claudian } = await this.storage.initialize();
     this.lastKnownTabManagerState = await this.storage.getTabManagerState();

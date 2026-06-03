@@ -82,13 +82,66 @@
   color: var(--text-normal);
 }
 
+/*
+ * Active tab (UX-1) — when multiple tabs are open the active one must read
+ * at a glance. The base styling differentiated active vs idle only by border
+ * color; with three tabs each in a different state that contrast collapses.
+ * Filled accent background + bold weight makes the active tab the first
+ * thing the eye lands on, even alongside attention/working pulses.
+ */
 .claudian-tab-badge-active {
   border-color: var(--interactive-accent);
-  color: var(--text-normal);
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+  font-weight: 600;
+}
+
+.claudian-tab-badge-active:hover {
+  background: var(--interactive-accent-hover, var(--interactive-accent));
+  color: var(--text-on-accent);
 }
 
 .claudian-tab-badge-attention {
   border-color: var(--text-error);
+}
+
+/*
+ * Attention badge (UX-2) — a small dot in the corner that survives the
+ * active-tab fill (so the user sees attention pending even on the tab they
+ * are currently looking at) and the working pulse. Positioned bottom-left
+ * to avoid colliding with the worker dot (top-right) and the working dot
+ * (top-right).
+ */
+.claudian-tab-badge.claudian-tab-badge-attention::before {
+  content: '';
+  position: absolute;
+  bottom: 1px;
+  left: 1px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-error);
+  box-shadow: 0 0 0 1px var(--background-primary);
+  animation: claudian-tab-badge-attention-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes claudian-tab-badge-attention-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .claudian-tab-badge.claudian-tab-badge-attention::before {
+    animation: none;
+  }
 }
 
 .claudian-tab-badge-idle {

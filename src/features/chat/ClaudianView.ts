@@ -26,6 +26,7 @@ import type { OrchestratorPlan } from './rendering/orchestratorPlanParser';
 import { OrchestratorService } from './services/OrchestratorService';
 import {
   getTabProviderId,
+  getTabTitle,
   onProviderAvailabilityChanged,
   sendTabInputMessageFromExplicitEnterShortcut,
   updatePlanModeUI,
@@ -254,6 +255,7 @@ export class ClaudianView extends ItemView {
         },
         onTabSwitched: () => {
           this.updateTabBar();
+          this.syncHeaderTitle();
           this.updateHistoryDropdown();
           this.updateNavRowLocation();
           this.gitActionButton?.updateDisplay();
@@ -263,13 +265,18 @@ export class ClaudianView extends ItemView {
         onTabClosed: (tabId) => {
           this.orchestratorService.handleTabClosed(tabId);
           this.updateTabBar();
+          this.syncHeaderTitle();
           this.persistTabState();
         },
         onTabStreamingChanged: () => this.updateTabBar(),
-        onTabTitleChanged: () => this.updateTabBar(),
+        onTabTitleChanged: () => {
+          this.updateTabBar();
+          this.syncHeaderTitle();
+        },
         onTabAttentionChanged: () => this.updateTabBar(),
         onTabConversationChanged: () => {
           this.updateTabBar();
+          this.syncHeaderTitle();
           this.gitActionButton?.updateDisplay();
           this.persistTabState();
           this.syncProviderBrandColor();
@@ -284,6 +291,7 @@ export class ClaudianView extends ItemView {
 
     await this.restoreOrCreateTabs();
     this.syncProviderBrandColor();
+    this.syncHeaderTitle();
     this.updateLayoutForPosition();
     this.tabManager?.primeProviderRuntime();
   }
@@ -812,6 +820,27 @@ export class ClaudianView extends ItemView {
     this.syncHeaderLogo(providerId);
   }
 
+  /**
+   * UX-4 — surface the active session's title in the header instead of the
+   * static "Claudian" branding. The title was previously only visible by
+   * hovering the tab badge; users couldn't tell what conversation was open
+   * at a glance.
+   *
+   * Falls back to "Claudian" when no tab is active (empty state or tab
+   * teardown). Tab-bar visibility logic (`updateLayoutForPosition`) still
+   * decides whether the title element is shown at all — in header mode with
+   * 2+ tabs the title hides because the badges replace it; this method only
+   * controls the text content of the element.
+   */
+  private syncHeaderTitle(): void {
+    if (!this.titleTextEl) return;
+    const activeTab = this.tabManager?.getActiveTab();
+    const title = activeTab ? getTabTitle(activeTab, this.plugin) : 'Claudian';
+    this.titleTextEl.setText(title);
+    this.titleTextEl.setAttribute('aria-label', title);
+    this.titleTextEl.title = title;
+  }
+
   /** Rebuilds the header logo SVG to match the given provider. */
   private syncHeaderLogo(providerId: ProviderId): void {
     if (!this.logoEl) return;
@@ -972,6 +1001,16 @@ export class ClaudianView extends ItemView {
     this.registerEvent(this.plugin.app.vault.on('delete', () => markCacheDirty(true)));
     this.registerEvent(this.plugin.app.vault.on('rename', () => markCacheDirty(true)));
     this.registerEvent(this.plugin.app.vault.on('modify', () => markCacheDirty(false)));
+
+    // UX-4: refresh header title + tab bar when the active tab's conversation
+    // is renamed (manual rename or auto-title generation).
+    this.register(this.plugin.events.on('conversation:renamed', (payload) => {
+      const activeTab = this.tabManager?.getActiveTab();
+      if (activeTab?.conversationId === payload.conversationId) {
+        this.syncHeaderTitle();
+      }
+      this.updateTabBar();
+    }));
 
     // File open event
     this.registerEvent(

@@ -1185,6 +1185,10 @@ export class InputController {
   ): Promise<Record<string, string | string[]> | null> {
     this.deps.streamController.hideThinkingIndicator();
     this.hideInputContainer(inputContainerEl);
+    // UX-2: every inline question (approval, ask-user, post-plan approval)
+    // surfaces a tab-bar "needs attention" badge so background tabs that
+    // are blocked on the user become visible without switching to them.
+    this.deps.state.needsAttention = true;
 
     return new Promise<Record<string, string | string[]> | null>((resolve, reject) => {
       const inline = new InlineAskUserQuestion(
@@ -1192,6 +1196,7 @@ export class InputController {
         input,
         (result: Record<string, string | string[]> | null) => {
           setPending(null);
+          this.deps.state.needsAttention = false;
           this.restoreInputContainer(inputContainerEl);
           resolve(result);
         },
@@ -1203,6 +1208,7 @@ export class InputController {
         inline.render();
       } catch (err) {
         setPending(null);
+        this.deps.state.needsAttention = false;
         this.restoreInputContainer(inputContainerEl);
         reject(toError(err));
       }
@@ -1222,6 +1228,8 @@ export class InputController {
 
     streamController.hideThinkingIndicator();
     this.hideInputContainer(inputContainerEl);
+    // UX-2: surface "needs attention" while the exit-plan-mode prompt blocks.
+    state.needsAttention = true;
 
     const enrichedInput = state.planFilePath
       ? { ...input, planFilePath: state.planFilePath }
@@ -1238,6 +1246,7 @@ export class InputController {
         enrichedInput,
         (decision: ExitPlanModeDecision | null) => {
           this.pendingExitPlanModeInline = null;
+          state.needsAttention = false;
           this.restoreInputContainer(inputContainerEl);
           resolve(decision);
         },
@@ -1250,6 +1259,7 @@ export class InputController {
         inline.render();
       } catch (err) {
         this.pendingExitPlanModeInline = null;
+        state.needsAttention = false;
         this.restoreInputContainer(inputContainerEl);
         reject(toError(err));
       }
@@ -1274,6 +1284,9 @@ export class InputController {
       this.pendingExitPlanModeInline = null;
     }
     this.dismissPendingPlanApproval(true);
+    // UX-2: dismissing flushes every pending prompt above; clear the
+    // attention flag so the tab badge returns to its idle state.
+    this.deps.state.needsAttention = false;
     this.resetInputContainerVisibility();
   }
 
@@ -1286,6 +1299,8 @@ export class InputController {
 
     this.hideInputContainer(inputContainerEl);
     this.pendingPlanApprovalInvalidated = false;
+    // UX-2: post-plan approval prompt is another tab-blocking input.
+    this.deps.state.needsAttention = true;
 
     const planPathPrefix = this.getActiveCapabilities().planPathPrefix;
     const artifact = buildPlanArtifactFromChatState({
@@ -1301,6 +1316,7 @@ export class InputController {
           const invalidated = this.pendingPlanApprovalInvalidated;
           this.pendingPlanApprovalInvalidated = false;
           this.pendingPlanApproval = null;
+          this.deps.state.needsAttention = false;
           this.restoreInputContainer(inputContainerEl);
           resolve({ decision, invalidated });
         },
@@ -1312,6 +1328,7 @@ export class InputController {
       } catch (err) {
         this.pendingPlanApproval = null;
         this.pendingPlanApprovalInvalidated = false;
+        this.deps.state.needsAttention = false;
         this.restoreInputContainer(inputContainerEl);
         reject(toError(err));
       }

@@ -1,8 +1,10 @@
 import type { SharedAppStorage } from '../../core/bootstrap/storage';
+import type { EventBus } from '../../core/events/EventBus';
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../core/providers/types';
 import { DEFAULT_CHAT_PROVIDER_ID } from '../../core/providers/types';
 import type { Conversation, ConversationMeta } from '../../core/types';
+import type { ClaudianEventMap } from '../events/claudianEvents';
 
 /**
  * Collaborators the store needs from the Obsidian-lifecycle plugin shell.
@@ -22,6 +24,13 @@ export interface ConversationStoreDeps {
    * preserving the prior in-shell delete behavior.
    */
   repairViewsAfterDelete(conversationId: string): Promise<void>;
+  /**
+   * App-level event bus. The store stays narrow — it only emits
+   * `conversation:renamed` so far, but the bus reference is plumbed at the
+   * dependency boundary so future store-owned events (delete notifications,
+   * provider switches) don't need a constructor change.
+   */
+  events: EventBus<ClaudianEventMap>;
 }
 
 /**
@@ -152,12 +161,21 @@ export class ConversationStore {
     const conversation = this.conversations.find((c) => c.id === id);
     if (!conversation) return;
 
-    conversation.title = title.trim() || this.generateDefaultTitle();
+    const previousTitle = conversation.title;
+    const nextTitle = title.trim() || this.generateDefaultTitle();
+    conversation.title = nextTitle;
     conversation.updatedAt = Date.now();
 
     await this.deps.storage.sessions.saveMetadata(
       this.deps.storage.sessions.toSessionMetadata(conversation),
     );
+
+    if (nextTitle !== previousTitle) {
+      this.deps.events.emit('conversation:renamed', {
+        conversationId: id,
+        title: nextTitle,
+      });
+    }
   }
 
   async updateConversation(id: string, updates: Partial<Conversation>): Promise<void> {
@@ -167,11 +185,19 @@ export class ConversationStore {
     // providerId is immutable — strip it from updates to prevent accidental mutation
     const safeUpdates = { ...updates };
     delete safeUpdates.providerId;
+    const previousTitle = conversation.title;
     Object.assign(conversation, safeUpdates, { updatedAt: Date.now() });
 
     await this.deps.storage.sessions.saveMetadata(
       this.deps.storage.sessions.toSessionMetadata(conversation),
     );
+
+    if (conversation.title !== previousTitle) {
+      this.deps.events.emit('conversation:renamed', {
+        conversationId: id,
+        title: conversation.title,
+      });
+    }
 
     // Clear image data from memory after save (data is persisted by SDK).
     // Skip for pending forks: their deep-cloned images aren't in SDK storage yet.

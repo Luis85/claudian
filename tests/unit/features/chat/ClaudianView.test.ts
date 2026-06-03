@@ -131,6 +131,7 @@ describe('ClaudianView Escape handling', () => {
     view.historyDropdown = createMockEl();
     view.registerDomEvent = jest.fn();
     view.registerEvent = jest.fn();
+    view.register = jest.fn();
     view.eventRefs = eventRefs;
     view.plugin = {
       app: {
@@ -148,6 +149,10 @@ describe('ClaudianView Escape handling', () => {
             return ref;
           }),
         },
+      },
+      events: {
+        on: jest.fn(() => () => {}),
+        emit: jest.fn(),
       },
     };
     view.tabManager = {
@@ -192,6 +197,7 @@ describe('ClaudianView Escape handling', () => {
     view.historyDropdown = createMockEl();
     view.registerDomEvent = jest.fn();
     view.registerEvent = jest.fn();
+    view.register = jest.fn();
     view.eventRefs = eventRefs;
     view.plugin = {
       app: {
@@ -209,6 +215,10 @@ describe('ClaudianView Escape handling', () => {
             return ref;
           }),
         },
+      },
+      events: {
+        on: jest.fn(() => () => {}),
+        emit: jest.fn(),
       },
     };
     view.tabManager = {
