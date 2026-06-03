@@ -1,8 +1,9 @@
+import { BaseHistoryService } from '../../../core/providers/BaseHistoryService';
 import type {
   DeleteHistoryOutcome,
   HistoryLoadOutcome,
   HydrationContext,
-  ProviderConversationHistoryService,
+  ProviderForkSupport,
 } from '../../../core/providers/types';
 import { isSubagentToolName, TOOL_TASK } from '../../../core/tools/toolNames';
 import type {
@@ -16,6 +17,7 @@ import type {
 import { type ClaudeProviderState, getClaudeState } from '../types/providerState';
 import {
   deleteSDKSession,
+  getSDKSessionPath,
   loadSDKSessionMessages,
   loadSubagentToolCalls,
   sdkSessionExists,
@@ -315,14 +317,42 @@ function sanitizeProviderState(
   return Object.fromEntries(sanitizedEntries);
 }
 
-export class ClaudeConversationHistoryService implements ProviderConversationHistoryService {
-  private hydratedConversationIds = new Set<string>();
+export class ClaudeConversationHistoryService extends BaseHistoryService<ClaudeProviderState> {
+  forkSupport: ProviderForkSupport = {
+    isPendingForkConversation: (conversation: Conversation): boolean => {
+      const state = getClaudeState(conversation.providerState);
+      return !!state.forkSource
+        && !state.providerSessionId
+        && !conversation.sessionId;
+    },
+    buildForkProviderState: (
+      sourceSessionId: string,
+      resumeAt: string,
+      _sourceProviderState?: Record<string, unknown>,
+    ): Record<string, unknown> => {
+      const state: ClaudeProviderState = {
+        forkSource: { sessionId: sourceSessionId, resumeAt } satisfies ForkSource,
+      };
+      return state as Record<string, unknown>;
+    },
+  };
 
+  /**
+   * @deprecated Root v1 shim — delegates to {@link forkSupport}. Kept until Task 10 migrates
+   * `TabManager` and `ConversationStore` to the `hasForkSupport(service)` type guard, after
+   * which Task 13 deletes both shims and the interface's deprecated v1 fork surface.
+   */
   isPendingForkConversation(conversation: Conversation): boolean {
-    const state = getClaudeState(conversation.providerState);
-    return !!state.forkSource
-      && !state.providerSessionId
-      && !conversation.sessionId;
+    return this.forkSupport!.isPendingForkConversation(conversation);
+  }
+
+  /** @deprecated Root v1 shim — see {@link isPendingForkConversation}. */
+  buildForkProviderState(
+    sourceSessionId: string,
+    resumeAt: string,
+    sourceProviderState?: Record<string, unknown>,
+  ): Record<string, unknown> {
+    return this.forkSupport!.buildForkProviderState(sourceSessionId, resumeAt, sourceProviderState);
   }
 
   resolveSessionIdForConversation(conversation: Conversation | null): string | null {
@@ -331,20 +361,9 @@ export class ClaudeConversationHistoryService implements ProviderConversationHis
     return state.providerSessionId ?? conversation.sessionId ?? state.forkSource?.sessionId ?? null;
   }
 
-  buildForkProviderState(
-    sourceSessionId: string,
-    resumeAt: string,
-    _sourceProviderState?: Record<string, unknown>,
-  ): Record<string, unknown> {
-    const state: ClaudeProviderState = {
-      forkSource: { sessionId: sourceSessionId, resumeAt } satisfies ForkSource,
-    };
-    return state as Record<string, unknown>;
-  }
-
   buildPersistedProviderState(
     conversation: Conversation,
-  ): Record<string, unknown> | undefined {
+  ): ClaudeProviderState | undefined {
     const providerState: ClaudeProviderState = {
       ...getClaudeState(conversation.providerState),
     };
@@ -356,19 +375,41 @@ export class ClaudeConversationHistoryService implements ProviderConversationHis
       delete providerState.subagentData;
     }
 
-    return sanitizeProviderState(providerState);
+    return sanitizeProviderState(providerState) as ClaudeProviderState | undefined;
   }
 
-  async hydrateConversationHistory(
+  protected computeCacheKey(
     conversation: Conversation,
-    vaultPath: string | null,
-  ): Promise<void> {
-    if (!vaultPath || this.hydratedConversationIds.has(conversation.id)) {
-      return;
+    ctx: HydrationContext,
+  ): string | null {
+    if (!ctx.vaultPath) return null;
+    const state = getClaudeState(conversation.providerState);
+    const isPendingFork = this.forkSupport!.isPendingForkConversation(conversation);
+    const sessionIds = isPendingFork
+      ? [state.forkSource!.sessionId]
+      : [
+          ...(state.previousProviderSessionIds || []),
+          state.providerSessionId ?? conversation.sessionId,
+        ].filter((id): id is string => !!id);
+    if (sessionIds.length === 0) return null;
+    const composite = sessionIds.join('|');
+    // Rewind invariant (Plan EDIT 5): include resumeAtMessageId so a rewind on the same
+    // session invalidates the cache and re-truncates the SDK transcript.
+    const resumeMarker = conversation.resumeAtMessageId ?? '';
+    return `${ctx.vaultPath}::${composite}::${resumeMarker}`;
+  }
+
+  protected async loadMessages(
+    conversation: Conversation,
+    ctx: HydrationContext,
+  ): Promise<HistoryLoadOutcome> {
+    if (!ctx.vaultPath) {
+      return { kind: 'empty', reason: 'no-session', sourceRef: null };
     }
+    const vaultPath = ctx.vaultPath;
 
     const state = getClaudeState(conversation.providerState);
-    const isPendingFork = this.isPendingForkConversation(conversation);
+    const isPendingFork = this.forkSupport!.isPendingForkConversation(conversation);
     const allSessionIds: string[] = isPendingFork
       ? [state.forkSource!.sessionId]
       : [
@@ -377,19 +418,30 @@ export class ClaudeConversationHistoryService implements ProviderConversationHis
         ].filter((id): id is string => !!id);
 
     if (allSessionIds.length === 0) {
-      return;
+      return { kind: 'empty', reason: 'no-session', sourceRef: null };
     }
+
+    const currentSessionId = isPendingFork
+      ? state.forkSource!.sessionId
+      : (state.providerSessionId ?? conversation.sessionId);
+    const sourceRef = allSessionIds.join('|');
 
     const allSdkMessages: ChatMessage[] = [];
     let missingSessionCount = 0;
     let errorCount = 0;
     let successCount = 0;
 
-    const currentSessionId = isPendingFork
-      ? state.forkSource!.sessionId
-      : (state.providerSessionId ?? conversation.sessionId);
-
     for (const sessionId of allSessionIds) {
+      // Plan EDIT 7: mid-load abort. Check before each session read so a long
+      // multi-session walk releases promptly when the tab is switched.
+      if (ctx.signal?.aborted) {
+        return {
+          kind: 'error',
+          error: { code: 'cancelled', message: 'Hydration cancelled' },
+          sourceRef,
+        };
+      }
+
       if (!sdkSessionExists(vaultPath, sessionId)) {
         missingSessionCount++;
         continue;
@@ -411,9 +463,19 @@ export class ClaudeConversationHistoryService implements ProviderConversationHis
     }
 
     const allSessionsMissing = missingSessionCount === allSessionIds.length;
-    const hasLoadErrors = errorCount > 0 && successCount === 0 && !allSessionsMissing;
-    if (hasLoadErrors) {
-      return;
+    if (allSessionsMissing) {
+      return { kind: 'empty', reason: 'no-session', sourceRef };
+    }
+
+    if (errorCount > 0 && successCount === 0) {
+      return {
+        kind: 'error',
+        error: {
+          code: 'store-unreadable',
+          message: 'Failed to read Claude SDK session transcripts.',
+        },
+        sourceRef,
+      };
     }
 
     const filteredSdkMessages = allSdkMessages.filter(msg => !msg.isRebuiltContext);
@@ -432,34 +494,28 @@ export class ClaudeConversationHistoryService implements ProviderConversationHis
       applySubagentData(merged, state.subagentData);
     }
 
-    conversation.messages = merged;
-    this.hydratedConversationIds.add(conversation.id);
-  }
-
-  async deleteConversationSession(
-    conversation: Conversation,
-    vaultPath: string | null,
-  ): Promise<void> {
-    const state = getClaudeState(conversation.providerState);
-    const sessionId = state.providerSessionId ?? conversation.sessionId;
-    if (!vaultPath || !sessionId) {
-      return;
-    }
-
-    await deleteSDKSession(vaultPath, sessionId);
-  }
-
-  async hydrateConversationHistoryV2(
-    _c: Conversation,
-    _ctx: HydrationContext,
-  ): Promise<HistoryLoadOutcome> {
-    throw new Error('History v2 not yet implemented for this provider');
+    return { kind: 'loaded', messages: merged, sourceRef };
   }
 
   async deleteConversationSessionV2(
-    _c: Conversation,
-    _ctx: HydrationContext,
+    conversation: Conversation,
+    ctx: HydrationContext,
   ): Promise<DeleteHistoryOutcome> {
-    throw new Error('History v2 delete not yet implemented for this provider');
+    const state = getClaudeState(conversation.providerState);
+    const sessionId = state.providerSessionId ?? conversation.sessionId;
+    if (!ctx.vaultPath || !sessionId) {
+      return { kind: 'no-op', reason: 'no-session' };
+    }
+
+    await deleteSDKSession(ctx.vaultPath, sessionId);
+    // `getSDKSessionPath` validates the id; fall back to the bare id if validation rejects it
+    // (deleteSDKSession is best-effort and already swallows the same error class).
+    let resolvedPath = sessionId;
+    try {
+      resolvedPath = getSDKSessionPath(ctx.vaultPath, sessionId);
+    } catch {
+      // keep sessionId fallback
+    }
+    return { kind: 'deleted', paths: [resolvedPath] };
   }
 }
