@@ -8,6 +8,7 @@ import { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
 import type {
   SlashCommand,
 } from '../../../core/types';
+import { t } from '../../../i18n/i18n';
 import {
   type CCPermissions,
   type CCSettings,
@@ -181,7 +182,7 @@ export class StorageService {
       data.tabManagerState = state;
       await this.plugin.saveData(data);
     } catch {
-      new Notice('Failed to save tab layout');
+      new Notice(t('chat.storage.tabLayoutSaveFailed'));
     }
   }
 }

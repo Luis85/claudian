@@ -40,9 +40,32 @@ export type TranslationKey =
   | 'chat.context.fileAdded'
   | 'chat.context.folderAdded'
 
-  // Diagnostics (Q-1 chunk 9, main.ts)
+  // Diagnostics (Q-1 chunk 9, main.ts; chunk 15 additions)
   | 'diagnostics.logsEmpty'
   | 'diagnostics.logsCopied'
+  | 'diagnostics.logsCleared'
+  | 'diagnostics.inlineEditNoView'
+  | 'diagnostics.inlineEditInserted'
+  | 'diagnostics.inlineEditApplied'
+
+  // Settings - Mcp server modal validations (Q-1 chunk 15)
+  | 'settings.mcp.modal.serverNameRequired'
+  | 'settings.mcp.modal.serverNameInvalid'
+  | 'settings.mcp.modal.commandRequired'
+  | 'settings.mcp.modal.urlRequired'
+
+  // Settings - Agent Board (Q-1 chunk 15)
+  | 'settings.agentBoard.commonTemplates'
+  | 'settings.agentBoard.commonTemplatesEmpty'
+  | 'settings.agentBoard.installFailed'
+
+  // Environment (Q-1 chunk 15)
+  | 'env.applyPartial'
+  | 'env.applied'
+  | 'env.appliedRebuild'
+
+  // Chat - Storage (Q-1 chunk 15)
+  | 'chat.storage.tabLayoutSaveFailed'
 
   // Agent Board (Q-1 chunk 10, features/tasks/ui/AgentBoardView.ts)
   | 'tasks.board.stopRequested'

@@ -60,6 +60,9 @@
       "notFound": "Could not open file: {path}",
       "failed": "Failed to open file: {error}"
     },
+    "storage": {
+      "tabLayoutSaveFailed": "Failed to save tab layout"
+    },
     "rewind": {
       "confirmMessage": "Rewind to this point? File changes after this message will be reverted. Rewinding does not affect files edited manually or via bash.",
       "confirmMessageConversationOnly": "Rewind conversation to this point? File changes will be kept.",
@@ -334,7 +337,18 @@
       "importedWithSkipped": "Imported {count} MCP server(s) ({skipped} skipped)",
       "toggleEnabled": "MCP server \"{name}\" enabled",
       "toggleDisabled": "MCP server \"{name}\" disabled",
-      "deleted": "MCP server \"{name}\" deleted"
+      "deleted": "MCP server \"{name}\" deleted",
+      "modal": {
+        "serverNameRequired": "Please enter a server name",
+        "serverNameInvalid": "Server name can only contain letters, numbers, dots, hyphens, and underscores",
+        "commandRequired": "Please enter a command",
+        "urlRequired": "Please enter a URL"
+      }
+    },
+    "agentBoard": {
+      "commonTemplates": "Common work-order templates: {templates}.",
+      "commonTemplatesEmpty": "Common work-order templates: nothing to do.",
+      "installFailed": "Install failed: {error}"
     },
     "plugins": {
       "name": "Claude Code Plugins",
@@ -530,7 +544,16 @@
   },
   "diagnostics": {
     "logsEmpty": "No diagnostic log entries",
-    "logsCopied": "Copied {count} log entries"
+    "logsCopied": "Copied {count} log entries",
+    "logsCleared": "Diagnostic logs cleared",
+    "inlineEditNoView": "Inline edit unavailable: could not access the active Markdown view.",
+    "inlineEditInserted": "Inserted",
+    "inlineEditApplied": "Edit applied"
+  },
+  "env": {
+    "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
+    "applied": "Environment variables applied.",
+    "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."
   },
   "tasks": {
     "board": {

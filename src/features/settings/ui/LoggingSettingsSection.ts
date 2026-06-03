@@ -1,6 +1,7 @@
 import { Notice, Setting } from 'obsidian';
 
 import type { LogLevel } from '../../../core/logging/types';
+import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 
 const LEVEL_OPTIONS: Array<{ value: LogLevel; label: string }> = [
@@ -59,7 +60,7 @@ export function renderLoggingSettingsSection(
         .setButtonText('Clear logs')
         .onClick(() => {
           plugin.logger.clear();
-          new Notice('Diagnostic logs cleared');
+          new Notice(t('diagnostics.logsCleared'));
         }),
     );
 }

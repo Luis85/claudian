@@ -168,6 +168,9 @@
     "fileOpen": {
       "notFound": "Could not open file: {path}",
       "failed": "Failed to open file: {error}"
+    },
+    "storage": {
+      "tabLayoutSaveFailed": "Failed to save tab layout"
     }
   },
   "settings": {
@@ -480,7 +483,18 @@
       "importedWithSkipped": "Imported {count} MCP server(s) ({skipped} skipped)",
       "toggleEnabled": "MCP server \"{name}\" enabled",
       "toggleDisabled": "MCP server \"{name}\" disabled",
-      "deleted": "MCP server \"{name}\" deleted"
+      "deleted": "MCP server \"{name}\" deleted",
+      "modal": {
+        "serverNameRequired": "Please enter a server name",
+        "serverNameInvalid": "Server name can only contain letters, numbers, dots, hyphens, and underscores",
+        "commandRequired": "Please enter a command",
+        "urlRequired": "Please enter a URL"
+      }
+    },
+    "agentBoard": {
+      "commonTemplates": "Common work-order templates: {templates}.",
+      "commonTemplatesEmpty": "Common work-order templates: nothing to do.",
+      "installFailed": "Install failed: {error}"
     }
   },
   "quickActions": {
@@ -564,7 +578,11 @@
   },
   "diagnostics": {
     "logsEmpty": "No diagnostic log entries",
-    "logsCopied": "Copied {count} log entries"
+    "logsCopied": "Copied {count} log entries",
+    "logsCleared": "Diagnostic logs cleared",
+    "inlineEditNoView": "Inline edit unavailable: could not access the active Markdown view.",
+    "inlineEditInserted": "Inserted",
+    "inlineEditApplied": "Edit applied"
   },
   "tasks": {
     "board": {
@@ -600,5 +618,10 @@
       "templateProblems": "Template \"{name}\" has problems: {errors}",
       "needsBrowserSelection": "Open Claudian chat and select text in a browser view first."
     }
+  },
+  "env": {
+    "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
+    "applied": "Environment variables applied.",
+    "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."
   }
 }

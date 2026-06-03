@@ -3,6 +3,7 @@ import { Notice, Setting } from 'obsidian';
 import { ProviderRegistry } from '../../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../../core/providers/types';
 import { asSettingsBag } from '../../../../core/types/settings';
+import { t } from '../../../../i18n/i18n';
 import { resolveAgentBoardDefaultModel } from '../../../tasks/defaultModelResolver';
 import { resolveAgentBoardDefaultProvider } from '../../../tasks/defaultProviderResolver';
 import { installPresetTemplates } from '../../../tasks/templates/installPresetTemplates';
@@ -176,9 +177,12 @@ export function registerAgentBoardTabFields(): void {
           const parts: string[] = [];
           if (result.installed > 0) parts.push(`installed ${result.installed}`);
           if (result.skipped > 0) parts.push(`skipped ${result.skipped} already present`);
-          new Notice(`Common work-order templates: ${parts.join(', ') || 'nothing to do'}.`);
+          const summary = parts.join(', ');
+          new Notice(summary
+            ? t('settings.agentBoard.commonTemplates', { templates: summary })
+            : t('settings.agentBoard.commonTemplatesEmpty'));
         } catch (error) {
-          new Notice(`Install failed: ${error instanceof Error ? error.message : String(error)}`);
+          new Notice(t('settings.agentBoard.installFailed', { error: error instanceof Error ? error.message : String(error) }));
         }
       },
     },

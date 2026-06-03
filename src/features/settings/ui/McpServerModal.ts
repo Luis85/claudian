@@ -10,6 +10,7 @@ import type {
   McpStdioServerConfig,
 } from '../../../core/types';
 import { DEFAULT_MCP_SERVER, getMcpServerType } from '../../../core/types';
+import { t } from '../../../i18n/i18n';
 import { parseCommand } from '../../../utils/mcp';
 
 export class McpServerModal extends Modal {
@@ -231,13 +232,13 @@ export class McpServerModal extends Modal {
   private save() {
     const name = this.serverName.trim();
     if (!name) {
-      new Notice('Please enter a server name');
+      new Notice(t('settings.mcp.modal.serverNameRequired'));
       this.nameInputEl?.focus();
       return;
     }
 
     if (!/^[a-zA-Z0-9._-]+$/.test(name)) {
-      new Notice('Server name can only contain letters, numbers, dots, hyphens, and underscores');
+      new Notice(t('settings.mcp.modal.serverNameInvalid'));
       this.nameInputEl?.focus();
       return;
     }
@@ -247,7 +248,7 @@ export class McpServerModal extends Modal {
     if (this.serverType === 'stdio') {
       const fullCommand = this.command.trim();
       if (!fullCommand) {
-        new Notice('Please enter a command');
+        new Notice(t('settings.mcp.modal.commandRequired'));
         return;
       }
 
@@ -267,7 +268,7 @@ export class McpServerModal extends Modal {
     } else {
       const url = this.url.trim();
       if (!url) {
-        new Notice('Please enter a URL');
+        new Notice(t('settings.mcp.modal.urlRequired'));
         return;
       }
 

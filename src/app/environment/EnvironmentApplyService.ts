@@ -11,6 +11,7 @@ import { DEFAULT_CHAT_PROVIDER_ID } from '@/core/providers/types';
 import type { Conversation } from '@/core/types';
 import { asSettingsBag } from '@/core/types';
 import type { EnvironmentScope } from '@/core/types/settings';
+import { t } from '@/i18n/i18n';
 import type ClaudianPlugin from '@/main';
 
 export class EnvironmentApplyService {
@@ -90,7 +91,7 @@ export class EnvironmentApplyService {
         }
       }
       if (failedTabs > 0) {
-        new Notice(`Environment changes applied, but ${failedTabs} affected tab(s) failed to restart.`);
+        new Notice(t('env.applyPartial', { count: failedTabs }));
       }
     }
 
@@ -99,11 +100,7 @@ export class EnvironmentApplyService {
       openView.refreshModelSelector();
     }
 
-    new Notice(
-      changed
-        ? 'Environment variables applied. Sessions will be rebuilt on next message.'
-        : 'Environment variables applied.',
-    );
+    new Notice(t(changed ? 'env.appliedRebuild' : 'env.applied'));
   }
 
   reconcileWithEnvironment(

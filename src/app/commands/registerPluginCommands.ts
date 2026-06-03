@@ -15,6 +15,7 @@ import {
   createWorkOrderFromSelectionInteractive,
   createWorkOrderInteractive,
 } from '@/features/tasks/ui/createWorkOrderInteractive';
+import { t } from '@/i18n/i18n';
 import type ClaudianPlugin from '@/main';
 import { buildCursorContext } from '@/utils/editor';
 
@@ -119,7 +120,10 @@ export function registerPluginCommands(deps: PluginCommandDeps): void {
         const parts: string[] = [];
         if (result.installed > 0) parts.push(`installed ${result.installed}`);
         if (result.skipped > 0) parts.push(`skipped ${result.skipped} already present`);
-        new Notice(`Common work-order templates: ${parts.join(', ') || 'nothing to do'}.`);
+        const summary = parts.join(', ');
+        new Notice(summary
+          ? t('settings.agentBoard.commonTemplates', { templates: summary })
+          : t('settings.agentBoard.commonTemplatesEmpty'));
       })();
     },
   };
@@ -173,7 +177,7 @@ export function registerPluginCommands(deps: PluginCommandDeps): void {
     name: 'Clear diagnostic logs',
     callback: () => {
       plugin.logger.clear();
-      new Notice('Diagnostic logs cleared');
+      new Notice(t('diagnostics.logsCleared'));
     },
   };
   plugin.addCommand(clearDiagnosticLogsCmd);
@@ -190,7 +194,7 @@ export function registerPluginCommands(deps: PluginCommandDeps): void {
         ? ctx
         : plugin.app.workspace.getActiveViewOfType(MarkdownView);
       if (!view) {
-        new Notice('Inline edit unavailable: could not access the active Markdown view.');
+        new Notice(t('diagnostics.inlineEditNoView'));
         return;
       }
 
@@ -223,7 +227,7 @@ export function registerPluginCommands(deps: PluginCommandDeps): void {
       const result = await modal.openAndWait();
 
       if (result.decision === 'accept' && result.editedText !== undefined) {
-        new Notice(editContext.mode === 'cursor' ? 'Inserted' : 'Edit applied');
+        new Notice(t(editContext.mode === 'cursor' ? 'diagnostics.inlineEditInserted' : 'diagnostics.inlineEditApplied'));
       }
     },
   };
