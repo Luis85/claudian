@@ -49,7 +49,7 @@ import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
 import { ChatTabExecutionSurface } from './features/tasks/execution/ChatTabExecutionSurface';
 import { ChatWorkOrderLinker } from './features/tasks/execution/ChatWorkOrderLinker';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
-import { setLocale } from './i18n/i18n';
+import { setLocale, t } from './i18n/i18n';
 import type { Locale } from './i18n/types';
 import type { BrowserSelectionContext } from './utils/browser';
 import { chatMessageText } from './utils/chatMessageText';
@@ -173,17 +173,17 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     const fileContextManager = activeTab?.ui.fileContextManager;
 
     if (!activeTab || !fileContextManager) {
-      new Notice('Open Claudian chat and enable a provider before adding file context.');
+      new Notice(t('chat.context.fileNoTab'));
       return false;
     }
 
     if (!fileContextManager.attachFileAsPill(file.path)) {
-      new Notice(`Could not add file to chat: ${file.path}`);
+      new Notice(t('chat.context.fileAttachFailed', { path: file.path }));
       return false;
     }
 
     activeTab.dom.inputEl.focus();
-    new Notice(`Added ${file.path} to Claudian chat`);
+    new Notice(t('chat.context.fileAdded', { path: file.path }));
     return true;
   }
 
@@ -193,17 +193,17 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     const fileContextManager = activeTab?.ui.fileContextManager;
 
     if (!activeTab || !fileContextManager) {
-      new Notice('Open Claudian chat and enable a provider before adding folder context.');
+      new Notice(t('chat.context.folderNoTab'));
       return false;
     }
 
     if (!fileContextManager.attachFolderAsPill(folder.path)) {
-      new Notice(`Could not add folder to chat: ${folder.path}`);
+      new Notice(t('chat.context.folderAttachFailed', { path: folder.path }));
       return false;
     }
 
     activeTab.dom.inputEl.focus();
-    new Notice(`Added ${folder.path}/ to Claudian chat`);
+    new Notice(t('chat.context.folderAdded', { path: folder.path }));
     return true;
   }
 
@@ -298,11 +298,11 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   async copyDiagnosticLogs(): Promise<void> {
     const entries = this.logger.snapshot();
     if (entries.length === 0) {
-      new Notice('No diagnostic log entries');
+      new Notice(t('diagnostics.logsEmpty'));
       return;
     }
     await navigator.clipboard.writeText(formatLogEntries(entries));
-    new Notice(`Copied ${entries.length} log entries`);
+    new Notice(t('diagnostics.logsCopied', { count: entries.length }));
   }
 
   async saveSettings() {
@@ -356,7 +356,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
   async openConversation(conversationId: string): Promise<void> {
     if (!this.getConversationSync(conversationId)) {
-      new Notice('Linked conversation not found. It may have been deleted.');
+      new Notice(t('chat.history.linkedNotFound'));
       return;
     }
     await this.activateView();

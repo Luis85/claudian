@@ -30,6 +30,19 @@ export type TranslationKey =
   | 'chat.history.regenerateFailed'
   | 'chat.history.deleteFailed'
   | 'chat.history.renameFailed'
+  | 'chat.history.linkedNotFound'
+
+  // Chat - File / folder context commands (Q-1 chunk 9, main.ts entries)
+  | 'chat.context.fileNoTab'
+  | 'chat.context.folderNoTab'
+  | 'chat.context.fileAttachFailed'
+  | 'chat.context.folderAttachFailed'
+  | 'chat.context.fileAdded'
+  | 'chat.context.folderAdded'
+
+  // Diagnostics (Q-1 chunk 9, main.ts)
+  | 'diagnostics.logsEmpty'
+  | 'diagnostics.logsCopied'
 
   // Chat - Rewind
   | 'chat.rewind.confirmMessage'

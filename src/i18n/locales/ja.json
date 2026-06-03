@@ -28,7 +28,8 @@
       "loadFailed": "Failed to load conversation",
       "regenerateFailed": "Failed to regenerate response",
       "deleteFailed": "Failed to delete conversation",
-      "renameFailed": "Failed to rename conversation"
+      "renameFailed": "Failed to rename conversation",
+      "linkedNotFound": "Linked conversation not found. It may have been deleted."
     },
     "rewind": {
       "confirmMessage": "この時点に巻き戻しますか？このメッセージ以降のファイル変更が元に戻されます。手動またはbashで編集されたファイルには影響しません。",
@@ -138,6 +139,14 @@
       "noConversationsToResume": "No conversations to resume",
       "openConversationFailed": "Failed to open conversation: {error}",
       "chatServiceInitFailed": "Failed to initialize chat service"
+    },
+    "context": {
+      "fileNoTab": "Open Claudian chat and enable a provider before adding file context.",
+      "folderNoTab": "Open Claudian chat and enable a provider before adding folder context.",
+      "fileAttachFailed": "Could not add file to chat: {path}",
+      "folderAttachFailed": "Could not add folder to chat: {path}",
+      "fileAdded": "Added {path} to Claudian chat",
+      "folderAdded": "Added {path}/ to Claudian chat"
     }
   },
   "settings": {
@@ -518,5 +527,9 @@
         "created": "Subagent \"{name}\" created"
       }
     }
+  },
+  "diagnostics": {
+    "logsEmpty": "No diagnostic log entries",
+    "logsCopied": "Copied {count} log entries"
   }
 }

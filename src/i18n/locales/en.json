@@ -28,7 +28,16 @@
       "loadFailed": "Failed to load conversation",
       "regenerateFailed": "Failed to regenerate response",
       "deleteFailed": "Failed to delete conversation",
-      "renameFailed": "Failed to rename conversation"
+      "renameFailed": "Failed to rename conversation",
+      "linkedNotFound": "Linked conversation not found. It may have been deleted."
+    },
+    "context": {
+      "fileNoTab": "Open Claudian chat and enable a provider before adding file context.",
+      "folderNoTab": "Open Claudian chat and enable a provider before adding folder context.",
+      "fileAttachFailed": "Could not add file to chat: {path}",
+      "folderAttachFailed": "Could not add folder to chat: {path}",
+      "fileAdded": "Added {path} to Claudian chat",
+      "folderAdded": "Added {path}/ to Claudian chat"
     },
     "rewind": {
       "confirmMessage": "Rewind to this point? File changes after this message will be reverted. Rewinding does not affect files edited manually or via bash.",
@@ -492,6 +501,10 @@
       "trust": "Trust vault",
       "keepBlocked": "Keep blocked"
     }
+  },
+  "diagnostics": {
+    "logsEmpty": "No diagnostic log entries",
+    "logsCopied": "Copied {count} log entries"
   },
   "provider": {
     "opencode": {
