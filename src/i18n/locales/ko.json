@@ -276,7 +276,8 @@
         "prompt": "시스템 프롬프트",
         "promptDesc": "에이전트용 지침",
         "promptPlaceholder": "당신은 코드 리뷰어입니다. 주어진 코드를 분석하여..."
-      }
+      },
+      "loadFailed": "Failed to load subagent \"{name}\": {message}"
     },
     "safety": "보안",
     "loadUserSettings": {

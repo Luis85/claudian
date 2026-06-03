@@ -276,7 +276,8 @@
         "prompt": "Prompt del sistema",
         "promptDesc": "Instrucciones para el agente",
         "promptPlaceholder": "Eres un revisor de código. Analiza el código proporcionado para..."
-      }
+      },
+      "loadFailed": "Failed to load subagent \"{name}\": {message}"
     },
     "safety": "Seguridad",
     "loadUserSettings": {

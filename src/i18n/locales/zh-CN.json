@@ -276,7 +276,8 @@
         "prompt": "系统提示词",
         "promptDesc": "给代理的指令",
         "promptPlaceholder": "你是一名代码审查员。请分析给定代码中的..."
-      }
+      },
+      "loadFailed": "Failed to load subagent \"{name}\": {message}"
     },
     "safety": "安全",
     "loadUserSettings": {

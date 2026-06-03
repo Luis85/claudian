@@ -276,7 +276,8 @@
         "prompt": "システムプロンプト",
         "promptDesc": "エージェントへの指示",
         "promptPlaceholder": "あなたはコードレビュアーです。与えられたコードを分析して..."
-      }
+      },
+      "loadFailed": "Failed to load subagent \"{name}\": {message}"
     },
     "safety": "セキュリティ",
     "loadUserSettings": {

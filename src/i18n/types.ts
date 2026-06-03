@@ -257,6 +257,7 @@ export type TranslationKey =
   | 'settings.subagents.saveFailed'
   | 'settings.subagents.refreshFailed'
   | 'settings.subagents.deleteFailed'
+  | 'settings.subagents.loadFailed'
   | 'settings.subagents.renameCleanupFailed'
   | 'settings.subagents.created'
   | 'settings.subagents.updated'

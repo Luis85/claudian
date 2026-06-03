@@ -276,7 +276,8 @@
         "prompt": "System-Prompt",
         "promptDesc": "Anweisungen für den Agenten",
         "promptPlaceholder": "Du bist ein Code-Reviewer. Analysiere den angegebenen Code auf..."
-      }
+      },
+      "loadFailed": "Failed to load subagent \"{name}\": {message}"
     },
     "safety": "Sicherheit",
     "loadUserSettings": {

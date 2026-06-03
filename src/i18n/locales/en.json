@@ -301,6 +301,7 @@
       "saveFailed": "Failed to save subagent: {message}",
       "refreshFailed": "Failed to refresh subagents: {message}",
       "deleteFailed": "Failed to delete subagent: {message}",
+      "loadFailed": "Failed to load subagent \"{name}\": {message}",
       "renameCleanupFailed": "Warning: could not remove old file for \"{name}\"",
       "created": "Subagent \"{name}\" created",
       "updated": "Subagent \"{name}\" updated",

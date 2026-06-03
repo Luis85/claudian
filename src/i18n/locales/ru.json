@@ -276,7 +276,8 @@
         "prompt": "Системный промпт",
         "promptDesc": "Инструкции для агента",
         "promptPlaceholder": "Вы специалист по проверке кода. Проанализируйте предоставленный код на предмет..."
-      }
+      },
+      "loadFailed": "Failed to load subagent \"{name}\": {message}"
     },
     "safety": "Безопасность",
     "loadUserSettings": {
