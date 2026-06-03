@@ -303,7 +303,11 @@ export async function createWorkOrderFromSeed(
   await ensureFolder(plugin, folder);
 
   const now = new Date();
-  const title = seed.title || 'New work order';
+  // Template name dominates the seed-derived title: when the user explicitly
+  // picks a template, that picker choice is the strongest signal of what this
+  // work order is "about", so it drives the frontmatter title, the H1, and the
+  // filename slug.
+  const title = template?.name?.trim() || seed.title || 'New work order';
   const slug = slugifyTitle(title) || 'work-order';
   const id = `task-${timestampId(now)}-${slug}`;
   const status = options?.status ?? seed.status ?? 'ready';
