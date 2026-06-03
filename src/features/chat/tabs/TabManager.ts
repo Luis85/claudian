@@ -3,6 +3,7 @@ import { Notice } from 'obsidian';
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import { ProviderWorkspaceRegistry } from '../../../core/providers/ProviderWorkspaceRegistry';
+import { hasForkSupport } from '../../../core/providers/typeGuards';
 import type {
   ProviderId,
   ProviderTabWarmupContext,
@@ -637,15 +638,18 @@ export class TabManager implements TabManagerInterface {
       ? this.buildForkTitle(context.sourceTitle, context.forkAtUserMessage)
       : undefined;
 
-    // v1 builder is optional on the interface (will move to `forkSupport` in Task 13);
-    // absent means the provider does not support fork — emit an empty provider state.
-    const forkProviderState = ProviderRegistry
-      .getConversationHistoryService(conversation.providerId)
-      .buildForkProviderState?.(
+    // Capability invariant (forkSupportInvariant.test.ts): the `forkSupport`
+    // slot is present iff `capabilities.supportsFork === true`. The fork
+    // affordance is hidden upstream when supportsFork is false, so an absent
+    // slot here means no provider state to build — emit empty.
+    const historyService = ProviderRegistry.getConversationHistoryService(conversation.providerId);
+    const forkProviderState = hasForkSupport(historyService)
+      ? historyService.forkSupport.buildForkProviderState(
         context.sourceSessionId,
         context.resumeAt,
         context.sourceProviderState,
-      ) ?? {};
+      )
+      : {};
 
     await this.plugin.updateConversation(conversation.id, {
       messages: context.messages,
