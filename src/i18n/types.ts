@@ -78,6 +78,7 @@ export type TranslationKey =
   | 'chat.fork.errorNoActiveTab'
   | 'chat.fork.commandNoMessages'
   | 'chat.fork.commandNoAssistantUuid'
+  | 'chat.fork.unsupportedProvider'
 
   // Chat - Plan mode
   | 'chat.planMode.ariaLabel'
@@ -107,6 +108,7 @@ export type TranslationKey =
   | 'chat.input.unknownCommand'
   | 'chat.input.noConversationsToResume'
   | 'chat.input.openConversationFailed'
+  | 'chat.input.chatServiceInitFailed'
 
   // Chat - Orchestrator
   | 'chat.orchestrator.titleOpen'

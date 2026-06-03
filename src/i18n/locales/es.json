@@ -66,7 +66,8 @@
       "errorNoSession": "No hay ningún ID de sesión disponible",
       "errorNoActiveTab": "No hay ninguna pestaña activa",
       "commandNoMessages": "No se puede bifurcar: no hay mensajes en la conversación",
-      "commandNoAssistantUuid": "No se puede bifurcar: no hay respuesta del asistente con identificadores"
+      "commandNoAssistantUuid": "No se puede bifurcar: no hay respuesta del asistente con identificadores",
+      "unsupportedProvider": "Fork is not supported by this provider."
     },
     "bangBash": {
       "placeholder": "> Ejecuta un comando bash...",
@@ -135,7 +136,8 @@
       "forkUnavailable": "Fork not available.",
       "unknownCommand": "Unknown command: {command}",
       "noConversationsToResume": "No conversations to resume",
-      "openConversationFailed": "Failed to open conversation: {error}"
+      "openConversationFailed": "Failed to open conversation: {error}",
+      "chatServiceInitFailed": "Failed to initialize chat service"
     }
   },
   "settings": {

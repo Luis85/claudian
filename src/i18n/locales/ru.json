@@ -66,7 +66,8 @@
       "errorNoSession": "Идентификатор сессии недоступен",
       "errorNoActiveTab": "Нет активной вкладки",
       "commandNoMessages": "Нельзя форкнуть: в диалоге нет сообщений",
-      "commandNoAssistantUuid": "Нельзя форкнуть: нет ответа ассистента с идентификаторами"
+      "commandNoAssistantUuid": "Нельзя форкнуть: нет ответа ассистента с идентификаторами",
+      "unsupportedProvider": "Fork is not supported by this provider."
     },
     "bangBash": {
       "placeholder": "> Выполнить команду bash...",
@@ -135,7 +136,8 @@
       "forkUnavailable": "Fork not available.",
       "unknownCommand": "Unknown command: {command}",
       "noConversationsToResume": "No conversations to resume",
-      "openConversationFailed": "Failed to open conversation: {error}"
+      "openConversationFailed": "Failed to open conversation: {error}",
+      "chatServiceInitFailed": "Failed to initialize chat service"
     }
   },
   "settings": {

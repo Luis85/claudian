@@ -109,7 +109,7 @@ async function handleForkRequest(
   const { state } = tab;
 
   if (!getTabCapabilities(tab, plugin).supportsFork) {
-    new Notice('Fork is not supported by this provider.');
+    new Notice(t('chat.fork.unsupportedProvider'));
     return;
   }
 
@@ -159,7 +159,7 @@ async function handleForkAll(
   const { state } = tab;
 
   if (!getTabCapabilities(tab, plugin).supportsFork) {
-    new Notice('Fork is not supported by this provider.');
+    new Notice(t('chat.fork.unsupportedProvider'));
     return;
   }
 
@@ -433,7 +433,7 @@ export function initializeTabControllers(
         applyProviderUIGating(tab, plugin);
         return true;
       } catch (error) {
-        new Notice(error instanceof Error ? error.message : 'Failed to initialize chat service');
+        new Notice(error instanceof Error ? error.message : t('chat.input.chatServiceInitFailed'));
         return false;
       }
     },
