@@ -49,9 +49,9 @@ Specorator keeps its own record of every conversation under `.specorator/session
 | Split a conversation (fork) | Full | Full | Not supported | Not supported |
 | Attach images | Full | Full | Full | Full |
 | Inline edit (rewrite a passage in place) | Full | Full | Full | Full |
-| Plan mode (see the plan before running) | Full | Full | Not supported | Full |
+| Plan mode (see the plan before running) | Full | Full | Partial, mode runs but no approval card | Full |
 | `#` instruction mode (facts the helper should always know) | Full | Full | Full | Not supported |
-| `/` commands (saved shortcuts) | Full | Not supported | Not supported | Not supported |
+| `/` commands (saved shortcuts) | Full | Not supported | Partial, runtime-discovered | Not supported |
 | `$` skills (saved workflows) | Full | Full | Not supported | Not supported |
 | Helpers running sub-tasks (subagents) | Full | Full | Full | Not supported |
 | Rewind (jump back to an earlier point in the conversation) | Full | Not supported | Not supported | Not supported |
