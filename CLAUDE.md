@@ -108,9 +108,9 @@ Current coverage, by user-visible path:
 ## Development Notes
 
 - **Provider-native first**: Prefer the official Claude SDK and Codex app-server behavior over reimplementing provider features locally. When the provider already owns a capability, adapt to it instead of shadowing it.
-- **Runtime exploration**: For provider integrations, inspect real runtime output first. Claude data lands under `~/.claude/` and Codex data under `~/.codex/`. Real transcripts beat guessed event shapes. Put throwaway local scripts in `.context/`; only promote durable tooling into `dev/`.
+- **Runtime exploration**: For provider integrations, inspect real runtime output first. Claude data lands under `~/.claude/` and Codex data under `~/.codex/`. Real transcripts beat guessed event shapes. Put throwaway local scripts and raw runtime captures in `.context/`; only promote durable tooling into `dev/`.
 - **Comments**: Comment why, not what. Avoid narration and redundant JSDoc.
 - **TDD workflow**: For new behavior or bug fixes, write the failing test first in the mirrored `tests/` path, make it pass, then refactor.
 - Run `npm run typecheck && npm run lint && npm run test && npm run build` after editing.
 - No `console.*` in production code.
-- Put non-committed notes, handoff files, and throwaway scripts in `.context/`.
+- **Docs vs `.context/`**: Durable design notes, plans, ADRs, handoffs, research, and reviews live under `docs/` as Markdown with YAML frontmatter (`title`, `date`, `status`, `scope`). ADRs go in `docs/adr/`, plans in `docs/product/` or `docs/ideas/`, research in `docs/research/`, reviews in `docs/reviews/`. `.context/` is for **throwaway only**: local scripts, raw patches, runtime captures, scratch notes that should never be committed or referenced as canonical. If a `.context/` file is worth keeping, promote it to `docs/` with proper frontmatter.

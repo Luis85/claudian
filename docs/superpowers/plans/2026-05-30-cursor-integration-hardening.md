@@ -72,7 +72,7 @@ PR1 ships first; wait ~24h for telemetry/feedback; then PR2.
 
 | Path | Responsibility |
 |------|----------------|
-| `.context/cursor-hardening-verified.md` | Per-finding verification tracker. |
+| `docs/reviews/2026-06-02-cursor-hardening-verified.md` | Per-finding verification tracker. |
 | `.context/cursor-hardening-deferred.md` | Deferred items with rationale and follow-up plan reference. |
 | `.context/cursor-hardening-release-notes.md` | Draft of user-facing release notes; reviewer adapts for CHANGELOG. |
 | `src/core/providers/subprocessEnvironmentAllowlist.ts` | Shared env allowlist + filter used by Cursor and Opencode. |
@@ -116,17 +116,17 @@ PR1 ships first; wait ~24h for telemetry/feedback; then PR2.
 
 ## Task 0: Setup tracker + baseline + feature-flag scaffolding
 
-> **Status: DONE in PR1.** Tracker lives at `.context/cursor-hardening-verified.md` (gitignored per project convention). `.context/cursor-hardening-telemetry.md` documents the deferred log codes. Release notes were inlined into the PR #24 body since the project has no `CHANGELOG.md`.
+> **Status: DONE in PR1.** Tracker lives at `docs/reviews/2026-06-02-cursor-hardening-verified.md` (gitignored per project convention). `docs/superpowers/plans/2026-05-30-cursor-hardening-telemetry-design.md` documents the deferred log codes. Release notes were inlined into the PR #24 body since the project has no `CHANGELOG.md`.
 
 **Files:**
-- Create: `.context/cursor-hardening-verified.md`, `.context/cursor-hardening-deferred.md`, `.context/cursor-hardening-release-notes.md`
+- Create: `docs/reviews/2026-06-02-cursor-hardening-verified.md`, `.context/cursor-hardening-deferred.md`, `.context/cursor-hardening-release-notes.md`
 
 - [ ] **Step 1: Confirm working tree clean and baseline green**
 
 Run: `git status && npm run typecheck && npm run lint && npm run test`
 Expected: clean status, all three commands exit 0. Stop and fix baseline first if any fail.
 
-- [ ] **Step 2: Create `.context/cursor-hardening-verified.md`**
+- [ ] **Step 2: Create `docs/reviews/2026-06-02-cursor-hardening-verified.md`**
 
 Content:
 
@@ -214,7 +214,7 @@ Content:
 - [ ] **Step 5: Commit**
 
 ```bash
-git add docs/superpowers/plans/2026-05-30-cursor-integration-hardening.md .context/cursor-hardening-verified.md .context/cursor-hardening-deferred.md .context/cursor-hardening-release-notes.md
+git add docs/superpowers/plans/2026-05-30-cursor-integration-hardening.md docs/reviews/2026-06-02-cursor-hardening-verified.md .context/cursor-hardening-deferred.md .context/cursor-hardening-release-notes.md
 git commit -m "chore(cursor): add hardening plan, verification tracker, deferred list, and release notes draft"
 ```
 
@@ -537,7 +537,7 @@ Expected: PASS.
 - [ ] **Step 11: Commit**
 
 ```bash
-git add src/core/providers/subprocessEnvironmentAllowlist.ts src/providers/cursor/runtime/cursorAgentEnv.ts src/providers/opencode/runtime/OpencodeRuntimeEnvironment.ts tests/unit/core/providers/subprocessEnvironmentAllowlist.test.ts tests/unit/providers/cursor/runtime/cursorAgentEnv.test.ts tests/unit/providers/opencode/runtime/OpencodeRuntimeEnvironment.test.ts .context/cursor-hardening-verified.md
+git add src/core/providers/subprocessEnvironmentAllowlist.ts src/providers/cursor/runtime/cursorAgentEnv.ts src/providers/opencode/runtime/OpencodeRuntimeEnvironment.ts tests/unit/core/providers/subprocessEnvironmentAllowlist.test.ts tests/unit/providers/cursor/runtime/cursorAgentEnv.test.ts tests/unit/providers/opencode/runtime/OpencodeRuntimeEnvironment.test.ts docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "fix(providers): extract shared subprocess env allowlist; apply to Cursor and Opencode"
 ```
 
@@ -660,7 +660,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/providers/cursor/history/cursorHistoryStore.ts tests/unit/providers/cursor/history/cursorHistoryStoreClose.test.ts .context/cursor-hardening-verified.md
+git add src/providers/cursor/history/cursorHistoryStore.ts tests/unit/providers/cursor/history/cursorHistoryStoreClose.test.ts docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "fix(cursor): close SQLite handle after history hydration"
 ```
 
@@ -796,7 +796,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/providers/cursor/history/cursorHistoryStore.ts tests/unit/providers/cursor/history/cursorHistoryStore.test.ts .context/cursor-hardening-verified.md
+git add src/providers/cursor/history/cursorHistoryStore.ts tests/unit/providers/cursor/history/cursorHistoryStore.test.ts docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "fix(cursor): normalize workspace hash and fall back to legacy hash for one-shot migration"
 ```
 
@@ -904,7 +904,7 @@ Read `src/providers/cursor/history/CursorConversationHistoryService.ts`. Replace
 
 ```bash
 npm run test -- --selectProjects unit --testPathPattern=cursor/history
-git add src/providers/cursor/history/ tests/unit/providers/cursor/history/cursorHistoryStore.test.ts .context/cursor-hardening-verified.md
+git add src/providers/cursor/history/ tests/unit/providers/cursor/history/cursorHistoryStore.test.ts docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "fix(cursor): surface history hydration errors with redacted home-directory paths"
 ```
 
@@ -1003,7 +1003,7 @@ const exitCode = legacyListenerOrder
 
 ```bash
 npm run test -- --selectProjects unit --testPathPattern=CursorChatRuntime
-git add src/providers/cursor/runtime/CursorChatRuntime.ts tests/unit/providers/cursor/runtime/CursorChatRuntime.test.ts .context/cursor-hardening-verified.md
+git add src/providers/cursor/runtime/CursorChatRuntime.ts tests/unit/providers/cursor/runtime/CursorChatRuntime.test.ts docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "fix(cursor): attach close listener before stream pumping; add legacy-order rollback flag"
 ```
 
@@ -1119,7 +1119,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/providers/acp/AcpSubprocess.ts tests/unit/providers/acp/AcpSubprocessKillPlatform.test.ts tests/unit/providers/opencode/runtime/opencodeAcpKill.test.ts .context/cursor-hardening-verified.md
+git add src/providers/acp/AcpSubprocess.ts tests/unit/providers/acp/AcpSubprocessKillPlatform.test.ts tests/unit/providers/opencode/runtime/opencodeAcpKill.test.ts docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "fix(acp): use SIGKILL on Windows by default; idempotent exit; CLAUDIAN_ACP_FORCE_SIGTERM rollback"
 ```
 
@@ -1201,7 +1201,7 @@ Replace `this.pending` with the actual identifier from the file.
 
 ```bash
 npm run test -- --selectProjects unit --testPathPattern=providers/acp
-git add src/providers/acp/AcpJsonRpcTransport.ts tests/unit/providers/acp/AcpJsonRpcTransportTimeoutZero.test.ts .context/cursor-hardening-verified.md
+git add src/providers/acp/AcpJsonRpcTransport.ts tests/unit/providers/acp/AcpJsonRpcTransportTimeoutZero.test.ts docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "fix(acp): reject pending requests on transport close (covers timeoutMs=0)"
 ```
 
@@ -1254,7 +1254,7 @@ private allocateRequestId(): number {
 
 ```bash
 npm run test -- --selectProjects unit --testPathPattern=providers/acp
-git add src/providers/acp/AcpJsonRpcTransport.ts tests/unit/providers/acp/AcpJsonRpcTransportTimeoutZero.test.ts .context/cursor-hardening-verified.md
+git add src/providers/acp/AcpJsonRpcTransport.ts tests/unit/providers/acp/AcpJsonRpcTransportTimeoutZero.test.ts docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "fix(acp): bound request id allocation to avoid pending-map collision"
 ```
 
@@ -1358,7 +1358,7 @@ Rationale: the existing manual `try/finally` is correct; the migration is a read
 
 ```bash
 npm run test -- --selectProjects unit --testPathPattern=providers/cursor/runtime
-git add src/providers/cursor/runtime/cursorAgentSpawnLock.ts src/providers/cursor/runtime/CursorAuxCliRunner.ts tests/unit/providers/cursor/runtime/cursorAgentSpawnLockRecovery.test.ts .context/cursor-hardening-verified.md
+git add src/providers/cursor/runtime/cursorAgentSpawnLock.ts src/providers/cursor/runtime/CursorAuxCliRunner.ts tests/unit/providers/cursor/runtime/cursorAgentSpawnLockRecovery.test.ts docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "fix(cursor): add runWithCursorAgentSpawnLock helper; migrate aux runner"
 ```
 
@@ -1426,7 +1426,7 @@ In `CursorInlineEditService`, instantiate an `AbortController` on each query and
 
 ```bash
 npm run test -- --selectProjects unit --testPathPattern=CursorInlineEditService
-git add src/providers/cursor/auxiliary/CursorInlineEditService.ts tests/unit/providers/cursor/auxiliary/CursorInlineEditService.test.ts .context/cursor-hardening-verified.md
+git add src/providers/cursor/auxiliary/CursorInlineEditService.ts tests/unit/providers/cursor/auxiliary/CursorInlineEditService.test.ts docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "fix(cursor): propagate inline edit cancel into Cursor Agent spawn"
 ```
 
@@ -1482,7 +1482,7 @@ Remove `environmentVariables` from the object passed to `setProviderConfig` insi
 
 ```bash
 npm run test -- --selectProjects unit --testPathPattern=cursor/settings
-git add src/providers/cursor/settings.ts tests/unit/providers/cursor/settings.test.ts .context/cursor-hardening-verified.md
+git add src/providers/cursor/settings.ts tests/unit/providers/cursor/settings.test.ts docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "fix(cursor): stop shadowing environmentVariables in provider config writes"
 ```
 
@@ -1520,7 +1520,7 @@ Replace the compare with a single `if (saved !== next) { invalidate(); }`. Remov
 
 ```bash
 npm run test -- --selectProjects unit --testPathPattern=CursorSettingsReconciler
-git add src/providers/cursor/env/CursorSettingsReconciler.ts tests/unit/providers/cursor/env/CursorSettingsReconciler.test.ts .context/cursor-hardening-verified.md
+git add src/providers/cursor/env/CursorSettingsReconciler.ts tests/unit/providers/cursor/env/CursorSettingsReconciler.test.ts docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "fix(cursor): invalidate conversations on any environmentHash mismatch"
 ```
 
@@ -1587,7 +1587,7 @@ In `AcpSessionUpdateNormalizer`, add a `Set<string> emittedToolResultIds` (or si
 
 ```bash
 npm run test -- --selectProjects unit --testPathPattern=AcpSessionUpdateNormalizer
-git add src/providers/acp/AcpSessionUpdateNormalizer.ts tests/unit/providers/acp/AcpSessionUpdateNormalizer.test.ts .context/cursor-hardening-verified.md
+git add src/providers/acp/AcpSessionUpdateNormalizer.ts tests/unit/providers/acp/AcpSessionUpdateNormalizer.test.ts docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "fix(acp): emit tool_result at most once per tool call id"
 ```
 
@@ -1619,7 +1619,7 @@ it('falls back to args when result is missing for Read', () => {
 
 ```bash
 npm run test -- --selectProjects unit --testPathPattern=cursorToolNormalization
-git add src/providers/cursor/runtime/cursorToolNormalization.ts tests/unit/providers/cursor/runtime/cursorToolNormalization.test.ts .context/cursor-hardening-verified.md
+git add src/providers/cursor/runtime/cursorToolNormalization.ts tests/unit/providers/cursor/runtime/cursorToolNormalization.test.ts docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "fix(cursor): fall back to args when tool result is missing"
 ```
 
@@ -1668,7 +1668,7 @@ npm run typecheck && npm run lint && npm run test
 Expected: green. Update tracker — every row PENDING must be CONFIRMED+fixed or DISMISSED with reason. Commit tracker:
 
 ```bash
-git add .context/cursor-hardening-verified.md
+git add docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "chore(cursor): finalize verification tracker through Task 17" || echo "no tracker changes"
 ```
 
@@ -1760,7 +1760,7 @@ Edit `src/providers/cursor/history/CursorConversationHistoryService.ts`. In any 
 
 ```bash
 npm run test -- --selectProjects unit --testPathPattern="(cursorSessionIdValidation|cursor/history)"
-git add src/core/providers/cursorSessionIdValidation.ts src/providers/cursor/history/cursorHistoryStore.ts src/providers/cursor/history/CursorConversationHistoryService.ts tests/unit/providers/cursor/history/cursorSessionIdValidation.test.ts .context/cursor-hardening-verified.md
+git add src/core/providers/cursorSessionIdValidation.ts src/providers/cursor/history/cursorHistoryStore.ts src/providers/cursor/history/CursorConversationHistoryService.ts tests/unit/providers/cursor/history/cursorSessionIdValidation.test.ts docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "fix(cursor): validate sessionId before path construction (path-traversal hardening)"
 ```
 
@@ -1856,7 +1856,7 @@ export function resolveCursorCliPromptArg(prompt: string): ResolvedCursorCliProm
 
 ```bash
 npm run test -- --selectProjects unit --testPathPattern=cursorCliPromptTempFile
-git add src/providers/cursor/runtime/cursorCliPrompt.ts tests/unit/providers/cursor/runtime/cursorCliPromptTempFile.test.ts .context/cursor-hardening-verified.md
+git add src/providers/cursor/runtime/cursorCliPrompt.ts tests/unit/providers/cursor/runtime/cursorCliPromptTempFile.test.ts docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "fix(cursor): tighten prompt temp file permissions and clean up on write failure"
 ```
 
@@ -1924,7 +1924,7 @@ Create `tests/integration/providers/cursor/cursorLifecycleSmoke.test.ts`. Use th
 
 ```bash
 npm run test -- --testPathPattern=cursorLifecycleSmoke
-git add tests/integration/providers/cursor/cursorLifecycleSmoke.test.ts .context/cursor-hardening-verified.md
+git add tests/integration/providers/cursor/cursorLifecycleSmoke.test.ts docs/reviews/2026-06-02-cursor-hardening-verified.md
 git commit -m "test(cursor): integration smoke for spawn → prompt → tool → cancel → close"
 ```
 
@@ -1978,7 +1978,7 @@ Release reviewer flagged the lack of a manual gate.
 
 ## Task 25: Telemetry / observability stubs
 
-> **Status: DEFERRED-TO-PR2.** Three of four log sites (`cursor.history.load_failed`, `acp.transport.close_with_pending`, `acp.subprocess.kill_escalated`) have no `plugin.logger` reference in their constructors; plumbing touches constructor signatures, which is hot-path adjacent and outside PR1's risk tier. PR2 already touches `AcpSubprocess` + `AcpJsonRpcTransport` — right time to plumb the logger. Planned codes documented in `.context/cursor-hardening-telemetry.md`.
+> **Status: DEFERRED-TO-PR2.** Three of four log sites (`cursor.history.load_failed`, `acp.transport.close_with_pending`, `acp.subprocess.kill_escalated`) have no `plugin.logger` reference in their constructors; plumbing touches constructor signatures, which is hot-path adjacent and outside PR1's risk tier. PR2 already touches `AcpSubprocess` + `AcpJsonRpcTransport` — right time to plumb the logger. Planned codes documented in `docs/superpowers/plans/2026-05-30-cursor-hardening-telemetry-design.md`.
 
 Release review flagged no way to confirm the fixes after deploy.
 
@@ -1988,12 +1988,12 @@ Release review flagged no way to confirm the fixes after deploy.
   - `AcpSubprocess` shutdown when SIGKILL is escalated — `acp.subprocess.kill_escalated`.
   - `CursorInlineEditService.cancel` — `cursor.inline_edit.cancel`.
 
-- [ ] **Step 2:** Document the log codes in `.context/cursor-hardening-telemetry.md` so future log queries can grep for them.
+- [ ] **Step 2:** Document the log codes in `docs/superpowers/plans/2026-05-30-cursor-hardening-telemetry-design.md` so future log queries can grep for them.
 
 - [ ] **Step 3:** Commit.
 
 ```bash
-git add src/ .context/cursor-hardening-telemetry.md
+git add src/ docs/superpowers/plans/2026-05-30-cursor-hardening-telemetry-design.md
 git commit -m "chore(cursor): add log lines for post-deploy verification"
 ```
 
@@ -2003,7 +2003,7 @@ git commit -m "chore(cursor): add log lines for post-deploy verification"
 
 > **Status: PENDING-PR2.** PR1 ran its own version at the PR #24 tip. Repeat for PR2 once Tasks 6-17 land.
 
-- [ ] **Step 1:** Confirm every PENDING row in `.context/cursor-hardening-verified.md` is now CONFIRMED+fixed or DISMISSED.
+- [ ] **Step 1:** Confirm every PENDING row in `docs/reviews/2026-06-02-cursor-hardening-verified.md` is now CONFIRMED+fixed or DISMISSED.
 
 - [ ] **Step 2:** Full suite.
 
@@ -2029,7 +2029,7 @@ Expected: no Cursor aux service at 0% statement coverage.
 
 ## Task 27: Summary artifact
 
-> **Status: PENDING-PR2.** PR1 summary lives in the PR #24 body and the `.context/cursor-hardening-verified.md` tracker (gitignored). PR2 should produce a combined PR1+PR2 summary for the reviewer.
+> **Status: PENDING-PR2.** PR1 summary lives in the PR #24 body and the `docs/reviews/2026-06-02-cursor-hardening-verified.md` tracker (gitignored). PR2 should produce a combined PR1+PR2 summary for the reviewer.
 
 - [ ] Write `.context/cursor-hardening-summary.md` listing each task, the commit hash (from `git log --oneline -40`), verified/dismissed status, and the manual smoke result. This is what the reviewer reads.
 
