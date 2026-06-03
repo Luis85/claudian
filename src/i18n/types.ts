@@ -229,6 +229,21 @@ export type TranslationKey =
   // Settings - MCP Servers
   | 'settings.mcpServers.name'
   | 'settings.mcpServers.desc'
+  | 'settings.mcp.reloadFailed'
+  | 'settings.mcp.saveFailed'
+  | 'settings.mcp.clipboardEmpty'
+  | 'settings.mcp.invalidClipboard'
+  | 'settings.mcp.nameRequired'
+  | 'settings.mcp.clipboardReadFailed'
+  | 'settings.mcp.duplicate'
+  | 'settings.mcp.updated'
+  | 'settings.mcp.added'
+  | 'settings.mcp.importNothing'
+  | 'settings.mcp.imported'
+  | 'settings.mcp.importedWithSkipped'
+  | 'settings.mcp.toggleEnabled'
+  | 'settings.mcp.toggleDisabled'
+  | 'settings.mcp.deleted'
 
   // Settings - Plugins
   | 'settings.plugins.name'

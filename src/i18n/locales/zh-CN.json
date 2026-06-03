@@ -411,6 +411,23 @@
       "name": "Trust this vault's project settings",
       "descRisky": "This vault's .claude/settings.json defines hooks or permission allow-rules that can run commands or auto-approve tools. They are withheld until you trust this vault.",
       "descSafe": "Honor this vault's project .claude/settings.json (hooks / permission allow-rules). Only enable for vaults you trust."
+    },
+    "mcp": {
+      "reloadFailed": "Setting saved but reload failed. Changes will apply on next session.",
+      "saveFailed": "Failed to save MCP server",
+      "clipboardEmpty": "Clipboard is empty",
+      "invalidClipboard": "No valid mcp configuration found in clipboard",
+      "nameRequired": "Enter a name for the server",
+      "clipboardReadFailed": "Failed to read clipboard",
+      "duplicate": "Server \"{name}\" already exists",
+      "updated": "MCP server \"{name}\" updated",
+      "added": "MCP server \"{name}\" added",
+      "importNothing": "No new mcp servers imported",
+      "imported": "Imported {count} MCP server(s)",
+      "importedWithSkipped": "Imported {count} MCP server(s) ({skipped} skipped)",
+      "toggleEnabled": "MCP server \"{name}\" enabled",
+      "toggleDisabled": "MCP server \"{name}\" disabled",
+      "deleted": "MCP server \"{name}\" deleted"
     }
   },
   "quickActions": {

@@ -272,6 +272,23 @@
       "name": "MCP Servers",
       "desc": "Manage vault-level MCP server configurations stored in .claude/mcp.json. Servers with context-saving mode require @mention to activate."
     },
+    "mcp": {
+      "reloadFailed": "Setting saved but reload failed. Changes will apply on next session.",
+      "saveFailed": "Failed to save MCP server",
+      "clipboardEmpty": "Clipboard is empty",
+      "invalidClipboard": "No valid mcp configuration found in clipboard",
+      "nameRequired": "Enter a name for the server",
+      "clipboardReadFailed": "Failed to read clipboard",
+      "duplicate": "Server \"{name}\" already exists",
+      "updated": "MCP server \"{name}\" updated",
+      "added": "MCP server \"{name}\" added",
+      "importNothing": "No new mcp servers imported",
+      "imported": "Imported {count} MCP server(s)",
+      "importedWithSkipped": "Imported {count} MCP server(s) ({skipped} skipped)",
+      "toggleEnabled": "MCP server \"{name}\" enabled",
+      "toggleDisabled": "MCP server \"{name}\" disabled",
+      "deleted": "MCP server \"{name}\" deleted"
+    },
     "plugins": {
       "name": "Claude Code Plugins",
       "desc": "Manage Claude Code plugins discovered from ~/.claude/plugins. Enabled plugins are stored per vault in .claude/settings.json."
