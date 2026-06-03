@@ -111,6 +111,23 @@
     },
     "queue": {
       "steerFailed": "Failed to steer the queued message. It is still available."
+    },
+    "input": {
+      "initFailed": "Failed to initialize agent service. Please try again.",
+      "serviceUnavailable": "Agent service not available. Please reload the plugin.",
+      "instructionAdded": "Instruction added to custom system prompt",
+      "processResponseFailed": "Failed to process response",
+      "refineFailed": "Failed to refine instruction",
+      "noInstruction": "No instruction received",
+      "unexpectedApprovalSelection": "Unexpected approval selection: \"{value}\"",
+      "commandUnsupported": "/{command} is not supported by this provider.",
+      "externalContextUnavailable": "External context selector not available.",
+      "externalContextAdded": "Added external context: {path}",
+      "forkUnsupported": "Fork is not supported by this provider.",
+      "forkUnavailable": "Fork not available.",
+      "unknownCommand": "Unknown command: {command}",
+      "noConversationsToResume": "No conversations to resume",
+      "openConversationFailed": "Failed to open conversation: {error}"
     }
   },
   "settings": {

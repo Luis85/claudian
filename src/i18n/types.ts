@@ -83,6 +83,23 @@ export type TranslationKey =
   // Chat - Queued message
   | 'chat.queue.steerFailed'
 
+  // Chat - Input controller notices (Q-1 routing through t())
+  | 'chat.input.initFailed'
+  | 'chat.input.serviceUnavailable'
+  | 'chat.input.instructionAdded'
+  | 'chat.input.processResponseFailed'
+  | 'chat.input.refineFailed'
+  | 'chat.input.noInstruction'
+  | 'chat.input.unexpectedApprovalSelection'
+  | 'chat.input.commandUnsupported'
+  | 'chat.input.externalContextUnavailable'
+  | 'chat.input.externalContextAdded'
+  | 'chat.input.forkUnsupported'
+  | 'chat.input.forkUnavailable'
+  | 'chat.input.unknownCommand'
+  | 'chat.input.noConversationsToResume'
+  | 'chat.input.openConversationFailed'
+
   // Chat - Orchestrator
   | 'chat.orchestrator.titleOpen'
   | 'chat.orchestrator.titleInactive'

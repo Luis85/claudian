@@ -24,6 +24,7 @@ import type {
 } from '../../../core/runtime/types';
 import { TOOL_EXIT_PLAN_MODE } from '../../../core/tools/toolNames';
 import type { ApprovalDecision, ChatMessage, ExitPlanModeDecision, StreamChunk } from '../../../core/types';
+import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { ResumeSessionDropdown } from '../../../shared/components/ResumeSessionDropdown';
 import { InstructionModal } from '../../../shared/modals/InstructionConfirmModal';
@@ -391,7 +392,7 @@ export class InputController {
     if (this.deps.ensureServiceInitialized) {
       const ready = await this.deps.ensureServiceInitialized();
       if (!ready) {
-        new Notice('Failed to initialize agent service. Please try again.');
+        new Notice(t('chat.input.initFailed'));
         streamController.hideThinkingIndicator();
         state.isStreaming = false;
         this.activeStreamingAssistantMessage = null;
@@ -403,7 +404,7 @@ export class InputController {
 
     const agentService = this.getAgentService();
     if (!agentService) {
-      new Notice('Agent service not available. Please reload the plugin.');
+      new Notice(t('chat.input.serviceUnavailable'));
       this.activeStreamingAssistantMessage = null;
       this.resetProviderMessageBoundaryState();
       deferredAiTitleGeneration?.();
@@ -993,7 +994,7 @@ export class InputController {
               plugin.settings.systemPrompt = appendMarkdownSnippet(currentPrompt, finalInstruction);
               await plugin.saveSettings();
 
-              new Notice('Instruction added to custom system prompt');
+              new Notice(t('chat.input.instructionAdded'));
               instructionModeManager?.clear();
             })();
           },
@@ -1014,7 +1015,7 @@ export class InputController {
               if (result.error === 'Cancelled') {
                 return;
               }
-              new Notice(result.error || 'Failed to process response');
+              new Notice(result.error || t('chat.input.processResponseFailed'));
               modal?.showError(result.error || 'Failed to process response');
               return;
             }
@@ -1045,7 +1046,7 @@ export class InputController {
           instructionModeManager?.clear();
           return;
         }
-        new Notice(result.error || 'Failed to refine instruction');
+        new Notice(result.error || t('chat.input.refineFailed'));
         modal.showError(result.error || 'Failed to refine instruction');
         instructionModeManager?.clear();
         return;
@@ -1056,13 +1057,13 @@ export class InputController {
       } else if (result.refinedInstruction) {
         modal.showConfirmation(result.refinedInstruction);
       } else {
-        new Notice('No instruction received');
+        new Notice(t('chat.input.noInstruction'));
         modal.showError('No instruction received');
         instructionModeManager?.clear();
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      new Notice(`Error: ${errorMsg}`);
+      new Notice(`${t('common.error')}: ${errorMsg}`);
       modal?.showError(errorMsg);
       instructionModeManager?.clear();
     }
@@ -1141,7 +1142,7 @@ export class InputController {
     const selected = Object.values(result)[0];
     const selectedValue = Array.isArray(selected) ? selected[0] : selected;
     if (typeof selectedValue !== 'string') {
-      new Notice(`Unexpected approval selection: "${String(selectedValue)}"`);
+      new Notice(t('chat.input.unexpectedApprovalSelection', { value: String(selectedValue) }));
       return 'cancel';
     }
 
@@ -1376,7 +1377,7 @@ export class InputController {
     const capabilities = this.getActiveCapabilities();
 
     if (!isBuiltInCommandSupported(command, capabilities)) {
-      new Notice(`/${command.name} is not supported by this provider.`);
+      new Notice(t('chat.input.commandUnsupported', { command: command.name }));
       return;
     }
 
@@ -1387,12 +1388,12 @@ export class InputController {
       case 'add-dir': {
         const externalContextSelector = this.deps.getExternalContextSelector();
         if (!externalContextSelector) {
-          new Notice('External context selector not available.');
+          new Notice(t('chat.input.externalContextUnavailable'));
           return;
         }
         const result = externalContextSelector.addExternalContext(args);
         if (result.success) {
-          new Notice(`Added external context: ${result.normalizedPath}`);
+          new Notice(t('chat.input.externalContextAdded', { path: result.normalizedPath }));
         } else {
           new Notice(result.error);
         }
@@ -1403,11 +1404,11 @@ export class InputController {
         break;
       case 'fork': {
         if (!this.getActiveCapabilities().supportsFork) {
-          new Notice('Fork is not supported by this provider.');
+          new Notice(t('chat.input.forkUnsupported'));
           return;
         }
         if (!this.deps.onForkAll) {
-          new Notice('Fork not available.');
+          new Notice(t('chat.input.forkUnavailable'));
           return;
         }
         await this.deps.onForkAll();
@@ -1418,7 +1419,7 @@ export class InputController {
         const unknownAction = typeof (command as { action?: unknown }).action === 'string'
           ? (command as { action: string }).action
           : 'unknown';
-        new Notice(`Unknown command: ${unknownAction}`);
+        new Notice(t('chat.input.unknownCommand', { command: unknownAction }));
         break;
       }
     }
@@ -1452,7 +1453,7 @@ export class InputController {
 
     const conversations = plugin.getConversationList();
     if (conversations.length === 0) {
-      new Notice('No conversations to resume');
+      new Notice(t('chat.input.noConversationsToResume'));
       return;
     }
 
@@ -1469,7 +1470,7 @@ export class InputController {
           this.destroyResumeDropdown();
           openConversation(id).catch((err: unknown) => {
             const msg = err instanceof Error ? err.message : String(err);
-            new Notice(`Failed to open conversation: ${msg}`);
+            new Notice(t('chat.input.openConversationFailed', { error: msg }));
           });
         },
         onDismiss: () => {
