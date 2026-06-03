@@ -1,6 +1,7 @@
 import type { App } from 'obsidian';
 import { Modal, Notice, setIcon, Setting } from 'obsidian';
 
+import { t } from '../../../i18n/i18n';
 import { confirmDelete } from '../../../shared/modals/ConfirmModal';
 import type { OpencodeAgentStorage } from '../storage/OpencodeAgentStorage';
 import type { OpencodeAgentDefinition } from '../types/agent';
@@ -259,13 +260,13 @@ class OpencodeAgentModal extends Modal {
 
       const description = descriptionInput.value.trim();
       if (!description) {
-        new Notice('Description is required');
+        new Notice(t('provider.opencode.subagent.descriptionRequired'));
         return;
       }
 
       const prompt = promptArea.value;
       if (!prompt.trim()) {
-        new Notice('Prompt is required');
+        new Notice(t('provider.opencode.subagent.promptRequired'));
         return;
       }
 
@@ -275,7 +276,7 @@ class OpencodeAgentModal extends Modal {
         this.existing?.persistenceKey,
       );
       if (duplicate) {
-        new Notice(`A subagent named "${name}" already exists`);
+        new Notice(t('provider.opencode.subagent.duplicate', { name }));
         return;
       }
 
@@ -339,7 +340,7 @@ class OpencodeAgentModal extends Modal {
         await this.onSave(agent);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        new Notice(`Failed to save subagent: ${message}`);
+        new Notice(t('provider.opencode.subagent.saveFailed', { message }));
         return;
       }
       this.close();
@@ -462,9 +463,9 @@ export class OpencodeAgentSettings {
         await this.storage.delete(agent);
         await this.render();
         await this.onChanged?.();
-        new Notice(`Subagent "${agent.name}" deleted`);
+        new Notice(t('provider.opencode.subagent.deleted', { name: agent.name }));
       } catch {
-        new Notice('Failed to delete subagent');
+        new Notice(t('provider.opencode.subagent.deleteFailed'));
       }
       })();
     });
@@ -483,8 +484,8 @@ export class OpencodeAgentSettings {
         await this.onChanged?.();
         new Notice(
           existing
-            ? `Subagent "${agent.name}" updated`
-            : `Subagent "${agent.name}" created`,
+            ? t('provider.opencode.subagent.updated', { name: agent.name })
+            : t('provider.opencode.subagent.created', { name: agent.name }),
         );
       },
     );

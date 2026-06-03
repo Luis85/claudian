@@ -381,4 +381,14 @@ export type TranslationKey =
   | 'security.vaultTrust.body'
   | 'security.vaultTrust.detail'
   | 'security.vaultTrust.trust'
-  | 'security.vaultTrust.keepBlocked';
+  | 'security.vaultTrust.keepBlocked'
+
+  // Provider - Opencode subagent notices (Q-1 chunk 4)
+  | 'provider.opencode.subagent.descriptionRequired'
+  | 'provider.opencode.subagent.promptRequired'
+  | 'provider.opencode.subagent.duplicate'
+  | 'provider.opencode.subagent.saveFailed'
+  | 'provider.opencode.subagent.deleted'
+  | 'provider.opencode.subagent.deleteFailed'
+  | 'provider.opencode.subagent.updated'
+  | 'provider.opencode.subagent.created';
