@@ -36,6 +36,8 @@ Steps:
    - Context section (tech stack, files to modify/create as tables)
    - Constraints section (any limitations or out-of-scope items)
    - Task Breakdown section (all tasks numbered with substeps, exact file paths, commit messages)
+   - Execution Instructions: Subagent-Driven (recommended) — fresh subagent per task, review between tasks, two-stage check; with a dedicated review and polishing pass once done 
+   - Update docs during execution to keep underlying work-order and docs up-to-date
    - Run Ledger section:
      ```
      ## Run Ledger

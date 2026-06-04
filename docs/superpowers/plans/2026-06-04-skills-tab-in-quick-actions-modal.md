@@ -1,3 +1,6 @@
+---
+status: done
+---
 # Skills Tab in Quick Actions Modal Implementation Plan
 
 > **Status: implemented 2026-06-04** via [[work-order-20260604-skills-tab-quick-actions-modal]]. All 14 tasks completed; full verification (`npm run typecheck && npm run lint && npm run test && npm run build`) passes. Plan-checkbox tracking deliberately not back-filled here — the work order's acceptance criteria is the canonical progress record.

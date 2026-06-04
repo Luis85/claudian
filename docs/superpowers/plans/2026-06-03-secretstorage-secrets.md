@@ -1,5 +1,5 @@
 ---
-status: in-progress (foundation revised to structured design)
+status: in-progress
 parent: Security
 issue: "[[docs/issues/adopt-secretstorage-for-secrets.md]]"
 research: "[[docs/research/2026-06-04-obsidian-secret-storage.md]]"
