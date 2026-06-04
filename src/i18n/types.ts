@@ -159,6 +159,7 @@ export type TranslationKey =
 
   // Chat - Image attachments (Q-1 chunk 13)
   | 'chat.image.unsupported'
+  | 'chat.image.unavailable'
 
   // Chat - File open (Q-1 chunk 13)
   | 'chat.fileOpen.notFound'
