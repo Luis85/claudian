@@ -34,11 +34,11 @@ Keep the hexagonal **ports** below — they are the harness's "modular, switchab
 
 | Profile | Embeddings | Vector store | Generation | Install cost |
 |---|---|---|---|---|
-| **Default (no install)** | Transformers.js (ONNX, in-renderer) | sql.js / pure-JS store | the active chat provider or lite provider | **none** — runs in the renderer |
+| **Default (no install)** | Transformers.js (ONNX, in-renderer) | sql.js / pure-JS store | the active chat / Lite provider (**remote**) | **none to install**; embeddings run locally, but **generation is a network call** |
 | **Local power (opt-in)** | Ollama `/api/embed` | **LanceDB** (native node) | Ollama generate | Ollama server + model pull, **desktop-only** (a terminal step) |
-| **BYOK (opt-in)** | provider embeddings API | either | provider API | key only; **only profile that leaves the machine** (disclose) |
+| **BYOK (opt-in)** | provider embeddings API | either | provider API | key only; cloud embeddings + generation (disclose) |
 
-> **Specorator note:** the original spec's **Ollama + LanceDB** stack becomes the *Local power* profile, not the default — Ollama is a separate install + model download, which conflicts with the zero-terminal goal for Maya/Sam. LanceDB is a **native node module → desktop-only**; the renderer-default (Transformers.js + sql.js) is what keeps onboarding install-free and keeps a mobile path open. The ports make swapping these a settings choice. Backend default is tracked as [OQ8] in the parent PRD.
+> **Specorator note:** the original spec's **Ollama + LanceDB** stack becomes the *Local power* profile, not the default — Ollama is a separate install + model download, which conflicts with the zero-terminal goal for Maya/Sam. LanceDB is a **native node module → desktop-only**; the renderer-default (Transformers.js + sql.js) is what keeps onboarding install-free and keeps a mobile path open. The ports make swapping these a settings choice. Backend default is tracked as [OQ8] in the parent PRD. **Privacy:** only the *fully local* profile (local embeddings **and** Ollama generation) keeps everything on-device; the **default profile generates remotely** (the active/Lite provider), so retrieved chunks leave the device on every grounded answer and must be disclosed in the network ledger — BYOK is *not* the only profile that leaves the machine.
 
 > **Repo fit:** this codebase uses **Jest** (not Vitest) and **esbuild** (not Vite). Use Obsidian **`requestUrl`** for Ollama/HTTP calls; resolve any API keys through the existing **`SecretStore`** (Obsidian SecretStorage), never `.env`/cleartext. Keep Obsidian-specific code in `infrastructure/obsidian` as the spec says, mirrored under Specorator's existing `src/` + `tests/` layout.
 
@@ -320,7 +320,7 @@ Builds · TS strict passes · Jest tests pass · loads in Obsidian desktop · co
 ## 14. Constraints
 
 - No LangChain/LlamaIndex in MVP.
-- **Local-first by default; BYOK cloud embeddings/generation are opt-in and disclosed** (the only profile that leaves the machine).
+- **Local-first by default; cloud embeddings/generation (BYOK *or* the active/Lite provider) are opt-in and disclosed.** Only the fully-local profile (local embeddings **and** Ollama generation) keeps everything on-device — the default profile's *generation* is a remote call, shown in the network ledger.
 - Do not modify user notes in MVP (retrieval feeds the agent; writes go through the existing approval/undo path).
 - Use Obsidian Vault APIs; direct filesystem only where the native vector DB needs it.
 - Keep Obsidian-specific code in `infrastructure/obsidian`; keep business logic independent of Obsidian APIs; all provider integrations behind ports.
