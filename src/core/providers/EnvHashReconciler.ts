@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+
 import { parseEnvironmentVariables } from '../../utils/env';
 import type { Conversation } from '../types';
 import { getRuntimeEnvironmentText } from './providerEnvironment';
@@ -16,13 +18,30 @@ export interface EnvHashReconcilerSpec {
   reconcileModel?(settings: Record<string, unknown>, envText: string): void;
 }
 
-export function computeEnvHash(envText: string, watchedKeys: readonly string[]): string {
+/**
+ * Stable, sorted `KEY=value` projection of the watched keys. This embeds the raw
+ * values (including secrets) so it is NEVER persisted — it is only the pre-digest
+ * input to `computeEnvHash` and the comparison basis for legacy stored hashes.
+ */
+function canonicalEnvProjection(envText: string, watchedKeys: readonly string[]): string {
   const envVars = parseEnvironmentVariables(envText || '');
   return [...watchedKeys]
     .filter(key => envVars[key])
     .map(key => `${key}=${envVars[key]}`)
     .sort()
     .join('|');
+}
+
+/**
+ * SEC-A: a DIGEST (not the raw values) of the watched env keys. The watched set
+ * includes secrets (e.g. `OPENAI_API_KEY`, `CURSOR_API_KEY`) and this hash is
+ * persisted to `providerConfigs.*.environmentHash` in `claudian-settings.json`, so
+ * it must never contain the resolved secret itself. An empty projection stays `''`
+ * to preserve the "no env configured" sentinel (and parity with the default hash).
+ */
+export function computeEnvHash(envText: string, watchedKeys: readonly string[]): string {
+  const canonical = canonicalEnvProjection(envText, watchedKeys);
+  return canonical === '' ? '' : createHash('sha256').update(canonical).digest('hex');
 }
 
 /**
@@ -53,9 +72,19 @@ export function reconcileEnvironmentHash(
   }
 
   const currentHash = computeEnvHash(resolved.text, spec.watchedKeys);
+  const savedHash = spec.getSavedHash(settings);
 
-  if (currentHash === spec.getSavedHash(settings)) {
+  if (currentHash === savedHash) {
     return { changed: false, invalidatedConversations: [] };
+  }
+
+  // SEC-A back-compat: a hash saved in the LEGACY raw-`KEY=value` format (which
+  // could embed a resolved secret in plaintext settings) for the SAME values must
+  // not be treated as a change. Scrub it to the digest and persist — but drop no
+  // sessions — so the stale plaintext value is removed without spurious churn.
+  if (savedHash !== '' && savedHash === canonicalEnvProjection(resolved.text, spec.watchedKeys)) {
+    spec.saveHash(settings, currentHash);
+    return { changed: true, invalidatedConversations: [] };
   }
 
   const invalidatedConversations: Conversation[] = [];

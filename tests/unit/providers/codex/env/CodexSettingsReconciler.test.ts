@@ -1,3 +1,4 @@
+import { computeEnvHash } from '@/core/providers/EnvHashReconciler';
 import type { Conversation } from '@/core/types';
 import { codexSettingsReconciler } from '@/providers/codex/env/CodexSettingsReconciler';
 import { getCodexProviderSettings } from '@/providers/codex/settings';
@@ -63,7 +64,7 @@ describe('codexSettingsReconciler', () => {
     expect(conversation.providerState).toBeUndefined();
     expect(settings.model).toBe('my-custom-model');
     expect((settings.providerConfigs as any).codex.environmentHash).toBe(
-      'OPENAI_BASE_URL=https://api.example.com/v1',
+      computeEnvHash('OPENAI_BASE_URL=https://api.example.com/v1', ['OPENAI_BASE_URL']),
     );
   });
 
@@ -84,7 +85,7 @@ describe('codexSettingsReconciler', () => {
     expect(result.changed).toBe(true);
     expect(settings.model).toBe('gpt-5.4-mini');
     expect((settings.providerConfigs as any).codex.environmentHash).toBe(
-      'OPENAI_BASE_URL=https://api.example.com/v1',
+      computeEnvHash('OPENAI_BASE_URL=https://api.example.com/v1', ['OPENAI_BASE_URL']),
     );
   });
 

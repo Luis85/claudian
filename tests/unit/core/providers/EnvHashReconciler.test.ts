@@ -19,14 +19,30 @@ function makeConversation(overrides: Partial<Conversation>): Conversation {
   return { id: 'c', providerId: 'claude', sessionId: null, ...overrides } as Conversation;
 }
 
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+
 describe('computeEnvHash', () => {
-  it('keeps only watched keys, sorts, and joins with a pipe', () => {
+  it('returns a sha256 digest, not the raw KEY=value values', () => {
     const hash = computeEnvHash('B=2\nA=1\nUNWATCHED=9', ['A', 'B']);
-    expect(hash).toBe('A=1|B=2');
+    expect(hash).toMatch(SHA256_HEX);
   });
 
-  it('ignores watched keys that are unset', () => {
-    expect(computeEnvHash('A=1', ['A', 'B'])).toBe('A=1');
+  // SEC-A (P1): the watched set includes secrets and the hash is persisted to
+  // settings, so the resolved secret value must NEVER appear in the digest.
+  it('does not embed the secret value in the persisted hash', () => {
+    const hash = computeEnvHash('OPENAI_API_KEY=sk-supersecret', ['OPENAI_API_KEY']);
+    expect(hash).toMatch(SHA256_HEX);
+    expect(hash).not.toContain('sk-supersecret');
+    expect(hash).not.toContain('OPENAI_API_KEY');
+  });
+
+  it('is order-insensitive across watched keys and ignores unwatched/unset keys', () => {
+    expect(computeEnvHash('B=2\nA=1', ['A', 'B'])).toBe(computeEnvHash('A=1\nB=2', ['B', 'A']));
+    expect(computeEnvHash('A=1\nUNWATCHED=9', ['A', 'B'])).toBe(computeEnvHash('A=1', ['A', 'B']));
+  });
+
+  it('changes when a watched value changes', () => {
+    expect(computeEnvHash('A=1', ['A'])).not.toBe(computeEnvHash('A=2', ['A']));
   });
 
   it('returns an empty string when no watched keys are present', () => {
@@ -47,18 +63,47 @@ describe('reconcileEnvironmentHash', () => {
   }
 
   it('reports no change when the hash matches the saved hash', () => {
-    const spec = makeSpec({ getSavedHash: () => 'A=1' });
+    const spec = makeSpec({ getSavedHash: () => computeEnvHash('A=1', ['A']) });
     const result = reconcileEnvironmentHash(spec, { __envText: 'A=1' }, []);
 
     expect(result).toEqual({ changed: false, invalidatedConversations: [] });
     expect(spec.saveHash).not.toHaveBeenCalled();
   });
 
+  // SEC-A (P1): a hash saved in the legacy raw `KEY=value` format (which could have
+  // embedded a resolved secret in plaintext settings) for UNCHANGED values is
+  // scrubbed to a digest and persisted — without invalidating any session.
+  it('scrubs a legacy raw-format hash to a digest without invalidating sessions', () => {
+    const saveHash = jest.fn();
+    const invalidateConversation = jest.fn(() => true);
+    const spec = makeSpec({
+      watchedKeys: ['API_KEY'],
+      getSavedHash: () => 'API_KEY=sk-secret', // legacy plaintext format
+      saveHash,
+      invalidateConversation,
+    });
+    const result = reconcileEnvironmentHash(
+      spec,
+      { __envText: '' },
+      [makeConversation({ sessionId: 's1' })],
+      () => ({ text: 'API_KEY=sk-secret', missingKeys: [] }),
+    );
+
+    expect(result).toEqual({ changed: true, invalidatedConversations: [] });
+    expect(invalidateConversation).not.toHaveBeenCalled();
+    const persisted = saveHash.mock.calls[0][1] as string;
+    expect(persisted).toBe(computeEnvHash('API_KEY=sk-secret', ['API_KEY']));
+    expect(persisted).not.toContain('sk-secret');
+  });
+
   // SEC-A: when a watched key is migrated out of the plaintext blob into
   // SecretStorage, resolveEnvText re-injects its value so the hash is unchanged
   // and sessions are NOT invalidated.
   it('uses resolveEnvText so a migrated watched secret keeps the hash stable', () => {
-    const spec = makeSpec({ watchedKeys: ['API_KEY'], getSavedHash: () => 'API_KEY=sk-1' });
+    const spec = makeSpec({
+      watchedKeys: ['API_KEY'],
+      getSavedHash: () => computeEnvHash('API_KEY=sk-1', ['API_KEY']),
+    });
     const result = reconcileEnvironmentHash(
       spec,
       { __envText: '' }, // plaintext blob no longer has the key (migrated)
@@ -99,7 +144,7 @@ describe('reconcileEnvironmentHash', () => {
     );
 
     expect(result.changed).toBe(true);
-    expect(spec.saveHash).toHaveBeenCalledWith(expect.anything(), 'API_KEY=sk-2');
+    expect(spec.saveHash).toHaveBeenCalledWith(expect.anything(), computeEnvHash('API_KEY=sk-2', ['API_KEY']));
   });
 
   it('without a resolver, a stripped watched key changes the hash (the regression this guards)', () => {
@@ -126,7 +171,7 @@ describe('reconcileEnvironmentHash', () => {
     expect(result.changed).toBe(true);
     expect(result.invalidatedConversations).toEqual([stale]);
     expect(stale.sessionId).toBeNull();
-    expect(saveHash).toHaveBeenCalledWith({ __envText: 'A=1' }, 'A=1');
+    expect(saveHash).toHaveBeenCalledWith({ __envText: 'A=1' }, computeEnvHash('A=1', ['A']));
   });
 
   it('runs the optional model reconciliation with the freshly read env text', () => {
