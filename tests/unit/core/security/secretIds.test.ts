@@ -51,13 +51,14 @@ describe('secretIds — migration detection (advisory)', () => {
     for (const k of [
       'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'FOO_TOKEN', 'MY_SECRET',
       'X_PASSWORD', 'AWS_SECRET_ACCESS_KEY', 'BASIC_AUTH', 'NPM_CONFIG__AUTH',
+      'GOOGLE_PRIVATE_KEY', 'JWT_PRIVATE_KEY', 'SSH_PRIVATE_KEY', 'MY_PRIVATE-KEY',
     ]) {
       expect(isSecretEnvKey(k)).toBe(true);
     }
   });
 
-  it('does not flag non-secret env keys', () => {
-    for (const k of ['ANTHROPIC_BASE_URL', 'ANTHROPIC_MODEL', 'CLAUDE_CODE_USE_BEDROCK', 'PATH', 'NODE_ENV']) {
+  it('does not flag non-secret env keys (incl. generic *_KEY that is not private)', () => {
+    for (const k of ['ANTHROPIC_BASE_URL', 'ANTHROPIC_MODEL', 'CLAUDE_CODE_USE_BEDROCK', 'PATH', 'NODE_ENV', 'CACHE_KEY', 'PARTITION_KEY']) {
       expect(isSecretEnvKey(k)).toBe(false);
     }
   });
