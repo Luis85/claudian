@@ -83,6 +83,189 @@ describe('ClaudianView tab controls', () => {
   });
 });
 
+describe('ClaudianView.injectCommitTurnForConversation', () => {
+  type InjectHarness = {
+    view: any;
+    sendMessage: jest.Mock;
+    crossSendMessage: jest.Mock;
+    switchToTab: jest.Mock;
+    crossSwitchToTab: jest.Mock;
+    openConversation: jest.Mock;
+    canCreateTab: jest.Mock;
+    startTaskRunInFreshTab: jest.Mock;
+    findConversationAcrossViews: jest.Mock;
+  };
+
+  function makeHarness(opts: {
+    canCreateTab?: boolean;
+    initialCross?: 'this' | 'other' | null;
+    postOpenCross?: 'this' | 'other' | null;
+  }): InjectHarness {
+    const sendMessage = jest.fn(async () => undefined);
+    const crossSendMessage = jest.fn(async () => undefined);
+    const switchToTab = jest.fn(async () => undefined);
+    const crossSwitchToTab = jest.fn(async () => undefined);
+    const openConversation = jest.fn(async () => undefined);
+    const canCreateTab = jest.fn(() => opts.canCreateTab ?? true);
+    const startTaskRunInFreshTab = jest.fn(async () => ({
+      status: 'completed' as const,
+      conversationId: 'conv-1',
+      sidepanelTabId: 'tab-fresh',
+      finalAssistantContent: '',
+    }));
+
+    const view = Object.create(ClaudianView.prototype) as any;
+    const localTab = {
+      id: 'tab-local',
+      controllers: { inputController: { sendMessage } },
+    };
+    const otherTab = {
+      id: 'tab-other',
+      controllers: { inputController: { sendMessage: crossSendMessage } },
+    };
+    const otherTabManager = {
+      switchToTab: crossSwitchToTab,
+      getTab: jest.fn(() => otherTab),
+    };
+    const otherView = { getTabManager: () => otherTabManager };
+
+    view.tabManager = {
+      switchToTab,
+      getTab: jest.fn(() => localTab),
+      openConversation,
+      canCreateTab,
+    };
+    view.startTaskRunInFreshTab = startTaskRunInFreshTab;
+
+    const resolveCross = (mode: 'this' | 'other' | null) => {
+      if (mode === 'this') return { view, tabId: 'tab-local' };
+      if (mode === 'other') return { view: otherView, tabId: 'tab-other' };
+      return null;
+    };
+    const findConversationAcrossViews = jest.fn();
+    findConversationAcrossViews
+      .mockReturnValueOnce(resolveCross(opts.initialCross ?? null));
+    findConversationAcrossViews
+      .mockReturnValueOnce(resolveCross(opts.postOpenCross ?? opts.initialCross ?? null));
+    view.plugin = { findConversationAcrossViews };
+
+    return {
+      view,
+      sendMessage,
+      crossSendMessage,
+      switchToTab,
+      crossSwitchToTab,
+      openConversation,
+      canCreateTab,
+      startTaskRunInFreshTab,
+      findConversationAcrossViews,
+    };
+  }
+
+  it('focuses an in-view tab and sends the prompt without reopening from history', async () => {
+    const h = makeHarness({ initialCross: 'this' });
+
+    await h.view.injectCommitTurnForConversation({
+      conversationId: 'conv-1',
+      fallbackProviderId: 'claude',
+      fallbackModel: 'opus',
+      prompt: 'PROMPT',
+    });
+
+    expect(h.openConversation).not.toHaveBeenCalled();
+    expect(h.switchToTab).toHaveBeenCalledWith('tab-local');
+    expect(h.sendMessage).toHaveBeenCalledWith({ content: 'PROMPT' });
+    expect(h.startTaskRunInFreshTab).not.toHaveBeenCalled();
+  });
+
+  it('focuses a cross-view tab and sends the prompt there', async () => {
+    const h = makeHarness({ initialCross: 'other' });
+
+    await h.view.injectCommitTurnForConversation({
+      conversationId: 'conv-1',
+      fallbackProviderId: 'claude',
+      fallbackModel: 'opus',
+      prompt: 'PROMPT',
+    });
+
+    expect(h.openConversation).not.toHaveBeenCalled();
+    expect(h.crossSwitchToTab).toHaveBeenCalledWith('tab-other');
+    expect(h.crossSendMessage).toHaveBeenCalledWith({ content: 'PROMPT' });
+    expect(h.sendMessage).not.toHaveBeenCalled();
+    expect(h.startTaskRunInFreshTab).not.toHaveBeenCalled();
+  });
+
+  it('reopens the saved conversation from history into a fresh tab when no tab hosts it', async () => {
+    const h = makeHarness({
+      canCreateTab: true,
+      initialCross: null,
+      postOpenCross: 'this',
+    });
+
+    await h.view.injectCommitTurnForConversation({
+      conversationId: 'conv-1',
+      fallbackProviderId: 'claude',
+      fallbackModel: 'opus',
+      prompt: 'PROMPT',
+    });
+
+    expect(h.openConversation).toHaveBeenCalledWith('conv-1', { preferNewTab: true });
+    expect(h.sendMessage).toHaveBeenCalledWith({ content: 'PROMPT' });
+    expect(h.startTaskRunInFreshTab).not.toHaveBeenCalled();
+  });
+
+  it('falls back to a fresh task-run tab when tab cap is reached and no conversation is open', async () => {
+    const h = makeHarness({
+      canCreateTab: false,
+      initialCross: null,
+      postOpenCross: null,
+    });
+
+    await h.view.injectCommitTurnForConversation({
+      conversationId: 'conv-1',
+      fallbackProviderId: 'claude',
+      fallbackModel: 'opus',
+      prompt: 'PROMPT',
+    });
+
+    expect(h.openConversation).not.toHaveBeenCalled();
+    expect(h.startTaskRunInFreshTab).toHaveBeenCalledWith({
+      providerId: 'claude',
+      model: 'opus',
+      prompt: 'PROMPT',
+    });
+  });
+
+  it('falls back to a fresh task-run tab when no conversationId is supplied', async () => {
+    const h = makeHarness({ initialCross: null });
+
+    await h.view.injectCommitTurnForConversation({
+      conversationId: null,
+      fallbackProviderId: 'claude',
+      fallbackModel: 'opus',
+      prompt: 'PROMPT',
+    });
+
+    expect(h.findConversationAcrossViews).not.toHaveBeenCalled();
+    expect(h.openConversation).not.toHaveBeenCalled();
+    expect(h.startTaskRunInFreshTab).toHaveBeenCalled();
+  });
+
+  it('throws when the chat view has no tabManager', async () => {
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.tabManager = null;
+    view.plugin = { findConversationAcrossViews: jest.fn() };
+    await expect(
+      view.injectCommitTurnForConversation({
+        conversationId: 'conv-1',
+        fallbackProviderId: 'claude',
+        fallbackModel: 'opus',
+        prompt: 'PROMPT',
+      }),
+    ).rejects.toThrow(/chat view/i);
+  });
+});
+
 describe('direct chat independence from Agent Board', () => {
   function collectTsFiles(dir: string): string[] {
     const out: string[] = [];

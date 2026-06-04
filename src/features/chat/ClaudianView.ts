@@ -726,10 +726,11 @@ export class ClaudianView extends ItemView {
   }
 
   /**
-   * Routes a commit-and-push prompt into a work-order's chat. Focuses or reopens
-   * the conversation tab when `conversationId` is known and recoverable;
-   * otherwise opens a fresh task-run tab on the supplied provider/model and
-   * sends the prompt there.
+   * Routes a commit-and-push prompt into a work-order's chat. Focuses the
+   * conversation tab when it's open in any ClaudianView, restores it from
+   * history into a fresh tab when no tab currently hosts it, and only falls
+   * back to a brand-new task-run tab when the saved conversation is truly
+   * unrecoverable (e.g. tab cap reached or no saved conversationId at all).
    */
   async injectCommitTurnForConversation(options: {
     conversationId: string | null;
@@ -742,15 +743,32 @@ export class ClaudianView extends ItemView {
     }
 
     if (options.conversationId) {
-      const existing = this.findTabWithConversation(options.conversationId);
-      if (existing) {
-        await this.tabManager.openConversation(options.conversationId);
-        const ic = existing.controllers.inputController;
-        if (!ic) {
-          throw new Error('Chat tab is missing an input controller.');
+      // findConversationAcrossViews covers both this view and any split view
+      // that already hosts the work-order tab. When neither does (closed tab,
+      // restart, etc.), preferNewTab routes through ConversationController to
+      // restore from saved history. Guard on canCreateTab so a full tab bar
+      // gracefully falls back to startTaskRunInFreshTab rather than silently
+      // hijacking the active tab.
+      let cross = this.plugin.findConversationAcrossViews(options.conversationId);
+      if (!cross && this.tabManager.canCreateTab()) {
+        await this.tabManager.openConversation(options.conversationId, {
+          preferNewTab: true,
+        });
+        cross = this.plugin.findConversationAcrossViews(options.conversationId);
+      }
+      if (cross) {
+        const ownerTabManager =
+          cross.view === this ? this.tabManager : cross.view.getTabManager();
+        if (ownerTabManager) {
+          await ownerTabManager.switchToTab(cross.tabId);
+          const ownerTab = ownerTabManager.getTab(cross.tabId);
+          const ic = ownerTab?.controllers.inputController;
+          if (!ic) {
+            throw new Error('Chat tab is missing an input controller.');
+          }
+          await ic.sendMessage({ content: options.prompt });
+          return;
         }
-        await ic.sendMessage({ content: options.prompt });
-        return;
       }
     }
 
