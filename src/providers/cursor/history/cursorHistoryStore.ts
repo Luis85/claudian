@@ -162,6 +162,37 @@ interface CursorSqliteOpenResult {
   error?: HistoryLoadError;
 }
 
+// node:sqlite ships with Node 22.5+. Older or locked-down runtimes (e.g. some
+// Electron/Obsidian builds, or Node 20 where it's a flagged builtin) can't
+// resolve it and throw a structured module-resolution error. We key off Node's
+// stable error `code` rather than matching human-readable text, which varies
+// across versions and locales — that text-matching is precisely what rots.
+const SQLITE_UNAVAILABLE_ERROR_CODES = new Set(['MODULE_NOT_FOUND', 'ERR_UNKNOWN_BUILTIN_MODULE']);
+
+/**
+ * Classifies a `node:sqlite` open failure into a structured outcome. A missing
+ * runtime maps to `sqlite-unavailable` (the user needs a newer Node); anything
+ * else is a genuine `store-unreadable` with the home directory redacted out of
+ * the detail field.
+ */
+export function classifyCursorSqliteOpenError(err: unknown): HistoryLoadError {
+  const code = (err as NodeJS.ErrnoException | null | undefined)?.code;
+  const message = err instanceof Error ? err.message : String(err);
+  const sqliteUnavailable =
+    (typeof code === 'string' && SQLITE_UNAVAILABLE_ERROR_CODES.has(code)) ||
+    message.includes('node:sqlite');
+  if (sqliteUnavailable) {
+    return { code: 'sqlite-unavailable', message: 'Cursor history requires Node 22.5+ (node:sqlite).' };
+  }
+  // Native sqlite errors can embed the dbPath (and thus the user's home
+  // directory). Redact before letting the detail field escape the store.
+  return {
+    code: 'store-unreadable',
+    message: 'Could not open Cursor SQLite store.',
+    detail: redactHomeInPath(message),
+  };
+}
+
 function openCursorSqliteReadonly(dbPath: string): CursorSqliteOpenResult {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/consistent-type-imports
@@ -169,21 +200,7 @@ function openCursorSqliteReadonly(dbPath: string): CursorSqliteOpenResult {
     const handle = new DatabaseSync(dbPath, { readOnly: true }) as unknown as CursorSqliteHandle;
     return { handle };
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (/Cannot find module 'node:sqlite'|MODULE_NOT_FOUND/.test(message)) {
-      return {
-        error: { code: 'sqlite-unavailable', message: 'Cursor history requires Node 22.5+ (node:sqlite).' },
-      };
-    }
-    // Native sqlite errors can embed the dbPath (and thus the user's home
-    // directory). Redact before letting the detail field escape the store.
-    return {
-      error: {
-        code: 'store-unreadable',
-        message: 'Could not open Cursor SQLite store.',
-        detail: redactHomeInPath(message),
-      },
-    };
+    return { error: classifyCursorSqliteOpenError(err) };
   }
 }
 

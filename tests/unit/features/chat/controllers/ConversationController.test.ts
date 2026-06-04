@@ -64,6 +64,8 @@ function createMockDeps(overrides: Partial<ConversationControllerDeps> = {}): Co
     state,
     renderer: {
       renderMessages: jest.fn().mockReturnValue(createMockEl()),
+      clearHydrationBanner: jest.fn(),
+      setHydrationError: jest.fn(),
     } as any,
     subagentManager: {
       orphanAllActive: jest.fn(),

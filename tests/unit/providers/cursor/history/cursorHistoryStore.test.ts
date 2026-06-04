@@ -8,6 +8,7 @@ const os = jest.requireActual<typeof osType>('os');
 import { TOOL_READ, TOOL_WRITE } from '@/core/tools/toolNames';
 import {
   buildChatMessagesFromCursorHistoryRecords,
+  classifyCursorSqliteOpenError,
   cursorWorkspaceHash,
   cursorWorkspaceHashLegacy,
   loadCursorChatMessagesFromStoreResult,
@@ -189,6 +190,32 @@ describe('loadCursorChatMessagesFromStoreResult', () => {
       // eslint-disable-next-line jest/no-conditional-expect
       expect(err).toContain('[HOME]');
     }
+  });
+});
+
+describe('classifyCursorSqliteOpenError', () => {
+  it("maps Node's unknown-builtin-module error to sqlite-unavailable", () => {
+    // Node 20 throws this when require('node:sqlite') hits the flagged builtin.
+    const err = Object.assign(new Error('No such built-in module: node:sqlite'), {
+      code: 'ERR_UNKNOWN_BUILTIN_MODULE',
+    });
+    expect(classifyCursorSqliteOpenError(err).code).toBe('sqlite-unavailable');
+  });
+
+  it('maps a missing-module error to sqlite-unavailable', () => {
+    const err = Object.assign(new Error("Cannot find module 'node:sqlite'"), {
+      code: 'MODULE_NOT_FOUND',
+    });
+    expect(classifyCursorSqliteOpenError(err).code).toBe('sqlite-unavailable');
+  });
+
+  it('classifies other open failures as store-unreadable with the home dir redacted', () => {
+    const home = os.homedir();
+    const err = new Error(`unable to open ${home}/.cursor/chats/abc/store.db`);
+    const result = classifyCursorSqliteOpenError(err);
+    expect(result.code).toBe('store-unreadable');
+    expect(result.message).not.toContain(home);
+    expect(result.detail ?? '').not.toContain(home);
   });
 });
 

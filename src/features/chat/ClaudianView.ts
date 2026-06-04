@@ -856,13 +856,9 @@ export class ClaudianView extends ItemView {
     payload: HydrationFailedBannerPayload,
   ): void {
     const tab = this.tabManager?.getAllTabs().find((t) => t.conversationId === conversationId);
-    if (!tab) return;
-    const messagesEl = tab.dom.messagesEl;
-    // Dedupe: a refresh might re-emit; keep only the latest banner.
-    messagesEl.querySelector('.claudian-hydration-error')?.remove();
-    const banner = messagesEl.createDiv({ cls: 'claudian-hydration-error' });
-    banner.setText(payload.message);
-    banner.dataset.errorCode = payload.code;
+    // The renderer owns the banner so it survives the `renderMessages` that the
+    // conversation restore runs immediately after the failure is emitted.
+    tab?.renderer?.setHydrationError({ code: payload.code, message: payload.message });
   }
 
   /** Rebuilds the header logo SVG to match the given provider. */

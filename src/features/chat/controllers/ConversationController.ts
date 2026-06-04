@@ -189,6 +189,8 @@ export class ConversationController {
   async loadActive(): Promise<void> {
     const { plugin, state, renderer } = this.deps;
 
+    // Clear any stale failure banner before hydrating; a fresh failure re-arms it.
+    renderer.clearHydrationBanner();
     const conversationId = state.currentConversationId;
     const conversation = conversationId ? await plugin.getConversationById(conversationId) : null;
 
@@ -241,7 +243,7 @@ export class ConversationController {
 
   /** Switches to a different conversation. */
   async switchTo(id: string): Promise<void> {
-    const { plugin, state, subagentManager } = this.deps;
+    const { plugin, state, subagentManager, renderer } = this.deps;
 
     if (id === state.currentConversationId) return;
     if (state.isStreaming) return;
@@ -252,6 +254,9 @@ export class ConversationController {
 
     try {
       this.deps.dismissPendingInlinePrompts?.();
+      // Drop any prior failure banner before hydrating the target conversation;
+      // a fresh failure re-arms it after the hydrate below.
+      renderer.clearHydrationBanner();
       await this.save();
 
       subagentManager.orphanAllActive();
