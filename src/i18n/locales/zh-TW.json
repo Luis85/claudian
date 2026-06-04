@@ -71,6 +71,16 @@
       "commandNoAssistantUuid": "無法分叉：沒有帶識別碼的助手回覆",
       "unsupportedProvider": "Fork is not supported by this provider."
     },
+    "feedback": {
+      "thumbsUp": {
+        "label": "有幫助",
+        "prompt": "看起來不錯，按這個方向繼續。"
+      },
+      "thumbsDown": {
+        "label": "沒幫助",
+        "prompt": "這個回答沒有幫助。在重試之前，請向我提出一個聚焦的後續問題，以了解我為什麼不同意。"
+      }
+    },
     "bangBash": {
       "placeholder": "> 執行 bash 指令...",
       "commandPanel": "指令面板",

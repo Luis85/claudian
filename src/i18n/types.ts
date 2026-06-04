@@ -233,6 +233,12 @@ export type TranslationKey =
   // Chat - Permission mode
   | 'chat.permissionMode.yoloWarning'
 
+  // Chat - Feedback (thumbs up / down on assistant responses)
+  | 'chat.feedback.thumbsUp.label'
+  | 'chat.feedback.thumbsUp.prompt'
+  | 'chat.feedback.thumbsDown.label'
+  | 'chat.feedback.thumbsDown.prompt'
+
   // Chat - Queued message
   | 'chat.queue.steerFailed'
 

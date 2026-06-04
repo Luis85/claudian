@@ -76,6 +76,10 @@ const localizedKeys = [
   'settings.enableBangBash.validation.noNode',
   'settings.requireCommandOrControlEnterToSend.name',
   'settings.requireCommandOrControlEnterToSend.desc',
+  'chat.feedback.thumbsUp.label',
+  'chat.feedback.thumbsUp.prompt',
+  'chat.feedback.thumbsDown.label',
+  'chat.feedback.thumbsDown.prompt',
 ] as const;
 
 const staleBangBashDesc =

@@ -71,6 +71,16 @@
       "commandNoAssistantUuid": "포크할 수 없습니다: 식별자가 있는 어시스턴트 응답이 없습니다",
       "unsupportedProvider": "Fork is not supported by this provider."
     },
+    "feedback": {
+      "thumbsUp": {
+        "label": "도움 됨",
+        "prompt": "좋습니다. 그 방향으로 진행해 주세요."
+      },
+      "thumbsDown": {
+        "label": "도움 안 됨",
+        "prompt": "이 응답은 도움이 되지 않았습니다. 다시 시도하기 전에 제가 동의하지 않는 이유를 파악할 수 있는 구체적인 후속 질문을 하나만 해주세요."
+      }
+    },
     "bangBash": {
       "placeholder": "> bash 명령 실행...",
       "commandPanel": "명령 패널",

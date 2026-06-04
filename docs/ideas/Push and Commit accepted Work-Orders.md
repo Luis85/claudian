@@ -1,5 +1,5 @@
 ---
-status:
+status: open
 priority: 2 - normal
 relations:
   - "[[Agent Kanban Board]]"

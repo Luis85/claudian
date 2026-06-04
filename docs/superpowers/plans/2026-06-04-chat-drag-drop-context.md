@@ -1,7 +1,7 @@
 ---
 title: Drag and drop into chat context — implementation plan
 date: 2026-06-04
-status: implemented
+status: done
 scope: features/chat
 relations:
   - "[[2026-06-04-chat-drag-drop-context-design]]"

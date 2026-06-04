@@ -117,6 +117,16 @@
       "commandNoAssistantUuid": "Cannot fork: no assistant response with identifiers",
       "unsupportedProvider": "Fork is not supported by this provider."
     },
+    "feedback": {
+      "thumbsUp": {
+        "label": "Helpful",
+        "prompt": "Looks good. Proceed with that approach."
+      },
+      "thumbsDown": {
+        "label": "Not helpful",
+        "prompt": "That response wasn't helpful. Ask me one focused follow-up question to learn why I disagree before retrying."
+      }
+    },
     "bangBash": {
       "placeholder": "> Run a bash command...",
       "commandPanel": "Command panel",
