@@ -191,6 +191,17 @@
   flex-shrink: 0;
 }
 
+.claudian-quick-action-favorite {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0 4px;
+  opacity: 0.5;
+}
+.claudian-quick-action-favorite.is-favorite {
+  opacity: 1;
+}
+
 .claudian-quick-action-prompt-input {
   width: 100%;
 }

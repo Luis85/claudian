@@ -3,6 +3,7 @@ import { Modal, Notice, setIcon } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
 import type { QuickActionStorage } from '../QuickActionStorage';
+import { assignNextFavoriteRank } from '../QuickActionStorage';
 import type { QuickAction } from '../types';
 import { QuickActionEditorModal } from './QuickActionEditorModal';
 
@@ -125,9 +126,26 @@ export class QuickActionsModal extends Modal {
       return;
     }
 
-    for (const action of filtered) {
+    const isFiltering = this.filter.trim().length > 0;
+    const ordered = isFiltering ? filtered : this.sortFavoritesFirst(filtered);
+    for (const action of ordered) {
       this.renderRow(action);
     }
+  }
+
+  private sortFavoritesFirst(actions: QuickAction[]): QuickAction[] {
+    const favs = actions
+      .filter((a) => a.favorite === true)
+      .sort((a, b) => {
+        const ar = a.favoriteRank ?? Number.POSITIVE_INFINITY;
+        const br = b.favoriteRank ?? Number.POSITIVE_INFINITY;
+        if (ar !== br) return ar - br;
+        return a.name.localeCompare(b.name);
+      });
+    const rest = actions
+      .filter((a) => a.favorite !== true)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return [...favs, ...rest];
   }
 
   private setFilter(value: string): void {
@@ -220,6 +238,23 @@ export class QuickActionsModal extends Modal {
       this.close();
     });
 
+    const starBtn = row.createEl('button', {
+      cls: 'claudian-quick-action-favorite',
+      attr: {
+        'aria-label': action.favorite
+          ? t('quickActions.modal.unmarkFavorite')
+          : t('quickActions.modal.markFavorite'),
+      },
+    });
+    setIcon(starBtn, 'star');
+    if (action.favorite) {
+      starBtn.addClass('is-favorite');
+    }
+    starBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      void this.toggleFavorite(action, starBtn);
+    });
+
     const actions = row.createDiv({ cls: 'claudian-quick-action-actions' });
     actions.createEl('button', { text: t('common.edit') }).addEventListener('click', (e) => {
       e.stopPropagation();
@@ -248,6 +283,26 @@ export class QuickActionsModal extends Modal {
       await this.refreshList();
     } catch {
       new Notice(t('quickActions.modal.deleteFailed'));
+    }
+  }
+
+  private async toggleFavorite(action: QuickAction, button: HTMLButtonElement): Promise<void> {
+    if (button.disabled) return;
+    button.disabled = true;
+    try {
+      if (action.favorite === true) {
+        await this.callbacks.storage.unsetFavorite(action);
+      } else {
+        const rank = assignNextFavoriteRank(this.actions);
+        if (rank === null) {
+          new Notice(t('quickActions.modal.favoriteLimitReached'));
+          return;
+        }
+        await this.callbacks.storage.setFavorite(action, rank);
+      }
+      await this.refreshList();
+    } finally {
+      button.disabled = false;
     }
   }
 }
