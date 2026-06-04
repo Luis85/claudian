@@ -3,12 +3,6 @@ import type { App, TFile } from 'obsidian';
 import type { ImageAttachment } from '@/core/types';
 import { persistPastedImages } from '@/features/chat/services/persistPastedImages';
 
-jest.mock('@/core/logging/Logger', () => ({
-  logger: {
-    warn: jest.fn(),
-  },
-}));
-
 function image(overrides: Partial<ImageAttachment> = {}): ImageAttachment {
   return {
     id: 'img-1',

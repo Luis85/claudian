@@ -1,6 +1,5 @@
 import type { App, TFile } from 'obsidian';
 
-import { logger } from '../../../core/logging/Logger';
 import type { ImageAttachment, ImageMediaType } from '../../../core/types';
 
 const MEDIA_TYPE_TO_EXT: Record<ImageMediaType, string> = {
@@ -47,8 +46,8 @@ export async function persistPastedImages(
       const tFile: TFile = await app.vault.createBinary(targetPath, buffer);
       image.path = tFile.path;
       image.name = tFile.name;
-    } catch (err) {
-      logger.warn('persistPastedImages: failed to write image to vault', { id: image.id, error: err });
+    } catch {
+      // Silently continue if write fails — image can still be sent with base64 data.
     }
   }
 }
