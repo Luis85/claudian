@@ -551,7 +551,10 @@
       "emptyLead": "Quick actions are reusable prompts stored as markdown notes in your vault—handy for workflows you run often.",
       "emptyHintVault": "Each file uses frontmatter type quick-action, plus name, optional description and icon; the note body is the message sent to the chat.",
       "emptyHintRun": "After you create actions, open this dialog from the toolbar and click a row to run one instantly.",
-      "emptyHintCreate": "Use Add action below to create your first quick action, or set the vault folder under Settings → Quick Actions."
+      "emptyHintCreate": "Use Add action below to create your first quick action, or set the vault folder under Settings → Quick Actions.",
+      "markFavorite": "加入收藏",
+      "unmarkFavorite": "取消收藏",
+      "favoriteLimitReached": "最多可以收藏 5 個快速動作"
     },
     "editor": {
       "titleEdit": "Edit quick action",

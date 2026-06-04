@@ -215,7 +215,10 @@
       "deleteFailed": "Failed to delete quick action",
       "searchPlaceholder": "Search actions by name, description, or tag…",
       "noResults": "No quick actions match your search.",
-      "filterByTag": "Filter by tag {tag}"
+      "filterByTag": "Filter by tag {tag}",
+      "markFavorite": "Mark as favorite",
+      "unmarkFavorite": "Unmark favorite",
+      "favoriteLimitReached": "You can favorite up to 5 quick actions"
     },
     "editor": {
       "titleEdit": "Edit quick action",
