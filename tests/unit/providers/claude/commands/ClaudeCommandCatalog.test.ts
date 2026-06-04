@@ -417,3 +417,72 @@ Deploy`,
     });
   });
 });
+
+import { EventBus } from '@/core/events/EventBus';
+import type { ProviderCommandEntry } from '@/core/providers/commands/ProviderCommandEntry';
+
+describe('ClaudeCommandCatalog EventBus emission', () => {
+  function skillEntry(overrides: Partial<ProviderCommandEntry> = {}): ProviderCommandEntry {
+    return {
+      id: 'skill-x', providerId: 'claude', kind: 'skill',
+      name: 'x', description: '', content: '',
+      scope: 'vault', source: 'user',
+      isEditable: true, isDeletable: true,
+      displayPrefix: '/', insertPrefix: '/',
+      ...overrides,
+    };
+  }
+  function commandEntry(overrides: Partial<ProviderCommandEntry> = {}): ProviderCommandEntry {
+    return { ...skillEntry({ id: 'cmd-x', kind: 'command' }), ...overrides };
+  }
+  function mkStorage() {
+    return {
+      loadAll: jest.fn().mockResolvedValue([]),
+      save: jest.fn().mockResolvedValue(undefined),
+      delete: jest.fn().mockResolvedValue(undefined),
+    } as never;
+  }
+
+  it('emits vaultSkill.changed when a skill is saved', async () => {
+    const bus = new EventBus<{ 'vaultSkill.changed': { providerId: 'claude' } }>();
+    const events: Array<{ providerId: string }> = [];
+    bus.on('vaultSkill.changed', (p) => { events.push(p); });
+    const { ClaudeCommandCatalog } = await import('@/providers/claude/commands/ClaudeCommandCatalog');
+    const catalog = new ClaudeCommandCatalog(
+      mkStorage(), mkStorage(), undefined, bus as never,
+    );
+    await catalog.saveVaultEntry(skillEntry());
+    expect(events).toEqual([{ providerId: 'claude' }]);
+  });
+
+  it('emits vaultSkill.changed when a skill is deleted', async () => {
+    const bus = new EventBus<{ 'vaultSkill.changed': { providerId: 'claude' } }>();
+    const events: Array<{ providerId: string }> = [];
+    bus.on('vaultSkill.changed', (p) => { events.push(p); });
+    const { ClaudeCommandCatalog } = await import('@/providers/claude/commands/ClaudeCommandCatalog');
+    const catalog = new ClaudeCommandCatalog(
+      mkStorage(), mkStorage(), undefined, bus as never,
+    );
+    await catalog.deleteVaultEntry(skillEntry());
+    expect(events).toEqual([{ providerId: 'claude' }]);
+  });
+
+  it('does NOT emit when a non-skill command is saved or deleted', async () => {
+    const bus = new EventBus<{ 'vaultSkill.changed': { providerId: 'claude' } }>();
+    const events: unknown[] = [];
+    bus.on('vaultSkill.changed', (p) => { events.push(p); });
+    const { ClaudeCommandCatalog } = await import('@/providers/claude/commands/ClaudeCommandCatalog');
+    const catalog = new ClaudeCommandCatalog(
+      mkStorage(), mkStorage(), undefined, bus as never,
+    );
+    await catalog.saveVaultEntry(commandEntry());
+    await catalog.deleteVaultEntry(commandEntry());
+    expect(events).toEqual([]);
+  });
+
+  it('works without an EventBus (no throw)', async () => {
+    const { ClaudeCommandCatalog } = await import('@/providers/claude/commands/ClaudeCommandCatalog');
+    const catalog = new ClaudeCommandCatalog(mkStorage(), mkStorage());
+    await expect(catalog.saveVaultEntry(skillEntry())).resolves.not.toThrow();
+  });
+});

@@ -1,3 +1,5 @@
+import type { ClaudianEventMap } from '../../../app/events/claudianEvents';
+import type { EventBus } from '../../../core/events/EventBus';
 import type {
   ProviderCommandCatalog,
   ProviderCommandDropdownConfig,
@@ -73,6 +75,7 @@ export class ClaudeCommandCatalog implements ProviderCommandCatalog {
     private commandStorage: SlashCommandStorage,
     private skillStorage: SkillStorage,
     private probe?: CommandProbe,
+    private eventBus?: EventBus<ClaudianEventMap>,
   ) {}
 
   setRuntimeCommands(commands: SlashCommand[]): void {
@@ -127,6 +130,7 @@ export class ClaudeCommandCatalog implements ProviderCommandCatalog {
     const cmd = entryToSlashCommand(entry);
     if (entry.kind === 'skill') {
       await this.skillStorage.save(cmd);
+      this.eventBus?.emit('vaultSkill.changed', { providerId: 'claude' });
     } else {
       await this.commandStorage.save(cmd);
     }
@@ -135,6 +139,7 @@ export class ClaudeCommandCatalog implements ProviderCommandCatalog {
   async deleteVaultEntry(entry: ProviderCommandEntry): Promise<void> {
     if (entry.kind === 'skill') {
       await this.skillStorage.delete(entry.id);
+      this.eventBus?.emit('vaultSkill.changed', { providerId: 'claude' });
     } else {
       await this.commandStorage.delete(entry.id);
     }
