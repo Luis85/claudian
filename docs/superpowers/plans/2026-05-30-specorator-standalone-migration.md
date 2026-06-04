@@ -88,7 +88,7 @@ Confirm content matches:
 {
   "id": "claudian-cursor",
   "name": "Claudian (Cursor fork)",
-  "version": "2.9.0",
+  "version": "3.3.0",
   "minAppVersion": "1.11.5",
   "description": "Embeds Claude Code, Codex, and other coding agents as AI collaborators in your vault. Your vault becomes their working directory, giving them capabilities for file reads and writes, search, bash commands, and multi-step workflows.",
   "author": "Yishen Tu",
@@ -132,7 +132,7 @@ git -C D:/Projects/claudian commit -m "chore(brand): rewrite manifest.json for S
 
 Edit `D:/Projects/claudian/package.json`:
 - Change `"name": "claudian"` to `"name": "specorator"`.
-- Change `"version": "2.9.0"` to `"version": "1.0.0"`.
+- Change `"version": "3.3.0"` to `"version": "1.0.0"`.
 - Change `"description": "Claudian - Claude Code embedded in Obsidian sidebar"` to `"description": "Specorator — spec-driven agent workspace for Obsidian"`.
 - Change `"author": "Yishen Tu"` to `"author": "Luis Mendez"`.
 - Update `keywords` array to: `["specorator", "obsidian", "obsidian-plugin", "agent", "spec-driven", "claude-code", "codex", "opencode", "cursor"]`.
