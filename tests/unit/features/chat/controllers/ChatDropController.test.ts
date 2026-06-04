@@ -6,20 +6,24 @@ jest.mock('obsidian', () => ({
 }));
 
 jest.mock('@/i18n/i18n', () => ({
-  t: (key: string) => {
+  t: (key: string, params?: any) => {
     const translations: Record<string, string> = {
       'chat.drop.image': 'Drop image',
       'chat.drop.fileContext': 'Drop into context',
       'chat.drop.folderContext': 'Drop folder into context',
       'chat.drop.osContext': 'Drop file or folder into context',
       'chat.drop.mixed': 'Drop into chat',
+      'chat.drop.batchAdded': `Added ${params?.count ?? 1} items`,
+      'chat.drop.externalFolderUnsupported': 'External folder not supported',
+      'chat.drop.outsideContext': `File outside context: ${params?.path ?? 'unknown'}`,
+      'chat.drop.batchSkipped': `Skipped ${params?.count ?? 1} items`,
     };
     return translations[key] || key;
   },
 }));
 
 import { createMockEl } from '@test/helpers/mockElement';
-import { TFile } from 'obsidian';
+import { Notice, TFile, TFolder } from 'obsidian';
 
 import { ChatDropController } from '@/features/chat/controllers/ChatDropController';
 
@@ -34,6 +38,7 @@ function makeDeps(overrides: Partial<any> = {}) {
       setImages: jest.fn(),
       getAttachedImages: jest.fn(() => []),
       hasImages: jest.fn(() => false),
+      addImageFromFile: jest.fn(async () => true),
     },
     getVaultPath: () => '/Users/me/vault',
     getExternalContexts: () => [],
@@ -88,6 +93,17 @@ function dispatchDragEnter(target: any, opts: { types?: string[]; dataTransfer?:
     dataTransfer,
     clientX: 100,
     clientY: 100,
+  };
+  target.dispatchEvent(event);
+  return event;
+}
+
+function dispatchDrop(target: any, dataTransfer: any): any {
+  const event: any = {
+    type: 'drop',
+    preventDefault: jest.fn(),
+    stopPropagation: jest.fn(),
+    dataTransfer,
   };
   target.dispatchEvent(event);
   return event;
@@ -152,5 +168,119 @@ describe('ChatDropController — overlay label', () => {
       clientY: 100,
     });
     expect(overlay?.hasClass('visible')).toBe(false);
+  });
+});
+
+describe('ChatDropController — drop routing', () => {
+  let containerEl: any;
+  let inputWrapperEl: any;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    containerEl = createMockEl();
+    inputWrapperEl = containerEl.createDiv({ cls: 'claudian-input-wrapper' });
+  });
+
+  it('routes Obsidian internal TFile drag to attachFileAsPill', async () => {
+    const tFile = Object.assign(new TFile(), { path: 'notes/a.md' });
+    const deps = makeDeps({
+      getDragManager: () => ({ draggable: { type: 'file', file: tFile } }),
+    });
+    const controller = new ChatDropController(containerEl, deps);
+    controller.init();
+
+    dispatchDrop(inputWrapperEl, { types: [], files: [], items: [] });
+    await Promise.resolve();
+
+    expect(deps.fileContext.attachFileAsPill).toHaveBeenCalledWith('notes/a.md');
+  });
+
+  it('routes Obsidian internal TFolder drag to attachFolderAsPill', async () => {
+    const tFolder = Object.assign(new TFolder(), { path: 'notes/sub' });
+    const deps = makeDeps({
+      getDragManager: () => ({ draggable: { type: 'folder', file: tFolder } }),
+    });
+    const controller = new ChatDropController(containerEl, deps);
+    controller.init();
+
+    dispatchDrop(inputWrapperEl, { types: [], files: [], items: [] });
+    await Promise.resolve();
+
+    expect(deps.fileContext.attachFolderAsPill).toHaveBeenCalledWith('notes/sub');
+  });
+
+  it('routes OS image MIME to imageContext.addImageFromFile', async () => {
+    const file = { name: 'x.png', type: 'image/png', size: 10, path: '/tmp/x.png' };
+    const deps = makeDeps();
+    const controller = new ChatDropController(containerEl, deps);
+    controller.init();
+
+    dispatchDrop(inputWrapperEl, { types: ['Files'], files: [file], items: [] });
+    await Promise.resolve();
+
+    expect(deps.imageContext.addImageFromFile).toHaveBeenCalledWith(file, 'drop');
+  });
+
+  it('routes OS file under vault to attachFileAsPill with relative path', async () => {
+    const file = { name: 'a.md', type: 'text/markdown', size: 10, path: '/Users/me/vault/notes/a.md' };
+    const deps = makeDeps();
+    const controller = new ChatDropController(containerEl, deps);
+    controller.init();
+
+    dispatchDrop(inputWrapperEl, { types: ['Files'], files: [file], items: [] });
+    await Promise.resolve();
+
+    expect(deps.fileContext.attachFileAsPill).toHaveBeenCalledWith('notes/a.md');
+  });
+
+  it('routes OS file under external root to attachExternalContextMention', async () => {
+    const file = { name: 'x.ts', type: 'application/typescript', size: 10, path: '/ext/foo/src/x.ts' };
+    const deps = makeDeps({
+      getExternalContexts: () => ['/ext/foo'],
+    });
+    const controller = new ChatDropController(containerEl, deps);
+    controller.init();
+
+    dispatchDrop(inputWrapperEl, { types: ['Files'], files: [file], items: [] });
+    await Promise.resolve();
+
+    expect(deps.fileContext.attachExternalContextMention)
+      .toHaveBeenCalledWith('/ext/foo/src/x.ts');
+  });
+
+  it('rejects out-of-vault OS folder via dedicated notice and never attaches', async () => {
+    const file = { name: 'folder', type: '', size: 0, path: '/ext/foo/sub' };
+    const deps = makeDeps({
+      getExternalContexts: () => ['/ext/foo'],
+    });
+    const controller = new ChatDropController(containerEl, deps);
+    controller.init();
+
+    const items = [{
+      kind: 'file',
+      type: '',
+      webkitGetAsEntry: () => ({ isDirectory: true, isFile: false }),
+      getAsFile: () => file,
+    }];
+    dispatchDrop(inputWrapperEl, { types: ['Files'], files: [file], items });
+    await Promise.resolve();
+
+    expect(deps.fileContext.attachFolderAsPill).not.toHaveBeenCalled();
+    expect(Notice).toHaveBeenCalled();
+  });
+
+  it('handles a mixed batch — 1 vault file + 1 OS image + 1 rejected path', async () => {
+    const deps = makeDeps();
+    const controller = new ChatDropController(containerEl, deps);
+    controller.init();
+
+    const img = { name: 'x.png', type: 'image/png', size: 10, path: '/tmp/x.png' };
+    const reject = { name: 'y.md', type: 'text/markdown', size: 10, path: '/elsewhere/y.md' };
+    dispatchDrop(inputWrapperEl, { types: ['Files'], files: [img, reject], items: [] });
+    await Promise.resolve();
+
+    expect(deps.imageContext.addImageFromFile).toHaveBeenCalledWith(img, 'drop');
+    expect(deps.fileContext.attachFileAsPill).not.toHaveBeenCalled();
+    expect(Notice).toHaveBeenCalled(); // rejected notice fires
   });
 });

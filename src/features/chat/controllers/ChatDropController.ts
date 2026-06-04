@@ -6,17 +6,20 @@
  * through the existing chat services.
  */
 
+import { Notice } from 'obsidian';
+
 import { t } from '@/i18n/i18n';
 import type { TranslationKey } from '@/i18n/types';
 
 import type { FileContextManager } from '../ui/FileContext';
 import type { ImageContextManager } from '../ui/ImageContext';
 import { detectPayload, type DragManagerLike,type DroppedPayload } from './dropPayloadDetection';
+import { classifyOsPath } from './osPathClassification';
 
 export interface ChatDropDeps {
   fileContext: Pick<FileContextManager,
     'attachFileAsPill' | 'attachFolderAsPill' | 'attachExternalContextMention'>;
-  imageContext: Pick<ImageContextManager, 'setImages' | 'getAttachedImages' | 'hasImages'>;
+  imageContext: Pick<ImageContextManager, 'setImages' | 'getAttachedImages' | 'hasImages' | 'addImageFromFile'>;
   getVaultPath: () => string;
   getExternalContexts: () => string[];
   getDragManager: () => DragManagerLike | null;
@@ -100,8 +103,105 @@ export class ChatDropController {
     return detectPayload(dataTransfer, this.deps.getDragManager());
   }
 
-  private async handleDrop(_e: DragEvent): Promise<void> {
-    // implemented in Task 7
+  private async handleDrop(e: DragEvent): Promise<void> {
+    e.preventDefault();
+    e.stopPropagation();
+    this.overlayEl?.removeClass('visible');
+
+    const dataTransfer = e.dataTransfer;
+    if (!dataTransfer) return;
+
+    const payload = detectPayload(dataTransfer, this.deps.getDragManager());
+
+    const attached: string[] = [];
+    const rejected: Array<{ path: string; reason: 'attach-failed' | 'image-failed' | 'outside-context' | 'external-folder-unsupported' }> = [];
+
+    for (const file of payload.vaultFiles) {
+      if (this.deps.fileContext.attachFileAsPill(file.path)) attached.push(file.path);
+      else rejected.push({ path: file.path, reason: 'attach-failed' });
+    }
+
+    for (const folder of payload.vaultFolders) {
+      if (this.deps.fileContext.attachFolderAsPill(folder.path)) attached.push(folder.path);
+      else rejected.push({ path: folder.path, reason: 'attach-failed' });
+    }
+
+    for (const img of payload.osImageFiles) {
+      const ok = await this.deps.imageContext.addImageFromFile(img, 'drop');
+      if (ok) attached.push(img.name);
+      else rejected.push({ path: img.name, reason: 'image-failed' });
+    }
+
+    const vaultPath = this.deps.getVaultPath();
+    const externalRoots = this.deps.getExternalContexts();
+
+    for (const file of payload.osFiles) {
+      const fileWithPath = file as unknown as { path?: string };
+      const absolutePath = fileWithPath.path ?? file.name;
+      const classified = classifyOsPath(absolutePath, vaultPath, externalRoots, { isDirectory: false });
+      switch (classified.kind) {
+        case 'vault-file':
+          if (this.deps.fileContext.attachFileAsPill(classified.relPath)) attached.push(classified.relPath);
+          else rejected.push({ path: absolutePath, reason: 'attach-failed' });
+          break;
+        case 'external-file':
+          if (this.deps.fileContext.attachExternalContextMention(absolutePath)) attached.push(absolutePath);
+          else rejected.push({ path: absolutePath, reason: 'attach-failed' });
+          break;
+        case 'rejected':
+          rejected.push({ path: absolutePath, reason: 'outside-context' });
+          break;
+        default:
+          rejected.push({ path: absolutePath, reason: 'outside-context' });
+          break;
+      }
+    }
+
+    for (const folder of payload.osFolders) {
+      const classified = classifyOsPath(folder.path, vaultPath, externalRoots, { isDirectory: true });
+      switch (classified.kind) {
+        case 'vault-folder':
+          if (this.deps.fileContext.attachFolderAsPill(classified.relPath)) attached.push(classified.relPath);
+          else rejected.push({ path: folder.path, reason: 'attach-failed' });
+          break;
+        case 'external-folder':
+          rejected.push({ path: folder.path, reason: 'external-folder-unsupported' });
+          break;
+        case 'rejected':
+          rejected.push({ path: folder.path, reason: 'outside-context' });
+          break;
+        default:
+          rejected.push({ path: folder.path, reason: 'outside-context' });
+          break;
+      }
+    }
+
+    this.fireNotices(attached.length, rejected);
+    this.deps.inputEl.focus();
+  }
+
+  private fireNotices(
+    attachedCount: number,
+    rejected: Array<{ path: string; reason: string }>
+  ): void {
+    if (attachedCount > 0) {
+      new Notice(t('chat.drop.batchAdded', { count: attachedCount }));
+    }
+    if (rejected.length === 0) return;
+
+    const externalFolders = rejected.filter((r) => r.reason === 'external-folder-unsupported');
+    const outside = rejected.filter((r) => r.reason === 'outside-context');
+    const otherCount = rejected.length - externalFolders.length - outside.length;
+
+    if (externalFolders.length > 0) {
+      new Notice(t('chat.drop.externalFolderUnsupported'));
+    }
+    if (outside.length > 0) {
+      new Notice(t('chat.drop.outsideContext', { path: outside[0].path }));
+    }
+    if (otherCount > 0) {
+      new Notice(t('chat.drop.batchSkipped', { count: otherCount }));
+    }
   }
 
   destroy(): void {
@@ -112,9 +212,9 @@ export class ChatDropController {
     }
     this.listeners = [];
     if (this.overlayEl) {
-      const parent = this.overlayEl.parentElement || (this.inputWrapperEl as any);
+      const parent = (this.overlayEl.parentElement || this.inputWrapperEl) as unknown as { children: unknown[] };
       if (parent && parent.children) {
-        const idx = parent.children.indexOf(this.overlayEl);
+        const idx = (parent.children as unknown[]).indexOf(this.overlayEl);
         if (idx !== -1) {
           parent.children.splice(idx, 1);
         }

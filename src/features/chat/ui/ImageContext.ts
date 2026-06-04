@@ -201,7 +201,7 @@ export class ImageContextManager {
     return IMAGE_EXTENSIONS[ext] || null;
   }
 
-  private async addImageFromFile(file: File, source: 'paste' | 'drop'): Promise<boolean> {
+  async addImageFromFile(file: File, source: 'paste' | 'drop'): Promise<boolean> {
     if (!this.enabled) {
       new Notice(t('chat.image.unsupported'));
       return false;
