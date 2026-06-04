@@ -63,6 +63,13 @@ describe('renderTaskPrompt', () => {
     expect(prompt).toContain(task.path);
   });
 
+  it('instructs the agent to keep related docs in sync during and before completion', () => {
+    const prompt = renderTaskPrompt(task);
+    expect(prompt).toContain('## Docs Sync');
+    expect(prompt).toMatch(/update.*related docs/i);
+    expect(prompt).toMatch(/before.*complet/i);
+  });
+
   it('omits criteria sections when the lane is absent or empty', () => {
     expect(renderTaskPrompt(task)).not.toContain('## Definition of Ready');
     expect(renderTaskPrompt(task, { definitionOfReady: [], definitionOfDone: [] })).not.toContain('## Definition of Done');

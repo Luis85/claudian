@@ -60,6 +60,9 @@ ${task.sections.acceptanceCriteria}
 ## Progress Tracking
 As you complete each acceptance criterion above, edit this work order note (${task.path}) and change the matching \`- [ ]\` checkbox to \`- [x]\`. Keep the checklist accurate as you make progress. Do not edit the Run Ledger or Result / Handoff sections — Claudian owns those.
 
+## Docs Sync
+While executing, update the related docs referenced from Objective/Context (plan, spec, ADR, issue, PRD) so progress is visible to humans reading those docs — do not let the work order be the only place that reflects current state. Before completing the work order, verify all related docs are updated to reflect the final state and any decisions made during the run.
+
 ## Context
 ${task.sections.context}
 
