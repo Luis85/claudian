@@ -20,6 +20,7 @@ import type { SharedAppStorage } from './core/bootstrap/storage';
 import { EventBus } from './core/events/EventBus';
 import { formatLogEntries } from './core/logging/formatLogEntries';
 import { Logger } from './core/logging/Logger';
+import type { MissingMcpSecret } from './core/mcp/mcpSecrets';
 import {
   getEnvironmentVariablesForScope as getScopedEnvironmentVariables,
   getRuntimeEnvironmentText,
@@ -439,6 +440,24 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.warnedMissingSecretIds.add(ref.secretId);
       this.logger.scope('secrets').debug(`Secret "${ref.name}" (${ref.scope}) missing on this device.`);
       new Notice(t('env.secretMissing', { name: ref.name }));
+    }
+  }
+
+  /**
+   * SEC-A Phase 3: surface MCP auth-header / stdio-env secrets that are absent on
+   * this device (e.g. a vault synced from another machine) so the user re-enters
+   * them in the server's settings, mirroring the provider env-secret prompt.
+   * Otherwise the server launches/tests without its credential while the editor
+   * still shows a masked ref. Deduped by id alongside env secrets.
+   */
+  warnMissingMcpSecrets(missing: MissingMcpSecret[]): void {
+    for (const ref of missing) {
+      if (this.warnedMissingSecretIds.has(ref.secretId)) continue;
+      this.warnedMissingSecretIds.add(ref.secretId);
+      this.logger
+        .scope('secrets')
+        .debug(`MCP secret "${ref.name}" for "${ref.serverName}" missing on this device.`);
+      new Notice(t('env.secretMissing', { name: `${ref.serverName}: ${ref.name}` }));
     }
   }
 

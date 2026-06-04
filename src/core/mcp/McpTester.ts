@@ -10,7 +10,7 @@ import { parseCommand } from '../../utils/mcp';
 import type { ManagedMcpServer } from '../types';
 import { getMcpServerType } from '../types';
 import type { McpSecretResolver } from './mcpSecrets';
-import { resolveMcpServerConfig } from './mcpSecrets';
+import { collectMissingMcpSecrets, resolveMcpServerConfig } from './mcpSecrets';
 
 export interface McpTool {
   name: string;
@@ -237,6 +237,20 @@ export async function testMcpServer(
   const type = getMcpServerType(server.config);
   // SEC-A Phase 3: verify against the resolved config (secret headers/env overlaid
   // from SecretStorage), so testing a server with migrated credentials still works.
+  // A secret missing on this device (e.g. synced settings) is reported up front
+  // rather than silently tested without the credential.
+  if (resolveSecret) {
+    const missing = collectMissingMcpSecrets([server], resolveSecret);
+    if (missing.length > 0) {
+      return {
+        success: false,
+        tools: [],
+        error: `Secret not set on this device: ${missing
+          .map((m) => m.name)
+          .join(', ')}. Re-enter it in the server settings.`,
+      };
+    }
+  }
   const resolvedConfig = resolveSecret ? resolveMcpServerConfig(server, resolveSecret) : server.config;
 
   let transport: Transport;

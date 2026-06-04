@@ -1,4 +1,5 @@
 import {
+  collectMissingMcpSecrets,
   extractMcpServerSecrets,
   MCP_SECRET_PLACEHOLDER,
   reconcileEditedMcpSecrets,
@@ -140,6 +141,44 @@ describe('mcpSecrets — resolveMcpServerConfig', () => {
   it('returns the original config when there are no secret refs', () => {
     const server = urlServer({ config: { type: 'http', url: 'https://x' }, secretHeaders: undefined });
     expect(resolveMcpServerConfig(server, () => 'x')).toBe(server.config);
+  });
+});
+
+describe('mcpSecrets — collectMissingMcpSecrets', () => {
+  const urlServer: ManagedMcpServer = {
+    name: 'github',
+    enabled: true,
+    config: { type: 'http', url: 'https://api.example.com' } as McpHttpServerConfig,
+    secretHeaders: { Authorization: 'id-auth' },
+  };
+  const stdioServer: ManagedMcpServer = {
+    name: 'local',
+    enabled: true,
+    config: { command: 'srv' } as McpStdioServerConfig,
+    secretEnv: { API_KEY: 'id-key' },
+  };
+
+  it('reports a header secret absent on this device, tagged with the server name', () => {
+    const missing = collectMissingMcpSecrets([urlServer], () => null);
+    expect(missing).toEqual([{ serverName: 'github', name: 'Authorization', secretId: 'id-auth' }]);
+  });
+
+  it('reports a stdio env secret that resolves empty', () => {
+    const missing = collectMissingMcpSecrets([stdioServer], () => '');
+    expect(missing).toEqual([{ serverName: 'local', name: 'API_KEY', secretId: 'id-key' }]);
+  });
+
+  it('returns nothing when every secret resolves', () => {
+    expect(collectMissingMcpSecrets([urlServer, stdioServer], () => 'value')).toEqual([]);
+  });
+
+  it('ignores servers without secret refs', () => {
+    const plain: ManagedMcpServer = {
+      name: 'plain',
+      enabled: true,
+      config: { type: 'http', url: 'https://x' } as McpHttpServerConfig,
+    };
+    expect(collectMissingMcpSecrets([plain], () => null)).toEqual([]);
   });
 });
 

@@ -198,3 +198,34 @@ function overlayResolved(
     if (value !== null && value !== '') target[name] = value;
   }
 }
+
+export interface MissingMcpSecret {
+  serverName: string;
+  name: string;
+  secretId: string;
+}
+
+/**
+ * SEC-A Phase 3: secret header/env refs for the given servers whose value is
+ * absent on this device (e.g. settings synced from another machine). The resolver
+ * silently omits these at launch/test, so callers warn the user to re-enter them
+ * rather than run without the credential while the editor still shows a masked ref.
+ */
+export function collectMissingMcpSecrets(
+  servers: ManagedMcpServer[],
+  resolve: McpSecretResolver,
+): MissingMcpSecret[] {
+  const missing: MissingMcpSecret[] = [];
+  for (const server of servers) {
+    const refs =
+      getMcpServerType(server.config) === 'stdio' ? server.secretEnv : server.secretHeaders;
+    if (!refs) continue;
+    for (const [name, id] of Object.entries(refs)) {
+      const value = resolve(id);
+      if (value === null || value === '') {
+        missing.push({ serverName: server.name, name, secretId: id });
+      }
+    }
+  }
+  return missing;
+}

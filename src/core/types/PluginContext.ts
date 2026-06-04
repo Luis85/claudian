@@ -5,6 +5,7 @@ import type { BrowserSelectionContext } from '../../utils/browser';
 import type { SharedAppStorage } from '../bootstrap/storage';
 import type { EventBus } from '../events/EventBus';
 import type { Logger } from '../logging/Logger';
+import type { MissingMcpSecret } from '../mcp/mcpSecrets';
 import type { AppTabManagerState } from '../providers/types';
 import type { ChatRuntime } from '../runtime/ChatRuntime';
 import type { SecretStore } from '../security/secretStore';
@@ -78,6 +79,8 @@ export interface PluginContext
   migrateEnvSecretsNow(): boolean;
   /** SEC-A: drop a deleted snippet's `snippet:<id>` secret refs and clear unreferenced values. */
   pruneSnippetSecrets(snippetId: string): boolean;
+  /** SEC-A: warn (once per id) that an MCP server's migrated secret is absent on this device. */
+  warnMissingMcpSecrets(missing: MissingMcpSecret[]): void;
   getActiveEnvironmentVariables(providerId?: ProviderId): string;
   /** SEC-A: parsed runtime env with SecretStorage values overlaid (for child-process spawns). */
   getResolvedEnvironmentVariables(providerId?: ProviderId): Record<string, string>;

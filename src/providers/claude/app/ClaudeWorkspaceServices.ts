@@ -1,4 +1,4 @@
-import { extractMcpServerSecrets } from '../../../core/mcp/mcpSecrets';
+import { collectMissingMcpSecrets, extractMcpServerSecrets } from '../../../core/mcp/mcpSecrets';
 import { McpServerManager } from '../../../core/mcp/McpServerManager';
 import { CachedCliResolver } from '../../../core/providers/CachedCliResolver';
 import type { ProviderCommandCatalog } from '../../../core/providers/commands/ProviderCommandCatalog';
@@ -84,6 +84,16 @@ export async function createClaudeWorkspaceServices(
     const servers = mcpManager.getServers();
     if (extractMcpServerSecrets(servers, plugin.secretStore)) {
       await mcpStorage.save(servers);
+    }
+    // SEC-A Phase 3: prompt re-entry for enabled servers whose migrated secret is
+    // absent on this device (e.g. synced settings); the server would otherwise
+    // launch without its credential while the editor shows a masked ref.
+    const missing = collectMissingMcpSecrets(
+      servers.filter((s) => s.enabled),
+      (id) => plugin.secretStore.get(id),
+    );
+    if (missing.length > 0) {
+      plugin.warnMissingMcpSecrets(missing);
     }
   } catch {
     // migration must not break workspace init
