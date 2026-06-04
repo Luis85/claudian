@@ -78,8 +78,36 @@ export class CommitOnAcceptCoordinator {
       return;
     }
 
-    // Modal + surface dispatch — implemented in Task 8.
-    void task;
-    void buildScopedCommitPrompt;
+    const choice = await this.deps.openModal({
+      taskTitle: task.frontmatter.title,
+      dirtyCount: status.dirtyCount,
+    });
+
+    if (choice.dontAskAgain) {
+      const bag = this.deps.readSettings() as { promptCommitOnAccept?: boolean };
+      bag.promptCommitOnAccept = false;
+      try {
+        await this.deps.saveSettings();
+      } catch (error) {
+        this.deps.logger.warn('commitOnAccept: settings write failed', error);
+        this.deps.showNotice('Failed to save preference. Try again from settings.');
+      }
+    }
+
+    if (!choice.confirmed) return;
+
+    if (!this.deps.surface.requestCommitTurn) {
+      this.deps.logger.debug('commitOnAccept skip: surface unsupported');
+      return;
+    }
+
+    const prompt = buildScopedCommitPrompt(task, status.dirtyCount);
+    try {
+      await this.deps.surface.requestCommitTurn(task, prompt);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.deps.logger.error('commitOnAccept: surface call failed', error);
+      this.deps.showNotice(`Commit prompt failed: ${message}`);
+    }
   }
 }

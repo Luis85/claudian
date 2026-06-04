@@ -126,3 +126,72 @@ describe('CommitOnAcceptCoordinator — silent-skip branches', () => {
     expect(h.loadTaskSpec).not.toHaveBeenCalled();
   });
 });
+
+describe('CommitOnAcceptCoordinator — happy path and post-modal branches', () => {
+  it('opens the modal with the work-order title and dirty count', async () => {
+    const h = makeHarness();
+    h.openModal.mockResolvedValueOnce({ confirmed: true, dontAskAgain: false });
+    h.events.emit('task:status-changed', { taskId: 'wo-1', path: 'Agent Board/tasks/wo-1.md', status: 'done' });
+    await new Promise((r) => setImmediate(r));
+    expect(h.openModal).toHaveBeenCalledWith({ taskTitle: 'Task A', dirtyCount: 3 });
+  });
+
+  it('forwards the built prompt to the surface on confirm', async () => {
+    const h = makeHarness();
+    h.openModal.mockResolvedValueOnce({ confirmed: true, dontAskAgain: false });
+    h.events.emit('task:status-changed', { taskId: 'wo-1', path: 'Agent Board/tasks/wo-1.md', status: 'done' });
+    await new Promise((r) => setImmediate(r));
+    expect(h.surface.requestCommitTurn).toHaveBeenCalledTimes(1);
+    const [, prompt] = h.surface.requestCommitTurn.mock.calls[0];
+    expect(prompt).toContain('Work-Order: wo-1 — Task A');
+  });
+
+  it('does not call the surface when the user skips without dontAskAgain', async () => {
+    const h = makeHarness();
+    h.openModal.mockResolvedValueOnce({ confirmed: false, dontAskAgain: false });
+    h.events.emit('task:status-changed', { taskId: 'wo-1', path: 'Agent Board/tasks/wo-1.md', status: 'done' });
+    await new Promise((r) => setImmediate(r));
+    expect(h.surface.requestCommitTurn).not.toHaveBeenCalled();
+    expect(h.saveSettings).not.toHaveBeenCalled();
+  });
+
+  it('writes settings off and skips surface when user skips with dontAskAgain', async () => {
+    const h = makeHarness();
+    h.openModal.mockResolvedValueOnce({ confirmed: false, dontAskAgain: true });
+    h.events.emit('task:status-changed', { taskId: 'wo-1', path: 'Agent Board/tasks/wo-1.md', status: 'done' });
+    await new Promise((r) => setImmediate(r));
+    expect(h.settings.promptCommitOnAccept).toBe(false);
+    expect(h.saveSettings).toHaveBeenCalled();
+    expect(h.surface.requestCommitTurn).not.toHaveBeenCalled();
+  });
+
+  it('shows a Notice and logs error when surface rejects', async () => {
+    const h = makeHarness();
+    h.openModal.mockResolvedValueOnce({ confirmed: true, dontAskAgain: false });
+    h.surface.requestCommitTurn.mockRejectedValueOnce(new Error('boom'));
+    h.events.emit('task:status-changed', { taskId: 'wo-1', path: 'Agent Board/tasks/wo-1.md', status: 'done' });
+    await new Promise((r) => setImmediate(r));
+    expect(h.logger.error).toHaveBeenCalled();
+    expect(h.showNotice).toHaveBeenCalledWith(expect.stringMatching(/Commit prompt failed/));
+  });
+
+  it('shows a Notice when settings save fails on dontAskAgain', async () => {
+    const h = makeHarness();
+    h.openModal.mockResolvedValueOnce({ confirmed: false, dontAskAgain: true });
+    h.saveSettings.mockRejectedValueOnce(new Error('disk full'));
+    h.events.emit('task:status-changed', { taskId: 'wo-1', path: 'Agent Board/tasks/wo-1.md', status: 'done' });
+    await new Promise((r) => setImmediate(r));
+    expect(h.logger.warn).toHaveBeenCalled();
+    expect(h.showNotice).toHaveBeenCalledWith(expect.stringMatching(/Failed to save preference/));
+  });
+
+  it('handles two rapid accepts as two independent flows', async () => {
+    const h = makeHarness();
+    h.openModal.mockResolvedValue({ confirmed: true, dontAskAgain: false });
+    h.events.emit('task:status-changed', { taskId: 'wo-1', path: 'Agent Board/tasks/wo-1.md', status: 'done' });
+    h.events.emit('task:status-changed', { taskId: 'wo-1', path: 'Agent Board/tasks/wo-1.md', status: 'done' });
+    await new Promise((r) => setImmediate(r));
+    expect(h.openModal).toHaveBeenCalledTimes(2);
+    expect(h.surface.requestCommitTurn).toHaveBeenCalledTimes(2);
+  });
+});
