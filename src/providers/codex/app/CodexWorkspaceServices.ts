@@ -46,6 +46,7 @@ export async function createCodexWorkspaceServices(
     ),
     skillListProvider,
     getVaultPath(plugin.app),
+    plugin.events,
   );
 
   return {

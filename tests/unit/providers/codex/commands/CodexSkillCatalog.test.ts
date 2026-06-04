@@ -1,3 +1,5 @@
+import { EventBus } from '@/core/events/EventBus';
+import type { ProviderCommandEntry } from '@/core/providers/commands/ProviderCommandEntry';
 import type { VaultFileAdapter } from '@/core/storage/VaultFileAdapter';
 import { CodexSkillCatalog } from '@/providers/codex/commands/CodexSkillCatalog';
 import type { SkillMetadata } from '@/providers/codex/runtime/codexAppServerTypes';
@@ -437,5 +439,71 @@ Prompt`,
 
       expect(compactEntry).toBeUndefined();
     });
+  });
+});
+
+describe('CodexSkillCatalog EventBus emission', () => {
+  function skillEntry(): ProviderCommandEntry {
+    return {
+      id: 'codex-skill-vault-codex-x',
+      providerId: 'codex',
+      kind: 'skill',
+      name: 'x',
+      description: '',
+      content: 'body',
+      scope: 'vault',
+      source: 'user',
+      isEditable: true,
+      isDeletable: true,
+      displayPrefix: '$',
+      insertPrefix: '$',
+      sourceFilePath: '.codex/skills/x/SKILL.md',
+      persistenceKey: 'vault-codex::x',
+    };
+  }
+  function mkStorage() {
+    return {
+      save: jest.fn().mockResolvedValue(undefined),
+      delete: jest.fn().mockResolvedValue(undefined),
+      load: jest.fn().mockResolvedValue(null),
+    } as never;
+  }
+  function mkListProvider() {
+    return {
+      listSkills: jest.fn().mockResolvedValue([]),
+      invalidate: jest.fn(),
+    } as never;
+  }
+
+  it('emits vaultSkill.changed on save', async () => {
+    const bus = new EventBus<{ 'vaultSkill.changed': { providerId: 'codex' } }>();
+    const events: Array<{ providerId: string }> = [];
+    bus.on('vaultSkill.changed', (p) => { events.push(p); });
+    const { CodexSkillCatalog } = await import('@/providers/codex/commands/CodexSkillCatalog');
+    const catalog = new CodexSkillCatalog(
+      mkStorage(), mkListProvider(), '/vault', bus as never,
+    );
+    await catalog.saveVaultEntry(skillEntry());
+    expect(events).toEqual([{ providerId: 'codex' }]);
+  });
+
+  it('emits vaultSkill.changed on delete', async () => {
+    const bus = new EventBus<{ 'vaultSkill.changed': { providerId: 'codex' } }>();
+    const events: Array<{ providerId: string }> = [];
+    bus.on('vaultSkill.changed', (p) => { events.push(p); });
+    const { CodexSkillCatalog } = await import('@/providers/codex/commands/CodexSkillCatalog');
+    const catalog = new CodexSkillCatalog(
+      mkStorage(), mkListProvider(), '/vault', bus as never,
+    );
+    await catalog.deleteVaultEntry(skillEntry());
+    expect(events).toEqual([{ providerId: 'codex' }]);
+  });
+
+  it('works without an EventBus', async () => {
+    const { CodexSkillCatalog } = await import('@/providers/codex/commands/CodexSkillCatalog');
+    const catalog = new CodexSkillCatalog(
+      mkStorage(), mkListProvider(), '/vault',
+    );
+    await expect(catalog.saveVaultEntry(skillEntry())).resolves.not.toThrow();
   });
 });

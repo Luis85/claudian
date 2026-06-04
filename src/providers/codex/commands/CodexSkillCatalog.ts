@@ -1,3 +1,5 @@
+import type { ClaudianEventMap } from '../../../app/events/claudianEvents';
+import type { EventBus } from '../../../core/events/EventBus';
 import type {
   ProviderCommandCatalog,
   ProviderCommandDropdownConfig,
@@ -83,6 +85,7 @@ export class CodexSkillCatalog implements ProviderCommandCatalog {
     private storage: CodexSkillStorage,
     private listProvider: CodexSkillListProvider,
     private vaultPath: string | null,
+    private eventBus?: EventBus<ClaudianEventMap>,
   ) {}
 
   setRuntimeCommands(_commands: SlashCommand[]): void {
@@ -154,6 +157,7 @@ export class CodexSkillCatalog implements ProviderCommandCatalog {
         : undefined,
     });
     this.listProvider.invalidate();
+    this.eventBus?.emit('vaultSkill.changed', { providerId: 'codex' });
   }
 
   async deleteVaultEntry(entry: ProviderCommandEntry): Promise<void> {
@@ -163,6 +167,7 @@ export class CodexSkillCatalog implements ProviderCommandCatalog {
       rootId: persistenceState?.rootId ?? 'vault-codex',
     });
     this.listProvider.invalidate();
+    this.eventBus?.emit('vaultSkill.changed', { providerId: 'codex' });
   }
 
   getDropdownConfig(): ProviderCommandDropdownConfig {
