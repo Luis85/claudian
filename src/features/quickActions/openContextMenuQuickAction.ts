@@ -61,6 +61,12 @@ export function openContextMenuQuickAction(
         // attached beforehand. Attach AFTER the switch resolves so the pill
         // survives and gets folded into the outgoing prompt via
         // FileContextManager.getAttachedMentionSuffix().
+        //
+        // Tradeoff: switch runs unconditionally even when reusing the active
+        // blank tab, so any prior manual pills on that tab are wiped by the
+        // reset — acceptable since the user just invoked a quick action
+        // explicitly targeting a different file/folder. Do not add a
+        // self-switch guard without revisiting the spec.
         await tabManager.switchToTab(targetTab.id);
 
         // Attach the right-clicked file or folder as a visible chip.

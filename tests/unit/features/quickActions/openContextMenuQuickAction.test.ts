@@ -208,6 +208,23 @@ describe('openContextMenuQuickAction', () => {
       const attachOrder = (activeTab.ui.fileContextManager.attachFileAsPill as jest.Mock).mock.invocationCallOrder[0];
       expect(switchOrder).toBeLessThan(attachOrder);
     });
+
+    it('attaches pill AFTER switchToTab on the new-tab path as well', async () => {
+      const activeTab = makeMockTab('active');
+      const newTab = makeMockTab('blank');
+      newTab.id = 'tab-2';
+      const tabManager = makeMockTabManager({ activeTab, canCreate: true, newTab });
+      const plugin = makeMockPlugin(tabManager);
+
+      const file = Object.assign(Object.create(TFile.prototype), { path: 'note.md' });
+      await openContextMenuQuickAction(plugin as any, file);
+      await capturedOnRun!(MOCK_ACTION);
+      await flushMicrotasks();
+
+      const switchOrder = (tabManager.switchToTab as jest.Mock).mock.invocationCallOrder[0];
+      const attachOrder = (newTab.ui.fileContextManager.attachFileAsPill as jest.Mock).mock.invocationCallOrder[0];
+      expect(switchOrder).toBeLessThan(attachOrder);
+    });
   });
 
   describe('onRun send', () => {
