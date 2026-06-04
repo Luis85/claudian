@@ -2,6 +2,19 @@ import type { VaultFileAdapter } from '../../core/storage/VaultFileAdapter';
 import { parseQuickActionContent, serializeQuickAction } from './quickActionParse';
 import type { QuickAction } from './types';
 
+export function assignNextFavoriteRank(actions: QuickAction[]): number | null {
+  const used = new Set<number>();
+  for (const a of actions) {
+    if (a.favorite === true && typeof a.favoriteRank === 'number') {
+      used.add(a.favoriteRank);
+    }
+  }
+  for (let r = 1; r <= 5; r++) {
+    if (!used.has(r)) return r;
+  }
+  return null;
+}
+
 export class QuickActionStorage {
   constructor(
     private adapter: VaultFileAdapter,
@@ -51,10 +64,24 @@ export class QuickActionStorage {
       icon: action.icon,
       tags: action.tags,
       prompt: action.prompt,
+      favorite: action.favorite,
+      favoriteRank: action.favoriteRank,
     });
     await this.adapter.ensureFolder(this.getFolderPath());
     await this.adapter.write(filePath, content);
     return filePath;
+  }
+
+  async setFavorite(action: QuickAction, rank: number): Promise<void> {
+    if (!Number.isInteger(rank) || rank < 1 || rank > 5) {
+      throw new Error(`invalid favoriteRank: ${rank}`);
+    }
+    await this.save({ ...action, favorite: true, favoriteRank: rank });
+  }
+
+  async unsetFavorite(action: QuickAction): Promise<void> {
+    const { favorite: _favorite, favoriteRank: _favoriteRank, ...rest } = action;
+    await this.save({ ...rest, favorite: undefined, favoriteRank: undefined });
   }
 
   async delete(filePath: string): Promise<void> {
