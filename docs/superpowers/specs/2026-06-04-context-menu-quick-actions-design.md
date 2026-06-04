@@ -1,7 +1,7 @@
 ---
-title: "Context menu quick actions"
+title: Context menu quick actions
 date: 2026-06-04
-status: revised
+status: shipped
 scope: features/quickActions, app/commands
 ---
 
