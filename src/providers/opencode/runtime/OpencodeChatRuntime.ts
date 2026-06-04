@@ -80,6 +80,7 @@ import {
   getManagedOpencodeModes,
   isManagedOpencodeModeId,
   normalizeOpencodeAvailableModes,
+  OPENCODE_PLAN_MODE_ID,
   resolveOpencodeModeForPermissionMode,
   resolvePermissionModeForManagedOpencodeMode,
 } from '../modes';
@@ -155,6 +156,8 @@ export class OpencodeChatRuntime implements ChatRuntime {
   private currentSessionEffortValues = new Set<string>();
   private currentSessionModelId: string | null = null;
   private currentSessionModeId: string | null = null;
+  private currentTurnIsPlan = false;
+  private currentTurnSawAssistantContent = false;
   private currentTurnMetadata: ChatTurnMetadata = {};
   private loadedSessionId: string | null = null;
   private permissionModeSyncCallback: ((mode: string) => void) | null = null;
@@ -385,6 +388,8 @@ export class OpencodeChatRuntime implements ChatRuntime {
       sessionId,
     };
     this.currentTurnMetadata = {};
+    this.currentTurnIsPlan = false;
+    this.currentTurnSawAssistantContent = false;
     this.contextUsage = null;
     this.promptUsage = null;
     this.sessionUpdateNormalizer.reset();
@@ -393,6 +398,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
     const activeTurn = this.activeTurn;
     try {
       await this.applySelectedMode(sessionId);
+      this.currentTurnIsPlan = this.currentSessionModeId === OPENCODE_PLAN_MODE_ID;
       await this.applySelectedModel(sessionId, queryOptions);
       await this.applySelectedEffort(sessionId);
     } catch (error) {
@@ -427,6 +433,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
         activeTurn.queue.push({ sessionId, type: 'usage', usage });
       }
 
+      this.finalizePlanTurnMetadata();
       activeTurn.queue.push({ type: 'done' });
       activeTurn.queue.close();
     }).catch((error) => {
@@ -540,6 +547,12 @@ export class OpencodeChatRuntime implements ChatRuntime {
     const metadata = this.currentTurnMetadata;
     this.currentTurnMetadata = {};
     return metadata;
+  }
+
+  private finalizePlanTurnMetadata(): void {
+    if (this.currentTurnIsPlan && this.currentTurnSawAssistantContent) {
+      this.currentTurnMetadata.planCompleted = true;
+    }
   }
 
   buildSessionUpdates(params: {
@@ -1187,6 +1200,9 @@ export class OpencodeChatRuntime implements ChatRuntime {
         if (normalized.role === 'user' && normalized.messageId) {
           this.currentTurnMetadata.userMessageId = normalized.messageId;
         }
+        if (normalized.role === 'assistant' && normalized.streamChunks.length > 0) {
+          this.currentTurnSawAssistantContent = true;
+        }
         for (const chunk of normalized.streamChunks) {
           this.activeTurn.queue.push(chunk);
         }
@@ -1309,14 +1325,18 @@ export class OpencodeChatRuntime implements ChatRuntime {
   }
 
   private resolveSessionPath(sessionId: string, rawPath: string): string {
-    if (path.isAbsolute(rawPath)) {
-      return rawPath;
-    }
-
     const cwd = this.sessionCwds.get(sessionId)
       ?? getVaultPath(this.plugin.app)
       ?? process.cwd();
-    return path.resolve(cwd, rawPath);
+    const resolvedPath = path.isAbsolute(rawPath)
+      ? path.resolve(rawPath)
+      : path.resolve(cwd, rawPath);
+    const relative = path.relative(cwd, resolvedPath);
+    if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) {
+      return resolvedPath;
+    }
+
+    throw new Error('OpenCode file access is limited to the current workspace.');
   }
 
   private formatRuntimeError(error: unknown): string {
