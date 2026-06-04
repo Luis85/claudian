@@ -43,6 +43,7 @@ import {
 import type { PluginContext } from './core/types/PluginContext';
 import type { EnvironmentScope } from './core/types/settings';
 import { ClaudianView } from './features/chat/ClaudianView';
+import { sendFeedbackPrompt } from './features/chat/feedback/sendFeedbackPrompt';
 import { isClaudianView } from './features/chat/isClaudianView';
 import type { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
 import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
@@ -118,6 +119,26 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       isEligible: (msg) => msg.role === 'assistant' && Boolean(chatMessageText(msg)),
       run: (msg, conversationId) => {
         void chatWorkOrderLinker.promoteMessageToWorkOrder(msg, conversationId);
+      },
+    });
+
+    this.registerChatMessageAction({
+      id: 'thumbs-up-feedback',
+      label: t('chat.feedback.thumbsUp.label'),
+      icon: 'thumbs-up',
+      isEligible: (msg) => msg.role === 'assistant' && Boolean(chatMessageText(msg)),
+      run: (msg, conversationId) => {
+        sendFeedbackPrompt(this, msg, conversationId, 'up');
+      },
+    });
+
+    this.registerChatMessageAction({
+      id: 'thumbs-down-feedback',
+      label: t('chat.feedback.thumbsDown.label'),
+      icon: 'thumbs-down',
+      isEligible: (msg) => msg.role === 'assistant' && Boolean(chatMessageText(msg)),
+      run: (msg, conversationId) => {
+        sendFeedbackPrompt(this, msg, conversationId, 'down');
       },
     });
 
