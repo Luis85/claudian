@@ -24,6 +24,7 @@ function createMockPlugin(settings = {}) {
       },
     },
     getActiveEnvironmentVariables: jest.fn().mockReturnValue(''),
+    getResolvedEnvironmentVariables: jest.fn().mockReturnValue({}),
     getResolvedProviderCliPath: jest.fn().mockReturnValue('/fake/claude'),
   } as any;
 }
@@ -108,9 +109,9 @@ describe('TitleGenerationService', () => {
 
     it('should prioritize setting over env var', async () => {
       mockPlugin.settings.titleGenerationModel = 'sonnet';
-      mockPlugin.getActiveEnvironmentVariables.mockReturnValue(
-        'ANTHROPIC_DEFAULT_HAIKU_MODEL=custom-haiku'
-      );
+      mockPlugin.getResolvedEnvironmentVariables.mockReturnValue({
+        ANTHROPIC_DEFAULT_HAIKU_MODEL: 'custom-haiku',
+      });
 
       setMockMessages([
         { type: 'system', subtype: 'init', session_id: 'test-session' },
@@ -132,9 +133,9 @@ describe('TitleGenerationService', () => {
 
     it('should use ANTHROPIC_DEFAULT_HAIKU_MODEL when setting is empty', async () => {
       mockPlugin.settings.titleGenerationModel = '';
-      mockPlugin.getActiveEnvironmentVariables.mockReturnValue(
-        'ANTHROPIC_DEFAULT_HAIKU_MODEL=custom-haiku'
-      );
+      mockPlugin.getResolvedEnvironmentVariables.mockReturnValue({
+        ANTHROPIC_DEFAULT_HAIKU_MODEL: 'custom-haiku',
+      });
 
       setMockMessages([
         { type: 'system', subtype: 'init', session_id: 'test-session' },

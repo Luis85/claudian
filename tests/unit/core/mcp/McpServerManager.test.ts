@@ -1,5 +1,5 @@
 import { McpServerManager } from '@/core/mcp/McpServerManager';
-import type { ManagedMcpServer } from '@/core/types';
+import type { ManagedMcpServer, McpHttpServerConfig, McpStdioServerConfig } from '@/core/types';
 
 // SEC-4: keep the curation deterministic so assertions can verify host vars are
 // withheld while configured vars + an enhanced PATH survive.
@@ -462,6 +462,68 @@ describe('McpServerManager', () => {
       expect(manager.getServers()).toEqual([]);
       await manager.loadServers();
       expect(manager.getServers()).toEqual(servers);
+    });
+  });
+
+  describe('getActiveServers — SEC-A secret resolution', () => {
+    it('overlays a resolved secret header for an enabled url server', async () => {
+      const servers: ManagedMcpServer[] = [
+        {
+          name: 'remote',
+          config: { type: 'http', url: 'https://x', headers: { Accept: 'application/json' } },
+          enabled: true,
+          contextSaving: false,
+          secretHeaders: { Authorization: 'id-auth' },
+        },
+      ];
+      const manager = new McpServerManager(
+        { load: async () => servers },
+        (id) => (id === 'id-auth' ? 'Bearer live' : null),
+      );
+      await manager.loadServers();
+
+      const remote = manager.getActiveServers(new Set()).remote as McpHttpServerConfig;
+      expect(remote.headers).toEqual({ Accept: 'application/json', Authorization: 'Bearer live' });
+    });
+
+    it('curates a stdio server with its secret env overlaid before curation', async () => {
+      const servers: ManagedMcpServer[] = [
+        {
+          name: 'local',
+          config: { command: 'run', env: { LOG_LEVEL: 'debug' } },
+          enabled: true,
+          contextSaving: false,
+          secretEnv: { API_KEY: 'id-key' },
+        },
+      ];
+      const manager = new McpServerManager(
+        { load: async () => servers },
+        () => 'dummy-live',
+      );
+      await manager.loadServers();
+
+      const local = manager.getActiveServers(new Set()).local as McpStdioServerConfig;
+      // curateStdioMcpEnv (mocked) keeps configured vars + adds HOME/PATH; the
+      // secret env var must be present (resolved before curation).
+      expect(local.env?.API_KEY).toBe('dummy-live');
+      expect(local.env?.LOG_LEVEL).toBe('debug');
+    });
+
+    it('omits a missing secret rather than injecting empty', async () => {
+      const servers: ManagedMcpServer[] = [
+        {
+          name: 'remote',
+          config: { type: 'http', url: 'https://x' },
+          enabled: true,
+          contextSaving: false,
+          secretHeaders: { Authorization: 'id-auth' },
+        },
+      ];
+      const manager = new McpServerManager({ load: async () => servers }, () => null);
+      await manager.loadServers();
+
+      const remote = manager.getActiveServers(new Set()).remote as McpHttpServerConfig;
+      expect(remote.headers?.Authorization).toBeUndefined();
     });
   });
 });

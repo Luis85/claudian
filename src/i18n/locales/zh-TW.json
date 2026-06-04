@@ -712,6 +712,14 @@
     }
   },
   "env": {
+    "secretVarsHeading": "機密變數",
+    "secretVarsDesc": "API 金鑰和權杖保存在系統鑰匙圈中，而不是明文設定裡。",
+    "secretNotSet": "此裝置上未設定——請選擇或建立要使用的機密。",
+    "secretRemove": "移除",
+    "secretAdd": "新增機密變數",
+    "secretNamePlaceholder": "VARIABLE_NAME",
+    "secretAddButton": "新增",
+    "secretMissing": "此裝置未設定提供者密鑰「{name}」，請在 Claudian 設定中重新輸入。",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."

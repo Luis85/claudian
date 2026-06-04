@@ -712,6 +712,14 @@
     }
   },
   "env": {
+    "secretVarsHeading": "비밀 변수",
+    "secretVarsDesc": "API 키와 토큰은 평문 설정이 아니라 시스템 키체인에 보관됩니다.",
+    "secretNotSet": "이 기기에 설정되지 않았습니다 — 사용할 비밀을 선택하거나 만드세요.",
+    "secretRemove": "제거",
+    "secretAdd": "비밀 변수 추가",
+    "secretNamePlaceholder": "VARIABLE_NAME",
+    "secretAddButton": "추가",
+    "secretMissing": "이 기기에 공급자 비밀 \"{name}\"이(가) 설정되어 있지 않습니다. Claudian 설정에서 다시 입력하세요.",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."

@@ -99,7 +99,10 @@ A shared environment scope plus a snippet manager.
 | Setting | What it does | Default |
 |---------|--------------|---------|
 | **Shared environment** | `KEY=VALUE` lines (one per line, shell `export` prefix accepted) passed to every provider. Intended for `PATH`, proxies, certs, temp dirs. | Empty |
+| **Secret variables** | API keys / tokens stored in Obsidian's keychain-backed SecretStorage (OS keychain), not in plaintext. Each row is a variable name + a selected/created secret; only the secret's name is saved in settings. | Empty |
 | **Snippets** | Save and reapply named environment blocks. Each snippet can attach its own custom context-window overrides and model aliases. | Empty |
+
+**Secret variables** (requires Obsidian **1.11.5+**): use this instead of typing API keys into the plaintext textarea. The value lives in your OS keychain (outside the vault); the vault settings store only a reference. Secret-shaped keys you've already typed into the environment fields are migrated into SecretStorage automatically on load. Secrets are **device-local** — on a synced vault opened on another machine, a row shows "not set on this device" until you re-enter it (a one-time notice also reminds you). Honest scope: this keeps keys out of synced/committed vault files, but does not isolate them from other plugins or same-user processes.
 
 A review warning surfaces when a key in the shared scope (e.g. `OPENAI_API_KEY`) probably belongs in a provider-scoped section instead.
 

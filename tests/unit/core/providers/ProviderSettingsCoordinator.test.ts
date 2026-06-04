@@ -77,6 +77,7 @@ describe('ProviderSettingsCoordinator', () => {
       expect(reconcileSpy).toHaveBeenCalledWith(
         settings,
         [claudeConv],
+        undefined,
       );
 
       reconcileSpy.mockRestore();

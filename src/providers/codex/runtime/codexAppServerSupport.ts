@@ -1,6 +1,6 @@
 import type { ProviderId } from '../../../core/providers/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
-import { getEnhancedPath, parseEnvironmentVariables } from '../../../utils/env';
+import { getEnhancedPath } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
 import type { InitializeResult } from './codexAppServerTypes';
 import { buildCodexLaunchSpec } from './CodexLaunchSpecBuilder';
@@ -20,7 +20,7 @@ export function buildCodexAppServerEnvironment(
   plugin: PluginContext,
   providerId: ProviderId = 'codex',
 ): Record<string, string> {
-  const customEnv = parseEnvironmentVariables(plugin.getActiveEnvironmentVariables(providerId));
+  const customEnv = plugin.getResolvedEnvironmentVariables(providerId);
   const baseEnv = Object.fromEntries(
     Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
   );

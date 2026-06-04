@@ -81,8 +81,8 @@ export const opencodeSettingsReconciler: ProviderSettingsReconciler = {
     return false;
   },
 
-  reconcileModelWithEnvironment: (settings, conversations) =>
-    reconcileEnvironmentHash(opencodeEnvHashSpec, settings, conversations),
+  reconcileModelWithEnvironment: (settings, conversations, resolveEnvText) =>
+    reconcileEnvironmentHash(opencodeEnvHashSpec, settings, conversations, resolveEnvText),
 
   normalizeModelVariantSettings(settings: Record<string, unknown>): boolean {
     const hadLegacyDiscoveryFields = hasLegacyOpencodeDiscoveryFields(settings);

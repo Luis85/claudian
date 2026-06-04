@@ -712,6 +712,14 @@
     }
   },
   "env": {
+    "secretVarsHeading": "Секретные переменные",
+    "secretVarsDesc": "Ключи API и токены хранятся в системном хранилище ключей, а не в открытом виде в настройках.",
+    "secretNotSet": "Не задано на этом устройстве — выберите или создайте секрет для использования.",
+    "secretRemove": "Удалить",
+    "secretAdd": "Добавить секретную переменную",
+    "secretNamePlaceholder": "VARIABLE_NAME",
+    "secretAddButton": "Добавить",
+    "secretMissing": "Секрет провайдера «{name}» не задан на этом устройстве — введите его снова в настройках Claudian.",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."

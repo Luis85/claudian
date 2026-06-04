@@ -34,8 +34,8 @@ const codexEnvHashSpec: EnvHashReconcilerSpec = {
 };
 
 export const codexSettingsReconciler: ProviderSettingsReconciler = {
-  reconcileModelWithEnvironment: (settings, conversations) =>
-    reconcileEnvironmentHash(codexEnvHashSpec, settings, conversations),
+  reconcileModelWithEnvironment: (settings, conversations, resolveEnvText) =>
+    reconcileEnvironmentHash(codexEnvHashSpec, settings, conversations, resolveEnvText),
 
   setEnabled(settings, enabled) {
     updateCodexProviderSettings(settings, { enabled });

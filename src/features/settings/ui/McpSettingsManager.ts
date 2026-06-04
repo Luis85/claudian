@@ -2,8 +2,11 @@ import type { App } from 'obsidian';
 import { Notice, setIcon } from 'obsidian';
 
 import { tryParseClipboardConfig } from '../../../core/mcp/McpConfigParser';
+import { collectMissingMcpSecrets, extractMcpServerSecrets, type MissingMcpSecret } from '../../../core/mcp/mcpSecrets';
 import { testMcpServer } from '../../../core/mcp/McpTester';
 import type { AppMcpStorage } from '../../../core/providers/types';
+import { isClaudianGeneratedSecretId } from '../../../core/security/secretIds';
+import type { SecretStore } from '../../../core/security/secretStore';
 import type { ManagedMcpServer, McpServerConfig, McpServerType } from '../../../core/types';
 import { DEFAULT_MCP_SERVER, getMcpServerType } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
@@ -14,22 +17,70 @@ import { McpTestModal } from './McpTestModal';
 export interface McpSettingsManagerDeps {
   app: App;
   mcpStorage: AppMcpStorage;
+  /** SEC-A Phase 3: keychain store for migrating/resolving MCP secret headers/env. */
+  secretStore: SecretStore;
   broadcastMcpReload: () => Promise<void>;
+  /** SEC-A Phase 3: surface a re-entry warning for secret refs absent on this device. */
+  warnMissingMcpSecrets?: (missing: MissingMcpSecret[]) => void;
 }
 
 export class McpSettingsManager {
   private app: App;
   private containerEl: HTMLElement;
   private mcpStorage: AppMcpStorage;
+  private secretStore: SecretStore;
   private broadcastMcpReload: () => Promise<void>;
+  private warnMissingMcpSecrets?: (missing: MissingMcpSecret[]) => void;
   private servers: ManagedMcpServer[] = [];
 
   constructor(containerEl: HTMLElement, deps: McpSettingsManagerDeps) {
     this.app = deps.app;
     this.containerEl = containerEl;
     this.mcpStorage = deps.mcpStorage;
+    this.secretStore = deps.secretStore;
     this.broadcastMcpReload = deps.broadcastMcpReload;
+    this.warnMissingMcpSecrets = deps.warnMissingMcpSecrets;
     void this.loadAndRender();
+  }
+
+  /**
+   * SEC-A Phase 3: persist servers, first migrating any secret-shaped header/env
+   * value typed into the editor into SecretStorage so it never lands in plaintext.
+   */
+  private async persistServers(): Promise<void> {
+    extractMcpServerSecrets(this.servers, this.secretStore);
+    await this.mcpStorage.save(this.servers);
+  }
+
+  /** All SecretStorage ids still referenced by the loaded servers. */
+  private referencedSecretIds(): Set<string> {
+    const ids = new Set<string>();
+    for (const s of this.servers) {
+      for (const id of Object.values(s.secretHeaders ?? {})) ids.add(id);
+      for (const id of Object.values(s.secretEnv ?? {})) ids.add(id);
+    }
+    return ids;
+  }
+
+  /**
+   * SEC-A Phase 3: clear keychain values for a removed/edited server's secret refs
+   * that no remaining server references, so a deleted credential doesn't linger.
+   */
+  private clearOrphanedSecrets(removed: ManagedMcpServer | null): void {
+    if (!removed) return;
+    const removedIds = [
+      ...Object.values(removed.secretHeaders ?? {}),
+      ...Object.values(removed.secretEnv ?? {}),
+    ];
+    if (removedIds.length === 0) return;
+    const stillReferenced = this.referencedSecretIds();
+    for (const id of removedIds) {
+      // SecretStorage ids are global across plugins. The metadata may point at an
+      // external/user-selected id (e.g. a hand-edited mcp.json), so only auto-clear
+      // Claudian-owned ids — never a secret another plugin or workflow owns.
+      if (!isClaudianGeneratedSecretId(id)) continue;
+      if (!stillReferenced.has(id)) this.secretStore.clear(id);
+    }
   }
 
   private async loadAndRender() {
@@ -184,7 +235,7 @@ export class McpSettingsManager {
     modal.open();
 
     try {
-      const result = await testMcpServer(server);
+      const result = await testMcpServer(server, (id) => this.secretStore.get(id));
       modal.setResult(result);
     } catch (error) {
       modal.setError(error instanceof Error ? error.message : 'Verification failed');
@@ -200,7 +251,7 @@ export class McpSettingsManager {
     server.disabledTools = newDisabledTools;
 
     try {
-      await this.mcpStorage.save(this.servers);
+      await this.persistServers();
     } catch (error) {
       server.disabledTools = previous;
       throw error;
@@ -326,7 +377,8 @@ export class McpSettingsManager {
       this.servers.push(server);
     }
 
-    await this.mcpStorage.save(this.servers);
+    await this.persistServers();
+    this.clearOrphanedSecrets(existing);
     await this.broadcastMcpReload();
     this.render();
     new Notice(existing
@@ -365,7 +417,7 @@ export class McpSettingsManager {
       return;
     }
 
-    await this.mcpStorage.save(this.servers);
+    await this.persistServers();
     await this.broadcastMcpReload();
     this.render();
 
@@ -377,12 +429,20 @@ export class McpSettingsManager {
 
   private async toggleServer(server: ManagedMcpServer) {
     server.enabled = !server.enabled;
-    await this.mcpStorage.save(this.servers);
+    await this.persistServers();
     await this.broadcastMcpReload();
     this.render();
     new Notice(server.enabled
       ? t('settings.mcp.toggleEnabled', { name: server.name })
       : t('settings.mcp.toggleDisabled', { name: server.name }));
+
+    // SEC-A Phase 3: workspace init only checks ENABLED servers for missing secrets,
+    // so a disabled synced server (ref present, keychain value absent on this device)
+    // would otherwise launch credential-less when enabled here with no re-entry prompt.
+    if (server.enabled) {
+      const missing = collectMissingMcpSecrets([server], (id) => this.secretStore.get(id));
+      if (missing.length > 0) this.warnMissingMcpSecrets?.(missing);
+    }
   }
 
   private async deleteServer(server: ManagedMcpServer) {
@@ -391,7 +451,8 @@ export class McpSettingsManager {
     }
 
     this.servers = this.servers.filter((s) => s.name !== server.name);
-    await this.mcpStorage.save(this.servers);
+    await this.persistServers();
+    this.clearOrphanedSecrets(server);
     await this.broadcastMcpReload();
     this.render();
     new Notice(t('settings.mcp.deleted', { name: server.name }));

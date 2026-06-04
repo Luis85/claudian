@@ -1,3 +1,4 @@
+import { computeEnvHash } from '@/core/providers/EnvHashReconciler';
 import { setProviderEnvironmentVariables } from '@/core/providers/providerEnvironment';
 import { cursorSettingsReconciler } from '@/providers/cursor/env/CursorSettingsReconciler';
 import {
@@ -111,16 +112,17 @@ describe('cursor env survives reconcileModelWithEnvironment → saveHash', () =>
     const after = getCursorProviderSettings(bag);
     expect(after.environmentVariables)
       .toBe('CURSOR_API_KEY=foo\nCURSOR_BASE_URL=https://example');
-    // Hash must include both watched keys, sorted, pipe-joined.
+    // Hash is a digest of both watched keys (sorted) — never the raw secret values.
     expect(after.environmentHash)
-      .toBe('CURSOR_API_KEY=foo|CURSOR_BASE_URL=https://example');
+      .toBe(computeEnvHash('CURSOR_API_KEY=foo\nCURSOR_BASE_URL=https://example', ['CURSOR_API_KEY', 'CURSOR_BASE_URL']));
+    expect(after.environmentHash).not.toContain('foo');
   });
 
   it('does not wipe an existing env when the hash is already up to date', () => {
     const bag: Record<string, unknown> = {};
     setProviderEnvironmentVariables(bag, 'cursor', 'CURSOR_API_KEY=foo');
-    // Prime the hash so the reconciler takes the no-op branch.
-    updateCursorProviderSettings(bag, { environmentHash: 'CURSOR_API_KEY=foo' });
+    // Prime the hash (digest) so the reconciler takes the no-op branch.
+    updateCursorProviderSettings(bag, { environmentHash: computeEnvHash('CURSOR_API_KEY=foo', ['CURSOR_API_KEY']) });
 
     const { changed } = cursorSettingsReconciler.reconcileModelWithEnvironment(bag, []);
 

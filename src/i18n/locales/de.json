@@ -712,6 +712,14 @@
     }
   },
   "env": {
+    "secretVarsHeading": "Geheime Variablen",
+    "secretVarsDesc": "API-Schlüssel und Tokens werden im System-Schlüsselbund gespeichert, nicht im Klartext der Einstellungen.",
+    "secretNotSet": "Auf diesem Gerät nicht gesetzt – wähle das Geheimnis aus oder erstelle es, um es zu verwenden.",
+    "secretRemove": "Entfernen",
+    "secretAdd": "Geheime Variable hinzufügen",
+    "secretNamePlaceholder": "VARIABLE_NAME",
+    "secretAddButton": "Hinzufügen",
+    "secretMissing": "Anbieter-Geheimnis \"{name}\" ist auf diesem Gerät nicht gesetzt – bitte in den Claudian-Einstellungen erneut eingeben.",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."

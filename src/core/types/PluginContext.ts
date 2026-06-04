@@ -5,8 +5,10 @@ import type { BrowserSelectionContext } from '../../utils/browser';
 import type { SharedAppStorage } from '../bootstrap/storage';
 import type { EventBus } from '../events/EventBus';
 import type { Logger } from '../logging/Logger';
+import type { MissingMcpSecret } from '../mcp/mcpSecrets';
 import type { AppTabManagerState } from '../providers/types';
 import type { ChatRuntime } from '../runtime/ChatRuntime';
+import type { SecretStore } from '../security/secretStore';
 import type {
   ChatMessageAction,
   ClaudianSettings,
@@ -15,7 +17,7 @@ import type {
   ConversationSnapshot,
 } from './index';
 import type { ProviderId } from './provider';
-import type { EnvironmentScope } from './settings';
+import type { EnvironmentScope, SecretEnvVarRef } from './settings';
 
 /**
  * Narrow chat-tab manager surface consumed by the provider boundary.
@@ -69,7 +71,19 @@ export interface PluginContext
   applyEnvironmentVariablesBatch(
     updates: Array<{ scope: EnvironmentScope; envText: string }>,
   ): Promise<void>;
+  /** SEC-A: persist secret-var refs and reconcile/sync the affected provider scope. */
+  applySecretEnvVars(refs: SecretEnvVarRef[], scope: EnvironmentScope): Promise<void>;
+  /** SEC-A: keychain-backed secret value store (get/set/has/list/clear). */
+  readonly secretStore: SecretStore;
+  /** SEC-A: migrate plaintext secrets (shared/provider/snippet blobs) into SecretStorage; returns whether settings changed. */
+  migrateEnvSecretsNow(): boolean;
+  /** SEC-A: drop a deleted snippet's `snippet:<id>` secret refs and clear unreferenced values. */
+  pruneSnippetSecrets(snippetId: string): boolean;
+  /** SEC-A: warn (once per id) that an MCP server's migrated secret is absent on this device. */
+  warnMissingMcpSecrets(missing: MissingMcpSecret[]): void;
   getActiveEnvironmentVariables(providerId?: ProviderId): string;
+  /** SEC-A: parsed runtime env with SecretStorage values overlaid (for child-process spawns). */
+  getResolvedEnvironmentVariables(providerId?: ProviderId): Record<string, string>;
   getEnvironmentVariablesForScope(scope: EnvironmentScope): string;
   getResolvedProviderCliPath(providerId: ProviderId): string | null;
 

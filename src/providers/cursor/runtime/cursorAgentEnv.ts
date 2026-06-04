@@ -1,9 +1,9 @@
 import { buildAllowlistedSubprocessEnvironment } from '../../../core/providers/subprocessEnvironmentAllowlist';
 import type { PluginContext } from '../../../core/types/PluginContext';
-import { getEnhancedPath, parseEnvironmentVariables } from '../../../utils/env';
+import { getEnhancedPath } from '../../../utils/env';
 
 export function buildCursorAgentEnvironment(plugin: PluginContext): Record<string, string> {
-  const customEnv = parseEnvironmentVariables(plugin.getActiveEnvironmentVariables('cursor'));
+  const customEnv = plugin.getResolvedEnvironmentVariables('cursor');
   return buildAllowlistedSubprocessEnvironment({
     processEnv: process.env,
     customEnv,

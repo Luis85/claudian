@@ -62,6 +62,7 @@ describe('ClaudianService', () => {
       },
       getResolvedProviderCliPath: jest.fn().mockReturnValue('/usr/local/bin/claude'),
       getActiveEnvironmentVariables: jest.fn().mockReturnValue(''),
+      getResolvedEnvironmentVariables: jest.fn().mockReturnValue({}),
       pluginManager: {
         getPluginsKey: jest.fn().mockReturnValue(''),
       },

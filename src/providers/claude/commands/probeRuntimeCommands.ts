@@ -3,7 +3,7 @@ import { query as agentQuery } from '@anthropic-ai/claude-agent-sdk';
 
 import type { SlashCommand } from '../../../core/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
-import { getEnhancedPath, parseEnvironmentVariables } from '../../../utils/env';
+import { getEnhancedPath } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
 import { shouldHonorClaudeProjectSettings } from '../runtime/claudeProjectTrust';
 import { createCustomSpawnFunction } from '../runtime/customSpawn';
@@ -37,9 +37,7 @@ export async function probeRuntimeCommands(plugin: PluginContext): Promise<Slash
   const cliPath = plugin.getResolvedProviderCliPath('claude');
   if (!cliPath) return [];
 
-  const customEnv = parseEnvironmentVariables(
-    plugin.getActiveEnvironmentVariables('claude')
-  );
+  const customEnv = plugin.getResolvedEnvironmentVariables('claude');
   const enhancedPath = getEnhancedPath(customEnv.PATH, cliPath);
   const claudeSettings = getClaudeProviderSettings(
     plugin.settings,

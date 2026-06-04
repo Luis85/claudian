@@ -6,6 +6,8 @@ import {
   resolveEnvironmentSnippetScope,
 } from '../../../core/providers/providerEnvironment';
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
+import { reconcileSnippetEdit, resolveSnippetEnvText } from '../../../core/providers/secretEnvVars';
+import { SECRET_VALUE_PLACEHOLDER } from '../../../core/security/secretIds';
 import type { EnvironmentScope, EnvSnippet } from '../../../core/types';
 import { VIEW_TYPE_CLAUDIAN } from '../../../core/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
@@ -32,6 +34,20 @@ export class EnvSnippetModal extends Modal {
     this.snippet = snippet;
     this.snippetScope = scope;
     this.onSave = onSave;
+  }
+
+  /**
+   * SEC-A: render the snippet's stored (sanitized) env text plus a masked
+   * placeholder row per migrated secret, so the user can see and remove a secret
+   * without its value ever being shown. Reconciled on save (see reconcileSnippetEdit).
+   */
+  private buildEditableSnippetEnv(snippet: EnvSnippet): string {
+    const refs = (this.plugin.settings.secretEnvVars ?? []).filter(
+      (ref) => ref.scope === `snippet:${snippet.id}`,
+    );
+    const base = snippet.envVars.replace(/\s+$/, '');
+    const sentinels = refs.map((ref) => `${ref.name}=${SECRET_VALUE_PLACEHOLDER}`);
+    return [base, ...sentinels].filter((line) => line.length > 0).join('\n');
   }
 
   onOpen() {
@@ -178,7 +194,9 @@ export class EnvSnippetModal extends Modal {
       .setDesc(t('settings.envSnippets.modal.envVarsPlaceholder'))
       .addTextArea((text) => {
         envVarsEl = text.inputEl;
-        const envVarsToShow = this.snippet?.envVars ?? this.plugin.getEnvironmentVariablesForScope(this.snippetScope);
+        const envVarsToShow = this.snippet
+          ? this.buildEditableSnippetEnv(this.snippet)
+          : this.plugin.getEnvironmentVariablesForScope(this.snippetScope);
         text.setValue(envVarsToShow);
         text.inputEl.rows = 8;
         text.inputEl.addEventListener('blur', () => renderContextLimitFields());
@@ -324,6 +342,9 @@ export class EnvSnippetManager {
       (snippet) => {
         void (async (): Promise<void> => {
           this.plugin.settings.envSnippets.push(snippet);
+          // SEC-A: move secret-shaped lines into SecretStorage (under this
+          // snippet's scope) so they never persist in plaintext.
+          this.reconcileSnippetSecrets(snippet);
           await this.plugin.saveSettings();
           this.render();
           new Notice(t('settings.envSnippets.saved', { name: snippet.name }));
@@ -334,21 +355,43 @@ export class EnvSnippetManager {
   }
 
   private async insertSnippet(snippet: EnvSnippet) {
-    const snippetContent = snippet.envVars.trim();
-    const updates = getEnvironmentScopeUpdates(
-      snippetContent,
-      snippet.scope ?? this.scope,
+    // SEC-A: re-inject this snippet's migrated secret values (held inert under
+    // `snippet:<id>` refs) so insertion activates them in the target scope. A
+    // secret missing on this device is reported and skipped (re-entry prompt).
+    const snippetRefs = (this.plugin.settings.secretEnvVars ?? []).filter(
+      (ref) => ref.scope === `snippet:${snippet.id}`,
     );
+    const { envText, missing } = resolveSnippetEnvText(
+      snippet.envVars,
+      snippetRefs,
+      (id) => this.plugin.secretStore.get(id),
+    );
+    if (missing.length > 0) {
+      new Notice(t('env.secretMissing', { name: missing.map((ref) => ref.name).join(', ') }));
+    }
 
-    if (updates.length === 1) {
-      const [update] = updates;
-      this.syncTextareaValue(update.scope, update.envText);
-      await this.plugin.applyEnvironmentVariables(update.scope, update.envText);
-    } else if (updates.length > 1) {
-      for (const update of updates) {
+    const snippetContent = envText.trim();
+    // SEC-A: when the snippet resolves to empty — e.g. it consists only of migrated
+    // secret refs that are absent on this device — do NOT apply. getEnvironmentScopeUpdates
+    // would return a fallback-scope update with empty text, and applying it would WIPE
+    // the target scope's env instead of doing nothing. The missing-secret warning above
+    // prompts re-entry; env limits/aliases below still apply.
+    if (snippetContent) {
+      const updates = getEnvironmentScopeUpdates(
+        snippetContent,
+        snippet.scope ?? this.scope,
+      );
+
+      if (updates.length === 1) {
+        const [update] = updates;
         this.syncTextareaValue(update.scope, update.envText);
+        await this.plugin.applyEnvironmentVariables(update.scope, update.envText);
+      } else if (updates.length > 1) {
+        for (const update of updates) {
+          this.syncTextareaValue(update.scope, update.envText);
+        }
+        await this.plugin.applyEnvironmentVariablesBatch(updates);
       }
-      await this.plugin.applyEnvironmentVariablesBatch(updates);
     }
 
     // Legacy snippets without contextLimits don't modify limits
@@ -401,6 +444,9 @@ export class EnvSnippetManager {
           const index = this.plugin.settings.envSnippets.findIndex(s => s.id === snippet.id);
           if (index !== -1) {
             this.plugin.settings.envSnippets[index] = updatedSnippet;
+            // SEC-A: reconcile placeholders/removals, migrate new secrets, and
+            // prune refs the user dropped from the editor.
+            this.reconcileSnippetSecrets(updatedSnippet);
             await this.plugin.saveSettings();
             this.render();
             new Notice(t('settings.envSnippets.updated', { name: updatedSnippet.name }));
@@ -411,8 +457,35 @@ export class EnvSnippetManager {
     modal.open();
   }
 
+  /**
+   * SEC-A: reconcile a saved/edited snippet's secrets. The editor shows a masked
+   * placeholder row per existing secret; here we strip those rows, prune refs the
+   * user removed (so a deleted credential isn't re-injected on insert), clear the
+   * orphaned values, then migrate any real secret values typed in.
+   */
+  private reconcileSnippetSecrets(snippet: EnvSnippet): void {
+    const scope: EnvironmentScope = `snippet:${snippet.id}`;
+    const snippetRefs = (this.plugin.settings.secretEnvVars ?? []).filter((ref) => ref.scope === scope);
+    const { envVars, keptRefNames } = reconcileSnippetEdit(snippet.envVars, snippetRefs);
+    snippet.envVars = envVars;
+
+    const dropped = snippetRefs.filter((ref) => !keptRefNames.has(ref.name));
+    if (dropped.length > 0) {
+      const next = (this.plugin.settings.secretEnvVars ?? []).filter((ref) => !dropped.includes(ref));
+      this.plugin.settings.secretEnvVars = next;
+      const stillUsed = new Set(next.map((ref) => ref.secretId));
+      for (const ref of dropped) {
+        if (!stillUsed.has(ref.secretId)) this.plugin.secretStore.clear(ref.secretId);
+      }
+    }
+
+    this.plugin.migrateEnvSecretsNow();
+  }
+
   private async deleteSnippet(snippet: EnvSnippet) {
     this.plugin.settings.envSnippets = this.plugin.settings.envSnippets.filter(s => s.id !== snippet.id);
+    // SEC-A: drop the deleted snippet's secret refs + clear unreferenced values.
+    this.plugin.pruneSnippetSecrets(snippet.id);
     await this.plugin.saveSettings();
     this.render();
     new Notice(t('settings.envSnippets.deleted', { name: snippet.name }));
