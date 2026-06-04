@@ -1,5 +1,5 @@
 ---
-status: approved
+status: shipped
 parent: Quality
 ---
 # main.ts refactor — design

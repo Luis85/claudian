@@ -93,7 +93,6 @@ dev
 # package-lock.json
 
 # Claude session config + worktrees (never commit these — worktrees show up as gitlinks)
-.claude/
 /.claude/worktrees/
 /.claude/worktrees/**
 /.claudian/

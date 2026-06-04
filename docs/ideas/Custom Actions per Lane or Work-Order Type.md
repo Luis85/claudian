@@ -1,5 +1,7 @@
 ---
 priority: 2 - normal
+status: open
+tracked-by: "[[docs/issues/custom-actions-per-lane.md]]"
 relations:
   - "[[Agent Kanban Board]]"
 ---

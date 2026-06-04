@@ -1,5 +1,5 @@
 ---
-status: approved
+status: shipped
 parent: "[[Agent Kanban Board]]"
 ---
 # Agent Board Configurable Lanes + Board QoL Design

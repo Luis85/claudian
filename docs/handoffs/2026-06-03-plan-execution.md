@@ -1,7 +1,8 @@
 ---
 title: Session handoff — 2026-06-03 (Claudian plan execution)
 date: 2026-06-03
-status: in progress — Q-1 i18n sweep ~25% complete; ADR-0001 P2b deferred; ADR-0001 P3 blocked on PR2
+status: superseded
+superseded-by: "[[docs/handoffs/2026-06-04-q1-complete.md]]"
 scope: whole-codebase plan execution (Phase 1a/1b/1c, ADR-0001 P1/P2a, Q-NEW-1, Q-1 partial)
 branch: main (direct commits, no feature branch)
 head-at-handoff: c4ca6ad

@@ -1,11 +1,14 @@
 ---
 title: Translate validator and parser helper strings used by Notice sites
-status: open
-priority: P2
+status: partially-shipped
+priority: 2 - normal
 related:
   - "[[docs/reviews/2026-06-02-codebase-review-and-improvement-plan.md]]"
-  - "Q-1 Notice i18n sweep"
+  - Q-1 Notice i18n sweep
 created: 2026-06-03
+type: issue
+relations:
+  - Cross Cutting
 ---
 
 # Translate validator + parser helper strings
