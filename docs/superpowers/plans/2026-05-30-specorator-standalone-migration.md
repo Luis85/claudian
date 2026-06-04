@@ -74,6 +74,8 @@ Expected: remote branch tracking set.
 
 ### Task 2: Rewrite `manifest.json` for Specorator v1.0.0
 
+> **The manifest/package snapshots in this plan (Tasks 2–3) are illustrative**, captured when the plan was drafted, and drift from the repo over time. Before each step, diff against the **live** `manifest.json` / `package.json` rather than the inline copy. Only these are normative: **reset** `id → specorator` and `version → 1.0.0`; **preserve** `minAppVersion 1.11.5` (the SecretStorage floor); carry author/repo/description per the target block. Current live values at last edit: `id: claudian-cursor`, `version: 3.3.0`, `minAppVersion: 1.11.5`.
+
 **Files:**
 - Modify: `D:/Projects/claudian/manifest.json`
 
