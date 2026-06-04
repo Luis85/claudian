@@ -208,6 +208,16 @@ export interface MigrationSecretStore {
   list(): string[];
 }
 
+/**
+ * Provider-owned structured settings fields that hold a plaintext secret. SEC-A
+ * migrates each into a `provider:<id>` secret ref under `envName` and removes the
+ * field. (Codex's `apiKey` was also dead — never read — so this additionally makes
+ * a previously-entered key take effect via the env overlay.)
+ */
+const PROVIDER_CONFIG_SECRET_FIELDS: ReadonlyArray<{ providerId: ProviderId; field: string; envName: string }> = [
+  { providerId: 'codex', field: 'apiKey', envName: 'OPENAI_API_KEY' },
+];
+
 export function migrateEnvSecrets(
   settings: Record<string, unknown>,
   providerIds: ProviderId[],
@@ -280,6 +290,32 @@ export function migrateEnvSecrets(
   }
 
   if (hadLegacy) changed = true; // the legacy field was removed → settings changed
+
+  // Provider-owned STRUCTURED secret fields (not env blobs): translate any
+  // plaintext value into a provider-scoped secret ref and strip the field, so the
+  // key leaves the settings file. A value already covered by an existing ref of the
+  // same scope/name is just stripped (that ref wins). Today this is only Codex's
+  // dead `apiKey` field; migrating it as OPENAI_API_KEY also makes it take effect.
+  const providerConfigs = settings.providerConfigs as Record<string, Record<string, unknown>> | undefined;
+  if (providerConfigs) {
+    for (const { providerId, field, envName } of PROVIDER_CONFIG_SECRET_FIELDS) {
+      const config = providerConfigs[providerId];
+      const value = config?.[field];
+      if (typeof value !== 'string' || value.length === 0) continue;
+      const scope: EnvironmentScope = `provider:${providerId}`;
+      const alreadyCovered =
+        existing.some((ref) => ref.scope === scope && ref.name === envName) ||
+        newRefs.some((ref) => ref.scope === scope && ref.name === envName);
+      if (!alreadyCovered) {
+        const id = uniquifySecretId(migratedEnvSecretId(scope, envName), usedIds);
+        usedIds.add(id);
+        setSecret(id, value);
+        newRefs.push({ scope, name: envName, secretId: id });
+      }
+      delete config[field];
+      changed = true;
+    }
+  }
 
   if (newRefs.length > 0 || clearedRefs.length > 0) {
     // Prune only the SPECIFIC cleared refs (by identity) — the UI lets multiple

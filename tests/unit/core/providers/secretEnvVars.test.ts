@@ -224,6 +224,50 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
     return { changed, stored };
   }
 
+  it('migrates a plaintext providerConfigs.codex.apiKey into a provider:codex secret and strips the field', () => {
+    const settings: Record<string, unknown> = {
+      providerConfigs: { codex: { enabled: true, apiKey: 'sk-codex' } },
+      secretEnvVars: [],
+    };
+    const { changed, stored } = run(settings);
+
+    expect(changed).toBe(true);
+    // Field stripped from plaintext settings.
+    expect((settings.providerConfigs as any).codex.apiKey).toBeUndefined();
+    // Translated into a provider:codex OPENAI_API_KEY secret ref (now actually used).
+    expect(settings.secretEnvVars).toEqual([
+      { scope: 'provider:codex', name: 'OPENAI_API_KEY', secretId: 'claudian-env-provider-codex-openai-api-key' },
+    ]);
+    expect(stored.get('claudian-env-provider-codex-openai-api-key')).toBe('sk-codex');
+  });
+
+  it('strips the apiKey field without duplicating when a provider:codex OPENAI_API_KEY ref already exists', () => {
+    const settings: Record<string, unknown> = {
+      providerConfigs: { codex: { apiKey: 'sk-dead' } },
+      secretEnvVars: [
+        { scope: 'provider:codex', name: 'OPENAI_API_KEY', secretId: 'existing-id' },
+      ],
+    };
+    const { changed } = run(settings, { 'existing-id': 'sk-live' });
+
+    expect(changed).toBe(true);
+    expect((settings.providerConfigs as any).codex.apiKey).toBeUndefined();
+    // The existing (functional) ref wins; the dead value is discarded, not duplicated.
+    expect(settings.secretEnvVars).toEqual([
+      { scope: 'provider:codex', name: 'OPENAI_API_KEY', secretId: 'existing-id' },
+    ]);
+  });
+
+  it('leaves settings untouched when codex.apiKey is absent or empty', () => {
+    const settings: Record<string, unknown> = {
+      providerConfigs: { codex: { enabled: true, apiKey: '' } },
+      secretEnvVars: [],
+    };
+    const { changed } = run(settings);
+    expect(changed).toBe(false);
+    expect(settings.secretEnvVars).toEqual([]);
+  });
+
   it('migrates shared, provider, and snippet blobs, leaving non-secrets', () => {
     const settings: Record<string, unknown> = {
       sharedEnvironmentVariables: 'ANTHROPIC_API_KEY=sk-a\nHTTP_PROXY=http://p',
