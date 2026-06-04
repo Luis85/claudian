@@ -41,6 +41,7 @@ import { InlinePlanApproval, type PlanApprovalDecision } from '../rendering/Inli
 import type { MessageRenderer } from '../rendering/MessageRenderer';
 import { setToolIcon, updateToolCallResult } from '../rendering/ToolCallRenderer';
 import type { SubagentManager } from '../services/SubagentManager';
+import { persistPastedImages } from '../services/persistPastedImages';
 import type { ChatState } from '../state/ChatState';
 import type { FileContextManager } from '../ui/FileContext';
 import type { ImageContextManager } from '../ui/ImageContext';
@@ -319,6 +320,9 @@ export class InputController {
     // Slash commands are passed directly to SDK for handling
     // SDK handles expansion, $ARGUMENTS, @file references, and frontmatter options
     const images = imageOverride ?? imageContextManager?.getAttachedImages() ?? [];
+    if (images.length > 0) {
+      await persistPastedImages(this.deps.plugin.app, images);
+    }
     const imagesForMessage = images.length > 0 ? [...images] : undefined;
     const isCompact = /^\/compact(\s|$)/i.test(content);
 
