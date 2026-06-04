@@ -1,8 +1,9 @@
 ---
 title: Quick action favorites in right-click menu
 date: 2026-06-04
-status: draft
+status: shipped
 scope: features/quickActions
+parent: "[[Quick Actions]]"
 ---
 
 ## Problem

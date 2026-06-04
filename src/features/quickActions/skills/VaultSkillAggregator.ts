@@ -1,15 +1,12 @@
 import type { Logger } from '../../../core/logging/Logger';
 import type { ProviderCommandEntry } from '../../../core/providers/commands/ProviderCommandEntry';
-import type { ProviderRecord, SkillTabEntry, VaultSkillSource } from './types';
-
-/**
- * Optional dependencies for `VaultSkillAggregator`. A logger lets the
- * aggregator emit a `warn` breadcrumb when a single provider's
- * `listVaultEntries()` rejects, instead of silently swallowing.
- */
-export interface VaultSkillAggregatorOptions {
-  logger?: Logger;
-}
+import type { ProviderId } from '../../../core/providers/types';
+import type {
+  ProviderRecord,
+  SkillTabEntry,
+  VaultSkillAggregatorOptions,
+  VaultSkillSource,
+} from './types';
 
 /**
  * Walks every provider record returned by the injected factory, asks each
@@ -44,6 +41,24 @@ export class VaultSkillAggregator implements VaultSkillSource {
       ),
     );
     return buckets.flat();
+  }
+
+  listCachedNow(): SkillTabEntry[] {
+    return [];
+  }
+
+  async listAllStreaming(
+    _onProviderResolved: (providerId: ProviderId, entries: SkillTabEntry[]) => void,
+  ): Promise<void> {
+    // Implementation in Task 8
+  }
+
+  invalidate(_providerId?: ProviderId): void {
+    // Implementation in Task 5
+  }
+
+  dispose(): void {
+    // Implementation in Task 5
   }
 
   private async collectFromProvider(record: ProviderRecord): Promise<SkillTabEntry[]> {

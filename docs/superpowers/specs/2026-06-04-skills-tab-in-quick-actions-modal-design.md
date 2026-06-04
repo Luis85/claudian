@@ -1,8 +1,9 @@
 ---
 title: Skills tab in quick actions modal
 date: 2026-06-04
-status: implemented
+status: shipped
 scope: features/quickActions, core/providers, providers/{claude,codex,opencode,cursor}
+parent: "[[Quick Actions]]"
 ---
 
 # Skills tab in quick actions modal

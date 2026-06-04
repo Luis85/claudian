@@ -3,6 +3,7 @@ title: Thumbs up / thumbs down feedback actions on agent responses
 date: 2026-06-04
 status: shipped
 scope: features/chat, main.ts, i18n
+parent: "[[Chat]]"
 ---
 
 # Thumbs up / thumbs down feedback actions on agent responses

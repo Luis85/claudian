@@ -3,6 +3,7 @@ title: Skills tab responsiveness via persistent index, pre-warm, progressive ren
 date: 2026-06-04
 status: draft
 scope: features/quickActions
+parent: "[[Quick Actions]]"
 ---
 
 ## Problem

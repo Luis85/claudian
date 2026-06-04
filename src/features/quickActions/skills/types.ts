@@ -1,5 +1,9 @@
+import type { ClaudianEventMap } from '../../../app/events/claudianEvents';
+import type { EventBus } from '../../../core/events/EventBus';
+import type { Logger } from '../../../core/logging/Logger';
 import type { ProviderCommandCatalog } from '../../../core/providers/commands/ProviderCommandCatalog';
 import type { ProviderId } from '../../../core/providers/types';
+import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
 
 /**
  * A vault-discovered skill surfaced in the Quick Actions modal Skills tab.
@@ -38,10 +42,36 @@ export interface ProviderRecord {
 }
 
 /**
- * Minimal interface the Skills tab needs from a skill source. Lets the modal
- * couple to behavior, not to the concrete `VaultSkillAggregator` class, and
- * gives tests a small seam without `as unknown` casts.
+ * Read API consumed by `SkillsTabRenderer`.
+ *
+ * - `listAll`: full async fetch (cache-aware). Existing callers keep working.
+ * - `listCachedNow`: synchronous, returns whatever is currently in the
+ *   in-memory cache; empty if cold. Used for instant Phase-A paint.
+ * - `listAllStreaming`: walks providers concurrently, fires `onProviderResolved`
+ *   per provider as its fetch settles. Used for Phase-B refresh.
+ * - `invalidate`: drop one bucket (with providerId) or all (without).
+ * - `dispose`: unsubscribe EventBus, clear caches, flush pending persist.
  */
 export interface VaultSkillSource {
   listAll(): Promise<SkillTabEntry[]>;
+  listCachedNow(): SkillTabEntry[];
+  listAllStreaming(
+    onProviderResolved: (providerId: ProviderId, entries: SkillTabEntry[]) => void,
+  ): Promise<void>;
+  invalidate(providerId?: ProviderId): void;
+  dispose(): void;
+}
+
+export interface VaultSkillAggregatorOptions {
+  logger?: Logger;
+  /** Defaults to 60_000 ms. */
+  ttlMs?: number;
+  /** When supplied, aggregator subscribes to `vaultSkill.changed`. */
+  eventBus?: EventBus<ClaudianEventMap>;
+  /** When supplied, aggregator hydrates from / persists to this adapter. */
+  cacheAdapter?: VaultFileAdapter;
+  /** Defaults to `.claudian/cache/skill-index.json`. */
+  cachePath?: string;
+  /** Clock injection for deterministic tests. Defaults to `Date.now`. */
+  nowMs?: () => number;
 }

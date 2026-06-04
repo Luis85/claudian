@@ -11,6 +11,7 @@ tags:
   - chat
   - file-context
   - inline-edit
+parent: "[[Chat]]"
 ---
 
 # Drag and drop files or folders into the chat to add to context

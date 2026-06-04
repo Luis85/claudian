@@ -5,6 +5,7 @@ status: shipped
 scope: features/chat — image attachments, persistence, rendering
 relations:
   - "[[Pasted images or files to the chat dont get picked up]]"
+parent: Infrastructure
 ---
 
 ## Problem

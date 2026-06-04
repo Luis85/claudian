@@ -3,6 +3,7 @@ title: Context menu quick actions
 date: 2026-06-04
 status: shipped
 scope: features/quickActions, app/commands
+parent: "[[Quick Actions]]"
 ---
 
 # Context menu quick actions

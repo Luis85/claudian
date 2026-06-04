@@ -70,6 +70,10 @@ function makeStorage(actions: QuickAction[]): QuickActionStorage {
 // favorites assertions stay focused on the Quick Actions tab.
 const NOOP_AGGREGATOR: VaultSkillSource = {
   listAll: jest.fn().mockResolvedValue([]),
+  listCachedNow: jest.fn().mockReturnValue([]),
+  listAllStreaming: jest.fn().mockResolvedValue(undefined),
+  invalidate: jest.fn(),
+  dispose: jest.fn(),
 };
 const NOOP_ON_RUN_SKILL = jest.fn();
 const NOOP_ON_EDIT_SKILL = jest.fn();

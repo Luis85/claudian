@@ -3,6 +3,7 @@ title: Idea to Design quick action
 date: 2026-06-04
 status: shipped
 scope: docs/quick-actions
+parent: "[[Quick Actions]]"
 ---
 
 # Idea to Design quick action
