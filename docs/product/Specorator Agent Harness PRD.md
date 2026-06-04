@@ -13,6 +13,9 @@ method: two research rounds, 8 parallel subagents total — round 1 (codebase ha
 tags: [prd, specorator, agent-harness, obsidian, onboarding, safety, ux]
 related:
   - "[[Specorator]]"
+  - "[[Specorator RAG Layer Spec]]"
+  - "[[Specorator Architecture (C4)]]"
+  - "[[Specorator UI Map]]"
   - "[[2026-05-28-plugin-improvement-research-proposal]]"
   - "[[2026-05-28-standalone-product-vision]]"
   - "[[../adr/0001-transport-agnostic-provider-seam]]"
@@ -159,7 +162,7 @@ These shape every feature and are confirmed by the platform research:
 - **Desktop vs mobile fork.** Anything needing Node — CLI spawning, Shadow-Git, sql.js/Transformers.js native paths — is desktop-only. v1 is desktop-only.
 - **Secrets via Obsidian `SecretStorage`** (`app.secretStorage`, wrapped by the existing `SecretStore` — `src/core/security/secretStore.ts`), encrypted at rest by the OS keychain (Electron `safeStorage` *under the hood*) since Obsidian 1.11.5 (the plugin's `minAppVersion`). **Target this contract, not raw Electron `safeStorage`:** the API is `setSecret`/`getSecret`/`listSecrets` (synchronous, no delete, no `isEncryptionAvailable`). Secrets live in per-device app storage **outside** the vault and **do not sync** — store only the secret *id* in settings and have the user re-enter the value per device. See `[[2026-06-04-obsidian-secret-storage]]`.
 - **No real renderer sandbox.** Node integration is on; there is no OS sandbox boundary available to a plugin. The "sandbox" component is defence-in-depth only.
-- **Renderer-friendly building blocks:** `isomorphic-git` (Shadow-Git checkpoints), `sql.js` (local index), `@huggingface/transformers` (offline embeddings). All three have known mobile-reliability caveats; desktop is solid.
+- **Renderer-friendly building blocks:** `isomorphic-git` (Shadow-Git checkpoints), `sql.js` (local index), `@huggingface/transformers` (offline embeddings) — the **no-install default** stack for the RAG layer. All three have known mobile-reliability caveats; desktop is solid. Higher-performance RAG backends (**Ollama** local server, **LanceDB** native module) are **opt-in and desktop-only** — they add an install step, so they are never the default for non-technical users (see [[Specorator RAG Layer Spec]], [OQ8](#13-open-questions--risks)).
 
 ---
 
@@ -192,7 +195,7 @@ Priority: **M** = Must (MVP), **S** = Should (v1), **C** = Could (v2+). Each fea
 - **F-ON-7 [S] Auto-detection for Opencode & Cursor**, parity with Claude's path probing; document Windows `.cmd`-wrapper caveat in-product, not just README.
 - **F-ON-8 [S] In-app auto-install + managed runtime (zero-*terminal*).** Install/fetch a provider runtime on first run, in-app, with progress UI — *not* a self-update mechanism (which Obsidian policy forbids), but "installing an additional program" (which it allows, with README disclosure). Removes the PATH/terminal failure for the default provider. Licensing reality (round 2): **Codex (Apache-2.0) and Opencode (MIT) are redistributable/auto-fetchable cleanly**; **Claude Code's SDK already bundles a per-platform binary** ("no separate install") but still needs Node on the npm route, and is BYOK-only (no claude.ai login, own branding); **Cursor is proprietary, no npm, account-gated — auto-running the vendor installer is the best available, not "zero install."** Verify each license before shipping.
 - **F-ON-9 [C] Free on-ramp.** A documented no-credit-card path (e.g. a free model tier) so the billing wall isn't the first wall.
-- **F-ON-10 [S] "Lite" direct-API onboarding provider (the only true zero-install path).** A built-in, read-mostly provider that calls the model directly via the bundled SDK / `requestUrl` + a pasted BYOK key — **no CLI, no Node, no terminal**, and the one path that can also work on mobile. Scope is deliberately narrow: vault Q&A and reads over the Vault MCP tools, single-shot or shallow, framed as "Quick answers" that **escalate to a full CLI provider for edits and power features**. This does *not* violate NG5 ("don't rebuild the loop") precisely because it is read-mostly and never reimplements the write/approve/undo agentic loop the co-evolution argument protects. Strongest single move for UC-1.
+- **F-ON-10 [S] "Lite" direct-API onboarding provider (the only true zero-install path).** A built-in, read-mostly provider that calls the model directly via the bundled SDK / `requestUrl` + a pasted BYOK key — **no CLI, no Node, no terminal**, and the one path that can also work on mobile. Scope is deliberately narrow: vault Q&A and reads over the Vault MCP tools, single-shot or shallow, framed as "Quick answers" that **escalate to a full CLI provider for edits and power features**. This does *not* violate NG5 ("don't rebuild the loop") precisely because it is read-mostly and never reimplements the write/approve/undo agentic loop the co-evolution argument protects. Its answers **are the RAG layer's grounded "Ask Vault"** (F-RAG-4) — cited from real notes, not free-form generation. Strongest single move for UC-1.
 
 ### 8.2 Trust, safety & undo — *closes G-B*; see [§9](#9-security--trust-model)
 
@@ -211,11 +214,22 @@ Priority: **M** = Must (MVP), **S** = Should (v1), **C** = Could (v2+). Each fea
 - **F-VAULT-2 [M] Core note tools:** `read_note`, `create_note`, `edit_note` (section/block-aware), `move/rename` (auto-updates wikilinks), `list`, `delete` (to trash, recoverable, gated).
 - **F-VAULT-3 [M] Structure tools:** `frontmatter_read/edit`, `tag_edit`, `get_backlinks`, `get_outgoing_links`, `resolve_wikilink`.
 - **F-VAULT-4 [M] Keyword search** over the vault (full-text).
-- **F-VAULT-5 [S] Semantic search** (local `sql.js` index + `@huggingface/transformers` embeddings; offline-capable) with **wikilink graph expansion**.
+- **F-VAULT-5 [S] Semantic search** — **folded into the RAG layer (§8.3a, F-RAG-3)**: local index + embeddings, offline-capable, with wikilink graph expansion.
 - **F-VAULT-6 [S] Dataview & Bases query tools** so the agent reads the structured layer users already maintain.
 - **F-VAULT-7 [C] Canvas / Excalidraw generation** as first-class outputs.
 - **F-VAULT-8 [C] Cross-encoder reranking** for retrieval quality.
 - **F-VAULT-9 [C] Block-level provenance / ingest** (`/ingest`, `/ingest-deep`): captured claims carry a citation that resolves to the source paragraph. Granularity for MVP is [OQ4](#12-open-questions--risks).
+
+### 8.3a Retrieval & grounding — the RAG layer — *closes G-C (recall half); feeds F-VERIFY & F-ON-10*
+
+Retrieval is a **harness component, not a separate plugin** — it curates the smallest set of high-signal tokens (the context-rot defense) and **publishes itself as Vault MCP tools so every provider retrieves**, not just a built-in chat. The hexagonal ports (embedding / vector / keyword / LLM) make the backend a switchable *profile*, which is exactly the "modular, switchable" design rule. Full implementation spec: **[[Specorator RAG Layer Spec]]**.
+
+- **F-RAG-1 [S] Vault index.** Heading-aware chunking (remark AST), frontmatter/tags/links preserved, stable content-hash chunk IDs; manual rebuild; **respects `.obsidian-agentignore`** and exclude rules (a privacy-locked folder is never embedded).
+- **F-RAG-2 [S] Pluggable embedding + vector store (ports).** **Default = no-install** (Transformers.js in-renderer + sql.js/pure-JS). **Opt-in = local power** (Ollama + LanceDB, desktop-only, native) and **BYOK** (cloud embeddings, disclosed). Backend default is [OQ8](#13-open-questions--risks).
+- **F-RAG-3 [S] Hybrid retrieval.** Vector + FlexSearch keyword + graph boost, with current-note bias (`finalScore = 0.7·vector + 0.25·keyword + 0.05·graph`). **Absorbs F-VAULT-5.**
+- **F-RAG-4 [M] Grounded "Ask Vault".** Answers **only** from retrieved context, names what's missing, and cites sources as `[[note#heading]]` links. This is the **Lite provider** read path (F-ON-10) and can ship **keyword-only before embeddings exist**. Treats retrieved chunks as *data, not instructions* (§9).
+- **F-RAG-5 [S] Exposed as Vault MCP tools** (`semantic_search`, `ask_vault`) so all four CLI providers retrieve mid-task — the reason RAG is a harness component rather than a silo.
+- **F-RAG-6 [C] Index freshness & quality.** Incremental indexing on file change · embedding cache · graph-aware retrieval (backlinks) · cross-encoder rerank (shared with F-VAULT-8) · related-notes panel.
 
 ### 8.4 Memory — *closes G-C (memory half)*
 
@@ -265,7 +279,7 @@ This is the layer that turns frontier CLI agents into something a non-technical 
 
 A prose vault has no test suite, so "verification" means **structured checking against sources and structure, cheapest-first** — deterministic gates before any model judgement (the LLM-as-judge literature warns of "illusory consensus").
 
-- **F-VERIFY-1 [S] Deterministic pre-approval checks.** Before the user is asked to approve, run zero-LLM gates and surface failures inline in the diff: **wikilink/link integrity** (every link the agent wrote resolves — uniquely strong in Obsidian via the metadata cache, the closest thing a vault has to a test suite), **citation resolves** (every "sourced" claim points to a real note/block/URL), **frontmatter schema** validation against the vault's Dataview/Bases types, and **diff containment** (only the approved files were touched — pairs with Shadow-Git + audit log).
+- **F-VERIFY-1 [S] Deterministic pre-approval checks.** Before the user is asked to approve, run zero-LLM gates and surface failures inline in the diff: **wikilink/link integrity** (every link the agent wrote resolves — uniquely strong in Obsidian via the metadata cache, the closest thing a vault has to a test suite), **citation resolves** (every "sourced" claim points to a real note/block/URL), **frontmatter schema** validation against the vault's Dataview/Bases types, and **diff containment** (only the approved files were touched — pairs with Shadow-Git + audit log). The RAG layer's `[[note#heading]]` citations (F-RAG-4) provide the resolvable spans this check verifies against.
 - **F-VERIFY-2 [C] Model-graded checks.** Rubric-based LLM-as-judge (explicit rubric, randomised order) + **citation-faithfulness** (is each claim entailed by its cited span?) + optional cross-family consensus — weighted *below* the deterministic gates.
 - **F-VERIFY-3 [C] Red-team / eval harness.** A Promptfoo indirect-prompt-injection suite over a poisoned test vault (assert no remote-image/link in output when A is live; no private content in egress; the gate fired — and explicitly assert Cursor's known gap), plus Jest unit tests for the Rule-of-Two state machine (§9.2) and the exfil/hidden-text sanitizers. Track pass-rate as a trend (like `tests/perf/`); **green ≠ secure** (the attacker moves second).
 
@@ -367,6 +381,13 @@ Grouped by theme; priority in brackets. "Vault agent" = the active provider runn
 - **US-28 [S]** As Devin, I want to author a reusable workflow once and run it on whatever provider a chat is using. *(F-HARN-4)*
 - **US-29 [S]** As a careful user, I want to see which providers a skill/tool/rule actually works on, with no silent failures. *(F-HARN-5)*
 
+### Retrieval (RAG)
+- **US-30 [M]** As Maya, I want to ask my whole vault a question and get an answer grounded in my notes with clickable sources. *(F-RAG-4)*
+- **US-31 [S]** As Sam, when I'm reading a note, I want "Ask Current Note" to prefer that note's content. *(F-RAG-3)*
+- **US-32 [S]** As Priya, I want retrieval and embeddings to run locally with no install and nothing leaving my machine. *(F-RAG-2)*
+- **US-33 [S]** As Devin, I want my CLI agent to search my vault as a tool mid-task, so it grounds its edits in my actual notes. *(F-RAG-5)*
+- **US-34 [M]** As any user, I want the answer to say when my notes don't cover something, instead of inventing it. *(F-RAG-4)*
+
 ---
 
 ## 11. Use cases (end-to-end)
@@ -381,6 +402,8 @@ Grouped by theme; priority in brackets. "Vault agent" = the active provider runn
 - **UC-8 — Memory continuity.** Sam tells the agent his preferred note structure once; it's written to the vault profile; next week a new chat already follows it. (F-MEM-1)
 - **UC-9 — Set a rule once, applies everywhere.** Sam opens the Harness Library → "Add rule" → types "Keep daily notes in `Journal/`, never delete tasks." → saved as a vault note → compiled to each provider's native rules/instructions. His next chats on **Codex and Cursor both respect it** — no file editing, no per-provider setup. (F-HARN-1/2/5)
 - **UC-10 — Connect a tool from a gallery.** Maya wants web search: Harness Library → "Add tool" → picks a search MCP from the catalog → pastes a key (stored in the keychain) → it's live on every MCP-capable provider, with a clear note where it isn't. She never sees JSON. (F-HARN-3)
+- **UC-11 — Grounded Ask Vault (zero-install).** Maya (Lite provider, no CLI) asks "what did I conclude about spaced repetition?" → hybrid retrieval over her index → a grounded answer citing `[[note#heading]]` links; the deterministic citation check confirms every link resolves; if her notes don't cover it, the answer says so rather than inventing. (F-RAG-3/4, F-VERIFY-1, F-ON-10)
+- **UC-12 — Agent grounds an edit.** Mid-task, Devin's Claude agent calls `semantic_search` (a Vault MCP tool) to pull his prior decisions before drafting a new section, and cites them — retrieval reaches the *delegated* provider, not just the built-in chat. (F-RAG-5, F-VAULT-1)
 
 ---
 
@@ -392,11 +415,11 @@ Sequenced so the **non-technical wins land first** (they're the point of the rev
 Stable Vault MCP scaffolding and tool-registry interface (backend-agnostic), `safeStorage` key plumbing, persistent log/audit substrate, desktop guard. *(F-ON-4/6, F-SAFE-5 substrate, F-VAULT-1 scaffold)*
 
 ### Phase 1 — Trust & onboarding MVP (the heart of this PRD)
-**Lite direct-API onboarding provider** · provider validation on enable · setup wizard · diagnostics · plain-language errors · in-app key entry (`SecretStore`) · **whole-vault Shadow-Git undo (turn-level)** · pre-execution expanded-diff approval · safe defaults · `.obsidian-agentignore` · core Vault MCP note/structure/keyword tools · cost & context HUD · **Harness Library shell with provider-agnostic Rules and a Tool (MCP) gallery**.
-**Definition of done:** Maya installs and gets a first answer with **no terminal and no external install** (lite provider); "what are my most-linked notes about X?" works; a multi-step edit is approved, applied, and undone in one click — on a non-Claude provider; a rule set once is respected across two different providers with no file editing. *(F-ON-1/2/3/4/5/6/10, F-SAFE-1/2/3/4, F-VAULT-1/2/3/4, F-CTX-1, F-HARN-1/2/3)*
+**Lite direct-API onboarding provider** · **keyword "Ask Vault" (grounded first answers, no embeddings yet)** · provider validation on enable · setup wizard · diagnostics · plain-language errors · in-app key entry (`SecretStore`) · **whole-vault Shadow-Git undo (turn-level)** · pre-execution expanded-diff approval · safe defaults · `.obsidian-agentignore` · core Vault MCP note/structure/keyword tools · cost & context HUD · **Harness Library shell with provider-agnostic Rules and a Tool (MCP) gallery**.
+**Definition of done:** Maya installs and gets a first answer with **no terminal and no external install** (lite provider, grounded with a citation); "what are my most-linked notes about X?" works; a multi-step edit is approved, applied, and undone in one click — on a non-Claude provider; a rule set once is respected across two different providers with no file editing. *(F-ON-1/2/3/4/5/6/10, F-SAFE-1/2/3/4, F-VAULT-1/2/3/4, F-CTX-1, F-HARN-1/2/3, F-RAG-4)*
 
 ### Phase 2 — Vault intelligence & memory
-Semantic search + graph expansion · Dataview/Bases tools · three-tier vault memory · tool-output offloading · progressive disclosure · cost display · plan files in the Agent Board · **provider-agnostic Skills + capability-aware Harness Library** · **deterministic verification gates**. *(F-VAULT-5/6, F-MEM-1, F-CTX-2/3, F-COST-1, F-PLAN-1/2, F-HARN-4/5, F-VERIFY-1)*
+**RAG layer: vault index · embeddings · hybrid retrieval · `semantic_search`/`ask_vault` Vault MCP tools** (absorbs semantic search + graph expansion) · Dataview/Bases tools · three-tier vault memory · tool-output offloading · progressive disclosure · cost display · plan files in the Agent Board · **provider-agnostic Skills + capability-aware Harness Library** · **deterministic verification gates**. *(F-RAG-1/2/3/5, F-VAULT-6, F-MEM-1, F-CTX-2/3, F-COST-1, F-PLAN-1/2, F-HARN-4/5, F-VERIFY-1)*
 
 ### Phase 3 — Differentiation & ecosystem
 Block-level provenance / ingest · Canvas/Excalidraw generation · cross-encoder reranking · model tiering · subagent context-isolation security control · MCP-server memory relay · egress allowlist + network ledger · bundled/managed runtime (if validated). *(F-VAULT-7/8/9, F-COST-2, F-ORCH-1, F-MEM-2, F-SAFE-6, F-ON-8)*
@@ -415,6 +438,8 @@ Red-team eval harness (Promptfoo injection suite + Rule-of-Two state-machine tes
 - **OQ5 — Zero-install onboarding (round 2 resolved into two tracks).** Not one bundled-runtime gamble but: (1) a **lite direct-API provider** (F-ON-10) = the only *true* zero-install path, also the mobile path; (2) **in-app auto-install + validation** for CLI providers = zero-*terminal*, not zero-install. Residual: per-CLI **licensing** (Claude Commercial Terms incl. the June 2026 Agent-SDK-credit change; Cursor ToS reserves all rights → assume not bundleable; Codex Apache-2.0 / Opencode MIT are clean) and the Node requirement on Claude's npm route. Verify licenses before shipping auto-install.
 - **OQ6 — Shadow-Git clobber risk (round 2 resolved).** Put the shadow `gitdir` **outside the vault** (plugin data) → it never collides with the user's `.git`, the Obsidian Git plugin, or Sync. Residual is only **binary-heavy-vault performance** — quantify with a `tests/perf/` spec; text vaults checkpoint sub-second.
 - **OQ7 — Undo restore coherence (round 2 surfaced; the biggest sleeper risk).** A raw git checkout Obsidian doesn't notice (stale subdir watcher) is itself a data hazard, and Sync / the Git plugin / concurrent multi-tab turns can race a restore. Restore must quiesce other writers and write back through the Vault API (or force a rescan); multi-tab needs per-tab branches or a serialized checkpoint queue. Needs a spike before F-SAFE-1 ships as "one click, every provider."
+- **OQ8 — RAG backend default.** Is the no-install renderer stack (Transformers.js + sql.js) reliable enough to be the default (model-loading in the Electron renderer is finicky; mobile is the weak link), or do we lead with LanceDB+Ollama (better scale/quality but a desktop-only install step that breaks zero-terminal)? Likely answer: renderer default + opt-in local-power profile — but verify Transformers.js model loading and LanceDB native-module behaviour in the Obsidian renderer first. See [[Specorator RAG Layer Spec]] §0.
+- **OQ9 — Index freshness & cost.** Full re-index doesn't scale; incremental indexing on file-change + an embedding cache are needed, and embedding cost/latency on large or binary-heavy vaults must be quantified (pair with a `tests/perf/` spec). What's the staleness budget between an edit and its searchability?
 - **R1 — Co-evolution overfitting.** Vendor agents are post-trained on their own harness; changing tool logic can *degrade* their performance. Keep Vault MCP tool interfaces stable and conventional; don't impose bespoke patch formats.
 - **R2 — Trust is the product.** One data-loss incident burns trust irreversibly. Undo/checkpoints/approval are non-negotiable and must ship in Phase 1, tested hard.
 - **R3 — Context rot.** Without disciplined context management, quality degrades on long tasks. F-CTX-* are not optional polish.

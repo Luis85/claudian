@@ -3,7 +3,7 @@
     { "id": "g_views", "type": "group", "x": -200, "y": 0, "width": 2400, "height": 560, "label": "Dedicated Views & Entry Points — 🟩 today · 🟦 new in v1 · 🟥 safety-critical" },
     { "id": "g_chat", "type": "group", "x": -200, "y": 640, "width": 2400, "height": 1180, "label": "Inside the Chat View (ClaudianView) — panels, message renderers & inline cards" },
     { "id": "g_modals_now", "type": "group", "x": -200, "y": 1900, "width": 1620, "height": 820, "label": "Modals — today 🟩" },
-    { "id": "g_modals_new", "type": "group", "x": 1460, "y": 1900, "width": 800, "height": 820, "label": "New surfaces — v1 🟦 / 🟥" },
+    { "id": "g_modals_new", "type": "group", "x": 1460, "y": 1900, "width": 800, "height": 960, "label": "New surfaces — v1 🟦 / 🟥" },
     { "id": "g_settings", "type": "group", "x": -200, "y": 2800, "width": 2520, "height": 420, "label": "Settings Tab (ClaudianSettingTab) sections — 🟩 today, 🟦 v1 additions" },
 
     { "id": "title", "type": "text", "x": -200, "y": -300, "width": 1700, "height": 150, "color": "6", "text": "# Specorator — UI Map (current & future state)\nViews · modals · panels and their responsibilities. **🟩 Green = ships today** · **🟦 Cyan = new in v1** · **🟥 Red = safety-critical**. Code symbols in `mono`. Companion to [[Specorator Architecture (C4)]]." },
@@ -17,6 +17,7 @@
     { "id": "view_harness", "type": "text", "x": 1700, "y": 120, "width": 320, "height": 150, "color": "5", "text": "## Harness Library View 🟦\nSkills · Tools · Rules in one tap-to-use surface (Quick-Actions-style)." },
     { "id": "view_audit", "type": "text", "x": 1320, "y": 360, "width": 320, "height": 150, "color": "5", "text": "## Audit Log View 🟦\nEvery action: tool · args · result digest · approval · checkpoint id. Persistent, exportable." },
     { "id": "view_lite", "type": "text", "x": -120, "y": 360, "width": 320, "height": 150, "color": "5", "text": "## Lite provider (Quick answers) 🟦\nDirect API, no CLI/Node — zero-install onboarding & mobile. Escalates to a CLI provider for edits." },
+    { "id": "view_index", "type": "text", "x": 300, "y": 360, "width": 320, "height": 150, "color": "5", "text": "## Index Status view 🟦\nRAG index health: files · chunks · embeddings · last build. Rebuild / clear." },
     { "id": "view_undo", "type": "text", "x": 1700, "y": 360, "width": 320, "height": 150, "color": "1", "text": "## Checkpoint Timeline 🟥\nShadow-Git checkpoints; 'Undo all changes' on any provider." },
 
     { "id": "p_tabbar", "type": "text", "x": -120, "y": 740, "width": 250, "height": 110, "color": "4", "text": "**Tab Bar** 🟩 `TabBar`\nMulti-tab, per-provider; new / close / switch." },
@@ -67,6 +68,7 @@
     { "id": "f_memory", "type": "text", "x": 1900, "y": 2330, "width": 300, "height": 130, "color": "5", "text": "**Memory Viewer/Editor** 🟦\nSession summaries · facts · profile (Markdown you own)." },
     { "id": "f_ignore", "type": "text", "x": 1540, "y": 2490, "width": 300, "height": 130, "color": "1", "text": "**agentignore Editor** 🟥\nMark folders the agent can't read or write." },
     { "id": "f_ledger", "type": "text", "x": 1900, "y": 2490, "width": 300, "height": 130, "color": "1", "text": "**Network Ledger** 🟥\nEvery outbound call, by category (LLM · web · MCP)." },
+    { "id": "m_ask", "type": "text", "x": 1540, "y": 2650, "width": 660, "height": 130, "color": "5", "text": "**Ask Vault** 🟦 modal — grounded Q&A over the RAG index; cited `[[note#heading]]` sources; says when notes don't cover it. *Also the Lite provider read path.*" },
 
     { "id": "st_general", "type": "text", "x": -120, "y": 2910, "width": 250, "height": 130, "color": "4", "text": "**General** 🟩\nLocale · logging · keyboard nav." },
     { "id": "st_providers", "type": "text", "x": 150, "y": 2910, "width": 250, "height": 130, "color": "4", "text": "**Provider tabs** 🟩\nClaude / Codex / Opencode / Cursor: model · mode · env · CLI path." },
@@ -76,7 +78,8 @@
     { "id": "st_board", "type": "text", "x": 1230, "y": 2910, "width": 250, "height": 130, "color": "4", "text": "**Agent Board** 🟩 `AgentBoardSettingsSection`" },
     { "id": "st_env", "type": "text", "x": 1500, "y": 2910, "width": 250, "height": 130, "color": "4", "text": "**Environment / Secrets** 🟩\n`SecretEnvVarsSection`." },
     { "id": "st_onboard", "type": "text", "x": 1770, "y": 2910, "width": 250, "height": 130, "color": "5", "text": "**Setup & Diagnostics** 🟦\nValidation status · install help." },
-    { "id": "st_harness", "type": "text", "x": 2040, "y": 2910, "width": 250, "height": 130, "color": "5", "text": "**Harness Library** 🟦\nManage skills / tools / rules." }
+    { "id": "st_harness", "type": "text", "x": 2040, "y": 2910, "width": 250, "height": 130, "color": "5", "text": "**Harness Library** 🟦\nManage skills / tools / rules." },
+    { "id": "st_rag", "type": "text", "x": -120, "y": 3070, "width": 250, "height": 130, "color": "5", "text": "**RAG / Retrieval** 🟦\nIndex backend, folders, chunking; rebuild / clear." }
   ],
   "edges": [
     { "id": "e1", "fromNode": "entry_ribbon", "fromSide": "right", "toNode": "view_chat", "toSide": "left", "label": "open" },

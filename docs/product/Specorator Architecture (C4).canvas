@@ -30,6 +30,7 @@
     { "id": "c_session", "type": "text", "x": 480, "y": 1340, "width": 320, "height": 180, "color": "4", "text": "**Session & history store** 🟩\n`.claudian/sessions` metadata · resume · fork." },
     { "id": "c_vaultmcp", "type": "text", "x": 860, "y": 1340, "width": 480, "height": 180, "color": "5", "text": "## Vault MCP server 🟦\nLoopback HTTP MCP all four CLIs dial into. Gives every backend vault-native tools + shared memory.\n*Additive tool surface — not a safety chokepoint.*" },
     { "id": "c_lite", "type": "text", "x": 1800, "y": 1560, "width": 380, "height": 150, "color": "5", "text": "## Lite provider (direct API) 🟦\nBYOK, no CLI/Node — the only zero-install path (also mobile). Read-mostly Q&A → escalates to a CLI provider for edits." },
+    { "id": "c_rag", "type": "text", "x": 1340, "y": 1560, "width": 420, "height": 150, "color": "5", "text": "## Retrieval (RAG) layer 🟦\nIndex · chunk · embed · hybrid retrieve. Pluggable backends (no-install default; Ollama/LanceDB opt-in). Grounded answers + citations." },
     { "id": "c_memory", "type": "text", "x": 1400, "y": 1340, "width": 360, "height": 180, "color": "5", "text": "**Memory store (3-tier)** 🟦\nSession summaries · durable facts · profile. Markdown, in the vault." },
     { "id": "c_harness", "type": "text", "x": 1800, "y": 1340, "width": 380, "height": 180, "color": "5", "text": "## Harness Library 🟦\nProvider-agnostic **Skills · Tools (MCP) · Rules**. Author once in a Quick-Actions-style UI → compiles to each provider's native format. *No config files.*" },
 
@@ -90,6 +91,8 @@
     { "id": "e25", "fromNode": "v_sem", "fromSide": "bottom", "toNode": "build_panel", "toSide": "top", "label": "surfaces in Chat & Board" },
     { "id": "e26", "fromNode": "tr_undo", "fromSide": "bottom", "toNode": "build_panel", "toSide": "top", "label": "wraps the existing seam" },
     { "id": "e27", "fromNode": "s_settings", "fromSide": "bottom", "toNode": "c_harness", "toSide": "top", "label": "authored in-app (no files)" },
-    { "id": "e28", "fromNode": "c_harness", "fromSide": "bottom", "toNode": "hl_hdr", "toSide": "top", "label": "zoom in ▼" }
+    { "id": "e28", "fromNode": "c_harness", "fromSide": "bottom", "toNode": "hl_hdr", "toSide": "top", "label": "zoom in ▼" },
+    { "id": "e29", "fromNode": "c_rag", "fromSide": "top", "toNode": "c_vaultmcp", "toSide": "bottom", "label": "exposes semantic_search / ask_vault" },
+    { "id": "e30", "fromNode": "c_lite", "fromSide": "left", "toNode": "c_rag", "toSide": "right", "label": "Ask Vault (grounded)" }
   ]
 }
