@@ -1,8 +1,16 @@
 ---
+title: Specorator Standalone Migration (v1.0.0 rebrand)
+date: 2026-05-30
 status: open
+scope: brand/standalone migration — Claudian → Specorator v1.0.0 (packaging, not new capability)
 parent: Product
+related:
+  - "[[Specorator Agent Harness PRD]]"
+  - "[[Specorator]]"
 ---
 # Specorator Standalone Migration Implementation Plan
+
+> **Connects to the harness roadmap.** This plan delivers **Specorator v1.0.0 — a brand/standalone rebrand of *today's* feature set** (chat, Agent Board, inline edit, Quick Actions, Orchestrator), moved to `Luis85/specorator` with `.claudian/` → `.specorator/` storage. It is the **foundation/packaging release**; the agent-harness program (zero-terminal onboarding, undo, Vault MCP, RAG, Harness Library) ships *after* it as Specorator v1.x → v2 — see **[[Specorator Agent Harness PRD]]** (§12 roadmap). Two connections to carry forward: (1) the live manifest is **already at `minAppVersion` 1.11.5** (the SecretStorage floor the harness's in-app keys need) — Task 2's draft manifest below still shows `1.7.2` and must be updated to **preserve 1.11.5**; (2) doc paths moved under `docs/product/` since this plan was written (e.g. `docs/product/Specorator.md` → `docs/product/Specorator.md`, and feature wikilinks now live under `docs/product/features/`) — adjust the Task 19/20 references accordingly.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -81,7 +89,7 @@ Confirm content matches:
   "id": "claudian-cursor",
   "name": "Claudian (Cursor fork)",
   "version": "2.9.0",
-  "minAppVersion": "1.7.2",
+  "minAppVersion": "1.11.5",
   "description": "Embeds Claude Code, Codex, and other coding agents as AI collaborators in your vault. Your vault becomes their working directory, giving them capabilities for file reads and writes, search, bash commands, and multi-step workflows.",
   "author": "Yishen Tu",
   "authorUrl": "https://github.com/YishenTu",
@@ -91,13 +99,15 @@ Confirm content matches:
 
 - [ ] **Step 2: Replace contents**
 
+> **Update (post-harness-design):** the live manifest is now `minAppVersion` **1.11.5** (required by the harness's `SecretStorage` key entry) at version **3.3.0** — preserve `1.11.5` and carry the real current version forward; do not regress to the `1.7.2` / `2.9.0` shown when this plan was first drafted.
+
 Write to `D:/Projects/claudian/manifest.json`:
 ```json
 {
   "id": "specorator",
   "name": "Specorator",
   "version": "1.0.0",
-  "minAppVersion": "1.7.2",
+  "minAppVersion": "1.11.5",
   "description": "Spec-driven agent workspace for Obsidian. Plan, run, review, keep the record.",
   "author": "Luis Mendez",
   "authorUrl": "https://github.com/Luis85",
@@ -825,17 +835,17 @@ git -C D:/Projects/claudian commit -m "style: rename claudian-* CSS classes to s
 
 **Files:**
 - Modify: `D:/Projects/claudian/README.md`
-- Reference source: `D:/Projects/claudian/docs/Specorator.md`
+- Reference source: `D:/Projects/claudian/docs/product/Specorator.md`
 
 - [ ] **Step 1: Read the source narrative**
 
-Read `D:/Projects/claudian/docs/Specorator.md`. It contains the product narrative drafted during the brainstorming phase.
+Read `D:/Projects/claudian/docs/product/Specorator.md`. It contains the product narrative drafted during the brainstorming phase.
 
 - [ ] **Step 2: Write new README**
 
-Overwrite `D:/Projects/claudian/README.md` with content derived from `docs/Specorator.md`. Apply these transformations:
+Overwrite `D:/Projects/claudian/README.md` with content derived from `docs/product/Specorator.md`. Apply these transformations:
 
-1. Drop the YAML frontmatter block (`---` through `---` at the top of `docs/Specorator.md`).
+1. Drop the YAML frontmatter block (`---` through `---` at the top of `docs/product/Specorator.md`).
 2. Convert the tagline (`tagline: "Plan the work, run it, review what came back, keep the record. All in your vault."`) into a subtitle line under the `# Specorator` heading.
 3. Replace every wikilink `[[docs/features/Chat]]` with a relative markdown link `[Chat](docs/features/Chat.md)`. Repeat for each feature: `Multi Provider Support`, `Quick Actions`, `Orchestrator`, `Agent Kanban Board`.
 4. Add a new section after the intro:

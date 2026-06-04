@@ -18,6 +18,8 @@ related:
 
 > **Origin.** This began as a standalone "Obsidian RAG Plugin" draft. In Specorator it is **not** a separate plugin — it is a **harness component** (the Retrieval layer). The implementation spec below is preserved; the callouts and §0 / §16 reconcile it with Specorator's architecture, the zero-terminal goal, and this repo's tooling. See the parent [[Specorator Agent Harness PRD]] (§8.3a) for product framing.
 
+> **MVP slice (phasing).** Phase 1 ships **keyword-only** "Ask Vault" — retrieval + grounded answer + `[[note#heading]]` citations, **no embeddings** — as the Lite provider's read path. The embedding / semantic / hybrid stack and the Vault-MCP-exposed `semantic_search` land in **Phase 2, gated on the renderer-backend spike** (parent PRD [OQ8]). §11 Acceptance and §12 DoD below describe the *full* system; for the Phase-1 slice, read "grounded answer with ≥1 source link" as *keyword-grounded*.
+
 ## 0. How this fits Specorator (read first)
 
 Retrieval is a harness component, not a feature silo. The Anthropic context-engineering point is that the job is "the smallest set of high-signal tokens" — that *is* retrieval. Three integration points change the standalone framing:

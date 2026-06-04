@@ -1,8 +1,10 @@
 ---
 type: product
 name: Specorator
+title: Specorator — product overview
 tagline: Plan the work, run it, review what came back, keep the record. All in your vault.
 status: shipped
+scope: product overview + v1 roadmap pointer
 features:
   - "[[Chat]]"
   - "[[Multi Provider Support]]"
@@ -75,8 +77,8 @@ Specorator is the v1 name for the plugin built on the Claudian codebase, shipped
 
 The short version of that plan: keep the depth Specorator already has — real AI engines, working side by side, with your notes underneath — and close the three things that today still ask too much of a non-technical person.
 
-- **Setup without a terminal.** Install, paste one key, ask your first question. No command line, no hunting for where a program lives, no error you can't read.
-- **Trust you can see and take back.** Every change shown before it lands, and a single "undo everything" that works no matter which engine made the change — not just one of them.
+- **Setup without a terminal.** Install, add one key, ask your first question. No command line, no hunting for where a program lives, no error you can't read. (Quick answers need no install at all; full AI engines fetch a helper program for you — in-app, still no terminal.)
+- **Trust you can see and take back.** Changes shown before they land, and a one-click *revert your vault to the way it was before the agent's last turn* — on every engine. On most engines you also approve each change *before* it happens; on a few, that before-the-fact preview isn't possible, so the revert is the safety net. Specorator tells you which is which, the way the [[Multi Provider Support]] matrix already does — it never pretends an engine protects more than it does.
 - **An assistant that actually knows your vault.** It follows your links, reads your tags and properties, finds the note you half-remember, and carries what it learns about your work from one day to the next — instead of treating your vault as a plain folder of files.
 - **Set it up by tapping, not by editing files.** The things that shape your assistant — saved workflows, connected tools, and standing rules like "always cite sources" — live in the same one-tap surface as Quick Actions. No config files, no JSON, no provider-specific folders. Set a rule once and every engine follows it.
 
