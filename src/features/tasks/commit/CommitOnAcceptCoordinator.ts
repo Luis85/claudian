@@ -1,4 +1,3 @@
-import type { EventBus } from '../../../core/events/EventBus';
 import type { TaskEventMap } from '../events';
 import type { TaskSpec } from '../model/taskTypes';
 import { buildScopedCommitPrompt } from './scopedCommitPrompt';
@@ -9,8 +8,16 @@ export interface CoordinatorLogger {
   error(message: string, ...args: unknown[]): void;
 }
 
+/** Minimal slice of `EventBus` the coordinator depends on. */
+export interface CommitOnAcceptEventSource {
+  on(
+    event: 'task:status-changed',
+    handler: (payload: TaskEventMap['task:status-changed']) => void,
+  ): () => void;
+}
+
 export interface CommitOnAcceptDeps {
-  events: EventBus<TaskEventMap>;
+  events: CommitOnAcceptEventSource;
   loadTaskSpec(path: string): Promise<TaskSpec>;
   getGitStatus(): Promise<{ isRepo: boolean; dirtyCount: number }>;
   isProviderGitEnabled(providerId: string): boolean;
