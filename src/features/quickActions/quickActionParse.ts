@@ -1,4 +1,4 @@
-import { extractString, extractStringArray, parseFrontmatter } from '../../utils/frontmatter';
+import { extractBoolean, extractNumber, extractString, extractStringArray, parseFrontmatter } from '../../utils/frontmatter';
 import {
   QUICK_ACTION_FRONTMATTER_TYPE,
   type QuickAction,
@@ -27,6 +27,12 @@ export function parseQuickActionContent(
   const icon = extractString(fm, 'icon')?.trim() || undefined;
   const tags = extractStringArray(fm, 'tags');
 
+  const favorite = extractBoolean(fm, 'favorite') === true ? true : undefined;
+  const rankRaw = extractNumber(fm, 'favoriteRank');
+  const favoriteRank = Number.isInteger(rankRaw) && rankRaw! >= 1 && rankRaw! <= 5
+    ? rankRaw
+    : undefined;
+
   return {
     id: filePathToId(filePath),
     name,
@@ -35,6 +41,8 @@ export function parseQuickActionContent(
     tags: tags && tags.length > 0 ? tags : undefined,
     prompt: body,
     filePath,
+    favorite,
+    favoriteRank: favorite ? favoriteRank : undefined,
   };
 }
 
@@ -53,6 +61,17 @@ export function serializeQuickAction(action: QuickActionFrontmatter & { prompt: 
     lines.push('tags:');
     for (const tag of tags) {
       lines.push(`  - ${yamlQuote(tag)}`);
+    }
+  }
+  if (action.favorite === true) {
+    lines.push('favorite: true');
+    if (
+      typeof action.favoriteRank === 'number' &&
+      Number.isInteger(action.favoriteRank) &&
+      action.favoriteRank >= 1 &&
+      action.favoriteRank <= 5
+    ) {
+      lines.push(`favoriteRank: ${action.favoriteRank}`);
     }
   }
   lines.push('---', '', action.prompt.trim(), '');

@@ -92,3 +92,83 @@ Body.
     expect(parseQuickActionContent(content, 'Quick Actions/note.md')).toBeNull();
   });
 });
+
+describe('quickActionParse favorites', () => {
+  it('parses favorite and favoriteRank', () => {
+    const content = `---
+type: ${QUICK_ACTION_FRONTMATTER_TYPE}
+name: Refactor
+favorite: true
+favoriteRank: 2
+---
+
+Body.
+`;
+    const action = parseQuickActionContent(content, 'Quick Actions/refactor.md');
+    expect(action?.favorite).toBe(true);
+    expect(action?.favoriteRank).toBe(2);
+  });
+
+  it('treats favorite=false as not a favorite', () => {
+    const content = `---
+type: ${QUICK_ACTION_FRONTMATTER_TYPE}
+name: Plain
+favorite: false
+---
+
+Body.
+`;
+    const action = parseQuickActionContent(content, 'Quick Actions/plain.md');
+    expect(action?.favorite).toBeUndefined();
+    expect(action?.favoriteRank).toBeUndefined();
+  });
+
+  it('ignores favoriteRank outside 1..5', () => {
+    const content = `---
+type: ${QUICK_ACTION_FRONTMATTER_TYPE}
+name: Bad rank
+favorite: true
+favoriteRank: 9
+---
+
+Body.
+`;
+    const action = parseQuickActionContent(content, 'Quick Actions/bad.md');
+    expect(action?.favorite).toBe(true);
+    expect(action?.favoriteRank).toBeUndefined();
+  });
+
+  it('serializes favorite and favoriteRank only when favorite is true', () => {
+    const serialized = serializeQuickAction({
+      name: 'Star',
+      prompt: 'Body.',
+      favorite: true,
+      favoriteRank: 3,
+    });
+    expect(serialized).toContain('favorite: true');
+    expect(serialized).toContain('favoriteRank: 3');
+  });
+
+  it('omits favorite lines when favorite is false or absent', () => {
+    const serialized = serializeQuickAction({
+      name: 'Plain',
+      prompt: 'Body.',
+      favorite: false,
+      favoriteRank: 3,
+    });
+    expect(serialized).not.toContain('favorite:');
+    expect(serialized).not.toContain('favoriteRank:');
+  });
+
+  it('round-trips favorite and favoriteRank', () => {
+    const serialized = serializeQuickAction({
+      name: 'Round',
+      prompt: 'Body.',
+      favorite: true,
+      favoriteRank: 4,
+    });
+    const parsed = parseQuickActionContent(serialized, 'Quick Actions/round.md');
+    expect(parsed?.favorite).toBe(true);
+    expect(parsed?.favoriteRank).toBe(4);
+  });
+});

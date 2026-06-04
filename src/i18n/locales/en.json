@@ -216,6 +216,9 @@
       "searchPlaceholder": "Search actions by name, description, or tag…",
       "noResults": "No quick actions match your search.",
       "filterByTag": "Filter by tag {tag}",
+      "markFavorite": "Mark as favorite",
+      "unmarkFavorite": "Unmark favorite",
+      "favoriteLimitReached": "You can favorite up to 5 quick actions",
       "tabs": {
         "quickActions": "Quick actions",
         "skills": "Skills"

@@ -111,6 +111,8 @@ export class QuickActionEditorModal extends Modal {
       tags: this.existing?.tags,
       prompt: trimmedPrompt,
       filePath: this.existing?.filePath ?? '',
+      favorite: this.existing?.favorite,
+      favoriteRank: this.existing?.favoriteRank,
     };
 
     try {

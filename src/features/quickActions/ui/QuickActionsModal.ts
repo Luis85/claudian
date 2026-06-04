@@ -3,6 +3,7 @@ import { Modal, Notice, setIcon } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
 import type { QuickActionStorage } from '../QuickActionStorage';
+import { assignNextFavoriteRank } from '../QuickActionStorage';
 import type { SkillTabEntry, VaultSkillSource } from '../skills/types';
 import type { QuickAction } from '../types';
 import { QuickActionEditorModal } from './QuickActionEditorModal';
@@ -19,6 +20,7 @@ export interface QuickActionsModalCallbacks {
   onEditSkill: (entry: SkillTabEntry) => void;
   storage: QuickActionStorage;
   aggregator: VaultSkillSource;
+  onFavoritesChanged?: () => void;
 }
 
 type ActiveTab = 'quickActions' | 'skills';
@@ -39,6 +41,11 @@ export class QuickActionsModal extends Modal {
 
   // Skills tab — delegated to a dedicated renderer.
   private skillsRenderer: SkillsTabRenderer;
+
+  // Serializes favorite toggles across all rows. Without this, two rapid
+  // clicks on different stars would both read a stale `this.actions` snapshot
+  // and pick the same free rank, allowing more than five favorites on disk.
+  private toggleQueue: Promise<void> = Promise.resolve();
 
   constructor(app: App, callbacks: QuickActionsModalCallbacks) {
     super(app);
@@ -168,13 +175,18 @@ export class QuickActionsModal extends Modal {
   }
 
   private runFirstMatch(): void {
-    const filtered = this.applyFilter(this.actions);
-    const first = filtered[0];
+    const first = this.applyFilteredOrder()[0];
     if (!first) {
       return;
     }
     this.callbacks.onRun(first);
     this.close();
+  }
+
+  private applyFilteredOrder(): QuickAction[] {
+    const filtered = this.applyFilter(this.actions);
+    const isFiltering = this.filter.trim().length > 0;
+    return isFiltering ? filtered : this.sortFavoritesFirst(filtered);
   }
 
   private async refreshList(): Promise<void> {
@@ -201,8 +213,8 @@ export class QuickActionsModal extends Modal {
     this.listEl.removeClass('claudian-quick-actions-list--empty');
     this.searchWrapEl.removeClass('claudian-quick-actions-search--hidden');
 
-    const filtered = this.applyFilter(this.actions);
-    if (filtered.length === 0) {
+    const ordered = this.applyFilteredOrder();
+    if (ordered.length === 0) {
       this.listEl.createDiv({
         cls: 'claudian-quick-actions-empty-results',
         text: t('quickActions.modal.noResults'),
@@ -210,9 +222,24 @@ export class QuickActionsModal extends Modal {
       return;
     }
 
-    for (const action of filtered) {
+    for (const action of ordered) {
       this.renderRow(action);
     }
+  }
+
+  private sortFavoritesFirst(actions: QuickAction[]): QuickAction[] {
+    const favs = actions
+      .filter((a) => a.favorite === true)
+      .sort((a, b) => {
+        const ar = a.favoriteRank ?? Number.POSITIVE_INFINITY;
+        const br = b.favoriteRank ?? Number.POSITIVE_INFINITY;
+        if (ar !== br) return ar - br;
+        return a.name.localeCompare(b.name);
+      });
+    const rest = actions
+      .filter((a) => a.favorite !== true)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return [...favs, ...rest];
   }
 
   private setFilter(value: string): void {
@@ -314,6 +341,23 @@ export class QuickActionsModal extends Modal {
       this.close();
     });
 
+    const starBtn = row.createEl('button', {
+      cls: 'claudian-quick-action-favorite',
+      attr: {
+        'aria-label': action.favorite
+          ? t('quickActions.modal.unmarkFavorite')
+          : t('quickActions.modal.markFavorite'),
+      },
+    });
+    setIcon(starBtn, 'star');
+    if (action.favorite) {
+      starBtn.addClass('is-favorite');
+    }
+    starBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      void this.toggleFavorite(action, starBtn);
+    });
+
     const actions = row.createDiv({ cls: 'claudian-quick-action-actions' });
     actions
       .createEl('button', { text: t('common.edit') })
@@ -333,6 +377,7 @@ export class QuickActionsModal extends Modal {
     new QuickActionEditorModal(this.app, existing, async (action) => {
       const filePath = await this.callbacks.storage.save(action);
       action.filePath = filePath;
+      this.callbacks.onFavoritesChanged?.();
       await this.refreshList();
     }).open();
   }
@@ -343,9 +388,47 @@ export class QuickActionsModal extends Modal {
     }
     try {
       await this.callbacks.storage.delete(action.filePath);
+      this.callbacks.onFavoritesChanged?.();
       await this.refreshList();
     } catch {
       new Notice(t('quickActions.modal.deleteFailed'));
+    }
+  }
+
+  private toggleFavorite(action: QuickAction, button: HTMLButtonElement): void {
+    if (button.disabled) return;
+    button.disabled = true;
+    // Chain onto the shared queue so each toggle's assignNextFavoriteRank
+    // runs only after the previous toggle's refreshList has updated
+    // this.actions. The .catch swallow keeps a single failure from
+    // poisoning future toggles — runToggle owns its own try/catch.
+    this.toggleQueue = this.toggleQueue
+      .then(() => this.runToggle(action, button))
+      .catch(() => undefined);
+  }
+
+  private async runToggle(action: QuickAction, button: HTMLButtonElement): Promise<void> {
+    try {
+      // Re-resolve the action against the latest list — previous toggles may
+      // have changed its favorite state on disk and in this.actions.
+      const current = this.actions.find((a) => a.filePath === action.filePath) ?? action;
+      if (current.favorite === true) {
+        await this.callbacks.storage.unsetFavorite(current);
+      } else {
+        const rank = assignNextFavoriteRank(this.actions);
+        if (rank === null) {
+          new Notice(t('quickActions.modal.favoriteLimitReached'));
+          return;
+        }
+        await this.callbacks.storage.setFavorite(current, rank);
+      }
+      this.callbacks.onFavoritesChanged?.();
+      await this.refreshList();
+    } catch {
+      new Notice(t('quickActions.editor.saveFailed'));
+      await this.refreshList();
+    } finally {
+      button.disabled = false;
     }
   }
 }

@@ -18,10 +18,15 @@ import { QuickActionsModal } from './ui/QuickActionsModal';
  *   attaches a file pill), or to send into a known target tab.
  * - `file`: optional vault file/folder forwarded to `runVaultSkill` when the
  *   user picks a skill on the Skills tab. `null`/undefined means no pill.
+ * - `onFavoritesChanged`: invoked after a favorite toggle inside the modal so
+ *   the plugin's `QuickActionFavoritesCache` can re-emit the workspace menu.
+ *   Defaults to refreshing the shared cache; every callsite wants the same
+ *   wiring so the default keeps callers from drifting.
  */
 export interface OpenQuickActionsModalOptions {
   onRun: (action: QuickAction) => void;
   file?: TAbstractFile | null;
+  onFavoritesChanged?: () => void;
 }
 
 /**
@@ -58,5 +63,7 @@ export function openQuickActionsModal(
         entry.providerId,
       );
     },
+    onFavoritesChanged:
+      options.onFavoritesChanged ?? (() => plugin.quickActionFavoritesCache?.refresh()),
   }).open();
 }

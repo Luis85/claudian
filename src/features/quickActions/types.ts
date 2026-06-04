@@ -9,6 +9,8 @@ export interface QuickAction {
   tags?: string[];
   prompt: string;
   filePath: string;
+  favorite?: boolean;
+  favoriteRank?: number;
 }
 
 export interface QuickActionFrontmatter {
@@ -16,4 +18,6 @@ export interface QuickActionFrontmatter {
   description?: string;
   icon?: string;
   tags?: string[];
+  favorite?: boolean;
+  favoriteRank?: number;
 }

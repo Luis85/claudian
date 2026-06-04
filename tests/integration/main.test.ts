@@ -3,6 +3,7 @@ import { Menu, TFile, TFolder } from 'obsidian';
 import { resetCommandHotkeysForTests } from '@/core/commands/commandHotkeyRegistry';
 import { TOOL_SUBAGENT } from '@/core/tools/toolNames';
 import { VIEW_TYPE_CLAUDIAN } from '@/core/types';
+import { QuickActionFavoritesCache } from '@/features/quickActions/QuickActionFavoritesCache';
 import * as sdkSession from '@/providers/claude/history/ClaudeHistoryStore';
 import { DEFAULT_SETTINGS } from '@/providers/claude/types/settings';
 
@@ -87,6 +88,7 @@ describe('ClaudianPlugin', () => {
           rename: jest.fn().mockResolvedValue(undefined),
         },
         on: jest.fn().mockReturnValue({}),
+        offref: jest.fn(),
       },
       workspace: {
         getLeavesOfType: jest.fn().mockReturnValue([]),
@@ -287,6 +289,15 @@ describe('ClaudianPlugin', () => {
       await plugin.onload();
 
       expect(() => plugin.onunload()).not.toThrow();
+    });
+
+    it('constructs the QuickActionFavoritesCache at load and disposes it at unload', async () => {
+      await plugin.onload();
+
+      expect(plugin.quickActionFavoritesCache).toBeInstanceOf(QuickActionFavoritesCache);
+      const disposeSpy = jest.spyOn(plugin.quickActionFavoritesCache!, 'dispose');
+      plugin.onunload();
+      expect(disposeSpy).toHaveBeenCalledTimes(1);
     });
   });
 

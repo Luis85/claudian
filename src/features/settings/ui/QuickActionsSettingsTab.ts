@@ -18,6 +18,7 @@ export function renderQuickActionsSettingsTab(
         .onChange(async (value) => {
           plugin.settings.quickActionsFolder = value.trim() || 'Quick Actions';
           await plugin.saveSettings();
+          plugin.quickActionFavoritesCache?.refresh();
         });
     });
 }

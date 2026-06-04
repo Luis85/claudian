@@ -552,6 +552,9 @@
       "emptyHintVault": "Each file uses frontmatter type quick-action, plus name, optional description and icon; the note body is the message sent to the chat.",
       "emptyHintRun": "After you create actions, open this dialog from the toolbar and click a row to run one instantly.",
       "emptyHintCreate": "Use Add action below to create your first quick action, or set the vault folder under Settings → Quick Actions.",
+      "markFavorite": "添加到收藏",
+      "unmarkFavorite": "取消收藏",
+      "favoriteLimitReached": "最多可收藏 5 个快速操作",
       "tabs": {
         "quickActions": "Quick actions",
         "skills": "Skills"
