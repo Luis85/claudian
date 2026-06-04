@@ -360,4 +360,20 @@ describe('VaultSkillAggregator', () => {
     await agg.listAll();
     expect(fetch).toHaveBeenCalledTimes(2);
   });
+
+  it('deduplicates concurrent fetches per provider', async () => {
+    let resolveFn: (v: ProviderCommandEntry[]) => void = () => {};
+    const pending = new Promise<ProviderCommandEntry[]>((r) => { resolveFn = r; });
+    const fetch = jest.fn().mockReturnValue(pending);
+    const records = [makeRecord({ entries: fetch })];
+    const agg = new VaultSkillAggregator(() => records, { ttlMs: 60_000 });
+
+    const p1 = agg.listAll();
+    const p2 = agg.listAll();
+    const p3 = agg.listAll();
+    resolveFn([makeSkillEntry({ id: 'a', name: 'a' })]);
+    await Promise.all([p1, p2, p3]);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
 });

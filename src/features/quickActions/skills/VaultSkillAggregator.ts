@@ -39,6 +39,7 @@ export class VaultSkillAggregator implements VaultSkillSource {
   private readonly ttlMs: number;
   private readonly nowMs: () => number;
   private readonly cache = new Map<ProviderId, CachedBucket>();
+  private readonly inFlight = new Map<ProviderId, Promise<ProviderCommandEntry[]>>();
   private eventBusUnsubscribe: (() => void) | undefined;
 
   constructor(
@@ -77,43 +78,55 @@ export class VaultSkillAggregator implements VaultSkillSource {
   invalidate(providerId?: ProviderId): void {
     if (providerId === undefined) {
       this.cache.clear();
+      this.inFlight.clear();
     } else {
       this.cache.delete(providerId);
+      this.inFlight.delete(providerId);
     }
   }
 
   dispose(): void {
     this.eventBusUnsubscribe?.();
     this.cache.clear();
+    this.inFlight.clear();
   }
 
   /** Returns the raw cached or freshly-fetched provider entries (skill kind). */
-  private async fetchBucket(record: ProviderRecord): Promise<ProviderCommandEntry[]> {
+  private fetchBucket(record: ProviderRecord): Promise<ProviderCommandEntry[]> {
     const now = this.nowMs();
     const cached = this.cache.get(record.providerId);
     if (cached && cached.expiresAt > now) {
-      return cached.entries;
+      return Promise.resolve(cached.entries);
     }
-    try {
-      const all = await record.commandCatalog.listVaultEntries();
-      const raw = all.filter((e) => e.kind === 'skill');
-      this.cache.set(record.providerId, {
-        entries: raw,
-        expiresAt: now + this.ttlMs,
-      });
-      return raw;
-    } catch (err) {
-      this.logger?.warn('vault skill aggregation failed', {
-        providerId: record.providerId,
-        err,
-      });
-      // Cache empty so we don't thrash retries within TTL
-      this.cache.set(record.providerId, {
-        entries: [],
-        expiresAt: now + this.ttlMs,
-      });
-      return [];
-    }
+    const existing = this.inFlight.get(record.providerId);
+    if (existing) return existing;
+
+    const promise = (async () => {
+      try {
+        const all = await record.commandCatalog.listVaultEntries();
+        const raw = all.filter((e) => e.kind === 'skill');
+        this.cache.set(record.providerId, {
+          entries: raw,
+          expiresAt: this.nowMs() + this.ttlMs,
+        });
+        return raw;
+      } catch (err) {
+        this.logger?.warn('vault skill aggregation failed', {
+          providerId: record.providerId,
+          err,
+        });
+        // Cache empty so we don't thrash retries within TTL
+        this.cache.set(record.providerId, {
+          entries: [],
+          expiresAt: this.nowMs() + this.ttlMs,
+        });
+        return [];
+      } finally {
+        this.inFlight.delete(record.providerId);
+      }
+    })();
+    this.inFlight.set(record.providerId, promise);
+    return promise;
   }
 
   private mapBucket(
