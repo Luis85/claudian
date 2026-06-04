@@ -54,6 +54,30 @@ export function overlaySecretEnvVars(
 }
 
 /**
+ * Build the effective env for a provider with correct precedence (most specific
+ * wins): shared plaintext < shared secret < provider plaintext < provider secret.
+ * Overlaying shared secrets BEFORE the provider blob is parsed ensures a provider
+ * override (e.g. `OPENAI_API_KEY=... # claudian:plaintext`) wins over a shared
+ * secret of the same name. Reports refs whose secret value is absent on device.
+ */
+export function resolveProviderEnvVars(
+  settings: Record<string, unknown>,
+  providerId: ProviderId,
+  resolve: SecretResolver,
+): { env: Record<string, string>; missing: SecretEnvVarRef[] } {
+  const refs = (settings.secretEnvVars as SecretEnvVarRef[] | undefined) ?? [];
+  const env = parseEnvironmentVariables(getSharedEnvironmentVariables(settings));
+  const sharedMissing = overlaySecretEnvVars(env, secretEnvVarsForScope(refs, 'shared'), resolve).missing;
+  Object.assign(env, parseEnvironmentVariables(getProviderEnvironmentVariables(settings, providerId)));
+  const providerMissing = overlaySecretEnvVars(
+    env,
+    secretEnvVarsForScope(refs, `provider:${providerId}`),
+    resolve,
+  ).missing;
+  return { env, missing: [...sharedMissing, ...providerMissing] };
+}
+
+/**
  * One-time migration for a single env blob: move secret-shaped `KEY=VALUE` lines
  * into the store and drop them from the blob. Non-secret lines, comments, blank
  * lines, opted-out lines (`# claudian:plaintext`), and empty values pass through.

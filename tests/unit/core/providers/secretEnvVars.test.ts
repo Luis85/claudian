@@ -6,6 +6,7 @@ import {
   extractBlobSecretRefs,
   migrateEnvSecrets,
   overlaySecretEnvVars,
+  resolveProviderEnvVars,
   secretEnvVarsForScope,
 } from '../../../../src/core/providers/secretEnvVars';
 import type { SecretEnvVarRef } from '../../../../src/core/types/settings';
@@ -44,6 +45,40 @@ describe('secretEnvVars — overlay', () => {
     const { missing } = overlaySecretEnvVars(env, refs, (id) => (id === 'id-1' ? '' : null));
     expect(env).toEqual({}); // '' (cleared) and null (absent) both skipped
     expect(missing.map((r) => r.secretId).sort()).toEqual(['id-1', 'id-2']);
+  });
+});
+
+describe('secretEnvVars — resolveProviderEnvVars precedence', () => {
+  it('lets a provider plaintext override win over a same-named shared secret', () => {
+    const settings: Record<string, unknown> = {
+      sharedEnvironmentVariables: 'ANTHROPIC_BASE_URL=https://shared',
+      providerConfigs: {
+        claude: { environmentVariables: 'ANTHROPIC_API_KEY=provider-key' },
+      },
+      secretEnvVars: [
+        { scope: 'shared', name: 'ANTHROPIC_API_KEY', secretId: 'shared-sid' },
+        { scope: 'provider:claude', name: 'ANTHROPIC_AUTH_TOKEN', secretId: 'prov-sid' },
+      ],
+    };
+    const stored: Record<string, string> = { 'shared-sid': 'shared-secret', 'prov-sid': 'prov-secret' };
+
+    const { env } = resolveProviderEnvVars(settings, 'claude', (id) => stored[id] ?? null);
+
+    // Provider plaintext beats the shared secret of the same name.
+    expect(env.ANTHROPIC_API_KEY).toBe('provider-key');
+    // Provider-scope secret applies; shared non-secret applies.
+    expect(env.ANTHROPIC_AUTH_TOKEN).toBe('prov-secret');
+    expect(env.ANTHROPIC_BASE_URL).toBe('https://shared');
+  });
+
+  it('reports refs whose secret value is absent on this device', () => {
+    const settings: Record<string, unknown> = {
+      sharedEnvironmentVariables: '',
+      providerConfigs: {},
+      secretEnvVars: [{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: 'gone' }],
+    };
+    const { missing } = resolveProviderEnvVars(settings, 'codex', () => null);
+    expect(missing.map((r) => r.name)).toEqual(['OPENAI_API_KEY']);
   });
 });
 

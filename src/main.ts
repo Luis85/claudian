@@ -23,7 +23,6 @@ import { Logger } from './core/logging/Logger';
 import {
   getEnvironmentVariablesForScope as getScopedEnvironmentVariables,
   getRuntimeEnvironmentText,
-  getRuntimeEnvironmentVariables,
   serializeEnvironmentVariables,
 } from './core/providers/providerEnvironment';
 import { ProviderRegistry } from './core/providers/ProviderRegistry';
@@ -31,8 +30,7 @@ import { ProviderSettingsCoordinator } from './core/providers/ProviderSettingsCo
 import { ProviderWorkspaceRegistry } from './core/providers/ProviderWorkspaceRegistry';
 import {
   migrateEnvSecrets,
-  overlaySecretEnvVars,
-  secretEnvVarsForScope,
+  resolveProviderEnvVars,
 } from './core/providers/secretEnvVars';
 import type { ProviderId } from './core/providers/types';
 import type { AppTabManagerState } from './core/providers/types';
@@ -385,13 +383,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   private resolveProviderEnv(
     providerId: ProviderId,
   ): { env: Record<string, string>; missing: SecretEnvVarRef[] } {
-    const env = getRuntimeEnvironmentVariables(this.settings, providerId);
-    const refs = [
-      ...secretEnvVarsForScope(this.settings.secretEnvVars, 'shared'),
-      ...secretEnvVarsForScope(this.settings.secretEnvVars, `provider:${providerId}`),
-    ];
-    const { missing } = overlaySecretEnvVars(env, refs, (id) => this.secretStore.get(id));
-    return { env, missing };
+    return resolveProviderEnvVars(this.settings, providerId, (id) => this.secretStore.get(id));
   }
 
   /**
