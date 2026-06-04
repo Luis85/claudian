@@ -2244,4 +2244,84 @@ describe('MessageRenderer', () => {
       expect(messagesEl.querySelectorAll('.claudian-context-card')).toHaveLength(1);
     });
   });
+
+  describe('image rendering', () => {
+    const baseImage: ImageAttachment = {
+      id: 'img-1',
+      name: 'Pasted image.png',
+      mediaType: 'image/png',
+      data: 'ZGF0YQ==',
+      size: 4,
+      source: 'paste',
+    };
+
+    it('prefers vault path when set and TFile exists', () => {
+      const getResourcePath = jest.fn().mockReturnValue('app://vault/Pasted%20image.png');
+      const getAbstractFileByPath = jest.fn().mockReturnValue(new TFile());
+      const messagesEl = createMockEl();
+      const { renderer } = createRenderer(messagesEl);
+      (renderer as any).app = {
+        vault: { getAbstractFileByPath, getResourcePath },
+      };
+
+      const img = { ...baseImage, path: 'attachments/Pasted image.png' };
+      const imgEl = { setAttribute: jest.fn() } as unknown as HTMLImageElement;
+      renderer.setImageSrc(imgEl, img);
+
+      expect(getAbstractFileByPath).toHaveBeenCalledWith('attachments/Pasted image.png');
+      expect(getResourcePath).toHaveBeenCalled();
+      expect((imgEl.setAttribute as jest.Mock)).toHaveBeenCalledWith('src', 'app://vault/Pasted%20image.png');
+    });
+
+    it('falls back to data URI when path resolves to null', () => {
+      const getResourcePath = jest.fn();
+      const getAbstractFileByPath = jest.fn().mockReturnValue(null);
+      const messagesEl = createMockEl();
+      const { renderer } = createRenderer(messagesEl);
+      (renderer as any).app = {
+        vault: { getAbstractFileByPath, getResourcePath },
+      };
+
+      const img = { ...baseImage, path: 'attachments/missing.png' };
+      const imgEl = { setAttribute: jest.fn() } as unknown as HTMLImageElement;
+      renderer.setImageSrc(imgEl, img);
+
+      expect((imgEl.setAttribute as jest.Mock)).toHaveBeenCalledWith('src', `data:${img.mediaType};base64,${img.data}`);
+      expect(getResourcePath).not.toHaveBeenCalled();
+    });
+
+    it('renders fallback chip when neither path resolves nor data is present', () => {
+      const getAbstractFileByPath = jest.fn().mockReturnValue(null);
+      const messagesEl = createMockEl();
+      const { renderer } = createRenderer(messagesEl);
+      (renderer as any).app = {
+        vault: { getAbstractFileByPath },
+      };
+
+      const img = { ...baseImage, path: 'attachments/missing.png', data: '' };
+      renderer.renderMessageImages(messagesEl, [img]);
+
+      // No <img> child — fallback chip element present instead.
+      const imagesContainer = messagesEl.querySelector('.claudian-message-images');
+      expect(imagesContainer).toBeDefined();
+      const imgChildren = imagesContainer?.querySelectorAll?.('img') ?? [];
+      expect(imgChildren.length).toBe(0);
+      const fallback = imagesContainer?.querySelector('.claudian-message-image-fallback');
+      expect(fallback).toBeDefined();
+    });
+
+    it('uses data URI for legacy images that have no path', () => {
+      const messagesEl = createMockEl();
+      const { renderer } = createRenderer(messagesEl);
+      (renderer as any).app = {
+        vault: { getAbstractFileByPath: jest.fn() },
+      };
+
+      const img = { ...baseImage }; // no path
+      const imgEl = { setAttribute: jest.fn() } as unknown as HTMLImageElement;
+      renderer.setImageSrc(imgEl, img);
+
+      expect((imgEl.setAttribute as jest.Mock)).toHaveBeenCalledWith('src', `data:${img.mediaType};base64,${img.data}`);
+    });
+  });
 });
