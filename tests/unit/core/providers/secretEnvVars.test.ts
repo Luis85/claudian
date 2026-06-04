@@ -48,6 +48,30 @@ describe('secretEnvVars — overlay', () => {
   });
 });
 
+describe('secretEnvVars — no secret value leaks into persisted settings', () => {
+  it('migrated settings JSON contains the ids but never the secret values', () => {
+    const settings: Record<string, unknown> = {
+      sharedEnvironmentVariables: 'ANTHROPIC_API_KEY=sk-super-secret\nANTHROPIC_MODEL=custom',
+      providerConfigs: { codex: { environmentVariables: 'OPENAI_API_KEY=op-secret' } },
+      secretEnvVars: [],
+    };
+    const stored = new Map<string, string>();
+    migrateEnvSecrets(settings, ['claude', 'codex'], {
+      set: (id, v) => stored.set(id, v),
+      list: () => [...stored.keys()],
+    });
+
+    // What persists to .claudian/claudian-settings.json:
+    const json = JSON.stringify(settings);
+    expect(json).not.toContain('sk-super-secret');
+    expect(json).not.toContain('op-secret');
+    expect(json).toContain('claudian-env-shared-anthropic-api-key'); // only the id reference
+
+    // Values live ONLY in the out-of-vault keychain store.
+    expect([...stored.values()].sort()).toEqual(['op-secret', 'sk-super-secret']);
+  });
+});
+
 describe('secretEnvVars — resolveProviderEnvVars precedence', () => {
   it('lets a provider plaintext override win over a same-named shared secret', () => {
     const settings: Record<string, unknown> = {

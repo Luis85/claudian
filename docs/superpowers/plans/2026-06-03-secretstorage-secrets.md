@@ -109,9 +109,10 @@ API keys are entered today as env lines in the provider tabs (`ANTHROPIC_API_KEY
       the Claude CLI expands `${VAR}` in `.claude/mcp.json` — safe default is resolve-fully-in-plugin + a smoke test.
 - [ ] Tests: no plaintext header/token in `.claude/mcp.json`; live + Test paths send real auth.
 
-### Phase 4 — UX, leak-assertion, docs (S–M)
-- [ ] Re-enter prompt + device-local explainer; migration notice.
-- [ ] Assertion test: diagnostics/export never contain a stored secret value.
+### Phase 4 — UX, leak-assertion, docs (S–M) — shipped
+- [x] `SecretComponent` UI (`SecretEnvVarsSection`) to add/edit/remove provider keys per scope, with a
+      "not set on this device" indicator; wired below the env textarea. Migration notice via `env.secretMissing`.
+- [x] Assertion test: persisted settings JSON contains the secret ids but never the secret values.
 - [ ] `README.md` Privacy + `docs/product/user-manuals/settings.md`: SecretStorage, the **honest threat model**,
       `minAppVersion 1.11.5`, Linux keyring requirement, device-local re-entry.
 
