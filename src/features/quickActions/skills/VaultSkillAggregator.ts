@@ -29,12 +29,17 @@ const DEFAULT_TTL_MS = 60_000;
  * (`providerEnabled`, `providerDisplayName`) is re-evaluated from the live
  * `ProviderRecord` on every `listAll()` call so a provider toggled while
  * the cache is warm is reflected without invalidation.
+ *
+ * When an `eventBus` is supplied, the aggregator subscribes to
+ * `vaultSkill.changed` and invalidates the matching provider's bucket so
+ * vault edits propagate without a manual refresh. `dispose()` unsubscribes.
  */
 export class VaultSkillAggregator implements VaultSkillSource {
   private readonly logger?: Logger;
   private readonly ttlMs: number;
   private readonly nowMs: () => number;
   private readonly cache = new Map<ProviderId, CachedBucket>();
+  private eventBusUnsubscribe: (() => void) | undefined;
 
   constructor(
     private getProviderRecords: () => ProviderRecord[],
@@ -43,6 +48,12 @@ export class VaultSkillAggregator implements VaultSkillSource {
     this.logger = options.logger?.scope('quickActions');
     this.ttlMs = options.ttlMs ?? DEFAULT_TTL_MS;
     this.nowMs = options.nowMs ?? Date.now;
+    if (options.eventBus) {
+      this.eventBusUnsubscribe = options.eventBus.on(
+        'vaultSkill.changed',
+        ({ providerId }) => this.invalidate(providerId),
+      );
+    }
   }
 
   async listAll(): Promise<SkillTabEntry[]> {
@@ -63,12 +74,17 @@ export class VaultSkillAggregator implements VaultSkillSource {
     // Implementation in Task 8
   }
 
-  invalidate(_providerId?: ProviderId): void {
-    // Implementation in Task 5
+  invalidate(providerId?: ProviderId): void {
+    if (providerId === undefined) {
+      this.cache.clear();
+    } else {
+      this.cache.delete(providerId);
+    }
   }
 
   dispose(): void {
-    // Implementation in Task 5
+    this.eventBusUnsubscribe?.();
+    this.cache.clear();
   }
 
   /** Returns the raw cached or freshly-fetched provider entries (skill kind). */

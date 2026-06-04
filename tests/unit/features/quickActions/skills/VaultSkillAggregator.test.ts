@@ -287,4 +287,77 @@ describe('VaultSkillAggregator', () => {
     expect(second.providerEnabled).toBe(false);
     expect(fetch).toHaveBeenCalledTimes(1);   // bucket reused
   });
+
+  it('invalidate(providerId) clears only that bucket', async () => {
+    const fetchA = jest.fn().mockResolvedValue([makeSkillEntry({ id: 'a', name: 'a' })]);
+    const fetchB = jest.fn().mockResolvedValue([
+      makeSkillEntry({ id: 'b', name: 'b', providerId: 'codex', insertPrefix: '$' }),
+    ]);
+    const records = [
+      makeRecord({ providerId: 'claude', entries: fetchA }),
+      makeRecord({ providerId: 'codex', displayName: 'Codex', entries: fetchB }),
+    ];
+    const agg = new VaultSkillAggregator(() => records, { ttlMs: 60_000 });
+    await agg.listAll();
+    expect(fetchA).toHaveBeenCalledTimes(1);
+    expect(fetchB).toHaveBeenCalledTimes(1);
+
+    agg.invalidate('claude');
+    await agg.listAll();
+    expect(fetchA).toHaveBeenCalledTimes(2);
+    expect(fetchB).toHaveBeenCalledTimes(1);
+  });
+
+  it('invalidate() with no arg clears all buckets', async () => {
+    const fetch = jest.fn().mockResolvedValue([makeSkillEntry({ id: 'a', name: 'a' })]);
+    const records = [makeRecord({ entries: fetch })];
+    const agg = new VaultSkillAggregator(() => records, { ttlMs: 60_000 });
+    await agg.listAll();
+    agg.invalidate();
+    await agg.listAll();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('subscribes to EventBus vaultSkill.changed and invalidates the matching provider', async () => {
+    const { EventBus } = await import('@/core/events/EventBus');
+    const bus = new EventBus<{ 'vaultSkill.changed': { providerId: 'claude' | 'codex' } }>();
+    const fetch = jest.fn().mockResolvedValue([makeSkillEntry({ id: 'a', name: 'a' })]);
+    const records = [makeRecord({ providerId: 'claude', entries: fetch })];
+    const agg = new VaultSkillAggregator(() => records, {
+      ttlMs: 60_000,
+      eventBus: bus as never,
+    });
+
+    await agg.listAll();
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    bus.emit('vaultSkill.changed', { providerId: 'claude' });
+    await agg.listAll();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('dispose() unsubscribes EventBus and clears caches', async () => {
+    const { EventBus } = await import('@/core/events/EventBus');
+    const bus = new EventBus<{ 'vaultSkill.changed': { providerId: 'claude' | 'codex' } }>();
+    const fetch = jest.fn().mockResolvedValue([makeSkillEntry({ id: 'a', name: 'a' })]);
+    const records = [makeRecord({ providerId: 'claude', entries: fetch })];
+    const agg = new VaultSkillAggregator(() => records, {
+      ttlMs: 60_000,
+      eventBus: bus as never,
+    });
+
+    await agg.listAll();
+    agg.dispose();
+
+    // After dispose, emit should not invalidate (cache cleared anyway, but
+    // event handler must be unregistered to prevent late re-entry)
+    bus.emit('vaultSkill.changed', { providerId: 'claude' });
+
+    // Cache cleared by dispose, so this refetches
+    await agg.listAll();
+    expect(fetch).toHaveBeenCalledTimes(2);
+    // No double-invalidate from a stale handler
+    await agg.listAll();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
 });
