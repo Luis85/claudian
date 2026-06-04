@@ -88,11 +88,12 @@ export interface ProviderRegistration {
 
 /**
  * SEC-A: resolves the effective env text for a provider WITH SecretStorage values
- * overlaid. Env-hash reconciliation uses this so moving a watched key (e.g.
- * `OPENAI_API_KEY`) from the plaintext blob into the keychain does not change the
- * hash and therefore does not invalidate existing sessions.
+ * overlaid, plus whether any referenced secret is missing on this device. Env-hash
+ * reconciliation uses this so (a) moving a watched key into the keychain doesn't
+ * change the hash, and (b) when a synced secret is absent locally the env is
+ * incomplete, so invalidation is deferred until the user re-enters it.
  */
-export type EnvTextResolver = (providerId: ProviderId) => string;
+export type EnvTextResolver = (providerId: ProviderId) => { text: string; hasMissingSecrets: boolean };
 
 export interface ProviderSettingsReconciler {
   handleEnvironmentChange?(settings: Record<string, unknown>): boolean;

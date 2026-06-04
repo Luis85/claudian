@@ -374,16 +374,39 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.settings,
     ),
   ): Record<string, string> {
+    const { env, missing } = this.resolveProviderEnv(providerId);
+    if (missing.length > 0) {
+      this.warnMissingDeviceSecrets(missing);
+    }
+    return env;
+  }
+
+  /** Parse the provider env and overlay SecretStorage values; reports missing refs. */
+  private resolveProviderEnv(
+    providerId: ProviderId,
+  ): { env: Record<string, string>; missing: SecretEnvVarRef[] } {
     const env = getRuntimeEnvironmentVariables(this.settings, providerId);
     const refs = [
       ...secretEnvVarsForScope(this.settings.secretEnvVars, 'shared'),
       ...secretEnvVarsForScope(this.settings.secretEnvVars, `provider:${providerId}`),
     ];
     const { missing } = overlaySecretEnvVars(env, refs, (id) => this.secretStore.get(id));
-    if (missing.length > 0) {
-      this.warnMissingDeviceSecrets(missing);
-    }
-    return env;
+    return { env, missing };
+  }
+
+  /**
+   * SEC-A: env text for env-hash reconciliation plus whether any referenced
+   * secret is missing on this device. Hashing the resolved env keeps a watched
+   * key's value stable across the plaintext→keychain move; `hasMissingSecrets`
+   * lets the reconciler defer invalidation when a synced secret isn't present yet.
+   */
+  getEnvironmentHashInput(
+    providerId: ProviderId = ProviderRegistry.resolveSettingsProviderId(
+      this.settings,
+    ),
+  ): { text: string; hasMissingSecrets: boolean } {
+    const { env, missing } = this.resolveProviderEnv(providerId);
+    return { text: serializeEnvironmentVariables(env), hasMissingSecrets: missing.length > 0 };
   }
 
   /**
@@ -451,9 +474,9 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.settings,
       this.conversationStore.getConversations(),
       providerIds,
-      // SEC-A: hash the resolved env so secrets in SecretStorage keep the same
-      // watched-key values as the old plaintext env — no spurious invalidation.
-      (providerId) => serializeEnvironmentVariables(this.getResolvedEnvironmentVariables(providerId)),
+      // SEC-A: hash the resolved env (secrets overlaid) and defer invalidation
+      // when a referenced secret is missing on this device.
+      (providerId) => this.getEnvironmentHashInput(providerId),
     );
   }
 

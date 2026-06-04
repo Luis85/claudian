@@ -73,6 +73,13 @@ export function extractBlobSecretRefs(
   const refs: SecretEnvVarRef[] = [];
   const clearedRefs: SecretEnvVarRef[] = [];
   const out: string[] = [];
+  // name -> ref for this scope, seeded from existing refs and extended with refs
+  // created in THIS pass, so a repeated secret key reuses one ref instead of
+  // allocating a duplicate (which a later edit/clear would only half-update).
+  const byName = new Map<string, SecretEnvVarRef>();
+  for (const ref of existingRefs) {
+    if (ref.scope === scope) byName.set(ref.name, ref);
+  }
 
   for (const line of blob.split(/\r?\n/)) {
     if (PLAINTEXT_OPT_OUT.test(line)) {
@@ -87,27 +94,37 @@ export function extractBlobSecretRefs(
       continue;
     }
 
-    const existing = existingRefs.find((ref) => ref.scope === scope && ref.name === key);
+    const tracked = byName.get(key);
 
     if (parsed[key] === '') {
-      // Cleared in the editor (`KEY=`). If it was a migrated secret, prune its
-      // ref so the stale SecretStorage value is no longer overlaid at launch.
+      // Cleared in the editor (`KEY=`). Prune a persisted ref so the stale
+      // SecretStorage value is no longer overlaid; un-create an in-pass ref.
       // The (now empty) line is kept as the user's explicit value.
-      if (existing) clearedRefs.push(existing);
+      if (tracked) {
+        if (existingRefs.includes(tracked)) {
+          clearedRefs.push(tracked);
+        } else {
+          const i = refs.indexOf(tracked);
+          if (i >= 0) refs.splice(i, 1);
+        }
+        byName.delete(key);
+      }
       out.push(line);
       continue;
     }
 
-    // A re-entered key (already migrated) updates its existing secret in place,
-    // keeping the same id/ref — so editing a key in the textarea never leaves a
-    // stale SecretStorage value winning over the new one, nor a plaintext line.
-    if (existing) {
-      setSecret(existing.secretId, parsed[key]);
+    // A re-entered key (already migrated, or a duplicate line in this pass)
+    // updates the SAME secret in place — never a stale duplicate ref or a
+    // plaintext line.
+    if (tracked) {
+      setSecret(tracked.secretId, parsed[key]);
     } else {
       const id = uniquifySecretId(migratedEnvSecretId(scope, key), usedIds);
       usedIds.add(id);
       setSecret(id, parsed[key]);
-      refs.push({ scope, name: key, secretId: id });
+      const ref: SecretEnvVarRef = { scope, name: key, secretId: id };
+      refs.push(ref);
+      byName.set(key, ref);
     }
     // Drop the secret line from the sanitized blob (either way).
   }

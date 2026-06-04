@@ -103,6 +103,12 @@ describe('secretEnvVars — migration extraction', () => {
     expect(new Set(ids).size).toBe(2);
     expect([...stored.values()].sort()).toEqual(['one', 'two']);
   });
+
+  it('reuses one ref for a repeated secret key (no duplicate; last value wins)', () => {
+    const { refs, stored } = migrate('OPENAI_API_KEY=one\nOPENAI_API_KEY=two');
+    expect(refs).toHaveLength(1);
+    expect(stored.get(refs[0].secretId)).toBe('two');
+  });
 });
 
 describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => {

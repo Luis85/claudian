@@ -63,10 +63,26 @@ describe('reconcileEnvironmentHash', () => {
       spec,
       { __envText: '' }, // plaintext blob no longer has the key (migrated)
       [makeConversation({ sessionId: 's1' })],
-      () => 'API_KEY=sk-1', // resolver re-injects it from SecretStorage
+      () => ({ text: 'API_KEY=sk-1', hasMissingSecrets: false }), // re-injected from SecretStorage
     );
 
     expect(result.changed).toBe(false);
+    expect(spec.invalidateConversation).not.toHaveBeenCalled();
+    expect(spec.saveHash).not.toHaveBeenCalled();
+  });
+
+  it('defers invalidation when a referenced secret is missing on this device', () => {
+    const spec = makeSpec({ watchedKeys: ['API_KEY'], getSavedHash: () => 'API_KEY=sk-1' });
+    // Resolved env is incomplete (secret absent locally): even though the hash
+    // would differ, sessions must NOT be invalidated until re-entry.
+    const result = reconcileEnvironmentHash(
+      spec,
+      { __envText: '' },
+      [makeConversation({ sessionId: 's1' })],
+      () => ({ text: '', hasMissingSecrets: true }),
+    );
+
+    expect(result).toEqual({ changed: false, invalidatedConversations: [] });
     expect(spec.invalidateConversation).not.toHaveBeenCalled();
     expect(spec.saveHash).not.toHaveBeenCalled();
   });

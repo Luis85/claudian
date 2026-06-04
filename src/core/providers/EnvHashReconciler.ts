@@ -39,10 +39,19 @@ export function reconcileEnvironmentHash(
   // SEC-A: hash the RESOLVED env (secrets overlaid) when available, so a watched
   // key moving from the plaintext blob into SecretStorage keeps the same value
   // and the same hash — no spurious session invalidation on upgrade/edit.
-  const envText = resolveEnvText
+  const resolved = resolveEnvText
     ? resolveEnvText(spec.providerId)
-    : getRuntimeEnvironmentText(settings, spec.providerId);
-  const currentHash = computeEnvHash(envText, spec.watchedKeys);
+    : { text: getRuntimeEnvironmentText(settings, spec.providerId), hasMissingSecrets: false };
+
+  // SEC-A: if a referenced secret is absent on this device (e.g. a synced vault
+  // opened on a new machine), the resolved env is incomplete — we can't tell
+  // whether a watched key actually changed, so defer: keep the saved hash and
+  // existing sessions until the user re-enters the secret.
+  if (resolved.hasMissingSecrets) {
+    return { changed: false, invalidatedConversations: [] };
+  }
+
+  const currentHash = computeEnvHash(resolved.text, spec.watchedKeys);
 
   if (currentHash === spec.getSavedHash(settings)) {
     return { changed: false, invalidatedConversations: [] };
@@ -55,7 +64,7 @@ export function reconcileEnvironmentHash(
     }
   }
 
-  spec.reconcileModel?.(settings, envText);
+  spec.reconcileModel?.(settings, resolved.text);
   spec.saveHash(settings, currentHash);
 
   return { changed: true, invalidatedConversations };
