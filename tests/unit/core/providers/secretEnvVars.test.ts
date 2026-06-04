@@ -100,6 +100,20 @@ describe('secretEnvVars — resolveProviderEnvVars precedence', () => {
     expect(env.ANTHROPIC_BASE_URL).toBe('https://shared');
   });
 
+  // SEC-A: a secret opted out of migration with `# claudian:plaintext` stays in the
+  // plaintext blob, but the marker must NOT be launched as part of the value.
+  it('strips the claudian:plaintext opt-out marker from the resolved runtime value', () => {
+    const settings: Record<string, unknown> = {
+      sharedEnvironmentVariables: '',
+      providerConfigs: {
+        codex: { environmentVariables: 'OPENAI_API_KEY=sk-live # claudian:plaintext' },
+      },
+      secretEnvVars: [],
+    };
+    const { env } = resolveProviderEnvVars(settings, 'codex', () => null);
+    expect(env.OPENAI_API_KEY).toBe('sk-live');
+  });
+
   it('reports refs whose secret value is absent on this device', () => {
     const settings: Record<string, unknown> = {
       sharedEnvironmentVariables: '',

@@ -8,7 +8,7 @@
  * Migration (one-time): EXTRACT secret-shaped plaintext lines out of an existing
  * env blob into the store and return the sanitized blob plus the new refs.
  */
-import { parseEnvironmentVariables } from '../../utils/env';
+import { parseEnvironmentVariables, PLAINTEXT_OPT_OUT_MARKER } from '../../utils/env';
 import { isClaudianGeneratedSecretId, isSecretEnvKey, migratedEnvSecretId, SECRET_VALUE_PLACEHOLDER, uniquifySecretId } from '../security/secretIds';
 import type { EnvironmentScope, SecretEnvVarRef } from '../types/settings';
 import {
@@ -21,9 +21,6 @@ import type { ProviderId } from './types';
 
 export type SecretResolver = (id: string) => string | null;
 export type SecretSetter = (id: string, value: string) => void;
-
-/** Inline opt-out marker: leave this env line in plaintext (power-user escape). */
-const PLAINTEXT_OPT_OUT = /#\s*claudian:plaintext\s*$/;
 
 /** Refs that apply to a given scope. */
 export function secretEnvVarsForScope(refs: SecretEnvVarRef[], scope: EnvironmentScope): SecretEnvVarRef[] {
@@ -140,7 +137,7 @@ export function extractBlobSecretRefs(
   }
 
   for (const line of blob.split(/\r?\n/)) {
-    if (PLAINTEXT_OPT_OUT.test(line)) {
+    if (PLAINTEXT_OPT_OUT_MARKER.test(line)) {
       out.push(line);
       continue;
     }
