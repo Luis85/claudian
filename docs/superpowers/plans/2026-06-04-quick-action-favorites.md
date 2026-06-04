@@ -1,5 +1,5 @@
 ---
-status: open
+status: done
 ---
 # Quick Action Favorites Implementation Plan
 
