@@ -113,7 +113,7 @@ Everything below distils to three problems. They are the spine of this PRD.
 
 ## 4. Strategy: don't rebuild the loop — build the harness around it
 
-> A stakeholder-facing C4 view of this architecture (Context → Container → Component) lives in the companion canvas **[[Specorator Architecture (C4)]]**, colour-coded so the "build upon, don't reinvent" boundary is unmistakable: green = ships today, cyan = new in v1, red = safety-critical.
+> A stakeholder-facing C4 view of this architecture (Context → Container → Component) lives in the companion canvas **[[Specorator Architecture (C4)]]**, colour-coded so the "build upon, don't reinvent" boundary is unmistakable: green = ships today, cyan = post-1.0 harness roadmap, red = safety-critical.
 
 Vault Operator is a **self-contained** harness: it owns the loop and therefore owns onboarding, undo, cost, and vault semantics end-to-end, at the cost of provider depth and mobile. Claudian is a **delegating** harness: it inherits frontier provider depth across four backends but currently exposes the seam.
 
