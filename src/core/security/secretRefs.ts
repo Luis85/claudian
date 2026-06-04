@@ -73,7 +73,7 @@ const KNOWN_SECRET_ENV_KEYS = new Set(
   ].map((k) => k.toUpperCase()),
 );
 
-const SECRET_ENV_SUFFIX_RE = /(?:_|^)(?:API[_-]?KEY|ACCESS[_-]?KEY|SECRET[_-]?KEY|SECRET|TOKEN|PASSWORD|PASSWD|CREDENTIALS?)$/;
+const SECRET_ENV_SUFFIX_RE = /(?:_|^)(?:API[_-]?KEY|ACCESS[_-]?KEY|SECRET[_-]?KEY|SECRET|TOKEN|PASSWORD|PASSWD|AUTH|CREDENTIALS?)$/;
 
 /** Heuristic: does this env var name hold a secret value? */
 export function isSecretEnvKey(key: string): boolean {

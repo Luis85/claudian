@@ -11,7 +11,7 @@ import {
 
 describe('secretRefs — detection', () => {
   it('flags known + suffix-matched secret env keys', () => {
-    for (const k of ['ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'FOO_TOKEN', 'MY_SECRET', 'X_PASSWORD', 'AWS_SECRET_ACCESS_KEY']) {
+    for (const k of ['ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'FOO_TOKEN', 'MY_SECRET', 'X_PASSWORD', 'AWS_SECRET_ACCESS_KEY', 'BASIC_AUTH', 'NPM_CONFIG__AUTH']) {
       expect(isSecretEnvKey(k)).toBe(true);
     }
   });
