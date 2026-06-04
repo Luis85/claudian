@@ -56,6 +56,8 @@ export class ClaudianView extends ItemView {
   private tabContentEl: HTMLElement | null = null;
   private navRowContent: HTMLElement | null = null;
   private emptyStateEl: HTMLElement | null = null;
+  /** History hydration failures awaiting a bound tab to render their banner. */
+  private pendingHydrationErrors = new Map<string, { code: string; message: string }>();
 
   // DOM Elements
   private viewContainerEl: HTMLElement | null = null;
@@ -851,14 +853,28 @@ export class ClaudianView extends ItemView {
    * Task 4 (history-service-contract). No-op when no tab matches the id —
    * the `Notice` toast from `registerHydrationFailedSubscriber` is still shown.
    */
+  /**
+   * Records a history hydration failure so the conversation pane can surface it
+   * as an inline banner. The failure is emitted synchronously during hydration —
+   * before the target tab is bound to the conversation (`switchTo` rebinds only
+   * in `restoreConversation`; `createTab` hydrates before the tab exists) — so a
+   * lookup by `tab.conversationId` here would miss. Instead we stash it by
+   * conversation id and let `ConversationController.restoreConversation` consume
+   * it once the tab is bound. The `Notice` toast (raised by the subscriber) still
+   * fires regardless, so a failure is never silent.
+   */
   private renderHydrationErrorBanner(
     conversationId: string,
     payload: HydrationFailedBannerPayload,
   ): void {
-    const tab = this.tabManager?.getAllTabs().find((t) => t.conversationId === conversationId);
-    // The renderer owns the banner so it survives the `renderMessages` that the
-    // conversation restore runs immediately after the failure is emitted.
-    tab?.renderer?.setHydrationError({ code: payload.code, message: payload.message });
+    this.pendingHydrationErrors.set(conversationId, { code: payload.code, message: payload.message });
+  }
+
+  /** Returns and clears any pending hydration failure for a conversation. */
+  consumePendingHydrationError(conversationId: string): { code: string; message: string } | null {
+    const pending = this.pendingHydrationErrors.get(conversationId) ?? null;
+    this.pendingHydrationErrors.delete(conversationId);
+    return pending;
   }
 
   /** Rebuilds the header logo SVG to match the given provider. */
