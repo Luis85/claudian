@@ -150,6 +150,17 @@
       "fileAdded": "Added {path} to Claudian chat",
       "folderAdded": "Added {path}/ to Claudian chat"
     },
+    "drop": {
+      "image": "Drop image",
+      "fileContext": "Drop into context",
+      "folderContext": "Drop folder into context",
+      "osContext": "Drop file or folder into context",
+      "mixed": "Drop into chat",
+      "batchAdded": "Added {count} to context",
+      "batchSkipped": "Skipped {count}: outside vault or external context",
+      "externalFolderUnsupported": "Folders outside the vault aren't supported as context yet",
+      "outsideContext": "{path} is outside the vault and any configured external context"
+    },
     "tab": {
       "createFailed": "Failed to create tab",
       "createConversationFailed": "Failed to create conversation",

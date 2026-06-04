@@ -51,6 +51,17 @@ export type TranslationKey =
   | 'chat.context.fileAdded'
   | 'chat.context.folderAdded'
 
+  // Chat - Drag and drop
+  | 'chat.drop.image'
+  | 'chat.drop.fileContext'
+  | 'chat.drop.folderContext'
+  | 'chat.drop.osContext'
+  | 'chat.drop.mixed'
+  | 'chat.drop.batchAdded'
+  | 'chat.drop.batchSkipped'
+  | 'chat.drop.externalFolderUnsupported'
+  | 'chat.drop.outsideContext'
+
   // Diagnostics (Q-1 chunk 9, main.ts; chunk 15 additions)
   | 'diagnostics.logsEmpty'
   | 'diagnostics.logsCopied'
