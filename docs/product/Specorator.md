@@ -78,8 +78,11 @@ The short version of that plan: keep the depth Specorator already has — real A
 - **Setup without a terminal.** Install, paste one key, ask your first question. No command line, no hunting for where a program lives, no error you can't read.
 - **Trust you can see and take back.** Every change shown before it lands, and a single "undo everything" that works no matter which engine made the change — not just one of them.
 - **An assistant that actually knows your vault.** It follows your links, reads your tags and properties, finds the note you half-remember, and carries what it learns about your work from one day to the next — instead of treating your vault as a plain folder of files.
+- **Set it up by tapping, not by editing files.** The things that shape your assistant — saved workflows, connected tools, and standing rules like "always cite sources" — live in the same one-tap surface as Quick Actions. No config files, no JSON, no provider-specific folders. Set a rule once and every engine follows it.
 
 Underneath those, the same plan adds sensible spending limits and a security model designed so a booby-trapped web clip or PDF can't quietly turn your assistant against your own notes.
+
+The goal behind all of it: bring the power of frontier AI coding tools to anyone who keeps their thinking in a vault — without the terminal, the setup, or the jargon.
 
 ---
 

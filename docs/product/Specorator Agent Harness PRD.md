@@ -21,7 +21,9 @@ related:
 
 # Specorator Agent Harness PRD
 
-> **Naming.** *Claudian* is the current plugin and codebase. **Specorator is the product name for v1** — the release this PRD describes, shipped once a stable agent-harness base is in place. Throughout, "Claudian" refers to today's implementation and "Specorator" to the v1 product it becomes. See [[Specorator]] for the v1 product overview.
+> **Naming.** *Claudian* is the current plugin and codebase. **Specorator is the product name for v1** — the release this PRD describes, shipped once a stable agent-harness base is in place. Throughout, "Claudian" refers to today's implementation and "Specorator" to the v1 product it becomes. See [[Specorator]] for the v1 product overview, and [[Specorator Architecture (C4)]] for the stakeholder-facing C4 architecture canvas.
+
+> **Product vision.** Bring frontier AI coding tools (Claude Code, Codex, Cursor) into the **mainstream** as a user-friendly Obsidian plugin. The defining primitives of an agent harness — **skills, tools (MCP), and rules** — must be configurable through **easy, provider-agnostic interfaces** that feel like the [[Quick Actions]] we already ship: a card you tap, not a config file you edit. The technical surface of the underlying CLIs stays hidden; the user thinks in *workflows, tools, and rules*, not in `.claude/`, `.cursor/rules`, or MCP JSON.
 
 > **TL;DR** — An agent is a model plus a *harness*: the loop, tools, memory, context discipline, and safety that turn a text predictor into something that gets work done in your vault. Claudian already owns a strong harness layer (multi-provider chat, sessions, approval gates) but it **rents the agentic loop from external CLIs** and exposes that seam to the user. That is the right engineering bet — but it leaves a non-technical person stranded at the install step, unsure what the agent just did to their notes, and unable to undo it in one click. This PRD is the roadmap from that base to **Specorator v1**: keep the delegation architecture and build the **user-facing harness** on top of it — a zero-terminal first run, a universal one-click undo, vault-native tools shared across every provider via a local MCP bridge, cross-session memory, cost guardrails, and a security model that structurally breaks the lethal trifecta. The north star: **a writer or researcher who has never opened a terminal can install Specorator, paste one key, ask a question about their vault, approve a change, and undo it — all without leaving Obsidian.**
 
@@ -99,6 +101,8 @@ Everything below distils to three problems. They are the spine of this PRD.
 
 ## 4. Strategy: don't rebuild the loop — build the harness around it
 
+> A stakeholder-facing C4 view of this architecture (Context → Container → Component) lives in the companion canvas **[[Specorator Architecture (C4)]]**, colour-coded so the "build upon, don't reinvent" boundary is unmistakable: green = ships today, cyan = new in v1, red = safety-critical.
+
 Vault Operator is a **self-contained** harness: it owns the loop and therefore owns onboarding, undo, cost, and vault semantics end-to-end, at the cost of provider depth and mobile. Claudian is a **delegating** harness: it inherits frontier provider depth across four backends but currently exposes the seam.
 
 The user-supplied draft recommends a **Hybrid (Option C)** path, and the research supports it — with one sharpening. The mechanism that makes the hybrid coherent is a **local MCP server owned by Claudian** ("**Vault MCP**") that every delegated CLI connects to. The CLIs already speak MCP. So instead of each provider getting a bare working directory, each provider gets a *vault-aware toolbelt and a shared memory* — wikilinks, frontmatter, Dataview, Canvas, semantic search, provenance, and cross-session memory — delivered uniformly, written once, with no change to any agent loop.
@@ -161,7 +165,7 @@ These shape every feature and are confirmed by the platform research:
 | **Agent Client** | ACP client | **High** (terminal install) | Per-turn | `@note` mentions | None | Multi-agent ACP |
 | **Claudian (today)** | CLI/ACP embed | **High** (CLI + PATH) | Claude only | Folder only | None | **4-provider depth** |
 
-**Our defensible space:** *the only multi-provider agent with frontier-CLI depth that a non-technical person can actually install and trust.* We keep the depth (nobody else has four backends this deep) and close the onboarding/trust/vault-native gap that currently disqualifies us for Maya and Sam. The Vault MCP bridge is how we get Vault Operator-class vault semantics **without** giving up provider depth or rebuilding a loop.
+**Our defensible space:** *the only multi-provider agent with frontier-CLI depth that a non-technical person can actually install, trust, and shape.* We keep the depth (nobody else has four backends this deep) and close the onboarding/trust/vault-native gap that currently disqualifies us for Maya and Sam. The Vault MCP bridge is how we get Vault Operator-class vault semantics **without** giving up provider depth or rebuilding a loop — and the **Harness Library** ([§8.9](#89-harness-library--provider-agnostic-skills-tools--rules--the-mainstreaming-layer)) is how we *mainstream* the harness primitives (skills, tools, rules) that every competitor still exposes as files and JSON. That combination — depth + zero-terminal trust + tap-to-configure harness — is the wedge that brings frontier coding agents to non-technical users.
 
 ---
 
@@ -231,6 +235,20 @@ Priority: **M** = Must (MVP), **S** = Should (v1), **C** = Could (v2+). Each fea
 - **F-OBS-2 [S] Persistent, exportable trace/log per task** (pairs with F-SAFE-5).
 - **F-OBS-3 [S] Token/cost per step and per task** (pairs with F-CTX-1/F-COST-1).
 
+### 8.9 Harness Library — provider-agnostic skills, tools & rules — *the mainstreaming layer*
+
+This is the layer that turns frontier CLI agents into something a non-technical person can shape. The defining primitives of any harness — **skills** (reusable workflows), **tools** (MCP/external capabilities), and **rules** (standing guidance/instructions) — are today configured per-provider, in files and JSON (`.claude/skills`, `.codex/agents`, `.cursor/rules`, `.claude/mcp.json`, `#` instruction mode). Specorator unifies them behind **one provider-agnostic, card-based surface modelled on [[Quick Actions]]**: you tap to add a skill, connect a tool, or set a rule — you never edit a config file, and you never need to know which provider stores what where.
+
+- **F-HARN-1 [M] Quick-Actions-style authoring shell.** One card-based surface to create, edit, and run harness primitives, reusing the Quick Actions UX and vault-note storage. Everything is a note you own; nothing requires touching `.claude/`/`.cursor/` or JSON.
+- **F-HARN-2 [M] Provider-agnostic Rules.** Author standing guidance once ("rules"); Specorator compiles/syncs it to each provider's native convention (Claude memory/`CLAUDE.md`, `AGENTS.md`, `.cursor/rules`, `#` instruction mode). Shares storage with the Memory profile (F-MEM-1).
+- **F-HARN-3 [M] Tool (MCP) gallery.** Connect an external tool by picking it from a friendly catalog — name, what it does, auth via `safeStorage` — and Specorator wires it into every provider that supports MCP. No raw JSON. Honest, capability-aware: shows "not available on provider X" rather than failing silently. (Builds on today's Claude-full / partial-elsewhere MCP support.)
+- **F-HARN-4 [S] Provider-agnostic Skills.** Author a reusable workflow once in a neutral format; compile to each provider's native skill format (`.claude/skills`, `.codex/skills`, `.agents/skills`, Opencode). Where a provider lacks `$` skills, fall back to injecting the workflow as a command/prompt so behaviour is uniform.
+- **F-HARN-5 [S] One library, capability-aware.** Each primitive shows which providers it's active on, consistent with the honest matrix in [[Multi Provider Support]] — never pretend a provider supports something it doesn't.
+- **F-HARN-6 [C] Share & import.** Because skills/rules/tools are plain Markdown notes, export one as a note others can import — a path to community sharing without an app store.
+- **F-HARN-7 [C] Context-menu / palette entry.** Start a skill or rule from a file/folder right-click or the command palette (aligns with existing vault idea docs).
+
+**Design rule (protects [R1](#13-open-questions--risks) co-evolution):** author in Specorator's neutral format, then **emit each provider's *native* convention** — never impose a bespoke format on a vendor agent that was post-trained on its own. The neutral layer is an authoring convenience; the compiled output is always idiomatic to the target.
+
 ---
 
 ## 9. Security & trust model
@@ -293,6 +311,13 @@ Grouped by theme; priority in brackets. "Vault agent" = the active provider runn
 - **US-23 [M]** As Devin, I want today's plan mode, subagents, `/` commands, `$` skills, and MCP to keep working unchanged. *(regression guard)*
 - **US-24 [S]** As Devin, I want the new vault-native tools available to my existing provider without extra setup. *(F-VAULT-1)*
 
+### Harness Library (skills · tools · rules)
+- **US-25 [M]** As Sam, I want to set a rule once — "always write in British English and cite sources" — and have every provider follow it, without editing config files. *(F-HARN-2)*
+- **US-26 [M]** As Maya, I want to connect a tool by picking it from a list and pasting a key, not by editing MCP JSON. *(F-HARN-3)*
+- **US-27 [M]** As any user, I want skills, tools, and rules to live in the same tap-to-use surface as Quick Actions, so there's one simple mental model. *(F-HARN-1)*
+- **US-28 [S]** As Devin, I want to author a reusable workflow once and run it on whatever provider a chat is using. *(F-HARN-4)*
+- **US-29 [S]** As a careful user, I want to see which providers a skill/tool/rule actually works on, with no silent failures. *(F-HARN-5)*
+
 ---
 
 ## 11. Use cases (end-to-end)
@@ -305,6 +330,8 @@ Grouped by theme; priority in brackets. "Vault agent" = the active provider runn
 - **UC-6 — Cost-bounded long task.** Devin runs a multi-step refactor of his research notes; the HUD shows live cost; near the limit he gets a warning + one-tap compaction; cheap steps run on a budget model, synthesis escalates once. (F-CTX-1, F-COST-1/2)
 - **UC-7 — Privacy lockdown.** Priya adds `Finances/` and `Journal/` to `.obsidian-agentignore`; the agent cannot read or write them; web search stays off; the network ledger shows only her LLM provider. (F-SAFE-4/6)
 - **UC-8 — Memory continuity.** Sam tells the agent his preferred note structure once; it's written to the vault profile; next week a new chat already follows it. (F-MEM-1)
+- **UC-9 — Set a rule once, applies everywhere.** Sam opens the Harness Library → "Add rule" → types "Keep daily notes in `Journal/`, never delete tasks." → saved as a vault note → compiled to each provider's native rules/instructions. His next chats on **Codex and Cursor both respect it** — no file editing, no per-provider setup. (F-HARN-1/2/5)
+- **UC-10 — Connect a tool from a gallery.** Maya wants web search: Harness Library → "Add tool" → picks a search MCP from the catalog → pastes a key (stored in the keychain) → it's live on every MCP-capable provider, with a clear note where it isn't. She never sees JSON. (F-HARN-3)
 
 ---
 
@@ -316,11 +343,11 @@ Sequenced so the **non-technical wins land first** (they're the point of the rev
 Stable Vault MCP scaffolding and tool-registry interface (backend-agnostic), `safeStorage` key plumbing, persistent log/audit substrate, desktop guard. *(F-ON-4/6, F-SAFE-5 substrate, F-VAULT-1 scaffold)*
 
 ### Phase 1 — Trust & onboarding MVP (the heart of this PRD)
-Provider validation on enable · setup wizard · diagnostics · plain-language errors · **universal Shadow-Git undo** · pre-execution expanded-diff approval · safe defaults · `.obsidian-agentignore` · core Vault MCP note/structure/keyword tools · cost & context HUD.
-**Definition of done:** Maya installs with no terminal and gets an answer; "what are my most-linked notes about X?" works; a multi-step edit is approved, applied, and undone in one click — on a non-Claude provider. *(F-ON-1/2/3/5/6, F-SAFE-1/2/3/4, F-VAULT-1/2/3/4, F-CTX-1)*
+Provider validation on enable · setup wizard · diagnostics · plain-language errors · **universal Shadow-Git undo** · pre-execution expanded-diff approval · safe defaults · `.obsidian-agentignore` · core Vault MCP note/structure/keyword tools · cost & context HUD · **Harness Library shell with provider-agnostic Rules and a Tool (MCP) gallery**.
+**Definition of done:** Maya installs with no terminal and gets an answer; "what are my most-linked notes about X?" works; a multi-step edit is approved, applied, and undone in one click — on a non-Claude provider; a rule set once is respected across two different providers with no file editing. *(F-ON-1/2/3/5/6, F-SAFE-1/2/3/4, F-VAULT-1/2/3/4, F-CTX-1, F-HARN-1/2/3)*
 
 ### Phase 2 — Vault intelligence & memory
-Semantic search + graph expansion · Dataview/Bases tools · three-tier vault memory · tool-output offloading · progressive disclosure · cost display · plan files in the Agent Board. *(F-VAULT-5/6, F-MEM-1, F-CTX-2/3, F-COST-1, F-PLAN-1/2)*
+Semantic search + graph expansion · Dataview/Bases tools · three-tier vault memory · tool-output offloading · progressive disclosure · cost display · plan files in the Agent Board · **provider-agnostic Skills + capability-aware Harness Library**. *(F-VAULT-5/6, F-MEM-1, F-CTX-2/3, F-COST-1, F-PLAN-1/2, F-HARN-4/5)*
 
 ### Phase 3 — Differentiation & ecosystem
 Block-level provenance / ingest · Canvas/Excalidraw generation · cross-encoder reranking · model tiering · subagent context-isolation security control · MCP-server memory relay · egress allowlist + network ledger · bundled/managed runtime (if validated). *(F-VAULT-7/8/9, F-COST-2, F-ORCH-1, F-MEM-2, F-SAFE-6, F-ON-8)*
