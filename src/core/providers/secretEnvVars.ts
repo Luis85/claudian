@@ -106,13 +106,24 @@ export function extractBlobSecretRefs(
  * key active immediately. Snippet secrets stay plaintext until a follow-up adds
  * a snippet-scoped association — see the SEC-A plan.
  */
+export interface MigrationSecretStore {
+  set(id: string, value: string): void;
+  /** All ids already present in SecretStorage (this vault's keychain). */
+  list(): string[];
+}
+
 export function migrateEnvSecrets(
   settings: Record<string, unknown>,
   providerIds: ProviderId[],
-  setSecret: SecretSetter,
+  store: MigrationSecretStore,
 ): boolean {
   const existing = (settings.secretEnvVars as SecretEnvVarRef[] | undefined) ?? [];
-  const usedIds = new Set(existing.map((ref) => ref.secretId));
+  // Seed from existing refs AND every id already in SecretStorage, so a derived
+  // id can never overwrite an unrelated secret. Obsidian's id space is shared
+  // across plugins within a vault, so a same-named secret from another plugin
+  // (or a stale id) must not be clobbered.
+  const usedIds = new Set<string>([...existing.map((ref) => ref.secretId), ...store.list()]);
+  const setSecret: SecretSetter = (id, value) => store.set(id, value);
   const newRefs: SecretEnvVarRef[] = [];
 
   const shared = extractBlobSecretRefs(getSharedEnvironmentVariables(settings), 'shared', setSecret, usedIds);

@@ -106,9 +106,13 @@ describe('secretEnvVars — migration extraction', () => {
 });
 
 describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => {
-  function run(settings: Record<string, unknown>) {
-    const stored = new Map<string, string>();
-    const changed = migrateEnvSecrets(settings, ['claude', 'codex'], (id, v) => stored.set(id, v));
+  function run(settings: Record<string, unknown>, seed: Record<string, string> = {}) {
+    const stored = new Map<string, string>(Object.entries(seed));
+    const store = {
+      set: (id: string, v: string) => stored.set(id, v),
+      list: () => [...stored.keys()],
+    };
+    const changed = migrateEnvSecrets(settings, ['claude', 'codex'], store);
     return { changed, stored };
   }
 
@@ -147,5 +151,20 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
     };
     expect(run(settings).changed).toBe(false);
     expect(settings.secretEnvVars).toEqual([]);
+  });
+
+  it('does not overwrite an id already present in SecretStorage (seeds usedIds from store.list)', () => {
+    const settings: Record<string, unknown> = {
+      sharedEnvironmentVariables: 'ANTHROPIC_API_KEY=sk-new',
+      providerConfigs: {},
+      secretEnvVars: [],
+    };
+    // The derived id already holds a foreign/stale value in the keychain.
+    const { stored } = run(settings, { 'claudian-env-shared-anthropic-api-key': 'pre-existing' });
+
+    const refs = settings.secretEnvVars as SecretEnvVarRef[];
+    expect(refs[0].secretId).toBe('claudian-env-shared-anthropic-api-key-2'); // uniquified
+    expect(stored.get('claudian-env-shared-anthropic-api-key')).toBe('pre-existing'); // untouched
+    expect(stored.get('claudian-env-shared-anthropic-api-key-2')).toBe('sk-new');
   });
 });

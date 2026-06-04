@@ -264,7 +264,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     const didMigrateSecrets = migrateEnvSecrets(
       this.settings,
       ProviderRegistry.getRegisteredProviderIds(),
-      (id, value) => this.secretStore.set(id, value),
+      this.secretStore,
     );
 
     // Plan mode is ephemeral — normalize back to normal on load so the app
