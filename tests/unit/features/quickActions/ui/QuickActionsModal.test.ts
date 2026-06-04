@@ -145,6 +145,8 @@ async function openModal(
 }
 
 describe('QuickActionsModal tabs', () => {
+  beforeEach(() => jest.clearAllMocks());
+
   it('renders Quick Actions and Skills tabs with Quick Actions selected by default', async () => {
     const { modal } = await openModal();
     const tabs = modal.contentEl.querySelectorAll('.claudian-quick-actions-tab');
@@ -253,6 +255,165 @@ describe('QuickActionsModal tabs', () => {
 
     const empty = modal.contentEl.querySelector('.claudian-quick-actions-skills-empty');
     expect(empty?.textContent).toContain('quickActions.skills.emptyAll');
+  });
+
+  it('renders the empty-state copy when aggregator rejects', async () => {
+    const aggregator = {
+      listAll: jest.fn().mockRejectedValue(new Error('boom')),
+    } as unknown as QuickActionsModalCallbacks['aggregator'];
+    const { modal } = await openModal({ aggregator });
+    const tabs = modal.contentEl.querySelectorAll(
+      '.claudian-quick-actions-tab',
+    ) as NodeListOf<HTMLElement>;
+    tabs[1].click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    const empty = modal.contentEl.querySelector('.claudian-quick-actions-skills-empty');
+    expect(empty?.textContent).toContain('quickActions.skills.emptyAll');
+  });
+
+  it('renders the Edit button when sourceFilePath is set', async () => {
+    const aggregator = makeAggregator([makeSkill({ name: 'tdd' })]);
+    const { modal } = await openModal({ aggregator });
+    const tabs = modal.contentEl.querySelectorAll(
+      '.claudian-quick-actions-tab',
+    ) as NodeListOf<HTMLElement>;
+    tabs[1].click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    const edit = modal.contentEl.querySelector('.claudian-quick-actions-skill-edit');
+    expect(edit).not.toBeNull();
+    expect(edit?.textContent).toContain('quickActions.skills.editInSettings');
+  });
+
+  it('renders the disabled badge span on a disabled-provider row', async () => {
+    const aggregator = makeAggregator([makeSkill({ providerEnabled: false })]);
+    const { modal } = await openModal({ aggregator });
+    const tabs = modal.contentEl.querySelectorAll(
+      '.claudian-quick-actions-tab',
+    ) as NodeListOf<HTMLElement>;
+    tabs[1].click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    const badge = modal.contentEl.querySelector(
+      '.claudian-quick-actions-skill-disabled-badge',
+    );
+    expect(badge).not.toBeNull();
+    expect(badge?.textContent).toContain('quickActions.skills.disabledBadge');
+  });
+
+  it('clicking a disabled-provider row still fires onRunSkill (runVaultSkill handles the Notice)', async () => {
+    const aggregator = makeAggregator([makeSkill({ providerEnabled: false })]);
+    const { modal, callbacks } = await openModal({ aggregator });
+    const tabs = modal.contentEl.querySelectorAll(
+      '.claudian-quick-actions-tab',
+    ) as NodeListOf<HTMLElement>;
+    tabs[1].click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    const row = modal.contentEl.querySelector(
+      '.claudian-quick-actions-skill-row-main',
+    ) as HTMLElement;
+    row.click();
+    expect(callbacks.onRunSkill).toHaveBeenCalledTimes(1);
+  });
+
+  it('filters skills by name substring', async () => {
+    const aggregator = makeAggregator([
+      makeSkill({ id: 'claude:a', name: 'brainstorming' }),
+      makeSkill({ id: 'claude:b', name: 'tdd' }),
+    ]);
+    const { modal } = await openModal({ aggregator });
+    const tabs = modal.contentEl.querySelectorAll(
+      '.claudian-quick-actions-tab',
+    ) as NodeListOf<HTMLElement>;
+    tabs[1].click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    const search = modal.contentEl.querySelector(
+      '.claudian-quick-actions-skill-list ~ * input, input[type=search]',
+    ) as HTMLInputElement;
+    search.value = 'tdd';
+    search.dispatchEvent(new Event('input'));
+
+    const rows = modal.contentEl.querySelectorAll('.claudian-quick-actions-skill-row');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].textContent).toContain('tdd');
+  });
+
+  it('filters skills by providerDisplayName substring', async () => {
+    const aggregator = makeAggregator([
+      makeSkill({ id: 'claude:a', providerDisplayName: 'Claude', name: 'a' }),
+      makeSkill({
+        id: 'codex:b',
+        providerId: 'codex',
+        providerDisplayName: 'Codex',
+        insertPrefix: '$',
+        name: 'b',
+      }),
+    ]);
+    const { modal } = await openModal({ aggregator });
+    const tabs = modal.contentEl.querySelectorAll(
+      '.claudian-quick-actions-tab',
+    ) as NodeListOf<HTMLElement>;
+    tabs[1].click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    const search = modal.contentEl.querySelector(
+      'input[type=search]',
+    ) as HTMLInputElement;
+    search.value = 'codex';
+    search.dispatchEvent(new Event('input'));
+
+    const rows = modal.contentEl.querySelectorAll('.claudian-quick-actions-skill-row');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].textContent).toContain('b');
+  });
+
+  it('renders noResults when filter matches nothing', async () => {
+    const aggregator = makeAggregator([makeSkill({ name: 'tdd' })]);
+    const { modal } = await openModal({ aggregator });
+    const tabs = modal.contentEl.querySelectorAll(
+      '.claudian-quick-actions-tab',
+    ) as NodeListOf<HTMLElement>;
+    tabs[1].click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    const search = modal.contentEl.querySelector(
+      'input[type=search]',
+    ) as HTMLInputElement;
+    search.value = 'nope';
+    search.dispatchEvent(new Event('input'));
+
+    const noResults = modal.contentEl.querySelector(
+      '.claudian-quick-actions-empty-results',
+    );
+    expect(noResults?.textContent).toContain('quickActions.skills.noResults');
+  });
+
+  it('Enter on the skills search runs the first matching skill and closes', async () => {
+    const aggregator = makeAggregator([
+      makeSkill({ id: 'claude:a', name: 'brainstorming' }),
+      makeSkill({ id: 'claude:b', name: 'tdd' }),
+    ]);
+    const { modal, callbacks } = await openModal({ aggregator });
+    const tabs = modal.contentEl.querySelectorAll(
+      '.claudian-quick-actions-tab',
+    ) as NodeListOf<HTMLElement>;
+    tabs[1].click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    const search = modal.contentEl.querySelector(
+      'input[type=search]',
+    ) as HTMLInputElement;
+    search.value = 'tdd';
+    search.dispatchEvent(new Event('input'));
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    expect(callbacks.onRunSkill).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'claude:b', name: 'tdd' }),
+    );
+    expect(modal.close).toHaveBeenCalled();
   });
 
   it('clears the search input when switching tabs', async () => {

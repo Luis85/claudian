@@ -1,5 +1,15 @@
+import type { Logger } from '../../../core/logging/Logger';
 import type { ProviderCommandEntry } from '../../../core/providers/commands/ProviderCommandEntry';
-import type { ProviderRecord, SkillTabEntry } from './types';
+import type { ProviderRecord, SkillTabEntry, VaultSkillSource } from './types';
+
+/**
+ * Optional dependencies for `VaultSkillAggregator`. A logger lets the
+ * aggregator emit a `warn` breadcrumb when a single provider's
+ * `listVaultEntries()` rejects, instead of silently swallowing.
+ */
+export interface VaultSkillAggregatorOptions {
+  logger?: Logger;
+}
 
 /**
  * Walks every provider record returned by the injected factory, asks each
@@ -7,15 +17,31 @@ import type { ProviderRecord, SkillTabEntry } from './types';
  * entries, and tags them with provider metadata for the Skills tab.
  *
  * Per-provider failures are swallowed so a single broken provider cannot
- * blank out the entire Skills tab.
+ * blank out the entire Skills tab. When a `logger` is supplied, the failure
+ * is logged at warn level under the `quickActions` scope.
  */
-export class VaultSkillAggregator {
-  constructor(private getProviderRecords: () => ProviderRecord[]) {}
+export class VaultSkillAggregator implements VaultSkillSource {
+  private readonly logger?: Logger;
+
+  constructor(
+    private getProviderRecords: () => ProviderRecord[],
+    options: VaultSkillAggregatorOptions = {},
+  ) {
+    this.logger = options.logger?.scope('quickActions');
+  }
 
   async listAll(): Promise<SkillTabEntry[]> {
     const records = this.getProviderRecords();
     const buckets = await Promise.all(
-      records.map((r) => this.collectFromProvider(r).catch(() => [] as SkillTabEntry[])),
+      records.map((r) =>
+        this.collectFromProvider(r).catch((err) => {
+          this.logger?.warn('vault skill aggregation failed', {
+            providerId: r.providerId,
+            err,
+          });
+          return [] as SkillTabEntry[];
+        }),
+      ),
     );
     return buckets.flat();
   }

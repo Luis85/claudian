@@ -115,6 +115,8 @@ function makeMockPlugin(
   return {
     app: { vault: {} },
     settings: { quickActionsFolder: 'Quick Actions' },
+    storage: { getAdapter: jest.fn(() => ({})) },
+    logger: undefined,
     getView: jest.fn(() => view),
     activateView: jest.fn().mockResolvedValue(undefined),
   };
@@ -279,6 +281,8 @@ describe('openContextMenuQuickAction', () => {
       const plugin = {
         app: { vault: {} },
         settings: { quickActionsFolder: 'Quick Actions' },
+        storage: { getAdapter: jest.fn(() => ({})) },
+        logger: undefined,
         getView: jest.fn()
           .mockReturnValueOnce(null)
           .mockReturnValueOnce(view),
@@ -298,6 +302,8 @@ describe('openContextMenuQuickAction', () => {
       const plugin = {
         app: { vault: {} },
         settings: { quickActionsFolder: 'Quick Actions' },
+        storage: { getAdapter: jest.fn(() => ({})) },
+        logger: undefined,
         getView: jest.fn().mockReturnValue(null),
         activateView: jest.fn().mockResolvedValue(undefined),
       };

@@ -3,16 +3,16 @@ import { Modal, Notice, setIcon } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
 import type { QuickActionStorage } from '../QuickActionStorage';
-import type { SkillTabEntry } from '../skills/types';
-import type { VaultSkillAggregator } from '../skills/VaultSkillAggregator';
+import type { SkillTabEntry, VaultSkillSource } from '../skills/types';
 import type { QuickAction } from '../types';
 import { QuickActionEditorModal } from './QuickActionEditorModal';
+import { SkillsTabRenderer } from './SkillsTabRenderer';
 
 export interface QuickActionsModalCallbacks {
   onRun: (action: QuickAction) => void;
   onRunSkill: (entry: SkillTabEntry) => void;
   storage: QuickActionStorage;
-  aggregator: VaultSkillAggregator;
+  aggregator: VaultSkillSource;
 }
 
 type ActiveTab = 'quickActions' | 'skills';
@@ -31,15 +31,17 @@ export class QuickActionsModal extends Modal {
   private actions: QuickAction[] = [];
   private filter = '';
 
-  // Skills tab state
-  private skillSearchInputEl: HTMLInputElement | null = null;
-  private skillListEl: HTMLElement | null = null;
-  private skills: SkillTabEntry[] = [];
-  private skillFilter = '';
+  // Skills tab — delegated to a dedicated renderer.
+  private skillsRenderer: SkillsTabRenderer;
 
   constructor(app: App, callbacks: QuickActionsModalCallbacks) {
     super(app);
     this.callbacks = callbacks;
+    this.skillsRenderer = new SkillsTabRenderer(
+      callbacks.aggregator,
+      callbacks.onRunSkill,
+      () => this.close(),
+    );
   }
 
   onOpen(): void {
@@ -87,29 +89,23 @@ export class QuickActionsModal extends Modal {
     this.searchWrapEl = null;
     this.searchInputEl = null;
     this.listEl = null;
-    this.skillSearchInputEl = null;
-    this.skillListEl = null;
     this.filter = '';
-    this.skillFilter = '';
 
+    let inputToFocus: HTMLInputElement | null;
     if (this.activeTab === 'quickActions') {
-      this.renderQuickActionsBody(this.bodyEl);
+      inputToFocus = this.renderQuickActionsBody(this.bodyEl);
       await this.refreshList();
-      // Cast defeats narrowing — fields were nulled at the top, then
-      // re-assigned inside renderQuickActionsBody (TS can't track that).
-      (this.searchInputEl as HTMLInputElement | null)?.focus();
     } else {
-      this.renderSkillsBody(this.bodyEl);
-      await this.refreshSkills();
-      (this.skillSearchInputEl as HTMLInputElement | null)?.focus();
+      inputToFocus = await this.skillsRenderer.render(this.bodyEl);
     }
+    inputToFocus?.focus();
   }
 
   // ============================================================
-  // Quick Actions tab (refactored from prior onOpen body)
+  // Quick Actions tab
   // ============================================================
 
-  private renderQuickActionsBody(host: HTMLElement): void {
+  private renderQuickActionsBody(host: HTMLElement): HTMLInputElement {
     this.introEl = host.createDiv({ cls: 'claudian-quick-actions-intro' });
 
     this.searchWrapEl = host.createDiv({ cls: 'claudian-quick-actions-search' });
@@ -117,23 +113,24 @@ export class QuickActionsModal extends Modal {
       cls: 'claudian-quick-actions-search-container',
     });
     const placeholder = t('quickActions.modal.searchPlaceholder');
-    this.searchInputEl = inputContainer.createEl('input', {
+    const searchInput = inputContainer.createEl('input', {
       type: 'search',
       cls: 'claudian-quick-actions-search-input',
       attr: { placeholder, 'aria-label': placeholder },
     });
-    this.searchInputEl.addEventListener('input', () => {
-      this.filter = this.searchInputEl?.value ?? '';
+    this.searchInputEl = searchInput;
+    searchInput.addEventListener('input', () => {
+      this.filter = searchInput.value ?? '';
       this.renderList();
     });
-    this.searchInputEl.addEventListener('keydown', (e) => {
+    searchInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         this.runFirstMatch();
-      } else if (e.key === 'Escape' && this.searchInputEl?.value) {
+      } else if (e.key === 'Escape' && searchInput.value) {
         e.preventDefault();
         e.stopPropagation();
-        this.searchInputEl.value = '';
+        searchInput.value = '';
         this.filter = '';
         this.renderList();
       }
@@ -159,6 +156,8 @@ export class QuickActionsModal extends Modal {
       .addEventListener('click', () => {
         this.openEditor(null);
       });
+
+    return searchInput;
   }
 
   private runFirstMatch(): void {
@@ -340,166 +339,6 @@ export class QuickActionsModal extends Modal {
       await this.refreshList();
     } catch {
       new Notice(t('quickActions.modal.deleteFailed'));
-    }
-  }
-
-  // ============================================================
-  // Skills tab
-  // ============================================================
-
-  private renderSkillsBody(host: HTMLElement): void {
-    const searchWrap = host.createDiv({ cls: 'claudian-quick-actions-search' });
-    const inputContainer = searchWrap.createDiv({
-      cls: 'claudian-quick-actions-search-container',
-    });
-    const placeholder = t('quickActions.skills.searchPlaceholder');
-    this.skillSearchInputEl = inputContainer.createEl('input', {
-      type: 'search',
-      cls: 'claudian-quick-actions-search-input',
-      attr: { placeholder, 'aria-label': placeholder },
-    });
-    this.skillSearchInputEl.addEventListener('input', () => {
-      this.skillFilter = this.skillSearchInputEl?.value ?? '';
-      this.renderSkillList();
-    });
-    this.skillSearchInputEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        this.runFirstSkillMatch();
-      } else if (e.key === 'Escape' && this.skillSearchInputEl?.value) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.skillSearchInputEl.value = '';
-        this.skillFilter = '';
-        this.renderSkillList();
-      }
-    });
-
-    this.skillListEl = host.createDiv({
-      cls: 'claudian-quick-actions-list claudian-quick-actions-skill-list',
-    });
-  }
-
-  private async refreshSkills(): Promise<void> {
-    if (!this.skillListEl) return;
-    try {
-      this.skills = await this.callbacks.aggregator.listAll();
-    } catch {
-      this.skills = [];
-    }
-    this.renderSkillList();
-  }
-
-  private renderSkillList(): void {
-    if (!this.skillListEl) return;
-    this.skillListEl.empty();
-
-    if (this.skills.length === 0) {
-      this.skillListEl.addClass('claudian-quick-actions-skills-empty');
-      this.skillListEl.createEl('p', {
-        cls: 'claudian-quick-actions-skills-empty-lead',
-        text: t('quickActions.skills.emptyAll'),
-      });
-      this.skillListEl.createEl('p', {
-        cls: 'claudian-quick-actions-skills-empty-hint',
-        text: t('quickActions.skills.emptyHint'),
-      });
-      return;
-    }
-    this.skillListEl.removeClass('claudian-quick-actions-skills-empty');
-
-    const filtered = this.applySkillFilter(this.skills);
-    if (filtered.length === 0) {
-      this.skillListEl.createDiv({
-        cls: 'claudian-quick-actions-empty-results',
-        text: t('quickActions.skills.noResults'),
-      });
-      return;
-    }
-
-    let lastProvider: string | null = null;
-    for (const skill of filtered) {
-      if (skill.providerId !== lastProvider) {
-        this.skillListEl.createDiv({
-          cls: 'claudian-quick-actions-provider-header',
-          text: skill.providerDisplayName,
-        });
-        lastProvider = skill.providerId;
-      }
-      this.renderSkillRow(skill);
-    }
-  }
-
-  private applySkillFilter(skills: SkillTabEntry[]): SkillTabEntry[] {
-    const needle = this.skillFilter.trim().toLowerCase();
-    if (!needle) return skills;
-    return skills.filter((s) => {
-      if (s.name.toLowerCase().includes(needle)) return true;
-      if (s.description.toLowerCase().includes(needle)) return true;
-      if (s.providerDisplayName.toLowerCase().includes(needle)) return true;
-      return false;
-    });
-  }
-
-  private runFirstSkillMatch(): void {
-    const filtered = this.applySkillFilter(this.skills);
-    const first = filtered[0];
-    if (!first) return;
-    this.callbacks.onRunSkill(first);
-    this.close();
-  }
-
-  private renderSkillRow(skill: SkillTabEntry): void {
-    if (!this.skillListEl) return;
-
-    const row = this.skillListEl.createDiv({
-      cls: 'claudian-quick-action-row claudian-quick-actions-skill-row',
-    });
-    if (!skill.providerEnabled) {
-      row.addClass('is-provider-disabled');
-    }
-
-    const main = row.createDiv({
-      cls: 'claudian-quick-action-main claudian-quick-actions-skill-row-main',
-    });
-
-    const iconEl = main.createSpan({ cls: 'claudian-quick-action-icon' });
-    setIcon(iconEl, 'book-open');
-
-    const textCol = main.createDiv({ cls: 'claudian-quick-action-text' });
-    textCol.createEl('strong', { text: skill.name });
-    if (skill.description) {
-      textCol.createDiv({
-        cls: 'claudian-quick-action-desc',
-        text: skill.description,
-      });
-    }
-    if (!skill.providerEnabled) {
-      textCol.createSpan({
-        cls: 'claudian-quick-actions-skill-disabled-badge',
-        text: t('quickActions.skills.disabledBadge'),
-      });
-    }
-
-    main.addEventListener('click', () => {
-      this.callbacks.onRunSkill(skill);
-      this.close();
-    });
-
-    if (skill.sourceFilePath) {
-      const actions = row.createDiv({ cls: 'claudian-quick-action-actions' });
-      const editBtn = actions.createEl('button', {
-        cls: 'claudian-quick-actions-skill-edit',
-        text: t('quickActions.skills.editInSettings', {
-          provider: skill.providerDisplayName,
-        }),
-      });
-      editBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        // Best-effort: close modal so user lands in plugin settings.
-        // Provider-specific deep-link is deferred to a future change.
-        this.close();
-      });
     }
   }
 }

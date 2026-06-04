@@ -148,6 +148,45 @@ describe('VaultSkillAggregator', () => {
     expect(result.map((e) => e.providerId)).toEqual(['codex']);
   });
 
+  it('logs a warn breadcrumb when a provider rejects and a logger is supplied', async () => {
+    const warn = jest.fn();
+    const logger = { scope: jest.fn().mockReturnValue({ warn }) };
+    const records = [
+      makeRecord({
+        providerId: 'claude',
+        entries: () => Promise.reject(new Error('boom')),
+      }),
+    ];
+    const agg = new VaultSkillAggregator(() => records, {
+      logger: logger as never,
+    });
+    await agg.listAll();
+    expect(logger.scope).toHaveBeenCalledWith('quickActions');
+    expect(warn).toHaveBeenCalledWith(
+      'vault skill aggregation failed',
+      expect.objectContaining({ providerId: 'claude' }),
+    );
+  });
+
+  it('merges empty result buckets cleanly when one provider has no skills', async () => {
+    const records = [
+      makeRecord({
+        providerId: 'claude',
+        entries: [],
+      }),
+      makeRecord({
+        providerId: 'codex',
+        displayName: 'Codex',
+        entries: [
+          makeSkillEntry({ id: 'b', name: 'b', providerId: 'codex', insertPrefix: '$' }),
+        ],
+      }),
+    ];
+    const agg = new VaultSkillAggregator(() => records);
+    const result = await agg.listAll();
+    expect(result.map((e) => e.providerId)).toEqual(['codex']);
+  });
+
   it('maps undefined sourceFilePath to null', async () => {
     const records = [
       makeRecord({

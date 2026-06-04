@@ -1,15 +1,10 @@
-import { Notice, type TAbstractFile,TFile, TFolder } from 'obsidian';
+import { Notice, type TAbstractFile, TFile, TFolder } from 'obsidian';
 
-import { VaultFileAdapter } from '@/core/storage/VaultFileAdapter';
 import { t } from '@/i18n/i18n';
 import type ClaudianPlugin from '@/main';
 
-import { QuickActionStorage } from './QuickActionStorage';
-import { buildProviderRecords } from './skills/buildProviderRecords';
-import { runVaultSkill } from './skills/runVaultSkill';
-import { VaultSkillAggregator } from './skills/VaultSkillAggregator';
+import { openQuickActionsModal } from './openQuickActionsModal';
 import type { QuickAction } from './types';
-import { QuickActionsModal } from './ui/QuickActionsModal';
 
 /**
  * Opens the quick actions picker modal for the given vault file or folder.
@@ -24,22 +19,12 @@ export function openContextMenuQuickAction(
   plugin: ClaudianPlugin,
   file: TAbstractFile,
 ): void {
-  const storage = new QuickActionStorage(
-    new VaultFileAdapter(plugin.app),
-    () => plugin.settings.quickActionsFolder ?? 'Quick Actions',
-  );
-  const aggregator = new VaultSkillAggregator(() => buildProviderRecords(plugin));
-
-  new QuickActionsModal(plugin.app, {
-    storage,
-    aggregator,
+  openQuickActionsModal(plugin, {
+    file,
     onRun: (action) => {
       void runQuickAction(plugin, action, file);
     },
-    onRunSkill: (entry) => {
-      void runVaultSkill(plugin, entry, file);
-    },
-  }).open();
+  });
 }
 
 async function runQuickAction(

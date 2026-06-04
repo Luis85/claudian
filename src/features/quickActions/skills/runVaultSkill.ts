@@ -1,7 +1,11 @@
 import { Notice, type TAbstractFile, TFile, TFolder } from 'obsidian';
 
+import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
+import type { ProviderId } from '@/core/providers/types';
+import { asSettingsBag } from '@/core/types/settings';
 import { getTabProviderId } from '@/features/chat/tabs/providerResolution';
 import type { TabManager } from '@/features/chat/tabs/TabManager';
+import type { TabData } from '@/features/chat/tabs/types';
 import { t } from '@/i18n/i18n';
 import type ClaudianPlugin from '@/main';
 
@@ -11,6 +15,12 @@ import type { SkillTabEntry } from './types';
  * Routes execution of a vault skill to a chat tab matching the skill's
  * provider, attaches the optional file/folder as a context pill, and sends
  * the provider-native skill invocation (`$name` or `/name`).
+ *
+ * Provider-enable state is re-checked at execution time via
+ * `ProviderRegistry.isEnabled` — `SkillTabEntry.providerEnabled` is a
+ * listing-time cache for picker dimming, so a provider toggled while the
+ * modal was open must not silently send into a disabled provider, and a
+ * provider re-enabled while the modal was open must not silently fail.
  *
  * Tab routing order:
  * 1. Active tab matches provider and is blank → reuse.
@@ -28,7 +38,11 @@ export async function runVaultSkill(
   entry: SkillTabEntry,
   file: TAbstractFile | null,
 ): Promise<void> {
-  if (!entry.providerEnabled) {
+  const enabledNow = ProviderRegistry.isEnabled(
+    entry.providerId,
+    asSettingsBag(plugin.settings),
+  );
+  if (!enabledNow) {
     new Notice(
       t('quickActions.skills.providerDisabled', { provider: entry.providerDisplayName }),
     );
@@ -66,12 +80,12 @@ export async function runVaultSkill(
 async function resolveTargetTab(
   tabManager: TabManager,
   plugin: ClaudianPlugin,
-  targetProviderId: string,
-): Promise<TabLike | null> {
-  const activeTab = tabManager.getActiveTab() as TabLike | null;
+  targetProviderId: ProviderId,
+): Promise<TabData | null> {
+  const activeTab = tabManager.getActiveTab();
 
   if (activeTab) {
-    const activeProvider = getTabProviderId(activeTab as never, plugin);
+    const activeProvider = getTabProviderId(activeTab, plugin);
     if (activeProvider === targetProviderId) {
       if (activeTab.lifecycleState === 'blank') {
         return activeTab;
@@ -82,12 +96,9 @@ async function resolveTargetTab(
 
   // Active tab provider mismatches (or no active tab). Look for an existing
   // blank tab on the target provider before creating a new one.
-  const allTabs = typeof tabManager.getAllTabs === 'function'
-    ? (tabManager.getAllTabs() as unknown as TabLike[])
-    : [];
-  const blankMatch = allTabs.find((tab) => {
+  const blankMatch = tabManager.getAllTabs().find((tab) => {
     if (tab.lifecycleState !== 'blank') return false;
-    return getTabProviderId(tab as never, plugin) === targetProviderId;
+    return getTabProviderId(tab, plugin) === targetProviderId;
   });
   if (blankMatch) {
     return blankMatch;
@@ -98,31 +109,14 @@ async function resolveTargetTab(
 
 async function createTabForProvider(
   tabManager: TabManager,
-  providerId: string,
-): Promise<TabLike | null> {
+  providerId: ProviderId,
+): Promise<TabData | null> {
   if (!tabManager.canCreateTab()) {
     return null;
   }
   const created = await tabManager.createTab(null, undefined, {
     activate: false,
-    defaultProviderId: providerId as never,
+    defaultProviderId: providerId,
   });
-  return (created as unknown as TabLike) ?? null;
+  return created ?? null;
 }
-
-/** Minimal structural type covering the fields runVaultSkill touches on a tab. */
-type TabLike = {
-  id: string;
-  lifecycleState: string;
-  ui: {
-    fileContextManager?: {
-      attachFileAsPill: (path: string) => void;
-      attachFolderAsPill: (path: string) => void;
-    };
-  };
-  controllers: {
-    inputController?: {
-      sendMessage: (input: { content: string }) => void;
-    };
-  };
-};

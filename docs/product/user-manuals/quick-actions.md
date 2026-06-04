@@ -117,3 +117,44 @@ When the **Quick actions folder** is empty (or missing), the picker still opens.
 3. Fill in **Name**, an optional **Description** and **Icon**, and the **Prompt** body you want sent. Save.
 4. Next time you want it, open the picker and click the row — the prompt fires straight into the active chat.
 5. To reorganize, edit the underlying note (rename via the vault and adjust `name:` to rename; tweak the body anytime to change what gets sent).
+
+---
+
+## Skills tab
+
+The picker opens with two tabs: **Quick actions** (covered above) and **Skills**. The Skills tab is a read-only listing of every provider-discovered skill in your vault, grouped by provider.
+
+### Where skills come from
+
+| Provider | Source folder | Trigger |
+|----------|---------------|---------|
+| Claude | `.claude/skills/<name>/SKILL.md` | `/<name>` |
+| Codex | `.codex/skills/<name>/SKILL.md` (vault) plus `~/.codex/skills/...` (home) | `$<name>` |
+| Opencode | Discovered from the Opencode runtime at session start | `/<name>` |
+| Cursor | Not surfaced (Cursor does not expose skills today) | — |
+
+Each skill row shows the skill name, its description, and a provider header (Claude, Codex, …) above its group. Rows are alphabetical inside a provider group; provider order matches the registration order.
+
+### Running a skill
+
+Click a row → the modal closes and the skill invocation (`/skill-name` for Claude/Opencode, `$skill-name` for Codex) is sent into the chat as your next message.
+
+The runtime picks a chat tab for you:
+
+- If your **currently active** tab is on the same provider as the skill **and** the tab is blank (no conversation yet), the active tab is reused.
+- If the active tab is on the same provider but already has a conversation, a new tab is opened for the skill.
+- If the active tab is on a different provider, the picker first looks for an **existing blank tab** on the skill's provider; if it finds one, that tab is reused. Otherwise a new tab is opened with the skill's provider pre-selected.
+
+When you opened the picker by right-clicking a file or folder, the file/folder pill is attached to the target tab **after** the tab switch, so it survives the new-tab welcome reset.
+
+### Disabled providers
+
+A skill belonging to a provider you have disabled in settings is dimmed in the list and tagged with a small **disabled** badge. Clicking it shows a notice instead of sending — the provider must be enabled (Settings → Claudian → its tab) before the skill can run. The check happens at the moment you click, so toggling a provider while the picker is open is honored without reopening.
+
+### Edit in settings
+
+When the picker knows the skill is backed by an editable file on disk (vault `SKILL.md`, Codex home-folder `SKILL.md`, etc.), each row gets an **Edit in {provider} settings** button on the right. Today it closes the modal so you can finish navigating to the provider's settings; a future change will deep-link directly to the entry. For runtime-discovered skills (e.g. Opencode), the Edit button is hidden because the file path is unknown to Obsidian.
+
+### Search
+
+The Skills tab has its own search box, separate from Quick actions search. Substring matches against the skill name, description, and provider display name. Press **Enter** to run the first match. **Escape** clears the field. Switching tabs resets both searches to empty.

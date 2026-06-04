@@ -17,7 +17,12 @@ export interface SkillTabEntry {
   insertPrefix: '/' | '$';
   /** SKILL.md path when known. null for runtime-discovered (e.g. Opencode). */
   sourceFilePath: string | null;
-  /** Cached at listing time. Used to gate execution and dim disabled rows. */
+  /**
+   * Cached at listing time. Reflects provider-enable state when the modal
+   * opened; used to dim disabled rows in the picker. `runVaultSkill`
+   * re-checks `ProviderRegistry.isEnabled` at execution so a provider
+   * toggled while the modal was open is honored.
+   */
   providerEnabled: boolean;
 }
 
@@ -30,4 +35,13 @@ export interface ProviderRecord {
   displayName: string;
   isEnabled: boolean;
   commandCatalog: ProviderCommandCatalog;
+}
+
+/**
+ * Minimal interface the Skills tab needs from a skill source. Lets the modal
+ * couple to behavior, not to the concrete `VaultSkillAggregator` class, and
+ * gives tests a small seam without `as unknown` casts.
+ */
+export interface VaultSkillSource {
+  listAll(): Promise<SkillTabEntry[]>;
 }

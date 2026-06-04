@@ -236,6 +236,29 @@ Deploy the app`,
       expect(entries.every(e => e.scope === 'vault')).toBe(true);
       expect(entries.find(e => e.name === 'commit')).toBeUndefined();
     });
+
+    it('folds sourceFilePath onto skill entries and leaves command entries with undefined sourceFilePath', async () => {
+      const adapter = createMockAdapter({
+        '.claude/commands/review.md': `---
+description: Review code
+---
+Review this code`,
+        '.claude/skills/deploy/SKILL.md': `---
+description: Deploy
+---
+Deploy the app`,
+      });
+      const commands = new SlashCommandStorage(adapter);
+      const skills = new SkillStorage(adapter);
+      const catalog = new ClaudeCommandCatalog(commands, skills);
+
+      const entries = await catalog.listVaultEntries();
+
+      const skill = entries.find((e) => e.kind === 'skill');
+      const command = entries.find((e) => e.kind === 'command');
+      expect(skill?.sourceFilePath).toBe('.claude/skills/deploy/SKILL.md');
+      expect(command?.sourceFilePath).toBeUndefined();
+    });
   });
 
   describe('saveVaultEntry', () => {
