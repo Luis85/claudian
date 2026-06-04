@@ -1,3 +1,5 @@
+import type { HistoryLoadErrorCode } from '../../core/providers/types';
+
 export interface ChatEventMap {
   /** Emitted when a chat tab is opened or closed. */
   'chat:tabs-changed': { openCount: number };
@@ -9,4 +11,17 @@ export interface ChatEventMap {
    * through `plugin.getConversationSync(id)` if they need more.
    */
   'conversation:renamed': { conversationId: string; title: string };
+  /**
+   * Emitted when a provider history service reports an `error` outcome from
+   * either `hydrateConversationHistoryV2` or `deleteConversationSessionV2`.
+   * The payload is the redacted user-safe summary from the provider; raw
+   * detail strings stay confined to the leveled logger. Subscriber wiring is
+   * a follow-up task — this event is produced today so callers can react
+   * without inspecting `HistoryLoadOutcome` themselves.
+   */
+  'conversation:hydration-failed': {
+    conversationId: string;
+    code: HistoryLoadErrorCode;
+    message: string;
+  };
 }

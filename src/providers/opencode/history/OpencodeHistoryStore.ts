@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import * as fs from 'node:fs';
 
+import type { HistoryLoadError } from '../../../core/providers/types';
 import { extractResolvedAnswersFromResultText } from '../../../core/tools/toolInput';
 import { isWriteEditTool, TOOL_ASK_USER_QUESTION } from '../../../core/tools/toolNames';
 import type { ChatMessage, ContentBlock, ToolCallInfo } from '../../../core/types';
@@ -39,28 +40,43 @@ export const OPENCODE_MESSAGE_ROW_SQL = buildOpencodeMessageRowsSql('?');
 const OPENCODE_PART_ROW_SQL = buildOpencodePartRowsSql('?');
 const OPENCODE_HYDRATION_DIAGNOSTIC_ID_PREFIX = 'opencode-hydration-error';
 
+export interface OpencodeSessionLoadResult {
+  messages: ChatMessage[];
+  error?: HistoryLoadError;
+}
+
 export async function loadOpencodeSessionMessages(
   sessionId: string,
   providerState?: OpencodeProviderState,
-): Promise<ChatMessage[]> {
+): Promise<OpencodeSessionLoadResult> {
   const databasePath = resolveExistingOpencodeDatabasePath(providerState?.databasePath);
   if (!databasePath || databasePath === ':memory:' || !fs.existsSync(databasePath)) {
-    return [];
+    return { messages: [] };
   }
 
   const rows = await loadOpencodeSessionRows(databasePath, sessionId);
   if (!rows) {
-    return [createOpencodeHydrationDiagnosticMessage({
-      databasePath,
-      reason: 'Could not read OpenCode session rows from SQLite.',
-      sessionId,
-    })];
+    const transportAvailable = await isSqliteTransportAvailable();
+    const error: HistoryLoadError = transportAvailable
+      ? {
+          code: 'store-unreadable',
+          message: 'Could not read OpenCode session rows from SQLite.',
+          detail: `databasePath=${databasePath} sessionId=${sessionId}`,
+        }
+      : {
+          code: 'sqlite-unavailable',
+          message: 'OpenCode history requires node:sqlite or the sqlite3 CLI.',
+          detail: `databasePath=${databasePath} sessionId=${sessionId}`,
+        };
+    return { messages: [], error };
   }
 
-  return mapOpencodeMessages(
-    hydrateStoredMessages(rows.messageRows, rows.partRows),
-    { databasePath, sessionId },
-  );
+  return {
+    messages: mapOpencodeMessages(
+      hydrateStoredMessages(rows.messageRows, rows.partRows),
+      { databasePath, sessionId },
+    ),
+  };
 }
 
 export function mapOpencodeMessages(
@@ -76,6 +92,10 @@ export function mapOpencodeMessages(
         mappedMessages.push(mappedMessage);
       }
     } catch (error) {
+      // Per-row sentinel stays for individual malformed messages; session-level
+      // failures are reported through HistoryLoadOutcome.error. Lifting per-row
+      // signals into the outcome (e.g. `outcomes: HistoryLoadError[]` on the
+      // loaded variant) is a follow-up.
       mappedMessages.push(createOpencodeHydrationDiagnosticMessage({
         ...context,
         messageId: getString(message.info.id) ?? undefined,
@@ -298,10 +318,6 @@ function buildOpencodeHydrationDiagnosticId(params: {
   return `${OPENCODE_HYDRATION_DIAGNOSTIC_ID_PREFIX}-${scope}-${safeId}`;
 }
 
-export function isOpencodeSessionHydrationDiagnosticMessage(message: ChatMessage): boolean {
-  return message.id.startsWith(`${OPENCODE_HYDRATION_DIAGNOSTIC_ID_PREFIX}-session-`);
-}
-
 function isOpencodeHydrationDiagnosticMessage(message: ChatMessage): boolean {
   return message.id.startsWith(OPENCODE_HYDRATION_DIAGNOSTIC_ID_PREFIX);
 }
@@ -485,6 +501,17 @@ async function loadSqliteModule(): Promise<SqliteModule | null> {
   } catch {
     return null;
   }
+}
+
+async function isSqliteTransportAvailable(): Promise<boolean> {
+  const sqliteModule = await loadSqliteModule();
+  if (sqliteModule) return true;
+  return isSqlite3CliAvailable();
+}
+
+function isSqlite3CliAvailable(): boolean {
+  const probe = spawnSync('sqlite3', ['-version'], { encoding: 'utf8' });
+  return !probe.error && probe.status === 0;
 }
 
 interface StoredSessionRows {

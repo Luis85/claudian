@@ -21,6 +21,10 @@ import { QuickActionsModal } from '../quickActions/ui/QuickActionsModal';
 import { resolveModelContextWindow } from '../settings/customModels/resolveModelContextWindow';
 import type { HistoryConversationOpenState } from './controllers/ConversationController';
 import type { ProgrammaticSendResult } from './controllers/InputController';
+import {
+  type HydrationFailedBannerPayload,
+  registerHydrationFailedSubscriber,
+} from './hydration/hydrationFailedSubscriber';
 import { InlineOrchestratorPlan } from './rendering/InlineOrchestratorPlan';
 import type { OrchestratorPlan } from './rendering/orchestratorPlanParser';
 import { OrchestratorService } from './services/OrchestratorService';
@@ -52,6 +56,8 @@ export class ClaudianView extends ItemView {
   private tabContentEl: HTMLElement | null = null;
   private navRowContent: HTMLElement | null = null;
   private emptyStateEl: HTMLElement | null = null;
+  /** History hydration failures awaiting a bound tab to render their banner. */
+  private pendingHydrationErrors = new Map<string, { code: string; message: string }>();
 
   // DOM Elements
   private viewContainerEl: HTMLElement | null = null;
@@ -841,6 +847,36 @@ export class ClaudianView extends ItemView {
     this.titleTextEl.title = title;
   }
 
+  /**
+   * Renders an inline error banner inside the conversation pane when history
+   * hydration fails. Replaces the in-stream sentinel that Opencode used before
+   * Task 4 (history-service-contract). No-op when no tab matches the id —
+   * the `Notice` toast from `registerHydrationFailedSubscriber` is still shown.
+   */
+  /**
+   * Records a history hydration failure so the conversation pane can surface it
+   * as an inline banner. The failure is emitted synchronously during hydration —
+   * before the target tab is bound to the conversation (`switchTo` rebinds only
+   * in `restoreConversation`; `createTab` hydrates before the tab exists) — so a
+   * lookup by `tab.conversationId` here would miss. Instead we stash it by
+   * conversation id and let `ConversationController.restoreConversation` consume
+   * it once the tab is bound. The `Notice` toast (raised by the subscriber) still
+   * fires regardless, so a failure is never silent.
+   */
+  private renderHydrationErrorBanner(
+    conversationId: string,
+    payload: HydrationFailedBannerPayload,
+  ): void {
+    this.pendingHydrationErrors.set(conversationId, { code: payload.code, message: payload.message });
+  }
+
+  /** Returns and clears any pending hydration failure for a conversation. */
+  consumePendingHydrationError(conversationId: string): { code: string; message: string } | null {
+    const pending = this.pendingHydrationErrors.get(conversationId) ?? null;
+    this.pendingHydrationErrors.delete(conversationId);
+    return pending;
+  }
+
   /** Rebuilds the header logo SVG to match the given provider. */
   private syncHeaderLogo(providerId: ProviderId): void {
     if (!this.logoEl) return;
@@ -1010,6 +1046,14 @@ export class ClaudianView extends ItemView {
         this.syncHeaderTitle();
       }
       this.updateTabBar();
+    }));
+
+    // History Service Contract (Task 11): surface a Notice + inline banner when
+    // `ConversationStore` reports a hydration / delete failure. Without this,
+    // Opencode users with corrupt SQLite would see a blank pane (Task 4
+    // removed the in-stream sentinel that used to render the error there).
+    this.register(registerHydrationFailedSubscriber(this.plugin.events, (conversationId, payload) => {
+      this.renderHydrationErrorBanner(conversationId, payload);
     }));
 
     // File open event

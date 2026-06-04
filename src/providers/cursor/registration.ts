@@ -1,4 +1,7 @@
-import type { ProviderRegistration } from '../../core/providers/types';
+import type {
+  ProviderConversationHistoryService,
+  ProviderRegistration,
+} from '../../core/providers/types';
 import { CursorInlineEditService } from './auxiliary/CursorInlineEditService';
 import { CursorInstructionRefineService } from './auxiliary/CursorInstructionRefineService';
 import { CursorTitleGenerationService } from './auxiliary/CursorTitleGenerationService';
@@ -25,6 +28,10 @@ export const cursorProviderRegistration: ProviderRegistration = {
   createTitleGenerationService: (plugin) => new CursorTitleGenerationService(plugin),
   createInstructionRefineService: (plugin) => new CursorInstructionRefineService(plugin),
   createInlineEditService: (plugin) => new CursorInlineEditService(plugin),
-  historyService: new CursorConversationHistoryService(),
+  // The typed subclass narrows TPersistedState to CursorProviderState; the
+  // registration field uses the default-instantiated interface. The shape is
+  // structurally compatible (chatSessionId: string | undefined) but lacks the
+  // index signature that Record<string, unknown> demands.
+  historyService: new CursorConversationHistoryService() as unknown as ProviderConversationHistoryService,
   taskResultInterpreter: new CursorTaskResultInterpreter(),
 };

@@ -20,6 +20,7 @@
 @import "./components/subagent.css";
 @import "./components/input.css";
 @import "./components/context-footer.css";
+@import "./components/hydration-error.css";
 
 /* Toolbar */
 @import "./toolbar/model-selector.css";

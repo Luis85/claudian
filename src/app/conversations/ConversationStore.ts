@@ -1,7 +1,8 @@
 import type { SharedAppStorage } from '../../core/bootstrap/storage';
 import type { EventBus } from '../../core/events/EventBus';
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
-import type { ProviderId } from '../../core/providers/types';
+import { hasForkSupport } from '../../core/providers/typeGuards';
+import type { HydrationContext, ProviderId } from '../../core/providers/types';
 import { DEFAULT_CHAT_PROVIDER_ID } from '../../core/providers/types';
 import type { Conversation, ConversationMeta } from '../../core/types';
 import type { ClaudianEventMap } from '../events/claudianEvents';
@@ -25,8 +26,8 @@ export interface ConversationStoreDeps {
    */
   repairViewsAfterDelete(conversationId: string): Promise<void>;
   /**
-   * App-level event bus. The store stays narrow — it only emits
-   * `conversation:renamed` so far, but the bus reference is plumbed at the
+   * App-level event bus. The store currently emits `conversation:renamed`
+   * and `conversation:hydration-failed`; the bus reference is plumbed at the
    * dependency boundary so future store-owned events (delete notifications,
    * provider switches) don't need a constructor change.
    */
@@ -148,9 +149,20 @@ export class ConversationStore {
     const conversation = this.conversations[index];
     this.conversations.splice(index, 1);
 
-    await ProviderRegistry
+    const ctx: HydrationContext = {
+      vaultPath: this.deps.getVaultPath(),
+      reason: 'open',
+    };
+    const outcome = await ProviderRegistry
       .getConversationHistoryService(conversation.providerId)
-      .deleteConversationSession(conversation, this.deps.getVaultPath());
+      .deleteConversationSessionV2(conversation, ctx);
+    if (outcome.kind === 'error') {
+      this.deps.events.emit('conversation:hydration-failed', {
+        conversationId: id,
+        code: outcome.error.code,
+        message: outcome.error.message,
+      });
+    }
 
     await this.deps.storage.sessions.deleteMetadata(id);
 
@@ -201,7 +213,13 @@ export class ConversationStore {
 
     // Clear image data from memory after save (data is persisted by SDK).
     // Skip for pending forks: their deep-cloned images aren't in SDK storage yet.
-    if (!ProviderRegistry.getConversationHistoryService(conversation.providerId).isPendingForkConversation(conversation)) {
+    // `hasForkSupport` is the typed guard — providers without a `forkSupport`
+    // slot have no fork concept, so treat them as non-pending.
+    const historyService = ProviderRegistry.getConversationHistoryService(conversation.providerId);
+    const isPendingFork = hasForkSupport(historyService)
+      ? historyService.forkSupport.isPendingForkConversation(conversation)
+      : false;
+    if (!isPendingFork) {
       for (const msg of conversation.messages) {
         if (msg.images) {
           for (const img of msg.images) {
@@ -244,10 +262,31 @@ export class ConversationStore {
     }));
   }
 
-  private async loadSdkMessagesForConversation(conversation: Conversation): Promise<void> {
-    await ProviderRegistry
-      .getConversationHistoryService(conversation.providerId)
-      .hydrateConversationHistory(conversation, this.deps.getVaultPath());
+  private async loadSdkMessagesForConversation(
+    conversation: Conversation,
+    reason: HydrationContext['reason'] = 'open',
+  ): Promise<void> {
+    const ctx: HydrationContext = {
+      vaultPath: this.deps.getVaultPath(),
+      reason,
+    };
+    const service = ProviderRegistry.getConversationHistoryService(conversation.providerId);
+    const outcome = await service.hydrateConversationHistoryV2(conversation, ctx);
+    switch (outcome.kind) {
+      case 'loaded':
+        conversation.messages = outcome.messages;
+        break;
+      case 'cached':
+      case 'empty':
+        break;
+      case 'error':
+        this.deps.events.emit('conversation:hydration-failed', {
+          conversationId: conversation.id,
+          code: outcome.error.code,
+          message: outcome.error.message,
+        });
+        break;
+    }
   }
 
   private getConversationPreview(conv: Conversation): string {

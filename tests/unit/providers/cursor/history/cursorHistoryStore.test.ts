@@ -8,6 +8,7 @@ const os = jest.requireActual<typeof osType>('os');
 import { TOOL_READ, TOOL_WRITE } from '@/core/tools/toolNames';
 import {
   buildChatMessagesFromCursorHistoryRecords,
+  classifyCursorSqliteOpenError,
   cursorWorkspaceHash,
   cursorWorkspaceHashLegacy,
   loadCursorChatMessagesFromStoreResult,
@@ -160,15 +161,61 @@ describe('loadCursorChatMessagesFromStoreResult', () => {
     const result = loadCursorChatMessagesFromStoreResult('/definitely/does/not/exist.db');
     expect(result.messages).toEqual([]);
     expect(result.error).toBeDefined();
+    // After Task 5 the open path emits a structured HistoryLoadError.
+    expect(typeof result.error).toBe('object');
+    // eslint-disable-next-line jest/no-conditional-expect
+    if (result.error && typeof result.error === 'object') expect(result.error.code).toBe('store-unreadable');
   });
 
-  it('redacts the home directory from the error message', () => {
+  it('does not leak the home directory through the structured error', () => {
     const home = os.homedir();
     const dbPath = `${home}/.cursor/chats/abc/xyz/store.db`;
     const result = loadCursorChatMessagesFromStoreResult(dbPath);
     expect(result.error).toBeDefined();
-    expect(result.error).not.toContain(home);
-    expect(result.error).toContain('[HOME]');
+    // Structured error: HOME must not leak through the user-facing message OR
+    // the debug-only detail field that the leveled logger consumes. Detail
+    // passes through `redactHomeInPath` before reaching callers; the underlying
+    // node:sqlite open error doesn't always embed the path itself (depends on
+    // Node build), so we assert non-leak rather than the sentinel presence.
+    const err = result.error;
+    if (err && typeof err === 'object') {
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(err.message).not.toContain(home);
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(err.detail ?? '').not.toContain(home);
+    } else {
+      // Legacy string path (kept for SQL-read inline failures).
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(err).not.toContain(home);
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(err).toContain('[HOME]');
+    }
+  });
+});
+
+describe('classifyCursorSqliteOpenError', () => {
+  it("maps Node's unknown-builtin-module error to sqlite-unavailable", () => {
+    // Node 20 throws this when require('node:sqlite') hits the flagged builtin.
+    const err = Object.assign(new Error('No such built-in module: node:sqlite'), {
+      code: 'ERR_UNKNOWN_BUILTIN_MODULE',
+    });
+    expect(classifyCursorSqliteOpenError(err).code).toBe('sqlite-unavailable');
+  });
+
+  it('maps a missing-module error to sqlite-unavailable', () => {
+    const err = Object.assign(new Error("Cannot find module 'node:sqlite'"), {
+      code: 'MODULE_NOT_FOUND',
+    });
+    expect(classifyCursorSqliteOpenError(err).code).toBe('sqlite-unavailable');
+  });
+
+  it('classifies other open failures as store-unreadable with the home dir redacted', () => {
+    const home = os.homedir();
+    const err = new Error(`unable to open ${home}/.cursor/chats/abc/store.db`);
+    const result = classifyCursorSqliteOpenError(err);
+    expect(result.code).toBe('store-unreadable');
+    expect(result.message).not.toContain(home);
+    expect(result.detail ?? '').not.toContain(home);
   });
 });
 

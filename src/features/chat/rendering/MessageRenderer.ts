@@ -73,6 +73,7 @@ export class MessageRenderer {
   private windowedMessages: ChatMessage[] = [];
   private renderWindowStart = 0;
   private loadEarlierEl: HTMLElement | null = null;
+  private hydrationError: { code: string; message: string } | null = null;
 
   constructor(
     plugin: ClaudianPlugin,
@@ -265,6 +266,12 @@ export class MessageRenderer {
     const newWelcomeEl = this.messagesEl.createDiv({ cls: 'claudian-welcome' });
     newWelcomeEl.createDiv({ cls: 'claudian-welcome-greeting', text: getGreeting() });
 
+    // A hydration failure is surfaced as a banner kept in renderer state, not as
+    // a one-shot DOM insert. `empty()` above wiped any prior copy, so re-render
+    // it from state — otherwise the banner the failure subscriber adds before
+    // this restore-driven render would be silently dropped, leaving a blank pane.
+    this.renderHydrationErrorBanner();
+
     const start = windowStartIndex(messages.length);
     this.renderWindowStart = start;
     if (start > 0) {
@@ -277,6 +284,35 @@ export class MessageRenderer {
 
     this.scrollToBottom();
     return newWelcomeEl;
+  }
+
+  /**
+   * Records a history hydration failure and shows it as an inline banner. The
+   * error is held in renderer state so it survives the `renderMessages` that
+   * `restoreConversation` runs right after `ConversationStore` emits the
+   * failure — see the re-render in {@link renderMessages}.
+   */
+  setHydrationError(error: { code: string; message: string }): void {
+    this.hydrationError = error;
+    this.renderHydrationErrorBanner();
+  }
+
+  /**
+   * Drops any recorded hydration failure and removes its banner. Called before
+   * hydrating a switched / reloaded conversation so a previous failure does not
+   * linger on a healthy pane.
+   */
+  clearHydrationBanner(): void {
+    this.hydrationError = null;
+    this.messagesEl.querySelector('.claudian-hydration-error')?.remove();
+  }
+
+  private renderHydrationErrorBanner(): void {
+    this.messagesEl.querySelector('.claudian-hydration-error')?.remove();
+    if (!this.hydrationError) return;
+    const banner = this.messagesEl.createDiv({ cls: 'claudian-hydration-error' });
+    banner.setText(this.hydrationError.message);
+    banner.dataset.errorCode = this.hydrationError.code;
   }
 
   private renderLoadEarlierControl(): void {

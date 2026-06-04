@@ -202,6 +202,14 @@ async function handleForkAll(
   });
 }
 
+/**
+ * Structural view of the host (`ClaudianView`) that owns pending hydration
+ * failures. Declared locally to avoid importing the view type (circular import).
+ */
+interface PendingHydrationErrorHost {
+  consumePendingHydrationError(conversationId: string): { code: string; message: string } | null;
+}
+
 export function initializeTabControllers(
   tab: TabData,
   plugin: ClaudianPlugin,
@@ -325,6 +333,9 @@ export function initializeTabControllers(
       getStatusPanel: () => ui.statusPanel,
       getAgentService: () => tab.service, // Use tab's service instead of plugin's
       dismissPendingInlinePrompts: () => tab.controllers.inputController?.dismissPendingApproval(),
+      consumePendingHydrationError: (conversationId: string) =>
+        (component as Partial<PendingHydrationErrorHost>)
+          .consumePendingHydrationError?.(conversationId) ?? null,
       ensureServiceForConversation: async (conversation) => {
         const nextProviderId = getTabProviderId(tab, plugin, conversation);
         const providerChanged = tab.providerId !== nextProviderId;

@@ -6,6 +6,7 @@ import type { HomeFileAdapter } from '../storage/HomeFileAdapter';
 import type { VaultFileAdapter } from '../storage/VaultFileAdapter';
 import type {
   AgentDefinition,
+  ChatMessage,
   Conversation,
   InstructionRefineResult,
   ManagedMcpServer,
@@ -458,25 +459,72 @@ export interface ProviderWorkspaceRegistration<
   initialize(context: ProviderWorkspaceInitContext): Promise<TServices>;
 }
 
-export interface ProviderConversationHistoryService {
-  hydrateConversationHistory(
-    conversation: Conversation,
-    vaultPath: string | null,
-  ): Promise<void>;
-  deleteConversationSession(
-    conversation: Conversation,
-    vaultPath: string | null,
-  ): Promise<void>;
-  resolveSessionIdForConversation(conversation: Conversation | null): string | null;
+export interface HydrationContext {
+  vaultPath: string | null;
+  signal?: AbortSignal;
+  forceRefresh?: boolean;
+  reason: 'open' | 'reload' | 'tail' | 'fork-resume';
+}
+
+export type HistoryLoadErrorCode =
+  | 'store-missing'
+  | 'store-unreadable'
+  | 'sqlite-unavailable'
+  | 'parse-failed'
+  | 'invalid-session-id'
+  | 'fork-checkpoint-not-found'
+  | 'cancelled';
+
+export interface HistoryLoadError {
+  code: HistoryLoadErrorCode;
+  /** Redacted, user-safe summary. Must never embed `os.homedir()` literally. */
+  message: string;
+  /** Debug-only detail. Logged through the leveled logger, never rendered. */
+  detail?: string;
+}
+
+export type HistoryLoadOutcome =
+  | { kind: 'loaded'; messages: ChatMessage[]; sourceRef: string }
+  | { kind: 'cached'; sourceRef: string }
+  | { kind: 'empty'; reason: 'no-session' | 'no-store' | 'no-rows'; sourceRef: string | null }
+  | { kind: 'error'; error: HistoryLoadError; sourceRef: string | null };
+
+export type DeleteHistoryOutcome =
+  | { kind: 'deleted'; paths: string[] }
+  | { kind: 'no-op'; reason: 'provider-owned' | 'no-session' }
+  | { kind: 'error'; error: HistoryLoadError };
+
+export interface ProviderForkSupport {
   isPendingForkConversation(conversation: Conversation): boolean;
-  /** Builds opaque provider state for a forked conversation. */
   buildForkProviderState(
     sourceSessionId: string,
     resumeAt: string,
     sourceProviderState?: Record<string, unknown>,
   ): Record<string, unknown>;
-  /** Adds provider-owned persisted metadata to Conversation.providerState before session save. */
-  buildPersistedProviderState?(conversation: Conversation): Record<string, unknown> | undefined;
+}
+
+export interface ProviderConversationHistoryService<
+  TPersistedState = Record<string, unknown>,
+> {
+  /** Outcome-typed hydration. Returns the outcome; never mutates `conversation.messages`. */
+  hydrateConversationHistoryV2(
+    conversation: Conversation,
+    ctx: HydrationContext,
+  ): Promise<HistoryLoadOutcome>;
+
+  /** Outcome-typed delete. */
+  deleteConversationSessionV2(
+    conversation: Conversation,
+    ctx: HydrationContext,
+  ): Promise<DeleteHistoryOutcome>;
+
+  resolveSessionIdForConversation(conversation: Conversation | null): string | null;
+
+  /** Present only when `capabilities.supportsFork === true`. Enforced by the registry invariant test (Task 8). */
+  forkSupport?: ProviderForkSupport;
+
+  /** Provider-owned persisted metadata added to `Conversation.providerState` before session save. */
+  buildPersistedProviderState?(conversation: Conversation): TPersistedState | undefined;
 }
 
 export type ProviderTaskTerminalStatus = Extract<ToolCallInfo['status'], 'completed' | 'error'>;

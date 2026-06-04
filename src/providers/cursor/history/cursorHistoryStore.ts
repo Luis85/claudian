@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 
 import { isValidCursorSessionId } from '../../../core/providers/cursorSessionIdValidation';
+import type { HistoryLoadError } from '../../../core/providers/types';
 import { isSubagentToolName } from '../../../core/tools/toolNames';
 import type { ChatMessage, ToolCallInfo } from '../../../core/types';
 import { extractDiffData } from '../../../utils/diff';
@@ -156,13 +157,50 @@ interface CursorSqliteHandle {
   close: () => void;
 }
 
-function openCursorSqliteReadonly(dbPath: string): CursorSqliteHandle | null {
+interface CursorSqliteOpenResult {
+  handle?: CursorSqliteHandle;
+  error?: HistoryLoadError;
+}
+
+// node:sqlite ships with Node 22.5+. Older or locked-down runtimes (e.g. some
+// Electron/Obsidian builds, or Node 20 where it's a flagged builtin) can't
+// resolve it and throw a structured module-resolution error. We key off Node's
+// stable error `code` rather than matching human-readable text, which varies
+// across versions and locales — that text-matching is precisely what rots.
+const SQLITE_UNAVAILABLE_ERROR_CODES = new Set(['MODULE_NOT_FOUND', 'ERR_UNKNOWN_BUILTIN_MODULE']);
+
+/**
+ * Classifies a `node:sqlite` open failure into a structured outcome. A missing
+ * runtime maps to `sqlite-unavailable` (the user needs a newer Node); anything
+ * else is a genuine `store-unreadable` with the home directory redacted out of
+ * the detail field.
+ */
+export function classifyCursorSqliteOpenError(err: unknown): HistoryLoadError {
+  const code = (err as NodeJS.ErrnoException | null | undefined)?.code;
+  const message = err instanceof Error ? err.message : String(err);
+  const sqliteUnavailable =
+    (typeof code === 'string' && SQLITE_UNAVAILABLE_ERROR_CODES.has(code)) ||
+    message.includes('node:sqlite');
+  if (sqliteUnavailable) {
+    return { code: 'sqlite-unavailable', message: 'Cursor history requires Node 22.5+ (node:sqlite).' };
+  }
+  // Native sqlite errors can embed the dbPath (and thus the user's home
+  // directory). Redact before letting the detail field escape the store.
+  return {
+    code: 'store-unreadable',
+    message: 'Could not open Cursor SQLite store.',
+    detail: redactHomeInPath(message),
+  };
+}
+
+function openCursorSqliteReadonly(dbPath: string): CursorSqliteOpenResult {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/consistent-type-imports
     const { DatabaseSync } = require('node:sqlite') as typeof import('node:sqlite');
-    return new DatabaseSync(dbPath, { readOnly: true }) as unknown as CursorSqliteHandle;
-  } catch {
-    return null;
+    const handle = new DatabaseSync(dbPath, { readOnly: true }) as unknown as CursorSqliteHandle;
+    return { handle };
+  } catch (err) {
+    return { error: classifyCursorSqliteOpenError(err) };
   }
 }
 
@@ -227,11 +265,20 @@ function redactHomeInPath(s: string): string {
 
 export interface CursorHistoryLoadResult {
   messages: ChatMessage[];
-  error?: string;
+  /**
+   * Structured error from the open path (sqlite-unavailable / store-unreadable);
+   * legacy redacted string for downstream SQL-read failures the loader still
+   * emits inline. Callers normalize the string variant into `store-unreadable`.
+   */
+  error?: HistoryLoadError | string;
 }
 
 export function loadCursorChatMessagesFromStoreResult(dbPath: string): CursorHistoryLoadResult {
-  const db = openCursorSqliteReadonly(dbPath);
+  const openResult = openCursorSqliteReadonly(dbPath);
+  if (openResult.error) {
+    return { messages: [], error: openResult.error };
+  }
+  const db = openResult.handle;
   if (!db) {
     return { messages: [], error: `Cursor history: could not open ${redactHomeInPath(dbPath)}` };
   }

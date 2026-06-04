@@ -133,6 +133,47 @@ describe('MessageRenderer', () => {
   });
 
   // ============================================
+  // hydration error banner
+  // ============================================
+
+  it('re-renders a hydration-error banner after renderMessages empties the pane', () => {
+    const { renderer, messagesEl } = createRenderer();
+    jest.spyOn(renderer, 'renderStoredMessage').mockImplementation(() => {});
+
+    // Mirrors the real ordering: ConversationStore emits the failure (→
+    // setHydrationError) before restoreConversation triggers renderMessages.
+    renderer.setHydrationError({ code: 'store-unreadable', message: 'History unavailable' });
+    renderer.renderMessages([], () => 'Welcome');
+
+    const banner = messagesEl.querySelector('.claudian-hydration-error');
+    expect(banner).not.toBeNull();
+    expect(banner?.textContent).toBe('History unavailable');
+    expect(banner?.dataset.errorCode).toBe('store-unreadable');
+  });
+
+  it('does not duplicate the banner across repeated renders', () => {
+    const { renderer, messagesEl } = createRenderer();
+    jest.spyOn(renderer, 'renderStoredMessage').mockImplementation(() => {});
+
+    renderer.setHydrationError({ code: 'sqlite-unavailable', message: 'Needs Node 22.5+' });
+    renderer.renderMessages([], () => 'Welcome');
+    renderer.renderMessages([], () => 'Welcome');
+
+    expect(messagesEl.querySelectorAll('.claudian-hydration-error')).toHaveLength(1);
+  });
+
+  it('clearHydrationBanner stops the banner from re-rendering', () => {
+    const { renderer, messagesEl } = createRenderer();
+    jest.spyOn(renderer, 'renderStoredMessage').mockImplementation(() => {});
+
+    renderer.setHydrationError({ code: 'store-unreadable', message: 'History unavailable' });
+    renderer.clearHydrationBanner();
+    renderer.renderMessages([], () => 'Welcome');
+
+    expect(messagesEl.querySelector('.claudian-hydration-error')).toBeNull();
+  });
+
+  // ============================================
   // renderStoredMessage
   // ============================================
 
