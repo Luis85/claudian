@@ -44,6 +44,13 @@ describe('secretRefs — ids and tokens', () => {
     expect(hasSecretRef('KEY=plain')).toBe(false);
     expect(findSecretRefs('a=${secret:one} b=${secret:two}')).toEqual(['one', 'two']);
   });
+
+  it('findSecretRefs is not corrupted by a prior hasSecretRef call (shared /g regex lastIndex)', () => {
+    const text = 'a=${secret:one} b=${secret:two}';
+    expect(hasSecretRef(text)).toBe(true);
+    // Before the fix, the leftover lastIndex made matchAll start mid-string and drop "one".
+    expect(findSecretRefs(text)).toEqual(['one', 'two']);
+  });
 });
 
 describe('secretRefs — env blob extract/resolve', () => {
@@ -98,5 +105,25 @@ describe('secretRefs — env blob extract/resolve', () => {
   it('resolves missing references to empty string', () => {
     const resolved = resolveEnvBlob('K=${secret:gone}', () => null);
     expect(resolved).toBe('K=');
+  });
+
+  it('keeps distinct secrets when keys normalize to the same id (collision suffix)', () => {
+    const blob = 'FOO_TOKEN=one\nFOO__TOKEN=two';
+    const { blob: out, secrets } = extractEnvBlobSecrets(blob, makeId);
+
+    const ids = secrets.map((s) => s.id);
+    expect(new Set(ids).size).toBe(2); // no clobbering
+    expect(secrets.map((s) => s.value).sort()).toEqual(['one', 'two']);
+
+    const map = new Map(secrets.map((s) => [s.id, s.value]));
+    expect(resolveEnvBlob(out, (id) => map.get(id) ?? null)).toBe(blob);
+  });
+
+  it('a newly-added secret does not reuse an existing reference id', () => {
+    const first = extractEnvBlobSecrets('FOO_TOKEN=one', makeId);
+    // Append a second key that normalizes to the same base id, then re-extract.
+    const second = extractEnvBlobSecrets(`${first.blob}\nFOO__TOKEN=two`, makeId);
+    expect(second.secrets).toHaveLength(1);
+    expect(second.secrets[0].id).not.toBe(first.secrets[0].id);
   });
 });

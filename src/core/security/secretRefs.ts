@@ -19,18 +19,25 @@ export function secretRef(id: string): string {
   return `\${secret:${id}}`;
 }
 
+// `SECRET_REF_RE` is global, so `.test()`/`.matchAll()` are stateful via
+// `lastIndex`. These helpers reset before AND after use so a prior call can
+// never make the next one start mid-string (which would drop the first ref).
 /** True if the text already contains a secret reference token. */
 export function hasSecretRef(text: string): boolean {
   SECRET_REF_RE.lastIndex = 0;
-  return SECRET_REF_RE.test(text);
+  const found = SECRET_REF_RE.test(text);
+  SECRET_REF_RE.lastIndex = 0;
+  return found;
 }
 
 /** Collect the ids referenced in a piece of text. */
 export function findSecretRefs(text: string): string[] {
+  SECRET_REF_RE.lastIndex = 0;
   const ids: string[] = [];
   for (const m of text.matchAll(SECRET_REF_RE)) {
     ids.push(m[1]);
   }
+  SECRET_REF_RE.lastIndex = 0;
   return ids;
 }
 
@@ -119,6 +126,10 @@ function parseEnvAssignment(line: string): ParsedEnvLine | null {
  */
 export function extractEnvBlobSecrets(blob: string, makeId: (key: string) => string): EnvBlobExtraction {
   const secrets: ExtractedSecret[] = [];
+  // Seed with ids already referenced in this blob so newly-extracted secrets
+  // never collide with an existing reference (or with each other) after
+  // normalization (e.g. `FOO_TOKEN` and `FOO__TOKEN` both normalize alike).
+  const used = new Set<string>(findSecretRefs(blob));
   const out = blob.split('\n').map((line) => {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) return line;
@@ -134,11 +145,20 @@ export function extractEnvBlobSecrets(blob: string, makeId: (key: string) => str
 
     // Strip surrounding quotes for the stored value; keep it simple/explicit.
     const unquoted = rawValue.replace(/^(['"])([\s\S]*)\1\s*$/, '$2');
-    const id = normalizeSecretId(makeId(parsed.key));
+    const id = uniquifySecretId(normalizeSecretId(makeId(parsed.key)), used);
+    used.add(id);
     secrets.push({ id, value: unquoted });
     return `${parsed.key}=${secretRef(id)}`;
   });
   return { blob: out.join('\n'), secrets };
+}
+
+/** Return `base`, or `base-2`, `base-3`, … if already taken. */
+function uniquifySecretId(base: string, used: Set<string>): string {
+  if (!used.has(base)) return base;
+  let n = 2;
+  while (used.has(`${base}-${n}`)) n += 1;
+  return `${base}-${n}`;
 }
 
 /**
