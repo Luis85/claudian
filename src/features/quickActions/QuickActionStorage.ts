@@ -20,6 +20,52 @@ export function assignNextFavoriteRank(actions: QuickAction[]): number | null {
   return null;
 }
 
+/**
+ * Surgically patches the `favorite` and `favoriteRank` keys in a note's
+ * YAML frontmatter without round-tripping through the lossy serializer.
+ * Unknown keys (e.g. `aliases`, `cssclasses`, future metadata) are preserved
+ * verbatim so a one-click star toggle never wipes hand-authored metadata.
+ *
+ * Only top-level scalar `favorite:` / `favoriteRank:` lines are touched.
+ * Setting a value to `undefined` removes the line.
+ */
+export function applyFavoriteFrontmatterPatch(
+  content: string,
+  updates: { favorite?: boolean; favoriteRank?: number },
+): string {
+  const FRONTMATTER = /^(---\r?\n)([\s\S]*?)(\r?\n---\r?\n?)([\s\S]*)$/;
+  const match = content.match(FRONTMATTER);
+  if (!match) {
+    const fmLines = ['---'];
+    if (updates.favorite !== undefined) fmLines.push(`favorite: ${updates.favorite}`);
+    if (updates.favoriteRank !== undefined) fmLines.push(`favoriteRank: ${updates.favoriteRank}`);
+    fmLines.push('---', '');
+    return fmLines.join('\n') + content;
+  }
+
+  const [, openFence, yaml, closeFence, body] = match;
+  const lines = yaml.split(/\r?\n/);
+  const setOrRemove = (key: string, value: unknown): void => {
+    const lineRegex = new RegExp(`^${key}\\s*:`);
+    const idx = lines.findIndex((l) => lineRegex.test(l));
+    if (value === undefined || value === null) {
+      if (idx >= 0) lines.splice(idx, 1);
+      return;
+    }
+    const newLine = `${key}: ${value}`;
+    if (idx >= 0) {
+      lines[idx] = newLine;
+    } else {
+      lines.push(newLine);
+    }
+  };
+
+  setOrRemove('favorite', updates.favorite);
+  setOrRemove('favoriteRank', updates.favoriteRank);
+
+  return openFence + lines.join('\n') + closeFence + body;
+}
+
 export class QuickActionStorage {
   constructor(
     private adapter: VaultFileAdapter,
@@ -83,12 +129,27 @@ export class QuickActionStorage {
     if (!Number.isInteger(rank) || rank < 1 || rank > 5) {
       throw new Error(`invalid favoriteRank: ${rank}`);
     }
-    await this.save({ ...action, favorite: true, favoriteRank: rank });
+    await this.patchFavoriteFrontmatter(action.filePath, { favorite: true, favoriteRank: rank });
   }
 
   async unsetFavorite(action: QuickAction): Promise<void> {
-    const { favorite: _favorite, favoriteRank: _favoriteRank, ...rest } = action;
-    await this.save({ ...rest, favorite: undefined, favoriteRank: undefined });
+    await this.patchFavoriteFrontmatter(action.filePath, {
+      favorite: undefined,
+      favoriteRank: undefined,
+    });
+  }
+
+  // Toggle path patches only the favorite fields so unknown user-authored
+  // keys (aliases, cssclasses, custom fields) survive a one-click star.
+  // The editor modal still goes through save() because the user has opted
+  // into the canonical serialized form when they open the editor.
+  private async patchFavoriteFrontmatter(
+    filePath: string,
+    updates: { favorite?: boolean; favoriteRank?: number },
+  ): Promise<void> {
+    const content = await this.adapter.read(filePath);
+    const patched = applyFavoriteFrontmatterPatch(content, updates);
+    await this.adapter.write(filePath, patched);
   }
 
   async delete(filePath: string): Promise<void> {

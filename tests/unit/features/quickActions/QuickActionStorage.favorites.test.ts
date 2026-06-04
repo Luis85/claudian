@@ -173,4 +173,121 @@ Original body.
     });
     expect((adapter.ensureFolder as jest.Mock)).toHaveBeenCalledWith('Quick Actions');
   });
+
+  it('setFavorite preserves unrelated frontmatter keys', async () => {
+    const adapter = makeAdapter();
+    adapter.files.set('Quick Actions/with-extra.md', `---
+type: quick-action
+name: Extra
+aliases:
+  - Alias One
+cssclasses: my-class
+custom_field: kept
+---
+
+Body kept.
+`);
+    const storage = new QuickActionStorage(adapter as unknown as VaultFileAdapter, () => 'Quick Actions');
+    const action = makeAction({
+      name: 'Extra',
+      filePath: 'Quick Actions/with-extra.md',
+      prompt: 'Body kept.',
+    });
+
+    await storage.setFavorite(action, 2);
+
+    const written = adapter.files.get('Quick Actions/with-extra.md')!;
+    expect(written).toContain('favorite: true');
+    expect(written).toContain('favoriteRank: 2');
+    expect(written).toContain('aliases:');
+    expect(written).toContain('  - Alias One');
+    expect(written).toContain('cssclasses: my-class');
+    expect(written).toContain('custom_field: kept');
+    expect(written).toContain('Body kept.');
+  });
+
+  it('unsetFavorite preserves unrelated frontmatter keys and strips only favorite lines', async () => {
+    const adapter = makeAdapter();
+    adapter.files.set('Quick Actions/with-extra.md', `---
+type: quick-action
+name: Extra
+aliases:
+  - Alias One
+favorite: true
+favoriteRank: 3
+custom_field: kept
+---
+
+Body.
+`);
+    const storage = new QuickActionStorage(adapter as unknown as VaultFileAdapter, () => 'Quick Actions');
+    const action = makeAction({
+      name: 'Extra',
+      filePath: 'Quick Actions/with-extra.md',
+      prompt: 'Body.',
+      favorite: true,
+      favoriteRank: 3,
+    });
+
+    await storage.unsetFavorite(action);
+
+    const written = adapter.files.get('Quick Actions/with-extra.md')!;
+    expect(written).not.toMatch(/^favorite:/m);
+    expect(written).not.toMatch(/^favoriteRank:/m);
+    expect(written).toContain('aliases:');
+    expect(written).toContain('  - Alias One');
+    expect(written).toContain('custom_field: kept');
+    expect(written).toContain('Body.');
+  });
+
+  it('setFavorite appends favorite lines when none exist', async () => {
+    const adapter = makeAdapter();
+    adapter.files.set('Quick Actions/plain.md', `---
+type: quick-action
+name: Plain
+---
+
+Body.
+`);
+    const storage = new QuickActionStorage(adapter as unknown as VaultFileAdapter, () => 'Quick Actions');
+    const action = makeAction({ name: 'Plain', filePath: 'Quick Actions/plain.md', prompt: 'Body.' });
+
+    await storage.setFavorite(action, 1);
+
+    const written = adapter.files.get('Quick Actions/plain.md')!;
+    expect(written).toContain('favorite: true');
+    expect(written).toContain('favoriteRank: 1');
+    expect(written).toContain('type: quick-action');
+    expect(written).toContain('name: Plain');
+  });
+
+  it('setFavorite replaces existing favorite lines without duplication', async () => {
+    const adapter = makeAdapter();
+    adapter.files.set('Quick Actions/foo.md', `---
+type: quick-action
+name: Foo
+favorite: true
+favoriteRank: 2
+---
+
+Body.
+`);
+    const storage = new QuickActionStorage(adapter as unknown as VaultFileAdapter, () => 'Quick Actions');
+    const action = makeAction({
+      name: 'Foo',
+      filePath: 'Quick Actions/foo.md',
+      prompt: 'Body.',
+      favorite: true,
+      favoriteRank: 2,
+    });
+
+    await storage.setFavorite(action, 4);
+
+    const written = adapter.files.get('Quick Actions/foo.md')!;
+    const favoriteMatches = (written.match(/^favorite:/gm) ?? []).length;
+    const rankMatches = (written.match(/^favoriteRank:/gm) ?? []).length;
+    expect(favoriteMatches).toBe(1);
+    expect(rankMatches).toBe(1);
+    expect(written).toContain('favoriteRank: 4');
+  });
 });
