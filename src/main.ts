@@ -29,6 +29,7 @@ import { ProviderSettingsCoordinator } from './core/providers/ProviderSettingsCo
 import { ProviderWorkspaceRegistry } from './core/providers/ProviderWorkspaceRegistry';
 import type { ProviderId } from './core/providers/types';
 import type { AppTabManagerState } from './core/providers/types';
+import { VaultFileAdapter } from './core/storage/VaultFileAdapter';
 import type {
   ChatMessageAction,
   ClaudianSettings,
@@ -46,6 +47,8 @@ import { ClaudianView } from './features/chat/ClaudianView';
 import { sendFeedbackPrompt } from './features/chat/feedback/sendFeedbackPrompt';
 import { isClaudianView } from './features/chat/isClaudianView';
 import type { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
+import { QuickActionFavoritesCache } from './features/quickActions/QuickActionFavoritesCache';
+import { QuickActionStorage } from './features/quickActions/QuickActionStorage';
 import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
 import { ChatTabExecutionSurface } from './features/tasks/execution/ChatTabExecutionSurface';
 import { ChatWorkOrderLinker } from './features/tasks/execution/ChatWorkOrderLinker';
@@ -65,6 +68,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   storage!: SharedAppStorage;
   gitStatusWatcher: GitStatusWatcher | null = null;
   conversationStore!: ConversationStore;
+  public quickActionFavoritesCache: QuickActionFavoritesCache | null = null;
   private lifecycle!: PluginLifecycle;
   private viewActivator!: PluginViewActivator;
   private envApply!: EnvironmentApplyService;
@@ -144,6 +148,17 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
     registerPluginCommands({ plugin: this, taskExecutionSurface, chatWorkOrderLinker });
 
+    const quickActionStorage = new QuickActionStorage(
+      new VaultFileAdapter(this.app),
+      () => this.settings.quickActionsFolder ?? 'Quick Actions',
+    );
+    this.quickActionFavoritesCache = new QuickActionFavoritesCache(
+      quickActionStorage,
+      this.app,
+      () => this.settings.quickActionsFolder ?? 'Quick Actions',
+    );
+    this.quickActionFavoritesCache.start();
+
     registerWorkspaceMenus(this);
 
 
@@ -181,6 +196,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   }
 
   onunload(): void {
+    this.quickActionFavoritesCache?.dispose();
+    this.quickActionFavoritesCache = null;
     this.gitStatusWatcher?.stop();
     this.gitStatusWatcher = null;
     this.lifecycle.shutdownActiveRuntimes();
