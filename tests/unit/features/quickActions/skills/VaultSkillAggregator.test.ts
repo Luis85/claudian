@@ -265,4 +265,26 @@ describe('VaultSkillAggregator', () => {
 
     expect(fetch).toHaveBeenCalledTimes(2);
   });
+
+  it('reflects current providerEnabled on cache hit (no refetch needed)', async () => {
+    const fetch = jest.fn().mockResolvedValue([makeSkillEntry({ id: 'skill-a', name: 'a' })]);
+    let enabled = true;
+    const recordsFactory = () => [
+      makeRecord({
+        entries: fetch,
+        get isEnabled() {
+          return enabled;
+        },
+      } as never),
+    ];
+    const agg = new VaultSkillAggregator(recordsFactory, { ttlMs: 60_000 });
+
+    const [first] = await agg.listAll();
+    expect(first.providerEnabled).toBe(true);
+
+    enabled = false;
+    const [second] = await agg.listAll();
+    expect(second.providerEnabled).toBe(false);
+    expect(fetch).toHaveBeenCalledTimes(1);   // bucket reused
+  });
 });
