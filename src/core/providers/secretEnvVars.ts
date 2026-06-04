@@ -66,22 +66,35 @@ export function resolveProviderEnvVars(
   resolve: SecretResolver,
 ): { env: Record<string, string>; missing: SecretEnvVarRef[] } {
   const refs = (settings.secretEnvVars as SecretEnvVarRef[] | undefined) ?? [];
+  const sharedRefs = secretEnvVarsForScope(refs, 'shared');
+  const providerRefs = secretEnvVarsForScope(refs, `provider:${providerId}`);
+
   const env = parseEnvironmentVariables(getSharedEnvironmentVariables(settings));
-  const sharedMissing = overlaySecretEnvVars(env, secretEnvVarsForScope(refs, 'shared'), resolve).missing;
-  Object.assign(env, parseEnvironmentVariables(getProviderEnvironmentVariables(settings, providerId)));
-  const providerMissing = overlaySecretEnvVars(
-    env,
-    secretEnvVarsForScope(refs, `provider:${providerId}`),
-    resolve,
-  ).missing;
-  // A ref counts as "missing" only when nothing else supplies its variable name
-  // in the FINAL env — a later-precedence source (provider plaintext, or a
-  // provider-scope secret) may have already overridden a missing shared secret,
-  // in which case the env is complete and reconciliation must not be deferred.
-  const missing = [...sharedMissing, ...providerMissing].filter((ref) => {
-    const value = env[ref.name];
-    return value === undefined || value === '';
-  });
+  const sharedMissing = overlaySecretEnvVars(env, sharedRefs, resolve).missing;
+
+  const providerEnv = parseEnvironmentVariables(getProviderEnvironmentVariables(settings, providerId));
+  Object.assign(env, providerEnv);
+  const providerMissing = overlaySecretEnvVars(env, providerRefs, resolve).missing;
+
+  // Names supplied at PROVIDER precedence (provider plaintext, or a present
+  // provider secret) — higher precedence than a shared secret.
+  const providerMissingSet = new Set(providerMissing);
+  const providerSupplied = new Set<string>();
+  for (const [name, value] of Object.entries(providerEnv)) {
+    if (value !== '') providerSupplied.add(name);
+  }
+  for (const ref of providerRefs) {
+    if (!providerMissingSet.has(ref)) providerSupplied.add(ref.name);
+  }
+
+  // A missing SHARED secret is moot only if a higher-precedence provider source
+  // supplies the same name. A missing PROVIDER secret is the most specific
+  // source, so it is always reported — a lower-precedence shared value must not
+  // silently satisfy it (the provider launch would use the wrong credential).
+  const missing = [
+    ...sharedMissing.filter((ref) => !providerSupplied.has(ref.name)),
+    ...providerMissing,
+  ];
   return { env, missing };
 }
 
