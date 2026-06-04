@@ -88,12 +88,12 @@ export interface ProviderRegistration {
 
 /**
  * SEC-A: resolves the effective env text for a provider WITH SecretStorage values
- * overlaid, plus whether any referenced secret is missing on this device. Env-hash
- * reconciliation uses this so (a) moving a watched key into the keychain doesn't
- * change the hash, and (b) when a synced secret is absent locally the env is
- * incomplete, so invalidation is deferred until the user re-enters it.
+ * overlaid, plus the names of any referenced secrets missing on this device.
+ * Env-hash reconciliation uses this so (a) moving a watched key into the keychain
+ * doesn't change the hash, and (b) when a *watched* secret is absent locally the
+ * env is incomplete, so invalidation is deferred until the user re-enters it.
  */
-export type EnvTextResolver = (providerId: ProviderId) => { text: string; hasMissingSecrets: boolean };
+export type EnvTextResolver = (providerId: ProviderId) => { text: string; missingKeys: string[] };
 
 export interface ProviderSettingsReconciler {
   handleEnvironmentChange?(settings: Record<string, unknown>): boolean;

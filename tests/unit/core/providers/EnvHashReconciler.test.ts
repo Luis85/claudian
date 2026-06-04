@@ -63,7 +63,7 @@ describe('reconcileEnvironmentHash', () => {
       spec,
       { __envText: '' }, // plaintext blob no longer has the key (migrated)
       [makeConversation({ sessionId: 's1' })],
-      () => ({ text: 'API_KEY=sk-1', hasMissingSecrets: false }), // re-injected from SecretStorage
+      () => ({ text: 'API_KEY=sk-1', missingKeys: [] }), // re-injected from SecretStorage
     );
 
     expect(result.changed).toBe(false);
@@ -71,20 +71,35 @@ describe('reconcileEnvironmentHash', () => {
     expect(spec.saveHash).not.toHaveBeenCalled();
   });
 
-  it('defers invalidation when a referenced secret is missing on this device', () => {
+  it('defers invalidation when a WATCHED secret is missing on this device', () => {
     const spec = makeSpec({ watchedKeys: ['API_KEY'], getSavedHash: () => 'API_KEY=sk-1' });
-    // Resolved env is incomplete (secret absent locally): even though the hash
-    // would differ, sessions must NOT be invalidated until re-entry.
+    // Resolved env is incomplete (watched secret absent locally): even though the
+    // hash would differ, sessions must NOT be invalidated until re-entry.
     const result = reconcileEnvironmentHash(
       spec,
       { __envText: '' },
       [makeConversation({ sessionId: 's1' })],
-      () => ({ text: '', hasMissingSecrets: true }),
+      () => ({ text: '', missingKeys: ['API_KEY'] }),
     );
 
     expect(result).toEqual({ changed: false, invalidatedConversations: [] });
     expect(spec.invalidateConversation).not.toHaveBeenCalled();
     expect(spec.saveHash).not.toHaveBeenCalled();
+  });
+
+  it('does NOT defer when only a non-watched secret is missing', () => {
+    const spec = makeSpec({ watchedKeys: ['API_KEY'], getSavedHash: () => 'API_KEY=sk-1' });
+    // GITHUB_TOKEN is missing but isn't watched; a real change to API_KEY must
+    // still reconcile/invalidate.
+    const result = reconcileEnvironmentHash(
+      spec,
+      { __envText: '' },
+      [makeConversation({ sessionId: 's1' })],
+      () => ({ text: 'API_KEY=sk-2', missingKeys: ['GITHUB_TOKEN'] }),
+    );
+
+    expect(result.changed).toBe(true);
+    expect(spec.saveHash).toHaveBeenCalledWith(expect.anything(), 'API_KEY=sk-2');
   });
 
   it('without a resolver, a stripped watched key changes the hash (the regression this guards)', () => {

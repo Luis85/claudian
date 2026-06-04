@@ -395,18 +395,18 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   }
 
   /**
-   * SEC-A: env text for env-hash reconciliation plus whether any referenced
-   * secret is missing on this device. Hashing the resolved env keeps a watched
-   * key's value stable across the plaintext→keychain move; `hasMissingSecrets`
-   * lets the reconciler defer invalidation when a synced secret isn't present yet.
+   * SEC-A: env text for env-hash reconciliation plus the names of any referenced
+   * secrets missing on this device. Hashing the resolved env keeps a watched
+   * key's value stable across the plaintext→keychain move; `missingKeys` lets the
+   * reconciler defer invalidation only when one of ITS watched keys isn't present.
    */
   getEnvironmentHashInput(
     providerId: ProviderId = ProviderRegistry.resolveSettingsProviderId(
       this.settings,
     ),
-  ): { text: string; hasMissingSecrets: boolean } {
+  ): { text: string; missingKeys: string[] } {
     const { env, missing } = this.resolveProviderEnv(providerId);
-    return { text: serializeEnvironmentVariables(env), hasMissingSecrets: missing.length > 0 };
+    return { text: serializeEnvironmentVariables(env), missingKeys: missing.map((ref) => ref.name) };
   }
 
   /**

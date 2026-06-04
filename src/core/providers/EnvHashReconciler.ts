@@ -41,13 +41,14 @@ export function reconcileEnvironmentHash(
   // and the same hash — no spurious session invalidation on upgrade/edit.
   const resolved = resolveEnvText
     ? resolveEnvText(spec.providerId)
-    : { text: getRuntimeEnvironmentText(settings, spec.providerId), hasMissingSecrets: false };
+    : { text: getRuntimeEnvironmentText(settings, spec.providerId), missingKeys: [] };
 
-  // SEC-A: if a referenced secret is absent on this device (e.g. a synced vault
-  // opened on a new machine), the resolved env is incomplete — we can't tell
-  // whether a watched key actually changed, so defer: keep the saved hash and
-  // existing sessions until the user re-enters the secret.
-  if (resolved.hasMissingSecrets) {
+  // SEC-A: if a *watched* secret is absent on this device (e.g. a synced vault
+  // opened on a new machine), this provider's hash input is incomplete — we
+  // can't tell whether that watched key changed, so defer: keep the saved hash
+  // and existing sessions until the user re-enters it. A missing secret that is
+  // NOT one of this reconciler's watched keys does not block reconciliation.
+  if (resolved.missingKeys.some((key) => spec.watchedKeys.includes(key))) {
     return { changed: false, invalidatedConversations: [] };
   }
 

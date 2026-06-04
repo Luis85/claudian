@@ -214,9 +214,21 @@ function createStubEl(tag: string): any {
     tagName: tag.toUpperCase(),
     children: [] as any[],
     textContent: '',
+    className: '',
+    dataset: {} as Record<string, string>,
     setText(text: string) {
       this.textContent = text;
     },
+    empty() {
+      this.children = [];
+      this.textContent = '';
+    },
+    addClass(_cls: string) { return this; },
+    removeClass(_cls: string) { return this; },
+    toggleClass(_cls: string, _on?: boolean) { return this; },
+    setAttribute(_k: string, _v: string) { return this; },
+    addEventListener() { /* noop */ },
+    removeEventListener() { /* noop */ },
     createEl(childTag: string, opts?: { text?: string; cls?: string }) {
       const child = createStubEl(childTag);
       if (opts?.text) child.textContent = opts.text;
@@ -242,6 +254,7 @@ export class Setting {
   nameEl: any = createStubEl('div');
   descEl: any = createStubEl('div');
   settingEl: any = createStubEl('div');
+  controlEl: any = createStubEl('div');
 
   constructor(containerEl: any) {
     this.containerEl = containerEl;
@@ -393,6 +406,44 @@ export class Setting {
     };
     this.components.push({ kind: 'button', props: component });
     if (cb) cb(component);
+    return this;
+  }
+
+  // Obsidian 1.11.x: attach an arbitrary BaseComponent (e.g. SecretComponent).
+  addComponent(cb: (el: any) => unknown): this {
+    const host = createStubEl('div');
+    const component = cb(host);
+    this.components.push({ kind: 'component', props: component } as any);
+    return this;
+  }
+}
+
+// Obsidian 1.11.4+ SecretComponent — minimal mock. Holds the selected secret
+// name/id (not the value); `triggerChange` simulates the user picking one.
+export class SecretComponent {
+  app: any;
+  containerEl: any;
+  value = '';
+  changeHandler: (value: string) => unknown = () => undefined;
+
+  constructor(app: any, containerEl: any) {
+    this.app = app;
+    this.containerEl = containerEl;
+  }
+
+  setValue(value: string): this {
+    this.value = value;
+    return this;
+  }
+
+  onChange(cb: (value: string) => unknown): this {
+    this.changeHandler = cb;
+    return this;
+  }
+
+  triggerChange(value: string): this {
+    this.value = value;
+    this.changeHandler(value);
     return this;
   }
 }
