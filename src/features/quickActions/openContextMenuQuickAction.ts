@@ -26,5 +26,6 @@ export function openContextMenuQuickAction(
     onRun: (action) => {
       void runQuickActionForFile(plugin, file, action);
     },
+    onFavoritesChanged: () => plugin.quickActionFavoritesCache?.refresh(),
   }).open();
 }

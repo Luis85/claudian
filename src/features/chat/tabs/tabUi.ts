@@ -411,6 +411,7 @@ function initializeInputToolbar(
         onRun: (action) => {
           void tab.controllers.inputController?.sendMessage({ content: action.prompt });
         },
+        onFavoritesChanged: () => plugin.quickActionFavoritesCache?.refresh(),
       }).open();
     },
   });

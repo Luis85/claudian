@@ -492,6 +492,7 @@ export class ClaudianView extends ItemView {
           if (!targetTab) return;
           void targetTab.controllers.inputController?.sendMessage({ content: action.prompt });
         },
+        onFavoritesChanged: () => this.plugin.quickActionFavoritesCache?.refresh(),
       }).open();
     });
 

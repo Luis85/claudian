@@ -10,6 +10,7 @@ import { QuickActionEditorModal } from './QuickActionEditorModal';
 export interface QuickActionsModalCallbacks {
   onRun: (action: QuickAction) => void;
   storage: QuickActionStorage;
+  onFavoritesChanged?: () => void;
 }
 
 export class QuickActionsModal extends Modal {
@@ -303,6 +304,7 @@ export class QuickActionsModal extends Modal {
         }
         await this.callbacks.storage.setFavorite(action, rank);
       }
+      this.callbacks.onFavoritesChanged?.();
       await this.refreshList();
     } catch {
       new Notice(t('quickActions.editor.saveFailed'));

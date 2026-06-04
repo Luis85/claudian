@@ -176,4 +176,73 @@ describe('QuickActionsModal favorites', () => {
 
     expect(Notice).toHaveBeenCalledWith('quickActions.editor.saveFailed');
   });
+
+  it('calls onFavoritesChanged after starring an action', async () => {
+    const onFavoritesChanged = jest.fn();
+    const storage = makeStorage([
+      makeAction({ name: 'B', filePath: 'Quick Actions/b.md' }),
+    ]);
+    const modal = new QuickActionsModal({} as App, { storage, onRun: jest.fn(), onFavoritesChanged });
+    modal.open();
+    await flush();
+
+    const star = modal['contentEl'].querySelector('.claudian-quick-action-favorite') as HTMLButtonElement;
+    star.click();
+    await flush();
+
+    expect(onFavoritesChanged).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onFavoritesChanged after unstarring an action', async () => {
+    const onFavoritesChanged = jest.fn();
+    const storage = makeStorage([
+      makeAction({ name: 'A', favorite: true, favoriteRank: 1, filePath: 'Quick Actions/a.md' }),
+    ]);
+    const modal = new QuickActionsModal({} as App, { storage, onRun: jest.fn(), onFavoritesChanged });
+    modal.open();
+    await flush();
+
+    const star = modal['contentEl'].querySelector('.claudian-quick-action-favorite') as HTMLButtonElement;
+    star.click();
+    await flush();
+
+    expect(onFavoritesChanged).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call onFavoritesChanged when the storage call fails', async () => {
+    const onFavoritesChanged = jest.fn();
+    const storage = makeStorage([
+      makeAction({ name: 'B', filePath: 'Quick Actions/b.md' }),
+    ]);
+    (storage.setFavorite as jest.Mock).mockRejectedValueOnce(new Error('disk full'));
+    const modal = new QuickActionsModal({} as App, { storage, onRun: jest.fn(), onFavoritesChanged });
+    modal.open();
+    await flush();
+
+    const star = modal['contentEl'].querySelector('.claudian-quick-action-favorite') as HTMLButtonElement;
+    star.click();
+    await flush();
+
+    expect(onFavoritesChanged).not.toHaveBeenCalled();
+  });
+
+  it('does not call onFavoritesChanged when the 5-fav limit is reached', async () => {
+    const onFavoritesChanged = jest.fn();
+    const storage = makeStorage([
+      ...[1, 2, 3, 4, 5].map((r) =>
+        makeAction({ name: `F${r}`, favorite: true, favoriteRank: r, filePath: `Quick Actions/f${r}.md` }),
+      ),
+      makeAction({ name: 'New', filePath: 'Quick Actions/new.md' }),
+    ]);
+    const modal = new QuickActionsModal({} as App, { storage, onRun: jest.fn(), onFavoritesChanged });
+    modal.open();
+    await flush();
+
+    const stars = modal['contentEl'].querySelectorAll('.claudian-quick-action-favorite');
+    const newStar = stars[stars.length - 1] as HTMLButtonElement;
+    newStar.click();
+    await flush();
+
+    expect(onFavoritesChanged).not.toHaveBeenCalled();
+  });
 });
