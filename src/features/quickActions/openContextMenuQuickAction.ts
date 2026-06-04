@@ -55,6 +55,14 @@ export function openContextMenuQuickAction(
           return;
         }
 
+        // Bring the tab into focus FIRST. switchToTab triggers
+        // ConversationController.initializeWelcome() on a blank tab, which calls
+        // FileContextManager.resetForNewConversation() and wipes any pill we
+        // attached beforehand. Attach AFTER the switch resolves so the pill
+        // survives and gets folded into the outgoing prompt via
+        // FileContextManager.getAttachedMentionSuffix().
+        await tabManager.switchToTab(targetTab.id);
+
         // Attach the right-clicked file or folder as a visible chip.
         if (file instanceof TFile) {
           targetTab.ui.fileContextManager?.attachFileAsPill(file.path);
@@ -62,8 +70,7 @@ export function openContextMenuQuickAction(
           targetTab.ui.fileContextManager?.attachFolderAsPill(file.path);
         }
 
-        // Bring the tab into focus and fire the prompt.
-        await tabManager.switchToTab(targetTab.id);
+        // Fire the prompt — sendMessage folds attached pills into content.
         void targetTab.controllers.inputController?.sendMessage({ content: action.prompt });
       })();
     },
