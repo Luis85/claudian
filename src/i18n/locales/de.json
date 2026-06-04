@@ -71,6 +71,16 @@
       "commandNoAssistantUuid": "Verzweigung nicht möglich: keine Assistentenantwort mit Kennungen",
       "unsupportedProvider": "Fork is not supported by this provider."
     },
+    "feedback": {
+      "thumbsUp": {
+        "label": "Hilfreich",
+        "prompt": "Diese Antwort war hilfreich. Halte kurz fest, was funktioniert hat, damit wir es uns für die Zukunft merken."
+      },
+      "thumbsDown": {
+        "label": "Nicht hilfreich",
+        "prompt": "Diese Antwort war nicht hilfreich. Stelle mir eine gezielte Rückfrage, um zu verstehen, warum ich anderer Meinung bin, bevor du es erneut versuchst."
+      }
+    },
     "bangBash": {
       "placeholder": "> Einen Bash-Befehl ausführen...",
       "commandPanel": "Befehlspanel",

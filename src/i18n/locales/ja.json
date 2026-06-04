@@ -71,6 +71,16 @@
       "commandNoAssistantUuid": "フォークできません: 識別子付きのアシスタント応答がありません",
       "unsupportedProvider": "Fork is not supported by this provider."
     },
+    "feedback": {
+      "thumbsUp": {
+        "label": "役に立った",
+        "prompt": "この回答は役に立ちました。今後も活かせるよう、うまくいった点を簡潔にまとめてください。"
+      },
+      "thumbsDown": {
+        "label": "役に立たなかった",
+        "prompt": "この回答は役に立ちませんでした。再試行する前に、なぜ私が同意しないのかを理解するための具体的な質問を1つしてください。"
+      }
+    },
     "bangBash": {
       "placeholder": "> bash コマンドを実行...",
       "commandPanel": "コマンドパネル",

@@ -71,6 +71,16 @@
       "commandNoAssistantUuid": "Impossible de bifurquer : aucune réponse de l’assistant avec des identifiants",
       "unsupportedProvider": "Fork is not supported by this provider."
     },
+    "feedback": {
+      "thumbsUp": {
+        "label": "Utile",
+        "prompt": "Cette réponse a été utile. Note brièvement ce qui a fonctionné pour t'en souvenir par la suite."
+      },
+      "thumbsDown": {
+        "label": "Pas utile",
+        "prompt": "Cette réponse n'a pas été utile. Pose-moi une question ciblée pour comprendre pourquoi je ne suis pas d'accord avant de réessayer."
+      }
+    },
     "bangBash": {
       "placeholder": "> Exécuter une commande bash...",
       "commandPanel": "Panneau de commandes",

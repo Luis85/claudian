@@ -71,6 +71,16 @@
       "commandNoAssistantUuid": "无法分叉：没有带标识符的助手回复",
       "unsupportedProvider": "Fork is not supported by this provider."
     },
+    "feedback": {
+      "thumbsUp": {
+        "label": "有帮助",
+        "prompt": "这个回答有帮助。请简要记下哪里做得好，便于今后继续保持。"
+      },
+      "thumbsDown": {
+        "label": "没帮助",
+        "prompt": "这个回答没有帮助。在重试之前，请向我提出一个聚焦的后续问题，以便了解我为什么不同意。"
+      }
+    },
     "bangBash": {
       "placeholder": "> 运行命令...",
       "commandPanel": "命令面板",
