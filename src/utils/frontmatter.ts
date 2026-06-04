@@ -169,6 +169,21 @@ export function extractBoolean(
   return undefined;
 }
 
+export function extractNumber(
+  fm: Record<string, unknown>,
+  key: string
+): number | undefined {
+  const val = fm[key];
+  if (typeof val === 'number' && Number.isFinite(val)) return val;
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (!trimmed) return undefined;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return value != null && typeof value === 'object' && !Array.isArray(value);
 }
