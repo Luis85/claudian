@@ -1,6 +1,7 @@
 import type { TAbstractFile } from 'obsidian';
 
 import type ClaudianPlugin from '@/main';
+import { openClaudianProviderSettings } from '@/utils/obsidianPrivateApi';
 
 import { QuickActionStorage } from './QuickActionStorage';
 import { buildProviderRecords } from './skills/buildProviderRecords';
@@ -49,6 +50,13 @@ export function openQuickActionsModal(
     onRun: options.onRun,
     onRunSkill: (entry) => {
       void runVaultSkill(plugin, entry, file);
+    },
+    onEditSkill: (entry) => {
+      openClaudianProviderSettings(
+        plugin.app,
+        plugin.manifest.id,
+        entry.providerId,
+      );
     },
   }).open();
 }
