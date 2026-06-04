@@ -1,3 +1,6 @@
+---
+parent: "[[Multi Provider Support]]"
+---
 # Claudian — Install Codex (Windows)
 
 This manual walks Windows users through installing the **OpenAI Codex CLI**, the runtime Claudian drives when the Codex provider is enabled. Two flavours are supported: **Native Windows** (`codex.exe`) and **WSL** (Linux `codex` inside a WSL distro). Pick one method per machine and configure Claudian accordingly under **Settings → Claudian → Codex**.

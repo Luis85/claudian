@@ -107,6 +107,7 @@ views:
       - status
     columnSize:
       file.name: 369
+      note.status: 192
   - type: table
     name: ADRs
     filters:

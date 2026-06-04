@@ -1,5 +1,5 @@
 ---
-status: open
+status: done
 priority: 2 - normal
 relations:
 tags:

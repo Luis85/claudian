@@ -1,3 +1,6 @@
+---
+parent: "[[Multi Provider Support]]"
+---
 # Claudian — Install Claude (Windows)
 
 This manual walks Windows users through installing the **Claude Code CLI**, the runtime Claudian drives when the Claude provider is enabled. Mac and Linux are not covered here.

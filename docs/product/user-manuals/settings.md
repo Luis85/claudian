@@ -1,3 +1,6 @@
+---
+parent: Product
+---
 # Claudian — Settings
 
 This manual is the index for the Claudian settings panel. Each tab gets a section. Where a feature has its own manual, follow the cross-link instead of looking for the depth here.
