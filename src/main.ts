@@ -112,16 +112,9 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
     const chatWorkOrderLinker = new ChatWorkOrderLinker(this);
 
-    this.registerChatMessageAction({
-      id: 'create-work-order-from-message',
-      label: 'Create work order',
-      icon: 'kanban-square',
-      isEligible: (msg) => msg.role === 'assistant' && Boolean(chatMessageText(msg)),
-      run: (msg, conversationId) => {
-        void chatWorkOrderLinker.promoteMessageToWorkOrder(msg, conversationId);
-      },
-    });
-
+    // Registration order = left-to-right render order inside .claudian-text-actions
+    // (which itself sits left of the copy button). Visual order under an assistant
+    // response: thumbs-up, thumbs-down, work-order, copy.
     this.registerChatMessageAction({
       id: 'thumbs-up-feedback',
       label: t('chat.feedback.thumbsUp.label'),
@@ -139,6 +132,16 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       isEligible: (msg) => msg.role === 'assistant' && Boolean(chatMessageText(msg)),
       run: (msg, conversationId) => {
         sendFeedbackPrompt(this, msg, conversationId, 'down');
+      },
+    });
+
+    this.registerChatMessageAction({
+      id: 'create-work-order-from-message',
+      label: 'Create work order',
+      icon: 'kanban-square',
+      isEligible: (msg) => msg.role === 'assistant' && Boolean(chatMessageText(msg)),
+      run: (msg, conversationId) => {
+        void chatWorkOrderLinker.promoteMessageToWorkOrder(msg, conversationId);
       },
     });
 
