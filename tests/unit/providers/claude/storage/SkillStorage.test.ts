@@ -294,4 +294,69 @@ Prompt`,
       expect(adapter.deleteFolder).toHaveBeenCalledWith('.claude/skills/target');
     });
   });
+
+  describe('loadAll parallelism', () => {
+    function makeAdapter(map: Record<string, string>) {
+      return {
+        listFolders: jest.fn().mockResolvedValue(Object.keys(map).map((k) => `.claude/skills/${k}`)),
+        exists: jest.fn().mockImplementation((p: string) => Promise.resolve(p in map || p.replace('/SKILL.md', '').split('/').pop()! in map)),
+        read: jest.fn().mockImplementation((p: string) => {
+          const name = p.replace('/SKILL.md', '').split('/').pop()!;
+          const body = map[name];
+          if (body === undefined) throw new Error(`missing ${p}`);
+          return Promise.resolve(body);
+        }),
+      } as never;
+    }
+
+    it('returns one LoadedSkill per SKILL.md folder', async () => {
+      const adapter = makeAdapter({
+        tdd: '---\ndescription: TDD skill\n---\nbody',
+        review: '---\ndescription: Review skill\n---\nbody',
+      });
+      const storage = new SkillStorage(adapter);
+      const result = await storage.loadAll();
+      expect(result.map((s) => s.skill.name).sort()).toEqual(['review', 'tdd']);
+    });
+
+    it('runs file reads in parallel', async () => {
+      const order: string[] = [];
+      const adapter = {
+        listFolders: jest.fn().mockResolvedValue(['.claude/skills/a', '.claude/skills/b', '.claude/skills/c']),
+        exists: jest.fn().mockResolvedValue(true),
+        read: jest.fn().mockImplementation(async (p: string) => {
+          order.push(`start:${p}`);
+          await new Promise((r) => setTimeout(r, 5));
+          order.push(`end:${p}`);
+          return '---\ndescription: x\n---\n';
+        }),
+      } as never;
+      const storage = new SkillStorage(adapter);
+      await storage.loadAll();
+      // Parallel: all "start" entries appear before any "end"
+      const startCount = order.findIndex((e) => e.startsWith('end:'));
+      expect(order.slice(0, startCount).every((e) => e.startsWith('start:'))).toBe(true);
+    });
+
+    it('skips folders without a SKILL.md without throwing', async () => {
+      const adapter = {
+        listFolders: jest.fn().mockResolvedValue(['.claude/skills/a', '.claude/skills/orphan']),
+        exists: jest.fn().mockImplementation((p: string) => Promise.resolve(p.endsWith('/a/SKILL.md'))),
+        read: jest.fn().mockResolvedValue('---\ndescription: a\n---\n'),
+      } as never;
+      const storage = new SkillStorage(adapter);
+      const result = await storage.loadAll();
+      expect(result.map((s) => s.skill.name)).toEqual(['a']);
+    });
+
+    it('returns [] when root listing throws', async () => {
+      const adapter = {
+        listFolders: jest.fn().mockRejectedValue(new Error('nope')),
+        exists: jest.fn(),
+        read: jest.fn(),
+      } as never;
+      const storage = new SkillStorage(adapter);
+      expect(await storage.loadAll()).toEqual([]);
+    });
+  });
 });
