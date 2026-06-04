@@ -37,6 +37,26 @@ export class ChatTabExecutionSurface implements TaskExecutionSurface {
     };
   }
 
+  async requestCommitTurn(task: TaskSpec, prompt: string): Promise<void> {
+    const { provider, model } = task.frontmatter;
+    if (!provider) throw new Error('Work order is missing provider');
+    if (!model) throw new Error('Work order is missing model');
+
+    let view = this.plugin.getView();
+    if (!view) {
+      await this.plugin.activateView();
+      view = this.plugin.getView();
+    }
+    if (!view) throw new Error('Could not open the Claudian chat view.');
+
+    await view.injectCommitTurnForConversation({
+      conversationId: task.frontmatter.conversation_id ?? null,
+      fallbackProviderId: provider as ProviderId,
+      fallbackModel: model,
+      prompt,
+    });
+  }
+
   private failed(error: string): TaskRunHandle {
     return {
       status: 'failed',
