@@ -1,6 +1,6 @@
-import type ClaudianPlugin from '@/main';
 import { ChatTabExecutionSurface } from '@/features/tasks/execution/ChatTabExecutionSurface';
 import type { TaskSpec } from '@/features/tasks/model/taskTypes';
+import type ClaudianPlugin from '@/main';
 
 function makeTask(overrides: Partial<TaskSpec['frontmatter']> = {}): TaskSpec {
   return {

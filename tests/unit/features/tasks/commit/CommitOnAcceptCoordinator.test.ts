@@ -1,6 +1,6 @@
 import { EventBus } from '@/core/events/EventBus';
-import type { TaskEventMap } from '@/features/tasks/events';
 import { CommitOnAcceptCoordinator } from '@/features/tasks/commit/CommitOnAcceptCoordinator';
+import type { TaskEventMap } from '@/features/tasks/events';
 import type { TaskSpec } from '@/features/tasks/model/taskTypes';
 
 interface Harness {

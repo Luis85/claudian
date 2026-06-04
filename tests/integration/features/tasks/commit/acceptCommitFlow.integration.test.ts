@@ -33,7 +33,8 @@ function setup(opts: { promptCommitOnAccept: boolean; dirtyCount: number; confir
   const settings: { promptCommitOnAccept: boolean } = { promptCommitOnAccept: opts.promptCommitOnAccept };
   const saveSettings = jest.fn(async () => undefined);
   const noteStore = new TaskNoteStore();
-  const surface = { requestCommitTurn: jest.fn(async () => undefined) };
+  const surface = { requestCommitTurn: jest.fn() as jest.Mock };
+  surface.requestCommitTurn.mockResolvedValue(undefined);
   const openModal = jest.fn(async () => ({ confirmed: opts.confirm, dontAskAgain: opts.dontAskAgain }));
   const coordinator = new CommitOnAcceptCoordinator({
     events,
