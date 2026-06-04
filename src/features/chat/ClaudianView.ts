@@ -725,6 +725,45 @@ export class ClaudianView extends ItemView {
     };
   }
 
+  /**
+   * Routes a commit-and-push prompt into a work-order's chat. Focuses or reopens
+   * the conversation tab when `conversationId` is known and recoverable;
+   * otherwise opens a fresh task-run tab on the supplied provider/model and
+   * sends the prompt there.
+   */
+  async injectCommitTurnForConversation(options: {
+    conversationId: string | null;
+    fallbackProviderId: ProviderId;
+    fallbackModel: string;
+    prompt: string;
+  }): Promise<void> {
+    if (!this.tabManager) {
+      throw new Error('Chat view is not ready.');
+    }
+
+    if (options.conversationId) {
+      const existing = this.findTabWithConversation(options.conversationId);
+      if (existing) {
+        await this.tabManager.openConversation(options.conversationId);
+        const ic = existing.controllers.inputController;
+        if (!ic) {
+          throw new Error('Chat tab is missing an input controller.');
+        }
+        await ic.sendMessage({ content: options.prompt });
+        return;
+      }
+    }
+
+    const result = await this.startTaskRunInFreshTab({
+      providerId: options.fallbackProviderId,
+      model: options.fallbackModel,
+      prompt: options.prompt,
+    });
+    if (result.status === 'failed' && result.error) {
+      throw new Error(result.error);
+    }
+  }
+
   private handleTabClick(tabId: TabId): void {
     const switched = this.tabManager?.switchToTab(tabId);
     if (switched) {
