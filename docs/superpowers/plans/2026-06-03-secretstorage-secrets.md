@@ -50,16 +50,11 @@ currently **`1.7.2`**.
 
 ## Key design decisions
 
-1. **DECISION TO CONFIRM — compatibility path.** `SecretStorage` needs Obsidian ≥1.11.4 but `minAppVersion`
-   is `1.7.2`. Two options:
-   - **(Recommended) Feature-detect + graceful fallback.** Keep `minAppVersion`; a `SecretStore` wrapper
-     uses `app.secretStorage` when present, else falls back to today's in-file storage **plus a one-time
-     plaintext-at-rest warning** (the issue's disclosure stopgap). No user is locked out; sub-1.11.4 users
-     keep working at today's security level.
-   - **(Simpler) Bump `minAppVersion` to `1.11.4`.** Drops sub-1.11.4 users; no fallback code. Cleaner, but
-     a hard compatibility break.
-
-   This is the only decision that materially changes the work. Default below assumes **feature-detect**.
+1. **DECIDED (2026-06-03) — bump `minAppVersion` to `1.11.4`; no backwards compatibility.** `SecretStorage`
+   requires Obsidian ≥1.11.4, so `manifest.json` `minAppVersion` is bumped to `1.11.4` and there is **no
+   feature-detect fallback** — `SecretStore` assumes `app.secretStorage` exists. Sub-1.11.4 users are
+   intentionally dropped (cleaner, no plaintext-fallback branch to maintain). The disclosure stopgap is
+   therefore unnecessary.
 
 2. **Reference token format.** Vault files store a reference, never a value:
    - `.claudian/claudian-settings.json` env blobs: a Claudian-owned token `${secret:<id>}` on the value side
@@ -95,11 +90,12 @@ currently **`1.7.2`**.
 
 ## Phased task breakdown
 
-### Phase 0 — `SecretStore` wrapper + compat substrate (S)
-- [ ] Add `src/core/security/secretStore.ts`: feature-detect `app.secretStorage`; fallback no-op/in-file
-      mode flagged via `isBacked()`; one-time plaintext warning Notice when unbacked and a secret would be stored.
-- [ ] Unit tests: backed path (mock `app.secretStorage`) and unbacked fallback path.
-- [ ] No behavior change yet. `typecheck && lint && test && build` green.
+### Phase 0 — `SecretStore` wrapper + manifest bump (S)
+- [ ] Bump `manifest.json` `minAppVersion` to `1.11.4`.
+- [ ] Add `src/core/security/secretStore.ts`: thin typed wrapper over `app.secretStorage`
+      (`get`/`set`/`has`/`delete`/`list`). **Backed-only — no fallback** (relies on the bumped minAppVersion).
+- [ ] Unit tests with a mocked `app.secretStorage`.
+- [ ] `typecheck && lint && test && build` green.
 
 ### Phase 1 — pure `secretRefs` core (M)
 - [ ] Add `src/core/security/secretRefs.ts`: token grammar `${secret:<id>}`, ID derivation, secret-key
@@ -130,12 +126,11 @@ currently **`1.7.2`**.
 ### Phase 4 — settings UX + leak-assertion + docs (S–M)
 - [ ] Provider Environment textareas: render saved secret lines as masked refs; entering a new secret value
       re-extracts on save. (Optionally use `SecretComponent` for a dedicated "API key" field per provider.)
-- [ ] One-time migration notice + the disclosure warning for the unbacked fallback.
+- [ ] One-time migration notice (informational; secrets moved into the OS keychain).
 - [ ] Assertion test: diagnostics/transcripts/log export never contain a stored secret value (ties to but
       does not implement SEC-E).
-- [ ] Update `README.md` Privacy section + `docs/product/user-manuals/settings.md` to describe SecretStorage.
-- [ ] If the **bump-minAppVersion** decision was chosen instead: set `manifest.json` `minAppVersion: 1.11.4`,
-      drop the fallback branch, and note it in release notes.
+- [ ] Update `README.md` Privacy section + `docs/product/user-manuals/settings.md` to describe SecretStorage
+      and the `minAppVersion: 1.11.4` requirement; note the bump in release notes.
 
 ## Test plan
 
@@ -168,7 +163,7 @@ currently **`1.7.2`**.
   via the `minAppVersion` bump.
 - All gates green; a test asserts no secret value appears in persisted files or diagnostics export.
 
-## Open decision (needs confirmation before Phase 4 / manifest)
+## Decision (settled 2026-06-03)
 
-**Feature-detect + fallback (recommended, default in this plan) vs bump `minAppVersion` to 1.11.4.**
-Everything through Phase 3 is identical either way; only Phase 4's manifest/fallback handling differs.
+**Bump `minAppVersion` to `1.11.4`; no backwards compatibility / no fallback.** `SecretStore` is
+backed-only; Phase 4 sets the manifest and drops all fallback/disclosure-stopgap handling.
