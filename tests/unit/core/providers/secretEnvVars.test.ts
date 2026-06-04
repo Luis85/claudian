@@ -412,6 +412,24 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
     expect(getSharedEnvironmentVariables(settings)).toBe('ANTHROPIC_API_KEY=\nHTTP_PROXY=http://p'); // empty line kept
   });
 
+  it('prunes the ref but does NOT clear a non-Claudian (external) secret id when a key is cleared', () => {
+    // A ref points at an external SecretStorage id (user-mapped via SecretComponent,
+    // potentially shared with another plugin). Clearing the plaintext line must drop
+    // the ref but never erase that external secret.
+    const settings: Record<string, unknown> = {
+      sharedEnvironmentVariables: 'ANTHROPIC_API_KEY=\nHTTP_PROXY=http://p',
+      providerConfigs: {},
+      secretEnvVars: [
+        { scope: 'shared', name: 'ANTHROPIC_API_KEY', secretId: 'some-other-plugin-key' },
+      ],
+    };
+    const { changed, stored } = run(settings, { 'some-other-plugin-key': 'sk-shared-external' });
+
+    expect(changed).toBe(true);
+    expect(settings.secretEnvVars).toEqual([]); // ref pruned (overlay won't re-inject)
+    expect(stored.get('some-other-plugin-key')).toBe('sk-shared-external'); // external value untouched
+  });
+
   it('does not overwrite an id already present in SecretStorage (seeds usedIds from store.list)', () => {
     const settings: Record<string, unknown> = {
       sharedEnvironmentVariables: 'ANTHROPIC_API_KEY=sk-new',

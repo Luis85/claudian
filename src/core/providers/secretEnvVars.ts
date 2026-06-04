@@ -9,7 +9,7 @@
  * env blob into the store and return the sanitized blob plus the new refs.
  */
 import { parseEnvironmentVariables } from '../../utils/env';
-import { isSecretEnvKey, migratedEnvSecretId, SECRET_VALUE_PLACEHOLDER, uniquifySecretId } from '../security/secretIds';
+import { isClaudianGeneratedSecretId, isSecretEnvKey, migratedEnvSecretId, SECRET_VALUE_PLACEHOLDER, uniquifySecretId } from '../security/secretIds';
 import type { EnvironmentScope, SecretEnvVarRef } from '../types/settings';
 import {
   getProviderEnvironmentVariables,
@@ -327,6 +327,11 @@ export function migrateEnvSecrets(
     settings.secretEnvVars = next;
     const stillUsed = new Set(next.map((ref) => ref.secretId));
     for (const ref of clearedRefs) {
+      // Mirror the settings UI's clearIfOrphaned guard: SecretStorage ids are
+      // global across plugins and a ref may point at a user-selected external id
+      // (via SecretComponent), so only auto-erase Claudian-owned ids — never a
+      // secret another plugin owns.
+      if (!isClaudianGeneratedSecretId(ref.secretId)) continue;
       if (!stillUsed.has(ref.secretId)) setSecret(ref.secretId, '');
     }
     changed = true;
