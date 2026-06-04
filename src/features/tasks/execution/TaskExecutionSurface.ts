@@ -16,4 +16,10 @@ export interface TaskRunHandle {
 export interface TaskExecutionSurface {
   startTaskRun(task: TaskSpec, options: TaskRunOptions): Promise<TaskRunHandle>;
   cancelTaskRun?(runId: string): void;
+  /**
+   * Injects a scoped commit-and-push prompt into the work-order's existing chat
+   * conversation. Resolves once the prompt has been queued. Implementations that
+   * don't host a chat surface can omit this method.
+   */
+  requestCommitTurn?(task: TaskSpec, prompt: string): Promise<void>;
 }

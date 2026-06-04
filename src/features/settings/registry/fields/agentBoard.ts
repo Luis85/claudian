@@ -69,6 +69,14 @@ export function registerAgentBoardTabFields(): void {
     order: 50,
   });
 
+  r.registerSection({
+    id: 'commitOnAccept',
+    tabId: 'agentBoard',
+    label: 'Git',
+    order: 55,
+    description: 'Prompt to commit and push when a work order is Accepted.',
+  });
+
   r.registerField({
     id: 'agentBoardWorkOrderFolder',
     tabId: 'agentBoard',
@@ -159,6 +167,17 @@ export function registerAgentBoardTabFields(): void {
     },
     default: null,
     keywords: ['lanes', 'columns', 'board'],
+  });
+
+  r.registerField({
+    id: 'promptCommitOnAccept',
+    tabId: 'agentBoard',
+    sectionId: 'commitOnAccept',
+    label: 'Prompt to commit and push on Accept',
+    description: 'When the vault is a dirty git repo, ask before committing the changes that ship with the accepted work order.',
+    type: { kind: 'toggle' },
+    default: true,
+    keywords: ['git', 'commit', 'push', 'accept'],
   });
 
   r.registerField({

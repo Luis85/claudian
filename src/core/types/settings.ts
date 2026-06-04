@@ -186,6 +186,8 @@ export interface ClaudianSettings {
   deferMathRenderingDuringStreaming: boolean;
   chatViewPlacement: ChatViewPlacement;
   firstRunDismissed: boolean;
+  /** When true, prompt the user to commit & push after Accepting a Work-Order in a dirty git-backed vault. */
+  promptCommitOnAccept?: boolean;
 
   // Agent Board
   agentBoardWorkOrderFolder: string;
