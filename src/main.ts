@@ -20,15 +20,23 @@ import type { SharedAppStorage } from './core/bootstrap/storage';
 import { EventBus } from './core/events/EventBus';
 import { formatLogEntries } from './core/logging/formatLogEntries';
 import { Logger } from './core/logging/Logger';
+import type { MissingMcpSecret } from './core/mcp/mcpSecrets';
 import {
   getEnvironmentVariablesForScope as getScopedEnvironmentVariables,
   getRuntimeEnvironmentText,
+  serializeEnvironmentVariables,
 } from './core/providers/providerEnvironment';
 import { ProviderRegistry } from './core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from './core/providers/ProviderSettingsCoordinator';
 import { ProviderWorkspaceRegistry } from './core/providers/ProviderWorkspaceRegistry';
+import {
+  migrateEnvSecrets,
+  pruneScopeSecretRefs,
+  resolveProviderEnvVars,
+} from './core/providers/secretEnvVars';
 import type { ProviderId } from './core/providers/types';
 import type { AppTabManagerState } from './core/providers/types';
+import { SecretStore } from './core/security/secretStore';
 import type {
   ChatMessageAction,
   ClaudianSettings,
@@ -41,7 +49,7 @@ import {
   VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
 } from './core/types';
 import type { PluginContext } from './core/types/PluginContext';
-import type { EnvironmentScope } from './core/types/settings';
+import type { EnvironmentScope, SecretEnvVarRef } from './core/types/settings';
 import { ClaudianView } from './features/chat/ClaudianView';
 import { sendFeedbackPrompt } from './features/chat/feedback/sendFeedbackPrompt';
 import { isClaudianView } from './features/chat/isClaudianView';
@@ -58,6 +66,10 @@ import { getVaultPath } from './utils/path';
 
 export default class ClaudianPlugin extends Plugin implements PluginContext {
   settings!: ClaudianSettings;
+  /** SEC-A: keychain-backed secret store (Obsidian SecretStorage), set in onload. */
+  secretStore!: SecretStore;
+  /** SEC-A: secret ids already warned about as missing on this device (dedup). */
+  private readonly warnedMissingSecretIds = new Set<string>();
   readonly events = new EventBus<ClaudianEventMap>();
   readonly logger = new Logger({ enabled: false, level: 'warn' });
   /** Optional, registry-driven actions rendered in the chat user-message toolbar. */
@@ -271,6 +283,17 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       ...claudian,
     };
 
+    // SEC-A: keychain-backed secret store. Requires Obsidian >= 1.11.5 (the
+    // plugin's minAppVersion), so app.secretStorage is always present.
+    this.secretStore = new SecretStore(this.app.secretStorage);
+    // One-time migration of any plaintext API keys/tokens in the active env
+    // blobs into SecretStorage (idempotent; cheap no-op once done).
+    const didMigrateSecrets = migrateEnvSecrets(
+      this.settings,
+      ProviderRegistry.getRegisteredProviderIds(),
+      this.secretStore,
+    );
+
     // Plan mode is ephemeral — normalize back to normal on load so the app
     // doesn't start stuck in plan mode after a restart (prePlanPermissionMode is lost)
     if (this.settings.permissionMode === 'plan') {
@@ -301,7 +324,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.settings,
     );
 
-    if (changed || didNormalizeModelVariants || didNormalizeProviderSelection) {
+    if (changed || didNormalizeModelVariants || didNormalizeProviderSelection || didMigrateSecrets) {
       await this.saveSettings();
     }
 
@@ -351,6 +374,29 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     return this.envApply.applyBatch(updates);
   }
 
+  /** SEC-A: persist secret-var refs and run the env reconcile/sync for the scope. */
+  async applySecretEnvVars(refs: SecretEnvVarRef[], scope: EnvironmentScope): Promise<void> {
+    return this.envApply.applySecretEnvVars(refs, scope);
+  }
+
+  /** SEC-A: migrate plaintext secrets (shared/provider/snippet blobs) into SecretStorage. */
+  migrateEnvSecretsNow(): boolean {
+    return migrateEnvSecrets(
+      this.settings,
+      ProviderRegistry.getRegisteredProviderIds(),
+      this.secretStore,
+    );
+  }
+
+  /** SEC-A: drop a deleted snippet's secret refs and clear values no other ref uses. */
+  pruneSnippetSecrets(snippetId: string): boolean {
+    return pruneScopeSecretRefs(
+      this.settings,
+      `snippet:${snippetId}`,
+      (id) => this.secretStore.clear(id),
+    );
+  }
+
   /** Returns the runtime environment variables (fixed at plugin load). */
   getActiveEnvironmentVariables(
     providerId: ProviderId = ProviderRegistry.resolveSettingsProviderId(
@@ -361,6 +407,82 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.settings,
       providerId,
     );
+  }
+
+  /**
+   * SEC-A: the parsed runtime env for a provider with secret values overlaid
+   * from SecretStorage. This is what every child-process spawn path uses — the
+   * plaintext blob (via `getActiveEnvironmentVariables`) no longer carries keys.
+   * A secret that is absent on this device (e.g. synced from another machine) is
+   * left unset rather than injected empty; the settings UI prompts re-entry.
+   */
+  getResolvedEnvironmentVariables(
+    providerId: ProviderId = ProviderRegistry.resolveSettingsProviderId(
+      this.settings,
+    ),
+  ): Record<string, string> {
+    const { env, missing } = this.resolveProviderEnv(providerId);
+    if (missing.length > 0) {
+      this.warnMissingDeviceSecrets(missing);
+    }
+    return env;
+  }
+
+  /** Parse the provider env and overlay SecretStorage values; reports missing refs. */
+  private resolveProviderEnv(
+    providerId: ProviderId,
+  ): { env: Record<string, string>; missing: SecretEnvVarRef[] } {
+    return resolveProviderEnvVars(this.settings, providerId, (id) => this.secretStore.get(id));
+  }
+
+  /**
+   * SEC-A: env text for env-hash reconciliation plus the names of any referenced
+   * secrets missing on this device. Hashing the resolved env keeps a watched
+   * key's value stable across the plaintext→keychain move; `missingKeys` lets the
+   * reconciler defer invalidation only when one of ITS watched keys isn't present.
+   */
+  getEnvironmentHashInput(
+    providerId: ProviderId = ProviderRegistry.resolveSettingsProviderId(
+      this.settings,
+    ),
+  ): { text: string; missingKeys: string[] } {
+    const { env, missing } = this.resolveProviderEnv(providerId);
+    return { text: serializeEnvironmentVariables(env), missingKeys: missing.map((ref) => ref.name) };
+  }
+
+  /**
+   * SEC-A: a secret referenced by settings but absent in this device's
+   * SecretStorage (e.g. settings synced from another machine). It's omitted from
+   * the launch env rather than injected empty; surface it once per id via a
+   * user-visible Notice (not the diagnostic logger, which is off by default and
+   * not yet enabled during initial load) so the user knows to re-enter it. The
+   * full settings re-entry UI lands in Phase 4.
+   */
+  private warnMissingDeviceSecrets(missing: SecretEnvVarRef[]): void {
+    for (const ref of missing) {
+      if (this.warnedMissingSecretIds.has(ref.secretId)) continue;
+      this.warnedMissingSecretIds.add(ref.secretId);
+      this.logger.scope('secrets').debug(`Secret "${ref.name}" (${ref.scope}) missing on this device.`);
+      new Notice(t('env.secretMissing', { name: ref.name }));
+    }
+  }
+
+  /**
+   * SEC-A Phase 3: surface MCP auth-header / stdio-env secrets that are absent on
+   * this device (e.g. a vault synced from another machine) so the user re-enters
+   * them in the server's settings, mirroring the provider env-secret prompt.
+   * Otherwise the server launches/tests without its credential while the editor
+   * still shows a masked ref. Deduped by id alongside env secrets.
+   */
+  warnMissingMcpSecrets(missing: MissingMcpSecret[]): void {
+    for (const ref of missing) {
+      if (this.warnedMissingSecretIds.has(ref.secretId)) continue;
+      this.warnedMissingSecretIds.add(ref.secretId);
+      this.logger
+        .scope('secrets')
+        .debug(`MCP secret "${ref.name}" for "${ref.serverName}" missing on this device.`);
+      new Notice(t('env.secretMissing', { name: `${ref.serverName}: ${ref.name}` }));
+    }
   }
 
   getActiveBrowserSelection(): BrowserSelectionContext | null {
@@ -411,6 +533,9 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.settings,
       this.conversationStore.getConversations(),
       providerIds,
+      // SEC-A: hash the resolved env (secrets overlaid) and defer invalidation
+      // when a referenced secret is missing on this device.
+      (providerId) => this.getEnvironmentHashInput(providerId),
     );
   }
 

@@ -1,3 +1,4 @@
+import { computeEnvHash } from '@/core/providers/EnvHashReconciler';
 import type { Conversation } from '@/core/types';
 import { claudeSettingsReconciler } from '@/providers/claude/env/ClaudeSettingsReconciler';
 import { getClaudeProviderSettings } from '@/providers/claude/settings';
@@ -30,7 +31,7 @@ describe('claudeSettingsReconciler', () => {
       expect(conversation.sessionId).toBeNull();
       expect(settings.model).toBe('claude-opus-4-6');
       expect(getClaudeProviderSettings(settings).environmentHash).toBe(
-        'ANTHROPIC_BASE_URL=https://api.example.com',
+        computeEnvHash('ANTHROPIC_BASE_URL=https://api.example.com', ['ANTHROPIC_BASE_URL']),
       );
     });
 

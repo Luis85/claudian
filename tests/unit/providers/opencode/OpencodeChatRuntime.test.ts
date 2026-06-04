@@ -1,5 +1,6 @@
 import { itPosix, itWin32 } from '@test/helpers/platform';
 
+import { getRuntimeEnvironmentVariables } from '@/core/providers/providerEnvironment';
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from '@/core/providers/ProviderSettingsCoordinator';
 import {
@@ -13,7 +14,7 @@ import * as launchArtifacts from '@/providers/opencode/runtime/OpencodeLaunchArt
 import { getOpencodeProviderSettings } from '@/providers/opencode/settings';
 
 function createMockPlugin(overrides: Record<string, unknown> = {}): any {
-  return {
+  const plugin: any = {
     settings: {},
     manifest: { version: '0.0.0-test' },
     getAllViews: jest.fn().mockReturnValue([]),
@@ -28,6 +29,11 @@ function createMockPlugin(overrides: Record<string, unknown> = {}): any {
     },
     ...overrides,
   };
+  // Resolved env mirrors the runtime env parsed from settings (no secrets in tests).
+  plugin.getResolvedEnvironmentVariables = jest.fn((providerId = 'opencode') =>
+    getRuntimeEnvironmentVariables(plugin.settings, providerId),
+  );
+  return plugin;
 }
 
 describe('OpencodeChatRuntime', () => {

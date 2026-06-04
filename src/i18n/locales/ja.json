@@ -712,6 +712,14 @@
     }
   },
   "env": {
+    "secretVarsHeading": "シークレット変数",
+    "secretVarsDesc": "API キーやトークンは平文の設定ではなく、システムのキーチェーンに保存されます。",
+    "secretNotSet": "このデバイスには設定されていません。使用するシークレットを選択または作成してください。",
+    "secretRemove": "削除",
+    "secretAdd": "シークレット変数を追加",
+    "secretNamePlaceholder": "VARIABLE_NAME",
+    "secretAddButton": "追加",
+    "secretMissing": "プロバイダーのシークレット「{name}」はこのデバイスに設定されていません。Claudian の設定で再入力してください。",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."

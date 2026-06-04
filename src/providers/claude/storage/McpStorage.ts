@@ -2,11 +2,53 @@ import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
 import type {
   ManagedMcpConfigFile,
   ManagedMcpServer,
+  McpHttpServerConfig,
   McpServerConfig,
+  McpSSEServerConfig,
+  McpStdioServerConfig,
 } from '../../../core/types';
-import { DEFAULT_MCP_SERVER, isValidMcpServerConfig } from '../../../core/types';
+import { DEFAULT_MCP_SERVER, getMcpServerType, isValidMcpServerConfig } from '../../../core/types';
 
 export const MCP_CONFIG_PATH = '.claude/mcp.json';
+
+/** Validate a `_claudian` secret-ref map (name → secret id), dropping bad entries. */
+function normalizeSecretRefs(value: unknown): Record<string, string> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const refs: Record<string, string> = {};
+  for (const [name, id] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof id === 'string' && id) refs[name] = id;
+  }
+  return Object.keys(refs).length > 0 ? refs : undefined;
+}
+
+/**
+ * SEC-A Phase 3: return a copy of the server config with any header/env key that
+ * has a secret ref removed, so a resolved secret value never lands in the
+ * committable/syncable `.claude/mcp.json`.
+ */
+function stripSecretKeys(server: ManagedMcpServer): McpServerConfig {
+  if (getMcpServerType(server.config) === 'stdio') {
+    const refs = server.secretEnv;
+    const stdio = server.config as McpStdioServerConfig;
+    if (!refs || !stdio.env) return server.config;
+    const env = { ...stdio.env };
+    for (const name of Object.keys(refs)) delete env[name];
+    const next: McpStdioServerConfig = { ...stdio };
+    if (Object.keys(env).length > 0) next.env = env;
+    else delete next.env;
+    return next;
+  }
+
+  const refs = server.secretHeaders;
+  const url = server.config as McpSSEServerConfig | McpHttpServerConfig;
+  if (!refs || !url.headers) return server.config;
+  const headers = { ...url.headers };
+  for (const name of Object.keys(refs)) delete headers[name];
+  const next = { ...url };
+  if (Object.keys(headers).length > 0) next.headers = headers;
+  else delete next.headers;
+  return next;
+}
 
 export class McpStorage {
   constructor(private adapter: VaultFileAdapter) {}
@@ -56,6 +98,10 @@ export class McpStorage {
           contextSaving: meta.contextSaving ?? DEFAULT_MCP_SERVER.contextSaving,
           disabledTools: normalizedDisabledTools,
           description: meta.description,
+          // SEC-A Phase 3: secret header/env refs (name → SecretStorage id); the
+          // value is resolved in-plugin at launch and never lives in this file.
+          secretHeaders: normalizeSecretRefs(meta.secretHeaders),
+          secretEnv: normalizeSecretRefs(meta.secretEnv),
         });
       }
 
@@ -69,17 +115,28 @@ export class McpStorage {
     const mcpServers: Record<string, McpServerConfig> = {};
     const claudianServers: Record<
       string,
-      { enabled?: boolean; contextSaving?: boolean; disabledTools?: string[]; description?: string }
+      {
+        enabled?: boolean;
+        contextSaving?: boolean;
+        disabledTools?: string[];
+        description?: string;
+        secretHeaders?: Record<string, string>;
+        secretEnv?: Record<string, string>;
+      }
     > = {};
 
     for (const server of servers) {
-      mcpServers[server.name] = server.config;
+      // SEC-A Phase 3: never persist a secret-referenced header/env value as
+      // plaintext, even if a caller left it on the config — strip those keys.
+      mcpServers[server.name] = stripSecretKeys(server);
 
       const meta: {
         enabled?: boolean;
         contextSaving?: boolean;
         disabledTools?: string[];
         description?: string;
+        secretHeaders?: Record<string, string>;
+        secretEnv?: Record<string, string>;
       } = {};
 
       // SECURITY (SEC-3): Always persist the `enabled` flag. The presence of a
@@ -100,6 +157,12 @@ export class McpStorage {
       }
       if (server.description) {
         meta.description = server.description;
+      }
+      if (server.secretHeaders && Object.keys(server.secretHeaders).length > 0) {
+        meta.secretHeaders = server.secretHeaders;
+      }
+      if (server.secretEnv && Object.keys(server.secretEnv).length > 0) {
+        meta.secretEnv = server.secretEnv;
       }
 
       if (Object.keys(meta).length > 0) {

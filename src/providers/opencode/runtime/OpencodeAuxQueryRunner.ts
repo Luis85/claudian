@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import type { AuxQueryConfig, AuxQueryRunner } from '../../../core/auxiliary/AuxQueryRunner';
-import { getRuntimeEnvironmentText } from '../../../core/providers/providerEnvironment';
+import { serializeEnvironmentVariables } from '../../../core/providers/providerEnvironment';
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type { PluginContext } from '../../../core/types/PluginContext';
 import { asSettingsBag } from '../../../core/types/settings';
@@ -171,7 +171,10 @@ export class OpencodeAuxQueryRunner implements AuxQueryRunner {
     const resolvedCliPath = this.plugin.getResolvedProviderCliPath('opencode') ?? 'opencode';
 
     const settings = asSettingsBag(this.plugin.settings);
-    const runtimeEnv = buildOpencodeRuntimeEnv(settings, resolvedCliPath);
+    const runtimeEnv = buildOpencodeRuntimeEnv(
+      this.plugin.getResolvedEnvironmentVariables('opencode'),
+      resolvedCliPath,
+    );
     const auxAgentId = OPENCODE_AUX_AGENT_IDS[this.options.agentProfile];
     const artifacts = await prepareOpencodeLaunchArtifacts({
       artifactsSubdir: `opencode/auxiliary/${this.options.artifactPurpose}`,
@@ -187,7 +190,7 @@ export class OpencodeAuxQueryRunner implements AuxQueryRunner {
       artifactKey: artifacts.launchKey,
       command: resolvedCliPath,
       configPath: artifacts.configPath,
-      envText: getRuntimeEnvironmentText(settings, 'opencode'),
+      envText: serializeEnvironmentVariables(this.plugin.getResolvedEnvironmentVariables('opencode')),
     });
 
     const shouldRestart = !this.process

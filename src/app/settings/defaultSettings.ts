@@ -26,6 +26,7 @@ export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
 
   sharedEnvironmentVariables: '',
   envSnippets: [],
+  secretEnvVars: [],
   customContextLimits: {},
   customModelAliases: {},
 

@@ -27,6 +27,20 @@ export interface EnvSnippet {
   modelAliases?: Record<string, string>;   // Optional: display aliases for custom models
 }
 
+/**
+ * SEC-A: a structured reference to a secret environment variable whose value is
+ * held in Obsidian SecretStorage. Only this reference (never the value) is
+ * persisted in `.claudian/claudian-settings.json`.
+ */
+export interface SecretEnvVarRef {
+  /** Environment scope the var applies to: `shared` or `provider:<id>`. */
+  scope: EnvironmentScope;
+  /** The env var name injected into the child process (e.g. `ANTHROPIC_API_KEY`). */
+  name: string;
+  /** The Obsidian SecretStorage id holding the value (see `core/security/secretIds`). */
+  secretId: string;
+}
+
 /** Source of a slash command. */
 export type SlashCommandSource = 'builtin' | 'user' | 'plugin' | 'sdk';
 
@@ -79,8 +93,13 @@ export interface InstructionRefineResult {
 /** Permission mode for tool execution. */
 export type PermissionMode = 'yolo' | 'plan' | 'normal';
 
-/** Scope for environment variable storage and snippets. */
-export type EnvironmentScope = 'shared' | `provider:${string}`;
+/**
+ * Scope for environment variable storage and snippets. `snippet:<id>` is used
+ * only by SEC-A secret refs: it associates a migrated snippet secret with its
+ * snippet without making it active at launch (resolution ignores snippet scopes;
+ * the value is re-injected only when the snippet is inserted).
+ */
+export type EnvironmentScope = 'shared' | `provider:${string}` | `snippet:${string}`;
 
 /** Opaque device-keyed CLI paths for per-device configuration. */
 export type HostnameCliPaths = Record<string, string>;
@@ -134,6 +153,8 @@ export interface ClaudianSettings {
   // Environment
   sharedEnvironmentVariables: string;
   envSnippets: EnvSnippet[];
+  /** SEC-A: secret env vars whose values live in Obsidian SecretStorage (only the id is stored here). */
+  secretEnvVars: SecretEnvVarRef[];
   customContextLimits: Record<string, number>;
   customModelAliases: Record<string, string>;
 

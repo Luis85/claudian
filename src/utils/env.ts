@@ -322,12 +322,24 @@ export function getEnhancedPath(additionalPaths?: string, cliPath?: string): str
   return unique.join(PATH_SEPARATOR);
 }
 
+/**
+ * SEC-A inline opt-out marker: a trailing `# claudian:plaintext` on an env line tells
+ * the secret-migration pass to leave that line in plaintext (power-user escape hatch).
+ * The marker is preserved in stored settings but stripped before runtime parsing.
+ */
+export const PLAINTEXT_OPT_OUT_MARKER = /#\s*claudian:plaintext\s*$/;
+
 export function parseEnvironmentVariables(input: string): Record<string, string> {
   const result: Record<string, string> = {};
   for (const line of input.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
-    const normalized = trimmed.startsWith('export ') ? trimmed.slice(7) : trimmed;
+    // SEC-A: the `# claudian:plaintext` opt-out marker is kept in the SAVED env line
+    // (so the secret stays opted out of future migrations) but must never reach the
+    // runtime as part of the value. parseEnvironmentVariables is the chokepoint every
+    // runtime consumer funnels through, so strip the marker here.
+    const withoutMarker = trimmed.replace(PLAINTEXT_OPT_OUT_MARKER, '').trimEnd();
+    const normalized = withoutMarker.startsWith('export ') ? withoutMarker.slice(7) : withoutMarker;
     const eqIndex = normalized.indexOf('=');
     if (eqIndex > 0) {
       const key = normalized.substring(0, eqIndex).trim();

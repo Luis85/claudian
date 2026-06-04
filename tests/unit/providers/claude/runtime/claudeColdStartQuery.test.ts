@@ -42,6 +42,7 @@ function createMockPlugin(overrides?: Partial<ColdStartQueryConfig['plugin']>) {
     settings: {},
     getResolvedProviderCliPath: jest.fn().mockReturnValue('/mock/claude'),
     getActiveEnvironmentVariables: jest.fn().mockReturnValue(''),
+    getResolvedEnvironmentVariables: jest.fn().mockReturnValue({}),
     ...overrides,
   } as unknown as ColdStartQueryConfig['plugin'];
 }
