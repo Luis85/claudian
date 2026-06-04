@@ -49,7 +49,7 @@ import {
   VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
 } from './core/types';
 import type { PluginContext } from './core/types/PluginContext';
-import type { EnvironmentScope } from './core/types/settings';
+import type { EnvironmentScope, SecretEnvVarRef } from './core/types/settings';
 import { ClaudianView } from './features/chat/ClaudianView';
 import { isClaudianView } from './features/chat/isClaudianView';
 import type { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
@@ -67,6 +67,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   settings!: ClaudianSettings;
   /** SEC-A: keychain-backed secret store (Obsidian SecretStorage), set in onload. */
   secretStore!: SecretStore;
+  /** SEC-A: secret ids already warned about as missing on this device (dedup). */
+  private readonly warnedMissingSecretIds = new Set<string>();
   readonly events = new EventBus<ClaudianEventMap>();
   readonly logger = new Logger({ enabled: false, level: 'warn' });
   /** Optional, registry-driven actions rendered in the chat user-message toolbar. */
@@ -377,8 +379,30 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       ...secretEnvVarsForScope(this.settings.secretEnvVars, 'shared'),
       ...secretEnvVarsForScope(this.settings.secretEnvVars, `provider:${providerId}`),
     ];
-    overlaySecretEnvVars(env, refs, (id) => this.secretStore.get(id));
+    const { missing } = overlaySecretEnvVars(env, refs, (id) => this.secretStore.get(id));
+    if (missing.length > 0) {
+      this.warnMissingDeviceSecrets(missing);
+    }
     return env;
+  }
+
+  /**
+   * SEC-A: a secret referenced by settings but absent in this device's
+   * SecretStorage (e.g. settings synced from another machine). It's omitted from
+   * the launch env rather than injected empty; warn once per id so it's not
+   * silent. The user-facing re-entry prompt lives in the settings UI (Phase 4).
+   */
+  private warnMissingDeviceSecrets(missing: SecretEnvVarRef[]): void {
+    for (const ref of missing) {
+      if (this.warnedMissingSecretIds.has(ref.secretId)) continue;
+      this.warnedMissingSecretIds.add(ref.secretId);
+      this.logger
+        .scope('secrets')
+        .warn(
+          `Secret "${ref.name}" (${ref.scope}) is not set on this device — `
+          + 'launches omit it until you re-enter it in Claudian settings.',
+        );
+    }
   }
 
   getActiveBrowserSelection(): BrowserSelectionContext | null {
