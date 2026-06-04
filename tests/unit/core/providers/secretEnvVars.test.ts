@@ -8,10 +8,12 @@ import {
   migrateEnvSecrets,
   overlaySecretEnvVars,
   pruneScopeSecretRefs,
+  reconcileSnippetEdit,
   resolveProviderEnvVars,
   resolveSnippetEnvText,
   secretEnvVarsForScope,
 } from '../../../../src/core/providers/secretEnvVars';
+import { SECRET_VALUE_PLACEHOLDER } from '../../../../src/core/security/secretIds';
 import type { SecretEnvVarRef } from '../../../../src/core/types/settings';
 
 describe('secretEnvVars — scope filtering', () => {
@@ -406,6 +408,38 @@ describe('secretEnvVars — resolveSnippetEnvText (insertion)', () => {
   it('produces only the secret lines when the snippet has no plaintext', () => {
     const { envText } = resolveSnippetEnvText('', refs, () => 'sk-g');
     expect(envText).toBe('GEMINI_API_KEY=sk-g');
+  });
+});
+
+describe('secretEnvVars — reconcileSnippetEdit', () => {
+  const refs: SecretEnvVarRef[] = [
+    { scope: 'snippet:s1', name: 'OPENAI_API_KEY', secretId: 'id-o' },
+  ];
+
+  it('keeps a ref when its placeholder row is left unchanged and strips the row', () => {
+    const { envVars, keptRefNames } = reconcileSnippetEdit(
+      `FOO=bar\nOPENAI_API_KEY=${SECRET_VALUE_PLACEHOLDER}`,
+      refs,
+    );
+    expect(envVars).toBe('FOO=bar'); // placeholder row stripped, never stored/migrated
+    expect([...keptRefNames]).toEqual(['OPENAI_API_KEY']);
+  });
+
+  it('drops a ref when the user deletes its row from the editor', () => {
+    const { envVars, keptRefNames } = reconcileSnippetEdit('FOO=bar', refs);
+    expect(envVars).toBe('FOO=bar');
+    expect(keptRefNames.size).toBe(0); // omitted → caller prunes the ref
+  });
+
+  it('drops a ref when the row is emptied (KEY=)', () => {
+    const { keptRefNames } = reconcileSnippetEdit('OPENAI_API_KEY=', refs);
+    expect(keptRefNames.size).toBe(0);
+  });
+
+  it('keeps the ref and the real value when the secret is re-entered', () => {
+    const { envVars, keptRefNames } = reconcileSnippetEdit('OPENAI_API_KEY=sk-new', refs);
+    expect(envVars).toBe('OPENAI_API_KEY=sk-new'); // kept for re-migration (id reused)
+    expect([...keptRefNames]).toEqual(['OPENAI_API_KEY']);
   });
 });
 

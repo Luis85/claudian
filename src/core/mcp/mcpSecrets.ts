@@ -15,6 +15,7 @@ import {
   isSecretHeaderName,
   migratedMcpEnvSecretId,
   migratedMcpHeaderSecretId,
+  SECRET_VALUE_PLACEHOLDER,
   uniquifySecretId,
 } from '../security/secretIds';
 import type {
@@ -28,12 +29,8 @@ import { getMcpServerType } from '../types/mcp';
 
 export type McpSecretResolver = (id: string) => string | null;
 
-/**
- * Masked sentinel shown in the MCP editor for an existing secret header/env value
- * (the real value is never surfaced). Leaving it unchanged keeps the ref; deleting
- * the line or emptying it removes the credential.
- */
-export const MCP_SECRET_PLACEHOLDER = '••••••';
+/** Masked sentinel shown in the MCP editor for an existing secret header/env value. */
+export const MCP_SECRET_PLACEHOLDER = SECRET_VALUE_PLACEHOLDER;
 
 /**
  * SEC-A Phase 3: reconcile an edited header/env map (parsed from the editor

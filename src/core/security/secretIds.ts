@@ -12,6 +12,13 @@
  */
 
 /**
+ * Masked sentinel shown in textarea editors for an already-stored secret value
+ * (the real value is never surfaced). Leaving it unchanged keeps the secret ref;
+ * deleting the line or emptying it removes the credential.
+ */
+export const SECRET_VALUE_PLACEHOLDER = '••••••';
+
+/**
  * Normalize an arbitrary string into a valid SecretStorage id (the API requires
  * lowercase alphanumeric + dashes): lowercase, non-`[a-z0-9]` collapsed to
  * dashes, no leading/trailing or doubled dashes. (Stateless regex — the right

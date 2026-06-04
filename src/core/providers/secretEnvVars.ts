@@ -9,7 +9,7 @@
  * env blob into the store and return the sanitized blob plus the new refs.
  */
 import { parseEnvironmentVariables } from '../../utils/env';
-import { isSecretEnvKey, migratedEnvSecretId, uniquifySecretId } from '../security/secretIds';
+import { isSecretEnvKey, migratedEnvSecretId, SECRET_VALUE_PLACEHOLDER, uniquifySecretId } from '../security/secretIds';
 import type { EnvironmentScope, SecretEnvVarRef } from '../types/settings';
 import {
   getProviderEnvironmentVariables,
@@ -324,6 +324,42 @@ export function resolveSnippetEnvText(
     lines.push(`${ref.name}=${value}`);
   }
   return { envText: lines.join('\n'), missing };
+}
+
+/**
+ * SEC-A: reconcile an edited snippet `envVars` (shown in the editor with a masked
+ * placeholder row per existing secret) against the snippet's secret refs. Returns
+ * the env text to store (placeholder rows stripped; real values kept for
+ * re-migration) and the set of ref names to KEEP. A ref whose key is left as the
+ * placeholder or re-entered with a real value is kept; a ref whose key the user
+ * deleted or emptied (`KEY=`) is absent from `keptRefNames` so the caller prunes
+ * it — otherwise a removed snippet credential would be re-injected on insert.
+ */
+export function reconcileSnippetEdit(
+  editedEnvVars: string,
+  snippetRefs: SecretEnvVarRef[],
+): { envVars: string; keptRefNames: Set<string> } {
+  const refByName = new Map(snippetRefs.map((ref) => [ref.name, ref]));
+  const keptRefNames = new Set<string>();
+  const lines: string[] = [];
+
+  for (const line of editedEnvVars.split(/\r?\n/)) {
+    const parsed = parseEnvironmentVariables(line);
+    const key = Object.keys(parsed)[0];
+    if (key && refByName.has(key)) {
+      if (parsed[key] === SECRET_VALUE_PLACEHOLDER) {
+        keptRefNames.add(key); // unchanged secret → keep ref, drop the placeholder line
+        continue;
+      }
+      if (parsed[key] !== '') {
+        keptRefNames.add(key); // re-entry → keep ref (migration reuses the id), keep line
+      }
+      // `KEY=` (emptied) → not kept → caller prunes the ref
+    }
+    lines.push(line);
+  }
+
+  return { envVars: lines.join('\n'), keptRefNames };
 }
 
 /**
