@@ -2303,11 +2303,11 @@ describe('MessageRenderer', () => {
 
       // No <img> child — fallback chip element present instead.
       const imagesContainer = messagesEl.querySelector('.claudian-message-images');
-      expect(imagesContainer).toBeDefined();
+      expect(imagesContainer).not.toBeNull();
       const imgChildren = imagesContainer?.querySelectorAll?.('img') ?? [];
       expect(imgChildren.length).toBe(0);
       const fallback = imagesContainer?.querySelector('.claudian-message-image-fallback');
-      expect(fallback).toBeDefined();
+      expect(fallback).not.toBeNull();
     });
 
     it('uses data URI for legacy images that have no path', () => {

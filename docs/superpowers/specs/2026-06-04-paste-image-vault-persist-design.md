@@ -1,7 +1,7 @@
 ---
 title: Persist pasted chat images to the vault
 date: 2026-06-04
-status: draft
+status: shipped
 scope: features/chat — image attachments, persistence, rendering
 relations:
   - "[[docs/issues/Pasted images or files to the chat dont get picked up.md]]"

@@ -716,7 +716,7 @@ export class MessageRenderer {
   }
 
   /**
-   * Sets image src from attachment \u2014 prefers vault file over base64 blob.
+   * Sets image src from attachment — prefers vault file over base64 blob.
    */
   setImageSrc(imgEl: HTMLImageElement, image: ImageAttachment): void {
     const src = this.resolveImageSrc(image);
@@ -761,7 +761,7 @@ export class MessageRenderer {
   showFullImage(image: ImageAttachment): void {
     const src = this.resolveImageSrc(image);
     if (!src) {
-      // Nothing to show \u2014 surface a brief fallback rather than a blank modal.
+      // Nothing to show — surface a brief fallback rather than a blank modal.
       new Notice(t('chat.image.unavailable'));
       return;
     }

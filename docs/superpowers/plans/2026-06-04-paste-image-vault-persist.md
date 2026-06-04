@@ -1,5 +1,5 @@
 ---
-status: open
+status: shipped
 ---
 # Persist pasted chat images to the vault — Implementation Plan
 
