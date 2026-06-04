@@ -73,7 +73,7 @@ If you keep your thinking in a vault and you want help with the mechanical parts
 
 ## Where it's heading
 
-Specorator is the v1 name for the plugin built on the Claudian codebase, shipped once the foundation underneath it is stable and safe enough to hand to someone who has never opened a terminal. The plan that gets us there is the **[[Specorator Agent Harness PRD]]**.
+**Specorator v1.0.0** is today's feature set — Chat, Multi-Provider, Quick Actions, Orchestrator, Agent Board — rebranded from the Claudian codebase and shipped as a standalone plugin. It does **not** wait on the harness work below. What follows is the **post-1.0 harness roadmap** layered on top of that rebrand: making the assistant something a person who has never opened a terminal can install and trust. The plan is the **[[Specorator Agent Harness PRD]]**.
 
 The short version of that plan: keep the depth Specorator already has — real AI engines, working side by side, with your notes underneath — and close the three things that today still ask too much of a non-technical person.
 
