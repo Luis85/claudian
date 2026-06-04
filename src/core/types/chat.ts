@@ -24,6 +24,8 @@ export interface ImageAttachment {
   mediaType: ImageMediaType;
   /** Base64 encoded image data - single source of truth. */
   data: string;
+  /** Vault-relative path. Stamped on send. Survives ConversationStore save. */
+  path?: string;
   width?: number;
   height?: number;
   size: number;
