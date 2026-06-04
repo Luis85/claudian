@@ -583,7 +583,7 @@
       "width": 300,
       "height": 130,
       "color": "1",
-      "text": "**agentignore Editor** 🟥\nMark folders the agent can't read or write."
+      "text": "**agentignore Editor** 🟥\nMark folders to keep out of search/index (reliable) and gate file tools — best-effort on Cursor/Bash unless compiled to the provider's native ignore."
     },
     {
       "id": "f_ledger",

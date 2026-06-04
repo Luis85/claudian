@@ -366,7 +366,7 @@ Grouped by theme; priority in brackets. "Vault agent" = the active provider runn
 - **US-7 [M]** As Sam, before the agent changes a note I want to see exactly what will change, expanded, and approve it. *(F-SAFE-2)*
 - **US-8 [M]** As any user, when the agent did something I didn't want, I want to revert my vault to how it was before that turn, in one click — on whatever provider I'm using. *(F-SAFE-1)*
 - **US-9 [M]** As a new user, I want safe defaults so the agent asks before editing until I decide otherwise. *(F-SAFE-3)*
-- **US-10 [M]** As Priya, I want to mark folders the agent must never read or write. *(F-SAFE-4)*
+- **US-10 [M]** As Priya, I want to mark sensitive folders as off-limits — reliably kept out of search and the index, and blocked from agent file tools where the engine allows (best-effort, compiled to the provider's native ignore, elsewhere). *(F-SAFE-4)*
 - **US-11 [S]** As a careful user, I want a record of everything the agent did, surviving restarts. *(F-SAFE-5)*
 - **US-12 [S]** As Priya, I want a ledger of the agent's network calls and a switch for the network tools I haven't enabled — knowing a provider's own traffic can be disclosed but not firewalled. *(F-SAFE-6)*
 
