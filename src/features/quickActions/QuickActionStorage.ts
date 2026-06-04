@@ -34,7 +34,9 @@ export class QuickActionStorage {
 
     const actions: QuickAction[] = [];
     try {
-      await this.adapter.ensureFolder(folder);
+      // Read-only path: do not create the folder. listFilesRecursive returns []
+      // when the folder is missing, so favorites cache reloads on plugin startup
+      // never materialize the configured Quick Actions folder.
       const files = await this.adapter.listFilesRecursive(folder);
       for (const filePath of files) {
         if (!filePath.endsWith('.md')) {

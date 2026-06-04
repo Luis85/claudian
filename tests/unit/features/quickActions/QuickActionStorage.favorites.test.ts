@@ -149,4 +149,28 @@ Original body.
     expect(written).toContain('favorite: true');
     expect(written).toContain('favoriteRank: 4');
   });
+
+  it('loadAll does not create the folder when it does not exist', async () => {
+    const adapter = makeAdapter();
+    // Folder does not exist; only the ensureFolder spy would prove creation.
+    const storage = new QuickActionStorage(adapter as unknown as VaultFileAdapter, () => 'Quick Actions');
+
+    const result = await storage.loadAll();
+
+    expect(result).toEqual([]);
+    expect((adapter.ensureFolder as jest.Mock)).not.toHaveBeenCalled();
+  });
+
+  it('save still ensures the folder exists before writing', async () => {
+    const adapter = makeAdapter();
+    const storage = new QuickActionStorage(adapter as unknown as VaultFileAdapter, () => 'Quick Actions');
+    await storage.save({
+      id: 'x',
+      name: 'X',
+      description: 'X',
+      prompt: 'Body.',
+      filePath: 'Quick Actions/x.md',
+    });
+    expect((adapter.ensureFolder as jest.Mock)).toHaveBeenCalledWith('Quick Actions');
+  });
 });
