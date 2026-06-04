@@ -847,7 +847,7 @@ Overwrite `D:/Projects/claudian/README.md` with content derived from `docs/produ
 
 1. Drop the YAML frontmatter block (`---` through `---` at the top of `docs/product/Specorator.md`).
 2. Convert the tagline (`tagline: "Plan the work, run it, review what came back, keep the record. All in your vault."`) into a subtitle line under the `# Specorator` heading.
-3. Replace every wikilink `[[docs/features/Chat]]` with a relative markdown link `[Chat](docs/features/Chat.md)`. Repeat for each feature: `Multi Provider Support`, `Quick Actions`, `Orchestrator`, `Agent Kanban Board`.
+3. Replace every feature wikilink — `[[Chat]]`, `[[Multi Provider Support]]`, `[[Quick Actions]]`, `[[Orchestrator]]`, `[[Agent Kanban Board]]` (plain wikilinks, as they appear in `docs/product/Specorator.md`) — with a relative markdown link to the file under `docs/product/features/`, e.g. `[Chat](docs/product/features/Chat.md)`.
 4. Add a new section after the intro:
    ```markdown
    ## Install
