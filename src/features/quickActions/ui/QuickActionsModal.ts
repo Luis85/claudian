@@ -42,6 +42,11 @@ export class QuickActionsModal extends Modal {
   // Skills tab — delegated to a dedicated renderer.
   private skillsRenderer: SkillsTabRenderer;
 
+  // Serializes favorite toggles across all rows. Without this, two rapid
+  // clicks on different stars would both read a stale `this.actions` snapshot
+  // and pick the same free rank, allowing more than five favorites on disk.
+  private toggleQueue: Promise<void> = Promise.resolve();
+
   constructor(app: App, callbacks: QuickActionsModalCallbacks) {
     super(app);
     this.callbacks = callbacks;
@@ -390,19 +395,32 @@ export class QuickActionsModal extends Modal {
     }
   }
 
-  private async toggleFavorite(action: QuickAction, button: HTMLButtonElement): Promise<void> {
+  private toggleFavorite(action: QuickAction, button: HTMLButtonElement): void {
     if (button.disabled) return;
     button.disabled = true;
+    // Chain onto the shared queue so each toggle's assignNextFavoriteRank
+    // runs only after the previous toggle's refreshList has updated
+    // this.actions. The .catch swallow keeps a single failure from
+    // poisoning future toggles — runToggle owns its own try/catch.
+    this.toggleQueue = this.toggleQueue
+      .then(() => this.runToggle(action, button))
+      .catch(() => undefined);
+  }
+
+  private async runToggle(action: QuickAction, button: HTMLButtonElement): Promise<void> {
     try {
-      if (action.favorite === true) {
-        await this.callbacks.storage.unsetFavorite(action);
+      // Re-resolve the action against the latest list — previous toggles may
+      // have changed its favorite state on disk and in this.actions.
+      const current = this.actions.find((a) => a.filePath === action.filePath) ?? action;
+      if (current.favorite === true) {
+        await this.callbacks.storage.unsetFavorite(current);
       } else {
         const rank = assignNextFavoriteRank(this.actions);
         if (rank === null) {
           new Notice(t('quickActions.modal.favoriteLimitReached'));
           return;
         }
-        await this.callbacks.storage.setFavorite(action, rank);
+        await this.callbacks.storage.setFavorite(current, rank);
       }
       this.callbacks.onFavoritesChanged?.();
       await this.refreshList();

@@ -359,6 +359,83 @@ describe('QuickActionsModal favorites', () => {
     expect(onFavoritesChanged).not.toHaveBeenCalled();
   });
 
+  it('serializes concurrent toggles so two rapid stars do not pick the same rank', async () => {
+    // 4 favorites already exist with ranks 1-4. User clicks star on two
+    // different non-favorite rows back-to-back. Without serialization, both
+    // handlers would read the same stale this.actions and both pick rank 5.
+    let resolveFirst!: () => void;
+    let resolveSecond!: () => void;
+    const firstSave = new Promise<void>((r) => { resolveFirst = r; });
+    const secondSave = new Promise<void>((r) => { resolveSecond = r; });
+
+    const setFavorite = jest.fn()
+      .mockImplementationOnce(() => firstSave)
+      .mockImplementationOnce(() => secondSave);
+
+    const storage = {
+      loadAll: jest.fn().mockResolvedValue([
+        ...[1, 2, 3, 4].map((r) =>
+          makeAction({ name: `F${r}`, favorite: true, favoriteRank: r, filePath: `Quick Actions/f${r}.md` }),
+        ),
+        makeAction({ name: 'X', filePath: 'Quick Actions/x.md' }),
+        makeAction({ name: 'Y', filePath: 'Quick Actions/y.md' }),
+      ]),
+      save: jest.fn().mockResolvedValue('Quick Actions/x.md'),
+      delete: jest.fn().mockResolvedValue(undefined),
+      setFavorite,
+      unsetFavorite: jest.fn().mockResolvedValue(undefined),
+    } as unknown as QuickActionStorage;
+
+    const modal = new QuickActionsModal({} as App, {
+      storage,
+      onRun: jest.fn(),
+      onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
+      aggregator: NOOP_AGGREGATOR,
+    });
+    modal.open();
+    await flush();
+
+    const stars = Array.from(
+      modal['contentEl'].querySelectorAll('.claudian-quick-action-favorite'),
+    ) as HTMLButtonElement[];
+    // F1..F4 are filled (4 stars), X and Y are outline (2 more). Click the
+    // last two — X and Y.
+    const xStar = stars[stars.length - 2];
+    const yStar = stars[stars.length - 1];
+
+    xStar.click();
+    yStar.click();
+    await flush();
+
+    // Only the first call should have happened so far; the second is queued.
+    expect(setFavorite).toHaveBeenCalledTimes(1);
+    expect(setFavorite).toHaveBeenNthCalledWith(1, expect.objectContaining({ name: 'X' }), 5);
+
+    // After the first save resolves, refreshList reloads from storage. Make
+    // the second loadAll return X as already favorited with rank 5 so the
+    // second toggle's assignNextFavoriteRank sees 5/5 used and returns null.
+    (storage.loadAll as jest.Mock).mockResolvedValueOnce([
+      ...[1, 2, 3, 4].map((r) =>
+        makeAction({ name: `F${r}`, favorite: true, favoriteRank: r, filePath: `Quick Actions/f${r}.md` }),
+      ),
+      makeAction({ name: 'X', favorite: true, favoriteRank: 5, filePath: 'Quick Actions/x.md' }),
+      makeAction({ name: 'Y', filePath: 'Quick Actions/y.md' }),
+    ]);
+    resolveFirst();
+    await flush();
+    await flush();
+    await flush();
+
+    // Second toggle ran AFTER first's refresh. It saw 5/5 favorites and
+    // showed the limit notice without calling setFavorite a second time.
+    expect(setFavorite).toHaveBeenCalledTimes(1);
+    expect(Notice).toHaveBeenCalledWith('quickActions.modal.favoriteLimitReached');
+    expect(yStar.disabled).toBe(false);
+
+    // Avoid unused-variable lint for resolveSecond — second save never runs.
+    void resolveSecond;
+  });
+
   it('calls onFavoritesChanged after editor onSave resolves successfully', async () => {
     const onFavoritesChanged = jest.fn();
     const storage = makeStorage([
