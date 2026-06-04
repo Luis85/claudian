@@ -333,9 +333,11 @@ Prompt`,
       } as never;
       const storage = new SkillStorage(adapter);
       await storage.loadAll();
-      // Parallel: all "start" entries appear before any "end"
-      const startCount = order.findIndex((e) => e.startsWith('end:'));
-      expect(order.slice(0, startCount).every((e) => e.startsWith('start:'))).toBe(true);
+      // Parallel: every 'start' must appear before any 'end'.
+      // Sequential interleaves [start:a, end:a, start:b, end:b, ...].
+      const firstEndIdx = order.findIndex((e) => e.startsWith('end:'));
+      const startCount = order.filter((e) => e.startsWith('start:')).length;
+      expect(firstEndIdx).toBe(startCount);
     });
 
     it('skips folders without a SKILL.md without throwing', async () => {
