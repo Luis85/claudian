@@ -382,7 +382,7 @@ Grouped by theme; priority in brackets. "Vault agent" = the active provider runn
 - **US-19 [S]** As Maya, I want my memory stored as Markdown in my vault, so I own it and can edit it. *(F-MEM-1)*
 
 ### Cost & context
-- **US-20 [M]** As a budget-conscious user, I want to see what a conversation is costing me as it runs. *(F-CTX-1, F-COST-1)*
+- **US-20 [S]** As a budget-conscious user, I want to see what a conversation is costing me as it runs — Should, gated on a verified rate card (a wrong number is worse than none; matches F-CTX-1's cost split / F-COST-1). *(F-CTX-1 cost, F-COST-1)*
 - **US-21 [M]** As any user, I want a warning (and one-tap compaction) before a long chat degrades or errors. *(F-CTX-1)*
 - **US-22 [C]** As a cost-aware user, I want cheap work to run on a cheap model and only hard work to escalate. *(F-COST-2)*
 
