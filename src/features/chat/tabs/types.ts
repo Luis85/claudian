@@ -5,6 +5,7 @@ import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
 import type { SlashCommandDropdown } from '../../../shared/components/SlashCommandDropdown';
 import type { BrowserSelectionController } from '../controllers/BrowserSelectionController';
 import type { CanvasSelectionController } from '../controllers/CanvasSelectionController';
+import type { ChatDropController } from '../controllers/ChatDropController';
 import type { ConversationController } from '../controllers/ConversationController';
 import type { InputController } from '../controllers/InputController';
 import type { NavigationController } from '../controllers/NavigationController';
@@ -123,6 +124,7 @@ export interface TabServices {
 export interface TabUIComponents {
   fileContextManager: FileContextManager | null;
   imageContextManager: ImageContextManager | null;
+  chatDropController?: ChatDropController;
   modelSelector: ModelSelector | null;
   modeSelector: ModeSelector | null;
   thinkingBudgetSelector: ThinkingBudgetSelector | null;

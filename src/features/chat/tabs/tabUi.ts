@@ -14,6 +14,8 @@ import { getVaultPath } from '../../../utils/path';
 import { QuickActionStorage } from '../../quickActions/QuickActionStorage';
 import { QuickActionsModal } from '../../quickActions/ui/QuickActionsModal';
 import { resolveModelContextWindow } from '../../settings/customModels/resolveModelContextWindow';
+import { ChatDropController } from '../controllers/ChatDropController';
+import type { DragManagerLike } from '../controllers/dropPayloadDetection';
 import { BangBashService } from '../services/BangBashService';
 import { BangBashModeManager as BangBashModeManagerClass } from '../ui/BangBashModeManager';
 import { FileContextManager } from '../ui/FileContext';
@@ -90,6 +92,19 @@ function initializeContextManagers(tab: TabData, plugin: ClaudianPlugin): void {
     },
     dom.contextRowEl
   );
+
+  tab.ui.chatDropController = new ChatDropController(dom.inputContainerEl, {
+    fileContext: tab.ui.fileContextManager!,
+    imageContext: tab.ui.imageContextManager!,
+    getVaultPath: () => getVaultPath(app) ?? '',
+    getExternalContexts: () => tab.ui.externalContextSelector?.getExternalContexts() || [],
+    getDragManager: () => {
+      const dragMgr = (app as unknown as { dragManager?: unknown }).dragManager;
+      return (dragMgr as DragManagerLike | null) ?? null;
+    },
+    inputEl: dom.inputEl,
+  });
+  tab.ui.chatDropController.init();
 }
 
 function initializeSlashCommands(
