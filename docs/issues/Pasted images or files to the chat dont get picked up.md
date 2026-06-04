@@ -1,6 +1,6 @@
 ---
 type: bug
-status: shipped
+status: done
 tags:
   - chat
 priority: 2 - normal

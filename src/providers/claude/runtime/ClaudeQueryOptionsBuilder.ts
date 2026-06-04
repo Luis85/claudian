@@ -51,6 +51,12 @@ export interface PersistentQueryContext extends QueryOptionsContext {
   hooks: Options['hooks'];
   externalContextPaths?: string[];
   orchestratorMode?: boolean;
+  /**
+   * Per-turn model override (e.g. from a work-order's selected model).
+   * Beats `settings.model` so the very first persistent-query message uses
+   * the correct model without relying on a post-start `setModel()` call.
+   */
+  modelOverride?: string;
 }
 
 export interface ColdStartQueryContext extends QueryOptionsContext {
@@ -112,6 +118,7 @@ export class QueryOptionsBuilder {
     ctx: QueryOptionsContext,
     externalContextPaths?: string[],
     orchestratorMode?: boolean,
+    modelOverride?: string,
   ): PersistentQueryConfig {
     const claudeSettings = getClaudeProviderSettings(ctx.settings);
     const systemPromptSettings: SystemPromptSettings = {
@@ -138,9 +145,13 @@ export class QueryOptionsBuilder {
       shouldHonorClaudeProjectSettingsFor(asSettingsBag(ctx.settings), ctx.vaultPath),
     );
 
+    // Use the per-turn model override when present (e.g. work-order model).
+    // Storing it here keeps currentConfig.model accurate so applyDynamicUpdates
+    // correctly detects changes on subsequent turns.
+    const effectiveModel = modelOverride ?? ctx.settings.model;
     return {
-      model: ctx.settings.model,
-      effortLevel: resolveEffortLevel(ctx.settings.model, ctx.settings.effortLevel),
+      model: effectiveModel,
+      effortLevel: resolveEffortLevel(effectiveModel, ctx.settings.effortLevel),
       permissionMode: ctx.settings.permissionMode,
       sdkPermissionMode,
       systemPromptKey: computeSystemPromptKey(
@@ -161,7 +172,7 @@ export class QueryOptionsBuilder {
   static buildPersistentQueryOptions(ctx: PersistentQueryContext): Options {
     const { options, claudeSettings } = QueryOptionsBuilder.buildBaseOptions(
       ctx,
-      ctx.settings.model,
+      ctx.modelOverride ?? ctx.settings.model,
       ctx.abortController,
       ctx.orchestratorMode,
     );
@@ -178,7 +189,7 @@ export class QueryOptionsBuilder {
       claudeSettings.safeMode,
       ctx.canUseTool,
     );
-    QueryOptionsBuilder.applyThinking(options, ctx.settings, ctx.settings.model);
+    QueryOptionsBuilder.applyThinking(options, ctx.settings, ctx.modelOverride ?? ctx.settings.model);
     options.hooks = ctx.hooks;
 
     options.enableFileCheckpointing = true;

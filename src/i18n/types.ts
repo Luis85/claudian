@@ -61,6 +61,8 @@ export type TranslationKey =
   | 'chat.drop.batchSkipped'
   | 'chat.drop.externalFolderUnsupported'
   | 'chat.drop.outsideContext'
+  | 'chat.drop.outsideContextBatch'
+  | 'chat.drop.imageFailed'
 
   // Diagnostics (Q-1 chunk 9, main.ts; chunk 15 additions)
   | 'diagnostics.logsEmpty'
@@ -299,6 +301,8 @@ export type TranslationKey =
   | 'quickActions.editor.nameRequired'
   | 'quickActions.editor.promptRequired'
   | 'quickActions.editor.saveFailed'
+  | 'quickActions.contextMenu.title'
+  | 'quickActions.contextMenu.tabLimitReached'
 
   // Settings - Section Headings
   | 'settings.title'

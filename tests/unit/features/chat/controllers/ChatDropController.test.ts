@@ -16,7 +16,9 @@ jest.mock('@/i18n/i18n', () => ({
       'chat.drop.batchAdded': `Added ${params?.count ?? 1} items`,
       'chat.drop.externalFolderUnsupported': 'External folder not supported',
       'chat.drop.outsideContext': `File outside context: ${params?.path ?? 'unknown'}`,
+      'chat.drop.outsideContextBatch': `${params?.count ?? 0} files outside context`,
       'chat.drop.batchSkipped': `Skipped ${params?.count ?? 1} items`,
+      'chat.drop.imageFailed': `Failed to attach ${params?.count ?? 1} image(s)`,
     };
     return translations[key] || key;
   },
@@ -266,7 +268,7 @@ describe('ChatDropController — drop routing', () => {
     await Promise.resolve();
 
     expect(deps.fileContext.attachFolderAsPill).not.toHaveBeenCalled();
-    expect(Notice).toHaveBeenCalled();
+    expect(Notice).toHaveBeenCalledWith('External folder not supported');
   });
 
   it('handles a mixed batch — 1 vault file + 1 OS image + 1 rejected path', async () => {
@@ -274,13 +276,70 @@ describe('ChatDropController — drop routing', () => {
     const controller = new ChatDropController(containerEl, deps);
     controller.init();
 
+    const vault = { name: 'a.md', type: 'text/markdown', size: 10, path: '/Users/me/vault/notes/a.md' };
     const img = { name: 'x.png', type: 'image/png', size: 10, path: '/tmp/x.png' };
     const reject = { name: 'y.md', type: 'text/markdown', size: 10, path: '/elsewhere/y.md' };
-    dispatchDrop(inputWrapperEl, { types: ['Files'], files: [img, reject], items: [] });
+    dispatchDrop(inputWrapperEl, { types: ['Files'], files: [vault, img, reject], items: [] });
     await Promise.resolve();
 
+    expect(deps.fileContext.attachFileAsPill).toHaveBeenCalledWith('notes/a.md');
     expect(deps.imageContext.addImageFromFile).toHaveBeenCalledWith(img, 'drop');
-    expect(deps.fileContext.attachFileAsPill).not.toHaveBeenCalled();
-    expect(Notice).toHaveBeenCalled(); // rejected notice fires
+    expect(Notice).toHaveBeenCalledWith(expect.stringContaining('outside'));
+  });
+
+  it('fires imageFailed notice when addImageFromFile returns false', async () => {
+    const deps = makeDeps({
+      imageContext: {
+        setImages: jest.fn(),
+        getAttachedImages: jest.fn(() => []),
+        hasImages: jest.fn(() => false),
+        addImageFromFile: jest.fn(async () => false),
+      },
+    });
+    const controller = new ChatDropController(containerEl, deps);
+    controller.init();
+
+    const img = { name: 'big.png', type: 'image/png', size: 999999, path: '/tmp/big.png' };
+    dispatchDrop(inputWrapperEl, { types: ['Files'], files: [img], items: [] });
+    await Promise.resolve();
+
+    expect(Notice).toHaveBeenCalledWith('Failed to attach 1 image(s)');
+    expect(Notice).not.toHaveBeenCalledWith(expect.stringContaining('Skipped'));
+  });
+
+  it('uses outsideContextBatch when multiple paths are outside vault and external roots', async () => {
+    const deps = makeDeps();
+    const controller = new ChatDropController(containerEl, deps);
+    controller.init();
+
+    const a = { name: 'a.md', type: 'text/markdown', size: 10, path: '/elsewhere/a.md' };
+    const b = { name: 'b.md', type: 'text/markdown', size: 10, path: '/somewhere/b.md' };
+    dispatchDrop(inputWrapperEl, { types: ['Files'], files: [a, b], items: [] });
+    await Promise.resolve();
+
+    expect(Notice).toHaveBeenCalledWith('2 files outside context');
+  });
+
+  it('fires both external-folder and outside-context notices in a multi-kind rejection batch', async () => {
+    const deps = makeDeps({ getExternalContexts: () => ['/ext/foo'] });
+    const controller = new ChatDropController(containerEl, deps);
+    controller.init();
+
+    // 1 OS folder under an external root → external-folder-unsupported
+    // 1 OS file outside everything → outside-context
+    const extFolder = { name: 'sub', type: '', size: 0, path: '/ext/foo/sub' };
+    const stray = { name: 'z.md', type: 'text/markdown', size: 10, path: '/somewhere/z.md' };
+    const items = [{
+      kind: 'file',
+      type: '',
+      webkitGetAsEntry: () => ({ isDirectory: true, isFile: false }),
+      getAsFile: () => extFolder,
+    }];
+    dispatchDrop(inputWrapperEl, { types: ['Files'], files: [extFolder, stray], items });
+    await Promise.resolve();
+
+    expect(deps.fileContext.attachFolderAsPill).not.toHaveBeenCalled();
+    expect(Notice).toHaveBeenCalledWith('External folder not supported');
+    expect(Notice).toHaveBeenCalledWith(expect.stringContaining('outside'));
   });
 });

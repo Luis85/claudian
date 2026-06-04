@@ -11,7 +11,7 @@ import {
   isMentionStart,
   resolveExternalMentionAtIndex,
 } from '../../../utils/contextMentionResolver';
-import { buildExternalContextDisplayEntries } from '../../../utils/externalContext';
+import { buildExternalContextDisplayEntries, normalizePathForComparison } from '../../../utils/externalContext';
 import { externalContextScanner } from '../../../utils/externalContextScanner';
 import { getVaultPath, normalizePathForVault as normalizePathForVaultUtil } from '../../../utils/path';
 import { FileContextState } from './file-context/state/FileContextState';
@@ -268,11 +268,11 @@ export class FileContextManager {
     if (roots.length === 0) return false;
 
     const entries = buildExternalContextDisplayEntries(roots);
-    const normalizedAbs = absolutePath.replace(/\\\\/g, '/');
+    const normalizedAbs = normalizePathForComparison(absolutePath);
     const match = entries
       .map((entry) => ({
         entry,
-        normalizedRoot: entry.contextRoot.replace(/\\\\/g, '/'),
+        normalizedRoot: normalizePathForComparison(entry.contextRoot),
       }))
       .find(({ normalizedRoot }) => normalizedAbs.startsWith(normalizedRoot + '/'));
 

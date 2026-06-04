@@ -4,6 +4,19 @@ import { TFile, TFolder } from 'obsidian';
 import { registerWorkspaceMenus } from '@/app/commands/registerWorkspaceMenus';
 import type ClaudianPlugin from '@/main';
 
+jest.mock('@/i18n/i18n', () => ({
+  t: (key: string) => {
+    const map: Record<string, string> = {
+      'quickActions.contextMenu.title': 'Quick actions',
+    };
+    return map[key] ?? key;
+  },
+}));
+
+jest.mock('@/features/quickActions/openContextMenuQuickAction', () => ({
+  openContextMenuQuickAction: jest.fn(),
+}));
+
 type FileMenuHandler = (menu: Menu, file: TAbstractFile) => void;
 type EditorMenuHandler = (menu: Menu, editor: Editor) => void;
 
@@ -62,26 +75,28 @@ describe('registerWorkspaceMenus', () => {
     expect(plugin.registerEvent).toHaveBeenCalledTimes(2);
   });
 
-  it('adds Claudian chat + work-order items for TFile entries', () => {
+  it('adds Claudian chat, work-order, and quick-actions items for TFile entries', () => {
     const { plugin, fileMenu } = createPlugin();
     registerWorkspaceMenus(plugin);
     const file = Object.create(TFile.prototype) as TFile;
     const { menu, items } = createMenu();
     fileMenu.handler!(menu, file);
-    expect(items).toHaveLength(2);
+    expect(items).toHaveLength(3);
     expect((items[0].setTitle as jest.Mock)).toHaveBeenCalledWith('Add file to Claudian chat');
     expect((items[1].setTitle as jest.Mock)).toHaveBeenCalledWith('Create work order');
+    expect((items[2].setTitle as jest.Mock)).toHaveBeenCalledWith('Quick actions');
   });
 
-  it('adds folder + work-order items for TFolder entries', () => {
+  it('adds folder, work-order, and quick-actions items for TFolder entries', () => {
     const { plugin, fileMenu } = createPlugin();
     registerWorkspaceMenus(plugin);
     const folder = Object.create(TFolder.prototype) as TFolder;
     const { menu, items } = createMenu();
     fileMenu.handler!(menu, folder);
-    expect(items).toHaveLength(2);
+    expect(items).toHaveLength(3);
     expect((items[0].setTitle as jest.Mock)).toHaveBeenCalledWith('Add folder to Claudian chat');
     expect((items[1].setTitle as jest.Mock)).toHaveBeenCalledWith('Create work order');
+    expect((items[2].setTitle as jest.Mock)).toHaveBeenCalledWith('Quick actions');
   });
 
   it('skips editor-menu item when selection is empty', () => {

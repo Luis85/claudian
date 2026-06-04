@@ -71,8 +71,6 @@ function dispatchDrop(target: any, dataTransfer: any): void {
 describe('integration: chat drop flow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Clear notices from the mock
-    (Notice as any).mock.calls.length = 0;
   });
 
   it('adds a dragged vault file as a chip pill', async () => {
@@ -84,7 +82,7 @@ describe('integration: chat drop flow', () => {
     await Promise.resolve();
 
     expect(tab.fileContext.getAttachedFiles().has('notes/a.md')).toBe(true);
-    expect((Notice as any).mock.calls.some((call: any[]) => call[0].includes('Added 1'))).toBe(true);
+    expect(Notice).toHaveBeenCalledWith(expect.stringContaining('Added 1'));
   });
 
   it('rejects an out-of-vault OS folder with the dedicated notice', async () => {
@@ -104,7 +102,7 @@ describe('integration: chat drop flow', () => {
     await Promise.resolve();
 
     expect(tab.fileContext.getAttachedFolders().size).toBe(0);
-    expect((Notice as any).mock.calls.some((call: any[]) => call[0].toLowerCase().includes('outside'))).toBe(true);
+    expect(Notice).toHaveBeenCalledWith(expect.stringMatching(/outside/i));
   });
 
   it('inserts @ mention for an OS file inside an external context root', async () => {

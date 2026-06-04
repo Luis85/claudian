@@ -1,5 +1,6 @@
 import { DEFAULT_LANE_TITLES, type ResolvedBoardLayout, type ResolvedLane } from '../config/boardConfigTypes';
 import { parseAcceptanceProgress } from '../model/acceptanceProgress';
+import { isRunnableTaskStatus } from '../model/taskStateMachine';
 import type { InvalidTaskNote, TaskSpec } from '../model/taskTypes';
 
 export interface AgentBoardRenderCallbacks {
@@ -9,6 +10,7 @@ export interface AgentBoardRenderCallbacks {
   onAccept(task: TaskSpec): void;
   onRework(task: TaskSpec): void;
   onMarkReady(task: TaskSpec): void;
+  onReopen(task: TaskSpec): void;
   onAddWorkOrder(): void;
   onRunNextReady(): void;
 }
@@ -28,10 +30,10 @@ export class AgentBoardRenderer {
     const addButton = header.createEl('button', { cls: 'mod-cta', text: 'Add work order' });
     addButton.addEventListener('click', () => callbacks.onAddWorkOrder());
 
-    const hasReady = state.layout.lanes.some((lane) =>
-      lane.tasks.some((task) => task.frontmatter.status === 'ready'),
+    const hasRunnable = state.layout.lanes.some((lane) =>
+      lane.tasks.some((task) => isRunnableTaskStatus(task.frontmatter.status)),
     );
-    if (hasReady) {
+    if (hasRunnable) {
       const runNextBtn = header.createEl('button', { text: 'Run next ready' });
       runNextBtn.addEventListener('click', () => callbacks.onRunNextReady());
     }
@@ -132,6 +134,9 @@ export class AgentBoardRenderer {
     if (task.frontmatter.status === 'review') {
       this.renderAction(actions, 'Accept', () => callbacks.onAccept(task));
       this.renderAction(actions, 'Rework', () => callbacks.onRework(task));
+    }
+    if (task.frontmatter.status === 'done') {
+      this.renderAction(actions, 'Reopen', () => callbacks.onReopen(task));
     }
   }
 

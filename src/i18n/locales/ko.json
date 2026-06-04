@@ -159,7 +159,9 @@
       "batchAdded": "Added {count} to context",
       "batchSkipped": "Skipped {count}: outside vault or external context",
       "externalFolderUnsupported": "Folders outside the vault aren't supported as context yet",
-      "outsideContext": "{path} is outside the vault and any configured external context"
+      "outsideContext": "{path} is outside the vault and any configured external context",
+      "outsideContextBatch": "{count} items are outside the vault and any configured external context",
+      "imageFailed": "Failed to attach {count} image(s)"
     },
     "tab": {
       "createFailed": "Failed to create tab",
@@ -557,6 +559,10 @@
       "nameRequired": "Name is required",
       "promptRequired": "Prompt is required",
       "saveFailed": "Failed to save quick action"
+    },
+    "contextMenu": {
+      "title": "Quick actions",
+      "tabLimitReached": "Cannot open quick action: tab limit reached. Close a tab first."
     }
   },
   "security": {

@@ -52,4 +52,8 @@ Steps:
 5. Use Write tool directly — do NOT use TaskCreate. File body must be fully populated, not templated.
 6. Return the path to the created work-order file.
 
-Plan reference: ask user for plan file path or look in current note context, add the provided plan as wikilink to the work-order
+6. While executing update underlying docs to make progress visible. Add this also as an instruction to the work-order to advise the agent to make his progress visible on the work-order.
+
+Plan reference: ask user for plan file path or look in current note context, add the provided plan as wikilink to the work-order.
+
+Before marking the work-order as done, make sure that related docs are updated accordingly.

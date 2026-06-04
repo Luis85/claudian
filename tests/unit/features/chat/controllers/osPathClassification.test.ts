@@ -61,8 +61,8 @@ describe('classifyOsPath', () => {
 
   itWin32('classifies a Windows vault file with mixed slashes', () => {
     const result = classifyOsPath(
-      'D:\\\\Projects\\\\vault\\\\notes\\\\a.md',
-      'D:\\\\Projects\\\\vault',
+      'D:\\Projects\\vault\\notes\\a.md',
+      'D:\\Projects\\vault',
       [],
       { isDirectory: false }
     );
@@ -71,15 +71,25 @@ describe('classifyOsPath', () => {
 
   itWin32('classifies a Windows external file', () => {
     const result = classifyOsPath(
-      'C:\\\\Work\\\\foo\\\\src\\\\index.ts',
-      'D:\\\\Projects\\\\vault',
-      ['C:\\\\Work\\\\foo'],
+      'C:\\Work\\foo\\src\\index.ts',
+      'D:\\Projects\\vault',
+      ['C:\\Work\\foo'],
       { isDirectory: false }
     );
     expect(result).toEqual({
       kind: 'external-file',
-      contextRoot: 'C:\\\\Work\\\\foo',
+      contextRoot: 'C:\\Work\\foo',
     });
+  });
+
+  itWin32('rejects a Windows path outside vault and external roots', () => {
+    const result = classifyOsPath(
+      'E:\\elsewhere\\x.md',
+      'D:\\Projects\\vault',
+      ['C:\\Work\\foo'],
+      { isDirectory: false }
+    );
+    expect(result).toEqual({ kind: 'rejected' });
   });
 
   itPosix('prefers vault over external root when both match', () => {

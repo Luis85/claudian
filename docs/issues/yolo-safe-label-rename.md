@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260603-yolo-label-rename
 title: Replace user-facing "YOLO"/"Safe" permission labels with clearer terms
-status: open
+status: closed
 priority: 2 - normal
 triage: ready-for-agent
 created: 2026-06-03
@@ -16,6 +16,7 @@ tags:
   - ux
   - labels
   - safety
+  - wont-do
 ---
 
 # Rename YOLO / Safe permission labels

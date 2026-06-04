@@ -493,12 +493,18 @@ export class ClaudianService implements ChatRuntime {
 
   /**
    * Starts the persistent query for the active chat conversation.
+   *
+   * @param modelOverride - Optional model to use instead of `settings.model`.
+   *   Pass the work-order model here so the Claude CLI process is spawned with
+   *   the correct `--model` flag on the very first turn, without relying on a
+   *   post-init `setModel()` call that only takes effect at turn boundaries.
    */
   private async startPersistentQuery(
     vaultPath: string,
     cliPath: string,
     resumeSessionId?: string,
-    externalContextPaths?: string[]
+    externalContextPaths?: string[],
+    modelOverride?: string,
   ): Promise<void> {
     if (this.persistentQuery) {
       return;
@@ -521,6 +527,7 @@ export class ClaudianService implements ChatRuntime {
       cliPath,
       externalContextPaths,
       this.currentOrchestratorMode,
+      modelOverride,
     );
     this.currentConfig = config;
 
@@ -532,6 +539,7 @@ export class ClaudianService implements ChatRuntime {
       resumeAtMessageId,
       externalContextPaths,
       this.currentOrchestratorMode,
+      modelOverride,
     );
 
     this.persistentQuery = agentQuery({
@@ -644,17 +652,24 @@ export class ClaudianService implements ChatRuntime {
 
   /**
    * Builds configuration object for tracking changes.
+   *
+   * @param modelOverride - Optional per-turn model that beats `settings.model`.
+   *   Pass the work-order model here so `currentConfig.model` accurately reflects
+   *   the model the persistent query was started with, keeping applyDynamicUpdates
+   *   correct for subsequent turns.
    */
   private buildPersistentQueryConfig(
     vaultPath: string,
     cliPath: string,
     externalContextPaths?: string[],
     orchestratorMode?: boolean,
+    modelOverride?: string,
   ): PersistentQueryConfig {
     return QueryOptionsBuilder.buildPersistentQueryConfig(
       this.buildQueryOptionsContext(vaultPath, cliPath),
       externalContextPaths,
       orchestratorMode,
+      modelOverride,
     );
   }
 
@@ -697,6 +712,10 @@ export class ClaudianService implements ChatRuntime {
 
   /**
    * Builds SDK options for the persistent query.
+   *
+   * @param modelOverride - Optional per-turn model that beats `settings.model`.
+   *   Used when the persistent query is started for the first time so the CLI
+   *   process receives the correct `--model` flag immediately.
    */
   private buildPersistentQueryOptions(
     vaultPath: string,
@@ -705,6 +724,7 @@ export class ClaudianService implements ChatRuntime {
     resumeAtMessageId?: string,
     externalContextPaths?: string[],
     orchestratorMode?: boolean,
+    modelOverride?: string,
   ): Options {
     const baseContext = this.buildQueryOptionsContext(vaultPath, cliPath);
     const hooks = this.buildHooks();
@@ -719,6 +739,7 @@ export class ClaudianService implements ChatRuntime {
       hooks,
       externalContextPaths,
       orchestratorMode,
+      modelOverride,
     };
 
     return QueryOptionsBuilder.buildPersistentQueryOptions(ctx);
@@ -1221,12 +1242,17 @@ export class ClaudianService implements ChatRuntime {
     const shouldUsePersistent = !effectiveQueryOptions?.forceColdStart;
 
     if (shouldUsePersistent) {
-      // Start persistent query if not running
+      // Start persistent query if not running.
+      // Pass the per-turn model override so the CLI process is spawned with
+      // the correct --model flag immediately, without relying on setModel()
+      // which only takes effect at turn boundaries.
       if (!this.persistentQuery && !this.shuttingDown) {
         await this.startPersistentQuery(
           vaultPath,
           resolvedClaudePath,
-          this.sessionManager.getSessionId() ?? undefined
+          this.sessionManager.getSessionId() ?? undefined,
+          undefined,
+          queryOptions?.model,
         );
       }
 

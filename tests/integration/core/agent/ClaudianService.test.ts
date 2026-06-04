@@ -602,9 +602,32 @@ describe('ClaudianService', () => {
   // MessageChannel tests moved to tests/unit/core/agent/MessageChannel.test.ts
 
   describe('persistent query updates', () => {
-    it('updates model on the active persistent query', async () => {
+    // Regression — work-order model must reach the CLI process at startup, not via
+    // a post-init setModel() call that only takes effect at turn boundaries.
+    it('starts persistent query with the per-turn model override', async () => {
       const chunks: any[] = [];
       for await (const chunk of service.query('hello', undefined, undefined, { model: 'claude-opus-4-5' })) {
+        chunks.push(chunk);
+      }
+
+      // Options passed to agentQuery() must include the override model so the
+      // CLI subprocess is spawned with --model claude-opus-4-5.
+      const options = getLastOptions();
+      expect(options?.model).toBe('claude-opus-4-5');
+      // No redundant setModel() call needed when the query was already started
+      // with the correct model.
+      const response = getLastResponse();
+      expect(response?.setModel).not.toHaveBeenCalled();
+    });
+
+    it('calls setModel when model changes on an already-running persistent query', async () => {
+      // First turn: start with no override (uses settings.model = claude-sonnet-4-5)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for await (const _ of service.query('first')) { /* consume */ }
+
+      // Second turn: model override differs from what the persistent query was started with
+      const chunks: any[] = [];
+      for await (const chunk of service.query('second', undefined, undefined, { model: 'claude-opus-4-5' })) {
         chunks.push(chunk);
       }
 

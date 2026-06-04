@@ -13,7 +13,12 @@ import type { TranslationKey } from '@/i18n/types';
 
 import type { FileContextManager } from '../ui/FileContext';
 import type { ImageContextManager } from '../ui/ImageContext';
-import { detectPayload, type DragManagerLike,type DroppedPayload } from './dropPayloadDetection';
+import {
+  detectPayload,
+  type DragManagerLike,
+  type DroppedPayload,
+  getFilePath,
+} from './dropPayloadDetection';
 import { classifyOsPath } from './osPathClassification';
 
 export interface ChatDropDeps {
@@ -92,6 +97,8 @@ export class ChatDropController {
     }
   }
 
+  // Called on dragenter where browsers restrict file content access for security.
+  // A second full detectPayload call is made in handleDrop where content is available.
   private peekPayload(dataTransfer: DataTransfer | null): DroppedPayload {
     if (!dataTransfer) {
       return {
@@ -136,8 +143,7 @@ export class ChatDropController {
     const externalRoots = this.deps.getExternalContexts();
 
     for (const file of payload.osFiles) {
-      const fileWithPath = file as unknown as { path?: string };
-      const absolutePath = fileWithPath.path ?? file.name;
+      const absolutePath = getFilePath(file) ?? file.name;
       const classified = classifyOsPath(absolutePath, vaultPath, externalRoots, { isDirectory: false });
       switch (classified.kind) {
         case 'vault-file':
@@ -152,6 +158,8 @@ export class ChatDropController {
           rejected.push({ path: absolutePath, reason: 'outside-context' });
           break;
         default:
+          // Unreachable: isDirectory:false rules out vault-folder/external-folder.
+          // Kept for exhaustiveness across the shared OsPathClassification union.
           rejected.push({ path: absolutePath, reason: 'outside-context' });
           break;
       }
@@ -171,6 +179,8 @@ export class ChatDropController {
           rejected.push({ path: folder.path, reason: 'outside-context' });
           break;
         default:
+          // Unreachable: isDirectory:true rules out vault-file/external-file.
+          // Kept for exhaustiveness across the shared OsPathClassification union.
           rejected.push({ path: folder.path, reason: 'outside-context' });
           break;
       }
@@ -191,16 +201,22 @@ export class ChatDropController {
 
     const externalFolders = rejected.filter((r) => r.reason === 'external-folder-unsupported');
     const outside = rejected.filter((r) => r.reason === 'outside-context');
-    const otherCount = rejected.length - externalFolders.length - outside.length;
+    const imageFailed = rejected.filter((r) => r.reason === 'image-failed');
+    const attachFailed = rejected.filter((r) => r.reason === 'attach-failed');
 
     if (externalFolders.length > 0) {
       new Notice(t('chat.drop.externalFolderUnsupported'));
     }
-    if (outside.length > 0) {
+    if (outside.length === 1) {
       new Notice(t('chat.drop.outsideContext', { path: outside[0].path }));
+    } else if (outside.length > 1) {
+      new Notice(t('chat.drop.outsideContextBatch', { count: outside.length }));
     }
-    if (otherCount > 0) {
-      new Notice(t('chat.drop.batchSkipped', { count: otherCount }));
+    if (imageFailed.length > 0) {
+      new Notice(t('chat.drop.imageFailed', { count: imageFailed.length }));
+    }
+    if (attachFailed.length > 0) {
+      new Notice(t('chat.drop.batchSkipped', { count: attachFailed.length }));
     }
   }
 
@@ -211,16 +227,7 @@ export class ChatDropController {
       }
     }
     this.listeners = [];
-    if (this.overlayEl) {
-      const parent = (this.overlayEl.parentElement || this.inputWrapperEl) as unknown as { children: unknown[] };
-      if (parent && parent.children) {
-        const idx = (parent.children as unknown[]).indexOf(this.overlayEl);
-        if (idx !== -1) {
-          parent.children.splice(idx, 1);
-        }
-      }
-      this.overlayEl.remove?.();
-    }
+    this.overlayEl?.remove();
     this.overlayEl = null;
     this.overlayLabelEl = null;
     this.inputWrapperEl = null;

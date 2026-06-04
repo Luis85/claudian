@@ -1,7 +1,7 @@
 ---
 title: Drag and drop files or folders into the chat to add to context
 date: 2026-06-04
-status: design-approved
+status: shipped
 scope: features/chat
 relations:
   - "[[docs/superpowers/plans/2026-06-04-chat-drag-drop-context.md]]"

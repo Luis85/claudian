@@ -199,6 +199,16 @@ export interface TabData {
    */
   draftModel: string | null;
 
+  /**
+   * Tab-pinned model that survives `bound_active` (unlike `draftModel`,
+   * which the tab lifecycle clears during init). Set by Agent Board task
+   * runs so the work-order's selected model:
+   *   - displays correctly in the ModelSelector for the life of the tab,
+   *   - is forwarded as `queryOptions.model` on every turn, not just the first.
+   * Null for regular tabs.
+   */
+  pinnedModel?: string | null;
+
   /** Active provider for this tab's current conversation/runtime. */
   providerId: ProviderId;
 

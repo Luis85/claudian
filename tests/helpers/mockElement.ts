@@ -104,6 +104,12 @@ export function createMockEl(tag = 'div'): any {
   const dataset: Record<string, string> = {};
   const style: Record<string, string> = {};
   let textContent = '';
+  let parentRef: any = null;
+  const setParent = (child: any, parent: any) => {
+    if (child && typeof child === 'object' && typeof child.__setParent === 'function') {
+      child.__setParent(parent);
+    }
+  };
 
   const resolveDisplay = (): string | null => {
     if (classes.has('claudian-hidden')) return 'none';
@@ -255,6 +261,7 @@ export function createMockEl(tag = 'div'): any {
       if (opts?.cls) child.addClass(opts.cls);
       if (opts?.text) child.textContent = opts.text;
       children.push(child);
+      setParent(child, element);
       return child;
     },
     createSpan(opts?: { cls?: string; text?: string }) {
@@ -262,6 +269,7 @@ export function createMockEl(tag = 'div'): any {
       if (opts?.cls) child.addClass(opts.cls);
       if (opts?.text) child.textContent = opts.text;
       children.push(child);
+      setParent(child, element);
       return child;
     },
     createEl(tagName: string, opts?: { cls?: string; text?: string; attr?: Record<string, string> }) {
@@ -274,14 +282,22 @@ export function createMockEl(tag = 'div'): any {
         }
       }
       children.push(child);
+      setParent(child, element);
       return child;
     },
 
-    appendChild(child: any) { children.push(child); return child; },
-    insertBefore(el: MockElement, _ref: MockElement | null) { children.unshift(el); },
+    appendChild(child: any) { children.push(child); setParent(child, element); return child; },
+    insertBefore(el: MockElement, _ref: MockElement | null) { children.unshift(el); setParent(el, element); },
     get firstChild() { return children[0] || null; },
     get lastElementChild() { return children[children.length - 1] || null; },
-    remove() {},
+    __setParent(p: any) { parentRef = p; },
+    remove() {
+      if (parentRef && Array.isArray(parentRef.children)) {
+        const idx = parentRef.children.indexOf(element);
+        if (idx !== -1) parentRef.children.splice(idx, 1);
+      }
+      parentRef = null;
+    },
     empty() {
       children.length = 0;
       element.innerHTML = '';

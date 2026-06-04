@@ -8,6 +8,7 @@ import { asSettingsBag } from '../../../core/types/settings';
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { confirm } from '../../../shared/modals/ConfirmModal';
+import { promptReason } from '../../../shared/modals/PromptModal';
 import { archiveWorkOrder } from '../commands/taskCommands';
 import { getLaneForStatus, loadBoardConfig } from '../config/BoardConfigStore';
 import type { BoardConfig, ResolvedBoardLayout } from '../config/boardConfigTypes';
@@ -16,7 +17,7 @@ import { selectNextReadyTask } from '../execution/selectNextReadyTask';
 import type { TaskExecutionSurface } from '../execution/TaskExecutionSurface';
 import { TaskRunCoordinator } from '../execution/TaskRunCoordinator';
 import { TaskIndexer } from '../indexing/TaskIndexer';
-import { canTransitionTaskStatus } from '../model/taskStateMachine';
+import { canTransitionTaskStatus, isRunnableTaskStatus } from '../model/taskStateMachine';
 import type { TaskBoardModel, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
 import { TaskNoteStore } from '../storage/TaskNoteStore';
@@ -121,8 +122,9 @@ export class AgentBoardView extends ItemView {
         onRun: (task) => void this.runTask(task),
         onStop: (task) => this.stopTask(task),
         onAccept: (task) => void this.transitionTask(task, 'done', 'Accepted from review.'),
-        onRework: (task) => void this.transitionTask(task, 'needs_fix', 'Sent back for rework.'),
+        onRework: (task) => void this.reworkTask(task),
         onMarkReady: (task) => void this.transitionTask(task, 'ready', 'Marked ready.'),
+        onReopen: (task) => void this.transitionTask(task, 'inbox', 'Reopened.'),
         onAddWorkOrder: () => void this.addWorkOrderFromBoard(),
         onRunNextReady: () => void this.runNextReady(),
       },
@@ -150,8 +152,9 @@ export class AgentBoardView extends ItemView {
       onRun: (target) => void this.runTask(target),
       onStop: (target) => this.stopTask(target),
       onAccept: (target) => void this.transitionTask(target, 'done', 'Accepted from review.'),
-      onRework: (target) => void this.transitionTask(target, 'needs_fix', 'Sent back for rework.'),
+      onRework: (target) => void this.reworkTask(target),
       onMarkReady: (target) => void this.transitionTask(target, 'ready', 'Marked ready.'),
+      onReopen: (target) => void this.transitionTask(target, 'inbox', 'Reopened.'),
       onArchive: (target) => void this.archiveTask(target),
       onSaveFields: (target, fields) => this.saveTaskFields(target, fields),
       getProviderOptions: () =>
@@ -311,12 +314,21 @@ export class AgentBoardView extends ItemView {
 
   async runNextReady(): Promise<void> {
     await this.refresh();
-    const next = selectNextReadyTask(this.model.tasks, (status) => status === 'ready');
+    const next = selectNextReadyTask(this.model.tasks, isRunnableTaskStatus);
     if (!next) {
       new Notice(t('tasks.board.noReady'));
       return;
     }
     await this.runTask(next);
+  }
+
+  private async reworkTask(task: TaskSpec): Promise<void> {
+    const reason = await promptReason(
+      this.plugin.app,
+      'Rework reason',
+      'Describe what the agent should fix…',
+    );
+    await this.transitionTask(task, 'needs_fix', reason ?? 'Sent back for rework.');
   }
 
   private async applyNoteChange(path: string, transform: (content: string) => string): Promise<void> {

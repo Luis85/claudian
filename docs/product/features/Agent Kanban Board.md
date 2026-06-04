@@ -12,6 +12,7 @@ related:
   - "[[docs/product/features/Orchestrator]]"
   - "[[Quick Actions]]"
 user_manual: "[[docs/product/user-manuals/agent-board]]"
+image: "[[agent-board-overview.png]]"
 ---
 
 # Agent Kanban Board
@@ -24,6 +25,7 @@ By Thursday you have thirty open chat tabs, a sticky note that says "ask about t
 
 Every card on the board is a regular note in your vault. You write what you want help with and attach the documents the helper will need. You pick an engine and move the card to ready. One click starts the run, the card slides to running, and the reply streams back into the card as it arrives. When the run finishes, the card moves to review. You read the result before accepting it, asking a follow-up, or sending it on.
 
+![[agent-board-overview.png]]
 <!-- screenshot: board view with columns Inbox, Ready, Running, Review, Done, a running card mid-stream, and the card detail panel open on the right -->
 
 The board and the notes are the same thing seen two ways. You can edit a card from the board, or open it as a regular Markdown file and edit it there. Both update at once. The folder belongs to you, so you can sync it, back it up, or rename it.

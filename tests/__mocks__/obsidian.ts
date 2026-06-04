@@ -181,6 +181,7 @@ export interface MockDropdownComponent {
   value: string;
   options: MockDropdownOption[];
   changeHandler: (v: string) => void;
+  selectEl: { empty: () => void };
   addOption: (value: string, label: string) => MockDropdownComponent;
   setValue: (v: string) => MockDropdownComponent;
   onChange: (fn: (v: string) => void) => MockDropdownComponent;
@@ -327,6 +328,7 @@ export class Setting {
       value: '',
       options: [],
       changeHandler: () => undefined,
+      selectEl: { empty: jest.fn() },
       addOption(value: string, label: string) {
         this.options.push({ value, label });
         return this;
@@ -413,40 +415,38 @@ export class TextAreaComponent {
   }
 }
 
+function makeStubContentEl(): any {
+  function stubEl(): any {
+    return {
+      createEl: jest.fn().mockImplementation(() => stubEl()),
+      createDiv: jest.fn().mockImplementation(() => stubEl()),
+      createSpan: jest.fn().mockImplementation(() => stubEl()),
+      addEventListener: jest.fn(),
+      addClass: jest.fn(),
+      setText: jest.fn(),
+    };
+  }
+  return stubEl();
+}
+
+export class Component {
+  load = jest.fn();
+  unload = jest.fn();
+  onload(): void {}
+  onunload(): void {}
+  addChild = jest.fn().mockReturnThis();
+  removeChild = jest.fn().mockReturnThis();
+  register = jest.fn();
+  registerEvent = jest.fn();
+  registerDomEvent = jest.fn();
+  registerInterval = jest.fn();
+}
+
 export class Modal {
   app: any;
-  containerEl: any = {
-    createDiv: jest.fn().mockReturnValue({
-      createEl: jest.fn().mockReturnValue({ addEventListener: jest.fn() }),
-      createDiv: jest.fn().mockReturnValue({
-        createEl: jest.fn().mockReturnValue({ addEventListener: jest.fn() }),
-        createDiv: jest.fn().mockReturnValue({
-          createEl: jest.fn(),
-        }),
-        setText: jest.fn(),
-      }),
-      addClass: jest.fn(),
-      setText: jest.fn(),
-    }),
-    empty: jest.fn(),
-    addClass: jest.fn(),
-  };
-  contentEl: any = {
-    createDiv: jest.fn().mockReturnValue({
-      createEl: jest.fn().mockReturnValue({ addEventListener: jest.fn() }),
-      createDiv: jest.fn().mockReturnValue({
-        createEl: jest.fn().mockReturnValue({ addEventListener: jest.fn() }),
-        createDiv: jest.fn().mockReturnValue({
-          createEl: jest.fn(),
-        }),
-        setText: jest.fn(),
-      }),
-      addClass: jest.fn(),
-      setText: jest.fn(),
-    }),
-    empty: jest.fn(),
-    addClass: jest.fn(),
-  };
+  modalEl: any = { addClass: jest.fn() };
+  containerEl: any = makeStubContentEl();
+  contentEl: any = makeStubContentEl();
 
   constructor(app: any) {
     this.app = app;
@@ -454,6 +454,7 @@ export class Modal {
 
   open = jest.fn();
   close = jest.fn();
+  setTitle = jest.fn().mockReturnThis();
   onOpen(): void {}
   onClose(): void {}
 }

@@ -22,6 +22,7 @@ import {
 import type {
   ApprovalCallbackOptions,
   ApprovalDecisionOption,
+  ChatRuntimeQueryOptions,
   ChatTurnRequest,
 } from '../../../core/runtime/types';
 import { TOOL_EXIT_PLAN_MODE } from '../../../core/tools/toolNames';
@@ -105,6 +106,15 @@ export interface InputControllerDeps {
   getSubagentManager: () => SubagentManager;
   /** Tab-level provider fallback for blank tabs (derived from draft model). */
   getTabProviderId?: () => ProviderId;
+  /**
+   * Tab-pinned model that should override the provider's global `settings.model`
+   * on the next send. Returns the work-order's selected model for Agent Board
+   * task runs (and the draft model for blank tabs that haven't committed yet);
+   * returns null/empty when no override applies. Captured BEFORE
+   * `ensureServiceInitialized` runs because the tab lifecycle clears the draft
+   * model during init.
+   */
+  getTabModelOverride?: () => string | null;
   /** Returns true if ready. */
   ensureServiceInitialized?: () => Promise<boolean>;
   openConversation?: (conversationId: string) => Promise<void>;
@@ -318,6 +328,15 @@ export class InputController {
       inputEl.value = '';
       this.deps.resetInputHeight();
     }
+    // Bug — selected work-order model didn't reach the runtime: capture the
+    // tab-pinned model BEFORE `ensureServiceInitialized` runs, since the tab
+    // lifecycle clears `draftModel` during init. Plumbed into `query()` as
+    // `queryOptions.model` so the provider's per-turn override beats the
+    // global `settings.model` snapshot.
+    const tabModelOverrideRaw = this.deps.getTabModelOverride?.();
+    const tabModelOverride = typeof tabModelOverrideRaw === 'string' && tabModelOverrideRaw.trim()
+      ? tabModelOverrideRaw.trim()
+      : null;
     state.isStreaming = true;
     state.cancelRequested = false;
     state.ignoreUsageUpdates = false; // Allow usage updates for new query
@@ -458,7 +477,10 @@ export class InputController {
       // Pass history WITHOUT current turn (userMsg + assistantMsg we just added)
       // This prevents duplication when rebuilding context for new sessions
       const previousMessages = state.messages.slice(0, -2);
-      for await (const chunk of agentService.query(preparedTurn, previousMessages)) {
+      const queryOptions: ChatRuntimeQueryOptions | undefined = tabModelOverride
+        ? { model: tabModelOverride }
+        : undefined;
+      for await (const chunk of agentService.query(preparedTurn, previousMessages, queryOptions)) {
         if (state.streamGeneration !== streamGeneration) {
           wasInvalidated = true;
           break;

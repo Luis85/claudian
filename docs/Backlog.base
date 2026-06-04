@@ -13,6 +13,7 @@ views:
     columnSize:
       file.name: 237
     cardSize: 320
+    image: note.image
   - type: table
     name: User Manuals
     filters:
@@ -42,6 +43,9 @@ views:
     filters:
       and:
         - file.inFolder("docs/superpowers/specs")
+    groupBy:
+      property: status
+      direction: ASC
     order:
       - file.name
       - status
@@ -88,7 +92,7 @@ views:
       - relations
       - tags
     columnSize:
-      file.name: 353
+      file.name: 393
       note.status: 128
       note.priority: 144
       note.relations: 217

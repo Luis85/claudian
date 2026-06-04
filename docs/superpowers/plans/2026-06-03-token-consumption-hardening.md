@@ -1,7 +1,7 @@
 ---
 title: Token consumption hardening — unified UsageInfo, persisted, recoverable, tested
 date: 2026-06-03
-status: draft
+status: open
 scope: src/core/types, src/core/providers, src/providers/{claude,codex,opencode,cursor}, src/features/chat
 ---
 # Token consumption hardening Implementation Plan

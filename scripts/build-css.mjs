@@ -4,6 +4,7 @@
  * Concatenates modular CSS files from src/style/ into root styles.css
  */
 
+import esbuild from 'esbuild';
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname, resolve, relative } from 'path';
 import { fileURLToPath } from 'url';
@@ -13,6 +14,7 @@ const ROOT = join(__dirname, '..');
 const STYLE_DIR = join(ROOT, 'src', 'style');
 const OUTPUT = join(ROOT, 'styles.css');
 const INDEX_FILE = join(STYLE_DIR, 'index.css');
+const PROD = process.argv.includes('production');
 
 const IMPORT_PATTERN = /^\s*@import\s+(?:url\()?['"]([^'"]+)['"]\)?\s*;/gm;
 
@@ -54,7 +56,7 @@ function listCssFiles(dir, baseDir = dir) {
   return files;
 }
 
-function build() {
+async function build() {
   const moduleOrder = getModuleOrder();
   const parts = ['/* Claudian Plugin Styles */\n/* Built from src/style/ modules */\n'];
   const missingFiles = [];
@@ -111,9 +113,19 @@ function build() {
     process.exit(1);
   }
 
-  const output = parts.join('\n');
+  const raw = parts.join('\n');
+  let output = raw;
+  if (PROD) {
+    const result = await esbuild.transform(raw, {
+      loader: 'css',
+      minify: true,
+      legalComments: 'none',
+    });
+    output = result.code;
+  }
   writeFileSync(OUTPUT, output);
-  console.log(`Built styles.css (${(output.length / 1024).toFixed(1)} KB)`);
+  const label = PROD ? 'Built styles.css (minified' : 'Built styles.css (';
+  console.log(`${label} ${(output.length / 1024).toFixed(1)} KB)`);
 }
 
 build();

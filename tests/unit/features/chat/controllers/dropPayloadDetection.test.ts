@@ -89,6 +89,17 @@ describe('detectPayload', () => {
     expect(payload.osFiles).toHaveLength(0);
   });
 
+  it('falls through to OS detection when dragManager.draggable has no recognized TFile/TFolder', () => {
+    // draggable type is 'file' but file is neither TFile nor TFolder — consumeInternalDrag
+    // returns consumed:false and OS detection takes over.
+    const dragManager = { draggable: { type: 'file' as const, file: { foo: 'bar' } as any } };
+    const osImage = makeFile('/tmp/x.png', 'image/png');
+    const dt = makeDataTransfer({ types: ['Files'], files: [osImage] });
+    const payload = detectPayload(dt, dragManager);
+    expect(payload.vaultFiles).toEqual([]);
+    expect(payload.osImageFiles).toEqual([osImage]);
+  });
+
   it('prefers internal drag when both internal and OS markers are present', () => {
     const tFile = Object.assign(new TFile(), { path: 'a.md' });
     const dragManager = { draggable: { type: 'file' as const, file: tFile } };

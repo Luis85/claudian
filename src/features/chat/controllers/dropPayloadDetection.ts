@@ -133,7 +133,7 @@ function collectDirectoryPaths(
   return paths;
 }
 
-function getFilePath(file: File): string | null {
+export function getFilePath(file: File): string | null {
   const electronPath = (file as unknown as { path?: string }).path;
   return typeof electronPath === 'string' && electronPath.length > 0 ? electronPath : null;
 }

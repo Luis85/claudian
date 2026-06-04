@@ -24,6 +24,7 @@ ClaudianView (lifecycle + assembly)
 │   ├── ConversationController
 │   ├── StreamController
 │   ├── InputController
+│   ├── ChatDropController
 │   ├── SelectionController
 │   ├── BrowserSelectionController
 │   ├── CanvasSelectionController
@@ -80,6 +81,7 @@ The feature layer consumes provider-neutral `StreamChunk` values. Providers own 
 | `SelectionController` | Editor selection polling and CM6 decorations |
 | `BrowserSelectionController` | Browser view selection tracking |
 | `CanvasSelectionController` | Canvas selection tracking |
+| `ChatDropController` | Drag-and-drop lifecycle for one chat tab — overlay, payload routing, vault/external/image dispatch |
 | `NavigationController` | Vim-style keyboard navigation |
 
 ## Rendering Pipeline

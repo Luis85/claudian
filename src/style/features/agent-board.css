@@ -141,6 +141,16 @@
   opacity: 0.65;
 }
 
+.claudian-work-order-modal {
+  width: min(960px, 92vw);
+  max-width: min(960px, 92vw);
+}
+
+.claudian-work-order-modal .modal-content {
+  width: 100%;
+  max-width: 100%;
+}
+
 .claudian-work-order-modal-meta {
   display: flex;
   flex-wrap: wrap;
@@ -150,22 +160,65 @@
   font-size: var(--font-ui-smaller);
 }
 
-.claudian-work-order-modal-section {
-  white-space: pre-wrap;
-  word-break: break-word;
-  background: var(--background-secondary);
-  padding: 8px;
-  border-radius: 6px;
+.claudian-work-order-modal-heading {
+  margin: 18px 0 8px;
+  font-size: var(--font-ui-medium);
+  color: var(--text-normal);
 }
 
 .claudian-work-order-modal-handoff {
   background: var(--background-secondary);
-  padding: 8px 12px;
+  padding: 12px 16px;
   border-radius: 6px;
+  line-height: 1.55;
 }
 
 .claudian-work-order-modal-handoff > :first-child {
   margin-top: 0;
+}
+
+.claudian-work-order-modal-handoff > :last-child {
+  margin-bottom: 0;
+}
+
+.claudian-work-order-modal-acceptance {
+  padding: 12px 16px;
+}
+
+.claudian-work-order-modal-acceptance ul,
+.claudian-work-order-modal-acceptance ol {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.claudian-work-order-modal-acceptance li.task-list-item {
+  padding: 10px 6px 10px 30px;
+  text-indent: -24px;
+  margin: 0;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.claudian-work-order-modal-acceptance li.task-list-item + li.task-list-item {
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.claudian-work-order-modal-acceptance li.task-list-item .task-list-item-checkbox {
+  margin: 0 8px 0 0;
+  vertical-align: middle;
+  text-indent: 0;
+}
+
+.claudian-work-order-modal-acceptance li.task-list-item > p {
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+
+.claudian-work-order-modal-acceptance li.is-checked,
+.claudian-work-order-modal-acceptance li.task-list-item.is-checked {
+  color: var(--text-muted);
 }
 
 .claudian-agent-board-errors {
