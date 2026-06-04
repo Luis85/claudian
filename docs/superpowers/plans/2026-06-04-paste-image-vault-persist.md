@@ -1,5 +1,5 @@
 ---
-status: shipped
+status: done
 parent: Infrastructure
 ---
 # Persist pasted chat images to the vault — Implementation Plan

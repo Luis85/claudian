@@ -1,5 +1,5 @@
 ---
-status: shipped
+status: done
 priority: 2 - normal
 relations:
   - "[[Chat]]"

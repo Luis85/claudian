@@ -1,5 +1,5 @@
 ---
-status: open
+status: done
 ---
 # Context Menu Quick Actions Implementation Plan
 
