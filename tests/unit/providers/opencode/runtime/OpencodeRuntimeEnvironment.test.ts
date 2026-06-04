@@ -10,7 +10,7 @@ describe('buildOpencodeRuntimeEnv', () => {
     process.env = {
       PATH: '/usr/bin',
       HOME: '/home/test',
-      SECRET_TOKEN: 'sk-leak-me',
+      SECRET_TOKEN: 'dummy-leak-me',
       OPENCODE_API_KEY: 'op-key',
       NODE_TLS_REJECT_UNAUTHORIZED: '0',
     };

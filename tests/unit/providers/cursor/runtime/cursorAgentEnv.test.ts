@@ -31,7 +31,7 @@ describe('buildCursorAgentEnvironment', () => {
     process.env = {
       PATH: '/usr/bin',
       HOME: '/home/test',
-      SECRET_TOKEN: 'sk-leak-me',
+      SECRET_TOKEN: 'dummy-leak-me',
       CURSOR_API_KEY: 'cur-key',
       NODE_TLS_REJECT_UNAUTHORIZED: '0',
     };

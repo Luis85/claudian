@@ -498,14 +498,14 @@ describe('McpServerManager', () => {
       ];
       const manager = new McpServerManager(
         { load: async () => servers },
-        () => 'sk-live',
+        () => 'dummy-live',
       );
       await manager.loadServers();
 
       const local = manager.getActiveServers(new Set()).local as McpStdioServerConfig;
       // curateStdioMcpEnv (mocked) keeps configured vars + adds HOME/PATH; the
       // secret env var must be present (resolved before curation).
-      expect(local.env?.API_KEY).toBe('sk-live');
+      expect(local.env?.API_KEY).toBe('dummy-live');
       expect(local.env?.LOG_LEVEL).toBe('debug');
     });
 

@@ -18,10 +18,10 @@ describe('SecretStore', () => {
     const api = createFakeSecretStorage();
     const store = new SecretStore(api);
 
-    store.set('env-shared-anthropic-api-key', 'sk-abc123');
+    store.set('env-shared-anthropic-api-key', 'dummy-abc123');
 
-    expect(store.get('env-shared-anthropic-api-key')).toBe('sk-abc123');
-    expect(api.map.get('env-shared-anthropic-api-key')).toBe('sk-abc123');
+    expect(store.get('env-shared-anthropic-api-key')).toBe('dummy-abc123');
+    expect(api.map.get('env-shared-anthropic-api-key')).toBe('dummy-abc123');
   });
 
   it('returns null for an unknown id', () => {

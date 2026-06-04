@@ -50,8 +50,8 @@ describe('parseEnvironmentVariables', () => {
   // SEC-A: the `# claudian:plaintext` opt-out marker must never leak into the value
   // the runtime launches with (it is kept only in the saved settings line).
   it('strips a trailing claudian:plaintext opt-out marker from the value', () => {
-    expect(parseEnvironmentVariables('OPENAI_API_KEY=sk-live # claudian:plaintext'))
-      .toEqual({ OPENAI_API_KEY: 'sk-live' });
+    expect(parseEnvironmentVariables('OPENAI_API_KEY=dummy-live # claudian:plaintext'))
+      .toEqual({ OPENAI_API_KEY: 'dummy-live' });
     expect(parseEnvironmentVariables('export FOO="bar baz"  #claudian:plaintext'))
       .toEqual({ FOO: 'bar baz' });
   });

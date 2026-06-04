@@ -70,7 +70,7 @@ describe('renderSecretEnvVarsSection', () => {
         { scope: 'shared', name: 'OPENAI_API_KEY', secretId: 'sid' },
         { scope: 'provider:claude', name: 'ANTHROPIC_API_KEY', secretId: 'other' },
       ],
-      { sid: 'sk-x' },
+      { sid: 'dummy-x' },
     );
     renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
 
@@ -81,7 +81,7 @@ describe('renderSecretEnvVarsSection', () => {
   });
 
   it('updates a ref secret id and saves when its SecretComponent changes', async () => {
-    const plugin = makePlugin([{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: 'sid' }], { sid: 'sk-x' });
+    const plugin = makePlugin([{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: 'sid' }], { sid: 'dummy-x' });
     renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
 
     const rowComponent = secretComponents().find((c) => c.value === 'sid');
@@ -122,7 +122,7 @@ describe('renderSecretEnvVarsSection', () => {
 
   it('removes a ref and clears its orphaned Claudian-generated secret on delete', async () => {
     const id = 'claudian-env-shared-openai-api-key';
-    const plugin = makePlugin([{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: id }], { [id]: 'sk-x' });
+    const plugin = makePlugin([{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: id }], { [id]: 'dummy-x' });
     renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
 
     buttons().find((b) => b.icon === 'trash')?.clickHandler();
@@ -138,7 +138,7 @@ describe('renderSecretEnvVarsSection', () => {
   it('does not clear an external (non-Claudian) secret id on delete', async () => {
     // SecretStorage ids are global; an id another plugin owns must survive.
     const plugin = makePlugin([{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: 'external-id' }], {
-      'external-id': 'sk-x',
+      'external-id': 'dummy-x',
     });
     renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
 
@@ -147,7 +147,7 @@ describe('renderSecretEnvVarsSection', () => {
 
     expect(plugin.settings.secretEnvVars).toEqual([]);
     expect(plugin.secretStore.clear).not.toHaveBeenCalled();
-    expect(plugin.secretStore.get('external-id')).toBe('sk-x');
+    expect(plugin.secretStore.get('external-id')).toBe('dummy-x');
   });
 
   it('does not clear a secret value still referenced by another row', async () => {
@@ -157,7 +157,7 @@ describe('renderSecretEnvVarsSection', () => {
         { scope: 'shared', name: 'OPENAI_API_KEY', secretId: id },
         { scope: 'provider:claude', name: 'ALT_KEY', secretId: id },
       ],
-      { [id]: 'sk-x' },
+      { [id]: 'dummy-x' },
     );
     renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
 
@@ -172,7 +172,7 @@ describe('renderSecretEnvVarsSection', () => {
 
   it('clears the previous Claudian id when a row is retargeted to a new secret', async () => {
     const oldId = 'claudian-env-shared-openai-api-key';
-    const plugin = makePlugin([{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: oldId }], { [oldId]: 'sk-x' });
+    const plugin = makePlugin([{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: oldId }], { [oldId]: 'dummy-x' });
     renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
 
     secretComponents().find((c) => c.value === oldId)?.triggerChange('claudian-env-shared-new');
@@ -184,7 +184,7 @@ describe('renderSecretEnvVarsSection', () => {
 
   it('does not clear an external previous id when a row is retargeted', async () => {
     const plugin = makePlugin([{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: 'external-id' }], {
-      'external-id': 'sk-x',
+      'external-id': 'dummy-x',
     });
     renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
 
@@ -192,6 +192,6 @@ describe('renderSecretEnvVarsSection', () => {
     await flush();
 
     expect(plugin.secretStore.clear).not.toHaveBeenCalled();
-    expect(plugin.secretStore.get('external-id')).toBe('sk-x');
+    expect(plugin.secretStore.get('external-id')).toBe('dummy-x');
   });
 });

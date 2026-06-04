@@ -35,12 +35,12 @@ describe('secretEnvVars — overlay', () => {
 
   it('injects resolved values and leaves the rest untouched', () => {
     const env: Record<string, string> = { ANTHROPIC_BASE_URL: 'https://x' };
-    const store = new Map([['id-1', 'sk-a'], ['id-2', 'sk-b']]);
+    const store = new Map([['id-1', 'dummy-a'], ['id-2', 'dummy-b']]);
     const { missing } = overlaySecretEnvVars(env, refs, (id) => store.get(id) ?? null);
     expect(env).toEqual({
       ANTHROPIC_BASE_URL: 'https://x',
-      ANTHROPIC_API_KEY: 'sk-a',
-      OPENAI_API_KEY: 'sk-b',
+      ANTHROPIC_API_KEY: 'dummy-a',
+      OPENAI_API_KEY: 'dummy-b',
     });
     expect(missing).toEqual([]);
   });
@@ -56,7 +56,7 @@ describe('secretEnvVars — overlay', () => {
 describe('secretEnvVars — no secret value leaks into persisted settings', () => {
   it('migrated settings JSON contains the ids but never the secret values', () => {
     const settings: Record<string, unknown> = {
-      sharedEnvironmentVariables: 'ANTHROPIC_API_KEY=sk-super-secret\nANTHROPIC_MODEL=custom',
+      sharedEnvironmentVariables: 'ANTHROPIC_API_KEY=dummy-super-secret\nANTHROPIC_MODEL=custom',
       providerConfigs: { codex: { environmentVariables: 'OPENAI_API_KEY=op-secret' } },
       secretEnvVars: [],
     };
@@ -68,12 +68,12 @@ describe('secretEnvVars — no secret value leaks into persisted settings', () =
 
     // What persists to .claudian/claudian-settings.json:
     const json = JSON.stringify(settings);
-    expect(json).not.toContain('sk-super-secret');
+    expect(json).not.toContain('dummy-super-secret');
     expect(json).not.toContain('op-secret');
     expect(json).toContain('claudian-env-shared-anthropic-api-key'); // only the id reference
 
     // Values live ONLY in the out-of-vault keychain store.
-    expect([...stored.values()].sort()).toEqual(['op-secret', 'sk-super-secret']);
+    expect([...stored.values()].sort()).toEqual(['dummy-super-secret', 'op-secret']);
   });
 });
 
@@ -106,12 +106,12 @@ describe('secretEnvVars — resolveProviderEnvVars precedence', () => {
     const settings: Record<string, unknown> = {
       sharedEnvironmentVariables: '',
       providerConfigs: {
-        codex: { environmentVariables: 'OPENAI_API_KEY=sk-live # claudian:plaintext' },
+        codex: { environmentVariables: 'OPENAI_API_KEY=dummy-live # claudian:plaintext' },
       },
       secretEnvVars: [],
     };
     const { env } = resolveProviderEnvVars(settings, 'codex', () => null);
-    expect(env.OPENAI_API_KEY).toBe('sk-live');
+    expect(env.OPENAI_API_KEY).toBe('dummy-live');
   });
 
   it('reports refs whose secret value is absent on this device', () => {
@@ -173,7 +173,7 @@ describe('secretEnvVars — migration extraction', () => {
 
   it('moves secret lines into the store and drops them, keeping non-secrets inline', () => {
     const blob = [
-      'ANTHROPIC_API_KEY=sk-secret-123',
+      'ANTHROPIC_API_KEY=dummy-secret-123',
       'ANTHROPIC_BASE_URL=https://api.example.com',
       'ANTHROPIC_MODEL=custom',
     ].join('\n');
@@ -184,11 +184,11 @@ describe('secretEnvVars — migration extraction', () => {
     expect(refs).toEqual([
       { scope: 'shared', name: 'ANTHROPIC_API_KEY', secretId: 'claudian-env-shared-anthropic-api-key' },
     ]);
-    expect(stored.get('claudian-env-shared-anthropic-api-key')).toBe('sk-secret-123');
+    expect(stored.get('claudian-env-shared-anthropic-api-key')).toBe('dummy-secret-123');
   });
 
   it('namespaces ids per scope', () => {
-    const { refs } = migrate('OPENAI_API_KEY=sk-x', 'provider:codex');
+    const { refs } = migrate('OPENAI_API_KEY=dummy-x', 'provider:codex');
     expect(refs[0].secretId).toBe('claudian-env-provider-codex-openai-api-key');
   });
 
@@ -227,7 +227,7 @@ describe('secretEnvVars — migration extraction', () => {
   });
 
   it('is idempotent — re-running on the sanitized blob extracts nothing', () => {
-    const first = migrate('OPENAI_API_KEY=sk-x\nFOO=bar');
+    const first = migrate('OPENAI_API_KEY=dummy-x\nFOO=bar');
     const second = migrate(first.blob);
     expect(second.refs).toEqual([]);
     expect(second.blob).toBe(first.blob);
@@ -328,11 +328,11 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
 
   it('migrates shared, provider, and snippet blobs, leaving non-secrets', () => {
     const settings: Record<string, unknown> = {
-      sharedEnvironmentVariables: 'ANTHROPIC_API_KEY=sk-a\nHTTP_PROXY=http://p',
+      sharedEnvironmentVariables: 'ANTHROPIC_API_KEY=dummy-a\nHTTP_PROXY=http://p',
       providerConfigs: {
-        codex: { environmentVariables: 'OPENAI_API_KEY=sk-o\nOPENAI_MODEL=gpt' },
+        codex: { environmentVariables: 'OPENAI_API_KEY=dummy-o\nOPENAI_MODEL=gpt' },
       },
-      envSnippets: [{ id: 's1', name: 'n', description: '', envVars: 'GEMINI_API_KEY=sk-g\nFOO=bar' }],
+      envSnippets: [{ id: 's1', name: 'n', description: '', envVars: 'GEMINI_API_KEY=dummy-g\nFOO=bar' }],
       secretEnvVars: [],
     };
 
@@ -350,16 +350,16 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
       { scope: 'provider:codex', name: 'OPENAI_API_KEY', secretId: 'claudian-env-provider-codex-openai-api-key' },
       { scope: 'snippet:s1', name: 'GEMINI_API_KEY', secretId: 'claudian-env-snippet-s1-gemini-api-key' },
     ]);
-    expect(stored.get('claudian-env-shared-anthropic-api-key')).toBe('sk-a');
-    expect(stored.get('claudian-env-provider-codex-openai-api-key')).toBe('sk-o');
-    expect(stored.get('claudian-env-snippet-s1-gemini-api-key')).toBe('sk-g');
+    expect(stored.get('claudian-env-shared-anthropic-api-key')).toBe('dummy-a');
+    expect(stored.get('claudian-env-provider-codex-openai-api-key')).toBe('dummy-o');
+    expect(stored.get('claudian-env-snippet-s1-gemini-api-key')).toBe('dummy-g');
   });
 
   it('is idempotent for snippet secrets (re-running migrates nothing new)', () => {
     const settings: Record<string, unknown> = {
       sharedEnvironmentVariables: '',
       providerConfigs: {},
-      envSnippets: [{ id: 's1', name: 'n', description: '', envVars: 'GEMINI_API_KEY=sk-g' }],
+      envSnippets: [{ id: 's1', name: 'n', description: '', envVars: 'GEMINI_API_KEY=dummy-g' }],
       secretEnvVars: [],
     };
     run(settings);
@@ -367,7 +367,7 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
 
     // Second pass: nothing to migrate.
     const { changed } = run(settings, {
-      'claudian-env-snippet-s1-gemini-api-key': 'sk-g',
+      'claudian-env-snippet-s1-gemini-api-key': 'dummy-g',
     });
     expect(changed).toBe(false);
     expect((settings.secretEnvVars as SecretEnvVarRef[]).length).toBe(1);
@@ -381,7 +381,7 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
 
     // Legacy single-blob env: a shared secret + a provider-owned model line.
     const settings: Record<string, unknown> = {
-      environmentVariables: 'ANTHROPIC_API_KEY=sk-a\nOPENAI_MODEL=gpt-custom',
+      environmentVariables: 'ANTHROPIC_API_KEY=dummy-a\nOPENAI_MODEL=gpt-custom',
       secretEnvVars: [],
     };
     const stored = new Map<string, string>();
@@ -396,7 +396,7 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
     expect(getProviderEnvironmentVariables(settings, 'codex')).toBe('OPENAI_MODEL=gpt-custom');
     // The shared secret migrated out of plaintext.
     expect((settings.secretEnvVars as SecretEnvVarRef[]).map((r) => r.name)).toEqual(['ANTHROPIC_API_KEY']);
-    expect(stored.get('claudian-env-shared-anthropic-api-key')).toBe('sk-a');
+    expect(stored.get('claudian-env-shared-anthropic-api-key')).toBe('dummy-a');
 
     jest.restoreAllMocks();
   });
@@ -412,7 +412,7 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
         { scope: 'provider:claude', name: 'OPENAI_API_KEY', secretId: sharedId },
       ],
     };
-    const { changed, stored } = run(settings, { [sharedId]: 'sk-shared' });
+    const { changed, stored } = run(settings, { [sharedId]: 'dummy-shared' });
 
     expect(changed).toBe(true);
     // Only the shared ref pruned; the provider ref (still referencing the id) remains.
@@ -420,7 +420,7 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
       { scope: 'provider:claude', name: 'OPENAI_API_KEY', secretId: sharedId },
     ]);
     // Value NOT cleared — still referenced by the provider ref.
-    expect(stored.get(sharedId)).toBe('sk-shared');
+    expect(stored.get(sharedId)).toBe('dummy-shared');
   });
 
   it('is a no-op (returns false) when there are no plaintext secrets', () => {
@@ -435,14 +435,14 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
 
   it('updates an existing ref in place when a migrated key is re-entered (no duplicate, no plaintext)', () => {
     const settings: Record<string, unknown> = {
-      sharedEnvironmentVariables: 'ANTHROPIC_API_KEY=sk-new\nHTTP_PROXY=http://p',
+      sharedEnvironmentVariables: 'ANTHROPIC_API_KEY=dummy-new\nHTTP_PROXY=http://p',
       providerConfigs: {},
       secretEnvVars: [
         { scope: 'shared', name: 'ANTHROPIC_API_KEY', secretId: 'claudian-env-shared-anthropic-api-key' },
       ],
     };
     const { changed, stored } = run(settings, {
-      'claudian-env-shared-anthropic-api-key': 'sk-old',
+      'claudian-env-shared-anthropic-api-key': 'dummy-old',
     });
 
     expect(changed).toBe(true);
@@ -451,7 +451,7 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
     expect(settings.secretEnvVars).toEqual([
       { scope: 'shared', name: 'ANTHROPIC_API_KEY', secretId: 'claudian-env-shared-anthropic-api-key' },
     ]);
-    expect(stored.get('claudian-env-shared-anthropic-api-key')).toBe('sk-new');
+    expect(stored.get('claudian-env-shared-anthropic-api-key')).toBe('dummy-new');
   });
 
   it('prunes the ref and clears the stored value when a migrated key is cleared (KEY=)', () => {
@@ -462,7 +462,7 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
         { scope: 'shared', name: 'ANTHROPIC_API_KEY', secretId: 'claudian-env-shared-anthropic-api-key' },
       ],
     };
-    const { changed, stored } = run(settings, { 'claudian-env-shared-anthropic-api-key': 'sk-old' });
+    const { changed, stored } = run(settings, { 'claudian-env-shared-anthropic-api-key': 'dummy-old' });
 
     expect(changed).toBe(true);
     expect(settings.secretEnvVars).toEqual([]); // ref pruned so overlay won't re-inject
@@ -481,11 +481,11 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
         { scope: 'shared', name: 'ANTHROPIC_API_KEY', secretId: 'some-other-plugin-key' },
       ],
     };
-    const { changed, stored } = run(settings, { 'some-other-plugin-key': 'sk-shared-external' });
+    const { changed, stored } = run(settings, { 'some-other-plugin-key': 'dummy-shared-external' });
 
     expect(changed).toBe(true);
     expect(settings.secretEnvVars).toEqual([]); // ref pruned (overlay won't re-inject)
-    expect(stored.get('some-other-plugin-key')).toBe('sk-shared-external'); // external value untouched
+    expect(stored.get('some-other-plugin-key')).toBe('dummy-shared-external'); // external value untouched
   });
 
   // SEC-A end-to-end: opting an already-migrated key back to plaintext drops the ref
@@ -493,13 +493,13 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
   it('opting a migrated key back to plaintext drops its ref and the plaintext value resolves', () => {
     const settings: Record<string, unknown> = {
       providerConfigs: {
-        codex: { environmentVariables: 'OPENAI_API_KEY=sk-typed # claudian:plaintext' },
+        codex: { environmentVariables: 'OPENAI_API_KEY=dummy-typed # claudian:plaintext' },
       },
       secretEnvVars: [
         { scope: 'provider:codex', name: 'OPENAI_API_KEY', secretId: 'claudian-env-provider-codex-openai-api-key' },
       ],
     };
-    const { changed } = run(settings, { 'claudian-env-provider-codex-openai-api-key': 'sk-old-migrated' });
+    const { changed } = run(settings, { 'claudian-env-provider-codex-openai-api-key': 'dummy-old-migrated' });
 
     expect(changed).toBe(true);
     expect(settings.secretEnvVars).toEqual([]); // stale ref pruned
@@ -509,14 +509,14 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
     const { env } = resolveProviderEnvVars(
       settings,
       'codex',
-      () => 'sk-old-migrated',
+      () => 'dummy-old-migrated',
     );
-    expect(env.OPENAI_API_KEY).toBe('sk-typed');
+    expect(env.OPENAI_API_KEY).toBe('dummy-typed');
   });
 
   it('does not overwrite an id already present in SecretStorage (seeds usedIds from store.list)', () => {
     const settings: Record<string, unknown> = {
-      sharedEnvironmentVariables: 'ANTHROPIC_API_KEY=sk-new',
+      sharedEnvironmentVariables: 'ANTHROPIC_API_KEY=dummy-new',
       providerConfigs: {},
       secretEnvVars: [],
     };
@@ -526,7 +526,7 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
     const refs = settings.secretEnvVars as SecretEnvVarRef[];
     expect(refs[0].secretId).toBe('claudian-env-shared-anthropic-api-key-2'); // uniquified
     expect(stored.get('claudian-env-shared-anthropic-api-key')).toBe('pre-existing'); // untouched
-    expect(stored.get('claudian-env-shared-anthropic-api-key-2')).toBe('sk-new');
+    expect(stored.get('claudian-env-shared-anthropic-api-key-2')).toBe('dummy-new');
   });
 });
 
@@ -539,9 +539,9 @@ describe('secretEnvVars — resolveSnippetEnvText (insertion)', () => {
     const { envText, missing } = resolveSnippetEnvText(
       'FOO=bar',
       refs,
-      (id) => (id === 'id-g' ? 'sk-g' : null),
+      (id) => (id === 'id-g' ? 'dummy-g' : null),
     );
-    expect(envText).toBe('FOO=bar\nGEMINI_API_KEY=sk-g');
+    expect(envText).toBe('FOO=bar\nGEMINI_API_KEY=dummy-g');
     expect(missing).toEqual([]);
   });
 
@@ -552,8 +552,8 @@ describe('secretEnvVars — resolveSnippetEnvText (insertion)', () => {
   });
 
   it('produces only the secret lines when the snippet has no plaintext', () => {
-    const { envText } = resolveSnippetEnvText('', refs, () => 'sk-g');
-    expect(envText).toBe('GEMINI_API_KEY=sk-g');
+    const { envText } = resolveSnippetEnvText('', refs, () => 'dummy-g');
+    expect(envText).toBe('GEMINI_API_KEY=dummy-g');
   });
 });
 
@@ -583,8 +583,8 @@ describe('secretEnvVars — reconcileSnippetEdit', () => {
   });
 
   it('keeps the ref and the real value when the secret is re-entered', () => {
-    const { envVars, keptRefNames } = reconcileSnippetEdit('OPENAI_API_KEY=sk-new', refs);
-    expect(envVars).toBe('OPENAI_API_KEY=sk-new'); // kept for re-migration (id reused)
+    const { envVars, keptRefNames } = reconcileSnippetEdit('OPENAI_API_KEY=dummy-new', refs);
+    expect(envVars).toBe('OPENAI_API_KEY=dummy-new'); // kept for re-migration (id reused)
     expect([...keptRefNames]).toEqual(['OPENAI_API_KEY']);
   });
 });

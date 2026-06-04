@@ -30,9 +30,9 @@ describe('computeEnvHash', () => {
   // SEC-A (P1): the watched set includes secrets and the hash is persisted to
   // settings, so the resolved secret value must NEVER appear in the digest.
   it('does not embed the secret value in the persisted hash', () => {
-    const hash = computeEnvHash('OPENAI_API_KEY=sk-supersecret', ['OPENAI_API_KEY']);
+    const hash = computeEnvHash('OPENAI_API_KEY=dummy-supersecret', ['OPENAI_API_KEY']);
     expect(hash).toMatch(SHA256_HEX);
-    expect(hash).not.toContain('sk-supersecret');
+    expect(hash).not.toContain('dummy-supersecret');
     expect(hash).not.toContain('OPENAI_API_KEY');
   });
 
@@ -78,7 +78,7 @@ describe('reconcileEnvironmentHash', () => {
     const invalidateConversation = jest.fn(() => true);
     const spec = makeSpec({
       watchedKeys: ['API_KEY'],
-      getSavedHash: () => 'API_KEY=sk-secret', // legacy plaintext format
+      getSavedHash: () => 'API_KEY=dummy-secret', // legacy plaintext format
       saveHash,
       invalidateConversation,
     });
@@ -86,14 +86,14 @@ describe('reconcileEnvironmentHash', () => {
       spec,
       { __envText: '' },
       [makeConversation({ sessionId: 's1' })],
-      () => ({ text: 'API_KEY=sk-secret', missingKeys: [] }),
+      () => ({ text: 'API_KEY=dummy-secret', missingKeys: [] }),
     );
 
     expect(result).toEqual({ changed: true, invalidatedConversations: [] });
     expect(invalidateConversation).not.toHaveBeenCalled();
     const persisted = saveHash.mock.calls[0][1] as string;
-    expect(persisted).toBe(computeEnvHash('API_KEY=sk-secret', ['API_KEY']));
-    expect(persisted).not.toContain('sk-secret');
+    expect(persisted).toBe(computeEnvHash('API_KEY=dummy-secret', ['API_KEY']));
+    expect(persisted).not.toContain('dummy-secret');
   });
 
   // SEC-A: when a watched key is migrated out of the plaintext blob into
@@ -102,13 +102,13 @@ describe('reconcileEnvironmentHash', () => {
   it('uses resolveEnvText so a migrated watched secret keeps the hash stable', () => {
     const spec = makeSpec({
       watchedKeys: ['API_KEY'],
-      getSavedHash: () => computeEnvHash('API_KEY=sk-1', ['API_KEY']),
+      getSavedHash: () => computeEnvHash('API_KEY=dummy-1', ['API_KEY']),
     });
     const result = reconcileEnvironmentHash(
       spec,
       { __envText: '' }, // plaintext blob no longer has the key (migrated)
       [makeConversation({ sessionId: 's1' })],
-      () => ({ text: 'API_KEY=sk-1', missingKeys: [] }), // re-injected from SecretStorage
+      () => ({ text: 'API_KEY=dummy-1', missingKeys: [] }), // re-injected from SecretStorage
     );
 
     expect(result.changed).toBe(false);
@@ -117,7 +117,7 @@ describe('reconcileEnvironmentHash', () => {
   });
 
   it('defers invalidation when a WATCHED secret is missing on this device', () => {
-    const spec = makeSpec({ watchedKeys: ['API_KEY'], getSavedHash: () => 'API_KEY=sk-1' });
+    const spec = makeSpec({ watchedKeys: ['API_KEY'], getSavedHash: () => 'API_KEY=dummy-1' });
     // Resolved env is incomplete (watched secret absent locally): even though the
     // hash would differ, sessions must NOT be invalidated until re-entry.
     const result = reconcileEnvironmentHash(
@@ -133,22 +133,22 @@ describe('reconcileEnvironmentHash', () => {
   });
 
   it('does NOT defer when only a non-watched secret is missing', () => {
-    const spec = makeSpec({ watchedKeys: ['API_KEY'], getSavedHash: () => 'API_KEY=sk-1' });
+    const spec = makeSpec({ watchedKeys: ['API_KEY'], getSavedHash: () => 'API_KEY=dummy-1' });
     // GITHUB_TOKEN is missing but isn't watched; a real change to API_KEY must
     // still reconcile/invalidate.
     const result = reconcileEnvironmentHash(
       spec,
       { __envText: '' },
       [makeConversation({ sessionId: 's1' })],
-      () => ({ text: 'API_KEY=sk-2', missingKeys: ['GITHUB_TOKEN'] }),
+      () => ({ text: 'API_KEY=dummy-2', missingKeys: ['GITHUB_TOKEN'] }),
     );
 
     expect(result.changed).toBe(true);
-    expect(spec.saveHash).toHaveBeenCalledWith(expect.anything(), computeEnvHash('API_KEY=sk-2', ['API_KEY']));
+    expect(spec.saveHash).toHaveBeenCalledWith(expect.anything(), computeEnvHash('API_KEY=dummy-2', ['API_KEY']));
   });
 
   it('without a resolver, a stripped watched key changes the hash (the regression this guards)', () => {
-    const spec = makeSpec({ watchedKeys: ['API_KEY'], getSavedHash: () => 'API_KEY=sk-1' });
+    const spec = makeSpec({ watchedKeys: ['API_KEY'], getSavedHash: () => 'API_KEY=dummy-1' });
     const result = reconcileEnvironmentHash(spec, { __envText: '' }, []);
     expect(result.changed).toBe(true);
   });

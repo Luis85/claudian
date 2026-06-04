@@ -20,7 +20,7 @@ function urlServer(over: Partial<ManagedMcpServer> = {}): ManagedMcpServer {
 function stdioServer(over: Partial<ManagedMcpServer> = {}): ManagedMcpServer {
   return {
     name: 'local',
-    config: { command: 'run', env: { API_KEY: 'sk-x', LOG_LEVEL: 'debug' } },
+    config: { command: 'run', env: { API_KEY: 'dummy-x', LOG_LEVEL: 'debug' } },
     enabled: true,
     contextSaving: false,
     ...over,
@@ -59,7 +59,7 @@ describe('mcpSecrets — extractMcpServerSecrets', () => {
     const config = server.config as McpStdioServerConfig;
     expect(config.env).toEqual({ LOG_LEVEL: 'debug' });
     expect(server.secretEnv).toEqual({ API_KEY: 'claudian-mcp-local-env-api-key' });
-    expect(store.stored.get('claudian-mcp-local-env-api-key')).toBe('sk-x');
+    expect(store.stored.get('claudian-mcp-local-env-api-key')).toBe('dummy-x');
   });
 
   it('is idempotent and a cheap no-op once migrated', () => {
@@ -124,8 +124,8 @@ describe('mcpSecrets — resolveMcpServerConfig', () => {
       secretEnv: { API_KEY: 'id-key' },
     });
 
-    const resolved = resolveMcpServerConfig(server, () => 'sk-live') as McpStdioServerConfig;
-    expect(resolved.env).toEqual({ LOG_LEVEL: 'debug', API_KEY: 'sk-live' });
+    const resolved = resolveMcpServerConfig(server, () => 'dummy-live') as McpStdioServerConfig;
+    expect(resolved.env).toEqual({ LOG_LEVEL: 'debug', API_KEY: 'dummy-live' });
   });
 
   it('omits a secret missing on this device rather than injecting empty', () => {
