@@ -57,10 +57,12 @@ describe('SecretStore', () => {
     expect(store.list().sort()).toEqual(['a', 'b']);
   });
 
-  it('clears a value by overwriting with an empty string', () => {
-    const store = new SecretStore(createFakeSecretStorage());
+  it('normalizes a cleared (empty-string) secret to null on get()', () => {
+    const api = createFakeSecretStorage();
+    const store = new SecretStore(api);
     store.set('k', 'v');
     store.clear('k');
-    expect(store.get('k')).toBe('');
+    expect(store.get('k')).toBeNull();
+    expect(api.map.get('k')).toBe(''); // underlying API still holds the empty sentinel
   });
 });

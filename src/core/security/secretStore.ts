@@ -33,20 +33,20 @@ export class SecretStore {
     this.api.setSecret(id, value);
   }
 
-  /** Read a secret value, or `null` if absent. */
+  /**
+   * Read a usable secret value, or `null` if absent. Both `null` (never set /
+   * absent on this device) and `''` (cleared — the API has no delete, so
+   * `clear()` writes an empty string) normalize to `null`, so value-resolution
+   * paths that treat `null` as the re-entry signal can't inject an empty secret.
+   */
   get(id: string): string | null {
-    return this.api.getSecret(id);
+    const value = this.api.getSecret(id);
+    return value === null || value === '' ? null : value;
   }
 
-  /**
-   * Whether a usable secret value is stored. Both `null` (never set / absent on
-   * this device) and `''` (cleared — the API has no delete, so `clear()` writes
-   * an empty string) count as absent, so callers don't mistake a cleared secret
-   * for a present one and skip re-entry.
-   */
+  /** Whether a usable secret value is stored (a cleared/empty secret counts as absent). */
   has(id: string): boolean {
-    const value = this.api.getSecret(id);
-    return value !== null && value !== '';
+    return this.get(id) !== null;
   }
 
   /** All stored secret ids. */
