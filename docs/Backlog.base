@@ -88,7 +88,8 @@ views:
       - relations
       - tags
     columnSize:
-      file.name: 360
+      file.name: 353
+      note.status: 128
       note.priority: 144
       note.relations: 217
       note.tags: 161
