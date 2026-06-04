@@ -53,4 +53,31 @@ describe('InputController image save integration', () => {
     expect(persistPastedImages).toHaveBeenCalledTimes(1);
     expect(result.messageImages?.[0].path).toBe('attachments/existing.png');
   });
+
+  // M-02 regression — the queue/streaming branch must also see persisted images.
+  // Before the fix, `persistPastedImages` ran AFTER the `if (state.isStreaming)`
+  // check, so queued + steered turns could land in ConversationStore.save with
+  // `data` cleared and no `path`. Now persist is hoisted above the queue branch.
+  it('persists images before snapshotting the queued message (queue branch)', async () => {
+    const { dispatchQueuedSendForTest } = await import('./_fixtures/sendImageFixture');
+    const image: ImageAttachment = {
+      id: 'img-3',
+      name: 'queued.png',
+      mediaType: 'image/png',
+      data: Buffer.from('queued').toString('base64'),
+      size: 6,
+      source: 'paste',
+    };
+
+    const { queuedImages, queuedTurnRequestImages } = await dispatchQueuedSendForTest({
+      images: [image],
+    });
+
+    expect(persistPastedImages).toHaveBeenCalledTimes(1);
+    // path stamped on the same ref before the queue snapshot captured it
+    expect(queuedImages?.[0].path).toBe('attachments/queued.png');
+    expect(queuedTurnRequestImages?.[0].path).toBe('attachments/queued.png');
+    // data still present for runtime consumption when the turn eventually flushes
+    expect(queuedTurnRequestImages?.[0].data).toBe(image.data);
+  });
 });

@@ -265,6 +265,20 @@ export class InputController {
       return;
     }
 
+    // Persist any pasted/dropped images to the vault BEFORE the queue branch —
+    // both the streaming-queue (state.queuedMessage) and the steer-then-commit
+    // path reuse this image snapshot. Without persisting up front, queued or
+    // steered images can land in ConversationStore.save with `data` cleared
+    // and no `path` — leaving an unrenderable user bubble after reload.
+    if (hasImages) {
+      const sourceImages = imageOverride ?? imageContextManager?.getAttachedImages() ?? [];
+      if (sourceImages.length > 0) {
+        await persistPastedImages(this.deps.plugin.app, sourceImages, {
+          logger: this.deps.plugin.logger.scope('chat.images'),
+        });
+      }
+    }
+
     // If agent is working, queue the message instead of dropping it
     if (state.isStreaming) {
       const images = hasImages
@@ -320,11 +334,9 @@ export class InputController {
     fileContextManager?.startSession();
 
     // Slash commands are passed directly to SDK for handling
-    // SDK handles expansion, $ARGUMENTS, @file references, and frontmatter options
+    // SDK handles expansion, $ARGUMENTS, @file references, and frontmatter options.
+    // Image persistence already ran above (covers queue + steer paths too).
     const images = imageOverride ?? imageContextManager?.getAttachedImages() ?? [];
-    if (images.length > 0) {
-      await persistPastedImages(this.deps.plugin.app, images);
-    }
     const imagesForMessage = images.length > 0 ? [...images] : undefined;
     const isCompact = /^\/compact(\s|$)/i.test(content);
 
