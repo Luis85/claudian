@@ -351,6 +351,7 @@ export const claudeSettingsTabRenderer: ProviderSettingsTabRenderer = {
     new McpSettingsManager(mcpContainer, {
       app: context.plugin.app,
       mcpStorage: claudeWorkspace.mcpStorage,
+      secretStore: context.plugin.secretStore,
       broadcastMcpReload: async () => {
         for (const view of context.plugin.getAllViews()) {
           await view.getTabManager()?.broadcastToAllTabs(

@@ -354,11 +354,6 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     return this.envApply.applySecretEnvVars(refs, scope);
   }
 
-  /** SEC-A: read a secret value from SecretStorage (cleared/empty normalizes to null). */
-  resolveSecretValue(secretId: string): string | null {
-    return this.secretStore.get(secretId);
-  }
-
   /** SEC-A: migrate plaintext secrets (shared/provider/snippet blobs) into SecretStorage. */
   migrateEnvSecretsNow(): boolean {
     return migrateEnvSecrets(

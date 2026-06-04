@@ -295,6 +295,11 @@ export class McpServerModal extends Modal {
       enabled: this.enabled,
       contextSaving: this.contextSaving,
       disabledTools: this.existingServer?.disabledTools,
+      // SEC-A Phase 3: carry forward existing secret refs (their values live in
+      // SecretStorage and aren't shown in the textareas). Any secret-shaped value
+      // typed into the textareas is migrated on save (see McpSettingsManager).
+      secretHeaders: this.existingServer?.secretHeaders,
+      secretEnv: this.existingServer?.secretEnv,
     };
 
     this.onSave(server);

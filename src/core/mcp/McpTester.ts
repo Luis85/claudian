@@ -9,6 +9,8 @@ import { curateStdioMcpEnv } from '../../utils/env';
 import { parseCommand } from '../../utils/mcp';
 import type { ManagedMcpServer } from '../types';
 import { getMcpServerType } from '../types';
+import type { McpSecretResolver } from './mcpSecrets';
+import { resolveMcpServerConfig } from './mcpSecrets';
 
 export interface McpTool {
   name: string;
@@ -228,13 +230,19 @@ async function getRequestBody(body: BodyInit | null | undefined): Promise<Buffer
 
 const nodeFetch = createNodeFetch();
 
-export async function testMcpServer(server: ManagedMcpServer): Promise<McpTestResult> {
+export async function testMcpServer(
+  server: ManagedMcpServer,
+  resolveSecret?: McpSecretResolver,
+): Promise<McpTestResult> {
   const type = getMcpServerType(server.config);
+  // SEC-A Phase 3: verify against the resolved config (secret headers/env overlaid
+  // from SecretStorage), so testing a server with migrated credentials still works.
+  const resolvedConfig = resolveSecret ? resolveMcpServerConfig(server, resolveSecret) : server.config;
 
   let transport: Transport;
   try {
     if (type === 'stdio') {
-      const config = server.config as { command: string; args?: string[]; env?: Record<string, string> };
+      const config = resolvedConfig as { command: string; args?: string[]; env?: Record<string, string> };
       const { cmd, args } = parseCommand(config.command, config.args);
       if (!cmd) {
         return { success: false, tools: [], error: 'Missing command' };
@@ -249,7 +257,7 @@ export async function testMcpServer(server: ManagedMcpServer): Promise<McpTestRe
         stderr: 'ignore',
       });
     } else {
-      const config = server.config as UrlServerConfig;
+      const config = resolvedConfig as UrlServerConfig;
       const url = new URL(config.url);
       const options = {
         fetch: nodeFetch,

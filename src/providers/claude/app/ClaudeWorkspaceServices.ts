@@ -1,3 +1,4 @@
+import { extractMcpServerSecrets } from '../../../core/mcp/mcpSecrets';
 import { McpServerManager } from '../../../core/mcp/McpServerManager';
 import { CachedCliResolver } from '../../../core/providers/CachedCliResolver';
 import type { ProviderCommandCatalog } from '../../../core/providers/commands/ProviderCommandCatalog';
@@ -57,7 +58,9 @@ export async function createClaudeWorkspaceServices(
 
   const cliResolver = new CachedCliResolver(claudeCliSpec);
   const mcpStorage = claudeStorage.mcp;
-  const mcpManager = new McpServerManager(mcpStorage);
+  // SEC-A Phase 3: resolve secret auth-header / stdio-env values from SecretStorage
+  // at launch (the value never lives in `.claude/mcp.json`).
+  const mcpManager = new McpServerManager(mcpStorage, (id) => plugin.secretStore.get(id));
 
   // SEC-3 one-time grandfather: trust vault MCP servers already present at upgrade
   // so an existing config is not silently disabled, while newly-synced servers
@@ -74,6 +77,17 @@ export async function createClaudeWorkspaceServices(
   }
 
   await mcpManager.loadServers();
+
+  // SEC-A Phase 3: one-time migration of any plaintext secret headers/env already
+  // in `.claude/mcp.json` into SecretStorage. Best-effort; never blocks init.
+  try {
+    const servers = mcpManager.getServers();
+    if (extractMcpServerSecrets(servers, plugin.secretStore)) {
+      await mcpStorage.save(servers);
+    }
+  } catch {
+    // migration must not break workspace init
+  }
 
   const vaultPath = getVaultPath(plugin.app) ?? '';
   const pluginManager = new PluginManager(vaultPath, claudeStorage.ccSettings);

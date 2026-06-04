@@ -40,6 +40,11 @@ export function migratedMcpHeaderSecretId(serverName: string, headerName: string
   return normalizeSecretId(`${CLAUDIAN_PREFIX}-mcp-${serverName}-header-${headerName}`);
 }
 
+/** Stable id for an MCP stdio env value migrated out of `.claude/mcp.json`. */
+export function migratedMcpEnvSecretId(serverName: string, envName: string): string {
+  return normalizeSecretId(`${CLAUDIAN_PREFIX}-mcp-${serverName}-env-${envName}`);
+}
+
 /** Return `base`, or `base-2`, `base-3`, … if already taken (migration collision-proofing). */
 export function uniquifySecretId(base: string, used: Set<string>): string {
   if (!used.has(base)) return base;

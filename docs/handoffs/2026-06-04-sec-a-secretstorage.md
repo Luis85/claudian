@@ -1,7 +1,7 @@
 ---
 title: SEC-A SecretStorage — handoff for remaining work
 date: 2026-06-04
-status: phases-0-2-and-4-shipped; phase-3-and-follow-ups-open
+status: phases-0-4-shipped; phase-3-mcp + snippet-scope + i18n complete
 scope: SEC-A (provider secrets + env vars out of plaintext into Obsidian SecretStorage)
 pr: "Luis85/claudian#27 (branch claude/secretstorage-secrets)"
 related:
@@ -51,25 +51,35 @@ Keeps secrets out of synced/committed vault files and (with a real OS keyring) o
 reach. Does **NOT** isolate from same-user processes or other Obsidian plugins (global id space). Linux
 without a keyring degrades to obfuscation. Secrets are **device-local** → re-enter on a new machine.
 
-## Remaining work (pick up in a new session)
+## Remaining work — DONE
 
-1. **Phase 3 — MCP auth headers via SecretStorage.** MCP secrets are still plaintext in `.claude/mcp.json`:
-   `McpSSEServerConfig.headers` / `McpHttpServerConfig.headers` and stdio `env` (`src/core/types/mcp.ts`),
-   stored by `src/providers/claude/storage/McpStorage.ts` (`MCP_CONFIG_PATH`). Plan:
-   - `SecretComponent` for the auth-header value in the MCP server editor; persist the secret id in the
-     `_claudian` metadata namespace of `.claude/mcp.json` (not the plaintext header).
-   - Resolve at the **in-app tester** (`src/core/mcp/McpTester.ts`, builds the transport with `config.headers`)
-     and the **live spawn** (`src/core/mcp/McpServerManager.ts`).
-   - **Open decision / smoke test:** does the Claude CLI expand `${VAR}` in `.claude/mcp.json` header values?
-     Safe default = resolve fully in-plugin; verify with a smoke test before relying on env-var injection.
-   - Reuse `migratedMcpHeaderSecretId` (already in `secretIds.ts`) + `isSecretHeaderName`.
-2. **Snippet-scoped secret refs (`snippet:<id>`).** `migrateEnvSecrets` deliberately skips
-   `envSnippets[].envVars` (snippets are inert templates; a `shared|provider` ref would activate the key
-   immediately). To support them: extend the scope union to `snippet:<id>` and resolve at
-   `EnvSnippetManager.insertSnippet`. Until then, snippet secrets stay plaintext.
-3. **Minor:** `SecretEnvVarsSection` UI strings are hardcoded English (matches the existing env review
-   warning) — i18n them if desired. The `isSecretEnvKey`/`isSecretHeaderName` detection is migration-only/
-   advisory (the structured UI is the steady-state path), so it doesn't need to be exhaustive.
+All three follow-ups landed (see the "phase-3 + snippet + i18n" commits).
+
+1. **Phase 3 — MCP auth headers / stdio env via SecretStorage. ✅**
+   - New pure module `src/core/mcp/mcpSecrets.ts`: `extractMcpServerSecrets` (one-time migration: move
+     secret-shaped plaintext header/env values into SecretStorage, record `secretHeaders` / `secretEnv`
+     name→id refs, strip plaintext; idempotent, collision-proof against `store.list()`) and
+     `resolveMcpServerConfig` (overlay resolved values at launch; a missing secret is omitted, never
+     injected empty).
+   - Storage: `ManagedMcpServer` + `_claudian.servers[name]` carry `secretHeaders` / `secretEnv`
+     (`src/core/types/mcp.ts`). `McpStorage` round-trips them and **defensively strips** any
+     secret-referenced key from the persisted `mcpServers` plaintext.
+   - Resolution: `McpServerManager` takes a `secretResolver` and overlays secrets in `getActiveServers`
+     **before** SEC-4 curation; `McpTester.testMcpServer(server, resolveSecret?)` verifies against the
+     resolved config. Configs reach the SDK in-memory (`options.mcpServers` / `setMcpServers`), so the
+     **safe default — resolve fully in-plugin** — was taken (no reliance on CLI `${VAR}` expansion; couldn't
+     smoke-test the CLI in the build container).
+   - UI/migration wiring: secret-shaped values typed into the MCP editor textareas are migrated on save
+     (`McpSettingsManager.persistServers`); existing plaintext is migrated once on workspace init
+     (`ClaudeWorkspaceServices`); the modal preserves existing refs across edits.
+2. **Snippet-scoped secret refs (`snippet:<id>`). ✅** `EnvironmentScope` extended; `migrateEnvSecrets`
+   now migrates saved snippets' `envVars` under `snippet:<id>` (inert at launch — resolution ignores
+   snippet scopes); `resolveSnippetEnvText` re-injects on insert; delete prunes refs
+   (`pruneScopeSecretRefs`).
+3. **i18n. ✅** `SecretEnvVarsSection` strings routed through `t()` with new `env.secret*` keys across all
+   10 locales.
+
+The `isSecretEnvKey`/`isSecretHeaderName` detection remains migration-only/advisory.
 
 ## Verify
 

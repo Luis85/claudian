@@ -347,7 +347,7 @@ export class EnvSnippetManager {
     const { envText, missing } = resolveSnippetEnvText(
       snippet.envVars,
       snippetRefs,
-      (id) => this.plugin.resolveSecretValue(id),
+      (id) => this.plugin.secretStore.get(id),
     );
     if (missing.length > 0) {
       new Notice(t('env.secretMissing', { name: missing.map((ref) => ref.name).join(', ') }));

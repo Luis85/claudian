@@ -2,8 +2,10 @@ import type { App } from 'obsidian';
 import { Notice, setIcon } from 'obsidian';
 
 import { tryParseClipboardConfig } from '../../../core/mcp/McpConfigParser';
+import { extractMcpServerSecrets } from '../../../core/mcp/mcpSecrets';
 import { testMcpServer } from '../../../core/mcp/McpTester';
 import type { AppMcpStorage } from '../../../core/providers/types';
+import type { SecretStore } from '../../../core/security/secretStore';
 import type { ManagedMcpServer, McpServerConfig, McpServerType } from '../../../core/types';
 import { DEFAULT_MCP_SERVER, getMcpServerType } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
@@ -14,6 +16,8 @@ import { McpTestModal } from './McpTestModal';
 export interface McpSettingsManagerDeps {
   app: App;
   mcpStorage: AppMcpStorage;
+  /** SEC-A Phase 3: keychain store for migrating/resolving MCP secret headers/env. */
+  secretStore: SecretStore;
   broadcastMcpReload: () => Promise<void>;
 }
 
@@ -21,6 +25,7 @@ export class McpSettingsManager {
   private app: App;
   private containerEl: HTMLElement;
   private mcpStorage: AppMcpStorage;
+  private secretStore: SecretStore;
   private broadcastMcpReload: () => Promise<void>;
   private servers: ManagedMcpServer[] = [];
 
@@ -28,8 +33,18 @@ export class McpSettingsManager {
     this.app = deps.app;
     this.containerEl = containerEl;
     this.mcpStorage = deps.mcpStorage;
+    this.secretStore = deps.secretStore;
     this.broadcastMcpReload = deps.broadcastMcpReload;
     void this.loadAndRender();
+  }
+
+  /**
+   * SEC-A Phase 3: persist servers, first migrating any secret-shaped header/env
+   * value typed into the editor into SecretStorage so it never lands in plaintext.
+   */
+  private async persistServers(): Promise<void> {
+    extractMcpServerSecrets(this.servers, this.secretStore);
+    await this.mcpStorage.save(this.servers);
   }
 
   private async loadAndRender() {
@@ -184,7 +199,7 @@ export class McpSettingsManager {
     modal.open();
 
     try {
-      const result = await testMcpServer(server);
+      const result = await testMcpServer(server, (id) => this.secretStore.get(id));
       modal.setResult(result);
     } catch (error) {
       modal.setError(error instanceof Error ? error.message : 'Verification failed');
@@ -200,7 +215,7 @@ export class McpSettingsManager {
     server.disabledTools = newDisabledTools;
 
     try {
-      await this.mcpStorage.save(this.servers);
+      await this.persistServers();
     } catch (error) {
       server.disabledTools = previous;
       throw error;
@@ -326,7 +341,7 @@ export class McpSettingsManager {
       this.servers.push(server);
     }
 
-    await this.mcpStorage.save(this.servers);
+    await this.persistServers();
     await this.broadcastMcpReload();
     this.render();
     new Notice(existing
@@ -365,7 +380,7 @@ export class McpSettingsManager {
       return;
     }
 
-    await this.mcpStorage.save(this.servers);
+    await this.persistServers();
     await this.broadcastMcpReload();
     this.render();
 
@@ -377,7 +392,7 @@ export class McpSettingsManager {
 
   private async toggleServer(server: ManagedMcpServer) {
     server.enabled = !server.enabled;
-    await this.mcpStorage.save(this.servers);
+    await this.persistServers();
     await this.broadcastMcpReload();
     this.render();
     new Notice(server.enabled
@@ -391,7 +406,7 @@ export class McpSettingsManager {
     }
 
     this.servers = this.servers.filter((s) => s.name !== server.name);
-    await this.mcpStorage.save(this.servers);
+    await this.persistServers();
     await this.broadcastMcpReload();
     this.render();
     new Notice(t('settings.mcp.deleted', { name: server.name }));

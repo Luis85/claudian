@@ -7,6 +7,7 @@ import type { EventBus } from '../events/EventBus';
 import type { Logger } from '../logging/Logger';
 import type { AppTabManagerState } from '../providers/types';
 import type { ChatRuntime } from '../runtime/ChatRuntime';
+import type { SecretStore } from '../security/secretStore';
 import type {
   ChatMessageAction,
   ClaudianSettings,
@@ -71,8 +72,8 @@ export interface PluginContext
   ): Promise<void>;
   /** SEC-A: persist secret-var refs and reconcile/sync the affected provider scope. */
   applySecretEnvVars(refs: SecretEnvVarRef[], scope: EnvironmentScope): Promise<void>;
-  /** SEC-A: read a secret value from SecretStorage (cleared/empty normalizes to null). */
-  resolveSecretValue(secretId: string): string | null;
+  /** SEC-A: keychain-backed secret value store (get/set/has/list/clear). */
+  readonly secretStore: SecretStore;
   /** SEC-A: migrate plaintext secrets (shared/provider/snippet blobs) into SecretStorage; returns whether settings changed. */
   migrateEnvSecretsNow(): boolean;
   /** SEC-A: drop a deleted snippet's `snippet:<id>` secret refs and clear unreferenced values. */
