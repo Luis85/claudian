@@ -8,19 +8,6 @@ jest.mock('obsidian', () => ({
   Notice: jest.fn(),
 }));
 
-// Mock document.createElementNS for SVG elements created in setupDragAndDrop
-const mockSvgElement = () => {
-  const el = createMockEl('svg');
-  el.appendChild = jest.fn();
-  return el;
-};
-
-beforeAll(() => {
-  if (typeof globalThis.document === 'undefined') {
-    (globalThis as any).document = {};
-  }
-  (globalThis.document as any).createElementNS = jest.fn(() => mockSvgElement());
-});
 
 function createMockCallbacks() {
   return {
@@ -468,111 +455,6 @@ describe('ImageContextManager - Private Helpers', () => {
     });
   });
 
-  describe('Drag and Drop handlers', () => {
-    it('handleDragEnter should show overlay when dragging files', () => {
-      const event = {
-        preventDefault: jest.fn(),
-        stopPropagation: jest.fn(),
-        dataTransfer: { types: ['Files'] },
-      };
-
-      manager['handleDragEnter'](event as any);
-
-      expect(event.preventDefault).toHaveBeenCalled();
-      expect(event.stopPropagation).toHaveBeenCalled();
-      expect(manager['dropOverlay']?.hasClass('visible')).toBe(true);
-    });
-
-    it('handleDragEnter should not show overlay when not dragging files', () => {
-      const event = {
-        preventDefault: jest.fn(),
-        stopPropagation: jest.fn(),
-        dataTransfer: { types: ['text/plain'] },
-      };
-
-      manager['handleDragEnter'](event as any);
-
-      expect(manager['dropOverlay']?.hasClass('visible')).toBeFalsy();
-    });
-
-    it('handleDragOver should prevent default', () => {
-      const event = {
-        preventDefault: jest.fn(),
-        stopPropagation: jest.fn(),
-      };
-
-      manager['handleDragOver'](event as any);
-
-      expect(event.preventDefault).toHaveBeenCalled();
-      expect(event.stopPropagation).toHaveBeenCalled();
-    });
-
-    it('handleDragLeave should hide overlay when cursor leaves input wrapper', () => {
-      // Show overlay first
-      manager['dropOverlay']?.addClass('visible');
-
-      const event = {
-        preventDefault: jest.fn(),
-        stopPropagation: jest.fn(),
-        clientX: -1, // Outside bounds
-        clientY: -1,
-      };
-
-      manager['handleDragLeave'](event as any);
-
-      expect(event.preventDefault).toHaveBeenCalled();
-      expect(manager['dropOverlay']?.hasClass('visible')).toBe(false);
-    });
-
-    it('handleDrop should hide overlay and process image files', async () => {
-      manager['dropOverlay']?.addClass('visible');
-      const addImageSpy = jest.spyOn(manager as any, 'addImageFromFile').mockResolvedValue(true);
-
-      const mockFile = { type: 'image/png', name: 'test.png', size: 1024 };
-      const event = {
-        preventDefault: jest.fn(),
-        stopPropagation: jest.fn(),
-        dataTransfer: { files: { length: 1, 0: mockFile, [Symbol.iterator]: function* () { yield mockFile; } } },
-      };
-
-      await manager['handleDrop'](event as any);
-
-      expect(event.preventDefault).toHaveBeenCalled();
-      expect(manager['dropOverlay']?.hasClass('visible')).toBe(false);
-      expect(addImageSpy).toHaveBeenCalledWith(mockFile, 'drop');
-
-      addImageSpy.mockRestore();
-    });
-
-    it('handleDrop should skip non-image files', async () => {
-      const addImageSpy = jest.spyOn(manager as any, 'addImageFromFile').mockResolvedValue(true);
-      jest.spyOn(manager as any, 'isImageFile').mockReturnValue(false);
-
-      const mockFile = { type: 'application/pdf', name: 'doc.pdf', size: 1024 };
-      const event = {
-        preventDefault: jest.fn(),
-        stopPropagation: jest.fn(),
-        dataTransfer: { files: { length: 1, 0: mockFile } },
-      };
-
-      await manager['handleDrop'](event as any);
-
-      expect(addImageSpy).not.toHaveBeenCalled();
-      addImageSpy.mockRestore();
-    });
-
-    it('handleDrop should handle no files gracefully', async () => {
-      const event = {
-        preventDefault: jest.fn(),
-        stopPropagation: jest.fn(),
-        dataTransfer: { files: undefined },
-      };
-
-      await manager['handleDrop'](event as any);
-      // Should not throw and still call preventDefault
-      expect(event.preventDefault).toHaveBeenCalled();
-    });
-  });
 
   describe('Paste handler', () => {
     it('setupPasteHandler should register paste event on inputEl', () => {
@@ -717,7 +599,6 @@ describe('ImageContextManager - Private Helpers', () => {
         body: mockBody,
         addEventListener: addEventSpy,
         removeEventListener: removeEventSpy,
-        createElementNS: jest.fn(() => mockSvgElement()),
       };
     });
 
