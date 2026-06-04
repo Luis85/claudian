@@ -160,6 +160,44 @@ describe('BaseHistoryService.hydrateConversationHistoryV2', () => {
     expect(svc.loadCalls).toBe(2);
   });
 
+  it('seeds the cache when loadMessages resolves a source unknown at key-compute time', async () => {
+    // Mirrors Codex: computeCacheKey is null for a threadId-only conversation
+    // until loadMessages discovers and backfills the session path, after which
+    // the key becomes concrete. The cache must seed on that resolved key so the
+    // follow-up restore/createTab hydration hits the cache instead of reparsing.
+    class BackfillingService extends BaseHistoryService {
+      loadCalls = 0;
+      protected computeCacheKey(c: Conversation): string | null {
+        return c.sessionId ? `${c.id}:${c.sessionId}` : null;
+      }
+      protected async loadMessages(c: Conversation): Promise<HistoryLoadOutcome> {
+        this.loadCalls++;
+        (c as { sessionId: string | null }).sessionId = 'sess-backfilled';
+        return {
+          kind: 'loaded',
+          messages: [{ id: 'm', role: 'user', content: 'hi', timestamp: 1 } as ChatMessage],
+          sourceRef: `${c.id}:sess-backfilled`,
+        };
+      }
+      resolveSessionIdForConversation(c: Conversation | null): string | null {
+        return c?.sessionId ?? null;
+      }
+      async deleteConversationSessionV2(): Promise<DeleteHistoryOutcome> {
+        return { kind: 'no-op', reason: 'no-session' };
+      }
+    }
+
+    const svc = new BackfillingService();
+    const conv = makeConversation({ sessionId: null });
+    const first = await svc.hydrateConversationHistoryV2(conv, ctx);
+    if (first.kind === 'loaded') conv.messages = first.messages;
+    expect(svc.loadCalls).toBe(1);
+
+    const second = await svc.hydrateConversationHistoryV2(conv, ctx);
+    expect(second).toEqual({ kind: 'cached', sourceRef: 'conv-1:sess-backfilled' });
+    expect(svc.loadCalls).toBe(1);
+  });
+
   it('dedupes concurrent hydrations of the same conversation through inflight map', async () => {
     const svc = new FakeHistoryService();
     svc.loadDelayMs = 10;

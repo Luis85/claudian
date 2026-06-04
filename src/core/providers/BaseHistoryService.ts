@@ -83,8 +83,17 @@ export abstract class BaseHistoryService<
     const pending = (async (): Promise<HistoryLoadOutcome> => {
       const outcome = await this.loadMessages(conversation, ctx);
 
-      if (outcome.kind === 'loaded' && key) {
-        this.hydrationCache.set(conversation.id, key);
+      if (outcome.kind === 'loaded') {
+        // loadMessages can resolve a source that was unknown when `key` was
+        // computed above (e.g. Codex backfilling sessionFilePath from a bare
+        // threadId), flipping the key from null → concrete during the load.
+        // Recompute it here so first-time path discovery still seeds the cache;
+        // reusing the pre-load `key` would leave it unseeded and make the next
+        // hydration reparse the same transcript.
+        const resolvedKey = this.computeCacheKey(conversation, ctx);
+        if (resolvedKey) {
+          this.hydrationCache.set(conversation.id, resolvedKey);
+        }
       } else if (outcome.kind === 'empty' || outcome.kind === 'error') {
         this.hydrationCache.delete(conversation.id);
       }
