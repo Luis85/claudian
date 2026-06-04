@@ -3,7 +3,7 @@ priority: 2 - normal
 relations:
   - Product
 status: open
-tracked-by: "[[docs/issues/better-git-changed-files-view.md]]"
+tracked-by: "[[better-git-changed-files-view]]"
 tags:
   - qol
 ---

@@ -8,7 +8,7 @@ triage: ready-for-agent
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (PN-9)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (PN-9)"
 scope: context-management
 tags:
   - claude

@@ -5,7 +5,6 @@ parent: Infrastructure
 
 # Settings overhaul — design
 
-Status: draft / design  
 Date: 2026-05-30  
 Owner: Claudian core  
 Target version: 3.0.0 (major)
@@ -31,7 +30,7 @@ These changes are breaking (default-enable behaviour and the `agentBoardDefaultP
 
 Related context:
 
-- [[docs/user-manuals/settings.md]] — the manual that surfaced the surprises.
+- [[settings]] — the manual that surfaced the surprises.
 - [[2026-05-28-standalone-product-vision]] — future-direction context for staying provider-neutral.
 - Project [[CLAUDE.md]] — multi-provider product status.
 

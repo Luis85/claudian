@@ -5,9 +5,9 @@ status: research
 scope: market/competitive (embedded agent runtimes, RAG copilots, vault-as-MCP bridges, adjacent IDE agents)
 method: dedicated deep web-research pass (60+ source fetches — GitHub repos, community store/obsidianstats listings, official sites, changelogs, pricing pages, forum threads), June 2026
 related:
-  - "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]]"
-  - "[[docs/ideas/2026-05-28-plugin-improvement-research-proposal.md]]"
-  - "[[docs/ideas/2026-05-28-standalone-product-vision.md]]"
+  - "[[2026-06-03-comprehensive-improvement-proposal]]"
+  - "[[2026-05-28-plugin-improvement-research-proposal]]"
+  - "[[2026-05-28-standalone-product-vision]]"
 ---
 
 # Competitive Landscape — June 2026
@@ -22,7 +22,7 @@ feature-parity matrix, and turns it into threat-ranked strategy.
 > The **feature claims for Claudian** (four providers incl. Cursor, plan mode, rewind, subagents, MCP
 > management, Agent Board, inline edit) are verified against *this repo's* `CLAUDE.md`/code, not inferred.
 > See also the unresolved upstream/fork naming defect in
-> [[docs/issues/resolve-fork-naming-mismatch.md]].
+> [[resolve-fork-naming-mismatch]].
 
 ## Executive summary
 
@@ -97,7 +97,7 @@ runtime. Claudian's counter is the integrated UX (inline edit, plan mode, kanban
 
 **Table stakes now:** plan mode, checkpoints/rewind, subagents, MCP, **background/async agents**. Claudian
 has the first four; **background/async agents are the gap** — and exactly where Agent Board can become the
-differentiator (see [[docs/issues/agent-board-background-runs.md]]).
+differentiator (see [[agent-board-background-runs]]).
 
 ## Feature parity matrix — Claudian vs top 5 direct rivals
 
@@ -160,8 +160,8 @@ inline edit — given away by Agent Client/NoClaw/Zed. "We support N agents" is 
 3. **Obsidian security regime** — per-version automated review (May 2026) + the active **PHANTOMPULSE** RAT
    campaign abusing process-spawning plugins make Claudian's `child_process`/CLI-spawn architecture a trust +
    review-pass liability. A failed scorecard or security scare could stall installs. Directly reinforces
-   [[docs/issues/adopt-secretstorage-for-secrets.md]], [[docs/issues/audit-innerhtml-rendering.md]],
-   [[docs/issues/normalizepath-coverage.md]], [[docs/issues/confirm-deferred-view-load-time.md]].
+   [[adopt-secretstorage-for-secrets]], [[audit-innerhtml-rendering]],
+   [[normalizepath-coverage]], [[confirm-deferred-view-load-time]].
 4. **Cursor/Zed** raising expectations to background/async + parallel-worktree agents a desktop Obsidian
    plugin can't easily replicate.
 
@@ -169,10 +169,10 @@ inline edit — given away by Agent Client/NoClaw/Zed. "We support N agents" is 
 
 1. **Make Agent Board the headline + lean into multi-agent/background orchestration.** The one feature no
    Obsidian rival has, riding the strongest 2026 trend. Tie it to background/async runs (queued work orders
-   executing while the user works) to close the biggest table-stakes gap. → [[docs/issues/agent-board-background-runs.md]].
+   executing while the user works) to close the biggest table-stakes gap. → [[agent-board-background-runs]].
 2. **Add RAG / semantic vault search + citations.** Clearest feature hole vs Copilot/Smart Composer, and what
    knowledge-workers (not coders) actually want. Even lexical+embeddings grounding for `@mention` would
-   neutralize Copilot's core advantage. → builds on [[docs/issues/explicit-context-citations.md]];
+   neutralize Copilot's core advantage. → builds on [[explicit-context-citations]];
    **recommend a new issue: "RAG / semantic vault search (Phase B retrieval)."**
 3. **First-class local-model + privacy story.** Smart Composer/Copilot-self-host own "private/offline."
    Smooth Ollama/LM Studio via OpenCode/compatible providers and market "your notes never leave your

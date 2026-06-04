@@ -5,8 +5,7 @@ parent: Infrastructure
 # Internal Event Bus Design
 
 Date: 2026-05-29
-Status: proposed for user review
-Source issue: [[docs/issues/Missing Eventbus makes expanding or integrating harder than it should be.md]]
+Source issue: [[Missing Eventbus makes expanding or integrating harder than it should be]]
 
 ## Summary
 

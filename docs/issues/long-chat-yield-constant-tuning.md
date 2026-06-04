@@ -8,9 +8,9 @@ triage: needs-measurement
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (PR-4)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (PR-4)"
 related:
-  - "[[docs/issues/Loading a long chat from history makes the ui unresponsive.md]]"
+  - "[[Loading a long chat from history makes the ui unresponsive]]"
 scope: history-hydration
 tags:
   - performance

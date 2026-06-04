@@ -7,11 +7,11 @@ scope: whole-product (strategy, architecture, security/privacy, UX/product, perf
 method: 6 parallel dedicated review passes (architecture/quality, security/privacy, UX/product, performance/reliability+backlog, market/competitive web research, provider-native-capability web research) against `main` at 252929d
 supersedes: docs/reviews/2026-06-02-codebase-review-and-improvement-plan.md (incorporates remaining open items, corrects stale status)
 related:
-  - "[[docs/reviews/2026-06-02-codebase-review-and-improvement-plan.md]]"
-  - "[[docs/adr/0001-transport-agnostic-provider-seam.md]]"
-  - "[[docs/ideas/2026-05-28-plugin-improvement-research-proposal.md]]"
-  - "[[docs/ideas/2026-05-28-standalone-product-vision.md]]"
-  - "[[docs/issues/agent-board-evidence-review.md]]"
+  - "[[2026-06-02-codebase-review-and-improvement-plan]]"
+  - "[[0001-transport-agnostic-provider-seam]]"
+  - "[[2026-05-28-plugin-improvement-research-proposal]]"
+  - "[[2026-05-28-standalone-product-vision]]"
+  - "[[agent-board-evidence-review]]"
 ---
 
 # Claudian — Comprehensive Improvement Proposal (2026-06-03)
@@ -201,7 +201,7 @@ The four runtimes have advanced; Claudian under-uses several now-available surfa
 | PN-1 | P1 | **Codex MCP management** — app-server already exposes MCP server status, resource reading, and OAuth login flows; `[mcp_servers.*]` config. Brings Codex to Claude parity. | Codex | developers.openai.com/codex/app-server + /mcp **[DOCS]** |
 | PN-2 | P1 | **Cursor MCP support** — CLI auto-detects `.cursor/mcp.json`; `agent mcp list/list-tools`, `--approve-mcps`, in-session `/mcp`. | Cursor | cursor.com/docs/cli/mcp **[DOCS]** |
 | PN-3 | P1 | **Cursor subagents** (first-class in Cursor 2.4, Jan 2026) — parallel isolated context, custom prompts/tools/models. Currently gated in Claudian. | Cursor | cursor.com/changelog/2-4 **[DOCS]** |
-| ~~PN-4~~ | P2 | ~~**Opencode plan mode** — currently gated~~ — **CORRECTION (2026-06-03): the plan *mode* is already shipped.** `supportsPlanMode: true` (`opencode/capabilities.ts:7`); `permissionMode 'plan'` maps to the managed `plan` mode (`opencode/modes.ts:124-147`) applied via the ACP config path. The original "gated" claim came from a stale CLAUDE.md line. **The one real remaining gap is narrow:** the runtime never emits `planCompleted`, so the shared post-plan approval card never opens for Opencode — tracked in [[docs/issues/opencode-plan-approval-card.md]]. | Opencode | verified against `252929d`; `plan-mode.md` §Gated providers |
+| ~~PN-4~~ | P2 | ~~**Opencode plan mode** — currently gated~~ — **CORRECTION (2026-06-03): the plan *mode* is already shipped.** `supportsPlanMode: true` (`opencode/capabilities.ts:7`); `permissionMode 'plan'` maps to the managed `plan` mode (`opencode/modes.ts:124-147`) applied via the ACP config path. The original "gated" claim came from a stale CLAUDE.md line. **The one real remaining gap is narrow:** the runtime never emits `planCompleted`, so the shared post-plan approval card never opens for Opencode — tracked in [[opencode-plan-approval-card]]. | Opencode | verified against `252929d`; `plan-mode.md` §Gated providers |
 | PN-5 | P2 | **Codex transcript rollback** — app-server `thread/rollback` drops the last N turns from in-memory context + persists a rollback marker; `turn/interrupt` only cancels an active turn. **Neither restores already-applied file edits**, so this does *not* by itself close UX-D for Codex — a file-level revert needs a separate snapshot/patch-revert path (Claudian-side, or a confirmed Codex file-checkpoint primitive if the landing native `/rewind` exposes one). Surface transcript rollback under a clearly transcript-only affordance, distinct from file rewind. | Codex | developers.openai.com/codex/app-server **[DOCS]** |
 | PN-6 | P2 | **Claude lifecycle hooks** — `PreToolUse`/`PostToolUse`/`Stop`/`Session*` as in-process callbacks; feeds audit/gating (and the evidence gate). | Claude | code.claude.com/docs/en/agent-sdk/hooks **[DOCS]** |
 | PN-7 | P2 | **Verify Claude file-checkpointing API** — ensure rewind uses official `enableFileCheckpointing`+`rewindFiles()` (handles created files + NotebookEdit) vs a custom impl. | Claude | code.claude.com agent-sdk/file-checkpointing **[DOCS]** |

@@ -5,7 +5,6 @@ parent: Product
 # Feature docs content design
 
 Date: 2026-05-30
-Status: draft
 
 ## Scope
 
@@ -108,8 +107,8 @@ personas:
   - pm
 cta_url: https://github.com/Luis85/specorator
 related:
-  - "[[docs/features/Related Feature]]"
-user_manual: "[[docs/user-manuals/manual-slug]]"
+  - "[[Related Feature]]"
+user_manual: "[[manual-slug]]"
 support_claude: full
 support_codex: full
 support_opencode: partial
@@ -206,8 +205,8 @@ For gaps that are by design or architectural, write them as finished decisions, 
 ```markdown
 ### Goes well with
 
-- [[docs/features/Feature Name]]: one-line context for why
-- [[docs/features/Feature Name]]: one-line context for why
+- [[Feature Name]]: one-line context for why
+- [[Feature Name]]: one-line context for why
 ```
 
 Two to four links max. Wikilinks only.
@@ -259,8 +258,8 @@ personas:
   - pm
 cta_url: https://github.com/Luis85/specorator
 related:
-  - "[[docs/features/Chat]]"
-user_manual: "[[docs/user-manuals/quick-actions]]"
+  - "[[Chat]]"
+user_manual: "[[quick-actions]]"
 ---
 
 # Quick Actions
@@ -296,7 +295,7 @@ The actions live in your vault as ordinary files. You can edit them in any text 
 
 ### Goes well with
 
-- [[docs/features/Chat]]: quick actions fire into any active chat; context, provider, and model come from the chat tab
+- [[Chat]]: quick actions fire into any active chat; context, provider, and model come from the chat tab
 
 ---
 

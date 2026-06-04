@@ -12,13 +12,13 @@ When the user pastes an image to the chat, it gets added to the context but the 
 > **Status (2026-06-03): paste path appears wired — needs user re-verification.** The paste handler captures
 > the image and routes it via `addImageFromFile('paste')` into image context (`ImageContext.ts:174-204`).
 > Confirm the *agent* now resolves the pasted image end-to-end, then close. (Flagged in
-> [[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] backlog reconciliation.)
+> [[2026-06-03-comprehensive-improvement-proposal]] backlog reconciliation.)
 
 ## Implementation (2026-06-04)
 
 **Status: SHIPPED**
 
-Pasted images now persist to the vault on send via `persistPastedImages` and render through `MessageRenderer.resolveImageSrc` (prefers vault path, falls back to base64, then to a graceful chip). See [[docs/superpowers/specs/2026-06-04-paste-image-vault-persist-design.md]] and [[docs/superpowers/plans/2026-06-04-paste-image-vault-persist.md]].
+Pasted images now persist to the vault on send via `persistPastedImages` and render through `MessageRenderer.resolveImageSrc` (prefers vault path, falls back to base64, then to a graceful chip). See [[2026-06-04-paste-image-vault-persist-design]] and [[2026-06-04-paste-image-vault-persist]].
 
 Changes:
 - `ImageAttachment` gains optional `path` field (vault-relative, stamped on send)

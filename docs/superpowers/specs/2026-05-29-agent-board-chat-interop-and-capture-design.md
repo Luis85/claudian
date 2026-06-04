@@ -4,12 +4,12 @@ title: Agent Board — chat↔work-order interop, capture sources, run-next-read
 date: 2026-05-29
 status: shipped
 owner: Claudian
-source: "[[docs/issues/agent-board-mvp.md]]"
+source: "[[agent-board-mvp]]"
 related:
-  - "[[docs/ideas/agent-board-symphony.md]]"
+  - "[[agent-board-symphony]]"
   - "[[2026-05-28-standalone-product-vision]]"
-  - "[[docs/superpowers/specs/2026-05-28-agent-board-thin-slice-design.md]]"
-  - "[[docs/superpowers/specs/2026-05-29-agent-board-configurable-lanes-design.md]]"
+  - "[[2026-05-28-agent-board-thin-slice-design]]"
+  - "[[2026-05-29-agent-board-configurable-lanes-design]]"
 scope: mvp-gap-closing-increment-before-specorator-migration
 parent: Cross Cutting
 ---
@@ -19,7 +19,7 @@ parent: Cross Cutting
 ## Goal
 
 Close the remaining Agent Board MVP capture and interop stories from
-[[docs/issues/agent-board-mvp.md]] so the Specorator migration can proceed with
+[[agent-board-mvp]] so the Specorator migration can proceed with
 chat coexistence fully demonstrated. The strict migration-gate bullets (create/index,
 lanes, run-binding, ledger/handoff writes, one-run-per-order, state-machine tests,
 `TaskNoteStore` preservation tests) are already met by prior increments. This increment

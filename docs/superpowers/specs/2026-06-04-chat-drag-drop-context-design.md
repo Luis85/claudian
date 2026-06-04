@@ -4,9 +4,9 @@ date: 2026-06-04
 status: shipped
 scope: features/chat
 relations:
-  - "[[docs/superpowers/plans/2026-06-04-chat-drag-drop-context.md]]"
-  - "[[docs/superpowers/specs/2026-06-04-paste-image-vault-persist-design.md]]"
-  - "[[docs/issues/Drag and drop of files or folders into the chat to add to context.md]]"
+  - "[[2026-06-04-chat-drag-drop-context]]"
+  - "[[2026-06-04-paste-image-vault-persist-design]]"
+  - "[[Drag and drop of files or folders into the chat to add to context]]"
 tags:
   - chat
   - file-context

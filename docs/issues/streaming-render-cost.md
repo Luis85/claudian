@@ -8,7 +8,7 @@ triage: low-value
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (PR-3)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (PR-3)"
 scope: streaming-render
 tags:
   - performance

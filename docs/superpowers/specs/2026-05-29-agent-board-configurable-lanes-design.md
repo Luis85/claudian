@@ -5,9 +5,8 @@ parent: "[[Agent Kanban Board]]"
 # Agent Board Configurable Lanes + Board QoL Design
 
 Date: 2026-05-29
-Status: proposed for user review
-Source PRD: [[docs/issues/agent-board-mvp.md]]
-Builds on: [[docs/superpowers/specs/2026-05-28-agent-board-thin-slice-design.md]]
+Source PRD: [[agent-board-mvp]]
+Builds on: [[2026-05-28-agent-board-thin-slice-design]]
 
 ## Summary
 

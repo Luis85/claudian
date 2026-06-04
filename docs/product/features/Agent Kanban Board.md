@@ -9,9 +9,9 @@ personas:
 cta_url: https://github.com/Luis85/specorator
 related:
   - "[[Chat]]"
-  - "[[docs/product/features/Orchestrator]]"
+  - "[[Orchestrator]]"
   - "[[Quick Actions]]"
-user_manual: "[[docs/product/user-manuals/agent-board]]"
+user_manual: "[[agent-board]]"
 image: "[[agent-board-overview.png]]"
 ---
 
@@ -53,7 +53,7 @@ A card might be "draft a thank-you letter to Aunt Maria", "summarize this twelve
 
 ### Goes well with
 
-- [[docs/product/features/Orchestrator]]: send a long orchestrator run to the board as a card so you can step away while it works
+- [[Orchestrator]]: send a long orchestrator run to the board as a card so you can step away while it works
 - [[Chat]]: open a card as a chat tab when you want to talk it through
 - [[Quick Actions]]: run a saved prompt on the active card to draft it, tidy it, or summarize it
 

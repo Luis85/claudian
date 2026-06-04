@@ -2,20 +2,22 @@
 title: Codebase Review & Improvement Plan
 date: 2026-06-02
 updated: 2026-06-03
-status: phases-1a-1b-1c-shipped + adr-p1-p2a-shipped + q-new-1-shipped + q-1-shipped
+status: superseded
+prior_status: phases-1a-1b-1c-shipped + adr-p1-p2a-shipped + q-new-1-shipped + q-1-shipped
 version: v3.2.0 (just shipped)
 scope: whole-codebase (architecture, concurrency, security, performance, quality, Obsidian conformance, backlog reconciliation)
 method: 7 parallel dedicated review passes (architecture, concurrency/lifecycle, security, performance, code quality + testing, Obsidian API conformance, backlog reconciliation) against `main` at 9541ab9
 supersedes: docs/reviews/2026-05-31-codebase-review-and-improvement-plan.md (incorporates remaining open items)
+superseded_by: docs/reviews/2026-06-03-comprehensive-improvement-proposal.md
 related:
-  - "[[docs/adr/0001-transport-agnostic-provider-seam.md]]"
-  - "[[docs/reviews/2026-05-31-codebase-review-and-improvement-plan.md]]"
-  - "[[docs/handoffs/2026-06-04-q1-complete.md]]"
+  - "[[0001-transport-agnostic-provider-seam]]"
+  - "[[2026-05-31-codebase-review-and-improvement-plan]]"
+  - "[[2026-06-04-q1-complete]]"
 ---
 
 # Claudian Codebase Review & Improvement Plan — 2026-06-02
 
-> **Superseded (2026-06-03) by [[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]].** Several
+> **Superseded (2026-06-03) by [[2026-06-03-comprehensive-improvement-proposal]].** Several
 > status rows below are now stale: **Q-4** (four untested security paths) and **Q-NEW-2** (provider test
 > parity) have since **shipped**; **PERF-5** was already `Promise.all`; **Q-7** is still **3/8** tabs (not
 > "finish soon"); madge cycles are **58**, not 52; and **PERF-1** is `scrollIntoView`, not an

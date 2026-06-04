@@ -8,9 +8,9 @@ triage: needs-scoping
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/ideas/Append docs creation system-prompt to plan mode input.md]]"
+source: "[[Append docs creation system-prompt to plan mode input]]"
 related:
-  - "[[docs/product/user-manuals/plan-mode.md]]"
+  - "[[plan-mode]]"
 scope: plan-mode
 tags:
   - plan-mode
@@ -41,7 +41,7 @@ Add an opt-in (off by default) where **Claudian writes the plan to a frontmatter
 plan is available — driven by the existing post-plan metadata/artifact (`planCompleted` /
 `buildPlanArtifactFromChatState` / captured `planFilePath`), under a configurable plans folder and the
 provider's `planPathPrefix` where one exists. For providers without `planCompleted` (e.g. Opencode, see
-[[docs/issues/opencode-plan-approval-card.md]]), persist on the approve action or when the plan content is
+[[opencode-plan-approval-card]]), persist on the approve action or when the plan content is
 otherwise captured.
 
 ## Acceptance criteria

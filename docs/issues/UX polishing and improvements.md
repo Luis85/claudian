@@ -10,7 +10,7 @@ relations:
 
 > **Status (2026-06-03): shipped.** All four items landed in Phase 1b (`e2f389a`): active-tab badge,
 > `needsAttention` indicator, tab-switch-while-blocked, and session title in the header. Verified against
-> the tree in [[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]].
+> the tree in [[2026-06-03-comprehensive-improvement-proposal]].
 
 ## Issues
 

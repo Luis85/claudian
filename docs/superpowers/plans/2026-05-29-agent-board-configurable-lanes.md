@@ -16,7 +16,7 @@ parent: "[[Agent Kanban Board]]"
 
 ## Spec
 
-Implements [[docs/superpowers/specs/2026-05-29-agent-board-configurable-lanes-design.md]]. Roles, body-section editing, free status dropdown, WIP limits, drag/drop, custom statuses/transitions are out of scope.
+Implements [[2026-05-29-agent-board-configurable-lanes-design]]. Roles, body-section editing, free status dropdown, WIP limits, drag/drop, custom statuses/transitions are out of scope.
 
 ## File Structure
 

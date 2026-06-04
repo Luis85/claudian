@@ -8,7 +8,7 @@ triage: needs-scoping
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (PN-10)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (PN-10)"
 scope: provider-roster
 tags:
   - provider

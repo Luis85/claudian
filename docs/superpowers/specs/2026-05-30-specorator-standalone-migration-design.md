@@ -7,11 +7,11 @@ status: design / approved
 date: 2026-05-30
 owner: Luis Mendez
 supersedes_planning_in:
-  - "[[docs/ideas/2026-05-28-standalone-product-vision.md]]"
+  - "[[2026-05-28-standalone-product-vision]]"
 related:
-  - "[[docs/Specorator.md]]"
-  - "[[docs/ideas/2026-05-28-standalone-product-vision.md]]"
-  - "[[docs/issues/agent-board-mvp.md]]"
+  - "[[Specorator]]"
+  - "[[2026-05-28-standalone-product-vision]]"
+  - "[[agent-board-mvp]]"
 parent: Product
 ---
 

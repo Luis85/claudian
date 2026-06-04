@@ -1,3 +1,9 @@
+---
+date: 2026-06-04
+status: shipped
+scope: user-manual
+parent: "[[Multi Provider Support]]"
+---
 # Claudian — MCP Servers
 
 This manual covers Model Context Protocol (MCP) servers in Claudian: what they are, how to add them per provider, how to work with them in chat, and where the configuration lives on disk.
@@ -17,7 +23,7 @@ MCP servers extend a provider with additional tools (file search, GitHub APIs, b
 
 If you want a server visible to **all four providers**, you must register it in each provider's own configuration. Claudian does not bridge tools across providers.
 
-See [[settings]] for the full settings panel layout, [[install-claude.md]], [[install-codex.md]], [[install-opencode.md]], and [[install-cursor.md]] for CLI installation steps.
+See [[settings]] for the full settings panel layout, [[install-claude]], [[install-codex]], [[install-opencode]], and [[install-cursor]] for CLI installation steps.
 
 ---
 
@@ -41,7 +47,7 @@ This is the main flow most users care about. The Claude provider exposes the ful
 
 ### Prerequisites
 
-1. Claude provider enabled in **Settings → Claudian → General → Providers**. See [[install-claude.md]].
+1. Claude provider enabled in **Settings → Claudian → General → Providers**. See [[install-claude]].
 2. The Claude tab visible in the settings panel.
 
 ### Open the MCP section

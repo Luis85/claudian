@@ -8,9 +8,9 @@ triage: ready-for-agent
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (UX-C)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (UX-C)"
 related:
-  - "[[docs/issues/composer-context-pre-send-preview.md]]"
+  - "[[composer-context-pre-send-preview]]"
 scope: citations
 tags:
   - ux

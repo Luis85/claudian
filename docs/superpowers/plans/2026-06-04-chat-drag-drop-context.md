@@ -4,9 +4,9 @@ date: 2026-06-04
 status: implemented
 scope: features/chat
 relations:
-  - "[[docs/superpowers/specs/2026-06-04-chat-drag-drop-context-design.md]]"
-  - "[[docs/superpowers/plans/2026-06-04-paste-image-vault-persist.md]]"
-  - "[[docs/issues/Drag and drop of files or folders into the chat to add to context.md]]"
+  - "[[2026-06-04-chat-drag-drop-context-design]]"
+  - "[[2026-06-04-paste-image-vault-persist]]"
+  - "[[Drag and drop of files or folders into the chat to add to context]]"
 tags:
   - chat
   - file-context
@@ -24,13 +24,13 @@ tags:
 
 **Tech Stack:** TypeScript, Obsidian Plugin API, Jest unit + integration tests, the project's existing `@test/helpers/mockElement` shim.
 
-**Reference spec:** [[docs/superpowers/specs/2026-06-04-chat-drag-drop-context-design.md]]
+**Reference spec:** [[2026-06-04-chat-drag-drop-context-design]]
 
 ---
 
 ## Concurrent Plan: Paste-Image Vault Persistence
 
-A sibling plan, [[docs/superpowers/plans/2026-06-04-paste-image-vault-persist.md]], runs in parallel. It writes pasted clipboard images to the vault on send and refactors `MessageRenderer` to prefer vault paths. This plan does not touch any of its files, and vice versa:
+A sibling plan, [[2026-06-04-paste-image-vault-persist]], runs in parallel. It writes pasted clipboard images to the vault on send and refactors `MessageRenderer` to prefer vault paths. This plan does not touch any of its files, and vice versa:
 
 | File | Paste-image plan | This plan |
 |------|------------------|-----------|
@@ -1674,8 +1674,8 @@ type: improvement
 priority: 3 - low
 status: implemented
 relations:
-  - "[[docs/superpowers/specs/2026-06-04-chat-drag-drop-context-design.md]]"
-  - "[[docs/superpowers/plans/2026-06-04-chat-drag-drop-context.md]]"
+  - "[[2026-06-04-chat-drag-drop-context-design]]"
+  - "[[2026-06-04-chat-drag-drop-context]]"
 tags:
 ---
 ```

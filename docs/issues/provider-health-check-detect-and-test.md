@@ -8,9 +8,9 @@ triage: ready-for-agent
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (UX-A)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (UX-A)"
 related:
-  - "[[docs/ideas/2026-05-28-plugin-improvement-research-proposal.md]]"
+  - "[[2026-05-28-plugin-improvement-research-proposal]]"
 scope: onboarding
 tags:
   - ux

@@ -8,9 +8,9 @@ triage: ready-for-agent
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (UX-F, UX-J)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (UX-F, UX-J)"
 related:
-  - "[[docs/issues/provider-health-check-detect-and-test.md]]"
+  - "[[provider-health-check-detect-and-test]]"
 scope: error-states
 tags:
   - ux

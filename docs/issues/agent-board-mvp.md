@@ -8,7 +8,7 @@ triage: ready-for-agent
 created: 2026-05-28
 updated: 2026-05-28
 owner: Claudian
-source: "[[docs/ideas/agent-board-symphony.md]]"
+source: "[[agent-board-symphony]]"
 related:
   - "[[2026-05-28-standalone-product-vision]]"
 scope: phase-1-mvp-before-specorator-migration
@@ -24,7 +24,7 @@ relations:
 
 # Agent Board MVP — optional Markdown workspace with visible sidepanel execution
 
-> Source idea: [[docs/ideas/agent-board-symphony.md]]  
+> Source idea: [[agent-board-symphony]]  
 > Transition context: [[2026-05-28-standalone-product-vision]]  
 > Scope: Phase 1 MVP and bridge increment before the Specorator migration. Later autonomous orchestration phases are out of scope.
 
@@ -340,7 +340,7 @@ MVP is acceptable when:
 
 ## Further Notes
 
-- This PRD intentionally covers the bridge MVP before the Specorator migration. The full multi-phase vision lives in [[docs/ideas/agent-board-symphony.md]] and [[2026-05-28-standalone-product-vision]].
+- This PRD intentionally covers the bridge MVP before the Specorator migration. The full multi-phase vision lives in [[agent-board-symphony]] and [[2026-05-28-standalone-product-vision]].
 - The product test for MVP has two parts: (1) *Can I keep using direct agent chat exactly as before?* and (2) *Can I create a Markdown work order, run it through Claudian, watch it live, and get a durable result back in Obsidian?*
 - Board configuration in MVP is intentionally limited: configurable display/criteria/roles mapped onto a stable internal state model. More powerful workflow automation belongs in later phases.
 - Open validation questions (naming "Agent Board" vs alternatives, default permission tier, primary-artifact shape, config storage location) do not block MVP build.

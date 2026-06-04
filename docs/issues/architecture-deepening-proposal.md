@@ -23,7 +23,6 @@ tags:
   - prd
 relations:
   - "[[Chat]]"
-  - "[[Infrastructure]]"
 ---
 
 # Architecture Deepening Proposal — Chat tab composition, stream projection, conversation store, provider contracts, and auxiliary query reuse

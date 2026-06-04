@@ -2,7 +2,7 @@
 type: feature
 name: Chat
 tagline: A workspace beside your notes that already knows what you're looking at and what you've highlighted.
-status: draft
+status: shipped
 personas:
   - knowledge-worker
   - pm
@@ -10,8 +10,8 @@ cta_url: https://github.com/Luis85/specorator
 related:
   - "[[Quick Actions]]"
   - "[[Multi Provider Support]]"
-  - "[[docs/product/features/Orchestrator]]"
-user_manual: "[[docs/product/user-manuals/chat]]"
+  - "[[Orchestrator]]"
+user_manual: "[[chat]]"
 ---
 
 # Chat
@@ -46,7 +46,7 @@ When the co-worker rewrites a paragraph you selected or fills in a section of a 
 ### What it doesn't do
 
 - Chat is not a document editor. Suggested edits arrive as previews you accept, not as silent writes while the reply is still streaming.
-- Background runs are not supported. The chat tab runs in the foreground. For parallel work, see [[docs/product/features/Orchestrator]].
+- Background runs are not supported. The chat tab runs in the foreground. For parallel work, see [[Orchestrator]].
 - Web search is not built in. Providers with their own search use it; others do not.
 - Capabilities differ per provider. See [[Multi Provider Support]] for the side-by-side comparison.
 
@@ -54,7 +54,7 @@ When the co-worker rewrites a paragraph you selected or fills in a section of a 
 
 - [[Quick Actions]]: store prompts you use daily and fire them into the active chat with one tap
 - [[Multi Provider Support]]: open new chat tabs on whichever providers you have access to, side by side
-- [[docs/product/features/Orchestrator]]: when one chat isn't enough, hand the work off to several runs at once
+- [[Orchestrator]]: when one chat isn't enough, hand the work off to several runs at once
 
 ---
 

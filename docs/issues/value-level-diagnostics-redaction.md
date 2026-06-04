@@ -8,7 +8,7 @@ triage: ready-for-agent
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (SEC-E)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (SEC-E)"
 scope: logging-redaction
 tags:
   - security

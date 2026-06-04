@@ -11,7 +11,7 @@ related:
   - "[[Chat]]"
   - "[[Multi Provider Support]]"
   - "[[Agent Kanban Board]]"
-user_manual: "[[docs/product/user-manuals/orchestrator]]"
+user_manual: "[[orchestrator]]"
 parent: "[[Chat]]"
 ---
 

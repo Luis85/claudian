@@ -16,7 +16,7 @@ parent: "[[Agent Kanban Board]]"
 
 ## Scope Check
 
-This plan implements the approved thin slice from [[docs/superpowers/specs/2026-05-28-agent-board-thin-slice-design.md]]. It excludes custom lane config, drag/drop, workflow-note config, worktrees, headless execution, selection/browser/chat capture, and publish automation.
+This plan implements the approved thin slice from [[2026-05-28-agent-board-thin-slice-design]]. It excludes custom lane config, drag/drop, workflow-note config, worktrees, headless execution, selection/browser/chat capture, and publish automation.
 
 ## File Structure
 
