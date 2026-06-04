@@ -112,4 +112,54 @@ describe('QuickActionFavoritesCache', () => {
     expect((storage.loadAll as jest.Mock).mock.calls.length).toBe(beforeCalls);
     cache.dispose();
   });
+
+  it('discards stale reload results when a newer reload supersedes', async () => {
+    const app = makeApp();
+    // First load returns old set; second load returns new set. We control
+    // resolution order: resolve the second load BEFORE the first.
+    let resolveFirst!: (v: QuickAction[]) => void;
+    let resolveSecond!: (v: QuickAction[]) => void;
+    const firstLoad = new Promise<QuickAction[]>((r) => { resolveFirst = r; });
+    const secondLoad = new Promise<QuickAction[]>((r) => { resolveSecond = r; });
+
+    const storage = {
+      loadAll: jest.fn()
+        .mockReturnValueOnce(firstLoad)
+        .mockReturnValueOnce(secondLoad),
+    } as unknown as QuickActionStorage;
+
+    const cache = new QuickActionFavoritesCache(storage, app as any, () => 'Quick Actions');
+    cache.start(); // triggers first reload
+    cache.refresh(); // triggers second reload while first is still in flight
+
+    // Resolve second (newer) first
+    resolveSecond([makeAction(1, 'NEW', 'Quick Actions/new.md')]);
+    await flush();
+    expect(cache.getFavorites().map((f) => f.name)).toEqual(['NEW']);
+
+    // Now resolve first (older) — should NOT overwrite the newer result
+    resolveFirst([makeAction(2, 'OLD', 'Quick Actions/old.md')]);
+    await flush();
+    expect(cache.getFavorites().map((f) => f.name)).toEqual(['NEW']);
+
+    cache.dispose();
+  });
+
+  it('discards in-flight reload results after dispose', async () => {
+    const app = makeApp();
+    let resolveLoad!: (v: QuickAction[]) => void;
+    const pendingLoad = new Promise<QuickAction[]>((r) => { resolveLoad = r; });
+    const storage = {
+      loadAll: jest.fn().mockReturnValueOnce(pendingLoad),
+    } as unknown as QuickActionStorage;
+
+    const cache = new QuickActionFavoritesCache(storage, app as any, () => 'Quick Actions');
+    cache.start();
+    cache.dispose();
+
+    resolveLoad([makeAction(1, 'GONE', 'Quick Actions/gone.md')]);
+    await flush();
+
+    expect(cache.getFavorites()).toEqual([]);
+  });
 });

@@ -16,6 +16,7 @@ export class QuickActionFavoritesCache {
   private favorites: QuickAction[] = [];
   private refs: EventRef[] = [];
   private currentFolder = '';
+  private reloadGeneration = 0;
 
   constructor(
     private storage: QuickActionStorage,
@@ -46,6 +47,9 @@ export class QuickActionFavoritesCache {
   }
 
   dispose(): void {
+    // Bump generation so any in-flight reload that resolves after dispose
+    // is discarded instead of repopulating `favorites`.
+    ++this.reloadGeneration;
     this.unsubscribe();
     this.favorites = [];
   }
@@ -72,7 +76,11 @@ export class QuickActionFavoritesCache {
   }
 
   private async reload(): Promise<void> {
+    const myGeneration = ++this.reloadGeneration;
     const all = await this.storage.loadAll();
+    // If another reload (or dispose) bumped the generation while we were
+    // awaiting, our result is stale and must not overwrite fresher state.
+    if (myGeneration !== this.reloadGeneration) return;
     const favs = all
       .filter((a) => a.favorite === true)
       .sort((a, b) => {
