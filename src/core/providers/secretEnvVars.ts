@@ -138,6 +138,21 @@ export function extractBlobSecretRefs(
 
   for (const line of blob.split(/\r?\n/)) {
     if (PLAINTEXT_OPT_OUT_MARKER.test(line)) {
+      // Opted out of migration: keep the plaintext line verbatim. But if this key
+      // was previously migrated, PRUNE the now-stale ref — otherwise the resolver
+      // overlays the old SecretStorage value on top of (or, when absent, deletes)
+      // the opted-out plaintext, so the escape hatch could never replace/recover it.
+      const optedOutKey = Object.keys(parseEnvironmentVariables(line))[0];
+      const trackedOptOut = optedOutKey ? byName.get(optedOutKey) : undefined;
+      if (trackedOptOut) {
+        if (existingRefs.includes(trackedOptOut)) {
+          clearedRefs.push(trackedOptOut);
+        } else {
+          const i = refs.indexOf(trackedOptOut);
+          if (i >= 0) refs.splice(i, 1);
+        }
+        byName.delete(optedOutKey as string);
+      }
       out.push(line);
       continue;
     }

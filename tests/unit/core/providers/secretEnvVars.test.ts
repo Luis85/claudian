@@ -192,6 +192,27 @@ describe('secretEnvVars — migration extraction', () => {
     expect(refs[0].secretId).toBe('claudian-env-provider-codex-openai-api-key');
   });
 
+  // SEC-A: when a user opts an ALREADY-MIGRATED key back to plaintext with the
+  // `# claudian:plaintext` marker, the stale ref must be pruned so the resolver
+  // stops overlaying the old SecretStorage value on top of the plaintext value.
+  it('prunes an existing ref when its key is opted back out to plaintext', () => {
+    const existing: SecretEnvVarRef[] = [
+      { scope: 'provider:codex', name: 'OPENAI_API_KEY', secretId: 'claudian-env-provider-codex-openai-api-key' },
+    ];
+    const stored = new Map<string, string>();
+    const result = extractBlobSecretRefs(
+      'OPENAI_API_KEY=new-plaintext # claudian:plaintext',
+      'provider:codex',
+      (id, v) => stored.set(id, v),
+      new Set<string>(),
+      existing,
+    );
+
+    expect(result.refs).toEqual([]); // no new ref created
+    expect(result.clearedRefs).toEqual(existing); // stale ref pruned
+    expect(result.blob).toBe('OPENAI_API_KEY=new-plaintext # claudian:plaintext'); // line kept verbatim
+  });
+
   it('keeps comments, blanks, opted-out lines, and empty values', () => {
     const blob = [
       '# a comment',
@@ -442,6 +463,32 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
     expect(changed).toBe(true);
     expect(settings.secretEnvVars).toEqual([]); // ref pruned (overlay won't re-inject)
     expect(stored.get('some-other-plugin-key')).toBe('sk-shared-external'); // external value untouched
+  });
+
+  // SEC-A end-to-end: opting an already-migrated key back to plaintext drops the ref
+  // from settings AND lets the plaintext value win at resolution (no stale overlay).
+  it('opting a migrated key back to plaintext drops its ref and the plaintext value resolves', () => {
+    const settings: Record<string, unknown> = {
+      providerConfigs: {
+        codex: { environmentVariables: 'OPENAI_API_KEY=sk-typed # claudian:plaintext' },
+      },
+      secretEnvVars: [
+        { scope: 'provider:codex', name: 'OPENAI_API_KEY', secretId: 'claudian-env-provider-codex-openai-api-key' },
+      ],
+    };
+    const { changed } = run(settings, { 'claudian-env-provider-codex-openai-api-key': 'sk-old-migrated' });
+
+    expect(changed).toBe(true);
+    expect(settings.secretEnvVars).toEqual([]); // stale ref pruned
+
+    // The resolver now returns the opted-out plaintext value (marker stripped), not
+    // the old migrated secret — even though that secret still exists in the store.
+    const { env } = resolveProviderEnvVars(
+      settings,
+      'codex',
+      () => 'sk-old-migrated',
+    );
+    expect(env.OPENAI_API_KEY).toBe('sk-typed');
   });
 
   it('does not overwrite an id already present in SecretStorage (seeds usedIds from store.list)', () => {
