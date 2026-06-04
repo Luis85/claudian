@@ -148,12 +148,14 @@ describe('mcpSecrets — collectMissingMcpSecrets', () => {
   const urlServer: ManagedMcpServer = {
     name: 'github',
     enabled: true,
+    contextSaving: false,
     config: { type: 'http', url: 'https://api.example.com' } as McpHttpServerConfig,
     secretHeaders: { Authorization: 'id-auth' },
   };
   const stdioServer: ManagedMcpServer = {
     name: 'local',
     enabled: true,
+    contextSaving: false,
     config: { command: 'srv' } as McpStdioServerConfig,
     secretEnv: { API_KEY: 'id-key' },
   };
@@ -176,6 +178,7 @@ describe('mcpSecrets — collectMissingMcpSecrets', () => {
     const plain: ManagedMcpServer = {
       name: 'plain',
       enabled: true,
+      contextSaving: false,
       config: { type: 'http', url: 'https://x' } as McpHttpServerConfig,
     };
     expect(collectMissingMcpSecrets([plain], () => null)).toEqual([]);

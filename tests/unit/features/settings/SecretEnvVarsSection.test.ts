@@ -26,6 +26,14 @@ function makePlugin(secretEnvVars: SecretEnvVarRef[], stored: Record<string, str
     },
     settings,
     saveSettings: jest.fn().mockResolvedValue(undefined),
+    // Mirrors SecretStore.clear (the API has no delete; it overwrites with '').
+    secretStore: {
+      clear: jest.fn((id: string) => secrets.set(id, '')),
+      get: (id: string) => {
+        const v = secrets.get(id);
+        return v === undefined || v === '' ? null : v;
+      },
+    },
     applySecretEnvVars: jest.fn().mockImplementation(async (refs: SecretEnvVarRef[]) => {
       settings.secretEnvVars = refs;
     }),
@@ -112,7 +120,7 @@ describe('renderSecretEnvVarsSection', () => {
     expect(plugin.applySecretEnvVars).not.toHaveBeenCalled();
   });
 
-  it('removes a ref when its trash button is clicked', async () => {
+  it('removes a ref and clears its orphaned secret value when its trash button is clicked', async () => {
     const plugin = makePlugin([{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: 'sid' }], { sid: 'sk-x' });
     renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
 
@@ -121,5 +129,27 @@ describe('renderSecretEnvVarsSection', () => {
 
     expect(plugin.settings.secretEnvVars).toEqual([]);
     expect(plugin.applySecretEnvVars).toHaveBeenCalled();
+    // The deleted key/token no longer lingers in SecretStorage.
+    expect(plugin.secretStore.clear).toHaveBeenCalledWith('sid');
+    expect(plugin.secretStore.get('sid')).toBeNull();
+  });
+
+  it('does not clear a secret value still referenced by another row', async () => {
+    const plugin = makePlugin(
+      [
+        { scope: 'shared', name: 'OPENAI_API_KEY', secretId: 'shared-sid' },
+        { scope: 'provider:claude', name: 'ALT_KEY', secretId: 'shared-sid' },
+      ],
+      { 'shared-sid': 'sk-x' },
+    );
+    renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
+
+    buttons().find((b) => b.icon === 'trash')?.clickHandler();
+    await flush();
+
+    expect(plugin.settings.secretEnvVars).toEqual([
+      { scope: 'provider:claude', name: 'ALT_KEY', secretId: 'shared-sid' },
+    ]);
+    expect(plugin.secretStore.clear).not.toHaveBeenCalled(); // still referenced → preserved
   });
 });

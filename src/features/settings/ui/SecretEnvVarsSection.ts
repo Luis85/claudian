@@ -81,7 +81,14 @@ export function renderSecretEnvVarsSection(options: SecretEnvVarsSectionOptions)
   }
 
   async function removeRef(target: SecretEnvVarRef): Promise<void> {
-    await persist(currentRefs().filter((ref) => ref !== target));
+    const next = currentRefs().filter((ref) => ref !== target);
+    await persist(next);
+    // SEC-A: clear the device value when no remaining ref uses this id, so a
+    // deleted key/token doesn't linger in SecretStorage (matches snippet/MCP
+    // deletion paths). A user-picked id shared by another row is preserved.
+    if (!next.some((ref) => ref.secretId === target.secretId)) {
+      plugin.secretStore.clear(target.secretId);
+    }
   }
 
   async function persist(next: SecretEnvVarRef[]): Promise<void> {
