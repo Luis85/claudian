@@ -235,4 +235,34 @@ describe('VaultSkillAggregator', () => {
     expect(typeof agg.invalidate).toBe('function');
     expect(typeof agg.dispose).toBe('function');
   });
+
+  it('caches per-provider listVaultEntries calls within TTL', async () => {
+    const fetch = jest.fn().mockResolvedValue([makeSkillEntry({ id: 'skill-a', name: 'a' })]);
+    const records = [makeRecord({ entries: fetch })];
+    const agg = new VaultSkillAggregator(() => records, { ttlMs: 60_000 });
+
+    await agg.listAll();
+    await agg.listAll();
+    await agg.listAll();
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('refetches after TTL expiry', async () => {
+    let now = 1_000;
+    const fetch = jest.fn().mockResolvedValue([makeSkillEntry({ id: 'skill-a', name: 'a' })]);
+    const records = [makeRecord({ entries: fetch })];
+    const agg = new VaultSkillAggregator(() => records, {
+      ttlMs: 1_000,
+      nowMs: () => now,
+    });
+
+    await agg.listAll();
+    now += 500;
+    await agg.listAll();
+    now += 600;            // total elapsed 1100ms > ttl
+    await agg.listAll();
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
 });

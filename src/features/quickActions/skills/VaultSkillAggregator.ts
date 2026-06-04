@@ -8,6 +8,13 @@ import type {
   VaultSkillSource,
 } from './types';
 
+interface CachedBucket {
+  entries: ProviderCommandEntry[];
+  expiresAt: number;
+}
+
+const DEFAULT_TTL_MS = 60_000;
+
 /**
  * Walks every provider record returned by the injected factory, asks each
  * provider's `ProviderCommandCatalog.listVaultEntries()` for skill-kind
@@ -16,29 +23,32 @@ import type {
  * Per-provider failures are swallowed so a single broken provider cannot
  * blank out the entire Skills tab. When a `logger` is supplied, the failure
  * is logged at warn level under the `quickActions` scope.
+ *
+ * Raw `ProviderCommandEntry[]` buckets are cached per provider for `ttlMs`
+ * so the modal can re-open without rehitting disk. Provider metadata
+ * (`providerEnabled`, `providerDisplayName`) is re-evaluated from the live
+ * `ProviderRecord` on every `listAll()` call so a provider toggled while
+ * the cache is warm is reflected without invalidation.
  */
 export class VaultSkillAggregator implements VaultSkillSource {
   private readonly logger?: Logger;
+  private readonly ttlMs: number;
+  private readonly nowMs: () => number;
+  private readonly cache = new Map<ProviderId, CachedBucket>();
 
   constructor(
     private getProviderRecords: () => ProviderRecord[],
     options: VaultSkillAggregatorOptions = {},
   ) {
     this.logger = options.logger?.scope('quickActions');
+    this.ttlMs = options.ttlMs ?? DEFAULT_TTL_MS;
+    this.nowMs = options.nowMs ?? Date.now;
   }
 
   async listAll(): Promise<SkillTabEntry[]> {
     const records = this.getProviderRecords();
     const buckets = await Promise.all(
-      records.map((r) =>
-        this.collectFromProvider(r).catch((err) => {
-          this.logger?.warn('vault skill aggregation failed', {
-            providerId: r.providerId,
-            err,
-          });
-          return [] as SkillTabEntry[];
-        }),
-      ),
+      records.map((r) => this.fetchBucket(r).then((raw) => this.mapBucket(raw, r))),
     );
     return buckets.flat();
   }
@@ -61,15 +71,48 @@ export class VaultSkillAggregator implements VaultSkillSource {
     // Implementation in Task 5
   }
 
-  private async collectFromProvider(record: ProviderRecord): Promise<SkillTabEntry[]> {
-    const entries = await record.commandCatalog.listVaultEntries();
-    return entries
-      .filter((e) => e.kind === 'skill')
+  /** Returns the raw cached or freshly-fetched provider entries (skill kind). */
+  private async fetchBucket(record: ProviderRecord): Promise<ProviderCommandEntry[]> {
+    const now = this.nowMs();
+    const cached = this.cache.get(record.providerId);
+    if (cached && cached.expiresAt > now) {
+      return cached.entries;
+    }
+    try {
+      const all = await record.commandCatalog.listVaultEntries();
+      const raw = all.filter((e) => e.kind === 'skill');
+      this.cache.set(record.providerId, {
+        entries: raw,
+        expiresAt: now + this.ttlMs,
+      });
+      return raw;
+    } catch (err) {
+      this.logger?.warn('vault skill aggregation failed', {
+        providerId: record.providerId,
+        err,
+      });
+      // Cache empty so we don't thrash retries within TTL
+      this.cache.set(record.providerId, {
+        entries: [],
+        expiresAt: now + this.ttlMs,
+      });
+      return [];
+    }
+  }
+
+  private mapBucket(
+    raw: ProviderCommandEntry[],
+    record: ProviderRecord,
+  ): SkillTabEntry[] {
+    return raw
       .map((e) => this.mapEntry(e, record))
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  private mapEntry(entry: ProviderCommandEntry, record: ProviderRecord): SkillTabEntry {
+  private mapEntry(
+    entry: ProviderCommandEntry,
+    record: ProviderRecord,
+  ): SkillTabEntry {
     const prefix = entry.insertPrefix === '$' ? '$' : '/';
     return {
       id: `${record.providerId}:${entry.id}`,
