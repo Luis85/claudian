@@ -200,10 +200,14 @@ export function createMockEl(tag = 'div'): any {
     innerHTML: '',
 
     get textContent() {
-      return textContent;
+      // Aggregate text from children (mimics DOM behavior)
+      const childText = children.map(c => c.textContent || '').join('');
+      return (textContent || childText) || '';
     },
     set textContent(value: string) {
       textContent = value;
+      // When setting textContent on an element, it clears all children in real DOM
+      // For mock purposes, we'll keep children but update textContent
     },
 
     get className() {
