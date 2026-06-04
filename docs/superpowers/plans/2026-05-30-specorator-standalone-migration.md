@@ -99,7 +99,7 @@ Confirm content matches:
 
 - [ ] **Step 2: Replace contents**
 
-> **Update (post-harness-design):** the live manifest is now `minAppVersion` **1.11.5** (required by the harness's `SecretStorage` key entry) at version **3.3.0** — preserve `1.11.5` and carry the real current version forward; do not regress to the `1.7.2` / `2.9.0` shown when this plan was first drafted.
+> **Update (post-harness-design):** preserve **`minAppVersion` 1.11.5** (required by the harness's `SecretStorage` key entry — the live manifest is already there; the `1.7.2` shown when this plan was drafted must not regress that floor). The *product* `version` intentionally **resets to `1.0.0`** for the standalone release, as the manifest block below sets — regardless of the fork's current `3.3.0`. (Only `minAppVersion` carries forward; the version is a deliberate reset.)
 
 Write to `D:/Projects/claudian/manifest.json`:
 ```json
