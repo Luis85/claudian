@@ -56,6 +56,13 @@ function createPlugin(overrides: Partial<{
     },
     conversationStore: { getConversations: () => [] },
     getConversationSync: jest.fn().mockReturnValue(null),
+    secretStore: {
+      set: jest.fn(),
+      get: jest.fn().mockReturnValue(null),
+      has: jest.fn().mockReturnValue(false),
+      list: jest.fn().mockReturnValue([]),
+    },
+    getResolvedEnvironmentVariables: jest.fn().mockReturnValue({}),
   } as unknown as ClaudianPlugin;
 }
 

@@ -68,6 +68,7 @@ export function extractBlobSecretRefs(
   scope: EnvironmentScope,
   setSecret: SecretSetter,
   usedIds: Set<string>,
+  existingRefs: SecretEnvVarRef[] = [],
 ): { blob: string; refs: SecretEnvVarRef[] } {
   const refs: SecretEnvVarRef[] = [];
   const out: string[] = [];
@@ -85,11 +86,19 @@ export function extractBlobSecretRefs(
       continue;
     }
 
-    const id = uniquifySecretId(migratedEnvSecretId(scope, key), usedIds);
-    usedIds.add(id);
-    setSecret(id, parsed[key]);
-    refs.push({ scope, name: key, secretId: id });
-    // Drop the secret line from the sanitized blob.
+    // A re-entered key (already migrated) updates its existing secret in place,
+    // keeping the same id/ref — so editing a key in the textarea never leaves a
+    // stale SecretStorage value winning over the new one, nor a plaintext line.
+    const existing = existingRefs.find((ref) => ref.scope === scope && ref.name === key);
+    if (existing) {
+      setSecret(existing.secretId, parsed[key]);
+    } else {
+      const id = uniquifySecretId(migratedEnvSecretId(scope, key), usedIds);
+      usedIds.add(id);
+      setSecret(id, parsed[key]);
+      refs.push({ scope, name: key, secretId: id });
+    }
+    // Drop the secret line from the sanitized blob (either way).
   }
 
   return { blob: out.join('\n'), refs };
@@ -125,28 +134,30 @@ export function migrateEnvSecrets(
   const usedIds = new Set<string>([...existing.map((ref) => ref.secretId), ...store.list()]);
   const setSecret: SecretSetter = (id, value) => store.set(id, value);
   const newRefs: SecretEnvVarRef[] = [];
+  let changed = false;
 
-  const shared = extractBlobSecretRefs(getSharedEnvironmentVariables(settings), 'shared', setSecret, usedIds);
-  if (shared.refs.length > 0) {
+  const sharedBlob = getSharedEnvironmentVariables(settings);
+  const shared = extractBlobSecretRefs(sharedBlob, 'shared', setSecret, usedIds, existing);
+  if (shared.blob !== sharedBlob) {
     setSharedEnvironmentVariables(settings, shared.blob);
-    newRefs.push(...shared.refs);
+    changed = true;
   }
+  newRefs.push(...shared.refs);
 
   for (const providerId of providerIds) {
     const scope: EnvironmentScope = `provider:${providerId}`;
-    const result = extractBlobSecretRefs(
-      getProviderEnvironmentVariables(settings, providerId),
-      scope,
-      setSecret,
-      usedIds,
-    );
-    if (result.refs.length > 0) {
+    const blob = getProviderEnvironmentVariables(settings, providerId);
+    const result = extractBlobSecretRefs(blob, scope, setSecret, usedIds, existing);
+    if (result.blob !== blob) {
       setProviderEnvironmentVariables(settings, providerId, result.blob);
-      newRefs.push(...result.refs);
+      changed = true;
     }
+    newRefs.push(...result.refs);
   }
 
-  if (newRefs.length === 0) return false;
-  settings.secretEnvVars = [...existing, ...newRefs];
-  return true;
+  if (newRefs.length > 0) {
+    settings.secretEnvVars = [...existing, ...newRefs];
+    changed = true;
+  }
+  return changed;
 }

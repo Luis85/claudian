@@ -7,6 +7,7 @@ import {
 } from '@/core/providers/providerEnvironment';
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from '@/core/providers/ProviderSettingsCoordinator';
+import { migrateEnvSecrets } from '@/core/providers/secretEnvVars';
 import type { ProviderId } from '@/core/providers/types';
 import { DEFAULT_CHAT_PROVIDER_ID } from '@/core/providers/types';
 import type { Conversation } from '@/core/types';
@@ -38,6 +39,16 @@ export class EnvironmentApplyService {
       await this.plugin.saveSettings();
       return;
     }
+
+    // SEC-A: migrate any newly-typed secret keys out of the edited plaintext
+    // blob into SecretStorage (reusing an existing ref's id when a migrated key
+    // is re-entered), so an edited secret never lingers in plaintext or resolves
+    // to a stale value, and reconciliation below sees the resolved env.
+    migrateEnvSecrets(
+      settingsBag,
+      ProviderRegistry.getRegisteredProviderIds(),
+      this.plugin.secretStore,
+    );
 
     const affected = this.affectedProviders(changedScopes);
     ProviderSettingsCoordinator.handleEnvironmentChange(settingsBag, affected);
