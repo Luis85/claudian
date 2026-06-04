@@ -9,8 +9,10 @@ features:
   - "[[Quick Actions]]"
   - "[[Orchestrator]]"
   - "[[Agent Kanban Board]]"
+roadmap: "[[Specorator Agent Harness PRD]]"
 cta_url: https://github.com/Luis85/specorator
 date: 2026-05-30
+revised: 2026-06-04
 ---
 
 # Specorator
@@ -64,6 +66,20 @@ You're already using AI for serious work. Drafting emails. Planning trips. Compa
 ## Who it's for
 
 If you keep your thinking in a vault and you want help with the mechanical parts of that thinking, this is for you. You don't need to know what an API is. You don't need to write code. You need a folder of notes and a willingness to treat the AI provider less like a search bar and more like a co-worker you give work to. Start with one chat in the sidebar. When you catch yourself typing the same prompt twice, save it as a Quick Action your co-worker can run on tap. When one question turns into four, hand all four to the Orchestrator and let it split the load. When the list of things you've handed off starts to slip, open the board and treat it like a shared backlog between the two of you.
+
+---
+
+## Where it's heading
+
+Specorator is the v1 name for the plugin built on the Claudian codebase, shipped once the foundation underneath it is stable and safe enough to hand to someone who has never opened a terminal. The plan that gets us there is the **[[Specorator Agent Harness PRD]]**.
+
+The short version of that plan: keep the depth Specorator already has — real AI engines, working side by side, with your notes underneath — and close the three things that today still ask too much of a non-technical person.
+
+- **Setup without a terminal.** Install, paste one key, ask your first question. No command line, no hunting for where a program lives, no error you can't read.
+- **Trust you can see and take back.** Every change shown before it lands, and a single "undo everything" that works no matter which engine made the change — not just one of them.
+- **An assistant that actually knows your vault.** It follows your links, reads your tags and properties, finds the note you half-remember, and carries what it learns about your work from one day to the next — instead of treating your vault as a plain folder of files.
+
+Underneath those, the same plan adds sensible spending limits and a security model designed so a booby-trapped web clip or PDF can't quietly turn your assistant against your own notes.
 
 ---
 

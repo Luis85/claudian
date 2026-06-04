@@ -1,24 +1,29 @@
 ---
 type: prd
-title: "Claudian Agent Harness — from CLI bridge to a trustworthy vault agent for everyone"
+name: Specorator (v1)
+title: "Specorator — from Claudian's CLI bridge to a trustworthy vault agent for everyone"
 codename: Vault-Operator-Klasse
 version: 0.1
 status: draft / review
 date: 2026-06-04
 owner: Luis
+product: "[[Specorator]]"
 scope: src/app, src/core, src/providers/*, src/features/* (chat, settings, tasks), docs/product
 method: 4 parallel research subagents (codebase harness audit, Vault Operator + competitive landscape, harness/security best-practice research, UX/onboarding gap audit) synthesised against the user-supplied "Obsidian Agent Harness" PRD draft
-tags: [prd, agent-harness, obsidian, onboarding, safety, ux]
+tags: [prd, specorator, agent-harness, obsidian, onboarding, safety, ux]
 related:
+  - "[[Specorator]]"
   - "[[2026-05-28-plugin-improvement-research-proposal]]"
   - "[[2026-05-28-standalone-product-vision]]"
   - "[[../adr/0001-transport-agnostic-provider-seam]]"
   - "[[Multi Provider Support]]"
 ---
 
-# Claudian Agent Harness PRD
+# Specorator Agent Harness PRD
 
-> **TL;DR** — An agent is a model plus a *harness*: the loop, tools, memory, context discipline, and safety that turn a text predictor into something that gets work done in your vault. Claudian already owns a strong harness layer (multi-provider chat, sessions, approval gates) but it **rents the agentic loop from external CLIs** and exposes that seam to the user. That is the right engineering bet — but it leaves a non-technical person stranded at the install step, unsure what the agent just did to their notes, and unable to undo it in one click. This PRD keeps the delegation architecture and builds the **user-facing harness** on top of it: a zero-terminal first run, a universal one-click undo, vault-native tools shared across every provider via a local MCP bridge, cross-session memory, cost guardrails, and a security model that structurally breaks the lethal trifecta. The north star: **a writer or researcher who has never opened a terminal can install Claudian, paste one key, ask a question about their vault, approve a change, and undo it — all without leaving Obsidian.**
+> **Naming.** *Claudian* is the current plugin and codebase. **Specorator is the product name for v1** — the release this PRD describes, shipped once a stable agent-harness base is in place. Throughout, "Claudian" refers to today's implementation and "Specorator" to the v1 product it becomes. See [[Specorator]] for the v1 product overview.
+
+> **TL;DR** — An agent is a model plus a *harness*: the loop, tools, memory, context discipline, and safety that turn a text predictor into something that gets work done in your vault. Claudian already owns a strong harness layer (multi-provider chat, sessions, approval gates) but it **rents the agentic loop from external CLIs** and exposes that seam to the user. That is the right engineering bet — but it leaves a non-technical person stranded at the install step, unsure what the agent just did to their notes, and unable to undo it in one click. This PRD is the roadmap from that base to **Specorator v1**: keep the delegation architecture and build the **user-facing harness** on top of it — a zero-terminal first run, a universal one-click undo, vault-native tools shared across every provider via a local MCP bridge, cross-session memory, cost guardrails, and a security model that structurally breaks the lethal trifecta. The north star: **a writer or researcher who has never opened a terminal can install Specorator, paste one key, ask a question about their vault, approve a change, and undo it — all without leaving Obsidian.**
 
 ---
 
@@ -336,7 +341,7 @@ Red-team against prompt injection (e.g. Promptfoo suite) · audit-log maturity �
 - **R1 — Co-evolution overfitting.** Vendor agents are post-trained on their own harness; changing tool logic can *degrade* their performance. Keep Vault MCP tool interfaces stable and conventional; don't impose bespoke patch formats.
 - **R2 — Trust is the product.** One data-loss incident burns trust irreversibly. Undo/checkpoints/approval are non-negotiable and must ship in Phase 1, tested hard.
 - **R3 — Context rot.** Without disciplined context management, quality degrades on long tasks. F-CTX-* are not optional polish.
-- **R4 — Scope vs. the standalone-product vision.** This PRD overlaps the Specorator/standalone-product direction; reconcile naming and surface ownership with `[[2026-05-28-standalone-product-vision]]` before build.
+- **R4 — Scope vs. the standalone-product vision (naming resolved).** **Specorator is the confirmed v1 name** for the release this PRD targets; Claudian is the working codebase it grows out of. The remaining work is to align the surface naming (settings labels, storage paths such as `.claudian/` → product convention, ribbon/command copy) and reconcile the feature set here with `[[Specorator]]` and `[[2026-05-28-standalone-product-vision]]` as v1 firms up.
 
 ---
 
