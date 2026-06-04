@@ -1,7 +1,7 @@
 import { parseEnvironmentVariables } from '../../utils/env';
 import type { Conversation } from '../types';
 import { getRuntimeEnvironmentText } from './providerEnvironment';
-import type { ProviderId } from './types';
+import type { EnvTextResolver, ProviderId } from './types';
 
 /** Per-provider variation behind the environment-hash invalidation seam. */
 export interface EnvHashReconcilerSpec {
@@ -34,8 +34,14 @@ export function reconcileEnvironmentHash(
   spec: EnvHashReconcilerSpec,
   settings: Record<string, unknown>,
   conversations: Conversation[],
+  resolveEnvText?: EnvTextResolver,
 ): { changed: boolean; invalidatedConversations: Conversation[] } {
-  const envText = getRuntimeEnvironmentText(settings, spec.providerId);
+  // SEC-A: hash the RESOLVED env (secrets overlaid) when available, so a watched
+  // key moving from the plaintext blob into SecretStorage keeps the same value
+  // and the same hash — no spurious session invalidation on upgrade/edit.
+  const envText = resolveEnvText
+    ? resolveEnvText(spec.providerId)
+    : getRuntimeEnvironmentText(settings, spec.providerId);
   const currentHash = computeEnvHash(envText, spec.watchedKeys);
 
   if (currentHash === spec.getSavedHash(settings)) {

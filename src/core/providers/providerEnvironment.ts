@@ -247,6 +247,13 @@ export function getRuntimeEnvironmentVariables(
   return parseEnvironmentVariables(getRuntimeEnvironmentText(settings, providerId));
 }
 
+/** Serialize an env dict back to `KEY=VALUE` lines (e.g. to hash a resolved env). */
+export function serializeEnvironmentVariables(env: Record<string, string>): string {
+  return Object.entries(env)
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n');
+}
+
 export function getEnvironmentVariablesForScope(
   settings: Record<string, unknown>,
   scope: EnvironmentScope,

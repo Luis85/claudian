@@ -24,6 +24,7 @@ import {
   getEnvironmentVariablesForScope as getScopedEnvironmentVariables,
   getRuntimeEnvironmentText,
   getRuntimeEnvironmentVariables,
+  serializeEnvironmentVariables,
 } from './core/providers/providerEnvironment';
 import { ProviderRegistry } from './core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from './core/providers/ProviderSettingsCoordinator';
@@ -428,6 +429,9 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.settings,
       this.conversationStore.getConversations(),
       providerIds,
+      // SEC-A: hash the resolved env so secrets in SecretStorage keep the same
+      // watched-key values as the old plaintext env — no spurious invalidation.
+      (providerId) => serializeEnvironmentVariables(this.getResolvedEnvironmentVariables(providerId)),
     );
   }
 

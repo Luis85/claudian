@@ -54,6 +54,29 @@ describe('reconcileEnvironmentHash', () => {
     expect(spec.saveHash).not.toHaveBeenCalled();
   });
 
+  // SEC-A: when a watched key is migrated out of the plaintext blob into
+  // SecretStorage, resolveEnvText re-injects its value so the hash is unchanged
+  // and sessions are NOT invalidated.
+  it('uses resolveEnvText so a migrated watched secret keeps the hash stable', () => {
+    const spec = makeSpec({ watchedKeys: ['API_KEY'], getSavedHash: () => 'API_KEY=sk-1' });
+    const result = reconcileEnvironmentHash(
+      spec,
+      { __envText: '' }, // plaintext blob no longer has the key (migrated)
+      [makeConversation({ sessionId: 's1' })],
+      () => 'API_KEY=sk-1', // resolver re-injects it from SecretStorage
+    );
+
+    expect(result.changed).toBe(false);
+    expect(spec.invalidateConversation).not.toHaveBeenCalled();
+    expect(spec.saveHash).not.toHaveBeenCalled();
+  });
+
+  it('without a resolver, a stripped watched key changes the hash (the regression this guards)', () => {
+    const spec = makeSpec({ watchedKeys: ['API_KEY'], getSavedHash: () => 'API_KEY=sk-1' });
+    const result = reconcileEnvironmentHash(spec, { __envText: '' }, []);
+    expect(result.changed).toBe(true);
+  });
+
   it('persists the new hash and returns the invalidated conversations on change', () => {
     const stale = makeConversation({ id: 'stale', sessionId: 's1' });
     const live = makeConversation({ id: 'live', sessionId: null });

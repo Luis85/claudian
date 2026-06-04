@@ -86,12 +86,21 @@ export interface ProviderRegistration {
   subagentLifecycleAdapter?: ProviderSubagentLifecycleAdapter;
 }
 
+/**
+ * SEC-A: resolves the effective env text for a provider WITH SecretStorage values
+ * overlaid. Env-hash reconciliation uses this so moving a watched key (e.g.
+ * `OPENAI_API_KEY`) from the plaintext blob into the keychain does not change the
+ * hash and therefore does not invalidate existing sessions.
+ */
+export type EnvTextResolver = (providerId: ProviderId) => string;
+
 export interface ProviderSettingsReconciler {
   handleEnvironmentChange?(settings: Record<string, unknown>): boolean;
 
   reconcileModelWithEnvironment(
     settings: Record<string, unknown>,
     conversations: Conversation[],
+    resolveEnvText?: EnvTextResolver,
   ): { changed: boolean; invalidatedConversations: Conversation[] };
 
   normalizeModelVariantSettings(settings: Record<string, unknown>): boolean;

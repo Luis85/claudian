@@ -2,6 +2,7 @@ import { Notice } from 'obsidian';
 
 import {
   getEnvironmentVariablesForScope as getScopedEnvironmentVariables,
+  serializeEnvironmentVariables,
   setEnvironmentVariablesForScope,
 } from '@/core/providers/providerEnvironment';
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
@@ -110,6 +111,9 @@ export class EnvironmentApplyService {
       this.plugin.settings,
       this.plugin.conversationStore.getConversations(),
       providerIds,
+      // SEC-A: hash the resolved env (secrets overlaid) so moving a watched key
+      // into SecretStorage doesn't invalidate sessions on env edits.
+      (providerId) => serializeEnvironmentVariables(this.plugin.getResolvedEnvironmentVariables(providerId)),
     );
   }
 

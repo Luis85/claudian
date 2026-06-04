@@ -1,6 +1,6 @@
 import type { Conversation } from '../types';
 import { ProviderRegistry } from './ProviderRegistry';
-import type { ProviderChatUIConfig, ProviderId } from './types';
+import type { EnvTextResolver, ProviderChatUIConfig, ProviderId } from './types';
 
 export interface SettingsReconciliationResult {
   changed: boolean;
@@ -363,11 +363,13 @@ export class ProviderSettingsCoordinator {
   static reconcileAllProviders(
     settings: Record<string, unknown>,
     conversations: Conversation[],
+    resolveEnvText?: EnvTextResolver,
   ): SettingsReconciliationResult {
     return this.reconcileProviders(
       settings,
       conversations,
       ProviderRegistry.getRegisteredProviderIds(),
+      resolveEnvText,
     );
   }
 
@@ -375,6 +377,7 @@ export class ProviderSettingsCoordinator {
     settings: Record<string, unknown>,
     conversations: Conversation[],
     providerIds: ProviderId[],
+    resolveEnvText?: EnvTextResolver,
   ): SettingsReconciliationResult {
     let anyChanged = false;
     const allInvalidated: Conversation[] = [];
@@ -394,6 +397,7 @@ export class ProviderSettingsCoordinator {
       const { changed, invalidatedConversations } = reconciler.reconcileModelWithEnvironment(
         targetSettings,
         providerConversations,
+        resolveEnvText,
       );
 
       if (changed) {
