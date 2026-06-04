@@ -4,11 +4,16 @@ import { parsedToSlashCommand, parseSlashCommandContent, serializeCommand } from
 
 export const SKILLS_PATH = '.claude/skills';
 
+export interface LoadedSkill {
+  skill: SlashCommand;
+  filePath: string;
+}
+
 export class SkillStorage {
   constructor(private adapter: VaultFileAdapter) {}
 
-  async loadAll(): Promise<SlashCommand[]> {
-    const skills: SlashCommand[] = [];
+  async loadAll(): Promise<LoadedSkill[]> {
+    const skills: LoadedSkill[] = [];
 
     try {
       const folders = await this.adapter.listFolders(SKILLS_PATH);
@@ -24,12 +29,15 @@ export class SkillStorage {
           const parsed = parseSlashCommandContent(content);
 
           skills.push({
-            ...parsedToSlashCommand(parsed, {
-              id: `skill-${skillName}`,
-              name: skillName,
-              source: 'user',
-            }),
-            kind: 'skill',
+            skill: {
+              ...parsedToSlashCommand(parsed, {
+                id: `skill-${skillName}`,
+                name: skillName,
+                source: 'user',
+              }),
+              kind: 'skill',
+            },
+            filePath: skillPath,
           });
         } catch {
           // Non-critical: skip malformed skill files

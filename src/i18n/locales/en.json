@@ -215,7 +215,20 @@
       "deleteFailed": "Failed to delete quick action",
       "searchPlaceholder": "Search actions by name, description, or tag…",
       "noResults": "No quick actions match your search.",
-      "filterByTag": "Filter by tag {tag}"
+      "filterByTag": "Filter by tag {tag}",
+      "tabs": {
+        "quickActions": "Quick actions",
+        "skills": "Skills"
+      }
+    },
+    "skills": {
+      "emptyAll": "No vault skills found.",
+      "emptyHint": "Skills live in .claude/skills/, .codex/skills/, and .agents/skills/.",
+      "providerDisabled": "Provider '{provider}' is disabled. Enable it in settings.",
+      "editInSettings": "Edit in {provider} settings",
+      "disabledBadge": "disabled",
+      "searchPlaceholder": "Search skills by name or description…",
+      "noResults": "No skills match your search."
     },
     "editor": {
       "titleEdit": "Edit quick action",

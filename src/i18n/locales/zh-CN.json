@@ -551,7 +551,20 @@
       "emptyLead": "Quick actions are reusable prompts stored as markdown notes in your vault—handy for workflows you run often.",
       "emptyHintVault": "Each file uses frontmatter type quick-action, plus name, optional description and icon; the note body is the message sent to the chat.",
       "emptyHintRun": "After you create actions, open this dialog from the toolbar and click a row to run one instantly.",
-      "emptyHintCreate": "Use Add action below to create your first quick action, or set the vault folder under Settings → Quick Actions."
+      "emptyHintCreate": "Use Add action below to create your first quick action, or set the vault folder under Settings → Quick Actions.",
+      "tabs": {
+        "quickActions": "Quick actions",
+        "skills": "Skills"
+      }
+    },
+    "skills": {
+      "emptyAll": "No vault skills found.",
+      "emptyHint": "Skills live in .claude/skills/, .codex/skills/, and .agents/skills/.",
+      "providerDisabled": "Provider '{provider}' is disabled. Enable it in settings.",
+      "editInSettings": "Edit in {provider} settings",
+      "disabledBadge": "disabled",
+      "searchPlaceholder": "Search skills by name or description…",
+      "noResults": "No skills match your search."
     },
     "editor": {
       "titleEdit": "Edit quick action",

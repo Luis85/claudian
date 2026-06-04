@@ -50,15 +50,37 @@ userInvocable: true
 Do the thing`,
       });
       const storage = new SkillStorage(adapter);
-      const skills = await storage.loadAll();
+      const loaded = await storage.loadAll();
 
-      expect(skills).toHaveLength(1);
-      expect(skills[0].id).toBe('skill-my-skill');
-      expect(skills[0].name).toBe('my-skill');
-      expect(skills[0].description).toBe('A helpful skill');
-      expect(skills[0].userInvocable).toBe(true);
-      expect(skills[0].content).toBe('Do the thing');
-      expect(skills[0].source).toBe('user');
+      expect(loaded).toHaveLength(1);
+      const { skill } = loaded[0];
+      expect(skill.id).toBe('skill-my-skill');
+      expect(skill.name).toBe('my-skill');
+      expect(skill.description).toBe('A helpful skill');
+      expect(skill.userInvocable).toBe(true);
+      expect(skill.content).toBe('Do the thing');
+      expect(skill.source).toBe('user');
+    });
+
+    it('returns the SKILL.md path alongside each skill', async () => {
+      const adapter = createMockAdapter({
+        '.claude/skills/tdd/SKILL.md': `---
+description: TDD
+---
+Prompt`,
+        '.claude/skills/brainstorming/SKILL.md': `---
+description: Brainstorm
+---
+Prompt`,
+      });
+      const storage = new SkillStorage(adapter);
+      const loaded = await storage.loadAll();
+
+      const paths = loaded.map((entry) => entry.filePath).sort();
+      expect(paths).toEqual([
+        '.claude/skills/brainstorming/SKILL.md',
+        '.claude/skills/tdd/SKILL.md',
+      ]);
     });
 
     it('loads multiple skills', async () => {
@@ -74,10 +96,10 @@ disableModelInvocation: true
 Prompt B`,
       });
       const storage = new SkillStorage(adapter);
-      const skills = await storage.loadAll();
+      const loaded = await storage.loadAll();
 
-      expect(skills).toHaveLength(2);
-      expect(skills.map(s => s.name).sort()).toEqual(['skill-a', 'skill-b']);
+      expect(loaded).toHaveLength(2);
+      expect(loaded.map(({ skill }) => skill.name).sort()).toEqual(['skill-a', 'skill-b']);
     });
 
     it('skips folders without SKILL.md', async () => {
@@ -89,28 +111,28 @@ Prompt`,
         '.claude/skills/no-skill/README.md': 'Just a readme',
       });
       const storage = new SkillStorage(adapter);
-      const skills = await storage.loadAll();
+      const loaded = await storage.loadAll();
 
-      expect(skills).toHaveLength(1);
-      expect(skills[0].name).toBe('has-skill');
+      expect(loaded).toHaveLength(1);
+      expect(loaded[0].skill.name).toBe('has-skill');
     });
 
     it('returns empty array when skills directory does not exist', async () => {
       const adapter = createMockAdapter({});
       (adapter.exists as jest.Mock).mockResolvedValue(false);
       const storage = new SkillStorage(adapter);
-      const skills = await storage.loadAll();
+      const loaded = await storage.loadAll();
 
-      expect(skills).toEqual([]);
+      expect(loaded).toEqual([]);
     });
 
     it('returns empty array when listFolders throws an error', async () => {
       const adapter = createMockAdapter({});
       (adapter.listFolders as jest.Mock).mockRejectedValue(new Error('Permission denied'));
       const storage = new SkillStorage(adapter);
-      const skills = await storage.loadAll();
+      const loaded = await storage.loadAll();
 
-      expect(skills).toEqual([]);
+      expect(loaded).toEqual([]);
     });
 
     it('skips malformed skill and continues loading valid ones', async () => {
@@ -128,10 +150,10 @@ Prompt`,
         return originalImpl(p);
       });
       const storage = new SkillStorage(adapter);
-      const skills = await storage.loadAll();
+      const loaded = await storage.loadAll();
 
-      expect(skills).toHaveLength(1);
-      expect(skills[0].name).toBe('good');
+      expect(loaded).toHaveLength(1);
+      expect(loaded[0].skill.name).toBe('good');
     });
 
     it('parses all skill frontmatter fields', async () => {
@@ -150,10 +172,10 @@ allowed-tools:
 Full prompt`,
       });
       const storage = new SkillStorage(adapter);
-      const skills = await storage.loadAll();
+      const loaded = await storage.loadAll();
 
-      expect(skills).toHaveLength(1);
-      const skill = skills[0];
+      expect(loaded).toHaveLength(1);
+      const { skill } = loaded[0];
       expect(skill.description).toBe('Full skill');
       expect(skill.disableModelInvocation).toBe(true);
       expect(skill.userInvocable).toBe(true);
@@ -173,10 +195,10 @@ Prompt`,
         '.claude/skills/invalid/SKILL.md': 'No frontmatter at all',
       });
       const storage = new SkillStorage(adapter);
-      const skills = await storage.loadAll();
+      const loaded = await storage.loadAll();
 
       // Invalid skill has no frontmatter but still loads (content only)
-      expect(skills).toHaveLength(2);
+      expect(loaded).toHaveLength(2);
     });
   });
 

@@ -17,6 +17,9 @@ import {
 } from '../../utils/animationFrame';
 import { openPluginSettingsTab } from '../../utils/obsidianPrivateApi';
 import { QuickActionStorage } from '../quickActions/QuickActionStorage';
+import { buildProviderRecords } from '../quickActions/skills/buildProviderRecords';
+import { runVaultSkill } from '../quickActions/skills/runVaultSkill';
+import { VaultSkillAggregator } from '../quickActions/skills/VaultSkillAggregator';
 import { QuickActionsModal } from '../quickActions/ui/QuickActionsModal';
 import { resolveModelContextWindow } from '../settings/customModels/resolveModelContextWindow';
 import type { HistoryConversationOpenState } from './controllers/ConversationController';
@@ -484,13 +487,18 @@ export class ClaudianView extends ItemView {
         this.plugin.storage.getAdapter(),
         () => this.plugin.settings.quickActionsFolder ?? 'Quick Actions',
       );
+      const aggregator = new VaultSkillAggregator(() => buildProviderRecords(this.plugin));
       new QuickActionsModal(this.plugin.app, {
         storage,
+        aggregator,
         onRun: (action) => {
           // Resolve the active tab at run time — user may have switched tabs while the modal was open.
           const targetTab = this.tabManager?.getActiveTab();
           if (!targetTab) return;
           void targetTab.controllers.inputController?.sendMessage({ content: action.prompt });
+        },
+        onRunSkill: (entry) => {
+          void runVaultSkill(this.plugin, entry, null);
         },
       }).open();
     });

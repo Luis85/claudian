@@ -12,6 +12,9 @@ import { SlashCommandDropdown } from '../../../shared/components/SlashCommandDro
 import { getEnhancedPath } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
 import { QuickActionStorage } from '../../quickActions/QuickActionStorage';
+import { buildProviderRecords } from '../../quickActions/skills/buildProviderRecords';
+import { runVaultSkill } from '../../quickActions/skills/runVaultSkill';
+import { VaultSkillAggregator } from '../../quickActions/skills/VaultSkillAggregator';
 import { QuickActionsModal } from '../../quickActions/ui/QuickActionsModal';
 import { resolveModelContextWindow } from '../../settings/customModels/resolveModelContextWindow';
 import { ChatDropController } from '../controllers/ChatDropController';
@@ -406,10 +409,15 @@ function initializeInputToolbar(
         plugin.storage.getAdapter(),
         () => plugin.settings.quickActionsFolder ?? 'Quick Actions',
       );
+      const aggregator = new VaultSkillAggregator(() => buildProviderRecords(plugin));
       new QuickActionsModal(plugin.app, {
         storage,
+        aggregator,
         onRun: (action) => {
           void tab.controllers.inputController?.sendMessage({ content: action.prompt });
+        },
+        onRunSkill: (entry) => {
+          void runVaultSkill(plugin, entry, null);
         },
       }).open();
     },

@@ -1,6 +1,7 @@
 import { Notice, TFile, TFolder } from 'obsidian';
 
 import { openContextMenuQuickAction } from '@/features/quickActions/openContextMenuQuickAction';
+import type { SkillTabEntry } from '@/features/quickActions/skills/types';
 import type { QuickAction } from '@/features/quickActions/types';
 
 // ---- Mocks ----------------------------------------------------------------
@@ -19,12 +20,34 @@ jest.mock('@/features/quickActions/QuickActionStorage', () => ({
   QuickActionStorage: jest.fn().mockImplementation(() => ({})),
 }));
 
-// Capture the onRun callback passed to QuickActionsModal so tests can invoke it.
+jest.mock('@/features/quickActions/skills/buildProviderRecords', () => ({
+  buildProviderRecords: jest.fn().mockReturnValue([]),
+}));
+
+jest.mock('@/features/quickActions/skills/VaultSkillAggregator', () => ({
+  VaultSkillAggregator: jest.fn().mockImplementation(() => ({
+    listAll: jest.fn().mockResolvedValue([]),
+  })),
+}));
+
+jest.mock('@/features/quickActions/skills/runVaultSkill', () => ({
+  runVaultSkill: jest.fn().mockResolvedValue(undefined),
+}));
+
+// Capture the onRun/onRunSkill callbacks + aggregator passed to QuickActionsModal.
 let capturedOnRun: ((action: QuickAction) => void) | null = null;
+let capturedOnRunSkill: ((entry: SkillTabEntry) => void) | null = null;
+let capturedAggregator: unknown = null;
 
 jest.mock('@/features/quickActions/ui/QuickActionsModal', () => ({
-  QuickActionsModal: jest.fn().mockImplementation((_app: unknown, callbacks: { onRun: (action: QuickAction) => void }) => {
+  QuickActionsModal: jest.fn().mockImplementation((_app: unknown, callbacks: {
+    onRun: (action: QuickAction) => void;
+    onRunSkill: (entry: SkillTabEntry) => void;
+    aggregator: unknown;
+  }) => {
     capturedOnRun = callbacks.onRun;
+    capturedOnRunSkill = callbacks.onRunSkill;
+    capturedAggregator = callbacks.aggregator;
     return { open: jest.fn() };
   }),
 }));
@@ -101,6 +124,8 @@ function makeMockPlugin(
 
 beforeEach(() => {
   capturedOnRun = null;
+  capturedOnRunSkill = null;
+  capturedAggregator = null;
   jest.clearAllMocks();
 });
 
@@ -283,6 +308,39 @@ describe('openContextMenuQuickAction', () => {
 
       // No error thrown, no send attempted
       expect(Notice).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('skills wiring', () => {
+    it('passes a VaultSkillAggregator into the modal', async () => {
+      const activeTab = makeMockTab('blank');
+      const tabManager = makeMockTabManager({ activeTab, canCreate: true });
+      const plugin = makeMockPlugin(tabManager);
+      await openContextMenuQuickAction(plugin as any, { path: 'note.md' } as TFile);
+      expect(capturedAggregator).not.toBeNull();
+    });
+
+    it('routes onRunSkill to runVaultSkill with the same file argument', async () => {
+      const { runVaultSkill } = jest.requireMock(
+        '@/features/quickActions/skills/runVaultSkill',
+      );
+      const activeTab = makeMockTab('blank');
+      const tabManager = makeMockTabManager({ activeTab, canCreate: true });
+      const plugin = makeMockPlugin(tabManager);
+      const file = Object.assign(Object.create(TFile.prototype), { path: 'note.md' });
+      await openContextMenuQuickAction(plugin as any, file);
+      const entry = {
+        id: 'claude:skill-x',
+        name: 'x',
+        providerId: 'claude',
+        providerDisplayName: 'Claude',
+        description: '',
+        insertPrefix: '/',
+        sourceFilePath: null,
+        providerEnabled: true,
+      } as SkillTabEntry;
+      capturedOnRunSkill!(entry);
+      expect(runVaultSkill).toHaveBeenCalledWith(plugin, entry, file);
     });
   });
 });

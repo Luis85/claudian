@@ -1,5 +1,13 @@
 # Skills Tab in Quick Actions Modal Implementation Plan
 
+> **Status: implemented 2026-06-04** via [[Agent Board/tasks/work-order-20260604-skills-tab-quick-actions-modal.md]]. All 14 tasks completed; full verification (`npm run typecheck && npm run lint && npm run test && npm run build`) passes. Plan-checkbox tracking deliberately not back-filled here — the work order's acceptance criteria is the canonical progress record.
+>
+> **Deviations from plan during implementation:**
+> - Extracted `buildProviderRecords` into `src/features/quickActions/skills/buildProviderRecords.ts` instead of inlining inside `openContextMenuQuickAction.ts`. Reason: the new required `aggregator` + `onRunSkill` modal callbacks forced updates at three modal-construction sites (`openContextMenuQuickAction.ts`, `ClaudianView.ts` header zap button, `tabs/tabUi.ts` `onQuickActionsOpen`). Sharing the helper avoids triplicate registry boilerplate.
+> - `QuickActionsModal.renderActiveTab` uses `(this.searchInputEl as HTMLInputElement | null)?.focus()` cast to defeat TS narrowing after the renderXBody method call (TS doesn't track property reassignments through method calls).
+> - Modal test mocks needed `@jest-environment jsdom` annotation + `setTimeout` instead of `setImmediate` (jsdom lacks `setImmediate`).
+> - `SkillStorage.loadAll` shape change rippled into `StorageService.loadAllSlashCommands` which also had to be updated (`skills.map(entry => entry.skill)`).
+>
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a read-only Skills tab to the existing Quick Actions modal that lists vault-discovered skills across every registered provider and routes execution to a provider-matched chat tab, inheriting the right-click file/folder pill attach.
