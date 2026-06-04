@@ -15,9 +15,9 @@ import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { formatDurationMmSs } from '../../../utils/date';
 import { processFileLinks, registerFileLinkHandler } from '../../../utils/fileLink';
-import { getVaultFileByPath } from '../../../utils/obsidianCompat';
 import { replaceImageEmbedsWithHtml } from '../../../utils/imageEmbed';
 import { escapeMathDelimitersForStreaming } from '../../../utils/markdownMath';
+import { getVaultFileByPath } from '../../../utils/obsidianCompat';
 import { extractVaultMentions } from '../../../utils/vaultMentions';
 import { findRewindContext } from '../rewind';
 import { eligibleMessageActions } from './messageActions';
@@ -762,7 +762,7 @@ export class MessageRenderer {
     const src = this.resolveImageSrc(image);
     if (!src) {
       // Nothing to show \u2014 surface a brief fallback rather than a blank modal.
-      new Notice('Image is no longer available in the vault.');
+      new Notice(t('chat.image.unavailable'));
       return;
     }
 

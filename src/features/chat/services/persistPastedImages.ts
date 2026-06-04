@@ -43,7 +43,8 @@ export async function persistPastedImages(
     try {
       const targetPath = await app.fileManager.getAvailablePathForAttachment(desired);
       const buffer = Buffer.from(image.data, 'base64');
-      const tFile: TFile = await app.vault.createBinary(targetPath, buffer);
+      const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+      const tFile: TFile = await app.vault.createBinary(targetPath, arrayBuffer);
       image.path = tFile.path;
       image.name = tFile.name;
     } catch {

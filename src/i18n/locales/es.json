@@ -176,7 +176,8 @@
       "pickerFailed": "Unable to open folder picker."
     },
     "image": {
-      "unsupported": "Image attachments are not supported by this provider."
+      "unsupported": "Image attachments are not supported by this provider.",
+      "unavailable": "Image is no longer available in the vault."
     },
     "fileOpen": {
       "notFound": "Could not open file: {path}",
