@@ -239,7 +239,7 @@
       "width": 480,
       "height": 180,
       "color": "5",
-      "text": "## Vault MCP server 🟦\nLoopback HTTP MCP all four CLIs dial into. Gives every backend vault-native tools + shared memory.\n*Additive tool surface — not a safety chokepoint.*"
+      "text": "## Vault MCP server 🟦\nLoopback HTTP MCP the CLIs dial into (reach is per-provider, gated on the S1 spike). Gives connected backends vault-native tools + shared memory.\n*Additive tool surface — not a safety chokepoint.*"
     },
     {
       "id": "c_lite",
@@ -299,7 +299,7 @@
       "width": 360,
       "height": 180,
       "color": "1",
-      "text": "**Undo / revert turn — Shadow-Git** 🟥\nWhole-vault, turn-level checkpoints (gitdir outside the vault). One-click **'revert vault to before this turn'** on every provider. *Not covered: out-of-vault writes, big binaries, concurrent tabs.*"
+      "text": "**Undo / revert turn — Shadow-Git** 🟥\nWhole-vault, turn-level checkpoints (gitdir outside the vault). One-click **'revert vault to before this turn'** (cross-provider in Phase 2; Claude-native first). *Not covered: out-of-vault writes, big binaries, concurrent tabs.*"
     },
     {
       "id": "sf_audit",
@@ -489,7 +489,7 @@
       "width": 185,
       "height": 170,
       "color": "5",
-      "text": "**Tools (MCP)** 🟦\nConnect once → all providers. A gallery, not JSON."
+      "text": "**Tools (MCP)** 🟦\nConnect once → every MCP-capable provider. A gallery, not JSON."
     },
     {
       "id": "hl_rules",

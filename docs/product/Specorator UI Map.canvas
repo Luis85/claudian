@@ -553,7 +553,7 @@
       "width": 300,
       "height": 130,
       "color": "5",
-      "text": "**Rule Editor** 🟦\nAuthor a standing rule once → compiled to every provider."
+      "text": "**Rule Editor** 🟦\nAuthor a standing rule once → compiled to each provider's native rules file."
     },
     {
       "id": "f_skill",
