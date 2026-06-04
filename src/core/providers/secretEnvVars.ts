@@ -74,7 +74,15 @@ export function resolveProviderEnvVars(
     secretEnvVarsForScope(refs, `provider:${providerId}`),
     resolve,
   ).missing;
-  return { env, missing: [...sharedMissing, ...providerMissing] };
+  // A ref counts as "missing" only when nothing else supplies its variable name
+  // in the FINAL env — a later-precedence source (provider plaintext, or a
+  // provider-scope secret) may have already overridden a missing shared secret,
+  // in which case the env is complete and reconciliation must not be deferred.
+  const missing = [...sharedMissing, ...providerMissing].filter((ref) => {
+    const value = env[ref.name];
+    return value === undefined || value === '';
+  });
+  return { env, missing };
 }
 
 /**

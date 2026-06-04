@@ -105,6 +105,18 @@ describe('secretEnvVars — resolveProviderEnvVars precedence', () => {
     const { missing } = resolveProviderEnvVars(settings, 'codex', () => null);
     expect(missing.map((r) => r.name)).toEqual(['OPENAI_API_KEY']);
   });
+
+  it('does not report a missing shared secret when a later source supplies the same name', () => {
+    const settings: Record<string, unknown> = {
+      sharedEnvironmentVariables: '',
+      // Provider plaintext supplies OPENAI_API_KEY, overriding the missing shared secret.
+      providerConfigs: { codex: { environmentVariables: 'OPENAI_API_KEY=provider-key' } },
+      secretEnvVars: [{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: 'gone' }],
+    };
+    const { env, missing } = resolveProviderEnvVars(settings, 'codex', () => null);
+    expect(env.OPENAI_API_KEY).toBe('provider-key');
+    expect(missing).toEqual([]); // env is complete → not deferred
+  });
 });
 
 describe('secretEnvVars — migration extraction', () => {
