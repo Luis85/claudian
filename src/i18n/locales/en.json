@@ -120,7 +120,7 @@
     "feedback": {
       "thumbsUp": {
         "label": "Helpful",
-        "prompt": "That response was helpful. Briefly note what worked so we keep it in mind going forward."
+        "prompt": "Looks good. Proceed with that approach."
       },
       "thumbsDown": {
         "label": "Not helpful",

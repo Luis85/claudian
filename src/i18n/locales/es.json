@@ -74,7 +74,7 @@
     "feedback": {
       "thumbsUp": {
         "label": "Útil",
-        "prompt": "Esa respuesta fue útil. Anota brevemente qué funcionó para tenerlo en cuenta en el futuro."
+        "prompt": "Me parece bien. Adelante con ese enfoque."
       },
       "thumbsDown": {
         "label": "No útil",
