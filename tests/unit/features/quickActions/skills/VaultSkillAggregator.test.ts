@@ -1,5 +1,5 @@
 import type { ProviderCommandEntry } from '@/core/providers/commands/ProviderCommandEntry';
-import type { ProviderRecord } from '@/features/quickActions/skills/types';
+import type { ProviderRecord, SkillTabEntry } from '@/features/quickActions/skills/types';
 import { VaultSkillAggregator } from '@/features/quickActions/skills/VaultSkillAggregator';
 
 function makeRecord(
@@ -424,5 +424,69 @@ describe('VaultSkillAggregator', () => {
     enabled = false;
     const [entry] = agg.listCachedNow();
     expect(entry.providerEnabled).toBe(false);
+  });
+
+  it('listAllStreaming fires callback once per provider in resolution order', async () => {
+    let resolveFast: (v: ProviderCommandEntry[]) => void = () => {};
+    let resolveSlow: (v: ProviderCommandEntry[]) => void = () => {};
+    const fast = new Promise<ProviderCommandEntry[]>((r) => { resolveFast = r; });
+    const slow = new Promise<ProviderCommandEntry[]>((r) => { resolveSlow = r; });
+    const records = [
+      makeRecord({ providerId: 'claude', entries: () => slow }),
+      makeRecord({ providerId: 'codex', displayName: 'Codex', entries: () => fast }),
+    ];
+    const agg = new VaultSkillAggregator(() => records, { ttlMs: 60_000 });
+
+    const seen: string[] = [];
+    const done = agg.listAllStreaming((providerId) => { seen.push(providerId); });
+
+    resolveFast([makeSkillEntry({ id: 'codex-x', name: 'x', providerId: 'codex', insertPrefix: '$' })]);
+    resolveSlow([makeSkillEntry({ id: 'skill-y', name: 'y' })]);
+
+    await done;
+    expect(seen).toEqual(['codex', 'claude']);
+  });
+
+  it('listAllStreaming resolves after every provider settles', async () => {
+    const records = [
+      makeRecord({ entries: [makeSkillEntry({ id: 'a', name: 'a' })] }),
+      makeRecord({
+        providerId: 'codex',
+        displayName: 'Codex',
+        entries: [makeSkillEntry({ id: 'b', name: 'b', providerId: 'codex', insertPrefix: '$' })],
+      }),
+    ];
+    const agg = new VaultSkillAggregator(() => records, { ttlMs: 60_000 });
+    const seen: string[] = [];
+    await agg.listAllStreaming((p) => { seen.push(p); });
+    expect(new Set(seen)).toEqual(new Set(['claude', 'codex']));
+  });
+
+  it('listAllStreaming callback receives sorted SkillTabEntry[] for that provider', async () => {
+    const records = [
+      makeRecord({
+        entries: [
+          makeSkillEntry({ id: 'skill-z', name: 'z' }),
+          makeSkillEntry({ id: 'skill-a', name: 'a' }),
+        ],
+      }),
+    ];
+    const agg = new VaultSkillAggregator(() => records, { ttlMs: 60_000 });
+    let received: SkillTabEntry[] = [];
+    await agg.listAllStreaming((_id, entries) => { received = entries; });
+    expect(received.map((e) => e.name)).toEqual(['a', 'z']);
+  });
+
+  it('listAllStreaming still fires for a provider whose fetch throws (empty entries)', async () => {
+    const records = [
+      makeRecord({
+        providerId: 'claude',
+        entries: () => Promise.reject(new Error('boom')),
+      }),
+    ];
+    const agg = new VaultSkillAggregator(() => records, { ttlMs: 60_000 });
+    const seen: Array<{ p: string; n: number }> = [];
+    await agg.listAllStreaming((p, e) => { seen.push({ p, n: e.length }); });
+    expect(seen).toEqual([{ p: 'claude', n: 0 }]);
   });
 });

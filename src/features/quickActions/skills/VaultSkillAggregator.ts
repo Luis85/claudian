@@ -77,9 +77,22 @@ export class VaultSkillAggregator implements VaultSkillSource {
   }
 
   async listAllStreaming(
-    _onProviderResolved: (providerId: ProviderId, entries: SkillTabEntry[]) => void,
+    onProviderResolved: (providerId: ProviderId, entries: SkillTabEntry[]) => void,
   ): Promise<void> {
-    // Implementation in Task 8
+    const records = this.getProviderRecords();
+    await Promise.all(
+      records.map(async (r) => {
+        const raw = await this.fetchBucket(r);
+        try {
+          onProviderResolved(r.providerId, this.mapBucket(raw, r));
+        } catch (err) {
+          this.logger?.warn('skill stream callback threw', {
+            providerId: r.providerId,
+            err,
+          });
+        }
+      }),
+    );
   }
 
   invalidate(providerId?: ProviderId): void {
