@@ -54,6 +54,33 @@ describe('assignNextFavoriteRank', () => {
     ];
     expect(assignNextFavoriteRank(list)).toBe(1);
   });
+
+  it('returns null when five favorites exist with no ranks', () => {
+    const favs = [1, 2, 3, 4, 5].map((i) =>
+      makeAction({ favorite: true, favoriteRank: undefined, name: `F${i}` }),
+    );
+    expect(assignNextFavoriteRank(favs)).toBeNull();
+  });
+
+  it('returns null when total favorites (ranked + unranked) reaches five', () => {
+    const favs = [
+      makeAction({ favorite: true, favoriteRank: 1 }),
+      makeAction({ favorite: true, favoriteRank: 2 }),
+      makeAction({ favorite: true, favoriteRank: undefined, name: 'U1' }),
+      makeAction({ favorite: true, favoriteRank: undefined, name: 'U2' }),
+      makeAction({ favorite: true, favoriteRank: undefined, name: 'U3' }),
+    ];
+    expect(assignNextFavoriteRank(favs)).toBeNull();
+  });
+
+  it('returns the lowest unused rank when total < 5 even with unranked favorites', () => {
+    const favs = [
+      makeAction({ favorite: true, favoriteRank: 1 }),
+      makeAction({ favorite: true, favoriteRank: undefined, name: 'U1' }),
+    ];
+    // 2 favorites total, ranks {1, -}, lowest unused rank is 2
+    expect(assignNextFavoriteRank(favs)).toBe(2);
+  });
 });
 
 describe('QuickActionStorage favorites', () => {

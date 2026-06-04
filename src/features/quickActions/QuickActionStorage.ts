@@ -4,11 +4,16 @@ import type { QuickAction } from './types';
 
 export function assignNextFavoriteRank(actions: QuickAction[]): number | null {
   const used = new Set<number>();
+  let totalFavorites = 0;
   for (const a of actions) {
-    if (a.favorite === true && typeof a.favoriteRank === 'number') {
-      used.add(a.favoriteRank);
+    if (a.favorite === true) {
+      totalFavorites++;
+      if (typeof a.favoriteRank === 'number') {
+        used.add(a.favoriteRank);
+      }
     }
   }
+  if (totalFavorites >= 5) return null;
   for (let r = 1; r <= 5; r++) {
     if (!used.has(r)) return r;
   }
