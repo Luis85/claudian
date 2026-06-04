@@ -336,6 +336,7 @@ export type TranslationKey =
   | 'quickActions.skills.editInSettings'
   | 'quickActions.skills.disabledBadge'
   | 'quickActions.skills.searchPlaceholder'
+  | 'quickActions.skills.refreshTooltip'
   | 'quickActions.skills.noResults'
 
   // Settings - Section Headings

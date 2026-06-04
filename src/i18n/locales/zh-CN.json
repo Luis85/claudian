@@ -567,6 +567,7 @@
       "editInSettings": "Edit in {provider} settings",
       "disabledBadge": "disabled",
       "searchPlaceholder": "Search skills by name or description…",
+      "refreshTooltip": "刷新技能",
       "noResults": "No skills match your search."
     },
     "editor": {

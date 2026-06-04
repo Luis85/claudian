@@ -2,15 +2,11 @@ import { setIcon } from 'obsidian';
 
 import { t } from '@/i18n/i18n';
 
+import type { ProviderId } from '../../../core/providers/types';
 import type { SkillTabEntry, VaultSkillSource } from '../skills/types';
 
-/**
- * Owns the Skills-tab body of `QuickActionsModal`: search input, provider
- * headers, skill rows, disabled-provider dimming, edit affordance.
- *
- * Lives outside the modal so its 150 LOC don't accrete onto the Quick
- * Actions tab and so the modal shell can focus on tab switching only.
- */
+const SKELETON_ROWS = 4;
+
 export class SkillsTabRenderer {
   private skills: SkillTabEntry[] = [];
   private filter = '';
@@ -24,15 +20,29 @@ export class SkillsTabRenderer {
     private close: () => void,
   ) {}
 
-  /** Builds the body inside `host` and resolves with the input element to focus. */
   async render(host: HTMLElement): Promise<HTMLInputElement | null> {
     this.filter = '';
     this.buildSearch(host);
     this.listEl = host.createDiv({
       cls: 'claudian-quick-actions-list claudian-quick-actions-skill-list',
     });
-    await this.refresh();
+
+    // Phase A: instant paint from in-memory cache (may be empty on cold start).
+    this.skills = this.source.listCachedNow();
+    this.renderList();
+
+    // Phase B: background refresh, streaming per-provider updates.
+    void this.source.listAllStreaming((providerId, entries) => {
+      this.patchProvider(providerId, entries);
+    });
+
     return this.searchInputEl;
+  }
+
+  private patchProvider(providerId: ProviderId, freshEntries: SkillTabEntry[]): void {
+    this.skills = this.skills.filter((s) => s.providerId !== providerId);
+    this.skills.push(...freshEntries);
+    this.renderList();
   }
 
   private buildSearch(host: HTMLElement): void {
@@ -62,16 +72,22 @@ export class SkillsTabRenderer {
         this.renderList();
       }
     });
-  }
 
-  private async refresh(): Promise<void> {
-    if (!this.listEl) return;
-    try {
-      this.skills = await this.source.listAll();
-    } catch {
-      this.skills = [];
-    }
-    this.renderList();
+    const refreshBtn = inputContainer.createEl('button', {
+      cls: 'claudian-quick-actions-search-refresh',
+      attr: {
+        type: 'button',
+        title: t('quickActions.skills.refreshTooltip'),
+        'aria-label': t('quickActions.skills.refreshTooltip'),
+      },
+    });
+    setIcon(refreshBtn, 'refresh-cw');
+    refreshBtn.addEventListener('click', () => {
+      this.source.invalidate();
+      void this.source.listAllStreaming((providerId, entries) => {
+        this.patchProvider(providerId, entries);
+      });
+    });
   }
 
   private renderList(): void {
@@ -79,20 +95,19 @@ export class SkillsTabRenderer {
     this.listEl.empty();
 
     if (this.skills.length === 0) {
-      this.listEl.addClass('claudian-quick-actions-skills-empty');
-      this.listEl.createEl('p', {
-        cls: 'claudian-quick-actions-skills-empty-lead',
-        text: t('quickActions.skills.emptyAll'),
-      });
-      this.listEl.createEl('p', {
-        cls: 'claudian-quick-actions-skills-empty-hint',
-        text: t('quickActions.skills.emptyHint'),
-      });
+      this.renderSkeleton();
       return;
     }
     this.listEl.removeClass('claudian-quick-actions-skills-empty');
 
     const filtered = this.applyFilter(this.skills);
+    filtered.sort((a, b) => {
+      if (a.providerId !== b.providerId) {
+        return a.providerId.localeCompare(b.providerId);
+      }
+      return a.name.localeCompare(b.name);
+    });
+
     if (filtered.length === 0) {
       this.listEl.createDiv({
         cls: 'claudian-quick-actions-empty-results',
@@ -111,6 +126,20 @@ export class SkillsTabRenderer {
         lastProvider = skill.providerId;
       }
       this.renderRow(skill);
+    }
+  }
+
+  private renderSkeleton(): void {
+    if (!this.listEl) return;
+    this.listEl.addClass('claudian-quick-actions-skills-skeleton');
+    for (let i = 0; i < SKELETON_ROWS; i++) {
+      const row = this.listEl.createDiv({
+        cls: 'claudian-quick-action-row claudian-quick-actions-skill-row is-skeleton',
+      });
+      row.createDiv({ cls: 'claudian-quick-action-icon is-skeleton-block' });
+      const text = row.createDiv({ cls: 'claudian-quick-action-text' });
+      text.createDiv({ cls: 'is-skeleton-line is-skeleton-line-title' });
+      text.createDiv({ cls: 'is-skeleton-line is-skeleton-line-desc' });
     }
   }
 
@@ -179,8 +208,6 @@ export class SkillsTabRenderer {
       });
       editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        // Close the modal first so the settings dialog isn't stacked behind it,
-        // then ask the host to deep-link into the provider's settings sub-tab.
         this.close();
         this.onEditSkill(skill);
       });

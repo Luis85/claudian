@@ -111,6 +111,29 @@ function makeStorage(actions: QuickAction[] = []) {
 function makeAggregator(entries: SkillTabEntry[] = []) {
   return {
     listAll: jest.fn().mockResolvedValue(entries),
+    listCachedNow: jest.fn().mockReturnValue(entries),
+    listAllStreaming: jest
+      .fn()
+      .mockImplementation(
+        (
+          onProviderResolved: (providerId: string, entries: SkillTabEntry[]) => void,
+        ) => {
+          // Group entries by providerId and dispatch one callback per provider so
+          // the streaming refresh path is exercised the same way it is at runtime.
+          const byProvider = new Map<string, SkillTabEntry[]>();
+          for (const entry of entries) {
+            const bucket = byProvider.get(entry.providerId) ?? [];
+            bucket.push(entry);
+            byProvider.set(entry.providerId, bucket);
+          }
+          for (const [providerId, bucket] of byProvider) {
+            onProviderResolved(providerId, bucket);
+          }
+          return Promise.resolve();
+        },
+      ),
+    invalidate: jest.fn(),
+    dispose: jest.fn(),
   } as unknown as QuickActionsModalCallbacks['aggregator'];
 }
 
@@ -167,8 +190,17 @@ describe('QuickActionsModal tabs', () => {
     tabs[1].click();
     await new Promise((r) => setTimeout(r, 0));
 
-    expect((aggregator as unknown as { listAll: jest.Mock }).listAll).toHaveBeenCalled();
-    const skillRow = modal.contentEl.querySelector('.claudian-quick-actions-skill-row');
+    // Phase A: instant paint reads from the in-memory cache; Phase B streams
+    // a background refresh. The renderer no longer calls listAll().
+    expect(
+      (aggregator as unknown as { listCachedNow: jest.Mock }).listCachedNow,
+    ).toHaveBeenCalled();
+    expect(
+      (aggregator as unknown as { listAllStreaming: jest.Mock }).listAllStreaming,
+    ).toHaveBeenCalled();
+    const skillRow = modal.contentEl.querySelector(
+      '.claudian-quick-actions-skill-row:not(.is-skeleton)',
+    );
     expect(skillRow).not.toBeNull();
     expect(skillRow?.textContent).toContain('brainstorming');
   });
@@ -246,7 +278,10 @@ describe('QuickActionsModal tabs', () => {
     expect(row?.classList.contains('is-provider-disabled')).toBe(true);
   });
 
-  it('renders the all-empty copy when aggregator returns []', async () => {
+  it('renders skeleton placeholders when the cache is cold and the stream has not yielded', async () => {
+    // makeAggregator() returns no entries, so listCachedNow() yields []
+    // and listAllStreaming() never fires onProviderResolved. The new SWR
+    // design shows skeleton rows instead of an empty-state message.
     const { modal } = await openModal();
     const tabs = modal.contentEl.querySelectorAll(
       '.claudian-quick-actions-tab',
@@ -254,23 +289,10 @@ describe('QuickActionsModal tabs', () => {
     tabs[1].click();
     await new Promise((r) => setTimeout(r, 0));
 
-    const empty = modal.contentEl.querySelector('.claudian-quick-actions-skills-empty');
-    expect(empty?.textContent).toContain('quickActions.skills.emptyAll');
-  });
-
-  it('renders the empty-state copy when aggregator rejects', async () => {
-    const aggregator = {
-      listAll: jest.fn().mockRejectedValue(new Error('boom')),
-    } as unknown as QuickActionsModalCallbacks['aggregator'];
-    const { modal } = await openModal({ aggregator });
-    const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
-    ) as NodeListOf<HTMLElement>;
-    tabs[1].click();
-    await new Promise((r) => setTimeout(r, 0));
-
-    const empty = modal.contentEl.querySelector('.claudian-quick-actions-skills-empty');
-    expect(empty?.textContent).toContain('quickActions.skills.emptyAll');
+    const skeletonRows = modal.contentEl.querySelectorAll(
+      '.claudian-quick-actions-skill-row.is-skeleton',
+    );
+    expect(skeletonRows.length).toBeGreaterThan(0);
   });
 
   it('renders the Edit button when sourceFilePath is set', async () => {

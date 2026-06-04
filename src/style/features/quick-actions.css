@@ -293,3 +293,32 @@
 .claudian-quick-actions-skills-empty-hint {
   font-size: var(--font-ui-small);
 }
+
+.claudian-quick-actions-skill-row.is-skeleton {
+  pointer-events: none;
+  opacity: 0.55;
+}
+.is-skeleton-block,
+.is-skeleton-line {
+  background: var(--background-modifier-border);
+  border-radius: 4px;
+  animation: claudian-skeleton-pulse 1.4s ease-in-out infinite;
+}
+.is-skeleton-block { width: 16px; height: 16px; }
+.is-skeleton-line { height: 12px; margin: 4px 0; }
+.is-skeleton-line-title { width: 40%; }
+.is-skeleton-line-desc { width: 70%; }
+@keyframes claudian-skeleton-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.85; }
+}
+.claudian-quick-actions-search-refresh {
+  background: transparent;
+  border: 0;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+.claudian-quick-actions-search-refresh:hover {
+  color: var(--text-normal);
+}
