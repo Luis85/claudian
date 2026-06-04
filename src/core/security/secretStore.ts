@@ -38,9 +38,15 @@ export class SecretStore {
     return this.api.getSecret(id);
   }
 
-  /** Whether a secret value is stored for the id. */
+  /**
+   * Whether a usable secret value is stored. Both `null` (never set / absent on
+   * this device) and `''` (cleared — the API has no delete, so `clear()` writes
+   * an empty string) count as absent, so callers don't mistake a cleared secret
+   * for a present one and skip re-entry.
+   */
   has(id: string): boolean {
-    return this.api.getSecret(id) !== null;
+    const value = this.api.getSecret(id);
+    return value !== null && value !== '';
   }
 
   /** All stored secret ids. */

@@ -36,6 +36,13 @@ describe('SecretStore', () => {
     expect(store.has('k')).toBe(true);
   });
 
+  it('treats a cleared (empty-string) secret as absent', () => {
+    const store = new SecretStore(createFakeSecretStorage());
+    store.set('k', 'v');
+    store.clear('k');
+    expect(store.has('k')).toBe(false);
+  });
+
   it('overwrites an existing value (no delete in the API)', () => {
     const store = new SecretStore(createFakeSecretStorage());
     store.set('k', 'first');
