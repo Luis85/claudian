@@ -196,6 +196,28 @@ describe('ConversationStore', () => {
       await store.updateConversation(fork.id, { title: 'fork' });
       expect(fork.messages[0].images?.[0].data).toBe('fork-bytes');
     });
+
+    it('preserves image.path while clearing image.data after save', async () => {
+      const { store } = createStore();
+      const conv = await store.createConversation();
+      conv.messages.push({
+        role: 'user',
+        content: 'see image',
+        timestamp: Date.now(),
+        images: [
+          { id: 'a', name: 'a.png', data: 'AAA=', path: 'attachments/a.png', mediaType: 'image/png', size: 1, source: 'paste' },
+          { id: 'b', name: 'b.png', data: 'BBB=', path: 'attachments/b.png', mediaType: 'image/png', size: 1, source: 'paste' },
+        ],
+      } as never);
+      await store.updateConversation(conv.id, { title: 'with images' });
+
+      for (const msg of conv.messages) {
+        for (const img of msg.images ?? []) {
+          expect(img.data).toBe('');
+          expect(img.path).toMatch(/^attachments\//);
+        }
+      }
+    });
   });
 
   describe('renameConversation', () => {
