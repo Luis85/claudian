@@ -60,7 +60,8 @@ Non-goals (any phase): multi-user sync · cloud backend (BYOK is opt-in, not def
 - `unified` + `remark-parse` for Markdown AST parsing · `gray-matter` for frontmatter
 - **KeywordIndex:** FlexSearch
 - **VectorStore:** default sql.js / pure-JS; opt-in `@lancedb/lancedb` (native, desktop)
-- **EmbeddingProvider / LlmProvider:** default Transformers.js (in-renderer); opt-in Ollama HTTP (`requestUrl`); opt-in BYOK provider
+- **EmbeddingProvider:** default Transformers.js (in-renderer); opt-in Ollama HTTP (`requestUrl`) / BYOK.
+- **LlmProvider:** default = the active chat / Lite provider adapter (**no in-renderer generation needed**; Phase 1 sends generation to that provider); opt-in Ollama (local generation) / BYOK.
 - internal event bus (the repo already has `core/events/EventBus` — reuse it rather than adding `eventemitter3`)
 
 > **Specorator note:** prefer reusing existing repo infrastructure (`EventBus`, logger, `SecretStore`, settings storage) over new deps. New runtime deps to evaluate: `unified`/`remark-parse`, `gray-matter`, `flexsearch`, `zod`, and the chosen embedding/vector libs.
