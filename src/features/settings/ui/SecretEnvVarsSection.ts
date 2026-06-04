@@ -84,8 +84,9 @@ export function renderSecretEnvVarsSection(options: SecretEnvVarsSectionOptions)
   }
 
   async function persist(next: SecretEnvVarRef[]): Promise<void> {
-    plugin.settings.secretEnvVars = next;
-    await plugin.saveSettings();
+    // Route through the env apply flow so an open provider tab reconciles its
+    // runtime (rather than just saving + re-rendering).
+    await plugin.applySecretEnvVars(next, scope);
     render();
   }
 }

@@ -348,6 +348,11 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     return this.envApply.applyBatch(updates);
   }
 
+  /** SEC-A: persist secret-var refs and run the env reconcile/sync for the scope. */
+  async applySecretEnvVars(refs: SecretEnvVarRef[], scope: EnvironmentScope): Promise<void> {
+    return this.envApply.applySecretEnvVars(refs, scope);
+  }
+
   /** Returns the runtime environment variables (fixed at plugin load). */
   getActiveEnvironmentVariables(
     providerId: ProviderId = ProviderRegistry.resolveSettingsProviderId(

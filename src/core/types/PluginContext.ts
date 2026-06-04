@@ -15,7 +15,7 @@ import type {
   ConversationSnapshot,
 } from './index';
 import type { ProviderId } from './provider';
-import type { EnvironmentScope } from './settings';
+import type { EnvironmentScope, SecretEnvVarRef } from './settings';
 
 /**
  * Narrow chat-tab manager surface consumed by the provider boundary.
@@ -69,6 +69,8 @@ export interface PluginContext
   applyEnvironmentVariablesBatch(
     updates: Array<{ scope: EnvironmentScope; envText: string }>,
   ): Promise<void>;
+  /** SEC-A: persist secret-var refs and reconcile/sync the affected provider scope. */
+  applySecretEnvVars(refs: SecretEnvVarRef[], scope: EnvironmentScope): Promise<void>;
   getActiveEnvironmentVariables(providerId?: ProviderId): string;
   /** SEC-A: parsed runtime env with SecretStorage values overlaid (for child-process spawns). */
   getResolvedEnvironmentVariables(providerId?: ProviderId): Record<string, string>;

@@ -2,6 +2,7 @@ import {
   getProviderEnvironmentVariables,
   getSharedEnvironmentVariables,
 } from '../../../../src/core/providers/providerEnvironment';
+import { ProviderRegistry } from '../../../../src/core/providers/ProviderRegistry';
 import {
   extractBlobSecretRefs,
   migrateEnvSecrets,
@@ -206,6 +207,56 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
     ]);
     expect(stored.get('claudian-env-shared-anthropic-api-key')).toBe('sk-a');
     expect(stored.get('claudian-env-provider-codex-openai-api-key')).toBe('sk-o');
+  });
+
+  it('preserves provider-owned legacy env lines while migrating a shared secret', () => {
+    // Register codex so the legacy blob classifies OPENAI_* as codex-owned.
+    jest.spyOn(ProviderRegistry, 'getRegisteredProviderIds').mockReturnValue(['codex']);
+    jest.spyOn(ProviderRegistry, 'getEnvironmentKeyPatterns')
+      .mockImplementation((id) => (id === 'codex' ? [/^OPENAI_/] : []));
+
+    // Legacy single-blob env: a shared secret + a provider-owned model line.
+    const settings: Record<string, unknown> = {
+      environmentVariables: 'ANTHROPIC_API_KEY=sk-a\nOPENAI_MODEL=gpt-custom',
+      secretEnvVars: [],
+    };
+    const stored = new Map<string, string>();
+    const changed = migrateEnvSecrets(settings, ['codex'], {
+      set: (id, v) => stored.set(id, v),
+      list: () => [...stored.keys()],
+    });
+
+    expect(changed).toBe(true);
+    expect(settings.environmentVariables).toBeUndefined(); // legacy field removed
+    // The codex-owned line survives (snapshotted before the legacy field was deleted).
+    expect(getProviderEnvironmentVariables(settings, 'codex')).toBe('OPENAI_MODEL=gpt-custom');
+    // The shared secret migrated out of plaintext.
+    expect((settings.secretEnvVars as SecretEnvVarRef[]).map((r) => r.name)).toEqual(['ANTHROPIC_API_KEY']);
+    expect(stored.get('claudian-env-shared-anthropic-api-key')).toBe('sk-a');
+
+    jest.restoreAllMocks();
+  });
+
+  it('clearing one ref does not remove or clear another that shares the secret id', () => {
+    const sharedId = 'claudian-env-shared-openai-api-key';
+    const settings: Record<string, unknown> = {
+      sharedEnvironmentVariables: 'OPENAI_API_KEY=', // cleared in shared scope
+      providerConfigs: { claude: { environmentVariables: '' } },
+      // Two refs reuse the SAME secret id (the UI allows selecting one entry twice).
+      secretEnvVars: [
+        { scope: 'shared', name: 'OPENAI_API_KEY', secretId: sharedId },
+        { scope: 'provider:claude', name: 'OPENAI_API_KEY', secretId: sharedId },
+      ],
+    };
+    const { changed, stored } = run(settings, { [sharedId]: 'sk-shared' });
+
+    expect(changed).toBe(true);
+    // Only the shared ref pruned; the provider ref (still referencing the id) remains.
+    expect(settings.secretEnvVars).toEqual([
+      { scope: 'provider:claude', name: 'OPENAI_API_KEY', secretId: sharedId },
+    ]);
+    // Value NOT cleared — still referenced by the provider ref.
+    expect(stored.get(sharedId)).toBe('sk-shared');
   });
 
   it('is a no-op (returns false) when there are no plaintext secrets', () => {

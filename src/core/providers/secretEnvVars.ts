@@ -189,32 +189,53 @@ export function migrateEnvSecrets(
   const clearedRefs: SecretEnvVarRef[] = [];
   let changed = false;
 
+  // Snapshot every scoped blob BEFORE any setter mutates `settings`. The setters
+  // delete the legacy `environmentVariables` field, and reading a provider blob
+  // afterwards (it falls back to classifying that legacy blob) would drop
+  // provider-owned lines that only lived in the legacy blob.
+  const hadLegacy = typeof settings.environmentVariables === 'string'
+    && (settings.environmentVariables as string).length > 0;
   const sharedBlob = getSharedEnvironmentVariables(settings);
+  const providerBlobs = new Map<ProviderId, string>(
+    providerIds.map((id) => [id, getProviderEnvironmentVariables(settings, id)]),
+  );
+
   const shared = extractBlobSecretRefs(sharedBlob, 'shared', setSecret, usedIds, existing);
-  if (shared.blob !== sharedBlob) {
+  // Write shared back when it changed, or to materialize the legacy blob's shared
+  // portion before the legacy field is removed.
+  if (shared.blob !== sharedBlob || hadLegacy) {
     setSharedEnvironmentVariables(settings, shared.blob);
-    changed = true;
+    if (shared.blob !== sharedBlob) changed = true;
   }
   newRefs.push(...shared.refs);
   clearedRefs.push(...shared.clearedRefs);
 
   for (const providerId of providerIds) {
     const scope: EnvironmentScope = `provider:${providerId}`;
-    const blob = getProviderEnvironmentVariables(settings, providerId);
+    const blob = providerBlobs.get(providerId) ?? '';
     const result = extractBlobSecretRefs(blob, scope, setSecret, usedIds, existing);
-    if (result.blob !== blob) {
+    // Write back when changed, or to materialize this provider's legacy lines.
+    if (result.blob !== blob || (hadLegacy && blob.length > 0)) {
       setProviderEnvironmentVariables(settings, providerId, result.blob);
-      changed = true;
+      if (result.blob !== blob) changed = true;
     }
     newRefs.push(...result.refs);
     clearedRefs.push(...result.clearedRefs);
   }
 
+  if (hadLegacy) changed = true; // the legacy field was removed → settings changed
+
   if (newRefs.length > 0 || clearedRefs.length > 0) {
-    const clearedIds = new Set(clearedRefs.map((ref) => ref.secretId));
-    settings.secretEnvVars = [...existing.filter((ref) => !clearedIds.has(ref.secretId)), ...newRefs];
+    // Prune only the SPECIFIC cleared refs (by identity) — the UI lets multiple
+    // rows/scopes point at the same SecretStorage entry, so clearing by id alone
+    // would drop unrelated refs. Clear a stored value only when no remaining ref
+    // still references that id.
+    const cleared = new Set(clearedRefs);
+    const next = [...existing.filter((ref) => !cleared.has(ref)), ...newRefs];
+    settings.secretEnvVars = next;
+    const stillUsed = new Set(next.map((ref) => ref.secretId));
     for (const ref of clearedRefs) {
-      setSecret(ref.secretId, ''); // clear the now-unreferenced stored value
+      if (!stillUsed.has(ref.secretId)) setSecret(ref.secretId, '');
     }
     changed = true;
   }

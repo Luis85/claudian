@@ -15,7 +15,8 @@ function makeContainer(): any {
 
 function makePlugin(secretEnvVars: SecretEnvVarRef[], stored: Record<string, string> = {}): PluginContext {
   const secrets = new Map<string, string>(Object.entries(stored));
-  return {
+  const settings = { secretEnvVars };
+  const plugin = {
     app: {
       secretStorage: {
         getSecret: (id: string) => (secrets.has(id) ? (secrets.get(id) as string) : null),
@@ -23,9 +24,13 @@ function makePlugin(secretEnvVars: SecretEnvVarRef[], stored: Record<string, str
         listSecrets: () => Array.from(secrets.keys()),
       },
     },
-    settings: { secretEnvVars },
+    settings,
     saveSettings: jest.fn().mockResolvedValue(undefined),
+    applySecretEnvVars: jest.fn().mockImplementation(async (refs: SecretEnvVarRef[]) => {
+      settings.secretEnvVars = refs;
+    }),
   } as unknown as PluginContext;
+  return plugin;
 }
 
 // The mock Setting tracks `instances`/`components` and SecretComponent exposes
@@ -76,7 +81,7 @@ describe('renderSecretEnvVarsSection', () => {
     await flush();
 
     expect((plugin.settings.secretEnvVars as SecretEnvVarRef[])[0].secretId).toBe('sid-2');
-    expect(plugin.saveSettings).toHaveBeenCalled();
+    expect(plugin.applySecretEnvVars).toHaveBeenCalled();
   });
 
   it('adds a new secret variable from the add row', async () => {
@@ -91,7 +96,7 @@ describe('renderSecretEnvVarsSection', () => {
     expect(plugin.settings.secretEnvVars).toEqual([
       { scope: 'shared', name: 'ANTHROPIC_API_KEY', secretId: 'new-sid' },
     ]);
-    expect(plugin.saveSettings).toHaveBeenCalled();
+    expect(plugin.applySecretEnvVars).toHaveBeenCalled();
   });
 
   it('does not add when name or secret is missing', async () => {
@@ -104,7 +109,7 @@ describe('renderSecretEnvVarsSection', () => {
     await flush();
 
     expect(plugin.settings.secretEnvVars).toEqual([]);
-    expect(plugin.saveSettings).not.toHaveBeenCalled();
+    expect(plugin.applySecretEnvVars).not.toHaveBeenCalled();
   });
 
   it('removes a ref when its trash button is clicked', async () => {
@@ -115,6 +120,6 @@ describe('renderSecretEnvVarsSection', () => {
     await flush();
 
     expect(plugin.settings.secretEnvVars).toEqual([]);
-    expect(plugin.saveSettings).toHaveBeenCalled();
+    expect(plugin.applySecretEnvVars).toHaveBeenCalled();
   });
 });
