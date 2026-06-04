@@ -107,6 +107,28 @@ describe('renderSecretEnvVarsSection', () => {
     expect(plugin.applySecretEnvVars).toHaveBeenCalled();
   });
 
+  it('replaces an existing same-(scope,name) ref instead of appending a duplicate', async () => {
+    const oldId = 'claudian-env-shared-anthropic-api-key';
+    const plugin = makePlugin(
+      [{ scope: 'shared', name: 'ANTHROPIC_API_KEY', secretId: oldId }],
+      { [oldId]: 'dummy-old' },
+    );
+    renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
+
+    // Re-add the SAME name in the same scope with a different secret.
+    textComponents()[0].changeHandler('ANTHROPIC_API_KEY');
+    secretComponents()[0].triggerChange('new-sid');
+    buttons().find((b) => b.buttonText === 'Add')?.clickHandler();
+    await flush();
+
+    // Exactly one ref for that (scope, name), pointing at the new secret.
+    expect(plugin.settings.secretEnvVars).toEqual([
+      { scope: 'shared', name: 'ANTHROPIC_API_KEY', secretId: 'new-sid' },
+    ]);
+    // The replaced Claudian-owned id is orphaned → cleared so it can't re-activate.
+    expect(plugin.secretStore.clear).toHaveBeenCalledWith(oldId);
+  });
+
   it('does not add when name or secret is missing', async () => {
     const plugin = makePlugin([]);
     renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });

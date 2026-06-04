@@ -61,10 +61,17 @@ export function renderSecretEnvVarsSection(options: SecretEnvVarsSectionOptions)
       .addButton((btn) =>
         btn.setButtonText(t('env.secretAddButton')).onClick(() => {
           if (!draft.name || !draft.secretId) return;
-          void persist([
-            ...currentRefs(),
-            { scope, name: draft.name, secretId: draft.secretId },
-          ]);
+          // Enforce one ref per (scope, name): replace an existing same-name row
+          // instead of appending a duplicate. Overlay order makes the last ref win at
+          // runtime, so a leftover older ref would silently re-activate (a credential
+          // the user thought removed) once the newer row is deleted/retargeted.
+          const replaced = secretRefsForScope().find((ref) => ref.name === draft.name);
+          const next = currentRefs().filter((ref) => !(ref.scope === scope && ref.name === draft.name));
+          next.push({ scope, name: draft.name, secretId: draft.secretId });
+          void (async () => {
+            await persist(next);
+            if (replaced) clearIfOrphaned(replaced.secretId, next);
+          })();
         }),
       );
   }

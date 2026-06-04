@@ -371,20 +371,27 @@ export class EnvSnippetManager {
     }
 
     const snippetContent = envText.trim();
-    const updates = getEnvironmentScopeUpdates(
-      snippetContent,
-      snippet.scope ?? this.scope,
-    );
+    // SEC-A: when the snippet resolves to empty — e.g. it consists only of migrated
+    // secret refs that are absent on this device — do NOT apply. getEnvironmentScopeUpdates
+    // would return a fallback-scope update with empty text, and applying it would WIPE
+    // the target scope's env instead of doing nothing. The missing-secret warning above
+    // prompts re-entry; env limits/aliases below still apply.
+    if (snippetContent) {
+      const updates = getEnvironmentScopeUpdates(
+        snippetContent,
+        snippet.scope ?? this.scope,
+      );
 
-    if (updates.length === 1) {
-      const [update] = updates;
-      this.syncTextareaValue(update.scope, update.envText);
-      await this.plugin.applyEnvironmentVariables(update.scope, update.envText);
-    } else if (updates.length > 1) {
-      for (const update of updates) {
+      if (updates.length === 1) {
+        const [update] = updates;
         this.syncTextareaValue(update.scope, update.envText);
+        await this.plugin.applyEnvironmentVariables(update.scope, update.envText);
+      } else if (updates.length > 1) {
+        for (const update of updates) {
+          this.syncTextareaValue(update.scope, update.envText);
+        }
+        await this.plugin.applyEnvironmentVariablesBatch(updates);
       }
-      await this.plugin.applyEnvironmentVariablesBatch(updates);
     }
 
     // Legacy snippets without contextLimits don't modify limits
