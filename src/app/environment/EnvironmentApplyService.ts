@@ -6,11 +6,12 @@ import {
 } from '@/core/providers/providerEnvironment';
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from '@/core/providers/ProviderSettingsCoordinator';
+import { migrateEnvSecrets } from '@/core/providers/secretEnvVars';
 import type { ProviderId } from '@/core/providers/types';
 import { DEFAULT_CHAT_PROVIDER_ID } from '@/core/providers/types';
 import type { Conversation } from '@/core/types';
 import { asSettingsBag } from '@/core/types';
-import type { EnvironmentScope } from '@/core/types/settings';
+import type { EnvironmentScope, SecretEnvVarRef } from '@/core/types/settings';
 import { t } from '@/i18n/i18n';
 import type ClaudianPlugin from '@/main';
 
@@ -38,7 +39,32 @@ export class EnvironmentApplyService {
       return;
     }
 
-    const affected = this.affectedProviders(changedScopes);
+    // SEC-A: migrate any newly-typed secret keys out of the edited plaintext
+    // blob into SecretStorage (reusing an existing ref's id when a migrated key
+    // is re-entered), so an edited secret never lingers in plaintext or resolves
+    // to a stale value, and reconciliation below sees the resolved env.
+    migrateEnvSecrets(
+      settingsBag,
+      ProviderRegistry.getRegisteredProviderIds(),
+      this.plugin.secretStore,
+    );
+
+    await this.finalizeEnvironmentChange(this.affectedProviders(changedScopes));
+  }
+
+  /**
+   * SEC-A: persist updated secret-var refs and run the SAME reconcile + tab/runtime
+   * sync as a plaintext env edit, so changing a key here immediately reaches an
+   * already-open provider tab (no stale subprocess env until an unrelated edit).
+   */
+  async applySecretEnvVars(refs: SecretEnvVarRef[], scope: EnvironmentScope): Promise<void> {
+    this.plugin.settings.secretEnvVars = refs;
+    await this.finalizeEnvironmentChange(this.affectedProviders([scope]));
+  }
+
+  /** Reconcile + sync open tabs/runtimes for the affected providers after an env change. */
+  private async finalizeEnvironmentChange(affected: ProviderId[]): Promise<void> {
+    const settingsBag = asSettingsBag(this.plugin.settings);
     ProviderSettingsCoordinator.handleEnvironmentChange(settingsBag, affected);
     const { changed, invalidatedConversations } = this.reconcileWithEnvironment(affected);
     await this.plugin.saveSettings();
@@ -110,6 +136,9 @@ export class EnvironmentApplyService {
       this.plugin.settings,
       this.plugin.conversationStore.getConversations(),
       providerIds,
+      // SEC-A: hash the resolved env (secrets overlaid); defer invalidation when
+      // a referenced secret is missing on this device.
+      (providerId) => this.plugin.getEnvironmentHashInput(providerId),
     );
   }
 

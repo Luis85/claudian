@@ -2,7 +2,6 @@ import { QueryBackedTitleGenerationService } from '../../../core/auxiliary/Query
 import type { TitleGenerationResult } from '../../../core/providers/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
 import { asSettingsBag } from '../../../core/types/settings';
-import { parseEnvironmentVariables } from '../../../utils/env';
 import { ClaudeAuxQueryRunner } from '../runtime/ClaudeAuxQueryRunner';
 import { claudeChatUIConfig } from '../ui/ClaudeChatUIConfig';
 
@@ -22,9 +21,7 @@ export class TitleGenerationService extends QueryBackedTitleGenerationService {
 }
 
 function resolveTitleModel(plugin: PluginContext): string {
-  const envVars = parseEnvironmentVariables(
-    plugin.getActiveEnvironmentVariables('claude'),
-  );
+  const envVars = plugin.getResolvedEnvironmentVariables('claude');
   const titleModel = plugin.settings.titleGenerationModel;
   if (titleModel && claudeChatUIConfig.ownsModel(
     titleModel,

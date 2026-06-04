@@ -84,6 +84,14 @@ export type TranslationKey =
   | 'env.applyPartial'
   | 'env.applied'
   | 'env.appliedRebuild'
+  | 'env.secretMissing'
+  | 'env.secretVarsHeading'
+  | 'env.secretVarsDesc'
+  | 'env.secretNotSet'
+  | 'env.secretRemove'
+  | 'env.secretAdd'
+  | 'env.secretNamePlaceholder'
+  | 'env.secretAddButton'
 
   // Chat - Storage (Q-1 chunk 15)
   | 'chat.storage.tabLayoutSaveFailed'
@@ -312,6 +320,15 @@ export type TranslationKey =
   | 'quickActions.editor.saveFailed'
   | 'quickActions.contextMenu.title'
   | 'quickActions.contextMenu.tabLimitReached'
+  | 'quickActions.modal.tabs.quickActions'
+  | 'quickActions.modal.tabs.skills'
+  | 'quickActions.skills.emptyAll'
+  | 'quickActions.skills.emptyHint'
+  | 'quickActions.skills.providerDisabled'
+  | 'quickActions.skills.editInSettings'
+  | 'quickActions.skills.disabledBadge'
+  | 'quickActions.skills.searchPlaceholder'
+  | 'quickActions.skills.noResults'
 
   // Settings - Section Headings
   | 'settings.title'

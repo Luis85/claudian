@@ -122,6 +122,7 @@ function createMockPlugin(settings: Record<string, unknown> = {}) {
     _ccPermissions: ccPermissions,
     saveSettings: jest.fn().mockResolvedValue(undefined),
     getActiveEnvironmentVariables: jest.fn().mockReturnValue(''),
+    getResolvedEnvironmentVariables: jest.fn().mockReturnValue({}),
     getResolvedProviderCliPath: jest.fn().mockReturnValue('/mock/claude'),
     // Mock getView to return null (tests don't have real view)
     // This allows optional chaining to work safely

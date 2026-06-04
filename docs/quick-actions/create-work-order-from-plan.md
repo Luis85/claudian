@@ -53,5 +53,3 @@ Steps:
 6. Return the path to the created work-order file.
 
 Plan reference: ask user for plan file path or look in current note context, add the provided plan as wikilink to the work-order.
-
-Note: docs-sync guidance (update related docs during the run, verify before completion) is codified in the work-order run prompt (`TaskPromptRenderer`). Do not duplicate it in the work-order body.

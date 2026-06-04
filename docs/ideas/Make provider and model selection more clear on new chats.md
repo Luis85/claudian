@@ -1,5 +1,5 @@
 ---
-status:
+status: open
 priority: 3 - low
 relations:
   - "[[Chat]]"

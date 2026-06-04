@@ -4,6 +4,7 @@ tags:
 priority: 3 - low
 relations:
   - Quality
+status: open
 ---
 # Plugin improvement research proposal
 

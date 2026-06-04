@@ -3,7 +3,7 @@ import { getProviderConfig, setProviderConfig } from './providerConfig';
 import { ProviderRegistry } from './ProviderRegistry';
 import type { ProviderId } from './types';
 
-export type EnvironmentScope = 'shared' | `provider:${string}`;
+export type EnvironmentScope = 'shared' | `provider:${string}` | `snippet:${string}`;
 export interface EnvironmentScopeUpdate {
   scope: EnvironmentScope;
   envText: string;
@@ -245,6 +245,13 @@ export function getRuntimeEnvironmentVariables(
   providerId: ProviderId,
 ): Record<string, string> {
   return parseEnvironmentVariables(getRuntimeEnvironmentText(settings, providerId));
+}
+
+/** Serialize an env dict back to `KEY=VALUE` lines (e.g. to hash a resolved env). */
+export function serializeEnvironmentVariables(env: Record<string, string>): string {
+  return Object.entries(env)
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n');
 }
 
 export function getEnvironmentVariablesForScope(

@@ -554,7 +554,20 @@
       "emptyHintCreate": "Use Add action below to create your first quick action, or set the vault folder under Settings → Quick Actions.",
       "markFavorite": "Marquer comme favori",
       "unmarkFavorite": "Retirer des favoris",
-      "favoriteLimitReached": "Vous pouvez marquer jusqu'à 5 actions rapides en favoris"
+      "favoriteLimitReached": "Vous pouvez marquer jusqu'à 5 actions rapides en favoris",
+      "tabs": {
+        "quickActions": "Quick actions",
+        "skills": "Skills"
+      }
+    },
+    "skills": {
+      "emptyAll": "No vault skills found.",
+      "emptyHint": "Skills live in .claude/skills/, .codex/skills/, and .agents/skills/.",
+      "providerDisabled": "Provider '{provider}' is disabled. Enable it in settings.",
+      "editInSettings": "Edit in {provider} settings",
+      "disabledBadge": "disabled",
+      "searchPlaceholder": "Search skills by name or description…",
+      "noResults": "No skills match your search."
     },
     "editor": {
       "titleEdit": "Edit quick action",
@@ -702,6 +715,14 @@
     }
   },
   "env": {
+    "secretVarsHeading": "Variables secrètes",
+    "secretVarsDesc": "Clés d’API et jetons conservés dans le trousseau du système, pas en clair dans les paramètres.",
+    "secretNotSet": "Non défini sur cet appareil — sélectionnez ou créez le secret pour l’utiliser.",
+    "secretRemove": "Supprimer",
+    "secretAdd": "Ajouter une variable secrète",
+    "secretNamePlaceholder": "VARIABLE_NAME",
+    "secretAddButton": "Ajouter",
+    "secretMissing": "Le secret du fournisseur « {name} » n’est pas défini sur cet appareil — saisissez-le à nouveau dans les paramètres de Claudian.",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."

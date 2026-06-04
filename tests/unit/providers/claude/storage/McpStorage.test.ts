@@ -515,6 +515,56 @@ describe('McpStorage', () => {
     });
   });
 
+  describe('SEC-A Phase 3 — secret header/env refs', () => {
+    it('round-trips secretHeaders/secretEnv through _claudian metadata', async () => {
+      const adapter = createMockAdapter();
+      const storage = new McpStorage(adapter);
+
+      await storage.save([
+        {
+          name: 'remote',
+          config: { type: 'http', url: 'https://x', headers: { Accept: 'application/json' } },
+          enabled: true,
+          contextSaving: false,
+          secretHeaders: { Authorization: 'claudian-mcp-remote-header-authorization' },
+        },
+      ]);
+
+      const file = JSON.parse(adapter._store['.claude/mcp.json']) as {
+        mcpServers: Record<string, { headers?: Record<string, string> }>;
+        _claudian: { servers: Record<string, { secretHeaders?: Record<string, string> }> };
+      };
+      expect(file._claudian.servers.remote.secretHeaders).toEqual({
+        Authorization: 'claudian-mcp-remote-header-authorization',
+      });
+      expect(file.mcpServers.remote.headers).toEqual({ Accept: 'application/json' });
+
+      const [loaded] = await storage.load();
+      expect(loaded.secretHeaders).toEqual({ Authorization: 'claudian-mcp-remote-header-authorization' });
+    });
+
+    it('strips a secret-referenced header value from the persisted plaintext config', async () => {
+      const adapter = createMockAdapter();
+      const storage = new McpStorage(adapter);
+
+      // A caller left the resolved value on the config; save must not write it.
+      await storage.save([
+        {
+          name: 'remote',
+          config: { type: 'http', url: 'https://x', headers: { Authorization: 'Bearer LEAK', Accept: 'json' } },
+          enabled: true,
+          contextSaving: false,
+          secretHeaders: { Authorization: 'id-auth' },
+        },
+      ]);
+
+      const raw = adapter._store['.claude/mcp.json'];
+      expect(raw).not.toContain('Bearer LEAK');
+      const file = JSON.parse(raw) as { mcpServers: Record<string, { headers?: Record<string, string> }> };
+      expect(file.mcpServers.remote.headers).toEqual({ Accept: 'json' });
+    });
+  });
+
   describe('exists', () => {
     it('returns false when mcp.json does not exist', async () => {
       const adapter = createMockAdapter();

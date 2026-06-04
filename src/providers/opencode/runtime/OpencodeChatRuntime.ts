@@ -5,7 +5,7 @@ import {
   computeSystemPromptKey,
   type SystemPromptSettings,
 } from '../../../core/prompt/mainAgent';
-import { getRuntimeEnvironmentText } from '../../../core/providers/providerEnvironment';
+import { serializeEnvironmentVariables } from '../../../core/providers/providerEnvironment';
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type {
@@ -298,7 +298,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
     const nextLaunchKey = JSON.stringify({
       command: resolvedCliPath,
       configPath: artifacts.configPath,
-      envText: getRuntimeEnvironmentText(this.plugin.settings, 'opencode'),
+      envText: serializeEnvironmentVariables(this.plugin.getResolvedEnvironmentVariables('opencode')),
       promptKey: computeSystemPromptKey(promptSettings, orchestratorPromptOptions),
       artifactKey: artifacts.launchKey,
     });
@@ -714,7 +714,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
     databasePathOverride?: string | null,
   ): NodeJS.ProcessEnv {
     return buildOpencodeRuntimeEnv(
-      this.plugin.settings,
+      this.plugin.getResolvedEnvironmentVariables('opencode'),
       cliPath,
       databasePathOverride,
     );

@@ -218,7 +218,20 @@
       "filterByTag": "Filter by tag {tag}",
       "markFavorite": "Mark as favorite",
       "unmarkFavorite": "Unmark favorite",
-      "favoriteLimitReached": "You can favorite up to 5 quick actions"
+      "favoriteLimitReached": "You can favorite up to 5 quick actions",
+      "tabs": {
+        "quickActions": "Quick actions",
+        "skills": "Skills"
+      }
+    },
+    "skills": {
+      "emptyAll": "No vault skills found.",
+      "emptyHint": "Skills live in .claude/skills/, .codex/skills/, and .agents/skills/.",
+      "providerDisabled": "Provider '{provider}' is disabled. Enable it in settings.",
+      "editInSettings": "Edit in {provider} settings",
+      "disabledBadge": "disabled",
+      "searchPlaceholder": "Search skills by name or description…",
+      "noResults": "No skills match your search."
     },
     "editor": {
       "titleEdit": "Edit quick action",
@@ -593,6 +606,14 @@
     "logsCleared": "Diagnostic logs cleared"
   },
   "env": {
+    "secretVarsHeading": "Secret variables",
+    "secretVarsDesc": "API keys and tokens kept in your system keychain, not in plaintext settings.",
+    "secretNotSet": "Not set on this device — select or create the secret to use it.",
+    "secretRemove": "Remove",
+    "secretAdd": "Add secret variable",
+    "secretNamePlaceholder": "VARIABLE_NAME",
+    "secretAddButton": "Add",
+    "secretMissing": "Provider secret \"{name}\" isn’t set on this device — re-enter it in Claudian settings.",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."

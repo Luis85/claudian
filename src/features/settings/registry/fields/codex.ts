@@ -27,16 +27,6 @@ export function registerCodexTabFields(): void {
   });
 
   r.registerField({
-    id: 'providerConfigs.codex.apiKey',
-    tabId: 'codex',
-    sectionId: 'setup',
-    label: 'OpenAI API key',
-    description: 'OpenAI API key for Codex requests',
-    type: { kind: 'text', placeholder: 'sk-...' },
-    default: '',
-  });
-
-  r.registerField({
     id: 'providerConfigs.codex.customModels',
     tabId: 'codex',
     sectionId: 'models',

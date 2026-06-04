@@ -16,8 +16,7 @@ import {
   type ScheduledAnimationFrame,
 } from '../../utils/animationFrame';
 import { openPluginSettingsTab } from '../../utils/obsidianPrivateApi';
-import { QuickActionStorage } from '../quickActions/QuickActionStorage';
-import { QuickActionsModal } from '../quickActions/ui/QuickActionsModal';
+import { openQuickActionsModal } from '../quickActions/openQuickActionsModal';
 import { resolveModelContextWindow } from '../settings/customModels/resolveModelContextWindow';
 import type { HistoryConversationOpenState } from './controllers/ConversationController';
 import type { ProgrammaticSendResult } from './controllers/InputController';
@@ -480,20 +479,14 @@ export class ClaudianView extends ItemView {
     quickActionsBtn.addEventListener('click', () => {
       const activeTab = this.tabManager?.getActiveTab();
       if (!activeTab) return;
-      const storage = new QuickActionStorage(
-        this.plugin.storage.getAdapter(),
-        () => this.plugin.settings.quickActionsFolder ?? 'Quick Actions',
-      );
-      new QuickActionsModal(this.plugin.app, {
-        storage,
+      openQuickActionsModal(this.plugin, {
         onRun: (action) => {
           // Resolve the active tab at run time — user may have switched tabs while the modal was open.
           const targetTab = this.tabManager?.getActiveTab();
           if (!targetTab) return;
           void targetTab.controllers.inputController?.sendMessage({ content: action.prompt });
         },
-        onFavoritesChanged: () => this.plugin.quickActionFavoritesCache?.refresh(),
-      }).open();
+      });
     });
 
     // New tab button (plus icon)

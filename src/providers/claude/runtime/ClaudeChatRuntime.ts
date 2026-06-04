@@ -59,7 +59,7 @@ import type { PluginContext } from '../../../core/types/PluginContext';
 import type { ClaudianSettings, PermissionMode } from '../../../core/types/settings';
 import { t } from '../../../i18n/i18n';
 import { stripCurrentNoteContext } from '../../../utils/context';
-import { getEnhancedPath, getMissingNodeError, parseEnvironmentVariables } from '../../../utils/env';
+import { getEnhancedPath, getMissingNodeError } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
 import {
   buildContextFromHistory,
@@ -684,7 +684,7 @@ export class ClaudianService implements ChatRuntime {
   }
 
   private buildQueryOptionsContext(vaultPath: string, cliPath: string): QueryOptionsContext {
-    const customEnv = parseEnvironmentVariables(this.plugin.getActiveEnvironmentVariables(this.providerId));
+    const customEnv = this.plugin.getResolvedEnvironmentVariables(this.providerId);
     const enhancedPath = getEnhancedPath(customEnv.PATH, cliPath);
 
     return {
@@ -1187,7 +1187,7 @@ export class ClaudianService implements ChatRuntime {
       return;
     }
 
-    const customEnv = parseEnvironmentVariables(this.plugin.getActiveEnvironmentVariables(this.providerId));
+    const customEnv = this.plugin.getResolvedEnvironmentVariables(this.providerId);
     const enhancedPath = getEnhancedPath(customEnv.PATH, resolvedClaudePath);
     const missingNodeError = getMissingNodeError(resolvedClaudePath, enhancedPath);
     if (missingNodeError) {

@@ -85,7 +85,7 @@ export class StorageService {
   async loadAllSlashCommands(): Promise<SlashCommand[]> {
     const commands = await this.commands.loadAll();
     const skills = await this.skills.loadAll();
-    return [...commands, ...skills];
+    return [...commands, ...skills.map((entry) => entry.skill)];
   }
 
   getAdapter(): VaultFileAdapter {

@@ -42,6 +42,14 @@ export interface ManagedMcpServer {
   /** Tool names disabled for this server. */
   disabledTools?: string[];
   description?: string;
+  /**
+   * SEC-A Phase 3: secret auth-header values held in Obsidian SecretStorage.
+   * Maps header name → secret id. The value never persists in `.claude/mcp.json`
+   * (only the id, in `_claudian` metadata); it is resolved in-plugin at launch.
+   */
+  secretHeaders?: Record<string, string>;
+  /** SEC-A Phase 3: secret stdio env values in SecretStorage. Maps env var name → secret id. */
+  secretEnv?: Record<string, string>;
 }
 
 /** MCP configuration file format used by the current CLI integrations. */
@@ -60,6 +68,10 @@ export interface ManagedMcpConfigFile extends McpConfigFile {
         contextSaving?: boolean;
         disabledTools?: string[];
         description?: string;
+        /** SEC-A Phase 3: header name → SecretStorage id (value lives in the keychain). */
+        secretHeaders?: Record<string, string>;
+        /** SEC-A Phase 3: stdio env var name → SecretStorage id. */
+        secretEnv?: Record<string, string>;
       }
     >;
   };

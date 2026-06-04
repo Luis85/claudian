@@ -554,7 +554,20 @@
       "emptyHintCreate": "Use Add action below to create your first quick action, or set the vault folder under Settings → Quick Actions.",
       "markFavorite": "Marcar como favorita",
       "unmarkFavorite": "Quitar de favoritas",
-      "favoriteLimitReached": "Puedes marcar hasta 5 acciones rápidas como favoritas"
+      "favoriteLimitReached": "Puedes marcar hasta 5 acciones rápidas como favoritas",
+      "tabs": {
+        "quickActions": "Quick actions",
+        "skills": "Skills"
+      }
+    },
+    "skills": {
+      "emptyAll": "No vault skills found.",
+      "emptyHint": "Skills live in .claude/skills/, .codex/skills/, and .agents/skills/.",
+      "providerDisabled": "Provider '{provider}' is disabled. Enable it in settings.",
+      "editInSettings": "Edit in {provider} settings",
+      "disabledBadge": "disabled",
+      "searchPlaceholder": "Search skills by name or description…",
+      "noResults": "No skills match your search."
     },
     "editor": {
       "titleEdit": "Edit quick action",
@@ -702,6 +715,14 @@
     }
   },
   "env": {
+    "secretVarsHeading": "Variables secretas",
+    "secretVarsDesc": "Las claves de API y los tokens se guardan en el llavero del sistema, no en texto plano en los ajustes.",
+    "secretNotSet": "No configurado en este dispositivo: selecciona o crea el secreto para usarlo.",
+    "secretRemove": "Quitar",
+    "secretAdd": "Añadir variable secreta",
+    "secretNamePlaceholder": "VARIABLE_NAME",
+    "secretAddButton": "Añadir",
+    "secretMissing": "El secreto del proveedor \"{name}\" no está configurado en este dispositivo: vuélvelo a introducir en los ajustes de Claudian.",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."

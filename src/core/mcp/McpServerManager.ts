@@ -2,6 +2,8 @@ import { curateStdioMcpEnv } from '../../utils/env';
 import { extractMcpMentions, transformMcpMentions } from '../../utils/mcp';
 import type { ManagedMcpServer, McpServerConfig, McpStdioServerConfig } from '../types';
 import { getMcpServerType } from '../types';
+import type { McpSecretResolver } from './mcpSecrets';
+import { resolveMcpServerConfig } from './mcpSecrets';
 
 /** Storage interface for loading MCP servers. */
 export interface McpStorageAdapter {
@@ -11,9 +13,11 @@ export interface McpStorageAdapter {
 export class McpServerManager {
   private servers: ManagedMcpServer[] = [];
   private storage: McpStorageAdapter;
+  private secretResolver?: McpSecretResolver;
 
-  constructor(storage: McpStorageAdapter) {
+  constructor(storage: McpStorageAdapter, secretResolver?: McpSecretResolver) {
     this.storage = storage;
+    this.secretResolver = secretResolver;
   }
 
   async loadServers(): Promise<void> {
@@ -48,7 +52,12 @@ export class McpServerManager {
         continue;
       }
 
-      result[server.name] = McpServerManager.curateServerConfig(server.config);
+      // SEC-A Phase 3: overlay secret header/env values from SecretStorage before
+      // curation, so a stdio server's secret env is curated alongside its own vars.
+      const resolved = this.secretResolver
+        ? resolveMcpServerConfig(server, this.secretResolver)
+        : server.config;
+      result[server.name] = McpServerManager.curateServerConfig(resolved);
     }
 
     return result;

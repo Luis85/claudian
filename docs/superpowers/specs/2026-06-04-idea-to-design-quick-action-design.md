@@ -1,7 +1,7 @@
 ---
-title: "Idea to Design quick action"
+title: Idea to Design quick action
 date: 2026-06-04
-status: draft
+status: shipped
 scope: docs/quick-actions
 ---
 

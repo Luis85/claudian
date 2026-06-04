@@ -43,6 +43,7 @@ function createMockPlugin(settings: Record<string, unknown> = {}) {
     },
     manifest: { version: '0.0.0-test' },
     getResolvedProviderCliPath: jest.fn().mockReturnValue('/usr/local/bin/opencode'),
+    getResolvedEnvironmentVariables: jest.fn().mockReturnValue({}),
     app: {
       vault: {
         adapter: {

@@ -1,3 +1,4 @@
+import { computeEnvHash } from '../../../../src/core/providers/EnvHashReconciler';
 import { getOpencodeDiscoveryState, updateOpencodeDiscoveryState } from '../../../../src/providers/opencode/discoveryState';
 import { opencodeSettingsReconciler } from '../../../../src/providers/opencode/env/OpencodeSettingsReconciler';
 
@@ -90,7 +91,10 @@ describe('opencodeSettingsReconciler.reconcileModelWithEnvironment', () => {
     expect(conversations[0].sessionId).toBeNull();
     expect(conversations[0].providerState).toBeUndefined();
     expect((settings.providerConfigs as any).opencode.environmentHash).toBe(
-      'OPENCODE_CONFIG=/tmp/opencode.json|OPENCODE_DB=/new/opencode.db',
+      computeEnvHash('OPENCODE_CONFIG=/tmp/opencode.json\nOPENCODE_DB=/new/opencode.db', [
+        'OPENCODE_CONFIG',
+        'OPENCODE_DB',
+      ]),
     );
   });
 });

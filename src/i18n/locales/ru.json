@@ -554,7 +554,20 @@
       "emptyHintCreate": "Use Add action below to create your first quick action, or set the vault folder under Settings → Quick Actions.",
       "markFavorite": "Добавить в избранное",
       "unmarkFavorite": "Убрать из избранного",
-      "favoriteLimitReached": "Можно добавить до 5 быстрых действий в избранное"
+      "favoriteLimitReached": "Можно добавить до 5 быстрых действий в избранное",
+      "tabs": {
+        "quickActions": "Quick actions",
+        "skills": "Skills"
+      }
+    },
+    "skills": {
+      "emptyAll": "No vault skills found.",
+      "emptyHint": "Skills live in .claude/skills/, .codex/skills/, and .agents/skills/.",
+      "providerDisabled": "Provider '{provider}' is disabled. Enable it in settings.",
+      "editInSettings": "Edit in {provider} settings",
+      "disabledBadge": "disabled",
+      "searchPlaceholder": "Search skills by name or description…",
+      "noResults": "No skills match your search."
     },
     "editor": {
       "titleEdit": "Edit quick action",
@@ -702,6 +715,14 @@
     }
   },
   "env": {
+    "secretVarsHeading": "Секретные переменные",
+    "secretVarsDesc": "Ключи API и токены хранятся в системном хранилище ключей, а не в открытом виде в настройках.",
+    "secretNotSet": "Не задано на этом устройстве — выберите или создайте секрет для использования.",
+    "secretRemove": "Удалить",
+    "secretAdd": "Добавить секретную переменную",
+    "secretNamePlaceholder": "VARIABLE_NAME",
+    "secretAddButton": "Добавить",
+    "secretMissing": "Секрет провайдера «{name}» не задан на этом устройстве — введите его снова в настройках Claudian.",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."

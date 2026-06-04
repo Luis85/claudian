@@ -11,8 +11,7 @@ import type ClaudianPlugin from '../../../main';
 import { SlashCommandDropdown } from '../../../shared/components/SlashCommandDropdown';
 import { getEnhancedPath } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
-import { QuickActionStorage } from '../../quickActions/QuickActionStorage';
-import { QuickActionsModal } from '../../quickActions/ui/QuickActionsModal';
+import { openQuickActionsModal } from '../../quickActions/openQuickActionsModal';
 import { resolveModelContextWindow } from '../../settings/customModels/resolveModelContextWindow';
 import { ChatDropController } from '../controllers/ChatDropController';
 import type { DragManagerLike } from '../controllers/dropPayloadDetection';
@@ -402,17 +401,11 @@ function initializeInputToolbar(
       }).open();
     },
     onQuickActionsOpen: () => {
-      const storage = new QuickActionStorage(
-        plugin.storage.getAdapter(),
-        () => plugin.settings.quickActionsFolder ?? 'Quick Actions',
-      );
-      new QuickActionsModal(plugin.app, {
-        storage,
+      openQuickActionsModal(plugin, {
         onRun: (action) => {
           void tab.controllers.inputController?.sendMessage({ content: action.prompt });
         },
-        onFavoritesChanged: () => plugin.quickActionFavoritesCache?.refresh(),
-      }).open();
+      });
     },
   });
 

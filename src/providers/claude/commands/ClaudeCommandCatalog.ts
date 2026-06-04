@@ -8,7 +8,10 @@ import { isSkill } from '../../../utils/slashCommand';
 import type { SkillStorage } from '../storage/SkillStorage';
 import type { SlashCommandStorage } from '../storage/SlashCommandStorage';
 
-function slashCommandToEntry(cmd: SlashCommand): ProviderCommandEntry {
+function slashCommandToEntry(
+  cmd: SlashCommand,
+  options: { sourceFilePath?: string } = {},
+): ProviderCommandEntry {
   const skill = isSkill(cmd);
   return {
     id: cmd.id,
@@ -31,6 +34,7 @@ function slashCommandToEntry(cmd: SlashCommand): ProviderCommandEntry {
     isDeletable: cmd.source !== 'sdk',
     displayPrefix: '/',
     insertPrefix: '/',
+    ...(options.sourceFilePath ? { sourceFilePath: options.sourceFilePath } : {}),
   };
 }
 
@@ -85,7 +89,7 @@ export class ClaudeCommandCatalog implements ProviderCommandCatalog {
     }
     const runtimeEntries = this.sdkCommands
       .filter(cmd => !BUILTIN_HIDDEN_COMMANDS.has(cmd.name.toLowerCase()))
-      .map(slashCommandToEntry);
+      .map((cmd) => slashCommandToEntry(cmd));
     if (runtimeEntries.length > 0) {
       return runtimeEntries;
     }
@@ -113,7 +117,10 @@ export class ClaudeCommandCatalog implements ProviderCommandCatalog {
   async listVaultEntries(): Promise<ProviderCommandEntry[]> {
     const commands = await this.commandStorage.loadAll();
     const skills = await this.skillStorage.loadAll();
-    return [...commands, ...skills].map(slashCommandToEntry);
+    return [
+      ...commands.map((cmd) => slashCommandToEntry(cmd)),
+      ...skills.map((entry) => slashCommandToEntry(entry.skill, { sourceFilePath: entry.filePath })),
+    ];
   }
 
   async saveVaultEntry(entry: ProviderCommandEntry): Promise<void> {

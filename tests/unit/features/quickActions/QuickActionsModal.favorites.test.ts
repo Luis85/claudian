@@ -7,6 +7,7 @@ import type { App} from 'obsidian';
 import { Notice } from 'obsidian';
 
 import type { QuickActionStorage } from '@/features/quickActions/QuickActionStorage';
+import type { VaultSkillSource } from '@/features/quickActions/skills/types';
 import type { QuickAction } from '@/features/quickActions/types';
 import { QuickActionsModal } from '@/features/quickActions/ui/QuickActionsModal';
 
@@ -64,6 +65,14 @@ function makeStorage(actions: QuickAction[]): QuickActionStorage {
   } as unknown as QuickActionStorage;
 }
 
+// The favorites suite exercises the Quick Actions tab, but the modal shell
+// requires Skills tab dependencies too — supply inert stand-ins so the
+// favorites assertions stay focused on the Quick Actions tab.
+const NOOP_AGGREGATOR: VaultSkillSource = {
+  listAll: jest.fn().mockResolvedValue([]),
+};
+const NOOP_ON_RUN_SKILL = jest.fn();
+
 async function flush() {
   await Promise.resolve();
   await Promise.resolve();
@@ -78,7 +87,12 @@ describe('QuickActionsModal favorites', () => {
       makeAction({ name: 'B', favorite: true, favoriteRank: 2 }),
       makeAction({ name: 'A', favorite: true, favoriteRank: 1 }),
     ]);
-    const modal = new QuickActionsModal({} as App, { storage, onRun: jest.fn() });
+    const modal = new QuickActionsModal({} as App, {
+      storage,
+      onRun: jest.fn(),
+      onRunSkill: NOOP_ON_RUN_SKILL,
+      aggregator: NOOP_AGGREGATOR,
+    });
     modal.open();
     await flush();
 
@@ -92,7 +106,12 @@ describe('QuickActionsModal favorites', () => {
       makeAction({ name: 'A', favorite: true, favoriteRank: 1, filePath: 'Quick Actions/a.md' }),
       makeAction({ name: 'B', filePath: 'Quick Actions/b.md' }),
     ]);
-    const modal = new QuickActionsModal({} as App, { storage, onRun: jest.fn() });
+    const modal = new QuickActionsModal({} as App, {
+      storage,
+      onRun: jest.fn(),
+      onRunSkill: NOOP_ON_RUN_SKILL,
+      aggregator: NOOP_AGGREGATOR,
+    });
     modal.open();
     await flush();
 
@@ -111,7 +130,12 @@ describe('QuickActionsModal favorites', () => {
     const storage = makeStorage([
       makeAction({ name: 'A', favorite: true, favoriteRank: 1, filePath: 'Quick Actions/a.md' }),
     ]);
-    const modal = new QuickActionsModal({} as App, { storage, onRun: jest.fn() });
+    const modal = new QuickActionsModal({} as App, {
+      storage,
+      onRun: jest.fn(),
+      onRunSkill: NOOP_ON_RUN_SKILL,
+      aggregator: NOOP_AGGREGATOR,
+    });
     modal.open();
     await flush();
 
@@ -131,7 +155,12 @@ describe('QuickActionsModal favorites', () => {
       ),
       makeAction({ name: 'New', filePath: 'Quick Actions/new.md' }),
     ]);
-    const modal = new QuickActionsModal({} as App, { storage, onRun: jest.fn() });
+    const modal = new QuickActionsModal({} as App, {
+      storage,
+      onRun: jest.fn(),
+      onRunSkill: NOOP_ON_RUN_SKILL,
+      aggregator: NOOP_AGGREGATOR,
+    });
     modal.open();
     await flush();
 
@@ -151,7 +180,12 @@ describe('QuickActionsModal favorites', () => {
       makeAction({ name: 'B', favorite: true, favoriteRank: 2, filePath: 'Quick Actions/b.md' }),
       makeAction({ name: 'A', favorite: true, favoriteRank: 1, filePath: 'Quick Actions/a.md' }),
     ]);
-    const modal = new QuickActionsModal({} as App, { storage, onRun });
+    const modal = new QuickActionsModal({} as App, {
+      storage,
+      onRun,
+      onRunSkill: NOOP_ON_RUN_SKILL,
+      aggregator: NOOP_AGGREGATOR,
+    });
     modal.open();
     await flush();
 
@@ -166,7 +200,12 @@ describe('QuickActionsModal favorites', () => {
     ]);
     (storage.setFavorite as jest.Mock).mockRejectedValueOnce(new Error('disk full'));
 
-    const modal = new QuickActionsModal({} as App, { storage, onRun: jest.fn() });
+    const modal = new QuickActionsModal({} as App, {
+      storage,
+      onRun: jest.fn(),
+      onRunSkill: NOOP_ON_RUN_SKILL,
+      aggregator: NOOP_AGGREGATOR,
+    });
     modal.open();
     await flush();
 
@@ -182,7 +221,13 @@ describe('QuickActionsModal favorites', () => {
     const storage = makeStorage([
       makeAction({ name: 'B', filePath: 'Quick Actions/b.md' }),
     ]);
-    const modal = new QuickActionsModal({} as App, { storage, onRun: jest.fn(), onFavoritesChanged });
+    const modal = new QuickActionsModal({} as App, {
+      storage,
+      onRun: jest.fn(),
+      onRunSkill: NOOP_ON_RUN_SKILL,
+      aggregator: NOOP_AGGREGATOR,
+      onFavoritesChanged,
+    });
     modal.open();
     await flush();
 
@@ -198,7 +243,13 @@ describe('QuickActionsModal favorites', () => {
     const storage = makeStorage([
       makeAction({ name: 'A', favorite: true, favoriteRank: 1, filePath: 'Quick Actions/a.md' }),
     ]);
-    const modal = new QuickActionsModal({} as App, { storage, onRun: jest.fn(), onFavoritesChanged });
+    const modal = new QuickActionsModal({} as App, {
+      storage,
+      onRun: jest.fn(),
+      onRunSkill: NOOP_ON_RUN_SKILL,
+      aggregator: NOOP_AGGREGATOR,
+      onFavoritesChanged,
+    });
     modal.open();
     await flush();
 
@@ -215,7 +266,13 @@ describe('QuickActionsModal favorites', () => {
       makeAction({ name: 'B', filePath: 'Quick Actions/b.md' }),
     ]);
     (storage.setFavorite as jest.Mock).mockRejectedValueOnce(new Error('disk full'));
-    const modal = new QuickActionsModal({} as App, { storage, onRun: jest.fn(), onFavoritesChanged });
+    const modal = new QuickActionsModal({} as App, {
+      storage,
+      onRun: jest.fn(),
+      onRunSkill: NOOP_ON_RUN_SKILL,
+      aggregator: NOOP_AGGREGATOR,
+      onFavoritesChanged,
+    });
     modal.open();
     await flush();
 
@@ -234,7 +291,13 @@ describe('QuickActionsModal favorites', () => {
       ),
       makeAction({ name: 'New', filePath: 'Quick Actions/new.md' }),
     ]);
-    const modal = new QuickActionsModal({} as App, { storage, onRun: jest.fn(), onFavoritesChanged });
+    const modal = new QuickActionsModal({} as App, {
+      storage,
+      onRun: jest.fn(),
+      onRunSkill: NOOP_ON_RUN_SKILL,
+      aggregator: NOOP_AGGREGATOR,
+      onFavoritesChanged,
+    });
     modal.open();
     await flush();
 

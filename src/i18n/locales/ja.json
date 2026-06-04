@@ -554,7 +554,20 @@
       "emptyHintCreate": "Use Add action below to create your first quick action, or set the vault folder under Settings → Quick Actions.",
       "markFavorite": "お気に入りに追加",
       "unmarkFavorite": "お気に入りから外す",
-      "favoriteLimitReached": "お気に入りに登録できるクイックアクションは最大5つです"
+      "favoriteLimitReached": "お気に入りに登録できるクイックアクションは最大5つです",
+      "tabs": {
+        "quickActions": "Quick actions",
+        "skills": "Skills"
+      }
+    },
+    "skills": {
+      "emptyAll": "No vault skills found.",
+      "emptyHint": "Skills live in .claude/skills/, .codex/skills/, and .agents/skills/.",
+      "providerDisabled": "Provider '{provider}' is disabled. Enable it in settings.",
+      "editInSettings": "Edit in {provider} settings",
+      "disabledBadge": "disabled",
+      "searchPlaceholder": "Search skills by name or description…",
+      "noResults": "No skills match your search."
     },
     "editor": {
       "titleEdit": "Edit quick action",
@@ -702,6 +715,14 @@
     }
   },
   "env": {
+    "secretVarsHeading": "シークレット変数",
+    "secretVarsDesc": "API キーやトークンは平文の設定ではなく、システムのキーチェーンに保存されます。",
+    "secretNotSet": "このデバイスには設定されていません。使用するシークレットを選択または作成してください。",
+    "secretRemove": "削除",
+    "secretAdd": "シークレット変数を追加",
+    "secretNamePlaceholder": "VARIABLE_NAME",
+    "secretAddButton": "追加",
+    "secretMissing": "プロバイダーのシークレット「{name}」はこのデバイスに設定されていません。Claudian の設定で再入力してください。",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."

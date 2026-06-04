@@ -3,6 +3,8 @@ type: improvement
 priority: 2 - normal
 status: open
 relations:
+  - "[[Agent Kanban Board]]"
+  - "[[Chat]]"
 tags:
 ---
 ![[Pasted image 20260604141050.png]]

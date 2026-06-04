@@ -26,6 +26,7 @@ function createMockPlugin(settings: Record<string, unknown> = {}): ClaudianPlugi
     settings,
     getResolvedProviderCliPath: jest.fn().mockReturnValue('/mock/claude'),
     getActiveEnvironmentVariables: jest.fn().mockReturnValue(''),
+    getResolvedEnvironmentVariables: jest.fn().mockReturnValue({}),
   } as unknown as ClaudianPlugin;
 }
 

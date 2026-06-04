@@ -1,7 +1,7 @@
 ---
 type: bug
 priority: 1 - high
-status: open
+status: done
 relations:
   - "[[Agent Kanban Board]]"
   - "[[Chat]]"

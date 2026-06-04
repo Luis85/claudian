@@ -70,6 +70,11 @@ describe('ClaudianPlugin', () => {
     resetCommandHotkeysForTests();
 
     mockApp = {
+      secretStorage: {
+        setSecret: jest.fn(),
+        getSecret: jest.fn().mockReturnValue(null),
+        listSecrets: jest.fn().mockReturnValue([]),
+      },
       vault: {
         adapter: {
           basePath: '/test/vault',

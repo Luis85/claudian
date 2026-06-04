@@ -30,4 +30,13 @@ export interface ProviderCommandEntry {
    * across edits, renames, and deletes in shared settings UIs.
    */
   persistenceKey?: string;
+  /**
+   * Absolute or vault-relative path to the file that defines this command/skill.
+   * Set for entries backed by an editable file on disk — vault SKILL.md
+   * (`.claude/skills/<name>/SKILL.md`), home-scope skills (`~/.codex/skills/...`),
+   * etc. Undefined for runtime-discovered entries (e.g. Opencode skills) and
+   * SDK built-ins. Consumers use it to surface an "open file" affordance or
+   * jump to provider settings pre-focused on this entry.
+   */
+  sourceFilePath?: string;
 }

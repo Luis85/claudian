@@ -66,6 +66,7 @@ function listedSkillToProviderEntry(
     isDeletable: isVault,
     displayPrefix: '$',
     insertPrefix: '$',
+    sourceFilePath: skill.path,
     ...(isVault
       ? {
           persistenceKey: createCodexSkillPersistenceKey({
@@ -130,6 +131,7 @@ export class CodexSkillCatalog implements ProviderCommandCatalog {
         isDeletable: true,
         displayPrefix: '$',
         insertPrefix: '$',
+        sourceFilePath: listedSkill.path,
         persistenceKey: createCodexSkillPersistenceKey({
           rootId: location.rootId,
           currentName: location.name,

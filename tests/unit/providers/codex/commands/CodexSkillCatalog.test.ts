@@ -101,6 +101,33 @@ describe('CodexSkillCatalog', () => {
       expect(homeEntry!.persistenceKey).toBeUndefined();
     });
 
+    it('sets sourceFilePath on dropdown entries', async () => {
+      const storage = new CodexSkillStorage(createMockAdapter({}), createMockAdapter({}));
+      const listProvider = createMockSkillListProvider([
+        {
+          name: 'my-skill',
+          description: 'A vault skill',
+          path: '/test/vault/.codex/skills/my-skill/SKILL.md',
+          scope: 'repo',
+          enabled: true,
+        },
+        {
+          name: 'home-skill',
+          description: 'Home skill',
+          path: '/Users/test/.codex/skills/home-skill/SKILL.md',
+          scope: 'user',
+          enabled: true,
+        },
+      ]);
+      const catalog = new CodexSkillCatalog(storage, listProvider, '/test/vault');
+
+      const entries = await catalog.listDropdownEntries({ includeBuiltIns: false });
+      const vault = entries.find(e => e.name === 'my-skill')!;
+      const home = entries.find(e => e.name === 'home-skill')!;
+      expect(vault.sourceFilePath).toBe('/test/vault/.codex/skills/my-skill/SKILL.md');
+      expect(home.sourceFilePath).toBe('/Users/test/.codex/skills/home-skill/SKILL.md');
+    });
+
     it('omits disabled skills from dropdown entries', async () => {
       const storage = new CodexSkillStorage(createMockAdapter({}), createMockAdapter({}));
       const listProvider = createMockSkillListProvider([
@@ -167,6 +194,7 @@ Prompt`,
       expect(entries[0].name).toBe('vault-skill');
       expect(entries[0].scope).toBe('vault');
       expect(entries[0].content).toBe('Prompt');
+      expect(entries[0].sourceFilePath).toBe('/test/vault/.codex/skills/vault-skill/SKILL.md');
     });
 
     it('recognizes repo skills under a \\\\wsl$ vault path', async () => {

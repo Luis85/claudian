@@ -205,3 +205,82 @@
 .claudian-quick-action-prompt-input {
   width: 100%;
 }
+
+/* Tab strip */
+.claudian-quick-actions-tabs {
+  display: flex;
+  gap: 0.25em;
+  margin-bottom: 0.75em;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.claudian-quick-actions-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.5em 0.9em;
+  margin-bottom: -1px;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.claudian-quick-actions-tab:hover {
+  color: var(--text-normal);
+}
+
+.claudian-quick-actions-tab.is-active {
+  color: var(--text-normal);
+  border-bottom-color: var(--interactive-accent);
+}
+
+/* Skill list */
+.claudian-quick-actions-skill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+}
+
+.claudian-quick-actions-provider-header {
+  margin-top: 0.6em;
+  margin-bottom: 0.2em;
+  font-size: var(--font-ui-smaller);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.claudian-quick-actions-provider-header:first-child {
+  margin-top: 0;
+}
+
+.claudian-quick-actions-skill-row.is-provider-disabled {
+  opacity: 0.55;
+}
+
+.claudian-quick-actions-skill-disabled-badge {
+  display: inline-block;
+  margin-left: 0.5em;
+  padding: 0.05em 0.45em;
+  border-radius: 8px;
+  background: var(--background-modifier-border);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  text-transform: uppercase;
+}
+
+.claudian-quick-actions-skills-empty {
+  padding: 1em;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.claudian-quick-actions-skills-empty-lead {
+  font-weight: 600;
+  margin-bottom: 0.3em;
+}
+
+.claudian-quick-actions-skills-empty-hint {
+  font-size: var(--font-ui-small);
+}

@@ -314,6 +314,7 @@ function createStubPlugin() {
     getAllViews: jest.fn().mockReturnValue([]),
     getView: jest.fn().mockReturnValue(undefined),
     getActiveEnvironmentVariables: jest.fn().mockReturnValue(''),
+    getResolvedEnvironmentVariables: jest.fn().mockReturnValue({}),
     events: {
       on: jest.fn(() => () => undefined),
       emit: jest.fn(),

@@ -82,8 +82,8 @@ const cursorEnvHashSpec: EnvHashReconcilerSpec = {
 };
 
 export const cursorSettingsReconciler: ProviderSettingsReconciler = {
-  reconcileModelWithEnvironment: (settings, conversations) =>
-    reconcileEnvironmentHash(cursorEnvHashSpec, settings, conversations),
+  reconcileModelWithEnvironment: (settings, conversations, resolveEnvText) =>
+    reconcileEnvironmentHash(cursorEnvHashSpec, settings, conversations, resolveEnvText),
 
   setEnabled(settings, enabled) {
     updateCursorProviderSettings(settings, { enabled });

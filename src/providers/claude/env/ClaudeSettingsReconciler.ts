@@ -37,8 +37,8 @@ const claudeEnvHashSpec: EnvHashReconcilerSpec = {
 };
 
 export const claudeSettingsReconciler: ProviderSettingsReconciler = {
-  reconcileModelWithEnvironment: (settings, conversations) =>
-    reconcileEnvironmentHash(claudeEnvHashSpec, settings, conversations),
+  reconcileModelWithEnvironment: (settings, conversations, resolveEnvText) =>
+    reconcileEnvironmentHash(claudeEnvHashSpec, settings, conversations, resolveEnvText),
 
   setEnabled(settings, enabled) {
     updateClaudeProviderSettings(settings, { enabled });

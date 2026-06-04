@@ -4,17 +4,28 @@ import { Modal, Notice, setIcon } from 'obsidian';
 import { t } from '../../../i18n/i18n';
 import type { QuickActionStorage } from '../QuickActionStorage';
 import { assignNextFavoriteRank } from '../QuickActionStorage';
+import type { SkillTabEntry, VaultSkillSource } from '../skills/types';
 import type { QuickAction } from '../types';
 import { QuickActionEditorModal } from './QuickActionEditorModal';
+import { SkillsTabRenderer } from './SkillsTabRenderer';
 
 export interface QuickActionsModalCallbacks {
   onRun: (action: QuickAction) => void;
+  onRunSkill: (entry: SkillTabEntry) => void;
   storage: QuickActionStorage;
+  aggregator: VaultSkillSource;
   onFavoritesChanged?: () => void;
 }
 
+type ActiveTab = 'quickActions' | 'skills';
+
 export class QuickActionsModal extends Modal {
   private callbacks: QuickActionsModalCallbacks;
+  private activeTab: ActiveTab = 'quickActions';
+  private tabStripEl: HTMLElement | null = null;
+  private bodyEl: HTMLElement | null = null;
+
+  // Quick Actions tab state
   private introEl: HTMLElement | null = null;
   private searchWrapEl: HTMLElement | null = null;
   private searchInputEl: HTMLInputElement | null = null;
@@ -22,44 +33,111 @@ export class QuickActionsModal extends Modal {
   private actions: QuickAction[] = [];
   private filter = '';
 
+  // Skills tab — delegated to a dedicated renderer.
+  private skillsRenderer: SkillsTabRenderer;
+
   constructor(app: App, callbacks: QuickActionsModalCallbacks) {
     super(app);
     this.callbacks = callbacks;
+    this.skillsRenderer = new SkillsTabRenderer(
+      callbacks.aggregator,
+      callbacks.onRunSkill,
+      () => this.close(),
+    );
   }
 
   onOpen(): void {
     this.setTitle(t('quickActions.modal.title'));
     this.modalEl.addClass('claudian-sp-modal', 'claudian-quick-actions-modal');
 
-    const body = this.contentEl.createDiv({ cls: 'claudian-quick-actions-body' });
-    this.introEl = body.createDiv({ cls: 'claudian-quick-actions-intro' });
+    this.tabStripEl = this.contentEl.createDiv({ cls: 'claudian-quick-actions-tabs' });
+    this.renderTabStrip();
 
-    this.searchWrapEl = body.createDiv({ cls: 'claudian-quick-actions-search' });
-    const inputContainer = this.searchWrapEl.createDiv({ cls: 'claudian-quick-actions-search-container' });
+    this.bodyEl = this.contentEl.createDiv({ cls: 'claudian-quick-actions-body' });
+    void this.renderActiveTab();
+  }
+
+  private renderTabStrip(): void {
+    if (!this.tabStripEl) return;
+    this.tabStripEl.empty();
+
+    const entries: Array<{ key: ActiveTab; label: string }> = [
+      { key: 'quickActions', label: t('quickActions.modal.tabs.quickActions') },
+      { key: 'skills', label: t('quickActions.modal.tabs.skills') },
+    ];
+
+    for (const entry of entries) {
+      const tab = this.tabStripEl.createEl('button', {
+        cls: 'claudian-quick-actions-tab',
+        text: entry.label,
+        attr: { type: 'button' },
+      });
+      if (this.activeTab === entry.key) {
+        tab.addClass('is-active');
+      }
+      tab.addEventListener('click', () => {
+        if (this.activeTab === entry.key) return;
+        this.activeTab = entry.key;
+        this.renderTabStrip();
+        void this.renderActiveTab();
+      });
+    }
+  }
+
+  private async renderActiveTab(): Promise<void> {
+    if (!this.bodyEl) return;
+    this.bodyEl.empty();
+    this.introEl = null;
+    this.searchWrapEl = null;
+    this.searchInputEl = null;
+    this.listEl = null;
+    this.filter = '';
+
+    let inputToFocus: HTMLInputElement | null;
+    if (this.activeTab === 'quickActions') {
+      inputToFocus = this.renderQuickActionsBody(this.bodyEl);
+      await this.refreshList();
+    } else {
+      inputToFocus = await this.skillsRenderer.render(this.bodyEl);
+    }
+    inputToFocus?.focus();
+  }
+
+  // ============================================================
+  // Quick Actions tab
+  // ============================================================
+
+  private renderQuickActionsBody(host: HTMLElement): HTMLInputElement {
+    this.introEl = host.createDiv({ cls: 'claudian-quick-actions-intro' });
+
+    this.searchWrapEl = host.createDiv({ cls: 'claudian-quick-actions-search' });
+    const inputContainer = this.searchWrapEl.createDiv({
+      cls: 'claudian-quick-actions-search-container',
+    });
     const placeholder = t('quickActions.modal.searchPlaceholder');
-    this.searchInputEl = inputContainer.createEl('input', {
+    const searchInput = inputContainer.createEl('input', {
       type: 'search',
       cls: 'claudian-quick-actions-search-input',
       attr: { placeholder, 'aria-label': placeholder },
     });
-    this.searchInputEl.addEventListener('input', () => {
-      this.filter = this.searchInputEl?.value ?? '';
+    this.searchInputEl = searchInput;
+    searchInput.addEventListener('input', () => {
+      this.filter = searchInput.value ?? '';
       this.renderList();
     });
-    this.searchInputEl.addEventListener('keydown', (e) => {
+    searchInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         this.runFirstMatch();
-      } else if (e.key === 'Escape' && this.searchInputEl?.value) {
+      } else if (e.key === 'Escape' && searchInput.value) {
         e.preventDefault();
         e.stopPropagation();
-        this.searchInputEl.value = '';
+        searchInput.value = '';
         this.filter = '';
         this.renderList();
       }
     });
 
-    // Reset button on right side of search
     const resetBtn = inputContainer.createEl('button', {
       cls: 'claudian-quick-actions-search-reset',
       text: '✕',
@@ -69,19 +147,19 @@ export class QuickActionsModal extends Modal {
       this.setFilter('');
     });
 
-    this.listEl = body.createDiv({ cls: 'claudian-quick-actions-list' });
+    this.listEl = host.createDiv({ cls: 'claudian-quick-actions-list' });
 
-    const footer = this.contentEl.createDiv({ cls: 'claudian-quick-actions-footer' });
-    footer.createEl('button', {
-      cls: 'mod-cta',
-      text: t('quickActions.modal.add'),
-    }).addEventListener('click', () => {
-      this.openEditor(null);
-    });
+    const footer = host.createDiv({ cls: 'claudian-quick-actions-footer' });
+    footer
+      .createEl('button', {
+        cls: 'mod-cta',
+        text: t('quickActions.modal.add'),
+      })
+      .addEventListener('click', () => {
+        this.openEditor(null);
+      });
 
-    void this.refreshList().then(() => {
-      this.searchInputEl?.focus();
-    });
+    return searchInput;
   }
 
   private runFirstMatch(): void {
@@ -186,7 +264,9 @@ export class QuickActionsModal extends Modal {
         cls: 'claudian-quick-actions-intro-lead',
         text: t('quickActions.modal.emptyLead'),
       });
-      const hints = this.introEl.createEl('ul', { cls: 'claudian-quick-actions-intro-hints' });
+      const hints = this.introEl.createEl('ul', {
+        cls: 'claudian-quick-actions-intro-hints',
+      });
       hints.createEl('li', { text: t('quickActions.modal.emptyHintVault') });
       hints.createEl('li', { text: t('quickActions.modal.emptyHintRun') });
       hints.createEl('li', { text: t('quickActions.modal.emptyHintCreate') });
@@ -213,7 +293,10 @@ export class QuickActionsModal extends Modal {
     const textCol = main.createDiv({ cls: 'claudian-quick-action-text' });
     textCol.createEl('strong', { text: action.name });
     if (action.description !== action.name) {
-      textCol.createDiv({ cls: 'claudian-quick-action-desc', text: action.description });
+      textCol.createDiv({
+        cls: 'claudian-quick-action-desc',
+        text: action.description,
+      });
     }
     if (action.tags && action.tags.length > 0) {
       const tagsEl = textCol.createDiv({ cls: 'claudian-quick-action-tags' });
@@ -221,7 +304,11 @@ export class QuickActionsModal extends Modal {
         const chip = tagsEl.createSpan({
           cls: 'claudian-quick-action-tag',
           text: `#${tag}`,
-          attr: { role: 'button', tabindex: '0', 'aria-label': t('quickActions.modal.filterByTag', { tag }) },
+          attr: {
+            role: 'button',
+            tabindex: '0',
+            'aria-label': t('quickActions.modal.filterByTag', { tag }),
+          },
         });
         chip.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -260,14 +347,18 @@ export class QuickActionsModal extends Modal {
     });
 
     const actions = row.createDiv({ cls: 'claudian-quick-action-actions' });
-    actions.createEl('button', { text: t('common.edit') }).addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.openEditor(action);
-    });
-    actions.createEl('button', { text: t('common.delete') }).addEventListener('click', (e) => {
-      e.stopPropagation();
-      void this.deleteAction(action);
-    });
+    actions
+      .createEl('button', { text: t('common.edit') })
+      .addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.openEditor(action);
+      });
+    actions
+      .createEl('button', { text: t('common.delete') })
+      .addEventListener('click', (e) => {
+        e.stopPropagation();
+        void this.deleteAction(action);
+      });
   }
 
   private openEditor(existing: QuickAction | null): void {

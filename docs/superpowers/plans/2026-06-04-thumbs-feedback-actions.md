@@ -1,5 +1,5 @@
 ---
-status: open
+status: done
 ---
 # Thumbs feedback actions Implementation Plan
 

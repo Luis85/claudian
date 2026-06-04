@@ -4,6 +4,7 @@ import { getEnvironmentReviewKeysForScope } from '../../../core/providers/provid
 import type { PluginContext } from '../../../core/types/PluginContext';
 import type { EnvironmentScope } from '../../../core/types/settings';
 import { EnvSnippetManager } from './EnvSnippetManager';
+import { renderSecretEnvVarsSection } from './SecretEnvVarsSection';
 
 interface EnvironmentSettingsSectionOptions {
   container: HTMLElement;
@@ -74,6 +75,10 @@ export function renderEnvironmentSettingsSection(
     });
 
   updateReviewWarning();
+
+  // SEC-A: secret env vars (keychain-backed) live in their own structured editor
+  // so keys never have to be typed into the plaintext textarea above.
+  renderSecretEnvVarsSection({ container, plugin, scope });
 
   const contextLimitsContainer = container.createDiv({ cls: 'claudian-context-limits-container' });
   renderCustomContextLimits?.(contextLimitsContainer);

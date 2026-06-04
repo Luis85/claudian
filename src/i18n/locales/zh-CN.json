@@ -554,7 +554,20 @@
       "emptyHintCreate": "Use Add action below to create your first quick action, or set the vault folder under Settings → Quick Actions.",
       "markFavorite": "添加到收藏",
       "unmarkFavorite": "取消收藏",
-      "favoriteLimitReached": "最多可收藏 5 个快速操作"
+      "favoriteLimitReached": "最多可收藏 5 个快速操作",
+      "tabs": {
+        "quickActions": "Quick actions",
+        "skills": "Skills"
+      }
+    },
+    "skills": {
+      "emptyAll": "No vault skills found.",
+      "emptyHint": "Skills live in .claude/skills/, .codex/skills/, and .agents/skills/.",
+      "providerDisabled": "Provider '{provider}' is disabled. Enable it in settings.",
+      "editInSettings": "Edit in {provider} settings",
+      "disabledBadge": "disabled",
+      "searchPlaceholder": "Search skills by name or description…",
+      "noResults": "No skills match your search."
     },
     "editor": {
       "titleEdit": "Edit quick action",
@@ -702,6 +715,14 @@
     }
   },
   "env": {
+    "secretVarsHeading": "机密变量",
+    "secretVarsDesc": "API 密钥和令牌保存在系统钥匙串中，而不是明文设置里。",
+    "secretNotSet": "此设备上未设置——请选择或创建要使用的机密。",
+    "secretRemove": "移除",
+    "secretAdd": "添加机密变量",
+    "secretNamePlaceholder": "VARIABLE_NAME",
+    "secretAddButton": "添加",
+    "secretMissing": "此设备未设置提供方密钥“{name}”，请在 Claudian 设置中重新输入。",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."
