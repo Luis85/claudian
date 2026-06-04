@@ -368,7 +368,7 @@ Grouped by theme; priority in brackets. "Vault agent" = the active provider runn
 - **US-9 [M]** As a new user, I want safe defaults so the agent asks before editing until I decide otherwise. *(F-SAFE-3)*
 - **US-10 [M]** As Priya, I want to mark folders the agent must never read or write. *(F-SAFE-4)*
 - **US-11 [S]** As a careful user, I want a record of everything the agent did, surviving restarts. *(F-SAFE-5)*
-- **US-12 [S]** As Priya, I want to see and control every network call the agent makes. *(F-SAFE-6)*
+- **US-12 [S]** As Priya, I want a ledger of the agent's network calls and a switch for the network tools I haven't enabled — knowing a provider's own traffic can be disclosed but not firewalled. *(F-SAFE-6)*
 
 ### Vault-native work
 - **US-13 [M]** As Maya, I want to ask "what are my most-linked notes about X?" and get a real answer from my vault's structure. *(F-VAULT-3/4)*
@@ -445,7 +445,7 @@ The genuine MVP — mostly UI/wiring on substrate that exists (the one genuinely
 The harness bulk, each item now de-risked by a Phase-0 spike: cross-provider **whole-vault Shadow-Git undo** (post-S2) · **Vault MCP tool surface** wired to all capable providers (post-S1) · `.obsidian-agentignore` (+ native ignore emission) · **RAG layer** (index · embeddings · hybrid retrieval · `semantic_search`/`ask_vault` MCP tools, post-S3; absorbs semantic search + graph expansion) · Dataview/Bases tools · three-tier memory · tool-output offloading · **progressive disclosure (F-CTX-3, now Must)** · cost display · plan files in the Agent Board · **Harness Library: provider-agnostic Rules + Tool gallery + Skills** · **deterministic verification gates** · **in-app auto-install / managed runtime** (F-ON-8 — so the Lite→edit escalation stays zero-terminal). *(F-SAFE-1/4, F-VAULT-1/2/3/6, F-RAG-1/2/3/5, F-MEM-1, F-CTX-2/3, F-COST-1, F-PLAN-1/2, F-HARN-1..5, F-VERIFY-1, F-ON-8)*
 
 ### Phase 3 — Differentiation & ecosystem
-Block-level provenance / ingest · Canvas/Excalidraw generation · cross-encoder reranking · model tiering · subagent context-isolation security control · MCP-server memory relay · egress allowlist + network ledger. *(F-VAULT-7/8/9, F-COST-2, F-ORCH-1, F-MEM-2, F-SAFE-6)*
+Block-level provenance / ingest · Canvas/Excalidraw generation · cross-encoder reranking · model tiering · subagent context-isolation security control · MCP-server memory relay · egress controls + network ledger. *(F-VAULT-7/8/9, F-COST-2, F-ORCH-1, F-MEM-2, F-SAFE-6)*
 
 ### Phase 4 — Hardening & (optional) mobile
 Red-team eval harness (Promptfoo injection suite + Rule-of-Two state-machine tests + sanitizer tests) · model-graded verification · audit-log maturity · untrusted-content pre-processing hardening · evaluate a degraded mobile mode (lite provider + vault tools via `requestUrl`, no CLI/Git). *(F-SAFE-7, F-VERIFY-2/3, NG1 revisited)*
