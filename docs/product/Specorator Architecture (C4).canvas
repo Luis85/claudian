@@ -35,7 +35,7 @@
       "width": 1500,
       "height": 150,
       "color": "6",
-      "text": "# Specorator — Architecture (C4 Model)\nContext → Container → Component. Stakeholder view. **🟩 Green = ships today (build upon, don't regress)** · **🟦 Cyan = new in v1** · **🟥 Red = safety-critical** · **🟧 Orange = people/actors** · **🟨 Yellow = legend/notes** · ⬜ Grey = external."
+      "text": "# Specorator — Architecture (C4 Model)\nContext → Container → Component. Stakeholder view. **🟩 Green = ships today (build upon, don't regress)** · **🟦 Cyan = post-1.0 harness roadmap** · **🟥 Red = safety-critical** · **🟧 Orange = people/actors** · **🟨 Yellow = legend/notes** · ⬜ Grey = external."
     },
     {
       "id": "legend",
@@ -45,7 +45,7 @@
       "width": 480,
       "height": 600,
       "color": "3",
-      "text": "## Legend\n\n**🟩 Green** — exists today. Specorator builds upon these; v1 must **not** regress them.\n\n**🟦 Cyan** — new harness components added for v1.\n\n**🟥 Red** — safety-critical, fail-closed, non-negotiable.\n\n**⬜ Grey** — external systems outside Specorator.\n\n**🟧 Orange** — people / actors.\n\n**🟨 Yellow** — legend & notes.\n\n**🟪 Purple** — title / system header.\n\n---\n**Principle:** *Agent = Model + Harness.* Keep the delegated loop; build the user-facing harness around it.\n\n**Don't reinvent:** Chat · Agent Board · Quick Actions · Orchestrator · Multi-provider already work — *extend* them."
+      "text": "## Legend\n\n**🟩 Green** — exists today. Specorator builds upon these; v1 must **not** regress them.\n\n**🟦 Cyan** — new harness components added post-1.0 (the harness roadmap).\n\n**🟥 Red** — safety-critical, fail-closed, non-negotiable.\n\n**⬜ Grey** — external systems outside Specorator.\n\n**🟧 Orange** — people / actors.\n\n**🟨 Yellow** — legend & notes.\n\n**🟪 Purple** — title / system header.\n\n---\n**Principle:** *Agent = Model + Harness.* Keep the delegated loop; build the user-facing harness around it.\n\n**Don't reinvent:** Chat · Agent Board · Quick Actions · Orchestrator · Multi-provider already work — *extend* them."
     },
     {
       "id": "a_nontech",

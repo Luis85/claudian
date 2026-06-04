@@ -7,7 +7,7 @@
       "y": 0,
       "width": 2400,
       "height": 560,
-      "label": "Dedicated Views & Entry Points — 🟩 today · 🟦 new in v1 · 🟥 safety-critical"
+      "label": "Dedicated Views & Entry Points — 🟩 today · 🟦 post-1.0 roadmap · 🟥 safety-critical"
     },
     {
       "id": "g_chat",
@@ -34,7 +34,7 @@
       "y": 1900,
       "width": 800,
       "height": 880,
-      "label": "New surfaces — v1 🟦 / 🟥"
+      "label": "New surfaces — post-1.0 🟦 / 🟥"
     },
     {
       "id": "g_settings",
@@ -43,7 +43,7 @@
       "y": 2800,
       "width": 2520,
       "height": 420,
-      "label": "Settings Tab (ClaudianSettingTab) sections — 🟩 today, 🟦 v1 additions"
+      "label": "Settings Tab (ClaudianSettingTab) sections — 🟩 today, 🟦 post-1.0 additions"
     },
     {
       "id": "title",
@@ -53,7 +53,7 @@
       "width": 1700,
       "height": 150,
       "color": "6",
-      "text": "# Specorator — UI Map (current & future state)\nViews · modals · panels and their responsibilities. **🟩 Green = ships today** · **🟦 Cyan = new in v1** · **🟥 Red = safety-critical**. Code symbols in `mono`. Companion to [[Specorator Architecture (C4)]]."
+      "text": "# Specorator — UI Map (current & future state)\nViews · modals · panels and their responsibilities. **🟩 Green = ships today** · **🟦 Cyan = post-1.0 harness roadmap** · **🟥 Red = safety-critical**. Code symbols in `mono`. Companion to [[Specorator Architecture (C4)]]."
     },
     {
       "id": "legend",
@@ -63,7 +63,7 @@
       "width": 480,
       "height": 420,
       "color": "3",
-      "text": "## Legend\n\n**🟩 Green** — exists today (don't regress).\n**🟦 Cyan** — new surface for v1.\n**🟥 Red** — safety-critical.\n\n`Type`: View = dedicated pane (ItemView) · Modal = dialog · Panel/Card = lives inside a view.\n\nEdges: **opens / contains ▼ / extends**.\n\n*New surfaces follow the [[Quick Actions]] card model: tap to use, no files or JSON.*"
+      "text": "## Legend\n\n**🟩 Green** — exists today (don't regress).\n**🟦 Cyan** — post-1.0 roadmap surface.\n**🟥 Red** — safety-critical.\n\n`Type`: View = dedicated pane (ItemView) · Modal = dialog · Panel/Card = lives inside a view.\n\nEdges: **opens / contains ▼ / extends**.\n\n*New surfaces follow the [[Quick Actions]] card model: tap to use, no files or JSON.*"
     },
     {
       "id": "entry_ribbon",
