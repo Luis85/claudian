@@ -69,8 +69,9 @@ export function extractBlobSecretRefs(
   setSecret: SecretSetter,
   usedIds: Set<string>,
   existingRefs: SecretEnvVarRef[] = [],
-): { blob: string; refs: SecretEnvVarRef[] } {
+): { blob: string; refs: SecretEnvVarRef[]; clearedRefs: SecretEnvVarRef[] } {
   const refs: SecretEnvVarRef[] = [];
+  const clearedRefs: SecretEnvVarRef[] = [];
   const out: string[] = [];
 
   for (const line of blob.split(/\r?\n/)) {
@@ -81,7 +82,18 @@ export function extractBlobSecretRefs(
     // A single line yields at most one key via the canonical parser.
     const parsed = parseEnvironmentVariables(line);
     const key = Object.keys(parsed)[0];
-    if (!key || !isSecretEnvKey(key) || parsed[key] === '') {
+    if (!key || !isSecretEnvKey(key)) {
+      out.push(line);
+      continue;
+    }
+
+    const existing = existingRefs.find((ref) => ref.scope === scope && ref.name === key);
+
+    if (parsed[key] === '') {
+      // Cleared in the editor (`KEY=`). If it was a migrated secret, prune its
+      // ref so the stale SecretStorage value is no longer overlaid at launch.
+      // The (now empty) line is kept as the user's explicit value.
+      if (existing) clearedRefs.push(existing);
       out.push(line);
       continue;
     }
@@ -89,7 +101,6 @@ export function extractBlobSecretRefs(
     // A re-entered key (already migrated) updates its existing secret in place,
     // keeping the same id/ref — so editing a key in the textarea never leaves a
     // stale SecretStorage value winning over the new one, nor a plaintext line.
-    const existing = existingRefs.find((ref) => ref.scope === scope && ref.name === key);
     if (existing) {
       setSecret(existing.secretId, parsed[key]);
     } else {
@@ -101,7 +112,7 @@ export function extractBlobSecretRefs(
     // Drop the secret line from the sanitized blob (either way).
   }
 
-  return { blob: out.join('\n'), refs };
+  return { blob: out.join('\n'), refs, clearedRefs };
 }
 
 /**
@@ -134,6 +145,7 @@ export function migrateEnvSecrets(
   const usedIds = new Set<string>([...existing.map((ref) => ref.secretId), ...store.list()]);
   const setSecret: SecretSetter = (id, value) => store.set(id, value);
   const newRefs: SecretEnvVarRef[] = [];
+  const clearedRefs: SecretEnvVarRef[] = [];
   let changed = false;
 
   const sharedBlob = getSharedEnvironmentVariables(settings);
@@ -143,6 +155,7 @@ export function migrateEnvSecrets(
     changed = true;
   }
   newRefs.push(...shared.refs);
+  clearedRefs.push(...shared.clearedRefs);
 
   for (const providerId of providerIds) {
     const scope: EnvironmentScope = `provider:${providerId}`;
@@ -153,10 +166,15 @@ export function migrateEnvSecrets(
       changed = true;
     }
     newRefs.push(...result.refs);
+    clearedRefs.push(...result.clearedRefs);
   }
 
-  if (newRefs.length > 0) {
-    settings.secretEnvVars = [...existing, ...newRefs];
+  if (newRefs.length > 0 || clearedRefs.length > 0) {
+    const clearedIds = new Set(clearedRefs.map((ref) => ref.secretId));
+    settings.secretEnvVars = [...existing.filter((ref) => !clearedIds.has(ref.secretId)), ...newRefs];
+    for (const ref of clearedRefs) {
+      setSecret(ref.secretId, ''); // clear the now-unreferenced stored value
+    }
     changed = true;
   }
   return changed;

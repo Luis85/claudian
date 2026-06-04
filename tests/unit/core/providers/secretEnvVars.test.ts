@@ -174,6 +174,22 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
     expect(stored.get('claudian-env-shared-anthropic-api-key')).toBe('sk-new');
   });
 
+  it('prunes the ref and clears the stored value when a migrated key is cleared (KEY=)', () => {
+    const settings: Record<string, unknown> = {
+      sharedEnvironmentVariables: 'ANTHROPIC_API_KEY=\nHTTP_PROXY=http://p',
+      providerConfigs: {},
+      secretEnvVars: [
+        { scope: 'shared', name: 'ANTHROPIC_API_KEY', secretId: 'claudian-env-shared-anthropic-api-key' },
+      ],
+    };
+    const { changed, stored } = run(settings, { 'claudian-env-shared-anthropic-api-key': 'sk-old' });
+
+    expect(changed).toBe(true);
+    expect(settings.secretEnvVars).toEqual([]); // ref pruned so overlay won't re-inject
+    expect(stored.get('claudian-env-shared-anthropic-api-key')).toBe(''); // stored value cleared
+    expect(getSharedEnvironmentVariables(settings)).toBe('ANTHROPIC_API_KEY=\nHTTP_PROXY=http://p'); // empty line kept
+  });
+
   it('does not overwrite an id already present in SecretStorage (seeds usedIds from store.list)', () => {
     const settings: Record<string, unknown> = {
       sharedEnvironmentVariables: 'ANTHROPIC_API_KEY=sk-new',
