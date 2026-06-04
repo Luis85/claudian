@@ -64,7 +64,15 @@ export class CommitOnAcceptCoordinator {
     }
 
     const provider = task.frontmatter.provider;
-    if (provider && !this.deps.isProviderGitEnabled(provider)) {
+    const model = task.frontmatter.model;
+    // Surface.requestCommitTurn rejects without a provider+model pair. Skip
+    // silently here so a manually-marked-done work order doesn't surface the
+    // modal only to fail on confirm with "missing provider/model".
+    if (!provider || !model) {
+      this.deps.logger.debug('commitOnAccept skip: missing provider or model');
+      return;
+    }
+    if (!this.deps.isProviderGitEnabled(provider)) {
       this.deps.logger.debug('commitOnAccept skip: providerOptOut');
       return;
     }

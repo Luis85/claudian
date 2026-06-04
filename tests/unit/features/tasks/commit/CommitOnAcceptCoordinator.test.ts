@@ -118,6 +118,24 @@ describe('CommitOnAcceptCoordinator — silent-skip branches', () => {
     expect(h.openModal).not.toHaveBeenCalled();
   });
 
+  it('skips silently when work order has no provider', async () => {
+    const h = makeHarness();
+    h.loadTaskSpec.mockResolvedValueOnce(makeTask({ provider: undefined }));
+    h.events.emit('task:status-changed', { taskId: 'wo-1', path: 'p', status: 'done' });
+    await new Promise((r) => setImmediate(r));
+    expect(h.openModal).not.toHaveBeenCalled();
+    expect(h.surface.requestCommitTurn).not.toHaveBeenCalled();
+  });
+
+  it('skips silently when work order has no model', async () => {
+    const h = makeHarness();
+    h.loadTaskSpec.mockResolvedValueOnce(makeTask({ model: undefined }));
+    h.events.emit('task:status-changed', { taskId: 'wo-1', path: 'p', status: 'done' });
+    await new Promise((r) => setImmediate(r));
+    expect(h.openModal).not.toHaveBeenCalled();
+    expect(h.surface.requestCommitTurn).not.toHaveBeenCalled();
+  });
+
   it('stop() removes the subscription', async () => {
     const h = makeHarness();
     h.coordinator.stop();
