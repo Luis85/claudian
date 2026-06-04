@@ -66,7 +66,14 @@ export class VaultSkillAggregator implements VaultSkillSource {
   }
 
   listCachedNow(): SkillTabEntry[] {
-    return [];
+    const records = this.getProviderRecords();
+    const out: SkillTabEntry[] = [];
+    for (const record of records) {
+      const cached = this.cache.get(record.providerId);
+      if (!cached) continue;
+      out.push(...this.mapBucket(cached.entries, record));
+    }
+    return out;
   }
 
   async listAllStreaming(

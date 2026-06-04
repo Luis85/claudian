@@ -376,4 +376,53 @@ describe('VaultSkillAggregator', () => {
 
     expect(fetch).toHaveBeenCalledTimes(1);
   });
+
+  it('listCachedNow returns empty before any fetch', () => {
+    const agg = new VaultSkillAggregator(() => []);
+    expect(agg.listCachedNow()).toEqual([]);
+  });
+
+  it('listCachedNow returns SkillTabEntry[] from in-memory cache after fetch', async () => {
+    const records = [
+      makeRecord({
+        entries: [
+          makeSkillEntry({ id: 'skill-z', name: 'z' }),
+          makeSkillEntry({ id: 'skill-a', name: 'a' }),
+        ],
+      }),
+    ];
+    const agg = new VaultSkillAggregator(() => records, { ttlMs: 60_000 });
+    await agg.listAll();
+    const cached = agg.listCachedNow();
+    expect(cached.map((e) => e.name)).toEqual(['a', 'z']);
+  });
+
+  it('listCachedNow returns cached entries even after TTL expiry', async () => {
+    let now = 1_000;
+    const records = [
+      makeRecord({ entries: [makeSkillEntry({ id: 'skill-a', name: 'a' })] }),
+    ];
+    const agg = new VaultSkillAggregator(() => records, {
+      ttlMs: 100,
+      nowMs: () => now,
+    });
+    await agg.listAll();
+    now += 5_000;
+    expect(agg.listCachedNow().map((e) => e.name)).toEqual(['a']);
+  });
+
+  it('listCachedNow re-tags providerEnabled from current records', async () => {
+    let enabled = true;
+    const recordsFactory = () => [
+      makeRecord({
+        entries: [makeSkillEntry({ id: 'skill-a', name: 'a' })],
+        get isEnabled() { return enabled; },
+      } as never),
+    ];
+    const agg = new VaultSkillAggregator(recordsFactory, { ttlMs: 60_000 });
+    await agg.listAll();
+    enabled = false;
+    const [entry] = agg.listCachedNow();
+    expect(entry.providerEnabled).toBe(false);
+  });
 });
