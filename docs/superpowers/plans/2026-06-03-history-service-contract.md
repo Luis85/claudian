@@ -1,7 +1,7 @@
 ---
 title: History service contract — outcome-typed hydration
 date: 2026-06-03
-status: draft
+status: shipped
 parent: Core/Providers
 scope: src/core/providers, src/providers/*/history, src/app/conversations
 ---
@@ -12,6 +12,26 @@ scope: src/core/providers, src/providers/*/history, src/app/conversations
 **Goal:** Replace the silent `Promise<void>` `ProviderConversationHistoryService` contract with an outcome-typed seam, fold the three divergent error-signalling patterns (Cursor side-channel, Opencode sentinel message, Claude/Codex silent return) into one `HistoryLoadOutcome` discriminated union, lift the duplicated hydration cache into a shared `BaseHistoryService`, and gate fork helpers behind `capabilities.supportsFork` so providers that do not support fork stop shipping no-op stubs.
 
 **Sequencing discipline (read first):** This plan is **additive-then-collapse**. Tasks 1-12 land the new v2 methods alongside the existing v1 methods, with v1 marked `@deprecated`. Every commit boundary leaves `npm run typecheck && npm run lint && npm run test && npm run build` green so each task can ship as its own PR. Task 13 collapses v1 only after every caller and every test is on v2. Do not skip ahead to Task 13.
+
+---
+
+## Status: shipped
+
+Merged to `main` via **PR #26** (merge commit `71d1f05`). All 13 tasks landed; the full plan body below is preserved as the implementation record.
+
+**Review-driven fixes applied after the initial implementation** (Codex review on the PR):
+
+- `523356b` — `MessageRenderer` holds the hydration-failure banner in state and re-renders it from `renderMessages`, so it survives the `restoreConversation → renderMessages` (`messagesEl.empty()`) that runs right after the failure is emitted; and Cursor's `node:sqlite` open failure is classified by Node's structured error `code` (`MODULE_NOT_FOUND` / `ERR_UNKNOWN_BUILTIN_MODULE`) rather than a brittle message regex, so the Node-20 "No such built-in module" case maps to `sqlite-unavailable`.
+- `17d7dab` — `BaseHistoryService` recomputes the cache key **after** `loadMessages`, so a source resolved mid-load (Codex backfilling `sessionFilePath` from a bare `threadId`) seeds the cache instead of forcing the next hydration to reparse.
+- `a56240c` — the hydration-failure banner is stashed by conversation id and rendered in `restoreConversation` once the tab is **bound** (the emit-time `tab.conversationId` lookup missed for current-tab switches and freshly created tabs).
+- `4587693` — `CodexConversationHistoryService.computeCacheKey` returns `null` for forks (pending or established), so forks never serve a stale `fork::<threadId>`-keyed merge from the generic cache; the merge re-runs on every open.
+
+**Non-blocking followups still open** (tracked here, not done in this PR):
+
+1. Rename `hydrateConversationHistoryV2` → `hydrateConversationHistory` (the `V2` suffix is post-migration debt now that v1 is gone).
+2. Update the stale comment at `src/features/chat/tabs/TabManager.ts:713` to reflect the new `inflight` dedupe.
+3. Add an `assertNever`-style exhaustiveness guard on the `loadSdkMessagesForConversation` outcome switch.
+4. Drop the `as unknown as ProviderConversationHistoryService` casts at registration sites once the `TPersistedState` generic-variance is resolved.
 
 **Architecture:**
 
