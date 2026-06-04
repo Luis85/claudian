@@ -70,7 +70,7 @@ views:
       note.type: 102
       file.name: 462
       note.priority: 90
-      note.status: 87
+      note.status: 144
       note.relations: 179
       note.tags: 327
   - type: table
