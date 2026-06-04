@@ -489,4 +489,100 @@ describe('VaultSkillAggregator', () => {
     await agg.listAllStreaming((p, e) => { seen.push({ p, n: e.length }); });
     expect(seen).toEqual([{ p: 'claude', n: 0 }]);
   });
+
+  it('hydrate() populates cache from a stubbed adapter so listCachedNow returns entries before any fetch', async () => {
+    const stored = JSON.stringify({
+      schemaVersion: 1,
+      writtenAt: 1,
+      buckets: {
+        claude: [
+          {
+            id: 'skill-hydrated',
+            providerId: 'claude',
+            kind: 'skill',
+            name: 'hydrated',
+            description: 'from disk',
+            content: '',
+            scope: 'vault',
+            source: 'user',
+            isEditable: true,
+            isDeletable: true,
+            displayPrefix: '/',
+            insertPrefix: '/',
+            sourceFilePath: '.claude/skills/hydrated/SKILL.md',
+          },
+        ],
+      },
+    });
+    const adapter = {
+      exists: jest.fn().mockResolvedValue(true),
+      read: jest.fn().mockResolvedValue(stored),
+      write: jest.fn().mockResolvedValue(undefined),
+    };
+    const fetch = jest.fn().mockResolvedValue([]);
+    const records = [makeRecord({ entries: fetch })];
+    const agg = new VaultSkillAggregator(() => records, {
+      ttlMs: 60_000,
+      cacheAdapter: adapter as never,
+      cachePath: '.claudian/cache/skill-index.json',
+    });
+    await agg.hydrate();
+    expect(adapter.read).toHaveBeenCalledWith('.claudian/cache/skill-index.json');
+    expect(agg.listCachedNow().map((e) => e.name)).toEqual(['hydrated']);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('hydrate() no-ops when cache file missing', async () => {
+    const adapter = {
+      exists: jest.fn().mockResolvedValue(false),
+      read: jest.fn(),
+      write: jest.fn(),
+    };
+    const agg = new VaultSkillAggregator(() => [], {
+      cacheAdapter: adapter as never,
+    });
+    await agg.hydrate();
+    expect(adapter.read).not.toHaveBeenCalled();
+  });
+
+  it('hydrate() ignores malformed JSON and logs a warn', async () => {
+    const warn = jest.fn();
+    const logger = { scope: jest.fn().mockReturnValue({ warn }) };
+    const adapter = {
+      exists: jest.fn().mockResolvedValue(true),
+      read: jest.fn().mockResolvedValue('not json'),
+      write: jest.fn(),
+    };
+    const agg = new VaultSkillAggregator(() => [], {
+      cacheAdapter: adapter as never,
+      logger: logger as never,
+    });
+    await agg.hydrate();
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it('persists to disk after a successful fetch (debounced)', async () => {
+    jest.useFakeTimers();
+    const adapter = {
+      exists: jest.fn().mockResolvedValue(false),
+      read: jest.fn(),
+      write: jest.fn().mockResolvedValue(undefined),
+    };
+    const records = [makeRecord({ entries: [makeSkillEntry({ id: 'a', name: 'a' })] })];
+    const agg = new VaultSkillAggregator(() => records, {
+      ttlMs: 60_000,
+      cacheAdapter: adapter as never,
+      cachePath: '.claudian/cache/skill-index.json',
+    });
+    await agg.listAll();
+    expect(adapter.write).not.toHaveBeenCalled();    // debounce pending
+    jest.advanceTimersByTime(1100);
+    await Promise.resolve();                          // flush microtasks
+    await Promise.resolve();
+    expect(adapter.write).toHaveBeenCalledTimes(1);
+    const [path, body] = adapter.write.mock.calls[0];
+    expect(path).toBe('.claudian/cache/skill-index.json');
+    expect(JSON.parse(body).buckets.claude[0].name).toBe('a');
+    jest.useRealTimers();
+  });
 });

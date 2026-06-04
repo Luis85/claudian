@@ -1,6 +1,11 @@
 import type { Logger } from '../../../core/logging/Logger';
 import type { ProviderCommandEntry } from '../../../core/providers/commands/ProviderCommandEntry';
 import type { ProviderId } from '../../../core/providers/types';
+import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
+import {
+  parsePersistedSkillIndex,
+  serializePersistedSkillIndex,
+} from './skillIndexPersistence';
 import type {
   ProviderRecord,
   SkillTabEntry,
@@ -41,6 +46,11 @@ export class VaultSkillAggregator implements VaultSkillSource {
   private readonly cache = new Map<ProviderId, CachedBucket>();
   private readonly inFlight = new Map<ProviderId, Promise<ProviderCommandEntry[]>>();
   private eventBusUnsubscribe: (() => void) | undefined;
+  private readonly cacheAdapter?: VaultFileAdapter;
+  private readonly cachePath: string;
+  private persistTimer: number | null = null;
+  private static readonly PERSIST_DEBOUNCE_MS = 1_000;
+  private static readonly DEFAULT_CACHE_PATH = '.claudian/cache/skill-index.json';
 
   constructor(
     private getProviderRecords: () => ProviderRecord[],
@@ -54,6 +64,35 @@ export class VaultSkillAggregator implements VaultSkillSource {
         'vaultSkill.changed',
         ({ providerId }) => this.invalidate(providerId),
       );
+    }
+    this.cacheAdapter = options.cacheAdapter;
+    this.cachePath = options.cachePath ?? VaultSkillAggregator.DEFAULT_CACHE_PATH;
+  }
+
+  /**
+   * Populates the in-memory cache from the persisted skill index on disk.
+   *
+   * No-ops when no `cacheAdapter` was supplied or when the cache file does
+   * not exist. When the file is present but the contents are malformed or
+   * the schema version does not match, the failure is swallowed and a
+   * `warn` breadcrumb is emitted; callers continue with a cold cache.
+   */
+  async hydrate(): Promise<void> {
+    if (!this.cacheAdapter) return;
+    try {
+      if (!(await this.cacheAdapter.exists(this.cachePath))) return;
+      const raw = await this.cacheAdapter.read(this.cachePath);
+      const buckets = parsePersistedSkillIndex(raw);
+      if (!buckets) {
+        this.logger?.warn('skill index hydrate skipped: malformed or schema mismatch');
+        return;
+      }
+      const expiresAt = this.nowMs() + this.ttlMs;
+      for (const [providerId, entries] of buckets) {
+        this.cache.set(providerId, { entries, expiresAt });
+      }
+    } catch (err) {
+      this.logger?.warn('skill index hydrate failed', { err });
     }
   }
 
@@ -106,9 +145,37 @@ export class VaultSkillAggregator implements VaultSkillSource {
   }
 
   dispose(): void {
+    if (this.persistTimer !== null) {
+      window.clearTimeout(this.persistTimer);
+      this.persistTimer = null;
+      void this.flushPersist();   // fire and forget; plugin is unloading
+    }
     this.eventBusUnsubscribe?.();
     this.cache.clear();
     this.inFlight.clear();
+  }
+
+  private schedulePersist(): void {
+    if (!this.cacheAdapter) return;
+    if (this.persistTimer !== null) window.clearTimeout(this.persistTimer);
+    this.persistTimer = window.setTimeout(() => {
+      this.persistTimer = null;
+      void this.flushPersist();
+    }, VaultSkillAggregator.PERSIST_DEBOUNCE_MS);
+  }
+
+  private async flushPersist(): Promise<void> {
+    if (!this.cacheAdapter) return;
+    const buckets = new Map<ProviderId, ProviderCommandEntry[]>();
+    for (const [providerId, bucket] of this.cache) {
+      buckets.set(providerId, bucket.entries);
+    }
+    const body = serializePersistedSkillIndex(buckets, this.nowMs());
+    try {
+      await this.cacheAdapter.write(this.cachePath, body);
+    } catch (err) {
+      this.logger?.warn('skill index persist failed', { err });
+    }
   }
 
   /** Returns the raw cached or freshly-fetched provider entries (skill kind). */
@@ -129,6 +196,7 @@ export class VaultSkillAggregator implements VaultSkillSource {
           entries: raw,
           expiresAt: this.nowMs() + this.ttlMs,
         });
+        this.schedulePersist();
         return raw;
       } catch (err) {
         this.logger?.warn('vault skill aggregation failed', {
@@ -140,6 +208,7 @@ export class VaultSkillAggregator implements VaultSkillSource {
           entries: [],
           expiresAt: this.nowMs() + this.ttlMs,
         });
+        this.schedulePersist();
         return [];
       } finally {
         this.inFlight.delete(record.providerId);
