@@ -2,7 +2,7 @@ import type { App } from 'obsidian';
 import { Notice, setIcon } from 'obsidian';
 
 import { tryParseClipboardConfig } from '../../../core/mcp/McpConfigParser';
-import { extractMcpServerSecrets } from '../../../core/mcp/mcpSecrets';
+import { collectMissingMcpSecrets, extractMcpServerSecrets, type MissingMcpSecret } from '../../../core/mcp/mcpSecrets';
 import { testMcpServer } from '../../../core/mcp/McpTester';
 import type { AppMcpStorage } from '../../../core/providers/types';
 import { isClaudianGeneratedSecretId } from '../../../core/security/secretIds';
@@ -20,6 +20,8 @@ export interface McpSettingsManagerDeps {
   /** SEC-A Phase 3: keychain store for migrating/resolving MCP secret headers/env. */
   secretStore: SecretStore;
   broadcastMcpReload: () => Promise<void>;
+  /** SEC-A Phase 3: surface a re-entry warning for secret refs absent on this device. */
+  warnMissingMcpSecrets?: (missing: MissingMcpSecret[]) => void;
 }
 
 export class McpSettingsManager {
@@ -28,6 +30,7 @@ export class McpSettingsManager {
   private mcpStorage: AppMcpStorage;
   private secretStore: SecretStore;
   private broadcastMcpReload: () => Promise<void>;
+  private warnMissingMcpSecrets?: (missing: MissingMcpSecret[]) => void;
   private servers: ManagedMcpServer[] = [];
 
   constructor(containerEl: HTMLElement, deps: McpSettingsManagerDeps) {
@@ -36,6 +39,7 @@ export class McpSettingsManager {
     this.mcpStorage = deps.mcpStorage;
     this.secretStore = deps.secretStore;
     this.broadcastMcpReload = deps.broadcastMcpReload;
+    this.warnMissingMcpSecrets = deps.warnMissingMcpSecrets;
     void this.loadAndRender();
   }
 
@@ -431,6 +435,14 @@ export class McpSettingsManager {
     new Notice(server.enabled
       ? t('settings.mcp.toggleEnabled', { name: server.name })
       : t('settings.mcp.toggleDisabled', { name: server.name }));
+
+    // SEC-A Phase 3: workspace init only checks ENABLED servers for missing secrets,
+    // so a disabled synced server (ref present, keychain value absent on this device)
+    // would otherwise launch credential-less when enabled here with no re-entry prompt.
+    if (server.enabled) {
+      const missing = collectMissingMcpSecrets([server], (id) => this.secretStore.get(id));
+      if (missing.length > 0) this.warnMissingMcpSecrets?.(missing);
+    }
   }
 
   private async deleteServer(server: ManagedMcpServer) {

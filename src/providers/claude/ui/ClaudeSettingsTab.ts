@@ -359,6 +359,7 @@ export const claudeSettingsTabRenderer: ProviderSettingsTabRenderer = {
           );
         }
       },
+      warnMissingMcpSecrets: (missing) => context.plugin.warnMissingMcpSecrets(missing),
     });
 
     // --- Plugins ---
