@@ -30,6 +30,7 @@ import { ProviderSettingsCoordinator } from './core/providers/ProviderSettingsCo
 import { ProviderWorkspaceRegistry } from './core/providers/ProviderWorkspaceRegistry';
 import {
   migrateEnvSecrets,
+  pruneScopeSecretRefs,
   resolveProviderEnvVars,
 } from './core/providers/secretEnvVars';
 import type { ProviderId } from './core/providers/types';
@@ -351,6 +352,29 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   /** SEC-A: persist secret-var refs and run the env reconcile/sync for the scope. */
   async applySecretEnvVars(refs: SecretEnvVarRef[], scope: EnvironmentScope): Promise<void> {
     return this.envApply.applySecretEnvVars(refs, scope);
+  }
+
+  /** SEC-A: read a secret value from SecretStorage (cleared/empty normalizes to null). */
+  resolveSecretValue(secretId: string): string | null {
+    return this.secretStore.get(secretId);
+  }
+
+  /** SEC-A: migrate plaintext secrets (shared/provider/snippet blobs) into SecretStorage. */
+  migrateEnvSecretsNow(): boolean {
+    return migrateEnvSecrets(
+      this.settings,
+      ProviderRegistry.getRegisteredProviderIds(),
+      this.secretStore,
+    );
+  }
+
+  /** SEC-A: drop a deleted snippet's secret refs and clear values no other ref uses. */
+  pruneSnippetSecrets(snippetId: string): boolean {
+    return pruneScopeSecretRefs(
+      this.settings,
+      `snippet:${snippetId}`,
+      (id) => this.secretStore.clear(id),
+    );
   }
 
   /** Returns the runtime environment variables (fixed at plugin load). */

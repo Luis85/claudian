@@ -671,6 +671,13 @@
     }
   },
   "env": {
+    "secretVarsHeading": "Variables secretas",
+    "secretVarsDesc": "Las claves de API y los tokens se guardan en el llavero del sistema, no en texto plano en los ajustes.",
+    "secretNotSet": "No configurado en este dispositivo: selecciona o crea el secreto para usarlo.",
+    "secretRemove": "Quitar",
+    "secretAdd": "Añadir variable secreta",
+    "secretNamePlaceholder": "VARIABLE_NAME",
+    "secretAddButton": "Añadir",
     "secretMissing": "El secreto del proveedor \"{name}\" no está configurado en este dispositivo: vuélvelo a introducir en los ajustes de Claudian.",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",

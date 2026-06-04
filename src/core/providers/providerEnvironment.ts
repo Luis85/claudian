@@ -3,7 +3,7 @@ import { getProviderConfig, setProviderConfig } from './providerConfig';
 import { ProviderRegistry } from './ProviderRegistry';
 import type { ProviderId } from './types';
 
-export type EnvironmentScope = 'shared' | `provider:${string}`;
+export type EnvironmentScope = 'shared' | `provider:${string}` | `snippet:${string}`;
 export interface EnvironmentScopeUpdate {
   scope: EnvironmentScope;
   envText: string;

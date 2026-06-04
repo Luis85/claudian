@@ -2,6 +2,7 @@ import { SecretComponent, Setting } from 'obsidian';
 
 import type { PluginContext } from '../../../core/types/PluginContext';
 import type { EnvironmentScope, SecretEnvVarRef } from '../../../core/types/settings';
+import { t } from '../../../i18n/i18n';
 
 interface SecretEnvVarsSectionOptions {
   container: HTMLElement;
@@ -24,14 +25,14 @@ export function renderSecretEnvVarsSection(options: SecretEnvVarsSectionOptions)
   function render(): void {
     host.empty();
     new Setting(host)
-      .setName('Secret variables')
-      .setDesc('API keys and tokens kept in your system keychain, not in plaintext settings.')
+      .setName(t('env.secretVarsHeading'))
+      .setDesc(t('env.secretVarsDesc'))
       .setHeading();
 
     for (const ref of secretRefsForScope()) {
       const setting = new Setting(host).setName(ref.name);
       if (!isSecretSet(plugin, ref.secretId)) {
-        setting.setDesc('Not set on this device — select or create the secret to use it.');
+        setting.setDesc(t('env.secretNotSet'));
       }
       setting.addComponent((el) =>
         new SecretComponent(plugin.app, el)
@@ -39,7 +40,7 @@ export function renderSecretEnvVarsSection(options: SecretEnvVarsSectionOptions)
           .onChange((secretId) => { void updateRefSecret(ref, secretId); }),
       );
       setting.addExtraButton((btn) =>
-        btn.setIcon('trash').setTooltip('Remove').onClick(() => { void removeRef(ref); }),
+        btn.setIcon('trash').setTooltip(t('env.secretRemove')).onClick(() => { void removeRef(ref); }),
       );
     }
 
@@ -49,15 +50,15 @@ export function renderSecretEnvVarsSection(options: SecretEnvVarsSectionOptions)
   function renderAddRow(): void {
     const draft = { name: '', secretId: '' };
     new Setting(host)
-      .setName('Add secret variable')
+      .setName(t('env.secretAdd'))
       .addText((text) =>
-        text.setPlaceholder('VARIABLE_NAME').onChange((value) => { draft.name = value.trim(); }),
+        text.setPlaceholder(t('env.secretNamePlaceholder')).onChange((value) => { draft.name = value.trim(); }),
       )
       .addComponent((el) =>
         new SecretComponent(plugin.app, el).onChange((secretId) => { draft.secretId = secretId; }),
       )
       .addButton((btn) =>
-        btn.setButtonText('Add').onClick(() => {
+        btn.setButtonText(t('env.secretAddButton')).onClick(() => {
           if (!draft.name || !draft.secretId) return;
           void persist([
             ...currentRefs(),

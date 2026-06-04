@@ -72,6 +72,13 @@ export type TranslationKey =
   | 'env.applied'
   | 'env.appliedRebuild'
   | 'env.secretMissing'
+  | 'env.secretVarsHeading'
+  | 'env.secretVarsDesc'
+  | 'env.secretNotSet'
+  | 'env.secretRemove'
+  | 'env.secretAdd'
+  | 'env.secretNamePlaceholder'
+  | 'env.secretAddButton'
 
   // Chat - Storage (Q-1 chunk 15)
   | 'chat.storage.tabLayoutSaveFailed'

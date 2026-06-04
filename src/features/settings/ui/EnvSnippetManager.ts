@@ -6,6 +6,7 @@ import {
   resolveEnvironmentSnippetScope,
 } from '../../../core/providers/providerEnvironment';
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
+import { resolveSnippetEnvText } from '../../../core/providers/secretEnvVars';
 import type { EnvironmentScope, EnvSnippet } from '../../../core/types';
 import { VIEW_TYPE_CLAUDIAN } from '../../../core/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
@@ -324,6 +325,9 @@ export class EnvSnippetManager {
       (snippet) => {
         void (async (): Promise<void> => {
           this.plugin.settings.envSnippets.push(snippet);
+          // SEC-A: move any secret-shaped lines the user typed into SecretStorage
+          // (under this snippet's scope) so they never persist in plaintext.
+          this.plugin.migrateEnvSecretsNow();
           await this.plugin.saveSettings();
           this.render();
           new Notice(t('settings.envSnippets.saved', { name: snippet.name }));
@@ -334,7 +338,22 @@ export class EnvSnippetManager {
   }
 
   private async insertSnippet(snippet: EnvSnippet) {
-    const snippetContent = snippet.envVars.trim();
+    // SEC-A: re-inject this snippet's migrated secret values (held inert under
+    // `snippet:<id>` refs) so insertion activates them in the target scope. A
+    // secret missing on this device is reported and skipped (re-entry prompt).
+    const snippetRefs = (this.plugin.settings.secretEnvVars ?? []).filter(
+      (ref) => ref.scope === `snippet:${snippet.id}`,
+    );
+    const { envText, missing } = resolveSnippetEnvText(
+      snippet.envVars,
+      snippetRefs,
+      (id) => this.plugin.resolveSecretValue(id),
+    );
+    if (missing.length > 0) {
+      new Notice(t('env.secretMissing', { name: missing.map((ref) => ref.name).join(', ') }));
+    }
+
+    const snippetContent = envText.trim();
     const updates = getEnvironmentScopeUpdates(
       snippetContent,
       snippet.scope ?? this.scope,
@@ -401,6 +420,8 @@ export class EnvSnippetManager {
           const index = this.plugin.settings.envSnippets.findIndex(s => s.id === snippet.id);
           if (index !== -1) {
             this.plugin.settings.envSnippets[index] = updatedSnippet;
+            // SEC-A: migrate any newly-typed secret out of the edited plaintext.
+            this.plugin.migrateEnvSecretsNow();
             await this.plugin.saveSettings();
             this.render();
             new Notice(t('settings.envSnippets.updated', { name: updatedSnippet.name }));
@@ -413,6 +434,8 @@ export class EnvSnippetManager {
 
   private async deleteSnippet(snippet: EnvSnippet) {
     this.plugin.settings.envSnippets = this.plugin.settings.envSnippets.filter(s => s.id !== snippet.id);
+    // SEC-A: drop the deleted snippet's secret refs + clear unreferenced values.
+    this.plugin.pruneSnippetSecrets(snippet.id);
     await this.plugin.saveSettings();
     this.render();
     new Notice(t('settings.envSnippets.deleted', { name: snippet.name }));

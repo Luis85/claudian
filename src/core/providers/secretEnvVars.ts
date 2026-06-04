@@ -178,15 +178,16 @@ export function extractBlobSecretRefs(
 }
 
 /**
- * One-time migration across the ACTIVE env blobs: the shared blob and each
- * provider's blob. Mutates `settings` in place (sanitized blobs + appended
- * `secretEnvVars`) and returns whether anything changed. Idempotent — re-running
- * finds no plaintext secrets and is a cheap no-op.
+ * One-time migration across the shared blob, each provider's blob, and every
+ * saved snippet's `envVars`. Mutates `settings` in place (sanitized blobs +
+ * appended `secretEnvVars`) and returns whether anything changed. Idempotent —
+ * re-running finds no plaintext secrets and is a cheap no-op.
  *
- * Deliberately does NOT touch `envSnippets[].envVars`: snippets are inert
- * templates applied on demand, so a `shared`/`provider:<id>` ref would make the
- * key active immediately. Snippet secrets stay plaintext until a follow-up adds
- * a snippet-scoped association — see the SEC-A plan.
+ * Snippet secrets are migrated under a `snippet:<id>` scope, which resolution
+ * (`resolveProviderEnvVars`) deliberately ignores — snippets are inert templates,
+ * so a migrated key must NOT become active at launch. The value is re-injected
+ * only when the snippet is inserted (`resolveSnippetEnvText`), at which point the
+ * apply path migrates it into the active shared/provider scope.
  */
 export interface MigrationSecretStore {
   set(id: string, value: string): void;
@@ -244,6 +245,27 @@ export function migrateEnvSecrets(
     clearedRefs.push(...result.clearedRefs);
   }
 
+  // Saved snippets: migrate secret-shaped lines into a `snippet:<id>` scope so the
+  // value leaves the plaintext settings file. These refs stay inert at launch and
+  // are materialized on insert (see resolveSnippetEnvText).
+  const snippets: Array<{ id?: unknown; envVars?: unknown }> = Array.isArray(settings.envSnippets)
+    ? settings.envSnippets
+    : [];
+  for (const snippet of snippets) {
+    if (!snippet || typeof snippet.id !== 'string' || typeof snippet.envVars !== 'string') {
+      continue;
+    }
+    const scope: EnvironmentScope = `snippet:${snippet.id}`;
+    const blob = snippet.envVars;
+    const result = extractBlobSecretRefs(blob, scope, setSecret, usedIds, existing);
+    if (result.blob !== blob) {
+      snippet.envVars = result.blob;
+      changed = true;
+    }
+    newRefs.push(...result.refs);
+    clearedRefs.push(...result.clearedRefs);
+  }
+
   if (hadLegacy) changed = true; // the legacy field was removed → settings changed
 
   if (newRefs.length > 0 || clearedRefs.length > 0) {
@@ -261,4 +283,56 @@ export function migrateEnvSecrets(
     changed = true;
   }
   return changed;
+}
+
+/**
+ * SEC-A: rebuild a snippet's env text for INSERTION by re-injecting the values of
+ * its migrated secrets (held under `snippet:<id>` refs). Snippet secrets are inert
+ * at launch — this is the only path that materializes them. A secret absent on
+ * this device is reported in `missing` and omitted (so insertion never writes an
+ * empty value); the user re-enters it. The sanitized snippet text is preserved
+ * verbatim; resolved `NAME=value` lines are appended.
+ */
+export function resolveSnippetEnvText(
+  envVars: string,
+  refs: SecretEnvVarRef[],
+  resolve: SecretResolver,
+): { envText: string; missing: SecretEnvVarRef[] } {
+  const missing: SecretEnvVarRef[] = [];
+  const lines: string[] = [];
+  const base = envVars.replace(/\s+$/, '');
+  if (base) lines.push(base);
+  for (const ref of refs) {
+    const value = resolve(ref.secretId);
+    if (value === null || value === '') {
+      missing.push(ref);
+      continue;
+    }
+    lines.push(`${ref.name}=${value}`);
+  }
+  return { envText: lines.join('\n'), missing };
+}
+
+/**
+ * SEC-A: remove every secret ref for a scope (e.g. a deleted snippet) from
+ * `settings.secretEnvVars` and clear each stored value no remaining ref still
+ * references. Returns whether the refs changed. Values shared with another scope
+ * (the UI allows reusing one SecretStorage entry) are left intact.
+ */
+export function pruneScopeSecretRefs(
+  settings: Record<string, unknown>,
+  scope: EnvironmentScope,
+  clearValue: (id: string) => void,
+): boolean {
+  const existing = (settings.secretEnvVars as SecretEnvVarRef[] | undefined) ?? [];
+  const pruned = existing.filter((ref) => ref.scope === scope);
+  if (pruned.length === 0) return false;
+
+  const next = existing.filter((ref) => ref.scope !== scope);
+  settings.secretEnvVars = next;
+  const stillUsed = new Set(next.map((ref) => ref.secretId));
+  for (const ref of pruned) {
+    if (!stillUsed.has(ref.secretId)) clearValue(ref.secretId);
+  }
+  return true;
 }

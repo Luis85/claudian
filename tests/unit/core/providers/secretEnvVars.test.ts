@@ -7,7 +7,9 @@ import {
   extractBlobSecretRefs,
   migrateEnvSecrets,
   overlaySecretEnvVars,
+  pruneScopeSecretRefs,
   resolveProviderEnvVars,
+  resolveSnippetEnvText,
   secretEnvVarsForScope,
 } from '../../../../src/core/providers/secretEnvVars';
 import type { SecretEnvVarRef } from '../../../../src/core/types/settings';
@@ -208,13 +210,13 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
     return { changed, stored };
   }
 
-  it('migrates shared and provider blobs, leaving non-secrets and not touching snippets', () => {
+  it('migrates shared, provider, and snippet blobs, leaving non-secrets', () => {
     const settings: Record<string, unknown> = {
       sharedEnvironmentVariables: 'ANTHROPIC_API_KEY=sk-a\nHTTP_PROXY=http://p',
       providerConfigs: {
         codex: { environmentVariables: 'OPENAI_API_KEY=sk-o\nOPENAI_MODEL=gpt' },
       },
-      envSnippets: [{ id: 's1', name: 'n', description: '', envVars: 'GEMINI_API_KEY=sk-g' }],
+      envSnippets: [{ id: 's1', name: 'n', description: '', envVars: 'GEMINI_API_KEY=sk-g\nFOO=bar' }],
       secretEnvVars: [],
     };
 
@@ -223,16 +225,36 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
     expect(changed).toBe(true);
     expect(getSharedEnvironmentVariables(settings)).toBe('HTTP_PROXY=http://p');
     expect(getProviderEnvironmentVariables(settings, 'codex')).toBe('OPENAI_MODEL=gpt');
-    // Snippet plaintext is intentionally left as-is.
-    expect((settings.envSnippets as Array<{ envVars: string }>)[0].envVars).toBe('GEMINI_API_KEY=sk-g');
+    // Snippet secret is moved out; its non-secret line is preserved.
+    expect((settings.envSnippets as Array<{ envVars: string }>)[0].envVars).toBe('FOO=bar');
 
     const refs = settings.secretEnvVars as SecretEnvVarRef[];
     expect(refs).toEqual([
       { scope: 'shared', name: 'ANTHROPIC_API_KEY', secretId: 'claudian-env-shared-anthropic-api-key' },
       { scope: 'provider:codex', name: 'OPENAI_API_KEY', secretId: 'claudian-env-provider-codex-openai-api-key' },
+      { scope: 'snippet:s1', name: 'GEMINI_API_KEY', secretId: 'claudian-env-snippet-s1-gemini-api-key' },
     ]);
     expect(stored.get('claudian-env-shared-anthropic-api-key')).toBe('sk-a');
     expect(stored.get('claudian-env-provider-codex-openai-api-key')).toBe('sk-o');
+    expect(stored.get('claudian-env-snippet-s1-gemini-api-key')).toBe('sk-g');
+  });
+
+  it('is idempotent for snippet secrets (re-running migrates nothing new)', () => {
+    const settings: Record<string, unknown> = {
+      sharedEnvironmentVariables: '',
+      providerConfigs: {},
+      envSnippets: [{ id: 's1', name: 'n', description: '', envVars: 'GEMINI_API_KEY=sk-g' }],
+      secretEnvVars: [],
+    };
+    run(settings);
+    expect((settings.envSnippets as Array<{ envVars: string }>)[0].envVars).toBe('');
+
+    // Second pass: nothing to migrate.
+    const { changed } = run(settings, {
+      'claudian-env-snippet-s1-gemini-api-key': 'sk-g',
+    });
+    expect(changed).toBe(false);
+    expect((settings.secretEnvVars as SecretEnvVarRef[]).length).toBe(1);
   });
 
   it('preserves provider-owned legacy env lines while migrating a shared secret', () => {
@@ -345,5 +367,77 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
     expect(refs[0].secretId).toBe('claudian-env-shared-anthropic-api-key-2'); // uniquified
     expect(stored.get('claudian-env-shared-anthropic-api-key')).toBe('pre-existing'); // untouched
     expect(stored.get('claudian-env-shared-anthropic-api-key-2')).toBe('sk-new');
+  });
+});
+
+describe('secretEnvVars — resolveSnippetEnvText (insertion)', () => {
+  const refs: SecretEnvVarRef[] = [
+    { scope: 'snippet:s1', name: 'GEMINI_API_KEY', secretId: 'id-g' },
+  ];
+
+  it('appends resolved secret lines to the sanitized snippet text', () => {
+    const { envText, missing } = resolveSnippetEnvText(
+      'FOO=bar',
+      refs,
+      (id) => (id === 'id-g' ? 'sk-g' : null),
+    );
+    expect(envText).toBe('FOO=bar\nGEMINI_API_KEY=sk-g');
+    expect(missing).toEqual([]);
+  });
+
+  it('omits a secret missing on this device and reports it', () => {
+    const { envText, missing } = resolveSnippetEnvText('FOO=bar', refs, () => null);
+    expect(envText).toBe('FOO=bar'); // never an empty value injected
+    expect(missing).toEqual(refs);
+  });
+
+  it('produces only the secret lines when the snippet has no plaintext', () => {
+    const { envText } = resolveSnippetEnvText('', refs, () => 'sk-g');
+    expect(envText).toBe('GEMINI_API_KEY=sk-g');
+  });
+});
+
+describe('secretEnvVars — pruneScopeSecretRefs', () => {
+  it('removes a scope\'s refs and clears values no other ref uses', () => {
+    const cleared: string[] = [];
+    const settings: Record<string, unknown> = {
+      secretEnvVars: [
+        { scope: 'snippet:s1', name: 'GEMINI_API_KEY', secretId: 'id-g' },
+        { scope: 'shared', name: 'ANTHROPIC_API_KEY', secretId: 'id-a' },
+      ] satisfies SecretEnvVarRef[],
+    };
+
+    const changed = pruneScopeSecretRefs(settings, 'snippet:s1', (id) => cleared.push(id));
+
+    expect(changed).toBe(true);
+    expect(settings.secretEnvVars).toEqual([
+      { scope: 'shared', name: 'ANTHROPIC_API_KEY', secretId: 'id-a' },
+    ]);
+    expect(cleared).toEqual(['id-g']);
+  });
+
+  it('keeps a stored value still referenced by another scope', () => {
+    const cleared: string[] = [];
+    const settings: Record<string, unknown> = {
+      secretEnvVars: [
+        { scope: 'snippet:s1', name: 'KEY', secretId: 'shared-id' },
+        { scope: 'provider:codex', name: 'KEY', secretId: 'shared-id' },
+      ] satisfies SecretEnvVarRef[],
+    };
+
+    const changed = pruneScopeSecretRefs(settings, 'snippet:s1', (id) => cleared.push(id));
+
+    expect(changed).toBe(true);
+    expect(settings.secretEnvVars).toEqual([
+      { scope: 'provider:codex', name: 'KEY', secretId: 'shared-id' },
+    ]);
+    expect(cleared).toEqual([]); // value still in use by provider:codex
+  });
+
+  it('returns false when the scope has no refs', () => {
+    const settings: Record<string, unknown> = {
+      secretEnvVars: [{ scope: 'shared', name: 'A', secretId: 'a' }] satisfies SecretEnvVarRef[],
+    };
+    expect(pruneScopeSecretRefs(settings, 'snippet:none', () => undefined)).toBe(false);
   });
 });

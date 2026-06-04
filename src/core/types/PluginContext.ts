@@ -71,6 +71,12 @@ export interface PluginContext
   ): Promise<void>;
   /** SEC-A: persist secret-var refs and reconcile/sync the affected provider scope. */
   applySecretEnvVars(refs: SecretEnvVarRef[], scope: EnvironmentScope): Promise<void>;
+  /** SEC-A: read a secret value from SecretStorage (cleared/empty normalizes to null). */
+  resolveSecretValue(secretId: string): string | null;
+  /** SEC-A: migrate plaintext secrets (shared/provider/snippet blobs) into SecretStorage; returns whether settings changed. */
+  migrateEnvSecretsNow(): boolean;
+  /** SEC-A: drop a deleted snippet's `snippet:<id>` secret refs and clear unreferenced values. */
+  pruneSnippetSecrets(snippetId: string): boolean;
   getActiveEnvironmentVariables(providerId?: ProviderId): string;
   /** SEC-A: parsed runtime env with SecretStorage values overlaid (for child-process spawns). */
   getResolvedEnvironmentVariables(providerId?: ProviderId): Record<string, string>;

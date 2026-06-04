@@ -93,8 +93,13 @@ export interface InstructionRefineResult {
 /** Permission mode for tool execution. */
 export type PermissionMode = 'yolo' | 'plan' | 'normal';
 
-/** Scope for environment variable storage and snippets. */
-export type EnvironmentScope = 'shared' | `provider:${string}`;
+/**
+ * Scope for environment variable storage and snippets. `snippet:<id>` is used
+ * only by SEC-A secret refs: it associates a migrated snippet secret with its
+ * snippet without making it active at launch (resolution ignores snippet scopes;
+ * the value is re-injected only when the snippet is inserted).
+ */
+export type EnvironmentScope = 'shared' | `provider:${string}` | `snippet:${string}`;
 
 /** Opaque device-keyed CLI paths for per-device configuration. */
 export type HostnameCliPaths = Record<string, string>;

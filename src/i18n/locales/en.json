@@ -562,6 +562,13 @@
     "logsCleared": "Diagnostic logs cleared"
   },
   "env": {
+    "secretVarsHeading": "Secret variables",
+    "secretVarsDesc": "API keys and tokens kept in your system keychain, not in plaintext settings.",
+    "secretNotSet": "Not set on this device — select or create the secret to use it.",
+    "secretRemove": "Remove",
+    "secretAdd": "Add secret variable",
+    "secretNamePlaceholder": "VARIABLE_NAME",
+    "secretAddButton": "Add",
     "secretMissing": "Provider secret \"{name}\" isn’t set on this device — re-enter it in Claudian settings.",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
