@@ -1,4 +1,4 @@
-import type { App, TFile } from 'obsidian';
+import type { App } from 'obsidian';
 
 import type { ImageAttachment } from '@/core/types';
 import { persistPastedImages } from '@/features/chat/services/persistPastedImages';

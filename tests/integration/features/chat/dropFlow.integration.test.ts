@@ -1,5 +1,5 @@
 import { createMockEl } from '@test/helpers/mockElement';
-import { Notice, TFile, TFolder } from 'obsidian';
+import { Notice, TFile } from 'obsidian';
 
 import { ChatDropController } from '@/features/chat/controllers/ChatDropController';
 import { FileContextManager } from '@/features/chat/ui/FileContext';
@@ -77,7 +77,7 @@ describe('integration: chat drop flow', () => {
 
   it('adds a dragged vault file as a chip pill', async () => {
     const tab = bootTab();
-    const tFile = Object.assign(new TFile('notes/a.md'), { path: 'notes/a.md' });
+    const tFile = Object.assign(new TFile(), { path: 'notes/a.md' });
     tab.dragManagerRef.draggable = { type: 'file', file: tFile };
 
     dispatchDrop(tab.inputWrapper, { types: [], files: [], items: [] });

@@ -1,7 +1,9 @@
 import { Notice } from 'obsidian';
 
+import type {
+  BuiltInCommand,
+} from '../../../core/commands/builtInCommands';
 import {
-  type BuiltInCommand,
   detectBuiltInCommand,
   isBuiltInCommandSupported,
 } from '../../../core/commands/builtInCommands';
@@ -40,8 +42,8 @@ import { InlineExitPlanMode } from '../rendering/InlineExitPlanMode';
 import { InlinePlanApproval, type PlanApprovalDecision } from '../rendering/InlinePlanApproval';
 import type { MessageRenderer } from '../rendering/MessageRenderer';
 import { setToolIcon, updateToolCallResult } from '../rendering/ToolCallRenderer';
-import type { SubagentManager } from '../services/SubagentManager';
 import { persistPastedImages } from '../services/persistPastedImages';
+import type { SubagentManager } from '../services/SubagentManager';
 import type { ChatState } from '../state/ChatState';
 import type { FileContextManager } from '../ui/FileContext';
 import type { ImageContextManager } from '../ui/ImageContext';
