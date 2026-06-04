@@ -5,15 +5,15 @@ import type { TaskSpec } from '@/features/tasks/model/taskTypes';
 
 interface Harness {
   events: EventBus<TaskEventMap>;
-  loadTaskSpec: jest.Mock<Promise<TaskSpec>, [string]>;
-  getGitStatus: jest.Mock<Promise<{ isRepo: boolean; dirtyCount: number }>, []>;
-  isProviderGitEnabled: jest.Mock<boolean, [string]>;
-  openModal: jest.Mock<Promise<{ confirmed: boolean; dontAskAgain: boolean }>, [{ taskTitle: string; dirtyCount: number }]>;
-  surface: { requestCommitTurn: jest.Mock<Promise<void>, [TaskSpec, string]> };
+  loadTaskSpec: jest.Mock;
+  getGitStatus: jest.Mock;
+  isProviderGitEnabled: jest.Mock;
+  openModal: jest.Mock;
+  surface: { requestCommitTurn: jest.Mock };
   settings: { promptCommitOnAccept: boolean };
-  saveSettings: jest.Mock<Promise<void>, []>;
+  saveSettings: jest.Mock;
   logger: { debug: jest.Mock; warn: jest.Mock; error: jest.Mock };
-  showNotice: jest.Mock<void, [string]>;
+  showNotice: jest.Mock;
   coordinator: CommitOnAcceptCoordinator;
 }
 

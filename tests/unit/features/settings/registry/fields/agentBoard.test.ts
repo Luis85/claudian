@@ -65,7 +65,7 @@ describe('Agent Board tab registry fields', () => {
     expect(tab?.order).toBe(60);
   });
 
-  it('registers 5 sections under Agent Board in spec order', () => {
+  it('registers 6 sections under Agent Board in spec order', () => {
     registerAgentBoardTabFields();
     const r = getSettingsRegistry();
     const sections = r.getSections('agentBoard', { providerConfigs: {} } as any);
@@ -75,6 +75,7 @@ describe('Agent Board tab registry fields', () => {
       'lanes',
       'templates',
       'archive',
+      'commitOnAccept',
     ]);
   });
 
