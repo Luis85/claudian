@@ -197,9 +197,18 @@
   cursor: pointer;
   padding: 0 4px;
   opacity: 0.5;
+  color: var(--text-muted);
+}
+.claudian-quick-action-favorite:hover {
+  opacity: 0.8;
+  color: var(--text-normal);
 }
 .claudian-quick-action-favorite.is-favorite {
   opacity: 1;
+  color: var(--interactive-accent);
+}
+.claudian-quick-action-favorite.is-favorite svg {
+  fill: var(--interactive-accent);
 }
 
 .claudian-quick-action-prompt-input {

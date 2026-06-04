@@ -1,5 +1,5 @@
-import { EventBus } from '@/core/events/EventBus';
 import type { ClaudianEventMap } from '@/app/events/claudianEvents';
+import { EventBus } from '@/core/events/EventBus';
 
 describe('QuickActionsEventMap wiring', () => {
   it('exposes vaultSkill.changed with providerId payload via ClaudianEventMap', () => {
