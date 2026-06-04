@@ -226,4 +226,13 @@ describe('VaultSkillAggregator', () => {
     const [entry] = await agg.listAll();
     expect(entry.providerEnabled).toBe(false);
   });
+
+  it('exposes streaming + cached + invalidate + dispose contract', () => {
+    const agg = new VaultSkillAggregator(() => []);
+    expect(typeof agg.listAll).toBe('function');
+    expect(typeof agg.listCachedNow).toBe('function');
+    expect(typeof agg.listAllStreaming).toBe('function');
+    expect(typeof agg.invalidate).toBe('function');
+    expect(typeof agg.dispose).toBe('function');
+  });
 });

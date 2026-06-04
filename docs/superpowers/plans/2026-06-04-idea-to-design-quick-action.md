@@ -1,5 +1,6 @@
 ---
 status: done
+parent: "[[Quick Actions]]"
 ---
 # Idea to Design quick action — Implementation Plan
 

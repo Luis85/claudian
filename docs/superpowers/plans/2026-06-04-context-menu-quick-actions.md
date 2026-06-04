@@ -1,5 +1,6 @@
 ---
 status: done
+parent: "[[Quick Actions]]"
 ---
 # Context Menu Quick Actions Implementation Plan
 

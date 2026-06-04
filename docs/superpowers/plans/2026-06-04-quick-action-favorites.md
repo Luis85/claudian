@@ -1,5 +1,6 @@
 ---
 status: done
+parent: "[[Quick Actions]]"
 ---
 # Quick Action Favorites Implementation Plan
 

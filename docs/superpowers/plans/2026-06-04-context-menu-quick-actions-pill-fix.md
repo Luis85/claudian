@@ -1,5 +1,6 @@
 ---
 status: done
+parent: "[[Quick Actions]]"
 ---
 # Context-menu quick action pill-attach ordering fix — Implementation Plan
 

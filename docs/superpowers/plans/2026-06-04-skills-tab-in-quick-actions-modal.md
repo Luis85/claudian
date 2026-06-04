@@ -1,5 +1,6 @@
 ---
 status: done
+parent: "[[Quick Actions]]"
 ---
 # Skills Tab in Quick Actions Modal Implementation Plan
 

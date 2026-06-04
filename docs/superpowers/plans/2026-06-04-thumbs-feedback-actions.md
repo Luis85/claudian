@@ -1,5 +1,6 @@
 ---
 status: done
+parent: "[[Chat]]"
 ---
 # Thumbs feedback actions Implementation Plan
 
