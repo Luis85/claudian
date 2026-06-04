@@ -8,9 +8,10 @@ import { QuickActionStorage } from './QuickActionStorage';
 import { QuickActionsModal } from './ui/QuickActionsModal';
 
 /**
- * Opens the quick actions picker modal with the given vault file or folder
- * pre-loaded as context. On action selection: reuses or creates a chat tab,
- * attaches a file chip, then fires the action prompt immediately.
+ * Opens the quick actions picker modal for the given vault file or folder.
+ * On action selection: reuses or creates a chat tab, switches to it,
+ * attaches the file/folder as a context chip (after the switch so the
+ * welcome reset does not wipe it), then fires the action prompt.
  */
 export function openContextMenuQuickAction(
   plugin: ClaudianPlugin,
