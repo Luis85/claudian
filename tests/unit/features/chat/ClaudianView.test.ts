@@ -214,7 +214,33 @@ describe('ClaudianView.injectCommitTurnForConversation', () => {
     expect(h.startTaskRunInFreshTab).not.toHaveBeenCalled();
   });
 
-  it('falls back to a fresh task-run tab when tab cap is reached and no conversation is open', async () => {
+  it('restores the saved conversation into the active tab when the tab cap blocks a new tab', async () => {
+    // canCreateTab false → TabManager.openConversation loads the saved
+    // history into the active tab (no createTab path). The post-open lookup
+    // resolves the active tab as the owner; the commit prompt fires there
+    // instead of bouncing off the tab cap with a fresh-tab failure.
+    const h = makeHarness({
+      canCreateTab: false,
+      initialCross: null,
+      postOpenCross: 'this',
+    });
+
+    await h.view.injectCommitTurnForConversation({
+      conversationId: 'conv-1',
+      fallbackProviderId: 'claude',
+      fallbackModel: 'opus',
+      prompt: 'PROMPT',
+    });
+
+    expect(h.openConversation).toHaveBeenCalledWith('conv-1', { preferNewTab: true });
+    expect(h.sendMessage).toHaveBeenCalledWith({ content: 'PROMPT' });
+    expect(h.startTaskRunInFreshTab).not.toHaveBeenCalled();
+  });
+
+  it('falls back to a fresh task-run tab when openConversation cannot surface any tab', async () => {
+    // Edge case: openConversation runs but neither the new-tab nor the
+    // active-tab restore path lands a tab. findConversationAcrossViews
+    // still returns null post-open → fresh task-run tab is the last resort.
     const h = makeHarness({
       canCreateTab: false,
       initialCross: null,
@@ -228,7 +254,7 @@ describe('ClaudianView.injectCommitTurnForConversation', () => {
       prompt: 'PROMPT',
     });
 
-    expect(h.openConversation).not.toHaveBeenCalled();
+    expect(h.openConversation).toHaveBeenCalledWith('conv-1', { preferNewTab: true });
     expect(h.startTaskRunInFreshTab).toHaveBeenCalledWith({
       providerId: 'claude',
       model: 'opus',

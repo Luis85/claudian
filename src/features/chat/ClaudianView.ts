@@ -745,12 +745,14 @@ export class ClaudianView extends ItemView {
     if (options.conversationId) {
       // findConversationAcrossViews covers both this view and any split view
       // that already hosts the work-order tab. When neither does (closed tab,
-      // restart, etc.), preferNewTab routes through ConversationController to
-      // restore from saved history. Guard on canCreateTab so a full tab bar
-      // gracefully falls back to startTaskRunInFreshTab rather than silently
-      // hijacking the active tab.
+      // restart, etc.), openConversation restores from saved history — it
+      // opens a new tab when canCreateTab is true and otherwise reloads the
+      // active tab in place. We deliberately skip the canCreateTab guard
+      // because startTaskRunInFreshTab would also hit the tab cap, so the
+      // user would get a "tab limit reached" failure instead of the commit
+      // prompt firing into the conversation they just accepted.
       let cross = this.plugin.findConversationAcrossViews(options.conversationId);
-      if (!cross && this.tabManager.canCreateTab()) {
+      if (!cross) {
         await this.tabManager.openConversation(options.conversationId, {
           preferNewTab: true,
         });
