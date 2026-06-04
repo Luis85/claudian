@@ -1,84 +1,59 @@
-import type { ProviderConversationHistoryService } from '../../../core/providers/types';
+import { BaseHistoryService } from '../../../core/providers/BaseHistoryService';
+import type {
+  DeleteHistoryOutcome,
+  HistoryLoadOutcome,
+  HydrationContext,
+} from '../../../core/providers/types';
 import type { Conversation } from '../../../core/types';
 import { getOpencodeState, type OpencodeProviderState } from '../types';
-import {
-  isOpencodeSessionHydrationDiagnosticMessage,
-  loadOpencodeSessionMessages,
-} from './OpencodeHistoryStore';
+import { loadOpencodeSessionMessages } from './OpencodeHistoryStore';
 
-export class OpencodeConversationHistoryService implements ProviderConversationHistoryService {
-  private hydratedKeys = new Map<string, string>();
+export class OpencodeConversationHistoryService extends BaseHistoryService<OpencodeProviderState> {
+  // forkSupport intentionally omitted — Opencode capabilities.supportsFork === false.
 
-  async hydrateConversationHistory(
-    conversation: Conversation,
-    _vaultPath: string | null,
-  ): Promise<void> {
-    const sessionId = conversation.sessionId;
-    if (!sessionId) {
-      this.hydratedKeys.delete(conversation.id);
-      return;
-    }
-
+  protected computeCacheKey(conversation: Conversation): string | null {
+    if (!conversation.sessionId) return null;
     const state = getOpencodeState(conversation.providerState);
-    const hydrationKey = `${sessionId}::${state.databasePath ?? ''}`;
-    if (
-      conversation.messages.length > 0
-      && this.hydratedKeys.get(conversation.id) === hydrationKey
-    ) {
-      return;
-    }
-
-    const messages = await loadOpencodeSessionMessages(sessionId, state);
-    if (messages.length === 0) {
-      this.hydratedKeys.delete(conversation.id);
-      return;
-    }
-
-    conversation.messages = messages;
-    if (
-      messages.length === 1
-      && isOpencodeSessionHydrationDiagnosticMessage(messages[0])
-    ) {
-      this.hydratedKeys.delete(conversation.id);
-      return;
-    }
-
-    this.hydratedKeys.set(conversation.id, hydrationKey);
+    return `${conversation.sessionId}::${state.databasePath ?? ''}`;
   }
 
-  async deleteConversationSession(
-    _conversation: Conversation,
-    _vaultPath: string | null,
-  ): Promise<void> {
-    // Never mutate OpenCode native history.
+  protected async loadMessages(
+    conversation: Conversation,
+    _ctx: HydrationContext,
+  ): Promise<HistoryLoadOutcome> {
+    const sessionId = conversation.sessionId;
+    if (!sessionId) return { kind: 'empty', reason: 'no-session', sourceRef: null };
+
+    const state = getOpencodeState(conversation.providerState);
+    const sourceRef = `${sessionId}::${state.databasePath ?? ''}`;
+    const result = await loadOpencodeSessionMessages(sessionId, state);
+
+    if (result.error) {
+      return { kind: 'error', error: result.error, sourceRef };
+    }
+    if (result.messages.length === 0) {
+      return { kind: 'empty', reason: 'no-rows', sourceRef };
+    }
+    return { kind: 'loaded', messages: result.messages, sourceRef };
   }
 
   resolveSessionIdForConversation(conversation: Conversation | null): string | null {
     return conversation?.sessionId ?? null;
   }
 
-  isPendingForkConversation(_conversation: Conversation): boolean {
-    return false;
+  async deleteConversationSessionV2(
+    _conversation: Conversation,
+    _ctx: HydrationContext,
+  ): Promise<DeleteHistoryOutcome> {
+    // Never mutate OpenCode native history (it is provider-owned by design).
+    return { kind: 'no-op', reason: 'provider-owned' };
   }
 
-  buildForkProviderState(
-    _sourceSessionId: string,
-    _resumeAt: string,
-    _sourceProviderState?: Record<string, unknown>,
-  ): Record<string, unknown> {
-    return {};
-  }
-
-  buildPersistedProviderState(
-    conversation: Conversation,
-  ): Record<string, unknown> | undefined {
+  buildPersistedProviderState(conversation: Conversation): OpencodeProviderState | undefined {
     const state = getOpencodeState(conversation.providerState);
     const providerState: OpencodeProviderState = {
       ...(state.databasePath ? { databasePath: state.databasePath } : {}),
     };
-
-    return Object.keys(providerState).length > 0
-      ? providerState as Record<string, unknown>
-      : undefined;
+    return Object.keys(providerState).length > 0 ? providerState : undefined;
   }
 }

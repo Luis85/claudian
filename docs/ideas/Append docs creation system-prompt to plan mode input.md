@@ -1,6 +1,7 @@
 ---
 priority: 2 - normal
-status:
+status: open
+tracked-by: "[[docs/issues/append-docs-plan-mode.md]]"
 relations:
   - "[[Chat]]"
 tags:

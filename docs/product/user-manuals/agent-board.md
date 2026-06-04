@@ -114,7 +114,7 @@ The board lays out one lane per status, left-to-right, in this order:
 Lane titles in the UI are: **Inbox, Ready, Running, Needs input, Needs approval, Review, Needs fix, Done, Failed, Canceled**. Key rules:
 
 - Captured work orders land in **Inbox** — a triage lane that is *not* auto-run.
-- **Ready** is the only status **Run next ready** will pick up (see [[agent-board-chat-interop-and-capture]] for the selection rule).
+- **Ready** and **Needs fix** are picked up by **Run next ready** (see [[agent-board-chat-interop-and-capture]] for the selection rule). `needs_fix` cards are treated as runnable so a reworked order can be queued without per-card intervention.
 - **Running** is reached only by clicking **Run**. The board enforces one active run per work order.
 - **Review** is reached only after a run produces a valid `<claudian_handoff>` block. A missing or malformed handoff sends the card to **Failed** instead.
 - **Failed** and **Canceled** cards keep their ledger and can be reopened to **Ready**.
@@ -139,13 +139,17 @@ Clicking any card opens the **work-order detail modal**. What it shows depends o
 | `ready` / `needs_fix` | Title, provider, model, priority | — | Edit, Open conversation*, **Run** |
 | `running` | — | Status, provider, model, priority | Edit, Open conversation*, **Stop** |
 | `review` | Title, provider, model, priority | — | **Open note**, Open conversation*, **Accept**, **Rework** |
-| `done` / `failed` / `canceled` | Title, provider, model, priority | — | Edit, Open conversation*, **Archive** |
+| `needs_fix` | Title, provider, model, priority | — | Edit, Open conversation*, **Run**, and shows the **Handoff** from the prior run when present |
+| `done` | Title, provider, model, priority | — | Edit, Open conversation*, **Reopen**, **Archive** |
+| `failed` / `canceled` | Title, provider, model, priority | — | Edit, Open conversation*, **Archive** |
 
 *Open conversation appears only when the work order has a `conversation_id` and the linked conversation still exists. See [[agent-board-chat-interop-and-capture]] for the chat round-trip.
 
-The body of the modal renders **Objective** and **Acceptance criteria** (with the `done/total` count when checkboxes are present). On Review, the modal also renders the **Handoff** block. On Failed, it renders the **Run ledger** so you can see why the run failed. Editable field changes save on dropdown change / text blur and refresh the board.
+The body of the modal renders **Objective** and **Acceptance criteria** (with the `done/total` count when checkboxes are present). On `review` and `needs_fix`, the modal also renders the **Handoff** block from the prior run (when present), so the reviewer can see what the agent delivered before deciding to run again. On Failed, it renders the **Run ledger** so you can see why the run failed. Editable field changes save on dropdown change / text blur and refresh the board.
 
-**Archive** moves the note into the **Archive folder** so it leaves the board's scanned folder. It only appears for terminal statuses (`done`, `failed`, `canceled`).
+**Reopen** moves a `done` card back to **Inbox** so it can be re-scoped and re-run. It only appears for `done`.
+
+**Archive** moves the note into the **Archive folder** so it leaves the board's scanned folder. It appears for terminal statuses (`done`, `failed`, `canceled`).
 
 ---
 
@@ -184,5 +188,5 @@ Capture commands (selection, browser selection, message promotion, conversation 
 2. Click **Add work order**, pick **Blank work order** (or any template) → the new card opens in the detail view.
 3. Fill **Objective**, draft **Acceptance criteria** as task-list items, drop the source/scope into **Context**, click **Mark ready**.
 4. Click **Run** on the card (or **Run next ready** in the header). Claudian opens a fresh chat tab and streams the agent's reply.
-5. When the agent ends with a valid `<claudian_handoff>` block, the card moves to **Review**. Open the detail view, read the **Handoff** block, then click **Accept** (→ `done`) or **Rework** (→ `needs_fix`).
-6. On terminal statuses, **Archive** moves the note out of the board folder.
+5. When the agent ends with a valid `<claudian_handoff>` block, the card moves to **Review**. Open the detail view, read the **Handoff** block, then click **Accept** (→ `done`) or **Rework** (→ `needs_fix`). Clicking **Rework** opens a reason prompt — describe what the agent should fix. The reason appears under **Rework Notes** in the next run prompt so the agent receives concrete feedback. The prior **Handoff** block stays visible in the detail modal while the card sits in `needs_fix`.
+6. On terminal statuses, **Archive** moves the note out of the board folder. From `done`, **Reopen** moves the card back to **Inbox** for re-scoping or re-running.

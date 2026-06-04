@@ -161,5 +161,5 @@ Subagents live under `.opencode/agent/` (legacy: `.opencode/agents/`). The Openc
 
 - Toggle **Enable Opencode** under **Settings → Claudian → General → Providers**.
 - Pick visible models in the Opencode tab — see [[settings]].
-- Plan mode and rewind are gated for Opencode. Image attachments, `#` instruction mode, subagents, and history reload are supported.
+- Plan **mode** runs as Opencode's managed `plan` mode (toggle it from the toolbar or Shift+Tab), but the shared post-plan approval card is gated — the runtime does not emit `planCompleted`, so you drive the next step from the chat input manually (see [[plan-mode]], "Gated providers"). Fork and rewind are gated. Image attachments, `#` instruction mode, subagents, runtime-discovered slash commands, and history reload are supported.
 - Start a chat tab and pick an Opencode model from the provider picker.

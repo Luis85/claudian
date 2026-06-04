@@ -1,9 +1,14 @@
 import { ConversationStore } from '@/app/conversations/ConversationStore';
 import type { SharedAppStorage } from '@/core/bootstrap/storage';
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
-import type { AppSessionStorage } from '@/core/providers/types';
+import type {
+  AppSessionStorage,
+  DeleteHistoryOutcome,
+  HistoryLoadOutcome,
+  HydrationContext,
+} from '@/core/providers/types';
 import { DEFAULT_CHAT_PROVIDER_ID } from '@/core/providers/types';
-import type { Conversation, SessionMetadata } from '@/core/types';
+import type { ChatMessage, Conversation, SessionMetadata } from '@/core/types';
 
 type MockSessions = jest.Mocked<AppSessionStorage>;
 
@@ -51,11 +56,17 @@ describe('ConversationStore', () => {
     jest
       .spyOn(ProviderRegistry, 'getConversationHistoryService')
       .mockReturnValue({
-        hydrateConversationHistory: jest.fn().mockResolvedValue(undefined),
-        deleteConversationSession: jest.fn().mockResolvedValue(undefined),
+        hydrateConversationHistoryV2: jest
+          .fn()
+          .mockResolvedValue({ kind: 'cached', sourceRef: 'k' }),
+        deleteConversationSessionV2: jest
+          .fn()
+          .mockResolvedValue({ kind: 'no-op', reason: 'no-session' }),
         resolveSessionIdForConversation: jest.fn().mockReturnValue(null),
-        isPendingForkConversation: jest.fn().mockReturnValue(false),
-        buildForkProviderState: jest.fn(),
+        forkSupport: {
+          isPendingForkConversation: jest.fn().mockReturnValue(false),
+          buildForkProviderState: jest.fn(),
+        },
       } as never);
   });
 
@@ -113,7 +124,10 @@ describe('ConversationStore', () => {
       const result = await store.switchConversation(conv.id);
 
       expect(result?.id).toBe(conv.id);
-      expect(history.hydrateConversationHistory).toHaveBeenCalledWith(conv, '/vault');
+      expect(history.hydrateConversationHistoryV2).toHaveBeenCalledWith(conv, {
+        vaultPath: '/vault',
+        reason: 'open',
+      });
     });
   });
 
@@ -160,10 +174,17 @@ describe('ConversationStore', () => {
       jest
         .spyOn(ProviderRegistry, 'getConversationHistoryService')
         .mockReturnValue({
-          hydrateConversationHistory: jest.fn().mockResolvedValue(undefined),
-          deleteConversationSession: jest.fn().mockResolvedValue(undefined),
+          hydrateConversationHistoryV2: jest
+            .fn()
+            .mockResolvedValue({ kind: 'cached', sourceRef: 'k' }),
+          deleteConversationSessionV2: jest
+            .fn()
+            .mockResolvedValue({ kind: 'no-op', reason: 'no-session' }),
           resolveSessionIdForConversation: jest.fn().mockReturnValue(null),
-          isPendingForkConversation: jest.fn().mockReturnValue(true),
+          forkSupport: {
+            isPendingForkConversation: jest.fn().mockReturnValue(true),
+            buildForkProviderState: jest.fn(),
+          },
         } as never);
       const fork = await store.createConversation();
       fork.messages.push({
@@ -174,6 +195,28 @@ describe('ConversationStore', () => {
       } as never);
       await store.updateConversation(fork.id, { title: 'fork' });
       expect(fork.messages[0].images?.[0].data).toBe('fork-bytes');
+    });
+
+    it('preserves image.path while clearing image.data after save', async () => {
+      const { store } = createStore();
+      const conv = await store.createConversation();
+      conv.messages.push({
+        role: 'user',
+        content: 'see image',
+        timestamp: Date.now(),
+        images: [
+          { id: 'a', name: 'a.png', data: 'AAA=', path: 'attachments/a.png', mediaType: 'image/png', size: 1, source: 'paste' },
+          { id: 'b', name: 'b.png', data: 'BBB=', path: 'attachments/b.png', mediaType: 'image/png', size: 1, source: 'paste' },
+        ],
+      } as never);
+      await store.updateConversation(conv.id, { title: 'with images' });
+
+      for (const msg of conv.messages) {
+        for (const img of msg.images ?? []) {
+          expect(img.data).toBe('');
+          expect(img.path).toMatch(/^attachments\//);
+        }
+      }
     });
   });
 
@@ -198,7 +241,10 @@ describe('ConversationStore', () => {
       await store.deleteConversation(conv.id);
 
       expect(store.getConversationSync(conv.id)).toBeNull();
-      expect(history.deleteConversationSession).toHaveBeenCalledWith(conv, '/vault');
+      expect(history.deleteConversationSessionV2).toHaveBeenCalledWith(conv, {
+        vaultPath: '/vault',
+        reason: 'open',
+      });
       expect(sessions.deleteMetadata).toHaveBeenCalledWith(conv.id);
       expect(repairViewsAfterDelete).toHaveBeenCalledWith(conv.id);
     });
@@ -223,7 +269,7 @@ describe('ConversationStore', () => {
       const fetched = await store.getConversationById(conv.id);
 
       expect(fetched?.id).toBe(conv.id);
-      expect(history.hydrateConversationHistory).toHaveBeenCalled();
+      expect(history.hydrateConversationHistoryV2).toHaveBeenCalled();
     });
   });
 
@@ -299,5 +345,280 @@ describe('ConversationStore', () => {
     const { store } = createStore();
     const conv = await store.createConversation();
     expect(store.getConversations()).toContain(conv);
+  });
+
+  describe('caller branches on HistoryLoadOutcome (v2)', () => {
+    const makeMsg = (): ChatMessage =>
+      ({ id: 'm1', role: 'user', content: 'hi', timestamp: 1 }) as ChatMessage;
+    const SEEDED: ChatMessage = {
+      id: 'pre',
+      role: 'user',
+      content: 'pre-existing',
+      timestamp: 0,
+    } as ChatMessage;
+
+    type StoreHarness = {
+      store: ConversationStore;
+      emit: jest.Mock;
+    };
+
+    function makeHarnessWithHydrateOutcome(
+      outcome: HistoryLoadOutcome,
+    ): StoreHarness {
+      jest.spyOn(ProviderRegistry, 'getConversationHistoryService').mockReturnValue({
+        hydrateConversationHistoryV2: jest.fn().mockResolvedValue(outcome),
+        deleteConversationSessionV2: jest
+          .fn()
+          .mockResolvedValue({ kind: 'no-op', reason: 'no-session' }),
+        resolveSessionIdForConversation: jest.fn().mockReturnValue(null),
+      });
+      const emit = jest.fn();
+      const sessions = createMockSessions();
+      const storage = { sessions } as unknown as SharedAppStorage;
+      const store = new ConversationStore({
+        storage,
+        getVaultPath: () => '/vault',
+        repairViewsAfterDelete: async () => undefined,
+        events: { emit, on: jest.fn(), off: jest.fn(), setErrorSink: jest.fn() } as any,
+      });
+      return { store, emit };
+    }
+
+    it("assigns messages on 'loaded' and does not emit", async () => {
+      const loaded: HistoryLoadOutcome = {
+        kind: 'loaded',
+        messages: [makeMsg()],
+        sourceRef: 'k',
+      };
+      const { store, emit } = makeHarnessWithHydrateOutcome(loaded);
+      const conv = await store.createConversation();
+      conv.messages.push(SEEDED);
+
+      const result = await store.switchConversation(conv.id);
+
+      expect(result?.id).toBe(conv.id);
+      expect(conv.messages).toEqual(loaded.messages);
+      expect(emit).not.toHaveBeenCalledWith(
+        'conversation:hydration-failed',
+        expect.anything(),
+      );
+    });
+
+    it("leaves messages alone on 'cached' and does not emit", async () => {
+      const { store, emit } = makeHarnessWithHydrateOutcome({
+        kind: 'cached',
+        sourceRef: 'k',
+      });
+      const conv = await store.createConversation();
+      conv.messages.push(SEEDED);
+
+      const result = await store.switchConversation(conv.id);
+
+      expect(result?.id).toBe(conv.id);
+      expect(conv.messages).toEqual([SEEDED]);
+      expect(emit).not.toHaveBeenCalledWith(
+        'conversation:hydration-failed',
+        expect.anything(),
+      );
+    });
+
+    it("leaves messages alone on 'empty' and does not emit", async () => {
+      const { store, emit } = makeHarnessWithHydrateOutcome({
+        kind: 'empty',
+        reason: 'no-rows',
+        sourceRef: 'k',
+      });
+      const conv = await store.createConversation();
+      conv.messages.push(SEEDED);
+
+      const result = await store.switchConversation(conv.id);
+
+      expect(result?.id).toBe(conv.id);
+      expect(conv.messages).toEqual([SEEDED]);
+      expect(emit).not.toHaveBeenCalledWith(
+        'conversation:hydration-failed',
+        expect.anything(),
+      );
+    });
+
+    it("emits 'conversation:hydration-failed' on 'error' and leaves messages alone", async () => {
+      const { store, emit } = makeHarnessWithHydrateOutcome({
+        kind: 'error',
+        error: { code: 'store-unreadable', message: 'x' },
+        sourceRef: null,
+      });
+      const conv = await store.createConversation();
+      conv.messages.push(SEEDED);
+
+      const result = await store.switchConversation(conv.id);
+
+      expect(result?.id).toBe(conv.id);
+      expect(conv.messages).toEqual([SEEDED]);
+      expect(emit).toHaveBeenCalledWith('conversation:hydration-failed', {
+        conversationId: conv.id,
+        code: 'store-unreadable',
+        message: 'x',
+      });
+    });
+
+    it('passes HydrationContext with vaultPath and reason to v2', async () => {
+      const hydrateV2 = jest.fn().mockResolvedValue({ kind: 'cached', sourceRef: 'k' });
+      jest.spyOn(ProviderRegistry, 'getConversationHistoryService').mockReturnValue({
+        hydrateConversationHistoryV2: hydrateV2,
+        deleteConversationSessionV2: jest.fn().mockResolvedValue({ kind: 'no-op', reason: 'no-session' }),
+        resolveSessionIdForConversation: jest.fn().mockReturnValue(null),
+      });
+
+      const { store } = createStore();
+      const conv = await store.createConversation();
+      await store.switchConversation(conv.id);
+
+      expect(hydrateV2).toHaveBeenCalledTimes(1);
+      const [convArg, ctxArg] = hydrateV2.mock.calls[0] as [Conversation, HydrationContext];
+      expect(convArg).toBe(conv);
+      expect(ctxArg.vaultPath).toBe('/vault');
+      expect(ctxArg.reason).toBe('open');
+    });
+  });
+
+  describe('deleteConversation branches on DeleteHistoryOutcome (v2)', () => {
+    type DeleteHarness = {
+      store: ConversationStore;
+      sessions: MockSessions;
+      emit: jest.Mock;
+      deleteV2: jest.Mock;
+      repairViewsAfterDelete: jest.Mock;
+    };
+
+    function makeHarnessWithDeleteOutcome(
+      outcome: DeleteHistoryOutcome,
+    ): DeleteHarness {
+      const deleteV2 = jest.fn().mockResolvedValue(outcome);
+      jest.spyOn(ProviderRegistry, 'getConversationHistoryService').mockReturnValue({
+        hydrateConversationHistoryV2: jest
+          .fn()
+          .mockResolvedValue({ kind: 'cached', sourceRef: 'k' }),
+        deleteConversationSessionV2: deleteV2,
+        resolveSessionIdForConversation: jest.fn().mockReturnValue(null),
+      });
+      const emit = jest.fn();
+      const sessions = createMockSessions();
+      const storage = { sessions } as unknown as SharedAppStorage;
+      const repairViewsAfterDelete = jest.fn().mockResolvedValue(undefined);
+      const store = new ConversationStore({
+        storage,
+        getVaultPath: () => '/vault',
+        repairViewsAfterDelete,
+        events: { emit, on: jest.fn(), off: jest.fn(), setErrorSink: jest.fn() } as any,
+      });
+      return { store, sessions, emit, deleteV2, repairViewsAfterDelete };
+    }
+
+    it("passes HydrationContext to v2 and cleans up on 'deleted' without emitting", async () => {
+      const harness = makeHarnessWithDeleteOutcome({
+        kind: 'deleted',
+        paths: ['/tmp/x.jsonl'],
+      });
+      const conv = await harness.store.createConversation();
+
+      await harness.store.deleteConversation(conv.id);
+
+      expect(harness.deleteV2).toHaveBeenCalledTimes(1);
+      const [, ctxArg] = harness.deleteV2.mock.calls[0] as [Conversation, HydrationContext];
+      expect(ctxArg.vaultPath).toBe('/vault');
+      expect(ctxArg.reason).toBe('open');
+      expect(harness.sessions.deleteMetadata).toHaveBeenCalledWith(conv.id);
+      expect(harness.repairViewsAfterDelete).toHaveBeenCalledWith(conv.id);
+      expect(harness.emit).not.toHaveBeenCalledWith(
+        'conversation:hydration-failed',
+        expect.anything(),
+      );
+    });
+
+    it("cleans up on 'no-op' without emitting", async () => {
+      const harness = makeHarnessWithDeleteOutcome({
+        kind: 'no-op',
+        reason: 'no-session',
+      });
+      const conv = await harness.store.createConversation();
+
+      await harness.store.deleteConversation(conv.id);
+
+      expect(harness.sessions.deleteMetadata).toHaveBeenCalledWith(conv.id);
+      expect(harness.repairViewsAfterDelete).toHaveBeenCalledWith(conv.id);
+      expect(harness.emit).not.toHaveBeenCalledWith(
+        'conversation:hydration-failed',
+        expect.anything(),
+      );
+    });
+
+    it("emits 'conversation:hydration-failed' on 'error' and still cleans up metadata", async () => {
+      const harness = makeHarnessWithDeleteOutcome({
+        kind: 'error',
+        error: { code: 'store-unreadable', message: 'boom' },
+      });
+      const conv = await harness.store.createConversation();
+
+      await harness.store.deleteConversation(conv.id);
+
+      expect(harness.emit).toHaveBeenCalledWith('conversation:hydration-failed', {
+        conversationId: conv.id,
+        code: 'store-unreadable',
+        message: 'boom',
+      });
+      expect(harness.sessions.deleteMetadata).toHaveBeenCalledWith(conv.id);
+      expect(harness.repairViewsAfterDelete).toHaveBeenCalledWith(conv.id);
+    });
+  });
+
+  describe('updateConversation routes fork detection via hasForkSupport', () => {
+    it('clears images when service has no forkSupport slot', async () => {
+      jest.spyOn(ProviderRegistry, 'getConversationHistoryService').mockReturnValue({
+        hydrateConversationHistoryV2: jest.fn().mockResolvedValue({ kind: 'cached', sourceRef: 'k' }),
+        deleteConversationSessionV2: jest.fn().mockResolvedValue({ kind: 'no-op', reason: 'no-session' }),
+        resolveSessionIdForConversation: jest.fn().mockReturnValue(null),
+        // forkSupport intentionally absent.
+      });
+
+      const { store } = createStore();
+      const conv = await store.createConversation();
+      conv.messages.push({
+        role: 'user',
+        content: 'see image',
+        timestamp: Date.now(),
+        images: [{ data: 'base64-bytes', mimeType: 'image/png' }],
+      } as never);
+
+      await store.updateConversation(conv.id, { title: 'with image' });
+
+      expect(conv.messages[0].images?.[0].data).toBe('');
+    });
+
+    it('preserves images for a pending fork via forkSupport.isPendingForkConversation', async () => {
+      const isPendingForkConversation = jest.fn().mockReturnValue(true);
+      jest.spyOn(ProviderRegistry, 'getConversationHistoryService').mockReturnValue({
+        hydrateConversationHistoryV2: jest.fn().mockResolvedValue({ kind: 'cached', sourceRef: 'k' }),
+        deleteConversationSessionV2: jest.fn().mockResolvedValue({ kind: 'no-op', reason: 'no-session' }),
+        resolveSessionIdForConversation: jest.fn().mockReturnValue(null),
+        forkSupport: {
+          isPendingForkConversation,
+          buildForkProviderState: jest.fn(),
+        },
+      } as never);
+
+      const { store } = createStore();
+      const fork = await store.createConversation();
+      fork.messages.push({
+        role: 'user',
+        content: 'fork image',
+        timestamp: Date.now(),
+        images: [{ data: 'fork-bytes', mimeType: 'image/png' }],
+      } as never);
+
+      await store.updateConversation(fork.id, { title: 'fork' });
+
+      expect(isPendingForkConversation).toHaveBeenCalledWith(fork);
+      expect(fork.messages[0].images?.[0].data).toBe('fork-bytes');
+    });
   });
 });

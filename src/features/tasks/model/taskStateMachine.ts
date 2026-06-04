@@ -21,7 +21,7 @@ const LEGAL_TRANSITIONS: ReadonlyMap<TaskStatus, ReadonlySet<TaskStatus>> = new 
   ['needs_approval', new Set(['running', 'failed', 'canceled'])],
   ['review', new Set(['done', 'needs_fix', 'canceled'])],
   ['needs_fix', new Set(['ready', 'running', 'canceled'])],
-  ['done', new Set()],
+  ['done', new Set(['inbox'])],
   ['failed', new Set(['ready'])],
   ['canceled', new Set()],
 ]);

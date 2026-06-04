@@ -3,6 +3,7 @@ import { Notice } from 'obsidian';
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import { ProviderWorkspaceRegistry } from '../../../core/providers/ProviderWorkspaceRegistry';
+import { hasForkSupport } from '../../../core/providers/typeGuards';
 import type {
   ProviderId,
   ProviderTabWarmupContext,
@@ -51,6 +52,12 @@ function isTabManagerViewHost(value: unknown): value is TabManagerViewHost {
 type CreateTabOptions = {
   activate?: boolean;
   draftModel?: string;
+  /**
+   * Tab-pinned model for task-run tabs. Persists through runtime init so the
+   * ModelSelector keeps displaying the work-order model and `queryOptions.model`
+   * applies on every turn (not just the first).
+   */
+  pinnedModel?: string;
   bypassTabLimit?: boolean;
   defaultProviderId?: ProviderId;
 };
@@ -164,7 +171,7 @@ export class TabManager implements TabManagerInterface {
       return null;
     }
 
-    const { activate = true, draftModel } = options;
+    const { activate = true, draftModel, pinnedModel } = options;
 
     const conversation = conversationId
       ? await this.plugin.getConversationById(conversationId)
@@ -184,6 +191,7 @@ export class TabManager implements TabManagerInterface {
       conversation: conversation ?? undefined,
       tabId,
       ...(typeof draftModel === 'string' ? { draftModel } : {}),
+      ...(typeof pinnedModel === 'string' ? { pinnedModel } : {}),
       defaultProviderId,
       onStreamingChanged: (isStreaming) => {
         this.callbacks.onTabStreamingChanged?.(tab.id, isStreaming);
@@ -245,9 +253,12 @@ export class TabManager implements TabManagerInterface {
   }): Promise<TabData | null> {
     // Do not steal focus: the work order run streams in a background tab so the
     // user stays on whatever tab/view they were on. They can switch to it manually.
+    // pinnedModel persists past runtime init so the ModelSelector keeps showing
+    // the work-order model and queryOptions.model applies on every turn.
     return this.createTab(options.conversationId ?? undefined, undefined, {
       activate: false,
       draftModel: options.model,
+      pinnedModel: options.model,
       defaultProviderId: options.providerId,
     });
   }
@@ -637,13 +648,18 @@ export class TabManager implements TabManagerInterface {
       ? this.buildForkTitle(context.sourceTitle, context.forkAtUserMessage)
       : undefined;
 
-    const forkProviderState = ProviderRegistry
-      .getConversationHistoryService(conversation.providerId)
-      .buildForkProviderState(
+    // Capability invariant (forkSupportInvariant.test.ts): the `forkSupport`
+    // slot is present iff `capabilities.supportsFork === true`. The fork
+    // affordance is hidden upstream when supportsFork is false, so an absent
+    // slot here means no provider state to build — emit empty.
+    const historyService = ProviderRegistry.getConversationHistoryService(conversation.providerId);
+    const forkProviderState = hasForkSupport(historyService)
+      ? historyService.forkSupport.buildForkProviderState(
         context.sourceSessionId,
         context.resumeAt,
         context.sourceProviderState,
-      );
+      )
+      : {};
 
     await this.plugin.updateConversation(conversation.id, {
       messages: context.messages,

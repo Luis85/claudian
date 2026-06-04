@@ -177,3 +177,20 @@
   object-fit: cover;
   display: block;
 }
+
+/* Fallback chip when image is unavailable */
+.claudian-message-image-fallback {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.3em 0.6em;
+  border: 1px dashed var(--background-modifier-border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-style: italic;
+}
+
+.claudian-message-image-fallback::before {
+  content: '🖼';
+}

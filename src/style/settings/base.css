@@ -405,11 +405,6 @@
   margin-bottom: 4px;
 }
 
-.claudian-sp-modal .modal-content {
-  max-width: 600px;
-  width: auto;
-}
-
 .claudian-sp-content-area {
   width: 100%;
   font-family: var(--font-monospace);

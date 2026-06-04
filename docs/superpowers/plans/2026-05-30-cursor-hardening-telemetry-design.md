@@ -1,7 +1,7 @@
 ---
 title: Cursor Hardening — Telemetry log codes (design)
 date: 2026-05-30
-status: design / deferred to PR2
+status: open
 scope: src/providers/cursor/history, src/providers/acp, src/providers/cursor/runtime
 supersedes: none
 related:

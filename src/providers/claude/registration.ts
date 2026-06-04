@@ -1,4 +1,7 @@
-import type { ProviderRegistration } from '../../core/providers/types';
+import type {
+  ProviderConversationHistoryService,
+  ProviderRegistration,
+} from '../../core/providers/types';
 import { getClaudeWorkspaceServices } from './app/ClaudeWorkspaceServices';
 import { InlineEditService as ClaudeInlineEditService } from './auxiliary/ClaudeInlineEditService';
 import { InstructionRefineService as ClaudeInstructionRefineService } from './auxiliary/ClaudeInstructionRefineService';
@@ -38,6 +41,10 @@ export const claudeProviderRegistration: ProviderRegistration = {
   createTitleGenerationService: (plugin) => new ClaudeTitleGenerationService(plugin),
   createInstructionRefineService: (plugin) => new ClaudeInstructionRefineService(plugin),
   createInlineEditService: (plugin) => new ClaudeInlineEditService(plugin),
-  historyService: new ClaudeConversationHistoryService(),
+  // The typed subclass narrows TPersistedState to ClaudeProviderState; the
+  // registration field uses the default-instantiated interface. The shape is
+  // structurally compatible but lacks the index signature that
+  // Record<string, unknown> demands.
+  historyService: new ClaudeConversationHistoryService() as unknown as ProviderConversationHistoryService,
   taskResultInterpreter: new ClaudeTaskResultInterpreter(),
 };

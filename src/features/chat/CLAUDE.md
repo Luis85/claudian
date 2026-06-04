@@ -9,9 +9,11 @@ Main sidebar chat interface. `ClaudianView` assembles tabs, controllers, rendere
 - Provider-owned services are resolved through registries
   - `ProviderRegistry`: runtime, title generation, instruction refinement, inline edit, task-result interpretation
   - `ProviderWorkspaceRegistry`: command catalogs, agent mention providers, MCP managers, CLI resolution
-- Current feature split
-  - Claude exposes rewind, instruction mode, runtime command discovery, and in-app MCP controls
-  - Codex exposes fork, history reload, plan mode, instruction mode, images, inline edit, `$` skills, and subagents, but not rewind
+- Current feature split (capability flags in `src/providers/<id>/capabilities.ts`; illustrative, not exhaustive)
+  - Claude exposes rewind, fork, plan mode, instruction mode, runtime command discovery, in-app MCP controls, `/` commands, `$` skills, and subagents
+  - Codex exposes fork, history reload, plan mode, instruction mode, images, inline edit, `$` skills, and subagents, but not rewind or in-app MCP
+  - Opencode exposes plan mode (managed `plan` mode; post-plan approval card gated), runtime-discovered slash commands, subagents, and Opencode-managed MCP, but not fork or rewind
+  - Cursor exposes plan mode, history reload, images, and inline edit, but not fork, rewind, in-app MCP, or subagents
 
 ## Architecture
 
@@ -22,6 +24,7 @@ ClaudianView (lifecycle + assembly)
 │   ├── ConversationController
 │   ├── StreamController
 │   ├── InputController
+│   ├── ChatDropController
 │   ├── SelectionController
 │   ├── BrowserSelectionController
 │   ├── CanvasSelectionController
@@ -78,6 +81,7 @@ The feature layer consumes provider-neutral `StreamChunk` values. Providers own 
 | `SelectionController` | Editor selection polling and CM6 decorations |
 | `BrowserSelectionController` | Browser view selection tracking |
 | `CanvasSelectionController` | Canvas selection tracking |
+| `ChatDropController` | Drag-and-drop lifecycle for one chat tab — overlay, payload routing, vault/external/image dispatch |
 | `NavigationController` | Vim-style keyboard navigation |
 
 ## Rendering Pipeline

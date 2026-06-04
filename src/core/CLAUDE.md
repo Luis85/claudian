@@ -4,7 +4,7 @@ Core modules stay provider-neutral. Features depend on `core/`; providers implem
 
 ## Runtime Status
 
-- `core/runtime/` and `core/providers/` define the chat-facing seam. `ChatRuntime` is the neutral runtime interface. `src/providers/claude/runtime/` and `src/providers/codex/runtime/` provide the concrete implementations.
+- `core/runtime/` and `core/providers/` define the chat-facing seam. `ChatRuntime` is the neutral runtime interface. The `claude`, `codex`, `opencode`, and `cursor` runtimes (`src/providers/<id>/runtime/`) provide the concrete implementations.
 - `ProviderRegistry` owns runtime and auxiliary-service factories. `ProviderWorkspaceRegistry` owns provider workspace services such as command catalogs, agent mentions, CLI resolution, MCP managers, and provider settings tabs.
 - Claude-specific agents, plugins, MCP, runtime command discovery, and storage live under `src/providers/claude/`.
 - Codex-specific skills, subagents, JSONL history hydration, session tailing, and workspace services live under `src/providers/codex/`.
@@ -71,7 +71,7 @@ const cliResolver = ProviderWorkspaceRegistry.getCliResolver(providerId);
 ### Storage
 
 - `core/storage/` provides generic vault/home adapters only
-- Provider-owned workspace storage lives under `src/providers/claude/storage/` and `src/providers/codex/storage/`
+- Provider-owned workspace storage/history lives under each provider directory (e.g. `src/providers/claude/storage/`, `src/providers/codex/`, `src/providers/opencode/`, `src/providers/cursor/history/`)
 - Provider-owned transcript hydration and deletion live under provider `history/` services
 
 ## Gotchas

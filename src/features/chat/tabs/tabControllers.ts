@@ -202,6 +202,14 @@ async function handleForkAll(
   });
 }
 
+/**
+ * Structural view of the host (`ClaudianView`) that owns pending hydration
+ * failures. Declared locally to avoid importing the view type (circular import).
+ */
+interface PendingHydrationErrorHost {
+  consumePendingHydrationError(conversationId: string): { code: string; message: string } | null;
+}
+
 export function initializeTabControllers(
   tab: TabData,
   plugin: ClaudianPlugin,
@@ -325,6 +333,9 @@ export function initializeTabControllers(
       getStatusPanel: () => ui.statusPanel,
       getAgentService: () => tab.service, // Use tab's service instead of plugin's
       dismissPendingInlinePrompts: () => tab.controllers.inputController?.dismissPendingApproval(),
+      consumePendingHydrationError: (conversationId: string) =>
+        (component as Partial<PendingHydrationErrorHost>)
+          .consumePendingHydrationError?.(conversationId) ?? null,
       ensureServiceForConversation: async (conversation) => {
         const nextProviderId = getTabProviderId(tab, plugin, conversation);
         const providerChanged = tab.providerId !== nextProviderId;
@@ -410,6 +421,27 @@ export function initializeTabControllers(
     getAgentService: () => tab.service,
     getSubagentManager: () => services.subagentManager,
     getTabProviderId: () => getTabProviderId(tab, plugin),
+    // Surface the tab-pinned model so `InputController` can forward it as a
+    // per-turn `queryOptions.model` override. Required for Agent Board task
+    // runs where the work-order's selected model differs from the provider's
+    // global `settings.model`.
+    //
+    // Resolution order:
+    //   1. `pinnedModel` — sticks past runtime init; covers every turn on a
+    //      task-run tab (work-order model honored on the 2nd, 3rd, etc. send too).
+    //   2. `draftModel` on a blank tab — covers regular chat tabs where the
+    //      user has picked a model in the composer but hasn't sent yet (the
+    //      draft survives only until init clears it).
+    //   3. null otherwise — bound tabs fall back to global `settings.model`.
+    getTabModelOverride: () => {
+      if (typeof tab.pinnedModel === 'string' && tab.pinnedModel.trim()) {
+        return tab.pinnedModel.trim();
+      }
+      if (tab.lifecycleState === 'blank' && typeof tab.draftModel === 'string' && tab.draftModel.trim()) {
+        return tab.draftModel.trim();
+      }
+      return null;
+    },
     ensureServiceInitialized: async () => {
       if (tab.serviceInitialized && tab.lifecycleState === 'bound_active') {
         return true;

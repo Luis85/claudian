@@ -68,7 +68,10 @@ jest.mock('@/core/providers/ProviderRegistry', () => ({
   ProviderRegistry: {
     createChatRuntime: (...args: any[]) => mockCreateChatRuntime(...args),
     getConversationHistoryService: () => ({
-      buildForkProviderState: mockBuildForkProviderState,
+      forkSupport: {
+        isPendingForkConversation: () => false,
+        buildForkProviderState: mockBuildForkProviderState,
+      },
     }),
     getCapabilities: (...args: any[]) => mockGetCapabilities(...args),
     resolveProviderForModel: (model: string) => (

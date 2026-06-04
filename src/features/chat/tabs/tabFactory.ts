@@ -18,6 +18,13 @@ export interface TabCreateOptions {
   tabId?: TabId;
   /** Restored draft model for blank tabs. */
   draftModel?: string | null;
+  /**
+   * Tab-pinned model that survives runtime init. Used for Agent Board task
+   * runs so the work-order model:
+   *   - displays in the ModelSelector for the life of the tab,
+   *   - is forwarded as `queryOptions.model` on every turn.
+   */
+  pinnedModel?: string | null;
   /** Provider to inherit for blank tabs (e.g. from the active tab). */
   defaultProviderId?: ProviderId;
   onStreamingChanged?: (isStreaming: boolean) => void;
@@ -71,10 +78,16 @@ export function createTab(options: TabCreateOptions): TabData {
       ? getEnabledProviderForModel(draftModel, plugin.settings)
       : resolveBlankTabDefaultProviderId(asSettingsBag(plugin.settings)));
 
+  const pinnedModelInput = typeof options.pinnedModel === 'string'
+    ? options.pinnedModel.trim()
+    : '';
+  const pinnedModel = pinnedModelInput || null;
+
   const tab: TabData = {
     id,
     lifecycleState: isBound ? 'bound_cold' : 'blank',
     draftModel,
+    pinnedModel,
     providerId: initialProviderId,
     conversationId: conversation?.id ?? null,
     service: null,

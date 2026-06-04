@@ -1097,6 +1097,66 @@ describe('InputController - Message Queue', () => {
 
       expect(mockAgentService.query).toHaveBeenCalled();
     });
+
+    // Regression — Agent Board work-order runs were ignoring the selected
+    // model because the runtime reads `settings.model` (global) instead of
+    // the tab-pinned `draftModel`. InputController now forwards the
+    // `getTabModelOverride()` value as `queryOptions.model` so providers
+    // honor the work-order's choice for the first turn.
+    it('forwards tab-pinned model override as queryOptions.model', async () => {
+      const localDeps = createSendableDeps({
+        getTabModelOverride: () => 'sonnet',
+      });
+      (localDeps as any).mockAgentService.query = jest
+        .fn()
+        .mockImplementation(() => createMockStream([{ type: 'done' }]));
+      const localController = new InputController(localDeps);
+      const localInput = localDeps.getInputEl() as ReturnType<typeof createMockInputEl>;
+      localInput.value = 'Run the work order';
+
+      await localController.sendMessage();
+
+      const queryMock = (localDeps as any).mockAgentService.query as jest.Mock;
+      expect(queryMock).toHaveBeenCalled();
+      const [, , queryOptions] = queryMock.mock.calls[0];
+      expect(queryOptions).toEqual({ model: 'sonnet' });
+    });
+
+    it('omits queryOptions.model when no tab override is pinned', async () => {
+      const localDeps = createSendableDeps({
+        getTabModelOverride: () => null,
+      });
+      (localDeps as any).mockAgentService.query = jest
+        .fn()
+        .mockImplementation(() => createMockStream([{ type: 'done' }]));
+      const localController = new InputController(localDeps);
+      const localInput = localDeps.getInputEl() as ReturnType<typeof createMockInputEl>;
+      localInput.value = 'Regular chat send';
+
+      await localController.sendMessage();
+
+      const queryMock = (localDeps as any).mockAgentService.query as jest.Mock;
+      const [, , queryOptions] = queryMock.mock.calls[0];
+      expect(queryOptions).toBeUndefined();
+    });
+
+    it('treats whitespace-only tab override as no override', async () => {
+      const localDeps = createSendableDeps({
+        getTabModelOverride: () => '   ',
+      });
+      (localDeps as any).mockAgentService.query = jest
+        .fn()
+        .mockImplementation(() => createMockStream([{ type: 'done' }]));
+      const localController = new InputController(localDeps);
+      const localInput = localDeps.getInputEl() as ReturnType<typeof createMockInputEl>;
+      localInput.value = 'Whitespace override';
+
+      await localController.sendMessage();
+
+      const queryMock = (localDeps as any).mockAgentService.query as jest.Mock;
+      const [, , queryOptions] = queryMock.mock.calls[0];
+      expect(queryOptions).toBeUndefined();
+    });
   });
 
   describe('Conversation operation guards', () => {

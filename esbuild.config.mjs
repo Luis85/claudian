@@ -60,11 +60,9 @@ const patchRendererUnsafeUnref = {
       const originalContents = await fsPromises.readFile(bundlePath, 'utf8');
       const patchedBundle = patchRendererUnsafeUnrefSites(originalContents);
 
-      if (patchedBundle.contents !== originalContents) {
-        await fsPromises.writeFile(bundlePath, patchedBundle.contents, 'utf8');
-      }
+      let finalContents = patchedBundle.contents;
 
-      const unsafeMatches = findUnsafeTimerUnrefSites(patchedBundle.contents);
+      const unsafeMatches = findUnsafeTimerUnrefSites(finalContents);
       if (unsafeMatches.length > 0) {
         const details = unsafeMatches
           .slice(0, 5)
@@ -74,6 +72,25 @@ const patchRendererUnsafeUnref = {
         throw new Error(
           `Renderer-unsafe timer .unref() calls remain in main.js:\n${details}`,
         );
+      }
+
+      // Minify AFTER patching so renderer-unsafe-unref patterns (which match
+      // unminified SDK shape) still apply. Minifying the patched output is
+      // safe because the patched code uses verbose `const t = setTimeout(...);
+      // t.unref?.()` form that survives minify as `setTimeout(...)?.unref?.()`.
+      if (prod) {
+        const minified = await esbuild.transform(finalContents, {
+          loader: 'js',
+          minify: true,
+          legalComments: 'none',
+          target: 'es2018',
+          format: 'cjs',
+        });
+        finalContents = minified.code;
+      }
+
+      if (finalContents !== originalContents) {
+        await fsPromises.writeFile(bundlePath, finalContents, 'utf8');
       }
     });
   },
@@ -143,6 +160,7 @@ const context = await esbuild.context({
   logLevel: 'info',
   sourcemap: prod ? false : 'inline',
   treeShaking: true,
+  // Minify runs in patchRendererUnsafeUnref onEnd (after SDK patches), not here.
   outfile: 'main.js',
 });
 

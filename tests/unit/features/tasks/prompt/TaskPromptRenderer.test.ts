@@ -68,3 +68,47 @@ describe('renderTaskPrompt', () => {
     expect(renderTaskPrompt(task, { definitionOfReady: [], definitionOfDone: [] })).not.toContain('## Definition of Done');
   });
 });
+
+describe('renderTaskPrompt — Rework Notes', () => {
+  function makeTaskWithLedger(ledger: string): TaskSpec {
+    return { ...task, sections: { ...task.sections, ledger } };
+  }
+
+  it('includes ## Rework Notes when last needs_fix ledger entry has a custom reason', () => {
+    const t = makeTaskWithLedger(
+      '- 2026-06-04T10:00:00Z [running] Started run.\n' +
+      '- 2026-06-04T11:00:00Z [needs_fix] Fix the broken import in module X.',
+    );
+    const prompt = renderTaskPrompt(t);
+    expect(prompt).toContain('## Rework Notes');
+    expect(prompt).toContain('Fix the broken import in module X.');
+  });
+
+  it('omits ## Rework Notes when last needs_fix entry is the default canned message', () => {
+    const t = makeTaskWithLedger(
+      '- 2026-06-04T10:00:00Z [needs_fix] Sent back for rework.',
+    );
+    const prompt = renderTaskPrompt(t);
+    expect(prompt).not.toContain('## Rework Notes');
+  });
+
+  it('omits ## Rework Notes when no needs_fix entry exists in ledger', () => {
+    const t = makeTaskWithLedger(
+      '- 2026-06-04T10:00:00Z [running] Started run.\n' +
+      '- 2026-06-04T11:00:00Z [review] Handoff written.',
+    );
+    const prompt = renderTaskPrompt(t);
+    expect(prompt).not.toContain('## Rework Notes');
+  });
+
+  it('uses the LAST needs_fix entry when multiple exist', () => {
+    const t = makeTaskWithLedger(
+      '- 2026-06-01T00:00:00Z [needs_fix] Old rework note.\n' +
+      '- 2026-06-02T00:00:00Z [running] Started run.\n' +
+      '- 2026-06-03T00:00:00Z [needs_fix] Latest rework note.',
+    );
+    const prompt = renderTaskPrompt(t);
+    expect(prompt).toContain('Latest rework note.');
+    expect(prompt).not.toContain('Old rework note.');
+  });
+});

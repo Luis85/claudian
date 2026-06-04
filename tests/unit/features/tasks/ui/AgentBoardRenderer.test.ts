@@ -72,6 +72,7 @@ function makeCallbacks(): AgentBoardRenderCallbacks {
     onMarkReady: jest.fn(),
     onAddWorkOrder: jest.fn(),
     onRunNextReady: jest.fn(),
+    onReopen: jest.fn(),
   };
 }
 
@@ -81,7 +82,7 @@ function findRunNextButton(host: HTMLElement): HTMLButtonElement | null {
 }
 
 describe('AgentBoardRenderer — "Run next ready" button visibility', () => {
-  it('hides the button when no work orders are in ready status', () => {
+  it('hides the button when no work orders are in ready or needs_fix status', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     const state = makeState({
@@ -109,6 +110,19 @@ describe('AgentBoardRenderer — "Run next ready" button visibility', () => {
     expect(btn).not.toBeNull();
   });
 
+  it('shows the button when board has only needs_fix tasks (no ready)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const state = makeState({
+      needs_fix: [makeTask('nf', 'needs_fix')],
+      done: [makeTask('d', 'done')],
+    });
+
+    renderer.render(host, state, makeCallbacks());
+
+    expect(findRunNextButton(host)).not.toBeNull();
+  });
+
   it('invokes onRunNextReady when the visible button is clicked', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
@@ -120,5 +134,49 @@ describe('AgentBoardRenderer — "Run next ready" button visibility', () => {
     const btn = findRunNextButton(host);
     btn?.click();
     expect(callbacks.onRunNextReady).toHaveBeenCalledTimes(1);
+  });
+});
+
+function findReopenButton(host: HTMLElement): HTMLButtonElement | null {
+  const buttons = Array.from(host.querySelectorAll('button')) as HTMLButtonElement[];
+  return buttons.find((btn) => btn.textContent === 'Reopen') ?? null;
+}
+
+describe('AgentBoardRenderer — Reopen button on done cards', () => {
+  it('renders Reopen button on done card', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const state = makeState({ done: [makeTask('d', 'done')] });
+
+    renderer.render(host, state, makeCallbacks());
+
+    expect(findReopenButton(host)).not.toBeNull();
+  });
+
+  it('does not render Reopen button on non-done cards', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const state = makeState({
+      review: [makeTask('rv', 'review')],
+      failed: [makeTask('f', 'failed')],
+      canceled: [makeTask('c', 'canceled')],
+    });
+
+    renderer.render(host, state, makeCallbacks());
+
+    expect(findReopenButton(host)).toBeNull();
+  });
+
+  it('invokes onReopen when Reopen button is clicked on a done card', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    const doneTask = makeTask('d', 'done');
+    const state = makeState({ done: [doneTask] });
+
+    renderer.render(host, state, callbacks);
+
+    findReopenButton(host)?.click();
+    expect(callbacks.onReopen).toHaveBeenCalledWith(doneTask);
   });
 });

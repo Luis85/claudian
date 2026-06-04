@@ -150,6 +150,19 @@
       "fileAdded": "Added {path} to Claudian chat",
       "folderAdded": "Added {path}/ to Claudian chat"
     },
+    "drop": {
+      "image": "Drop image",
+      "fileContext": "Drop into context",
+      "folderContext": "Drop folder into context",
+      "osContext": "Drop file or folder into context",
+      "mixed": "Drop into chat",
+      "batchAdded": "Added {count} to context",
+      "batchSkipped": "Skipped {count}: outside vault or external context",
+      "externalFolderUnsupported": "Folders outside the vault aren't supported as context yet",
+      "outsideContext": "{path} is outside the vault and any configured external context",
+      "outsideContextBatch": "{count} items are outside the vault and any configured external context",
+      "imageFailed": "Failed to attach {count} image(s)"
+    },
     "tab": {
       "createFailed": "Failed to create tab",
       "createConversationFailed": "Failed to create conversation",
@@ -165,7 +178,8 @@
       "pickerFailed": "Unable to open folder picker."
     },
     "image": {
-      "unsupported": "Image attachments are not supported by this provider."
+      "unsupported": "Image attachments are not supported by this provider.",
+      "unavailable": "Image is no longer available in the vault."
     },
     "fileOpen": {
       "notFound": "Could not open file: {path}",
@@ -545,6 +559,10 @@
       "nameRequired": "Name is required",
       "promptRequired": "Prompt is required",
       "saveFailed": "Failed to save quick action"
+    },
+    "contextMenu": {
+      "title": "Quick actions",
+      "tabLimitReached": "Cannot open quick action: tab limit reached. Close a tab first."
     }
   },
   "security": {

@@ -1,5 +1,5 @@
 ---
-status: approved
+status: shipped
 parent: "[[Multi Provider Support]]"
 ---
 # Cursor model families and modes — design

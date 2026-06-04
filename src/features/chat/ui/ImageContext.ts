@@ -24,7 +24,6 @@ export class ImageContextManager {
   private previewContainerEl: HTMLElement;
   private imagePreviewEl: HTMLElement;
   private inputEl: HTMLTextAreaElement;
-  private dropOverlay: HTMLElement | null = null;
   private attachedImages: Map<string, ImageAttachment> = new Map();
   private enabled = true;
 
@@ -46,7 +45,6 @@ export class ImageContextManager {
       this.previewContainerEl.insertBefore(this.imagePreviewEl, fileIndicator);
     }
 
-    this.setupDragAndDrop();
     this.setupPasteHandler();
   }
 
@@ -81,95 +79,6 @@ export class ImageContextManager {
     this.callbacks.onImagesChanged();
   }
 
-  private setupDragAndDrop() {
-    const inputWrapper = this.containerEl.querySelector('.claudian-input-wrapper') as HTMLElement;
-    if (!inputWrapper) return;
-
-    this.dropOverlay = inputWrapper.createDiv({ cls: 'claudian-drop-overlay' });
-    const dropContent = this.dropOverlay.createDiv({ cls: 'claudian-drop-content' });
-    const ownerDocument = inputWrapper.ownerDocument ?? window.document;
-    const svg = ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('width', '32');
-    svg.setAttribute('height', '32');
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('stroke-width', '2');
-    const pathEl = ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'path');
-    pathEl.setAttribute('d', 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4');
-    const polyline = ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-    polyline.setAttribute('points', '17 8 12 3 7 8');
-    const line = ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', '12');
-    line.setAttribute('y1', '3');
-    line.setAttribute('x2', '12');
-    line.setAttribute('y2', '15');
-    svg.appendChild(pathEl);
-    svg.appendChild(polyline);
-    svg.appendChild(line);
-    dropContent.appendChild(svg);
-    dropContent.createSpan({ text: 'Drop image here' });
-
-    const dropZone = inputWrapper;
-
-    dropZone.addEventListener('dragenter', (e) => this.handleDragEnter(e));
-    dropZone.addEventListener('dragover', (e) => this.handleDragOver(e));
-    dropZone.addEventListener('dragleave', (e) => this.handleDragLeave(e));
-    dropZone.addEventListener('drop', (e) => {
-      void this.handleDrop(e);
-    });
-  }
-
-  private handleDragEnter(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (e.dataTransfer?.types.includes('Files')) {
-      this.dropOverlay?.addClass('visible');
-    }
-  }
-
-  private handleDragOver(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  private handleDragLeave(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const inputWrapper = this.containerEl.querySelector('.claudian-input-wrapper');
-    if (!inputWrapper) {
-      this.dropOverlay?.removeClass('visible');
-      return;
-    }
-
-    const rect = inputWrapper.getBoundingClientRect();
-    if (
-      e.clientX <= rect.left ||
-      e.clientX >= rect.right ||
-      e.clientY <= rect.top ||
-      e.clientY >= rect.bottom
-    ) {
-      this.dropOverlay?.removeClass('visible');
-    }
-  }
-
-  private async handleDrop(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    this.dropOverlay?.removeClass('visible');
-
-    const files = e.dataTransfer?.files;
-    if (!files) return;
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      if (this.isImageFile(file)) {
-        await this.addImageFromFile(file, 'drop');
-      }
-    }
-  }
 
   private setupPasteHandler() {
     this.inputEl.addEventListener('paste', (e) => {
@@ -201,7 +110,7 @@ export class ImageContextManager {
     return IMAGE_EXTENSIONS[ext] || null;
   }
 
-  private async addImageFromFile(file: File, source: 'paste' | 'drop'): Promise<boolean> {
+  async addImageFromFile(file: File, source: 'paste' | 'drop'): Promise<boolean> {
     if (!this.enabled) {
       new Notice(t('chat.image.unsupported'));
       return false;

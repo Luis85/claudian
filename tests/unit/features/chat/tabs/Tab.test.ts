@@ -622,6 +622,30 @@ describe('Tab - Creation', () => {
       expect(tab.providerId).toBe('claude');
     });
 
+    // Regression — Agent Board task-run tabs need pinnedModel to persist past
+    // runtime init so the ModelSelector keeps showing the work-order model
+    // and `getTabModelOverride` returns it on every turn (not just the first).
+    it('should store pinnedModel when provided', () => {
+      const plugin = createMockPlugin();
+      const tab = createTab(createMockOptions({ plugin, pinnedModel: 'sonnet' }));
+
+      expect(tab.pinnedModel).toBe('sonnet');
+    });
+
+    it('should normalize whitespace-only pinnedModel to null', () => {
+      const plugin = createMockPlugin();
+      const tab = createTab(createMockOptions({ plugin, pinnedModel: '   ' }));
+
+      expect(tab.pinnedModel).toBeNull();
+    });
+
+    it('should default pinnedModel to null when not provided', () => {
+      const plugin = createMockPlugin();
+      const tab = createTab(createMockOptions({ plugin }));
+
+      expect(tab.pinnedModel).toBeNull();
+    });
+
     it('should keep a Claude custom gpt model on Claude when Codex is disabled', () => {
       const plugin = createMockPlugin();
       plugin.settings.settingsProvider = 'claude';

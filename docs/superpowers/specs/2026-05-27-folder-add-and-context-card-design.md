@@ -1,5 +1,5 @@
 ---
-status: approved
+status: shipped
 parent: "[[Chat]]"
 ---
 # Add folders to chat + inline context card

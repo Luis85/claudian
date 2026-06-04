@@ -340,6 +340,26 @@ describe('QueryOptionsBuilder', () => {
 
       expect(config.settingSources).toBe('user,project,local');
     });
+
+    // Regression — work-order model override must be stored in config.model so
+    // applyDynamicUpdates correctly detects model changes on subsequent turns.
+    it('stores modelOverride in config.model when provided', () => {
+      const ctx = createMockContext({
+        settings: createMockSettings({ model: 'opus' }),
+      });
+      const config = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, 'sonnet');
+
+      expect(config.model).toBe('sonnet');
+    });
+
+    it('falls back to settings.model when no modelOverride provided', () => {
+      const ctx = createMockContext({
+        settings: createMockSettings({ model: 'opus' }),
+      });
+      const config = QueryOptionsBuilder.buildPersistentQueryConfig(ctx);
+
+      expect(config.model).toBe('opus');
+    });
   });
 
   describe('buildPersistentQueryOptions', () => {
@@ -674,6 +694,35 @@ describe('QueryOptionsBuilder', () => {
 
       expect(options.plugins).toBeUndefined();
       expect(options.agents).toBeUndefined();
+    });
+
+    // Regression — work-order model must reach the CLI process at startup, not via
+    // a post-init setModel() call that only takes effect at turn boundaries.
+    it('uses modelOverride instead of settings.model when provided', () => {
+      const ctx = {
+        ...createMockContext({
+          settings: createMockSettings({ model: 'opus', effortLevel: 'low' }),
+        }),
+        abortController: new AbortController(),
+        hooks: {},
+        modelOverride: 'sonnet',
+      };
+      const options = QueryOptionsBuilder.buildPersistentQueryOptions(ctx);
+
+      expect(options.model).toBe('sonnet');
+    });
+
+    it('uses settings.model when no modelOverride is set', () => {
+      const ctx = {
+        ...createMockContext({
+          settings: createMockSettings({ model: 'opus' }),
+        }),
+        abortController: new AbortController(),
+        hooks: {},
+      };
+      const options = QueryOptionsBuilder.buildPersistentQueryOptions(ctx);
+
+      expect(options.model).toBe('opus');
     });
   });
 

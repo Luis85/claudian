@@ -14,6 +14,8 @@ import { getVaultPath } from '../../../utils/path';
 import { QuickActionStorage } from '../../quickActions/QuickActionStorage';
 import { QuickActionsModal } from '../../quickActions/ui/QuickActionsModal';
 import { resolveModelContextWindow } from '../../settings/customModels/resolveModelContextWindow';
+import { ChatDropController } from '../controllers/ChatDropController';
+import type { DragManagerLike } from '../controllers/dropPayloadDetection';
 import { BangBashService } from '../services/BangBashService';
 import { BangBashModeManager as BangBashModeManagerClass } from '../ui/BangBashModeManager';
 import { FileContextManager } from '../ui/FileContext';
@@ -90,6 +92,19 @@ function initializeContextManagers(tab: TabData, plugin: ClaudianPlugin): void {
     },
     dom.contextRowEl
   );
+
+  tab.ui.chatDropController = new ChatDropController(dom.inputContainerEl, {
+    fileContext: tab.ui.fileContextManager!,
+    imageContext: tab.ui.imageContextManager!,
+    getVaultPath: () => getVaultPath(app) ?? '',
+    getExternalContexts: () => tab.ui.externalContextSelector?.getExternalContexts() || [],
+    getDragManager: () => {
+      const dragMgr = (app as unknown as { dragManager?: unknown }).dragManager;
+      return (dragMgr as DragManagerLike | null) ?? null;
+    },
+    inputEl: dom.inputEl,
+  });
+  tab.ui.chatDropController.init();
 }
 
 function initializeSlashCommands(
@@ -204,9 +219,32 @@ function initializeInputToolbar(
       return getTabChatUIConfig(tab, plugin);
     },
     getCapabilities: () => getTabCapabilities(tab, plugin),
-    getSettings: () => getTabSettingsSnapshot(tab, plugin),
+    getSettings: () => {
+      const snapshot = getTabSettingsSnapshot(tab, plugin);
+      // Surface the tab-pinned model (e.g. Agent Board work-order model) so
+      // the ModelSelector displays it for the life of the tab rather than
+      // falling back to the provider's global `settings.model` once
+      // `tab.draftModel` is cleared during runtime init.
+      if (typeof tab.pinnedModel === 'string' && tab.pinnedModel.trim()) {
+        return { ...snapshot, model: tab.pinnedModel.trim() };
+      }
+      // Blank tabs that haven't sent yet still surface `draftModel` so the
+      // selector reflects the user's pending pick even before `settings.model`
+      // is updated on the next send.
+      if (tab.lifecycleState === 'blank' && typeof tab.draftModel === 'string' && tab.draftModel.trim()) {
+        return { ...snapshot, model: tab.draftModel.trim() };
+      }
+      return snapshot;
+    },
     getEnvironmentVariables: () => plugin.getActiveEnvironmentVariables(),
     onModelChange: async (model: string) => {
+      // Manual model pick on a task-run tab overrides the work-order pin.
+      // Cleared before the provider/draft branches so the new value takes effect
+      // on every subsequent turn rather than getting shadowed by the old pin.
+      if (typeof tab.pinnedModel === 'string' && tab.pinnedModel.trim() !== model) {
+        tab.pinnedModel = null;
+      }
+
       // For blank tabs, update draft model and derive provider
       if (tab.lifecycleState === 'blank') {
         const previousProvider = tab.providerId;

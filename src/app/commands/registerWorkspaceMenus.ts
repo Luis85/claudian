@@ -1,7 +1,9 @@
 import type { Editor, Menu, TAbstractFile } from 'obsidian';
 import { TFile, TFolder } from 'obsidian';
 
+import { openContextMenuQuickAction } from '@/features/quickActions/openContextMenuQuickAction';
 import { createWorkOrderFromSelectionInteractive, createWorkOrderInteractive } from '@/features/tasks/ui/createWorkOrderInteractive';
+import { t } from '@/i18n/i18n';
 import type ClaudianPlugin from '@/main';
 
 export function registerWorkspaceMenus(plugin: ClaudianPlugin): void {
@@ -24,6 +26,14 @@ export function registerWorkspaceMenus(plugin: ClaudianPlugin): void {
               void createWorkOrderInteractive(plugin, file);
             });
         });
+        menu.addItem((item) => {
+          item
+            .setTitle(t('quickActions.contextMenu.title'))
+            .setIcon('zap')
+            .onClick(() => {
+              openContextMenuQuickAction(plugin, file);
+            });
+        });
       } else if (file instanceof TFolder) {
         menu.addItem((item) => {
           item
@@ -39,6 +49,14 @@ export function registerWorkspaceMenus(plugin: ClaudianPlugin): void {
             .setIcon('kanban-square')
             .onClick(() => {
               void createWorkOrderInteractive(plugin, file);
+            });
+        });
+        menu.addItem((item) => {
+          item
+            .setTitle(t('quickActions.contextMenu.title'))
+            .setIcon('zap')
+            .onClick(() => {
+              openContextMenuQuickAction(plugin, file);
             });
         });
       }

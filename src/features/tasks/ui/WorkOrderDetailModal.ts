@@ -25,6 +25,7 @@ export interface WorkOrderDetailModalCallbacks {
   onAccept(task: TaskSpec): void;
   onRework(task: TaskSpec): void;
   onMarkReady(task: TaskSpec): void;
+  onReopen(task: TaskSpec): void;
   onArchive(task: TaskSpec): void;
   onSaveFields(task: TaskSpec, fields: WorkOrderFieldUpdate): void | Promise<void>;
   getProviderOptions(): WorkOrderOption[];
@@ -56,14 +57,17 @@ export class WorkOrderDetailModal extends Modal {
       this.renderEditors();
     }
 
-    this.renderSection('Objective', task.sections.objective);
+    this.renderMarkdownBlock('Objective', task.sections.objective || '—');
     const acProgress = parseAcceptanceProgress(task.sections.acceptanceCriteria);
     const acLabel = acProgress.total > 0
       ? `Acceptance criteria (${acProgress.done}/${acProgress.total})`
       : 'Acceptance criteria';
-    this.renderMarkdownBlock(acLabel, task.sections.acceptanceCriteria || '—');
+    this.renderMarkdownBlock(acLabel, task.sections.acceptanceCriteria || '—', 'acceptance');
 
-    if (task.frontmatter.status === 'review' && task.sections.handoff.length > 0) {
+    if (
+      (task.frontmatter.status === 'review' || task.frontmatter.status === 'needs_fix') &&
+      task.sections.handoff.length > 0
+    ) {
       this.renderMarkdownBlock('Handoff', task.sections.handoff);
     }
 
@@ -79,9 +83,11 @@ export class WorkOrderDetailModal extends Modal {
     this.contentEl.empty();
   }
 
-  private renderMarkdownBlock(label: string, markdown: string): void {
-    this.contentEl.createEl('h4', { text: label });
-    const el = this.contentEl.createDiv({ cls: 'claudian-work-order-modal-handoff' });
+  private renderMarkdownBlock(label: string, markdown: string, variant?: 'acceptance'): void {
+    this.contentEl.createEl('h4', { text: label, cls: 'claudian-work-order-modal-heading' });
+    const classes = ['claudian-work-order-modal-handoff'];
+    if (variant === 'acceptance') classes.push('claudian-work-order-modal-acceptance');
+    const el = this.contentEl.createDiv({ cls: classes.join(' ') });
     void MarkdownRenderer.render(this.app, markdown, el, this.task.path, this.markdownComponent);
   }
 
@@ -231,6 +237,15 @@ export class WorkOrderDetailModal extends Modal {
       );
     }
 
+    if (task.frontmatter.status === 'done') {
+      actions.addButton((btn) =>
+        btn.setButtonText('Reopen').onClick(() => {
+          this.close();
+          this.callbacks.onReopen(task);
+        }),
+      );
+    }
+
     if (
       task.frontmatter.status === 'done' ||
       task.frontmatter.status === 'failed' ||
@@ -245,13 +260,5 @@ export class WorkOrderDetailModal extends Modal {
           }),
       );
     }
-  }
-
-  private renderSection(label: string, body: string): void {
-    this.contentEl.createEl('h4', { text: label });
-    this.contentEl.createEl('pre', {
-      cls: 'claudian-work-order-modal-section',
-      text: body.length > 0 ? body : '—',
-    });
   }
 }

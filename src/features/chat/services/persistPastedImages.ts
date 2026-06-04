@@ -1,0 +1,83 @@
+import type { App, TFile } from 'obsidian';
+
+import type { ImageAttachment, ImageMediaType } from '../../../core/types';
+
+const MEDIA_TYPE_TO_EXT: Record<ImageMediaType, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+};
+
+/**
+ * Minimal logger surface so callers can route diagnostics through their
+ * scoped `plugin.logger`. Optional — when omitted, write failures stay silent
+ * (caller can still send the in-memory `data`).
+ */
+export interface PersistPastedImagesLogger {
+  warn(msg: string, ...args: unknown[]): void;
+}
+
+export interface PersistPastedImagesOptions {
+  /** Injection point for tests; defaults to `new Date()`. */
+  now?: Date;
+  /** Optional logger; receives a `warn` per failed write. */
+  logger?: PersistPastedImagesLogger;
+}
+
+/**
+ * Mutates each `ImageAttachment` in `images` whose `path` is unset by writing
+ * the base64 buffer to the vault via Obsidian's attachment APIs. Respects the
+ * user's "Default location for new attachments" setting through
+ * `fileManager.getAvailablePathForAttachment`. Filename matches Obsidian's
+ * native paste convention: `Pasted image YYYYMMDDHHmmss.<ext>`.
+ *
+ * Writes are sequential so two same-second pastes get disambiguated by
+ * `getAvailablePathForAttachment` rather than racing on the same stamp.
+ *
+ * On individual write failure, the image is left with `path` undefined; the
+ * caller can still send the in-memory `data`. Other images continue.
+ */
+export async function persistPastedImages(
+  app: App,
+  images: ImageAttachment[],
+  options: PersistPastedImagesOptions = {},
+): Promise<void> {
+  if (images.length === 0) return;
+  const now = options.now ?? new Date();
+
+  for (const image of images) {
+    if (image.path) continue;
+    const ext = MEDIA_TYPE_TO_EXT[image.mediaType];
+    if (!ext) continue;
+    const desired = `Pasted image ${formatPastedStamp(now)}.${ext}`;
+    try {
+      const targetPath = await app.fileManager.getAvailablePathForAttachment(desired);
+      const buffer = Buffer.from(image.data, 'base64');
+      const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+      const tFile: TFile = await app.vault.createBinary(targetPath, arrayBuffer);
+      image.path = tFile.path;
+      image.name = tFile.name;
+    } catch (err) {
+      // Don't stop the batch on one failure — caller can still send base64 `data`.
+      // Logger is optional but strongly recommended: silent EACCES/ENOSPC/bad-path
+      // failures look like "image never saved" to the user with no way to debug.
+      options.logger?.warn('persistPastedImages: failed to write image to vault', {
+        id: image.id,
+        name: image.name,
+        mediaType: image.mediaType,
+        error: err,
+      });
+    }
+  }
+}
+
+function formatPastedStamp(date: Date): string {
+  const yyyy = date.getUTCFullYear().toString().padStart(4, '0');
+  const mm = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+  const dd = date.getUTCDate().toString().padStart(2, '0');
+  const hh = date.getUTCHours().toString().padStart(2, '0');
+  const mi = date.getUTCMinutes().toString().padStart(2, '0');
+  const ss = date.getUTCSeconds().toString().padStart(2, '0');
+  return `${yyyy}${mm}${dd}${hh}${mi}${ss}`;
+}

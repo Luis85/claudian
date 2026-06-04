@@ -51,6 +51,19 @@ export type TranslationKey =
   | 'chat.context.fileAdded'
   | 'chat.context.folderAdded'
 
+  // Chat - Drag and drop
+  | 'chat.drop.image'
+  | 'chat.drop.fileContext'
+  | 'chat.drop.folderContext'
+  | 'chat.drop.osContext'
+  | 'chat.drop.mixed'
+  | 'chat.drop.batchAdded'
+  | 'chat.drop.batchSkipped'
+  | 'chat.drop.externalFolderUnsupported'
+  | 'chat.drop.outsideContext'
+  | 'chat.drop.outsideContextBatch'
+  | 'chat.drop.imageFailed'
+
   // Diagnostics (Q-1 chunk 9, main.ts; chunk 15 additions)
   | 'diagnostics.logsEmpty'
   | 'diagnostics.logsCopied'
@@ -156,6 +169,7 @@ export type TranslationKey =
 
   // Chat - Image attachments (Q-1 chunk 13)
   | 'chat.image.unsupported'
+  | 'chat.image.unavailable'
 
   // Chat - File open (Q-1 chunk 13)
   | 'chat.fileOpen.notFound'
@@ -295,6 +309,8 @@ export type TranslationKey =
   | 'quickActions.editor.nameRequired'
   | 'quickActions.editor.promptRequired'
   | 'quickActions.editor.saveFailed'
+  | 'quickActions.contextMenu.title'
+  | 'quickActions.contextMenu.tabLimitReached'
 
   // Settings - Section Headings
   | 'settings.title'

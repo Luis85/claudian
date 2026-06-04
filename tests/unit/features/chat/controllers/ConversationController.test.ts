@@ -64,6 +64,8 @@ function createMockDeps(overrides: Partial<ConversationControllerDeps> = {}): Co
     state,
     renderer: {
       renderMessages: jest.fn().mockReturnValue(createMockEl()),
+      clearHydrationBanner: jest.fn(),
+      setHydrationError: jest.fn(),
     } as any,
     subagentManager: {
       orphanAllActive: jest.fn(),
@@ -93,6 +95,7 @@ function createMockDeps(overrides: Partial<ConversationControllerDeps> = {}): Co
     getStatusPanel: () => ({
       remount: jest.fn(),
     }) as any,
+    consumePendingHydrationError: jest.fn().mockReturnValue(null),
     ...overrides,
   };
 }
@@ -597,6 +600,46 @@ describe('ConversationController', () => {
 
       const greetingFn = (deps.renderer.renderMessages as jest.Mock).mock.calls[0][1];
       expect(greetingFn().length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('hydration error banner', () => {
+    it('renders a pending hydration failure on switch once the tab is bound', async () => {
+      deps.state.currentConversationId = 'old-conv';
+      (deps.plugin.switchConversation as jest.Mock).mockResolvedValue({
+        id: 'new-conv',
+        messages: [],
+        sessionId: null,
+      });
+      // First consume call (stale drop at switch start) → null; second call
+      // (in restoreConversation, after bind) → the freshly emitted failure.
+      (deps.consumePendingHydrationError as jest.Mock)
+        .mockReturnValueOnce(null)
+        .mockReturnValueOnce({ code: 'store-unreadable', message: 'History unavailable' });
+
+      await controller.switchTo('new-conv');
+
+      expect(deps.consumePendingHydrationError).toHaveBeenCalledWith('new-conv');
+      expect(deps.renderer.setHydrationError).toHaveBeenCalledWith({
+        code: 'store-unreadable',
+        message: 'History unavailable',
+      });
+    });
+
+    it('clears the banner and drops a stale failure at switch start', async () => {
+      deps.state.currentConversationId = 'old-conv';
+      (deps.plugin.switchConversation as jest.Mock).mockResolvedValue({
+        id: 'new-conv',
+        messages: [],
+        sessionId: null,
+      });
+
+      await controller.switchTo('new-conv');
+
+      expect(deps.renderer.clearHydrationBanner).toHaveBeenCalled();
+      expect(deps.consumePendingHydrationError).toHaveBeenCalledWith('new-conv');
+      // No pending failure → no banner rendered.
+      expect(deps.renderer.setHydrationError).not.toHaveBeenCalled();
     });
   });
 

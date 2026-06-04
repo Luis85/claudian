@@ -11,7 +11,7 @@ related:
   - "[[Quick Actions]]"
   - "[[Multi Provider Support]]"
   - "[[docs/product/features/Orchestrator]]"
-user_manual: "[[docs/user-manuals/chat]]"
+user_manual: "[[docs/product/user-manuals/chat]]"
 ---
 
 # Chat

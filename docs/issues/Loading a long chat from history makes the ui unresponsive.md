@@ -1,7 +1,7 @@
 ---
 type: bug
 priority: 1 - high
-status: shipped
+status: done
 relations:
   - Performance
   - "[[Chat]]"

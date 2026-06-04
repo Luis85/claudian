@@ -56,6 +56,8 @@ export interface ConversationControllerDeps {
   getAgentService?: () => ChatRuntime | null;
   ensureServiceForConversation?: (conversation: Conversation | null) => Promise<void>;
   dismissPendingInlinePrompts?: () => void;
+  /** Returns and clears a hydration failure recorded for the conversation while it was being opened. */
+  consumePendingHydrationError?: (conversationId: string) => { code: string; message: string } | null;
 }
 
 type SaveOptions = {
@@ -190,6 +192,10 @@ export class ConversationController {
     const { plugin, state, renderer } = this.deps;
 
     const conversationId = state.currentConversationId;
+    // Clear any stale failure banner/pending failure before hydrating; a fresh
+    // failure re-arms it via the hydrate below and renders in restoreConversation.
+    renderer.clearHydrationBanner();
+    if (conversationId) this.deps.consumePendingHydrationError?.(conversationId);
     const conversation = conversationId ? await plugin.getConversationById(conversationId) : null;
 
     // No active conversation - start at entry point
@@ -241,7 +247,7 @@ export class ConversationController {
 
   /** Switches to a different conversation. */
   async switchTo(id: string): Promise<void> {
-    const { plugin, state, subagentManager } = this.deps;
+    const { plugin, state, subagentManager, renderer } = this.deps;
 
     if (id === state.currentConversationId) return;
     if (state.isStreaming) return;
@@ -252,6 +258,11 @@ export class ConversationController {
 
     try {
       this.deps.dismissPendingInlinePrompts?.();
+      // Drop any prior failure banner (and stale pending failure) before
+      // hydrating the target conversation; a fresh failure re-arms it via the
+      // hydrate below and is rendered in restoreConversation.
+      renderer.clearHydrationBanner();
+      this.deps.consumePendingHydrationError?.(id);
       await this.save();
 
       subagentManager.orphanAllActive();
@@ -510,6 +521,12 @@ export class ConversationController {
       () => this.getGreeting()
     );
     this.deps.setWelcomeEl(welcomeEl);
+
+    // The tab is now bound to this conversation, so a hydration failure recorded
+    // while it was opening can finally render its inline banner (the lookup at
+    // emit time missed because the tab wasn't bound yet).
+    const hydrationError = this.deps.consumePendingHydrationError?.(conversation.id);
+    if (hydrationError) renderer.setHydrationError(hydrationError);
   }
 
   /**

@@ -1,4 +1,5 @@
 import { selectNextReadyTask } from '@/features/tasks/execution/selectNextReadyTask';
+import { isRunnableTaskStatus } from '@/features/tasks/model/taskStateMachine';
 import type { TaskPriority, TaskSpec, TaskStatus } from '@/features/tasks/model/taskTypes';
 
 const task = (id: string, status: TaskStatus, priority: TaskPriority, created: string): TaskSpec =>
@@ -37,5 +38,32 @@ describe('selectNextReadyTask', () => {
   it('skips non-ready statuses', () => {
     const tasks = [task('r', 'review', '0 - urgent', '1'), task('ready', 'ready', '2 - normal', '2')];
     expect(selectNextReadyTask(tasks, isReady)?.frontmatter.id).toBe('ready');
+  });
+});
+
+describe('selectNextReadyTask with isRunnableTaskStatus', () => {
+  it('picks needs_fix task when no ready task exists', () => {
+    const tasks = [
+      task('nf', 'needs_fix', '2 - normal', '2026-01-01'),
+      task('done', 'done', '0 - urgent', '2025-01-01'),
+    ];
+    expect(selectNextReadyTask(tasks, isRunnableTaskStatus)?.frontmatter.id).toBe('nf');
+  });
+
+  it('prefers ready over needs_fix at same priority by creation date', () => {
+    const tasks = [
+      task('nf', 'needs_fix', '1 - high', '2026-01-01'),
+      task('r', 'ready', '1 - high', '2026-02-01'),
+    ];
+    // same priority → older wins → needs_fix is older, so it is picked
+    expect(selectNextReadyTask(tasks, isRunnableTaskStatus)?.frontmatter.id).toBe('nf');
+  });
+
+  it('picks ready over needs_fix when ready has higher priority', () => {
+    const tasks = [
+      task('nf', 'needs_fix', '2 - normal', '2025-01-01'),
+      task('r', 'ready', '0 - urgent', '2026-01-01'),
+    ];
+    expect(selectNextReadyTask(tasks, isRunnableTaskStatus)?.frontmatter.id).toBe('r');
   });
 });

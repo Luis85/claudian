@@ -1,103 +1,115 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import * as os from 'node:os';
-import * as path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
-
+import type { HydrationContext } from '../../../../src/core/providers/types';
 import type { Conversation } from '../../../../src/core/types';
 import { OpencodeConversationHistoryService } from '../../../../src/providers/opencode/history/OpencodeConversationHistoryService';
+import * as Store from '../../../../src/providers/opencode/history/OpencodeHistoryStore';
 
-describe('OpencodeConversationHistoryService', () => {
-  let tmpRoot: string;
+function makeConversation(overrides: Partial<Conversation> = {}): Conversation {
+  return {
+    id: 'conv-1',
+    title: 't',
+    messages: [],
+    providerId: 'opencode',
+    sessionId: 'sess-a',
+    providerState: { databasePath: '/tmp/oc.db' },
+    createdAt: 0,
+    updatedAt: 0,
+    ...overrides,
+  } as unknown as Conversation;
+}
 
-  beforeEach(() => {
-    tmpRoot = mkdtempSync(path.join(os.tmpdir(), 'claudian-opencode-conversation-history-'));
+const ctx: HydrationContext = { vaultPath: null, reason: 'open' };
+
+describe('OpencodeConversationHistoryService.hydrateConversationHistoryV2', () => {
+  afterEach(() => { jest.restoreAllMocks(); });
+
+  it('returns empty:no-session when conversation.sessionId is null', async () => {
+    const svc = new OpencodeConversationHistoryService();
+    const conv = makeConversation({ sessionId: null });
+    const out = await svc.hydrateConversationHistoryV2(conv, ctx);
+    expect(out.kind).toBe('empty');
+    // eslint-disable-next-line jest/no-conditional-expect
+    if (out.kind === 'empty') expect(out.reason).toBe('no-session');
   });
 
-  afterEach(() => {
-    rmSync(tmpRoot, { force: true, recursive: true });
-  });
-
-  it('retries after a session-level hydration diagnostic', async () => {
-    const dbPath = path.join(tmpRoot, 'opencode.db');
-    const sessionId = 'session-retry';
-    const conversation = createConversation(sessionId, dbPath);
-    const service = new OpencodeConversationHistoryService();
-
-    const db = new DatabaseSync(dbPath);
-    try {
-      db.exec(`
-        create table message (
-          id text primary key,
-          session_id text not null,
-          time_created integer not null,
-          data text not null
-        );
-      `);
-      db.prepare('insert into message (id, session_id, time_created, data) values (?, ?, ?, ?)').run(
-        'msg-user',
-        sessionId,
-        1_000,
-        JSON.stringify({
-          role: 'user',
-          time: { created: 1_000 },
-        }),
-      );
-    } finally {
-      db.close();
-    }
-
-    await service.hydrateConversationHistory(conversation, null);
-
-    expect(conversation.messages).toHaveLength(1);
-    expect(conversation.messages[0]).toMatchObject({
-      id: 'opencode-hydration-error-session-session-retry',
-      role: 'assistant',
+  it('returns loaded with messages and a stable sourceRef on success', async () => {
+    jest.spyOn(Store, 'loadOpencodeSessionMessages').mockResolvedValue({
+      messages: [
+        { id: 'm1', role: 'user', content: 'hi', timestamp: 1 } as never,
+      ],
     });
-
-    const repairedDb = new DatabaseSync(dbPath);
-    try {
-      repairedDb.exec(`
-        create table part (
-          id text primary key,
-          session_id text not null,
-          message_id text not null,
-          data text not null
-        );
-      `);
-      repairedDb.prepare('insert into part (id, session_id, message_id, data) values (?, ?, ?, ?)').run(
-        'part-user',
-        sessionId,
-        'msg-user',
-        JSON.stringify({ text: 'Recovered prompt', type: 'text' }),
-      );
-    } finally {
-      repairedDb.close();
+    const svc = new OpencodeConversationHistoryService();
+    const conv = makeConversation();
+    const out = await svc.hydrateConversationHistoryV2(conv, ctx);
+    expect(out.kind).toBe('loaded');
+    if (out.kind === 'loaded') {
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(out.messages.length).toBe(1);
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(out.sourceRef).toBe('sess-a::/tmp/oc.db');
     }
+    expect(conv.messages.length).toBe(0);
+  });
 
-    await service.hydrateConversationHistory(conversation, null);
-
-    expect(conversation.messages).toEqual([
-      {
-        assistantMessageId: undefined,
-        content: 'Recovered prompt',
-        id: 'msg-user',
-        role: 'user',
-        timestamp: 1_000,
-        userMessageId: 'msg-user',
+  it('returns error:store-unreadable when the loader reports a generic error', async () => {
+    jest.spyOn(Store, 'loadOpencodeSessionMessages').mockResolvedValue({
+      messages: [],
+      error: {
+        code: 'store-unreadable',
+        message: 'Could not read OpenCode session rows from SQLite.',
+        detail: 'detail-debug-only',
       },
-    ]);
+    });
+    const svc = new OpencodeConversationHistoryService();
+    const conv = makeConversation();
+    const out = await svc.hydrateConversationHistoryV2(conv, ctx);
+    expect(out.kind).toBe('error');
+    if (out.kind === 'error') {
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(out.error.code).toBe('store-unreadable');
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(out.error.message).not.toContain('/tmp/oc.db');
+    }
+    expect(conv.messages.length).toBe(0);
+  });
+
+  it('returns error:sqlite-unavailable when node:sqlite cannot load', async () => {
+    jest.spyOn(Store, 'loadOpencodeSessionMessages').mockResolvedValue({
+      messages: [],
+      error: {
+        code: 'sqlite-unavailable',
+        message: 'OpenCode history requires node:sqlite or the sqlite3 CLI.',
+      },
+    });
+    const svc = new OpencodeConversationHistoryService();
+    const out = await svc.hydrateConversationHistoryV2(makeConversation(), ctx);
+    expect(out.kind).toBe('error');
+    // eslint-disable-next-line jest/no-conditional-expect
+    if (out.kind === 'error') expect(out.error.code).toBe('sqlite-unavailable');
+  });
+
+  it('returns empty:no-rows when the loader returns zero messages and no error', async () => {
+    jest.spyOn(Store, 'loadOpencodeSessionMessages').mockResolvedValue({ messages: [] });
+    const svc = new OpencodeConversationHistoryService();
+    const conv = makeConversation();
+    const out = await svc.hydrateConversationHistoryV2(conv, ctx);
+    expect(out.kind).toBe('empty');
+    // eslint-disable-next-line jest/no-conditional-expect
+    if (out.kind === 'empty') expect(out.reason).toBe('no-rows');
   });
 });
 
-function createConversation(sessionId: string, databasePath: string): Conversation {
-  return {
-    createdAt: 1,
-    id: 'conv-opencode',
-    messages: [],
-    providerId: 'opencode',
-    providerState: { databasePath },
-    sessionId,
-    title: 'OpenCode conversation',
-    updatedAt: 1,
-  };
-}
+describe('OpencodeConversationHistoryService.deleteConversationSessionV2', () => {
+  it('returns no-op:provider-owned because OpenCode native history is never mutated', async () => {
+    const svc = new OpencodeConversationHistoryService();
+    const conv = makeConversation();
+    const out = await svc.deleteConversationSessionV2(conv, ctx);
+    expect(out).toEqual({ kind: 'no-op', reason: 'provider-owned' });
+  });
+});
+
+describe('OpencodeConversationHistoryService.forkSupport', () => {
+  it('is undefined because Opencode does not support fork', () => {
+    const svc = new OpencodeConversationHistoryService();
+    expect(svc.forkSupport).toBeUndefined();
+  });
+});

@@ -1,5 +1,7 @@
 ---
 priority: 2 - normal
+status: open
+tracked-by: "[[docs/issues/work-orders-with-specialized-agents.md]]"
 relations:
   - "[[Agent Kanban Board]]"
 ---
