@@ -47,6 +47,33 @@ export class McpSettingsManager {
     await this.mcpStorage.save(this.servers);
   }
 
+  /** All SecretStorage ids still referenced by the loaded servers. */
+  private referencedSecretIds(): Set<string> {
+    const ids = new Set<string>();
+    for (const s of this.servers) {
+      for (const id of Object.values(s.secretHeaders ?? {})) ids.add(id);
+      for (const id of Object.values(s.secretEnv ?? {})) ids.add(id);
+    }
+    return ids;
+  }
+
+  /**
+   * SEC-A Phase 3: clear keychain values for a removed/edited server's secret refs
+   * that no remaining server references, so a deleted credential doesn't linger.
+   */
+  private clearOrphanedSecrets(removed: ManagedMcpServer | null): void {
+    if (!removed) return;
+    const removedIds = [
+      ...Object.values(removed.secretHeaders ?? {}),
+      ...Object.values(removed.secretEnv ?? {}),
+    ];
+    if (removedIds.length === 0) return;
+    const stillReferenced = this.referencedSecretIds();
+    for (const id of removedIds) {
+      if (!stillReferenced.has(id)) this.secretStore.clear(id);
+    }
+  }
+
   private async loadAndRender() {
     this.servers = await this.mcpStorage.load();
     this.render();
@@ -342,6 +369,7 @@ export class McpSettingsManager {
     }
 
     await this.persistServers();
+    this.clearOrphanedSecrets(existing);
     await this.broadcastMcpReload();
     this.render();
     new Notice(existing
@@ -407,6 +435,7 @@ export class McpSettingsManager {
 
     this.servers = this.servers.filter((s) => s.name !== server.name);
     await this.persistServers();
+    this.clearOrphanedSecrets(server);
     await this.broadcastMcpReload();
     this.render();
     new Notice(t('settings.mcp.deleted', { name: server.name }));

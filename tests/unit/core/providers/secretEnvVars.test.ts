@@ -120,7 +120,7 @@ describe('secretEnvVars — resolveProviderEnvVars precedence', () => {
     expect(missing).toEqual([]); // env is complete → not deferred
   });
 
-  it('still reports a missing PROVIDER secret masked only by a lower-precedence shared value', () => {
+  it('masks a lower-precedence shared value when the provider secret is missing', () => {
     const settings: Record<string, unknown> = {
       // Shared plaintext supplies OPENAI_API_KEY, but the provider secret (most
       // specific) is the intended value and is missing on this device.
@@ -129,9 +129,21 @@ describe('secretEnvVars — resolveProviderEnvVars precedence', () => {
       secretEnvVars: [{ scope: 'provider:codex', name: 'OPENAI_API_KEY', secretId: 'gone' }],
     };
     const { env, missing } = resolveProviderEnvVars(settings, 'codex', () => null);
-    // Effective value falls back to shared, but the provider secret is reported missing.
-    expect(env.OPENAI_API_KEY).toBe('shared-fallback');
+    // The shared value is masked (not silently used) and the provider secret is
+    // reported missing so the user re-enters it.
+    expect(env.OPENAI_API_KEY).toBeUndefined();
     expect(missing.map((r) => r.scope)).toEqual(['provider:codex']);
+  });
+
+  it('masks a shared plaintext value when its own shared secret is missing', () => {
+    const settings: Record<string, unknown> = {
+      sharedEnvironmentVariables: 'OPENAI_API_KEY=stale-plain',
+      providerConfigs: {},
+      secretEnvVars: [{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: 'gone' }],
+    };
+    const { env, missing } = resolveProviderEnvVars(settings, 'codex', () => null);
+    expect(env.OPENAI_API_KEY).toBeUndefined();
+    expect(missing.map((r) => r.name)).toEqual(['OPENAI_API_KEY']);
   });
 });
 

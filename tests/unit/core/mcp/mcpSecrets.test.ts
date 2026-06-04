@@ -1,4 +1,9 @@
-import { extractMcpServerSecrets, resolveMcpServerConfig } from '@/core/mcp/mcpSecrets';
+import {
+  extractMcpServerSecrets,
+  MCP_SECRET_PLACEHOLDER,
+  reconcileEditedMcpSecrets,
+  resolveMcpServerConfig,
+} from '@/core/mcp/mcpSecrets';
 import type { ManagedMcpServer, McpHttpServerConfig, McpStdioServerConfig } from '@/core/types';
 
 function urlServer(over: Partial<ManagedMcpServer> = {}): ManagedMcpServer {
@@ -135,5 +140,42 @@ describe('mcpSecrets — resolveMcpServerConfig', () => {
   it('returns the original config when there are no secret refs', () => {
     const server = urlServer({ config: { type: 'http', url: 'https://x' }, secretHeaders: undefined });
     expect(resolveMcpServerConfig(server, () => 'x')).toBe(server.config);
+  });
+});
+
+describe('mcpSecrets — reconcileEditedMcpSecrets', () => {
+  const existing = { Authorization: 'id-auth' };
+
+  it('keeps a ref when the masked placeholder is left unchanged', () => {
+    const { plaintext, refs } = reconcileEditedMcpSecrets(
+      { Authorization: MCP_SECRET_PLACEHOLDER, Accept: 'json' },
+      existing,
+    );
+    expect(refs).toEqual({ Authorization: 'id-auth' }); // unchanged secret preserved
+    expect(plaintext).toEqual({ Accept: 'json' }); // no secret value written
+  });
+
+  it('drops the ref when the key is removed from the editor', () => {
+    const { plaintext, refs } = reconcileEditedMcpSecrets({ Accept: 'json' }, existing);
+    expect(refs).toEqual({}); // removed → ref dropped
+    expect(plaintext).toEqual({ Accept: 'json' });
+  });
+
+  it('drops the ref when the key is emptied (KEY=)', () => {
+    const { refs } = reconcileEditedMcpSecrets({ Authorization: '' }, existing);
+    expect(refs).toEqual({});
+  });
+
+  it('reuses the existing id when the secret is re-entered with a new value', () => {
+    const { plaintext, refs } = reconcileEditedMcpSecrets({ Authorization: 'Bearer new' }, existing);
+    // value flows through as plaintext for migration; the id is preserved for reuse
+    expect(plaintext).toEqual({ Authorization: 'Bearer new' });
+    expect(refs).toEqual({ Authorization: 'id-auth' });
+  });
+
+  it('treats a brand-new key as plaintext (migration decides if it is secret-shaped)', () => {
+    const { plaintext, refs } = reconcileEditedMcpSecrets({ 'X-Api-Token': 'tok' }, undefined);
+    expect(plaintext).toEqual({ 'X-Api-Token': 'tok' });
+    expect(refs).toEqual({});
   });
 });

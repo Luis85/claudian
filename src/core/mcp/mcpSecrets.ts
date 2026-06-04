@@ -28,6 +28,43 @@ import { getMcpServerType } from '../types/mcp';
 
 export type McpSecretResolver = (id: string) => string | null;
 
+/**
+ * Masked sentinel shown in the MCP editor for an existing secret header/env value
+ * (the real value is never surfaced). Leaving it unchanged keeps the ref; deleting
+ * the line or emptying it removes the credential.
+ */
+export const MCP_SECRET_PLACEHOLDER = '••••••';
+
+/**
+ * SEC-A Phase 3: reconcile an edited header/env map (parsed from the editor
+ * textarea) against the server's existing secret refs. Returns the plaintext
+ * entries to persist and the secret refs to keep:
+ * - unchanged placeholder → keep the ref (no plaintext written);
+ * - a real value → plaintext; if it re-enters an existing ref's key, keep that id
+ *   so migration updates the same secret in place instead of orphaning it;
+ * - an omitted key or an emptied one (`KEY=`) → drop the ref (so resolution stops
+ *   overlaying a credential the user removed).
+ */
+export function reconcileEditedMcpSecrets(
+  parsed: Record<string, string>,
+  existingRefs: Record<string, string> | undefined,
+): { plaintext: Record<string, string>; refs: Record<string, string> } {
+  const existing = existingRefs ?? {};
+  const plaintext: Record<string, string> = {};
+  const refs: Record<string, string> = {};
+  for (const [key, value] of Object.entries(parsed)) {
+    if (existing[key] && value === MCP_SECRET_PLACEHOLDER) {
+      refs[key] = existing[key];
+    } else if (value === '') {
+      // cleared → drop the ref and write no plaintext
+    } else {
+      plaintext[key] = value;
+      if (existing[key]) refs[key] = existing[key]; // re-entry reuses the id
+    }
+  }
+  return { plaintext, refs };
+}
+
 /** Minimal SecretStorage surface needed to migrate values out of configs. */
 export interface McpSecretStore {
   set(id: string, value: string): void;

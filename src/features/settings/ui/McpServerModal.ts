@@ -1,6 +1,7 @@
 import type { App } from 'obsidian';
 import { Modal, Notice, Setting } from 'obsidian';
 
+import { MCP_SECRET_PLACEHOLDER, reconcileEditedMcpSecrets } from '../../../core/mcp/mcpSecrets';
 import type {
   ManagedMcpServer,
   McpHttpServerConfig,
@@ -63,12 +64,26 @@ export class McpServerModal extends Modal {
       } else {
         this.command = stdioConfig.command;
       }
-      this.env = this.envRecordToString(stdioConfig.env);
+      this.env = this.buildEditableEnvString(stdioConfig.env, this.existingServer?.secretEnv);
     } else {
       const urlConfig = config as McpSSEServerConfig | McpHttpServerConfig;
       this.url = urlConfig.url;
-      this.headers = this.envRecordToString(urlConfig.headers);
+      this.headers = this.buildEditableEnvString(urlConfig.headers, this.existingServer?.secretHeaders);
     }
+  }
+
+  /**
+   * SEC-A Phase 3: render plaintext entries plus a masked placeholder row per
+   * existing secret ref, so the user sees (and can remove) migrated credentials
+   * without their values ever being shown.
+   */
+  private buildEditableEnvString(
+    record: Record<string, string> | undefined,
+    refs: Record<string, string> | undefined,
+  ): string {
+    const base = this.envRecordToString(record);
+    const sentinels = Object.keys(refs ?? {}).map((name) => `${name}=${MCP_SECRET_PLACEHOLDER}`);
+    return [base, ...sentinels].filter((line) => line.length > 0).join('\n');
   }
 
   onOpen() {
@@ -244,6 +259,11 @@ export class McpServerModal extends Modal {
     }
 
     let config: McpServerConfig;
+    // SEC-A Phase 3: reconcile edited textarea entries against existing secret refs
+    // for the CURRENT type only. Switching type drops the other type's refs; an
+    // unchanged placeholder keeps a ref; deleting/emptying a key removes it.
+    let secretHeaders: Record<string, string> | undefined;
+    let secretEnv: Record<string, string> | undefined;
 
     if (this.serverType === 'stdio') {
       const fullCommand = this.command.trim();
@@ -259,9 +279,15 @@ export class McpServerModal extends Modal {
         stdioConfig.args = args;
       }
 
-      const env = this.parseEnvString(this.env);
-      if (Object.keys(env).length > 0) {
-        stdioConfig.env = env;
+      const { plaintext, refs } = reconcileEditedMcpSecrets(
+        this.parseEnvString(this.env),
+        this.existingServer?.secretEnv,
+      );
+      if (Object.keys(plaintext).length > 0) {
+        stdioConfig.env = plaintext;
+      }
+      if (Object.keys(refs).length > 0) {
+        secretEnv = refs;
       }
 
       config = stdioConfig;
@@ -272,18 +298,24 @@ export class McpServerModal extends Modal {
         return;
       }
 
+      const { plaintext, refs } = reconcileEditedMcpSecrets(
+        this.parseEnvString(this.headers),
+        this.existingServer?.secretHeaders,
+      );
+      if (Object.keys(refs).length > 0) {
+        secretHeaders = refs;
+      }
+
       if (this.serverType === 'sse') {
         const sseConfig: McpSSEServerConfig = { type: 'sse', url };
-        const headers = this.parseEnvString(this.headers);
-        if (Object.keys(headers).length > 0) {
-          sseConfig.headers = headers;
+        if (Object.keys(plaintext).length > 0) {
+          sseConfig.headers = plaintext;
         }
         config = sseConfig;
       } else {
         const httpConfig: McpHttpServerConfig = { type: 'http', url };
-        const headers = this.parseEnvString(this.headers);
-        if (Object.keys(headers).length > 0) {
-          httpConfig.headers = headers;
+        if (Object.keys(plaintext).length > 0) {
+          httpConfig.headers = plaintext;
         }
         config = httpConfig;
       }
@@ -295,11 +327,8 @@ export class McpServerModal extends Modal {
       enabled: this.enabled,
       contextSaving: this.contextSaving,
       disabledTools: this.existingServer?.disabledTools,
-      // SEC-A Phase 3: carry forward existing secret refs (their values live in
-      // SecretStorage and aren't shown in the textareas). Any secret-shaped value
-      // typed into the textareas is migrated on save (see McpSettingsManager).
-      secretHeaders: this.existingServer?.secretHeaders,
-      secretEnv: this.existingServer?.secretEnv,
+      secretHeaders,
+      secretEnv,
     };
 
     this.onSave(server);

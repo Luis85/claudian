@@ -95,6 +95,19 @@ export function resolveProviderEnvVars(
     ...sharedMissing.filter((ref) => !providerSupplied.has(ref.name)),
     ...providerMissing,
   ];
+
+  // When the highest-precedence configured source for a name is a secret that is
+  // missing on this device, OMIT the name rather than leak a lower-precedence
+  // value (e.g. launching with a shared key when the provider-specific secret the
+  // user configured is just absent here). A provider secret is the top source, so
+  // a missing one masks everything lower; a missing shared secret is masked only
+  // when no higher provider source supplies the name.
+  for (const ref of providerMissing) {
+    delete env[ref.name];
+  }
+  for (const ref of sharedMissing) {
+    if (!providerSupplied.has(ref.name)) delete env[ref.name];
+  }
   return { env, missing };
 }
 
