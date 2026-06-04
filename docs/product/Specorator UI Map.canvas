@@ -16,6 +16,7 @@
     { "id": "view_onboard", "type": "text", "x": 1320, "y": 120, "width": 320, "height": 150, "color": "5", "text": "## Onboarding Wizard 🟦\nInline first-run flow: pick provider · validate · paste key · send first message." },
     { "id": "view_harness", "type": "text", "x": 1700, "y": 120, "width": 320, "height": 150, "color": "5", "text": "## Harness Library View 🟦\nSkills · Tools · Rules in one tap-to-use surface (Quick-Actions-style)." },
     { "id": "view_audit", "type": "text", "x": 1320, "y": 360, "width": 320, "height": 150, "color": "5", "text": "## Audit Log View 🟦\nEvery action: tool · args · result digest · approval · checkpoint id. Persistent, exportable." },
+    { "id": "view_lite", "type": "text", "x": -120, "y": 360, "width": 320, "height": 150, "color": "5", "text": "## Lite provider (Quick answers) 🟦\nDirect API, no CLI/Node — zero-install onboarding & mobile. Escalates to a CLI provider for edits." },
     { "id": "view_undo", "type": "text", "x": 1700, "y": 360, "width": 320, "height": 150, "color": "1", "text": "## Checkpoint Timeline 🟥\nShadow-Git checkpoints; 'Undo all changes' on any provider." },
 
     { "id": "p_tabbar", "type": "text", "x": -120, "y": 740, "width": 250, "height": 110, "color": "4", "text": "**Tab Bar** 🟩 `TabBar`\nMulti-tab, per-provider; new / close / switch." },
@@ -42,6 +43,7 @@
     { "id": "n_undo", "type": "text", "x": 530, "y": 1320, "width": 280, "height": 150, "color": "1", "text": "## Undo-all button 🟥\nOne click reverts the last approved batch — on any provider." },
     { "id": "n_mcpchip", "type": "text", "x": 840, "y": 1320, "width": 280, "height": 150, "color": "5", "text": "## Vault MCP chip 🟦\nShows the vault-native tools connected for this chat's provider." },
     { "id": "n_rulechip", "type": "text", "x": 1150, "y": 1320, "width": 290, "height": 150, "color": "5", "text": "## Active Rules chip 🟦\nWhich standing rules apply to this chat." },
+    { "id": "n_verify", "type": "text", "x": 1460, "y": 1320, "width": 300, "height": 150, "color": "5", "text": "## Verification card 🟦\nLink integrity · citations resolve · only approved files touched — shown before approval." },
 
     { "id": "m_inline", "type": "text", "x": -120, "y": 2010, "width": 330, "height": 130, "color": "4", "text": "**Inline Edit** 🟩 `InlineEditModal`\nRewrite a selected passage in place." },
     { "id": "m_orchgoal", "type": "text", "x": 250, "y": 2010, "width": 330, "height": 130, "color": "4", "text": "**Orchestrator Goal** 🟩 `OrchestratorGoalModal`\nDefine a goal to split into tasks." },
@@ -57,7 +59,7 @@
     { "id": "m_common", "type": "text", "x": 990, "y": 2330, "width": 330, "height": 130, "color": "4", "text": "**Shared small modals** 🟩\n`Confirm` · `Prompt` · `ForkTarget` · `Instruction`." },
     { "id": "m_provider", "type": "text", "x": -120, "y": 2490, "width": 700, "height": 130, "color": "4", "text": "**Provider config modals** 🟩\nClaude `AgentModal` · `SlashCommandModal` · Codex `CodexSkillModal` / `CodexSubagentModal` · Opencode `OpencodeAgentModal`. *(per-provider, file-backed today)*" },
 
-    { "id": "f_key", "type": "text", "x": 1540, "y": 2010, "width": 300, "height": 130, "color": "5", "text": "**API Key entry** 🟦\nPaste key → `safeStorage` keychain. No env vars, never synced." },
+    { "id": "f_key", "type": "text", "x": 1540, "y": 2010, "width": 300, "height": 130, "color": "5", "text": "**API Key entry** 🟦\nPaste key → `SecretStore` (Obsidian SecretStorage, OS-keychain-backed). Stores only the id; re-entered per device." },
     { "id": "f_diag", "type": "text", "x": 1900, "y": 2010, "width": 300, "height": 130, "color": "5", "text": "**Diagnostics** 🟦\nProvider status ✓/✗ · test connection · copy system info · log viewer." },
     { "id": "f_toolgallery", "type": "text", "x": 1540, "y": 2170, "width": 300, "height": 130, "color": "5", "text": "**Tool (MCP) Gallery** 🟦\nConnect a tool from a catalog. *Replaces raw MCP JSON.*" },
     { "id": "f_ruleedit", "type": "text", "x": 1900, "y": 2170, "width": 300, "height": 130, "color": "5", "text": "**Rule Editor** 🟦\nAuthor a standing rule once → compiled to every provider." },
@@ -90,6 +92,7 @@
     { "id": "e11", "fromNode": "view_undo", "fromSide": "bottom", "toNode": "n_undo", "toSide": "top", "label": "drives" },
     { "id": "e12", "fromNode": "st_mcp", "fromSide": "top", "toNode": "m_mcp", "toSide": "bottom", "label": "add MCP server" },
     { "id": "e13", "fromNode": "st_qa", "fromSide": "top", "toNode": "m_qaedit", "toSide": "bottom", "label": "edit" },
-    { "id": "e14", "fromNode": "st_harness", "fromSide": "top", "toNode": "f_toolgallery", "toSide": "bottom", "label": "manages" }
+    { "id": "e14", "fromNode": "st_harness", "fromSide": "top", "toNode": "f_toolgallery", "toSide": "bottom", "label": "manages" },
+    { "id": "e15", "fromNode": "n_verify", "fromSide": "left", "toNode": "n_approval", "toSide": "right", "label": "checks before approve" }
   ]
 }
