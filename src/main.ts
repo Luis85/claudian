@@ -389,19 +389,17 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   /**
    * SEC-A: a secret referenced by settings but absent in this device's
    * SecretStorage (e.g. settings synced from another machine). It's omitted from
-   * the launch env rather than injected empty; warn once per id so it's not
-   * silent. The user-facing re-entry prompt lives in the settings UI (Phase 4).
+   * the launch env rather than injected empty; surface it once per id via a
+   * user-visible Notice (not the diagnostic logger, which is off by default and
+   * not yet enabled during initial load) so the user knows to re-enter it. The
+   * full settings re-entry UI lands in Phase 4.
    */
   private warnMissingDeviceSecrets(missing: SecretEnvVarRef[]): void {
     for (const ref of missing) {
       if (this.warnedMissingSecretIds.has(ref.secretId)) continue;
       this.warnedMissingSecretIds.add(ref.secretId);
-      this.logger
-        .scope('secrets')
-        .warn(
-          `Secret "${ref.name}" (${ref.scope}) is not set on this device — `
-          + 'launches omit it until you re-enter it in Claudian settings.',
-        );
+      this.logger.scope('secrets').debug(`Secret "${ref.name}" (${ref.scope}) missing on this device.`);
+      new Notice(t('env.secretMissing', { name: ref.name }));
     }
   }
 

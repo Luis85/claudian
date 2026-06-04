@@ -671,6 +671,7 @@
     }
   },
   "env": {
+    "secretMissing": "プロバイダーのシークレット「{name}」はこのデバイスに設定されていません。Claudian の設定で再入力してください。",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."

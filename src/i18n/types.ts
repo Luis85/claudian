@@ -71,6 +71,7 @@ export type TranslationKey =
   | 'env.applyPartial'
   | 'env.applied'
   | 'env.appliedRebuild'
+  | 'env.secretMissing'
 
   // Chat - Storage (Q-1 chunk 15)
   | 'chat.storage.tabLayoutSaveFailed'

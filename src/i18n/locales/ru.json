@@ -671,6 +671,7 @@
     }
   },
   "env": {
+    "secretMissing": "Секрет провайдера «{name}» не задан на этом устройстве — введите его снова в настройках Claudian.",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."

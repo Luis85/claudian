@@ -671,6 +671,7 @@
     }
   },
   "env": {
+    "secretMissing": "이 기기에 공급자 비밀 \"{name}\"이(가) 설정되어 있지 않습니다. Claudian 설정에서 다시 입력하세요.",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."

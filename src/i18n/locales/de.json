@@ -671,6 +671,7 @@
     }
   },
   "env": {
+    "secretMissing": "Anbieter-Geheimnis \"{name}\" ist auf diesem Gerät nicht gesetzt – bitte in den Claudian-Einstellungen erneut eingeben.",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."

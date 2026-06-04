@@ -671,6 +671,7 @@
     }
   },
   "env": {
+    "secretMissing": "El secreto del proveedor \"{name}\" no está configurado en este dispositivo: vuélvelo a introducir en los ajustes de Claudian.",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."

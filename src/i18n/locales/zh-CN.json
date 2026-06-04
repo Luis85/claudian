@@ -671,6 +671,7 @@
     }
   },
   "env": {
+    "secretMissing": "此设备未设置提供方密钥“{name}”，请在 Claudian 设置中重新输入。",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."
