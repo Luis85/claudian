@@ -1,5 +1,6 @@
 import { SecretComponent, Setting } from 'obsidian';
 
+import { isClaudianGeneratedSecretId } from '../../../core/security/secretIds';
 import type { PluginContext } from '../../../core/types/PluginContext';
 import type { EnvironmentScope, SecretEnvVarRef } from '../../../core/types/settings';
 import { t } from '../../../i18n/i18n';
@@ -77,18 +78,28 @@ export function renderSecretEnvVarsSection(options: SecretEnvVarsSectionOptions)
   }
 
   async function updateRefSecret(target: SecretEnvVarRef, secretId: string): Promise<void> {
-    await persist(currentRefs().map((ref) => (ref === target ? { ...ref, secretId } : ref)));
+    const previousId = target.secretId;
+    const next = currentRefs().map((ref) => (ref === target ? { ...ref, secretId } : ref));
+    await persist(next);
+    clearIfOrphaned(previousId, next);
   }
 
   async function removeRef(target: SecretEnvVarRef): Promise<void> {
     const next = currentRefs().filter((ref) => ref !== target);
     await persist(next);
-    // SEC-A: clear the device value when no remaining ref uses this id, so a
-    // deleted key/token doesn't linger in SecretStorage (matches snippet/MCP
-    // deletion paths). A user-picked id shared by another row is preserved.
-    if (!next.some((ref) => ref.secretId === target.secretId)) {
-      plugin.secretStore.clear(target.secretId);
-    }
+    clearIfOrphaned(target.secretId, next);
+  }
+
+  /**
+   * SEC-A: clear a secret value once no ref points at it, so a deleted/retargeted
+   * key doesn't linger (matches snippet/MCP deletion). Limited to Claudian-owned
+   * ids — SecretStorage ids are global, so an external/user-selected id another
+   * plugin owns is never auto-erased.
+   */
+  function clearIfOrphaned(secretId: string, refs: SecretEnvVarRef[]): void {
+    if (!isClaudianGeneratedSecretId(secretId)) return;
+    if (refs.some((ref) => ref.secretId === secretId)) return;
+    plugin.secretStore.clear(secretId);
   }
 
   async function persist(next: SecretEnvVarRef[]): Promise<void> {

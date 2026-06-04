@@ -120,8 +120,9 @@ describe('renderSecretEnvVarsSection', () => {
     expect(plugin.applySecretEnvVars).not.toHaveBeenCalled();
   });
 
-  it('removes a ref and clears its orphaned secret value when its trash button is clicked', async () => {
-    const plugin = makePlugin([{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: 'sid' }], { sid: 'sk-x' });
+  it('removes a ref and clears its orphaned Claudian-generated secret on delete', async () => {
+    const id = 'claudian-env-shared-openai-api-key';
+    const plugin = makePlugin([{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: id }], { [id]: 'sk-x' });
     renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
 
     buttons().find((b) => b.icon === 'trash')?.clickHandler();
@@ -130,17 +131,33 @@ describe('renderSecretEnvVarsSection', () => {
     expect(plugin.settings.secretEnvVars).toEqual([]);
     expect(plugin.applySecretEnvVars).toHaveBeenCalled();
     // The deleted key/token no longer lingers in SecretStorage.
-    expect(plugin.secretStore.clear).toHaveBeenCalledWith('sid');
-    expect(plugin.secretStore.get('sid')).toBeNull();
+    expect(plugin.secretStore.clear).toHaveBeenCalledWith(id);
+    expect(plugin.secretStore.get(id)).toBeNull();
+  });
+
+  it('does not clear an external (non-Claudian) secret id on delete', async () => {
+    // SecretStorage ids are global; an id another plugin owns must survive.
+    const plugin = makePlugin([{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: 'external-id' }], {
+      'external-id': 'sk-x',
+    });
+    renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
+
+    buttons().find((b) => b.icon === 'trash')?.clickHandler();
+    await flush();
+
+    expect(plugin.settings.secretEnvVars).toEqual([]);
+    expect(plugin.secretStore.clear).not.toHaveBeenCalled();
+    expect(plugin.secretStore.get('external-id')).toBe('sk-x');
   });
 
   it('does not clear a secret value still referenced by another row', async () => {
+    const id = 'claudian-env-shared-shared-key';
     const plugin = makePlugin(
       [
-        { scope: 'shared', name: 'OPENAI_API_KEY', secretId: 'shared-sid' },
-        { scope: 'provider:claude', name: 'ALT_KEY', secretId: 'shared-sid' },
+        { scope: 'shared', name: 'OPENAI_API_KEY', secretId: id },
+        { scope: 'provider:claude', name: 'ALT_KEY', secretId: id },
       ],
-      { 'shared-sid': 'sk-x' },
+      { [id]: 'sk-x' },
     );
     renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
 
@@ -148,8 +165,33 @@ describe('renderSecretEnvVarsSection', () => {
     await flush();
 
     expect(plugin.settings.secretEnvVars).toEqual([
-      { scope: 'provider:claude', name: 'ALT_KEY', secretId: 'shared-sid' },
+      { scope: 'provider:claude', name: 'ALT_KEY', secretId: id },
     ]);
     expect(plugin.secretStore.clear).not.toHaveBeenCalled(); // still referenced → preserved
+  });
+
+  it('clears the previous Claudian id when a row is retargeted to a new secret', async () => {
+    const oldId = 'claudian-env-shared-openai-api-key';
+    const plugin = makePlugin([{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: oldId }], { [oldId]: 'sk-x' });
+    renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
+
+    secretComponents().find((c) => c.value === oldId)?.triggerChange('claudian-env-shared-new');
+    await flush();
+
+    expect((plugin.settings.secretEnvVars as SecretEnvVarRef[])[0].secretId).toBe('claudian-env-shared-new');
+    expect(plugin.secretStore.clear).toHaveBeenCalledWith(oldId); // old value no longer orphaned
+  });
+
+  it('does not clear an external previous id when a row is retargeted', async () => {
+    const plugin = makePlugin([{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: 'external-id' }], {
+      'external-id': 'sk-x',
+    });
+    renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
+
+    secretComponents().find((c) => c.value === 'external-id')?.triggerChange('claudian-env-shared-new');
+    await flush();
+
+    expect(plugin.secretStore.clear).not.toHaveBeenCalled();
+    expect(plugin.secretStore.get('external-id')).toBe('sk-x');
   });
 });
