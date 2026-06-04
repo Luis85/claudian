@@ -8,10 +8,10 @@ triage: ready-for-agent
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (ARCH-2)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (ARCH-2)"
 related:
-  - "[[docs/adr/0001-transport-agnostic-provider-seam.md]]"
-  - "[[docs/superpowers/plans/2026-05-30-cursor-integration-hardening.md]]"
+  - "[[0001-transport-agnostic-provider-seam]]"
+  - "[[2026-05-30-cursor-integration-hardening]]"
 scope: provider-transport
 tags:
   - architecture

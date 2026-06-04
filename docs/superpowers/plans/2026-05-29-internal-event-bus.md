@@ -16,7 +16,7 @@ parent: Infrastructure
 
 ## Spec
 
-Implements [[docs/superpowers/specs/2026-05-29-internal-event-bus-design.md]]. Out of scope: chat stream/conversation events, async/wildcard dispatch, public API, logger integration.
+Implements [[2026-05-29-internal-event-bus-design]]. Out of scope: chat stream/conversation events, async/wildcard dispatch, public API, logger integration.
 
 ## File Structure
 

@@ -8,10 +8,10 @@ triage: needs-scoping
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (D4 + market research #1)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (D4 + market research #1)"
 related:
-  - "[[docs/issues/agent-board-evidence-review.md]]"
-  - "[[docs/ideas/agent-board-symphony.md]]"
+  - "[[agent-board-evidence-review]]"
+  - "[[agent-board-symphony]]"
 scope: agent-board-orchestration
 tags:
   - agent-board

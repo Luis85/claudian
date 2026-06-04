@@ -8,9 +8,9 @@ triage: needs-scoping
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (ARCH-4)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (ARCH-4)"
 related:
-  - "[[docs/adr/0001-transport-agnostic-provider-seam.md]]"
+  - "[[0001-transport-agnostic-provider-seam]]"
 scope: refactor
 tags:
   - architecture

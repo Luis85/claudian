@@ -8,10 +8,10 @@ triage: ready-for-agent
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (UX-B)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (UX-B)"
 related:
-  - "[[docs/ideas/2026-05-28-plugin-improvement-research-proposal.md]]"
-  - "[[docs/issues/explicit-context-citations.md]]"
+  - "[[2026-05-28-plugin-improvement-research-proposal]]"
+  - "[[explicit-context-citations]]"
 scope: composer-context
 tags:
   - ux

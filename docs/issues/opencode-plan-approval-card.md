@@ -2,13 +2,13 @@
 type: issue
 id: issue-20260603-opencode-plan-approval-card
 title: Opencode plan turns never emit planCompleted, so the inline plan-approval card never opens
-status: open
+status: shipped
 priority: 2 - normal
-triage: ready-for-agent
+triage: done
 created: 2026-06-03
-updated: 2026-06-03
+updated: 2026-06-04
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (PN-4 correction); [[docs/product/user-manuals/plan-mode.md]]"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (PN-4 correction); [[plan-mode]]"
 scope: opencode-capability
 tags:
   - opencode
@@ -48,3 +48,12 @@ post-plan approval flow opens, consistent with the other providers.
 
 - An Opencode plan turn opens the shared `InlinePlanApproval` card (approve / revise / cancel).
 - No regression to the toolbar toggle / Shift+Tab mode switch that already works.
+
+## Resolution (2026-06-04)
+
+`OpencodeChatRuntime` now captures `currentTurnIsPlan` after `applySelectedMode` (mode === `OPENCODE_PLAN_MODE_ID`)
+and flips `currentTurnSawAssistantContent` whenever an `agent_message_chunk` normalizes into non-empty
+stream chunks. On successful prompt resolution, `finalizePlanTurnMetadata` sets
+`currentTurnMetadata.planCompleted = true`, so the shared `InlinePlanApproval` card opens once
+`consumeTurnMetadata` is read by `InputController`. Covered by `OpencodeChatRuntime.test.ts` "plan-completion
+metadata" (plan + content → planCompleted, non-plan → omitted, plan + no content → omitted).

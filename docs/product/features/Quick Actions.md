@@ -2,7 +2,7 @@
 type: feature
 name: Quick Actions
 tagline: Your most-used prompts, one tap away. Stored as vault notes you own.
-status: draft
+status: shipped
 personas:
   - knowledge-worker
   - pm

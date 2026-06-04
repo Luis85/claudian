@@ -5,8 +5,7 @@ parent: "[[Agent Kanban Board]]"
 # Agent Board End-to-End Thin Slice Design
 
 Date: 2026-05-28  
-Status: proposed for user review  
-Source PRD: [[docs/issues/agent-board-mvp.md]]  
+Source PRD: [[agent-board-mvp]]  
 Branch: `codex/agent-board-thin-slice-design`
 
 ## Summary

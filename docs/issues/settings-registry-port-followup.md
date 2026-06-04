@@ -8,8 +8,8 @@ tags:
   - tech-debt
 priority: 2 - normal
 relations:
-  - "[[docs/superpowers/specs/2026-05-30-settings-overhaul-design.md]]"
-  - "[[docs/superpowers/plans/2026-05-30-settings-overhaul.md]]"
+  - "[[2026-05-30-settings-overhaul-design]]"
+  - "[[2026-05-30-settings-overhaul]]"
 ---
 
 # Complete the settings registry port — phase J followup (v3.1.0)
@@ -142,8 +142,8 @@ Follow the writing-plans skill to create `docs/superpowers/plans/2026-XX-XX-sett
 
 ## Related
 
-- Design: [[docs/superpowers/specs/2026-05-30-settings-overhaul-design.md]]
-- Original plan: [[docs/superpowers/plans/2026-05-30-settings-overhaul.md]] (Phases A–J)
+- Design: [[2026-05-30-settings-overhaul-design]]
+- Original plan: [[2026-05-30-settings-overhaul]] (Phases A–J)
 - Polish pass (2026-05-31): search visibility filter, hotkey polling, CustomModelsTable env guard, custom-models/hotkeys CSS, restored legacy renderers + workspace service wiring, `.claude/worktrees` gitignore hardening
 
 ## Status

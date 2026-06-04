@@ -8,9 +8,9 @@ triage: needs-scoping
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (UX-D, PN-5, PN-7)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (UX-D, PN-5, PN-7)"
 related:
-  - "[[docs/issues/claude-lifecycle-hooks.md]]"
+  - "[[claude-lifecycle-hooks]]"
 scope: edit-safety
 tags:
   - ux

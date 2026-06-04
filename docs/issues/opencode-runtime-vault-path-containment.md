@@ -2,13 +2,13 @@
 type: issue
 id: issue-20260603-opencode-path-containment
 title: Add vault-containment to OpencodeChatRuntime read/writeTextFile (main path)
-status: open
+status: shipped
 priority: 2 - normal
-triage: ready-for-agent
+triage: done
 created: 2026-06-03
-updated: 2026-06-03
+updated: 2026-06-04
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (SEC-B)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (SEC-B)"
 scope: provider-filesystem-safety
 tags:
   - security
@@ -39,3 +39,11 @@ Hoist the aux runner's `path.relative` containment check into
 
 - `read/writeTextFile` on the main runtime rejects absolute-outside-vault and `..`-escape paths.
 - A unit test covers an escape attempt on the main path; existing in-vault reads/writes still pass.
+
+## Resolution (2026-06-04)
+
+Hoisted the aux runner's `path.relative` containment check into
+`OpencodeChatRuntime.resolveSessionPath`. Absolute paths outside the session cwd and
+relative `..` escapes now throw `OpenCode file access is limited to the current workspace.`
+on both `readTextFile` and `writeTextFile`. Covered by POSIX + Windows escape-rejection
+tests in `tests/unit/providers/opencode/OpencodeChatRuntime.test.ts`.

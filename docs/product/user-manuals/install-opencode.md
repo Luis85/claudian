@@ -1,3 +1,9 @@
+---
+date: 2026-06-04
+status: shipped
+scope: user-install-guide
+parent: "[[Multi Provider Support]]"
+---
 # Claudian — Install Opencode (Windows)
 
 This manual walks Windows users through installing the **Opencode CLI**, the runtime Claudian drives when the Opencode provider is enabled. Claudian launches Opencode via `opencode acp`, so any working `opencode` install on `PATH` (or pointed at explicitly) is enough.
@@ -161,5 +167,5 @@ Subagents live under `.opencode/agent/` (legacy: `.opencode/agents/`). The Openc
 
 - Toggle **Enable Opencode** under **Settings → Claudian → General → Providers**.
 - Pick visible models in the Opencode tab — see [[settings]].
-- Plan **mode** runs as Opencode's managed `plan` mode (toggle it from the toolbar or Shift+Tab), but the shared post-plan approval card is gated — the runtime does not emit `planCompleted`, so you drive the next step from the chat input manually (see [[plan-mode]], "Gated providers"). Fork and rewind are gated. Image attachments, `#` instruction mode, subagents, runtime-discovered slash commands, and history reload are supported.
+- Plan mode runs as Opencode's managed `plan` mode (toggle it from the toolbar or Shift+Tab). When the plan turn produces assistant content, the runtime sets `planCompleted` and the shared inline approve / revise / cancel card opens — see [[plan-mode]]. Fork and rewind are gated. Image attachments, `#` instruction mode, subagents, runtime-discovered slash commands, and history reload are supported.
 - Start a chat tab and pick an Opencode model from the provider picker.

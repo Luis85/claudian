@@ -8,7 +8,7 @@ triage: ready-for-agent
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (UX-E, UX-G ARIA, UX-J reduced-motion)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (UX-E, UX-G ARIA, UX-J reduced-motion)"
 scope: accessibility
 tags:
   - ux

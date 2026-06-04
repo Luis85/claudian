@@ -5,9 +5,8 @@ parent: "[[Agent Kanban Board]]"
 # Work-Order Templates Design
 
 Date: 2026-05-29
-Status: proposed for user review
-Source idea: [[docs/ideas/Work-Order Templates.md]]
-Builds on: [[docs/superpowers/specs/2026-05-29-agent-board-configurable-lanes-design.md]]
+Source idea: [[Work-Order Templates]]
+Builds on: [[2026-05-29-agent-board-configurable-lanes-design]]
 
 ## Summary
 

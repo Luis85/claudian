@@ -1,8 +1,11 @@
+import { itPosix, itWin32 } from '@test/helpers/platform';
+
 import { getRuntimeEnvironmentVariables } from '@/core/providers/providerEnvironment';
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from '@/core/providers/ProviderSettingsCoordinator';
 import {
   OPENCODE_BUILD_MODE_ID,
+  OPENCODE_PLAN_MODE_ID,
   OPENCODE_SAFE_MODE_ID,
   OPENCODE_YOLO_MODE_ID,
 } from '@/providers/opencode/modes';
@@ -779,6 +782,112 @@ describe('OpencodeChatRuntime', () => {
       type: 'select',
       value: 'high',
     });
+  });
+
+  describe('plan-completion metadata', () => {
+    function setupPlanTurn(modeId: string) {
+      const runtime = new OpencodeChatRuntime(createMockPlugin());
+      const queue = { push: jest.fn(), close: jest.fn() } as any;
+      (runtime as any).sessionId = 'session-1';
+      (runtime as any).activeTurn = { queue, sessionId: 'session-1' };
+      (runtime as any).currentSessionModeId = modeId;
+      (runtime as any).currentTurnIsPlan = modeId === OPENCODE_PLAN_MODE_ID;
+      return runtime;
+    }
+
+    it('sets planCompleted when a plan turn produced assistant content and finalized', async () => {
+      const runtime = setupPlanTurn(OPENCODE_PLAN_MODE_ID);
+
+      await (runtime as any).handleSessionNotification({
+        sessionId: 'session-1',
+        update: {
+          sessionUpdate: 'agent_message_chunk',
+          content: { type: 'text', text: 'plan body' },
+        },
+      });
+
+      (runtime as any).finalizePlanTurnMetadata();
+
+      expect(runtime.consumeTurnMetadata()).toEqual({ planCompleted: true });
+    });
+
+    it('omits planCompleted for non-plan turns even with assistant content', async () => {
+      const runtime = setupPlanTurn(OPENCODE_YOLO_MODE_ID);
+
+      await (runtime as any).handleSessionNotification({
+        sessionId: 'session-1',
+        update: {
+          sessionUpdate: 'agent_message_chunk',
+          content: { type: 'text', text: 'normal response' },
+        },
+      });
+
+      (runtime as any).finalizePlanTurnMetadata();
+
+      expect(runtime.consumeTurnMetadata().planCompleted).toBeUndefined();
+    });
+
+    it('omits planCompleted when a plan turn finalized with no assistant content', () => {
+      const runtime = setupPlanTurn(OPENCODE_PLAN_MODE_ID);
+
+      (runtime as any).finalizePlanTurnMetadata();
+
+      expect(runtime.consumeTurnMetadata().planCompleted).toBeUndefined();
+    });
+  });
+
+  // POSIX-only path assertion; source resolves Windows drive paths on win32.
+  itPosix('rejects main-runtime read/write paths that escape the session workspace (posix)', () => {
+    const runtime = new OpencodeChatRuntime(createMockPlugin());
+
+    (runtime as any).sessionCwds = new Map([['session-1', '/tmp/claudian-test-vault']]);
+
+    // relative `..` escape
+    expect(() =>
+      (runtime as any).resolveSessionPath('session-1', '../outside.md'),
+    ).toThrow('OpenCode file access is limited to the current workspace.');
+
+    // absolute outside workspace
+    expect(() =>
+      (runtime as any).resolveSessionPath('session-1', '/tmp/outside.md'),
+    ).toThrow('OpenCode file access is limited to the current workspace.');
+
+    // in-workspace relative still works
+    expect(
+      (runtime as any).resolveSessionPath('session-1', 'notes/today.md'),
+    ).toBe('/tmp/claudian-test-vault/notes/today.md');
+
+    // in-workspace absolute still works
+    expect(
+      (runtime as any).resolveSessionPath('session-1', '/tmp/claudian-test-vault/notes/today.md'),
+    ).toBe('/tmp/claudian-test-vault/notes/today.md');
+  });
+
+  // Windows-only path assertion; uses drive-rooted absolute paths.
+  itWin32('rejects main-runtime read/write paths that escape the session workspace (win32)', () => {
+    const runtime = new OpencodeChatRuntime(createMockPlugin());
+
+    (runtime as any).sessionCwds = new Map([['session-1', 'C:\\vault']]);
+
+    // relative `..` escape
+    expect(() =>
+      (runtime as any).resolveSessionPath('session-1', '..\\outside.md'),
+    ).toThrow('OpenCode file access is limited to the current workspace.');
+
+    // absolute outside workspace
+    expect(() =>
+      (runtime as any).resolveSessionPath('session-1', 'C:\\outside.md'),
+    ).toThrow('OpenCode file access is limited to the current workspace.');
+
+    // in-workspace relative still works
+    expect(
+      (runtime as any).resolveSessionPath('session-1', 'notes\\today.md'),
+    ).toBe('C:\\vault\\notes\\today.md');
+
+    // in-workspace absolute still works
+    expect(
+      (runtime as any).resolveSessionPath('session-1', 'C:\\vault\\notes\\today.md'),
+    ).toBe('C:\\vault\\notes\\today.md');
   });
 
   it('exposes the active display model for auxiliary OpenCode tasks', () => {

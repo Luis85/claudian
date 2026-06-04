@@ -8,10 +8,10 @@ triage: needs-scoping
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (PN-6)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (PN-6)"
 related:
-  - "[[docs/issues/unified-safe-edit-revert.md]]"
-  - "[[docs/issues/agent-board-evidence-review.md]]"
+  - "[[unified-safe-edit-revert]]"
+  - "[[agent-board-evidence-review]]"
 scope: claude-capability
 tags:
   - claude

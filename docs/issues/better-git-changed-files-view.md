@@ -8,7 +8,7 @@ triage: ready-for-agent
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (backlog); [[docs/ideas/Better Git integration.md]]"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (backlog); [[Better Git integration]]"
 scope: git-integration
 tags:
   - git

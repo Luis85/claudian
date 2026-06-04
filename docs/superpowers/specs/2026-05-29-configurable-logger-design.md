@@ -5,8 +5,7 @@ parent: Infrastructure
 # Configurable Logger Design
 
 Date: 2026-05-29
-Status: proposed for user review
-Source issue: [[docs/issues/insufficient logging.md]]
+Source issue: [[insufficient logging]]
 
 ## Summary
 

@@ -1,9 +1,10 @@
 ---
 title: Codebase Review & Improvement Plan
 date: 2026-05-31
-status: draft
+status: superseded
 scope: whole-codebase (architecture, robustness, security, performance, quality, Obsidian conformance)
 method: 7 parallel dedicated review passes over src/ (~81k LOC, 435 files)
+superseded_by: docs/reviews/2026-06-03-comprehensive-improvement-proposal.md
 ---
 
 # Claudian Codebase Review & Improvement Plan

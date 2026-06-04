@@ -19,7 +19,7 @@ Four new Windows install guides shipped under `docs/product/user-manuals/`:
 - [[install-opencode]]
 - [[install-cursor]]
 
-Each links to [[settings]] using tab names, section headings, and setting labels that match the **pre-overhaul** settings panel. The v3.0.0 settings overhaul (design: [[docs/superpowers/specs/2026-05-30-settings-overhaul-design.md]]) will move, rename, or delete several of those surfaces. Once it lands, the install guides plus [[settings]] itself drift out of sync.
+Each links to [[settings]] using tab names, section headings, and setting labels that match the **pre-overhaul** settings panel. The v3.0.0 settings overhaul (design: [[2026-05-30-settings-overhaul-design]]) will move, rename, or delete several of those surfaces. Once it lands, the install guides plus [[settings]] itself drift out of sync.
 
 ## Concrete drift to fix
 
@@ -86,7 +86,7 @@ New surface. Add a "Searching settings" subsection: `/` focuses, `Esc` clears, r
 
 ## Related
 
-- Design: [[docs/superpowers/specs/2026-05-30-settings-overhaul-design.md]]
+- Design: [[2026-05-30-settings-overhaul-design]]
 - Plan (to be written): `docs/superpowers/plans/2026-05-30-settings-overhaul.md`
 - New install guides: [[install-claude]], [[install-codex]], [[install-opencode]], [[install-cursor]]
 - Settings manual: [[settings]]

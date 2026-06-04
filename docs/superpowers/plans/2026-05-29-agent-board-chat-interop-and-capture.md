@@ -12,7 +12,7 @@ parent: Cross Cutting
 
 **Tech Stack:** TypeScript, Obsidian plugin API, Jest (jsdom), existing `TaskNoteStore` / `TaskRunCoordinator` / `AgentBoardView`.
 
-**Reference spec:** [[docs/superpowers/specs/2026-05-29-agent-board-chat-interop-and-capture-design.md]]
+**Reference spec:** [[2026-05-29-agent-board-chat-interop-and-capture-design]]
 
 ### Deliberate refinement vs spec
 

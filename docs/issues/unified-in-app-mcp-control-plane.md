@@ -8,9 +8,9 @@ triage: needs-scoping
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (PN-1, PN-2, D3 / matrix correction)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (PN-1, PN-2, D3 / matrix correction)"
 related:
-  - "[[docs/issues/remote-mcp-ssrf-blocking-guard.md]]"
+  - "[[remote-mcp-ssrf-blocking-guard]]"
 scope: mcp-parity
 tags:
   - mcp

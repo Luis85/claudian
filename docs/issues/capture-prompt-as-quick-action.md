@@ -8,9 +8,9 @@ triage: ready-for-agent
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/ideas/Create a new Quick-Action from an Users prompt.md]]"
+source: "[[Create a new Quick-Action from an Users prompt]]"
 related:
-  - "[[docs/product/user-manuals/quick-actions.md]]"
+  - "[[quick-actions]]"
 scope: quick-actions
 tags:
   - quick-actions

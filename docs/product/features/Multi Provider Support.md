@@ -2,15 +2,15 @@
 type: feature
 name: Multi Provider Support
 tagline: Use the AI providers you already have, side by side in one workspace.
-status: draft
+status: shipped
 personas:
   - knowledge-worker
   - pm
 cta_url: https://github.com/Luis85/specorator
 related:
   - "[[Chat]]"
-  - "[[docs/product/features/Orchestrator]]"
-user_manual: "[[docs/product/user-manuals/multi-provider]]"
+  - "[[Orchestrator]]"
+user_manual: "[[multi-provider]]"
 parent: Infrastructure
 ---
 

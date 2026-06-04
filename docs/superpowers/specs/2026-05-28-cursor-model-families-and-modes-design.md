@@ -5,7 +5,6 @@ parent: "[[Multi Provider Support]]"
 # Cursor model families and modes — design
 
 Date: 2026-05-28
-Status: Approved (pending spec review)
 
 ## Problem
 

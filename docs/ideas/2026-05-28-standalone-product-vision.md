@@ -13,9 +13,9 @@ Repository transition target: <https://github.com/Luis85/specorator>
 Current implementation source: this repository (`claudian`)  
 Related:
 
-- [[docs/ideas/2026-05-28-plugin-improvement-research-proposal.md]]
-- [[docs/ideas/agent-board-symphony.md]]
-- [[docs/issues/agent-board-mvp.md]]
+- [[2026-05-28-plugin-improvement-research-proposal]]
+- [[agent-board-symphony]]
+- [[agent-board-mvp]]
 
 ## Executive summary
 
@@ -37,7 +37,7 @@ to:
 
 This is a rename plus a product synthesis, not just a repository move. The current plugin state here becomes the new implementation foundation; the previous Specorator work is mined for product concepts, terminology, docs, traceability ideas, and workflow discipline.
 
-Important sequencing decision: **Agent Board MVP is the next product increment before the migration to `Luis85/specorator`.** The migration should not happen while the product is still "mostly embedded chat plus future vision." Build the Agent Board MVP here first, using [[docs/issues/agent-board-mvp.md]] as the increment PRD, then migrate the stronger implementation and product story into Specorator.
+Important sequencing decision: **Agent Board MVP is the next product increment before the migration to `Luis85/specorator`.** The migration should not happen while the product is still "mostly embedded chat plus future vision." Build the Agent Board MVP here first, using [[agent-board-mvp]] as the increment PRD, then migrate the stronger implementation and product story into Specorator.
 
 ## Source-state assumptions
 
@@ -52,7 +52,7 @@ Those ideas still matter, but the implementation center should change:
 
 ## Bridge increment before migration: Agent Board MVP
 
-Before the repository/product migration, the current plugin should receive one major bridge increment: **Agent Board MVP** from [[docs/issues/agent-board-mvp.md]]. This increment is the proof that the future Specorator is not just a renamed Claudian and not just the old Specorator workflow shell.
+Before the repository/product migration, the current plugin should receive one major bridge increment: **Agent Board MVP** from [[agent-board-mvp]]. This increment is the proof that the future Specorator is not just a renamed Claudian and not just the old Specorator workflow shell.
 
 ### Why Agent Board must land before migration
 
@@ -463,7 +463,7 @@ Exit criteria:
 
 Goal: build the next product increment in the current plugin before moving the implementation to `Luis85/specorator`.
 
-This phase is governed by [[docs/issues/agent-board-mvp.md]]. It is the concrete bridge from Claudian's provider-native chat/runtime foundation to Specorator's spec-driven workflow identity.
+This phase is governed by [[agent-board-mvp]]. It is the concrete bridge from Claudian's provider-native chat/runtime foundation to Specorator's spec-driven workflow identity.
 
 Required outcomes:
 
@@ -488,7 +488,7 @@ Exit criteria:
 
 Goal: make the new product promise credible before marketing autonomous/spec-to-release workflows.
 
-Source: [[docs/ideas/2026-05-28-plugin-improvement-research-proposal.md]]
+Source: [[2026-05-28-plugin-improvement-research-proposal]]
 
 Priority work:
 
@@ -510,8 +510,8 @@ Goal: after Agent Board MVP exists in this repository, make it the conceptual su
 
 Sources:
 
-- [[docs/ideas/agent-board-symphony.md]]
-- [[docs/issues/agent-board-mvp.md]]
+- [[agent-board-symphony]]
+- [[agent-board-mvp]]
 
 Product promise to carry into the migration:
 
@@ -775,7 +775,7 @@ Specorator's transition is done when:
    - Mark keep/migrate/supersede/archive.
 
 3. **Agent Board MVP PR series in this repository**
-   - Build the work-order cockpit from [[docs/issues/agent-board-mvp.md]].
+   - Build the work-order cockpit from [[agent-board-mvp]].
    - Keep product strings mostly stable until migration decisions are made.
    - Prove the bridge demo before replacing the Specorator repo.
 
@@ -814,7 +814,7 @@ Specorator's transition is done when:
 
 Proceed with the transition, but make it explicit that this is a **Specorator supersession**:
 
-1. Build Agent Board MVP in the current plugin first, using [[docs/issues/agent-board-mvp.md]] as the next-increment PRD.
+1. Build Agent Board MVP in the current plugin first, using [[agent-board-mvp]] as the next-increment PRD.
 2. Then make the current plugin the new Specorator implementation foundation.
 3. Treat the old Specorator repo as the target home and product-history source.
 4. Acknowledge Claudian origin respectfully.

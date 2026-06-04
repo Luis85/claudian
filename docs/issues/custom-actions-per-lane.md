@@ -8,9 +8,9 @@ triage: needs-scoping
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/ideas/Custom Actions per Lane or Work-Order Type.md]]"
+source: "[[Custom Actions per Lane or Work-Order Type]]"
 related:
-  - "[[docs/product/user-manuals/agent-board-configurable-lanes.md]]"
+  - "[[agent-board-configurable-lanes]]"
 scope: agent-board
 tags:
   - agent-board

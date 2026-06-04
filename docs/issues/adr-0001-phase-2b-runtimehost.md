@@ -8,9 +8,9 @@ triage: ready-for-agent
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (ARCH-1)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (ARCH-1)"
 related:
-  - "[[docs/adr/0001-transport-agnostic-provider-seam.md]]"
+  - "[[0001-transport-agnostic-provider-seam]]"
 scope: provider-runtime-seam
 tags:
   - architecture

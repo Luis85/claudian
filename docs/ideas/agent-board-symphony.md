@@ -7,10 +7,10 @@ relations:
 
 > **Status (2026-06-03): partially shipped / decomposed.** The MVP, configurable lanes, work-order
 > templates, and chat-interop/capture have **shipped** (`src/features/tasks/`). The remaining orchestration
-> ambitions are tracked as discrete issues: [[docs/issues/agent-board-evidence-review.md]],
-> [[docs/issues/agent-board-background-runs.md]], [[docs/issues/integrate-orchestrator-with-agent-board.md]],
-> [[docs/issues/agent-board-drag-and-drop.md]], [[docs/issues/custom-actions-per-lane.md]],
-> [[docs/issues/work-orders-with-specialized-agents.md]], [[docs/issues/perf-gates-agent-board-and-multitab.md]].
+> ambitions are tracked as discrete issues: [[agent-board-evidence-review]],
+> [[agent-board-background-runs]], [[integrate-orchestrator-with-agent-board]],
+> [[agent-board-drag-and-drop]], [[custom-actions-per-lane]],
+> [[work-orders-with-specialized-agents]], [[perf-gates-agent-board-and-multitab]].
 > Treat this note as the umbrella vision, not untouched high-priority work.
 
 # Claudian Agent Board: Obsidian-Native Symphony Orchestration

@@ -8,9 +8,9 @@ triage: ready-for-agent
 created: 2026-05-29
 updated: 2026-05-29
 owner: Claudian
-source: "[[docs/ideas/agent-board-symphony.md]]"
+source: "[[agent-board-symphony]]"
 related:
-  - "[[docs/issues/agent-board-mvp.md]]"
+  - "[[agent-board-mvp]]"
   - "[[2026-05-28-standalone-product-vision]]"
 scope: phase-2-richer-evidence-before-worktrees
 tags:
@@ -27,8 +27,8 @@ relations:
 
 # Agent Board Evidence & Review Gate — structured run evidence, changed-file attribution, run leases, and evidence-gated completion
 
-> Source idea: [[docs/ideas/agent-board-symphony.md]] (Phase 2 — "Safer workspaces and richer evidence")
-> Builds on: [[docs/issues/agent-board-mvp.md]] (Phase 1 MVP, landing now)
+> Source idea: [[agent-board-symphony]] (Phase 2 — "Safer workspaces and richer evidence")
+> Builds on: [[agent-board-mvp]] (Phase 1 MVP, landing now)
 > Transition context: [[2026-05-28-standalone-product-vision]]
 > Scope: the increment immediately after the Agent Board MVP. This PRD takes the **richer evidence + review trust** half of symphony Phase 2 and explicitly **defers git worktrees** to a following increment.
 

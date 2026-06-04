@@ -114,4 +114,4 @@ When you're done, set the level back to **Warn** (or **Off**) so debug output st
 | **Copy diagnostic logs** | Formats the in-memory buffer and writes it to the clipboard. Shows a notice with the entry count (or "No diagnostic log entries" if the buffer is empty). Equivalent to the **Copy logs** button. |
 | **Clear diagnostic logs** | Empties the in-memory buffer. Shows a notice on completion. Equivalent to the **Clear logs** button. |
 
-There are no commands to toggle logging or change the level — those live in [[Before you start|the Diagnostics settings section]].
+There are no commands to toggle logging or change the level — those live in [[#Before you start|the Diagnostics settings section]].

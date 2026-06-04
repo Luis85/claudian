@@ -8,10 +8,10 @@ triage: needs-scoping
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (D4); [[docs/ideas/Integrate the Orchestrator with the Agent Board.md]]"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (D4); [[Integrate the Orchestrator with the Agent Board]]"
 related:
-  - "[[docs/issues/agent-board-evidence-review.md]]"
-  - "[[docs/issues/agent-board-background-runs.md]]"
+  - "[[agent-board-evidence-review]]"
+  - "[[agent-board-background-runs]]"
 scope: agent-board-orchestration
 tags:
   - agent-board

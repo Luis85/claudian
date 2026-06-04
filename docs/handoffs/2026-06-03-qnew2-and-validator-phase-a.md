@@ -2,12 +2,12 @@
 title: Session handoff — 2026-06-03 (Q-NEW-2 closed + validator Phase A closed)
 date: 2026-06-03
 status: superseded
-superseded-by: "[[docs/handoffs/2026-06-04-q1-complete.md]]"
+superseded-by: "[[2026-06-04-q1-complete]]"
 scope: pickup of validator-helper translation Phase B
 related:
-  - "[[docs/handoffs/2026-06-04-q1-complete.md]]"
-  - "[[docs/issues/translate-validator-helper-strings.md]]"
-  - "[[docs/reviews/2026-06-02-codebase-review-and-improvement-plan.md]]"
+  - "[[2026-06-04-q1-complete]]"
+  - "[[translate-validator-helper-strings]]"
+  - "[[2026-06-02-codebase-review-and-improvement-plan]]"
 supersedes:
   - "Q-NEW-2 section of 2026-06-04-q1-complete.md"
 ---
@@ -67,7 +67,7 @@ the cancellation fallback when preferred kinds are missing.
 
 ## Validator-helper translation — Phase A in flight
 
-Per the plan in [[docs/issues/translate-validator-helper-strings.md]]:
+Per the plan in [[translate-validator-helper-strings]]:
 Phase A migrates the `validate*` helpers, Phase B migrates the
 `parseOptional*` helpers plus the `runToolbarAction` / `notifyImageError`
 parameter pattern.

@@ -8,9 +8,9 @@ triage: needs-scoping
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/reviews/2026-06-03-comprehensive-improvement-proposal.md]] (UX-H)"
+source: "[[2026-06-03-comprehensive-improvement-proposal]] (UX-H)"
 related:
-  - "[[docs/issues/settings-registry-port-followup.md]]"
+  - "[[settings-registry-port-followup]]"
 scope: settings-ux
 tags:
   - ux

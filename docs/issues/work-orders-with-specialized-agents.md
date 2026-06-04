@@ -8,9 +8,9 @@ triage: needs-scoping
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/ideas/Work-Orders with specialized Agents.md]]"
+source: "[[Work-Orders with specialized Agents]]"
 related:
-  - "[[docs/issues/agent-board-evidence-review.md]]"
+  - "[[agent-board-evidence-review]]"
 scope: agent-board
 tags:
   - agent-board

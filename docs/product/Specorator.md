@@ -2,12 +2,12 @@
 type: product
 name: Specorator
 tagline: Plan the work, run it, review what came back, keep the record. All in your vault.
-status: draft
+status: shipped
 features:
   - "[[Chat]]"
   - "[[Multi Provider Support]]"
   - "[[Quick Actions]]"
-  - "[[docs/product/features/Orchestrator]]"
+  - "[[Orchestrator]]"
   - "[[Agent Kanban Board]]"
 cta_url: https://github.com/Luis85/specorator
 date: 2026-05-30
@@ -48,7 +48,7 @@ You're already using AI for serious work. Drafting emails. Planning trips. Compa
 | [[Chat]]                   | A workspace beside your notes that already knows what you're looking at and what you've highlighted.     |
 | [[Multi Provider Support]] | Different engines for different jobs. Pick the one that fits the moment.                                 |
 | [[Quick Actions]]          | Your most-used prompts, one tap away. Stored as vault notes you own.                                     |
-| [[docs/product/features/Orchestrator]]           | Split a goal into independent tasks, run them in parallel, get one answer that brings them all together. |
+| [[Orchestrator]]           | Split a goal into independent tasks, run them in parallel, get one answer that brings them all together. |
 | [[Agent Kanban Board]]     | A board for things you have handed off. Inbox to done, never lost in chat history.                       |
 
 ## What this is not

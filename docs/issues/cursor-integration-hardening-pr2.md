@@ -8,9 +8,9 @@ triage: ready-for-agent
 created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
-source: "[[docs/superpowers/plans/2026-05-30-cursor-integration-hardening.md]]; [[docs/superpowers/plans/2026-05-30-cursor-hardening-telemetry-design.md]]"
+source: "[[2026-05-30-cursor-integration-hardening]]; [[2026-05-30-cursor-hardening-telemetry-design]]"
 related:
-  - "[[docs/issues/adr-0001-phase-3-shared-transport.md]]"
+  - "[[adr-0001-phase-3-shared-transport]]"
 scope: cursor-acp-transport
 tags:
   - cursor
@@ -37,7 +37,7 @@ same files). Verified still open:
 
 ## Proposed change
 
-Land the PR2 items per the plan. **Sequence before [[docs/issues/adr-0001-phase-3-shared-transport.md]]** so
+Land the PR2 items per the plan. **Sequence before [[adr-0001-phase-3-shared-transport]]** so
 the corrected cancellation/id/dedup behavior is encoded once in the extracted transport.
 
 ## Acceptance criteria
