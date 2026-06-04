@@ -83,6 +83,25 @@ describe('persistPastedImages', () => {
     expect(b.path).toBe('attachments/b.png');
   });
 
+  it('routes failed-write errors to options.logger.warn when provided', async () => {
+    const app = mockApp({
+      createBinary: jest.fn().mockRejectedValue(new Error('ENOSPC')),
+    });
+    const warn = jest.fn();
+    const img = image({ id: 'fail-1' });
+    await persistPastedImages(app, [img], {
+      now: new Date('2026-06-04T12:00:00Z'),
+      logger: { warn },
+    });
+
+    expect(img.path).toBeUndefined();
+    expect(warn).toHaveBeenCalledTimes(1);
+    const [msg, meta] = warn.mock.calls[0];
+    expect(msg).toMatch(/failed to write image to vault/);
+    expect(meta).toMatchObject({ id: 'fail-1', name: 'clipboard.png', mediaType: 'image/png' });
+    expect((meta as { error: Error }).error).toBeInstanceOf(Error);
+  });
+
   it('runs writes sequentially (not in parallel) to avoid same-stamp collisions', async () => {
     const order: string[] = [];
     const app = mockApp({

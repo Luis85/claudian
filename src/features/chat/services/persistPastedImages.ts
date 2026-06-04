@@ -9,9 +9,20 @@ const MEDIA_TYPE_TO_EXT: Record<ImageMediaType, string> = {
   'image/webp': 'webp',
 };
 
+/**
+ * Minimal logger surface so callers can route diagnostics through their
+ * scoped `plugin.logger`. Optional — when omitted, write failures stay silent
+ * (caller can still send the in-memory `data`).
+ */
+export interface PersistPastedImagesLogger {
+  warn(msg: string, ...args: unknown[]): void;
+}
+
 export interface PersistPastedImagesOptions {
   /** Injection point for tests; defaults to `new Date()`. */
   now?: Date;
+  /** Optional logger; receives a `warn` per failed write. */
+  logger?: PersistPastedImagesLogger;
 }
 
 /**
@@ -32,7 +43,7 @@ export async function persistPastedImages(
   images: ImageAttachment[],
   options: PersistPastedImagesOptions = {},
 ): Promise<void> {
-  if (!images || images.length === 0) return;
+  if (images.length === 0) return;
   const now = options.now ?? new Date();
 
   for (const image of images) {
@@ -47,8 +58,16 @@ export async function persistPastedImages(
       const tFile: TFile = await app.vault.createBinary(targetPath, arrayBuffer);
       image.path = tFile.path;
       image.name = tFile.name;
-    } catch {
-      // Silently continue if write fails — image can still be sent with base64 data.
+    } catch (err) {
+      // Don't stop the batch on one failure — caller can still send base64 `data`.
+      // Logger is optional but strongly recommended: silent EACCES/ENOSPC/bad-path
+      // failures look like "image never saved" to the user with no way to debug.
+      options.logger?.warn('persistPastedImages: failed to write image to vault', {
+        id: image.id,
+        name: image.name,
+        mediaType: image.mediaType,
+        error: err,
+      });
     }
   }
 }
