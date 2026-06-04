@@ -133,6 +133,15 @@ export class App {
     // there are no leaves to restore, so immediate dispatch is equivalent.
     onLayoutReady: jest.fn((cb: () => void) => cb()),
   };
+  // Obsidian 1.11.4+ SecretStorage — in-memory fake (synchronous, dash-cased ids).
+  secretStorage: any = (() => {
+    const store = new Map<string, string>();
+    return {
+      setSecret: jest.fn((id: string, secret: string) => { store.set(id, secret); }),
+      getSecret: jest.fn((id: string) => (store.has(id) ? store.get(id) : null)),
+      listSecrets: jest.fn(() => Array.from(store.keys())),
+    };
+  })();
 }
 
 export class MarkdownView {

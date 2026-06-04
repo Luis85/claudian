@@ -70,6 +70,8 @@ export interface PluginContext
     updates: Array<{ scope: EnvironmentScope; envText: string }>,
   ): Promise<void>;
   getActiveEnvironmentVariables(providerId?: ProviderId): string;
+  /** SEC-A: parsed runtime env with SecretStorage values overlaid (for child-process spawns). */
+  getResolvedEnvironmentVariables(providerId?: ProviderId): Record<string, string>;
   getEnvironmentVariablesForScope(scope: EnvironmentScope): string;
   getResolvedProviderCliPath(providerId: ProviderId): string | null;
 

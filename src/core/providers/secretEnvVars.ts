@@ -11,6 +11,13 @@
 import { parseEnvironmentVariables } from '../../utils/env';
 import { isSecretEnvKey, migratedEnvSecretId, uniquifySecretId } from '../security/secretIds';
 import type { EnvironmentScope, SecretEnvVarRef } from '../types/settings';
+import {
+  getProviderEnvironmentVariables,
+  getSharedEnvironmentVariables,
+  setProviderEnvironmentVariables,
+  setSharedEnvironmentVariables,
+} from './providerEnvironment';
+import type { ProviderId } from './types';
 
 export type SecretResolver = (id: string) => string | null;
 export type SecretSetter = (id: string, value: string) => void;
@@ -86,4 +93,49 @@ export function extractBlobSecretRefs(
   }
 
   return { blob: out.join('\n'), refs };
+}
+
+/**
+ * One-time migration across the ACTIVE env blobs: the shared blob and each
+ * provider's blob. Mutates `settings` in place (sanitized blobs + appended
+ * `secretEnvVars`) and returns whether anything changed. Idempotent — re-running
+ * finds no plaintext secrets and is a cheap no-op.
+ *
+ * Deliberately does NOT touch `envSnippets[].envVars`: snippets are inert
+ * templates applied on demand, so a `shared`/`provider:<id>` ref would make the
+ * key active immediately. Snippet secrets stay plaintext until a follow-up adds
+ * a snippet-scoped association — see the SEC-A plan.
+ */
+export function migrateEnvSecrets(
+  settings: Record<string, unknown>,
+  providerIds: ProviderId[],
+  setSecret: SecretSetter,
+): boolean {
+  const existing = (settings.secretEnvVars as SecretEnvVarRef[] | undefined) ?? [];
+  const usedIds = new Set(existing.map((ref) => ref.secretId));
+  const newRefs: SecretEnvVarRef[] = [];
+
+  const shared = extractBlobSecretRefs(getSharedEnvironmentVariables(settings), 'shared', setSecret, usedIds);
+  if (shared.refs.length > 0) {
+    setSharedEnvironmentVariables(settings, shared.blob);
+    newRefs.push(...shared.refs);
+  }
+
+  for (const providerId of providerIds) {
+    const scope: EnvironmentScope = `provider:${providerId}`;
+    const result = extractBlobSecretRefs(
+      getProviderEnvironmentVariables(settings, providerId),
+      scope,
+      setSecret,
+      usedIds,
+    );
+    if (result.refs.length > 0) {
+      setProviderEnvironmentVariables(settings, providerId, result.blob);
+      newRefs.push(...result.refs);
+    }
+  }
+
+  if (newRefs.length === 0) return false;
+  settings.secretEnvVars = [...existing, ...newRefs];
+  return true;
 }

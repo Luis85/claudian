@@ -37,6 +37,7 @@ function createMockPlugin(settings = {}) {
       },
     },
     getActiveEnvironmentVariables: jest.fn().mockReturnValue(''),
+    getResolvedEnvironmentVariables: jest.fn().mockReturnValue({}),
     getResolvedProviderCliPath: jest.fn().mockReturnValue('/fake/claude'),
   } as any;
 }

@@ -3,7 +3,7 @@ import { query as agentQuery } from '@anthropic-ai/claude-agent-sdk';
 
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type { PluginContext } from '../../../core/types/PluginContext';
-import { getEnhancedPath, getMissingNodeError, parseEnvironmentVariables } from '../../../utils/env';
+import { getEnhancedPath, getMissingNodeError } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
 import { extractAssistantText } from '../auxiliary/extractAssistantText';
 import {
@@ -59,9 +59,7 @@ export async function runColdStartQuery(
     throw new Error('Claude CLI not found');
   }
 
-  const customEnv = parseEnvironmentVariables(
-    config.plugin.getActiveEnvironmentVariables('claude')
-  );
+  const customEnv = config.plugin.getResolvedEnvironmentVariables('claude');
   const enhancedPath = getEnhancedPath(customEnv.PATH, resolvedClaudePath);
 
   const missingNodeError = getMissingNodeError(resolvedClaudePath, enhancedPath);

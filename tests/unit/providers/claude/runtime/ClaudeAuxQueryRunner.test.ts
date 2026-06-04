@@ -20,6 +20,7 @@ function createMockPlugin(settings = {}): any {
       vault: { adapter: { basePath: '/test/vault/path' } },
     },
     getActiveEnvironmentVariables: jest.fn().mockReturnValue(''),
+    getResolvedEnvironmentVariables: jest.fn().mockReturnValue({}),
     getResolvedProviderCliPath: jest.fn().mockReturnValue('/fake/claude'),
   };
 }

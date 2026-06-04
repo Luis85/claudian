@@ -1,5 +1,10 @@
 import {
+  getProviderEnvironmentVariables,
+  getSharedEnvironmentVariables,
+} from '../../../../src/core/providers/providerEnvironment';
+import {
   extractBlobSecretRefs,
+  migrateEnvSecrets,
   overlaySecretEnvVars,
   secretEnvVarsForScope,
 } from '../../../../src/core/providers/secretEnvVars';
@@ -97,5 +102,50 @@ describe('secretEnvVars — migration extraction', () => {
     const ids = refs.map((r) => r.secretId);
     expect(new Set(ids).size).toBe(2);
     expect([...stored.values()].sort()).toEqual(['one', 'two']);
+  });
+});
+
+describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => {
+  function run(settings: Record<string, unknown>) {
+    const stored = new Map<string, string>();
+    const changed = migrateEnvSecrets(settings, ['claude', 'codex'], (id, v) => stored.set(id, v));
+    return { changed, stored };
+  }
+
+  it('migrates shared and provider blobs, leaving non-secrets and not touching snippets', () => {
+    const settings: Record<string, unknown> = {
+      sharedEnvironmentVariables: 'ANTHROPIC_API_KEY=sk-a\nHTTP_PROXY=http://p',
+      providerConfigs: {
+        codex: { environmentVariables: 'OPENAI_API_KEY=sk-o\nOPENAI_MODEL=gpt' },
+      },
+      envSnippets: [{ id: 's1', name: 'n', description: '', envVars: 'GEMINI_API_KEY=sk-g' }],
+      secretEnvVars: [],
+    };
+
+    const { changed, stored } = run(settings);
+
+    expect(changed).toBe(true);
+    expect(getSharedEnvironmentVariables(settings)).toBe('HTTP_PROXY=http://p');
+    expect(getProviderEnvironmentVariables(settings, 'codex')).toBe('OPENAI_MODEL=gpt');
+    // Snippet plaintext is intentionally left as-is.
+    expect((settings.envSnippets as Array<{ envVars: string }>)[0].envVars).toBe('GEMINI_API_KEY=sk-g');
+
+    const refs = settings.secretEnvVars as SecretEnvVarRef[];
+    expect(refs).toEqual([
+      { scope: 'shared', name: 'ANTHROPIC_API_KEY', secretId: 'claudian-env-shared-anthropic-api-key' },
+      { scope: 'provider:codex', name: 'OPENAI_API_KEY', secretId: 'claudian-env-provider-codex-openai-api-key' },
+    ]);
+    expect(stored.get('claudian-env-shared-anthropic-api-key')).toBe('sk-a');
+    expect(stored.get('claudian-env-provider-codex-openai-api-key')).toBe('sk-o');
+  });
+
+  it('is a no-op (returns false) when there are no plaintext secrets', () => {
+    const settings: Record<string, unknown> = {
+      sharedEnvironmentVariables: 'HTTP_PROXY=http://p',
+      providerConfigs: {},
+      secretEnvVars: [],
+    };
+    expect(run(settings).changed).toBe(false);
+    expect(settings.secretEnvVars).toEqual([]);
   });
 });

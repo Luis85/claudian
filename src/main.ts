@@ -23,12 +23,19 @@ import { Logger } from './core/logging/Logger';
 import {
   getEnvironmentVariablesForScope as getScopedEnvironmentVariables,
   getRuntimeEnvironmentText,
+  getRuntimeEnvironmentVariables,
 } from './core/providers/providerEnvironment';
 import { ProviderRegistry } from './core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from './core/providers/ProviderSettingsCoordinator';
 import { ProviderWorkspaceRegistry } from './core/providers/ProviderWorkspaceRegistry';
+import {
+  migrateEnvSecrets,
+  overlaySecretEnvVars,
+  secretEnvVarsForScope,
+} from './core/providers/secretEnvVars';
 import type { ProviderId } from './core/providers/types';
 import type { AppTabManagerState } from './core/providers/types';
+import { SecretStore } from './core/security/secretStore';
 import type {
   ChatMessageAction,
   ClaudianSettings,
@@ -57,6 +64,8 @@ import { getVaultPath } from './utils/path';
 
 export default class ClaudianPlugin extends Plugin implements PluginContext {
   settings!: ClaudianSettings;
+  /** SEC-A: keychain-backed secret store (Obsidian SecretStorage), set in onload. */
+  secretStore!: SecretStore;
   readonly events = new EventBus<ClaudianEventMap>();
   readonly logger = new Logger({ enabled: false, level: 'warn' });
   /** Optional, registry-driven actions rendered in the chat user-message toolbar. */
@@ -247,6 +256,17 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       ...claudian,
     };
 
+    // SEC-A: keychain-backed secret store. Requires Obsidian >= 1.11.5 (the
+    // plugin's minAppVersion), so app.secretStorage is always present.
+    this.secretStore = new SecretStore(this.app.secretStorage);
+    // One-time migration of any plaintext API keys/tokens in the active env
+    // blobs into SecretStorage (idempotent; cheap no-op once done).
+    const didMigrateSecrets = migrateEnvSecrets(
+      this.settings,
+      ProviderRegistry.getRegisteredProviderIds(),
+      (id, value) => this.secretStore.set(id, value),
+    );
+
     // Plan mode is ephemeral — normalize back to normal on load so the app
     // doesn't start stuck in plan mode after a restart (prePlanPermissionMode is lost)
     if (this.settings.permissionMode === 'plan') {
@@ -277,7 +297,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.settings,
     );
 
-    if (changed || didNormalizeModelVariants || didNormalizeProviderSelection) {
+    if (changed || didNormalizeModelVariants || didNormalizeProviderSelection || didMigrateSecrets) {
       await this.saveSettings();
     }
 
@@ -337,6 +357,27 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.settings,
       providerId,
     );
+  }
+
+  /**
+   * SEC-A: the parsed runtime env for a provider with secret values overlaid
+   * from SecretStorage. This is what every child-process spawn path uses — the
+   * plaintext blob (via `getActiveEnvironmentVariables`) no longer carries keys.
+   * A secret that is absent on this device (e.g. synced from another machine) is
+   * left unset rather than injected empty; the settings UI prompts re-entry.
+   */
+  getResolvedEnvironmentVariables(
+    providerId: ProviderId = ProviderRegistry.resolveSettingsProviderId(
+      this.settings,
+    ),
+  ): Record<string, string> {
+    const env = getRuntimeEnvironmentVariables(this.settings, providerId);
+    const refs = [
+      ...secretEnvVarsForScope(this.settings.secretEnvVars, 'shared'),
+      ...secretEnvVarsForScope(this.settings.secretEnvVars, `provider:${providerId}`),
+    ];
+    overlaySecretEnvVars(env, refs, (id) => this.secretStore.get(id));
+    return env;
   }
 
   getActiveBrowserSelection(): BrowserSelectionContext | null {
