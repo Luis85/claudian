@@ -57,6 +57,8 @@ import { isClaudianView } from './features/chat/isClaudianView';
 import type { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
 import { QuickActionFavoritesCache } from './features/quickActions/QuickActionFavoritesCache';
 import { QuickActionStorage } from './features/quickActions/QuickActionStorage';
+import { buildProviderRecords } from './features/quickActions/skills/buildProviderRecords';
+import { VaultSkillAggregator } from './features/quickActions/skills/VaultSkillAggregator';
 import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
 import { CommitOnAcceptCoordinator } from './features/tasks/commit/CommitOnAcceptCoordinator';
 import { CommitOnAcceptModal } from './features/tasks/commit/CommitOnAcceptModal';
@@ -85,6 +87,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   private commitOnAcceptCoordinator: CommitOnAcceptCoordinator | null = null;
   conversationStore!: ConversationStore;
   public quickActionFavoritesCache: QuickActionFavoritesCache | null = null;
+  public vaultSkillAggregator: VaultSkillAggregator | null = null;
   private lifecycle!: PluginLifecycle;
   private viewActivator!: PluginViewActivator;
   private envApply!: EnvironmentApplyService;
@@ -239,6 +242,18 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.logger.scope('onload').error('provider workspace init failed', error);
       return;
     }
+    // Skills tab cache: hydrate persisted index, then pre-warm in background.
+    this.vaultSkillAggregator = new VaultSkillAggregator(
+      () => buildProviderRecords(this),
+      {
+        logger: this.logger,
+        eventBus: this.events,
+        cacheAdapter: new VaultFileAdapter(this.app),
+        ttlMs: 60_000,
+      },
+    );
+    await this.vaultSkillAggregator.hydrate();
+    void this.vaultSkillAggregator.listAllStreaming(() => {});
     // Restored views constructed before provider services were ready may have
     // mounted the empty-state placeholder; reprobe so they can promote to the
     // full tab UI now that providers are available.
@@ -252,6 +267,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   }
 
   onunload(): void {
+    this.vaultSkillAggregator?.dispose();
+    this.vaultSkillAggregator = null;
     this.quickActionFavoritesCache?.dispose();
     this.quickActionFavoritesCache = null;
     this.commitOnAcceptCoordinator?.stop();

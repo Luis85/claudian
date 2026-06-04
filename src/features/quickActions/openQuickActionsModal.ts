@@ -43,7 +43,10 @@ export function openQuickActionsModal(
     plugin.storage.getAdapter(),
     () => plugin.settings.quickActionsFolder ?? 'Quick Actions',
   );
-  const aggregator = new VaultSkillAggregator(
+  // Fallback path: if the deferred onload hasn't run yet (modal opened from
+  // the file-menu before workspace layout ready), build a one-shot aggregator
+  // without disk cache or EventBus wiring. This is rare in practice.
+  const aggregator = plugin.vaultSkillAggregator ?? new VaultSkillAggregator(
     () => buildProviderRecords(plugin),
     { logger: plugin.logger },
   );
