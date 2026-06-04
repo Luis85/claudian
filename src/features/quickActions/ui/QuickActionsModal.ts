@@ -301,6 +301,9 @@ export class QuickActionsModal extends Modal {
         await this.callbacks.storage.setFavorite(action, rank);
       }
       await this.refreshList();
+    } catch {
+      new Notice(t('quickActions.editor.saveFailed'));
+      await this.refreshList();
     } finally {
       button.disabled = false;
     }

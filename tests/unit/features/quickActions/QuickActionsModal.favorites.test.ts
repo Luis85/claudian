@@ -143,4 +143,21 @@ describe('QuickActionsModal favorites', () => {
     expect(Notice).toHaveBeenCalledWith('quickActions.modal.favoriteLimitReached');
     expect((storage.setFavorite as jest.Mock)).not.toHaveBeenCalled();
   });
+
+  it('shows save-failed notice when setFavorite rejects', async () => {
+    const storage = makeStorage([
+      makeAction({ name: 'B', filePath: 'Quick Actions/b.md' }),
+    ]);
+    (storage.setFavorite as jest.Mock).mockRejectedValueOnce(new Error('disk full'));
+
+    const modal = new QuickActionsModal({} as App, { storage, onRun: jest.fn() });
+    modal.open();
+    await flush();
+
+    const star = modal['contentEl'].querySelector('.claudian-quick-action-favorite') as HTMLButtonElement;
+    star.click();
+    await flush();
+
+    expect(Notice).toHaveBeenCalledWith('quickActions.editor.saveFailed');
+  });
 });
