@@ -45,7 +45,7 @@
       "width": 480,
       "height": 600,
       "color": "3",
-      "text": "## Legend\n\n**🟩 Green** — exists today. Specorator builds upon these; v1 must **not** regress them.\n\n**🟦 Cyan** — new harness components added for v1.\n\n**🟥 Red** — safety-critical, fail-closed, non-negotiable.\n\n**⬜ Grey** — external systems outside Specorator.\n\n**🟧 Orange** — people / actors.\n\n**🟨 Yellow** — legend & notes.\n\n---\n**Principle:** *Agent = Model + Harness.* Keep the delegated loop; build the user-facing harness around it.\n\n**Don't reinvent:** Chat · Agent Board · Quick Actions · Orchestrator · Multi-provider already work — *extend* them."
+      "text": "## Legend\n\n**🟩 Green** — exists today. Specorator builds upon these; v1 must **not** regress them.\n\n**🟦 Cyan** — new harness components added for v1.\n\n**🟥 Red** — safety-critical, fail-closed, non-negotiable.\n\n**⬜ Grey** — external systems outside Specorator.\n\n**🟧 Orange** — people / actors.\n\n**🟨 Yellow** — legend & notes.\n\n**🟪 Purple** — title / system header.\n\n---\n**Principle:** *Agent = Model + Harness.* Keep the delegated loop; build the user-facing harness around it.\n\n**Don't reinvent:** Chat · Agent Board · Quick Actions · Orchestrator · Multi-provider already work — *extend* them."
     },
     {
       "id": "a_nontech",
@@ -229,7 +229,7 @@
       "width": 320,
       "height": 180,
       "color": "4",
-      "text": "**Session & history store** 🟩\n`.claudian/sessions` metadata · resume · fork."
+      "text": "**Session & history store** 🟩\n`.claudian/sessions` (→ `.specorator/` at v1.0.0) · resume · fork."
     },
     {
       "id": "c_vaultmcp",
@@ -533,7 +533,7 @@
       "fromSide": "right",
       "toNode": "ext_cli",
       "toSide": "left",
-      "label": "delegates the agent loop (ACP / stdio / stream-json)"
+      "label": "delegates the agent loop (per-provider transport)"
     },
     {
       "id": "e5",
