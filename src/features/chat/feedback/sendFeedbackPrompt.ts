@@ -38,11 +38,5 @@ export function sendFeedbackPrompt(
     direction === 'up'
       ? 'chat.feedback.thumbsUp.prompt'
       : 'chat.feedback.thumbsDown.prompt';
-  const content = t(promptKey);
-  if (!content) {
-    plugin.logger.scope('feedback').debug('empty prompt for direction', direction);
-    return;
-  }
-
-  void targetTab.controllers.inputController?.sendMessage({ content });
+  void targetTab.controllers.inputController?.sendMessage({ content: t(promptKey) });
 }
