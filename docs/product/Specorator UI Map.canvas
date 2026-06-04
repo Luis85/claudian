@@ -143,7 +143,7 @@
       "width": 320,
       "height": 150,
       "color": "5",
-      "text": "## Lite provider (Quick answers) 🟦\nDirect API, no CLI/Node — zero-install onboarding & mobile. Escalates to a CLI provider for edits."
+      "text": "## Lite provider (Quick answers) 🟦\nDirect API, no CLI/Node — zero-install onboarding (**desktop v1; mobile post-v1**). Escalates to a CLI provider for edits."
     },
     {
       "id": "view_index",

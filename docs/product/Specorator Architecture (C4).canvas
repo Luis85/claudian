@@ -249,7 +249,7 @@
       "width": 380,
       "height": 150,
       "color": "5",
-      "text": "## Lite provider (direct API) 🟦\nBYOK, no CLI/Node — the only zero-install path (also mobile). Read-mostly Q&A → escalates to a CLI provider for edits."
+      "text": "## Lite provider (direct API) 🟦\nBYOK, no CLI/Node — the only zero-install path (**desktop v1; mobile is post-v1**, OQ2). Read-mostly Q&A → escalates to a CLI provider for edits."
     },
     {
       "id": "c_rag",
@@ -299,7 +299,7 @@
       "width": 360,
       "height": 180,
       "color": "1",
-      "text": "**Universal Undo — Shadow-Git** 🟥\nWhole-vault, turn-level checkpoints (gitdir outside the vault). One-click 'undo all' on **every** provider. *Not covered: out-of-vault writes, big binaries.*"
+      "text": "**Undo / revert turn — Shadow-Git** 🟥\nWhole-vault, turn-level checkpoints (gitdir outside the vault). One-click **'revert vault to before this turn'** on every provider. *Not covered: out-of-vault writes, big binaries, concurrent tabs.*"
     },
     {
       "id": "sf_audit",
