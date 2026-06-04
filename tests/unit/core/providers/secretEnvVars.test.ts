@@ -261,7 +261,7 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
 
   it('migrates a plaintext providerConfigs.codex.apiKey into a provider:codex secret and strips the field', () => {
     const settings: Record<string, unknown> = {
-      providerConfigs: { codex: { enabled: true, apiKey: 'sk-codex' } },
+      providerConfigs: { codex: { enabled: true, apiKey: 'dummy-codex-key' } },
       secretEnvVars: [],
     };
     const { changed, stored } = run(settings);
@@ -273,24 +273,47 @@ describe('secretEnvVars — migrateEnvSecrets (shared + provider blobs)', () => 
     expect(settings.secretEnvVars).toEqual([
       { scope: 'provider:codex', name: 'OPENAI_API_KEY', secretId: 'claudian-env-provider-codex-openai-api-key' },
     ]);
-    expect(stored.get('claudian-env-provider-codex-openai-api-key')).toBe('sk-codex');
+    expect(stored.get('claudian-env-provider-codex-openai-api-key')).toBe('dummy-codex-key');
   });
 
-  it('strips the apiKey field without duplicating when a provider:codex OPENAI_API_KEY ref already exists', () => {
+  it('strips the apiKey field without duplicating when its ref exists AND the secret is present locally', () => {
     const settings: Record<string, unknown> = {
-      providerConfigs: { codex: { apiKey: 'sk-dead' } },
+      providerConfigs: { codex: { apiKey: 'dummy-dead-key' } },
       secretEnvVars: [
         { scope: 'provider:codex', name: 'OPENAI_API_KEY', secretId: 'existing-id' },
       ],
     };
-    const { changed } = run(settings, { 'existing-id': 'sk-live' });
+    const { changed, stored } = run(settings, { 'existing-id': 'dummy-live-key' });
 
     expect(changed).toBe(true);
     expect((settings.providerConfigs as any).codex.apiKey).toBeUndefined();
-    // The existing (functional) ref wins; the dead value is discarded, not duplicated.
+    // The present local value wins; the dead field value is discarded, not duplicated.
     expect(settings.secretEnvVars).toEqual([
       { scope: 'provider:codex', name: 'OPENAI_API_KEY', secretId: 'existing-id' },
     ]);
+    expect(stored.get('existing-id')).toBe('dummy-live-key');
+  });
+
+  // SEC-A: on a synced vault the ref travels in settings but the SecretStorage value
+  // does NOT (secrets are device-local). The legacy plaintext apiKey is then the only
+  // local copy — recover it into the existing id rather than deleting it into nothing.
+  it('recovers the plaintext apiKey into an existing ref whose secret is absent on this device', () => {
+    const settings: Record<string, unknown> = {
+      providerConfigs: { codex: { apiKey: 'dummy-local-key' } },
+      secretEnvVars: [
+        { scope: 'provider:codex', name: 'OPENAI_API_KEY', secretId: 'synced-id' },
+      ],
+    };
+    // Empty store: the ref is synced but its keychain value is missing here.
+    const { changed, stored } = run(settings);
+
+    expect(changed).toBe(true);
+    expect((settings.providerConfigs as any).codex.apiKey).toBeUndefined();
+    // No duplicate ref; the plaintext is recovered INTO the existing id.
+    expect(settings.secretEnvVars).toEqual([
+      { scope: 'provider:codex', name: 'OPENAI_API_KEY', secretId: 'synced-id' },
+    ]);
+    expect(stored.get('synced-id')).toBe('dummy-local-key');
   });
 
   it('leaves settings untouched when codex.apiKey is absent or empty', () => {

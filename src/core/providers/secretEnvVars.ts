@@ -240,7 +240,8 @@ export function migrateEnvSecrets(
   // id can never overwrite an unrelated secret. Obsidian's id space is shared
   // across plugins within a vault, so a same-named secret from another plugin
   // (or a stale id) must not be clobbered.
-  const usedIds = new Set<string>([...existing.map((ref) => ref.secretId), ...store.list()]);
+  const storedIds = new Set<string>(store.list());
+  const usedIds = new Set<string>([...existing.map((ref) => ref.secretId), ...storedIds]);
   const setSecret: SecretSetter = (id, value) => store.set(id, value);
   const newRefs: SecretEnvVarRef[] = [];
   const clearedRefs: SecretEnvVarRef[] = [];
@@ -305,9 +306,8 @@ export function migrateEnvSecrets(
 
   // Provider-owned STRUCTURED secret fields (not env blobs): translate any
   // plaintext value into a provider-scoped secret ref and strip the field, so the
-  // key leaves the settings file. A value already covered by an existing ref of the
-  // same scope/name is just stripped (that ref wins). Today this is only Codex's
-  // dead `apiKey` field; migrating it as OPENAI_API_KEY also makes it take effect.
+  // key leaves the settings file. Today this is only Codex's dead `apiKey` field;
+  // migrating it as OPENAI_API_KEY also makes it take effect.
   const providerConfigs = settings.providerConfigs as Record<string, Record<string, unknown>> | undefined;
   if (providerConfigs) {
     for (const { providerId, field, envName } of PROVIDER_CONFIG_SECRET_FIELDS) {
@@ -315,10 +315,23 @@ export function migrateEnvSecrets(
       const value = config?.[field];
       if (typeof value !== 'string' || value.length === 0) continue;
       const scope: EnvironmentScope = `provider:${providerId}`;
-      const alreadyCovered =
-        existing.some((ref) => ref.scope === scope && ref.name === envName) ||
-        newRefs.some((ref) => ref.scope === scope && ref.name === envName);
-      if (!alreadyCovered) {
+      // A ref created in THIS run (from the env blob) already holds the live value.
+      const newRef = newRefs.find((ref) => ref.scope === scope && ref.name === envName);
+      // A ref carried in settings — possibly synced from another device, whose
+      // SecretStorage value is NOT present on this machine (secrets are device-local).
+      const existingRef = existing.find((ref) => ref.scope === scope && ref.name === envName);
+      if (newRef) {
+        // Covered by a fresh ref this run; the plaintext field is redundant — drop it.
+      } else if (existingRef) {
+        // Don't clobber a value that IS present locally (that ref wins). But if the
+        // referenced secret is absent on this device, the plaintext field is the only
+        // local copy of the credential — recover it into the existing id rather than
+        // deleting it into oblivion (which would launch with a missing key).
+        if (!storedIds.has(existingRef.secretId)) {
+          setSecret(existingRef.secretId, value);
+          storedIds.add(existingRef.secretId);
+        }
+      } else {
         const id = uniquifySecretId(migratedEnvSecretId(scope, envName), usedIds);
         usedIds.add(id);
         setSecret(id, value);
