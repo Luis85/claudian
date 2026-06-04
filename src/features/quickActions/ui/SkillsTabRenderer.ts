@@ -20,6 +20,7 @@ export class SkillsTabRenderer {
   constructor(
     private source: VaultSkillSource,
     private onRunSkill: (entry: SkillTabEntry) => void,
+    private onEditSkill: (entry: SkillTabEntry) => void,
     private close: () => void,
   ) {}
 
@@ -178,9 +179,10 @@ export class SkillsTabRenderer {
       });
       editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        // Best-effort: close modal so user lands in plugin settings.
-        // Provider-specific deep-link is deferred to a future change.
+        // Close the modal first so the settings dialog isn't stacked behind it,
+        // then ask the host to deep-link into the provider's settings sub-tab.
         this.close();
+        this.onEditSkill(skill);
       });
     }
   }

@@ -12,6 +12,12 @@ import { SkillsTabRenderer } from './SkillsTabRenderer';
 export interface QuickActionsModalCallbacks {
   onRun: (action: QuickAction) => void;
   onRunSkill: (entry: SkillTabEntry) => void;
+  /**
+   * Invoked when the user clicks the per-row "Edit in {provider} settings"
+   * button on the Skills tab. Implementations open the matching provider
+   * settings sub-tab; the modal closes itself before firing.
+   */
+  onEditSkill: (entry: SkillTabEntry) => void;
   storage: QuickActionStorage;
   aggregator: VaultSkillSource;
   onFavoritesChanged?: () => void;
@@ -42,6 +48,7 @@ export class QuickActionsModal extends Modal {
     this.skillsRenderer = new SkillsTabRenderer(
       callbacks.aggregator,
       callbacks.onRunSkill,
+      callbacks.onEditSkill,
       () => this.close(),
     );
   }

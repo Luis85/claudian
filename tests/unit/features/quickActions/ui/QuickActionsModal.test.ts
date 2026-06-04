@@ -134,6 +134,7 @@ async function openModal(
   const callbacks: QuickActionsModalCallbacks = {
     onRun: jest.fn(),
     onRunSkill: jest.fn(),
+    onEditSkill: jest.fn(),
     storage: makeStorage(),
     aggregator: makeAggregator(),
     ...overrides,
@@ -284,6 +285,30 @@ describe('QuickActionsModal tabs', () => {
     const edit = modal.contentEl.querySelector('.claudian-quick-actions-skill-edit');
     expect(edit).not.toBeNull();
     expect(edit?.textContent).toContain('quickActions.skills.editInSettings');
+  });
+
+  it('clicking the Edit button fires onEditSkill with the entry and closes the modal', async () => {
+    const aggregator = makeAggregator([makeSkill({ name: 'tdd' })]);
+    const { modal, callbacks } = await openModal({ aggregator });
+    const tabs = modal.contentEl.querySelectorAll(
+      '.claudian-quick-actions-tab',
+    ) as NodeListOf<HTMLElement>;
+    tabs[1].click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    const edit = modal.contentEl.querySelector(
+      '.claudian-quick-actions-skill-edit',
+    ) as HTMLButtonElement;
+    expect(edit).not.toBeNull();
+    edit.click();
+
+    expect(callbacks.onEditSkill).toHaveBeenCalledTimes(1);
+    expect(callbacks.onEditSkill).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'claude:skill-tdd', providerId: 'claude' }),
+    );
+    expect(modal.close).toHaveBeenCalled();
+    // Edit click should NOT run the skill.
+    expect(callbacks.onRunSkill).not.toHaveBeenCalled();
   });
 
   it('renders the disabled badge span on a disabled-provider row', async () => {

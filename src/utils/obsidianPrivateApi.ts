@@ -23,6 +23,7 @@ interface PrivateSettingsTab {
   searchInputEl?: HTMLInputElement;
   searchComponent?: { inputEl?: HTMLInputElement };
   updateHotkeyVisibility?: () => void;
+  containerEl?: HTMLElement;
 }
 
 interface PrivateSettingsController {
@@ -115,5 +116,40 @@ export function openPluginSettingsTab(app: App, pluginId: string): boolean {
   }
   setting.open();
   setting.openTabById(pluginId);
+  return true;
+}
+
+/**
+ * Opens the Claudian plugin settings and switches its inner tab to the given
+ * provider's sub-tab (e.g. `claude`, `codex`). Falls back to the default tab
+ * when the provider sub-tab is not rendered (typically because the provider is
+ * disabled and its tab is hidden). Returns `false` when the private settings
+ * surface is unavailable.
+ *
+ * Implementation: `openTabById` triggers an async render of the plugin tab, so
+ * the sub-tab `data-tab-id` button is queried after `PRIVATE_SETTINGS_RENDER_DELAY_MS`
+ * and clicked to switch.
+ */
+export function openClaudianProviderSettings(
+  app: App,
+  pluginId: string,
+  providerId: string,
+): boolean {
+  const setting = getSettingsController(app);
+  if (!setting) {
+    return false;
+  }
+  setting.open();
+  setting.openTabById(pluginId);
+  window.setTimeout(() => {
+    const tab = setting.activeTab;
+    if (!tab || !(tab.containerEl instanceof HTMLElement)) {
+      return;
+    }
+    const button = tab.containerEl.querySelector<HTMLButtonElement>(
+      `.claudian-settings-tab[data-tab-id="${providerId}"]`,
+    );
+    button?.click();
+  }, PRIVATE_SETTINGS_RENDER_DELAY_MS);
   return true;
 }

@@ -72,6 +72,7 @@ const NOOP_AGGREGATOR: VaultSkillSource = {
   listAll: jest.fn().mockResolvedValue([]),
 };
 const NOOP_ON_RUN_SKILL = jest.fn();
+const NOOP_ON_EDIT_SKILL = jest.fn();
 
 async function flush() {
   await Promise.resolve();
@@ -90,7 +91,7 @@ describe('QuickActionsModal favorites', () => {
     const modal = new QuickActionsModal({} as App, {
       storage,
       onRun: jest.fn(),
-      onRunSkill: NOOP_ON_RUN_SKILL,
+      onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
     });
     modal.open();
@@ -109,7 +110,7 @@ describe('QuickActionsModal favorites', () => {
     const modal = new QuickActionsModal({} as App, {
       storage,
       onRun: jest.fn(),
-      onRunSkill: NOOP_ON_RUN_SKILL,
+      onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
     });
     modal.open();
@@ -133,7 +134,7 @@ describe('QuickActionsModal favorites', () => {
     const modal = new QuickActionsModal({} as App, {
       storage,
       onRun: jest.fn(),
-      onRunSkill: NOOP_ON_RUN_SKILL,
+      onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
     });
     modal.open();
@@ -158,7 +159,7 @@ describe('QuickActionsModal favorites', () => {
     const modal = new QuickActionsModal({} as App, {
       storage,
       onRun: jest.fn(),
-      onRunSkill: NOOP_ON_RUN_SKILL,
+      onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
     });
     modal.open();
@@ -183,7 +184,7 @@ describe('QuickActionsModal favorites', () => {
     const modal = new QuickActionsModal({} as App, {
       storage,
       onRun,
-      onRunSkill: NOOP_ON_RUN_SKILL,
+      onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
     });
     modal.open();
@@ -203,7 +204,7 @@ describe('QuickActionsModal favorites', () => {
     const modal = new QuickActionsModal({} as App, {
       storage,
       onRun: jest.fn(),
-      onRunSkill: NOOP_ON_RUN_SKILL,
+      onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
     });
     modal.open();
@@ -224,7 +225,7 @@ describe('QuickActionsModal favorites', () => {
     const modal = new QuickActionsModal({} as App, {
       storage,
       onRun: jest.fn(),
-      onRunSkill: NOOP_ON_RUN_SKILL,
+      onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
       onFavoritesChanged,
     });
@@ -246,7 +247,7 @@ describe('QuickActionsModal favorites', () => {
     const modal = new QuickActionsModal({} as App, {
       storage,
       onRun: jest.fn(),
-      onRunSkill: NOOP_ON_RUN_SKILL,
+      onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
       onFavoritesChanged,
     });
@@ -269,7 +270,7 @@ describe('QuickActionsModal favorites', () => {
     const modal = new QuickActionsModal({} as App, {
       storage,
       onRun: jest.fn(),
-      onRunSkill: NOOP_ON_RUN_SKILL,
+      onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
       onFavoritesChanged,
     });
@@ -294,7 +295,7 @@ describe('QuickActionsModal favorites', () => {
     const modal = new QuickActionsModal({} as App, {
       storage,
       onRun: jest.fn(),
-      onRunSkill: NOOP_ON_RUN_SKILL,
+      onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
       onFavoritesChanged,
     });
