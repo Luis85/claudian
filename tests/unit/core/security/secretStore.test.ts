@@ -49,4 +49,11 @@ describe('SecretStore', () => {
     store.set('b', '2');
     expect(store.list().sort()).toEqual(['a', 'b']);
   });
+
+  it('clears a value by overwriting with an empty string', () => {
+    const store = new SecretStore(createFakeSecretStorage());
+    store.set('k', 'v');
+    store.clear('k');
+    expect(store.get('k')).toBe('');
+  });
 });

@@ -3,14 +3,19 @@
  *
  * Provider API keys and MCP auth headers must not persist in cleartext inside
  * the syncable/committable vault files (`.claudian/claudian-settings.json`,
- * `.claude/mcp.json`). This wraps Obsidian's `SecretStorage` (Electron
- * `safeStorage`-backed, OS keychain, out-of-vault), which is available since
- * Obsidian 1.11.4 — the plugin's `minAppVersion`. There is intentionally no
- * fallback: callers can assume `app.secretStorage` exists.
+ * `.claude/mcp.json`). This wraps Obsidian's `SecretStorage`, which encrypts
+ * secrets at rest via the OS keychain (Electron `safeStorage`) since Obsidian
+ * 1.11.5 — the plugin's `minAppVersion`. (1.11.4 introduced the API but stored
+ * values in plaintext localStorage, so 1.11.5 is the real floor.) There is
+ * intentionally no fallback: callers can assume `app.secretStorage` exists.
  *
- * The vault files store only references (see `secretRefs.ts`); this store holds
- * the real values. Note the Obsidian API exposes no delete — overwriting a
- * value is the only mutation; orphaned ids are harmless and inert.
+ * Threat model is honest: this keeps secrets out of synced/committed files and
+ * (with a real keyring) out of other OS users' reach — it does NOT isolate from
+ * same-user processes or other plugins (the id space is global). Our files store
+ * only the secret id/name (see `secretIds.ts`); this store holds the values.
+ *
+ * The Obsidian API exposes no delete — `clear()` overwrites with an empty string,
+ * the in-the-wild convention; orphaned ids are otherwise harmless and inert.
  */
 
 /** The subset of Obsidian's `SecretStorage` we depend on (injectable for tests). */
@@ -41,5 +46,10 @@ export class SecretStore {
   /** All stored secret ids. */
   list(): string[] {
     return this.api.listSecrets();
+  }
+
+  /** Clear a secret (the API has no delete; overwriting with '' is the convention). */
+  clear(id: string): void {
+    this.api.setSecret(id, '');
   }
 }

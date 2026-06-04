@@ -1,0 +1,72 @@
+import {
+  isSecretEnvKey,
+  isSecretHeaderName,
+  migratedEnvSecretId,
+  migratedMcpHeaderSecretId,
+  normalizeSecretId,
+  uniquifySecretId,
+} from '../../../../src/core/security/secretIds';
+
+describe('secretIds — normalization', () => {
+  it('normalizes ids to lowercase-alphanumeric-dashes', () => {
+    expect(normalizeSecretId('claudian-env-ANTHROPIC_API_KEY')).toBe('claudian-env-anthropic-api-key');
+    expect(normalizeSecretId('  weird//name__here  ')).toBe('weird-name-here');
+    expect(normalizeSecretId('!!!')).toBe('secret');
+  });
+});
+
+describe('secretIds — namespaced derivation', () => {
+  it('derives namespaced, valid env ids', () => {
+    expect(migratedEnvSecretId('shared', 'ANTHROPIC_API_KEY')).toBe('claudian-env-shared-anthropic-api-key');
+    expect(migratedEnvSecretId('snippet-1', 'OPENAI_API_KEY')).toBe('claudian-env-snippet-1-openai-api-key');
+  });
+
+  it('derives namespaced, valid MCP header ids', () => {
+    expect(migratedMcpHeaderSecretId('my-server', 'Authorization')).toBe('claudian-mcp-my-server-header-authorization');
+  });
+
+  it('every derived id satisfies the SecretStorage id rule (lowercase alnum + dashes)', () => {
+    for (const id of [
+      migratedEnvSecretId('shared', 'FOO__BAR_TOKEN'),
+      migratedMcpHeaderSecretId('Weird Server!', 'X-Api-Key'),
+    ]) {
+      expect(id).toMatch(/^[a-z0-9-]+$/);
+    }
+  });
+});
+
+describe('secretIds — collision-proofing', () => {
+  it('suffixes colliding ids', () => {
+    const used = new Set<string>();
+    const a = uniquifySecretId('claudian-env-shared-foo-token', used);
+    used.add(a);
+    const b = uniquifySecretId('claudian-env-shared-foo-token', used);
+    expect(a).toBe('claudian-env-shared-foo-token');
+    expect(b).toBe('claudian-env-shared-foo-token-2');
+  });
+});
+
+describe('secretIds — migration detection (advisory)', () => {
+  it('flags known + suffix-matched secret env keys (incl. AUTH)', () => {
+    for (const k of [
+      'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'FOO_TOKEN', 'MY_SECRET',
+      'X_PASSWORD', 'AWS_SECRET_ACCESS_KEY', 'BASIC_AUTH', 'NPM_CONFIG__AUTH',
+    ]) {
+      expect(isSecretEnvKey(k)).toBe(true);
+    }
+  });
+
+  it('does not flag non-secret env keys', () => {
+    for (const k of ['ANTHROPIC_BASE_URL', 'ANTHROPIC_MODEL', 'CLAUDE_CODE_USE_BEDROCK', 'PATH', 'NODE_ENV']) {
+      expect(isSecretEnvKey(k)).toBe(false);
+    }
+  });
+
+  it('flags credential-bearing MCP header names', () => {
+    for (const h of ['Authorization', 'authorization', 'X-Api-Key', 'Proxy-Authorization', 'Cookie']) {
+      expect(isSecretHeaderName(h)).toBe(true);
+    }
+    expect(isSecretHeaderName('Content-Type')).toBe(false);
+    expect(isSecretHeaderName('Accept')).toBe(false);
+  });
+});
