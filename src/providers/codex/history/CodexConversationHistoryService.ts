@@ -58,9 +58,14 @@ export class CodexConversationHistoryService extends BaseHistoryService<CodexPro
 
   protected computeCacheKey(conversation: Conversation): string | null {
     const state = getCodexState(conversation.providerState);
-    if (state.forkSource && state.threadId) {
-      return `fork::${state.threadId}`;
-    }
+    // Forks (pending or established) are never served from the generic
+    // hydration cache. A thread-id-only key can't capture the resolved
+    // source/fork transcript identity or content, so caching it would let a
+    // stale (or fallback-partial) source-prefix + fork-only merge survive after
+    // the files become resolvable or gain turns. Returning null forces
+    // loadMessages to re-run the merge — and pending forks keep their in-memory
+    // messages via its own short-circuit — on every hydration.
+    if (state.forkSource) return null;
     const threadId = state.threadId ?? conversation.sessionId ?? null;
     const sessionFilePath = state.sessionFilePath ?? null;
     if (!sessionFilePath) return null;

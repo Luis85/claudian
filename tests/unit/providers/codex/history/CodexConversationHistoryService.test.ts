@@ -1,3 +1,7 @@
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+
 import type { HydrationContext } from '@/core/providers/types';
 import type { Conversation } from '@/core/types';
 import { CodexConversationHistoryService } from '@/providers/codex/history/CodexConversationHistoryService';
@@ -54,6 +58,43 @@ describe('CodexConversationHistoryService.hydrateConversationHistoryV2', () => {
     expect(out.kind).toBe('empty');
     // eslint-disable-next-line jest/no-conditional-expect
     if (out.kind === 'empty') expect(out.reason).toBe('no-rows');
+  });
+
+  it('bypasses the hydration cache for established forks (re-runs the merge on every open)', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'claudian-codex-fork-'));
+    const transcript = path.join(dir, 'sess.jsonl');
+    fs.writeFileSync(transcript, '{}');
+    const turnsSpy = jest.spyOn(Store, 'parseCodexSessionTurns').mockReturnValue([
+      { turnId: 't1', messages: [{ id: 'm1', role: 'user', content: 'hi', timestamp: 1 } as never] },
+    ]);
+
+    try {
+      const svc = new CodexConversationHistoryService();
+      const conv = makeConversation({
+        sessionId: null,
+        providerState: {
+          threadId: 'fork-thread',
+          sessionFilePath: transcript,
+          forkSource: { sessionId: 'src', resumeAt: 't1' },
+          forkSourceSessionFilePath: transcript,
+        },
+      });
+
+      const first = await svc.hydrateConversationHistoryV2(conv, ctx);
+      expect(first.kind).toBe('loaded');
+      if (first.kind === 'loaded') conv.messages = first.messages;
+      const callsAfterFirst = turnsSpy.mock.calls.length;
+      expect(callsAfterFirst).toBeGreaterThan(0);
+
+      // A normal conversation with non-empty messages would short-circuit to
+      // `cached` here; an established fork must re-run the source+fork merge so a
+      // resolved-later or grown transcript is never served stale.
+      const second = await svc.hydrateConversationHistoryV2(conv, ctx);
+      expect(second.kind).toBe('loaded');
+      expect(turnsSpy.mock.calls.length).toBeGreaterThan(callsAfterFirst);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it('returns error:fork-checkpoint-not-found when resumeAt is missing in the source transcript', async () => {
