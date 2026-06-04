@@ -355,7 +355,7 @@ The Rule of Two is *defence-in-depth, not sufficiency* — both Meta and Databri
 Grouped by theme; priority in brackets. "Vault agent" = the active provider running through Claudian.
 
 ### Onboarding
-- **US-1 [M]** As Maya (no terminal), I want to install Claudian and reach my first answer without installing anything else, so I don't give up at setup. *(F-ON-2, F-ON-8)*
+- **US-1 [M]** As Maya (no terminal), I want to install Specorator and reach my first answer without installing anything else, so I don't give up at setup. *(F-ON-10 Lite + F-ON-9 free on-ramp = the zero-install path; F-ON-2 wizard)*
 - **US-2 [M]** As a new user, when I enable a provider I want to know immediately whether it works, so I'm not surprised by a failure later. *(F-ON-1)*
 - **US-3 [M]** As a user whose CLI isn't found, I want a plain-language message telling me exactly what to do, not `spawn ENOENT`. *(F-ON-5, F-ON-3)*
 - **US-4 [M]** As a user with an API key, I want to paste it into the app and have it stored securely, without editing environment variables. *(F-ON-4)*

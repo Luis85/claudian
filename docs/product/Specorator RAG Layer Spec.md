@@ -321,7 +321,7 @@ Builds · TS strict passes · Jest tests pass · loads in Obsidian desktop · co
 ## 14. Constraints
 
 - No LangChain/LlamaIndex in MVP.
-- **Local-first by default; cloud embeddings/generation (BYOK *or* the active/Lite provider) are opt-in and disclosed.** Only the fully-local profile (local embeddings **and** Ollama generation) keeps everything on-device — the default profile's *generation* is a remote call, shown in the network ledger.
+- **Local-first *index*, but default *generation* is remote — not opt-in.** Embeddings, vector store, and keyword index run locally by default; the **default profile sends generation (with the retrieved chunks) to the active/Lite provider — a remote call that ships by default**, so the Phase-1 egress disclosure/ledger applies to the default Ask Vault path. Only the *fully-local* profile (local embeddings **and** Ollama generation) keeps everything on-device; BYOK cloud embeddings are an additional opt-in.
 - Do not modify user notes in MVP (retrieval feeds the agent; writes go through the existing approval/undo path).
 - Use Obsidian Vault APIs; direct filesystem only where the native vector DB needs it.
 - Keep Obsidian-specific code in `infrastructure/obsidian`; keep business logic independent of Obsidian APIs; all provider integrations behind ports.
