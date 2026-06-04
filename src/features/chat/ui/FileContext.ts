@@ -257,6 +257,36 @@ export class FileContextManager {
     return true;
   }
 
+  /**
+   * Attaches an OS file that lives inside a configured external context root.
+   * Inserts `@displayName ` at the textarea caret and tracks the absolute path
+   * in the same state slot the @-mention dropdown uses for external files.
+   * Returns false when no external root contains the path.
+   */
+  attachExternalContextMention(absolutePath: string): boolean {
+    const roots = this.callbacks.getExternalContexts?.() ?? [];
+    if (roots.length === 0) return false;
+
+    const entries = buildExternalContextDisplayEntries(roots);
+    const normalizedAbs = absolutePath.replace(/\\\\/g, '/');
+    const match = entries
+      .map((entry) => ({
+        entry,
+        normalizedRoot: entry.contextRoot.replace(/\\\\/g, '/'),
+      }))
+      .find(({ normalizedRoot }) => normalizedAbs.startsWith(normalizedRoot + '/'));
+
+    if (!match) return false;
+
+    const relative = normalizedAbs.slice(match.normalizedRoot.length + 1);
+    const displayName = `@${match.entry.displayName}/${relative}`;
+
+    insertAtCaret(this.inputEl, `${displayName} `);
+    this.state.attachFile(absolutePath);
+    this.refreshChips();
+    return true;
+  }
+
   getAttachedFolders(): Set<string> {
     return this.state.getAttachedFolders();
   }
@@ -461,4 +491,15 @@ export class FileContextManager {
 
     return fileTags.some(tag => excludedTags.includes(tag));
   }
+}
+
+function insertAtCaret(input: HTMLTextAreaElement, text: string): void {
+  const start = input.selectionStart ?? input.value.length;
+  const end = input.selectionEnd ?? start;
+  const before = input.value.slice(0, start);
+  const after = input.value.slice(end);
+  input.value = `${before}${text}${after}`;
+  const caret = before.length + text.length;
+  input.selectionStart = caret;
+  input.selectionEnd = caret;
 }

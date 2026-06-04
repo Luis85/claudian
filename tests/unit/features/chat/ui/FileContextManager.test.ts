@@ -1020,6 +1020,33 @@ describe('FileContextManager', () => {
     });
   });
 
+  describe('attachExternalContextMention', () => {
+    it('returns false when the absolute path is not under any external root', () => {
+      const app = createMockApp();
+      const manager = new FileContextManager(
+        app, containerEl as any, inputEl, createMockCallbacks({ externalContexts: ['/ext/foo'] })
+      );
+      const ok = manager.attachExternalContextMention('/somewhere/else/x.md');
+      expect(ok).toBe(false);
+      manager.destroy();
+    });
+
+    it('inserts @displayName at the caret and tracks the absolute path', () => {
+      const app = createMockApp();
+      const manager = new FileContextManager(
+        app, containerEl as any, inputEl, createMockCallbacks({ externalContexts: ['/ext/foo'] })
+      );
+      inputEl.value = 'hello ';
+      inputEl.selectionStart = inputEl.value.length;
+      inputEl.selectionEnd = inputEl.value.length;
+      const ok = manager.attachExternalContextMention('/ext/foo/sub/x.md');
+      expect(ok).toBe(true);
+      expect(inputEl.value).toContain('@foo/sub/x.md');
+      expect(manager.getAttachedFiles().has('/ext/foo/sub/x.md')).toBe(true);
+      manager.destroy();
+    });
+  });
+
   describe('onOpenFile callback', () => {
     it('should show Notice when file not found in vault', async () => {
       const { Notice: NoticeMock } = jest.requireMock('obsidian');
