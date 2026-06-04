@@ -709,6 +709,16 @@
       "needsProvider": "Set an Agent Board default provider in settings first.",
       "needsModel": "Set an Agent Board default model in settings first.",
       "templateProblems": "Template \"{name}\" has problems: {errors}"
+    },
+    "commitOnAccept": {
+      "title": "Commit & push?",
+      "bodyOne": "Accepted \"{title}\". 1 file changed in the vault git repo.",
+      "bodyMany": "Accepted \"{title}\". {count} files changed in the vault git repo.",
+      "dontAsk": "Don't ask again for this vault",
+      "skip": "Skip",
+      "commitAndPush": "Commit & push",
+      "failed": "Commit prompt failed: {error}",
+      "settingsSaveFailed": "Failed to save preference. Try again from settings."
     }
   },
   "env": {

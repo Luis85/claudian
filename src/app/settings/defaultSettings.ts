@@ -64,6 +64,7 @@ export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
   deferMathRenderingDuringStreaming: true,
   chatViewPlacement: 'right-sidebar',
   firstRunDismissed: false,
+  promptCommitOnAccept: true,
 
   agentBoardWorkOrderFolder: 'Agent Board/tasks',
   agentBoardTemplateFolder: 'Agent Board/templates',

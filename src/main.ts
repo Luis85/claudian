@@ -55,8 +55,11 @@ import { sendFeedbackPrompt } from './features/chat/feedback/sendFeedbackPrompt'
 import { isClaudianView } from './features/chat/isClaudianView';
 import type { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
 import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
+import { CommitOnAcceptCoordinator } from './features/tasks/commit/CommitOnAcceptCoordinator';
+import { CommitOnAcceptModal } from './features/tasks/commit/CommitOnAcceptModal';
 import { ChatTabExecutionSurface } from './features/tasks/execution/ChatTabExecutionSurface';
 import { ChatWorkOrderLinker } from './features/tasks/execution/ChatWorkOrderLinker';
+import { TaskNoteStore } from './features/tasks/storage/TaskNoteStore';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
 import { setLocale, t } from './i18n/i18n';
 import type { Locale } from './i18n/types';
@@ -76,6 +79,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   readonly chatMessageActions: ChatMessageAction[] = [];
   storage!: SharedAppStorage;
   gitStatusWatcher: GitStatusWatcher | null = null;
+  private commitOnAcceptCoordinator: CommitOnAcceptCoordinator | null = null;
   conversationStore!: ConversationStore;
   private lifecycle!: PluginLifecycle;
   private viewActivator!: PluginViewActivator;
@@ -111,6 +115,43 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     });
 
     const taskExecutionSurface = new ChatTabExecutionSurface(this);
+    {
+      const noteStore = new TaskNoteStore();
+      this.commitOnAcceptCoordinator = new CommitOnAcceptCoordinator({
+        events: this.events,
+        loadTaskSpec: async (path) => {
+          const file = this.app.vault.getAbstractFileByPath(path);
+          if (!file || !('vault' in file)) {
+            throw new Error('Work order file not found');
+          }
+          const content = await this.app.vault.read(file as Parameters<typeof this.app.vault.read>[0]);
+          return noteStore.parse(path, content).task;
+        },
+        getGitStatus: async () => {
+          await this.gitStatusWatcher?.refresh();
+          return this.gitStatusWatcher?.getLastStatus() ?? { isRepo: false, dirtyCount: 0 };
+        },
+        isProviderGitEnabled: (providerId) => {
+          try {
+            const config = ProviderRegistry.getChatUIConfig(providerId as ProviderId);
+            return config.isGitActionsEnabled?.(this.settings) !== false;
+          } catch {
+            return false;
+          }
+        },
+        openModal: (opts) => {
+          const modal = new CommitOnAcceptModal(this.app, opts);
+          modal.open();
+          return modal.result();
+        },
+        surface: taskExecutionSurface,
+        readSettings: () => this.settings,
+        saveSettings: () => this.saveSettings(),
+        logger: this.logger.scope('tasks.commitOnAccept'),
+        showNotice: (message) => { new Notice(message); },
+      });
+      this.commitOnAcceptCoordinator.start();
+    }
     this.registerView(
       VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
       (leaf) => new AgentBoardView(leaf, this, taskExecutionSurface),
@@ -196,6 +237,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   }
 
   onunload(): void {
+    this.commitOnAcceptCoordinator?.stop();
+    this.commitOnAcceptCoordinator = null;
     this.gitStatusWatcher?.stop();
     this.gitStatusWatcher = null;
     this.lifecycle.shutdownActiveRuntimes();

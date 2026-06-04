@@ -1,6 +1,6 @@
 # Skills Tab in Quick Actions Modal Implementation Plan
 
-> **Status: implemented 2026-06-04** via [[Agent Board/tasks/work-order-20260604-skills-tab-quick-actions-modal.md]]. All 14 tasks completed; full verification (`npm run typecheck && npm run lint && npm run test && npm run build`) passes. Plan-checkbox tracking deliberately not back-filled here — the work order's acceptance criteria is the canonical progress record.
+> **Status: implemented 2026-06-04** via [[work-order-20260604-skills-tab-quick-actions-modal]]. All 14 tasks completed; full verification (`npm run typecheck && npm run lint && npm run test && npm run build`) passes. Plan-checkbox tracking deliberately not back-filled here — the work order's acceptance criteria is the canonical progress record.
 >
 > **Deviations from plan during implementation:**
 > - Extracted `buildProviderRecords` into `src/features/quickActions/skills/buildProviderRecords.ts` instead of inlining inside `openContextMenuQuickAction.ts`. Reason: the new required `aggregator` + `onRunSkill` modal callbacks forced updates at three modal-construction sites (`openContextMenuQuickAction.ts`, `ClaudianView.ts` header zap button, `tabs/tabUi.ts` `onQuickActionsOpen`). Sharing the helper avoids triplicate registry boilerplate.

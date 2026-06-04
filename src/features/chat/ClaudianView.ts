@@ -725,6 +725,65 @@ export class ClaudianView extends ItemView {
     };
   }
 
+  /**
+   * Routes a commit-and-push prompt into a work-order's chat. Focuses the
+   * conversation tab when it's open in any ClaudianView, restores it from
+   * history into a fresh tab when no tab currently hosts it, and only falls
+   * back to a brand-new task-run tab when the saved conversation is truly
+   * unrecoverable (e.g. tab cap reached or no saved conversationId at all).
+   */
+  async injectCommitTurnForConversation(options: {
+    conversationId: string | null;
+    fallbackProviderId: ProviderId;
+    fallbackModel: string;
+    prompt: string;
+  }): Promise<void> {
+    if (!this.tabManager) {
+      throw new Error('Chat view is not ready.');
+    }
+
+    if (options.conversationId) {
+      // findConversationAcrossViews covers both this view and any split view
+      // that already hosts the work-order tab. When neither does (closed tab,
+      // restart, etc.), openConversation restores from saved history — it
+      // opens a new tab when canCreateTab is true and otherwise reloads the
+      // active tab in place. We deliberately skip the canCreateTab guard
+      // because startTaskRunInFreshTab would also hit the tab cap, so the
+      // user would get a "tab limit reached" failure instead of the commit
+      // prompt firing into the conversation they just accepted.
+      let cross = this.plugin.findConversationAcrossViews(options.conversationId);
+      if (!cross) {
+        await this.tabManager.openConversation(options.conversationId, {
+          preferNewTab: true,
+        });
+        cross = this.plugin.findConversationAcrossViews(options.conversationId);
+      }
+      if (cross) {
+        const ownerTabManager =
+          cross.view === this ? this.tabManager : cross.view.getTabManager();
+        if (ownerTabManager) {
+          await ownerTabManager.switchToTab(cross.tabId);
+          const ownerTab = ownerTabManager.getTab(cross.tabId);
+          const ic = ownerTab?.controllers.inputController;
+          if (!ic) {
+            throw new Error('Chat tab is missing an input controller.');
+          }
+          await ic.sendMessage({ content: options.prompt });
+          return;
+        }
+      }
+    }
+
+    const result = await this.startTaskRunInFreshTab({
+      providerId: options.fallbackProviderId,
+      model: options.fallbackModel,
+      prompt: options.prompt,
+    });
+    if (result.status === 'failed' && result.error) {
+      throw new Error(result.error);
+    }
+  }
+
   private handleTabClick(tabId: TabId): void {
     const switched = this.tabManager?.switchToTab(tabId);
     if (switched) {

@@ -152,6 +152,14 @@ export type TranslationKey =
   | 'tasks.run.needsProvider'
   | 'tasks.run.needsModel'
   | 'tasks.run.templateProblems'
+  | 'tasks.commitOnAccept.title'
+  | 'tasks.commitOnAccept.bodyOne'
+  | 'tasks.commitOnAccept.bodyMany'
+  | 'tasks.commitOnAccept.dontAsk'
+  | 'tasks.commitOnAccept.skip'
+  | 'tasks.commitOnAccept.commitAndPush'
+  | 'tasks.commitOnAccept.failed'
+  | 'tasks.commitOnAccept.settingsSaveFailed'
 
   // Chat - Tabs (Q-1 chunk 13)
   | 'chat.tab.createFailed'
