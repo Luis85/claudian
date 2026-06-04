@@ -84,13 +84,18 @@ export class QuickActionsModal extends Modal {
   }
 
   private runFirstMatch(): void {
-    const filtered = this.applyFilter(this.actions);
-    const first = filtered[0];
+    const first = this.applyFilteredOrder()[0];
     if (!first) {
       return;
     }
     this.callbacks.onRun(first);
     this.close();
+  }
+
+  private applyFilteredOrder(): QuickAction[] {
+    const filtered = this.applyFilter(this.actions);
+    const isFiltering = this.filter.trim().length > 0;
+    return isFiltering ? filtered : this.sortFavoritesFirst(filtered);
   }
 
   private async refreshList(): Promise<void> {
@@ -117,8 +122,8 @@ export class QuickActionsModal extends Modal {
     this.listEl.removeClass('claudian-quick-actions-list--empty');
     this.searchWrapEl.removeClass('claudian-quick-actions-search--hidden');
 
-    const filtered = this.applyFilter(this.actions);
-    if (filtered.length === 0) {
+    const ordered = this.applyFilteredOrder();
+    if (ordered.length === 0) {
       this.listEl.createDiv({
         cls: 'claudian-quick-actions-empty-results',
         text: t('quickActions.modal.noResults'),
@@ -126,8 +131,6 @@ export class QuickActionsModal extends Modal {
       return;
     }
 
-    const isFiltering = this.filter.trim().length > 0;
-    const ordered = isFiltering ? filtered : this.sortFavoritesFirst(filtered);
     for (const action of ordered) {
       this.renderRow(action);
     }

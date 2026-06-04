@@ -144,6 +144,22 @@ describe('QuickActionsModal favorites', () => {
     expect((storage.setFavorite as jest.Mock)).not.toHaveBeenCalled();
   });
 
+  it('Enter runs the visually-first favorite when unfiltered', async () => {
+    const onRun = jest.fn();
+    const storage = makeStorage([
+      makeAction({ name: 'Zebra', filePath: 'Quick Actions/zebra.md' }),
+      makeAction({ name: 'B', favorite: true, favoriteRank: 2, filePath: 'Quick Actions/b.md' }),
+      makeAction({ name: 'A', favorite: true, favoriteRank: 1, filePath: 'Quick Actions/a.md' }),
+    ]);
+    const modal = new QuickActionsModal({} as App, { storage, onRun });
+    modal.open();
+    await flush();
+
+    (modal as any).runFirstMatch();
+
+    expect(onRun).toHaveBeenCalledWith(expect.objectContaining({ name: 'A' }));
+  });
+
   it('shows save-failed notice when setFavorite rejects', async () => {
     const storage = makeStorage([
       makeAction({ name: 'B', filePath: 'Quick Actions/b.md' }),
