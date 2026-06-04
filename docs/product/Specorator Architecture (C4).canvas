@@ -329,7 +329,7 @@
       "width": 360,
       "height": 180,
       "color": "1",
-      "text": "**Egress allowlist & network ledger** 🟥\nWeb / API only against an allowlist. Visible network categories."
+      "text": "**Egress controls & network ledger** 🟥\nDefault-off network tools; deny egress *tools* where a gate exists; visible ledger. *Not a firewall — delegated CLIs can open their own sockets.*"
     },
     {
       "id": "v_note",

@@ -48,9 +48,9 @@ Keep the hexagonal **ports** below — they are the harness's "modular, switchab
 
 Index Markdown notes from the current vault and enable semantic question answering with source citations.
 
-The MVP must support: manual vault indexing · Markdown parsing and semantic chunking · frontmatter extraction · embedding generation (pluggable; default in-renderer) · local vector storage · keyword index · hybrid retrieval · chat-style query command · source citations as Obsidian links · strict TypeScript · unit-testable domain services.
+The **full system** (all phases) must support: manual vault indexing · Markdown parsing and semantic chunking · frontmatter extraction · embedding generation (pluggable; default in-renderer) · local vector storage · keyword index · hybrid retrieval · chat-style query command · source citations as Obsidian links · strict TypeScript · unit-testable domain services. **Phase 1 ships only the keyword-only slice** (keyword index + grounded answer + citations — no embeddings/vector store/hybrid); see the MVP-slice callout in §0.
 
-Non-goals for MVP: multi-user sync · cloud backend (BYOK is opt-in, not default) · agent workflows (the agentic loop stays delegated — RAG only *feeds* it) · automatic note modification · PDF/image ingestion · mobile support for the native (LanceDB/Ollama) profile · LangChain/LlamaIndex dependency.
+Non-goals (any phase): multi-user sync · cloud backend (BYOK is opt-in, not default) · agent workflows (the agentic loop stays delegated — RAG only *feeds* it) · automatic note modification · PDF/image ingestion · mobile support for the native (LanceDB/Ollama) profile · LangChain/LlamaIndex dependency.
 
 ---
 
