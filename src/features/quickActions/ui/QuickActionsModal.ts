@@ -372,6 +372,7 @@ export class QuickActionsModal extends Modal {
     new QuickActionEditorModal(this.app, existing, async (action) => {
       const filePath = await this.callbacks.storage.save(action);
       action.filePath = filePath;
+      this.callbacks.onFavoritesChanged?.();
       await this.refreshList();
     }).open();
   }
@@ -382,6 +383,7 @@ export class QuickActionsModal extends Modal {
     }
     try {
       await this.callbacks.storage.delete(action.filePath);
+      this.callbacks.onFavoritesChanged?.();
       await this.refreshList();
     } catch {
       new Notice(t('quickActions.modal.deleteFailed'));

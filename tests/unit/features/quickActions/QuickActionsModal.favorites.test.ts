@@ -309,4 +309,96 @@ describe('QuickActionsModal favorites', () => {
 
     expect(onFavoritesChanged).not.toHaveBeenCalled();
   });
+
+  it('calls onFavoritesChanged after deleting an action', async () => {
+    const onFavoritesChanged = jest.fn();
+    const storage = makeStorage([
+      makeAction({ name: 'A', favorite: true, favoriteRank: 1, filePath: 'Quick Actions/a.md' }),
+    ]);
+    const modal = new QuickActionsModal({} as App, {
+      storage,
+      onRun: jest.fn(),
+      onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
+      aggregator: NOOP_AGGREGATOR,
+      onFavoritesChanged,
+    });
+    modal.open();
+    await flush();
+
+    const deleteButtons = Array.from(
+      modal['contentEl'].querySelectorAll('.claudian-quick-action-actions button'),
+    ).filter((b: any) => b.textContent === 'common.delete' || b.textContent === 'Delete');
+    (deleteButtons[0] as HTMLButtonElement).click();
+    await flush();
+
+    expect(onFavoritesChanged).toHaveBeenCalled();
+  });
+
+  it('does not call onFavoritesChanged when delete fails', async () => {
+    const onFavoritesChanged = jest.fn();
+    const storage = makeStorage([
+      makeAction({ name: 'A', favorite: true, favoriteRank: 1, filePath: 'Quick Actions/a.md' }),
+    ]);
+    (storage.delete as jest.Mock).mockRejectedValueOnce(new Error('vault locked'));
+    const modal = new QuickActionsModal({} as App, {
+      storage,
+      onRun: jest.fn(),
+      onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
+      aggregator: NOOP_AGGREGATOR,
+      onFavoritesChanged,
+    });
+    modal.open();
+    await flush();
+
+    const deleteButtons = Array.from(
+      modal['contentEl'].querySelectorAll('.claudian-quick-action-actions button'),
+    ).filter((b: any) => b.textContent === 'common.delete' || b.textContent === 'Delete');
+    (deleteButtons[0] as HTMLButtonElement).click();
+    await flush();
+
+    expect(onFavoritesChanged).not.toHaveBeenCalled();
+  });
+
+  it('calls onFavoritesChanged after editor onSave resolves successfully', async () => {
+    const onFavoritesChanged = jest.fn();
+    const storage = makeStorage([
+      makeAction({ name: 'A', favorite: true, favoriteRank: 1, filePath: 'Quick Actions/a.md' }),
+    ]);
+    const modal = new QuickActionsModal({} as App, {
+      storage,
+      onRun: jest.fn(),
+      onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
+      aggregator: NOOP_AGGREGATOR,
+      onFavoritesChanged,
+    });
+    modal.open();
+    await flush();
+
+    // Invoke the editor onSave callback directly to simulate a successful edit.
+    let capturedOnSave: ((action: QuickAction) => Promise<void>) | null = null;
+    const { QuickActionEditorModal } = jest.requireMock(
+      '@/features/quickActions/ui/QuickActionEditorModal',
+    );
+    // Replace the constructor to capture the onSave callback for this test.
+    const originalCtor = QuickActionEditorModal;
+    (jest.requireMock('@/features/quickActions/ui/QuickActionEditorModal') as any)
+      .QuickActionEditorModal = class {
+      constructor(_app: any, _existing: any, onSave: any) {
+        capturedOnSave = onSave;
+      }
+      open() {}
+    };
+
+    try {
+      (modal as any).openEditor(null);
+      expect(capturedOnSave).not.toBeNull();
+      await capturedOnSave!(makeAction({ name: 'NewAction', filePath: 'Quick Actions/new.md' }));
+      await flush();
+
+      expect(onFavoritesChanged).toHaveBeenCalled();
+    } finally {
+      (jest.requireMock('@/features/quickActions/ui/QuickActionEditorModal') as any)
+        .QuickActionEditorModal = originalCtor;
+    }
+  });
 });
