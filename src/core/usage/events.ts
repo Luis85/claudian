@@ -1,5 +1,4 @@
 import type { ProviderId } from '../providers/types';
-
 import type { UsageEntryKind } from './types';
 
 export interface UsageEventMap {

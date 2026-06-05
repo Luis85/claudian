@@ -1,5 +1,4 @@
 import type { ProviderId } from '../providers/types';
-
 import type { UsageEntryKind, UsageKey } from './types';
 
 const QUICK_ACTION_PROVIDER_SLOT = '_';
