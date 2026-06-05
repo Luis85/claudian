@@ -1,5 +1,7 @@
+import { buildUsageInfo } from '../../../core/providers/usage';
 import type { StreamChunk } from '../../../core/types';
 import type { SDKToolUseResult } from '../../../core/types/diff';
+import { cursorModelContextWindow } from './cursorModelWindowCatalog';
 import {
   capCursorToolResultLength,
   normalizeCursorToolCompletion,
@@ -179,25 +181,6 @@ function extractAssistantThinking(record: Record<string, unknown>): string {
   return out;
 }
 
-// Best-effort per-model context windows. Sizes are approximate and matched by
-// case-insensitive substring; real numbers can be tuned later.
-export function cursorContextWindowForModel(model: string | undefined): number {
-  const id = (model ?? '').toLowerCase();
-  if (id.includes('gemini')) {
-    return 1_000_000;
-  }
-  if (id.includes('gpt')) {
-    return 400_000;
-  }
-  if (id.includes('claude') || id.includes('sonnet') || id.includes('opus')) {
-    return 200_000;
-  }
-  if (id.includes('composer') || id.includes('sonic') || id.includes('grok')) {
-    return 200_000;
-  }
-  return 200_000;
-}
-
 function numericField(source: unknown, keys: string[]): number | undefined {
   if (!source || typeof source !== 'object') {
     return undefined;
@@ -215,8 +198,10 @@ function numericField(source: unknown, keys: string[]): number | undefined {
 export interface CursorUsage {
   inputTokens: number;
   outputTokens?: number;
+  cacheReadInputTokens?: number;
   contextTokens: number;
   contextWindow: number;
+  contextWindowIsAuthoritative: boolean;
   percentage: number;
 }
 
@@ -233,16 +218,13 @@ export function extractCursorUsage(
         ? ((rec.message as Record<string, unknown>).usage as unknown)
         : undefined;
 
-  const input =
-    numericField(usageObj, ['input_tokens', 'inputTokens']) ?? undefined;
-  const output =
-    numericField(usageObj, ['output_tokens', 'outputTokens']) ?? undefined;
+  const input = numericField(usageObj, ['input_tokens', 'inputTokens']);
+  const output = numericField(usageObj, ['output_tokens', 'outputTokens']);
   const total =
     numericField(usageObj, ['total_tokens', 'totalTokens']) ??
     numericField(rec, ['num_tokens', 'tokens']);
   const cacheRead = numericField(usageObj, ['cache_read_input_tokens']);
 
-  // Prefer an explicit total; otherwise sum the pieces we found.
   let contextTokens = 0;
   if (typeof total === 'number') {
     contextTokens = total;
@@ -253,10 +235,15 @@ export function extractCursorUsage(
   const explicitWindow =
     numericField(usageObj, ['context_window', 'contextWindow', 'context_size']) ??
     numericField(rec, ['context_window', 'contextWindow', 'context_size']);
+  const catalogWindow = cursorModelContextWindow(model);
+  const isAuthoritative =
+    typeof explicitWindow === 'number' && explicitWindow > 0
+      ? true
+      : catalogWindow > 0;
   const contextWindow =
     typeof explicitWindow === 'number' && explicitWindow > 0
       ? explicitWindow
-      : cursorContextWindowForModel(model);
+      : catalogWindow;
 
   const inputTokens = typeof input === 'number' ? input : 0;
   const percentage =
@@ -264,10 +251,15 @@ export function extractCursorUsage(
       ? Math.max(0, Math.min(100, Math.round((contextTokens / contextWindow) * 100)))
       : 0;
 
-  const result: CursorUsage = { inputTokens, contextTokens, contextWindow, percentage };
-  if (typeof output === 'number') {
-    result.outputTokens = output;
-  }
+  const result: CursorUsage = {
+    inputTokens,
+    contextTokens,
+    contextWindow,
+    contextWindowIsAuthoritative: isAuthoritative,
+    percentage,
+  };
+  if (typeof output === 'number') result.outputTokens = output;
+  if (typeof cacheRead === 'number') result.cacheReadInputTokens = cacheRead;
   return result;
 }
 
@@ -394,17 +386,25 @@ export class CursorNdjsonStreamReducer {
     }
 
     if (type === 'usage') {
+      if (!this.model) {
+        // Model not yet stamped from the `system` event — drop this usage event;
+        // we'll emit the next one once `system.model` is observed.
+        return { chunks: [], sessionId };
+      }
       const usage = extractCursorUsage(rec, this.model);
       return {
         chunks: [
           {
             type: 'usage',
-            usage: {
+            usage: buildUsageInfo({
+              model: this.model,
               inputTokens: usage.inputTokens,
-              contextWindow: usage.contextWindow,
+              outputTokens: usage.outputTokens,
+              cacheReadInputTokens: usage.cacheReadInputTokens,
               contextTokens: usage.contextTokens,
-              percentage: usage.percentage,
-            },
+              contextWindow: usage.contextWindow,
+              contextWindowIsAuthoritative: usage.contextWindowIsAuthoritative,
+            }),
             sessionId: sessionId ?? null,
           },
         ],
@@ -486,16 +486,25 @@ export class CursorNdjsonStreamReducer {
           sessionId,
         };
       }
+      if (!this.model) {
+        return {
+          chunks: [{ type: 'done' }],
+          sessionId,
+        };
+      }
       const usage = extractCursorUsage(rec, this.model);
       const chunks: StreamChunk[] = [
         {
           type: 'usage',
-          usage: {
+          usage: buildUsageInfo({
+            model: this.model,
             inputTokens: usage.inputTokens,
-            contextWindow: usage.contextWindow,
+            outputTokens: usage.outputTokens,
+            cacheReadInputTokens: usage.cacheReadInputTokens,
             contextTokens: usage.contextTokens,
-            percentage: usage.percentage,
-          },
+            contextWindow: usage.contextWindow,
+            contextWindowIsAuthoritative: usage.contextWindowIsAuthoritative,
+          }),
           sessionId: sessionId ?? null,
         },
         { type: 'done' },
