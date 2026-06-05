@@ -1,3 +1,4 @@
+import type { ChatTabReservations } from '../../../core/chatTabReservations';
 import type { TaskLedgerEntry, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
 import type { TaskExecutionSurface } from './TaskExecutionSurface';
@@ -23,6 +24,10 @@ export interface TaskRunCoordinatorDeps {
   /** Optional shared in-flight set so coordinators in different Agent Board
    * panes observe the same active runs and never double-launch a card. */
   activeRuns?: Set<string>;
+  /** Optional shared chat-tab reservation ledger. A run reserves a tab slot at
+   * launch so concurrent panes don't double-book the same free tabs; the surface
+   * releases it once the tab is created. */
+  reservations?: ChatTabReservations;
 }
 
 export type TaskRunResult =
@@ -54,6 +59,11 @@ export class TaskRunCoordinator {
     }
 
     this.activeRuns.add(id);
+    // Reserve the chat tab synchronously now, while the queue runner is still
+    // mid-launch, so another pane's free-tab gate sees it before the async tab
+    // creation lands. The surface releases it the moment the tab is created;
+    // the finally below is the safety net for paths that never open one.
+    const reservation = this.deps.reservations?.reserve();
     try {
       const startedAt = this.deps.now();
       await this.deps.writeTaskStatus(task, { status: 'running', timestamp: startedAt });
@@ -64,7 +74,10 @@ export class TaskRunCoordinator {
       });
 
       const prompt = (this.deps.renderPrompt ?? renderTaskPrompt)(task);
-      const handle = await this.deps.executionSurface.startTaskRun(task, { prompt });
+      const handle = await this.deps.executionSurface.startTaskRun(task, {
+        prompt,
+        tabReservation: reservation,
+      });
 
       const finishedAt = this.deps.now();
       const runFields = {
@@ -115,6 +128,9 @@ export class TaskRunCoordinator {
       });
       return { ok: true, status: 'review' };
     } finally {
+      // Idempotent with the surface's release at tab creation; covers early
+      // failures (provider/guard errors) that never reach the surface.
+      reservation?.release();
       this.activeRuns.delete(id);
     }
   }

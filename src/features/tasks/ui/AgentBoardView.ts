@@ -57,6 +57,9 @@ export class AgentBoardView extends ItemView {
       // Shared across every open board so a manual run here is visible to other
       // panes' queue runners and the same card never launches twice.
       activeRuns: this.plugin.taskActiveRuns,
+      // Shared chat-tab reservations so a launch in one pane is counted by every
+      // pane's free-tab gate before the async tab creation lands.
+      reservations: this.plugin.chatTabReservations,
       writeTaskStatus: async (task, options) => {
         await this.applyNoteChange(task.path, (content) => this.noteStore.writeStatus(content, options));
         this.lastRunStatus.set(task.frontmatter.id, options.status);

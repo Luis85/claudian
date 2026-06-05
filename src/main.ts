@@ -17,6 +17,7 @@ import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
 import { SharedStorageService } from './app/storage/SharedStorageService';
 import { PluginViewActivator } from './app/views/PluginViewActivator';
 import type { SharedAppStorage } from './core/bootstrap/storage';
+import { ChatTabReservations } from './core/chatTabReservations';
 import { EventBus } from './core/events/EventBus';
 import { formatLogEntries } from './core/logging/formatLogEntries';
 import { Logger } from './core/logging/Logger';
@@ -104,6 +105,9 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   /** The queue's single global control state (pause/halt/failure-count), shared
    * by every board's runner. Pause is restored from config on first board mount. */
   readonly queueControl: QueueControlState = createQueueControlState();
+  /** Chat tabs queue runs have committed to opening but not yet created. Shared
+   * so concurrent Agent Board panes can't double-book the same free tabs. */
+  readonly chatTabReservations = new ChatTabReservations();
   lastKnownTabManagerState: AppTabManagerState | null = null;
 
   async onload() {

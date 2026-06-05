@@ -8,6 +8,7 @@ function createPlugin(opts: {
   tabManager?: { canCreateTab?: () => boolean; getTabCount?: () => number } | null;
   lastKnownOpenTabCount?: number;
   maxTabs?: number;
+  pendingReservations?: number;
   placement?: 'main-tab' | 'left-sidebar' | 'right-sidebar';
 } = {}) {
   const leaves = opts.existingViewLeaves ?? [];
@@ -33,6 +34,7 @@ function createPlugin(opts: {
     },
     getView: jest.fn().mockReturnValue(view),
     lastKnownTabManagerState: { openTabs: new Array(opts.lastKnownOpenTabCount ?? 0).fill({}) },
+    chatTabReservations: { pending: opts.pendingReservations ?? 0 },
     // Plugin delegates activateView to the activator; mirror that here so
     // ensureViewOpen's plugin.activateView() call lands on the activator's method.
     activateView: jest.fn(),
@@ -135,6 +137,20 @@ describe('PluginViewActivator.getTabSlotUsage', () => {
     const { plugin } = createPlugin({ lastKnownOpenTabCount: 0, maxTabs: 5 });
     const activator = new PluginViewActivator(plugin);
     expect(activator.getTabSlotUsage()).toEqual({ used: 1, max: 5 });
+  });
+
+  it('adds pending chat-tab reservations on top of the live count', () => {
+    // A queue run reserves a slot the instant it launches, before its tab
+    // exists. A second pane's free-tab gate must see that reservation, or both
+    // panes read the same free count and over-launch into the cap.
+    const { plugin } = createPlugin({
+      hasLiveView: true,
+      tabManager: { getTabCount: () => 1 },
+      pendingReservations: 2,
+      maxTabs: 5,
+    });
+    const activator = new PluginViewActivator(plugin);
+    expect(activator.getTabSlotUsage()).toEqual({ used: 3, max: 5 });
   });
 
   it('does not reserve a fallback tab when a view is mounted with zero tabs', () => {

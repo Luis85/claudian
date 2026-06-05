@@ -86,13 +86,20 @@ export class PluginViewActivator {
    * will occupy and can't launch one run too many into the cap; a mounted view
    * already ran that path, so its live count is authoritative. `max` is clamped
    * to the same bounds the tab manager enforces.
+   *
+   * Pending chat-tab reservations are added on top: a queue run reserves a slot
+   * the instant it launches, before its tab exists, so a second Agent Board pane
+   * counts that committed-but-uncreated tab and won't over-launch into the cap.
    */
   getTabSlotUsage(): { used: number; max: number } {
     const tabManager = this.plugin.getView()?.getTabManager();
-    const used = tabManager
+    const live = tabManager
       ? tabManager.getTabCount()
       : Math.max(this.getLastKnownOpenTabCount(), 1);
-    return { used, max: this.getMaxTabsLimit() };
+    return {
+      used: live + this.plugin.chatTabReservations.pending,
+      max: this.getMaxTabsLimit(),
+    };
   }
 
   async runNextReadyWorkOrder(): Promise<void> {

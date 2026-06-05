@@ -1,6 +1,7 @@
 import type { WorkspaceLeaf } from 'obsidian';
 import { ItemView, Notice, Scope, setIcon } from 'obsidian';
 
+import type { ChatTabReservation } from '../../core/chatTabReservations';
 import { GIT_COMMIT_PROMPT } from '../../core/prompt/gitCommit';
 import { getHiddenProviderCommandSet } from '../../core/providers/commands/hiddenCommands';
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
@@ -670,6 +671,7 @@ export class ClaudianView extends ItemView {
     providerId: ProviderId;
     model: string;
     prompt: string;
+    tabReservation?: ChatTabReservation;
   }): Promise<{
     status: 'completed' | 'failed' | 'canceled';
     conversationId: string | null;
@@ -678,6 +680,7 @@ export class ClaudianView extends ItemView {
     error?: string;
   }> {
     if (!this.tabManager) {
+      options.tabReservation?.release();
       return { status: 'failed', conversationId: null, sidepanelTabId: null, finalAssistantContent: '', error: 'Chat view is not ready.' };
     }
 
@@ -685,6 +688,10 @@ export class ClaudianView extends ItemView {
       providerId: options.providerId,
       model: options.model,
     });
+    // The tab now counts in the live tab count (or creation failed), so this
+    // run no longer needs its pending reservation — release it before the turn
+    // streams so other panes' gates see the freed/used slot immediately.
+    options.tabReservation?.release();
     if (!tab) {
       return {
         status: 'failed',
