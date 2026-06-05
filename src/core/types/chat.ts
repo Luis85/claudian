@@ -184,24 +184,37 @@ export type StreamChunk =
 /**
  * Context window usage information.
  *
- * `contextTokens` is the provider-computed total token count in the context window.
- * Claude sets it to `inputTokens + cacheCreationInputTokens + cacheReadInputTokens`;
- * other providers should set it to their equivalent total.
+ * `contextTokens` is the provider-reported context-window occupancy after the
+ * current turn (i.e. what the next turn will see). Providers may compute it
+ * differently (Claude: `inputTokens + cacheCreationInputTokens + cacheReadInputTokens`;
+ * Codex: `tokenUsage.last.inputTokens + outputTokens + reasoningOutputTokens`;
+ * Opencode/Cursor: `usage_update.used` or `total_tokens`). Feature code should
+ * display `contextTokens` directly and never recompute it from the breakdown.
  *
- * Cache token fields are optional — only providers with prompt caching (Claude)
- * populate them. Feature code should use `contextTokens` for display, not recompute
- * from the cache breakdown.
+ * Cache token fields are populated only by providers with prompt caching (Claude,
+ * Opencode). Output/reasoning/thought are populated when the wire emits them.
+ * `costUsd` is populated only when the provider emits cost on the wire
+ * (currently Opencode via `AcpUsageUpdate.cost`); other providers leave it
+ * unset and rely on plugin-side estimation downstream.
  */
 export interface UsageInfo {
   model?: string;
   inputTokens: number;
-  /** Prompt caching: tokens used to create cache entries. Claude-specific; 0 if omitted. */
+  /** Assistant tokens emitted this turn. Optional; 0 if omitted. */
+  outputTokens?: number;
+  /** Reasoning tokens billed separately (Codex `reasoningOutputTokens`). 0 if omitted. */
+  reasoningOutputTokens?: number;
+  /** Thinking/thought tokens reported separately by some providers (Opencode). 0 if omitted. */
+  thoughtTokens?: number;
+  /** Prompt caching: tokens used to create cache entries. 0 if omitted. */
   cacheCreationInputTokens?: number;
-  /** Prompt caching: tokens read from cache. Claude-specific; 0 if omitted. */
+  /** Prompt caching: tokens read from cache. 0 if omitted. */
   cacheReadInputTokens?: number;
   contextWindow: number;
   /** True when `contextWindow` came from provider runtime data instead of a local heuristic. */
   contextWindowIsAuthoritative?: boolean;
   contextTokens: number;
   percentage: number;
+  /** Estimated USD cost of this turn (Opencode wire, plus optional plugin-side estimate). */
+  costUsd?: number;
 }
