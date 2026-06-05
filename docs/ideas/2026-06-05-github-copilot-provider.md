@@ -272,9 +272,14 @@ A realistic `capabilities.ts` is therefore strong:
   Claudian resolves the binary and lets the SDK/CLI manage auth — exactly how it
   treats other CLIs. Token precedence for headless use:
   `COPILOT_GITHUB_TOKEN` > `GH_TOKEN` > `GITHUB_TOKEN`.
-- **User's own entitlement required.** Every path requires the end user's own
-  active Copilot subscription (the free tier counts; BYOK with another provider's
-  key is also possible). The plugin grants no access of its own.
+- **Entitlement (scoped to GitHub-hosted Copilot).** Using GitHub-hosted Copilot
+  models requires the end user's own active Copilot subscription (the free tier
+  counts) plus a `copilot login`. The plugin grants no access of its own.
+- **BYOK is a separate, login-free mode.** With provider env vars (the user's own
+  OpenAI / Anthropic / Azure key) the CLI connects directly to that provider and
+  **GitHub authentication is not required** — only GitHub-hosted features (the
+  Copilot model catalog, GitHub MCP) become unavailable. Onboarding must therefore
+  not hard-require a Copilot subscription or `copilot login` when BYOK is configured.
 - **Licensing / packaging constraint.** The `copilot` CLI ships under a **custom
   GitHub Copilot CLI License** that prohibits modifying it or redistributing it on
   a standalone basis; only `@github/copilot-sdk` is MIT. Claudian must therefore
@@ -290,8 +295,8 @@ Cursor/Codex/Opencode. Three things the user needs:
 
 | Requirement | Avoidable? | Why |
 |---|---|---|
-| A GitHub Copilot subscription (their own; free tier counts) | ❌ never | the plugin uses the user's entitlement, not its own |
-| A one-time GitHub sign-in | ❌ never | someone has to authenticate |
+| A GitHub Copilot subscription (their own; free tier counts) | ❌ for Copilot models | the plugin uses the user's entitlement, not its own — **unless BYOK** (below) |
+| A one-time GitHub sign-in | ❌ for Copilot models | someone has to authenticate — **skipped in BYOK mode** |
 | The `copilot` CLI present | ⚠️ not cleanly | the only no-CLI chat path is the gray-area API; bundling a native binary doesn't fit a plugin |
 
 **Smoothest realistic flow** (same shape as the `install-codex` / `install-cursor`
@@ -309,6 +314,12 @@ So: **one install + one sign-in**, then seamless. We can match Pierrad's friendl
 `copilot login` uses the same flow) — while staying within GitHub's terms. The only
 thing we deliberately give up versus Pierrad's chat is "zero CLI install," which is
 the price of not using the bannable direct-API route.
+
+**BYOK alternative:** a user with their own OpenAI / Anthropic / Azure key can set
+the CLI's provider env vars and skip *both* the Copilot subscription and the GitHub
+login — the CLI talks directly to that provider (GitHub-hosted features like the
+Copilot model catalog and GitHub MCP are then unavailable). Onboarding should detect
+BYOK config and not force `copilot login`.
 
 **Scope note:** because the Language Server is out of scope, Claudian's Copilot
 integration is **chat/agent only — no Copilot inline autocomplete while typing
