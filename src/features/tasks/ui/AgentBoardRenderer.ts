@@ -17,6 +17,7 @@ export interface AgentBoardRenderCallbacks {
   getSkipReason?: (task: TaskSpec) => string | null;
   /** Dismiss a card's queue skip chip. */
   onAckSkip?: (task: TaskSpec) => void;
+  onContextMenu(task: TaskSpec, event: MouseEvent): void;
 }
 
 export interface AgentBoardRenderState {
@@ -204,6 +205,10 @@ export class AgentBoardRenderer {
     }
 
     card.addEventListener('click', () => callbacks.onOpenDetail(task));
+    card.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      callbacks.onContextMenu(task, event);
+    });
 
     const actions = card.createDiv({ cls: 'claudian-agent-board-card-actions' });
     if (task.frontmatter.status === 'inbox') {

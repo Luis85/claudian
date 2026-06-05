@@ -167,6 +167,10 @@ The runtime picks a chat tab for you:
 
 When you opened the picker by right-clicking a file or folder, the file/folder pill is attached to the target tab **after** the tab switch, so it survives the new-tab welcome reset.
 
+### Right-click on a work-order card
+
+The Agent Board also surfaces favorites and the picker via right-click on any work-order card. The favorites and the **Quick actions** entry appear below **Open note** and **Open conversation**, run against the work-order note as the target file, and are hidden while the work order is **running** or its note path no longer resolves. `needs_input` and `needs_approval` keep them. See [[agent-board#Right-click menu]] for the full menu layout.
+
 ### Disabled providers
 
 A skill belonging to a provider you have disabled in settings is dimmed in the list and tagged with a small **disabled** badge. Clicking it shows a notice instead of sending — the provider must be enabled (Settings → Claudian → its tab) before the skill can run. The check happens at the moment you click, so toggling a provider while the picker is open is honored without reopening.

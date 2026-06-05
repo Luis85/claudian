@@ -1,0 +1,44 @@
+/* Commit & push? confirmation modal (post-accept).
+ *
+ * Default Obsidian modal stacks elements with no breathing room. Loosen
+ * spacing so the body copy, the don't-ask checkbox, and the action buttons
+ * read as distinct rows. Mirrors the rhythm used by the instruction modal.
+ */
+
+.claudian-commit-on-accept-modal {
+  max-width: 460px;
+}
+
+.claudian-commit-on-accept-modal .modal-content > p {
+  margin: 0 0 18px;
+  line-height: 1.5;
+  color: var(--text-normal);
+}
+
+.claudian-commit-on-accept-dont-ask {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 20px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.claudian-commit-on-accept-dont-ask input[type='checkbox'] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.claudian-commit-on-accept-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.claudian-commit-on-accept-buttons button {
+  padding: 6px 14px;
+  font-size: 13px;
+}
