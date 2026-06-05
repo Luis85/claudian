@@ -310,7 +310,10 @@ function samePromptUsage(a: PromptUsageSnapshot, b: PromptUsageSnapshot): boolea
 }
 
 function buildUsageInfo(promptUsage: PromptUsageSnapshot, options?: TransformOptions): UsageInfo {
-  const model = options?.intendedModel?.trim() || 'claude-sonnet-4';
+  // Fall back to the canonical short id used in `DEFAULT_CLAUDE_MODELS`
+  // (`src/providers/claude/types/models.ts`) so the emitted UsageInfo.model
+  // round-trips through downstream lookups (settings, pricing, tooltips).
+  const model = options?.intendedModel?.trim() || 'sonnet';
   const contextWindow = getContextWindowSize(model, options?.customContextLimits);
   return sharedBuildUsageInfo({
     model,

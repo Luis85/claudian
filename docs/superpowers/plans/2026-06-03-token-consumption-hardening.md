@@ -1,7 +1,7 @@
 ---
 title: Token consumption hardening — unified UsageInfo, persisted, recoverable, tested
 date: 2026-06-03
-status: open
+status: done
 scope: src/core/types, src/core/providers, src/providers/{claude,codex,opencode,cursor}, src/features/chat
 parent: "[[Chat]]"
 ---
@@ -31,12 +31,12 @@ parent: "[[Chat]]"
 
 ## Pre-flight (do once before Task 1)
 
-- [ ] **Verify the baseline is green.**
+- [x] **Verify the baseline is green.**
 
   Run: `npm run typecheck && npm run lint && npm run test && npm run build`
   Expected: all four exit 0. If any fails, fix the failure first — do not start against a red baseline.
 
-- [ ] **Create the worktree if not already in one.** See `superpowers:using-git-worktrees`. Branch name: `core/token-consumption-hardening`. **Do not place the worktree under the Obsidian vault directory** — nested vaults confuse Obsidian's plugin loader. Place it outside the vault root.
+- [x] **Create the worktree if not already in one.** See `superpowers:using-git-worktrees`. Branch name: `core/token-consumption-hardening`. **Do not place the worktree under the Obsidian vault directory** — nested vaults confuse Obsidian's plugin loader. Place it outside the vault root.
 
 ---
 
@@ -552,9 +552,11 @@ import {
 
 describe('codexModelContextWindow', () => {
   it('exact-match returns the configured window', () => {
-    expect(codexModelContextWindow('gpt-5.3-codex')).toBe(200_000);
-    expect(codexModelContextWindow('gpt-5.2')).toBe(200_000);
-    expect(codexModelContextWindow('gpt-5.3-codex-spark')).toBe(200_000);
+    // Real wire values captured from ~/.codex/sessions/**/*.jsonl model_info events.
+    // The earlier draft of this plan said "200k everywhere"; preserved on Task 5.
+    expect(codexModelContextWindow('gpt-5.3-codex')).toBe(400_000);
+    expect(codexModelContextWindow('gpt-5.2')).toBe(400_000);
+    expect(codexModelContextWindow('gpt-5.3-codex-spark')).toBe(128_000);
   });
 
   it('returns 0 for unknown ids', () => {
@@ -588,10 +590,12 @@ interface CatalogEntry {
 
 const DEFAULT_WINDOW = 200_000;
 
+// Real wire values from ~/.codex/sessions/**/*.jsonl model_info events;
+// gpt-5.3-codex-spark deliberately ships with a smaller 128k window.
 const CATALOG: Readonly<Record<string, CatalogEntry>> = {
-  'gpt-5.2': { contextWindow: DEFAULT_WINDOW },
-  'gpt-5.3-codex': { contextWindow: DEFAULT_WINDOW },
-  'gpt-5.3-codex-spark': { contextWindow: DEFAULT_WINDOW },
+  'gpt-5.2': { contextWindow: 400_000 },
+  'gpt-5.3-codex': { contextWindow: 400_000 },
+  'gpt-5.3-codex-spark': { contextWindow: 128_000 },
 };
 
 export function codexModelContextWindow(modelId: string | undefined): number {

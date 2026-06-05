@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 
-import type { StreamChunk, UsageInfo } from '../../../core/types/chat';
+import { buildUsageInfo as sharedBuildUsageInfo } from '../../../core/providers/usage';
+import type { StreamChunk } from '../../../core/types/chat';
 import { findCodexSessionFile } from '../history/CodexHistoryStore';
 import {
   isCodexToolOutputError,
@@ -12,7 +13,7 @@ import {
   normalizeCodexToolResult,
   parseCodexArguments,
 } from '../normalization/codexToolNormalization';
-import { CODEX_DEFAULT_CONTEXT_WINDOW,codexModelContextWindow } from './codexModelWindowCatalog';
+import { CODEX_DEFAULT_CONTEXT_WINDOW, codexModelContextWindow } from './codexModelWindowCatalog';
 
 // ---------------------------------------------------------------------------
 // Model-specific context windows
@@ -130,10 +131,19 @@ export interface SessionTailState {
   emittedDoneByTurn: Set<string>;
   emittedUsageByTurn: Set<string>;
   callEnrichment: Map<string, CallEnrichmentData>;
+  /**
+   * Optional accessor providing the active Codex model at usage-emission time.
+   * The dormant `CodexFileTailEngine` path threads this through so the
+   * `task_complete` arm can route the chunk through `sharedBuildUsageInfo`,
+   * which requires a non-empty model. If absent or returning empty string, the
+   * tail silently drops the usage chunk (matches Cursor mapper behavior).
+   */
+  getActiveModel?: () => string;
 }
 
 export function createSessionTailState(
   fallbackContextWindow: number = CODEX_DEFAULT_CONTEXT_WINDOW,
+  getActiveModel?: () => string,
 ): SessionTailState {
   return {
     responseItemState: {
@@ -151,6 +161,7 @@ export function createSessionTailState(
     emittedDoneByTurn: new Set(),
     emittedUsageByTurn: new Set(),
     callEnrichment: new Map(),
+    ...(getActiveModel ? { getActiveModel } : {}),
   };
 }
 
@@ -256,8 +267,21 @@ export function mapEventMsgEvent(
 
       if (!state.emittedUsageByTurn.has(turnId)) {
         const pending = state.pendingUsageByTurn.get(turnId);
-        if (pending) {
-          const usage = buildUsageInfo(pending);
+        const model = state.getActiveModel?.().trim() ?? '';
+        if (pending && model) {
+          // Route through the shared builder so every emitted UsageInfo
+          // satisfies the cross-provider contract matrix (model truthy,
+          // percentage clamped, optional fields finite/non-negative).
+          const usage = sharedBuildUsageInfo({
+            model,
+            inputTokens: pending.inputTokens,
+            outputTokens: pending.outputTokens > 0 ? pending.outputTokens : undefined,
+            reasoningOutputTokens: pending.reasoningOutputTokens > 0 ? pending.reasoningOutputTokens : undefined,
+            cacheReadInputTokens: pending.cacheReadInputTokens > 0 ? pending.cacheReadInputTokens : undefined,
+            contextTokens: pending.contextTokens,
+            contextWindow: pending.contextWindow,
+            contextWindowIsAuthoritative: pending.contextWindowIsAuthoritative,
+          });
           chunks.push({ type: 'usage', usage, sessionId });
           state.emittedUsageByTurn.add(turnId);
         }
@@ -548,34 +572,6 @@ export function mapResponseItemEvent(
 }
 
 // ---------------------------------------------------------------------------
-// Usage builder
-// ---------------------------------------------------------------------------
-
-function buildUsageInfo(pending: {
-  inputTokens: number;
-  outputTokens: number;
-  reasoningOutputTokens: number;
-  cacheReadInputTokens: number;
-  contextTokens: number;
-  contextWindow: number;
-  contextWindowIsAuthoritative: boolean;
-}): UsageInfo {
-  const usage: UsageInfo = {
-    inputTokens: pending.inputTokens,
-    contextWindow: pending.contextWindow,
-    contextWindowIsAuthoritative: pending.contextWindowIsAuthoritative,
-    contextTokens: pending.contextTokens,
-    percentage: pending.contextWindow > 0
-      ? Math.min(100, Math.max(0, Math.round((pending.contextTokens / pending.contextWindow) * 100)))
-      : 0,
-  };
-  if (pending.outputTokens > 0) usage.outputTokens = pending.outputTokens;
-  if (pending.reasoningOutputTokens > 0) usage.reasoningOutputTokens = pending.reasoningOutputTokens;
-  if (pending.cacheReadInputTokens > 0) usage.cacheReadInputTokens = pending.cacheReadInputTokens;
-  return usage;
-}
-
-// ---------------------------------------------------------------------------
 // File-tail polling engine
 // ---------------------------------------------------------------------------
 
@@ -601,8 +597,9 @@ export class CodexFileTailEngine {
   constructor(
     private sessionsDir: string,
     private defaultContextWindow: number,
+    private getActiveModel?: () => string,
   ) {
-    this.tailState = createSessionTailState(defaultContextWindow);
+    this.tailState = createSessionTailState(defaultContextWindow, getActiveModel);
   }
 
   get turnCompleteEmitted(): boolean {
@@ -676,7 +673,7 @@ export class CodexFileTailEngine {
   }
 
   resetForNewTurn(): void {
-    this.tailState = createSessionTailState(this.defaultContextWindow);
+    this.tailState = createSessionTailState(this.defaultContextWindow, this.getActiveModel);
     this.pendingEvents = [];
     this._turnCompleteEmitted = false;
     this._usageEmitted = false;

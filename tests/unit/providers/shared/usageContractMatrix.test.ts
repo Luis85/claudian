@@ -1,7 +1,9 @@
 import { buildSDKMessage } from '@test/helpers/sdkMessages';
 
 import type { StreamChunk, UsageInfo } from '@/core/types';
+import { AcpSessionUpdateNormalizer } from '@/providers/acp/AcpSessionUpdateNormalizer';
 import { buildAcpUsageInfo } from '@/providers/acp/buildAcpUsageInfo';
+import type { AcpSessionUpdate } from '@/providers/acp/types';
 import {
   createTransformUsageState,
   transformSDKMessage,
@@ -94,7 +96,26 @@ describe('UsageInfo cross-provider contract matrix', () => {
     assertUsageInfoContract(usage);
   });
 
-  it('Opencode emits a contract-conformant UsageInfo', () => {
+  it('Opencode emits a contract-conformant UsageInfo via the ACP normalize→build pipeline', () => {
+    // OpencodeChatRuntime keeps its session-update handler private, so the
+    // matrix exercises the same two-stage pipeline the runtime uses:
+    //   1. AcpSessionUpdateNormalizer.normalize(wire update)  → normalized 'usage' event
+    //   2. buildAcpUsageInfo({ model, promptUsage, contextWindow }) → UsageInfo
+    // The runtime tracks `promptUsage` out-of-band (from `response.usage`, not
+    // from session/update events) so this test supplies it directly — the goal
+    // is to exercise the same shapes the runtime threads at emission time.
+    // Wiring a public end-to-end entry point on the runtime is tracked as a
+    // follow-up.
+    const normalizer = new AcpSessionUpdateNormalizer();
+    const wireUpdate: AcpSessionUpdate = {
+      sessionUpdate: 'usage_update',
+      size: 200_000,
+      used: 210,
+    };
+    const normalized = normalizer.normalize(wireUpdate);
+    expect(normalized.type).toBe('usage');
+    if (normalized.type !== 'usage') return;
+
     const usage = buildAcpUsageInfo({
       model: 'sonnet-via-opencode',
       promptUsage: {
@@ -105,7 +126,7 @@ describe('UsageInfo cross-provider contract matrix', () => {
         thoughtTokens: 10,
         totalTokens: 210,
       },
-      contextWindow: { size: 200_000, used: 210 },
+      contextWindow: normalized.usage,
     });
     expect(usage).not.toBeNull();
     assertUsageInfoContract(usage as UsageInfo);

@@ -112,6 +112,27 @@ Concurrent chat tabs are capped by **Settings → General → Display → Maximu
 
 ---
 
+## Context-usage meter
+
+The small bar next to the input shows the active conversation's context-window occupancy. Hover for the full tooltip.
+
+**Tooltip format:** `<used> / <window>` — for example `50k / 200k`. Token counts use these tiers:
+
+- `<1k`: raw integer (`500`).
+- `1k–10k`: one decimal (`1.3k`, `7.4k`).
+- `10k–1M`: integer k (`50k`, `170k`).
+- `≥1M`: one decimal M (`1.0M`, `1.5M`).
+
+**Cost suffix:** When the provider reports a per-turn cost in USD, the tooltip appends `· $<amount>` rounded to four decimals — e.g. `50k / 200k · $0.0042`. Only Opencode emits cost on the wire today; other providers omit the suffix.
+
+**Approaching-limit reminder:** Past 80% the tooltip appends ` (Approaching limit, run \`/compact\` to continue)` and the bar gains a warning style.
+
+**Persistence on cancel:** Cancelling a turn mid-stream still persists the last `usage` chunk received before the cancel, so the meter survives a re-open.
+
+**Recovery from history:** Re-opening a conversation whose `.specorator/sessions/<id>.meta.json` is missing recovers the most recent usage from the provider's own transcript (Claude `~/.claude/`, Codex `~/.codex/`, Opencode SQLite store, Cursor `~/.cursor/`).
+
+---
+
 ## Reference
 
 | Path / location | Notes |

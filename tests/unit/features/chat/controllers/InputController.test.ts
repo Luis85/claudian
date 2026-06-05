@@ -2137,7 +2137,10 @@ describe('InputController - Message Queue', () => {
     it('should persist conversation with updateLastResponse=false when cancelled mid-stream', async () => {
       deps = createSendableDeps();
 
-      // Simulate a usage chunk arriving before cancel, then the cancel flag trips.
+      // Drive two usage chunks before the cancel flag trips. Asserting on the
+      // SECOND chunk's values rather than just `!== null` proves the latest
+      // pre-cancel usage is what gets persisted (not the first, not a stale
+      // value, not the fixture's seed).
       ((deps as any).mockAgentService.query as jest.Mock).mockImplementation(() => {
         return (async function* () {
           yield { type: 'text', content: 'partial' };
@@ -2147,6 +2150,15 @@ describe('InputController - Message Queue', () => {
             inputTokens: 100,
             outputTokens: 50,
             cacheReadInputTokens: 10,
+            cacheCreationInputTokens: 5,
+            model: 'claude-sonnet-4-5',
+          } as any;
+          yield { type: 'usage', usage: deps.state.usage };
+          // Later snapshot — proves the LAST pre-cancel chunk wins.
+          deps.state.usage = {
+            inputTokens: 200,
+            outputTokens: 75,
+            cacheReadInputTokens: 20,
             cacheCreationInputTokens: 5,
             model: 'claude-sonnet-4-5',
           } as any;
@@ -2164,7 +2176,16 @@ describe('InputController - Message Queue', () => {
       // The save MUST be called with updateLastResponse=false on cancel — the partial
       // assistant content isn't a finished response, but state.usage still needs to land.
       expect(deps.conversationController.save).toHaveBeenCalledWith(false, undefined);
-      expect(deps.state.usage).not.toBeNull();
+      // Tightened: assert the persisted usage carries the LATEST values, not
+      // just non-null. This was previously tautological because the fixture
+      // seeded `state.usage` inline.
+      expect(deps.state.usage).toMatchObject({
+        inputTokens: 200,
+        outputTokens: 75,
+        cacheReadInputTokens: 20,
+        cacheCreationInputTokens: 5,
+        model: 'claude-sonnet-4-5',
+      });
     });
 
     it('should persist conversation with updateLastResponse=true on normal completion', async () => {

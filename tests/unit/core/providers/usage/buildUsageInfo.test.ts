@@ -10,6 +10,17 @@ describe('clampPercentage', () => {
     expect(clampPercentage(150, 100)).toBe(100);
     expect(clampPercentage(-5, 100)).toBe(0);
   });
+  it('returns 0 when window is non-finite (NaN/Infinity)', () => {
+    expect(clampPercentage(100, Number.NaN)).toBe(0);
+    expect(clampPercentage(100, Number.POSITIVE_INFINITY)).toBe(0);
+    expect(clampPercentage(100, Number.NEGATIVE_INFINITY)).toBe(0);
+  });
+  it('rounds half-up to whole percent', () => {
+    // 5 / 200 = 0.025 -> 2.5% -> 3 (Math.round half-up)
+    expect(clampPercentage(5, 200)).toBe(3);
+    // 1 / 200 = 0.005 -> 0.5% -> 1
+    expect(clampPercentage(1, 200)).toBe(1);
+  });
 });
 
 describe('buildUsageInfo', () => {
@@ -33,6 +44,35 @@ describe('buildUsageInfo', () => {
     expect(() =>
       buildUsageInfo({
         model: '',
+        inputTokens: 0,
+        contextTokens: 0,
+        contextWindow: 200_000,
+      }),
+    ).toThrow(/model id is required/i);
+  });
+
+  it('rejects whitespace-only and non-string model ids', () => {
+    expect(() =>
+      buildUsageInfo({
+        model: '   ',
+        inputTokens: 0,
+        contextTokens: 0,
+        contextWindow: 200_000,
+      }),
+    ).toThrow(/model id is required/i);
+
+    expect(() =>
+      buildUsageInfo({
+        model: 42 as unknown as string,
+        inputTokens: 0,
+        contextTokens: 0,
+        contextWindow: 200_000,
+      }),
+    ).toThrow(/model id is required/i);
+
+    expect(() =>
+      buildUsageInfo({
+        model: undefined as unknown as string,
         inputTokens: 0,
         contextTokens: 0,
         contextWindow: 200_000,

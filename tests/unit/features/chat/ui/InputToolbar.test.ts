@@ -1023,6 +1023,44 @@ describe('ContextUsageMeter', () => {
     const container = parentEl.querySelector('.claudian-context-meter');
     expect(container?.getAttribute('data-tooltip')).toBe('160k / 200k');
   });
+
+  it('appends $cost to tooltip when usage carries a finite costUsd', () => {
+    meter.update(makeUsage({
+      contextTokens: 50000,
+      contextWindow: 200000,
+      percentage: 25,
+      costUsd: 0.0042,
+    } as any));
+    const container = parentEl.querySelector('.claudian-context-meter');
+    expect(container?.getAttribute('data-tooltip')).toBe('50k / 200k · $0.0042');
+  });
+
+  it('appends $cost AND the compact reminder when usage is over 80% with a cost', () => {
+    meter.update(makeUsage({
+      contextTokens: 170000,
+      contextWindow: 200000,
+      percentage: 85,
+      costUsd: 1.234567,
+    } as any));
+    const container = parentEl.querySelector('.claudian-context-meter');
+    expect(container?.getAttribute('data-tooltip'))
+      .toBe('170k / 200k · $1.2346 (Approaching limit, run `/compact` to continue)');
+  });
+
+  it('does not append $cost when costUsd is missing/non-finite', () => {
+    meter.update(makeUsage({ contextTokens: 50000, contextWindow: 200000, percentage: 25 }));
+    const containerA = parentEl.querySelector('.claudian-context-meter');
+    expect(containerA?.getAttribute('data-tooltip')).not.toContain('$');
+
+    meter.update(makeUsage({
+      contextTokens: 50000,
+      contextWindow: 200000,
+      percentage: 25,
+      costUsd: Number.NaN,
+    } as any));
+    const containerB = parentEl.querySelector('.claudian-context-meter');
+    expect(containerB?.getAttribute('data-tooltip')).not.toContain('$');
+  });
 });
 
 describe('McpServerSelector - toggle and badges', () => {

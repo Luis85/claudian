@@ -20,6 +20,18 @@ Usage info comes from two SDK messages:
 
 Using result-message token counts would be wrong because they aggregate across subagents. Using assistant-message context window would be wrong because it's estimated. The two-phase merge gets the input-side counts plus the final context-window value.
 
+### `mergePromptUsage` — Latest Input, Max Cache
+
+`mergePromptUsage` uses `next.inputTokens` directly (falling back to `current.inputTokens` only when next is zero) — the SDK may revise input downward across `stream_event`/`message_delta`, so high-water-marking would over-count. Cache fields (`cacheCreationInputTokens`, `cacheReadInputTokens`) stay `Math.max(current, next)` because cache reuse is monotone within a turn.
+
+### Shared `buildUsageInfo` Funnel
+
+`transformClaudeMessage.ts`'s local `buildUsageInfo` delegates to `src/core/providers/usage/buildUsageInfo.ts`. The fallback `model` for `intendedModel`-less code paths is `'sonnet'` (the canonical short id in `DEFAULT_CLAUDE_MODELS`) so the emitted `UsageInfo.model` round-trips through downstream lookups. `contextWindowIsAuthoritative` starts `false`; the `result` arm flips it `true` only after `modelUsage[model].contextWindow` is observed.
+
+### History-backed `extractLastUsage`
+
+`ClaudeConversationHistoryService.extractLastUsage` walks the latest assistant SDK message in the JSONL transcript backwards for a non-null `usage`, builds the `UsageInfo` via the shared builder, and resolves `contextWindow` from the result's `modelUsage[model].contextWindow` (authoritative) or the settings fallback (non-authoritative). Returns `null` on any parse failure — never throws.
+
 ### Custom Spawn — Electron Workarounds
 
 `createCustomSpawnFunction()` works around two Obsidian/Electron-specific issues:

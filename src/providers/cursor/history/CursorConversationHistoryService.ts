@@ -12,7 +12,7 @@ import type {
 import { buildUsageInfo } from '../../../core/providers/usage';
 import type { Conversation, UsageInfo } from '../../../core/types';
 import { extractCursorUsage } from '../runtime/cursorStreamMapper';
-import { type CursorProviderState,getCursorState, resolveCursorSessionId } from '../types';
+import { type CursorProviderState, getCursorState, resolveCursorSessionId } from '../types';
 import {
   cursorWorkspaceHash,
   cursorWorkspaceHashLegacy,

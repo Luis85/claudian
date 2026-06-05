@@ -10,6 +10,7 @@ import {
   decodeOpencodeModelId,
   encodeOpencodeModelId,
   isOpencodeModelSelectionId,
+  OPENCODE_DEFAULT_CONTEXT_WINDOW,
   OPENCODE_DEFAULT_THINKING_LEVEL,
   OPENCODE_SYNTHETIC_MODEL_ID,
   resolveOpencodeBaseModelRawId,
@@ -24,7 +25,6 @@ import { getOpencodeProviderSettings, updateOpencodeProviderSettings } from '../
 const OPENCODE_MODELS: ProviderUIOption[] = [
   { value: OPENCODE_SYNTHETIC_MODEL_ID, label: 'OpenCode', description: 'ACP runtime' },
 ];
-const DEFAULT_CONTEXT_WINDOW = 200_000;
 const OPENCODE_METADATA_WARMUP_DB = ':memory:';
 const OPENCODE_PERMISSION_MODE_TOGGLE: ProviderPermissionModeToggleConfig = {
   inactiveValue: 'normal',
@@ -155,7 +155,7 @@ export const opencodeChatUIConfig: ProviderChatUIConfig = {
   },
 
   getContextWindowSize(model: string, customLimits?: Record<string, number>): number {
-    return customLimits?.[model] ?? DEFAULT_CONTEXT_WINDOW;
+    return customLimits?.[model] ?? OPENCODE_DEFAULT_CONTEXT_WINDOW;
   },
 
   isDefaultModel(model: string): boolean {

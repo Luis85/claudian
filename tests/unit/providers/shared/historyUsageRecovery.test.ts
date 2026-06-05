@@ -242,6 +242,50 @@ describe('Opencode extractLastUsage', () => {
     expect(usage).toBeNull();
   });
 
+  it('falls back to OpencodeChatUIConfig default contextWindow (200k) when row carries no window', () => {
+    // OpenCode persists `tokens` and `cost` but NOT the context window. The
+    // tooltip would show `<tokens> / 0` if we passed contextWindow:0 through —
+    // so the history service falls back to the same 200k default the
+    // OpencodeChatUIConfig uses for unknown models.
+    const usage = extractLastUsageFromOpencodeMessageData({
+      role: 'assistant',
+      modelID: 'opencode/claude-sonnet-4',
+      tokens: { input: 100, output: 50 },
+    });
+    expect(usage?.contextWindow).toBe(200_000);
+    expect(usage?.contextWindowIsAuthoritative).toBe(false);
+  });
+
+  it('treats persisted cost as USD-only when costCurrency === "USD"; ignores non-USD currencies', () => {
+    // Live ACP builder is strict: only surfaces costUsd when cost.currency === 'USD'.
+    // Mirror that here so a future non-USD persisted cost is not silently mislabeled.
+    const usdUsage = extractLastUsageFromOpencodeMessageData({
+      role: 'assistant',
+      modelID: 'opencode/claude-sonnet-4',
+      tokens: { input: 100 },
+      cost: 0.42,
+      costCurrency: 'USD',
+    });
+    expect(usdUsage?.costUsd).toBe(0.42);
+
+    const usdImplicitUsage = extractLastUsageFromOpencodeMessageData({
+      role: 'assistant',
+      modelID: 'opencode/claude-sonnet-4',
+      tokens: { input: 100 },
+      cost: 0.42,
+    });
+    expect(usdImplicitUsage?.costUsd).toBe(0.42);
+
+    const nonUsdUsage = extractLastUsageFromOpencodeMessageData({
+      role: 'assistant',
+      modelID: 'opencode/claude-sonnet-4',
+      tokens: { input: 100 },
+      cost: 0.42,
+      costCurrency: 'EUR',
+    });
+    expect(nonUsdUsage?.costUsd).toBeUndefined();
+  });
+
   it('returns null when modelID is missing', () => {
     const usage = extractLastUsageFromOpencodeMessageData({
       role: 'assistant',

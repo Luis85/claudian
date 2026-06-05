@@ -6,6 +6,7 @@ import type {
 } from '../../../core/providers/types';
 import { buildUsageInfo } from '../../../core/providers/usage';
 import type { Conversation, UsageInfo } from '../../../core/types';
+import { OPENCODE_DEFAULT_CONTEXT_WINDOW } from '../models';
 import { getOpencodeState, type OpencodeProviderState } from '../types';
 import {
   loadOpencodeLastAssistantData,
@@ -103,9 +104,7 @@ export function extractLastUsageFromOpencodeMessageData(
 
   const modelID = typeof data.modelID === 'string' && data.modelID.trim().length > 0
     ? data.modelID.trim()
-    : typeof data.providerID === 'string' && typeof data.modelID === 'string'
-      ? data.modelID
-      : null;
+    : null;
   if (!modelID) return null;
 
   const inputTokens = readNumber(tokens.input);
@@ -129,7 +128,16 @@ export function extractLastUsageFromOpencodeMessageData(
   // `input` (mirrors AcpUsage.cachedReadTokens). contextTokens sums the actual
   // input components.
   const contextTokens = inputTokens + outputTokens + cacheReadTokens + cacheWriteTokens;
-  const costUsd = typeof data.cost === 'number' && Number.isFinite(data.cost)
+  // Mirror the live `buildAcpUsageInfo` rule: only surface costUsd when the
+  // persisted currency is USD. Rows missing `costCurrency` are treated as USD
+  // because OpenCode's wire emits USD today; explicit non-USD currencies are
+  // dropped rather than silently mislabeled.
+  const persistedCurrency = typeof data.costCurrency === 'string' ? data.costCurrency : undefined;
+  const costUsd = (
+    typeof data.cost === 'number'
+    && Number.isFinite(data.cost)
+    && (persistedCurrency === undefined || persistedCurrency === 'USD')
+  )
     ? data.cost
     : undefined;
 
@@ -141,9 +149,12 @@ export function extractLastUsageFromOpencodeMessageData(
     cacheReadInputTokens: cacheReadTokens > 0 ? cacheReadTokens : undefined,
     cacheCreationInputTokens: cacheWriteTokens > 0 ? cacheWriteTokens : undefined,
     contextTokens,
-    // OpenCode persists `cost` and `tokens` but no context-window field; the
-    // catalog window the runtime uses isn't recorded in the row.
-    contextWindow: 0,
+    // OpenCode persists `cost` and `tokens` but no context-window field. Fall
+    // back to the OpencodeChatUIConfig default so the tooltip surfaces a real
+    // denominator (`<tokens> / 200k`) rather than `<tokens> / 0`. The flag
+    // stays false because this is a catalog default, not a wire-confirmed
+    // window.
+    contextWindow: OPENCODE_DEFAULT_CONTEXT_WINDOW,
     contextWindowIsAuthoritative: false,
     costUsd,
   });

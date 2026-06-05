@@ -17,6 +17,15 @@ describe('cursorModelContextWindow', () => {
     expect(cursorModelContextWindow('composer-2-sonnet-research')).toBe(200_000);
   });
 
+  it('regression: unknown ids that contain "sonnet"/"composer" substrings still return 0 (no substring fallback)', () => {
+    // The previous-explicit-entry assertion above only proves exact-match works.
+    // This one proves the old substring matcher is truly gone: a model id whose
+    // name contains a known suffix but is NOT in the catalog must return 0.
+    expect(cursorModelContextWindow('composer-2-sonnet-future')).toBe(0);
+    expect(cursorModelContextWindow('claude-sonnet-99')).toBe(0);
+    expect(cursorModelContextWindow('grok-vnext-research')).toBe(0);
+  });
+
   it('returns 0 for unknown ids so the caller can flag non-authoritative windows', () => {
     expect(cursorModelContextWindow('totally-fake-model')).toBe(0);
   });
