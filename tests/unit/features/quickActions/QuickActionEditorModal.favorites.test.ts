@@ -8,6 +8,8 @@ import type { App } from 'obsidian';
 import type { QuickAction } from '@/features/quickActions/types';
 import { QuickActionEditorModal } from '@/features/quickActions/ui/QuickActionEditorModal';
 
+import { createStorageMock } from './_helpers/quickActionStorageMock';
+
 jest.mock('obsidian', () => {
   class Modal {
     app: any;
@@ -72,19 +74,6 @@ jest.mock('@/shared/components/LucideIconPicker', () => ({
   },
 }));
 
-function noopStorage() {
-  return {
-    exists: jest.fn(async () => false),
-    getFilePathForName: jest.fn((name: string) => `Quick Actions/${name.toLowerCase()}.md`),
-    save: jest.fn(),
-    delete: jest.fn(),
-    loadAll: jest.fn(),
-    loadFromFile: jest.fn(),
-    setFavorite: jest.fn(),
-    unsetFavorite: jest.fn(),
-  } as any;
-}
-
 function makeExisting(p: Partial<QuickAction> = {}): QuickAction {
   return {
     id: p.id ?? 'existing-id',
@@ -110,7 +99,7 @@ describe('QuickActionEditorModal favorites', () => {
       favoriteRank: 3,
       filePath: 'Quick Actions/daily.md',
     });
-    const modal = new QuickActionEditorModal({} as App, existing, onSave, noopStorage());
+    const modal = new QuickActionEditorModal({} as App, existing, onSave, createStorageMock());
 
     await (modal as any).handleSave('Daily', 'Updated description', '', 'Updated body.');
 
@@ -131,7 +120,7 @@ describe('QuickActionEditorModal favorites', () => {
       name: 'NotFav',
       filePath: 'Quick Actions/notfav.md',
     });
-    const modal = new QuickActionEditorModal({} as App, existing, onSave, noopStorage());
+    const modal = new QuickActionEditorModal({} as App, existing, onSave, createStorageMock());
 
     await (modal as any).handleSave('NotFav', 'desc', '', 'body');
 

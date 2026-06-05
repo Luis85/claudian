@@ -27,5 +27,6 @@ describe('QuickActionStorage.exists', () => {
     const storage = new QuickActionStorage(adapter, () => 'Quick Actions');
 
     await expect(storage.exists('Quick Actions/missing.md')).resolves.toBe(false);
+    expect(adapter.exists).toHaveBeenCalledWith('Quick Actions/missing.md');
   });
 });

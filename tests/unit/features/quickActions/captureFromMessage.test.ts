@@ -1,29 +1,23 @@
 import { Notice } from 'obsidian';
 
-import type { ChatMessage } from '@/core/types';
+import type { ChatMessage, ImageAttachment } from '@/core/types';
 import { deriveSeedName, isCaptureEligible, openCaptureFromMessage } from '@/features/quickActions/captureFromMessage';
+
+import { createStorageMock } from './_helpers/quickActionStorageMock';
 
 jest.mock('obsidian', () => ({ Notice: jest.fn() }));
 
-jest.mock('@/features/quickActions/QuickActionStorage', () => {
-  const save = jest.fn(async (_a: any) => 'Quick Actions/seeded-name.md');
-  return {
-    QuickActionStorage: jest.fn().mockImplementation(() => ({
-      save,
-      exists: jest.fn(async () => false),
-      getFilePathForName: jest.fn((n: string) => `Quick Actions/${n}.md`),
-    })),
-    __save: save,
-  };
-});
+let lastSeed: { name?: string; prompt?: string } | undefined;
+let lastOnSave: ((action: any) => Promise<void>) | undefined;
 
-jest.mock('@/features/quickActions/ui/QuickActionEditorModal', () => {
-  return {
-    QuickActionEditorModal: jest.fn().mockImplementation((_app, _existing, onSave, _storage, seed) => ({
-      open: jest.fn(() => { (globalThis as any).__lastSeed = seed; (globalThis as any).__lastOnSave = onSave; }),
-    })),
-  };
-});
+jest.mock('@/features/quickActions/ui/QuickActionEditorModal', () => ({
+  QuickActionEditorModal: jest.fn().mockImplementation((_app, _existing, onSave, _storage, seed) => ({
+    open: jest.fn(() => {
+      lastSeed = seed;
+      lastOnSave = onSave;
+    }),
+  })),
+}));
 
 jest.mock('@/i18n/i18n', () => ({
   t: (key: string) => key,
@@ -41,6 +35,17 @@ function userMsg(partial: Partial<ChatMessage> = {}): ChatMessage {
   } as ChatMessage;
 }
 
+function makeImage(): ImageAttachment {
+  return {
+    id: 'img-1',
+    name: 'pic.png',
+    mediaType: 'image/png',
+    data: 'aGVsbG8=',
+    size: 5,
+    source: 'paste',
+  };
+}
+
 describe('isCaptureEligible', () => {
   it('is true for plain user prose', () => {
     expect(isCaptureEligible(userMsg({ content: 'Summarize this note.' }))).toBe(true);
@@ -55,7 +60,7 @@ describe('isCaptureEligible', () => {
   });
 
   it('is false for image-only messages (no text)', () => {
-    expect(isCaptureEligible(userMsg({ content: '', images: [{ mimeType: 'image/png', data: 'aGVsbG8=' } as never] }))).toBe(false);
+    expect(isCaptureEligible(userMsg({ content: '', images: [makeImage()] }))).toBe(false);
   });
 
   it.each(['/compact', '$skill', '#instruction', '!ls -la'])(
@@ -69,8 +74,25 @@ describe('isCaptureEligible', () => {
     expect(isCaptureEligible(userMsg({ content: 'Refactor /utils into smaller files' }))).toBe(true);
   });
 
-  it('falls back to chatMessageText when displayContent is undefined', () => {
-    expect(isCaptureEligible(userMsg({ content: 'fallback prose' }))).toBe(true);
+  it('falls back to chatMessageText (contentBlocks) when content and displayContent are empty', () => {
+    const msg = userMsg({
+      content: '',
+      displayContent: undefined,
+      contentBlocks: [
+        { type: 'text', content: 'block-sourced prose' },
+        { type: 'tool_use', toolId: 't1' },
+      ],
+    });
+    expect(isCaptureEligible(msg)).toBe(true);
+  });
+
+  it('is false when contentBlocks fallback only contains a leading command char', () => {
+    const msg = userMsg({
+      content: '',
+      displayContent: undefined,
+      contentBlocks: [{ type: 'text', content: '/compact' }],
+    });
+    expect(isCaptureEligible(msg)).toBe(false);
   });
 
   it('prefers displayContent over content when present', () => {
@@ -101,13 +123,37 @@ describe('deriveSeedName', () => {
   it('returns empty string for whitespace-only input', () => {
     expect(deriveSeedName('   \n   ')).toBe('');
   });
+
+  it('slices by code point so emoji input does not leave a lone surrogate', () => {
+    const emoji = '😀'.repeat(60);
+    const out = deriveSeedName(emoji, 50);
+    expect(out.endsWith('…')).toBe(true);
+    expect(Array.from(out).length).toBeLessThanOrEqual(51);
+    // No lone surrogate before the ellipsis: every high surrogate must be
+    // immediately followed by a low surrogate. Walk the body and collect a
+    // single boolean verdict so the assertion is unconditional.
+    const beforeEllipsis = out.slice(0, -1);
+    let allPaired = true;
+    for (let i = 0; i < beforeEllipsis.length; i++) {
+      const code = beforeEllipsis.charCodeAt(i);
+      if (code >= 0xd800 && code <= 0xdbff) {
+        const next = beforeEllipsis.charCodeAt(i + 1);
+        if (!(next >= 0xdc00 && next <= 0xdfff)) {
+          allPaired = false;
+          break;
+        }
+        i++;
+      }
+    }
+    expect(allPaired).toBe(true);
+  });
 });
 
 function makePluginMock(overrides: any = {}) {
   return {
     app: { workspace: { openLinkText: jest.fn(async () => undefined) } },
     settings: { quickActionsFolder: 'Quick Actions' },
-    storage: { getAdapter: jest.fn(() => ({})) },
+    quickActionStorage: createStorageMock(),
     quickActionFavoritesCache: { refresh: jest.fn() },
     logger: { scope: jest.fn(() => ({ warn: jest.fn() })) },
     ...overrides,
@@ -117,8 +163,8 @@ function makePluginMock(overrides: any = {}) {
 describe('openCaptureFromMessage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    delete (globalThis as any).__lastSeed;
-    delete (globalThis as any).__lastOnSave;
+    lastSeed = undefined;
+    lastOnSave = undefined;
   });
 
   it('surfaces a notice and does not open the modal when the folder setting is blank', () => {
@@ -128,7 +174,7 @@ describe('openCaptureFromMessage', () => {
     openCaptureFromMessage(plugin, msg);
 
     expect(Notice).toHaveBeenCalledWith('quickActions.capture.folderMissing');
-    expect((globalThis as any).__lastSeed).toBeUndefined();
+    expect(lastSeed).toBeUndefined();
   });
 
   it('opens the editor modal pre-seeded with derived name and prompt body', () => {
@@ -137,27 +183,36 @@ describe('openCaptureFromMessage', () => {
 
     openCaptureFromMessage(plugin, msg);
 
-    expect((globalThis as any).__lastSeed).toEqual({
+    expect(lastSeed).toEqual({
       name: 'Summarize this note.',
       prompt: 'Summarize this note.',
     });
   });
 
   it('runs save -> notice -> favoritesCache.refresh -> openLinkText in order on save', async () => {
-    const plugin = makePluginMock();
+    const saveSpy = jest.fn(async () => 'Quick Actions/captured.md');
+    const plugin = makePluginMock({ quickActionStorage: createStorageMock({ save: saveSpy }) });
     const msg = { id: 'm3', role: 'user', content: 'Capture this prompt body.', timestamp: 0 } as any;
 
     openCaptureFromMessage(plugin, msg);
-    const onSave = (globalThis as any).__lastOnSave as (a: any) => Promise<void>;
     const action = { name: 'Capture this prompt body.', prompt: 'Capture this prompt body.', filePath: '' } as any;
 
-    await onSave(action);
+    await lastOnSave!(action);
 
-    const save = (jest.requireMock('@/features/quickActions/QuickActionStorage') as any).__save;
-    expect(save).toHaveBeenCalledWith(action);
+    expect(saveSpy).toHaveBeenCalledWith(action);
     expect(Notice).toHaveBeenCalledWith('quickActions.capture.saved');
     expect(plugin.quickActionFavoritesCache.refresh).toHaveBeenCalled();
-    expect(plugin.app.workspace.openLinkText).toHaveBeenCalledWith('Quick Actions/seeded-name.md', '', false);
+    expect(plugin.app.workspace.openLinkText).toHaveBeenCalledWith('Quick Actions/captured.md', '', 'tab');
+
+    const saveOrder = saveSpy.mock.invocationCallOrder[0];
+    const noticeOrder = (Notice as unknown as jest.Mock).mock.invocationCallOrder.find(
+      (_, i) => ((Notice as unknown as jest.Mock).mock.calls[i] ?? [])[0] === 'quickActions.capture.saved',
+    );
+    const refreshOrder = (plugin.quickActionFavoritesCache.refresh as jest.Mock).mock.invocationCallOrder[0];
+    const openOrder = (plugin.app.workspace.openLinkText as jest.Mock).mock.invocationCallOrder[0];
+    expect(saveOrder).toBeLessThan(noticeOrder as number);
+    expect(noticeOrder).toBeLessThan(refreshOrder);
+    expect(refreshOrder).toBeLessThan(openOrder);
   });
 
   it('logs and swallows openLinkText failures without rethrowing', async () => {
@@ -169,9 +224,8 @@ describe('openCaptureFromMessage', () => {
     const msg = { id: 'm4', role: 'user', content: 'x', timestamp: 0 } as any;
 
     openCaptureFromMessage(plugin, msg);
-    const onSave = (globalThis as any).__lastOnSave as (a: any) => Promise<void>;
 
-    await expect(onSave({ name: 'x', prompt: 'x', filePath: '' } as any)).resolves.toBeUndefined();
+    await expect(lastOnSave!({ name: 'x', prompt: 'x', filePath: '' } as any)).resolves.toBeUndefined();
     expect(warn).toHaveBeenCalled();
   });
 });

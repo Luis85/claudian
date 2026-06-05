@@ -87,6 +87,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   gitStatusWatcher: GitStatusWatcher | null = null;
   private commitOnAcceptCoordinator: CommitOnAcceptCoordinator | null = null;
   conversationStore!: ConversationStore;
+  /** Plugin-lifetime singleton. Built in onload before any consumer reads it. */
+  public quickActionStorage!: QuickActionStorage;
   public quickActionFavoritesCache: QuickActionFavoritesCache | null = null;
   public vaultSkillAggregator: VaultSkillAggregator | null = null;
   private lifecycle!: PluginLifecycle;
@@ -217,12 +219,12 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
     registerPluginCommands({ plugin: this, taskExecutionSurface, chatWorkOrderLinker });
 
-    const quickActionStorage = new QuickActionStorage(
+    this.quickActionStorage = new QuickActionStorage(
       new VaultFileAdapter(this.app),
       () => this.settings.quickActionsFolder ?? 'Quick Actions',
     );
     this.quickActionFavoritesCache = new QuickActionFavoritesCache(
-      quickActionStorage,
+      this.quickActionStorage,
       this.app,
       () => this.settings.quickActionsFolder ?? 'Quick Actions',
     );

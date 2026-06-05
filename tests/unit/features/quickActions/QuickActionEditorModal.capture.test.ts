@@ -6,8 +6,16 @@ import '../../../setup/obsidianDom';
 import type { App } from 'obsidian';
 import { Notice } from 'obsidian';
 
-import type { QuickActionStorage } from '@/features/quickActions/QuickActionStorage';
 import { QuickActionEditorModal } from '@/features/quickActions/ui/QuickActionEditorModal';
+
+import { createStorageMock } from './_helpers/quickActionStorageMock';
+
+// Module-scope captures for setValue() and LucideIconPicker initial value.
+// Modal renders settings in order: name, description, icon, prompt.
+const mockTextSetValues: string[] = [];
+const mockTextAreaSetValues: string[] = [];
+const mockIconInitialValues: string[] = [];
+let mockSetDisabledCalled = false;
 
 jest.mock('obsidian', () => {
   class Modal {
@@ -35,15 +43,39 @@ jest.mock('obsidian', () => {
     setName() { return this; }
     setDesc() { return this; }
     addText(cb: (i: any) => void) {
-      cb({ setValue: () => ({ onChange: () => undefined }), setDisabled: () => undefined, onChange: () => undefined });
+      const input: any = {
+        setValue(v: string) {
+          mockTextSetValues.push(v);
+          return input;
+        },
+        setDisabled() {
+          mockSetDisabledCalled = true;
+          return input;
+        },
+        onChange() { return input; },
+      };
+      cb(input);
       return this;
     }
     addTextArea(cb: (a: any) => void) {
-      cb({ setValue: () => ({ onChange: () => undefined }), onChange: () => undefined, inputEl: { rows: 0, addClass: () => undefined } });
+      const area: any = {
+        setValue(v: string) {
+          mockTextAreaSetValues.push(v);
+          return area;
+        },
+        onChange() { return area; },
+        inputEl: { rows: 0, addClass() {} },
+      };
+      cb(area);
       return this;
     }
     addButton(cb: (b: any) => void) {
-      cb({ setButtonText: () => ({ setCta: () => ({ onClick: () => undefined }), onClick: () => undefined }), setCta: () => ({ onClick: () => undefined }), onClick: () => undefined });
+      const btn: any = {
+        setButtonText() { return btn; },
+        setCta() { return btn; },
+        onClick() { return btn; },
+      };
+      cb(btn);
       return this;
     }
   }
@@ -53,30 +85,25 @@ jest.mock('obsidian', () => {
 jest.mock('@/i18n/i18n', () => ({ t: (key: string) => key }));
 jest.mock('@/shared/components/LucideIconPicker', () => ({
   LucideIconPicker: class {
-    constructor(_p: HTMLElement, _o: { value: string; onChange: (v: string) => void }) {}
+    constructor(_p: HTMLElement, opts: { value: string; onChange: (v: string) => void }) {
+      mockIconInitialValues.push(opts.value);
+    }
     destroy() {}
   },
 }));
 
-function makeStorage(exists = false): jest.Mocked<QuickActionStorage> {
-  return {
-    exists: jest.fn(async () => exists),
-    getFilePathForName: jest.fn((name: string) => `Quick Actions/${name.toLowerCase()}.md`),
-    save: jest.fn(),
-    delete: jest.fn(),
-    loadAll: jest.fn(),
-    loadFromFile: jest.fn(),
-    setFavorite: jest.fn(),
-    unsetFavorite: jest.fn(),
-  } as unknown as jest.Mocked<QuickActionStorage>;
-}
-
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockTextSetValues.length = 0;
+  mockTextAreaSetValues.length = 0;
+  mockIconInitialValues.length = 0;
+  mockSetDisabledCalled = false;
+});
 
 describe('QuickActionEditorModal capture seed + collision guard', () => {
-  it('pre-fills name and prompt from seed on Add flow', async () => {
+  it('pre-fills name and prompt from seed on Add flow (drives onOpen)', () => {
     const onSave = jest.fn().mockResolvedValue(undefined);
-    const storage = makeStorage(false);
+    const storage = createStorageMock();
     const modal = new QuickActionEditorModal(
       {} as App,
       null,
@@ -85,30 +112,42 @@ describe('QuickActionEditorModal capture seed + collision guard', () => {
       { name: 'Seeded name', prompt: 'Seeded prompt body.' },
     );
 
-    await (modal as any).handleSave('Seeded name', '', '', 'Seeded prompt body.');
+    modal.open();
 
-    expect(storage.exists).toHaveBeenCalledWith('Quick Actions/seeded name.md');
-    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
-      name: 'Seeded name',
-      prompt: 'Seeded prompt body.',
-      filePath: '',
-    }));
+    // onOpen renders: name (addText), description (addText), icon (LucideIconPicker), prompt (addTextArea).
+    expect(mockTextSetValues[0]).toBe('Seeded name');
+    expect(mockTextSetValues[1]).toBe(''); // description has no seed
+    expect(mockIconInitialValues[0]).toBe('');
+    expect(mockTextAreaSetValues[0]).toBe('Seeded prompt body.');
+    // Add flow must leave the name field editable.
+    expect(mockSetDisabledCalled).toBe(false);
+  });
+
+  it('falls back to empty fields on Add when no seed is given', () => {
+    const onSave = jest.fn().mockResolvedValue(undefined);
+    const modal = new QuickActionEditorModal({} as App, null, onSave, createStorageMock());
+
+    modal.open();
+
+    expect(mockTextSetValues[0]).toBe('');
+    expect(mockTextAreaSetValues[0]).toBe('');
   });
 
   it('blocks save with a notice when the slug already exists (Add flow)', async () => {
     const onSave = jest.fn();
-    const storage = makeStorage(true);
+    const storage = createStorageMock({ exists: true });
     const modal = new QuickActionEditorModal({} as App, null, onSave, storage);
 
     await (modal as any).handleSave('Existing', '', '', 'Body');
 
+    expect(storage.exists).toHaveBeenCalledWith('Quick Actions/existing.md');
     expect(Notice).toHaveBeenCalledWith('quickActions.editor.nameExists');
     expect(onSave).not.toHaveBeenCalled();
   });
 
   it('skips the collision guard on Edit flow (existing.filePath is set)', async () => {
     const onSave = jest.fn().mockResolvedValue(undefined);
-    const storage = makeStorage(true);
+    const storage = createStorageMock({ exists: true });
     const modal = new QuickActionEditorModal(
       {} as App,
       {
@@ -128,24 +167,30 @@ describe('QuickActionEditorModal capture seed + collision guard', () => {
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
-  it('ignores seed when existing is present', async () => {
+  it('renders form from existing (not seed) when both are supplied; Edit disables the name field', () => {
     const onSave = jest.fn().mockResolvedValue(undefined);
-    const storage = makeStorage(false);
     const modal = new QuickActionEditorModal(
       {} as App,
       {
         id: 'edit-id',
         name: 'Existing name',
-        description: 'd',
+        description: 'existing desc',
+        icon: 'star',
         prompt: 'existing body',
         filePath: 'Quick Actions/existing-name.md',
       },
       onSave,
-      storage,
+      createStorageMock(),
       { name: 'Ignored seed', prompt: 'Ignored prompt' },
     );
 
-    expect((modal as any).existing.name).toBe('Existing name');
-    expect((modal as any).seed?.name).toBe('Ignored seed');
+    modal.open();
+
+    expect(mockTextSetValues[0]).toBe('Existing name');
+    expect(mockTextSetValues[1]).toBe('existing desc');
+    expect(mockIconInitialValues[0]).toBe('star');
+    expect(mockTextAreaSetValues[0]).toBe('existing body');
+    // Edit flow must disable name to keep the filename frozen.
+    expect(mockSetDisabledCalled).toBe(true);
   });
 });

@@ -54,7 +54,7 @@ keeping any code identifiers verbatim.
 
 ## Creating a quick action
 
-Two ways — inline editor or hand-authored.
+Three ways — inline editor, capture from chat, or hand-authored.
 
 ### 1. Inline editor
 
@@ -69,7 +69,27 @@ Save → the note is written to your **Quick actions folder** and the picker ref
 
 If **Name** or **Prompt** is empty on save, a notice tells you which one. Save failures also surface as a notice.
 
-### 2. Hand-authored
+### 2. Capture from chat
+
+Every sent **user message** in a chat exposes a **Capture as quick action** button (the `bookmark-plus` Lucide icon) in the per-message toolbar, next to the thumbs and work-order actions. Click it to open the inline editor pre-seeded with:
+
+- **Name** — first non-empty line of the prompt, trimmed, truncated at 50 characters with an ellipsis.
+- **Prompt** — the full message body.
+
+The button is hidden for messages that cannot be safely captured:
+
+- Assistant replies.
+- Empty messages and image-only messages.
+- Slash, dollar, hash, and bang command prefixes (`/compact`, `$skill`, `#instruction`, `!ls`) — these are runtime invocations, not prompt bodies.
+
+On save the file is written under your **Quick actions folder**, a notice confirms the save, the picker refreshes so the new action is immediately available, and the saved note opens in a pane for further editing.
+
+Two guard rails:
+
+- **Folder missing** — if you cleared the **Quick actions folder** setting, clicking capture shows a notice and the editor does not open.
+- **Name collision** — if a quick action with the same slugified name already exists, the save is blocked with a notice and the modal stays open so you can rename. Editing an existing action bypasses this check.
+
+### 3. Hand-authored
 
 Create a Markdown note in the **Quick actions folder** with the [anatomy](#anatomy-of-a-quick-action) above. Both quoted YAML (`name: "Summarize selection"`) and unquoted scalars parse the same. The list refreshes the next time the picker opens.
 
