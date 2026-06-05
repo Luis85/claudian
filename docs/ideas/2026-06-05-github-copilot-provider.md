@@ -22,30 +22,33 @@ source: deep-research 2026-06-05 (six-angle web survey + provider-seam inventory
 ## Executive summary
 
 GitHub Copilot can be added to Claudian as a first-class chat provider, and the
-path is now clean. The decisive enabler is the **official, GA GitHub Copilot
-CLI** (`copilot`) and its embeddable sibling
-[`@github/copilot-sdk`](https://github.com/github/copilot-sdk): an agentic
-runtime with tool use, MCP, custom agents, streaming, structured output, and
-native session resume. Critically, the CLI **speaks the Agent Client Protocol**
-(`copilot --acp --stdio`) — the same transport Claudian's Opencode provider
-already runs on (`src/providers/acp/`).
+path is now clean. The integration surface is the **official, GA
+[`@github/copilot-sdk`](https://github.com/github/copilot-sdk)** (MIT) — GitHub's
+supported programmatic wrapper over the Copilot agent — driving the user's
+installed **Copilot CLI** (`copilot`): an agentic runtime with tool use, MCP,
+custom agents, streaming, structured output, and native session resume. The same
+agent is also reachable as raw JSONL (`copilot -p --output-format json`) and over
+ACP (`copilot --acp`), which give Claudian a no-dependency fallback and a
+contingency that reuses its existing ACP transport (`src/providers/acp/`).
 
-> **Recommendation:** add a `copilot` provider built on the **official Copilot
-> CLI over ACP**, reusing the existing ACP transport (mirroring
-> `OpencodeChatRuntime`). Use the CLI's `--output-format json` (JSONL) one-shot
-> mode as a fallback transport (parsed like Cursor's stream-json). **Reject** the
-> Copilot Language Server path (completion-only, non-agentic) and the direct
-> `api.githubcopilot.com` chat API path (reverse-engineered, documented account
-> suspensions).
+> **Recommendation:** add a `copilot` provider built on the **official
+> `@github/copilot-sdk`**, configured to drive a *user-installed* `copilot` CLI
+> (`cliPath` + allowlisted `env` + vault `cwd` + `onPermissionRequest` →
+> `ApprovalManager`). Keep `copilot -p --output-format json` JSONL as a
+> no-dependency fallback, and `copilot --acp` over `src/providers/acp/` as a
+> contingency. **Reject** the Copilot Language Server (editor-completion only —
+> out of scope) and the direct `api.githubcopilot.com` chat API
+> (reverse-engineered, documented account suspensions).
 
-This corrects an earlier tentative read that Copilot CLI lacked structured
-output and headless resume. That conclusion came from GitHub's *programmatic
-reference* docs page, which **lags the shipped binary**. The repo changelog shows
-both features shipped (see [§Decisive findings](#decisive-findings)).
+This corrects an earlier tentative read that Copilot CLI lacked structured output
+and headless resume. That conclusion came from GitHub's *programmatic reference*
+docs page, which **lags the shipped binary**. The repo changelog shows both
+features shipped (see [§Decisive findings](#decisive-findings)).
 
 A working existence proof already exists in the wild: the
 `go2engle/obsidian-github-copilot-integration` plugin drives streaming, agentic,
-tool-using Copilot chat **inside Obsidian today** via `@github/copilot-sdk`.
+tool-using Copilot chat **inside Obsidian today** via `@github/copilot-sdk` — i.e.
+it is literally the transport this note recommends.
 
 ## Problem / motivation
 
@@ -55,9 +58,9 @@ tool-using Copilot chat **inside Obsidian today** via `@github/copilot-sdk`.
   already ship it. This is the Copilot analog of the open
   [[gemini-cli-provider]] roster-parity issue.
 - **Low marginal cost on the current seam.** ADR-0001's transport-agnostic
-  provider seam plus the shared ACP transport mean a fifth provider — especially
-  an ACP-speaking one — is largely a wiring-and-normalization exercise, not new
-  infrastructure.
+  provider seam plus GitHub's official SDK (which owns spawn, JSON-RPC, resume,
+  and auth detection) mean a fifth provider is largely a wiring-and-normalization
+  exercise, not new infrastructure.
 - **User pull.** Copilot subscribers (including the free tier) want to use their
   existing entitlement and model access (GPT-5.x, Claude Sonnet/Opus/Haiku 4.x,
   Gemini 3) from inside their vault without paying a second provider.
@@ -79,15 +82,13 @@ type surgery**: `ProviderId` is `export type ProviderId = string`
 - a self-contained `src/providers/copilot/` directory (runtime, history,
   settings, UI, auxiliary services, tool normalization).
 
-Two reference templates already exist:
+No single existing provider is a perfect template, but two are close:
 
-- **Opencode** — builds its runtime on the **shared ACP transport**
-  (`src/providers/acp/`: JSON-RPC client, subprocess wrapper, tool stream
-  adapter, update normalizer). This is the closest template for an ACP-speaking
-  Copilot.
-- **Cursor** — spawns a CLI directly and parses a **structured NDJSON stream**
-  (`cursorStreamMapper`, `cursorToolNormalization`) without ACP. This is the
-  template for the JSONL fallback transport.
+- **Claude** already depends on an *official vendor SDK* rather than parsing a raw
+  stream — it's the precedent for the SDK-driven approach this note recommends.
+- **Cursor / Opencode** show the CLI-subprocess discipline (env allowlist,
+  Windows spawn, cancellation) and the stream → `StreamChunk` normalization the
+  Copilot runtime still needs, whichever transport wins.
 
 ## Integration mechanisms surveyed
 
@@ -96,9 +97,13 @@ Claudian's needs (an *agentic, streaming, tool-using* chat runtime):
 
 | Mechanism | What it is | Agentic / tools | Streaming | Sanctioned? | Verdict |
 |---|---|---|---|---|---|
-| **Copilot CLI / `@github/copilot-sdk`** | Official agentic runtime; CLI process driven over ACP/JSON-RPC | ✅ full agent loop, MCP, custom agents | ✅ JSONL + ACP `session/update` | ✅ official | **Adopt** |
-| **Copilot Language Server** (`@github/copilot-language-server`) | Official LSP engine for inline/panel/next-edit completions | ❌ `conversation/*` is a bounded, non-agentic chat facade | partial (panel via `partialResultToken`) | ✅ official | **Reject** — completion-only, wrong shape |
+| **Copilot CLI / `@github/copilot-sdk`** | Official agentic runtime; CLI process driven over JSON-RPC (SDK), JSONL (`-p`), or ACP | ✅ full agent loop, MCP, custom agents | ✅ SDK deltas / JSONL / ACP `session/update` | ✅ official | **Adopt** |
+| **Copilot Language Server** (`@github/copilot-language-server`) | Official LSP engine for inline/panel/next-edit completions | ❌ `conversation/*` is a bounded, non-agentic chat facade | partial (panel via `partialResultToken`) | ✅ official | **Reject — out of scope** (editor completion only) |
 | **Direct `api.githubcopilot.com/chat/completions`** | Reverse-engineered OpenAI-compatible endpoint via `copilot_internal/v2/token` | ✅ `tools` pass-through | ✅ SSE | ❌ unsanctioned | **Reject** — ToS risk, account bans |
+
+Claudian integrates providers as **chat/agent runtimes**, not editor autocomplete,
+so the Language Server is out of scope *by design* — Copilot ghost-text while
+typing is a non-goal here.
 
 ## Prior art: two Obsidian plugins (a natural experiment)
 
@@ -114,12 +119,15 @@ this decision.
 | Agentic tools | ❌ | ✅ (auto-approves via `approveAll`) |
 | Auth | Runs its own OAuth | Delegates to `copilot login` (CLI owns token) |
 
-**Takeaways for Claudian.** (1) Plugin B proves the official CLI/SDK path drives
-streaming agentic chat in Obsidian today, and its architecture matches Claudian's
-spawn-a-CLI-and-parse-a-stream pattern exactly. (2) Plugin A's chat path is the
-one to avoid (ToS risk; and `requestUrl` blocks streaming anyway). (3) Plugin B
-auto-approves every tool (`approveAll`) — Claudian must instead route tool
-approvals through its own `ApprovalManager`/safe-mode, not blanket-approve.
+**Takeaways for Claudian.** (1) Plugin B proves the official SDK path drives
+streaming agentic chat in Obsidian today — it is the transport this note
+recommends — and matches Claudian's spawn-a-CLI-and-talk-JSON-RPC pattern. (2)
+Plugin A's friendly "login with GitHub" is the same GitHub **device flow** the
+sanctioned CLI uses (`copilot login`); the risky part is its *chat* path (the
+reverse-engineered API), not the login UX — so the smooth login is reproducible
+safely. (3) Plugin B auto-approves every tool (`approveAll`) — Claudian must
+instead route tool approvals through its own `ApprovalManager`/safe-mode via the
+SDK's `onPermissionRequest`, never blanket-approve.
 
 ## Decisive findings
 
@@ -137,12 +145,15 @@ which **supersede the lagging programmatic-reference docs page**:
   **changelog-only — undocumented in the official CLI reference** — so pin a CLI
   version and probe before relying on them. Transcripts are stored as JSONL at
   `~/.copilot/session-state/<id>/events.jsonl`.
-- **ACP transport exists.** `copilot --acp --stdio` (public preview 2026-01-28).
-  Zed already runs Copilot CLI as an ACP external agent. This is the same protocol
-  family as `src/providers/acp/`.
 - **Official SDK is GA.** `@github/copilot-sdk` (GA 2026-06-02, MIT) embeds the
   same agent runtime (planning, tool/MCP invocation, file edits, streaming,
-  multi-turn). It manages a CLI process over JSON-RPC under the hood.
+  multi-turn). It drives the CLI as a JSON-RPC server and owns the process
+  lifecycle. `CopilotClientOptions` exposes `cliPath`, `env`, `cwd`, `logLevel`,
+  `autoStart`/`autoRestart`, `start()`/`stop()`/`forceStop()`, `resumeSession()`,
+  and `onPermissionRequest` (see [§Recommendation](#recommendation--proposed-architecture)).
+- **ACP transport exists.** `copilot --acp --stdio` (public preview 2026-01-28).
+  Zed already runs Copilot CLI as an ACP external agent. This is the same protocol
+  family as `src/providers/acp/` — the basis for the contingency transport.
 - **CLI is GA & agentic.** Copilot CLI went GA 2026-02-25 with tool use, built-in
   GitHub MCP + custom MCP, and custom agents (`--agent`). It ships under a
   **custom GitHub Copilot CLI License** (not MIT) that forbids modifying or
@@ -150,28 +161,50 @@ which **supersede the lagging programmatic-reference docs page**:
 
 ## Recommendation & proposed architecture
 
-### Transport: ACP primary, JSONL fallback
+### Transport: official SDK primary, JSONL fallback, ACP contingency
 
-**Primary — `copilot --acp --stdio` over `src/providers/acp/`.** Copilot's ACP
-mode emits the same `session/update` events the existing ACP normalizer already
-handles for Opencode, so a `CopilotChatRuntime` mirrors `OpencodeChatRuntime` and
-inherits streaming, tool cards, and image support with the least new transport
-code. *Risk to manage:* the `--acp` interface is newer and has seen flag churn
-(the older `--headless --stdio` was removed ~v0.0.410), so pin a known-good CLI
-version and add a capability/version probe at workspace init.
+**Primary — `@github/copilot-sdk` driving a *user-installed* `copilot` CLI.** The
+SDK is GitHub's GA, MIT-licensed, officially supported programmatic surface over
+the Copilot agent, and it's the most on-pattern choice: Claudian's
+"provider-native first" rule already has the **Claude** provider depend on an
+official vendor SDK rather than parse a raw stream. Crucially, `CopilotClientOptions`
+exposes every control Claudian treats as non-negotiable, so adopting the SDK does
+**not** forfeit Claudian's spawn discipline:
 
-**Fallback — `copilot -p --output-format json` (JSONL), parsed like Cursor.** If
-ACP proves unstable, spawn one-shot per turn and parse JSONL the way
-`cursorStreamMapper` parses cursor-agent's stream-json, using
-`--resume <id>` / `--continue` for continuity and reading
-`~/.copilot/session-state/<id>/events.jsonl` for history hydration (the analog of
-Cursor's `store.db` and Codex's JSONL). *Risk:* JSONL output ergonomics are still
-maturing ([copilot-cli#3008](https://github.com/github/copilot-cli/issues/3008)).
+| Claudian requirement | SDK option |
+|---|---|
+| Resolve a *user-installed* binary (license + no native-binary bundling) | `cliPath` |
+| **Allowlisted** child env (hard `core/` security rule) | `env` — pass an *explicit* allowlisted env; the default is `process.env` |
+| Vault working directory | `cwd` |
+| Lifecycle / cleanup / cancel | `start()` / `stop()` / `forceStop()`, `autoStart`, `autoRestart` |
+| Native resume / history | `resumeSession()` |
+| Route approvals through `ApprovalManager` (never `approveAll`) | `onPermissionRequest` |
+| Map to `StreamChunk` | typed `assistant.message_delta` + tool events |
 
-**Do not** depend on `@github/copilot-sdk` directly: it bundles and manages its
-*own* CLI process and transport, duplicating `src/providers/acp/` and fighting
-Claudian's own-the-transport pattern. (Re-evaluate only if CLI flag churn makes
-the SDK's stability worth the dependency.)
+*Why over a raw CLI bind:* the CLI's programmatic seam is churny (`--headless
+--stdio` was removed and replaced by `--acp`; `--output-format json` and the
+resume flags are changelog-only/undocumented). The SDK is GitHub's **stable
+contract** over that churn, and absorbs CLI version drift behind a typed API.
+
+*Packaging caveat — the main risk, validate in the spike:* the SDK's npm package
+*bundles* a copy of the CLI, but an Obsidian plugin ships a single esbuild'd
+`main.js` and must **not** ship a native binary. Mark the SDK `external` and point
+`cliPath` at the user-installed `copilot`; don't rely on the bundled copy. (Plugin
+B sidesteps this by requiring `copilot` on PATH.)
+
+**Fallback — `copilot -p --output-format json` (JSONL), no SDK dependency.** If
+the SDK can't be bundled cleanly, spawn one-shot per turn and parse JSONL the way
+`cursorStreamMapper` parses cursor-agent's stream-json, using `--resume <id>` /
+`--continue` for continuity and reading `~/.copilot/session-state/<id>/events.jsonl`
+for history hydration (the analog of Cursor's `store.db` and Codex's JSONL).
+*Risk:* JSONL output ergonomics are still maturing
+([copilot-cli#3008](https://github.com/github/copilot-cli/issues/3008)).
+
+**Contingency — `copilot --acp --stdio` over `src/providers/acp/`.** Copilot's ACP
+mode emits the same `session/update` events Claudian's existing ACP normalizer
+already handles for Opencode, so this is a viable zero-new-dependency transport if
+we'd rather reuse the ACP stack than add the SDK. *Risk:* Copilot's ACP dialect
+may diverge from Opencode's, and the `--acp` flag is newer than the SDK contract.
 
 ### Proposed file inventory (`src/providers/copilot/`)
 
@@ -179,16 +212,19 @@ Mirrors the Opencode/Cursor layout:
 
 - `registration.ts` — `ProviderRegistration` (displayName "GitHub Copilot",
   capabilities, runtime/history/aux factories).
-- `capabilities.ts` — `CopilotProviderState` capability flags (see matrix below).
+- `capabilities.ts` — `ProviderCapabilities` flag set (see matrix below).
 - `types.ts` — `CopilotProviderState` (`{ sessionId?: string }`) + typed accessor.
 - `settings.ts` — settings schema, defaults, getters/setters under
   `providerConfigs.copilot`.
-- `runtime/CopilotChatRuntime.ts` — ACP-backed runtime (or JSONL fallback).
+- `runtime/CopilotChatRuntime.ts` — SDK-driven runtime (`CopilotClient` →
+  `createSession` / `resumeSession`); the JSONL fallback sits behind the same
+  interface.
 - `runtime/copilotToolNormalization.ts` — Copilot tool vocabulary → Claudian
   canonical tool names.
-- `runtime/CopilotCliResolver.ts` + binary locator — resolve the `copilot` binary
-  (PATH + per-host overrides), route child env through
-  `providers/subprocessEnvironmentAllowlist`.
+- `runtime/CopilotCliResolver.ts` + binary locator — resolve the *user-installed*
+  `copilot` binary (PATH + per-host overrides) and feed it to the SDK as `cliPath`;
+  route the child env through `providers/subprocessEnvironmentAllowlist` and pass
+  the result as the SDK's explicit `env` (never the default `process.env`).
 - `history/CopilotConversationHistoryService.ts` — hydrate/delete from
   `~/.copilot/session-state/<id>/events.jsonl`; validate session ids before any
   path join (cf. `cursorSessionIdValidation`).
@@ -205,16 +241,17 @@ provider lists in `core/`/`features/`; no `providerId === 'copilot'` branches.
 
 | Capability | Status | Notes |
 |---|---|---|
-| Send / stream / cancel | ✅ | ACP `session/update` or JSONL deltas |
-| Native history reload + resume | ✅ | `--resume`/`--session-id`, `events.jsonl` |
+| Send / stream / cancel | ✅ | SDK message deltas (or JSONL deltas in fallback) |
+| Native history reload + resume | ✅ | `resumeSession()` / `--resume`, `events.jsonl` |
 | Tool-call cards / thinking / usage | ✅ | full agent loop |
 | MCP tools | ✅ | built-in GitHub MCP + custom |
 | Custom agents / subagents | ✅ | `--agent`, custom agents |
 | Plan mode | ✅ likely | `--plan`/`--mode`/`--autopilot`; confirm in spike |
-| Image attachments | ✅ | ACP + vision models |
+| Image attachments | ✅ | vision models |
 | Inline edit, `#` instruction, `$` skills | ✅ | aux-query pattern (cf. Cursor) |
 | Fork | ⚠️ gate initially | revisit once session model is confirmed |
 | Rewind | 🔒 gate | no native support |
+| Editor autocomplete (ghost text) | 🚫 non-goal | Language Server out of scope |
 
 A realistic `capabilities.ts` is therefore strong:
 `supportsNativeHistory: true`, `supportsMcpTools: true`, `supportsPlanMode: true`,
@@ -224,8 +261,8 @@ A realistic `capabilities.ts` is therefore strong:
 ## Auth, subscription & licensing
 
 - **No OAuth to implement.** Auth is CLI-owned: the user runs `copilot login`
-  (device flow); the CLI stores the token (system keychain / `~/.copilot/`).
-  Claudian just resolves the binary and lets the CLI manage auth — exactly how it
+  (GitHub device flow); the CLI stores the token (system keychain / `~/.copilot/`).
+  Claudian resolves the binary and lets the SDK/CLI manage auth — exactly how it
   treats other CLIs. Token precedence for headless use:
   `COPILOT_GITHUB_TOKEN` > `GH_TOKEN` > `GITHUB_TOKEN`.
 - **User's own entitlement required.** Every path requires the end user's own
@@ -235,27 +272,58 @@ A realistic `capabilities.ts` is therefore strong:
   GitHub Copilot CLI License** that prohibits modifying it or redistributing it on
   a standalone basis; only `@github/copilot-sdk` is MIT. Claudian must therefore
   **resolve a user-installed `copilot` binary** (`npm i -g @github/copilot` or
-  Homebrew) and never bundle, fork, or patch it — consistent with how the
-  Cursor/Codex/Opencode providers resolve user-installed CLIs, and a further
-  reason to avoid depending on `@github/copilot-sdk` (which bundles the CLI).
+  Homebrew) and never bundle, fork, or patch it — which is also why the SDK is
+  pointed at that binary via `cliPath` rather than shipping its bundled copy.
+
+## End-user onboarding
+
+"Install the plugin and you're instantly chatting" is **not** achievable on any
+sanctioned path — but Copilot can match the smoothest bar Claudian already sets for
+Cursor/Codex/Opencode. Three things the user needs:
+
+| Requirement | Avoidable? | Why |
+|---|---|---|
+| A GitHub Copilot subscription (their own; free tier counts) | ❌ never | the plugin uses the user's entitlement, not its own |
+| A one-time GitHub sign-in | ❌ never | someone has to authenticate |
+| The `copilot` CLI present | ⚠️ not cleanly | the only no-CLI chat path is the gray-area API; bundling a native binary doesn't fit a plugin |
+
+**Smoothest realistic flow** (same shape as the `install-codex` / `install-cursor`
+user manuals):
+
+1. Install Claudian from Obsidian community plugins.
+2. Install the CLI once — `npm i -g @github/copilot` or Homebrew. Claudian detects
+   it's missing and links/guides this (provider health-check pattern).
+3. **Sign in** — surface `copilot login` (GitHub device flow) behind an in-app
+   button; needs the subscription. Auth then persists (the CLI owns the token).
+4. Claudian auto-detects the binary and you're chatting.
+
+So: **one install + one sign-in**, then seamless. We can match Pierrad's friendly
+"Sign in with GitHub" — the device flow is *not* the risky part (the sanctioned
+`copilot login` uses the same flow) — while staying within GitHub's terms. The only
+thing we deliberately give up versus Pierrad's chat is "zero CLI install," which is
+the price of not using the bannable direct-API route.
+
+**Scope note:** because the Language Server is out of scope, Claudian's Copilot
+integration is **chat/agent only — no Copilot inline autocomplete while typing
+notes**, consistent with how every Claudian provider works.
 
 ## ToS / risk
 
-- The official CLI/SDK path is **sanctioned**: GitHub-published clients
+- The official SDK/CLI path is **sanctioned**: GitHub-published clients
   authenticating as the user.
 - The rejected direct-API path (`copilot_internal/v2/token` +
   `api.githubcopilot.com`, typically while spoofing `Copilot-Integration-Id:
   vscode-chat`) is **gray-area** and has produced documented GitHub Security
   warnings and **permanent Copilot revocations** (e.g. avante.nvim users). Staying
-  on the official CLI keeps Claudian clear of this.
+  on the official SDK/CLI keeps Claudian clear of this.
 
 ## Effort & sequencing
 
-- **Effort:** following the Opencode (ACP) template rather than the heavier Cursor
-  (raw-NDJSON) one, the streaming/history core is plausibly *lighter* than a
-  from-scratch provider because the ACP transport already exists. Bulk of work:
-  runtime wiring, Copilot tool normalization, settings/CLI resolution, history
-  hydration, settings UI, and tests (unit-first, mirrored under `tests/`).
+- **Effort:** the SDK removes most transport and process-lifecycle work (it owns
+  spawn, JSON-RPC, resume, and auth detection), so the bulk shifts to Copilot tool
+  normalization, settings/CLI resolution, the settings UI, onboarding, and tests
+  (unit-first, mirrored under `tests/`). Net plausibly lighter than a from-scratch
+  provider; the main unknown is the Obsidian packaging of the SDK (spike item 1).
 - **Sequencing:** land after ADR-0001 Phase 2b/3 (RuntimeHost + shared transport)
   so the fifth provider arrives on the tightened seam — same guidance as
   [[gemini-cli-provider]]. A Copilot + Gemini pair is a natural "roster parity"
@@ -263,42 +331,51 @@ A realistic `capabilities.ts` is therefore strong:
 
 ## Spike plan (do this before writing provider code)
 
-Per the repo's "inspect real runtime output first" rule, validate the transport
-assumptions with throwaway captures in `.context/` before committing to ACP vs
-JSONL:
+Per the repo's "inspect real runtime output first" rule, validate with throwaway
+captures in `.context/` before committing to a transport:
 
-1. `copilot --acp --stdio` against a scratch vault — capture the `session/update`
-   stream for a turn that does a file read, an edit, and a shell command; confirm
-   it maps cleanly onto the existing ACP update normalizer.
-2. `copilot -p "…" --output-format json` — capture the JSONL; confirm text /
-   thinking / tool-call / tool-result / usage records are recoverable.
-3. Inspect `~/.copilot/session-state/<id>/events.jsonl` for a resumed session;
-   confirm history hydration shape and the exact subfolder name (varies by
-   version).
-4. Decide ACP vs JSONL on the evidence, then promote findings into an ADR or this
-   note and open the implementation issue.
+1. **Packaging (decisive).** Confirm `@github/copilot-sdk` can be bundled into an
+   Obsidian plugin (esbuild `external`) and run purely as a JSON-RPC client against
+   a **user-installed** `copilot` (`cliPath`), shipping no native binary. If not,
+   fall back to the JSONL path or ACP-direct.
+2. **Spawn discipline.** Confirm the SDK honors `env` (allowlisted, not
+   `process.env`), `cwd` (vault), and `onPermissionRequest` (→ `ApprovalManager`),
+   and that `stop()`/`forceStop()` give clean cancellation/cleanup.
+3. **Streaming map.** Capture `assistant.message_delta` + tool events for a turn
+   that reads a file, edits, and runs a shell command; confirm they map onto
+   `StreamChunk` (text / thinking / tool / usage).
+4. **Resume/history.** Drive `resumeSession()` and inspect
+   `~/.copilot/session-state/<id>/events.jsonl`; confirm hydration shape and the
+   exact subfolder name (varies by version).
+5. **Fallback sanity.** Capture `copilot -p "…" --output-format json` (≥ 0.0.421)
+   so the no-dependency JSONL path is ready if the SDK can't be bundled.
+6. Decide SDK vs JSONL vs ACP-direct on the evidence; promote findings into an ADR
+   and open the implementation issue.
 
 ## Acceptance criteria
 
 - `copilot` registered as a provider with send / stream / cancel / resume at
   minimum; no `providerId === 'x'` branches; no edits to hardcoded provider lists
   in `core/`/`features/`.
-- Tool approvals routed through Claudian's `ApprovalManager`/safe-mode (never a
-  blanket `approveAll`).
-- Child process env routed through `providers/subprocessEnvironmentAllowlist`;
-  session ids validated before any path operation.
+- Copilot CLI resolved as a *user-installed* binary and passed to the SDK via
+  `cliPath`; the SDK's `env` is the allowlisted child env (not `process.env`).
+- Tool approvals routed through Claudian's `ApprovalManager`/safe-mode via
+  `onPermissionRequest` (never a blanket `approveAll`).
+- Session ids validated before any path operation.
 - Unsupported surfaces (rewind, and fork initially) gated via
   `ProviderCapabilities`, not stubbed in feature code.
 - Unit tests mirror `src/providers/copilot/` under `tests/unit/`.
 
 ## Open questions
 
-- ACP vs JSONL as the shipping transport (resolve in spike) — and how to absorb
-  CLI flag churn (version pin + capability probe).
-- Does Copilot's ACP plan/ask mode map onto the shared post-plan approval card
-  (cf. Opencode's managed plan mode), or need bespoke handling?
+- **Packaging:** can `@github/copilot-sdk` be cleanly bundled in an Obsidian plugin
+  (esbuild `external`) while forcing `cliPath` at a user-installed CLI and shipping
+  no binary? If not, the JSONL path or ACP-direct becomes primary. (Resolve in
+  spike item 1.)
+- Does Copilot's plan/ask mode map onto the shared post-plan approval card (cf.
+  Opencode's managed plan mode), or need bespoke handling?
 - Exact `~/.copilot/session-state/...` path stability across CLI versions.
-- Model catalog: discover at runtime (Copilot model set drifts) vs a curated
+- Model catalog: discover at runtime (the Copilot model set drifts) vs a curated
   default list; reuse the Cursor `--list-models`-style catalog pattern if Copilot
   exposes one.
 
@@ -314,8 +391,9 @@ JSONL:
   [issue #52](https://github.com/github/copilot-cli/issues/52)
 - **Copilot SDK:** [github/copilot-sdk](https://github.com/github/copilot-sdk) ·
   [GA blog](https://github.blog/changelog/2026-06-02-copilot-sdk-is-now-generally-available/) ·
-  [getting-started](https://github.com/github/copilot-sdk/blob/main/docs/getting-started.md)
-- **Language Server:** [release repo](https://github.com/github/copilot-language-server-release) ·
+  [getting-started](https://github.com/github/copilot-sdk/blob/main/docs/getting-started.md) ·
+  [Node SDK usage](https://github.com/github/awesome-copilot/blob/main/instructions/copilot-sdk-nodejs.instructions.md)
+- **Language Server (out of scope):** [release repo](https://github.com/github/copilot-language-server-release) ·
   [SDK announce](https://github.blog/changelog/2025-02-10-copilot-language-server-sdk-is-now-available/)
 - **Reverse-engineered API surface (rejected path):**
   [ericc-ch/copilot-api](https://github.com/ericc-ch/copilot-api) ·
@@ -326,5 +404,3 @@ JSONL:
   [Acceptable Use Policies](https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies) ·
   [avante.nvim #557](https://github.com/yetone/avante.nvim/issues/557) ·
   [community #174325](https://github.com/orgs/community/discussions/174325)
-</content>
-</invoke>
