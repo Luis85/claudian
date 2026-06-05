@@ -563,10 +563,12 @@ class MockMenuItem {
   });
 }
 
+export const MENU_SEPARATOR = Symbol('MenuSeparator');
+
 export class Menu {
   static instances: Menu[] = [];
 
-  items: MockMenuItem[] = [];
+  items: Array<MockMenuItem | typeof MENU_SEPARATOR> = [];
   showAtMouseEvent = jest.fn();
 
   constructor() {
@@ -577,6 +579,11 @@ export class Menu {
     const item = new MockMenuItem();
     callback(item);
     this.items.push(item);
+    return this;
+  }
+
+  addSeparator(): this {
+    this.items.push(MENU_SEPARATOR);
     return this;
   }
 }
