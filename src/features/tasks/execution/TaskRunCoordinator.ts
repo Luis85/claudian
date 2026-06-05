@@ -91,15 +91,19 @@ export class TaskRunCoordinator {
         staleThresholdMs: this.deps.staleThresholdMs,
       });
       this.registry.bind(id, session);
-      // Drive the session to a prompt finish if the chat turn settles with a
-      // failure/cancel but emits no stream end (e.g. provider init failed), so it
-      // doesn't wait for onEnd until the stale timer. Never block on the terminal:
-      // these calls are no-ops once the session is finishing (e.g. after a normal
-      // stream end or a stale-heartbeat settle).
+      // Drive the session to a prompt finish if the chat turn settles but emits
+      // no stream end, so it doesn't wait for onEnd until the stale timer. This
+      // covers failure/cancel (e.g. provider init failed) and the `completed`
+      // case where the controller resolved ok without a `done` chunk (e.g. the
+      // provider threw after creating the assistant message). Never block on the
+      // terminal: these calls are no-ops once the session is finishing (the
+      // normal stream `done` fires before the terminal resolves, so it wins) or
+      // after a stale-heartbeat settle.
       void handle.terminal
         .then((terminal) => {
           if (terminal.status === 'failed') session.fail(terminal.error ?? 'Chat run failed.');
           else if (terminal.status === 'canceled') session.cancel('Chat run canceled.');
+          else session.complete(terminal.finalAssistantContent);
         })
         .catch((error) => session.fail(error instanceof Error ? error.message : String(error)));
       const result: RunSessionResult = await session.run();

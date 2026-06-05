@@ -53,7 +53,15 @@ class FakeSurface implements TaskExecutionSurface {
       conversationId: 'conv-1',
       sidepanelTabId: 'tab-1',
       stream: this.adapter,
-      terminal: Promise.resolve(this.opts.terminal ?? { status: 'completed', finalAssistantContent: '' }),
+      // When a terminal is given, resolve it immediately (models a chat turn that
+      // settled without a matching stream end). Otherwise resolve only after the
+      // stream emits its end — as the real chat send does — so the stream drives
+      // the finish and the terminal-completed fallback stays a no-op.
+      terminal: this.opts.terminal
+        ? Promise.resolve(this.opts.terminal)
+        : this.adapter
+            .whenEnded()
+            .then((payload) => ({ status: 'completed' as const, finalAssistantContent: payload.finalAssistantContent })),
     };
   }
 }
@@ -149,6 +157,37 @@ describe('TaskRunCoordinator', () => {
     const result = await coordinator.run(makeTask());
     expect(result).toEqual({ ok: false, error: 'provider init failed' });
     expect(statuses[statuses.length - 1]).toBe('failed');
+  });
+
+  it('finishes a run whose terminal completes with a handoff but emits no stream end', async () => {
+    // The provider settled the turn `completed` (handoff present) without ever
+    // emitting a `done` chunk; the terminal must drive the finish to review
+    // instead of leaving the run hanging until the stale timer.
+    const surface = new FakeSurface({ terminal: { status: 'completed', finalAssistantContent: VALID_HANDOFF } });
+    const { coordinator, statuses, handoffs } = makeCoordinator(surface);
+    await expect(coordinator.run(makeTask())).resolves.toEqual({ ok: true, status: 'review' });
+    expect(statuses).toEqual(['running', 'review']);
+    expect(handoffs[0]).toContain('## Summary');
+  });
+
+  it('finishes as needs_handoff when the terminal completes with no handoff and no stream end', async () => {
+    const surface = new FakeSurface({ terminal: { status: 'completed', finalAssistantContent: 'no handoff' } });
+    const { coordinator, statuses } = makeCoordinator(surface);
+    await expect(coordinator.run(makeTask())).resolves.toEqual({ ok: false, error: 'Missing claudian_handoff block' });
+    expect(statuses).toEqual(['running', 'needs_handoff']);
+  });
+
+  it('does not double-finalize: a completed terminal is a no-op once the stream already ended', async () => {
+    // Default surface resolves the terminal only after emitEnd (as the real send
+    // does), so the stream-driven review wins and the terminal-completed fallback
+    // is a no-op — the run settles exactly once.
+    const { coordinator, statuses, surface } = makeCoordinator();
+    const p = coordinator.run(makeTask());
+    await flushMicrotasks();
+    surface.adapter.emitText(VALID_HANDOFF);
+    surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await expect(p).resolves.toEqual({ ok: true, status: 'review' });
+    expect(statuses).toEqual(['running', 'review']);
   });
 
   it('delegates a clean run to RunSession: running -> review with handoff', async () => {

@@ -10,6 +10,7 @@ export class SyntheticStreamAdapter implements ProviderStreamAdapter {
   followUps: string[] = [];
   canceled = false;
   private handlers: StreamHandlers | null = null;
+  private endResolvers: Array<(payload: EndPayload) => void> = [];
 
   subscribe(handlers: StreamHandlers): () => void {
     this.handlers = handlers;
@@ -30,5 +31,15 @@ export class SyntheticStreamAdapter implements ProviderStreamAdapter {
   emitToolUse(tool: StreamToolUse): void { this.handlers?.onToolUse(tool); }
   emitToolResult(name: string, ok: boolean): void { this.handlers?.onToolResult(name, ok); }
   emitError(error: string): void { this.handlers?.onError(error); }
-  emitEnd(payload: EndPayload): void { this.handlers?.onEnd(payload); }
+  emitEnd(payload: EndPayload): void {
+    this.handlers?.onEnd(payload);
+    // Mirror reality: the chat send promise (and thus the run handle's terminal)
+    // resolves only after the stream loop ends, i.e. after the `done` chunk.
+    for (const resolve of this.endResolvers.splice(0)) resolve(payload);
+  }
+
+  /** Resolves the next time {@link emitEnd} is called — for wiring a handle terminal. */
+  whenEnded(): Promise<EndPayload> {
+    return new Promise((resolve) => { this.endResolvers.push(resolve); });
+  }
 }

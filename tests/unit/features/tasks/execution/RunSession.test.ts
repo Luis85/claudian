@@ -379,4 +379,51 @@ describe('RunSession', () => {
       expect(write.conversationId).toBeUndefined();
     }
   });
+
+  it('complete() finalizes a completed run to review when no stream end arrived', async () => {
+    // The chat turn settled completed (handoff present) but emitted no `done`.
+    const { session, statuses, handoffs } = makeSession({ heartbeatIntervalMs: 100000, staleThresholdMs: 100000 });
+    const terminal = session.run();
+    session.complete(VALID_HANDOFF);
+    const result = await terminal;
+    expect(result).toEqual({ ok: true, status: 'review' });
+    expect(statuses[statuses.length - 1]).toBe('review');
+    expect(handoffs[0]).toContain('## Summary');
+  });
+
+  it('complete() is a no-op once the run has paused, so a stale initial terminal cannot finalize it', async () => {
+    const { session, adapter, statuses } = makeSession({ heartbeatIntervalMs: 100000, staleThresholdMs: 100000 });
+    const terminal = session.run();
+    adapter.emitText('<claudian_needs_input>\nquestion: which?\n</claudian_needs_input>');
+    await Promise.resolve();
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked' }); // pause-turn end
+    await Promise.resolve();
+    expect(statuses[statuses.length - 1]).toBe('needs_input');
+
+    // The initial chat terminal resolves completed with only the pause content;
+    // completing from that stale snapshot would wrongly finalize a paused run.
+    session.complete('asked');
+    await Promise.resolve();
+    expect(statuses[statuses.length - 1]).toBe('needs_input');
+
+    await session.resume({ kind: 'reply', content: '.env' });
+    adapter.emitText(VALID_HANDOFF);
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    const result = await terminal;
+    expect(result.ok).toBe(true);
+    expect(statuses[statuses.length - 1]).toBe('review');
+  });
+
+  it('complete() is a no-op once the run already settled via the stream', async () => {
+    const { session, adapter, statuses } = makeSession({ heartbeatIntervalMs: 100000, staleThresholdMs: 100000 });
+    const terminal = session.run();
+    adapter.emitText(VALID_HANDOFF);
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await terminal;
+    const count = statuses.length;
+    session.complete('late terminal content'); // the terminal resolves after the stream end
+    await Promise.resolve();
+    expect(statuses.length).toBe(count);
+    expect(statuses[statuses.length - 1]).toBe('review');
+  });
 });

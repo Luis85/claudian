@@ -72,6 +72,11 @@ export class RunSession {
   private resolveTerminal: ((r: RunSessionResult) => void) | null = null;
   private readonly terminalPromise: Promise<RunSessionResult>;
   private paused = false;
+  // Sticky: true once the run has paused at least once. After a pause the initial
+  // chat terminal no longer represents the run's true end (follow-up turns run
+  // with their own unwired terminals), so the terminal-completed fallback must
+  // not finalize from it.
+  private hasPaused = false;
   private pauseApplied: Promise<void> = Promise.resolve();
   // Number of pause turns whose own `done` we still expect to ignore. Each pause
   // ends the agent's turn (so the stream emits a `done`); we must not let that
@@ -202,6 +207,23 @@ export class RunSession {
     void this.finish({ status: 'failed', finalAssistantContent: this.finalContentBuffer, error });
   }
 
+  /**
+   * Complete the run from outside the stream: the chat turn settled `completed`
+   * but emitted no stream `done` (e.g. the provider threw after creating the
+   * assistant message yet the controller still resolved ok). No-op once finishing
+   * — the normal stream `done` fires before the terminal resolves, so it wins —
+   * and no-op once the run has paused, since the initial terminal then no longer
+   * marks the run's end. Prefers the live stream content when richer than the
+   * terminal's snapshot.
+   */
+  complete(finalAssistantContent: string): void {
+    if (this.finishing || this.hasPaused) return;
+    const content = finalAssistantContent.length >= this.finalContentBuffer.length
+      ? finalAssistantContent
+      : this.finalContentBuffer;
+    void this.finish({ status: 'completed', finalAssistantContent: content });
+  }
+
   private handleText(chunk: string): void {
     this.touch();
     this.finalContentBuffer += chunk;
@@ -239,6 +261,7 @@ export class RunSession {
 
   private beginPause(kind: 'needs_input' | 'needs_approval', block: ClaudianBlock): void {
     this.paused = true;
+    this.hasPaused = true;
     this.pauseEndsPending += 1;
     this.stopHeartbeat();
     const reason = kind === 'needs_input' ? block.fields.question : block.fields.action;
