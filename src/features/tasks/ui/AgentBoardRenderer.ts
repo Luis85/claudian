@@ -35,6 +35,10 @@ export interface AgentBoardRenderCallbacks {
   onApprove?(task: TaskSpec): void;
   onReject?(task: TaskSpec, reason: string): void;
   onCancelPaused?(task: TaskSpec): void;
+  /** needs_handoff → review: salvage a run that finished without a structured handoff. */
+  onSendToReview?(task: TaskSpec): void;
+  /** needs_handoff → failed: give up on a run that finished without a structured handoff. */
+  onMarkFailed?(task: TaskSpec): void;
 }
 
 export interface AgentBoardRenderState {
@@ -235,6 +239,10 @@ export class AgentBoardRenderer {
     }
     if (status === 'done') {
       this.renderAction(actions, 'Reopen', () => this.callbacks?.onReopen(task));
+    }
+    if (status === 'needs_handoff') {
+      this.renderAction(actions, 'Review', () => this.callbacks?.onSendToReview?.(task));
+      this.renderAction(actions, 'Mark failed', () => this.callbacks?.onMarkFailed?.(task));
     }
   }
 

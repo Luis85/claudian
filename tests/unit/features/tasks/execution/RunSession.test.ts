@@ -211,13 +211,15 @@ describe('RunSession', () => {
 
   it('fails with heartbeat lost when no events arrive within the stale threshold', async () => {
     jest.useFakeTimers();
-    const { session, statuses } = makeSession({ staleThresholdMs: 2000, heartbeatIntervalMs: 500 });
+    const { session, adapter, statuses } = makeSession({ staleThresholdMs: 2000, heartbeatIntervalMs: 500 });
     const terminal = session.run();
     jest.advanceTimersByTime(3000);
     await Promise.resolve();
     const result = await terminal;
     expect(result.ok).toBe(false);
     expect(statuses[statuses.length - 1]).toBe('failed');
+    // The stuck provider turn is cancelled so the chat tab is freed.
+    expect(adapter.canceled).toBe(true);
     jest.useRealTimers();
   });
 });

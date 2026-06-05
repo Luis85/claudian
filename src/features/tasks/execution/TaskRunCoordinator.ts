@@ -81,8 +81,11 @@ export class TaskRunCoordinator {
       this.activeRuns.set(id, session);
       try {
         const result: RunSessionResult = await session.run();
-        // The surface's own terminal is awaited by adapters internally; settle it too.
-        await handle.terminal.catch(() => undefined);
+        // Do not block on the chat turn's own terminal: when RunSession settles
+        // itself (e.g. a stale-heartbeat failure) the provider turn can still be
+        // pending, so awaiting here would keep the task in activeRuns and stall the
+        // board's finished event/refresh. Just swallow any late rejection.
+        void handle.terminal.catch(() => undefined);
         if (result.ok) return { ok: true, status: result.status };
         return { ok: false, error: result.error };
       } finally {

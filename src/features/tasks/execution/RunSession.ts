@@ -349,6 +349,9 @@ export class RunSession {
     }, interval);
     this.staleTimer = window.setInterval(() => {
       if (Date.now() - this.lastEvent > stale) {
+        // The turn is stuck (no events for the whole window); cancel the provider
+        // turn so the chat tab is freed and its terminal promise resolves.
+        this.deps.stream.cancel();
         void this.finish({
           status: 'failed',
           finalAssistantContent: this.finalContentBuffer,

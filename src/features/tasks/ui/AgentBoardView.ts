@@ -158,6 +158,8 @@ export class AgentBoardView extends ItemView {
         onApprove: (task) => void this.onApprove(task.frontmatter.id),
         onReject: (task, reason) => void this.onReject(task.frontmatter.id, reason),
         onCancelPaused: (task) => this.stopTask(task),
+        onSendToReview: (task) => void this.transitionTask(task, 'review', 'Sent to review without a structured handoff.'),
+        onMarkFailed: (task) => void this.transitionTask(task, 'failed', 'Marked failed: run produced no structured handoff.'),
       },
     );
 
@@ -192,6 +194,8 @@ export class AgentBoardView extends ItemView {
       onRework: (target) => void this.reworkTask(target),
       onMarkReady: (target) => void this.transitionTask(target, 'ready', 'Marked ready.'),
       onReopen: (target) => void this.transitionTask(target, 'inbox', 'Reopened.'),
+      onSendToReview: (target) => void this.transitionTask(target, 'review', 'Sent to review without a structured handoff.'),
+      onMarkFailed: (target) => void this.transitionTask(target, 'failed', 'Marked failed: run produced no structured handoff.'),
       onArchive: (target) => void this.archiveTask(target),
       onSaveFields: (target, fields) => this.saveTaskFields(target, fields),
       getProviderOptions: () =>

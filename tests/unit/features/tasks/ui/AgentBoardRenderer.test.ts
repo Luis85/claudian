@@ -77,6 +77,8 @@ function makeCallbacks(): AgentBoardRenderCallbacks {
     onApprove: jest.fn(),
     onReject: jest.fn(),
     onCancelPaused: jest.fn(),
+    onSendToReview: jest.fn(),
+    onMarkFailed: jest.fn(),
   };
 }
 
@@ -254,6 +256,18 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
     reason.value = 'too risky';
     findButton(host, 'Reject')?.click();
     expect(callbacks.onReject).toHaveBeenCalledWith(task, 'too risky');
+  });
+
+  it('exposes Review and Mark failed actions on needs_handoff cards', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    const task = makeTask('h', 'needs_handoff');
+    renderer.render(host, makeState({ needs_handoff: [task] }), callbacks);
+    findButton(host, 'Review')?.click();
+    expect(callbacks.onSendToReview).toHaveBeenCalledWith(task);
+    findButton(host, 'Mark failed')?.click();
+    expect(callbacks.onMarkFailed).toHaveBeenCalledWith(task);
   });
 
   it('patchCard swaps the status badge and actions in place', () => {
