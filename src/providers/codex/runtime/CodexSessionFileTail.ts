@@ -12,22 +12,15 @@ import {
   normalizeCodexToolResult,
   parseCodexArguments,
 } from '../normalization/codexToolNormalization';
+import { CODEX_DEFAULT_CONTEXT_WINDOW,codexModelContextWindow } from './codexModelWindowCatalog';
 
 // ---------------------------------------------------------------------------
 // Model-specific context windows
 // ---------------------------------------------------------------------------
 
-const DEFAULT_CONTEXT_WINDOW = 200_000;
-
-export const CODEX_CONTEXT_WINDOW_BY_MODEL: Record<string, number> = {
-  'gpt-5.2': 400_000,
-  'gpt-5.3-codex': 400_000,
-  'gpt-5.3-codex-spark': 128_000,
-};
-
 export function getCodexContextWindow(model?: string): number {
-  if (!model) return DEFAULT_CONTEXT_WINDOW;
-  return CODEX_CONTEXT_WINDOW_BY_MODEL[model] ?? DEFAULT_CONTEXT_WINDOW;
+  if (!model) return CODEX_DEFAULT_CONTEXT_WINDOW;
+  return codexModelContextWindow(model) || CODEX_DEFAULT_CONTEXT_WINDOW;
 }
 
 // ---------------------------------------------------------------------------
@@ -124,7 +117,7 @@ export interface SessionTailState {
 }
 
 export function createSessionTailState(
-  fallbackContextWindow: number = DEFAULT_CONTEXT_WINDOW,
+  fallbackContextWindow: number = CODEX_DEFAULT_CONTEXT_WINDOW,
 ): SessionTailState {
   return {
     responseItemState: {
