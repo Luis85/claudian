@@ -209,6 +209,45 @@ describe('RunSession', () => {
     expect(writes).toEqual(['running', 'review']);
   });
 
+  it('does not let a slow initial running write revert a fast reject', async () => {
+    const writes: string[] = [];
+    let releaseRunning!: () => void;
+    const adapter = new SyntheticStreamAdapter();
+    const events = new EventBus<TaskEventMap>();
+    const session = new RunSession({
+      task: makeTask(),
+      runId: 'r',
+      conversationId: null,
+      sidepanelTabId: null,
+      stream: adapter,
+      events,
+      now: () => '2026-06-04T09:00:00Z',
+      writeStatus: async (_t, options) => {
+        if (options.status === 'running' && writes.length === 0) {
+          await new Promise<void>((resolve) => { releaseRunning = resolve; });
+        }
+        writes.push(options.status);
+      },
+      flushLedger: async () => {},
+      writeHandoff: async () => {},
+      heartbeatIntervalMs: 100000,
+      staleThresholdMs: 100000,
+      ledgerIntervalMs: 100000,
+      ledgerMilestone: 999,
+    });
+    const terminal = session.run();
+    adapter.emitText('<claudian_needs_approval>\naction: drop\n</claudian_needs_approval>');
+    await Promise.resolve();
+    const rejecting = session.resume({ kind: 'reject', reason: 'no' });
+    await Promise.resolve();
+    releaseRunning();
+    await rejecting;
+    const result = await terminal;
+    expect(result.ok).toBe(false);
+    // 'canceled' must be the last write — the late running write cannot revert it.
+    expect(writes[writes.length - 1]).toBe('canceled');
+  });
+
   it('fails with heartbeat lost when no events arrive within the stale threshold', async () => {
     jest.useFakeTimers();
     const { session, adapter, statuses } = makeSession({ staleThresholdMs: 2000, heartbeatIntervalMs: 500 });

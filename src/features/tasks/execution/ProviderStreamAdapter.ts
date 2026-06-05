@@ -13,6 +13,12 @@ export interface StreamHandlers {
     finalAssistantContent: string;
     error?: string;
   }): void;
+  /**
+   * Any stream activity (including chunks not mapped above, e.g. thinking/usage/
+   * subagent). Lets the runner treat ongoing-but-quiet streams as alive so the
+   * stale-heartbeat check doesn't cancel them.
+   */
+  onActivity?(): void;
 }
 
 export interface ProviderStreamAdapter {

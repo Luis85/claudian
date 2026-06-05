@@ -121,6 +121,7 @@ export class RunSession {
       onToolUse: (tool) => this.handleTool(tool.name, tool.primaryArg),
       onToolResult: () => this.handleToolResult(),
       onError: (error) => this.handleError(error),
+      onActivity: () => this.touch(),
       onEnd: (payload) => { void this.finish(payload); },
     });
     this.startHeartbeat();
@@ -146,14 +147,16 @@ export class RunSession {
     await this.pauseApplied;
 
     if (arg.kind === 'reject') {
-      this.finishing = true;
-      this.stopLiveWiring();
+      // Route through finish() so the terminal write waits for the in-flight
+      // running/heartbeat writes (a fast reject must not be overtaken by a late
+      // initial running write that re-activates the work order).
+      this.ledger.enqueue({ timestamp: this.deps.now(), status: 'canceled', message: `rejected: ${arg.reason}` });
       this.deps.stream.cancel();
-      const ts = this.deps.now();
-      this.ledger.enqueue({ timestamp: ts, status: 'canceled', message: `rejected: ${arg.reason}` });
-      await this.deps.writeStatus(this.deps.task, { status: 'canceled', timestamp: ts, pauseReason: null });
-      this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'canceled' });
-      await this.settle({ ok: false, error: `rejected: ${arg.reason}`, status: 'canceled' });
+      await this.finish({
+        status: 'canceled',
+        finalAssistantContent: this.finalContentBuffer,
+        error: `rejected: ${arg.reason}`,
+      });
       return;
     }
 

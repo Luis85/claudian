@@ -86,6 +86,27 @@ describe('ChatTabStreamAdapter', () => {
     expect(calls).toContainEqual(['result', { name: 'unknown', ok: false }]);
   });
 
+  it('reports activity for every chunk, including ones it does not map', () => {
+    const tab = new FakeTabHandle();
+    const adapter = new ChatTabStreamAdapter(tab);
+    let activity = 0;
+    const handlers: StreamHandlers = {
+      onText: () => {},
+      onToolUse: () => {},
+      onToolResult: () => {},
+      onError: () => {},
+      onEnd: () => {},
+      onActivity: () => { activity += 1; },
+    };
+    adapter.subscribe(handlers);
+
+    tab.emit({ type: 'thinking', content: 'reasoning…' });
+    tab.emit({ type: 'tool_output', id: 't1', content: 'partial' });
+    tab.emit({ type: 'text', content: 'hi' });
+
+    expect(activity).toBe(3);
+  });
+
   it('maps error chunks to onError', () => {
     const tab = new FakeTabHandle();
     const adapter = new ChatTabStreamAdapter(tab);

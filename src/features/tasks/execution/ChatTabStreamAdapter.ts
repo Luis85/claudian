@@ -25,6 +25,9 @@ export class ChatTabStreamAdapter implements ProviderStreamAdapter {
     let assistantContent = '';
     const toolNames = new Map<string, string>();
     return this.handle.subscribe((chunk) => {
+      // Every chunk — including thinking/usage/subagent ones not mapped below —
+      // counts as activity so the runner's stale check sees a live stream.
+      handlers.onActivity?.();
       switch (chunk.type) {
         case 'text':
           assistantContent += chunk.content;
