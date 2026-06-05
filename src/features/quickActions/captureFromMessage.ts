@@ -1,9 +1,10 @@
 import { Notice } from 'obsidian';
 
-import type { ChatMessage } from '../../core/types';
-import { t } from '../../i18n/i18n';
-import type ClaudianPlugin from '../../main';
-import { chatMessageText } from '../../utils/chatMessageText';
+import type { ChatMessage } from '@/core/types';
+import { t } from '@/i18n/i18n';
+import type ClaudianPlugin from '@/main';
+import { chatMessageText } from '@/utils/chatMessageText';
+
 import { QuickActionStorage } from './QuickActionStorage';
 import { QuickActionEditorModal } from './ui/QuickActionEditorModal';
 
