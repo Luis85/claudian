@@ -6,6 +6,8 @@ icon: list-checks
 tags:
   - engineering
   - planning
+favorite: true
+favoriteRank: 5
 ---
 
 Break the current plan into independently-grabbable issues using tracer-bullet vertical slices.

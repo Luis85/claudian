@@ -7,6 +7,8 @@ tags:
   - design
   - brainstorming
   - planning
+favorite: true
+favoriteRank: 1
 ---
 
 Kick off a brainstorming session that turns the idea below into a written design spec.

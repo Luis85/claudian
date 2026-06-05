@@ -7,6 +7,8 @@ tags:
   - review
   - work-order
   - agents
+favorite: true
+favoriteRank: 4
 ---
 
 Thoroughly review a completed (or in-review) work-order. Dispatch parallel subagents, synthesize findings, apply a low-risk polish pass, and update the work-order via its native conventions.

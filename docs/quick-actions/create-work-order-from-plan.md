@@ -3,6 +3,8 @@ type: quick-action
 name: Create work-order from plan
 description: Generate a populated work-order file from a plan document. Provide plan path.
 icon: clipboard-list
+favorite: true
+favoriteRank: 2
 ---
 
 Create a work-order from a plan document.
