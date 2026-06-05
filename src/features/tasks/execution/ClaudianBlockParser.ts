@@ -70,9 +70,13 @@ export class ClaudianBlockParser {
         const closeTag = KIND_TO_CLOSE[this.openKind];
         const idx = this.buffer.indexOf(closeTag);
         if (idx === -1) {
-          // Hold the partial body; wait for more chunks.
-          this.openBody += this.buffer;
-          this.buffer = '';
+          // The close tag can be split across chunks (e.g. `</claudian_needs_in`
+          // then `put>`). Append everything except a possible partial close-tag
+          // suffix to the body, and keep that suffix in the buffer so the next
+          // chunk can complete the tag — mirroring the open-tag tail handling.
+          const tail = this.partialCloseTailLength(closeTag);
+          this.openBody += this.buffer.slice(0, this.buffer.length - tail);
+          this.buffer = tail > 0 ? this.buffer.slice(this.buffer.length - tail) : '';
           break;
         }
         this.openBody += this.buffer.slice(0, idx);
@@ -131,6 +135,15 @@ export class ClaudianBlockParser {
       }
     }
     return false;
+  }
+
+  /** Length of the buffer's longest suffix that is a (proper) prefix of the close tag. */
+  private partialCloseTailLength(closeTag: string): number {
+    const max = Math.min(this.buffer.length, closeTag.length - 1);
+    for (let i = max; i >= 1; i--) {
+      if (this.buffer.endsWith(closeTag.slice(0, i))) return i;
+    }
+    return 0;
   }
 }
 
