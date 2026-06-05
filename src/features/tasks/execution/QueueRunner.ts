@@ -1,4 +1,5 @@
 import type { TaskEventMap } from '../events';
+import { isRunnableTaskStatus } from '../model/taskStateMachine';
 import type { TaskLedgerEntry, TaskSpec } from '../model/taskTypes';
 import type { QueueSlotTracker } from './QueueSlotTracker';
 import type { EligibilityPredicates } from './selectNextEligibleTask';
@@ -67,6 +68,11 @@ export interface QueueRunnerDeps {
   // tab; when the panel is at maxTabs the runtime fails the run, so the queue
   // must wait rather than launch and corrupt a ready card. Omitted ⇒ unbounded.
   getFreeExecutionSlots?: () => number;
+  // Re-reads a work order from disk just before launch, returning the current
+  // spec or null if it's gone/unparseable. Lets the queue skip a stale cached
+  // card whose status changed since the board last indexed (e.g. completed or
+  // edited) instead of overwriting it. Omitted ⇒ run the cached spec.
+  reloadTask?: (task: TaskSpec) => Promise<TaskSpec | null>;
 }
 
 interface QueueRunnerState {
@@ -202,15 +208,42 @@ export class QueueRunner {
     if (!this.deps.slot.acquire(task.frontmatter.id)) return;
     // The card is running now, so any stale skip chip no longer applies.
     this.control.lastSkipReasonByTask.delete(task.frontmatter.id);
-    this.deps.events.emit('task:queue-tick', { taskId: task.frontmatter.id });
-    this.deps.coordinator
-      .run(task)
-      .then((res) => this.onSettle(res))
-      .catch((err) => this.onSettle({ ok: false, error: String(err) }))
-      .finally(() => {
-        this.deps.slot.release(task.frontmatter.id);
-        this.tick();
-      });
+    void this.runAcquired(task);
+  }
+
+  // Re-read the work order immediately before running so the queue never starts
+  // a stale cached spec — e.g. the card was completed or edited after the board's
+  // last index but before this wake. Manual runs already pass a freshly-parsed
+  // spec; this gives the queue path the same guarantee. The slot is already held
+  // (acquired in launch); release it on a stale skip so the loop can advance.
+  private async runAcquired(task: TaskSpec): Promise<void> {
+    const id = task.frontmatter.id;
+    let fresh: TaskSpec | null = task;
+    if (this.deps.reloadTask) {
+      try {
+        fresh = await this.deps.reloadTask(task);
+      } catch {
+        fresh = null;
+      }
+    }
+    if (!fresh || !isRunnableTaskStatus(fresh.frontmatter.status)) {
+      // The note changed since indexing (completed, reworked, already running,
+      // or deleted). Don't overwrite it, and free the slot. Deliberately do not
+      // self-tick: the same change raises a vault event that re-indexes and ticks
+      // the runner, so re-driving here would risk a tight loop while the model
+      // still shows the card as runnable.
+      this.deps.slot.release(id);
+      return;
+    }
+    this.deps.events.emit('task:queue-tick', { taskId: id });
+    try {
+      this.onSettle(await this.deps.coordinator.run(fresh));
+    } catch (err) {
+      this.onSettle({ ok: false, error: String(err) });
+    } finally {
+      this.deps.slot.release(id);
+      this.tick();
+    }
   }
 
   private onSettle(res: TaskRunResult): void {

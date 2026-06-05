@@ -56,6 +56,7 @@ interface HarnessConfig {
   onRun?: (task: TaskSpec) => Promise<TaskRunResult> | TaskRunResult;
   getFreeExecutionSlots?: () => number;
   control?: QueueControlState;
+  reloadTask?: (task: TaskSpec) => Promise<TaskSpec | null>;
 }
 
 interface Harness {
@@ -114,6 +115,7 @@ function makeHarness(config: HarnessConfig = {}): Harness {
     control: config.control,
     now: config.now ?? (() => Date.now()),
     getFreeExecutionSlots: config.getFreeExecutionSlots,
+    reloadTask: config.reloadTask,
   });
 
   return {
@@ -331,6 +333,71 @@ describe('QueueRunner — skip ledger debounce', () => {
     expect(h.ledger).toHaveLength(1);
     expect(h.ledger[0].status).toBe('needs_fix');
     expect(h.ledger[0].message).toContain('skipped');
+  });
+});
+
+describe('QueueRunner — pre-launch re-read', () => {
+  it('runs the freshly reloaded spec, not the cached one', async () => {
+    const seen: string[] = [];
+    const h = makeHarness({
+      // Disk says the card is now Needs-fix, while the board cached it as Ready.
+      reloadTask: async () => makeTask('a', { status: 'needs_fix' }),
+      onRun: async (task) => {
+        seen.push(task.frontmatter.status);
+        return { ok: true, status: 'review' };
+      },
+    });
+    h.setTasks([makeTask('a', { status: 'ready' })]);
+
+    h.runner.tick();
+    await flush();
+
+    expect(h.runCalls).toEqual(['a']);
+    expect(seen).toEqual(['needs_fix']);
+  });
+
+  it('does not launch when the card is no longer runnable on disk', async () => {
+    // Race: the user completed the card after the board's last index.
+    const h = makeHarness({ reloadTask: async () => makeTask('a', { status: 'done' }) });
+    h.setTasks([makeTask('a', { status: 'ready' })]);
+
+    h.runner.tick();
+    await flush();
+
+    expect(h.runCalls).toEqual([]);
+  });
+
+  it('does not launch when the card is gone on disk', async () => {
+    const h = makeHarness({ reloadTask: async () => null });
+    h.setTasks([makeTask('a', { status: 'ready' })]);
+
+    h.runner.tick();
+    await flush();
+
+    expect(h.runCalls).toEqual([]);
+  });
+
+  it('frees the slot on a stale skip so the next tick can run another card', async () => {
+    const h = makeHarness({
+      cap: 1,
+      reloadTask: async (task) =>
+        task.frontmatter.id === 'a' ? makeTask('a', { status: 'done' }) : task,
+    });
+    h.setTasks([makeTask('a', { status: 'ready' }), makeTask('b', { status: 'ready' })]);
+
+    h.runner.tick();
+    await flush();
+    // 'a' was stale (done on disk) → skipped without running, and its slot freed.
+    // The runner does not self-tick on a stale skip (it waits for the re-index
+    // event the change raises), so nothing else launched yet.
+    expect(h.runCalls).toEqual([]);
+    expect(h.slot.occupied()).toBe(0);
+
+    // The board re-indexes after the change and ticks; the freed slot lets 'b' run.
+    h.setTasks([makeTask('b', { status: 'ready' })]);
+    h.runner.tick();
+    await flush();
+    expect(h.runCalls).toEqual(['b']);
   });
 });
 

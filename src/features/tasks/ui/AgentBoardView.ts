@@ -422,6 +422,24 @@ export class AgentBoardView extends ItemView {
     if (spec) spec.frontmatter.status = status;
   }
 
+  // Reads a work order fresh for the queue's pre-launch staleness check, and
+  // keeps the in-memory model honest so a changed or removed card isn't re-picked
+  // on the next tick. Returns null when the note is gone or unparseable.
+  private async reloadTaskFromVault(task: TaskSpec): Promise<TaskSpec | null> {
+    const file = this.plugin.app.vault.getAbstractFileByPath(task.path);
+    if (!(file instanceof TFile)) {
+      this.model.tasks = this.model.tasks.filter((t) => t.frontmatter.id !== task.frontmatter.id);
+      return null;
+    }
+    try {
+      const fresh = this.noteStore.parse(task.path, await this.plugin.app.vault.read(file)).task;
+      this.patchModelStatus(fresh.frontmatter.id, fresh.frontmatter.status);
+      return fresh;
+    } catch {
+      return null;
+    }
+  }
+
   private syncRunner(): void {
     this.plugin.queueSlotTracker.setCap(this.plugin.settings.agentBoardQueueCap);
     if (!this.runner) {
@@ -443,6 +461,10 @@ export class AgentBoardView extends ItemView {
         control: this.plugin.queueControl,
         now: () => Date.now(),
         getFreeExecutionSlots: () => this.freeExecutionSlots(),
+        // Re-read each card just before launch so the queue never runs a stale
+        // cached spec (e.g. completed/edited since the last index), mirroring the
+        // manual run path.
+        reloadTask: (task) => this.reloadTaskFromVault(task),
       });
     } else {
       this.runner.setHaltAfterFailures(this.plugin.settings.agentBoardQueueHaltAfter);
