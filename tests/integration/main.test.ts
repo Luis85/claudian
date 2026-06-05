@@ -13,12 +13,16 @@ jest.mock('fs');
 // Now import the plugin after mocking
 import ClaudianPlugin from '@/main';
 
+const { MENU_SEPARATOR } = jest.requireActual('obsidian') as { MENU_SEPARATOR: symbol };
+
+type MockMenuItem = {
+  title: string;
+  icon: string;
+  clickHandler: (() => void) | null;
+};
+
 type MockMenu = Menu & {
-  items: Array<{
-    title: string;
-    icon: string;
-    clickHandler: (() => void) | null;
-  }>;
+  items: Array<MockMenuItem | symbol>;
 };
 
 function createMockMenu(): MockMenu {
@@ -31,6 +35,14 @@ function createMockTFile(path: string): TFile {
 
 function createMockTFolder(path: string): TFolder {
   return new (TFolder as any)(path) as TFolder;
+}
+
+function itemTitles(menu: MockMenu): string[] {
+  return menu.items.map((entry) => entry === MENU_SEPARATOR ? '<sep>' : (entry as MockMenuItem).title);
+}
+
+function menuItem(menu: MockMenu, index: number): MockMenuItem {
+  return menu.items[index] as MockMenuItem;
 }
 
 /**
@@ -171,12 +183,16 @@ describe('ClaudianPlugin', () => {
       const file = createMockTFile('notes/context.md');
       fileMenuCall![1](menu, file);
 
-      expect(menu.items).toHaveLength(3);
-      expect(menu.items[0].title).toBe('Add file to Claudian chat');
-      expect(menu.items[0].icon).toBe('at-sign');
-      expect(menu.items[1].title).toBe('Create work order');
-      expect(menu.items[1].icon).toBe('kanban-square');
-      expect(menu.items[2].icon).toBe('zap');
+      expect(itemTitles(menu)).toEqual([
+        '<sep>',
+        'Add file to Claudian chat',
+        'Create work order',
+        'Open Quick Actions',
+        '<sep>',
+      ]);
+      expect(menuItem(menu, 1).icon).toBe('at-sign');
+      expect(menuItem(menu, 2).icon).toBe('kanban-square');
+      expect(menuItem(menu, 3).icon).toBe('zap');
     });
 
     it('adds a folder menu item for TFolder with correct title and icon', async () => {
@@ -191,12 +207,16 @@ describe('ClaudianPlugin', () => {
       const folder = createMockTFolder('notes');
       fileMenuCall![1](menu, folder);
 
-      expect(menu.items).toHaveLength(3);
-      expect(menu.items[0].title).toBe('Add folder to Claudian chat');
-      expect(menu.items[0].icon).toBe('folder');
-      expect(menu.items[1].title).toBe('Create work order');
-      expect(menu.items[1].icon).toBe('kanban-square');
-      expect(menu.items[2].icon).toBe('zap');
+      expect(itemTitles(menu)).toEqual([
+        '<sep>',
+        'Add folder to Claudian chat',
+        'Create work order',
+        'Open Quick Actions',
+        '<sep>',
+      ]);
+      expect(menuItem(menu, 1).icon).toBe('folder');
+      expect(menuItem(menu, 2).icon).toBe('kanban-square');
+      expect(menuItem(menu, 3).icon).toBe('zap');
     });
 
     it('adds the selected folder to the active chat from the file menu', async () => {
@@ -210,7 +230,7 @@ describe('ClaudianPlugin', () => {
       const folder = createMockTFolder('notes');
       fileMenuCall![1](menu, folder);
 
-      menu.items[0].clickHandler?.();
+      menuItem(menu, 1).clickHandler?.();
 
       expect(addSpy).toHaveBeenCalledWith(folder);
     });
@@ -226,7 +246,7 @@ describe('ClaudianPlugin', () => {
       const file = createMockTFile('notes/context.md');
       fileMenuCall![1](menu, file);
 
-      menu.items[0].clickHandler?.();
+      menuItem(menu, 1).clickHandler?.();
 
       expect(addSpy).toHaveBeenCalledWith(file);
     });

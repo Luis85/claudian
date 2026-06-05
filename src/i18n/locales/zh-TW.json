@@ -594,7 +594,7 @@
       "folderMissing": "請先設定快速操作資料夾"
     },
     "contextMenu": {
-      "title": "Quick actions",
+      "title": "Open Quick Actions",
       "tabLimitReached": "Cannot open quick action: tab limit reached. Close a tab first."
     }
   },

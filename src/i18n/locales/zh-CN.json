@@ -594,7 +594,7 @@
       "folderMissing": "请先配置快速操作文件夹"
     },
     "contextMenu": {
-      "title": "Quick actions",
+      "title": "Open Quick Actions",
       "tabLimitReached": "Cannot open quick action: tab limit reached. Close a tab first."
     }
   },
