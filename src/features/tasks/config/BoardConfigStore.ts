@@ -15,7 +15,10 @@ export function loadBoardConfig(settings: Record<string, unknown>): LoadBoardCon
 
   const candidate = raw as { lanes?: unknown };
   if (!Array.isArray(candidate.lanes)) {
-    return { config: DEFAULT_BOARD_CONFIG, errors: [] };
+    // A persisted config with no lanes array — e.g. a fresh vault where only
+    // queue.paused was saved — must keep the default lanes rather than collapse
+    // the board to zero lanes, while still honoring the queue flag.
+    return { config: { ...DEFAULT_BOARD_CONFIG, queue: normalizeQueue(raw) }, errors: [] };
   }
 
   const errors: string[] = [];
@@ -120,13 +123,15 @@ function normalizeQueue(raw: unknown): BoardQueueConfig {
 }
 
 // Mutates the settings bag in place so the caller can persist via the existing
-// `plugin.saveSettings()` path. Keeps `lanes` intact (defaulting to an empty
-// array) so a queue toggle never clobbers a user's lane configuration.
+// `plugin.saveSettings()` path. Preserves an existing config verbatim and only
+// sets the queue flag. It deliberately does NOT fabricate a `lanes: []` for a
+// fresh vault — an explicit empty lanes array suppresses loadBoardConfig's
+// default-lane fallback and would collapse the board. When no config exists the
+// result is `{ queue }` only, and loadBoardConfig restores the default lanes.
 export function writeBoardQueuePaused(settings: Record<string, unknown>, paused: boolean): void {
   const existing = settings.agentBoardConfig;
   const base: Record<string, unknown> =
     existing && typeof existing === 'object' ? { ...(existing as Record<string, unknown>) } : {};
-  if (!Array.isArray(base.lanes)) base.lanes = [];
   base.queue = { paused };
   settings.agentBoardConfig = base;
 }

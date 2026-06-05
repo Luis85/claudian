@@ -155,6 +155,14 @@ describe('loadBoardConfig — queue.paused', () => {
     });
     expect(config.queue).toEqual({ paused: false });
   });
+
+  it('keeps default lanes but preserves queue.paused when lanes are absent', () => {
+    const { config } = loadBoardConfig({ agentBoardConfig: { queue: { paused: true } } });
+    expect(config.lanes.map((lane) => lane.id)).toEqual(
+      DEFAULT_BOARD_CONFIG.lanes.map((lane) => lane.id),
+    );
+    expect(config.queue).toEqual({ paused: true });
+  });
 });
 
 describe('writeBoardQueuePaused', () => {
@@ -180,13 +188,17 @@ describe('writeBoardQueuePaused', () => {
     });
   });
 
-  it('creates agentBoardConfig if missing', () => {
+  it('persists only the queue flag (no fabricated lanes) when no config exists', () => {
     const settings: Record<string, unknown> = {};
     writeBoardQueuePaused(settings, true);
-    expect(settings.agentBoardConfig).toEqual({
-      lanes: [],
-      queue: { paused: true },
-    });
+    expect(settings.agentBoardConfig).toEqual({ queue: { paused: true } });
+    // Regression: persisting the queue flag on a fresh vault must not collapse
+    // the board to zero lanes — loadBoardConfig still restores the defaults.
+    const { config } = loadBoardConfig(settings);
+    expect(config.queue).toEqual({ paused: true });
+    expect(config.lanes.map((lane) => lane.id)).toEqual(
+      DEFAULT_BOARD_CONFIG.lanes.map((lane) => lane.id),
+    );
   });
 });
 
