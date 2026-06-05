@@ -35,6 +35,18 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+function numericField(source: unknown, keys: string[]): number | undefined {
+  if (!source || typeof source !== 'object') return undefined;
+  const obj = source as Record<string, unknown>;
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
 export function parsePayloadValue(raw: unknown): unknown {
   if (typeof raw !== 'string') return raw;
   try {
@@ -107,6 +119,10 @@ export interface SessionTailState {
   lastTextByTurn: Map<string, string>;
   lastThinkingByTurn: Map<string, string>;
   pendingUsageByTurn: Map<string, {
+    inputTokens: number;
+    outputTokens: number;
+    reasoningOutputTokens: number;
+    cacheReadInputTokens: number;
     contextTokens: number;
     contextWindow: number;
     contextWindowIsAuthoritative: boolean;
@@ -241,11 +257,7 @@ export function mapEventMsgEvent(
       if (!state.emittedUsageByTurn.has(turnId)) {
         const pending = state.pendingUsageByTurn.get(turnId);
         if (pending) {
-          const usage = buildUsageInfo(
-            pending.contextTokens,
-            pending.contextWindow,
-            pending.contextWindowIsAuthoritative,
-          );
+          const usage = buildUsageInfo(pending);
           chunks.push({ type: 'usage', usage, sessionId });
           state.emittedUsageByTurn.add(turnId);
         }
@@ -293,14 +305,20 @@ export function mapEventMsgEvent(
     case 'token_count': {
       const turnId = resolveTurnId(state, undefined);
       const lastTokenUsage = isRecord(info.last_token_usage) ? info.last_token_usage : {};
-      const inputTokens = typeof lastTokenUsage.input_tokens === 'number'
-        ? lastTokenUsage.input_tokens
-        : typeof lastTokenUsage.input === 'number'
-          ? lastTokenUsage.input
-          : 0;
+      const inputTokens = numericField(lastTokenUsage, ['input_tokens', 'input']) ?? 0;
+      const cachedInputTokens = numericField(lastTokenUsage, ['cached_input_tokens', 'cached_input']) ?? 0;
+      const outputTokens = numericField(lastTokenUsage, ['output_tokens', 'output']) ?? 0;
+      const reasoningOutputTokens = numericField(lastTokenUsage, ['reasoning_output_tokens', 'reasoning_output']) ?? 0;
+      // contextTokens = input + output + reasoning. cached_input_tokens is part of input_tokens
+      // on the wire, so do NOT add it again.
+      const contextTokens = inputTokens + outputTokens + reasoningOutputTokens;
 
       state.pendingUsageByTurn.set(turnId, {
-        contextTokens: inputTokens,
+        inputTokens,
+        outputTokens,
+        reasoningOutputTokens,
+        cacheReadInputTokens: cachedInputTokens,
+        contextTokens,
         contextWindow: state.modelContextWindow,
         contextWindowIsAuthoritative: state.modelContextWindowIsAuthoritative,
       });
@@ -533,20 +551,28 @@ export function mapResponseItemEvent(
 // Usage builder
 // ---------------------------------------------------------------------------
 
-function buildUsageInfo(
-  contextTokens: number,
-  contextWindow: number,
-  contextWindowIsAuthoritative: boolean,
-): UsageInfo {
-  return {
-    inputTokens: contextTokens,
-    cacheCreationInputTokens: 0,
-    cacheReadInputTokens: 0,
-    contextWindow,
-    contextWindowIsAuthoritative,
-    contextTokens,
-    percentage: contextWindow > 0 ? Math.min(100, Math.max(0, Math.round((contextTokens / contextWindow) * 100))) : 0,
+function buildUsageInfo(pending: {
+  inputTokens: number;
+  outputTokens: number;
+  reasoningOutputTokens: number;
+  cacheReadInputTokens: number;
+  contextTokens: number;
+  contextWindow: number;
+  contextWindowIsAuthoritative: boolean;
+}): UsageInfo {
+  const usage: UsageInfo = {
+    inputTokens: pending.inputTokens,
+    contextWindow: pending.contextWindow,
+    contextWindowIsAuthoritative: pending.contextWindowIsAuthoritative,
+    contextTokens: pending.contextTokens,
+    percentage: pending.contextWindow > 0
+      ? Math.min(100, Math.max(0, Math.round((pending.contextTokens / pending.contextWindow) * 100)))
+      : 0,
   };
+  if (pending.outputTokens > 0) usage.outputTokens = pending.outputTokens;
+  if (pending.reasoningOutputTokens > 0) usage.reasoningOutputTokens = pending.reasoningOutputTokens;
+  if (pending.cacheReadInputTokens > 0) usage.cacheReadInputTokens = pending.cacheReadInputTokens;
+  return usage;
 }
 
 // ---------------------------------------------------------------------------

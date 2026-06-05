@@ -182,6 +182,10 @@ describe('mapEventMsgEvent', () => {
     it('emits pending usage then done', () => {
       const state = makeState({ currentTurnId: 'turn-1' });
       state.pendingUsageByTurn.set('turn-1', {
+        inputTokens: 500,
+        outputTokens: 0,
+        reasoningOutputTokens: 0,
+        cacheReadInputTokens: 0,
         contextTokens: 500,
         contextWindow: 200_000,
         contextWindowIsAuthoritative: false,
@@ -281,7 +285,11 @@ describe('mapEventMsgEvent', () => {
       const chunks = mapEventMsgEvent(payload, 'sess-1', state);
       expect(chunks).toEqual([]);
       expect(state.pendingUsageByTurn.get('turn-1')).toEqual({
-        contextTokens: 13140,
+        inputTokens: 13140,
+        outputTokens: 323,
+        reasoningOutputTokens: 0,
+        cacheReadInputTokens: 3456,
+        contextTokens: 13140 + 323,
         contextWindow: 200_000,
         contextWindowIsAuthoritative: false,
       });
@@ -298,7 +306,11 @@ describe('mapEventMsgEvent', () => {
       const chunks = mapEventMsgEvent(payload, 'sess-1', state);
       expect(chunks).toEqual([]);
       expect(state.pendingUsageByTurn.get('turn-1')).toEqual({
-        contextTokens: 100,
+        inputTokens: 100,
+        outputTokens: 50,
+        reasoningOutputTokens: 0,
+        cacheReadInputTokens: 0,
+        contextTokens: 100 + 50,
         contextWindow: 200_000,
         contextWindowIsAuthoritative: false,
       });
@@ -318,10 +330,67 @@ describe('mapEventMsgEvent', () => {
       };
       mapEventMsgEvent(payload, 'sess-1', state);
       expect(state.pendingUsageByTurn.get('turn-1')).toEqual({
+        inputTokens: 500,
+        outputTokens: 0,
+        reasoningOutputTokens: 0,
+        cacheReadInputTokens: 0,
         contextTokens: 500,
         contextWindow: 258400,
         contextWindowIsAuthoritative: true,
       });
+    });
+
+    it('parses cached_input_tokens, output_tokens, reasoning_output_tokens, not just input', () => {
+      const state = makeState({ currentTurnId: 'turn-1' });
+      state.modelContextWindow = 200_000;
+      state.modelContextWindowIsAuthoritative = true;
+
+      const chunks = mapEventMsgEvent({
+        type: 'token_count',
+        info: {
+          last_token_usage: {
+            input_tokens: 4000,
+            cached_input_tokens: 800,
+            output_tokens: 1200,
+            reasoning_output_tokens: 300,
+          },
+        },
+      }, 'sess-1', state);
+
+      expect(chunks).toEqual([]); // token_count stages into pendingUsageByTurn; emit happens on task_complete
+      const pending = state.pendingUsageByTurn.get('turn-1');
+      expect(pending).toBeDefined();
+      expect(pending?.inputTokens).toBe(4000);
+      expect(pending?.cacheReadInputTokens).toBe(800);
+      expect(pending?.outputTokens).toBe(1200);
+      expect(pending?.reasoningOutputTokens).toBe(300);
+      // contextTokens = input + output + reasoning (cache_read is part of input on the wire, don't double-count)
+      expect(pending?.contextTokens).toBe(4000 + 1200 + 300);
+    });
+
+    it('emits a UsageInfo without cacheCreationInputTokens (no phantom zero)', () => {
+      const state = makeState({ currentTurnId: 'turn-1' });
+      state.modelContextWindow = 200_000;
+      state.modelContextWindowIsAuthoritative = true;
+
+      mapEventMsgEvent({
+        type: 'token_count',
+        info: { last_token_usage: { input_tokens: 100 } },
+      }, 'sess-1', state);
+
+      const chunks = mapEventMsgEvent({ type: 'task_complete' }, 'sess-1', state);
+      const usageChunk = chunks.find(c => c.type === 'usage');
+      expect(usageChunk).toMatchObject({
+        type: 'usage',
+        usage: {
+          inputTokens: 100,
+        },
+      });
+      const usage = usageChunk?.type === 'usage' ? usageChunk.usage : undefined;
+      expect(usage?.cacheCreationInputTokens).toBeUndefined();
+      // No cache read either if not in event
+      expect(usage?.cacheReadInputTokens).toBeUndefined();
+      expect(usage?.outputTokens).toBeUndefined();
     });
   });
 
