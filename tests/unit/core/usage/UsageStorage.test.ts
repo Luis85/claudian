@@ -54,7 +54,7 @@ describe('UsageStorage', () => {
       records: { 'quickAction:_:summarize': { count: 3, lastUsedAt: 1000 } },
     };
     await storage.save(idx);
-    expect(adapter.files.get(PATH)).toContain('"summarize"');
+    expect(adapter.files.get(PATH)).toContain('summarize');
     const reloaded = await storage.load();
     expect(reloaded).toEqual(idx);
   });

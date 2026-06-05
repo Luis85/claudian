@@ -1,6 +1,5 @@
 import type { Logger } from '../logging/Logger';
 import type { VaultFileAdapter } from '../storage/VaultFileAdapter';
-import { parseKey } from './keys';
 import { USAGE_INDEX_SCHEMA_VERSION, type UsageIndex, type UsageRecord } from './types';
 
 const DEFAULT_PATH = '.claudian/usage.json';
@@ -40,14 +39,7 @@ export class UsageStorage {
   async save(index: UsageIndex): Promise<void> {
     const scope = this.logger.scope('usage');
     try {
-      // Enrich each record with the name field (derived from key) so the stored
-      // JSON is human-readable and search-friendly without changing UsageRecord.
-      const enriched: Record<string, UsageRecord & { name?: string }> = {};
-      for (const [key, rec] of Object.entries(index.records)) {
-        const parsed = parseKey(key);
-        enriched[key] = parsed ? { ...rec, name: parsed.name } : { ...rec };
-      }
-      const json = JSON.stringify({ version: index.version, records: enriched });
+      const json = JSON.stringify(index);
       await this.adapter.write(this.path, json);
     } catch (err) {
       scope.warn('failed to write usage.json', err);
