@@ -2129,6 +2129,63 @@ describe('InputController - Message Queue', () => {
       expect(deps.state.isStreaming).toBe(false);
       expect(deps.state.cancelRequested).toBe(false);
     });
+
+    // Token-consumption hardening (Task 12): when the user cancels mid-stream, the
+    // last `state.usage` chunk must still be persisted. The save happens BEFORE the
+    // plan-approval branches and uses `updateLastResponse=false` so the partial
+    // assistant content isn't claimed as a finished response, but usage IS written.
+    it('should persist conversation with updateLastResponse=false when cancelled mid-stream', async () => {
+      deps = createSendableDeps();
+
+      // Simulate a usage chunk arriving before cancel, then the cancel flag trips.
+      ((deps as any).mockAgentService.query as jest.Mock).mockImplementation(() => {
+        return (async function* () {
+          yield { type: 'text', content: 'partial' };
+          // StreamController is mocked in this suite, so set state.usage directly
+          // to mirror what projectUsage would do for a real usage chunk.
+          deps.state.usage = {
+            inputTokens: 100,
+            outputTokens: 50,
+            cacheReadInputTokens: 10,
+            cacheCreationInputTokens: 5,
+            model: 'claude-sonnet-4-5',
+          } as any;
+          deps.state.cancelRequested = true;
+          yield { type: 'usage', usage: deps.state.usage };
+        })();
+      });
+
+      inputEl = deps.getInputEl() as ReturnType<typeof createMockInputEl>;
+      inputEl.value = 'test message';
+      controller = new InputController(deps);
+
+      await controller.sendMessage();
+
+      // The save MUST be called with updateLastResponse=false on cancel — the partial
+      // assistant content isn't a finished response, but state.usage still needs to land.
+      expect(deps.conversationController.save).toHaveBeenCalledWith(false, undefined);
+      expect(deps.state.usage).not.toBeNull();
+    });
+
+    it('should persist conversation with updateLastResponse=true on normal completion', async () => {
+      deps = createSendableDeps();
+
+      ((deps as any).mockAgentService.query as jest.Mock).mockImplementation(() => {
+        return (async function* () {
+          yield { type: 'text', content: 'response' };
+          yield { type: 'done' };
+        })();
+      });
+
+      inputEl = deps.getInputEl() as ReturnType<typeof createMockInputEl>;
+      inputEl.value = 'test message';
+      controller = new InputController(deps);
+
+      await controller.sendMessage();
+
+      // Sanity: the non-cancel path still saves with updateLastResponse=true.
+      expect(deps.conversationController.save).toHaveBeenCalledWith(true, undefined);
+    });
   });
 
   describe('Duration footer', () => {
@@ -3239,7 +3296,7 @@ describe('InputController - Message Queue', () => {
       expect(mockAgentService.query).toHaveBeenCalledTimes(1);
     });
 
-    it('external dismissal while the approval UI is open bails out without save or restore', async () => {
+    it('external dismissal while the approval UI is open bails out of plan-approval flow but still persists usage', async () => {
       const restoreFn = jest.fn();
       const parentEl = createMockEl();
       const inputContainerEl = createMockEl();
@@ -3271,8 +3328,13 @@ describe('InputController - Message Queue', () => {
       controller.dismissPendingApproval();
       await sendPromise;
 
+      // Token-consumption hardening: save now runs BEFORE the plan-approval branches,
+      // so external dismissal still persists message state and usage. This is the
+      // intended behavior — usage chunks must not be dropped when plan approval is
+      // invalidated. The restore-permission-mode and refresh-buttons work that lived
+      // inside the planApprovalInvalidated guard is still correctly skipped.
       expect(restoreFn).not.toHaveBeenCalled();
-      expect(deps.conversationController.save).not.toHaveBeenCalled();
+      expect(deps.conversationController.save).toHaveBeenCalledWith(true, { resumeAtMessageId: undefined });
       expect(mockAgentService.query).toHaveBeenCalledTimes(1);
     });
 
