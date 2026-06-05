@@ -33,10 +33,20 @@ export interface QueueControlState {
   halted: boolean;
   haltReason: string | null;
   consecutiveFailures: number;
+  /** Last skip reason and time per task, shared so the 60s skip-ledger debounce
+   * is global: two panes skipping the same ineligible card write one ledger line,
+   * not one each. */
+  lastSkipReasonByTask: Map<string, { reason: string; at: number }>;
 }
 
 export function createQueueControlState(paused = false): QueueControlState {
-  return { paused, halted: false, haltReason: null, consecutiveFailures: 0 };
+  return {
+    paused,
+    halted: false,
+    haltReason: null,
+    consecutiveFailures: 0,
+    lastSkipReasonByTask: new Map(),
+  };
 }
 
 export interface QueueRunnerDeps {
@@ -61,7 +71,6 @@ export interface QueueRunnerDeps {
 
 interface QueueRunnerState {
   haltAfterFailures: number;
-  lastSkipReasonByTask: Map<string, { reason: string; at: number }>;
 }
 
 const SKIP_DEBOUNCE_MS = 60_000;
@@ -88,7 +97,6 @@ export class QueueRunner {
     this.control = deps.control ?? createQueueControlState(deps.initialPaused ?? false);
     this.state = {
       haltAfterFailures: Math.max(1, deps.haltAfterFailures),
-      lastSkipReasonByTask: new Map(),
     };
   }
 
@@ -109,11 +117,11 @@ export class QueueRunner {
   }
 
   getSkipReason(taskId: string): string | null {
-    return this.state.lastSkipReasonByTask.get(taskId)?.reason ?? null;
+    return this.control.lastSkipReasonByTask.get(taskId)?.reason ?? null;
   }
 
   clearSkipReason(taskId: string): void {
-    this.state.lastSkipReasonByTask.delete(taskId);
+    this.control.lastSkipReasonByTask.delete(taskId);
   }
 
   // Mutates the shared control state, so a toggle in one pane pauses every
@@ -193,7 +201,7 @@ export class QueueRunner {
   private launch(task: TaskSpec): void {
     if (!this.deps.slot.acquire(task.frontmatter.id)) return;
     // The card is running now, so any stale skip chip no longer applies.
-    this.state.lastSkipReasonByTask.delete(task.frontmatter.id);
+    this.control.lastSkipReasonByTask.delete(task.frontmatter.id);
     this.deps.events.emit('task:queue-tick', { taskId: task.frontmatter.id });
     this.deps.coordinator
       .run(task)
@@ -218,14 +226,16 @@ export class QueueRunner {
 
   private recordSkip(task: TaskSpec, reason: string): void {
     const now = this.deps.now();
-    const prev = this.state.lastSkipReasonByTask.get(task.frontmatter.id);
+    const prev = this.control.lastSkipReasonByTask.get(task.frontmatter.id);
     const isNewReason = !prev || prev.reason !== reason;
     const windowElapsed = prev ? now - prev.at > SKIP_DEBOUNCE_MS : true;
     // Same reason inside the debounce window: keep the existing chip but stay
     // quiet — no event storm and no ledger spam while the card sits ineligible.
+    // The map lives on the shared control, so this debounce is global across
+    // every open board's runner, not per-pane.
     if (!isNewReason && !windowElapsed) return;
 
-    this.state.lastSkipReasonByTask.set(task.frontmatter.id, { reason, at: now });
+    this.control.lastSkipReasonByTask.set(task.frontmatter.id, { reason, at: now });
     this.deps.events.emit('task:queue-skipped', { taskId: task.frontmatter.id, reason });
     void this.deps.appendLedger(task, {
       timestamp: new Date(now).toISOString(),

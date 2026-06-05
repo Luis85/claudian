@@ -409,4 +409,23 @@ describe('QueueRunner — shared control (single brain across panes)', () => {
     await flush();
     expect(control.halted).toBe(true);
   });
+
+  it('shares the skip-ledger debounce so a card is skipped once per window across panes', async () => {
+    const control = createQueueControlState();
+    const now = () => 2_000_000;
+    const a = makeHarness({ control, now, eligibility: { isProviderEnabled: () => false } });
+    const b = makeHarness({ control, now, eligibility: { isProviderEnabled: () => false } });
+    a.setTasks([makeTask('x')]);
+    b.setTasks([makeTask('x')]);
+
+    a.runner.tick();
+    await flush();
+    expect(a.ledger).toHaveLength(1);
+
+    // The second pane shares the debounce window via the control, so it does not
+    // append a duplicate `queue: skipped` ledger line for the same task/reason.
+    b.runner.tick();
+    await flush();
+    expect(b.ledger).toHaveLength(0);
+  });
 });
