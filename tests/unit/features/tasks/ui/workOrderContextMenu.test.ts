@@ -7,9 +7,9 @@ import type { TaskSpec, TaskStatus } from '@/features/tasks/model/taskTypes';
 import { showWorkOrderContextMenu } from '@/features/tasks/ui/workOrderContextMenu';
 
 // `MENU_SEPARATOR` only exists on the obsidian mock (real obsidian exports the
-// `MenuSeparator` class instead). Mirrors the cast pattern used by other
-// menu-bearing tests in this repo (ConversationController.test.ts,
-// MessageRenderer.test.ts).
+// `MenuSeparator` class instead). The `jest.requireActual('obsidian')` + cast
+// bridge mirrors the pattern used by other obsidian-mock-dependent tests
+// (e.g. tests/unit/features/chat/ui/FileContextManager.test.ts).
 const { MENU_SEPARATOR } = jest.requireActual('obsidian') as { MENU_SEPARATOR: symbol };
 type MockMenu = Menu & { items: Array<{ setTitle: jest.Mock; clickHandler?: () => void } | symbol> };
 const MenuMock = Menu as typeof Menu & { instances: MockMenu[] };
