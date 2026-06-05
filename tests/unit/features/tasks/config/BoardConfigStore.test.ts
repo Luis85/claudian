@@ -1,4 +1,8 @@
-import { getLaneForStatus, loadBoardConfig } from '../../../../../src/features/tasks/config/BoardConfigStore';
+import {
+  getLaneForStatus,
+  loadBoardConfig,
+  writeBoardQueuePaused,
+} from '../../../../../src/features/tasks/config/BoardConfigStore';
 import { DEFAULT_BOARD_CONFIG } from '../../../../../src/features/tasks/config/boardConfigTypes';
 
 describe('loadBoardConfig', () => {
@@ -119,6 +123,70 @@ describe('loadBoardConfig', () => {
     const { config, errors } = loadBoardConfig({ agentBoardConfig });
     expect(config).toEqual(DEFAULT_BOARD_CONFIG);
     expect(errors.some((e) => e.includes('Lane id "dup"'))).toBe(true);
+  });
+});
+
+describe('loadBoardConfig — queue.paused', () => {
+  it('defaults queue.paused to false when settings have no queue block', () => {
+    const { config } = loadBoardConfig({
+      agentBoardConfig: {
+        lanes: [{ id: 'inbox', title: 'Inbox', statuses: ['inbox'] }],
+      },
+    });
+    expect(config.queue).toEqual({ paused: false });
+  });
+
+  it('round-trips queue.paused=true from settings', () => {
+    const { config } = loadBoardConfig({
+      agentBoardConfig: {
+        lanes: [{ id: 'inbox', title: 'Inbox', statuses: ['inbox'] }],
+        queue: { paused: true },
+      },
+    });
+    expect(config.queue).toEqual({ paused: true });
+  });
+
+  it('coerces malformed queue block to default', () => {
+    const { config } = loadBoardConfig({
+      agentBoardConfig: {
+        lanes: [{ id: 'inbox', title: 'Inbox', statuses: ['inbox'] }],
+        queue: 'nope',
+      },
+    });
+    expect(config.queue).toEqual({ paused: false });
+  });
+});
+
+describe('writeBoardQueuePaused', () => {
+  it('sets queue.paused on the settings object in place', () => {
+    const settings: Record<string, unknown> = {
+      agentBoardConfig: { lanes: [], queue: { paused: false } },
+    };
+    writeBoardQueuePaused(settings, true);
+    expect(settings.agentBoardConfig).toEqual({
+      lanes: [],
+      queue: { paused: true },
+    });
+  });
+
+  it('creates the queue block if missing', () => {
+    const settings: Record<string, unknown> = {
+      agentBoardConfig: { lanes: [] },
+    };
+    writeBoardQueuePaused(settings, true);
+    expect(settings.agentBoardConfig).toEqual({
+      lanes: [],
+      queue: { paused: true },
+    });
+  });
+
+  it('creates agentBoardConfig if missing', () => {
+    const settings: Record<string, unknown> = {};
+    writeBoardQueuePaused(settings, true);
+    expect(settings.agentBoardConfig).toEqual({
+      lanes: [],
+      queue: { paused: true },
+    });
   });
 });
 

@@ -1,6 +1,6 @@
 import { isTaskStatus } from '../model/taskStateMachine';
 import type { TaskStatus } from '../model/taskTypes';
-import { type BoardConfig, type BoardLaneConfig,DEFAULT_BOARD_CONFIG } from './boardConfigTypes';
+import { type BoardConfig, type BoardLaneConfig,type BoardQueueConfig,DEFAULT_BOARD_CONFIG } from './boardConfigTypes';
 
 export interface LoadBoardConfigResult {
   config: BoardConfig;
@@ -53,7 +53,7 @@ export function loadBoardConfig(settings: Record<string, unknown>): LoadBoardCon
     lanes.push(lane);
   }
 
-  return { config: { schemaVersion: 1, lanes }, errors };
+  return { config: { schemaVersion: 1, lanes, queue: normalizeQueue(raw) }, errors };
 }
 
 export function getLaneForStatus(config: BoardConfig, status: TaskStatus): BoardLaneConfig | null {
@@ -110,4 +110,23 @@ function normalizeLane(raw: unknown, errors: string[]): BoardLaneConfig | null {
 function toStringList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.map((item) => String(item).trim()).filter((item) => item.length > 0);
+}
+
+function normalizeQueue(raw: unknown): BoardQueueConfig {
+  if (!raw || typeof raw !== 'object') return { paused: false };
+  const queue = (raw as { queue?: unknown }).queue;
+  if (!queue || typeof queue !== 'object') return { paused: false };
+  return { paused: Boolean((queue as { paused?: unknown }).paused) };
+}
+
+// Mutates the settings bag in place so the caller can persist via the existing
+// `plugin.saveSettings()` path. Keeps `lanes` intact (defaulting to an empty
+// array) so a queue toggle never clobbers a user's lane configuration.
+export function writeBoardQueuePaused(settings: Record<string, unknown>, paused: boolean): void {
+  const existing = settings.agentBoardConfig;
+  const base: Record<string, unknown> =
+    existing && typeof existing === 'object' ? { ...(existing as Record<string, unknown>) } : {};
+  if (!Array.isArray(base.lanes)) base.lanes = [];
+  base.queue = { paused };
+  settings.agentBoardConfig = base;
 }
