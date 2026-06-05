@@ -466,4 +466,74 @@ describe('RunSession', () => {
     expect(adapter.detached).toBe(true);
     expect(statuses).toEqual(['running', 'review']);
   });
+
+  it('finishes a follow-up that settles ok even when it emits no stream done', async () => {
+    const { session, adapter, statuses } = makeSession({ heartbeatIntervalMs: 100000, staleThresholdMs: 100000 });
+    const terminal = session.run();
+    adapter.emitText('<claudian_needs_input>\nquestion: which?\n</claudian_needs_input>');
+    await Promise.resolve();
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked' }); // pause-turn end
+    await Promise.resolve();
+    await session.resume({ kind: 'reply', content: 'go' });
+
+    // The follow-up turn produces no stream done; it settles ok via its outcome.
+    adapter.settleFollowUp({ ok: true, finalAssistantContent: VALID_HANDOFF });
+    const result = await terminal;
+    expect(result).toEqual({ ok: true, status: 'review' });
+    expect(statuses).toEqual(['running', 'needs_input', 'running', 'review']);
+  });
+
+  it('finishes a follow-up settling ok even if a late pause-turn done arrives after resume', async () => {
+    const { session, adapter } = makeSession({ heartbeatIntervalMs: 100000, staleThresholdMs: 100000 });
+    const terminal = session.run();
+    adapter.emitText('<claudian_needs_input>\nquestion: q\n</claudian_needs_input>');
+    await Promise.resolve();
+    // User resumes before the pause-turn done arrives.
+    await session.resume({ kind: 'reply', content: 'go' });
+    // The late pause-turn done now arrives; it must be ignored, not finalize.
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked' });
+    await Promise.resolve();
+    // The follow-up then settles ok without its own done — must still finish.
+    adapter.settleFollowUp({ ok: true, finalAssistantContent: VALID_HANDOFF });
+    const result = await terminal;
+    expect(result).toEqual({ ok: true, status: 'review' });
+  });
+
+  it('does not finish a follow-up that paused again, even though it settles ok', async () => {
+    const { session, adapter, statuses } = makeSession({ heartbeatIntervalMs: 100000, staleThresholdMs: 100000 });
+    const terminal = session.run();
+    adapter.emitText('<claudian_needs_input>\nquestion: q1\n</claudian_needs_input>');
+    await Promise.resolve();
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked' }); // pause 1 turn end
+    await Promise.resolve();
+    await session.resume({ kind: 'reply', content: 'go' });
+
+    // The follow-up re-pauses, emitting its own turn-end done (ignored by the counter).
+    adapter.emitText('<claudian_needs_input>\nquestion: q2\n</claudian_needs_input>');
+    await Promise.resolve();
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked2' });
+    await Promise.resolve();
+    // The follow-up sendMessage then settles ok — must NOT finalize the paused run.
+    adapter.settleFollowUp({ ok: true, finalAssistantContent: 'asked2' });
+    await Promise.resolve();
+    expect(statuses[statuses.length - 1]).toBe('needs_input');
+
+    session.cancel(); // clean up timers / resolve the terminal
+    await terminal;
+  });
+
+  it('fails a follow-up that settles with an error', async () => {
+    const { session, adapter, statuses } = makeSession({ heartbeatIntervalMs: 100000, staleThresholdMs: 100000 });
+    const terminal = session.run();
+    adapter.emitText('<claudian_needs_input>\nquestion: q\n</claudian_needs_input>');
+    await Promise.resolve();
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked' });
+    await Promise.resolve();
+    await session.resume({ kind: 'reply', content: 'go' });
+
+    adapter.settleFollowUp({ ok: false, error: 'provider crashed' });
+    const result = await terminal;
+    expect(result.ok).toBe(false);
+    expect(statuses[statuses.length - 1]).toBe('failed');
+  });
 });

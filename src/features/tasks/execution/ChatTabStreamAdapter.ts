@@ -1,5 +1,5 @@
 import type { StreamChunk } from '../../../core/types';
-import type { ProviderStreamAdapter, StreamHandlers } from './ProviderStreamAdapter';
+import type { FollowUpOutcome, ProviderStreamAdapter, StreamHandlers } from './ProviderStreamAdapter';
 
 /**
  * The slice of a chat tab the adapter drives. Expressed structurally so this
@@ -8,7 +8,7 @@ import type { ProviderStreamAdapter, StreamHandlers } from './ProviderStreamAdap
  */
 export interface StreamingTabHandle {
   subscribe(observer: (chunk: StreamChunk) => void): () => void;
-  sendFollowUp(content: string): Promise<void>;
+  sendFollowUp(content: string): Promise<FollowUpOutcome>;
   cancel(): void;
 }
 
@@ -52,7 +52,7 @@ export class ChatTabStreamAdapter implements ProviderStreamAdapter {
     });
   }
 
-  sendFollowUp(content: string): Promise<void> {
+  sendFollowUp(content: string): Promise<FollowUpOutcome> {
     return this.handle.sendFollowUp(content);
   }
 

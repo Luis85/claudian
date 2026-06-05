@@ -619,7 +619,7 @@ describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
     expect(terminal.status).toBe('completed');
   });
 
-  it('surfaces a failed follow-up turn to the run as a synthetic error chunk', async () => {
+  it('reports a failed follow-up turn via its settlement outcome', async () => {
     const streamController = { addStreamObserver: () => () => {} };
     let call = 0;
     const inputController = {
@@ -636,16 +636,12 @@ describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
     view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
 
     const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
-    const seen: Array<{ type: string; content?: string }> = [];
-    handle.subscribe((chunk: { type: string; content?: string }) => seen.push(chunk));
+    const outcome = await handle.sendFollowUp('reply');
 
-    await handle.sendFollowUp('reply');
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(seen).toContainEqual({ type: 'error', content: 'init failed' });
+    expect(outcome).toEqual({ ok: false, error: 'init failed' });
   });
 
-  it('synthesizes a done chunk when a follow-up settles ok but emits no stream end', async () => {
+  it('reports a successful follow-up turn (no stream end needed) via its outcome', async () => {
     let rawObserver: ((chunk: { type: string }) => void) | null = null;
     const streamController = {
       addStreamObserver: (obs: (chunk: { type: string }) => void) => {
@@ -658,9 +654,10 @@ describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
       sendMessage: jest.fn(async () => {
         call += 1;
         // The first turn ends with a real done; the follow-up resolves ok but
-        // emits none (e.g. the provider threw after creating the message).
+        // emits none (e.g. the provider threw after creating the message). The
+        // settlement outcome — not a synthetic chunk — carries the completion.
         if (call === 1) rawObserver?.({ type: 'done' });
-        return { ok: true, finalAssistantContent: '' };
+        return { ok: true, finalAssistantContent: 'reply-content' };
       }),
       cancelStreaming: jest.fn(),
     };
@@ -673,40 +670,10 @@ describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
     handle.subscribe((chunk: { type: string }) => seen.push(chunk));
     seen.length = 0; // drop the initial turn's replayed chunks
 
-    await handle.sendFollowUp('reply');
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    const outcome = await handle.sendFollowUp('reply');
 
-    expect(seen).toEqual([{ type: 'done' }]);
-  });
-
-  it('does not synthesize a second done when a follow-up emits its own stream end', async () => {
-    let rawObserver: ((chunk: { type: string }) => void) | null = null;
-    const streamController = {
-      addStreamObserver: (obs: (chunk: { type: string }) => void) => {
-        rawObserver = obs;
-        return () => { rawObserver = null; };
-      },
-    };
-    const inputController = {
-      sendMessage: jest.fn(async () => {
-        rawObserver?.({ type: 'done' }); // every turn ends with a real done
-        return { ok: true, finalAssistantContent: '' };
-      }),
-      cancelStreaming: jest.fn(),
-    };
-    const tab = { id: 'tab-1', conversationId: 'conv-1', controllers: { inputController, streamController } };
-    const view = Object.create(ClaudianView.prototype) as any;
-    view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
-
-    const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
-    const seen: Array<{ type: string }> = [];
-    handle.subscribe((chunk: { type: string }) => seen.push(chunk));
-    seen.length = 0;
-
-    await handle.sendFollowUp('reply');
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    // Only the follow-up's own real done — no synthesized duplicate.
-    expect(seen).toEqual([{ type: 'done' }]);
+    expect(outcome).toEqual({ ok: true, finalAssistantContent: 'reply-content' });
+    // No synthetic stream chunk is emitted; the runner finishes from the outcome.
+    expect(seen).toEqual([]);
   });
 });

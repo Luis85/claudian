@@ -3,7 +3,7 @@ import {
   ChatTabStreamAdapter,
   type StreamingTabHandle,
 } from '../../../../../src/features/tasks/execution/ChatTabStreamAdapter';
-import type { StreamHandlers } from '../../../../../src/features/tasks/execution/ProviderStreamAdapter';
+import type { FollowUpOutcome, StreamHandlers } from '../../../../../src/features/tasks/execution/ProviderStreamAdapter';
 
 class FakeTabHandle implements StreamingTabHandle {
   followUps: string[] = [];
@@ -16,8 +16,9 @@ class FakeTabHandle implements StreamingTabHandle {
       if (this.observer === observer) this.observer = null;
     };
   }
-  async sendFollowUp(content: string): Promise<void> {
+  async sendFollowUp(content: string): Promise<FollowUpOutcome> {
     this.followUps.push(content);
+    return { ok: true, finalAssistantContent: '' };
   }
   cancel(): void {
     this.canceled = true;

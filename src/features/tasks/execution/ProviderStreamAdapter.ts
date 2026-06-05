@@ -21,8 +21,20 @@ export interface StreamHandlers {
   onActivity?(): void;
 }
 
+/**
+ * Settlement of a follow-up turn, reported back to the runner so it can finish a
+ * turn that emits no stream `done`. Returned (rather than signalled via a stream
+ * chunk) so it is tied to this specific send — a late `done` from an earlier
+ * turn cannot be mistaken for this turn's end. `void` means the adapter does not
+ * report outcomes (the runner then relies on stream chunks; used by tests).
+ */
+export type FollowUpOutcome =
+  | { ok: true; finalAssistantContent: string }
+  | { ok: false; error: string };
+
 export interface ProviderStreamAdapter {
   subscribe(handlers: StreamHandlers): () => void;
-  sendFollowUp(content: string): Promise<void>;
+  /** Resolves when the follow-up turn settles; see {@link FollowUpOutcome}. */
+  sendFollowUp(content: string): Promise<FollowUpOutcome | void>;
   cancel(): void;
 }

@@ -694,12 +694,7 @@ export class ClaudianView extends ItemView {
     // Chunks are buffered until the real observer attaches, then replayed in order.
     const buffered: StreamChunk[] = [];
     let liveObserver: ((chunk: StreamChunk) => void) | null = null;
-    // Tracks whether the current turn has emitted a stream `done`. Lets a
-    // follow-up that settles ok without a `done` synthesize one, while a turn
-    // that did end (including a re-pause's own `done`) is left untouched.
-    let sawDoneSinceSend = false;
     const emit = (chunk: StreamChunk): void => {
-      if (chunk.type === 'done') sawDoneSinceSend = true;
       if (liveObserver) liveObserver(chunk);
       else buffered.push(chunk);
     };
@@ -750,26 +745,24 @@ export class ClaudianView extends ItemView {
         };
       },
       sendFollowUp: async (content) => {
-        // Fire the follow-up turn without blocking. Follow-up turns have no
-        // terminal promise wired to the runner, so the run can only finish from
-        // a stream chunk. Synthesize one when the turn settles but emits no
-        // stream end: an error chunk on failure, and a `done` chunk when it
-        // settled ok yet produced no `done` (e.g. the provider threw after
-        // creating the assistant message and the controller still resolved ok).
-        // A turn that did emit a `done` — including a re-pause's own turn-end —
-        // is left alone so its pause/finish accounting is not double-counted.
-        sawDoneSinceSend = false;
-        void (inputController.sendMessage({ content }) as Promise<ProgrammaticSendResult | undefined>)
-          .then((result) => {
-            if (result?.ok) {
-              if (!sawDoneSinceSend) emit({ type: 'done' });
-            } else {
-              emit({ type: 'error', content: result?.error ?? 'Follow-up turn failed.' });
-            }
-          })
-          .catch((error) => {
-            emit({ type: 'error', content: error instanceof Error ? error.message : String(error) });
-          });
+        // Resolve with the follow-up turn's settlement so the runner can finish a
+        // turn that emits no stream `done` (e.g. the provider threw after creating
+        // the assistant message and the controller still resolved ok). Reporting
+        // it as the return value — rather than a synthetic stream chunk — ties it
+        // to this specific send, so a late `done` from the pause turn can't be
+        // mistaken for this turn's end. The runner ignores it when a real `done`
+        // already finished the turn or the follow-up paused again.
+        try {
+          const result = (await inputController.sendMessage({ content })) as
+            | ProgrammaticSendResult
+            | undefined;
+          if (result?.ok) {
+            return { ok: true, finalAssistantContent: result.finalAssistantContent };
+          }
+          return { ok: false, error: result?.error ?? 'Follow-up turn failed.' };
+        } catch (error) {
+          return { ok: false, error: error instanceof Error ? error.message : String(error) };
+        }
       },
       cancel: () => inputController.cancelStreaming(),
       terminal,

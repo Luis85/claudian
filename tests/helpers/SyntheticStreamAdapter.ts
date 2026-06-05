@@ -1,4 +1,5 @@
 import type {
+  FollowUpOutcome,
   ProviderStreamAdapter,
   StreamHandlers,
   StreamToolUse,
@@ -11,6 +12,7 @@ export class SyntheticStreamAdapter implements ProviderStreamAdapter {
   canceled = false;
   private handlers: StreamHandlers | null = null;
   private endResolvers: Array<(payload: EndPayload) => void> = [];
+  private followUpResolvers: Array<(outcome: FollowUpOutcome | void) => void> = [];
 
   subscribe(handlers: StreamHandlers): () => void {
     this.handlers = handlers;
@@ -19,8 +21,17 @@ export class SyntheticStreamAdapter implements ProviderStreamAdapter {
     };
   }
 
-  async sendFollowUp(content: string): Promise<void> {
+  sendFollowUp(content: string): Promise<FollowUpOutcome | void> {
     this.followUps.push(content);
+    // Stays pending until settleFollowUp() so a test can sequence the turn's
+    // chunks (re-pause, late done) before reporting the settlement outcome.
+    return new Promise((resolve) => { this.followUpResolvers.push(resolve); });
+  }
+
+  /** Settle the oldest pending sendFollowUp with the given outcome (omit for "no outcome"). */
+  settleFollowUp(outcome?: FollowUpOutcome): void {
+    const resolve = this.followUpResolvers.shift();
+    resolve?.(outcome);
   }
 
   cancel(): void {

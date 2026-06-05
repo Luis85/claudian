@@ -328,6 +328,11 @@ export interface TaskRunTabTerminal {
   error?: string;
 }
 
+/** Settlement of a follow-up turn, reported back so a runner can finish turns that emit no stream end. */
+export type TaskRunTabFollowUpOutcome =
+  | { ok: true; finalAssistantContent: string }
+  | { ok: false; error: string };
+
 /**
  * Chat-native handle to a freshly opened task-run tab. Deliberately expressed in
  * neutral chat/core terms (no tasks-feature types) so chat never depends on the
@@ -338,8 +343,8 @@ export interface TaskRunTabHandle {
   sidepanelTabId: TabId;
   /** Observe the live neutral stream chunks for this tab's run. */
   subscribe(observer: (chunk: StreamChunk) => void): () => void;
-  /** Send a follow-up turn into the same conversation (does not await completion). */
-  sendFollowUp(content: string): Promise<void>;
+  /** Send a follow-up turn; resolves with the turn's settlement (see {@link TaskRunTabFollowUpOutcome}). */
+  sendFollowUp(content: string): Promise<TaskRunTabFollowUpOutcome>;
   /** Cancel the active turn. */
   cancel(): void;
   /** Resolves when the initial turn settles. */

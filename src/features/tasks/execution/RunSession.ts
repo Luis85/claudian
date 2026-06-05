@@ -195,7 +195,29 @@ export class RunSession {
     this.deps.events.emit('task:resumed', { taskId: this.taskId, path: this.path });
     this.ledger.enqueue({ timestamp: ts, status: 'running', message: `resumed: ${truncate(content, 80)}` });
     this.startHeartbeat();
-    await this.deps.stream.sendFollowUp(content);
+    // Fire the follow-up and wire its settlement, mirroring how the coordinator
+    // wires the initial turn's terminal: a follow-up that ends without a stream
+    // `done` still finishes the run. Don't await it (resume returns once the turn
+    // is dispatched). The completion reads paused/finishing at settlement, so it
+    // is turn-isolated — a late `done` from the pause turn can't drive it.
+    void Promise.resolve(this.deps.stream.sendFollowUp(content))
+      .then((outcome) => {
+        if (!outcome) return; // adapter reports no outcome; stream chunks drive finish
+        if (outcome.ok) this.completeFromFollowUp(outcome.finalAssistantContent);
+        else this.fail(outcome.error);
+      })
+      .catch((error) => this.fail(error instanceof Error ? error.message : String(error)));
+  }
+
+  /**
+   * Finish from a follow-up turn that settled `ok`. Finalizes only when no
+   * stream `done` already did (finishing) and the follow-up did not itself pause
+   * again (paused). Reading state at settlement keeps it turn-isolated.
+   */
+  private completeFromFollowUp(content: string): void {
+    if (this.finishing || this.paused) return;
+    const final = content.length >= this.finalContentBuffer.length ? content : this.finalContentBuffer;
+    void this.finish({ status: 'completed', finalAssistantContent: final });
   }
 
   cancel(reason = 'stopped by user'): void {
