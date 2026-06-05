@@ -486,22 +486,20 @@ describe('ClaudianPlugin', () => {
       expect(content).not.toHaveProperty('permissions');
     });
 
-    it('wakes queue runners when the maximum-tabs limit increases', async () => {
+    it('wakes queue runners on every settings save so eligibility and capacity re-evaluate', async () => {
       await plugin.onload();
       const wakes: string[] = [];
       plugin.events.on('task:queue-cap-changed', () => wakes.push('wake'));
 
-      // Raising the chat-tab limit frees an execution slot the queue gates on,
-      // so a tab-blocked queue must be woken instead of waiting for an
-      // unrelated event.
+      // Raising the chat-tab limit frees an execution slot the queue gates on.
       plugin.settings.maxTabs = (plugin.settings.maxTabs ?? 3) + 1;
       await plugin.saveSettings();
       expect(wakes).toHaveLength(1);
 
-      // Lowering the limit frees nothing, so it must not wake the runners.
-      plugin.settings.maxTabs = (plugin.settings.maxTabs ?? 3) - 1;
+      // Enabling a provider (or any eligibility-affecting change) must also wake
+      // the queue so a skipped card is re-checked, even with no cap/tab change.
       await plugin.saveSettings();
-      expect(wakes).toHaveLength(1);
+      expect(wakes).toHaveLength(2);
     });
   });
 
