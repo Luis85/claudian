@@ -330,8 +330,9 @@ export class RunSession {
 
   /** Flushes any remaining ledger lines, disposes the writer, then resolves the terminal exactly once. */
   private async settle(result: RunSessionResult): Promise<void> {
-    await this.ledger.flushNow();
-    this.ledger.dispose();
+    // finalize() flushes and disposes only once the queue drains, so a transient
+    // failure of the terminal flush keeps retrying instead of dropping the lines.
+    await this.ledger.finalize();
     const resolve = this.resolveTerminal;
     this.resolveTerminal = null;
     resolve?.(result);

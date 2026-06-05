@@ -70,6 +70,29 @@ describe('LedgerWriter', () => {
     writer.dispose();
   });
 
+  it('finalize keeps retrying a failed terminal flush instead of dropping entries', async () => {
+    jest.useFakeTimers();
+    let attempts = 0;
+    const flushed: string[] = [];
+    const writer = new LedgerWriter({
+      flush: async (entries) => {
+        attempts += 1;
+        if (attempts === 1) throw new Error('transient');
+        for (const e of entries) flushed.push(e.message);
+      },
+      intervalMs: 60000,
+      milestoneThreshold: 999,
+    });
+    writer.enqueue(entry('Handoff written.'));
+    await writer.finalize();
+    // First terminal flush failed; the entry is re-queued for retry, not dropped.
+    expect(flushed).toEqual([]);
+    jest.advanceTimersByTime(5000);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    expect(flushed).toEqual(['Handoff written.']);
+    jest.useRealTimers();
+  });
+
   it('retries a failed flush with backoff and drops after two attempts', async () => {
     jest.useFakeTimers();
     let attempts = 0;

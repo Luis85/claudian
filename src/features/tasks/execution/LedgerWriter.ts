@@ -17,6 +17,7 @@ export class LedgerWriter {
   private flushInFlight: Promise<void> | null = null;
   private retryAttempt = 0;
   private disposed = false;
+  private disposeAfterDrain = false;
 
   constructor(private readonly opts: LedgerWriterOptions) {
     this.scheduleInterval();
@@ -65,7 +66,28 @@ export class LedgerWriter {
         // Re-queue at the front and schedule a retry.
         this.queue = [...batch, ...this.queue];
         this.scheduleRetry();
+        return; // retry pending — defer disposal so the final entries survive
       }
+    }
+    // Flushed (or gave up after exhausting retries). If a finalize is waiting on
+    // the queue to drain, dispose now that nothing is pending.
+    if (this.disposeAfterDrain && this.queue.length === 0) {
+      this.dispose();
+    }
+  }
+
+  /**
+   * Final flush for shutdown: attempt the flush, then dispose only once the queue
+   * has drained. If the terminal flush fails transiently it stays scheduled on the
+   * retry/backoff path and disposes after it eventually drains (or degrades), so
+   * final entries like "Handoff written." are not dropped by an early dispose.
+   */
+  async finalize(): Promise<void> {
+    await this.flushNow();
+    if (this.queue.length === 0) {
+      this.dispose();
+    } else {
+      this.disposeAfterDrain = true;
     }
   }
 

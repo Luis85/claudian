@@ -215,7 +215,14 @@ export class AgentBoardView extends ItemView {
   }
 
   private stopTask(task: TaskSpec): void {
-    this.executionSurface.cancelTaskRun?.(task.frontmatter.run_id ?? '');
+    // Prefer cancelling the live RunSession (the execution surface does not own
+    // cancellation); fall back to the optional surface hook for other surfaces.
+    const session = this.coordinator?.getActiveRun(task.frontmatter.id);
+    if (session) {
+      session.cancel();
+    } else {
+      this.executionSurface.cancelTaskRun?.(task.frontmatter.run_id ?? '');
+    }
     new Notice(t('tasks.board.stopRequested', { title: task.frontmatter.title }));
   }
 
