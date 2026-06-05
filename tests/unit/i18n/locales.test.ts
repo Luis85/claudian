@@ -80,6 +80,10 @@ const localizedKeys = [
   'chat.feedback.thumbsUp.prompt',
   'chat.feedback.thumbsDown.label',
   'chat.feedback.thumbsDown.prompt',
+  'quickActions.capture.label',
+  'quickActions.capture.saved',
+  'quickActions.capture.folderMissing',
+  'quickActions.editor.nameExists',
 ] as const;
 
 const staleBangBashDesc =

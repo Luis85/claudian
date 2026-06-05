@@ -6,8 +6,6 @@ icon: eye
 tags:
   - planning
   - review
-favorite: true
-favoriteRank: 3
 ---
 
 Review the given plan from multiple product perspectives, dispatch dedicated subagents, then update the plan.

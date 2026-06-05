@@ -374,12 +374,17 @@ export class QuickActionsModal extends Modal {
   }
 
   private openEditor(existing: QuickAction | null): void {
-    new QuickActionEditorModal(this.app, existing, async (action) => {
-      const filePath = await this.callbacks.storage.save(action);
-      action.filePath = filePath;
-      this.callbacks.onFavoritesChanged?.();
-      await this.refreshList();
-    }).open();
+    new QuickActionEditorModal(
+      this.app,
+      existing,
+      async (action) => {
+        const filePath = await this.callbacks.storage.save(action);
+        action.filePath = filePath;
+        this.callbacks.onFavoritesChanged?.();
+        await this.refreshList();
+      },
+      this.callbacks.storage,
+    ).open();
   }
 
   private async deleteAction(action: QuickAction): Promise<void> {

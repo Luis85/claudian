@@ -74,6 +74,8 @@ Plan mode shows the plan inline before any write-side tool runs; see [[plan-mode
 
 Tool calls render as labeled blocks (file edits, bash output, web fetches, etc.). Expand a block to see the full payload.
 
+Every sent **user** message also exposes a small per-message toolbar — thumbs-up / thumbs-down feedback on assistant replies, **Create work order** on assistant replies, and **Capture as quick action** (the `bookmark-plus` icon) on user prompts. The capture button opens the inline editor pre-seeded with the prompt body; see [[quick-actions]] for the full flow.
+
 ---
 
 ## Edits to your notes

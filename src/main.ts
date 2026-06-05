@@ -55,6 +55,7 @@ import { ClaudianView } from './features/chat/ClaudianView';
 import { sendFeedbackPrompt } from './features/chat/feedback/sendFeedbackPrompt';
 import { isClaudianView } from './features/chat/isClaudianView';
 import type { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
+import { isCaptureEligible, openCaptureFromMessage } from './features/quickActions/captureFromMessage';
 import { QuickActionFavoritesCache } from './features/quickActions/QuickActionFavoritesCache';
 import { QuickActionStorage } from './features/quickActions/QuickActionStorage';
 import { buildProviderRecords } from './features/quickActions/skills/buildProviderRecords';
@@ -86,6 +87,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   gitStatusWatcher: GitStatusWatcher | null = null;
   private commitOnAcceptCoordinator: CommitOnAcceptCoordinator | null = null;
   conversationStore!: ConversationStore;
+  /** Plugin-lifetime singleton. Built in onload before any consumer reads it. */
+  public quickActionStorage!: QuickActionStorage;
   public quickActionFavoritesCache: QuickActionFavoritesCache | null = null;
   public vaultSkillAggregator: VaultSkillAggregator | null = null;
   private lifecycle!: PluginLifecycle;
@@ -174,7 +177,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
     // Registration order = left-to-right render order inside .claudian-text-actions
     // (which itself sits left of the copy button). Visual order under an assistant
-    // response: thumbs-up, thumbs-down, work-order, copy.
+    // response: thumbs-up, thumbs-down, work-order, copy. The capture action below
+    // targets user messages only (gated by isCaptureEligible).
     this.registerChatMessageAction({
       id: 'thumbs-up-feedback',
       label: t('chat.feedback.thumbsUp.label'),
@@ -205,14 +209,22 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       },
     });
 
+    this.registerChatMessageAction({
+      id: 'capture-prompt-as-quick-action',
+      label: t('quickActions.capture.label'),
+      icon: 'bookmark-plus',
+      isEligible: isCaptureEligible,
+      run: (msg) => openCaptureFromMessage(this, msg),
+    });
+
     registerPluginCommands({ plugin: this, taskExecutionSurface, chatWorkOrderLinker });
 
-    const quickActionStorage = new QuickActionStorage(
+    this.quickActionStorage = new QuickActionStorage(
       new VaultFileAdapter(this.app),
       () => this.settings.quickActionsFolder ?? 'Quick Actions',
     );
     this.quickActionFavoritesCache = new QuickActionFavoritesCache(
-      quickActionStorage,
+      this.quickActionStorage,
       this.app,
       () => this.settings.quickActionsFolder ?? 'Quick Actions',
     );

@@ -11,7 +11,7 @@ Create a work-order from a plan document.
 
 Steps:
 1. Read the plan file (user will provide path or it's in current note context)
-2. Extract: objective/goal, acceptance criteria, file structure, all tasks with steps
+2. Extract: objective/goal, acceptance criteria, and instruction to execute the linked plan
 3. Before writing, read an existing work-order in `Agent Board/tasks/` to confirm the exact frontmatter schema in use
 4. Create work-order markdown file in `Agent Board/tasks/` named `work-order-YYYYMMDD-<slug>.md` with:
    - Frontmatter (exact schema — do not invent field names or values):
@@ -35,11 +35,12 @@ Steps:
      ```
    - Objective section (goal + wikilinks to plan/spec/issue docs)
    - Acceptance Criteria section (all criteria as checklist items)
-   - Context section (tech stack, files to modify/create as tables)
+   - Context section with clear link and instruction to execute the linked plan
+   - Plan reference: ask user for plan file path or look in current note context, add the provided plan as wikilink to the work-order.
    - Constraints section (any limitations or out-of-scope items)
-   - Task Breakdown section (all tasks numbered with substeps, exact file paths, commit messages)
    - Execution Instructions: Subagent-Driven (recommended) — fresh subagent per task, review between tasks, two-stage check; with a dedicated review and polishing pass once done 
    - Update docs during execution to keep underlying work-order and docs up-to-date
+   - Add wikilinks to the referenced plan to link WO and plan together for better visibility
    - Run Ledger section:
      ```
      ## Run Ledger
@@ -55,5 +56,3 @@ Steps:
      ```
 5. Use Write tool directly — do NOT use TaskCreate. File body must be fully populated, not templated.
 6. Return the path to the created work-order file.
-
-Plan reference: ask user for plan file path or look in current note context, add the provided plan as wikilink to the work-order.

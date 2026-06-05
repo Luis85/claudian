@@ -8,6 +8,8 @@ import type { App } from 'obsidian';
 import type { QuickAction } from '@/features/quickActions/types';
 import { QuickActionEditorModal } from '@/features/quickActions/ui/QuickActionEditorModal';
 
+import { createStorageMock } from './_helpers/quickActionStorageMock';
+
 jest.mock('obsidian', () => {
   class Modal {
     app: any;
@@ -97,7 +99,7 @@ describe('QuickActionEditorModal favorites', () => {
       favoriteRank: 3,
       filePath: 'Quick Actions/daily.md',
     });
-    const modal = new QuickActionEditorModal({} as App, existing, onSave);
+    const modal = new QuickActionEditorModal({} as App, existing, onSave, createStorageMock());
 
     await (modal as any).handleSave('Daily', 'Updated description', '', 'Updated body.');
 
@@ -118,7 +120,7 @@ describe('QuickActionEditorModal favorites', () => {
       name: 'NotFav',
       filePath: 'Quick Actions/notfav.md',
     });
-    const modal = new QuickActionEditorModal({} as App, existing, onSave);
+    const modal = new QuickActionEditorModal({} as App, existing, onSave, createStorageMock());
 
     await (modal as any).handleSave('NotFav', 'desc', '', 'body');
 

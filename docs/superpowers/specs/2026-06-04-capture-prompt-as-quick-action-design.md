@@ -1,7 +1,7 @@
 ---
 title: Capture sent prompt as quick action
 date: 2026-06-04
-status: draft
+status: ready-for-review
 scope: features/quickActions, features/chat
 parent: "[[Quick Actions]]"
 ---

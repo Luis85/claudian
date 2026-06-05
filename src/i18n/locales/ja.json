@@ -585,7 +585,13 @@
       "promptDesc": "Message sent to the chat when you run this action",
       "nameRequired": "Name is required",
       "promptRequired": "Prompt is required",
-      "saveFailed": "Failed to save quick action"
+      "saveFailed": "Failed to save quick action",
+      "nameExists": "この名前のクイックアクションは既に存在します"
+    },
+    "capture": {
+      "label": "クイックアクションとして保存",
+      "saved": "クイックアクションを保存しました",
+      "folderMissing": "先にクイックアクションフォルダを設定してください"
     },
     "contextMenu": {
       "title": "Quick actions",

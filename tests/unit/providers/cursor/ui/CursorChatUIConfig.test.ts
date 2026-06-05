@@ -146,6 +146,23 @@ describe('cursorChatUIConfig.normalizeModelVariant', () => {
   });
 });
 
+describe('cursorChatUIConfig.getContextWindowSize', () => {
+  it('decodes namespaced picker values before the catalog lookup', () => {
+    // cursor:gemini-2.5-pro must resolve to the 1M window, not the 200k default.
+    expect(cursorChatUIConfig.getContextWindowSize('cursor:gemini-2.5-pro')).toBe(1_000_000);
+    expect(cursorChatUIConfig.getContextWindowSize('cursor:gpt-5')).toBe(400_000);
+  });
+
+  it('still resolves bare raw ids from legacy/history values', () => {
+    expect(cursorChatUIConfig.getContextWindowSize('gemini-2.5-pro')).toBe(1_000_000);
+  });
+
+  it('falls back to the default window for unknown models', () => {
+    expect(cursorChatUIConfig.getContextWindowSize('cursor:auto')).toBe(200_000);
+    expect(cursorChatUIConfig.getContextWindowSize('cursor:totally-fake')).toBe(200_000);
+  });
+});
+
 describe('cursor capabilities', () => {
   it('exposes the shared effort reasoning control', () => {
     expect(CURSOR_PROVIDER_CAPABILITIES.reasoningControl).toBe('effort');

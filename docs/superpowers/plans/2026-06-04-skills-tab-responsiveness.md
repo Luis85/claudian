@@ -1,5 +1,5 @@
 ---
-status: open
+status: done
 parent: "[[Quick Actions]]"
 ---
 # Skills tab responsiveness Implementation Plan

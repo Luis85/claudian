@@ -34,7 +34,10 @@ views:
       - file.name
       - status
       - parent
-    sort: []
+      - file.backlinks
+    sort:
+      - property: parent
+        direction: ASC
     columnSize:
       file.name: 353
       note.status: 128

@@ -3,21 +3,28 @@ import { Modal, Notice, Setting } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
 import { LucideIconPicker } from '../../../shared/components/LucideIconPicker';
+import type { QuickActionStorage } from '../QuickActionStorage';
 import type { QuickAction } from '../types';
 
 export class QuickActionEditorModal extends Modal {
   private existing: QuickAction | null;
   private onSave: (action: QuickAction) => Promise<void>;
+  private storage: QuickActionStorage;
+  private seed: { name?: string; prompt?: string } | null;
   private iconPicker: LucideIconPicker | null = null;
 
   constructor(
     app: App,
     existing: QuickAction | null,
     onSave: (action: QuickAction) => Promise<void>,
+    storage: QuickActionStorage,
+    seed?: { name?: string; prompt?: string },
   ) {
     super(app);
     this.existing = existing;
     this.onSave = onSave;
+    this.storage = storage;
+    this.seed = seed ?? null;
   }
 
   onOpen(): void {
@@ -27,10 +34,10 @@ export class QuickActionEditorModal extends Modal {
       : t('quickActions.editor.titleAdd'));
     this.modalEl.addClass('claudian-sp-modal');
 
-    let name = this.existing?.name ?? '';
+    let name = this.existing?.name ?? this.seed?.name ?? '';
     let description = this.existing?.description ?? '';
     let icon = this.existing?.icon ?? '';
-    let prompt = this.existing?.prompt ?? '';
+    let prompt = this.existing?.prompt ?? this.seed?.prompt ?? '';
 
     new Setting(this.contentEl)
       .setName(t('quickActions.editor.name'))
@@ -101,6 +108,14 @@ export class QuickActionEditorModal extends Modal {
     if (!trimmedPrompt) {
       new Notice(t('quickActions.editor.promptRequired'));
       return;
+    }
+
+    if (!this.existing) {
+      const targetPath = this.storage.getFilePathForName(trimmedName);
+      if (await this.storage.exists(targetPath)) {
+        new Notice(t('quickActions.editor.nameExists'));
+        return;
+      }
     }
 
     const action: QuickAction = {

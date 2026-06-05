@@ -48,6 +48,23 @@ defensible product value**.
 
 ---
 
+## Status delta — 2026-06-05 (two days after this proposal)
+
+- **SEC-A (TL;DR #3) — shipped.** Provider API keys, MCP auth headers, and MCP env vars now persist
+  via Obsidian `SecretStorage` (keychain), not in vault config files. Substrate landed across PR #27
+  (`aa2bba2a`) plus follow-up fixes through `8d184c9d`. Files: `src/core/security/secretStore.ts`,
+  `secretIds.ts`, `src/core/mcp/mcpSecrets.ts`, `src/features/settings/ui/SecretEnvVarsSection.ts`.
+  Manifest `minAppVersion` bumped to 1.11.5.
+- **ADR-0001 Phase 2b (TL;DR #5) — partial.** `RuntimeHost` interface designed and exported at
+  `src/core/runtime/RuntimeHost.ts` (no longer "dead code" as a *design*, but the seven
+  `setXxxCallback()` setters on `ChatRuntime` are not yet migrated). Phase 3 unchanged.
+- **Forward planning re-anchored.** Remaining open work is now decomposed into 26 ordered child
+  slices across five tracks in [[2026-06-05-plugin-improvement-roadmap]]; the first child spec
+  ([[2026-06-05-composer-context-builder-substrate-design]], slice 1.1) covers the
+  `ComposerContextBuilder` substrate — the trust-UX layer this proposal flagged under TL;DR #4.
+
+---
+
 ## Method
 
 Six dedicated subagents reviewed `main` at `252929d` in parallel, then findings were cross-checked

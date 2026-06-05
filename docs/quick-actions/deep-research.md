@@ -6,6 +6,8 @@ icon: microscope
 tags:
   - research
   - agents
+favorite: true
+favoriteRank: 3
 ---
 
 Run a deep research session on the topic or idea I just described. Follow these steps:

@@ -585,7 +585,13 @@
       "promptDesc": "Message sent to the chat when you run this action",
       "nameRequired": "Name is required",
       "promptRequired": "Prompt is required",
-      "saveFailed": "Failed to save quick action"
+      "saveFailed": "Failed to save quick action",
+      "nameExists": "이 이름의 빠른 작업이 이미 존재합니다"
+    },
+    "capture": {
+      "label": "빠른 작업으로 저장",
+      "saved": "빠른 작업이 저장되었습니다",
+      "folderMissing": "먼저 빠른 작업 폴더를 설정하세요"
     },
     "contextMenu": {
       "title": "Quick actions",

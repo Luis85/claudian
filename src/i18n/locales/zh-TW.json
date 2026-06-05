@@ -585,7 +585,13 @@
       "promptDesc": "Message sent to the chat when you run this action",
       "nameRequired": "Name is required",
       "promptRequired": "Prompt is required",
-      "saveFailed": "Failed to save quick action"
+      "saveFailed": "Failed to save quick action",
+      "nameExists": "已存在同名快速操作"
+    },
+    "capture": {
+      "label": "儲存為快速操作",
+      "saved": "快速操作已儲存",
+      "folderMissing": "請先設定快速操作資料夾"
     },
     "contextMenu": {
       "title": "Quick actions",

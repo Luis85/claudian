@@ -109,6 +109,11 @@ export class QuickActionStorage {
     return parseQuickActionContent(content, filePath);
   }
 
+  /** Thin wrapper for collision checks before write. */
+  async exists(filePath: string): Promise<boolean> {
+    return this.adapter.exists(filePath);
+  }
+
   async save(action: QuickAction): Promise<string> {
     const filePath = action.filePath || this.getFilePathForName(action.name);
     const content = serializeQuickAction({

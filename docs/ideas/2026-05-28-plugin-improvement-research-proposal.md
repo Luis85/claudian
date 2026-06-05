@@ -62,11 +62,11 @@ This proposal was drafted 2026-05-28. In the days since, two companion documents
 | Explicit-context citations via `ContextSourceHandle` | 1.2 | **Open** | No `ContextSourceHandle` type. |
 | `VaultEditRouter` / Markdown-safe edit routing | 1.3 | **Open (partial)** | OBS-4 moved work-order note writes to `vault.process()`; no general edit router. |
 | Agent Safety & Audit Center | 2.4 | **Partial (scaffolded)** | `src/core/logging/` (leveled logger + redaction + ring buffer) and a diagnostics settings tab exist; copy/clear are stubbed (`diagnostics.ts` `TODO Phase F`). No `RuntimeAuditSink` / `RuntimeAuditEvent` / `RuntimeDiagnosticsSnapshot`. |
-| Secret references / Obsidian `SecretStorage` | 2.5 | **Open** | API keys, MCP env, and HTTP headers persist as plaintext; `redact.ts` covers logs only (broadened by SEC-6). |
+| Secret references / Obsidian `SecretStorage` | 2.5 | **Done (2026-06-05)** | PR #27 + follow-up fixes shipped Phases 0–4. API keys, MCP auth headers, and MCP env vars now persist via `app.secretStorage` (keychain). Substrate: `src/core/security/secretStore.ts`, `secretIds.ts`, `src/core/mcp/mcpSecrets.ts`, `src/features/settings/ui/SecretEnvVarsSection.ts`. `minAppVersion` bumped to 1.11.5. |
 | MCP threat-model controls (risk labels, health, provenance, HTTPS/SSRF) | 2.6 | **Partial** | SEC-3/SEC-4 hardening done; per-server/per-tool enablement metadata exists; risk labels, health panel, provenance UI, and non-HTTPS/SSRF warnings open. `supportsMcpTools` is `true` only for Claude (Codex/Opencode/Cursor `false`). |
 | `ExternalPathGrant` + network egress policy | 2.7 | **Partial** | External paths are a flat string list; SEC-5 added ACP vault containment; Codex has reactive per-session network approval. No grant model or configurable egress policy. |
 | Provider stream/history golden fixtures | 3.8 | **Open** | No `ProviderStreamFixtureHarness`; the perf monitoring suite is a separate concern. |
-| Runtime capability resolver / split `ChatRuntime` | 3.9 | **Superseded** | See ADR 0001. The broad interface and Opencode/Cursor no-op `rewind()` are confirmed; the agreed design is `ChatRuntimeCore` + mixins + descriptor + `RuntimeHost`, not a `RuntimeCapabilityResolver`. |
+| Runtime capability resolver / split `ChatRuntime` | 3.9 | **Superseded (Phase 2 partial, 2026-06-05)** | See ADR 0001. `RuntimeHost` interface designed and exported at `src/core/runtime/RuntimeHost.ts`. `ChatRuntime` still carries the seven `setXxxCallback()` setters; capability mixins, nested descriptor, and setter migration deferred to roadmap slices 4.3 / 4.4 in [[2026-06-05-plugin-improvement-roadmap]]. |
 | `ConversationSessionEnvelope` | 3.10 | **Open (partial)** | `ConversationStore` extracted (ARCH-3) moved session/conversation CRUD out of `main.ts`; the envelope itself is unbuilt. |
 | Provider setup / onboarding wizard + comfort profiles | 4.11 | **Partial** | A first-run banner exists; the wizard, comfort profiles, and instruction viewer/validator are open. |
 | `ProviderInvocationCatalog` facade | 4.12 | **Open** | Not present. |
@@ -78,6 +78,20 @@ This proposal was drafted 2026-05-28. In the days since, two companion documents
 - **"No central diagnostics/logging Module" was inaccurate.** `src/core/logging/` (a leveled, namespaced logger with redaction and a bounded ring buffer) and a typed `EventBus` already existed, and a "Diagnostics" settings tab with copy/clear log actions is scaffolded. Wave 2's diagnostics work is therefore an *extension* (audit events + redacted snapshot export), not greenfield.
 - **The Phase 0 "baseline caveat" is resolved.** The file-context typecheck/test failures seen during research were not a real source defect — the review traced them to platform-coupled tests (win32 assertions running on POSIX CI), fixed them, and added a win32 + ubuntu CI matrix (review S0-1). The "re-run the targeted file-context suite before claiming a baseline failure" step is now moot.
 - **The `core/` → `main.ts` coupling is being closed.** ARCH-1 extracted a narrow `PluginContext` interface and ARCH-2 routed provider defaults through registration; `madge` circular dependencies dropped 184 → 52.
+
+## Status reconciliation (revised 2026-06-05)
+
+Four days past the 2026-06-01 reconciliation. One major item shipped; one architecture item moved from design to partial implementation. The phase order in this proposal is now governed by a parent roadmap that decomposes the remaining open work into ordered child slices.
+
+- **Secret references / Obsidian `SecretStorage` (§2.5):** **Done.** PR #27 and follow-up fixes merged Phases 0–4. Provider API keys, MCP auth headers, and MCP env vars now persist via `app.secretStorage` (keychain), not in vault config files. Substrate: `src/core/security/secretStore.ts`, `secretIds.ts`, `src/core/mcp/mcpSecrets.ts`, `src/features/settings/ui/SecretEnvVarsSection.ts`. Manifest `minAppVersion` bumped to 1.11.5.
+- **ADR 0001 transport-agnostic provider seam (§3.9 — superseded):** **Partial.** `RuntimeHost` interface designed and exported at `src/core/runtime/RuntimeHost.ts`. `ChatRuntime` still carries the seven `setXxxCallback()` setters at lines 54-60; capability mixins, the nested capability descriptor, and the setter migration are deferred to roadmap slices **4.3** / **4.4**.
+
+Forward planning now lives in:
+
+- [`docs/superpowers/specs/2026-06-05-plugin-improvement-roadmap.md`](../superpowers/specs/2026-06-05-plugin-improvement-roadmap.md) — parent index over 26 ordered child slices across five tracks (release hygiene, context-trust UX, safety/audit/diagnostics, MCP + external/network, provider reliability + architecture, workflow expansion + accessibility).
+- [`docs/superpowers/specs/2026-06-05-composer-context-builder-substrate-design.md`](../superpowers/specs/2026-06-05-composer-context-builder-substrate-design.md) — first child spec; the `ComposerContextBuilder` substrate (this proposal's named highest-leverage next bet, §1).
+
+This proposal remains the canonical record of intent and rationale; the roadmap owns slice-level status.
 
 ## Decision framing
 

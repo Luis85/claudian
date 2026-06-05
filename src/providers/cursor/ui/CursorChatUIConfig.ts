@@ -145,11 +145,13 @@ export const cursorChatUIConfig: ProviderChatUIConfig = {
   },
 
   getContextWindowSize(model: string, _customLimits?: Record<string, number>): number {
-    return cursorModelContextWindow(model) || DEFAULT_CONTEXT_WINDOW;
+    // Picker values arrive namespaced (`cursor:<rawId>`); the catalog is keyed
+    // by raw ids, so strip the prefix or non-200k windows fall back to default.
+    return cursorModelContextWindow(fromCursorModelValue(model)) || DEFAULT_CONTEXT_WINDOW;
   },
 
   getModelPricing(modelId: string) {
-    return cursorModelPricing(modelId);
+    return cursorModelPricing(fromCursorModelValue(modelId));
   },
 
   isDefaultModel(model: string): boolean {
