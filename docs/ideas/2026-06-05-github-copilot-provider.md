@@ -186,11 +186,18 @@ exposes every control Claudian treats as non-negotiable, so adopting the SDK doe
 resume flags are changelog-only/undocumented). The SDK is GitHub's **stable
 contract** over that churn, and absorbs CLI version drift behind a typed API.
 
-*Packaging caveat — the main risk, validate in the spike:* the SDK's npm package
-*bundles* a copy of the CLI, but an Obsidian plugin ships a single esbuild'd
-`main.js` and must **not** ship a native binary. Mark the SDK `external` and point
-`cliPath` at the user-installed `copilot`; don't rely on the bundled copy. (Plugin
-B sidesteps this by requiring `copilot` on PATH.)
+*Packaging caveat — the main risk, validate in the spike:* this repo **bundles**
+dependencies into `main.js` (`esbuild.config.mjs` uses `bundle: true`) and ships
+only `main.js` / `manifest.json` / `styles.css` — so the SDK must be **bundled,
+not marked `external`** (an external `require('@github/copilot-sdk')` would not
+resolve in community installs, which have no `node_modules` beside the plugin).
+The catch is that the SDK's npm package also *bundles a native CLI binary*, which
+can't go into `main.js`; point `cliPath` at the user-installed `copilot` so that
+binary is never needed, and verify the SDK's JS bundles cleanly — it may need an
+`import.meta.url` patch like the existing `@openai/codex-sdk` /
+`@anthropic-ai/claude-agent-sdk` handling already in `esbuild.config.mjs`
+(`patchSdkImportMeta`). (Plugin B sidesteps the whole question by requiring
+`copilot` on PATH.)
 
 **Fallback — `copilot -p --output-format json` (JSONL), no SDK dependency.** If
 the SDK can't be bundled cleanly, spawn one-shot per turn and parse JSONL the way
@@ -334,10 +341,12 @@ notes**, consistent with how every Claudian provider works.
 Per the repo's "inspect real runtime output first" rule, validate with throwaway
 captures in `.context/` before committing to a transport:
 
-1. **Packaging (decisive).** Confirm `@github/copilot-sdk` can be bundled into an
-   Obsidian plugin (esbuild `external`) and run purely as a JSON-RPC client against
-   a **user-installed** `copilot` (`cliPath`), shipping no native binary. If not,
-   fall back to the JSONL path or ACP-direct.
+1. **Packaging (decisive).** Confirm `@github/copilot-sdk`'s JS **bundles** cleanly
+   into `main.js` (the repo bundles deps and ships no `node_modules`), applying an
+   `import.meta.url` patch if needed (cf. the existing Codex/Claude SDK handling in
+   `esbuild.config.mjs`), and that pointing `cliPath` at a **user-installed**
+   `copilot` keeps the SDK's bundled native binary out of the build. If the JS
+   can't be bundled cleanly, fall back to the JSONL path or ACP-direct.
 2. **Spawn discipline.** Confirm the SDK honors `env` (allowlisted, not
    `process.env`), `cwd` (vault), and `onPermissionRequest` (→ `ApprovalManager`),
    and that `stop()`/`forceStop()` give clean cancellation/cleanup.
@@ -368,10 +377,10 @@ captures in `.context/` before committing to a transport:
 
 ## Open questions
 
-- **Packaging:** can `@github/copilot-sdk` be cleanly bundled in an Obsidian plugin
-  (esbuild `external`) while forcing `cliPath` at a user-installed CLI and shipping
-  no binary? If not, the JSONL path or ACP-direct becomes primary. (Resolve in
-  spike item 1.)
+- **Packaging:** does `@github/copilot-sdk`'s JS **bundle** cleanly into `main.js`
+  (with an `import.meta.url` patch if needed, like the existing vendor SDKs), while
+  `cliPath` keeps its native binary out of the build? If not, the JSONL path or
+  ACP-direct becomes primary. (Resolve in spike item 1.)
 - Does Copilot's plan/ask mode map onto the shared post-plan approval card (cf.
   Opencode's managed plan mode), or need bespoke handling?
 - Exact `~/.copilot/session-state/...` path stability across CLI versions.
