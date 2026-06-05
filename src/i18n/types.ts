@@ -327,6 +327,7 @@ export type TranslationKey =
   | 'quickActions.editor.promptRequired'
   | 'quickActions.editor.saveFailed'
   | 'quickActions.editor.nameExists'
+  | 'quickActions.capture.label'
   | 'quickActions.capture.folderMissing'
   | 'quickActions.capture.saved'
   | 'quickActions.contextMenu.title'

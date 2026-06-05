@@ -55,6 +55,7 @@ import { ClaudianView } from './features/chat/ClaudianView';
 import { sendFeedbackPrompt } from './features/chat/feedback/sendFeedbackPrompt';
 import { isClaudianView } from './features/chat/isClaudianView';
 import type { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
+import { isCaptureEligible, openCaptureFromMessage } from './features/quickActions/captureFromMessage';
 import { QuickActionFavoritesCache } from './features/quickActions/QuickActionFavoritesCache';
 import { QuickActionStorage } from './features/quickActions/QuickActionStorage';
 import { buildProviderRecords } from './features/quickActions/skills/buildProviderRecords';
@@ -203,6 +204,14 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       run: (msg, conversationId) => {
         void chatWorkOrderLinker.promoteMessageToWorkOrder(msg, conversationId);
       },
+    });
+
+    this.registerChatMessageAction({
+      id: 'capture-prompt-as-quick-action',
+      label: t('quickActions.capture.label'),
+      icon: 'bookmark-plus',
+      isEligible: isCaptureEligible,
+      run: (msg) => openCaptureFromMessage(this, msg),
     });
 
     registerPluginCommands({ plugin: this, taskExecutionSurface, chatWorkOrderLinker });
