@@ -95,7 +95,7 @@ views:
       - relations
       - tags
     columnSize:
-      file.name: 393
+      file.name: 430
       note.status: 128
       note.priority: 144
       note.relations: 217
@@ -108,6 +108,9 @@ views:
     order:
       - file.name
       - status
+    sort:
+      - property: file.name
+        direction: DESC
     columnSize:
       file.name: 369
       note.status: 192

@@ -3,7 +3,7 @@ priority: 1 - high
 relations:
   - Product
   - Migration
-status: design / approved
+status: approved (design)
 date: 2026-05-30
 owner: Luis Mendez
 supersedes_planning_in:

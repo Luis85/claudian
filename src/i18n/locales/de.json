@@ -696,7 +696,11 @@
       "runParseFailed": "Cannot run work order: {error}",
       "runFailed": "Work order run failed: {error}",
       "noReady": "No ready work orders to run.",
-      "laneSaveFailed": "Could not save lane change: {error}"
+      "laneSaveFailed": "Could not save lane change: {error}",
+      "contextMenu": {
+        "openNote": "Notiz öffnen",
+        "openConversation": "Unterhaltung öffnen"
+      }
     },
     "template": {
       "nameRequired": "Template name is required.",

@@ -563,10 +563,20 @@ class MockMenuItem {
   });
 }
 
+export const MENU_SEPARATOR = Symbol('MenuSeparator');
+
 export class Menu {
   static instances: Menu[] = [];
 
-  items: MockMenuItem[] = [];
+  // `items` mixes `MockMenuItem` (from `addItem`) and `MENU_SEPARATOR` symbols
+  // (from `addSeparator`). Tests that access `items[i]` must handle both — the
+  // `WorkOrderContextMenu` suite filters via `entry === MENU_SEPARATOR`. Older
+  // tests that only ever call `addItem` (e.g. `ConversationController.test.ts`,
+  // `MessageRenderer.test.ts`, `tests/integration/main.test.ts`) narrow `items`
+  // to a separator-free shape and stay safe as long as their menu builders do
+  // not start calling `addSeparator`. If you add `addSeparator` to one of those
+  // menus, update its test's `items` cast at the same time.
+  items: Array<MockMenuItem | typeof MENU_SEPARATOR> = [];
   showAtMouseEvent = jest.fn();
 
   constructor() {
@@ -577,6 +587,11 @@ export class Menu {
     const item = new MockMenuItem();
     callback(item);
     this.items.push(item);
+    return this;
+  }
+
+  addSeparator(): this {
+    this.items.push(MENU_SEPARATOR);
     return this;
   }
 }
