@@ -13,12 +13,36 @@ export interface AgentBoardRenderCallbacks {
   onReopen(task: TaskSpec): void;
   onAddWorkOrder(): void;
   onRunNextReady(): void;
+  /** Queue skip reason for a card, or null when the card is not skipped. */
+  getSkipReason?: (task: TaskSpec) => string | null;
+  /** Dismiss a card's queue skip chip. */
+  onAckSkip?: (task: TaskSpec) => void;
 }
 
 export interface AgentBoardRenderState {
   layout: ResolvedBoardLayout;
   invalidNotes: InvalidTaskNote[];
   slots: { used: number; max: number };
+}
+
+export interface QueueToolbarState {
+  paused: boolean;
+  halted: boolean;
+  slotOccupied: number;
+  slotCapacity: number;
+  consecutiveFailures: number;
+  onToggle: () => void;
+}
+
+export interface HaltBannerState {
+  reason: string | null;
+  onResume: () => void;
+  onOpenFailed: () => void;
+}
+
+export interface SkipChipState {
+  reason: string | null;
+  onAck: () => void;
 }
 
 export class AgentBoardRenderer {
@@ -59,6 +83,66 @@ export class AgentBoardRenderer {
     if (state.layout.errors.length > 0 || state.invalidNotes.length > 0) {
       this.renderErrors(root, state.layout.errors, state.invalidNotes);
     }
+  }
+
+  // Queue surfaces render into their own hosts so AgentBoardView can mount and
+  // refresh them independently of the lane grid above.
+  renderToolbar(host: HTMLElement, state: QueueToolbarState): void {
+    host.empty();
+    const bar = host.createDiv({ cls: 'claudian-agent-board-toolbar' });
+
+    const toggle = bar.createEl('button', {
+      cls: 'claudian-agent-board-toolbar--queue-toggle',
+      text: state.paused || state.halted ? '▶ Queue' : '⏸ Queue',
+    });
+    if (state.halted) toggle.addClass('claudian-agent-board-toolbar--queue-toggle-halted');
+    toggle.addEventListener('click', () => state.onToggle());
+
+    bar.createSpan({
+      cls: 'claudian-agent-board-toolbar--queue-active-count',
+      text: `${state.slotOccupied}/${state.slotCapacity} active`,
+    });
+
+    if (state.consecutiveFailures > 0) {
+      bar.createSpan({
+        cls: 'claudian-agent-board-toolbar--queue-failure-count',
+        text: `· ${state.consecutiveFailures} failures`,
+      });
+    }
+  }
+
+  renderHaltBanner(host: HTMLElement, state: HaltBannerState): void {
+    host.empty();
+    if (!state.reason) return;
+    const banner = host.createDiv({ cls: 'claudian-agent-board-banner-halt' });
+    banner.createDiv({
+      cls: 'claudian-agent-board-banner-halt-title',
+      text: `⚠ Queue halted: ${state.reason}`,
+    });
+    const actions = banner.createDiv({ cls: 'claudian-agent-board-banner-halt--actions' });
+    const resume = actions.createEl('button', {
+      cls: 'claudian-agent-board-banner-halt--resume',
+      text: 'Resume queue',
+    });
+    resume.addEventListener('click', () => state.onResume());
+    const open = actions.createEl('button', {
+      cls: 'claudian-agent-board-banner-halt--open-failed',
+      text: 'Open failed cards',
+    });
+    open.addEventListener('click', () => state.onOpenFailed());
+  }
+
+  renderSkipChip(host: HTMLElement, state: SkipChipState): void {
+    host.empty();
+    if (!state.reason) return;
+    const chip = host.createDiv({
+      cls: 'claudian-agent-board-card-skip-chip',
+      text: `⊘ Queue skipped: ${state.reason}`,
+    });
+    chip.addEventListener('click', (event) => {
+      event.stopPropagation();
+      state.onAck();
+    });
   }
 
   private renderLane(parent: HTMLElement, lane: ResolvedLane, callbacks: AgentBoardRenderCallbacks): void {
@@ -137,6 +221,12 @@ export class AgentBoardRenderer {
     }
     if (task.frontmatter.status === 'done') {
       this.renderAction(actions, 'Reopen', () => callbacks.onReopen(task));
+    }
+
+    const skipReason = callbacks.getSkipReason?.(task) ?? null;
+    if (skipReason) {
+      const chipHost = card.createDiv({ cls: 'claudian-agent-board-card-skip-host' });
+      this.renderSkipChip(chipHost, { reason: skipReason, onAck: () => callbacks.onAckSkip?.(task) });
     }
   }
 
