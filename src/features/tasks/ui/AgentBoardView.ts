@@ -23,8 +23,8 @@ import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
 import { TaskNoteStore } from '../storage/TaskNoteStore';
 import { AgentBoardRenderer } from './AgentBoardRenderer';
 import { createWorkOrderInteractive } from './createWorkOrderInteractive';
-import { WorkOrderDetailModal, type WorkOrderFieldUpdate } from './WorkOrderDetailModal';
 import { showWorkOrderContextMenu } from './workOrderContextMenu';
+import { WorkOrderDetailModal, type WorkOrderFieldUpdate } from './WorkOrderDetailModal';
 
 export class AgentBoardView extends ItemView {
   private readonly noteStore = new TaskNoteStore();
