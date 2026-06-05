@@ -47,6 +47,29 @@ describe('LedgerWriter', () => {
     writer.dispose();
   });
 
+  it('flushes entries queued during an in-flight flush instead of dropping them', async () => {
+    let release!: () => void;
+    const flushed: string[] = [];
+    let calls = 0;
+    const writer = new LedgerWriter({
+      flush: async (entries) => {
+        calls += 1;
+        if (calls === 1) await new Promise<void>((r) => { release = r; });
+        for (const e of entries) flushed.push(e.message);
+      },
+      intervalMs: 60000,
+      milestoneThreshold: 999,
+    });
+    writer.enqueue(entry('a'));
+    const firstFlush = writer.flushNow(); // starts flushing [a], then blocks
+    writer.enqueue(entry('b')); // queued while [a] is in-flight
+    const secondFlush = writer.flushNow(); // must wait for [a], then flush [b]
+    release();
+    await Promise.all([firstFlush, secondFlush]);
+    expect(flushed).toEqual(['a', 'b']);
+    writer.dispose();
+  });
+
   it('retries a failed flush with backoff and drops after two attempts', async () => {
     jest.useFakeTimers();
     let attempts = 0;

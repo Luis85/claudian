@@ -14,7 +14,7 @@ export class LedgerWriter {
   private queue: TaskLedgerEntry[] = [];
   private tailBuffer: TaskLedgerEntry[] = [];
   private timer: number | null = null;
-  private flushing = false;
+  private flushInFlight: Promise<void> | null = null;
   private retryAttempt = 0;
   private disposed = false;
 
@@ -35,10 +35,25 @@ export class LedgerWriter {
   }
 
   async flushNow(): Promise<void> {
-    if (this.flushing || this.queue.length === 0) return;
+    // Wait for any in-flight flush first, so entries enqueued during it (e.g. a
+    // run's final "Handoff written." line) are not stranded when a caller flushes
+    // then disposes. Single-threaded execution guarantees only one flush runs at
+    // a time, so this never double-writes a batch.
+    if (this.flushInFlight) {
+      await this.flushInFlight;
+    }
+    if (this.queue.length === 0) return;
+    this.flushInFlight = this.doFlush();
+    try {
+      await this.flushInFlight;
+    } finally {
+      this.flushInFlight = null;
+    }
+  }
+
+  private async doFlush(): Promise<void> {
     const batch = this.queue.slice();
     this.queue.length = 0;
-    this.flushing = true;
     try {
       await this.opts.flush(batch);
       this.retryAttempt = 0;
@@ -51,8 +66,6 @@ export class LedgerWriter {
         this.queue = [...batch, ...this.queue];
         this.scheduleRetry();
       }
-    } finally {
-      this.flushing = false;
     }
   }
 

@@ -27,6 +27,9 @@ export type TaskRunResult = { ok: true; status: TaskStatus } | { ok: false; erro
  */
 export class TaskRunCoordinator {
   private readonly activeRuns = new Map<string, RunSession>();
+  // Task ids reserved between the guard check and the surface resolving, so two
+  // near-simultaneous runs of the same work order can't both open a tab.
+  private readonly starting = new Set<string>();
 
   constructor(private readonly deps: TaskRunCoordinatorDeps) {}
 
@@ -40,7 +43,7 @@ export class TaskRunCoordinator {
 
     if (!provider) return { ok: false, error: 'Work order is missing provider' };
     if (!model) return { ok: false, error: 'Work order is missing model' };
-    if (task.frontmatter.status === 'running' || this.activeRuns.has(id)) {
+    if (task.frontmatter.status === 'running' || this.activeRuns.has(id) || this.starting.has(id)) {
       return { ok: false, error: 'This work order is already running.' };
     }
     if (!this.deps.isProviderEnabled(provider)) {
@@ -50,36 +53,43 @@ export class TaskRunCoordinator {
       return { ok: false, error: `Model ${model} is not available for provider ${provider}` };
     }
 
-    const prompt = (this.deps.renderPrompt ?? renderTaskPrompt)(task);
-    const handle = await this.deps.executionSurface.startTaskRun(task, { prompt });
-    if (!handle.runId) {
-      const terminal = await handle.terminal;
-      return { ok: false, error: terminal.error ?? 'Run failed.' };
-    }
-
-    const session = new RunSession({
-      task,
-      runId: handle.runId,
-      conversationId: handle.conversationId,
-      sidepanelTabId: handle.sidepanelTabId,
-      stream: handle.stream,
-      events: this.deps.events,
-      now: this.deps.now,
-      writeStatus: this.deps.writeTaskStatus,
-      flushLedger: (entries) => this.deps.flushLedger(task, entries),
-      writeHandoff: this.deps.writeHandoff,
-      heartbeatIntervalMs: this.deps.heartbeatIntervalMs,
-      staleThresholdMs: this.deps.staleThresholdMs,
-    });
-    this.activeRuns.set(id, session);
+    // Reserve the id before awaiting the surface (tab creation), then hold it for
+    // the whole run, so a concurrent run of the same work order is rejected.
+    this.starting.add(id);
     try {
-      const result: RunSessionResult = await session.run();
-      // The surface's own terminal is awaited by adapters internally; settle it too.
-      await handle.terminal.catch(() => undefined);
-      if (result.ok) return { ok: true, status: result.status };
-      return { ok: false, error: result.error };
+      const prompt = (this.deps.renderPrompt ?? renderTaskPrompt)(task);
+      const handle = await this.deps.executionSurface.startTaskRun(task, { prompt });
+      if (!handle.runId) {
+        const terminal = await handle.terminal;
+        return { ok: false, error: terminal.error ?? 'Run failed.' };
+      }
+
+      const session = new RunSession({
+        task,
+        runId: handle.runId,
+        conversationId: handle.conversationId,
+        sidepanelTabId: handle.sidepanelTabId,
+        stream: handle.stream,
+        events: this.deps.events,
+        now: this.deps.now,
+        writeStatus: this.deps.writeTaskStatus,
+        flushLedger: (entries) => this.deps.flushLedger(task, entries),
+        writeHandoff: this.deps.writeHandoff,
+        heartbeatIntervalMs: this.deps.heartbeatIntervalMs,
+        staleThresholdMs: this.deps.staleThresholdMs,
+      });
+      this.activeRuns.set(id, session);
+      try {
+        const result: RunSessionResult = await session.run();
+        // The surface's own terminal is awaited by adapters internally; settle it too.
+        await handle.terminal.catch(() => undefined);
+        if (result.ok) return { ok: true, status: result.status };
+        return { ok: false, error: result.error };
+      } finally {
+        this.activeRuns.delete(id);
+      }
     } finally {
-      this.activeRuns.delete(id);
+      this.starting.delete(id);
     }
   }
 }

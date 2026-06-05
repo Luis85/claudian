@@ -175,6 +175,47 @@ describe('TaskRunCoordinator', () => {
     expect(coordinator.getActiveRun('task-1')).toBeUndefined();
   });
 
+  it('rejects a concurrent run of the same work order while the first is still starting', async () => {
+    let releaseStart!: () => void;
+    const adapter = new SyntheticStreamAdapter();
+    let startCalls = 0;
+    const surface: TaskExecutionSurface = {
+      startTaskRun: async (): Promise<TaskRunHandle> => {
+        startCalls += 1;
+        await new Promise<void>((resolve) => { releaseStart = resolve; });
+        return {
+          runId: 'run-1',
+          conversationId: 'c',
+          sidepanelTabId: 't',
+          stream: adapter,
+          terminal: Promise.resolve({ status: 'completed', finalAssistantContent: '' } as TaskRunTerminal),
+        };
+      },
+    };
+    const coordinator = new TaskRunCoordinator({
+      executionSurface: surface,
+      events: new EventBus<TaskEventMap>(),
+      now: () => '2026-05-28T18:10:00+02:00',
+      isProviderEnabled: () => true,
+      ownsModel: () => true,
+      writeTaskStatus: async () => {},
+      flushLedger: async () => {},
+      writeHandoff: async () => {},
+    });
+
+    const task = makeTask();
+    const first = coordinator.run(task);
+    const second = await coordinator.run(task);
+    expect(second).toEqual({ ok: false, error: 'This work order is already running.' });
+    expect(startCalls).toBe(1);
+
+    releaseStart();
+    await flushMicrotasks();
+    adapter.emitText(VALID_HANDOFF);
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await first;
+  });
+
   it('uses an injected renderPrompt when provided', async () => {
     const surface = new FakeSurface();
     const { coordinator } = makeCoordinator(surface, { renderPrompt: () => 'INJECTED PROMPT' });
