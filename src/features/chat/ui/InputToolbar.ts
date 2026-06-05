@@ -38,6 +38,14 @@ function runToolbarAction(action: () => Promise<void>, failureMessage: string): 
   });
 }
 
+export function formatTokens(tokens: number): string {
+  if (!Number.isFinite(tokens) || tokens <= 0) return '0';
+  if (tokens < 1000) return String(Math.round(tokens));
+  if (tokens < 10_000) return `${(tokens / 1000).toFixed(1)}k`;
+  if (tokens < 1_000_000) return `${Math.round(tokens / 1000)}k`;
+  return `${(tokens / 1_000_000).toFixed(1)}M`;
+}
+
 export interface ToolbarSettings {
   model: string;
   thinkingBudget: string;
@@ -1320,18 +1328,14 @@ export class ContextUsageMeter {
     }
 
     // Set tooltip with detailed usage
-    let tooltip = `${this.formatTokens(usage.contextTokens)} / ${this.formatTokens(usage.contextWindow)}`;
+    let tooltip = `${formatTokens(usage.contextTokens)} / ${formatTokens(usage.contextWindow)}`;
+    if (typeof usage.costUsd === 'number' && Number.isFinite(usage.costUsd)) {
+      tooltip += ` · $${usage.costUsd.toFixed(4)}`;
+    }
     if (usage.percentage > 80) {
       tooltip += ' (Approaching limit, run `/compact` to continue)';
     }
     this.container.setAttribute('data-tooltip', tooltip);
-  }
-
-  private formatTokens(tokens: number): string {
-    if (tokens >= 1000) {
-      return `${Math.round(tokens / 1000)}k`;
-    }
-    return String(tokens);
   }
 }
 
