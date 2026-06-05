@@ -34,6 +34,7 @@ export interface WriteStatusOptions {
   started?: string | null;
   heartbeat?: string | null;
   pauseReason?: string | null;
+  attempts?: number;
 }
 
 export interface WriteFieldsOptions {
@@ -96,6 +97,7 @@ export class TaskNoteStore {
     if (options.started !== undefined) frontmatter.started = options.started;
     if (options.heartbeat !== undefined) frontmatter.heartbeat = options.heartbeat;
     if (options.pauseReason !== undefined) frontmatter.pause_reason = options.pauseReason;
+    if (options.attempts !== undefined) frontmatter.attempts = options.attempts;
 
     if (options.status === 'done' || options.status === 'failed' || options.status === 'canceled') {
       frontmatter.finished = options.timestamp;

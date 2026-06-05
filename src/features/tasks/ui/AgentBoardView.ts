@@ -21,7 +21,7 @@ import { canTransitionTaskStatus, isRunnableTaskStatus } from '../model/taskStat
 import type { TaskBoardModel, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
 import { TaskNoteStore } from '../storage/TaskNoteStore';
-import { AgentBoardRenderer } from './AgentBoardRenderer';
+import { type AgentBoardPauseState,AgentBoardRenderer } from './AgentBoardRenderer';
 import { createWorkOrderInteractive } from './createWorkOrderInteractive';
 import { WorkOrderDetailModal, type WorkOrderFieldUpdate } from './WorkOrderDetailModal';
 
@@ -33,6 +33,12 @@ export class AgentBoardView extends ItemView {
   private config: BoardConfig = loadBoardConfig({}).config;
   private layout: ResolvedBoardLayout = { lanes: [], errors: [] };
   private refreshTimer: number | null = null;
+  // One coordinator for the view, kept across runs so paused runs are reachable
+  // from the card reply/approve/reject handlers via getActiveRun(taskId).
+  private coordinator: TaskRunCoordinator | null = null;
+  private elapsedTimer: number | null = null;
+  private readonly pauseState = new Map<string, AgentBoardPauseState>();
+  private readonly lastRunStatus = new Map<string, TaskStatus>();
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -63,7 +69,28 @@ export class AgentBoardView extends ItemView {
     this.registerEvent(vault.on('rename', (file) => this.onVaultChange(file)));
     this.register(this.plugin.events.on('chat:tabs-changed', () => this.refreshSlots()));
     this.register(this.plugin.events.on('task:board-config-changed', () => void this.refresh()));
+
+    // Live-run visibility: patch cards in place from run events without a full
+    // re-render, and tick the elapsed timer every second.
+    this.register(this.plugin.events.on('task:attempt-started', (p) => this.patchCard(p.taskId)));
+    this.register(this.plugin.events.on('task:status-changed', (p) => this.onStatusChanged(p)));
+    this.register(this.plugin.events.on('task:ledger-appended', (p) => this.patchLiveStrip(p.taskId, p.entry.message)));
+    this.register(this.plugin.events.on('task:heartbeat', (p) => this.patchLiveStrip(p.taskId)));
+    this.register(this.plugin.events.on('task:needs-input', (p) => this.onPauseRequested('needs_input', p)));
+    this.register(this.plugin.events.on('task:needs-approval', (p) => this.onPauseRequested('needs_approval', p)));
+    this.register(this.plugin.events.on('task:resumed', (p) => {
+      this.pauseState.delete(p.taskId);
+      this.patchCard(p.taskId);
+    }));
+
+    this.elapsedTimer = window.setInterval(() => this.tickElapsed(), 1000);
+    this.register(() => {
+      if (this.elapsedTimer !== null) window.clearInterval(this.elapsedTimer);
+      this.elapsedTimer = null;
+    });
+
     await this.refresh();
+    await this.recoverOrphanedRuns();
   }
 
   async onClose(): Promise<void> {
@@ -127,8 +154,18 @@ export class AgentBoardView extends ItemView {
         onReopen: (task) => void this.transitionTask(task, 'inbox', 'Reopened.'),
         onAddWorkOrder: () => void this.addWorkOrderFromBoard(),
         onRunNextReady: () => void this.runNextReady(),
+        onReply: (task, content) => void this.onReply(task.frontmatter.id, content),
+        onApprove: (task) => void this.onApprove(task.frontmatter.id),
+        onReject: (task, reason) => void this.onReject(task.frontmatter.id, reason),
+        onCancelPaused: (task) => this.stopTask(task),
       },
     );
+
+    // A full render rebuilds card refs, so re-apply any active pause payloads
+    // (question/default/risk from the run events) over the note-seeded reply.
+    for (const taskId of this.pauseState.keys()) {
+      this.patchCard(taskId);
+    }
 
     const nextLanes = this.contentEl.querySelector(lanesSelector) as HTMLElement | null;
     if (nextLanes) {
@@ -271,43 +308,138 @@ export class AgentBoardView extends ItemView {
       return;
     }
 
-    const settings = asSettingsBag(this.plugin.settings);
-    let lastStatus: TaskStatus = latest.frontmatter.status;
-    const coordinator = new TaskRunCoordinator({
-      executionSurface: this.executionSurface,
-      events: this.plugin.events,
-      now: () => new Date().toISOString(),
-      isProviderEnabled: (providerId) =>
-        ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId) &&
-        ProviderRegistry.isEnabled(providerId as ProviderId, settings),
-      ownsModel: (providerId, model) =>
-        ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId) &&
-        ProviderRegistry.getChatUIConfig(providerId as ProviderId).ownsModel(model, settings),
-      writeTaskStatus: async (_task, options) => {
-        await this.applyNoteChange(task.path, (content) => this.noteStore.writeStatus(content, options));
-        lastStatus = options.status;
-      },
-      flushLedger: (_task, entries) =>
-        this.applyNoteChange(task.path, (content) =>
-          entries.reduce((acc, entry) => this.noteStore.appendLedger(acc, entry), content),
-        ),
-      writeHandoff: (_task, markdown) =>
-        this.applyNoteChange(task.path, (content) => this.noteStore.writeHandoff(content, markdown)),
-      renderPrompt: (target) =>
-        renderTaskPrompt(target, getLaneForStatus(this.config, target.frontmatter.status) ?? undefined),
-    });
-
+    const coordinator = this.getCoordinator();
     this.plugin.events.emit('task:run-started', { taskId: latest.frontmatter.id, path: task.path });
     const result = await coordinator.run(latest);
     this.plugin.events.emit('task:run-finished', {
       taskId: latest.frontmatter.id,
       path: task.path,
-      status: result.ok ? result.status : lastStatus,
+      status: result.ok ? result.status : (this.lastRunStatus.get(latest.frontmatter.id) ?? latest.frontmatter.status),
     });
     if (!result.ok) {
       new Notice(t('tasks.board.runFailed', { error: result.error }));
     }
     await this.refresh();
+  }
+
+  private getCoordinator(): TaskRunCoordinator {
+    if (this.coordinator) return this.coordinator;
+    this.coordinator = new TaskRunCoordinator({
+      executionSurface: this.executionSurface,
+      events: this.plugin.events,
+      now: () => new Date().toISOString(),
+      isProviderEnabled: (providerId) =>
+        ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId) &&
+        ProviderRegistry.isEnabled(providerId as ProviderId, asSettingsBag(this.plugin.settings)),
+      ownsModel: (providerId, model) =>
+        ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId) &&
+        ProviderRegistry.getChatUIConfig(providerId as ProviderId).ownsModel(model, asSettingsBag(this.plugin.settings)),
+      writeTaskStatus: async (target, options) => {
+        await this.applyNoteChange(target.path, (content) => this.noteStore.writeStatus(content, options));
+        this.lastRunStatus.set(target.frontmatter.id, options.status);
+      },
+      flushLedger: (target, entries) =>
+        this.applyNoteChange(target.path, (content) =>
+          entries.reduce((acc, entry) => this.noteStore.appendLedger(acc, entry), content),
+        ),
+      writeHandoff: (target, markdown) =>
+        this.applyNoteChange(target.path, (content) => this.noteStore.writeHandoff(content, markdown)),
+      renderPrompt: (target) =>
+        renderTaskPrompt(target, getLaneForStatus(this.config, target.frontmatter.status) ?? undefined),
+    });
+    return this.coordinator;
+  }
+
+  private patchCard(taskId: string): void {
+    const task = this.model.tasks.find((entry) => entry.frontmatter.id === taskId);
+    if (!task) return;
+    this.renderer.patchCard(taskId, task, this.pauseState.get(taskId) ?? null);
+  }
+
+  private patchLiveStrip(taskId: string, lastLedger?: string): void {
+    const task = this.model.tasks.find((entry) => entry.frontmatter.id === taskId);
+    if (!task) return;
+    const now = Date.now();
+    const startedAt = task.frontmatter.started ? Date.parse(task.frontmatter.started) : now;
+    const heartbeatAt = task.frontmatter.heartbeat ? Date.parse(task.frontmatter.heartbeat) : now;
+    const ledger = lastLedger ?? task.sections.ledger.split('\n').filter((line) => line.trim().length > 0).pop();
+    this.renderer.patchLiveStrip(taskId, {
+      lastLedger: ledger,
+      elapsedMs: Math.max(0, now - startedAt),
+      attemptNumber: task.frontmatter.attempts,
+      heartbeatAgeMs: Math.max(0, now - heartbeatAt),
+    });
+  }
+
+  private onStatusChanged(p: { taskId: string; status: TaskStatus }): void {
+    if (p.status !== 'needs_input' && p.status !== 'needs_approval') {
+      this.pauseState.delete(p.taskId);
+    }
+    this.patchCard(p.taskId);
+  }
+
+  private onPauseRequested(
+    kind: 'needs_input' | 'needs_approval',
+    p: { taskId: string; runId: string; question?: string; action?: string; risk?: string; default?: string; reversible?: boolean },
+  ): void {
+    this.pauseState.set(p.taskId, {
+      question: kind === 'needs_input' ? p.question : undefined,
+      action: kind === 'needs_approval' ? p.action : undefined,
+      risk: p.risk,
+      defaultValue: p.default,
+      reversible: p.reversible,
+      runId: p.runId,
+    });
+    this.patchCard(p.taskId);
+  }
+
+  private tickElapsed(): void {
+    for (const task of this.model.tasks) {
+      const status = task.frontmatter.status;
+      if (status === 'running' || status === 'needs_input' || status === 'needs_approval') {
+        this.patchLiveStrip(task.frontmatter.id);
+      }
+    }
+  }
+
+  // Reply/approve/reject route into the live RunSession. If no session is active
+  // (the run just ended or was orphaned), the next refresh removes the reply
+  // surface, so a stray click is a safe no-op.
+  private async onReply(taskId: string, content: string): Promise<void> {
+    await this.coordinator?.getActiveRun(taskId)?.resume({ kind: 'reply', content });
+  }
+
+  private async onApprove(taskId: string): Promise<void> {
+    await this.coordinator?.getActiveRun(taskId)?.resume({ kind: 'approve' });
+  }
+
+  private async onReject(taskId: string, reason: string): Promise<void> {
+    await this.coordinator?.getActiveRun(taskId)?.resume({ kind: 'reject', reason });
+  }
+
+  /**
+   * Marks any work order persisted as running/needs_input/needs_approval but with
+   * no live session (e.g. a plugin reload mid-run) as failed, so the board never
+   * shows a permanently "active" card that nothing is driving.
+   */
+  private async recoverOrphanedRuns(): Promise<void> {
+    const now = new Date().toISOString();
+    let recovered = false;
+    for (const task of this.model.tasks) {
+      const status = task.frontmatter.status;
+      if (status !== 'running' && status !== 'needs_input' && status !== 'needs_approval') continue;
+      if (this.coordinator?.getActiveRun(task.frontmatter.id)) continue;
+      await this.applyNoteChange(task.path, (content) =>
+        this.noteStore.appendLedger(content, { timestamp: now, status: 'failed', message: 'orphaned by plugin reload' }),
+      );
+      await this.applyNoteChange(task.path, (content) =>
+        this.noteStore.writeStatus(content, { status: 'failed', timestamp: now }),
+      );
+      this.pauseState.delete(task.frontmatter.id);
+      this.plugin.events.emit('task:status-changed', { taskId: task.frontmatter.id, path: task.path, status: 'failed' });
+      recovered = true;
+    }
+    if (recovered) await this.refresh();
   }
 
   async runNextReady(): Promise<void> {

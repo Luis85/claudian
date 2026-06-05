@@ -14,6 +14,7 @@ export interface RunSessionWriteStatusOptions {
   started?: string | null;
   heartbeat?: string | null;
   pauseReason?: string | null;
+  attempts?: number;
 }
 
 export interface RunSessionDeps {
@@ -117,6 +118,7 @@ export class RunSession {
       // Stamp the run-start once; heartbeats deliberately omit `started`.
       started: ts,
       heartbeat: ts,
+      attempts: this.attemptNumber,
     });
     return this.terminalPromise;
   }
