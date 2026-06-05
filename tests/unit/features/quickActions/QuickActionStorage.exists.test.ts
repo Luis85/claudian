@@ -1,5 +1,5 @@
-import { QuickActionStorage } from '@/features/quickActions/QuickActionStorage';
 import type { VaultFileAdapter } from '@/core/storage/VaultFileAdapter';
+import { QuickActionStorage } from '@/features/quickActions/QuickActionStorage';
 
 function makeAdapter(existing = new Set<string>()): VaultFileAdapter {
   return {
