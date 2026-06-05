@@ -694,10 +694,11 @@ export class ClaudianView extends ItemView {
     // Chunks are buffered until the real observer attaches, then replayed in order.
     const buffered: StreamChunk[] = [];
     let liveObserver: ((chunk: StreamChunk) => void) | null = null;
-    const detachRaw = streamController.addStreamObserver((chunk) => {
+    const emit = (chunk: StreamChunk): void => {
       if (liveObserver) liveObserver(chunk);
       else buffered.push(chunk);
-    });
+    };
+    const detachRaw = streamController.addStreamObserver(emit);
 
     const toTerminal = (result: ProgrammaticSendResult | undefined): TaskRunTabTerminal => {
       const sendResult: ProgrammaticSendResult = result ?? {
@@ -739,7 +740,18 @@ export class ClaudianView extends ItemView {
         };
       },
       sendFollowUp: async (content) => {
-        void (inputController.sendMessage({ content }) as Promise<unknown>).catch(() => undefined);
+        // Fire the follow-up turn without blocking; surface a failure that emits
+        // no stream end as a synthetic error chunk so the run fails promptly
+        // (follow-up turns have no terminal promise wired to the runner).
+        void (inputController.sendMessage({ content }) as Promise<ProgrammaticSendResult | undefined>)
+          .then((result) => {
+            if (result && !result.ok) {
+              emit({ type: 'error', content: result.error ?? 'Follow-up turn failed.' });
+            }
+          })
+          .catch((error) => {
+            emit({ type: 'error', content: error instanceof Error ? error.message : String(error) });
+          });
       },
       cancel: () => inputController.cancelStreaming(),
       terminal,

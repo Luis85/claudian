@@ -618,4 +618,30 @@ describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
     const terminal = await handle.terminal;
     expect(terminal.status).toBe('completed');
   });
+
+  it('surfaces a failed follow-up turn to the run as a synthetic error chunk', async () => {
+    const streamController = { addStreamObserver: () => () => {} };
+    let call = 0;
+    const inputController = {
+      sendMessage: jest.fn(async () => {
+        call += 1;
+        return call === 1
+          ? { ok: true, finalAssistantContent: '' }
+          : { ok: false, finalAssistantContent: '', error: 'init failed' };
+      }),
+      cancelStreaming: jest.fn(),
+    };
+    const tab = { id: 'tab-1', conversationId: 'conv-1', controllers: { inputController, streamController } };
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
+
+    const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
+    const seen: Array<{ type: string; content?: string }> = [];
+    handle.subscribe((chunk: { type: string; content?: string }) => seen.push(chunk));
+
+    await handle.sendFollowUp('reply');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(seen).toContainEqual({ type: 'error', content: 'init failed' });
+  });
 });
