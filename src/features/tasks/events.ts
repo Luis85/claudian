@@ -9,4 +9,14 @@ export interface TaskEventMap {
   'task:status-changed': { taskId: string; path: string; status: TaskStatus };
   /** Emitted when a work-order run ends. */
   'task:run-finished': { taskId: string; path: string; status: TaskStatus };
+  /** Emitted when the queue runner launches a card. */
+  'task:queue-tick': { taskId: string };
+  /** Emitted when the user pauses the queue runner on a board. */
+  'task:queue-paused': void;
+  /** Emitted when the user resumes the queue runner on a board. */
+  'task:queue-resumed': void;
+  /** Emitted when the queue runner auto-halts after consecutive failures. */
+  'task:queue-halted': { reason: string };
+  /** Emitted when the runner skips a card for an eligibility reason. */
+  'task:queue-skipped': { taskId: string; reason: string };
 }
