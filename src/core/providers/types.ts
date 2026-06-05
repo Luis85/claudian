@@ -300,6 +300,18 @@ export interface ProviderModeSelectorConfig {
   value: string;
 }
 
+/** Per-model pricing descriptor. Tokens are billed per 1,000,000. */
+export interface ModelPricing {
+  /** USD per 1,000,000 input tokens. */
+  inputPer1M: number;
+  /** USD per 1,000,000 output tokens. */
+  outputPer1M: number;
+  /** USD per 1,000,000 cache-read tokens. Defaults to inputPer1M when omitted. */
+  cacheReadPer1M?: number;
+  /** USD per 1,000,000 cache-creation tokens. Defaults to inputPer1M when omitted. */
+  cacheWritePer1M?: number;
+}
+
 /** Static UI configuration owned by the provider (model list, reasoning, context window). */
 export interface ProviderChatUIConfig {
   /** Model options for the selector dropdown. Provider extracts what it needs from the settings bag. */
@@ -319,6 +331,9 @@ export interface ProviderChatUIConfig {
 
   /** Context window size in tokens. */
   getContextWindowSize(model: string, customLimits?: Record<string, number>): number;
+
+  /** Optional per-model pricing seam. Returns null when pricing is not known. */
+  getModelPricing?(modelId: string): ModelPricing | null;
 
   /** Whether this is a built-in (default) model vs custom/env model. */
   isDefaultModel(model: string): boolean;
