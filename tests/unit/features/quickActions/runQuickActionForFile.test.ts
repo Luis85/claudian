@@ -2,7 +2,10 @@ import { Notice, TFile, TFolder } from 'obsidian';
 
 import { EventBus } from '@/core/events/EventBus';
 import type { UsageEventMap } from '@/core/usage/events';
-import { runQuickActionForFile } from '@/features/quickActions/runQuickActionForFile';
+import {
+  dispatchQuickActionToTab,
+  runQuickActionForFile,
+} from '@/features/quickActions/runQuickActionForFile';
 import type { QuickAction } from '@/features/quickActions/types';
 
 jest.mock('obsidian', () => ({
@@ -174,6 +177,54 @@ describe('runQuickActionForFile usage emission', () => {
     const file = Object.assign(Object.create(TFile.prototype), { path: 'note.md' });
 
     await runQuickActionForFile(plugin as any, file, MOCK_ACTION);
+    expect(recorded).toEqual([]);
+  });
+});
+
+describe('dispatchQuickActionToTab (shared seam)', () => {
+  it('emits usage.recorded after sendMessage resolves — covers the chat-header onRun path', async () => {
+    const events = new EventBus<UsageEventMap>();
+    const recorded: Array<UsageEventMap['usage.recorded']> = [];
+    events.on('usage.recorded', (e) => recorded.push(e));
+
+    const sendMessage = jest.fn().mockResolvedValue(undefined);
+    const tab = { controllers: { inputController: { sendMessage } } };
+    const plugin = { events } as unknown as Parameters<typeof dispatchQuickActionToTab>[0];
+
+    await dispatchQuickActionToTab(plugin, tab, {
+      id: 'a',
+      name: 'Idea to design',
+      description: '',
+      prompt: 'p',
+      filePath: 'Quick Actions/idea-to-design.md',
+    });
+
+    expect(sendMessage).toHaveBeenCalledWith({ content: 'p' });
+    expect(recorded).toEqual([{ kind: 'quickAction', name: 'idea-to-design' }]);
+  });
+
+  it('does NOT emit when the target tab has no inputController', async () => {
+    const events = new EventBus<UsageEventMap>();
+    const recorded: Array<UsageEventMap['usage.recorded']> = [];
+    events.on('usage.recorded', (e) => recorded.push(e));
+
+    const tab = { controllers: {} };
+    const plugin = { events } as unknown as Parameters<typeof dispatchQuickActionToTab>[0];
+
+    await dispatchQuickActionToTab(plugin, tab, MOCK_ACTION);
+    expect(recorded).toEqual([]);
+  });
+
+  it('does NOT emit when sendMessage rejects', async () => {
+    const events = new EventBus<UsageEventMap>();
+    const recorded: Array<UsageEventMap['usage.recorded']> = [];
+    events.on('usage.recorded', (e) => recorded.push(e));
+
+    const sendMessage = jest.fn().mockRejectedValue(new Error('boom'));
+    const tab = { controllers: { inputController: { sendMessage } } };
+    const plugin = { events } as unknown as Parameters<typeof dispatchQuickActionToTab>[0];
+
+    await expect(dispatchQuickActionToTab(plugin, tab, MOCK_ACTION)).rejects.toThrow('boom');
     expect(recorded).toEqual([]);
   });
 });

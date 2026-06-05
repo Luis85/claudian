@@ -17,6 +17,7 @@ import {
 } from '../../utils/animationFrame';
 import { openPluginSettingsTab } from '../../utils/obsidianPrivateApi';
 import { openQuickActionsModal } from '../quickActions/openQuickActionsModal';
+import { dispatchQuickActionToTab } from '../quickActions/runQuickActionForFile';
 import { resolveModelContextWindow } from '../settings/customModels/resolveModelContextWindow';
 import type { HistoryConversationOpenState } from './controllers/ConversationController';
 import type { ProgrammaticSendResult } from './controllers/InputController';
@@ -488,7 +489,11 @@ export class ClaudianView extends ItemView {
           // Resolve the active tab at run time — user may have switched tabs while the modal was open.
           const targetTab = this.tabManager?.getActiveTab();
           if (!targetTab) return;
-          void targetTab.controllers.inputController?.sendMessage({ content: action.prompt });
+          // Route through the shared dispatcher so this entry point emits
+          // usage.recorded on success, same as the context-menu + favorites
+          // paths. Bypassing the helper here previously caused the leaderboard
+          // to undercount header-launched runs.
+          void dispatchQuickActionToTab(this.plugin, targetTab, action);
         },
       });
     });
