@@ -1,12 +1,20 @@
 ---
 title: Transport-agnostic provider seam
 date: 2026-06-01
-revised: 2026-06-01 (r2)
-status: design / approved
+revised: 2026-06-05 (r3 — status: accepted, Phase 2 partial)
+status: accepted, Phase 2 partial
 scope: src/core/providers, src/core/runtime, src/providers/*, src/features (boundary)
 supersedes: none
 method: 3 parallel codebase review passes (core seam, coupling-leak audit, adaptor comparison) + external pattern research (ACP, LSP/MCP capability negotiation, Vercel AI SDK, Cline, continue.dev), then a 4-pass design review (claim verification, design red-team, external-pattern fact-check, migration feasibility), then a 6-perspective independent verification pass (architect, Phase-0 implementer, red-team skeptic, external-pattern fact-check, test/maintainability, migration sequencer)
 ---
+
+## Implementation status (2026-06-05)
+
+- ✅ `RuntimeHost` interface designed and exported at `src/core/runtime/RuntimeHost.ts`.
+- ⏳ `ChatRuntime` setters not yet migrated — roadmap slice **4.3** in [[2026-06-05-plugin-improvement-roadmap]].
+- ⏳ `RewindCapable` / `SteerCapable` / `ForkCapable` / `SubagentCapable` mixins + nested capability descriptor + declarative tool manifest — roadmap slice **4.4**.
+
+Tracking: [[2026-06-05-plugin-improvement-roadmap]] governs the slice-level status of 4.3 / 4.4.
 
 # ADR 0001 — Transport-agnostic provider seam
 
