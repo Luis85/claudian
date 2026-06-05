@@ -283,7 +283,12 @@ function mergePromptUsage(
   usage: MessageUsage,
 ): PromptUsageSnapshot {
   const next = toPromptUsageSnapshot(usage);
-  const inputTokens = Math.max(current.inputTokens, next.inputTokens);
+  // Cache fields are monotone-within-turn (the SDK never *un-caches* tokens it already
+  // reported). inputTokens is NOT monotone: the SDK may report the per-turn input on the
+  // first assistant message and a slightly different value on a later stream_event/
+  // message_delta. Use the latest snapshot for inputTokens and high-water-mark only
+  // for cache fields, so the recorded total tracks the SDK's view of the current turn.
+  const inputTokens = next.inputTokens > 0 ? next.inputTokens : current.inputTokens;
   const cacheCreationInputTokens = Math.max(current.cacheCreationInputTokens, next.cacheCreationInputTokens);
   const cacheReadInputTokens = Math.max(current.cacheReadInputTokens, next.cacheReadInputTokens);
   return {
