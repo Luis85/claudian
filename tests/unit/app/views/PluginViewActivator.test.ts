@@ -129,6 +129,20 @@ describe('PluginViewActivator.getTabSlotUsage', () => {
     expect(activator.getTabSlotUsage().max).toBe(10);
   });
 
+  it('reports no free capacity while a Claudian leaf is mid-mount (no tab manager yet)', () => {
+    // Mirrors canCreateNewTab(): a leaf exists but the view/tab manager isn't
+    // ready (e.g. workspace restore). The queue must wait, not launch a run the
+    // chat surface can't host yet — which would fail the card.
+    const { plugin } = createPlugin({
+      existingViewLeaves: [{}],
+      lastKnownOpenTabCount: 0,
+      maxTabs: 5,
+    });
+    const activator = new PluginViewActivator(plugin);
+    const usage = activator.getTabSlotUsage();
+    expect(usage.max - usage.used).toBe(0);
+  });
+
   it('reserves the fallback blank tab when no view is mounted and nothing is persisted', () => {
     // restoreOrCreateTabs() creates one blank tab on mount when no tabs are
     // persisted, and work-order runs open their own tabs on top of it. Count
