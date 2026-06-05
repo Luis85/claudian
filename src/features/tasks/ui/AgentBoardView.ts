@@ -113,10 +113,10 @@ export class AgentBoardView extends ItemView {
     }));
     this.register(this.plugin.events.on('task:run-finished', () => this.runner?.tick()));
     this.register(this.plugin.events.on('task:queue-cap-changed', () => this.runner?.tick()));
-    // Pause/resume is global; reload the persisted state so a toggle in another
-    // open board takes effect on this board's runner too, not just its chrome.
-    this.register(this.plugin.events.on('task:queue-paused', () => this.syncQueueFromConfig()));
-    this.register(this.plugin.events.on('task:queue-resumed', () => this.syncQueueFromConfig()));
+    // Pause/halt live in the shared control state, so by the time these fire the
+    // runner state is already global; the boards only need to repaint chrome.
+    this.register(this.plugin.events.on('task:queue-paused', () => this.render()));
+    this.register(this.plugin.events.on('task:queue-resumed', () => this.render()));
     this.register(this.plugin.events.on('task:queue-halted', () => this.render()));
     this.register(this.plugin.events.on('task:queue-tick', () => this.render()));
     this.register(this.plugin.events.on('task:queue-skipped', () => this.render()));
@@ -417,10 +417,7 @@ export class AgentBoardView extends ItemView {
   }
 
   private syncRunner(): void {
-    // Cap is global; halt threshold is per-runner. Both re-sync here so a
-    // settings change takes effect on the next refresh without a remount.
     this.plugin.queueSlotTracker.setCap(this.plugin.settings.agentBoardQueueCap);
-    const paused = this.config.queue?.paused ?? false;
     if (!this.runner) {
       this.runner = new QueueRunner({
         slot: this.plugin.queueSlotTracker,
@@ -435,16 +432,20 @@ export class AgentBoardView extends ItemView {
           this.applyNoteChange(task.path, (content) => this.noteStore.appendLedger(content, entry)),
         events: this.plugin.events,
         haltAfterFailures: this.plugin.settings.agentBoardQueueHaltAfter,
-        initialPaused: paused,
+        // One shared control state across every board, so pause/halt/failure-count
+        // are global — no per-pane propagation needed.
+        control: this.plugin.queueControl,
         now: () => Date.now(),
         getFreeExecutionSlots: () => this.freeExecutionSlots(),
       });
     } else {
       this.runner.setHaltAfterFailures(this.plugin.settings.agentBoardQueueHaltAfter);
-      // applyPaused (not setPaused) so syncing this board to the persisted state
-      // doesn't re-emit and bounce the pause event around every open board.
-      this.runner.applyPaused(paused);
     }
+    // Align the shared control with the persisted pause flag: restores pause on
+    // first mount and tracks an external settings edit. Because the control is
+    // shared, this takes effect on every open board's runner at once.
+    const paused = this.config.queue?.paused ?? false;
+    if (this.runner.isPaused() !== paused) this.runner.setPaused(paused);
     this.runner.tick();
   }
 
@@ -454,15 +455,6 @@ export class AgentBoardView extends ItemView {
   private freeExecutionSlots(): number {
     const { used, max } = this.computeSlots();
     return Math.max(0, max - used);
-  }
-
-  private syncQueueFromConfig(): void {
-    // Reload the persisted (global) queue config and align this board's runner
-    // without re-indexing the vault, then repaint the chrome.
-    const { config } = loadBoardConfig(asSettingsBag(this.plugin.settings));
-    this.config = config;
-    this.syncRunner();
-    this.render();
   }
 
   private async onToggleQueue(): Promise<void> {

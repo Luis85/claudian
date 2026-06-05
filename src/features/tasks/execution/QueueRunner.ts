@@ -21,6 +21,24 @@ export interface QueueRunnerCoordinator {
   isActive(taskId: string): boolean;
 }
 
+/**
+ * The queue's global control state. Every Agent Board pane is a window onto the
+ * same work-order folder, so pause/halt/failure-count are one logical thing.
+ * A single instance is shared by all per-board runners (owned at plugin level),
+ * making a pause or auto-halt in any pane take effect everywhere with no
+ * per-event propagation.
+ */
+export interface QueueControlState {
+  paused: boolean;
+  halted: boolean;
+  haltReason: string | null;
+  consecutiveFailures: number;
+}
+
+export function createQueueControlState(paused = false): QueueControlState {
+  return { paused, halted: false, haltReason: null, consecutiveFailures: 0 };
+}
+
 export interface QueueRunnerDeps {
   slot: QueueSlotTracker;
   getTasks: () => TaskSpec[];
@@ -29,7 +47,11 @@ export interface QueueRunnerDeps {
   appendLedger: (task: TaskSpec, entry: TaskLedgerEntry) => Promise<void>;
   events: QueueRunnerEvents;
   haltAfterFailures: number;
-  initialPaused: boolean;
+  /** Shared global control state. When omitted, the runner owns a private one
+   * seeded from `initialPaused` (used by tests and single-runner contexts). */
+  control?: QueueControlState;
+  /** Seed for a private control state when `control` is not supplied. */
+  initialPaused?: boolean;
   now: () => number;
   // Free execution (chat-tab) slots available right now. A run consumes a chat
   // tab; when the panel is at maxTabs the runtime fails the run, so the queue
@@ -38,10 +60,6 @@ export interface QueueRunnerDeps {
 }
 
 interface QueueRunnerState {
-  paused: boolean;
-  halted: boolean;
-  haltReason: string | null;
-  consecutiveFailures: number;
   haltAfterFailures: number;
   lastSkipReasonByTask: Map<string, { reason: string; at: number }>;
 }
@@ -60,35 +78,34 @@ const SKIP_DEBOUNCE_MS = 60_000;
  */
 export class QueueRunner {
   private readonly state: QueueRunnerState;
+  // Shared across every board's runner so pause/halt/failure-count are global.
+  private readonly control: QueueControlState;
   private pending = false;
   private running = false;
   private disposed = false;
 
   constructor(private readonly deps: QueueRunnerDeps) {
+    this.control = deps.control ?? createQueueControlState(deps.initialPaused ?? false);
     this.state = {
-      paused: deps.initialPaused,
-      halted: false,
-      haltReason: null,
-      consecutiveFailures: 0,
       haltAfterFailures: Math.max(1, deps.haltAfterFailures),
       lastSkipReasonByTask: new Map(),
     };
   }
 
   isPaused(): boolean {
-    return this.state.paused;
+    return this.control.paused;
   }
 
   isHalted(): boolean {
-    return this.state.halted;
+    return this.control.halted;
   }
 
   getConsecutiveFailures(): number {
-    return this.state.consecutiveFailures;
+    return this.control.consecutiveFailures;
   }
 
   getHaltReason(): string | null {
-    return this.state.haltReason;
+    return this.control.haltReason;
   }
 
   getSkipReason(taskId: string): string | null {
@@ -99,10 +116,10 @@ export class QueueRunner {
     this.state.lastSkipReasonByTask.delete(taskId);
   }
 
-  // User-initiated pause/resume: emits so other open boards can align via
-  // applyPaused (which does not re-emit, so there is no event echo).
+  // Mutates the shared control state, so a toggle in one pane pauses every
+  // pane's runner; the emit just tells the other panes to repaint their chrome.
   setPaused(next: boolean): void {
-    this.state.paused = next;
+    this.control.paused = next;
     if (next) {
       this.deps.events.emit('task:queue-paused');
     } else {
@@ -111,24 +128,16 @@ export class QueueRunner {
     }
   }
 
-  // Align to a (persisted) pause state without emitting — used when a board
-  // reloads the global queue config after another board toggled it.
-  applyPaused(next: boolean): void {
-    if (this.state.paused === next) return;
-    this.state.paused = next;
-    if (!next) this.tick();
-  }
-
   setHalted(reason: string): void {
-    this.state.halted = true;
-    this.state.haltReason = reason;
+    this.control.halted = true;
+    this.control.haltReason = reason;
     this.deps.events.emit('task:queue-halted', { reason });
   }
 
   clearHalt(): void {
-    this.state.halted = false;
-    this.state.haltReason = null;
-    this.state.consecutiveFailures = 0;
+    this.control.halted = false;
+    this.control.haltReason = null;
+    this.control.consecutiveFailures = 0;
   }
 
   setHaltAfterFailures(next: number): void {
@@ -158,7 +167,7 @@ export class QueueRunner {
   }
 
   private doTick(): void {
-    if (this.state.paused || this.state.halted) return;
+    if (this.control.paused || this.control.halted) return;
     // Per-pass exclusion: consider each card at most once so a skip — or a
     // launch that already holds its slot — can never re-select the same card
     // and spin the loop. Cross-tick de-dup is handled by the coordinator's
@@ -198,12 +207,12 @@ export class QueueRunner {
 
   private onSettle(res: TaskRunResult): void {
     if (res.ok) {
-      this.state.consecutiveFailures = 0;
+      this.control.consecutiveFailures = 0;
       return;
     }
-    this.state.consecutiveFailures += 1;
-    if (this.state.consecutiveFailures >= this.state.haltAfterFailures) {
-      this.setHalted(`${this.state.consecutiveFailures} consecutive failures · last: ${res.error}`);
+    this.control.consecutiveFailures += 1;
+    if (this.control.consecutiveFailures >= this.state.haltAfterFailures) {
+      this.setHalted(`${this.control.consecutiveFailures} consecutive failures · last: ${res.error}`);
     }
   }
 

@@ -65,6 +65,7 @@ import { CommitOnAcceptCoordinator } from './features/tasks/commit/CommitOnAccep
 import { CommitOnAcceptModal } from './features/tasks/commit/CommitOnAcceptModal';
 import { ChatTabExecutionSurface } from './features/tasks/execution/ChatTabExecutionSurface';
 import { ChatWorkOrderLinker } from './features/tasks/execution/ChatWorkOrderLinker';
+import { createQueueControlState, type QueueControlState } from './features/tasks/execution/QueueRunner';
 import { QueueSlotTracker } from './features/tasks/execution/QueueSlotTracker';
 import { TaskNoteStore } from './features/tasks/storage/TaskNoteStore';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
@@ -100,6 +101,9 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   /** Shared in-flight work-order ids, so coordinators in different Agent Board
    * panes observe the same active runs and never double-launch the same card. */
   readonly taskActiveRuns = new Set<string>();
+  /** The queue's single global control state (pause/halt/failure-count), shared
+   * by every board's runner. Pause is restored from config on first board mount. */
+  readonly queueControl: QueueControlState = createQueueControlState();
   lastKnownTabManagerState: AppTabManagerState | null = null;
 
   async onload() {

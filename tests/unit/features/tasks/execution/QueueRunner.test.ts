@@ -1,5 +1,7 @@
 import type { TaskEventMap } from '../../../../../src/features/tasks/events';
 import {
+  createQueueControlState,
+  type QueueControlState,
   QueueRunner,
   type QueueRunnerCoordinator,
   type QueueRunnerEvents,
@@ -53,6 +55,7 @@ interface HarnessConfig {
   // the test resolves later to hold the slot.
   onRun?: (task: TaskSpec) => Promise<TaskRunResult> | TaskRunResult;
   getFreeExecutionSlots?: () => number;
+  control?: QueueControlState;
 }
 
 interface Harness {
@@ -108,6 +111,7 @@ function makeHarness(config: HarnessConfig = {}): Harness {
     events,
     haltAfterFailures: config.haltAfterFailures ?? 3,
     initialPaused: config.initialPaused ?? false,
+    control: config.control,
     now: config.now ?? (() => Date.now()),
     getFreeExecutionSlots: config.getFreeExecutionSlots,
   });
@@ -358,24 +362,51 @@ describe('QueueRunner — execution slot gate', () => {
   });
 });
 
-describe('QueueRunner — applyPaused (silent align)', () => {
-  it('changes paused state and blocks ticks without emitting', async () => {
-    const h = makeHarness();
-    h.setTasks([makeTask('a')]);
-    h.runner.applyPaused(true);
-    h.runner.tick();
+describe('QueueRunner — shared control (single brain across panes)', () => {
+  it('an auto-halt in one runner halts every runner sharing the control', async () => {
+    const control = createQueueControlState();
+    const a = makeHarness({ control, haltAfterFailures: 1, onRun: () => ({ ok: false, error: 'boom' }) });
+    const b = makeHarness({ control });
+    a.setTasks([makeTask('x')]);
+    b.setTasks([makeTask('y')]);
+
+    a.runner.tick();
     await flush();
-    expect(h.runCalls).toEqual([]);
-    expect(h.runner.isPaused()).toBe(true);
-    expect(h.emissions.some((e) => e.name === 'task:queue-paused')).toBe(false);
+    expect(a.runner.isHalted()).toBe(true);
+    expect(b.runner.isHalted()).toBe(true);
+
+    b.runner.tick();
+    await flush();
+    expect(b.runCalls).toEqual([]);
   });
 
-  it('resumes and drains without emitting a resumed event', async () => {
-    const h = makeHarness({ initialPaused: true });
-    h.setTasks([makeTask('a')]);
-    h.runner.applyPaused(false);
+  it('a pause in one runner pauses every runner sharing the control', async () => {
+    const control = createQueueControlState();
+    const a = makeHarness({ control });
+    const b = makeHarness({ control });
+    b.setTasks([makeTask('y')]);
+
+    a.runner.setPaused(true);
+    expect(b.runner.isPaused()).toBe(true);
+
+    b.runner.tick();
     await flush();
-    expect(h.runCalls).toEqual(['a']);
-    expect(h.emissions.some((e) => e.name === 'task:queue-resumed')).toBe(false);
+    expect(b.runCalls).toEqual([]);
+  });
+
+  it('shares the consecutive-failure count toward a single halt threshold', async () => {
+    const control = createQueueControlState();
+    const a = makeHarness({ control, haltAfterFailures: 2, onRun: () => ({ ok: false, error: 'boom' }) });
+    const b = makeHarness({ control, haltAfterFailures: 2, onRun: () => ({ ok: false, error: 'boom' }) });
+    a.setTasks([makeTask('x')]);
+    b.setTasks([makeTask('y')]);
+
+    // One failure in each runner reaches the shared threshold of 2.
+    a.runner.tick();
+    await flush();
+    expect(control.halted).toBe(false);
+    b.runner.tick();
+    await flush();
+    expect(control.halted).toBe(true);
   });
 });
