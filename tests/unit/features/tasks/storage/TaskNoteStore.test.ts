@@ -110,6 +110,7 @@ describe('TaskNoteStore', () => {
       runId: 'run-123',
       conversationId: 'conversation-456',
       sidepanelTabId: 'tab-789',
+      started: '2026-05-28T09:00:00.000Z',
       timestamp: '2026-05-28T09:00:00.000Z',
     });
 
@@ -123,6 +124,23 @@ describe('TaskNoteStore', () => {
     expect(parsed.task.frontmatter.custom_field).toBe('keep-me');
     expect(written).toContain('Intro prose that must stay.');
     expect(written).toContain('Closing prose.');
+  });
+
+  it('does not overwrite started on a heartbeat-only running write', () => {
+    const started = store.writeStatus(VALID_NOTE, {
+      status: 'running',
+      started: '2026-05-28T09:00:00.000Z',
+      heartbeat: '2026-05-28T09:00:00.000Z',
+      timestamp: '2026-05-28T09:00:00.000Z',
+    });
+    const afterHeartbeat = store.writeStatus(started, {
+      status: 'running',
+      heartbeat: '2026-05-28T09:05:00.000Z',
+      timestamp: '2026-05-28T09:05:00.000Z',
+    });
+    const parsed = store.parse('tasks/task-1.md', afterHeartbeat);
+    expect(parsed.task.frontmatter.started).toBe('2026-05-28T09:00:00.000Z');
+    expect(parsed.task.frontmatter.heartbeat).toBe('2026-05-28T09:05:00.000Z');
   });
 
   it('appends ledger entries only between ledger markers', () => {

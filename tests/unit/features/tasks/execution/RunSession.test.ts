@@ -92,6 +92,9 @@ describe('RunSession', () => {
     await Promise.resolve();
     expect(statuses).toEqual(['running', 'needs_input']);
     expect(seen[0].question).toBe('which env?');
+    // The pause turn ends with its own stream-end; it must be ignored.
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked' });
+    await Promise.resolve();
     await session.resume({ kind: 'reply', content: '.env.local' });
     expect(adapter.followUps).toEqual(['.env.local']);
     expect(statuses).toEqual(['running', 'needs_input', 'running']);
@@ -99,6 +102,28 @@ describe('RunSession', () => {
     adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
     await terminal;
     expect(ledger.find((e) => e.message.startsWith('resumed:'))).toBeTruthy();
+    jest.useRealTimers();
+  });
+
+  it('ignores the late pause-turn end after a fast resume', async () => {
+    jest.useFakeTimers();
+    const { session, adapter, statuses, handoffs } = makeSession();
+    const terminal = session.run();
+    adapter.emitText('<claudian_needs_input>\nquestion: which env?\n</claudian_needs_input>');
+    await Promise.resolve();
+    // User resumes BEFORE the pause turn's own `done` arrives.
+    await session.resume({ kind: 'reply', content: '.env.local' });
+    expect(statuses).toEqual(['running', 'needs_input', 'running']);
+    // The late pause-turn `done` arrives now — it must not finalize the run.
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked' });
+    await Promise.resolve();
+    expect(handoffs.length).toBe(0);
+    // The real follow-up turn then completes with a handoff.
+    adapter.emitText(VALID_HANDOFF);
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    const result = await terminal;
+    expect(result.ok).toBe(true);
+    expect(statuses[statuses.length - 1]).toBe('review');
     jest.useRealTimers();
   });
 

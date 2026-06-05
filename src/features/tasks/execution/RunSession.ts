@@ -11,6 +11,7 @@ export interface RunSessionWriteStatusOptions {
   runId?: string | null;
   conversationId?: string | null;
   sidepanelTabId?: string | null;
+  started?: string | null;
   heartbeat?: string | null;
   pauseReason?: string | null;
 }
@@ -66,6 +67,10 @@ export class RunSession {
   private readonly terminalPromise: Promise<RunSessionResult>;
   private paused = false;
   private pauseApplied: Promise<void> = Promise.resolve();
+  // Number of pause turns whose own `done` we still expect to ignore. Each pause
+  // ends the agent's turn (so the stream emits a `done`); we must not let that
+  // turn-end finalize the run, even if the user resumes before it arrives.
+  private pauseEndsPending = 0;
   private finalContentBuffer = '';
   private attemptNumber = 0;
   private finishing = false;
@@ -109,6 +114,8 @@ export class RunSession {
       runId: this.deps.runId,
       conversationId: this.deps.conversationId,
       sidepanelTabId: this.deps.sidepanelTabId,
+      // Stamp the run-start once; heartbeats deliberately omit `started`.
+      started: ts,
       heartbeat: ts,
     });
     return this.terminalPromise;
@@ -188,6 +195,7 @@ export class RunSession {
 
   private beginPause(kind: 'needs_input' | 'needs_approval', block: ClaudianBlock): void {
     this.paused = true;
+    this.pauseEndsPending += 1;
     this.stopHeartbeat();
     const reason = kind === 'needs_input' ? block.fields.question : block.fields.action;
     // Initiate the status write synchronously (so the persisted status order is
@@ -241,10 +249,14 @@ export class RunSession {
     error?: string;
   }): Promise<void> {
     if (this.resolveTerminal === null || this.finishing) return;
-    // A turn that ends while we are paused is the agent ending its turn after a
-    // pause block (the protocol asks it to). Ignore that completion and wait for
-    // resume; real failures and cancels still finalize.
-    if (this.paused && payload.status === 'completed') return;
+    // Each pause ends the agent's turn, so its own `done` arrives as a completed
+    // turn-end. Ignore exactly one such end per pause — even if the user already
+    // resumed (the late pause-turn `done` must not finalize the follow-up run).
+    // Real failures and cancels always finalize.
+    if (payload.status === 'completed' && this.pauseEndsPending > 0) {
+      this.pauseEndsPending -= 1;
+      return;
+    }
     this.finishing = true;
     this.stopLiveWiring();
     const finalOut = this.parser.finalize();

@@ -26,6 +26,12 @@ export interface WriteStatusOptions {
   runId?: string | null;
   conversationId?: string | null;
   sidepanelTabId?: string | null;
+  /**
+   * When provided, records the run-start time. Set this only at the start of a
+   * run (not on heartbeats), otherwise the original start time is lost and
+   * elapsed/duration metadata is corrupted.
+   */
+  started?: string | null;
   heartbeat?: string | null;
   pauseReason?: string | null;
 }
@@ -87,12 +93,9 @@ export class TaskNoteStore {
     if (options.runId !== undefined) frontmatter.run_id = options.runId;
     if (options.conversationId !== undefined) frontmatter.conversation_id = options.conversationId;
     if (options.sidepanelTabId !== undefined) frontmatter.sidepanel_tab_id = options.sidepanelTabId;
+    if (options.started !== undefined) frontmatter.started = options.started;
     if (options.heartbeat !== undefined) frontmatter.heartbeat = options.heartbeat;
     if (options.pauseReason !== undefined) frontmatter.pause_reason = options.pauseReason;
-
-    if (options.status === 'running') {
-      frontmatter.started = options.timestamp;
-    }
 
     if (options.status === 'done' || options.status === 'failed' || options.status === 'canceled') {
       frontmatter.finished = options.timestamp;

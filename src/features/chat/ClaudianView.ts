@@ -6,7 +6,7 @@ import { getHiddenProviderCommandSet } from '../../core/providers/commands/hidde
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from '../../core/providers/ProviderSettingsCoordinator';
 import { DEFAULT_CHAT_PROVIDER_ID, type ProviderId } from '../../core/providers/types';
-import { asSettingsBag, VIEW_TYPE_CLAUDIAN } from '../../core/types';
+import { asSettingsBag, type StreamChunk, VIEW_TYPE_CLAUDIAN } from '../../core/types';
 import { t } from '../../i18n/i18n';
 import type ClaudianPlugin from '../../main';
 import { createProviderIconSvg } from '../../shared/icons';
@@ -689,6 +689,16 @@ export class ClaudianView extends ItemView {
     const streamController = tab.controllers.streamController;
     if (!inputController || !streamController) return null;
 
+    // Attach to the stream BEFORE starting the turn so no early chunk (even a
+    // fast `done`) is lost in the window before the work-order runner subscribes.
+    // Chunks are buffered until the real observer attaches, then replayed in order.
+    const buffered: StreamChunk[] = [];
+    let liveObserver: ((chunk: StreamChunk) => void) | null = null;
+    const detachRaw = streamController.addStreamObserver((chunk) => {
+      if (liveObserver) liveObserver(chunk);
+      else buffered.push(chunk);
+    });
+
     const toTerminal = (result: ProgrammaticSendResult | undefined): TaskRunTabTerminal => {
       const sendResult: ProgrammaticSendResult = result ?? {
         ok: false,
@@ -717,7 +727,17 @@ export class ClaudianView extends ItemView {
     return {
       conversationId: tab.conversationId,
       sidepanelTabId: tab.id,
-      subscribe: (observer) => streamController.addStreamObserver(observer),
+      subscribe: (observer) => {
+        liveObserver = observer;
+        if (buffered.length > 0) {
+          const replay = buffered.splice(0, buffered.length);
+          for (const chunk of replay) observer(chunk);
+        }
+        return () => {
+          if (liveObserver === observer) liveObserver = null;
+          detachRaw();
+        };
+      },
       sendFollowUp: async (content) => {
         void (inputController.sendMessage({ content }) as Promise<unknown>).catch(() => undefined);
       },

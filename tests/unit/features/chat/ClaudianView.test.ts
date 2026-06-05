@@ -581,3 +581,41 @@ describe('ClaudianView Escape handling', () => {
     expect(result).toBeUndefined();
   });
 });
+
+describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
+  it('buffers chunks emitted before the runner subscribes and replays them in order', async () => {
+    let rawObserver: ((chunk: { type: string }) => void) | null = null;
+    const streamController = {
+      addStreamObserver: (obs: (chunk: { type: string }) => void) => {
+        rawObserver = obs;
+        return () => { rawObserver = null; };
+      },
+    };
+    const inputController = {
+      sendMessage: jest.fn(async () => {
+        // Emit synchronously during the turn — before the runner subscribes.
+        rawObserver?.({ type: 'text' });
+        rawObserver?.({ type: 'done' });
+        return { ok: true, finalAssistantContent: 'early' };
+      }),
+      cancelStreaming: jest.fn(),
+    };
+    const tab = {
+      id: 'tab-1',
+      conversationId: 'conv-1',
+      controllers: { inputController, streamController },
+    };
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
+
+    const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
+    expect(handle).not.toBeNull();
+
+    const seen: string[] = [];
+    handle.subscribe((chunk: { type: string }) => seen.push(chunk.type));
+    expect(seen).toEqual(['text', 'done']);
+
+    const terminal = await handle.terminal;
+    expect(terminal.status).toBe('completed');
+  });
+});
