@@ -125,8 +125,12 @@ function getNpmGlobalPrefix(): string | null {
     const appDataNpm = process.env.APPDATA
       ? path.join(process.env.APPDATA, 'npm')
       : null;
-    if (appDataNpm && fs.existsSync(appDataNpm)) {
-      return appDataNpm;
+    try {
+      if (appDataNpm && fs.existsSync(appDataNpm)) {
+        return appDataNpm;
+      }
+    } catch {
+      // Inaccessible (permission denied, etc.) — fall through to null.
     }
   }
 
