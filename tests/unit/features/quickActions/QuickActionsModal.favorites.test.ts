@@ -6,6 +6,8 @@ import '../../../setup/obsidianDom';
 import type { App} from 'obsidian';
 import { Notice } from 'obsidian';
 
+import { EventBus } from '@/core/events/EventBus';
+import type { UsageEventMap } from '@/core/usage/events';
 import type { QuickActionStorage } from '@/features/quickActions/QuickActionStorage';
 import type { VaultSkillSource } from '@/features/quickActions/skills/types';
 import type { QuickAction } from '@/features/quickActions/types';
@@ -39,6 +41,13 @@ jest.mock('@/i18n/i18n', () => ({
 
 jest.mock('@/features/quickActions/ui/QuickActionEditorModal', () => ({
   QuickActionEditorModal: class { open() {} },
+}));
+
+jest.mock('@/features/quickActions/ui/UsageStatsTab', () => ({
+  UsageStatsTab: jest.fn().mockImplementation(() => ({
+    render: jest.fn(),
+    dispose: jest.fn(),
+  })),
 }));
 
 function makeAction(p: Partial<QuickAction>): QuickAction {
@@ -77,6 +86,8 @@ const NOOP_AGGREGATOR: VaultSkillSource = {
 };
 const NOOP_ON_RUN_SKILL = jest.fn();
 const NOOP_ON_EDIT_SKILL = jest.fn();
+const NOOP_USAGE_TRACKER = null;
+const NOOP_EVENTS: EventBus<UsageEventMap> = new EventBus<UsageEventMap>();
 
 async function flush() {
   await Promise.resolve();
@@ -97,6 +108,8 @@ describe('QuickActionsModal favorites', () => {
       onRun: jest.fn(),
       onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
+      usageTracker: NOOP_USAGE_TRACKER,
+      events: NOOP_EVENTS,
     });
     modal.open();
     await flush();
@@ -116,6 +129,8 @@ describe('QuickActionsModal favorites', () => {
       onRun: jest.fn(),
       onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
+      usageTracker: NOOP_USAGE_TRACKER,
+      events: NOOP_EVENTS,
     });
     modal.open();
     await flush();
@@ -140,6 +155,8 @@ describe('QuickActionsModal favorites', () => {
       onRun: jest.fn(),
       onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
+      usageTracker: NOOP_USAGE_TRACKER,
+      events: NOOP_EVENTS,
     });
     modal.open();
     await flush();
@@ -165,6 +182,8 @@ describe('QuickActionsModal favorites', () => {
       onRun: jest.fn(),
       onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
+      usageTracker: NOOP_USAGE_TRACKER,
+      events: NOOP_EVENTS,
     });
     modal.open();
     await flush();
@@ -190,6 +209,8 @@ describe('QuickActionsModal favorites', () => {
       onRun,
       onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
+      usageTracker: NOOP_USAGE_TRACKER,
+      events: NOOP_EVENTS,
     });
     modal.open();
     await flush();
@@ -210,6 +231,8 @@ describe('QuickActionsModal favorites', () => {
       onRun: jest.fn(),
       onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
+      usageTracker: NOOP_USAGE_TRACKER,
+      events: NOOP_EVENTS,
     });
     modal.open();
     await flush();
@@ -232,6 +255,8 @@ describe('QuickActionsModal favorites', () => {
       onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
       onFavoritesChanged,
+      usageTracker: NOOP_USAGE_TRACKER,
+      events: NOOP_EVENTS,
     });
     modal.open();
     await flush();
@@ -254,6 +279,8 @@ describe('QuickActionsModal favorites', () => {
       onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
       onFavoritesChanged,
+      usageTracker: NOOP_USAGE_TRACKER,
+      events: NOOP_EVENTS,
     });
     modal.open();
     await flush();
@@ -277,6 +304,8 @@ describe('QuickActionsModal favorites', () => {
       onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
       onFavoritesChanged,
+      usageTracker: NOOP_USAGE_TRACKER,
+      events: NOOP_EVENTS,
     });
     modal.open();
     await flush();
@@ -302,6 +331,8 @@ describe('QuickActionsModal favorites', () => {
       onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
       onFavoritesChanged,
+      usageTracker: NOOP_USAGE_TRACKER,
+      events: NOOP_EVENTS,
     });
     modal.open();
     await flush();
@@ -325,6 +356,8 @@ describe('QuickActionsModal favorites', () => {
       onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
       onFavoritesChanged,
+      usageTracker: NOOP_USAGE_TRACKER,
+      events: NOOP_EVENTS,
     });
     modal.open();
     await flush();
@@ -350,6 +383,8 @@ describe('QuickActionsModal favorites', () => {
       onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
       onFavoritesChanged,
+      usageTracker: NOOP_USAGE_TRACKER,
+      events: NOOP_EVENTS,
     });
     modal.open();
     await flush();
@@ -395,6 +430,8 @@ describe('QuickActionsModal favorites', () => {
       onRun: jest.fn(),
       onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
+      usageTracker: NOOP_USAGE_TRACKER,
+      events: NOOP_EVENTS,
     });
     modal.open();
     await flush();
@@ -451,6 +488,8 @@ describe('QuickActionsModal favorites', () => {
       onRunSkill: NOOP_ON_RUN_SKILL, onEditSkill: NOOP_ON_EDIT_SKILL,
       aggregator: NOOP_AGGREGATOR,
       onFavoritesChanged,
+      usageTracker: NOOP_USAGE_TRACKER,
+      events: NOOP_EVENTS,
     });
     modal.open();
     await flush();

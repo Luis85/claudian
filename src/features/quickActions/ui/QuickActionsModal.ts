@@ -1,6 +1,9 @@
 import type { App } from 'obsidian';
 import { Modal, Notice, setIcon } from 'obsidian';
 
+import type { EventBus } from '../../../core/events/EventBus';
+import type { UsageEventMap } from '../../../core/usage/events';
+import type { UsageRecord } from '../../../core/usage/types';
 import { t } from '../../../i18n/i18n';
 import type { QuickActionStorage } from '../QuickActionStorage';
 import { assignNextFavoriteRank } from '../QuickActionStorage';
@@ -8,6 +11,7 @@ import type { SkillTabEntry, VaultSkillSource } from '../skills/types';
 import type { QuickAction } from '../types';
 import { QuickActionEditorModal } from './QuickActionEditorModal';
 import { SkillsTabRenderer } from './SkillsTabRenderer';
+import { UsageStatsTab } from './UsageStatsTab';
 
 export interface QuickActionsModalCallbacks {
   onRun: (action: QuickAction) => void;
@@ -21,9 +25,12 @@ export interface QuickActionsModalCallbacks {
   storage: QuickActionStorage;
   aggregator: VaultSkillSource;
   onFavoritesChanged?: () => void;
+  usageTracker: { getAll(): ReadonlyMap<string, UsageRecord> } | null;
+  events: EventBus<UsageEventMap>;
+  now?: () => number;
 }
 
-type ActiveTab = 'quickActions' | 'skills';
+type ActiveTab = 'quickActions' | 'skills' | 'stats';
 
 export class QuickActionsModal extends Modal {
   private callbacks: QuickActionsModalCallbacks;
@@ -42,6 +49,9 @@ export class QuickActionsModal extends Modal {
   // Skills tab — delegated to a dedicated renderer.
   private skillsRenderer: SkillsTabRenderer;
 
+  // Stats tab — null when no usageTracker was provided.
+  private statsTab: UsageStatsTab | null = null;
+
   // Serializes favorite toggles across all rows. Without this, two rapid
   // clicks on different stars would both read a stale `this.actions` snapshot
   // and pick the same free rank, allowing more than five favorites on disk.
@@ -56,6 +66,16 @@ export class QuickActionsModal extends Modal {
       callbacks.onEditSkill,
       () => this.close(),
     );
+    if (callbacks.usageTracker) {
+      this.statsTab = new UsageStatsTab({
+        tracker: callbacks.usageTracker,
+        events: callbacks.events,
+        quickActions: () => this.actions,
+        skills: () => callbacks.aggregator.listCachedNow(),
+        now: callbacks.now ?? (() => Date.now()),
+        onClearAll: () => this.confirmClearAll(),
+      });
+    }
   }
 
   onOpen(): void {
@@ -77,6 +97,9 @@ export class QuickActionsModal extends Modal {
       { key: 'quickActions', label: t('quickActions.modal.tabs.quickActions') },
       { key: 'skills', label: t('quickActions.modal.tabs.skills') },
     ];
+    if (this.statsTab) {
+      entries.push({ key: 'stats', label: t('quickActions.usage.tabLabel') });
+    }
 
     for (const entry of entries) {
       const tab = this.tabStripEl.createEl('button', {
@@ -104,6 +127,11 @@ export class QuickActionsModal extends Modal {
     this.searchInputEl = null;
     this.listEl = null;
     this.filter = '';
+
+    if (this.activeTab === 'stats' && this.statsTab) {
+      this.statsTab.render(this.bodyEl);
+      return;
+    }
 
     let inputToFocus: HTMLInputElement | null;
     if (this.activeTab === 'quickActions') {
@@ -435,5 +463,31 @@ export class QuickActionsModal extends Modal {
     } finally {
       button.disabled = false;
     }
+  }
+
+  private confirmClearAll(): void {
+    const modal = new Modal(this.app);
+    modal.titleEl.setText(t('quickActions.usage.clearConfirm.title'));
+    modal.contentEl.createEl('p', { text: t('quickActions.usage.clearConfirm.body') });
+    const footer = modal.contentEl.createDiv({ cls: 'modal-button-container' });
+    footer.createEl('button', { text: t('quickActions.usage.clearConfirm.cancel') })
+      .addEventListener('click', () => modal.close());
+    const confirm = footer.createEl('button', {
+      text: t('quickActions.usage.clearConfirm.confirm'),
+      cls: 'mod-warning',
+    });
+    confirm.addEventListener('click', () => {
+      this.callbacks.events.emit('usage.cleared');
+      modal.close();
+      if (this.activeTab === 'stats') {
+        void this.renderActiveTab();
+      }
+    });
+    modal.open();
+  }
+
+  onClose(): void {
+    this.statsTab?.dispose();
+    // Modal base class has no onClose to call through in Obsidian's public API.
   }
 }

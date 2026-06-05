@@ -1,6 +1,8 @@
 /**
  * @jest-environment jsdom
  */
+import { EventBus } from '@/core/events/EventBus';
+import type { UsageEventMap } from '@/core/usage/events';
 import type { SkillTabEntry } from '@/features/quickActions/skills/types';
 import type { QuickAction } from '@/features/quickActions/types';
 import type { QuickActionsModalCallbacks } from '@/features/quickActions/ui/QuickActionsModal';
@@ -100,6 +102,13 @@ jest.mock('@/features/quickActions/ui/QuickActionEditorModal', () => ({
   QuickActionEditorModal: jest.fn().mockImplementation(() => ({ open: jest.fn() })),
 }));
 
+jest.mock('@/features/quickActions/ui/UsageStatsTab', () => ({
+  UsageStatsTab: jest.fn().mockImplementation(() => ({
+    render: jest.fn(),
+    dispose: jest.fn(),
+  })),
+}));
+
 function makeStorage(actions: QuickAction[] = []) {
   return {
     loadAll: jest.fn().mockResolvedValue(actions),
@@ -151,6 +160,10 @@ function makeSkill(overrides: Partial<SkillTabEntry> = {}): SkillTabEntry {
   };
 }
 
+function makeEvents(): EventBus<UsageEventMap> {
+  return new EventBus<UsageEventMap>();
+}
+
 async function openModal(
   overrides: Partial<QuickActionsModalCallbacks> = {},
 ): Promise<{ modal: QuickActionsModal; callbacks: QuickActionsModalCallbacks }> {
@@ -160,6 +173,8 @@ async function openModal(
     onEditSkill: jest.fn(),
     storage: makeStorage(),
     aggregator: makeAggregator(),
+    usageTracker: null,
+    events: makeEvents(),
     ...overrides,
   };
   const modal = new QuickActionsModal({} as never, callbacks);
