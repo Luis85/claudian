@@ -52,6 +52,8 @@ If `listCachedNow()` returns an empty array (cold start before disk hydrate comp
 
 `onload` triggers `void aggregator.listAllStreaming(() => {})` as fire-and-forget after hydrate. Users opening the modal seconds later read a hot cache.
 
+Each quick-actions toolbar button additionally fires `void plugin.vaultSkillAggregator?.listAllStreaming(() => {})` on `mouseenter` so the cache stays warm against TTL expiry between opens. Concurrent hovers are deduplicated by the aggregator's in-flight map.
+
 ### In-flight deduplication
 
 Two concurrent callers (pre-warm + user click; user click + EventBus-triggered refresh) share underlying per-provider fetch promises via `inFlight: Map<ProviderId, Promise<...>>`. The underlying `listVaultEntries()` is invoked at most once per provider per refresh cycle.

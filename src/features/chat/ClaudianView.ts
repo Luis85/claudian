@@ -476,6 +476,11 @@ export class ClaudianView extends ItemView {
     setIcon(quickActionsBtn, 'zap');
     quickActionsBtn.setAttribute('aria-label', t('quickActions.toolbar.ariaLabel'));
     quickActionsBtn.setAttribute('title', t('quickActions.toolbar.title'));
+    // Pre-warm the Skills tab cache on hover so the modal opens against a hot cache.
+    // Idempotent: VaultSkillAggregator deduplicates concurrent fetches per provider.
+    quickActionsBtn.addEventListener('mouseenter', () => {
+      void this.plugin.vaultSkillAggregator?.listAllStreaming(() => {});
+    });
     quickActionsBtn.addEventListener('click', () => {
       const activeTab = this.tabManager?.getActiveTab();
       if (!activeTab) return;
