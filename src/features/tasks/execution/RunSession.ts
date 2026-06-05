@@ -137,14 +137,6 @@ export class RunSession {
     const ts = this.deps.now();
     this.ledger.enqueue({ timestamp: ts, status: 'running', message: `Run started (attempt ${this.attemptNumber})` });
     this.deps.events.emit('task:attempt-started', { taskId: this.taskId, path: this.path, attemptNumber: this.attemptNumber });
-    this.unsubscribe = this.deps.stream.subscribe({
-      onText: (chunk) => this.handleText(chunk),
-      onToolUse: (tool) => this.handleTool(tool.name, tool.primaryArg),
-      onToolResult: () => this.handleToolResult(),
-      onError: (error) => this.handleError(error),
-      onActivity: () => this.touch(),
-      onEnd: (payload) => { void this.finish(payload); },
-    });
     this.startHeartbeat();
     this.trackBackgroundWrite(this.persistStatus({
       status: 'running',
@@ -156,6 +148,22 @@ export class RunSession {
       heartbeat: ts,
       attempts: this.attemptNumber,
     }));
+    // Subscribe last: a fast/local run can have buffered chunks that the chat
+    // handle replays synchronously inside subscribe(), finishing the run before
+    // subscribe() returns. In that window this.unsubscribe is unassigned, so
+    // finish()'s stopLiveWiring() can't detach the observer (and it cleared the
+    // heartbeat started above). Reconcile here: if the run already finished,
+    // detach the now-known observer; otherwise store it for later teardown.
+    const unsubscribe = this.deps.stream.subscribe({
+      onText: (chunk) => this.handleText(chunk),
+      onToolUse: (tool) => this.handleTool(tool.name, tool.primaryArg),
+      onToolResult: () => this.handleToolResult(),
+      onError: (error) => this.handleError(error),
+      onActivity: () => this.touch(),
+      onEnd: (payload) => { void this.finish(payload); },
+    });
+    if (this.finishing) unsubscribe();
+    else this.unsubscribe = unsubscribe;
     return this.terminalPromise;
   }
 

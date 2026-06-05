@@ -1,8 +1,21 @@
 import { EventBus } from '../../../../../src/core/events/EventBus';
 import type { TaskEventMap } from '../../../../../src/features/tasks/events';
+import type { ProviderStreamAdapter, StreamHandlers } from '../../../../../src/features/tasks/execution/ProviderStreamAdapter';
 import { RunSession } from '../../../../../src/features/tasks/execution/RunSession';
 import type { TaskLedgerEntry, TaskSpec } from '../../../../../src/features/tasks/model/taskTypes';
 import { SyntheticStreamAdapter } from '../../../../helpers/SyntheticStreamAdapter';
+
+/** Adapter that replays a completed run synchronously inside subscribe() (fast/local run). */
+class ReplayOnSubscribeAdapter implements ProviderStreamAdapter {
+  detached = false;
+  subscribe(handlers: StreamHandlers): () => void {
+    handlers.onText(VALID_HANDOFF);
+    handlers.onEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    return () => { this.detached = true; };
+  }
+  async sendFollowUp(): Promise<void> {}
+  cancel(): void {}
+}
 
 const VALID_HANDOFF = `<claudian_handoff>
 summary: Done.
@@ -425,5 +438,32 @@ describe('RunSession', () => {
     await Promise.resolve();
     expect(statuses.length).toBe(count);
     expect(statuses[statuses.length - 1]).toBe('review');
+  });
+
+  it('detaches the stream observer when a buffered chunk finishes the run synchronously during subscribe()', async () => {
+    // A fast/local run replays its `done` inside subscribe(), so finish() runs
+    // before run() has stored the unsubscribe handle; run() must still detach.
+    const adapter = new ReplayOnSubscribeAdapter();
+    const statuses: string[] = [];
+    const session = new RunSession({
+      task: makeTask(),
+      runId: 'r',
+      getConversationId: () => null,
+      sidepanelTabId: null,
+      stream: adapter,
+      events: new EventBus<TaskEventMap>(),
+      now: () => '2026-06-04T09:00:00Z',
+      writeStatus: async (_t, options) => { statuses.push(options.status); },
+      flushLedger: async () => {},
+      writeHandoff: async () => {},
+      heartbeatIntervalMs: 100000,
+      staleThresholdMs: 100000,
+      ledgerIntervalMs: 100000,
+      ledgerMilestone: 999,
+    });
+    const result = await session.run();
+    expect(result).toEqual({ ok: true, status: 'review' });
+    expect(adapter.detached).toBe(true);
+    expect(statuses).toEqual(['running', 'review']);
   });
 });

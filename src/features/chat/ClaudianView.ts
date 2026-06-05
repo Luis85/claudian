@@ -694,7 +694,12 @@ export class ClaudianView extends ItemView {
     // Chunks are buffered until the real observer attaches, then replayed in order.
     const buffered: StreamChunk[] = [];
     let liveObserver: ((chunk: StreamChunk) => void) | null = null;
+    // Tracks whether the current turn has emitted a stream `done`. Lets a
+    // follow-up that settles ok without a `done` synthesize one, while a turn
+    // that did end (including a re-pause's own `done`) is left untouched.
+    let sawDoneSinceSend = false;
     const emit = (chunk: StreamChunk): void => {
+      if (chunk.type === 'done') sawDoneSinceSend = true;
       if (liveObserver) liveObserver(chunk);
       else buffered.push(chunk);
     };
@@ -745,13 +750,21 @@ export class ClaudianView extends ItemView {
         };
       },
       sendFollowUp: async (content) => {
-        // Fire the follow-up turn without blocking; surface a failure that emits
-        // no stream end as a synthetic error chunk so the run fails promptly
-        // (follow-up turns have no terminal promise wired to the runner).
+        // Fire the follow-up turn without blocking. Follow-up turns have no
+        // terminal promise wired to the runner, so the run can only finish from
+        // a stream chunk. Synthesize one when the turn settles but emits no
+        // stream end: an error chunk on failure, and a `done` chunk when it
+        // settled ok yet produced no `done` (e.g. the provider threw after
+        // creating the assistant message and the controller still resolved ok).
+        // A turn that did emit a `done` — including a re-pause's own turn-end —
+        // is left alone so its pause/finish accounting is not double-counted.
+        sawDoneSinceSend = false;
         void (inputController.sendMessage({ content }) as Promise<ProgrammaticSendResult | undefined>)
           .then((result) => {
-            if (result && !result.ok) {
-              emit({ type: 'error', content: result.error ?? 'Follow-up turn failed.' });
+            if (result?.ok) {
+              if (!sawDoneSinceSend) emit({ type: 'done' });
+            } else {
+              emit({ type: 'error', content: result?.error ?? 'Follow-up turn failed.' });
             }
           })
           .catch((error) => {

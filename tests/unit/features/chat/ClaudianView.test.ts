@@ -644,4 +644,69 @@ describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
 
     expect(seen).toContainEqual({ type: 'error', content: 'init failed' });
   });
+
+  it('synthesizes a done chunk when a follow-up settles ok but emits no stream end', async () => {
+    let rawObserver: ((chunk: { type: string }) => void) | null = null;
+    const streamController = {
+      addStreamObserver: (obs: (chunk: { type: string }) => void) => {
+        rawObserver = obs;
+        return () => { rawObserver = null; };
+      },
+    };
+    let call = 0;
+    const inputController = {
+      sendMessage: jest.fn(async () => {
+        call += 1;
+        // The first turn ends with a real done; the follow-up resolves ok but
+        // emits none (e.g. the provider threw after creating the message).
+        if (call === 1) rawObserver?.({ type: 'done' });
+        return { ok: true, finalAssistantContent: '' };
+      }),
+      cancelStreaming: jest.fn(),
+    };
+    const tab = { id: 'tab-1', conversationId: 'conv-1', controllers: { inputController, streamController } };
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
+
+    const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
+    const seen: Array<{ type: string }> = [];
+    handle.subscribe((chunk: { type: string }) => seen.push(chunk));
+    seen.length = 0; // drop the initial turn's replayed chunks
+
+    await handle.sendFollowUp('reply');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(seen).toEqual([{ type: 'done' }]);
+  });
+
+  it('does not synthesize a second done when a follow-up emits its own stream end', async () => {
+    let rawObserver: ((chunk: { type: string }) => void) | null = null;
+    const streamController = {
+      addStreamObserver: (obs: (chunk: { type: string }) => void) => {
+        rawObserver = obs;
+        return () => { rawObserver = null; };
+      },
+    };
+    const inputController = {
+      sendMessage: jest.fn(async () => {
+        rawObserver?.({ type: 'done' }); // every turn ends with a real done
+        return { ok: true, finalAssistantContent: '' };
+      }),
+      cancelStreaming: jest.fn(),
+    };
+    const tab = { id: 'tab-1', conversationId: 'conv-1', controllers: { inputController, streamController } };
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
+
+    const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
+    const seen: Array<{ type: string }> = [];
+    handle.subscribe((chunk: { type: string }) => seen.push(chunk));
+    seen.length = 0;
+
+    await handle.sendFollowUp('reply');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Only the follow-up's own real done — no synthesized duplicate.
+    expect(seen).toEqual([{ type: 'done' }]);
+  });
 });
