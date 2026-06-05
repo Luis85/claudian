@@ -72,6 +72,10 @@ export class RunSession {
   // ends the agent's turn (so the stream emits a `done`); we must not let that
   // turn-end finalize the run, even if the user resumes before it arrives.
   private pauseEndsPending = 0;
+  // Fire-and-forget status writes (initial `running`, heartbeats). finish() awaits
+  // these before the terminal write so a slow start/heartbeat write can't land
+  // afterward and revert a completed run back to running.
+  private readonly pendingStatusWrites = new Set<Promise<void>>();
   private finalContentBuffer = '';
   private attemptNumber = 0;
   private finishing = false;
@@ -96,6 +100,13 @@ export class RunSession {
   private get taskId(): string { return this.deps.task.frontmatter.id; }
   private get path(): string { return this.deps.task.path; }
 
+  /** Tracks a fire-and-forget status write so finish() can await it before the terminal write. */
+  private trackBackgroundWrite(write: Promise<void>): void {
+    const settled = write.catch(() => undefined);
+    this.pendingStatusWrites.add(settled);
+    void settled.finally(() => this.pendingStatusWrites.delete(settled));
+  }
+
   run(): Promise<RunSessionResult> {
     this.attemptNumber = (this.deps.task.frontmatter.attempts ?? 0) + 1;
     const ts = this.deps.now();
@@ -109,7 +120,7 @@ export class RunSession {
       onEnd: (payload) => { void this.finish(payload); },
     });
     this.startHeartbeat();
-    void this.deps.writeStatus(this.deps.task, {
+    this.trackBackgroundWrite(this.deps.writeStatus(this.deps.task, {
       status: 'running',
       timestamp: ts,
       runId: this.deps.runId,
@@ -119,7 +130,7 @@ export class RunSession {
       started: ts,
       heartbeat: ts,
       attempts: this.attemptNumber,
-    });
+    }));
     return this.terminalPromise;
   }
 
@@ -260,11 +271,16 @@ export class RunSession {
       return;
     }
     this.finishing = true;
-    // Let any in-flight pause status write + ledger flush settle first, so the
-    // final flush below is not skipped by the writer's in-progress guard (which
-    // would otherwise drop a just-enqueued line, e.g. cancel during a pause).
-    await this.pauseApplied;
+    // Stop heartbeats/stream first, then let every in-flight write settle before
+    // the terminal write: the pause write+flush (so the final ledger flush is not
+    // skipped by the writer's in-progress guard, e.g. cancel during a pause) and
+    // the fire-and-forget running/heartbeat writes (so a slow start write cannot
+    // land after the terminal write and revert the run to running).
     this.stopLiveWiring();
+    await this.pauseApplied;
+    if (this.pendingStatusWrites.size > 0) {
+      await Promise.all([...this.pendingStatusWrites]);
+    }
     const finalOut = this.parser.finalize();
     for (const warning of finalOut.warnings) {
       this.deps.events.emit('task:parser-warning', { taskId: this.taskId, path: this.path, warning });
@@ -328,7 +344,7 @@ export class RunSession {
     const stale = this.deps.staleThresholdMs ?? DEFAULTS.staleThresholdMs;
     this.heartbeatTimer = window.setInterval(() => {
       const at = this.deps.now();
-      void this.deps.writeStatus(this.deps.task, { status: 'running', timestamp: at, heartbeat: at });
+      this.trackBackgroundWrite(this.deps.writeStatus(this.deps.task, { status: 'running', timestamp: at, heartbeat: at }));
       this.deps.events.emit('task:heartbeat', { taskId: this.taskId, path: this.path, at });
     }, interval);
     this.staleTimer = window.setInterval(() => {

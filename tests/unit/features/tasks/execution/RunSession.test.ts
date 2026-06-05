@@ -171,6 +171,44 @@ describe('RunSession', () => {
     jest.useRealTimers();
   });
 
+  it('does not let a slow initial running write land after the terminal status', async () => {
+    const writes: string[] = [];
+    let releaseRunning!: () => void;
+    const adapter = new SyntheticStreamAdapter();
+    const events = new EventBus<TaskEventMap>();
+    const session = new RunSession({
+      task: makeTask(),
+      runId: 'r',
+      conversationId: null,
+      sidepanelTabId: null,
+      stream: adapter,
+      events,
+      now: () => '2026-06-04T09:00:00Z',
+      writeStatus: async (_t, options) => {
+        if (options.status === 'running' && writes.length === 0) {
+          // The initial running write is slow (e.g. a queued vault.process).
+          await new Promise<void>((resolve) => { releaseRunning = resolve; });
+        }
+        writes.push(options.status);
+      },
+      flushLedger: async () => {},
+      writeHandoff: async () => {},
+      heartbeatIntervalMs: 100000,
+      staleThresholdMs: 100000,
+      ledgerIntervalMs: 100000,
+      ledgerMilestone: 999,
+    });
+    const terminal = session.run();
+    adapter.emitText(VALID_HANDOFF);
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await Promise.resolve();
+    releaseRunning();
+    const result = await terminal;
+    expect(result.ok).toBe(true);
+    // 'review' must be written after 'running', never the other way around.
+    expect(writes).toEqual(['running', 'review']);
+  });
+
   it('fails with heartbeat lost when no events arrive within the stale threshold', async () => {
     jest.useFakeTimers();
     const { session, statuses } = makeSession({ staleThresholdMs: 2000, heartbeatIntervalMs: 500 });
