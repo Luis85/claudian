@@ -249,7 +249,13 @@
       "promptDesc": "Message sent to the chat when you run this action",
       "nameRequired": "Name is required",
       "promptRequired": "Prompt is required",
-      "saveFailed": "Failed to save quick action"
+      "saveFailed": "Failed to save quick action",
+      "nameExists": "A quick action with this name already exists"
+    },
+    "capture": {
+      "label": "Capture as quick action",
+      "saved": "Quick action saved",
+      "folderMissing": "Configure Quick Actions folder first"
     },
     "contextMenu": {
       "title": "Quick actions",

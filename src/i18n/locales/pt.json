@@ -585,7 +585,13 @@
       "promptDesc": "Message sent to the chat when you run this action",
       "nameRequired": "Name is required",
       "promptRequired": "Prompt is required",
-      "saveFailed": "Failed to save quick action"
+      "saveFailed": "Failed to save quick action",
+      "nameExists": "Já existe uma ação rápida com este nome"
+    },
+    "capture": {
+      "label": "Salvar como ação rápida",
+      "saved": "Ação rápida salva",
+      "folderMissing": "Configure primeiro a pasta de ações rápidas"
     },
     "contextMenu": {
       "title": "Quick actions",
