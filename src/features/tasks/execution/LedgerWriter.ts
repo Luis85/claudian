@@ -13,7 +13,7 @@ const RETRY_BACKOFF_MS = [5000, 30000];
 export class LedgerWriter {
   private queue: TaskLedgerEntry[] = [];
   private tailBuffer: TaskLedgerEntry[] = [];
-  private timer: ReturnType<typeof setTimeout> | null = null;
+  private timer: number | null = null;
   private flushing = false;
   private retryAttempt = 0;
   private disposed = false;
@@ -62,14 +62,14 @@ export class LedgerWriter {
 
   dispose(): void {
     this.disposed = true;
-    if (this.timer) clearTimeout(this.timer);
+    if (this.timer) window.clearTimeout(this.timer);
     this.timer = null;
   }
 
   private scheduleInterval(): void {
     if (this.disposed) return;
     if (this.timer) return;
-    this.timer = setTimeout(() => {
+    this.timer = window.setTimeout(() => {
       this.timer = null;
       void this.flushNow().then(() => this.scheduleInterval());
     }, this.opts.intervalMs);
@@ -77,9 +77,9 @@ export class LedgerWriter {
 
   private scheduleRetry(): void {
     if (this.disposed) return;
-    if (this.timer) clearTimeout(this.timer);
+    if (this.timer) window.clearTimeout(this.timer);
     const delay = RETRY_BACKOFF_MS[this.retryAttempt - 1] ?? RETRY_BACKOFF_MS[RETRY_BACKOFF_MS.length - 1];
-    this.timer = setTimeout(() => {
+    this.timer = window.setTimeout(() => {
       this.timer = null;
       void this.flushNow().then(() => this.scheduleInterval());
     }, delay);
