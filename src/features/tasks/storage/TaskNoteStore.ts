@@ -26,6 +26,8 @@ export interface WriteStatusOptions {
   runId?: string | null;
   conversationId?: string | null;
   sidepanelTabId?: string | null;
+  heartbeat?: string | null;
+  pauseReason?: string | null;
 }
 
 export interface WriteFieldsOptions {
@@ -85,6 +87,8 @@ export class TaskNoteStore {
     if (options.runId !== undefined) frontmatter.run_id = options.runId;
     if (options.conversationId !== undefined) frontmatter.conversation_id = options.conversationId;
     if (options.sidepanelTabId !== undefined) frontmatter.sidepanel_tab_id = options.sidepanelTabId;
+    if (options.heartbeat !== undefined) frontmatter.heartbeat = options.heartbeat;
+    if (options.pauseReason !== undefined) frontmatter.pause_reason = options.pauseReason;
 
     if (options.status === 'running') {
       frontmatter.started = options.timestamp;
@@ -92,9 +96,20 @@ export class TaskNoteStore {
 
     if (options.status === 'done' || options.status === 'failed' || options.status === 'canceled') {
       frontmatter.finished = options.timestamp;
+      frontmatter.heartbeat = null;
+      frontmatter.pause_reason = null;
     }
 
     return this.withFrontmatter(frontmatter, parsed.task.body);
+  }
+
+  clearPause(content: string, timestamp: string): string {
+    return this.writeStatus(content, {
+      status: 'running',
+      timestamp,
+      heartbeat: timestamp,
+      pauseReason: null,
+    });
   }
 
   writeFields(content: string, fields: WriteFieldsOptions, timestamp: string = new Date().toISOString()): string {

@@ -211,4 +211,57 @@ ${HANDOFF_END}`);
     expect(parsed.task.frontmatter.provider).toBeUndefined();
   });
 
+  describe('writeStatus heartbeat + pause_reason', () => {
+    const baseNote = `---
+type: claudian-work-order
+schema_version: 1
+id: t1
+title: T1
+status: running
+priority: 2 - normal
+created: 2026-06-04T08:00:00.000Z
+updated: 2026-06-04T08:00:00.000Z
+attempts: 0
+---
+body`;
+
+    it('writes heartbeat and pause_reason when provided', () => {
+      const result = store.writeStatus(baseNote, {
+        status: 'needs_input',
+        timestamp: '2026-06-04T09:00:00.000Z',
+        heartbeat: '2026-06-04T09:00:00.000Z',
+        pauseReason: 'Which env file?',
+      });
+      const parsed = store.parse('t1.md', result);
+      expect(parsed.task.frontmatter.status).toBe('needs_input');
+      expect(parsed.task.frontmatter.heartbeat).toBe('2026-06-04T09:00:00.000Z');
+      expect(parsed.task.frontmatter.pause_reason).toBe('Which env file?');
+    });
+
+    it('clears pause_reason on clearPause', () => {
+      const paused = store.writeStatus(baseNote, {
+        status: 'needs_input',
+        timestamp: '2026-06-04T09:00:00.000Z',
+        pauseReason: 'Which env file?',
+      });
+      const cleared = store.clearPause(paused, '2026-06-04T09:01:00.000Z');
+      expect(cleared).toContain('pause_reason: null');
+      const parsed = store.parse('t1.md', cleared);
+      expect(parsed.task.frontmatter.status).toBe('running');
+      expect(parsed.task.frontmatter.heartbeat).toBe('2026-06-04T09:01:00.000Z');
+    });
+
+    it('clears heartbeat and pause_reason on terminal status', () => {
+      const paused = store.writeStatus(baseNote, {
+        status: 'needs_input',
+        timestamp: '2026-06-04T09:00:00.000Z',
+        heartbeat: '2026-06-04T09:00:00.000Z',
+        pauseReason: 'Which env file?',
+      });
+      const done = store.writeStatus(paused, { status: 'done', timestamp: '2026-06-04T09:02:00.000Z' });
+      expect(done).toContain('heartbeat: null');
+      expect(done).toContain('pause_reason: null');
+    });
+  });
+
 });
