@@ -6,6 +6,15 @@ import type ClaudianPlugin from '@/main';
 import type { QuickAction } from './types';
 
 /**
+ * Filename stem (no extension, no folder path). Used as the stable
+ * identity key for usage tracking — survives moves, breaks on rename.
+ */
+export function quickActionStemFromPath(filePath: string): string {
+  const base = filePath.split('/').pop() ?? filePath;
+  return base.replace(/\.md$/i, '');
+}
+
+/**
  * Shared run flow used by both the quick-actions modal callback and the
  * favorite items injected into the file/folder right-click menu.
  *
@@ -57,5 +66,9 @@ export async function runQuickActionForFile(
     targetTab.ui.fileContextManager?.attachFolderAsPill(file.path);
   }
 
-  void targetTab.controllers.inputController?.sendMessage({ content: action.prompt });
+  await targetTab.controllers.inputController?.sendMessage({ content: action.prompt });
+  plugin.events.emit('usage.recorded', {
+    kind: 'quickAction',
+    name: quickActionStemFromPath(action.filePath),
+  });
 }

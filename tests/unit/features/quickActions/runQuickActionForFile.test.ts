@@ -1,5 +1,7 @@
 import { Notice, TFile, TFolder } from 'obsidian';
 
+import { EventBus } from '@/core/events/EventBus';
+import type { UsageEventMap } from '@/core/usage/events';
 import { runQuickActionForFile } from '@/features/quickActions/runQuickActionForFile';
 import type { QuickAction } from '@/features/quickActions/types';
 
@@ -54,6 +56,7 @@ function makeMockPlugin(tabManager: ReturnType<typeof makeMockTabManager> | null
   const view = { getTabManager: jest.fn(() => tabManager) };
   return {
     app: { vault: {} },
+    events: { emit: jest.fn() },
     getView: jest.fn(() => view),
     activateView: jest.fn().mockResolvedValue(undefined),
   };
@@ -114,5 +117,63 @@ describe('runQuickActionForFile', () => {
 
     expect(Notice).toHaveBeenCalledWith('quickActions.contextMenu.tabLimitReached');
     expect(tm.switchToTab).not.toHaveBeenCalled();
+  });
+});
+
+describe('runQuickActionForFile usage emission', () => {
+  it('emits usage.recorded with quick-action filename stem after sendMessage resolves', async () => {
+    const events = new EventBus<UsageEventMap>();
+    const recorded: Array<UsageEventMap['usage.recorded']> = [];
+    events.on('usage.recorded', (e) => recorded.push(e));
+
+    const tab = makeMockTab('blank');
+    const tm = makeMockTabManager({ activeTab: tab, canCreate: true });
+    const plugin = { ...makeMockPlugin(tm), events };
+    const file = Object.assign(Object.create(TFile.prototype), { path: 'note.md' });
+    const action: QuickAction = {
+      id: 'a',
+      name: 'Summarize selection',
+      description: '',
+      prompt: 'p',
+      filePath: 'Quick Actions/summarize.md',
+    };
+
+    await runQuickActionForFile(plugin as any, file, action);
+
+    expect(recorded).toEqual([{ kind: 'quickAction', name: 'summarize' }]);
+  });
+
+  it('does NOT emit if sendMessage rejects', async () => {
+    const events = new EventBus<UsageEventMap>();
+    const recorded: Array<UsageEventMap['usage.recorded']> = [];
+    events.on('usage.recorded', (e) => recorded.push(e));
+
+    const tab = makeMockTab('blank');
+    tab.controllers.inputController.sendMessage = jest.fn().mockRejectedValue(new Error('send failed'));
+    const tm = makeMockTabManager({ activeTab: tab, canCreate: true });
+    const plugin = { ...makeMockPlugin(tm), events };
+    const file = Object.assign(Object.create(TFile.prototype), { path: 'note.md' });
+
+    await expect(
+      runQuickActionForFile(plugin as any, file, MOCK_ACTION),
+    ).rejects.toThrow('send failed');
+    expect(recorded).toEqual([]);
+  });
+
+  it('does NOT emit on early return (no view)', async () => {
+    const events = new EventBus<UsageEventMap>();
+    const recorded: Array<UsageEventMap['usage.recorded']> = [];
+    events.on('usage.recorded', (e) => recorded.push(e));
+
+    const plugin = {
+      app: { vault: {} },
+      events,
+      getView: jest.fn(() => null),
+      activateView: jest.fn().mockResolvedValue(undefined),
+    };
+    const file = Object.assign(Object.create(TFile.prototype), { path: 'note.md' });
+
+    await runQuickActionForFile(plugin as any, file, MOCK_ACTION);
+    expect(recorded).toEqual([]);
   });
 });
