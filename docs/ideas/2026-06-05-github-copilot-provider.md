@@ -126,12 +126,17 @@ approvals through its own `ApprovalManager`/safe-mode, not blanket-approve.
 From the GitHub changelog (authoritative for shipped behavior) and official blog,
 which **supersede the lagging programmatic-reference docs page**:
 
-- **Structured output exists.** `--output-format json` shipped in **v0.0.415
-  (2026-02-23)**, emitting **JSONL** in `-p` prompt mode. Feature request
+- **Structured output exists.** `--output-format json` shipped in **v0.0.421
+  (2026-03-03)**, emitting **JSONL** in `-p` prompt mode — so require **≥ 0.0.421**
+  before enabling the JSONL path. Feature request
   [copilot-cli#52](https://github.com/github/copilot-cli/issues/52) is **closed**,
   fulfilled. (No distinct `stream-json` alias — the mechanism is JSONL.)
-- **Headless resume exists.** `--resume`, `--continue`, `--session-id=<id>`;
-  transcripts stored as JSONL at `~/.copilot/session-state/<id>/events.jsonl`.
+- **Headless resume exists.** Resume a known session with `copilot --resume <id>`
+  (or `--continue` for the latest session in the cwd, v1.0.52); `--session-id=<id>`
+  (v1.0.51) additionally lets you assign a specific session UUID. These flags are
+  **changelog-only — undocumented in the official CLI reference** — so pin a CLI
+  version and probe before relying on them. Transcripts are stored as JSONL at
+  `~/.copilot/session-state/<id>/events.jsonl`.
 - **ACP transport exists.** `copilot --acp --stdio` (public preview 2026-01-28).
   Zed already runs Copilot CLI as an ACP external agent. This is the same protocol
   family as `src/providers/acp/`.
@@ -158,7 +163,7 @@ version and add a capability/version probe at workspace init.
 **Fallback — `copilot -p --output-format json` (JSONL), parsed like Cursor.** If
 ACP proves unstable, spawn one-shot per turn and parse JSONL the way
 `cursorStreamMapper` parses cursor-agent's stream-json, using
-`--session-id`/`--resume` for continuity and reading
+`--resume <id>` / `--continue` for continuity and reading
 `~/.copilot/session-state/<id>/events.jsonl` for history hydration (the analog of
 Cursor's `store.db` and Codex's JSONL). *Risk:* JSONL output ergonomics are still
 maturing ([copilot-cli#3008](https://github.com/github/copilot-cli/issues/3008)).
