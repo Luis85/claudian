@@ -77,6 +77,14 @@ export function registerAgentBoardTabFields(): void {
     description: 'Prompt to commit and push when a work order is Accepted.',
   });
 
+  r.registerSection({
+    id: 'queue',
+    tabId: 'agentBoard',
+    label: 'Queue',
+    order: 35,
+    description: 'Background runner that auto-picks Ready and Needs-fix cards.',
+  });
+
   r.registerField({
     id: 'agentBoardWorkOrderFolder',
     tabId: 'agentBoard',
@@ -178,6 +186,29 @@ export function registerAgentBoardTabFields(): void {
     type: { kind: 'toggle' },
     default: true,
     keywords: ['git', 'commit', 'push', 'accept'],
+  });
+
+  r.registerField({
+    id: 'agentBoardQueueCap',
+    tabId: 'agentBoard',
+    sectionId: 'queue',
+    label: 'Concurrent runs',
+    description:
+      'Maximum number of cards the queue runner may auto-start at once, shared across all boards.',
+    type: { kind: 'number', min: 1, max: 8, step: 1 },
+    default: 1,
+    keywords: ['queue', 'concurrent', 'cap', 'parallel'],
+  });
+
+  r.registerField({
+    id: 'agentBoardQueueHaltAfter',
+    tabId: 'agentBoard',
+    sectionId: 'queue',
+    label: 'Auto-halt after consecutive failures',
+    description: 'Pause the queue after this many auto-run failures in a row. Manual runs do not count.',
+    type: { kind: 'number', min: 1, max: 20, step: 1 },
+    default: 3,
+    keywords: ['queue', 'halt', 'failure', 'safety'],
   });
 
   r.registerField({
