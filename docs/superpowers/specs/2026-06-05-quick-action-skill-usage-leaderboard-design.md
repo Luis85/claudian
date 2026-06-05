@@ -1,7 +1,7 @@
 ---
 title: Quick-action and skill usage leaderboard
 date: 2026-06-05
-status: approved (design)
+status: shipped
 scope: core/usage, features/quickActions, features/quickActions/ui
 parent: "[[Quick Actions]]"
 relations:

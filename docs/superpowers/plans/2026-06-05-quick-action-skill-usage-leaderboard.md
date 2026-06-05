@@ -1,5 +1,5 @@
 ---
-status: open
+status: shipped
 parent: "[[Quick Actions]]"
 ---
 # Quick-action and skill usage leaderboard implementation plan
