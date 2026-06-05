@@ -65,6 +65,7 @@ import { CommitOnAcceptCoordinator } from './features/tasks/commit/CommitOnAccep
 import { CommitOnAcceptModal } from './features/tasks/commit/CommitOnAcceptModal';
 import { ChatTabExecutionSurface } from './features/tasks/execution/ChatTabExecutionSurface';
 import { ChatWorkOrderLinker } from './features/tasks/execution/ChatWorkOrderLinker';
+import { QueueSlotTracker } from './features/tasks/execution/QueueSlotTracker';
 import { TaskNoteStore } from './features/tasks/storage/TaskNoteStore';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
 import { setLocale, t } from './i18n/i18n';
@@ -94,6 +95,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   private lifecycle!: PluginLifecycle;
   private viewActivator!: PluginViewActivator;
   private envApply!: EnvironmentApplyService;
+  /** Plugin-level concurrency gate shared by every Agent Board queue runner. */
+  queueSlotTracker!: QueueSlotTracker;
   lastKnownTabManagerState: AppTabManagerState | null = null;
 
   async onload() {
@@ -114,6 +117,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
     this.viewActivator = new PluginViewActivator(this);
     this.envApply = new EnvironmentApplyService(this);
+    this.queueSlotTracker = new QueueSlotTracker(this.settings.agentBoardQueueCap);
 
     this.registerView(
       VIEW_TYPE_CLAUDIAN,
@@ -450,6 +454,9 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     );
 
     await this.storage.saveClaudianSettings(this.settings);
+    // The queue cap is a global, shared across every board's runner, so syncing
+    // it here makes a settings change take effect live without a board refresh.
+    this.queueSlotTracker?.setCap(this.settings.agentBoardQueueCap);
   }
 
   /** Updates and persists environment variables, restarting processes to apply changes. */
