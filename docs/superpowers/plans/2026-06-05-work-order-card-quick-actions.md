@@ -1,5 +1,5 @@
 ---
-status: implemented
+status: done
 parent: "[[Agent Kanban Board]]"
 spec: "[[docs/superpowers/specs/2026-06-05-work-order-card-quick-actions-design.md]]"
 ---

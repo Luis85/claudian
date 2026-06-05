@@ -1,7 +1,7 @@
 ---
 title: Work-order card right-click quick actions
 date: 2026-06-05
-status: implemented
+status: shipped
 scope: features/tasks/ui, features/quickActions, i18n
 parent: "[[Agent Kanban Board]]"
 relations:
