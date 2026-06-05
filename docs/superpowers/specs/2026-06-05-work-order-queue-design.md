@@ -72,10 +72,10 @@ None. Existing `TASK_STATUSES` and `LEGAL_TRANSITIONS` unchanged. Runner uses th
 | `src/features/tasks/events.ts` | Add `task:queue-tick`, `task:queue-paused`, `task:queue-resumed`, `task:queue-halted`, `task:queue-skipped`. |
 | `src/features/tasks/ui/AgentBoardView.ts` | Construct `QueueRunner` on mount; wire toolbar toggle; mount halt banner; dispose on close. |
 | `src/features/tasks/ui/AgentBoardRenderer.ts` | Toolbar render with toggle + slot count + failure count; halt banner; per-card skip chip. |
-| `src/features/tasks/model/taskTypes.ts` | `BoardConfig.queue: { paused: boolean }` (optional, defaults false). |
-| `src/features/tasks/storage/BoardConfigStore.ts` | Round-trip `queue.paused`. |
-| `src/app/defaultSettings.ts` | `agentBoardQueueCap: 1`; `agentBoardQueueHaltAfter: 3`. |
-| `src/features/settings/GeneralTab.ts` | Two number inputs (cap, halt threshold) in new "Agent Board Queue" group. |
+| `src/features/tasks/config/boardConfigTypes.ts` | `BoardConfig.queue?: { paused: boolean }` (optional, defaults false). |
+| `src/features/tasks/config/BoardConfigStore.ts` | Round-trip `queue.paused`. |
+| `src/app/settings/defaultSettings.ts` | `agentBoardQueueCap: 1`; `agentBoardQueueHaltAfter: 3`. |
+| `src/features/settings/registry/fields/agentBoard.ts` | Two number fields (cap, halt threshold) in existing Agent Board settings group. |
 | `src/style/tasks/_agent-board.css` | Toolbar styles, halt banner, skip chip. |
 
 ### Plugin-level wiring
@@ -389,8 +389,8 @@ No new modals. No card detail-modal additions beyond the existing ledger view (q
 | Spec | Add |
 |---|---|
 | `tests/unit/features/tasks/execution/TaskRunCoordinator.test.ts` | assert `activeRuns` lock still blocks runner double-start when manual click races with auto-pick |
-| `tests/unit/features/tasks/storage/BoardConfigStore.test.ts` | `queue.paused` round-trip; default false; missing `queue` block parses cleanly |
-| `tests/unit/app/defaultSettings.test.ts` | `agentBoardQueueCap=1`, `agentBoardQueueHaltAfter=3` defaults; bounds enforced (1–8, 1–20) |
+| `tests/unit/features/tasks/config/BoardConfigStore.test.ts` | `queue.paused` round-trip; default false; missing `queue` block parses cleanly |
+| `tests/unit/app/settings/defaultSettings.test.ts` | `agentBoardQueueCap=1`, `agentBoardQueueHaltAfter=3` defaults; bounds enforced (1–8, 1–20) |
 | `tests/unit/features/tasks/ui/AgentBoardRenderer.test.ts` | toolbar toggle renders correct icon per state; halt banner shows on halted; skip chip renders + clears on status change + ack click |
 
 ### Integration (new) under `tests/integration/features/tasks/`
