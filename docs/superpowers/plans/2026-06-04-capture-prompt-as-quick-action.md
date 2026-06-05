@@ -1,5 +1,5 @@
 ---
-status: draft
+status: ready-for-review
 parent: "[[Quick Actions]]"
 ---
 # Capture sent prompt as quick action Implementation Plan
