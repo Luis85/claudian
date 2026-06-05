@@ -10,7 +10,6 @@ function makeTask(overrides: Partial<TaskSpec['frontmatter']> & { id: string }):
     frontmatter: {
       type: 'claudian-work-order',
       schema_version: 1,
-      id: overrides.id,
       title: overrides.id,
       status: 'ready',
       priority: '2 - normal',
