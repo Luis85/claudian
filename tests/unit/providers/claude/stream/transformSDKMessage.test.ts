@@ -918,6 +918,7 @@ describe('transformSDKMessage', () => {
             contextWindow: 200000,
             contextTokens: 16,
             percentage: 0,
+            contextWindowIsAuthoritative: false,
           },
         },
       ]);
@@ -991,6 +992,7 @@ describe('transformSDKMessage', () => {
             contextWindow: 200000,
             contextTokens: 10,
             percentage: 0,
+            contextWindowIsAuthoritative: false,
           },
         },
       ]);
@@ -1051,6 +1053,7 @@ describe('transformSDKMessage', () => {
             contextWindow: 200000,
             contextTokens: 10,
             percentage: 0,
+            contextWindowIsAuthoritative: false,
           },
         },
       ]);
@@ -1480,6 +1483,7 @@ describe('transformSDKMessage', () => {
         contextWindow: 200000,
         contextTokens: 1500,
         percentage: 1,
+        contextWindowIsAuthoritative: false,
       });
     });
 
@@ -1628,6 +1632,7 @@ describe('transformSDKMessage', () => {
             contextWindow: 200000,
             contextTokens: 0,
             percentage: 0,
+            contextWindowIsAuthoritative: false,
           },
         },
       ]);
