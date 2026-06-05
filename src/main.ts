@@ -108,6 +108,10 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   /** Chat tabs queue runs have committed to opening but not yet created. Shared
    * so concurrent Agent Board panes can't double-book the same free tabs. */
   readonly chatTabReservations = new ChatTabReservations();
+  /** Last-applied Maximum tabs, so saveSettings can wake a tab-blocked queue
+   * when raising the limit frees an execution slot (the queue gates on free
+   * chat tabs). Seeded on load; mirrors the queue-cap wake. */
+  private appliedMaxTabs = 0;
   lastKnownTabManagerState: AppTabManagerState | null = null;
 
   async onload() {
@@ -390,6 +394,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       ...DEFAULT_CLAUDIAN_SETTINGS,
       ...claudian,
     };
+    this.appliedMaxTabs = this.settings.maxTabs ?? 3;
 
     // SEC-A: keychain-backed secret store. Requires Obsidian >= 1.11.5 (the
     // plugin's minAppVersion), so app.secretStorage is always present.
@@ -476,6 +481,14 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     if (prevCap !== undefined && (this.queueSlotTracker?.capacity() ?? prevCap) > prevCap) {
       // Newly freed slots: wake every open board's runner so a backed-up queue
       // drains immediately instead of waiting for an unrelated event.
+      this.events.emit('task:queue-cap-changed');
+    }
+    // Raising Maximum tabs frees a chat-tab execution slot the queue gates on.
+    // Reuse the same wake event so a tab-blocked queue drains at once instead of
+    // stalling until an unrelated chat/status/run event ticks the runner.
+    const prevMaxTabs = this.appliedMaxTabs;
+    this.appliedMaxTabs = this.settings.maxTabs ?? 3;
+    if (this.appliedMaxTabs > prevMaxTabs) {
       this.events.emit('task:queue-cap-changed');
     }
   }

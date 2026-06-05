@@ -485,6 +485,24 @@ describe('ClaudianPlugin', () => {
       // Permissions are now in .claude/settings.json (CC format), not claudian-settings.json
       expect(content).not.toHaveProperty('permissions');
     });
+
+    it('wakes queue runners when the maximum-tabs limit increases', async () => {
+      await plugin.onload();
+      const wakes: string[] = [];
+      plugin.events.on('task:queue-cap-changed', () => wakes.push('wake'));
+
+      // Raising the chat-tab limit frees an execution slot the queue gates on,
+      // so a tab-blocked queue must be woken instead of waiting for an
+      // unrelated event.
+      plugin.settings.maxTabs = (plugin.settings.maxTabs ?? 3) + 1;
+      await plugin.saveSettings();
+      expect(wakes).toHaveLength(1);
+
+      // Lowering the limit frees nothing, so it must not wake the runners.
+      plugin.settings.maxTabs = (plugin.settings.maxTabs ?? 3) - 1;
+      await plugin.saveSettings();
+      expect(wakes).toHaveLength(1);
+    });
   });
 
   describe('applyEnvironmentVariables', () => {
