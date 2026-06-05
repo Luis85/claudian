@@ -594,7 +594,7 @@
       "folderMissing": "先にクイックアクションフォルダを設定してください"
     },
     "contextMenu": {
-      "title": "Quick actions",
+      "title": "Open Quick Actions",
       "tabLimitReached": "Cannot open quick action: tab limit reached. Close a tab first."
     }
   },

@@ -9,6 +9,7 @@ export function registerWorkspaceMenus(plugin: ClaudianPlugin): void {
   plugin.registerEvent(
     plugin.app.workspace.on('file-menu', (menu: Menu, file: TAbstractFile) => {
       if (file instanceof TFile) {
+        menu.addSeparator();
         menu.addItem((item) => {
           item
             .setTitle('Add file to Claudian chat')
@@ -26,7 +27,9 @@ export function registerWorkspaceMenus(plugin: ClaudianPlugin): void {
             });
         });
         appendQuickActionFavoritesAndPicker(menu, plugin, file);
+        menu.addSeparator();
       } else if (file instanceof TFolder) {
+        menu.addSeparator();
         menu.addItem((item) => {
           item
             .setTitle('Add folder to Claudian chat')
@@ -44,6 +47,7 @@ export function registerWorkspaceMenus(plugin: ClaudianPlugin): void {
             });
         });
         appendQuickActionFavoritesAndPicker(menu, plugin, file);
+        menu.addSeparator();
       }
     }),
   );

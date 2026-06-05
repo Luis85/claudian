@@ -7,10 +7,12 @@ import { runQuickActionForFile } from '@/features/quickActions/runQuickActionFor
 import type { QuickAction } from '@/features/quickActions/types';
 import type ClaudianPlugin from '@/main';
 
+const { MENU_SEPARATOR } = jest.requireActual('obsidian') as { MENU_SEPARATOR: symbol };
+
 jest.mock('@/i18n/i18n', () => ({
   t: (key: string) => {
     const map: Record<string, string> = {
-      'quickActions.contextMenu.title': 'Quick actions',
+      'quickActions.contextMenu.title': 'Open Quick Actions',
     };
     return map[key] ?? key;
   },
@@ -36,8 +38,8 @@ function createMenuItem(): MenuItem {
   return item as unknown as MenuItem;
 }
 
-function createMenu(): { menu: Menu; items: MenuItem[] } {
-  const items: MenuItem[] = [];
+function createMenu(): { menu: Menu; items: Array<MenuItem | symbol> } {
+  const items: Array<MenuItem | symbol> = [];
   const menu = {
     addItem: jest.fn((cb: (item: MenuItem) => void) => {
       const item = createMenuItem();
@@ -45,8 +47,25 @@ function createMenu(): { menu: Menu; items: MenuItem[] } {
       cb(item);
       return menu;
     }),
+    addSeparator: jest.fn(() => {
+      items.push(MENU_SEPARATOR);
+      return menu;
+    }),
   } as unknown as Menu;
   return { menu, items };
+}
+
+function isMenuItem(entry: MenuItem | symbol): entry is MenuItem {
+  return entry !== MENU_SEPARATOR;
+}
+
+function titles(items: Array<MenuItem | symbol>): string[] {
+  return items.map((entry) => {
+    if (entry === MENU_SEPARATOR) return '<sep>';
+    if (!isMenuItem(entry)) return '';
+    const calls = (entry.setTitle as jest.Mock).mock.calls;
+    return calls.length > 0 ? String(calls[0][0]) : '';
+  });
 }
 
 function createPlugin(favorites: QuickAction[] = []): {
@@ -89,28 +108,34 @@ describe('registerWorkspaceMenus', () => {
     expect(plugin.registerEvent).toHaveBeenCalledTimes(2);
   });
 
-  it('adds Claudian chat, work-order, and quick-actions items for TFile entries', () => {
+  it('adds separator-bracketed Claudian chat, work-order, and quick-actions items for TFile entries', () => {
     const { plugin, fileMenu } = createPlugin();
     registerWorkspaceMenus(plugin);
     const file = Object.create(TFile.prototype) as TFile;
     const { menu, items } = createMenu();
     fileMenu.handler!(menu, file);
-    expect(items).toHaveLength(3);
-    expect((items[0].setTitle as jest.Mock)).toHaveBeenCalledWith('Add file to Claudian chat');
-    expect((items[1].setTitle as jest.Mock)).toHaveBeenCalledWith('Create work order');
-    expect((items[2].setTitle as jest.Mock)).toHaveBeenCalledWith('Quick actions');
+    expect(titles(items)).toEqual([
+      '<sep>',
+      'Add file to Claudian chat',
+      'Create work order',
+      'Open Quick Actions',
+      '<sep>',
+    ]);
   });
 
-  it('adds folder, work-order, and quick-actions items for TFolder entries', () => {
+  it('adds separator-bracketed folder, work-order, and quick-actions items for TFolder entries', () => {
     const { plugin, fileMenu } = createPlugin();
     registerWorkspaceMenus(plugin);
     const folder = Object.create(TFolder.prototype) as TFolder;
     const { menu, items } = createMenu();
     fileMenu.handler!(menu, folder);
-    expect(items).toHaveLength(3);
-    expect((items[0].setTitle as jest.Mock)).toHaveBeenCalledWith('Add folder to Claudian chat');
-    expect((items[1].setTitle as jest.Mock)).toHaveBeenCalledWith('Create work order');
-    expect((items[2].setTitle as jest.Mock)).toHaveBeenCalledWith('Quick actions');
+    expect(titles(items)).toEqual([
+      '<sep>',
+      'Add folder to Claudian chat',
+      'Create work order',
+      'Open Quick Actions',
+      '<sep>',
+    ]);
   });
 
   it('skips editor-menu item when selection is empty', () => {
@@ -129,12 +154,13 @@ describe('registerWorkspaceMenus', () => {
     const { menu, items } = createMenu();
     editorMenu.handler!(menu, editor);
     expect(items).toHaveLength(1);
-    expect((items[0].setTitle as jest.Mock)).toHaveBeenCalledWith(
+    const item = items[0] as MenuItem;
+    expect((item.setTitle as jest.Mock)).toHaveBeenCalledWith(
       'Create work order from selection',
     );
   });
 
-  it('injects favorite items above the existing "Quick actions" entry for files', () => {
+  it('injects favorite items below the "Open Quick Actions" entry for files', () => {
     const favs: QuickAction[] = [
       { id: 'a', name: 'Refactor', description: 'Refactor', prompt: 'Refactor.', filePath: 'Quick Actions/refactor.md', favorite: true, favoriteRank: 1 },
       { id: 'b', name: 'Summarize', description: 'Summarize', prompt: 'Summarize.', filePath: 'Quick Actions/summarize.md', favorite: true, favoriteRank: 2 },
@@ -145,12 +171,15 @@ describe('registerWorkspaceMenus', () => {
     const { menu, items } = createMenu();
     fileMenu.handler!(menu, file);
 
-    expect(items).toHaveLength(5);
-    expect((items[0].setTitle as jest.Mock)).toHaveBeenCalledWith('Add file to Claudian chat');
-    expect((items[1].setTitle as jest.Mock)).toHaveBeenCalledWith('Create work order');
-    expect((items[2].setTitle as jest.Mock)).toHaveBeenCalledWith('Refactor');
-    expect((items[3].setTitle as jest.Mock)).toHaveBeenCalledWith('Summarize');
-    expect((items[4].setTitle as jest.Mock)).toHaveBeenCalledWith('Quick actions');
+    expect(titles(items)).toEqual([
+      '<sep>',
+      'Add file to Claudian chat',
+      'Create work order',
+      'Open Quick Actions',
+      'Refactor',
+      'Summarize',
+      '<sep>',
+    ]);
   });
 
   it('clicking a favorite item routes through runQuickActionForFile', () => {
@@ -163,7 +192,7 @@ describe('registerWorkspaceMenus', () => {
     const { menu, items } = createMenu();
     fileMenu.handler!(menu, file);
 
-    const favItem = items[2];
+    const favItem = items[4] as MenuItem;
     const onClickCall = (favItem.onClick as jest.Mock).mock.calls[0]?.[0];
     expect(typeof onClickCall).toBe('function');
     onClickCall();
@@ -177,6 +206,12 @@ describe('registerWorkspaceMenus', () => {
     const file = Object.create(TFile.prototype) as TFile;
     const { menu, items } = createMenu();
     fileMenu.handler!(menu, file);
-    expect(items).toHaveLength(3);
+    expect(titles(items)).toEqual([
+      '<sep>',
+      'Add file to Claudian chat',
+      'Create work order',
+      'Open Quick Actions',
+      '<sep>',
+    ]);
   });
 });

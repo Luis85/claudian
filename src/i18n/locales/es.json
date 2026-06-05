@@ -594,7 +594,7 @@
       "folderMissing": "Configura primero la carpeta de acciones rápidas"
     },
     "contextMenu": {
-      "title": "Quick actions",
+      "title": "Open Quick Actions",
       "tabLimitReached": "Cannot open quick action: tab limit reached. Close a tab first."
     }
   },

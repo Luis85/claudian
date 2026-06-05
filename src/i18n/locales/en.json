@@ -258,7 +258,7 @@
       "folderMissing": "Configure Quick Actions folder first"
     },
     "contextMenu": {
-      "title": "Quick actions",
+      "title": "Open Quick Actions",
       "tabLimitReached": "Cannot open quick action: tab limit reached. Close a tab first."
     }
   },

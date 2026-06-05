@@ -594,7 +594,7 @@
       "folderMissing": "먼저 빠른 작업 폴더를 설정하세요"
     },
     "contextMenu": {
-      "title": "Quick actions",
+      "title": "Open Quick Actions",
       "tabLimitReached": "Cannot open quick action: tab limit reached. Close a tab first."
     }
   },

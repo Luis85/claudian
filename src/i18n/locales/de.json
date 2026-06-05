@@ -594,7 +594,7 @@
       "folderMissing": "Konfigurieren Sie zuerst den Quick-Actions-Ordner"
     },
     "contextMenu": {
-      "title": "Quick actions",
+      "title": "Open Quick Actions",
       "tabLimitReached": "Cannot open quick action: tab limit reached. Close a tab first."
     }
   },

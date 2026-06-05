@@ -134,9 +134,9 @@ describe('showWorkOrderContextMenu', () => {
       'tasks.board.contextMenu.openNote',
       'tasks.board.contextMenu.openConversation',
       '<sep>',
+      'quickActions.contextMenu.title',
       'Fav A',
       'Fav B',
-      'quickActions.contextMenu.title',
     ]);
     expect(menu.showAtMouseEvent).toHaveBeenCalledWith(mouseEvent);
     // Each item carries the expected icon — including the fav.icon override path
@@ -147,9 +147,9 @@ describe('showWorkOrderContextMenu', () => {
     };
     expect(icons(0)).toBe('file-text');
     expect(icons(1)).toBe('messages-square');
-    expect(icons(3)).toBe('rocket');
-    expect(icons(4)).toBe('star');
-    expect(icons(5)).toBe('zap');
+    expect(icons(3)).toBe('zap');
+    expect(icons(4)).toBe('rocket');
+    expect(icons(5)).toBe('star');
   });
 
   it('case 2: ready, no conv, no favs, WO resolvable → Open note, sep, picker', () => {
@@ -217,9 +217,9 @@ describe('showWorkOrderContextMenu', () => {
     expect(titles(MenuMock.instances[0])).toEqual([
       'tasks.board.contextMenu.openNote',
       '<sep>',
+      'quickActions.contextMenu.title',
       'Fav A',
       'Fav B',
-      'quickActions.contextMenu.title',
     ]);
   });
 
@@ -233,8 +233,8 @@ describe('showWorkOrderContextMenu', () => {
     expect(titles(MenuMock.instances[0])).toEqual([
       'tasks.board.contextMenu.openNote',
       '<sep>',
-      'Fav A',
       'quickActions.contextMenu.title',
+      'Fav A',
     ]);
   });
 
@@ -293,8 +293,8 @@ describe('showWorkOrderContextMenu', () => {
     showWorkOrderContextMenu(task, mouseEvent, deps);
 
     const menu = MenuMock.instances[0];
-    // index 0 = Open note, index 1 = separator, index 2 = Fav A
-    const favItem = menu.items[2] as { clickHandler?: () => void };
+    // index 0 = Open note, index 1 = separator, index 2 = picker, index 3 = Fav A
+    const favItem = menu.items[3] as { clickHandler?: () => void };
     favItem.clickHandler?.();
 
     expect(runQuickActionForFile).toHaveBeenCalledWith(plugin, woFile, fav);

@@ -594,7 +594,7 @@
       "folderMissing": "Configurez d'abord le dossier des actions rapides"
     },
     "contextMenu": {
-      "title": "Quick actions",
+      "title": "Open Quick Actions",
       "tabLimitReached": "Cannot open quick action: tab limit reached. Close a tab first."
     }
   },
