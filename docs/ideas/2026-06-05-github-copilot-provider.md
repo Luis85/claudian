@@ -257,13 +257,17 @@ provider lists in `core/`/`features/`; no `providerId === 'copilot'` branches.
 | Image attachments | ✅ | vision models |
 | Inline edit, `#` instruction, `$` skills | ✅ | aux-query pattern (cf. Cursor) |
 | Fork | ⚠️ gate initially | revisit once session model is confirmed |
-| Rewind | 🔒 gate | no native support |
+| Rewind | ⚠️ needs spike | native `/undo` / `/rewind` rollback exists (conversation + git snapshot) but is documented as interactive-TUI only; gate until a programmatic/SDK hook is confirmed |
 | Editor autocomplete (ghost text) | 🚫 non-goal | Language Server out of scope |
 
 A realistic `capabilities.ts` is therefore strong:
 `supportsNativeHistory: true`, `supportsMcpTools: true`, `supportsPlanMode: true`,
-`supportsImageAttachments: true`, `supportsRewind: false`,
-`supportsFork: false` (initially), `reasoningControl: 'none'`.
+`supportsImageAttachments: true`, `supportsRewind: false` (pending spike),
+`supportsFork: false` (initially), `reasoningControl: 'none'`. Rewind starts
+`false` not because Copilot lacks rollback — its native `/undo` / `/rewind`
+restore both the conversation and a git snapshot — but because those are
+documented as interactive-TUI commands only (no flag/SDK method per the
+changelog); flip it on once the spike confirms a programmatic rewind hook.
 
 ## Auth, subscription & licensing
 
@@ -394,6 +398,10 @@ captures in `.context/` before committing to a transport:
   ACP-direct becomes primary. (Resolve in spike item 1.)
 - Does Copilot's plan/ask mode map onto the shared post-plan approval card (cf.
   Opencode's managed plan mode), or need bespoke handling?
+- **Rewind:** is Copilot's native `/undo` / `/rewind` rollback (conversation + git
+  snapshot) drivable programmatically (SDK method / flag) to back
+  `ChatRuntime.rewind()`? The changelog documents it as interactive-TUI only, so
+  `supportsRewind` stays `false` until a programmatic hook is confirmed.
 - Exact `~/.copilot/session-state/...` path stability across CLI versions.
 - Model catalog: discover at runtime (the Copilot model set drifts) vs a curated
   default list; reuse the Cursor `--list-models`-style catalog pattern if Copilot
