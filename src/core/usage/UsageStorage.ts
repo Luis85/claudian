@@ -1,6 +1,5 @@
 import type { Logger } from '../logging/Logger';
 import type { VaultFileAdapter } from '../storage/VaultFileAdapter';
-
 import { parseKey } from './keys';
 import { USAGE_INDEX_SCHEMA_VERSION, type UsageIndex, type UsageRecord } from './types';
 

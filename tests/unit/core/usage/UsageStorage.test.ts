@@ -1,6 +1,6 @@
 import type { Logger } from '@/core/logging/Logger';
-import { UsageStorage } from '@/core/usage/UsageStorage';
 import { USAGE_INDEX_SCHEMA_VERSION, type UsageIndex } from '@/core/usage/types';
+import { UsageStorage } from '@/core/usage/UsageStorage';
 
 interface FakeAdapter {
   files: Map<string, string>;

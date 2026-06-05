@@ -1,8 +1,8 @@
 import { EventBus } from '@/core/events/EventBus';
 import type { Logger } from '@/core/logging/Logger';
 import type { UsageEventMap } from '@/core/usage/events';
-import { UsageTracker } from '@/core/usage/UsageTracker';
 import { USAGE_INDEX_SCHEMA_VERSION, type UsageIndex } from '@/core/usage/types';
+import { UsageTracker } from '@/core/usage/UsageTracker';
 
 function silentLogger(): Logger {
   const noop = () => undefined;

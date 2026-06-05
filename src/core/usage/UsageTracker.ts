@@ -1,15 +1,14 @@
 import type { EventBus } from '../events/EventBus';
 import type { Logger } from '../logging/Logger';
-
 import type { UsageEventMap } from './events';
 import { parseKey, serializeKey } from './keys';
-import type { UsageStorage } from './UsageStorage';
 import {
   USAGE_INDEX_SCHEMA_VERSION,
   type UsageIndex,
   type UsageKey,
   type UsageRecord,
 } from './types';
+import type { UsageStorage } from './UsageStorage';
 
 const DEBOUNCE_MS = 1_000;
 
