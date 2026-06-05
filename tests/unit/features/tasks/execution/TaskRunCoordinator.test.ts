@@ -1,5 +1,6 @@
 import { EventBus } from '../../../../../src/core/events/EventBus';
 import type { TaskEventMap } from '../../../../../src/features/tasks/events';
+import { ActiveRunRegistry } from '../../../../../src/features/tasks/execution/activeRunRegistry';
 import type {
   TaskExecutionSurface,
   TaskRunHandle,
@@ -216,9 +217,10 @@ describe('TaskRunCoordinator', () => {
     await first;
   });
 
-  it('rejects a run already held in a shared activeRunIds set (another view)', async () => {
-    const shared = new Set<string>(['task-1']); // another coordinator/view is running it
-    const { coordinator } = makeCoordinator(new FakeSurface(), { activeRunIds: shared });
+  it('rejects a run already held in a shared run registry (another view)', async () => {
+    const shared = new ActiveRunRegistry();
+    shared.reserve('task-1'); // another coordinator/view is running it
+    const { coordinator } = makeCoordinator(new FakeSurface(), { runRegistry: shared });
     await expect(coordinator.run(makeTask())).resolves.toEqual({
       ok: false,
       error: 'This work order is already running.',

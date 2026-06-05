@@ -1,6 +1,7 @@
 import type { TaskEventEmitter } from '../events';
 import type { TaskLedgerEntry, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
+import { ActiveRunRegistry } from './activeRunRegistry';
 import { RunSession, type RunSessionResult, type RunSessionWriteStatusOptions } from './RunSession';
 import type { TaskExecutionSurface } from './TaskExecutionSurface';
 
@@ -17,12 +18,13 @@ export interface TaskRunCoordinatorDeps {
   heartbeatIntervalMs?: number;
   staleThresholdMs?: number;
   /**
-   * Process-shared set of task ids with a live run. Reserved before the surface
-   * resolves and held for the whole run, so concurrent/cross-view runs of the
-   * same work order are rejected and crash recovery can tell a run is still live.
-   * Defaults to a coordinator-local set when omitted.
+   * Process-shared registry of live runs. Reserved before the surface resolves
+   * and held for the whole run, so concurrent/cross-view runs of the same work
+   * order are rejected, crash recovery can tell a run is still live, and the live
+   * session is reachable for reply/approve/reject/stop. Defaults to a
+   * coordinator-local registry when omitted.
    */
-  activeRunIds?: Set<string>;
+  runRegistry?: ActiveRunRegistry;
 }
 
 export type TaskRunResult = { ok: true; status: TaskStatus } | { ok: false; error: string };
@@ -33,19 +35,17 @@ export type TaskRunResult = { ok: true; status: TaskStatus } | { ok: false; erro
  * RunSession owns status writes, the live ledger, heartbeat, and pause/resume.
  */
 export class TaskRunCoordinator {
-  private readonly activeRuns = new Map<string, RunSession>();
-  // Task ids reserved from the guard check until the run ends (shared across
-  // views when injected), so concurrent/cross-view runs are rejected and crash
-  // recovery can tell a run is still live.
-  private readonly runIds: Set<string>;
+  // Shared (when injected) registry of live runs: powers the concurrency guard,
+  // crash recovery, and reply/approve/reject/stop routing across views.
+  private readonly registry: ActiveRunRegistry;
 
   constructor(private readonly deps: TaskRunCoordinatorDeps) {
-    this.runIds = deps.activeRunIds ?? new Set<string>();
+    this.registry = deps.runRegistry ?? new ActiveRunRegistry();
   }
 
   /** The live session for a task, if one is currently running (drives reply/approve/reject). */
   getActiveRun(taskId: string): RunSession | undefined {
-    return this.activeRuns.get(taskId);
+    return this.registry.getSession(taskId);
   }
 
   async run(task: TaskSpec): Promise<TaskRunResult> {
@@ -53,7 +53,7 @@ export class TaskRunCoordinator {
 
     if (!provider) return { ok: false, error: 'Work order is missing provider' };
     if (!model) return { ok: false, error: 'Work order is missing model' };
-    if (task.frontmatter.status === 'running' || this.activeRuns.has(id) || this.runIds.has(id)) {
+    if (task.frontmatter.status === 'running' || this.registry.has(id)) {
       return { ok: false, error: 'This work order is already running.' };
     }
     if (!this.deps.isProviderEnabled(provider)) {
@@ -65,7 +65,7 @@ export class TaskRunCoordinator {
 
     // Reserve the id before awaiting the surface (tab creation), then hold it for
     // the whole run, so a concurrent run of the same work order is rejected.
-    this.runIds.add(id);
+    this.registry.reserve(id);
     try {
       const prompt = (this.deps.renderPrompt ?? renderTaskPrompt)(task);
       const handle = await this.deps.executionSurface.startTaskRun(task, { prompt });
@@ -88,21 +88,17 @@ export class TaskRunCoordinator {
         heartbeatIntervalMs: this.deps.heartbeatIntervalMs,
         staleThresholdMs: this.deps.staleThresholdMs,
       });
-      this.activeRuns.set(id, session);
-      try {
-        const result: RunSessionResult = await session.run();
-        // Do not block on the chat turn's own terminal: when RunSession settles
-        // itself (e.g. a stale-heartbeat failure) the provider turn can still be
-        // pending, so awaiting here would keep the task in activeRuns and stall the
-        // board's finished event/refresh. Just swallow any late rejection.
-        void handle.terminal.catch(() => undefined);
-        if (result.ok) return { ok: true, status: result.status };
-        return { ok: false, error: result.error };
-      } finally {
-        this.activeRuns.delete(id);
-      }
+      this.registry.bind(id, session);
+      const result: RunSessionResult = await session.run();
+      // Do not block on the chat turn's own terminal: when RunSession settles
+      // itself (e.g. a stale-heartbeat failure) the provider turn can still be
+      // pending, so awaiting here would keep the run registered and stall the
+      // board's finished event/refresh. Just swallow any late rejection.
+      void handle.terminal.catch(() => undefined);
+      if (result.ok) return { ok: true, status: result.status };
+      return { ok: false, error: result.error };
     } finally {
-      this.runIds.delete(id);
+      this.registry.release(id);
     }
   }
 }

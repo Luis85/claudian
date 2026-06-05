@@ -13,7 +13,7 @@ import { archiveWorkOrder } from '../commands/taskCommands';
 import { getLaneForStatus, loadBoardConfig } from '../config/BoardConfigStore';
 import type { BoardConfig, ResolvedBoardLayout } from '../config/boardConfigTypes';
 import { resolveBoardLayout } from '../config/resolveBoardLayout';
-import { sharedActiveRunIds } from '../execution/activeRunRegistry';
+import { sharedRunRegistry } from '../execution/activeRunRegistry';
 import { selectNextReadyTask } from '../execution/selectNextReadyTask';
 import type { TaskExecutionSurface } from '../execution/TaskExecutionSurface';
 import { TaskRunCoordinator } from '../execution/TaskRunCoordinator';
@@ -216,9 +216,10 @@ export class AgentBoardView extends ItemView {
   }
 
   private stopTask(task: TaskSpec): void {
-    // Prefer cancelling the live RunSession (the execution surface does not own
-    // cancellation); fall back to the optional surface hook for other surfaces.
-    const session = this.coordinator?.getActiveRun(task.frontmatter.id);
+    // Prefer cancelling the live RunSession via the shared registry (works even
+    // for a run started by a previous view instance); fall back to the optional
+    // surface hook for other surfaces.
+    const session = sharedRunRegistry.getSession(task.frontmatter.id);
     if (session) {
       session.cancel();
     } else {
@@ -339,7 +340,7 @@ export class AgentBoardView extends ItemView {
     this.coordinator = new TaskRunCoordinator({
       executionSurface: this.executionSurface,
       events: this.plugin.events,
-      activeRunIds: sharedActiveRunIds,
+      runRegistry: sharedRunRegistry,
       now: () => new Date().toISOString(),
       isProviderEnabled: (providerId) =>
         ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId) &&
@@ -415,19 +416,20 @@ export class AgentBoardView extends ItemView {
     }
   }
 
-  // Reply/approve/reject route into the live RunSession. If no session is active
-  // (the run just ended or was orphaned), the next refresh removes the reply
-  // surface, so a stray click is a safe no-op.
+  // Reply/approve/reject route into the live RunSession via the shared registry,
+  // so a board reopened mid-run can still drive a run owned by a previous view.
+  // If no session is active (the run just ended), the next refresh removes the
+  // reply surface, so a stray click is a safe no-op.
   private async onReply(taskId: string, content: string): Promise<void> {
-    await this.coordinator?.getActiveRun(taskId)?.resume({ kind: 'reply', content });
+    await sharedRunRegistry.getSession(taskId)?.resume({ kind: 'reply', content });
   }
 
   private async onApprove(taskId: string): Promise<void> {
-    await this.coordinator?.getActiveRun(taskId)?.resume({ kind: 'approve' });
+    await sharedRunRegistry.getSession(taskId)?.resume({ kind: 'approve' });
   }
 
   private async onReject(taskId: string, reason: string): Promise<void> {
-    await this.coordinator?.getActiveRun(taskId)?.resume({ kind: 'reject', reason });
+    await sharedRunRegistry.getSession(taskId)?.resume({ kind: 'reject', reason });
   }
 
   /**
@@ -444,7 +446,7 @@ export class AgentBoardView extends ItemView {
       // Skip work orders a run is still driving anywhere in this process (e.g. a
       // previous view instance that was closed and reopened) — only genuinely
       // orphaned runs (no live session, e.g. after a plugin reload) are failed.
-      if (sharedActiveRunIds.has(task.frontmatter.id)) continue;
+      if (sharedRunRegistry.has(task.frontmatter.id)) continue;
       await this.applyNoteChange(task.path, (content) =>
         this.noteStore.appendLedger(content, { timestamp: now, status: 'failed', message: 'orphaned by plugin reload' }),
       );

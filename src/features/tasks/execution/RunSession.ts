@@ -79,6 +79,10 @@ export class RunSession {
   private finalContentBuffer = '';
   private attemptNumber = 0;
   private finishing = false;
+  // Tools can run for minutes with no intervening stream chunks (a long build or
+  // test). Track in-flight tools so the stale check doesn't mistake a working
+  // tool for a dead stream and cancel the turn.
+  private inFlightTools = 0;
 
   constructor(private readonly deps: RunSessionDeps) {
     this.ledger = new LedgerWriter({
@@ -115,7 +119,7 @@ export class RunSession {
     this.unsubscribe = this.deps.stream.subscribe({
       onText: (chunk) => this.handleText(chunk),
       onToolUse: (tool) => this.handleTool(tool.name, tool.primaryArg),
-      onToolResult: () => this.touch(),
+      onToolResult: () => this.handleToolResult(),
       onError: (error) => this.handleError(error),
       onEnd: (payload) => { void this.finish(payload); },
     });
@@ -247,9 +251,15 @@ export class RunSession {
   }
 
   private handleTool(name: string, primaryArg: string | null): void {
+    this.inFlightTools += 1;
     this.touch();
     const arg = primaryArg ? ` ${truncate(primaryArg, 60)}` : '';
     this.ledger.enqueue({ timestamp: this.deps.now(), status: 'running', message: `tool: ${name}${arg}` });
+  }
+
+  private handleToolResult(): void {
+    if (this.inFlightTools > 0) this.inFlightTools -= 1;
+    this.touch();
   }
 
   private handleError(error: string): void {
@@ -349,7 +359,10 @@ export class RunSession {
       this.deps.events.emit('task:heartbeat', { taskId: this.taskId, path: this.path, at });
     }, interval);
     this.staleTimer = window.setInterval(() => {
-      if (Date.now() - this.lastEvent > stale) {
+      // A tool in flight (e.g. a long build/test) is legitimate work, not a dead
+      // stream — don't cancel while one is running. A genuinely hung tool can
+      // still be stopped by the user.
+      if (this.inFlightTools === 0 && Date.now() - this.lastEvent > stale) {
         // The turn is stuck (no events for the whole window); cancel the provider
         // turn so the chat tab is freed and its terminal promise resolves.
         this.deps.stream.cancel();

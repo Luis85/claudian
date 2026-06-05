@@ -222,4 +222,25 @@ describe('RunSession', () => {
     expect(adapter.canceled).toBe(true);
     jest.useRealTimers();
   });
+
+  it('does not stale (cancel) while a long-running tool is in flight', async () => {
+    jest.useFakeTimers();
+    const { session, adapter, statuses, handoffs } = makeSession({ staleThresholdMs: 2000, heartbeatIntervalMs: 500 });
+    const terminal = session.run();
+    adapter.emitToolUse({ name: 'Bash', primaryArg: 'npm run build' });
+    // A long tool with no intervening chunks — well past the stale threshold.
+    jest.advanceTimersByTime(6000);
+    await Promise.resolve();
+    expect(statuses).not.toContain('failed');
+    expect(adapter.canceled).toBe(false);
+    expect(handoffs.length).toBe(0);
+    // The tool finishes and the run completes normally.
+    adapter.emitToolResult('Bash', true);
+    adapter.emitText(VALID_HANDOFF);
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    const result = await terminal;
+    expect(result.ok).toBe(true);
+    expect(statuses[statuses.length - 1]).toBe('review');
+    jest.useRealTimers();
+  });
 });
