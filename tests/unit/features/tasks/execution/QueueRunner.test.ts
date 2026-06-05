@@ -52,6 +52,7 @@ interface HarnessConfig {
   // Decides each run's outcome (default: success). May return a pending promise
   // the test resolves later to hold the slot.
   onRun?: (task: TaskSpec) => Promise<TaskRunResult> | TaskRunResult;
+  getFreeExecutionSlots?: () => number;
 }
 
 interface Harness {
@@ -108,6 +109,7 @@ function makeHarness(config: HarnessConfig = {}): Harness {
     haltAfterFailures: config.haltAfterFailures ?? 3,
     initialPaused: config.initialPaused ?? false,
     now: config.now ?? (() => Date.now()),
+    getFreeExecutionSlots: config.getFreeExecutionSlots,
   });
 
   return {
@@ -322,5 +324,58 @@ describe('QueueRunner — dispose', () => {
     h.runner.tick();
     await flush();
     expect(h.runCalls).toEqual([]);
+  });
+});
+
+describe('QueueRunner — execution slot gate', () => {
+  it('does not launch when no chat-tab slot is free', async () => {
+    const h = makeHarness({ getFreeExecutionSlots: () => 0 });
+    h.setTasks([makeTask('a')]);
+    h.runner.tick();
+    await flush();
+    expect(h.runCalls).toEqual([]);
+  });
+
+  it('launches at most the number of free execution slots in one drain', async () => {
+    let release!: () => void;
+    const hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const h = makeHarness({
+      cap: 5,
+      getFreeExecutionSlots: () => 2,
+      onRun: async () => {
+        await hold;
+        return { ok: true, status: 'review' };
+      },
+    });
+    h.setTasks([makeTask('a'), makeTask('b'), makeTask('c'), makeTask('d')]);
+    h.runner.tick();
+    await flush();
+    expect(h.runCalls).toEqual(['a', 'b']);
+    release();
+    await flush();
+  });
+});
+
+describe('QueueRunner — applyPaused (silent align)', () => {
+  it('changes paused state and blocks ticks without emitting', async () => {
+    const h = makeHarness();
+    h.setTasks([makeTask('a')]);
+    h.runner.applyPaused(true);
+    h.runner.tick();
+    await flush();
+    expect(h.runCalls).toEqual([]);
+    expect(h.runner.isPaused()).toBe(true);
+    expect(h.emissions.some((e) => e.name === 'task:queue-paused')).toBe(false);
+  });
+
+  it('resumes and drains without emitting a resumed event', async () => {
+    const h = makeHarness({ initialPaused: true });
+    h.setTasks([makeTask('a')]);
+    h.runner.applyPaused(false);
+    await flush();
+    expect(h.runCalls).toEqual(['a']);
+    expect(h.emissions.some((e) => e.name === 'task:queue-resumed')).toBe(false);
   });
 });

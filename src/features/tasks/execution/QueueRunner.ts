@@ -31,6 +31,10 @@ export interface QueueRunnerDeps {
   haltAfterFailures: number;
   initialPaused: boolean;
   now: () => number;
+  // Free execution (chat-tab) slots available right now. A run consumes a chat
+  // tab; when the panel is at maxTabs the runtime fails the run, so the queue
+  // must wait rather than launch and corrupt a ready card. Omitted ⇒ unbounded.
+  getFreeExecutionSlots?: () => number;
 }
 
 interface QueueRunnerState {
@@ -95,6 +99,8 @@ export class QueueRunner {
     this.state.lastSkipReasonByTask.delete(taskId);
   }
 
+  // User-initiated pause/resume: emits so other open boards can align via
+  // applyPaused (which does not re-emit, so there is no event echo).
   setPaused(next: boolean): void {
     this.state.paused = next;
     if (next) {
@@ -103,6 +109,14 @@ export class QueueRunner {
       this.deps.events.emit('task:queue-resumed');
       this.tick();
     }
+  }
+
+  // Align to a (persisted) pause state without emitting — used when a board
+  // reloads the global queue config after another board toggled it.
+  applyPaused(next: boolean): void {
+    if (this.state.paused === next) return;
+    this.state.paused = next;
+    if (!next) this.tick();
   }
 
   setHalted(reason: string): void {
@@ -150,7 +164,11 @@ export class QueueRunner {
     // and spin the loop. Cross-tick de-dup is handled by the coordinator's
     // in-flight set (eligibility.isActive) and by cards leaving Ready once run.
     const excluded = new Set<string>();
-    while (this.deps.slot.hasFreeSlot()) {
+    // Track free chat tabs locally and decrement per launch: a launched run's
+    // tab opens asynchronously, so re-reading the live count mid-drain would
+    // over-launch beyond the tabs actually available.
+    let freeExecutionSlots = this.deps.getFreeExecutionSlots?.() ?? Number.POSITIVE_INFINITY;
+    while (this.deps.slot.hasFreeSlot() && freeExecutionSlots > 0) {
       const pick = selectNextEligibleTask(this.deps.getTasks(), this.deps.eligibility, excluded);
       if (!pick) return;
       excluded.add(pick.task.frontmatter.id);
@@ -159,6 +177,7 @@ export class QueueRunner {
         continue;
       }
       this.launch(pick.task);
+      freeExecutionSlots -= 1;
     }
   }
 

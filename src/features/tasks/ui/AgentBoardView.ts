@@ -94,14 +94,21 @@ export class AgentBoardView extends ItemView {
     this.registerEvent(vault.on('modify', (file) => this.onVaultChange(file)));
     this.registerEvent(vault.on('delete', (file) => this.onVaultChange(file)));
     this.registerEvent(vault.on('rename', (file) => this.onVaultChange(file)));
-    this.register(this.plugin.events.on('chat:tabs-changed', () => this.refreshSlots()));
+    // A freed chat tab can unblock the queue (it gates launches on tab
+    // availability), so re-render the slot count and nudge the runner.
+    this.register(this.plugin.events.on('chat:tabs-changed', () => {
+      this.refreshSlots();
+      this.runner?.tick();
+    }));
     this.register(this.plugin.events.on('task:board-config-changed', () => void this.refresh()));
     // Any status change (manual or queue) can free a slot or change eligibility,
     // so nudge the runner. Queue events only need a repaint of the queue chrome.
     this.register(this.plugin.events.on('task:status-changed', () => this.runner?.tick()));
     this.register(this.plugin.events.on('task:run-finished', () => this.runner?.tick()));
-    this.register(this.plugin.events.on('task:queue-paused', () => this.render()));
-    this.register(this.plugin.events.on('task:queue-resumed', () => this.render()));
+    // Pause/resume is global; reload the persisted state so a toggle in another
+    // open board takes effect on this board's runner too, not just its chrome.
+    this.register(this.plugin.events.on('task:queue-paused', () => this.syncQueueFromConfig()));
+    this.register(this.plugin.events.on('task:queue-resumed', () => this.syncQueueFromConfig()));
     this.register(this.plugin.events.on('task:queue-halted', () => this.render()));
     this.register(this.plugin.events.on('task:queue-tick', () => this.render()));
     this.register(this.plugin.events.on('task:queue-skipped', () => this.render()));
@@ -422,12 +429,32 @@ export class AgentBoardView extends ItemView {
         haltAfterFailures: this.plugin.settings.agentBoardQueueHaltAfter,
         initialPaused: paused,
         now: () => Date.now(),
+        getFreeExecutionSlots: () => this.freeExecutionSlots(),
       });
     } else {
       this.runner.setHaltAfterFailures(this.plugin.settings.agentBoardQueueHaltAfter);
-      if (this.runner.isPaused() !== paused) this.runner.setPaused(paused);
+      // applyPaused (not setPaused) so syncing this board to the persisted state
+      // doesn't re-emit and bounce the pause event around every open board.
+      this.runner.applyPaused(paused);
     }
     this.runner.tick();
+  }
+
+  // Free chat tabs a queue run can open right now. A run that can't get a tab
+  // fails in the runtime and would mark a ready card failed, so the queue gates
+  // launches on this and waits for a tab to free up.
+  private freeExecutionSlots(): number {
+    const { used, max } = this.computeSlots();
+    return Math.max(0, max - used);
+  }
+
+  private syncQueueFromConfig(): void {
+    // Reload the persisted (global) queue config and align this board's runner
+    // without re-indexing the vault, then repaint the chrome.
+    const { config } = loadBoardConfig(asSettingsBag(this.plugin.settings));
+    this.config = config;
+    this.syncRunner();
+    this.render();
   }
 
   private async onToggleQueue(): Promise<void> {
