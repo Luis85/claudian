@@ -37,6 +37,7 @@ export const DEFAULT_LANE_TITLES: Record<TaskStatus, string> = {
   needs_approval: 'Needs approval',
   review: 'Review',
   needs_fix: 'Needs fix',
+  needs_handoff: 'Needs handoff',
   done: 'Done',
   failed: 'Failed',
   canceled: 'Canceled',
