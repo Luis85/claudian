@@ -113,4 +113,11 @@ export class TaskRunCoordinator {
       this.activeRuns.delete(id);
     }
   }
+
+  /** Whether a run for `taskId` is currently in flight. Used by the queue
+   * runner's eligibility predicate to skip cards already running (manual or
+   * auto), and to keep a single in-flight set across both run paths. */
+  isActive(taskId: string): boolean {
+    return this.activeRuns.has(taskId);
+  }
 }

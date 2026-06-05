@@ -184,3 +184,50 @@ describe('TaskRunCoordinator', () => {
     expect(surface.prompts[0]).toBe('INJECTED PROMPT');
   });
 });
+
+describe('TaskRunCoordinator.isActive', () => {
+  it('reports false for ids not in flight', () => {
+    const { coordinator } = makeCoordinator({
+      status: 'completed',
+      runId: 'run-1',
+      conversationId: 'conv-1',
+      sidepanelTabId: 'tab-1',
+      finalAssistantContent: VALID_HANDOFF,
+    });
+    expect(coordinator.isActive('task-1')).toBe(false);
+  });
+
+  it('reports true while a run is in flight and false after it settles', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const surface: TaskExecutionSurface = {
+      startTaskRun: async () => {
+        await gate;
+        return {
+          status: 'completed',
+          runId: 'r',
+          conversationId: 'c',
+          sidepanelTabId: 't',
+          finalAssistantContent: VALID_HANDOFF,
+        };
+      },
+    };
+    const coordinator = new TaskRunCoordinator({
+      executionSurface: surface,
+      now: () => '2026-06-05T00:00:00Z',
+      isProviderEnabled: () => true,
+      ownsModel: () => true,
+      writeTaskStatus: async () => {},
+      appendLedger: async () => {},
+      writeHandoff: async () => {},
+    });
+
+    const runPromise = coordinator.run(makeTask());
+    expect(coordinator.isActive('task-1')).toBe(true);
+    release();
+    await runPromise;
+    expect(coordinator.isActive('task-1')).toBe(false);
+  });
+});
