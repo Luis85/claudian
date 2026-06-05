@@ -31,6 +31,7 @@ export interface AgentBoardRenderCallbacks {
   onReopen(task: TaskSpec): void;
   onAddWorkOrder(): void;
   onRunNextReady(): void;
+  onContextMenu(task: TaskSpec, event: MouseEvent): void;
   onReply?(task: TaskSpec, content: string): void;
   onApprove?(task: TaskSpec): void;
   onReject?(task: TaskSpec, reason: string): void;
@@ -202,6 +203,10 @@ export class AgentBoardRenderer {
     }
 
     card.addEventListener('click', () => callbacks.onOpenDetail(task));
+    card.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      callbacks.onContextMenu(task, event);
+    });
 
     const actions = card.createDiv({ cls: 'claudian-agent-board-card-actions' });
     this.renderActionsFor(actions, task);

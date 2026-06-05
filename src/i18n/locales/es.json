@@ -594,7 +594,7 @@
       "folderMissing": "Configura primero la carpeta de acciones rápidas"
     },
     "contextMenu": {
-      "title": "Quick actions",
+      "title": "Open Quick Actions",
       "tabLimitReached": "Cannot open quick action: tab limit reached. Close a tab first."
     }
   },
@@ -696,7 +696,11 @@
       "runParseFailed": "Cannot run work order: {error}",
       "runFailed": "Work order run failed: {error}",
       "noReady": "No ready work orders to run.",
-      "laneSaveFailed": "Could not save lane change: {error}"
+      "laneSaveFailed": "Could not save lane change: {error}",
+      "contextMenu": {
+        "openNote": "Abrir nota",
+        "openConversation": "Abrir conversación"
+      }
     },
     "template": {
       "nameRequired": "Template name is required.",

@@ -594,7 +594,7 @@
       "folderMissing": "먼저 빠른 작업 폴더를 설정하세요"
     },
     "contextMenu": {
-      "title": "Quick actions",
+      "title": "Open Quick Actions",
       "tabLimitReached": "Cannot open quick action: tab limit reached. Close a tab first."
     }
   },
@@ -696,7 +696,11 @@
       "runParseFailed": "Cannot run work order: {error}",
       "runFailed": "Work order run failed: {error}",
       "noReady": "No ready work orders to run.",
-      "laneSaveFailed": "Could not save lane change: {error}"
+      "laneSaveFailed": "Could not save lane change: {error}",
+      "contextMenu": {
+        "openNote": "노트 열기",
+        "openConversation": "대화 열기"
+      }
     },
     "template": {
       "nameRequired": "Template name is required.",

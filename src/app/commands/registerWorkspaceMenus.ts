@@ -1,35 +1,15 @@
 import type { Editor, Menu, TAbstractFile } from 'obsidian';
 import { TFile, TFolder } from 'obsidian';
 
-import { openContextMenuQuickAction } from '@/features/quickActions/openContextMenuQuickAction';
-import { runQuickActionForFile } from '@/features/quickActions/runQuickActionForFile';
+import { appendQuickActionFavoritesAndPicker } from '@/features/quickActions/appendQuickActionMenu';
 import { createWorkOrderFromSelectionInteractive, createWorkOrderInteractive } from '@/features/tasks/ui/createWorkOrderInteractive';
-import { t } from '@/i18n/i18n';
 import type ClaudianPlugin from '@/main';
-
-function addFavoriteItems(
-  menu: Menu,
-  plugin: ClaudianPlugin,
-  file: TAbstractFile,
-): void {
-  const cache = plugin.quickActionFavoritesCache;
-  if (!cache) return;
-  for (const fav of cache.getFavorites()) {
-    menu.addItem((item) => {
-      item
-        .setTitle(fav.name)
-        .setIcon(fav.icon ?? 'star')
-        .onClick(() => {
-          void runQuickActionForFile(plugin, file, fav);
-        });
-    });
-  }
-}
 
 export function registerWorkspaceMenus(plugin: ClaudianPlugin): void {
   plugin.registerEvent(
     plugin.app.workspace.on('file-menu', (menu: Menu, file: TAbstractFile) => {
       if (file instanceof TFile) {
+        menu.addSeparator();
         menu.addItem((item) => {
           item
             .setTitle('Add file to Claudian chat')
@@ -46,16 +26,10 @@ export function registerWorkspaceMenus(plugin: ClaudianPlugin): void {
               void createWorkOrderInteractive(plugin, file);
             });
         });
-        addFavoriteItems(menu, plugin, file);
-        menu.addItem((item) => {
-          item
-            .setTitle(t('quickActions.contextMenu.title'))
-            .setIcon('zap')
-            .onClick(() => {
-              openContextMenuQuickAction(plugin, file);
-            });
-        });
+        appendQuickActionFavoritesAndPicker(menu, plugin, file);
+        menu.addSeparator();
       } else if (file instanceof TFolder) {
+        menu.addSeparator();
         menu.addItem((item) => {
           item
             .setTitle('Add folder to Claudian chat')
@@ -72,15 +46,8 @@ export function registerWorkspaceMenus(plugin: ClaudianPlugin): void {
               void createWorkOrderInteractive(plugin, file);
             });
         });
-        addFavoriteItems(menu, plugin, file);
-        menu.addItem((item) => {
-          item
-            .setTitle(t('quickActions.contextMenu.title'))
-            .setIcon('zap')
-            .onClick(() => {
-              openContextMenuQuickAction(plugin, file);
-            });
-        });
+        appendQuickActionFavoritesAndPicker(menu, plugin, file);
+        menu.addSeparator();
       }
     }),
   );

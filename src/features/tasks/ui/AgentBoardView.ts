@@ -23,6 +23,8 @@ import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
 import { TaskNoteStore } from '../storage/TaskNoteStore';
 import { type AgentBoardPauseState,AgentBoardRenderer } from './AgentBoardRenderer';
 import { createWorkOrderInteractive } from './createWorkOrderInteractive';
+import { showWorkOrderContextMenu } from './WorkOrderContextMenu';
+import { buildWorkOrderConversationBindings } from './workOrderConversationBindings';
 import { WorkOrderDetailModal, type WorkOrderFieldUpdate } from './WorkOrderDetailModal';
 
 export class AgentBoardView extends ItemView {
@@ -154,6 +156,11 @@ export class AgentBoardView extends ItemView {
         onReopen: (task) => void this.transitionTask(task, 'inbox', 'Reopened.'),
         onAddWorkOrder: () => void this.addWorkOrderFromBoard(),
         onRunNextReady: () => void this.runNextReady(),
+        onContextMenu: (task, event) => showWorkOrderContextMenu(task, event, {
+          plugin: this.plugin,
+          onOpenNote: (target) => void this.openTask(target),
+          ...buildWorkOrderConversationBindings(this.plugin),
+        }),
         onReply: (task, content) => void this.onReply(task.frontmatter.id, content),
         onApprove: (task) => void this.onApprove(task.frontmatter.id),
         onReject: (task, reason) => void this.onReject(task.frontmatter.id, reason),
@@ -180,14 +187,7 @@ export class AgentBoardView extends ItemView {
     const settings = asSettingsBag(this.plugin.settings);
     new WorkOrderDetailModal(this.plugin.app, task, {
       onOpenNote: (target) => void this.openTask(target),
-      onOpenConversation: (target) => {
-        const conversationId = target.frontmatter.conversation_id;
-        if (conversationId) void this.plugin.openConversation(conversationId);
-      },
-      canOpenConversation: (target) => {
-        const conversationId = target.frontmatter.conversation_id;
-        return Boolean(conversationId && this.plugin.getConversationSync(conversationId));
-      },
+      ...buildWorkOrderConversationBindings(this.plugin),
       onRun: (target) => void this.runTask(target),
       onStop: (target) => this.stopTask(target),
       onAccept: (target) => void this.transitionTask(target, 'done', 'Accepted from review.'),
