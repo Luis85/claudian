@@ -10,6 +10,7 @@ All modal sites go through `openQuickActionsModal(plugin, { onRun, file? })`:
 |------|------|------------------|--------|
 | File/folder context menu | `openContextMenuQuickAction.ts` | `runQuickAction` — resolves a tab and attaches the file as a pill | the right-clicked file |
 | Chat header toolbar | `ClaudianView.ts` `quickActionsBtn` | Sends prompt into the currently active tab | `null` |
+| WO card right-click | `src/features/tasks/ui/workOrderContextMenu.ts` | `runQuickActionForFile` (favorites) / `openContextMenuQuickAction` (picker) | the WO note `TFile` |
 
 `openQuickActionsModal` owns the shared wiring: `QuickActionStorage` (`plugin.storage.getAdapter()`) and the Skills-tab `onRunSkill` callback that routes to `runVaultSkill`. The Skills-tab `aggregator` parameter is read from `plugin.vaultSkillAggregator` (the plugin-lifetime singleton — see [Skills Tab Caching](#skills-tab-caching)); a transient fallback aggregator is built only when the modal is opened before `completeDeferredOnload()` has run. Adding a third modal entry point means calling the helper — never reassembling the wiring inline.
 

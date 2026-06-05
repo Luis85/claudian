@@ -153,6 +153,28 @@ The body of the modal renders **Objective** and **Acceptance criteria** (with th
 
 ---
 
+## Right-click menu
+
+Right-clicking a work-order card opens a context menu. Left-click still opens the detail modal — the right-click menu is an extra surface for quick navigation and quick actions against the WO note.
+
+The menu has up to four kinds of entry:
+
+| Entry | When it shows | What it does |
+|-------|---------------|--------------|
+| **Open note** | Always | Opens the work-order Markdown note in a new tab. |
+| **Open conversation** | When the WO has a `conversation_id` AND that conversation still exists | Switches to the linked chat tab (same gate as the detail modal). |
+| **Quick-action favorites** | Quick-action favorites exist AND the menu's quick-action block is shown (see below) | Runs the favorite against the WO note — identical to right-clicking a vault file. |
+| **Quick actions** | When the quick-action block is shown | Opens the Quick actions picker with the WO note attached as the target file. |
+
+The **quick-action block** (favorites + picker) is hidden when either of:
+
+- the work order is **running** — avoids surprise side-prompts on an active run, and
+- the WO note path no longer resolves to a real file — covers deleted, moved, or shadowed-by-folder cases.
+
+`needs_input` and `needs_approval` keep the quick-action block — only `running` hides it. See [[quick-actions]] for how to author favorites and what the picker does.
+
+---
+
 ## Running
 
 ### A single work order
