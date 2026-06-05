@@ -20,6 +20,9 @@ export interface TaskRunCoordinatorDeps {
   appendLedger: (task: TaskSpec, entry: TaskLedgerEntry) => Promise<void>;
   writeHandoff: (task: TaskSpec, markdown: string) => Promise<void>;
   renderPrompt?: (task: TaskSpec) => string;
+  /** Optional shared in-flight set so coordinators in different Agent Board
+   * panes observe the same active runs and never double-launch a card. */
+  activeRuns?: Set<string>;
 }
 
 export type TaskRunResult =
@@ -27,9 +30,11 @@ export type TaskRunResult =
   | { ok: false; error: string };
 
 export class TaskRunCoordinator {
-  private readonly activeRuns = new Set<string>();
+  private readonly activeRuns: Set<string>;
 
-  constructor(private readonly deps: TaskRunCoordinatorDeps) {}
+  constructor(private readonly deps: TaskRunCoordinatorDeps) {
+    this.activeRuns = deps.activeRuns ?? new Set<string>();
+  }
 
   async run(task: TaskSpec): Promise<TaskRunResult> {
     const { provider, model, id } = task.frontmatter;

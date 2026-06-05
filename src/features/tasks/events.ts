@@ -19,4 +19,6 @@ export interface TaskEventMap {
   'task:queue-halted': { reason: string };
   /** Emitted when the runner skips a card for an eligibility reason. */
   'task:queue-skipped': { taskId: string; reason: string };
+  /** Emitted when the shared queue cap rises, so backed-up runners drain now. */
+  'task:queue-cap-changed': void;
 }

@@ -97,6 +97,9 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   private envApply!: EnvironmentApplyService;
   /** Plugin-level concurrency gate shared by every Agent Board queue runner. */
   queueSlotTracker!: QueueSlotTracker;
+  /** Shared in-flight work-order ids, so coordinators in different Agent Board
+   * panes observe the same active runs and never double-launch the same card. */
+  readonly taskActiveRuns = new Set<string>();
   lastKnownTabManagerState: AppTabManagerState | null = null;
 
   async onload() {
@@ -454,9 +457,15 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     );
 
     await this.storage.saveClaudianSettings(this.settings);
-    // The queue cap is a global, shared across every board's runner, so syncing
-    // it here makes a settings change take effect live without a board refresh.
+    // The queue cap is global, shared across every board's runner, so syncing it
+    // here makes a settings change take effect live without a board refresh.
+    const prevCap = this.queueSlotTracker?.capacity();
     this.queueSlotTracker?.setCap(this.settings.agentBoardQueueCap);
+    if (prevCap !== undefined && (this.queueSlotTracker?.capacity() ?? prevCap) > prevCap) {
+      // Newly freed slots: wake every open board's runner so a backed-up queue
+      // drains immediately instead of waiting for an unrelated event.
+      this.events.emit('task:queue-cap-changed');
+    }
   }
 
   /** Updates and persists environment variables, restarting processes to apply changes. */

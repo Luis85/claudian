@@ -231,3 +231,50 @@ describe('TaskRunCoordinator.isActive', () => {
     expect(coordinator.isActive('task-1')).toBe(false);
   });
 });
+
+describe('TaskRunCoordinator — shared activeRuns', () => {
+  it('two coordinators sharing a set observe each others in-flight runs', async () => {
+    const shared = new Set<string>();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const surface: TaskExecutionSurface = {
+      startTaskRun: async () => {
+        await gate;
+        return {
+          status: 'completed',
+          runId: 'r',
+          conversationId: 'c',
+          sidepanelTabId: 't',
+          finalAssistantContent: VALID_HANDOFF,
+        };
+      },
+    };
+    const make = (): TaskRunCoordinator =>
+      new TaskRunCoordinator({
+        executionSurface: surface,
+        now: () => '2026-06-05T00:00:00Z',
+        isProviderEnabled: () => true,
+        ownsModel: () => true,
+        activeRuns: shared,
+        writeTaskStatus: async () => {},
+        appendLedger: async () => {},
+        writeHandoff: async () => {},
+      });
+    const a = make();
+    const b = make();
+
+    const runPromise = a.run(makeTask());
+    // The run started in `a` is visible to `b` through the shared set.
+    expect(b.isActive('task-1')).toBe(true);
+    // And `b` refuses to launch the same card while it is in flight elsewhere.
+    await expect(b.run(makeTask())).resolves.toEqual({
+      ok: false,
+      error: 'This work order is already running.',
+    });
+    release();
+    await runPromise;
+    expect(b.isActive('task-1')).toBe(false);
+  });
+});

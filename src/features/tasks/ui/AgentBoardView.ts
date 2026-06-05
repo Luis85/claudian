@@ -54,12 +54,14 @@ export class AgentBoardView extends ItemView {
       now: () => new Date().toISOString(),
       isProviderEnabled: (providerId) => this.isProviderEnabled(providerId),
       ownsModel: (providerId, model) => this.ownsModel(providerId, model),
+      // Shared across every open board so a manual run here is visible to other
+      // panes' queue runners and the same card never launches twice.
+      activeRuns: this.plugin.taskActiveRuns,
       writeTaskStatus: async (task, options) => {
         await this.applyNoteChange(task.path, (content) => this.noteStore.writeStatus(content, options));
         this.lastRunStatus.set(task.frontmatter.id, options.status);
-        // Keep the in-memory model in step so the queue runner does not re-pick a
-        // card whose terminal status has not yet been re-indexed from disk.
-        this.patchModelStatus(task.frontmatter.id, options.status);
+        // The status-changed subscription patches every open board's in-memory
+        // model, so stale-card re-picks are covered for this pane and others.
         this.plugin.events.emit('task:status-changed', {
           taskId: task.frontmatter.id,
           path: task.path,
@@ -101,10 +103,16 @@ export class AgentBoardView extends ItemView {
       this.runner?.tick();
     }));
     this.register(this.plugin.events.on('task:board-config-changed', () => void this.refresh()));
-    // Any status change (manual or queue) can free a slot or change eligibility,
-    // so nudge the runner. Queue events only need a repaint of the queue chrome.
-    this.register(this.plugin.events.on('task:status-changed', () => this.runner?.tick()));
+    // Any status change (manual or queue, this pane or another) can free a slot
+    // or change eligibility. Patch the in-memory model first so the runner does
+    // not re-pick a card whose terminal status hasn't been re-indexed yet, then
+    // nudge it. Queue events only need a repaint of the queue chrome.
+    this.register(this.plugin.events.on('task:status-changed', (payload) => {
+      this.patchModelStatus(payload.taskId, payload.status);
+      this.runner?.tick();
+    }));
     this.register(this.plugin.events.on('task:run-finished', () => this.runner?.tick()));
+    this.register(this.plugin.events.on('task:queue-cap-changed', () => this.runner?.tick()));
     // Pause/resume is global; reload the persisted state so a toggle in another
     // open board takes effect on this board's runner too, not just its chrome.
     this.register(this.plugin.events.on('task:queue-paused', () => this.syncQueueFromConfig()));
