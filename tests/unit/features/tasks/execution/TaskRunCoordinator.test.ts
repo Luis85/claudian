@@ -141,6 +141,16 @@ describe('TaskRunCoordinator', () => {
     expect(statuses).toEqual([]);
   });
 
+  it('fails promptly when the chat terminal fails without a stream end', async () => {
+    // Handle is created (runId set) but the turn settles failed and the adapter
+    // never emits a stream end — the terminal failure must drive the finish.
+    const surface = new FakeSurface({ terminal: { status: 'failed', finalAssistantContent: '', error: 'provider init failed' } });
+    const { coordinator, statuses } = makeCoordinator(surface);
+    const result = await coordinator.run(makeTask());
+    expect(result).toEqual({ ok: false, error: 'provider init failed' });
+    expect(statuses[statuses.length - 1]).toBe('failed');
+  });
+
   it('delegates a clean run to RunSession: running -> review with handoff', async () => {
     const { coordinator, statuses, handoffs, surface } = makeCoordinator();
     const p = coordinator.run(makeTask());

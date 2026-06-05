@@ -209,6 +209,34 @@ describe('RunSession', () => {
     expect(writes).toEqual(['running', 'review']);
   });
 
+  it('settles as failed (no hang) when the terminal handoff write throws', async () => {
+    const statuses: string[] = [];
+    const adapter = new SyntheticStreamAdapter();
+    const events = new EventBus<TaskEventMap>();
+    const session = new RunSession({
+      task: makeTask(),
+      runId: 'r',
+      conversationId: null,
+      sidepanelTabId: null,
+      stream: adapter,
+      events,
+      now: () => '2026-06-04T09:00:00Z',
+      writeStatus: async (_t, options) => { statuses.push(options.status); },
+      flushLedger: async () => {},
+      writeHandoff: async () => { throw new Error('missing markers'); },
+      heartbeatIntervalMs: 100000,
+      staleThresholdMs: 100000,
+      ledgerIntervalMs: 100000,
+      ledgerMilestone: 999,
+    });
+    const terminal = session.run();
+    adapter.emitText(VALID_HANDOFF);
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    const result = await terminal;
+    expect(result.ok).toBe(false);
+    expect(statuses[statuses.length - 1]).toBe('failed');
+  });
+
   it('does not let a slow initial running write revert a fast reject', async () => {
     const writes: string[] = [];
     let releaseRunning!: () => void;

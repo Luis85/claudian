@@ -178,6 +178,15 @@ export class RunSession {
     void this.finish({ status: 'canceled', finalAssistantContent: this.finalContentBuffer });
   }
 
+  /**
+   * Fail the run from outside the stream (e.g. the chat turn settled with an
+   * error but emitted no stream end, so onEnd never fired). No-op once finishing.
+   */
+  fail(error: string): void {
+    if (this.finishing) return;
+    void this.finish({ status: 'failed', finalAssistantContent: this.finalContentBuffer, error });
+  }
+
   private handleText(chunk: string): void {
     this.touch();
     this.finalContentBuffer += chunk;
@@ -284,12 +293,27 @@ export class RunSession {
       return;
     }
     this.finishing = true;
-    // Stop heartbeats/stream first, then let every in-flight write settle before
-    // the terminal write: the pause write+flush (so the final ledger flush is not
-    // skipped by the writer's in-progress guard, e.g. cancel during a pause) and
-    // the fire-and-forget running/heartbeat writes (so a slow start write cannot
-    // land after the terminal write and revert the run to running).
     this.stopLiveWiring();
+    try {
+      await this.finalizeRun(payload);
+    } catch (error) {
+      // A terminal note write failed (e.g. a hand-edited note missing generated
+      // markers). Settle as failed so the run doesn't hang and the shared
+      // registry releases the task.
+      await this.settleAfterFailure(error);
+    }
+  }
+
+  private async finalizeRun(payload: {
+    status: 'completed' | 'failed' | 'canceled';
+    finalAssistantContent: string;
+    error?: string;
+  }): Promise<void> {
+    // Let every in-flight write settle before the terminal write: the pause
+    // write+flush (so the final ledger flush is not skipped by the writer's
+    // in-progress guard, e.g. cancel during a pause) and the fire-and-forget
+    // running/heartbeat writes (so a slow start write cannot land after the
+    // terminal write and revert the run to running).
     await this.pauseApplied;
     if (this.pendingStatusWrites.size > 0) {
       await Promise.all([...this.pendingStatusWrites]);
@@ -339,6 +363,20 @@ export class RunSession {
     this.ledger.enqueue({ timestamp: ts, status: 'failed', message: 'Empty response' });
     this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'failed' });
     await this.settle({ ok: false, error: 'Empty response', status: 'failed' });
+  }
+
+  /** Last-resort settle when a terminal write itself fails; marks failed best-effort and never hangs. */
+  private async settleAfterFailure(error: unknown): Promise<void> {
+    if (this.resolveTerminal === null) return;
+    const message = error instanceof Error ? error.message : String(error);
+    try {
+      await this.deps.writeStatus(this.deps.task, { status: 'failed', timestamp: this.deps.now() });
+      this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'failed' });
+    } catch {
+      // The note write itself is failing; still settle so the run does not hang.
+    }
+    this.ledger.enqueue({ timestamp: this.deps.now(), status: 'failed', message: `run finalize failed: ${message}` });
+    await this.settle({ ok: false, error: message, status: 'failed' });
   }
 
   /** Flushes any remaining ledger lines, disposes the writer, then resolves the terminal exactly once. */

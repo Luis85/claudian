@@ -89,12 +89,18 @@ export class TaskRunCoordinator {
         staleThresholdMs: this.deps.staleThresholdMs,
       });
       this.registry.bind(id, session);
+      // Drive the session to a prompt finish if the chat turn settles with a
+      // failure/cancel but emits no stream end (e.g. provider init failed), so it
+      // doesn't wait for onEnd until the stale timer. Never block on the terminal:
+      // these calls are no-ops once the session is finishing (e.g. after a normal
+      // stream end or a stale-heartbeat settle).
+      void handle.terminal
+        .then((terminal) => {
+          if (terminal.status === 'failed') session.fail(terminal.error ?? 'Chat run failed.');
+          else if (terminal.status === 'canceled') session.cancel('Chat run canceled.');
+        })
+        .catch((error) => session.fail(error instanceof Error ? error.message : String(error)));
       const result: RunSessionResult = await session.run();
-      // Do not block on the chat turn's own terminal: when RunSession settles
-      // itself (e.g. a stale-heartbeat failure) the provider turn can still be
-      // pending, so awaiting here would keep the run registered and stall the
-      // board's finished event/refresh. Just swallow any late rejection.
-      void handle.terminal.catch(() => undefined);
       if (result.ok) return { ok: true, status: result.status };
       return { ok: false, error: result.error };
     } finally {
