@@ -1,7 +1,7 @@
 ---
 title: Work-order execution — visibility + protocols (P0+P1) Implementation Plan
 date: 2026-06-04
-status: open
+status: ready-for-review
 parent: "[[2026-06-04-work-order-execution-design]]"
 ---
 

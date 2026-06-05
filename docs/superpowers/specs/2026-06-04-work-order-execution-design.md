@@ -1,7 +1,7 @@
 ---
 title: Work-order execution — visibility + agent protocols (P0+P1)
 date: 2026-06-04
-status: draft
+status: ready-for-review
 scope: agent-board-execution
 parent: "[[agent-board-mvp]]"
 related:
@@ -19,6 +19,14 @@ The Agent Board executes work orders today as a binary state flip: `ready → ru
 This spec closes that gap. It (P0) makes the run state observable on the card without opening the tab, and (P1) activates the dormant `needs_input` / `needs_approval` states by giving the agent inline protocol blocks the runtime watches for in the stream.
 
 Scope intentionally excludes scheduling (queues, dependencies), DoR/DoD validators, indexing performance, and provider-native background runs. Those are tracked elsewhere and warrant their own specs.
+
+## Implementation status
+
+Implemented per [[2026-06-04-work-order-execution]] (PR #35). All automated gates pass: `typecheck`, `lint`, the full unit + integration suites, and `build`.
+
+One deliberate deviation from the plan, confirmed with the maintainer: a **single neutral stream adapter** taps the shared `StreamController` (every provider runtime already normalizes its raw stream to `StreamChunk` before the feature layer sees it), rather than four per-provider adapters. The `RunSession` contract and the rest of the design are unchanged.
+
+**Pending before `shipped`:** per-provider manual smoke in a real vault (Claude, Codex, Opencode, Cursor) — it cannot run headlessly — then merge.
 
 ## Goals
 
