@@ -175,7 +175,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
     // Registration order = left-to-right render order inside .claudian-text-actions
     // (which itself sits left of the copy button). Visual order under an assistant
-    // response: thumbs-up, thumbs-down, work-order, copy.
+    // response: thumbs-up, thumbs-down, work-order, copy. The capture action below
+    // targets user messages only (gated by isCaptureEligible).
     this.registerChatMessageAction({
       id: 'thumbs-up-feedback',
       label: t('chat.feedback.thumbsUp.label'),
