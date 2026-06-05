@@ -22,8 +22,8 @@ source: deep-research 2026-06-05 (six-angle web survey + provider-seam inventory
 ## Executive summary
 
 GitHub Copilot can be added to Claudian as a first-class chat provider, and the
-path is now clean. The decisive enabler is the **official, GA, MIT-licensed
-GitHub Copilot CLI** (`copilot`) and its embeddable sibling
+path is now clean. The decisive enabler is the **official, GA GitHub Copilot
+CLI** (`copilot`) and its embeddable sibling
 [`@github/copilot-sdk`](https://github.com/github/copilot-sdk): an agentic
 runtime with tool use, MCP, custom agents, streaming, structured output, and
 native session resume. Critically, the CLI **speaks the Agent Client Protocol**
@@ -139,7 +139,9 @@ which **supersede the lagging programmatic-reference docs page**:
   same agent runtime (planning, tool/MCP invocation, file edits, streaming,
   multi-turn). It manages a CLI process over JSON-RPC under the hood.
 - **CLI is GA & agentic.** Copilot CLI went GA 2026-02-25 with tool use, built-in
-  GitHub MCP + custom MCP, and custom agents (`--agent`).
+  GitHub MCP + custom MCP, and custom agents (`--agent`). It ships under a
+  **custom GitHub Copilot CLI License** (not MIT) that forbids modifying or
+  redistributing it standalone — only `@github/copilot-sdk` is MIT.
 
 ## Recommendation & proposed architecture
 
@@ -214,7 +216,7 @@ A realistic `capabilities.ts` is therefore strong:
 `supportsImageAttachments: true`, `supportsRewind: false`,
 `supportsFork: false` (initially), `reasoningControl: 'none'`.
 
-## Auth & subscription model
+## Auth, subscription & licensing
 
 - **No OAuth to implement.** Auth is CLI-owned: the user runs `copilot login`
   (device flow); the CLI stores the token (system keychain / `~/.copilot/`).
@@ -224,6 +226,13 @@ A realistic `capabilities.ts` is therefore strong:
 - **User's own entitlement required.** Every path requires the end user's own
   active Copilot subscription (the free tier counts; BYOK with another provider's
   key is also possible). The plugin grants no access of its own.
+- **Licensing / packaging constraint.** The `copilot` CLI ships under a **custom
+  GitHub Copilot CLI License** that prohibits modifying it or redistributing it on
+  a standalone basis; only `@github/copilot-sdk` is MIT. Claudian must therefore
+  **resolve a user-installed `copilot` binary** (`npm i -g @github/copilot` or
+  Homebrew) and never bundle, fork, or patch it — consistent with how the
+  Cursor/Codex/Opencode providers resolve user-installed CLIs, and a further
+  reason to avoid depending on `@github/copilot-sdk` (which bundles the CLI).
 
 ## ToS / risk
 
