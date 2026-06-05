@@ -29,7 +29,6 @@
 @import "./toolbar/permission-toggle.css";
 @import "./toolbar/plan-mode-toggle.css";
 @import "./toolbar/orchestrator-toggle.css";
-@import "./toolbar/quick-actions-toggle.css";
 @import "./toolbar/service-tier-toggle.css";
 @import "./toolbar/external-context.css";
 @import "./toolbar/mcp-selector.css";

@@ -118,7 +118,6 @@ export function createTab(options: TabCreateOptions): TabData {
       permissionToggle: null,
       planModeToggle: null,
       orchestratorToggle: null,
-      quickActionsToggle: null,
       serviceTierToggle: null,
       slashCommandDropdown: null,
       instructionModeManager: null,

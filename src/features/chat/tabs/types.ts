@@ -26,7 +26,6 @@ import type {
   OrchestratorToggle,
   PermissionToggle,
   PlanModeToggle,
-  QuickActionsToggle,
   ServiceTierToggle,
   ThinkingBudgetSelector,
 } from '../ui/InputToolbar';
@@ -133,7 +132,6 @@ export interface TabUIComponents {
   permissionToggle: PermissionToggle | null;
   planModeToggle: PlanModeToggle | null;
   orchestratorToggle: OrchestratorToggle | null;
-  quickActionsToggle: QuickActionsToggle | null;
   serviceTierToggle: ServiceTierToggle | null;
   slashCommandDropdown: SlashCommandDropdown | null;
   instructionModeManager: InstructionModeManager | null;

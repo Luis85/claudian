@@ -59,7 +59,6 @@ export interface ToolbarCallbacks {
   getOrchestratorMode?: () => boolean;
   onOrchestratorOpen?: () => void;
   getOrchestratorEnabled?: () => boolean;
-  onQuickActionsOpen?: () => void;
   getSettings: () => ToolbarSettings;
   getEnvironmentVariables?: () => string;
   getUIConfig: () => ProviderChatUIConfig;
@@ -587,37 +586,6 @@ export class OrchestratorToggle {
       'title',
       isActive ? t('chat.orchestrator.titleActive') : t('chat.orchestrator.titleOpen'),
     );
-  }
-}
-
-export class QuickActionsToggle {
-  private container: HTMLElement;
-  private buttonEl: HTMLElement | null = null;
-  private callbacks: ToolbarCallbacks;
-
-  constructor(parentEl: HTMLElement, callbacks: ToolbarCallbacks) {
-    this.callbacks = callbacks;
-    this.container = parentEl.createDiv({ cls: 'claudian-quick-actions-toggle' });
-    this.render();
-  }
-
-  private render(): void {
-    this.container.empty();
-    this.buttonEl = this.container.createDiv({ cls: 'claudian-quick-actions-button' });
-    const iconEl = this.buttonEl.createSpan({ cls: 'claudian-quick-actions-icon' });
-    setIcon(iconEl, 'zap');
-    this.buttonEl.setAttr('aria-label', t('quickActions.toolbar.ariaLabel'));
-    this.buttonEl.setAttr('title', t('quickActions.toolbar.title'));
-    const canShow = Boolean(this.callbacks.onQuickActionsOpen);
-    this.container.toggleClass('claudian-hidden', !canShow);
-    this.buttonEl.addEventListener('click', () => {
-      this.callbacks.onQuickActionsOpen?.();
-    });
-  }
-
-  updateDisplay(): void {
-    const canShow = Boolean(this.callbacks.onQuickActionsOpen);
-    this.container.toggleClass('claudian-hidden', !canShow);
   }
 }
 
@@ -1380,7 +1348,6 @@ export function createInputToolbar(
   permissionToggle: PermissionToggle;
   planModeToggle: PlanModeToggle;
   orchestratorToggle: OrchestratorToggle;
-  quickActionsToggle: QuickActionsToggle;
   serviceTierToggle: ServiceTierToggle;
 } {
   const modelSelector = new ModelSelector(parentEl, callbacks);
@@ -1392,15 +1359,6 @@ export function createInputToolbar(
   const permissionToggle = new PermissionToggle(parentEl, callbacks);
   const planModeToggle = new PlanModeToggle(parentEl, callbacks);
   const orchestratorToggle = new OrchestratorToggle(parentEl, callbacks);
-  // Quick-actions button is rendered above the textarea in `ClaudianView`,
-  // not inside the input toolbar. The toggle class stays around because
-  // `tab.ui.quickActionsToggle?.updateDisplay()` is still called from
-  // provider-availability hooks; resolve to a no-op stub at the same
-  // shape as the real widget.
-  const quickActionsToggle: QuickActionsToggle = new QuickActionsToggle(
-    parentEl.ownerDocument.createElement('div'),
-    callbacks,
-  );
   const modeSelector = new ModeSelector(parentEl, callbacks);
 
   return {
@@ -1414,6 +1372,5 @@ export function createInputToolbar(
     permissionToggle,
     planModeToggle,
     orchestratorToggle,
-    quickActionsToggle,
   };
 }

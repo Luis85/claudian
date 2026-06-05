@@ -11,7 +11,6 @@ import type ClaudianPlugin from '../../../main';
 import { SlashCommandDropdown } from '../../../shared/components/SlashCommandDropdown';
 import { getEnhancedPath } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
-import { openQuickActionsModal } from '../../quickActions/openQuickActionsModal';
 import { resolveModelContextWindow } from '../../settings/customModels/resolveModelContextWindow';
 import { ChatDropController } from '../controllers/ChatDropController';
 import type { DragManagerLike } from '../controllers/dropPayloadDetection';
@@ -400,13 +399,6 @@ function initializeInputToolbar(
         },
       }).open();
     },
-    onQuickActionsOpen: () => {
-      openQuickActionsModal(plugin, {
-        onRun: (action) => {
-          void tab.controllers.inputController?.sendMessage({ content: action.prompt });
-        },
-      });
-    },
   });
 
   tab.ui.modelSelector = toolbarComponents.modelSelector;
@@ -418,7 +410,6 @@ function initializeInputToolbar(
   tab.ui.permissionToggle = toolbarComponents.permissionToggle;
   tab.ui.planModeToggle = toolbarComponents.planModeToggle;
   tab.ui.orchestratorToggle = toolbarComponents.orchestratorToggle;
-  tab.ui.quickActionsToggle = toolbarComponents.quickActionsToggle;
   tab.ui.serviceTierToggle = toolbarComponents.serviceTierToggle;
 
   tab.ui.mcpServerSelector.setMcpManager(getProviderMcpManager(getTabProviderId(tab, plugin)));

@@ -170,7 +170,6 @@ export function refreshTabProviderUI(tab: TabData, plugin: ClaudianPlugin): void
   tab.ui.permissionToggle?.updateDisplay();
   tab.ui.planModeToggle?.updateDisplay();
   tab.ui.orchestratorToggle?.updateDisplay();
-  tab.ui.quickActionsToggle?.updateDisplay();
   tab.ui.serviceTierToggle?.updateDisplay();
   tab.dom.inputWrapper.toggleClass(
     'claudian-input-plan-mode',
