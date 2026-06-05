@@ -51,6 +51,9 @@ import {
 } from './core/types';
 import type { PluginContext } from './core/types/PluginContext';
 import type { EnvironmentScope, SecretEnvVarRef } from './core/types/settings';
+import type { UsageEventMap } from './core/usage/events';
+import { UsageStorage } from './core/usage/UsageStorage';
+import { UsageTracker } from './core/usage/UsageTracker';
 import { ClaudianView } from './features/chat/ClaudianView';
 import { sendFeedbackPrompt } from './features/chat/feedback/sendFeedbackPrompt';
 import { isClaudianView } from './features/chat/isClaudianView';
@@ -91,6 +94,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   public quickActionStorage!: QuickActionStorage;
   public quickActionFavoritesCache: QuickActionFavoritesCache | null = null;
   public vaultSkillAggregator: VaultSkillAggregator | null = null;
+  public usageTracker: UsageTracker | null = null;
   private lifecycle!: PluginLifecycle;
   private viewActivator!: PluginViewActivator;
   private envApply!: EnvironmentApplyService;
@@ -254,6 +258,14 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.logger.scope('onload').error('provider workspace init failed', error);
       return;
     }
+    const usageStorage = new UsageStorage(new VaultFileAdapter(this.app), this.logger);
+    this.usageTracker = new UsageTracker(
+      this.events as unknown as EventBus<UsageEventMap>,
+      usageStorage,
+      () => Date.now(),
+      this.logger,
+    );
+    await this.usageTracker.hydrate();
     // Skills tab cache: hydrate persisted index, then pre-warm in background.
     this.vaultSkillAggregator = new VaultSkillAggregator(
       () => buildProviderRecords(this),
@@ -279,6 +291,11 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   }
 
   onunload(): void {
+    if (this.usageTracker) {
+      void this.usageTracker.flush();
+      this.usageTracker.dispose();
+      this.usageTracker = null;
+    }
     this.vaultSkillAggregator?.dispose();
     this.vaultSkillAggregator = null;
     this.quickActionFavoritesCache?.dispose();
