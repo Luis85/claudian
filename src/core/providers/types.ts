@@ -15,6 +15,7 @@ import type {
   SlashCommand,
   SubagentInfo,
   ToolCallInfo,
+  UsageInfo,
 } from '../types';
 import type { PluginContext } from '../types/PluginContext';
 import type { ProviderId } from '../types/provider';
@@ -300,6 +301,18 @@ export interface ProviderModeSelectorConfig {
   value: string;
 }
 
+/** Per-model pricing descriptor. Tokens are billed per 1,000,000. */
+export interface ModelPricing {
+  /** USD per 1,000,000 input tokens. */
+  inputPer1M: number;
+  /** USD per 1,000,000 output tokens. */
+  outputPer1M: number;
+  /** USD per 1,000,000 cache-read tokens. Defaults to inputPer1M when omitted. */
+  cacheReadPer1M?: number;
+  /** USD per 1,000,000 cache-creation tokens. Defaults to inputPer1M when omitted. */
+  cacheWritePer1M?: number;
+}
+
 /** Static UI configuration owned by the provider (model list, reasoning, context window). */
 export interface ProviderChatUIConfig {
   /** Model options for the selector dropdown. Provider extracts what it needs from the settings bag. */
@@ -319,6 +332,9 @@ export interface ProviderChatUIConfig {
 
   /** Context window size in tokens. */
   getContextWindowSize(model: string, customLimits?: Record<string, number>): number;
+
+  /** Optional per-model pricing seam. Returns null when pricing is not known. */
+  getModelPricing?(modelId: string): ModelPricing | null;
 
   /** Whether this is a built-in (default) model vs custom/env model. */
   isDefaultModel(model: string): boolean;
@@ -535,6 +551,14 @@ export interface ProviderConversationHistoryService<
 
   /** Provider-owned persisted metadata added to `Conversation.providerState` before session save. */
   buildPersistedProviderState?(conversation: Conversation): TPersistedState | undefined;
+
+  /**
+   * Optional: recover the last `UsageInfo` from the provider's persisted transcript.
+   * Called by ConversationStore after message hydration when `conversation.usage` is
+   * unset. Implementations must return null on parse failure (never throw); the
+   * hydration site treats null as "no historical usage available."
+   */
+  extractLastUsage?(conversation: Conversation, ctx: HydrationContext): Promise<UsageInfo | null>;
 }
 
 export type ProviderTaskTerminalStatus = Extract<ToolCallInfo['status'], 'completed' | 'error'>;

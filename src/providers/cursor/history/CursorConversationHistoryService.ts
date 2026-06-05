@@ -9,12 +9,15 @@ import type {
   HistoryLoadOutcome,
   HydrationContext,
 } from '../../../core/providers/types';
-import type { Conversation } from '../../../core/types';
-import { type CursorProviderState,getCursorState, resolveCursorSessionId } from '../types';
+import { buildUsageInfo } from '../../../core/providers/usage';
+import type { Conversation, UsageInfo } from '../../../core/types';
+import { extractCursorUsage } from '../runtime/cursorStreamMapper';
+import { type CursorProviderState, getCursorState, resolveCursorSessionId } from '../types';
 import {
   cursorWorkspaceHash,
   cursorWorkspaceHashLegacy,
   loadCursorChatMessagesFromStoreResult,
+  loadCursorRawRecords,
   resolveCursorStoreDbPath,
 } from './cursorHistoryStore';
 
@@ -113,4 +116,93 @@ export class CursorConversationHistoryService extends BaseHistoryService<CursorP
     const entries = Object.entries(merged).filter(([, value]) => value !== undefined);
     return entries.length > 0 ? Object.fromEntries(entries) as CursorProviderState : undefined;
   }
+
+  /**
+   * Recovers the most recent `UsageInfo` from Cursor's per-session SQLite
+   * `blobs` store. The cursor-agent CLI persists raw stream-json events as
+   * JSON blobs; we walk them back to front to find the latest `usage` event
+   * (or assistant blob carrying a `usage` field) and the latest `system`
+   * event that stamped the model id.
+   */
+  async extractLastUsage(
+    conversation: Conversation,
+    ctx: HydrationContext,
+  ): Promise<UsageInfo | null> {
+    try {
+      const sessionId = resolveCursorSessionId(conversation);
+      if (!sessionId || !ctx.vaultPath) return null;
+      const dbPath = resolveCursorStoreDbPath(ctx.vaultPath, sessionId);
+      if (!dbPath) return null;
+
+      const records = loadCursorRawRecords(dbPath);
+      if (!records || records.length === 0) return null;
+
+      return extractLastUsageFromCursorRecords(records);
+    } catch {
+      return null;
+    }
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function readModel(rec: Record<string, unknown>): string | null {
+  const direct = rec.model;
+  if (typeof direct === 'string' && direct.trim().length > 0) return direct.trim();
+  // Some Cursor records nest model under message.metadata or system payload.
+  if (isRecord(rec.message)) {
+    const nested = (rec.message as Record<string, unknown>).model;
+    if (typeof nested === 'string' && nested.trim().length > 0) return nested.trim();
+  }
+  return null;
+}
+
+function hasUsageField(rec: Record<string, unknown>): boolean {
+  if (rec.type === 'usage') return true;
+  if (isRecord(rec.usage)) return true;
+  if (isRecord(rec.message) && isRecord((rec.message as Record<string, unknown>).usage)) {
+    return true;
+  }
+  return false;
+}
+
+export function extractLastUsageFromCursorRecords(
+  records: readonly Record<string, unknown>[],
+): UsageInfo | null {
+  // Walk back to front: find latest usage-bearing record AND latest model stamp.
+  let model: string | null = null;
+  let lastUsageRecord: Record<string, unknown> | null = null;
+
+  for (let i = records.length - 1; i >= 0; i--) {
+    const rec = records[i];
+    if (!isRecord(rec)) continue;
+
+    if (!model) {
+      const candidate = readModel(rec);
+      if (candidate) model = candidate;
+    }
+    if (!lastUsageRecord && hasUsageField(rec)) {
+      lastUsageRecord = rec;
+    }
+    if (model && lastUsageRecord) break;
+  }
+
+  if (!lastUsageRecord || !model) return null;
+
+  const usage = extractCursorUsage(lastUsageRecord, model);
+  if (usage.contextTokens === 0 && usage.inputTokens === 0 && (usage.outputTokens ?? 0) === 0) {
+    return null;
+  }
+
+  return buildUsageInfo({
+    model,
+    inputTokens: usage.inputTokens,
+    outputTokens: usage.outputTokens,
+    cacheReadInputTokens: usage.cacheReadInputTokens,
+    contextTokens: usage.contextTokens,
+    contextWindow: usage.contextWindow,
+    contextWindowIsAuthoritative: usage.contextWindowIsAuthoritative,
+  });
 }

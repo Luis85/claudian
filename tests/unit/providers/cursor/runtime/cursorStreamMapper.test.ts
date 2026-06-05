@@ -1,5 +1,4 @@
 import {
-  cursorContextWindowForModel,
   CursorNdjsonStreamReducer,
   extractCursorUsage,
 } from '@/providers/cursor/runtime/cursorStreamMapper';
@@ -166,6 +165,7 @@ describe('CursorNdjsonStreamReducer', () => {
 
   it('ends with usage and done on result success', () => {
     const r = new CursorNdjsonStreamReducer();
+    r.reduceLine(JSON.stringify({ type: 'system', model: 'claude-sonnet-4', session_id: 's9' }));
     const out = r.reduceLine(JSON.stringify({
       type: 'result',
       subtype: 'success',
@@ -173,6 +173,17 @@ describe('CursorNdjsonStreamReducer', () => {
       session_id: 's9',
     }));
     expect(out.chunks.map(c => c.type)).toEqual(['usage', 'done']);
+  });
+
+  it('ends with only done on result success when no system event seen', () => {
+    const r = new CursorNdjsonStreamReducer();
+    const out = r.reduceLine(JSON.stringify({
+      type: 'result',
+      subtype: 'success',
+      is_error: false,
+      session_id: 's9',
+    }));
+    expect(out.chunks.map(c => c.type)).toEqual(['done']);
   });
 
   it('does not re-emit pre-tool assistant text after a tool call', () => {
@@ -237,9 +248,9 @@ describe('CursorNdjsonStreamReducer', () => {
     expect(usage.usage.percentage).toBe(0);
   });
 
-  it('falls back to a claude/sonnet context window of 200k', () => {
+  it('uses the catalog window for a known claude/sonnet model', () => {
     const r = new CursorNdjsonStreamReducer();
-    r.reduceLine(JSON.stringify({ type: 'system', model: 'claude-4.5-sonnet', session_id: 's1' }));
+    r.reduceLine(JSON.stringify({ type: 'system', model: 'claude-sonnet-4', session_id: 's1' }));
     const out = r.reduceLine(JSON.stringify({ type: 'result', is_error: false, session_id: 's1' }));
     const usage = out.chunks[0] as { usage: { contextWindow: number } };
     expect(usage.usage.contextWindow).toBe(200_000);
@@ -263,15 +274,17 @@ describe('CursorNdjsonStreamReducer', () => {
 
   it('prefers an explicit context_window from the usage data', () => {
     const r = new CursorNdjsonStreamReducer();
+    r.reduceLine(JSON.stringify({ type: 'system', model: 'claude-sonnet-4', session_id: 's1' }));
     const out = r.reduceLine(JSON.stringify({
       type: 'result',
       is_error: false,
       usage: { total_tokens: 50_000, context_window: 100_000 },
     }));
-    const usage = out.chunks[0] as { usage: { contextTokens: number; contextWindow: number; percentage: number } };
+    const usage = out.chunks[0] as { usage: { contextTokens: number; contextWindow: number; percentage: number; contextWindowIsAuthoritative?: boolean } };
     expect(usage.usage.contextTokens).toBe(50_000);
     expect(usage.usage.contextWindow).toBe(100_000);
     expect(usage.usage.percentage).toBe(50);
+    expect(usage.usage.contextWindowIsAuthoritative).toBe(true);
   });
 
   it('emits a thinking chunk for a thinking block and still emits text', () => {
@@ -318,6 +331,7 @@ describe('CursorNdjsonStreamReducer', () => {
         inputTokens: 0,
         contextTokens: 0,
         contextWindow: 1_000_000,
+        contextWindowIsAuthoritative: true,
         percentage: 0,
       });
     });
@@ -325,32 +339,25 @@ describe('CursorNdjsonStreamReducer', () => {
     it('reads camelCase and message.usage shapes', () => {
       const fromMessage = extractCursorUsage(
         { message: { usage: { inputTokens: 200, outputTokens: 800 } } },
-        'claude-sonnet',
+        'claude-sonnet-4',
       );
       expect(fromMessage.inputTokens).toBe(200);
       expect(fromMessage.outputTokens).toBe(800);
       expect(fromMessage.contextTokens).toBe(1000);
       expect(fromMessage.contextWindow).toBe(200_000);
+      expect(fromMessage.contextWindowIsAuthoritative).toBe(true);
     });
 
     it('falls back to top-level num_tokens for the total', () => {
       const u = extractCursorUsage({ num_tokens: 1234 }, 'unknown-model');
       expect(u.contextTokens).toBe(1234);
       expect(u.inputTokens).toBe(0);
+      expect(u.contextWindow).toBe(0);
+      expect(u.contextWindowIsAuthoritative).toBe(false);
     });
 
     it('does not throw on weird shapes', () => {
       expect(() => extractCursorUsage({ usage: 'nope', message: 5 } as never, undefined)).not.toThrow();
-    });
-  });
-
-  describe('cursorContextWindowForModel', () => {
-    it('maps known model families', () => {
-      expect(cursorContextWindowForModel('gemini-2.5-pro')).toBe(1_000_000);
-      expect(cursorContextWindowForModel('GPT-5')).toBe(400_000);
-      expect(cursorContextWindowForModel('claude-opus')).toBe(200_000);
-      expect(cursorContextWindowForModel('composer-1')).toBe(200_000);
-      expect(cursorContextWindowForModel(undefined)).toBe(200_000);
     });
   });
 });

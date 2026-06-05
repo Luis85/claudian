@@ -1,5 +1,6 @@
 import type { SDKMessage, SDKResultError } from '@anthropic-ai/claude-agent-sdk';
 
+import { buildUsageInfo as sharedBuildUsageInfo } from '../../../core/providers/usage';
 import type { SDKToolUseResult, StreamChunk, UsageInfo } from '../../../core/types';
 import { isBlockedMessage } from '../sdk/messages';
 import { extractToolResultContent } from '../sdk/toolResultContent';
@@ -96,6 +97,8 @@ export interface TransformUsageState {
   getPromptUsage(): PromptUsageSnapshot;
   hasEmitted(promptUsage: PromptUsageSnapshot): boolean;
   markEmitted(promptUsage: PromptUsageSnapshot): void;
+  markWindowAuthoritative(): void;
+  isWindowAuthoritative(): boolean;
 }
 
 interface ContextWindowEntry {
@@ -283,7 +286,12 @@ function mergePromptUsage(
   usage: MessageUsage,
 ): PromptUsageSnapshot {
   const next = toPromptUsageSnapshot(usage);
-  const inputTokens = Math.max(current.inputTokens, next.inputTokens);
+  // Cache fields are monotone-within-turn (the SDK never *un-caches* tokens it already
+  // reported). inputTokens is NOT monotone: the SDK may report the per-turn input on the
+  // first assistant message and a slightly different value on a later stream_event/
+  // message_delta. Use the latest snapshot for inputTokens and high-water-mark only
+  // for cache fields, so the recorded total tracks the SDK's view of the current turn.
+  const inputTokens = next.inputTokens > 0 ? next.inputTokens : current.inputTokens;
   const cacheCreationInputTokens = Math.max(current.cacheCreationInputTokens, next.cacheCreationInputTokens);
   const cacheReadInputTokens = Math.max(current.cacheReadInputTokens, next.cacheReadInputTokens);
   return {
@@ -302,29 +310,32 @@ function samePromptUsage(a: PromptUsageSnapshot, b: PromptUsageSnapshot): boolea
 }
 
 function buildUsageInfo(promptUsage: PromptUsageSnapshot, options?: TransformOptions): UsageInfo {
-  const model = options?.intendedModel ?? 'sonnet';
+  // Fall back to the canonical short id used in `DEFAULT_CLAUDE_MODELS`
+  // (`src/providers/claude/types/models.ts`) so the emitted UsageInfo.model
+  // round-trips through downstream lookups (settings, pricing, tooltips).
+  const model = options?.intendedModel?.trim() || 'sonnet';
   const contextWindow = getContextWindowSize(model, options?.customContextLimits);
-  const percentage = Math.min(100, Math.max(0, Math.round((promptUsage.contextTokens / contextWindow) * 100)));
-
-  return {
+  return sharedBuildUsageInfo({
     model,
     inputTokens: promptUsage.inputTokens,
     cacheCreationInputTokens: promptUsage.cacheCreationInputTokens,
     cacheReadInputTokens: promptUsage.cacheReadInputTokens,
-    contextWindow,
     contextTokens: promptUsage.contextTokens,
-    percentage,
-  };
+    contextWindow,
+    contextWindowIsAuthoritative: options?.usageState?.isWindowAuthoritative() ?? false,
+  });
 }
 
 export function createTransformUsageState(): TransformUsageState {
   let promptUsage: PromptUsageSnapshot = { ...EMPTY_PROMPT_USAGE };
   let lastEmittedPromptUsage: PromptUsageSnapshot | null = null;
+  let windowAuthoritative = false;
 
   return {
     clear(): void {
       promptUsage = { ...EMPTY_PROMPT_USAGE };
       lastEmittedPromptUsage = null;
+      windowAuthoritative = false;
     },
 
     mergePromptUsage(usage: MessageUsage): PromptUsageSnapshot {
@@ -342,6 +353,14 @@ export function createTransformUsageState(): TransformUsageState {
 
     markEmitted(nextPromptUsage: PromptUsageSnapshot): void {
       lastEmittedPromptUsage = { ...nextPromptUsage };
+    },
+
+    markWindowAuthoritative(): void {
+      windowAuthoritative = true;
+    },
+
+    isWindowAuthoritative(): boolean {
+      return windowAuthoritative;
     },
   };
 }
@@ -551,8 +570,21 @@ export function* transformSDKMessage(
       break;
     }
 
-    case 'result':
+    case 'result': {
       options?.streamState?.clearAll();
+
+      // Detect authoritative context window from result.modelUsage BEFORE emitting the final
+      // usage chunk, so the emitted UsageInfo carries contextWindowIsAuthoritative=true.
+      let authoritativeContextWindow: number | null = null;
+      if ('modelUsage' in message && message.modelUsage) {
+        const modelUsage = message.modelUsage as Record<string, { contextWindow?: number }>;
+        const selectedEntry = selectContextWindowEntry(modelUsage, options?.intendedModel);
+        if (selectedEntry) {
+          authoritativeContextWindow = selectedEntry.contextWindow;
+          options?.usageState?.markWindowAuthoritative();
+        }
+      }
+
       if (options?.usageState) {
         const usageChunk = maybeEmitUsageFromPromptUsage(options.usageState.getPromptUsage(), options);
         if (usageChunk) {
@@ -571,14 +603,11 @@ export function* transformSDKMessage(
       // Usage is now extracted from assistant messages for accuracy (excludes subagent tokens)
       // Result message usage is aggregated across main + subagents, causing inaccurate spikes
 
-      if ('modelUsage' in message && message.modelUsage) {
-        const modelUsage = message.modelUsage as Record<string, { contextWindow?: number }>;
-        const selectedEntry = selectContextWindowEntry(modelUsage, options?.intendedModel);
-        if (selectedEntry) {
-          yield { type: 'context_window', contextWindow: selectedEntry.contextWindow };
-        }
+      if (authoritativeContextWindow !== null) {
+        yield { type: 'context_window', contextWindow: authoritativeContextWindow };
       }
       break;
+    }
 
     default:
       break;

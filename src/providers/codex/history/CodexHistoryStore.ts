@@ -18,7 +18,12 @@ interface CodexEvent {
   type: string;
   thread_id?: string;
   item?: CodexItem;
-  usage?: { input_tokens: number; cached_input_tokens: number; output_tokens: number };
+  usage?: {
+    input_tokens?: number;
+    cached_input_tokens?: number;
+    output_tokens?: number;
+    reasoning_output_tokens?: number;
+  };
   error?: { message: string };
   message?: string;
 }

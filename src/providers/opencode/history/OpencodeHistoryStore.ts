@@ -38,6 +38,7 @@ interface SqliteModule {
 
 export const OPENCODE_MESSAGE_ROW_SQL = buildOpencodeMessageRowsSql('?');
 const OPENCODE_PART_ROW_SQL = buildOpencodePartRowsSql('?');
+const OPENCODE_LAST_ASSISTANT_DATA_SQL = buildOpencodeLastAssistantDataSql('?');
 const OPENCODE_HYDRATION_DIAGNOSTIC_ID_PREFIX = 'opencode-hydration-error';
 
 export interface OpencodeSessionLoadResult {
@@ -632,4 +633,79 @@ select id, message_id, data
 from part
 where session_id = ${sessionIdExpression}
 order by message_id asc, id asc;`.trim();
+}
+
+function buildOpencodeLastAssistantDataSql(sessionIdExpression: string): string {
+  // Pull the most recent assistant message's raw data JSON. Order by
+  // time_created desc, id desc so a tied timestamp still resolves
+  // deterministically. We intentionally trust the row's validity check
+  // (json_valid) so a malformed row never makes it back to the caller.
+  return `
+select data
+from message
+where session_id = ${sessionIdExpression}
+  and json_valid(data)
+  and json_extract(data, '$.role') = 'assistant'
+order by time_created desc, id desc
+limit 1;`.trim();
+}
+
+/**
+ * Loads the most recent assistant `message.data` JSON for a session, used by
+ * `extractLastUsage` to recover persisted token counts without re-hydrating
+ * the full transcript. Returns null when the store is unavailable, the row
+ * doesn't exist, or the JSON fails to parse.
+ */
+export async function loadOpencodeLastAssistantData(
+  sessionId: string,
+  providerState?: OpencodeProviderState,
+): Promise<Record<string, unknown> | null> {
+  const databasePath = resolveExistingOpencodeDatabasePath(providerState?.databasePath);
+  if (!databasePath || databasePath === ':memory:' || !fs.existsSync(databasePath)) {
+    return null;
+  }
+
+  // Try node:sqlite first, then sqlite3 CLI — same transport pattern as
+  // loadOpencodeSessionRows above.
+  const viaNodeSqlite = await loadLastAssistantDataWithNodeSqlite(databasePath, sessionId);
+  if (viaNodeSqlite !== undefined) {
+    return viaNodeSqlite;
+  }
+  return loadLastAssistantDataWithSqliteCli(databasePath, sessionId);
+}
+
+async function loadLastAssistantDataWithNodeSqlite(
+  databasePath: string,
+  sessionId: string,
+): Promise<Record<string, unknown> | null | undefined> {
+  const sqlite = await loadSqliteModule();
+  if (!sqlite) {
+    return undefined;
+  }
+
+  let db: InstanceType<SqliteModule['DatabaseSync']> | null = null;
+  try {
+    db = new sqlite.DatabaseSync(databasePath, { readonly: true });
+    const rows = db.prepare(OPENCODE_LAST_ASSISTANT_DATA_SQL).all(sessionId);
+    if (rows.length === 0) return null;
+    const row = rows[0];
+    return parseJsonObject(row.data);
+  } catch {
+    return undefined;
+  } finally {
+    db?.close();
+  }
+}
+
+function loadLastAssistantDataWithSqliteCli(
+  databasePath: string,
+  sessionId: string,
+): Record<string, unknown> | null {
+  const escapedSessionId = escapeSqlLiteral(sessionId);
+  const rows = runSqlite3JsonQuery(
+    databasePath,
+    buildOpencodeLastAssistantDataSql(`'${escapedSessionId}'`),
+  );
+  if (!rows || rows.length === 0) return null;
+  return parseJsonObject(rows[0].data);
 }

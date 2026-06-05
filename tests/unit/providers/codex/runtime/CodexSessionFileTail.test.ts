@@ -179,9 +179,16 @@ describe('mapEventMsgEvent', () => {
   });
 
   describe('task_complete', () => {
-    it('emits pending usage then done', () => {
-      const state = makeState({ currentTurnId: 'turn-1' });
+    it('emits pending usage then done when getActiveModel is wired', () => {
+      const state: SessionTailState = {
+        ...createSessionTailState(200_000, () => 'gpt-5.3-codex'),
+        currentTurnId: 'turn-1',
+      };
       state.pendingUsageByTurn.set('turn-1', {
+        inputTokens: 500,
+        outputTokens: 0,
+        reasoningOutputTokens: 0,
+        cacheReadInputTokens: 0,
         contextTokens: 500,
         contextWindow: 200_000,
         contextWindowIsAuthoritative: false,
@@ -199,6 +206,75 @@ describe('mapEventMsgEvent', () => {
       const state = makeState({ currentTurnId: 'turn-1' });
       const chunks = mapEventMsgEvent({ type: 'task_complete' }, 'sess-1', state);
       expect(chunks).toContainEqual({ type: 'done' });
+    });
+
+    it('stamps the active model on the emitted usage when getActiveModel is provided', () => {
+      // Closes the dormant-engine contract gap flagged in review: any UsageInfo
+      // emitted by this engine must satisfy the cross-provider contract matrix
+      // (`expect(usage.model).toBeTruthy()`). The engine routes the chunk
+      // through the shared builder, which requires a non-empty model.
+      const state: SessionTailState = {
+        ...createSessionTailState(200_000, () => 'gpt-5.3-codex'),
+        currentTurnId: 'turn-1',
+      };
+      state.pendingUsageByTurn.set('turn-1', {
+        inputTokens: 500,
+        outputTokens: 100,
+        reasoningOutputTokens: 50,
+        cacheReadInputTokens: 0,
+        contextTokens: 650,
+        contextWindow: 400_000,
+        contextWindowIsAuthoritative: true,
+      });
+
+      const chunks = mapEventMsgEvent({ type: 'task_complete' }, 'sess-1', state);
+      const usageChunk = chunks.find((c) => c.type === 'usage') as
+        | { type: 'usage'; usage: { model: string; outputTokens?: number; contextWindow: number } }
+        | undefined;
+      expect(usageChunk).toBeDefined();
+      expect(usageChunk?.usage.model).toBe('gpt-5.3-codex');
+      expect(usageChunk?.usage.outputTokens).toBe(100);
+      expect(usageChunk?.usage.contextWindow).toBe(400_000);
+    });
+
+    it('silently drops the usage chunk when getActiveModel returns empty (matches Cursor mapper)', () => {
+      const state: SessionTailState = {
+        ...createSessionTailState(200_000, () => ''),
+        currentTurnId: 'turn-1',
+      };
+      state.pendingUsageByTurn.set('turn-1', {
+        inputTokens: 500,
+        outputTokens: 0,
+        reasoningOutputTokens: 0,
+        cacheReadInputTokens: 0,
+        contextTokens: 500,
+        contextWindow: 200_000,
+        contextWindowIsAuthoritative: false,
+      });
+
+      const chunks = mapEventMsgEvent({ type: 'task_complete' }, 'sess-1', state);
+      const usageChunks = chunks.filter((c) => c.type === 'usage');
+      expect(usageChunks).toHaveLength(0);
+      expect(chunks).toContainEqual({ type: 'done' });
+    });
+
+    it('silently drops the usage chunk when no getActiveModel accessor is provided', () => {
+      // Back-compat: existing callers that built SessionTailState without an
+      // accessor must NOT crash; they emit `done` and skip usage.
+      const state = makeState({ currentTurnId: 'turn-1' });
+      state.pendingUsageByTurn.set('turn-1', {
+        inputTokens: 500,
+        outputTokens: 0,
+        reasoningOutputTokens: 0,
+        cacheReadInputTokens: 0,
+        contextTokens: 500,
+        contextWindow: 200_000,
+        contextWindowIsAuthoritative: false,
+      });
+
+      const chunks = mapEventMsgEvent({ type: 'task_complete' }, 'sess-1', state);
+      const usageChunks = chunks.filter((c) => c.type === 'usage');
+      expect(usageChunks).toHaveLength(0);
     });
 
     it('does not emit duplicate done for same turn', () => {
@@ -281,7 +357,11 @@ describe('mapEventMsgEvent', () => {
       const chunks = mapEventMsgEvent(payload, 'sess-1', state);
       expect(chunks).toEqual([]);
       expect(state.pendingUsageByTurn.get('turn-1')).toEqual({
-        contextTokens: 13140,
+        inputTokens: 13140,
+        outputTokens: 323,
+        reasoningOutputTokens: 0,
+        cacheReadInputTokens: 3456,
+        contextTokens: 13140 + 323,
         contextWindow: 200_000,
         contextWindowIsAuthoritative: false,
       });
@@ -298,7 +378,11 @@ describe('mapEventMsgEvent', () => {
       const chunks = mapEventMsgEvent(payload, 'sess-1', state);
       expect(chunks).toEqual([]);
       expect(state.pendingUsageByTurn.get('turn-1')).toEqual({
-        contextTokens: 100,
+        inputTokens: 100,
+        outputTokens: 50,
+        reasoningOutputTokens: 0,
+        cacheReadInputTokens: 0,
+        contextTokens: 100 + 50,
         contextWindow: 200_000,
         contextWindowIsAuthoritative: false,
       });
@@ -318,10 +402,70 @@ describe('mapEventMsgEvent', () => {
       };
       mapEventMsgEvent(payload, 'sess-1', state);
       expect(state.pendingUsageByTurn.get('turn-1')).toEqual({
+        inputTokens: 500,
+        outputTokens: 0,
+        reasoningOutputTokens: 0,
+        cacheReadInputTokens: 0,
         contextTokens: 500,
         contextWindow: 258400,
         contextWindowIsAuthoritative: true,
       });
+    });
+
+    it('parses cached_input_tokens, output_tokens, reasoning_output_tokens, not just input', () => {
+      const state = makeState({ currentTurnId: 'turn-1' });
+      state.modelContextWindow = 200_000;
+      state.modelContextWindowIsAuthoritative = true;
+
+      const chunks = mapEventMsgEvent({
+        type: 'token_count',
+        info: {
+          last_token_usage: {
+            input_tokens: 4000,
+            cached_input_tokens: 800,
+            output_tokens: 1200,
+            reasoning_output_tokens: 300,
+          },
+        },
+      }, 'sess-1', state);
+
+      expect(chunks).toEqual([]); // token_count stages into pendingUsageByTurn; emit happens on task_complete
+      const pending = state.pendingUsageByTurn.get('turn-1');
+      expect(pending).toBeDefined();
+      expect(pending?.inputTokens).toBe(4000);
+      expect(pending?.cacheReadInputTokens).toBe(800);
+      expect(pending?.outputTokens).toBe(1200);
+      expect(pending?.reasoningOutputTokens).toBe(300);
+      // contextTokens = input + output + reasoning (cache_read is part of input on the wire, don't double-count)
+      expect(pending?.contextTokens).toBe(4000 + 1200 + 300);
+    });
+
+    it('emits a UsageInfo without cacheCreationInputTokens (no phantom zero)', () => {
+      const state: SessionTailState = {
+        ...createSessionTailState(200_000, () => 'gpt-5.3-codex'),
+        currentTurnId: 'turn-1',
+        modelContextWindow: 200_000,
+        modelContextWindowIsAuthoritative: true,
+      };
+
+      mapEventMsgEvent({
+        type: 'token_count',
+        info: { last_token_usage: { input_tokens: 100 } },
+      }, 'sess-1', state);
+
+      const chunks = mapEventMsgEvent({ type: 'task_complete' }, 'sess-1', state);
+      const usageChunk = chunks.find(c => c.type === 'usage');
+      expect(usageChunk).toMatchObject({
+        type: 'usage',
+        usage: {
+          inputTokens: 100,
+        },
+      });
+      const usage = usageChunk?.type === 'usage' ? usageChunk.usage : undefined;
+      expect(usage?.cacheCreationInputTokens).toBeUndefined();
+      // No cache read either if not in event
+      expect(usage?.cacheReadInputTokens).toBeUndefined();
+      expect(usage?.outputTokens).toBeUndefined();
     });
   });
 
@@ -339,7 +483,7 @@ describe('mapEventMsgEvent', () => {
     });
 
     it('does not mark fallback context windows as authoritative', () => {
-      const state = makeState();
+      const state = createSessionTailState(200_000, () => 'gpt-5.3-codex');
       mapEventMsgEvent({ type: 'task_started', turn_id: 'turn-1' }, 'sess-1', state);
       mapEventMsgEvent(
         {
@@ -1144,7 +1288,9 @@ describe('CodexFileTailEngine', () => {
       { type: 'event_msg', payload: { type: 'task_started', info: { id: 'turn-1' } } },
     ]);
 
-    const engine = new CodexFileTailEngine(tmpDir, 200_000);
+    // Engine must be wired with getActiveModel so the dormant builder routes
+    // emitted UsageInfo through the shared builder (contract: model truthy).
+    const engine = new CodexFileTailEngine(tmpDir, 200_000, () => 'gpt-5.3-codex');
     await engine.primeCursor('thread-4');
 
     // task_started must appear after prime so the tail state has a current turn

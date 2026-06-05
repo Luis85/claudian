@@ -583,7 +583,17 @@ export class InputController {
           }
         }
 
-        // Provider-agnostic post-plan approval: show UI and await decision before save/auto-send
+        // Persist usage and message state BEFORE the plan-approval branches. This ensures
+        // a cancelled stream still saves the last usage chunk; without this, cancellation
+        // during the post-plan approval await (or any future invalidated branch) would
+        // drop `state.usage` on the floor. updateLastResponse=false on cancel keeps the
+        // partial assistant content from being claimed as a finished response, while
+        // state.usage and message state still land in the meta file.
+        // Only clear resumeAtMessageId if enqueue succeeded; preserve checkpoint on failure for retry.
+        const saveExtras = didEnqueueToSdk ? { resumeAtMessageId: undefined } : undefined;
+        await conversationController.save(!didCancelThisTurn, saveExtras);
+
+        // Provider-agnostic post-plan approval: show UI and await decision before auto-send
         let planAutoSendContent: string | null = null;
         let planApprovalInvalidated = false;
         let shouldProcessQueuedMessage = true;
@@ -607,9 +617,10 @@ export class InputController {
         }
 
         if (!planApprovalInvalidated) {
-          // Only clear resumeAtMessageId if enqueue succeeded; preserve checkpoint on failure for retry
-          const saveExtras = didEnqueueToSdk ? { resumeAtMessageId: undefined } : undefined;
-          await conversationController.save(true, saveExtras);
+          // The leading save above already wrote message state and usage. Plan-approval
+          // branches re-run sendMessage() (auto-implement / approve-new-session — both
+          // call sendMessage which saves itself) or just update the input UI (revise /
+          // cancel) — neither needs an extra save here.
 
           const userMsgIndex = state.messages.indexOf(userMsg);
           renderer.refreshActionButtons(userMsg, state.messages, userMsgIndex >= 0 ? userMsgIndex : undefined);

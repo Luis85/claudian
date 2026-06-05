@@ -571,6 +571,115 @@ describe('ConversationStore', () => {
     });
   });
 
+  describe('history-backed usage recovery', () => {
+    it('calls extractLastUsage when conversation.usage is unset and populates it', async () => {
+      const recovered = {
+        model: 'claude-sonnet-4',
+        inputTokens: 100,
+        contextTokens: 100,
+        contextWindow: 200_000,
+        percentage: 0,
+      };
+      const extractLastUsage = jest.fn().mockResolvedValue(recovered);
+      jest.spyOn(ProviderRegistry, 'getConversationHistoryService').mockReturnValue({
+        hydrateConversationHistoryV2: jest.fn().mockResolvedValue({ kind: 'cached', sourceRef: 'k' }),
+        deleteConversationSessionV2: jest.fn().mockResolvedValue({ kind: 'no-op', reason: 'no-session' }),
+        resolveSessionIdForConversation: jest.fn().mockReturnValue(null),
+        extractLastUsage,
+      } as never);
+
+      const { store } = createStore();
+      const conv = await store.createConversation();
+      expect(conv.usage).toBeUndefined();
+
+      await store.switchConversation(conv.id);
+
+      expect(extractLastUsage).toHaveBeenCalledWith(conv, {
+        vaultPath: '/vault',
+        reason: 'open',
+      });
+      expect(conv.usage).toBe(recovered);
+    });
+
+    it('skips extractLastUsage when conversation.usage is already set', async () => {
+      const extractLastUsage = jest.fn();
+      jest.spyOn(ProviderRegistry, 'getConversationHistoryService').mockReturnValue({
+        hydrateConversationHistoryV2: jest.fn().mockResolvedValue({ kind: 'cached', sourceRef: 'k' }),
+        deleteConversationSessionV2: jest.fn().mockResolvedValue({ kind: 'no-op', reason: 'no-session' }),
+        resolveSessionIdForConversation: jest.fn().mockReturnValue(null),
+        extractLastUsage,
+      } as never);
+
+      const { store } = createStore();
+      const conv = await store.createConversation();
+      const existing = {
+        model: 'claude-sonnet-4',
+        inputTokens: 50,
+        contextTokens: 50,
+        contextWindow: 200_000,
+        percentage: 0,
+      };
+      conv.usage = existing;
+
+      await store.switchConversation(conv.id);
+
+      expect(extractLastUsage).not.toHaveBeenCalled();
+      expect(conv.usage).toBe(existing);
+    });
+
+    it('tolerates extractLastUsage throwing without breaking hydration', async () => {
+      const extractLastUsage = jest.fn().mockRejectedValue(new Error('boom'));
+      jest.spyOn(ProviderRegistry, 'getConversationHistoryService').mockReturnValue({
+        hydrateConversationHistoryV2: jest.fn().mockResolvedValue({ kind: 'cached', sourceRef: 'k' }),
+        deleteConversationSessionV2: jest.fn().mockResolvedValue({ kind: 'no-op', reason: 'no-session' }),
+        resolveSessionIdForConversation: jest.fn().mockReturnValue(null),
+        extractLastUsage,
+      } as never);
+
+      const { store } = createStore();
+      const conv = await store.createConversation();
+
+      // Should not throw despite the recovery hook rejecting.
+      const result = await store.switchConversation(conv.id);
+      expect(result?.id).toBe(conv.id);
+      expect(conv.usage).toBeUndefined();
+    });
+
+    it('treats null return as "no historical usage" without overwriting', async () => {
+      const extractLastUsage = jest.fn().mockResolvedValue(null);
+      jest.spyOn(ProviderRegistry, 'getConversationHistoryService').mockReturnValue({
+        hydrateConversationHistoryV2: jest.fn().mockResolvedValue({ kind: 'cached', sourceRef: 'k' }),
+        deleteConversationSessionV2: jest.fn().mockResolvedValue({ kind: 'no-op', reason: 'no-session' }),
+        resolveSessionIdForConversation: jest.fn().mockReturnValue(null),
+        extractLastUsage,
+      } as never);
+
+      const { store } = createStore();
+      const conv = await store.createConversation();
+
+      await store.switchConversation(conv.id);
+
+      expect(extractLastUsage).toHaveBeenCalled();
+      expect(conv.usage).toBeUndefined();
+    });
+
+    it('does not require extractLastUsage on the service', async () => {
+      jest.spyOn(ProviderRegistry, 'getConversationHistoryService').mockReturnValue({
+        hydrateConversationHistoryV2: jest.fn().mockResolvedValue({ kind: 'cached', sourceRef: 'k' }),
+        deleteConversationSessionV2: jest.fn().mockResolvedValue({ kind: 'no-op', reason: 'no-session' }),
+        resolveSessionIdForConversation: jest.fn().mockReturnValue(null),
+        // extractLastUsage intentionally absent.
+      });
+
+      const { store } = createStore();
+      const conv = await store.createConversation();
+
+      const result = await store.switchConversation(conv.id);
+      expect(result?.id).toBe(conv.id);
+      expect(conv.usage).toBeUndefined();
+    });
+  });
+
   describe('updateConversation routes fork detection via hasForkSupport', () => {
     it('clears images when service has no forkSupport slot', async () => {
       jest.spyOn(ProviderRegistry, 'getConversationHistoryService').mockReturnValue({

@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 
-import type { StreamChunk, UsageInfo } from '../../../core/types/chat';
+import { buildUsageInfo as sharedBuildUsageInfo } from '../../../core/providers/usage';
+import type { StreamChunk } from '../../../core/types/chat';
 import { findCodexSessionFile } from '../history/CodexHistoryStore';
 import {
   isCodexToolOutputError,
@@ -12,22 +13,15 @@ import {
   normalizeCodexToolResult,
   parseCodexArguments,
 } from '../normalization/codexToolNormalization';
+import { CODEX_DEFAULT_CONTEXT_WINDOW, codexModelContextWindow } from './codexModelWindowCatalog';
 
 // ---------------------------------------------------------------------------
 // Model-specific context windows
 // ---------------------------------------------------------------------------
 
-const DEFAULT_CONTEXT_WINDOW = 200_000;
-
-export const CODEX_CONTEXT_WINDOW_BY_MODEL: Record<string, number> = {
-  'gpt-5.2': 400_000,
-  'gpt-5.3-codex': 400_000,
-  'gpt-5.3-codex-spark': 128_000,
-};
-
 export function getCodexContextWindow(model?: string): number {
-  if (!model) return DEFAULT_CONTEXT_WINDOW;
-  return CODEX_CONTEXT_WINDOW_BY_MODEL[model] ?? DEFAULT_CONTEXT_WINDOW;
+  if (!model) return CODEX_DEFAULT_CONTEXT_WINDOW;
+  return codexModelContextWindow(model) || CODEX_DEFAULT_CONTEXT_WINDOW;
 }
 
 // ---------------------------------------------------------------------------
@@ -40,6 +34,18 @@ export function getNonEmptyString(value: unknown, fallback: string): string {
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function numericField(source: unknown, keys: string[]): number | undefined {
+  if (!source || typeof source !== 'object') return undefined;
+  const obj = source as Record<string, unknown>;
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+  }
+  return undefined;
 }
 
 export function parsePayloadValue(raw: unknown): unknown {
@@ -114,6 +120,10 @@ export interface SessionTailState {
   lastTextByTurn: Map<string, string>;
   lastThinkingByTurn: Map<string, string>;
   pendingUsageByTurn: Map<string, {
+    inputTokens: number;
+    outputTokens: number;
+    reasoningOutputTokens: number;
+    cacheReadInputTokens: number;
     contextTokens: number;
     contextWindow: number;
     contextWindowIsAuthoritative: boolean;
@@ -121,10 +131,19 @@ export interface SessionTailState {
   emittedDoneByTurn: Set<string>;
   emittedUsageByTurn: Set<string>;
   callEnrichment: Map<string, CallEnrichmentData>;
+  /**
+   * Optional accessor providing the active Codex model at usage-emission time.
+   * The dormant `CodexFileTailEngine` path threads this through so the
+   * `task_complete` arm can route the chunk through `sharedBuildUsageInfo`,
+   * which requires a non-empty model. If absent or returning empty string, the
+   * tail silently drops the usage chunk (matches Cursor mapper behavior).
+   */
+  getActiveModel?: () => string;
 }
 
 export function createSessionTailState(
-  fallbackContextWindow: number = DEFAULT_CONTEXT_WINDOW,
+  fallbackContextWindow: number = CODEX_DEFAULT_CONTEXT_WINDOW,
+  getActiveModel?: () => string,
 ): SessionTailState {
   return {
     responseItemState: {
@@ -142,6 +161,7 @@ export function createSessionTailState(
     emittedDoneByTurn: new Set(),
     emittedUsageByTurn: new Set(),
     callEnrichment: new Map(),
+    ...(getActiveModel ? { getActiveModel } : {}),
   };
 }
 
@@ -247,12 +267,21 @@ export function mapEventMsgEvent(
 
       if (!state.emittedUsageByTurn.has(turnId)) {
         const pending = state.pendingUsageByTurn.get(turnId);
-        if (pending) {
-          const usage = buildUsageInfo(
-            pending.contextTokens,
-            pending.contextWindow,
-            pending.contextWindowIsAuthoritative,
-          );
+        const model = state.getActiveModel?.().trim() ?? '';
+        if (pending && model) {
+          // Route through the shared builder so every emitted UsageInfo
+          // satisfies the cross-provider contract matrix (model truthy,
+          // percentage clamped, optional fields finite/non-negative).
+          const usage = sharedBuildUsageInfo({
+            model,
+            inputTokens: pending.inputTokens,
+            outputTokens: pending.outputTokens > 0 ? pending.outputTokens : undefined,
+            reasoningOutputTokens: pending.reasoningOutputTokens > 0 ? pending.reasoningOutputTokens : undefined,
+            cacheReadInputTokens: pending.cacheReadInputTokens > 0 ? pending.cacheReadInputTokens : undefined,
+            contextTokens: pending.contextTokens,
+            contextWindow: pending.contextWindow,
+            contextWindowIsAuthoritative: pending.contextWindowIsAuthoritative,
+          });
           chunks.push({ type: 'usage', usage, sessionId });
           state.emittedUsageByTurn.add(turnId);
         }
@@ -300,14 +329,20 @@ export function mapEventMsgEvent(
     case 'token_count': {
       const turnId = resolveTurnId(state, undefined);
       const lastTokenUsage = isRecord(info.last_token_usage) ? info.last_token_usage : {};
-      const inputTokens = typeof lastTokenUsage.input_tokens === 'number'
-        ? lastTokenUsage.input_tokens
-        : typeof lastTokenUsage.input === 'number'
-          ? lastTokenUsage.input
-          : 0;
+      const inputTokens = numericField(lastTokenUsage, ['input_tokens', 'input']) ?? 0;
+      const cachedInputTokens = numericField(lastTokenUsage, ['cached_input_tokens', 'cached_input']) ?? 0;
+      const outputTokens = numericField(lastTokenUsage, ['output_tokens', 'output']) ?? 0;
+      const reasoningOutputTokens = numericField(lastTokenUsage, ['reasoning_output_tokens', 'reasoning_output']) ?? 0;
+      // contextTokens = input + output + reasoning. cached_input_tokens is part of input_tokens
+      // on the wire, so do NOT add it again.
+      const contextTokens = inputTokens + outputTokens + reasoningOutputTokens;
 
       state.pendingUsageByTurn.set(turnId, {
-        contextTokens: inputTokens,
+        inputTokens,
+        outputTokens,
+        reasoningOutputTokens,
+        cacheReadInputTokens: cachedInputTokens,
+        contextTokens,
         contextWindow: state.modelContextWindow,
         contextWindowIsAuthoritative: state.modelContextWindowIsAuthoritative,
       });
@@ -537,26 +572,6 @@ export function mapResponseItemEvent(
 }
 
 // ---------------------------------------------------------------------------
-// Usage builder
-// ---------------------------------------------------------------------------
-
-function buildUsageInfo(
-  contextTokens: number,
-  contextWindow: number,
-  contextWindowIsAuthoritative: boolean,
-): UsageInfo {
-  return {
-    inputTokens: contextTokens,
-    cacheCreationInputTokens: 0,
-    cacheReadInputTokens: 0,
-    contextWindow,
-    contextWindowIsAuthoritative,
-    contextTokens,
-    percentage: contextWindow > 0 ? Math.min(100, Math.max(0, Math.round((contextTokens / contextWindow) * 100))) : 0,
-  };
-}
-
-// ---------------------------------------------------------------------------
 // File-tail polling engine
 // ---------------------------------------------------------------------------
 
@@ -582,8 +597,9 @@ export class CodexFileTailEngine {
   constructor(
     private sessionsDir: string,
     private defaultContextWindow: number,
+    private getActiveModel?: () => string,
   ) {
-    this.tailState = createSessionTailState(defaultContextWindow);
+    this.tailState = createSessionTailState(defaultContextWindow, getActiveModel);
   }
 
   get turnCompleteEmitted(): boolean {
@@ -657,7 +673,7 @@ export class CodexFileTailEngine {
   }
 
   resetForNewTurn(): void {
-    this.tailState = createSessionTailState(this.defaultContextWindow);
+    this.tailState = createSessionTailState(this.defaultContextWindow, this.getActiveModel);
     this.pendingEvents = [];
     this._turnCompleteEmitted = false;
     this._usageEmitted = false;

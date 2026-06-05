@@ -1,9 +1,10 @@
+import { buildUsageInfo } from '../../core/providers/usage';
 import type { UsageInfo } from '../../core/types';
 import type { AcpUsage, AcpUsageUpdate } from './types';
 
 export interface BuildAcpUsageInfoParams {
   contextWindow?: AcpUsageUpdate | null;
-  model?: string;
+  model: string;
   promptUsage?: AcpUsage | null;
 }
 
@@ -17,25 +18,27 @@ export function buildAcpUsageInfo(params: BuildAcpUsageInfoParams): UsageInfo | 
 
   const contextTokens = contextWindow?.used ?? promptUsage?.totalTokens ?? 0;
   const contextWindowSize = contextWindow?.size ?? 0;
+  const cost = contextWindow?.cost;
+  const costUsd = cost && cost.currency === 'USD' && Number.isFinite(cost.amount) ? cost.amount : undefined;
 
-  return {
-    cacheCreationInputTokens: promptUsage?.cachedWriteTokens ?? 0,
-    cacheReadInputTokens: promptUsage?.cachedReadTokens ?? 0,
+  // Pass through only the AcpUsage fields that were actually defined. Pass `undefined` (not 0)
+  // for missing optional fields so the shared builder omits them entirely from the persisted
+  // UsageInfo (avoiding phantom zeros).
+  const cachedRead = promptUsage?.cachedReadTokens;
+  const cachedWrite = promptUsage?.cachedWriteTokens;
+  const thought = promptUsage?.thoughtTokens;
+  const output = promptUsage?.outputTokens;
+
+  return buildUsageInfo({
+    model: params.model,
+    inputTokens: promptUsage?.inputTokens ?? 0,
+    outputTokens: typeof output === 'number' ? output : undefined,
+    thoughtTokens: typeof thought === 'number' ? thought : undefined,
+    cacheCreationInputTokens: typeof cachedWrite === 'number' ? cachedWrite : undefined,
+    cacheReadInputTokens: typeof cachedRead === 'number' ? cachedRead : undefined,
     contextTokens,
     contextWindow: contextWindowSize,
-    // Only the contextWindow update speaks authoritatively about window size; falling back
-    // to promptUsage alone is a best-effort approximation.
     contextWindowIsAuthoritative: Boolean(contextWindow),
-    inputTokens: promptUsage?.inputTokens ?? 0,
-    model: params.model,
-    percentage: computePercentage(contextTokens, contextWindowSize),
-  };
-}
-
-function computePercentage(used: number, total: number): number {
-  if (total <= 0) {
-    return 0;
-  }
-  const ratio = Math.round((used / total) * 100);
-  return Math.min(100, Math.max(0, ratio));
+    costUsd,
+  });
 }

@@ -111,6 +111,8 @@ A review warning surfaces when a key in the shared scope (e.g. `OPENAI_API_KEY`)
 
 Below the textarea, if any custom model ids are discovered from `*_MODEL` variables, **Custom model overrides** appears: per-model **Alias** (selector label) and context-window input (`200k`, `1m`, or a number 1000–10000000). See [[composer-context-pills]] for how the context window is surfaced in chat.
 
+For Codex (`gpt-5.2`, `gpt-5.3-codex`, `gpt-5.3-codex-spark`) and Cursor (Claude/Composer/Sonic/Grok/GPT/Gemini families) Claudian ships an exact-id catalog of known windows; a custom override here applies only to ids the catalog does not recognise.
+
 ### Diagnostics
 
 See the [Diagnostics](#diagnostics) section below and [[configurable-logger]].

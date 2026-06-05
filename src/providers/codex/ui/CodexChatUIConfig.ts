@@ -7,6 +7,7 @@ import type {
 } from '../../../core/providers/types';
 import { OPENAI_PROVIDER_ICON } from '../../../shared/icons';
 import { getCodexModelOptions } from '../modelOptions';
+import { codexModelContextWindow, codexModelPricing } from '../runtime/codexModelWindowCatalog';
 import { applyCodexModelDefaults } from '../settings';
 import {
   DEFAULT_CODEX_MODEL_SET,
@@ -70,8 +71,12 @@ export const codexChatUIConfig: ProviderChatUIConfig = {
     return 'medium';
   },
 
-  getContextWindowSize(): number {
-    return DEFAULT_CONTEXT_WINDOW;
+  getContextWindowSize(model: string, _customLimits?: Record<string, number>): number {
+    return codexModelContextWindow(model) || DEFAULT_CONTEXT_WINDOW;
+  },
+
+  getModelPricing(modelId: string) {
+    return codexModelPricing(modelId);
   },
 
   isDefaultModel(model: string): boolean {

@@ -426,7 +426,9 @@ export class OpencodeChatRuntime implements ChatRuntime {
 
       const usage = buildAcpUsageInfo({
         contextWindow: this.contextUsage,
-        model: this.getActiveDisplayModel(queryOptions),
+        // Fall back to the synthetic provider id when no concrete model is selected yet:
+        // buildAcpUsageInfo requires a non-empty model string (see shared buildUsageInfo).
+        model: this.getActiveDisplayModel(queryOptions) ?? OPENCODE_SYNTHETIC_MODEL_ID,
         promptUsage: this.promptUsage,
       });
       if (usage) {
@@ -1223,7 +1225,9 @@ export class OpencodeChatRuntime implements ChatRuntime {
         this.contextUsage = normalized.usage;
         const usage = buildAcpUsageInfo({
           contextWindow: normalized.usage,
-          model: this.getActiveDisplayModel(),
+          // Fall back to the synthetic provider id when no concrete model is selected yet:
+          // buildAcpUsageInfo requires a non-empty model string (see shared buildUsageInfo).
+          model: this.getActiveDisplayModel() ?? OPENCODE_SYNTHETIC_MODEL_ID,
           promptUsage: this.promptUsage,
         });
         if (usage) {

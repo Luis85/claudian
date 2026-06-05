@@ -30,6 +30,20 @@ JSONL remains the provider-owned replay source for history hydration and session
 
 `codexSettingsReconciler` watches `OPENAI_MODEL`, `OPENAI_BASE_URL`, `OPENAI_API_KEY`. Any hash change invalidates all existing Codex sessions (clears `sessionId` and `providerState`), preventing the UI from trying to resume sessions against a different API endpoint.
 
+### Exact-id Model Window Catalog
+
+`codexModelWindowCatalog.ts` holds the model → context-window table for known Codex models. Windows are the **real wire values** captured from `~/.codex/sessions/**/*.jsonl` `model_info` events — `gpt-5.2 = 400_000`, `gpt-5.3-codex = 400_000`, `gpt-5.3-codex-spark = 128_000`. Unknown ids return `0`; `getCodexContextWindow` in `CodexSessionFileTail.ts` falls back to `CODEX_DEFAULT_CONTEXT_WINDOW = 200_000` so the UI always has a denominator. `CodexChatUIConfig` exposes the catalog through `getContextWindowSize` and (currently null-for-all) `getModelPricing`.
+
+### Usage Emission
+
+`CodexNotificationRouter.onTokenUsageUpdated` funnels every `thread/tokenUsage/updated` notification through `src/core/providers/usage/buildUsageInfo`. It stamps the active model via the constructor's `getActiveModel: () => string`, computes `contextTokens = input + output + reasoning` (cached_input is already part of input on the wire), exposes `cacheReadInputTokens`, and flips `contextWindowIsAuthoritative` based on whether the wire reported a positive `modelContextWindow`.
+
+`CodexSessionFileTail.ts` mirrors the parsing for transcript-driven hydration: the `token_count` arm stages full input/output/reasoning/cache breakdown into `pendingUsageByTurn`. The dormant `CodexFileTailEngine` (no production callers today) also threads `getActiveModel` so any future wire-up emits contract-conformant `UsageInfo`. If the accessor is absent or returns empty, the engine silently drops the usage chunk rather than emit a malformed shape — same pattern as Cursor's mapper.
+
+### History-backed `extractLastUsage`
+
+`CodexConversationHistoryService.extractLastUsage` walks the last `event_msg type=token_count` in the JSONL transcript, resolves the active model from the most recent `model_info` event (falling back to `DEFAULT_CODEX_PRIMARY_MODEL = 'gpt-5.5'`), and routes through the shared builder. Window resolution mirrors live emission: wire `model_context_window` if present, otherwise the catalog, otherwise the default. Returns `null` on parse failure.
+
 ## Non-Obvious Behaviors
 
 ### Thread Resume Requirement

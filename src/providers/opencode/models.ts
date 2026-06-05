@@ -27,6 +27,13 @@ export interface OpencodeDiscoveredModelGroup {
 
 export const OPENCODE_SYNTHETIC_MODEL_ID = 'opencode';
 export const OPENCODE_DEFAULT_THINKING_LEVEL = 'default';
+/**
+ * Catalog-equivalent default context window for OpenCode models. OpenCode's
+ * SQLite store persists `tokens` and `cost` per assistant message but does not
+ * persist the wire context window, so transcript-only hydration (via
+ * `extractLastUsage`) falls back to this constant.
+ */
+export const OPENCODE_DEFAULT_CONTEXT_WINDOW = 200_000;
 
 const OPENCODE_MODEL_PREFIX = 'opencode:';
 const OPENCODE_VARIANT_ASCENDING_ORDER = [
