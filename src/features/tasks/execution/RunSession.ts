@@ -260,6 +260,10 @@ export class RunSession {
       return;
     }
     this.finishing = true;
+    // Let any in-flight pause status write + ledger flush settle first, so the
+    // final flush below is not skipped by the writer's in-progress guard (which
+    // would otherwise drop a just-enqueued line, e.g. cancel during a pause).
+    await this.pauseApplied;
     this.stopLiveWiring();
     const finalOut = this.parser.finalize();
     for (const warning of finalOut.warnings) {
