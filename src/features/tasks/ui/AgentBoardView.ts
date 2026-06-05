@@ -492,10 +492,13 @@ export class AgentBoardView extends ItemView {
     const shouldRun = this.runner.isPaused() || this.runner.isHalted();
     const nextPaused = !shouldRun;
     if (this.runner.isHalted()) this.runner.clearHalt();
+    // Apply the paused state before persisting: saveSettings() emits a queue wake
+    // that ticks every board's runner, so flipping the shared control first means
+    // a pause can't be undercut by a card auto-launching during the save.
+    this.runner.setPaused(nextPaused);
     try {
       writeBoardQueuePaused(asSettingsBag(this.plugin.settings), nextPaused);
       await this.plugin.saveSettings();
-      this.runner.setPaused(nextPaused);
       void this.refresh();
     } catch (error) {
       new Notice(t('tasks.board.updateFailed', { error: error instanceof Error ? error.message : String(error) }));
