@@ -1,7 +1,7 @@
 ---
 title: Work-order card right-click quick actions
 date: 2026-06-05
-status: draft
+status: implemented
 scope: features/tasks/ui, features/quickActions, i18n
 parent: "[[Agent Kanban Board]]"
 relations:
@@ -116,7 +116,7 @@ Favorites list comes from `plugin.quickActionFavoritesCache.getFavorites()` — 
 - **`running` status** → quick-action items dropped. Open note + Open conversation only. Reasoning: avoid surprise side-prompts against an active run from a menu that looks like a normal "fire one off" affordance.
 - **`needs_input` / `needs_approval`** → quick-action items SHOWN. These are mid-flight states but the user often needs to prepare a follow-up prompt in a different tab; gating them adds friction without safety benefit. Confirmed in brainstorming Q2 (option A "strict").
 - **All other statuses** (`inbox`, `ready`, `review`, `needs_fix`, `done`, `failed`, `canceled`) → quick-action items SHOWN.
-- **WO `TFile` unresolvable** (note deleted / moved between board render and right-click) → favorites + picker entries dropped. Open note remains and surfaces `Notice: file not found` through existing `openTask`.
+- **WO `TFile` unresolvable** (note deleted / moved between board render and right-click) → favorites + picker entries dropped. Open note remains; clicking it falls through `AgentBoardView.openTask`, which silently no-ops when the abstract file is not a `TFile`. A `Notice` is not surfaced today — flag as follow-up if user-facing feedback is desired.
 - **No favorites + WO `TFile` resolvable + not running** → only the `Quick actions…` picker entry below the separator. Separator still emitted because picker counts as "items below".
 - **Empty menu** (defensive) → don't call `showAtMouseEvent`. Cannot trigger in practice since Open note is unconditional.
 
@@ -235,7 +235,7 @@ No new selectors. Card visual stays identical; only event behavior changes.
 | Case | Behavior |
 |------|----------|
 | Right-click on an inline card action button (`Run`, `Stop`, …) | Browser fires `contextmenu` on the button; event bubbles to the card listener; same menu shows. Buttons themselves have no native menu. Acceptable. |
-| WO note deleted between render and right-click | `getAbstractFileByPath` returns null → quick-action items dropped. Open note still listed; clicking it surfaces `Notice: file not found` via existing `openTask`. |
+| WO note deleted between render and right-click | `getAbstractFileByPath` returns null → quick-action items dropped. Open note still listed; clicking it falls through `AgentBoardView.openTask`, which silently no-ops (no `Notice`). |
 | `conversation_id` set but conversation missing from store | `canOpenConversation` returns false → item hidden. Matches detail modal logic. |
 | Favorites cache not yet started (modal opened before `completeDeferredOnload`) | `getFavorites()` returns `[]` → no favorites shown, picker still works. |
 | Esc / outside click while menu open | Obsidian `Menu` closes itself. No leak. |
