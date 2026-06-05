@@ -19,6 +19,8 @@ interface CachedBucket {
 }
 
 const DEFAULT_TTL_MS = 60_000;
+const PERSIST_DEBOUNCE_MS = 1_000;
+const DEFAULT_CACHE_PATH = '.claudian/cache/skill-index.json';
 
 /**
  * Walks every provider record returned by the injected factory, asks each
@@ -49,8 +51,6 @@ export class VaultSkillAggregator implements VaultSkillSource {
   private readonly cacheAdapter?: VaultFileAdapter;
   private readonly cachePath: string;
   private persistTimer: number | null = null;
-  private static readonly PERSIST_DEBOUNCE_MS = 1_000;
-  private static readonly DEFAULT_CACHE_PATH = '.claudian/cache/skill-index.json';
 
   constructor(
     private getProviderRecords: () => ProviderRecord[],
@@ -66,7 +66,7 @@ export class VaultSkillAggregator implements VaultSkillSource {
       );
     }
     this.cacheAdapter = options.cacheAdapter;
-    this.cachePath = options.cachePath ?? VaultSkillAggregator.DEFAULT_CACHE_PATH;
+    this.cachePath = options.cachePath ?? DEFAULT_CACHE_PATH;
   }
 
   /**
@@ -148,22 +148,26 @@ export class VaultSkillAggregator implements VaultSkillSource {
     if (this.persistTimer !== null) {
       window.clearTimeout(this.persistTimer);
       this.persistTimer = null;
-      void this.flushPersist();   // fire and forget; plugin is unloading
+      // Snapshot built synchronously before any await — safe to clear cache afterwards.
+      void this.flushPersist();
     }
     this.eventBusUnsubscribe?.();
+    this.eventBusUnsubscribe = undefined;
     this.cache.clear();
     this.inFlight.clear();
   }
 
+  /** Trailing-edge debounce: collapse near-simultaneous fetches into a single write. */
   private schedulePersist(): void {
     if (!this.cacheAdapter) return;
     if (this.persistTimer !== null) window.clearTimeout(this.persistTimer);
     this.persistTimer = window.setTimeout(() => {
       this.persistTimer = null;
       void this.flushPersist();
-    }, VaultSkillAggregator.PERSIST_DEBOUNCE_MS);
+    }, PERSIST_DEBOUNCE_MS);
   }
 
+  /** Snapshot the in-memory cache and write the index. Failures logged at warn; never throws. */
   private async flushPersist(): Promise<void> {
     if (!this.cacheAdapter) return;
     const buckets = new Map<ProviderId, ProviderCommandEntry[]>();

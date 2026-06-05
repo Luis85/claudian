@@ -44,7 +44,10 @@ export interface ProviderRecord {
 /**
  * Read API consumed by `SkillsTabRenderer`.
  *
- * - `listAll`: full async fetch (cache-aware). Existing callers keep working.
+ * - `listAll`: full async fetch (cache-aware). Convenience for callers that
+ *   need every provider's entries in a single awaited result — used by
+ *   tests and diagnostics. Production rendering goes through the streaming
+ *   pair (`listCachedNow` + `listAllStreaming`).
  * - `listCachedNow`: synchronous, returns whatever is currently in the
  *   in-memory cache; empty if cold. Used for instant Phase-A paint.
  * - `listAllStreaming`: walks providers concurrently, fires `onProviderResolved`

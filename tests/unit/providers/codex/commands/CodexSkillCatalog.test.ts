@@ -1,3 +1,4 @@
+import type { ClaudianEventMap } from '@/app/events/claudianEvents';
 import { EventBus } from '@/core/events/EventBus';
 import type { ProviderCommandEntry } from '@/core/providers/commands/ProviderCommandEntry';
 import type { VaultFileAdapter } from '@/core/storage/VaultFileAdapter';
@@ -479,9 +480,8 @@ describe('CodexSkillCatalog EventBus emission', () => {
     const bus = new EventBus<{ 'vaultSkill.changed': { providerId: 'codex' } }>();
     const events: Array<{ providerId: string }> = [];
     bus.on('vaultSkill.changed', (p) => { events.push(p); });
-    const { CodexSkillCatalog } = await import('@/providers/codex/commands/CodexSkillCatalog');
     const catalog = new CodexSkillCatalog(
-      mkStorage(), mkListProvider(), '/vault', bus as never,
+      mkStorage(), mkListProvider(), '/vault', bus as unknown as EventBus<ClaudianEventMap>,
     );
     await catalog.saveVaultEntry(skillEntry());
     expect(events).toEqual([{ providerId: 'codex' }]);
@@ -491,16 +491,14 @@ describe('CodexSkillCatalog EventBus emission', () => {
     const bus = new EventBus<{ 'vaultSkill.changed': { providerId: 'codex' } }>();
     const events: Array<{ providerId: string }> = [];
     bus.on('vaultSkill.changed', (p) => { events.push(p); });
-    const { CodexSkillCatalog } = await import('@/providers/codex/commands/CodexSkillCatalog');
     const catalog = new CodexSkillCatalog(
-      mkStorage(), mkListProvider(), '/vault', bus as never,
+      mkStorage(), mkListProvider(), '/vault', bus as unknown as EventBus<ClaudianEventMap>,
     );
     await catalog.deleteVaultEntry(skillEntry());
     expect(events).toEqual([{ providerId: 'codex' }]);
   });
 
   it('works without an EventBus', async () => {
-    const { CodexSkillCatalog } = await import('@/providers/codex/commands/CodexSkillCatalog');
     const catalog = new CodexSkillCatalog(
       mkStorage(), mkListProvider(), '/vault',
     );

@@ -12,7 +12,7 @@ All modal sites go through `openQuickActionsModal(plugin, { onRun, file? })`:
 | Chat header toolbar | `ClaudianView.ts` `quickActionsBtn` | Sends prompt into the currently active tab | `null` |
 | Per-tab input toolbar | `tabs/tabUi.ts` `onQuickActionsOpen` | Sends prompt into the originating tab | `null` |
 
-`openQuickActionsModal` owns the shared wiring: `QuickActionStorage` (`plugin.storage.getAdapter()`), `VaultSkillAggregator` (`buildProviderRecords` factory, `plugin.logger`), and the Skills-tab `onRunSkill` callback that routes to `runVaultSkill`. Adding a fourth modal entry point means calling the helper — never reassembling the wiring inline.
+`openQuickActionsModal` owns the shared wiring: `QuickActionStorage` (`plugin.storage.getAdapter()`) and the Skills-tab `onRunSkill` callback that routes to `runVaultSkill`. The Skills-tab `aggregator` parameter is read from `plugin.vaultSkillAggregator` (the plugin-lifetime singleton — see [Skills Tab Caching](#skills-tab-caching)); a transient fallback aggregator is built only when the modal is opened before `completeDeferredOnload()` has run. Adding a fourth modal entry point means calling the helper — never reassembling the wiring inline.
 
 ## Skills Tab
 

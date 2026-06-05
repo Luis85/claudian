@@ -1,3 +1,4 @@
+import { EventBus } from '@/core/events/EventBus';
 import type { ProviderCommandEntry } from '@/core/providers/commands/ProviderCommandEntry';
 import type { ProviderRecord, SkillTabEntry } from '@/features/quickActions/skills/types';
 import { VaultSkillAggregator } from '@/features/quickActions/skills/VaultSkillAggregator';
@@ -319,7 +320,6 @@ describe('VaultSkillAggregator', () => {
   });
 
   it('subscribes to EventBus vaultSkill.changed and invalidates the matching provider', async () => {
-    const { EventBus } = await import('@/core/events/EventBus');
     const bus = new EventBus<{ 'vaultSkill.changed': { providerId: 'claude' | 'codex' } }>();
     const fetch = jest.fn().mockResolvedValue([makeSkillEntry({ id: 'a', name: 'a' })]);
     const records = [makeRecord({ providerId: 'claude', entries: fetch })];
@@ -337,7 +337,6 @@ describe('VaultSkillAggregator', () => {
   });
 
   it('dispose() unsubscribes EventBus and clears caches', async () => {
-    const { EventBus } = await import('@/core/events/EventBus');
     const bus = new EventBus<{ 'vaultSkill.changed': { providerId: 'claude' | 'codex' } }>();
     const fetch = jest.fn().mockResolvedValue([makeSkillEntry({ id: 'a', name: 'a' })]);
     const records = [makeRecord({ providerId: 'claude', entries: fetch })];
@@ -558,7 +557,7 @@ describe('VaultSkillAggregator', () => {
       logger: logger as never,
     });
     await agg.hydrate();
-    expect(warn).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('hydrate'));
   });
 
   it('persists to disk after a successful fetch (debounced)', async () => {
