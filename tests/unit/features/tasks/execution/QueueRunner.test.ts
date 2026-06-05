@@ -318,6 +318,20 @@ describe('QueueRunner — skip ledger debounce', () => {
     expect(h.ledger).toHaveLength(2);
     expect(h.ledger[1].message).toContain('model');
   });
+
+  it('records the skipped card\'s actual status, not a hard-coded ready', async () => {
+    // The queue runs both Ready and Needs-fix cards, so a skipped Needs-fix card
+    // must log its real status — otherwise the ledger claims it was Ready.
+    const h = makeHarness({ eligibility: { isProviderEnabled: () => false } });
+    h.setTasks([makeTask('a', { status: 'needs_fix' })]);
+
+    h.runner.tick();
+    await flush();
+
+    expect(h.ledger).toHaveLength(1);
+    expect(h.ledger[0].status).toBe('needs_fix');
+    expect(h.ledger[0].message).toContain('skipped');
+  });
 });
 
 describe('QueueRunner — dispose', () => {

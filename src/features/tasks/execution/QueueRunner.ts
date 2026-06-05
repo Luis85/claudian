@@ -239,7 +239,9 @@ export class QueueRunner {
     this.deps.events.emit('task:queue-skipped', { taskId: task.frontmatter.id, reason });
     void this.deps.appendLedger(task, {
       timestamp: new Date(now).toISOString(),
-      status: 'ready',
+      // The queue runs both Ready and Needs-fix cards; record the card's real
+      // status so the ledger doesn't claim a Needs-fix card was Ready.
+      status: task.frontmatter.status,
       message: `queue: skipped (${reason})`,
     });
   }
