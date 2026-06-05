@@ -1,5 +1,5 @@
 ---
-status: approved
+status: shipped
 date: 2026-06-04
 scope: features/tasks, features/chat, app/settings
 parent: "[[Agent Kanban Board]]"

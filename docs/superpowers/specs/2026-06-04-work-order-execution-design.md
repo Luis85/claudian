@@ -1,7 +1,7 @@
 ---
 title: Work-order execution — visibility + agent protocols (P0+P1)
 date: 2026-06-04
-status: draft
+status: approved (design)
 scope: agent-board-execution
 parent: "[[agent-board-mvp]]"
 related:
