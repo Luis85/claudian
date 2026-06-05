@@ -359,6 +359,10 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     return this.viewActivator.canCreateNewTab();
   }
 
+  getTabSlotUsage(): { used: number; max: number } {
+    return this.viewActivator.getTabSlotUsage();
+  }
+
   private async ensureViewOpen(): Promise<ClaudianView | null> {
     return this.viewActivator.ensureViewOpen();
   }

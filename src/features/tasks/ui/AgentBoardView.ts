@@ -272,9 +272,12 @@ export class AgentBoardView extends ItemView {
   }
 
   private computeSlots(): { used: number; max: number } {
-    const max = this.plugin.settings.maxTabs;
-    const used = this.plugin.getView()?.getTabManager()?.getTabCount() ?? 0;
-    return { used, max };
+    // Delegate to the activator so the queue's slot gate and the manual
+    // new-tab guard (canCreateNewTab) share one tab-accounting source. With no
+    // chat view mounted this reports the persisted tab count — the set the next
+    // run restores — instead of 0, so the queue can't over-launch past the
+    // restored cap and fail ready cards on the tab limit.
+    return this.plugin.getTabSlotUsage();
   }
 
   private async archiveTask(task: TaskSpec): Promise<void> {

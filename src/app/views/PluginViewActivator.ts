@@ -77,6 +77,19 @@ export class PluginViewActivator {
     return this.getLastKnownOpenTabCount() < this.getMaxTabsLimit();
   }
 
+  /**
+   * Tabs in use and the effective cap, for the Agent Board queue's slot gate.
+   * Shares canCreateNewTab()'s accounting: when no live tab manager exists the
+   * next run restores the persisted tab set, so the persisted count — not 0 —
+   * is what's effectively in use. `max` is clamped to the same bounds the tab
+   * manager enforces so the queue can't launch past the real cap.
+   */
+  getTabSlotUsage(): { used: number; max: number } {
+    const tabManager = this.plugin.getView()?.getTabManager();
+    const used = tabManager ? tabManager.getTabCount() : this.getLastKnownOpenTabCount();
+    return { used, max: this.getMaxTabsLimit() };
+  }
+
   async runNextReadyWorkOrder(): Promise<void> {
     await this.activateAgentBoardView();
     const leaf = this.plugin.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN_AGENT_BOARD)[0];

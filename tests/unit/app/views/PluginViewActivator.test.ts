@@ -5,7 +5,7 @@ import type ClaudianPlugin from '@/main';
 function createPlugin(opts: {
   existingViewLeaves?: unknown[];
   hasLiveView?: boolean;
-  tabManager?: { canCreateTab?: () => boolean } | null;
+  tabManager?: { canCreateTab?: () => boolean; getTabCount?: () => number } | null;
   lastKnownOpenTabCount?: number;
   maxTabs?: number;
   placement?: 'main-tab' | 'left-sidebar' | 'right-sidebar';
@@ -97,5 +97,33 @@ describe('PluginViewActivator.openNewTab', () => {
 
     expect(liveView.createNewTab).not.toHaveBeenCalled();
     expect(newLeafTab.setViewState).toHaveBeenCalled();
+  });
+});
+
+describe('PluginViewActivator.getTabSlotUsage', () => {
+  it('reports the live tab count when a view is mounted', () => {
+    const { plugin } = createPlugin({
+      hasLiveView: true,
+      tabManager: { getTabCount: () => 2 },
+      maxTabs: 5,
+    });
+    const activator = new PluginViewActivator(plugin);
+    expect(activator.getTabSlotUsage()).toEqual({ used: 2, max: 5 });
+  });
+
+  it('falls back to the persisted tab count when no view is mounted', () => {
+    // Regression: a closed chat view restores its persisted tabs when the next
+    // queue run activates it, so `used` must reflect that set — not 0 — or the
+    // Agent Board queue over-launches past the cap and marks ready cards failed
+    // on the tab limit.
+    const { plugin } = createPlugin({ lastKnownOpenTabCount: 3, maxTabs: 5 });
+    const activator = new PluginViewActivator(plugin);
+    expect(activator.getTabSlotUsage()).toEqual({ used: 3, max: 5 });
+  });
+
+  it('clamps max to the same [3,10] bounds the tab manager enforces', () => {
+    const { plugin } = createPlugin({ lastKnownOpenTabCount: 0, maxTabs: 99 });
+    const activator = new PluginViewActivator(plugin);
+    expect(activator.getTabSlotUsage().max).toBe(10);
   });
 });
