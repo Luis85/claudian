@@ -1,5 +1,11 @@
+import { Notice } from 'obsidian';
+
 import type { ChatMessage } from '../../core/types';
+import { t } from '../../i18n/i18n';
+import type ClaudianPlugin from '../../main';
 import { chatMessageText } from '../../utils/chatMessageText';
+import { QuickActionStorage } from './QuickActionStorage';
+import { QuickActionEditorModal } from './ui/QuickActionEditorModal';
 
 const COMMAND_PREFIXES = ['/', '$', '#', '!'] as const;
 
@@ -39,4 +45,51 @@ export function deriveSeedName(text: string, maxLen = 50): string {
   const firstLine = text.split(/\r?\n/, 1)[0]?.trim() ?? '';
   if (firstLine.length <= maxLen) return firstLine;
   return firstLine.slice(0, maxLen).trimEnd() + '…';
+}
+
+/**
+ * Opens the quick-action editor pre-filled with this message's prose and a
+ * derived name. The folder check fires before the modal is constructed so a
+ * misconfigured vault never lands the user in a half-broken save flow.
+ *
+ * Side-effects on save (in order): write file, toast, refresh favorites cache,
+ * open the saved note. `openLinkText` failures are logged and swallowed —
+ * the save itself already succeeded.
+ */
+export function openCaptureFromMessage(
+  plugin: ClaudianPlugin,
+  message: ChatMessage,
+): void {
+  const folder = plugin.settings.quickActionsFolder?.trim() ?? '';
+  if (!folder) {
+    new Notice(t('quickActions.capture.folderMissing'));
+    return;
+  }
+
+  const prompt = visibleText(message);
+  if (!prompt) return;
+
+  const seedName = deriveSeedName(prompt);
+
+  const storage = new QuickActionStorage(
+    plugin.storage.getAdapter(),
+    () => plugin.settings.quickActionsFolder ?? 'Quick Actions',
+  );
+
+  new QuickActionEditorModal(
+    plugin.app,
+    null,
+    async (action) => {
+      const filePath = await storage.save(action);
+      new Notice(t('quickActions.capture.saved'));
+      plugin.quickActionFavoritesCache?.refresh();
+      try {
+        await plugin.app.workspace.openLinkText(filePath, '', false);
+      } catch (err) {
+        plugin.logger.scope('quickActions').warn('openLinkText after capture failed', err);
+      }
+    },
+    storage,
+    { name: seedName, prompt },
+  ).open();
 }
