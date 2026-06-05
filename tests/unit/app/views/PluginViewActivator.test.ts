@@ -126,4 +126,26 @@ describe('PluginViewActivator.getTabSlotUsage', () => {
     const activator = new PluginViewActivator(plugin);
     expect(activator.getTabSlotUsage().max).toBe(10);
   });
+
+  it('reserves the fallback blank tab when no view is mounted and nothing is persisted', () => {
+    // restoreOrCreateTabs() creates one blank tab on mount when no tabs are
+    // persisted, and work-order runs open their own tabs on top of it. Count
+    // that blank tab so the queue reserves its slot instead of launching one
+    // run too many into the tab cap.
+    const { plugin } = createPlugin({ lastKnownOpenTabCount: 0, maxTabs: 5 });
+    const activator = new PluginViewActivator(plugin);
+    expect(activator.getTabSlotUsage()).toEqual({ used: 1, max: 5 });
+  });
+
+  it('does not reserve a fallback tab when a view is mounted with zero tabs', () => {
+    // A mounted view already ran restoreOrCreateTabs(), so its live count is
+    // authoritative; the fallback reservation must not double-count here.
+    const { plugin } = createPlugin({
+      hasLiveView: true,
+      tabManager: { getTabCount: () => 0 },
+      maxTabs: 5,
+    });
+    const activator = new PluginViewActivator(plugin);
+    expect(activator.getTabSlotUsage()).toEqual({ used: 0, max: 5 });
+  });
 });

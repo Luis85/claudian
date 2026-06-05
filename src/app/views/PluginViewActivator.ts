@@ -80,13 +80,18 @@ export class PluginViewActivator {
   /**
    * Tabs in use and the effective cap, for the Agent Board queue's slot gate.
    * Shares canCreateNewTab()'s accounting: when no live tab manager exists the
-   * next run restores the persisted tab set, so the persisted count — not 0 —
-   * is what's effectively in use. `max` is clamped to the same bounds the tab
-   * manager enforces so the queue can't launch past the real cap.
+   * next run mounts the chat view, and restoreOrCreateTabs() either restores
+   * the persisted tab set or creates one fallback blank tab when nothing is
+   * persisted. Reserve at least that blank tab so the queue counts the slot it
+   * will occupy and can't launch one run too many into the cap; a mounted view
+   * already ran that path, so its live count is authoritative. `max` is clamped
+   * to the same bounds the tab manager enforces.
    */
   getTabSlotUsage(): { used: number; max: number } {
     const tabManager = this.plugin.getView()?.getTabManager();
-    const used = tabManager ? tabManager.getTabCount() : this.getLastKnownOpenTabCount();
+    const used = tabManager
+      ? tabManager.getTabCount()
+      : Math.max(this.getLastKnownOpenTabCount(), 1);
     return { used, max: this.getMaxTabsLimit() };
   }
 
