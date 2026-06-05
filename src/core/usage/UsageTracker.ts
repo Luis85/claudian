@@ -1,7 +1,7 @@
 import type { EventBus } from '../events/EventBus';
 import type { Logger } from '../logging/Logger';
 import type { UsageEventMap } from './events';
-import { parseKey, serializeKey } from './keys';
+import { serializeKey } from './keys';
 import {
   USAGE_INDEX_SCHEMA_VERSION,
   type UsageIndex,
@@ -108,11 +108,11 @@ export class UsageTracker {
   }
 
   private snapshot(): UsageIndex {
+    // All keys in `this.records` originated from `serializeKey()` (see
+    // `handleRecord`), so no defensive parse is needed at persist time.
     const records: Record<string, UsageRecord> = {};
     for (const [key, value] of this.records) {
-      if (parseKey(key) !== null) {
-        records[key] = { count: value.count, lastUsedAt: value.lastUsedAt };
-      }
+      records[key] = { count: value.count, lastUsedAt: value.lastUsedAt };
     }
     return { version: USAGE_INDEX_SCHEMA_VERSION, records };
   }

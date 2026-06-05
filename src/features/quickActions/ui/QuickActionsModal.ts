@@ -7,6 +7,7 @@ import type { UsageRecord } from '../../../core/usage/types';
 import { t } from '../../../i18n/i18n';
 import type { QuickActionStorage } from '../QuickActionStorage';
 import { assignNextFavoriteRank } from '../QuickActionStorage';
+import { quickActionStemFromPath } from '../runQuickActionForFile';
 import type { SkillTabEntry, VaultSkillSource } from '../skills/types';
 import type { QuickAction } from '../types';
 import { formatUsageBadge, loadBadgeI18n } from './formatUsageBadge';
@@ -336,9 +337,7 @@ export class QuickActionsModal extends Modal {
     const textCol = main.createDiv({ cls: 'claudian-quick-action-text' });
     textCol.createEl('strong', { text: action.name });
     if (this.callbacks.usageTracker) {
-      const stem = action.filePath
-        ? (action.filePath.split('/').pop() ?? action.filePath).replace(/\.md$/i, '')
-        : action.name;
+      const stem = action.filePath ? quickActionStemFromPath(action.filePath) : action.name;
       const record = this.callbacks.usageTracker.getAll().get(`quickAction:_:${stem}`) ?? null;
       textCol.createSpan({
         cls: 'claudian-quick-action-usage-badge',
