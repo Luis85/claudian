@@ -74,7 +74,12 @@ export async function runVaultSkill(
   }
 
   const content = `${entry.insertPrefix}${entry.name}`;
-  void target.controllers.inputController?.sendMessage({ content });
+  await target.controllers.inputController?.sendMessage({ content });
+  plugin.events.emit('usage.recorded', {
+    kind: 'skill',
+    name: entry.name,
+    providerId: entry.providerId,
+  });
 }
 
 async function resolveTargetTab(
