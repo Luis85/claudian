@@ -216,6 +216,15 @@ describe('TaskRunCoordinator', () => {
     await first;
   });
 
+  it('rejects a run already held in a shared activeRunIds set (another view)', async () => {
+    const shared = new Set<string>(['task-1']); // another coordinator/view is running it
+    const { coordinator } = makeCoordinator(new FakeSurface(), { activeRunIds: shared });
+    await expect(coordinator.run(makeTask())).resolves.toEqual({
+      ok: false,
+      error: 'This work order is already running.',
+    });
+  });
+
   it('uses an injected renderPrompt when provided', async () => {
     const surface = new FakeSurface();
     const { coordinator } = makeCoordinator(surface, { renderPrompt: () => 'INJECTED PROMPT' });

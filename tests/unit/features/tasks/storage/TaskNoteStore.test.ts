@@ -269,6 +269,30 @@ body`;
       expect(parsed.task.frontmatter.heartbeat).toBe('2026-06-04T09:01:00.000Z');
     });
 
+    it('records finished and clears heartbeat when a run ends in review', () => {
+      const running = store.writeStatus(baseNote, {
+        status: 'running',
+        started: '2026-06-04T09:00:00.000Z',
+        heartbeat: '2026-06-04T09:00:30.000Z',
+        timestamp: '2026-06-04T09:00:30.000Z',
+      });
+      const reviewed = store.writeStatus(running, { status: 'review', timestamp: '2026-06-04T09:05:00.000Z' });
+      expect(reviewed).toContain('heartbeat: null');
+      const parsed = store.parse('t1.md', reviewed);
+      expect(parsed.task.frontmatter.status).toBe('review');
+      expect(parsed.task.frontmatter.finished).toBe('2026-06-04T09:05:00.000Z');
+    });
+
+    it('clears the finished timestamp when a new run starts', () => {
+      const ended = store.writeStatus(baseNote, { status: 'failed', timestamp: '2026-06-04T09:05:00.000Z' });
+      const rerun = store.writeStatus(ended, {
+        status: 'running',
+        started: '2026-06-04T10:00:00.000Z',
+        timestamp: '2026-06-04T10:00:00.000Z',
+      });
+      expect(rerun).toContain('finished: null');
+    });
+
     it('clears heartbeat and pause_reason on terminal status', () => {
       const paused = store.writeStatus(baseNote, {
         status: 'needs_input',

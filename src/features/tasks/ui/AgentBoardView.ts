@@ -13,6 +13,7 @@ import { archiveWorkOrder } from '../commands/taskCommands';
 import { getLaneForStatus, loadBoardConfig } from '../config/BoardConfigStore';
 import type { BoardConfig, ResolvedBoardLayout } from '../config/boardConfigTypes';
 import { resolveBoardLayout } from '../config/resolveBoardLayout';
+import { sharedActiveRunIds } from '../execution/activeRunRegistry';
 import { selectNextReadyTask } from '../execution/selectNextReadyTask';
 import type { TaskExecutionSurface } from '../execution/TaskExecutionSurface';
 import { TaskRunCoordinator } from '../execution/TaskRunCoordinator';
@@ -338,6 +339,7 @@ export class AgentBoardView extends ItemView {
     this.coordinator = new TaskRunCoordinator({
       executionSurface: this.executionSurface,
       events: this.plugin.events,
+      activeRunIds: sharedActiveRunIds,
       now: () => new Date().toISOString(),
       isProviderEnabled: (providerId) =>
         ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId) &&
@@ -439,7 +441,10 @@ export class AgentBoardView extends ItemView {
     for (const task of this.model.tasks) {
       const status = task.frontmatter.status;
       if (status !== 'running' && status !== 'needs_input' && status !== 'needs_approval') continue;
-      if (this.coordinator?.getActiveRun(task.frontmatter.id)) continue;
+      // Skip work orders a run is still driving anywhere in this process (e.g. a
+      // previous view instance that was closed and reopened) — only genuinely
+      // orphaned runs (no live session, e.g. after a plugin reload) are failed.
+      if (sharedActiveRunIds.has(task.frontmatter.id)) continue;
       await this.applyNoteChange(task.path, (content) =>
         this.noteStore.appendLedger(content, { timestamp: now, status: 'failed', message: 'orphaned by plugin reload' }),
       );

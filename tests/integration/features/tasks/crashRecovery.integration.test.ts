@@ -2,6 +2,7 @@ import { TFile } from 'obsidian';
 
 import { EventBus } from '../../../../src/core/events/EventBus';
 import type { TaskEventMap } from '../../../../src/features/tasks/events';
+import { sharedActiveRunIds } from '../../../../src/features/tasks/execution/activeRunRegistry';
 import {
   HANDOFF_END,
   HANDOFF_START,
@@ -93,6 +94,8 @@ function makeView(notes: Record<string, string>, coordinator: unknown) {
 }
 
 describe('Agent Board crash recovery (integration)', () => {
+  afterEach(() => sharedActiveRunIds.clear());
+
   it('marks an orphaned running work order as failed on open', async () => {
     const notes = { [PATH]: makeRunningNote('running') };
     const { view, store, statusEvents } = makeView(notes, null);
@@ -117,8 +120,8 @@ describe('Agent Board crash recovery (integration)', () => {
 
   it('leaves a work order with a live session untouched', async () => {
     const notes = { [PATH]: makeRunningNote('running') };
-    const coordinator = { getActiveRun: () => ({ resume: jest.fn() }) };
-    const { view, store } = makeView(notes, coordinator);
+    const { view, store } = makeView(notes, null);
+    sharedActiveRunIds.add('t1'); // a live run (e.g. a previous view) still owns it
 
     await view.recoverOrphanedRuns();
 

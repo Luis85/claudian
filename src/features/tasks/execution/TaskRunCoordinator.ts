@@ -16,6 +16,13 @@ export interface TaskRunCoordinatorDeps {
   renderPrompt?: (task: TaskSpec) => string;
   heartbeatIntervalMs?: number;
   staleThresholdMs?: number;
+  /**
+   * Process-shared set of task ids with a live run. Reserved before the surface
+   * resolves and held for the whole run, so concurrent/cross-view runs of the
+   * same work order are rejected and crash recovery can tell a run is still live.
+   * Defaults to a coordinator-local set when omitted.
+   */
+  activeRunIds?: Set<string>;
 }
 
 export type TaskRunResult = { ok: true; status: TaskStatus } | { ok: false; error: string };
@@ -27,11 +34,14 @@ export type TaskRunResult = { ok: true; status: TaskStatus } | { ok: false; erro
  */
 export class TaskRunCoordinator {
   private readonly activeRuns = new Map<string, RunSession>();
-  // Task ids reserved between the guard check and the surface resolving, so two
-  // near-simultaneous runs of the same work order can't both open a tab.
-  private readonly starting = new Set<string>();
+  // Task ids reserved from the guard check until the run ends (shared across
+  // views when injected), so concurrent/cross-view runs are rejected and crash
+  // recovery can tell a run is still live.
+  private readonly runIds: Set<string>;
 
-  constructor(private readonly deps: TaskRunCoordinatorDeps) {}
+  constructor(private readonly deps: TaskRunCoordinatorDeps) {
+    this.runIds = deps.activeRunIds ?? new Set<string>();
+  }
 
   /** The live session for a task, if one is currently running (drives reply/approve/reject). */
   getActiveRun(taskId: string): RunSession | undefined {
@@ -43,7 +53,7 @@ export class TaskRunCoordinator {
 
     if (!provider) return { ok: false, error: 'Work order is missing provider' };
     if (!model) return { ok: false, error: 'Work order is missing model' };
-    if (task.frontmatter.status === 'running' || this.activeRuns.has(id) || this.starting.has(id)) {
+    if (task.frontmatter.status === 'running' || this.activeRuns.has(id) || this.runIds.has(id)) {
       return { ok: false, error: 'This work order is already running.' };
     }
     if (!this.deps.isProviderEnabled(provider)) {
@@ -55,7 +65,7 @@ export class TaskRunCoordinator {
 
     // Reserve the id before awaiting the surface (tab creation), then hold it for
     // the whole run, so a concurrent run of the same work order is rejected.
-    this.starting.add(id);
+    this.runIds.add(id);
     try {
       const prompt = (this.deps.renderPrompt ?? renderTaskPrompt)(task);
       const handle = await this.deps.executionSurface.startTaskRun(task, { prompt });
@@ -92,7 +102,7 @@ export class TaskRunCoordinator {
         this.activeRuns.delete(id);
       }
     } finally {
-      this.starting.delete(id);
+      this.runIds.delete(id);
     }
   }
 }

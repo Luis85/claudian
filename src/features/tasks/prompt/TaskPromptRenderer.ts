@@ -59,16 +59,28 @@ export function renderTaskPrompt(task: TaskSpec, lane?: TaskPromptLaneCriteria):
   const protocol = `
 
 ## Protocol
-While running, you may emit these inline blocks. Use them whenever the situation calls for them; the harness watches the stream and reacts.
+While running, you may emit these inline blocks. Use them whenever the situation calls for them; the harness watches the stream and reacts. Put each field on its own line as \`key: value\` (do not put multiple fields on one line).
 
-- <claudian_progress>step: …; done: N/M; note: …</claudian_progress>
-  Optional milestone updates. Emit at natural boundaries; do not flood.
+Progress — optional milestone updates; emit at natural boundaries, do not flood:
+<claudian_progress>
+step: short description of what you are doing
+done: N/M
+note: optional extra detail
+</claudian_progress>
 
-- <claudian_needs_input>question: …; why: …; default: …</claudian_needs_input>
-  When you genuinely need information you cannot derive. End your turn after this block. The run pauses; you will be resumed with the user's reply.
+Needs input — when you genuinely need information you cannot derive. End your turn after this block; the run pauses and you will be resumed with the user's reply:
+<claudian_needs_input>
+question: what you need to know
+why: optional reason it is ambiguous
+default: optional value to assume if the user does not answer
+</claudian_needs_input>
 
-- <claudian_needs_approval>action: …; risk: …; reversible: true|false</claudian_needs_approval>
-  Before destructive or irreversible operations. End your turn after this block. The run pauses; you will be resumed only if the user approves.
+Needs approval — before destructive or irreversible operations. End your turn after this block; the run pauses and you will be resumed only if the user approves:
+<claudian_needs_approval>
+action: what you intend to do
+risk: optional description of the risk
+reversible: true|false
+</claudian_needs_approval>
 
 End the entire run with one <claudian_handoff> block as specified below.`;
 

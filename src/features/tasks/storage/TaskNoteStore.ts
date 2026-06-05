@@ -10,6 +10,15 @@ export const HANDOFF_END = '<!-- claudian:handoff-end -->';
 
 const CLAUDIAN_MARKER_PREFIX = '<!-- claudian:';
 
+/** Statuses that mean the run has ended (run-finished metadata + heartbeat clear apply). */
+const RUN_ENDED_STATUSES: ReadonlySet<TaskStatus> = new Set([
+  'review',
+  'needs_handoff',
+  'done',
+  'failed',
+  'canceled',
+]);
+
 type WritableFrontmatter = TaskSpec['frontmatter'] & Record<string, unknown>;
 
 export interface ParsedTaskSpec extends Omit<TaskSpec, 'frontmatter'> {
@@ -99,7 +108,15 @@ export class TaskNoteStore {
     if (options.pauseReason !== undefined) frontmatter.pause_reason = options.pauseReason;
     if (options.attempts !== undefined) frontmatter.attempts = options.attempts;
 
-    if (options.status === 'done' || options.status === 'failed' || options.status === 'canceled') {
+    // A fresh run is in progress and has not finished yet.
+    if (options.status === 'running') {
+      frontmatter.finished = null;
+    }
+
+    // The run has ended (whether or not the work order still needs human review):
+    // record the finish time and clear live-run metadata so the card stops
+    // showing a stale heartbeat and the duration is accurate.
+    if (RUN_ENDED_STATUSES.has(options.status)) {
       frontmatter.finished = options.timestamp;
       frontmatter.heartbeat = null;
       frontmatter.pause_reason = null;
