@@ -77,7 +77,9 @@ export class TaskRunCoordinator {
       const session = new RunSession({
         task,
         runId: handle.runId,
-        conversationId: handle.conversationId,
+        // The conversation is created lazily by the first chat turn, so read it
+        // live: it is null at start and becomes non-null once the send binds it.
+        getConversationId: () => handle.conversationId,
         sidepanelTabId: handle.sidepanelTabId,
         stream: handle.stream,
         events: this.deps.events,

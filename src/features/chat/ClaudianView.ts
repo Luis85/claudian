@@ -726,7 +726,12 @@ export class ClaudianView extends ItemView {
       }));
 
     return {
-      conversationId: tab.conversationId,
+      // The conversation is created lazily by the first send() above, which
+      // mutates tab.conversationId via onConversationIdChanged. Read it live so
+      // the run binds the real id once it exists instead of freezing null here.
+      get conversationId() {
+        return tab.conversationId;
+      },
       sidepanelTabId: tab.id,
       subscribe: (observer) => {
         liveObserver = observer;

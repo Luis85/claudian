@@ -71,7 +71,7 @@ function makeHarness(initialNote = makeNote()) {
   const session = new RunSession({
     task,
     runId: 'run-1',
-    conversationId: 'conv-1',
+    getConversationId: () => 'conv-1',
     sidepanelTabId: 'tab-1',
     stream: adapter,
     events,

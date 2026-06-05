@@ -47,7 +47,11 @@ export class ChatTabExecutionSurface implements TaskExecutionSurface {
 
     return {
       runId,
-      conversationId: handle.conversationId,
+      // Delegate to the chat handle: the conversation is created lazily by the
+      // first send, so this is null now and becomes non-null once bound.
+      get conversationId() {
+        return handle.conversationId;
+      },
       sidepanelTabId: handle.sidepanelTabId,
       stream: new ChatTabStreamAdapter(handle),
       terminal: handle.terminal,

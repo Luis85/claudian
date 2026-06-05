@@ -50,7 +50,7 @@ function makeSession(overrides: Partial<ConstructorParameters<typeof RunSession>
   const session = new RunSession({
     task: makeTask(),
     runId: 'run-1',
-    conversationId: 'conv-1',
+    getConversationId: () => 'conv-1',
     sidepanelTabId: 'tab-1',
     stream: adapter,
     events,
@@ -179,7 +179,7 @@ describe('RunSession', () => {
     const session = new RunSession({
       task: makeTask(),
       runId: 'r',
-      conversationId: null,
+      getConversationId: () => null,
       sidepanelTabId: null,
       stream: adapter,
       events,
@@ -216,7 +216,7 @@ describe('RunSession', () => {
     const session = new RunSession({
       task: makeTask(),
       runId: 'r',
-      conversationId: null,
+      getConversationId: () => null,
       sidepanelTabId: null,
       stream: adapter,
       events,
@@ -245,7 +245,7 @@ describe('RunSession', () => {
     const session = new RunSession({
       task: makeTask(),
       runId: 'r',
-      conversationId: null,
+      getConversationId: () => null,
       sidepanelTabId: null,
       stream: adapter,
       events,
@@ -309,5 +309,74 @@ describe('RunSession', () => {
     expect(result.ok).toBe(true);
     expect(statuses[statuses.length - 1]).toBe('review');
     jest.useRealTimers();
+  });
+
+  it('binds the conversation id once it is created lazily (read live, not frozen at start)', async () => {
+    // The conversation is created by the first chat turn, so it is null when the
+    // run starts and becomes non-null afterward. Status writes must pick it up.
+    let conversationId: string | null = null;
+    const writes: Array<{ status: string; conversationId?: string | null }> = [];
+    const adapter = new SyntheticStreamAdapter();
+    const session = new RunSession({
+      task: makeTask(),
+      runId: 'r',
+      getConversationId: () => conversationId,
+      sidepanelTabId: null,
+      stream: adapter,
+      events: new EventBus<TaskEventMap>(),
+      now: () => '2026-06-04T09:00:00Z',
+      writeStatus: async (_t, options) => {
+        writes.push({ status: options.status, conversationId: options.conversationId });
+      },
+      flushLedger: async () => {},
+      writeHandoff: async () => {},
+      heartbeatIntervalMs: 100000,
+      staleThresholdMs: 100000,
+      ledgerIntervalMs: 100000,
+      ledgerMilestone: 999,
+    });
+    const terminal = session.run();
+    // The send binds the conversation before the turn ends.
+    conversationId = 'conv-late';
+    adapter.emitText(VALID_HANDOFF);
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await terminal;
+
+    // Initial running write happened before binding -> no conversation id frozen.
+    expect(writes[0]).toEqual({ status: 'running', conversationId: undefined });
+    // Terminal write happened after binding -> the live id is persisted.
+    expect(writes[writes.length - 1]).toEqual({ status: 'review', conversationId: 'conv-late' });
+  });
+
+  it('never persists a null conversation id, so a re-run cannot clear an existing binding', async () => {
+    const writes: Array<{ status: string; conversationId?: string | null }> = [];
+    const adapter = new SyntheticStreamAdapter();
+    const session = new RunSession({
+      task: makeTask(),
+      runId: 'r',
+      getConversationId: () => null,
+      sidepanelTabId: null,
+      stream: adapter,
+      events: new EventBus<TaskEventMap>(),
+      now: () => '2026-06-04T09:00:00Z',
+      writeStatus: async (_t, options) => {
+        writes.push({ status: options.status, conversationId: options.conversationId });
+      },
+      flushLedger: async () => {},
+      writeHandoff: async () => {},
+      heartbeatIntervalMs: 100000,
+      staleThresholdMs: 100000,
+      ledgerIntervalMs: 100000,
+      ledgerMilestone: 999,
+    });
+    const terminal = session.run();
+    adapter.emitText(VALID_HANDOFF);
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await terminal;
+
+    expect(writes.length).toBeGreaterThan(0);
+    for (const write of writes) {
+      expect(write.conversationId).toBeUndefined();
+    }
   });
 });

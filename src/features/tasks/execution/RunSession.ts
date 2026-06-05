@@ -20,7 +20,12 @@ export interface RunSessionWriteStatusOptions {
 export interface RunSessionDeps {
   task: TaskSpec;
   runId: string;
-  conversationId: string | null;
+  /**
+   * Reads the run's conversation id live. The conversation is created lazily by
+   * the first chat turn, so this is null at run start and becomes non-null once
+   * bound; status writes pick it up then (and never clear an existing binding).
+   */
+  getConversationId: () => string | null;
   sidepanelTabId: string | null;
   stream: ProviderStreamAdapter;
   events: TaskEventEmitter;
@@ -111,6 +116,17 @@ export class RunSession {
     void settled.finally(() => this.pendingStatusWrites.delete(settled));
   }
 
+  /**
+   * Writes a status, attaching the live conversation id when one is bound. Never
+   * passes a null id, so the lazily-created conversation persists as soon as it
+   * exists without clearing an existing binding on a re-run.
+   */
+  private persistStatus(options: RunSessionWriteStatusOptions): Promise<void> {
+    const conversationId = this.deps.getConversationId();
+    const merged = conversationId ? { conversationId, ...options } : options;
+    return this.deps.writeStatus(this.deps.task, merged);
+  }
+
   run(): Promise<RunSessionResult> {
     this.attemptNumber = (this.deps.task.frontmatter.attempts ?? 0) + 1;
     const ts = this.deps.now();
@@ -125,11 +141,10 @@ export class RunSession {
       onEnd: (payload) => { void this.finish(payload); },
     });
     this.startHeartbeat();
-    this.trackBackgroundWrite(this.deps.writeStatus(this.deps.task, {
+    this.trackBackgroundWrite(this.persistStatus({
       status: 'running',
       timestamp: ts,
       runId: this.deps.runId,
-      conversationId: this.deps.conversationId,
       sidepanelTabId: this.deps.sidepanelTabId,
       // Stamp the run-start once; heartbeats deliberately omit `started`.
       started: ts,
@@ -162,7 +177,7 @@ export class RunSession {
 
     const content = arg.kind === 'reply' ? arg.content : 'approved';
     const ts = this.deps.now();
-    await this.deps.writeStatus(this.deps.task, { status: 'running', timestamp: ts, heartbeat: ts, pauseReason: null });
+    await this.persistStatus({ status: 'running', timestamp: ts, heartbeat: ts, pauseReason: null });
     this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'running' });
     this.deps.events.emit('task:resumed', { taskId: this.taskId, path: this.path });
     this.ledger.enqueue({ timestamp: ts, status: 'running', message: `resumed: ${truncate(content, 80)}` });
@@ -238,7 +253,7 @@ export class RunSession {
     reason: string | null,
   ): Promise<void> {
     const ts = this.deps.now();
-    await this.deps.writeStatus(this.deps.task, { status: kind, timestamp: ts, pauseReason: reason });
+    await this.persistStatus({ status: kind, timestamp: ts, pauseReason: reason });
     this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: kind });
     if (kind === 'needs_input') {
       this.deps.events.emit('task:needs-input', {
@@ -325,7 +340,7 @@ export class RunSession {
     const ts = this.deps.now();
 
     if (payload.status === 'canceled') {
-      await this.deps.writeStatus(this.deps.task, { status: 'canceled', timestamp: ts });
+      await this.persistStatus({ status: 'canceled', timestamp: ts });
       this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'canceled' });
       await this.settle({ ok: false, error: payload.error ?? 'canceled', status: 'canceled' });
       return;
@@ -333,7 +348,7 @@ export class RunSession {
 
     if (payload.status === 'failed') {
       this.ledger.enqueue({ timestamp: ts, status: 'failed', message: payload.error ?? 'Run failed.' });
-      await this.deps.writeStatus(this.deps.task, { status: 'failed', timestamp: ts });
+      await this.persistStatus({ status: 'failed', timestamp: ts });
       this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'failed' });
       await this.settle({ ok: false, error: payload.error ?? 'failed', status: 'failed' });
       return;
@@ -343,7 +358,7 @@ export class RunSession {
     const parsed = parseTaskHandoff(content);
     if (parsed.ok) {
       await this.deps.writeHandoff(this.deps.task, parsed.handoff.markdown);
-      await this.deps.writeStatus(this.deps.task, { status: 'review', timestamp: ts });
+      await this.persistStatus({ status: 'review', timestamp: ts });
       this.ledger.enqueue({ timestamp: ts, status: 'review', message: 'Handoff written.' });
       this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'review' });
       await this.settle({ ok: true, status: 'review' });
@@ -351,7 +366,7 @@ export class RunSession {
     }
 
     if (content.length > 0) {
-      await this.deps.writeStatus(this.deps.task, { status: 'needs_handoff', timestamp: ts });
+      await this.persistStatus({ status: 'needs_handoff', timestamp: ts });
       this.ledger.enqueue({ timestamp: ts, status: 'needs_handoff', message: parsed.error });
       this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'needs_handoff' });
       this.deps.events.emit('task:needs-handoff', { taskId: this.taskId, path: this.path, error: parsed.error });
@@ -359,7 +374,7 @@ export class RunSession {
       return;
     }
 
-    await this.deps.writeStatus(this.deps.task, { status: 'failed', timestamp: ts });
+    await this.persistStatus({ status: 'failed', timestamp: ts });
     this.ledger.enqueue({ timestamp: ts, status: 'failed', message: 'Empty response' });
     this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'failed' });
     await this.settle({ ok: false, error: 'Empty response', status: 'failed' });
@@ -370,7 +385,7 @@ export class RunSession {
     if (this.resolveTerminal === null) return;
     const message = error instanceof Error ? error.message : String(error);
     try {
-      await this.deps.writeStatus(this.deps.task, { status: 'failed', timestamp: this.deps.now() });
+      await this.persistStatus({ status: 'failed', timestamp: this.deps.now() });
       this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'failed' });
     } catch {
       // The note write itself is failing; still settle so the run does not hang.
@@ -396,7 +411,7 @@ export class RunSession {
     const stale = this.deps.staleThresholdMs ?? DEFAULTS.staleThresholdMs;
     this.heartbeatTimer = window.setInterval(() => {
       const at = this.deps.now();
-      this.trackBackgroundWrite(this.deps.writeStatus(this.deps.task, { status: 'running', timestamp: at, heartbeat: at }));
+      this.trackBackgroundWrite(this.persistStatus({ status: 'running', timestamp: at, heartbeat: at }));
       this.deps.events.emit('task:heartbeat', { taskId: this.taskId, path: this.path, at });
     }, interval);
     this.staleTimer = window.setInterval(() => {
