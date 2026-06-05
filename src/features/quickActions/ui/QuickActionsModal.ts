@@ -9,6 +9,7 @@ import type { QuickActionStorage } from '../QuickActionStorage';
 import { assignNextFavoriteRank } from '../QuickActionStorage';
 import type { SkillTabEntry, VaultSkillSource } from '../skills/types';
 import type { QuickAction } from '../types';
+import { formatUsageBadge, loadBadgeI18n } from './formatUsageBadge';
 import { QuickActionEditorModal } from './QuickActionEditorModal';
 import { SkillsTabRenderer } from './SkillsTabRenderer';
 import { UsageStatsTab } from './UsageStatsTab';
@@ -65,6 +66,8 @@ export class QuickActionsModal extends Modal {
       callbacks.onRunSkill,
       callbacks.onEditSkill,
       () => this.close(),
+      callbacks.usageTracker,
+      callbacks.now ?? (() => Date.now()),
     );
     if (callbacks.usageTracker) {
       this.statsTab = new UsageStatsTab({
@@ -332,6 +335,20 @@ export class QuickActionsModal extends Modal {
 
     const textCol = main.createDiv({ cls: 'claudian-quick-action-text' });
     textCol.createEl('strong', { text: action.name });
+    if (this.callbacks.usageTracker) {
+      const stem = action.filePath
+        ? (action.filePath.split('/').pop() ?? action.filePath).replace(/\.md$/i, '')
+        : action.name;
+      const record = this.callbacks.usageTracker.getAll().get(`quickAction:_:${stem}`) ?? null;
+      textCol.createSpan({
+        cls: 'claudian-quick-action-usage-badge',
+        text: formatUsageBadge(
+          record,
+          this.callbacks.now?.() ?? Date.now(),
+          loadBadgeI18n(),
+        ),
+      });
+    }
     if (action.description !== action.name) {
       textCol.createDiv({
         cls: 'claudian-quick-action-desc',
