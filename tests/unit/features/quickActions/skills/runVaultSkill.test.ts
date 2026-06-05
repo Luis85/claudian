@@ -1,7 +1,7 @@
 import { Notice, TFile, TFolder } from 'obsidian';
 
-import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import { EventBus } from '@/core/events/EventBus';
+import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import type { UsageEventMap } from '@/core/usage/events';
 import { runVaultSkill } from '@/features/quickActions/skills/runVaultSkill';
 import type { SkillTabEntry } from '@/features/quickActions/skills/types';

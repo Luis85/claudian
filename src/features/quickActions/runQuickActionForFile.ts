@@ -66,7 +66,9 @@ export async function runQuickActionForFile(
     targetTab.ui.fileContextManager?.attachFolderAsPill(file.path);
   }
 
-  await targetTab.controllers.inputController?.sendMessage({ content: action.prompt });
+  const inputController = targetTab.controllers.inputController;
+  if (!inputController) return;
+  await inputController.sendMessage({ content: action.prompt });
   plugin.events.emit('usage.recorded', {
     kind: 'quickAction',
     name: quickActionStemFromPath(action.filePath),

@@ -55,6 +55,7 @@ describe('usage tracker end-to-end', () => {
       .toEqual({ count: 1, lastUsedAt: 100_000 });
     expect(tracker2.get({ kind: 'skill', name: 'deep-research', providerId: 'claude' }))
       .toEqual({ count: 1, lastUsedAt: 200_000 });
+    tracker2.dispose();
   });
 
   it('usage.cleared wipes the persisted index', async () => {
@@ -73,5 +74,6 @@ describe('usage tracker end-to-end', () => {
     bus.emit('usage.cleared');
     await tracker.flush();
     expect(JSON.parse(adapter.files.get('.claudian/usage.json')!).records).toEqual({});
+    tracker.dispose();
   });
 });

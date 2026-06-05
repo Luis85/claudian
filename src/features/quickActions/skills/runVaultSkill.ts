@@ -74,7 +74,9 @@ export async function runVaultSkill(
   }
 
   const content = `${entry.insertPrefix}${entry.name}`;
-  await target.controllers.inputController?.sendMessage({ content });
+  const inputController = target.controllers.inputController;
+  if (!inputController) return;
+  await inputController.sendMessage({ content });
   plugin.events.emit('usage.recorded', {
     kind: 'skill',
     name: entry.name,
