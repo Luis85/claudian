@@ -85,8 +85,8 @@ function makeHarness(config: HarnessConfig = {}): Harness {
   };
 
   const events: QueueRunnerEvents = {
-    emit: (name, payload) => {
-      emissions.push({ name, payload });
+    emit: (name, ...args) => {
+      emissions.push({ name, payload: args[0] });
     },
     on: () => () => {},
   };

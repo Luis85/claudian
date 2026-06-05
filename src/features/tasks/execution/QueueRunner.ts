@@ -1,13 +1,19 @@
 import type { TaskEventMap } from '../events';
 import type { TaskLedgerEntry, TaskSpec } from '../model/taskTypes';
-import { selectNextEligibleTask } from './selectNextEligibleTask';
-import type { EligibilityPredicates } from './selectNextEligibleTask';
 import type { QueueSlotTracker } from './QueueSlotTracker';
+import type { EligibilityPredicates } from './selectNextEligibleTask';
+import { selectNextEligibleTask } from './selectNextEligibleTask';
 import type { TaskRunResult } from './TaskRunCoordinator';
 
+// Variadic to mirror the shared EventBus exactly so a plain
+// `EventBus<ClaudianEventMap>` satisfies this without an adapter: void events
+// take no payload arg, the rest take one.
 export interface QueueRunnerEvents {
-  emit<K extends keyof TaskEventMap>(name: K, payload: TaskEventMap[K]): void;
-  on<K extends keyof TaskEventMap>(name: K, handler: (payload: TaskEventMap[K]) => void): () => void;
+  emit<K extends keyof TaskEventMap>(
+    event: K,
+    ...args: TaskEventMap[K] extends void ? [] : [TaskEventMap[K]]
+  ): void;
+  on<K extends keyof TaskEventMap>(event: K, handler: (payload: TaskEventMap[K]) => void): () => void;
 }
 
 export interface QueueRunnerCoordinator {
@@ -92,9 +98,9 @@ export class QueueRunner {
   setPaused(next: boolean): void {
     this.state.paused = next;
     if (next) {
-      this.deps.events.emit('task:queue-paused', undefined as never);
+      this.deps.events.emit('task:queue-paused');
     } else {
-      this.deps.events.emit('task:queue-resumed', undefined as never);
+      this.deps.events.emit('task:queue-resumed');
       this.tick();
     }
   }
