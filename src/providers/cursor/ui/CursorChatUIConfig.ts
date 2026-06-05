@@ -19,6 +19,7 @@ import {
   isCursorModelValue,
   toCursorModelValue,
 } from '../runtime/cursorModelId';
+import { cursorModelContextWindow, cursorModelPricing } from '../runtime/cursorModelWindowCatalog';
 import {
   getCursorEnabledModels,
   getCursorProviderSettings,
@@ -143,8 +144,12 @@ export const cursorChatUIConfig: ProviderChatUIConfig = {
     return variants[0]?.value ?? CURSOR_STANDARD_MODE;
   },
 
-  getContextWindowSize(): number {
-    return DEFAULT_CONTEXT_WINDOW;
+  getContextWindowSize(model: string, _customLimits?: Record<string, number>): number {
+    return cursorModelContextWindow(model) || DEFAULT_CONTEXT_WINDOW;
+  },
+
+  getModelPricing(modelId: string) {
+    return cursorModelPricing(modelId);
   },
 
   isDefaultModel(model: string): boolean {
