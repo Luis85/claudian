@@ -73,6 +73,7 @@ function makeCallbacks(): AgentBoardRenderCallbacks {
     onAddWorkOrder: jest.fn(),
     onRunNextReady: jest.fn(),
     onReopen: jest.fn(),
+    onContextMenu: jest.fn(),
   };
 }
 
@@ -178,5 +179,64 @@ describe('AgentBoardRenderer — Reopen button on done cards', () => {
 
     findReopenButton(host)?.click();
     expect(callbacks.onReopen).toHaveBeenCalledWith(doneTask);
+  });
+});
+
+function findFirstCard(host: HTMLElement): HTMLElement | null {
+  return host.querySelector('.claudian-agent-board-card') as HTMLElement | null;
+}
+
+describe('AgentBoardRenderer — contextmenu listener', () => {
+  function makeCallbacksWithCtxMenu() {
+    return { ...makeCallbacks(), onContextMenu: jest.fn() };
+  }
+
+  it('invokes onContextMenu with the task and the event when a card is right-clicked', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacksWithCtxMenu();
+    const task = makeTask('r', 'ready');
+    const state = makeState({ ready: [task] });
+
+    renderer.render(host, state, callbacks);
+
+    const card = findFirstCard(host);
+    expect(card).not.toBeNull();
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    card!.dispatchEvent(event);
+
+    expect(callbacks.onContextMenu).toHaveBeenCalledTimes(1);
+    expect(callbacks.onContextMenu).toHaveBeenCalledWith(task, event);
+  });
+
+  it('calls preventDefault on the contextmenu event', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacksWithCtxMenu();
+    const state = makeState({ ready: [makeTask('r', 'ready')] });
+
+    renderer.render(host, state, callbacks);
+
+    const card = findFirstCard(host);
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    const preventDefault = jest.spyOn(event, 'preventDefault');
+    card!.dispatchEvent(event);
+
+    expect(preventDefault).toHaveBeenCalled();
+  });
+
+  it('left-click still invokes onOpenDetail (additive contextmenu does not break click)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacksWithCtxMenu();
+    const task = makeTask('r', 'ready');
+    const state = makeState({ ready: [task] });
+
+    renderer.render(host, state, callbacks);
+
+    findFirstCard(host)!.click();
+
+    expect(callbacks.onOpenDetail).toHaveBeenCalledWith(task);
+    expect(callbacks.onContextMenu).not.toHaveBeenCalled();
   });
 });
