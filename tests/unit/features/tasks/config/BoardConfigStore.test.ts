@@ -105,7 +105,7 @@ describe('loadBoardConfig', () => {
     const { config } = loadBoardConfig({});
     expect(Object.isFrozen(config)).toBe(true);
     expect(() => config.lanes.push(config.lanes[0])).toThrow();
-    expect(DEFAULT_BOARD_CONFIG.lanes).toHaveLength(10);
+    expect(DEFAULT_BOARD_CONFIG.lanes).toHaveLength(11);
   });
 
   it('falls back to default when two lanes share an id', () => {
