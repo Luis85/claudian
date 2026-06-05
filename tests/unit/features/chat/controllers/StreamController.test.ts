@@ -2691,3 +2691,48 @@ describe('StreamController - Plan Mode', () => {
     });
   });
 });
+
+describe('StreamController - stream observers', () => {
+  let controller: StreamController;
+  let deps: StreamControllerDeps;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    installTestWindow();
+    deps = createMockDeps();
+    controller = new StreamController(deps);
+    deps.state.currentContentEl = createMockEl();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    restoreTestWindow();
+  });
+
+  it('forwards every chunk to a registered observer until disposed', async () => {
+    const seen: string[] = [];
+    const dispose = controller.addStreamObserver((chunk) => seen.push(chunk.type));
+    const msg = createTestMessage();
+
+    await controller.handleStreamChunk({ type: 'text', content: 'hi' }, msg);
+    await controller.handleStreamChunk({ type: 'done' }, msg);
+    expect(seen).toEqual(['text', 'done']);
+
+    dispose();
+    await controller.handleStreamChunk({ type: 'text', content: 'more' }, msg);
+    expect(seen).toEqual(['text', 'done']);
+  });
+
+  it('isolates observer errors so the stream keeps flowing', async () => {
+    const seen: string[] = [];
+    controller.addStreamObserver(() => { throw new Error('boom'); });
+    controller.addStreamObserver((chunk) => seen.push(chunk.type));
+    const msg = createTestMessage();
+
+    await expect(
+      controller.handleStreamChunk({ type: 'text', content: 'hi' }, msg),
+    ).resolves.toBeUndefined();
+    expect(seen).toEqual(['text']);
+  });
+});

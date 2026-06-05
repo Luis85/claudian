@@ -1,4 +1,12 @@
+import type { EventBus } from '../../core/events/EventBus';
 import type { TaskLedgerEntry, TaskStatus } from './model/taskTypes';
+
+/**
+ * Emit-only view of the event bus for task producers (RunSession, coordinator).
+ * The app-level `EventBus<ClaudianEventMap>` (a superset map) satisfies this, so
+ * producers stay decoupled from chat/app event keys while still emitting task ones.
+ */
+export type TaskEventEmitter = Pick<EventBus<TaskEventMap>, 'emit'>;
 
 export interface TaskEventMap {
   /** Emitted when Agent Board configuration (lanes/folder) changes. */

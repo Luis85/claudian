@@ -1,5 +1,4 @@
-import type { EventBus } from '../../../core/events/EventBus';
-import type { TaskEventMap } from '../events';
+import type { TaskEventEmitter } from '../events';
 import type { TaskLedgerEntry, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { type ClaudianBlock,ClaudianBlockParser } from './ClaudianBlockParser';
 import { LedgerWriter } from './LedgerWriter';
@@ -22,7 +21,7 @@ export interface RunSessionDeps {
   conversationId: string | null;
   sidepanelTabId: string | null;
   stream: ProviderStreamAdapter;
-  events: EventBus<TaskEventMap>;
+  events: TaskEventEmitter;
   now: () => string;
   writeStatus: (task: TaskSpec, options: RunSessionWriteStatusOptions) => Promise<void>;
   flushLedger: (entries: TaskLedgerEntry[]) => Promise<void>;
@@ -242,6 +241,10 @@ export class RunSession {
     error?: string;
   }): Promise<void> {
     if (this.resolveTerminal === null || this.finishing) return;
+    // A turn that ends while we are paused is the agent ending its turn after a
+    // pause block (the protocol asks it to). Ignore that completion and wait for
+    // resume; real failures and cancels still finalize.
+    if (this.paused && payload.status === 'completed') return;
     this.finishing = true;
     this.stopLiveWiring();
     const finalOut = this.parser.finalize();

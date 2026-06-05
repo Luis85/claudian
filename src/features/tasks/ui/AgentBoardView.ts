@@ -275,6 +275,7 @@ export class AgentBoardView extends ItemView {
     let lastStatus: TaskStatus = latest.frontmatter.status;
     const coordinator = new TaskRunCoordinator({
       executionSurface: this.executionSurface,
+      events: this.plugin.events,
       now: () => new Date().toISOString(),
       isProviderEnabled: (providerId) =>
         ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId) &&
@@ -285,14 +286,11 @@ export class AgentBoardView extends ItemView {
       writeTaskStatus: async (_task, options) => {
         await this.applyNoteChange(task.path, (content) => this.noteStore.writeStatus(content, options));
         lastStatus = options.status;
-        this.plugin.events.emit('task:status-changed', {
-          taskId: latest.frontmatter.id,
-          path: task.path,
-          status: options.status,
-        });
       },
-      appendLedger: (_task, entry) =>
-        this.applyNoteChange(task.path, (content) => this.noteStore.appendLedger(content, entry)),
+      flushLedger: (_task, entries) =>
+        this.applyNoteChange(task.path, (content) =>
+          entries.reduce((acc, entry) => this.noteStore.appendLedger(acc, entry), content),
+        ),
       writeHandoff: (_task, markdown) =>
         this.applyNoteChange(task.path, (content) => this.noteStore.writeHandoff(content, markdown)),
       renderPrompt: (target) =>

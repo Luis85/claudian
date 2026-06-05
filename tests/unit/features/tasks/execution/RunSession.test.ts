@@ -1,6 +1,6 @@
 import { EventBus } from '../../../../../src/core/events/EventBus';
-import { RunSession } from '../../../../../src/features/tasks/execution/RunSession';
 import type { TaskEventMap } from '../../../../../src/features/tasks/events';
+import { RunSession } from '../../../../../src/features/tasks/execution/RunSession';
 import type { TaskLedgerEntry, TaskSpec } from '../../../../../src/features/tasks/model/taskTypes';
 import { SyntheticStreamAdapter } from '../../../../helpers/SyntheticStreamAdapter';
 
@@ -122,6 +122,28 @@ describe('RunSession', () => {
     const result = await terminal;
     expect(result.ok).toBe(false);
     expect(statuses).toEqual(['running', 'needs_handoff']);
+  });
+
+  it('ignores a completed stream end while paused and finalizes only after resume', async () => {
+    jest.useFakeTimers();
+    const { session, adapter, statuses, handoffs } = makeSession();
+    const terminal = session.run();
+    adapter.emitText('<claudian_needs_input>\nquestion: which env?\n</claudian_needs_input>');
+    await Promise.resolve();
+    expect(statuses).toEqual(['running', 'needs_input']);
+    // The pause turn ends with its own stream-end; this must NOT finalize the run.
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked' });
+    await Promise.resolve();
+    expect(statuses).toEqual(['running', 'needs_input']);
+    expect(handoffs.length).toBe(0);
+
+    await session.resume({ kind: 'reply', content: '.env.local' });
+    adapter.emitText(VALID_HANDOFF);
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    const result = await terminal;
+    expect(result.ok).toBe(true);
+    expect(statuses).toEqual(['running', 'needs_input', 'running', 'review']);
+    jest.useRealTimers();
   });
 
   it('fails with heartbeat lost when no events arrive within the stale threshold', async () => {

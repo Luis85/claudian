@@ -36,7 +36,7 @@ import {
 } from './tabs/Tab';
 import { TabBar } from './tabs/TabBar';
 import { TabManager } from './tabs/TabManager';
-import type { TabData, TabId } from './tabs/types';
+import type { TabData, TabId, TaskRunTabHandle, TaskRunTabTerminal } from './tabs/types';
 import { GitActionButton } from './ui/GitActionButton';
 import { recalculateUsageForModel } from './utils/usageInfo';
 
@@ -666,66 +666,63 @@ export class ClaudianView extends ItemView {
   }
 
   /** Opens a fresh chat tab pinned to the work order's provider/model and auto-sends its prompt. */
+  /**
+   * Opens a fresh tab for a work-order run and returns a live handle: the caller
+   * (the Agent Board, via its execution surface) observes the stream, sends
+   * follow-ups, and awaits the terminal result without the tab being focused.
+   * Returns null when no tab could be opened (view not ready / tab cap reached).
+   */
   async startTaskRunInFreshTab(options: {
     providerId: ProviderId;
     model: string;
     prompt: string;
-  }): Promise<{
-    status: 'completed' | 'failed' | 'canceled';
-    conversationId: string | null;
-    sidepanelTabId: string | null;
-    finalAssistantContent: string;
-    error?: string;
-  }> {
-    if (!this.tabManager) {
-      return { status: 'failed', conversationId: null, sidepanelTabId: null, finalAssistantContent: '', error: 'Chat view is not ready.' };
-    }
+  }): Promise<TaskRunTabHandle | null> {
+    if (!this.tabManager) return null;
 
     const tab = await this.tabManager.createTaskRunTab({
       providerId: options.providerId,
       model: options.model,
     });
-    if (!tab) {
-      return {
-        status: 'failed',
-        conversationId: null,
-        sidepanelTabId: null,
-        finalAssistantContent: '',
-        error: 'Could not open a chat tab for the work order (tab limit reached?).',
-      };
-    }
+    if (!tab) return null;
 
     const inputController = tab.controllers.inputController;
-    if (!inputController) {
-      return {
-        status: 'failed',
-        conversationId: tab.conversationId,
-        sidepanelTabId: tab.id,
-        finalAssistantContent: '',
-        error: 'Chat tab is missing an input controller.',
-      };
-    }
+    const streamController = tab.controllers.streamController;
+    if (!inputController || !streamController) return null;
 
-    const result = (await inputController.sendMessage({ content: options.prompt })) as
-      | ProgrammaticSendResult
-      | undefined;
-    const sendResult: ProgrammaticSendResult = result ?? {
-      ok: false,
-      finalAssistantContent: '',
-      error: 'No result from the chat run.',
+    const toTerminal = (result: ProgrammaticSendResult | undefined): TaskRunTabTerminal => {
+      const sendResult: ProgrammaticSendResult = result ?? {
+        ok: false,
+        finalAssistantContent: '',
+        error: 'No result from the chat run.',
+      };
+      let status: TaskRunTabTerminal['status'] = sendResult.ok ? 'completed' : 'failed';
+      if (!sendResult.ok && sendResult.error === 'Canceled') status = 'canceled';
+      return {
+        status,
+        finalAssistantContent: sendResult.finalAssistantContent,
+        error: sendResult.ok ? undefined : sendResult.error,
+      };
     };
 
-    let status: 'completed' | 'failed' | 'canceled' = sendResult.ok ? 'completed' : 'failed';
-    if (!sendResult.ok && sendResult.error === 'Canceled') {
-      status = 'canceled';
-    }
+    const terminal = (inputController.sendMessage({ content: options.prompt }) as Promise<
+      ProgrammaticSendResult | undefined
+    >)
+      .then(toTerminal)
+      .catch((error) => ({
+        status: 'failed' as const,
+        finalAssistantContent: '',
+        error: error instanceof Error ? error.message : String(error),
+      }));
 
     return {
-      status,
       conversationId: tab.conversationId,
       sidepanelTabId: tab.id,
-      finalAssistantContent: sendResult.finalAssistantContent,
-      error: sendResult.ok ? undefined : sendResult.error,
+      subscribe: (observer) => streamController.addStreamObserver(observer),
+      sendFollowUp: async (content) => {
+        void (inputController.sendMessage({ content }) as Promise<unknown>).catch(() => undefined);
+      },
+      cancel: () => inputController.cancelStreaming(),
+      terminal,
     };
   }
 
@@ -778,13 +775,17 @@ export class ClaudianView extends ItemView {
       }
     }
 
-    const result = await this.startTaskRunInFreshTab({
+    const handle = await this.startTaskRunInFreshTab({
       providerId: options.fallbackProviderId,
       model: options.fallbackModel,
       prompt: options.prompt,
     });
-    if (result.status === 'failed' && result.error) {
-      throw new Error(result.error);
+    if (!handle) {
+      throw new Error('Could not open a chat tab for the work order (tab limit reached?).');
+    }
+    const terminal = await handle.terminal;
+    if (terminal.status === 'failed' && terminal.error) {
+      throw new Error(terminal.error);
     }
   }
 

@@ -108,10 +108,12 @@ describe('ClaudianView.injectCommitTurnForConversation', () => {
     const openConversation = jest.fn(async () => undefined);
     const canCreateTab = jest.fn(() => opts.canCreateTab ?? true);
     const startTaskRunInFreshTab = jest.fn(async () => ({
-      status: 'completed' as const,
       conversationId: 'conv-1',
       sidepanelTabId: 'tab-fresh',
-      finalAssistantContent: '',
+      subscribe: () => () => {},
+      sendFollowUp: async () => {},
+      cancel: () => {},
+      terminal: Promise.resolve({ status: 'completed' as const, finalAssistantContent: '' }),
     }));
 
     const view = Object.create(ClaudianView.prototype) as any;
