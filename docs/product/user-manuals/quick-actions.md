@@ -182,3 +182,46 @@ When the picker knows the skill is backed by an editable file on disk (vault `SK
 ### Search
 
 The Skills tab has its own search box, separate from Quick actions search. Substring matches against the skill name, description, and provider display name. Press **Enter** to run the first match. **Escape** clears the field. Switching tabs resets both searches to empty.
+
+---
+
+## Stats tab
+
+The picker has a third tab, **Stats**, that surfaces a usage leaderboard for the quick actions and skills you've already run. The tab only appears once the plugin has finished initializing its tracker — if it's missing, reopen the picker after the next quick-action or skill dispatch.
+
+Every successful dispatch increments a counter and stamps a `lastUsedAt` timestamp:
+
+- **Quick actions** are counted by **filename stem** (no extension, no folder path). Renaming the YAML `name:` field keeps the same counter; renaming the underlying note breaks the chain and starts a new counter.
+- **Skills** are counted by `(providerId, name)`. The same skill name across two providers (for example `$deep-research` on Claude and Codex) keeps **separate** counters.
+
+The data is persisted to `.claudian/usage.json` with debounced writes (one second). A burst of dispatches collapses into a single write. The file is hidden inside the `.claudian/` config folder and is safe to delete if you want to reset the leaderboard from the vault side.
+
+### Sections
+
+The tab shows three sections, in order:
+
+1. **Top used** — your five most-used live entries, sorted by count descending. Entries whose underlying file no longer exists (orphans) are hidden.
+2. **Drop candidates** — entries that are likely safe to delete. The rule is `count < median` **AND** `last used > 30 days ago`. The list is capped at 10 rows and sorted oldest-first so the most-stale entries surface to the top. The section is hidden entirely when no entries qualify.
+3. **All** — every live entry. A sort dropdown in the section header lets you pick **Most used**, **Least used**, **Longest unused**, or **Recently used**.
+
+Each row shows a type tag (**Quick action** or **Skill**), the entry name (with provider in parentheses for skills), and a badge with the count and a relative "last used" timestamp (for example `47 uses · 12 days ago`).
+
+### Inline badges
+
+The Quick Actions tab and the Skills tab also display a per-row usage badge — the same `5 uses · 1 day ago` format — next to each entry. The badge reads from the same in-memory tracker as the Stats tab, so the counts stay consistent across tabs without refreshing.
+
+A row that has never been dispatched reads `0 uses · never`.
+
+### Clear all
+
+At the bottom of the Stats tab, a **Clear all usage** button wipes every counter. A confirmation modal asks you to confirm before the write hits disk. After confirmation the in-memory map empties, the Stats tab re-renders to its empty state, and the persisted `.claudian/usage.json` is rewritten on the next debounce.
+
+Clearing is global — there is no per-row reset. If you want to keep your existing counters and delete only one entry, delete the underlying quick-action note or skill file; the counter becomes an orphan and is hidden from all three Stats sections immediately, while the recorded count stays on disk in case the same name is recreated later.
+
+### Orphans
+
+A usage record whose live entry (quick-action note or skill file) is no longer present in the vault is an **orphan**. Orphans:
+
+- Are kept on disk so re-creating the same name restores the previous count.
+- Are hidden from **Top used**, **Drop candidates**, and **All**.
+- Are also dropped from the median calculation, so they cannot skew the **Drop candidates** threshold.
