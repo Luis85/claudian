@@ -275,6 +275,7 @@ export class CodexChatRuntime implements ChatRuntime {
     // Set up notification router to push chunks
     this.notificationRouter = new CodexNotificationRouter(
       (chunk) => enqueueChunk(chunk),
+      () => this.resolveModel(queryOptions) ?? DEFAULT_CODEX_PRIMARY_MODEL,
       (update) => this.recordTurnMetadata(update),
     );
 

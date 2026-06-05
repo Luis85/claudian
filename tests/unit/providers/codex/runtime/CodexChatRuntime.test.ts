@@ -780,10 +780,11 @@ describe('CodexChatRuntime', () => {
         usage: {
           inputTokens: 900,
           cacheReadInputTokens: 100,
-          cacheCreationInputTokens: 0,
           contextWindow: 200000,
         },
       });
+      const usage = (usageChunk as { type: 'usage'; usage: { cacheCreationInputTokens?: number } }).usage;
+      expect(usage.cacheCreationInputTokens).toBeUndefined();
     });
 
     it('yields tool_use and tool_result from item notifications', async () => {

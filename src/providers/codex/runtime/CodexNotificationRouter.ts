@@ -1,5 +1,6 @@
+import { buildUsageInfo } from '../../../core/providers/usage';
 import type { ChatTurnMetadata } from '../../../core/runtime/types';
-import type { StreamChunk, UsageInfo } from '../../../core/types';
+import type { StreamChunk } from '../../../core/types';
 import {
   isCodexToolOutputError,
   normalizeCodexToolInput,
@@ -30,6 +31,7 @@ import type {
   UserMessageItem,
   WebSearchItem,
 } from './codexAppServerTypes';
+import { CODEX_DEFAULT_CONTEXT_WINDOW, codexModelContextWindow } from './codexModelWindowCatalog';
 
 type ChunkEmitter = (chunk: StreamChunk) => void;
 type TurnMetadataListener = (update: Partial<ChatTurnMetadata>) => void;
@@ -67,6 +69,7 @@ export class CodexNotificationRouter {
 
   constructor(
     private readonly emit: ChunkEmitter,
+    private readonly getActiveModel: () => string,
     private readonly onTurnMetadata?: TurnMetadataListener,
   ) {}
 
@@ -774,18 +777,24 @@ export class CodexNotificationRouter {
 
   private onTokenUsageUpdated(params: TokenUsageUpdatedNotification): void {
     const last = params.tokenUsage.last;
-    const contextTokens = last.inputTokens;
-    const contextWindow = params.tokenUsage.modelContextWindow;
+    const wireWindow = params.tokenUsage.modelContextWindow;
+    const activeModel = this.getActiveModel();
+    const fallbackWindow = codexModelContextWindow(activeModel) || CODEX_DEFAULT_CONTEXT_WINDOW;
+    const contextWindow = wireWindow > 0 ? wireWindow : fallbackWindow;
+    const contextTokens =
+      last.inputTokens + last.outputTokens + last.reasoningOutputTokens;
 
-    const usage: UsageInfo = {
+    const usage = buildUsageInfo({
+      model: activeModel,
       inputTokens: last.inputTokens,
-      cacheCreationInputTokens: 0,
+      outputTokens: last.outputTokens,
+      reasoningOutputTokens: last.reasoningOutputTokens,
       cacheReadInputTokens: last.cachedInputTokens,
-      contextWindow,
-      contextWindowIsAuthoritative: contextWindow > 0,
+      // Codex app-server doesn't expose cache-creation tokens separately — leave it unset.
       contextTokens,
-      percentage: contextWindow > 0 ? Math.min(100, Math.max(0, Math.round((contextTokens / contextWindow) * 100))) : 0,
-    };
+      contextWindow,
+      contextWindowIsAuthoritative: wireWindow > 0,
+    });
 
     this.emit({ type: 'usage', usage, sessionId: params.threadId });
   }

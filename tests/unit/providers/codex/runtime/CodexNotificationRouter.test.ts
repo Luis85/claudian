@@ -1,4 +1,4 @@
-import type { StreamChunk } from '@/core/types';
+import type { StreamChunk, UsageInfo } from '@/core/types';
 import { CodexNotificationRouter } from '@/providers/codex/runtime/CodexNotificationRouter';
 
 describe('CodexNotificationRouter', () => {
@@ -11,6 +11,7 @@ describe('CodexNotificationRouter', () => {
     turnMetadata = [];
     router = new CodexNotificationRouter(
       (chunk) => chunks.push(chunk),
+      () => 'gpt-5.3-codex',
       (update) => turnMetadata.push(update),
     );
   });
@@ -856,15 +857,62 @@ describe('CodexNotificationRouter', () => {
       expect(chunks[0]).toMatchObject({
         type: 'usage',
         usage: {
+          model: 'gpt-5.3-codex',
           inputTokens: 9000,
+          outputTokens: 1000,
+          reasoningOutputTokens: 200,
           cacheReadInputTokens: 5000,
-          cacheCreationInputTokens: 0,
           contextWindow: 200000,
           contextWindowIsAuthoritative: true,
-          contextTokens: 9000,
-          percentage: 5,
+          contextTokens: 9000 + 1000 + 200,
         },
       });
+      const usage = (chunks[0] as { type: 'usage'; usage: { cacheCreationInputTokens?: number } }).usage;
+      expect(usage.cacheCreationInputTokens).toBeUndefined();
+    });
+
+    it('stamps the active model, includes output+reasoning in contextTokens, exposes cache reads', () => {
+      // router already initialized with active model = 'gpt-5.3-codex'
+      chunks.length = 0;
+      router.handleNotification('thread/tokenUsage/updated', {
+        threadId: 'T1',
+        turnId: 'turn-1',
+        tokenUsage: {
+          total: { totalTokens: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningOutputTokens: 0 },
+          last: { totalTokens: 5500, inputTokens: 4000, cachedInputTokens: 800, outputTokens: 1000, reasoningOutputTokens: 500 },
+          modelContextWindow: 200_000,
+        },
+      });
+      const usageChunks = chunks.filter(c => c.type === 'usage');
+      expect(usageChunks).toHaveLength(1);
+      const usage = (usageChunks[0] as { type: 'usage'; usage: UsageInfo }).usage;
+      expect(usage.model).toBe('gpt-5.3-codex');
+      expect(usage.inputTokens).toBe(4000);
+      expect(usage.outputTokens).toBe(1000);
+      expect(usage.reasoningOutputTokens).toBe(500);
+      expect(usage.cacheReadInputTokens).toBe(800);
+      expect(usage.cacheCreationInputTokens).toBeUndefined();
+      expect(usage.contextTokens).toBe(4000 + 1000 + 500);
+      expect(usage.contextWindow).toBe(200_000);
+      expect(usage.contextWindowIsAuthoritative).toBe(true);
+    });
+
+    it('marks contextWindowIsAuthoritative=false when modelContextWindow is 0 and falls back to catalog (400k for gpt-5.3-codex)', () => {
+      chunks.length = 0;
+      router.handleNotification('thread/tokenUsage/updated', {
+        threadId: 'T1',
+        turnId: 'turn-1',
+        tokenUsage: {
+          total: { totalTokens: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningOutputTokens: 0 },
+          last: { totalTokens: 100, inputTokens: 100, cachedInputTokens: 0, outputTokens: 0, reasoningOutputTokens: 0 },
+          modelContextWindow: 0,
+        },
+      });
+      const usageChunks = chunks.filter(c => c.type === 'usage');
+      expect(usageChunks).toHaveLength(1);
+      const usage = (usageChunks[0] as { type: 'usage'; usage: UsageInfo }).usage;
+      expect(usage.contextWindowIsAuthoritative).toBe(false);
+      expect(usage.contextWindow).toBe(400_000); // catalog value for gpt-5.3-codex
     });
   });
 
