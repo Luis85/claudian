@@ -24,6 +24,7 @@ import { TaskNoteStore } from '../storage/TaskNoteStore';
 import { AgentBoardRenderer } from './AgentBoardRenderer';
 import { createWorkOrderInteractive } from './createWorkOrderInteractive';
 import { WorkOrderDetailModal, type WorkOrderFieldUpdate } from './WorkOrderDetailModal';
+import { showWorkOrderContextMenu } from './workOrderContextMenu';
 
 export class AgentBoardView extends ItemView {
   private readonly noteStore = new TaskNoteStore();
@@ -127,6 +128,18 @@ export class AgentBoardView extends ItemView {
         onReopen: (task) => void this.transitionTask(task, 'inbox', 'Reopened.'),
         onAddWorkOrder: () => void this.addWorkOrderFromBoard(),
         onRunNextReady: () => void this.runNextReady(),
+        onContextMenu: (task, event) => showWorkOrderContextMenu(task, event, {
+          plugin: this.plugin,
+          onOpenNote: (target) => void this.openTask(target),
+          onOpenConversation: (target) => {
+            const conversationId = target.frontmatter.conversation_id;
+            if (conversationId) void this.plugin.openConversation(conversationId);
+          },
+          canOpenConversation: (target) => {
+            const conversationId = target.frontmatter.conversation_id;
+            return Boolean(conversationId && this.plugin.getConversationSync(conversationId));
+          },
+        }),
       },
     );
 
