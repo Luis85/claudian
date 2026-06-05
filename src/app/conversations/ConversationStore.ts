@@ -287,6 +287,21 @@ export class ConversationStore {
         });
         break;
     }
+
+    // History-backed usage recovery: only when meta-stored usage is absent. We
+    // never overwrite live `conversation.usage`. `extractLastUsage` is optional;
+    // the hook returns null on parse failure, but we also wrap in try/catch so
+    // a buggy implementation never breaks hydration.
+    if (!conversation.usage && typeof service.extractLastUsage === 'function') {
+      try {
+        const recovered = await service.extractLastUsage(conversation, ctx);
+        if (recovered) {
+          conversation.usage = recovered;
+        }
+      } catch {
+        // Best-effort. Silently swallow recovery failures.
+      }
+    }
   }
 
   private getConversationPreview(conv: Conversation): string {

@@ -7,9 +7,12 @@ import type {
   HydrationContext,
   ProviderForkSupport,
 } from '../../../core/providers/types';
-import type { Conversation } from '../../../core/types';
+import { buildUsageInfo } from '../../../core/providers/usage';
+import type { Conversation, UsageInfo } from '../../../core/types';
+import { getCodexContextWindow } from '../runtime/CodexSessionFileTail';
 import type { CodexProviderState } from '../types';
 import { getCodexState } from '../types';
+import { DEFAULT_CODEX_PRIMARY_MODEL } from '../types/models';
 import {
   type CodexParsedTurn,
   deriveCodexSessionsRootFromSessionPath,
@@ -224,6 +227,44 @@ export class CodexConversationHistoryService extends BaseHistoryService<CodexPro
     return { kind: 'no-op', reason: 'provider-owned' };
   }
 
+  /**
+   * Recovers the most recent `UsageInfo` from the Codex session JSONL by
+   * walking it back to front. Looks for the latest `event_msg/token_count`
+   * (carries `last_token_usage`) and the latest `task_started` (carries
+   * `model_context_window`, authoritative when present).
+   *
+   * Returns null when the session file is missing, unreadable, or contains
+   * no usable token_count event.
+   */
+  async extractLastUsage(
+    conversation: Conversation,
+    _ctx: HydrationContext,
+  ): Promise<UsageInfo | null> {
+    try {
+      const state = getCodexState(conversation.providerState);
+      const transcriptRootPath = state.transcriptRootPath
+        ?? deriveCodexSessionsRootFromSessionPath(state.sessionFilePath);
+      const threadId = state.threadId ?? conversation.sessionId ?? null;
+      const sessionFilePath = state.sessionFilePath ?? (
+        threadId
+          ? findCodexSessionFile(threadId, transcriptRootPath ?? undefined)
+          : null
+      );
+      if (!sessionFilePath) return null;
+
+      let content: string;
+      try {
+        content = fs.readFileSync(sessionFilePath, 'utf-8');
+      } catch {
+        return null;
+      }
+
+      return extractLastUsageFromCodexJsonl(content);
+    } catch {
+      return null;
+    }
+  }
+
   buildPersistedProviderState(
     conversation: Conversation,
   ): CodexProviderState | undefined {
@@ -257,4 +298,112 @@ export class CodexConversationHistoryService extends BaseHistoryService<CodexPro
 
     return turns.slice(0, checkpointIndex + 1);
   }
+}
+
+// ---------------------------------------------------------------------------
+// extractLastUsage helpers
+// ---------------------------------------------------------------------------
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function readNumber(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+interface CodexLastTokenUsage {
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+  reasoningOutputTokens: number;
+}
+
+function readLastTokenUsageBlock(payload: Record<string, unknown>): CodexLastTokenUsage | null {
+  const info = isRecord(payload.info) ? payload.info : null;
+  if (!info) return null;
+  const lastTokenUsage = isRecord(info.last_token_usage) ? info.last_token_usage : null;
+  if (!lastTokenUsage) return null;
+
+  return {
+    inputTokens: readNumber(lastTokenUsage.input_tokens ?? lastTokenUsage.input),
+    cachedInputTokens: readNumber(lastTokenUsage.cached_input_tokens ?? lastTokenUsage.cached_input),
+    outputTokens: readNumber(lastTokenUsage.output_tokens ?? lastTokenUsage.output),
+    reasoningOutputTokens: readNumber(
+      lastTokenUsage.reasoning_output_tokens ?? lastTokenUsage.reasoning_output,
+    ),
+  };
+}
+
+export function extractLastUsageFromCodexJsonl(content: string): UsageInfo | null {
+  const lines = content.split('\n').filter(line => line.trim().length > 0);
+  if (lines.length === 0) return null;
+
+  let lastTokenUsage: CodexLastTokenUsage | null = null;
+  let modelContextWindow: number | null = null;
+  let model: string | null = null;
+
+  // Walk back to front so the most recent records win.
+  for (let i = lines.length - 1; i >= 0; i--) {
+    let parsed: Record<string, unknown>;
+    try {
+      const rawParsed = JSON.parse(lines[i]) as unknown;
+      if (!isRecord(rawParsed)) continue;
+      parsed = rawParsed;
+    } catch {
+      continue;
+    }
+
+    const payload = isRecord(parsed.payload) ? parsed.payload : parsed;
+
+    if (parsed.type === 'event_msg' && payload.type === 'token_count' && !lastTokenUsage) {
+      lastTokenUsage = readLastTokenUsageBlock(payload);
+      continue;
+    }
+
+    if (parsed.type === 'event_msg' && payload.type === 'task_started') {
+      if (modelContextWindow === null) {
+        const window = payload.model_context_window;
+        if (typeof window === 'number' && window > 0) {
+          modelContextWindow = window;
+        }
+      }
+      continue;
+    }
+
+    if (!model) {
+      // Codex session files can stamp model id on session_meta, turn_context, or
+      // legacy event wrappers. Accept any record carrying a `model` string field.
+      const candidate = payload.model ?? parsed.model;
+      if (typeof candidate === 'string' && candidate.trim().length > 0) {
+        model = candidate.trim();
+      }
+    }
+
+    if (lastTokenUsage && modelContextWindow !== null && model) break;
+  }
+
+  if (!lastTokenUsage) return null;
+
+  const resolvedModel = model ?? DEFAULT_CODEX_PRIMARY_MODEL;
+  const inputTokens = lastTokenUsage.inputTokens;
+  const outputTokens = lastTokenUsage.outputTokens;
+  const reasoningOutputTokens = lastTokenUsage.reasoningOutputTokens;
+  const cacheReadInputTokens = lastTokenUsage.cachedInputTokens;
+  // contextTokens = input + output + reasoning. cached_input is part of input
+  // on the wire, so don't add it again. Mirrors CodexSessionFileTail.buildUsageInfo.
+  const contextTokens = inputTokens + outputTokens + reasoningOutputTokens;
+  const contextWindow = modelContextWindow ?? getCodexContextWindow(resolvedModel);
+  const contextWindowIsAuthoritative = modelContextWindow !== null;
+
+  return buildUsageInfo({
+    model: resolvedModel,
+    inputTokens,
+    outputTokens: outputTokens > 0 ? outputTokens : undefined,
+    reasoningOutputTokens: reasoningOutputTokens > 0 ? reasoningOutputTokens : undefined,
+    cacheReadInputTokens: cacheReadInputTokens > 0 ? cacheReadInputTokens : undefined,
+    contextTokens,
+    contextWindow,
+    contextWindowIsAuthoritative,
+  });
 }

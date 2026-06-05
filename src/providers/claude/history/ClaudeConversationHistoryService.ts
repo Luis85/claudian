@@ -5,6 +5,7 @@ import type {
   HydrationContext,
   ProviderForkSupport,
 } from '../../../core/providers/types';
+import { buildUsageInfo } from '../../../core/providers/usage';
 import { isSubagentToolName, TOOL_TASK } from '../../../core/tools/toolNames';
 import type {
   AsyncSubagentStatus,
@@ -13,13 +14,16 @@ import type {
   ForkSource,
   SubagentInfo,
   ToolCallInfo,
+  UsageInfo,
 } from '../../../core/types';
+import { getContextWindowSize } from '../types/models';
 import { type ClaudeProviderState, getClaudeState } from '../types/providerState';
 import {
   deleteSDKSession,
   getSDKSessionPath,
   loadSDKSessionMessages,
   loadSubagentToolCalls,
+  readSDKSession,
   sdkSessionExists,
 } from './ClaudeHistoryStore';
 
@@ -500,4 +504,151 @@ export class ClaudeConversationHistoryService extends BaseHistoryService<ClaudeP
     }
     return { kind: 'deleted', paths: [resolvedPath] };
   }
+
+  /**
+   * Recovers the most recent `UsageInfo` from the persisted JSONL transcript.
+   *
+   * Scan strategy (walk the raw SDK rows back to front):
+   * - The last `result` row carries `modelUsage[model].contextWindow` — when
+   *   present, that's the authoritative window for the matching model.
+   * - The last main-agent `assistant` row (no `parent_tool_use_id`) carries
+   *   `message.usage` (input + cache_creation + cache_read) and the model id.
+   *   Subagent assistant rows are excluded so we don't conflate windows.
+   *
+   * Returns null if neither row is found or any parse step fails.
+   */
+  async extractLastUsage(
+    conversation: Conversation,
+    ctx: HydrationContext,
+  ): Promise<UsageInfo | null> {
+    try {
+      if (!ctx.vaultPath) return null;
+      const state = getClaudeState(conversation.providerState);
+      const sessionId = state.providerSessionId ?? conversation.sessionId;
+      if (!sessionId) return null;
+
+      const session = await readSDKSession(ctx.vaultPath, sessionId);
+      if (session.error || session.messages.length === 0) return null;
+
+      return extractLastUsageFromSdkMessages(
+        session.messages as unknown as Record<string, unknown>[],
+      );
+    } catch {
+      return null;
+    }
+  }
+}
+
+interface ClaudeMessageUsage {
+  input_tokens?: number;
+  output_tokens?: number;
+  cache_creation_input_tokens?: number;
+  cache_read_input_tokens?: number;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizeNonNegInteger(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
+function readNestedUsage(msg: Record<string, unknown>): ClaudeMessageUsage | null {
+  if (!isRecord(msg.message)) return null;
+  const usage = (msg.message as Record<string, unknown>).usage;
+  if (!isRecord(usage)) return null;
+  return usage as ClaudeMessageUsage;
+}
+
+function readNestedModel(msg: Record<string, unknown>): string | undefined {
+  if (!isRecord(msg.message)) return undefined;
+  const model = (msg.message as Record<string, unknown>).model;
+  return typeof model === 'string' && model.trim().length > 0 ? model.trim() : undefined;
+}
+
+function readModelUsageMap(msg: Record<string, unknown>): Record<string, { contextWindow?: number }> | null {
+  if (!isRecord(msg.modelUsage)) return null;
+  return msg.modelUsage as Record<string, { contextWindow?: number }>;
+}
+
+function isMainAgentAssistant(msg: Record<string, unknown>): boolean {
+  const parent = msg.parent_tool_use_id;
+  return parent === null || parent === undefined;
+}
+
+export function extractLastUsageFromSdkMessages(
+  messages: readonly Record<string, unknown>[],
+): UsageInfo | null {
+  // Walk back to front. Capture the latest result-message modelUsage (carries
+  // authoritative contextWindow) and the latest main-agent assistant usage.
+  let lastAssistantUsage: ClaudeMessageUsage | null = null;
+  let lastAssistantModel: string | undefined;
+  let lastResultModelUsage: Record<string, { contextWindow?: number }> | null = null;
+
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (!isRecord(msg)) continue;
+
+    if (msg.type === 'result' && !lastResultModelUsage) {
+      const modelUsage = readModelUsageMap(msg);
+      if (modelUsage) {
+        lastResultModelUsage = modelUsage;
+      }
+      continue;
+    }
+
+    if (msg.type === 'assistant' && !lastAssistantUsage && isMainAgentAssistant(msg)) {
+      const usage = readNestedUsage(msg);
+      if (usage) {
+        lastAssistantUsage = usage;
+        lastAssistantModel = readNestedModel(msg);
+      }
+    }
+
+    if (lastAssistantUsage && lastResultModelUsage) break;
+  }
+
+  if (!lastAssistantUsage) return null;
+  const model = lastAssistantModel;
+  if (!model) return null;
+
+  const inputTokens = normalizeNonNegInteger(lastAssistantUsage.input_tokens);
+  const outputTokens = normalizeNonNegInteger(lastAssistantUsage.output_tokens);
+  const cacheCreationInputTokens = normalizeNonNegInteger(lastAssistantUsage.cache_creation_input_tokens);
+  const cacheReadInputTokens = normalizeNonNegInteger(lastAssistantUsage.cache_read_input_tokens);
+  const contextTokens = inputTokens + cacheCreationInputTokens + cacheReadInputTokens;
+
+  // Resolve context window: prefer result-message authoritative entry for the
+  // same model; fall back to the model's heuristic window.
+  let contextWindow = getContextWindowSize(model);
+  let contextWindowIsAuthoritative = false;
+  if (lastResultModelUsage) {
+    const entry = lastResultModelUsage[model];
+    const entryWindow = entry?.contextWindow;
+    if (typeof entryWindow === 'number' && entryWindow > 0) {
+      contextWindow = entryWindow;
+      contextWindowIsAuthoritative = true;
+    } else {
+      // Single-entry case: trust it even if the model id doesn't literal-match.
+      const entries = Object.values(lastResultModelUsage)
+        .filter((u): u is { contextWindow: number } =>
+          typeof u?.contextWindow === 'number' && u.contextWindow > 0);
+      if (entries.length === 1) {
+        contextWindow = entries[0].contextWindow;
+        contextWindowIsAuthoritative = true;
+      }
+    }
+  }
+
+  return buildUsageInfo({
+    model,
+    inputTokens,
+    outputTokens: outputTokens > 0 ? outputTokens : undefined,
+    cacheCreationInputTokens: cacheCreationInputTokens > 0 ? cacheCreationInputTokens : undefined,
+    cacheReadInputTokens: cacheReadInputTokens > 0 ? cacheReadInputTokens : undefined,
+    contextTokens,
+    contextWindow,
+    contextWindowIsAuthoritative,
+  });
 }

@@ -15,6 +15,7 @@ import type {
   SlashCommand,
   SubagentInfo,
   ToolCallInfo,
+  UsageInfo,
 } from '../types';
 import type { PluginContext } from '../types/PluginContext';
 import type { ProviderId } from '../types/provider';
@@ -550,6 +551,14 @@ export interface ProviderConversationHistoryService<
 
   /** Provider-owned persisted metadata added to `Conversation.providerState` before session save. */
   buildPersistedProviderState?(conversation: Conversation): TPersistedState | undefined;
+
+  /**
+   * Optional: recover the last `UsageInfo` from the provider's persisted transcript.
+   * Called by ConversationStore after message hydration when `conversation.usage` is
+   * unset. Implementations must return null on parse failure (never throw); the
+   * hydration site treats null as "no historical usage available."
+   */
+  extractLastUsage?(conversation: Conversation, ctx: HydrationContext): Promise<UsageInfo | null>;
 }
 
 export type ProviderTaskTerminalStatus = Extract<ToolCallInfo['status'], 'completed' | 'error'>;

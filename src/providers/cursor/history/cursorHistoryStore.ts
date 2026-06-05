@@ -321,3 +321,46 @@ export function loadCursorChatMessagesFromStoreResult(dbPath: string): CursorHis
 export function loadCursorChatMessagesFromStore(dbPath: string): ChatMessage[] {
   return loadCursorChatMessagesFromStoreResult(dbPath).messages;
 }
+
+/**
+ * Loads the raw, unparsed JSON records from the Cursor blob store, ordered by
+ * `rowid` ascending. Used by `extractLastUsage` to scan for usage events that
+ * never make it into the user-facing chat messages. Returns null when the
+ * store can't be opened or the SQL read fails.
+ */
+export function loadCursorRawRecords(dbPath: string): Record<string, unknown>[] | null {
+  const openResult = openCursorSqliteReadonly(dbPath);
+  if (openResult.error || !openResult.handle) {
+    return null;
+  }
+  const db = openResult.handle;
+  try {
+    let rows: Array<{ rowid: number; id: string; data: Buffer | Uint8Array }>;
+    try {
+      const stmt = db.prepare('SELECT rowid, id, data FROM blobs ORDER BY rowid');
+      rows = stmt.all() as Array<{ rowid: number; id: string; data: Buffer | Uint8Array }>;
+    } catch {
+      return null;
+    }
+
+    const records: Record<string, unknown>[] = [];
+    for (const row of rows) {
+      const buf = Buffer.isBuffer(row.data) ? row.data : Buffer.from(row.data);
+      const raw = buf.toString('utf8');
+      if (!raw.startsWith('{')) continue;
+
+      try {
+        const parsed = JSON.parse(raw) as unknown;
+        if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          records.push(parsed as Record<string, unknown>);
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    return records;
+  } finally {
+    try { db.close(); } catch { /* ignore close errors */ }
+  }
+}
