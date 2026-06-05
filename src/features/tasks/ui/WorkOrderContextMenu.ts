@@ -1,16 +1,20 @@
 import { Menu, TFile } from 'obsidian';
 
-import { openContextMenuQuickAction } from '@/features/quickActions/openContextMenuQuickAction';
-import { runQuickActionForFile } from '@/features/quickActions/runQuickActionForFile';
-import { t } from '@/i18n/i18n';
-import type ClaudianPlugin from '@/main';
-
+import { t } from '../../../i18n/i18n';
+import type ClaudianPlugin from '../../../main';
+import { appendQuickActionFavoritesAndPicker } from '../../quickActions/appendQuickActionMenu';
 import type { TaskSpec } from '../model/taskTypes';
 
 export interface WorkOrderContextMenuDeps {
   plugin: ClaudianPlugin;
   onOpenNote: (task: TaskSpec) => void;
   onOpenConversation: (task: TaskSpec) => void;
+  /**
+   * Returns true when Open conversation should be visible. The composed gate
+   * (`conversation_id` present AND `getConversationSync(id)` resolves) lives in
+   * `buildWorkOrderConversationBindings` so both this menu and the
+   * `WorkOrderDetailModal` share one source of truth.
+   */
   canOpenConversation: (task: TaskSpec) => boolean;
 }
 
@@ -24,12 +28,12 @@ export interface WorkOrderContextMenuDeps {
  *
  * Quick-action items (favorites + picker) are hidden when:
  *   - status === 'running' (avoid surprise side-prompts on an active run), OR
- *   - the work-order note path no longer resolves to a TFile (deleted/moved).
+ *   - the work-order note path no longer resolves to a TFile (deleted/moved
+ *     or shadowed by a TFolder of the same path).
  *
- * Favorites come from the plugin-lifetime `QuickActionFavoritesCache`. Click
- * handlers delegate to `runQuickActionForFile` / `openContextMenuQuickAction`
- * with the WO note as the file argument so the existing tab-routing and pill
- * attach flow is reused unchanged.
+ * Favorites + picker are delegated to `appendQuickActionFavoritesAndPicker` so
+ * this surface stays aligned with the workspace file/folder menu (one helper,
+ * one layout, one click semantics).
  */
 export function showWorkOrderContextMenu(
   task: TaskSpec,
@@ -39,13 +43,13 @@ export function showWorkOrderContextMenu(
   const { plugin, onOpenNote, onOpenConversation, canOpenConversation } = deps;
   const menu = new Menu();
 
-  menu.addItem((i) => i
+  menu.addItem((item) => item
     .setTitle(t('tasks.board.contextMenu.openNote'))
     .setIcon('file-text')
     .onClick(() => onOpenNote(task)));
 
   if (canOpenConversation(task)) {
-    menu.addItem((i) => i
+    menu.addItem((item) => item
       .setTitle(t('tasks.board.contextMenu.openConversation'))
       .setIcon('messages-square')
       .onClick(() => onOpenConversation(task)));
@@ -53,22 +57,12 @@ export function showWorkOrderContextMenu(
 
   const isRunning = task.frontmatter.status === 'running';
   const abstract = plugin.app.vault.getAbstractFileByPath(task.path);
-  const woTFile = abstract instanceof TFile ? abstract : null;
-  const canPromptOn = !isRunning && woTFile !== null;
+  const workOrderFile = abstract instanceof TFile ? abstract : null;
+  const canPromptOn = !isRunning && workOrderFile !== null;
 
   if (canPromptOn) {
-    const favs = plugin.quickActionFavoritesCache?.getFavorites() ?? [];
     menu.addSeparator();
-    for (const fav of favs) {
-      menu.addItem((i) => i
-        .setTitle(fav.name)
-        .setIcon(fav.icon ?? 'star')
-        .onClick(() => { void runQuickActionForFile(plugin, woTFile, fav); }));
-    }
-    menu.addItem((i) => i
-      .setTitle(t('quickActions.contextMenu.title'))
-      .setIcon('zap')
-      .onClick(() => openContextMenuQuickAction(plugin, woTFile)));
+    appendQuickActionFavoritesAndPicker(menu, plugin, workOrderFile);
   }
 
   menu.showAtMouseEvent(event);
