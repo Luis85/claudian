@@ -37,6 +37,7 @@ export interface AgentBoardRenderCallbacks {
   /** Dismiss a card's queue skip chip. */
   onAckSkip?: (task: TaskSpec) => void;
   onContextMenu(task: TaskSpec, event: MouseEvent): void;
+  onToggleLaneCollapse(laneId: string): void;
   onReply?(task: TaskSpec, content: string): void;
   onApprove?(task: TaskSpec): void;
   onReject?(task: TaskSpec, reason: string): void;
@@ -219,10 +220,26 @@ export class AgentBoardRenderer {
   }
 
   private renderLane(parent: HTMLElement, lane: ResolvedLane, callbacks: AgentBoardRenderCallbacks): void {
+    if (lane.collapsible && lane.collapsed) {
+      this.renderCollapsedLane(parent, lane, callbacks);
+      return;
+    }
+
     const laneEl = parent.createDiv({ cls: 'claudian-agent-board-lane' });
     const head = laneEl.createDiv({ cls: 'claudian-agent-board-lane-header' });
     head.createSpan({ text: lane.title });
     head.createSpan({ cls: 'claudian-agent-board-lane-count', text: String(lane.tasks.length) });
+    if (lane.collapsible) {
+      const toggle = head.createEl('button', {
+        cls: 'claudian-agent-board-lane-collapse-toggle',
+        text: '›',
+      });
+      toggle.setAttribute('aria-label', 'Collapse lane');
+      toggle.addEventListener('click', (event) => {
+        event.stopPropagation();
+        callbacks.onToggleLaneCollapse(lane.id);
+      });
+    }
 
     if (lane.definitionOfReady.length > 0 || lane.definitionOfDone.length > 0) {
       this.renderCriteria(laneEl, lane);
@@ -231,6 +248,28 @@ export class AgentBoardRenderer {
     for (const task of lane.tasks) {
       this.renderCard(laneEl, task, callbacks);
     }
+  }
+
+  private renderCollapsedLane(
+    parent: HTMLElement,
+    lane: ResolvedLane,
+    callbacks: AgentBoardRenderCallbacks,
+  ): void {
+    const strip = parent.createDiv({
+      cls: 'claudian-agent-board-lane claudian-agent-board-lane--collapsed',
+    });
+    strip.setAttribute('role', 'button');
+    strip.setAttribute('aria-label', `Expand lane ${lane.title}`);
+    strip.setAttribute('aria-expanded', 'false');
+    strip.createSpan({
+      cls: 'claudian-agent-board-lane-title-vertical',
+      text: lane.title,
+    });
+    strip.createSpan({
+      cls: 'claudian-agent-board-lane-count',
+      text: String(lane.tasks.length),
+    });
+    strip.addEventListener('click', () => callbacks.onToggleLaneCollapse(lane.id));
   }
 
   private renderCriteria(laneEl: HTMLElement, lane: ResolvedLane): void {

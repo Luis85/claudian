@@ -88,6 +88,7 @@ function makeDeps(overrides: Partial<DepsArgs> = {}): DepsArgs {
     onOpenNote: jest.fn(),
     onOpenConversation: jest.fn(),
     canOpenConversation: jest.fn(() => false),
+    onArchive: jest.fn(),
     ...overrides,
   };
 }
@@ -381,5 +382,87 @@ describe('showWorkOrderContextMenu', () => {
 
     expect(titles(MenuMock.instances[0])).toEqual(['tasks.board.contextMenu.openNote']);
     expect(MenuMock.instances[0].showAtMouseEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it('case 16: status done → Archive item appended with separator', () => {
+    const task = makeTask('done');
+    const plugin = makePlugin({ favorites: [] });
+    const deps = makeDeps({ plugin });
+
+    showWorkOrderContextMenu(task, mouseEvent, deps);
+
+    expect(titles(MenuMock.instances[0])).toEqual([
+      'tasks.board.contextMenu.openNote',
+      '<sep>',
+      'quickActions.contextMenu.title',
+      '<sep>',
+      'tasks.board.contextMenu.archive',
+    ]);
+  });
+
+  it('case 17: status failed → Archive item appended', () => {
+    const task = makeTask('failed');
+    const plugin = makePlugin({ favorites: [] });
+    const deps = makeDeps({ plugin });
+
+    showWorkOrderContextMenu(task, mouseEvent, deps);
+
+    expect(titles(MenuMock.instances[0])).toContain('tasks.board.contextMenu.archive');
+  });
+
+  it('case 18: status canceled → Archive item appended', () => {
+    const task = makeTask('canceled');
+    const plugin = makePlugin({ favorites: [] });
+    const deps = makeDeps({ plugin });
+
+    showWorkOrderContextMenu(task, mouseEvent, deps);
+
+    expect(titles(MenuMock.instances[0])).toContain('tasks.board.contextMenu.archive');
+  });
+
+  it('case 19: status running → Archive item absent', () => {
+    const task = makeTask('running');
+    const plugin = makePlugin({ favorites: [] });
+    const deps = makeDeps({ plugin });
+
+    showWorkOrderContextMenu(task, mouseEvent, deps);
+
+    expect(titles(MenuMock.instances[0])).not.toContain('tasks.board.contextMenu.archive');
+  });
+
+  it('case 20: status ready → Archive item absent', () => {
+    const task = makeTask('ready');
+    const plugin = makePlugin({ favorites: [] });
+    const deps = makeDeps({ plugin });
+
+    showWorkOrderContextMenu(task, mouseEvent, deps);
+
+    expect(titles(MenuMock.instances[0])).not.toContain('tasks.board.contextMenu.archive');
+  });
+
+  it('case 21: status inbox → Archive item absent', () => {
+    const task = makeTask('inbox');
+    const plugin = makePlugin({ favorites: [] });
+    const deps = makeDeps({ plugin });
+
+    showWorkOrderContextMenu(task, mouseEvent, deps);
+
+    expect(titles(MenuMock.instances[0])).not.toContain('tasks.board.contextMenu.archive');
+  });
+
+  it('case 22: clicking Archive invokes onArchive(task)', () => {
+    const task = makeTask('done');
+    const plugin = makePlugin({ favorites: [] });
+    const deps = makeDeps({ plugin });
+
+    showWorkOrderContextMenu(task, mouseEvent, deps);
+
+    const menu = MenuMock.instances[0];
+    // index 0 = Open note, 1 = <sep>, 2 = picker, 3 = <sep>, 4 = Archive
+    const archiveItem = menu.items[4] as { clickHandler?: () => void };
+    archiveItem.clickHandler?.();
+
+    expect(deps.onArchive).toHaveBeenCalledTimes(1);
+    expect(deps.onArchive).toHaveBeenCalledWith(task);
   });
 });

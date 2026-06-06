@@ -1,10 +1,9 @@
 ---
 title: Work Order Handoff Chat Card Implementation Plan
 date: 2026-06-06
-status: shipped
+status: open
 scope: chat-rendering
 parent: "[[2026-06-06-work-order-handoff-chat-card-design]]"
-shipped_by: "[[Agent Board/tasks/work-order-20260606-work-order-handoff-chat-card]]"
 ---
 
 # Work Order Handoff Chat Card Implementation Plan

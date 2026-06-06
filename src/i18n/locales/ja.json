@@ -701,7 +701,8 @@
       "laneSaveFailed": "Could not save lane change: {error}",
       "contextMenu": {
         "openNote": "ノートを開く",
-        "openConversation": "会話を開く"
+        "openConversation": "会話を開く",
+        "archive": "アーカイブ"
       }
     },
     "template": {

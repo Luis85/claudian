@@ -8,6 +8,8 @@ export interface BoardLaneConfig {
   visible: boolean;
   definitionOfReady: string[];
   definitionOfDone: string[];
+  collapsible: boolean;
+  collapsed: boolean;
 }
 
 export interface BoardConfig {
@@ -27,6 +29,8 @@ export interface ResolvedLane {
   definitionOfReady: string[];
   definitionOfDone: string[];
   isCatchAll: boolean;
+  collapsible: boolean;
+  collapsed: boolean;
 }
 
 export interface ResolvedBoardLayout {
@@ -66,6 +70,8 @@ export const DEFAULT_BOARD_CONFIG: BoardConfig = Object.freeze({
         visible: true,
         definitionOfReady: [],
         definitionOfDone: [],
+        collapsible: false,
+        collapsed: false,
       }),
     ),
   ) as BoardLaneConfig[],

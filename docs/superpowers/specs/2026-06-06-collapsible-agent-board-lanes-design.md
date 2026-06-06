@@ -1,7 +1,7 @@
 ---
 title: Collapsible Agent Board Lanes
 date: 2026-06-06
-status: draft
+status: implemented
 scope: features/tasks
 parent: "[[Agent Kanban Board]]"
 source: "[[docs/ideas/Collapse first and last column of the Agent-Board]]"

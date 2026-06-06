@@ -36,6 +36,8 @@ views:
       - parent
       - file.backlinks
     sort:
+      - property: file.name
+        direction: DESC
       - property: parent
         direction: ASC
     columnSize:

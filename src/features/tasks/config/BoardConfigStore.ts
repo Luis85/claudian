@@ -107,6 +107,12 @@ function normalizeLane(raw: unknown, errors: string[]): BoardLaneConfig | null {
     visible: lane.visible === undefined ? true : Boolean(lane.visible),
     definitionOfReady: toStringList(lane.definitionOfReady),
     definitionOfDone: toStringList(lane.definitionOfDone),
+    collapsible: Boolean(lane.collapsible),
+    // Gate `collapsed` on `collapsible` so a stale on-disk
+    // `{ collapsible: false, collapsed: true }` (e.g. user un-checked
+    // Collapsible without a re-save reaching `writeLaneCollapsed`) can never
+    // resurrect a collapsed strip after load.
+    collapsed: Boolean(lane.collapsible) && Boolean(lane.collapsed),
   };
 }
 
@@ -135,6 +141,32 @@ function defaultConfigPreservingQueue(raw: unknown): BoardConfig {
 // fresh vault — an explicit empty lanes array suppresses loadBoardConfig's
 // default-lane fallback and would collapse the board. When no config exists the
 // result is `{ queue }` only, and loadBoardConfig restores the default lanes.
+// Persists a per-lane collapsed flag through the same mutation path used by
+// `writeBoardQueuePaused`. Defensive guards: an unknown lane id is a no-op
+// (defends against stale UI state after a reorder/delete from another pane);
+// a non-collapsible lane refuses to collapse so toggling Collapsible OFF in the
+// editor cannot leave an orphan collapsed strip on the board.
+export function writeLaneCollapsed(
+  settings: Record<string, unknown>,
+  laneId: string,
+  collapsed: boolean,
+): void {
+  const existing = settings.agentBoardConfig;
+  if (!existing || typeof existing !== 'object') return;
+  const base = { ...(existing as Record<string, unknown>) };
+  const lanesRaw = base.lanes;
+  if (!Array.isArray(lanesRaw)) return;
+  const next = lanesRaw.map((laneRaw) => {
+    if (!laneRaw || typeof laneRaw !== 'object') return laneRaw;
+    const lane = laneRaw as Record<string, unknown>;
+    if (lane.id !== laneId) return lane;
+    if (!lane.collapsible) return lane;
+    return { ...lane, collapsed };
+  });
+  base.lanes = next;
+  settings.agentBoardConfig = base;
+}
+
 export function writeBoardQueuePaused(settings: Record<string, unknown>, paused: boolean): void {
   const existing = settings.agentBoardConfig;
   const base: Record<string, unknown> =

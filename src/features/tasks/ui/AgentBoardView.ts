@@ -10,7 +10,12 @@ import type ClaudianPlugin from '../../../main';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { promptReason } from '../../../shared/modals/PromptModal';
 import { archiveWorkOrder } from '../commands/taskCommands';
-import { getLaneForStatus, loadBoardConfig, writeBoardQueuePaused } from '../config/BoardConfigStore';
+import {
+  getLaneForStatus,
+  loadBoardConfig,
+  writeBoardQueuePaused,
+  writeLaneCollapsed,
+} from '../config/BoardConfigStore';
 import type { BoardConfig, ResolvedBoardLayout } from '../config/boardConfigTypes';
 import { resolveBoardLayout } from '../config/resolveBoardLayout';
 import { sharedRunRegistry } from '../execution/activeRunRegistry';
@@ -237,10 +242,14 @@ export class AgentBoardView extends ItemView {
           this.runner?.clearSkipReason(task.frontmatter.id);
           this.render();
         },
+        onToggleLaneCollapse: (laneId) => {
+          void this.handleToggleLaneCollapse(laneId);
+        },
         onContextMenu: (task, event) => showWorkOrderContextMenu(task, event, {
           plugin: this.plugin,
           onOpenNote: (target) => void this.openTask(target),
           ...buildWorkOrderConversationBindings(this.plugin),
+          onArchive: (target) => void this.archiveTask(target),
         }),
         onReply: (task, content) => void this.onReply(task.frontmatter.id, content),
         onApprove: (task) => void this.onApprove(task.frontmatter.id),
@@ -668,6 +677,30 @@ export class AgentBoardView extends ItemView {
   private onQueueCapChanged(): void {
     this.runner?.setHaltAfterFailures(this.plugin.settings.agentBoardQueueHaltAfter);
     this.runner?.tick();
+  }
+
+  private async handleToggleLaneCollapse(laneId: string): Promise<void> {
+    const settings = asSettingsBag(this.plugin.settings);
+    const lane = this.config.lanes.find((candidate) => candidate.id === laneId);
+    // No-op for an unknown lane id (race vs editor delete/reorder) and for a
+    // non-collapsible lane; `writeLaneCollapsed` enforces the same invariant
+    // on disk, but bailing early avoids a needless saveSettings round-trip.
+    if (!lane || !lane.collapsible) return;
+    writeLaneCollapsed(settings, laneId, !lane.collapsed);
+    try {
+      await this.plugin.saveSettings();
+      // Other open Agent Board panes refresh their cached `config`/`layout`
+      // only on this event (see `onOpen` registration); without it a second
+      // pane keeps showing the stale expanded/collapsed state until an
+      // unrelated refresh. Matches the AgentBoardLaneEditor save path.
+      this.plugin.events.emit('task:board-config-changed');
+    } catch (error) {
+      new Notice(t('tasks.board.updateFailed', { error: error instanceof Error ? error.message : String(error) }));
+      return;
+    }
+    this.config = loadBoardConfig(settings).config;
+    this.layout = resolveBoardLayout(this.config, this.model);
+    this.render();
   }
 
   private async onToggleQueue(): Promise<void> {

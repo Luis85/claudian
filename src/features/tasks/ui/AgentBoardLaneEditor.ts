@@ -158,6 +158,30 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
         }),
     );
 
+    // Collapsible toggle — uses a raw checkbox (not Setting.addToggle) so the
+    // editor mirrors the status-checkbox pattern and stays testable under the
+    // Obsidian mock, whose ToggleComponent has no `toggleEl` to hang a
+    // `data-focus-key` on. Turning Collapsible OFF clears `collapsed` so the
+    // board can't strand a non-collapsible lane in the collapsed strip variant.
+    const collapsibleRow = block.createDiv({ cls: 'claudian-lane-editor-collapsible' });
+    const collapsibleLabel = collapsibleRow.createEl('label', {
+      cls: 'claudian-lane-editor-collapsible-label',
+    });
+    const collapsibleInput = collapsibleLabel.createEl('input', { type: 'checkbox' });
+    collapsibleInput.dataset.focusKey = `lane:${lane.id}:collapsible`;
+    collapsibleInput.checked = lane.collapsible;
+    collapsibleInput.addEventListener('change', async () => {
+      const snapshot = cloneConfig(config);
+      lane.collapsible = collapsibleInput.checked;
+      if (!collapsibleInput.checked) lane.collapsed = false;
+      const ok = await persist(snapshot);
+      if (ok) {
+        pendingFocusKey = `lane:${lane.id}:collapsible`;
+        rerender();
+      }
+    });
+    collapsibleLabel.createSpan({ text: 'Collapsible' });
+
     const statusRow = block.createDiv({ cls: 'claudian-lane-editor-statuses' });
     const conflicts: Array<{ status: TaskStatus; canonicalTitle: string }> = [];
 
@@ -244,6 +268,8 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
             visible: true,
             definitionOfReady: [],
             definitionOfDone: [],
+            collapsible: false,
+            collapsed: false,
           });
           const ok = await persist(snapshot);
           if (ok) {

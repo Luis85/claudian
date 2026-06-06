@@ -701,7 +701,8 @@
       "laneSaveFailed": "Could not save lane change: {error}",
       "contextMenu": {
         "openNote": "Abrir nota",
-        "openConversation": "Abrir conversa"
+        "openConversation": "Abrir conversa",
+        "archive": "Arquivar"
       }
     },
     "template": {

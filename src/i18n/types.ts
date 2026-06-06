@@ -139,6 +139,7 @@ export type TranslationKey =
   | 'tasks.board.laneSaveFailed'
   | 'tasks.board.contextMenu.openNote'
   | 'tasks.board.contextMenu.openConversation'
+  | 'tasks.board.contextMenu.archive'
 
   // Tasks - Templates / create / fromChat / run (Q-1 chunk 14)
   | 'tasks.template.nameRequired'
