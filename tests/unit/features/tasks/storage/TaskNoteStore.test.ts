@@ -306,4 +306,25 @@ body`;
     });
   });
 
+  describe('writeLedgerSnapshot', () => {
+    const baseNote =
+      '---\n' +
+      'type: claudian-work-order\nschema_version: 1\nid: t\ntitle: t\nstatus: running\nupdated: x\n' +
+      '---\n' +
+      '## Objective\nx\n## Acceptance Criteria\n- [ ] a\n## Context\nx\n## Constraints\nx\n' +
+      `${RUN_LEDGER_START}\n- old line\n${RUN_LEDGER_END}\n` +
+      '<!-- claudian:handoff-start -->\n<!-- claudian:handoff-end -->\n';
+
+    it('replaces the run-ledger region with the provided snapshot in one write', () => {
+      const next = store.writeLedgerSnapshot(baseNote, '- 2026-06-06T... [running] new line');
+      expect(next).toContain(`${RUN_LEDGER_START}\n- 2026-06-06T... [running] new line\n${RUN_LEDGER_END}`);
+      expect(next).not.toContain('- old line');
+    });
+
+    it('rejects snapshots that embed claudian markers', () => {
+      expect(() => store.writeLedgerSnapshot(baseNote, '<!-- claudian:run-ledger-start -->'))
+        .toThrow(/Generated task region content cannot contain Claudian markers/);
+    });
+  });
+
 });

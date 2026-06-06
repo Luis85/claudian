@@ -156,6 +156,12 @@ export class TaskNoteStore {
     return this.replaceGeneratedRegion(content, RUN_LEDGER_START, RUN_LEDGER_END, nextLedger);
   }
 
+  writeLedgerSnapshot(content: string, markdown: string): string {
+    this.assertNoEmbeddedClaudianMarkers(markdown);
+
+    return this.replaceGeneratedRegion(content, RUN_LEDGER_START, RUN_LEDGER_END, markdown.trim());
+  }
+
   writeHandoff(content: string, markdown: string): string {
     this.assertNoEmbeddedClaudianMarkers(markdown);
 
