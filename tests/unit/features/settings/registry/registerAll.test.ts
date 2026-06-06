@@ -27,10 +27,10 @@ describe('registerAllSettings', () => {
     expect(registry.getTabs(settings(false)).map((tab) => tab.id)).not.toContain(
       'orchestrator'
     );
-    expect(registry.getFields(settings(false)).map((field) => field.id)).not.toContain(
+    expect(registry.getAllFields().map((field) => field.id)).not.toContain(
       'orchestratorEnabled'
     );
-    expect(registry.getFields(settings(false)).map((field) => field.id)).not.toContain(
+    expect(registry.getAllFields().map((field) => field.id)).not.toContain(
       'orchestratorSystemPrompt'
     );
   });
@@ -56,3 +56,4 @@ describe('registerAllSettings', () => {
     expect(() => registerAllSettings()).toThrow(/duplicate tab id/);
   });
 });
+
