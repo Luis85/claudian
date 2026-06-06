@@ -30,7 +30,8 @@ parent: "[[2026-06-06-work-order-handoff-chat-card-design]]"
 - Modify `src/features/chat/controllers/StreamController.ts`: route the live streamed finalize through the work-order handoff card so the card replaces the raw block when a run completes, not only on reload.
 - Modify `src/features/chat/tabs/types.ts`: add `workOrderPath?: string | null` to task-run tab data and options.
 - Modify `src/features/chat/tabs/TabManager.ts`: store the work-order path on task-run tabs.
-- Modify `src/features/chat/tabs/tabControllers.ts`: pass work-order context into `MessageRenderer`.
+- Modify `src/features/chat/tabs/tabControllers.ts`: pass work-order context into `MessageRenderer` (resolved from tab or persisted conversation) and wire the conversation-persistence accessor.
+- Modify `src/features/chat/controllers/ConversationController.ts`: persist the work-order path onto `Conversation.workOrderPath` so the card survives reopen from history / restart.
 - Modify `src/features/chat/ClaudianView.ts`: accept an optional `workOrderPath` in `startTaskRunInFreshTab` (the commit-turn caller leaves it unset).
 - Modify `src/features/tasks/execution/ChatTabExecutionSurface.ts`: pass `task.path` to the chat view.
 - Create `src/style/features/work-order-handoff-card.css`: card styles.
@@ -160,6 +161,18 @@ next_action: Review the result.
     expect(result).toBeNull();
   });
 
+  it('returns null when handoff delimiters are unmatched or nested', () => {
+    const result = splitWorkOrderHandoffForDisplay(`<claudian_handoff> stray
+<claudian_handoff>
+summary: Finished the work.
+verification: npm run test passed.
+risks: No known risks.
+next_action: Review the result.
+</claudian_handoff>`);
+
+    expect(result).toBeNull();
+  });
+
   it('normalizes and truncates long summary previews', () => {
     const preview = truncateHandoffPreview(`${'word '.repeat(60)}final`);
 
@@ -213,6 +226,13 @@ const HANDOFF_BLOCK_PATTERN = /<claudian_handoff>\s*[\s\S]*?\s*<\/claudian_hando
 const REQUIRED_HANDOFF_LABELS = ['summary', 'verification', 'risks', 'next_action'] as const;
 
 export function splitWorkOrderHandoffForDisplay(content: string): WorkOrderHandoffSegment[] | null {
+  // Reject unmatched or nested delimiters before matching: a stray opening tag
+  // before the real block would otherwise be swallowed by the single-block
+  // regex and hidden behind a card instead of failing open.
+  const openCount = (content.match(/<claudian_handoff>/g) ?? []).length;
+  const closeCount = (content.match(/<\/claudian_handoff>/g) ?? []).length;
+  if (openCount !== 1 || closeCount !== 1) return null;
+
   const matches = [...content.matchAll(HANDOFF_BLOCK_PATTERN)];
   if (matches.length !== 1) return null;
 
@@ -373,6 +393,7 @@ git commit -m "feat: add work order handoff card renderer"
 - Modify: `src/features/chat/tabs/types.ts`
 - Modify: `src/features/chat/tabs/TabManager.ts`
 - Modify: `src/features/chat/tabs/tabControllers.ts`
+- Modify: `src/features/chat/controllers/ConversationController.ts`
 - Modify: `src/features/chat/ClaudianView.ts`
 - Modify: `src/features/tasks/execution/ChatTabExecutionSurface.ts`
 
@@ -414,23 +435,63 @@ Replace the return statement in `createTaskRunTab` with:
     return tab;
 ```
 
-- [ ] **Step 3: Pass task-tab context into MessageRenderer**
+- [ ] **Step 3: Pass task-tab context into MessageRenderer (durable across reopen)**
 
-In `src/features/chat/tabs/tabControllers.ts`, pass a seventh argument to `new MessageRenderer`:
+In `src/features/chat/tabs/tabControllers.ts`, pass a seventh argument to `new MessageRenderer` that resolves the work-order path from the transient tab first, then the persisted conversation — so the gate still fires when a saved work-order conversation is reopened through `createTab` (history / restart), not only on a fresh `createTaskRunTab`:
 
 ```ts
-    () => tab.workOrderPath ?? null,
+    () =>
+      tab.workOrderPath
+      ?? (tab.conversationId
+        ? plugin.getConversationSync(tab.conversationId)?.workOrderPath ?? null
+        : null),
 ```
 
 The full call should end like this:
 
 ```ts
     () => getTabCapabilities(tab, plugin),
-    () => tab.workOrderPath ?? null,
+    () =>
+      tab.workOrderPath
+      ?? (tab.conversationId
+        ? plugin.getConversationSync(tab.conversationId)?.workOrderPath ?? null
+        : null),
   );
 ```
 
-- [ ] **Step 4: Add work-order path to the chat view task-run API**
+- [ ] **Step 4: Persist the work-order path on the conversation**
+
+`tab.workOrderPath` is set only by `createTaskRunTab`, so reopening a saved run (which uses `createTab`) would lose it and re-render the raw block. Persist it on the durable conversation through the existing save chokepoint — `Conversation.workOrderPath` already exists in the model and is otherwise unused.
+
+In `src/features/chat/controllers/ConversationController.ts`, add an accessor to `ConversationControllerDeps`:
+
+```ts
+  getWorkOrderPath?: () => string | null;
+```
+
+In `save()`, include it in the `updates` object. It is a `Partial<Conversation>`, so a `null` from a normal tab omits the key and leaves any stored value intact:
+
+```ts
+    const updates: Partial<Conversation> = {
+      ...sessionUpdates,
+      messages: state.messages,
+      currentNote: currentNote,
+      externalContextPaths: externalContextPaths.length > 0 ? externalContextPaths : undefined,
+      usage: state.usage ?? undefined,
+      enabledMcpServers: enabledMcpServers.length > 0 ? enabledMcpServers : undefined,
+      ...(this.deps.getWorkOrderPath?.() ? { workOrderPath: this.deps.getWorkOrderPath()! } : {}),
+    };
+```
+
+In `src/features/chat/tabs/tabControllers.ts`, wire the accessor where `ConversationController` is constructed (add to its deps object):
+
+```ts
+      getWorkOrderPath: () => tab.workOrderPath ?? null,
+```
+
+The first save of a run writes `task.path` onto the conversation, so the stored-replay path re-derives the card after reopen. Verify by asserting `plugin.updateConversation` receives `workOrderPath` when the accessor returns a path (extend the existing `ConversationController` save coverage).
+
+- [ ] **Step 5: Add work-order path to the chat view task-run API**
 
 In `src/features/chat/ClaudianView.ts`, add this **optional** option to `startTaskRunInFreshTab`:
 
@@ -450,7 +511,7 @@ Pass it to `createTaskRunTab`:
     });
 ```
 
-- [ ] **Step 5: Pass task path from the execution surface**
+- [ ] **Step 6: Pass task path from the execution surface**
 
 In `src/features/tasks/execution/ChatTabExecutionSurface.ts`, add this property to the `view.startTaskRunInFreshTab` call:
 
@@ -458,7 +519,7 @@ In `src/features/tasks/execution/ChatTabExecutionSurface.ts`, add this property 
       workOrderPath: task.path,
 ```
 
-- [ ] **Step 6: Run typecheck to see the expected constructor failure**
+- [ ] **Step 7: Run typecheck to see the expected constructor failure**
 
 Run:
 
@@ -822,9 +883,15 @@ with:
       if (state.currentTextEl && !replacedWithCard) {
         renderer.addTextCopyButton(state.currentTextEl, state.currentTextContent);
       }
+      // The card swap removed the text block that registered actions anchor to;
+      // re-anchor them onto the card so a freshly completed run keeps actions
+      // (e.g. Create work order) without waiting for a reload.
+      if (replacedWithCard && msg) {
+        renderer.refreshMessageActions(msg);
+      }
 ```
 
-The raw text is still pushed to `msg.contentBlocks` just above this block, so persisted history and reload are unchanged — only the live DOM is transformed.
+The raw text is still pushed to `msg.contentBlocks` just above this block, so persisted history and reload are unchanged — only the live DOM is transformed. Because the swap removes the text block that `addAssistantMessageActions` anchors to, the hook also re-anchors registered actions onto the card through `refreshMessageActions`; the stored-replay path gets the same result via the Step 5 fallback.
 
 - [ ] **Step 7: Run focused tests and typecheck**
 
@@ -840,7 +907,7 @@ Expected: both commands PASS.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/features/chat/rendering/MessageRenderer.ts src/features/chat/controllers/StreamController.ts src/features/chat/tabs/types.ts src/features/chat/tabs/TabManager.ts src/features/chat/tabs/tabControllers.ts src/features/chat/ClaudianView.ts src/features/tasks/execution/ChatTabExecutionSurface.ts tests/unit/features/chat/rendering/MessageRenderer.test.ts
+git add src/features/chat/rendering/MessageRenderer.ts src/features/chat/controllers/StreamController.ts src/features/chat/controllers/ConversationController.ts src/features/chat/tabs/types.ts src/features/chat/tabs/TabManager.ts src/features/chat/tabs/tabControllers.ts src/features/chat/ClaudianView.ts src/features/tasks/execution/ChatTabExecutionSurface.ts tests/unit/features/chat/rendering/MessageRenderer.test.ts
 git commit -m "feat: render work order handoffs as chat cards"
 ```
 
@@ -1024,7 +1091,7 @@ Expected:
 
 - `git status --short` prints no file changes.
 - `git log` shows this plan plus implementation commits on `spec/work-order-handoff-chat-card`.
-- Diff stat includes the spec, plan, helper, card renderer, `MessageRenderer`, the `StreamController` finalize hook, task-tab context wiring, CSS, and tests.
+- Diff stat includes the spec, plan, helper, card renderer, `MessageRenderer`, the `StreamController` finalize hook, `ConversationController` work-order-path persistence, task-tab context wiring, CSS, and tests.
 
 - [ ] **Step 3: Push the branch**
 
@@ -1055,5 +1122,5 @@ PR URL: paste the URL printed by `gh pr create`
 Branch: spec/work-order-handoff-chat-card
 Commit: paste the SHA printed by `git rev-parse HEAD`
 Verification: typecheck, lint, unit tests, build
-Remaining risk: run one manual Obsidian Agent Board work order and confirm the card appears the moment the run completes (live, not only after reopening/reloading the tab), then expand/collapse it.
+Remaining risk: run one manual Obsidian Agent Board work order and confirm the card appears the moment the run completes (live), then reopen the conversation from history (and after a restart) to confirm it re-renders as a card, and expand/collapse it.
 ```

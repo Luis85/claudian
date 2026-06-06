@@ -80,7 +80,7 @@ Expected responsibilities:
   - splits a message into pre-handoff Markdown, structured handoff data, and post-handoff Markdown,
   - rejects malformed, incomplete, or ambiguous content.
 - Message rendering:
-  - determines whether the message belongs to a work-order run,
+  - determines whether the message belongs to a work-order run (from the transient task-run tab or the persisted work-order path on the conversation),
   - delegates eligible assistant-message content to the helper,
   - renders normal Markdown segments with existing behavior,
   - inserts the compact/expandable card for the structured handoff segment,
@@ -106,7 +106,7 @@ When any rule fails, render the message normally. This fail-open behavior avoids
 
 ## Data Flow
 
-1. The Agent Board starts a work-order run in a chat tab linked to the work-order note.
+1. The Agent Board starts a work-order run in a chat tab linked to the work-order note; the work-order path is persisted on the conversation when it binds, so the link survives reopen from history or a restart.
 2. The provider streams an assistant response that ends with one structured `<claudian_handoff>` block.
 3. Existing task execution parses the final response and writes the handoff into the work-order note.
 4. Chat rendering receives the assistant message for display, on either the live streaming finalize (when the run completes) or the stored-message replay (on reload, switch, or rewind).
@@ -145,7 +145,8 @@ Renderer tests should cover:
 - normal assistant text before and after the block still renders,
 - non-work-order chat containing the same valid handoff text renders unchanged,
 - malformed work-order handoff content renders unchanged,
-- the streaming finalize hook swaps a completed handoff text block for the card in work-order tabs and leaves it untouched elsewhere.
+- the streaming finalize hook swaps a completed handoff text block for the card in work-order tabs and leaves it untouched elsewhere,
+- a reopened work-order conversation (gate resolved from the persisted conversation path) still renders the card.
 
 Later implementation verification should run targeted unit tests plus the usual project checks: typecheck, lint, unit tests, and build.
 
@@ -157,6 +158,7 @@ Later implementation verification should run targeted unit tests plus the usual 
 - The behavior is scoped to work-order run chats.
 - Ambiguous or malformed content — including duplicate required fields — fails open by rendering normally.
 - The transformation runs on both the live streaming finalize and the stored replay path, so the card appears at run completion and survives reload.
+- The work-order link is persisted on the conversation (`Conversation.workOrderPath`), so reopening a saved run from history or after a restart still renders the card.
 - No settings toggle is required for the first version.
 
 ## Open Follow-up
