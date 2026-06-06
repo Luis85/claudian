@@ -38,6 +38,11 @@ import { WorkOrderDetailModal, type WorkOrderFieldUpdate } from './WorkOrderDeta
 // Orphan recovery uses the same stale window as RunSession's own stale check,
 // so a sidecar heartbeat newer than this is treated as a still-live writer.
 const ORPHAN_STALE_THRESHOLD_MS = DEFAULT_STALE_THRESHOLD_MS;
+// Periodic orphan recheck cadence. The onOpen sweep catches stale cards after a
+// reload; this cadence catches a mid-session crash that strands a card while
+// the board stays open. Coarse (60s) on purpose — recovery is cheap but the
+// stale window itself is 5 minutes, so faster polling adds no real signal.
+const ORPHAN_RECHECK_INTERVAL_MS = 60_000;
 
 export class AgentBoardView extends ItemView {
   private readonly noteStore = new TaskNoteStore();
@@ -53,10 +58,21 @@ export class AgentBoardView extends ItemView {
   // reply/approve/reject handlers via the shared run registry.
   private readonly coordinator: TaskRunCoordinator;
   private elapsedTimer: number | null = null;
+  // Periodic re-check for orphaned runs: the onOpen sweep catches a board that
+  // was reopened after a reload, but a mid-session crash can strand cards while
+  // the board is already open. recoverOrphanedRuns is idempotent (skips cards
+  // with a live registry entry or a fresh sidecar heartbeat) so running on a
+  // cadence here is safe.
+  private orphanRecheckTimer: number | null = null;
   private readonly pauseState = new Map<string, AgentBoardPauseState>();
   // Last status written per task, so a failed/canceled run can report the
   // terminal status on `task:run-finished` without re-reading the note.
   private readonly lastRunStatus = new Map<string, TaskStatus>();
+  // Most recent heartbeat event timestamp per task. The note frontmatter only
+  // updates the heartbeat at start/pause/resume, so reading it for the live
+  // strip would freeze the age display between transitions; this map holds the
+  // sidecar tick's `at` value so the rendered age stays fresh second-by-second.
+  private readonly liveHeartbeats = new Map<string, string>();
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -94,8 +110,13 @@ export class AgentBoardView extends ItemView {
         this.plugin.runSidecarStore.appendLedger(runId, entry),
       finalizeLedgerToNote: async (task, runId) => {
         const snapshot = await this.plugin.runSidecarStore.snapshotLedgerAsMarkdown(runId);
-        if (!snapshot) return;
-        await this.applyNoteChange(task.path, (content) => this.noteStore.writeLedgerSnapshot(content, snapshot));
+        if (snapshot) {
+          await this.applyNoteChange(task.path, (content) => this.noteStore.writeLedgerSnapshot(content, snapshot));
+        }
+        // Snapshot landed (or the ledger was empty), so the sidecar's job for
+        // this run is over. Cleanup is best-effort — a leftover sidecar dir is
+        // harmless and orphan recovery treats a stale heartbeat as dead.
+        await this.plugin.runSidecarStore.cleanupRun(runId);
       },
       writeHandoff: (task, markdown) =>
         this.applyNoteChange(task.path, (content) => this.noteStore.writeHandoff(content, markdown)),
@@ -135,7 +156,10 @@ export class AgentBoardView extends ItemView {
     // re-render, and tick the elapsed timer every second.
     this.register(this.plugin.events.on('task:attempt-started', (p) => this.patchCard(p.taskId)));
     this.register(this.plugin.events.on('task:ledger-appended', (p) => this.patchLiveStrip(p.taskId, p.entry.message)));
-    this.register(this.plugin.events.on('task:heartbeat', (p) => this.patchLiveStrip(p.taskId)));
+    this.register(this.plugin.events.on('task:heartbeat', (p) => {
+      this.liveHeartbeats.set(p.taskId, p.at);
+      this.patchLiveStrip(p.taskId);
+    }));
     this.register(this.plugin.events.on('task:needs-input', (p) => this.onPauseRequested('needs_input', p)));
     this.register(this.plugin.events.on('task:needs-approval', (p) => this.onPauseRequested('needs_approval', p)));
     this.register(this.plugin.events.on('task:resumed', (p) => {
@@ -169,8 +193,21 @@ export class AgentBoardView extends ItemView {
       this.elapsedTimer = null;
     });
 
+    // Run orphan recovery once after the initial index, then on a slow cadence
+    // for as long as the board is open. recoverOrphanedRuns is idempotent — it
+    // only acts on cards whose status looks live but have no driver and no fresh
+    // sidecar tick — so a periodic re-check costs almost nothing and catches a
+    // mid-session crash that strands cards while a board is already open.
     await this.refresh();
     await this.recoverOrphanedRuns();
+    this.orphanRecheckTimer = window.setInterval(
+      () => { void this.recoverOrphanedRuns(); },
+      ORPHAN_RECHECK_INTERVAL_MS,
+    );
+    this.register(() => {
+      if (this.orphanRecheckTimer !== null) window.clearInterval(this.orphanRecheckTimer);
+      this.orphanRecheckTimer = null;
+    });
   }
 
   async onClose(): Promise<void> {
@@ -462,7 +499,12 @@ export class AgentBoardView extends ItemView {
     if (!task) return;
     const now = Date.now();
     const startedAt = task.frontmatter.started ? Date.parse(task.frontmatter.started) : now;
-    const heartbeatAt = task.frontmatter.heartbeat ? Date.parse(task.frontmatter.heartbeat) : now;
+    // Prefer the live heartbeat captured from the run event — frontmatter only
+    // updates at transitions, so the rendered age would otherwise freeze between
+    // start and the next pause/resume even though the run is still ticking.
+    const liveHeartbeat = this.liveHeartbeats.get(taskId);
+    const heartbeatSource = liveHeartbeat ?? task.frontmatter.heartbeat;
+    const heartbeatAt = heartbeatSource ? Date.parse(heartbeatSource) : now;
     const ledger = lastLedger ?? task.sections.ledger.split('\n').filter((line) => line.trim().length > 0).pop();
     this.renderer.patchLiveStrip(taskId, {
       lastLedger: ledger,
@@ -475,6 +517,11 @@ export class AgentBoardView extends ItemView {
   private onStatusChanged(p: { taskId: string; status: TaskStatus }): void {
     if (p.status !== 'needs_input' && p.status !== 'needs_approval') {
       this.pauseState.delete(p.taskId);
+    }
+    // Drop the live heartbeat at terminal so a re-launched card doesn't show
+    // the previous run's stale tick before the new run's first heartbeat lands.
+    if (p.status === 'review' || p.status === 'done' || p.status === 'failed' || p.status === 'canceled') {
+      this.liveHeartbeats.delete(p.taskId);
     }
     this.patchCard(p.taskId);
   }

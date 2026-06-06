@@ -191,6 +191,96 @@ describe('AgentBoardView.recoverOrphanedRuns', () => {
 
     expect(writeStatus).toHaveBeenCalledTimes(1);
   });
+
+  it('is idempotent: a second call on the same model does not re-recover already-failed cards', async () => {
+    // The periodic re-check relies on this contract — a card whose status
+    // moved to failed on pass 1 must not get re-written on pass 2.
+    const { view, writeStatus } = makeView({ sidecarHeartbeat: null });
+
+    await view['recoverOrphanedRuns']();
+    expect(writeStatus).toHaveBeenCalledTimes(1);
+
+    // Mirror what `applyNoteChange` would have done in production: the task's
+    // status is now `failed`, so the model entry should reflect that.
+    view.model.tasks[0].frontmatter.status = 'failed';
+
+    await view['recoverOrphanedRuns']();
+    // Still 1 — the failed card is not in the {running, needs_input,
+    // needs_approval} set, so the loop skips it.
+    expect(writeStatus).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('AgentBoardView.patchLiveStrip live heartbeat', () => {
+  function buildLiveStripView(frontmatterHeartbeat: string | undefined) {
+    const patchLiveStrip = jest.fn();
+    const view = Object.create(AgentBoardView.prototype) as any;
+    view.renderer = { patchLiveStrip };
+    view.model = {
+      tasks: [{
+        path: 'tasks/wo.md',
+        frontmatter: {
+          id: 'wo-1',
+          started: new Date(Date.now() - 5_000).toISOString(),
+          heartbeat: frontmatterHeartbeat,
+          attempts: 1,
+        },
+        sections: { ledger: '' },
+      }],
+    };
+    view.liveHeartbeats = new Map<string, string>();
+    return { view, patchLiveStrip };
+  }
+
+  it('prefers the live heartbeat event timestamp over stale frontmatter', () => {
+    // Frontmatter heartbeat is 10 minutes old (would render as very stale).
+    // A live event fired ~1s ago should make the rendered age small.
+    const stale = new Date(Date.now() - 10 * 60_000).toISOString();
+    const { view, patchLiveStrip } = buildLiveStripView(stale);
+    view.liveHeartbeats.set('wo-1', new Date(Date.now() - 1_000).toISOString());
+
+    view.patchLiveStrip('wo-1');
+
+    const payload = patchLiveStrip.mock.calls[0][1] as { heartbeatAgeMs: number };
+    expect(payload.heartbeatAgeMs).toBeLessThan(5_000);
+    expect(payload.heartbeatAgeMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('falls back to frontmatter heartbeat when no live tick has been captured', () => {
+    const stamp = new Date(Date.now() - 30_000).toISOString();
+    const { view, patchLiveStrip } = buildLiveStripView(stamp);
+
+    view.patchLiveStrip('wo-1');
+
+    const payload = patchLiveStrip.mock.calls[0][1] as { heartbeatAgeMs: number };
+    expect(payload.heartbeatAgeMs).toBeGreaterThanOrEqual(29_000);
+    expect(payload.heartbeatAgeMs).toBeLessThan(35_000);
+  });
+});
+
+describe('AgentBoardView.onStatusChanged liveHeartbeat eviction', () => {
+  function buildEvictView() {
+    const view = Object.create(AgentBoardView.prototype) as any;
+    view.pauseState = new Map();
+    view.liveHeartbeats = new Map<string, string>([['wo-1', '2026-06-06T00:00:00Z']]);
+    view.patchCard = jest.fn();
+    return view;
+  }
+
+  it.each(['review', 'done', 'failed', 'canceled'] as const)(
+    'drops the live heartbeat entry on terminal status %s',
+    (status) => {
+      const view = buildEvictView();
+      view.onStatusChanged({ taskId: 'wo-1', status });
+      expect(view.liveHeartbeats.has('wo-1')).toBe(false);
+    },
+  );
+
+  it('keeps the live heartbeat entry on a non-terminal status change', () => {
+    const view = buildEvictView();
+    view.onStatusChanged({ taskId: 'wo-1', status: 'running' });
+    expect(view.liveHeartbeats.has('wo-1')).toBe(true);
+  });
 });
 
 describe('AgentBoardView.syncRunner startup pause', () => {
