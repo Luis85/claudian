@@ -433,7 +433,11 @@ export class AgentBoardView extends ItemView {
     }
     try {
       const fresh = this.noteStore.parse(task.path, await this.plugin.app.vault.read(file)).task;
-      this.patchModelStatus(fresh.frontmatter.id, fresh.frontmatter.status);
+      // Replace the whole cached entry (status, provider, model, priority) so the
+      // next selection re-evaluates against reality and won't re-pick a card the
+      // reload just found stale or ineligible.
+      const index = this.model.tasks.findIndex((t) => t.frontmatter.id === fresh.frontmatter.id);
+      if (index !== -1) this.model.tasks[index] = fresh;
       return fresh;
     } catch {
       return null;

@@ -4,7 +4,7 @@ import { isRunnableTaskStatus } from '../model/taskStateMachine';
 import type { TaskLedgerEntry, TaskSpec } from '../model/taskTypes';
 import type { QueueSlotTracker } from './QueueSlotTracker';
 import type { EligibilityPredicates } from './selectNextEligibleTask';
-import { selectNextEligibleTask } from './selectNextEligibleTask';
+import { selectNextEligibleTask, taskIneligibilityReason } from './selectNextEligibleTask';
 import type { TaskRunResult } from './TaskRunCoordinator';
 
 // Variadic to mirror the shared EventBus exactly so a plain
@@ -240,6 +240,18 @@ export class QueueRunner {
       // Deliberately do not self-tick: the same change raises a vault event that
       // re-indexes and ticks the runner, so re-driving here would risk a tight
       // loop while the model still shows the card as runnable.
+      reservation?.release();
+      this.deps.slot.release(id);
+      return;
+    }
+    // Eligibility can change between indexing and this wake (the note's
+    // provider/model was edited, or a provider was disabled). Re-check the fresh
+    // spec and skip — as selection would — rather than handing it to the
+    // coordinator, whose guard rejection onSettle() would count as a failure and
+    // could halt the whole queue.
+    const ineligibility = taskIneligibilityReason(fresh, this.deps.eligibility);
+    if (ineligibility) {
+      this.recordSkip(fresh, ineligibility);
       reservation?.release();
       this.deps.slot.release(id);
       return;

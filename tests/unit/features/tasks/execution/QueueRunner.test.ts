@@ -443,6 +443,31 @@ describe('QueueRunner — chat-tab reservation', () => {
   });
 });
 
+describe('QueueRunner — post-reload eligibility', () => {
+  it('skips an ineligible reloaded card instead of failing and halting the queue', async () => {
+    // The card is eligible as indexed (claude) but its note now names a disabled
+    // provider (codex). Running it would trip a coordinator guard; counting that
+    // as a failure could halt the queue, so it must be skipped instead.
+    const h = makeHarness({
+      haltAfterFailures: 1,
+      eligibility: { isProviderEnabled: (id) => id === 'claude' },
+      onRun: () => ({ ok: false, error: 'boom' }),
+      reloadTask: async () => makeTask('a', { status: 'ready', provider: 'codex' }),
+    });
+    h.setTasks([makeTask('a', { status: 'ready', provider: 'claude' })]);
+
+    h.runner.tick();
+    await flush();
+
+    expect(h.runCalls).toEqual([]);
+    expect(h.runner.isHalted()).toBe(false);
+    const skipped = h.emissions
+      .filter((e) => e.name === 'task:queue-skipped')
+      .map((e) => (e.payload as { taskId: string }).taskId);
+    expect(skipped).toContain('a');
+  });
+});
+
 describe('QueueRunner — dispose', () => {
   it('dispose prevents further ticks', async () => {
     const h = makeHarness();

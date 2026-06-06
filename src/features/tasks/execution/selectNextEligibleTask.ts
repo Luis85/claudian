@@ -16,6 +16,23 @@ function priorityRank(priority: TaskPriority): number {
   return Number.isNaN(rank) ? Number.POSITIVE_INFINITY : rank;
 }
 
+// Why a runnable card still can't launch right now, or null when it's eligible.
+// Shared by selection and the queue's pre-launch re-check so both report the
+// same stable reasons.
+export function taskIneligibilityReason(
+  task: TaskSpec,
+  predicates: Pick<EligibilityPredicates, 'isProviderEnabled' | 'ownsModel'>,
+): string | null {
+  const { provider, model } = task.frontmatter;
+  if (!provider) return 'work order is missing provider';
+  if (!model) return 'work order is missing model';
+  if (!predicates.isProviderEnabled(provider)) return `provider '${provider}' is disabled`;
+  if (!predicates.ownsModel(provider, model)) {
+    return `model '${model}' is not available for provider '${provider}'`;
+  }
+  return null;
+}
+
 // Picks the single highest-priority runnable card (priority, then created-asc)
 // that is not excluded and not already in flight, then reports whether it is
 // eligible to launch or must be skipped with a stable, human-readable reason.
@@ -42,18 +59,7 @@ export function selectNextEligibleTask(
   });
 
   const task = sorted[0];
-  const { provider, model } = task.frontmatter;
-  if (!provider) return { kind: 'skipped', task, reason: 'work order is missing provider' };
-  if (!model) return { kind: 'skipped', task, reason: 'work order is missing model' };
-  if (!predicates.isProviderEnabled(provider)) {
-    return { kind: 'skipped', task, reason: `provider '${provider}' is disabled` };
-  }
-  if (!predicates.ownsModel(provider, model)) {
-    return {
-      kind: 'skipped',
-      task,
-      reason: `model '${model}' is not available for provider '${provider}'`,
-    };
-  }
+  const reason = taskIneligibilityReason(task, predicates);
+  if (reason) return { kind: 'skipped', task, reason };
   return { kind: 'ok', task };
 }
