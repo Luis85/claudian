@@ -540,6 +540,35 @@ describe('RunSession', () => {
     await terminal;
   });
 
+  it('fails the run when persisting a pause status throws (instead of hanging paused)', async () => {
+    const adapter = new SyntheticStreamAdapter();
+    const statuses: string[] = [];
+    const session = new RunSession({
+      task: makeTask(),
+      runId: 'r',
+      getConversationId: () => null,
+      sidepanelTabId: null,
+      stream: adapter,
+      events: new EventBus<TaskEventMap>(),
+      now: () => '2026-06-04T09:00:00Z',
+      writeStatus: async (_t, options) => {
+        if (options.status === 'needs_input') throw new Error('disk full');
+        statuses.push(options.status);
+      },
+      flushLedger: async () => {},
+      writeHandoff: async () => {},
+      heartbeatIntervalMs: 100000,
+      staleThresholdMs: 100000,
+      ledgerIntervalMs: 100000,
+      ledgerMilestone: 999,
+    });
+    const terminal = session.run();
+    adapter.emitText('<claudian_needs_input>\nquestion: which?\n</claudian_needs_input>');
+    const result = await terminal;
+    expect(result.ok).toBe(false);
+    expect(statuses[statuses.length - 1]).toBe('failed');
+  });
+
   it('fails a follow-up that settles with an error', async () => {
     const { session, adapter, statuses } = makeSession({ heartbeatIntervalMs: 100000, staleThresholdMs: 100000 });
     const terminal = session.run();

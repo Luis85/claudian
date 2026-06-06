@@ -308,7 +308,18 @@ export class RunSession {
     reason: string | null,
   ): Promise<void> {
     const ts = this.deps.now();
-    await this.persistStatus({ status: kind, timestamp: ts, pauseReason: reason });
+    try {
+      await this.persistStatus({ status: kind, timestamp: ts, pauseReason: reason });
+    } catch (error) {
+      // The pause status couldn't be persisted, so the board can't surface the
+      // pause and the run would hang paused with no live UI. Clear the pause and
+      // fail the run so it settles and the shared registry releases it, rather
+      // than stranding it until a reload. finish() awaits this same pauseApplied
+      // promise, which resolves as this catch returns — no self-deadlock.
+      this.paused = false;
+      this.fail(error instanceof Error ? error.message : String(error));
+      return;
+    }
     this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: kind });
     if (kind === 'needs_input') {
       this.deps.events.emit('task:needs-input', {
