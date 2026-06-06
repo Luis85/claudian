@@ -951,6 +951,8 @@ Create `src/style/features/work-order-handoff-card.css` with this content:
 
 ```css
 .claudian-work-order-handoff-card {
+  /* Positioning context for card-anchored `.claudian-text-actions` (absolute). */
+  position: relative;
   margin: 8px 0;
   padding: 8px;
   border: 1px solid var(--background-modifier-border);
@@ -1050,6 +1052,15 @@ Create `src/style/features/work-order-handoff-card.css` with this content:
 
 .claudian-work-order-handoff-card-section-body {
   color: var(--text-normal);
+}
+
+/* Handoff-only messages anchor `.claudian-text-actions` under the card instead
+   of a `.claudian-text-block`. That shared element is opacity:0 and is only
+   revealed by `.claudian-text-block:hover` in messages.css, so reveal it on card
+   hover/focus here too — otherwise actions like "Create work order" stay hidden. */
+.claudian-work-order-handoff-card:hover .claudian-text-actions,
+.claudian-work-order-handoff-card:focus-within .claudian-text-actions {
+  opacity: 1;
 }
 ```
 
