@@ -27,3 +27,21 @@ describe('AgentBoardView.onToggleQueue', () => {
     expect(view.runner.setPaused).toHaveBeenCalledWith(true);
   });
 });
+
+describe('AgentBoardView.onQueueCapChanged', () => {
+  it('applies the live halt threshold and ticks on a settings wake', () => {
+    // The wake fires on any settings save. The global cap is applied by the
+    // plugin; the per-runner halt threshold must be synced here too, or a
+    // changed limit only takes effect on the next board refresh.
+    const setHaltAfterFailures = jest.fn();
+    const tick = jest.fn();
+    const view = Object.create(AgentBoardView.prototype) as any;
+    view.runner = { setHaltAfterFailures, tick };
+    view.plugin = { settings: { agentBoardQueueHaltAfter: 5 } };
+
+    view.onQueueCapChanged();
+
+    expect(setHaltAfterFailures).toHaveBeenCalledWith(5);
+    expect(tick).toHaveBeenCalled();
+  });
+});

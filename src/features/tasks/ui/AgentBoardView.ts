@@ -117,7 +117,7 @@ export class AgentBoardView extends ItemView {
       this.runner?.tick();
     }));
     this.register(this.plugin.events.on('task:run-finished', () => this.runner?.tick()));
-    this.register(this.plugin.events.on('task:queue-cap-changed', () => this.runner?.tick()));
+    this.register(this.plugin.events.on('task:queue-cap-changed', () => this.onQueueCapChanged()));
     // Pause/halt live in the shared control state, so by the time these fire the
     // runner state is already global; the boards only need to repaint chrome.
     this.register(this.plugin.events.on('task:queue-paused', () => this.render()));
@@ -490,6 +490,17 @@ export class AgentBoardView extends ItemView {
   private freeExecutionSlots(): number {
     const { used, max } = this.computeSlots();
     return Math.max(0, max - used);
+  }
+
+  // saveSettings() emits task:queue-cap-changed on any settings change. The
+  // global concurrency cap is applied by the plugin already, but the halt
+  // threshold is per-runner, so apply the live value here before draining —
+  // otherwise a changed limit only takes effect on the next board refresh.
+  // (Deliberately not a full syncRunner(): that reconciles pause from the cached
+  // config, which would revert a pause just toggled from a board.)
+  private onQueueCapChanged(): void {
+    this.runner?.setHaltAfterFailures(this.plugin.settings.agentBoardQueueHaltAfter);
+    this.runner?.tick();
   }
 
   private async onToggleQueue(): Promise<void> {
