@@ -58,6 +58,13 @@ export interface ConversationControllerDeps {
   dismissPendingInlinePrompts?: () => void;
   /** Returns and clears a hydration failure recorded for the conversation while it was being opened. */
   consumePendingHydrationError?: (conversationId: string) => { code: string; message: string } | null;
+  /**
+   * Resolves the work-order note path linked to this tab's current conversation,
+   * if any. Wired to `tab.workOrderPath` so `save()` can persist it on the
+   * durable `Conversation` and let the chat-display splitter re-fire after
+   * reopen/restart. Returns `null` for normal (non-work-order) tabs.
+   */
+  getWorkOrderPath?: () => string | null;
 }
 
 type SaveOptions = {
@@ -442,6 +449,10 @@ export class ConversationController {
       ? agentService.buildSessionUpdates({ conversation, sessionInvalidated })
       : { updates: {} };
 
+    // `Partial<Conversation>`: a `null` from a normal tab omits the key and
+    // leaves any stored value intact, so this only writes when the active tab
+    // resolves to a work-order path.
+    const workOrderPath = this.deps.getWorkOrderPath?.() ?? null;
     const updates: Partial<Conversation> = {
       ...sessionUpdates,
       messages: state.messages,
@@ -449,6 +460,7 @@ export class ConversationController {
       externalContextPaths: externalContextPaths.length > 0 ? externalContextPaths : undefined,
       usage: state.usage ?? undefined,
       enabledMcpServers: enabledMcpServers.length > 0 ? enabledMcpServers : undefined,
+      ...(workOrderPath ? { workOrderPath } : {}),
     };
 
     if (updateLastResponse) {

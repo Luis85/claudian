@@ -776,9 +776,25 @@ export class StreamController {
       }
       msg.contentBlocks = msg.contentBlocks || [];
       msg.contentBlocks.push({ type: 'text', content: state.currentTextContent });
+      // Work-order tabs swap a completed handoff block for the compact card on
+      // finalize; everything else keeps the raw text block plus copy button.
+      const replacedWithCard =
+        state.currentContentEl && state.currentTextEl
+          ? renderer.finalizeStreamedAssistantText?.(
+              state.currentContentEl,
+              state.currentTextEl,
+              state.currentTextContent,
+            ) ?? false
+          : false;
       // Copy button added here (not during streaming) to match history-loaded messages
-      if (state.currentTextEl) {
+      if (state.currentTextEl && !replacedWithCard) {
         renderer.addTextCopyButton(state.currentTextEl, state.currentTextContent);
+      }
+      // The card swap removed the text block that registered actions anchor to;
+      // re-anchor them onto the card so a freshly completed run keeps actions
+      // (e.g. Create work order) without waiting for a reload.
+      if (replacedWithCard && msg) {
+        renderer.refreshMessageActions?.(msg);
       }
     }
     state.currentTextEl = null;

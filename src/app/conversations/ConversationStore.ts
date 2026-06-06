@@ -77,6 +77,7 @@ export class ConversationStore {
           usage: meta.usage,
           titleGenerationStatus: meta.titleGenerationStatus,
           resumeAtMessageId: meta.resumeAtMessageId,
+          workOrderPath: meta.workOrderPath,
         } satisfies Conversation;
       })
       .sort((a, b) => (b.lastResponseAt ?? b.updatedAt) - (a.lastResponseAt ?? a.updatedAt));

@@ -626,6 +626,13 @@ export class ClaudianView extends ItemView {
     model: string;
     prompt: string;
     tabReservation?: ChatTabReservation;
+    /**
+     * Vault-relative work-order note path. Pinned onto the new tab so the chat
+     * display renders the run's `<claudian_handoff>` as a card. Optional: the
+     * commit-turn fallback inside `injectCommitTurnForConversation` has no
+     * work-order note path to pass, so a normal (non-work-order) tab is fine.
+     */
+    workOrderPath?: string;
   }): Promise<TaskRunTabHandle | null> {
     if (!this.tabManager) {
       options.tabReservation?.release();
@@ -635,6 +642,7 @@ export class ClaudianView extends ItemView {
     const tab = await this.tabManager.createTaskRunTab({
       providerId: options.providerId,
       model: options.model,
+      workOrderPath: options.workOrderPath,
     });
     // The tab now counts in the live tab count (or creation failed), so this
     // run no longer needs its pending reservation — release it before the turn

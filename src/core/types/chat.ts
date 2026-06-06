@@ -109,7 +109,7 @@ export interface Conversation {
   enabledMcpServers?: string[];
   /** Assistant checkpoint identifier for resumeAtMessageId after rewind. */
   resumeAtMessageId?: string;
-  /** Optional link to a work-order note path. Absent for ad-hoc chat. In-memory only. */
+  /** Optional link to a work-order note path. Absent for ad-hoc chat. */
   workOrderPath?: string;
 }
 
@@ -150,7 +150,7 @@ export interface SessionMetadata {
   usage?: UsageInfo;
   /** Assistant checkpoint identifier for resumeAtMessageId after rewind. */
   resumeAtMessageId?: string;
-  /** Optional link to a work-order note path. Absent for ad-hoc chat. In-memory only. */
+  /** Optional link to a work-order note path. Absent for ad-hoc chat. */
   workOrderPath?: string;
 }
 

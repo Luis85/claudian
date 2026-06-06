@@ -495,6 +495,30 @@ describe('ConversationController', () => {
 
       expect(deps.state.hasPendingConversationSave).toBe(false);
     });
+
+    it('persists workOrderPath onto updates when the accessor returns a path', async () => {
+      deps = createMockDeps({
+        getWorkOrderPath: () => 'docs/work-orders/example.md',
+      });
+      controller = new ConversationController(deps);
+      deps.state.currentConversationId = 'conv-1';
+      deps.state.messages = [{ id: '1', role: 'user', content: 'test', timestamp: Date.now() }];
+
+      await controller.save();
+
+      const call = (deps.plugin.updateConversation as jest.Mock).mock.calls[0];
+      expect(call[1].workOrderPath).toBe('docs/work-orders/example.md');
+    });
+
+    it('omits workOrderPath from updates when the accessor returns null', async () => {
+      deps.state.currentConversationId = 'conv-1';
+      deps.state.messages = [{ id: '1', role: 'user', content: 'test', timestamp: Date.now() }];
+
+      await controller.save();
+
+      const call = (deps.plugin.updateConversation as jest.Mock).mock.calls[0];
+      expect(call[1]).not.toHaveProperty('workOrderPath');
+    });
   });
 
   describe('loadActive with existing conversation', () => {
