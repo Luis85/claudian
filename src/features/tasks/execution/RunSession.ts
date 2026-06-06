@@ -31,6 +31,37 @@ export interface RunSessionDeps {
   events: TaskEventEmitter;
   now: () => string;
   writeStatus: (task: TaskSpec, options: RunSessionWriteStatusOptions) => Promise<void>;
+  /**
+   * Sidecar heartbeat write. Replaces the per-tick frontmatter heartbeat that
+   * raced the agent's checklist Edits. Receives the run id so the coordinator
+   * can stamp the heartbeat into a sidecar keyed off the run, not the note.
+   * Optional during the in-flight write-race fix; once the coordinator wires
+   * this, the optional marker is removed by a follow-up task.
+   */
+  writeHeartbeat?: (
+    runId: string,
+    heartbeat: { at: string; status: TaskStatus; pauseReason?: string | null },
+  ) => Promise<void>;
+  /**
+   * Sidecar ledger append (one entry per call). The note is updated only at
+   * terminal via {@link finalizeLedgerToNote}. Optional during the in-flight
+   * write-race fix; once the coordinator wires this the optional marker is
+   * removed by a follow-up task.
+   */
+  appendLedger?: (runId: string, entry: TaskLedgerEntry) => Promise<void>;
+  /**
+   * At terminal, snapshot the sidecar ledger back into the work-order note's
+   * `<!-- claudian:run-ledger-* -->` region. Runs after the handoff write so the
+   * note's terminal state lands in a single coordinated transition. Optional
+   * during the in-flight write-race fix; once the coordinator wires this the
+   * optional marker is removed by a follow-up task.
+   */
+  finalizeLedgerToNote?: (task: TaskSpec, runId: string) => Promise<void>;
+  /**
+   * Legacy note-side ledger flush. Used as a fallback when `appendLedger` is
+   * not wired (during the in-flight write-race fix). Removal tracked by the
+   * work-order write-race plan.
+   */
   flushLedger: (entries: TaskLedgerEntry[]) => Promise<void>;
   writeHandoff: (task: TaskSpec, markdown: string) => Promise<void>;
   heartbeatIntervalMs?: number;
@@ -96,7 +127,19 @@ export class RunSession {
 
   constructor(private readonly deps: RunSessionDeps) {
     this.ledger = new LedgerWriter({
+      // Append each batched entry to the sidecar (per-entry append), then emit
+      // the per-entry event. Batching stays at the writer to avoid one syscall
+      // per progress line; the writer's order is preserved here by `for...of`.
+      // Falls back to the legacy batch flush when the coordinator hasn't yet
+      // wired the sidecar — the write-race fix is shipping in steps.
       flush: async (entries) => {
+        if (this.deps.appendLedger) {
+          for (const entry of entries) {
+            await this.deps.appendLedger(this.deps.runId, entry);
+            this.deps.events.emit('task:ledger-appended', { taskId: this.taskId, path: this.path, entry });
+          }
+          return;
+        }
         await this.deps.flushLedger(entries);
         for (const entry of entries) {
           this.deps.events.emit('task:ledger-appended', { taskId: this.taskId, path: this.path, entry });
@@ -455,6 +498,7 @@ export class RunSession {
     if (payload.status === 'canceled') {
       await this.persistStatus({ status: 'canceled', timestamp: ts });
       this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'canceled' });
+      await this.snapshotLedgerToNote();
       await this.settle({ ok: false, error: payload.error ?? 'canceled', status: 'canceled' });
       return;
     }
@@ -463,6 +507,7 @@ export class RunSession {
       this.ledger.enqueue({ timestamp: ts, status: 'failed', message: payload.error ?? 'Run failed.' });
       await this.persistStatus({ status: 'failed', timestamp: ts });
       this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'failed' });
+      await this.snapshotLedgerToNote();
       await this.settle({ ok: false, error: payload.error ?? 'failed', status: 'failed' });
       return;
     }
@@ -474,6 +519,7 @@ export class RunSession {
       await this.persistStatus({ status: 'review', timestamp: ts });
       this.ledger.enqueue({ timestamp: ts, status: 'review', message: 'Handoff written.' });
       this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'review' });
+      await this.snapshotLedgerToNote();
       await this.settle({ ok: true, status: 'review' });
       return;
     }
@@ -483,6 +529,7 @@ export class RunSession {
       this.ledger.enqueue({ timestamp: ts, status: 'needs_handoff', message: parsed.error });
       this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'needs_handoff' });
       this.deps.events.emit('task:needs-handoff', { taskId: this.taskId, path: this.path, error: parsed.error });
+      await this.snapshotLedgerToNote();
       await this.settle({ ok: false, error: parsed.error, status: 'needs_handoff' });
       return;
     }
@@ -490,7 +537,32 @@ export class RunSession {
     await this.persistStatus({ status: 'failed', timestamp: ts });
     this.ledger.enqueue({ timestamp: ts, status: 'failed', message: 'Empty response' });
     this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'failed' });
+    await this.snapshotLedgerToNote();
     await this.settle({ ok: false, error: 'Empty response', status: 'failed' });
+  }
+
+  /**
+   * Replace the work-order note's run-ledger region with the sidecar snapshot.
+   * Best-effort: a failure to snapshot must not hang the run — callers still
+   * proceed to `settle()` so the terminal result is resolved.
+   */
+  private async snapshotLedgerToNote(): Promise<void> {
+    // Drain the sidecar queue first so the snapshot includes every entry the
+    // run produced (the writer batches, so the most recent enqueue may still
+    // be pending). Best-effort: a transient flush failure still proceeds to
+    // snapshot what's on disk rather than hanging the terminal write.
+    try {
+      await this.ledger.flushNow();
+    } catch {
+      // Sidecar append failed; snapshot what's on disk anyway.
+    }
+    if (!this.deps.finalizeLedgerToNote) return;
+    try {
+      await this.deps.finalizeLedgerToNote(this.deps.task, this.deps.runId);
+    } catch {
+      // The note's run-ledger region couldn't be updated (e.g. missing markers).
+      // Sidecar still has the full ledger; the run settles cleanly.
+    }
   }
 
   /** Last-resort settle when a terminal write itself fails; marks failed best-effort and never hangs. */
@@ -504,6 +576,7 @@ export class RunSession {
       // The note write itself is failing; still settle so the run does not hang.
     }
     this.ledger.enqueue({ timestamp: this.deps.now(), status: 'failed', message: `run finalize failed: ${message}` });
+    await this.snapshotLedgerToNote();
     await this.settle({ ok: false, error: message, status: 'failed' });
   }
 
@@ -524,7 +597,17 @@ export class RunSession {
     const stale = this.deps.staleThresholdMs ?? DEFAULTS.staleThresholdMs;
     this.heartbeatTimer = window.setInterval(() => {
       const at = this.deps.now();
-      this.trackBackgroundWrite(this.persistStatus({ status: 'running', timestamp: at, heartbeat: at }));
+      // Route the heartbeat to a sidecar instead of the note: per-tick frontmatter
+      // writes raced the agent's checklist Edits on the same note. The note still
+      // sees status writes at transitions (start/pause/resume/terminal), which
+      // align with turn boundaries where the agent is not mid-Edit. Falls back
+      // to the legacy note status write only when the coordinator hasn't yet
+      // wired the sidecar (transitional during the write-race fix).
+      if (this.deps.writeHeartbeat) {
+        this.trackBackgroundWrite(this.deps.writeHeartbeat(this.deps.runId, { at, status: 'running' }));
+      } else {
+        this.trackBackgroundWrite(this.persistStatus({ status: 'running', timestamp: at, heartbeat: at }));
+      }
       this.deps.events.emit('task:heartbeat', { taskId: this.taskId, path: this.path, at });
     }, interval);
     this.staleTimer = window.setInterval(() => {

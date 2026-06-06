@@ -60,6 +60,8 @@ function makeSession(overrides: Partial<ConstructorParameters<typeof RunSession>
   const statuses: string[] = [];
   const ledger: TaskLedgerEntry[] = [];
   const handoffs: string[] = [];
+  const heartbeats: Array<{ runId: string; at: string; status: string; pauseReason?: string | null }> = [];
+  const finalizedLedgers: Array<{ taskId: string; runId: string }> = [];
   const session = new RunSession({
     task: makeTask(),
     runId: 'run-1',
@@ -69,7 +71,10 @@ function makeSession(overrides: Partial<ConstructorParameters<typeof RunSession>
     events,
     now: () => '2026-06-04T09:00:00Z',
     writeStatus: async (_t, options) => { statuses.push(options.status); },
-    flushLedger: async (entries) => { ledger.push(...entries); },
+    flushLedger: async () => {},
+    writeHeartbeat: async (runId, hb) => { heartbeats.push({ runId, ...hb }); },
+    appendLedger: async (_runId, entry) => { ledger.push(entry); },
+    finalizeLedgerToNote: async (task, runId) => { finalizedLedgers.push({ taskId: task.frontmatter.id, runId }); },
     writeHandoff: async (_t, md) => { handoffs.push(md); },
     heartbeatIntervalMs: 1000,
     staleThresholdMs: 5000,
@@ -77,7 +82,7 @@ function makeSession(overrides: Partial<ConstructorParameters<typeof RunSession>
     ledgerMilestone: 999,
     ...overrides,
   });
-  return { session, adapter, events, statuses, ledger, handoffs };
+  return { session, adapter, events, statuses, ledger, handoffs, heartbeats, finalizedLedgers };
 }
 
 describe('RunSession', () => {
@@ -246,6 +251,9 @@ describe('RunSession', () => {
         writes.push(options.status);
       },
       flushLedger: async () => {},
+      writeHeartbeat: async () => {},
+      appendLedger: async () => {},
+      finalizeLedgerToNote: async () => {},
       writeHandoff: async () => {},
       heartbeatIntervalMs: 100000,
       staleThresholdMs: 100000,
@@ -277,6 +285,9 @@ describe('RunSession', () => {
       now: () => '2026-06-04T09:00:00Z',
       writeStatus: async (_t, options) => { statuses.push(options.status); },
       flushLedger: async () => {},
+      writeHeartbeat: async () => {},
+      appendLedger: async () => {},
+      finalizeLedgerToNote: async () => {},
       writeHandoff: async () => { throw new Error('missing markers'); },
       heartbeatIntervalMs: 100000,
       staleThresholdMs: 100000,
@@ -311,6 +322,9 @@ describe('RunSession', () => {
         writes.push(options.status);
       },
       flushLedger: async () => {},
+      writeHeartbeat: async () => {},
+      appendLedger: async () => {},
+      finalizeLedgerToNote: async () => {},
       writeHandoff: async () => {},
       heartbeatIntervalMs: 100000,
       staleThresholdMs: 100000,
@@ -383,6 +397,9 @@ describe('RunSession', () => {
         writes.push({ status: options.status, conversationId: options.conversationId });
       },
       flushLedger: async () => {},
+      writeHeartbeat: async () => {},
+      appendLedger: async () => {},
+      finalizeLedgerToNote: async () => {},
       writeHandoff: async () => {},
       heartbeatIntervalMs: 100000,
       staleThresholdMs: 100000,
@@ -417,6 +434,9 @@ describe('RunSession', () => {
         writes.push({ status: options.status, conversationId: options.conversationId });
       },
       flushLedger: async () => {},
+      writeHeartbeat: async () => {},
+      appendLedger: async () => {},
+      finalizeLedgerToNote: async () => {},
       writeHandoff: async () => {},
       heartbeatIntervalMs: 100000,
       staleThresholdMs: 100000,
@@ -496,6 +516,9 @@ describe('RunSession', () => {
       now: () => '2026-06-04T09:00:00Z',
       writeStatus: async (_t, options) => { statuses.push(options.status); },
       flushLedger: async () => {},
+      writeHeartbeat: async () => {},
+      appendLedger: async () => {},
+      finalizeLedgerToNote: async () => {},
       writeHandoff: async () => {},
       heartbeatIntervalMs: 100000,
       staleThresholdMs: 100000,
@@ -597,6 +620,9 @@ describe('RunSession', () => {
         statuses.push(options.status);
       },
       flushLedger: async () => {},
+      writeHeartbeat: async () => {},
+      appendLedger: async () => {},
+      finalizeLedgerToNote: async () => {},
       writeHandoff: async () => {},
       heartbeatIntervalMs: 100000,
       staleThresholdMs: 100000,
@@ -644,5 +670,73 @@ describe('RunSession', () => {
     adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
     const result = await terminal;
     expect(result).toEqual({ ok: true, status: 'review' });
+  });
+
+  describe('RunSession sidecar writes', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('does not call writeStatus during heartbeat ticks; calls writeHeartbeat instead', async () => {
+      jest.useFakeTimers();
+      const { session, statuses, heartbeats } = makeSession({
+        heartbeatIntervalMs: 100,
+        staleThresholdMs: 100_000,
+      });
+      void session.run();
+      // Drain the initial run-start status write.
+      await Promise.resolve();
+      expect(statuses).toEqual(['running']);
+      const baselineStatusWrites = statuses.length;
+
+      // Advance two heartbeat intervals.
+      jest.advanceTimersByTime(250);
+      await Promise.resolve();
+
+      // No further status writes from the heartbeat tick.
+      expect(statuses.length).toBe(baselineStatusWrites);
+      expect(heartbeats.length).toBeGreaterThan(0);
+      expect(heartbeats[0].runId).toBe('run-1');
+      expect(heartbeats[0].status).toBe('running');
+    });
+
+    it('routes ledger entries through appendLedger, not flushLedger', async () => {
+      const flushLedger = jest.fn().mockResolvedValue(undefined);
+      const { session, adapter, ledger } = makeSession({ flushLedger });
+      const terminal = session.run();
+      adapter.emitText('<claudian_progress>\nstep: building\ndone: 1/3\n</claudian_progress>');
+      adapter.emitText(VALID_HANDOFF);
+      adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+      await terminal;
+
+      // appendLedger received the progress entry (via the captured ledger array).
+      expect(ledger.find((e) => e.message.startsWith('progress:'))).toBeTruthy();
+      // flushLedger is no longer invoked by the run.
+      expect(flushLedger).not.toHaveBeenCalled();
+    });
+
+    it('on terminal, writes one finalizeLedgerToNote call after the handoff write', async () => {
+      const callOrder: string[] = [];
+      const writeHandoff = jest.fn().mockImplementation(async () => {
+        callOrder.push('writeHandoff');
+      });
+      const finalizeLedgerToNote = jest.fn().mockImplementation(async () => {
+        callOrder.push('finalizeLedgerToNote');
+      });
+      const { session, adapter } = makeSession({ writeHandoff, finalizeLedgerToNote });
+      const terminal = session.run();
+      adapter.emitText(VALID_HANDOFF);
+      adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+      const result = await terminal;
+
+      expect(result.ok).toBe(true);
+      expect(writeHandoff).toHaveBeenCalledTimes(1);
+      expect(finalizeLedgerToNote).toHaveBeenCalledTimes(1);
+      const finalizeCall = finalizeLedgerToNote.mock.calls[0];
+      expect(finalizeCall[0].frontmatter.id).toBe('t1');
+      expect(finalizeCall[1]).toBe('run-1');
+      // Order: handoff first, then ledger snapshot.
+      expect(callOrder).toEqual(['writeHandoff', 'finalizeLedgerToNote']);
+    });
   });
 });
