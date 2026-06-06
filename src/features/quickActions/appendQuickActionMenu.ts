@@ -2,8 +2,8 @@ import type { Menu, TAbstractFile } from 'obsidian';
 
 import { t } from '../../i18n/i18n';
 import type ClaudianPlugin from '../../main';
+import { launchQuickAction } from './launchQuickAction';
 import { openContextMenuQuickAction } from './openContextMenuQuickAction';
-import { runQuickActionForFile } from './runQuickActionForFile';
 
 /**
  * Append the shared "picker + favorites" quick-action block to a `Menu`.
@@ -39,6 +39,6 @@ export function appendQuickActionFavoritesAndPicker(
     menu.addItem((item) => item
       .setTitle(fav.name)
       .setIcon(fav.icon ?? 'star')
-      .onClick(() => { void runQuickActionForFile(plugin, file, fav); }));
+      .onClick(() => { void launchQuickAction(plugin, file, fav); }));
   }
 }
