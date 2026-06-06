@@ -30,6 +30,25 @@ export type WorkOrderProtocolSegment =
   | { type: 'needs_approval'; needsApproval: NeedsApprovalData }
   | { type: 'handoff'; handoff: ParsedHandoffForDisplay; preview: string };
 
+const FENCE_PATTERN = /^(`{3,}|~{3,})[^\n]*\n([\s\S]*?)^\1[ \t]*$/gm;
+
+function findFencedRanges(content: string): Array<[number, number]> {
+  const ranges: Array<[number, number]> = [];
+  FENCE_PATTERN.lastIndex = 0;
+  for (const m of content.matchAll(FENCE_PATTERN)) {
+    if (m.index === undefined) continue;
+    ranges.push([m.index, m.index + m[0].length]);
+  }
+  return ranges;
+}
+
+function isInsideAnyRange(pos: number, ranges: Array<[number, number]>): boolean {
+  for (const [start, end] of ranges) {
+    if (pos >= start && pos < end) return true;
+  }
+  return false;
+}
+
 const BLOCK_PATTERNS: Array<{ kind: 'progress' | 'needs_input' | 'needs_approval' | 'handoff'; regex: RegExp }> = [
   { kind: 'progress', regex: /<claudian_progress>([\s\S]*?)<\/claudian_progress>/g },
   { kind: 'needs_input', regex: /<claudian_needs_input>([\s\S]*?)<\/claudian_needs_input>/g },
@@ -56,13 +75,16 @@ export function splitWorkOrderProtocolForDisplay(content: string): WorkOrderProt
   }
   matches.sort((a, b) => a.start - b.start);
 
-  if (matches.length === 0) {
+  const fenceRanges = findFencedRanges(content);
+  const filteredMatches = matches.filter((m) => !isInsideAnyRange(m.start, fenceRanges));
+
+  if (filteredMatches.length === 0) {
     return [{ type: 'markdown', content }];
   }
 
   const segments: WorkOrderProtocolSegment[] = [];
   let cursor = 0;
-  for (const match of matches) {
+  for (const match of filteredMatches) {
     if (match.start > cursor) {
       const between = content.slice(cursor, match.start).trim();
       if (between.length > 0) segments.push({ type: 'markdown', content: between });

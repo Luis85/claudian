@@ -71,4 +71,73 @@ describe('splitWorkOrderProtocolForDisplay', () => {
       { type: 'markdown', content: '<claudian_progress>\nstep: a\n' },
     ]);
   });
+
+  it('does not extract protocol blocks inside fenced code blocks', () => {
+    const segments = splitWorkOrderProtocolForDisplay(
+      'See the format:\n```xml\n<claudian_progress>\nstep: docs\ndone: 1/2\n</claudian_progress>\n```\nDone.',
+    );
+    // Whole input stays as one markdown segment; no progress segment emitted.
+    expect(segments.map((s) => s.type)).toEqual(['markdown']);
+  });
+
+  it('does not extract protocol blocks inside tilde-fenced code blocks', () => {
+    const segments = splitWorkOrderProtocolForDisplay(
+      '~~~xml\n<claudian_handoff>\nsummary: s\nverification: v\nrisks: None\nnext_action: n\n</claudian_handoff>\n~~~',
+    );
+    expect(segments.map((s) => s.type)).toEqual(['markdown']);
+  });
+
+  it('extracts protocol blocks that appear after a closed fenced block', () => {
+    const segments = splitWorkOrderProtocolForDisplay(
+      '```\nignore me\n```\n<claudian_progress>\nstep: real\ndone: 1/1\n</claudian_progress>',
+    );
+    expect(segments.map((s) => s.type)).toEqual(['markdown', 'progress']);
+  });
+
+  it('truncates handoff preview at 160 chars with ellipsis terminator', () => {
+    const long = 'word '.repeat(40); // 200 chars
+    const segments = splitWorkOrderProtocolForDisplay(
+      `<claudian_handoff>\nsummary: ${long}\nverification: v\nrisks: None\nnext_action: n\n</claudian_handoff>`,
+    );
+    const handoff = segments.find((s) => s.type === 'handoff');
+    expect(handoff).toBeDefined();
+    if (handoff?.type !== 'handoff') throw new Error('expected handoff');
+    expect(handoff.preview.length).toBeLessThanOrEqual(160);
+    expect(handoff.preview.endsWith('…')).toBe(true);
+  });
+
+  it('normalizes preview whitespace and keeps short summaries unchanged', () => {
+    const segments = splitWorkOrderProtocolForDisplay(
+      '<claudian_handoff>\nsummary: short    summary\nverification: v\nrisks: None\nnext_action: n\n</claudian_handoff>',
+    );
+    const handoff = segments.find((s) => s.type === 'handoff');
+    if (handoff?.type !== 'handoff') throw new Error('expected handoff');
+    expect(handoff.preview).toBe('short summary');
+  });
+
+  it('renders multiple handoff blocks as separate handoff segments', () => {
+    const segments = splitWorkOrderProtocolForDisplay(
+      '<claudian_handoff>\nsummary: a\nverification: v\nrisks: None\nnext_action: n\n</claudian_handoff>\n' +
+      '<claudian_handoff>\nsummary: b\nverification: v\nrisks: None\nnext_action: n\n</claudian_handoff>',
+    );
+    expect(segments.map((s) => s.type)).toEqual(['handoff', 'handoff']);
+  });
+
+  it('treats reversible values other than "true"/"false" as undefined', () => {
+    const segments = splitWorkOrderProtocolForDisplay(
+      '<claudian_needs_approval>\naction: deploy\nreversible: yes\n</claudian_needs_approval>',
+    );
+    const seg = segments[0];
+    if (seg.type !== 'needs_approval') throw new Error('expected needs_approval');
+    expect(seg.needsApproval.reversible).toBeUndefined();
+  });
+
+  it('rejects a progress block whose required step field is blank (emits raw markdown)', () => {
+    const segments = splitWorkOrderProtocolForDisplay(
+      '<claudian_progress>\nstep: \ndone: 1/2\n</claudian_progress>',
+    );
+    expect(segments).toEqual([
+      { type: 'markdown', content: '<claudian_progress>\nstep: \ndone: 1/2\n</claudian_progress>' },
+    ]);
+  });
 });
