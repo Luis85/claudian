@@ -195,6 +195,31 @@ The reservation ledger remains plugin-level. Cross-pane race protection is prese
 
 ## Tab bar visuals
 
+### Render order
+
+Chat tabs render first, work-order tabs render last. Within each group, the existing insertion order is preserved (no drag-reorder exists today).
+
+Implemented as a sorted view at the render seam, not as a re-sort of the underlying `Map`:
+
+```ts
+// TabManager
+getOrderedTabs(): TabData[] {
+  const chat: TabData[] = [];
+  const wo: TabData[] = [];
+  for (const t of this.tabs.values()) {
+    (t.kind === 'work-order' ? wo : chat).push(t);
+  }
+  return [...chat, ...wo];
+}
+```
+
+- `TabBar` renderer iterates `getOrderedTabs()` instead of `getAllTabs()` / `tabs.values()`.
+- Newly created chat tabs slot in after the last existing chat tab (visually pushing all WO tabs right by one).
+- Newly created work-order tabs append at the end of the bar.
+- Closing a chat tab leaves the WO group's relative order unchanged; the group shifts left as a whole.
+- Active-tab styling, switch-to-next/prev navigation (`NavigationController`), and tab-bar keyboard cycling all consume `getOrderedTabs()` so cycling goes chat → chat → … → WO → WO → chat (wraps).
+- Persisted tab-state restore uses the saved insertion order to seed the `Map`; the sorted view derives from there. No migration needed for ordering.
+
 ### DOM/CSS
 
 Tab bar renderer reads `tab.kind`. When `'work-order'`:
@@ -265,6 +290,7 @@ Other locales fall back to English until translated; matches the existing patter
 | `tabs/TabManager.kindCap.test.ts` | `createTab` with default kind respects `maxChatTabs` only; `createTaskRunTab` respects `maxWorkOrderTabs` only; reaching one cap does not block the other; `bypassTabLimit` still escapes both |
 | `tabs/TabManager.persistence.test.ts` | restored persisted state preserves `kind`; missing `kind` defaults to `'chat'` |
 | `tabs/TabManager.events.test.ts` | `chat:tabs-changed` payload includes `chatCount` and `workOrderCount` matching internal counts after create/close |
+| `tabs/TabManager.order.test.ts` | `getOrderedTabs()` returns all chat tabs first then all WO tabs; within each group insertion order is preserved; creating a chat tab after a WO tab inserts it before the WO group in the ordered view; closing a chat tab leaves the WO group's relative order intact |
 | `app/settings/migration.test.ts` | only `maxTabs` present → migrates to `maxChatTabs`, seeds `maxWorkOrderTabs` to default; both new keys present → no-op; neither present → defaults applied |
 | `features/tasks/execution/QueueRunner.freeSlots.test.ts` | with WO cap=2 and 2 WO tabs open, free slots = 0; opening N chat tabs does not change WO free count; an outstanding reservation decrements free slots |
 
@@ -284,7 +310,7 @@ No new perf spec. The change does not move existing performance windows (tab cou
 - Promote/demote tab kind at runtime.
 - Auto-close work-order tabs when their run reaches a terminal state.
 - A separate `ChatTabReservations` instance for chat tabs.
-- Reordering the tab bar into chat vs. work-order groups.
+- Drag-reorder of tabs (none today). Render order is a fixed chat-then-WO grouping; manual reordering remains out of scope.
 - Run-status badge (running/done/failed) on the tab itself.
 - Per-pane differentiation of work-order caps. The cap remains plugin-level, matching the current shared model.
 
