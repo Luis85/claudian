@@ -64,9 +64,6 @@ export interface ToolbarCallbacks {
   onPermissionModeChange: (mode: string) => Promise<void>;
   /** Toggles plan mode on/off (saves/restores pre-plan permission mode). */
   onPlanModeToggle?: () => Promise<void>;
-  getOrchestratorMode?: () => boolean;
-  onOrchestratorOpen?: () => void;
-  getOrchestratorEnabled?: () => boolean;
   getSettings: () => ToolbarSettings;
   getEnvironmentVariables?: () => string;
   getUIConfig: () => ProviderChatUIConfig;
@@ -550,49 +547,6 @@ export class PlanModeToggle {
     this.buttonEl.setAttr(
       'title',
       isActive ? t('chat.planMode.titleActive') : t('chat.planMode.titleInactive'),
-    );
-  }
-}
-
-export class OrchestratorToggle {
-  private container: HTMLElement;
-  private buttonEl: HTMLElement | null = null;
-  private callbacks: ToolbarCallbacks;
-
-  constructor(parentEl: HTMLElement, callbacks: ToolbarCallbacks) {
-    this.callbacks = callbacks;
-    this.container = parentEl.createDiv({ cls: 'claudian-orchestrator-toggle' });
-    this.render();
-  }
-
-  private render(): void {
-    this.container.empty();
-    this.buttonEl = this.container.createDiv({ cls: 'claudian-orchestrator-button' });
-    const iconEl = this.buttonEl.createSpan({ cls: 'claudian-orchestrator-icon' });
-    setIcon(iconEl, 'git-fork');
-    this.updateDisplay();
-    this.buttonEl.addEventListener('click', () => {
-      this.callbacks.onOrchestratorOpen?.();
-    });
-  }
-
-  updateDisplay(): void {
-    if (!this.buttonEl) {
-      return;
-    }
-    const enabled = this.callbacks.getOrchestratorEnabled?.() !== false;
-    const canShow = enabled && Boolean(this.callbacks.onOrchestratorOpen);
-    if (!canShow) {
-      this.container.addClass('claudian-hidden');
-      return;
-    }
-    this.container.removeClass('claudian-hidden');
-    const isActive = this.callbacks.getOrchestratorMode?.() ?? false;
-    this.buttonEl.toggleClass('active', isActive);
-    this.buttonEl.setAttr('aria-pressed', isActive ? 'true' : 'false');
-    this.buttonEl.setAttr(
-      'title',
-      isActive ? t('chat.orchestrator.titleActive') : t('chat.orchestrator.titleOpen'),
     );
   }
 }
@@ -1351,7 +1305,6 @@ export function createInputToolbar(
   mcpServerSelector: McpServerSelector;
   permissionToggle: PermissionToggle;
   planModeToggle: PlanModeToggle;
-  orchestratorToggle: OrchestratorToggle;
   serviceTierToggle: ServiceTierToggle;
 } {
   const modelSelector = new ModelSelector(parentEl, callbacks);
@@ -1362,7 +1315,6 @@ export function createInputToolbar(
   const mcpServerSelector = new McpServerSelector(parentEl);
   const permissionToggle = new PermissionToggle(parentEl, callbacks);
   const planModeToggle = new PlanModeToggle(parentEl, callbacks);
-  const orchestratorToggle = new OrchestratorToggle(parentEl, callbacks);
   const modeSelector = new ModeSelector(parentEl, callbacks);
 
   return {
@@ -1375,6 +1327,5 @@ export function createInputToolbar(
     mcpServerSelector,
     permissionToggle,
     planModeToggle,
-    orchestratorToggle,
   };
 }

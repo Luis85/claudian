@@ -46,12 +46,6 @@ export class TabBar {
 
   /** Renders a single tab badge. */
   private renderBadge(item: TabBarItem): void {
-    const roleClass = item.isWorker
-      ? 'claudian-tab-badge-worker'
-      : item.isOrchestrator
-        ? 'claudian-tab-badge-orchestrator'
-        : '';
-
     const stateClasses = ['claudian-tab-badge'];
     if (item.isActive) {
       stateClasses.push('claudian-tab-badge-active');
@@ -65,10 +59,6 @@ export class TabBar {
     if (!item.isActive && !item.needsAttention && !item.isStreaming) {
       stateClasses.push('claudian-tab-badge-idle');
     }
-    if (roleClass) {
-      stateClasses.push(roleClass);
-    }
-
     const badgeEl = this.containerEl.createDiv({
       cls: stateClasses.join(' '),
       text: String(item.index),
@@ -82,15 +72,6 @@ export class TabBar {
       badgeEl.setAttribute('data-working', 'true');
     }
     badgeEl.setAttribute('data-provider', item.providerId);
-    if (item.isWorker) {
-      badgeEl.setAttribute('data-tab-role', 'worker');
-      if (item.workerIndex != null) {
-        badgeEl.setAttribute('data-worker-index', String(item.workerIndex));
-      }
-    } else if (item.isOrchestrator) {
-      badgeEl.setAttribute('data-tab-role', 'orchestrator');
-    }
-
     // Click handler to switch tab
     badgeEl.addEventListener('click', () => {
       this.callbacks.onTabClick(item.id);

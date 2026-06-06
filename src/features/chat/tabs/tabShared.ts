@@ -12,7 +12,6 @@ import type {
 import type { Conversation } from '../../../core/types';
 import { asSettingsBag } from '../../../core/types/settings';
 import type ClaudianPlugin from '../../../main';
-import { syncOrchestratorModeUI } from '../ui/orchestratorModeUi';
 import { getTabProviderId } from './providerResolution';
 import type { TabData, TabProviderContext } from './types';
 
@@ -169,13 +168,11 @@ export function refreshTabProviderUI(tab: TabData, plugin: ClaudianPlugin): void
   tab.ui.thinkingBudgetSelector?.updateDisplay();
   tab.ui.permissionToggle?.updateDisplay();
   tab.ui.planModeToggle?.updateDisplay();
-  tab.ui.orchestratorToggle?.updateDisplay();
   tab.ui.serviceTierToggle?.updateDisplay();
   tab.dom.inputWrapper.toggleClass(
     'claudian-input-plan-mode',
     permissionMode === 'plan' && capabilities.supportsPlanMode,
   );
-  syncOrchestratorModeUI(tab, plugin);
 }
 
 /**

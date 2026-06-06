@@ -117,7 +117,6 @@ export function createTab(options: TabCreateOptions): TabData {
       mcpServerSelector: null,
       permissionToggle: null,
       planModeToggle: null,
-      orchestratorToggle: null,
       serviceTierToggle: null,
       slashCommandDropdown: null,
       instructionModeManager: null,

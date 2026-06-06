@@ -26,9 +26,6 @@ import {
   type HydrationFailedBannerPayload,
   registerHydrationFailedSubscriber,
 } from './hydration/hydrationFailedSubscriber';
-import { InlineOrchestratorPlan } from './rendering/InlineOrchestratorPlan';
-import type { OrchestratorPlan } from './rendering/orchestratorPlanParser';
-import { OrchestratorService } from './services/OrchestratorService';
 import {
   getTabProviderId,
   getTabTitle,
@@ -83,8 +80,6 @@ export class ClaudianView extends ItemView {
 
   // Debouncing for tab state persistence
   private pendingPersist: number | null = null;
-
-  private orchestratorService!: OrchestratorService;
 
   constructor(leaf: WorkspaceLeaf, plugin: ClaudianPlugin) {
     super(leaf);
@@ -161,7 +156,6 @@ export class ClaudianView extends ItemView {
       tab.ui.thinkingBudgetSelector?.updateDisplay();
       tab.ui.permissionToggle?.updateDisplay();
       tab.ui.planModeToggle?.updateDisplay();
-      tab.ui.orchestratorToggle?.updateDisplay();
       tab.ui.serviceTierToggle?.updateDisplay();
       tab.dom.inputWrapper.toggleClass(
         'claudian-input-plan-mode',
@@ -240,24 +234,12 @@ export class ClaudianView extends ItemView {
     this.navRowContent = this.buildNavRowContent();
     this.tabContentEl = this.viewContainerEl.createDiv({ cls: 'claudian-tab-content-container' });
 
-    this.orchestratorService = new OrchestratorService({
-      sendToTab: (tabId, message) => {
-        const tab = this.tabManager?.getTab(tabId);
-        if (!tab) {
-          return;
-        }
-        void tab.controllers.inputController?.sendMessage({ content: message });
-      },
-    });
-
-    this.tabsRestored = false;
     this.tabManager = new TabManager(
       this.plugin,
       this.tabContentEl,
       this,
       {
-        onTabCreated: (tab) => {
-          this.wireOrchestratorCallbacks(tab);
+        onTabCreated: () => {
           this.updateTabBar();
           this.updateNavRowLocation();
           this.gitActionButton?.updateDisplay();
@@ -273,8 +255,7 @@ export class ClaudianView extends ItemView {
           this.persistTabState();
           this.syncProviderBrandColor();
         },
-        onTabClosed: (tabId) => {
-          this.orchestratorService.handleTabClosed(tabId);
+        onTabClosed: () => {
           this.updateTabBar();
           this.syncHeaderTitle();
           this.persistTabState();
@@ -631,50 +612,6 @@ export class ClaudianView extends ItemView {
     }
 
     void inputController.sendMessage({ content: GIT_COMMIT_PROMPT });
-  }
-
-  private wireOrchestratorCallbacks(tab: TabData): void {
-    const tabId = tab.id;
-    const isWorker = tab.orchestratorTabId != null;
-
-    const onPlanDetected = isWorker
-      ? undefined
-      : (msgEl: HTMLElement, plan: OrchestratorPlan) => {
-        new InlineOrchestratorPlan(
-          msgEl,
-          plan,
-          async (tasks) => {
-            for (const task of tasks) {
-              const workerTab = await this.tabManager?.createWorkerTab(tabId);
-              if (!workerTab) {
-                continue;
-              }
-              this.orchestratorService.registerWorker(tabId, workerTab.id, task.description);
-              this.wireWorkerDone(workerTab);
-              void workerTab.controllers.inputController?.sendMessage({ content: task.prompt });
-            }
-          },
-          () => {},
-        ).render();
-      };
-
-    const onWorkerDone = isWorker
-      ? (result: string, isError: boolean) => {
-        this.orchestratorService.reportResult(tabId, result, isError);
-      }
-      : undefined;
-
-    tab.controllers.streamController?.setOrchestratorCallbacks(onPlanDetected, onWorkerDone);
-  }
-
-  private wireWorkerDone(tab: TabData): void {
-    const tabId = tab.id;
-    tab.controllers.streamController?.setOrchestratorCallbacks(
-      undefined,
-      (result, isError) => {
-        this.orchestratorService.reportResult(tabId, result, isError);
-      },
-    );
   }
 
   /** Opens a fresh chat tab pinned to the work order's provider/model and auto-sends its prompt. */
