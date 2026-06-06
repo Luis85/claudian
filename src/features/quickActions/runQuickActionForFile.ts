@@ -1,9 +1,16 @@
 import { Notice, type TAbstractFile, TFile, TFolder } from 'obsidian';
 
+import type { ProviderId } from '@/core/providers/types';
 import { t } from '@/i18n/i18n';
 import type ClaudianPlugin from '@/main';
 
 import type { QuickAction } from './types';
+
+/** Per-run provider+model override (Task 6 wires the behavior). */
+export interface QuickActionRunOverride {
+  providerId: ProviderId;
+  model: string;
+}
 
 /**
  * Filename stem (no extension, no folder path). Used as the stable
@@ -64,6 +71,8 @@ export async function runQuickActionForFile(
   plugin: ClaudianPlugin,
   file: TAbstractFile,
   action: QuickAction,
+  // TODO(Task 6): apply override to target tab provider+model before dispatch.
+  _override?: QuickActionRunOverride,
 ): Promise<void> {
   let view = plugin.getView();
   if (!view) {
