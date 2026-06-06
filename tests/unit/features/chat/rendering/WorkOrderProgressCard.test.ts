@@ -28,4 +28,36 @@ describe('renderWorkOrderProgressCard', () => {
     renderWorkOrderProgressCard(parent as any, { step: 'thinking', done: { complete: 1, total: 1 } });
     expect(parent.querySelector('.claudian-work-order-progress-card-note')).toBeNull();
   });
+
+  it('renders progress bar at 0% when total is zero', () => {
+    const parent = createMockEl('div');
+    renderWorkOrderProgressCard(parent as unknown as HTMLElement, {
+      step: 'init',
+      done: { complete: 0, total: 0 },
+    });
+    const fill = parent.querySelector('.claudian-work-order-progress-card-bar-fill') as any;
+    expect(fill?.style.width).toBe('0%');
+    const counter = parent.querySelector('.claudian-work-order-progress-card-counter');
+    expect(counter?.textContent).toBe('0 / 0');
+  });
+
+  it('clamps progress bar at 100% when complete exceeds total', () => {
+    const parent = createMockEl('div');
+    renderWorkOrderProgressCard(parent as unknown as HTMLElement, {
+      step: 's',
+      done: { complete: 7, total: 3 },
+    });
+    const fill = parent.querySelector('.claudian-work-order-progress-card-bar-fill') as any;
+    expect(fill?.style.width).toBe('100%');
+  });
+
+  it('renders progress bar at 100% when complete equals total', () => {
+    const parent = createMockEl('div');
+    renderWorkOrderProgressCard(parent as unknown as HTMLElement, {
+      step: 'done',
+      done: { complete: 5, total: 5 },
+    });
+    const fill = parent.querySelector('.claudian-work-order-progress-card-bar-fill') as any;
+    expect(fill?.style.width).toBe('100%');
+  });
 });
