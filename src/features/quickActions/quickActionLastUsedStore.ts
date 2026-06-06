@@ -97,6 +97,7 @@ export class QuickActionLastUsedStore {
 
   private entries = new Map<string, LastUsedEntry>();
   private hydrated = false;
+  private hydratePromise: Promise<void> | null = null;
   private dirty = false;
   private pendingWrite: Promise<void> | null = null;
   private debounceTimer: number | null = null;
@@ -110,10 +111,18 @@ export class QuickActionLastUsedStore {
   }
 
   /**
-   * Load the cache file into memory once. Idempotent; a missing or malformed
-   * file is treated as a cold start (warn-logged, no throw).
+   * Load the cache file into memory once. Idempotent and concurrency-safe:
+   * the in-flight hydrate is cached so two concurrent callers (e.g. onload
+   * pre-warm + first modal open) share the same disk read instead of racing.
+   * A missing or malformed file is treated as a cold start (warn-logged).
    */
   async hydrate(): Promise<void> {
+    if (this.hydratePromise) return this.hydratePromise;
+    this.hydratePromise = this.doHydrate();
+    return this.hydratePromise;
+  }
+
+  private async doHydrate(): Promise<void> {
     if (this.hydrated) return;
     this.hydrated = true;
     try {

@@ -348,4 +348,35 @@ describe('runQuickActionForFile with override', () => {
     expect(tm.createTab).not.toHaveBeenCalled();
     expect(tm.switchToTab).toHaveBeenCalledWith('tab-1');
   });
+
+  it('creates a new tab when active tab provider matches override but tab is not blank', async () => {
+    jest.doMock('@/features/chat/tabs/providerResolution', () => ({
+      getTabProviderId: () => 'claude',
+    }));
+    jest.doMock('@/features/chat/tabs/tabShared', () => ({
+      resolveBlankTabModel: () => 'claude-sonnet-4-5',
+    }));
+    const { TFile: TFileFresh } = await import('obsidian');
+    const newTab = makeMockTab('blank');
+    newTab.id = 'tab-2';
+    // Active tab matches the override provider but is NOT blank.
+    const activeTab = makeMockTab('active');
+    const tm = makeMockTabManager({ activeTab, canCreate: true, newTab });
+    const plugin = makeMockPlugin(tm);
+    const file = Object.assign(Object.create(TFileFresh.prototype), { path: 'note.md' });
+
+    const { runQuickActionForFile: run } = await import('@/features/quickActions/runQuickActionForFile');
+    await run(plugin as any, file, MOCK_ACTION, { providerId: 'claude', model: 'claude-sonnet-4-5' });
+
+    expect(tm.createTab).toHaveBeenCalledWith(
+      null,
+      undefined,
+      expect.objectContaining({
+        activate: false,
+        defaultProviderId: 'claude',
+        pinnedModel: 'claude-sonnet-4-5',
+      }),
+    );
+    expect(tm.switchToTab).toHaveBeenCalledWith('tab-2');
+  });
 });

@@ -339,7 +339,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     }
   }
 
-  onunload(): void {
+  async onunload(): Promise<void> {
     this.unloaded = true;
     if (this.usageTracker) {
       void this.usageTracker.flush();
@@ -355,8 +355,12 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     this.gitStatusWatcher?.stop();
     this.gitStatusWatcher = null;
     if (this.quickActionLastUsedStore) {
-      void this.quickActionLastUsedStore.flush();
+      // Null the field BEFORE awaiting so any in-flight `set()` from a
+      // still-mounted modal short-circuits instead of arming another write
+      // against a store we're about to discard.
+      const store = this.quickActionLastUsedStore;
       this.quickActionLastUsedStore = null;
+      await store.flush();
     }
     this.lifecycle?.shutdownActiveRuntimes();
     void this.lifecycle?.persistOpenTabStates();
