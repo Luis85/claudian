@@ -54,18 +54,22 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
   // which left the editor desynced from disk and produced an unhandled
   // promise rejection on every save failure.
   const persist = async (snapshot: BoardConfig): Promise<boolean> => {
+    // The lane editor owns lanes only; queue.paused is toggled from the Agent
+    // Board and can change while this pane is open. Re-read the live queue at
+    // both save and roll-back time so a pause set elsewhere is never clobbered
+    // by the queue captured when the pane opened.
+    const liveQueue = loadBoardConfig(asSettingsBag(plugin.settings)).config.queue;
+    config.queue = liveQueue;
     plugin.settings.agentBoardConfig = config;
     try {
       await plugin.saveSettings();
       plugin.events.emit('task:board-config-changed');
       return true;
     } catch (error) {
-      // Roll back both the in-memory editor state AND `plugin.settings` so
-      // the failed write does not leave the live settings desynced from disk.
-      // The original code left `plugin.settings.agentBoardConfig` pointing at
-      // the mutated config even when saveSettings rejected.
-      config = snapshot;
-      plugin.settings.agentBoardConfig = snapshot;
+      // Roll back the lanes but keep the live queue so a failed write does not
+      // leave the live settings desynced from disk or revert an unrelated pause.
+      config = { ...snapshot, queue: liveQueue };
+      plugin.settings.agentBoardConfig = config;
       const message = error instanceof Error ? error.message : String(error);
       new Notice(t('tasks.board.laneSaveFailed', { error: message }));
       return false;

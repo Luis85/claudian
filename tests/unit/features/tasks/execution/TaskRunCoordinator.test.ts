@@ -1,9 +1,12 @@
+import type { ChatTabReservation } from '../../../../../src/core/chatTabReservations';
+import { ChatTabReservations } from '../../../../../src/core/chatTabReservations';
 import { EventBus } from '../../../../../src/core/events/EventBus';
 import type { TaskEventMap } from '../../../../../src/features/tasks/events';
 import { ActiveRunRegistry } from '../../../../../src/features/tasks/execution/activeRunRegistry';
 import type {
   TaskExecutionSurface,
   TaskRunHandle,
+  TaskRunOptions,
   TaskRunTerminal,
 } from '../../../../../src/features/tasks/execution/TaskExecutionSurface';
 import { TaskRunCoordinator, type TaskRunCoordinatorDeps } from '../../../../../src/features/tasks/execution/TaskRunCoordinator';
@@ -42,12 +45,14 @@ function makeTask(overrides: Partial<TaskSpec['frontmatter']> = {}): TaskSpec {
 
 class FakeSurface implements TaskExecutionSurface {
   prompts: string[] = [];
+  reservations: Array<ChatTabReservation | undefined> = [];
   readonly adapter = new SyntheticStreamAdapter();
 
   constructor(private readonly opts: { runId?: string; terminal?: TaskRunTerminal } = {}) {}
 
-  async startTaskRun(_task: TaskSpec, options: { prompt: string }): Promise<TaskRunHandle> {
+  async startTaskRun(_task: TaskSpec, options: TaskRunOptions): Promise<TaskRunHandle> {
     this.prompts.push(options.prompt);
+    this.reservations.push(options.tabReservation);
     return {
       runId: this.opts.runId ?? 'run-1',
       conversationId: 'conv-1',
@@ -225,6 +230,17 @@ describe('TaskRunCoordinator', () => {
     expect(coordinator.getActiveRun('task-1')).toBeUndefined();
   });
 
+  it('reports a canceled run with canceled: true (so the queue does not count it as a failure)', async () => {
+    const surface = new FakeSurface({ terminal: { status: 'canceled', finalAssistantContent: '' } });
+    const { coordinator, statuses } = makeCoordinator(surface);
+    await expect(coordinator.run(makeTask())).resolves.toEqual({
+      ok: false,
+      error: 'canceled',
+      canceled: true,
+    });
+    expect(statuses[statuses.length - 1]).toBe('canceled');
+  });
+
   it('rejects a concurrent run of the same work order while the first is still starting', async () => {
     let releaseStart!: () => void;
     const adapter = new SyntheticStreamAdapter();
@@ -285,5 +301,92 @@ describe('TaskRunCoordinator', () => {
     surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
     await p;
     expect(surface.prompts[0]).toBe('INJECTED PROMPT');
+  });
+});
+
+describe('TaskRunCoordinator.isActive', () => {
+  it('reports false for ids not in flight', () => {
+    const { coordinator } = makeCoordinator();
+    expect(coordinator.isActive('task-1')).toBe(false);
+  });
+
+  it('reports true while a run is in flight and false after it settles', async () => {
+    const surface = new FakeSurface();
+    const { coordinator } = makeCoordinator(surface);
+    const p = coordinator.run(makeTask());
+    await flushMicrotasks();
+    expect(coordinator.isActive('task-1')).toBe(true);
+    surface.adapter.emitText(VALID_HANDOFF);
+    surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await p;
+    expect(coordinator.isActive('task-1')).toBe(false);
+  });
+});
+
+describe('TaskRunCoordinator — shared activeRuns', () => {
+  it('two coordinators sharing a set observe each others in-flight runs', async () => {
+    const shared = new Set<string>();
+    const surfaceA = new FakeSurface();
+    const { coordinator: a } = makeCoordinator(surfaceA, { activeRuns: shared });
+    const { coordinator: b } = makeCoordinator(new FakeSurface(), { activeRuns: shared });
+
+    const p = a.run(makeTask());
+    await flushMicrotasks();
+    // The run started in `a` is visible to `b` through the shared set.
+    expect(b.isActive('task-1')).toBe(true);
+    // And `b` refuses to launch the same card while it is in flight elsewhere.
+    await expect(b.run(makeTask())).resolves.toEqual({
+      ok: false,
+      error: 'This work order is already running.',
+    });
+    surfaceA.adapter.emitText(VALID_HANDOFF);
+    surfaceA.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await p;
+    expect(b.isActive('task-1')).toBe(false);
+  });
+});
+
+describe('TaskRunCoordinator — shared chat-tab reservations', () => {
+  it('reserves a tab before the run, passes it to the surface, and releases it after', async () => {
+    const reservations = new ChatTabReservations();
+    const surface = new FakeSurface();
+    const { coordinator } = makeCoordinator(surface, { reservations });
+
+    const p = coordinator.run(makeTask());
+    await flushMicrotasks();
+    // The reservation is taken synchronously at launch, visible to other panes.
+    expect(reservations.pending).toBe(1);
+    expect(surface.reservations[0]).toBeDefined();
+    surface.adapter.emitText(VALID_HANDOFF);
+    surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await p;
+    // Released once the run settles (here via the finally safety net).
+    expect(reservations.pending).toBe(0);
+  });
+
+  it('does not reserve when a guard rejects the run before launch', async () => {
+    const reservations = new ChatTabReservations();
+    const { coordinator } = makeCoordinator(new FakeSurface(), { reservations });
+    await coordinator.run(makeTask({ provider: undefined }));
+    expect(reservations.pending).toBe(0);
+  });
+
+  it('stays balanced when the surface also releases (idempotent with the finally)', async () => {
+    const reservations = new ChatTabReservations();
+    const surface = new FakeSurface();
+    // Mirror the chat view releasing the reservation at tab creation, mid-run.
+    const startTaskRun = surface.startTaskRun.bind(surface);
+    surface.startTaskRun = (task, options) => {
+      options.tabReservation?.release();
+      return startTaskRun(task, options);
+    };
+    const { coordinator } = makeCoordinator(surface, { reservations });
+
+    const p = coordinator.run(makeTask());
+    await flushMicrotasks();
+    surface.adapter.emitText(VALID_HANDOFF);
+    surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await p;
+    expect(reservations.pending).toBe(0);
   });
 });

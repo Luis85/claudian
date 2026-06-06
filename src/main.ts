@@ -17,6 +17,7 @@ import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
 import { SharedStorageService } from './app/storage/SharedStorageService';
 import { PluginViewActivator } from './app/views/PluginViewActivator';
 import type { SharedAppStorage } from './core/bootstrap/storage';
+import { ChatTabReservations } from './core/chatTabReservations';
 import { EventBus } from './core/events/EventBus';
 import { formatLogEntries } from './core/logging/formatLogEntries';
 import { Logger } from './core/logging/Logger';
@@ -65,6 +66,8 @@ import { CommitOnAcceptCoordinator } from './features/tasks/commit/CommitOnAccep
 import { CommitOnAcceptModal } from './features/tasks/commit/CommitOnAcceptModal';
 import { ChatTabExecutionSurface } from './features/tasks/execution/ChatTabExecutionSurface';
 import { ChatWorkOrderLinker } from './features/tasks/execution/ChatWorkOrderLinker';
+import { createQueueControlState, type QueueControlState } from './features/tasks/execution/QueueRunner';
+import { QueueSlotTracker } from './features/tasks/execution/QueueSlotTracker';
 import { TaskNoteStore } from './features/tasks/storage/TaskNoteStore';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
 import { setLocale, t } from './i18n/i18n';
@@ -94,6 +97,17 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   private lifecycle!: PluginLifecycle;
   private viewActivator!: PluginViewActivator;
   private envApply!: EnvironmentApplyService;
+  /** Plugin-level concurrency gate shared by every Agent Board queue runner. */
+  queueSlotTracker!: QueueSlotTracker;
+  /** Shared in-flight work-order ids, so coordinators in different Agent Board
+   * panes observe the same active runs and never double-launch the same card. */
+  readonly taskActiveRuns = new Set<string>();
+  /** The queue's single global control state (pause/halt/failure-count), shared
+   * by every board's runner. Pause is restored from config on first board mount. */
+  readonly queueControl: QueueControlState = createQueueControlState();
+  /** Chat tabs queue runs have committed to opening but not yet created. Shared
+   * so concurrent Agent Board panes can't double-book the same free tabs. */
+  readonly chatTabReservations = new ChatTabReservations();
   lastKnownTabManagerState: AppTabManagerState | null = null;
 
   async onload() {
@@ -114,6 +128,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
     this.viewActivator = new PluginViewActivator(this);
     this.envApply = new EnvironmentApplyService(this);
+    this.queueSlotTracker = new QueueSlotTracker(this.settings.agentBoardQueueCap);
 
     this.registerView(
       VIEW_TYPE_CLAUDIAN,
@@ -348,6 +363,10 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     return this.viewActivator.canCreateNewTab();
   }
 
+  getTabSlotUsage(): { used: number; max: number } {
+    return this.viewActivator.getTabSlotUsage();
+  }
+
   private async ensureViewOpen(): Promise<ClaudianView | null> {
     return this.viewActivator.ensureViewOpen();
   }
@@ -450,6 +469,16 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     );
 
     await this.storage.saveClaudianSettings(this.settings);
+    // The queue cap is global, shared across every board's runner, so syncing it
+    // here makes a settings change take effect live without a board refresh.
+    this.queueSlotTracker?.setCap(this.settings.agentBoardQueueCap);
+    // Any settings change can change what the queue may launch: the concurrency
+    // cap, the chat-tab limit (free execution slots), or a card's eligibility
+    // (provider enabled, model availability). Wake every open board's runner so
+    // it re-evaluates at once instead of stalling until an unrelated
+    // chat/status/run/vault event ticks it. tick() is idempotent and cheap, so
+    // an unrelated settings change is a harmless no-op re-evaluation.
+    this.events.emit('task:queue-cap-changed');
   }
 
   /** Updates and persists environment variables, restarting processes to apply changes. */

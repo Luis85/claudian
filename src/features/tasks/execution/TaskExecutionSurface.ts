@@ -1,8 +1,13 @@
+import type { ChatTabReservation } from '../../../core/chatTabReservations';
 import type { TaskSpec } from '../model/taskTypes';
 import type { ProviderStreamAdapter } from './ProviderStreamAdapter';
 
 export interface TaskRunOptions {
   prompt: string;
+  /** Reservation for the chat tab this run will open. The surface releases it
+   *  once the tab is created so the queue's free-tab gate stops counting it as
+   *  pending. Absent for surfaces that don't open a fresh tab. */
+  tabReservation?: ChatTabReservation;
 }
 
 export interface TaskRunTerminal {

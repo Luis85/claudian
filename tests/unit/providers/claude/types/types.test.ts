@@ -108,6 +108,8 @@ describe('types.ts', () => {
         agentBoardArchiveFolder: 'Agent Board/archive',
         agentBoardDefaultProvider: 'codex',
         agentBoardDefaultModel: '',
+        agentBoardQueueCap: 1,
+        agentBoardQueueHaltAfter: 3,
         hiddenProviderCommands: {
           claude: [],
           codex: [],
@@ -169,6 +171,8 @@ describe('types.ts', () => {
         agentBoardArchiveFolder: 'Agent Board/archive',
         agentBoardDefaultProvider: 'codex',
         agentBoardDefaultModel: '',
+        agentBoardQueueCap: 1,
+        agentBoardQueueHaltAfter: 3,
         hiddenProviderCommands: {
           claude: [],
           codex: [],
@@ -231,6 +235,8 @@ describe('types.ts', () => {
         agentBoardArchiveFolder: 'Agent Board/archive',
         agentBoardDefaultProvider: 'codex',
         agentBoardDefaultModel: '',
+        agentBoardQueueCap: 1,
+        agentBoardQueueHaltAfter: 3,
         hiddenProviderCommands: {
           claude: [],
           codex: [],

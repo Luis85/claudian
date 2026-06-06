@@ -1,6 +1,6 @@
 import { isTaskStatus } from '../model/taskStateMachine';
 import type { TaskStatus } from '../model/taskTypes';
-import { type BoardConfig, type BoardLaneConfig,DEFAULT_BOARD_CONFIG } from './boardConfigTypes';
+import { type BoardConfig, type BoardLaneConfig,type BoardQueueConfig,DEFAULT_BOARD_CONFIG } from './boardConfigTypes';
 
 export interface LoadBoardConfigResult {
   config: BoardConfig;
@@ -15,7 +15,10 @@ export function loadBoardConfig(settings: Record<string, unknown>): LoadBoardCon
 
   const candidate = raw as { lanes?: unknown };
   if (!Array.isArray(candidate.lanes)) {
-    return { config: DEFAULT_BOARD_CONFIG, errors: [] };
+    // A persisted config with no lanes array — e.g. a fresh vault where only
+    // queue.paused was saved — must keep the default lanes rather than collapse
+    // the board to zero lanes, while still honoring the queue flag.
+    return { config: defaultConfigPreservingQueue(raw), errors: [] };
   }
 
   const errors: string[] = [];
@@ -26,7 +29,7 @@ export function loadBoardConfig(settings: Record<string, unknown>): LoadBoardCon
   for (const laneRaw of candidate.lanes) {
     const lane = normalizeLane(laneRaw, errors);
     if (!lane) {
-      return { config: DEFAULT_BOARD_CONFIG, errors };
+      return { config: defaultConfigPreservingQueue(raw), errors };
     }
     if (seenIds.has(lane.id)) {
       // Lane-id collisions are structural — two lanes claiming the same id make
@@ -34,7 +37,7 @@ export function loadBoardConfig(settings: Record<string, unknown>): LoadBoardCon
       // default. This is the only remaining fallback path; status duplicates
       // are surfaced as soft warnings further down.
       errors.push(`Lane id "${lane.id}" is used by more than one lane.`);
-      return { config: DEFAULT_BOARD_CONFIG, errors };
+      return { config: defaultConfigPreservingQueue(raw), errors };
     }
     seenIds.add(lane.id);
     // Cross-lane status duplicates are tolerated: the user's lanes survive
@@ -53,7 +56,7 @@ export function loadBoardConfig(settings: Record<string, unknown>): LoadBoardCon
     lanes.push(lane);
   }
 
-  return { config: { schemaVersion: 1, lanes }, errors };
+  return { config: { schemaVersion: 1, lanes, queue: normalizeQueue(raw) }, errors };
 }
 
 export function getLaneForStatus(config: BoardConfig, status: TaskStatus): BoardLaneConfig | null {
@@ -110,4 +113,32 @@ function normalizeLane(raw: unknown, errors: string[]): BoardLaneConfig | null {
 function toStringList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.map((item) => String(item).trim()).filter((item) => item.length > 0);
+}
+
+function normalizeQueue(raw: unknown): BoardQueueConfig {
+  if (!raw || typeof raw !== 'object') return { paused: false };
+  const queue = (raw as { queue?: unknown }).queue;
+  if (!queue || typeof queue !== 'object') return { paused: false };
+  return { paused: Boolean((queue as { paused?: unknown }).paused) };
+}
+
+// A structurally invalid board config still must preserve the user's queue
+// pause — dropping it would silently resume auto-starting work orders. Restore
+// the default lanes but carry queue.paused through from the saved config.
+function defaultConfigPreservingQueue(raw: unknown): BoardConfig {
+  return { ...DEFAULT_BOARD_CONFIG, queue: normalizeQueue(raw) };
+}
+
+// Mutates the settings bag in place so the caller can persist via the existing
+// `plugin.saveSettings()` path. Preserves an existing config verbatim and only
+// sets the queue flag. It deliberately does NOT fabricate a `lanes: []` for a
+// fresh vault — an explicit empty lanes array suppresses loadBoardConfig's
+// default-lane fallback and would collapse the board. When no config exists the
+// result is `{ queue }` only, and loadBoardConfig restores the default lanes.
+export function writeBoardQueuePaused(settings: Record<string, unknown>, paused: boolean): void {
+  const existing = settings.agentBoardConfig;
+  const base: Record<string, unknown> =
+    existing && typeof existing === 'object' ? { ...(existing as Record<string, unknown>) } : {};
+  base.queue = { paused };
+  settings.agentBoardConfig = base;
 }

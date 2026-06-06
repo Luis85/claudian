@@ -40,6 +40,7 @@ export class ChatTabExecutionSurface implements TaskExecutionSurface {
       providerId: provider as ProviderId,
       model,
       prompt: options.prompt,
+      tabReservation: options.tabReservation,
     });
     if (!handle) {
       return this.failed('Could not open a chat tab for the work order (tab limit reached?).');

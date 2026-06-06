@@ -38,4 +38,17 @@ export interface TaskEventMap {
   'task:parser-warning': { taskId: string; path: string; warning: string };
   /** Emitted when LedgerWriter has given up flushing after retries. */
   'task:ledger-flush-degraded': { taskId: string; path: string };
+
+  /** Emitted when the queue runner launches a card. */
+  'task:queue-tick': { taskId: string };
+  /** Emitted when the user pauses the queue runner on a board. */
+  'task:queue-paused': void;
+  /** Emitted when the user resumes the queue runner on a board. */
+  'task:queue-resumed': void;
+  /** Emitted when the queue runner auto-halts after consecutive failures. */
+  'task:queue-halted': { reason: string };
+  /** Emitted when the runner skips a card for an eligibility reason. */
+  'task:queue-skipped': { taskId: string; reason: string };
+  /** Emitted when the shared queue cap rises, so backed-up runners drain now. */
+  'task:queue-cap-changed': void;
 }

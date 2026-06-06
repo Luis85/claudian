@@ -318,6 +318,67 @@ describe('ClaudianView.injectCommitTurnForConversation', () => {
   });
 });
 
+describe('ClaudianView.startTaskRunInFreshTab — chat-tab reservation', () => {
+  it('releases the reservation once the tab is created', async () => {
+    const release = jest.fn();
+    const sendMessage = jest.fn(async () => ({ ok: true, finalAssistantContent: 'done' }));
+    const createTaskRunTab = jest.fn(async () => ({
+      id: 'tab-1',
+      conversationId: 'conv-1',
+      controllers: {
+        inputController: { sendMessage },
+        streamController: { addStreamObserver: () => () => {} },
+      },
+    }));
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.tabManager = { createTaskRunTab };
+
+    const result = await view.startTaskRunInFreshTab({
+      providerId: 'claude',
+      model: 'opus',
+      prompt: 'PROMPT',
+      tabReservation: { release },
+    });
+
+    expect(createTaskRunTab).toHaveBeenCalledTimes(1);
+    expect(release).toHaveBeenCalledTimes(1);
+    // A live handle is returned once the tab exists.
+    expect(result).not.toBeNull();
+  });
+
+  it('releases the reservation when the tab cap blocks creation', async () => {
+    const release = jest.fn();
+    const createTaskRunTab = jest.fn(async () => null);
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.tabManager = { createTaskRunTab };
+
+    const result = await view.startTaskRunInFreshTab({
+      providerId: 'claude',
+      model: 'opus',
+      prompt: 'PROMPT',
+      tabReservation: { release },
+    });
+
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(result).toBeNull();
+  });
+
+  it('releases the reservation when the chat view is not ready', async () => {
+    const release = jest.fn();
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.tabManager = null;
+
+    await view.startTaskRunInFreshTab({
+      providerId: 'claude',
+      model: 'opus',
+      prompt: 'PROMPT',
+      tabReservation: { release },
+    });
+
+    expect(release).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('direct chat independence from Agent Board', () => {
   function collectTsFiles(dir: string): string[] {
     const out: string[] = [];

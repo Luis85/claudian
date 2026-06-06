@@ -1,3 +1,4 @@
+import type { ChatTabReservation, ChatTabReservations } from '../../../core/chatTabReservations';
 import type { TaskEventEmitter } from '../events';
 import type { TaskLedgerEntry, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
@@ -25,9 +26,24 @@ export interface TaskRunCoordinatorDeps {
    * coordinator-local registry when omitted.
    */
   runRegistry?: ActiveRunRegistry;
+  /**
+   * Optional shared in-flight set so coordinators in different Agent Board panes
+   * observe the same active runs and never double-launch a card. The queue
+   * runner's eligibility predicate reads it via {@link TaskRunCoordinator.isActive}.
+   * Kept in lockstep with the registry across both run paths.
+   */
+  activeRuns?: Set<string>;
+  /**
+   * Optional shared chat-tab reservation ledger. A run reserves a tab slot at
+   * launch so concurrent panes don't double-book the same free tabs; the surface
+   * releases it once the tab is created.
+   */
+  reservations?: ChatTabReservations;
 }
 
-export type TaskRunResult = { ok: true; status: TaskStatus } | { ok: false; error: string };
+export type TaskRunResult =
+  | { ok: true; status: TaskStatus }
+  | { ok: false; error: string; canceled?: boolean };
 
 /**
  * Wires a work order to a chat-tab run and delegates the per-run lifecycle to a
@@ -38,9 +54,13 @@ export class TaskRunCoordinator {
   // Shared (when injected) registry of live runs: powers the concurrency guard,
   // crash recovery, and reply/approve/reject/stop routing across views.
   private readonly registry: ActiveRunRegistry;
+  // Lightweight in-flight id set, shared across panes for the queue runner's
+  // eligibility check; kept in lockstep with the registry in run().
+  private readonly activeRuns: Set<string>;
 
   constructor(private readonly deps: TaskRunCoordinatorDeps) {
     this.registry = deps.runRegistry ?? new ActiveRunRegistry();
+    this.activeRuns = deps.activeRuns ?? new Set<string>();
   }
 
   /** The live session for a task, if one is currently running (drives reply/approve/reject). */
@@ -48,12 +68,19 @@ export class TaskRunCoordinator {
     return this.registry.getSession(taskId);
   }
 
-  async run(task: TaskSpec): Promise<TaskRunResult> {
+  /** Whether a run for `taskId` is currently in flight. Used by the queue
+   * runner's eligibility predicate to skip cards already running (manual or
+   * auto), keeping a single in-flight view across both run paths. */
+  isActive(taskId: string): boolean {
+    return this.activeRuns.has(taskId) || this.registry.has(taskId);
+  }
+
+  async run(task: TaskSpec, externalReservation?: ChatTabReservation): Promise<TaskRunResult> {
     const { provider, model, id } = task.frontmatter;
 
     if (!provider) return { ok: false, error: 'Work order is missing provider' };
     if (!model) return { ok: false, error: 'Work order is missing model' };
-    if (task.frontmatter.status === 'running' || this.registry.has(id)) {
+    if (task.frontmatter.status === 'running' || this.registry.has(id) || this.activeRuns.has(id)) {
       return { ok: false, error: 'This work order is already running.' };
     }
     if (!this.deps.isProviderEnabled(provider)) {
@@ -63,12 +90,22 @@ export class TaskRunCoordinator {
       return { ok: false, error: `Model ${model} is not available for provider ${provider}` };
     }
 
-    // Reserve the id before awaiting the surface (tab creation), then hold it for
-    // the whole run, so a concurrent run of the same work order is rejected.
+    // Reserve the id in both the live-session registry (which holds the RunSession
+    // for reply/stop) and the cross-pane in-flight set before awaiting the surface
+    // (tab creation), so a concurrent run of the same work order is rejected.
     this.registry.reserve(id);
+    this.activeRuns.add(id);
+    // Use the queue runner's reservation when it made one synchronously at launch
+    // (so other panes saw it before this run's async reload); otherwise reserve
+    // here for the manual-run path. The surface releases it the moment the tab is
+    // created; the finally below is the safety net for paths that never open one.
+    const reservation = externalReservation ?? this.deps.reservations?.reserve();
     try {
       const prompt = (this.deps.renderPrompt ?? renderTaskPrompt)(task);
-      const handle = await this.deps.executionSurface.startTaskRun(task, { prompt });
+      const handle = await this.deps.executionSurface.startTaskRun(task, {
+        prompt,
+        tabReservation: reservation,
+      });
       if (!handle.runId) {
         const terminal = await handle.terminal;
         return { ok: false, error: terminal.error ?? 'Run failed.' };
@@ -108,9 +145,17 @@ export class TaskRunCoordinator {
         .catch((error) => session.fail(error instanceof Error ? error.message : String(error)));
       const result: RunSessionResult = await session.run();
       if (result.ok) return { ok: true, status: result.status };
+      // Report cancellation distinctly (only when true, so the common failure
+      // shape stays `{ ok, error }`) so the queue runner doesn't count a
+      // user-initiated stop as a provider failure toward its auto-halt streak.
+      if (result.status === 'canceled') return { ok: false, error: result.error, canceled: true };
       return { ok: false, error: result.error };
     } finally {
+      // Idempotent with the surface's release at tab creation; covers early
+      // failures (provider/guard errors) that never reach the surface.
+      reservation?.release();
       this.registry.release(id);
+      this.activeRuns.delete(id);
     }
   }
 }

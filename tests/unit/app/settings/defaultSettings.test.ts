@@ -20,3 +20,13 @@ describe('DEFAULT_CLAUDIAN_SETTINGS', () => {
     expect(DEFAULT_CLAUDIAN_SETTINGS.agentBoardDefaultModel).toBeNull();
   });
 });
+
+describe('DEFAULT_CLAUDIAN_SETTINGS — queue', () => {
+  it('defaults agentBoardQueueCap to 1', () => {
+    expect(DEFAULT_CLAUDIAN_SETTINGS.agentBoardQueueCap).toBe(1);
+  });
+
+  it('defaults agentBoardQueueHaltAfter to 3', () => {
+    expect(DEFAULT_CLAUDIAN_SETTINGS.agentBoardQueueHaltAfter).toBe(3);
+  });
+});

@@ -284,6 +284,111 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
   });
 });
 
+describe('AgentBoardRenderer — queue toolbar', () => {
+  it('renders the toolbar toggle in running state by default', () => {
+    const host = document.createElement('div');
+    const renderer = new AgentBoardRenderer();
+    renderer.renderToolbar(host, {
+      paused: false,
+      halted: false,
+      slotOccupied: 0,
+      slotCapacity: 1,
+      consecutiveFailures: 0,
+      onToggle: () => {},
+    });
+    const toggle = host.querySelector('.claudian-agent-board-toolbar--queue-toggle');
+    expect(toggle?.textContent).toContain('Queue');
+    expect(
+      host.querySelector('.claudian-agent-board-toolbar--queue-active-count')?.textContent,
+    ).toContain('0/1');
+  });
+
+  it('renders failure counter when > 0', () => {
+    const host = document.createElement('div');
+    const renderer = new AgentBoardRenderer();
+    renderer.renderToolbar(host, {
+      paused: false,
+      halted: false,
+      slotOccupied: 0,
+      slotCapacity: 1,
+      consecutiveFailures: 2,
+      onToggle: () => {},
+    });
+    expect(
+      host.querySelector('.claudian-agent-board-toolbar--queue-failure-count')?.textContent,
+    ).toContain('2');
+  });
+
+  it('invokes the toggle callback on click', () => {
+    const host = document.createElement('div');
+    const renderer = new AgentBoardRenderer();
+    let clicked = false;
+    renderer.renderToolbar(host, {
+      paused: false,
+      halted: false,
+      slotOccupied: 0,
+      slotCapacity: 1,
+      consecutiveFailures: 0,
+      onToggle: () => {
+        clicked = true;
+      },
+    });
+    (host.querySelector('.claudian-agent-board-toolbar--queue-toggle') as HTMLButtonElement)?.click();
+    expect(clicked).toBe(true);
+  });
+});
+
+describe('AgentBoardRenderer — halt banner', () => {
+  it('renders the banner with reason and resume action when halted', () => {
+    const host = document.createElement('div');
+    const renderer = new AgentBoardRenderer();
+    let resumed = false;
+    renderer.renderHaltBanner(host, {
+      reason: '3 consecutive failures · last: boom',
+      onResume: () => {
+        resumed = true;
+      },
+      onOpenFailed: () => {},
+    });
+    expect(host.querySelector('.claudian-agent-board-banner-halt')?.textContent).toContain('halted');
+    expect(host.textContent).toContain('boom');
+    (host.querySelector('.claudian-agent-board-banner-halt--resume') as HTMLButtonElement)?.click();
+    expect(resumed).toBe(true);
+  });
+
+  it('renders nothing when reason is null', () => {
+    const host = document.createElement('div');
+    const renderer = new AgentBoardRenderer();
+    renderer.renderHaltBanner(host, { reason: null, onResume: () => {}, onOpenFailed: () => {} });
+    expect(host.querySelector('.claudian-agent-board-banner-halt')).toBeNull();
+  });
+});
+
+describe('AgentBoardRenderer — skip chip', () => {
+  it('renders the chip with reason text when reason is set', () => {
+    const host = document.createElement('div');
+    const renderer = new AgentBoardRenderer();
+    let acked = false;
+    renderer.renderSkipChip(host, {
+      reason: "provider 'codex' is disabled",
+      onAck: () => {
+        acked = true;
+      },
+    });
+    const chip = host.querySelector('.claudian-agent-board-card-skip-chip');
+    expect(chip?.textContent).toContain("provider 'codex' is disabled");
+    (chip as HTMLElement)?.click();
+    expect(acked).toBe(true);
+  });
+
+  it('renders nothing when reason is null', () => {
+    const host = document.createElement('div');
+    const renderer = new AgentBoardRenderer();
+    renderer.renderSkipChip(host, { reason: null, onAck: () => {} });
+    expect(host.querySelector('.claudian-agent-board-card-skip-chip')).toBeNull();
+  });
+});
+
 function findFirstCard(host: HTMLElement): HTMLElement | null {
   return host.querySelector('.claudian-agent-board-card') as HTMLElement | null;
 }
