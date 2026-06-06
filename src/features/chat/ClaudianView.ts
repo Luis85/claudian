@@ -1,6 +1,7 @@
 import type { WorkspaceLeaf } from 'obsidian';
 import { ItemView, Notice, Scope, setIcon } from 'obsidian';
 
+import type { ChatTabReservation } from '../../core/chatTabReservations';
 import { GIT_COMMIT_PROMPT } from '../../core/prompt/gitCommit';
 import { getHiddenProviderCommandSet } from '../../core/providers/commands/hiddenCommands';
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
@@ -50,6 +51,10 @@ export class ClaudianView extends ItemView {
 
   // Tab management
   private tabManager: TabManager | null = null;
+  // False until restoreOrCreateTabs() finishes: the tab manager is assigned
+  // before the async restore runs, so the Agent Board queue must not count the
+  // live tab count during that window or it can overbook the cap / drop tabs.
+  private tabsRestored = false;
   private tabBar: TabBar | null = null;
   private tabBarContainerEl: HTMLElement | null = null;
   private tabContentEl: HTMLElement | null = null;
@@ -244,6 +249,7 @@ export class ClaudianView extends ItemView {
       },
     });
 
+    this.tabsRestored = false;
     this.tabManager = new TabManager(
       this.plugin,
       this.tabContentEl,
@@ -294,6 +300,7 @@ export class ClaudianView extends ItemView {
     );
 
     await this.restoreOrCreateTabs();
+    this.tabsRestored = true;
     this.syncProviderBrandColor();
     this.syncHeaderTitle();
     this.updateLayoutForPosition();
@@ -670,6 +677,7 @@ export class ClaudianView extends ItemView {
     providerId: ProviderId;
     model: string;
     prompt: string;
+    tabReservation?: ChatTabReservation;
   }): Promise<{
     status: 'completed' | 'failed' | 'canceled';
     conversationId: string | null;
@@ -678,6 +686,7 @@ export class ClaudianView extends ItemView {
     error?: string;
   }> {
     if (!this.tabManager) {
+      options.tabReservation?.release();
       return { status: 'failed', conversationId: null, sidepanelTabId: null, finalAssistantContent: '', error: 'Chat view is not ready.' };
     }
 
@@ -685,6 +694,10 @@ export class ClaudianView extends ItemView {
       providerId: options.providerId,
       model: options.model,
     });
+    // The tab now counts in the live tab count (or creation failed), so this
+    // run no longer needs its pending reservation — release it before the turn
+    // streams so other panes' gates see the freed/used slot immediately.
+    options.tabReservation?.release();
     if (!tab) {
       return {
         status: 'failed',
@@ -1192,5 +1205,12 @@ export class ClaudianView extends ItemView {
   /** Gets the tab manager. */
   getTabManager(): TabManager | null {
     return this.tabManager;
+  }
+
+  /** Whether the tab manager has finished restoring its persisted tabs. The
+   *  Agent Board queue gates on this so it doesn't count an empty live tab set
+   *  mid-restore and overbook the tab cap. */
+  areTabsRestored(): boolean {
+    return this.tabsRestored;
   }
 }

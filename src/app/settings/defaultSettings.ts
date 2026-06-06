@@ -71,6 +71,8 @@ export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
   agentBoardArchiveFolder: 'Agent Board/archive',
   agentBoardDefaultProvider: null,
   agentBoardDefaultModel: null,
+  agentBoardQueueCap: 1,
+  agentBoardQueueHaltAfter: 3,
 
   hiddenProviderCommands: getDefaultHiddenProviderCommands(),
 

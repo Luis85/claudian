@@ -1,3 +1,4 @@
+import { ChatTabReservations } from '../../../../../src/core/chatTabReservations';
 import type { TaskExecutionSurface, TaskRunHandle } from '../../../../../src/features/tasks/execution/TaskExecutionSurface';
 import { TaskRunCoordinator } from '../../../../../src/features/tasks/execution/TaskRunCoordinator';
 import type { TaskSpec } from '../../../../../src/features/tasks/model/taskTypes';
@@ -157,6 +158,7 @@ describe('TaskRunCoordinator', () => {
     await expect(coordinator.run(makeTask())).resolves.toEqual({
       ok: false,
       error: 'Run canceled.',
+      canceled: true,
     });
     expect(statuses).toEqual(['running', 'canceled']);
   });
@@ -182,5 +184,184 @@ describe('TaskRunCoordinator', () => {
 
     await coordinator.run(makeTask());
     expect(surface.prompts[0]).toBe('INJECTED PROMPT');
+  });
+});
+
+describe('TaskRunCoordinator.isActive', () => {
+  it('reports false for ids not in flight', () => {
+    const { coordinator } = makeCoordinator({
+      status: 'completed',
+      runId: 'run-1',
+      conversationId: 'conv-1',
+      sidepanelTabId: 'tab-1',
+      finalAssistantContent: VALID_HANDOFF,
+    });
+    expect(coordinator.isActive('task-1')).toBe(false);
+  });
+
+  it('reports true while a run is in flight and false after it settles', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const surface: TaskExecutionSurface = {
+      startTaskRun: async () => {
+        await gate;
+        return {
+          status: 'completed',
+          runId: 'r',
+          conversationId: 'c',
+          sidepanelTabId: 't',
+          finalAssistantContent: VALID_HANDOFF,
+        };
+      },
+    };
+    const coordinator = new TaskRunCoordinator({
+      executionSurface: surface,
+      now: () => '2026-06-05T00:00:00Z',
+      isProviderEnabled: () => true,
+      ownsModel: () => true,
+      writeTaskStatus: async () => {},
+      appendLedger: async () => {},
+      writeHandoff: async () => {},
+    });
+
+    const runPromise = coordinator.run(makeTask());
+    expect(coordinator.isActive('task-1')).toBe(true);
+    release();
+    await runPromise;
+    expect(coordinator.isActive('task-1')).toBe(false);
+  });
+});
+
+describe('TaskRunCoordinator — shared activeRuns', () => {
+  it('two coordinators sharing a set observe each others in-flight runs', async () => {
+    const shared = new Set<string>();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const surface: TaskExecutionSurface = {
+      startTaskRun: async () => {
+        await gate;
+        return {
+          status: 'completed',
+          runId: 'r',
+          conversationId: 'c',
+          sidepanelTabId: 't',
+          finalAssistantContent: VALID_HANDOFF,
+        };
+      },
+    };
+    const make = (): TaskRunCoordinator =>
+      new TaskRunCoordinator({
+        executionSurface: surface,
+        now: () => '2026-06-05T00:00:00Z',
+        isProviderEnabled: () => true,
+        ownsModel: () => true,
+        activeRuns: shared,
+        writeTaskStatus: async () => {},
+        appendLedger: async () => {},
+        writeHandoff: async () => {},
+      });
+    const a = make();
+    const b = make();
+
+    const runPromise = a.run(makeTask());
+    // The run started in `a` is visible to `b` through the shared set.
+    expect(b.isActive('task-1')).toBe(true);
+    // And `b` refuses to launch the same card while it is in flight elsewhere.
+    await expect(b.run(makeTask())).resolves.toEqual({
+      ok: false,
+      error: 'This work order is already running.',
+    });
+    release();
+    await runPromise;
+    expect(b.isActive('task-1')).toBe(false);
+  });
+});
+
+describe('TaskRunCoordinator — shared chat-tab reservations', () => {
+  function gatedSurface(reservations: ChatTabReservations) {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const seen = { pendingDuringRun: -1, gotReservation: false };
+    const surface: TaskExecutionSurface = {
+      startTaskRun: async (_task, options) => {
+        seen.pendingDuringRun = reservations.pending;
+        seen.gotReservation = options.tabReservation !== undefined;
+        await gate;
+        return {
+          status: 'completed',
+          runId: 'r',
+          conversationId: 'c',
+          sidepanelTabId: 't',
+          finalAssistantContent: VALID_HANDOFF,
+        };
+      },
+    };
+    return { surface, release: () => release(), seen };
+  }
+
+  function make(reservations: ChatTabReservations, surface: TaskExecutionSurface): TaskRunCoordinator {
+    return new TaskRunCoordinator({
+      executionSurface: surface,
+      now: () => '2026-06-05T00:00:00Z',
+      isProviderEnabled: () => true,
+      ownsModel: () => true,
+      reservations,
+      writeTaskStatus: async () => {},
+      appendLedger: async () => {},
+      writeHandoff: async () => {},
+    });
+  }
+
+  it('reserves a tab before the run and passes the reservation to the surface', async () => {
+    const reservations = new ChatTabReservations();
+    const { surface, release, seen } = gatedSurface(reservations);
+    const coordinator = make(reservations, surface);
+
+    const runPromise = coordinator.run(makeTask());
+    // The reservation is taken synchronously at launch, visible to other panes.
+    expect(reservations.pending).toBe(1);
+    release();
+    await runPromise;
+
+    expect(seen.pendingDuringRun).toBe(1);
+    expect(seen.gotReservation).toBe(true);
+    // Released once the run settles (here via the finally safety net).
+    expect(reservations.pending).toBe(0);
+  });
+
+  it('does not reserve when a guard rejects the run before launch', async () => {
+    const reservations = new ChatTabReservations();
+    const { surface } = gatedSurface(reservations);
+    const coordinator = make(reservations, surface);
+
+    await coordinator.run(makeTask({ provider: undefined }));
+    expect(reservations.pending).toBe(0);
+  });
+
+  it('stays balanced when the surface also releases (idempotent with the finally)', async () => {
+    const reservations = new ChatTabReservations();
+    const surface: TaskExecutionSurface = {
+      // Mirrors the chat view releasing at tab creation, mid-run.
+      startTaskRun: async (_task, options) => {
+        options.tabReservation?.release();
+        return {
+          status: 'completed',
+          runId: 'r',
+          conversationId: 'c',
+          sidepanelTabId: 't',
+          finalAssistantContent: VALID_HANDOFF,
+        };
+      },
+    };
+    const coordinator = make(reservations, surface);
+
+    await coordinator.run(makeTask());
+    expect(reservations.pending).toBe(0);
   });
 });

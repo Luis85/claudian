@@ -485,6 +485,22 @@ describe('ClaudianPlugin', () => {
       // Permissions are now in .claude/settings.json (CC format), not claudian-settings.json
       expect(content).not.toHaveProperty('permissions');
     });
+
+    it('wakes queue runners on every settings save so eligibility and capacity re-evaluate', async () => {
+      await plugin.onload();
+      const wakes: string[] = [];
+      plugin.events.on('task:queue-cap-changed', () => wakes.push('wake'));
+
+      // Raising the chat-tab limit frees an execution slot the queue gates on.
+      plugin.settings.maxTabs = (plugin.settings.maxTabs ?? 3) + 1;
+      await plugin.saveSettings();
+      expect(wakes).toHaveLength(1);
+
+      // Enabling a provider (or any eligibility-affecting change) must also wake
+      // the queue so a skipped card is re-checked, even with no cap/tab change.
+      await plugin.saveSettings();
+      expect(wakes).toHaveLength(2);
+    });
   });
 
   describe('applyEnvironmentVariables', () => {

@@ -195,6 +195,10 @@ export interface ClaudianSettings {
   agentBoardArchiveFolder: string;
   agentBoardDefaultProvider: ProviderId | null;
   agentBoardDefaultModel: string | null;
+  /** Max concurrent queue-runner auto-starts, shared across all boards. */
+  agentBoardQueueCap: number;
+  /** Auto-halt the queue runner after this many consecutive auto-run failures. */
+  agentBoardQueueHaltAfter: number;
   // Validated and normalized by BoardConfigStore; stored as raw to keep core free of feature types.
   agentBoardConfig?: unknown;
 

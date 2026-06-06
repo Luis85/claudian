@@ -1,4 +1,8 @@
-import { getLaneForStatus, loadBoardConfig } from '../../../../../src/features/tasks/config/BoardConfigStore';
+import {
+  getLaneForStatus,
+  loadBoardConfig,
+  writeBoardQueuePaused,
+} from '../../../../../src/features/tasks/config/BoardConfigStore';
 import { DEFAULT_BOARD_CONFIG } from '../../../../../src/features/tasks/config/boardConfigTypes';
 
 describe('loadBoardConfig', () => {
@@ -119,6 +123,114 @@ describe('loadBoardConfig', () => {
     const { config, errors } = loadBoardConfig({ agentBoardConfig });
     expect(config).toEqual(DEFAULT_BOARD_CONFIG);
     expect(errors.some((e) => e.includes('Lane id "dup"'))).toBe(true);
+  });
+});
+
+describe('loadBoardConfig — queue.paused', () => {
+  it('defaults queue.paused to false when settings have no queue block', () => {
+    const { config } = loadBoardConfig({
+      agentBoardConfig: {
+        lanes: [{ id: 'inbox', title: 'Inbox', statuses: ['inbox'] }],
+      },
+    });
+    expect(config.queue).toEqual({ paused: false });
+  });
+
+  it('round-trips queue.paused=true from settings', () => {
+    const { config } = loadBoardConfig({
+      agentBoardConfig: {
+        lanes: [{ id: 'inbox', title: 'Inbox', statuses: ['inbox'] }],
+        queue: { paused: true },
+      },
+    });
+    expect(config.queue).toEqual({ paused: true });
+  });
+
+  it('coerces malformed queue block to default', () => {
+    const { config } = loadBoardConfig({
+      agentBoardConfig: {
+        lanes: [{ id: 'inbox', title: 'Inbox', statuses: ['inbox'] }],
+        queue: 'nope',
+      },
+    });
+    expect(config.queue).toEqual({ paused: false });
+  });
+
+  it('keeps default lanes but preserves queue.paused when lanes are absent', () => {
+    const { config } = loadBoardConfig({ agentBoardConfig: { queue: { paused: true } } });
+    expect(config.lanes.map((lane) => lane.id)).toEqual(
+      DEFAULT_BOARD_CONFIG.lanes.map((lane) => lane.id),
+    );
+    expect(config.queue).toEqual({ paused: true });
+  });
+
+  it('preserves queue.paused when falling back from a malformed lane', () => {
+    // A lane edited to a blank title fails validation; the board reverts to
+    // default lanes, but the user's pause must survive or the queue silently
+    // resumes auto-starting work orders.
+    const agentBoardConfig = {
+      schemaVersion: 1,
+      lanes: [{ id: 'a', title: '', statuses: ['ready'] }],
+      queue: { paused: true },
+    };
+    const { config } = loadBoardConfig({ agentBoardConfig });
+    expect(config.lanes.map((lane) => lane.id)).toEqual(
+      DEFAULT_BOARD_CONFIG.lanes.map((lane) => lane.id),
+    );
+    expect(config.queue).toEqual({ paused: true });
+  });
+
+  it('preserves queue.paused when falling back from duplicate lane ids', () => {
+    const agentBoardConfig = {
+      schemaVersion: 1,
+      lanes: [
+        { id: 'dup', title: 'A', statuses: ['ready'] },
+        { id: 'dup', title: 'B', statuses: ['done'] },
+      ],
+      queue: { paused: true },
+    };
+    const { config } = loadBoardConfig({ agentBoardConfig });
+    expect(config.lanes.map((lane) => lane.id)).toEqual(
+      DEFAULT_BOARD_CONFIG.lanes.map((lane) => lane.id),
+    );
+    expect(config.queue).toEqual({ paused: true });
+  });
+});
+
+describe('writeBoardQueuePaused', () => {
+  it('sets queue.paused on the settings object in place', () => {
+    const settings: Record<string, unknown> = {
+      agentBoardConfig: { lanes: [], queue: { paused: false } },
+    };
+    writeBoardQueuePaused(settings, true);
+    expect(settings.agentBoardConfig).toEqual({
+      lanes: [],
+      queue: { paused: true },
+    });
+  });
+
+  it('creates the queue block if missing', () => {
+    const settings: Record<string, unknown> = {
+      agentBoardConfig: { lanes: [] },
+    };
+    writeBoardQueuePaused(settings, true);
+    expect(settings.agentBoardConfig).toEqual({
+      lanes: [],
+      queue: { paused: true },
+    });
+  });
+
+  it('persists only the queue flag (no fabricated lanes) when no config exists', () => {
+    const settings: Record<string, unknown> = {};
+    writeBoardQueuePaused(settings, true);
+    expect(settings.agentBoardConfig).toEqual({ queue: { paused: true } });
+    // Regression: persisting the queue flag on a fresh vault must not collapse
+    // the board to zero lanes — loadBoardConfig still restores the defaults.
+    const { config } = loadBoardConfig(settings);
+    expect(config.queue).toEqual({ paused: true });
+    expect(config.lanes.map((lane) => lane.id)).toEqual(
+      DEFAULT_BOARD_CONFIG.lanes.map((lane) => lane.id),
+    );
   });
 });
 

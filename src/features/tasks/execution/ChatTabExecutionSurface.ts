@@ -25,6 +25,7 @@ export class ChatTabExecutionSurface implements TaskExecutionSurface {
       providerId: provider as ProviderId,
       model,
       prompt: options.prompt,
+      tabReservation: options.tabReservation,
     });
 
     return {

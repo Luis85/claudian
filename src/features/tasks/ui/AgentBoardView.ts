@@ -10,9 +10,10 @@ import type ClaudianPlugin from '../../../main';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { promptReason } from '../../../shared/modals/PromptModal';
 import { archiveWorkOrder } from '../commands/taskCommands';
-import { getLaneForStatus, loadBoardConfig } from '../config/BoardConfigStore';
+import { getLaneForStatus, loadBoardConfig, writeBoardQueuePaused } from '../config/BoardConfigStore';
 import type { BoardConfig, ResolvedBoardLayout } from '../config/boardConfigTypes';
 import { resolveBoardLayout } from '../config/resolveBoardLayout';
+import { QueueRunner } from '../execution/QueueRunner';
 import { selectNextReadyTask } from '../execution/selectNextReadyTask';
 import type { TaskExecutionSurface } from '../execution/TaskExecutionSurface';
 import { TaskRunCoordinator } from '../execution/TaskRunCoordinator';
@@ -35,6 +36,11 @@ export class AgentBoardView extends ItemView {
   private config: BoardConfig = loadBoardConfig({}).config;
   private layout: ResolvedBoardLayout = { lanes: [], errors: [] };
   private refreshTimer: number | null = null;
+  private runner: QueueRunner | null = null;
+  private readonly coordinator: TaskRunCoordinator;
+  // Last status written per task, so a failed/canceled run can report the
+  // terminal status on `task:run-finished` without re-reading the note.
+  private readonly lastRunStatus = new Map<string, TaskStatus>();
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -42,6 +48,38 @@ export class AgentBoardView extends ItemView {
     private readonly executionSurface: TaskExecutionSurface,
   ) {
     super(leaf);
+    // One coordinator shared by manual runs and the queue runner so a single
+    // in-flight set (`isActive`) prevents a card from running twice. Its deps
+    // key off the task passed to `run()`, never a closure, so any task is safe.
+    this.coordinator = new TaskRunCoordinator({
+      executionSurface: this.executionSurface,
+      now: () => new Date().toISOString(),
+      isProviderEnabled: (providerId) => this.isProviderEnabled(providerId),
+      ownsModel: (providerId, model) => this.ownsModel(providerId, model),
+      // Shared across every open board so a manual run here is visible to other
+      // panes' queue runners and the same card never launches twice.
+      activeRuns: this.plugin.taskActiveRuns,
+      // Shared chat-tab reservations so a launch in one pane is counted by every
+      // pane's free-tab gate before the async tab creation lands.
+      reservations: this.plugin.chatTabReservations,
+      writeTaskStatus: async (task, options) => {
+        await this.applyNoteChange(task.path, (content) => this.noteStore.writeStatus(content, options));
+        this.lastRunStatus.set(task.frontmatter.id, options.status);
+        // The status-changed subscription patches every open board's in-memory
+        // model, so stale-card re-picks are covered for this pane and others.
+        this.plugin.events.emit('task:status-changed', {
+          taskId: task.frontmatter.id,
+          path: task.path,
+          status: options.status,
+        });
+      },
+      appendLedger: (task, entry) =>
+        this.applyNoteChange(task.path, (content) => this.noteStore.appendLedger(content, entry)),
+      writeHandoff: (task, markdown) =>
+        this.applyNoteChange(task.path, (content) => this.noteStore.writeHandoff(content, markdown)),
+      renderPrompt: (task) =>
+        renderTaskPrompt(task, getLaneForStatus(this.config, task.frontmatter.status) ?? undefined),
+    });
   }
 
   getViewType(): string {
@@ -63,12 +101,36 @@ export class AgentBoardView extends ItemView {
     this.registerEvent(vault.on('modify', (file) => this.onVaultChange(file)));
     this.registerEvent(vault.on('delete', (file) => this.onVaultChange(file)));
     this.registerEvent(vault.on('rename', (file) => this.onVaultChange(file)));
-    this.register(this.plugin.events.on('chat:tabs-changed', () => this.refreshSlots()));
+    // A freed chat tab can unblock the queue (it gates launches on tab
+    // availability), so re-render the slot count and nudge the runner.
+    this.register(this.plugin.events.on('chat:tabs-changed', () => {
+      this.refreshSlots();
+      this.runner?.tick();
+    }));
     this.register(this.plugin.events.on('task:board-config-changed', () => void this.refresh()));
+    // Any status change (manual or queue, this pane or another) can free a slot
+    // or change eligibility. Patch the in-memory model first so the runner does
+    // not re-pick a card whose terminal status hasn't been re-indexed yet, then
+    // nudge it. Queue events only need a repaint of the queue chrome.
+    this.register(this.plugin.events.on('task:status-changed', (payload) => {
+      this.patchModelStatus(payload.taskId, payload.status);
+      this.runner?.tick();
+    }));
+    this.register(this.plugin.events.on('task:run-finished', () => this.runner?.tick()));
+    this.register(this.plugin.events.on('task:queue-cap-changed', () => this.onQueueCapChanged()));
+    // Pause/halt live in the shared control state, so by the time these fire the
+    // runner state is already global; the boards only need to repaint chrome.
+    this.register(this.plugin.events.on('task:queue-paused', () => this.render()));
+    this.register(this.plugin.events.on('task:queue-resumed', () => this.render()));
+    this.register(this.plugin.events.on('task:queue-halted', () => this.render()));
+    this.register(this.plugin.events.on('task:queue-tick', () => this.render()));
+    this.register(this.plugin.events.on('task:queue-skipped', () => this.render()));
     await this.refresh();
   }
 
   async onClose(): Promise<void> {
+    this.runner?.dispose();
+    this.runner = null;
     if (this.refreshTimer !== null) {
       window.clearTimeout(this.refreshTimer);
       this.refreshTimer = null;
@@ -82,6 +144,7 @@ export class AgentBoardView extends ItemView {
     this.config = config;
     const layout = resolveBoardLayout(config, this.model);
     this.layout = { ...layout, errors: [...errors, ...layout.errors] };
+    this.syncRunner();
     this.render();
   }
 
@@ -116,8 +179,15 @@ export class AgentBoardView extends ItemView {
     const scrollLeft = previousLanes?.scrollLeft ?? 0;
     const scrollTop = previousLanes?.scrollTop ?? 0;
 
+    this.contentEl.empty();
+    const toolbarHost = this.contentEl.createDiv({ cls: 'claudian-agent-board-toolbar-host' });
+    const bannerHost = this.contentEl.createDiv({ cls: 'claudian-agent-board-banner-host' });
+    const boardHost = this.contentEl.createDiv({ cls: 'claudian-agent-board-host' });
+
+    this.renderQueueChrome(toolbarHost, bannerHost);
+
     this.renderer.render(
-      this.contentEl,
+      boardHost,
       { layout: this.layout, invalidNotes: this.model.invalidNotes, slots: this.computeSlots() },
       {
         onOpenDetail: (task) => this.openDetail(task),
@@ -129,6 +199,11 @@ export class AgentBoardView extends ItemView {
         onReopen: (task) => void this.transitionTask(task, 'inbox', 'Reopened.'),
         onAddWorkOrder: () => void this.addWorkOrderFromBoard(),
         onRunNextReady: () => void this.runNextReady(),
+        getSkipReason: (task) => this.runner?.getSkipReason(task.frontmatter.id) ?? null,
+        onAckSkip: (task) => {
+          this.runner?.clearSkipReason(task.frontmatter.id);
+          this.render();
+        },
         onContextMenu: (task, event) => showWorkOrderContextMenu(task, event, {
           plugin: this.plugin,
           onOpenNote: (target) => void this.openTask(target),
@@ -142,6 +217,22 @@ export class AgentBoardView extends ItemView {
       nextLanes.scrollLeft = scrollLeft;
       nextLanes.scrollTop = scrollTop;
     }
+  }
+
+  private renderQueueChrome(toolbarHost: HTMLElement, bannerHost: HTMLElement): void {
+    this.renderer.renderToolbar(toolbarHost, {
+      paused: this.runner?.isPaused() ?? false,
+      halted: this.runner?.isHalted() ?? false,
+      slotOccupied: this.plugin.queueSlotTracker.occupied(),
+      slotCapacity: this.plugin.queueSlotTracker.capacity(),
+      consecutiveFailures: this.runner?.getConsecutiveFailures() ?? 0,
+      onToggle: () => void this.onToggleQueue(),
+    });
+    this.renderer.renderHaltBanner(bannerHost, {
+      reason: this.runner?.getHaltReason() ?? null,
+      onResume: () => this.onResumeQueue(),
+      onOpenFailed: () => this.onOpenFailedCards(),
+    });
   }
 
   private openDetail(task: TaskSpec): void {
@@ -184,9 +275,12 @@ export class AgentBoardView extends ItemView {
   }
 
   private computeSlots(): { used: number; max: number } {
-    const max = this.plugin.settings.maxTabs;
-    const used = this.plugin.getView()?.getTabManager()?.getTabCount() ?? 0;
-    return { used, max };
+    // Delegate to the activator so the queue's slot gate and the manual
+    // new-tab guard (canCreateNewTab) share one tab-accounting source. With no
+    // chat view mounted this reports the persisted tab count — the set the next
+    // run restores — instead of 0, so the queue can't over-launch past the
+    // restored cap and fail ready cards on the tab limit.
+    return this.plugin.getTabSlotUsage();
   }
 
   private async archiveTask(task: TaskSpec): Promise<void> {
@@ -271,40 +365,16 @@ export class AgentBoardView extends ItemView {
       return;
     }
 
-    const settings = asSettingsBag(this.plugin.settings);
-    let lastStatus: TaskStatus = latest.frontmatter.status;
-    const coordinator = new TaskRunCoordinator({
-      executionSurface: this.executionSurface,
-      now: () => new Date().toISOString(),
-      isProviderEnabled: (providerId) =>
-        ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId) &&
-        ProviderRegistry.isEnabled(providerId as ProviderId, settings),
-      ownsModel: (providerId, model) =>
-        ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId) &&
-        ProviderRegistry.getChatUIConfig(providerId as ProviderId).ownsModel(model, settings),
-      writeTaskStatus: async (_task, options) => {
-        await this.applyNoteChange(task.path, (content) => this.noteStore.writeStatus(content, options));
-        lastStatus = options.status;
-        this.plugin.events.emit('task:status-changed', {
-          taskId: latest.frontmatter.id,
-          path: task.path,
-          status: options.status,
-        });
-      },
-      appendLedger: (_task, entry) =>
-        this.applyNoteChange(task.path, (content) => this.noteStore.appendLedger(content, entry)),
-      writeHandoff: (_task, markdown) =>
-        this.applyNoteChange(task.path, (content) => this.noteStore.writeHandoff(content, markdown)),
-      renderPrompt: (target) =>
-        renderTaskPrompt(target, getLaneForStatus(this.config, target.frontmatter.status) ?? undefined),
-    });
-
     this.plugin.events.emit('task:run-started', { taskId: latest.frontmatter.id, path: task.path });
-    const result = await coordinator.run(latest);
+    const result = await this.coordinator.run(latest);
+    const finishedStatus = result.ok
+      ? result.status
+      : this.lastRunStatus.get(latest.frontmatter.id) ?? latest.frontmatter.status;
+    this.lastRunStatus.delete(latest.frontmatter.id);
     this.plugin.events.emit('task:run-finished', {
       taskId: latest.frontmatter.id,
       path: task.path,
-      status: result.ok ? result.status : lastStatus,
+      status: finishedStatus,
     });
     if (!result.ok) {
       new Notice(t('tasks.board.runFailed', { error: result.error }));
@@ -329,6 +399,140 @@ export class AgentBoardView extends ItemView {
       'Describe what the agent should fix…',
     );
     await this.transitionTask(task, 'needs_fix', reason ?? 'Sent back for rework.');
+  }
+
+  private isProviderEnabled(providerId: string): boolean {
+    const settings = asSettingsBag(this.plugin.settings);
+    return (
+      ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId) &&
+      ProviderRegistry.isEnabled(providerId as ProviderId, settings)
+    );
+  }
+
+  private ownsModel(providerId: string, model: string): boolean {
+    const settings = asSettingsBag(this.plugin.settings);
+    return (
+      ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId) &&
+      ProviderRegistry.getChatUIConfig(providerId as ProviderId).ownsModel(model, settings)
+    );
+  }
+
+  private patchModelStatus(taskId: string, status: TaskStatus): void {
+    const spec = this.model.tasks.find((task) => task.frontmatter.id === taskId);
+    if (spec) spec.frontmatter.status = status;
+  }
+
+  // Reads a work order fresh for the queue's pre-launch staleness check, and
+  // keeps the in-memory model honest so a changed or removed card isn't re-picked
+  // on the next tick. Returns null when the note is gone or unparseable.
+  private async reloadTaskFromVault(task: TaskSpec): Promise<TaskSpec | null> {
+    const file = this.plugin.app.vault.getAbstractFileByPath(task.path);
+    if (!(file instanceof TFile)) {
+      this.model.tasks = this.model.tasks.filter((t) => t.frontmatter.id !== task.frontmatter.id);
+      return null;
+    }
+    try {
+      const fresh = this.noteStore.parse(task.path, await this.plugin.app.vault.read(file)).task;
+      // Replace the whole cached entry (status, provider, model, priority) so the
+      // next selection re-evaluates against reality and won't re-pick a card the
+      // reload just found stale or ineligible.
+      const index = this.model.tasks.findIndex((t) => t.frontmatter.id === fresh.frontmatter.id);
+      if (index !== -1) this.model.tasks[index] = fresh;
+      return fresh;
+    } catch {
+      return null;
+    }
+  }
+
+  private syncRunner(): void {
+    this.plugin.queueSlotTracker.setCap(this.plugin.settings.agentBoardQueueCap);
+    if (!this.runner) {
+      this.runner = new QueueRunner({
+        slot: this.plugin.queueSlotTracker,
+        getTasks: () => this.model.tasks,
+        eligibility: {
+          isProviderEnabled: (id) => this.isProviderEnabled(id),
+          ownsModel: (id, model) => this.ownsModel(id, model),
+          isActive: (id) => this.coordinator.isActive(id),
+        },
+        coordinator: this.coordinator,
+        appendLedger: (task, entry) =>
+          this.applyNoteChange(task.path, (content) => this.noteStore.appendLedger(content, entry)),
+        events: this.plugin.events,
+        haltAfterFailures: this.plugin.settings.agentBoardQueueHaltAfter,
+        // One shared control state across every board, so pause/halt/failure-count
+        // are global — no per-pane propagation needed.
+        control: this.plugin.queueControl,
+        now: () => Date.now(),
+        getFreeExecutionSlots: () => this.freeExecutionSlots(),
+        // Re-read each card just before launch so the queue never runs a stale
+        // cached spec (e.g. completed/edited since the last index), mirroring the
+        // manual run path.
+        reloadTask: (task) => this.reloadTaskFromVault(task),
+        // Reserve the chat tab synchronously at launch (before the async reload)
+        // so a second pane can't double-book the same free tab.
+        reservations: this.plugin.chatTabReservations,
+      });
+    } else {
+      this.runner.setHaltAfterFailures(this.plugin.settings.agentBoardQueueHaltAfter);
+    }
+    // Align the shared control with the persisted pause flag: restores pause on
+    // first mount and tracks an external settings edit. Because the control is
+    // shared, this takes effect on every open board's runner at once.
+    const paused = this.config.queue?.paused ?? false;
+    if (this.runner.isPaused() !== paused) this.runner.setPaused(paused);
+    this.runner.tick();
+  }
+
+  // Free chat tabs a queue run can open right now. A run that can't get a tab
+  // fails in the runtime and would mark a ready card failed, so the queue gates
+  // launches on this and waits for a tab to free up.
+  private freeExecutionSlots(): number {
+    const { used, max } = this.computeSlots();
+    return Math.max(0, max - used);
+  }
+
+  // saveSettings() emits task:queue-cap-changed on any settings change. The
+  // global concurrency cap is applied by the plugin already, but the halt
+  // threshold is per-runner, so apply the live value here before draining —
+  // otherwise a changed limit only takes effect on the next board refresh.
+  // (Deliberately not a full syncRunner(): that reconciles pause from the cached
+  // config, which would revert a pause just toggled from a board.)
+  private onQueueCapChanged(): void {
+    this.runner?.setHaltAfterFailures(this.plugin.settings.agentBoardQueueHaltAfter);
+    this.runner?.tick();
+  }
+
+  private async onToggleQueue(): Promise<void> {
+    if (!this.runner) return;
+    // The toggle reads as ▶ when paused or halted; either way the intent is to
+    // (re)start the queue. Otherwise it reads as ⏸ and pauses.
+    const shouldRun = this.runner.isPaused() || this.runner.isHalted();
+    const nextPaused = !shouldRun;
+    if (this.runner.isHalted()) this.runner.clearHalt();
+    // Apply the paused state before persisting: saveSettings() emits a queue wake
+    // that ticks every board's runner, so flipping the shared control first means
+    // a pause can't be undercut by a card auto-launching during the save.
+    this.runner.setPaused(nextPaused);
+    try {
+      writeBoardQueuePaused(asSettingsBag(this.plugin.settings), nextPaused);
+      await this.plugin.saveSettings();
+      void this.refresh();
+    } catch (error) {
+      new Notice(t('tasks.board.updateFailed', { error: error instanceof Error ? error.message : String(error) }));
+    }
+  }
+
+  private onResumeQueue(): void {
+    this.runner?.clearHalt();
+    this.runner?.setPaused(false);
+    void this.refresh();
+  }
+
+  private onOpenFailedCards(): void {
+    // Placeholder until a dedicated filter exists: a refresh resurfaces the
+    // current board state, including any failed/needs-fix cards.
+    void this.refresh();
   }
 
   private async applyNoteChange(path: string, transform: (content: string) => string): Promise<void> {

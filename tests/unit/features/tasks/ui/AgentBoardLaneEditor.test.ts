@@ -272,3 +272,48 @@ describe('renderAgentBoardLaneEditor — duplicate-status hint', () => {
     expect(lanes).toHaveLength(2);
   });
 });
+
+describe('renderAgentBoardLaneEditor — queue preservation', () => {
+  it('does not clobber a queue pause toggled while the pane is open', async () => {
+    const { plugin, save } = makePlugin([{ id: 'a', title: 'A', statuses: ['ready'] }]);
+    const host = document.createElement('div');
+    renderAgentBoardLaneEditor(host, plugin);
+
+    // The user pauses the queue from an Agent Board while this pane stays open.
+    plugin.settings.agentBoardConfig = {
+      ...(plugin.settings.agentBoardConfig as BoardConfig),
+      queue: { paused: true },
+    };
+
+    const checkbox = findCheckbox(host, 0, 'running');
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event('change'));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(save).toHaveBeenCalled();
+    // The lane edit saved, but the pause set elsewhere must survive.
+    expect((plugin.settings.agentBoardConfig as BoardConfig).queue).toEqual({ paused: true });
+  });
+
+  it('keeps the live queue pause even when a lane save fails and rolls back', async () => {
+    const { plugin, save } = makePlugin([{ id: 'a', title: 'A', statuses: ['ready'] }]);
+    save.mockRejectedValueOnce(new Error('disk full'));
+    const host = document.createElement('div');
+    renderAgentBoardLaneEditor(host, plugin);
+
+    plugin.settings.agentBoardConfig = {
+      ...(plugin.settings.agentBoardConfig as BoardConfig),
+      queue: { paused: true },
+    };
+
+    const checkbox = findCheckbox(host, 0, 'running');
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event('change'));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // Save failed → lanes roll back, but the rollback must not revert the pause.
+    expect((plugin.settings.agentBoardConfig as BoardConfig).queue).toEqual({ paused: true });
+  });
+});

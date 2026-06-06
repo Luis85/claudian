@@ -77,6 +77,44 @@ export class PluginViewActivator {
     return this.getLastKnownOpenTabCount() < this.getMaxTabsLimit();
   }
 
+  /**
+   * Tabs in use and the effective cap, for the Agent Board queue's slot gate.
+   * Shares canCreateNewTab()'s accounting: when no live tab manager exists the
+   * next run mounts the chat view, and restoreOrCreateTabs() either restores
+   * the persisted tab set or creates one fallback blank tab when nothing is
+   * persisted. Reserve at least that blank tab so the queue counts the slot it
+   * will occupy and can't launch one run too many into the cap; a mounted view
+   * already ran that path, so its live count is authoritative. `max` is clamped
+   * to the same bounds the tab manager enforces.
+   *
+   * Pending chat-tab reservations are added on top: a queue run reserves a slot
+   * the instant it launches, before its tab exists, so a second Agent Board pane
+   * counts that committed-but-uncreated tab and won't over-launch into the cap.
+   *
+   * When a Claudian leaf exists but its tab manager isn't ready yet — not
+   * created, or created but still restoring its persisted tabs (the manager is
+   * assigned before the async restore) — report no free capacity, like
+   * canCreateNewTab(), so the queue waits instead of racing the restore and
+   * overbooking the cap or dropping restored tabs.
+   */
+  getTabSlotUsage(): { used: number; max: number } {
+    const max = this.getMaxTabsLimit();
+    const view = this.plugin.getView();
+    const tabManager = view?.getTabManager();
+    if (tabManager && view?.areTabsRestored()) {
+      return { used: tabManager.getTabCount() + this.plugin.chatTabReservations.pending, max };
+    }
+    const hasClaudianLeaf =
+      this.plugin.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN).length > 0;
+    if (hasClaudianLeaf) {
+      return { used: max, max };
+    }
+    // No leaf at all: the next run mounts the view and restoreOrCreateTabs()
+    // restores the persisted set (or one fallback blank tab when none persisted).
+    const live = Math.max(this.getLastKnownOpenTabCount(), 1);
+    return { used: live + this.plugin.chatTabReservations.pending, max };
+  }
+
   async runNextReadyWorkOrder(): Promise<void> {
     await this.activateAgentBoardView();
     const leaf = this.plugin.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN_AGENT_BOARD)[0];
