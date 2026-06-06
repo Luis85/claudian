@@ -95,7 +95,7 @@ views:
       - relations
       - tags
     columnSize:
-      file.name: 430
+      file.name: 460
       note.status: 128
       note.priority: 144
       note.relations: 217
@@ -125,3 +125,11 @@ views:
     columnSize:
       file.name: 353
       note.status: 176
+  - type: table
+    name: Decisions
+    filters:
+      and:
+        - file.inFolder("docs/decisions")
+    order:
+      - file.name
+      - status
