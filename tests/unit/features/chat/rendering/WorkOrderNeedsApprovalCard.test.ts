@@ -14,6 +14,8 @@ describe('renderWorkOrderNeedsApprovalCard', () => {
     const chip = card?.querySelector('.claudian-work-order-needs-approval-card-reversible-chip');
     expect(chip?.textContent).toBe('Reversible');
     expect(chip?.classList.contains('is-irreversible')).toBe(false);
+    expect(card?.querySelector('.claudian-work-order-needs-approval-card-title')?.textContent).toBe('Approval required');
+    expect(riskEl?.textContent).toContain('rebuild required');
   });
 
   it('renders an "Irreversible" chip when reversible is false', () => {
@@ -29,5 +31,17 @@ describe('renderWorkOrderNeedsApprovalCard', () => {
     renderWorkOrderNeedsApprovalCard(parent as unknown as HTMLElement, { action: 'deploy' });
     expect(parent.querySelector('.claudian-work-order-needs-approval-card-reversible-chip')).toBeNull();
     expect(parent.querySelector('.claudian-work-order-needs-approval-card-risk')).toBeNull();
+  });
+
+  it('renders risk row when reversible is false', () => {
+    const parent = createMockEl('div');
+    renderWorkOrderNeedsApprovalCard(parent as unknown as HTMLElement, {
+      action: 'drop database',
+      risk: 'data loss',
+      reversible: false,
+    });
+    const riskEl = parent.querySelector('.claudian-work-order-needs-approval-card-risk');
+    expect(riskEl).not.toBeNull();
+    expect(riskEl?.querySelector('.claudian-work-order-needs-approval-card-label')?.textContent).toBe('Risk: ');
   });
 });
