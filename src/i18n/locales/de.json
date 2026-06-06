@@ -559,6 +559,15 @@
       "title": "Open Quick Actions",
       "tabLimitReached": "Cannot open quick action: tab limit reached. Close a tab first."
     },
+    "launchModal": {
+      "title": "Run \"{name}\"",
+      "providerLabel": "Provider",
+      "modelLabel": "Model",
+      "runButton": "Run",
+      "cancelButton": "Cancel",
+      "fallbackNotice": "Previous choice ({provider} / {model}) unavailable, defaulted to current selection.",
+      "noProvidersEnabled": "No providers enabled — configure in settings."
+    },
     "usage": {
       "tabLabel": "Statistiken",
       "topUsed": "Top 5 — Am häufigsten genutzt",
