@@ -2,19 +2,48 @@ import type { DataAdapter } from 'obsidian';
 
 import { RunSidecarStore } from '../../../../../src/features/tasks/storage/RunSidecarStore';
 
-function makeFakeAdapter() {
+interface FakeAdapterOptions {
+  trackMkdir?: boolean;
+  rejectDuplicateMkdir?: boolean;
+}
+
+function makeFakeAdapter(options: FakeAdapterOptions = {}) {
   const files = new Map<string, string>();
-  const adapter: Pick<DataAdapter, 'exists' | 'mkdir' | 'read' | 'write' | 'append'> = {
-    async exists(path) { return files.has(path); },
-    async mkdir(_path) { /* in-memory: no-op */ },
+  const dirs = new Set<string>();
+  const mkdirs: string[] = [];
+  const adapter: Pick<
+    DataAdapter,
+    'exists' | 'mkdir' | 'read' | 'write' | 'append' | 'rmdir' | 'remove'
+  > = {
+    async exists(path) { return files.has(path) || dirs.has(path); },
+    async mkdir(path) {
+      if (options.trackMkdir) mkdirs.push(path);
+      if (options.rejectDuplicateMkdir && dirs.has(path)) {
+        throw new Error('EEXIST: directory already exists');
+      }
+      dirs.add(path);
+    },
     async read(path) {
       if (!files.has(path)) throw new Error(`ENOENT: ${path}`);
       return files.get(path) as string;
     },
     async write(path, data) { files.set(path, data); },
     async append(path, data) { files.set(path, (files.get(path) ?? '') + data); },
+    async rmdir(path, recursive) {
+      if (recursive) {
+        for (const key of [...files.keys()]) {
+          if (key === path || key.startsWith(`${path}/`)) files.delete(key);
+        }
+        for (const key of [...dirs]) {
+          if (key === path || key.startsWith(`${path}/`)) dirs.delete(key);
+        }
+      } else {
+        dirs.delete(path);
+      }
+    },
+    async remove(path) { files.delete(path); },
   };
-  return { adapter: adapter as DataAdapter, files };
+  return { adapter: adapter as DataAdapter, files, dirs, mkdirs };
 }
 
 describe('RunSidecarStore.heartbeat', () => {
@@ -69,6 +98,30 @@ describe('RunSidecarStore.ledger', () => {
     const store = new RunSidecarStore(adapter, '.claudian/runs');
     expect(await store.readLedger('nope')).toEqual([]);
   });
+
+  it('readLedger skips malformed JSONL lines and returns the rest', async () => {
+    const { adapter, files } = makeFakeAdapter();
+    files.set(
+      '.claudian/runs/r/ledger.jsonl',
+      `${JSON.stringify({ timestamp: 'a', status: 'running', message: 'one' })}\n` +
+        '{ broken\n' +
+        `${JSON.stringify({ timestamp: 'b', status: 'running', message: 'two' })}\n`,
+    );
+    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const entries = await store.readLedger('r');
+    expect(entries.map((e) => e.message)).toEqual(['one', 'two']);
+  });
+
+  it('readLedger tolerates CRLF line endings', async () => {
+    const { adapter, files } = makeFakeAdapter();
+    files.set(
+      '.claudian/runs/r/ledger.jsonl',
+      `${JSON.stringify({ timestamp: 'a', status: 'running', message: 'one' })}\r\n` +
+        `${JSON.stringify({ timestamp: 'b', status: 'running', message: 'two' })}\r\n`,
+    );
+    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    expect((await store.readLedger('r')).map((e) => e.message)).toEqual(['one', 'two']);
+  });
 });
 
 describe('RunSidecarStore.snapshotLedgerAsMarkdown', () => {
@@ -98,5 +151,88 @@ describe('RunSidecarStore.snapshotLedgerAsMarkdown', () => {
     const { adapter } = makeFakeAdapter();
     const store = new RunSidecarStore(adapter, '.claudian/runs');
     expect(await store.snapshotLedgerAsMarkdown('nope')).toBe('');
+  });
+
+  it('survives one bad line and keeps the rest', async () => {
+    const { adapter, files } = makeFakeAdapter();
+    files.set(
+      '.claudian/runs/r/ledger.jsonl',
+      `${JSON.stringify({ timestamp: 't1', status: 'running', message: 'one' })}\n` +
+        '{ broken\n' +
+        `${JSON.stringify({ timestamp: 't2', status: 'review', message: 'two' })}\n`,
+    );
+    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    expect(await store.snapshotLedgerAsMarkdown('r')).toBe(
+      '- t1 [running] one\n- t2 [review] two',
+    );
+  });
+
+  it('flattens embedded newlines so one ledger entry stays one markdown line', async () => {
+    const { adapter } = makeFakeAdapter();
+    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    await store.appendLedger('run-x', {
+      timestamp: 't',
+      status: 'running',
+      message: 'line one\nline two\r\nline three',
+    });
+    const md = await store.snapshotLedgerAsMarkdown('run-x');
+    // One markdown bullet, no embedded newlines.
+    expect(md.split('\n')).toHaveLength(1);
+    expect(md).toBe('- t [running] line one line two line three');
+  });
+});
+
+describe('RunSidecarStore.ensureRunDir', () => {
+  it('creates baseDir and parent .claudian when nothing exists', async () => {
+    const { adapter, mkdirs } = makeFakeAdapter({ trackMkdir: true });
+    const store = new RunSidecarStore(adapter, '.claudian/runs');
+
+    await store.writeHeartbeat('run-x', { at: '2026-06-06T00:00:00Z', status: 'running' });
+
+    expect(mkdirs).toContain('.claudian');
+    expect(mkdirs).toContain('.claudian/runs');
+    expect(mkdirs).toContain('.claudian/runs/run-x');
+  });
+
+  it('handles concurrent first-write to the same runId without throwing', async () => {
+    const { adapter } = makeFakeAdapter({ rejectDuplicateMkdir: true });
+    const store = new RunSidecarStore(adapter, '.claudian/runs');
+
+    await expect(
+      Promise.all([
+        store.writeHeartbeat('run-y', { at: 't', status: 'running' }),
+        store.appendLedger('run-y', { timestamp: 't', status: 'running', message: 'm' }),
+      ]),
+    ).resolves.not.toThrow();
+  });
+});
+
+describe('RunSidecarStore.cleanupRun', () => {
+  it('removes the run dir and its contents', async () => {
+    const { adapter, files } = makeFakeAdapter();
+    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    await store.writeHeartbeat('r', { at: 't', status: 'running' });
+    await store.appendLedger('r', { timestamp: 't', status: 'running', message: 'm' });
+    expect(files.has('.claudian/runs/r/heartbeat.json')).toBe(true);
+
+    await store.cleanupRun('r');
+
+    expect(files.has('.claudian/runs/r/heartbeat.json')).toBe(false);
+    expect(files.has('.claudian/runs/r/ledger.jsonl')).toBe(false);
+  });
+
+  it('is a no-op when the run dir does not exist', async () => {
+    const { adapter } = makeFakeAdapter();
+    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    await expect(store.cleanupRun('nope')).resolves.toBeUndefined();
+  });
+
+  it('swallows a transient rmdir failure rather than poisoning the terminal path', async () => {
+    const { adapter } = makeFakeAdapter();
+    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    await store.writeHeartbeat('r', { at: 't', status: 'running' });
+    adapter.rmdir = jest.fn(async () => { throw new Error('boom'); }) as unknown as DataAdapter['rmdir'];
+
+    await expect(store.cleanupRun('r')).resolves.toBeUndefined();
   });
 });
