@@ -522,24 +522,27 @@ export class MessageRenderer {
   }
 
   private renderAssistantDisplaySegment(contentEl: HTMLElement, segment: WorkOrderProtocolSegment): void {
-    if (segment.type === 'markdown') {
-      this.renderPlainAssistantTextBlock(contentEl, segment.content);
-      return;
+    switch (segment.type) {
+      case 'markdown':
+        this.renderPlainAssistantTextBlock(contentEl, segment.content);
+        return;
+      case 'progress':
+        renderWorkOrderProgressCard(contentEl, segment.progress);
+        return;
+      case 'needs_input':
+        renderWorkOrderNeedsInputCard(contentEl, segment.needsInput);
+        return;
+      case 'needs_approval':
+        renderWorkOrderNeedsApprovalCard(contentEl, segment.needsApproval);
+        return;
+      case 'handoff':
+        renderWorkOrderHandoffCard(contentEl, segment, (el, md, options) => this.renderContent(el, md, options));
+        return;
+      default: {
+        const _exhaustive: never = segment;
+        void _exhaustive;
+      }
     }
-    if (segment.type === 'progress') {
-      renderWorkOrderProgressCard(contentEl, segment.progress);
-      return;
-    }
-    if (segment.type === 'needs_input') {
-      renderWorkOrderNeedsInputCard(contentEl, segment.needsInput);
-      return;
-    }
-    if (segment.type === 'needs_approval') {
-      renderWorkOrderNeedsApprovalCard(contentEl, segment.needsApproval);
-      return;
-    }
-    // handoff
-    renderWorkOrderHandoffCard(contentEl, segment, (el, md, options) => this.renderContent(el, md, options));
   }
 
   /**
