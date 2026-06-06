@@ -74,7 +74,19 @@ function makeCallbacks(): AgentBoardRenderCallbacks {
     onRunNextReady: jest.fn(),
     onReopen: jest.fn(),
     onContextMenu: jest.fn(),
+    onReply: jest.fn(),
+    onApprove: jest.fn(),
+    onReject: jest.fn(),
+    onCancelPaused: jest.fn(),
+    onSendToReview: jest.fn(),
+    onMarkFailed: jest.fn(),
   };
+}
+
+function findButton(host: HTMLElement, label: string): HTMLButtonElement | null {
+  return (Array.from(host.querySelectorAll('button')) as HTMLButtonElement[]).find(
+    (btn) => btn.textContent === label,
+  ) ?? null;
 }
 
 function findRunNextButton(host: HTMLElement): HTMLButtonElement | null {
@@ -179,6 +191,96 @@ describe('AgentBoardRenderer — Reopen button on done cards', () => {
 
     findReopenButton(host)?.click();
     expect(callbacks.onReopen).toHaveBeenCalledWith(doneTask);
+  });
+});
+
+describe('AgentBoardRenderer — live strip + paused reply', () => {
+  it('paints a live strip for running tasks', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ running: [makeTask('a', 'running')] }), makeCallbacks());
+    expect(host.querySelector('.claudian-agent-board-card-live-strip')).not.toBeNull();
+  });
+
+  it('does not paint a live strip for non-live statuses', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ ready: [makeTask('a', 'ready')] }), makeCallbacks());
+    expect(host.querySelector('.claudian-agent-board-card-live-strip')).toBeNull();
+  });
+
+  it('patchLiveStrip updates the last ledger line without rebuilding the card', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ running: [makeTask('a', 'running')] }), makeCallbacks());
+    const card = host.querySelector('.claudian-agent-board-card');
+    renderer.patchLiveStrip('a', { lastLedger: 'tool: Edit src/foo.ts', elapsedMs: 12_000, attemptNumber: 1, heartbeatAgeMs: 2_000 });
+    const ledgerEl = host.querySelector('.claudian-agent-board-card-live-strip--ledger');
+    expect(ledgerEl?.textContent).toBe('tool: Edit src/foo.ts');
+    expect(host.querySelector('.claudian-agent-board-card')).toBe(card);
+  });
+
+  it('patchCard shows a needs_input reply box seeded with the default value', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const task = makeTask('a', 'needs_input');
+    renderer.render(host, makeState({ needs_input: [task] }), makeCallbacks());
+    renderer.patchCard('a', task, { question: 'which env?', defaultValue: '.env.local' });
+    const field = host.querySelector('.claudian-agent-board-card-reply--field') as HTMLInputElement | null;
+    expect(host.querySelector('.claudian-agent-board-card-reply')).not.toBeNull();
+    expect(field?.value).toBe('.env.local');
+  });
+
+  it('routes the reply through onReply when Send is clicked', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    const task = makeTask('a', 'needs_input');
+    renderer.render(host, makeState({ needs_input: [task] }), callbacks);
+    renderer.patchCard('a', task, { question: 'which env?' });
+    const field = host.querySelector('.claudian-agent-board-card-reply--field') as HTMLInputElement;
+    field.value = 'my answer';
+    findButton(host, 'Send')?.click();
+    expect(callbacks.onReply).toHaveBeenCalledWith(task, 'my answer');
+  });
+
+  it('routes approve and reject for needs_approval', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    const task = makeTask('a', 'needs_approval');
+    renderer.render(host, makeState({ needs_approval: [task] }), callbacks);
+    renderer.patchCard('a', task, { action: 'drop table', risk: 'high' });
+    findButton(host, 'Approve')?.click();
+    expect(callbacks.onApprove).toHaveBeenCalledWith(task);
+    const reason = host.querySelector('.claudian-agent-board-card-reply--field') as HTMLInputElement;
+    reason.value = 'too risky';
+    findButton(host, 'Reject')?.click();
+    expect(callbacks.onReject).toHaveBeenCalledWith(task, 'too risky');
+  });
+
+  it('exposes Review and Mark failed actions on needs_handoff cards', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    const task = makeTask('h', 'needs_handoff');
+    renderer.render(host, makeState({ needs_handoff: [task] }), callbacks);
+    findButton(host, 'Review')?.click();
+    expect(callbacks.onSendToReview).toHaveBeenCalledWith(task);
+    findButton(host, 'Mark failed')?.click();
+    expect(callbacks.onMarkFailed).toHaveBeenCalledWith(task);
+  });
+
+  it('patchCard swaps the status badge and actions in place', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const task = makeTask('a', 'running');
+    renderer.render(host, makeState({ running: [task] }), makeCallbacks());
+    const card = host.querySelector('.claudian-agent-board-card');
+    renderer.patchCard('a', makeTask('a', 'review'), null);
+    expect(host.querySelector('.claudian-agent-board-card')).toBe(card);
+    expect(host.querySelector('.claudian-agent-board-status-badge')?.textContent).toBe('Review');
+    expect(findButton(host, 'Accept')).not.toBeNull();
   });
 });
 

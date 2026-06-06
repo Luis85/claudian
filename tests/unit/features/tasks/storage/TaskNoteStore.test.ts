@@ -110,6 +110,7 @@ describe('TaskNoteStore', () => {
       runId: 'run-123',
       conversationId: 'conversation-456',
       sidepanelTabId: 'tab-789',
+      started: '2026-05-28T09:00:00.000Z',
       timestamp: '2026-05-28T09:00:00.000Z',
     });
 
@@ -123,6 +124,23 @@ describe('TaskNoteStore', () => {
     expect(parsed.task.frontmatter.custom_field).toBe('keep-me');
     expect(written).toContain('Intro prose that must stay.');
     expect(written).toContain('Closing prose.');
+  });
+
+  it('does not overwrite started on a heartbeat-only running write', () => {
+    const started = store.writeStatus(VALID_NOTE, {
+      status: 'running',
+      started: '2026-05-28T09:00:00.000Z',
+      heartbeat: '2026-05-28T09:00:00.000Z',
+      timestamp: '2026-05-28T09:00:00.000Z',
+    });
+    const afterHeartbeat = store.writeStatus(started, {
+      status: 'running',
+      heartbeat: '2026-05-28T09:05:00.000Z',
+      timestamp: '2026-05-28T09:05:00.000Z',
+    });
+    const parsed = store.parse('tasks/task-1.md', afterHeartbeat);
+    expect(parsed.task.frontmatter.started).toBe('2026-05-28T09:00:00.000Z');
+    expect(parsed.task.frontmatter.heartbeat).toBe('2026-05-28T09:05:00.000Z');
   });
 
   it('appends ledger entries only between ledger markers', () => {
@@ -209,6 +227,83 @@ ${HANDOFF_END}`);
     expect(parsed.task.frontmatter.title).toBe('Only title');
     expect(parsed.task.frontmatter.priority).toBe('2 - normal');
     expect(parsed.task.frontmatter.provider).toBeUndefined();
+  });
+
+  describe('writeStatus heartbeat + pause_reason', () => {
+    const baseNote = `---
+type: claudian-work-order
+schema_version: 1
+id: t1
+title: T1
+status: running
+priority: 2 - normal
+created: 2026-06-04T08:00:00.000Z
+updated: 2026-06-04T08:00:00.000Z
+attempts: 0
+---
+body`;
+
+    it('writes heartbeat and pause_reason when provided', () => {
+      const result = store.writeStatus(baseNote, {
+        status: 'needs_input',
+        timestamp: '2026-06-04T09:00:00.000Z',
+        heartbeat: '2026-06-04T09:00:00.000Z',
+        pauseReason: 'Which env file?',
+      });
+      const parsed = store.parse('t1.md', result);
+      expect(parsed.task.frontmatter.status).toBe('needs_input');
+      expect(parsed.task.frontmatter.heartbeat).toBe('2026-06-04T09:00:00.000Z');
+      expect(parsed.task.frontmatter.pause_reason).toBe('Which env file?');
+    });
+
+    it('clears pause_reason on clearPause', () => {
+      const paused = store.writeStatus(baseNote, {
+        status: 'needs_input',
+        timestamp: '2026-06-04T09:00:00.000Z',
+        pauseReason: 'Which env file?',
+      });
+      const cleared = store.clearPause(paused, '2026-06-04T09:01:00.000Z');
+      expect(cleared).toContain('pause_reason: null');
+      const parsed = store.parse('t1.md', cleared);
+      expect(parsed.task.frontmatter.status).toBe('running');
+      expect(parsed.task.frontmatter.heartbeat).toBe('2026-06-04T09:01:00.000Z');
+    });
+
+    it('records finished and clears heartbeat when a run ends in review', () => {
+      const running = store.writeStatus(baseNote, {
+        status: 'running',
+        started: '2026-06-04T09:00:00.000Z',
+        heartbeat: '2026-06-04T09:00:30.000Z',
+        timestamp: '2026-06-04T09:00:30.000Z',
+      });
+      const reviewed = store.writeStatus(running, { status: 'review', timestamp: '2026-06-04T09:05:00.000Z' });
+      expect(reviewed).toContain('heartbeat: null');
+      const parsed = store.parse('t1.md', reviewed);
+      expect(parsed.task.frontmatter.status).toBe('review');
+      expect(parsed.task.frontmatter.finished).toBe('2026-06-04T09:05:00.000Z');
+    });
+
+    it('clears the finished timestamp when a new run starts', () => {
+      const ended = store.writeStatus(baseNote, { status: 'failed', timestamp: '2026-06-04T09:05:00.000Z' });
+      const rerun = store.writeStatus(ended, {
+        status: 'running',
+        started: '2026-06-04T10:00:00.000Z',
+        timestamp: '2026-06-04T10:00:00.000Z',
+      });
+      expect(rerun).toContain('finished: null');
+    });
+
+    it('clears heartbeat and pause_reason on terminal status', () => {
+      const paused = store.writeStatus(baseNote, {
+        status: 'needs_input',
+        timestamp: '2026-06-04T09:00:00.000Z',
+        heartbeat: '2026-06-04T09:00:00.000Z',
+        pauseReason: 'Which env file?',
+      });
+      const done = store.writeStatus(paused, { status: 'done', timestamp: '2026-06-04T09:02:00.000Z' });
+      expect(done).toContain('heartbeat: null');
+      expect(done).toContain('pause_reason: null');
+    });
   });
 
 });

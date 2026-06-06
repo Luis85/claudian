@@ -267,17 +267,27 @@ export class QueueRunner {
       return;
     }
     this.deps.events.emit('task:queue-tick', { taskId: id });
+    let result: TaskRunResult;
     try {
       // Hand the reservation to the coordinator so the chat view releases it at
       // tab creation; the finally below is an idempotent safety net.
-      this.onSettle(await this.deps.coordinator.run(fresh, reservation));
+      result = await this.deps.coordinator.run(fresh, reservation);
     } catch (err) {
-      this.onSettle({ ok: false, error: String(err) });
+      result = { ok: false, error: String(err) };
     } finally {
       reservation?.release();
       this.deps.slot.release(id);
-      this.tick();
     }
+    // A startup failure (no chat tab/view available) is environmental, not a card
+    // failure: record a debounced skip and wait for a capacity change
+    // (chat:tabs-changed re-ticks) rather than hot-retrying the same still-ready
+    // card and counting it toward the auto-halt streak.
+    if (!result.ok && result.startupFailed) {
+      this.recordSkip(fresh, result.error);
+      return;
+    }
+    this.onSettle(result);
+    this.tick();
   }
 
   private onSettle(res: TaskRunResult): void {

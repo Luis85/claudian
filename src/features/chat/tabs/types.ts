@@ -2,6 +2,7 @@ import type { Component, WorkspaceLeaf } from 'obsidian';
 
 import type { InstructionRefineService, ProviderId, TitleGenerationService } from '../../../core/providers/types';
 import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
+import type { StreamChunk } from '../../../core/types';
 import type { SlashCommandDropdown } from '../../../shared/components/SlashCommandDropdown';
 import type { BrowserSelectionController } from '../controllers/BrowserSelectionController';
 import type { CanvasSelectionController } from '../controllers/CanvasSelectionController';
@@ -318,4 +319,38 @@ export interface TabBarItem {
   isWorker?: boolean;
   /** 1-based index among workers spawned from the orchestrator tab. */
   workerIndex?: number;
+}
+
+/** Outcome of a programmatic task-run turn, surfaced to the work-order runner. */
+export interface TaskRunTabTerminal {
+  status: 'completed' | 'failed' | 'canceled';
+  finalAssistantContent: string;
+  error?: string;
+}
+
+/** Settlement of a follow-up turn, reported back so a runner can finish turns that emit no stream end. */
+export type TaskRunTabFollowUpOutcome =
+  | { ok: true; finalAssistantContent: string }
+  | { ok: false; error: string };
+
+/**
+ * Chat-native handle to a freshly opened task-run tab. Deliberately expressed in
+ * neutral chat/core terms (no tasks-feature types) so chat never depends on the
+ * Agent Board; the tasks-side bridge wraps it into its own stream adapter.
+ */
+export interface TaskRunTabHandle {
+  conversationId: string | null;
+  sidepanelTabId: TabId;
+  /** Observe the live neutral stream chunks for this tab's run. */
+  subscribe(observer: (chunk: StreamChunk) => void): () => void;
+  /**
+   * Send a follow-up turn; resolves with the turn's settlement (see
+   * {@link TaskRunTabFollowUpOutcome}), or `void` when the turn was queued (the
+   * tab was still streaming) and will report its end via the stream instead.
+   */
+  sendFollowUp(content: string): Promise<TaskRunTabFollowUpOutcome | void>;
+  /** Cancel the active turn. */
+  cancel(): void;
+  /** Resolves when the initial turn settles. */
+  terminal: Promise<TaskRunTabTerminal>;
 }

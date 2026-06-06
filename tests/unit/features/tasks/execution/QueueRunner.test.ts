@@ -160,6 +160,25 @@ describe('QueueRunner — paused/halted gates', () => {
   });
 });
 
+describe('QueueRunner — startup failure', () => {
+  it('records a skip and does not halt or count a startup failure as a card failure', async () => {
+    const h = makeHarness({
+      haltAfterFailures: 1, // a real failure would halt immediately
+      onRun: () => ({ ok: false, error: 'Could not open a chat tab', startupFailed: true }),
+    });
+    h.setTasks([makeTask('a')]);
+    h.runner.tick();
+    await flush();
+
+    expect(h.runCalls).toEqual(['a']);
+    // Environmental startup failure: surfaced as a skip, not a failure.
+    expect(h.runner.isHalted()).toBe(false);
+    expect(h.runner.getConsecutiveFailures()).toBe(0);
+    expect(h.emissions.some((e) => e.name === 'task:queue-skipped')).toBe(true);
+    expect(h.ledger.some((l) => l.message.includes('Could not open a chat tab'))).toBe(true);
+  });
+});
+
 describe('QueueRunner — skip-cascade', () => {
   it('drains skips in a single tick and launches the next eligible card', async () => {
     const h = makeHarness({

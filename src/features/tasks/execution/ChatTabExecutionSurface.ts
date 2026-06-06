@@ -1,7 +1,22 @@
 import type { ProviderId } from '../../../core/providers/types';
 import type ClaudianPlugin from '../../../main';
 import type { TaskSpec } from '../model/taskTypes';
-import type { TaskExecutionSurface, TaskRunHandle, TaskRunOptions } from './TaskExecutionSurface';
+import { ChatTabStreamAdapter } from './ChatTabStreamAdapter';
+import type { ProviderStreamAdapter, StreamHandlers } from './ProviderStreamAdapter';
+import type { TaskExecutionSurface, TaskRunHandle, TaskRunOptions, TaskRunTerminal } from './TaskExecutionSurface';
+
+/** Stream adapter for run handles that never started (validation/setup failures). */
+class NoopStreamAdapter implements ProviderStreamAdapter {
+  subscribe(_handlers: StreamHandlers): () => void {
+    return () => {};
+  }
+  async sendFollowUp(_content: string): Promise<void> {
+    /* no-op */
+  }
+  cancel(): void {
+    /* no-op */
+  }
+}
 
 export class ChatTabExecutionSurface implements TaskExecutionSurface {
   constructor(private readonly plugin: ClaudianPlugin) {}
@@ -21,20 +36,26 @@ export class ChatTabExecutionSurface implements TaskExecutionSurface {
     if (!view) return this.failed('Could not open the Claudian chat view.');
 
     const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const result = await view.startTaskRunInFreshTab({
+    const handle = await view.startTaskRunInFreshTab({
       providerId: provider as ProviderId,
       model,
       prompt: options.prompt,
       tabReservation: options.tabReservation,
     });
+    if (!handle) {
+      return this.failed('Could not open a chat tab for the work order (tab limit reached?).');
+    }
 
     return {
-      status: result.status,
       runId,
-      conversationId: result.conversationId,
-      sidepanelTabId: result.sidepanelTabId,
-      finalAssistantContent: result.finalAssistantContent,
-      error: result.error,
+      // Delegate to the chat handle: the conversation is created lazily by the
+      // first send, so this is null now and becomes non-null once bound.
+      get conversationId() {
+        return handle.conversationId;
+      },
+      sidepanelTabId: handle.sidepanelTabId,
+      stream: new ChatTabStreamAdapter(handle),
+      terminal: handle.terminal,
     };
   }
 
@@ -59,13 +80,13 @@ export class ChatTabExecutionSurface implements TaskExecutionSurface {
   }
 
   private failed(error: string): TaskRunHandle {
+    const terminal: TaskRunTerminal = { status: 'failed', finalAssistantContent: '', error };
     return {
-      status: 'failed',
       runId: '',
       conversationId: null,
       sidepanelTabId: null,
-      finalAssistantContent: '',
-      error,
+      stream: new NoopStreamAdapter(),
+      terminal: Promise.resolve(terminal),
     };
   }
 }

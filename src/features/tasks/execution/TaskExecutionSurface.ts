@@ -1,5 +1,6 @@
 import type { ChatTabReservation } from '../../../core/chatTabReservations';
 import type { TaskSpec } from '../model/taskTypes';
+import type { ProviderStreamAdapter } from './ProviderStreamAdapter';
 
 export interface TaskRunOptions {
   prompt: string;
@@ -9,13 +10,20 @@ export interface TaskRunOptions {
   tabReservation?: ChatTabReservation;
 }
 
-export interface TaskRunHandle {
+export interface TaskRunTerminal {
   status: 'completed' | 'failed' | 'canceled';
+  finalAssistantContent: string;
+  error?: string;
+}
+
+export interface TaskRunHandle {
   runId: string;
   conversationId: string | null;
   sidepanelTabId: string | null;
-  finalAssistantContent: string;
-  error?: string;
+  /** Live stream the run coordinator subscribes to for the work-order ledger. */
+  stream: ProviderStreamAdapter;
+  /** Resolves when the underlying chat turn settles. */
+  terminal: Promise<TaskRunTerminal>;
 }
 
 export interface TaskExecutionSurface {
