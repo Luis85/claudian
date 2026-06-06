@@ -672,8 +672,8 @@ export class AgentBoardView extends ItemView {
 
   private async onToggleQueue(): Promise<void> {
     if (!this.runner) return;
-    // The toggle reads as ▶ when paused or halted; either way the intent is to
-    // (re)start the queue. Otherwise it reads as ⏸ and pauses.
+    // The toggle reads "Run queue" when paused or halted; either way the intent
+    // is to (re)start the queue. Otherwise it reads "Pause queue" and pauses.
     const shouldRun = this.runner.isPaused() || this.runner.isHalted();
     const nextPaused = !shouldRun;
     if (this.runner.isHalted()) this.runner.clearHalt();
@@ -688,18 +688,6 @@ export class AgentBoardView extends ItemView {
     } catch (error) {
       new Notice(t('tasks.board.updateFailed', { error: error instanceof Error ? error.message : String(error) }));
     }
-  }
-
-  private onResumeQueue(): void {
-    this.runner?.clearHalt();
-    this.runner?.setPaused(false);
-    void this.refresh();
-  }
-
-  private onOpenFailedCards(): void {
-    // Placeholder until a dedicated filter exists: a refresh resurfaces the
-    // current board state, including any failed/needs-fix cards.
-    void this.refresh();
   }
 
   private async applyNoteChange(path: string, transform: (content: string) => string): Promise<void> {

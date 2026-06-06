@@ -438,32 +438,6 @@
   color: var(--text-error);
 }
 
-/* Queue halt banner */
-.claudian-agent-board-banner-halt {
-  background-color: var(--background-modifier-error);
-  border: 1px solid var(--text-error);
-  border-radius: 4px;
-  padding: 8px 12px;
-  margin: 8px 10px;
-  color: var(--text-normal);
-}
-
-.claudian-agent-board-banner-halt--actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.claudian-agent-board-banner-halt--resume,
-.claudian-agent-board-banner-halt--open-failed {
-  background-color: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 3px;
-  padding: 3px 8px;
-  cursor: pointer;
-  color: var(--text-normal);
-}
-
 /* Per-card queue skip chip */
 .claudian-agent-board-card-skip-chip {
   display: inline-block;

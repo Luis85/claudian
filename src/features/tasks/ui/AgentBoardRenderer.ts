@@ -75,12 +75,6 @@ export interface QueueToolbarState {
   onToggle: () => void;
 }
 
-export interface HaltBannerState {
-  reason: string | null;
-  onResume: () => void;
-  onOpenFailed: () => void;
-}
-
 export interface SkipChipState {
   reason: string | null;
   onAck: () => void;
@@ -151,15 +145,6 @@ export class AgentBoardRenderer {
     this.applyLiveStrip(refs.liveStripMeta, refs.liveStripLedger, payload);
   }
 
-  renderToolbar(host: HTMLElement, state: QueueToolbarState): void {
-    host.empty();
-    const bar = host.createDiv({ cls: 'claudian-agent-board-toolbar' });
-    const actions = bar.createDiv({ cls: 'claudian-agent-board-toolbar-actions' });
-    const info = bar.createDiv({ cls: 'claudian-agent-board-toolbar-info' });
-    this.renderQueueToggle(actions, state);
-    this.renderQueueInfo(info, state);
-  }
-
   private renderBoardToolbar(
     root: HTMLElement,
     state: AgentBoardRenderState,
@@ -218,27 +203,6 @@ export class AgentBoardRenderer {
         text: `${state.consecutiveFailures} failures`,
       });
     }
-  }
-
-  renderHaltBanner(host: HTMLElement, state: HaltBannerState): void {
-    host.empty();
-    if (!state.reason) return;
-    const banner = host.createDiv({ cls: 'claudian-agent-board-banner-halt' });
-    banner.createDiv({
-      cls: 'claudian-agent-board-banner-halt-title',
-      text: `⚠ Queue halted: ${state.reason}`,
-    });
-    const actions = banner.createDiv({ cls: 'claudian-agent-board-banner-halt--actions' });
-    const resume = actions.createEl('button', {
-      cls: 'claudian-agent-board-banner-halt--resume',
-      text: 'Resume queue',
-    });
-    resume.addEventListener('click', () => state.onResume());
-    const open = actions.createEl('button', {
-      cls: 'claudian-agent-board-banner-halt--open-failed',
-      text: 'Open failed cards',
-    });
-    open.addEventListener('click', () => state.onOpenFailed());
   }
 
   renderSkipChip(host: HTMLElement, state: SkipChipState): void {
@@ -333,7 +297,6 @@ export class AgentBoardRenderer {
       reply = this.renderReplySurface(card, task, null);
     }
 
-
     this.renderSkipChipFor(card, task, callbacks);
 
     this.cardRefs.set(task.frontmatter.id, {
@@ -358,9 +321,6 @@ export class AgentBoardRenderer {
     if (status === 'failed' || status === 'canceled') {
       this.renderAction(actions, 'Retry', () => this.callbacks?.onMarkReady(task));
     }
-    if (status === 'needs_input' || status === 'needs_approval') {
-      this.renderAction(actions, 'Resume', () => this.callbacks?.onMarkReady(task));
-    }
     if (status === 'running') {
       this.renderAction(actions, 'Stop', () => this.callbacks?.onStop(task));
     }
@@ -375,11 +335,14 @@ export class AgentBoardRenderer {
       this.renderAction(actions, 'Review', () => this.callbacks?.onSendToReview?.(task));
       this.renderAction(actions, 'Mark failed', () => this.callbacks?.onMarkFailed?.(task));
     }
-    if (status !== 'inbox' && status !== 'running' && status !== 'done') {
+    // Generic recovery is for non-live cards only. A live status (running /
+    // needs_input / needs_approval) is driven by its reply surface (Send / Approve
+    // / Reject / Stop); a bare status transition here would strand that paused
+    // RunSession and leak the queue slot it still holds, so skip those.
+    if (status !== 'inbox' && status !== 'done' && !LIVE_STATUSES.has(status)) {
       this.renderAction(actions, 'Back to inbox', () => this.callbacks?.onMoveToInbox(task));
     }
   }
-
 
   private renderSkipChipFor(card: HTMLElement, task: TaskSpec, callbacks: AgentBoardRenderCallbacks): void {
     const skipReason = callbacks.getSkipReason?.(task) ?? null;

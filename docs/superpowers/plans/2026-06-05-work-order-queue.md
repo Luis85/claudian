@@ -19,7 +19,7 @@ The Agent Board queue follow-up in [[Agent Board/tasks/task-20260606100000-bug-f
 - The queue control starts paused on every Obsidian/plugin load; a saved running state is ignored until the user clicks **Run queue** in that session.
 - Agent Board chrome is a single toolbar row: actions on the left, queue/chat-tab information on the right, with the existing bottom border retained.
 - Queue failure state emits a queue-state repaint event after run settlement, so stale failure text clears when the failure streak resets.
-- Non-running recovery states have user-visible recovery paths, including **Back to inbox** for ready/failed/canceled/intermediate states and retry/resume actions where appropriate.
+- Non-running recovery states have user-visible recovery paths: **Retry** (failed/canceled → ready), **Back to inbox** for non-live recoverable states (ready/failed/canceled/review/needs_fix/needs_handoff), and the lane-specific review/handoff actions. Live paused states (`needs_input`/`needs_approval`) are intentionally left to their on-card reply surface (Send/Approve/Reject/Stop): a bare status transition there would strand the still-running `RunSession` and leak the queue slot it holds.
 
 **Architecture:** A plugin-level singleton `QueueSlotTracker` enforces the global concurrency cap across boards. Each `AgentBoardView` constructs a `QueueRunner` on mount that subscribes to task events and picks the next eligible card via `selectNextEligibleTask` (a wrapper over the existing `selectNextReadyTask`). The runner calls the existing `TaskRunCoordinator.run()` — no coordinator behavior change. UI surfaces (toolbar toggle, toolbar halt/status text, skip chip) live in `AgentBoardRenderer` and route updates via new `task:queue-*` events.
 
