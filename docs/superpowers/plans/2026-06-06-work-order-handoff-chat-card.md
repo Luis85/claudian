@@ -1,7 +1,7 @@
 ---
 title: Work Order Handoff Chat Card Implementation Plan
 date: 2026-06-06
-status: open
+status: done
 scope: chat-rendering
 parent: "[[2026-06-06-work-order-handoff-chat-card-design]]"
 ---

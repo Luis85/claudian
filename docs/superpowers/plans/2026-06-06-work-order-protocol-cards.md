@@ -3,6 +3,7 @@ title: Work-order protocol cards (progress / needs_input / needs_approval)
 date: 2026-06-06
 status: open
 scope: features/chat
+parent: "[[Agent Kanban Board]]"
 ---
 
 # Work-Order Protocol Cards Implementation Plan
