@@ -29,12 +29,19 @@ export class RunSidecarStore {
     return JSON.parse(raw) as RunSidecarHeartbeat;
   }
 
-  async appendLedger(_runId: string, _entry: TaskLedgerEntry): Promise<void> {
-    throw new Error('not implemented');
+  async appendLedger(runId: string, entry: TaskLedgerEntry): Promise<void> {
+    await this.ensureRunDir(runId);
+    const line = `${JSON.stringify(entry)}\n`;
+    await this.adapter.append(this.ledgerPath(runId), line);
   }
 
-  async readLedger(_runId: string): Promise<TaskLedgerEntry[]> {
-    throw new Error('not implemented');
+  async readLedger(runId: string): Promise<TaskLedgerEntry[]> {
+    if (!(await this.adapter.exists(this.ledgerPath(runId)))) return [];
+    const raw = await this.adapter.read(this.ledgerPath(runId));
+    return raw
+      .split('\n')
+      .filter((line) => line.length > 0)
+      .map((line) => JSON.parse(line) as TaskLedgerEntry);
   }
 
   async snapshotLedgerAsMarkdown(_runId: string): Promise<string> {

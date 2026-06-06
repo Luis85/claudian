@@ -38,3 +38,35 @@ describe('RunSidecarStore.heartbeat', () => {
     expect(await store.readHeartbeat('nope')).toBeNull();
   });
 });
+
+describe('RunSidecarStore.ledger', () => {
+  it('appends JSONL entries to .claudian/runs/<runId>/ledger.jsonl', async () => {
+    const { adapter, files } = makeFakeAdapter();
+    const store = new RunSidecarStore(adapter, '.claudian/runs');
+
+    await store.appendLedger('run-1', {
+      timestamp: '2026-06-06T12:00:00.000Z',
+      status: 'running',
+      message: 'Run started (attempt 1)',
+    });
+    await store.appendLedger('run-1', {
+      timestamp: '2026-06-06T12:00:05.000Z',
+      status: 'running',
+      message: 'progress: scanning files',
+    });
+
+    const raw = files.get('.claudian/runs/run-1/ledger.jsonl') as string;
+    expect(raw.split('\n').filter((l) => l.length > 0)).toHaveLength(2);
+    const entries = await store.readLedger('run-1');
+    expect(entries.map((e) => e.message)).toEqual([
+      'Run started (attempt 1)',
+      'progress: scanning files',
+    ]);
+  });
+
+  it('returns [] for a missing ledger file', async () => {
+    const { adapter } = makeFakeAdapter();
+    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    expect(await store.readLedger('nope')).toEqual([]);
+  });
+});
