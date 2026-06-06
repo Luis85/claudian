@@ -6,7 +6,8 @@ import { asSettingsBag } from '@/core/types/settings';
 import { resolveBlankTabModel } from '@/features/chat/tabs/tabShared';
 import type ClaudianPlugin from '@/main';
 
-import { quickActionStemFromPath, runQuickActionForFile } from './runQuickActionForFile';
+import { quickActionStemFromPath } from './quickActionStem';
+import { runQuickActionForFile } from './runQuickActionForFile';
 import type { QuickAction } from './types';
 import {
   QuickActionLaunchModal,

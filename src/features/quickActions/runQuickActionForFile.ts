@@ -5,7 +5,10 @@ import { getTabProviderId } from '@/features/chat/tabs/providerResolution';
 import { t } from '@/i18n/i18n';
 import type ClaudianPlugin from '@/main';
 
+import { quickActionStemFromPath } from './quickActionStem';
 import type { QuickAction } from './types';
+
+export { quickActionStemFromPath };
 
 /**
  * Per-run provider+model override applied to the target tab. When present, the
@@ -16,15 +19,6 @@ import type { QuickAction } from './types';
 export interface QuickActionRunOverride {
   providerId: ProviderId;
   model: string;
-}
-
-/**
- * Filename stem (no extension, no folder path). Used as the stable
- * identity key for usage tracking — survives moves, breaks on rename.
- */
-export function quickActionStemFromPath(filePath: string): string {
-  const base = filePath.split('/').pop() ?? filePath;
-  return base.replace(/\.md$/i, '');
 }
 
 /**
