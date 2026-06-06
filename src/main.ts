@@ -71,6 +71,7 @@ import { ChatTabExecutionSurface } from './features/tasks/execution/ChatTabExecu
 import { ChatWorkOrderLinker } from './features/tasks/execution/ChatWorkOrderLinker';
 import { createQueueControlState, type QueueControlState } from './features/tasks/execution/QueueRunner';
 import { QueueSlotTracker } from './features/tasks/execution/QueueSlotTracker';
+import { RunSidecarStore } from './features/tasks/storage/RunSidecarStore';
 import { TaskNoteStore } from './features/tasks/storage/TaskNoteStore';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
 import { setLocale, t } from './i18n/i18n';
@@ -104,6 +105,10 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   private envApply!: EnvironmentApplyService;
   /** Plugin-level concurrency gate shared by every Agent Board queue runner. */
   queueSlotTracker!: QueueSlotTracker;
+  /** Shared sidecar store for per-run heartbeat + ledger writes under
+   * `.claudian/runs/<runId>/`. Coordinators in different Agent Board panes
+   * route through this single instance so cross-pane writes don't race. */
+  runSidecarStore!: RunSidecarStore;
   /** Shared in-flight work-order ids, so coordinators in different Agent Board
    * panes observe the same active runs and never double-launch the same card. */
   readonly taskActiveRuns = new Set<string>();
@@ -136,6 +141,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     this.viewActivator = new PluginViewActivator(this);
     this.envApply = new EnvironmentApplyService(this);
     this.queueSlotTracker = new QueueSlotTracker(this.settings.agentBoardQueueCap);
+    this.runSidecarStore = new RunSidecarStore(this.app.vault.adapter, '.claudian/runs');
 
     this.registerView(
       VIEW_TYPE_CLAUDIAN,
