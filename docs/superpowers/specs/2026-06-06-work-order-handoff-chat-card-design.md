@@ -51,7 +51,7 @@ When expanded, the card shows formatted Markdown sections:
 - Risks
 - Next Action
 
-The expanded view hides the XML wrapper and raw field syntax. Users can collapse the card again after inspection.
+The expanded view hides the XML wrapper and raw field syntax, and the collapsed-state indicator chips are hidden while expanded so the section headers are not duplicated. Users can collapse the card again after inspection.
 
 If the summary is long, only the collapsed preview is truncated. Expanded content remains complete.
 
@@ -84,7 +84,8 @@ Expected responsibilities:
   - delegates eligible assistant-message content to the helper,
   - renders normal Markdown segments with existing behavior,
   - inserts the compact/expandable card for the structured handoff segment,
-  - applies the transformation on two paths — the stored-message replay path and a streaming finalize hook — so the card appears as soon as a live run completes and again after reload.
+  - applies the transformation on two paths — the stored-message replay path and a streaming finalize hook — so the card appears as soon as a live run completes and again after reload,
+  - keeps registered assistant-message actions reachable, anchoring them to the card when the message is handoff-only.
 - Task execution:
   - continues using the existing handoff parser and note-writing path.
 

@@ -611,6 +611,45 @@ next_action: Review the result.
     expect(replaced).toBe(false);
     expect(contentEl.querySelector('.claudian-work-order-handoff-card')).toBeNull();
   });
+
+  it('keeps registered message actions reachable on a handoff-only card', () => {
+    const messagesEl = createMockEl();
+    const run = jest.fn();
+    const action: ChatMessageAction = {
+      id: 'create-wo',
+      label: 'Create work order',
+      icon: 'plus',
+      isEligible: () => true,
+      run,
+    };
+    const renderer = new MessageRenderer(
+      mockRendererPlugin({ chatMessageActions: [action] }) as any,
+      createMockComponent() as any,
+      messagesEl,
+      undefined,
+      undefined,
+      mockCapabilities('claude'),
+      () => 'docs/work-orders/example.md',
+    );
+    jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+    renderer.renderStoredMessage({
+      id: 'a-handoff-actions',
+      role: 'assistant',
+      content: `<claudian_handoff>
+summary: Finished the work.
+verification: npm run test passed.
+risks: No known risks.
+next_action: Review the result.
+</claudian_handoff>`,
+      timestamp: Date.now(),
+    });
+
+    const card = messagesEl.querySelector('.claudian-work-order-handoff-card');
+    expect(card).not.toBeNull();
+    expect(card?.querySelector('.claudian-text-actions')).not.toBeNull();
+    expect(messagesEl.querySelector('.claudian-text-action-btn')).not.toBeNull();
+  });
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -715,7 +754,7 @@ Add these methods above `private renderAssistantContent`:
   }
 ```
 
-- [ ] **Step 5: Replace direct assistant text rendering**
+- [ ] **Step 5: Replace direct assistant text rendering and keep message actions reachable**
 
 In the `block.type === 'text'` branch, replace the direct `createDiv`/`renderContent`/`addTextCopyButton` lines with:
 
@@ -727,6 +766,32 @@ In the fallback `if (msg.content)` branch, replace the direct `createDiv`/`rende
 
 ```ts
         this.renderAssistantTextBlock(contentEl, msg.content);
+```
+
+Finally, in `addAssistantMessageActions`, make the action anchor fall back to the handoff card so a handoff-only message (which renders no `.claudian-text-block`) still surfaces registered actions. Replace:
+
+```ts
+    const textBlocks = msgEl.querySelectorAll('.claudian-text-block');
+    const lastTextBlock = textBlocks.length > 0
+      ? (textBlocks[textBlocks.length - 1] as HTMLElement)
+      : null;
+    if (!lastTextBlock) return;
+
+    const container = lastTextBlock.createDiv({ cls: 'claudian-text-actions' });
+```
+
+with:
+
+```ts
+    const textBlocks = msgEl.querySelectorAll('.claudian-text-block');
+    const anchorEl = textBlocks.length > 0
+      ? (textBlocks[textBlocks.length - 1] as HTMLElement)
+      // A handoff-only assistant message renders as a card with no text block;
+      // anchor actions to the card so they stay reachable in work-order tabs.
+      : msgEl.querySelector<HTMLElement>('.claudian-work-order-handoff-card');
+    if (!anchorEl) return;
+
+    const container = anchorEl.createDiv({ cls: 'claudian-text-actions' });
 ```
 
 - [ ] **Step 6: Route the live streaming finalize through the card**
@@ -863,6 +928,12 @@ Create `src/style/features/work-order-handoff-card.css` with this content:
   background: var(--background-modifier-hover);
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
+}
+
+/* The chips are a collapsed-state affordance; hide them once expanded so they
+   do not duplicate the section headers (setupCollapsible adds `expanded`). */
+.claudian-work-order-handoff-card.expanded .claudian-work-order-handoff-card-chips {
+  display: none;
 }
 
 .claudian-work-order-handoff-card-details {
