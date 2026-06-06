@@ -279,6 +279,30 @@ describe('ClaudianView.injectCommitTurnForConversation', () => {
     expect(h.startTaskRunInFreshTab).toHaveBeenCalled();
   });
 
+  it('disposes the fresh-tab stream observer after the commit fallback settles', async () => {
+    const h = makeHarness({ initialCross: null });
+    const dispose = jest.fn();
+    h.view.startTaskRunInFreshTab = jest.fn(async () => ({
+      conversationId: 'conv-1',
+      sidepanelTabId: 'tab-fresh',
+      subscribe: jest.fn(() => dispose),
+      sendFollowUp: async () => {},
+      cancel: () => {},
+      terminal: Promise.resolve({ status: 'completed' as const, finalAssistantContent: '' }),
+    }));
+
+    await h.view.injectCommitTurnForConversation({
+      conversationId: null,
+      fallbackProviderId: 'claude',
+      fallbackModel: 'opus',
+      prompt: 'PROMPT',
+    });
+
+    // The commit flow doesn't read the stream, so it must release the eagerly
+    // registered observer instead of leaking it for the tab lifetime.
+    expect(dispose).toHaveBeenCalledTimes(1);
+  });
+
   it('throws when the chat view has no tabManager', async () => {
     const view = Object.create(ClaudianView.prototype) as any;
     view.tabManager = null;

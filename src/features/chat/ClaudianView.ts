@@ -829,9 +829,19 @@ export class ClaudianView extends ItemView {
     if (!handle) {
       throw new Error('Could not open a chat tab for the work order (tab limit reached?).');
     }
-    const terminal = await handle.terminal;
-    if (terminal.status === 'failed' && terminal.error) {
-      throw new Error(terminal.error);
+    // startTaskRunInFreshTab eagerly registers a stream observer that buffers
+    // chunks until a consumer subscribes. The commit flow doesn't consume the
+    // stream, so subscribe with a no-op (which drains the buffer and stops
+    // further buffering) and dispose it once the turn settles — otherwise the
+    // observer stays attached for the tab's lifetime, buffering with no reader.
+    const dispose = handle.subscribe(() => {});
+    try {
+      const terminal = await handle.terminal;
+      if (terminal.status === 'failed' && terminal.error) {
+        throw new Error(terminal.error);
+      }
+    } finally {
+      dispose();
     }
   }
 
