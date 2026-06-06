@@ -1351,6 +1351,157 @@ next_action: Review the result.
   });
 
   // ============================================
+  // Progress card (work-order protocol)
+  // ============================================
+
+  it('swaps a streamed progress text block for a card on finalize in a work-order tab', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl, 'claude', true);
+    jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+
+    const replaced = renderer.finalizeStreamedAssistantText(
+      contentEl,
+      textEl,
+      '<claudian_progress>\nstep: compiling\ndone: 3/10\n</claudian_progress>',
+    );
+
+    expect(replaced).toBe(true);
+    expect(contentEl.querySelector('.claudian-work-order-progress-card')).not.toBeNull();
+    expect(contentEl.querySelector('.claudian-text-block')).toBeNull();
+  });
+
+  it('leaves a streamed progress text block untouched outside work-order tabs', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl, 'claude', false);
+    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+
+    const replaced = renderer.finalizeStreamedAssistantText(
+      contentEl,
+      textEl,
+      '<claudian_progress>\nstep: compiling\ndone: 3/10\n</claudian_progress>',
+    );
+
+    expect(replaced).toBe(false);
+    expect(contentEl.querySelector('.claudian-work-order-progress-card')).toBeNull();
+  });
+
+  it('keeps registered message actions reachable on a progress-only card', () => {
+    const messagesEl = createMockEl();
+    const run = jest.fn();
+    const action: ChatMessageAction = {
+      id: 'create-wo',
+      label: 'Create work order',
+      icon: 'plus',
+      isEligible: () => true,
+      run,
+    };
+    const renderer = new MessageRenderer(
+      mockRendererPlugin({ chatMessageActions: [action] }) as any,
+      createMockComponent() as any,
+      messagesEl,
+      undefined,
+      undefined,
+      mockCapabilities('claude'),
+      () => 'docs/work-orders/example.md',
+    );
+    jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+    renderer.renderStoredMessage({
+      id: 'a-progress-actions',
+      role: 'assistant',
+      content: '<claudian_progress>\nstep: compiling\ndone: 3/10\n</claudian_progress>',
+      timestamp: Date.now(),
+    });
+
+    const card = messagesEl.querySelector('.claudian-work-order-progress-card');
+    expect(card).not.toBeNull();
+    expect(card?.querySelector('.claudian-text-actions')).not.toBeNull();
+    expect(messagesEl.querySelector('.claudian-text-action-btn')).not.toBeNull();
+  });
+
+  // ============================================
+  // Needs-input card (work-order protocol)
+  // ============================================
+
+  it('swaps a streamed needs_input text block for a card on finalize in a work-order tab', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl, 'claude', true);
+    jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+
+    const replaced = renderer.finalizeStreamedAssistantText(
+      contentEl,
+      textEl,
+      '<claudian_needs_input>\nquestion: Continue?\n</claudian_needs_input>',
+    );
+
+    expect(replaced).toBe(true);
+    expect(contentEl.querySelector('.claudian-work-order-needs-input-card')).not.toBeNull();
+    expect(contentEl.querySelector('.claudian-text-block')).toBeNull();
+  });
+
+  it('leaves a streamed needs_input text block untouched outside work-order tabs', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl, 'claude', false);
+    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+
+    const replaced = renderer.finalizeStreamedAssistantText(
+      contentEl,
+      textEl,
+      '<claudian_needs_input>\nquestion: Continue?\n</claudian_needs_input>',
+    );
+
+    expect(replaced).toBe(false);
+    expect(contentEl.querySelector('.claudian-work-order-needs-input-card')).toBeNull();
+  });
+
+  // ============================================
+  // Needs-approval card (work-order protocol)
+  // ============================================
+
+  it('swaps a streamed needs_approval text block for a card on finalize in a work-order tab', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl, 'claude', true);
+    jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+
+    const replaced = renderer.finalizeStreamedAssistantText(
+      contentEl,
+      textEl,
+      '<claudian_needs_approval>\naction: deploy\nreversible: true\n</claudian_needs_approval>',
+    );
+
+    expect(replaced).toBe(true);
+    expect(contentEl.querySelector('.claudian-work-order-needs-approval-card')).not.toBeNull();
+    expect(contentEl.querySelector('.claudian-text-block')).toBeNull();
+  });
+
+  it('leaves a streamed needs_approval text block untouched outside work-order tabs', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl, 'claude', false);
+    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+
+    const replaced = renderer.finalizeStreamedAssistantText(
+      contentEl,
+      textEl,
+      '<claudian_needs_approval>\naction: deploy\nreversible: true\n</claudian_needs_approval>',
+    );
+
+    expect(replaced).toBe(false);
+    expect(contentEl.querySelector('.claudian-work-order-needs-approval-card')).toBeNull();
+  });
+
+  // ============================================
   // Copy button
   // ============================================
 
