@@ -76,8 +76,6 @@ export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
 
   hiddenProviderCommands: getDefaultHiddenProviderCommands(),
 
-  orchestratorEnabled: true,
-  orchestratorSystemPrompt: '',
   quickActionsFolder: 'Quick Actions',
   loggingEnabled: false,
   logLevel: 'warn',

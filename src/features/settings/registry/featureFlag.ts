@@ -9,10 +9,9 @@
 //   - codex: 8+ fields missing (safeMode, installMethod, reasoningSummary, env, etc.)
 //   - opencode: visibleModels/modelAliases custom widgets still placeholders
 //   - cursor: visibleModels custom widget still placeholder
-//   - agentBoard, orchestrator, diagnostics: COMPLETE — keep on registry
+//   - agentBoard, diagnostics: COMPLETE — keep on registry
 export const REGISTRY_TABS: ReadonlySet<string> = new Set<string>([
   'agentBoard',
-  'orchestrator',
   'diagnostics',
 ]);
 
