@@ -21,12 +21,6 @@ import { ImageContextManager } from '../ui/ImageContext';
 import { createInputToolbar } from '../ui/InputToolbar';
 import { InstructionModeManager as InstructionModeManagerClass } from '../ui/InstructionModeManager';
 import { NavigationSidebar } from '../ui/NavigationSidebar';
-import { OrchestratorGoalModal } from '../ui/OrchestratorGoalModal';
-import {
-  isOrchestratorModeActive,
-  setOrchestratorModeActive,
-  syncOrchestratorModeUI,
-} from '../ui/orchestratorModeUi';
 import { StatusPanel } from '../ui/StatusPanel';
 import { autoResizeTextarea } from '../ui/textareaResize';
 import { recalculateUsageForModel } from '../utils/usageInfo';
@@ -373,32 +367,6 @@ function initializeInputToolbar(
         await updatePlanModeUI(tab, plugin, planValue);
       }
     },
-    getOrchestratorEnabled: () => {
-      if (tab.orchestratorTabId) {
-        return false;
-      }
-      return plugin.settings.orchestratorEnabled !== false;
-    },
-    getOrchestratorMode: () => isOrchestratorModeActive(tab, plugin),
-    onOrchestratorOpen: () => {
-      if (tab.orchestratorTabId) {
-        return;
-      }
-      const isActive = isOrchestratorModeActive(tab, plugin);
-      new OrchestratorGoalModal(plugin.app, {
-        isActive,
-        onTurnOff: async () => {
-          await setOrchestratorModeActive(tab, plugin, false);
-        },
-        onSubmit: async (goal) => {
-          if (!isOrchestratorModeActive(tab, plugin)) {
-            await setOrchestratorModeActive(tab, plugin, true);
-          }
-          syncOrchestratorModeUI(tab, plugin);
-          void tab.controllers.inputController?.sendMessage({ content: goal });
-        },
-      }).open();
-    },
   });
 
   tab.ui.modelSelector = toolbarComponents.modelSelector;
@@ -409,7 +377,6 @@ function initializeInputToolbar(
   tab.ui.mcpServerSelector = toolbarComponents.mcpServerSelector;
   tab.ui.permissionToggle = toolbarComponents.permissionToggle;
   tab.ui.planModeToggle = toolbarComponents.planModeToggle;
-  tab.ui.orchestratorToggle = toolbarComponents.orchestratorToggle;
   tab.ui.serviceTierToggle = toolbarComponents.serviceTierToggle;
 
   tab.ui.mcpServerSelector.setMcpManager(getProviderMcpManager(getTabProviderId(tab, plugin)));
@@ -512,3 +479,4 @@ export async function maybeWarnYoloMode(plugin: ClaudianPlugin, mode: string): P
   await plugin.saveSettings();
   new Notice(t('chat.permissionMode.yoloWarning'), 12000);
 }
+

@@ -426,13 +426,8 @@ export class ConversationController {
       const conversation = await plugin.createConversation({
         providerId: agentService?.providerId,
         sessionId: initialSessionId,
-        orchestratorMode: state.pendingOrchestratorMode || undefined,
       });
-      state.currentConversationId = conversation.id;
-      if (state.pendingOrchestratorMode) {
-        state.pendingOrchestratorMode = false;
-      }
-    }
+      state.currentConversationId = conversation.id;    }
 
     const fileCtx = this.deps.getFileContextManager();
     const currentNote = fileCtx?.getCurrentNotePath() || undefined;
@@ -479,7 +474,6 @@ export class ConversationController {
     const { plugin, state, renderer } = this.deps;
 
     state.currentConversationId = conversation.id;
-    state.pendingOrchestratorMode = false;
     state.messages = [...conversation.messages];
     state.usage = conversation.usage ?? null;
     state.autoScrollEnabled = plugin.settings.enableAutoScroll ?? true;

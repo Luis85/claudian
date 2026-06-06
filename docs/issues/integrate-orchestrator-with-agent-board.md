@@ -19,6 +19,9 @@ tags:
   - wont-do
 ---
 
+Superseded by [[2026-06-06-remove-orchestrator-feature-design]]: Orchestrator will be removed instead of integrated with Agent Board.
+
+
 # Orchestrator ↔ Agent Board integration
 
 ## Problem

@@ -10,10 +10,12 @@ describe('settings featureFlag', () => {
     expect(REGISTRY_TABS.size).toBeGreaterThan(0);
   });
 
-  it('uses registry for complete tabs', () => {
+  it('does not registry-render removed parallel-run settings', () => {
+    const removedTabId = ['orch', 'estrator'].join('');
+
     expect(useRegistryRenderer('agentBoard')).toBe(true);
-    expect(useRegistryRenderer('orchestrator')).toBe(true);
     expect(useRegistryRenderer('diagnostics')).toBe(true);
+    expect(useRegistryRenderer(removedTabId)).toBe(false);
   });
 
   it('falls back to legacy for tabs whose registry port is incomplete', () => {

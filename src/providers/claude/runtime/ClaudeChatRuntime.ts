@@ -157,7 +157,6 @@ export class ClaudianService implements ChatRuntime {
   private permissionModeSyncCallback: ((sdkMode: string) => void) | null = null;
   private vaultPath: string | null = null;
   private currentExternalContextPaths: string[] = [];
-  private currentOrchestratorMode = false;
   private readyStateListeners = new Set<(ready: boolean) => void>();
 
   // Modular components
@@ -472,7 +471,6 @@ export class ClaudianService implements ChatRuntime {
       vaultPath,
       cliPath,
       externalContextPaths,
-      this.currentOrchestratorMode,
     );
     if (this.needsRestart(newConfig)) {
       // Close FIRST, then try to start new one (allows fallback if CLI unavailable)
@@ -526,7 +524,6 @@ export class ClaudianService implements ChatRuntime {
       vaultPath,
       cliPath,
       externalContextPaths,
-      this.currentOrchestratorMode,
       modelOverride,
     );
     this.currentConfig = config;
@@ -538,7 +535,6 @@ export class ClaudianService implements ChatRuntime {
       resumeSessionId,
       resumeAtMessageId,
       externalContextPaths,
-      this.currentOrchestratorMode,
       modelOverride,
     );
 
@@ -662,13 +658,11 @@ export class ClaudianService implements ChatRuntime {
     vaultPath: string,
     cliPath: string,
     externalContextPaths?: string[],
-    orchestratorMode?: boolean,
     modelOverride?: string,
   ): PersistentQueryConfig {
     return QueryOptionsBuilder.buildPersistentQueryConfig(
       this.buildQueryOptionsContext(vaultPath, cliPath),
       externalContextPaths,
-      orchestratorMode,
       modelOverride,
     );
   }
@@ -723,7 +717,6 @@ export class ClaudianService implements ChatRuntime {
     resumeSessionId?: string,
     resumeAtMessageId?: string,
     externalContextPaths?: string[],
-    orchestratorMode?: boolean,
     modelOverride?: string,
   ): Options {
     const baseContext = this.buildQueryOptionsContext(vaultPath, cliPath);
@@ -738,7 +731,6 @@ export class ClaudianService implements ChatRuntime {
       canUseTool: this.createApprovalCallback(),
       hooks,
       externalContextPaths,
-      orchestratorMode,
       modelOverride,
     };
 
@@ -1044,7 +1036,6 @@ export class ClaudianService implements ChatRuntime {
       images,
       externalContextPaths: queryOptions?.externalContextPaths,
       enabledMcpServers: queryOptions?.enabledMcpServers,
-      orchestratorMode: queryOptions?.orchestratorMode,
     };
   }
 
@@ -1064,7 +1055,6 @@ export class ClaudianService implements ChatRuntime {
       enabledMcpServers: request.enabledMcpServers ?? legacyQueryOptions?.enabledMcpServers,
       forceColdStart: legacyQueryOptions?.forceColdStart,
       externalContextPaths: request.externalContextPaths ?? legacyQueryOptions?.externalContextPaths,
-      orchestratorMode: request.orchestratorMode ?? legacyQueryOptions?.orchestratorMode,
     };
 
     if (
@@ -1073,7 +1063,6 @@ export class ClaudianService implements ChatRuntime {
       effectiveQueryOptions.enabledMcpServers === undefined &&
       effectiveQueryOptions.forceColdStart === undefined &&
       effectiveQueryOptions.externalContextPaths === undefined &&
-      effectiveQueryOptions.orchestratorMode === undefined &&
       (effectiveQueryOptions.mcpMentions?.size ?? 0) === 0
     ) {
       return undefined;
@@ -1165,11 +1154,9 @@ export class ClaudianService implements ChatRuntime {
     const images = normalized.request.images;
     const conversationHistory = normalized.conversationHistory;
     const queryOptions = normalized.queryOptions;
-    this.currentOrchestratorMode = normalized.request.orchestratorMode === true;
     const log = this.plugin.logger.scope('claude.runtime');
     if (log.isEnabled('debug')) {
       log.debug('query start', {
-        orchestratorMode: this.currentOrchestratorMode,
         hasHistory: (conversationHistory?.length ?? 0) > 0,
         sessionId: this.sessionManager.getSessionId() ?? null,
       });
@@ -1611,7 +1598,6 @@ export class ClaudianService implements ChatRuntime {
       allowedTools,
       hasEditorContext,
       externalContextPaths,
-      orchestratorMode: queryOptions?.orchestratorMode,
     };
 
     const options = QueryOptionsBuilder.buildColdStartQueryOptions(ctx);

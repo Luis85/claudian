@@ -158,23 +158,14 @@ describe('TabBar', () => {
       expect(badge.getAttribute('aria-label')).toContain('(working)');
     });
 
-    it('marks a plain (non-orchestrator) tab as working when streaming', () => {
+    it('marks a normal tab as working when streaming', () => {
       const containerEl = createMockEl();
       const tabBar = new TabBar(containerEl, createMockCallbacks());
 
-      tabBar.update([
-        createTabBarItem({
-          isStreaming: true,
-          isActive: false,
-          isWorker: false,
-          isOrchestrator: false,
-        }),
-      ]);
+      tabBar.update([createTabBarItem({ isStreaming: true, isActive: false })]);
 
       const badge = containerEl._children[0];
       expect(badge._classList.has('claudian-tab-badge-working')).toBe(true);
-      expect(badge._classList.has('claudian-tab-badge-worker')).toBe(false);
-      expect(badge._classList.has('claudian-tab-badge-orchestrator')).toBe(false);
       expect(badge.getAttribute('data-working')).toBe('true');
     });
 
@@ -208,31 +199,6 @@ describe('TabBar', () => {
 
       expect(containerEl._children[0]._classList.has('claudian-tab-badge-attention')).toBe(true);
       expect(containerEl._children[0]._classList.has('claudian-tab-badge-working')).toBe(true);
-    });
-  });
-
-  describe('orchestrator tab roles', () => {
-    it('applies worker styling and data attributes', () => {
-      const containerEl = createMockEl();
-      const tabBar = new TabBar(containerEl, createMockCallbacks());
-
-      tabBar.update([createTabBarItem({ isWorker: true, workerIndex: 2, title: 'Worker 2 · New Chat' })]);
-
-      const badge = containerEl._children[0];
-      expect(badge._classList.has('claudian-tab-badge-worker')).toBe(true);
-      expect(badge.getAttribute('data-tab-role')).toBe('worker');
-      expect(badge.getAttribute('data-worker-index')).toBe('2');
-    });
-
-    it('applies orchestrator parent styling', () => {
-      const containerEl = createMockEl();
-      const tabBar = new TabBar(containerEl, createMockCallbacks());
-
-      tabBar.update([createTabBarItem({ isOrchestrator: true, title: 'Orchestrator · New Chat' })]);
-
-      const badge = containerEl._children[0];
-      expect(badge._classList.has('claudian-tab-badge-orchestrator')).toBe(true);
-      expect(badge.getAttribute('data-tab-role')).toBe('orchestrator');
     });
   });
 

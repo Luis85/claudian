@@ -150,8 +150,6 @@ export class CursorChatRuntime implements ChatRuntime {
       turn,
       conversationHistory,
       resumeSessionId: resumeId,
-      orchestratorMode: turn.request.orchestratorMode,
-      orchestratorSystemPrompt: this.plugin.settings.orchestratorSystemPrompt,
     });
     const { arg: promptArg, cleanup: cleanupPromptFile } = resolveCursorCliPromptArg(cliPrompt);
     const launch = resolveCursorLaunch(cli, [...flagArgs, promptArg]);

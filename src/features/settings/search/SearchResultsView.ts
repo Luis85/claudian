@@ -37,13 +37,12 @@ export class SearchResultsView {
   private renderResults(): void {
     const grouped = this.groupByTabAndSection();
 
-    // Tab order: general, <registered providers in registration order>, agentBoard, orchestrator, diagnostics.
+    // Tab order: general, <registered providers in registration order>, agentBoard, diagnostics.
     // Provider tab ids match provider ids by convention (see registry/providers/registerProviderTab.ts).
     const tabOrder = [
       'general',
       ...ProviderRegistry.getRegisteredProviderIds(),
       'agentBoard',
-      'orchestrator',
       'diagnostics',
     ];
     const sortedTabIds = Object.keys(grouped).sort((a, b) => {

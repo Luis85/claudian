@@ -95,7 +95,6 @@ export interface PluginContext
   createConversation(options?: {
     providerId?: ProviderId;
     sessionId?: string;
-    orchestratorMode?: boolean;
   }): Promise<Conversation>;
   switchConversation(id: string): Promise<Conversation | null>;
   deleteConversation(id: string): Promise<void>;

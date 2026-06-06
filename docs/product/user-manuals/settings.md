@@ -19,7 +19,6 @@ The panel is organized as a tab bar at the top:
 |-----|--------------|----------------|
 | **General** | Always | Provider on/off toggles, language, quick actions, display, conversations, content, input, hotkeys, shared environment, diagnostics. |
 | **Agent Board** | Always | Work-order folders, default provider/model, common-template installer, lane editor. |
-| **Orchestrator** | Always | Orchestrator mode toggle and system prompt appendix. |
 | **Claude** | When Claude is enabled in **General → Providers** | CLI path, safety, models, slash commands, subagents, MCP servers, Claude Code plugins, Claude environment, experimental flags. |
 | **Codex** | When Codex is enabled | CLI path (and WSL settings on Windows), safety, models, skills, subagents, MCP notice, Codex environment. |
 | **Opencode** | When Opencode is enabled | CLI path, visible-model picker, hidden commands, subagents, Opencode environment. |
@@ -138,16 +137,6 @@ The **Board lanes** sub-section beneath the table embeds the lane editor describ
 
 ---
 
-## Orchestrator
-
-Cross-link: [[orchestrator]] for the orchestrator workflow.
-
-| Setting | What it does | Default |
-|---------|--------------|---------|
-| **Enable orchestrator mode** | Show the orchestrator toolbar toggle in chat and allow spawning parallel worker tabs from approved plans. When off, the toolbar toggle is hidden. | On |
-| **Orchestrator system prompt** | Instructions appended while orchestrator mode is on. The textarea is prefilled with the built-in default; edit to customize, or restore the default text to reset. | Built-in default |
-
----
 
 ## Claude
 
@@ -345,7 +334,7 @@ All paths are relative to your vault root unless noted.
 
 | Path | Owner | Contents |
 |------|-------|----------|
-| `.claudian/claudian-settings.json` | Claudian | Every setting on this page — general, agent board, orchestrator, and each provider's settings bag, plus `agentBoardConfig` for the lane editor. |
+| `.claudian/claudian-settings.json` | Claudian | Every setting on this page — general, agent board, and each provider's settings bag, plus `agentBoardConfig` for the lane editor. |
 | `.claude/settings.json` | Claude Code CLI (shared with Claudian) | Permission rules and enabled Claude Code plugins. Claudian merges with the CLI's own writes. |
 | `.claude/mcp.json` | Claudian-managed MCP for Claude | Servers in two namespaces — `mcpServers` (CLI-compatible) and `_claudian.servers` (Claudian metadata: enabled, contextSaving, disabledTools, description). |
 | `.claude/commands/**/*.md` | Vault | Claude slash commands listed under **Claude → Commands and skills**. |

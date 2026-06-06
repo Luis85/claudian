@@ -34,7 +34,6 @@ import { searchFields } from './search/searchUtils';
 import { renderAgentBoardSettingsSection } from './ui/AgentBoardSettingsSection';
 import { renderEnvironmentSettingsSection } from './ui/EnvironmentSettingsSection';
 import { renderLoggingSettingsSection } from './ui/LoggingSettingsSection';
-import { renderOrchestratorSettingsTab } from './ui/OrchestratorSettingsTab';
 import { renderQuickActionsSettingsTab } from './ui/QuickActionsSettingsTab';
 
 type SettingsTabId = string;
@@ -150,7 +149,6 @@ export class ClaudianSettingTab extends PluginSettingTab {
     const tabIds: SettingsTabId[] = [
       'general',
       'agentBoard',
-      'orchestrator',
       'diagnostics',
       ...providerTabs,
     ];
@@ -203,8 +201,6 @@ export class ClaudianSettingTab extends PluginSettingTab {
         label = t('settings.tabs.general' as TranslationKey);
       } else if (id === 'agentBoard') {
         label = 'Agent Board';
-      } else if (id === 'orchestrator') {
-        label = t('settings.tabs.orchestrator' as TranslationKey);
       } else if (id === 'diagnostics') {
         label = 'Diagnostics';
       } else {
@@ -251,16 +247,6 @@ export class ClaudianSettingTab extends PluginSettingTab {
       }
     }
 
-    const orchestratorContent = tabContents.get('orchestrator');
-    if (orchestratorContent) {
-      if (useRegistryRenderer('orchestrator')) {
-        this.tabDisposers.push(
-          renderTab(orchestratorContent, 'orchestrator', ctx, getSettingsRegistry()),
-        );
-      } else {
-        renderOrchestratorSettingsTab(orchestratorContent, this.plugin);
-      }
-    }
 
     const diagnosticsContent = tabContents.get('diagnostics');
     if (diagnosticsContent && useRegistryRenderer('diagnostics')) {

@@ -205,10 +205,6 @@ export interface ClaudianSettings {
   // Provider command visibility
   hiddenProviderCommands: HiddenProviderCommands;
 
-  /** When false, orchestrator toolbar toggle and mode are hidden. */
-  orchestratorEnabled?: boolean;
-  /** Custom orchestrator system prompt appendix; empty uses built-in default. */
-  orchestratorSystemPrompt?: string;
 
   /** Vault folder for quick-action markdown files (relative to vault root). */
   quickActionsFolder?: string;

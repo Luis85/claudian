@@ -264,26 +264,6 @@ export class TabManager implements TabManagerInterface {
   }
 
   /**
-   * Creates a worker tab for orchestrator mode (ignores max tab limit).
-   */
-  async createWorkerTab(orchestratorTabId: TabId): Promise<TabData | null> {
-    const tab = await this.createTab(null, undefined, {
-      activate: false,
-      bypassTabLimit: true,
-    });
-    if (!tab) {
-      return null;
-    }
-    tab.orchestratorTabId = orchestratorTabId;
-    const orchestratorTab = this.tabs.get(orchestratorTabId);
-    if (orchestratorTab) {
-      orchestratorTab.workerTabIds = orchestratorTab.workerTabIds ?? [];
-      orchestratorTab.workerTabIds.push(tab.id);
-    }
-    return tab;
-  }
-
-  /**
    * Switches to a different tab.
    * @param tabId The tab to switch to.
    */
@@ -450,37 +430,15 @@ export class TabManager implements TabManagerInterface {
     let index = 1;
 
     for (const tab of this.tabs.values()) {
-      const orchestratorParentId = tab.orchestratorTabId;
-      const workerIds = orchestratorParentId
-        ? this.tabs.get(orchestratorParentId)?.workerTabIds
-        : undefined;
-      const workerIndex = workerIds && orchestratorParentId
-        ? workerIds.indexOf(tab.id) + 1
-        : undefined;
-      let title = getTabTitle(tab, this.plugin);
-      if (workerIndex != null && workerIndex > 0) {
-        title = `Worker ${workerIndex} · ${title}`;
-      } else if ((tab.workerTabIds?.length ?? 0) > 0) {
-        title = `Orchestrator · ${title}`;
-      }
-
-      const workersStreaming = (tab.workerTabIds ?? []).some(
-        (workerId) => this.tabs.get(workerId)?.state.isStreaming === true,
-      );
-      const isStreaming = tab.state.isStreaming || workersStreaming;
-
       items.push({
         id: tab.id,
         index: index++,
-        title,
+        title: getTabTitle(tab, this.plugin),
         providerId: getTabProviderId(tab, this.plugin),
         isActive: tab.id === this.activeTabId,
-        isStreaming,
+        isStreaming: tab.state.isStreaming,
         needsAttention: tab.state.needsAttention,
         canClose: this.tabs.size > 1 || !tab.state.isStreaming,
-        isOrchestrator: (tab.workerTabIds?.length ?? 0) > 0,
-        isWorker: orchestratorParentId != null,
-        workerIndex: workerIndex && workerIndex > 0 ? workerIndex : undefined,
       });
     }
 

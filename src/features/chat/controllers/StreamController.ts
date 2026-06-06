@@ -36,9 +36,7 @@ import { extractDiffData } from '../../../utils/diff';
 import { hasStreamingMathDelimiters } from '../../../utils/markdownMath';
 import { getVaultPath, normalizePathForVault } from '../../../utils/path';
 import { FLAVOR_TEXTS } from '../constants';
-import { collectAssistantReportText } from '../rendering/assistantReportText';
 import type { MessageRenderer, RenderContentOptions } from '../rendering/MessageRenderer';
-import { extractOrchestratorPlan, type OrchestratorPlan } from '../rendering/orchestratorPlanParser';
 import { scrollMessagesToBottom } from '../rendering/scrollToBottom';
 import { resolveSubagentLifecycleAdapter } from '../rendering/subagentLifecycleResolution';
 import {
@@ -87,10 +85,6 @@ export interface StreamControllerDeps {
   updateQueueIndicator: () => void;
   /** Get the agent service from the tab. */
   getAgentService?: () => ChatRuntime | null;
-  /** Called when a complete assistant message contains an orchestrator plan block. */
-  onOrchestratorPlanDetected?: (msgEl: HTMLElement, plan: OrchestratorPlan) => void;
-  /** Called when a worker tab finishes streaming. */
-  onWorkerDone?: (result: string, isError: boolean) => void;
 }
 
 export class StreamController {
@@ -168,13 +162,6 @@ export class StreamController {
     return this.toolCallIndex.get(id, toolCalls);
   }
 
-  setOrchestratorCallbacks(
-    onOrchestratorPlanDetected?: StreamControllerDeps['onOrchestratorPlanDetected'],
-    onWorkerDone?: StreamControllerDeps['onWorkerDone'],
-  ): void {
-    this.deps.onOrchestratorPlanDetected = onOrchestratorPlanDetected;
-    this.deps.onWorkerDone = onWorkerDone;
-  }
 
   private getActiveProviderId(): ProviderId {
     return this.deps.getAgentService?.()?.providerId ?? DEFAULT_CHAT_PROVIDER_ID;
@@ -279,20 +266,6 @@ export class StreamController {
         // Flush any remaining pending tools
         this.flushPendingTools();
         await this.finalizeCurrentTextBlock(msg);
-        const report = collectAssistantReportText(msg);
-        if (this.deps.onOrchestratorPlanDetected && report.text) {
-          const plan = extractOrchestratorPlan(report.text);
-          if (plan) {
-            const msgEl = this.deps.renderer.getMessageEl(msg.id);
-            if (msgEl) {
-              this.deps.onOrchestratorPlanDetected(msgEl, plan);
-            }
-          }
-        }
-        if (this.deps.onWorkerDone) {
-          const toolError = msg.toolCalls?.some((tc) => tc.status === 'error') ?? false;
-          this.deps.onWorkerDone(report.text, toolError || report.hadStreamError);
-        }
         break;
       }
 

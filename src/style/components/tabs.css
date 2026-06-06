@@ -27,56 +27,6 @@
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
-/* Orchestrator parent tab (has spawned workers) */
-.claudian-tab-badge-orchestrator {
-  border-color: var(--color-purple);
-  border-style: double;
-  color: color-mix(in srgb, var(--color-purple) 75%, var(--text-normal));
-  background: color-mix(in srgb, var(--color-purple) 10%, var(--background-primary));
-}
-
-.claudian-tab-badge-orchestrator:hover {
-  background: color-mix(in srgb, var(--color-purple) 16%, var(--background-modifier-hover));
-}
-
-.claudian-tab-badge-orchestrator.claudian-tab-badge-active {
-  border-color: var(--color-purple);
-  border-style: double;
-  color: var(--text-normal);
-  background: color-mix(in srgb, var(--color-purple) 18%, var(--background-primary));
-}
-
-/* Worker tabs spawned from an orchestrator */
-.claudian-tab-badge-worker {
-  border-color: color-mix(in srgb, var(--color-purple) 55%, var(--background-modifier-border));
-  border-style: dashed;
-  color: color-mix(in srgb, var(--color-purple) 70%, var(--text-muted));
-  background: color-mix(in srgb, var(--color-purple) 6%, var(--background-primary));
-}
-
-.claudian-tab-badge-worker::after {
-  content: '';
-  position: absolute;
-  top: 1px;
-  right: 1px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--color-purple);
-  opacity: 0.85;
-}
-
-.claudian-tab-badge-worker:hover {
-  background: color-mix(in srgb, var(--color-purple) 12%, var(--background-modifier-hover));
-}
-
-.claudian-tab-badge-worker.claudian-tab-badge-active {
-  border-color: var(--color-purple);
-  border-style: dashed;
-  color: var(--text-normal);
-  background: color-mix(in srgb, var(--color-purple) 14%, var(--background-primary));
-}
-
 .claudian-tab-badge:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
@@ -199,10 +149,6 @@
   --claudian-tab-working-color: var(--claudian-brand-opencode, #c8c8c8);
 }
 
-.claudian-tab-badge-worker.claudian-tab-badge-working,
-.claudian-tab-badge-orchestrator.claudian-tab-badge-working {
-  --claudian-tab-working-color: var(--color-purple);
-}
 
 /* Universal working dot (all tab types, including plain chats) */
 .claudian-tab-badge.claudian-tab-badge-working::after {

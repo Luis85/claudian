@@ -211,12 +211,10 @@ export class CodexChatRuntime implements ChatRuntime {
     // No-op: Codex handles MCP internally
   }
 
-  private currentOrchestratorMode = false;
 
   async ensureReady(options?: ChatRuntimeEnsureReadyOptions): Promise<boolean> {
     const promptSettings = this.getSystemPromptSettings();
-    const promptOptions = this.buildOrchestratorPromptOptions(this.currentOrchestratorMode);
-    const promptKey = computeSystemPromptKey(promptSettings, promptOptions);
+    const promptKey = computeSystemPromptKey(promptSettings);
     const launchSpec = resolveCodexAppServerLaunchSpec(this.plugin, this.providerId);
     const clientConfigKey = [promptKey, JSON.stringify({
       command: launchSpec.command,
@@ -247,7 +245,6 @@ export class CodexChatRuntime implements ChatRuntime {
   ): AsyncGenerator<StreamChunk> {
     this.resetTurnMetadata();
     let turn = originalTurn;
-    this.currentOrchestratorMode = turn.request.orchestratorMode === true;
     await this.ensureReady();
 
     this.canceled = false;
@@ -259,10 +256,7 @@ export class CodexChatRuntime implements ChatRuntime {
 
     const model = this.resolveModel(queryOptions);
     const promptSettings = this.getSystemPromptSettings();
-    const promptText = buildSystemPrompt(
-      promptSettings,
-      this.buildOrchestratorPromptOptions(this.currentOrchestratorMode),
-    );
+    const promptText = buildSystemPrompt(promptSettings);
 
     const enqueueChunk = (chunk: StreamChunk): void => {
       this.chunkBuffer.push(chunk);
@@ -797,15 +791,6 @@ export class CodexChatRuntime implements ChatRuntime {
     };
   }
 
-  private buildOrchestratorPromptOptions(orchestratorMode: boolean) {
-    if (!orchestratorMode) {
-      return {};
-    }
-    return {
-      orchestratorMode: true,
-      orchestratorSystemPrompt: this.plugin.settings.orchestratorSystemPrompt,
-    };
-  }
 
   private getProviderSettings(): Record<string, unknown> {
     return ProviderSettingsCoordinator.getProviderSettingsSnapshot(

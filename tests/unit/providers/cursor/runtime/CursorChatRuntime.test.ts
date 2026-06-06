@@ -53,7 +53,6 @@ function createMockPlugin(overrides: Record<string, unknown> = {}): any {
     app: {},
     settings: {
       permissionMode: 'normal',
-      orchestratorSystemPrompt: '',
       ...((overrides.settings as object) ?? {}),
     },
     getResolvedProviderCliPath: jest.fn().mockReturnValue('/usr/bin/cursor-agent'),

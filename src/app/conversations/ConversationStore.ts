@@ -109,7 +109,6 @@ export class ConversationStore {
   async createConversation(options?: {
     providerId?: ProviderId;
     sessionId?: string;
-    orchestratorMode?: boolean;
   }): Promise<Conversation> {
     const providerId = options?.providerId ?? DEFAULT_CHAT_PROVIDER_ID;
     const sessionId = options?.sessionId;
@@ -122,7 +121,6 @@ export class ConversationStore {
       updatedAt: Date.now(),
       sessionId: sessionId ?? null,
       messages: [],
-      ...(options?.orchestratorMode ? { orchestratorMode: true } : {}),
     };
 
     this.conversations.unshift(conversation);

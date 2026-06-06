@@ -747,10 +747,6 @@ export class InputController {
       : options.content;
     const enabledMcpServers = mcpServerSelector?.getEnabledServers();
 
-    const conversationId = this.deps.state.currentConversationId;
-    const conversation = conversationId
-      ? this.deps.plugin.getConversationSync(conversationId)
-      : null;
 
     return {
       displayContent: options.content,
@@ -767,8 +763,6 @@ export class InputController {
         enabledMcpServers: enabledMcpServers && enabledMcpServers.size > 0
           ? enabledMcpServers
           : undefined,
-        orchestratorMode: conversation?.orchestratorMode === true
-          || this.deps.state.pendingOrchestratorMode,
       },
     };
   }
@@ -932,13 +926,8 @@ export class InputController {
       const conversation = await plugin.createConversation({
         providerId: this.getActiveProviderId(),
         sessionId,
-        orchestratorMode: state.pendingOrchestratorMode || undefined,
       });
-      state.currentConversationId = conversation.id;
-      if (state.pendingOrchestratorMode) {
-        state.pendingOrchestratorMode = false;
-      }
-    }
+      state.currentConversationId = conversation.id;    }
 
     // Find first user message by role (not by index)
     const firstUserMsg = state.messages.find(m => m.role === 'user');

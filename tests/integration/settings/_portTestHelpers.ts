@@ -24,7 +24,7 @@ export interface PortTestOptions {
   /**
    * For provider tabs, mark the provider as enabled in plugin.settings and in
    * the `ProviderRegistry.getEnabledProviderIds` mock. Non-provider tabs
-   * (agentBoard, orchestrator, diagnostics) leave this false.
+   * (agentBoard, diagnostics) leave this false.
    */
   providerEnabled?: boolean;
   /**
@@ -32,8 +32,7 @@ export interface PortTestOptions {
    * should land at. Mirrors the shell's `tabIds` ordering:
    *   0: general
    *   1: agentBoard
-   *   2: orchestrator
-   *   3: diagnostics
+     *   3: diagnostics
    *   4+: enabled providers (claude/codex/opencode/cursor)
    */
   tabContentIndex: number;

@@ -5,7 +5,6 @@ import * as path from 'path';
 import type { PreparedChatTurn } from '../../../core/runtime/types';
 import type { ChatMessage } from '../../../core/types';
 import { buildContextFromHistory, buildPromptWithHistoryContext } from '../../../utils/session';
-import { appendOrchestratorInstructionsToCursorPrompt } from '../prompt/cursorOrchestratorPrompt';
 
 // Windows CreateProcess argv and cmd.exe wrappers fail once the full command line
 // grows too large (ENAMETOOLONG). cursor-agent accepts `@/path/to/prompt.txt` to
@@ -21,8 +20,6 @@ export interface BuildCursorAgentPromptOptions {
   turn: PreparedChatTurn;
   conversationHistory?: ChatMessage[];
   resumeSessionId?: string | null;
-  orchestratorMode?: boolean;
-  orchestratorSystemPrompt?: string;
 }
 
 /**
@@ -34,8 +31,6 @@ export function buildCursorAgentPrompt(options: BuildCursorAgentPromptOptions): 
     turn,
     conversationHistory,
     resumeSessionId,
-    orchestratorMode,
-    orchestratorSystemPrompt,
   } = options;
 
   let prompt = turn.prompt;
@@ -50,11 +45,7 @@ export function buildCursorAgentPrompt(options: BuildCursorAgentPromptOptions): 
     );
   }
 
-  return appendOrchestratorInstructionsToCursorPrompt(
-    prompt,
-    orchestratorMode,
-    orchestratorSystemPrompt,
-  );
+  return prompt;
 }
 
 export function resolveCursorCliPromptArg(prompt: string): ResolvedCursorCliPrompt {

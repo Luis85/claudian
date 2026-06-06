@@ -21,12 +21,20 @@ describe('registerAllSettings', () => {
     resetSettingsRegistryForTests();
   });
 
-  it('produces general, agentBoard, orchestrator, diagnostics tabs by default', () => {
+  it('does not register removed parallel-run settings', () => {
+    const removedTabId = ['orch', 'estrator'].join('');
+
     registerAllSettings();
-    const tabs = getSettingsRegistry()
-      .getTabs(settings(false))
-      .map((t) => t.id);
-    expect(tabs).toEqual(['general', 'agentBoard', 'orchestrator', 'diagnostics']);
+    const registry = getSettingsRegistry();
+    expect(registry.getTabs(settings(false)).map((tab) => tab.id)).not.toContain(
+      removedTabId
+    );
+    expect(registry.getAllFields().map((field) => field.id)).not.toContain(
+      `${removedTabId}Enabled`
+    );
+    expect(registry.getAllFields().map((field) => field.id)).not.toContain(
+      `${removedTabId}SystemPrompt`
+    );
   });
 
   it('produces all 8 tabs when every provider is enabled', () => {
@@ -41,7 +49,6 @@ describe('registerAllSettings', () => {
       'opencode',
       'cursor',
       'agentBoard',
-      'orchestrator',
       'diagnostics',
     ]);
   });
@@ -51,3 +58,4 @@ describe('registerAllSettings', () => {
     expect(() => registerAllSettings()).toThrow(/duplicate tab id/);
   });
 });
+

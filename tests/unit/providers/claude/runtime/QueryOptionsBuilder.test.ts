@@ -347,7 +347,7 @@ describe('QueryOptionsBuilder', () => {
       const ctx = createMockContext({
         settings: createMockSettings({ model: 'opus' }),
       });
-      const config = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, 'sonnet');
+      const config = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], 'sonnet');
 
       expect(config.model).toBe('sonnet');
     });
