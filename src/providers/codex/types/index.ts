@@ -7,6 +7,9 @@ export interface CodexProviderState {
   forkSourceSessionFilePath?: string;
   forkSourceTranscriptRootPath?: string;
   forkSource?: ForkSource;
+  // Structural index so the type assigns to `Record<string, unknown>`, which
+  // the registry-erased `ProviderConversationHistoryService` field demands.
+  [key: string]: unknown;
 }
 
 export function getCodexState(

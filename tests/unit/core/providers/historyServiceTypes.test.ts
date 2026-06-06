@@ -102,17 +102,17 @@ describe('ProviderConversationHistoryService v2 surface', () => {
   it('accepts generic TPersistedState; forkSupport is optional', () => {
     type PinnedState = { databasePath: string };
     const service: ProviderConversationHistoryService<PinnedState> = {
-      async hydrateConversationHistoryV2(_c, _ctx) {
+      async hydrateConversationHistory(_c, _ctx) {
         return { kind: 'empty', reason: 'no-store', sourceRef: null };
       },
-      async deleteConversationSessionV2(_c, _ctx) {
+      async deleteConversationSession(_c, _ctx) {
         return { kind: 'no-op', reason: 'provider-owned' };
       },
       resolveSessionIdForConversation(_c) { return null; },
       buildPersistedProviderState(_c) { return { databasePath: '/tmp/db' }; },
     };
     expect(service.forkSupport).toBeUndefined();
-    expect(typeof service.hydrateConversationHistoryV2).toBe('function');
-    expect(typeof service.deleteConversationSessionV2).toBe('function');
+    expect(typeof service.hydrateConversationHistory).toBe('function');
+    expect(typeof service.deleteConversationSession).toBe('function');
   });
 });

@@ -28,7 +28,7 @@ interface ProviderHarness {
   id: ProviderId;
   /**
    * How many times the provider's loader is expected to be invoked per
-   * `hydrateConversationHistoryV2` call when the path reaches `loadMessages`.
+   * `hydrateConversationHistory` call when the path reaches `loadMessages`.
    * Claude walks `previousProviderSessionIds + current`, so its seed produces
    * two reads per hydration; the other providers do a single read.
    */
@@ -366,7 +366,7 @@ describe.each(harnesses)('history service contract — $id', (h) => {
   it('loaded: messages present, sourceRef set', async () => {
     h.stubStore('loaded');
     const conv = h.seedConversation();
-    const out = await service().hydrateConversationHistoryV2(conv, CTX);
+    const out = await service().hydrateConversationHistory(conv, CTX);
     expect(out.kind).toBe('loaded');
     if (out.kind === 'loaded') {
       // eslint-disable-next-line jest/no-conditional-expect
@@ -379,14 +379,14 @@ describe.each(harnesses)('history service contract — $id', (h) => {
   it('empty: returns empty when the loader produces zero rows', async () => {
     h.stubStore('empty');
     const conv = h.seedConversation();
-    const out = await service().hydrateConversationHistoryV2(conv, CTX);
+    const out = await service().hydrateConversationHistory(conv, CTX);
     expect(out.kind).toBe('empty');
   });
 
   it('error-unreadable: returns error (or empty for Codex JSONL swallowing)', async () => {
     h.stubStore('error-unreadable');
     const conv = h.seedConversation();
-    const out = await service().hydrateConversationHistoryV2(conv, CTX);
+    const out = await service().hydrateConversationHistory(conv, CTX);
     // Codex parses JSONL with fs.readFileSync wrapped in try/catch, so a
     // simulated read failure surfaces as an empty parse result, not an
     // error. Every other provider must surface a structured error.
@@ -397,7 +397,7 @@ describe.each(harnesses)('history service contract — $id', (h) => {
   it('error-sqlite-unavailable: maps to empty for Claude/Codex, error for Opencode/Cursor', async () => {
     h.stubStore('error-sqlite-unavailable');
     const conv = h.seedConversation();
-    const out = await service().hydrateConversationHistoryV2(conv, CTX);
+    const out = await service().hydrateConversationHistory(conv, CTX);
     // Claude + Codex have no sqlite path. The harness drives them down
     // their equivalent dead-end (missing session / empty JSONL), which
     // maps to `empty` in the contract. Opencode/Cursor surface the
@@ -413,14 +413,14 @@ describe.each(harnesses)('history service contract — $id', (h) => {
   it('cached: second hydration with stable state returns cached', async () => {
     const spies = h.stubStore('cached');
     const conv = h.seedConversation();
-    const first = await service().hydrateConversationHistoryV2(conv, CTX);
+    const first = await service().hydrateConversationHistory(conv, CTX);
     expect(first.kind).toBe('loaded');
     if (first.kind === 'loaded') {
       // BaseHistoryService only seeds the cache when conversation.messages is
       // populated; ConversationStore owns this assignment in production.
       conv.messages = first.messages;
     }
-    const second = await service().hydrateConversationHistoryV2(conv, CTX);
+    const second = await service().hydrateConversationHistory(conv, CTX);
     expect(second.kind).toBe('cached');
     // The loader spies (last entry after any path-resolver) should have been
     // hit exactly `callsPerHydrate` times total — the second call is served
@@ -432,11 +432,11 @@ describe.each(harnesses)('history service contract — $id', (h) => {
   it('force-refresh: bypasses cache and re-invokes the loader', async () => {
     const spies = h.stubStore('force-refresh');
     const conv = h.seedConversation();
-    const first = await service().hydrateConversationHistoryV2(conv, CTX);
+    const first = await service().hydrateConversationHistory(conv, CTX);
     if (first.kind === 'loaded') {
       conv.messages = first.messages;
     }
-    const second = await service().hydrateConversationHistoryV2(conv, {
+    const second = await service().hydrateConversationHistory(conv, {
       ...CTX,
       forceRefresh: true,
     });
@@ -450,7 +450,7 @@ describe.each(harnesses)('history service contract — $id', (h) => {
     const controller = new AbortController();
     controller.abort();
     const conv = h.seedConversation();
-    const out = await service().hydrateConversationHistoryV2(conv, {
+    const out = await service().hydrateConversationHistory(conv, {
       ...CTX,
       signal: controller.signal,
     });
@@ -471,7 +471,7 @@ describe.each(harnesses)('history service contract — $id', (h) => {
     (conv as { sessionId: string | null }).sessionId = null;
     (conv as { providerState: Record<string, unknown> }).providerState = {};
 
-    const out = await service().deleteConversationSessionV2(conv, {
+    const out = await service().deleteConversationSession(conv, {
       vaultPath: null,
       reason: 'open',
     });

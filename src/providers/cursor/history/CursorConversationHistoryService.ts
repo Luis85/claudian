@@ -65,7 +65,7 @@ export class CursorConversationHistoryService extends BaseHistoryService<CursorP
     return resolveCursorSessionId(conversation);
   }
 
-  async deleteConversationSessionV2(
+  async deleteConversationSession(
     conversation: Conversation,
     ctx: HydrationContext,
   ): Promise<DeleteHistoryOutcome> {

@@ -46,7 +46,7 @@ export abstract class BaseHistoryService<
     conversation: Conversation | null,
   ): string | null;
 
-  abstract deleteConversationSessionV2(
+  abstract deleteConversationSession(
     conversation: Conversation,
     ctx: HydrationContext,
   ): Promise<DeleteHistoryOutcome>;
@@ -55,7 +55,7 @@ export abstract class BaseHistoryService<
     conversation: Conversation,
   ): TPersistedState | undefined;
 
-  async hydrateConversationHistoryV2(
+  async hydrateConversationHistory(
     conversation: Conversation,
     ctx: HydrationContext,
   ): Promise<HistoryLoadOutcome> {

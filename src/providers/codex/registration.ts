@@ -1,7 +1,4 @@
-import type {
-  ProviderConversationHistoryService,
-  ProviderRegistration,
-} from '../../core/providers/types';
+import type { ProviderRegistration } from '../../core/providers/types';
 import { CodexInlineEditService } from './auxiliary/CodexInlineEditService';
 import { CodexInstructionRefineService } from './auxiliary/CodexInstructionRefineService';
 import { CodexTitleGenerationService } from './auxiliary/CodexTitleGenerationService';
@@ -28,10 +25,6 @@ export const codexProviderRegistration: ProviderRegistration = {
   createTitleGenerationService: (plugin) => new CodexTitleGenerationService(plugin),
   createInstructionRefineService: (plugin) => new CodexInstructionRefineService(plugin),
   createInlineEditService: (plugin) => new CodexInlineEditService(plugin),
-  // The typed subclass narrows TPersistedState to CodexProviderState; the
-  // registration field uses the default-instantiated interface. The shape is
-  // structurally compatible but lacks the index signature that
-  // Record<string, unknown> demands.
-  historyService: new CodexConversationHistoryService() as unknown as ProviderConversationHistoryService,
+  historyService: new CodexConversationHistoryService(),
   subagentLifecycleAdapter: codexSubagentLifecycleAdapter,
 };

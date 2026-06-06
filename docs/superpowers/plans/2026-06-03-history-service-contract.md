@@ -26,12 +26,12 @@ Merged to `main` via **PR #26** (merge commit `71d1f05`). All 13 tasks landed; t
 - `a56240c` — the hydration-failure banner is stashed by conversation id and rendered in `restoreConversation` once the tab is **bound** (the emit-time `tab.conversationId` lookup missed for current-tab switches and freshly created tabs).
 - `4587693` — `CodexConversationHistoryService.computeCacheKey` returns `null` for forks (pending or established), so forks never serve a stale `fork::<threadId>`-keyed merge from the generic cache; the merge re-runs on every open.
 
-**Non-blocking followups still open** (tracked here, not done in this PR):
+**Non-blocking followups** — closed by [[Agent Board/tasks/work-order-20260606-history-service-contract]]:
 
-1. Rename `hydrateConversationHistoryV2` → `hydrateConversationHistory` (the `V2` suffix is post-migration debt now that v1 is gone).
-2. Update the stale comment at `src/features/chat/tabs/TabManager.ts:713` to reflect the new `inflight` dedupe.
-3. Add an `assertNever`-style exhaustiveness guard on the `loadSdkMessagesForConversation` outcome switch.
-4. Drop the `as unknown as ProviderConversationHistoryService` casts at registration sites once the `TPersistedState` generic-variance is resolved.
+1. ~~Rename `hydrateConversationHistoryV2` → `hydrateConversationHistory` (the `V2` suffix is post-migration debt now that v1 is gone).~~ **Done.**
+2. ~~Update the stale comment at `src/features/chat/tabs/TabManager.ts:713` to reflect the new `inflight` dedupe.~~ **Done** (TabManager `restoreState` comment now points at `BaseHistoryService.inflight` + cache short-circuit).
+3. ~~Add an `assertNever`-style exhaustiveness guard on the `loadSdkMessagesForConversation` outcome switch.~~ **Done** (`src/utils/assertNever.ts` added; guard wired into both the hydration and deletion outcome switches in `ConversationStore`).
+4. ~~Drop the `as unknown as ProviderConversationHistoryService` casts at registration sites once the `TPersistedState` generic-variance is resolved.~~ **Done** (each provider-state interface now carries a `[key: string]: unknown` index signature so `Service<TPersistedState>` assigns to the registry-erased `Service<Record<string, unknown>>` without a cast).
 
 **Architecture:**
 

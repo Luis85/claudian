@@ -46,7 +46,7 @@ export class OpencodeConversationHistoryService extends BaseHistoryService<Openc
     return conversation?.sessionId ?? null;
   }
 
-  async deleteConversationSessionV2(
+  async deleteConversationSession(
     _conversation: Conversation,
     _ctx: HydrationContext,
   ): Promise<DeleteHistoryOutcome> {

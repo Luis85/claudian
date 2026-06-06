@@ -22,13 +22,13 @@ function makeConversation(overrides: Partial<Conversation> = {}): Conversation {
 }
 const ctx: HydrationContext = { vaultPath: null, reason: 'open' };
 
-describe('CodexConversationHistoryService.hydrateConversationHistoryV2', () => {
+describe('CodexConversationHistoryService.hydrateConversationHistory', () => {
   afterEach(() => { jest.restoreAllMocks(); });
 
   it('returns empty:no-session when there is no thread id and no session file path', async () => {
     const svc = new CodexConversationHistoryService();
     const conv = makeConversation({ sessionId: null, providerState: {} });
-    const out = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const out = await svc.hydrateConversationHistory(conv, ctx);
     expect(out.kind).toBe('empty');
     // eslint-disable-next-line jest/no-conditional-expect
     if (out.kind === 'empty') expect(out.reason).toBe('no-session');
@@ -40,7 +40,7 @@ describe('CodexConversationHistoryService.hydrateConversationHistoryV2', () => {
     ]);
     const svc = new CodexConversationHistoryService();
     const conv = makeConversation();
-    const out = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const out = await svc.hydrateConversationHistory(conv, ctx);
     expect(out.kind).toBe('loaded');
     if (out.kind === 'loaded') {
       // eslint-disable-next-line jest/no-conditional-expect
@@ -54,7 +54,7 @@ describe('CodexConversationHistoryService.hydrateConversationHistoryV2', () => {
     jest.spyOn(Store, 'parseCodexSessionFile').mockReturnValue([]);
     const svc = new CodexConversationHistoryService();
     const conv = makeConversation();
-    const out = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const out = await svc.hydrateConversationHistory(conv, ctx);
     expect(out.kind).toBe('empty');
     // eslint-disable-next-line jest/no-conditional-expect
     if (out.kind === 'empty') expect(out.reason).toBe('no-rows');
@@ -80,7 +80,7 @@ describe('CodexConversationHistoryService.hydrateConversationHistoryV2', () => {
         },
       });
 
-      const first = await svc.hydrateConversationHistoryV2(conv, ctx);
+      const first = await svc.hydrateConversationHistory(conv, ctx);
       expect(first.kind).toBe('loaded');
       if (first.kind === 'loaded') conv.messages = first.messages;
       const callsAfterFirst = turnsSpy.mock.calls.length;
@@ -89,7 +89,7 @@ describe('CodexConversationHistoryService.hydrateConversationHistoryV2', () => {
       // A normal conversation with non-empty messages would short-circuit to
       // `cached` here; an established fork must re-run the source+fork merge so a
       // resolved-later or grown transcript is never served stale.
-      const second = await svc.hydrateConversationHistoryV2(conv, ctx);
+      const second = await svc.hydrateConversationHistory(conv, ctx);
       expect(second.kind).toBe('loaded');
       expect(turnsSpy.mock.calls.length).toBeGreaterThan(callsAfterFirst);
     } finally {
@@ -109,18 +109,18 @@ describe('CodexConversationHistoryService.hydrateConversationHistoryV2', () => {
       },
     });
     const svc = new CodexConversationHistoryService();
-    const out = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const out = await svc.hydrateConversationHistory(conv, ctx);
     expect(out.kind).toBe('error');
     // eslint-disable-next-line jest/no-conditional-expect
     if (out.kind === 'error') expect(out.error.code).toBe('fork-checkpoint-not-found');
   });
 });
 
-describe('CodexConversationHistoryService.deleteConversationSessionV2', () => {
+describe('CodexConversationHistoryService.deleteConversationSession', () => {
   it('returns no-op:provider-owned (codex native transcripts are never deleted)', async () => {
     const svc = new CodexConversationHistoryService();
     const conv = makeConversation();
-    const out = await svc.deleteConversationSessionV2(conv, ctx);
+    const out = await svc.deleteConversationSession(conv, ctx);
     expect(out).toEqual({ kind: 'no-op', reason: 'provider-owned' });
   });
 });

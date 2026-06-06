@@ -678,8 +678,10 @@ export class TabManager implements TabManagerInterface {
     this.isRestoringState = true;
     try {
       // Pre-warm conversation hydration in parallel. createTab below will call
-      // getConversationById again, but hydrateConversationHistory keeps a
-      // hydrated-id set and the second call is a no-op. Without this the UI
+      // getConversationById again, but BaseHistoryService dedupes concurrent
+      // hydrations through its `inflight` map and short-circuits resolved
+      // hydrations through the cache, so the second call returns the prior
+      // outcome without re-reading the transcript. Without this the UI
       // freezes for the sum of every tab's transcript load.
       await Promise.all(
         state.openTabs

@@ -18,12 +18,12 @@ function makeConversation(overrides: Partial<Conversation> = {}): Conversation {
 }
 const ctx: HydrationContext = { vaultPath: '/vault', reason: 'open' };
 
-describe('ClaudeConversationHistoryService.hydrateConversationHistoryV2', () => {
+describe('ClaudeConversationHistoryService.hydrateConversationHistory', () => {
   afterEach(() => { jest.restoreAllMocks(); });
 
   it('returns empty:no-session when vaultPath is null', async () => {
     const svc = new ClaudeConversationHistoryService();
-    const out = await svc.hydrateConversationHistoryV2(makeConversation(), { vaultPath: null, reason: 'open' });
+    const out = await svc.hydrateConversationHistory(makeConversation(), { vaultPath: null, reason: 'open' });
     expect(out.kind).toBe('empty');
     // eslint-disable-next-line jest/no-conditional-expect
     if (out.kind === 'empty') expect(out.reason).toBe('no-session');
@@ -42,7 +42,7 @@ describe('ClaudeConversationHistoryService.hydrateConversationHistoryV2', () => 
         previousProviderSessionIds: ['sdk-sess-prev-1', 'sdk-sess-prev-2'],
       },
     });
-    const out = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const out = await svc.hydrateConversationHistory(conv, ctx);
     expect(out.kind).toBe('loaded');
     if (out.kind === 'loaded') {
       // eslint-disable-next-line jest/no-conditional-expect
@@ -63,11 +63,11 @@ describe('ClaudeConversationHistoryService.hydrateConversationHistoryV2', () => 
     const svc = new ClaudeConversationHistoryService();
     const conv = makeConversation();
 
-    const first = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const first = await svc.hydrateConversationHistory(conv, ctx);
     if (first.kind === 'loaded') conv.messages = first.messages;
 
     (conv as unknown as { resumeAtMessageId: string }).resumeAtMessageId = 'm-prior';
-    const second = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const second = await svc.hydrateConversationHistory(conv, ctx);
 
     expect(second.kind).toBe('loaded');
     expect(loadSpy).toHaveBeenCalledTimes(2);
@@ -90,7 +90,7 @@ describe('ClaudeConversationHistoryService.hydrateConversationHistoryV2', () => 
         previousProviderSessionIds: ['sdk-sess-prev-1', 'sdk-sess-prev-2'],
       },
     });
-    const out = await svc.hydrateConversationHistoryV2(conv, { ...ctx, signal: controller.signal });
+    const out = await svc.hydrateConversationHistory(conv, { ...ctx, signal: controller.signal });
 
     expect(out.kind).toBe('error');
     // eslint-disable-next-line jest/no-conditional-expect
@@ -106,7 +106,7 @@ describe('ClaudeConversationHistoryService.hydrateConversationHistoryV2', () => 
       error: 'simulated SDK load failure',
     });
     const svc = new ClaudeConversationHistoryService();
-    const out = await svc.hydrateConversationHistoryV2(makeConversation(), ctx);
+    const out = await svc.hydrateConversationHistory(makeConversation(), ctx);
     expect(out.kind).toBe('error');
     // eslint-disable-next-line jest/no-conditional-expect
     if (out.kind === 'error') expect(out.error.code).toBe('store-unreadable');
@@ -115,25 +115,25 @@ describe('ClaudeConversationHistoryService.hydrateConversationHistoryV2', () => 
   it('returns empty:no-session when every previousSessionId is missing on disk', async () => {
     jest.spyOn(Store, 'sdkSessionExists').mockReturnValue(false);
     const svc = new ClaudeConversationHistoryService();
-    const out = await svc.hydrateConversationHistoryV2(makeConversation(), ctx);
+    const out = await svc.hydrateConversationHistory(makeConversation(), ctx);
     expect(out.kind).toBe('empty');
   });
 });
 
-describe('ClaudeConversationHistoryService.deleteConversationSessionV2', () => {
+describe('ClaudeConversationHistoryService.deleteConversationSession', () => {
   afterEach(() => { jest.restoreAllMocks(); });
 
   it('returns deleted with the SDK session path when deletion succeeds', async () => {
     const deleteSpy = jest.spyOn(Store, 'deleteSDKSession').mockResolvedValue(undefined);
     const svc = new ClaudeConversationHistoryService();
-    const out = await svc.deleteConversationSessionV2(makeConversation(), ctx);
+    const out = await svc.deleteConversationSession(makeConversation(), ctx);
     expect(deleteSpy).toHaveBeenCalledWith('/vault', 'sdk-sess-a');
     expect(out.kind).toBe('deleted');
   });
 
   it('returns no-op:no-session when sessionId is unresolved or vaultPath is null', async () => {
     const svc = new ClaudeConversationHistoryService();
-    const out = await svc.deleteConversationSessionV2(
+    const out = await svc.deleteConversationSession(
       makeConversation({ sessionId: null, providerState: {} }),
       ctx,
     );

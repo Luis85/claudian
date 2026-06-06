@@ -483,7 +483,7 @@ export class ClaudeConversationHistoryService extends BaseHistoryService<ClaudeP
     return { kind: 'loaded', messages: merged, sourceRef };
   }
 
-  async deleteConversationSessionV2(
+  async deleteConversationSession(
     conversation: Conversation,
     ctx: HydrationContext,
   ): Promise<DeleteHistoryOutcome> {
