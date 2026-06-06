@@ -35,6 +35,8 @@ export interface QueueControlState {
   halted: boolean;
   haltReason: string | null;
   consecutiveFailures: number;
+  /** False until the user explicitly starts the queue in this plugin session. */
+  sessionActivated: boolean;
   /** Last skip reason and time per task, shared so the 60s skip-ledger debounce
    * is global: two panes skipping the same ineligible card write one ledger line,
    * not one each. */
@@ -47,6 +49,7 @@ export function createQueueControlState(paused = false): QueueControlState {
     halted: false,
     haltReason: null,
     consecutiveFailures: 0,
+    sessionActivated: !paused,
     lastSkipReasonByTask: new Map(),
   };
 }
@@ -152,6 +155,7 @@ export class QueueRunner {
     if (next) {
       this.deps.events.emit('task:queue-paused');
     } else {
+      this.control.sessionActivated = true;
       this.deps.events.emit('task:queue-resumed');
       this.tick();
     }
@@ -167,6 +171,7 @@ export class QueueRunner {
     this.control.halted = false;
     this.control.haltReason = null;
     this.control.consecutiveFailures = 0;
+    this.deps.events.emit('task:queue-state-changed');
   }
 
   setHaltAfterFailures(next: number): void {
@@ -293,16 +298,21 @@ export class QueueRunner {
   private onSettle(res: TaskRunResult): void {
     if (res.ok) {
       this.control.consecutiveFailures = 0;
+      this.deps.events.emit('task:queue-state-changed');
       return;
     }
     // A cancellation is a user action, not a provider failure — leave the streak
     // untouched (neither bump nor reset) so canceling queued runs can't trip the
     // auto-halt guard.
-    if (res.canceled) return;
+    if (res.canceled) {
+      this.deps.events.emit('task:queue-state-changed');
+      return;
+    }
     this.control.consecutiveFailures += 1;
     if (this.control.consecutiveFailures >= this.state.haltAfterFailures) {
       this.setHalted(`${this.control.consecutiveFailures} consecutive failures · last: ${res.error}`);
     }
+    this.deps.events.emit('task:queue-state-changed');
   }
 
   private recordSkip(task: TaskSpec, reason: string): void {

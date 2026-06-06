@@ -93,7 +93,7 @@ function normalizePriority(priority?: TaskPriority): TaskPriority {
 }
 
 function buildWorkOrderMarkdown(args: BuildWorkOrderArgs): string {
-  const status = args.status ?? 'ready';
+  const status = args.status ?? 'inbox';
   const priority = normalizePriority(args.priority);
 
   let contextBody = '_Add the links, files, and scope the agent needs._';
@@ -310,7 +310,7 @@ export async function createWorkOrderFromSeed(
   const title = template?.name?.trim() || seed.title || 'New work order';
   const slug = slugifyTitle(title) || 'work-order';
   const id = `task-${timestampId(now)}-${slug}`;
-  const status = options?.status ?? seed.status ?? 'ready';
+  const status = options?.status ?? seed.status ?? 'inbox';
 
   let markdown: string;
   if (template) {

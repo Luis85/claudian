@@ -12,6 +12,7 @@ import {
   type AgentBoardRenderCallbacks,
   AgentBoardRenderer,
   type AgentBoardRenderState,
+  type QueueToolbarState,
 } from '../../../../../src/features/tasks/ui/AgentBoardRenderer';
 
 function makeTask(id: string, status: TaskStatus): TaskSpec {
@@ -73,6 +74,7 @@ function makeCallbacks(): AgentBoardRenderCallbacks {
     onAddWorkOrder: jest.fn(),
     onRunNextReady: jest.fn(),
     onReopen: jest.fn(),
+    onMoveToInbox: jest.fn(),
     onContextMenu: jest.fn(),
     onReply: jest.fn(),
     onApprove: jest.fn(),
@@ -285,19 +287,30 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
 });
 
 describe('AgentBoardRenderer — queue toolbar', () => {
+  function renderQueue(host: HTMLElement, overrides: Partial<QueueToolbarState> = {}): void {
+    new AgentBoardRenderer().render(
+      host,
+      {
+        ...makeState({ ready: [makeTask('r', 'ready')] }),
+        queue: {
+          paused: false,
+          halted: false,
+          slotOccupied: 0,
+          slotCapacity: 1,
+          consecutiveFailures: 0,
+          onToggle: () => {},
+          ...overrides,
+        },
+      },
+      makeCallbacks(),
+    );
+  }
+
   it('renders the toolbar toggle in running state by default', () => {
     const host = document.createElement('div');
-    const renderer = new AgentBoardRenderer();
-    renderer.renderToolbar(host, {
-      paused: false,
-      halted: false,
-      slotOccupied: 0,
-      slotCapacity: 1,
-      consecutiveFailures: 0,
-      onToggle: () => {},
-    });
+    renderQueue(host);
     const toggle = host.querySelector('.claudian-agent-board-toolbar--queue-toggle');
-    expect(toggle?.textContent).toContain('Queue');
+    expect(toggle?.textContent).toBe('Pause queue');
     expect(
       host.querySelector('.claudian-agent-board-toolbar--queue-active-count')?.textContent,
     ).toContain('0/1');
@@ -305,62 +318,112 @@ describe('AgentBoardRenderer — queue toolbar', () => {
 
   it('renders failure counter when > 0', () => {
     const host = document.createElement('div');
-    const renderer = new AgentBoardRenderer();
-    renderer.renderToolbar(host, {
-      paused: false,
-      halted: false,
-      slotOccupied: 0,
-      slotCapacity: 1,
-      consecutiveFailures: 2,
-      onToggle: () => {},
-    });
+    renderQueue(host, { consecutiveFailures: 2 });
     expect(
       host.querySelector('.claudian-agent-board-toolbar--queue-failure-count')?.textContent,
     ).toContain('2');
   });
 
+  it('surfaces the halt reason inline and flips the toggle to run', () => {
+    const host = document.createElement('div');
+    renderQueue(host, { halted: true, haltReason: '3 consecutive failures · last: boom' });
+    const toggle = host.querySelector('.claudian-agent-board-toolbar--queue-toggle');
+    expect(toggle?.textContent).toBe('Run queue');
+    expect(toggle?.classList.contains('claudian-agent-board-toolbar--queue-toggle-halted')).toBe(true);
+    expect(
+      host.querySelector('.claudian-agent-board-toolbar--queue-failure-count')?.textContent,
+    ).toContain('boom');
+  });
+
   it('invokes the toggle callback on click', () => {
     const host = document.createElement('div');
-    const renderer = new AgentBoardRenderer();
     let clicked = false;
-    renderer.renderToolbar(host, {
-      paused: false,
-      halted: false,
-      slotOccupied: 0,
-      slotCapacity: 1,
-      consecutiveFailures: 0,
-      onToggle: () => {
-        clicked = true;
-      },
-    });
+    renderQueue(host, { onToggle: () => { clicked = true; } });
     (host.querySelector('.claudian-agent-board-toolbar--queue-toggle') as HTMLButtonElement)?.click();
     expect(clicked).toBe(true);
   });
 });
 
-describe('AgentBoardRenderer — halt banner', () => {
-  it('renders the banner with reason and resume action when halted', () => {
-    const host = document.createElement('div');
+
+describe('AgentBoardRenderer — merged board toolbar', () => {
+  it('renders board actions and queue information in one toolbar row', () => {
     const renderer = new AgentBoardRenderer();
-    let resumed = false;
-    renderer.renderHaltBanner(host, {
-      reason: '3 consecutive failures · last: boom',
-      onResume: () => {
-        resumed = true;
+    const host = document.createElement('div');
+    const state = makeState({ ready: [makeTask('r', 'ready')] });
+
+    renderer.render(host, {
+      ...state,
+      queue: {
+        paused: true,
+        halted: false,
+        slotOccupied: 0,
+        slotCapacity: 1,
+        consecutiveFailures: 0,
+        onToggle: () => {},
       },
-      onOpenFailed: () => {},
-    });
-    expect(host.querySelector('.claudian-agent-board-banner-halt')?.textContent).toContain('halted');
-    expect(host.textContent).toContain('boom');
-    (host.querySelector('.claudian-agent-board-banner-halt--resume') as HTMLButtonElement)?.click();
-    expect(resumed).toBe(true);
+    }, makeCallbacks());
+
+    const toolbars = host.querySelectorAll('.claudian-agent-board-toolbar');
+    expect(toolbars).toHaveLength(1);
+    expect(toolbars[0].querySelector('.claudian-agent-board-toolbar-actions')?.textContent).toContain('Add work order');
+    expect(toolbars[0].querySelector('.claudian-agent-board-toolbar-actions')?.textContent).toContain('Run queue');
+    expect(toolbars[0].querySelector('.claudian-agent-board-toolbar-info')?.textContent).toContain('Chat tabs');
+    expect(host.querySelector('.claudian-agent-board-header')).toBeNull();
+  });
+});
+
+function buttonTexts(host: HTMLElement): string[] {
+  return Array.from(host.querySelectorAll('button')).map((btn) => btn.textContent ?? '');
+}
+
+describe('AgentBoardRenderer — recovery actions', () => {
+  it('renders Back to inbox on ready cards', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
+    expect(buttonTexts(host)).toContain('Back to inbox');
   });
 
-  it('renders nothing when reason is null', () => {
-    const host = document.createElement('div');
+  it('renders Retry and Back to inbox on failed cards', () => {
     const renderer = new AgentBoardRenderer();
-    renderer.renderHaltBanner(host, { reason: null, onResume: () => {}, onOpenFailed: () => {} });
-    expect(host.querySelector('.claudian-agent-board-banner-halt')).toBeNull();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ failed: [makeTask('f', 'failed')] }), makeCallbacks());
+    expect(buttonTexts(host)).toEqual(expect.arrayContaining(['Retry', 'Back to inbox']));
+  });
+
+  it('invokes onMoveToInbox from Back to inbox', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    const task = makeTask('r', 'ready');
+    renderer.render(host, makeState({ ready: [task] }), callbacks);
+    const button = Array.from(host.querySelectorAll('button')).find((btn) => btn.textContent === 'Back to inbox');
+    button?.click();
+    expect(callbacks.onMoveToInbox).toHaveBeenCalledWith(task);
+  });
+
+  // A live paused run (needs_input / needs_approval) still holds its queue slot
+  // via the pending coordinator.run(); a bare status transition from a generic
+  // recovery button would strand that session and leak the slot. Those states are
+  // driven solely by their reply surface (Send / Approve / Reject / Stop).
+  it.each<TaskStatus>(['needs_input', 'needs_approval'])(
+    'omits generic recovery actions for live %s cards but keeps the reply surface',
+    (status) => {
+      const renderer = new AgentBoardRenderer();
+      const host = document.createElement('div');
+      renderer.render(host, makeState({ live: [makeTask('p', status)] }), makeCallbacks());
+      const texts = buttonTexts(host);
+      expect(texts).not.toContain('Back to inbox');
+      expect(texts).not.toContain('Resume');
+      expect(host.querySelector('.claudian-agent-board-card-reply')).not.toBeNull();
+    },
+  );
+
+  it('still offers Back to inbox once a stopped run settles to canceled', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ canceled: [makeTask('c', 'canceled')] }), makeCallbacks());
+    expect(buttonTexts(host)).toContain('Back to inbox');
   });
 });
 

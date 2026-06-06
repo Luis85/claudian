@@ -29,6 +29,7 @@ export interface AgentBoardRenderCallbacks {
   onRework(task: TaskSpec): void;
   onMarkReady(task: TaskSpec): void;
   onReopen(task: TaskSpec): void;
+  onMoveToInbox(task: TaskSpec): void;
   onAddWorkOrder(): void;
   onRunNextReady(): void;
   /** Queue skip reason for a card, or null when the card is not skipped. */
@@ -50,6 +51,7 @@ export interface AgentBoardRenderState {
   layout: ResolvedBoardLayout;
   invalidNotes: InvalidTaskNote[];
   slots: { used: number; max: number };
+  queue?: QueueToolbarState;
 }
 
 interface CardRefs {
@@ -69,13 +71,8 @@ export interface QueueToolbarState {
   slotOccupied: number;
   slotCapacity: number;
   consecutiveFailures: number;
+  haltReason?: string | null;
   onToggle: () => void;
-}
-
-export interface HaltBannerState {
-  reason: string | null;
-  onResume: () => void;
-  onOpenFailed: () => void;
 }
 
 export interface SkipChipState {
@@ -93,23 +90,10 @@ export class AgentBoardRenderer {
     container.empty();
     const root = container.createDiv({ cls: 'claudian-agent-board' });
 
-    const header = root.createDiv({ cls: 'claudian-agent-board-header' });
-    const addButton = header.createEl('button', { cls: 'mod-cta', text: 'Add work order' });
-    addButton.addEventListener('click', () => callbacks.onAddWorkOrder());
-
     const hasRunnable = state.layout.lanes.some((lane) =>
       lane.tasks.some((task) => isRunnableTaskStatus(task.frontmatter.status)),
     );
-    if (hasRunnable) {
-      const runNextBtn = header.createEl('button', { text: 'Run next ready' });
-      runNextBtn.addEventListener('click', () => callbacks.onRunNextReady());
-    }
-
-    const free = Math.max(0, state.slots.max - state.slots.used);
-    const slotsEl = header.createSpan({
-      cls: 'claudian-agent-board-slots',
-      text: `Chat tabs ${state.slots.used}/${state.slots.max} · ${free} free`,
-    });
+    const { free, slotsEl } = this.renderBoardToolbar(root, state, callbacks, hasRunnable);
     if (free <= 0) {
       slotsEl.addClass('claudian-agent-board-slots--full');
       root.createDiv({
@@ -161,51 +145,64 @@ export class AgentBoardRenderer {
     this.applyLiveStrip(refs.liveStripMeta, refs.liveStripLedger, payload);
   }
 
-  // Queue surfaces render into their own hosts so AgentBoardView can mount and
-  // refresh them independently of the lane grid above.
-  renderToolbar(host: HTMLElement, state: QueueToolbarState): void {
-    host.empty();
-    const bar = host.createDiv({ cls: 'claudian-agent-board-toolbar' });
+  private renderBoardToolbar(
+    root: HTMLElement,
+    state: AgentBoardRenderState,
+    callbacks: AgentBoardRenderCallbacks,
+    hasRunnable: boolean,
+  ): { free: number; slotsEl: HTMLElement } {
+    const bar = root.createDiv({ cls: 'claudian-agent-board-toolbar' });
+    const actions = bar.createDiv({ cls: 'claudian-agent-board-toolbar-actions' });
+    const info = bar.createDiv({ cls: 'claudian-agent-board-toolbar-info' });
 
-    const toggle = bar.createEl('button', {
+    const addButton = actions.createEl('button', { cls: 'mod-cta', text: 'Add work order' });
+    addButton.addEventListener('click', () => callbacks.onAddWorkOrder());
+
+    if (hasRunnable) {
+      const runNextBtn = actions.createEl('button', { text: 'Run next ready' });
+      runNextBtn.addEventListener('click', () => callbacks.onRunNextReady());
+    }
+
+    if (state.queue) this.renderQueueToggle(actions, state.queue);
+    if (state.queue) this.renderQueueInfo(info, state.queue);
+
+    const free = Math.max(0, state.slots.max - state.slots.used);
+    const slotsEl = info.createSpan({
+      cls: 'claudian-agent-board-slots',
+      text: `Chat tabs ${state.slots.used}/${state.slots.max} · ${free} free`,
+    });
+    return { free, slotsEl };
+  }
+
+  private renderQueueToggle(parent: HTMLElement, state: QueueToolbarState): void {
+    const toggle = parent.createEl('button', {
       cls: 'claudian-agent-board-toolbar--queue-toggle',
-      text: state.paused || state.halted ? '▶ Queue' : '⏸ Queue',
+      text: state.paused || state.halted ? 'Run queue' : 'Pause queue',
     });
     if (state.halted) toggle.addClass('claudian-agent-board-toolbar--queue-toggle-halted');
     toggle.addEventListener('click', () => state.onToggle());
+  }
 
-    bar.createSpan({
+  private renderQueueInfo(parent: HTMLElement, state: QueueToolbarState): void {
+    parent.createSpan({
       cls: 'claudian-agent-board-toolbar--queue-active-count',
       text: `${state.slotOccupied}/${state.slotCapacity} active`,
     });
 
-    if (state.consecutiveFailures > 0) {
-      bar.createSpan({
+    if (state.halted && state.haltReason) {
+      parent.createSpan({
         cls: 'claudian-agent-board-toolbar--queue-failure-count',
-        text: `· ${state.consecutiveFailures} failures`,
+        text: `Queue halted: ${state.haltReason}`,
+      });
+      return;
+    }
+
+    if (state.consecutiveFailures > 0) {
+      parent.createSpan({
+        cls: 'claudian-agent-board-toolbar--queue-failure-count',
+        text: `${state.consecutiveFailures} failures`,
       });
     }
-  }
-
-  renderHaltBanner(host: HTMLElement, state: HaltBannerState): void {
-    host.empty();
-    if (!state.reason) return;
-    const banner = host.createDiv({ cls: 'claudian-agent-board-banner-halt' });
-    banner.createDiv({
-      cls: 'claudian-agent-board-banner-halt-title',
-      text: `⚠ Queue halted: ${state.reason}`,
-    });
-    const actions = banner.createDiv({ cls: 'claudian-agent-board-banner-halt--actions' });
-    const resume = actions.createEl('button', {
-      cls: 'claudian-agent-board-banner-halt--resume',
-      text: 'Resume queue',
-    });
-    resume.addEventListener('click', () => state.onResume());
-    const open = actions.createEl('button', {
-      cls: 'claudian-agent-board-banner-halt--open-failed',
-      text: 'Open failed cards',
-    });
-    open.addEventListener('click', () => state.onOpenFailed());
   }
 
   renderSkipChip(host: HTMLElement, state: SkipChipState): void {
@@ -321,6 +318,9 @@ export class AgentBoardRenderer {
     if (status === 'ready' || status === 'needs_fix') {
       this.renderAction(actions, 'Run', () => this.callbacks?.onRun(task));
     }
+    if (status === 'failed' || status === 'canceled') {
+      this.renderAction(actions, 'Retry', () => this.callbacks?.onMarkReady(task));
+    }
     if (status === 'running') {
       this.renderAction(actions, 'Stop', () => this.callbacks?.onStop(task));
     }
@@ -334,6 +334,13 @@ export class AgentBoardRenderer {
     if (status === 'needs_handoff') {
       this.renderAction(actions, 'Review', () => this.callbacks?.onSendToReview?.(task));
       this.renderAction(actions, 'Mark failed', () => this.callbacks?.onMarkFailed?.(task));
+    }
+    // Generic recovery is for non-live cards only. A live status (running /
+    // needs_input / needs_approval) is driven by its reply surface (Send / Approve
+    // / Reject / Stop); a bare status transition here would strand that paused
+    // RunSession and leak the queue slot it still holds, so skip those.
+    if (status !== 'inbox' && status !== 'done' && !LIVE_STATUSES.has(status)) {
+      this.renderAction(actions, 'Back to inbox', () => this.callbacks?.onMoveToInbox(task));
     }
   }
 

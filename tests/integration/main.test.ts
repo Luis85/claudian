@@ -116,7 +116,7 @@ describe('ClaudianPlugin', () => {
         on: jest.fn().mockReturnValue({}),
         setActiveLeaf: jest.fn(),
         revealLeaf: jest.fn(),
-        onLayoutReady: jest.fn((cb: () => void) => cb()),
+        onLayoutReady: jest.fn(),
       },
     };
 
@@ -129,6 +129,10 @@ describe('ClaudianPlugin', () => {
     // Create plugin instance with mocked app
     plugin = new ClaudianPlugin(mockApp, mockManifest);
     (plugin.loadData as jest.Mock).mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    plugin.onunload();
   });
 
   describe('onload', () => {

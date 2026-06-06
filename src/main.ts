@@ -99,6 +99,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   public vaultSkillAggregator: VaultSkillAggregator | null = null;
   public usageTracker: UsageTracker | null = null;
   private lifecycle!: PluginLifecycle;
+  private unloaded = true;
   private viewActivator!: PluginViewActivator;
   private envApply!: EnvironmentApplyService;
   /** Plugin-level concurrency gate shared by every Agent Board queue runner. */
@@ -107,14 +108,16 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
    * panes observe the same active runs and never double-launch the same card. */
   readonly taskActiveRuns = new Set<string>();
   /** The queue's single global control state (pause/halt/failure-count), shared
-   * by every board's runner. Pause is restored from config on first board mount. */
-  readonly queueControl: QueueControlState = createQueueControlState();
+   * by every board's runner. It starts paused on every plugin load; the user
+   * must explicitly run the queue for this session. */
+  readonly queueControl: QueueControlState = createQueueControlState(true);
   /** Chat tabs queue runs have committed to opening but not yet created. Shared
    * so concurrent Agent Board panes can't double-book the same free tabs. */
   readonly chatTabReservations = new ChatTabReservations();
   lastKnownTabManagerState: AppTabManagerState | null = null;
 
   async onload() {
+    this.unloaded = false;
     await this.loadSettings();
 
     this.logger.setEnabled(this.settings.loggingEnabled ?? false);
@@ -291,8 +294,9 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.logger.scope('onload').error('provider workspace init failed', error);
       return;
     }
+    if (this.unloaded) return;
     // Skills tab cache: hydrate persisted index, then pre-warm in background.
-    this.vaultSkillAggregator = new VaultSkillAggregator(
+    const aggregator = new VaultSkillAggregator(
       () => buildProviderRecords(this),
       {
         logger: this.logger,
@@ -301,8 +305,13 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
         ttlMs: 60_000,
       },
     );
-    await this.vaultSkillAggregator.hydrate();
-    void this.vaultSkillAggregator.listAllStreaming(() => {});
+    this.vaultSkillAggregator = aggregator;
+    await aggregator.hydrate();
+    if (this.unloaded || this.vaultSkillAggregator !== aggregator) {
+      aggregator.dispose();
+      return;
+    }
+    void aggregator.listAllStreaming(() => {});
     // Restored views constructed before provider services were ready may have
     // mounted the empty-state placeholder; reprobe so they can promote to the
     // full tab UI now that providers are available.
@@ -316,6 +325,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   }
 
   onunload(): void {
+    this.unloaded = true;
     if (this.usageTracker) {
       void this.usageTracker.flush();
       this.usageTracker.dispose();
@@ -329,8 +339,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     this.commitOnAcceptCoordinator = null;
     this.gitStatusWatcher?.stop();
     this.gitStatusWatcher = null;
-    this.lifecycle.shutdownActiveRuntimes();
-    void this.lifecycle.persistOpenTabStates();
+    this.lifecycle?.shutdownActiveRuntimes();
+    void this.lifecycle?.persistOpenTabStates();
   }
 
 

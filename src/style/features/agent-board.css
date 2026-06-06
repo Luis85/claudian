@@ -308,16 +308,7 @@
   font-size: var(--font-ui-smaller);
 }
 
-.claudian-agent-board-header {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
-}
-
 .claudian-agent-board-slots {
-  margin-left: auto;
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);
 }
@@ -400,9 +391,23 @@
 .claudian-agent-board-toolbar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  padding: 6px 10px;
+  padding: 6px 0 10px;
   border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.claudian-agent-board-toolbar-actions,
+.claudian-agent-board-toolbar-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.claudian-agent-board-toolbar-info {
+  justify-content: flex-end;
+  margin-left: auto;
 }
 
 .claudian-agent-board-toolbar--queue-toggle {
@@ -431,32 +436,6 @@
 
 .claudian-agent-board-toolbar--queue-failure-count {
   color: var(--text-error);
-}
-
-/* Queue halt banner */
-.claudian-agent-board-banner-halt {
-  background-color: var(--background-modifier-error);
-  border: 1px solid var(--text-error);
-  border-radius: 4px;
-  padding: 8px 12px;
-  margin: 8px 10px;
-  color: var(--text-normal);
-}
-
-.claudian-agent-board-banner-halt--actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.claudian-agent-board-banner-halt--resume,
-.claudian-agent-board-banner-halt--open-failed {
-  background-color: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 3px;
-  padding: 3px 8px;
-  cursor: pointer;
-  color: var(--text-normal);
 }
 
 /* Per-card queue skip chip */

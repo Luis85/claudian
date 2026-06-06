@@ -54,6 +54,24 @@ describe('TaskStateMachine', () => {
     expect(() => assertTaskTransition(from, to)).not.toThrow();
   });
 
+
+  it.each<[TaskStatus, TaskStatus]>([
+    ['ready', 'inbox'],
+    ['needs_input', 'ready'],
+    ['needs_input', 'inbox'],
+    ['needs_approval', 'ready'],
+    ['needs_approval', 'inbox'],
+    ['review', 'inbox'],
+    ['needs_fix', 'inbox'],
+    ['failed', 'inbox'],
+    ['canceled', 'ready'],
+    ['canceled', 'inbox'],
+    ['needs_handoff', 'inbox'],
+  ])('allows recovery transition %s -> %s', (from, to) => {
+    expect(canTransitionTaskStatus(from, to)).toBe(true);
+    expect(() => assertTaskTransition(from, to)).not.toThrow();
+  });
+
   it.each<[TaskStatus, TaskStatus]>([
     ['ready', 'review'],
     ['inbox', 'running'],
@@ -61,12 +79,10 @@ describe('TaskStateMachine', () => {
     ['done', 'ready'],
     ['done', 'needs_fix'],
     ['canceled', 'running'],
-    ['canceled', 'inbox'],
     ['failed', 'review'],
     ['ready', 'needs_handoff'],
     ['done', 'needs_handoff'],
     ['needs_handoff', 'running'],
-    ['needs_handoff', 'inbox'],
   ])('rejects %s -> %s', (from, to) => {
     expect(canTransitionTaskStatus(from, to)).toBe(false);
     expect(() => assertTaskTransition(from, to)).toThrow(`Illegal task transition: ${from} -> ${to}`);
