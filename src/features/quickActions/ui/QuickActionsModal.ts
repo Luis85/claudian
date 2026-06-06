@@ -1,13 +1,19 @@
 import type { App } from 'obsidian';
 import { Modal, Notice, setIcon } from 'obsidian';
 
+import type { EventBus } from '../../../core/events/EventBus';
+import type { UsageEventMap } from '../../../core/usage/events';
+import type { UsageRecord } from '../../../core/usage/types';
 import { t } from '../../../i18n/i18n';
 import type { QuickActionStorage } from '../QuickActionStorage';
 import { assignNextFavoriteRank } from '../QuickActionStorage';
+import { quickActionStemFromPath } from '../runQuickActionForFile';
 import type { SkillTabEntry, VaultSkillSource } from '../skills/types';
 import type { QuickAction } from '../types';
+import { formatUsageBadge, loadBadgeI18n } from './formatUsageBadge';
 import { QuickActionEditorModal } from './QuickActionEditorModal';
 import { SkillsTabRenderer } from './SkillsTabRenderer';
+import { UsageStatsTab } from './UsageStatsTab';
 
 export interface QuickActionsModalCallbacks {
   onRun: (action: QuickAction) => void;
@@ -21,9 +27,12 @@ export interface QuickActionsModalCallbacks {
   storage: QuickActionStorage;
   aggregator: VaultSkillSource;
   onFavoritesChanged?: () => void;
+  usageTracker: { getAll(): ReadonlyMap<string, UsageRecord> } | null;
+  events: EventBus<UsageEventMap>;
+  now?: () => number;
 }
 
-type ActiveTab = 'quickActions' | 'skills';
+type ActiveTab = 'quickActions' | 'skills' | 'stats';
 
 export class QuickActionsModal extends Modal {
   private callbacks: QuickActionsModalCallbacks;
@@ -37,10 +46,17 @@ export class QuickActionsModal extends Modal {
   private searchInputEl: HTMLInputElement | null = null;
   private listEl: HTMLElement | null = null;
   private actions: QuickAction[] = [];
+  // Once-set flag: did this modal ever finish loading `actions` from disk?
+  // Drives the Stats-tab warm-up so opening Stats before the Quick Actions
+  // tab has rendered does not show an empty leaderboard.
+  private actionsLoaded = false;
   private filter = '';
 
   // Skills tab — delegated to a dedicated renderer.
   private skillsRenderer: SkillsTabRenderer;
+
+  // Stats tab — null when no usageTracker was provided.
+  private statsTab: UsageStatsTab | null = null;
 
   // Serializes favorite toggles across all rows. Without this, two rapid
   // clicks on different stars would both read a stale `this.actions` snapshot
@@ -55,7 +71,19 @@ export class QuickActionsModal extends Modal {
       callbacks.onRunSkill,
       callbacks.onEditSkill,
       () => this.close(),
+      callbacks.usageTracker,
+      callbacks.now ?? (() => Date.now()),
     );
+    if (callbacks.usageTracker) {
+      this.statsTab = new UsageStatsTab({
+        tracker: callbacks.usageTracker,
+        events: callbacks.events,
+        quickActions: () => this.actions,
+        skills: () => callbacks.aggregator.listCachedNow(),
+        now: callbacks.now ?? (() => Date.now()),
+        onClearAll: () => this.confirmClearAll(),
+      });
+    }
   }
 
   onOpen(): void {
@@ -77,6 +105,9 @@ export class QuickActionsModal extends Modal {
       { key: 'quickActions', label: t('quickActions.modal.tabs.quickActions') },
       { key: 'skills', label: t('quickActions.modal.tabs.skills') },
     ];
+    if (this.statsTab) {
+      entries.push({ key: 'stats', label: t('quickActions.usage.tabLabel') });
+    }
 
     for (const entry of entries) {
       const tab = this.tabStripEl.createEl('button', {
@@ -104,6 +135,22 @@ export class QuickActionsModal extends Modal {
     this.searchInputEl = null;
     this.listEl = null;
     this.filter = '';
+
+    if (this.activeTab === 'stats' && this.statsTab) {
+      // Stats tab reads from two synchronous suppliers: `() => this.actions`
+      // and `aggregator.listCachedNow()`. On a cold open both can be empty
+      // — `this.actions` is populated by the fire-and-forget refreshList()
+      // kicked off when the Quick Actions tab renders, and the aggregator
+      // cache is cold until the first listAll(). Without this warm-up step
+      // UsageStatsTab.collectLiveRows() treats every persisted counter as
+      // an orphan and paints an empty leaderboard.
+      await Promise.all([
+        this.actionsLoaded ? Promise.resolve() : this.loadActionsFromStorage(),
+        this.callbacks.aggregator.listAll(),
+      ]);
+      this.statsTab.render(this.bodyEl);
+      return;
+    }
 
     let inputToFocus: HTMLInputElement | null;
     if (this.activeTab === 'quickActions') {
@@ -193,9 +240,14 @@ export class QuickActionsModal extends Modal {
     if (!this.listEl || !this.introEl) {
       return;
     }
-    this.actions = await this.callbacks.storage.loadAll();
+    await this.loadActionsFromStorage();
     this.renderIntro();
     this.renderList();
+  }
+
+  private async loadActionsFromStorage(): Promise<void> {
+    this.actions = await this.callbacks.storage.loadAll();
+    this.actionsLoaded = true;
   }
 
   private renderList(): void {
@@ -304,6 +356,18 @@ export class QuickActionsModal extends Modal {
 
     const textCol = main.createDiv({ cls: 'claudian-quick-action-text' });
     textCol.createEl('strong', { text: action.name });
+    if (this.callbacks.usageTracker) {
+      const stem = action.filePath ? quickActionStemFromPath(action.filePath) : action.name;
+      const record = this.callbacks.usageTracker.getAll().get(`quickAction:_:${stem}`) ?? null;
+      textCol.createSpan({
+        cls: 'claudian-quick-action-usage-badge',
+        text: formatUsageBadge(
+          record,
+          this.callbacks.now?.() ?? Date.now(),
+          loadBadgeI18n(),
+        ),
+      });
+    }
     if (action.description !== action.name) {
       textCol.createDiv({
         cls: 'claudian-quick-action-desc',
@@ -435,5 +499,31 @@ export class QuickActionsModal extends Modal {
     } finally {
       button.disabled = false;
     }
+  }
+
+  private confirmClearAll(): void {
+    const modal = new Modal(this.app);
+    modal.titleEl.setText(t('quickActions.usage.clearConfirm.title'));
+    modal.contentEl.createEl('p', { text: t('quickActions.usage.clearConfirm.body') });
+    const footer = modal.contentEl.createDiv({ cls: 'modal-button-container' });
+    footer.createEl('button', { text: t('quickActions.usage.clearConfirm.cancel') })
+      .addEventListener('click', () => modal.close());
+    const confirm = footer.createEl('button', {
+      text: t('quickActions.usage.clearConfirm.confirm'),
+      cls: 'mod-warning',
+    });
+    confirm.addEventListener('click', () => {
+      this.callbacks.events.emit('usage.cleared');
+      modal.close();
+      if (this.activeTab === 'stats') {
+        void this.renderActiveTab();
+      }
+    });
+    modal.open();
+  }
+
+  onClose(): void {
+    this.statsTab?.dispose();
+    // Modal base class has no onClose to call through in Obsidian's public API.
   }
 }

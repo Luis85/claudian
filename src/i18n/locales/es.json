@@ -596,6 +596,46 @@
     "contextMenu": {
       "title": "Open Quick Actions",
       "tabLimitReached": "Cannot open quick action: tab limit reached. Close a tab first."
+    },
+    "usage": {
+      "tabLabel": "Estadísticas",
+      "topUsed": "Top 5 — Más usados",
+      "dropCandidates": "Candidatos a eliminar",
+      "all": "Todo",
+      "uses": "{count} usos",
+      "uses_one": "1 uso",
+      "uses_zero": "0 usos",
+      "lastUsed": {
+        "never": "nunca",
+        "today": "hoy",
+        "daysAgo": "hace {count} días",
+        "daysAgo_one": "hace 1 día"
+      },
+      "sort": {
+        "label": "Ordenar por",
+        "mostUsed": "Más usados",
+        "leastUsed": "Menos usados",
+        "longestUnused": "Más tiempo sin usar",
+        "recentlyUsed": "Usados recientemente"
+      },
+      "column": {
+        "type": "Tipo",
+        "name": "Nombre",
+        "count": "Cantidad",
+        "lastUsed": "Último uso"
+      },
+      "type": {
+        "quickAction": "Acción rápida",
+        "skill": "Skill"
+      },
+      "empty": "Aún no hay uso registrado. Ejecuta una acción rápida o skill para iniciar la tabla.",
+      "clearAll": "Borrar todas las estadísticas",
+      "clearConfirm": {
+        "title": "¿Borrar todas las estadísticas de uso?",
+        "body": "Esto no se puede deshacer.",
+        "confirm": "Borrar",
+        "cancel": "Cancelar"
+      }
     }
   },
   "security": {

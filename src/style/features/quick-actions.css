@@ -322,3 +322,128 @@
 .claudian-quick-actions-search-refresh:hover {
   color: var(--text-normal);
 }
+
+/* Inline usage badges — Quick Actions + Skills rows */
+.claudian-quick-action-usage-badge,
+.claudian-skill-usage-badge {
+  display: inline-block;
+  margin-left: 0.5em;
+  padding: 0.05em 0.45em;
+  border-radius: 8px;
+  background: var(--background-modifier-border);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: normal;
+  letter-spacing: 0;
+  text-transform: none;
+  vertical-align: baseline;
+}
+
+/* Stats tab */
+.claudian-usage-empty {
+  padding: 1em;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.claudian-usage-section {
+  margin-bottom: 1em;
+}
+
+.claudian-usage-section h3 {
+  margin: 0 0 0.4em;
+  font-size: var(--font-ui-small);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.claudian-usage-all-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5em;
+  margin-bottom: 0.4em;
+}
+
+.claudian-usage-all-header h3 {
+  margin: 0;
+}
+
+.claudian-usage-sort {
+  padding: 0.25em 0.5em;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: var(--font-ui-smaller);
+}
+
+.claudian-usage-top-row,
+.claudian-usage-drop-row,
+.claudian-usage-all-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6em;
+  padding: 0.4em 0.6em;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  margin-bottom: 0.3em;
+}
+
+.claudian-usage-drop-row {
+  background: var(--background-secondary);
+  border-style: dashed;
+}
+
+.claudian-usage-row-type {
+  flex-shrink: 0;
+  padding: 0.05em 0.45em;
+  border-radius: 8px;
+  background: var(--background-modifier-border);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.claudian-usage-row-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-normal);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.claudian-usage-row-badge {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.claudian-usage-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1em;
+  padding-top: 0.75em;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.claudian-usage-clear-all {
+  padding: 0.35em 0.8em;
+  border: 1px solid var(--background-modifier-error, var(--background-modifier-border));
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-error, var(--text-muted));
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.claudian-usage-clear-all:hover {
+  background: var(--background-modifier-error-hover, var(--background-modifier-hover));
+  color: var(--text-error, var(--text-normal));
+}

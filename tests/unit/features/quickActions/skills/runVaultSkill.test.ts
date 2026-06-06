@@ -1,6 +1,8 @@
 import { Notice, TFile, TFolder } from 'obsidian';
 
+import { EventBus } from '@/core/events/EventBus';
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
+import type { UsageEventMap } from '@/core/usage/events';
 import { runVaultSkill } from '@/features/quickActions/skills/runVaultSkill';
 import type { SkillTabEntry } from '@/features/quickActions/skills/types';
 
@@ -80,6 +82,7 @@ function makePlugin(opts: {
     plugin: {
       app: {},
       settings: {},
+      events: { emit: jest.fn() },
       getView: jest.fn(() => view),
       activateView: jest.fn().mockResolvedValue(undefined),
     },
@@ -256,6 +259,8 @@ describe('runVaultSkill', () => {
     const view = { getTabManager: jest.fn(() => tabManager) };
     const plugin = {
       app: {},
+      settings: {},
+      events: { emit: jest.fn() },
       getView: jest.fn().mockReturnValueOnce(null).mockReturnValueOnce(view),
       activateView: jest.fn().mockResolvedValue(undefined),
     };
@@ -264,5 +269,52 @@ describe('runVaultSkill', () => {
 
     expect(plugin.activateView).toHaveBeenCalledTimes(1);
     expect(activeTab.controllers.inputController.sendMessage).toHaveBeenCalled();
+  });
+});
+
+describe('runVaultSkill usage emission', () => {
+  it('emits usage.recorded with skill name + providerId after sendMessage resolves', async () => {
+    const events = new EventBus<UsageEventMap>();
+    const recorded: Array<UsageEventMap['usage.recorded']> = [];
+    events.on('usage.recorded', (e) => recorded.push(e));
+
+    const activeTab = makeTab({ providerId: 'claude', lifecycleState: 'blank' });
+    const { plugin } = makePlugin({ activeTab });
+    (plugin as any).events = events;
+
+    await runVaultSkill(plugin as any, makeEntry({ name: 'deep-research', providerId: 'claude' }), null);
+
+    expect(recorded).toEqual([
+      { kind: 'skill', name: 'deep-research', providerId: 'claude' },
+    ]);
+  });
+
+  it('does NOT emit when provider is disabled', async () => {
+    (ProviderRegistry.isEnabled as jest.Mock).mockReturnValue(false);
+    const events = new EventBus<UsageEventMap>();
+    const recorded: Array<UsageEventMap['usage.recorded']> = [];
+    events.on('usage.recorded', (e) => recorded.push(e));
+
+    const { plugin } = makePlugin();
+    (plugin as any).events = events;
+
+    await runVaultSkill(plugin as any, makeEntry({ name: 'x', providerId: 'claude' }), null);
+    expect(recorded).toEqual([]);
+  });
+
+  it('does NOT emit if sendMessage rejects', async () => {
+    const events = new EventBus<UsageEventMap>();
+    const recorded: Array<UsageEventMap['usage.recorded']> = [];
+    events.on('usage.recorded', (e) => recorded.push(e));
+
+    const activeTab = makeTab({ providerId: 'claude', lifecycleState: 'blank' });
+    activeTab.controllers.inputController.sendMessage = jest.fn().mockRejectedValue(new Error('boom'));
+    const { plugin } = makePlugin({ activeTab });
+    (plugin as any).events = events;
+
+    await expect(
+      runVaultSkill(plugin as any, makeEntry({ name: 'x', providerId: 'claude' }), null),
+    ).rejects.toThrow('boom');
+    expect(recorded).toEqual([]);
   });
 });

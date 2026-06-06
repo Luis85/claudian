@@ -1,5 +1,7 @@
 import type { TAbstractFile } from 'obsidian';
 
+import type { EventBus } from '@/core/events/EventBus';
+import type { UsageEventMap } from '@/core/usage/events';
 import type ClaudianPlugin from '@/main';
 import { openClaudianProviderSettings } from '@/utils/obsidianPrivateApi';
 
@@ -68,5 +70,9 @@ export function openQuickActionsModal(
     },
     onFavoritesChanged:
       options.onFavoritesChanged ?? (() => plugin.quickActionFavoritesCache?.refresh()),
+    usageTracker: plugin.usageTracker,
+    // ClaudianEventMap is a superset of UsageEventMap; cast needed because
+    // EventBus<M> is invariant on M.
+    events: plugin.events as unknown as EventBus<UsageEventMap>,
   }).open();
 }

@@ -52,6 +52,9 @@ import {
 } from './core/types';
 import type { PluginContext } from './core/types/PluginContext';
 import type { EnvironmentScope, SecretEnvVarRef } from './core/types/settings';
+import type { UsageEventMap } from './core/usage/events';
+import { UsageStorage } from './core/usage/UsageStorage';
+import { UsageTracker } from './core/usage/UsageTracker';
 import { ClaudianView } from './features/chat/ClaudianView';
 import { sendFeedbackPrompt } from './features/chat/feedback/sendFeedbackPrompt';
 import { isClaudianView } from './features/chat/isClaudianView';
@@ -94,6 +97,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   public quickActionStorage!: QuickActionStorage;
   public quickActionFavoritesCache: QuickActionFavoritesCache | null = null;
   public vaultSkillAggregator: VaultSkillAggregator | null = null;
+  public usageTracker: UsageTracker | null = null;
   private lifecycle!: PluginLifecycle;
   private viewActivator!: PluginViewActivator;
   private envApply!: EnvironmentApplyService;
@@ -245,6 +249,24 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     );
     this.quickActionFavoritesCache.start();
 
+    // Usage tracker must subscribe to the bus BEFORE any entry point that
+    // can emit `usage.recorded` is registered. The file/folder context menu
+    // (`registerWorkspaceMenus`) is the earliest such entry point — if a
+    // user fires a quick action between onload and onLayoutReady, the bus
+    // would silently drop the event and the leaderboard would undercount.
+    // Hydration is awaited so the in-memory map reflects disk state before
+    // start() subscribes; without this ordering, an event that lands
+    // between subscribe and hydrate would be wiped by hydrate's clear().
+    const usageStorage = new UsageStorage(new VaultFileAdapter(this.app), this.logger);
+    this.usageTracker = new UsageTracker(
+      this.events as unknown as EventBus<UsageEventMap>,
+      usageStorage,
+      () => Date.now(),
+      this.logger,
+    );
+    await this.usageTracker.hydrate();
+    this.usageTracker.start();
+
     registerWorkspaceMenus(this);
 
 
@@ -294,6 +316,11 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   }
 
   onunload(): void {
+    if (this.usageTracker) {
+      void this.usageTracker.flush();
+      this.usageTracker.dispose();
+      this.usageTracker = null;
+    }
     this.vaultSkillAggregator?.dispose();
     this.vaultSkillAggregator = null;
     this.quickActionFavoritesCache?.dispose();

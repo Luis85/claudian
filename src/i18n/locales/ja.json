@@ -596,6 +596,46 @@
     "contextMenu": {
       "title": "Open Quick Actions",
       "tabLimitReached": "Cannot open quick action: tab limit reached. Close a tab first."
+    },
+    "usage": {
+      "tabLabel": "Stats",
+      "topUsed": "Top 5 — Most used",
+      "dropCandidates": "Drop candidates",
+      "all": "All",
+      "uses": "{count} uses",
+      "uses_one": "1 use",
+      "uses_zero": "0 uses",
+      "lastUsed": {
+        "never": "never",
+        "today": "today",
+        "daysAgo": "{count} days ago",
+        "daysAgo_one": "1 day ago"
+      },
+      "sort": {
+        "label": "Sort by",
+        "mostUsed": "Most used",
+        "leastUsed": "Least used",
+        "longestUnused": "Longest unused",
+        "recentlyUsed": "Recently used"
+      },
+      "column": {
+        "type": "Type",
+        "name": "Name",
+        "count": "Count",
+        "lastUsed": "Last used"
+      },
+      "type": {
+        "quickAction": "Quick action",
+        "skill": "Skill"
+      },
+      "empty": "No usage tracked yet. Run a quick-action or skill to start the leaderboard.",
+      "clearAll": "Clear all stats",
+      "clearConfirm": {
+        "title": "Clear all usage stats?",
+        "body": "This cannot be undone.",
+        "confirm": "Clear",
+        "cancel": "Cancel"
+      }
     }
   },
   "security": {

@@ -3,7 +3,9 @@ import { setIcon } from 'obsidian';
 import { t } from '@/i18n/i18n';
 
 import type { ProviderId } from '../../../core/providers/types';
+import type { UsageRecord } from '../../../core/usage/types';
 import type { SkillTabEntry, VaultSkillSource } from '../skills/types';
+import { formatUsageBadge, loadBadgeI18n } from './formatUsageBadge';
 
 const SKELETON_ROWS = 4;
 
@@ -18,6 +20,8 @@ export class SkillsTabRenderer {
     private onRunSkill: (entry: SkillTabEntry) => void,
     private onEditSkill: (entry: SkillTabEntry) => void,
     private close: () => void,
+    private usageTracker: { getAll(): ReadonlyMap<string, UsageRecord> } | null = null,
+    private now: () => number = () => Date.now(),
   ) {}
 
   async render(host: HTMLElement): Promise<HTMLInputElement | null> {
@@ -184,6 +188,14 @@ export class SkillsTabRenderer {
       textCol.createDiv({
         cls: 'claudian-quick-action-desc',
         text: skill.description,
+      });
+    }
+    if (this.usageTracker) {
+      const key = `skill:${skill.providerId}:${skill.name}`;
+      const record = this.usageTracker.getAll().get(key) ?? null;
+      textCol.createSpan({
+        cls: 'claudian-skill-usage-badge',
+        text: formatUsageBadge(record, this.now(), loadBadgeI18n()),
       });
     }
     if (!skill.providerEnabled) {

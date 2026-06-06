@@ -596,6 +596,46 @@
     "contextMenu": {
       "title": "Open Quick Actions",
       "tabLimitReached": "Cannot open quick action: tab limit reached. Close a tab first."
+    },
+    "usage": {
+      "tabLabel": "Statistiques",
+      "topUsed": "Top 5 — Les plus utilisés",
+      "dropCandidates": "Candidats à supprimer",
+      "all": "Tout",
+      "uses": "{count} utilisations",
+      "uses_one": "1 utilisation",
+      "uses_zero": "0 utilisation",
+      "lastUsed": {
+        "never": "jamais",
+        "today": "aujourd'hui",
+        "daysAgo": "il y a {count} jours",
+        "daysAgo_one": "il y a 1 jour"
+      },
+      "sort": {
+        "label": "Trier par",
+        "mostUsed": "Les plus utilisés",
+        "leastUsed": "Les moins utilisés",
+        "longestUnused": "Inutilisés depuis le plus longtemps",
+        "recentlyUsed": "Utilisés récemment"
+      },
+      "column": {
+        "type": "Type",
+        "name": "Nom",
+        "count": "Nombre",
+        "lastUsed": "Dernière utilisation"
+      },
+      "type": {
+        "quickAction": "Action rapide",
+        "skill": "Skill"
+      },
+      "empty": "Aucune utilisation enregistrée. Lancez une action rapide ou un skill pour démarrer le classement.",
+      "clearAll": "Effacer toutes les statistiques",
+      "clearConfirm": {
+        "title": "Effacer toutes les statistiques d'utilisation ?",
+        "body": "Cette action est irréversible.",
+        "confirm": "Effacer",
+        "cancel": "Annuler"
+      }
     }
   },
   "security": {
