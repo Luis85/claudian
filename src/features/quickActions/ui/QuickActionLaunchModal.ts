@@ -24,8 +24,8 @@ export interface QuickActionLaunchModalOptions {
   enabledProviders: QuickActionLaunchProvider[];
   resolveDefaultModelForProvider: (providerId: ProviderId) => string;
   fallbackNotice?: {
-    storedProviderId: ProviderId;
-    storedModel: string;
+    storedProviderLabel: string;
+    storedModelLabel: string;
   };
   onConfirm: (choice: { providerId: ProviderId; model: string }) => void;
 }
@@ -46,48 +46,73 @@ export class QuickActionLaunchModal extends Modal {
   }
 
   onOpen(): void {
+    this.modalEl?.addClass?.('claudian-qa-launch-modal');
     const root = this.contentEl;
     root.empty();
-    root.addClass('claudian-qa-launch-modal');
 
+    // Register Enter-to-Run before rendering so the binding survives any render error.
+    this.scope?.register?.([], 'Enter', (event) => {
+      if (this.options.enabledProviders.length === 0) return;
+      event.preventDefault();
+      const btn = this.contentEl.querySelector<HTMLButtonElement>('[data-testid="qa-run"]');
+      btn?.click();
+    });
+
+    const rawName = this.options.action.name?.trim();
+    const name = rawName && rawName.length > 0
+      ? rawName
+      : t('quickActions.launchModal.untitledFallback');
     root.createEl('h3', {
-      text: t('quickActions.launchModal.title', { name: this.options.action.name }),
+      text: t('quickActions.launchModal.title', { name }),
     });
 
     if (this.options.fallbackNotice) {
       const notice = root.createDiv({
         cls: 'claudian-qa-launch-notice',
-        attr: { 'data-testid': 'qa-fallback-notice' },
+        attr: { 'data-testid': 'qa-fallback-notice', role: 'alert' },
       });
       notice.setText(t('quickActions.launchModal.fallbackNotice', {
-        provider: this.options.fallbackNotice.storedProviderId,
-        model: this.options.fallbackNotice.storedModel,
+        provider: this.options.fallbackNotice.storedProviderLabel,
+        model: this.options.fallbackNotice.storedModelLabel,
       }));
     }
 
     if (this.options.enabledProviders.length === 0) {
+      const emptyId = 'claudian-qa-empty-' + Math.random().toString(36).slice(2, 9);
       const empty = root.createDiv({
         cls: 'claudian-qa-launch-empty',
-        attr: { 'data-testid': 'qa-empty' },
+        attr: { id: emptyId, 'data-testid': 'qa-empty', 'aria-live': 'polite' },
       });
       empty.setText(t('quickActions.launchModal.noProvidersEnabled'));
-      this.renderActions(root, /* runDisabled */ true);
+      this.renderActions(root, /* runDisabled */ true, emptyId);
       return;
     }
 
     this.renderProviderRow(root);
     this.renderModelRow(root);
     this.renderActions(root, /* runDisabled */ false);
+
+    const runBtn = this.contentEl.querySelector<HTMLButtonElement>('[data-testid="qa-run"]');
+    runBtn?.focus();
   }
 
   onClose(): void {
+    this.modalEl?.removeClass?.('claudian-qa-launch-modal');
     this.contentEl.empty();
+    this.providerSelect = null;
+    this.modelSelect = null;
   }
 
   private renderProviderRow(root: HTMLElement): void {
+    const selectId = 'claudian-qa-provider-' + Math.random().toString(36).slice(2, 9);
     const row = root.createDiv({ cls: 'claudian-qa-launch-row' });
-    row.createEl('label', { text: t('quickActions.launchModal.providerLabel') });
-    const select = row.createEl('select', { attr: { 'data-testid': 'qa-provider' } });
+    row.createEl('label', {
+      text: t('quickActions.launchModal.providerLabel'),
+      attr: { for: selectId },
+    });
+    const select = row.createEl('select', {
+      attr: { id: selectId, 'data-testid': 'qa-provider' },
+    });
     for (const provider of this.options.enabledProviders) {
       const opt = select.createEl('option', { text: provider.displayName });
       opt.value = provider.id;
@@ -97,14 +122,21 @@ export class QuickActionLaunchModal extends Modal {
       const next = select.value as ProviderId;
       const defaultModel = this.options.resolveDefaultModelForProvider(next);
       this.renderModelOptions(next, defaultModel);
+      this.modelSelect?.focus();
     });
     this.providerSelect = select;
   }
 
   private renderModelRow(root: HTMLElement): void {
+    const selectId = 'claudian-qa-model-' + Math.random().toString(36).slice(2, 9);
     const row = root.createDiv({ cls: 'claudian-qa-launch-row' });
-    row.createEl('label', { text: t('quickActions.launchModal.modelLabel') });
-    const select = row.createEl('select', { attr: { 'data-testid': 'qa-model' } });
+    row.createEl('label', {
+      text: t('quickActions.launchModal.modelLabel'),
+      attr: { for: selectId },
+    });
+    const select = row.createEl('select', {
+      attr: { id: selectId, 'data-testid': 'qa-model' },
+    });
     this.modelSelect = select;
     this.renderModelOptions(this.options.presetProviderId, this.options.presetModel);
   }
@@ -124,9 +156,12 @@ export class QuickActionLaunchModal extends Modal {
     }
   }
 
-  private renderActions(root: HTMLElement, runDisabled: boolean): void {
+  private renderActions(root: HTMLElement, runDisabled: boolean, describedById?: string): void {
     const actions = root.createDiv({ cls: 'claudian-qa-launch-actions' });
 
+    // DOM order: Cancel first, Run second. Visual order is reversed via
+    // `flex-direction: row-reverse` in CSS so Run appears on the right while
+    // Tab order naturally ends on Run as the primary action.
     const cancel = actions.createEl('button', {
       text: t('quickActions.launchModal.cancelButton'),
       attr: { 'data-testid': 'qa-cancel' },
@@ -139,6 +174,9 @@ export class QuickActionLaunchModal extends Modal {
     });
     run.addClass('mod-cta');
     run.disabled = runDisabled;
+    if (runDisabled && describedById) {
+      run.setAttribute('aria-describedby', describedById);
+    }
     run.addEventListener('click', () => {
       if (!this.providerSelect || !this.modelSelect) return;
       const choice = {

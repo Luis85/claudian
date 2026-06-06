@@ -12,6 +12,8 @@ import {
 jest.mock('obsidian', () => {
   class Modal {
     contentEl = document.createElement('div');
+    modalEl = document.createElement('div');
+    scope = { register: jest.fn() };
     constructor(public app: unknown) {}
     open(): void { this.onOpen(); }
     close(): void { this.onClose(); }
@@ -109,12 +111,12 @@ describe('QuickActionLaunchModal', () => {
 
   it('shows the fallback notice when present', () => {
     const opts = makeOptions({
-      fallbackNotice: { storedProviderId: 'codex', storedModel: 'gpt-5-codex' },
+      fallbackNotice: { storedProviderLabel: 'Codex', storedModelLabel: 'gpt-5-codex' },
     });
     const modal = new QuickActionLaunchModal(opts);
     modal.open();
     const notice = modal.contentEl.querySelector('[data-testid="qa-fallback-notice"]');
-    expect(notice?.textContent).toContain('codex');
+    expect(notice?.textContent).toContain('Codex');
     expect(notice?.textContent).toContain('gpt-5-codex');
   });
 
