@@ -33,10 +33,20 @@ export class ChatTabStreamAdapter implements ProviderStreamAdapter {
           assistantContent += chunk.content;
           handlers.onText(chunk.content);
           break;
-        case 'tool_use':
+        case 'tool_use': {
+          // A provider can stream incremental `tool_use` updates for one id (the
+          // chat stream merges them). Drive onToolUse once per id so the runner
+          // counts the tool as in-flight exactly once — the single eventual
+          // tool_result balances it. Double-counting would leak the in-flight
+          // count positive and disable stale-timeout cancellation for later
+          // genuinely hung turns.
+          const isNewTool = !toolNames.has(chunk.id);
           toolNames.set(chunk.id, chunk.name);
-          handlers.onToolUse({ name: chunk.name, primaryArg: extractPrimaryArg(chunk.input) });
+          if (isNewTool) {
+            handlers.onToolUse({ name: chunk.name, primaryArg: extractPrimaryArg(chunk.input) });
+          }
           break;
+        }
         case 'tool_result':
           handlers.onToolResult(toolNames.get(chunk.id) ?? chunk.id, !chunk.isError);
           break;

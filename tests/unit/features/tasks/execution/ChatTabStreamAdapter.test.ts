@@ -73,6 +73,22 @@ describe('ChatTabStreamAdapter', () => {
     expect(calls[2]).toEqual(['tool', { name: 'Grep', primaryArg: 'needle' }]);
   });
 
+  it('drives onToolUse once per id when a tool streams incremental updates', () => {
+    const tab = new FakeTabHandle();
+    const adapter = new ChatTabStreamAdapter(tab);
+    const { calls, handlers } = captureHandlers();
+    adapter.subscribe(handlers);
+
+    // Same id streamed as updates (input accumulates), then a single result.
+    tab.emit({ type: 'tool_use', id: 't1', name: 'Edit', input: {} });
+    tab.emit({ type: 'tool_use', id: 't1', name: 'Edit', input: { file_path: 'src/foo.ts' } });
+    tab.emit({ type: 'tool_result', id: 't1', content: 'ok' });
+
+    // One onToolUse + one onToolResult keeps the runner's in-flight count balanced.
+    expect(calls.filter(([k]) => k === 'tool')).toEqual([['tool', { name: 'Edit', primaryArg: null }]]);
+    expect(calls.filter(([k]) => k === 'result')).toEqual([['result', { name: 'Edit', ok: true }]]);
+  });
+
   it('resolves tool_result names from prior tool_use and reports ok/error', () => {
     const tab = new FakeTabHandle();
     const adapter = new ChatTabStreamAdapter(tab);
