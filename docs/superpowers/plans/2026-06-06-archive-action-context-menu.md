@@ -1,9 +1,10 @@
 ---
 title: Archive Action in Work-Order Context Menu Implementation Plan
 date: 2026-06-06
-status: draft
+status: open
 scope: features/tasks
 spec: "[[docs/superpowers/specs/2026-06-06-archive-action-context-menu-design.md]]"
+parent: "[[Agent Kanban Board]]"
 ---
 
 # Archive Action in Work-Order Context Menu Implementation Plan
