@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260603-actionable-error-states
 title: Render runtime errors as actionable cards (open settings, retry) + handle context-too-large / unauthenticated
-status: open
+status: done
 priority: 1 - high
 triage: ready-for-agent
 created: 2026-06-03
