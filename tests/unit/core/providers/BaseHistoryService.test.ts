@@ -41,14 +41,14 @@ class FakeHistoryService extends BaseHistoryService {
     return c?.sessionId ?? null;
   }
 
-  async deleteConversationSessionV2(): Promise<DeleteHistoryOutcome> {
+  async deleteConversationSession(): Promise<DeleteHistoryOutcome> {
     return { kind: 'no-op', reason: 'no-session' };
   }
 }
 
 const ctx: HydrationContext = { vaultPath: '/vault', reason: 'open' };
 
-describe('BaseHistoryService.hydrateConversationHistoryV2', () => {
+describe('BaseHistoryService.hydrateConversationHistory', () => {
   it('returns loaded WITHOUT mutating conversation.messages (caller is responsible)', async () => {
     const svc = new FakeHistoryService();
     const messages: ChatMessage[] = [
@@ -57,7 +57,7 @@ describe('BaseHistoryService.hydrateConversationHistoryV2', () => {
     svc.nextOutcome = { kind: 'loaded', messages, sourceRef: 'conv-1:sess-a' };
 
     const conv = makeConversation({ sessionId: 'sess-a' });
-    const outcome = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const outcome = await svc.hydrateConversationHistory(conv, ctx);
 
     expect(outcome.kind).toBe('loaded');
     expect(conv.messages).toEqual([]);
@@ -71,11 +71,11 @@ describe('BaseHistoryService.hydrateConversationHistoryV2', () => {
     svc.nextOutcome = { kind: 'loaded', messages, sourceRef: 'conv-1:sess-a' };
 
     const conv = makeConversation({ sessionId: 'sess-a' });
-    const first = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const first = await svc.hydrateConversationHistory(conv, ctx);
     if (first.kind === 'loaded') conv.messages = first.messages;
     expect(svc.loadCalls).toBe(1);
 
-    const second = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const second = await svc.hydrateConversationHistory(conv, ctx);
     expect(second).toEqual({ kind: 'cached', sourceRef: 'conv-1:sess-a' });
     expect(svc.loadCalls).toBe(1);
   });
@@ -88,9 +88,9 @@ describe('BaseHistoryService.hydrateConversationHistoryV2', () => {
     svc.nextOutcome = { kind: 'loaded', messages, sourceRef: 'conv-1:sess-a' };
 
     const conv = makeConversation({ sessionId: 'sess-a' });
-    const first = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const first = await svc.hydrateConversationHistory(conv, ctx);
     if (first.kind === 'loaded') conv.messages = first.messages;
-    await svc.hydrateConversationHistoryV2(conv, { ...ctx, forceRefresh: true });
+    await svc.hydrateConversationHistory(conv, { ...ctx, forceRefresh: true });
 
     expect(svc.loadCalls).toBe(2);
   });
@@ -101,7 +101,7 @@ describe('BaseHistoryService.hydrateConversationHistoryV2', () => {
     controller.abort();
 
     const conv = makeConversation({ sessionId: 'sess-a' });
-    const outcome = await svc.hydrateConversationHistoryV2(conv, {
+    const outcome = await svc.hydrateConversationHistory(conv, {
       ...ctx,
       signal: controller.signal,
     });
@@ -120,16 +120,16 @@ describe('BaseHistoryService.hydrateConversationHistoryV2', () => {
     svc.nextOutcome = { kind: 'loaded', messages, sourceRef: 'conv-1:sess-a' };
 
     const conv = makeConversation({ sessionId: 'sess-a' });
-    const first = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const first = await svc.hydrateConversationHistory(conv, ctx);
     if (first.kind === 'loaded') conv.messages = first.messages;
 
     svc.nextOutcome = { kind: 'empty', reason: 'no-rows', sourceRef: 'conv-1:sess-a' };
     conv.messages = [];
-    const outcome = await svc.hydrateConversationHistoryV2(conv, { ...ctx, forceRefresh: true });
+    const outcome = await svc.hydrateConversationHistory(conv, { ...ctx, forceRefresh: true });
 
     expect(outcome.kind).toBe('empty');
     svc.nextOutcome = { kind: 'loaded', messages, sourceRef: 'conv-1:sess-a' };
-    await svc.hydrateConversationHistoryV2(conv, ctx);
+    await svc.hydrateConversationHistory(conv, ctx);
     expect(svc.loadCalls).toBe(3);
   });
 
@@ -145,7 +145,7 @@ describe('BaseHistoryService.hydrateConversationHistoryV2', () => {
     conv.messages = [
       { id: 'pre', role: 'user', content: 'pre', timestamp: 1 } as ChatMessage,
     ];
-    const outcome = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const outcome = await svc.hydrateConversationHistory(conv, ctx);
     expect(outcome.kind).toBe('error');
     expect(conv.messages.length).toBe(1);
   });
@@ -155,8 +155,8 @@ describe('BaseHistoryService.hydrateConversationHistoryV2', () => {
     svc.nextOutcome = { kind: 'empty', reason: 'no-session', sourceRef: null };
 
     const conv = makeConversation({ sessionId: null });
-    await svc.hydrateConversationHistoryV2(conv, ctx);
-    await svc.hydrateConversationHistoryV2(conv, ctx);
+    await svc.hydrateConversationHistory(conv, ctx);
+    await svc.hydrateConversationHistory(conv, ctx);
     expect(svc.loadCalls).toBe(2);
   });
 
@@ -182,18 +182,18 @@ describe('BaseHistoryService.hydrateConversationHistoryV2', () => {
       resolveSessionIdForConversation(c: Conversation | null): string | null {
         return c?.sessionId ?? null;
       }
-      async deleteConversationSessionV2(): Promise<DeleteHistoryOutcome> {
+      async deleteConversationSession(): Promise<DeleteHistoryOutcome> {
         return { kind: 'no-op', reason: 'no-session' };
       }
     }
 
     const svc = new BackfillingService();
     const conv = makeConversation({ sessionId: null });
-    const first = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const first = await svc.hydrateConversationHistory(conv, ctx);
     if (first.kind === 'loaded') conv.messages = first.messages;
     expect(svc.loadCalls).toBe(1);
 
-    const second = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const second = await svc.hydrateConversationHistory(conv, ctx);
     expect(second).toEqual({ kind: 'cached', sourceRef: 'conv-1:sess-backfilled' });
     expect(svc.loadCalls).toBe(1);
   });
@@ -209,8 +209,8 @@ describe('BaseHistoryService.hydrateConversationHistoryV2', () => {
 
     const conv = makeConversation({ sessionId: 'sess-a' });
     const [a, b] = await Promise.all([
-      svc.hydrateConversationHistoryV2(conv, ctx),
-      svc.hydrateConversationHistoryV2(conv, ctx),
+      svc.hydrateConversationHistory(conv, ctx),
+      svc.hydrateConversationHistory(conv, ctx),
     ]);
 
     expect(svc.loadCalls).toBe(1);

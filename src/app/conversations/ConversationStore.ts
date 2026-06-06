@@ -5,6 +5,7 @@ import { hasForkSupport } from '../../core/providers/typeGuards';
 import type { HydrationContext, ProviderId } from '../../core/providers/types';
 import { DEFAULT_CHAT_PROVIDER_ID } from '../../core/providers/types';
 import type { Conversation, ConversationMeta } from '../../core/types';
+import { assertNever } from '../../utils/assertNever';
 import type { ClaudianEventMap } from '../events/claudianEvents';
 
 /**
@@ -153,13 +154,20 @@ export class ConversationStore {
     };
     const outcome = await ProviderRegistry
       .getConversationHistoryService(conversation.providerId)
-      .deleteConversationSessionV2(conversation, ctx);
-    if (outcome.kind === 'error') {
-      this.deps.events.emit('conversation:hydration-failed', {
-        conversationId: id,
-        code: outcome.error.code,
-        message: outcome.error.message,
-      });
+      .deleteConversationSession(conversation, ctx);
+    switch (outcome.kind) {
+      case 'deleted':
+      case 'no-op':
+        break;
+      case 'error':
+        this.deps.events.emit('conversation:hydration-failed', {
+          conversationId: id,
+          code: outcome.error.code,
+          message: outcome.error.message,
+        });
+        break;
+      default:
+        assertNever(outcome);
     }
 
     await this.deps.storage.sessions.deleteMetadata(id);
@@ -269,7 +277,7 @@ export class ConversationStore {
       reason,
     };
     const service = ProviderRegistry.getConversationHistoryService(conversation.providerId);
-    const outcome = await service.hydrateConversationHistoryV2(conversation, ctx);
+    const outcome = await service.hydrateConversationHistory(conversation, ctx);
     switch (outcome.kind) {
       case 'loaded':
         conversation.messages = outcome.messages;
@@ -284,6 +292,8 @@ export class ConversationStore {
           message: outcome.error.message,
         });
         break;
+      default:
+        assertNever(outcome);
     }
 
     // History-backed usage recovery: only when meta-stored usage is absent. We

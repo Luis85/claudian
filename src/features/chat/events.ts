@@ -13,7 +13,7 @@ export interface ChatEventMap {
   'conversation:renamed': { conversationId: string; title: string };
   /**
    * Emitted when a provider history service reports an `error` outcome from
-   * either `hydrateConversationHistoryV2` or `deleteConversationSessionV2`.
+   * either `hydrateConversationHistory` or `deleteConversationSession`.
    * The payload is the redacted user-safe summary from the provider; raw
    * detail strings stay confined to the leveled logger. Subscriber wiring is
    * a follow-up task — this event is produced today so callers can react

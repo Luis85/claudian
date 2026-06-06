@@ -19,13 +19,13 @@ function makeConversation(overrides: Partial<Conversation> = {}): Conversation {
 
 const ctx: HydrationContext = { vaultPath: null, reason: 'open' };
 
-describe('OpencodeConversationHistoryService.hydrateConversationHistoryV2', () => {
+describe('OpencodeConversationHistoryService.hydrateConversationHistory', () => {
   afterEach(() => { jest.restoreAllMocks(); });
 
   it('returns empty:no-session when conversation.sessionId is null', async () => {
     const svc = new OpencodeConversationHistoryService();
     const conv = makeConversation({ sessionId: null });
-    const out = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const out = await svc.hydrateConversationHistory(conv, ctx);
     expect(out.kind).toBe('empty');
     // eslint-disable-next-line jest/no-conditional-expect
     if (out.kind === 'empty') expect(out.reason).toBe('no-session');
@@ -39,7 +39,7 @@ describe('OpencodeConversationHistoryService.hydrateConversationHistoryV2', () =
     });
     const svc = new OpencodeConversationHistoryService();
     const conv = makeConversation();
-    const out = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const out = await svc.hydrateConversationHistory(conv, ctx);
     expect(out.kind).toBe('loaded');
     if (out.kind === 'loaded') {
       // eslint-disable-next-line jest/no-conditional-expect
@@ -61,7 +61,7 @@ describe('OpencodeConversationHistoryService.hydrateConversationHistoryV2', () =
     });
     const svc = new OpencodeConversationHistoryService();
     const conv = makeConversation();
-    const out = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const out = await svc.hydrateConversationHistory(conv, ctx);
     expect(out.kind).toBe('error');
     if (out.kind === 'error') {
       // eslint-disable-next-line jest/no-conditional-expect
@@ -81,7 +81,7 @@ describe('OpencodeConversationHistoryService.hydrateConversationHistoryV2', () =
       },
     });
     const svc = new OpencodeConversationHistoryService();
-    const out = await svc.hydrateConversationHistoryV2(makeConversation(), ctx);
+    const out = await svc.hydrateConversationHistory(makeConversation(), ctx);
     expect(out.kind).toBe('error');
     // eslint-disable-next-line jest/no-conditional-expect
     if (out.kind === 'error') expect(out.error.code).toBe('sqlite-unavailable');
@@ -91,18 +91,18 @@ describe('OpencodeConversationHistoryService.hydrateConversationHistoryV2', () =
     jest.spyOn(Store, 'loadOpencodeSessionMessages').mockResolvedValue({ messages: [] });
     const svc = new OpencodeConversationHistoryService();
     const conv = makeConversation();
-    const out = await svc.hydrateConversationHistoryV2(conv, ctx);
+    const out = await svc.hydrateConversationHistory(conv, ctx);
     expect(out.kind).toBe('empty');
     // eslint-disable-next-line jest/no-conditional-expect
     if (out.kind === 'empty') expect(out.reason).toBe('no-rows');
   });
 });
 
-describe('OpencodeConversationHistoryService.deleteConversationSessionV2', () => {
+describe('OpencodeConversationHistoryService.deleteConversationSession', () => {
   it('returns no-op:provider-owned because OpenCode native history is never mutated', async () => {
     const svc = new OpencodeConversationHistoryService();
     const conv = makeConversation();
-    const out = await svc.deleteConversationSessionV2(conv, ctx);
+    const out = await svc.deleteConversationSession(conv, ctx);
     expect(out).toEqual({ kind: 'no-op', reason: 'provider-owned' });
   });
 });

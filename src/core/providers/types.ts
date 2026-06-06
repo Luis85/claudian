@@ -533,13 +533,13 @@ export interface ProviderConversationHistoryService<
   TPersistedState = Record<string, unknown>,
 > {
   /** Outcome-typed hydration. Returns the outcome; never mutates `conversation.messages`. */
-  hydrateConversationHistoryV2(
+  hydrateConversationHistory(
     conversation: Conversation,
     ctx: HydrationContext,
   ): Promise<HistoryLoadOutcome>;
 
   /** Outcome-typed delete. */
-  deleteConversationSessionV2(
+  deleteConversationSession(
     conversation: Conversation,
     ctx: HydrationContext,
   ): Promise<DeleteHistoryOutcome>;

@@ -36,7 +36,7 @@ describe('CursorConversationHistoryService — no out-of-band error getter', () 
   });
 });
 
-describe('CursorConversationHistoryService.hydrateConversationHistoryV2', () => {
+describe('CursorConversationHistoryService.hydrateConversationHistory', () => {
   afterEach(() => { jest.restoreAllMocks(); });
 
   it('returns error:sqlite-unavailable when node:sqlite cannot be required', async () => {
@@ -46,7 +46,7 @@ describe('CursorConversationHistoryService.hydrateConversationHistoryV2', () => 
       error: { code: 'sqlite-unavailable', message: 'Cursor history requires node:sqlite.' },
     });
     const svc = new CursorConversationHistoryService();
-    const out = await svc.hydrateConversationHistoryV2(makeConversation('s'), {
+    const out = await svc.hydrateConversationHistory(makeConversation('s'), {
       vaultPath: '/vault',
       reason: 'open',
     });
@@ -56,7 +56,7 @@ describe('CursorConversationHistoryService.hydrateConversationHistoryV2', () => 
   });
 });
 
-describe('CursorConversationHistoryService.deleteConversationSessionV2', () => {
+describe('CursorConversationHistoryService.deleteConversationSession', () => {
   const realOs = jest.requireActual<typeof osTypes>('os');
   let tmpHome: string;
   let homedirSpy: jest.SpyInstance;
@@ -87,7 +87,7 @@ describe('CursorConversationHistoryService.deleteConversationSessionV2', () => {
     const dir = plantChatDir(cursorWorkspaceHash(vault), sessionId);
 
     const svc = new CursorConversationHistoryService();
-    const out = await svc.deleteConversationSessionV2(makeConversation(sessionId), ctxFor(vault));
+    const out = await svc.deleteConversationSession(makeConversation(sessionId), ctxFor(vault));
 
     expect(out.kind).toBe('deleted');
     // eslint-disable-next-line jest/no-conditional-expect
@@ -101,7 +101,7 @@ describe('CursorConversationHistoryService.deleteConversationSessionV2', () => {
     const legacyDir = plantChatDir(cursorWorkspaceHashLegacy(vault), sessionId);
 
     const svc = new CursorConversationHistoryService();
-    const out = await svc.deleteConversationSessionV2(makeConversation(sessionId), ctxFor(vault));
+    const out = await svc.deleteConversationSession(makeConversation(sessionId), ctxFor(vault));
 
     expect(out.kind).toBe('deleted');
     // eslint-disable-next-line jest/no-conditional-expect
@@ -116,7 +116,7 @@ describe('CursorConversationHistoryService.deleteConversationSessionV2', () => {
     fs.writeFileSync(path.join(chatsRoot, 'sentinel'), '');
 
     const svc = new CursorConversationHistoryService();
-    const out = await svc.deleteConversationSessionV2(makeConversation('.'), ctxFor(vault));
+    const out = await svc.deleteConversationSession(makeConversation('.'), ctxFor(vault));
 
     expect(out.kind).toBe('error');
     // eslint-disable-next-line jest/no-conditional-expect
@@ -127,7 +127,7 @@ describe('CursorConversationHistoryService.deleteConversationSessionV2', () => {
   it('returns no-op:no-session when sessionId is null or vaultPath is null', async () => {
     const svc = new CursorConversationHistoryService();
     const conv = { ...makeConversation('s'), providerState: {} } as Conversation;
-    const out = await svc.deleteConversationSessionV2(conv, { vaultPath: null, reason: 'open' });
+    const out = await svc.deleteConversationSession(conv, { vaultPath: null, reason: 'open' });
     expect(out).toEqual({ kind: 'no-op', reason: 'no-session' });
   });
 });
