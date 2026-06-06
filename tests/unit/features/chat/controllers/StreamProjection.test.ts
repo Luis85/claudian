@@ -2,7 +2,6 @@ import type { StreamChunk, UsageInfo } from '@/core/types';
 import {
   projectBlockTransition,
   projectCompactBoundary,
-  projectErrorText,
   type ProjectionBlockState,
   projectNoticeText,
   projectUsage,
@@ -111,11 +110,7 @@ describe('StreamProjection - block transitions', () => {
   });
 });
 
-describe('StreamProjection - error and notice text', () => {
-  it('formats an error chunk', () => {
-    expect(projectErrorText('Something went wrong')).toBe('\n\n❌ **Error:** Something went wrong');
-  });
-
+describe('StreamProjection - notice text', () => {
   it('formats a warning notice as Blocked', () => {
     const chunk = { type: 'notice', content: 'Tool was blocked', level: 'warning' } as Extract<
       StreamChunk,

@@ -156,6 +156,12 @@ export class InputController {
   }> = [];
   private sawInitialProviderUserMessage = false;
   private awaitingProviderAssistantStart = false;
+  /** Last dispatched turn, retained so a runtime-error card can re-dispatch it. */
+  private lastTurnSubmission: {
+    turnRequest: ChatTurnRequest;
+    displayContent: string;
+    images?: ChatMessage['images'];
+  } | null = null;
 
   constructor(deps: InputControllerDeps) {
     this.deps = deps;
@@ -393,6 +399,15 @@ export class InputController {
         canvasContextOverride: options?.canvasContextOverride,
       });
     const { displayContent, turnRequest } = turnSubmission;
+
+    // Remember this turn so an actionable runtime-error card can re-dispatch it
+    // verbatim via retryLastTurn() (UX-F/UX-J). Cloned so later mutation of the
+    // live request can't change what a retry would re-send.
+    this.lastTurnSubmission = {
+      turnRequest: cloneChatTurnRequest(turnRequest),
+      displayContent,
+      images: imagesForMessage ? [...imagesForMessage] : undefined,
+    };
 
     fileContextManager?.markCurrentNoteSent();
     // Added file/folder pills are consumed by this turn; clear them (keeps the current note).
@@ -679,6 +694,30 @@ export class InputController {
     }
 
     return programmaticResult;
+  }
+
+  /** Whether a previously-dispatched turn is available to retry. */
+  hasRetryableTurn(): boolean {
+    return this.lastTurnSubmission !== null;
+  }
+
+  /**
+   * Re-dispatches the last turn after a runtime error (UX-F/UX-J). Reuses the
+   * normal {@link sendMessage} path via `turnRequestOverride`, so the retry runs
+   * through the same prepare/query/stream plumbing — not a fabricated send path.
+   * No-ops while streaming or when there is nothing to retry.
+   */
+  retryLastTurn(): void {
+    const last = this.lastTurnSubmission;
+    if (!last || this.deps.state.isStreaming) return;
+
+    void this.sendMessage({
+      content: last.displayContent,
+      images: last.images,
+      turnRequestOverride: last.turnRequest,
+    }).catch((err: unknown) => {
+      this.deps.plugin.logger.scope('input').error('retryLastTurn failed unexpectedly', err);
+    });
   }
 
   // ============================================

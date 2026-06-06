@@ -48,8 +48,6 @@ export type UsageProjectionDecision =
   | { action: 'ignore' }
   | { action: 'update'; usage: UsageInfo };
 
-const ERROR_PREFIX = '\n\n❌ **Error:** ';
-
 /**
  * Block-transition rule shared by text/thinking/tool_use chunks: a new content type must
  * flush buffered tools and close whatever incompatible block is open before its own
@@ -96,11 +94,6 @@ export function projectCompactBoundary(state: ProjectionBlockState): BlockTransi
     finalizeThinking: state.hasOpenThinkingBlock,
     finalizeText: true,
   };
-}
-
-/** The user-facing text appended for an error chunk (provider-neutral, no DOM). */
-export function projectErrorText(content: string): string {
-  return `${ERROR_PREFIX}${content}`;
 }
 
 /** The user-facing text appended for a notice chunk. `warning` renders as "Blocked". */

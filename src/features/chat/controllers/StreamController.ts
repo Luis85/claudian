@@ -34,8 +34,10 @@ import {
 import { formatDurationMmSs } from '../../../utils/date';
 import { extractDiffData } from '../../../utils/diff';
 import { hasStreamingMathDelimiters } from '../../../utils/markdownMath';
+import { openClaudianProviderSettings } from '../../../utils/obsidianPrivateApi';
 import { getVaultPath, normalizePathForVault } from '../../../utils/path';
 import { FLAVOR_TEXTS } from '../constants';
+import { renderInlineRuntimeError } from '../rendering/InlineRuntimeError';
 import type { MessageRenderer, RenderContentOptions } from '../rendering/MessageRenderer';
 import { scrollMessagesToBottom } from '../rendering/scrollToBottom';
 import { resolveSubagentLifecycleAdapter } from '../rendering/subagentLifecycleResolution';
@@ -64,11 +66,11 @@ import {
 import type { SubagentManager } from '../services/SubagentManager';
 import type { ChatState } from '../state/ChatState';
 import type { FileContextManager } from '../ui/FileContext';
+import { classifyRuntimeError } from './runtimeErrorClassification';
 import {
   type BlockTransitionDecision,
   projectBlockTransition,
   projectCompactBoundary,
-  projectErrorText,
   type ProjectionBlockState,
   projectNoticeText,
   projectUsage,
@@ -85,6 +87,12 @@ export interface StreamControllerDeps {
   updateQueueIndicator: () => void;
   /** Get the agent service from the tab. */
   getAgentService?: () => ChatRuntime | null;
+  /**
+   * Re-dispatches the last turn for the active conversation. Wired to the retry
+   * affordance on actionable runtime-error cards (UX-F/UX-J). Omitted when the
+   * tab has no turn available to retry.
+   */
+  onRetryLastTurn?: () => void;
 }
 
 export class StreamController {
@@ -257,9 +265,11 @@ export class StreamController {
         break;
 
       case 'error':
-        // Flush pending tools before rendering error message
+        // Flush pending tools, then render an actionable recovery card
+        // (open settings / login hint / retry) instead of bare error text.
         this.flushPendingTools();
-        await this.appendText(projectErrorText(chunk.content));
+        await this.finalizeCurrentTextBlock(msg);
+        this.renderRuntimeError(chunk.content);
         break;
 
       case 'done': {
@@ -1579,6 +1589,44 @@ export class StreamController {
   // ============================================
   // Compact Boundary
   // ============================================
+
+  // ============================================
+  // Runtime Error Card (UX-F/UX-J)
+  // ============================================
+
+  /**
+   * Classifies a runtime `error` chunk and renders an actionable recovery card.
+   * Open-settings and retry callbacks are wired only when the underlying surface
+   * is available, so the card never offers an action it can't perform.
+   */
+  private renderRuntimeError(content: string): void {
+    const { state, plugin } = this.deps;
+    if (!state.currentContentEl) return;
+
+    this.hideThinkingIndicator();
+
+    const kind = classifyRuntimeError(content);
+    const providerId = this.getActiveProviderId();
+
+    const onOpenSettings =
+      kind === 'cli-not-found' || kind === 'unauthenticated'
+        ? () => {
+            openClaudianProviderSettings(plugin.app, plugin.manifest.id, providerId);
+          }
+        : undefined;
+
+    const onRetry = this.deps.onRetryLastTurn
+      ? () => this.deps.onRetryLastTurn?.()
+      : undefined;
+
+    renderInlineRuntimeError(state.currentContentEl, {
+      kind,
+      content,
+      providerId,
+      onOpenSettings,
+      onRetry,
+    });
+  }
 
   private renderCompactBoundary(): void {
     const { state } = this.deps;

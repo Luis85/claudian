@@ -483,16 +483,37 @@ describe('StreamController - Text Content', () => {
   });
 
   describe('Error and notice handling', () => {
-    it('should append error message on error chunk', async () => {
+    it('should render an actionable error card on error chunk', async () => {
       const msg = createTestMessage();
-      deps.state.currentTextEl = createMockEl();
 
       await controller.handleStreamChunk(
         { type: 'error', content: 'Something went wrong' },
         msg
       );
 
-      expect(deps.state.currentTextContent).toContain('Error');
+      expect(
+        deps.state.currentContentEl!.querySelector('.claudian-runtime-error-card'),
+      ).not.toBeNull();
+    });
+
+    it('wires retry on the error card to onRetryLastTurn', async () => {
+      const onRetryLastTurn = jest.fn();
+      const retryDeps = { ...createMockDeps(), onRetryLastTurn };
+      const retryController = new StreamController(retryDeps);
+      retryDeps.state.currentContentEl = createMockEl();
+      const msg = createTestMessage();
+
+      await retryController.handleStreamChunk(
+        { type: 'error', content: 'Something went wrong' },
+        msg
+      );
+
+      const retryBtn = retryDeps.state.currentContentEl!.querySelector(
+        '.claudian-runtime-error-button-primary',
+      );
+      expect(retryBtn).not.toBeNull();
+      (retryBtn as unknown as { click: () => void }).click();
+      expect(onRetryLastTurn).toHaveBeenCalledTimes(1);
     });
 
     it('should append warning notice on notice chunk', async () => {

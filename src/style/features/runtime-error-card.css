@@ -1,0 +1,144 @@
+/* src/style/features/runtime-error-card.css */
+
+/* Actionable runtime-error card (UX-F/UX-J): replaces bare error stream text
+   with a guided recovery surface (open settings / login hint / retry). */
+
+.claudian-runtime-error-card {
+  margin: 10px 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--text-error);
+  background: var(--background-secondary);
+  border-radius: 6px;
+  font-size: var(--font-ui-small);
+}
+
+.claudian-runtime-error-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.claudian-runtime-error-icon {
+  color: var(--text-error);
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  display: inline-flex;
+}
+
+.claudian-runtime-error-title {
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+}
+
+.claudian-runtime-error-body {
+  margin-top: 6px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+/* Login hint (auth failures) */
+.claudian-runtime-error-hint {
+  margin-top: 10px;
+}
+
+.claudian-runtime-error-hint-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  margin-bottom: 4px;
+}
+
+.claudian-runtime-error-hint-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.claudian-runtime-error-hint-command {
+  flex: 1 1 auto;
+  padding: 4px 8px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-normal);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.claudian-runtime-error-hint-copy {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+}
+
+.claudian-runtime-error-hint-copy:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+/* Raw provider message (collapsible) */
+.claudian-runtime-error-details {
+  margin-top: 10px;
+}
+
+.claudian-runtime-error-details-summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.claudian-runtime-error-details-text {
+  margin: 6px 0 0;
+  padding: 8px;
+  background: var(--background-primary);
+  border-radius: 4px;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+/* Actions */
+.claudian-runtime-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.claudian-runtime-error-button {
+  padding: 5px 12px;
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+  background: var(--interactive-normal);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+}
+
+.claudian-runtime-error-button:hover {
+  background: var(--interactive-hover);
+}
+
+.claudian-runtime-error-button-primary {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+}
+
+.claudian-runtime-error-button-primary:hover {
+  background: var(--interactive-accent-hover);
+}
