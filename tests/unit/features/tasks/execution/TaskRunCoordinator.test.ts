@@ -175,11 +175,19 @@ describe('TaskRunCoordinator', () => {
     expect(handoffs[0]).toContain('## Summary');
   });
 
-  it('finishes as needs_handoff when the terminal completes with no handoff and no stream end', async () => {
+  it('implicit-pauses (needs_input) when the terminal completes with content but no handoff and no stream end', async () => {
     const surface = new FakeSurface({ terminal: { status: 'completed', finalAssistantContent: 'no handoff' } });
     const { coordinator, statuses } = makeCoordinator(surface);
-    await expect(coordinator.run(makeTask())).resolves.toEqual({ ok: false, error: 'Missing claudian_handoff block' });
-    expect(statuses).toEqual(['running', 'needs_handoff']);
+    const p = coordinator.run(makeTask());
+    // Yield enough for the terminal-driven complete() → beginImplicitPause to apply.
+    await flushMicrotasks();
+    await flushMicrotasks();
+    expect(statuses).toEqual(['running', 'needs_input']);
+    // Run stays alive until either the assistant emits a handoff or the user cancels.
+    coordinator.getActiveRun('task-1')?.cancel('test cleanup');
+    const result = await p;
+    expect(result.ok).toBe(false);
+    expect(result).toEqual({ ok: false, error: 'canceled', canceled: true });
   });
 
   it('does not double-finalize: a completed terminal is a no-op once the stream already ended', async () => {
@@ -208,15 +216,19 @@ describe('TaskRunCoordinator', () => {
     expect(surface.prompts[0]).toContain('Task ID: task-1');
   });
 
-  it('delegates a completed run with no handoff to needs_handoff', async () => {
+  it('delegates a completed run with no handoff to an implicit needs_input pause that stays alive', async () => {
     const { coordinator, statuses, surface } = makeCoordinator();
     const p = coordinator.run(makeTask());
     await flushMicrotasks();
     surface.adapter.emitText('No handoff here.');
     surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: 'No handoff here.' });
-
-    await expect(p).resolves.toEqual({ ok: false, error: 'Missing claudian_handoff block' });
-    expect(statuses).toEqual(['running', 'needs_handoff']);
+    await flushMicrotasks();
+    await flushMicrotasks();
+    expect(statuses).toEqual(['running', 'needs_input']);
+    expect(coordinator.getActiveRun('task-1')).toBeDefined();
+    // Settle the still-alive run so the test doesn't hang.
+    coordinator.getActiveRun('task-1')?.cancel('test cleanup');
+    await expect(p).resolves.toEqual({ ok: false, error: 'canceled', canceled: true });
   });
 
   it('exposes the active run while in flight and clears it afterwards', async () => {

@@ -182,15 +182,28 @@ describe('work-order run lifecycle (integration)', () => {
     expect(h.parsed().sections.ledger).toContain('rejected: too destructive');
   });
 
-  it('needs_handoff: completed content without a handoff block', async () => {
+  it('implicit needs_input: completed content without a handoff block keeps the run alive and pauses for follow-up', async () => {
     const h = makeHarness();
     const terminal = h.session.run();
-    h.adapter.emitText('did some work but forgot the handoff');
-    h.adapter.emitEnd({ status: 'completed', finalAssistantContent: 'did some work but forgot the handoff' });
+    h.adapter.emitText('Which folder should I scaffold under?');
+    h.adapter.emitEnd({
+      status: 'completed',
+      finalAssistantContent: 'Which folder should I scaffold under?',
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(h.parsed().frontmatter.status).toBe('needs_input');
+    expect(h.parsed().sections.ledger).toContain('Paused implicitly');
+    // Resume with a follow-up turn that produces a real handoff → review.
+    await h.session.resume({ kind: 'reply', content: 'src/foo' });
+    h.adapter.emitText(VALID_HANDOFF);
+    h.adapter.emitEnd({
+      status: 'completed',
+      finalAssistantContent: 'Which folder should I scaffold under?' + VALID_HANDOFF,
+    });
     const result = await terminal;
-    expect(result.ok).toBe(false);
-    expect(h.parsed().frontmatter.status).toBe('needs_handoff');
-    expect(h.parsed().sections.ledger).toContain('Missing claudian_handoff block');
+    expect(result.ok).toBe(true);
+    expect(h.parsed().frontmatter.status).toBe('review');
   });
 
   it('heartbeat lost: stale stream fails the run', async () => {

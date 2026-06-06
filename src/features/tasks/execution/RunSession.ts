@@ -373,6 +373,19 @@ export class RunSession {
       this.pauseEndsPending -= 1;
       return;
     }
+    // Implicit pause: a completed turn that produced text but no structured
+    // handoff/pause block is the assistant pausing for clarification. Persist
+    // as needs_input and keep the stream wired so a follow-up turn can settle
+    // the run — instead of marking the work order needs_handoff and stranding
+    // any later `<claudian_needs_input>` block the assistant emits.
+    if (payload.status === 'completed' && !this.paused
+        && payload.finalAssistantContent.trim().length > 0
+        && !parseTaskHandoff(payload.finalAssistantContent).ok) {
+      await this.pauseApplied;
+      this.beginImplicitPause(payload.finalAssistantContent);
+      await this.pauseApplied;
+      return;
+    }
     this.finishing = true;
     this.stopLiveWiring();
     try {
@@ -383,6 +396,40 @@ export class RunSession {
       // registry releases the task.
       await this.settleAfterFailure(error);
     }
+  }
+
+  private beginImplicitPause(content: string): void {
+    this.paused = true;
+    this.hasPaused = true;
+    this.stopHeartbeat();
+    const reason = extractImplicitPauseReason(content);
+    this.pauseApplied = this.applyImplicitPause(reason);
+  }
+
+  private async applyImplicitPause(reason: string): Promise<void> {
+    const ts = this.deps.now();
+    try {
+      await this.persistStatus({ status: 'needs_input', timestamp: ts, pauseReason: reason });
+    } catch (error) {
+      // The pause status couldn't be persisted; mirror applyPause and fail
+      // rather than hanging the run with no live UI.
+      this.paused = false;
+      this.fail(error instanceof Error ? error.message : String(error));
+      return;
+    }
+    this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'needs_input' });
+    this.deps.events.emit('task:needs-input', {
+      taskId: this.taskId,
+      path: this.path,
+      question: reason,
+      runId: this.deps.runId,
+    });
+    this.ledger.enqueue({
+      timestamp: ts,
+      status: 'needs_input',
+      message: `Paused implicitly (no handoff/pause block): ${truncate(reason, 80)}`,
+    });
+    await this.ledger.flushNow();
   }
 
   private async finalizeRun(payload: {
@@ -516,6 +563,18 @@ export class RunSession {
 function truncate(value: string, n: number): string {
   if (value.length <= n) return value;
   return value.slice(0, n - 1) + '…';
+}
+
+/** Best-effort label for an implicit pause: prefer the last paragraph (typically
+ *  the question), capped so a runaway turn can't blow out the pause-reason field. */
+function extractImplicitPauseReason(content: string): string {
+  const trimmed = content.trim();
+  if (!trimmed) return 'The agent is waiting for your input.';
+  const paragraphs = trimmed.split(/\n\s*\n/);
+  const last = paragraphs[paragraphs.length - 1].trim();
+  const reason = last.length > 0 ? last : trimmed;
+  const max = 240;
+  return reason.length <= max ? reason : reason.slice(reason.length - max);
 }
 
 function formatStaleWindow(ms: number): string {

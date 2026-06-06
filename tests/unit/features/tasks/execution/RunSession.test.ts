@@ -152,14 +152,55 @@ describe('RunSession', () => {
     expect(ledger.find((e) => e.message.includes('rejected: too risky'))).toBeTruthy();
   });
 
-  it('lands in needs_handoff when stream completes with content but no handoff block', async () => {
+  it('implicit-pauses as needs_input when stream completes with content but no handoff block, and stays alive for a follow-up turn that lands in review', async () => {
+    const { session, adapter, events, statuses } = makeSession();
+    const seen: TaskEventMap['task:needs-input'][] = [];
+    events.on('task:needs-input', (p) => seen.push(p));
+    const terminal = session.run();
+    // Turn 1 ends with a plain-text question — no handoff, no <claudian_*> block.
+    adapter.emitText('Should I use option A or option B?');
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: 'Should I use option A or option B?' });
+    // Allow the implicit-pause status write + ledger flush to settle.
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(statuses).toEqual(['running', 'needs_input']);
+    expect(seen.length).toBe(1);
+    expect(seen[0].question).toContain('A or option B?');
+    // Run is still alive; resume drives a follow-up turn that produces a handoff.
+    await session.resume({ kind: 'reply', content: 'option A' });
+    adapter.emitText(VALID_HANDOFF);
+    adapter.emitEnd({
+      status: 'completed',
+      finalAssistantContent: 'Should I use option A or option B?' + VALID_HANDOFF,
+    });
+    const result = await terminal;
+    expect(result.ok).toBe(true);
+    expect(statuses).toEqual(['running', 'needs_input', 'running', 'review']);
+  });
+
+  it('keeps implicit-pausing across repeated plain-text turns until either a handoff or cancel settles the run', async () => {
     const { session, adapter, statuses } = makeSession();
     const terminal = session.run();
-    adapter.emitText('did stuff but no handoff');
-    adapter.emitEnd({ status: 'completed', finalAssistantContent: 'did stuff but no handoff' });
+    adapter.emitText('First clarification?');
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: 'First clarification?' });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(statuses).toEqual(['running', 'needs_input']);
+    await session.resume({ kind: 'reply', content: 'ok' });
+    adapter.emitText('Second clarification?');
+    adapter.emitEnd({
+      status: 'completed',
+      finalAssistantContent: 'First clarification?Second clarification?',
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(statuses).toEqual(['running', 'needs_input', 'running', 'needs_input']);
+    // Cancel from the still-paused state to settle the run.
+    session.cancel('user stop');
     const result = await terminal;
     expect(result.ok).toBe(false);
-    expect(statuses).toEqual(['running', 'needs_handoff']);
+    expect(result.status).toBe('canceled');
   });
 
   it('ignores a completed stream end while paused and finalizes only after resume', async () => {

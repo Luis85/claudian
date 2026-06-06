@@ -96,7 +96,16 @@
 
 .claudian-agent-board-card-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
+}
+
+/* A narrow lane (max-width 240px) cannot fit three full-width buttons in a
+   single row — review/needs_handoff cards have three (Accept/Rework/Back to
+   inbox or Review/Mark failed/Back to inbox). Shrink + wrap rather than clip. */
+.claudian-agent-board-card-actions > button {
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .claudian-agent-board-card-title-row {
