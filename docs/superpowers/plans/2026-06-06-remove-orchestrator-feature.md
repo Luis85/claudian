@@ -1,7 +1,7 @@
 ---
 title: Remove the Orchestrator feature Implementation Plan
 date: 2026-06-06
-status: ready-for-review
+status: done
 parent: "[[2026-06-06-remove-orchestrator-feature-design]]"
 ---
 

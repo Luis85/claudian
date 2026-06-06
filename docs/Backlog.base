@@ -55,6 +55,7 @@ views:
       - parent
     columnSize:
       file.name: 392
+      note.status: 175
   - type: table
     name: Issues
     filters:

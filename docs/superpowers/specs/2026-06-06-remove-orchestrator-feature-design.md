@@ -1,7 +1,7 @@
 ---
 title: Remove the Orchestrator feature
 date: 2026-06-06
-status: approved (design)
+status: shipped
 scope: features/chat, providers, settings, i18n, docs/product
 parent: "[[Agent Kanban Board]]"
 relations:

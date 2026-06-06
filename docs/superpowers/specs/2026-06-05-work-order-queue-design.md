@@ -1,7 +1,7 @@
 ---
 title: Work-order queue — automatic background runner for ready cards
 date: 2026-06-05
-status: approved (design)
+status: shipped
 scope: agent-board-queue
 related:
   - "[[2026-06-04-work-order-execution-design]]"

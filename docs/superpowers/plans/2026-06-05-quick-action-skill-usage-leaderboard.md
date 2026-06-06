@@ -1,5 +1,5 @@
 ---
-status: shipped
+status: done
 parent: "[[Quick Actions]]"
 ---
 # Quick-action and skill usage leaderboard implementation plan

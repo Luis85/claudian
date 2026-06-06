@@ -1,7 +1,7 @@
 ---
 title: Skills tab responsiveness via persistent index, pre-warm, progressive render, and SWR
 date: 2026-06-04
-status: draft
+status: shipped
 scope: features/quickActions
 parent: "[[Quick Actions]]"
 ---

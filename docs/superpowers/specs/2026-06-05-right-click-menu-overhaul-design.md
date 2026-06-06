@@ -1,7 +1,7 @@
 ---
 title: Right-click menu quick actions overhaul
 date: 2026-06-05
-status: approved
+status: shipped
 scope: context menus
 ---
 

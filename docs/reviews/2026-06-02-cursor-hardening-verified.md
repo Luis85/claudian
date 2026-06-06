@@ -1,7 +1,7 @@
 ---
 title: Cursor Hardening — Verified findings
 date: 2026-06-02
-status: PR1 shipped
+status: partially-shipped
 scope: src/providers/cursor, src/providers/acp, src/core/providers
 verified-against: main HEAD 045c485 (post-3.2.0 release)
 related:
