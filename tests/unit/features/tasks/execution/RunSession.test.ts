@@ -710,6 +710,40 @@ describe('RunSession', () => {
       }
     });
 
+    it('settles to review even if finalizeLedgerToNote throws', async () => {
+      // The note's run-ledger region may be missing markers (hand-edited or an
+      // older note); the snapshot can't land, but the run must still settle so
+      // the registry releases the task and the card stops looking active.
+      const finalizeLedgerToNote = jest.fn().mockRejectedValue(new Error('Missing generated region markers'));
+      const { session, adapter } = makeSession({ finalizeLedgerToNote });
+      const terminal = session.run();
+      adapter.emitText(VALID_HANDOFF);
+      adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+      const result = await terminal;
+
+      expect(result.ok).toBe(true);
+      expect(result.status).toBe('review');
+      expect(finalizeLedgerToNote).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps ticking when writeHeartbeat consistently rejects', async () => {
+      // A failing sidecar write (e.g. transient adapter error) must not crash
+      // the heartbeat loop: the next tick still fires, and the run still
+      // settles cleanly on the normal stream `done`.
+      const writeHeartbeat = jest.fn().mockRejectedValue(new Error('transient'));
+      const { session, adapter } = makeSession({ writeHeartbeat });
+      const terminal = session.run();
+      adapter.emitText(VALID_HANDOFF);
+      adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+      const result = await terminal;
+
+      // We don't assert call count here — the heartbeat is timer-driven and the
+      // run is fast/synthetic — only that the failure is swallowed and the
+      // run still reaches review cleanly.
+      expect(result.ok).toBe(true);
+      expect(result.status).toBe('review');
+    });
+
     it('on terminal, writes one finalizeLedgerToNote call after the handoff write', async () => {
       const callOrder: string[] = [];
       const writeHandoff = jest.fn().mockImplementation(async () => {

@@ -192,6 +192,20 @@ describe('AgentBoardView.recoverOrphanedRuns', () => {
     expect(writeStatus).toHaveBeenCalledTimes(1);
   });
 
+  it('recovers a running task with no run_id without consulting the sidecar', async () => {
+    // A note in `running` status that was never assigned a run_id (e.g. saved
+    // mid-run before the first persist) must still be recoverable — the sidecar
+    // is keyed on run_id and there's nothing to consult.
+    const { view, writeStatus } = makeView({ sidecarHeartbeat: null });
+    delete view.model.tasks[0].frontmatter.run_id;
+
+    await view['recoverOrphanedRuns']();
+
+    expect(view.plugin.runSidecarStore.readHeartbeat).not.toHaveBeenCalled();
+    expect(writeStatus).toHaveBeenCalledTimes(1);
+    expect(writeStatus.mock.calls[0][1]).toMatchObject({ status: 'failed' });
+  });
+
   it('is idempotent: a second call on the same model does not re-recover already-failed cards', async () => {
     // The periodic re-check relies on this contract — a card whose status
     // moved to failed on pass 1 must not get re-written on pass 2.

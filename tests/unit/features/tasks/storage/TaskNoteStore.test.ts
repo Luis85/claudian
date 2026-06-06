@@ -325,6 +325,20 @@ body`;
       expect(() => store.writeLedgerSnapshot(baseNote, '<!-- claudian:run-ledger-start -->'))
         .toThrow(/Generated task region content cannot contain Claudian markers/);
     });
+
+    it('throws when the note is missing run-ledger markers', () => {
+      // A hand-edited note that dropped the generated region must not be
+      // silently re-mangled. The thrown error is what AgentBoardView's
+      // finalizeLedgerToNote try/catches into the best-effort path so the
+      // run still settles even when the snapshot can't land.
+      const noMarkers =
+        '---\n' +
+        'type: claudian-work-order\nschema_version: 1\nid: t\ntitle: t\nstatus: running\nupdated: x\n' +
+        '---\n' +
+        '## Objective\nx\n';
+      expect(() => store.writeLedgerSnapshot(noMarkers, '- whatever'))
+        .toThrow(/Missing generated region markers/);
+    });
   });
 
 });
