@@ -1,5 +1,5 @@
 import { createConsoleSink } from './consoleSink';
-import { redactArgs, truncateBody } from './redact';
+import { redactArgs, scrubString, truncateBody } from './redact';
 import type { EmittableLevel, LogEntry, LoggerOptions, LogLevel, LogSink } from './types';
 import { levelAllows } from './types';
 
@@ -34,7 +34,7 @@ class LoggerCore {
       ts: this.now(),
       level,
       scope,
-      msg: truncateBody(msg, this.maxBodyChars),
+      msg: truncateBody(scrubString(msg), this.maxBodyChars),
       args: redactArgs(args),
     };
     this.buffer.push(entry);

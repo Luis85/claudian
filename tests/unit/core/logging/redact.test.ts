@@ -1,4 +1,6 @@
-import { redactArgs, truncateBody } from '../../../../src/core/logging/redact';
+import os from 'os';
+
+import { redactArgs, scrubString, truncateBody } from '../../../../src/core/logging/redact';
 
 describe('redactArgs', () => {
   it('masks secret-shaped keys', () => {
@@ -62,6 +64,82 @@ describe('redactArgs', () => {
     const a: Record<string, unknown> = { name: 'a' };
     a.self = a;
     expect(() => redactArgs([a])).not.toThrow();
+  });
+});
+
+describe('redactArgs value-level scrubbing', () => {
+  it('scrubs a bearer token embedded in a non-secret key value', () => {
+    const [out] = redactArgs([
+      { message: 'Authorization: Bearer abc123def456ghi789jkl' },
+    ]) as [Record<string, unknown>];
+    expect(out.message).not.toContain('abc123def456ghi789jkl');
+    expect(out.message).toBe('Authorization: Bearer [redacted]');
+  });
+
+  it('scrubs token=/api_key=/api-key= kv patterns inside values', () => {
+    const [out] = redactArgs([
+      {
+        url: 'https://host/cb?token=abc123def456ghi&x=1',
+        a: 'api_key=secretValue1234567',
+        b: 'api-key=anotherSecret987654',
+      },
+    ]) as [Record<string, unknown>];
+    expect(out.url).not.toContain('abc123def456ghi');
+    expect(out.url).toContain('token=[redacted]');
+    expect(out.url).toContain('x=1');
+    expect(out.a).not.toContain('secretValue1234567');
+    expect(out.b).not.toContain('anotherSecret987654');
+  });
+
+  it('scrubs sk-/provider-prefixed key shapes inside values', () => {
+    const [out] = redactArgs([
+      {
+        endpoint: 'configured key sk-ant-api03-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789',
+        err: new Error('failed with sk-proj-ZZZ1234567890abcdefghij').message,
+      },
+    ]) as [Record<string, unknown>];
+    expect(out.endpoint).not.toContain('sk-ant-api03-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789');
+    expect(out.endpoint).toContain('[redacted]');
+    expect(out.err).not.toContain('sk-proj-ZZZ1234567890abcdefghij');
+  });
+
+  it('scrubs user:pass@host credentials in URL/command strings', () => {
+    const [out] = redactArgs([
+      { cmd: 'git clone https://user:secrettoken123@host.example/repo.git' },
+    ]) as [Record<string, unknown>];
+    expect(out.cmd).not.toContain('secrettoken123');
+    expect(out.cmd).toContain('host.example/repo.git');
+  });
+
+  it('normalizes the home directory to ~ in values', () => {
+    const home = os.homedir();
+    const [out] = redactArgs([
+      { path: `${home}/Documents/vault/note.md` },
+    ]) as [Record<string, unknown>];
+    expect(out.path).toBe('~/Documents/vault/note.md');
+    expect(out.path).not.toContain(home);
+  });
+
+  it('leaves ordinary prose untouched', () => {
+    const [out] = redactArgs([
+      { message: 'Saved 3 files to the vault and resolved 2 conflicts.' },
+    ]) as [Record<string, unknown>];
+    expect(out.message).toBe('Saved 3 files to the vault and resolved 2 conflicts.');
+  });
+});
+
+describe('scrubString', () => {
+  it('is a no-op for plain text', () => {
+    expect(scrubString('hello world')).toBe('hello world');
+  });
+
+  it('scrubs a bearer token in a free-form message', () => {
+    expect(scrubString('got Bearer abc123def456ghi789')).toBe('got Bearer [redacted]');
+  });
+
+  it('normalizes the home directory', () => {
+    const home = os.homedir();
+    expect(scrubString(`reading ${home}/x`)).toBe('reading ~/x');
   });
 });
 
