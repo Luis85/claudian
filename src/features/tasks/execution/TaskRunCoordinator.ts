@@ -32,7 +32,7 @@ export interface TaskRunCoordinatorDeps {
 
 export type TaskRunResult =
   | { ok: true; status: TaskStatus }
-  | { ok: false; error: string };
+  | { ok: false; error: string; canceled?: boolean };
 
 export class TaskRunCoordinator {
   private readonly activeRuns: Set<string>;
@@ -94,7 +94,7 @@ export class TaskRunCoordinator {
           status: 'canceled',
           message: 'Run canceled.',
         });
-        return { ok: false, error: 'Run canceled.' };
+        return { ok: false, error: 'Run canceled.', canceled: true };
       }
 
       if (handle.status === 'failed') {

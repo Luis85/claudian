@@ -233,6 +233,21 @@ describe('QueueRunner — halt threshold', () => {
     expect(h.emissions.filter((e) => e.name === 'task:queue-halted')).toHaveLength(1);
   });
 
+  it('does not count canceled runs toward the auto-halt threshold', async () => {
+    // Canceling auto-started runs (the user cancels the chat tab) returns
+    // ok:false with canceled:true. That's a user action, not a provider failure,
+    // so it must not trip the auto-halt guard.
+    const h = makeHarness({
+      cap: 1,
+      haltAfterFailures: 1,
+      onRun: () => ({ ok: false, error: 'Run canceled.', canceled: true }),
+    });
+    h.setTasks([makeTask('a'), makeTask('b'), makeTask('c')]);
+    h.runner.tick();
+    await flush();
+    expect(h.runner.isHalted()).toBe(false);
+  });
+
   it('coerces a non-finite halt threshold to the default so auto-halt still fires', async () => {
     // Clearing Settings → Auto-halt writes undefined; Math.max(1, undefined) is
     // NaN, which would disable auto-halt (consecutiveFailures >= NaN is false).

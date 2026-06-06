@@ -285,6 +285,10 @@ export class QueueRunner {
       this.control.consecutiveFailures = 0;
       return;
     }
+    // A cancellation is a user action, not a provider failure — leave the streak
+    // untouched (neither bump nor reset) so canceling queued runs can't trip the
+    // auto-halt guard.
+    if (res.canceled) return;
     this.control.consecutiveFailures += 1;
     if (this.control.consecutiveFailures >= this.state.haltAfterFailures) {
       this.setHalted(`${this.control.consecutiveFailures} consecutive failures · last: ${res.error}`);

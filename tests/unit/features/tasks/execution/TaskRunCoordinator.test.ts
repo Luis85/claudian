@@ -158,6 +158,7 @@ describe('TaskRunCoordinator', () => {
     await expect(coordinator.run(makeTask())).resolves.toEqual({
       ok: false,
       error: 'Run canceled.',
+      canceled: true,
     });
     expect(statuses).toEqual(['running', 'canceled']);
   });
