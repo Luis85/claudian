@@ -768,4 +768,36 @@ describe('RunSession', () => {
       expect(callOrder).toEqual(['writeHandoff', 'finalizeLedgerToNote']);
     });
   });
+
+  describe('RunSession.resume failure handling', () => {
+    it('does not emit task:resumed when persistStatus for the resume turn rejects', async () => {
+      // A frontmatter write that fails on resume (e.g. vault offline / file gone)
+      // must NOT leak a stale `task:resumed` event — the board reads that as
+      // "back to running" and drops the reply surface, leaving the user with no
+      // way to retry. The run must fail visibly instead.
+      let writeCount = 0;
+      const writeStatus = jest.fn(async (_t: TaskSpec, options: { status: string }) => {
+        writeCount += 1;
+        // Allow the initial running write + the pause write through; reject the
+        // resume → running write so we exercise the failure path.
+        if (writeCount >= 3 && options.status === 'running') {
+          throw new Error('vault offline');
+        }
+      });
+      const { session, adapter, events } = makeSession({ writeStatus });
+      const resumed: TaskEventMap['task:resumed'][] = [];
+      events.on('task:resumed', (p) => resumed.push(p));
+      const terminal = session.run();
+      adapter.emitText('<claudian_needs_input>\nquestion: which?\n</claudian_needs_input>');
+      await Promise.resolve();
+      await Promise.resolve();
+      // Resume returns normally (the failure is settled internally as a fail);
+      // it must not throw out to the caller, which is a fire-and-forget void in
+      // the board.
+      await session.resume({ kind: 'reply', content: 'use a' });
+      const result = await terminal;
+      expect(resumed).toHaveLength(0);
+      expect(result.ok).toBe(false);
+    });
+  });
 });

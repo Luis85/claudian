@@ -220,7 +220,25 @@ export class RunSession {
 
     const content = arg.kind === 'reply' ? arg.content : 'approved';
     const ts = this.deps.now();
-    await this.persistStatus({ status: 'running', timestamp: ts, heartbeat: ts, pauseReason: null });
+    try {
+      await this.persistStatus({ status: 'running', timestamp: ts, heartbeat: ts, pauseReason: null });
+    } catch (error) {
+      // The frontmatter write failed (vault offline / file gone / hand-edited
+      // markers). The UI would otherwise see no event at all and the card
+      // would sit at needs_input forever with no live driver — fail the run
+      // visibly instead so the board's status-changed handler surfaces it.
+      // Do NOT emit `task:resumed` first: the board reads that as "back to
+      // running" and drops the reply surface before the failure lands.
+      const message = error instanceof Error ? error.message : String(error);
+      this.ledger.enqueue({ timestamp: ts, status: 'failed', message: `resume failed: ${message}` });
+      this.deps.stream.cancel();
+      await this.finish({
+        status: 'failed',
+        finalAssistantContent: this.finalContentBuffer,
+        error: `resume failed: ${message}`,
+      });
+      return;
+    }
     this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'running' });
     this.deps.events.emit('task:resumed', { taskId: this.taskId, path: this.path });
     this.ledger.enqueue({ timestamp: ts, status: 'running', message: `resumed: ${truncate(content, 80)}` });
@@ -639,7 +657,11 @@ function extractImplicitPauseReason(content: string): string {
   const last = paragraphs[paragraphs.length - 1].trim();
   const reason = last.length > 0 ? last : trimmed;
   const max = 240;
-  return reason.length <= max ? reason : reason.slice(reason.length - max);
+  if (reason.length <= max) return reason;
+  // Tail-truncate (keep the trailing chars — the question usually lands at the
+  // end), and signal the cut with a leading "…" so a reader knows context was
+  // dropped instead of seeing a fragmentary sentence start.
+  return `…${reason.slice(reason.length - (max - 1))}`;
 }
 
 function formatStaleWindow(ms: number): string {

@@ -2,9 +2,9 @@
 type: polish
 id: issue-20260606-agent-board-polishing-pass
 title: Agent Board polishing pass — review findings across UI, execution, and storage layers
-status: open
+status: mostly-resolved
 priority: 2 - medium
-triage: ready-for-agent
+triage: see-resolution-summary
 created: 2026-06-06
 updated: 2026-06-06
 owner: Claudian
@@ -22,6 +22,44 @@ tags:
   - bugs
 relations:
   - "[[Agent Kanban Board]]"
+---
+
+## Resolution summary (2026-06-06 polish session)
+
+| Finding | Resolution | Notes |
+|---|---|---|
+| H1 | **FIXED** | `RunSession.resume` wraps `persistStatus` in try/catch; on failure, ledgers + fails the run before any `task:resumed` emit. Unit test added. |
+| H2 | **NOT A BUG** | `trackBackgroundWrite` pre-catches every pending write via `.catch(() => undefined)`. `Promise.all` cannot reject. No change. |
+| H3 | **NOT A BUG** | `retryAttempt > RETRY_BACKOFF_MS.length` consumes every backoff window before degrading. Changing to `>=` would skip `backoff[1]` (the 30s window). Existing test pins the contract. |
+| H4 | **ALREADY FIXED** | `WorkOrderDetailModal` already trims before blur compare. |
+| H5 | **FIXED** | Collapsed lane gets `tabindex="0"` + keydown handler (Enter/Space). Expanded toggle gets `aria-expanded="true"`. |
+| H6 | **DEFERRED** | Full i18n sweep across 10 locales is a single large PR; tracked as a follow-up below. Not landed in this pass. |
+| H7 | **FIXED** | `AgentBoardRenderer.removeCard(taskId)` detaches + drops the ref. View's vault-delete handler calls it. |
+| H8 | **FIXED** | `AgentBoardView.evictInMemoryStateForPath` runs on `vault.on('delete')`, dropping `pauseState` / `liveHeartbeats` / `lastRunStatus` for the deleted task before the refresh fires. |
+| M1 | **FIXED** | Dropped explicit `refresh()` in `saveTaskFields`. `vault.process` emits modify → 100ms debounced refresh coalesces. Three sequential field edits now collapse to one re-index. |
+| M2 | **FIXED** | `extractImplicitPauseReason` prepends `…` when right-slicing, so a truncated reason is visibly partial. |
+| M3 | **FIXED** | `applyLiveStrip` sets `aria-label="{Fresh|Stale|Very stale} heartbeat ({age} ago)"` and uses tier-specific glyphs (●/◐/◯) so color-blind users get freshness without the color cue. |
+| M5 | **FIXED** | Reply + reject-reason inputs get `maxLength = 4000`. |
+| M6 | **NOT A BUG** | `TaskNoteStore.appendLedger` does throw via `replaceGeneratedRegion` when markers are missing; finding's "silent" claim was wrong. New test pins the loud-throw contract. |
+| M7 | **FIXED** | `escapeClaudianMarkers` wraps `<claudian_*>` substrings in backticks across title/objective/AC/context/constraints. Prompt parser regex no longer matches polluted user metadata. Unit test added. |
+| M8 | **FIXED** | `recoveringOrphans` reentry bool collapses overlapping `recoverOrphanedRuns` passes. |
+| M9 | **FIXED** | `RunSidecarStore.listRuns` splits on `/[\\/]/` with a comment explaining why. |
+| M11 | **DEFERRED** | Implicit-pause retry on malformed handoff is a behavior change worth its own design discussion. Tracked as follow-up. |
+| M13 | **FIXED** | `renderPromptText` splits on blank-line paragraphs; single-paragraph prompts get `white-space: pre-wrap` so inline newlines survive. |
+| L3 | **FIXED** | `1 failure` / `N failures` pluralization. |
+| L8 | **FIXED** | `renderErrors` truncates each line at 300 chars with `…`; full text remains via `title` tooltip. |
+
+Verification: `npm run typecheck && npm run lint && npm run test && npm run build` all clean. Test suite up from 7832 → 7835 (new H1 + M7 + M6 + RunSidecarStore runtimeId tests).
+
+### Follow-ups (still open)
+
+- **H6 — i18n sweep.** Move the toolbar/queue/card/modal strings behind `t('tasks.board.*')` across all 10 locales. Single large PR.
+- **M11 — Implicit-pause retry on malformed handoff.** Needs design call: retry-once vs. stay terminal as `needs_handoff`. Behavior change.
+- **M-series rough edges not in this pass**: M4 (extended vault-change debounce window), M10 (sentence-case audit), M12 (board-config normalization notice), M14 (`PROVIDER_DEFAULT_MODEL_VALUE` constant). All low-impact polish.
+- **L-series nitpicks not in this pass**: L1 (TAIL_CAP comment), L2 (`role="article"` + `aria-labelledby` on cards), L4 (`extractGeneratedRegion` single-pass), L5 (dual `attempts` write doc), L6 (silent catch doc), L7 (archive confirmation i18n — pairs with H6), L9 (priority+date ordering doc), L10 (QueueRunner.launch comment fix).
+
+Once these follow-ups land or are explicitly rejected, this issue can move to `status: resolved`.
+
 ---
 
 # Agent Board polishing pass — review findings

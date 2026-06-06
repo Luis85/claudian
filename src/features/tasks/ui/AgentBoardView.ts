@@ -64,6 +64,12 @@ export class AgentBoardView extends ItemView {
   // with a live registry entry or a fresh sidecar heartbeat) so running on a
   // cadence here is safe.
   private orphanRecheckTimer: number | null = null;
+  // Reentry guard for `recoverOrphanedRuns`. Called from onOpen, the periodic
+  // timer, and (potentially) other paths; a second pass entering while the
+  // first is mid-await would scan the same model and double-write `failed`
+  // for the same orphan. The guard collapses overlapping calls into a single
+  // pass; subsequent invocations no-op cleanly.
+  private recoveringOrphans = false;
   private readonly pauseState = new Map<string, AgentBoardPauseState>();
   // Last status written per task, so a failed/canceled run can report the
   // terminal status on `task:run-finished` without re-reading the note.
@@ -136,7 +142,13 @@ export class AgentBoardView extends ItemView {
     const { vault } = this.plugin.app;
     this.registerEvent(vault.on('create', (file) => this.onVaultChange(file)));
     this.registerEvent(vault.on('modify', (file) => this.onVaultChange(file)));
-    this.registerEvent(vault.on('delete', (file) => this.onVaultChange(file)));
+    // A vault delete never emits a terminal status change, so the in-memory
+    // pause + heartbeat maps would otherwise leak when a paused card is
+    // deleted from disk. Evict before scheduling the refresh.
+    this.registerEvent(vault.on('delete', (file) => {
+      this.evictInMemoryStateForPath(file.path);
+      this.onVaultChange(file);
+    }));
     this.registerEvent(vault.on('rename', (file) => this.onVaultChange(file)));
     // A freed chat tab can unblock the queue (it gates launches on tab
     // availability), so re-render the slot count and nudge the runner.
@@ -232,6 +244,24 @@ export class AgentBoardView extends ItemView {
   private onVaultChange(file: TAbstractFile): void {
     if (!file.path.startsWith(`${this.folder}/`)) return;
     this.scheduleRefresh();
+  }
+
+  /**
+   * Drop in-memory pause + live heartbeat entries for a work-order path. Called
+   * on `vault.on('delete')` because a deleted file never emits a terminal
+   * status change — without this, paused cards leak their pause payload until
+   * the plugin reloads. Lookup is by path → task id from the current model,
+   * since the deleted file is already gone from the vault.
+   */
+  private evictInMemoryStateForPath(path: string): void {
+    if (!path.startsWith(`${this.folder}/`)) return;
+    const task = this.model.tasks.find((entry) => entry.path === path);
+    if (!task) return;
+    const id = task.frontmatter.id;
+    this.pauseState.delete(id);
+    this.liveHeartbeats.delete(id);
+    this.lastRunStatus.delete(id);
+    this.renderer.removeCard(id);
   }
 
   private scheduleRefresh(): void {
@@ -371,8 +401,11 @@ export class AgentBoardView extends ItemView {
   }
 
   private async saveTaskFields(task: TaskSpec, fields: WorkOrderFieldUpdate): Promise<void> {
+    // No explicit refresh: applyNoteChange goes through vault.process, which
+    // emits a `modify` event the onOpen handler already wires to a 100ms
+    // debounced refresh. Three field edits in quick succession (title +
+    // provider + model) collapse to one re-index instead of three.
     await this.applyNoteChange(task.path, (content) => this.noteStore.writeFields(content, fields));
-    await this.refresh();
   }
 
   private computeSlots(): { used: number; max: number } {
@@ -641,6 +674,16 @@ export class AgentBoardView extends ItemView {
    * shows a permanently "active" card that nothing is driving.
    */
   private async recoverOrphanedRuns(): Promise<void> {
+    if (this.recoveringOrphans) return;
+    this.recoveringOrphans = true;
+    try {
+      await this.recoverOrphanedRunsInner();
+    } finally {
+      this.recoveringOrphans = false;
+    }
+  }
+
+  private async recoverOrphanedRunsInner(): Promise<void> {
     const now = new Date().toISOString();
     const nowMs = Date.now();
     let recovered = false;

@@ -153,6 +153,21 @@ export class AgentBoardRenderer {
     this.applyLiveStrip(refs.liveStripMeta, refs.liveStripLedger, payload);
   }
 
+  /**
+   * Drop the cached card refs for a task that no longer exists in the model
+   * (vault delete, archive). Without this, `cardRefs` would hold a reference
+   * to the detached DOM node until the next full `render()` clears the map —
+   * fine in steady state, but a leak window for any path that mutates the
+   * model without an immediate re-render. The DOM is also detached defensively
+   * so a stale handler can't reach a removed-but-still-mounted card.
+   */
+  removeCard(taskId: string): void {
+    const refs = this.cardRefs.get(taskId);
+    if (!refs) return;
+    refs.card.remove();
+    this.cardRefs.delete(taskId);
+  }
+
   private renderBoardToolbar(
     root: HTMLElement,
     state: AgentBoardRenderState,

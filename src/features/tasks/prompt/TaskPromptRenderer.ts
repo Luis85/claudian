@@ -40,9 +40,27 @@ function renderPriorAttempts(ledger: string): string {
   return `\n\n## Prior Attempts\nLedger from previous attempts (most recent at the bottom):\n${tail.join('\n')}`;
 }
 
+/**
+ * Wrap any `<claudian_*>` substring in backticks so a polluted title or section
+ * cannot impersonate a real protocol block. The agent still reads the intent;
+ * the stream parser regex (which looks for a literal `<claudian_<kind>>`) does
+ * not match a backticked occurrence. Applied to every user-supplied string the
+ * renderer interpolates; renderer-emitted blocks below are deliberately
+ * literal and unescaped.
+ */
+function escapeClaudianMarkers(value: string): string {
+  if (!value) return value;
+  return value.replace(/<(\/?)claudian_([A-Za-z_]+)>/g, '`<$1claudian_$2>`');
+}
+
 export function renderTaskPrompt(task: TaskSpec, lane?: TaskPromptLaneCriteria): string {
   const provider = task.frontmatter.provider ?? 'unspecified';
   const model = task.frontmatter.model ?? 'unspecified';
+  const title = escapeClaudianMarkers(task.frontmatter.title);
+  const objective = escapeClaudianMarkers(task.sections.objective);
+  const acceptanceCriteria = escapeClaudianMarkers(task.sections.acceptanceCriteria);
+  const context = escapeClaudianMarkers(task.sections.context);
+  const constraints = escapeClaudianMarkers(task.sections.constraints);
 
   const dor =
     lane && lane.definitionOfReady.length > 0
@@ -86,21 +104,21 @@ End the entire run with one <claudian_handoff> block as specified below.`;
 
   const priorAttempts = renderPriorAttempts(task.sections.ledger);
 
-  return `${task.frontmatter.title}
+  return `${title}
 
 You are executing a Claudian work order. Complete only the task described below and respect all constraints.
 
 ## Work Order
 Work order path: ${task.path}
-Title: ${task.frontmatter.title}
+Title: ${title}
 Task ID: ${task.frontmatter.id}
 Provider/model: ${provider} / ${model}
 
 ## Objective
-${task.sections.objective}
+${objective}
 
 ## Acceptance Criteria
-${task.sections.acceptanceCriteria}
+${acceptanceCriteria}
 
 ## Progress Tracking
 As you complete each acceptance criterion above, edit this work order note (${task.path}) and change the matching \`- [ ]\` checkbox to \`- [x]\`. Keep the checklist accurate as you make progress. Do not edit the Run Ledger or Result / Handoff sections — Claudian owns those.
@@ -109,10 +127,10 @@ As you complete each acceptance criterion above, edit this work order note (${ta
 While executing, update the related docs referenced from Objective/Context (plan, spec, ADR, issue, PRD) so progress is visible to humans reading those docs — do not let the work order be the only place that reflects current state. Before completing the work order, verify all related docs are updated to reflect the final state and any decisions made during the run.${protocol}
 
 ## Context
-${task.sections.context}
+${context}
 
 ## Constraints
-${task.sections.constraints}${dor}${dod}${reworkNotes}${priorAttempts}
+${constraints}${dor}${dod}${reworkNotes}${priorAttempts}
 
 ## Required Structured Handoff
 At the end of your final response, include exactly one strict handoff block in this format:
