@@ -163,6 +163,38 @@ describe('loadBoardConfig — queue.paused', () => {
     );
     expect(config.queue).toEqual({ paused: true });
   });
+
+  it('preserves queue.paused when falling back from a malformed lane', () => {
+    // A lane edited to a blank title fails validation; the board reverts to
+    // default lanes, but the user's pause must survive or the queue silently
+    // resumes auto-starting work orders.
+    const agentBoardConfig = {
+      schemaVersion: 1,
+      lanes: [{ id: 'a', title: '', statuses: ['ready'] }],
+      queue: { paused: true },
+    };
+    const { config } = loadBoardConfig({ agentBoardConfig });
+    expect(config.lanes.map((lane) => lane.id)).toEqual(
+      DEFAULT_BOARD_CONFIG.lanes.map((lane) => lane.id),
+    );
+    expect(config.queue).toEqual({ paused: true });
+  });
+
+  it('preserves queue.paused when falling back from duplicate lane ids', () => {
+    const agentBoardConfig = {
+      schemaVersion: 1,
+      lanes: [
+        { id: 'dup', title: 'A', statuses: ['ready'] },
+        { id: 'dup', title: 'B', statuses: ['done'] },
+      ],
+      queue: { paused: true },
+    };
+    const { config } = loadBoardConfig({ agentBoardConfig });
+    expect(config.lanes.map((lane) => lane.id)).toEqual(
+      DEFAULT_BOARD_CONFIG.lanes.map((lane) => lane.id),
+    );
+    expect(config.queue).toEqual({ paused: true });
+  });
 });
 
 describe('writeBoardQueuePaused', () => {

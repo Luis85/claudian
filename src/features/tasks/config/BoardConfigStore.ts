@@ -18,7 +18,7 @@ export function loadBoardConfig(settings: Record<string, unknown>): LoadBoardCon
     // A persisted config with no lanes array — e.g. a fresh vault where only
     // queue.paused was saved — must keep the default lanes rather than collapse
     // the board to zero lanes, while still honoring the queue flag.
-    return { config: { ...DEFAULT_BOARD_CONFIG, queue: normalizeQueue(raw) }, errors: [] };
+    return { config: defaultConfigPreservingQueue(raw), errors: [] };
   }
 
   const errors: string[] = [];
@@ -29,7 +29,7 @@ export function loadBoardConfig(settings: Record<string, unknown>): LoadBoardCon
   for (const laneRaw of candidate.lanes) {
     const lane = normalizeLane(laneRaw, errors);
     if (!lane) {
-      return { config: DEFAULT_BOARD_CONFIG, errors };
+      return { config: defaultConfigPreservingQueue(raw), errors };
     }
     if (seenIds.has(lane.id)) {
       // Lane-id collisions are structural — two lanes claiming the same id make
@@ -37,7 +37,7 @@ export function loadBoardConfig(settings: Record<string, unknown>): LoadBoardCon
       // default. This is the only remaining fallback path; status duplicates
       // are surfaced as soft warnings further down.
       errors.push(`Lane id "${lane.id}" is used by more than one lane.`);
-      return { config: DEFAULT_BOARD_CONFIG, errors };
+      return { config: defaultConfigPreservingQueue(raw), errors };
     }
     seenIds.add(lane.id);
     // Cross-lane status duplicates are tolerated: the user's lanes survive
@@ -120,6 +120,13 @@ function normalizeQueue(raw: unknown): BoardQueueConfig {
   const queue = (raw as { queue?: unknown }).queue;
   if (!queue || typeof queue !== 'object') return { paused: false };
   return { paused: Boolean((queue as { paused?: unknown }).paused) };
+}
+
+// A structurally invalid board config still must preserve the user's queue
+// pause — dropping it would silently resume auto-starting work orders. Restore
+// the default lanes but carry queue.paused through from the saved config.
+function defaultConfigPreservingQueue(raw: unknown): BoardConfig {
+  return { ...DEFAULT_BOARD_CONFIG, queue: normalizeQueue(raw) };
 }
 
 // Mutates the settings bag in place so the caller can persist via the existing
