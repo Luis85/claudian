@@ -57,6 +57,49 @@ ${HANDOFF_END}
 `;
 }
 
+function makeRunningNoteFor(id: string, opts: { withLedger?: boolean } = {}): string {
+  const ledgerBody =
+    opts.withLedger === false
+      ? 'This note predates the generated run-ledger markers.'
+      : `${RUN_LEDGER_START}\n- 2026-06-04T08:30:00.000Z [running] Run started (attempt 1)\n${RUN_LEDGER_END}`;
+  return `---
+type: claudian-work-order
+schema_version: 1
+id: ${id}
+title: Orphaned ${id}
+status: running
+priority: 2 - normal
+created: 2026-06-04T08:00:00.000Z
+updated: 2026-06-04T08:00:00.000Z
+started: 2026-06-04T08:30:00.000Z
+heartbeat: 2026-06-04T08:30:00.000Z
+attempts: 1
+---
+# Orphaned ${id}
+
+## Objective
+Do the thing.
+
+## Acceptance Criteria
+- [ ] Done.
+
+## Context
+ctx
+
+## Constraints
+none
+
+## Run Ledger
+
+${ledgerBody}
+
+## Result / Handoff
+
+${HANDOFF_START}
+${HANDOFF_END}
+`;
+}
+
 function makeView(notes: Record<string, string>, coordinator: unknown) {
   const store = new TaskNoteStore();
   const events = new EventBus<TaskEventMap>();
@@ -136,5 +179,32 @@ describe('Agent Board crash recovery (integration)', () => {
     await view.recoverOrphanedRuns();
 
     expect(store.parse(PATH, notes[PATH]).task.frontmatter.status).toBe('review');
+  });
+
+  it('recovers an orphaned note that is missing the run-ledger markers', async () => {
+    // A hand-edited or older active note has no generated ledger region, so the
+    // ledger append throws — the status must still be failed.
+    const notes = { [PATH]: makeRunningNoteFor('t1', { withLedger: false }) };
+    const { view, store } = makeView(notes, null);
+
+    await view.recoverOrphanedRuns();
+
+    expect(store.parse(PATH, notes[PATH]).task.frontmatter.status).toBe('failed');
+  });
+
+  it('keeps recovering other orphaned notes when one is missing ledger markers', async () => {
+    const noMarkers = 'Agent Board/tasks/no-markers.md';
+    const withMarkers = 'Agent Board/tasks/with-markers.md';
+    const notes = {
+      [noMarkers]: makeRunningNoteFor('a', { withLedger: false }),
+      [withMarkers]: makeRunningNoteFor('b'),
+    };
+    const { view, store } = makeView(notes, null);
+
+    await view.recoverOrphanedRuns();
+
+    // The marker-less note must not abort recovery of the rest of the loop.
+    expect(store.parse(noMarkers, notes[noMarkers]).task.frontmatter.status).toBe('failed');
+    expect(store.parse(withMarkers, notes[withMarkers]).task.frontmatter.status).toBe('failed');
   });
 });

@@ -517,15 +517,30 @@ export class AgentBoardView extends ItemView {
       // previous view instance that was closed and reopened) — only genuinely
       // orphaned runs (no live session, e.g. after a plugin reload) are failed.
       if (sharedRunRegistry.has(task.frontmatter.id)) continue;
-      await this.applyNoteChange(task.path, (content) =>
-        this.noteStore.appendLedger(content, { timestamp: now, status: 'failed', message: 'orphaned by plugin reload' }),
-      );
-      await this.applyNoteChange(task.path, (content) =>
-        this.noteStore.writeStatus(content, { status: 'failed', timestamp: now }),
-      );
-      this.pauseState.delete(task.frontmatter.id);
-      this.plugin.events.emit('task:status-changed', { taskId: task.frontmatter.id, path: task.path, status: 'failed' });
-      recovered = true;
+      try {
+        // Write the failed status first: it only rewrites frontmatter, so a note
+        // missing the generated run-ledger markers (hand-edited or older) is
+        // still recovered. The ledger append is best-effort and must not abort
+        // this note's recovery or the rest of the loop.
+        await this.applyNoteChange(task.path, (content) =>
+          this.noteStore.writeStatus(content, { status: 'failed', timestamp: now }),
+        );
+        try {
+          await this.applyNoteChange(task.path, (content) =>
+            this.noteStore.appendLedger(content, { timestamp: now, status: 'failed', message: 'orphaned by plugin reload' }),
+          );
+        } catch {
+          // The note lacks the generated ledger region; the failed status above
+          // is what un-stalls the card, so proceed without the ledger line.
+        }
+        this.pauseState.delete(task.frontmatter.id);
+        this.plugin.events.emit('task:status-changed', { taskId: task.frontmatter.id, path: task.path, status: 'failed' });
+        recovered = true;
+      } catch {
+        // Couldn't even mark this note failed (e.g. a transient write failure);
+        // skip it so the remaining orphaned notes are still recovered, and let
+        // the next board open retry it.
+      }
     }
     if (recovered) await this.refresh();
   }
