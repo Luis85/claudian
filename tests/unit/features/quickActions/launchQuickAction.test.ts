@@ -6,6 +6,11 @@ import type { QuickAction } from '@/features/quickActions/types';
 jest.mock('obsidian', () => ({
   TFile: class TFile { path = ''; },
   TFolder: class TFolder { path = ''; },
+  Notice: jest.fn(),
+}));
+
+jest.mock('@/i18n/i18n', () => ({
+  t: (key: string) => key,
 }));
 
 const openModalMock = jest.fn();
@@ -110,7 +115,7 @@ describe('launchQuickAction', () => {
     const opts = openModalMock.mock.calls[0][0];
     expect(opts.presetProviderId).toBe('claude');
     expect(opts.presetModel).toBe('claude-sonnet-4-5');
-    expect(opts.fallbackNotice).toEqual({ storedProviderId: 'codex', storedModel: 'gpt-5-codex' });
+    expect(opts.fallbackNotice).toEqual({ storedProviderLabel: 'Codex', storedModelLabel: 'gpt-5-codex' });
     expect(store.delete).toHaveBeenCalledWith('summarize');
   });
 
@@ -126,7 +131,7 @@ describe('launchQuickAction', () => {
 
     const opts = openModalMock.mock.calls[0][0];
     expect(opts.presetModel).toBe('claude-sonnet-4-5');
-    expect(opts.fallbackNotice?.storedModel).toBe('unknown-model');
+    expect(opts.fallbackNotice?.storedModelLabel).toBe('unknown-model');
   });
 
   it('uses global default + no notice on store miss', async () => {
@@ -166,5 +171,28 @@ describe('launchQuickAction', () => {
     await launchQuickAction(plugin, makeFile(), ACTION);
     expect(store.set).not.toHaveBeenCalled();
     expect(runMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('launchQuickAction without a store', () => {
+  it('opens modal with global default preset when quickActionLastUsedStore is undefined', async () => {
+    const plugin = {
+      app: {},
+      settings: { provider: 'claude' },
+      // quickActionLastUsedStore intentionally absent
+    } as never;
+    await launchQuickAction(plugin, makeFile(), ACTION);
+    const opts = openModalMock.mock.calls[0][0];
+    expect(opts.presetProviderId).toBe('claude');
+    expect(opts.presetModel).toBe('claude-sonnet-4-5');
+    expect(opts.fallbackNotice).toBeUndefined();
+  });
+
+  it('confirm without a store does not throw', async () => {
+    const plugin = { app: {}, settings: { provider: 'claude' } } as never;
+    await launchQuickAction(plugin, makeFile(), ACTION);
+    const opts = openModalMock.mock.calls[0][0];
+    expect(() => opts.onConfirm({ providerId: 'claude', model: 'claude-sonnet-4-5' })).not.toThrow();
+    expect(runMock).toHaveBeenCalled();
   });
 });

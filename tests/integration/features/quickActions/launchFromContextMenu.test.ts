@@ -9,6 +9,8 @@ import { TFile } from 'obsidian';
 jest.mock('obsidian', () => {
   class Modal {
     contentEl = document.createElement('div');
+    modalEl = document.createElement('div');
+    scope = { register: jest.fn() };
     constructor(public app: unknown) {}
     open(): void {
       document.body.appendChild(this.contentEl);
@@ -175,4 +177,41 @@ it('end-to-end: launch modal → confirm Codex → tab created with codex + pinn
     kind: 'quickAction',
     name: 'summarize',
   }));
+});
+
+it('integration: Cancel path does not persist or dispatch', async () => {
+  const tabManager = {
+    getActiveTab: () => null,
+    canCreateTab: () => true,
+    createTab: jest.fn(),
+    switchToTab: jest.fn(),
+  };
+  const view = { getTabManager: () => tabManager };
+  const store = { get: jest.fn().mockReturnValue(null), set: jest.fn(), delete: jest.fn() };
+  const plugin = {
+    app: {},
+    settings: { provider: 'claude' },
+    quickActionLastUsedStore: store,
+    events: { emit: jest.fn() },
+    getView: () => view,
+    activateView: jest.fn(),
+  } as never;
+
+  await launchQuickAction(plugin, makeFile(), ACTION);
+  const cancelBtn = document.body.querySelector<HTMLButtonElement>('[data-testid="qa-cancel"]')!;
+  expect(cancelBtn).not.toBeNull();
+  cancelBtn.click();
+  await new Promise((r) => setTimeout(r, 0));
+
+  expect(store.set).not.toHaveBeenCalled();
+  expect(tabManager.createTab).not.toHaveBeenCalled();
+});
+
+// Fallback-notice integration: Agent B is renaming the i18n field set; the
+// underlying behavior (modal renders a [data-testid="qa-fallback-notice"]
+// when stored provider is disabled) is already covered by the unit-level
+// QuickActionLaunchModal test. Skip here until the rename lands so we don't
+// race with Agent B on the same DOM convention.
+it.skip('integration: fallback-notice renders when stored provider is disabled', () => {
+  // TODO: enable once Agent B finishes the i18n / field rename for the notice.
 });
