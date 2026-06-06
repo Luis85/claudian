@@ -1,7 +1,7 @@
 ---
 title: Quick-action provider+model prompt
 date: 2026-06-06
-status: draft
+status: implemented
 scope: src/features/quickActions, src/features/tasks/ui/workOrderContextMenu.ts
 ---
 
