@@ -83,7 +83,8 @@ Expected responsibilities:
   - determines whether the message belongs to a work-order run,
   - delegates eligible assistant-message content to the helper,
   - renders normal Markdown segments with existing behavior,
-  - inserts the compact/expandable card for the structured handoff segment.
+  - inserts the compact/expandable card for the structured handoff segment,
+  - applies the transformation on two paths — the stored-message replay path and a streaming finalize hook — so the card appears as soon as a live run completes and again after reload.
 - Task execution:
   - continues using the existing handoff parser and note-writing path.
 
@@ -97,7 +98,8 @@ Transform a handoff block only when all of the following are true:
 2. The active chat tab or message context is linked to a work-order run.
 3. The content contains exactly one `<claudian_handoff>` block.
 4. The block contains all required fields: `summary`, `verification`, `risks`, and `next_action`.
-5. The block parses without ambiguity.
+5. No required field label is repeated inside the block (a duplicate label is ambiguous because the shared parser keeps only the last value).
+6. The block parses without ambiguity.
 
 When any rule fails, render the message normally. This fail-open behavior avoids hiding potentially important output.
 
@@ -106,10 +108,10 @@ When any rule fails, render the message normally. This fail-open behavior avoids
 1. The Agent Board starts a work-order run in a chat tab linked to the work-order note.
 2. The provider streams an assistant response that ends with one structured `<claudian_handoff>` block.
 3. Existing task execution parses the final response and writes the handoff into the work-order note.
-4. Chat rendering receives the assistant message for display.
+4. Chat rendering receives the assistant message for display, on either the live streaming finalize (when the run completes) or the stored-message replay (on reload, switch, or rewind).
 5. The renderer recognizes the work-order context and passes the content to the handoff display helper.
 6. The helper returns display segments: Markdown before the handoff, a structured handoff card model, and Markdown after the handoff.
-7. The renderer displays the Markdown segments normally and the handoff model as a collapsed card.
+7. The renderer displays the Markdown segments normally and the handoff model as a collapsed card. On the streaming path it swaps the just-finished raw text element in place; the stored content block keeps the raw handoff text so reload re-derives the same card.
 8. Expanding the card reveals formatted sections without raw XML or field labels.
 
 ## Error Handling
@@ -117,6 +119,7 @@ When any rule fails, render the message normally. This fail-open behavior avoids
 - **No valid handoff block:** render the message normally.
 - **Malformed handoff block:** render the message normally.
 - **Missing required field:** render the message normally.
+- **Duplicate required field:** render the message normally; a repeated label is ambiguous.
 - **Multiple handoff blocks:** render the message normally to avoid hiding unexpected output.
 - **Long summary:** truncate only the collapsed preview; keep expanded content complete.
 - **Unexpected rendering error:** fall back to normal message rendering rather than dropping assistant content.
@@ -130,6 +133,7 @@ Unit tests should cover the handoff display helper:
 - malformed XML-like block,
 - missing `summary`, `verification`, `risks`, or `next_action`,
 - multiple handoff blocks,
+- a repeated required field,
 - long summary preview truncation.
 
 Renderer tests should cover:
@@ -139,7 +143,8 @@ Renderer tests should cover:
 - raw `<claudian_handoff>` tags and raw field labels are not visible in card mode,
 - normal assistant text before and after the block still renders,
 - non-work-order chat containing the same valid handoff text renders unchanged,
-- malformed work-order handoff content renders unchanged.
+- malformed work-order handoff content renders unchanged,
+- the streaming finalize hook swaps a completed handoff text block for the card in work-order tabs and leaves it untouched elsewhere.
 
 Later implementation verification should run targeted unit tests plus the usual project checks: typecheck, lint, unit tests, and build.
 
@@ -149,7 +154,8 @@ Later implementation verification should run targeted unit tests plus the usual 
 - The card is collapsed by default.
 - Expanded content is formatted, not raw.
 - The behavior is scoped to work-order run chats.
-- Ambiguous or malformed content fails open by rendering normally.
+- Ambiguous or malformed content — including duplicate required fields — fails open by rendering normally.
+- The transformation runs on both the live streaming finalize and the stored replay path, so the card appears at run completion and survives reload.
 - No settings toggle is required for the first version.
 
 ## Open Follow-up

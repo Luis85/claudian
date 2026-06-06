@@ -1,10 +1,18 @@
+---
+title: Work Order Handoff Chat Card Implementation Plan
+date: 2026-06-06
+status: ready-for-review
+scope: chat-rendering
+parent: "[[2026-06-06-work-order-handoff-chat-card-design]]"
+---
+
 # Work Order Handoff Chat Card Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Render valid Agent Board work-order `<claudian_handoff>` blocks as compact expandable chat cards instead of raw XML-like text.
 
-**Architecture:** Add a pure chat-facing handoff splitter, a focused card renderer, and a narrow `MessageRenderer` integration gated by task-run tab context. Persistence, provider transcripts, and task note handoff writing stay unchanged.
+**Architecture:** Add a pure chat-facing handoff splitter, a focused card renderer, and a narrow `MessageRenderer` integration gated by task-run tab context, applied on both the stored-replay path and a live streaming finalize hook so the card appears the moment a work-order run completes (not only after a reload). Persistence, provider transcripts, and task note handoff writing stay unchanged.
 
 **Tech Stack:** TypeScript, Obsidian DOM helpers, existing `setupCollapsible`, Jest unit tests, modular CSS imported through `src/style/index.css`.
 
@@ -18,11 +26,12 @@
 
 - Create `src/features/chat/rendering/WorkOrderHandoffDisplay.ts`: pure parser/splitter for exactly one valid handoff block.
 - Create `src/features/chat/rendering/WorkOrderHandoffCard.ts`: compact/expandable DOM card renderer.
-- Modify `src/features/chat/rendering/MessageRenderer.ts`: render assistant text through the splitter when the tab has a work-order path.
+- Modify `src/features/chat/rendering/MessageRenderer.ts`: render assistant text through the splitter when the tab has a work-order path, on both the stored-message path and a streaming finalize hook.
+- Modify `src/features/chat/controllers/StreamController.ts`: route the live streamed finalize through the work-order handoff card so the card replaces the raw block when a run completes, not only on reload.
 - Modify `src/features/chat/tabs/types.ts`: add `workOrderPath?: string | null` to task-run tab data and options.
 - Modify `src/features/chat/tabs/TabManager.ts`: store the work-order path on task-run tabs.
 - Modify `src/features/chat/tabs/tabControllers.ts`: pass work-order context into `MessageRenderer`.
-- Modify `src/features/chat/ClaudianView.ts`: accept `workOrderPath` in `startTaskRunInFreshTab`.
+- Modify `src/features/chat/ClaudianView.ts`: accept an optional `workOrderPath` in `startTaskRunInFreshTab` (the commit-turn caller leaves it unset).
 - Modify `src/features/tasks/execution/ChatTabExecutionSurface.ts`: pass `task.path` to the chat view.
 - Create `src/style/features/work-order-handoff-card.css`: card styles.
 - Modify `src/style/index.css`: import the new style module.
@@ -139,6 +148,18 @@ summary: Missing fields
     expect(result).toBeNull();
   });
 
+  it('returns null when a required field is repeated', () => {
+    const result = splitWorkOrderHandoffForDisplay(`<claudian_handoff>
+summary: First summary.
+summary: Second summary.
+verification: npm run test passed.
+risks: No known risks.
+next_action: Review the result.
+</claudian_handoff>`);
+
+    expect(result).toBeNull();
+  });
+
   it('normalizes and truncates long summary previews', () => {
     const preview = truncateHandoffPreview(`${'word '.repeat(60)}final`);
 
@@ -189,6 +210,7 @@ export type WorkOrderHandoffSegment =
   | WorkOrderHandoffDisplaySegment;
 
 const HANDOFF_BLOCK_PATTERN = /<claudian_handoff>\s*[\s\S]*?\s*<\/claudian_handoff>/g;
+const REQUIRED_HANDOFF_LABELS = ['summary', 'verification', 'risks', 'next_action'] as const;
 
 export function splitWorkOrderHandoffForDisplay(content: string): WorkOrderHandoffSegment[] | null {
   const matches = [...content.matchAll(HANDOFF_BLOCK_PATTERN)];
@@ -198,6 +220,10 @@ export function splitWorkOrderHandoffForDisplay(content: string): WorkOrderHando
   if (match.index === undefined) return null;
 
   const rawBlock = match[0];
+  // The shared task parser keeps last-wins on duplicate labels; reject ambiguous
+  // blocks here so a repeated required field fails open to the raw transcript
+  // instead of silently hiding content behind a card.
+  if (hasDuplicateHandoffField(rawBlock)) return null;
   const parsed = parseTaskHandoff(rawBlock);
   if (!parsed.ok) return null;
 
@@ -214,6 +240,13 @@ export function splitWorkOrderHandoffForDisplay(content: string): WorkOrderHando
   if (after) segments.push({ type: 'markdown', content: after });
 
   return segments;
+}
+
+function hasDuplicateHandoffField(block: string): boolean {
+  return REQUIRED_HANDOFF_LABELS.some((label) => {
+    const matches = block.match(new RegExp(`^${label}:`, 'gm'));
+    return (matches?.length ?? 0) > 1;
+  });
 }
 
 export function truncateHandoffPreview(
@@ -399,11 +432,13 @@ The full call should end like this:
 
 - [ ] **Step 4: Add work-order path to the chat view task-run API**
 
-In `src/features/chat/ClaudianView.ts`, add this option to `startTaskRunInFreshTab`:
+In `src/features/chat/ClaudianView.ts`, add this **optional** option to `startTaskRunInFreshTab`:
 
 ```ts
-    workOrderPath: string;
+    workOrderPath?: string;
 ```
+
+Keep it optional. `startTaskRunInFreshTab` has a second caller inside `injectCommitTurnForConversation` (the commit-turn fallback) that has no work-order note path to pass; a required field there would break typecheck. The common commit turn already reuses the original run's tab (which carries `workOrderPath` from creation), so only the rare fresh-tab fallback resolves to a normal, non-work-order tab — which is correct.
 
 Pass it to `createTaskRunTab`:
 
@@ -431,7 +466,7 @@ Run:
 npm run typecheck
 ```
 
-Expected: FAIL because `MessageRenderer` does not yet accept the seventh constructor argument. Continue to Task 5 before committing.
+Expected: FAIL only because `MessageRenderer` does not yet accept the seventh constructor argument. (The optional `workOrderPath` keeps both `startTaskRunInFreshTab` callers compiling, so there is no second error.) Continue to Task 5 before committing.
 
 ---
 
@@ -439,6 +474,7 @@ Expected: FAIL because `MessageRenderer` does not yet accept the seventh constru
 
 **Files:**
 - Modify: `src/features/chat/rendering/MessageRenderer.ts`
+- Modify: `src/features/chat/controllers/StreamController.ts`
 - Modify: `tests/unit/features/chat/rendering/MessageRenderer.test.ts`
 
 - [ ] **Step 1: Add renderer tests**
@@ -538,6 +574,43 @@ next_action: Review the result.
     expect(messagesEl.querySelector('.claudian-work-order-handoff-card')).toBeNull();
     expect(renderContentSpy).toHaveBeenCalledWith(expect.anything(), malformed);
   });
+
+  it('swaps a streamed work-order handoff text block for a card on finalize', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl, 'claude', true);
+    jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+
+    const replaced = renderer.finalizeStreamedAssistantText(contentEl, textEl, `<claudian_handoff>
+summary: Finished the work.
+verification: npm run test passed.
+risks: No known risks.
+next_action: Review the result.
+</claudian_handoff>`);
+
+    expect(replaced).toBe(true);
+    expect(contentEl.querySelector('.claudian-work-order-handoff-card')).not.toBeNull();
+    expect(messagesEl.textContent).not.toContain('<claudian_handoff>');
+  });
+
+  it('leaves a streamed text block untouched outside work-order tabs', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl, 'claude', false);
+    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+
+    const replaced = renderer.finalizeStreamedAssistantText(contentEl, textEl, `<claudian_handoff>
+summary: Finished the work.
+verification: npm run test passed.
+risks: No known risks.
+next_action: Review the result.
+</claudian_handoff>`);
+
+    expect(replaced).toBe(false);
+    expect(contentEl.querySelector('.claudian-work-order-handoff-card')).toBeNull();
+  });
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -616,6 +689,30 @@ Add these methods above `private renderAssistantContent`:
 
     renderWorkOrderHandoffCard(contentEl, segment, (el, md, options) => this.renderContent(el, md, options));
   }
+
+  /**
+   * Streaming finalize hook: when a work-order run's final text block holds a
+   * complete handoff, drop the raw text element and render the compact card (plus
+   * any surrounding markdown) in its place. Returns true when it replaced the
+   * block; no-ops (returns false) outside work-order tabs or without a valid
+   * single handoff, leaving the caller to keep the raw text block. The stored
+   * `text` content block is untouched, so persistence and reload stay unchanged.
+   */
+  finalizeStreamedAssistantText(
+    contentEl: HTMLElement,
+    textEl: HTMLElement,
+    markdown: string,
+  ): boolean {
+    if (!this.getWorkOrderPath()) return false;
+    const segments = splitWorkOrderHandoffForDisplay(markdown);
+    if (!segments) return false;
+
+    textEl.remove();
+    for (const segment of segments) {
+      this.renderAssistantDisplaySegment(contentEl, segment);
+    }
+    return true;
+  }
 ```
 
 - [ ] **Step 5: Replace direct assistant text rendering**
@@ -632,7 +729,39 @@ In the fallback `if (msg.content)` branch, replace the direct `createDiv`/`rende
         this.renderAssistantTextBlock(contentEl, msg.content);
 ```
 
-- [ ] **Step 6: Run focused tests and typecheck**
+- [ ] **Step 6: Route the live streaming finalize through the card**
+
+The streamed run-completion path renders text directly into the live element and never re-enters `renderAssistantContent`, so without this step the card would only appear after a conversation reload (the main UX this plan fixes). In `src/features/chat/controllers/StreamController.ts`, update `finalizeCurrentTextBlock` so it swaps a finished work-order handoff for the card. Replace the copy-button block:
+
+```ts
+      // Copy button added here (not during streaming) to match history-loaded messages
+      if (state.currentTextEl) {
+        renderer.addTextCopyButton(state.currentTextEl, state.currentTextContent);
+      }
+```
+
+with:
+
+```ts
+      // Work-order tabs swap a completed handoff block for the compact card on
+      // finalize; everything else keeps the raw text block plus copy button.
+      const replacedWithCard =
+        state.currentContentEl && state.currentTextEl
+          ? renderer.finalizeStreamedAssistantText(
+              state.currentContentEl,
+              state.currentTextEl,
+              state.currentTextContent,
+            )
+          : false;
+      // Copy button added here (not during streaming) to match history-loaded messages
+      if (state.currentTextEl && !replacedWithCard) {
+        renderer.addTextCopyButton(state.currentTextEl, state.currentTextContent);
+      }
+```
+
+The raw text is still pushed to `msg.contentBlocks` just above this block, so persisted history and reload are unchanged — only the live DOM is transformed.
+
+- [ ] **Step 7: Run focused tests and typecheck**
 
 Run:
 
@@ -643,10 +772,10 @@ npm run typecheck
 
 Expected: both commands PASS.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add src/features/chat/rendering/MessageRenderer.ts src/features/chat/tabs/types.ts src/features/chat/tabs/TabManager.ts src/features/chat/tabs/tabControllers.ts src/features/chat/ClaudianView.ts src/features/tasks/execution/ChatTabExecutionSurface.ts tests/unit/features/chat/rendering/MessageRenderer.test.ts
+git add src/features/chat/rendering/MessageRenderer.ts src/features/chat/controllers/StreamController.ts src/features/chat/tabs/types.ts src/features/chat/tabs/TabManager.ts src/features/chat/tabs/tabControllers.ts src/features/chat/ClaudianView.ts src/features/tasks/execution/ChatTabExecutionSurface.ts tests/unit/features/chat/rendering/MessageRenderer.test.ts
 git commit -m "feat: render work order handoffs as chat cards"
 ```
 
@@ -824,7 +953,7 @@ Expected:
 
 - `git status --short` prints no file changes.
 - `git log` shows this plan plus implementation commits on `spec/work-order-handoff-chat-card`.
-- Diff stat includes the spec, plan, helper, card renderer, `MessageRenderer`, task-tab context wiring, CSS, and tests.
+- Diff stat includes the spec, plan, helper, card renderer, `MessageRenderer`, the `StreamController` finalize hook, task-tab context wiring, CSS, and tests.
 
 - [ ] **Step 3: Push the branch**
 
@@ -855,5 +984,5 @@ PR URL: paste the URL printed by `gh pr create`
 Branch: spec/work-order-handoff-chat-card
 Commit: paste the SHA printed by `git rev-parse HEAD`
 Verification: typecheck, lint, unit tests, build
-Remaining risk: run one manual Obsidian Agent Board work order and expand/collapse the handoff card.
+Remaining risk: run one manual Obsidian Agent Board work order and confirm the card appears the moment the run completes (live, not only after reopening/reloading the tab), then expand/collapse it.
 ```
