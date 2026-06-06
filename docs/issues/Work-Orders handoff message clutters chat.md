@@ -1,7 +1,8 @@
 ---
 type: improvement
 priority: 1 - high
-status: open
+status: done
+shipped_by: "[[Agent Board/tasks/work-order-20260606-work-order-handoff-chat-card]]"
 relations:
   - "[[Agent Kanban Board]]"
   - "[[Chat]]"

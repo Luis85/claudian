@@ -1,8 +1,9 @@
 ---
 title: Work Order Handoff Chat Card Design
 date: 2026-06-06
-status: approved
+status: implemented
 scope: chat-rendering
+shipped_by: "[[Agent Board/tasks/work-order-20260606-work-order-handoff-chat-card]]"
 parent: "[[Work-Orders handoff message clutters chat]]"
 relations:
   - "[[Agent Kanban Board]]"
