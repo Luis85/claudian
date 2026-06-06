@@ -13,7 +13,6 @@ export interface TaskRunCoordinatorDeps {
   isProviderEnabled: (providerId: string) => boolean;
   ownsModel: (providerId: string, model: string) => boolean;
   writeTaskStatus: (task: TaskSpec, options: RunSessionWriteStatusOptions) => Promise<void>;
-  flushLedger: (task: TaskSpec, entries: TaskLedgerEntry[]) => Promise<void>;
   /**
    * Sidecar heartbeat write — keyed by runId only, not by note. Replaces the
    * per-tick frontmatter heartbeat that raced the agent's checklist Edits on
@@ -149,7 +148,6 @@ export class TaskRunCoordinator {
         events: this.deps.events,
         now: this.deps.now,
         writeStatus: this.deps.writeTaskStatus,
-        flushLedger: (entries) => this.deps.flushLedger(task, entries),
         writeHeartbeat: (runId, hb) => this.deps.writeHeartbeat(runId, hb),
         appendLedger: (runId, entry) => this.deps.appendLedger(task, runId, entry),
         finalizeLedgerToNote: (t, runId) => this.deps.finalizeLedgerToNote(t, runId),

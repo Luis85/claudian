@@ -71,7 +71,6 @@ function makeSession(overrides: Partial<ConstructorParameters<typeof RunSession>
     events,
     now: () => '2026-06-04T09:00:00Z',
     writeStatus: async (_t, options) => { statuses.push(options.status); },
-    flushLedger: async () => {},
     writeHeartbeat: async (runId, hb) => { heartbeats.push({ runId, ...hb }); },
     appendLedger: async (_runId, entry) => { ledger.push(entry); },
     finalizeLedgerToNote: async (task, runId) => { finalizedLedgers.push({ taskId: task.frontmatter.id, runId }); },
@@ -250,7 +249,6 @@ describe('RunSession', () => {
         }
         writes.push(options.status);
       },
-      flushLedger: async () => {},
       writeHeartbeat: async () => {},
       appendLedger: async () => {},
       finalizeLedgerToNote: async () => {},
@@ -284,7 +282,6 @@ describe('RunSession', () => {
       events,
       now: () => '2026-06-04T09:00:00Z',
       writeStatus: async (_t, options) => { statuses.push(options.status); },
-      flushLedger: async () => {},
       writeHeartbeat: async () => {},
       appendLedger: async () => {},
       finalizeLedgerToNote: async () => {},
@@ -321,7 +318,6 @@ describe('RunSession', () => {
         }
         writes.push(options.status);
       },
-      flushLedger: async () => {},
       writeHeartbeat: async () => {},
       appendLedger: async () => {},
       finalizeLedgerToNote: async () => {},
@@ -396,7 +392,6 @@ describe('RunSession', () => {
       writeStatus: async (_t, options) => {
         writes.push({ status: options.status, conversationId: options.conversationId });
       },
-      flushLedger: async () => {},
       writeHeartbeat: async () => {},
       appendLedger: async () => {},
       finalizeLedgerToNote: async () => {},
@@ -433,7 +428,6 @@ describe('RunSession', () => {
       writeStatus: async (_t, options) => {
         writes.push({ status: options.status, conversationId: options.conversationId });
       },
-      flushLedger: async () => {},
       writeHeartbeat: async () => {},
       appendLedger: async () => {},
       finalizeLedgerToNote: async () => {},
@@ -515,7 +509,6 @@ describe('RunSession', () => {
       events: new EventBus<TaskEventMap>(),
       now: () => '2026-06-04T09:00:00Z',
       writeStatus: async (_t, options) => { statuses.push(options.status); },
-      flushLedger: async () => {},
       writeHeartbeat: async () => {},
       appendLedger: async () => {},
       finalizeLedgerToNote: async () => {},
@@ -619,7 +612,6 @@ describe('RunSession', () => {
         if (options.status === 'needs_input') throw new Error('disk full');
         statuses.push(options.status);
       },
-      flushLedger: async () => {},
       writeHeartbeat: async () => {},
       appendLedger: async () => {},
       finalizeLedgerToNote: async () => {},
@@ -700,19 +692,22 @@ describe('RunSession', () => {
       expect(heartbeats[0].status).toBe('running');
     });
 
-    it('routes ledger entries through appendLedger, not flushLedger', async () => {
-      const flushLedger = jest.fn().mockResolvedValue(undefined);
-      const { session, adapter, ledger } = makeSession({ flushLedger });
+    it('routes ledger entries through appendLedger', async () => {
+      const appendLedger = jest.fn().mockResolvedValue(undefined);
+      const { session, adapter } = makeSession({ appendLedger });
       const terminal = session.run();
       adapter.emitText('<claudian_progress>\nstep: building\ndone: 1/3\n</claudian_progress>');
       adapter.emitText(VALID_HANDOFF);
       adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
       await terminal;
 
-      // appendLedger received the progress entry (via the captured ledger array).
-      expect(ledger.find((e) => e.message.startsWith('progress:'))).toBeTruthy();
-      // flushLedger is no longer invoked by the run.
-      expect(flushLedger).not.toHaveBeenCalled();
+      // appendLedger received entries keyed by runId, including the progress line.
+      expect(appendLedger).toHaveBeenCalled();
+      const messages = appendLedger.mock.calls.map((args) => args[1].message);
+      expect(messages.some((m: string) => m.startsWith('progress:'))).toBe(true);
+      for (const call of appendLedger.mock.calls) {
+        expect(call[0]).toBe('run-1');
+      }
     });
 
     it('on terminal, writes one finalizeLedgerToNote call after the handoff write', async () => {

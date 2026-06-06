@@ -83,25 +83,14 @@ export class AgentBoardView extends ItemView {
         await this.applyNoteChange(task.path, (content) => this.noteStore.writeStatus(content, options));
         this.lastRunStatus.set(task.frontmatter.id, options.status);
       },
-      // RunSession batches ledger lines and flushes them together.
-      flushLedger: (task, entries) =>
-        this.applyNoteChange(task.path, (content) =>
-          entries.reduce((acc, entry) => this.noteStore.appendLedger(acc, entry), content),
-        ),
-      // Sidecar hooks are wired with note-backed stand-ins until Task 8 swaps in
-      // the real `RunSidecarStore`: the existing transitional note path keeps
-      // working, and the coordinator's new seam is in place for the real wiring
-      // to drop in without further changes to RunSession.
-      writeHeartbeat: async () => {
-        // No-op: the legacy note-side heartbeat raced agent Edits. RunSession
-        // still writes status at transitions; Task 8 routes ticks to the sidecar.
-      },
-      appendLedger: (task, _runId, entry) =>
-        this.applyNoteChange(task.path, (content) => this.noteStore.appendLedger(content, entry)),
-      finalizeLedgerToNote: async () => {
-        // No-op: the per-entry note appends above already keep the note ledger
-        // up to date. Task 8 will move the live writes to the sidecar and use
-        // this to snapshot back at terminal.
+      writeHeartbeat: (runId, hb) =>
+        this.plugin.runSidecarStore.writeHeartbeat(runId, hb),
+      appendLedger: (_task, runId, entry) =>
+        this.plugin.runSidecarStore.appendLedger(runId, entry),
+      finalizeLedgerToNote: async (task, runId) => {
+        const snapshot = await this.plugin.runSidecarStore.snapshotLedgerAsMarkdown(runId);
+        if (!snapshot) return;
+        await this.applyNoteChange(task.path, (content) => this.noteStore.writeLedgerSnapshot(content, snapshot));
       },
       writeHandoff: (task, markdown) =>
         this.applyNoteChange(task.path, (content) => this.noteStore.writeHandoff(content, markdown)),

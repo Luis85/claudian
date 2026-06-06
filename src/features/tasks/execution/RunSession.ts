@@ -35,34 +35,22 @@ export interface RunSessionDeps {
    * Sidecar heartbeat write. Replaces the per-tick frontmatter heartbeat that
    * raced the agent's checklist Edits. Receives the run id so the coordinator
    * can stamp the heartbeat into a sidecar keyed off the run, not the note.
-   * Optional during the in-flight write-race fix; once the coordinator wires
-   * this, the optional marker is removed by a follow-up task.
    */
-  writeHeartbeat?: (
+  writeHeartbeat: (
     runId: string,
     heartbeat: { at: string; status: TaskStatus; pauseReason?: string | null },
   ) => Promise<void>;
   /**
    * Sidecar ledger append (one entry per call). The note is updated only at
-   * terminal via {@link finalizeLedgerToNote}. Optional during the in-flight
-   * write-race fix; once the coordinator wires this the optional marker is
-   * removed by a follow-up task.
+   * terminal via {@link finalizeLedgerToNote}.
    */
-  appendLedger?: (runId: string, entry: TaskLedgerEntry) => Promise<void>;
+  appendLedger: (runId: string, entry: TaskLedgerEntry) => Promise<void>;
   /**
    * At terminal, snapshot the sidecar ledger back into the work-order note's
    * `<!-- claudian:run-ledger-* -->` region. Runs after the handoff write so the
-   * note's terminal state lands in a single coordinated transition. Optional
-   * during the in-flight write-race fix; once the coordinator wires this the
-   * optional marker is removed by a follow-up task.
+   * note's terminal state lands in a single coordinated transition.
    */
-  finalizeLedgerToNote?: (task: TaskSpec, runId: string) => Promise<void>;
-  /**
-   * Legacy note-side ledger flush. Used as a fallback when `appendLedger` is
-   * not wired (during the in-flight write-race fix). Removal tracked by the
-   * work-order write-race plan.
-   */
-  flushLedger: (entries: TaskLedgerEntry[]) => Promise<void>;
+  finalizeLedgerToNote: (task: TaskSpec, runId: string) => Promise<void>;
   writeHandoff: (task: TaskSpec, markdown: string) => Promise<void>;
   heartbeatIntervalMs?: number;
   staleThresholdMs?: number;
@@ -130,18 +118,9 @@ export class RunSession {
       // Append each batched entry to the sidecar (per-entry append), then emit
       // the per-entry event. Batching stays at the writer to avoid one syscall
       // per progress line; the writer's order is preserved here by `for...of`.
-      // Falls back to the legacy batch flush when the coordinator hasn't yet
-      // wired the sidecar — the write-race fix is shipping in steps.
       flush: async (entries) => {
-        if (this.deps.appendLedger) {
-          for (const entry of entries) {
-            await this.deps.appendLedger(this.deps.runId, entry);
-            this.deps.events.emit('task:ledger-appended', { taskId: this.taskId, path: this.path, entry });
-          }
-          return;
-        }
-        await this.deps.flushLedger(entries);
         for (const entry of entries) {
+          await this.deps.appendLedger(this.deps.runId, entry);
           this.deps.events.emit('task:ledger-appended', { taskId: this.taskId, path: this.path, entry });
         }
       },
@@ -556,7 +535,6 @@ export class RunSession {
     } catch {
       // Sidecar append failed; snapshot what's on disk anyway.
     }
-    if (!this.deps.finalizeLedgerToNote) return;
     try {
       await this.deps.finalizeLedgerToNote(this.deps.task, this.deps.runId);
     } catch {
@@ -600,14 +578,8 @@ export class RunSession {
       // Route the heartbeat to a sidecar instead of the note: per-tick frontmatter
       // writes raced the agent's checklist Edits on the same note. The note still
       // sees status writes at transitions (start/pause/resume/terminal), which
-      // align with turn boundaries where the agent is not mid-Edit. Falls back
-      // to the legacy note status write only when the coordinator hasn't yet
-      // wired the sidecar (transitional during the write-race fix).
-      if (this.deps.writeHeartbeat) {
-        this.trackBackgroundWrite(this.deps.writeHeartbeat(this.deps.runId, { at, status: 'running' }));
-      } else {
-        this.trackBackgroundWrite(this.persistStatus({ status: 'running', timestamp: at, heartbeat: at }));
-      }
+      // align with turn boundaries where the agent is not mid-Edit.
+      this.trackBackgroundWrite(this.deps.writeHeartbeat(this.deps.runId, { at, status: 'running' }));
       this.deps.events.emit('task:heartbeat', { taskId: this.taskId, path: this.path, at });
     }, interval);
     this.staleTimer = window.setInterval(() => {

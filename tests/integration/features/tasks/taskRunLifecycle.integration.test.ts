@@ -68,6 +68,9 @@ function makeHarness(initialNote = makeNote()) {
   const adapter = new SyntheticStreamAdapter();
   const statuses: string[] = [];
   const task = store.parse(PATH, note).task as TaskSpec;
+  // Simulate the production sidecar: appendLedger captures entries in memory,
+  // finalizeLedgerToNote snapshots them into the note's run-ledger region.
+  const sidecarLedger: Array<{ timestamp: string; status: string; message: string }> = [];
   const session = new RunSession({
     task,
     runId: 'run-1',
@@ -80,8 +83,18 @@ function makeHarness(initialNote = makeNote()) {
       statuses.push(options.status);
       note = store.writeStatus(note, options);
     },
-    flushLedger: async (entries) => {
-      note = entries.reduce((acc, entry) => store.appendLedger(acc, entry), note);
+    writeHeartbeat: async () => {
+      // Sidecar heartbeat is irrelevant to these note-state assertions; no-op.
+    },
+    appendLedger: async (_runId, entry) => {
+      sidecarLedger.push(entry);
+    },
+    finalizeLedgerToNote: async () => {
+      const markdown = sidecarLedger
+        .map((e) => `- ${e.timestamp} [${e.status}] ${e.message}`)
+        .join('\n');
+      if (markdown.length === 0) return;
+      note = store.writeLedgerSnapshot(note, markdown);
     },
     writeHandoff: async (_t, markdown) => {
       note = store.writeHandoff(note, markdown);
@@ -99,6 +112,7 @@ function makeHarness(initialNote = makeNote()) {
     statuses,
     parsed: () => store.parse(PATH, note).task,
     rawNote: () => note,
+    sidecarMessages: () => sidecarLedger.map((e) => e.message),
   };
 }
 
@@ -190,10 +204,13 @@ describe('work-order run lifecycle (integration)', () => {
       status: 'completed',
       finalAssistantContent: 'Which folder should I scaffold under?',
     });
-    await Promise.resolve();
-    await Promise.resolve();
+    // Drain the implicit-pause async chain: persistStatus, ledger.flushNow, and
+    // the per-entry appendLedger awaits inside the flush callback.
+    for (let i = 0; i < 8; i++) await Promise.resolve();
     expect(h.parsed().frontmatter.status).toBe('needs_input');
-    expect(h.parsed().sections.ledger).toContain('Paused implicitly');
+    // Mid-run, the ledger lives in the sidecar; the note's run-ledger region
+    // is rewritten only at terminal (via finalizeLedgerToNote).
+    expect(h.sidecarMessages().some((m) => m.startsWith('Paused implicitly'))).toBe(true);
     // Resume with a follow-up turn that produces a real handoff → review.
     await h.session.resume({ kind: 'reply', content: 'src/foo' });
     h.adapter.emitText(VALID_HANDOFF);
@@ -204,6 +221,8 @@ describe('work-order run lifecycle (integration)', () => {
     const result = await terminal;
     expect(result.ok).toBe(true);
     expect(h.parsed().frontmatter.status).toBe('review');
+    // After terminal, the note's run-ledger contains the implicit-pause line too.
+    expect(h.parsed().sections.ledger).toContain('Paused implicitly');
   });
 
   it('heartbeat lost: stale stream fails the run', async () => {
