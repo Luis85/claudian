@@ -43,7 +43,7 @@ export interface TaskRunCoordinatorDeps {
 
 export type TaskRunResult =
   | { ok: true; status: TaskStatus }
-  | { ok: false; error: string; canceled?: boolean };
+  | { ok: false; error: string; canceled?: boolean; startupFailed?: boolean };
 
 /**
  * Wires a work order to a chat-tab run and delegates the per-run lifecycle to a
@@ -108,7 +108,11 @@ export class TaskRunCoordinator {
       });
       if (!handle.runId) {
         const terminal = await handle.terminal;
-        return { ok: false, error: terminal.error ?? 'Run failed.' };
+        // The surface couldn't open a chat tab/view (environmental, e.g. tab cap
+        // or the view not ready) — not a card failure. Flag it so the queue
+        // records a stable skip and waits for capacity instead of hot-retrying
+        // the still-ready card and tripping its auto-halt streak.
+        return { ok: false, error: terminal.error ?? 'Run failed.', startupFailed: true };
       }
 
       const session = new RunSession({

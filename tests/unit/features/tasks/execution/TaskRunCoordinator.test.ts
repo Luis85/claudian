@@ -147,10 +147,10 @@ describe('TaskRunCoordinator', () => {
     });
   });
 
-  it('returns the terminal error when the surface could not start a run', async () => {
+  it('returns the terminal error (flagged startupFailed) when the surface could not start a run', async () => {
     const surface = new FakeSurface({ runId: '', terminal: { status: 'failed', finalAssistantContent: '', error: 'tab cap' } });
     const { coordinator, statuses } = makeCoordinator(surface);
-    await expect(coordinator.run(makeTask())).resolves.toEqual({ ok: false, error: 'tab cap' });
+    await expect(coordinator.run(makeTask())).resolves.toEqual({ ok: false, error: 'tab cap', startupFailed: true });
     expect(statuses).toEqual([]);
   });
 
