@@ -1,6 +1,7 @@
 ---
-status: open
+status: shipped
 parent: "[[Agent Kanban Board]]"
+shipped_by: "[[work-order-20260606-work-order-tab-budget]]"
 ---
 # Work-order tab budget implementation plan
 

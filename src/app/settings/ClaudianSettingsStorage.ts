@@ -8,6 +8,7 @@ import type {
   ClaudianSettings,
 } from '../../core/types/settings';
 import { DEFAULT_CLAUDIAN_SETTINGS } from './defaultSettings';
+import { migrateTabBudget } from './migrateTabBudget';
 import { migrateModelOverrides } from './migrations/migrateModelOverrides';
 
 export {
@@ -63,6 +64,10 @@ export class ClaudianSettingsStorage {
 
     const content = await this.adapter.read(CLAUDIAN_SETTINGS_PATH);
     const stored = JSON.parse(content) as Record<string, unknown>;
+
+    // Migrate raw stored shape BEFORE the defaults merge so legacy values copy
+    // forward to the new keys instead of being shadowed by the defaults.
+    migrateTabBudget(stored);
 
     const merged = {
       ...this.getDefaults(),

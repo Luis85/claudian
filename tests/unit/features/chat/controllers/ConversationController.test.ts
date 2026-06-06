@@ -192,6 +192,8 @@ describe('ConversationController', () => {
 
         await controller.switchTo('new-conv');
 
+        await controller.whenHydrated();
+
         expect(deps.clearQueuedMessage).toHaveBeenCalled();
       });
 
@@ -201,6 +203,8 @@ describe('ConversationController', () => {
 
         await controller.switchTo('new-conv');
 
+        await controller.whenHydrated();
+
         expect(deps.plugin.switchConversation).not.toHaveBeenCalled();
       });
 
@@ -208,6 +212,8 @@ describe('ConversationController', () => {
         deps.state.currentConversationId = 'same-conv';
 
         await controller.switchTo('same-conv');
+
+        await controller.whenHydrated();
 
         expect(deps.plugin.switchConversation).not.toHaveBeenCalled();
       });
@@ -217,6 +223,8 @@ describe('ConversationController', () => {
         const fileContextManager = deps.getFileContextManager()!;
 
         await controller.switchTo('new-conv');
+
+        await controller.whenHydrated();
 
         expect(fileContextManager.resetForLoadedConversation).toHaveBeenCalled();
       });
@@ -228,6 +236,8 @@ describe('ConversationController', () => {
 
         await controller.switchTo('new-conv');
 
+        await controller.whenHydrated();
+
         expect(inputEl.value).toBe('');
       });
 
@@ -237,6 +247,8 @@ describe('ConversationController', () => {
         dropdown.addClass('visible');
 
         await controller.switchTo('new-conv');
+
+        await controller.whenHydrated();
 
         expect(dropdown.hasClass('visible')).toBe(false);
       });
@@ -272,6 +284,8 @@ describe('ConversationController', () => {
         });
 
         await controller.switchTo('new-conv');
+
+        await controller.whenHydrated();
 
         expect(deps.state.messages.length).toBe(1);
         const welcomeEl = deps.getWelcomeEl()!;
@@ -587,6 +601,8 @@ describe('ConversationController', () => {
 
       await controller.switchTo('new-conv');
 
+      await controller.whenHydrated();
+
       expect(fileContextManager.setCurrentNote).toHaveBeenCalledWith('docs/readme.md');
     });
 
@@ -603,6 +619,8 @@ describe('ConversationController', () => {
 
       await controller.switchTo('new-conv');
 
+      await controller.whenHydrated();
+
       expect(fileContextManager.setCurrentNote).not.toHaveBeenCalled();
     });
 
@@ -616,6 +634,8 @@ describe('ConversationController', () => {
       });
 
       await controller.switchTo('new-conv');
+
+      await controller.whenHydrated();
 
       expect(deps.renderer.renderMessages).toHaveBeenCalledWith(
         expect.any(Array),
@@ -643,6 +663,8 @@ describe('ConversationController', () => {
 
       await controller.switchTo('new-conv');
 
+      await controller.whenHydrated();
+
       expect(deps.consumePendingHydrationError).toHaveBeenCalledWith('new-conv');
       expect(deps.renderer.setHydrationError).toHaveBeenCalledWith({
         code: 'store-unreadable',
@@ -659,6 +681,8 @@ describe('ConversationController', () => {
       });
 
       await controller.switchTo('new-conv');
+
+      await controller.whenHydrated();
 
       expect(deps.renderer.clearHydrationBanner).toHaveBeenCalled();
       expect(deps.consumePendingHydrationError).toHaveBeenCalledWith('new-conv');
@@ -1072,9 +1096,16 @@ describe('ConversationController', () => {
       expect(clickHandlers).toBeDefined();
 
       await clickHandlers![0]({ stopPropagation: jest.fn() });
-      await Promise.resolve();
+      // The click handler dispatches `runConversationAction(...)` fire-and-
+      // forget; flush a macrotask so switchTo's Phase A runs and registers
+      // the hydration promise that `whenHydrated` then awaits.
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await controller.whenHydrated();
 
-      expect(deps.plugin.switchConversation).toHaveBeenCalledWith('conv-2');
+      expect(deps.plugin.switchConversation).toHaveBeenCalledWith(
+        'conv-2',
+        expect.objectContaining({ signal: expect.anything() }),
+      );
     });
 
     it('should call regenerateTitle when clicking regenerate button on failed item', async () => {
@@ -1255,6 +1286,8 @@ describe('ConversationController - Callbacks', () => {
     const controller = new ConversationController(deps, { onConversationSwitched });
 
     await controller.switchTo('new-conv');
+
+    await controller.whenHydrated();
 
     expect(onConversationSwitched).toHaveBeenCalled();
   });
@@ -1554,6 +1587,8 @@ describe('ConversationController - MCP Server Persistence', () => {
 
       await controller.switchTo('new-conv');
 
+      await controller.whenHydrated();
+
       expect(mockMcpServerSelector.setEnabledServers).toHaveBeenCalledWith(['switched-server']);
     });
 
@@ -1568,6 +1603,8 @@ describe('ConversationController - MCP Server Persistence', () => {
       });
 
       await controller.switchTo('new-conv');
+
+      await controller.whenHydrated();
 
       expect(mockMcpServerSelector.clearEnabled).toHaveBeenCalled();
     });
@@ -1595,6 +1632,8 @@ describe('ConversationController - MCP Server Persistence', () => {
       deps.state.currentConversationId = 'old-conv';
 
       await controller.switchTo('new-conv');
+
+      await controller.whenHydrated();
 
       expect(ensureServiceForConversation).toHaveBeenCalledWith(switchedConversation);
     });
@@ -1673,6 +1712,8 @@ describe('ConversationController - Race Condition Guards', () => {
 
       await controller.switchTo('new-conv');
 
+      await controller.whenHydrated();
+
       expect(deps.plugin.switchConversation).not.toHaveBeenCalled();
     });
 
@@ -1682,16 +1723,25 @@ describe('ConversationController - Race Condition Guards', () => {
 
       await controller.switchTo('new-conv');
 
+      await controller.whenHydrated();
+
       expect(deps.plugin.switchConversation).not.toHaveBeenCalled();
     });
 
-    it('should reset isSwitchingConversation flag even on error', async () => {
+    it('should reset isHydrating flag even when the deferred transcript load errors', async () => {
+      // Phase A (the sync portion of switchTo) no longer owns the transcript
+      // load — it returns immediately after the spinner + state swap, so a
+      // hydration failure cannot reject `switchTo`. Instead the rejection
+      // surfaces inside the background `hydrateAndRender`, which is gated on
+      // `state.isHydrating` and must reset that flag in its finally block.
       deps.state.currentConversationId = 'old-conv';
       (deps.plugin.switchConversation as jest.Mock).mockRejectedValue(new Error('Switch failed'));
 
-      await expect(controller.switchTo('new-conv')).rejects.toThrow('Switch failed');
+      await controller.switchTo('new-conv');
+      await controller.whenHydrated();
 
       expect(deps.state.isSwitchingConversation).toBe(false);
+      expect(deps.state.isHydrating).toBe(false);
     });
 
     it('should reset isSwitchingConversation flag when conversation not found', async () => {
@@ -1700,14 +1750,22 @@ describe('ConversationController - Race Condition Guards', () => {
 
       await controller.switchTo('non-existent');
 
+      await controller.whenHydrated();
+
       expect(deps.state.isSwitchingConversation).toBe(false);
     });
 
-    it('should set isSwitchingConversation flag during switch', async () => {
+    it('should set isHydrating flag while the deferred transcript load is in flight', async () => {
+      // `isSwitchingConversation` is now only true during Phase A (the sync
+      // tab swap + spinner render), so it has already flipped back to false
+      // by the time `plugin.switchConversation` runs in Phase B. The flag the
+      // sender / send-gate cares about during Phase B is `isHydrating`.
       deps.state.currentConversationId = 'old-conv';
-      let flagDuringSwitch = false;
+      let hydratingDuringLoad = false;
+      let switchingDuringLoad = false;
       (deps.plugin.switchConversation as jest.Mock).mockImplementation(async () => {
-        flagDuringSwitch = deps.state.isSwitchingConversation;
+        hydratingDuringLoad = deps.state.isHydrating;
+        switchingDuringLoad = deps.state.isSwitchingConversation;
         return {
           id: 'new-conv',
           title: 'New Conversation',
@@ -1719,8 +1777,11 @@ describe('ConversationController - Race Condition Guards', () => {
       });
 
       await controller.switchTo('new-conv');
+      await controller.whenHydrated();
 
-      expect(flagDuringSwitch).toBe(true);
+      expect(hydratingDuringLoad).toBe(true);
+      expect(switchingDuringLoad).toBe(false);
+      expect(deps.state.isHydrating).toBe(false);
       expect(deps.state.isSwitchingConversation).toBe(false);
     });
   });
@@ -1753,6 +1814,8 @@ describe('ConversationController - Race Condition Guards', () => {
       });
 
       await controller.switchTo('new-conv');
+
+      await controller.whenHydrated();
       await switchPromise;
 
       expect(deps.plugin.createConversation).not.toHaveBeenCalled();
@@ -1868,6 +1931,8 @@ describe('ConversationController - Persistent External Context Paths', () => {
 
       await controller.switchTo('empty-conv');
 
+      await controller.whenHydrated();
+
       expect(mockExternalContextSelector.clearExternalContexts).toHaveBeenCalledWith(
         ['/persistent/path/a', '/persistent/path/b']
       );
@@ -1884,6 +1949,8 @@ describe('ConversationController - Persistent External Context Paths', () => {
 
       await controller.switchTo('conv-with-messages');
 
+      await controller.whenHydrated();
+
       expect(mockExternalContextSelector.setExternalContexts).toHaveBeenCalledWith(
         ['/saved/path/from/session']
       );
@@ -1899,6 +1966,8 @@ describe('ConversationController - Persistent External Context Paths', () => {
       });
 
       await controller.switchTo('conv-with-messages');
+
+      await controller.whenHydrated();
 
       expect(mockExternalContextSelector.setExternalContexts).toHaveBeenCalledWith([]);
     });
@@ -1927,6 +1996,7 @@ describe('ConversationController - Persistent External Context Paths', () => {
         externalContextPaths: [],
       });
       await controller.switchTo('session-1');
+      await controller.whenHydrated();
 
       // User adds path B in session 1, settings now have [A, B]
       (deps.plugin.settings as any).persistentExternalContextPaths = ['/path/a', '/path/b'];
@@ -1941,6 +2011,7 @@ describe('ConversationController - Persistent External Context Paths', () => {
 
       jest.clearAllMocks();
       await controller.switchTo('session-0');
+      await controller.whenHydrated();
 
       // Should get BOTH paths because session is empty (msg=0)
       expect(mockExternalContextSelector.clearExternalContexts).toHaveBeenCalledWith(
@@ -2249,6 +2320,8 @@ describe('ConversationController - switchTo fork path', () => {
 
     await controller.switchTo('fork-conv');
 
+    await controller.whenHydrated();
+
     expect(mockAgentService.syncConversationState).toHaveBeenCalledWith(
       forkConversation,
       expect.any(Array),
@@ -2268,6 +2341,8 @@ describe('ConversationController - switchTo fork path', () => {
     (deps.plugin.switchConversation as jest.Mock).mockResolvedValue(forkConversation);
 
     await controller.switchTo('fork-conv');
+
+    await controller.whenHydrated();
 
     expect(mockAgentService.syncConversationState).toHaveBeenCalledWith(
       forkConversation,
@@ -2660,6 +2735,8 @@ describe('ConversationController - Rewind', () => {
       deps.state.currentConversationId = 'old-conv';
 
       await controller.switchTo('switched-conv');
+
+      await controller.whenHydrated();
 
       expect(dismissFn).toHaveBeenCalled();
     });

@@ -192,12 +192,12 @@ export function registerAgentBoardTabFields(): void {
     id: 'agentBoardQueueCap',
     tabId: 'agentBoard',
     sectionId: 'queue',
-    label: 'Concurrent runs',
+    label: 'Concurrent work-order runs',
     description:
-      'Maximum number of cards the queue runner may auto-start at once, shared across all boards.',
+      'Maximum number of work orders that may run at once. Also caps how many work-order tabs the Agent Board may open in the chat panel. Shared across all boards.',
     type: { kind: 'number', min: 1, max: 8, step: 1 },
     default: 1,
-    keywords: ['queue', 'concurrent', 'cap', 'parallel'],
+    keywords: ['queue', 'concurrent', 'cap', 'parallel', 'work-order', 'tabs'],
   });
 
   r.registerField({

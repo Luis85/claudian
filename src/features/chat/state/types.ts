@@ -57,6 +57,11 @@ export interface ChatStateData {
   isCreatingConversation: boolean;
   /** Guards against concurrent operations during conversation switching. */
   isSwitchingConversation: boolean;
+  /** True while the target conversation's transcript is being loaded asynchronously.
+   *  Set after the instant tab swap + spinner render; cleared when the
+   *  hydration result lands (or the hydration is aborted by a newer switch).
+   *  Gates send / submit so the user can't dispatch into a half-loaded tab. */
+  isHydrating: boolean;
   /** Local tab state is ahead of persisted conversation metadata. */
   hasPendingConversationSave: boolean;
 

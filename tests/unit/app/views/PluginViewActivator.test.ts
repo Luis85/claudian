@@ -5,9 +5,14 @@ import type ClaudianPlugin from '@/main';
 function createPlugin(opts: {
   existingViewLeaves?: unknown[];
   hasLiveView?: boolean;
-  tabManager?: { canCreateTab?: () => boolean; getTabCount?: () => number } | null;
+  tabManager?: {
+    canCreateTab?: (kind?: 'chat' | 'work-order') => boolean;
+    getTabCount?: () => number;
+    countTabsByKind?: (kind: 'chat' | 'work-order') => number;
+  } | null;
   lastKnownOpenTabCount?: number;
-  maxTabs?: number;
+  maxChatTabs?: number;
+  agentBoardQueueCap?: number;
   pendingReservations?: number;
   tabsRestored?: boolean;
   placement?: 'main-tab' | 'left-sidebar' | 'right-sidebar';
@@ -35,20 +40,19 @@ function createPlugin(opts: {
     },
     settings: {
       chatViewPlacement: opts.placement ?? 'main-tab',
-      maxTabs: opts.maxTabs ?? 3,
+      maxChatTabs: opts.maxChatTabs ?? 3,
+      agentBoardQueueCap: opts.agentBoardQueueCap ?? 3,
     },
     getView: jest.fn().mockReturnValue(view),
     lastKnownTabManagerState: { openTabs: new Array(opts.lastKnownOpenTabCount ?? 0).fill({}) },
     chatTabReservations: { pending: opts.pendingReservations ?? 0 },
-    // Plugin delegates activateView to the activator; mirror that here so
-    // ensureViewOpen's plugin.activateView() call lands on the activator's method.
     activateView: jest.fn(),
   } as unknown as ClaudianPlugin;
   return { plugin, newLeafTab };
 }
 
 describe('PluginViewActivator.canCreateNewTab', () => {
-  it('uses tabManager.canCreateTab when a live view exists', () => {
+  it('uses tabManager.canCreateTab("chat") when a live view exists', () => {
     const { plugin } = createPlugin({
       hasLiveView: true,
       tabManager: { canCreateTab: () => false },
@@ -57,15 +61,14 @@ describe('PluginViewActivator.canCreateNewTab', () => {
     expect(activator.canCreateNewTab()).toBe(false);
   });
 
-  it('honors maxTabs clamp [3,10] when relying on last-known state', () => {
-    const { plugin } = createPlugin({ lastKnownOpenTabCount: 9, maxTabs: 12 });
+  it('honors maxChatTabs clamp [3,10] when relying on last-known state', () => {
+    const { plugin } = createPlugin({ lastKnownOpenTabCount: 9, maxChatTabs: 12 });
     const activator = new PluginViewActivator(plugin);
-    // clamp = min(10, max(3, 12)) = 10; 9 < 10
     expect(activator.canCreateNewTab()).toBe(true);
   });
 
   it('clamps minimum to 3', () => {
-    const { plugin } = createPlugin({ lastKnownOpenTabCount: 2, maxTabs: 1 });
+    const { plugin } = createPlugin({ lastKnownOpenTabCount: 2, maxChatTabs: 1 });
     const activator = new PluginViewActivator(plugin);
     expect(activator.canCreateNewTab()).toBe(true);
   });
@@ -91,13 +94,11 @@ describe('PluginViewActivator.openNewTab', () => {
   it('does not stack a tab when restoredTabCount is 0', async () => {
     const { plugin, newLeafTab } = createPlugin({ lastKnownOpenTabCount: 0 });
     const liveView = { createNewTab: jest.fn().mockResolvedValue(undefined), getTabManager: () => null };
-    // Three getView() calls: 1 in openNewTab, 2 in ensureViewOpen (before/after activateView)
     (plugin.getView as jest.Mock)
       .mockReturnValueOnce(null)
       .mockReturnValueOnce(null)
       .mockReturnValue(liveView);
     const activator = new PluginViewActivator(plugin);
-    // plugin.activateView delegates to the activator (mirrors production wiring).
     (plugin.activateView as jest.Mock).mockImplementation(() => activator.activateView());
 
     await activator.openNewTab();
@@ -107,95 +108,75 @@ describe('PluginViewActivator.openNewTab', () => {
   });
 });
 
-describe('PluginViewActivator.getTabSlotUsage', () => {
-  it('reports the live tab count when a view is mounted', () => {
+describe('PluginViewActivator.getTabSlotUsage (work-order budget)', () => {
+  it('reports WO tab count and queue cap when a view is mounted', () => {
     const { plugin } = createPlugin({
       hasLiveView: true,
-      tabManager: { getTabCount: () => 2 },
-      maxTabs: 5,
+      tabManager: { countTabsByKind: (k) => (k === 'work-order' ? 1 : 4) },
+      maxChatTabs: 4,
+      agentBoardQueueCap: 3,
     });
     const activator = new PluginViewActivator(plugin);
-    expect(activator.getTabSlotUsage()).toEqual({ used: 2, max: 5 });
+    expect(activator.getTabSlotUsage()).toEqual({ used: 1, max: 3 });
   });
 
-  it('falls back to the persisted tab count when no view is mounted', () => {
-    // Regression: a closed chat view restores its persisted tabs when the next
-    // queue run activates it, so `used` must reflect that set — not 0 — or the
-    // Agent Board queue over-launches past the cap and marks ready cards failed
-    // on the tab limit.
-    const { plugin } = createPlugin({ lastKnownOpenTabCount: 3, maxTabs: 5 });
+  it('adds pending reservations to WO usage', () => {
+    const { plugin } = createPlugin({
+      hasLiveView: true,
+      tabManager: { countTabsByKind: (k) => (k === 'work-order' ? 1 : 0) },
+      pendingReservations: 2,
+      agentBoardQueueCap: 5,
+    });
     const activator = new PluginViewActivator(plugin);
     expect(activator.getTabSlotUsage()).toEqual({ used: 3, max: 5 });
   });
 
-  it('clamps max to the same [3,10] bounds the tab manager enforces', () => {
-    const { plugin } = createPlugin({ lastKnownOpenTabCount: 0, maxTabs: 99 });
+  it('clamps WO max to the queue-cap range [1,8]', () => {
+    const { plugin } = createPlugin({ agentBoardQueueCap: 99 });
     const activator = new PluginViewActivator(plugin);
-    expect(activator.getTabSlotUsage().max).toBe(10);
+    expect(activator.getTabSlotUsage().max).toBe(8);
   });
 
   it('reports no free capacity while a mounted view is still restoring its tabs', () => {
-    // The tab manager is assigned before restoreOrCreateTabs() completes, so its
-    // live count is 0 mid-restore even though persisted tabs are incoming. The
-    // queue must wait rather than overbook the cap or drop restored tabs.
     const { plugin } = createPlugin({
       hasLiveView: true,
       existingViewLeaves: [{}],
-      tabManager: { getTabCount: () => 0 },
+      tabManager: { countTabsByKind: () => 0 },
       tabsRestored: false,
-      maxTabs: 5,
+      agentBoardQueueCap: 5,
     });
     const activator = new PluginViewActivator(plugin);
     expect(activator.getTabSlotUsage()).toEqual({ used: 5, max: 5 });
   });
 
   it('reports no free capacity while a Claudian leaf is mid-mount (no tab manager yet)', () => {
-    // Mirrors canCreateNewTab(): a leaf exists but the view/tab manager isn't
-    // ready (e.g. workspace restore). The queue must wait, not launch a run the
-    // chat surface can't host yet — which would fail the card.
     const { plugin } = createPlugin({
       existingViewLeaves: [{}],
       lastKnownOpenTabCount: 0,
-      maxTabs: 5,
+      agentBoardQueueCap: 5,
     });
     const activator = new PluginViewActivator(plugin);
     const usage = activator.getTabSlotUsage();
     expect(usage.max - usage.used).toBe(0);
   });
 
-  it('reserves the fallback blank tab when no view is mounted and nothing is persisted', () => {
-    // restoreOrCreateTabs() creates one blank tab on mount when no tabs are
-    // persisted, and work-order runs open their own tabs on top of it. Count
-    // that blank tab so the queue reserves its slot instead of launching one
-    // run too many into the tab cap.
-    const { plugin } = createPlugin({ lastKnownOpenTabCount: 0, maxTabs: 5 });
+  it('reports only reservations when no view is mounted (no WO tabs live yet)', () => {
+    const { plugin } = createPlugin({
+      lastKnownOpenTabCount: 0,
+      pendingReservations: 1,
+      agentBoardQueueCap: 5,
+    });
     const activator = new PluginViewActivator(plugin);
     expect(activator.getTabSlotUsage()).toEqual({ used: 1, max: 5 });
   });
 
-  it('adds pending chat-tab reservations on top of the live count', () => {
-    // A queue run reserves a slot the instant it launches, before its tab
-    // exists. A second pane's free-tab gate must see that reservation, or both
-    // panes read the same free count and over-launch into the cap.
+  it('accepts queue cap=1 (below old MIN_TABS=3 floor)', () => {
     const { plugin } = createPlugin({
       hasLiveView: true,
-      tabManager: { getTabCount: () => 1 },
-      pendingReservations: 2,
-      maxTabs: 5,
+      tabManager: { countTabsByKind: () => 0 },
+      agentBoardQueueCap: 1,
     });
     const activator = new PluginViewActivator(plugin);
-    expect(activator.getTabSlotUsage()).toEqual({ used: 3, max: 5 });
-  });
-
-  it('does not reserve a fallback tab when a view is mounted with zero tabs', () => {
-    // A mounted view already ran restoreOrCreateTabs(), so its live count is
-    // authoritative; the fallback reservation must not double-count here.
-    const { plugin } = createPlugin({
-      hasLiveView: true,
-      tabManager: { getTabCount: () => 0 },
-      maxTabs: 5,
-    });
-    const activator = new PluginViewActivator(plugin);
-    expect(activator.getTabSlotUsage()).toEqual({ used: 0, max: 5 });
+    expect(activator.getTabSlotUsage()).toEqual({ used: 0, max: 1 });
   });
 });

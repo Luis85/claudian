@@ -66,6 +66,13 @@ interface CardRefs {
 
 const LIVE_STATUSES: ReadonlySet<TaskStatus> = new Set(['running', 'needs_input', 'needs_approval']);
 
+/**
+ * Cap for the reply / reject-reason input. Large enough for a long-form
+ * paragraph; small enough that a pasted megabyte can't reach the runtime and
+ * fail there with a cryptic error.
+ */
+const REPLY_INPUT_MAX_LENGTH = 4000;
+
 export interface QueueToolbarState {
   paused: boolean;
   halted: boolean;
@@ -99,7 +106,7 @@ export class AgentBoardRenderer {
       slotsEl.addClass('claudian-agent-board-slots--full');
       root.createDiv({
         cls: 'claudian-agent-board-hint',
-        text: 'No free chat tabs. A work order run needs a free tab — close a chat tab in the chat panel, or raise "Maximum tabs" in settings.',
+        text: 'No free work-order slots. A work-order run needs a free slot — close a work-order tab in the chat panel, or raise "Concurrent work-order runs" in Agent Board settings.',
       });
     }
 
@@ -170,7 +177,7 @@ export class AgentBoardRenderer {
     const free = Math.max(0, state.slots.max - state.slots.used);
     const slotsEl = info.createSpan({
       cls: 'claudian-agent-board-slots',
-      text: `Chat tabs ${state.slots.used}/${state.slots.max} · ${free} free`,
+      text: `Work-order tabs ${state.slots.used}/${state.slots.max} · ${free} free`,
     });
     return { free, slotsEl };
   }
@@ -201,7 +208,7 @@ export class AgentBoardRenderer {
     if (state.consecutiveFailures > 0) {
       parent.createSpan({
         cls: 'claudian-agent-board-toolbar--queue-failure-count',
-        text: `${state.consecutiveFailures} failures`,
+        text: `${state.consecutiveFailures} ${state.consecutiveFailures === 1 ? 'failure' : 'failures'}`,
       });
     }
   }
@@ -227,14 +234,18 @@ export class AgentBoardRenderer {
 
     const laneEl = parent.createDiv({ cls: 'claudian-agent-board-lane' });
     const head = laneEl.createDiv({ cls: 'claudian-agent-board-lane-header' });
-    head.createSpan({ text: lane.title });
-    head.createSpan({ cls: 'claudian-agent-board-lane-count', text: String(lane.tasks.length) });
+    head.createSpan({ cls: 'claudian-agent-board-lane-title', text: lane.title });
+    const meta = head.createDiv({ cls: 'claudian-agent-board-lane-header-meta' });
+    meta.createSpan({ cls: 'claudian-agent-board-lane-count', text: String(lane.tasks.length) });
     if (lane.collapsible) {
-      const toggle = head.createEl('button', {
+      const toggle = meta.createEl('button', {
         cls: 'claudian-agent-board-lane-collapse-toggle',
         text: '›',
       });
       toggle.setAttribute('aria-label', 'Collapse lane');
+      // Native <button> is already keyboard-reachable; aria-expanded mirrors the
+      // collapsed-strip variant so screen readers announce the same state.
+      toggle.setAttribute('aria-expanded', 'true');
       toggle.addEventListener('click', (event) => {
         event.stopPropagation();
         callbacks.onToggleLaneCollapse(lane.id);
@@ -261,6 +272,10 @@ export class AgentBoardRenderer {
     strip.setAttribute('role', 'button');
     strip.setAttribute('aria-label', `Expand lane ${lane.title}`);
     strip.setAttribute('aria-expanded', 'false');
+    // Keyboard reachable: a collapsed lane is a real interactive control, so
+    // tab-focus must reach it. Enter / Space activate the toggle the same way
+    // a click does (native semantic for role="button").
+    strip.setAttribute('tabindex', '0');
     strip.createSpan({
       cls: 'claudian-agent-board-lane-title-vertical',
       text: lane.title,
@@ -269,7 +284,14 @@ export class AgentBoardRenderer {
       cls: 'claudian-agent-board-lane-count',
       text: String(lane.tasks.length),
     });
-    strip.addEventListener('click', () => callbacks.onToggleLaneCollapse(lane.id));
+    const toggle = (): void => callbacks.onToggleLaneCollapse(lane.id);
+    strip.addEventListener('click', toggle);
+    strip.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggle();
+      }
+    });
   }
 
   private renderCriteria(laneEl: HTMLElement, lane: ResolvedLane): void {
@@ -390,6 +412,29 @@ export class AgentBoardRenderer {
     this.renderSkipChip(chipHost, { reason: skipReason, onAck: () => callbacks.onAckSkip?.(task) });
   }
 
+  /**
+   * Render the pause prompt (question / approval action) preserving paragraph
+   * breaks. `createDiv({ text })` collapses newlines on display, so a multi-line
+   * agent question would render as one wall of text. Splitting by blank line
+   * keeps the original visual structure without enabling Markdown.
+   */
+  private renderPromptText(parent: HTMLElement, prompt: string): void {
+    const host = parent.createDiv({ cls: 'claudian-agent-board-card-reply-prompt' });
+    const paragraphs = prompt.split(/\n{2,}/);
+    if (paragraphs.length === 1) {
+      // Single paragraph: still honor inline newlines via CSS pre-wrap class.
+      host.addClass('claudian-agent-board-card-reply-prompt--prewrap');
+      host.setText(prompt);
+      return;
+    }
+    for (const paragraph of paragraphs) {
+      host.createDiv({
+        cls: 'claudian-agent-board-card-reply-prompt-paragraph',
+        text: paragraph,
+      });
+    }
+  }
+
   private renderReplySurface(card: HTMLElement, task: TaskSpec, pause: AgentBoardPauseState | null): HTMLElement {
     const reply = card.createDiv({ cls: 'claudian-agent-board-card-reply' });
     // The card itself opens the detail view on click; keep reply interactions local.
@@ -397,12 +442,16 @@ export class AgentBoardRenderer {
 
     if (task.frontmatter.status === 'needs_input') {
       const question = pause?.question ?? task.frontmatter.pause_reason ?? 'The agent is waiting for your input.';
-      reply.createDiv({ cls: 'claudian-agent-board-card-reply-prompt', text: question });
+      this.renderPromptText(reply, question);
       const field = reply.createEl('input', {
         cls: 'claudian-agent-board-card-reply--field',
         type: 'text',
         placeholder: 'Your reply…',
       });
+      // Cap reply length so a pasted megabyte doesn't reach the runtime and
+      // fail there with a cryptic error. 4000 chars is well below any provider
+      // input cap but high enough for a real long-form reply.
+      field.maxLength = REPLY_INPUT_MAX_LENGTH;
       if (pause?.defaultValue) field.value = pause.defaultValue;
       const actions = reply.createDiv({ cls: 'claudian-agent-board-card-reply--actions' });
       const submit = () => this.callbacks?.onReply?.(task, field.value);
@@ -415,7 +464,7 @@ export class AgentBoardRenderer {
       stop.addEventListener('click', (event) => { event.stopPropagation(); this.callbacks?.onCancelPaused?.(task); });
     } else {
       const action = pause?.action ?? task.frontmatter.pause_reason ?? 'The agent requests approval to proceed.';
-      reply.createDiv({ cls: 'claudian-agent-board-card-reply-prompt', text: action });
+      this.renderPromptText(reply, action);
       if (pause?.risk) {
         reply.createDiv({ cls: 'claudian-agent-board-card-reply-risk', text: `Risk: ${pause.risk}` });
       }
@@ -424,6 +473,7 @@ export class AgentBoardRenderer {
         type: 'text',
         placeholder: 'Reason (used if you reject)…',
       });
+      reason.maxLength = REPLY_INPUT_MAX_LENGTH;
       const actions = reply.createDiv({ cls: 'claudian-agent-board-card-reply--actions' });
       const approve = actions.createEl('button', { cls: 'mod-cta', text: 'Approve' });
       approve.addEventListener('click', (event) => { event.stopPropagation(); this.callbacks?.onApprove?.(task); });
@@ -451,7 +501,12 @@ export class AgentBoardRenderer {
   private applyLiveStrip(metaEl: HTMLElement, ledgerEl: HTMLElement, payload: AgentBoardLiveStripPayload): void {
     const tier = staleTier(payload.heartbeatAgeMs);
     metaEl.className = `claudian-agent-board-card-live-strip--meta claudian-stale-${tier}`;
-    metaEl.setText(`● ${formatElapsed(payload.elapsedMs)} · attempt ${payload.attemptNumber}`);
+    // Per-tier glyph + aria-label so color-blind users still get the freshness
+    // signal. The bullet (●) is always present for the basic "live" indicator;
+    // tier escalates to a warning/stop glyph for amber/red.
+    const glyph = tier === 'green' ? '●' : tier === 'amber' ? '◐' : '◯';
+    metaEl.setText(`${glyph} ${formatElapsed(payload.elapsedMs)} · attempt ${payload.attemptNumber}`);
+    metaEl.setAttribute('aria-label', staleAriaLabel(tier, payload.heartbeatAgeMs));
     ledgerEl.setText(payload.lastLedger ?? 'starting…');
   }
 
@@ -467,11 +522,21 @@ export class AgentBoardRenderer {
     const errorsEl = parent.createDiv({ cls: 'claudian-agent-board-errors' });
     if (errors.length > 0) {
       errorsEl.createEl('h4', { text: 'Board notices' });
-      for (const message of errors) errorsEl.createDiv({ text: message });
+      // Cap each error line at 300 chars so a long path/stack doesn't blow out
+      // the lane width or push the lanes off-screen. Full text stays available
+      // via the title tooltip on hover.
+      for (const message of errors) {
+        const div = errorsEl.createDiv({ text: truncateErrorLine(message) });
+        div.title = message;
+      }
     }
     if (invalidNotes.length > 0) {
       errorsEl.createEl('h4', { text: 'Skipped notes' });
-      for (const note of invalidNotes) errorsEl.createDiv({ text: `${note.path}: ${note.error}` });
+      for (const note of invalidNotes) {
+        const full = `${note.path}: ${note.error}`;
+        const div = errorsEl.createDiv({ text: truncateErrorLine(full) });
+        div.title = full;
+      }
     }
   }
 }
@@ -487,9 +552,29 @@ function staleTier(ageMs: number): 'green' | 'amber' | 'red' {
   return 'red';
 }
 
+function staleAriaLabel(tier: 'green' | 'amber' | 'red', ageMs: number): string {
+  const age = formatStaleAge(ageMs);
+  if (tier === 'green') return `Fresh heartbeat (${age} ago)`;
+  if (tier === 'amber') return `Stale heartbeat (${age} ago)`;
+  return `Very stale heartbeat (${age} ago)`;
+}
+
 function formatElapsed(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}m ${seconds}s`;
+}
+
+const ERROR_LINE_CAP = 300;
+
+function truncateErrorLine(value: string): string {
+  if (value.length <= ERROR_LINE_CAP) return value;
+  return `${value.slice(0, ERROR_LINE_CAP - 1)}…`;
+}
+
+function formatStaleAge(ageMs: number): string {
+  if (ageMs < 60_000) return `${Math.round(ageMs / 1000)}s`;
+  if (ageMs < 3_600_000) return `${Math.round(ageMs / 60_000)}m`;
+  return `${Math.round(ageMs / 3_600_000)}h`;
 }

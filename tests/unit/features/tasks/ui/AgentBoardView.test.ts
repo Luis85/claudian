@@ -57,20 +57,25 @@ describe('AgentBoardView.onToggleQueue', () => {
 });
 
 describe('AgentBoardView.onQueueCapChanged', () => {
-  it('applies the live halt threshold and ticks on a settings wake', () => {
+  it('applies the live halt threshold, ticks, and re-renders on a settings wake', () => {
     // The wake fires on any settings save. The global cap is applied by the
-    // plugin; the per-runner halt threshold must be synced here too, or a
-    // changed limit only takes effect on the next board refresh.
+    // plugin; the per-runner halt threshold must be synced here too, and the
+    // board must re-render so the "Work-order tabs N/M" slot badge picks up the
+    // new cap immediately — otherwise the badge stays stale until the next
+    // unrelated status/run event ticks the board.
     const setHaltAfterFailures = jest.fn();
     const tick = jest.fn();
+    const render = jest.fn();
     const view = Object.create(AgentBoardView.prototype) as any;
     view.runner = { setHaltAfterFailures, tick };
+    view.render = render;
     view.plugin = { settings: { agentBoardQueueHaltAfter: 5 } };
 
     view.onQueueCapChanged();
 
     expect(setHaltAfterFailures).toHaveBeenCalledWith(5);
     expect(tick).toHaveBeenCalled();
+    expect(render).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -80,8 +85,9 @@ describe('AgentBoardView.recoverOrphanedRuns', () => {
   // mocked applyNoteChange/noteStore, a runSidecarStore with readHeartbeat,
   // and a stub events emitter.
   function makeView(options: {
-    sidecarHeartbeat: { at: string; status: 'running' } | null;
+    sidecarHeartbeat: { at: string; status: 'running'; runtimeId?: string } | null;
     sidecarThrows?: boolean;
+    pluginRuntimeId?: string;
   }): {
     view: any;
     writeStatus: jest.Mock;
@@ -110,6 +116,7 @@ describe('AgentBoardView.recoverOrphanedRuns', () => {
     view.pauseState = new Map();
     view.plugin = {
       events,
+      runtimeId: options.pluginRuntimeId ?? 'plugin-current',
       runSidecarStore: {
         readHeartbeat: jest.fn(async () => {
           if (options.sidecarThrows) throw new Error('boom');
@@ -190,6 +197,61 @@ describe('AgentBoardView.recoverOrphanedRuns', () => {
     await view['recoverOrphanedRuns']();
 
     expect(writeStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks the run failed when sidecar runtimeId differs from current plugin runtimeId', async () => {
+    // A previous plugin load wrote the sidecar then died. The `at` value can
+    // still be within the 5-minute stale window, but the runtimeId mismatch
+    // says nothing in *this* process is still ticking, so recovery runs now —
+    // no need to wait for the stale window to age out.
+    const { view, writeStatus, events } = makeView({
+      sidecarHeartbeat: {
+        at: new Date(Date.now() - 1_000).toISOString(),
+        status: 'running',
+        runtimeId: 'plugin-previous',
+      },
+      pluginRuntimeId: 'plugin-current',
+    });
+
+    await view['recoverOrphanedRuns']();
+
+    expect(writeStatus).toHaveBeenCalledTimes(1);
+    expect(writeStatus.mock.calls[0][1]).toMatchObject({ status: 'failed' });
+    expect(events.emit).toHaveBeenCalledWith(
+      'task:status-changed',
+      expect.objectContaining({ status: 'failed' }),
+    );
+  });
+
+  it('skips orphan adoption when sidecar runtimeId matches current plugin runtimeId', async () => {
+    // A live RunSession in the same plugin load is still ticking — treat as
+    // live regardless of the `at` freshness check.
+    const { view, writeStatus } = makeView({
+      sidecarHeartbeat: {
+        at: new Date(Date.now() - 2_000).toISOString(),
+        status: 'running',
+        runtimeId: 'plugin-current',
+      },
+      pluginRuntimeId: 'plugin-current',
+    });
+
+    await view['recoverOrphanedRuns']();
+
+    expect(writeStatus).not.toHaveBeenCalled();
+  });
+
+  it('falls back to `at` freshness when sidecar lacks a runtimeId (legacy sidecar)', async () => {
+    // A sidecar written before the runtimeId field existed must still gate
+    // recovery on the `at` freshness check — otherwise upgrading the plugin
+    // would strand every legacy sidecar's card.
+    const { view, writeStatus } = makeView({
+      sidecarHeartbeat: { at: new Date(Date.now() - 2_000).toISOString(), status: 'running' },
+      pluginRuntimeId: 'plugin-current',
+    });
+
+    await view['recoverOrphanedRuns']();
+
+    expect(writeStatus).not.toHaveBeenCalled();
   });
 
   it('recovers a running task with no run_id without consulting the sidecar', async () => {
@@ -364,7 +426,7 @@ describe('AgentBoardView.onStatusChanged liveHeartbeat eviction', () => {
     return view;
   }
 
-  it.each(['review', 'done', 'failed', 'canceled'] as const)(
+  it.each(['review', 'done', 'failed', 'canceled', 'needs_handoff'] as const)(
     'drops the live heartbeat entry on terminal status %s',
     (status) => {
       const view = buildEvictView();
@@ -377,6 +439,78 @@ describe('AgentBoardView.onStatusChanged liveHeartbeat eviction', () => {
     const view = buildEvictView();
     view.onStatusChanged({ taskId: 'wo-1', status: 'running' });
     expect(view.liveHeartbeats.has('wo-1')).toBe(true);
+  });
+});
+
+describe('AgentBoardView.finalizeLedgerToNote', () => {
+  // Build a view stub with snapshotLedgerAsMarkdown + cleanupRun + applyNoteChange
+  // + writeLedgerSnapshot mocks so we can probe the failure-emit-keep-sidecar
+  // contract directly without driving a full RunSession.
+  function makeView(options: {
+    snapshot: string;
+    applyThrows?: Error;
+  }) {
+    const cleanupRun = jest.fn(async (_runId: string) => {});
+    const snapshotLedgerAsMarkdown = jest.fn(async () => options.snapshot);
+    const writeLedgerSnapshot = jest.fn((content: string) => content);
+    const applyNoteChange = jest.fn(async (_path: string, transform: (c: string) => string) => {
+      if (options.applyThrows) throw options.applyThrows;
+      transform('');
+    });
+    const events = { emit: jest.fn() };
+    const view = Object.create(AgentBoardView.prototype) as any;
+    view.noteStore = { writeLedgerSnapshot };
+    view.plugin = {
+      events,
+      logger: { scope: () => ({ warn: jest.fn(), info: jest.fn() }) },
+      runSidecarStore: { snapshotLedgerAsMarkdown, cleanupRun },
+    };
+    view.applyNoteChange = applyNoteChange;
+    return { view, cleanupRun, snapshotLedgerAsMarkdown, writeLedgerSnapshot, applyNoteChange, events };
+  }
+
+  const task = { path: 'tasks/wo.md', frontmatter: { id: 'wo-1' } } as any;
+
+  it('writes snapshot region then cleans up sidecar on success', async () => {
+    const { view, cleanupRun, writeLedgerSnapshot, applyNoteChange } = makeView({
+      snapshot: '- t [running] hi',
+    });
+
+    await view['finalizeLedgerToNote'](task, 'run-1');
+
+    expect(applyNoteChange).toHaveBeenCalledTimes(1);
+    expect(writeLedgerSnapshot).toHaveBeenCalledTimes(1);
+    expect(cleanupRun).toHaveBeenCalledWith('run-1');
+  });
+
+  it('skips note write when sidecar ledger is empty but still cleans up', async () => {
+    // No ledger entries to materialize (e.g. the run was canceled before the
+    // first flush). The note region is untouched; the sidecar is still removed
+    // because there is nothing to preserve.
+    const { view, cleanupRun, applyNoteChange } = makeView({ snapshot: '' });
+
+    await view['finalizeLedgerToNote'](task, 'run-1');
+
+    expect(applyNoteChange).not.toHaveBeenCalled();
+    expect(cleanupRun).toHaveBeenCalledWith('run-1');
+  });
+
+  it('emits task:ledger-finalize-failed and keeps sidecar when snapshot write throws', async () => {
+    // A hand-edited note missing the run-ledger markers throws on snapshot
+    // write. The failure must be surfaced (event) and the sidecar must NOT be
+    // cleaned up so a developer can recover the ledger from disk.
+    const err = new Error('Missing generated region markers');
+    const { view, cleanupRun, events } = makeView({ snapshot: '- t [running] hi', applyThrows: err });
+
+    await view['finalizeLedgerToNote'](task, 'run-1');
+
+    expect(cleanupRun).not.toHaveBeenCalled();
+    expect(events.emit).toHaveBeenCalledWith('task:ledger-finalize-failed', {
+      taskId: 'wo-1',
+      path: 'tasks/wo.md',
+      runId: 'run-1',
+      error: 'Missing generated region markers',
+    });
   });
 });
 

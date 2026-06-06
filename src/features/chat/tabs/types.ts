@@ -34,25 +34,42 @@ import type { NavigationSidebar } from '../ui/NavigationSidebar';
 import type { StatusPanel } from '../ui/StatusPanel';
 
 /**
- * Default number of tabs allowed.
+ * Default number of chat tabs allowed.
  *
  * Set to 3 to balance usability with resource usage:
  * - Each tab has its own chat runtime and persistent query
  * - More tabs = more memory and potential SDK processes
  * - 3 tabs allows multi-tasking without excessive overhead
  */
-export const DEFAULT_MAX_TABS = 3;
+export const DEFAULT_MAX_CHAT_TABS = 3;
 
 /**
- * Minimum number of tabs allowed (settings floor).
+ * Minimum number of chat tabs allowed (settings floor for the chat budget).
+ * Work-order tabs follow the Agent Board queue cap range (`MIN_WORK_ORDER_TABS`).
  */
 export const MIN_TABS = 3;
 
 /**
- * Maximum number of tabs allowed (settings ceiling).
- * Users can configure up to this many tabs via settings.
+ * Maximum number of chat tabs allowed (settings ceiling for the chat budget).
+ * Users can configure up to this many chat tabs via settings.
  */
 export const MAX_TABS = 10;
+
+/**
+ * Work-order tab cap follows the single Agent Board queue cap setting
+ * (`agentBoardQueueCap`) — the same number the queue runner uses for concurrent
+ * runs, so users only have one knob for "how many work orders at once".
+ * Range matches the queue cap field's UI range.
+ */
+export const MIN_WORK_ORDER_TABS = 1;
+export const MAX_WORK_ORDER_TABS = 8;
+
+/**
+ * Distinguishes user-opened chat tabs from Agent Board work-order task-run tabs.
+ * Immutable after creation. Drives independent cap enforcement and tab-bar
+ * rendering (chat tabs render first, work-order tabs render last).
+ */
+export type TabKind = 'chat' | 'work-order';
 
 /**
  * Minimal interface for the ClaudianView methods used by TabManager and Tab.
@@ -77,6 +94,9 @@ export interface TabManagerInterface {
 
   /** Gets all tabs. */
   getAllTabs(): TabData[];
+
+  /** Counts open tabs of the given kind. */
+  countTabsByKind(kind: TabKind): number;
 
   /** Creates a fresh, activated tab pinned to a provider/model for an Agent Board task run. */
   createTaskRunTab(options: {
@@ -188,6 +208,12 @@ export interface TabData {
   /** Unique tab identifier. */
   id: TabId;
 
+  /**
+   * Immutable kind classifier. Determines which cap this tab counts against
+   * and how it renders in the tab bar. Set once at creation.
+   */
+  kind: TabKind;
+
   /** Explicit lifecycle state. */
   lifecycleState: TabLifecycleState;
 
@@ -260,6 +286,11 @@ export interface PersistedTabState {
   tabId: TabId;
   conversationId: string | null;
   draftModel?: string | null;
+  /**
+   * Optional for back-compat with pre-upgrade persisted state. Restore treats
+   * a missing value as 'chat'.
+   */
+  kind?: TabKind;
 }
 
 /**
@@ -312,6 +343,8 @@ export interface TabBarItem {
   isStreaming: boolean;
   needsAttention: boolean;
   canClose: boolean;
+  /** Drives badge styling — work-order badges get an accent + aria suffix. */
+  kind: TabKind;
 }
 
 /** Outcome of a programmatic task-run turn, surfaced to the work-order runner. */

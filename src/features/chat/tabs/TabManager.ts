@@ -30,14 +30,17 @@ import {
   wireTabInputEvents,
 } from './Tab';
 import {
-  DEFAULT_MAX_TABS,
+  DEFAULT_MAX_CHAT_TABS,
   MAX_TABS,
+  MAX_WORK_ORDER_TABS,
   MIN_TABS,
+  MIN_WORK_ORDER_TABS,
   type PersistedTabManagerState,
   type PersistedTabState,
   type TabBarItem,
   type TabData,
   type TabId,
+  type TabKind,
   type TabManagerCallbacks,
   type TabManagerInterface,
   type TabManagerViewHost,
@@ -60,6 +63,8 @@ type CreateTabOptions = {
   pinnedModel?: string;
   bypassTabLimit?: boolean;
   defaultProviderId?: ProviderId;
+  /** Tab kind. Defaults to 'chat' when omitted. Immutable after creation. */
+  kind?: TabKind;
 };
 
 type OpenConversationOptions = {
@@ -116,12 +121,28 @@ export class TabManager implements TabManagerInterface {
   private isSwitchingTab = false;
 
   /**
-   * Gets the current max tabs limit from settings.
-   * Clamps to MIN_TABS and MAX_TABS bounds.
+   * Returns the configured cap for a given tab kind. Chat and work-order draw
+   * from independent budgets:
+   *   - Chat: `maxChatTabs` setting, clamped to [MIN_TABS, MAX_TABS].
+   *   - Work-order: derived from `agentBoardQueueCap` (the single Agent Board
+   *     queue concurrency knob), clamped to [MIN_WORK_ORDER_TABS,
+   *     MAX_WORK_ORDER_TABS] so the tab cap always matches the queue cap the
+   *     user sees in Agent Board settings.
    */
-  private getMaxTabs(): number {
-    const settingsValue = this.plugin.settings.maxTabs ?? DEFAULT_MAX_TABS;
-    return Math.max(MIN_TABS, Math.min(MAX_TABS, settingsValue));
+  private getMaxTabsFor(kind: TabKind): number {
+    if (kind === 'work-order') {
+      const raw = this.plugin.settings.agentBoardQueueCap ?? 1;
+      return Math.max(MIN_WORK_ORDER_TABS, Math.min(MAX_WORK_ORDER_TABS, raw));
+    }
+    const raw = this.plugin.settings.maxChatTabs ?? DEFAULT_MAX_CHAT_TABS;
+    return Math.max(MIN_TABS, Math.min(MAX_TABS, raw));
+  }
+
+  /** Counts open tabs of the given kind. */
+  countTabsByKind(kind: TabKind): number {
+    let n = 0;
+    for (const t of this.tabs.values()) if (t.kind === kind) n++;
+    return n;
   }
 
   constructor(
@@ -174,8 +195,9 @@ export class TabManager implements TabManagerInterface {
     tabId?: TabId,
     options: CreateTabOptions = {},
   ): Promise<TabData | null> {
-    const maxTabs = this.getMaxTabs();
-    if (this.tabs.size >= maxTabs && !options.bypassTabLimit) {
+    const kind: TabKind = options.kind ?? 'chat';
+    const maxTabs = this.getMaxTabsFor(kind);
+    if (this.countTabsByKind(kind) >= maxTabs && !options.bypassTabLimit) {
       return null;
     }
 
@@ -201,6 +223,7 @@ export class TabManager implements TabManagerInterface {
       ...(typeof draftModel === 'string' ? { draftModel } : {}),
       ...(typeof pinnedModel === 'string' ? { pinnedModel } : {}),
       defaultProviderId,
+      kind,
       onStreamingChanged: (isStreaming) => {
         this.callbacks.onTabStreamingChanged?.(tab.id, isStreaming);
       },
@@ -249,7 +272,11 @@ export class TabManager implements TabManagerInterface {
       this.maybePrimeProviderRuntime(tab);
     }
 
-    this.plugin.events.emit('chat:tabs-changed', { openCount: this.tabs.size });
+    this.plugin.events.emit('chat:tabs-changed', {
+      openCount: this.tabs.size,
+      chatCount: this.countTabsByKind('chat'),
+      workOrderCount: this.countTabsByKind('work-order'),
+    });
     return tab;
   }
 
@@ -269,6 +296,7 @@ export class TabManager implements TabManagerInterface {
       draftModel: options.model,
       pinnedModel: options.model,
       defaultProviderId: options.providerId,
+      kind: 'work-order',
     });
     if (tab) {
       tab.workOrderPath = options.workOrderPath ?? null;
@@ -307,8 +335,15 @@ export class TabManager implements TabManagerInterface {
       this.activeTabId = tabId;
       activateTab(tab);
 
-      // Load conversation if not already loaded
-      if (tab.conversationId && tab.state.messages.length === 0) {
+      // Load conversation if not already loaded. `isHydrating` covers the
+      // window between the instant tab swap + spinner render in `switchTo`
+      // and the async transcript load resolving — without this guard a
+      // re-activation in that window would restart the hydration mid-flight.
+      if (
+        tab.conversationId
+        && tab.state.messages.length === 0
+        && !tab.state.isHydrating
+      ) {
         await tab.controllers.conversationController?.switchTo(tab.conversationId);
       } else if (
         tab.conversationId
@@ -375,7 +410,11 @@ export class TabManager implements TabManagerInterface {
     this.providerCommandCache.delete(tabId);
     this.tabs.delete(tabId);
     this.callbacks.onTabClosed?.(tabId);
-    this.plugin.events.emit('chat:tabs-changed', { openCount: this.tabs.size });
+    this.plugin.events.emit('chat:tabs-changed', {
+      openCount: this.tabs.size,
+      chatCount: this.countTabsByKind('chat'),
+      workOrderCount: this.countTabsByKind('work-order'),
+    });
 
     // If we closed the active tab, switch to another
     if (this.activeTabId === tabId) {
@@ -428,9 +467,23 @@ export class TabManager implements TabManagerInterface {
     return this.tabs.size;
   }
 
-  /** Checks if more tabs can be created. */
-  canCreateTab(): boolean {
-    return this.tabs.size < this.getMaxTabs();
+  /** Checks if more tabs of a given kind can be created. Defaults to chat. */
+  canCreateTab(kind: TabKind = 'chat'): boolean {
+    return this.countTabsByKind(kind) < this.getMaxTabsFor(kind);
+  }
+
+  /**
+   * Returns tabs ordered chat-first then work-order, preserving insertion order
+   * within each group. The tab bar renderer and prev/next navigation consume
+   * this ordered view so cycling goes chat → chat → … → WO → WO → chat.
+   */
+  getOrderedTabs(): TabData[] {
+    const chat: TabData[] = [];
+    const wo: TabData[] = [];
+    for (const t of this.tabs.values()) {
+      (t.kind === 'work-order' ? wo : chat).push(t);
+    }
+    return [...chat, ...wo];
   }
 
   // ============================================
@@ -442,7 +495,7 @@ export class TabManager implements TabManagerInterface {
     const items: TabBarItem[] = [];
     let index = 1;
 
-    for (const tab of this.tabs.values()) {
+    for (const tab of this.getOrderedTabs()) {
       items.push({
         id: tab.id,
         index: index++,
@@ -452,6 +505,7 @@ export class TabManager implements TabManagerInterface {
         isStreaming: tab.state.isStreaming,
         needsAttention: tab.state.needsAttention,
         canClose: this.tabs.size > 1 || !tab.state.isStreaming,
+        kind: tab.kind,
       });
     }
 
@@ -577,8 +631,8 @@ export class TabManager implements TabManagerInterface {
     if (target === 'new-tab') {
       const tab = await this.forkToNewTab(context);
       if (!tab) {
-        const maxTabs = this.getMaxTabs();
-        new Notice(t('chat.fork.maxTabsReached', { count: String(maxTabs) }));
+        const maxTabs = this.getMaxTabsFor('chat');
+        new Notice(t('chat.tabs.maxChatReached', { count: String(maxTabs) }));
         return;
       }
       new Notice(t('chat.fork.notice'));
@@ -593,14 +647,14 @@ export class TabManager implements TabManagerInterface {
   }
 
   async forkToNewTab(context: ForkContext): Promise<TabData | null> {
-    const maxTabs = this.getMaxTabs();
-    if (this.tabs.size >= maxTabs) {
+    const maxTabs = this.getMaxTabsFor('chat');
+    if (this.countTabsByKind('chat') >= maxTabs) {
       return null;
     }
 
     const conversationId = await this.createForkConversation(context);
     try {
-      return await this.createTab(conversationId);
+      return await this.createTab(conversationId, undefined, { kind: 'chat' });
     } catch (error) {
       await this.plugin.deleteConversation(conversationId).catch(() => {});
       throw error;
@@ -688,6 +742,7 @@ export class TabManager implements TabManagerInterface {
           : {}),
         tabId: tab.id,
         conversationId: tab.conversationId,
+        kind: tab.kind,
       });
     }
 
@@ -723,6 +778,7 @@ export class TabManager implements TabManagerInterface {
           await this.createTab(tabState.conversationId, tabState.tabId, {
             activate: false,
             ...(typeof tabState.draftModel === 'string' ? { draftModel: tabState.draftModel } : {}),
+            kind: tabState.kind ?? 'chat',
           });
         } catch {
           // Continue restoring other tabs

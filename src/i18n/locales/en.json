@@ -31,7 +31,8 @@
       "deleteFailed": "Failed to delete conversation",
       "renameFailed": "Failed to rename conversation",
       "linkedNotFound": "Linked conversation not found. It may have been deleted.",
-      "linkedNoFreeTab": "Cannot open conversation: tab limit reached. Close a tab first."
+      "linkedNoFreeTab": "Cannot open conversation: tab limit reached. Close a tab first.",
+      "loading": "Loading conversation…"
     },
     "context": {
       "fileNoTab": "Open Claudian chat and enable a provider before adding file context.",
@@ -61,6 +62,11 @@
       "closeFailed": "Failed to close tab",
       "maxReached": "Maximum {count} tabs allowed",
       "providerSwitchBlocked": "Cannot switch provider on a bound session. Start a new tab instead."
+    },
+    "tabs": {
+      "maxChatReached": "Cannot open: maximum {count} chat tabs reached.",
+      "maxWorkOrderReached": "Work-order tab limit reached ({count}). Queue is waiting.",
+      "workOrderSuffix": "(work order)"
     },
     "externalContext": {
       "invalidRemoved": "Removed {count} invalid external context path(s): {paths}",
@@ -563,6 +569,11 @@
       "name": "Maximum chat tabs",
       "desc": "Maximum number of concurrent chat tabs (3-10). Each tab uses a separate Claude session.",
       "warning": "More than 5 tabs may impact performance and memory usage."
+    },
+    "maxChatTabs": {
+      "name": "Max chat tabs",
+      "desc": "Maximum chat tabs you can have open at once.",
+      "warning": "More than 5 chat tabs may impact performance."
     },
     "tabBarPosition": {
       "name": "Tab bar position",

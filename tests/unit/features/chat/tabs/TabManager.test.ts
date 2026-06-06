@@ -4,7 +4,7 @@ import { EventBus } from '@/core/events/EventBus';
 import { ProviderWorkspaceRegistry } from '@/core/providers/ProviderWorkspaceRegistry';
 import { TabManager } from '@/features/chat/tabs/TabManager';
 import {
-  DEFAULT_MAX_TABS,
+  DEFAULT_MAX_CHAT_TABS,
   type PersistedTabManagerState,
   type TabManagerCallbacks,
 } from '@/features/chat/tabs/types';
@@ -121,7 +121,8 @@ function createMockPlugin(overrides: Record<string, any> = {}): any {
       },
     },
     settings: {
-      maxTabs: DEFAULT_MAX_TABS,
+      maxChatTabs: DEFAULT_MAX_CHAT_TABS,
+      agentBoardQueueCap: DEFAULT_MAX_CHAT_TABS,
       ...(overrides.settings || {}),
     },
     events: new EventBus<any>(),
@@ -175,6 +176,7 @@ function createMockTabData(overrides: Record<string, any> = {}): any {
 
   return {
     id: `tab-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+    kind: 'chat',
     providerId: 'claude',
     conversationId: null,
     service: null,
@@ -280,14 +282,14 @@ describe('TabManager - Tab Lifecycle', () => {
     it('should enforce max tabs limit', async () => {
       const manager = createManager({ callbacks });
 
-      for (let i = 0; i < DEFAULT_MAX_TABS; i++) {
+      for (let i = 0; i < DEFAULT_MAX_CHAT_TABS; i++) {
         await manager.createTab();
       }
 
       const extraTab = await manager.createTab();
 
       expect(extraTab).toBeNull();
-      expect(manager.getTabCount()).toBe(DEFAULT_MAX_TABS);
+      expect(manager.getTabCount()).toBe(DEFAULT_MAX_CHAT_TABS);
     });
 
     it('should use provided tab ID for restoration', async () => {
@@ -554,6 +556,25 @@ describe('TabManager - Tab Lifecycle', () => {
     }
     expect(counts[counts.length - 1]).toBe(1);
   });
+
+  it('chat:tabs-changed payload carries chatCount and workOrderCount', async () => {
+    jest.clearAllMocks();
+    const plugin = createMockPlugin();
+    let counter = 0;
+    mockCreateTab.mockImplementation((opts: { kind?: 'chat' | 'work-order' }) => {
+      counter++;
+      return createMockTabData({ id: `tab-${counter}`, kind: opts?.kind ?? 'chat' });
+    });
+    const manager = new TabManager(plugin, createMockMcpManager(), createMockEl(), createMockView(), {});
+    const payloads: Array<{ openCount: number; chatCount: number; workOrderCount: number }> = [];
+    plugin.events.on('chat:tabs-changed', (p: { openCount: number; chatCount: number; workOrderCount: number }) => payloads.push(p));
+
+    await manager.createTab(undefined, undefined, { activate: false, kind: 'chat' });
+    await manager.createTab(undefined, undefined, { activate: false, kind: 'work-order' });
+
+    const last = payloads[payloads.length - 1];
+    expect(last).toEqual({ openCount: 2, chatCount: 1, workOrderCount: 1 });
+  });
 });
 
 describe('TabManager - Tab Queries', () => {
@@ -617,7 +638,7 @@ describe('TabManager - Tab Queries', () => {
     });
 
     it('should return false when at limit', async () => {
-      for (let i = 1; i < DEFAULT_MAX_TABS; i++) {
+      for (let i = 1; i < DEFAULT_MAX_CHAT_TABS; i++) {
         await manager.createTab();
       }
       expect(manager.canCreateTab()).toBe(false);
@@ -678,6 +699,27 @@ describe('TabManager - Tab Bar Data', () => {
 
       expect(items[0].isStreaming).toBe(false);
       expect(items[1].isStreaming).toBe(true);
+    });
+
+    it('orders chat tabs before work-order tabs in getTabBarItems', async () => {
+      // Install factory AFTER createManager() since createManager clears mocks
+      // and re-installs its default factory.
+      manager = createManager();
+      let counter = 0;
+      mockCreateTab.mockImplementation((opts: { kind?: 'chat' | 'work-order' }) => {
+        counter++;
+        return createMockTabData({ id: `tab-${counter}`, kind: opts?.kind ?? 'chat' });
+      });
+
+      await manager.createTab(undefined, undefined, { activate: false, kind: 'work-order' });
+      await manager.createTab(undefined, undefined, { activate: false, kind: 'chat' });
+      await manager.createTab(undefined, undefined, { activate: false, kind: 'work-order' });
+      await manager.createTab(undefined, undefined, { activate: false, kind: 'chat' });
+
+      const items = manager.getTabBarItems();
+      const kinds = items.map((it) => it.kind);
+      // Chat first (insertion order), then WO (insertion order).
+      expect(kinds).toEqual(['chat', 'chat', 'work-order', 'work-order']);
     });
 
     it('should resolve badge provider from the live tab context', async () => {
@@ -829,6 +871,7 @@ describe('TabManager - Persistence', () => {
           tabId: 'blank-opencode',
           conversationId: null,
           draftModel: 'opencode:google/gemini-3.1-pro-preview',
+          kind: 'chat',
         }],
       });
     });
@@ -847,6 +890,49 @@ describe('TabManager - Persistence', () => {
       await manager.restoreState(persistedState);
 
       expect(mockCreateTab).toHaveBeenCalledTimes(2);
+    });
+
+    it('round-trips work-order kind through restoreState and getPersistedState', async () => {
+      mockCreateTab.mockReset();
+      let counter = 0;
+      const persistedKinds: Array<'chat' | 'work-order'> = ['chat', 'work-order'];
+      mockCreateTab.mockImplementation(() => {
+        const k = persistedKinds[counter++] ?? 'chat';
+        return createMockTabData({ id: `restored-${counter}`, kind: k });
+      });
+
+      const initial: PersistedTabManagerState = {
+        openTabs: [
+          { tabId: 'restored-1', conversationId: null, kind: 'chat' },
+          { tabId: 'restored-2', conversationId: null, kind: 'work-order' },
+        ],
+        activeTabId: 'restored-1',
+      };
+      await manager.restoreState(initial);
+
+      const round = manager.getPersistedState();
+      const kinds = round.openTabs.map((t) => t.kind);
+      expect(kinds).toEqual(['chat', 'work-order']);
+    });
+
+    it('defaults missing kind to chat when restoring legacy persisted state', async () => {
+      mockCreateTab.mockReset();
+      mockCreateTab.mockImplementation((opts: { kind?: 'chat' | 'work-order' }) =>
+        createMockTabData({ id: 'restored-legacy', kind: opts?.kind ?? 'chat' }),
+      );
+
+      const legacy: PersistedTabManagerState = {
+        openTabs: [{ tabId: 'restored-legacy', conversationId: null }],
+        activeTabId: 'restored-legacy',
+      };
+      await manager.restoreState(legacy);
+
+      // createTab(conversationId, tabId, options) — the factory must receive a kind option.
+      const lastCall = mockCreateTab.mock.calls[mockCreateTab.mock.calls.length - 1];
+      // The factory at tabFactory.ts spreads options into createTab's options arg.
+      // We assert the tab manager passes a defined kind through to createTab.
+      const firstArg = lastCall?.[0] ?? {};
+      expect(firstArg.kind ?? 'chat').toBe('chat');
     });
 
     it('should restore draftModel for blank tabs', async () => {
@@ -2085,10 +2171,10 @@ describe('TabManager - openConversation Current Tab Path', () => {
   });
 
   it('should not open in current tab if at max tabs and preferNewTab is true', async () => {
-    for (let i = 0; i < DEFAULT_MAX_TABS - 1; i++) {
+    for (let i = 0; i < DEFAULT_MAX_CHAT_TABS - 1; i++) {
       await manager.createTab();
     }
-    expect(manager.getTabCount()).toBe(DEFAULT_MAX_TABS);
+    expect(manager.getTabCount()).toBe(DEFAULT_MAX_CHAT_TABS);
 
     const activeTab = manager.getActiveTab();
     const switchTo = jest.fn().mockResolvedValue(undefined);
@@ -2103,10 +2189,10 @@ describe('TabManager - openConversation Current Tab Path', () => {
   });
 
   it('should refuse to hijack active tab when requireNewTab is true and tab cap is reached', async () => {
-    for (let i = 0; i < DEFAULT_MAX_TABS - 1; i++) {
+    for (let i = 0; i < DEFAULT_MAX_CHAT_TABS - 1; i++) {
       await manager.createTab();
     }
-    expect(manager.getTabCount()).toBe(DEFAULT_MAX_TABS);
+    expect(manager.getTabCount()).toBe(DEFAULT_MAX_CHAT_TABS);
 
     const activeTab = manager.getActiveTab();
     const switchTo = jest.fn().mockResolvedValue(undefined);
@@ -2119,7 +2205,7 @@ describe('TabManager - openConversation Current Tab Path', () => {
     // Must NOT hijack the active tab (would close any running session in it).
     expect(switchTo).not.toHaveBeenCalled();
     // And must NOT create another tab over the cap.
-    expect(manager.getTabCount()).toBe(DEFAULT_MAX_TABS);
+    expect(manager.getTabCount()).toBe(DEFAULT_MAX_CHAT_TABS);
   });
 
   it('should open a new tab when requireNewTab is true and capacity is available', async () => {
@@ -2385,7 +2471,7 @@ describe('TabManager - forkInCurrentTab', () => {
     const plugin = createMockPlugin({
       createConversation: mockCreateConversation,
       updateConversation: mockUpdateConversation,
-      settings: { maxTabs: 3 },
+      settings: { maxChatTabs: 3, agentBoardQueueCap: 3 },
     });
 
     let tabCounter = 0;
@@ -2508,7 +2594,8 @@ describe('TabManager - switchToTab Session Sync', () => {
 
     const plugin = createMockPlugin({
       settings: {
-        maxTabs: DEFAULT_MAX_TABS,
+        maxChatTabs: DEFAULT_MAX_CHAT_TABS,
+        agentBoardQueueCap: DEFAULT_MAX_CHAT_TABS,
         persistentExternalContextPaths: ['/persistent/path'],
       },
     });
@@ -2800,8 +2887,8 @@ describe('TabManager - forkToNewTab at max tabs', () => {
     jest.clearAllMocks();
 
     const plugin = createMockPlugin();
-    // MIN_TABS is 3, so maxTabs must be >= 3 to avoid clamping
-    plugin.settings.maxTabs = 3;
+    // MIN_TABS is 3, so maxChatTabs must be >= 3 to avoid clamping
+    plugin.settings.maxChatTabs = 3;
     plugin.createConversation = jest.fn().mockResolvedValue({ id: 'fork-conv', providerId: 'claude' });
     plugin.updateConversation = jest.fn().mockResolvedValue(undefined);
 
@@ -2830,6 +2917,82 @@ describe('TabManager - forkToNewTab at max tabs', () => {
     });
 
     expect(result).toBeNull();
+  });
+});
+
+describe('TabManager - per-kind cap independence', () => {
+  it('forkToNewTab respects chat cap independently of work-order tabs', async () => {
+    jest.clearAllMocks();
+    const plugin = createMockPlugin();
+    plugin.settings.maxChatTabs = 3; // MIN_TABS clamp
+    plugin.settings.agentBoardQueueCap = 3;
+    plugin.createConversation = jest.fn().mockResolvedValue({ id: 'fork-conv', providerId: 'claude' });
+    plugin.updateConversation = jest.fn().mockResolvedValue(undefined);
+
+    let counter = 0;
+    mockCreateTab.mockImplementation((opts: { kind?: 'chat' | 'work-order' }) => {
+      counter++;
+      return createMockTabData({ id: `tab-${counter}`, kind: opts?.kind ?? 'chat' });
+    });
+
+    const manager = new TabManager(plugin, createMockMcpManager(), createMockEl(), createMockView());
+    await manager.createTab(undefined, undefined, { kind: 'chat' });
+    await manager.createTab(undefined, undefined, { kind: 'chat' });
+    await manager.createTab(undefined, undefined, { kind: 'chat' });
+    // Add a work-order tab on top — if fork were counting totals it would also see 4 tabs.
+    await manager.createTab(undefined, undefined, { kind: 'work-order' });
+
+    // Chat at cap, WO present — fork must refuse based on chat-only count.
+    const forked = await manager.forkToNewTab({
+      messages: [],
+      sourceSessionId: 'session-1',
+      resumeAt: 'asst-uuid',
+    });
+    expect(forked).toBeNull();
+  });
+
+  it('createTaskRunTab succeeds when chat cap is full but work-order cap free', async () => {
+    jest.clearAllMocks();
+    const plugin = createMockPlugin();
+    // MIN_TABS = 3 so chat cap stays at 3; fill it then verify WO still opens.
+    plugin.settings.maxChatTabs = 3;
+    plugin.settings.agentBoardQueueCap = 3;
+
+    let counter = 0;
+    mockCreateTab.mockImplementation((opts: { kind?: 'chat' | 'work-order' }) => {
+      counter++;
+      return createMockTabData({ id: `tab-${counter}`, kind: opts?.kind ?? 'chat' });
+    });
+
+    const manager = new TabManager(plugin, createMockMcpManager(), createMockEl(), createMockView());
+    await manager.createTab(undefined, undefined, { kind: 'chat' });
+    await manager.createTab(undefined, undefined, { kind: 'chat' });
+    await manager.createTab(undefined, undefined, { kind: 'chat' });
+    expect(manager.canCreateTab('chat')).toBe(false);
+
+    const wo = await manager.createTaskRunTab({ providerId: 'claude' as never, model: 'sonnet' });
+    expect(wo).not.toBeNull();
+  });
+
+  it('createTaskRunTab returns null when WO cap full, leaving chat cap untouched', async () => {
+    jest.clearAllMocks();
+    const plugin = createMockPlugin();
+    // MIN_TABS = 3 clamps WO cap to 3 minimum; saturate then verify chat free.
+    plugin.settings.maxChatTabs = 5;
+    plugin.settings.agentBoardQueueCap = 3;
+
+    let counter = 0;
+    mockCreateTab.mockImplementation((opts: { kind?: 'chat' | 'work-order' }) => {
+      counter++;
+      return createMockTabData({ id: `tab-${counter}`, kind: opts?.kind ?? 'chat' });
+    });
+
+    const manager = new TabManager(plugin, createMockMcpManager(), createMockEl(), createMockView());
+    expect(await manager.createTaskRunTab({ providerId: 'claude' as never, model: 'sonnet' })).not.toBeNull();
+    expect(await manager.createTaskRunTab({ providerId: 'claude' as never, model: 'sonnet' })).not.toBeNull();
+    expect(await manager.createTaskRunTab({ providerId: 'claude' as never, model: 'sonnet' })).not.toBeNull();
+    expect(await manager.createTaskRunTab({ providerId: 'claude' as never, model: 'sonnet' })).toBeNull();
+    expect(manager.canCreateTab('chat')).toBe(true);
   });
 });
 

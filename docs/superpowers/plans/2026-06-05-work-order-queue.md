@@ -1,7 +1,7 @@
 ---
 title: Work-order Queue Implementation Plan
 date: 2026-06-05
-status: in-progress
+status: done
 parent: "[[2026-06-05-work-order-queue-design]]"
 ---
 

@@ -776,3 +776,15 @@ export class TFolder {
     this.name = path.split('/').pop() || '';
   }
 }
+
+/**
+ * Minimal stand-in for Obsidian's filesystem adapter. Production code does
+ * `adapter instanceof FileSystemAdapter` to take a Node `fs` fast path; the
+ * mock returns the same relative path so `getAbsolutePath()` callers receive
+ * a deterministic value in tests.
+ */
+export class FileSystemAdapter {
+  getFullPath(relativePath: string): string {
+    return relativePath;
+  }
+}

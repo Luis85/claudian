@@ -98,6 +98,34 @@
   border-color: var(--background-modifier-border);
 }
 
+/*
+ * Work-order tab badge (Agent Board run host) — distinct from chat tabs:
+ *   - Wrench glyph replaces the index number (rendered by TabBar).
+ *   - Dashed border tints it apart from solid chat badges even at inactive state.
+ *   - First WO badge after a chat group gets an extra left margin so the two
+ *     groups read as separate clusters at a glance, not one continuous row.
+ */
+.claudian-tab-badge--work-order {
+  border-style: dashed;
+}
+
+.claudian-tab-badge--work-order-first {
+  margin-left: 12px;
+}
+
+.claudian-tab-badge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+.claudian-tab-badge-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
 @keyframes claudian-tab-badge-working-pulse {
   0%,
   100% {

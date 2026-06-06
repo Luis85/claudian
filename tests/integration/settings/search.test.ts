@@ -291,7 +291,7 @@ function createStubPlugin() {
         claude: { enabled: true },
       },
       tabBarPosition: 'input',
-      maxTabs: 3,
+      maxChatTabs: 3,
       chatViewPlacement: 'right-sidebar' as const,
       enableAutoScroll: true,
       deferMathRenderingDuringStreaming: true,

@@ -1,4 +1,7 @@
 ---
+date: 2026-06-04
+status: shipped
+scope: user-manual
 parent: "[[Chat]]"
 ---
 # Add folders to chat & attached-context card

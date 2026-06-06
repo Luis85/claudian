@@ -28,7 +28,7 @@ function createPlugin(): { plugin: ClaudianPlugin; commands: AnyCommand[] } {
         getLeavesOfType: jest.fn().mockReturnValue([]),
       },
     },
-    settings: { maxTabs: 3 },
+    settings: { maxChatTabs: 3, agentBoardQueueCap: 1 },
     copyDiagnosticLogs: jest.fn(),
   } as unknown as ClaudianPlugin;
   return { plugin, commands };

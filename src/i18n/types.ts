@@ -43,6 +43,7 @@ export type TranslationKey =
   | 'chat.history.renameFailed'
   | 'chat.history.linkedNotFound'
   | 'chat.history.linkedNoFreeTab'
+  | 'chat.history.loading'
 
   // Chat - File / folder context commands (Q-1 chunk 9, main.ts entries)
   | 'chat.context.fileNoTab'
@@ -568,6 +569,12 @@ export type TranslationKey =
   | 'settings.maxTabs.name'
   | 'settings.maxTabs.desc'
   | 'settings.maxTabs.warning'
+  | 'settings.maxChatTabs.name'
+  | 'settings.maxChatTabs.desc'
+  | 'settings.maxChatTabs.warning'
+  | 'chat.tabs.maxChatReached'
+  | 'chat.tabs.maxWorkOrderReached'
+  | 'chat.tabs.workOrderSuffix'
   | 'settings.tabBarPosition.name'
   | 'settings.tabBarPosition.desc'
   | 'settings.tabBarPosition.input'

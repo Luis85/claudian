@@ -180,7 +180,7 @@ export interface ClaudianSettings {
   lastCustomModel?: string;
 
   // UI preferences
-  maxTabs: number;
+  maxChatTabs: number;
   tabBarPosition: TabBarPosition;
   enableAutoScroll: boolean;
   deferMathRenderingDuringStreaming: boolean;

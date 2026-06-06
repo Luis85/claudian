@@ -338,33 +338,33 @@ export class ClaudianSettingTab extends PluginSettingTab {
           });
       });
 
-    const maxTabsSetting = new Setting(container)
-      .setName(t('settings.maxTabs.name'))
-      .setDesc(t('settings.maxTabs.desc'));
+    const maxChatTabsSetting = new Setting(container)
+      .setName(t('settings.maxChatTabs.name'))
+      .setDesc(t('settings.maxChatTabs.desc'));
 
-    const maxTabsWarningEl = container.createDiv({
+    const maxChatTabsWarningEl = container.createDiv({
       cls: 'claudian-max-tabs-warning claudian-setting-validation claudian-setting-validation-warning claudian-hidden',
     });
-    maxTabsWarningEl.setText(t('settings.maxTabs.warning'));
+    maxChatTabsWarningEl.setText(t('settings.maxChatTabs.warning'));
 
-    const updateMaxTabsWarning = (value: number): void => {
-      maxTabsWarningEl.toggleClass('claudian-hidden', value <= 5);
+    const updateMaxChatTabsWarning = (value: number): void => {
+      maxChatTabsWarningEl.toggleClass('claudian-hidden', value <= 5);
     };
 
-    maxTabsSetting.addSlider((slider) => {
+    maxChatTabsSetting.addSlider((slider) => {
       slider
         .setLimits(3, 10, 1)
-        .setValue(this.plugin.settings.maxTabs ?? 3)
+        .setValue(this.plugin.settings.maxChatTabs ?? 3)
         .setDynamicTooltip()
         .onChange(async (value) => {
-          this.plugin.settings.maxTabs = value;
+          this.plugin.settings.maxChatTabs = value;
           await this.plugin.saveSettings();
-          updateMaxTabsWarning(value);
+          updateMaxChatTabsWarning(value);
           for (const view of this.plugin.getAllViews()) {
             view.refreshTabControls();
           }
         });
-      updateMaxTabsWarning(this.plugin.settings.maxTabs ?? 3);
+      updateMaxChatTabsWarning(this.plugin.settings.maxChatTabs ?? 3);
     });
 
     new Setting(container)

@@ -82,6 +82,26 @@ describe('RunSidecarStore.heartbeat', () => {
 
     expect(await store.readHeartbeat('nope')).toBeNull();
   });
+
+  it('round-trips an optional runtimeId stamped by the caller', async () => {
+    // The runtimeId identifies the plugin instance that wrote the heartbeat.
+    // Orphan recovery uses a mismatch to detect "previous plugin load" sidecars
+    // immediately, without waiting for the 5-minute stale window.
+    const { adapter } = makeFakeAdapter();
+    const store = new RunSidecarStore(adapter, '.claudian/runs');
+
+    await store.writeHeartbeat('run-rt', {
+      at: '2026-06-06T12:00:00.000Z',
+      status: 'running',
+      runtimeId: 'plugin-load-abc',
+    });
+
+    expect(await store.readHeartbeat('run-rt')).toEqual({
+      at: '2026-06-06T12:00:00.000Z',
+      status: 'running',
+      runtimeId: 'plugin-load-abc',
+    });
+  });
 });
 
 describe('RunSidecarStore.ledger', () => {

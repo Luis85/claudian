@@ -5,12 +5,26 @@
  * vault adapter instead of Node's fs module.
  */
 
-import type { App } from 'obsidian';
+import { type App,FileSystemAdapter } from 'obsidian';
 
 export class VaultFileAdapter {
   private writeQueue: Promise<void> = Promise.resolve();
 
   constructor(private app: App) {}
+
+  /**
+   * Absolute filesystem path for a vault-relative path, or null when the active
+   * vault adapter does not back the vault with a real filesystem (mobile, in-mem
+   * test harnesses). Callers use this to take a Node `fs` fast path for bulk I/O
+   * while keeping the `vault.adapter` fallback intact.
+   */
+  getAbsolutePath(relativePath: string): string | null {
+    const adapter = this.app.vault.adapter;
+    if (adapter instanceof FileSystemAdapter) {
+      return adapter.getFullPath(relativePath);
+    }
+    return null;
+  }
 
   async exists(path: string): Promise<boolean> {
     return this.app.vault.adapter.exists(path);

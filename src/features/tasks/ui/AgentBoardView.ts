@@ -105,19 +105,13 @@ export class AgentBoardView extends ItemView {
         this.lastRunStatus.set(task.frontmatter.id, options.status);
       },
       writeHeartbeat: (runId, hb) =>
-        this.plugin.runSidecarStore.writeHeartbeat(runId, hb),
+        // Stamp the current plugin's runtimeId so orphan recovery can detect a
+        // sidecar written by a previous plugin load immediately, instead of
+        // waiting for the 5-minute stale-`at` window to age out.
+        this.plugin.runSidecarStore.writeHeartbeat(runId, { ...hb, runtimeId: this.plugin.runtimeId }),
       appendLedger: (_task, runId, entry) =>
         this.plugin.runSidecarStore.appendLedger(runId, entry),
-      finalizeLedgerToNote: async (task, runId) => {
-        const snapshot = await this.plugin.runSidecarStore.snapshotLedgerAsMarkdown(runId);
-        if (snapshot) {
-          await this.applyNoteChange(task.path, (content) => this.noteStore.writeLedgerSnapshot(content, snapshot));
-        }
-        // Snapshot landed (or the ledger was empty), so the sidecar's job for
-        // this run is over. Cleanup is best-effort — a leftover sidecar dir is
-        // harmless and orphan recovery treats a stale heartbeat as dead.
-        await this.plugin.runSidecarStore.cleanupRun(runId);
-      },
+      finalizeLedgerToNote: (task, runId) => this.finalizeLedgerToNote(task, runId),
       writeHandoff: (task, markdown) =>
         this.applyNoteChange(task.path, (content) => this.noteStore.writeHandoff(content, markdown)),
       renderPrompt: (task) =>
@@ -521,7 +515,15 @@ export class AgentBoardView extends ItemView {
     }
     // Drop the live heartbeat at terminal so a re-launched card doesn't show
     // the previous run's stale tick before the new run's first heartbeat lands.
-    if (p.status === 'review' || p.status === 'done' || p.status === 'failed' || p.status === 'canceled') {
+    // `needs_handoff` is also terminal here — the run ended without a parseable
+    // handoff and only a re-run can restart heartbeats.
+    if (
+      p.status === 'review'
+      || p.status === 'done'
+      || p.status === 'failed'
+      || p.status === 'canceled'
+      || p.status === 'needs_handoff'
+    ) {
       this.liveHeartbeats.delete(p.taskId);
     }
     this.patchCard(p.taskId);
@@ -565,6 +567,44 @@ export class AgentBoardView extends ItemView {
 
   private async onReject(taskId: string, reason: string): Promise<void> {
     await sharedRunRegistry.getSession(taskId)?.resume({ kind: 'reject', reason });
+  }
+
+  /**
+   * Replace the work-order note's run-ledger region with the sidecar snapshot
+   * at terminal, then GC the sidecar. Failure is surfaced (event) and the
+   * sidecar is intentionally KEPT so the ledger isn't lost — a hand-edited
+   * note missing the `<!-- claudian:run-ledger-* -->` markers can be recovered
+   * by reading `.claudian/runs/<runId>/ledger.jsonl` directly. Called from the
+   * coordinator wiring; extracted as a method so tests can pin the
+   * snapshot/emit/cleanup contract without driving a full RunSession.
+   */
+  private async finalizeLedgerToNote(task: TaskSpec, runId: string): Promise<void> {
+    const snapshot = await this.plugin.runSidecarStore.snapshotLedgerAsMarkdown(runId);
+    if (snapshot) {
+      try {
+        await this.applyNoteChange(task.path, (content) => this.noteStore.writeLedgerSnapshot(content, snapshot));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        this.plugin.logger.scope('tasks.finalizeLedger').warn(
+          `failed to write run-ledger snapshot for ${task.path} (run ${runId}): ${message}`,
+        );
+        this.plugin.events.emit('task:ledger-finalize-failed', {
+          taskId: task.frontmatter.id,
+          path: task.path,
+          runId,
+          error: message,
+        });
+        // Keep the sidecar so the ledger stays recoverable; the next board
+        // open's sweep won't touch it either (the task is still terminal-ish
+        // here, so the sweep won't match a "no active task" predicate either —
+        // by design, leave it for human triage).
+        return;
+      }
+    }
+    // Snapshot landed (or the ledger was empty), so the sidecar's job for
+    // this run is over. Cleanup is best-effort — a leftover sidecar dir is
+    // harmless and orphan recovery treats a stale heartbeat as dead.
+    await this.plugin.runSidecarStore.cleanupRun(runId);
   }
 
   /**
@@ -621,8 +661,17 @@ export class AgentBoardView extends ItemView {
         try {
           const sidecar = await this.plugin.runSidecarStore.readHeartbeat(runId);
           if (sidecar) {
-            const sidecarMs = Date.parse(sidecar.at);
-            if (Number.isFinite(sidecarMs) && nowMs - sidecarMs < ORPHAN_STALE_THRESHOLD_MS) continue;
+            // RuntimeId mismatch = the previous plugin load wrote this and is
+            // now gone. Recover immediately regardless of `at` freshness, so a
+            // mid-run reload doesn't strand the card for the full stale window.
+            // A legacy sidecar without runtimeId falls back to the `at` check
+            // below — upgrading the plugin must not strand existing sidecars.
+            if (sidecar.runtimeId && sidecar.runtimeId !== this.plugin.runtimeId) {
+              // Fall through to recovery.
+            } else {
+              const sidecarMs = Date.parse(sidecar.at);
+              if (Number.isFinite(sidecarMs) && nowMs - sidecarMs < ORPHAN_STALE_THRESHOLD_MS) continue;
+            }
           }
         } catch {
           // Corrupt or unreadable sidecar must not strand the card — fall
@@ -778,9 +827,15 @@ export class AgentBoardView extends ItemView {
   // otherwise a changed limit only takes effect on the next board refresh.
   // (Deliberately not a full syncRunner(): that reconciles pause from the cached
   // config, which would revert a pause just toggled from a board.)
+  //
+  // Also re-render the board chrome: the toolbar's "Work-order tabs N/M" badge
+  // reads `state.slots.max` from `computeSlots()`, which derives from the queue
+  // cap. Without a render here the badge stays stale until the next status/run
+  // event ticks the board, even though the cap is already live.
   private onQueueCapChanged(): void {
     this.runner?.setHaltAfterFailures(this.plugin.settings.agentBoardQueueHaltAfter);
     this.runner?.tick();
+    this.render();
   }
 
   private async handleToggleLaneCollapse(laneId: string): Promise<void> {

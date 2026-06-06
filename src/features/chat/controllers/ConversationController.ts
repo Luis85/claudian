@@ -83,6 +83,18 @@ type HistoryRenderOptions = {
 export class ConversationController {
   private deps: ConversationControllerDeps;
   private callbacks: ConversationCallbacks;
+  /**
+   * Tracks the in-flight transcript hydration so a follow-up tab switch can
+   * cancel the previous load instead of letting two hydrations race for the
+   * same renderer. Null when no hydration is active.
+   */
+  private hydrationAbort: AbortController | null = null;
+  /**
+   * Resolves when the active hydration's post-load restore lands (or aborts).
+   * Exposed via {@link whenHydrated} for tests and integration code that need
+   * to observe the post-hydrate state. Null when no hydration is in flight.
+   */
+  private hydrationPromise: Promise<void> | null = null;
 
   constructor(deps: ConversationControllerDeps, callbacks: ConversationCallbacks = {}) {
     this.deps = deps;
@@ -254,15 +266,20 @@ export class ConversationController {
 
   /** Switches to a different conversation. */
   async switchTo(id: string): Promise<void> {
-    const { plugin, state, subagentManager, renderer } = this.deps;
+    const { state, subagentManager, renderer } = this.deps;
 
     if (id === state.currentConversationId) return;
     if (state.isStreaming) return;
     if (state.isSwitchingConversation) return;
     if (state.isCreatingConversation) return;
 
-    state.isSwitchingConversation = true;
+    // Cancel any prior hydration so its result doesn't land in the new tab.
+    // The fetched conversation aborts via HydrationContext.signal; this side
+    // also short-circuits the post-load DOM restore in `hydrateAndRender`.
+    this.hydrationAbort?.abort();
+    this.hydrationAbort = null;
 
+    state.isSwitchingConversation = true;
     try {
       this.deps.dismissPendingInlinePrompts?.();
       // Drop any prior failure banner (and stale pending failure) before
@@ -275,24 +292,97 @@ export class ConversationController {
       subagentManager.orphanAllActive();
       subagentManager.clear();
 
-      const conversation = await plugin.switchConversation(id);
-      if (!conversation) {
-        return;
-      }
-
-      await this.deps.ensureServiceForConversation?.(conversation);
-
+      // Phase A — instant UI swap. Bind the tab to the target conversation,
+      // clear input + history dropdown, and render a spinner in place of the
+      // message list. This runs entirely sync so `switchTo` resolves quickly
+      // and the tab manager's switch guard releases right away, keeping the
+      // UI responsive (and the user able to switch to yet another tab) while
+      // the transcript loads in the background.
+      state.currentConversationId = id;
+      state.messages = [];
+      state.usage = null;
+      state.currentTodos = null;
+      state.hasPendingConversationSave = false;
       this.deps.getInputEl().value = '';
       this.deps.clearQueuedMessage();
-
-      this.restoreConversation(conversation);
-
       this.deps.getHistoryDropdown()?.removeClass('visible');
+      // Method-existence guard: unit tests stub `MessageRenderer` with a
+      // partial shape that predates `renderLoading`. The spinner is purely
+      // visual feedback — its absence is harmless in test environments.
+      if (typeof renderer.renderLoading === 'function') {
+        renderer.renderLoading(t('chat.history.loading'));
+      }
       this.updateWelcomeVisibility();
-
-      this.callbacks.onConversationSwitched?.();
     } finally {
       state.isSwitchingConversation = false;
+    }
+
+    // Phase B — async hydration + post-load restore. Not awaited; the spinner
+    // stays visible until this resolves or another switch cancels it. The
+    // `.catch` is mandatory: an unhandled rejection here would crash test
+    // runners and trip Electron's unhandledRejection logs in production.
+    const abort = new AbortController();
+    this.hydrationAbort = abort;
+    state.isHydrating = true;
+    this.hydrationPromise = this.hydrateAndRender(id, abort).catch(() => {
+      // `hydrateAndRender` surfaces user-visible failures inline (hydration
+      // banner from `ConversationStore.loadSdkMessagesForConversation`).
+      // Swallowing here is intentional — the spinner clears in `finally`.
+    });
+  }
+
+  /**
+   * Resolves when the most recent `switchTo`'s background hydration finishes
+   * (or is aborted by an even newer switch). No-op when no hydration is
+   * pending. Intended for tests + integration code that need post-hydrate
+   * state to be visible.
+   */
+  async whenHydrated(): Promise<void> {
+    while (this.hydrationPromise) {
+      const pending = this.hydrationPromise;
+      await pending;
+      // Loop again if a fresh switch started a new hydration meanwhile.
+      if (this.hydrationPromise === pending) break;
+    }
+  }
+
+  /**
+   * Loads the transcript for the target conversation, then completes the
+   * deferred half of the tab switch (`ensureServiceForConversation` +
+   * `restoreConversation`). A newer `switchTo` aborts this controller so the
+   * stale result is dropped without touching the renderer.
+   */
+  private async hydrateAndRender(
+    id: string,
+    abort: AbortController,
+  ): Promise<void> {
+    const { plugin, state } = this.deps;
+    try {
+      // Yield to a macrotask so the browser commits the Phase A spinner
+      // DOM before sync work in `restoreConversation` (DOM rebuild for the
+      // 80-message window) starts. Microtask awaits alone do NOT trigger
+      // paint — the cached-hydration path (active tab pre-warmed via
+      // `restoreState`) resolves through microtasks only, so without this
+      // yield the spinner stays invisible and the user only sees a freeze.
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+      if (abort.signal.aborted) return;
+
+      const conversation = await plugin.switchConversation(id, { signal: abort.signal });
+      if (abort.signal.aborted) return;
+      if (!conversation) return;
+
+      await this.deps.ensureServiceForConversation?.(conversation);
+      if (abort.signal.aborted) return;
+
+      this.restoreConversation(conversation);
+      this.updateWelcomeVisibility();
+      this.callbacks.onConversationSwitched?.();
+    } finally {
+      if (this.hydrationAbort === abort) {
+        this.hydrationAbort = null;
+        this.hydrationPromise = null;
+        state.isHydrating = false;
+      }
     }
   }
 
@@ -522,10 +612,17 @@ export class ConversationController {
       mcpServerSelector?.clearEnabled();
     }
 
-    const welcomeEl = renderer.renderMessages(
-      state.messages,
-      () => this.getGreeting()
-    );
+    // Chunked render: the welcome element is mounted synchronously so the
+    // welcome-visibility check + setWelcomeEl can run immediately, but the
+    // stored-message loop yields to the event loop every few entries so the
+    // tab-switch UI (spinner from Phase A, sidebar, toolbar) stays responsive
+    // instead of blocking on a multi-hundred-ms DOM rebuild. Method-existence
+    // guard: unit tests stub `MessageRenderer` with a partial shape that
+    // predates `renderMessagesChunked`; falling back to the sync renderer
+    // keeps test expectations on mounted-message counts intact.
+    const welcomeEl = typeof renderer.renderMessagesChunked === 'function'
+      ? renderer.renderMessagesChunked(state.messages, () => this.getGreeting()).welcomeEl
+      : renderer.renderMessages(state.messages, () => this.getGreeting());
     this.deps.setWelcomeEl(welcomeEl);
 
     // The tab is now bound to this conversation, so a hydration failure recorded

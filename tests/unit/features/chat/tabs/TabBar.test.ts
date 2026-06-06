@@ -23,6 +23,7 @@ function createTabBarItem(overrides: Partial<TabBarItem> = {}): TabBarItem {
     isStreaming: false,
     needsAttention: false,
     canClose: true,
+    kind: 'chat',
     ...overrides,
   };
 }

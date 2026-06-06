@@ -283,6 +283,17 @@ export class ClaudianView extends ItemView {
 
     await this.restoreOrCreateTabs();
     this.tabsRestored = true;
+    // Notify Agent Board queue the tab budget is now readable. During
+    // restoreOrCreateTabs(), each createTab() fires chat:tabs-changed but
+    // areTabsRestored() was still false, so getTabSlotUsage() reported full
+    // capacity via the hasClaudianLeaf fallback. Now that tabsRestored is true
+    // the correct work-order count can be read; fire once so the queue
+    // re-evaluates without waiting for the next manual tab create/close.
+    this.plugin.events.emit('chat:tabs-changed', {
+      openCount: this.tabManager?.getTabCount() ?? 0,
+      chatCount: this.tabManager?.countTabsByKind('chat') ?? 0,
+      workOrderCount: this.tabManager?.countTabsByKind('work-order') ?? 0,
+    });
     this.syncProviderBrandColor();
     this.syncHeaderTitle();
     this.updateLayoutForPosition();
@@ -795,7 +806,7 @@ export class ClaudianView extends ItemView {
       prompt: options.prompt,
     });
     if (!handle) {
-      throw new Error('Could not open a chat tab for the work order (tab limit reached?).');
+      throw new Error('Could not open a work-order tab (work-order tab limit reached).');
     }
     // startTaskRunInFreshTab eagerly registers a stream observer that buffers
     // chunks until a consumer subscribes. The commit flow doesn't consume the
@@ -835,8 +846,8 @@ export class ClaudianView extends ItemView {
   async createNewTab(): Promise<void> {
     const tab = await this.tabManager?.createTab();
     if (!tab) {
-      const maxTabs = this.plugin.settings.maxTabs ?? 3;
-      new Notice(t('chat.tab.maxReached', { count: maxTabs }));
+      const maxTabs = this.plugin.settings.maxChatTabs ?? 3;
+      new Notice(t('chat.tabs.maxChatReached', { count: String(maxTabs) }));
       this.updateTabBarVisibility();
       return;
     }

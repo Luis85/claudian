@@ -2,7 +2,7 @@ import type { HistoryLoadErrorCode } from '../../core/providers/types';
 
 export interface ChatEventMap {
   /** Emitted when a chat tab is opened or closed. */
-  'chat:tabs-changed': { openCount: number };
+  'chat:tabs-changed': { openCount: number; chatCount: number; workOrderCount: number };
   /**
    * Emitted when a conversation's title changes (manual rename or auto-title).
    * Listeners reading conversation titles for UI (header title, history

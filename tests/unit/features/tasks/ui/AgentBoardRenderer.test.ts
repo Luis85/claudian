@@ -370,7 +370,7 @@ describe('AgentBoardRenderer — merged board toolbar', () => {
     expect(toolbars).toHaveLength(1);
     expect(toolbars[0].querySelector('.claudian-agent-board-toolbar-actions')?.textContent).toContain('Add work order');
     expect(toolbars[0].querySelector('.claudian-agent-board-toolbar-actions')?.textContent).toContain('Run queue');
-    expect(toolbars[0].querySelector('.claudian-agent-board-toolbar-info')?.textContent).toContain('Chat tabs');
+    expect(toolbars[0].querySelector('.claudian-agent-board-toolbar-info')?.textContent).toContain('Work-order tabs');
     expect(host.querySelector('.claudian-agent-board-header')).toBeNull();
   });
 });

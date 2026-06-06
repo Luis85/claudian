@@ -1,8 +1,10 @@
 ---
 title: Separate tab budget for work-order runs
 date: 2026-06-06
-status: draft
+status: shipped
 scope: chat/tabs, tasks/execution, settings
+shipped_by: "[[work-order-20260606-work-order-tab-budget]]"
+follow_up: "Post-ship UX revision: collapsed the standalone `maxWorkOrderTabs` setting into the existing `agentBoardQueueCap` (Agent Board → Concurrent work-order runs). One knob now drives both queue concurrency and the WO tab cap; clamp range narrowed to [1, 8] to match the queue cap field. WO badges now render a wrench glyph (lucide setIcon) with a dashed border + extra left margin separating the chat and WO clusters."
 ---
 
 # Separate tab budget for work-order runs

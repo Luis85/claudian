@@ -7,7 +7,7 @@ import { SubagentManager } from '../services/SubagentManager';
 import { ChatState } from '../state/ChatState';
 import { resolveBlankTabDefaultProviderId } from './tabModelPolicy';
 import { resolveBlankTabModel } from './tabShared';
-import type { TabData, TabDOMElements, TabId } from './types';
+import type { TabData, TabDOMElements, TabId, TabKind } from './types';
 import { generateTabId } from './types';
 
 export interface TabCreateOptions {
@@ -27,6 +27,8 @@ export interface TabCreateOptions {
   pinnedModel?: string | null;
   /** Provider to inherit for blank tabs (e.g. from the active tab). */
   defaultProviderId?: ProviderId;
+  /** Immutable tab kind. Defaults to 'chat' when omitted. */
+  kind?: TabKind;
   onStreamingChanged?: (isStreaming: boolean) => void;
   onTitleChanged?: (title: string) => void;
   onAttentionChanged?: (needsAttention: boolean) => void;
@@ -85,6 +87,7 @@ export function createTab(options: TabCreateOptions): TabData {
 
   const tab: TabData = {
     id,
+    kind: options.kind ?? 'chat',
     lifecycleState: isBound ? 'bound_cold' : 'blank',
     draftModel,
     pinnedModel,

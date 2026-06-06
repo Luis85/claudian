@@ -133,11 +133,14 @@ export class ConversationStore {
     return conversation;
   }
 
-  async switchConversation(id: string): Promise<Conversation | null> {
+  async switchConversation(
+    id: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<Conversation | null> {
     const conversation = this.conversations.find((c) => c.id === id);
     if (!conversation) return null;
 
-    await this.loadSdkMessagesForConversation(conversation);
+    await this.loadSdkMessagesForConversation(conversation, 'open', options?.signal);
 
     return conversation;
   }
@@ -272,10 +275,12 @@ export class ConversationStore {
   private async loadSdkMessagesForConversation(
     conversation: Conversation,
     reason: HydrationContext['reason'] = 'open',
+    signal?: AbortSignal,
   ): Promise<void> {
     const ctx: HydrationContext = {
       vaultPath: this.deps.getVaultPath(),
       reason,
+      signal,
     };
     const service = ProviderRegistry.getConversationHistoryService(conversation.providerId);
     const outcome = await service.hydrateConversationHistory(conversation, ctx);

@@ -6,6 +6,14 @@ export interface RunSidecarHeartbeat {
   at: string;
   status: TaskStatus;
   pauseReason?: string | null;
+  /**
+   * Identifies the plugin instance that wrote this heartbeat. Mismatch with the
+   * current plugin's runtimeId means the previous load died — orphan recovery
+   * treats the card as dead immediately, without waiting for the 5-minute
+   * stale-`at` window. Absent on legacy sidecars (pre-upgrade): callers must
+   * fall back to the `at` freshness check.
+   */
+  runtimeId?: string;
 }
 
 export class RunSidecarStore {
@@ -82,7 +90,10 @@ export class RunSidecarStore {
     try {
       const listing = await this.adapter.list(this.baseDir);
       return listing.folders.map((path) => {
-        const segments = path.split('/');
+        // Obsidian's DataAdapter normalizes to forward slashes regardless of
+        // OS; split on both just in case a future adapter (or a non-Obsidian
+        // host running these tests) yields native separators.
+        const segments = path.split(/[\\/]/);
         return segments[segments.length - 1] ?? path;
       });
     } catch {

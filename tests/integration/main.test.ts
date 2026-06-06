@@ -495,8 +495,8 @@ describe('ClaudianPlugin', () => {
       const wakes: string[] = [];
       plugin.events.on('task:queue-cap-changed', () => wakes.push('wake'));
 
-      // Raising the chat-tab limit frees an execution slot the queue gates on.
-      plugin.settings.maxTabs = (plugin.settings.maxTabs ?? 3) + 1;
+      // Raising the queue cap frees an execution slot the queue gates on.
+      plugin.settings.agentBoardQueueCap = (plugin.settings.agentBoardQueueCap ?? 1) + 1;
       await plugin.saveSettings();
       expect(wakes).toHaveLength(1);
 

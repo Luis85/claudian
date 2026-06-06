@@ -38,6 +38,14 @@ export interface TaskEventMap {
   'task:parser-warning': { taskId: string; path: string; warning: string };
   /** Emitted when LedgerWriter has given up flushing after retries. */
   'task:ledger-flush-degraded': { taskId: string; path: string };
+  /**
+   * Emitted when the terminal ledger snapshot couldn't be written into the
+   * work-order note (e.g. the note was hand-edited and is missing the
+   * `<!-- claudian:run-ledger-* -->` markers). The sidecar is left in place so
+   * the ledger isn't lost — a developer can read `.claudian/runs/<runId>/ledger.jsonl`
+   * directly.
+   */
+  'task:ledger-finalize-failed': { taskId: string; path: string; runId: string; error: string };
 
   /** Emitted when the queue runner launches a card. */
   'task:queue-tick': { taskId: string };

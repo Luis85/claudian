@@ -253,8 +253,13 @@ export class InputController {
     // observe the final assistant content. User-driven sends leave this undefined.
     let programmaticResult: ProgrammaticSendResult | undefined;
 
-    // During conversation creation/switching, don't send - input is preserved so user can retry
-    if (state.isCreatingConversation || state.isSwitchingConversation) return;
+    // During conversation creation/switching/hydration, don't send - input is
+    // preserved so the user can retry once the target conversation is ready.
+    if (
+      state.isCreatingConversation
+      || state.isSwitchingConversation
+      || state.isHydrating
+    ) return;
 
     const inputEl = this.deps.getInputEl();
     const imageContextManager = this.deps.getImageContextManager();

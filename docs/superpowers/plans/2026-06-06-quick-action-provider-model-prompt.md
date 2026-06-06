@@ -1,5 +1,5 @@
 ---
-status: open
+status: done
 parent: "[[Quick Actions]]"
 ---
 # Quick-action provider+model prompt Implementation Plan

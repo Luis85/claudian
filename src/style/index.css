@@ -21,6 +21,7 @@
 @import "./components/input.css";
 @import "./components/context-footer.css";
 @import "./components/hydration-error.css";
+@import "./components/loading.css";
 
 /* Toolbar */
 @import "./toolbar/model-selector.css";

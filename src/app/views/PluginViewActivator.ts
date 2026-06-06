@@ -71,48 +71,42 @@ export class PluginViewActivator {
     const tabManager = view?.getTabManager();
 
     if (tabManager) {
-      return tabManager.canCreateTab();
+      return tabManager.canCreateTab('chat');
     }
     if (hasClaudianLeaf) return false;
-    return this.getLastKnownOpenTabCount() < this.getMaxTabsLimit();
+    return this.getLastKnownOpenTabCount() < this.getMaxTabsLimitFor('chat');
   }
 
   /**
-   * Tabs in use and the effective cap, for the Agent Board queue's slot gate.
-   * Shares canCreateNewTab()'s accounting: when no live tab manager exists the
-   * next run mounts the chat view, and restoreOrCreateTabs() either restores
-   * the persisted tab set or creates one fallback blank tab when nothing is
-   * persisted. Reserve at least that blank tab so the queue counts the slot it
-   * will occupy and can't launch one run too many into the cap; a mounted view
-   * already ran that path, so its live count is authoritative. `max` is clamped
-   * to the same bounds the tab manager enforces.
+   * Work-order tab usage and the WO cap, for the Agent Board queue's slot gate.
    *
-   * Pending chat-tab reservations are added on top: a queue run reserves a slot
-   * the instant it launches, before its tab exists, so a second Agent Board pane
-   * counts that committed-but-uncreated tab and won't over-launch into the cap.
+   * Reports only work-order tabs (not totals): the queue should consume only
+   * its own budget, leaving user chat tabs untouched. Pending WO-tab
+   * reservations are added on top so a second Agent Board pane sees the
+   * committed-but-uncreated tab and can't over-launch into the cap.
    *
    * When a Claudian leaf exists but its tab manager isn't ready yet — not
-   * created, or created but still restoring its persisted tabs (the manager is
-   * assigned before the async restore) — report no free capacity, like
-   * canCreateNewTab(), so the queue waits instead of racing the restore and
-   * overbooking the cap or dropping restored tabs.
+   * created, or created but still restoring its persisted tabs — report no
+   * free capacity so the queue waits instead of racing the restore.
+   *
+   * When no view exists at all, only reservations contribute to usage — there
+   * are no live WO tabs yet, so the queue may still launch up to the cap minus
+   * pending reservations.
    */
   getTabSlotUsage(): { used: number; max: number } {
-    const max = this.getMaxTabsLimit();
+    const max = this.getMaxTabsLimitFor('work-order');
     const view = this.plugin.getView();
     const tabManager = view?.getTabManager();
     if (tabManager && view?.areTabsRestored()) {
-      return { used: tabManager.getTabCount() + this.plugin.chatTabReservations.pending, max };
+      const wo = tabManager.countTabsByKind('work-order');
+      return { used: wo + this.plugin.chatTabReservations.pending, max };
     }
     const hasClaudianLeaf =
       this.plugin.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN).length > 0;
     if (hasClaudianLeaf) {
       return { used: max, max };
     }
-    // No leaf at all: the next run mounts the view and restoreOrCreateTabs()
-    // restores the persisted set (or one fallback blank tab when none persisted).
-    const live = Math.max(this.getLastKnownOpenTabCount(), 1);
-    return { used: live + this.plugin.chatTabReservations.pending, max };
+    return { used: this.plugin.chatTabReservations.pending, max };
   }
 
   async runNextReadyWorkOrder(): Promise<void> {
@@ -140,8 +134,14 @@ export class PluginViewActivator {
     return this.plugin.lastKnownTabManagerState?.openTabs.length ?? 0;
   }
 
-  private getMaxTabsLimit(): number {
-    const maxTabs = this.plugin.settings.maxTabs ?? 3;
-    return Math.max(3, Math.min(10, maxTabs));
+  private getMaxTabsLimitFor(kind: 'chat' | 'work-order'): number {
+    if (kind === 'work-order') {
+      // WO tab cap follows the Agent Board queue cap so users only have one
+      // knob for "how many work orders at once". Clamp to the queue cap range.
+      const raw = this.plugin.settings.agentBoardQueueCap ?? 1;
+      return Math.max(1, Math.min(8, raw));
+    }
+    const raw = this.plugin.settings.maxChatTabs ?? 3;
+    return Math.max(3, Math.min(10, raw));
   }
 }

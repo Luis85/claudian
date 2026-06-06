@@ -1,7 +1,7 @@
 ---
 title: Work Order Handoff Chat Card Design
 date: 2026-06-06
-status: approved (design)
+status: shipped
 scope: chat-rendering
 parent: "[[Work-Orders handoff message clutters chat]]"
 relations:

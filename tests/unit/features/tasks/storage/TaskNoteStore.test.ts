@@ -186,6 +186,23 @@ New handoff.
 ${HANDOFF_END}`);
   });
 
+  it('throws when the note is missing run-ledger markers so a hand-edited note fails loudly', () => {
+    // Without markers, `extractGeneratedRegion` returns '' and
+    // `replaceGeneratedRegion` would throw later — but the caller already
+    // pre-computed `currentLedger + entry`, so the loud throw at the right
+    // seam is the safer contract. Mirrors `writeLedgerSnapshot`'s behavior.
+    const noMarkers =
+      '---\n' +
+      'type: claudian-work-order\nschema_version: 1\nid: t\ntitle: t\nstatus: running\nupdated: x\n' +
+      '---\n' +
+      '## Objective\nx\n';
+    expect(() => store.appendLedger(noMarkers, {
+      timestamp: '2026-05-28T09:05:00.000Z',
+      status: 'running',
+      message: 'should not silently append',
+    })).toThrow(/Missing generated region markers/);
+  });
+
   it('rejects ledger messages containing Claudian marker strings', () => {
     expect(() => store.appendLedger(VALID_NOTE, {
       timestamp: '2026-05-28T09:05:00.000Z',

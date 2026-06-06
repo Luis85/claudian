@@ -98,6 +98,13 @@ export class MessageRenderer {
   private renderWindowStart = 0;
   private loadEarlierEl: HTMLElement | null = null;
   private hydrationError: { code: string; message: string } | null = null;
+  /**
+   * Monotonic counter bumped on every {@link renderMessagesChunked} call so
+   * the async chunked render aborts when a newer render lands. Without it a
+   * stale yield-resume could keep appending messages from a superseded
+   * transcript into the new tab's DOM.
+   */
+  private chunkedRenderGeneration = 0;
 
   constructor(
     plugin: ClaudianPlugin,
@@ -279,6 +286,22 @@ export class MessageRenderer {
    * @param getGreeting Function to get greeting text
    * @returns The newly created welcome element
    */
+  /**
+   * Renders an inline loading state in place of the message list. Called the
+   * instant a tab switch begins so the user sees an immediate visual ack
+   * instead of a blank pane while the transcript is hydrated in the
+   * background. Subsequent {@link renderMessages} replaces the spinner.
+   */
+  renderLoading(loadingText: string): void {
+    this.messagesEl.empty();
+    this.liveMessageEls.clear();
+    this.loadEarlierEl = null;
+    this.windowedMessages = [];
+    const loader = this.messagesEl.createDiv({ cls: 'claudian-loading' });
+    loader.createDiv({ cls: 'claudian-loading-spinner' });
+    loader.createDiv({ cls: 'claudian-loading-text', text: loadingText });
+  }
+
   renderMessages(
     messages: ChatMessage[],
     getGreeting: () => string
@@ -287,6 +310,10 @@ export class MessageRenderer {
     this.liveMessageEls.clear();
     this.loadEarlierEl = null;
     this.windowedMessages = messages;
+    // Bump the chunked-render generation so any background loop from a prior
+    // `renderMessagesChunked` call observes the supersession and bails before
+    // appending stale rows into this freshly-emptied pane.
+    this.chunkedRenderGeneration += 1;
 
     // Recreate welcome element after clearing
     const newWelcomeEl = this.messagesEl.createDiv({ cls: 'claudian-welcome' });
@@ -310,6 +337,58 @@ export class MessageRenderer {
 
     this.scrollToBottom();
     return newWelcomeEl;
+  }
+
+  /**
+   * Cooperative variant of {@link renderMessages} that yields to the event
+   * loop every {@link CHUNK_SIZE} messages. Used by the tab-switch / load-
+   * conversation paths so DOM rebuild of an 80-message window does not block
+   * the main thread for hundreds of milliseconds — the user keeps the spinner
+   * (Phase A) visible until the first chunk lands, then messages stream in
+   * progressively, and other Obsidian UI stays interactive between chunks.
+   *
+   * The returned `welcomeEl` is created synchronously so callers can wire
+   * `setWelcomeEl` + welcome visibility right away. `finished` resolves once
+   * the entire window has mounted, or earlier if a newer render aborts this
+   * one (see {@link chunkedRenderGeneration}).
+   */
+  renderMessagesChunked(
+    messages: ChatMessage[],
+    getGreeting: () => string,
+  ): { welcomeEl: HTMLElement; finished: Promise<void> } {
+    const CHUNK_SIZE = 5;
+
+    this.messagesEl.empty();
+    this.liveMessageEls.clear();
+    this.loadEarlierEl = null;
+    this.windowedMessages = messages;
+    const generation = ++this.chunkedRenderGeneration;
+
+    const newWelcomeEl = this.messagesEl.createDiv({ cls: 'claudian-welcome' });
+    newWelcomeEl.createDiv({ cls: 'claudian-welcome-greeting', text: getGreeting() });
+
+    this.renderHydrationErrorBanner();
+
+    const start = windowStartIndex(messages.length);
+    this.renderWindowStart = start;
+    if (start > 0) {
+      this.renderLoadEarlierControl();
+    }
+
+    const finished = (async () => {
+      for (let i = start; i < messages.length; i++) {
+        if (generation !== this.chunkedRenderGeneration) return;
+        this.renderStoredMessage(messages[i], messages, i);
+        if ((i - start + 1) % CHUNK_SIZE === 0 && i + 1 < messages.length) {
+          await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+        }
+      }
+      if (generation === this.chunkedRenderGeneration) {
+        this.scrollToBottom();
+      }
+    })();
+
+    return { welcomeEl: newWelcomeEl, finished };
   }
 
   /**

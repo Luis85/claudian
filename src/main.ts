@@ -111,6 +111,14 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
    * `.claudian/runs/<runId>/`. Coordinators in different Agent Board panes
    * route through this single instance so cross-pane writes don't race. */
   runSidecarStore!: RunSidecarStore;
+  /**
+   * Identifies this plugin instance to per-run sidecars. Minted at construction
+   * (NOT in onload) so a unit-test stub or restored-leaf path that reads it
+   * before onload still sees a stable id. Stamped on every heartbeat write;
+   * orphan recovery uses a mismatch to detect "previous plugin load" sidecars
+   * immediately, without waiting for the 5-minute stale-`at` window.
+   */
+  readonly runtimeId: string = generateRuntimeId();
   /** Shared in-flight work-order ids, so coordinators in different Agent Board
    * panes observe the same active runs and never double-launch the same card. */
   readonly taskActiveRuns = new Set<string>();
@@ -766,8 +774,11 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     return this.conversationStore.createConversation(options);
   }
 
-  switchConversation(id: string): Promise<Conversation | null> {
-    return this.conversationStore.switchConversation(id);
+  switchConversation(
+    id: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<Conversation | null> {
+    return this.conversationStore.switchConversation(id, options);
   }
 
   deleteConversation(id: string): Promise<void> {
@@ -828,4 +839,18 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     return null;
   }
 
+}
+
+/**
+ * Mint a stable id for this plugin instance. Stamped into every sidecar
+ * heartbeat so orphan recovery can detect "previous plugin load" sidecars
+ * without waiting for the 5-minute stale-`at` window. Prefers Web Crypto's
+ * `randomUUID`; falls back to a `time-rand` token for ancient runtimes.
+ */
+function generateRuntimeId(): string {
+  const cryptoApi = (window as Window & { crypto?: { randomUUID?: () => string } }).crypto;
+  if (cryptoApi?.randomUUID) {
+    return cryptoApi.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }

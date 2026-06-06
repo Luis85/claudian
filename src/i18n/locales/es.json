@@ -31,7 +31,8 @@
       "deleteFailed": "Failed to delete conversation",
       "renameFailed": "Failed to rename conversation",
       "linkedNotFound": "Linked conversation not found. It may have been deleted.",
-      "linkedNoFreeTab": "Cannot open conversation: tab limit reached. Close a tab first."
+      "linkedNoFreeTab": "Cannot open conversation: tab limit reached. Close a tab first.",
+      "loading": "Loading conversation…"
     },
     "rewind": {
       "confirmMessage": "¿Rebobinar a este punto? Los cambios de archivos después de este mensaje serán revertidos. El rebobinado no afecta archivos editados manualmente o mediante bash.",
@@ -170,6 +171,11 @@
     },
     "storage": {
       "tabLayoutSaveFailed": "Failed to save tab layout"
+    },
+    "tabs": {
+      "maxChatReached": "Cannot open: maximum {count} chat tabs reached.",
+      "maxWorkOrderReached": "Work-order tab limit reached ({count}). Queue is waiting.",
+      "workOrderSuffix": "(work order)"
     }
   },
   "settings": {
@@ -495,6 +501,11 @@
       "commonTemplates": "Common work-order templates: {templates}.",
       "commonTemplatesEmpty": "Common work-order templates: nothing to do.",
       "installFailed": "Install failed: {error}"
+    },
+    "maxChatTabs": {
+      "name": "Max chat tabs",
+      "desc": "Maximum chat tabs you can have open at once.",
+      "warning": "More than 5 chat tabs may impact performance."
     }
   },
   "quickActions": {

@@ -40,9 +40,26 @@
 
 .claudian-agent-board-lane-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 6px;
+  min-height: 24px;
   font-weight: var(--font-semibold);
+}
+
+.claudian-agent-board-lane-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.claudian-agent-board-lane-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .claudian-agent-board-lane-count {
@@ -211,6 +228,17 @@
 .claudian-agent-board-card-reply-prompt {
   font-size: var(--font-ui-smaller);
   font-weight: var(--font-medium);
+}
+
+/* Single-paragraph prompts: respect inline newlines so a question with line
+   breaks doesn't collapse to one wall of text. */
+.claudian-agent-board-card-reply-prompt--prewrap {
+  white-space: pre-wrap;
+}
+
+/* Multi-paragraph prompts: separate paragraphs with a small vertical gap. */
+.claudian-agent-board-card-reply-prompt-paragraph + .claudian-agent-board-card-reply-prompt-paragraph {
+  margin-top: var(--size-2-2);
 }
 
 .claudian-agent-board-card-reply-risk {
@@ -483,15 +511,26 @@
 }
 
 .claudian-agent-board-lane-collapse-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin: 0;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 0 4px;
   font-size: var(--font-ui-medium);
   line-height: 1;
+  box-shadow: none;
 }
 
 .claudian-agent-board-lane-collapse-toggle:hover {
   color: var(--text-normal);
+  background: var(--background-modifier-hover);
+  border-color: var(--background-modifier-border);
+  box-shadow: none;
 }

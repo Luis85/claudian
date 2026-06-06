@@ -1,4 +1,7 @@
 ---
+date: 2026-06-04
+status: shipped
+scope: user-manual
 parent: Infrastructure
 ---
 # Claudian — Configurable logger

@@ -99,7 +99,10 @@ export interface PluginContext
     providerId?: ProviderId;
     sessionId?: string;
   }): Promise<Conversation>;
-  switchConversation(id: string): Promise<Conversation | null>;
+  switchConversation(
+    id: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<Conversation | null>;
   deleteConversation(id: string): Promise<void>;
   renameConversation(id: string, title: string): Promise<void>;
   updateConversation(id: string, updates: Partial<Conversation>): Promise<void>;
