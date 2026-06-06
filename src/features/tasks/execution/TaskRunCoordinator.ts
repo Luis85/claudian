@@ -2,6 +2,7 @@ import type { ChatTabReservation, ChatTabReservations } from '../../../core/chat
 import type { TaskEventEmitter } from '../events';
 import type { TaskLedgerEntry, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
+import type { RunSidecarHeartbeat } from '../storage/RunSidecarStore';
 import { ActiveRunRegistry } from './activeRunRegistry';
 import { RunSession, type RunSessionResult, type RunSessionWriteStatusOptions } from './RunSession';
 import type { TaskExecutionSurface } from './TaskExecutionSurface';
@@ -19,10 +20,7 @@ export interface TaskRunCoordinatorDeps {
    * the same note. The sidecar is run-scoped so a stale heartbeat from a
    * previous run can't leak across.
    */
-  writeHeartbeat: (
-    runId: string,
-    heartbeat: { at: string; status: TaskStatus; pauseReason?: string | null },
-  ) => Promise<void>;
+  writeHeartbeat: (runId: string, heartbeat: RunSidecarHeartbeat) => Promise<void>;
   /**
    * Sidecar ledger append (one entry per call). Receives the task for
    * sidecar-path resolution and the runId so the sidecar stays partitioned by
@@ -31,9 +29,10 @@ export interface TaskRunCoordinatorDeps {
    */
   appendLedger: (task: TaskSpec, runId: string, entry: TaskLedgerEntry) => Promise<void>;
   /**
-   * At terminal, snapshot the sidecar ledger back into the work-order note's
-   * `<!-- claudian:run-ledger-* -->` region. Runs after the handoff write so
-   * the note's terminal state lands in a single coordinated transition.
+   * Snapshots the sidecar ledger into the work-order note's
+   * `<!-- claudian:run-ledger-* -->` region. Called once on every terminal
+   * path (completed, failed, canceled, needs_handoff) after the terminal
+   * status write and (when present) the handoff write.
    */
   finalizeLedgerToNote: (task: TaskSpec, runId: string) => Promise<void>;
   writeHandoff: (task: TaskSpec, markdown: string) => Promise<void>;
@@ -148,9 +147,10 @@ export class TaskRunCoordinator {
         events: this.deps.events,
         now: this.deps.now,
         writeStatus: this.deps.writeTaskStatus,
-        writeHeartbeat: (runId, hb) => this.deps.writeHeartbeat(runId, hb),
+        writeHeartbeat: this.deps.writeHeartbeat,
+        // `task` is captured: `appendLedger` injects it for sidecar path resolution.
         appendLedger: (runId, entry) => this.deps.appendLedger(task, runId, entry),
-        finalizeLedgerToNote: (t, runId) => this.deps.finalizeLedgerToNote(t, runId),
+        finalizeLedgerToNote: this.deps.finalizeLedgerToNote,
         writeHandoff: this.deps.writeHandoff,
         heartbeatIntervalMs: this.deps.heartbeatIntervalMs,
         staleThresholdMs: this.deps.staleThresholdMs,

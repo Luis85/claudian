@@ -20,6 +20,7 @@ import type { BoardConfig, ResolvedBoardLayout } from '../config/boardConfigType
 import { resolveBoardLayout } from '../config/resolveBoardLayout';
 import { sharedRunRegistry } from '../execution/activeRunRegistry';
 import { QueueRunner } from '../execution/QueueRunner';
+import { DEFAULT_STALE_THRESHOLD_MS } from '../execution/RunSession';
 import { selectNextReadyTask } from '../execution/selectNextReadyTask';
 import type { TaskExecutionSurface } from '../execution/TaskExecutionSurface';
 import { TaskRunCoordinator } from '../execution/TaskRunCoordinator';
@@ -34,9 +35,9 @@ import { showWorkOrderContextMenu } from './WorkOrderContextMenu';
 import { buildWorkOrderConversationBindings } from './workOrderConversationBindings';
 import { WorkOrderDetailModal, type WorkOrderFieldUpdate } from './WorkOrderDetailModal';
 
-// Mirrors RunSession's default staleThresholdMs: a sidecar heartbeat newer than
-// this is treated as a still-live writer, so orphan recovery skips the card.
-const ORPHAN_STALE_THRESHOLD_MS = 5 * 60_000;
+// Orphan recovery uses the same stale window as RunSession's own stale check,
+// so a sidecar heartbeat newer than this is treated as a still-live writer.
+const ORPHAN_STALE_THRESHOLD_MS = DEFAULT_STALE_THRESHOLD_MS;
 
 export class AgentBoardView extends ItemView {
   private readonly noteStore = new TaskNoteStore();

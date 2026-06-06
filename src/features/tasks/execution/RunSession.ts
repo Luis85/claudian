@@ -1,9 +1,19 @@
 import type { TaskEventEmitter } from '../events';
 import type { TaskLedgerEntry, TaskSpec, TaskStatus } from '../model/taskTypes';
+import type { RunSidecarHeartbeat } from '../storage/RunSidecarStore';
 import { type ClaudianBlock,ClaudianBlockParser } from './ClaudianBlockParser';
 import { LedgerWriter } from './LedgerWriter';
 import type { ProviderStreamAdapter } from './ProviderStreamAdapter';
 import { parseTaskHandoff } from './TaskHandoffParser';
+
+/**
+ * Shared stale-heartbeat threshold. After this much wall time with no sidecar
+ * heartbeat tick the run is treated as dead — both by the session's own stale
+ * cancel and by the board's orphan recovery. Keeping a single export means the
+ * UI's "is this card still alive?" check stays aligned with the session's own
+ * notion of "is my own heartbeat still fresh?".
+ */
+export const DEFAULT_STALE_THRESHOLD_MS = 5 * 60_000;
 
 export interface RunSessionWriteStatusOptions {
   status: TaskStatus;
@@ -36,19 +46,17 @@ export interface RunSessionDeps {
    * raced the agent's checklist Edits. Receives the run id so the coordinator
    * can stamp the heartbeat into a sidecar keyed off the run, not the note.
    */
-  writeHeartbeat: (
-    runId: string,
-    heartbeat: { at: string; status: TaskStatus; pauseReason?: string | null },
-  ) => Promise<void>;
+  writeHeartbeat: (runId: string, heartbeat: RunSidecarHeartbeat) => Promise<void>;
   /**
    * Sidecar ledger append (one entry per call). The note is updated only at
    * terminal via {@link finalizeLedgerToNote}.
    */
   appendLedger: (runId: string, entry: TaskLedgerEntry) => Promise<void>;
   /**
-   * At terminal, snapshot the sidecar ledger back into the work-order note's
-   * `<!-- claudian:run-ledger-* -->` region. Runs after the handoff write so the
-   * note's terminal state lands in a single coordinated transition.
+   * Snapshots the sidecar ledger into the work-order note's
+   * `<!-- claudian:run-ledger-* -->` region. Called once on every terminal
+   * path (completed, failed, canceled, needs_handoff) after the terminal
+   * status write and (when present) the handoff write.
    */
   finalizeLedgerToNote: (task: TaskSpec, runId: string) => Promise<void>;
   writeHandoff: (task: TaskSpec, markdown: string) => Promise<void>;
@@ -69,7 +77,7 @@ export type ResumeArg =
 
 const DEFAULTS = {
   heartbeatIntervalMs: 30_000,
-  staleThresholdMs: 300_000,
+  staleThresholdMs: DEFAULT_STALE_THRESHOLD_MS,
   ledgerIntervalMs: 5_000,
   ledgerMilestone: 3,
 };
@@ -477,7 +485,7 @@ export class RunSession {
     if (payload.status === 'canceled') {
       await this.persistStatus({ status: 'canceled', timestamp: ts });
       this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'canceled' });
-      await this.snapshotLedgerToNote();
+      await this.writeLedgerSnapshotBestEffort();
       await this.settle({ ok: false, error: payload.error ?? 'canceled', status: 'canceled' });
       return;
     }
@@ -486,7 +494,7 @@ export class RunSession {
       this.ledger.enqueue({ timestamp: ts, status: 'failed', message: payload.error ?? 'Run failed.' });
       await this.persistStatus({ status: 'failed', timestamp: ts });
       this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'failed' });
-      await this.snapshotLedgerToNote();
+      await this.writeLedgerSnapshotBestEffort();
       await this.settle({ ok: false, error: payload.error ?? 'failed', status: 'failed' });
       return;
     }
@@ -498,7 +506,7 @@ export class RunSession {
       await this.persistStatus({ status: 'review', timestamp: ts });
       this.ledger.enqueue({ timestamp: ts, status: 'review', message: 'Handoff written.' });
       this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'review' });
-      await this.snapshotLedgerToNote();
+      await this.writeLedgerSnapshotBestEffort();
       await this.settle({ ok: true, status: 'review' });
       return;
     }
@@ -508,7 +516,7 @@ export class RunSession {
       this.ledger.enqueue({ timestamp: ts, status: 'needs_handoff', message: parsed.error });
       this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'needs_handoff' });
       this.deps.events.emit('task:needs-handoff', { taskId: this.taskId, path: this.path, error: parsed.error });
-      await this.snapshotLedgerToNote();
+      await this.writeLedgerSnapshotBestEffort();
       await this.settle({ ok: false, error: parsed.error, status: 'needs_handoff' });
       return;
     }
@@ -516,16 +524,18 @@ export class RunSession {
     await this.persistStatus({ status: 'failed', timestamp: ts });
     this.ledger.enqueue({ timestamp: ts, status: 'failed', message: 'Empty response' });
     this.deps.events.emit('task:status-changed', { taskId: this.taskId, path: this.path, status: 'failed' });
-    await this.snapshotLedgerToNote();
+    await this.writeLedgerSnapshotBestEffort();
     await this.settle({ ok: false, error: 'Empty response', status: 'failed' });
   }
 
   /**
    * Replace the work-order note's run-ledger region with the sidecar snapshot.
-   * Best-effort: a failure to snapshot must not hang the run — callers still
-   * proceed to `settle()` so the terminal result is resolved.
+   * Best-effort: a failure to flush or snapshot must not hang the run — callers
+   * still proceed to `settle()` so the terminal result is resolved. The name
+   * stays distinct from the dep `finalizeLedgerToNote` so the call site
+   * doesn't read as the session wrapping itself in its own dep.
    */
-  private async snapshotLedgerToNote(): Promise<void> {
+  private async writeLedgerSnapshotBestEffort(): Promise<void> {
     // Drain the sidecar queue first so the snapshot includes every entry the
     // run produced (the writer batches, so the most recent enqueue may still
     // be pending). Best-effort: a transient flush failure still proceeds to
@@ -554,7 +564,7 @@ export class RunSession {
       // The note write itself is failing; still settle so the run does not hang.
     }
     this.ledger.enqueue({ timestamp: this.deps.now(), status: 'failed', message: `run finalize failed: ${message}` });
-    await this.snapshotLedgerToNote();
+    await this.writeLedgerSnapshotBestEffort();
     await this.settle({ ok: false, error: message, status: 'failed' });
   }
 
