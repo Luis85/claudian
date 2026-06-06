@@ -124,9 +124,9 @@ Ruflo packages cost into a first-class observability plugin with a budget circui
 
 ### Tier 2 — Adopt selectively (real value, needs scoping to fit)
 
-**2.1 — Role specialization via templates → a "team" of agents.**
-Ruflo's 45 typed agents (planner/coder/reviewer/security/docs) are mostly **prompt + tool-scope presets**. Claudian already has vault agents (`.claude/agents/*.md`) and work-order templates. The adoptable idea is a curated **agent role library** (review-bot, test-writer, doc-writer, security-auditor) shipped as templates/agents, plus the ability for a DAG pipeline (1.1) to assign a different role per stage. This is "swarm roles" without a queen — sequential specialists, human-gated.
-*Fit: good. Value: high. Effort: medium (mostly content + template wiring).*
+**2.1 — Role specialization → a "team" of agents.**
+Ruflo's 45 typed agents (planner/coder/reviewer/security/docs) are mostly **prompt + tool-scope presets**. The adoptable idea is a curated **role library** (planner, coder, test-writer, reviewer, security-auditor, doc-writer, …), plus the ability for a DAG pipeline (1.1) to assign a different role per stage. This is "swarm roles" without a queen — sequential specialists, human-gated. **Implement it provider-neutrally:** do *not* ship roles as provider agent files — there is no portable on-disk agent format (Claude `.claude/agents/*.md`, Codex `.codex/agents/*.toml`, Opencode's own schema all diverge, Cursor has none), so that path would only work for Claude. Instead use a Claudian-owned `RoleDefinition` (prompt addendum + advisory tool-scope + model tier) injected into the task prompt via `renderTaskPrompt`, reaching all four providers (full design: §10.5).
+*Fit: good. Value: high. Effort: medium (content + prompt-injection wiring; no new engine).*
 
 **2.2 — SPARC-style gated methodology as a work-order template chain.**
 `ruflo-sparc` (Spec→Pseudocode→Architecture→Refinement→Completion with gates) maps almost 1:1 onto a Claudian DAG of work orders with `review` gates between phases. Ship it as a preset template chain that auto-creates linked work orders. Pure composition of 1.1 + 2.1; no new engine.
