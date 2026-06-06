@@ -21,12 +21,18 @@ describe('registerAllSettings', () => {
     resetSettingsRegistryForTests();
   });
 
-  it('produces general, agentBoard, orchestrator, diagnostics tabs by default', () => {
+  it('does not register Orchestrator settings', () => {
     registerAllSettings();
-    const tabs = getSettingsRegistry()
-      .getTabs(settings(false))
-      .map((t) => t.id);
-    expect(tabs).toEqual(['general', 'agentBoard', 'orchestrator', 'diagnostics']);
+    const registry = getSettingsRegistry();
+    expect(registry.getTabs(settings(false)).map((tab) => tab.id)).not.toContain(
+      'orchestrator'
+    );
+    expect(registry.getFields(settings(false)).map((field) => field.id)).not.toContain(
+      'orchestratorEnabled'
+    );
+    expect(registry.getFields(settings(false)).map((field) => field.id)).not.toContain(
+      'orchestratorSystemPrompt'
+    );
   });
 
   it('produces all 8 tabs when every provider is enabled', () => {
@@ -41,7 +47,6 @@ describe('registerAllSettings', () => {
       'opencode',
       'cursor',
       'agentBoard',
-      'orchestrator',
       'diagnostics',
     ]);
   });
