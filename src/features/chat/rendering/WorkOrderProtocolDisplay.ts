@@ -58,6 +58,19 @@ const BLOCK_PATTERNS: Array<{ kind: 'progress' | 'needs_input' | 'needs_approval
 
 export const HANDOFF_PREVIEW_MAX_CHARS = 160;
 
+/**
+ * Splits an assistant text block into rendered segments by extracting
+ * `<claudian_progress>`, `<claudian_needs_input>`, `<claudian_needs_approval>`,
+ * and `<claudian_handoff>` blocks. Blocks inside fenced code (``` or ~~~) are
+ * left untouched so agents can show protocol docs without triggering cards.
+ *
+ * Semantics (deliberately more permissive than the deleted `splitWorkOrderHandoffForDisplay`):
+ * - Duplicate keys in a block overwrite; last wins. The old splitter rejected the block.
+ * - A stray opening tag before a valid block is silently dropped. The old splitter rejected.
+ * - Multiple handoff blocks each render as a card. The old splitter accepted at most one.
+ * Malformed blocks (missing required field) are emitted as raw markdown so
+ * users see something rather than a silent swallow.
+ */
 export function splitWorkOrderProtocolForDisplay(content: string): WorkOrderProtocolSegment[] {
   const matches: Array<{
     kind: 'progress' | 'needs_input' | 'needs_approval' | 'handoff';
