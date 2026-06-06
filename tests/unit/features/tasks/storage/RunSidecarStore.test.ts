@@ -70,3 +70,33 @@ describe('RunSidecarStore.ledger', () => {
     expect(await store.readLedger('nope')).toEqual([]);
   });
 });
+
+describe('RunSidecarStore.snapshotLedgerAsMarkdown', () => {
+  it('renders ledger entries as one markdown line each, matching TaskNoteStore.appendLedger format', async () => {
+    const { adapter } = makeFakeAdapter();
+    const store = new RunSidecarStore(adapter, '.claudian/runs');
+
+    await store.appendLedger('run-7', {
+      timestamp: '2026-06-06T12:00:00.000Z',
+      status: 'running',
+      message: 'Run started (attempt 1)',
+    });
+    await store.appendLedger('run-7', {
+      timestamp: '2026-06-06T12:00:05.000Z',
+      status: 'review',
+      message: 'Handoff written.',
+    });
+
+    const md = await store.snapshotLedgerAsMarkdown('run-7');
+    expect(md).toBe(
+      '- 2026-06-06T12:00:00.000Z [running] Run started (attempt 1)\n' +
+      '- 2026-06-06T12:00:05.000Z [review] Handoff written.',
+    );
+  });
+
+  it('returns empty string for a missing ledger', async () => {
+    const { adapter } = makeFakeAdapter();
+    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    expect(await store.snapshotLedgerAsMarkdown('nope')).toBe('');
+  });
+});

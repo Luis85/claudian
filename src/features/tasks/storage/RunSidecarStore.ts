@@ -44,8 +44,11 @@ export class RunSidecarStore {
       .map((line) => JSON.parse(line) as TaskLedgerEntry);
   }
 
-  async snapshotLedgerAsMarkdown(_runId: string): Promise<string> {
-    throw new Error('not implemented');
+  async snapshotLedgerAsMarkdown(runId: string): Promise<string> {
+    const entries = await this.readLedger(runId);
+    return entries
+      .map((e) => `- ${e.timestamp} [${e.status}] ${e.message}`)
+      .join('\n');
   }
 
   private async ensureRunDir(runId: string): Promise<void> {
