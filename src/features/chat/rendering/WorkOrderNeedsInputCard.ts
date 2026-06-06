@@ -13,12 +13,12 @@ export function renderWorkOrderNeedsInputCard(parentEl: HTMLElement, data: Needs
   main.createDiv({ cls: 'claudian-work-order-needs-input-card-title', text: 'Awaiting your input' });
   main.createDiv({ cls: 'claudian-work-order-needs-input-card-question', text: data.question });
 
-  if (data.why) {
+  if (data.why !== undefined) {
     const why = card.createDiv({ cls: 'claudian-work-order-needs-input-card-why' });
     why.createSpan({ cls: 'claudian-work-order-needs-input-card-label', text: 'Why: ' });
     why.appendText(data.why);
   }
-  if (data.defaultValue) {
+  if (data.defaultValue !== undefined) {
     const def = card.createDiv({ cls: 'claudian-work-order-needs-input-card-default' });
     def.createSpan({ cls: 'claudian-work-order-needs-input-card-label', text: 'Default: ' });
     def.appendText(data.defaultValue);
