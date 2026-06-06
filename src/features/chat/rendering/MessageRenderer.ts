@@ -1112,11 +1112,26 @@ export class MessageRenderer {
     if (actions.length === 0) return;
 
     const textBlocks = msgEl.querySelectorAll('.claudian-text-block');
+    // A protocol-card-only assistant message (handoff / progress / needs_input /
+    // needs_approval) renders with no text block; fall back to the last
+    // protocol card so actions stay reachable in work-order tabs.
+    const protocolCardSelectors = [
+      '.claudian-work-order-handoff-card',
+      '.claudian-work-order-needs-approval-card',
+      '.claudian-work-order-needs-input-card',
+      '.claudian-work-order-progress-card',
+    ];
+    let cardAnchor: HTMLElement | null = null;
+    for (const selector of protocolCardSelectors) {
+      const matches = msgEl.querySelectorAll<HTMLElement>(selector);
+      if (matches.length > 0) {
+        cardAnchor = matches[matches.length - 1] as HTMLElement;
+        break;
+      }
+    }
     const anchorEl = textBlocks.length > 0
       ? (textBlocks[textBlocks.length - 1] as HTMLElement)
-      // A handoff-only assistant message renders as a card with no text block;
-      // anchor actions to the card so they stay reachable in work-order tabs.
-      : msgEl.querySelector<HTMLElement>('.claudian-work-order-handoff-card');
+      : cardAnchor;
     if (!anchorEl) return;
 
     const container = anchorEl.createDiv({ cls: 'claudian-text-actions' });
