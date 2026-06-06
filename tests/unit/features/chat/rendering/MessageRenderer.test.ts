@@ -1248,6 +1248,32 @@ next_action: Review the result.
     expect(renderContentSpy).toHaveBeenCalledWith(expect.anything(), malformed);
   });
 
+  it('inserts the handoff card above a pre-existing response footer on finalize', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl, 'claude', true);
+    jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+    const footerEl = contentEl.createDiv({ cls: 'claudian-response-footer' });
+
+    const replaced = renderer.finalizeStreamedAssistantText(contentEl, textEl, `<claudian_handoff>
+summary: Finished the work.
+verification: npm run test passed.
+risks: No known risks.
+next_action: Review the result.
+</claudian_handoff>`);
+
+    expect(replaced).toBe(true);
+    const card = contentEl.querySelector('.claudian-work-order-handoff-card');
+    expect(card).not.toBeNull();
+    const cardIndex = (contentEl.children as any[]).indexOf(card);
+    const footerIndex = (contentEl.children as any[]).indexOf(footerEl);
+    expect(cardIndex).toBeGreaterThanOrEqual(0);
+    expect(footerIndex).toBeGreaterThanOrEqual(0);
+    expect(cardIndex).toBeLessThan(footerIndex);
+  });
+
   it('swaps a streamed work-order handoff text block for a card on finalize', () => {
     const messagesEl = createMockEl();
     const { renderer } = createRenderer(messagesEl, 'claude', true);

@@ -61,6 +61,20 @@ export type RenderContentFn = (
   options?: RenderContentOptions
 ) => Promise<void>;
 
+/**
+ * Returns the direct `.claudian-response-footer` child of `contentEl`, if any.
+ * Direct-child only on purpose: `:scope > .x` is not portable through our
+ * tests' minimal DOM mock, so this iterates the live `children` array instead.
+ */
+function findResponseFooterChild(contentEl: HTMLElement): HTMLElement | null {
+  const children = contentEl.children;
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i] as HTMLElement;
+    if (child.classList?.contains('claudian-response-footer')) return child;
+  }
+  return null;
+}
+
 function runRendererAction(action: () => Promise<void>): void {
   void action().catch(() => {
     // UI actions already surface expected failures locally.
@@ -534,10 +548,19 @@ export class MessageRenderer {
     const segments = splitWorkOrderHandoffForDisplay(markdown);
     if (!segments) return false;
 
+    // A live run that took long enough to bake a duration footer attaches
+    // `.claudian-response-footer` to `contentEl` BEFORE finalize runs. Since
+    // `renderAssistantDisplaySegment` appends new children, naïvely removing
+    // `textEl` and rendering would leave the card BELOW the footer — while a
+    // reload renders the card above. Detach the footer first, render the card,
+    // then re-append it so live + stored DOM order stays identical.
+    const footerEl = findResponseFooterChild(contentEl);
+    footerEl?.remove();
     textEl.remove();
     for (const segment of segments) {
       this.renderAssistantDisplaySegment(contentEl, segment);
     }
+    if (footerEl) contentEl.appendChild(footerEl);
     return true;
   }
 
