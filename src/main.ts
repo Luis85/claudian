@@ -61,6 +61,7 @@ import { isClaudianView } from './features/chat/isClaudianView';
 import type { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
 import { isCaptureEligible, openCaptureFromMessage } from './features/quickActions/captureFromMessage';
 import { QuickActionFavoritesCache } from './features/quickActions/QuickActionFavoritesCache';
+import { QuickActionLastUsedStore } from './features/quickActions/quickActionLastUsedStore';
 import { QuickActionStorage } from './features/quickActions/QuickActionStorage';
 import { buildProviderRecords } from './features/quickActions/skills/buildProviderRecords';
 import { VaultSkillAggregator } from './features/quickActions/skills/VaultSkillAggregator';
@@ -97,6 +98,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   /** Plugin-lifetime singleton. Built in onload before any consumer reads it. */
   public quickActionStorage!: QuickActionStorage;
   public quickActionFavoritesCache: QuickActionFavoritesCache | null = null;
+  public quickActionLastUsedStore: QuickActionLastUsedStore | null = null;
   public vaultSkillAggregator: VaultSkillAggregator | null = null;
   public usageTracker: UsageTracker | null = null;
   private lifecycle!: PluginLifecycle;
@@ -318,6 +320,13 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       return;
     }
     void aggregator.listAllStreaming(() => {});
+    const lastUsedStore = new QuickActionLastUsedStore({
+      adapter: new VaultFileAdapter(this.app),
+      logger: this.logger.scope('quickActions'),
+    });
+    await lastUsedStore.hydrate();
+    if (this.unloaded) return;
+    this.quickActionLastUsedStore = lastUsedStore;
     // Restored views constructed before provider services were ready may have
     // mounted the empty-state placeholder; reprobe so they can promote to the
     // full tab UI now that providers are available.
@@ -345,6 +354,10 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     this.commitOnAcceptCoordinator = null;
     this.gitStatusWatcher?.stop();
     this.gitStatusWatcher = null;
+    if (this.quickActionLastUsedStore) {
+      void this.quickActionLastUsedStore.flush();
+      this.quickActionLastUsedStore = null;
+    }
     this.lifecycle?.shutdownActiveRuntimes();
     void this.lifecycle?.persistOpenTabStates();
   }
