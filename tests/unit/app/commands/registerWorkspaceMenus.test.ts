@@ -24,6 +24,23 @@ jest.mock('@/features/quickActions/openContextMenuQuickAction', () => ({
 
 jest.mock('@/features/quickActions/runQuickActionForFile', () => ({
   runQuickActionForFile: jest.fn().mockResolvedValue(undefined),
+  quickActionStemFromPath: (p: string) => p.split('/').pop()?.replace(/\.md$/i, '') ?? p,
+}));
+
+// `appendQuickActionFavoritesAndPicker` (in production) routes favorite clicks
+// through `launchQuickAction`, which opens a provider+model picker modal before
+// invoking `runQuickActionForFile`. These tests assert the legacy direct-dispatch
+// shape, so stub `launchQuickAction` to forward straight to `runQuickActionForFile`
+// — preserving the test contract without pulling in `ProviderRegistry`,
+// `asSettingsBag`, or the modal UI.
+jest.mock('@/features/quickActions/launchQuickAction', () => ({
+  launchQuickAction: (plugin: unknown, file: unknown, action: unknown) => {
+    const mod = jest.requireMock('@/features/quickActions/runQuickActionForFile') as {
+      runQuickActionForFile: (...args: unknown[]) => unknown;
+    };
+    mod.runQuickActionForFile(plugin, file, action);
+    return Promise.resolve();
+  },
 }));
 
 type FileMenuHandler = (menu: Menu, file: TAbstractFile) => void;
