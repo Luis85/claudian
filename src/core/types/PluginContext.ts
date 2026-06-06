@@ -89,7 +89,10 @@ export interface PluginContext
 
   getActiveBrowserSelection(): BrowserSelectionContext | null;
   getActiveConversationSnapshot(): ConversationSnapshot | null;
-  openConversation(conversationId: string): Promise<void>;
+  openConversation(
+    conversationId: string,
+    options?: { requireNewTab?: boolean; preferNewTab?: boolean; activate?: boolean },
+  ): Promise<void>;
   activateView(): Promise<void>;
 
   createConversation(options?: {

@@ -2101,6 +2101,36 @@ describe('TabManager - openConversation Current Tab Path', () => {
 
     expect(switchTo).toHaveBeenCalledWith('conv-max');
   });
+
+  it('should refuse to hijack active tab when requireNewTab is true and tab cap is reached', async () => {
+    for (let i = 0; i < DEFAULT_MAX_TABS - 1; i++) {
+      await manager.createTab();
+    }
+    expect(manager.getTabCount()).toBe(DEFAULT_MAX_TABS);
+
+    const activeTab = manager.getActiveTab();
+    const switchTo = jest.fn().mockResolvedValue(undefined);
+    activeTab!.controllers.conversationController = { switchTo } as any;
+
+    plugin.getConversationById.mockResolvedValue({ id: 'conv-full' });
+
+    await manager.openConversation('conv-full', { requireNewTab: true });
+
+    // Must NOT hijack the active tab (would close any running session in it).
+    expect(switchTo).not.toHaveBeenCalled();
+    // And must NOT create another tab over the cap.
+    expect(manager.getTabCount()).toBe(DEFAULT_MAX_TABS);
+  });
+
+  it('should open a new tab when requireNewTab is true and capacity is available', async () => {
+    expect(manager.canCreateTab()).toBe(true);
+    const before = manager.getTabCount();
+    plugin.getConversationById.mockResolvedValue({ id: 'conv-fresh' });
+
+    await manager.openConversation('conv-fresh', { requireNewTab: true });
+
+    expect(manager.getTabCount()).toBe(before + 1);
+  });
 });
 
 describe('TabManager - Service Initialization Errors', () => {

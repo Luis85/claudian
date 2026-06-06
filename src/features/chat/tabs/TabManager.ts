@@ -64,6 +64,14 @@ type CreateTabOptions = {
 
 type OpenConversationOptions = {
   preferNewTab?: boolean;
+  /**
+   * Require a fresh tab — never hijack the active tab. When the tab cap is
+   * already reached, surface a Notice and abort instead of switching the
+   * current tab's conversation (which would close any running session in it).
+   * Used by Agent Board "Open conversation" so a click on a paused work-order
+   * card can't kill an unrelated streaming chat.
+   */
+  requireNewTab?: boolean;
   activate?: boolean;
 };
 
@@ -458,9 +466,12 @@ export class TabManager implements TabManagerInterface {
     conversationId: string,
     options: boolean | OpenConversationOptions = false,
   ): Promise<void> {
+    const requireNewTab = typeof options === 'boolean'
+      ? false
+      : options.requireNewTab ?? false;
     const preferNewTab = typeof options === 'boolean'
       ? options
-      : options.preferNewTab ?? false;
+      : (options.preferNewTab ?? false) || requireNewTab;
     const activate = typeof options === 'boolean'
       ? true
       : options.activate ?? true;
@@ -487,15 +498,23 @@ export class TabManager implements TabManagerInterface {
     // Open in current tab or new tab
     if (preferNewTab && this.canCreateTab()) {
       await this.createTab(conversationId, undefined, { activate });
-    } else {
-      // Open in current tab
-      // Note: Don't set tab.conversationId here - the onConversationIdChanged callback
-      // will sync it after successful switch. Setting it before switchTo() would cause
-      // incorrect tab metadata if switchTo() returns early (streaming/switching/creating).
-      const activeTab = this.getActiveTab();
-      if (activeTab) {
-        await activeTab.controllers.conversationController?.switchTo(conversationId);
-      }
+      return;
+    }
+    // requireNewTab refuses to hijack the active tab: surface a Notice so the
+    // user knows why nothing happened (vs silently closing their streaming
+    // session) and abort. preferNewTab without the require flag still falls
+    // through to the legacy in-place switch for backward compatibility.
+    if (requireNewTab) {
+      new Notice(t('chat.history.linkedNoFreeTab'));
+      return;
+    }
+    // Open in current tab
+    // Note: Don't set tab.conversationId here - the onConversationIdChanged callback
+    // will sync it after successful switch. Setting it before switchTo() would cause
+    // incorrect tab metadata if switchTo() returns early (streaming/switching/creating).
+    const activeTab = this.getActiveTab();
+    if (activeTab) {
+      await activeTab.controllers.conversationController?.switchTo(conversationId);
     }
   }
 

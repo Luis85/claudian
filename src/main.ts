@@ -655,13 +655,16 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     return { id: conversationId, title };
   }
 
-  async openConversation(conversationId: string): Promise<void> {
+  async openConversation(
+    conversationId: string,
+    options: { requireNewTab?: boolean; preferNewTab?: boolean; activate?: boolean } = {},
+  ): Promise<void> {
     if (!this.getConversationSync(conversationId)) {
       new Notice(t('chat.history.linkedNotFound'));
       return;
     }
     await this.activateView();
-    await this.getView()?.getTabManager()?.openConversation(conversationId);
+    await this.getView()?.getTabManager()?.openConversation(conversationId, options);
   }
 
   getEnvironmentVariablesForScope(scope: EnvironmentScope): string {

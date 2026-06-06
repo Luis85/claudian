@@ -85,13 +85,16 @@ describe('buildWorkOrderConversationBindings', () => {
       expect(plugin.openConversation).not.toHaveBeenCalled();
     });
 
-    it('dispatches to plugin.openConversation with the id when present', () => {
+    it('dispatches to plugin.openConversation with requireNewTab so the active tab is never hijacked', () => {
       const plugin = makePlugin();
       const { onOpenConversation } = buildWorkOrderConversationBindings(asPlugin(plugin));
 
       onOpenConversation(makeTask('conv-1'));
 
-      expect(plugin.openConversation).toHaveBeenCalledWith('conv-1');
+      // requireNewTab: a click on a paused work-order card must open a fresh
+      // tab or surface a notice — never close a running session in the
+      // currently active chat tab.
+      expect(plugin.openConversation).toHaveBeenCalledWith('conv-1', { requireNewTab: true });
     });
   });
 });

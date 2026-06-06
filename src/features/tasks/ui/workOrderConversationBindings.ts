@@ -19,7 +19,10 @@ export function buildWorkOrderConversationBindings(plugin: ClaudianPlugin): {
   return {
     onOpenConversation: (task) => {
       const conversationId = task.frontmatter.conversation_id;
-      if (conversationId) void plugin.openConversation(conversationId);
+      // Always open in a fresh tab so a click on a work-order card never
+      // hijacks (and closes) an unrelated streaming session in the active
+      // tab. If the tab cap is full, the TabManager surfaces a Notice.
+      if (conversationId) void plugin.openConversation(conversationId, { requireNewTab: true });
     },
     canOpenConversation: (task) => {
       const conversationId = task.frontmatter.conversation_id;

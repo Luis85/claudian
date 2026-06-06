@@ -30,7 +30,8 @@
       "regenerateFailed": "Failed to regenerate response",
       "deleteFailed": "Failed to delete conversation",
       "renameFailed": "Failed to rename conversation",
-      "linkedNotFound": "Linked conversation not found. It may have been deleted."
+      "linkedNotFound": "Linked conversation not found. It may have been deleted.",
+      "linkedNoFreeTab": "Cannot open conversation: tab limit reached. Close a tab first."
     },
     "rewind": {
       "confirmMessage": "回退到此處？此訊息之後的檔案變更將被還原。回退不會影響手動或透過 bash 編輯的檔案。",

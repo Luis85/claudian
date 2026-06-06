@@ -42,6 +42,7 @@ export type TranslationKey =
   | 'chat.history.deleteFailed'
   | 'chat.history.renameFailed'
   | 'chat.history.linkedNotFound'
+  | 'chat.history.linkedNoFreeTab'
 
   // Chat - File / folder context commands (Q-1 chunk 9, main.ts entries)
   | 'chat.context.fileNoTab'

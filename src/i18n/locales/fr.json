@@ -30,7 +30,8 @@
       "regenerateFailed": "Failed to regenerate response",
       "deleteFailed": "Failed to delete conversation",
       "renameFailed": "Failed to rename conversation",
-      "linkedNotFound": "Linked conversation not found. It may have been deleted."
+      "linkedNotFound": "Linked conversation not found. It may have been deleted.",
+      "linkedNoFreeTab": "Cannot open conversation: tab limit reached. Close a tab first."
     },
     "rewind": {
       "confirmMessage": "Rembobiner jusqu'à ce point ? Les modifications de fichiers après ce message seront annulées. Le rembobinage n'affecte pas les fichiers modifiés manuellement ou via bash.",

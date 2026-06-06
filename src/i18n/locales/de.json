@@ -30,7 +30,8 @@
       "regenerateFailed": "Failed to regenerate response",
       "deleteFailed": "Failed to delete conversation",
       "renameFailed": "Failed to rename conversation",
-      "linkedNotFound": "Linked conversation not found. It may have been deleted."
+      "linkedNotFound": "Linked conversation not found. It may have been deleted.",
+      "linkedNoFreeTab": "Cannot open conversation: tab limit reached. Close a tab first."
     },
     "rewind": {
       "confirmMessage": "Zu diesem Punkt zurückspulen? Dateiänderungen nach dieser Nachricht werden rückgängig gemacht. Das Zurückspulen betrifft keine manuell oder über Bash bearbeiteten Dateien.",
