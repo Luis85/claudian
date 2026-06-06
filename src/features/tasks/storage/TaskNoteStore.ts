@@ -10,6 +10,15 @@ export const HANDOFF_END = '<!-- claudian:handoff-end -->';
 
 const CLAUDIAN_MARKER_PREFIX = '<!-- claudian:';
 
+/** Statuses that mean the run has ended (run-finished metadata + heartbeat clear apply). */
+const RUN_ENDED_STATUSES: ReadonlySet<TaskStatus> = new Set([
+  'review',
+  'needs_handoff',
+  'done',
+  'failed',
+  'canceled',
+]);
+
 type WritableFrontmatter = TaskSpec['frontmatter'] & Record<string, unknown>;
 
 export interface ParsedTaskSpec extends Omit<TaskSpec, 'frontmatter'> {
@@ -26,6 +35,15 @@ export interface WriteStatusOptions {
   runId?: string | null;
   conversationId?: string | null;
   sidepanelTabId?: string | null;
+  /**
+   * When provided, records the run-start time. Set this only at the start of a
+   * run (not on heartbeats), otherwise the original start time is lost and
+   * elapsed/duration metadata is corrupted.
+   */
+  started?: string | null;
+  heartbeat?: string | null;
+  pauseReason?: string | null;
+  attempts?: number;
 }
 
 export interface WriteFieldsOptions {
@@ -85,16 +103,35 @@ export class TaskNoteStore {
     if (options.runId !== undefined) frontmatter.run_id = options.runId;
     if (options.conversationId !== undefined) frontmatter.conversation_id = options.conversationId;
     if (options.sidepanelTabId !== undefined) frontmatter.sidepanel_tab_id = options.sidepanelTabId;
+    if (options.started !== undefined) frontmatter.started = options.started;
+    if (options.heartbeat !== undefined) frontmatter.heartbeat = options.heartbeat;
+    if (options.pauseReason !== undefined) frontmatter.pause_reason = options.pauseReason;
+    if (options.attempts !== undefined) frontmatter.attempts = options.attempts;
 
+    // A fresh run is in progress and has not finished yet.
     if (options.status === 'running') {
-      frontmatter.started = options.timestamp;
+      frontmatter.finished = null;
     }
 
-    if (options.status === 'done' || options.status === 'failed' || options.status === 'canceled') {
+    // The run has ended (whether or not the work order still needs human review):
+    // record the finish time and clear live-run metadata so the card stops
+    // showing a stale heartbeat and the duration is accurate.
+    if (RUN_ENDED_STATUSES.has(options.status)) {
       frontmatter.finished = options.timestamp;
+      frontmatter.heartbeat = null;
+      frontmatter.pause_reason = null;
     }
 
     return this.withFrontmatter(frontmatter, parsed.task.body);
+  }
+
+  clearPause(content: string, timestamp: string): string {
+    return this.writeStatus(content, {
+      status: 'running',
+      timestamp,
+      heartbeat: timestamp,
+      pauseReason: null,
+    });
   }
 
   writeFields(content: string, fields: WriteFieldsOptions, timestamp: string = new Date().toISOString()): string {

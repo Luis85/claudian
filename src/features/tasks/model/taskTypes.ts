@@ -8,6 +8,7 @@ export type TaskStatus =
   | 'needs_approval'
   | 'review'
   | 'needs_fix'
+  | 'needs_handoff'
   | 'done'
   | 'failed'
   | 'canceled';
@@ -30,6 +31,8 @@ export interface TaskFrontmatter {
   sidepanel_tab_id?: string | null;
   started?: string | null;
   finished?: string | null;
+  heartbeat?: string | null;
+  pause_reason?: string | null;
   attempts: number;
 }
 

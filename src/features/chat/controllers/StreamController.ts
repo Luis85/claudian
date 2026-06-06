@@ -126,8 +126,24 @@ export class StreamController {
   private indexedToolCallsMsg: ChatMessage | null = null;
   private indexedToolCallsCount = 0;
 
+  // External observers of the neutral chunk stream (e.g. the work-order runner),
+  // notified before normal processing so a card can mirror the live run.
+  private streamObservers = new Set<(chunk: StreamChunk) => void>();
+
   constructor(deps: StreamControllerDeps) {
     this.deps = deps;
+  }
+
+  /**
+   * Registers an observer that receives every neutral {@link StreamChunk} this
+   * controller handles, for the lifetime of the returned disposer. Observer
+   * errors are isolated so a faulty observer never breaks streaming.
+   */
+  addStreamObserver(observer: (chunk: StreamChunk) => void): () => void {
+    this.streamObservers.add(observer);
+    return () => {
+      this.streamObservers.delete(observer);
+    };
   }
 
   /**
@@ -178,6 +194,16 @@ export class StreamController {
 
   async handleStreamChunk(chunk: StreamChunk, msg: ChatMessage): Promise<void> {
     const { state } = this.deps;
+
+    if (this.streamObservers.size > 0) {
+      for (const observer of this.streamObservers) {
+        try {
+          observer(chunk);
+        } catch {
+          // An observer must never break the stream for the chat UI.
+        }
+      }
+    }
 
     switch (chunk.type) {
       case 'thinking':

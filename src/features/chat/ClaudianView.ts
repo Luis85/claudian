@@ -7,7 +7,7 @@ import { getHiddenProviderCommandSet } from '../../core/providers/commands/hidde
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from '../../core/providers/ProviderSettingsCoordinator';
 import { DEFAULT_CHAT_PROVIDER_ID, type ProviderId } from '../../core/providers/types';
-import { asSettingsBag, VIEW_TYPE_CLAUDIAN } from '../../core/types';
+import { asSettingsBag, type StreamChunk, VIEW_TYPE_CLAUDIAN } from '../../core/types';
 import { t } from '../../i18n/i18n';
 import type ClaudianPlugin from '../../main';
 import { createProviderIconSvg } from '../../shared/icons';
@@ -38,7 +38,7 @@ import {
 } from './tabs/Tab';
 import { TabBar } from './tabs/TabBar';
 import { TabManager } from './tabs/TabManager';
-import type { TabData, TabId } from './tabs/types';
+import type { TabData, TabId, TaskRunTabHandle, TaskRunTabTerminal } from './tabs/types';
 import { GitActionButton } from './ui/GitActionButton';
 import { recalculateUsageForModel } from './utils/usageInfo';
 
@@ -678,21 +678,21 @@ export class ClaudianView extends ItemView {
   }
 
   /** Opens a fresh chat tab pinned to the work order's provider/model and auto-sends its prompt. */
+  /**
+   * Opens a fresh tab for a work-order run and returns a live handle: the caller
+   * (the Agent Board, via its execution surface) observes the stream, sends
+   * follow-ups, and awaits the terminal result without the tab being focused.
+   * Returns null when no tab could be opened (view not ready / tab cap reached).
+   */
   async startTaskRunInFreshTab(options: {
     providerId: ProviderId;
     model: string;
     prompt: string;
     tabReservation?: ChatTabReservation;
-  }): Promise<{
-    status: 'completed' | 'failed' | 'canceled';
-    conversationId: string | null;
-    sidepanelTabId: string | null;
-    finalAssistantContent: string;
-    error?: string;
-  }> {
+  }): Promise<TaskRunTabHandle | null> {
     if (!this.tabManager) {
       options.tabReservation?.release();
-      return { status: 'failed', conversationId: null, sidepanelTabId: null, finalAssistantContent: '', error: 'Chat view is not ready.' };
+      return null;
     }
 
     const tab = await this.tabManager.createTaskRunTab({
@@ -703,47 +703,95 @@ export class ClaudianView extends ItemView {
     // run no longer needs its pending reservation — release it before the turn
     // streams so other panes' gates see the freed/used slot immediately.
     options.tabReservation?.release();
-    if (!tab) {
-      return {
-        status: 'failed',
-        conversationId: null,
-        sidepanelTabId: null,
-        finalAssistantContent: '',
-        error: 'Could not open a chat tab for the work order (tab limit reached?).',
-      };
-    }
+    if (!tab) return null;
 
     const inputController = tab.controllers.inputController;
-    if (!inputController) {
-      return {
-        status: 'failed',
-        conversationId: tab.conversationId,
-        sidepanelTabId: tab.id,
-        finalAssistantContent: '',
-        error: 'Chat tab is missing an input controller.',
-      };
-    }
+    const streamController = tab.controllers.streamController;
+    if (!inputController || !streamController) return null;
 
-    const result = (await inputController.sendMessage({ content: options.prompt })) as
-      | ProgrammaticSendResult
-      | undefined;
-    const sendResult: ProgrammaticSendResult = result ?? {
-      ok: false,
-      finalAssistantContent: '',
-      error: 'No result from the chat run.',
+    // Attach to the stream BEFORE starting the turn so no early chunk (even a
+    // fast `done`) is lost in the window before the work-order runner subscribes.
+    // Chunks are buffered until the real observer attaches, then replayed in order.
+    const buffered: StreamChunk[] = [];
+    let liveObserver: ((chunk: StreamChunk) => void) | null = null;
+    const emit = (chunk: StreamChunk): void => {
+      if (liveObserver) liveObserver(chunk);
+      else buffered.push(chunk);
+    };
+    const detachRaw = streamController.addStreamObserver(emit);
+
+    const toTerminal = (result: ProgrammaticSendResult | undefined): TaskRunTabTerminal => {
+      const sendResult: ProgrammaticSendResult = result ?? {
+        ok: false,
+        finalAssistantContent: '',
+        error: 'No result from the chat run.',
+      };
+      let status: TaskRunTabTerminal['status'] = sendResult.ok ? 'completed' : 'failed';
+      if (!sendResult.ok && sendResult.error === 'Canceled') status = 'canceled';
+      return {
+        status,
+        finalAssistantContent: sendResult.finalAssistantContent,
+        error: sendResult.ok ? undefined : sendResult.error,
+      };
     };
 
-    let status: 'completed' | 'failed' | 'canceled' = sendResult.ok ? 'completed' : 'failed';
-    if (!sendResult.ok && sendResult.error === 'Canceled') {
-      status = 'canceled';
-    }
+    const terminal = (inputController.sendMessage({ content: options.prompt }) as Promise<
+      ProgrammaticSendResult | undefined
+    >)
+      .then(toTerminal)
+      .catch((error) => ({
+        status: 'failed' as const,
+        finalAssistantContent: '',
+        error: error instanceof Error ? error.message : String(error),
+      }));
 
     return {
-      status,
-      conversationId: tab.conversationId,
+      // The conversation is created lazily by the first send() above, which
+      // mutates tab.conversationId via onConversationIdChanged. Read it live so
+      // the run binds the real id once it exists instead of freezing null here.
+      get conversationId() {
+        return tab.conversationId;
+      },
       sidepanelTabId: tab.id,
-      finalAssistantContent: sendResult.finalAssistantContent,
-      error: sendResult.ok ? undefined : sendResult.error,
+      subscribe: (observer) => {
+        liveObserver = observer;
+        if (buffered.length > 0) {
+          const replay = buffered.splice(0, buffered.length);
+          for (const chunk of replay) observer(chunk);
+        }
+        return () => {
+          if (liveObserver === observer) liveObserver = null;
+          detachRaw();
+        };
+      },
+      sendFollowUp: async (content) => {
+        // Resolve with the follow-up turn's settlement so the runner can finish a
+        // turn that emits no stream `done` (e.g. the provider threw after creating
+        // the assistant message and the controller still resolved ok). Reporting
+        // it as the return value — rather than a synthetic stream chunk — ties it
+        // to this specific send, so a late `done` from the pause turn can't be
+        // mistaken for this turn's end. The runner ignores it when a real `done`
+        // already finished the turn or the follow-up paused again.
+        try {
+          const result = (await inputController.sendMessage({ content })) as
+            | ProgrammaticSendResult
+            | undefined;
+          // Queued behind the still-streaming pause turn: it will run and stream
+          // its own end next, so report no outcome and let the runner finish from
+          // that stream end rather than failing the accepted reply.
+          if (result?.queued) return;
+          // No result means the turn was not sent and never will be (service
+          // init failure, conversation switching, a built-in command, etc.):
+          // fail promptly instead of hanging until the stale-heartbeat timeout.
+          if (!result) return { ok: false, error: 'Follow-up turn could not be sent.' };
+          if (result.ok) return { ok: true, finalAssistantContent: result.finalAssistantContent };
+          return { ok: false, error: result.error ?? 'Follow-up turn failed.' };
+        } catch (error) {
+          return { ok: false, error: error instanceof Error ? error.message : String(error) };
+        }
+      },
+      cancel: () => inputController.cancelStreaming(),
+      terminal,
     };
   }
 
@@ -796,13 +844,27 @@ export class ClaudianView extends ItemView {
       }
     }
 
-    const result = await this.startTaskRunInFreshTab({
+    const handle = await this.startTaskRunInFreshTab({
       providerId: options.fallbackProviderId,
       model: options.fallbackModel,
       prompt: options.prompt,
     });
-    if (result.status === 'failed' && result.error) {
-      throw new Error(result.error);
+    if (!handle) {
+      throw new Error('Could not open a chat tab for the work order (tab limit reached?).');
+    }
+    // startTaskRunInFreshTab eagerly registers a stream observer that buffers
+    // chunks until a consumer subscribes. The commit flow doesn't consume the
+    // stream, so subscribe with a no-op (which drains the buffer and stops
+    // further buffering) and dispose it once the turn settles — otherwise the
+    // observer stays attached for the tab's lifetime, buffering with no reader.
+    const dispose = handle.subscribe(() => {});
+    try {
+      const terminal = await handle.terminal;
+      if (terminal.status === 'failed' && terminal.error) {
+        throw new Error(terminal.error);
+      }
+    } finally {
+      dispose();
     }
   }
 

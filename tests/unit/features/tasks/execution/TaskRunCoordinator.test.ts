@@ -1,7 +1,17 @@
+import type { ChatTabReservation } from '../../../../../src/core/chatTabReservations';
 import { ChatTabReservations } from '../../../../../src/core/chatTabReservations';
-import type { TaskExecutionSurface, TaskRunHandle } from '../../../../../src/features/tasks/execution/TaskExecutionSurface';
-import { TaskRunCoordinator } from '../../../../../src/features/tasks/execution/TaskRunCoordinator';
+import { EventBus } from '../../../../../src/core/events/EventBus';
+import type { TaskEventMap } from '../../../../../src/features/tasks/events';
+import { ActiveRunRegistry } from '../../../../../src/features/tasks/execution/activeRunRegistry';
+import type {
+  TaskExecutionSurface,
+  TaskRunHandle,
+  TaskRunOptions,
+  TaskRunTerminal,
+} from '../../../../../src/features/tasks/execution/TaskExecutionSurface';
+import { TaskRunCoordinator, type TaskRunCoordinatorDeps } from '../../../../../src/features/tasks/execution/TaskRunCoordinator';
 import type { TaskSpec } from '../../../../../src/features/tasks/model/taskTypes';
+import { SyntheticStreamAdapter } from '../../../../helpers/SyntheticStreamAdapter';
 
 function makeTask(overrides: Partial<TaskSpec['frontmatter']> = {}): TaskSpec {
   return {
@@ -35,30 +45,57 @@ function makeTask(overrides: Partial<TaskSpec['frontmatter']> = {}): TaskSpec {
 
 class FakeSurface implements TaskExecutionSurface {
   prompts: string[] = [];
+  reservations: Array<ChatTabReservation | undefined> = [];
+  readonly adapter = new SyntheticStreamAdapter();
 
-  constructor(private readonly handle: TaskRunHandle) {}
+  constructor(private readonly opts: { runId?: string; terminal?: TaskRunTerminal } = {}) {}
 
-  async startTaskRun(_task: TaskSpec, options: { prompt: string }): Promise<TaskRunHandle> {
+  async startTaskRun(_task: TaskSpec, options: TaskRunOptions): Promise<TaskRunHandle> {
     this.prompts.push(options.prompt);
-    return this.handle;
+    this.reservations.push(options.tabReservation);
+    return {
+      runId: this.opts.runId ?? 'run-1',
+      conversationId: 'conv-1',
+      sidepanelTabId: 'tab-1',
+      stream: this.adapter,
+      // When a terminal is given, resolve it immediately (models a chat turn that
+      // settled without a matching stream end). Otherwise resolve only after the
+      // stream emits its end — as the real chat send does — so the stream drives
+      // the finish and the terminal-completed fallback stays a no-op.
+      terminal: this.opts.terminal
+        ? Promise.resolve(this.opts.terminal)
+        : this.adapter
+            .whenEnded()
+            .then((payload) => ({ status: 'completed' as const, finalAssistantContent: payload.finalAssistantContent })),
+    };
   }
 }
 
-function makeCoordinator(handle: TaskRunHandle) {
+function makeCoordinator(
+  surface: FakeSurface = new FakeSurface(),
+  overrides: Partial<TaskRunCoordinatorDeps> = {},
+) {
   const statuses: string[] = [];
   const ledgerMessages: string[] = [];
   const handoffs: string[] = [];
-  const surface = new FakeSurface(handle);
+  const events = new EventBus<TaskEventMap>();
   const coordinator = new TaskRunCoordinator({
     executionSurface: surface,
+    events,
     now: () => '2026-05-28T18:10:00+02:00',
     isProviderEnabled: () => true,
     ownsModel: () => true,
-    writeTaskStatus: async (_task, options) => { statuses.push(options.status); },
-    appendLedger: async (_task, entry) => { ledgerMessages.push(entry.message); },
-    writeHandoff: async (_task, markdown) => { handoffs.push(markdown); },
+    writeTaskStatus: async (_t, options) => { statuses.push(options.status); },
+    flushLedger: async (_t, entries) => { for (const e of entries) ledgerMessages.push(e.message); },
+    writeHandoff: async (_t, markdown) => { handoffs.push(markdown); },
+    ...overrides,
   });
-  return { coordinator, statuses, ledgerMessages, handoffs, surface };
+  return { coordinator, statuses, ledgerMessages, handoffs, surface, events };
+}
+
+/** Lets coordinator.run() get past startTaskRun so the RunSession has subscribed. */
+function flushMicrotasks(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 const VALID_HANDOFF = `<claudian_handoff>
@@ -70,14 +107,7 @@ next_action: Review.
 
 describe('TaskRunCoordinator', () => {
   it('blocks missing provider', async () => {
-    const { coordinator, statuses } = makeCoordinator({
-      status: 'completed',
-      runId: 'run-1',
-      conversationId: 'conv-1',
-      sidepanelTabId: 'tab-1',
-      finalAssistantContent: VALID_HANDOFF,
-    });
-
+    const { coordinator, statuses } = makeCoordinator();
     await expect(coordinator.run(makeTask({ provider: undefined }))).resolves.toEqual({
       ok: false,
       error: 'Work order is missing provider',
@@ -86,14 +116,7 @@ describe('TaskRunCoordinator', () => {
   });
 
   it('blocks missing model', async () => {
-    const { coordinator } = makeCoordinator({
-      status: 'completed',
-      runId: 'run-1',
-      conversationId: 'conv-1',
-      sidepanelTabId: 'tab-1',
-      finalAssistantContent: VALID_HANDOFF,
-    });
-
+    const { coordinator } = makeCoordinator();
     await expect(coordinator.run(makeTask({ model: undefined }))).resolves.toEqual({
       ok: false,
       error: 'Work order is missing model',
@@ -101,135 +124,201 @@ describe('TaskRunCoordinator', () => {
   });
 
   it('blocks already-running work orders', async () => {
-    const { coordinator } = makeCoordinator({
-      status: 'completed',
-      runId: 'run-1',
-      conversationId: 'conv-1',
-      sidepanelTabId: 'tab-1',
-      finalAssistantContent: VALID_HANDOFF,
-    });
-
+    const { coordinator } = makeCoordinator();
     await expect(coordinator.run(makeTask({ status: 'running' }))).resolves.toEqual({
       ok: false,
       error: 'This work order is already running.',
     });
   });
 
-  it('transitions ready to running to review on valid handoff', async () => {
-    const { coordinator, statuses, handoffs, surface } = makeCoordinator({
-      status: 'completed',
-      runId: 'run-1',
-      conversationId: 'conv-1',
-      sidepanelTabId: 'tab-1',
-      finalAssistantContent: VALID_HANDOFF,
+  it('blocks disabled providers', async () => {
+    const { coordinator } = makeCoordinator(new FakeSurface(), { isProviderEnabled: () => false });
+    await expect(coordinator.run(makeTask())).resolves.toEqual({
+      ok: false,
+      error: 'Provider codex is not enabled',
     });
+  });
 
+  it('blocks unavailable models', async () => {
+    const { coordinator } = makeCoordinator(new FakeSurface(), { ownsModel: () => false });
+    await expect(coordinator.run(makeTask())).resolves.toEqual({
+      ok: false,
+      error: 'Model gpt-5-codex is not available for provider codex',
+    });
+  });
+
+  it('returns the terminal error (flagged startupFailed) when the surface could not start a run', async () => {
+    const surface = new FakeSurface({ runId: '', terminal: { status: 'failed', finalAssistantContent: '', error: 'tab cap' } });
+    const { coordinator, statuses } = makeCoordinator(surface);
+    await expect(coordinator.run(makeTask())).resolves.toEqual({ ok: false, error: 'tab cap', startupFailed: true });
+    expect(statuses).toEqual([]);
+  });
+
+  it('fails promptly when the chat terminal fails without a stream end', async () => {
+    // Handle is created (runId set) but the turn settles failed and the adapter
+    // never emits a stream end — the terminal failure must drive the finish.
+    const surface = new FakeSurface({ terminal: { status: 'failed', finalAssistantContent: '', error: 'provider init failed' } });
+    const { coordinator, statuses } = makeCoordinator(surface);
+    const result = await coordinator.run(makeTask());
+    expect(result).toEqual({ ok: false, error: 'provider init failed' });
+    expect(statuses[statuses.length - 1]).toBe('failed');
+  });
+
+  it('finishes a run whose terminal completes with a handoff but emits no stream end', async () => {
+    // The provider settled the turn `completed` (handoff present) without ever
+    // emitting a `done` chunk; the terminal must drive the finish to review
+    // instead of leaving the run hanging until the stale timer.
+    const surface = new FakeSurface({ terminal: { status: 'completed', finalAssistantContent: VALID_HANDOFF } });
+    const { coordinator, statuses, handoffs } = makeCoordinator(surface);
     await expect(coordinator.run(makeTask())).resolves.toEqual({ ok: true, status: 'review' });
+    expect(statuses).toEqual(['running', 'review']);
+    expect(handoffs[0]).toContain('## Summary');
+  });
+
+  it('finishes as needs_handoff when the terminal completes with no handoff and no stream end', async () => {
+    const surface = new FakeSurface({ terminal: { status: 'completed', finalAssistantContent: 'no handoff' } });
+    const { coordinator, statuses } = makeCoordinator(surface);
+    await expect(coordinator.run(makeTask())).resolves.toEqual({ ok: false, error: 'Missing claudian_handoff block' });
+    expect(statuses).toEqual(['running', 'needs_handoff']);
+  });
+
+  it('does not double-finalize: a completed terminal is a no-op once the stream already ended', async () => {
+    // Default surface resolves the terminal only after emitEnd (as the real send
+    // does), so the stream-driven review wins and the terminal-completed fallback
+    // is a no-op — the run settles exactly once.
+    const { coordinator, statuses, surface } = makeCoordinator();
+    const p = coordinator.run(makeTask());
+    await flushMicrotasks();
+    surface.adapter.emitText(VALID_HANDOFF);
+    surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await expect(p).resolves.toEqual({ ok: true, status: 'review' });
+    expect(statuses).toEqual(['running', 'review']);
+  });
+
+  it('delegates a clean run to RunSession: running -> review with handoff', async () => {
+    const { coordinator, statuses, handoffs, surface } = makeCoordinator();
+    const p = coordinator.run(makeTask());
+    await flushMicrotasks();
+    surface.adapter.emitText(VALID_HANDOFF);
+    surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+
+    await expect(p).resolves.toEqual({ ok: true, status: 'review' });
     expect(statuses).toEqual(['running', 'review']);
     expect(handoffs[0]).toContain('## Summary');
     expect(surface.prompts[0]).toContain('Task ID: task-1');
   });
 
-  it('transitions running to failed when completed content has no handoff', async () => {
-    const { coordinator, statuses } = makeCoordinator({
-      status: 'completed',
-      runId: 'run-1',
-      conversationId: 'conv-1',
-      sidepanelTabId: 'tab-1',
-      finalAssistantContent: 'No handoff here.',
-    });
+  it('delegates a completed run with no handoff to needs_handoff', async () => {
+    const { coordinator, statuses, surface } = makeCoordinator();
+    const p = coordinator.run(makeTask());
+    await flushMicrotasks();
+    surface.adapter.emitText('No handoff here.');
+    surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: 'No handoff here.' });
 
-    await expect(coordinator.run(makeTask())).resolves.toEqual({
-      ok: false,
-      error: 'Missing claudian_handoff block',
-    });
-    expect(statuses).toEqual(['running', 'failed']);
+    await expect(p).resolves.toEqual({ ok: false, error: 'Missing claudian_handoff block' });
+    expect(statuses).toEqual(['running', 'needs_handoff']);
   });
 
-  it('transitions running to canceled when execution is canceled', async () => {
-    const { coordinator, statuses } = makeCoordinator({
-      status: 'canceled',
-      runId: 'run-1',
-      conversationId: 'conv-1',
-      sidepanelTabId: 'tab-1',
-      finalAssistantContent: '',
-    });
+  it('exposes the active run while in flight and clears it afterwards', async () => {
+    const { coordinator, surface } = makeCoordinator();
+    const p = coordinator.run(makeTask());
+    await flushMicrotasks();
+    expect(coordinator.getActiveRun('task-1')).toBeDefined();
+    surface.adapter.emitText(VALID_HANDOFF);
+    surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await p;
+    expect(coordinator.getActiveRun('task-1')).toBeUndefined();
+  });
 
+  it('reports a canceled run with canceled: true (so the queue does not count it as a failure)', async () => {
+    const surface = new FakeSurface({ terminal: { status: 'canceled', finalAssistantContent: '' } });
+    const { coordinator, statuses } = makeCoordinator(surface);
     await expect(coordinator.run(makeTask())).resolves.toEqual({
       ok: false,
-      error: 'Run canceled.',
+      error: 'canceled',
       canceled: true,
     });
-    expect(statuses).toEqual(['running', 'canceled']);
+    expect(statuses[statuses.length - 1]).toBe('canceled');
   });
 
-  it('uses an injected renderPrompt when provided', async () => {
-    const surface = new FakeSurface({
-      status: 'completed',
-      runId: 'run-1',
-      conversationId: 'conv-1',
-      sidepanelTabId: 'tab-1',
-      finalAssistantContent: VALID_HANDOFF,
-    });
+  it('rejects a concurrent run of the same work order while the first is still starting', async () => {
+    let releaseStart!: () => void;
+    const adapter = new SyntheticStreamAdapter();
+    let startCalls = 0;
+    const surface: TaskExecutionSurface = {
+      startTaskRun: async (): Promise<TaskRunHandle> => {
+        startCalls += 1;
+        await new Promise<void>((resolve) => { releaseStart = resolve; });
+        return {
+          runId: 'run-1',
+          conversationId: 'c',
+          sidepanelTabId: 't',
+          stream: adapter,
+          terminal: Promise.resolve({ status: 'completed', finalAssistantContent: '' } as TaskRunTerminal),
+        };
+      },
+    };
     const coordinator = new TaskRunCoordinator({
       executionSurface: surface,
+      events: new EventBus<TaskEventMap>(),
       now: () => '2026-05-28T18:10:00+02:00',
       isProviderEnabled: () => true,
       ownsModel: () => true,
       writeTaskStatus: async () => {},
-      appendLedger: async () => {},
+      flushLedger: async () => {},
       writeHandoff: async () => {},
-      renderPrompt: () => 'INJECTED PROMPT',
     });
 
-    await coordinator.run(makeTask());
+    const task = makeTask();
+    const first = coordinator.run(task);
+    const second = await coordinator.run(task);
+    expect(second).toEqual({ ok: false, error: 'This work order is already running.' });
+    expect(startCalls).toBe(1);
+
+    releaseStart();
+    await flushMicrotasks();
+    adapter.emitText(VALID_HANDOFF);
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await first;
+  });
+
+  it('rejects a run already held in a shared run registry (another view)', async () => {
+    const shared = new ActiveRunRegistry();
+    shared.reserve('task-1'); // another coordinator/view is running it
+    const { coordinator } = makeCoordinator(new FakeSurface(), { runRegistry: shared });
+    await expect(coordinator.run(makeTask())).resolves.toEqual({
+      ok: false,
+      error: 'This work order is already running.',
+    });
+  });
+
+  it('uses an injected renderPrompt when provided', async () => {
+    const surface = new FakeSurface();
+    const { coordinator } = makeCoordinator(surface, { renderPrompt: () => 'INJECTED PROMPT' });
+    const p = coordinator.run(makeTask());
+    await flushMicrotasks();
+    surface.adapter.emitText(VALID_HANDOFF);
+    surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await p;
     expect(surface.prompts[0]).toBe('INJECTED PROMPT');
   });
 });
 
 describe('TaskRunCoordinator.isActive', () => {
   it('reports false for ids not in flight', () => {
-    const { coordinator } = makeCoordinator({
-      status: 'completed',
-      runId: 'run-1',
-      conversationId: 'conv-1',
-      sidepanelTabId: 'tab-1',
-      finalAssistantContent: VALID_HANDOFF,
-    });
+    const { coordinator } = makeCoordinator();
     expect(coordinator.isActive('task-1')).toBe(false);
   });
 
   it('reports true while a run is in flight and false after it settles', async () => {
-    let release!: () => void;
-    const gate = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const surface: TaskExecutionSurface = {
-      startTaskRun: async () => {
-        await gate;
-        return {
-          status: 'completed',
-          runId: 'r',
-          conversationId: 'c',
-          sidepanelTabId: 't',
-          finalAssistantContent: VALID_HANDOFF,
-        };
-      },
-    };
-    const coordinator = new TaskRunCoordinator({
-      executionSurface: surface,
-      now: () => '2026-06-05T00:00:00Z',
-      isProviderEnabled: () => true,
-      ownsModel: () => true,
-      writeTaskStatus: async () => {},
-      appendLedger: async () => {},
-      writeHandoff: async () => {},
-    });
-
-    const runPromise = coordinator.run(makeTask());
+    const surface = new FakeSurface();
+    const { coordinator } = makeCoordinator(surface);
+    const p = coordinator.run(makeTask());
+    await flushMicrotasks();
     expect(coordinator.isActive('task-1')).toBe(true);
-    release();
-    await runPromise;
+    surface.adapter.emitText(VALID_HANDOFF);
+    surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await p;
     expect(coordinator.isActive('task-1')).toBe(false);
   });
 });
@@ -237,37 +326,12 @@ describe('TaskRunCoordinator.isActive', () => {
 describe('TaskRunCoordinator — shared activeRuns', () => {
   it('two coordinators sharing a set observe each others in-flight runs', async () => {
     const shared = new Set<string>();
-    let release!: () => void;
-    const gate = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const surface: TaskExecutionSurface = {
-      startTaskRun: async () => {
-        await gate;
-        return {
-          status: 'completed',
-          runId: 'r',
-          conversationId: 'c',
-          sidepanelTabId: 't',
-          finalAssistantContent: VALID_HANDOFF,
-        };
-      },
-    };
-    const make = (): TaskRunCoordinator =>
-      new TaskRunCoordinator({
-        executionSurface: surface,
-        now: () => '2026-06-05T00:00:00Z',
-        isProviderEnabled: () => true,
-        ownsModel: () => true,
-        activeRuns: shared,
-        writeTaskStatus: async () => {},
-        appendLedger: async () => {},
-        writeHandoff: async () => {},
-      });
-    const a = make();
-    const b = make();
+    const surfaceA = new FakeSurface();
+    const { coordinator: a } = makeCoordinator(surfaceA, { activeRuns: shared });
+    const { coordinator: b } = makeCoordinator(new FakeSurface(), { activeRuns: shared });
 
-    const runPromise = a.run(makeTask());
+    const p = a.run(makeTask());
+    await flushMicrotasks();
     // The run started in `a` is visible to `b` through the shared set.
     expect(b.isActive('task-1')).toBe(true);
     // And `b` refuses to launch the same card while it is in flight elsewhere.
@@ -275,93 +339,54 @@ describe('TaskRunCoordinator — shared activeRuns', () => {
       ok: false,
       error: 'This work order is already running.',
     });
-    release();
-    await runPromise;
+    surfaceA.adapter.emitText(VALID_HANDOFF);
+    surfaceA.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await p;
     expect(b.isActive('task-1')).toBe(false);
   });
 });
 
 describe('TaskRunCoordinator — shared chat-tab reservations', () => {
-  function gatedSurface(reservations: ChatTabReservations) {
-    let release!: () => void;
-    const gate = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const seen = { pendingDuringRun: -1, gotReservation: false };
-    const surface: TaskExecutionSurface = {
-      startTaskRun: async (_task, options) => {
-        seen.pendingDuringRun = reservations.pending;
-        seen.gotReservation = options.tabReservation !== undefined;
-        await gate;
-        return {
-          status: 'completed',
-          runId: 'r',
-          conversationId: 'c',
-          sidepanelTabId: 't',
-          finalAssistantContent: VALID_HANDOFF,
-        };
-      },
-    };
-    return { surface, release: () => release(), seen };
-  }
-
-  function make(reservations: ChatTabReservations, surface: TaskExecutionSurface): TaskRunCoordinator {
-    return new TaskRunCoordinator({
-      executionSurface: surface,
-      now: () => '2026-06-05T00:00:00Z',
-      isProviderEnabled: () => true,
-      ownsModel: () => true,
-      reservations,
-      writeTaskStatus: async () => {},
-      appendLedger: async () => {},
-      writeHandoff: async () => {},
-    });
-  }
-
-  it('reserves a tab before the run and passes the reservation to the surface', async () => {
+  it('reserves a tab before the run, passes it to the surface, and releases it after', async () => {
     const reservations = new ChatTabReservations();
-    const { surface, release, seen } = gatedSurface(reservations);
-    const coordinator = make(reservations, surface);
+    const surface = new FakeSurface();
+    const { coordinator } = makeCoordinator(surface, { reservations });
 
-    const runPromise = coordinator.run(makeTask());
+    const p = coordinator.run(makeTask());
+    await flushMicrotasks();
     // The reservation is taken synchronously at launch, visible to other panes.
     expect(reservations.pending).toBe(1);
-    release();
-    await runPromise;
-
-    expect(seen.pendingDuringRun).toBe(1);
-    expect(seen.gotReservation).toBe(true);
+    expect(surface.reservations[0]).toBeDefined();
+    surface.adapter.emitText(VALID_HANDOFF);
+    surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await p;
     // Released once the run settles (here via the finally safety net).
     expect(reservations.pending).toBe(0);
   });
 
   it('does not reserve when a guard rejects the run before launch', async () => {
     const reservations = new ChatTabReservations();
-    const { surface } = gatedSurface(reservations);
-    const coordinator = make(reservations, surface);
-
+    const { coordinator } = makeCoordinator(new FakeSurface(), { reservations });
     await coordinator.run(makeTask({ provider: undefined }));
     expect(reservations.pending).toBe(0);
   });
 
   it('stays balanced when the surface also releases (idempotent with the finally)', async () => {
     const reservations = new ChatTabReservations();
-    const surface: TaskExecutionSurface = {
-      // Mirrors the chat view releasing at tab creation, mid-run.
-      startTaskRun: async (_task, options) => {
-        options.tabReservation?.release();
-        return {
-          status: 'completed',
-          runId: 'r',
-          conversationId: 'c',
-          sidepanelTabId: 't',
-          finalAssistantContent: VALID_HANDOFF,
-        };
-      },
+    const surface = new FakeSurface();
+    // Mirror the chat view releasing the reservation at tab creation, mid-run.
+    const startTaskRun = surface.startTaskRun.bind(surface);
+    surface.startTaskRun = (task, options) => {
+      options.tabReservation?.release();
+      return startTaskRun(task, options);
     };
-    const coordinator = make(reservations, surface);
+    const { coordinator } = makeCoordinator(surface, { reservations });
 
-    await coordinator.run(makeTask());
+    const p = coordinator.run(makeTask());
+    await flushMicrotasks();
+    surface.adapter.emitText(VALID_HANDOFF);
+    surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await p;
     expect(reservations.pending).toBe(0);
   });
 });

@@ -108,10 +108,12 @@ describe('ClaudianView.injectCommitTurnForConversation', () => {
     const openConversation = jest.fn(async () => undefined);
     const canCreateTab = jest.fn(() => opts.canCreateTab ?? true);
     const startTaskRunInFreshTab = jest.fn(async () => ({
-      status: 'completed' as const,
       conversationId: 'conv-1',
       sidepanelTabId: 'tab-fresh',
-      finalAssistantContent: '',
+      subscribe: () => () => {},
+      sendFollowUp: async () => {},
+      cancel: () => {},
+      terminal: Promise.resolve({ status: 'completed' as const, finalAssistantContent: '' }),
     }));
 
     const view = Object.create(ClaudianView.prototype) as any;
@@ -277,6 +279,30 @@ describe('ClaudianView.injectCommitTurnForConversation', () => {
     expect(h.startTaskRunInFreshTab).toHaveBeenCalled();
   });
 
+  it('disposes the fresh-tab stream observer after the commit fallback settles', async () => {
+    const h = makeHarness({ initialCross: null });
+    const dispose = jest.fn();
+    h.view.startTaskRunInFreshTab = jest.fn(async () => ({
+      conversationId: 'conv-1',
+      sidepanelTabId: 'tab-fresh',
+      subscribe: jest.fn(() => dispose),
+      sendFollowUp: async () => {},
+      cancel: () => {},
+      terminal: Promise.resolve({ status: 'completed' as const, finalAssistantContent: '' }),
+    }));
+
+    await h.view.injectCommitTurnForConversation({
+      conversationId: null,
+      fallbackProviderId: 'claude',
+      fallbackModel: 'opus',
+      prompt: 'PROMPT',
+    });
+
+    // The commit flow doesn't read the stream, so it must release the eagerly
+    // registered observer instead of leaking it for the tab lifetime.
+    expect(dispose).toHaveBeenCalledTimes(1);
+  });
+
   it('throws when the chat view has no tabManager', async () => {
     const view = Object.create(ClaudianView.prototype) as any;
     view.tabManager = null;
@@ -299,7 +325,10 @@ describe('ClaudianView.startTaskRunInFreshTab — chat-tab reservation', () => {
     const createTaskRunTab = jest.fn(async () => ({
       id: 'tab-1',
       conversationId: 'conv-1',
-      controllers: { inputController: { sendMessage } },
+      controllers: {
+        inputController: { sendMessage },
+        streamController: { addStreamObserver: () => () => {} },
+      },
     }));
     const view = Object.create(ClaudianView.prototype) as any;
     view.tabManager = { createTaskRunTab };
@@ -313,7 +342,8 @@ describe('ClaudianView.startTaskRunInFreshTab — chat-tab reservation', () => {
 
     expect(createTaskRunTab).toHaveBeenCalledTimes(1);
     expect(release).toHaveBeenCalledTimes(1);
-    expect(result.status).toBe('completed');
+    // A live handle is returned once the tab exists.
+    expect(result).not.toBeNull();
   });
 
   it('releases the reservation when the tab cap blocks creation', async () => {
@@ -330,7 +360,7 @@ describe('ClaudianView.startTaskRunInFreshTab — chat-tab reservation', () => {
     });
 
     expect(release).toHaveBeenCalledTimes(1);
-    expect(result.status).toBe('failed');
+    expect(result).toBeNull();
   });
 
   it('releases the reservation when the chat view is not ready', async () => {
@@ -634,5 +664,149 @@ describe('ClaudianView Escape handling', () => {
     expect(event.preventDefault).not.toHaveBeenCalled();
     expect(sendMessage).not.toHaveBeenCalled();
     expect(result).toBeUndefined();
+  });
+});
+
+describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
+  it('buffers chunks emitted before the runner subscribes and replays them in order', async () => {
+    let rawObserver: ((chunk: { type: string }) => void) | null = null;
+    const streamController = {
+      addStreamObserver: (obs: (chunk: { type: string }) => void) => {
+        rawObserver = obs;
+        return () => { rawObserver = null; };
+      },
+    };
+    const inputController = {
+      sendMessage: jest.fn(async () => {
+        // Emit synchronously during the turn — before the runner subscribes.
+        rawObserver?.({ type: 'text' });
+        rawObserver?.({ type: 'done' });
+        return { ok: true, finalAssistantContent: 'early' };
+      }),
+      cancelStreaming: jest.fn(),
+    };
+    const tab = {
+      id: 'tab-1',
+      conversationId: 'conv-1',
+      controllers: { inputController, streamController },
+    };
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
+
+    const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
+    expect(handle).not.toBeNull();
+
+    const seen: string[] = [];
+    handle.subscribe((chunk: { type: string }) => seen.push(chunk.type));
+    expect(seen).toEqual(['text', 'done']);
+
+    const terminal = await handle.terminal;
+    expect(terminal.status).toBe('completed');
+  });
+
+  it('reports a failed follow-up turn via its settlement outcome', async () => {
+    const streamController = { addStreamObserver: () => () => {} };
+    let call = 0;
+    const inputController = {
+      sendMessage: jest.fn(async () => {
+        call += 1;
+        return call === 1
+          ? { ok: true, finalAssistantContent: '' }
+          : { ok: false, finalAssistantContent: '', error: 'init failed' };
+      }),
+      cancelStreaming: jest.fn(),
+    };
+    const tab = { id: 'tab-1', conversationId: 'conv-1', controllers: { inputController, streamController } };
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
+
+    const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
+    const outcome = await handle.sendFollowUp('reply');
+
+    expect(outcome).toEqual({ ok: false, error: 'init failed' });
+  });
+
+  it('reports a successful follow-up turn (no stream end needed) via its outcome', async () => {
+    let rawObserver: ((chunk: { type: string }) => void) | null = null;
+    const streamController = {
+      addStreamObserver: (obs: (chunk: { type: string }) => void) => {
+        rawObserver = obs;
+        return () => { rawObserver = null; };
+      },
+    };
+    let call = 0;
+    const inputController = {
+      sendMessage: jest.fn(async () => {
+        call += 1;
+        // The first turn ends with a real done; the follow-up resolves ok but
+        // emits none (e.g. the provider threw after creating the message). The
+        // settlement outcome — not a synthetic chunk — carries the completion.
+        if (call === 1) rawObserver?.({ type: 'done' });
+        return { ok: true, finalAssistantContent: 'reply-content' };
+      }),
+      cancelStreaming: jest.fn(),
+    };
+    const tab = { id: 'tab-1', conversationId: 'conv-1', controllers: { inputController, streamController } };
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
+
+    const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
+    const seen: Array<{ type: string }> = [];
+    handle.subscribe((chunk: { type: string }) => seen.push(chunk));
+    seen.length = 0; // drop the initial turn's replayed chunks
+
+    const outcome = await handle.sendFollowUp('reply');
+
+    expect(outcome).toEqual({ ok: true, finalAssistantContent: 'reply-content' });
+    // No synthetic stream chunk is emitted; the runner finishes from the outcome.
+    expect(seen).toEqual([]);
+  });
+
+  it('reports no outcome for a queued follow-up (sendMessage signals queued)', async () => {
+    const streamController = { addStreamObserver: () => () => {} };
+    let call = 0;
+    const inputController = {
+      sendMessage: jest.fn(async () => {
+        call += 1;
+        // First turn settles; the reply arrives while still streaming, so the
+        // controller queues it and signals `queued` (accepted, will run later).
+        return call === 1
+          ? { ok: true, finalAssistantContent: '' }
+          : { ok: true, finalAssistantContent: '', queued: true };
+      }),
+      cancelStreaming: jest.fn(),
+    };
+    const tab = { id: 'tab-1', conversationId: 'conv-1', controllers: { inputController, streamController } };
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
+
+    const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
+    const outcome = await handle.sendFollowUp('reply');
+
+    // Queued, not failed — the runner must wait for the queued turn's stream end.
+    expect(outcome).toBeUndefined();
+  });
+
+  it('fails a follow-up that was not sent (sendMessage resolves undefined, no queued turn)', async () => {
+    const streamController = { addStreamObserver: () => () => {} };
+    let call = 0;
+    const inputController = {
+      sendMessage: jest.fn(async () => {
+        call += 1;
+        // First turn settles; the reply is a no-op (e.g. conversation switching
+        // or a built-in command) — no queued turn and no stream end will arrive.
+        return call === 1 ? { ok: true, finalAssistantContent: '' } : undefined;
+      }),
+      cancelStreaming: jest.fn(),
+    };
+    const tab = { id: 'tab-1', conversationId: 'conv-1', controllers: { inputController, streamController } };
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
+
+    const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
+    const outcome = await handle.sendFollowUp('reply');
+
+    // No queued turn will deliver: fail fast rather than hang until the stale timer.
+    expect(outcome).toEqual({ ok: false, error: 'Follow-up turn could not be sent.' });
   });
 });
