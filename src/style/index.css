@@ -51,6 +51,7 @@
 @import "./features/empty-state.css";
 @import "./features/context-card.css";
 @import "./features/work-order-handoff-card.css";
+@import "./features/work-order-protocol-cards.css";
 @import "./features/agent-board.css";
 
 /* Modals */
