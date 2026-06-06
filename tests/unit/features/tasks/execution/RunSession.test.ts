@@ -483,6 +483,24 @@ describe('RunSession', () => {
     expect(statuses).toEqual(['running', 'needs_input', 'running', 'review']);
   });
 
+  it('completes a follow-up via its own handoff even when the pause buffer is longer', async () => {
+    const { session, adapter, statuses } = makeSession({ heartbeatIntervalMs: 100000, staleThresholdMs: 100000 });
+    const terminal = session.run();
+    // A long pause question, so finalContentBuffer exceeds the follow-up handoff.
+    const longQuestion = 'which of these environment files should I use for the deployment configuration step here';
+    adapter.emitText(`<claudian_needs_input>\nquestion: ${longQuestion}\n</claudian_needs_input>`);
+    await Promise.resolve();
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked' }); // pause-turn end
+    await Promise.resolve();
+    await session.resume({ kind: 'reply', content: '.env' });
+
+    // The follow-up settles ok with a (shorter) valid handoff and no stream text.
+    adapter.settleFollowUp({ ok: true, finalAssistantContent: VALID_HANDOFF });
+    const result = await terminal;
+    expect(result).toEqual({ ok: true, status: 'review' });
+    expect(statuses[statuses.length - 1]).toBe('review');
+  });
+
   it('finishes a follow-up settling ok even if a late pause-turn done arrives after resume', async () => {
     const { session, adapter } = makeSession({ heartbeatIntervalMs: 100000, staleThresholdMs: 100000 });
     const terminal = session.run();

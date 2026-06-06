@@ -216,8 +216,10 @@ export class RunSession {
    */
   private completeFromFollowUp(content: string): void {
     if (this.finishing || this.paused) return;
-    const final = content.length >= this.finalContentBuffer.length ? content : this.finalContentBuffer;
-    void this.finish({ status: 'completed', finalAssistantContent: final });
+    // Use the follow-up turn's own result, not the accumulated multi-turn buffer:
+    // finalContentBuffer still holds the earlier pause turn, so a length compare
+    // could discard a valid (shorter) follow-up handoff for stale pause text.
+    void this.finish({ status: 'completed', finalAssistantContent: content });
   }
 
   cancel(reason = 'stopped by user'): void {
