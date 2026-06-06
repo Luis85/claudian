@@ -1,7 +1,7 @@
 ---
 title: Release-hardening improvement package
 date: 2026-06-06
-status: in-progress
+status: done
 scope: security, obsidian-compliance, ux, release-hygiene
 ---
 
@@ -41,4 +41,16 @@ failing gate re-dispatches the agent. A polishing pass follows once all land.
 ## Status log
 
 - 2026-06-06: package created; baseline `typecheck`+`lint` green.
+- 2026-06-06: all six items shipped via dedicated subagents (RALPH loop, sequential, each gated). Commits:
+  - #1 fork/naming — `9590b8a`
+  - #2 codex env allowlist — `84d8d56`
+  - #3 value-level redaction — `579fa1c`
+  - #4 innerHTML lint guard — `08365df` (audit found zero unsafe sites; guard added)
+  - #5 normalizePath coverage — `9d2d772`
+  - #6 actionable error cards — `05a1ff7`
+- 2026-06-06: polishing pass — integrated gate green (`typecheck`, `lint`, `build`, **7647 unit tests pass**); diffs reviewed (all reuse existing plumbing, no fabricated paths; `projectErrorText`/`ERROR_PREFIX` dead code removed); related docs synced (source proposal rows annotated shipped; `CLAUDE.md` updates for redaction contract, render guard, normalizePath, chat renderer table; style module registered).
+
+## Deferred / follow-ups
+
+- Known-secret-value fingerprinting for diagnostics (SEC-E optional bullet) — needs SecretStorage plumbed into the logging layer; tracked alongside SEC-A.
 </content>

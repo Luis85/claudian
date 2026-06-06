@@ -42,7 +42,8 @@ ClaudianView (lifecycle + assembly)
 │   ├── SubagentRenderer
 │   ├── InlineExitPlanMode
 │   ├── InlinePlanApproval
-│   └── InlineAskUserQuestion
+│   ├── InlineAskUserQuestion
+│   └── InlineRuntimeError
 ├── Tabs
 │   ├── TabManager
 │   ├── TabBar
@@ -96,6 +97,7 @@ The feature layer consumes provider-neutral `StreamChunk` values. Providers own 
 | `InlineExitPlanMode` | Claude tool-driven exit-plan approval |
 | `InlinePlanApproval` | Shared post-plan approval flow driven by consumed turn metadata (currently Codex) |
 | `InlineAskUserQuestion` | Ask-user cards emitted by provider runtimes |
+| `InlineRuntimeError` | Actionable runtime-error cards — classified via `classifyRuntimeError` (cli-not-found / unauthenticated / context-too-large / generic) with open-settings, provider login hint, and real retry re-dispatch |
 | `TodoListRenderer` | Todo items and status icons |
 | `SubagentRenderer` | Background agent lifecycle rendering |
 
