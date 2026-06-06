@@ -270,31 +270,6 @@ export type TranslationKey =
   | 'chat.input.openConversationFailed'
   | 'chat.input.chatServiceInitFailed'
 
-  // Chat - Orchestrator
-  | 'chat.orchestrator.titleOpen'
-  | 'chat.orchestrator.titleInactive'
-  | 'chat.orchestrator.titleActive'
-  | 'chat.orchestrator.toggleFailed'
-  | 'chat.orchestrator.spawnHeader'
-  | 'chat.orchestrator.spawnWorkers'
-  | 'chat.orchestrator.modal.title'
-  | 'chat.orchestrator.modal.intro'
-  | 'chat.orchestrator.modal.activeBanner'
-  | 'chat.orchestrator.modal.sectionWhatTitle'
-  | 'chat.orchestrator.modal.sectionWhatBody'
-  | 'chat.orchestrator.modal.sectionGoalTitle'
-  | 'chat.orchestrator.modal.sectionGoalBody'
-  | 'chat.orchestrator.modal.sectionTipsTitle'
-  | 'chat.orchestrator.modal.sectionTipsBody'
-  | 'chat.orchestrator.modal.sectionNextTitle'
-  | 'chat.orchestrator.modal.sectionNextBody'
-  | 'chat.orchestrator.modal.goalLabel'
-  | 'chat.orchestrator.modal.goalDesc'
-  | 'chat.orchestrator.modal.goalPlaceholder'
-  | 'chat.orchestrator.modal.goalRequired'
-  | 'chat.orchestrator.modal.submit'
-  | 'chat.orchestrator.modal.submitFailed'
-  | 'chat.orchestrator.modal.turnOff'
 
   // Quick Actions
   | 'quickActions.toolbar.ariaLabel'
@@ -607,14 +582,8 @@ export type TranslationKey =
   | 'settings.language.desc'
 
   // Settings - Tabs
-  | 'settings.tabs.orchestrator'
   | 'settings.tabs.quickActions'
 
-  // Settings - Orchestrator
-  | 'settings.orchestrator.enabled.name'
-  | 'settings.orchestrator.enabled.desc'
-  | 'settings.orchestrator.systemPrompt.name'
-  | 'settings.orchestrator.systemPrompt.desc'
 
   // Settings - Quick Actions
   | 'settings.quickActions.folder.name'

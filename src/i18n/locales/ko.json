@@ -103,34 +103,6 @@
     "permissionMode": {
       "yoloWarning": "YOLO mode lets the agent run commands and edit files with no approval prompts. A malicious or prompt-injected note could execute code. Only use YOLO in vaults you fully trust."
     },
-    "orchestrator": {
-      "titleInactive": "Orchestrator mode — parallel worker tabs",
-      "titleActive": "Orchestrator mode on",
-      "toggleFailed": "Failed to change orchestrator mode",
-      "spawnHeader": "Spawn {count} worker tab(s)?",
-      "spawnWorkers": "Spawn workers",
-      "titleOpen": "Open orchestrator goal guide",
-      "modal": {
-        "title": "Orchestrator goal",
-        "intro": "Describe what you want achieved. The main agent will plan parallel work and spawn worker tabs after you approve the plan.",
-        "activeBanner": "Orchestrator mode is on for this chat. Submit a new goal to steer workers, or turn orchestrator off.",
-        "sectionWhatTitle": "What orchestrator does",
-        "sectionWhatBody": "The main tab stays in charge: it breaks work into parallel tracks, proposes a plan, and coordinates worker tabs that run in the background.",
-        "sectionGoalTitle": "Write your goal",
-        "sectionGoalBody": "One clear outcome in plain language.\nScope boundaries (what is in / out).\nConstraints the workers must respect (files, providers, tests).",
-        "sectionTipsTitle": "Tips",
-        "sectionTipsBody": "Prefer independent workstreams the agent can run in parallel.\nMention deliverables (code, docs, tests) not just activities.\nKeep it short; details can live in follow-up messages.",
-        "sectionNextTitle": "What happens next",
-        "sectionNextBody": "Your goal is sent in orchestrator mode.\nThe agent drafts a plan with worker tasks.\nYou approve the plan to spawn worker tabs.",
-        "goalLabel": "Your goal",
-        "goalDesc": "This message is sent when you start orchestrator mode.",
-        "goalPlaceholder": "Example: Refactor the Cursor provider launch args and add unit tests for Windows plan mode, without changing Codex behavior.",
-        "goalRequired": "Enter a goal before starting orchestrator mode.",
-        "submit": "Start orchestrator",
-        "submitFailed": "Could not start orchestrator mode.",
-        "turnOff": "Turn off orchestrator"
-      }
-    },
     "queue": {
       "steerFailed": "Failed to steer the queued message. It is still available."
     },
@@ -205,7 +177,6 @@
       "general": "일반",
       "claude": "Claude",
       "codex": "Codex",
-      "orchestrator": "Orchestrator",
       "quickActions": "Quick Actions"
     },
     "display": "표시",
@@ -484,16 +455,6 @@
     "language": {
       "name": "언어",
       "desc": "플러그인 인터페이스의 표시 언어 변경"
-    },
-    "orchestrator": {
-      "enabled": {
-        "name": "Enable orchestrator mode",
-        "desc": "Show the orchestrator toolbar toggle and allow parallel worker tabs from approved plans."
-      },
-      "systemPrompt": {
-        "name": "Orchestrator system prompt",
-        "desc": "Additional instructions when orchestrator mode is on. Leave empty to use the built-in default."
-      }
     },
     "quickActions": {
       "folder": {
