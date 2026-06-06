@@ -119,8 +119,8 @@ Ruflo's ReasoningBank/AgentDB is its self-learning engine. Claudian doesn't need
 *Fit: good (Obsidian is literally a memory tool). Value: high. Effort: medium-high. Seam: net-new + MCP.*
 
 **1.3 — Cost / usage observability surfaced like ruflo's `cost-tracker`.**
-Claudian already tracks usage (`.claudian/usage.json`, `UsageEventMap`). Ruflo packages this as a first-class observability/cost plugin. Claudian could surface per-work-order and per-swarm-pipeline cost rollups on the Agent Board, plus a cost cap that pauses the queue (mirrors ruflo's budget circuit breaker). Low effort, high perceived value, no identity risk.
-*Fit: excellent. Value: medium-high. Effort: low.*
+Ruflo packages cost into a first-class observability plugin with a budget circuit breaker. Claudian could surface per-work-order and per-pipeline cost rollups on the Agent Board, plus a cost cap that pauses the queue. **Caveat on effort:** the two existing usage subsystems are distinct and neither is a cost ledger yet. `.claudian/usage.json` / `UsageEventMap` (`src/core/usage/`) is a *per-entry invocation counter for quick-actions and skills* (`kind`/`name`/`providerId`, count/lastUsedAt) — no tokens or dollars. Token/cost data lives separately as per-conversation `UsageInfo` (`src/core/providers/usage/`), where `costUsd` is only populated when a provider emits it and is **not persisted as a roll-up-able ledger**. So this item requires building a persisted, per-work-order cost ledger (capturing `UsageInfo`/`costUsd` per run) before any cap or rollup is possible — not merely surfacing existing data.
+*Fit: excellent. Value: medium-high. Effort: medium (needs a new cost-ledger substrate; `costUsd` is provider-dependent).*
 
 ### Tier 2 — Adopt selectively (real value, needs scoping to fit)
 
@@ -133,7 +133,7 @@ Ruflo's 45 typed agents (planner/coder/reviewer/security/docs) are mostly **prom
 *Fit: good. Value: medium-high. Effort: low-medium (depends on 1.1).*
 
 **2.3 — Plugin-marketplace surface for the existing "plugins approach."**
-Today Claudian *reads* Claude Code plugins but offers no discovery/install UX and only consumes their agents. Ruflo's `/plugin marketplace add` + plugin creator is a strong UX. Claudian could add (a) a settings panel listing installed Claude Code plugins with enable/disable (it already reconciles enabled state — just surface it), and (b) consume more than agents: plugin-contributed **commands, skills, and MCP servers**. This deepens the plugins approach the user specifically asked about, staying within the Claude Code plugin ecosystem rather than inventing a proprietary one.
+Today Claudian already *reads* Claude Code plugins and already ships an enable/disable panel: `PluginSettingsManager` (`src/providers/claude/ui/PluginSettingsManager.ts`), mounted by `ClaudeSettingsTab`, lists project/user plugins, refreshes, and toggles each via the dual-write enabled-state path. What it does **not** do is (a) provide a **discovery/install UX** (ruflo's `/plugin marketplace add` + plugin creator), and (b) consume **non-agent** plugin contributions — today only `agents/*.md` are scanned, so plugin-contributed **commands, skills, and MCP servers** are ignored. Those two gaps are the real Tier 2 work; the toggle panel is done. This deepens the plugins approach the user specifically asked about, staying within the Claude Code plugin ecosystem rather than inventing a proprietary one.
 *Fit: good (it's the user's stated angle). Value: medium-high. Effort: medium. Risk: keep it CC-compatible, don't fork the format.*
 
 **2.4 — Secret-aware, model-aware routing (a tiny bandit, not SONA).**
@@ -165,7 +165,7 @@ The user asked specifically what fits Claudian's *plugins approach*. Two distinc
 
 **(a) Claudian's provider/plugin extensibility (internal).** Claudian's `ProviderRegistry` + `ProviderWorkspaceRegistry` + capability flags are a strong, real plug-in architecture. The ruflo features that fit this seam are the ones expressible as **provider-neutral capabilities or auxiliary services**: dependency scheduling (board-level, provider-agnostic), shared memory (an MCP server any provider can use), cost routing (a model-resolver policy). These respect the boundary — they don't leak ruflo's Claude-specific swarm assumptions across providers.
 
-**(b) Claude Code plugins (external ecosystem).** Claudian already consumes Claude Code plugins (agents only). The highest-fit ruflo adoption *for the plugins angle specifically* is **2.3**: deepen this from "read agents" to "read agents + commands + skills + MCP, with an in-app enable/disable panel." Crucially, ruflo itself ships **as Claude Code plugins** (`/plugin marketplace add ruvnet/ruflo`) — so a Claudian user who installs ruflo's plugins would benefit directly if Claudian surfaced plugin-contributed commands/MCP. This is the cleanest interoperability story: **don't reimplement ruflo, render it.** Claudian becomes a great GUI for Claude Code plugins (including ruflo's), inside the vault.
+**(b) Claude Code plugins (external ecosystem).** Claudian already consumes Claude Code plugins (agents only) and already exposes an enable/disable panel (`PluginSettingsManager`). The highest-fit ruflo adoption *for the plugins angle specifically* is **2.3**: deepen consumption from "read agents" to "read agents + commands + skills + MCP," and add a discovery/install UX on top of the existing toggle panel. Crucially, ruflo itself ships **as Claude Code plugins** (`/plugin marketplace add ruvnet/ruflo`) — so a Claudian user who installs ruflo's plugins would benefit directly if Claudian surfaced plugin-contributed commands/MCP. This is the cleanest interoperability story: **don't reimplement ruflo, render it.** Claudian becomes a great GUI for Claude Code plugins (including ruflo's), inside the vault.
 
 > **Strategic note:** This reframes ruflo from "competitor to out-feature" to "ecosystem Claudian can host." Claudian's differentiator — Obsidian-native legibility, human gating, crash-recoverable runs — is orthogonal to ruflo's swarm engine. The strongest move is to make Claudian the **best place to run and observe Claude Code plugins (ruflo included) from a vault**, while adding the small set of orchestration primitives (DAG + shared memory) that make multi-step work first-class.
 
@@ -204,10 +204,10 @@ Everything in Tiers 1–2 is achievable through the three identified seams plus 
 | Crash recovery / heartbeat | daemon | ✅ sidecar+runtimeId | — (Claudian strong) |
 | Task DAG / dependencies | ✅ | ❌ | **Tier 1** |
 | Inter-agent shared memory | ✅ AgentDB/ReasoningBank | ❌ | **Tier 1** (scoped) |
-| Cost tracking + budget cap | ✅ | partial (usage only) | **Tier 1** |
+| Cost tracking + budget cap | ✅ | ❌ (invocation counter only; no cost ledger) | **Tier 1** |
 | Role-specialized agents | ✅ 45 | ❌ board-level | **Tier 2** |
 | Gated methodology (SPARC) | ✅ | ❌ | **Tier 2** (as template chain) |
-| Plugin marketplace / surfacing | ✅ 33 | reads CC plugins (agents) | **Tier 2** (deepen) |
+| Plugin marketplace / surfacing | ✅ 33 | reads CC plugin agents + toggle UI (no install UX, no commands/skills/MCP) | **Tier 2** (deepen) |
 | Model-tier routing | ✅ bandit | ❌ | **Tier 2** (heuristic) |
 | Background workers / daemon | ✅ | ❌ | Tier 3 (scheduled WOs) |
 | Queen/hive-mind + consensus | ✅ | ❌ | **No** |
