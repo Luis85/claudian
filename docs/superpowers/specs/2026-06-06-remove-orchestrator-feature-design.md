@@ -1,7 +1,7 @@
 ---
 title: Remove the Orchestrator feature
 date: 2026-06-06
-status: ready-for-review
+status: approved (design)
 scope: features/chat, providers, settings, i18n, docs/product
 parent: "[[Agent Kanban Board]]"
 relations:
@@ -208,5 +208,4 @@ These are intentionally outside this removal spec:
 - Add Agent Board affordances for decomposing a large goal into multiple work orders.
 - Add a combined-review surface across a related set of Agent Board work orders.
 - Add explicit archival cleanup for stale Orchestrator keys if future settings normalization work needs it.
-
 
