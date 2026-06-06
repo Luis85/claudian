@@ -69,4 +69,23 @@ describe('appendQuickActionFavoritesAndPicker', () => {
     // Picker entry still appended.
     expect(menu.items).toHaveLength(1);
   });
+
+  it('appends favorites in the order returned by getFavorites()', () => {
+    const menu = new MockMenu();
+    const plugin = {
+      quickActionFavoritesCache: {
+        getFavorites: () => [
+          { id: '1', name: 'First',  description: '', prompt: '', filePath: 'qa/first.md' },
+          { id: '2', name: 'Second', description: '', prompt: '', filePath: 'qa/second.md' },
+          { id: '3', name: 'Third',  description: '', prompt: '', filePath: 'qa/third.md' },
+        ],
+      },
+    } as any;
+    const file = { path: 'note.md' } as any;
+    appendQuickActionFavoritesAndPicker(menu as any, plugin, file);
+    // menu.items[0] is the picker; menu.items[1..3] are favorites in order.
+    expect(menu.items[1].title).toBe('First');
+    expect(menu.items[2].title).toBe('Second');
+    expect(menu.items[3].title).toBe('Third');
+  });
 });
