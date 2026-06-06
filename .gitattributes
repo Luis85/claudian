@@ -1,0 +1,7 @@
+# Enforce LF line endings repo-wide. `text=auto` lets git auto-detect text vs
+# binary, so binary assets are left untouched; text files are stored and checked
+# out with LF on every platform, keeping diffs and blame free of CRLF churn.
+* text=auto eol=lf
+
+# Binary assets must never be line-ending normalized.
+*.png binary
