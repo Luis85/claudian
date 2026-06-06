@@ -343,8 +343,12 @@ export interface TaskRunTabHandle {
   sidepanelTabId: TabId;
   /** Observe the live neutral stream chunks for this tab's run. */
   subscribe(observer: (chunk: StreamChunk) => void): () => void;
-  /** Send a follow-up turn; resolves with the turn's settlement (see {@link TaskRunTabFollowUpOutcome}). */
-  sendFollowUp(content: string): Promise<TaskRunTabFollowUpOutcome>;
+  /**
+   * Send a follow-up turn; resolves with the turn's settlement (see
+   * {@link TaskRunTabFollowUpOutcome}), or `void` when the turn was queued (the
+   * tab was still streaming) and will report its end via the stream instead.
+   */
+  sendFollowUp(content: string): Promise<TaskRunTabFollowUpOutcome | void>;
   /** Cancel the active turn. */
   cancel(): void;
   /** Resolves when the initial turn settles. */

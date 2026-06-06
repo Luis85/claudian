@@ -676,4 +676,27 @@ describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
     // No synthetic stream chunk is emitted; the runner finishes from the outcome.
     expect(seen).toEqual([]);
   });
+
+  it('reports no outcome for a queued follow-up (sendMessage resolves undefined)', async () => {
+    const streamController = { addStreamObserver: () => () => {} };
+    let call = 0;
+    const inputController = {
+      sendMessage: jest.fn(async () => {
+        call += 1;
+        // First turn settles; the reply arrives while still streaming, so the
+        // controller queues it and resolves undefined (not a failure).
+        return call === 1 ? { ok: true, finalAssistantContent: '' } : undefined;
+      }),
+      cancelStreaming: jest.fn(),
+    };
+    const tab = { id: 'tab-1', conversationId: 'conv-1', controllers: { inputController, streamController } };
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
+
+    const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
+    const outcome = await handle.sendFollowUp('reply');
+
+    // Queued, not failed — the runner must wait for the queued turn's stream end.
+    expect(outcome).toBeUndefined();
+  });
 });

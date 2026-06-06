@@ -8,7 +8,7 @@ import type { FollowUpOutcome, ProviderStreamAdapter, StreamHandlers } from './P
  */
 export interface StreamingTabHandle {
   subscribe(observer: (chunk: StreamChunk) => void): () => void;
-  sendFollowUp(content: string): Promise<FollowUpOutcome>;
+  sendFollowUp(content: string): Promise<FollowUpOutcome | void>;
   cancel(): void;
 }
 
@@ -52,7 +52,7 @@ export class ChatTabStreamAdapter implements ProviderStreamAdapter {
     });
   }
 
-  sendFollowUp(content: string): Promise<FollowUpOutcome> {
+  sendFollowUp(content: string): Promise<FollowUpOutcome | void> {
     return this.handle.sendFollowUp(content);
   }
 

@@ -536,4 +536,25 @@ describe('RunSession', () => {
     expect(result.ok).toBe(false);
     expect(statuses[statuses.length - 1]).toBe('failed');
   });
+
+  it('does not fail a queued follow-up (no outcome); the queued turn finishes it later', async () => {
+    const { session, adapter, statuses } = makeSession({ heartbeatIntervalMs: 100000, staleThresholdMs: 100000 });
+    const terminal = session.run();
+    adapter.emitText('<claudian_needs_input>\nquestion: q\n</claudian_needs_input>');
+    await Promise.resolve();
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked' }); // pause-turn end
+    await Promise.resolve();
+    await session.resume({ kind: 'reply', content: 'go' });
+
+    // The reply was queued (tab still streaming): no outcome is reported.
+    adapter.settleFollowUp();
+    await Promise.resolve();
+    expect(statuses[statuses.length - 1]).toBe('running'); // not failed
+
+    // The queued turn later runs and streams its own end.
+    adapter.emitText(VALID_HANDOFF);
+    adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    const result = await terminal;
+    expect(result).toEqual({ ok: true, status: 'review' });
+  });
 });
