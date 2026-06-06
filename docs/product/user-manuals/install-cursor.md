@@ -139,7 +139,7 @@ Cursor in Claudian is narrower than Claude. The composer hides controls the Curs
 - **Fork** — not supported on Cursor conversations.
 - **Provider slash commands** — Cursor does not expose runtime-discovered `/` commands. Claudian-defined `/` commands still work.
 - **In-app MCP management** — Claudian does not edit Cursor's MCP config. Use Cursor's own tooling.
-- **Subagents** — Cursor does not expose a `Task`-style subagent tool. Orchestrator workers still spawn as chat tabs, but they cannot fan out further.
+- **Subagents** — Cursor does not expose a `Task`-style subagent tool.
 
 Plan mode, the YOLO/Safe permission toggle, image attachments, the `#` instruction mode, and session resume from `~/.cursor/chats/<workspace>/<session>/` all work.
 

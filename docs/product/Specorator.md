@@ -9,7 +9,6 @@ features:
   - "[[Chat]]"
   - "[[Multi Provider Support]]"
   - "[[Quick Actions]]"
-  - "[[Orchestrator]]"
   - "[[Agent Kanban Board]]"
 roadmap: "[[Specorator Agent Harness PRD]]"
 cta_url: https://github.com/Luis85/specorator
@@ -31,7 +30,6 @@ You're already using AI for serious work. Drafting emails. Planning trips. Compa
 
 - Typing the same prompts every day. Save any prompt as a vault note and fire it from a one-tap picker.
 - Being locked into one tool's UI for one provider. Use whichever providers you have access to, in one workspace.
-- Goals too big for a single chat. Split the work into pieces that run at the same time and get one combined answer.
 - AI work scattering across thirty open tabs. A board tracks every handoff from inbox to done.
 - The agent quietly changing your notes. Preview every edit before it lands, or flip on YOLO mode when you trust the run.
 
@@ -52,7 +50,6 @@ You're already using AI for serious work. Drafting emails. Planning trips. Compa
 | [[Chat]]                   | A workspace beside your notes that already knows what you're looking at and what you've highlighted.     |
 | [[Multi Provider Support]] | Different engines for different jobs. Pick the one that fits the moment.                                 |
 | [[Quick Actions]]          | Your most-used prompts, one tap away. Stored as vault notes you own.                                     |
-| [[Orchestrator]]           | Split a goal into independent tasks, run them in parallel, get one answer that brings them all together. |
 | [[Agent Kanban Board]]     | A board for things you have handed off. Inbox to done, never lost in chat history.                       |
 
 ## What this is not
@@ -67,13 +64,13 @@ You're already using AI for serious work. Drafting emails. Planning trips. Compa
 
 ## Who it's for
 
-If you keep your thinking in a vault and you want help with the mechanical parts of that thinking, this is for you. You don't need to know what an API is. You don't need to write code. You need a folder of notes and a willingness to treat the AI provider less like a search bar and more like a co-worker you give work to. Start with one chat in the sidebar. When you catch yourself typing the same prompt twice, save it as a Quick Action your co-worker can run on tap. When one question turns into four, hand all four to the Orchestrator and let it split the load. When the list of things you've handed off starts to slip, open the board and treat it like a shared backlog between the two of you.
+If you keep your thinking in a vault and you want help with the mechanical parts of that thinking, this is for you. You don't need to know what an API is. You don't need to write code. You need a folder of notes and a willingness to treat the AI provider less like a search bar and more like a co-worker you give work to. Start with one chat in the sidebar. When you catch yourself typing the same prompt twice, save it as a Quick Action your co-worker can run on tap. When one question turns into a durable handoff, put it on the Agent Board so it keeps a record. When the list of things you've handed off starts to slip, open the board and treat it like a shared backlog between the two of you.
 
 ---
 
 ## Where it's heading
 
-**Specorator v1.0.0** is today's feature set — Chat, Multi-Provider, Quick Actions, Orchestrator, Agent Board — rebranded from the Claudian codebase and shipped as a standalone plugin. It does **not** wait on the harness work below. What follows is the **post-1.0 harness roadmap** layered on top of that rebrand: making the assistant something a person who has never opened a terminal can install and trust. The plan is the **[[Specorator Agent Harness PRD]]**.
+**Specorator v1.0.0** is today's feature set — Chat, Multi-Provider, Quick Actions, Agent Board — rebranded from the Claudian codebase and shipped as a standalone plugin. It does **not** wait on the harness work below. What follows is the **post-1.0 harness roadmap** layered on top of that rebrand: making the assistant something a person who has never opened a terminal can install and trust. The plan is the **[[Specorator Agent Harness PRD]]**.
 
 The short version of that plan: keep the depth Specorator already has — real AI engines, working side by side, with your notes underneath — and close the three things that today still ask too much of a non-technical person.
 

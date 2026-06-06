@@ -26,7 +26,7 @@ related:
 # Specorator Agent Harness PRD
 
 > **Naming & versioning (reconciled with the migration plan).** *Claudian* is the current plugin/codebase. **Specorator is the product name**, and two efforts share it — sequenced, not the same release:
-> 1. The **brand/standalone migration** ([[2026-05-30-specorator-standalone-migration]]) ships **Specorator v1.0.0** = *today's* feature set (chat, Agent Board, inline edit, Quick Actions, Orchestrator) rebranded, moved to its own repo (`Luis85/specorator`), with `.claudian/` → `.specorator/` storage and `claudian-*` → `specorator-*` identifiers. It is a packaging release, not new capability.
+> 1. The **brand/standalone migration** ([[2026-05-30-specorator-standalone-migration]]) ships **Specorator v1.0.0** = *today's* feature set (chat, Agent Board, inline edit, Quick Actions) rebranded, moved to its own repo (`Luis85/specorator`), with `.claudian/` → `.specorator/` storage and `claudian-*` → `specorator-*` identifiers. It is a packaging release, not new capability.
 > 2. **This PRD** describes the **agent-harness program that ships *after* v1.0.0** (the phased roadmap in §12 — onboarding, undo, Vault MCP, RAG, Harness Library), i.e. Specorator **v1.x → v2**.
 >
 > So wherever this document says "Specorator v1," read *"the harness roadmap layered on top of the v1.0.0 rebrand."* One dependency already handled: the harness's in-app key entry (F-ON-4) needs Obsidian **`minAppVersion` 1.11.5** for `SecretStorage`, and the live manifest is **already at 1.11.5** — the migration plan's Task 2 draft has been updated to preserve that floor. See [[Specorator]] for the product overview and [[Specorator Architecture (C4)]] for the C4 canvas.
@@ -155,7 +155,7 @@ This reframes delegation from a liability into the distribution channel: **one V
 
 The product today serves **Devin** well and **Maya/Sam** poorly. This PRD's job is to bring Maya and Sam in without losing Devin.
 
-**Crosswalk to the shipped persona taxonomy** (every shipped feature doc targets `knowledge-worker` / `pm`): Maya & Sam ≈ `knowledge-worker`; the **`pm` job** the shipped product centres on (handoff tracking via the **Agent Board**, parallel runs via the **Orchestrator**) maps to Sam/Devin doing project work — it must survive the non-technical pivot, not be displaced by it (see [§7.1](#71-coherence-with-shipped-features)). Devin = power-user; Priya = privacy. The empty `docs/product/jobs-to-be-done/*` stubs should be filled against this crosswalk.
+**Crosswalk to the shipped persona taxonomy** (every shipped feature doc targets `knowledge-worker` / `pm`): Maya & Sam ≈ `knowledge-worker`; the **`pm` job** the shipped product centres on (handoff tracking via the **Agent Board**) maps to Sam/Devin doing project work — it must survive the non-technical pivot, not be displaced by it (see [§7.1](#71-coherence-with-shipped-features)). Devin = power-user; Priya = privacy. The empty `docs/product/jobs-to-be-done/*` stubs should be filled against this crosswalk.
 
 ---
 
@@ -191,7 +191,7 @@ These shape every feature and are confirmed by the platform research:
 This PRD builds on shipped features; three need explicit reconciliation so the harness doesn't quietly contradict them:
 
 - **Agent Board.** F-PLAN-1 adds plan→tasks→runs to the Board, but the shipped [[Agent Kanban Board]] doc lists *non-goals* ("not a project-management tool; no assignees/due dates"). Keep that model — add plan/run linkage without turning it into a PM tool, or amend that doc deliberately.
-- **Orchestrator.** The shipped [[Orchestrator]] runs parallel workers *with full vault access* — in direct tension with `.obsidian-agentignore` (F-SAFE-4) and subagent isolation (F-ORCH-1). The §9 security model must apply to Orchestrator workers, not just single chats; UC-4's isolated-ingest pattern should reuse, not bypass, the Orchestrator worker model.
+
 - **Storage path.** Shipped feature docs already say `.specorator/sessions/` while the code uses `.claudian/`; the migration plan ([[2026-05-30-specorator-standalone-migration]]) owns that rename. Until it ships, `.claudian/` is current (see R4).
 
 ---

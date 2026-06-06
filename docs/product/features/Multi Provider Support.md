@@ -9,7 +9,6 @@ personas:
 cta_url: https://github.com/Luis85/specorator
 related:
   - "[[Chat]]"
-  - "[[Orchestrator]]"
 user_manual: "[[multi-provider]]"
 parent: Infrastructure
 ---

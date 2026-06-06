@@ -52,7 +52,7 @@ When logging is on, every captured entry is also printed to Obsidian's developer
 Each line is prefixed with the scope in brackets:
 
 ```text
-[claude.runtime] query start { orchestratorMode: false, hasHistory: true, sessionId: '…' }
+[claude.runtime] query start { hasHistory: true, sessionId: '…' }
 [events] handler for "chat.message" threw  Error: …
 [cursor.workspace] model discovery failed  Error: timed out
 ```
