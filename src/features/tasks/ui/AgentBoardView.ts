@@ -241,6 +241,7 @@ export class AgentBoardView extends ItemView {
           plugin: this.plugin,
           onOpenNote: (target) => void this.openTask(target),
           ...buildWorkOrderConversationBindings(this.plugin),
+          onArchive: (target) => void this.archiveTask(target),
         }),
         onReply: (task, content) => void this.onReply(task.frontmatter.id, content),
         onApprove: (task) => void this.onApprove(task.frontmatter.id),
