@@ -2,11 +2,11 @@ import { setIcon } from 'obsidian';
 
 import { type CollapsibleState,setupCollapsible } from './collapsible';
 import type { RenderContentFn } from './MessageRenderer';
-import type { WorkOrderHandoffDisplaySegment } from './WorkOrderHandoffDisplay';
+import type { WorkOrderProtocolSegment } from './WorkOrderProtocolDisplay';
 
 export function renderWorkOrderHandoffCard(
   parentEl: HTMLElement,
-  segment: WorkOrderHandoffDisplaySegment,
+  segment: Extract<WorkOrderProtocolSegment, { type: 'handoff' }>,
   renderMarkdown: RenderContentFn,
 ): void {
   const wrapper = parentEl.createDiv({ cls: 'claudian-work-order-handoff-card' });

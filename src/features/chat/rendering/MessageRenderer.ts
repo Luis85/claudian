@@ -31,10 +31,13 @@ import {
 import { renderStoredThinkingBlock } from './ThinkingBlockRenderer';
 import { renderStoredToolCall } from './ToolCallRenderer';
 import { renderWorkOrderHandoffCard } from './WorkOrderHandoffCard';
+import { renderWorkOrderNeedsApprovalCard } from './WorkOrderNeedsApprovalCard';
+import { renderWorkOrderNeedsInputCard } from './WorkOrderNeedsInputCard';
+import { renderWorkOrderProgressCard } from './WorkOrderProgressCard';
 import {
-  splitWorkOrderHandoffForDisplay,
-  type WorkOrderHandoffSegment,
-} from './WorkOrderHandoffDisplay';
+  splitWorkOrderProtocolForDisplay,
+  type WorkOrderProtocolSegment,
+} from './WorkOrderProtocolDisplay';
 import { renderStoredWriteEdit } from './WriteEditRenderer';
 
 /**
@@ -502,16 +505,12 @@ export class MessageRenderer {
   }
 
   private renderAssistantTextBlock(contentEl: HTMLElement, markdown: string): void {
-    const handoffSegments = this.getWorkOrderPath()
-      ? splitWorkOrderHandoffForDisplay(markdown)
-      : null;
-
-    if (!handoffSegments) {
+    if (!this.getWorkOrderPath()) {
       this.renderPlainAssistantTextBlock(contentEl, markdown);
       return;
     }
-
-    for (const segment of handoffSegments) {
+    const segments = splitWorkOrderProtocolForDisplay(markdown);
+    for (const segment of segments) {
       this.renderAssistantDisplaySegment(contentEl, segment);
     }
   }
@@ -522,12 +521,24 @@ export class MessageRenderer {
     this.addTextCopyButton(textEl, markdown);
   }
 
-  private renderAssistantDisplaySegment(contentEl: HTMLElement, segment: WorkOrderHandoffSegment): void {
+  private renderAssistantDisplaySegment(contentEl: HTMLElement, segment: WorkOrderProtocolSegment): void {
     if (segment.type === 'markdown') {
       this.renderPlainAssistantTextBlock(contentEl, segment.content);
       return;
     }
-
+    if (segment.type === 'progress') {
+      renderWorkOrderProgressCard(contentEl, segment.progress);
+      return;
+    }
+    if (segment.type === 'needs_input') {
+      renderWorkOrderNeedsInputCard(contentEl, segment.needsInput);
+      return;
+    }
+    if (segment.type === 'needs_approval') {
+      renderWorkOrderNeedsApprovalCard(contentEl, segment.needsApproval);
+      return;
+    }
+    // handoff
     renderWorkOrderHandoffCard(contentEl, segment, (el, md, options) => this.renderContent(el, md, options));
   }
 
@@ -545,8 +556,8 @@ export class MessageRenderer {
     markdown: string,
   ): boolean {
     if (!this.getWorkOrderPath()) return false;
-    const segments = splitWorkOrderHandoffForDisplay(markdown);
-    if (!segments) return false;
+    const segments = splitWorkOrderProtocolForDisplay(markdown);
+    if (segments.every((s) => s.type === 'markdown')) return false;
 
     // A live run that took long enough to bake a duration footer attaches
     // `.claudian-response-footer` to `contentEl` BEFORE finalize runs. Since
