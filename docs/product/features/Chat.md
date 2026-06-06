@@ -11,6 +11,7 @@ related:
   - "[[Quick Actions]]"
   - "[[Multi Provider Support]]"
 user_manual: "[[chat]]"
+image: "[[chat-sidepanel-overview.png]]"
 ---
 
 # Chat
@@ -25,6 +26,7 @@ The sidebar opens on a hotkey. The path of the note you're on goes in automatica
 
 Conversations stick around. Specorator saves the session under `.specorator/sessions/` so you can leave one open for weeks, jump back in tomorrow, or split it into two when one line of thinking deserves its own branch.
 
+![[chat-sidepanel-overview.png]]
 <!-- screenshot: chat sidebar open beside a note, with a selection highlighted and quoted in the chat composer -->
 
 When the co-worker rewrites a paragraph you selected or fills in a section of a draft, you choose how the change lands. The change can arrive in the chat with preview, apply, and discard buttons for you to accept or reject. Flip on YOLO mode and the co-worker writes directly while you watch.

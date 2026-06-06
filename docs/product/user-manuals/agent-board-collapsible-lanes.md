@@ -1,7 +1,7 @@
 ---
 date: 2026-06-04
 status: shipped
-scope: user-manual
+type: user-manual
 parent: "[[Agent Kanban Board]]"
 ---
 # Claudian — Agent Board collapsible lanes

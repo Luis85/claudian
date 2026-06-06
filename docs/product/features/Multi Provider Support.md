@@ -11,6 +11,7 @@ related:
   - "[[Chat]]"
 user_manual: "[[multi-provider]]"
 parent: Infrastructure
+image: "[[multi-provider-overview.png]]"
 ---
 
 # Multi Provider Support
@@ -25,6 +26,7 @@ This is not a model picker that swaps engines behind a single chat. Each provide
 
 Point Specorator at the providers you have once, and each gets its own chat tab and its own settings page under **Settings → Specorator**. If you only have one subscription, use that one. If you have several, open them in parallel. The tabs run side by side; your work stays in your vault whichever provider runs it.
 
+![[multi-provider-overview.png]]
 <!-- screenshot: chat tab header showing the provider switcher with the four options, transcripts panel visible -->
 
 Specorator keeps its own record of every conversation under `.specorator/sessions/`. You can leave one open for weeks and pick it back up tomorrow without losing where you were. Sessions stay inside Specorator; the plugin does not read or write to other tools' chat histories on disk.

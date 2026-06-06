@@ -1,7 +1,7 @@
 ---
 date: 2026-06-04
 status: shipped
-scope: user-install-guide
+type: user-install-guide
 parent: "[[Multi Provider Support]]"
 ---
 # Claudian — Install Opencode (Windows)
