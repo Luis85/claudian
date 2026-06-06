@@ -483,11 +483,10 @@ describe('StreamController - Text Content', () => {
       ).resolves.not.toThrow();
     });
 
-    it('calls onOrchestratorPlanDetected when plan JSON is present and message el resolves', async () => {
-      const msgEl = createMockEl();
-      const onOrchestratorPlanDetected = jest.fn();
-      deps.renderer.getMessageEl = jest.fn().mockReturnValue(msgEl);
-      controller.setOrchestratorCallbacks(onOrchestratorPlanDetected);
+    it('does not treat legacy plan JSON as a special action surface', async () => {
+      const legacyAction = jest.fn();
+      (deps as any).onOrchestratorPlanDetected = legacyAction;
+      deps.renderer.getMessageEl = jest.fn().mockReturnValue(createMockEl());
 
       const msg = createTestMessage();
       msg.content = `\`\`\`json
@@ -501,51 +500,11 @@ describe('StreamController - Text Content', () => {
 
       await controller.handleStreamChunk({ type: 'done' }, msg);
 
-      expect(deps.renderer.getMessageEl).toHaveBeenCalledWith(msg.id);
-      expect(onOrchestratorPlanDetected).toHaveBeenCalledWith(
-        msgEl,
-        expect.objectContaining({
-          type: 'orchestrator_plan',
-          tasks: [{ id: '1', description: 'Task 1', prompt: 'Do task 1' }],
-        }),
-      );
+      expect(legacyAction).not.toHaveBeenCalled();
+      expect(msg.content).toContain('"tasks"');
+      expect(msg.content).toContain('Do task 1');
     });
 
-    it('calls onWorkerDone with error text from contentBlocks when msg.content is empty', async () => {
-      const onWorkerDone = jest.fn();
-      controller.setOrchestratorCallbacks(undefined, onWorkerDone);
-
-      const msg = createTestMessage();
-      deps.state.currentTextEl = createMockEl();
-      deps.state.currentTextContent = '\n\n❌ **Error:** EPERM rename failed';
-
-      await controller.handleStreamChunk({ type: 'done' }, msg);
-
-      expect(onWorkerDone).toHaveBeenCalledWith(
-        expect.stringContaining('EPERM rename failed'),
-        true,
-      );
-    });
-
-    it('does not call onOrchestratorPlanDetected when message el is missing', async () => {
-      const onOrchestratorPlanDetected = jest.fn();
-      deps.renderer.getMessageEl = jest.fn().mockReturnValue(null);
-      controller.setOrchestratorCallbacks(onOrchestratorPlanDetected);
-
-      const msg = createTestMessage();
-      msg.content = `\`\`\`json
-{
-  "type": "orchestrator_plan",
-  "tasks": [
-    { "id": "1", "description": "Task 1", "prompt": "Do task 1" }
-  ]
-}
-\`\`\``;
-
-      await controller.handleStreamChunk({ type: 'done' }, msg);
-
-      expect(onOrchestratorPlanDetected).not.toHaveBeenCalled();
-    });
   });
 
   describe('Usage handling', () => {
