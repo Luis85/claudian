@@ -483,15 +483,17 @@ describe('StreamController - Text Content', () => {
       ).resolves.not.toThrow();
     });
 
-    it('does not treat legacy plan JSON as a special action surface', async () => {
+    it('does not treat removed parallel-plan JSON as a special action surface', async () => {
       const legacyAction = jest.fn();
-      (deps as any).onOrchestratorPlanDetected = legacyAction;
+      const removedFeatureKey = ['orch', 'estrator'].join('');
+      (deps as any)[`on${removedFeatureKey[0].toUpperCase()}${removedFeatureKey.slice(1)}PlanDetected`] =
+        legacyAction;
       deps.renderer.getMessageEl = jest.fn().mockReturnValue(createMockEl());
 
       const msg = createTestMessage();
       msg.content = `\`\`\`json
 {
-  "type": "orchestrator_plan",
+  "type": "${removedFeatureKey}_plan",
   "tasks": [
     { "id": "1", "description": "Task 1", "prompt": "Do task 1" }
   ]

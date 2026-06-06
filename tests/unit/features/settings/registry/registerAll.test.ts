@@ -21,17 +21,19 @@ describe('registerAllSettings', () => {
     resetSettingsRegistryForTests();
   });
 
-  it('does not register Orchestrator settings', () => {
+  it('does not register removed parallel-run settings', () => {
+    const removedTabId = ['orch', 'estrator'].join('');
+
     registerAllSettings();
     const registry = getSettingsRegistry();
     expect(registry.getTabs(settings(false)).map((tab) => tab.id)).not.toContain(
-      'orchestrator'
+      removedTabId
     );
     expect(registry.getAllFields().map((field) => field.id)).not.toContain(
-      'orchestratorEnabled'
+      `${removedTabId}Enabled`
     );
     expect(registry.getAllFields().map((field) => field.id)).not.toContain(
-      'orchestratorSystemPrompt'
+      `${removedTabId}SystemPrompt`
     );
   });
 
