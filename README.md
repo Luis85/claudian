@@ -1,8 +1,8 @@
 # Claudian
 
-![GitHub stars](https://img.shields.io/github/stars/YishenTu/claudian?style=social)
-![GitHub release](https://img.shields.io/github/v/release/YishenTu/claudian)
-![License](https://img.shields.io/github/license/YishenTu/claudian)
+![GitHub stars](https://img.shields.io/github/stars/Luis85/claudian?style=social)
+![GitHub release](https://img.shields.io/github/v/release/Luis85/claudian)
+![License](https://img.shields.io/github/license/Luis85/claudian)
 
 ![Preview](Preview.png)
 
@@ -45,7 +45,7 @@ Or install directly from the [community plugin page](https://community.obsidian.
 
 ### From GitHub Release
 
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/YishenTu/claudian/releases/latest)
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/Luis85/claudian/releases/latest)
 2. Create a folder called `claudian` in your vault's plugins folder:
    ```
    /path/to/vault/.obsidian/plugins/claudian/
@@ -59,7 +59,7 @@ Or install directly from the [community plugin page](https://community.obsidian.
 1. Clone this repository into your vault's plugins folder:
    ```bash
    cd /path/to/vault/.obsidian/plugins
-   git clone https://github.com/YishenTu/claudian.git
+   git clone https://github.com/Luis85/claudian.git
    cd claudian
    ```
 
@@ -128,7 +128,7 @@ If different, GUI apps like Obsidian may not find Node.js.
 
 ### Other providers
 
-Codex, Opencode, and Cursor support are live but features might be incomplete, and still need more testing across platforms and installation methods. If you have feature request or run into any bugs, please [submit a GitHub issue](https://github.com/YishenTu/claudian/issues).
+Codex, Opencode, and Cursor support are live but features might be incomplete, and still need more testing across platforms and installation methods. If you have feature request or run into any bugs, please [submit a GitHub issue](https://github.com/Luis85/claudian/issues).
 
 ## Architecture
 
@@ -176,11 +176,11 @@ Licensed under the [MIT License](LICENSE).
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=YishenTu%2Fclaudian&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=Luis85%2Fclaudian&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=YishenTu/claudian&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=YishenTu/claudian&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=YishenTu/claudian&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=Luis85/claudian&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=Luis85/claudian&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=Luis85/claudian&type=date&legend=top-left" />
  </picture>
 </a>
 

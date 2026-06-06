@@ -26,7 +26,7 @@
     "productivity",
     "ide"
   ],
-  "author": "Yishen Tu",
+  "author": "Luis85",
   "license": "MIT",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
