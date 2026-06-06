@@ -8,7 +8,6 @@ import type { McpServerManager } from '../../../core/mcp/McpServerManager';
 import {
   buildSystemPrompt,
   computeSystemPromptKey,
-  type SystemPromptBuildOptions,
   type SystemPromptSettings,
 } from '../../../core/prompt/mainAgent';
 import type { AppPluginManager } from '../../../core/providers/types';
@@ -50,7 +49,6 @@ export interface PersistentQueryContext extends QueryOptionsContext {
   canUseTool?: CanUseTool;
   hooks: Options['hooks'];
   externalContextPaths?: string[];
-  orchestratorMode?: boolean;
   /**
    * Per-turn model override (e.g. from a work-order's selected model).
    * Beats `settings.model` so the very first persistent-query message uses
@@ -70,20 +68,6 @@ export interface ColdStartQueryContext extends QueryOptionsContext {
   allowedTools?: string[];
   hasEditorContext: boolean;
   externalContextPaths?: string[];
-  orchestratorMode?: boolean;
-}
-
-function orchestratorPromptOptions(
-  settings: ClaudianSettings,
-  orchestratorMode?: boolean,
-): SystemPromptBuildOptions {
-  if (!orchestratorMode) {
-    return {};
-  }
-  return {
-    orchestratorMode: true,
-    orchestratorSystemPrompt: settings.orchestratorSystemPrompt,
-  };
 }
 
 export class QueryOptionsBuilder {
@@ -117,7 +101,6 @@ export class QueryOptionsBuilder {
   static buildPersistentQueryConfig(
     ctx: QueryOptionsContext,
     externalContextPaths?: string[],
-    orchestratorMode?: boolean,
     modelOverride?: string,
   ): PersistentQueryConfig {
     const claudeSettings = getClaudeProviderSettings(ctx.settings);
@@ -154,10 +137,7 @@ export class QueryOptionsBuilder {
       effortLevel: resolveEffortLevel(effectiveModel, ctx.settings.effortLevel),
       permissionMode: ctx.settings.permissionMode,
       sdkPermissionMode,
-      systemPromptKey: computeSystemPromptKey(
-        systemPromptSettings,
-        orchestratorPromptOptions(ctx.settings, orchestratorMode),
-      ),
+      systemPromptKey: computeSystemPromptKey(systemPromptSettings),
       disallowedToolsKey,
       mcpServersKey: '', // Dynamic via setMcpServers, not tracked for restart
       pluginsKey,
@@ -174,7 +154,6 @@ export class QueryOptionsBuilder {
       ctx,
       ctx.modelOverride ?? ctx.settings.model,
       ctx.abortController,
-      ctx.orchestratorMode,
     );
 
     options.disallowedTools = [
@@ -217,7 +196,6 @@ export class QueryOptionsBuilder {
       ctx,
       selectedModel,
       ctx.abortController,
-      ctx.orchestratorMode,
     );
 
     const mcpMentions = ctx.mcpMentions || new Set<string>();
@@ -304,7 +282,6 @@ export class QueryOptionsBuilder {
     ctx: QueryOptionsContext,
     model: string,
     abortController?: AbortController,
-    orchestratorMode?: boolean,
   ): { options: Options; claudeSettings: ReturnType<typeof getClaudeProviderSettings> } {
     const claudeSettings = getClaudeProviderSettings(ctx.settings);
     const systemPromptSettings: SystemPromptSettings = {
@@ -313,10 +290,9 @@ export class QueryOptionsBuilder {
       vaultPath: ctx.vaultPath,
       userName: ctx.settings.userName,
     };
-    const promptOptions = orchestratorPromptOptions(ctx.settings, orchestratorMode);
     const options: Options = {
       cwd: ctx.vaultPath,
-      systemPrompt: buildSystemPrompt(systemPromptSettings, promptOptions),
+      systemPrompt: buildSystemPrompt(systemPromptSettings),
       model,
       abortController,
       pathToClaudeCodeExecutable: ctx.cliPath,

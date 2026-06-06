@@ -1,5 +1,3 @@
-import { resolveOrchestratorSystemPrompt } from './orchestratorMode';
-
 export interface SystemPromptSettings {
   mediaFolder?: string;
   customPrompt?: string;
@@ -9,8 +7,6 @@ export interface SystemPromptSettings {
 
 export interface SystemPromptBuildOptions {
   appendices?: string[];
-  orchestratorMode?: boolean;
-  orchestratorSystemPrompt?: string;
 }
 
 function getPathRules(vaultPath?: string): string {
@@ -186,9 +182,6 @@ export function buildSystemPrompt(
   prompt += getImageInstructions(settings.mediaFolder || '');
   prompt += getAppendixSections(options.appendices);
 
-  if (options.orchestratorMode) {
-    prompt += `\n\n${resolveOrchestratorSystemPrompt(options.orchestratorSystemPrompt)}`;
-  }
 
   if (settings.customPrompt?.trim()) {
     prompt += `\n\n## Custom Instructions\n\n${settings.customPrompt.trim()}`;
@@ -217,10 +210,7 @@ export function computeSystemPromptKey(
     parts.push(appendixKey);
   }
 
-  if (options.orchestratorMode) {
-    parts.push('orchestrator_mode');
-    parts.push((options.orchestratorSystemPrompt ?? '').trim());
-  }
 
   return parts.join('::');
 }
+
