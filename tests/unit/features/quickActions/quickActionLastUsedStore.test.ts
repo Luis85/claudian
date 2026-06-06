@@ -3,6 +3,95 @@ import {
   PERSISTED_SCHEMA_VERSION,
   serializePersistedLastUsed,
 } from '@/features/quickActions/quickActionLastUsedStore';
+import { QuickActionLastUsedStore } from '@/features/quickActions/quickActionLastUsedStore';
+
+class StubAdapter {
+  files: Record<string, string> = {};
+  writeCount = 0;
+  async exists(p: string): Promise<boolean> { return p in this.files; }
+  async read(p: string): Promise<string> { return this.files[p]; }
+  async write(p: string, content: string): Promise<void> {
+    this.writeCount += 1;
+    this.files[p] = content;
+  }
+}
+
+function makeStore(adapter: StubAdapter, logger?: { warn: jest.Mock }) {
+  return new QuickActionLastUsedStore({
+    adapter: adapter as any,
+    cachePath: '.claudian/cache/quick-action-last-used.json',
+    debounceMs: 10,
+    logger: logger ?? { warn: jest.fn() },
+    now: () => 5000,
+  });
+}
+
+describe('QuickActionLastUsedStore', () => {
+  it('hydrates to empty when file does not exist', async () => {
+    const adapter = new StubAdapter();
+    const store = makeStore(adapter);
+    await store.hydrate();
+    expect(store.get('summarize')).toBeNull();
+  });
+
+  it('hydrates from a valid file', async () => {
+    const adapter = new StubAdapter();
+    adapter.files['.claudian/cache/quick-action-last-used.json'] = JSON.stringify({
+      schemaVersion: 1,
+      writtenAt: 0,
+      entries: { summarize: { providerId: 'claude', model: 'm', updatedAt: 1 } },
+    });
+    const store = makeStore(adapter);
+    await store.hydrate();
+    expect(store.get('summarize')).toEqual({ providerId: 'claude', model: 'm', updatedAt: 1 });
+  });
+
+  it('warn-logs and treats malformed JSON as cold cache', async () => {
+    const adapter = new StubAdapter();
+    adapter.files['.claudian/cache/quick-action-last-used.json'] = 'not-json';
+    const logger = { warn: jest.fn() };
+    const store = makeStore(adapter, logger);
+    await store.hydrate();
+    expect(store.get('summarize')).toBeNull();
+    expect(logger.warn).toHaveBeenCalled();
+  });
+
+  it('set updates in-memory immediately', () => {
+    const store = makeStore(new StubAdapter());
+    store.set('summarize', { providerId: 'claude', model: 'm' });
+    expect(store.get('summarize')).toEqual({ providerId: 'claude', model: 'm', updatedAt: 5000 });
+  });
+
+  it('coalesces multiple set calls into one debounced write', async () => {
+    const adapter = new StubAdapter();
+    const store = makeStore(adapter);
+    store.set('a', { providerId: 'claude', model: 'm1' });
+    store.set('b', { providerId: 'claude', model: 'm2' });
+    store.set('c', { providerId: 'claude', model: 'm3' });
+    await store.flush();
+    expect(adapter.writeCount).toBe(1);
+    const parsed = JSON.parse(adapter.files['.claudian/cache/quick-action-last-used.json']);
+    expect(Object.keys(parsed.entries).sort()).toEqual(['a', 'b', 'c']);
+  });
+
+  it('flush awaits pending write', async () => {
+    const adapter = new StubAdapter();
+    const store = makeStore(adapter);
+    store.set('x', { providerId: 'claude', model: 'm' });
+    await store.flush();
+    expect(adapter.writeCount).toBe(1);
+  });
+
+  it('swallows write errors and warn-logs', async () => {
+    const adapter = new StubAdapter();
+    adapter.write = jest.fn().mockRejectedValue(new Error('disk full'));
+    const logger = { warn: jest.fn() };
+    const store = makeStore(adapter, logger);
+    store.set('x', { providerId: 'claude', model: 'm' });
+    await store.flush();
+    expect(logger.warn).toHaveBeenCalled();
+  });
+});
 
 describe('quickActionLastUsedStore persistence', () => {
   describe('serializePersistedLastUsed', () => {
