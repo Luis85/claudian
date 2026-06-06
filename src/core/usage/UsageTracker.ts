@@ -16,8 +16,8 @@ export class UsageTracker {
   private records = new Map<string, UsageRecord>();
   private dirty = false;
   private writeTimer: number | null = null;
-  private readonly unsubRecorded: () => void;
-  private readonly unsubCleared: () => void;
+  private unsubRecorded: (() => void) | null = null;
+  private unsubCleared: (() => void) | null = null;
   private disposed = false;
 
   constructor(
@@ -25,14 +25,7 @@ export class UsageTracker {
     private storage: UsageStorage,
     private now: () => number,
     private logger: Logger,
-  ) {
-    this.unsubRecorded = events.on('usage.recorded', (payload) => {
-      this.handleRecord(payload);
-    });
-    this.unsubCleared = events.on('usage.cleared', () => {
-      this.handleClear();
-    });
-  }
+  ) {}
 
   async hydrate(): Promise<void> {
     const index = await this.storage.load();
@@ -40,6 +33,24 @@ export class UsageTracker {
     for (const [key, value] of Object.entries(index.records)) {
       this.records.set(key, { count: value.count, lastUsedAt: value.lastUsedAt });
     }
+  }
+
+  /**
+   * Subscribe to the usage event bus. Call AFTER {@link hydrate} so the
+   * initial disk load cannot race a freshly-handled `usage.recorded`
+   * (a `clear()` inside hydrate would wipe an increment that arrived
+   * between subscribe and hydrate). Idempotent — calling twice is a no-op
+   * so callers that defensively re-run startup paths do not double-subscribe.
+   */
+  start(): void {
+    if (this.disposed) return;
+    if (this.unsubRecorded || this.unsubCleared) return;
+    this.unsubRecorded = this.events.on('usage.recorded', (payload) => {
+      this.handleRecord(payload);
+    });
+    this.unsubCleared = this.events.on('usage.cleared', () => {
+      this.handleClear();
+    });
   }
 
   get(key: UsageKey): UsageRecord | undefined {
@@ -67,8 +78,10 @@ export class UsageTracker {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-    this.unsubRecorded();
-    this.unsubCleared();
+    this.unsubRecorded?.();
+    this.unsubCleared?.();
+    this.unsubRecorded = null;
+    this.unsubCleared = null;
     if (this.writeTimer !== null) {
       window.clearTimeout(this.writeTimer);
       this.writeTimer = null;

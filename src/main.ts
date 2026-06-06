@@ -234,6 +234,24 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     );
     this.quickActionFavoritesCache.start();
 
+    // Usage tracker must subscribe to the bus BEFORE any entry point that
+    // can emit `usage.recorded` is registered. The file/folder context menu
+    // (`registerWorkspaceMenus`) is the earliest such entry point — if a
+    // user fires a quick action between onload and onLayoutReady, the bus
+    // would silently drop the event and the leaderboard would undercount.
+    // Hydration is awaited so the in-memory map reflects disk state before
+    // start() subscribes; without this ordering, an event that lands
+    // between subscribe and hydrate would be wiped by hydrate's clear().
+    const usageStorage = new UsageStorage(new VaultFileAdapter(this.app), this.logger);
+    this.usageTracker = new UsageTracker(
+      this.events as unknown as EventBus<UsageEventMap>,
+      usageStorage,
+      () => Date.now(),
+      this.logger,
+    );
+    await this.usageTracker.hydrate();
+    this.usageTracker.start();
+
     registerWorkspaceMenus(this);
 
 
@@ -258,14 +276,6 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.logger.scope('onload').error('provider workspace init failed', error);
       return;
     }
-    const usageStorage = new UsageStorage(new VaultFileAdapter(this.app), this.logger);
-    this.usageTracker = new UsageTracker(
-      this.events as unknown as EventBus<UsageEventMap>,
-      usageStorage,
-      () => Date.now(),
-      this.logger,
-    );
-    await this.usageTracker.hydrate();
     // Skills tab cache: hydrate persisted index, then pre-warm in background.
     this.vaultSkillAggregator = new VaultSkillAggregator(
       () => buildProviderRecords(this),

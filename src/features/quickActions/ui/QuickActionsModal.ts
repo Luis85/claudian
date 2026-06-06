@@ -46,6 +46,10 @@ export class QuickActionsModal extends Modal {
   private searchInputEl: HTMLInputElement | null = null;
   private listEl: HTMLElement | null = null;
   private actions: QuickAction[] = [];
+  // Once-set flag: did this modal ever finish loading `actions` from disk?
+  // Drives the Stats-tab warm-up so opening Stats before the Quick Actions
+  // tab has rendered does not show an empty leaderboard.
+  private actionsLoaded = false;
   private filter = '';
 
   // Skills tab — delegated to a dedicated renderer.
@@ -133,6 +137,17 @@ export class QuickActionsModal extends Modal {
     this.filter = '';
 
     if (this.activeTab === 'stats' && this.statsTab) {
+      // Stats tab reads from two synchronous suppliers: `() => this.actions`
+      // and `aggregator.listCachedNow()`. On a cold open both can be empty
+      // — `this.actions` is populated by the fire-and-forget refreshList()
+      // kicked off when the Quick Actions tab renders, and the aggregator
+      // cache is cold until the first listAll(). Without this warm-up step
+      // UsageStatsTab.collectLiveRows() treats every persisted counter as
+      // an orphan and paints an empty leaderboard.
+      await Promise.all([
+        this.actionsLoaded ? Promise.resolve() : this.loadActionsFromStorage(),
+        this.callbacks.aggregator.listAll(),
+      ]);
       this.statsTab.render(this.bodyEl);
       return;
     }
@@ -225,9 +240,14 @@ export class QuickActionsModal extends Modal {
     if (!this.listEl || !this.introEl) {
       return;
     }
-    this.actions = await this.callbacks.storage.loadAll();
+    await this.loadActionsFromStorage();
     this.renderIntro();
     this.renderList();
+  }
+
+  private async loadActionsFromStorage(): Promise<void> {
+    this.actions = await this.callbacks.storage.loadAll();
+    this.actionsLoaded = true;
   }
 
   private renderList(): void {

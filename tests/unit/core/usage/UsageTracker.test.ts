@@ -41,6 +41,7 @@ describe('UsageTracker', () => {
     const storage = makeStorage();
     const tracker = new UsageTracker(bus, storage as never, now, silentLogger());
     await tracker.hydrate();
+    tracker.start();
 
     nowValue = 2_000;
     bus.emit('usage.recorded', { kind: 'quickAction', name: 'summarize' });
@@ -57,6 +58,7 @@ describe('UsageTracker', () => {
     const storage = makeStorage();
     const tracker = new UsageTracker(bus, storage as never, now, silentLogger());
     await tracker.hydrate();
+    tracker.start();
 
     bus.emit('usage.recorded', { kind: 'skill', name: 'x', providerId: 'claude' });
     bus.emit('usage.recorded', { kind: 'skill', name: 'x', providerId: 'codex' });
@@ -69,6 +71,7 @@ describe('UsageTracker', () => {
     const storage = makeStorage();
     const tracker = new UsageTracker(bus, storage as never, now, silentLogger());
     await tracker.hydrate();
+    tracker.start();
     storage.save.mockClear();
 
     for (let i = 0; i < 5; i++) {
@@ -88,6 +91,7 @@ describe('UsageTracker', () => {
     const storage = makeStorage();
     const tracker = new UsageTracker(bus, storage as never, now, silentLogger());
     await tracker.hydrate();
+    tracker.start();
     storage.save.mockClear();
 
     bus.emit('usage.recorded', { kind: 'quickAction', name: 'x' });
@@ -102,6 +106,7 @@ describe('UsageTracker', () => {
     const storage = makeStorage();
     const tracker = new UsageTracker(bus, storage as never, now, silentLogger());
     await tracker.hydrate();
+    tracker.start();
     bus.emit('usage.recorded', { kind: 'quickAction', name: 'x' });
     bus.emit('usage.cleared');
 
@@ -112,6 +117,7 @@ describe('UsageTracker', () => {
     const storage = makeStorage();
     const tracker = new UsageTracker(bus, storage as never, now, silentLogger());
     await tracker.hydrate();
+    tracker.start();
     tracker.dispose();
 
     bus.emit('usage.recorded', { kind: 'quickAction', name: 'x' });
@@ -125,10 +131,36 @@ describe('UsageTracker', () => {
     });
     const tracker = new UsageTracker(bus, storage as never, now, silentLogger());
     await tracker.hydrate();
+    tracker.start();
 
     expect(tracker.get({ kind: 'quickAction', name: 'seed' })).toEqual({
       count: 7,
       lastUsedAt: 500,
     });
+  });
+
+  it('ignores events fired before start() — caller controls subscribe ordering', async () => {
+    const storage = makeStorage();
+    const tracker = new UsageTracker(bus, storage as never, now, silentLogger());
+    // Hydrate runs but start() has not been called yet — the constructor
+    // does NOT subscribe, so the bus has no listener for this event.
+    await tracker.hydrate();
+    bus.emit('usage.recorded', { kind: 'quickAction', name: 'dropped' });
+    expect(tracker.get({ kind: 'quickAction', name: 'dropped' })).toBeUndefined();
+
+    // Once start() runs, subsequent events are processed.
+    tracker.start();
+    bus.emit('usage.recorded', { kind: 'quickAction', name: 'kept' });
+    expect(tracker.get({ kind: 'quickAction', name: 'kept' })?.count).toBe(1);
+  });
+
+  it('start() is idempotent — calling twice does not double-subscribe', async () => {
+    const storage = makeStorage();
+    const tracker = new UsageTracker(bus, storage as never, now, silentLogger());
+    await tracker.hydrate();
+    tracker.start();
+    tracker.start();
+    bus.emit('usage.recorded', { kind: 'quickAction', name: 'once' });
+    expect(tracker.get({ kind: 'quickAction', name: 'once' })?.count).toBe(1);
   });
 });

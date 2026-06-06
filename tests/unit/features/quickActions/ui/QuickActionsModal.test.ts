@@ -508,4 +508,86 @@ describe('QuickActionsModal tabs', () => {
     ) as HTMLInputElement;
     expect(refreshedSearch.value).toBe('');
   });
+
+  it('warms quick-action + skill caches before painting the Stats tab on a cold open', async () => {
+    // Reproduce the cold-open race: Quick Actions tab loadAll() takes time,
+    // user clicks Stats before it resolves. Without the warm-up step, the
+    // UsageStatsTab supplier would see empty actions + cold skills cache
+    // and treat every persisted counter as an orphan.
+    const usageTracker = {
+      getAll: jest.fn().mockReturnValue(new Map()),
+    } as unknown as NonNullable<QuickActionsModalCallbacks['usageTracker']>;
+
+    const loadAllResolve = { fn: null as ((value: QuickAction[]) => void) | null };
+    const slowStorage = {
+      loadAll: jest.fn().mockImplementation(
+        () => new Promise<QuickAction[]>((r) => { loadAllResolve.fn = r; }),
+      ),
+      save: jest.fn(),
+      delete: jest.fn(),
+    } as unknown as QuickActionsModalCallbacks['storage'];
+
+    const aggregator = makeAggregator([makeSkill({ name: 'a' })]);
+
+    const { UsageStatsTab } = jest.requireMock(
+      '@/features/quickActions/ui/UsageStatsTab',
+    ) as { UsageStatsTab: jest.Mock };
+    const statsRender = jest.fn();
+    UsageStatsTab.mockImplementation(() => ({
+      render: statsRender,
+      dispose: jest.fn(),
+    }));
+
+    const { modal } = await openModal({
+      storage: slowStorage,
+      aggregator,
+      usageTracker,
+    });
+
+    // Click Stats while the initial loadAll() is still pending.
+    const tabs = modal.contentEl.querySelectorAll(
+      '.claudian-quick-actions-tab',
+    ) as NodeListOf<HTMLElement>;
+    expect(tabs).toHaveLength(3);
+    tabs[2].click();
+    await Promise.resolve();
+
+    // Stats must NOT have rendered yet — modal is awaiting the warm-up.
+    expect(statsRender).not.toHaveBeenCalled();
+
+    // Resolve the pending loadAll() — Promise.all then unblocks (listAll
+    // already resolved in this fixture). Stats render should now fire.
+    loadAllResolve.fn?.([]);
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(statsRender).toHaveBeenCalled();
+    // listAll() warms the skill cache so UsageStatsTab.collectLiveRows()
+    // does not see an empty skills supplier.
+    expect(
+      (aggregator as unknown as { listAll: jest.Mock }).listAll,
+    ).toHaveBeenCalled();
+  });
+
+  it('subsequent Stats renders skip the loadAll() warm-up — actions already cached', async () => {
+    const usageTracker = {
+      getAll: jest.fn().mockReturnValue(new Map()),
+    } as unknown as NonNullable<QuickActionsModalCallbacks['usageTracker']>;
+    const storage = makeStorage([]);
+    const aggregator = makeAggregator([]);
+    const { modal } = await openModal({ storage, aggregator, usageTracker });
+
+    // Quick Actions tab already rendered once → loadAll fired once.
+    expect((storage as unknown as { loadAll: jest.Mock }).loadAll).toHaveBeenCalledTimes(1);
+
+    const tabs = modal.contentEl.querySelectorAll(
+      '.claudian-quick-actions-tab',
+    ) as NodeListOf<HTMLElement>;
+    tabs[2].click();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Stats warm-up sees actionsLoaded === true and skips a second load.
+    expect((storage as unknown as { loadAll: jest.Mock }).loadAll).toHaveBeenCalledTimes(1);
+  });
 });

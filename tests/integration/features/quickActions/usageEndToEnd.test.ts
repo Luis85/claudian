@@ -34,6 +34,7 @@ describe('usage tracker end-to-end', () => {
     let now = 100_000;
     const tracker = new UsageTracker(bus, storage, () => now, silentLogger());
     await tracker.hydrate();
+    tracker.start();
 
     bus.emit('usage.recorded', { kind: 'quickAction', name: 'summarize' });
     now = 200_000;
@@ -50,6 +51,7 @@ describe('usage tracker end-to-end', () => {
     const bus2 = new EventBus<UsageEventMap>();
     const tracker2 = new UsageTracker(bus2, storage, () => now, silentLogger());
     await tracker2.hydrate();
+    tracker2.start();
 
     expect(tracker2.get({ kind: 'quickAction', name: 'summarize' }))
       .toEqual({ count: 1, lastUsedAt: 100_000 });
@@ -64,6 +66,7 @@ describe('usage tracker end-to-end', () => {
     const bus = new EventBus<UsageEventMap>();
     const tracker = new UsageTracker(bus, storage, () => 0, silentLogger());
     await tracker.hydrate();
+    tracker.start();
 
     bus.emit('usage.recorded', { kind: 'quickAction', name: 'x' });
     await tracker.flush();
