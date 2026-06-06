@@ -86,6 +86,16 @@ interface QueueRunnerState {
 
 const SKIP_DEBOUNCE_MS = 60_000;
 
+// Matches the agentBoardQueueHaltAfter settings default. Clearing the settings
+// field writes `undefined`, and Math.max(1, undefined) is NaN — which would
+// disable auto-halt (consecutiveFailures >= NaN is always false). Fall back to
+// this for any non-finite threshold.
+const DEFAULT_HALT_AFTER_FAILURES = 3;
+
+function clampHaltAfterFailures(value: number): number {
+  return Number.isFinite(value) ? Math.max(1, value) : DEFAULT_HALT_AFTER_FAILURES;
+}
+
 /**
  * Per-board background loop. On each `tick()` it drains free slots by picking
  * the next eligible Ready/Needs-fix card and handing it to the shared
@@ -107,7 +117,7 @@ export class QueueRunner {
   constructor(private readonly deps: QueueRunnerDeps) {
     this.control = deps.control ?? createQueueControlState(deps.initialPaused ?? false);
     this.state = {
-      haltAfterFailures: Math.max(1, deps.haltAfterFailures),
+      haltAfterFailures: clampHaltAfterFailures(deps.haltAfterFailures),
     };
   }
 
@@ -160,7 +170,7 @@ export class QueueRunner {
   }
 
   setHaltAfterFailures(next: number): void {
-    this.state.haltAfterFailures = Math.max(1, next);
+    this.state.haltAfterFailures = clampHaltAfterFailures(next);
   }
 
   dispose(): void {

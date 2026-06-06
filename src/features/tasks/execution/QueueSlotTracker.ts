@@ -2,12 +2,19 @@
 // runner on each board competes for the same slots so the global cap holds
 // regardless of how many boards are open. Cap changes never evict in-flight
 // runs — shrinking the cap only refuses new acquires until enough release.
+// Clearing a settings number field writes `undefined`, and Math.max(1, undefined)
+// is NaN — which would freeze the queue (held.size < NaN is always false). Coerce
+// any non-finite cap back to the minimum.
+function clampCap(cap: number): number {
+  return Number.isFinite(cap) ? Math.max(1, cap) : 1;
+}
+
 export class QueueSlotTracker {
   private readonly held = new Set<string>();
   private cap: number;
 
   constructor(cap: number) {
-    this.cap = Math.max(1, cap);
+    this.cap = clampCap(cap);
   }
 
   capacity(): number {
@@ -38,6 +45,6 @@ export class QueueSlotTracker {
   }
 
   setCap(next: number): void {
-    this.cap = Math.max(1, next);
+    this.cap = clampCap(next);
   }
 }

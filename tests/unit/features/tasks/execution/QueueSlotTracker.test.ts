@@ -56,6 +56,21 @@ describe('QueueSlotTracker', () => {
     expect(t.hasFreeSlot()).toBe(true);
   });
 
+  it('coerces a non-finite cap to the minimum (cleared settings field)', () => {
+    // Clearing Settings → Concurrent runs writes undefined; Math.max(1, undefined)
+    // is NaN, which would freeze the queue (held.size < NaN is always false).
+    const t = new QueueSlotTracker(2);
+    t.setCap(undefined as unknown as number);
+    expect(t.capacity()).toBe(1);
+    expect(t.hasFreeSlot()).toBe(true);
+  });
+
+  it('coerces a non-finite cap at construction', () => {
+    const t = new QueueSlotTracker(undefined as unknown as number);
+    expect(t.capacity()).toBe(1);
+    expect(t.hasFreeSlot()).toBe(true);
+  });
+
   it('setCap shrinking below occupied keeps in-flight; refuses new acquires', () => {
     const t = new QueueSlotTracker(3);
     t.acquire('a');

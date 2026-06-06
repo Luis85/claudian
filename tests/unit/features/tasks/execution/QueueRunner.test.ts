@@ -233,6 +233,18 @@ describe('QueueRunner — halt threshold', () => {
     expect(h.emissions.filter((e) => e.name === 'task:queue-halted')).toHaveLength(1);
   });
 
+  it('coerces a non-finite halt threshold to the default so auto-halt still fires', async () => {
+    // Clearing Settings → Auto-halt writes undefined; Math.max(1, undefined) is
+    // NaN, which would disable auto-halt (consecutiveFailures >= NaN is false).
+    const h = makeHarness({ cap: 1, onRun: () => ({ ok: false, error: 'boom' }) });
+    h.runner.setHaltAfterFailures(undefined as unknown as number);
+    h.setTasks([makeTask('a'), makeTask('b'), makeTask('c')]);
+    h.runner.tick();
+    await flush();
+    // The default threshold (3) applies, so three failures still halt.
+    expect(h.runner.isHalted()).toBe(true);
+  });
+
   it('resets counter on success', async () => {
     let count = 0;
     const h = makeHarness({
