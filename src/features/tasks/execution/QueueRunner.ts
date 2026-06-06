@@ -1,3 +1,4 @@
+import type { ChatTabReservation, ChatTabReservations } from '../../../core/chatTabReservations';
 import type { TaskEventMap } from '../events';
 import { isRunnableTaskStatus } from '../model/taskStateMachine';
 import type { TaskLedgerEntry, TaskSpec } from '../model/taskTypes';
@@ -18,7 +19,7 @@ export interface QueueRunnerEvents {
 }
 
 export interface QueueRunnerCoordinator {
-  run(task: TaskSpec): Promise<TaskRunResult>;
+  run(task: TaskSpec, reservation?: ChatTabReservation): Promise<TaskRunResult>;
   isActive(taskId: string): boolean;
 }
 
@@ -73,6 +74,10 @@ export interface QueueRunnerDeps {
   // card whose status changed since the board last indexed (e.g. completed or
   // edited) instead of overwriting it. Omitted ⇒ run the cached spec.
   reloadTask?: (task: TaskSpec) => Promise<TaskSpec | null>;
+  // Shared chat-tab reservation ledger. The runner reserves a tab synchronously
+  // at launch — before the async reload — so a second pane woken by the same
+  // event sees the pending reservation and can't double-book the same free tab.
+  reservations?: ChatTabReservations;
 }
 
 interface QueueRunnerState {
@@ -208,7 +213,10 @@ export class QueueRunner {
     if (!this.deps.slot.acquire(task.frontmatter.id)) return;
     // The card is running now, so any stale skip chip no longer applies.
     this.control.lastSkipReasonByTask.delete(task.frontmatter.id);
-    void this.runAcquired(task);
+    // Reserve the chat tab synchronously now, before runAcquired's async reload,
+    // so another pane woken by the same event counts this committed-but-uncreated
+    // tab and won't over-launch into the cap.
+    void this.runAcquired(task, this.deps.reservations?.reserve());
   }
 
   // Re-read the work order immediately before running so the queue never starts
@@ -216,7 +224,7 @@ export class QueueRunner {
   // last index but before this wake. Manual runs already pass a freshly-parsed
   // spec; this gives the queue path the same guarantee. The slot is already held
   // (acquired in launch); release it on a stale skip so the loop can advance.
-  private async runAcquired(task: TaskSpec): Promise<void> {
+  private async runAcquired(task: TaskSpec, reservation?: ChatTabReservation): Promise<void> {
     const id = task.frontmatter.id;
     let fresh: TaskSpec | null = task;
     if (this.deps.reloadTask) {
@@ -228,19 +236,23 @@ export class QueueRunner {
     }
     if (!fresh || !isRunnableTaskStatus(fresh.frontmatter.status)) {
       // The note changed since indexing (completed, reworked, already running,
-      // or deleted). Don't overwrite it, and free the slot. Deliberately do not
-      // self-tick: the same change raises a vault event that re-indexes and ticks
-      // the runner, so re-driving here would risk a tight loop while the model
-      // still shows the card as runnable.
+      // or deleted). Don't overwrite it; free the slot and the reservation.
+      // Deliberately do not self-tick: the same change raises a vault event that
+      // re-indexes and ticks the runner, so re-driving here would risk a tight
+      // loop while the model still shows the card as runnable.
+      reservation?.release();
       this.deps.slot.release(id);
       return;
     }
     this.deps.events.emit('task:queue-tick', { taskId: id });
     try {
-      this.onSettle(await this.deps.coordinator.run(fresh));
+      // Hand the reservation to the coordinator so the chat view releases it at
+      // tab creation; the finally below is an idempotent safety net.
+      this.onSettle(await this.deps.coordinator.run(fresh, reservation));
     } catch (err) {
       this.onSettle({ ok: false, error: String(err) });
     } finally {
+      reservation?.release();
       this.deps.slot.release(id);
       this.tick();
     }

@@ -1,4 +1,4 @@
-import type { ChatTabReservations } from '../../../core/chatTabReservations';
+import type { ChatTabReservation, ChatTabReservations } from '../../../core/chatTabReservations';
 import type { TaskLedgerEntry, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
 import type { TaskExecutionSurface } from './TaskExecutionSurface';
@@ -41,7 +41,7 @@ export class TaskRunCoordinator {
     this.activeRuns = deps.activeRuns ?? new Set<string>();
   }
 
-  async run(task: TaskSpec): Promise<TaskRunResult> {
+  async run(task: TaskSpec, externalReservation?: ChatTabReservation): Promise<TaskRunResult> {
     const { provider, model, id } = task.frontmatter;
 
     if (!provider) return { ok: false, error: 'Work order is missing provider' };
@@ -59,11 +59,11 @@ export class TaskRunCoordinator {
     }
 
     this.activeRuns.add(id);
-    // Reserve the chat tab synchronously now, while the queue runner is still
-    // mid-launch, so another pane's free-tab gate sees it before the async tab
-    // creation lands. The surface releases it the moment the tab is created;
-    // the finally below is the safety net for paths that never open one.
-    const reservation = this.deps.reservations?.reserve();
+    // Use the queue runner's reservation when it made one synchronously at launch
+    // (so other panes saw it before this run's async reload); otherwise reserve
+    // here for the manual-run path. The surface releases it the moment the tab is
+    // created; the finally below is the safety net for paths that never open one.
+    const reservation = externalReservation ?? this.deps.reservations?.reserve();
     try {
       const startedAt = this.deps.now();
       await this.deps.writeTaskStatus(task, { status: 'running', timestamp: startedAt });

@@ -465,6 +465,9 @@ export class AgentBoardView extends ItemView {
         // cached spec (e.g. completed/edited since the last index), mirroring the
         // manual run path.
         reloadTask: (task) => this.reloadTaskFromVault(task),
+        // Reserve the chat tab synchronously at launch (before the async reload)
+        // so a second pane can't double-book the same free tab.
+        reservations: this.plugin.chatTabReservations,
       });
     } else {
       this.runner.setHaltAfterFailures(this.plugin.settings.agentBoardQueueHaltAfter);

@@ -1,3 +1,4 @@
+import { ChatTabReservations } from '../../../../../src/core/chatTabReservations';
 import type { TaskEventMap } from '../../../../../src/features/tasks/events';
 import {
   createQueueControlState,
@@ -57,6 +58,7 @@ interface HarnessConfig {
   getFreeExecutionSlots?: () => number;
   control?: QueueControlState;
   reloadTask?: (task: TaskSpec) => Promise<TaskSpec | null>;
+  reservations?: ChatTabReservations;
 }
 
 interface Harness {
@@ -116,6 +118,7 @@ function makeHarness(config: HarnessConfig = {}): Harness {
     now: config.now ?? (() => Date.now()),
     getFreeExecutionSlots: config.getFreeExecutionSlots,
     reloadTask: config.reloadTask,
+    reservations: config.reservations,
   });
 
   return {
@@ -398,6 +401,45 @@ describe('QueueRunner — pre-launch re-read', () => {
     h.runner.tick();
     await flush();
     expect(h.runCalls).toEqual(['b']);
+  });
+});
+
+describe('QueueRunner — chat-tab reservation', () => {
+  it('reserves a chat tab synchronously at launch, before the async reload', async () => {
+    const reservations = new ChatTabReservations();
+    let pendingDuringReload = -1;
+    const h = makeHarness({
+      reservations,
+      reloadTask: async (task) => {
+        // The reservation must already exist while the (async) reload is pending,
+        // so a second pane woken by the same synchronous event would see it.
+        pendingDuringReload = reservations.pending;
+        return task;
+      },
+    });
+    h.setTasks([makeTask('a', { status: 'ready' })]);
+
+    h.runner.tick();
+    await flush();
+
+    expect(pendingDuringReload).toBe(1);
+    expect(h.runCalls).toEqual(['a']);
+    expect(reservations.pending).toBe(0);
+  });
+
+  it('releases the reservation when the reloaded card is stale', async () => {
+    const reservations = new ChatTabReservations();
+    const h = makeHarness({
+      reservations,
+      reloadTask: async () => makeTask('a', { status: 'done' }),
+    });
+    h.setTasks([makeTask('a', { status: 'ready' })]);
+
+    h.runner.tick();
+    await flush();
+
+    expect(h.runCalls).toEqual([]);
+    expect(reservations.pending).toBe(0);
   });
 });
 
