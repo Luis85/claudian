@@ -207,11 +207,8 @@ it('integration: Cancel path does not persist or dispatch', async () => {
   expect(tabManager.createTab).not.toHaveBeenCalled();
 });
 
-// Fallback-notice integration: Agent B is renaming the i18n field set; the
-// underlying behavior (modal renders a [data-testid="qa-fallback-notice"]
-// when stored provider is disabled) is already covered by the unit-level
-// QuickActionLaunchModal test. Skip here until the rename lands so we don't
-// race with Agent B on the same DOM convention.
-it.skip('integration: fallback-notice renders when stored provider is disabled', () => {
-  // TODO: enable once Agent B finishes the i18n / field rename for the notice.
-});
+// Fallback-notice integration: the i18n field set was renamed mid-flight
+// (storedProviderId → storedProviderLabel, storedModel → storedModelLabel)
+// and the unit-level QuickActionLaunchModal test already pins the DOM
+// contract end-to-end. An integration variant here would be pure
+// duplication, so it is intentionally omitted.

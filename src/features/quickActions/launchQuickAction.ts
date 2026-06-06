@@ -1,9 +1,10 @@
-import type { TAbstractFile } from 'obsidian';
+import { Notice,type TAbstractFile } from 'obsidian';
 
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import type { ProviderId } from '@/core/providers/types';
 import { asSettingsBag } from '@/core/types/settings';
 import { resolveBlankTabModel } from '@/features/chat/tabs/tabShared';
+import { t } from '@/i18n/i18n';
 import type ClaudianPlugin from '@/main';
 
 import { quickActionStemFromPath } from './quickActionStem';
@@ -36,7 +37,7 @@ export async function launchQuickAction(
   const stored = plugin.quickActionLastUsedStore?.get(stem) ?? null;
   let presetProviderId: ProviderId;
   let presetModel: string;
-  let fallbackNotice: { storedProviderId: ProviderId; storedModel: string } | undefined;
+  let fallbackNotice: { storedProviderLabel: string; storedModelLabel: string } | undefined;
 
   const storedIsValid = !!stored
     && enabledIds.has(stored.providerId)
@@ -50,7 +51,10 @@ export async function launchQuickAction(
     presetProviderId = ProviderRegistry.resolveSettingsProviderId(settings);
     presetModel = resolveBlankTabModel(plugin, presetProviderId);
     if (stored) {
-      fallbackNotice = { storedProviderId: stored.providerId, storedModel: stored.model };
+      fallbackNotice = {
+        storedProviderLabel: resolveProviderLabel(stored.providerId),
+        storedModelLabel: resolveModelLabel(stored.providerId, stored.model, settings),
+      };
       plugin.quickActionLastUsedStore?.delete(stem);
     }
   }
@@ -64,6 +68,12 @@ export async function launchQuickAction(
     resolveDefaultModelForProvider: (providerId) => resolveBlankTabModel(plugin, providerId),
     fallbackNotice,
     onConfirm: (choice) => {
+      // Re-check that the chosen provider is still enabled. The modal may
+      // have been open while settings were edited in another window.
+      if (!ProviderRegistry.isEnabled(choice.providerId, settings)) {
+        new Notice(t('quickActions.launchModal.providerDisabled'));
+        return;
+      }
       plugin.quickActionLastUsedStore?.set(stem, choice);
       void runQuickActionForFile(plugin, file, action, choice);
     },
@@ -87,4 +97,28 @@ function buildEnabledProviders(settings: Record<string, unknown>): QuickActionLa
     });
   }
   return out;
+}
+
+function resolveProviderLabel(providerId: ProviderId): string {
+  try {
+    return ProviderRegistry.getProviderDisplayName(providerId);
+  } catch {
+    // Stored provider may no longer be registered; fall back to the raw id.
+    return providerId;
+  }
+}
+
+function resolveModelLabel(
+  providerId: ProviderId,
+  model: string,
+  settings: Record<string, unknown>,
+): string {
+  try {
+    const uiConfig = ProviderRegistry.getChatUIConfig(providerId);
+    const found = uiConfig.getModelOptions(settings).find((o) => o.value === model);
+    if (found) return found.label;
+  } catch {
+    // Stored provider may no longer be registered; fall through to raw model id.
+  }
+  return model;
 }
