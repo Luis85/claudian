@@ -1,4 +1,4 @@
-import { Notice, TFile, TFolder } from 'obsidian';
+import { TFile } from 'obsidian';
 
 import { openContextMenuQuickAction } from '@/features/quickActions/openContextMenuQuickAction';
 import type { SkillTabEntry } from '@/features/quickActions/skills/types';
@@ -34,6 +34,11 @@ jest.mock('@/features/quickActions/skills/runVaultSkill', () => ({
   runVaultSkill: jest.fn().mockResolvedValue(undefined),
 }));
 
+const launchMock = jest.fn();
+jest.mock('@/features/quickActions/launchQuickAction', () => ({
+  launchQuickAction: (...args: unknown[]) => launchMock(...args),
+}));
+
 // Capture the onRun/onRunSkill callbacks + aggregator passed to QuickActionsModal.
 let capturedOnRun: ((action: QuickAction) => void) | null = null;
 let capturedOnRunSkill: ((entry: SkillTabEntry) => void) | null = null;
@@ -56,13 +61,6 @@ jest.mock('@/i18n/i18n', () => ({
   t: (key: string) => key,
 }));
 
-// The helper's onRun callback wraps async work in `void (async () => {...})()`,
-// so awaiting capturedOnRun only flushes one microtask. Tests that observe
-// state reached after multiple inner awaits need to drain the queue.
-async function flushMicrotasks(): Promise<void> {
-  await new Promise((resolve) => setImmediate(resolve));
-}
-
 // ---- Helpers ---------------------------------------------------------------
 
 const MOCK_ACTION: QuickAction = {
@@ -73,52 +71,14 @@ const MOCK_ACTION: QuickAction = {
   filePath: 'Quick Actions/summarize.md',
 };
 
-function makeMockTab(lifecycleState: 'blank' | 'bound_cold' | 'active') {
-  return {
-    id: 'tab-1',
-    lifecycleState,
-    ui: {
-      fileContextManager: {
-        attachFileAsPill: jest.fn(),
-        attachFolderAsPill: jest.fn(),
-      },
-    },
-    controllers: {
-      inputController: {
-        sendMessage: jest.fn(),
-      },
-    },
-  };
-}
-
-function makeMockTabManager(opts: {
-  activeTab: ReturnType<typeof makeMockTab> | null;
-  canCreate: boolean;
-  newTab?: ReturnType<typeof makeMockTab> | null;
-}) {
-  return {
-    getActiveTab: jest.fn(() => opts.activeTab),
-    canCreateTab: jest.fn(() => opts.canCreate),
-    createTab: jest.fn().mockResolvedValue(opts.newTab ?? null),
-    switchToTab: jest.fn().mockResolvedValue(undefined),
-  };
-}
-
-function makeMockPlugin(
-  tabManager: ReturnType<typeof makeMockTabManager> | null,
-  viewExists = true,
-) {
-  const view = viewExists
-    ? { getTabManager: jest.fn(() => tabManager) }
-    : null;
-
+function makeMockPlugin() {
   return {
     app: { vault: {} },
     settings: { quickActionsFolder: 'Quick Actions' },
     storage: { getAdapter: jest.fn(() => ({})) },
     logger: undefined,
     events: { emit: jest.fn() },
-    getView: jest.fn(() => view),
+    getView: jest.fn(() => null),
     activateView: jest.fn().mockResolvedValue(undefined),
   };
 }
@@ -133,211 +93,40 @@ beforeEach(() => {
 });
 
 describe('openContextMenuQuickAction', () => {
-  it('opens QuickActionsModal', async () => {
-    const activeTab = makeMockTab('blank');
-    const tabManager = makeMockTabManager({ activeTab, canCreate: true });
-    const plugin = makeMockPlugin(tabManager);
+  it('opens QuickActionsModal', () => {
+    const plugin = makeMockPlugin();
 
-    await openContextMenuQuickAction(plugin as any, { path: 'note.md' } as TFile);
+    openContextMenuQuickAction(plugin as any, { path: 'note.md' } as TFile);
 
     const { QuickActionsModal } = jest.requireMock('@/features/quickActions/ui/QuickActionsModal');
     expect(QuickActionsModal).toHaveBeenCalledTimes(1);
   });
 
-  describe('onRun tab selection', () => {
-    it('reuses blank active tab', async () => {
-      const activeTab = makeMockTab('blank');
-      const tabManager = makeMockTabManager({ activeTab, canCreate: true });
-      const plugin = makeMockPlugin(tabManager);
+  it('onRun delegates to launchQuickAction with (plugin, file, action)', () => {
+    const plugin = makeMockPlugin();
+    const file = { path: 'note.md' } as TFile;
 
-      await openContextMenuQuickAction(plugin as any, { path: 'note.md' } as TFile);
-      await capturedOnRun!(MOCK_ACTION);
+    openContextMenuQuickAction(plugin as any, file);
+    capturedOnRun!(MOCK_ACTION);
 
-      expect(tabManager.createTab).not.toHaveBeenCalled();
-      expect(tabManager.switchToTab).toHaveBeenCalledWith('tab-1');
-    });
-
-    it('creates new tab when active tab has a conversation', async () => {
-      const activeTab = makeMockTab('active');
-      const newTab = makeMockTab('blank');
-      newTab.id = 'tab-2';
-      const tabManager = makeMockTabManager({ activeTab, canCreate: true, newTab });
-      const plugin = makeMockPlugin(tabManager);
-
-      await openContextMenuQuickAction(plugin as any, { path: 'note.md' } as TFile);
-      await capturedOnRun!(MOCK_ACTION);
-
-      expect(tabManager.createTab).toHaveBeenCalledWith(null, undefined, { activate: false });
-      expect(tabManager.switchToTab).toHaveBeenCalledWith('tab-2');
-    });
-
-    it('shows Notice and aborts when canCreateTab is false', async () => {
-      const activeTab = makeMockTab('active');
-      const tabManager = makeMockTabManager({ activeTab, canCreate: false });
-      const plugin = makeMockPlugin(tabManager);
-
-      await openContextMenuQuickAction(plugin as any, { path: 'note.md' } as TFile);
-      await capturedOnRun!(MOCK_ACTION);
-
-      expect(Notice).toHaveBeenCalledWith('quickActions.contextMenu.tabLimitReached');
-      expect(tabManager.switchToTab).not.toHaveBeenCalled();
-    });
-
-    it('shows Notice and aborts when createTab returns null', async () => {
-      const activeTab = makeMockTab('active');
-      const tabManager = makeMockTabManager({ activeTab, canCreate: true, newTab: null });
-      const plugin = makeMockPlugin(tabManager);
-
-      await openContextMenuQuickAction(plugin as any, { path: 'note.md' } as TFile);
-      await capturedOnRun!(MOCK_ACTION);
-
-      expect(Notice).toHaveBeenCalledWith('quickActions.contextMenu.tabLimitReached');
-      expect(tabManager.switchToTab).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('onRun chip injection', () => {
-    it('attaches file pill for TFile', async () => {
-      const activeTab = makeMockTab('blank');
-      const tabManager = makeMockTabManager({ activeTab, canCreate: true });
-      const plugin = makeMockPlugin(tabManager);
-
-      const file = Object.assign(Object.create(TFile.prototype), { path: 'docs/my-note.md' });
-      await openContextMenuQuickAction(plugin as any, file);
-      await capturedOnRun!(MOCK_ACTION);
-
-      expect(activeTab.ui.fileContextManager.attachFileAsPill).toHaveBeenCalledWith('docs/my-note.md');
-      expect(activeTab.ui.fileContextManager.attachFolderAsPill).not.toHaveBeenCalled();
-    });
-
-    it('attaches folder pill for TFolder', async () => {
-      const activeTab = makeMockTab('blank');
-      const tabManager = makeMockTabManager({ activeTab, canCreate: true });
-      const plugin = makeMockPlugin(tabManager);
-
-      const folder = Object.assign(Object.create(TFolder.prototype), { path: 'docs' });
-      await openContextMenuQuickAction(plugin as any, folder);
-      await capturedOnRun!(MOCK_ACTION);
-
-      expect(activeTab.ui.fileContextManager.attachFolderAsPill).toHaveBeenCalledWith('docs');
-      expect(activeTab.ui.fileContextManager.attachFileAsPill).not.toHaveBeenCalled();
-    });
-
-    it('attaches pill AFTER switchToTab to survive initializeWelcome reset', async () => {
-      const activeTab = makeMockTab('blank');
-      const tabManager = makeMockTabManager({ activeTab, canCreate: true });
-      const plugin = makeMockPlugin(tabManager);
-
-      const file = Object.assign(Object.create(TFile.prototype), { path: 'note.md' });
-      await openContextMenuQuickAction(plugin as any, file);
-      await capturedOnRun!(MOCK_ACTION);
-      await flushMicrotasks();
-
-      const switchOrder = (tabManager.switchToTab as jest.Mock).mock.invocationCallOrder[0];
-      const attachOrder = (activeTab.ui.fileContextManager.attachFileAsPill as jest.Mock).mock.invocationCallOrder[0];
-      expect(switchOrder).toBeLessThan(attachOrder);
-    });
-
-    it('attaches pill AFTER switchToTab on the new-tab path as well', async () => {
-      const activeTab = makeMockTab('active');
-      const newTab = makeMockTab('blank');
-      newTab.id = 'tab-2';
-      const tabManager = makeMockTabManager({ activeTab, canCreate: true, newTab });
-      const plugin = makeMockPlugin(tabManager);
-
-      const file = Object.assign(Object.create(TFile.prototype), { path: 'note.md' });
-      await openContextMenuQuickAction(plugin as any, file);
-      await capturedOnRun!(MOCK_ACTION);
-      await flushMicrotasks();
-
-      const switchOrder = (tabManager.switchToTab as jest.Mock).mock.invocationCallOrder[0];
-      const attachOrder = (newTab.ui.fileContextManager.attachFileAsPill as jest.Mock).mock.invocationCallOrder[0];
-      expect(switchOrder).toBeLessThan(attachOrder);
-    });
-  });
-
-  describe('onRun send', () => {
-    it('calls sendMessage with action prompt', async () => {
-      const activeTab = makeMockTab('blank');
-      const tabManager = makeMockTabManager({ activeTab, canCreate: true });
-      const plugin = makeMockPlugin(tabManager);
-
-      const file = Object.assign(Object.create(TFile.prototype), { path: 'note.md' });
-      await openContextMenuQuickAction(plugin as any, file);
-      await capturedOnRun!(MOCK_ACTION);
-
-      expect(activeTab.controllers.inputController.sendMessage).toHaveBeenCalledWith({
-        content: 'Summarize this.',
-      });
-    });
-  });
-
-  describe('onRun view handling', () => {
-    it('calls activateView when view is not yet open', async () => {
-      const activeTab = makeMockTab('blank');
-      const tabManager = makeMockTabManager({ activeTab, canCreate: true });
-
-      // getView() returns null on first call, then the view on second call
-      const view = { getTabManager: jest.fn(() => tabManager) };
-      const plugin = {
-        app: { vault: {} },
-        settings: { quickActionsFolder: 'Quick Actions' },
-        storage: { getAdapter: jest.fn(() => ({})) },
-        logger: undefined,
-        events: { emit: jest.fn() },
-        getView: jest.fn()
-          .mockReturnValueOnce(null)
-          .mockReturnValueOnce(view),
-        activateView: jest.fn().mockResolvedValue(undefined),
-      };
-
-      const file = Object.assign(Object.create(TFile.prototype), { path: 'note.md' });
-      await openContextMenuQuickAction(plugin as any, file);
-      await capturedOnRun!(MOCK_ACTION);
-      await flushMicrotasks();
-
-      expect(plugin.activateView).toHaveBeenCalledTimes(1);
-      expect(activeTab.controllers.inputController.sendMessage).toHaveBeenCalled();
-    });
-
-    it('aborts gracefully when view cannot be opened', async () => {
-      const plugin = {
-        app: { vault: {} },
-        settings: { quickActionsFolder: 'Quick Actions' },
-        storage: { getAdapter: jest.fn(() => ({})) },
-        logger: undefined,
-        events: { emit: jest.fn() },
-        getView: jest.fn().mockReturnValue(null),
-        activateView: jest.fn().mockResolvedValue(undefined),
-      };
-
-      const file = Object.assign(Object.create(TFile.prototype), { path: 'note.md' });
-      await openContextMenuQuickAction(plugin as any, file);
-      await capturedOnRun!(MOCK_ACTION);
-
-      // No error thrown, no send attempted
-      expect(Notice).not.toHaveBeenCalled();
-    });
+    expect(launchMock).toHaveBeenCalledTimes(1);
+    expect(launchMock).toHaveBeenCalledWith(plugin, file, MOCK_ACTION);
   });
 
   describe('skills wiring', () => {
-    it('passes a VaultSkillAggregator into the modal', async () => {
-      const activeTab = makeMockTab('blank');
-      const tabManager = makeMockTabManager({ activeTab, canCreate: true });
-      const plugin = makeMockPlugin(tabManager);
-      await openContextMenuQuickAction(plugin as any, { path: 'note.md' } as TFile);
+    it('passes a VaultSkillAggregator into the modal', () => {
+      const plugin = makeMockPlugin();
+      openContextMenuQuickAction(plugin as any, { path: 'note.md' } as TFile);
       expect(capturedAggregator).not.toBeNull();
     });
 
-    it('routes onRunSkill to runVaultSkill with the same file argument', async () => {
+    it('routes onRunSkill to runVaultSkill with the same file argument', () => {
       const { runVaultSkill } = jest.requireMock(
         '@/features/quickActions/skills/runVaultSkill',
       );
-      const activeTab = makeMockTab('blank');
-      const tabManager = makeMockTabManager({ activeTab, canCreate: true });
-      const plugin = makeMockPlugin(tabManager);
+      const plugin = makeMockPlugin();
       const file = Object.assign(Object.create(TFile.prototype), { path: 'note.md' });
-      await openContextMenuQuickAction(plugin as any, file);
+      openContextMenuQuickAction(plugin as any, file);
       const entry = {
         id: 'claude:skill-x',
         name: 'x',
