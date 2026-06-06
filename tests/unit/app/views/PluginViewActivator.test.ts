@@ -9,11 +9,16 @@ function createPlugin(opts: {
   lastKnownOpenTabCount?: number;
   maxTabs?: number;
   pendingReservations?: number;
+  tabsRestored?: boolean;
   placement?: 'main-tab' | 'left-sidebar' | 'right-sidebar';
 } = {}) {
   const leaves = opts.existingViewLeaves ?? [];
   const view = opts.hasLiveView
-    ? { getTabManager: () => opts.tabManager ?? null, createNewTab: jest.fn().mockResolvedValue(undefined) }
+    ? {
+        getTabManager: () => opts.tabManager ?? null,
+        areTabsRestored: () => opts.tabsRestored ?? true,
+        createNewTab: jest.fn().mockResolvedValue(undefined),
+      }
     : null;
   const newLeafTab = { setViewState: jest.fn().mockResolvedValue(undefined) };
   const plugin = {
@@ -127,6 +132,21 @@ describe('PluginViewActivator.getTabSlotUsage', () => {
     const { plugin } = createPlugin({ lastKnownOpenTabCount: 0, maxTabs: 99 });
     const activator = new PluginViewActivator(plugin);
     expect(activator.getTabSlotUsage().max).toBe(10);
+  });
+
+  it('reports no free capacity while a mounted view is still restoring its tabs', () => {
+    // The tab manager is assigned before restoreOrCreateTabs() completes, so its
+    // live count is 0 mid-restore even though persisted tabs are incoming. The
+    // queue must wait rather than overbook the cap or drop restored tabs.
+    const { plugin } = createPlugin({
+      hasLiveView: true,
+      existingViewLeaves: [{}],
+      tabManager: { getTabCount: () => 0 },
+      tabsRestored: false,
+      maxTabs: 5,
+    });
+    const activator = new PluginViewActivator(plugin);
+    expect(activator.getTabSlotUsage()).toEqual({ used: 5, max: 5 });
   });
 
   it('reports no free capacity while a Claudian leaf is mid-mount (no tab manager yet)', () => {

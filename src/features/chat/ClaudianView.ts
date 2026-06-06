@@ -51,6 +51,10 @@ export class ClaudianView extends ItemView {
 
   // Tab management
   private tabManager: TabManager | null = null;
+  // False until restoreOrCreateTabs() finishes: the tab manager is assigned
+  // before the async restore runs, so the Agent Board queue must not count the
+  // live tab count during that window or it can overbook the cap / drop tabs.
+  private tabsRestored = false;
   private tabBar: TabBar | null = null;
   private tabBarContainerEl: HTMLElement | null = null;
   private tabContentEl: HTMLElement | null = null;
@@ -245,6 +249,7 @@ export class ClaudianView extends ItemView {
       },
     });
 
+    this.tabsRestored = false;
     this.tabManager = new TabManager(
       this.plugin,
       this.tabContentEl,
@@ -295,6 +300,7 @@ export class ClaudianView extends ItemView {
     );
 
     await this.restoreOrCreateTabs();
+    this.tabsRestored = true;
     this.syncProviderBrandColor();
     this.syncHeaderTitle();
     this.updateLayoutForPosition();
@@ -1199,5 +1205,12 @@ export class ClaudianView extends ItemView {
   /** Gets the tab manager. */
   getTabManager(): TabManager | null {
     return this.tabManager;
+  }
+
+  /** Whether the tab manager has finished restoring its persisted tabs. The
+   *  Agent Board queue gates on this so it doesn't count an empty live tab set
+   *  mid-restore and overbook the tab cap. */
+  areTabsRestored(): boolean {
+    return this.tabsRestored;
   }
 }

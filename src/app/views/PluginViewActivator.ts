@@ -91,15 +91,17 @@ export class PluginViewActivator {
    * the instant it launches, before its tab exists, so a second Agent Board pane
    * counts that committed-but-uncreated tab and won't over-launch into the cap.
    *
-   * When a Claudian leaf exists but its tab manager isn't ready yet (e.g. mid
-   * workspace restore), report no free capacity — like canCreateNewTab() — so the
-   * queue waits instead of launching a run the chat surface can't host yet and
-   * failing the card.
+   * When a Claudian leaf exists but its tab manager isn't ready yet — not
+   * created, or created but still restoring its persisted tabs (the manager is
+   * assigned before the async restore) — report no free capacity, like
+   * canCreateNewTab(), so the queue waits instead of racing the restore and
+   * overbooking the cap or dropping restored tabs.
    */
   getTabSlotUsage(): { used: number; max: number } {
     const max = this.getMaxTabsLimit();
-    const tabManager = this.plugin.getView()?.getTabManager();
-    if (tabManager) {
+    const view = this.plugin.getView();
+    const tabManager = view?.getTabManager();
+    if (tabManager && view?.areTabsRestored()) {
       return { used: tabManager.getTabCount() + this.plugin.chatTabReservations.pending, max };
     }
     const hasClaudianLeaf =
