@@ -32,6 +32,7 @@ parent: "[[2026-06-06-work-order-handoff-chat-card-design]]"
 - Modify `src/features/chat/tabs/TabManager.ts`: store the work-order path on task-run tabs.
 - Modify `src/features/chat/tabs/tabControllers.ts`: pass work-order context into `MessageRenderer` (resolved from tab or persisted conversation) and wire the conversation-persistence accessor.
 - Modify `src/features/chat/controllers/ConversationController.ts`: persist the work-order path onto `Conversation.workOrderPath` so the card survives reopen from history / restart.
+- Modify `src/core/types/chat.ts`, `src/core/bootstrap/SessionStorage.ts`, and `src/app/conversations/ConversationStore.ts`: round-trip `workOrderPath` through persisted session metadata so the link survives a restart.
 - Modify `src/features/chat/ClaudianView.ts`: accept an optional `workOrderPath` in `startTaskRunInFreshTab` (the commit-turn caller leaves it unset).
 - Modify `src/features/tasks/execution/ChatTabExecutionSurface.ts`: pass `task.path` to the chat view.
 - Create `src/style/features/work-order-handoff-card.css`: card styles.
@@ -394,6 +395,9 @@ git commit -m "feat: add work order handoff card renderer"
 - Modify: `src/features/chat/tabs/TabManager.ts`
 - Modify: `src/features/chat/tabs/tabControllers.ts`
 - Modify: `src/features/chat/controllers/ConversationController.ts`
+- Modify: `src/core/types/chat.ts`
+- Modify: `src/core/bootstrap/SessionStorage.ts`
+- Modify: `src/app/conversations/ConversationStore.ts`
 - Modify: `src/features/chat/ClaudianView.ts`
 - Modify: `src/features/tasks/execution/ChatTabExecutionSurface.ts`
 
@@ -459,7 +463,9 @@ The full call should end like this:
   );
 ```
 
-- [ ] **Step 4: Persist the work-order path on the conversation**
+Also clear the transient tab path when the tab (re)binds a different conversation, so a task-run tab that later opens an unrelated conversation in place does not keep treating it as a work-order chat — and so the Step 4 save accessor cannot write the stale path onto the wrong conversation. In `src/features/chat/tabs/tabControllers.ts`, set `tab.workOrderPath = null` in the `ConversationController` `ensureServiceForConversation` callback (where `tab.conversationId` is reassigned on load/switch) and in `onNewConversation`. A fresh run creates its conversation lazily through `save()` rather than those callbacks, so the run's path survives until its first save persists it; once any conversation is bound, the durable `Conversation.workOrderPath` becomes the source of truth.
+
+- [ ] **Step 4: Persist the work-order path on the conversation (durably, across restart)**
 
 `tab.workOrderPath` is set only by `createTaskRunTab`, so reopening a saved run (which uses `createTab`) would lose it and re-render the raw block. Persist it on the durable conversation through the existing save chokepoint — `Conversation.workOrderPath` already exists in the model and is otherwise unused.
 
@@ -490,6 +496,26 @@ In `src/features/chat/tabs/tabControllers.ts`, wire the accessor where `Conversa
 ```
 
 The first save of a run writes `task.path` onto the conversation, so the stored-replay path re-derives the card after reopen. Verify by asserting `plugin.updateConversation` receives `workOrderPath` when the accessor returns a path (extend the existing `ConversationController` save coverage).
+
+Saving the in-memory conversation is not enough for the **restart** case — the durable session-metadata layer must round-trip the field too. `SessionMetadata` already declares `workOrderPath` (drop the stale "In-memory only" note in `src/core/types/chat.ts`), but the serializer and hydrator skip it.
+
+In `src/core/bootstrap/SessionStorage.ts`, add it to the object returned by `toSessionMetadata()`:
+
+```ts
+      resumeAtMessageId: conversation.resumeAtMessageId,
+      workOrderPath: conversation.workOrderPath,
+    };
+```
+
+In `src/app/conversations/ConversationStore.ts`, hydrate it back in the `loadConversations()` mapping:
+
+```ts
+      resumeAtMessageId: meta.resumeAtMessageId,
+      workOrderPath: meta.workOrderPath,
+    } satisfies Conversation;
+```
+
+Now `plugin.getConversationSync(...)?.workOrderPath` survives a reload/restart, so a reopened work-order conversation still re-renders the card. (`saveMetadata`/`loadMetadata` serialize the whole `SessionMetadata` as JSON, so no further wiring is needed.)
 
 - [ ] **Step 5: Add work-order path to the chat view task-run API**
 
@@ -907,7 +933,7 @@ Expected: both commands PASS.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/features/chat/rendering/MessageRenderer.ts src/features/chat/controllers/StreamController.ts src/features/chat/controllers/ConversationController.ts src/features/chat/tabs/types.ts src/features/chat/tabs/TabManager.ts src/features/chat/tabs/tabControllers.ts src/features/chat/ClaudianView.ts src/features/tasks/execution/ChatTabExecutionSurface.ts tests/unit/features/chat/rendering/MessageRenderer.test.ts
+git add src/features/chat/rendering/MessageRenderer.ts src/features/chat/controllers/StreamController.ts src/features/chat/controllers/ConversationController.ts src/core/types/chat.ts src/core/bootstrap/SessionStorage.ts src/app/conversations/ConversationStore.ts src/features/chat/tabs/types.ts src/features/chat/tabs/TabManager.ts src/features/chat/tabs/tabControllers.ts src/features/chat/ClaudianView.ts src/features/tasks/execution/ChatTabExecutionSurface.ts tests/unit/features/chat/rendering/MessageRenderer.test.ts
 git commit -m "feat: render work order handoffs as chat cards"
 ```
 
@@ -1091,7 +1117,7 @@ Expected:
 
 - `git status --short` prints no file changes.
 - `git log` shows this plan plus implementation commits on `spec/work-order-handoff-chat-card`.
-- Diff stat includes the spec, plan, helper, card renderer, `MessageRenderer`, the `StreamController` finalize hook, `ConversationController` work-order-path persistence, task-tab context wiring, CSS, and tests.
+- Diff stat includes the spec, plan, helper, card renderer, `MessageRenderer`, the `StreamController` finalize hook, `ConversationController` work-order-path persistence, the session-metadata round-trip (`SessionStorage` + `ConversationStore` + `chat.ts`), task-tab context wiring, CSS, and tests.
 
 - [ ] **Step 3: Push the branch**
 

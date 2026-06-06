@@ -158,7 +158,7 @@ Later implementation verification should run targeted unit tests plus the usual 
 - The behavior is scoped to work-order run chats.
 - Ambiguous or malformed content — including duplicate required fields — fails open by rendering normally.
 - The transformation runs on both the live streaming finalize and the stored replay path, so the card appears at run completion and survives reload.
-- The work-order link is persisted on the conversation (`Conversation.workOrderPath`), so reopening a saved run from history or after a restart still renders the card.
+- The work-order link is persisted on the conversation (`Conversation.workOrderPath`) and round-tripped through session metadata, so reopening a saved run from history or after a restart still renders the card. The transient tab path is cleared when a tab rebinds to another conversation, so an unrelated chat is never mis-rendered as a work-order handoff.
 - No settings toggle is required for the first version.
 
 ## Open Follow-up
