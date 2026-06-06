@@ -1,7 +1,7 @@
 ---
 title: Archive Action in Work-Order Context Menu
 date: 2026-06-06
-status: draft
+status: implemented
 scope: features/tasks
 parent: "[[Agent Kanban Board]]"
 ---
