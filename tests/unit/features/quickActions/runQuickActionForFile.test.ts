@@ -228,3 +228,68 @@ describe('dispatchQuickActionToTab (shared seam)', () => {
     expect(recorded).toEqual([]);
   });
 });
+
+describe('runQuickActionForFile with override', () => {
+  beforeEach(() => {
+    jest.resetModules();
+  });
+
+  it('reuses blank active tab when its provider matches override.providerId', async () => {
+    jest.doMock('@/features/chat/tabs/providerResolution', () => ({
+      getTabProviderId: () => 'claude',
+    }));
+    const { TFile: TFileFresh } = await import('obsidian');
+    const tab = { ...makeMockTab('blank'), providerId: 'claude' } as any;
+    const tm = makeMockTabManager({ activeTab: tab, canCreate: true });
+    const plugin = makeMockPlugin(tm);
+    const file = Object.assign(Object.create(TFileFresh.prototype), { path: 'note.md' });
+
+    const { runQuickActionForFile: run } = await import('@/features/quickActions/runQuickActionForFile');
+    await run(plugin as any, file, MOCK_ACTION, { providerId: 'claude', model: 'claude-sonnet-4-5' });
+
+    expect(tm.createTab).not.toHaveBeenCalled();
+    expect(tm.switchToTab).toHaveBeenCalledWith('tab-1');
+  });
+
+  it('creates a new tab with defaultProviderId + pinnedModel when active blank wrong provider', async () => {
+    jest.doMock('@/features/chat/tabs/providerResolution', () => ({
+      getTabProviderId: () => 'codex',
+    }));
+    const { TFile: TFileFresh } = await import('obsidian');
+    const newTab = makeMockTab('blank');
+    const tab = makeMockTab('blank');
+    const tm = makeMockTabManager({ activeTab: tab, canCreate: true, newTab });
+    const plugin = makeMockPlugin(tm);
+    const file = Object.assign(Object.create(TFileFresh.prototype), { path: 'note.md' });
+
+    const { runQuickActionForFile: run } = await import('@/features/quickActions/runQuickActionForFile');
+    await run(plugin as any, file, MOCK_ACTION, { providerId: 'claude', model: 'claude-sonnet-4-5' });
+
+    expect(tm.createTab).toHaveBeenCalledWith(
+      null,
+      undefined,
+      expect.objectContaining({
+        activate: false,
+        defaultProviderId: 'claude',
+        pinnedModel: 'claude-sonnet-4-5',
+      }),
+    );
+  });
+
+  it('preserves existing behavior when no override given (inherits from active blank)', async () => {
+    jest.doMock('@/features/chat/tabs/providerResolution', () => ({
+      getTabProviderId: () => 'codex',
+    }));
+    const { TFile: TFileFresh } = await import('obsidian');
+    const tab = makeMockTab('blank');
+    const tm = makeMockTabManager({ activeTab: tab, canCreate: true });
+    const plugin = makeMockPlugin(tm);
+    const file = Object.assign(Object.create(TFileFresh.prototype), { path: 'note.md' });
+
+    const { runQuickActionForFile: run } = await import('@/features/quickActions/runQuickActionForFile');
+    await run(plugin as any, file, MOCK_ACTION);
+
+    expect(tm.createTab).not.toHaveBeenCalled();
+    expect(tm.switchToTab).toHaveBeenCalledWith('tab-1');
+  });
+});

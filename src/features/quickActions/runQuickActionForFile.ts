@@ -1,12 +1,18 @@
 import { Notice, type TAbstractFile, TFile, TFolder } from 'obsidian';
 
 import type { ProviderId } from '@/core/providers/types';
+import { getTabProviderId } from '@/features/chat/tabs/providerResolution';
 import { t } from '@/i18n/i18n';
 import type ClaudianPlugin from '@/main';
 
 import type { QuickAction } from './types';
 
-/** Per-run provider+model override (Task 6 wires the behavior). */
+/**
+ * Per-run provider+model override applied to the target tab. When present, the
+ * active blank tab is only reused if its current provider equals
+ * `providerId`; otherwise a fresh tab is created with `defaultProviderId` +
+ * `pinnedModel` so the runtime applies the chosen model on every turn.
+ */
 export interface QuickActionRunOverride {
   providerId: ProviderId;
   model: string;
@@ -71,8 +77,7 @@ export async function runQuickActionForFile(
   plugin: ClaudianPlugin,
   file: TAbstractFile,
   action: QuickAction,
-  // TODO(Task 6): apply override to target tab provider+model before dispatch.
-  _override?: QuickActionRunOverride,
+  override?: QuickActionRunOverride,
 ): Promise<void> {
   let view = plugin.getView();
   if (!view) {
@@ -86,12 +91,25 @@ export async function runQuickActionForFile(
 
   const activeTab = tabManager.getActiveTab();
   const isBlank = activeTab?.lifecycleState === 'blank';
+  // When an override is present, the active blank tab is only reusable if
+  // its provider matches the override — running a Claude prompt in a blank
+  // Codex tab would defeat the picker.
+  const overrideMatchesActive = override !== undefined && isBlank && activeTab
+    ? getTabProviderId(activeTab, plugin) === override.providerId
+    : false;
   let targetTab;
 
-  if (isBlank && activeTab) {
+  if (override === undefined && isBlank && activeTab) {
+    targetTab = activeTab;
+  } else if (overrideMatchesActive && activeTab) {
     targetTab = activeTab;
   } else if (tabManager.canCreateTab()) {
-    const newTab = await tabManager.createTab(null, undefined, { activate: false });
+    const newTab = await tabManager.createTab(null, undefined, {
+      activate: false,
+      ...(override !== undefined
+        ? { defaultProviderId: override.providerId, pinnedModel: override.model }
+        : {}),
+    });
     if (!newTab) {
       new Notice(t('quickActions.contextMenu.tabLimitReached'));
       return;
