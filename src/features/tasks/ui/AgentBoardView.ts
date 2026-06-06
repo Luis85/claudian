@@ -689,6 +689,11 @@ export class AgentBoardView extends ItemView {
     writeLaneCollapsed(settings, laneId, !lane.collapsed);
     try {
       await this.plugin.saveSettings();
+      // Other open Agent Board panes refresh their cached `config`/`layout`
+      // only on this event (see `onOpen` registration); without it a second
+      // pane keeps showing the stale expanded/collapsed state until an
+      // unrelated refresh. Matches the AgentBoardLaneEditor save path.
+      this.plugin.events.emit('task:board-config-changed');
     } catch (error) {
       new Notice(t('tasks.board.updateFailed', { error: error instanceof Error ? error.message : String(error) }));
       return;
