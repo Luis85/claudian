@@ -88,6 +88,21 @@ export class AgentBoardView extends ItemView {
         this.applyNoteChange(task.path, (content) =>
           entries.reduce((acc, entry) => this.noteStore.appendLedger(acc, entry), content),
         ),
+      // Sidecar hooks are wired with note-backed stand-ins until Task 8 swaps in
+      // the real `RunSidecarStore`: the existing transitional note path keeps
+      // working, and the coordinator's new seam is in place for the real wiring
+      // to drop in without further changes to RunSession.
+      writeHeartbeat: async () => {
+        // No-op: the legacy note-side heartbeat raced agent Edits. RunSession
+        // still writes status at transitions; Task 8 routes ticks to the sidecar.
+      },
+      appendLedger: (task, _runId, entry) =>
+        this.applyNoteChange(task.path, (content) => this.noteStore.appendLedger(content, entry)),
+      finalizeLedgerToNote: async () => {
+        // No-op: the per-entry note appends above already keep the note ledger
+        // up to date. Task 8 will move the live writes to the sidecar and use
+        // this to snapshot back at terminal.
+      },
       writeHandoff: (task, markdown) =>
         this.applyNoteChange(task.path, (content) => this.noteStore.writeHandoff(content, markdown)),
       renderPrompt: (task) =>

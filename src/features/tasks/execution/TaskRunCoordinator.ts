@@ -14,6 +14,29 @@ export interface TaskRunCoordinatorDeps {
   ownsModel: (providerId: string, model: string) => boolean;
   writeTaskStatus: (task: TaskSpec, options: RunSessionWriteStatusOptions) => Promise<void>;
   flushLedger: (task: TaskSpec, entries: TaskLedgerEntry[]) => Promise<void>;
+  /**
+   * Sidecar heartbeat write — keyed by runId only, not by note. Replaces the
+   * per-tick frontmatter heartbeat that raced the agent's checklist Edits on
+   * the same note. The sidecar is run-scoped so a stale heartbeat from a
+   * previous run can't leak across.
+   */
+  writeHeartbeat: (
+    runId: string,
+    heartbeat: { at: string; status: TaskStatus; pauseReason?: string | null },
+  ) => Promise<void>;
+  /**
+   * Sidecar ledger append (one entry per call). Receives the task for
+   * sidecar-path resolution and the runId so the sidecar stays partitioned by
+   * run. The note's ledger region is updated only at terminal via
+   * {@link finalizeLedgerToNote}.
+   */
+  appendLedger: (task: TaskSpec, runId: string, entry: TaskLedgerEntry) => Promise<void>;
+  /**
+   * At terminal, snapshot the sidecar ledger back into the work-order note's
+   * `<!-- claudian:run-ledger-* -->` region. Runs after the handoff write so
+   * the note's terminal state lands in a single coordinated transition.
+   */
+  finalizeLedgerToNote: (task: TaskSpec, runId: string) => Promise<void>;
   writeHandoff: (task: TaskSpec, markdown: string) => Promise<void>;
   renderPrompt?: (task: TaskSpec) => string;
   heartbeatIntervalMs?: number;
@@ -127,6 +150,9 @@ export class TaskRunCoordinator {
         now: this.deps.now,
         writeStatus: this.deps.writeTaskStatus,
         flushLedger: (entries) => this.deps.flushLedger(task, entries),
+        writeHeartbeat: (runId, hb) => this.deps.writeHeartbeat(runId, hb),
+        appendLedger: (runId, entry) => this.deps.appendLedger(task, runId, entry),
+        finalizeLedgerToNote: (t, runId) => this.deps.finalizeLedgerToNote(t, runId),
         writeHandoff: this.deps.writeHandoff,
         heartbeatIntervalMs: this.deps.heartbeatIntervalMs,
         staleThresholdMs: this.deps.staleThresholdMs,

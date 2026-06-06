@@ -87,6 +87,9 @@ function makeCoordinator(
     ownsModel: () => true,
     writeTaskStatus: async (_t, options) => { statuses.push(options.status); },
     flushLedger: async (_t, entries) => { for (const e of entries) ledgerMessages.push(e.message); },
+    writeHeartbeat: async () => {},
+    appendLedger: async () => {},
+    finalizeLedgerToNote: async () => {},
     writeHandoff: async (_t, markdown) => { handoffs.push(markdown); },
     ...overrides,
   });
@@ -278,6 +281,9 @@ describe('TaskRunCoordinator', () => {
       ownsModel: () => true,
       writeTaskStatus: async () => {},
       flushLedger: async () => {},
+      writeHeartbeat: async () => {},
+      appendLedger: async () => {},
+      finalizeLedgerToNote: async () => {},
       writeHandoff: async () => {},
     });
 
@@ -313,6 +319,51 @@ describe('TaskRunCoordinator', () => {
     surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
     await p;
     expect(surface.prompts[0]).toBe('INJECTED PROMPT');
+  });
+
+  it('forwards sidecar hooks (writeHeartbeat, appendLedger, finalizeLedgerToNote) to RunSession', async () => {
+    jest.useFakeTimers();
+    try {
+      const writeHeartbeat = jest.fn(async (_runId: string, _hb: unknown) => {});
+      const appendLedger = jest.fn(async (_task: TaskSpec, _runId: string, _entry: unknown) => {});
+      const finalizeLedgerToNote = jest.fn(async (_task: TaskSpec, _runId: string) => {});
+      const surface = new FakeSurface();
+      const { coordinator } = makeCoordinator(surface, {
+        writeHeartbeat,
+        appendLedger,
+        finalizeLedgerToNote,
+        heartbeatIntervalMs: 10,
+        staleThresholdMs: 100_000,
+      });
+      const p = coordinator.run(makeTask());
+      await Promise.resolve();
+      await Promise.resolve();
+      // Force one heartbeat tick so the wired writeHeartbeat fires.
+      jest.advanceTimersByTime(15);
+      surface.adapter.emitText(VALID_HANDOFF);
+      surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+      await p;
+
+      // The sidecar ledger receives at least the run-start and the terminal handoff entries.
+      expect(appendLedger).toHaveBeenCalled();
+      const firstAppend = appendLedger.mock.calls[0];
+      expect(firstAppend[0].frontmatter.id).toBe('task-1');
+      expect(firstAppend[1]).toBe('run-1');
+      // The terminal finalize stamps the sidecar ledger back into the note exactly once.
+      expect(finalizeLedgerToNote).toHaveBeenCalledTimes(1);
+      expect(finalizeLedgerToNote).toHaveBeenCalledWith(
+        expect.objectContaining({ frontmatter: expect.objectContaining({ id: 'task-1' }) }),
+        'run-1',
+      );
+      // The heartbeat dep is wired and runId-keyed (no task arg).
+      expect(writeHeartbeat).toHaveBeenCalled();
+      expect(writeHeartbeat.mock.calls[0][0]).toBe('run-1');
+      expect(writeHeartbeat.mock.calls[0][1]).toEqual(
+        expect.objectContaining({ status: 'running', at: expect.any(String) }),
+      );
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 
