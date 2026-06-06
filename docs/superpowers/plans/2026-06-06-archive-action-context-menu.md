@@ -1,11 +1,13 @@
 ---
 title: Archive Action in Work-Order Context Menu Implementation Plan
 date: 2026-06-06
-status: open
+status: shipped
 scope: features/tasks
 spec: "[[docs/superpowers/specs/2026-06-06-archive-action-context-menu-design.md]]"
 parent: "[[Agent Kanban Board]]"
 ---
+
+> Shipped by [[Agent Board/tasks/work-order-20260606-archive-action-context-menu]] (pending manual smoke).
 
 # Archive Action in Work-Order Context Menu Implementation Plan
 
@@ -44,7 +46,7 @@ parent: "[[Agent Kanban Board]]"
 **Files:**
 - Modify: `src/i18n/locales/{en,de,es,fr,ja,ko,pt,ru,zh-CN,zh-TW}.json`
 
-- [ ] **Step 1: Add `archive` to `tasks.board.contextMenu` in `en.json`**
+- [x] **Step 1: Add `archive` to `tasks.board.contextMenu` in `en.json`**
 
 In `src/i18n/locales/en.json`, find the `"contextMenu"` block under `"tasks.board"` (search `"openNote": "Open note"`). Replace this block:
 
@@ -65,7 +67,7 @@ with:
       }
 ```
 
-- [ ] **Step 2: Apply the same shape change to the other 9 locales**
+- [x] **Step 2: Apply the same shape change to the other 9 locales**
 
 For each of `de.json`, `es.json`, `fr.json`, `ja.json`, `ko.json`, `pt.json`, `ru.json`, `zh-CN.json`, `zh-TW.json`, locate the matching `tasks.board.contextMenu` block and add an `archive` key. Use these values verbatim:
 
@@ -83,12 +85,12 @@ For each of `de.json`, `es.json`, `fr.json`, `ja.json`, `ko.json`, `pt.json`, `r
 
 Each file's edit looks like the `en.json` edit above — append `"archive": "<value>"` after `"openConversation"`, with a comma after `"openConversation"`.
 
-- [ ] **Step 3: Verify all 10 files parse**
+- [x] **Step 3: Verify all 10 files parse**
 
 Run: `npm run typecheck`
 Expected: PASS. (Locale JSON is loaded with `JSON.parse`; a malformed file would surface at runtime, but typecheck still catches any TS-side breakage. If you want a stricter early check, also run: `node -e "for (const f of ['en','de','es','fr','ja','ko','pt','ru','zh-CN','zh-TW']) JSON.parse(require('fs').readFileSync('src/i18n/locales/'+f+'.json','utf8'))"` — must exit 0.)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/i18n/locales/en.json src/i18n/locales/de.json src/i18n/locales/es.json src/i18n/locales/fr.json src/i18n/locales/ja.json src/i18n/locales/ko.json src/i18n/locales/pt.json src/i18n/locales/ru.json src/i18n/locales/zh-CN.json src/i18n/locales/zh-TW.json
@@ -103,7 +105,7 @@ git commit -m "feat(i18n): add tasks.board.contextMenu.archive translations"
 - Modify: `src/features/tasks/ui/WorkOrderContextMenu.ts`
 - Test: `tests/unit/features/tasks/ui/WorkOrderContextMenu.test.ts`
 
-- [ ] **Step 1: Extend the `makeDeps` factory in the test file**
+- [x] **Step 1: Extend the `makeDeps` factory in the test file**
 
 In `tests/unit/features/tasks/ui/WorkOrderContextMenu.test.ts`, find `function makeDeps(overrides...)` and replace it with:
 
@@ -120,7 +122,7 @@ function makeDeps(overrides: Partial<DepsArgs> = {}): DepsArgs {
 }
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 Append to `tests/unit/features/tasks/ui/WorkOrderContextMenu.test.ts` inside the existing `describe('showWorkOrderContextMenu', ...)`:
 
@@ -208,12 +210,12 @@ it('case 22: clicking Archive invokes onArchive(task)', () => {
 });
 ```
 
-- [ ] **Step 3: Run tests to verify they fail**
+- [x] **Step 3: Run tests to verify they fail**
 
 Run: `npm run test -- tests/unit/features/tasks/ui/WorkOrderContextMenu.test.ts`
 Expected: FAIL — case 16 / 17 / 18 / 22 expect an `archive` item that the menu does not produce yet. Case 19 / 20 / 21 may already pass because there is no archive item rendered at all; that is fine.
 
-- [ ] **Step 4: Add `onArchive` to the deps interface**
+- [x] **Step 4: Add `onArchive` to the deps interface**
 
 In `src/features/tasks/ui/WorkOrderContextMenu.ts`, replace the `WorkOrderContextMenuDeps` interface with:
 
@@ -234,7 +236,7 @@ export interface WorkOrderContextMenuDeps {
 }
 ```
 
-- [ ] **Step 5: Render the gated Archive item**
+- [x] **Step 5: Render the gated Archive item**
 
 In `src/features/tasks/ui/WorkOrderContextMenu.ts`, find the destructure inside `showWorkOrderContextMenu`:
 
@@ -274,17 +276,17 @@ Finally, replace the trailing `menu.showAtMouseEvent(event);` block at the botto
 
 The Archive block sits AFTER the quick-actions block and BEFORE the final `showAtMouseEvent` call. The separator is inside the gate so non-terminal cards never end with a trailing divider.
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [x] **Step 6: Run tests to verify they pass**
 
 Run: `npm run test -- tests/unit/features/tasks/ui/WorkOrderContextMenu.test.ts`
 Expected: PASS. If case 16's title ordering does not match, double-check that the gate runs AFTER `appendQuickActionFavoritesAndPicker` — the expected order is Open note → sep → picker → sep → Archive.
 
-- [ ] **Step 7: Run typecheck**
+- [x] **Step 7: Run typecheck**
 
 Run: `npm run typecheck`
 Expected: FAIL with one error: `AgentBoardView`'s `showWorkOrderContextMenu` call site does not supply `onArchive`. Task 3 fixes it. Do not commit yet — Task 3 will.
 
-- [ ] **Step 8: Commit (just the surface + tests)**
+- [x] **Step 8: Commit (just the surface + tests)**
 
 ```bash
 git add src/features/tasks/ui/WorkOrderContextMenu.ts tests/unit/features/tasks/ui/WorkOrderContextMenu.test.ts
@@ -300,7 +302,7 @@ Note: typecheck is intentionally still broken at this point. Task 3 closes the l
 **Files:**
 - Modify: `src/features/tasks/ui/AgentBoardView.ts`
 
-- [ ] **Step 1: Add `onArchive` to the context-menu deps factory**
+- [x] **Step 1: Add `onArchive` to the context-menu deps factory**
 
 In `src/features/tasks/ui/AgentBoardView.ts`, find the existing `onContextMenu` handler (search for `showWorkOrderContextMenu(task, event,`). Replace this block:
 
@@ -325,17 +327,17 @@ with:
 
 `archiveTask` is already defined on the class (search `private async archiveTask`). No additional changes required.
 
-- [ ] **Step 2: Run typecheck**
+- [x] **Step 2: Run typecheck**
 
 Run: `npm run typecheck`
 Expected: PASS.
 
-- [ ] **Step 3: Run all task unit tests**
+- [x] **Step 3: Run all task unit tests**
 
 Run: `npm run test -- tests/unit/features/tasks`
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/features/tasks/ui/AgentBoardView.ts
@@ -346,22 +348,22 @@ git commit -m "feat(tasks): wire Archive context-menu action through AgentBoardV
 
 ## Task 4: Full verification
 
-- [ ] **Step 1: Typecheck**
+- [x] **Step 1: Typecheck**
 
 Run: `npm run typecheck`
 Expected: PASS.
 
-- [ ] **Step 2: Lint**
+- [x] **Step 2: Lint**
 
 Run: `npm run lint`
 Expected: 0 problems.
 
-- [ ] **Step 3: Unit + integration tests**
+- [x] **Step 3: Unit + integration tests**
 
 Run: `npm run test`
 Expected: PASS.
 
-- [ ] **Step 4: Production build**
+- [x] **Step 4: Production build**
 
 Run: `npm run build`
 Expected: PASS.
