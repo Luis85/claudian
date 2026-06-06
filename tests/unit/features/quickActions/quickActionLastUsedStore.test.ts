@@ -1,3 +1,5 @@
+import type { Logger } from '@/core/logging/Logger';
+import type { VaultFileAdapter } from '@/core/storage/VaultFileAdapter';
 import {
   parsePersistedLastUsed,
   PERSISTED_SCHEMA_VERSION,
@@ -18,10 +20,10 @@ class StubAdapter {
 
 function makeStore(adapter: StubAdapter, logger?: { warn: jest.Mock }) {
   return new QuickActionLastUsedStore({
-    adapter: adapter as any,
+    adapter: adapter as unknown as VaultFileAdapter,
     cachePath: '.claudian/cache/quick-action-last-used.json',
     debounceMs: 10,
-    logger: logger ?? { warn: jest.fn() },
+    logger: (logger ?? { warn: jest.fn() }) as unknown as Logger,
     now: () => 5000,
   });
 }

@@ -1,4 +1,6 @@
+import type { Logger } from '@/core/logging/Logger';
 import type { ProviderId } from '@/core/providers/types';
+import type { VaultFileAdapter } from '@/core/storage/VaultFileAdapter';
 
 export const PERSISTED_SCHEMA_VERSION = 1;
 
@@ -67,21 +69,11 @@ export function parsePersistedLastUsed(raw: string): Map<string, LastUsedEntry> 
   return out;
 }
 
-export interface LastUsedAdapter {
-  exists(path: string): Promise<boolean>;
-  read(path: string): Promise<string>;
-  write(path: string, content: string): Promise<void>;
-}
-
-export interface LastUsedLogger {
-  warn(...args: unknown[]): void;
-}
-
 export interface QuickActionLastUsedStoreOptions {
-  adapter: LastUsedAdapter;
+  adapter: VaultFileAdapter;
   cachePath?: string;
   debounceMs?: number;
-  logger: LastUsedLogger;
+  logger: Logger;
   now?: () => number;
 }
 
@@ -97,10 +89,10 @@ const DEFAULT_DEBOUNCE_MS = 500;
  * not lost when Obsidian tears the plugin down.
  */
 export class QuickActionLastUsedStore {
-  private readonly adapter: LastUsedAdapter;
+  private readonly adapter: VaultFileAdapter;
   private readonly cachePath: string;
   private readonly debounceMs: number;
-  private readonly logger: LastUsedLogger;
+  private readonly logger: Logger;
   private readonly now: () => number;
 
   private entries = new Map<string, LastUsedEntry>();
@@ -129,12 +121,14 @@ export class QuickActionLastUsedStore {
       const raw = await this.adapter.read(this.cachePath);
       const parsed = parsePersistedLastUsed(raw);
       if (!parsed) {
-        this.logger.warn(`[quickActionLastUsedStore] malformed cache at ${this.cachePath}, starting cold`);
+        this.logger.warn('last-used hydrate skipped: malformed or schema mismatch', {
+          path: this.cachePath,
+        });
         return;
       }
       this.entries = parsed;
-    } catch (error) {
-      this.logger.warn(`[quickActionLastUsedStore] hydrate failed`, error);
+    } catch (err) {
+      this.logger.warn('last-used hydrate failed', { err });
     }
   }
 
@@ -201,8 +195,8 @@ export class QuickActionLastUsedStore {
     const payload = serializePersistedLastUsed(snapshot, writtenAt);
     const write = this.adapter
       .write(this.cachePath, payload)
-      .catch((error) => {
-        this.logger.warn(`[quickActionLastUsedStore] write failed`, error);
+      .catch((err) => {
+        this.logger.warn('last-used persist failed', { err });
         this.dirty = true;
       });
     this.pendingWrite = write;
