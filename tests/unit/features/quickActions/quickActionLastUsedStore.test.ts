@@ -93,6 +93,86 @@ describe('QuickActionLastUsedStore', () => {
     await store.flush();
     expect(logger.warn).toHaveBeenCalled();
   });
+
+  it('re-arms dirty after write failure so the next flush retries the write', async () => {
+    const adapter = new StubAdapter();
+    let firstCall = true;
+    adapter.write = jest.fn().mockImplementation((p: string, content: string) => {
+      adapter.writeCount += 1;
+      if (firstCall) {
+        firstCall = false;
+        return Promise.reject(new Error('disk full'));
+      }
+      adapter.files[p] = content;
+      return Promise.resolve();
+    });
+    const logger = { warn: jest.fn() };
+    const store = makeStore(adapter, logger);
+    store.set('x', { providerId: 'claude', model: 'm' });
+    await store.flush();
+    expect(logger.warn).toHaveBeenCalled();
+    // Second flush should retry the write since dirty was re-armed.
+    await store.flush();
+    expect(adapter.write).toHaveBeenCalledTimes(2);
+  });
+
+  it('delete persists removal of the entry to disk', async () => {
+    const adapter = new StubAdapter();
+    const store = makeStore(adapter);
+    store.set('a', { providerId: 'claude', model: 'm' });
+    await store.flush();
+    expect(adapter.writeCount).toBe(1);
+    store.delete('a');
+    await store.flush();
+    expect(adapter.writeCount).toBe(2);
+    const parsed = JSON.parse(adapter.files['.claudian/cache/quick-action-last-used.json']);
+    expect(parsed.entries.a).toBeUndefined();
+  });
+
+  it('delete on unknown stem is a no-op (no write scheduled)', async () => {
+    const adapter = new StubAdapter();
+    const store = makeStore(adapter);
+    store.delete('never-existed');
+    await store.flush();
+    expect(adapter.writeCount).toBe(0);
+  });
+
+  it('debounce timer fires and persists without an explicit flush', async () => {
+    jest.useFakeTimers();
+    try {
+      const adapter = new StubAdapter();
+      const store = makeStore(adapter);
+      store.set('x', { providerId: 'claude', model: 'm' });
+      expect(adapter.writeCount).toBe(0);
+      jest.advanceTimersByTime(10);
+      // Let the timer's async persistNow start and the adapter.write resolve.
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(adapter.writeCount).toBe(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('hydrate is idempotent (second call does not re-read adapter)', async () => {
+    const adapter = new StubAdapter();
+    const existsSpy = jest.spyOn(adapter, 'exists');
+    const store = makeStore(adapter);
+    await store.hydrate();
+    await store.hydrate();
+    // The adapter.exists call should only fire once — the second hydrate is a no-op.
+    expect(existsSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('hydrate swallows adapter errors and warn-logs', async () => {
+    const adapter = new StubAdapter();
+    adapter.exists = jest.fn().mockRejectedValue(new Error('IO error'));
+    const logger = { warn: jest.fn() };
+    const store = makeStore(adapter, logger);
+    await store.hydrate();
+    expect(logger.warn).toHaveBeenCalled();
+    expect(store.get('any')).toBeNull();
+  });
 });
 
 describe('quickActionLastUsedStore persistence', () => {
