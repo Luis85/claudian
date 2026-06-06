@@ -59,6 +59,7 @@
 @import "./modals/mcp-modal.css";
 @import "./modals/fork-target.css";
 @import "./modals/commit-on-accept.css";
+@import "./modals/quick-action-launch.css";
 
 /* Settings */
 @import "./settings/base.css";
