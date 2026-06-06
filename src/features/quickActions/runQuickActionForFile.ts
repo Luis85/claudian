@@ -2,6 +2,8 @@ import { Notice, type TAbstractFile, TFile, TFolder } from 'obsidian';
 
 import type { ProviderId } from '@/core/providers/types';
 import { getTabProviderId } from '@/features/chat/tabs/providerResolution';
+import { resolveBlankTabModel } from '@/features/chat/tabs/tabShared';
+import type { TabData } from '@/features/chat/tabs/types';
 import { t } from '@/i18n/i18n';
 import type ClaudianPlugin from '@/main';
 
@@ -12,13 +14,36 @@ export { quickActionStemFromPath };
 
 /**
  * Per-run provider+model override applied to the target tab. When present, the
- * active blank tab is only reused if its current provider equals
- * `providerId`; otherwise a fresh tab is created with `defaultProviderId` +
- * `pinnedModel` so the runtime applies the chosen model on every turn.
+ * active blank tab is only reused if its current provider AND effective model
+ * both equal the override; otherwise a fresh tab is created with
+ * `defaultProviderId` + `pinnedModel` so the runtime applies the chosen model
+ * on every turn. `switchToTab` does not carry a model, so reusing a tab pinned
+ * to a different model would silently drop the picker's choice.
  */
 export interface QuickActionRunOverride {
   providerId: ProviderId;
   model: string;
+}
+
+/**
+ * Resolve the effective model a blank tab is currently using, mirroring the
+ * resolution order in `tabControllers.getTabModelOverride` and `tabUi`:
+ *   1. `pinnedModel` — survives runtime init
+ *   2. `draftModel` — composer-picked, only on blank tabs
+ *   3. provider-projected blank model fallback
+ */
+function resolveActiveBlankTabModel(
+  tab: Pick<TabData, 'pinnedModel' | 'draftModel'>,
+  plugin: ClaudianPlugin,
+  providerId: ProviderId,
+): string {
+  if (typeof tab.pinnedModel === 'string' && tab.pinnedModel.trim()) {
+    return tab.pinnedModel.trim();
+  }
+  if (typeof tab.draftModel === 'string' && tab.draftModel.trim()) {
+    return tab.draftModel.trim();
+  }
+  return resolveBlankTabModel(plugin, providerId);
 }
 
 /**
@@ -78,18 +103,27 @@ export async function runQuickActionForFile(
     await plugin.activateView();
     view = plugin.getView();
   }
-  if (!view) return;
+  if (!view) {
+    plugin.logger.scope('quickActions').warn('view unavailable, skipping dispatch');
+    return;
+  }
 
   const tabManager = view.getTabManager();
-  if (!tabManager) return;
+  if (!tabManager) {
+    plugin.logger.scope('quickActions').warn('tabManager unavailable, skipping dispatch');
+    return;
+  }
 
   const activeTab = tabManager.getActiveTab();
   const isBlank = activeTab?.lifecycleState === 'blank';
-  // When an override is present, the active blank tab is only reusable if
-  // its provider matches the override — running a Claude prompt in a blank
-  // Codex tab would defeat the picker.
+  // When an override is present, the active blank tab is only reusable if its
+  // provider AND its currently effective model both match the override. The
+  // provider check alone is not enough: `switchToTab` does not accept a model,
+  // so a blank Claude tab pinned to claude-haiku would silently drop the user's
+  // claude-sonnet pick from the launch modal.
   const overrideMatchesActive = override !== undefined && isBlank && activeTab
     ? getTabProviderId(activeTab, plugin) === override.providerId
+      && resolveActiveBlankTabModel(activeTab, plugin, override.providerId) === override.model
     : false;
   let targetTab;
 

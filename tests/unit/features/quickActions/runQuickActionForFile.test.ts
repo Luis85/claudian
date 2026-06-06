@@ -57,11 +57,13 @@ function makeMockTabManager(opts: {
 
 function makeMockPlugin(tabManager: ReturnType<typeof makeMockTabManager> | null) {
   const view = { getTabManager: jest.fn(() => tabManager) };
+  const scoped = { warn: jest.fn(), info: jest.fn(), error: jest.fn(), debug: jest.fn() };
   return {
     app: { vault: {} },
     events: { emit: jest.fn() },
     getView: jest.fn(() => view),
     activateView: jest.fn().mockResolvedValue(undefined),
+    logger: { scope: jest.fn(() => scoped) },
   };
 }
 
@@ -168,16 +170,21 @@ describe('runQuickActionForFile usage emission', () => {
     const recorded: Array<UsageEventMap['usage.recorded']> = [];
     events.on('usage.recorded', (e) => recorded.push(e));
 
+    const scoped = { warn: jest.fn(), info: jest.fn(), error: jest.fn(), debug: jest.fn() };
     const plugin = {
       app: { vault: {} },
       events,
       getView: jest.fn(() => null),
       activateView: jest.fn().mockResolvedValue(undefined),
+      logger: { scope: jest.fn(() => scoped) },
     };
     const file = Object.assign(Object.create(TFile.prototype), { path: 'note.md' });
 
     await runQuickActionForFile(plugin as any, file, MOCK_ACTION);
     expect(recorded).toEqual([]);
+    expect(scoped.warn).toHaveBeenCalledWith(
+      expect.stringContaining('view unavailable'),
+    );
   });
 });
 
@@ -234,12 +241,20 @@ describe('runQuickActionForFile with override', () => {
     jest.resetModules();
   });
 
-  it('reuses blank active tab when its provider matches override.providerId', async () => {
+  it('reuses blank active tab when its provider AND pinned model match the override', async () => {
     jest.doMock('@/features/chat/tabs/providerResolution', () => ({
       getTabProviderId: () => 'claude',
     }));
+    jest.doMock('@/features/chat/tabs/tabShared', () => ({
+      resolveBlankTabModel: () => 'claude-sonnet-4-5',
+    }));
     const { TFile: TFileFresh } = await import('obsidian');
-    const tab = { ...makeMockTab('blank'), providerId: 'claude' } as any;
+    const tab = {
+      ...makeMockTab('blank'),
+      providerId: 'claude',
+      pinnedModel: 'claude-sonnet-4-5',
+      draftModel: null,
+    } as any;
     const tm = makeMockTabManager({ activeTab: tab, canCreate: true });
     const plugin = makeMockPlugin(tm);
     const file = Object.assign(Object.create(TFileFresh.prototype), { path: 'note.md' });
@@ -251,9 +266,47 @@ describe('runQuickActionForFile with override', () => {
     expect(tm.switchToTab).toHaveBeenCalledWith('tab-1');
   });
 
+  it('creates a new tab when override.providerId matches but override.model differs from active tab pinned model', async () => {
+    jest.doMock('@/features/chat/tabs/providerResolution', () => ({
+      getTabProviderId: () => 'claude',
+    }));
+    jest.doMock('@/features/chat/tabs/tabShared', () => ({
+      resolveBlankTabModel: () => 'claude-haiku-4-5',
+    }));
+    const { TFile: TFileFresh } = await import('obsidian');
+    const newTab = makeMockTab('blank');
+    newTab.id = 'tab-2';
+    const tab = {
+      ...makeMockTab('blank'),
+      providerId: 'claude',
+      pinnedModel: 'claude-haiku-4-5',
+      draftModel: null,
+    } as any;
+    const tm = makeMockTabManager({ activeTab: tab, canCreate: true, newTab });
+    const plugin = makeMockPlugin(tm);
+    const file = Object.assign(Object.create(TFileFresh.prototype), { path: 'note.md' });
+
+    const { runQuickActionForFile: run } = await import('@/features/quickActions/runQuickActionForFile');
+    await run(plugin as any, file, MOCK_ACTION, { providerId: 'claude', model: 'claude-sonnet-4-5' });
+
+    expect(tm.createTab).toHaveBeenCalledWith(
+      null,
+      undefined,
+      expect.objectContaining({
+        activate: false,
+        defaultProviderId: 'claude',
+        pinnedModel: 'claude-sonnet-4-5',
+      }),
+    );
+    expect(tm.switchToTab).toHaveBeenCalledWith('tab-2');
+  });
+
   it('creates a new tab with defaultProviderId + pinnedModel when active blank wrong provider', async () => {
     jest.doMock('@/features/chat/tabs/providerResolution', () => ({
       getTabProviderId: () => 'codex',
+    }));
+    jest.doMock('@/features/chat/tabs/tabShared', () => ({
+      resolveBlankTabModel: () => 'gpt-5',
     }));
     const { TFile: TFileFresh } = await import('obsidian');
     const newTab = makeMockTab('blank');
@@ -279,6 +332,9 @@ describe('runQuickActionForFile with override', () => {
   it('preserves existing behavior when no override given (inherits from active blank)', async () => {
     jest.doMock('@/features/chat/tabs/providerResolution', () => ({
       getTabProviderId: () => 'codex',
+    }));
+    jest.doMock('@/features/chat/tabs/tabShared', () => ({
+      resolveBlankTabModel: () => 'gpt-5',
     }));
     const { TFile: TFileFresh } = await import('obsidian');
     const tab = makeMockTab('blank');
