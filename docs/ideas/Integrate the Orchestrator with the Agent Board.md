@@ -3,7 +3,9 @@ priority: 3 - low
 relations:
   - Integrations
   - Cross Cutting
-status: open
+status: done
+tags:
+  - wont-do
 ---
 As of right now, the Orchestrator is just working inside the chatpanel, spawning workers in tabs and does not respect the max tabs settings, which is fine, as it usually needs up to five 5 tabs. 
 

@@ -1,6 +1,6 @@
 ---
 type: improvement
-priority: 2 - normal
+priority: 1 - high
 status: open
 relations:
   - "[[Agent Kanban Board]]"
