@@ -113,6 +113,7 @@ export class SessionStorage {
       enabledMcpServers: conversation.enabledMcpServers,
       usage: conversation.usage,
       resumeAtMessageId: conversation.resumeAtMessageId,
+      workOrderPath: conversation.workOrderPath,
     };
   }
 

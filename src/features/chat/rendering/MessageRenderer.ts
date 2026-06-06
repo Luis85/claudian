@@ -30,6 +30,11 @@ import {
 } from './SubagentRenderer';
 import { renderStoredThinkingBlock } from './ThinkingBlockRenderer';
 import { renderStoredToolCall } from './ToolCallRenderer';
+import { renderWorkOrderHandoffCard } from './WorkOrderHandoffCard';
+import {
+  splitWorkOrderHandoffForDisplay,
+  type WorkOrderHandoffSegment,
+} from './WorkOrderHandoffDisplay';
 import { renderStoredWriteEdit } from './WriteEditRenderer';
 
 /**
@@ -56,6 +61,20 @@ export type RenderContentFn = (
   options?: RenderContentOptions
 ) => Promise<void>;
 
+/**
+ * Returns the direct `.claudian-response-footer` child of `contentEl`, if any.
+ * Direct-child only on purpose: `:scope > .x` is not portable through our
+ * tests' minimal DOM mock, so this iterates the live `children` array instead.
+ */
+function findResponseFooterChild(contentEl: HTMLElement): HTMLElement | null {
+  const children = contentEl.children;
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i] as HTMLElement;
+    if (child.classList?.contains('claudian-response-footer')) return child;
+  }
+  return null;
+}
+
 function runRendererAction(action: () => Promise<void>): void {
   void action().catch(() => {
     // UI actions already surface expected failures locally.
@@ -69,6 +88,7 @@ export class MessageRenderer {
   private messagesEl: HTMLElement;
   private rewindCallback?: (messageId: string, mode?: ChatRewindMode) => Promise<void>;
   private getCapabilities: () => ProviderCapabilities;
+  private getWorkOrderPath: () => string | null | undefined;
   private forkCallback?: (messageId: string) => Promise<void>;
   private liveMessageEls = new Map<string, HTMLElement>();
   private windowedMessages: ChatMessage[] = [];
@@ -83,6 +103,7 @@ export class MessageRenderer {
     rewindCallback?: (messageId: string, mode?: ChatRewindMode) => Promise<void>,
     forkCallback?: (messageId: string) => Promise<void>,
     getCapabilities?: () => ProviderCapabilities,
+    getWorkOrderPath?: () => string | null | undefined,
   ) {
     this.app = plugin.app;
     this.plugin = plugin;
@@ -90,6 +111,7 @@ export class MessageRenderer {
     this.messagesEl = messagesEl;
     this.rewindCallback = rewindCallback;
     this.forkCallback = forkCallback;
+    this.getWorkOrderPath = getWorkOrderPath ?? (() => null);
     this.getCapabilities = getCapabilities ?? (() => ({
       providerId: DEFAULT_CHAT_PROVIDER_ID,
       supportsPersistentRuntime: false,
@@ -479,6 +501,69 @@ export class MessageRenderer {
     });
   }
 
+  private renderAssistantTextBlock(contentEl: HTMLElement, markdown: string): void {
+    const handoffSegments = this.getWorkOrderPath()
+      ? splitWorkOrderHandoffForDisplay(markdown)
+      : null;
+
+    if (!handoffSegments) {
+      this.renderPlainAssistantTextBlock(contentEl, markdown);
+      return;
+    }
+
+    for (const segment of handoffSegments) {
+      this.renderAssistantDisplaySegment(contentEl, segment);
+    }
+  }
+
+  private renderPlainAssistantTextBlock(contentEl: HTMLElement, markdown: string): void {
+    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+    void this.renderContent(textEl, markdown);
+    this.addTextCopyButton(textEl, markdown);
+  }
+
+  private renderAssistantDisplaySegment(contentEl: HTMLElement, segment: WorkOrderHandoffSegment): void {
+    if (segment.type === 'markdown') {
+      this.renderPlainAssistantTextBlock(contentEl, segment.content);
+      return;
+    }
+
+    renderWorkOrderHandoffCard(contentEl, segment, (el, md, options) => this.renderContent(el, md, options));
+  }
+
+  /**
+   * Streaming finalize hook: when a work-order run's final text block holds a
+   * complete handoff, drop the raw text element and render the compact card (plus
+   * any surrounding markdown) in its place. Returns true when it replaced the
+   * block; no-ops (returns false) outside work-order tabs or without a valid
+   * single handoff, leaving the caller to keep the raw text block. The stored
+   * `text` content block is untouched, so persistence and reload stay unchanged.
+   */
+  finalizeStreamedAssistantText(
+    contentEl: HTMLElement,
+    textEl: HTMLElement,
+    markdown: string,
+  ): boolean {
+    if (!this.getWorkOrderPath()) return false;
+    const segments = splitWorkOrderHandoffForDisplay(markdown);
+    if (!segments) return false;
+
+    // A live run that took long enough to bake a duration footer attaches
+    // `.claudian-response-footer` to `contentEl` BEFORE finalize runs. Since
+    // `renderAssistantDisplaySegment` appends new children, naïvely removing
+    // `textEl` and rendering would leave the card BELOW the footer — while a
+    // reload renders the card above. Detach the footer first, render the card,
+    // then re-append it so live + stored DOM order stays identical.
+    const footerEl = findResponseFooterChild(contentEl);
+    footerEl?.remove();
+    textEl.remove();
+    for (const segment of segments) {
+      this.renderAssistantDisplaySegment(contentEl, segment);
+    }
+    if (footerEl) contentEl.appendChild(footerEl);
+    return true;
+  }
+
   /**
    * Renders assistant message content (content blocks or fallback).
    */
@@ -498,9 +583,7 @@ export class MessageRenderer {
           if (!block.content || !block.content.trim()) {
             continue;
           }
-          const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
-          void this.renderContent(textEl, block.content);
-          this.addTextCopyButton(textEl, block.content);
+          this.renderAssistantTextBlock(contentEl, block.content);
         } else if (block.type === 'tool_use') {
           const toolCall = msg.toolCalls?.find(tc => tc.id === block.toolId);
           if (toolCall) {
@@ -532,9 +615,7 @@ export class MessageRenderer {
     } else {
       // Fallback for old conversations without contentBlocks
       if (msg.content) {
-        const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
-        void this.renderContent(textEl, msg.content);
-        this.addTextCopyButton(textEl, msg.content);
+        this.renderAssistantTextBlock(contentEl, msg.content);
       }
       if (msg.toolCalls) {
         for (const toolCall of msg.toolCalls) {
@@ -1017,12 +1098,14 @@ export class MessageRenderer {
     if (actions.length === 0) return;
 
     const textBlocks = msgEl.querySelectorAll('.claudian-text-block');
-    const lastTextBlock = textBlocks.length > 0
+    const anchorEl = textBlocks.length > 0
       ? (textBlocks[textBlocks.length - 1] as HTMLElement)
-      : null;
-    if (!lastTextBlock) return;
+      // A handoff-only assistant message renders as a card with no text block;
+      // anchor actions to the card so they stay reachable in work-order tabs.
+      : msgEl.querySelector<HTMLElement>('.claudian-work-order-handoff-card');
+    if (!anchorEl) return;
 
-    const container = lastTextBlock.createDiv({ cls: 'claudian-text-actions' });
+    const container = anchorEl.createDiv({ cls: 'claudian-text-actions' });
     for (const action of actions) {
       const btn = container.createSpan({ cls: 'claudian-text-action-btn' });
       setIcon(btn, action.icon);

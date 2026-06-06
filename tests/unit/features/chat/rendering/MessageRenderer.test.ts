@@ -75,7 +75,11 @@ function mockCapabilities(providerId: 'claude' | 'codex' = 'claude') {
   });
 }
 
-function createRenderer(messagesEl?: any, providerId: 'claude' | 'codex' = 'claude') {
+function createRenderer(
+  messagesEl?: any,
+  providerId: 'claude' | 'codex' = 'claude',
+  isWorkOrderTab = false,
+) {
   const el = messagesEl ?? createMockEl();
   const comp = createMockComponent();
   const plugin = mockRendererPlugin();
@@ -87,6 +91,7 @@ function createRenderer(messagesEl?: any, providerId: 'claude' | 'codex' = 'clau
       undefined,
       undefined,
       mockCapabilities(providerId),
+      () => isWorkOrderTab ? 'docs/work-orders/example.md' : null,
     ),
     messagesEl: el,
     plugin,
@@ -1150,6 +1155,199 @@ describe('MessageRenderer', () => {
     } finally {
       (globalThis as any).document = origDocument;
     }
+  });
+
+  // ============================================
+  // Work-order handoff card
+  // ============================================
+
+  it('renders a valid work-order handoff as a collapsed card', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl, 'claude', true);
+    const renderContentSpy = jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+    const handoff = `<claudian_handoff>
+summary: Finished the work.
+verification: npm run test passed.
+risks: No known risks.
+next_action: Review the result.
+</claudian_handoff>`;
+
+    renderer.renderStoredMessage({
+      id: 'a-handoff',
+      role: 'assistant',
+      content: `Intro text.\n\n${handoff}\n\nClosing text.`,
+      timestamp: Date.now(),
+    });
+
+    expect(messagesEl.querySelector('.claudian-work-order-handoff-card')).not.toBeNull();
+    expect(messagesEl.textContent).toContain('Work order handoff');
+    expect(messagesEl.textContent).toContain('Finished the work.');
+    expect(messagesEl.textContent).not.toContain('<claudian_handoff>');
+    expect(renderContentSpy).toHaveBeenCalledWith(expect.anything(), 'Intro text.');
+    expect(renderContentSpy).toHaveBeenCalledWith(expect.anything(), 'Closing text.');
+  });
+
+  it('expands the handoff card to reveal formatted sections', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl, 'claude', true);
+    jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+    renderer.renderStoredMessage({
+      id: 'a-handoff-expanded',
+      role: 'assistant',
+      content: `<claudian_handoff>
+summary: Finished the work.
+verification: npm run test passed.
+risks: No known risks.
+next_action: Review the result.
+</claudian_handoff>`,
+      timestamp: Date.now(),
+    });
+
+    const header = messagesEl.querySelector('.claudian-work-order-handoff-card-header') as any;
+    const details = messagesEl.querySelector('.claudian-work-order-handoff-card-details');
+    expect(details?.hasClass('claudian-hidden')).toBe(true);
+
+    header._eventListeners.get('click')[0]();
+
+    expect(details?.hasClass('claudian-hidden')).toBe(false);
+    expect(messagesEl.textContent).toContain('Summary');
+    expect(messagesEl.textContent).toContain('Verification');
+    expect(messagesEl.textContent).toContain('Risks');
+    expect(messagesEl.textContent).toContain('Next Action');
+  });
+
+  it('renders valid handoff text unchanged outside work-order tabs', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl, 'claude', false);
+    const renderContentSpy = jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+    const handoff = `<claudian_handoff>
+summary: Finished the work.
+verification: npm run test passed.
+risks: No known risks.
+next_action: Review the result.
+</claudian_handoff>`;
+
+    renderer.renderStoredMessage({ id: 'a-normal', role: 'assistant', content: handoff, timestamp: Date.now() });
+
+    expect(messagesEl.querySelector('.claudian-work-order-handoff-card')).toBeNull();
+    expect(renderContentSpy).toHaveBeenCalledWith(expect.anything(), handoff);
+  });
+
+  it('renders malformed work-order handoff text unchanged', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl, 'claude', true);
+    const renderContentSpy = jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+    const malformed = `<claudian_handoff>\nsummary: Missing fields\n</claudian_handoff>`;
+
+    renderer.renderStoredMessage({ id: 'a-bad', role: 'assistant', content: malformed, timestamp: Date.now() });
+
+    expect(messagesEl.querySelector('.claudian-work-order-handoff-card')).toBeNull();
+    expect(renderContentSpy).toHaveBeenCalledWith(expect.anything(), malformed);
+  });
+
+  it('inserts the handoff card above a pre-existing response footer on finalize', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl, 'claude', true);
+    jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+    const footerEl = contentEl.createDiv({ cls: 'claudian-response-footer' });
+
+    const replaced = renderer.finalizeStreamedAssistantText(contentEl, textEl, `<claudian_handoff>
+summary: Finished the work.
+verification: npm run test passed.
+risks: No known risks.
+next_action: Review the result.
+</claudian_handoff>`);
+
+    expect(replaced).toBe(true);
+    const card = contentEl.querySelector('.claudian-work-order-handoff-card');
+    expect(card).not.toBeNull();
+    const cardIndex = (contentEl.children as any[]).indexOf(card);
+    const footerIndex = (contentEl.children as any[]).indexOf(footerEl);
+    expect(cardIndex).toBeGreaterThanOrEqual(0);
+    expect(footerIndex).toBeGreaterThanOrEqual(0);
+    expect(cardIndex).toBeLessThan(footerIndex);
+  });
+
+  it('swaps a streamed work-order handoff text block for a card on finalize', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl, 'claude', true);
+    jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+
+    const replaced = renderer.finalizeStreamedAssistantText(contentEl, textEl, `<claudian_handoff>
+summary: Finished the work.
+verification: npm run test passed.
+risks: No known risks.
+next_action: Review the result.
+</claudian_handoff>`);
+
+    expect(replaced).toBe(true);
+    expect(contentEl.querySelector('.claudian-work-order-handoff-card')).not.toBeNull();
+    expect(messagesEl.textContent).not.toContain('<claudian_handoff>');
+  });
+
+  it('leaves a streamed text block untouched outside work-order tabs', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl, 'claude', false);
+    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+
+    const replaced = renderer.finalizeStreamedAssistantText(contentEl, textEl, `<claudian_handoff>
+summary: Finished the work.
+verification: npm run test passed.
+risks: No known risks.
+next_action: Review the result.
+</claudian_handoff>`);
+
+    expect(replaced).toBe(false);
+    expect(contentEl.querySelector('.claudian-work-order-handoff-card')).toBeNull();
+  });
+
+  it('keeps registered message actions reachable on a handoff-only card', () => {
+    const messagesEl = createMockEl();
+    const run = jest.fn();
+    const action: ChatMessageAction = {
+      id: 'create-wo',
+      label: 'Create work order',
+      icon: 'plus',
+      isEligible: () => true,
+      run,
+    };
+    const renderer = new MessageRenderer(
+      mockRendererPlugin({ chatMessageActions: [action] }) as any,
+      createMockComponent() as any,
+      messagesEl,
+      undefined,
+      undefined,
+      mockCapabilities('claude'),
+      () => 'docs/work-orders/example.md',
+    );
+    jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
+
+    renderer.renderStoredMessage({
+      id: 'a-handoff-actions',
+      role: 'assistant',
+      content: `<claudian_handoff>
+summary: Finished the work.
+verification: npm run test passed.
+risks: No known risks.
+next_action: Review the result.
+</claudian_handoff>`,
+      timestamp: Date.now(),
+    });
+
+    const card = messagesEl.querySelector('.claudian-work-order-handoff-card');
+    expect(card).not.toBeNull();
+    expect(card?.querySelector('.claudian-text-actions')).not.toBeNull();
+    expect(messagesEl.querySelector('.claudian-text-action-btn')).not.toBeNull();
   });
 
   // ============================================

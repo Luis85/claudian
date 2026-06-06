@@ -38,8 +38,8 @@ Steps:
    - Context section with clear link and instruction to execute the linked plan
    - Plan reference: ask user for plan file path or look in current note context, add the provided plan as wikilink to the work-order.
    - Constraints section (any limitations or out-of-scope items)
-   - Execution Instructions: Subagent-Driven (recommended) — fresh subagent per task, review between tasks, two-stage check; with a dedicated review and polishing pass once done 
-   - Update docs during execution to keep underlying work-order and docs up-to-date
+   - Execution Instructions: Subagent-Driven (recommended) on an isolated worktree — fresh subagent per task, review between tasks and keep the work-order updated between tasks, two-stage check with dedicated subagents; follow up with a dedicated review and polishing pass once done 
+   - Important: Update docs during execution to keep underlying work-order and docs up-to-date;
    - Add wikilinks to the referenced plan to link WO and plan together for better visibility
    - Run Ledger section:
      ```

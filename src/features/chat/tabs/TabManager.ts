@@ -258,17 +258,22 @@ export class TabManager implements TabManagerInterface {
     providerId: ProviderId;
     model: string;
     conversationId?: string | null;
+    workOrderPath?: string | null;
   }): Promise<TabData | null> {
     // Do not steal focus: the work order run streams in a background tab so the
     // user stays on whatever tab/view they were on. They can switch to it manually.
     // pinnedModel persists past runtime init so the ModelSelector keeps showing
     // the work-order model and queryOptions.model applies on every turn.
-    return this.createTab(options.conversationId ?? undefined, undefined, {
+    const tab = await this.createTab(options.conversationId ?? undefined, undefined, {
       activate: false,
       draftModel: options.model,
       pinnedModel: options.model,
       defaultProviderId: options.providerId,
     });
+    if (tab) {
+      tab.workOrderPath = options.workOrderPath ?? null;
+    }
+    return tab;
   }
 
   /**

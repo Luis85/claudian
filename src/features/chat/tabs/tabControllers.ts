@@ -258,6 +258,11 @@ export function initializeTabControllers(
       ? (id) => handleForkRequest(tab, plugin, id, forkRequestCallback)
       : undefined,
     () => getTabCapabilities(tab, plugin),
+    () =>
+      tab.workOrderPath
+      ?? (tab.conversationId
+        ? plugin.getConversationSync(tab.conversationId)?.workOrderPath ?? null
+        : null),
   );
 
   // Selection controller
@@ -336,7 +341,14 @@ export function initializeTabControllers(
       consumePendingHydrationError: (conversationId: string) =>
         (component as Partial<PendingHydrationErrorHost>)
           .consumePendingHydrationError?.(conversationId) ?? null,
+      getWorkOrderPath: () => tab.workOrderPath ?? null,
       ensureServiceForConversation: async (conversation) => {
+        // Clear transient tab work-order path when (re)binding a conversation:
+        // a task-run tab that later opens an unrelated conversation in place
+        // must not keep treating it as a work-order chat, and must not let the
+        // save accessor write a stale path onto the wrong conversation. The
+        // durable Conversation.workOrderPath is the source of truth once bound.
+        tab.workOrderPath = null;
         const nextProviderId = getTabProviderId(tab, plugin, conversation);
         const providerChanged = tab.providerId !== nextProviderId;
         tab.providerId = nextProviderId;
@@ -372,6 +384,7 @@ export function initializeTabControllers(
         // outgoing CLI process exit; the framework callback can't be async, so
         // run the teardown in a contained async IIFE so the old process is gone
         // before the next send constructs a replacement.
+        tab.workOrderPath = null;
         const previousProviderId = tab.providerId;
         cleanupTabRuntime(tab).catch((error) =>
           plugin.logger.scope('chat').error('tab runtime cleanup failed', error),

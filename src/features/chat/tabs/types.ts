@@ -83,6 +83,7 @@ export interface TabManagerInterface {
     providerId: ProviderId;
     model: string;
     conversationId?: string | null;
+    workOrderPath?: string | null;
   }): Promise<TabData | null>;
 }
 
@@ -205,6 +206,9 @@ export interface TabData {
    * Null for regular tabs.
    */
   pinnedModel?: string | null;
+
+  /** Vault-relative work-order note path when this tab hosts an Agent Board run. */
+  workOrderPath?: string | null;
 
   /** Active provider for this tab's current conversation/runtime. */
   providerId: ProviderId;
