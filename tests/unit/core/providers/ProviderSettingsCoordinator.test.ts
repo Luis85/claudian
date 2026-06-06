@@ -477,6 +477,40 @@ describe('ProviderSettingsCoordinator', () => {
 
       expect(settings.permissionMode).toBe('yolo');
     });
+
+    // Regression: agent-board Claude tasks must use Claude's own saved permission
+    // mode, not the active settings-provider's global mode. When Codex is active
+    // in YOLO mode, getProviderSettingsSnapshot(settings, 'claude') must return
+    // Claude's saved 'normal' mode — ClaudeChatRuntime.applyDynamicUpdates reads
+    // getScopedSettings().permissionMode instead of plugin.settings.permissionMode
+    // to honour this projection.
+    it('returns the Claude-saved permission mode when a non-Claude provider is active in YOLO', () => {
+      const settings: Record<string, unknown> = {
+        settingsProvider: 'codex',
+        providerConfigs: {
+          codex: { enabled: true },
+        },
+        // Global (Codex) mode is YOLO — this is what plugin.settings.permissionMode holds
+        permissionMode: 'yolo',
+        model: 'haiku',
+        effortLevel: 'high',
+        serviceTier: 'default',
+        thinkingBudget: 'off',
+        savedProviderModel: { claude: 'haiku', codex: 'gpt-5.4-mini' },
+        savedProviderEffort: { claude: 'high', codex: 'medium' },
+        savedProviderServiceTier: { claude: 'default', codex: 'default' },
+        savedProviderThinkingBudget: { claude: 'off', codex: 'off' },
+        // Claude is saved as 'normal' (safe mode); Codex is 'yolo'
+        savedProviderPermissionMode: { claude: 'normal', codex: 'yolo' },
+      };
+
+      const snapshot = ProviderSettingsCoordinator.getProviderSettingsSnapshot(settings, 'claude');
+
+      // The snapshot must carry Claude's own saved mode, not Codex's YOLO
+      expect(snapshot.permissionMode).toBe('normal');
+      // Global settings must remain unchanged
+      expect(settings.permissionMode).toBe('yolo');
+    });
   });
 
   describe('provider-scoped reconciliation', () => {

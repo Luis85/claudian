@@ -1526,7 +1526,12 @@ export class ClaudianService implements ChatRuntime {
         getVaultPath: () => this.vaultPath,
         getCliPath: () => this.plugin.getResolvedProviderCliPath('claude'),
         getScopedSettings: () => this.getScopedSettings(),
-        getPermissionMode: () => this.plugin.settings.permissionMode,
+        // Read the Claude-projected permission mode rather than the raw global
+        // setting. The global reflects whichever provider is currently active in
+        // the settings panel; when a non-Claude provider (e.g. Codex) is active
+        // in YOLO mode, `plugin.settings.permissionMode` carries that provider's
+        // value and would incorrectly override Claude's own saved safe-mode.
+        getPermissionMode: () => this.getScopedSettings().permissionMode as PermissionMode,
         resolveSDKPermissionMode: (mode) => this.resolveSDKPermissionMode(mode),
         mcpManager: this.mcpManager,
         buildPersistentQueryConfig: (vaultPath, cliPath, externalContextPaths) =>
@@ -1870,7 +1875,9 @@ export class ClaudianService implements ChatRuntime {
       getApprovalCallback: () => this.approvalCallback,
       getAskUserQuestionCallback: () => this.askUserQuestionCallback,
       getExitPlanModeCallback: () => this.exitPlanModeCallback,
-      getPermissionMode: () => this.plugin.settings.permissionMode,
+      // Same projection fix as applyDynamicUpdates: read the Claude-projected
+      // mode so ExitPlanMode restores the correct post-plan permission level.
+      getPermissionMode: () => this.getScopedSettings().permissionMode as PermissionMode,
       resolveSDKPermissionMode: (mode) => this.resolveSDKPermissionMode(mode),
       syncPermissionMode: (mode, sdkMode) => {
         if (this.currentConfig) {
