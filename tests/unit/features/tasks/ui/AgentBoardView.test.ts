@@ -1,3 +1,4 @@
+import { sharedRunRegistry } from '@/features/tasks/execution/activeRunRegistry';
 import { createQueueControlState } from '@/features/tasks/execution/QueueRunner';
 import { QueueSlotTracker } from '@/features/tasks/execution/QueueSlotTracker';
 import { AgentBoardView } from '@/features/tasks/ui/AgentBoardView';
@@ -70,6 +71,125 @@ describe('AgentBoardView.onQueueCapChanged', () => {
 
     expect(setHaltAfterFailures).toHaveBeenCalledWith(5);
     expect(tick).toHaveBeenCalled();
+  });
+});
+
+describe('AgentBoardView.recoverOrphanedRuns', () => {
+  // Build a minimal view stub wired with enough surface area for
+  // recoverOrphanedRuns: a task in a running-ish status with a run_id, a
+  // mocked applyNoteChange/noteStore, a runSidecarStore with readHeartbeat,
+  // and a stub events emitter.
+  function makeView(options: {
+    sidecarHeartbeat: { at: string; status: 'running' } | null;
+    sidecarThrows?: boolean;
+  }): {
+    view: any;
+    writeStatus: jest.Mock;
+    appendLedger: jest.Mock;
+    events: { emit: jest.Mock };
+  } {
+    sharedRunRegistry.clear();
+    const writeStatus = jest.fn((content: string) => content);
+    const appendLedger = jest.fn((content: string) => content);
+    const events = { emit: jest.fn() };
+    const view = Object.create(AgentBoardView.prototype) as any;
+    view.model = {
+      tasks: [
+        {
+          path: 'tasks/wo.md',
+          frontmatter: {
+            id: 'wo-1',
+            run_id: 'run-1',
+            status: 'running',
+          },
+        },
+      ],
+      invalidNotes: [],
+    };
+    view.noteStore = { writeStatus, appendLedger };
+    view.pauseState = new Map();
+    view.plugin = {
+      events,
+      runSidecarStore: {
+        readHeartbeat: jest.fn(async () => {
+          if (options.sidecarThrows) throw new Error('boom');
+          return options.sidecarHeartbeat;
+        }),
+      },
+    };
+    view.applyNoteChange = jest.fn(async (_path: string, transform: (c: string) => string) => {
+      transform('');
+    });
+    view.refresh = jest.fn(async () => {});
+    return { view, writeStatus, appendLedger, events };
+  }
+
+  afterEach(() => {
+    sharedRunRegistry.clear();
+  });
+
+  it('treats a fresh sidecar heartbeat as live and skips orphan adoption', async () => {
+    // Sidecar wrote ~2s ago — a previous run touched things very recently, so
+    // do not assume the card is orphaned even when no session is in the
+    // process-local registry (the "plugin just reloaded" window).
+    const { view, writeStatus, appendLedger, events } = makeView({
+      sidecarHeartbeat: { at: new Date(Date.now() - 2_000).toISOString(), status: 'running' },
+    });
+
+    await view['recoverOrphanedRuns']();
+
+    expect(view.plugin.runSidecarStore.readHeartbeat).toHaveBeenCalledWith('run-1');
+    expect(writeStatus).not.toHaveBeenCalled();
+    expect(appendLedger).not.toHaveBeenCalled();
+    expect(events.emit).not.toHaveBeenCalled();
+    expect(view.refresh).not.toHaveBeenCalled();
+  });
+
+  it('marks the run failed when neither frontmatter nor sidecar heartbeat is recent', async () => {
+    // No sidecar heartbeat at all — there is no signal that a live writer
+    // exists, so the orphan adoption path runs and the ledger line lands.
+    const { view, writeStatus, appendLedger, events } = makeView({ sidecarHeartbeat: null });
+
+    await view['recoverOrphanedRuns']();
+
+    expect(writeStatus).toHaveBeenCalledTimes(1);
+    expect(writeStatus.mock.calls[0][1]).toMatchObject({ status: 'failed' });
+    expect(appendLedger).toHaveBeenCalledTimes(1);
+    expect(appendLedger.mock.calls[0][1]).toMatchObject({
+      status: 'failed',
+      message: 'orphaned by plugin reload',
+    });
+    expect(events.emit).toHaveBeenCalledWith('task:status-changed', {
+      taskId: 'wo-1',
+      path: 'tasks/wo.md',
+      status: 'failed',
+    });
+    expect(view.refresh).toHaveBeenCalled();
+  });
+
+  it('marks the run failed when the sidecar heartbeat is stale', async () => {
+    // 10 minutes old, well past the 5-minute stale threshold: no live writer.
+    const { view, writeStatus, events } = makeView({
+      sidecarHeartbeat: { at: new Date(Date.now() - 10 * 60_000).toISOString(), status: 'running' },
+    });
+
+    await view['recoverOrphanedRuns']();
+
+    expect(writeStatus).toHaveBeenCalledTimes(1);
+    expect(events.emit).toHaveBeenCalledWith(
+      'task:status-changed',
+      expect.objectContaining({ status: 'failed' }),
+    );
+  });
+
+  it('falls through to recovery when the sidecar read throws', async () => {
+    // A corrupt sidecar JSON must not strand the card — prefer recovering it
+    // over leaving it in a permanent "running" state with no driver.
+    const { view, writeStatus } = makeView({ sidecarHeartbeat: null, sidecarThrows: true });
+
+    await view['recoverOrphanedRuns']();
+
+    expect(writeStatus).toHaveBeenCalledTimes(1);
   });
 });
 
