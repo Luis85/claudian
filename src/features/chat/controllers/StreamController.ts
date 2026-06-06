@@ -778,10 +778,17 @@ export class StreamController {
       msg.contentBlocks.push({ type: 'text', content: state.currentTextContent });
       // Work-order tabs swap a completed handoff block for the compact card on
       // finalize; everything else keeps the raw text block plus copy button.
+      // Derive the content element from the text element's parent because
+      // `InputController` nulls `state.currentContentEl` right before this
+      // call — guarding on `state.currentContentEl` here would mean the live
+      // swap never fires on a normal completed turn (only after a reload).
+      const liveContentEl =
+        (state.currentTextEl?.parentElement as HTMLElement | null | undefined)
+          ?? state.currentContentEl;
       const replacedWithCard =
-        state.currentContentEl && state.currentTextEl
+        liveContentEl && state.currentTextEl
           ? renderer.finalizeStreamedAssistantText?.(
-              state.currentContentEl,
+              liveContentEl,
               state.currentTextEl,
               state.currentTextContent,
             ) ?? false

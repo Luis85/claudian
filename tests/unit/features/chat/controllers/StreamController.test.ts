@@ -434,6 +434,52 @@ describe('StreamController - Text Content', () => {
       expect(deps.state.currentTextEl).toBeNull();
       expect(deps.state.currentTextContent).toBe('');
     });
+
+    // Regression: InputController nulls `state.currentContentEl` BEFORE calling
+    // `finalizeCurrentTextBlock`, so the work-order card swap must derive the
+    // live content element from `textEl.parentElement` instead of guarding on
+    // `state.currentContentEl`. Otherwise the card only appears after a reload.
+    it('derives content element from textEl parent when work-order swap fires', async () => {
+      const msg = createTestMessage();
+      const contentEl = createMockEl();
+      const textEl = createMockEl();
+      // Mock element doesn't expose parentElement; inject it so the production
+      // derivation path is exercised even when InputController has nulled
+      // `currentContentEl` (the actual regression).
+      Object.defineProperty(textEl, 'parentElement', { value: contentEl });
+      deps.state.currentTextEl = textEl as any;
+      deps.state.currentContentEl = null;
+      deps.state.currentTextContent = 'streamed handoff';
+
+      const finalize = jest.fn().mockReturnValue(true);
+      (deps.renderer as any).finalizeStreamedAssistantText = finalize;
+      (deps.renderer as any).refreshMessageActions = jest.fn();
+
+      await controller.finalizeCurrentTextBlock(msg);
+
+      expect(finalize).toHaveBeenCalledWith(contentEl, textEl, 'streamed handoff');
+      // Copy button is skipped when the card swap consumed the text block.
+      expect(deps.renderer.addTextCopyButton).not.toHaveBeenCalled();
+      expect((deps.renderer as any).refreshMessageActions).toHaveBeenCalledWith(msg);
+    });
+
+    it('falls back to keeping the text block when the swap declines', async () => {
+      const msg = createTestMessage();
+      const contentEl = createMockEl();
+      const textEl = createMockEl();
+      Object.defineProperty(textEl, 'parentElement', { value: contentEl });
+      deps.state.currentTextEl = textEl as any;
+      deps.state.currentContentEl = null;
+      deps.state.currentTextContent = 'plain text';
+
+      (deps.renderer as any).finalizeStreamedAssistantText = jest.fn().mockReturnValue(false);
+      (deps.renderer as any).refreshMessageActions = jest.fn();
+
+      await controller.finalizeCurrentTextBlock(msg);
+
+      expect(deps.renderer.addTextCopyButton).toHaveBeenCalledWith(textEl, 'plain text');
+      expect((deps.renderer as any).refreshMessageActions).not.toHaveBeenCalled();
+    });
   });
 
   describe('Error and notice handling', () => {
