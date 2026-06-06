@@ -2,6 +2,7 @@ import {
   getLaneForStatus,
   loadBoardConfig,
   writeBoardQueuePaused,
+  writeLaneCollapsed,
 } from '../../../../../src/features/tasks/config/BoardConfigStore';
 import { DEFAULT_BOARD_CONFIG } from '../../../../../src/features/tasks/config/boardConfigTypes';
 
@@ -110,6 +111,42 @@ describe('loadBoardConfig', () => {
     expect(Object.isFrozen(config)).toBe(true);
     expect(() => config.lanes.push(config.lanes[0])).toThrow();
     expect(DEFAULT_BOARD_CONFIG.lanes).toHaveLength(11);
+  });
+
+  it('injects collapsible/collapsed defaults for legacy lanes', () => {
+    const agentBoardConfig = {
+      schemaVersion: 1,
+      lanes: [{ id: 'a', title: 'A', statuses: ['ready'] }],
+    };
+    const { config } = loadBoardConfig({ agentBoardConfig });
+    expect(config.lanes[0].collapsible).toBe(false);
+    expect(config.lanes[0].collapsed).toBe(false);
+  });
+
+  it('preserves explicit collapsible/collapsed values', () => {
+    const agentBoardConfig = {
+      schemaVersion: 1,
+      lanes: [
+        { id: 'a', title: 'A', statuses: ['ready'], collapsible: true, collapsed: true },
+      ],
+    };
+    const { config } = loadBoardConfig({ agentBoardConfig });
+    expect(config.lanes[0].collapsible).toBe(true);
+    expect(config.lanes[0].collapsed).toBe(true);
+  });
+
+  it('clears orphan collapsed=true when collapsible=false on disk', () => {
+    // Defensive: a stale config (Collapsible un-checked without a writeLaneCollapsed
+    // round-trip) must not be able to resurrect a collapsed strip after load.
+    const agentBoardConfig = {
+      schemaVersion: 1,
+      lanes: [
+        { id: 'a', title: 'A', statuses: ['ready'], collapsible: false, collapsed: true },
+      ],
+    };
+    const { config } = loadBoardConfig({ agentBoardConfig });
+    expect(config.lanes[0].collapsible).toBe(false);
+    expect(config.lanes[0].collapsed).toBe(false);
   });
 
   it('falls back to default when two lanes share an id', () => {
@@ -234,6 +271,48 @@ describe('writeBoardQueuePaused', () => {
   });
 });
 
+describe('writeLaneCollapsed', () => {
+  it('sets collapsed=true on the target lane only', () => {
+    const settings: Record<string, unknown> = {
+      agentBoardConfig: {
+        schemaVersion: 1,
+        lanes: [
+          { id: 'a', title: 'A', statuses: ['ready'], collapsible: true, collapsed: false },
+          { id: 'b', title: 'B', statuses: ['running'], collapsible: true, collapsed: false },
+        ],
+      },
+    };
+    writeLaneCollapsed(settings, 'a', true);
+    const stored = (settings.agentBoardConfig as { lanes: Array<{ id: string; collapsed: boolean }> }).lanes;
+    expect(stored.find((lane) => lane.id === 'a')?.collapsed).toBe(true);
+    expect(stored.find((lane) => lane.id === 'b')?.collapsed).toBe(false);
+  });
+
+  it('is a no-op for an unknown lane id', () => {
+    const settings: Record<string, unknown> = {
+      agentBoardConfig: {
+        schemaVersion: 1,
+        lanes: [{ id: 'a', title: 'A', statuses: ['ready'], collapsible: true, collapsed: false }],
+      },
+    };
+    const before = JSON.stringify(settings.agentBoardConfig);
+    writeLaneCollapsed(settings, 'ghost', true);
+    expect(JSON.stringify(settings.agentBoardConfig)).toBe(before);
+  });
+
+  it('refuses to collapse a non-collapsible lane', () => {
+    const settings: Record<string, unknown> = {
+      agentBoardConfig: {
+        schemaVersion: 1,
+        lanes: [{ id: 'a', title: 'A', statuses: ['ready'], collapsible: false, collapsed: false }],
+      },
+    };
+    writeLaneCollapsed(settings, 'a', true);
+    const stored = (settings.agentBoardConfig as { lanes: Array<{ id: string; collapsed: boolean }> }).lanes;
+    expect(stored[0].collapsed).toBe(false);
+  });
+});
+
 describe('getLaneForStatus', () => {
   it('finds the lane owning a status, else null', () => {
     expect(getLaneForStatus(DEFAULT_BOARD_CONFIG, 'review')?.id).toBe('review');
@@ -242,7 +321,7 @@ describe('getLaneForStatus', () => {
   it('returns null when no lane owns the status', () => {
     const config = {
       schemaVersion: 1 as const,
-      lanes: [{ id: 'a', title: 'A', statuses: ['ready' as const], visible: true, definitionOfReady: [], definitionOfDone: [] }],
+      lanes: [{ id: 'a', title: 'A', statuses: ['ready' as const], visible: true, definitionOfReady: [], definitionOfDone: [], collapsible: false, collapsed: false }],
     };
     expect(getLaneForStatus(config, 'done')).toBeNull();
   });

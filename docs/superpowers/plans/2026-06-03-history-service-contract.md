@@ -1,7 +1,7 @@
 ---
 title: History service contract — outcome-typed hydration
 date: 2026-06-03
-status: shipped
+status: done
 parent: Core/Providers
 scope: src/core/providers, src/providers/*/history, src/app/conversations
 ---

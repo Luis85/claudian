@@ -29,9 +29,9 @@ function model(...tasks: TaskSpec[]): TaskBoardModel {
 const config: BoardConfig = {
   schemaVersion: 1,
   lanes: [
-    { id: 'active', title: 'Active', statuses: ['ready', 'running'], visible: true, definitionOfReady: ['Clear'], definitionOfDone: [] },
-    { id: 'closed', title: 'Closed', statuses: ['done'], visible: true, definitionOfReady: [], definitionOfDone: [] },
-    { id: 'hidden', title: 'Hidden', statuses: ['failed'], visible: false, definitionOfReady: [], definitionOfDone: [] },
+    { id: 'active', title: 'Active', statuses: ['ready', 'running'], visible: true, definitionOfReady: ['Clear'], definitionOfDone: [], collapsible: false, collapsed: false },
+    { id: 'closed', title: 'Closed', statuses: ['done'], visible: true, definitionOfReady: [], definitionOfDone: [], collapsible: false, collapsed: false },
+    { id: 'hidden', title: 'Hidden', statuses: ['failed'], visible: false, definitionOfReady: [], definitionOfDone: [], collapsible: false, collapsed: false },
   ],
 };
 
@@ -56,5 +56,57 @@ describe('resolveBoardLayout', () => {
   it('omits the catch-all when every task has a visible lane', () => {
     const layout = resolveBoardLayout(config, model(task('a', 'ready')));
     expect(layout.lanes.some((lane) => lane.isCatchAll)).toBe(false);
+  });
+
+  it('passes collapsible/collapsed through to resolved lanes', () => {
+    const c: BoardConfig = {
+      schemaVersion: 1,
+      lanes: [
+        {
+          id: 'a',
+          title: 'A',
+          statuses: ['ready'],
+          visible: true,
+          definitionOfReady: [],
+          definitionOfDone: [],
+          collapsible: true,
+          collapsed: true,
+        },
+      ],
+    };
+    const layout = resolveBoardLayout(c, model());
+    expect(layout.lanes[0].collapsible).toBe(true);
+    expect(layout.lanes[0].collapsed).toBe(true);
+  });
+
+  it('defaults catch-all lane to non-collapsible', () => {
+    // A `running` task with no visible lane routes through the catch-all,
+    // which must never project a collapsed strip.
+    const layout = resolveBoardLayout(config, model(task('z', 'inbox')));
+    const catchAll = layout.lanes.find((lane) => lane.isCatchAll);
+    expect(catchAll?.collapsible).toBe(false);
+    expect(catchAll?.collapsed).toBe(false);
+  });
+
+  it('re-gates collapsed against collapsible at resolve time', () => {
+    // Defense-in-depth: a hand-built config that bypasses normalizeLane
+    // (collapsible=false but collapsed=true) must not project a strip.
+    const c: BoardConfig = {
+      schemaVersion: 1,
+      lanes: [
+        {
+          id: 'a',
+          title: 'A',
+          statuses: ['ready'],
+          visible: true,
+          definitionOfReady: [],
+          definitionOfDone: [],
+          collapsible: false,
+          collapsed: true,
+        },
+      ],
+    };
+    const layout = resolveBoardLayout(c, model());
+    expect(layout.lanes[0].collapsed).toBe(false);
   });
 });

@@ -3,7 +3,7 @@ type: issue
 id: issue-20260603-agent-board-drag-and-drop
 title: Add drag-and-drop lane transitions to the Agent Board
 status: open
-priority: 2 - normal
+priority: 3 - low
 triage: ready-for-agent
 created: 2026-06-03
 updated: 2026-06-03

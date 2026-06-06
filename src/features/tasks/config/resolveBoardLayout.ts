@@ -17,6 +17,11 @@ export function resolveBoardLayout(config: BoardConfig, model: TaskBoardModel): 
       definitionOfReady: lane.definitionOfReady,
       definitionOfDone: lane.definitionOfDone,
       isCatchAll: false,
+      collapsible: lane.collapsible,
+      // Re-gate `collapsed` here so a config that slipped past
+      // `normalizeLane` (test fixtures, hand-edits) still cannot project a
+      // collapsed strip onto a non-collapsible lane.
+      collapsed: lane.collapsible && lane.collapsed,
     };
     buckets.set(lane.id, resolved);
     return resolved;
@@ -34,6 +39,8 @@ export function resolveBoardLayout(config: BoardConfig, model: TaskBoardModel): 
     definitionOfReady: [],
     definitionOfDone: [],
     isCatchAll: true,
+    collapsible: false,
+    collapsed: false,
   };
 
   for (const task of model.tasks) {

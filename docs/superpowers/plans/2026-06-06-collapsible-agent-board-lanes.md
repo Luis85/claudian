@@ -1,7 +1,7 @@
 ---
 title: Collapsible Agent Board Lanes Implementation Plan
 date: 2026-06-06
-status: open
+status: implemented
 scope: features/tasks
 spec: "[[docs/superpowers/specs/2026-06-06-collapsible-agent-board-lanes-design.md]]"
 parent: "[[Agent Kanban Board]]"
@@ -9,7 +9,7 @@ parent: "[[Agent Kanban Board]]"
 
 # Collapsible Agent Board Lanes Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Let users mark any Agent Board lane as collapsible in the lane editor, then collapse it to a narrow vertical strip (rotated title + count badge) by clicking a chevron in the lane header; click the strip to expand. Collapsed state persists across sessions.
 
@@ -42,7 +42,7 @@ parent: "[[Agent Kanban Board]]"
 **Files:**
 - Modify: `src/features/tasks/config/boardConfigTypes.ts`
 
-- [ ] **Step 1: Update `BoardLaneConfig` and `ResolvedLane` interfaces**
+- [x] **Step 1: Update `BoardLaneConfig` and `ResolvedLane` interfaces**
 
 Replace the existing `BoardLaneConfig` and `ResolvedLane` interfaces with:
 
@@ -70,7 +70,7 @@ export interface ResolvedLane {
 }
 ```
 
-- [ ] **Step 2: Update `DEFAULT_BOARD_CONFIG` factory to include new flags**
+- [x] **Step 2: Update `DEFAULT_BOARD_CONFIG` factory to include new flags**
 
 In the same file, find the `TASK_STATUSES.map((status) => freezeLane({ ... }))` block and add the two new fields with `false` defaults:
 
@@ -87,12 +87,12 @@ freezeLane({
 }),
 ```
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `npm run typecheck`
 Expected: PASS (no errors). If errors appear in other files referencing `BoardLaneConfig`/`ResolvedLane`, do NOT fix them here — later tasks will. If errors appear inside `boardConfigTypes.ts` itself, fix and re-run.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Commit** *(deferred — user did not request commits during this run)*
 
 ```bash
 git add src/features/tasks/config/boardConfigTypes.ts
@@ -107,7 +107,7 @@ git commit -m "feat(tasks): add collapsible/collapsed flags to lane config types
 - Modify: `src/features/tasks/config/BoardConfigStore.ts`
 - Test: `tests/unit/features/tasks/config/BoardConfigStore.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/unit/features/tasks/config/BoardConfigStore.test.ts` inside the existing `describe('loadBoardConfig', ...)`:
 
@@ -135,12 +135,12 @@ it('preserves explicit collapsible/collapsed values', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm run test -- tests/unit/features/tasks/config/BoardConfigStore.test.ts`
 Expected: FAIL — `config.lanes[0].collapsible` is `undefined`.
 
-- [ ] **Step 3: Update `normalizeLane` to read and default both flags**
+- [x] **Step 3: Update `normalizeLane` to read and default both flags**
 
 In `src/features/tasks/config/BoardConfigStore.ts`, find the `return { id, title, statuses, visible, definitionOfReady, definitionOfDone };` block at the end of `normalizeLane` and replace it with:
 
@@ -159,17 +159,17 @@ return {
 
 Note: `collapsed` is gated by `collapsible` to defend against an orphan state on disk (e.g. a user un-checked Collapsible while the file said `collapsed: true`).
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npm run test -- tests/unit/features/tasks/config/BoardConfigStore.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Run full typecheck**
+- [x] **Step 5: Run full typecheck**
 
 Run: `npm run typecheck`
 Expected: PASS (the type errors from Task 1 should now resolve for this file).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Commit** *(deferred)*
 
 ```bash
 git add src/features/tasks/config/BoardConfigStore.ts tests/unit/features/tasks/config/BoardConfigStore.test.ts
@@ -184,7 +184,7 @@ git commit -m "feat(tasks): migrate legacy lane configs to include collapsible/c
 - Modify: `src/features/tasks/config/BoardConfigStore.ts`
 - Test: `tests/unit/features/tasks/config/BoardConfigStore.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append a new `describe` block to `tests/unit/features/tasks/config/BoardConfigStore.test.ts`:
 
@@ -239,12 +239,12 @@ describe('writeLaneCollapsed', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm run test -- tests/unit/features/tasks/config/BoardConfigStore.test.ts`
 Expected: FAIL — `writeLaneCollapsed` is not exported.
 
-- [ ] **Step 3: Add `writeLaneCollapsed` to `BoardConfigStore.ts`**
+- [x] **Step 3: Add `writeLaneCollapsed` to `BoardConfigStore.ts`**
 
 At the bottom of `src/features/tasks/config/BoardConfigStore.ts`, append:
 
@@ -276,12 +276,12 @@ export function writeLaneCollapsed(
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npm run test -- tests/unit/features/tasks/config/BoardConfigStore.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Commit** *(deferred)*
 
 ```bash
 git add src/features/tasks/config/BoardConfigStore.ts tests/unit/features/tasks/config/BoardConfigStore.test.ts
@@ -296,7 +296,7 @@ git commit -m "feat(tasks): add writeLaneCollapsed store helper"
 - Modify: `src/features/tasks/config/resolveBoardLayout.ts`
 - Test: `tests/unit/features/tasks/config/resolveBoardLayout.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/unit/features/tasks/config/resolveBoardLayout.test.ts`:
 
@@ -350,12 +350,12 @@ it('defaults catch-all lane to non-collapsible', () => {
 
 (Adjust the existing imports in the test file as needed — `resolveBoardLayout` and types should already be imported.)
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm run test -- tests/unit/features/tasks/config/resolveBoardLayout.test.ts`
 Expected: FAIL — `collapsible` is `undefined` on the resolved lane.
 
-- [ ] **Step 3: Update `resolveBoardLayout` to thread flags**
+- [x] **Step 3: Update `resolveBoardLayout` to thread flags**
 
 In `src/features/tasks/config/resolveBoardLayout.ts`, replace the inner `ordered` map and the `catchAll` literal with:
 
@@ -389,12 +389,12 @@ const catchAll: ResolvedLane = {
 };
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npm run test -- tests/unit/features/tasks/config/resolveBoardLayout.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Commit** *(deferred)*
 
 ```bash
 git add src/features/tasks/config/resolveBoardLayout.ts tests/unit/features/tasks/config/resolveBoardLayout.test.ts
@@ -409,7 +409,7 @@ git commit -m "feat(tasks): pass collapsible/collapsed through resolveBoardLayou
 - Modify: `src/features/tasks/ui/AgentBoardRenderer.ts`
 - Test: `tests/unit/features/tasks/ui/AgentBoardRenderer.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/unit/features/tasks/ui/AgentBoardRenderer.test.ts`:
 
@@ -492,12 +492,12 @@ describe('AgentBoardRenderer collapsed lanes', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm run test -- tests/unit/features/tasks/ui/AgentBoardRenderer.test.ts`
 Expected: FAIL — `onToggleLaneCollapse` not in callbacks type; chevron + strip classes not in DOM.
 
-- [ ] **Step 3: Add the callback to the interface**
+- [x] **Step 3: Add the callback to the interface**
 
 In `src/features/tasks/ui/AgentBoardRenderer.ts`, find `AgentBoardRenderCallbacks` and append:
 
@@ -505,7 +505,7 @@ In `src/features/tasks/ui/AgentBoardRenderer.ts`, find `AgentBoardRenderCallback
   onToggleLaneCollapse(laneId: string): void;
 ```
 
-- [ ] **Step 4: Branch `renderLane` on collapsed state**
+- [x] **Step 4: Branch `renderLane` on collapsed state**
 
 In `src/features/tasks/ui/AgentBoardRenderer.ts`, replace the existing `private renderLane(...)` method with:
 
@@ -564,17 +564,17 @@ private renderCollapsedLane(
 }
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `npm run test -- tests/unit/features/tasks/ui/AgentBoardRenderer.test.ts`
 Expected: PASS.
 
-- [ ] **Step 6: Run typecheck**
+- [x] **Step 6: Run typecheck**
 
 Run: `npm run typecheck`
 Expected: FAIL with one error: `AgentBoardView` does not implement `onToggleLaneCollapse` on its callbacks object. Task 6 fixes this. Continue without committing yet.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: Commit** *(deferred)*
 
 ```bash
 git add src/features/tasks/ui/AgentBoardRenderer.ts tests/unit/features/tasks/ui/AgentBoardRenderer.test.ts
@@ -588,7 +588,7 @@ git commit -m "feat(tasks): render collapsed lane strip and chevron toggle"
 **Files:**
 - Modify: `src/features/tasks/ui/AgentBoardView.ts`
 
-- [ ] **Step 1: Import the new store helper**
+- [x] **Step 1: Import the new store helper**
 
 In `src/features/tasks/ui/AgentBoardView.ts`, find the existing import line:
 
@@ -607,7 +607,7 @@ import {
 } from '../config/BoardConfigStore';
 ```
 
-- [ ] **Step 2: Add the handler method**
+- [x] **Step 2: Add the handler method**
 
 In the same file, find the existing private method that writes queue paused (search for `writeBoardQueuePaused(`). Right after it, add a new private method on the class:
 
@@ -637,7 +637,7 @@ private async handleToggleLaneCollapse(laneId: string): Promise<void> {
 }
 ```
 
-- [ ] **Step 3: Wire the callback into the renderer call**
+- [x] **Step 3: Wire the callback into the renderer call**
 
 Search the file for the existing call to `this.renderer.render(`. The callbacks object passed in already lists every existing handler (`onRun`, `onStop`, etc.). Add a new entry:
 
@@ -647,17 +647,17 @@ onToggleLaneCollapse: (laneId) => {
 },
 ```
 
-- [ ] **Step 4: Run typecheck**
+- [x] **Step 4: Run typecheck**
 
 Run: `npm run typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Run all task tests**
+- [x] **Step 5: Run all task tests**
 
 Run: `npm run test -- tests/unit/features/tasks`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Commit** *(deferred)*
 
 ```bash
 git add src/features/tasks/ui/AgentBoardView.ts
@@ -672,7 +672,7 @@ git commit -m "feat(tasks): wire collapse toggle through AgentBoardView"
 - Modify: `src/features/tasks/ui/AgentBoardLaneEditor.ts`
 - Test: `tests/unit/features/tasks/ui/AgentBoardLaneEditor.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/unit/features/tasks/ui/AgentBoardLaneEditor.test.ts` (reuse existing imports and test helpers; if the file uses a `renderEditor`/setup pattern, follow it):
 
@@ -712,12 +712,12 @@ describe('AgentBoardLaneEditor collapsible toggle', () => {
 
 If the test file does not already define `setupEditor` and `flushPromises`, copy the test setup patterns from the existing `AgentBoardLaneEditor.test.ts` describe blocks (this file already exercises the editor, so a setup helper exists — reuse it verbatim).
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm run test -- tests/unit/features/tasks/ui/AgentBoardLaneEditor.test.ts`
 Expected: FAIL — no element with `data-focus-key="lane:a:collapsible"`.
 
-- [ ] **Step 3: Add the Collapsible toggle UI**
+- [x] **Step 3: Add the Collapsible toggle UI**
 
 In `src/features/tasks/ui/AgentBoardLaneEditor.ts`, find the block where `head.addToggle((toggle) => toggle.setValue(lane.visible)...)` is called (the "visible" toggle inside `renderLaneBlock`). Right after that `head.addToggle` block, add a second toggle:
 
@@ -742,7 +742,7 @@ head.addToggle((toggle) => {
 
 Note: Obsidian's `ToggleComponent` exposes `toggleEl` (the underlying `<div>` wrapping the input). If the test instead queries the `<input>` element, change the data attribute to point at the actual `<input>` via `toggle.toggleEl.querySelector('input')`. Check `AgentBoardLaneEditor.test.ts` for how the existing `visible` toggle is found, and use the same selector strategy for consistency.
 
-- [ ] **Step 4: Update the "Add lane" default to include the new flags**
+- [x] **Step 4: Update the "Add lane" default to include the new flags**
 
 In the same file, find the `Add lane` button handler and update the pushed object to:
 
@@ -759,17 +759,17 @@ config.lanes.push({
 });
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `npm run test -- tests/unit/features/tasks/ui/AgentBoardLaneEditor.test.ts`
 Expected: PASS. If the selector for the toggle does not match, adjust the `data-focus-key` placement (Step 3) until it does, then re-run.
 
-- [ ] **Step 6: Run typecheck**
+- [x] **Step 6: Run typecheck**
 
 Run: `npm run typecheck`
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: Commit** *(deferred)*
 
 ```bash
 git add src/features/tasks/ui/AgentBoardLaneEditor.ts tests/unit/features/tasks/ui/AgentBoardLaneEditor.test.ts
@@ -783,7 +783,7 @@ git commit -m "feat(tasks): add Collapsible toggle to lane editor"
 **Files:**
 - Modify: `src/style/features/agent-board.css`
 
-- [ ] **Step 1: Append the new rules**
+- [x] **Step 1: Append the new rules**
 
 At the end of `src/style/features/agent-board.css`, append:
 
@@ -826,12 +826,12 @@ At the end of `src/style/features/agent-board.css`, append:
 }
 ```
 
-- [ ] **Step 2: Build CSS to verify the import wires up**
+- [x] **Step 2: Build CSS to verify the import wires up**
 
 Run: `npm run build`
 Expected: PASS. `styles.css` at the repo root is regenerated and includes the new selectors. (No new `@import` is needed because `agent-board.css` is already registered in `src/style/index.css`.)
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Commit** *(deferred)*
 
 ```bash
 git add src/style/features/agent-board.css styles.css
@@ -842,31 +842,31 @@ git commit -m "feat(tasks): style collapsed lane strip and chevron toggle"
 
 ## Task 9: Full verification
 
-- [ ] **Step 1: Typecheck**
+- [x] **Step 1: Typecheck**
 
 Run: `npm run typecheck`
 Expected: PASS.
 
-- [ ] **Step 2: Lint**
+- [x] **Step 2: Lint**
 
 Run: `npm run lint`
 Expected: 0 problems.
 
-- [ ] **Step 3: Unit + integration tests**
+- [x] **Step 3: Unit + integration tests**
 
 Run: `npm run test`
 Expected: PASS.
 
-- [ ] **Step 4: Production build**
+- [x] **Step 4: Production build**
 
 Run: `npm run build`
 Expected: PASS.
 
-- [ ] **Step 5: Manual smoke (optional)**
+- [ ] **Step 5: Manual smoke (optional)** *(deferred — requires Obsidian reload, not run in this session)*
 
 Reload the plugin in the dev vault. Open Agent Board → settings → mark a lane Collapsible → click the chevron in that lane's header → confirm the strip renders with rotated title and count → click the strip → confirm it expands. Restart Obsidian and confirm the collapsed state persisted.
 
-- [ ] **Step 6: Final commit (only if any drift was found and fixed)**
+- [ ] **Step 6: Final commit (only if any drift was found and fixed)** *(deferred)*
 
 ```bash
 git add -A

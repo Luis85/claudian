@@ -21,6 +21,8 @@ type LaneSeed = {
   id: string;
   title: string;
   statuses: string[];
+  collapsible?: boolean;
+  collapsed?: boolean;
 };
 
 function makePlugin(lanes: LaneSeed[]): {
@@ -39,6 +41,8 @@ function makePlugin(lanes: LaneSeed[]): {
       visible: true,
       definitionOfReady: [],
       definitionOfDone: [],
+      collapsible: lane.collapsible ?? false,
+      collapsed: lane.collapsed ?? false,
     })),
   };
   const plugin = {
@@ -315,5 +319,62 @@ describe('renderAgentBoardLaneEditor — queue preservation', () => {
 
     // Save failed → lanes roll back, but the rollback must not revert the pause.
     expect((plugin.settings.agentBoardConfig as BoardConfig).queue).toEqual({ paused: true });
+  });
+});
+
+describe('renderAgentBoardLaneEditor — collapsible toggle', () => {
+  function findCollapsibleInput(host: HTMLElement, laneId: string): HTMLInputElement | null {
+    return host.querySelector<HTMLInputElement>(`[data-focus-key="lane:${laneId}:collapsible"]`);
+  }
+
+  it('renders a Collapsible checkbox per lane reflecting the stored value', () => {
+    const { plugin } = makePlugin([
+      { id: 'a', title: 'A', statuses: ['ready'], collapsible: true, collapsed: false },
+      { id: 'b', title: 'B', statuses: ['running'], collapsible: false, collapsed: false },
+    ]);
+    const host = document.createElement('div');
+    renderAgentBoardLaneEditor(host, plugin);
+
+    expect(findCollapsibleInput(host, 'a')?.checked).toBe(true);
+    expect(findCollapsibleInput(host, 'b')?.checked).toBe(false);
+  });
+
+  it('persists collapsible=true when the checkbox is checked', async () => {
+    const { plugin, save } = makePlugin([
+      { id: 'a', title: 'A', statuses: ['ready'], collapsible: false, collapsed: false },
+    ]);
+    const host = document.createElement('div');
+    renderAgentBoardLaneEditor(host, plugin);
+
+    const input = findCollapsibleInput(host, 'a')!;
+    input.checked = true;
+    input.dispatchEvent(new Event('change'));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(save).toHaveBeenCalled();
+    expect((plugin.settings.agentBoardConfig as BoardConfig).lanes[0].collapsible).toBe(true);
+  });
+
+  it('clears collapsed when Collapsible is turned off', async () => {
+    // Regression guard: a lane left in `{collapsible:true, collapsed:true}` must
+    // not survive a Collapsible OFF — otherwise the board would project an
+    // orphan strip after the user un-checks Collapsible.
+    const { plugin } = makePlugin([
+      { id: 'a', title: 'A', statuses: ['ready'], collapsible: true, collapsed: true },
+    ]);
+    const host = document.createElement('div');
+    renderAgentBoardLaneEditor(host, plugin);
+
+    const input = findCollapsibleInput(host, 'a')!;
+    expect(input.checked).toBe(true);
+    input.checked = false;
+    input.dispatchEvent(new Event('change'));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const stored = (plugin.settings.agentBoardConfig as BoardConfig).lanes[0];
+    expect(stored.collapsible).toBe(false);
+    expect(stored.collapsed).toBe(false);
   });
 });

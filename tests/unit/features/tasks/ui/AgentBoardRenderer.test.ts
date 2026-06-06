@@ -50,6 +50,8 @@ function makeLane(id: string, tasks: TaskSpec[]): ResolvedLane {
     definitionOfReady: [],
     definitionOfDone: [],
     isCatchAll: false,
+    collapsible: false,
+    collapsed: false,
   };
 }
 
@@ -76,6 +78,7 @@ function makeCallbacks(): AgentBoardRenderCallbacks {
     onReopen: jest.fn(),
     onMoveToInbox: jest.fn(),
     onContextMenu: jest.fn(),
+    onToggleLaneCollapse: jest.fn(),
     onReply: jest.fn(),
     onApprove: jest.fn(),
     onReject: jest.fn(),
@@ -508,5 +511,78 @@ describe('AgentBoardRenderer — contextmenu listener', () => {
 
     expect(callbacks.onOpenDetail).toHaveBeenCalledWith(task);
     expect(callbacks.onContextMenu).not.toHaveBeenCalled();
+  });
+});
+
+describe('AgentBoardRenderer — collapsible lanes', () => {
+  function makeCollapsibleLane(collapsed: boolean): ResolvedLane {
+    return {
+      id: 'done',
+      title: 'Done',
+      tasks: [makeTask('t1', 'done')],
+      definitionOfReady: [],
+      definitionOfDone: [],
+      isCatchAll: false,
+      collapsible: true,
+      collapsed,
+    };
+  }
+
+  function stateWith(lane: ResolvedLane): AgentBoardRenderState {
+    return {
+      layout: { lanes: [lane], errors: [] },
+      invalidNotes: [],
+      slots: { used: 0, max: 1 },
+    };
+  }
+
+  it('renders a chevron button on expanded collapsible lanes', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    renderer.render(host, stateWith(makeCollapsibleLane(false)), callbacks);
+    const chevron = host.querySelector('.claudian-agent-board-lane-collapse-toggle') as HTMLButtonElement | null;
+    expect(chevron).not.toBeNull();
+    expect(chevron?.getAttribute('aria-label')).toBe('Collapse lane');
+    chevron?.click();
+    expect(callbacks.onToggleLaneCollapse).toHaveBeenCalledWith('done');
+  });
+
+  it('omits the chevron on non-collapsible lanes', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ done: [makeTask('d', 'done')] }), makeCallbacks());
+    expect(host.querySelector('.claudian-agent-board-lane-collapse-toggle')).toBeNull();
+  });
+
+  it('renders a strip with rotated title and count when collapsed; click expands', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    renderer.render(host, stateWith(makeCollapsibleLane(true)), callbacks);
+    const strip = host.querySelector('.claudian-agent-board-lane--collapsed') as HTMLElement | null;
+    expect(strip).not.toBeNull();
+    expect(strip?.getAttribute('role')).toBe('button');
+    expect(strip?.getAttribute('aria-expanded')).toBe('false');
+    expect(strip?.getAttribute('aria-label')).toBe('Expand lane Done');
+    // Cards must not render inside the collapsed strip — the count badge speaks for them.
+    expect(host.querySelector('.claudian-agent-board-card')).toBeNull();
+    const titleVertical = strip?.querySelector('.claudian-agent-board-lane-title-vertical');
+    expect(titleVertical?.textContent).toBe('Done');
+    const count = strip?.querySelector('.claudian-agent-board-lane-count');
+    expect(count?.textContent).toBe('1');
+    strip?.click();
+    expect(callbacks.onToggleLaneCollapse).toHaveBeenCalledWith('done');
+  });
+
+  it('chevron click does not bubble to a card click', () => {
+    // Stops propagation so a chevron click never opens the first card by accident.
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    renderer.render(host, stateWith(makeCollapsibleLane(false)), callbacks);
+    const chevron = host.querySelector('.claudian-agent-board-lane-collapse-toggle') as HTMLButtonElement | null;
+    chevron?.click();
+    expect(callbacks.onOpenDetail).not.toHaveBeenCalled();
   });
 });
