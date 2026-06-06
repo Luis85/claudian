@@ -318,6 +318,8 @@ export type TranslationKey =
   | 'quickActions.launchModal.cancelButton'
   | 'quickActions.launchModal.fallbackNotice'
   | 'quickActions.launchModal.noProvidersEnabled'
+  | 'quickActions.launchModal.providerDisabled'
+  | 'quickActions.launchModal.untitledFallback'
   | 'quickActions.modal.tabs.quickActions'
   | 'quickActions.modal.tabs.skills'
   | 'quickActions.skills.emptyAll'

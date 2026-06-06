@@ -566,7 +566,9 @@
       "runButton": "Run",
       "cancelButton": "Cancel",
       "fallbackNotice": "Previous choice ({provider} / {model}) unavailable, defaulted to current selection.",
-      "noProvidersEnabled": "No providers enabled — configure in settings."
+      "noProvidersEnabled": "No providers enabled — configure in settings.",
+      "providerDisabled": "Selected provider is no longer enabled — open settings to re-enable.",
+      "untitledFallback": "(untitled action)"
     },
     "usage": {
       "tabLabel": "Stats",
