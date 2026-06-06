@@ -13,6 +13,7 @@ import { archiveWorkOrder } from '../commands/taskCommands';
 import { getLaneForStatus, loadBoardConfig, writeBoardQueuePaused } from '../config/BoardConfigStore';
 import type { BoardConfig, ResolvedBoardLayout } from '../config/boardConfigTypes';
 import { resolveBoardLayout } from '../config/resolveBoardLayout';
+import { sharedRunRegistry } from '../execution/activeRunRegistry';
 import { QueueRunner } from '../execution/QueueRunner';
 import { selectNextReadyTask } from '../execution/selectNextReadyTask';
 import type { TaskExecutionSurface } from '../execution/TaskExecutionSurface';
@@ -22,7 +23,7 @@ import { canTransitionTaskStatus, isRunnableTaskStatus } from '../model/taskStat
 import type { TaskBoardModel, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
 import { TaskNoteStore } from '../storage/TaskNoteStore';
-import { AgentBoardRenderer } from './AgentBoardRenderer';
+import { type AgentBoardPauseState, AgentBoardRenderer } from './AgentBoardRenderer';
 import { createWorkOrderInteractive } from './createWorkOrderInteractive';
 import { showWorkOrderContextMenu } from './WorkOrderContextMenu';
 import { buildWorkOrderConversationBindings } from './workOrderConversationBindings';
@@ -37,7 +38,12 @@ export class AgentBoardView extends ItemView {
   private layout: ResolvedBoardLayout = { lanes: [], errors: [] };
   private refreshTimer: number | null = null;
   private runner: QueueRunner | null = null;
+  // One coordinator for the view, shared by manual runs and the queue runner.
+  // Built in the constructor so paused runs stay reachable from the card
+  // reply/approve/reject handlers via the shared run registry.
   private readonly coordinator: TaskRunCoordinator;
+  private elapsedTimer: number | null = null;
+  private readonly pauseState = new Map<string, AgentBoardPauseState>();
   // Last status written per task, so a failed/canceled run can report the
   // terminal status on `task:run-finished` without re-reading the note.
   private readonly lastRunStatus = new Map<string, TaskStatus>();
@@ -53,28 +59,30 @@ export class AgentBoardView extends ItemView {
     // key off the task passed to `run()`, never a closure, so any task is safe.
     this.coordinator = new TaskRunCoordinator({
       executionSurface: this.executionSurface,
+      events: this.plugin.events,
       now: () => new Date().toISOString(),
       isProviderEnabled: (providerId) => this.isProviderEnabled(providerId),
       ownsModel: (providerId, model) => this.ownsModel(providerId, model),
+      // Live sessions are held in a process-shared registry so a paused run is
+      // reachable for reply/approve/reject/stop even from a reopened board.
+      runRegistry: sharedRunRegistry,
       // Shared across every open board so a manual run here is visible to other
       // panes' queue runners and the same card never launches twice.
       activeRuns: this.plugin.taskActiveRuns,
       // Shared chat-tab reservations so a launch in one pane is counted by every
       // pane's free-tab gate before the async tab creation lands.
       reservations: this.plugin.chatTabReservations,
+      // RunSession owns the task:status-changed emit (on pause/resume/terminal),
+      // so this just persists the write and records the last status.
       writeTaskStatus: async (task, options) => {
         await this.applyNoteChange(task.path, (content) => this.noteStore.writeStatus(content, options));
         this.lastRunStatus.set(task.frontmatter.id, options.status);
-        // The status-changed subscription patches every open board's in-memory
-        // model, so stale-card re-picks are covered for this pane and others.
-        this.plugin.events.emit('task:status-changed', {
-          taskId: task.frontmatter.id,
-          path: task.path,
-          status: options.status,
-        });
       },
-      appendLedger: (task, entry) =>
-        this.applyNoteChange(task.path, (content) => this.noteStore.appendLedger(content, entry)),
+      // RunSession batches ledger lines and flushes them together.
+      flushLedger: (task, entries) =>
+        this.applyNoteChange(task.path, (content) =>
+          entries.reduce((acc, entry) => this.noteStore.appendLedger(acc, entry), content),
+        ),
       writeHandoff: (task, markdown) =>
         this.applyNoteChange(task.path, (content) => this.noteStore.writeHandoff(content, markdown)),
       renderPrompt: (task) =>
@@ -108,12 +116,26 @@ export class AgentBoardView extends ItemView {
       this.runner?.tick();
     }));
     this.register(this.plugin.events.on('task:board-config-changed', () => void this.refresh()));
+
+    // Live-run visibility: patch cards in place from run events without a full
+    // re-render, and tick the elapsed timer every second.
+    this.register(this.plugin.events.on('task:attempt-started', (p) => this.patchCard(p.taskId)));
+    this.register(this.plugin.events.on('task:ledger-appended', (p) => this.patchLiveStrip(p.taskId, p.entry.message)));
+    this.register(this.plugin.events.on('task:heartbeat', (p) => this.patchLiveStrip(p.taskId)));
+    this.register(this.plugin.events.on('task:needs-input', (p) => this.onPauseRequested('needs_input', p)));
+    this.register(this.plugin.events.on('task:needs-approval', (p) => this.onPauseRequested('needs_approval', p)));
+    this.register(this.plugin.events.on('task:resumed', (p) => {
+      this.pauseState.delete(p.taskId);
+      this.patchCard(p.taskId);
+    }));
+
     // Any status change (manual or queue, this pane or another) can free a slot
     // or change eligibility. Patch the in-memory model first so the runner does
-    // not re-pick a card whose terminal status hasn't been re-indexed yet, then
-    // nudge it. Queue events only need a repaint of the queue chrome.
+    // not re-pick a card whose terminal status hasn't been re-indexed yet and the
+    // card UI repaints against the new status, then nudge the runner.
     this.register(this.plugin.events.on('task:status-changed', (payload) => {
       this.patchModelStatus(payload.taskId, payload.status);
+      this.onStatusChanged(payload);
       this.runner?.tick();
     }));
     this.register(this.plugin.events.on('task:run-finished', () => this.runner?.tick()));
@@ -126,7 +148,15 @@ export class AgentBoardView extends ItemView {
     this.register(this.plugin.events.on('task:queue-tick', () => this.render()));
     this.register(this.plugin.events.on('task:queue-skipped', () => this.render()));
     this.register(this.plugin.events.on('task:queue-state-changed', () => this.render()));
+
+    this.elapsedTimer = window.setInterval(() => this.tickElapsed(), 1000);
+    this.register(() => {
+      if (this.elapsedTimer !== null) window.clearInterval(this.elapsedTimer);
+      this.elapsedTimer = null;
+    });
+
     await this.refresh();
+    await this.recoverOrphanedRuns();
   }
 
   async onClose(): Promise<void> {
@@ -212,8 +242,20 @@ export class AgentBoardView extends ItemView {
           onOpenNote: (target) => void this.openTask(target),
           ...buildWorkOrderConversationBindings(this.plugin),
         }),
+        onReply: (task, content) => void this.onReply(task.frontmatter.id, content),
+        onApprove: (task) => void this.onApprove(task.frontmatter.id),
+        onReject: (task, reason) => void this.onReject(task.frontmatter.id, reason),
+        onCancelPaused: (task) => this.stopTask(task),
+        onSendToReview: (task) => void this.transitionTask(task, 'review', 'Sent to review without a structured handoff.'),
+        onMarkFailed: (task) => void this.transitionTask(task, 'failed', 'Marked failed: run produced no structured handoff.'),
       },
     );
+
+    // A full render rebuilds card refs, so re-apply any active pause payloads
+    // (question/default/risk from the run events) over the note-seeded reply.
+    for (const taskId of this.pauseState.keys()) {
+      this.patchCard(taskId);
+    }
 
     const nextLanes = this.contentEl.querySelector(lanesSelector) as HTMLElement | null;
     if (nextLanes) {
@@ -245,6 +287,8 @@ export class AgentBoardView extends ItemView {
       onRework: (target) => void this.reworkTask(target),
       onMarkReady: (target) => void this.transitionTask(target, 'ready', 'Marked ready.'),
       onReopen: (target) => void this.transitionTask(target, 'inbox', 'Reopened.'),
+      onSendToReview: (target) => void this.transitionTask(target, 'review', 'Sent to review without a structured handoff.'),
+      onMarkFailed: (target) => void this.transitionTask(target, 'failed', 'Marked failed: run produced no structured handoff.'),
       onArchive: (target) => void this.archiveTask(target),
       onSaveFields: (target, fields) => this.saveTaskFields(target, fields),
       getProviderOptions: () =>
@@ -264,7 +308,15 @@ export class AgentBoardView extends ItemView {
   }
 
   private stopTask(task: TaskSpec): void {
-    this.executionSurface.cancelTaskRun?.(task.frontmatter.run_id ?? '');
+    // Prefer cancelling the live RunSession via the shared registry (works even
+    // for a run started by a previous view instance); fall back to the optional
+    // surface hook for other surfaces.
+    const session = sharedRunRegistry.getSession(task.frontmatter.id);
+    if (session) {
+      session.cancel();
+    } else {
+      this.executionSurface.cancelTaskRun?.(task.frontmatter.run_id ?? '');
+    }
     new Notice(t('tasks.board.stopRequested', { title: task.frontmatter.title }));
   }
 
@@ -379,6 +431,117 @@ export class AgentBoardView extends ItemView {
       new Notice(t('tasks.board.runFailed', { error: result.error }));
     }
     await this.refresh();
+  }
+
+  private patchCard(taskId: string): void {
+    const task = this.model.tasks.find((entry) => entry.frontmatter.id === taskId);
+    if (!task) return;
+    this.renderer.patchCard(taskId, task, this.pauseState.get(taskId) ?? null);
+  }
+
+  private patchLiveStrip(taskId: string, lastLedger?: string): void {
+    const task = this.model.tasks.find((entry) => entry.frontmatter.id === taskId);
+    if (!task) return;
+    const now = Date.now();
+    const startedAt = task.frontmatter.started ? Date.parse(task.frontmatter.started) : now;
+    const heartbeatAt = task.frontmatter.heartbeat ? Date.parse(task.frontmatter.heartbeat) : now;
+    const ledger = lastLedger ?? task.sections.ledger.split('\n').filter((line) => line.trim().length > 0).pop();
+    this.renderer.patchLiveStrip(taskId, {
+      lastLedger: ledger,
+      elapsedMs: Math.max(0, now - startedAt),
+      attemptNumber: task.frontmatter.attempts,
+      heartbeatAgeMs: Math.max(0, now - heartbeatAt),
+    });
+  }
+
+  private onStatusChanged(p: { taskId: string; status: TaskStatus }): void {
+    if (p.status !== 'needs_input' && p.status !== 'needs_approval') {
+      this.pauseState.delete(p.taskId);
+    }
+    this.patchCard(p.taskId);
+  }
+
+  private onPauseRequested(
+    kind: 'needs_input' | 'needs_approval',
+    p: { taskId: string; runId: string; question?: string; action?: string; risk?: string; default?: string; reversible?: boolean },
+  ): void {
+    this.pauseState.set(p.taskId, {
+      question: kind === 'needs_input' ? p.question : undefined,
+      action: kind === 'needs_approval' ? p.action : undefined,
+      risk: p.risk,
+      defaultValue: p.default,
+      reversible: p.reversible,
+      runId: p.runId,
+    });
+    this.patchCard(p.taskId);
+  }
+
+  private tickElapsed(): void {
+    for (const task of this.model.tasks) {
+      const status = task.frontmatter.status;
+      if (status === 'running' || status === 'needs_input' || status === 'needs_approval') {
+        this.patchLiveStrip(task.frontmatter.id);
+      }
+    }
+  }
+
+  // Reply/approve/reject route into the live RunSession via the shared registry,
+  // so a board reopened mid-run can still drive a run owned by a previous view.
+  // If no session is active (the run just ended), the next refresh removes the
+  // reply surface, so a stray click is a safe no-op.
+  private async onReply(taskId: string, content: string): Promise<void> {
+    await sharedRunRegistry.getSession(taskId)?.resume({ kind: 'reply', content });
+  }
+
+  private async onApprove(taskId: string): Promise<void> {
+    await sharedRunRegistry.getSession(taskId)?.resume({ kind: 'approve' });
+  }
+
+  private async onReject(taskId: string, reason: string): Promise<void> {
+    await sharedRunRegistry.getSession(taskId)?.resume({ kind: 'reject', reason });
+  }
+
+  /**
+   * Marks any work order persisted as running/needs_input/needs_approval but with
+   * no live session (e.g. a plugin reload mid-run) as failed, so the board never
+   * shows a permanently "active" card that nothing is driving.
+   */
+  private async recoverOrphanedRuns(): Promise<void> {
+    const now = new Date().toISOString();
+    let recovered = false;
+    for (const task of this.model.tasks) {
+      const status = task.frontmatter.status;
+      if (status !== 'running' && status !== 'needs_input' && status !== 'needs_approval') continue;
+      // Skip work orders a run is still driving anywhere in this process (e.g. a
+      // previous view instance that was closed and reopened) — only genuinely
+      // orphaned runs (no live session, e.g. after a plugin reload) are failed.
+      if (sharedRunRegistry.has(task.frontmatter.id)) continue;
+      try {
+        // Write the failed status first: it only rewrites frontmatter, so a note
+        // missing the generated run-ledger markers (hand-edited or older) is
+        // still recovered. The ledger append is best-effort and must not abort
+        // this note's recovery or the rest of the loop.
+        await this.applyNoteChange(task.path, (content) =>
+          this.noteStore.writeStatus(content, { status: 'failed', timestamp: now }),
+        );
+        try {
+          await this.applyNoteChange(task.path, (content) =>
+            this.noteStore.appendLedger(content, { timestamp: now, status: 'failed', message: 'orphaned by plugin reload' }),
+          );
+        } catch {
+          // The note lacks the generated ledger region; the failed status above
+          // is what un-stalls the card, so proceed without the ledger line.
+        }
+        this.pauseState.delete(task.frontmatter.id);
+        this.plugin.events.emit('task:status-changed', { taskId: task.frontmatter.id, path: task.path, status: 'failed' });
+        recovered = true;
+      } catch {
+        // Couldn't even mark this note failed (e.g. a transient write failure);
+        // skip it so the remaining orphaned notes are still recovered, and let
+        // the next board open retry it.
+      }
+    }
+    if (recovered) await this.refresh();
   }
 
   async runNextReady(): Promise<void> {

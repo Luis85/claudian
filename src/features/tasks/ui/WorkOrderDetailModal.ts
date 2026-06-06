@@ -26,6 +26,10 @@ export interface WorkOrderDetailModalCallbacks {
   onRework(task: TaskSpec): void;
   onMarkReady(task: TaskSpec): void;
   onReopen(task: TaskSpec): void;
+  /** needs_handoff → review: salvage a run that finished without a structured handoff. */
+  onSendToReview?(task: TaskSpec): void;
+  /** needs_handoff → failed: give up on a run that finished without a structured handoff. */
+  onMarkFailed?(task: TaskSpec): void;
   onArchive(task: TaskSpec): void;
   onSaveFields(task: TaskSpec, fields: WorkOrderFieldUpdate): void | Promise<void>;
   getProviderOptions(): WorkOrderOption[];
@@ -243,6 +247,27 @@ export class WorkOrderDetailModal extends Modal {
           this.close();
           this.callbacks.onReopen(task);
         }),
+      );
+    }
+
+    if (task.frontmatter.status === 'needs_handoff') {
+      actions.addButton((btn) =>
+        btn
+          .setButtonText('Review')
+          .setCta()
+          .onClick(() => {
+            this.close();
+            this.callbacks.onSendToReview?.(task);
+          }),
+      );
+      actions.addButton((btn) =>
+        btn
+          .setButtonText('Mark failed')
+          .setWarning()
+          .onClick(() => {
+            this.close();
+            this.callbacks.onMarkFailed?.(task);
+          }),
       );
     }
 

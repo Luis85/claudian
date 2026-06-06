@@ -141,6 +141,83 @@
   opacity: 0.65;
 }
 
+/* ===== Live run strip + paused reply (work-order execution) ===== */
+
+.claudian-agent-board-status-badge--needs_handoff {
+  background: var(--background-modifier-error-hover, var(--background-modifier-border));
+  color: var(--text-warning);
+}
+
+.claudian-agent-board-card--needs_input,
+.claudian-agent-board-card--needs_approval {
+  border-left: 3px solid var(--color-orange);
+}
+
+.claudian-agent-board-card-live-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: var(--font-ui-smaller);
+  opacity: 0.9;
+  margin-top: 0.4rem;
+}
+
+.claudian-agent-board-card-live-strip--meta {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.claudian-agent-board-card-live-strip--ledger {
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The leading "●" of the meta line is the heartbeat-stale dot. */
+.claudian-stale-green::first-letter { color: var(--color-green); }
+.claudian-stale-amber::first-letter { color: var(--color-orange); }
+.claudian-stale-red::first-letter { color: var(--color-red); }
+
+@keyframes claudian-pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.claudian-agent-board-card--running .claudian-agent-board-card-live-strip--meta::first-letter,
+.claudian-agent-board-card--needs_input .claudian-agent-board-card-live-strip--meta::first-letter,
+.claudian-agent-board-card--needs_approval .claudian-agent-board-card-live-strip--meta::first-letter {
+  animation: claudian-pulse-dot 1.2s ease-in-out infinite;
+}
+
+.claudian-agent-board-card-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.claudian-agent-board-card-reply-prompt {
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+}
+
+.claudian-agent-board-card-reply-risk {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-warning);
+}
+
+.claudian-agent-board-card-reply--field {
+  width: 100%;
+}
+
+.claudian-agent-board-card-reply--actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
 .claudian-work-order-modal {
   width: min(960px, 92vw);
   max-width: min(960px, 92vw);

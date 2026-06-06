@@ -115,7 +115,39 @@ describe('renderTaskPrompt — Rework Notes', () => {
       '- 2026-06-03T00:00:00Z [needs_fix] Latest rework note.',
     );
     const prompt = renderTaskPrompt(t);
-    expect(prompt).toContain('Latest rework note.');
-    expect(prompt).not.toContain('Old rework note.');
+    // Scope to the Rework Notes section: Prior Attempts intentionally echoes the
+    // full recent ledger (including older needs_fix lines), so assert the
+    // prominent Rework Notes callout itself surfaces only the latest reason.
+    const reworkSection = prompt.split('## Rework Notes')[1]?.split('\n## ')[0] ?? '';
+    expect(reworkSection).toContain('Latest rework note.');
+    expect(reworkSection).not.toContain('Old rework note.');
+  });
+});
+
+describe('renderTaskPrompt — Protocol + Prior Attempts', () => {
+  it('includes the Protocol section with all three blocks', () => {
+    const prompt = renderTaskPrompt(task);
+    expect(prompt).toContain('## Protocol');
+    expect(prompt).toContain('<claudian_progress>');
+    expect(prompt).toContain('<claudian_needs_input>');
+    expect(prompt).toContain('<claudian_needs_approval>');
+  });
+
+  it('omits Prior Attempts on first run (empty ledger)', () => {
+    const empty = { ...task, sections: { ...task.sections, ledger: '' } };
+    expect(renderTaskPrompt(empty)).not.toContain('## Prior Attempts');
+  });
+
+  it('includes Prior Attempts on rerun with prior ledger entries', () => {
+    const ledger = [
+      '- 2026-06-04T10:00:00Z [running] Run started (attempt 1)',
+      '- 2026-06-04T10:01:00Z [running] tool: Edit src/foo.ts',
+      '- 2026-06-04T10:02:00Z [needs_fix] Tests still failing',
+    ].join('\n');
+    const t = { ...task, sections: { ...task.sections, ledger } };
+    const prompt = renderTaskPrompt(t);
+    expect(prompt).toContain('## Prior Attempts');
+    expect(prompt).toContain('tool: Edit src/foo.ts');
+    expect(prompt).toContain('Tests still failing');
   });
 });

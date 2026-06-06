@@ -1,44 +1,78 @@
 import type { ChatTabReservation, ChatTabReservations } from '../../../core/chatTabReservations';
+import type { TaskEventEmitter } from '../events';
 import type { TaskLedgerEntry, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
+import { ActiveRunRegistry } from './activeRunRegistry';
+import { RunSession, type RunSessionResult, type RunSessionWriteStatusOptions } from './RunSession';
 import type { TaskExecutionSurface } from './TaskExecutionSurface';
-import { parseTaskHandoff } from './TaskHandoffParser';
-
-export interface WriteTaskStatusOptions {
-  status: TaskStatus;
-  runId?: string | null;
-  conversationId?: string | null;
-  sidepanelTabId?: string | null;
-  timestamp: string;
-}
 
 export interface TaskRunCoordinatorDeps {
   executionSurface: TaskExecutionSurface;
+  events: TaskEventEmitter;
   now: () => string;
   isProviderEnabled: (providerId: string) => boolean;
   ownsModel: (providerId: string, model: string) => boolean;
-  writeTaskStatus: (task: TaskSpec, options: WriteTaskStatusOptions) => Promise<void>;
-  appendLedger: (task: TaskSpec, entry: TaskLedgerEntry) => Promise<void>;
+  writeTaskStatus: (task: TaskSpec, options: RunSessionWriteStatusOptions) => Promise<void>;
+  flushLedger: (task: TaskSpec, entries: TaskLedgerEntry[]) => Promise<void>;
   writeHandoff: (task: TaskSpec, markdown: string) => Promise<void>;
   renderPrompt?: (task: TaskSpec) => string;
-  /** Optional shared in-flight set so coordinators in different Agent Board
-   * panes observe the same active runs and never double-launch a card. */
+  heartbeatIntervalMs?: number;
+  staleThresholdMs?: number;
+  /**
+   * Process-shared registry of live runs. Reserved before the surface resolves
+   * and held for the whole run, so concurrent/cross-view runs of the same work
+   * order are rejected, crash recovery can tell a run is still live, and the live
+   * session is reachable for reply/approve/reject/stop. Defaults to a
+   * coordinator-local registry when omitted.
+   */
+  runRegistry?: ActiveRunRegistry;
+  /**
+   * Optional shared in-flight set so coordinators in different Agent Board panes
+   * observe the same active runs and never double-launch a card. The queue
+   * runner's eligibility predicate reads it via {@link TaskRunCoordinator.isActive}.
+   * Kept in lockstep with the registry across both run paths.
+   */
   activeRuns?: Set<string>;
-  /** Optional shared chat-tab reservation ledger. A run reserves a tab slot at
+  /**
+   * Optional shared chat-tab reservation ledger. A run reserves a tab slot at
    * launch so concurrent panes don't double-book the same free tabs; the surface
-   * releases it once the tab is created. */
+   * releases it once the tab is created.
+   */
   reservations?: ChatTabReservations;
 }
 
 export type TaskRunResult =
   | { ok: true; status: TaskStatus }
-  | { ok: false; error: string; canceled?: boolean };
+  | { ok: false; error: string; canceled?: boolean; startupFailed?: boolean };
 
+/**
+ * Wires a work order to a chat-tab run and delegates the per-run lifecycle to a
+ * {@link RunSession}. The coordinator owns validation and the active-run registry;
+ * RunSession owns status writes, the live ledger, heartbeat, and pause/resume.
+ */
 export class TaskRunCoordinator {
+  // Shared (when injected) registry of live runs: powers the concurrency guard,
+  // crash recovery, and reply/approve/reject/stop routing across views.
+  private readonly registry: ActiveRunRegistry;
+  // Lightweight in-flight id set, shared across panes for the queue runner's
+  // eligibility check; kept in lockstep with the registry in run().
   private readonly activeRuns: Set<string>;
 
   constructor(private readonly deps: TaskRunCoordinatorDeps) {
+    this.registry = deps.runRegistry ?? new ActiveRunRegistry();
     this.activeRuns = deps.activeRuns ?? new Set<string>();
+  }
+
+  /** The live session for a task, if one is currently running (drives reply/approve/reject). */
+  getActiveRun(taskId: string): RunSession | undefined {
+    return this.registry.getSession(taskId);
+  }
+
+  /** Whether a run for `taskId` is currently in flight. Used by the queue
+   * runner's eligibility predicate to skip cards already running (manual or
+   * auto), keeping a single in-flight view across both run paths. */
+  isActive(taskId: string): boolean {
+    return this.activeRuns.has(taskId) || this.registry.has(taskId);
   }
 
   async run(task: TaskSpec, externalReservation?: ChatTabReservation): Promise<TaskRunResult> {
@@ -46,11 +80,9 @@ export class TaskRunCoordinator {
 
     if (!provider) return { ok: false, error: 'Work order is missing provider' };
     if (!model) return { ok: false, error: 'Work order is missing model' };
-
-    if (task.frontmatter.status === 'running' || this.activeRuns.has(id)) {
+    if (task.frontmatter.status === 'running' || this.registry.has(id) || this.activeRuns.has(id)) {
       return { ok: false, error: 'This work order is already running.' };
     }
-
     if (!this.deps.isProviderEnabled(provider)) {
       return { ok: false, error: `Provider ${provider} is not enabled` };
     }
@@ -58,6 +90,10 @@ export class TaskRunCoordinator {
       return { ok: false, error: `Model ${model} is not available for provider ${provider}` };
     }
 
+    // Reserve the id in both the live-session registry (which holds the RunSession
+    // for reply/stop) and the cross-pane in-flight set before awaiting the surface
+    // (tab creation), so a concurrent run of the same work order is rejected.
+    this.registry.reserve(id);
     this.activeRuns.add(id);
     // Use the queue runner's reservation when it made one synchronously at launch
     // (so other panes saw it before this run's async reload); otherwise reserve
@@ -65,80 +101,65 @@ export class TaskRunCoordinator {
     // created; the finally below is the safety net for paths that never open one.
     const reservation = externalReservation ?? this.deps.reservations?.reserve();
     try {
-      const startedAt = this.deps.now();
-      await this.deps.writeTaskStatus(task, { status: 'running', timestamp: startedAt });
-      await this.deps.appendLedger(task, {
-        timestamp: startedAt,
-        status: 'running',
-        message: 'Run started.',
-      });
-
       const prompt = (this.deps.renderPrompt ?? renderTaskPrompt)(task);
       const handle = await this.deps.executionSurface.startTaskRun(task, {
         prompt,
         tabReservation: reservation,
       });
+      if (!handle.runId) {
+        const terminal = await handle.terminal;
+        // The surface couldn't open a chat tab/view (environmental, e.g. tab cap
+        // or the view not ready) — not a card failure. Flag it so the queue
+        // records a stable skip and waits for capacity instead of hot-retrying
+        // the still-ready card and tripping its auto-halt streak.
+        return { ok: false, error: terminal.error ?? 'Run failed.', startupFailed: true };
+      }
 
-      const finishedAt = this.deps.now();
-      const runFields = {
+      const session = new RunSession({
+        task,
         runId: handle.runId,
-        conversationId: handle.conversationId,
+        // The conversation is created lazily by the first chat turn, so read it
+        // live: it is null at start and becomes non-null once the send binds it.
+        getConversationId: () => handle.conversationId,
         sidepanelTabId: handle.sidepanelTabId,
-        timestamp: finishedAt,
-      };
-
-      if (handle.status === 'canceled') {
-        await this.deps.writeTaskStatus(task, { status: 'canceled', ...runFields });
-        await this.deps.appendLedger(task, {
-          timestamp: finishedAt,
-          status: 'canceled',
-          message: 'Run canceled.',
-        });
-        return { ok: false, error: 'Run canceled.', canceled: true };
-      }
-
-      if (handle.status === 'failed') {
-        const error = handle.error ?? 'Run failed.';
-        await this.deps.writeTaskStatus(task, { status: 'failed', ...runFields });
-        await this.deps.appendLedger(task, {
-          timestamp: finishedAt,
-          status: 'failed',
-          message: error,
-        });
-        return { ok: false, error };
-      }
-
-      const parsed = parseTaskHandoff(handle.finalAssistantContent);
-      if (!parsed.ok) {
-        await this.deps.writeTaskStatus(task, { status: 'failed', ...runFields });
-        await this.deps.appendLedger(task, {
-          timestamp: finishedAt,
-          status: 'failed',
-          message: parsed.error,
-        });
-        return { ok: false, error: parsed.error };
-      }
-
-      await this.deps.writeHandoff(task, parsed.handoff.markdown);
-      await this.deps.writeTaskStatus(task, { status: 'review', ...runFields });
-      await this.deps.appendLedger(task, {
-        timestamp: finishedAt,
-        status: 'review',
-        message: 'Handoff written.',
+        stream: handle.stream,
+        events: this.deps.events,
+        now: this.deps.now,
+        writeStatus: this.deps.writeTaskStatus,
+        flushLedger: (entries) => this.deps.flushLedger(task, entries),
+        writeHandoff: this.deps.writeHandoff,
+        heartbeatIntervalMs: this.deps.heartbeatIntervalMs,
+        staleThresholdMs: this.deps.staleThresholdMs,
       });
-      return { ok: true, status: 'review' };
+      this.registry.bind(id, session);
+      // Drive the session to a prompt finish if the chat turn settles but emits
+      // no stream end, so it doesn't wait for onEnd until the stale timer. This
+      // covers failure/cancel (e.g. provider init failed) and the `completed`
+      // case where the controller resolved ok without a `done` chunk (e.g. the
+      // provider threw after creating the assistant message). Never block on the
+      // terminal: these calls are no-ops once the session is finishing (the
+      // normal stream `done` fires before the terminal resolves, so it wins) or
+      // after a stale-heartbeat settle.
+      void handle.terminal
+        .then((terminal) => {
+          if (terminal.status === 'failed') session.fail(terminal.error ?? 'Chat run failed.');
+          else if (terminal.status === 'canceled') session.cancel('Chat run canceled.');
+          else session.complete(terminal.finalAssistantContent);
+        })
+        .catch((error) => session.fail(error instanceof Error ? error.message : String(error)));
+      const result: RunSessionResult = await session.run();
+      if (result.ok) return { ok: true, status: result.status };
+      // Report cancellation distinctly (only when true, so the common failure
+      // shape stays `{ ok, error }`) so the queue runner doesn't count a
+      // user-initiated stop as a provider failure toward its auto-halt streak.
+      if (result.status === 'canceled') return { ok: false, error: result.error, canceled: true };
+      return { ok: false, error: result.error };
     } finally {
       // Idempotent with the surface's release at tab creation; covers early
       // failures (provider/guard errors) that never reach the surface.
       reservation?.release();
+      this.registry.release(id);
       this.activeRuns.delete(id);
     }
-  }
-
-  /** Whether a run for `taskId` is currently in flight. Used by the queue
-   * runner's eligibility predicate to skip cards already running (manual or
-   * auto), and to keep a single in-flight set across both run paths. */
-  isActive(taskId: string): boolean {
-    return this.activeRuns.has(taskId);
   }
 }

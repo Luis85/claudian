@@ -1,5 +1,5 @@
 ---
-status: ready
+status: done
 date: 2026-06-04
 scope: features/tasks, features/chat, app/settings
 parent: "[[2026-06-04-commit-and-push-on-accept-design]]"

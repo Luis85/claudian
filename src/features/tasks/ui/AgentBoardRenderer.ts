@@ -1,7 +1,25 @@
 import { DEFAULT_LANE_TITLES, type ResolvedBoardLayout, type ResolvedLane } from '../config/boardConfigTypes';
 import { parseAcceptanceProgress } from '../model/acceptanceProgress';
 import { isRunnableTaskStatus } from '../model/taskStateMachine';
-import type { InvalidTaskNote, TaskSpec } from '../model/taskTypes';
+import type { InvalidTaskNote, TaskSpec, TaskStatus } from '../model/taskTypes';
+
+/** Pause payload surfaced on a card while a run waits for input or approval. */
+export interface AgentBoardPauseState {
+  question?: string;
+  action?: string;
+  risk?: string;
+  defaultValue?: string;
+  reversible?: boolean;
+  runId?: string;
+}
+
+/** Live metrics painted onto a card's strip without rebuilding the card. */
+export interface AgentBoardLiveStripPayload {
+  lastLedger?: string;
+  elapsedMs: number;
+  attemptNumber: number;
+  heartbeatAgeMs: number;
+}
 
 export interface AgentBoardRenderCallbacks {
   onOpenDetail(task: TaskSpec): void;
@@ -19,6 +37,14 @@ export interface AgentBoardRenderCallbacks {
   /** Dismiss a card's queue skip chip. */
   onAckSkip?: (task: TaskSpec) => void;
   onContextMenu(task: TaskSpec, event: MouseEvent): void;
+  onReply?(task: TaskSpec, content: string): void;
+  onApprove?(task: TaskSpec): void;
+  onReject?(task: TaskSpec, reason: string): void;
+  onCancelPaused?(task: TaskSpec): void;
+  /** needs_handoff → review: salvage a run that finished without a structured handoff. */
+  onSendToReview?(task: TaskSpec): void;
+  /** needs_handoff → failed: give up on a run that finished without a structured handoff. */
+  onMarkFailed?(task: TaskSpec): void;
 }
 
 export interface AgentBoardRenderState {
@@ -27,6 +53,17 @@ export interface AgentBoardRenderState {
   slots: { used: number; max: number };
   queue?: QueueToolbarState;
 }
+
+interface CardRefs {
+  card: HTMLElement;
+  statusBadge: HTMLElement;
+  liveStripMeta: HTMLElement | null;
+  liveStripLedger: HTMLElement | null;
+  actions: HTMLElement;
+  reply: HTMLElement | null;
+}
+
+const LIVE_STATUSES: ReadonlySet<TaskStatus> = new Set(['running', 'needs_input', 'needs_approval']);
 
 export interface QueueToolbarState {
   paused: boolean;
@@ -50,7 +87,12 @@ export interface SkipChipState {
 }
 
 export class AgentBoardRenderer {
+  private cardRefs = new Map<string, CardRefs>();
+  private callbacks: AgentBoardRenderCallbacks | null = null;
+
   render(container: HTMLElement, state: AgentBoardRenderState, callbacks: AgentBoardRenderCallbacks): void {
+    this.callbacks = callbacks;
+    this.cardRefs.clear();
     container.empty();
     const root = container.createDiv({ cls: 'claudian-agent-board' });
 
@@ -74,6 +116,39 @@ export class AgentBoardRenderer {
     if (state.layout.errors.length > 0 || state.invalidNotes.length > 0) {
       this.renderErrors(root, state.layout.errors, state.invalidNotes);
     }
+  }
+
+  /**
+   * Patches a single card's status badge, action buttons, and paused reply
+   * surface in place (no full re-render), preserving the card's DOM node and the
+   * live strip so streaming updates don't flicker.
+   */
+  patchCard(taskId: string, task: TaskSpec, pause?: AgentBoardPauseState | null): void {
+    const refs = this.cardRefs.get(taskId);
+    if (!refs) return;
+    const status = task.frontmatter.status;
+
+    refs.statusBadge.setText(DEFAULT_LANE_TITLES[status]);
+    refs.statusBadge.className = `claudian-agent-board-status-badge claudian-agent-board-status-badge--${status}`;
+    refs.card.className = `claudian-agent-board-card claudian-agent-board-card--${status}`;
+
+    refs.actions.empty();
+    this.renderActionsFor(refs.actions, task);
+
+    if (refs.reply) {
+      refs.reply.remove();
+      refs.reply = null;
+    }
+    if (status === 'needs_input' || status === 'needs_approval') {
+      refs.reply = this.renderReplySurface(refs.card, task, pause ?? null);
+    }
+  }
+
+  /** Updates a card's elapsed timer, attempt pill, stale dot, and last ledger line in place. */
+  patchLiveStrip(taskId: string, payload: AgentBoardLiveStripPayload): void {
+    const refs = this.cardRefs.get(taskId);
+    if (!refs || !refs.liveStripMeta || !refs.liveStripLedger) return;
+    this.applyLiveStrip(refs.liveStripMeta, refs.liveStripLedger, payload);
   }
 
   renderToolbar(host: HTMLElement, state: QueueToolbarState): void {
@@ -210,13 +285,11 @@ export class AgentBoardRenderer {
 
   private renderCard(parent: HTMLElement, task: TaskSpec, callbacks: AgentBoardRenderCallbacks): void {
     const status = task.frontmatter.status;
-    const card = parent.createDiv({ cls: 'claudian-agent-board-card' });
-    if (status === 'failed') card.addClass('claudian-agent-board-card--failed');
-    else if (status === 'canceled') card.addClass('claudian-agent-board-card--canceled');
+    const card = parent.createDiv({ cls: `claudian-agent-board-card claudian-agent-board-card--${status}` });
 
     const titleRow = card.createDiv({ cls: 'claudian-agent-board-card-title-row' });
     titleRow.createDiv({ cls: 'claudian-agent-board-card-title', text: task.frontmatter.title });
-    titleRow.createSpan({
+    const statusBadge = titleRow.createSpan({
       cls: `claudian-agent-board-status-badge claudian-agent-board-status-badge--${status}`,
       text: DEFAULT_LANE_TITLES[status],
     });
@@ -237,6 +310,15 @@ export class AgentBoardRenderer {
       });
     }
 
+    let liveStripMeta: HTMLElement | null = null;
+    let liveStripLedger: HTMLElement | null = null;
+    if (LIVE_STATUSES.has(status)) {
+      const liveStrip = card.createDiv({ cls: 'claudian-agent-board-card-live-strip' });
+      liveStripMeta = liveStrip.createDiv({ cls: 'claudian-agent-board-card-live-strip--meta' });
+      liveStripLedger = liveStrip.createDiv({ cls: 'claudian-agent-board-card-live-strip--ledger' });
+      this.applyLiveStrip(liveStripMeta, liveStripLedger, this.seedLiveStrip(task));
+    }
+
     card.addEventListener('click', () => callbacks.onOpenDetail(task));
     card.addEventListener('contextmenu', (event) => {
       event.preventDefault();
@@ -244,37 +326,131 @@ export class AgentBoardRenderer {
     });
 
     const actions = card.createDiv({ cls: 'claudian-agent-board-card-actions' });
-    if (task.frontmatter.status === 'inbox') {
-      this.renderAction(actions, 'Mark ready', () => callbacks.onMarkReady(task));
-    }
-    if (task.frontmatter.status === 'ready' || task.frontmatter.status === 'needs_fix') {
-      this.renderAction(actions, 'Run', () => callbacks.onRun(task));
-    }
-    if (task.frontmatter.status === 'failed' || task.frontmatter.status === 'canceled') {
-      this.renderAction(actions, 'Retry', () => callbacks.onMarkReady(task));
-    }
-    if (task.frontmatter.status === 'needs_input' || task.frontmatter.status === 'needs_approval') {
-      this.renderAction(actions, 'Resume', () => callbacks.onMarkReady(task));
-    }
-    if (task.frontmatter.status === 'running') {
-      this.renderAction(actions, 'Stop', () => callbacks.onStop(task));
-    }
-    if (task.frontmatter.status === 'review') {
-      this.renderAction(actions, 'Accept', () => callbacks.onAccept(task));
-      this.renderAction(actions, 'Rework', () => callbacks.onRework(task));
-    }
-    if (task.frontmatter.status === 'done') {
-      this.renderAction(actions, 'Reopen', () => callbacks.onReopen(task));
-    }
-    if (task.frontmatter.status !== 'inbox' && task.frontmatter.status !== 'running' && task.frontmatter.status !== 'done') {
-      this.renderAction(actions, 'Back to inbox', () => callbacks.onMoveToInbox(task));
+    this.renderActionsFor(actions, task);
+
+    let reply: HTMLElement | null = null;
+    if (status === 'needs_input' || status === 'needs_approval') {
+      reply = this.renderReplySurface(card, task, null);
     }
 
-    const skipReason = callbacks.getSkipReason?.(task) ?? null;
-    if (skipReason) {
-      const chipHost = card.createDiv({ cls: 'claudian-agent-board-card-skip-host' });
-      this.renderSkipChip(chipHost, { reason: skipReason, onAck: () => callbacks.onAckSkip?.(task) });
+
+    this.renderSkipChipFor(card, task, callbacks);
+
+    this.cardRefs.set(task.frontmatter.id, {
+      card,
+      statusBadge,
+      liveStripMeta,
+      liveStripLedger,
+      actions,
+      reply,
+    });
+  }
+
+  /** Builds the action buttons for a task's current status (reused by initial render and patches). */
+  private renderActionsFor(actions: HTMLElement, task: TaskSpec): void {
+    const status = task.frontmatter.status;
+    if (status === 'inbox') {
+      this.renderAction(actions, 'Mark ready', () => this.callbacks?.onMarkReady(task));
     }
+    if (status === 'ready' || status === 'needs_fix') {
+      this.renderAction(actions, 'Run', () => this.callbacks?.onRun(task));
+    }
+    if (status === 'failed' || status === 'canceled') {
+      this.renderAction(actions, 'Retry', () => this.callbacks?.onMarkReady(task));
+    }
+    if (status === 'needs_input' || status === 'needs_approval') {
+      this.renderAction(actions, 'Resume', () => this.callbacks?.onMarkReady(task));
+    }
+    if (status === 'running') {
+      this.renderAction(actions, 'Stop', () => this.callbacks?.onStop(task));
+    }
+    if (status === 'review') {
+      this.renderAction(actions, 'Accept', () => this.callbacks?.onAccept(task));
+      this.renderAction(actions, 'Rework', () => this.callbacks?.onRework(task));
+    }
+    if (status === 'done') {
+      this.renderAction(actions, 'Reopen', () => this.callbacks?.onReopen(task));
+    }
+    if (status === 'needs_handoff') {
+      this.renderAction(actions, 'Review', () => this.callbacks?.onSendToReview?.(task));
+      this.renderAction(actions, 'Mark failed', () => this.callbacks?.onMarkFailed?.(task));
+    }
+    if (status !== 'inbox' && status !== 'running' && status !== 'done') {
+      this.renderAction(actions, 'Back to inbox', () => this.callbacks?.onMoveToInbox(task));
+    }
+  }
+
+
+  private renderSkipChipFor(card: HTMLElement, task: TaskSpec, callbacks: AgentBoardRenderCallbacks): void {
+    const skipReason = callbacks.getSkipReason?.(task) ?? null;
+    if (!skipReason) return;
+    const chipHost = card.createDiv({ cls: 'claudian-agent-board-card-skip-host' });
+    this.renderSkipChip(chipHost, { reason: skipReason, onAck: () => callbacks.onAckSkip?.(task) });
+  }
+
+  private renderReplySurface(card: HTMLElement, task: TaskSpec, pause: AgentBoardPauseState | null): HTMLElement {
+    const reply = card.createDiv({ cls: 'claudian-agent-board-card-reply' });
+    // The card itself opens the detail view on click; keep reply interactions local.
+    reply.addEventListener('click', (event) => event.stopPropagation());
+
+    if (task.frontmatter.status === 'needs_input') {
+      const question = pause?.question ?? task.frontmatter.pause_reason ?? 'The agent is waiting for your input.';
+      reply.createDiv({ cls: 'claudian-agent-board-card-reply-prompt', text: question });
+      const field = reply.createEl('input', {
+        cls: 'claudian-agent-board-card-reply--field',
+        type: 'text',
+        placeholder: 'Your reply…',
+      });
+      if (pause?.defaultValue) field.value = pause.defaultValue;
+      const actions = reply.createDiv({ cls: 'claudian-agent-board-card-reply--actions' });
+      const submit = () => this.callbacks?.onReply?.(task, field.value);
+      const send = actions.createEl('button', { cls: 'mod-cta', text: 'Send' });
+      send.addEventListener('click', (event) => { event.stopPropagation(); submit(); });
+      field.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') { event.preventDefault(); submit(); }
+      });
+      const stop = actions.createEl('button', { text: 'Stop' });
+      stop.addEventListener('click', (event) => { event.stopPropagation(); this.callbacks?.onCancelPaused?.(task); });
+    } else {
+      const action = pause?.action ?? task.frontmatter.pause_reason ?? 'The agent requests approval to proceed.';
+      reply.createDiv({ cls: 'claudian-agent-board-card-reply-prompt', text: action });
+      if (pause?.risk) {
+        reply.createDiv({ cls: 'claudian-agent-board-card-reply-risk', text: `Risk: ${pause.risk}` });
+      }
+      const reason = reply.createEl('input', {
+        cls: 'claudian-agent-board-card-reply--field',
+        type: 'text',
+        placeholder: 'Reason (used if you reject)…',
+      });
+      const actions = reply.createDiv({ cls: 'claudian-agent-board-card-reply--actions' });
+      const approve = actions.createEl('button', { cls: 'mod-cta', text: 'Approve' });
+      approve.addEventListener('click', (event) => { event.stopPropagation(); this.callbacks?.onApprove?.(task); });
+      const reject = actions.createEl('button', { text: 'Reject' });
+      reject.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.callbacks?.onReject?.(task, reason.value.trim() || 'rejected');
+      });
+    }
+    return reply;
+  }
+
+  private seedLiveStrip(task: TaskSpec): AgentBoardLiveStripPayload {
+    const now = Date.now();
+    const startedMs = task.frontmatter.started ? Date.parse(task.frontmatter.started) : now;
+    const heartbeatMs = task.frontmatter.heartbeat ? Date.parse(task.frontmatter.heartbeat) : now;
+    return {
+      lastLedger: lastLineOf(task.sections.ledger) ?? undefined,
+      elapsedMs: Math.max(0, now - startedMs),
+      attemptNumber: task.frontmatter.attempts,
+      heartbeatAgeMs: Math.max(0, now - heartbeatMs),
+    };
+  }
+
+  private applyLiveStrip(metaEl: HTMLElement, ledgerEl: HTMLElement, payload: AgentBoardLiveStripPayload): void {
+    const tier = staleTier(payload.heartbeatAgeMs);
+    metaEl.className = `claudian-agent-board-card-live-strip--meta claudian-stale-${tier}`;
+    metaEl.setText(`● ${formatElapsed(payload.elapsedMs)} · attempt ${payload.attemptNumber}`);
+    ledgerEl.setText(payload.lastLedger ?? 'starting…');
   }
 
   private renderAction(parent: HTMLElement, label: string, handler: () => void): void {
@@ -296,4 +472,22 @@ export class AgentBoardRenderer {
       for (const note of invalidNotes) errorsEl.createDiv({ text: `${note.path}: ${note.error}` });
     }
   }
+}
+
+function lastLineOf(ledger: string): string | null {
+  const lines = ledger.split('\n').filter((l) => l.trim().length > 0);
+  return lines.length === 0 ? null : lines[lines.length - 1];
+}
+
+function staleTier(ageMs: number): 'green' | 'amber' | 'red' {
+  if (ageMs < 60_000) return 'green';
+  if (ageMs < 300_000) return 'amber';
+  return 'red';
+}
+
+function formatElapsed(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}m ${seconds}s`;
 }
