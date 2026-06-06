@@ -225,6 +225,89 @@ describe('AgentBoardView.recoverOrphanedRuns', () => {
   });
 });
 
+describe('AgentBoardView.sweepStaleSidecars', () => {
+  // Build a minimal view stub wired with enough surface for sweepStaleSidecars:
+  // a tasks model, and a runSidecarStore with listRuns + cleanupRun mocked.
+  function makeView(options: {
+    runIds: string[];
+    tasks: Array<{ id: string; status: string; runId?: string }>;
+  }) {
+    const cleanupRun = jest.fn(async (_runId: string) => {});
+    const listRuns = jest.fn(async () => options.runIds);
+    const view = Object.create(AgentBoardView.prototype) as any;
+    view.model = {
+      tasks: options.tasks.map((t) => ({
+        path: `tasks/${t.id}.md`,
+        frontmatter: { id: t.id, status: t.status, run_id: t.runId },
+      })),
+      invalidNotes: [],
+    };
+    view.plugin = {
+      runSidecarStore: {
+        listRuns,
+        cleanupRun,
+      },
+    };
+    return { view, listRuns, cleanupRun };
+  }
+
+  it('is a no-op when there are no sidecars', async () => {
+    const { view, cleanupRun } = makeView({ runIds: [], tasks: [] });
+
+    await view['sweepStaleSidecars']();
+
+    expect(cleanupRun).not.toHaveBeenCalled();
+  });
+
+  it('deletes sidecar dirs whose run_id has no matching active task', async () => {
+    // run-a: matches a running task → keep.
+    // run-b: matches a `review` task (terminal-ish) → delete.
+    // run-c: no task references it at all → delete.
+    const { view, cleanupRun } = makeView({
+      runIds: ['run-a', 'run-b', 'run-c'],
+      tasks: [
+        { id: 'wo-a', status: 'running', runId: 'run-a' },
+        { id: 'wo-b', status: 'review', runId: 'run-b' },
+      ],
+    });
+
+    await view['sweepStaleSidecars']();
+
+    expect(cleanupRun).toHaveBeenCalledTimes(2);
+    const cleaned = cleanupRun.mock.calls.map((c) => c[0]).sort();
+    expect(cleaned).toEqual(['run-b', 'run-c']);
+  });
+
+  it('keeps sidecars for every non-terminal status (running, needs_input, needs_approval)', async () => {
+    const { view, cleanupRun } = makeView({
+      runIds: ['run-r', 'run-i', 'run-p'],
+      tasks: [
+        { id: 'wo-r', status: 'running', runId: 'run-r' },
+        { id: 'wo-i', status: 'needs_input', runId: 'run-i' },
+        { id: 'wo-p', status: 'needs_approval', runId: 'run-p' },
+      ],
+    });
+
+    await view['sweepStaleSidecars']();
+
+    expect(cleanupRun).not.toHaveBeenCalled();
+  });
+
+  it('ignores active tasks with no run_id when deciding what to keep', async () => {
+    // An active task with no run_id can't own a sidecar, so an orphan sidecar
+    // (run-x) whose id happens to be absent from the task list must still be
+    // cleaned up.
+    const { view, cleanupRun } = makeView({
+      runIds: ['run-x'],
+      tasks: [{ id: 'wo-1', status: 'running' }],
+    });
+
+    await view['sweepStaleSidecars']();
+
+    expect(cleanupRun).toHaveBeenCalledWith('run-x');
+  });
+});
+
 describe('AgentBoardView.patchLiveStrip live heartbeat', () => {
   function buildLiveStripView(frontmatterHeartbeat: string | undefined) {
     const patchLiveStrip = jest.fn();

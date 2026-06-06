@@ -199,6 +199,7 @@ export class AgentBoardView extends ItemView {
     // sidecar tick — so a periodic re-check costs almost nothing and catches a
     // mid-session crash that strands cards while a board is already open.
     await this.refresh();
+    await this.sweepStaleSidecars();
     await this.recoverOrphanedRuns();
     this.orphanRecheckTimer = window.setInterval(
       () => { void this.recoverOrphanedRuns(); },
@@ -564,6 +565,34 @@ export class AgentBoardView extends ItemView {
 
   private async onReject(taskId: string, reason: string): Promise<void> {
     await sharedRunRegistry.getSession(taskId)?.resume({ kind: 'reject', reason });
+  }
+
+  /**
+   * Deletes sidecar dirs under `.claudian/runs/` whose owning work order is
+   * gone or no longer in a live status. Runs at board open after `refresh()`
+   * so `this.model.tasks` reflects the on-disk truth. A sidecar dir whose
+   * run_id matches an active (running/needs_input/needs_approval) task is
+   * preserved — recoverOrphanedRuns may still need its heartbeat to decide
+   * the card's fate. Everything else (cards that finished before the
+   * post-snapshot cleanup landed, or crashed mid-flight without a matching
+   * card) is removed silently.
+   */
+  private async sweepStaleSidecars(): Promise<void> {
+    const runIds = await this.plugin.runSidecarStore.listRuns();
+    if (runIds.length === 0) return;
+    const activeRunIds = new Set<string>();
+    for (const task of this.model.tasks) {
+      const status = task.frontmatter.status;
+      if (status === 'running' || status === 'needs_input' || status === 'needs_approval') {
+        const id = task.frontmatter.run_id;
+        if (id) activeRunIds.add(id);
+      }
+    }
+    await Promise.all(
+      runIds
+        .filter((id) => !activeRunIds.has(id))
+        .map((id) => this.plugin.runSidecarStore.cleanupRun(id)),
+    );
   }
 
   /**

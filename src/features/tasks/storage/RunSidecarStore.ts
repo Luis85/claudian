@@ -71,6 +71,26 @@ export class RunSidecarStore {
   }
 
   /**
+   * Lists every `<runId>` directory present under `baseDir`. Used by the
+   * startup sweep to find sidecars whose owning work order is gone or
+   * terminal. Returns [] when `baseDir` doesn't exist yet, or when listing
+   * fails — best-effort: a sweep that can't read the directory just skips
+   * cleanup for this session.
+   */
+  async listRuns(): Promise<string[]> {
+    if (!(await this.adapter.exists(this.baseDir))) return [];
+    try {
+      const listing = await this.adapter.list(this.baseDir);
+      return listing.folders.map((path) => {
+        const segments = path.split('/');
+        return segments[segments.length - 1] ?? path;
+      });
+    } catch {
+      return [];
+    }
+  }
+
+  /**
    * Delete the run's sidecar directory. Called after a successful terminal
    * snapshot lands in the work-order note so the sidecar's job (covering live
    * runs) is over. Best-effort: a missing dir, or a transient delete failure,

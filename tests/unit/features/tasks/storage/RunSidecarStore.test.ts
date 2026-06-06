@@ -13,7 +13,7 @@ function makeFakeAdapter(options: FakeAdapterOptions = {}) {
   const mkdirs: string[] = [];
   const adapter: Pick<
     DataAdapter,
-    'exists' | 'mkdir' | 'read' | 'write' | 'append' | 'rmdir' | 'remove'
+    'exists' | 'mkdir' | 'read' | 'write' | 'append' | 'rmdir' | 'remove' | 'list'
   > = {
     async exists(path) { return files.has(path) || dirs.has(path); },
     async mkdir(path) {
@@ -42,6 +42,22 @@ function makeFakeAdapter(options: FakeAdapterOptions = {}) {
       }
     },
     async remove(path) { files.delete(path); },
+    async list(path) {
+      const childFolders: string[] = [];
+      const childFiles: string[] = [];
+      const prefix = `${path}/`;
+      for (const folder of dirs) {
+        if (folder.startsWith(prefix) && !folder.slice(prefix.length).includes('/')) {
+          childFolders.push(folder);
+        }
+      }
+      for (const file of files.keys()) {
+        if (file.startsWith(prefix) && !file.slice(prefix.length).includes('/')) {
+          childFiles.push(file);
+        }
+      }
+      return { folders: childFolders, files: childFiles };
+    },
   };
   return { adapter: adapter as DataAdapter, files, dirs, mkdirs };
 }
@@ -234,5 +250,33 @@ describe('RunSidecarStore.cleanupRun', () => {
     adapter.rmdir = jest.fn(async () => { throw new Error('boom'); }) as unknown as DataAdapter['rmdir'];
 
     await expect(store.cleanupRun('r')).resolves.toBeUndefined();
+  });
+});
+
+describe('RunSidecarStore.listRuns', () => {
+  it('returns [] when baseDir does not exist', async () => {
+    const { adapter } = makeFakeAdapter();
+    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    expect(await store.listRuns()).toEqual([]);
+  });
+
+  it('returns the run-id subfolders under baseDir', async () => {
+    const { adapter } = makeFakeAdapter();
+    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    // Seed two sidecars so the per-run directories exist on disk.
+    await store.writeHeartbeat('run-a', { at: 't', status: 'running' });
+    await store.writeHeartbeat('run-b', { at: 't', status: 'running' });
+
+    const ids = (await store.listRuns()).sort();
+    expect(ids).toEqual(['run-a', 'run-b']);
+  });
+
+  it('returns [] when the underlying list call throws', async () => {
+    const { adapter } = makeFakeAdapter();
+    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    await store.writeHeartbeat('run-a', { at: 't', status: 'running' });
+    adapter.list = jest.fn(async () => { throw new Error('boom'); }) as unknown as DataAdapter['list'];
+
+    expect(await store.listRuns()).toEqual([]);
   });
 });
