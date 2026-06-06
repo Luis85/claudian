@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260603-innerhtml-audit
 title: Audit all rendering for innerHTML/outerHTML/insertAdjacentHTML on agent/markdown output
-status: open
+status: done
 priority: 1 - high
 triage: ready-for-agent
 created: 2026-06-03
