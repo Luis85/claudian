@@ -9,3 +9,32 @@
 - Provider-specific behavior stays behind `ChatRuntime`, `ProviderRegistry`, and existing chat controllers/renderers.
 - Work-order notes are the durable source of task state for this feature slice.
 - WO card right-click is a renderer→view callback seam (`AgentBoardRenderCallbacks.onContextMenu`) dispatched through `ui/workOrderContextMenu.ts`, which reuses `features/quickActions/` helpers without coupling tasks to chat.
+
+## Run state — sidecar vs work-order note
+
+To avoid racing the agent's `Edit` tool against the work-order checklist, run state is split across two surfaces:
+
+| Surface | What lands | When |
+|---|---|---|
+| `.claudian/runs/<runId>/heartbeat.json` | `{ at, status, pauseReason? }` (`RunSidecarHeartbeat`) | every 30s heartbeat tick |
+| `.claudian/runs/<runId>/ledger.jsonl` | one JSON-encoded `TaskLedgerEntry` per line | every ledger flush (per progress block, tool call, status transition) |
+| Work-order note frontmatter | `status`, `run_id`, `heartbeat`, `started`, `attempts`, `pauseReason` | run start, pause, resume, terminal — turn boundaries only |
+| Work-order note `<!-- claudian:run-ledger-* -->` region | full sidecar ledger rendered as `- <ts> [<status>] <message>` lines | once at terminal (after handoff write) |
+| Work-order note `<!-- claudian:handoff-* -->` region | structured handoff markdown | once at terminal (review path) |
+
+### Components
+
+- **`storage/RunSidecarStore`**: filesystem only. Owns `writeHeartbeat`, `readHeartbeat`, `appendLedger`, `readLedger`, `snapshotLedgerAsMarkdown(runId)`, `listRuns()`, `cleanupRun(runId)`. Recursive `ensureBaseDir` walks `.claudian` → `.claudian/runs` once (memoized). `readLedger` skips malformed JSON lines, tolerates CRLF; snapshot flattens embedded newlines in messages so one entry = one markdown line.
+- **`storage/TaskNoteStore`**: `writeLedgerSnapshot(content, markdown)` mirrors `writeHandoff` — replaces the run-ledger region atomically. Throws on missing markers.
+- **`execution/RunSession`**: deps `writeHeartbeat`, `appendLedger`, `finalizeLedgerToNote` are REQUIRED. Heartbeat tick + `LedgerWriter` flush callback route directly to sidecar. `writeLedgerSnapshotBestEffort()` runs on every terminal path (canceled / failed / canceled / needs_handoff / review) AFTER the terminal status write and (when present) the handoff write, BEFORE `settle(...)`. Best-effort: snapshot failures are swallowed so the run still settles.
+- **`execution/TaskRunCoordinator`**: wires deps from view → session. `appendLedger` closure injects `task`; `writeHeartbeat`/`finalizeLedgerToNote` are direct method refs on the dep.
+- **`ui/AgentBoardView`**: wires `plugin.runSidecarStore` into the coordinator. Owns three lifecycle hooks against the sidecar:
+  - **GC on terminal**: `finalizeLedgerToNote` calls `cleanupRun(runId)` after the snapshot lands.
+  - **Startup sweep**: `sweepStaleSidecars()` runs in `onOpen` after `refresh()` and before `recoverOrphanedRuns()`. Removes any `<runId>` dir not matched by a non-terminal task with that `run_id`.
+  - **Periodic orphan re-check**: 60s interval re-runs `recoverOrphanedRuns()` so mid-session crashes don't strand cards until the next `onOpen`.
+- **Orphan recovery** (`recoverOrphanedRuns`): for tasks in `{running, needs_input, needs_approval}` with no live session in `sharedRunRegistry`, reads `runSidecarStore.readHeartbeat(run_id)`. If the sidecar's `at` is within `DEFAULT_STALE_THRESHOLD_MS` (5 min, shared with `RunSession.staleThresholdMs`), the safety net skips adoption; otherwise marks the run failed with an `orphaned by plugin reload` ledger line.
+- **Live heartbeat UI**: `AgentBoardView.liveHeartbeats: Map<taskId, isoString>` captures the `task:heartbeat` event `at` and `patchLiveStrip` prefers it over `frontmatter.heartbeat`. Evicted on terminal status.
+
+### Why the split is safe
+
+Status writes (frontmatter) align with turn boundaries where the agent has just paused or ended — it is not mid-`Edit`. The terminal ledger snapshot writes the note in a single `replaceGeneratedRegion` call after the run has settled and the stream is closed. Heartbeat ticks and per-ledger-entry appends — the high-frequency writes that previously raced the agent — never touch the note.
