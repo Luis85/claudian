@@ -771,11 +771,14 @@ export class ClaudianView extends ItemView {
           const result = (await inputController.sendMessage({ content })) as
             | ProgrammaticSendResult
             | undefined;
-          // `undefined` means the turn was queued (the tab was still streaming
-          // the pause turn). The queued reply is accepted and will stream its own
-          // end once the current turn finishes, so report no outcome and let the
-          // runner finish from that stream end instead of failing the reply.
-          if (!result) return;
+          // Queued behind the still-streaming pause turn: it will run and stream
+          // its own end next, so report no outcome and let the runner finish from
+          // that stream end rather than failing the accepted reply.
+          if (result?.queued) return;
+          // No result means the turn was not sent and never will be (service
+          // init failure, conversation switching, a built-in command, etc.):
+          // fail promptly instead of hanging until the stale-heartbeat timeout.
+          if (!result) return { ok: false, error: 'Follow-up turn could not be sent.' };
           if (result.ok) return { ok: true, finalAssistantContent: result.finalAssistantContent };
           return { ok: false, error: result.error ?? 'Follow-up turn failed.' };
         } catch (error) {

@@ -127,6 +127,14 @@ export interface ProgrammaticSendResult {
   ok: boolean;
   finalAssistantContent: string;
   error?: string;
+  /**
+   * The turn was accepted but queued behind a still-streaming turn; it will run
+   * (and stream its own end) once the current turn finishes. Distinguishes the
+   * streaming-queue branch from a `void` return that means "not sent" (e.g. a
+   * built-in command or a conversation switch), so callers can wait for queued
+   * turns but fail fast on no-ops.
+   */
+  queued?: boolean;
 }
 
 export class InputController {
@@ -321,7 +329,10 @@ export class InputController {
         imageContextManager?.clearImages();
       }
       this.queuedMessages.updateQueueIndicator();
-      return;
+      // Signal "accepted but queued" so programmatic callers (Agent Board
+      // follow-ups) wait for the queued turn's stream end instead of mistaking
+      // this for a not-sent no-op. User-driven sends ignore the return.
+      return { ok: true, finalAssistantContent: '', queued: true };
     }
 
     if (shouldUseInput) {

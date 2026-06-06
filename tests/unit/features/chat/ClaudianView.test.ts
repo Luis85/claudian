@@ -762,15 +762,17 @@ describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
     expect(seen).toEqual([]);
   });
 
-  it('reports no outcome for a queued follow-up (sendMessage resolves undefined)', async () => {
+  it('reports no outcome for a queued follow-up (sendMessage signals queued)', async () => {
     const streamController = { addStreamObserver: () => () => {} };
     let call = 0;
     const inputController = {
       sendMessage: jest.fn(async () => {
         call += 1;
         // First turn settles; the reply arrives while still streaming, so the
-        // controller queues it and resolves undefined (not a failure).
-        return call === 1 ? { ok: true, finalAssistantContent: '' } : undefined;
+        // controller queues it and signals `queued` (accepted, will run later).
+        return call === 1
+          ? { ok: true, finalAssistantContent: '' }
+          : { ok: true, finalAssistantContent: '', queued: true };
       }),
       cancelStreaming: jest.fn(),
     };
@@ -783,5 +785,28 @@ describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
 
     // Queued, not failed — the runner must wait for the queued turn's stream end.
     expect(outcome).toBeUndefined();
+  });
+
+  it('fails a follow-up that was not sent (sendMessage resolves undefined, no queued turn)', async () => {
+    const streamController = { addStreamObserver: () => () => {} };
+    let call = 0;
+    const inputController = {
+      sendMessage: jest.fn(async () => {
+        call += 1;
+        // First turn settles; the reply is a no-op (e.g. conversation switching
+        // or a built-in command) — no queued turn and no stream end will arrive.
+        return call === 1 ? { ok: true, finalAssistantContent: '' } : undefined;
+      }),
+      cancelStreaming: jest.fn(),
+    };
+    const tab = { id: 'tab-1', conversationId: 'conv-1', controllers: { inputController, streamController } };
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
+
+    const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
+    const outcome = await handle.sendFollowUp('reply');
+
+    // No queued turn will deliver: fail fast rather than hang until the stale timer.
+    expect(outcome).toEqual({ ok: false, error: 'Follow-up turn could not be sent.' });
   });
 });
