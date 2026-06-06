@@ -5,6 +5,12 @@ import type ClaudianPlugin from '../../../main';
 import { appendQuickActionFavoritesAndPicker } from '../../quickActions/appendQuickActionMenu';
 import type { TaskSpec } from '../model/taskTypes';
 
+const ARCHIVABLE_STATUSES: ReadonlySet<TaskSpec['frontmatter']['status']> = new Set([
+  'done',
+  'failed',
+  'canceled',
+]);
+
 export interface WorkOrderContextMenuDeps {
   plugin: ClaudianPlugin;
   onOpenNote: (task: TaskSpec) => void;
@@ -16,6 +22,8 @@ export interface WorkOrderContextMenuDeps {
    * `WorkOrderDetailModal` share one source of truth.
    */
   canOpenConversation: (task: TaskSpec) => boolean;
+  /** Invoked when the user clicks Archive on a terminal-status card. */
+  onArchive: (task: TaskSpec) => void;
 }
 
 /**
@@ -40,7 +48,7 @@ export function showWorkOrderContextMenu(
   event: MouseEvent,
   deps: WorkOrderContextMenuDeps,
 ): void {
-  const { plugin, onOpenNote, onOpenConversation, canOpenConversation } = deps;
+  const { plugin, onOpenNote, onOpenConversation, canOpenConversation, onArchive } = deps;
   const menu = new Menu();
 
   menu.addItem((item) => item
@@ -63,6 +71,14 @@ export function showWorkOrderContextMenu(
   if (canPromptOn) {
     menu.addSeparator();
     appendQuickActionFavoritesAndPicker(menu, plugin, workOrderFile);
+  }
+
+  if (ARCHIVABLE_STATUSES.has(task.frontmatter.status)) {
+    menu.addSeparator();
+    menu.addItem((item) => item
+      .setTitle(t('tasks.board.contextMenu.archive'))
+      .setIcon('archive')
+      .onClick(() => onArchive(task)));
   }
 
   menu.showAtMouseEvent(event);
