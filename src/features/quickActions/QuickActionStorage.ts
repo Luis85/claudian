@@ -1,3 +1,5 @@
+import { normalizePath } from 'obsidian';
+
 import type { VaultFileAdapter } from '../../core/storage/VaultFileAdapter';
 import { parseQuickActionContent, serializeQuickAction } from './quickActionParse';
 import type { QuickAction } from './types';
@@ -125,7 +127,8 @@ export class QuickActionStorage {
       favorite: action.favorite,
       favoriteRank: action.favoriteRank,
     });
-    await this.adapter.ensureFolder(this.getFolderPath());
+    // Folder is user-configured; normalize before the adapter's mkdir/write.
+    await this.adapter.ensureFolder(normalizePath(this.getFolderPath()));
     await this.adapter.write(filePath, content);
     return filePath;
   }
@@ -168,6 +171,7 @@ export class QuickActionStorage {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '') || 'action';
-    return `${folder}/${safe}.md`;
+    // User-configured folder + action name flow into adapter writes/reads.
+    return normalizePath(`${folder}/${safe}.md`);
   }
 }

@@ -1,3 +1,4 @@
+import { normalizePath } from 'obsidian';
 import { parse as parseToml, stringify as stringifyToml } from 'smol-toml';
 
 import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
@@ -77,12 +78,14 @@ export class CodexSubagentStorage {
   }
 
   private resolveCurrentPath(agent: CodexSubagentDefinition): string {
+    // fileName / agent.name are user-/agent-supplied; normalize the vault path
+    // before it reaches the adapter's read/write/delete calls.
     const persistedLocation = parseCodexSubagentPersistenceKey(agent.persistenceKey);
     if (persistedLocation) {
-      return `${CODEX_AGENTS_PATH}/${persistedLocation.fileName}`;
+      return normalizePath(`${CODEX_AGENTS_PATH}/${persistedLocation.fileName}`);
     }
 
-    return `${CODEX_AGENTS_PATH}/${agent.name}.toml`;
+    return normalizePath(`${CODEX_AGENTS_PATH}/${agent.name}.toml`);
   }
 
   private resolveTargetPath(
@@ -93,7 +96,7 @@ export class CodexSubagentStorage {
       return this.resolveCurrentPath(previous);
     }
 
-    return `${CODEX_AGENTS_PATH}/${agent.name}.toml`;
+    return normalizePath(`${CODEX_AGENTS_PATH}/${agent.name}.toml`);
   }
 
   private async scanAdapter(

@@ -1,5 +1,7 @@
 import * as path from 'node:path';
 
+import { normalizePath } from 'obsidian';
+
 import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
 import { extractBoolean, isRecord, parseFrontmatter } from '../../../utils/frontmatter';
 import { yamlString } from '../../../utils/slashCommand';
@@ -92,12 +94,14 @@ export class OpencodeAgentStorage {
   }
 
   private resolveCurrentPath(agent: OpencodeAgentDefinition): string {
+    // persistenceKey path and agent.name are user-/agent-supplied; normalize the
+    // vault path before it reaches the adapter's read/write/delete calls.
     const persistedLocation = parseOpencodeAgentPersistenceKey(agent.persistenceKey);
     if (persistedLocation) {
-      return persistedLocation.filePath;
+      return normalizePath(persistedLocation.filePath);
     }
 
-    return `${OPENCODE_DEFAULT_AGENT_SAVE_PATH}/${agent.name}.md`;
+    return normalizePath(`${OPENCODE_DEFAULT_AGENT_SAVE_PATH}/${agent.name}.md`);
   }
 
   private resolveTargetPath(
@@ -108,7 +112,7 @@ export class OpencodeAgentStorage {
       return this.resolveCurrentPath(previous);
     }
 
-    return `${OPENCODE_DEFAULT_AGENT_SAVE_PATH}/${agent.name}.md`;
+    return normalizePath(`${OPENCODE_DEFAULT_AGENT_SAVE_PATH}/${agent.name}.md`);
   }
 
   private async scanAdapter(

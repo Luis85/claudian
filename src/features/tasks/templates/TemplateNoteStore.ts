@@ -1,5 +1,5 @@
 import type { App, Vault } from 'obsidian';
-import { TFile } from 'obsidian';
+import { normalizePath, TFile } from 'obsidian';
 
 import { extractString, parseFrontmatter } from '../../../utils/frontmatter';
 import type { TaskPriority } from '../model/taskTypes';
@@ -96,7 +96,8 @@ export class TemplateNoteStore {
 
   getFilePathForName(folder: string, name: string): string {
     const slug = slugify(name) || 'template';
-    return `${normalizeFolder(folder)}/${slug}.md`;
+    // folder + name are user-/settings-derived; normalize before any vault call.
+    return normalizePath(`${normalizeFolder(folder)}/${slug}.md`);
   }
 
   async save(
@@ -113,7 +114,7 @@ export class TemplateNoteStore {
         return originalPath;
       }
     }
-    const normalized = normalizeFolder(folder);
+    const normalized = normalizePath(normalizeFolder(folder));
     if (!vault.getAbstractFileByPath(normalized)) {
       await vault.createFolder(normalized);
     }
