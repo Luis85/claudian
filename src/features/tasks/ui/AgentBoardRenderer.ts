@@ -11,6 +11,7 @@ export interface AgentBoardRenderCallbacks {
   onRework(task: TaskSpec): void;
   onMarkReady(task: TaskSpec): void;
   onReopen(task: TaskSpec): void;
+  onMoveToInbox(task: TaskSpec): void;
   onAddWorkOrder(): void;
   onRunNextReady(): void;
   /** Queue skip reason for a card, or null when the card is not skipped. */
@@ -24,6 +25,7 @@ export interface AgentBoardRenderState {
   layout: ResolvedBoardLayout;
   invalidNotes: InvalidTaskNote[];
   slots: { used: number; max: number };
+  queue?: QueueToolbarState;
 }
 
 export interface QueueToolbarState {
@@ -32,6 +34,7 @@ export interface QueueToolbarState {
   slotOccupied: number;
   slotCapacity: number;
   consecutiveFailures: number;
+  haltReason?: string | null;
   onToggle: () => void;
 }
 
@@ -51,23 +54,10 @@ export class AgentBoardRenderer {
     container.empty();
     const root = container.createDiv({ cls: 'claudian-agent-board' });
 
-    const header = root.createDiv({ cls: 'claudian-agent-board-header' });
-    const addButton = header.createEl('button', { cls: 'mod-cta', text: 'Add work order' });
-    addButton.addEventListener('click', () => callbacks.onAddWorkOrder());
-
     const hasRunnable = state.layout.lanes.some((lane) =>
       lane.tasks.some((task) => isRunnableTaskStatus(task.frontmatter.status)),
     );
-    if (hasRunnable) {
-      const runNextBtn = header.createEl('button', { text: 'Run next ready' });
-      runNextBtn.addEventListener('click', () => callbacks.onRunNextReady());
-    }
-
-    const free = Math.max(0, state.slots.max - state.slots.used);
-    const slotsEl = header.createSpan({
-      cls: 'claudian-agent-board-slots',
-      text: `Chat tabs ${state.slots.used}/${state.slots.max} · ${free} free`,
-    });
+    const { free, slotsEl } = this.renderBoardToolbar(root, state, callbacks, hasRunnable);
     if (free <= 0) {
       slotsEl.addClass('claudian-agent-board-slots--full');
       root.createDiv({
@@ -86,28 +76,71 @@ export class AgentBoardRenderer {
     }
   }
 
-  // Queue surfaces render into their own hosts so AgentBoardView can mount and
-  // refresh them independently of the lane grid above.
   renderToolbar(host: HTMLElement, state: QueueToolbarState): void {
     host.empty();
     const bar = host.createDiv({ cls: 'claudian-agent-board-toolbar' });
+    const actions = bar.createDiv({ cls: 'claudian-agent-board-toolbar-actions' });
+    const info = bar.createDiv({ cls: 'claudian-agent-board-toolbar-info' });
+    this.renderQueueToggle(actions, state);
+    this.renderQueueInfo(info, state);
+  }
 
-    const toggle = bar.createEl('button', {
+  private renderBoardToolbar(
+    root: HTMLElement,
+    state: AgentBoardRenderState,
+    callbacks: AgentBoardRenderCallbacks,
+    hasRunnable: boolean,
+  ): { free: number; slotsEl: HTMLElement } {
+    const bar = root.createDiv({ cls: 'claudian-agent-board-toolbar' });
+    const actions = bar.createDiv({ cls: 'claudian-agent-board-toolbar-actions' });
+    const info = bar.createDiv({ cls: 'claudian-agent-board-toolbar-info' });
+
+    const addButton = actions.createEl('button', { cls: 'mod-cta', text: 'Add work order' });
+    addButton.addEventListener('click', () => callbacks.onAddWorkOrder());
+
+    if (hasRunnable) {
+      const runNextBtn = actions.createEl('button', { text: 'Run next ready' });
+      runNextBtn.addEventListener('click', () => callbacks.onRunNextReady());
+    }
+
+    if (state.queue) this.renderQueueToggle(actions, state.queue);
+    if (state.queue) this.renderQueueInfo(info, state.queue);
+
+    const free = Math.max(0, state.slots.max - state.slots.used);
+    const slotsEl = info.createSpan({
+      cls: 'claudian-agent-board-slots',
+      text: `Chat tabs ${state.slots.used}/${state.slots.max} · ${free} free`,
+    });
+    return { free, slotsEl };
+  }
+
+  private renderQueueToggle(parent: HTMLElement, state: QueueToolbarState): void {
+    const toggle = parent.createEl('button', {
       cls: 'claudian-agent-board-toolbar--queue-toggle',
-      text: state.paused || state.halted ? '▶ Queue' : '⏸ Queue',
+      text: state.paused || state.halted ? 'Run queue' : 'Pause queue',
     });
     if (state.halted) toggle.addClass('claudian-agent-board-toolbar--queue-toggle-halted');
     toggle.addEventListener('click', () => state.onToggle());
+  }
 
-    bar.createSpan({
+  private renderQueueInfo(parent: HTMLElement, state: QueueToolbarState): void {
+    parent.createSpan({
       cls: 'claudian-agent-board-toolbar--queue-active-count',
       text: `${state.slotOccupied}/${state.slotCapacity} active`,
     });
 
-    if (state.consecutiveFailures > 0) {
-      bar.createSpan({
+    if (state.halted && state.haltReason) {
+      parent.createSpan({
         cls: 'claudian-agent-board-toolbar--queue-failure-count',
-        text: `· ${state.consecutiveFailures} failures`,
+        text: `Queue halted: ${state.haltReason}`,
+      });
+      return;
+    }
+
+    if (state.consecutiveFailures > 0) {
+      parent.createSpan({
+        cls: 'claudian-agent-board-toolbar--queue-failure-count',
+        text: `${state.consecutiveFailures} failures`,
       });
     }
   }
@@ -217,6 +250,12 @@ export class AgentBoardRenderer {
     if (task.frontmatter.status === 'ready' || task.frontmatter.status === 'needs_fix') {
       this.renderAction(actions, 'Run', () => callbacks.onRun(task));
     }
+    if (task.frontmatter.status === 'failed' || task.frontmatter.status === 'canceled') {
+      this.renderAction(actions, 'Retry', () => callbacks.onMarkReady(task));
+    }
+    if (task.frontmatter.status === 'needs_input' || task.frontmatter.status === 'needs_approval') {
+      this.renderAction(actions, 'Resume', () => callbacks.onMarkReady(task));
+    }
     if (task.frontmatter.status === 'running') {
       this.renderAction(actions, 'Stop', () => callbacks.onStop(task));
     }
@@ -226,6 +265,9 @@ export class AgentBoardRenderer {
     }
     if (task.frontmatter.status === 'done') {
       this.renderAction(actions, 'Reopen', () => callbacks.onReopen(task));
+    }
+    if (task.frontmatter.status !== 'inbox' && task.frontmatter.status !== 'running' && task.frontmatter.status !== 'done') {
+      this.renderAction(actions, 'Back to inbox', () => callbacks.onMoveToInbox(task));
     }
 
     const skipReason = callbacks.getSkipReason?.(task) ?? null;

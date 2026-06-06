@@ -275,6 +275,26 @@ describe('QueueRunner — halt threshold', () => {
     expect(h.runner.isHalted()).toBe(false);
   });
 
+
+  it('emits a queue state change after settle so failure chrome can clear without another launch', async () => {
+    let count = 0;
+    const h = makeHarness({
+      haltAfterFailures: 3,
+      onRun: () => {
+        count += 1;
+        return count === 1 ? { ok: false, error: 'boom' } : { ok: true, status: 'review' };
+      },
+    });
+    h.setTasks([makeTask('a'), makeTask('b')]);
+
+    h.runner.tick();
+    await flush();
+
+    const stateChanges = h.emissions.filter((e) => e.name === 'task:queue-state-changed');
+    expect(stateChanges.length).toBeGreaterThanOrEqual(2);
+    expect(h.runner.getConsecutiveFailures()).toBe(0);
+  });
+
   it('clearHalt resets state and lets next tick run', async () => {
     const h = makeHarness({
       haltAfterFailures: 1,

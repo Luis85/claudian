@@ -13,17 +13,19 @@ export const TASK_STATUSES = Object.freeze([
   'canceled',
 ] as const satisfies readonly TaskStatus[]);
 
-const LEGAL_TRANSITIONS: ReadonlyMap<TaskStatus, ReadonlySet<TaskStatus>> = new Map([
-  ['inbox', new Set(['ready'])],
-  ['ready', new Set(['running'])],
-  ['running', new Set(['review', 'failed', 'canceled', 'needs_input', 'needs_approval'])],
-  ['needs_input', new Set(['running', 'failed', 'canceled'])],
-  ['needs_approval', new Set(['running', 'failed', 'canceled'])],
-  ['review', new Set(['done', 'needs_fix', 'canceled'])],
-  ['needs_fix', new Set(['ready', 'running', 'canceled'])],
-  ['done', new Set(['inbox'])],
-  ['failed', new Set(['ready'])],
-  ['canceled', new Set()],
+const transitionSet = (...statuses: TaskStatus[]): ReadonlySet<TaskStatus> => new Set(statuses);
+
+const LEGAL_TRANSITIONS: ReadonlyMap<TaskStatus, ReadonlySet<TaskStatus>> = new Map<TaskStatus, ReadonlySet<TaskStatus>>([
+  ['inbox', transitionSet('ready')],
+  ['ready', transitionSet('running', 'inbox')],
+  ['running', transitionSet('review', 'failed', 'canceled', 'needs_input', 'needs_approval')],
+  ['needs_input', transitionSet('ready', 'running', 'failed', 'canceled', 'inbox')],
+  ['needs_approval', transitionSet('ready', 'running', 'failed', 'canceled', 'inbox')],
+  ['review', transitionSet('done', 'needs_fix', 'canceled', 'inbox')],
+  ['needs_fix', transitionSet('ready', 'running', 'canceled', 'inbox')],
+  ['done', transitionSet('inbox')],
+  ['failed', transitionSet('ready', 'inbox')],
+  ['canceled', transitionSet('ready', 'inbox')],
 ]);
 
 export function isTaskStatus(value: unknown): value is TaskStatus {

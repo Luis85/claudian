@@ -73,6 +73,7 @@ function makeCallbacks(): AgentBoardRenderCallbacks {
     onAddWorkOrder: jest.fn(),
     onRunNextReady: jest.fn(),
     onReopen: jest.fn(),
+    onMoveToInbox: jest.fn(),
     onContextMenu: jest.fn(),
   };
 }
@@ -195,7 +196,7 @@ describe('AgentBoardRenderer — queue toolbar', () => {
       onToggle: () => {},
     });
     const toggle = host.querySelector('.claudian-agent-board-toolbar--queue-toggle');
-    expect(toggle?.textContent).toContain('Queue');
+    expect(toggle?.textContent).toBe('Pause queue');
     expect(
       host.querySelector('.claudian-agent-board-toolbar--queue-active-count')?.textContent,
     ).toContain('0/1');
@@ -233,6 +234,65 @@ describe('AgentBoardRenderer — queue toolbar', () => {
     });
     (host.querySelector('.claudian-agent-board-toolbar--queue-toggle') as HTMLButtonElement)?.click();
     expect(clicked).toBe(true);
+  });
+});
+
+
+describe('AgentBoardRenderer — merged board toolbar', () => {
+  it('renders board actions and queue information in one toolbar row', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const state = makeState({ ready: [makeTask('r', 'ready')] });
+
+    renderer.render(host, {
+      ...state,
+      queue: {
+        paused: true,
+        halted: false,
+        slotOccupied: 0,
+        slotCapacity: 1,
+        consecutiveFailures: 0,
+        onToggle: () => {},
+      },
+    }, makeCallbacks());
+
+    const toolbars = host.querySelectorAll('.claudian-agent-board-toolbar');
+    expect(toolbars).toHaveLength(1);
+    expect(toolbars[0].querySelector('.claudian-agent-board-toolbar-actions')?.textContent).toContain('Add work order');
+    expect(toolbars[0].querySelector('.claudian-agent-board-toolbar-actions')?.textContent).toContain('Run queue');
+    expect(toolbars[0].querySelector('.claudian-agent-board-toolbar-info')?.textContent).toContain('Chat tabs');
+    expect(host.querySelector('.claudian-agent-board-header')).toBeNull();
+  });
+});
+
+function buttonTexts(host: HTMLElement): string[] {
+  return Array.from(host.querySelectorAll('button')).map((btn) => btn.textContent ?? '');
+}
+
+describe('AgentBoardRenderer — recovery actions', () => {
+  it('renders Back to inbox on ready cards', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
+    expect(buttonTexts(host)).toContain('Back to inbox');
+  });
+
+  it('renders Retry and Back to inbox on failed cards', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ failed: [makeTask('f', 'failed')] }), makeCallbacks());
+    expect(buttonTexts(host)).toEqual(expect.arrayContaining(['Retry', 'Back to inbox']));
+  });
+
+  it('invokes onMoveToInbox from Back to inbox', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    const task = makeTask('r', 'ready');
+    renderer.render(host, makeState({ ready: [task] }), callbacks);
+    const button = Array.from(host.querySelectorAll('button')).find((btn) => btn.textContent === 'Back to inbox');
+    button?.click();
+    expect(callbacks.onMoveToInbox).toHaveBeenCalledWith(task);
   });
 });
 

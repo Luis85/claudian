@@ -125,6 +125,7 @@ export class AgentBoardView extends ItemView {
     this.register(this.plugin.events.on('task:queue-halted', () => this.render()));
     this.register(this.plugin.events.on('task:queue-tick', () => this.render()));
     this.register(this.plugin.events.on('task:queue-skipped', () => this.render()));
+    this.register(this.plugin.events.on('task:queue-state-changed', () => this.render()));
     await this.refresh();
   }
 
@@ -180,15 +181,16 @@ export class AgentBoardView extends ItemView {
     const scrollTop = previousLanes?.scrollTop ?? 0;
 
     this.contentEl.empty();
-    const toolbarHost = this.contentEl.createDiv({ cls: 'claudian-agent-board-toolbar-host' });
-    const bannerHost = this.contentEl.createDiv({ cls: 'claudian-agent-board-banner-host' });
     const boardHost = this.contentEl.createDiv({ cls: 'claudian-agent-board-host' });
-
-    this.renderQueueChrome(toolbarHost, bannerHost);
 
     this.renderer.render(
       boardHost,
-      { layout: this.layout, invalidNotes: this.model.invalidNotes, slots: this.computeSlots() },
+      {
+        layout: this.layout,
+        invalidNotes: this.model.invalidNotes,
+        slots: this.computeSlots(),
+        queue: this.getQueueToolbarState(),
+      },
       {
         onOpenDetail: (task) => this.openDetail(task),
         onRun: (task) => void this.runTask(task),
@@ -197,6 +199,7 @@ export class AgentBoardView extends ItemView {
         onRework: (task) => void this.reworkTask(task),
         onMarkReady: (task) => void this.transitionTask(task, 'ready', 'Marked ready.'),
         onReopen: (task) => void this.transitionTask(task, 'inbox', 'Reopened.'),
+        onMoveToInbox: (task) => void this.transitionTask(task, 'inbox', 'Moved back to inbox.'),
         onAddWorkOrder: () => void this.addWorkOrderFromBoard(),
         onRunNextReady: () => void this.runNextReady(),
         getSkipReason: (task) => this.runner?.getSkipReason(task.frontmatter.id) ?? null,
@@ -219,20 +222,16 @@ export class AgentBoardView extends ItemView {
     }
   }
 
-  private renderQueueChrome(toolbarHost: HTMLElement, bannerHost: HTMLElement): void {
-    this.renderer.renderToolbar(toolbarHost, {
-      paused: this.runner?.isPaused() ?? false,
+  private getQueueToolbarState() {
+    return {
+      paused: this.runner?.isPaused() ?? true,
       halted: this.runner?.isHalted() ?? false,
+      haltReason: this.runner?.getHaltReason() ?? null,
       slotOccupied: this.plugin.queueSlotTracker.occupied(),
       slotCapacity: this.plugin.queueSlotTracker.capacity(),
       consecutiveFailures: this.runner?.getConsecutiveFailures() ?? 0,
       onToggle: () => void this.onToggleQueue(),
-    });
-    this.renderer.renderHaltBanner(bannerHost, {
-      reason: this.runner?.getHaltReason() ?? null,
-      onResume: () => this.onResumeQueue(),
-      onOpenFailed: () => this.onOpenFailedCards(),
-    });
+    };
   }
 
   private openDetail(task: TaskSpec): void {
@@ -476,11 +475,16 @@ export class AgentBoardView extends ItemView {
     } else {
       this.runner.setHaltAfterFailures(this.plugin.settings.agentBoardQueueHaltAfter);
     }
-    // Align the shared control with the persisted pause flag: restores pause on
-    // first mount and tracks an external settings edit. Because the control is
-    // shared, this takes effect on every open board's runner at once.
+    // Startup safety: every plugin session starts paused even if the last saved
+    // board config says the queue was running. A saved `false` is honored only
+    // after the user explicitly starts the queue in this session; saved `true`
+    // can always pause it.
     const paused = this.config.queue?.paused ?? false;
-    if (this.runner.isPaused() !== paused) this.runner.setPaused(paused);
+    if (paused) {
+      if (!this.runner.isPaused()) this.runner.setPaused(true);
+    } else if (this.plugin.queueControl.sessionActivated && this.runner.isPaused()) {
+      this.runner.setPaused(false);
+    }
     this.runner.tick();
   }
 

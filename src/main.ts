@@ -107,8 +107,9 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
    * panes observe the same active runs and never double-launch the same card. */
   readonly taskActiveRuns = new Set<string>();
   /** The queue's single global control state (pause/halt/failure-count), shared
-   * by every board's runner. Pause is restored from config on first board mount. */
-  readonly queueControl: QueueControlState = createQueueControlState();
+   * by every board's runner. It starts paused on every plugin load; the user
+   * must explicitly run the queue for this session. */
+  readonly queueControl: QueueControlState = createQueueControlState(true);
   /** Chat tabs queue runs have committed to opening but not yet created. Shared
    * so concurrent Agent Board panes can't double-book the same free tabs. */
   readonly chatTabReservations = new ChatTabReservations();

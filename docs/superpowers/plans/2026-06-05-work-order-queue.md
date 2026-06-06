@@ -11,7 +11,17 @@ parent: "[[2026-06-05-work-order-queue-design]]"
 
 **Goal:** Add a per-board background runner that auto-picks the next eligible Ready / Needs-fix work order, with configurable concurrency (default 1), persistent toolbar pause/resume per board, slot-hold-on-pause behavior, and an auto-halt after N consecutive failures. Skip cards whose provider is disabled or whose model is not owned with a ledger entry and on-card chip.
 
-**Architecture:** A plugin-level singleton `QueueSlotTracker` enforces the global concurrency cap across boards. Each `AgentBoardView` constructs a `QueueRunner` on mount that subscribes to task events and picks the next eligible card via `selectNextEligibleTask` (a wrapper over the existing `selectNextReadyTask`). The runner calls the existing `TaskRunCoordinator.run()` — no coordinator behavior change. UI surfaces (toolbar toggle, halt banner, skip chip) live in `AgentBoardRenderer` and route updates via new `task:queue-*` events.
+## Bug-fix follow-up (2026-06-06)
+
+The Agent Board queue follow-up in [[Agent Board/tasks/task-20260606100000-bug-fix]] tightened the intended workflow:
+
+- New work orders default to `inbox` unless a caller explicitly requests another state, so planning happens before queue eligibility.
+- The queue control starts paused on every Obsidian/plugin load; a saved running state is ignored until the user clicks **Run queue** in that session.
+- Agent Board chrome is a single toolbar row: actions on the left, queue/chat-tab information on the right, with the existing bottom border retained.
+- Queue failure state emits a queue-state repaint event after run settlement, so stale failure text clears when the failure streak resets.
+- Non-running recovery states have user-visible recovery paths, including **Back to inbox** for ready/failed/canceled/intermediate states and retry/resume actions where appropriate.
+
+**Architecture:** A plugin-level singleton `QueueSlotTracker` enforces the global concurrency cap across boards. Each `AgentBoardView` constructs a `QueueRunner` on mount that subscribes to task events and picks the next eligible card via `selectNextEligibleTask` (a wrapper over the existing `selectNextReadyTask`). The runner calls the existing `TaskRunCoordinator.run()` — no coordinator behavior change. UI surfaces (toolbar toggle, toolbar halt/status text, skip chip) live in `AgentBoardRenderer` and route updates via new `task:queue-*` events.
 
 **Tech Stack:** TypeScript, Jest, existing Claudian event bus (`src/core/events/EventBus.ts`), existing settings registry (`src/features/settings/registry/`), existing `BoardConfigStore` (`src/features/tasks/config/BoardConfigStore.ts`), existing `TaskRunCoordinator` (`src/features/tasks/execution/TaskRunCoordinator.ts`).
 

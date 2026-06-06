@@ -37,7 +37,7 @@ describe('buildWorkOrderMarkdown', () => {
     });
 
     expect(markdown).toContain('type: claudian-work-order');
-    expect(markdown).toContain('status: ready');
+    expect(markdown).toContain('status: inbox');
     expect(markdown).toContain('provider: codex');
     expect(markdown).toContain('model: gpt-5-codex');
     expect(markdown).toContain('Source note: [[docs/specs/board]]');
@@ -69,14 +69,14 @@ describe('buildWorkOrderMarkdown', () => {
     });
 
     const { task } = new TaskNoteStore().parse('Agent Board/tasks/parse.md', markdown);
-    expect(task.frontmatter.status).toBe('ready');
+    expect(task.frontmatter.status).toBe('inbox');
     expect(task.frontmatter.provider).toBe('codex');
     expect(task.frontmatter.model).toBe('gpt-5-codex');
   });
 
-  it('emits the requested status, defaulting to ready', () => {
+  it('emits the requested status, defaulting to inbox', () => {
     const base = { id: 't', title: 'T', provider: 'codex', model: 'm', timestamp: '2026-05-28T18:00:00.000Z' };
-    expect(buildWorkOrderMarkdown(base)).toContain('status: ready');
+    expect(buildWorkOrderMarkdown(base)).toContain('status: inbox');
     expect(buildWorkOrderMarkdown({ ...base, status: 'inbox' })).toContain('status: inbox');
   });
 
