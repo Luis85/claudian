@@ -1,6 +1,6 @@
 import { setIcon } from 'obsidian';
 
-import { setupCollapsible, type CollapsibleState } from './collapsible';
+import { type CollapsibleState,setupCollapsible } from './collapsible';
 import type { RenderContentFn } from './MessageRenderer';
 import type { WorkOrderHandoffDisplaySegment } from './WorkOrderHandoffDisplay';
 
