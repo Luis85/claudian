@@ -647,7 +647,7 @@
 
 .claudian-agent-board-slots {
   font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
+  color: var(--text-faint);
 }
 
 .claudian-agent-board-slots--full {
@@ -747,28 +747,142 @@
   margin-left: auto;
 }
 
-.claudian-agent-board-toolbar--queue-toggle {
+/* Equalized top-row toolbar buttons (Add work order CTA + Run next ready tool). */
+.claudian-agent-board-toolbar-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  background-color: var(--background-secondary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-m);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
+  line-height: 1.3;
+  white-space: nowrap;
   cursor: pointer;
+}
+
+/* Tool button: secondary surface (the CTA keeps its mod-cta accent fill). */
+.claudian-agent-board-toolbar-btn--tool {
+  background-color: var(--background-secondary);
+  border: 1px solid var(--border-color);
   color: var(--text-normal);
 }
 
-.claudian-agent-board-toolbar--queue-toggle-halted::after {
-  content: '●';
-  color: var(--text-error);
-  margin-left: 4px;
+.claudian-agent-board-toolbar-btn--tool:hover {
+  border-color: var(--border-color-hover);
+}
+
+.claudian-agent-board-toolbar-btn-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.claudian-agent-board-toolbar-btn-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Vertical divider between the board actions and the Auto-run switch. */
+.claudian-agent-board-toolbar-divider {
+  width: 1px;
+  height: 22px;
+  background-color: var(--border-color);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+/* Auto-run switch (renamed background-watcher toggle). */
+.claudian-agent-board-toolbar-autorun {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: var(--radius-m);
+  border: 1px solid var(--border-color);
+  background-color: var(--background-secondary);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  user-select: none;
+}
+
+.claudian-agent-board-toolbar-autorun:hover {
+  border-color: var(--border-color-hover);
+}
+
+.claudian-agent-board-toolbar-autorun-track {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.claudian-agent-board-toolbar-autorun-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: var(--text-on-accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .claudian-agent-board-toolbar-autorun-thumb {
+    transition: transform 0.18s ease;
+  }
+}
+
+.claudian-agent-board-toolbar-autorun-label {
+  white-space: nowrap;
+}
+
+/* OFF: muted label, neutral toggle track. */
+.claudian-agent-board-toolbar-autorun--off {
+  color: var(--text-muted);
+}
+
+.claudian-agent-board-toolbar-autorun--off .claudian-agent-board-toolbar-autorun-track {
+  /* `--toggle-bg` is a prototype token, not a default Obsidian variable; fall
+     back to a neutral host border color so the OFF track always has a fill. */
+  background-color: var(--toggle-bg, var(--background-modifier-border));
+}
+
+/* ON: accent pill + accent track, thumb slid right to white. */
+.claudian-agent-board-toolbar-autorun--on {
+  color: var(--text-normal);
+  border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  /* `--color-accent-3` is a prototype token; fall back to a soft accent tint so
+     the ON pill keeps an accent-tinted background on default Obsidian themes. */
+  background-color: var(--color-accent-3, color-mix(in srgb, var(--color-accent) 18%, transparent));
+}
+
+.claudian-agent-board-toolbar-autorun--on .claudian-agent-board-toolbar-autorun-track {
+  background-color: var(--color-accent);
+}
+
+.claudian-agent-board-toolbar-autorun-thumb--on {
+  transform: translateX(12px);
 }
 
 .claudian-agent-board-toolbar--queue-active-count,
 .claudian-agent-board-toolbar--queue-failure-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
+}
+
+/* "N/M active" dot: yellow with a soft ring (alpha via color-mix, no rgba). */
+.claudian-agent-board-toolbar-active-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--color-yellow);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-yellow) 16%, transparent);
+  flex-shrink: 0;
 }
 
 .claudian-agent-board-toolbar--queue-failure-count {
