@@ -20,6 +20,8 @@ By Thursday you have thirty open chat tabs, a sticky note that says "ask about t
 
 **Agent Kanban Board** is a place where everything you have handed off has a home. New ideas land in the inbox, get a little detail added, run when you are ready, and wait in review so you can read the result before deciding what is next.
 
+Use it when you want to hand work **to** the assistant instead of working through it live in chat. The board is for bigger chunks of work that need a queue, a priority, acceptance criteria, background-style running, and a review step before you call them done.
+
 ---
 
 Every card on the board is a regular note in your vault. You write what you want help with and attach the documents the helper will need. You pick an engine and move the card to ready. One click starts the run, the card slides to running, and the reply streams back into the card as it arrives. When the run finishes, the card moves to review. You read the result before accepting it, asking a follow-up, or sending it on.
@@ -42,6 +44,15 @@ A card might be "draft a thank-you letter to Aunt Maria", "summarize this twelve
 - Filter and sort by engine, status, and tag
 - Turn a chat conversation into a card so the work has somewhere to live after you close the tab
 - Re-open any card's saved conversation later as a chat tab when you want to follow up
+
+### When to use the board instead of chat
+
+- You have more than one thing to hand off and need a visible queue
+- The work should be scoped before it runs: objective, context, constraints, acceptance criteria
+- You want to prioritize tasks and run the next ready item
+- You want the assistant to work on a managed item while you focus elsewhere
+- You need to review, accept, rework, archive, or reopen the result
+- You want the handoff and result preserved as Markdown in your vault
 
 ### What it doesn't do
 

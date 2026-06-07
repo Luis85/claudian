@@ -10,6 +10,8 @@ This manual covers how to turn ideas, notes, selections, and chat into **work or
 
 A **work order** is a Markdown note (`type: claudian-work-order`) that the Agent Board tracks through a set of status lanes. Capture creates these notes from many places; interop links them back to chat.
 
+Capture is the bridge from low-ceremony chat to managed work. Start in [[sidepanel-chat|Co-Worker Chat]] when you want to think out loud or get a quick draft. Create a work order when the result should be queued, prioritized, run later, reviewed, or kept as a durable handoff record. For the full decision guide, see [[chat-vs-agent-board]].
+
 ---
 
 ## Before you start

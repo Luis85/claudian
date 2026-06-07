@@ -52,6 +52,8 @@ You're already using AI for serious work. Drafting emails. Planning trips. Compa
 | [[Quick Actions]]          | Your most-used prompts, one tap away. Stored as vault notes you own.                                     |
 | [[Agent Kanban Board]]     | A board for things you have handed off. Inbox to done, never lost in chat history.                       |
 
+Not sure where a task belongs? Use [[chat-vs-agent-board]]: start in chat for fast foreground work, then move durable handoffs to the board when they need priority, acceptance criteria, background-style running, or review.
+
 ## What this is not
 
 - Not a code-only tool. The plugin is for anyone who works in notes. Writers, planners, researchers, students, small-business owners, parents, anyone keeping track of thinking in their vault.

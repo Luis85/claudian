@@ -20,6 +20,8 @@ You have a co-worker. They sit in the sidebar, know what you're working on, and 
 
 **Co-Worker - Chat** opens beside whatever note you're on. It reads the file, sees what you've highlighted, and writes back into the vault when you ask it to.
 
+Use it when you want to work **with** the assistant right now: ask, refine, rewrite, compare, brainstorm, or get one task unstuck without turning it into a formal work order. If the task grows into something you want to queue, prioritize, or review later, promote it to the [[Agent Kanban Board]].
+
 ---
 
 The sidebar opens on a hotkey. The path of the note you're on goes in automatically. So does the text you've selected. Pull in other files with `@` mentions or drop in images by paste — they go in as images, not descriptions.
@@ -44,10 +46,18 @@ When your co-worker rewrites a paragraph or fills in a draft section, you choose
 - Preview and approve each change before it lands, or skip that step with YOLO mode
 - Attaches images by paste, drag, or `@` mention
 
+### When to use chat instead of the board
+
+- You want a quick answer, draft, rewrite, explanation, or comparison
+- You expect back-and-forth while you figure out what you actually need
+- You are working in the foreground and want to stay beside the current note
+- The task does not need a queue, priority, acceptance criteria, or review lane
+- You want to test an idea before deciding whether it deserves a work order
+
 ### What it doesn't do
 
 - Not a document editor. Suggested edits arrive as previews you accept, not silent writes mid-stream.
-- Background runs belong on the [[Agent Kanban Board]]; Co-Worker - Chat runs in the foreground.
+- Queued and background-style handoffs belong on the [[Agent Kanban Board]]; Co-Worker - Chat runs in the foreground.
 - Web search is not built in. Providers with their own search use it; others don't.
 - Capabilities differ per provider. See [[Multi Provider Support]] for the side-by-side.
 
