@@ -47,6 +47,7 @@ function makeLane(id: string, tasks: TaskSpec[]): ResolvedLane {
     id,
     title: id,
     tasks,
+    statuses: [id as TaskStatus],
     definitionOfReady: [],
     definitionOfDone: [],
     isCatchAll: false,
@@ -520,6 +521,7 @@ describe('AgentBoardRenderer — collapsible lanes', () => {
       id: 'done',
       title: 'Done',
       tasks: [makeTask('t1', 'done')],
+      statuses: ['done'],
       definitionOfReady: [],
       definitionOfDone: [],
       isCatchAll: false,
@@ -660,6 +662,30 @@ describe('AgentBoardRenderer — Inbox add-work-order row', () => {
     expect(addRow(host)).toBeNull();
   });
 
+  it('renders the add row on a custom lane routed the inbox status (id != "inbox")', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    // A custom board that remaps the inbox status onto a differently-id'd lane.
+    const lane: ResolvedLane = {
+      id: 'triage',
+      title: 'Triage',
+      tasks: [makeTask('a', 'inbox')],
+      statuses: ['inbox', 'ready'],
+      definitionOfReady: [],
+      definitionOfDone: [],
+      isCatchAll: false,
+      collapsible: false,
+      collapsed: false,
+    };
+    const state: AgentBoardRenderState = {
+      layout: { lanes: [lane], errors: [] },
+      invalidNotes: [],
+      slots: { used: 0, max: 4 },
+    };
+    renderer.render(host, state, makeCallbacks());
+    expect(addRow(host)).not.toBeNull();
+  });
+
   it('is a real button (keyboard-operable) and triggers onAddWorkOrder on click', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
@@ -681,6 +707,7 @@ describe('AgentBoardRenderer — Inbox add-work-order row', () => {
       id: 'inbox',
       title: 'Inbox',
       tasks: [makeTask('a', 'inbox')],
+      statuses: ['inbox'],
       definitionOfReady: [],
       definitionOfDone: [],
       isCatchAll: false,

@@ -1,5 +1,6 @@
 import type { TaskBoardModel, TaskStatus } from '../model/taskTypes';
 import type { BoardConfig, ResolvedBoardLayout, ResolvedLane } from './boardConfigTypes';
+import { DEFAULT_LANE_TITLES } from './boardConfigTypes';
 
 const CATCH_ALL_ID = 'unsorted';
 const CATCH_ALL_TITLE = 'Unsorted';
@@ -14,6 +15,7 @@ export function resolveBoardLayout(config: BoardConfig, model: TaskBoardModel): 
       id: lane.id,
       title: lane.title,
       tasks: [],
+      statuses: lane.statuses,
       definitionOfReady: lane.definitionOfReady,
       definitionOfDone: lane.definitionOfDone,
       isCatchAll: false,
@@ -32,10 +34,20 @@ export function resolveBoardLayout(config: BoardConfig, model: TaskBoardModel): 
     return lane ? buckets.get(lane.id) ?? null : null;
   };
 
+  // The catch-all owns every status no visible lane claims, so an affordance
+  // routed by status (e.g. the Inbox add-work-order row) lands in the right
+  // place when the default lanes are removed/remapped.
+  const claimed = new Set<TaskStatus>();
+  for (const lane of visibleLanes) for (const status of lane.statuses) claimed.add(status);
+  const catchAllStatuses = (Object.keys(DEFAULT_LANE_TITLES) as TaskStatus[]).filter(
+    (status) => !claimed.has(status),
+  );
+
   const catchAll: ResolvedLane = {
     id: CATCH_ALL_ID,
     title: CATCH_ALL_TITLE,
     tasks: [],
+    statuses: catchAllStatuses,
     definitionOfReady: [],
     definitionOfDone: [],
     isCatchAll: true,

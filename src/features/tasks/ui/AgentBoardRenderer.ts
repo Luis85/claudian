@@ -5,7 +5,7 @@ import { isRunnableTaskStatus } from '../model/taskStateMachine';
 import type { InvalidTaskNote, TaskSpec, TaskStatus } from '../model/taskTypes';
 
 /** Lane id of the Inbox lane — the only lane that hosts the add-work-order row. */
-const INBOX_LANE_ID = 'inbox';
+const INBOX_STATUS = 'inbox';
 
 /** Pause payload surfaced on a card while a run waits for input or approval. */
 export interface AgentBoardPauseState {
@@ -279,9 +279,10 @@ export class AgentBoardRenderer {
       this.renderCard(laneEl, task, callbacks);
     }
 
-    // The dashed add-work-order affordance belongs only to the Inbox lane: that
-    // is where new work orders land, so the other lanes stay frame-free.
-    if (lane.id === INBOX_LANE_ID) {
+    // The dashed add-work-order affordance belongs to whichever lane receives
+    // new (inbox-status) work orders — keyed by routed status, not lane id, so
+    // it still appears when the default Inbox lane is removed or remapped.
+    if (lane.statuses.includes(INBOX_STATUS)) {
       this.renderAddWorkOrderRow(laneEl, callbacks);
     }
   }

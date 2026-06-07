@@ -44,6 +44,19 @@ describe('resolveBoardLayout', () => {
     expect(layout.errors).toEqual([]);
   });
 
+  it('propagates each visible lane\'s statuses and gives the catch-all every unclaimed status', () => {
+    const layout = resolveBoardLayout(config, model(task('z', 'inbox')));
+    expect(layout.lanes[0].statuses).toEqual(['ready', 'running']);
+    expect(layout.lanes[1].statuses).toEqual(['done']);
+    const catchAll = layout.lanes.find((lane) => lane.isCatchAll)!;
+    // Statuses no visible lane claims land on the catch-all — including `inbox`
+    // and `failed` (the latter only claimed by a hidden lane).
+    expect(catchAll.statuses).toContain('inbox');
+    expect(catchAll.statuses).toContain('failed');
+    expect(catchAll.statuses).not.toContain('ready');
+    expect(catchAll.statuses).not.toContain('done');
+  });
+
   it('routes tasks with no visible lane into a catch-all appended last', () => {
     const layout = resolveBoardLayout(config, model(task('a', 'ready'), task('z', 'failed'), task('y', 'inbox')));
     const last = layout.lanes[layout.lanes.length - 1];

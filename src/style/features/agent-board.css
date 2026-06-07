@@ -39,6 +39,9 @@
   width: 286px;
   max-height: 100%;
   min-height: 0;
+  /* The lanes container scrolls horizontally; each lane owns its own vertical
+     scroll so tall stacks of cards stay reachable. */
+  overflow-y: auto;
 }
 
 .claudian-agent-board-lane-header {

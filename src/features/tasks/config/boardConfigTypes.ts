@@ -26,6 +26,8 @@ export interface ResolvedLane {
   id: string;
   title: string;
   tasks: TaskSpec[];
+  /** Statuses routed to this lane. The catch-all carries every unclaimed status. */
+  statuses: TaskStatus[];
   definitionOfReady: string[];
   definitionOfDone: string[];
   isCatchAll: boolean;
