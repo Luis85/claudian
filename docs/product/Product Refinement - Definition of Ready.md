@@ -1,6 +1,9 @@
 ---
 title: Outcome-Driven Definition of Ready
 version: 1.0
+date: 2026-06-07
+status: active
+scope: product-level and feature-level readiness gates for outcome-driven development
 owner: Product Management
 purpose: Ensure that Products, Features, and User Stories are aligned to measurable business outcomes before execution starts.
 inspired_by:
@@ -9,9 +12,28 @@ inspired_by:
   - Lean Product Development
   - Product Discovery
   - Dual-Track Agile
+related:
+  - "[[product-refinement]]"
+  - "[[Specorator - Product Vision]]"
+  - "[[Specorator Agent Harness PRD]]"
+  - "[[The Product Manager]]"
 ---
 
 # Outcome-Driven Definition of Ready (OD-DoR)
+
+## Audience
+
+| Role | How this doc is used |
+|------|----------------------|
+| **Product Manager** | Primary owner — applies every gate before accepting an idea or feature into Discovery |
+| **Delivery Manager** | Ensures teams only pull work that has passed the Ready gate into a sprint |
+| **UX Researcher** | Validates problem evidence and verifies that success criteria are measurable |
+| **Software Architect** | Reviews scope, assumptions, and the "simplest viable approach" criterion |
+| **Requirements Engineer** | Structures problem statements and value hypotheses using the provided templates |
+
+To run a full automated refinement review against this DoR, use the [[product-refinement]] quick action.
+
+---
 
 ## Core Principle
 
@@ -354,3 +376,14 @@ flowchart TD
 
     idea --> outcome --> discovery --> concept --> refinement --> ready --> development --> testing --> review --> done
 ```
+
+---
+
+## Related
+
+| Note | Relationship |
+|------|--------------|
+| [[product-refinement]] | Quick Action that runs a multi-angle OD-DoR review using subagents — dispatches PM, RE, Delivery, UX, and Architect perspectives |
+| [[Specorator - Product Vision]] | Product vision and roadmap; the outcomes this DoR is designed to protect |
+| [[Specorator Agent Harness PRD]] | PRD that governs the harness roadmap; items entering development pass through this DoR first |
+| [[The Product Manager]] | JTBD profile for the primary audience of this document |
