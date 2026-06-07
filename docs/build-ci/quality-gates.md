@@ -97,10 +97,15 @@ existing `test` job — no new tooling:
   silently defaulting. The built-ins are checked as a subset (not an exact
   list), so registering a new provider needs no edit here.
 - `tests/unit/core/providers/noHardcodedProviderList.test.ts` — fails when code
-  enumerates provider ids as a scattered `['claude', 'codex', …]` array/sequence
-  or a ≥3-way `switch`/comparison outside `src/providers/index.ts`. The id set is
-  derived from the registry, so the guard can't go stale. Adding a provider must
-  mean registering it and nothing else.
+  names ≥3 distinct provider ids (comment-stripped) in any shape: an array
+  literal, an array of `{ id: … }` objects, or a `switch`/comparison chain. The
+  id set is derived from the registry, so the guard can't go stale, and an
+  "allowlist honest" check drops exemptions once a file is cleaned up. Adding a
+  provider must mean registering it and nothing else. Allowlisted today:
+  `src/providers/index.ts` (the sanctioned aggregator) and
+  `src/features/settings/firstRunBanner/FirstRunBanner.ts` (grandfathered; its
+  per-provider `name`/`blurb`/`cli` list should move to the registry — see
+  `docs/tech-debt/2026-06-07-firstrun-banner-provider-list.md`).
 
 ## Next slices
 
