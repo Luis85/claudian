@@ -26,8 +26,11 @@ export interface ResolvedLane {
   id: string;
   title: string;
   tasks: TaskSpec[];
-  /** Statuses routed to this lane. The catch-all carries every unclaimed status. */
-  statuses: TaskStatus[];
+  /**
+   * The single lane that receives new (inbox-status) work orders, so exactly one
+   * lane renders the add-work-order affordance even with custom/duplicate routing.
+   */
+  hostsNewWorkOrders: boolean;
   definitionOfReady: string[];
   definitionOfDone: string[];
   isCatchAll: boolean;

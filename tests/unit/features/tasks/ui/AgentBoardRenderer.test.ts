@@ -47,7 +47,7 @@ function makeLane(id: string, tasks: TaskSpec[]): ResolvedLane {
     id,
     title: id,
     tasks,
-    statuses: [id as TaskStatus],
+    hostsNewWorkOrders: id === 'inbox',
     definitionOfReady: [],
     definitionOfDone: [],
     isCatchAll: false,
@@ -521,7 +521,7 @@ describe('AgentBoardRenderer — collapsible lanes', () => {
       id: 'done',
       title: 'Done',
       tasks: [makeTask('t1', 'done')],
-      statuses: ['done'],
+      hostsNewWorkOrders: false,
       definitionOfReady: [],
       definitionOfDone: [],
       isCatchAll: false,
@@ -662,15 +662,16 @@ describe('AgentBoardRenderer — Inbox add-work-order row', () => {
     expect(addRow(host)).toBeNull();
   });
 
-  it('renders the add row on a custom lane routed the inbox status (id != "inbox")', () => {
+  it('renders the add row on whichever lane hosts new work orders (id != "inbox")', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
-    // A custom board that remaps the inbox status onto a differently-id'd lane.
+    // A custom board that remaps the inbox status onto a differently-id'd lane;
+    // the resolver flags it as the new-work-order host.
     const lane: ResolvedLane = {
       id: 'triage',
       title: 'Triage',
       tasks: [makeTask('a', 'inbox')],
-      statuses: ['inbox', 'ready'],
+      hostsNewWorkOrders: true,
       definitionOfReady: [],
       definitionOfDone: [],
       isCatchAll: false,
@@ -707,7 +708,7 @@ describe('AgentBoardRenderer — Inbox add-work-order row', () => {
       id: 'inbox',
       title: 'Inbox',
       tasks: [makeTask('a', 'inbox')],
-      statuses: ['inbox'],
+      hostsNewWorkOrders: true,
       definitionOfReady: [],
       definitionOfDone: [],
       isCatchAll: false,

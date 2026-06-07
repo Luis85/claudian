@@ -1,9 +1,11 @@
 import type { TaskBoardModel, TaskStatus } from '../model/taskTypes';
 import type { BoardConfig, ResolvedBoardLayout, ResolvedLane } from './boardConfigTypes';
-import { DEFAULT_LANE_TITLES } from './boardConfigTypes';
 
 const CATCH_ALL_ID = 'unsorted';
 const CATCH_ALL_TITLE = 'Unsorted';
+// New work orders are created with the `inbox` status; the lane that receives
+// that status hosts the add-work-order affordance.
+const NEW_WORK_ORDER_STATUS: TaskStatus = 'inbox';
 
 export function resolveBoardLayout(config: BoardConfig, model: TaskBoardModel): ResolvedBoardLayout {
   const errors: string[] = [];
@@ -15,7 +17,7 @@ export function resolveBoardLayout(config: BoardConfig, model: TaskBoardModel): 
       id: lane.id,
       title: lane.title,
       tasks: [],
-      statuses: lane.statuses,
+      hostsNewWorkOrders: false,
       definitionOfReady: lane.definitionOfReady,
       definitionOfDone: lane.definitionOfDone,
       isCatchAll: false,
@@ -34,20 +36,11 @@ export function resolveBoardLayout(config: BoardConfig, model: TaskBoardModel): 
     return lane ? buckets.get(lane.id) ?? null : null;
   };
 
-  // The catch-all owns every status no visible lane claims, so an affordance
-  // routed by status (e.g. the Inbox add-work-order row) lands in the right
-  // place when the default lanes are removed/remapped.
-  const claimed = new Set<TaskStatus>();
-  for (const lane of visibleLanes) for (const status of lane.statuses) claimed.add(status);
-  const catchAllStatuses = (Object.keys(DEFAULT_LANE_TITLES) as TaskStatus[]).filter(
-    (status) => !claimed.has(status),
-  );
-
   const catchAll: ResolvedLane = {
     id: CATCH_ALL_ID,
     title: CATCH_ALL_TITLE,
     tasks: [],
-    statuses: catchAllStatuses,
+    hostsNewWorkOrders: false,
     definitionOfReady: [],
     definitionOfDone: [],
     isCatchAll: true,
@@ -61,9 +54,20 @@ export function resolveBoardLayout(config: BoardConfig, model: TaskBoardModel): 
     else catchAll.tasks.push(task);
   }
 
+  // Exactly one lane hosts the add-work-order row: the lane new (inbox) work
+  // orders route to. `findLane` honours duplicate mappings by returning the
+  // first visible owner; when no visible lane claims inbox the catch-all owns it.
+  const inboxHost = findLane(NEW_WORK_ORDER_STATUS) ?? catchAll;
+  inboxHost.hostsNewWorkOrders = true;
+
   const lanes = [...ordered];
-  if (catchAll.tasks.length > 0) {
+  // Render the catch-all when it holds unsorted tasks, or when it is the inbox
+  // host (so the add-work-order row stays reachable on boards without a visible
+  // Inbox lane). Only the unsorted-tasks case is worth surfacing as an error.
+  if (catchAll.tasks.length > 0 || catchAll.hostsNewWorkOrders) {
     lanes.push(catchAll);
+  }
+  if (catchAll.tasks.length > 0) {
     errors.push('Some work orders have a status with no visible lane and appear under "Unsorted".');
   }
 
