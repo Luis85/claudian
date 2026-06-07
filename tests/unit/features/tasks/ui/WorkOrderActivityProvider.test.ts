@@ -1,5 +1,5 @@
-import { WorkOrderActivityProvider } from '@/features/tasks/ui/WorkOrderActivityProvider';
 import type { TaskSpec } from '@/features/tasks/model/taskTypes';
+import { WorkOrderActivityProvider } from '@/features/tasks/ui/WorkOrderActivityProvider';
 
 const activeTask: TaskSpec = {
   path: 'Agent Board/tasks/task-1.md',
@@ -66,5 +66,19 @@ describe('WorkOrderActivityProvider', () => {
     await provider.openItem('task-1');
 
     expect(openDetailModal).toHaveBeenCalledWith(activeTask);
+  });
+
+  it('returns an empty summary when the vault mock cannot enumerate markdown files', async () => {
+    const plugin: any = {
+      settings: { agentBoardWorkOrderFolder: 'Agent Board/tasks' },
+      events: { on: jest.fn(() => jest.fn()) },
+      getAllViews: jest.fn(() => []),
+      app: { vault: {}, workspace: {} },
+    };
+    const provider = new WorkOrderActivityProvider(plugin);
+
+    await provider.refresh();
+
+    expect(provider.getSummary().items).toEqual([]);
   });
 });

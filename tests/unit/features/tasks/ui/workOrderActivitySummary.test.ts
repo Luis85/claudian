@@ -1,5 +1,5 @@
-import { buildWorkOrderActivitySummary } from '@/features/tasks/ui/workOrderActivitySummary';
 import type { TaskSpec, TaskStatus } from '@/features/tasks/model/taskTypes';
+import { buildWorkOrderActivitySummary } from '@/features/tasks/ui/workOrderActivitySummary';
 
 function task(id: string, status: TaskStatus, title = id, sidepanelTabId?: string | null): TaskSpec {
   return {

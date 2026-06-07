@@ -2,19 +2,19 @@ import { TFile } from 'obsidian';
 
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
+import { asSettingsBag } from '../../../core/types/settings';
 import type {
   WorkOrderActivityProvider as WorkOrderActivityProviderContract,
   WorkOrderActivitySummary,
 } from '../../../core/types/workOrderActivity';
 import { EMPTY_WORK_ORDER_ACTIVITY_SUMMARY } from '../../../core/types/workOrderActivity';
-import { asSettingsBag } from '../../../core/types/settings';
 import type ClaudianPlugin from '../../../main';
 import { TaskIndexer } from '../indexing/TaskIndexer';
 import type { TaskBoardModel, TaskSpec } from '../model/taskTypes';
 import { TaskNoteStore } from '../storage/TaskNoteStore';
+import { buildWorkOrderActivitySummary } from './workOrderActivitySummary';
 import { buildWorkOrderConversationBindings } from './workOrderConversationBindings';
 import { WorkOrderDetailModal } from './WorkOrderDetailModal';
-import { buildWorkOrderActivitySummary } from './workOrderActivitySummary';
 
 export interface WorkOrderActivityProviderDeps {
   indexTasks?: () => Promise<TaskBoardModel>;
@@ -87,7 +87,11 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
     const folder = typeof settings.agentBoardWorkOrderFolder === 'string'
       ? settings.agentBoardWorkOrderFolder
       : 'Agent Board/tasks';
-    return this.indexer.indexVaultFolder(this.plugin.app.vault, folder);
+    const vault = this.plugin.app.vault;
+    if (typeof vault.getMarkdownFiles !== 'function' || typeof vault.read !== 'function') {
+      return { tasks: [], invalidNotes: [] };
+    }
+    return this.indexer.indexVaultFolder(vault, folder);
   }
 
   private openDetailModal(task: TaskSpec): void {

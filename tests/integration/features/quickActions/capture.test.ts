@@ -54,7 +54,12 @@ jest.mock('obsidian', () => {
       return this;
     }
   }
-  return { Modal, Notice: jest.fn(), Setting };
+  return {
+    Modal,
+    Notice: jest.fn(),
+    Setting,
+    normalizePath: (path: string) => path.replace(/([\\/])+/g, '/').trim().replace(/(^\/+|\/+$)/g, ''),
+  };
 });
 
 jest.mock('@/i18n/i18n', () => ({ t: (key: string) => key }));
