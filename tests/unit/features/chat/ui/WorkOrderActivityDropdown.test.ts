@@ -24,6 +24,27 @@ describe('WorkOrderActivityDropdown', () => {
     expect(host._children).toHaveLength(0);
   });
 
+  it('marks the host hidden when empty so flexbox gap collapses', () => {
+    const host = createMockEl();
+    new WorkOrderActivityDropdown(host, {
+      summary: { items: [], closableTabs: [], runningCount: 0, attentionCount: 0 },
+      onOpenItem: jest.fn(),
+      onCloseItem: jest.fn(),
+    });
+    expect(host.hasClass('claudian-hidden')).toBe(true);
+  });
+
+  it('unmarks hidden when entries appear', () => {
+    const host = createMockEl();
+    const dropdown = new WorkOrderActivityDropdown(host, {
+      summary: { items: [], closableTabs: [], runningCount: 0, attentionCount: 0 },
+      onOpenItem: jest.fn(),
+      onCloseItem: jest.fn(),
+    });
+    dropdown.update({ items: [item], closableTabs: [], runningCount: 1, attentionCount: 0 });
+    expect(host.hasClass('claudian-hidden')).toBe(false);
+  });
+
   it('renders count, attention state, rows, and delegates selection', async () => {
     const host = createMockEl();
     const onOpenItem = jest.fn(async () => undefined);

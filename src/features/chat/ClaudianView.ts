@@ -475,7 +475,14 @@ export class ClaudianView extends ItemView {
     this.headerActionsContent = activeDocument.createElement('div');
     this.headerActionsContent.className = 'claudian-header-actions';
 
-    // Quick actions button (first) — opens the QuickActionsModal scoped to the active tab.
+    // Work-order activity slot (first) — mounts the WO dropdown when any
+    // running / needs-input / finished work-order tab exists. Placed before
+    // Quick Actions so the persistent button order stays stable; the dropdown
+    // toggles `claudian-hidden` when empty so flex gap collapses.
+    this.workOrderActivitySlotEl = this.headerActionsContent.createDiv({ cls: 'claudian-work-order-activity-slot' });
+    this.mountWorkOrderActivityDropdown();
+
+    // Quick actions button — opens the QuickActionsModal scoped to the active tab.
     // Lives above the textarea in nav row mode and at the top of the header in header mode.
     const quickActionsBtn = this.headerActionsContent.createDiv({ cls: 'claudian-header-btn' });
     setIcon(quickActionsBtn, 'zap');
@@ -502,9 +509,6 @@ export class ClaudianView extends ItemView {
         },
       });
     });
-
-    this.workOrderActivitySlotEl = this.headerActionsContent.createDiv({ cls: 'claudian-work-order-activity-slot' });
-    this.mountWorkOrderActivityDropdown();
 
     // New tab button (plus icon)
     this.newTabButtonEl = this.headerActionsContent.createDiv({ cls: 'claudian-header-btn claudian-new-tab-btn' });
@@ -826,6 +830,13 @@ export class ClaudianView extends ItemView {
           if (!ic) {
             throw new Error('Chat tab is missing an input controller.');
           }
+          // Drain background hydration first. TabManager.switchToTab → ConversationController.switchTo
+          // only awaits Phase A (sync UI swap); Phase B (transcript hydration) is
+          // fire-and-forget and leaves `state.isHydrating = true`. InputController.sendMessage
+          // early-returns while isHydrating is set, so without this await the
+          // commit prompt would silently drop on cold WO tabs (post-restart,
+          // post-close, or any tab whose transcript hasn't been hydrated yet).
+          await ownerTab?.controllers.conversationController?.whenHydrated?.();
           await ic.sendMessage({ content: options.prompt });
           return;
         }

@@ -305,6 +305,60 @@ describe('ClaudianView.injectCommitTurnForConversation', () => {
     });
   });
 
+  it('awaits the cold tab\'s background hydration before sending the commit prompt', async () => {
+    // Repro for bug: TabManager.switchToTab → ConversationController.switchTo Phase A
+    // resolves immediately while Phase B (hydration) runs fire-and-forget and leaves
+    // `state.isHydrating = true`. InputController.sendMessage early-returns when
+    // isHydrating is set, so the commit prompt silently drops. injectCommitTurnForConversation
+    // must wait for whenHydrated() before sending so the user message actually lands.
+    const events: string[] = [];
+    const tabState = { isHydrating: false };
+    const whenHydrated = jest.fn(async () => {
+      events.push('whenHydrated');
+      tabState.isHydrating = false;
+    });
+    // Real-shape sendMessage: silently drops when the tab is mid-hydration.
+    const sendMessage = jest.fn(async ({ content }: { content: string }) => {
+      if (tabState.isHydrating) {
+        events.push(`drop:${content}`);
+        return;
+      }
+      events.push(`send:${content}`);
+    });
+    // switchToTab simulates the fire-and-forget Phase B: returns while
+    // isHydrating remains true so the caller must explicitly drain it.
+    const switchToTab = jest.fn(async () => {
+      tabState.isHydrating = true;
+    });
+    const conversationController = { whenHydrated };
+    const localTab = {
+      id: 'tab-wo',
+      controllers: { inputController: { sendMessage }, conversationController },
+    };
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.tabManager = {
+      switchToTab,
+      getTab: jest.fn(() => localTab),
+      openConversation: jest.fn(),
+      canCreateTab: jest.fn(() => true),
+    };
+    view.startTaskRunInFreshTab = jest.fn();
+    view.plugin = {
+      findConversationAcrossViews: jest.fn(() => ({ view, tabId: 'tab-wo' })),
+    };
+
+    await view.injectCommitTurnForConversation({
+      conversationId: 'conv-wo',
+      fallbackProviderId: 'claude',
+      fallbackModel: 'opus',
+      prompt: 'COMMIT PROMPT',
+    });
+
+    expect(whenHydrated).toHaveBeenCalled();
+    expect(events).toEqual(['whenHydrated', 'send:COMMIT PROMPT']);
+    expect(sendMessage).toHaveBeenCalledWith({ content: 'COMMIT PROMPT' });
+  });
+
   it('falls back to a fresh task-run tab when no conversationId is supplied', async () => {
     const h = makeHarness({ initialCross: null });
 
@@ -876,5 +930,38 @@ describe('ClaudianView work-order activity', () => {
     const navContent = view.buildNavRowContent();
 
     expect(navContent.querySelector('.claudian-work-order-activity-slot')).not.toBeNull();
+  });
+
+  it('places the work-order activity slot before quick actions in the header row', () => {
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.containerEl = createMockEl();
+    view.containerEl.ownerDocument.createDocumentFragment = () => createMockEl('fragment');
+    view.plugin = {
+      gitStatusWatcher: null,
+      vaultSkillAggregator: null,
+      settings: {},
+      workOrderActivity: {
+        getSummary: () => ({ items: [], closableTabs: [], runningCount: 0, attentionCount: 0 }),
+        subscribe: jest.fn(() => jest.fn()),
+        openItem: jest.fn(),
+        closeTab: jest.fn(),
+      },
+    };
+    view.tabManager = { getActiveTab: jest.fn(() => null) };
+    view.syncHeaderLogo = jest.fn();
+    view.buildHeader(createMockEl());
+    view.buildNavRowContent();
+
+    const actions = view.headerActionsContent;
+    const slotIndex = actions._children.findIndex((c: any) =>
+      c.hasClass('claudian-work-order-activity-slot'),
+    );
+    const quickIndex = actions._children.findIndex((c: any) =>
+      c.hasClass('claudian-header-btn') && !c.hasClass('claudian-new-tab-btn'),
+    );
+
+    expect(slotIndex).toBeGreaterThanOrEqual(0);
+    expect(quickIndex).toBeGreaterThanOrEqual(0);
+    expect(slotIndex).toBeLessThan(quickIndex);
   });
 });

@@ -33,7 +33,12 @@ export class WorkOrderActivityDropdown {
   private render(): void {
     this.hostEl.empty();
     const { summary } = this.props;
-    if (this.entryCount(summary) === 0) return;
+    const isEmpty = this.entryCount(summary) === 0;
+    // Toggle hidden so the empty host stops contributing to the parent's
+    // flexbox gap — otherwise a 12px gap on each side leaks ~24px between
+    // sibling header buttons when no work-order activity exists.
+    this.hostEl.toggleClass('claudian-hidden', isEmpty);
+    if (isEmpty) return;
     const root = this.hostEl.createDiv({ cls: 'claudian-work-order-activity' });
     const classes = ['claudian-header-btn', 'claudian-work-order-activity-toggle'];
     if (summary.attentionCount > 0) classes.push('claudian-work-order-activity-toggle--attention');
