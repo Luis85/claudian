@@ -1,11 +1,36 @@
 import { type App, Component, MarkdownRenderer, Modal, setIcon, Setting } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
+import type { TranslationKey } from '../../../i18n/types';
 import { isPureAcceptanceChecklist, parseAcceptanceChecklist } from '../model/acceptanceChecklist';
 import { parseAcceptanceProgress } from '../model/acceptanceProgress';
+import { hasAnyHandoffSection, parseHandoffSections } from '../model/handoffSections';
 import type { TaskPriority, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderEditableValueChip } from './editableValueChip';
 import { renderSectionHeader } from './sectionHeader';
+
+// One collapsible Agent-handoff card. `body` is the section's raw markdown
+// (rendered through MarkdownRenderer so inline links stay live); `modifier`
+// keys the per-section icon color in CSS; `defaultOpen` follows the spec.
+interface HandoffCard {
+  titleKey: TranslationKey;
+  /** Lucide glyph; the color (per the spec table) is what matters, set in CSS. */
+  icon: string;
+  /** Per-section modifier driving the icon color (--summary/--verification/…). */
+  modifier: string;
+  defaultOpen: boolean;
+  body: string;
+}
+
+// A parsed run-ledger line: `- <iso-ts> [<status>] <message>`. Malformed lines
+// are dropped by the parser so the rendered list only holds well-formed entries.
+interface LedgerEntry {
+  timestamp: string;
+  status: string;
+  message: string;
+}
+
+const LEDGER_LINE = /^-\s+(\S+)\s+\[([^\]]+)\]\s*(.*)$/;
 
 export interface WorkOrderFieldUpdate {
   title?: string;
@@ -99,17 +124,7 @@ export class WorkOrderDetailModal extends Modal {
 
     this.renderObjective(main);
     this.renderAcceptance(main);
-
-    if (
-      (task.frontmatter.status === 'review' || task.frontmatter.status === 'needs_fix') &&
-      task.sections.handoff.length > 0
-    ) {
-      this.renderMarkdownBlock(main, 'Handoff', task.sections.handoff);
-    }
-
-    if (task.frontmatter.status === 'failed' && task.sections.ledger.length > 0) {
-      this.renderMarkdownBlock(main, 'Run ledger', task.sections.ledger);
-    }
+    this.renderActivity(main);
 
     this.renderActions(footer);
   }
@@ -119,12 +134,186 @@ export class WorkOrderDetailModal extends Modal {
     this.contentEl.empty();
   }
 
-  // Handoff / Run-ledger markdown blocks (owned by a later slice). Objective and
-  // Acceptance render through the dedicated section helpers below.
-  private renderMarkdownBlock(parent: HTMLElement, label: string, markdown: string): void {
-    parent.createEl('h4', { text: label, cls: 'claudian-work-order-modal-heading' });
-    const el = parent.createDiv({ cls: 'claudian-work-order-modal-handoff' });
-    void MarkdownRenderer.render(this.app, markdown, el, this.task.path, this.markdownComponent);
+  /**
+   * Status-driven Activity block rendered after Objective + Acceptance:
+   * - `review` / `needs_fix` with handoff content → structured Agent-handoff cards.
+   * - `needs_handoff` → salvage callout + collapsible transcript tail.
+   * - `failed` with ledger content → run-ledger list.
+   * Every other status renders nothing.
+   */
+  private renderActivity(parent: HTMLElement): void {
+    const { status } = this.task.frontmatter;
+    if ((status === 'review' || status === 'needs_fix') && this.task.sections.handoff.length > 0) {
+      this.renderHandoff(parent, this.task.sections.handoff);
+      return;
+    }
+    if (status === 'needs_handoff') {
+      this.renderHandoffSalvage(parent);
+      return;
+    }
+    if (status === 'failed' && this.task.sections.ledger.length > 0) {
+      this.renderRunLedger(parent, this.task.sections.ledger);
+    }
+  }
+
+  /**
+   * Agent handoff: parse the `## Heading\nbody` region into the four
+   * ParsedHandoff fields and render them as collapsible bordered cards
+   * (Summary / Verification / Risks / Next action). If the region parses into no
+   * known section, fall back to rendering the full raw markdown so handoff text
+   * is never dropped.
+   */
+  private renderHandoff(parent: HTMLElement, markdown: string): void {
+    const { section } = renderSectionHeader(parent, {
+      icon: 'clipboard-check',
+      label: t('tasks.workOrderModal.sectionHandoff'),
+    });
+
+    const parsed = parseHandoffSections(markdown);
+    if (!hasAnyHandoffSection(parsed)) {
+      const fallback = section.createDiv({ cls: 'claudian-work-order-modal-handoff-fallback' });
+      void MarkdownRenderer.render(this.app, markdown, fallback, this.task.path, this.markdownComponent);
+      return;
+    }
+
+    const cards: HandoffCard[] = [
+      { titleKey: 'tasks.workOrderModal.handoffSummary', icon: 'align-left', modifier: 'summary', defaultOpen: true, body: parsed.summary },
+      { titleKey: 'tasks.workOrderModal.handoffVerification', icon: 'check-circle', modifier: 'verification', defaultOpen: false, body: parsed.verification },
+      { titleKey: 'tasks.workOrderModal.handoffRisks', icon: 'alert-triangle', modifier: 'risks', defaultOpen: false, body: parsed.risks },
+      { titleKey: 'tasks.workOrderModal.handoffNextAction', icon: 'arrow-right', modifier: 'next', defaultOpen: true, body: parsed.nextAction },
+    ];
+
+    const group = section.createDiv({ cls: 'claudian-work-order-modal-collapse-group' });
+    for (const card of cards) {
+      this.renderCollapsible(group, {
+        title: t(card.titleKey),
+        icon: card.icon,
+        modifier: card.modifier,
+        defaultOpen: card.defaultOpen,
+        renderBody: (body) =>
+          void MarkdownRenderer.render(this.app, card.body, body, this.task.path, this.markdownComponent),
+      });
+    }
+  }
+
+  /**
+   * Needs-handoff salvage: a warning callout explaining the run finished without
+   * a structured handoff, plus a collapsible monospace transcript tail sourced
+   * from the available run trace (`sections.ledger`).
+   */
+  private renderHandoffSalvage(parent: HTMLElement): void {
+    const { section } = renderSectionHeader(parent, {
+      icon: 'alert-triangle',
+      label: t('tasks.workOrderModal.salvageTitle'),
+    });
+
+    section.createDiv({
+      cls: 'claudian-work-order-modal-salvage-callout',
+      text: t('tasks.workOrderModal.salvageCallout'),
+    });
+
+    const trace = this.task.sections.ledger.trim();
+    const group = section.createDiv({ cls: 'claudian-work-order-modal-collapse-group' });
+    this.renderCollapsible(group, {
+      title: t('tasks.workOrderModal.transcriptTail'),
+      icon: 'scroll-text',
+      modifier: 'tail',
+      defaultOpen: true,
+      renderBody: (body) => {
+        const trail = body.createDiv({ cls: 'claudian-work-order-modal-tail-body' });
+        trail.setText(trace.length > 0 ? trace : t('tasks.workOrderModal.transcriptTailEmpty'));
+      },
+    });
+  }
+
+  /**
+   * Failed run ledger: parse the `- <ts> [<status>] <message>` lines (malformed
+   * lines dropped) into an ordered list of status-colored dot + monospace time +
+   * message rows. Dot color follows the status→color contract via a CSS modifier.
+   */
+  private renderRunLedger(parent: HTMLElement, ledger: string): void {
+    const entries = this.parseLedger(ledger);
+    if (entries.length === 0) return;
+
+    const { section } = renderSectionHeader(parent, {
+      icon: 'scroll-text',
+      label: t('tasks.workOrderModal.sectionRunLedger'),
+    });
+
+    const list = section.createEl('ol', { cls: 'claudian-work-order-modal-ledger' });
+    for (const entry of entries) {
+      const row = list.createEl('li', { cls: 'claudian-work-order-modal-ledger-entry' });
+      const dot = row.createSpan({
+        cls: `claudian-work-order-modal-ledger-dot claudian-work-order-modal-ledger-dot--${entry.status}`,
+      });
+      dot.setAttr('aria-hidden', 'true');
+      row.createSpan({ cls: 'claudian-work-order-modal-ledger-time', text: entry.timestamp });
+      row.createSpan({ cls: 'claudian-work-order-modal-ledger-msg', text: entry.message });
+    }
+  }
+
+  private parseLedger(ledger: string): LedgerEntry[] {
+    const entries: LedgerEntry[] = [];
+    for (const line of ledger.split('\n')) {
+      const match = line.match(LEDGER_LINE);
+      if (!match) continue;
+      entries.push({ timestamp: match[1], status: match[2].trim(), message: match[3].trim() });
+    }
+    return entries;
+  }
+
+  /**
+   * Shared collapsible card: a real `<button>` header (keyboard-operable,
+   * `aria-expanded` reflecting state) carrying a rotating chevron + a colored
+   * section icon + the title, over a body rendered on demand. Collapsible state
+   * is local UI only — not persisted. The body is built lazily and cleared on
+   * collapse so it re-renders cleanly on the next expand.
+   */
+  private renderCollapsible(
+    parent: HTMLElement,
+    options: {
+      title: string;
+      icon: string;
+      modifier: string;
+      defaultOpen: boolean;
+      renderBody: (body: HTMLElement) => void;
+    },
+  ): void {
+    const card = parent.createDiv({
+      cls: `claudian-work-order-modal-collapse claudian-work-order-modal-collapse--${options.modifier}`,
+    });
+
+    const head = card.createEl('button', {
+      cls: 'claudian-work-order-modal-collapse-head',
+      attr: { type: 'button' },
+    });
+    const chevron = head.createSpan({ cls: 'claudian-work-order-modal-collapse-chevron' });
+    chevron.setAttr('aria-hidden', 'true');
+    chevron.setAttr('data-icon', 'chevron-right');
+    setIcon(chevron, 'chevron-right');
+    const icon = head.createSpan({ cls: 'claudian-work-order-modal-collapse-icon' });
+    icon.setAttr('aria-hidden', 'true');
+    icon.setAttr('data-icon', options.icon);
+    setIcon(icon, options.icon);
+    head.createSpan({ cls: 'claudian-work-order-modal-collapse-title', text: options.title });
+
+    let open = false;
+    let body: HTMLElement | undefined;
+    const apply = (next: boolean): void => {
+      open = next;
+      head.setAttr('aria-expanded', open ? 'true' : 'false');
+      card.toggleClass('is-open', open);
+      if (open) {
+        body ??= card.createDiv({ cls: 'claudian-work-order-modal-collapse-body' });
+        body.empty();
+        options.renderBody(body);
+      } else if (body) {
+        body.remove();
+        body = undefined;
+      }
+    };
+    head.addEventListener('click', () => apply(!open));
+    apply(options.defaultOpen);
   }
 
   /**

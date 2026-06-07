@@ -79,30 +79,6 @@
   padding: 12px 20px;
 }
 
-.claudian-work-order-modal-heading {
-  margin: 18px 0 8px;
-  font-size: var(--font-ui-medium);
-  color: var(--text-normal);
-}
-
-.claudian-work-order-modal-main > .claudian-work-order-modal-heading:first-child {
-  margin-top: 0;
-}
-
-.claudian-work-order-modal-handoff {
-  background: var(--background-secondary);
-  padding: 12px 16px;
-  border-radius: var(--radius-m);
-  line-height: 1.55;
-}
-
-.claudian-work-order-modal-handoff > :first-child {
-  margin-top: 0;
-}
-
-.claudian-work-order-modal-handoff > :last-child {
-  margin-bottom: 0;
-}
 
 /* ============================================================
    Shared section-header pattern (Objective, Acceptance, and the
@@ -296,6 +272,200 @@
 .claudian-work-order-modal-checklist-text p {
   margin: 0;
 }
+
+/* ============================================================
+   Activity block — status-driven section after Acceptance.
+   Agent handoff (review / needs_fix), needs_handoff salvage, and
+   the failed Run ledger. Collapsible cards share the collapse-*
+   pattern; ledger dot colors follow the status→color contract.
+   ============================================================ */
+
+/* Unparseable handoff fallback: the full raw markdown, never dropped. */
+.claudian-work-order-modal-handoff-fallback {
+  background: var(--background-secondary);
+  padding: 12px 16px;
+  border-radius: var(--radius-m);
+  line-height: var(--line-height-relaxed);
+  color: var(--text-muted);
+}
+
+.claudian-work-order-modal-handoff-fallback > :first-child {
+  margin-top: 0;
+}
+
+.claudian-work-order-modal-handoff-fallback > :last-child {
+  margin-bottom: 0;
+}
+
+/* ---------- Collapsible cards (handoff sections + transcript tail) ---------- */
+.claudian-work-order-modal-collapse-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.claudian-work-order-modal-collapse {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-l);
+  background: var(--background-primary-alt);
+  overflow: hidden;
+}
+
+.claudian-work-order-modal-collapse-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
+  text-align: left;
+  cursor: pointer;
+}
+
+.claudian-work-order-modal-collapse-head:hover {
+  background: var(--background-modifier-hover);
+}
+
+.claudian-work-order-modal-collapse-chevron {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-faint);
+}
+
+.claudian-work-order-modal-collapse-chevron svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Chevron points down when the card is open; the rotation is motion-gated. */
+.claudian-work-order-modal-collapse.is-open .claudian-work-order-modal-collapse-chevron {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .claudian-work-order-modal-collapse-chevron {
+    transition: transform 0.15s ease;
+  }
+}
+
+.claudian-work-order-modal-collapse-icon {
+  display: inline-flex;
+  align-items: center;
+  /* Per-section accent set by the --modifier classes below. */
+  color: var(--claudian-wo-collapse-color, var(--text-faint));
+}
+
+.claudian-work-order-modal-collapse-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.claudian-work-order-modal-collapse-title {
+  min-width: 0;
+}
+
+/* Body aligns under the title (chevron + icon + two 8px gaps = 46px inset). */
+.claudian-work-order-modal-collapse-body {
+  padding: 0 12px 12px 46px;
+  color: var(--text-muted);
+  line-height: var(--line-height-relaxed);
+}
+
+.claudian-work-order-modal-collapse-body > :first-child {
+  margin-top: 0;
+}
+
+.claudian-work-order-modal-collapse-body > :last-child {
+  margin-bottom: 0;
+}
+
+/* Per-section handoff card icon colors (color is what the spec table fixes). */
+.claudian-work-order-modal-collapse--summary { --claudian-wo-collapse-color: var(--color-blue); }
+.claudian-work-order-modal-collapse--verification { --claudian-wo-collapse-color: var(--color-green); }
+.claudian-work-order-modal-collapse--risks { --claudian-wo-collapse-color: var(--color-orange); }
+.claudian-work-order-modal-collapse--next { --claudian-wo-collapse-color: var(--interactive-accent); }
+.claudian-work-order-modal-collapse--tail { --claudian-wo-collapse-color: var(--color-orange); }
+
+/* ---------- Needs-handoff salvage callout + transcript tail ---------- */
+.claudian-work-order-modal-salvage-callout {
+  padding: 11px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-orange) 25%, transparent);
+  border-radius: var(--radius-l);
+  background: var(--background-modifier-warning);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  line-height: var(--line-height-relaxed);
+}
+
+.claudian-work-order-modal-tail-body {
+  font-family: var(--font-monospace);
+  font-size: 0.85em;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---------- Failed Run ledger ---------- */
+.claudian-work-order-modal-ledger {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-l);
+  background: var(--background-primary-alt);
+  overflow: hidden;
+}
+
+.claudian-work-order-modal-ledger-entry {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 14px;
+  font-size: var(--font-ui-small);
+}
+
+.claudian-work-order-modal-ledger-entry + .claudian-work-order-modal-ledger-entry {
+  border-top: 1px solid var(--border-color);
+}
+
+.claudian-work-order-modal-ledger-dot {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--claudian-wo-ledger-color, var(--text-muted));
+}
+
+.claudian-work-order-modal-ledger-time {
+  flex: 0 0 auto;
+  font-family: var(--font-monospace);
+  font-size: 0.85em;
+  color: var(--text-faint);
+}
+
+.claudian-work-order-modal-ledger-msg {
+  min-width: 0;
+  color: var(--text-normal);
+  word-break: break-word;
+}
+
+/* Ledger dot → status color contract (keyed off each entry's [status]). */
+.claudian-work-order-modal-ledger-dot--inbox { --claudian-wo-ledger-color: var(--color-base-60); }
+.claudian-work-order-modal-ledger-dot--ready { --claudian-wo-ledger-color: var(--color-blue); }
+.claudian-work-order-modal-ledger-dot--running { --claudian-wo-ledger-color: var(--color-yellow); }
+.claudian-work-order-modal-ledger-dot--needs_input { --claudian-wo-ledger-color: var(--color-blue); }
+.claudian-work-order-modal-ledger-dot--needs_approval { --claudian-wo-ledger-color: var(--color-purple); }
+.claudian-work-order-modal-ledger-dot--review { --claudian-wo-ledger-color: var(--color-blue); }
+.claudian-work-order-modal-ledger-dot--needs_handoff { --claudian-wo-ledger-color: var(--color-orange); }
+.claudian-work-order-modal-ledger-dot--needs_fix { --claudian-wo-ledger-color: var(--color-orange); }
+.claudian-work-order-modal-ledger-dot--done { --claudian-wo-ledger-color: var(--color-green); }
+.claudian-work-order-modal-ledger-dot--failed { --claudian-wo-ledger-color: var(--color-red); }
+.claudian-work-order-modal-ledger-dot--canceled { --claudian-wo-ledger-color: var(--color-base-60); }
 
 /* Collapse the two-pane grid: sidebar drops below main, divider goes to top. */
 @media (max-width: 720px) {
