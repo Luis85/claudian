@@ -47,6 +47,7 @@ function makeLane(id: string, tasks: TaskSpec[]): ResolvedLane {
     id,
     title: id,
     tasks,
+    hostsNewWorkOrders: id === 'inbox',
     definitionOfReady: [],
     definitionOfDone: [],
     isCatchAll: false,
@@ -520,6 +521,7 @@ describe('AgentBoardRenderer — collapsible lanes', () => {
       id: 'done',
       title: 'Done',
       tasks: [makeTask('t1', 'done')],
+      hostsNewWorkOrders: false,
       definitionOfReady: [],
       definitionOfDone: [],
       isCatchAll: false,
@@ -584,5 +586,140 @@ describe('AgentBoardRenderer — collapsible lanes', () => {
     const chevron = host.querySelector('.claudian-agent-board-lane-collapse-toggle') as HTMLButtonElement | null;
     chevron?.click();
     expect(callbacks.onOpenDetail).not.toHaveBeenCalled();
+  });
+
+  it('preserves Enter/Space keyboard activation and aria-expanded on the collapsed strip', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    renderer.render(host, stateWith(makeCollapsibleLane(true)), callbacks);
+    const strip = host.querySelector('.claudian-agent-board-lane--collapsed') as HTMLElement;
+    expect(strip.getAttribute('tabindex')).toBe('0');
+    expect(strip.getAttribute('aria-expanded')).toBe('false');
+
+    strip.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    strip.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    expect(callbacks.onToggleLaneCollapse).toHaveBeenCalledTimes(2);
+    expect(callbacks.onToggleLaneCollapse).toHaveBeenCalledWith('done');
+  });
+});
+
+describe('AgentBoardRenderer — borderless lane header', () => {
+  it('renders a lane header with the title and a count pill, with no lane frame/border class', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ ready: [makeTask('a', 'ready'), makeTask('b', 'ready')] }), makeCallbacks());
+
+    const header = host.querySelector('.claudian-agent-board-lane-header');
+    expect(header).not.toBeNull();
+    expect(header?.querySelector('.claudian-agent-board-lane-title')?.textContent).toBe('ready');
+
+    const pill = host.querySelector('.claudian-agent-board-lane-count');
+    expect(pill).not.toBeNull();
+    expect(pill?.textContent).toBe('2');
+  });
+
+  it('keeps the lane title as the source text (uppercasing is left to CSS)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ inbox: [makeTask('a', 'inbox')] }), makeCallbacks());
+    // Source text is the lane title verbatim; text-transform handles the visual case.
+    expect(host.querySelector('.claudian-agent-board-lane-title')?.textContent).toBe('inbox');
+  });
+});
+
+describe('AgentBoardRenderer — Inbox add-work-order row', () => {
+  function addRow(host: HTMLElement): HTMLButtonElement | null {
+    return host.querySelector('.claudian-agent-board-lane-add') as HTMLButtonElement | null;
+  }
+
+  it('renders a dashed add-work-order row only in the Inbox lane', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(
+      host,
+      makeState({ inbox: [makeTask('a', 'inbox')], ready: [makeTask('b', 'ready')], done: [makeTask('c', 'done')] }),
+      makeCallbacks(),
+    );
+
+    const inboxLane = host.querySelectorAll('.claudian-agent-board-lane')[0];
+    expect(inboxLane.querySelector('.claudian-agent-board-lane-add')).not.toBeNull();
+    // Exactly one add row across the whole board.
+    expect(host.querySelectorAll('.claudian-agent-board-lane-add')).toHaveLength(1);
+  });
+
+  it('renders the add row even when the Inbox lane has no tasks', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ inbox: [] }), makeCallbacks());
+    expect(addRow(host)).not.toBeNull();
+  });
+
+  it('does not render the add row in non-Inbox lanes', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ ready: [makeTask('a', 'ready')], done: [makeTask('b', 'done')] }), makeCallbacks());
+    expect(addRow(host)).toBeNull();
+  });
+
+  it('renders the add row on whichever lane hosts new work orders (id != "inbox")', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    // A custom board that remaps the inbox status onto a differently-id'd lane;
+    // the resolver flags it as the new-work-order host.
+    const lane: ResolvedLane = {
+      id: 'triage',
+      title: 'Triage',
+      tasks: [makeTask('a', 'inbox')],
+      hostsNewWorkOrders: true,
+      definitionOfReady: [],
+      definitionOfDone: [],
+      isCatchAll: false,
+      collapsible: false,
+      collapsed: false,
+    };
+    const state: AgentBoardRenderState = {
+      layout: { lanes: [lane], errors: [] },
+      invalidNotes: [],
+      slots: { used: 0, max: 4 },
+    };
+    renderer.render(host, state, makeCallbacks());
+    expect(addRow(host)).not.toBeNull();
+  });
+
+  it('is a real button (keyboard-operable) and triggers onAddWorkOrder on click', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    renderer.render(host, makeState({ inbox: [makeTask('a', 'inbox')] }), callbacks);
+
+    const row = addRow(host);
+    expect(row?.tagName).toBe('BUTTON');
+    row?.click();
+    expect(callbacks.onAddWorkOrder).toHaveBeenCalledTimes(1);
+  });
+
+  it('omits the add row when a collapsed lane happens to share the inbox id', () => {
+    // A collapsed lane renders the vertical strip, not the expanded body, so no
+    // add row should appear inside it.
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const lane: ResolvedLane = {
+      id: 'inbox',
+      title: 'Inbox',
+      tasks: [makeTask('a', 'inbox')],
+      hostsNewWorkOrders: true,
+      definitionOfReady: [],
+      definitionOfDone: [],
+      isCatchAll: false,
+      collapsible: true,
+      collapsed: true,
+    };
+    renderer.render(
+      host,
+      { layout: { lanes: [lane], errors: [] }, invalidNotes: [], slots: { used: 0, max: 1 } },
+      makeCallbacks(),
+    );
+    expect(host.querySelector('.claudian-agent-board-lane-add')).toBeNull();
   });
 });
