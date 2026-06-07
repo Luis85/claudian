@@ -792,6 +792,8 @@
     },
     "workOrderModal": {
       "properties": "Properties",
+      "sectionObjective": "Objective",
+      "sectionAcceptance": "Acceptance criteria",
       "fieldStatus": "Status",
       "fieldAgent": "Agent",
       "fieldProvider": "Provider",
