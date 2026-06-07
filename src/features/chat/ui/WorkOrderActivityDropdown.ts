@@ -1,0 +1,93 @@
+import { setIcon } from 'obsidian';
+
+import type { WorkOrderActivitySummary } from '../../../core/types/workOrderActivity';
+import { t } from '../../../i18n/i18n';
+
+export interface WorkOrderActivityDropdownProps {
+  summary: WorkOrderActivitySummary;
+  onOpenItem(id: string): void | Promise<void>;
+}
+
+export class WorkOrderActivityDropdown {
+  private open = false;
+
+  constructor(private readonly hostEl: HTMLElement, private props: WorkOrderActivityDropdownProps) {
+    this.render();
+  }
+
+  update(summary: WorkOrderActivitySummary): void {
+    this.props = { ...this.props, summary };
+    if (summary.items.length === 0) this.open = false;
+    this.render();
+  }
+
+  destroy(): void {
+    this.hostEl.empty();
+  }
+
+  private render(): void {
+    this.hostEl.empty();
+    const { summary } = this.props;
+    if (summary.items.length === 0) return;
+    const root = this.hostEl.createDiv({ cls: 'claudian-work-order-activity' });
+    const classes = ['claudian-header-btn', 'claudian-work-order-activity-toggle'];
+    if (summary.attentionCount > 0) classes.push('claudian-work-order-activity-toggle--attention');
+    const toggle = root.createDiv({ cls: classes.join(' ') });
+    toggle.setAttribute('role', 'button');
+    toggle.setAttribute('tabindex', '0');
+    toggle.setAttribute('aria-haspopup', 'menu');
+    toggle.setAttribute('aria-expanded', this.open ? 'true' : 'false');
+    toggle.setAttribute('aria-label', this.toggleLabel(summary));
+    setIcon(toggle.createSpan({ cls: 'claudian-work-order-activity-icon' }), 'clipboard-list');
+    toggle.createSpan({ cls: 'claudian-work-order-activity-count', text: String(summary.items.length) });
+    toggle.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.open = !this.open;
+      this.render();
+    });
+    toggle.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      this.open = !this.open;
+      this.render();
+    });
+    if (this.open) this.renderMenu(root);
+  }
+
+  private renderMenu(root: HTMLElement): void {
+    const menu = root.createDiv({ cls: 'claudian-work-order-activity-menu' });
+    menu.setAttribute('role', 'menu');
+    for (const item of this.props.summary.items) {
+      const row = menu.createDiv({ cls: 'claudian-work-order-activity-item' });
+      row.setAttribute('role', 'menuitem');
+      row.setAttribute('tabindex', '0');
+      row.createSpan({ cls: 'claudian-work-order-activity-title', text: item.title });
+      row.createSpan({ cls: 'claudian-work-order-activity-status', text: t(item.labelKey) });
+      row.createSpan({ cls: 'claudian-work-order-activity-action', text: t(item.actionHintKey) });
+      row.addEventListener('click', () => {
+        this.selectItem(item.id);
+      });
+      row.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        this.selectItem(item.id);
+      });
+    }
+  }
+
+  private selectItem(id: string): void {
+    this.open = false;
+    void this.props.onOpenItem(id);
+    this.render();
+  }
+
+  private toggleLabel(summary: WorkOrderActivitySummary): string {
+    if (summary.attentionCount > 0) {
+      return t('workOrderActivity.toggleAttention', {
+        count: String(summary.items.length),
+        attention: String(summary.attentionCount),
+      });
+    }
+    return t('workOrderActivity.toggleRunning', { count: String(summary.items.length) });
+  }
+}
