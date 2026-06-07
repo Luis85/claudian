@@ -153,14 +153,16 @@ export class WorkOrderDetailModal extends Modal {
     this.modalEl.addClass('claudian-work-order-modal');
     // Size the modal through the variables Obsidian's own `.modal` rule consumes
     // so the height cap applies regardless of how the active theme out-specifies
-    // a bare `.modal` selector. Setting them inline on modalEl is the most
-    // reliable hook; the CSS mirrors these as a fallback.
-    this.modalEl.style.setProperty('--modal-max-height', 'min(86vh, 760px)');
-    this.modalEl.style.setProperty('--dialog-max-height', 'min(86vh, 760px)');
-    this.modalEl.style.setProperty('--modal-width', 'min(960px, 92vw)');
-    this.modalEl.style.setProperty('--dialog-width', 'min(960px, 92vw)');
-    this.modalEl.style.setProperty('--modal-max-width', 'min(960px, 92vw)');
-    this.modalEl.style.setProperty('--dialog-max-width', 'min(960px, 92vw)');
+    // a bare `.modal` selector. Writing them on modalEl is the most reliable
+    // hook; the CSS mirrors these as a fallback.
+    this.modalEl.setCssProps({
+      '--modal-max-height': 'min(86vh, 760px)',
+      '--dialog-max-height': 'min(86vh, 760px)',
+      '--modal-width': 'min(960px, 92vw)',
+      '--dialog-width': 'min(960px, 92vw)',
+      '--modal-max-width': 'min(960px, 92vw)',
+      '--dialog-max-width': 'min(960px, 92vw)',
+    });
 
     // Sticky-shell frame: contentEl (the native `.modal-content`) becomes a flex
     // column with a pinned header, a scrollable two-pane body (main + properties
