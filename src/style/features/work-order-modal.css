@@ -231,6 +231,13 @@
   color: var(--text-faint);
 }
 
+/* Non-task-list acceptance criteria (prose / plain bullets) rendered as markdown. */
+.claudian-work-order-modal-checklist-prose {
+  padding: 11px 14px;
+  color: var(--text-muted);
+  line-height: var(--line-height-relaxed);
+}
+
 .claudian-work-order-modal-checklist-item {
   display: flex;
   align-items: center;

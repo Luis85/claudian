@@ -763,4 +763,18 @@ describe('WorkOrderDetailModal — Objective + Acceptance sections', () => {
     expect(find(section, 'claudian-work-order-modal-ring')).toBeUndefined();
     expect(find(section, 'claudian-work-order-modal-checklist-empty')).toBeDefined();
   });
+
+  it('renders non-checkbox acceptance criteria as markdown instead of dropping them', () => {
+    const task = makeTask('t', 'inbox');
+    task.sections.acceptanceCriteria = '- Includes all task metadata\n- Renders without checkboxes';
+    const { main } = openMain(task);
+    const section = findSection(main, 'Acceptance criteria')!;
+    // Prose / plain-bullet criteria (no task-list syntax) must not collapse to an em dash.
+    expect(find(section, 'claudian-work-order-modal-checklist-empty')).toBeUndefined();
+    expect(find(section, 'claudian-work-order-modal-checklist-prose')).toBeDefined();
+    const calls = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
+    expect(
+      calls.some((c) => c[1] === '- Includes all task metadata\n- Renders without checkboxes'),
+    ).toBe(true);
+  });
 });

@@ -170,15 +170,20 @@ export class WorkOrderDetailModal extends Modal {
       this.renderAcceptanceRing(right(), progress.done, progress.total, task.frontmatter.status);
     }
 
-    const card = section.createDiv({ cls: 'claudian-work-order-modal-checklist' });
     if (items.length === 0) {
-      card.createDiv({
-        cls: 'claudian-work-order-modal-checklist-empty',
-        text: '—',
-      });
+      if (markdown.trim().length === 0) {
+        section.createDiv({ cls: 'claudian-work-order-modal-checklist-empty', text: '—' });
+      } else {
+        // Acceptance criteria that aren't task-list checkboxes (prose / plain
+        // bullets) still render as markdown so existing or custom work orders
+        // don't appear to have no criteria.
+        const prose = section.createDiv({ cls: 'claudian-work-order-modal-checklist-prose' });
+        void MarkdownRenderer.render(this.app, markdown, prose, this.task.path, this.markdownComponent);
+      }
       return;
     }
 
+    const card = section.createDiv({ cls: 'claudian-work-order-modal-checklist' });
     for (const item of items) {
       const row = card.createDiv({ cls: 'claudian-work-order-modal-checklist-item' });
       if (item.checked) row.addClass('is-checked');
