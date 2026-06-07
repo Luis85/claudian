@@ -265,6 +265,16 @@
   margin-left: auto;
 }
 
+/* Native <button> reset (see agent-board.css). Neutralize the box-shadow +
+   appearance leak on our modal buttons without disturbing their set styling. */
+.claudian-work-order-modal-action,
+.claudian-work-order-modal-collapse-head {
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* ---------- Footer action buttons ---------- */
 .claudian-work-order-modal-action {
   display: inline-flex;
@@ -298,7 +308,7 @@
 /* CTA — primary positive action (Mark ready / Accept / Send to review). Green
    from the status→color palette, not the theme accent, so the positive action
    reads deliberately across themes. */
-.claudian-work-order-modal-action--cta {
+.claudian-work-order-modal .claudian-work-order-modal-action--cta {
   /* The border gives the green fill a defined edge on pale themes (Minimal),
      matching the board CTA treatment. */
   border-color: var(--color-green);
@@ -306,20 +316,20 @@
   color: var(--text-on-accent);
 }
 
-.claudian-work-order-modal-action--cta:hover {
+.claudian-work-order-modal .claudian-work-order-modal-action--cta:hover {
   background: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
   border-color: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
 }
 
 /* Secondary — a neutral surfaced button (Open note / Open conversation / Rework
    / Archive / Reopen). Reads as a real button, not a bare ghost. */
-.claudian-work-order-modal-action--ghost {
+.claudian-work-order-modal .claudian-work-order-modal-action--ghost {
   border-color: var(--border-color);
   background: var(--interactive-normal);
   color: var(--text-normal);
 }
 
-.claudian-work-order-modal-action--ghost:hover {
+.claudian-work-order-modal .claudian-work-order-modal-action--ghost:hover {
   border-color: var(--border-color-hover);
   background: var(--interactive-hover);
   color: var(--text-normal);
@@ -327,13 +337,13 @@
 
 /* Danger — destructive red; the soft border alpha goes through color-mix
    (never an rgba literal). Hover flips to a solid red fill. */
-.claudian-work-order-modal-action--danger {
+.claudian-work-order-modal .claudian-work-order-modal-action--danger {
   border-color: color-mix(in srgb, var(--color-red) 40%, transparent);
   background: var(--background-modifier-error);
   color: var(--color-red);
 }
 
-.claudian-work-order-modal-action--danger:hover {
+.claudian-work-order-modal .claudian-work-order-modal-action--danger:hover {
   background: var(--color-red);
   border-color: var(--color-red);
   color: var(--text-on-accent);
@@ -966,4 +976,6 @@
   opacity: 0;
   cursor: pointer;
   font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
 }

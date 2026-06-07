@@ -132,6 +132,26 @@
   box-shadow: none;
 }
 
+/* Native <button> reset. Obsidian's app.css styles bare `button` (injected
+   before plugin CSS) with --interactive-normal bg, --input-shadow, padding, and
+   a medium font-weight. Our component rules set bg/border/padding/font/cursor
+   explicitly; the only defaults that still leak are box-shadow and native
+   appearance chrome — neutralize just those (0-1-0 beats `button` 0-0-1, and
+   these props are unset by the component rules so there's no conflict). */
+.claudian-agent-board-toolbar-btn,
+.claudian-agent-board-toolbar-autorun,
+.claudian-agent-board-card-action-primary,
+.claudian-agent-board-card-action-more,
+.claudian-agent-board-lane-add,
+.claudian-agent-board-lane-collapse-toggle,
+.claudian-agent-board-card-menu-item,
+.claudian-agent-board-card-reply--actions button {
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* ===== Linear-style minimal work-order card ===== */
 .claudian-agent-board-card {
   /* Anchor for the absolutely-positioned hover action cluster (top-right). */
@@ -704,15 +724,34 @@
   gap: 6px;
 }
 
-/* Reply Send: green primary positive action, matching the CTA palette. The
-   sibling Stop keeps the neutral button surface. */
+/* Reply action buttons (Send + Stop): fully styled so neither inherits
+   Obsidian's native button chrome. `… button` is 0-1-1 (beats `button` 0-0-1);
+   the green Send override is 0-2-0 (beats a theme's `button.mod-cta` 0-1-1). */
+.claudian-agent-board-card-reply--actions button {
+  padding: 6px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
+  line-height: 1.3;
+  cursor: pointer;
+  background: var(--interactive-normal);
+  color: var(--text-normal);
+}
+
+.claudian-agent-board-card-reply--actions button:hover {
+  background: var(--interactive-hover);
+}
+
 .claudian-agent-board-card-reply--actions .mod-cta {
   background-color: var(--color-green);
+  border-color: var(--color-green);
   color: var(--text-on-accent);
 }
 
 .claudian-agent-board-card-reply--actions .mod-cta:hover {
   background-color: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
+  border-color: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
 }
 
 .claudian-agent-board-errors {
