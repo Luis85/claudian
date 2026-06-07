@@ -616,29 +616,82 @@ describe('AgentBoardRenderer — ⋯ overflow menu (portal-positioned popover)',
 });
 
 describe('AgentBoardRenderer — live strip + paused reply', () => {
-  it('paints a live strip for running tasks', () => {
+  for (const status of ['running', 'needs_input', 'needs_approval'] as const) {
+    it(`paints a live strip for ${status} tasks`, () => {
+      const renderer = new AgentBoardRenderer();
+      const host = document.createElement('div');
+      renderer.render(host, makeState({ [status]: [makeTask('a', status)] }), makeCallbacks());
+      expect(host.querySelector('.claudian-agent-board-card-live-strip')).not.toBeNull();
+    });
+  }
+
+  for (const status of ['inbox', 'ready', 'review', 'needs_handoff', 'needs_fix', 'done', 'failed', 'canceled'] as const) {
+    it(`does not paint a live strip for the non-live status ${status}`, () => {
+      const renderer = new AgentBoardRenderer();
+      const host = document.createElement('div');
+      renderer.render(host, makeState({ [status]: [makeTask('a', status)] }), makeCallbacks());
+      expect(host.querySelector('.claudian-agent-board-card-live-strip')).toBeNull();
+    });
+  }
+
+  it('builds a two-line band: a freshness dot + caption on line 1, the ledger tail on line 2', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     renderer.render(host, makeState({ running: [makeTask('a', 'running')] }), makeCallbacks());
-    expect(host.querySelector('.claudian-agent-board-card-live-strip')).not.toBeNull();
+    const meta = host.querySelector('.claudian-agent-board-card-live-strip--meta');
+    expect(meta?.querySelector('.claudian-agent-board-card-live-strip--dot')).not.toBeNull();
+    expect(meta?.querySelector('.claudian-agent-board-card-live-strip--caption')).not.toBeNull();
+    expect(host.querySelector('.claudian-agent-board-card-live-strip--ledger')).not.toBeNull();
   });
 
-  it('does not paint a live strip for non-live statuses', () => {
+  it('renders the attempt counter + elapsed caption from the seeded data sources', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
-    renderer.render(host, makeState({ ready: [makeTask('a', 'ready')] }), makeCallbacks());
-    expect(host.querySelector('.claudian-agent-board-card-live-strip')).toBeNull();
+    renderer.render(host, makeState({ running: [makeTask('a', 'running')] }), makeCallbacks());
+    renderer.patchLiveStrip('a', { lastLedger: 'tool: Edit', elapsedMs: 65_000, attemptNumber: 3, heartbeatAgeMs: 2_000 });
+    const caption = host.querySelector('.claudian-agent-board-card-live-strip--caption');
+    expect(caption?.textContent).toBe('1m 5s · attempt 3');
   });
 
-  it('patchLiveStrip updates the last ledger line without rebuilding the card', () => {
+  it('renders the last ledger line on line 2 (ellipsis-truncation is CSS, full text is set)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ running: [makeTask('a', 'running')] }), makeCallbacks());
+    const long = 'tool: Edit a very long path/that/keeps/going/and/going/src/foo.ts';
+    renderer.patchLiveStrip('a', { lastLedger: long, elapsedMs: 1_000, attemptNumber: 1, heartbeatAgeMs: 2_000 });
+    expect(host.querySelector('.claudian-agent-board-card-live-strip--ledger')?.textContent).toBe(long);
+  });
+
+  it.each([
+    ['green', 2_000, '●', 'Fresh heartbeat (2s ago)'],
+    ['amber', 90_000, '◐', 'Stale heartbeat (2m ago)'],
+    ['red', 600_000, '◯', 'Very stale heartbeat (10m ago)'],
+  ] as const)('preserves the %s freshness tier color class, glyph, and aria-label', (tier, ageMs, glyph, label) => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ running: [makeTask('a', 'running')] }), makeCallbacks());
+    renderer.patchLiveStrip('a', { lastLedger: 'x', elapsedMs: 1_000, attemptNumber: 1, heartbeatAgeMs: ageMs });
+    const dot = host.querySelector('.claudian-agent-board-card-live-strip--dot') as HTMLElement;
+    expect(dot.classList.contains(`claudian-stale-${tier}`)).toBe(true);
+    expect(dot.textContent).toBe(glyph);
+    expect(dot.getAttribute('aria-label')).toBe(label);
+  });
+
+  it('patchLiveStrip updates the meta + ledger in place (same nodes, no card rebuild)', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     renderer.render(host, makeState({ running: [makeTask('a', 'running')] }), makeCallbacks());
     const card = host.querySelector('.claudian-agent-board-card');
-    renderer.patchLiveStrip('a', { lastLedger: 'tool: Edit src/foo.ts', elapsedMs: 12_000, attemptNumber: 1, heartbeatAgeMs: 2_000 });
+    const dot = host.querySelector('.claudian-agent-board-card-live-strip--dot');
+    const caption = host.querySelector('.claudian-agent-board-card-live-strip--caption');
     const ledgerEl = host.querySelector('.claudian-agent-board-card-live-strip--ledger');
+    renderer.patchLiveStrip('a', { lastLedger: 'tool: Edit src/foo.ts', elapsedMs: 12_000, attemptNumber: 1, heartbeatAgeMs: 2_000 });
     expect(ledgerEl?.textContent).toBe('tool: Edit src/foo.ts');
+    // Same DOM nodes survive the patch (in-place update, not a rebuild).
     expect(host.querySelector('.claudian-agent-board-card')).toBe(card);
+    expect(host.querySelector('.claudian-agent-board-card-live-strip--dot')).toBe(dot);
+    expect(host.querySelector('.claudian-agent-board-card-live-strip--caption')).toBe(caption);
+    expect(host.querySelector('.claudian-agent-board-card-live-strip--ledger')).toBe(ledgerEl);
   });
 
   it('patchCard shows a needs_input reply box seeded with the default value', () => {

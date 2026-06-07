@@ -529,45 +529,64 @@
   opacity: 0.65;
 }
 
-/* ===== Live run strip + paused reply (work-order execution) ===== */
+/* ===== Live run strip + paused reply (work-order execution) =====
+   Top-bordered band on the card body (running / needs_input / needs_approval):
+   line 1 is a freshness dot + elapsed/attempt caption, line 2 is the last
+   run-ledger line (ellipsis-truncated). */
 
 .claudian-agent-board-card-live-strip {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 3px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
   font-size: var(--font-ui-smaller);
-  opacity: 0.9;
-  margin-top: 0.4rem;
 }
 
+/* Line 1: freshness dot + caption, aligned on a single baseline. */
 .claudian-agent-board-card-live-strip--meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   font-variant-numeric: tabular-nums;
   color: var(--text-muted);
 }
 
-.claudian-agent-board-card-live-strip--ledger {
+/* Freshness dot — the glyph (●/◐/◯) is the non-color cue; the tier class adds
+   the color. line-height:1 keeps the glyph centered against the caption. */
+.claudian-agent-board-card-live-strip--dot {
+  flex: 0 0 auto;
+  line-height: 1;
   color: var(--text-muted);
+}
+
+.claudian-agent-board-card-live-strip--caption {
+  min-width: 0;
+}
+
+/* Line 2: last ledger line, ellipsis-truncated to one line. */
+.claudian-agent-board-card-live-strip--ledger {
+  color: var(--text-faint);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* The leading "●" of the meta line is the heartbeat-stale dot. */
-.claudian-stale-green::first-letter { color: var(--color-green); }
-.claudian-stale-amber::first-letter { color: var(--color-orange); }
-.claudian-stale-red::first-letter { color: var(--color-red); }
+/* Heartbeat freshness tier → dot color (green fresh / amber stale / red very
+   stale), per the redesign freshness contract. */
+.claudian-agent-board-card-live-strip--dot.claudian-stale-green { color: var(--color-green); }
+.claudian-agent-board-card-live-strip--dot.claudian-stale-amber { color: var(--color-orange); }
+.claudian-agent-board-card-live-strip--dot.claudian-stale-red { color: var(--color-red); }
 
 @keyframes claudian-pulse-dot {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
 
-/* Reduced-motion gated: the live-strip heartbeat dot only pulses when the user
-   has not requested reduced motion. */
+/* Reduced-motion gated: the freshness dot only pulses when the user has not
+   requested reduced motion. */
 @media (prefers-reduced-motion: no-preference) {
-  .claudian-agent-board-card--running .claudian-agent-board-card-live-strip--meta::first-letter,
-  .claudian-agent-board-card--needs_input .claudian-agent-board-card-live-strip--meta::first-letter,
-  .claudian-agent-board-card--needs_approval .claudian-agent-board-card-live-strip--meta::first-letter {
+  .claudian-agent-board-card-live-strip--dot {
     animation: claudian-pulse-dot 1.2s ease-in-out infinite;
   }
 }
