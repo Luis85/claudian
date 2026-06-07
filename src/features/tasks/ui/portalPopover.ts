@@ -120,14 +120,16 @@ export class PortalPopover {
       }
     };
 
+    // Scroll/resize live on the trigger's own window so popouts reflow correctly.
+    const win = ownerDoc.defaultView ?? window;
     ownerDoc.addEventListener('mousedown', onPointerDown, true);
-    window.addEventListener('scroll', onReflow, true);
-    window.addEventListener('resize', onReflow);
+    win.addEventListener('scroll', onReflow, true);
+    win.addEventListener('resize', onReflow);
     pop.addEventListener('keydown', onKeyDown);
     this.cleanups.push(
       () => ownerDoc.removeEventListener('mousedown', onPointerDown, true),
-      () => window.removeEventListener('scroll', onReflow, true),
-      () => window.removeEventListener('resize', onReflow),
+      () => win.removeEventListener('scroll', onReflow, true),
+      () => win.removeEventListener('resize', onReflow),
       () => pop.removeEventListener('keydown', onKeyDown),
     );
 
@@ -147,8 +149,10 @@ export class PortalPopover {
   /** Compute fixed coordinates from the trigger rect, flipping up near the bottom. */
   private position(pop: HTMLElement, itemCount: number): void {
     const rect = this.options.trigger.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
+    // Use the trigger's own window so popout panes flip/clamp against the right viewport.
+    const win = this.options.trigger.ownerDocument.defaultView ?? window;
+    const viewportHeight = win.innerHeight;
+    const viewportWidth = win.innerWidth;
     const estimatedHeight = itemCount * ITEM_HEIGHT + MENU_PADDING;
 
     const dropUp = rect.bottom + estimatedHeight + OFFSET > viewportHeight && rect.top - estimatedHeight > 0;

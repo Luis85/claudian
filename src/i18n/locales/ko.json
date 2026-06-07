@@ -760,7 +760,6 @@
       },
       "cardAction": {
         "run": "실행",
-        "runNow": "지금 실행",
         "retry": "재시도",
         "backToInbox": "받은 편지함으로",
         "moreActions": "추가 작업"
@@ -778,7 +777,8 @@
           "reject": "Reject",
           "defaultRejectReason": "rejected"
         }
-      }
+      },
+      "notRunnable": "Mark \"{title}\" ready before running."
     },
     "template": {
       "nameRequired": "Template name is required.",

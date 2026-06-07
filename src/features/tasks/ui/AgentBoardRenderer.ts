@@ -123,11 +123,6 @@ const MENU_ARCHIVE: CardAction = {
   danger: true,
   run: (cb, task) => cb.onArchive(task),
 };
-const MENU_RUN_NOW: CardAction = {
-  labelKey: 'tasks.board.cardAction.runNow',
-  icon: 'play',
-  run: (cb, task) => cb.onRun(task),
-};
 const MENU_BACK_TO_INBOX: CardAction = {
   labelKey: 'tasks.board.cardAction.backToInbox',
   icon: 'rotate-ccw',
@@ -160,15 +155,17 @@ const MENU_MARK_FAILED: CardAction = {
 const CARD_ACTIONS: Partial<Record<TaskStatus, CardActionModel>> = {
   inbox: {
     primary: { labelKey: 'tasks.workOrderModal.actionMarkReady', icon: 'check', variant: 'cta', run: (cb, task) => cb.onMarkReady(task) },
-    menu: [MENU_OPEN_NOTE, MENU_RUN_NOW, MENU_ARCHIVE],
+    // No "Run now": inbox items aren't runnable (must transition to ready first).
+    menu: [MENU_OPEN_NOTE, MENU_ARCHIVE],
   },
   ready: {
     primary: { labelKey: 'tasks.board.cardAction.run', icon: 'play', variant: 'cta', run: (cb, task) => cb.onRun(task) },
-    menu: [MENU_OPEN_NOTE, MENU_BACK_TO_INBOX, MENU_ARCHIVE],
+    // No Archive: ready/needs_fix are actionable, not archivable (ARCHIVABLE_STATUSES).
+    menu: [MENU_OPEN_NOTE, MENU_BACK_TO_INBOX],
   },
   needs_fix: {
     primary: { labelKey: 'tasks.board.cardAction.run', icon: 'play', variant: 'cta', run: (cb, task) => cb.onRun(task) },
-    menu: [MENU_OPEN_NOTE, MENU_BACK_TO_INBOX, MENU_ARCHIVE],
+    menu: [MENU_OPEN_NOTE, MENU_BACK_TO_INBOX],
   },
   running: {
     primary: { labelKey: 'tasks.workOrderModal.actionStop', icon: 'square', variant: 'danger', run: (cb, task) => cb.onStop(task) },

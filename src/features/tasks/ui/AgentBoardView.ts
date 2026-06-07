@@ -523,6 +523,14 @@ export class AgentBoardView extends ItemView {
       return;
     }
 
+    // Only ready/needs_fix may run. Guard here so no entry point (menus, future
+    // callers) can start a run from an untriaged or terminal status.
+    if (!isRunnableTaskStatus(latest.frontmatter.status)) {
+      new Notice(t('tasks.board.notRunnable', { title: latest.frontmatter.title }));
+      await this.refresh();
+      return;
+    }
+
     this.plugin.events.emit('task:run-started', { taskId: latest.frontmatter.id, path: task.path });
     const result = await this.coordinator.run(latest);
     const finishedStatus = result.ok

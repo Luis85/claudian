@@ -207,7 +207,7 @@ describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ 
     expect(findClusterTrigger(host)?.getAttribute('aria-label')).toBe('More actions');
   });
 
-  it('inbox: primary Mark ready → onMarkReady; menu = Open note, Run now, Archive', () => {
+  it('inbox: primary Mark ready → onMarkReady; menu = Open note, Archive (no Run now)', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     const callbacks = makeCallbacks();
@@ -218,13 +218,14 @@ describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ 
     findClusterPrimary(host)?.click();
     expect(callbacks.onMarkReady).toHaveBeenCalledWith(task);
 
+    // No "Run now": inbox items aren't runnable until triaged to ready.
     const menu = openClusterMenu(host);
-    expect(menuItemTexts(menu)).toEqual(['Open note', 'Run now', 'Archive']);
-    findMenuItem(menu, 'Run now')?.click();
-    expect(callbacks.onRun).toHaveBeenCalledWith(task);
+    expect(menuItemTexts(menu)).toEqual(['Open note', 'Archive']);
+    findMenuItem(menu, 'Archive')?.click();
+    expect(callbacks.onArchive).toHaveBeenCalledWith(task);
   });
 
-  it('ready: primary Run → onRun; menu = Open note, Back to inbox, Archive', () => {
+  it('ready: primary Run → onRun; menu = Open note, Back to inbox (no Archive)', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     const callbacks = makeCallbacks();
@@ -235,8 +236,9 @@ describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ 
     findClusterPrimary(host)?.click();
     expect(callbacks.onRun).toHaveBeenCalledWith(task);
 
+    // No Archive: ready/needs_fix are actionable, not archivable (ARCHIVABLE_STATUSES).
     const menu = openClusterMenu(host);
-    expect(menuItemTexts(menu)).toEqual(['Open note', 'Back to inbox', 'Archive']);
+    expect(menuItemTexts(menu)).toEqual(['Open note', 'Back to inbox']);
     findMenuItem(menu, 'Back to inbox')?.click();
     expect(callbacks.onMoveToInbox).toHaveBeenCalledWith(task);
   });
@@ -458,7 +460,8 @@ describe('AgentBoardRenderer — ⋯ overflow menu (portal-positioned popover)',
     const menu = openClusterMenu(host);
     expect(menu.getAttribute('role')).toBe('menu');
     const items = menu.querySelectorAll('[role="menuitem"]');
-    expect(items.length).toBe(3);
+    // inbox menu: Open note, Archive (Run now removed — inbox isn't runnable).
+    expect(items.length).toBe(2);
     items.forEach((item) => {
       expect(item.querySelector('.claudian-agent-board-card-menu-item-icon')).not.toBeNull();
     });

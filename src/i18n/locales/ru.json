@@ -760,7 +760,6 @@
       },
       "cardAction": {
         "run": "Запустить",
-        "runNow": "Запустить сейчас",
         "retry": "Повторить",
         "backToInbox": "Назад во входящие",
         "moreActions": "Ещё действия"
@@ -778,7 +777,8 @@
           "reject": "Reject",
           "defaultRejectReason": "rejected"
         }
-      }
+      },
+      "notRunnable": "Mark \"{title}\" ready before running."
     },
     "template": {
       "nameRequired": "Template name is required.",

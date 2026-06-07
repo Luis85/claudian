@@ -760,7 +760,6 @@
       },
       "cardAction": {
         "run": "Ausführen",
-        "runNow": "Jetzt ausführen",
         "retry": "Wiederholen",
         "backToInbox": "Zurück zum Eingang",
         "moreActions": "Weitere Aktionen"
@@ -778,7 +777,8 @@
           "reject": "Reject",
           "defaultRejectReason": "rejected"
         }
-      }
+      },
+      "notRunnable": "Mark \"{title}\" ready before running."
     },
     "template": {
       "nameRequired": "Template name is required.",

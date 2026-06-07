@@ -760,7 +760,6 @@
       },
       "cardAction": {
         "run": "執行",
-        "runNow": "立即執行",
         "retry": "重試",
         "backToInbox": "退回收件匣",
         "moreActions": "更多動作"
@@ -778,7 +777,8 @@
           "reject": "Reject",
           "defaultRejectReason": "rejected"
         }
-      }
+      },
+      "notRunnable": "Mark \"{title}\" ready before running."
     },
     "template": {
       "nameRequired": "Template name is required.",
