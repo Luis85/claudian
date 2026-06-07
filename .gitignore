@@ -103,3 +103,4 @@ dev
 # Throwaway agent notes, handoff files, and probe scripts (per CLAUDE.md)
 /.context/
 /Agent Board/
+.fallow/

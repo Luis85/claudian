@@ -33,6 +33,9 @@ npm run test:watch
 npm run test:coverage
 npm run check:loc        # LOC ratchet guard (see docs/build-ci/quality-gates.md)
 npm run check:artifacts  # post-build artifact smoke (run after npm run build)
+npm run quality          # fallow: dead-code + dupes + health (non-blocking signal)
+npm run quality:audit    # fallow audit: changed-files review vs main
+npm run quality:health   # fallow health: score + hotspots + refactor targets
 ```
 
 CI gates and the lint severity policy (errors block; warnings are a tracked,

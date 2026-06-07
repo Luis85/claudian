@@ -107,6 +107,32 @@ existing `test` job — no new tooling:
   per-provider `name`/`blurb`/`cli` list should move to the registry — see
   `docs/tech-debt/2026-06-07-firstrun-banner-provider-list.md`).
 
+## Fallow (monitoring, not a gate)
+
+`fallow` is a deterministic codebase-intelligence layer for TypeScript / JavaScript
+([fallow-rs/fallow](https://github.com/fallow-rs/fallow)). It surfaces dead code,
+duplication, complexity hotspots, and architecture-boundary violations as
+**structured signal** for humans and agents. Findings are **non-blocking** today —
+same posture as the perf suite — so the bar moves without day-one CI churn.
+
+Config lives in `.fallowrc.json` at the repo root. Cache and intermediate output
+go to `.fallow/` (already in `.gitignore`).
+
+| Command | What it does |
+|---------|--------------|
+| `npm run quality` | dead-code + dupes + health in one pass |
+| `npm run quality:audit` | changed-files review vs `main` (use before opening a PR) |
+| `npm run quality:health` | maintainability score, hotspots, prioritized refactor targets |
+| `npm run quality:dead-code` | unused exports / files / deps only |
+| `npm run quality:dupes` | clone families across `src/**` (tests excluded by config) |
+
+Baseline on 2026-06-07: 72 dead-code issues, 8 clone groups, 800 functions above
+the complexity threshold, maintainability 90.2 (good). Use these as the trend
+zero — treat regressions as PR-review signal, not as a merge block. If a finding
+proves load-bearing, promote the specific check (not the whole tool) to an
+`error`-tier gate the same way function-health rules will graduate from the lint
+backlog.
+
 ## Next slices
 
 Tracked here so the direction is explicit.
