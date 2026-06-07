@@ -144,6 +144,16 @@ export type TranslationKey =
   | 'tasks.board.contextMenu.openConversation'
   | 'tasks.board.contextMenu.archive'
   | 'tasks.board.contextMenu.delete'
+  | 'tasks.board.card.reply.inputPlaceholder'
+  | 'tasks.board.card.reply.send'
+  | 'tasks.board.card.reply.stop'
+  | 'tasks.board.card.reply.waitingForInput'
+  | 'tasks.board.card.reply.requestsApproval'
+  | 'tasks.board.card.reply.risk'
+  | 'tasks.board.card.reply.rejectReasonPlaceholder'
+  | 'tasks.board.card.reply.approve'
+  | 'tasks.board.card.reply.reject'
+  | 'tasks.board.card.reply.defaultRejectReason'
 
   // Tasks - Templates / create / fromChat / run (Q-1 chunk 14)
   | 'tasks.template.nameRequired'
