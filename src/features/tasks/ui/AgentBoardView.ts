@@ -327,7 +327,9 @@ export class AgentBoardView extends ItemView {
         // right-click context menu uses, so both surfaces stay in lockstep.
         onArchive: (task) => void this.archiveTask(task),
         onOpenNote: (task) => void this.openTask(task),
-        onOpenConversation: buildWorkOrderConversationBindings(this.plugin).onOpenConversation,
+        // Spread gives both onOpenConversation and canOpenConversation so the ⋯
+        // menu gates "Open conversation" the same way the modal/right-click do.
+        ...buildWorkOrderConversationBindings(this.plugin),
         onReply: (task, content) => void this.onReply(task.frontmatter.id, content),
         onApprove: (task) => void this.onApprove(task.frontmatter.id),
         onReject: (task, reason) => void this.onReject(task.frontmatter.id, reason),

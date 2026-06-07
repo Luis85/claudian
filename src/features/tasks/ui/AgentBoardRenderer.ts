@@ -59,6 +59,8 @@ export interface AgentBoardRenderCallbacks {
   onOpenNote(task: TaskSpec): void;
   /** ⋯ menu: open the linked conversation in a new tab. */
   onOpenConversation(task: TaskSpec): void;
+  /** Whether the linked conversation still exists; gates "Open conversation". */
+  canOpenConversation?(task: TaskSpec): boolean;
 }
 
 export interface AgentBoardRenderState {
@@ -98,6 +100,8 @@ interface CardAction {
   variant?: 'cta' | 'danger' | 'ghost';
   danger?: boolean;
   run: (callbacks: AgentBoardRenderCallbacks, task: TaskSpec) => void;
+  /** When present, the action is only shown if this returns true. */
+  available?: (callbacks: AgentBoardRenderCallbacks, task: TaskSpec) => boolean;
 }
 
 interface CardActionModel {
@@ -116,6 +120,9 @@ const MENU_OPEN_CONVERSATION: CardAction = {
   labelKey: 'tasks.board.contextMenu.openConversation',
   icon: 'message-square',
   run: (cb, task) => cb.onOpenConversation(task),
+  // Same guard the detail modal + right-click menu use: a persisted
+  // conversation_id whose conversation still resolves.
+  available: (cb, task) => Boolean(task.frontmatter.conversation_id) && (cb.canOpenConversation?.(task) ?? true),
 };
 const MENU_ARCHIVE: CardAction = {
   labelKey: 'tasks.board.contextMenu.archive',
@@ -723,7 +730,9 @@ export class AgentBoardRenderer {
     glyph.setAttribute('data-icon', 'more-horizontal');
     setIcon(glyph, 'more-horizontal');
 
-    const items: PortalPopoverItem[] = menu.map((action) => ({
+    const cb = this.callbacks;
+    const visible = menu.filter((action) => !action.available || (cb != null && action.available(cb, task)));
+    const items: PortalPopoverItem[] = visible.map((action) => ({
       label: t(action.labelKey),
       icon: action.icon,
       danger: action.danger,

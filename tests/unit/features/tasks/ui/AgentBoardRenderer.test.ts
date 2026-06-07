@@ -259,6 +259,7 @@ describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ 
     const host = document.createElement('div');
     const callbacks = makeCallbacks();
     const task = makeTask('rn', 'running');
+    task.frontmatter.conversation_id = 'c1';
     renderer.render(host, makeState({ running: [task] }), callbacks);
 
     const primary = findClusterPrimary(host);
@@ -271,6 +272,23 @@ describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ 
     expect(menuItemTexts(menu)).toEqual(['Open note', 'Open conversation']);
   });
 
+  it('hides Open conversation when the card has no conversation_id', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const task = makeTask('rn2', 'running'); // no conversation_id
+    renderer.render(host, makeState({ running: [task] }), makeCallbacks());
+    expect(menuItemTexts(openClusterMenu(host))).toEqual(['Open note']);
+  });
+
+  it('hides Open conversation when canOpenConversation returns false (deleted conversation)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const task = makeTask('rn3', 'running');
+    task.frontmatter.conversation_id = 'gone';
+    renderer.render(host, makeState({ running: [task] }), { ...makeCallbacks(), canOpenConversation: () => false });
+    expect(menuItemTexts(openClusterMenu(host))).toEqual(['Open note']);
+  });
+
   it.each<TaskStatus>(['needs_input', 'needs_approval'])(
     '%s: no primary; menu = Open note, Open conversation, Stop (Stop is destructive)',
     (status) => {
@@ -278,6 +296,7 @@ describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ 
       const host = document.createElement('div');
       const callbacks = makeCallbacks();
       const task = makeTask('p', status);
+      task.frontmatter.conversation_id = 'c1';
       renderer.render(host, makeState({ live: [task] }), callbacks);
 
       // No primary action — the reply surface owns the live controls.
@@ -297,6 +316,7 @@ describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ 
     const host = document.createElement('div');
     const callbacks = makeCallbacks();
     const task = makeTask('rv', 'review');
+    task.frontmatter.conversation_id = 'c1';
     renderer.render(host, makeState({ review: [task] }), callbacks);
 
     expect(findClusterPrimary(host)?.textContent).toContain('Accept');
@@ -380,6 +400,7 @@ describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ 
     const host = document.createElement('div');
     const callbacks = makeCallbacks();
     const task = makeTask('rn', 'running');
+    task.frontmatter.conversation_id = 'c1';
     renderer.render(host, makeState({ running: [task] }), callbacks);
     const menu = openClusterMenu(host);
     findMenuItem(menu, 'Open note')?.click();
