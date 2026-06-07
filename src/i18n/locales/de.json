@@ -793,7 +793,18 @@
           "heartbeatVeryStale": "Very stale heartbeat ({age} ago)"
         }
       },
-      "notRunnable": "Mark \"{title}\" ready before running."
+      "notRunnable": "Mark \"{title}\" ready before running.",
+      "noFreeSlots": "Keine freien Arbeitsauftrags-Slots. Ein Arbeitsauftrag braucht einen freien Slot – schließe einen Arbeitsauftrags-Tab im Chat-Bereich oder erhöhe „Concurrent work-order runs“ in den Agent-Board-Einstellungen.",
+      "collapseLane": "Spur einklappen",
+      "expandLane": "Spur {title} ausklappen",
+      "readyWhen": "Bereit, wenn",
+      "doneWhen": "Fertig, wenn",
+      "boardNotices": "Board-Hinweise",
+      "skippedNotes": "Übersprungene Notizen",
+      "queueHalted": "Warteschlange angehalten: {reason}",
+      "failureOne": "{n} Fehler",
+      "failureMany": "{n} Fehler",
+      "queueSkipped": "⊘ Warteschlange übersprungen: {reason}"
     },
     "template": {
       "nameRequired": "Template name is required.",
@@ -864,6 +875,53 @@
       "actionMarkFailed": "Mark failed",
       "actionReopen": "Reopen",
       "actionArchive": "Archive"
+    },
+    "templateEditor": {
+      "titleNew": "Neue Arbeitsauftrags-Vorlage",
+      "titleEdit": "Arbeitsauftrags-Vorlage bearbeiten",
+      "useDefault": "Standard verwenden",
+      "nameName": "Name",
+      "nameDesc": "Wird in der Auswahl angezeigt. Wird bei neuen Vorlagen zum Dateinamen der Vorlage.",
+      "descriptionName": "Description",
+      "descriptionDesc": "Optionale einzeilige Zusammenfassung, die in der Auswahl unter dem Namen angezeigt wird.",
+      "iconName": "Icon",
+      "iconDesc": "Optionales Lucide-Symbol für die Auswahlzeile.",
+      "providerName": "Provider",
+      "providerDesc": "Optional. Greift bei fehlender Angabe auf den Standard-Provider des Agent Board zurück.",
+      "modelName": "Model",
+      "modelDesc": "Optional. Greift bei fehlender Angabe auf das Standardmodell des Agent Board zurück.",
+      "priorityName": "Priority",
+      "priorityDesc": "Optional. Greift bei fehlender Angabe auf „normal“ zurück.",
+      "bodyName": "Body",
+      "bodyDesc": "Vorlagentext. Platzhalter: {{title}}, {{date}}, {{source}}.",
+      "save": "Speichern",
+      "cancel": "Abbrechen"
+    },
+    "templatePicker": {
+      "title": "Arbeitsauftrags-Vorlage",
+      "newTemplate": "Neue Vorlage",
+      "emptyState": "Noch keine Vorlagen. Wähle „Leer“, um einen einfachen Arbeitsauftrag zu erstellen, oder füge eine Vorlage hinzu, um sie später wiederzuverwenden.",
+      "lead": "Wähle eine Vorlage zum Anwenden oder beginne leer.",
+      "blankTitle": "Leerer Arbeitsauftrag",
+      "blankDesc": "Leeres Gerüst mit Ziel, Abnahme, Kontext und Einschränkungen.",
+      "edit": "Bearbeiten",
+      "delete": "Löschen"
+    },
+    "laneEditor": {
+      "untitledLane": "Unbenannte Spur",
+      "laneDesc": "Titel und ob die Spur auf dem Board angezeigt wird.",
+      "moveUp": "Nach oben",
+      "moveDown": "Nach unten",
+      "removeLane": "Spur entfernen",
+      "collapsible": "Einklappbar",
+      "routedTo": "Geleitet zu „{title}“",
+      "routedElsewhere": "⚠ Anderweitig geleitet: {summary}",
+      "routedSummaryItem": "{status} → „{lane}“",
+      "definitionOfReady": "Definition of Ready",
+      "definitionOfDone": "Definition of Done",
+      "addLane": "Spur hinzufügen",
+      "resetToDefault": "Auf Standard zurücksetzen",
+      "newLaneTitle": "Neue Spur"
     }
   },
   "env": {

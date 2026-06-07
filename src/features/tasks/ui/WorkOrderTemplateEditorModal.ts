@@ -11,8 +11,10 @@ import type { TaskPriority } from '../model/taskTypes';
 import type { SaveTemplateInput } from '../templates/TemplateNoteStore';
 import type { WorkOrderTemplate } from '../templates/templateTypes';
 
-const PRIORITY_OPTIONS: Array<{ value: '' | TaskPriority; label: string }> = [
-  { value: '', label: 'Use default' },
+// `null` label means "Use default", resolved through i18n at render time so the
+// option text follows the active locale (a module-level `t()` would freeze it).
+const PRIORITY_OPTIONS: Array<{ value: '' | TaskPriority; label: string | null }> = [
+  { value: '', label: null },
   { value: '0 - urgent', label: '0 - urgent' },
   { value: '1 - high', label: '1 - high' },
   { value: '2 - normal', label: '2 - normal' },
@@ -38,7 +40,7 @@ export class WorkOrderTemplateEditorModal extends Modal {
 
   onOpen(): void {
     const isEdit = Boolean(this.existing);
-    this.setTitle(isEdit ? 'Edit work-order template' : 'New work-order template');
+    this.setTitle(isEdit ? t('tasks.templateEditor.titleEdit') : t('tasks.templateEditor.titleNew'));
     this.modalEl.addClass('claudian-sp-modal', 'claudian-wo-template-editor-modal');
 
     let name = this.existing?.name ?? '';
@@ -50,8 +52,8 @@ export class WorkOrderTemplateEditorModal extends Modal {
     let body = this.existing?.body ?? defaultBody();
 
     new Setting(this.contentEl)
-      .setName('Name')
-      .setDesc('Shown in the picker. Becomes the template filename for new templates.')
+      .setName(t('tasks.templateEditor.nameName'))
+      .setDesc(t('tasks.templateEditor.nameDesc'))
       .addText((text) => {
         text.setValue(name).onChange((v) => { name = v; });
         if (isEdit) {
@@ -60,16 +62,15 @@ export class WorkOrderTemplateEditorModal extends Modal {
       });
 
     new Setting(this.contentEl)
-      .setName('Description')
-      .setDesc('Optional one-line summary shown under the name in the picker.')
+      .setName(t('tasks.templateEditor.descriptionName'))
+      .setDesc(t('tasks.templateEditor.descriptionDesc'))
       .addText((text) => {
         text.setValue(description).onChange((v) => { description = v; });
       });
 
     const iconSetting = new Setting(this.contentEl)
-      .setName('Icon')
-      // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Lucide" is the icon library brand name.
-      .setDesc('Optional Lucide icon for the picker row.');
+      .setName(t('tasks.templateEditor.iconName'))
+      .setDesc(t('tasks.templateEditor.iconDesc'));
     iconSetting.settingEl.addClass('claudian-icon-picker-setting');
     this.iconPicker = new LucideIconPicker(iconSetting.controlEl, {
       value: icon,
@@ -80,9 +81,8 @@ export class WorkOrderTemplateEditorModal extends Modal {
     const providerOptions = providerOptionList(settings);
 
     new Setting(this.contentEl)
-      .setName('Provider')
-      // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Board" is the product feature name.
-      .setDesc('Optional. Falls back to the Agent Board default provider when unset.')
+      .setName(t('tasks.templateEditor.providerName'))
+      .setDesc(t('tasks.templateEditor.providerDesc'))
       .addDropdown((dd) => {
         for (const opt of providerOptions) {
           dd.addOption(opt.value, opt.label);
@@ -96,9 +96,8 @@ export class WorkOrderTemplateEditorModal extends Modal {
       });
 
     const modelSetting = new Setting(this.contentEl)
-      .setName('Model')
-      // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Board" is the product feature name.
-      .setDesc('Optional. Falls back to the Agent Board default model when unset.');
+      .setName(t('tasks.templateEditor.modelName'))
+      .setDesc(t('tasks.templateEditor.modelDesc'));
     this.modelDropdownContainer = modelSetting.controlEl;
 
     const renderModelDropdown = (currentProvider: string, currentModel: string): void => {
@@ -120,19 +119,19 @@ export class WorkOrderTemplateEditorModal extends Modal {
     renderModelDropdown(provider, model);
 
     new Setting(this.contentEl)
-      .setName('Priority')
-      .setDesc('Optional. Falls back to normal when unset.')
+      .setName(t('tasks.templateEditor.priorityName'))
+      .setDesc(t('tasks.templateEditor.priorityDesc'))
       .addDropdown((dd) => {
         for (const opt of PRIORITY_OPTIONS) {
-          dd.addOption(opt.value, opt.label);
+          dd.addOption(opt.value, opt.label ?? t('tasks.templateEditor.useDefault'));
         }
         dd.setValue(priority);
         dd.onChange((v) => { priority = v as '' | TaskPriority; });
       });
 
     const bodySetting = new Setting(this.contentEl)
-      .setName('Body')
-      .setDesc('Template body. Placeholders: {{title}}, {{date}}, {{source}}.')
+      .setName(t('tasks.templateEditor.bodyName'))
+      .setDesc(t('tasks.templateEditor.bodyDesc'))
       .addTextArea((area) => {
         area.setValue(body).onChange((v) => { body = v; });
         area.inputEl.rows = 12;
@@ -142,14 +141,14 @@ export class WorkOrderTemplateEditorModal extends Modal {
 
     new Setting(this.contentEl)
       .addButton((btn) => {
-        btn.setButtonText('Save')
+        btn.setButtonText(t('tasks.templateEditor.save'))
           .setCta()
           .onClick(() => {
             void this.handleSave({ name, description, icon, provider, model, priority, body });
           });
       })
       .addButton((btn) => {
-        btn.setButtonText('Cancel').onClick(() => this.close());
+        btn.setButtonText(t('tasks.templateEditor.cancel')).onClick(() => this.close());
       });
   }
 
@@ -201,7 +200,7 @@ export class WorkOrderTemplateEditorModal extends Modal {
 }
 
 function providerOptionList(settings: Record<string, unknown>): Array<{ value: string; label: string }> {
-  const options: Array<{ value: string; label: string }> = [{ value: '', label: 'Use default' }];
+  const options: Array<{ value: string; label: string }> = [{ value: '', label: t('tasks.templateEditor.useDefault') }];
   for (const id of ProviderRegistry.getRegisteredProviderIds()) {
     if (ProviderRegistry.isEnabled(id as ProviderId, settings)) {
       options.push({ value: id, label: id });
@@ -214,7 +213,7 @@ function modelOptionList(
   providerId: string,
   settings: Record<string, unknown>,
 ): Array<{ value: string; label: string }> {
-  const options: Array<{ value: string; label: string }> = [{ value: '', label: 'Use default' }];
+  const options: Array<{ value: string; label: string }> = [{ value: '', label: t('tasks.templateEditor.useDefault') }];
   if (!providerId) {
     return options;
   }

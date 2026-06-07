@@ -732,7 +732,18 @@
           "heartbeatVeryStale": "Very stale heartbeat ({age} ago)"
         }
       },
-      "notRunnable": "Mark \"{title}\" ready before running."
+      "notRunnable": "Mark \"{title}\" ready before running.",
+      "noFreeSlots": "No free work-order slots. A work-order run needs a free slot — close a work-order tab in the chat panel, or raise \"Concurrent work-order runs\" in Agent Board settings.",
+      "collapseLane": "Collapse lane",
+      "expandLane": "Expand lane {title}",
+      "readyWhen": "Ready when",
+      "doneWhen": "Done when",
+      "boardNotices": "Board notices",
+      "skippedNotes": "Skipped notes",
+      "queueHalted": "Queue halted: {reason}",
+      "failureOne": "{n} failure",
+      "failureMany": "{n} failures",
+      "queueSkipped": "⊘ Queue skipped: {reason}"
     },
     "template": {
       "nameRequired": "Template name is required.",
@@ -803,6 +814,53 @@
       "actionMarkFailed": "Mark failed",
       "actionReopen": "Reopen",
       "actionArchive": "Archive"
+    },
+    "templateEditor": {
+      "titleNew": "New work-order template",
+      "titleEdit": "Edit work-order template",
+      "useDefault": "Use default",
+      "nameName": "Name",
+      "nameDesc": "Shown in the picker. Becomes the template filename for new templates.",
+      "descriptionName": "Description",
+      "descriptionDesc": "Optional one-line summary shown under the name in the picker.",
+      "iconName": "Icon",
+      "iconDesc": "Optional Lucide icon for the picker row.",
+      "providerName": "Provider",
+      "providerDesc": "Optional. Falls back to the Agent Board default provider when unset.",
+      "modelName": "Model",
+      "modelDesc": "Optional. Falls back to the Agent Board default model when unset.",
+      "priorityName": "Priority",
+      "priorityDesc": "Optional. Falls back to normal when unset.",
+      "bodyName": "Body",
+      "bodyDesc": "Template body. Placeholders: {{title}}, {{date}}, {{source}}.",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "templatePicker": {
+      "title": "Work-order template",
+      "newTemplate": "New template",
+      "emptyState": "No templates yet. Pick blank to create a plain work order, or add a template to reuse later.",
+      "lead": "Pick a template to apply, or start blank.",
+      "blankTitle": "Blank work order",
+      "blankDesc": "Empty skeleton with Objective, Acceptance, Context, Constraints.",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "laneEditor": {
+      "untitledLane": "Untitled lane",
+      "laneDesc": "Title and whether the lane shows on the board.",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "removeLane": "Remove lane",
+      "collapsible": "Collapsible",
+      "routedTo": "Routed to \"{title}\"",
+      "routedElsewhere": "⚠ Routed elsewhere: {summary}",
+      "routedSummaryItem": "{status} → \"{lane}\"",
+      "definitionOfReady": "Definition of ready",
+      "definitionOfDone": "Definition of done",
+      "addLane": "Add lane",
+      "resetToDefault": "Reset to default",
+      "newLaneTitle": "New lane"
     }
   },
   "provider": {

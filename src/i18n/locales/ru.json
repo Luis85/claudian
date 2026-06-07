@@ -793,7 +793,18 @@
           "heartbeatVeryStale": "Very stale heartbeat ({age} ago)"
         }
       },
-      "notRunnable": "Mark \"{title}\" ready before running."
+      "notRunnable": "Mark \"{title}\" ready before running.",
+      "noFreeSlots": "Нет свободных слотов для рабочих заданий. Для запуска нужен свободный слот — закройте вкладку рабочего задания на панели чата или увеличьте «Concurrent work-order runs» в настройках Agent Board.",
+      "collapseLane": "Свернуть дорожку",
+      "expandLane": "Развернуть дорожку {title}",
+      "readyWhen": "Готово, когда",
+      "doneWhen": "Завершено, когда",
+      "boardNotices": "Уведомления доски",
+      "skippedNotes": "Пропущенные заметки",
+      "queueHalted": "Очередь остановлена: {reason}",
+      "failureOne": "{n} сбой",
+      "failureMany": "{n} сбоев",
+      "queueSkipped": "⊘ Очередь пропущена: {reason}"
     },
     "template": {
       "nameRequired": "Template name is required.",
@@ -864,6 +875,53 @@
       "actionMarkFailed": "Mark failed",
       "actionReopen": "Reopen",
       "actionArchive": "Archive"
+    },
+    "templateEditor": {
+      "titleNew": "Новый шаблон рабочего задания",
+      "titleEdit": "Редактировать шаблон рабочего задания",
+      "useDefault": "По умолчанию",
+      "nameName": "Name",
+      "nameDesc": "Отображается в списке выбора. Для новых шаблонов становится именем файла шаблона.",
+      "descriptionName": "Description",
+      "descriptionDesc": "Необязательное однострочное описание, отображаемое под именем в списке выбора.",
+      "iconName": "Icon",
+      "iconDesc": "Необязательный значок Lucide для строки в списке выбора.",
+      "providerName": "Provider",
+      "providerDesc": "Необязательно. Если не задано, используется провайдер Agent Board по умолчанию.",
+      "modelName": "Model",
+      "modelDesc": "Необязательно. Если не задано, используется модель Agent Board по умолчанию.",
+      "priorityName": "Priority",
+      "priorityDesc": "Необязательно. Если не задано, используется normal.",
+      "bodyName": "Body",
+      "bodyDesc": "Текст шаблона. Подстановки: {{title}}, {{date}}, {{source}}.",
+      "save": "Сохранить",
+      "cancel": "Отмена"
+    },
+    "templatePicker": {
+      "title": "Шаблон рабочего задания",
+      "newTemplate": "Новый шаблон",
+      "emptyState": "Шаблонов пока нет. Выберите «пустой», чтобы создать обычное рабочее задание, или добавьте шаблон для повторного использования.",
+      "lead": "Выберите шаблон для применения или начните с пустого.",
+      "blankTitle": "Пустое рабочее задание",
+      "blankDesc": "Пустой каркас с разделами «Цель», «Приёмка», «Контекст», «Ограничения».",
+      "edit": "Редактировать",
+      "delete": "Удалить"
+    },
+    "laneEditor": {
+      "untitledLane": "Безымянная дорожка",
+      "laneDesc": "Название и отображается ли дорожка на доске.",
+      "moveUp": "Вверх",
+      "moveDown": "Вниз",
+      "removeLane": "Удалить дорожку",
+      "collapsible": "Сворачиваемая",
+      "routedTo": "Направлено в «{title}»",
+      "routedElsewhere": "⚠ Направлено в другое место: {summary}",
+      "routedSummaryItem": "{status} → «{lane}»",
+      "definitionOfReady": "Определение готовности",
+      "definitionOfDone": "Определение завершённости",
+      "addLane": "Добавить дорожку",
+      "resetToDefault": "Сбросить по умолчанию",
+      "newLaneTitle": "Новая дорожка"
     }
   },
   "env": {

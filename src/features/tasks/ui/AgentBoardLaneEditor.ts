@@ -92,8 +92,8 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
     // Use the lane's own title as the row header so users can identify the
     // lane after reorder. Positional names like `Lane ${index + 1}` lied after
     // any move-up / move-down click.
-    const headName = lane.title.trim().length > 0 ? lane.title : 'Untitled lane';
-    const head = new Setting(block).setName(headName).setDesc('Title and whether the lane shows on the board.');
+    const headName = lane.title.trim().length > 0 ? lane.title : t('tasks.laneEditor.untitledLane');
+    const head = new Setting(block).setName(headName).setDesc(t('tasks.laneEditor.laneDesc'));
     head.addText((text) => {
       text
         .setValue(lane.title)
@@ -125,7 +125,7 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
     head.addExtraButton((btn) =>
       btn
         .setIcon('arrow-up')
-        .setTooltip('Move up')
+        .setTooltip(t('tasks.laneEditor.moveUp'))
         .onClick(async () => {
           if (index === 0) return;
           const snapshot = cloneConfig(config);
@@ -137,7 +137,7 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
     head.addExtraButton((btn) =>
       btn
         .setIcon('arrow-down')
-        .setTooltip('Move down')
+        .setTooltip(t('tasks.laneEditor.moveDown'))
         .onClick(async () => {
           if (index >= config.lanes.length - 1) return;
           const snapshot = cloneConfig(config);
@@ -149,7 +149,7 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
     head.addExtraButton((btn) =>
       btn
         .setIcon('trash-2')
-        .setTooltip('Remove lane')
+        .setTooltip(t('tasks.laneEditor.removeLane'))
         .onClick(async () => {
           const snapshot = cloneConfig(config);
           config.lanes.splice(index, 1);
@@ -180,7 +180,7 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
         rerender();
       }
     });
-    collapsibleLabel.createSpan({ text: 'Collapsible' });
+    collapsibleLabel.createSpan({ text: t('tasks.laneEditor.collapsible') });
 
     const statusRow = block.createDiv({ cls: 'claudian-lane-editor-statuses' });
     const conflicts: Array<{ status: TaskStatus; canonicalTitle: string }> = [];
@@ -220,7 +220,7 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
         const owners = occurrences.get(status) ?? [];
         if (owners.length > 1 && owners[0].laneIndex !== index) {
           label.classList.add('claudian-lane-editor-status--duplicate');
-          label.setAttribute('title', `Routed to "${owners[0].laneTitle}"`);
+          label.setAttribute('title', t('tasks.laneEditor.routedTo', { title: owners[0].laneTitle }));
           conflicts.push({ status, canonicalTitle: owners[0].laneTitle });
         }
       }
@@ -234,17 +234,17 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
       const hint = block.createDiv({ cls: 'claudian-lane-editor-status-hint' });
       hint.setAttribute('role', 'note');
       const summary = conflicts
-        .map((entry) => `${entry.status} → "${entry.canonicalTitle}"`)
+        .map((entry) => t('tasks.laneEditor.routedSummaryItem', { status: entry.status, lane: entry.canonicalTitle }))
         .join(', ');
-      hint.textContent = `⚠ Routed elsewhere: ${summary}`;
+      hint.setText(t('tasks.laneEditor.routedElsewhere', { summary }));
     }
 
-    renderCriteria(block, 'Definition of ready', lane.definitionOfReady, async (lines) => {
+    renderCriteria(block, t('tasks.laneEditor.definitionOfReady'), lane.definitionOfReady, async (lines) => {
       const snapshot = cloneConfig(config);
       lane.definitionOfReady = lines;
       await persist(snapshot);
     });
-    renderCriteria(block, 'Definition of done', lane.definitionOfDone, async (lines) => {
+    renderCriteria(block, t('tasks.laneEditor.definitionOfDone'), lane.definitionOfDone, async (lines) => {
       const snapshot = cloneConfig(config);
       lane.definitionOfDone = lines;
       await persist(snapshot);
@@ -258,12 +258,12 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
 
     new Setting(wrap)
       .addButton((btn) =>
-        btn.setButtonText('Add lane').onClick(async () => {
+        btn.setButtonText(t('tasks.laneEditor.addLane')).onClick(async () => {
           const snapshot = cloneConfig(config);
           const newId = `lane-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
           config.lanes.push({
             id: newId,
-            title: 'New lane',
+            title: t('tasks.laneEditor.newLaneTitle'),
             statuses: [],
             visible: true,
             definitionOfReady: [],
@@ -280,7 +280,7 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
       )
       .addButton((btn) =>
         btn
-          .setButtonText('Reset to default')
+          .setButtonText(t('tasks.laneEditor.resetToDefault'))
           .setWarning()
           .onClick(async () => {
             const snapshot = cloneConfig(config);
