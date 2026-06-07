@@ -743,6 +743,7 @@
     "board": {
       "stopRequested": "Requested stop for \"{title}\".",
       "archived": "Archived \"{title}\".",
+      "deleted": "Deleted \"{title}\".",
       "fileNotFound": "Work order file was not found.",
       "updateFailed": "Cannot update work order: {error}",
       "transitionInvalid": "Cannot move \"{title}\" from {from} to {to}.",
@@ -753,7 +754,8 @@
       "contextMenu": {
         "openNote": "노트 열기",
         "openConversation": "대화 열기",
-        "archive": "보관"
+        "archive": "보관",
+        "delete": "삭제"
       }
     },
     "template": {

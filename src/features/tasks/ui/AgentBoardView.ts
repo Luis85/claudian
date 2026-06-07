@@ -9,7 +9,7 @@ import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { promptReason } from '../../../shared/modals/PromptModal';
-import { archiveWorkOrder } from '../commands/taskCommands';
+import { archiveWorkOrder, deleteWorkOrder } from '../commands/taskCommands';
 import {
   getLaneForStatus,
   loadBoardConfig,
@@ -321,6 +321,7 @@ export class AgentBoardView extends ItemView {
           onOpenNote: (target) => void this.openTask(target),
           ...buildWorkOrderConversationBindings(this.plugin),
           onArchive: (target) => void this.archiveTask(target),
+          onDelete: (target) => void this.deleteTask(target),
         }),
         onReply: (task, content) => void this.onReply(task.frontmatter.id, content),
         onApprove: (task) => void this.onApprove(task.frontmatter.id),
@@ -427,6 +428,24 @@ export class AgentBoardView extends ItemView {
     const destination = await archiveWorkOrder(this.plugin, task);
     if (destination) {
       new Notice(t('tasks.board.archived', { title: task.frontmatter.title }));
+    }
+    await this.refresh();
+  }
+
+  // Deletes the WO note via Obsidian's trash flow (system trash or vault
+  // `.trash/`, depending on the user's setting). Only offered from `inbox`
+  // because that's where triage captures land — past triage the safer escape
+  // hatch is Archive.
+  private async deleteTask(task: TaskSpec): Promise<void> {
+    const ok = await confirm(
+      this.plugin.app,
+      `Delete work order "${task.frontmatter.title}"? The note will be moved to the trash.`,
+      'Delete',
+    );
+    if (!ok) return;
+    const trashed = await deleteWorkOrder(this.plugin, task);
+    if (trashed) {
+      new Notice(t('tasks.board.deleted', { title: task.frontmatter.title }));
     }
     await this.refresh();
   }

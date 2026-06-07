@@ -235,6 +235,25 @@ export async function archiveWorkOrder(
   return destination;
 }
 
+/**
+ * Delete a work-order note via Obsidian's trash flow so the user can restore it
+ * from the system trash or vault `.trash/` (whichever the vault is configured
+ * for). Routed through `fileManager.trashFile` to honor that setting, mirroring
+ * how `TemplateNoteStore.delete` deletes vault-authored templates.
+ *
+ * Returns `true` when the file was trashed, `false` when the path no longer
+ * resolves to a TFile (already moved/deleted/shadowed by a TFolder).
+ */
+export async function deleteWorkOrder(
+  plugin: ClaudianPlugin,
+  task: TaskSpec,
+): Promise<boolean> {
+  const file = plugin.app.vault.getAbstractFileByPath(task.path);
+  if (!(file instanceof TFile)) return false;
+  await plugin.app.fileManager.trashFile(file);
+  return true;
+}
+
 export interface CreateWorkOrderOptions {
   status?: TaskStatus;
   reveal?: 'note' | 'none';

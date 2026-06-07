@@ -131,6 +131,7 @@ export type TranslationKey =
   // Agent Board (Q-1 chunk 10, features/tasks/ui/AgentBoardView.ts)
   | 'tasks.board.stopRequested'
   | 'tasks.board.archived'
+  | 'tasks.board.deleted'
   | 'tasks.board.fileNotFound'
   | 'tasks.board.updateFailed'
   | 'tasks.board.transitionInvalid'
@@ -141,6 +142,7 @@ export type TranslationKey =
   | 'tasks.board.contextMenu.openNote'
   | 'tasks.board.contextMenu.openConversation'
   | 'tasks.board.contextMenu.archive'
+  | 'tasks.board.contextMenu.delete'
 
   // Tasks - Templates / create / fromChat / run (Q-1 chunk 14)
   | 'tasks.template.nameRequired'

@@ -103,6 +103,7 @@ function makeDeps(overrides: Partial<DepsArgs> = {}): DepsArgs {
     onOpenConversation: jest.fn(),
     canOpenConversation: jest.fn(() => false),
     onArchive: jest.fn(),
+    onDelete: jest.fn(),
     ...overrides,
   };
 }
@@ -129,7 +130,7 @@ describe('showWorkOrderContextMenu', () => {
   });
 
 
-  it('case 1: ready + conv + 2 favs + WO resolvable → full menu', () => {
+  it('case 1: ready + conv + 2 favs + WO resolvable → top section then favs bracketed by seps', () => {
     const task = makeTask('ready', 'conv-1');
     const plugin = makePlugin({
       favorites: [
@@ -148,10 +149,11 @@ describe('showWorkOrderContextMenu', () => {
     expect(titles(menu)).toEqual([
       'tasks.board.contextMenu.openNote',
       'tasks.board.contextMenu.openConversation',
-      '<sep>',
       'quickActions.contextMenu.title',
+      '<sep>',
       'Fav A',
       'Fav B',
+      '<sep>',
     ]);
     expect(menu.showAtMouseEvent).toHaveBeenCalledWith(mouseEvent);
     // Each item carries the expected icon — including the fav.icon override path
@@ -162,12 +164,12 @@ describe('showWorkOrderContextMenu', () => {
     };
     expect(icons(0)).toBe('file-text');
     expect(icons(1)).toBe('messages-square');
-    expect(icons(3)).toBe('zap');
+    expect(icons(2)).toBe('zap');
     expect(icons(4)).toBe('rocket');
     expect(icons(5)).toBe('star');
   });
 
-  it('case 2: ready, no conv, no favs, WO resolvable → Open note, sep, picker', () => {
+  it('case 2: ready, no conv, no favs, WO resolvable → Open note + picker, no separators', () => {
     const task = makeTask('ready');
     const plugin = makePlugin({ favorites: [] });
     const deps = makeDeps({ plugin});
@@ -176,12 +178,11 @@ describe('showWorkOrderContextMenu', () => {
 
     expect(titles(MenuMock.instances[0])).toEqual([
       'tasks.board.contextMenu.openNote',
-      '<sep>',
       'quickActions.contextMenu.title',
     ]);
   });
 
-  it('case 3: running + conv + 3 favs → Open note + Open conversation only', () => {
+  it('case 3: running + conv + 3 favs → Open note + Open conversation only (no picker, no favs)', () => {
     const task = makeTask('running', 'conv-1');
     const plugin = makePlugin({
       favorites: [
@@ -217,7 +218,7 @@ describe('showWorkOrderContextMenu', () => {
     expect(MenuMock.instances[0].showAtMouseEvent).toHaveBeenCalledTimes(1);
   });
 
-  it('case 5: needs_input, no conv, 2 favs, WO resolvable → favs + picker shown', () => {
+  it('case 5: needs_input, no conv, 2 favs, WO resolvable → picker in top, favs bracketed', () => {
     const task = makeTask('needs_input');
     const plugin = makePlugin({
       favorites: [
@@ -231,14 +232,15 @@ describe('showWorkOrderContextMenu', () => {
 
     expect(titles(MenuMock.instances[0])).toEqual([
       'tasks.board.contextMenu.openNote',
-      '<sep>',
       'quickActions.contextMenu.title',
+      '<sep>',
       'Fav A',
       'Fav B',
+      '<sep>',
     ]);
   });
 
-  it('case 6: needs_approval, no conv, 1 fav, WO resolvable → favs + picker shown', () => {
+  it('case 6: needs_approval, no conv, 1 fav, WO resolvable → picker in top, fav bracketed', () => {
     const task = makeTask('needs_approval');
     const plugin = makePlugin({ favorites: [{ id: 'a', name: 'Fav A', prompt: 'p' }] });
     const deps = makeDeps({ plugin});
@@ -247,9 +249,10 @@ describe('showWorkOrderContextMenu', () => {
 
     expect(titles(MenuMock.instances[0])).toEqual([
       'tasks.board.contextMenu.openNote',
-      '<sep>',
       'quickActions.contextMenu.title',
+      '<sep>',
       'Fav A',
+      '<sep>',
     ]);
   });
 
@@ -270,7 +273,7 @@ describe('showWorkOrderContextMenu', () => {
     expect(MenuMock.instances[0].showAtMouseEvent).toHaveBeenCalledTimes(1);
   });
 
-  it('case 8: quickActionFavoritesCache undefined, ready, WO resolvable → Open note, sep, picker', () => {
+  it('case 8: quickActionFavoritesCache undefined, ready, WO resolvable → Open note + picker', () => {
     const task = makeTask('ready');
     const plugin = makePlugin({ hasFavoritesCache: false });
     const deps = makeDeps({ plugin});
@@ -279,7 +282,6 @@ describe('showWorkOrderContextMenu', () => {
 
     expect(titles(MenuMock.instances[0])).toEqual([
       'tasks.board.contextMenu.openNote',
-      '<sep>',
       'quickActions.contextMenu.title',
     ]);
   });
@@ -308,7 +310,7 @@ describe('showWorkOrderContextMenu', () => {
     showWorkOrderContextMenu(task, mouseEvent, deps);
 
     const menu = MenuMock.instances[0];
-    // index 0 = Open note, index 1 = separator, index 2 = picker, index 3 = Fav A
+    // index 0 = Open note, 1 = picker, 2 = <sep>, 3 = Fav A
     const favItem = menu.items[3] as { clickHandler?: () => void };
     favItem.clickHandler?.();
 
@@ -324,8 +326,9 @@ describe('showWorkOrderContextMenu', () => {
     showWorkOrderContextMenu(task, mouseEvent, deps);
 
     const menu = MenuMock.instances[0];
-    // index 0 = Open note, index 1 = separator, index 2 = picker
-    const pickerItem = menu.items[2] as { clickHandler?: () => void };
+    // index 0 = Open note, 1 = picker (picker now sits in the top section with
+    // no separator before it)
+    const pickerItem = menu.items[1] as { clickHandler?: () => void };
     pickerItem.clickHandler?.();
 
     expect(openContextMenuQuickAction).toHaveBeenCalledWith(plugin, woFile);
@@ -398,7 +401,7 @@ describe('showWorkOrderContextMenu', () => {
     expect(MenuMock.instances[0].showAtMouseEvent).toHaveBeenCalledTimes(1);
   });
 
-  it('case 16: status done → Archive item appended with separator', () => {
+  it('case 16: status done, no favs → Archive item appended directly under picker (no separators)', () => {
     const task = makeTask('done');
     const plugin = makePlugin({ favorites: [] });
     const deps = makeDeps({ plugin });
@@ -407,9 +410,7 @@ describe('showWorkOrderContextMenu', () => {
 
     expect(titles(MenuMock.instances[0])).toEqual([
       'tasks.board.contextMenu.openNote',
-      '<sep>',
       'quickActions.contextMenu.title',
-      '<sep>',
       'tasks.board.contextMenu.archive',
     ]);
   });
@@ -454,17 +455,22 @@ describe('showWorkOrderContextMenu', () => {
     expect(titles(MenuMock.instances[0])).not.toContain('tasks.board.contextMenu.archive');
   });
 
-  it('case 21: status inbox → Archive item absent', () => {
+  it('case 21: status inbox, no favs → Archive + Delete appended at the bottom', () => {
     const task = makeTask('inbox');
     const plugin = makePlugin({ favorites: [] });
     const deps = makeDeps({ plugin });
 
     showWorkOrderContextMenu(task, mouseEvent, deps);
 
-    expect(titles(MenuMock.instances[0])).not.toContain('tasks.board.contextMenu.archive');
+    expect(titles(MenuMock.instances[0])).toEqual([
+      'tasks.board.contextMenu.openNote',
+      'quickActions.contextMenu.title',
+      'tasks.board.contextMenu.archive',
+      'tasks.board.contextMenu.delete',
+    ]);
   });
 
-  it('case 22: clicking Archive invokes onArchive(task)', () => {
+  it('case 22: clicking Archive (done, no favs) invokes onArchive(task)', () => {
     const task = makeTask('done');
     const plugin = makePlugin({ favorites: [] });
     const deps = makeDeps({ plugin });
@@ -472,11 +478,62 @@ describe('showWorkOrderContextMenu', () => {
     showWorkOrderContextMenu(task, mouseEvent, deps);
 
     const menu = MenuMock.instances[0];
-    // index 0 = Open note, 1 = <sep>, 2 = picker, 3 = <sep>, 4 = Archive
-    const archiveItem = menu.items[4] as { clickHandler?: () => void };
+    // index 0 = Open note, 1 = picker, 2 = Archive
+    const archiveItem = menu.items[2] as { clickHandler?: () => void };
     archiveItem.clickHandler?.();
 
     expect(deps.onArchive).toHaveBeenCalledTimes(1);
     expect(deps.onArchive).toHaveBeenCalledWith(task);
+  });
+
+  it('case 23: status inbox + 2 favs → favs section sits between top and bottom sections', () => {
+    const task = makeTask('inbox');
+    const plugin = makePlugin({
+      favorites: [
+        { id: 'a', name: 'Fav A', prompt: 'p' },
+        { id: 'b', name: 'Fav B', prompt: 'p' },
+      ],
+    });
+    const deps = makeDeps({ plugin });
+
+    showWorkOrderContextMenu(task, mouseEvent, deps);
+
+    expect(titles(MenuMock.instances[0])).toEqual([
+      'tasks.board.contextMenu.openNote',
+      'quickActions.contextMenu.title',
+      '<sep>',
+      'Fav A',
+      'Fav B',
+      '<sep>',
+      'tasks.board.contextMenu.archive',
+      'tasks.board.contextMenu.delete',
+    ]);
+  });
+
+  it('case 24: clicking Delete (inbox, no favs) invokes onDelete(task)', () => {
+    const task = makeTask('inbox');
+    const plugin = makePlugin({ favorites: [] });
+    const deps = makeDeps({ plugin });
+
+    showWorkOrderContextMenu(task, mouseEvent, deps);
+
+    const menu = MenuMock.instances[0];
+    // index 0 = Open note, 1 = picker, 2 = Archive, 3 = Delete
+    const deleteItem = menu.items[3] as { clickHandler?: () => void };
+    deleteItem.clickHandler?.();
+
+    expect(deps.onDelete).toHaveBeenCalledTimes(1);
+    expect(deps.onDelete).toHaveBeenCalledWith(task);
+    expect(deps.onArchive).not.toHaveBeenCalled();
+  });
+
+  it('case 25: status done → Delete item absent (terminal status archives only)', () => {
+    const task = makeTask('done');
+    const plugin = makePlugin({ favorites: [] });
+    const deps = makeDeps({ plugin });
+
+    showWorkOrderContextMenu(task, mouseEvent, deps);
+
+    expect(titles(MenuMock.instances[0])).not.toContain('tasks.board.contextMenu.delete');
   });
 });
