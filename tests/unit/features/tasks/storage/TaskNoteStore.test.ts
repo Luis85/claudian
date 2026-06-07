@@ -249,6 +249,35 @@ ${HANDOFF_END}`);
     expect(parsed.task.frontmatter.provider).toBeUndefined();
   });
 
+  it('persists the agent persona id through writeFields', () => {
+    const written = store.writeFields(VALID_NOTE, { agent: 'standard' }, '2026-06-01T00:00:00.000Z');
+    const parsed = store.parse('tasks/task-1.md', written);
+    expect(parsed.task.frontmatter.agent).toBe('standard');
+  });
+
+  it('round-trips an unknown agent id through parse → write without dropping it', () => {
+    // A persona id this build does not know (a future Agents feature may own it).
+    // It must survive both the parse and a later unrelated field write so the
+    // assignment is never silently lost.
+    const noteWithUnknownAgent = VALID_NOTE.replace(
+      'attempts: 0',
+      'attempts: 0\nagent: refactorer-from-the-future',
+    );
+
+    const parsed = store.parse('tasks/task-1.md', noteWithUnknownAgent);
+    expect(parsed.task.frontmatter.agent).toBe('refactorer-from-the-future');
+
+    // An unrelated write (priority only) must preserve the unknown agent id.
+    const written = store.writeFields(
+      noteWithUnknownAgent,
+      { priority: '1 - high' },
+      '2026-06-01T00:00:00.000Z',
+    );
+    const reparsed = store.parse('tasks/task-1.md', written);
+    expect(reparsed.task.frontmatter.agent).toBe('refactorer-from-the-future');
+    expect(reparsed.task.frontmatter.priority).toBe('1 - high');
+  });
+
   it('syncs only the title H1 in the body, leaving sub-headings untouched', () => {
     const written = store.writeFields(VALID_NOTE, { title: 'Renamed' }, '2026-06-01T00:00:00.000Z');
     expect(written).toContain('# Renamed');

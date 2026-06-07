@@ -800,6 +800,21 @@
   color: var(--text-faint);
 }
 
+/* ---------- Agent assignee value (persona avatar + name) ----------
+   The avatar itself (.claudian-agent-avatar) is styled in agent-board.css and
+   shared with the card; here we only lay out the static (non-editable) avatar +
+   name pair and reserve the inline gap when the avatar leads the editable chip. */
+.claudian-work-order-modal-agent {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.claudian-work-order-modal-agent-name {
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+}
+
 .claudian-work-order-modal-prop-num {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;

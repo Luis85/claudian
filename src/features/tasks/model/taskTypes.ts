@@ -24,6 +24,13 @@ export interface TaskFrontmatter {
   priority: TaskPriority;
   created: string;
   updated: string;
+  /**
+   * Assigned Agents persona id, resolved through `resolvePersona` for display.
+   * An unknown id is preserved as-is (a future Agents feature may own it), so an
+   * absent / unknown value still renders the Standard persona without dropping
+   * the stored id.
+   */
+  agent?: string;
   provider?: ProviderId;
   model?: string;
   run_id?: string | null;

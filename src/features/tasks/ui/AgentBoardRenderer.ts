@@ -2,6 +2,8 @@ import { setIcon } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
 import type { TranslationKey } from '../../../i18n/types';
+import { renderAgentAvatar } from '../../agents/agentAvatar';
+import { resolvePersona } from '../../agents/personaRegistry';
 import { DEFAULT_LANE_TITLES, type ResolvedBoardLayout, type ResolvedLane } from '../config/boardConfigTypes';
 import { parseAcceptanceProgress } from '../model/acceptanceProgress';
 import { isRunnableTaskStatus } from '../model/taskStateMachine';
@@ -682,12 +684,16 @@ export class AgentBoardRenderer {
     prio.createSpan({ cls: 'claudian-agent-board-card-priority-label', text: priority });
   }
 
+  /** Avatar diameter (px) for the card footer assignee slot. */
+  private static readonly ASSIGNEE_AVATAR_SIZE = 20;
+
   /**
    * Footer row: acceptance progress (track + done/total, green at 100%) on the
-   * left, a reserved 20px assignee slot on the far right. When progress is
-   * absent, a spacer keeps the slot right-aligned. The assignee slot stays an
-   * empty placeholder in this slice (the persona slice fills it). Returns the
-   * footer + assignee elements so both can be cached as patch seams.
+   * left, the 20px assignee avatar on the far right. When progress is absent, a
+   * spacer keeps the slot right-aligned. The assignee resolves from the work
+   * order's `agent` frontmatter through `resolvePersona` (absent / unknown →
+   * Standard); the avatar carries the persona name as its `title` tooltip.
+   * Returns the footer + assignee elements so both can be cached as patch seams.
    */
   private renderFooter(
     card: HTMLElement,
@@ -712,6 +718,11 @@ export class AgentBoardRenderer {
       footer.createSpan({ cls: 'claudian-agent-board-card-footer-spacer' });
     }
     const assignee = footer.createSpan({ cls: 'claudian-agent-board-card-assignee' });
+    renderAgentAvatar(
+      assignee,
+      resolvePersona(task.frontmatter.agent),
+      AgentBoardRenderer.ASSIGNEE_AVATAR_SIZE,
+    );
     return { footer, assignee };
   }
 

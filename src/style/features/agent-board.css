@@ -513,12 +513,44 @@
   }
 }
 
-/* Reserved 20px assignee avatar surface (far right). Empty placeholder in this
-   slice — the persona slice fills it. */
+/* 20px assignee avatar surface (far right). The persona avatar (rendered by
+   renderAgentAvatar) fills it; sizing comes from the avatar's own custom prop. */
 .claudian-agent-board-card-assignee {
   flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
+  display: inline-flex;
+}
+
+/* ---------- Agents persona avatar (shared: card assignee + modal Agent row) ----------
+   A circular chip. The per-persona color arrives as the --agent-color custom
+   property (an Obsidian var(--color-…) token, set via setCssProps), and the
+   diameter as --agent-avatar-size — so background / text / border all derive
+   from one token via color-mix (no hardcoded hex or rgba literal). */
+.claudian-agent-avatar {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: var(--agent-avatar-size, 20px);
+  height: var(--agent-avatar-size, 20px);
+  border-radius: 50%;
+  font-weight: 600;
+  font-size: var(--agent-avatar-icon-size, 12px);
+  line-height: 1;
+  color: var(--agent-color, var(--text-muted));
+  background: color-mix(in srgb, var(--agent-color, var(--text-muted)) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--agent-color, var(--text-muted)) 30%, transparent);
+}
+
+/* The built-in renders a Lucide glyph; size it to the icon custom property
+   (~58% of the avatar) so the bot icon sits centered without overflowing. */
+.claudian-agent-avatar > svg {
+  width: var(--agent-avatar-icon-size, 12px);
+  height: var(--agent-avatar-icon-size, 12px);
+}
+
+/* Custom personas show their initials (slightly smaller than the icon ratio so
+   two glyphs fit the circle). */
+.claudian-agent-avatar--initials {
+  font-size: calc(var(--agent-avatar-size, 20px) * 0.42);
 }
 
 .claudian-agent-board-card--failed {
