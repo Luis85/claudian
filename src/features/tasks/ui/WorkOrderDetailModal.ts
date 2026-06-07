@@ -544,7 +544,9 @@ export class WorkOrderDetailModal extends Modal {
     // — renders as full markdown so no criteria are dropped from view.
     if (!isPureAcceptanceChecklist(markdown)) {
       if (markdown.trim().length === 0) {
-        section.createDiv({ cls: 'claudian-work-order-modal-checklist-empty', text: '—' });
+        // The em-dash placeholder is decorative and supplied via CSS (::before
+        // content), so no user-visible text literal lives in JS here.
+        section.createDiv({ cls: 'claudian-work-order-modal-checklist-empty' });
       } else {
         const prose = section.createDiv({ cls: 'claudian-work-order-modal-checklist-prose' });
         void MarkdownRenderer.render(this.app, markdown, prose, this.task.path, this.markdownComponent);

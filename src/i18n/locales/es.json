@@ -793,7 +793,18 @@
           "heartbeatVeryStale": "Very stale heartbeat ({age} ago)"
         }
       },
-      "notRunnable": "Mark \"{title}\" ready before running."
+      "notRunnable": "Mark \"{title}\" ready before running.",
+      "noFreeSlots": "No hay espacios libres para órdenes de trabajo. Una ejecución necesita un espacio libre: cierra una pestaña de orden de trabajo en el panel de chat, o aumenta \"Concurrent work-order runs\" en los ajustes del Agent Board.",
+      "collapseLane": "Contraer carril",
+      "expandLane": "Expandir carril {title}",
+      "readyWhen": "Listo cuando",
+      "doneWhen": "Hecho cuando",
+      "boardNotices": "Avisos del tablero",
+      "skippedNotes": "Notas omitidas",
+      "queueHalted": "Cola detenida: {reason}",
+      "failureOne": "{n} fallo",
+      "failureMany": "{n} fallos",
+      "queueSkipped": "⊘ Cola omitida: {reason}"
     },
     "template": {
       "nameRequired": "Template name is required.",
@@ -864,6 +875,53 @@
       "actionMarkFailed": "Mark failed",
       "actionReopen": "Reopen",
       "actionArchive": "Archive"
+    },
+    "templateEditor": {
+      "titleNew": "Nueva plantilla de orden de trabajo",
+      "titleEdit": "Editar plantilla de orden de trabajo",
+      "useDefault": "Usar predeterminado",
+      "nameName": "Name",
+      "nameDesc": "Se muestra en el selector. Se convierte en el nombre de archivo de la plantilla para plantillas nuevas.",
+      "descriptionName": "Description",
+      "descriptionDesc": "Resumen opcional de una línea que se muestra bajo el nombre en el selector.",
+      "iconName": "Icon",
+      "iconDesc": "Icono Lucide opcional para la fila del selector.",
+      "providerName": "Provider",
+      "providerDesc": "Opcional. Si no se define, usa el proveedor predeterminado del Agent Board.",
+      "modelName": "Model",
+      "modelDesc": "Opcional. Si no se define, usa el modelo predeterminado del Agent Board.",
+      "priorityName": "Priority",
+      "priorityDesc": "Opcional. Si no se define, usa la prioridad normal.",
+      "bodyName": "Body",
+      "bodyDesc": "Cuerpo de la plantilla. Marcadores: {{title}}, {{date}}, {{source}}.",
+      "save": "Guardar",
+      "cancel": "Cancelar"
+    },
+    "templatePicker": {
+      "title": "Plantilla de orden de trabajo",
+      "newTemplate": "Nueva plantilla",
+      "emptyState": "Aún no hay plantillas. Elige en blanco para crear una orden de trabajo simple, o agrega una plantilla para reutilizarla más tarde.",
+      "lead": "Elige una plantilla para aplicar, o empieza en blanco.",
+      "blankTitle": "Orden de trabajo en blanco",
+      "blankDesc": "Esqueleto vacío con Objetivo, Aceptación, Contexto y Restricciones.",
+      "edit": "Editar",
+      "delete": "Eliminar"
+    },
+    "laneEditor": {
+      "untitledLane": "Carril sin título",
+      "laneDesc": "Título y si el carril se muestra en el tablero.",
+      "moveUp": "Subir",
+      "moveDown": "Bajar",
+      "removeLane": "Quitar carril",
+      "collapsible": "Plegable",
+      "routedTo": "Enrutado a «{title}»",
+      "routedElsewhere": "⚠ Enrutado a otro lugar: {summary}",
+      "routedSummaryItem": "{status} → «{lane}»",
+      "definitionOfReady": "Definición de listo",
+      "definitionOfDone": "Definición de hecho",
+      "addLane": "Agregar carril",
+      "resetToDefault": "Restablecer valores predeterminados",
+      "newLaneTitle": "Nuevo carril"
     }
   },
   "env": {

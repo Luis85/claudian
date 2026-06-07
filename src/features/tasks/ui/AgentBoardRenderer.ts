@@ -274,7 +274,7 @@ export class AgentBoardRenderer {
       slotsEl.addClass('claudian-agent-board-slots--full');
       root.createDiv({
         cls: 'claudian-agent-board-hint',
-        text: 'No free work-order slots. A work-order run needs a free slot — close a work-order tab in the chat panel, or raise "Concurrent work-order runs" in Agent Board settings.',
+        text: t('tasks.board.noFreeSlots'),
       });
     }
 
@@ -446,12 +446,11 @@ export class AgentBoardRenderer {
       text: t('tasks.board.activeCount', { n: state.slotOccupied, m: state.slotCapacity }),
     });
 
-    // The halt/failure caption keeps the historical "Queue" wording for now (it
-    // gets re-keyed in the closing i18n sweep, not renamed here).
+    // Halt/failure caption uses the historical "Queue" wording, now keyed.
     if (state.halted && state.haltReason) {
       parent.createSpan({
         cls: 'claudian-agent-board-toolbar--queue-failure-count',
-        text: `Queue halted: ${state.haltReason}`,
+        text: t('tasks.board.queueHalted', { reason: state.haltReason }),
       });
       return;
     }
@@ -459,7 +458,10 @@ export class AgentBoardRenderer {
     if (state.consecutiveFailures > 0) {
       parent.createSpan({
         cls: 'claudian-agent-board-toolbar--queue-failure-count',
-        text: `${state.consecutiveFailures} ${state.consecutiveFailures === 1 ? 'failure' : 'failures'}`,
+        text:
+          state.consecutiveFailures === 1
+            ? t('tasks.board.failureOne', { n: state.consecutiveFailures })
+            : t('tasks.board.failureMany', { n: state.consecutiveFailures }),
       });
     }
   }
@@ -469,7 +471,7 @@ export class AgentBoardRenderer {
     if (!state.reason) return;
     const chip = host.createDiv({
       cls: 'claudian-agent-board-card-skip-chip',
-      text: `⊘ Queue skipped: ${state.reason}`,
+      text: t('tasks.board.queueSkipped', { reason: state.reason }),
     });
     chip.addEventListener('click', (event) => {
       event.stopPropagation();
@@ -489,11 +491,13 @@ export class AgentBoardRenderer {
     const meta = head.createDiv({ cls: 'claudian-agent-board-lane-header-meta' });
     meta.createSpan({ cls: 'claudian-agent-board-lane-count', text: String(lane.tasks.length) });
     if (lane.collapsible) {
+      // The chevron glyph is decorative and supplied via CSS (::before content),
+      // so no user-visible text literal lives in JS; the accessible name comes
+      // from the keyed aria-label below.
       const toggle = meta.createEl('button', {
         cls: 'claudian-agent-board-lane-collapse-toggle',
-        text: '›',
       });
-      toggle.setAttribute('aria-label', 'Collapse lane');
+      toggle.setAttribute('aria-label', t('tasks.board.collapseLane'));
       // Native <button> is already keyboard-reachable; aria-expanded mirrors the
       // collapsed-strip variant so screen readers announce the same state.
       toggle.setAttribute('aria-expanded', 'true');
@@ -539,7 +543,7 @@ export class AgentBoardRenderer {
       cls: 'claudian-agent-board-lane claudian-agent-board-lane--collapsed',
     });
     strip.setAttribute('role', 'button');
-    strip.setAttribute('aria-label', `Expand lane ${lane.title}`);
+    strip.setAttribute('aria-label', t('tasks.board.expandLane', { title: lane.title }));
     strip.setAttribute('aria-expanded', 'false');
     // Keyboard reachable: a collapsed lane is a real interactive control, so
     // tab-focus must reach it. Enter / Space activate the toggle the same way
@@ -566,12 +570,12 @@ export class AgentBoardRenderer {
   private renderCriteria(laneEl: HTMLElement, lane: ResolvedLane): void {
     const criteria = laneEl.createDiv({ cls: 'claudian-agent-board-lane-criteria' });
     if (lane.definitionOfReady.length > 0) {
-      criteria.createDiv({ cls: 'claudian-agent-board-lane-criteria-label', text: 'Ready when' });
+      criteria.createDiv({ cls: 'claudian-agent-board-lane-criteria-label', text: t('tasks.board.readyWhen') });
       const list = criteria.createEl('ul');
       for (const item of lane.definitionOfReady) list.createEl('li', { text: item });
     }
     if (lane.definitionOfDone.length > 0) {
-      criteria.createDiv({ cls: 'claudian-agent-board-lane-criteria-label', text: 'Done when' });
+      criteria.createDiv({ cls: 'claudian-agent-board-lane-criteria-label', text: t('tasks.board.doneWhen') });
       const list = criteria.createEl('ul');
       for (const item of lane.definitionOfDone) list.createEl('li', { text: item });
     }
@@ -957,7 +961,7 @@ export class AgentBoardRenderer {
   private renderErrors(parent: HTMLElement, errors: string[], invalidNotes: InvalidTaskNote[]): void {
     const errorsEl = parent.createDiv({ cls: 'claudian-agent-board-errors' });
     if (errors.length > 0) {
-      errorsEl.createEl('h4', { text: 'Board notices' });
+      errorsEl.createEl('h4', { text: t('tasks.board.boardNotices') });
       // Cap each error line at 300 chars so a long path/stack doesn't blow out
       // the lane width or push the lanes off-screen. Full text stays available
       // via the title tooltip on hover.
@@ -967,7 +971,7 @@ export class AgentBoardRenderer {
       }
     }
     if (invalidNotes.length > 0) {
-      errorsEl.createEl('h4', { text: 'Skipped notes' });
+      errorsEl.createEl('h4', { text: t('tasks.board.skippedNotes') });
       for (const note of invalidNotes) {
         const full = `${note.path}: ${note.error}`;
         const div = errorsEl.createDiv({ text: truncateErrorLine(full) });

@@ -466,6 +466,11 @@
   color: var(--text-faint);
 }
 
+/* Decorative em-dash placeholder for an empty acceptance section. */
+.claudian-work-order-modal-checklist-empty::before {
+  content: "—";
+}
+
 /* Non-task-list acceptance criteria (prose / plain bullets) rendered as markdown. */
 .claudian-work-order-modal-checklist-prose {
   padding: 11px 14px;

@@ -983,6 +983,11 @@
   box-shadow: none;
 }
 
+/* Decorative chevron glyph (the accessible name lives on the button's aria-label). */
+.claudian-agent-board-lane-collapse-toggle::before {
+  content: "›";
+}
+
 .claudian-agent-board-lane-collapse-toggle:hover {
   color: var(--text-normal);
   background: var(--background-modifier-hover);

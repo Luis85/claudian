@@ -31,7 +31,7 @@ export class WorkOrderTemplatePickerModal extends Modal {
   }
 
   onOpen(): void {
-    this.setTitle('Work-order template');
+    this.setTitle(t('tasks.templatePicker.title'));
     this.modalEl.addClass('claudian-sp-modal', 'claudian-wo-templates-modal');
 
     const body = this.contentEl.createDiv({ cls: 'claudian-wo-templates-body' });
@@ -41,7 +41,7 @@ export class WorkOrderTemplatePickerModal extends Modal {
     const footer = this.contentEl.createDiv({ cls: 'claudian-wo-templates-footer' });
     footer.createEl('button', {
       cls: 'mod-cta',
-      text: 'New template',
+      text: t('tasks.templatePicker.newTemplate'),
     }).addEventListener('click', () => {
       this.openEditor(null);
     });
@@ -80,11 +80,11 @@ export class WorkOrderTemplatePickerModal extends Modal {
     if (this.templates.length === 0) {
       this.introEl.createEl('p', {
         cls: 'claudian-wo-templates-intro-lead',
-        text: 'No templates yet. Pick blank to create a plain work order, or add a template to reuse later.',
+        text: t('tasks.templatePicker.emptyState'),
       });
       return;
     }
-    this.introEl.createEl('p', { text: 'Pick a template to apply, or start blank.' });
+    this.introEl.createEl('p', { text: t('tasks.templatePicker.lead') });
   }
 
   private renderBlankRow(): void {
@@ -96,10 +96,10 @@ export class WorkOrderTemplatePickerModal extends Modal {
     setIcon(iconEl, BLANK_ICON);
 
     const textCol = main.createDiv({ cls: 'claudian-wo-templates-text' });
-    textCol.createEl('strong', { text: 'Blank work order' });
+    textCol.createEl('strong', { text: t('tasks.templatePicker.blankTitle') });
     textCol.createDiv({
       cls: 'claudian-wo-templates-desc',
-      text: 'Empty skeleton with Objective, Acceptance, Context, Constraints.',
+      text: t('tasks.templatePicker.blankDesc'),
     });
 
     main.addEventListener('click', () => {
@@ -127,11 +127,11 @@ export class WorkOrderTemplatePickerModal extends Modal {
     });
 
     const actions = row.createDiv({ cls: 'claudian-wo-templates-actions' });
-    actions.createEl('button', { text: 'Edit' }).addEventListener('click', (event) => {
+    actions.createEl('button', { text: t('tasks.templatePicker.edit') }).addEventListener('click', (event) => {
       event.stopPropagation();
       this.openEditor(template);
     });
-    actions.createEl('button', { text: 'Delete' }).addEventListener('click', (event) => {
+    actions.createEl('button', { text: t('tasks.templatePicker.delete') }).addEventListener('click', (event) => {
       event.stopPropagation();
       void this.deleteTemplate(template);
     });
