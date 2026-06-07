@@ -1011,14 +1011,17 @@ describe('AgentBoardRenderer — Auto-run switch (renamed queue toggle)', () => 
     expect(clicked).toBe(1);
   });
 
-  it('invokes onToggle on Enter and Space (keyboard-operable)', () => {
+  it('is a native button, so Enter/Space activate it once (no double-toggle)', () => {
     const host = document.createElement('div');
     let clicked = 0;
     renderQueue(host, { onToggle: () => { clicked += 1; } });
-    const sw = findSwitch(host)!;
-    sw.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    sw.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
-    expect(clicked).toBe(2);
+    const sw = findSwitch(host) as HTMLButtonElement;
+    // Keyboard operability comes from the native <button> (the browser turns
+    // Enter/Space into a single click) — no manual keydown handler that would
+    // fire onToggle twice. A click therefore toggles exactly once.
+    expect(sw.tagName).toBe('BUTTON');
+    sw.click();
+    expect(clicked).toBe(1);
   });
 
   it('renders the active count with a soft-ring dot', () => {

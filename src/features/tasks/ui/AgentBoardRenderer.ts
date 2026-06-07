@@ -428,16 +428,10 @@ export class AgentBoardRenderer {
       text: t('tasks.board.autoRun.label'),
     });
 
+    // A native <button> activates on click AND on Enter/Space (the browser
+    // synthesizes the click), so one click handler covers keyboard use without
+    // a manual keydown path that would fire onToggle a second time.
     sw.addEventListener('click', () => state.onToggle());
-    // Native <button> already fires click on Enter / Space in most engines, but
-    // jsdom + some hosts don't synthesize it for role="switch"; bind explicitly
-    // so the keyboard path is guaranteed.
-    sw.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        state.onToggle();
-      }
-    });
   }
 
   private renderQueueInfo(parent: HTMLElement, state: QueueToolbarState): void {
