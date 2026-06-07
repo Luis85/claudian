@@ -53,7 +53,7 @@
 .claudian-agent-board-lane {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 9px;
   flex: 0 0 286px;
   width: 286px;
   /* Natural height — the lanes container owns the vertical scroll so a tall lane
@@ -93,6 +93,7 @@
   font-size: var(--font-ui-smaller);
   color: var(--text-faint);
   font-variant-numeric: tabular-nums;
+  min-width: 18px;
   text-align: center;
   padding: 1px 6px;
   /* --radius-full is the pill radius in newer Obsidian; the length fallback
@@ -106,16 +107,19 @@
 .claudian-agent-board-lane-add {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  text-align: left;
   width: 100%;
-  padding: 7px 12px;
-  border: 1px dashed var(--background-modifier-border);
+  padding: 9px 12px;
+  /* color-mix dashed edge stays visible-but-quiet on Minimal (where
+     --background-modifier-border washes out). */
+  border: 1px dashed color-mix(in srgb, var(--text-normal) 12%, transparent);
   border-radius: var(--radius-l, 8px);
   /* Stay flat by default so a theme's button surface doesn't make the row read
      as a solid CTA; only the hover wash lifts it. */
   background: transparent;
   color: var(--text-faint);
-  font-size: var(--font-ui-smaller);
+  font-size: var(--font-ui-small);
   cursor: pointer;
   box-shadow: none;
 }
@@ -136,21 +140,25 @@
   flex-direction: column;
   gap: 9px;
   padding: 12px 13px;
-  /* --background-modifier-border reads more clearly than --border-color on
-     low-contrast themes (e.g. Minimal) so the card surface is always defined. */
-  border: 1px solid var(--background-modifier-border);
+  /* Spec: the card sits a step LIGHTER than the board. On Minimal the
+     --background-tertiary/--text-normal-12% tokens wash out, so use a guaranteed
+     color-mix floor (board is --background-primary) for a visible-but-quiet edge. */
+  border: 1px solid color-mix(in srgb, var(--text-normal) 12%, transparent);
   /* --radius-l is the card radius in newer Obsidian; length fallback for hosts
      that predate the variable. */
   border-radius: var(--radius-l, 8px);
-  background: var(--background-secondary);
+  background: color-mix(in srgb, var(--background-primary) 94%, var(--text-normal) 6%);
+  /* Deliberate resting shadow as a Minimal contrast aid (spec drops it, but the
+     washed-out tokens leave the card under-defined without it). */
   box-shadow: var(--shadow-s);
   cursor: pointer;
 }
 
 .claudian-agent-board-card:hover {
-  border-color: var(--background-modifier-border-hover);
-  background: var(--background-secondary-alt);
-  box-shadow: var(--shadow-l);
+  /* Lift, not recede: lighten the surface a touch more and brighten the edge. */
+  border-color: color-mix(in srgb, var(--text-normal) 20%, transparent);
+  background: color-mix(in srgb, var(--background-primary) 90%, var(--text-normal) 10%);
+  box-shadow: var(--shadow-s);
 }
 
 .claudian-agent-board-card:active {
@@ -316,13 +324,14 @@
    CSS. Mounting on the body (a portal) keeps a tall menu from adding a scrollbar
    to the overflow:auto lane card list. */
 .claudian-agent-board-card-menu {
-  /* Portaled onto document.body; the dynamic top/left are set inline. */
+  /* Portaled onto document.body; the dynamic top/left are set inline.
+     min-width matches the JS MENU_MIN_WIDTH so the flip/clamp math agrees. */
   position: fixed;
   z-index: var(--layer-menu, 200);
-  min-width: 190px;
+  min-width: 180px;
   padding: 6px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-l);
+  border: 1px solid var(--border-color-hover);
+  border-radius: var(--radius-m);
   background: var(--background-secondary);
   box-shadow: var(--shadow-l);
   display: flex;
@@ -333,11 +342,11 @@
 .claudian-agent-board-card-menu-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   width: 100%;
-  padding: 8px 10px;
+  padding: 7px 9px;
   border: none;
-  border-radius: var(--radius-m);
+  border-radius: var(--radius-s);
   text-align: left;
   cursor: pointer;
   background: transparent;
@@ -420,6 +429,9 @@
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 10px;
+  /* Render the monospace provider/model line at the intended ~11px rather than
+     inheriting the card's 14px. */
+  font-size: var(--font-ui-smaller);
   color: var(--text-muted);
 }
 
@@ -632,7 +644,7 @@
 /* Heartbeat freshness tier → dot color (green fresh / amber stale / red very
    stale), per the redesign freshness contract. */
 .claudian-agent-board-card-live-strip--dot.claudian-stale-green { color: var(--color-green); }
-.claudian-agent-board-card-live-strip--dot.claudian-stale-amber { color: var(--color-orange); }
+.claudian-agent-board-card-live-strip--dot.claudian-stale-amber { color: var(--color-yellow); }
 .claudian-agent-board-card-live-strip--dot.claudian-stale-red { color: var(--color-red); }
 
 @keyframes claudian-pulse-dot {
@@ -799,7 +811,6 @@
   justify-content: space-between;
   gap: 12px;
   padding: 6px 0 10px;
-  border-bottom: 1px solid var(--background-modifier-border);
 }
 
 .claudian-agent-board-toolbar-actions,
@@ -844,6 +855,8 @@
    accent, so it reads deliberately across themes (matches the modal CTA). */
 .claudian-agent-board-toolbar-btn.mod-cta {
   background-color: var(--color-green);
+  /* The pale green fill has no edge on Minimal; a green border defines it. */
+  border: 1px solid var(--color-green);
   color: var(--text-on-accent);
 }
 
@@ -870,18 +883,24 @@
   flex-shrink: 0;
 }
 
-/* Auto-run switch (renamed background-watcher toggle). */
+/* Auto-run switch (renamed background-watcher toggle). Spec ships a pill: a
+   quiet bordered chip around the switch + label (mock.css:36-41). */
 .claudian-agent-board-toolbar-autorun {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 6px;
-  border: none;
-  background: transparent;
+  padding: 5px 12px 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--text-normal) 10%, transparent);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
   font-size: var(--font-ui-small);
   font-weight: var(--font-medium);
   cursor: pointer;
   user-select: none;
+}
+
+.claudian-agent-board-toolbar-autorun:hover {
+  border-color: var(--background-modifier-border-hover);
 }
 
 .claudian-agent-board-toolbar-autorun:hover .claudian-agent-board-toolbar-autorun-label {
@@ -916,18 +935,21 @@
   white-space: nowrap;
 }
 
-/* OFF: muted label, neutral toggle track. */
+/* OFF: muted label, neutral toggle track. --toggle-bg fallback keeps the track
+   visible on Minimal where it washes out. */
 .claudian-agent-board-toolbar-autorun--off {
   color: var(--text-muted);
 }
 
 .claudian-agent-board-toolbar-autorun--off .claudian-agent-board-toolbar-autorun-track {
-  background-color: var(--background-modifier-border);
+  background-color: var(--toggle-bg, color-mix(in srgb, var(--text-normal) 22%, transparent));
 }
 
-/* ON: green track signals the active/positive state; the label lifts to normal.
-   No pill chrome — just the switch + label, matching the cleaner mockup. */
+/* ON: green-tinted pill (border + wash) signals the active/positive state and
+   the green track confirms it; the label lifts to normal. */
 .claudian-agent-board-toolbar-autorun--on {
+  border-color: color-mix(in srgb, var(--color-green) 40%, transparent);
+  background: color-mix(in srgb, var(--color-green) 15%, transparent);
   color: var(--text-normal);
 }
 
@@ -988,7 +1010,7 @@
   cursor: pointer;
   background: var(--background-secondary);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-m, 6px);
+  border-radius: var(--radius-l, 8px);
 }
 
 .claudian-agent-board-lane--collapsed:hover {
@@ -1006,26 +1028,27 @@
   white-space: nowrap;
 }
 
+/* Borderless icon button — holds a real Lucide chevron (rendered in JS via
+   setIcon), matching the icon language of every other card glyph. */
 .claudian-agent-board-lane-collapse-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   margin: 0;
   background: transparent;
   border: none;
   color: var(--text-faint);
   cursor: pointer;
-  font-size: var(--font-ui-medium);
   line-height: 1;
   box-shadow: none;
 }
 
-/* Decorative chevron glyph (the accessible name lives on the button's aria-label). */
-.claudian-agent-board-lane-collapse-toggle::before {
-  content: "›";
+.claudian-agent-board-lane-collapse-toggle svg {
+  width: 14px;
+  height: 14px;
 }
 
 /* Smooth, borderless affordance: the glyph just brightens on hover — no button
@@ -1040,4 +1063,17 @@
   .claudian-agent-board-lane-collapse-toggle {
     transition: color 0.15s ease;
   }
+}
+
+/* Leading chevron at the top of the collapsed vertical strip (spec Board.jsx). */
+.claudian-agent-board-lane-collapsed-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.claudian-agent-board-lane-collapsed-chevron svg {
+  width: 14px;
+  height: 14px;
 }

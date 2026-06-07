@@ -491,13 +491,15 @@ export class AgentBoardRenderer {
     const meta = head.createDiv({ cls: 'claudian-agent-board-lane-header-meta' });
     meta.createSpan({ cls: 'claudian-agent-board-lane-count', text: String(lane.tasks.length) });
     if (lane.collapsible) {
-      // The chevron glyph is decorative and supplied via CSS (::before content),
-      // so no user-visible text literal lives in JS; the accessible name comes
-      // from the keyed aria-label below.
+      // Real Lucide chevron (rendered via setIcon), matching the icon language
+      // of every other card glyph. The accessible name comes from the keyed
+      // aria-label below; the glyph is decorative (data-icon mirrors it for tests).
       const toggle = meta.createEl('button', {
         cls: 'claudian-agent-board-lane-collapse-toggle',
       });
       toggle.setAttribute('aria-label', t('tasks.board.collapseLane'));
+      toggle.setAttribute('data-icon', 'chevron-down');
+      setIcon(toggle, 'chevron-down');
       // Native <button> is already keyboard-reachable; aria-expanded mirrors the
       // collapsed-strip variant so screen readers announce the same state.
       toggle.setAttribute('aria-expanded', 'true');
@@ -549,6 +551,12 @@ export class AgentBoardRenderer {
     // tab-focus must reach it. Enter / Space activate the toggle the same way
     // a click does (native semantic for role="button").
     strip.setAttribute('tabindex', '0');
+    // Leading Lucide chevron at the top of the strip (spec Board.jsx). Decorative
+    // (the accessible name lives on the strip's aria-label); data-icon mirrors it.
+    const chevron = strip.createSpan({ cls: 'claudian-agent-board-lane-collapsed-chevron' });
+    chevron.setAttribute('aria-hidden', 'true');
+    chevron.setAttribute('data-icon', 'chevron-right');
+    setIcon(chevron, 'chevron-right');
     strip.createSpan({
       cls: 'claudian-agent-board-lane-title-vertical',
       text: lane.title,
