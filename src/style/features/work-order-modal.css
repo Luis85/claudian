@@ -10,30 +10,37 @@
  */
 
 /*
- * Bind the sticky-shell at the `.modal` element itself (we own it via this
- * class) so the bounded flex column wins regardless of theme modal overrides:
- * the modal is a height-capped flex column, the body is the ONLY scroll region,
- * and the header/footer stay pinned. Binding here (rather than only on
- * `.modal-content`) keeps the shell intact even when a theme restyles
- * `.modal-content`'s overflow/height.
+ * Modal frame. Size the native `.modal` through the variables Obsidian's own
+ * `.modal` rule consumes (`--modal-max-height` / `--dialog-max-height`, also set
+ * inline on modalEl in onOpen) so the height cap applies even when a theme
+ * out-specifies a bare `.modal` selector. The native `.modal-content` is the
+ * flex column + height owner and the body is the ONLY scroll region — the same
+ * pattern as base/modal.css and the working MCP modals, kept native-Modal-safe.
  */
 .claudian-work-order-modal {
-  display: flex;
-  flex-direction: column;
+  --modal-max-height: min(86vh, 760px);
+  --dialog-max-height: min(86vh, 760px);
+  --modal-width: min(960px, 92vw);
+  --dialog-width: min(960px, 92vw);
+  --modal-max-width: min(960px, 92vw);
+  --dialog-max-width: min(960px, 92vw);
   width: min(960px, 92vw);
   max-width: min(960px, 92vw);
   max-height: min(86vh, 760px);
-  min-height: 0;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.claudian-work-order-modal-content {
+/* Scoped under the modal class (→ specificity 0-2-0) so it reliably out-specifies
+   a theme's bare `.modal-content { overflow }`. The native content fills the
+   capped frame; the body owns the single scroll region. */
+.claudian-work-order-modal .claudian-work-order-modal-content {
   flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   width: 100%;
   max-width: 100%;
-  min-height: 0;
   padding: 0;
   overflow: hidden;
 }
@@ -192,13 +199,12 @@
  * the column divider — so the body itself stays padding-free and the sidebar's
  * secondary background bleeds flush to the scroll-region edges.
  */
-.claudian-work-order-modal-body {
+.claudian-work-order-modal .claudian-work-order-modal-body {
   flex: 1 1 auto;
+  /* The single scroll region. min-height:0 lets this flex child shrink below its
+     content inside the capped `.modal-content`, so it scrolls instead of growing
+     the modal — no hard-coded header/footer subtraction needed. */
   min-height: 0;
-  /* Hard cap tied to the modal's own max-height (minus the pinned header +
-     footer) so the body always scrolls and the footer stays in view, even when
-     a theme prevents the flex chain from bounding the content. */
-  max-height: calc(min(86vh, 760px) - 132px);
   overflow-y: auto;
   overflow-x: hidden;
   display: grid;
@@ -293,12 +299,16 @@
    from the status→color palette, not the theme accent, so the positive action
    reads deliberately across themes. */
 .claudian-work-order-modal-action--cta {
+  /* The border gives the green fill a defined edge on pale themes (Minimal),
+     matching the board CTA treatment. */
+  border-color: var(--color-green);
   background: var(--color-green);
   color: var(--text-on-accent);
 }
 
 .claudian-work-order-modal-action--cta:hover {
   background: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
+  border-color: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
 }
 
 /* Secondary — a neutral surfaced button (Open note / Open conversation / Rework
@@ -564,6 +574,12 @@
   border-radius: var(--radius-l);
   background: var(--background-primary-alt);
   overflow: hidden;
+}
+
+/* Expanded cards shift to the secondary surface (spec), so an open handoff
+   section reads as distinct from the collapsed ones around it. */
+.claudian-work-order-modal-collapse.is-open {
+  background: var(--background-secondary);
 }
 
 .claudian-work-order-modal-collapse-head {

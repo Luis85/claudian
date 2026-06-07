@@ -151,12 +151,22 @@ export class WorkOrderDetailModal extends Modal {
   onOpen(): void {
     this.markdownComponent.load();
     this.modalEl.addClass('claudian-work-order-modal');
+    // Size the modal through the variables Obsidian's own `.modal` rule consumes
+    // so the height cap applies regardless of how the active theme out-specifies
+    // a bare `.modal` selector. Setting them inline on modalEl is the most
+    // reliable hook; the CSS mirrors these as a fallback.
+    this.modalEl.style.setProperty('--modal-max-height', 'min(86vh, 760px)');
+    this.modalEl.style.setProperty('--dialog-max-height', 'min(86vh, 760px)');
+    this.modalEl.style.setProperty('--modal-width', 'min(960px, 92vw)');
+    this.modalEl.style.setProperty('--dialog-width', 'min(960px, 92vw)');
+    this.modalEl.style.setProperty('--modal-max-width', 'min(960px, 92vw)');
+    this.modalEl.style.setProperty('--dialog-max-width', 'min(960px, 92vw)');
 
-    // Sticky-shell frame: contentEl becomes a flex column with a pinned header,
-    // a scrollable two-pane body (main + properties sidebar), and a pinned
-    // footer. Header/footer stay reachable while only the body scrolls. The
-    // header now owns the title (meta row + editable title + close button), so
-    // the native modal title is intentionally left empty.
+    // Sticky-shell frame: contentEl (the native `.modal-content`) becomes a flex
+    // column with a pinned header, a scrollable two-pane body (main + properties
+    // sidebar), and a pinned footer. Only the body scrolls; the header/footer
+    // stay reachable. The header owns the title, so the native modal title is
+    // left empty, and Obsidian's built-in close button is used as-is.
     this.contentEl.addClass('claudian-work-order-modal-content');
     const header = this.contentEl.createDiv({ cls: 'claudian-work-order-modal-header' });
     const body = this.contentEl.createDiv({ cls: 'claudian-work-order-modal-body' });
