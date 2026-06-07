@@ -52,7 +52,7 @@ Agentic contributors optimize for finishing the requested change. Without object
 ## Acceptance criteria
 
 - [x] CI fails if `npm run build` fails. — new `build` job in `.github/workflows/ci.yml`.
-- [x] CI fails on lint warnings, not only lint errors. — `lint` script now passes `--max-warnings=0` (baseline is warning-clean as of 2026-06-07).
+- [~] CI fails on lint warnings, not only lint errors. — **Revised by decision (2026-06-07):** warnings are a deliberate non-blocking backlog, not a hard gate, so adopting new aspirational rules does not block unrelated work on day one. Error-level rules block CI; the `warn` tier (staged `obsidianmd`, `no-explicit-any`, and the new function-health rules) is burned down incrementally and ratcheted as it clears. See `docs/build-ci/quality-gates.md` § "Lint severity policy".
 - [x] CI fails when a new source file exceeds the configured max LOC unless it is explicitly allowlisted. — `npm run check:loc` (`scripts/check-loc.mjs` + `scripts/loc-baseline.json`), wired into the `lint` job.
 - [x] CI fails if production artifacts are stale or missing. — `npm run check:artifacts` (`scripts/check-artifacts.mjs`) runs after build in the `build` job; covers presence, version sync, `minAppVersion`, and a bundle-size budget.
 - [x] The check output is short enough for agents to act on without reading CI logs manually. — both checks print a one-line OK summary and a compact, file-listed failure report.

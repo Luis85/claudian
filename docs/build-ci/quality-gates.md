@@ -17,7 +17,7 @@ Background: `docs/tech-debt/2026-06-07-agentic-quality-gates.md`.
 
 | Gate | Command | CI job | What it catches |
 |------|---------|--------|-----------------|
-| Lint (no warnings) | `npm run lint` | `lint` | Errors **and** warnings — `--max-warnings=0`. New warning-level debt fails. |
+| Lint (errors) | `npm run lint` | `lint` | Error-level rules block CI. Warnings print but do **not** fail — see "Lint severity policy" below. |
 | LOC guard | `npm run check:loc` | `lint` | New `src/**/*.ts` files above the cap; grandfathered hotspots that grow; stale baseline entries. |
 | Typecheck | `npm run typecheck` | `typecheck` | Type regressions. |
 | Tests | `npm run test` | `test` (Linux + Windows) | Behavior regressions on both path/spawn targets. |
@@ -30,6 +30,25 @@ Run the whole local set before pushing:
 ```bash
 npm run lint && npm run check:loc && npm run typecheck && npm run test && npm run build && npm run check:artifacts
 ```
+
+## Lint severity policy
+
+Two tiers, on purpose:
+
+- **`error`** — must-not-regress rules (no `console.*`, no raw HTML injection,
+  `Notice` i18n, provider-boundary imports, import sorting, unused vars, …).
+  These block CI. `npm run lint` exits non-zero on any of them.
+- **`warn`** — an aspirational backlog burned down one item at a time. CI does
+  **not** pass `--max-warnings`, so warnings print but never fail the build.
+  This keeps the bar moving without blocking unrelated work on day one.
+
+Current `warn`-tier rules: the staged `obsidianmd/*` set,
+`@typescript-eslint/no-explicit-any`, and the function-health rules
+(`max-lines-per-function` 200, `complexity` 25, `max-params` 6, `max-depth` 5
+— ~61 warnings as of 2026-06-07). As the backlog clears, ratchet a threshold
+down (or promote a clean rule to `error`) so the gain is locked in. Whole-file
+size is already a hard gate via the LOC guard; the function-health rules add
+function-level signal that file-level LOC can't see.
 
 ## LOC guard
 
@@ -66,10 +85,10 @@ reason in the PR, when a real dependency pushes the bundle up.
 
 Not yet enforced; tracked here so the direction is explicit.
 
-1. **Tighten staged lint to error.** `obsidianmd/*` rules and
-   `@typescript-eslint/no-explicit-any` are still `warn` in `eslint.config.mjs`.
-   Once each is baseline-clean in `src/`, promote it to `error` (the
-   `--max-warnings=0` gate already blocks *new* warnings).
+1. **Burn down the `warn` backlog, then ratchet.** Resolve function-health and
+   staged `obsidianmd`/`no-explicit-any` warnings incrementally; each time a
+   threshold reaches zero, tighten it (or promote the rule to `error`) so the
+   gain can't regress. No big-bang refactor and no day-one CI block.
 2. **Architecture gates** (remediation item 5 of the tech debt):
    - dependency-cycle budget (e.g. `madge`/`dpdm` over `src/`),
    - provider-boundary regression tests beyond the `no-restricted-imports`

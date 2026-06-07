@@ -160,6 +160,24 @@ export default defineConfig([
   },
   {
     files: ['src/**/*.ts'],
+    // Function-health backlog. Deliberately `warn`, not `error`: `npm run lint`
+    // does not pass --max-warnings, so these surface the worst existing
+    // offenders without blocking CI, to be burned down one function at a time.
+    // Ratchet the thresholds down as the list clears. Measured 2026-06-07:
+    // ~14 over-200-line functions, ~40 over-complexity-25, 6 over-6-params,
+    // 1 over-depth-5; the LOC guard already caps whole files at 500 LOC.
+    rules: {
+      'max-lines-per-function': [
+        'warn',
+        { max: 200, skipBlankLines: true, skipComments: true, IIFEs: true },
+      ],
+      complexity: ['warn', { max: 25 }],
+      'max-params': ['warn', { max: 6 }],
+      'max-depth': ['warn', { max: 5 }],
+    },
+  },
+  {
+    files: ['src/**/*.ts'],
     ignores: [
       // Provider-internal files own their own internals.
       'src/providers/*/**/*.ts',
