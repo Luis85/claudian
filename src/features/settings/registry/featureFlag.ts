@@ -18,5 +18,3 @@ export const REGISTRY_TABS: ReadonlySet<string> = new Set<string>([
 export function useRegistryRenderer(tabId: string): boolean {
   return REGISTRY_TABS.has(tabId);
 }
-
-export const USE_REGISTRY_RENDERER = false;

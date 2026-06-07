@@ -1,6 +1,5 @@
 import {
   REGISTRY_TABS,
-  USE_REGISTRY_RENDERER,
   useRegistryRenderer,
 } from '@/features/settings/registry/featureFlag';
 
@@ -29,9 +28,5 @@ describe('settings featureFlag', () => {
   it('returns false for unknown tab ids', () => {
     expect(useRegistryRenderer('does-not-exist')).toBe(false);
     expect(useRegistryRenderer('')).toBe(false);
-  });
-
-  it('keeps legacy USE_REGISTRY_RENDERER boolean off (back-compat)', () => {
-    expect(USE_REGISTRY_RENDERER).toBe(false);
   });
 });
