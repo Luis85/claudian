@@ -354,4 +354,4 @@ All paths are relative to your vault root unless noted.
 | `~/.codex/sessions/**/*.jsonl` | Codex CLI | Codex-native transcripts. |
 | `.claudian/sessions/*.meta.json` | Claudian | Provider-neutral session metadata. |
 
-Settings are read and written only at `.claudian/claudian-settings.json`. There is no legacy file path; legacy in-file fields are stripped on load (`LEGACY_STRIPPED_SETTING_FIELDS`) rather than read from another location.
+Settings are read and written only at `.claudian/claudian-settings.json`. There is no legacy file path; retired in-file fields are stripped on load (`DEPRECATED_SETTING_FIELDS`) rather than read from another location.

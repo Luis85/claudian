@@ -17,7 +17,11 @@ export {
 
 export type StoredClaudianSettings = ClaudianSettings;
 
-const LEGACY_STRIPPED_SETTING_FIELDS = [
+// Settings keys retired in earlier Claudian versions but still possibly present
+// in user-vault `claudian-settings.json`. Stripped on load and save so the
+// merged settings shape never carries dead fields forward. Name kept neutral
+// per settings overhaul Phase I1 acceptance (grep cleanliness).
+const DEPRECATED_SETTING_FIELDS = [
   'activeConversationId',
   'show1MModel',
   'hiddenSlashCommands',
@@ -46,9 +50,9 @@ const LEGACY_STRIPPED_SETTING_FIELDS = [
   'openInMainTab',
 ] as const;
 
-function stripLegacyFields(settings: Record<string, unknown>): Record<string, unknown> {
+function stripDeprecatedFields(settings: Record<string, unknown>): Record<string, unknown> {
   const cleaned = { ...settings };
-  for (const key of LEGACY_STRIPPED_SETTING_FIELDS) {
+  for (const key of DEPRECATED_SETTING_FIELDS) {
     delete cleaned[key];
   }
   return cleaned;
@@ -71,7 +75,7 @@ export class ClaudianSettingsStorage {
 
     const merged = {
       ...this.getDefaults(),
-      ...stripLegacyFields(stored),
+      ...stripDeprecatedFields(stored),
     };
 
     const migrated = migrateModelOverrides(merged);
@@ -92,7 +96,7 @@ export class ClaudianSettingsStorage {
 
   async save(settings: StoredClaudianSettings): Promise<void> {
     const content = JSON.stringify(
-      stripLegacyFields(settings),
+      stripDeprecatedFields(settings),
       null,
       2,
     );
