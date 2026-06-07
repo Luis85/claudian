@@ -3,6 +3,8 @@ import { type App, Component, MarkdownRenderer, Modal, setIcon } from 'obsidian'
 import { t } from '../../../i18n/i18n';
 import type { TranslationKey } from '../../../i18n/types';
 import { formatRelativeTime } from '../../../utils/date';
+import { renderAgentAvatar } from '../../agents/agentAvatar';
+import { listPersonas, resolvePersona } from '../../agents/personaRegistry';
 import { isPureAcceptanceChecklist, parseAcceptanceChecklist } from '../model/acceptanceChecklist';
 import { parseAcceptanceProgress } from '../model/acceptanceProgress';
 import { hasAnyHandoffSection, parseHandoffSections } from '../model/handoffSections';
@@ -53,6 +55,8 @@ interface FooterAction {
 
 export interface WorkOrderFieldUpdate {
   title?: string;
+  /** Assigned Agents persona id. */
+  agent?: string;
   provider?: string;
   model?: string;
   priority?: TaskPriority;
@@ -93,6 +97,18 @@ const EDITABLE_TITLE_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStatus>([
   'ready',
   'needs_fix',
 ]);
+
+// Statuses where the Agent assignee can still be changed. Every other status
+// (running + terminal/review states) renders the assignee as a static avatar +
+// name. Mirrors the editable-title set per the persona-seam spec.
+const EDITABLE_AGENT_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStatus>([
+  'inbox',
+  'ready',
+  'needs_fix',
+]);
+
+// Avatar diameter (px) for the modal Agent property value.
+const AGENT_AVATAR_SIZE = 18;
 
 // The detail modal is a singleton (one work order open at a time), so a stable
 // id is safe to use as the dialog's `aria-labelledby` target.
@@ -637,11 +653,10 @@ export class WorkOrderDetailModal extends Modal {
     const statusValue = this.addPropertyRow(panel, 'status', 'circle-dot', t('tasks.workOrderModal.fieldStatus')).value;
     this.renderStatusPill(statusValue, fm.status);
 
-    // Agent — placeholder slot (no avatar; the persona slice fills this).
-    this.addPropertyRow(panel, 'agent', 'user', t('tasks.workOrderModal.fieldAgent')).value.createSpan({
-      cls: 'claudian-work-order-modal-prop-placeholder',
-      text: '—',
-    });
+    // Agent — assignee persona. Editable states get a persona picker (avatar in
+    // the value chip); every other status shows a static avatar + name.
+    const agentValue = this.addPropertyRow(panel, 'agent', 'user', t('tasks.workOrderModal.fieldAgent')).value;
+    this.renderAgentRow(agentValue, fm.agent, EDITABLE_AGENT_STATUSES.has(fm.status));
 
     // Provider / Model — chips when editable; Provider change resets Model.
     const providerValue = this.addPropertyRow(panel, 'provider', 'cpu', t('tasks.workOrderModal.fieldProvider')).value;
@@ -727,6 +742,46 @@ export class WorkOrderDetailModal extends Modal {
         this.callbacks.onOpenConversation?.(task);
       });
     }
+  }
+
+  /**
+   * Agent assignee value. Both presentations resolve the persona from the
+   * stored `agent` id through `resolvePersona` (absent / unknown → Standard).
+   * Editable states render the shared editable value chip (so the picker stays
+   * keyboard-operable and visually matches Provider / Model / Priority) with the
+   * resolved persona avatar prepended into the chip; selection persists through
+   * `onSaveFields`. Non-editable states render a static avatar + persona name.
+   */
+  private renderAgentRow(parent: HTMLElement, agentId: string | undefined, editable: boolean): void {
+    const { task } = this;
+    const persona = resolvePersona(agentId);
+
+    if (!editable) {
+      const wrap = parent.createSpan({ cls: 'claudian-work-order-modal-agent' });
+      renderAgentAvatar(wrap, persona, AGENT_AVATAR_SIZE);
+      wrap.createSpan({ cls: 'claudian-work-order-modal-agent-name', text: persona.name });
+      return;
+    }
+
+    const personas = listPersonas();
+    const chip = renderEditableValueChip({
+      parent,
+      value: persona.id,
+      options: personas.map((p) => ({ value: p.id, label: p.name })),
+      onChange: (value) => void this.callbacks.onSaveFields(task, { agent: value }),
+    });
+
+    // Lead the chip with the selected persona's avatar (kept in sync on change).
+    chip.el.addClass('claudian-work-order-modal-chip--agent');
+    let avatar = renderAgentAvatar(chip.el, persona, AGENT_AVATAR_SIZE);
+    chip.el.insertBefore(avatar, chip.el.firstChild);
+    chip.selectEl.addEventListener('change', () => {
+      const next = resolvePersona(chip.selectEl.value);
+      const replacement = renderAgentAvatar(chip.el, next, AGENT_AVATAR_SIZE);
+      chip.el.insertBefore(replacement, chip.el.firstChild);
+      avatar.remove();
+      avatar = replacement;
+    });
   }
 
   private addPropertyRow(

@@ -116,6 +116,31 @@ export function installObsidianDom(): void {
       return child;
     };
   }
+
+  if (typeof protoRecord.setAttr !== 'function') {
+    protoRecord.setAttr = function setAttr(
+      this: HTMLElement,
+      name: string,
+      value: string | number | boolean | null,
+    ): void {
+      if (value === null) {
+        this.removeAttribute(name);
+        return;
+      }
+      this.setAttribute(name, String(value));
+    };
+  }
+
+  if (typeof protoRecord.setCssProps !== 'function') {
+    protoRecord.setCssProps = function setCssProps(
+      this: HTMLElement,
+      props: Record<string, string>,
+    ): void {
+      for (const [name, value] of Object.entries(props)) {
+        this.style.setProperty(name, value);
+      }
+    };
+  }
 }
 
 installObsidianDom();

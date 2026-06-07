@@ -886,5 +886,10 @@
     "noView": "Inline edit unavailable: could not access the active Markdown view.",
     "inserted": "Inserted",
     "applied": "Edit applied"
+  },
+  "agents": {
+    "persona": {
+      "standard": "Estándar"
+    }
   }
 }

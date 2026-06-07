@@ -234,6 +234,9 @@ export type TranslationKey =
   | 'tasks.workOrderModal.actionReopen'
   | 'tasks.workOrderModal.actionArchive'
 
+  // Agents - persona seam (Agent Board redesign)
+  | 'agents.persona.standard'
+
   // Chat - Tabs (Q-1 chunk 13)
   | 'chat.tab.createFailed'
   | 'chat.tab.createConversationFailed'

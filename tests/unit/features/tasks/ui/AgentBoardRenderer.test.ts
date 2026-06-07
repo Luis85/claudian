@@ -883,7 +883,7 @@ describe('AgentBoardRenderer — card body (title dot / meta / footer)', () => {
     expect(progress.querySelector('.claudian-agent-board-card-progress-count')?.textContent).toBe('2/2');
   });
 
-  it('reserves a 20px assignee slot at the footer far right (empty placeholder this slice)', () => {
+  it('renders the assignee avatar in the 20px slot at the footer far right', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     const task = makeTask('a', 'ready');
@@ -892,9 +892,23 @@ describe('AgentBoardRenderer — card body (title dot / meta / footer)', () => {
     const footer = host.querySelector('.claudian-agent-board-card-footer') as HTMLElement;
     const slot = footer.querySelector('.claudian-agent-board-card-assignee') as HTMLElement;
     expect(slot).not.toBeNull();
-    // Placeholder only — the persona slice fills it; no avatar rendered here.
-    expect(slot.childElementCount).toBe(0);
-    expect(slot.textContent).toBe('');
+    // The persona avatar fills the slot. No agent id → Standard.
+    const avatar = slot.querySelector('.claudian-agent-avatar') as HTMLElement;
+    expect(avatar).not.toBeNull();
+    expect(avatar.getAttribute('title')).toBe('Standard');
+    expect(avatar.getAttribute('data-icon')).toBe('cpu');
+    expect(avatar.style.getPropertyValue('--agent-avatar-size')).toBe('20px');
+  });
+
+  it('keeps the Standard tooltip for an unknown agent id (round-trips, resolves to Standard)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const task = makeTask('a', 'ready');
+    task.frontmatter.agent = 'persona-not-yet-shipped';
+    renderer.render(host, makeState({ ready: [task] }), makeCallbacks());
+    const avatar = host.querySelector('.claudian-agent-board-card-assignee .claudian-agent-avatar') as HTMLElement;
+    expect(avatar).not.toBeNull();
+    expect(avatar.getAttribute('title')).toBe('Standard');
   });
 
   it('keeps a footer with a spacer + assignee slot when acceptance progress is absent', () => {

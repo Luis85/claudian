@@ -56,6 +56,12 @@ interface RecordingEl {
   setText(text: string): void;
   setAttr(name: string, value: string): void;
   setAttribute(name: string, value: string): void;
+  // Records the per-persona color + size CSS custom properties the avatar sets.
+  setCssProps(props: Record<string, string>): void;
+  cssProps: Record<string, string>;
+  // The Agent chip prepends its avatar via insertBefore(node, firstChild).
+  readonly firstChild: RecordingEl | null;
+  insertBefore(node: RecordingEl, before: RecordingEl | null): RecordingEl;
   empty(): void;
   // Detaches this node from its parent (mirrors HTMLElement.remove) so removed
   // collapsible bodies disappear from the recorded tree.
@@ -82,8 +88,12 @@ function makeRecordingEl(tag: string): RecordingEl {
     textContent: '',
     value: '',
     attrs: {},
+    cssProps: {},
     events: {},
     children: [],
+    get firstChild() {
+      return this.children[0] ?? null;
+    },
     createEl(childTag: string, opts?: ElOpts) {
       const child = makeRecordingEl(childTag);
       if (opts?.text) child.text = opts.text;
@@ -129,6 +139,22 @@ function makeRecordingEl(tag: string): RecordingEl {
     },
     setAttribute(name: string, value: string) {
       this.attrs[name] = value;
+    },
+    setCssProps(props: Record<string, string>) {
+      Object.assign(this.cssProps, props);
+    },
+    insertBefore(node: RecordingEl, before: RecordingEl | null) {
+      const idx = before ? this.children.indexOf(before) : -1;
+      // Detach from any prior parent first (mirrors DOM insertBefore semantics).
+      const priorSiblings = node.parent?.children;
+      if (priorSiblings) {
+        const at = priorSiblings.indexOf(node);
+        if (at >= 0) priorSiblings.splice(at, 1);
+      }
+      node.parent = this;
+      if (idx >= 0) this.children.splice(idx, 0, node);
+      else this.children.push(node);
+      return node;
     },
     empty() {
       this.children = [];
@@ -517,13 +543,61 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
     expect(pill!.classes.has('claudian-work-order-modal-status-pill--needs_approval')).toBe(true);
   });
 
-  it('renders the Agent placeholder row with no avatar', () => {
+  it('renders the Agent row as a persona dropdown (chip + avatar) in an editable state', () => {
     const { sidebar } = openWith(makeTask('t', 'inbox'), richCallbacks());
-    const agentRow = findRow(sidebar, 'agent');
-    expect(agentRow).toBeDefined();
-    // Placeholder only — no chip/select and no avatar surface yet.
-    expect(find(agentRow!, 'claudian-work-order-modal-chip')).toBeUndefined();
-    expect(find(agentRow!, 'claudian-work-order-modal-avatar')).toBeUndefined();
+    const agentRow = findRow(sidebar, 'agent')!;
+    // Editable: a value chip with a native <select> picker.
+    const chip = find(agentRow, 'claudian-work-order-modal-chip');
+    expect(chip).toBeDefined();
+    expect(firstSelect(agentRow)).toBeDefined();
+    // The persona avatar leads the chip and carries the persona name as title.
+    const avatar = find(agentRow, 'claudian-agent-avatar');
+    expect(avatar).toBeDefined();
+    expect(avatar!.attrs['title']).toBe('Standard');
+    // 18px avatar in the modal value.
+    expect(avatar!.cssProps['--agent-avatar-size']).toBe('18px');
+    // The chip is the first chip child of the row (avatar is prepended into it).
+    expect(chip!.children[0]).toBe(avatar);
+  });
+
+  it('lists the persona options (Standard only for now) in the Agent picker', () => {
+    const { sidebar } = openWith(makeTask('t', 'inbox'), richCallbacks());
+    const select = firstSelect(findRow(sidebar, 'agent')!)!;
+    const optionLabels = select.children.filter((c) => c.tag === 'option').map((o) => o.text);
+    expect(optionLabels).toEqual(['Standard']);
+  });
+
+  it('persists an Agent selection through onSaveFields({ agent })', () => {
+    const onSaveFields = jest.fn();
+    const task = makeTask('t', 'inbox');
+    const { sidebar } = openWith(task, richCallbacks({ onSaveFields }));
+    const select = firstSelect(findRow(sidebar, 'agent')!)!;
+    select.value = 'standard';
+    select.emit('change');
+    expect(onSaveFields).toHaveBeenCalledWith(task, { agent: 'standard' });
+  });
+
+  it('renders the Agent row as a static avatar + name (no chip) in a non-editable state', () => {
+    const { sidebar } = openWith(makeTask('t', 'running'), richCallbacks());
+    const agentRow = findRow(sidebar, 'agent')!;
+    // Non-editable: no chip/select, but the avatar + name are present.
+    expect(find(agentRow, 'claudian-work-order-modal-chip')).toBeUndefined();
+    expect(firstSelect(agentRow)).toBeUndefined();
+    const avatar = find(agentRow, 'claudian-agent-avatar');
+    expect(avatar).toBeDefined();
+    expect(avatar!.attrs['data-icon']).toBe('cpu');
+    const name = find(agentRow, 'claudian-work-order-modal-agent-name');
+    expect(name).toBeDefined();
+    expect(name!.text).toBe('Standard');
+  });
+
+  it('resolves an unknown agent id to Standard in the Agent row', () => {
+    const task = makeTask('t', 'running');
+    task.frontmatter.agent = 'persona-not-yet-shipped';
+    const { sidebar } = openWith(task, richCallbacks());
+    const agentRow = findRow(sidebar, 'agent')!;
+    const name = find(agentRow, 'claudian-work-order-modal-agent-name');
+    expect(name!.text).toBe('Standard');
   });
 
   it('renders Provider/Model/Priority as editable value chips in editable states', () => {

@@ -48,6 +48,8 @@ export interface WriteStatusOptions {
 
 export interface WriteFieldsOptions {
   title?: string;
+  /** Assigned Agents persona id (an unknown id is persisted verbatim). */
+  agent?: string;
   provider?: string;
   model?: string;
   priority?: TaskPriority;
@@ -167,6 +169,7 @@ export class TaskNoteStore {
       // the note showing one title in frontmatter and another in the H1.
       body = syncTitleHeading(body, fields.title);
     }
+    if (fields.agent !== undefined) frontmatter.agent = fields.agent;
     if (fields.provider !== undefined) frontmatter.provider = fields.provider;
     if (fields.model !== undefined) frontmatter.model = fields.model;
     if (fields.priority !== undefined) frontmatter.priority = fields.priority;
