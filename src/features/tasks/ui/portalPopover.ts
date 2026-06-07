@@ -70,13 +70,17 @@ export class PortalPopover {
   open(): void {
     if (this.popover) return;
     const { items, menuClass, itemClass, itemIconClass, itemDangerClass } = this.options;
+    // Resolve the document from the trigger so the portal also works inside an
+    // Obsidian popout window (and avoids referencing the global `document`).
+    const ownerDoc = this.options.trigger.ownerDocument;
 
-    const pop = document.body.createDiv({ cls: menuClass });
+    const pop = ownerDoc.body.createDiv({ cls: menuClass });
     pop.setAttribute('role', 'menu');
     // Keep the popover focusable so Escape (and a programmatic focus on open)
     // has a reliable target even before any item is hovered.
     pop.setAttribute('tabindex', '-1');
-    pop.style.position = 'fixed';
+    // `position: fixed` lives on the menu CSS class; only the dynamic top/left
+    // (computed from the trigger rect) are set inline.
     // The card itself opens the detail view on click; keep popover clicks local.
     pop.addEventListener('click', (event) => event.stopPropagation());
     pop.addEventListener('mousedown', (event) => event.stopPropagation());
@@ -116,12 +120,12 @@ export class PortalPopover {
       }
     };
 
-    document.addEventListener('mousedown', onPointerDown, true);
+    ownerDoc.addEventListener('mousedown', onPointerDown, true);
     window.addEventListener('scroll', onReflow, true);
     window.addEventListener('resize', onReflow);
     pop.addEventListener('keydown', onKeyDown);
     this.cleanups.push(
-      () => document.removeEventListener('mousedown', onPointerDown, true),
+      () => ownerDoc.removeEventListener('mousedown', onPointerDown, true),
       () => window.removeEventListener('scroll', onReflow, true),
       () => window.removeEventListener('resize', onReflow),
       () => pop.removeEventListener('keydown', onKeyDown),

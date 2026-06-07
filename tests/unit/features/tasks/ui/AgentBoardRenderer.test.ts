@@ -472,7 +472,8 @@ describe('AgentBoardRenderer — ⋯ overflow menu (portal-positioned popover)',
     stubGeometry(trigger, { top: 100, bottom: 120, left: 200, right: 226 }, 800);
     trigger.click();
     const menu = document.querySelector('.claudian-agent-board-card-menu') as HTMLElement;
-    expect(menu.style.position).toBe('fixed');
+    // position: fixed comes from the menu CSS class; only the dynamic top/left are inline.
+    expect(menu.classList.contains('claudian-agent-board-card-menu')).toBe(true);
     // Room below (bottom 120 + menu height < 800) → drops down just under the trigger.
     expect(parseFloat(menu.style.top)).toBeGreaterThanOrEqual(120);
     expect(menu.classList.contains('claudian-agent-board-card-menu--up')).toBe(false);

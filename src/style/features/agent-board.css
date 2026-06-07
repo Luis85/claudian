@@ -291,6 +291,8 @@
    CSS. Mounting on the body (a portal) keeps a tall menu from adding a scrollbar
    to the overflow:auto lane card list. */
 .claudian-agent-board-card-menu {
+  /* Portaled onto document.body; the dynamic top/left are set inline. */
+  position: fixed;
   z-index: var(--layer-menu, 200);
   min-width: 180px;
   padding: 4px;
