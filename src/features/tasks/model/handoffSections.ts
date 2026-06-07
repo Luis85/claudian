@@ -35,6 +35,9 @@ const HEADING_TO_KEY: Record<string, SectionKey> = {
 // trailing whitespace and surrounding blank lines.
 const HEADING_PATTERN = /^#{1,6}\s+(.+?)\s*$/;
 
+// `renderHandoffMarkdown` always emits exactly these four headings in this order.
+const EXPECTED_ORDER: SectionKey[] = ['summary', 'verification', 'risks', 'nextAction'];
+
 export function parseHandoffSections(markdown: string): HandoffSections {
   const sections: HandoffSections = {
     summary: '',
@@ -44,6 +47,7 @@ export function parseHandoffSections(markdown: string): HandoffSections {
   };
 
   const lines = markdown.split('\n');
+  let nextExpected = 0;
   let activeKey: SectionKey | undefined;
   let buffer: string[] = [];
 
@@ -60,9 +64,14 @@ export function parseHandoffSections(markdown: string): HandoffSections {
       ? HEADING_TO_KEY[headingMatch[1].trim().toLowerCase()]
       : undefined;
 
-    if (headingKey) {
+    // Only the next heading in the generated sequence delimits a section. A
+    // heading inside a body — including one whose text matches a later section
+    // name — is kept as body content, so the handoff renders losslessly even
+    // when an agent writes "## Risks" inside its Summary.
+    if (headingKey && headingKey === EXPECTED_ORDER[nextExpected]) {
       flush();
       activeKey = headingKey;
+      nextExpected += 1;
       continue;
     }
 

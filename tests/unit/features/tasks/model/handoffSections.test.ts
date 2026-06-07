@@ -52,12 +52,34 @@ describe('parseHandoffSections', () => {
       '- bullet a',
       '- bullet b',
       '',
-      '## Next Action',
+      '## Verification',
       'Done.',
     ].join('\n');
     const parsed = parseHandoffSections(md);
     expect(parsed.summary).toBe('Line one with [[Wikilink]].\n\n- bullet a\n- bullet b');
-    expect(parsed.nextAction).toBe('Done.');
+    expect(parsed.verification).toBe('Done.');
+  });
+
+  it('keeps in-body headings as content (only the generated sequence delimits)', () => {
+    // An agent writes "## Risks" inside its Summary, before the real Verification.
+    const md = [
+      '## Summary',
+      'We mitigated several risks.',
+      '## Risks',
+      'Still investigating.',
+      '## Verification',
+      'Gates pass.',
+      '## Risks',
+      'Migration risk noted.',
+      '## Next Action',
+      'Merge.',
+    ].join('\n');
+    const parsed = parseHandoffSections(md);
+    // The in-body "## Risks" stays inside Summary; only the in-sequence Risks delimits.
+    expect(parsed.summary).toBe('We mitigated several risks.\n## Risks\nStill investigating.');
+    expect(parsed.verification).toBe('Gates pass.');
+    expect(parsed.risks).toBe('Migration risk noted.');
+    expect(parsed.nextAction).toBe('Merge.');
   });
 
   it('tolerates missing sections by returning empty strings for them', () => {
@@ -80,7 +102,7 @@ describe('parseHandoffSections', () => {
 
 describe('hasAnyHandoffSection', () => {
   it('is true when at least one known section parses with content', () => {
-    expect(hasAnyHandoffSection(parseHandoffSections('## Risks\nWatch the migration.'))).toBe(true);
+    expect(hasAnyHandoffSection(parseHandoffSections('## Summary\nWatch the migration.'))).toBe(true);
   });
 
   it('is false when nothing parsed into a known section', () => {
