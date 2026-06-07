@@ -697,6 +697,13 @@
         "archive": "Archive",
         "delete": "Delete"
       },
+      "cardAction": {
+        "run": "Run",
+        "runNow": "Run now",
+        "retry": "Retry",
+        "backToInbox": "Back to inbox",
+        "moreActions": "More actions"
+      },
       "card": {
         "reply": {
           "inputPlaceholder": "Your reply…",

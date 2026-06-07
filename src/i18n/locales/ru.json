@@ -758,6 +758,13 @@
         "archive": "В архив",
         "delete": "Удалить"
       },
+      "cardAction": {
+        "run": "Запустить",
+        "runNow": "Запустить сейчас",
+        "retry": "Повторить",
+        "backToInbox": "Назад во входящие",
+        "moreActions": "Ещё действия"
+      },
       "card": {
         "reply": {
           "inputPlaceholder": "Your reply…",

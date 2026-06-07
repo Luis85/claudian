@@ -758,6 +758,13 @@
         "archive": "Arquivar",
         "delete": "Excluir"
       },
+      "cardAction": {
+        "run": "Executar",
+        "runNow": "Executar agora",
+        "retry": "Tentar novamente",
+        "backToInbox": "Voltar à entrada",
+        "moreActions": "Mais ações"
+      },
       "card": {
         "reply": {
           "inputPlaceholder": "Your reply…",

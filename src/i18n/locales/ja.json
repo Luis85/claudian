@@ -758,6 +758,13 @@
         "archive": "アーカイブ",
         "delete": "削除"
       },
+      "cardAction": {
+        "run": "実行",
+        "runNow": "今すぐ実行",
+        "retry": "再試行",
+        "backToInbox": "受信トレイに戻す",
+        "moreActions": "その他の操作"
+      },
       "card": {
         "reply": {
           "inputPlaceholder": "Your reply…",

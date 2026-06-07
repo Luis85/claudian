@@ -323,6 +323,11 @@ export class AgentBoardView extends ItemView {
           onArchive: (target) => void this.archiveTask(target),
           onDelete: (target) => void this.deleteTask(target),
         }),
+        // Hover action cluster ⋯ menu items reuse the same view methods the
+        // right-click context menu uses, so both surfaces stay in lockstep.
+        onArchive: (task) => void this.archiveTask(task),
+        onOpenNote: (task) => void this.openTask(task),
+        onOpenConversation: buildWorkOrderConversationBindings(this.plugin).onOpenConversation,
         onReply: (task, content) => void this.onReply(task.frontmatter.id, content),
         onApprove: (task) => void this.onApprove(task.frontmatter.id),
         onReject: (task, reason) => void this.onReject(task.frontmatter.id, reason),
