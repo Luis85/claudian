@@ -66,8 +66,13 @@ function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
 }
 
+// Single-, double-, and backtick-quoted ids: TypeScript accepts a
+// no-substitution template literal (`'claude'` vs `` `claude` ``) anywhere a
+// string is accepted, so a backtick list must count too.
+const QUOTE = "['\"`]";
+
 function distinctProviderIds(code: string): string[] {
-  const re = new RegExp(`['"](${ID_ALT})['"]`, 'g');
+  const re = new RegExp(`${QUOTE}(${ID_ALT})${QUOTE}`, 'g');
   const distinct = new Set<string>();
   for (const m of code.matchAll(re)) distinct.add(m[1]);
   return [...distinct].sort();
