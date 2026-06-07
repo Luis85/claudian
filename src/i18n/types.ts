@@ -191,6 +191,10 @@ export type TranslationKey =
   | 'tasks.workOrderModal.salvageCallout'
   | 'tasks.workOrderModal.transcriptTail'
   | 'tasks.workOrderModal.transcriptTailEmpty'
+  | 'tasks.workOrderModal.editTitleHint'
+  | 'tasks.workOrderModal.startedAgo'
+  | 'tasks.workOrderModal.finishedAt'
+  | 'tasks.workOrderModal.closeAriaLabel'
 
   // Chat - Tabs (Q-1 chunk 13)
   | 'chat.tab.createFailed'

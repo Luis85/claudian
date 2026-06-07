@@ -26,11 +26,180 @@
   overflow: hidden;
 }
 
-/* Pinned header (filled by a later header slice). */
+/* ============================================================
+   Pinned header — meta row (ID chip + status-aware caption),
+   inline-editable title, a left-anchored 2px accent gradient, and
+   a top-right close button. The accent + live-dot color resolve from
+   `--claudian-wo-header-color`, set by the status modifiers below
+   (the status→color contract, shared with the pill / ring / ledger).
+   ============================================================ */
 .claudian-work-order-modal-header {
+  position: relative;
   flex: 0 0 auto;
-  border-bottom: 1px solid var(--background-modifier-border);
+  padding: 18px 26px 16px;
+  border-bottom: 1px solid var(--border-color);
 }
+
+/* 2px accent line on the header's bottom edge: left-anchored gradient that
+   fades out by 240px. Sits over the 1px border. */
+.claudian-work-order-modal-header-accent {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--claudian-wo-header-color, var(--border-color)) 0,
+    var(--claudian-wo-header-color, var(--border-color)) 64px,
+    transparent 240px
+  );
+}
+
+/* ---------- Meta row (above the title) ---------- */
+.claudian-work-order-modal-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+
+.claudian-work-order-modal-id-chip {
+  padding: 2px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-m);
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  letter-spacing: 0.02em;
+}
+
+.claudian-work-order-modal-header-live,
+.claudian-work-order-modal-header-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+/* Pulsing live dot in the status color (running). The pulse is motion-gated. */
+.claudian-work-order-modal-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--claudian-wo-header-color, var(--text-muted));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .claudian-work-order-modal-live-dot {
+    animation: claudian-wo-header-pulse 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes claudian-wo-header-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--claudian-wo-header-color, var(--text-muted)) 50%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--claudian-wo-header-color, var(--text-muted)) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--claudian-wo-header-color, var(--text-muted)) 0%, transparent);
+  }
+}
+
+/* ---------- Title ---------- */
+.claudian-work-order-modal-title {
+  margin: 0;
+  padding-right: 40px;
+  color: var(--text-normal);
+  font-size: 21px;
+  font-weight: var(--font-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+  outline: none;
+}
+
+/* Editable affordance (inbox / ready / needs_fix). */
+.claudian-work-order-modal-title.is-editable {
+  margin: -3px -7px;
+  padding: 3px 7px;
+  padding-right: 40px;
+  border-radius: var(--radius-m);
+  cursor: text;
+}
+
+.claudian-work-order-modal-title.is-editable:hover {
+  background: var(--background-modifier-hover);
+}
+
+.claudian-work-order-modal-title.is-editable:focus {
+  background: var(--input-bg);
+  box-shadow: 0 0 0 2px var(--color-accent-3);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .claudian-work-order-modal-title.is-editable {
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+  }
+}
+
+.claudian-work-order-modal-title-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 7px;
+  color: var(--text-faint);
+  font-size: var(--font-smaller);
+}
+
+/* ---------- Close button (top-right) ---------- */
+.claudian-work-order-modal-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-m);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.claudian-work-order-modal-close:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.claudian-work-order-modal-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .claudian-work-order-modal-close {
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+}
+
+/* Status → header accent/live-dot color contract (mirrors the status pill). */
+.claudian-work-order-modal-header--inbox { --claudian-wo-header-color: var(--color-base-60); }
+.claudian-work-order-modal-header--ready { --claudian-wo-header-color: var(--color-blue); }
+.claudian-work-order-modal-header--running { --claudian-wo-header-color: var(--color-yellow); }
+.claudian-work-order-modal-header--needs_input { --claudian-wo-header-color: var(--color-blue); }
+.claudian-work-order-modal-header--needs_approval { --claudian-wo-header-color: var(--color-purple); }
+.claudian-work-order-modal-header--review { --claudian-wo-header-color: var(--color-blue); }
+.claudian-work-order-modal-header--needs_handoff { --claudian-wo-header-color: var(--color-orange); }
+.claudian-work-order-modal-header--needs_fix { --claudian-wo-header-color: var(--color-orange); }
+.claudian-work-order-modal-header--done { --claudian-wo-header-color: var(--color-green); }
+.claudian-work-order-modal-header--failed { --claudian-wo-header-color: var(--color-red); }
+.claudian-work-order-modal-header--canceled { --claudian-wo-header-color: var(--color-base-60); }
 
 /*
  * Scroll region: the only part of the shell that scrolls. The two columns own

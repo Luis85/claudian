@@ -1,4 +1,4 @@
-import { formatDurationMmSs, getTodayDate } from '../../../src/utils/date';
+import { formatDurationMmSs, formatRelativeTime, getTodayDate } from '../../../src/utils/date';
 
 describe('getTodayDate', () => {
   it('returns readable date with ISO suffix', () => {
@@ -76,5 +76,44 @@ describe('formatDurationMmSs', () => {
       expect(formatDurationMmSs(Infinity)).toBe('0s');
       expect(formatDurationMmSs(-Infinity)).toBe('0s');
     });
+  });
+});
+
+describe('formatRelativeTime', () => {
+  const now = Date.parse('2026-06-07T12:00:00Z');
+
+  it('formats sub-minute gaps in seconds', () => {
+    expect(formatRelativeTime('2026-06-07T11:59:30Z', now)).toBe('30s');
+  });
+
+  it('formats minute gaps in minutes', () => {
+    expect(formatRelativeTime('2026-06-07T11:55:00Z', now)).toBe('5m');
+  });
+
+  it('formats hour gaps in hours', () => {
+    expect(formatRelativeTime('2026-06-07T09:00:00Z', now)).toBe('3h');
+  });
+
+  it('formats day gaps in days', () => {
+    expect(formatRelativeTime('2026-06-05T12:00:00Z', now)).toBe('2d');
+  });
+
+  it('rounds down to the nearest unit', () => {
+    // 89s → 1m (floor), not 2m.
+    expect(formatRelativeTime('2026-06-07T11:58:31Z', now)).toBe('1m');
+  });
+
+  it('clamps future timestamps to 0s', () => {
+    expect(formatRelativeTime('2026-06-07T12:05:00Z', now)).toBe('0s');
+  });
+
+  it('returns undefined for an empty or missing timestamp', () => {
+    expect(formatRelativeTime(undefined, now)).toBeUndefined();
+    expect(formatRelativeTime(null, now)).toBeUndefined();
+    expect(formatRelativeTime('', now)).toBeUndefined();
+  });
+
+  it('returns undefined for an unparseable timestamp', () => {
+    expect(formatRelativeTime('not-a-date', now)).toBeUndefined();
   });
 });
