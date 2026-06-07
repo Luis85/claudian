@@ -1,11 +1,3 @@
-jest.mock('obsidian', () => {
-  const actual = jest.requireActual('obsidian');
-  return {
-    ...actual,
-    normalizePath: (p: string): string => p.replace(/\\/g, '/').replace(/\/+/g, '/'),
-  };
-});
-
 import { TFile } from 'obsidian';
 
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';

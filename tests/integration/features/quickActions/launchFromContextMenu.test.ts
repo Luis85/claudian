@@ -6,30 +6,14 @@ import '../../../setup/obsidianDom';
 
 import { TFile } from 'obsidian';
 
-jest.mock('obsidian', () => {
-  class Modal {
-    contentEl = document.createElement('div');
-    modalEl = document.createElement('div');
-    scope = { register: jest.fn() };
-    constructor(public app: unknown) {}
-    open(): void {
-      document.body.appendChild(this.contentEl);
-      this.onOpen();
-    }
-    close(): void {
-      this.onClose();
-      this.contentEl.remove();
-    }
-    onOpen(): void {}
-    onClose(): void {}
-  }
-  return {
-    Modal,
-    Notice: jest.fn(),
-    TFile: class TFile { path = ''; },
-    TFolder: class TFolder { path = ''; },
-  };
-});
+// This flow calls modal.open(), so it needs a jsdom-driving Modal whose open()
+// invokes onOpen() against real DOM (the canonical mock's open is a no-op spy).
+// JsdomModal is that single shared override; Notice/TFile/TFolder/normalizePath
+// stay sourced from the canonical mock so the surface can't drift again.
+jest.mock('obsidian', () =>
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('../../../setup/jsdomObsidian').jsdomObsidianMock(),
+);
 
 jest.mock('@/i18n/i18n', () => {
   const en = jest.requireActual('@/i18n/locales/en.json');
