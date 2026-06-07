@@ -738,9 +738,11 @@
 .claudian-work-order-modal-ledger-dot--failed { --claudian-wo-ledger-color: var(--color-red); }
 .claudian-work-order-modal-ledger-dot--canceled { --claudian-wo-ledger-color: var(--color-base-60); }
 
-/* Collapse the two-pane grid: sidebar drops below main, divider goes to top. */
+/* Collapse the two-pane grid: sidebar drops below main, divider goes to top.
+   Scoped under the modal class to match the base body rule's specificity (0-2-0)
+   so this override still wins by source order. */
 @media (max-width: 720px) {
-  .claudian-work-order-modal-body {
+  .claudian-work-order-modal .claudian-work-order-modal-body {
     grid-template-columns: 1fr;
   }
 
