@@ -907,7 +907,15 @@ export class ClaudianView extends ItemView {
     if (!this.tabBarContainerEl || !this.tabManager) return;
 
     const tabCount = this.tabManager.countTabsByKind('chat');
-    const showTabBar = tabCount >= 2;
+    // Normally the bar hides with a single chat tab. But a hidden work-order
+    // tab can be the active tab (opened from the Work Orders dropdown), and
+    // work-order badges are omitted from getTabBarItems(); once that work order
+    // is terminal it also drops out of the dropdown. Without surfacing the bar
+    // here the user is stranded on the work-order tab with no visible control
+    // to switch back. Show it whenever a work-order tab is active and at least
+    // one chat tab exists to return to.
+    const activeIsWorkOrder = this.tabManager.getActiveTab()?.kind === 'work-order';
+    const showTabBar = tabCount >= 2 || (activeIsWorkOrder && tabCount >= 1);
     const isHeaderMode = this.plugin.settings.tabBarPosition === 'header';
 
     // Hide tab badges when only 1 tab, show when 2+
