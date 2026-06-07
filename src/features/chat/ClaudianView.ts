@@ -906,7 +906,7 @@ export class ClaudianView extends ItemView {
   private updateTabBarVisibility(): void {
     if (!this.tabBarContainerEl || !this.tabManager) return;
 
-    const tabCount = this.tabManager.getTabCount();
+    const tabCount = this.tabManager.countTabsByKind('chat');
     const showTabBar = tabCount >= 2;
     const isHeaderMode = this.plugin.settings.tabBarPosition === 'header';
 

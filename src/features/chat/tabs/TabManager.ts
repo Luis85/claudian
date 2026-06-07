@@ -496,6 +496,7 @@ export class TabManager implements TabManagerInterface {
     let index = 1;
 
     for (const tab of this.getOrderedTabs()) {
+      if (tab.kind === 'work-order') continue;
       items.push({
         id: tab.id,
         index: index++,

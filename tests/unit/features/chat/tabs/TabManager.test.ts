@@ -716,10 +716,8 @@ describe('TabManager - Tab Bar Data', () => {
       await manager.createTab(undefined, undefined, { activate: false, kind: 'work-order' });
       await manager.createTab(undefined, undefined, { activate: false, kind: 'chat' });
 
-      const items = manager.getTabBarItems();
-      const kinds = items.map((it) => it.kind);
-      // Chat first (insertion order), then WO (insertion order).
-      expect(kinds).toEqual(['chat', 'chat', 'work-order', 'work-order']);
+      expect(manager.getOrderedTabs().map((tab) => tab.kind)).toEqual(['chat', 'chat', 'work-order', 'work-order']);
+      expect(manager.getTabBarItems().map((item) => item.kind)).toEqual(['chat', 'chat']);
     });
 
     it('should resolve badge provider from the live tab context', async () => {
