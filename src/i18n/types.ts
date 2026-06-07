@@ -139,6 +139,7 @@ export type TranslationKey =
   | 'tasks.board.runFailed'
   | 'tasks.board.noReady'
   | 'tasks.board.laneSaveFailed'
+  | 'tasks.board.addWorkOrder'
   | 'tasks.board.contextMenu.openNote'
   | 'tasks.board.contextMenu.openConversation'
   | 'tasks.board.contextMenu.archive'

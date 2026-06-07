@@ -18,24 +18,27 @@
 
 .claudian-agent-board-lanes {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   align-items: flex-start;
   flex: 1 1 auto;
   min-height: 0;
-  overflow: auto;
+  /* Lanes are borderless columns: scroll horizontally when they overflow the
+     viewport, never vertically here (each lane owns its own card scroll). */
+  overflow-x: auto;
+  overflow-y: hidden;
   padding-bottom: 8px;
 }
 
+/* Borderless lane: just a header + a vertical stack of floating cards. No
+   frame, background, or border — the cards carry all the visual weight. */
 .claudian-agent-board-lane {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-width: 200px;
-  max-width: 240px;
-  padding: 8px;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 8px;
-  background: var(--background-secondary);
+  gap: 14px;
+  flex: 0 0 286px;
+  width: 286px;
+  max-height: 100%;
+  min-height: 0;
 }
 
 .claudian-agent-board-lane-header {
@@ -43,7 +46,6 @@
   align-items: center;
   gap: 6px;
   min-height: 24px;
-  font-weight: var(--font-semibold);
 }
 
 .claudian-agent-board-lane-title {
@@ -52,19 +54,55 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  color: var(--text-muted);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
 }
 
 .claudian-agent-board-lane-header-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex: 0 0 auto;
   margin-left: auto;
 }
 
 .claudian-agent-board-lane-count {
-  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  padding: 1px 6px;
+  /* --radius-full is the pill radius in newer Obsidian; the length fallback
+     keeps the pill fully rounded on hosts that predate the variable. */
+  border-radius: var(--radius-full, 999px);
+  background: var(--background-modifier-hover);
+}
+
+/* Dashed add-work-order affordance, Inbox lane only. Subtle by default; the
+   text lifts to --text-muted on hover/focus to signal interactivity. */
+.claudian-agent-board-lane-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-l, 8px);
+  background: transparent;
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.claudian-agent-board-lane-add:hover,
+.claudian-agent-board-lane-add:focus-visible {
+  color: var(--text-muted);
+  background: var(--background-modifier-hover);
+  box-shadow: none;
 }
 
 .claudian-agent-board-card {
@@ -407,27 +445,36 @@
   cursor: pointer;
 }
 
+/* Collapsed lane: a 44px vertical strip. The borderless expanded lane drops the
+   frame, so the strip reinstates its own background + border to read as a
+   clickable rail. */
 .claudian-agent-board-lane--collapsed {
-  min-width: 36px;
-  max-width: 36px;
-  padding: 8px 4px;
-  cursor: pointer;
+  flex: 0 0 44px;
+  width: 44px;
+  align-self: stretch;
+  flex-direction: column;
   align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  cursor: pointer;
+  background: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-m, 6px);
+}
+
+.claudian-agent-board-lane--collapsed:hover {
+  background: var(--background-modifier-hover);
 }
 
 .claudian-agent-board-lane--collapsed .claudian-agent-board-lane-title-vertical {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
+  font-size: var(--font-ui-small);
   font-weight: var(--font-semibold);
-  color: var(--text-normal);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  color: var(--text-muted);
   white-space: nowrap;
-}
-
-.claudian-agent-board-lane--collapsed .claudian-agent-board-lane-count {
-  margin-top: 8px;
-  padding: 2px 6px;
-  border-radius: 10px;
-  background: var(--background-modifier-border);
 }
 
 .claudian-agent-board-lane-collapse-toggle {

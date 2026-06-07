@@ -1,7 +1,11 @@
+import { t } from '../../../i18n/i18n';
 import { DEFAULT_LANE_TITLES, type ResolvedBoardLayout, type ResolvedLane } from '../config/boardConfigTypes';
 import { parseAcceptanceProgress } from '../model/acceptanceProgress';
 import { isRunnableTaskStatus } from '../model/taskStateMachine';
 import type { InvalidTaskNote, TaskSpec, TaskStatus } from '../model/taskTypes';
+
+/** Lane id of the Inbox lane — the only lane that hosts the add-work-order row. */
+const INBOX_LANE_ID = 'inbox';
 
 /** Pause payload surfaced on a card while a run waits for input or approval. */
 export interface AgentBoardPauseState {
@@ -274,6 +278,23 @@ export class AgentBoardRenderer {
     for (const task of lane.tasks) {
       this.renderCard(laneEl, task, callbacks);
     }
+
+    // The dashed add-work-order affordance belongs only to the Inbox lane: that
+    // is where new work orders land, so the other lanes stay frame-free.
+    if (lane.id === INBOX_LANE_ID) {
+      this.renderAddWorkOrderRow(laneEl, callbacks);
+    }
+  }
+
+  private renderAddWorkOrderRow(laneEl: HTMLElement, callbacks: AgentBoardRenderCallbacks): void {
+    const addRow = laneEl.createEl('button', {
+      cls: 'claudian-agent-board-lane-add',
+      text: t('tasks.board.addWorkOrder'),
+    });
+    addRow.addEventListener('click', (event) => {
+      event.stopPropagation();
+      callbacks.onAddWorkOrder();
+    });
   }
 
   private renderCollapsedLane(

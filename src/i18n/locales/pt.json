@@ -751,6 +751,7 @@
       "runFailed": "Work order run failed: {error}",
       "noReady": "No ready work orders to run.",
       "laneSaveFailed": "Could not save lane change: {error}",
+      "addWorkOrder": "+ Add work order",
       "contextMenu": {
         "openNote": "Abrir nota",
         "openConversation": "Abrir conversa",
