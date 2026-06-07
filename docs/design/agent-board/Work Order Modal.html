@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!--
+  Agent Board — Work-order detail modal redesign
+  ================================================
+  Problem with the MVP: a single tall column. Title is duplicated (header + a field
+  row), Provider / Model / Priority each eat a full 40px setting row, and content +
+  actions stack endlessly so the action buttons fall off-screen.
+
+  Direction (Jira / Linear / Azure DevOps work-item patterns):
+   • Sticky header  — status pill + WO id + click-to-edit title (the separate Title
+                      row is gone; the heading IS the field).
+   • Scroll body    — only the middle scrolls. Default layout is two-pane: objective +
+                      acceptance + agent activity on the left, a Linear-style property
+                      list (label → value) on the right.
+   • Sticky footer  — secondary actions left, primary CTA right; always in view.
+   • Acceptance     — checklist with a progress ring/bar (done vs total).
+   • Handoff        — long agent reports split into collapsible Summary / Verification
+                      / Risks / Next-action sections so the footer stays reachable.
+
+  Width is unchanged (min(960px, 92vw)). Everything is built on Obsidian design-system
+  tokens. Use the top switcher to preview each work-item state, and Tweaks (toolbar)
+  to explore layout / density / accent variations.
+-->
+<html lang="en" class="theme-dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Work-order modal — Agent Board</title>
+  <link rel="stylesheet" href="../design-system/colors_and_type.css" />
+  <link rel="stylesheet" href="work-order.css" />
+  <style>
+    html, body { margin: 0; height: 100%; background: var(--background-primary); }
+  </style>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" src="../tweaks-panel.jsx"></script>
+  <script type="text/babel" src="data.jsx"></script>
+  <script type="text/babel" src="Modal.jsx"></script>
+  <script type="text/babel" src="Shell.jsx"></script>
+  <script type="text/babel" src="App.jsx"></script>
+</body>
+</html>
