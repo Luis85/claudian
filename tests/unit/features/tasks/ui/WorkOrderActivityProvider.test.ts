@@ -224,8 +224,8 @@ describe('WorkOrderActivityProvider', () => {
     function closableHarness(overrides: Record<string, unknown> = {}) {
       const closeTab = jest.fn(async () => true);
       const listWorkOrderTabs = jest.fn(() => [
-        { id: 'tab-1', title: 'Active WO' },
-        { id: 'tab-2', title: 'Finished WO' },
+        { id: 'tab-1', title: 'Active WO', isStreaming: false },
+        { id: 'tab-2', title: 'Finished WO', isStreaming: false },
       ]);
       const getTab = jest.fn((id: string) => (id === 'tab-1' || id === 'tab-2' ? {} : null));
       const manager = { getTab, switchToTab: jest.fn(), closeTab, listWorkOrderTabs, ...overrides };
@@ -260,6 +260,18 @@ describe('WorkOrderActivityProvider', () => {
 
     it('reports no closable tabs when the tab manager cannot enumerate them', async () => {
       const { provider } = closableHarness({ listWorkOrderTabs: undefined });
+      await provider.refresh();
+
+      expect(provider.getSummary().closableTabs).toEqual([]);
+    });
+
+    it('never lists a streaming (live) work-order tab as closable', async () => {
+      // Race: a run just started, the tab is streaming, but RunSession has not
+      // yet persisted `running` + sidepanel_tab_id, so it is absent from the
+      // active items. It must not be offered as a force-closable "finished" tab.
+      const { provider } = closableHarness({
+        listWorkOrderTabs: jest.fn(() => [{ id: 'tab-live', title: 'Just started', isStreaming: true }]),
+      });
       await provider.refresh();
 
       expect(provider.getSummary().closableTabs).toEqual([]);

@@ -132,6 +132,11 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
       if (typeof manager?.listWorkOrderTabs !== 'function') continue;
       for (const tab of manager.listWorkOrderTabs()) {
         if (activeTabIds.has(tab.id) || seen.has(tab.id)) continue;
+        // A run just started can create its tab before RunSession persists
+        // `running` + `sidepanel_tab_id`, so the tab is briefly absent from
+        // activeItems. Never offer a streaming (live) tab as "finished" — that
+        // would let the user force-close and free the slot mid-run.
+        if (tab.isStreaming) continue;
         seen.add(tab.id);
         result.push({ tabId: tab.id, title: tab.title });
       }

@@ -506,13 +506,15 @@ export class TabManager implements TabManagerInterface {
    * Open work-order tabs with their display titles. Work-order badges are hidden
    * from the visible tab bar, so the Work Orders dropdown uses this to offer a
    * close affordance for finished/orphaned work-order tabs that would otherwise
-   * be invisible and keep consuming the work-order slot budget.
+   * be invisible and keep consuming the work-order slot budget. `isStreaming`
+   * lets the dropdown skip a live run whose note hasn't persisted its active
+   * status yet, so an in-flight run is never offered a "finished" close.
    */
-  listWorkOrderTabs(): Array<{ id: string; title: string }> {
-    const out: Array<{ id: string; title: string }> = [];
+  listWorkOrderTabs(): Array<{ id: string; title: string; isStreaming: boolean }> {
+    const out: Array<{ id: string; title: string; isStreaming: boolean }> = [];
     for (const tab of this.getOrderedTabs()) {
       if (tab.kind !== 'work-order') continue;
-      out.push({ id: tab.id, title: getTabTitle(tab, this.plugin) });
+      out.push({ id: tab.id, title: getTabTitle(tab, this.plugin), isStreaming: tab.state.isStreaming });
     }
     return out;
   }
