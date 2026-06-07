@@ -22,10 +22,10 @@
   align-items: flex-start;
   flex: 1 1 auto;
   min-height: 0;
-  /* Lanes are borderless columns: scroll horizontally when they overflow the
-     viewport, never vertically here (each lane owns its own card scroll). */
-  overflow-x: auto;
-  overflow-y: hidden;
+  /* Borderless columns: scroll horizontally for lane overflow and vertically for
+     tall stacks of cards. Vertical scroll stays on this container (not per lane)
+     so AgentBoardView.render() can snapshot/restore scrollTop across re-renders. */
+  overflow: auto;
   padding-bottom: 8px;
 }
 
@@ -37,11 +37,9 @@
   gap: 14px;
   flex: 0 0 286px;
   width: 286px;
-  max-height: 100%;
+  /* Natural height — the lanes container owns the vertical scroll so a tall lane
+     extends the scroll region rather than clipping its own cards. */
   min-height: 0;
-  /* The lanes container scrolls horizontally; each lane owns its own vertical
-     scroll so tall stacks of cards stay reachable. */
-  overflow-y: auto;
 }
 
 .claudian-agent-board-lane-header {
