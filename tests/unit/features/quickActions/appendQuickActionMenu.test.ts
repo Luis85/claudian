@@ -13,6 +13,7 @@ jest.mock('@/i18n/i18n', () => ({ t: (k: string) => k }));
 
 class MockMenu {
   items: Array<{ title?: string; icon?: string; clickHandler?: () => void }> = [];
+  separators = 0;
   addItem(cb: (item: any) => void): this {
     const item: any = {};
     item.setTitle = (title: string) => { item.title = title; return item; };
@@ -20,6 +21,12 @@ class MockMenu {
     item.onClick = (h: () => void) => { item.clickHandler = h; return item; };
     cb(item);
     this.items.push(item);
+    return this;
+  }
+  // Counter only — items array tracks only `addItem` calls so existing index
+  // assertions (picker at 0, favorites at 1..N) survive the new layout.
+  addSeparator(): this {
+    this.separators += 1;
     return this;
   }
 }
@@ -87,5 +94,40 @@ describe('appendQuickActionFavoritesAndPicker', () => {
     expect(menu.items[1].title).toBe('First');
     expect(menu.items[2].title).toBe('Second');
     expect(menu.items[3].title).toBe('Third');
+  });
+
+  it('brackets the favorites with leading + trailing separators when favorites exist', () => {
+    const menu = new MockMenu();
+    const plugin = {
+      quickActionFavoritesCache: {
+        getFavorites: () => [
+          { id: '1', name: 'Fav', description: '', prompt: '', filePath: 'qa/fav.md' },
+        ],
+      },
+    } as any;
+    const file = { path: 'note.md' } as any;
+    const count = appendQuickActionFavoritesAndPicker(menu as any, plugin, file);
+    expect(menu.separators).toBe(2);
+    expect(count).toBe(1);
+  });
+
+  it('emits no separators when no favorites are present', () => {
+    const menu = new MockMenu();
+    const plugin = {
+      quickActionFavoritesCache: { getFavorites: () => [] },
+    } as any;
+    const file = { path: 'note.md' } as any;
+    const count = appendQuickActionFavoritesAndPicker(menu as any, plugin, file);
+    expect(menu.separators).toBe(0);
+    expect(count).toBe(0);
+  });
+
+  it('emits no separators when quickActionFavoritesCache is undefined', () => {
+    const menu = new MockMenu();
+    const plugin = {} as any;
+    const file = { path: 'note.md' } as any;
+    const count = appendQuickActionFavoritesAndPicker(menu as any, plugin, file);
+    expect(menu.separators).toBe(0);
+    expect(count).toBe(0);
   });
 });

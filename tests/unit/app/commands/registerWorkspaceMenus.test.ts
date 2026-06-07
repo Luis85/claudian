@@ -177,7 +177,7 @@ describe('registerWorkspaceMenus', () => {
     );
   });
 
-  it('injects favorite items below the "Open Quick Actions" entry for files', () => {
+  it('brackets favorite items with leading + trailing separators for files', () => {
     const favs: QuickAction[] = [
       { id: 'a', name: 'Refactor', description: 'Refactor', prompt: 'Refactor.', filePath: 'Quick Actions/refactor.md', favorite: true, favoriteRank: 1 },
       { id: 'b', name: 'Summarize', description: 'Summarize', prompt: 'Summarize.', filePath: 'Quick Actions/summarize.md', favorite: true, favoriteRank: 2 },
@@ -188,13 +188,37 @@ describe('registerWorkspaceMenus', () => {
     const { menu, items } = createMenu();
     fileMenu.handler!(menu, file);
 
+    // The trailing favorites separator doubles as the outer bottom bracket —
+    // workspace menu skips its own bottom sep when the helper added one.
     expect(titles(items)).toEqual([
       '<sep>',
       'Add file to Claudian chat',
       'Create work order',
       'Open Quick Actions',
+      '<sep>',
       'Refactor',
       'Summarize',
+      '<sep>',
+    ]);
+  });
+
+  it('brackets favorite items with leading + trailing separators for folders', () => {
+    const favs: QuickAction[] = [
+      { id: 'a', name: 'Refactor', description: 'Refactor', prompt: 'Refactor.', filePath: 'Quick Actions/refactor.md', favorite: true, favoriteRank: 1 },
+    ];
+    const { plugin, fileMenu } = createPlugin(favs);
+    registerWorkspaceMenus(plugin);
+    const folder = Object.create(TFolder.prototype) as TFolder;
+    const { menu, items } = createMenu();
+    fileMenu.handler!(menu, folder);
+
+    expect(titles(items)).toEqual([
+      '<sep>',
+      'Add folder to Claudian chat',
+      'Create work order',
+      'Open Quick Actions',
+      '<sep>',
+      'Refactor',
       '<sep>',
     ]);
   });
@@ -209,7 +233,10 @@ describe('registerWorkspaceMenus', () => {
     const { menu, items } = createMenu();
     fileMenu.handler!(menu, file);
 
-    const favItem = items[4] as MenuItem;
+    // Layout: [<sep>, Add file, Create WO, Open Quick Actions, <sep>, Refactor, <sep>]
+    // Refactor sits at index 5 — favorites' leading separator pushes them one
+    // slot further than the legacy layout.
+    const favItem = items[5] as MenuItem;
     const onClickCall = (favItem.onClick as jest.Mock).mock.calls[0]?.[0];
     expect(typeof onClickCall).toBe('function');
     onClickCall();

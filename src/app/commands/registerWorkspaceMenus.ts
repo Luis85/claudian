@@ -26,8 +26,12 @@ export function registerWorkspaceMenus(plugin: ClaudianPlugin): void {
               void createWorkOrderInteractive(plugin, file);
             });
         });
-        appendQuickActionFavoritesAndPicker(menu, plugin, file);
-        menu.addSeparator();
+        // Helper returns the favorite count. When favs > 0 the helper already
+        // closed its block with a trailing separator that doubles as the outer
+        // bottom bracket — no need to emit a second one. When favs === 0 we
+        // still need to close the Claudian block ourselves.
+        const favsAppended = appendQuickActionFavoritesAndPicker(menu, plugin, file);
+        if (favsAppended === 0) menu.addSeparator();
       } else if (file instanceof TFolder) {
         menu.addSeparator();
         menu.addItem((item) => {
@@ -46,8 +50,8 @@ export function registerWorkspaceMenus(plugin: ClaudianPlugin): void {
               void createWorkOrderInteractive(plugin, file);
             });
         });
-        appendQuickActionFavoritesAndPicker(menu, plugin, file);
-        menu.addSeparator();
+        const favsAppended = appendQuickActionFavoritesAndPicker(menu, plugin, file);
+        if (favsAppended === 0) menu.addSeparator();
       }
     }),
   );
