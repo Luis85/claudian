@@ -19,7 +19,7 @@ image:
 
 Sometimes you want help, but you do not want the helper working directly on your desk. You want a copy of the desk first: somewhere safe to draft, edit, run commands, make mistakes, and show you what changed before anything lands back in your real workspace.
 
-**Workspace Isolation** gives every agent its own place to work before it touches yours. A chat tab, a board card, or a review run can move into an isolated workspace. The agent works there. You review the changed files. You decide what comes back.
+**Workspace Isolation** gives every agent co-worker its own place to work before it touches yours. A chat tab, a board card, or a review run can move into an isolated workspace. The agent works there. You review the changed files. You decide what comes back.
 
 ---
 

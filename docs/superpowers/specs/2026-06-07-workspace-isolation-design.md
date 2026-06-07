@@ -305,16 +305,7 @@ Required invariants:
 
 ## Product feature note
 
-Create `docs/product/features/Workspace Isolation.md` with:
-
-- `type: feature`
-- `name: Workspace Isolation`
-- draft status
-- tagline: `Give every agent its own workspace before it touches yours.`
-- related links to [[Co-Worker - Chat]], [[Agent Kanban Board]], and [[Multi Provider Support]]
-- copy explaining copy workspaces for non-git users
-- copy explaining git enhancements for git users
-- a clear non-sandbox caveat
+[[Workspace Isolation]]
 
 ## Testing strategy
 
