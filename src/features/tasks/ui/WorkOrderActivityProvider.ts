@@ -1,4 +1,4 @@
-import { TFile } from 'obsidian';
+import { type TAbstractFile,TFile } from 'obsidian';
 
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
@@ -9,6 +9,7 @@ import type {
 } from '../../../core/types/workOrderActivity';
 import { EMPTY_WORK_ORDER_ACTIVITY_SUMMARY } from '../../../core/types/workOrderActivity';
 import type ClaudianPlugin from '../../../main';
+import { revealWorkspaceLeaf } from '../../../utils/obsidianCompat';
 import { TaskIndexer } from '../indexing/TaskIndexer';
 import type { TaskBoardModel, TaskSpec } from '../model/taskTypes';
 import { TaskNoteStore } from '../storage/TaskNoteStore';
@@ -32,6 +33,7 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
   // published summary, otherwise the dropdown can flash back to a stale state
   // until the next event tick.
   private refreshGeneration = 0;
+  private refreshTimer: number | null = null;
 
   constructor(private readonly plugin: ClaudianPlugin, private readonly deps: WorkOrderActivityProviderDeps = {}) {}
 
@@ -45,13 +47,51 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
       this.plugin.events.on('task:run-finished', refresh),
       this.plugin.events.on('task:board-config-changed', refresh),
     ];
+    this.watchVault();
     void this.refresh();
+  }
+
+  // Task bus events only cover runs Claudian drives. Work-order notes can also
+  // change through plain vault operations — manual status edits, deletes,
+  // renames, external sync — which never emit a task event. Without this the
+  // dropdown would keep a finished/deleted order pinned in the chat header until
+  // an unrelated task event or reload, unlike AgentBoardView which already
+  // listens on the vault for the work-order folder.
+  private watchVault(): void {
+    const vault = this.plugin.app.vault;
+    if (typeof vault.on !== 'function') return;
+    const onChange = (file: TAbstractFile, oldPath?: string): void => {
+      if (this.isWorkOrderPath(file.path) || (oldPath !== undefined && this.isWorkOrderPath(oldPath))) {
+        this.scheduleRefresh();
+      }
+    };
+    const refs = [
+      vault.on('create', onChange),
+      vault.on('modify', onChange),
+      vault.on('delete', onChange),
+      vault.on('rename', onChange),
+    ];
+    for (const ref of refs) this.disposers.push(() => vault.offref(ref));
+  }
+
+  // Coalesce bursts (a single board action can rename + modify the same note)
+  // into one vault re-index, matching AgentBoardView's debounce window.
+  private scheduleRefresh(): void {
+    if (this.refreshTimer !== null) return;
+    this.refreshTimer = window.setTimeout(() => {
+      this.refreshTimer = null;
+      void this.refresh();
+    }, 100);
   }
 
   dispose(): void {
     for (const dispose of this.disposers) dispose();
     this.disposers = [];
     this.listeners.clear();
+    if (this.refreshTimer !== null) {
+      window.clearTimeout(this.refreshTimer);
+      this.refreshTimer = null;
+    }
   }
 
   getSummary(): WorkOrderActivitySummary {
@@ -79,6 +119,12 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
       for (const view of this.plugin.getAllViews()) {
         const manager = view.getTabManager();
         if (!manager?.getTab(item.sidepanelTabId)) continue;
+        // The dropdown renders in every chat view, so the owning tab can live in
+        // a different workspace leaf/split. Reveal that leaf first — otherwise
+        // selecting the row only flips the other manager's internal tab and the
+        // user sees nothing (same reason the cross-view conversation path reveals
+        // before switching).
+        await revealWorkspaceLeaf(this.plugin.app.workspace, view.leaf);
         await manager.switchToTab(item.sidepanelTabId);
         return;
       }
@@ -88,17 +134,25 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
     if (task) this.openDetailModal(task);
   }
 
-  private async indexModel(): Promise<TaskBoardModel> {
-    if (this.deps.indexTasks) return this.deps.indexTasks();
+  private get workOrderFolder(): string {
     const settings = asSettingsBag(this.plugin.settings);
     const folder = typeof settings.agentBoardWorkOrderFolder === 'string'
       ? settings.agentBoardWorkOrderFolder
       : 'Agent Board/tasks';
+    return folder.replace(/^\/+|\/+$/g, '');
+  }
+
+  private isWorkOrderPath(path: string): boolean {
+    return path.startsWith(`${this.workOrderFolder}/`);
+  }
+
+  private async indexModel(): Promise<TaskBoardModel> {
+    if (this.deps.indexTasks) return this.deps.indexTasks();
     const vault = this.plugin.app.vault;
     if (typeof vault.getMarkdownFiles !== 'function' || typeof vault.read !== 'function') {
       return { tasks: [], invalidNotes: [] };
     }
-    return this.indexer.indexVaultFolder(vault, folder);
+    return this.indexer.indexVaultFolder(vault, this.workOrderFolder);
   }
 
   private openDetailModal(task: TaskSpec): void {

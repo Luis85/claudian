@@ -114,6 +114,7 @@ export class App {
       basePath: '/mock/vault/path',
     },
     on: jest.fn().mockReturnValue({ id: 'mock-event-ref' }),
+    offref: jest.fn(),
   };
   workspace: any = {
     getLeavesOfType: jest.fn().mockReturnValue([]),
