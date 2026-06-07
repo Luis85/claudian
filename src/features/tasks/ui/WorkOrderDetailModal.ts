@@ -195,7 +195,10 @@ export class WorkOrderDetailModal extends Modal {
         check.setAttr('data-icon', 'check');
         setIcon(check, 'check');
       }
-      row.createSpan({ cls: 'claudian-work-order-modal-checklist-text', text: item.text });
+      // Render the label as markdown so inline links / wikilinks / code stay
+      // interactive, matching the full-markdown fallback used for non-pure sections.
+      const textEl = row.createDiv({ cls: 'claudian-work-order-modal-checklist-text' });
+      void MarkdownRenderer.render(this.app, item.text, textEl, this.task.path, this.markdownComponent);
     }
   }
 

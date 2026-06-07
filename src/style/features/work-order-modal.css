@@ -291,6 +291,12 @@
   word-break: break-word;
 }
 
+/* Collapse the paragraph MarkdownRenderer wraps a single-line label in so the
+   item label sits inline within the flex row. */
+.claudian-work-order-modal-checklist-text p {
+  margin: 0;
+}
+
 /* Collapse the two-pane grid: sidebar drops below main, divider goes to top. */
 @media (max-width: 720px) {
   .claudian-work-order-modal-body {

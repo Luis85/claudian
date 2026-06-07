@@ -748,10 +748,25 @@ describe('WorkOrderDetailModal — Objective + Acceptance sections', () => {
     const checkIcon = find(first, 'claudian-work-order-modal-checklist-check');
     expect(checkIcon).toBeDefined();
     expect(checkIcon!.attrs['data-icon']).toBe('check');
-    expect(findAll(first, (el) => el.text === 'First done').length).toBeGreaterThan(0);
+    // The label flows through MarkdownRenderer (inline markdown stays live).
+    const firstHasText = find(first, 'claudian-work-order-modal-checklist-text');
+    expect(firstHasText).toBeDefined();
+    const calls = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
+    expect(calls.some((c) => c[1] === 'First done')).toBe(true);
 
     // Unchecked rows are not marked checked.
     expect(second.classes.has('is-checked')).toBe(false);
+  });
+
+  it('renders checklist item labels through MarkdownRenderer so inline links stay live', () => {
+    const task = makeTask('t', 'inbox');
+    task.sections.acceptanceCriteria = '- [ ] Update [[Spec]] and [docs](https://x)';
+    const { main } = openMain(task);
+    const section = findSection(main, 'Acceptance criteria')!;
+    // Pure checklist keeps the custom card, but the label renders as markdown.
+    expect(find(section, 'claudian-work-order-modal-checklist')).toBeDefined();
+    const calls = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
+    expect(calls.some((c) => c[1] === 'Update [[Spec]] and [docs](https://x)')).toBe(true);
   });
 
   it('falls back to an em dash when there are no acceptance criteria', () => {
