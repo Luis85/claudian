@@ -22,6 +22,10 @@ views:
     order:
       - file.name
       - parent
+      - type
+    columnSize:
+      file.name: 353
+      note.type: 232
   - type: table
     name: Plans
     filters:

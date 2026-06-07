@@ -14,6 +14,7 @@ related:
   - "[[agent-board-symphony]]"
   - "[[Work-Order execution shall not consume available chat tabs]]"
   - "[[2026-06-07-work-order-activity-dropdown]]"
+  - "[[2026-06-07-agent-board-redesign-plan]]"
 scope: agent-board-orchestration
 tags:
   - agent-board

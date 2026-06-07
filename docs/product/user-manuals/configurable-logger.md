@@ -2,7 +2,7 @@
 date: 2026-06-04
 status: shipped
 type: user-manual
-parent: Infrastructure
+parent: "[[Specorator - Product Vision]]"
 ---
 # Claudian — Configurable logger
 

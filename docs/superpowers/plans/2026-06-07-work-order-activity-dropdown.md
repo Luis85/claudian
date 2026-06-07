@@ -1,5 +1,5 @@
 ---
-status: open
+status: done
 parent: "[[Co-Worker - Chat]]"
 ---
 # Work-order Activity Dropdown Implementation Plan

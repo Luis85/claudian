@@ -2,7 +2,7 @@
 date: 2026-06-04
 status: shipped
 type: user-manual
-parent: Product
+parent: "[[Specorator - Product Vision]]"
 ---
 # Claudian — Settings
 

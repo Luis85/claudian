@@ -2,7 +2,7 @@
 type: feature
 name: Agent Kanban Board
 tagline: A board for things you have handed off. Inbox to done, never lost in chat history.
-status: draft
+status: shipped
 personas:
   - knowledge-worker
   - pm

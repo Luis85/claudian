@@ -11,6 +11,7 @@ owner: Claudian
 source: "[[Work-Orders with specialized Agents]]"
 related:
   - "[[agent-board-evidence-review]]"
+  - "[[2026-06-07-agent-board-redesign-plan]]"
 scope: agent-board
 tags:
   - agent-board

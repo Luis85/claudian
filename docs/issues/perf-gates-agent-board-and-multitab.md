@@ -9,6 +9,8 @@ created: 2026-06-03
 updated: 2026-06-03
 owner: Claudian
 source: "[[2026-06-03-comprehensive-improvement-proposal]] (PR-2)"
+related:
+  - "[[2026-06-07-agent-board-redesign-plan]]"
 scope: performance-monitoring
 tags:
   - performance

@@ -2,7 +2,7 @@
 date: 2026-06-04
 status: shipped
 type: user-manual
-parent: "[[sidepanel-chat]]"
+parent: "[[Co-Worker - Chat]]"
 ---
 # Claudian — Chat
 

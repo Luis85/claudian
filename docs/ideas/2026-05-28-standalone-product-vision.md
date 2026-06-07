@@ -1,10 +1,16 @@
 ---
-priority: 1 - high
+priority: 4 - archive
 relations:
   - Product
-status: open
+status: superseded
+superseded_by:
+  - "[[Specorator - Product Vision]]"
+  - "[[Specorator Agent Harness PRD]]"
+  - "[[2026-05-30-specorator-standalone-migration-design]]"
 ---
 # Specorator standalone product vision
+
+> **Superseded 2026-06-07.** The product narrative landed as [[Specorator - Product Vision]]; the harness roadmap landed as [[Specorator Agent Harness PRD]]; the rename/migration execution is owned by [[2026-05-30-specorator-standalone-migration-design]] (which already declares `supersedes_planning_in: [[2026-05-28-standalone-product-vision]]`). Kept as historical record of the original transition framing.
 
 Status: idea / product-transition draft  
 Date: 2026-05-28  

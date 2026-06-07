@@ -73,11 +73,7 @@ After edits, re-run `npm run typecheck && npm run lint && npm run test`. If anyt
 
 Use the work-order's native conventions exactly. **Do not write `status` directly** — the task state machine guards transitions (`running → review`, `review → done | needs_fix | canceled`). Recommend the next status inside the handoff block.
 
-**Append a Run Ledger entry** inside `<!-- claudian:run-ledger-start -->` … `<!-- claudian:run-ledger-end -->`:
-
-```
-- <ISO timestamp> [review] Reviewed by 4 subagents. <N> findings (<B> blocker, <M> major, <m> minor, <nits> nits). Polish applied to <W> items. Verification: typecheck/lint/test/build all green.
-```
+**Do not write inside the `<!-- claudian:run-ledger-start -->` … `<!-- claudian:run-ledger-end -->` markers.** The plugin owns that region — per-step ledger entries live in `.claudian/runs/<runId>/ledger.jsonl` (sidecar) and the in-note region is written once at terminal as a snapshot. Manual writes inside the markers race the plugin's terminal write. Surface review activity through the handoff block instead (see below); the plugin will fold the terminal-snapshot ledger in automatically.
 
 **Replace the handoff region** content (between `<!-- claudian:handoff-start -->` and `<!-- claudian:handoff-end -->`) with a single `<claudian_handoff>` block — this is the format `TaskHandoffParser` expects:
 

@@ -16,7 +16,8 @@ sources:
   - https://blacksmithgu.github.io/obsidian-dataview/
   - https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines
 date: 2026-05-30
-status: draft
+status: complete
+shipped_via: "[[docs/superpowers/specs/2026-05-30-feature-docs-content-design]]"
 ---
 
 # Feature Documentation Content Design for Developer Tools and Obsidian Plugins

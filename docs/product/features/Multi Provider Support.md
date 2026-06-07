@@ -10,7 +10,7 @@ cta_url: https://github.com/Luis85/specorator
 related:
   - "[[Co-Worker - Chat]]"
 user_manual: "[[multi-provider]]"
-parent: Infrastructure
+parent: "[[Specorator - Product Vision]]"
 image: "[[multi-provider-overview.png]]"
 ---
 

@@ -6,7 +6,7 @@ tagline: Plan the work, run it, review what came back, keep the record. All in y
 status: in-progress
 scope: product overview + v1 roadmap pointer
 features:
-  - "[[sidepanel-chat]]"
+  - "[[Co-Worker - Chat]]"
   - "[[Multi Provider Support]]"
   - "[[Quick Actions]]"
   - "[[Agent Kanban Board]]"
@@ -47,7 +47,7 @@ You're already using AI for serious work. Drafting emails. Planning trips. Compa
 
 | Feature                    | What it is                                                                                               |
 | -------------------------- | -------------------------------------------------------------------------------------------------------- |
-| [[sidepanel-chat]]                   | A workspace beside your notes that already knows what you're looking at and what you've highlighted.     |
+| [[Co-Worker - Chat]]                 | A workspace beside your notes that already knows what you're looking at and what you've highlighted.     |
 | [[Multi Provider Support]] | Different engines for different jobs. Pick the one that fits the moment.                                 |
 | [[Quick Actions]]          | Your most-used prompts, one tap away. Stored as vault notes you own.                                     |
 | [[Agent Kanban Board]]     | A board for things you have handed off. Inbox to done, never lost in chat history.                       |
