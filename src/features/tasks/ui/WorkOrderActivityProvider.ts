@@ -14,7 +14,7 @@ import type { TaskBoardModel, TaskSpec } from '../model/taskTypes';
 import { TaskNoteStore } from '../storage/TaskNoteStore';
 import { buildWorkOrderActivitySummary } from './workOrderActivitySummary';
 import { buildWorkOrderConversationBindings } from './workOrderConversationBindings';
-import { WorkOrderDetailModal } from './WorkOrderDetailModal';
+import { WorkOrderDetailModal, type WorkOrderDetailModalCallbacks, type WorkOrderFieldUpdate } from './WorkOrderDetailModal';
 
 export interface WorkOrderActivityProviderDeps {
   indexTasks?: () => Promise<TaskBoardModel>;
@@ -27,6 +27,11 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
   private readonly listeners = new Set<(summary: WorkOrderActivitySummary) => void>();
   private summary: WorkOrderActivitySummary = EMPTY_WORK_ORDER_ACTIVITY_SUMMARY;
   private disposers: Array<() => void> = [];
+  // Monotonic refresh token. Out-of-order completions (e.g. a slow vault scan
+  // resolving after a faster one started later) must not overwrite the latest
+  // published summary, otherwise the dropdown can flash back to a stale state
+  // until the next event tick.
+  private refreshGeneration = 0;
 
   constructor(private readonly plugin: ClaudianPlugin, private readonly deps: WorkOrderActivityProviderDeps = {}) {}
 
@@ -60,7 +65,9 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
   }
 
   async refresh(): Promise<void> {
+    const generation = ++this.refreshGeneration;
     const model = await this.indexModel();
+    if (generation !== this.refreshGeneration) return;
     this.summary = buildWorkOrderActivitySummary(model.tasks);
     for (const listener of [...this.listeners]) listener(this.summary);
   }
@@ -99,16 +106,35 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
       this.deps.openDetailModal(task);
       return;
     }
+    new WorkOrderDetailModal(this.plugin.app, task, this.buildDetailModalCallbacks(task)).open();
+  }
+
+  // Public-ish (accessed via cast in tests) so the modal callback wiring —
+  // including the persisting `onSaveFields` — can be unit-tested without
+  // spinning up Obsidian's modal stack.
+  private buildDetailModalCallbacks(_task: TaskSpec): WorkOrderDetailModalCallbacks {
     const settings = asSettingsBag(this.plugin.settings);
-    new WorkOrderDetailModal(this.plugin.app, task, {
+    return {
       onOpenNote: (target) => { void this.openNote(target); },
       ...buildWorkOrderConversationBindings(this.plugin),
+      // Without this the activity dropdown's fallback modal would render
+      // editable title/provider/model/priority controls whose edits silently
+      // no-op'd through the optional callback, losing user input on close.
+      onSaveFields: (target, fields) => this.saveTaskFields(target, fields),
       getProviderOptions: () => ProviderRegistry.getEnabledProviderIds(settings).map((id) => ({ value: id, label: id })),
       getModelOptions: (providerId) =>
         ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId)
           ? ProviderRegistry.getChatUIConfig(providerId as ProviderId).getModelOptions(settings)
           : [],
-    }).open();
+    };
+  }
+
+  private async saveTaskFields(task: TaskSpec, fields: WorkOrderFieldUpdate): Promise<void> {
+    const file = this.plugin.app.vault.getAbstractFileByPath(task.path);
+    if (!(file instanceof TFile)) return;
+    // vault.process serializes concurrent transforms on the same note so
+    // edits from this dropdown cannot clobber a parallel run-coordinator write.
+    await this.plugin.app.vault.process(file, (content) => this.noteStore.writeFields(content, fields));
   }
 
   private async openNote(task: TaskSpec): Promise<void> {
