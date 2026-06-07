@@ -186,6 +186,11 @@ export class WorkOrderDetailModal extends Modal {
     const card = section.createDiv({ cls: 'claudian-work-order-modal-checklist' });
     for (const item of items) {
       const row = card.createDiv({ cls: 'claudian-work-order-modal-checklist-item' });
+      // Read-only checkbox semantics so assistive tech hears the checked state;
+      // the visible box glyph below stays decorative (aria-hidden).
+      row.setAttr('role', 'checkbox');
+      row.setAttr('aria-checked', item.checked ? 'true' : 'false');
+      row.setAttr('aria-disabled', 'true');
       if (item.checked) row.addClass('is-checked');
       const box = row.createSpan({ cls: 'claudian-work-order-modal-checklist-box' });
       box.setAttr('aria-hidden', 'true');

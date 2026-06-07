@@ -756,6 +756,12 @@ describe('WorkOrderDetailModal — Objective + Acceptance sections', () => {
 
     // Unchecked rows are not marked checked.
     expect(second.classes.has('is-checked')).toBe(false);
+
+    // Read-only checkbox semantics expose the checked state to assistive tech.
+    expect(first.attrs['role']).toBe('checkbox');
+    expect(first.attrs['aria-checked']).toBe('true');
+    expect(first.attrs['aria-disabled']).toBe('true');
+    expect(second.attrs['aria-checked']).toBe('false');
   });
 
   it('renders checklist item labels through MarkdownRenderer so inline links stay live', () => {
