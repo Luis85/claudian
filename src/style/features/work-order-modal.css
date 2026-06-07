@@ -137,7 +137,9 @@
 
 .claudian-work-order-modal-title.is-editable:focus {
   background: var(--input-bg);
-  box-shadow: 0 0 0 2px var(--color-accent-3);
+  /* `--color-accent-3` is a prototype token; fall back to an accent focus ring
+     so default Obsidian themes still get a visible focus indicator. */
+  box-shadow: 0 0 0 2px var(--color-accent-3, color-mix(in srgb, var(--color-accent) 40%, transparent));
 }
 
 @media (prefers-reduced-motion: no-preference) {

@@ -853,7 +853,9 @@
 .claudian-agent-board-toolbar-autorun--on {
   color: var(--text-normal);
   border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
-  background-color: var(--color-accent-3);
+  /* `--color-accent-3` is a prototype token; fall back to a soft accent tint so
+     the ON pill keeps an accent-tinted background on default Obsidian themes. */
+  background-color: var(--color-accent-3, color-mix(in srgb, var(--color-accent) 18%, transparent));
 }
 
 .claudian-agent-board-toolbar-autorun--on .claudian-agent-board-toolbar-autorun-track {
