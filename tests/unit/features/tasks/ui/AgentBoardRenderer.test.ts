@@ -256,6 +256,30 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
     expect(callbacks.onReject).toHaveBeenCalledWith(task, 'too risky');
   });
 
+  it('patchCard restores the footer (progress + assignee) when a paused card resumes', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const task = makeTask('a', 'needs_input');
+    task.sections.acceptanceCriteria = '- [x] one\n- [ ] two';
+    renderer.render(host, makeState({ needs_input: [task] }), makeCallbacks());
+
+    // Paused: footer is hidden (not destroyed), reply surface shown.
+    const footer = host.querySelector('.claudian-agent-board-card-footer') as HTMLElement;
+    expect(footer).not.toBeNull();
+    expect(footer.classList.contains('is-hidden')).toBe(true);
+    expect(host.querySelector('.claudian-agent-board-card-reply')).not.toBeNull();
+
+    // Resume to a non-reply status via patchCard (no full re-render): the footer
+    // (same DOM node) comes back and the reply surface is removed.
+    const resumed = makeTask('a', 'running');
+    resumed.sections.acceptanceCriteria = '- [x] one\n- [ ] two';
+    renderer.patchCard('a', resumed);
+    expect(footer.classList.contains('is-hidden')).toBe(false);
+    expect(host.querySelector('.claudian-agent-board-card-reply')).toBeNull();
+    expect(host.querySelector('.claudian-agent-board-card-progress')).not.toBeNull();
+    expect(host.querySelector('.claudian-agent-board-card-assignee')).not.toBeNull();
+  });
+
   it('patchCard swaps the status dot color + aria-label in place (no full re-render)', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
@@ -408,14 +432,18 @@ describe('AgentBoardRenderer — card body (title dot / meta / footer)', () => {
     expect(footer.querySelector('.claudian-agent-board-card-assignee')).not.toBeNull();
   });
 
-  it('omits the footer entirely while a reply surface is shown', () => {
+  it('hides the footer (kept in DOM as a patch seam) while a reply surface is shown', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     const task = makeTask('a', 'needs_input');
     task.sections.acceptanceCriteria = '- [ ] one';
     renderer.render(host, makeState({ needs_input: [task] }), makeCallbacks());
     expect(host.querySelector('.claudian-agent-board-card-reply')).not.toBeNull();
-    expect(host.querySelector('.claudian-agent-board-card-footer')).toBeNull();
+    // The footer is hidden (not destroyed) so a resumed card keeps its progress
+    // + assignee patch seams; `is-hidden` visually omits it.
+    const footer = host.querySelector('.claudian-agent-board-card-footer') as HTMLElement;
+    expect(footer).not.toBeNull();
+    expect(footer.classList.contains('is-hidden')).toBe(true);
   });
 });
 

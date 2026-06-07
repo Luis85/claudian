@@ -260,6 +260,11 @@
   gap: 10px;
 }
 
+/* Hidden (not destroyed) while the reply surface is shown on live cards. */
+.claudian-agent-board-card-footer.is-hidden {
+  display: none;
+}
+
 /* Spacer keeps the assignee slot right-aligned when progress is absent. */
 .claudian-agent-board-card-footer-spacer {
   flex: 1;

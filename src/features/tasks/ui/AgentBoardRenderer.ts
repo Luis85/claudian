@@ -64,6 +64,8 @@ interface CardRefs {
   statusDot: HTMLElement;
   liveStripMeta: HTMLElement | null;
   liveStripLedger: HTMLElement | null;
+  /** Card footer (progress + assignee). Hidden, not destroyed, while a reply shows. */
+  footer: HTMLElement;
   /** Reserved 20px footer avatar surface — empty here; filled by the persona slice. */
   assigneeSlot: HTMLElement;
   reply: HTMLElement | null;
@@ -156,11 +158,15 @@ export class AgentBoardRenderer {
     this.applyStatusDot(refs.statusDot, status);
     refs.card.className = `claudian-agent-board-card claudian-agent-board-card--${status}`;
 
+    // The footer is hidden (not destroyed) while a reply surface shows, so a
+    // resumed card recovers its progress + assignee seam without a full render.
+    const showReply = status === 'needs_input' || status === 'needs_approval';
+    refs.footer.toggleClass('is-hidden', showReply);
     if (refs.reply) {
       refs.reply.remove();
       refs.reply = null;
     }
-    if (status === 'needs_input' || status === 'needs_approval') {
+    if (showReply) {
       refs.reply = this.renderReplySurface(refs.card, task, pause ?? null);
     }
   }
@@ -371,19 +377,11 @@ export class AgentBoardRenderer {
 
     this.renderMetaRow(card, task);
 
-    // The reply surface (live states) replaces the footer: when the agent is
-    // waiting on the user, the footer's progress + assignee chrome is omitted.
+    // The footer is always built (so its progress + assignee patch seams stay
+    // live across status changes) but hidden while the reply surface is shown.
     const showReply = status === 'needs_input' || status === 'needs_approval';
-    let assigneeSlot: HTMLElement;
-    if (showReply) {
-      // Footer omitted while the reply surface is shown, but the assignee slot
-      // ref must stay non-null for the persona slice's patch seam — park a
-      // detached placeholder (built via the card, then removed from the tree).
-      assigneeSlot = card.createSpan({ cls: 'claudian-agent-board-card-assignee' });
-      assigneeSlot.remove();
-    } else {
-      assigneeSlot = this.renderFooter(card, task);
-    }
+    const { footer, assignee: assigneeSlot } = this.renderFooter(card, task);
+    if (showReply) footer.addClass('is-hidden');
 
     let liveStripMeta: HTMLElement | null = null;
     let liveStripLedger: HTMLElement | null = null;
@@ -416,6 +414,7 @@ export class AgentBoardRenderer {
       statusDot,
       liveStripMeta,
       liveStripLedger,
+      footer,
       assigneeSlot,
       reply,
     });
@@ -465,9 +464,12 @@ export class AgentBoardRenderer {
    * left, a reserved 20px assignee slot on the far right. When progress is
    * absent, a spacer keeps the slot right-aligned. The assignee slot stays an
    * empty placeholder in this slice (the persona slice fills it). Returns the
-   * assignee element so it can be cached as a patch seam.
+   * footer + assignee elements so both can be cached as patch seams.
    */
-  private renderFooter(card: HTMLElement, task: TaskSpec): HTMLElement {
+  private renderFooter(
+    card: HTMLElement,
+    task: TaskSpec,
+  ): { footer: HTMLElement; assignee: HTMLElement } {
     const footer = card.createDiv({ cls: 'claudian-agent-board-card-footer' });
     const progress = parseAcceptanceProgress(task.sections.acceptanceCriteria);
     if (progress.total > 0) {
@@ -486,7 +488,8 @@ export class AgentBoardRenderer {
     } else {
       footer.createSpan({ cls: 'claudian-agent-board-card-footer-spacer' });
     }
-    return footer.createSpan({ cls: 'claudian-agent-board-card-assignee' });
+    const assignee = footer.createSpan({ cls: 'claudian-agent-board-card-assignee' });
+    return { footer, assignee };
   }
 
   /**
