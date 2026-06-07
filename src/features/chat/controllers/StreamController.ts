@@ -269,6 +269,11 @@ export class StreamController {
         // (open settings / login hint / retry) instead of bare error text.
         this.flushPendingTools();
         await this.finalizeCurrentTextBlock(msg);
+        // Persist a structured block so the error + its guidance survive the
+        // end-of-turn save (reload / conversation switch re-renders the card);
+        // the card itself is DOM-only, like the compact boundary below.
+        msg.contentBlocks = msg.contentBlocks || [];
+        msg.contentBlocks.push({ type: 'runtime_error', content: chunk.content });
         this.renderRuntimeError(chunk.content);
         break;
 
