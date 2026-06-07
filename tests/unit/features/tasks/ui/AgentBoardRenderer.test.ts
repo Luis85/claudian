@@ -156,47 +156,38 @@ describe('AgentBoardRenderer — "Run next ready" button visibility', () => {
   });
 });
 
-function findReopenButton(host: HTMLElement): HTMLButtonElement | null {
-  const buttons = Array.from(host.querySelectorAll('button')) as HTMLButtonElement[];
-  return buttons.find((btn) => btn.textContent === 'Reopen') ?? null;
-}
-
-describe('AgentBoardRenderer — Reopen button on done cards', () => {
-  it('renders Reopen button on done card', () => {
+describe('AgentBoardRenderer — inline action cluster deferred (board-card-actions-menu slice)', () => {
+  // The old inline per-status action buttons (Mark ready / Run / Accept / Reopen /
+  // Back to inbox …) are replaced by a hover action cluster in the next slice. The
+  // card body no longer renders them; cards stay actionable via click→modal and
+  // right-click→context menu. The reply surface (Send/Stop/Approve/Reject) is NOT
+  // part of the deferred cluster and is asserted separately.
+  it('does not render the inline actions container on a card', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
-    const state = makeState({ done: [makeTask('d', 'done')] });
-
-    renderer.render(host, state, makeCallbacks());
-
-    expect(findReopenButton(host)).not.toBeNull();
+    renderer.render(host, makeState({ done: [makeTask('d', 'done')] }), makeCallbacks());
+    expect(host.querySelector('.claudian-agent-board-card-actions')).toBeNull();
   });
 
-  it('does not render Reopen button on non-done cards', () => {
+  it('does not render per-status action buttons (Reopen / Accept / Run / Mark ready)', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
-    const state = makeState({
-      review: [makeTask('rv', 'review')],
-      failed: [makeTask('f', 'failed')],
-      canceled: [makeTask('c', 'canceled')],
-    });
-
-    renderer.render(host, state, makeCallbacks());
-
-    expect(findReopenButton(host)).toBeNull();
-  });
-
-  it('invokes onReopen when Reopen button is clicked on a done card', () => {
-    const renderer = new AgentBoardRenderer();
-    const host = document.createElement('div');
-    const callbacks = makeCallbacks();
-    const doneTask = makeTask('d', 'done');
-    const state = makeState({ done: [doneTask] });
-
-    renderer.render(host, state, callbacks);
-
-    findReopenButton(host)?.click();
-    expect(callbacks.onReopen).toHaveBeenCalledWith(doneTask);
+    renderer.render(
+      host,
+      makeState({
+        inbox: [makeTask('i', 'inbox')],
+        ready: [makeTask('r', 'ready')],
+        review: [makeTask('rv', 'review')],
+        done: [makeTask('d', 'done')],
+      }),
+      makeCallbacks(),
+    );
+    const texts = buttonTexts(host);
+    expect(texts).not.toContain('Reopen');
+    expect(texts).not.toContain('Accept');
+    expect(texts).not.toContain('Rework');
+    expect(texts).not.toContain('Mark ready');
+    // The Inbox add-row button and toolbar buttons are unrelated to the card cluster.
   });
 });
 
@@ -265,28 +256,194 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
     expect(callbacks.onReject).toHaveBeenCalledWith(task, 'too risky');
   });
 
-  it('exposes Review and Mark failed actions on needs_handoff cards', () => {
+  it('patchCard restores the footer (progress + assignee) when a paused card resumes', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
-    const callbacks = makeCallbacks();
-    const task = makeTask('h', 'needs_handoff');
-    renderer.render(host, makeState({ needs_handoff: [task] }), callbacks);
-    findButton(host, 'Review')?.click();
-    expect(callbacks.onSendToReview).toHaveBeenCalledWith(task);
-    findButton(host, 'Mark failed')?.click();
-    expect(callbacks.onMarkFailed).toHaveBeenCalledWith(task);
+    const task = makeTask('a', 'needs_input');
+    task.sections.acceptanceCriteria = '- [x] one\n- [ ] two';
+    renderer.render(host, makeState({ needs_input: [task] }), makeCallbacks());
+
+    // Paused: footer is hidden (not destroyed), reply surface shown.
+    const footer = host.querySelector('.claudian-agent-board-card-footer') as HTMLElement;
+    expect(footer).not.toBeNull();
+    expect(footer.classList.contains('is-hidden')).toBe(true);
+    expect(host.querySelector('.claudian-agent-board-card-reply')).not.toBeNull();
+
+    // Resume to a non-reply status via patchCard (no full re-render): the footer
+    // (same DOM node) comes back and the reply surface is removed.
+    const resumed = makeTask('a', 'running');
+    resumed.sections.acceptanceCriteria = '- [x] one\n- [ ] two';
+    renderer.patchCard('a', resumed);
+    expect(footer.classList.contains('is-hidden')).toBe(false);
+    expect(host.querySelector('.claudian-agent-board-card-reply')).toBeNull();
+    expect(host.querySelector('.claudian-agent-board-card-progress')).not.toBeNull();
+    expect(host.querySelector('.claudian-agent-board-card-assignee')).not.toBeNull();
   });
 
-  it('patchCard swaps the status badge and actions in place', () => {
+  it('patchCard swaps the status dot color + aria-label in place (no full re-render)', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     const task = makeTask('a', 'running');
     renderer.render(host, makeState({ running: [task] }), makeCallbacks());
     const card = host.querySelector('.claudian-agent-board-card');
+    const dot = host.querySelector('.claudian-agent-board-card-status-dot') as HTMLElement;
+    expect(dot.classList.contains('claudian-agent-board-card-status-dot--running')).toBe(true);
     renderer.patchCard('a', makeTask('a', 'review'), null);
     expect(host.querySelector('.claudian-agent-board-card')).toBe(card);
-    expect(host.querySelector('.claudian-agent-board-status-badge')?.textContent).toBe('Review');
-    expect(findButton(host, 'Accept')).not.toBeNull();
+    expect(dot.classList.contains('claudian-agent-board-card-status-dot--running')).toBe(false);
+    expect(dot.classList.contains('claudian-agent-board-card-status-dot--review')).toBe(true);
+    expect(dot.getAttribute('aria-label')).toBe('Review');
+  });
+
+  it('patchCard removes the reply surface when leaving a live status', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const task = makeTask('a', 'needs_input');
+    renderer.render(host, makeState({ needs_input: [task] }), makeCallbacks());
+    expect(host.querySelector('.claudian-agent-board-card-reply')).not.toBeNull();
+    renderer.patchCard('a', makeTask('a', 'review'), null);
+    expect(host.querySelector('.claudian-agent-board-card-reply')).toBeNull();
+  });
+});
+
+describe('AgentBoardRenderer — card body (title dot / meta / footer)', () => {
+  it('renders a status dot carrying the status color class + accessible status label', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ needs_approval: [makeTask('a', 'needs_approval')] }), makeCallbacks());
+    const dot = host.querySelector('.claudian-agent-board-card-status-dot') as HTMLElement;
+    expect(dot).not.toBeNull();
+    expect(dot.classList.contains('claudian-agent-board-card-status-dot--needs_approval')).toBe(true);
+    // a11y: the dot announces the status (no visible text badge anymore).
+    expect(dot.getAttribute('aria-label')).toBe('Needs approval');
+    expect(dot.getAttribute('title')).toBe('Needs approval');
+  });
+
+  it('flags live statuses on the dot so CSS can pulse them', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ running: [makeTask('a', 'running')] }), makeCallbacks());
+    const liveDot = host.querySelector('.claudian-agent-board-card-status-dot') as HTMLElement;
+    expect(liveDot.classList.contains('claudian-agent-board-card-status-dot--live')).toBe(true);
+
+    const host2 = document.createElement('div');
+    new AgentBoardRenderer().render(host2, makeState({ ready: [makeTask('b', 'ready')] }), makeCallbacks());
+    const staticDot = host2.querySelector('.claudian-agent-board-card-status-dot') as HTMLElement;
+    expect(staticDot.classList.contains('claudian-agent-board-card-status-dot--live')).toBe(false);
+  });
+
+  it('no longer renders the old text status badge', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ ready: [makeTask('a', 'ready')] }), makeCallbacks());
+    expect(host.querySelector('.claudian-agent-board-status-badge')).toBeNull();
+  });
+
+  it('renders provider/model with truncation classes on the meta engine cell', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const task = makeTask('a', 'ready');
+    task.frontmatter.provider = 'claude';
+    task.frontmatter.model = 'sonnet';
+    renderer.render(host, makeState({ ready: [task] }), makeCallbacks());
+    const engine = host.querySelector('.claudian-agent-board-card-meta-engine') as HTMLElement;
+    expect(engine).not.toBeNull();
+    expect(engine.textContent).toContain('claude');
+    expect(engine.textContent).toContain('sonnet');
+  });
+
+  it('renders three priority bars filled per level with the priority color class', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const task = makeTask('a', 'ready');
+    task.frontmatter.priority = '1 - high';
+    renderer.render(host, makeState({ ready: [task] }), makeCallbacks());
+    const prio = host.querySelector('.claudian-agent-board-card-priority') as HTMLElement;
+    expect(prio).not.toBeNull();
+    expect(prio.classList.contains('claudian-agent-board-card-priority--high')).toBe(true);
+    const bars = prio.querySelectorAll('.claudian-agent-board-card-priority-bar');
+    expect(bars).toHaveLength(3);
+    // "1 - high" → 2 bars filled (low=1, normal=2, high=2? ascending: urgent=3, high=2, normal=2…)
+    const filled = prio.querySelectorAll('.claudian-agent-board-card-priority-bar.is-filled');
+    expect(filled.length).toBeGreaterThan(0);
+    expect(prio.textContent).toContain('1 - high');
+  });
+
+  it('renders a legacy/unknown priority without crashing the board (falls back to normal)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const task = makeTask('legacy', 'ready');
+    // A legacy/hand-authored value outside the canonical priority set.
+    (task.frontmatter as { priority: string }).priority = 'normal';
+    expect(() => renderer.render(host, makeState({ ready: [task] }), makeCallbacks())).not.toThrow();
+    const prio = host.querySelector('.claudian-agent-board-card-priority') as HTMLElement;
+    expect(prio).not.toBeNull();
+    // Falls back to the normal styling, but still shows the raw value as the label.
+    expect(prio.classList.contains('claudian-agent-board-card-priority--normal')).toBe(true);
+    expect(host.querySelector('.claudian-agent-board-card-priority-label')?.textContent).toBe('normal');
+  });
+
+  it('renders acceptance progress in the footer with done/total and a track', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const task = makeTask('a', 'ready');
+    task.sections.acceptanceCriteria = '- [x] one\n- [ ] two\n- [ ] three';
+    renderer.render(host, makeState({ ready: [task] }), makeCallbacks());
+    const footer = host.querySelector('.claudian-agent-board-card-footer') as HTMLElement;
+    expect(footer).not.toBeNull();
+    expect(footer.querySelector('.claudian-agent-board-card-progress-track')).not.toBeNull();
+    expect(footer.querySelector('.claudian-agent-board-card-progress-count')?.textContent).toBe('1/3');
+  });
+
+  it('marks the progress complete (green) when all acceptance criteria are checked', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const task = makeTask('a', 'ready');
+    task.sections.acceptanceCriteria = '- [x] one\n- [x] two';
+    renderer.render(host, makeState({ ready: [task] }), makeCallbacks());
+    const progress = host.querySelector('.claudian-agent-board-card-progress') as HTMLElement;
+    expect(progress.classList.contains('is-complete')).toBe(true);
+    expect(progress.querySelector('.claudian-agent-board-card-progress-count')?.textContent).toBe('2/2');
+  });
+
+  it('reserves a 20px assignee slot at the footer far right (empty placeholder this slice)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const task = makeTask('a', 'ready');
+    task.sections.acceptanceCriteria = '- [ ] one';
+    renderer.render(host, makeState({ ready: [task] }), makeCallbacks());
+    const footer = host.querySelector('.claudian-agent-board-card-footer') as HTMLElement;
+    const slot = footer.querySelector('.claudian-agent-board-card-assignee') as HTMLElement;
+    expect(slot).not.toBeNull();
+    // Placeholder only — the persona slice fills it; no avatar rendered here.
+    expect(slot.childElementCount).toBe(0);
+    expect(slot.textContent).toBe('');
+  });
+
+  it('keeps a footer with a spacer + assignee slot when acceptance progress is absent', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    // No acceptance criteria → no progress; footer still renders so the slot stays right-aligned.
+    renderer.render(host, makeState({ ready: [makeTask('a', 'ready')] }), makeCallbacks());
+    const footer = host.querySelector('.claudian-agent-board-card-footer') as HTMLElement;
+    expect(footer).not.toBeNull();
+    expect(footer.querySelector('.claudian-agent-board-card-progress')).toBeNull();
+    expect(footer.querySelector('.claudian-agent-board-card-footer-spacer')).not.toBeNull();
+    expect(footer.querySelector('.claudian-agent-board-card-assignee')).not.toBeNull();
+  });
+
+  it('hides the footer (kept in DOM as a patch seam) while a reply surface is shown', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const task = makeTask('a', 'needs_input');
+    task.sections.acceptanceCriteria = '- [ ] one';
+    renderer.render(host, makeState({ needs_input: [task] }), makeCallbacks());
+    expect(host.querySelector('.claudian-agent-board-card-reply')).not.toBeNull();
+    // The footer is hidden (not destroyed) so a resumed card keeps its progress
+    // + assignee patch seams; `is-hidden` visually omits it.
+    const footer = host.querySelector('.claudian-agent-board-card-footer') as HTMLElement;
+    expect(footer).not.toBeNull();
+    expect(footer.classList.contains('is-hidden')).toBe(true);
   });
 });
 
@@ -380,38 +537,28 @@ function buttonTexts(host: HTMLElement): string[] {
   return Array.from(host.querySelectorAll('button')).map((btn) => btn.textContent ?? '');
 }
 
-describe('AgentBoardRenderer — recovery actions', () => {
-  it('renders Back to inbox on ready cards', () => {
+describe('AgentBoardRenderer — recovery actions deferred to hover cluster', () => {
+  // The inline recovery buttons (Retry / Back to inbox …) move to the hover action
+  // cluster in the next slice (board-card-actions-menu). The card body no longer
+  // renders them inline; recovery stays reachable via the right-click context menu.
+  it('does not render inline recovery buttons (Back to inbox / Retry) on cards', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
-    renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
-    expect(buttonTexts(host)).toContain('Back to inbox');
+    renderer.render(
+      host,
+      makeState({ ready: [makeTask('r', 'ready')], failed: [makeTask('f', 'failed')], canceled: [makeTask('c', 'canceled')] }),
+      makeCallbacks(),
+    );
+    const texts = buttonTexts(host);
+    expect(texts).not.toContain('Back to inbox');
+    expect(texts).not.toContain('Retry');
   });
 
-  it('renders Retry and Back to inbox on failed cards', () => {
-    const renderer = new AgentBoardRenderer();
-    const host = document.createElement('div');
-    renderer.render(host, makeState({ failed: [makeTask('f', 'failed')] }), makeCallbacks());
-    expect(buttonTexts(host)).toEqual(expect.arrayContaining(['Retry', 'Back to inbox']));
-  });
-
-  it('invokes onMoveToInbox from Back to inbox', () => {
-    const renderer = new AgentBoardRenderer();
-    const host = document.createElement('div');
-    const callbacks = makeCallbacks();
-    const task = makeTask('r', 'ready');
-    renderer.render(host, makeState({ ready: [task] }), callbacks);
-    const button = Array.from(host.querySelectorAll('button')).find((btn) => btn.textContent === 'Back to inbox');
-    button?.click();
-    expect(callbacks.onMoveToInbox).toHaveBeenCalledWith(task);
-  });
-
-  // A live paused run (needs_input / needs_approval) still holds its queue slot
-  // via the pending coordinator.run(); a bare status transition from a generic
-  // recovery button would strand that session and leak the slot. Those states are
-  // driven solely by their reply surface (Send / Approve / Reject / Stop).
+  // A live paused run (needs_input / needs_approval) is driven solely by its reply
+  // surface (Send / Approve / Reject / Stop) — the reply surface is NOT part of the
+  // deferred hover cluster and stays on the card body.
   it.each<TaskStatus>(['needs_input', 'needs_approval'])(
-    'omits generic recovery actions for live %s cards but keeps the reply surface',
+    'keeps the reply surface on live %s cards (not part of the deferred cluster)',
     (status) => {
       const renderer = new AgentBoardRenderer();
       const host = document.createElement('div');
@@ -422,13 +569,6 @@ describe('AgentBoardRenderer — recovery actions', () => {
       expect(host.querySelector('.claudian-agent-board-card-reply')).not.toBeNull();
     },
   );
-
-  it('still offers Back to inbox once a stopped run settles to canceled', () => {
-    const renderer = new AgentBoardRenderer();
-    const host = document.createElement('div');
-    renderer.render(host, makeState({ canceled: [makeTask('c', 'canceled')] }), makeCallbacks());
-    expect(buttonTexts(host)).toContain('Back to inbox');
-  });
 });
 
 describe('AgentBoardRenderer — skip chip', () => {

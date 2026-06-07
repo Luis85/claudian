@@ -106,100 +106,226 @@
   box-shadow: none;
 }
 
+/* ===== Linear-style minimal work-order card ===== */
 .claudian-agent-board-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  background: var(--background-primary);
+  gap: 9px;
+  padding: 12px 13px;
+  border: 1px solid var(--border-color);
+  /* --radius-l is the card radius in newer Obsidian; length fallback for hosts
+     that predate the variable. */
+  border-radius: var(--radius-l, 8px);
+  background: var(--background-tertiary);
   cursor: pointer;
 }
 
 .claudian-agent-board-card:hover {
-  border-color: var(--interactive-accent);
+  border-color: var(--border-color-hover);
+  background: var(--color-base-30);
+  box-shadow: var(--shadow-s);
 }
 
-.claudian-agent-board-card-title {
-  font-weight: var(--font-medium);
+.claudian-agent-board-card:active {
+  transform: translateY(1px);
 }
 
-.claudian-agent-board-card-meta {
+/* ---------- Title row: status dot + title ---------- */
+.claudian-agent-board-card-title-row {
   display: flex;
-  justify-content: space-between;
+  align-items: flex-start;
   gap: 8px;
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-}
-
-.claudian-agent-board-card-progress {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.claudian-agent-board-card-progress progress {
-  flex: 1 1 auto;
-  height: 6px;
-}
-
-.claudian-agent-board-card-progress-label {
-  flex: 0 0 auto;
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-}
-
-.claudian-agent-board-card-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-/* A narrow lane (max-width 240px) cannot fit three full-width buttons in a
-   single row — review/needs_handoff cards have three (Accept/Rework/Back to
-   inbox or Review/Mark failed/Back to inbox). Shrink + wrap rather than clip. */
-.claudian-agent-board-card-actions > button {
-  flex: 0 1 auto;
   min-width: 0;
 }
 
-.claudian-agent-board-card-title-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.claudian-agent-board-status-badge {
-  flex: 0 0 auto;
-  font-size: var(--font-ui-smaller);
-  padding: 0 6px;
-  border-radius: 4px;
-  background: var(--background-modifier-border);
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.claudian-agent-board-status-badge--running {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-}
-
-.claudian-agent-board-status-badge--review,
-.claudian-agent-board-status-badge--needs_approval,
-.claudian-agent-board-status-badge--needs_input {
-  background: var(--background-modifier-success);
+.claudian-agent-board-card-title {
+  min-width: 0;
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-medium);
+  line-height: 1.35;
   color: var(--text-normal);
+  text-wrap: pretty;
 }
 
-.claudian-agent-board-status-badge--failed {
-  background: var(--background-modifier-error);
-  color: var(--text-error);
+/* Status dot — color read from the status → color contract via the modifier
+   classes below. Sits flush with the first title line. */
+.claudian-agent-board-card-status-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--claudian-board-dot-color, var(--text-muted));
+}
+
+/* Status → dot color contract (mirrors the work-order modal header). */
+.claudian-agent-board-card-status-dot--inbox { --claudian-board-dot-color: var(--color-base-60); }
+.claudian-agent-board-card-status-dot--ready { --claudian-board-dot-color: var(--color-blue); }
+.claudian-agent-board-card-status-dot--running { --claudian-board-dot-color: var(--color-yellow); }
+.claudian-agent-board-card-status-dot--needs_input { --claudian-board-dot-color: var(--color-blue); }
+.claudian-agent-board-card-status-dot--needs_approval { --claudian-board-dot-color: var(--color-purple); }
+.claudian-agent-board-card-status-dot--review { --claudian-board-dot-color: var(--color-blue); }
+.claudian-agent-board-card-status-dot--needs_handoff { --claudian-board-dot-color: var(--color-orange); }
+.claudian-agent-board-card-status-dot--needs_fix { --claudian-board-dot-color: var(--color-orange); }
+.claudian-agent-board-card-status-dot--done { --claudian-board-dot-color: var(--color-green); }
+.claudian-agent-board-card-status-dot--failed { --claudian-board-dot-color: var(--color-red); }
+.claudian-agent-board-card-status-dot--canceled { --claudian-board-dot-color: var(--color-base-60); }
+
+/* Live statuses pulse the dot. Motion-gated: the pulse only runs when the user
+   has not requested reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .claudian-agent-board-card-status-dot--live {
+    color: var(--claudian-board-dot-color, var(--text-muted));
+    animation: claudian-board-card-dot-pulse 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes claudian-board-card-dot-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--claudian-board-dot-color, var(--text-muted)) 50%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--claudian-board-dot-color, var(--text-muted)) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--claudian-board-dot-color, var(--text-muted)) 0%, transparent);
+  }
+}
+
+/* ---------- Meta row: provider/model + priority ---------- */
+.claudian-agent-board-card-meta {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+}
+
+/* The 1fr cell — give it the full track and truncate so it doesn't over-shrink
+   the priority cell. */
+.claudian-agent-board-card-meta-engine {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--font-monospace);
+  font-size: 0.92em;
+  color: var(--text-muted);
+}
+
+.claudian-agent-board-card-priority {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.claudian-agent-board-card-priority-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
+}
+
+.claudian-agent-board-card-priority-bar {
+  width: 3px;
+  border-radius: 1px;
+  background: var(--background-modifier-border);
+}
+
+.claudian-agent-board-card-priority-bar:nth-child(1) { height: 4px; }
+.claudian-agent-board-card-priority-bar:nth-child(2) { height: 7px; }
+.claudian-agent-board-card-priority-bar:nth-child(3) { height: 10px; }
+
+/* Priority → color contract: filled bars + label take the priority color. */
+.claudian-agent-board-card-priority--urgent { --claudian-board-prio-color: var(--color-red); }
+.claudian-agent-board-card-priority--high { --claudian-board-prio-color: var(--color-orange); }
+.claudian-agent-board-card-priority--normal { --claudian-board-prio-color: var(--color-yellow); }
+.claudian-agent-board-card-priority--low { --claudian-board-prio-color: var(--color-base-60); }
+
+.claudian-agent-board-card-priority-bar.is-filled {
+  background: var(--claudian-board-prio-color, var(--text-muted));
+}
+
+.claudian-agent-board-card-priority-label {
+  color: var(--claudian-board-prio-color, var(--text-muted));
+}
+
+/* ---------- Footer row: acceptance progress + reserved assignee slot ---------- */
+.claudian-agent-board-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Hidden (not destroyed) while the reply surface is shown on live cards. */
+.claudian-agent-board-card-footer.is-hidden {
+  display: none;
+}
+
+/* Spacer keeps the assignee slot right-aligned when progress is absent. */
+.claudian-agent-board-card-footer-spacer {
+  flex: 1;
+}
+
+.claudian-agent-board-card-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.claudian-agent-board-card-progress-track {
+  flex: 1;
+  height: 4px;
+  min-width: 0;
+  border-radius: var(--radius-full, 999px);
+  background: var(--background-modifier-border);
+  overflow: hidden;
+}
+
+.claudian-agent-board-card-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full, 999px);
+  background: var(--color-accent);
+}
+
+/* Green at 100%. */
+.claudian-agent-board-card-progress.is-complete .claudian-agent-board-card-progress-fill {
+  background: var(--color-green);
+}
+
+.claudian-agent-board-card-progress-count {
+  flex-shrink: 0;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.claudian-agent-board-card-progress.is-complete .claudian-agent-board-card-progress-count {
+  color: var(--color-green);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .claudian-agent-board-card-progress-fill {
+    transition: width 0.4s ease;
+  }
+}
+
+/* Reserved 20px assignee avatar surface (far right). Empty placeholder in this
+   slice — the persona slice fills it. */
+.claudian-agent-board-card-assignee {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
 }
 
 .claudian-agent-board-card--failed {
-  border-color: var(--text-error);
+  border-color: var(--color-red);
 }
 
 .claudian-agent-board-card--canceled {
@@ -207,16 +333,6 @@
 }
 
 /* ===== Live run strip + paused reply (work-order execution) ===== */
-
-.claudian-agent-board-status-badge--needs_handoff {
-  background: var(--background-modifier-error-hover, var(--background-modifier-border));
-  color: var(--text-warning);
-}
-
-.claudian-agent-board-card--needs_input,
-.claudian-agent-board-card--needs_approval {
-  border-left: 3px solid var(--color-orange);
-}
 
 .claudian-agent-board-card-live-strip {
   display: flex;
@@ -249,24 +365,30 @@
   50% { opacity: 0.4; }
 }
 
-.claudian-agent-board-card--running .claudian-agent-board-card-live-strip--meta::first-letter,
-.claudian-agent-board-card--needs_input .claudian-agent-board-card-live-strip--meta::first-letter,
-.claudian-agent-board-card--needs_approval .claudian-agent-board-card-live-strip--meta::first-letter {
-  animation: claudian-pulse-dot 1.2s ease-in-out infinite;
+/* Reduced-motion gated: the live-strip heartbeat dot only pulses when the user
+   has not requested reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .claudian-agent-board-card--running .claudian-agent-board-card-live-strip--meta::first-letter,
+  .claudian-agent-board-card--needs_input .claudian-agent-board-card-live-strip--meta::first-letter,
+  .claudian-agent-board-card--needs_approval .claudian-agent-board-card-live-strip--meta::first-letter {
+    animation: claudian-pulse-dot 1.2s ease-in-out infinite;
+  }
 }
 
+/* ---------- Reply surface (needs_input / needs_approval) ---------- */
 .claudian-agent-board-card-reply {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--background-modifier-border);
+  gap: 8px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border-color);
+  cursor: default;
 }
 
 .claudian-agent-board-card-reply-prompt {
   font-size: var(--font-ui-smaller);
-  font-weight: var(--font-medium);
+  line-height: 1.5;
+  color: var(--text-normal);
 }
 
 /* Single-paragraph prompts: respect inline newlines so a question with line
@@ -291,7 +413,7 @@
 
 .claudian-agent-board-card-reply--actions {
   display: flex;
-  gap: 0.4rem;
+  gap: 6px;
 }
 
 .claudian-agent-board-errors {

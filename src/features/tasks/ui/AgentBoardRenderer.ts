@@ -2,7 +2,7 @@ import { t } from '../../../i18n/i18n';
 import { DEFAULT_LANE_TITLES, type ResolvedBoardLayout, type ResolvedLane } from '../config/boardConfigTypes';
 import { parseAcceptanceProgress } from '../model/acceptanceProgress';
 import { isRunnableTaskStatus } from '../model/taskStateMachine';
-import type { InvalidTaskNote, TaskSpec, TaskStatus } from '../model/taskTypes';
+import type { InvalidTaskNote, TaskPriority, TaskSpec, TaskStatus } from '../model/taskTypes';
 
 /** Lane id of the Inbox lane — the only lane that hosts the add-work-order row. */
 
@@ -60,14 +60,34 @@ export interface AgentBoardRenderState {
 
 interface CardRefs {
   card: HTMLElement;
-  statusBadge: HTMLElement;
+  /** Small title-row status dot (replaces the old text status badge). */
+  statusDot: HTMLElement;
   liveStripMeta: HTMLElement | null;
   liveStripLedger: HTMLElement | null;
-  actions: HTMLElement;
+  /** Card footer (progress + assignee). Hidden, not destroyed, while a reply shows. */
+  footer: HTMLElement;
+  /** Reserved 20px footer avatar surface — empty here; filled by the persona slice. */
+  assigneeSlot: HTMLElement;
   reply: HTMLElement | null;
 }
 
 const LIVE_STATUSES: ReadonlySet<TaskStatus> = new Set(['running', 'needs_input', 'needs_approval']);
+
+const PRIORITY_TOTAL_BARS = 3;
+
+/**
+ * Priority → { filled-bar count, modifier suffix } for the card's ascending
+ * priority bars + label. Colors are applied in CSS via the modifier class,
+ * reading the contract in the redesign plan (urgent red / high orange /
+ * normal yellow / low base-60). Bars fill ascending: urgent 3, high 3,
+ * normal 2, low 1.
+ */
+const PRIORITY_META: Record<TaskPriority, { bars: number; modifier: string }> = {
+  '0 - urgent': { bars: 3, modifier: 'urgent' },
+  '1 - high': { bars: 3, modifier: 'high' },
+  '2 - normal': { bars: 2, modifier: 'normal' },
+  '3 - low': { bars: 1, modifier: 'low' },
+};
 
 /**
  * Cap for the reply / reject-reason input. Large enough for a long-form
@@ -124,27 +144,29 @@ export class AgentBoardRenderer {
   }
 
   /**
-   * Patches a single card's status badge, action buttons, and paused reply
-   * surface in place (no full re-render), preserving the card's DOM node and the
-   * live strip so streaming updates don't flicker.
+   * Patches a single card's status dot (color + live-pulse class), status
+   * modifier, and paused reply surface in place (no full re-render), preserving
+   * the card's DOM node and the live strip so streaming updates don't flicker.
+   * Inline action buttons are deferred to the hover action cluster (next slice),
+   * so no action container is patched here.
    */
   patchCard(taskId: string, task: TaskSpec, pause?: AgentBoardPauseState | null): void {
     const refs = this.cardRefs.get(taskId);
     if (!refs) return;
     const status = task.frontmatter.status;
 
-    refs.statusBadge.setText(DEFAULT_LANE_TITLES[status]);
-    refs.statusBadge.className = `claudian-agent-board-status-badge claudian-agent-board-status-badge--${status}`;
+    this.applyStatusDot(refs.statusDot, status);
     refs.card.className = `claudian-agent-board-card claudian-agent-board-card--${status}`;
 
-    refs.actions.empty();
-    this.renderActionsFor(refs.actions, task);
-
+    // The footer is hidden (not destroyed) while a reply surface shows, so a
+    // resumed card recovers its progress + assignee seam without a full render.
+    const showReply = status === 'needs_input' || status === 'needs_approval';
+    refs.footer.toggleClass('is-hidden', showReply);
     if (refs.reply) {
       refs.reply.remove();
       refs.reply = null;
     }
-    if (status === 'needs_input' || status === 'needs_approval') {
+    if (showReply) {
       refs.reply = this.renderReplySurface(refs.card, task, pause ?? null);
     }
   }
@@ -349,27 +371,17 @@ export class AgentBoardRenderer {
     const card = parent.createDiv({ cls: `claudian-agent-board-card claudian-agent-board-card--${status}` });
 
     const titleRow = card.createDiv({ cls: 'claudian-agent-board-card-title-row' });
+    const statusDot = titleRow.createSpan({ cls: 'claudian-agent-board-card-status-dot' });
+    this.applyStatusDot(statusDot, status);
     titleRow.createDiv({ cls: 'claudian-agent-board-card-title', text: task.frontmatter.title });
-    const statusBadge = titleRow.createSpan({
-      cls: `claudian-agent-board-status-badge claudian-agent-board-status-badge--${status}`,
-      text: DEFAULT_LANE_TITLES[status],
-    });
 
-    const meta = card.createDiv({ cls: 'claudian-agent-board-card-meta' });
-    meta.createSpan({ text: `${task.frontmatter.provider ?? '—'} / ${task.frontmatter.model ?? '—'}` });
-    meta.createSpan({ text: task.frontmatter.priority });
+    this.renderMetaRow(card, task);
 
-    const progress = parseAcceptanceProgress(task.sections.acceptanceCriteria);
-    if (progress.total > 0) {
-      const progressEl = card.createDiv({ cls: 'claudian-agent-board-card-progress' });
-      const bar = progressEl.createEl('progress');
-      bar.max = progress.total;
-      bar.value = progress.done;
-      progressEl.createSpan({
-        cls: 'claudian-agent-board-card-progress-label',
-        text: `${progress.done}/${progress.total}`,
-      });
-    }
+    // The footer is always built (so its progress + assignee patch seams stay
+    // live across status changes) but hidden while the reply surface is shown.
+    const showReply = status === 'needs_input' || status === 'needs_approval';
+    const { footer, assignee: assigneeSlot } = this.renderFooter(card, task);
+    if (showReply) footer.addClass('is-hidden');
 
     let liveStripMeta: HTMLElement | null = null;
     let liveStripLedger: HTMLElement | null = null;
@@ -386,11 +398,12 @@ export class AgentBoardRenderer {
       callbacks.onContextMenu(task, event);
     });
 
-    const actions = card.createDiv({ cls: 'claudian-agent-board-card-actions' });
-    this.renderActionsFor(actions, task);
-
+    // Inline per-status action buttons are intentionally deferred to the next
+    // slice (board-card-actions-menu), which reuses renderActionsFor for the
+    // hover action cluster. Cards stay actionable via click→detail modal and
+    // right-click→context menu. The reply surface below is NOT that cluster.
     let reply: HTMLElement | null = null;
-    if (status === 'needs_input' || status === 'needs_approval') {
+    if (showReply) {
       reply = this.renderReplySurface(card, task, null);
     }
 
@@ -398,15 +411,93 @@ export class AgentBoardRenderer {
 
     this.cardRefs.set(task.frontmatter.id, {
       card,
-      statusBadge,
+      statusDot,
       liveStripMeta,
       liveStripLedger,
-      actions,
+      footer,
+      assigneeSlot,
       reply,
     });
   }
 
-  /** Builds the action buttons for a task's current status (reused by initial render and patches). */
+  /** Paints the title-row status dot's color + live-pulse class + a11y label. */
+  private applyStatusDot(dot: HTMLElement, status: TaskStatus): void {
+    const live = LIVE_STATUSES.has(status) ? ' claudian-agent-board-card-status-dot--live' : '';
+    dot.className = `claudian-agent-board-card-status-dot claudian-agent-board-card-status-dot--${status}${live}`;
+    const label = DEFAULT_LANE_TITLES[status];
+    dot.setAttribute('aria-label', label);
+    dot.setAttribute('title', label);
+  }
+
+  /** Meta row: provider/model (truncated) on the left, priority bars + label on the right. */
+  private renderMetaRow(card: HTMLElement, task: TaskSpec): void {
+    const meta = card.createDiv({ cls: 'claudian-agent-board-card-meta' });
+    meta.createSpan({
+      cls: 'claudian-agent-board-card-meta-engine',
+      text: `${task.frontmatter.provider ?? '—'} / ${task.frontmatter.model ?? '—'}`,
+    });
+    this.renderPriority(meta, task.frontmatter.priority);
+  }
+
+  /** Ascending priority bars (filled per level) + the priority label. */
+  private renderPriority(parent: HTMLElement, priority: TaskPriority): void {
+    // Legacy or hand-authored notes can carry an unrecognized priority (e.g.
+    // `normal`); fall back to the normal styling so one bad value can't abort
+    // the whole board render. The label below still shows the raw value.
+    const meta =
+      (PRIORITY_META as Record<string, { bars: number; modifier: string }>)[priority] ??
+      PRIORITY_META['2 - normal'];
+    const prio = parent.createSpan({
+      cls: `claudian-agent-board-card-priority claudian-agent-board-card-priority--${meta.modifier}`,
+    });
+    const bars = prio.createSpan({ cls: 'claudian-agent-board-card-priority-bars' });
+    bars.setAttribute('aria-hidden', 'true');
+    for (let i = 1; i <= PRIORITY_TOTAL_BARS; i++) {
+      const filled = i <= meta.bars ? ' is-filled' : '';
+      bars.createSpan({ cls: `claudian-agent-board-card-priority-bar${filled}` });
+    }
+    prio.createSpan({ cls: 'claudian-agent-board-card-priority-label', text: priority });
+  }
+
+  /**
+   * Footer row: acceptance progress (track + done/total, green at 100%) on the
+   * left, a reserved 20px assignee slot on the far right. When progress is
+   * absent, a spacer keeps the slot right-aligned. The assignee slot stays an
+   * empty placeholder in this slice (the persona slice fills it). Returns the
+   * footer + assignee elements so both can be cached as patch seams.
+   */
+  private renderFooter(
+    card: HTMLElement,
+    task: TaskSpec,
+  ): { footer: HTMLElement; assignee: HTMLElement } {
+    const footer = card.createDiv({ cls: 'claudian-agent-board-card-footer' });
+    const progress = parseAcceptanceProgress(task.sections.acceptanceCriteria);
+    if (progress.total > 0) {
+      const complete = progress.done >= progress.total;
+      const progressEl = footer.createDiv({
+        cls: `claudian-agent-board-card-progress${complete ? ' is-complete' : ''}`,
+      });
+      progressEl.setAttribute('title', `${progress.done}/${progress.total}`);
+      const track = progressEl.createSpan({ cls: 'claudian-agent-board-card-progress-track' });
+      const fill = track.createSpan({ cls: 'claudian-agent-board-card-progress-fill' });
+      fill.style.width = `${(progress.done / progress.total) * 100}%`;
+      progressEl.createSpan({
+        cls: 'claudian-agent-board-card-progress-count',
+        text: `${progress.done}/${progress.total}`,
+      });
+    } else {
+      footer.createSpan({ cls: 'claudian-agent-board-card-footer-spacer' });
+    }
+    const assignee = footer.createSpan({ cls: 'claudian-agent-board-card-assignee' });
+    return { footer, assignee };
+  }
+
+  /**
+   * Builds the action buttons for a task's current status. Currently unused by
+   * the card body — the inline action cluster is deferred to the next slice
+   * (board-card-actions-menu), which renders these into a hover cluster. Kept
+   * here as the shared action-building seam for that slice.
+   */
   private renderActionsFor(actions: HTMLElement, task: TaskSpec): void {
     const status = task.frontmatter.status;
     if (status === 'inbox') {
@@ -477,12 +568,12 @@ export class AgentBoardRenderer {
     reply.addEventListener('click', (event) => event.stopPropagation());
 
     if (task.frontmatter.status === 'needs_input') {
-      const question = pause?.question ?? task.frontmatter.pause_reason ?? 'The agent is waiting for your input.';
+      const question = pause?.question ?? task.frontmatter.pause_reason ?? t('tasks.board.card.reply.waitingForInput');
       this.renderPromptText(reply, question);
       const field = reply.createEl('input', {
         cls: 'claudian-agent-board-card-reply--field',
         type: 'text',
-        placeholder: 'Your reply…',
+        placeholder: t('tasks.board.card.reply.inputPlaceholder'),
       });
       // Cap reply length so a pasted megabyte doesn't reach the runtime and
       // fail there with a cryptic error. 4000 chars is well below any provider
@@ -491,32 +582,35 @@ export class AgentBoardRenderer {
       if (pause?.defaultValue) field.value = pause.defaultValue;
       const actions = reply.createDiv({ cls: 'claudian-agent-board-card-reply--actions' });
       const submit = () => this.callbacks?.onReply?.(task, field.value);
-      const send = actions.createEl('button', { cls: 'mod-cta', text: 'Send' });
+      const send = actions.createEl('button', { cls: 'mod-cta', text: t('tasks.board.card.reply.send') });
       send.addEventListener('click', (event) => { event.stopPropagation(); submit(); });
       field.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') { event.preventDefault(); submit(); }
       });
-      const stop = actions.createEl('button', { text: 'Stop' });
+      const stop = actions.createEl('button', { text: t('tasks.board.card.reply.stop') });
       stop.addEventListener('click', (event) => { event.stopPropagation(); this.callbacks?.onCancelPaused?.(task); });
     } else {
-      const action = pause?.action ?? task.frontmatter.pause_reason ?? 'The agent requests approval to proceed.';
+      const action = pause?.action ?? task.frontmatter.pause_reason ?? t('tasks.board.card.reply.requestsApproval');
       this.renderPromptText(reply, action);
       if (pause?.risk) {
-        reply.createDiv({ cls: 'claudian-agent-board-card-reply-risk', text: `Risk: ${pause.risk}` });
+        reply.createDiv({
+          cls: 'claudian-agent-board-card-reply-risk',
+          text: t('tasks.board.card.reply.risk', { risk: pause.risk }),
+        });
       }
       const reason = reply.createEl('input', {
         cls: 'claudian-agent-board-card-reply--field',
         type: 'text',
-        placeholder: 'Reason (used if you reject)…',
+        placeholder: t('tasks.board.card.reply.rejectReasonPlaceholder'),
       });
       reason.maxLength = REPLY_INPUT_MAX_LENGTH;
       const actions = reply.createDiv({ cls: 'claudian-agent-board-card-reply--actions' });
-      const approve = actions.createEl('button', { cls: 'mod-cta', text: 'Approve' });
+      const approve = actions.createEl('button', { cls: 'mod-cta', text: t('tasks.board.card.reply.approve') });
       approve.addEventListener('click', (event) => { event.stopPropagation(); this.callbacks?.onApprove?.(task); });
-      const reject = actions.createEl('button', { text: 'Reject' });
+      const reject = actions.createEl('button', { text: t('tasks.board.card.reply.reject') });
       reject.addEventListener('click', (event) => {
         event.stopPropagation();
-        this.callbacks?.onReject?.(task, reason.value.trim() || 'rejected');
+        this.callbacks?.onReject?.(task, reason.value.trim() || t('tasks.board.card.reply.defaultRejectReason'));
       });
     }
     return reply;
