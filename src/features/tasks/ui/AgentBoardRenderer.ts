@@ -323,7 +323,7 @@ export class AgentBoardRenderer {
     }
   }
 
-  /** Updates a card's elapsed timer, attempt pill, stale dot, and last ledger line in place. */
+  /** Repaints a card's freshness dot, elapsed + attempt caption, and last ledger line in place (no rebuild). */
   patchLiveStrip(taskId: string, payload: AgentBoardLiveStripPayload): void {
     const refs = this.cardRefs.get(taskId);
     if (!refs || !refs.liveStripMeta || !refs.liveStripLedger) return;
@@ -557,8 +557,13 @@ export class AgentBoardRenderer {
     let liveStripMeta: HTMLElement | null = null;
     let liveStripLedger: HTMLElement | null = null;
     if (LIVE_STATUSES.has(status)) {
+      // Top-bordered live band: line 1 is a freshness dot + caption, line 2 is
+      // the last ledger line. The dot + caption are stable child nodes so
+      // `patchLiveStrip` can repaint them in place (no node churn on heartbeat).
       const liveStrip = card.createDiv({ cls: 'claudian-agent-board-card-live-strip' });
       liveStripMeta = liveStrip.createDiv({ cls: 'claudian-agent-board-card-live-strip--meta' });
+      liveStripMeta.createSpan({ cls: 'claudian-agent-board-card-live-strip--dot' });
+      liveStripMeta.createSpan({ cls: 'claudian-agent-board-card-live-strip--caption' });
       liveStripLedger = liveStrip.createDiv({ cls: 'claudian-agent-board-card-live-strip--ledger' });
       this.applyLiveStrip(liveStripMeta, liveStripLedger, this.seedLiveStrip(task));
     }
@@ -867,14 +872,27 @@ export class AgentBoardRenderer {
 
   private applyLiveStrip(metaEl: HTMLElement, ledgerEl: HTMLElement, payload: AgentBoardLiveStripPayload): void {
     const tier = staleTier(payload.heartbeatAgeMs);
-    metaEl.className = `claudian-agent-board-card-live-strip--meta claudian-stale-${tier}`;
-    // Per-tier glyph + aria-label so color-blind users still get the freshness
-    // signal. The bullet (●) is always present for the basic "live" indicator;
-    // tier escalates to a warning/stop glyph for amber/red.
-    const glyph = tier === 'green' ? '●' : tier === 'amber' ? '◐' : '◯';
-    metaEl.setText(`${glyph} ${formatElapsed(payload.elapsedMs)} · attempt ${payload.attemptNumber}`);
-    metaEl.setAttribute('aria-label', staleAriaLabel(tier, payload.heartbeatAgeMs));
-    ledgerEl.setText(payload.lastLedger ?? 'starting…');
+    // The freshness dot carries the tier color class; line 1's caption is the
+    // elapsed + attempt counter. Both repaint the stable child nodes seeded in
+    // `renderCard` so `patchLiveStrip` is an in-place update, not a rebuild.
+    const dot = metaEl.querySelector<HTMLElement>('.claudian-agent-board-card-live-strip--dot');
+    const caption = metaEl.querySelector<HTMLElement>('.claudian-agent-board-card-live-strip--caption');
+    if (dot) {
+      // Per-tier glyph + aria-label so color-blind users still get the freshness
+      // signal (the glyph is the non-color cue). The bullet (●) is the basic
+      // "live" indicator; tier escalates to a half/empty glyph for amber/red.
+      const glyph = tier === 'green' ? '●' : tier === 'amber' ? '◐' : '◯';
+      dot.className = `claudian-agent-board-card-live-strip--dot claudian-stale-${tier}`;
+      dot.setText(glyph);
+      dot.setAttribute('aria-label', staleAriaLabel(tier, payload.heartbeatAgeMs));
+    }
+    caption?.setText(
+      t('tasks.board.card.liveStrip.attempt', {
+        elapsed: formatElapsed(payload.elapsedMs),
+        attempt: payload.attemptNumber,
+      }),
+    );
+    ledgerEl.setText(payload.lastLedger ?? t('tasks.board.card.liveStrip.starting'));
   }
 
   private renderErrors(parent: HTMLElement, errors: string[], invalidNotes: InvalidTaskNote[]): void {
@@ -913,9 +931,9 @@ function staleTier(ageMs: number): 'green' | 'amber' | 'red' {
 
 function staleAriaLabel(tier: 'green' | 'amber' | 'red', ageMs: number): string {
   const age = formatStaleAge(ageMs);
-  if (tier === 'green') return `Fresh heartbeat (${age} ago)`;
-  if (tier === 'amber') return `Stale heartbeat (${age} ago)`;
-  return `Very stale heartbeat (${age} ago)`;
+  if (tier === 'green') return t('tasks.board.card.liveStrip.heartbeatFresh', { age });
+  if (tier === 'amber') return t('tasks.board.card.liveStrip.heartbeatStale', { age });
+  return t('tasks.board.card.liveStrip.heartbeatVeryStale', { age });
 }
 
 function formatElapsed(ms: number): string {

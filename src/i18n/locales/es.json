@@ -776,6 +776,13 @@
           "approve": "Approve",
           "reject": "Reject",
           "defaultRejectReason": "rejected"
+        },
+        "liveStrip": {
+          "attempt": "{elapsed} · attempt {attempt}",
+          "starting": "starting…",
+          "heartbeatFresh": "Fresh heartbeat ({age} ago)",
+          "heartbeatStale": "Stale heartbeat ({age} ago)",
+          "heartbeatVeryStale": "Very stale heartbeat ({age} ago)"
         }
       },
       "notRunnable": "Mark \"{title}\" ready before running."

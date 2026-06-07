@@ -159,6 +159,12 @@ export type TranslationKey =
   | 'tasks.board.card.reply.approve'
   | 'tasks.board.card.reply.reject'
   | 'tasks.board.card.reply.defaultRejectReason'
+  // Tasks - Board card live strip (freshness dot + ledger tail)
+  | 'tasks.board.card.liveStrip.attempt'
+  | 'tasks.board.card.liveStrip.starting'
+  | 'tasks.board.card.liveStrip.heartbeatFresh'
+  | 'tasks.board.card.liveStrip.heartbeatStale'
+  | 'tasks.board.card.liveStrip.heartbeatVeryStale'
 
   // Tasks - Templates / create / fromChat / run (Q-1 chunk 14)
   | 'tasks.template.nameRequired'
