@@ -1256,6 +1256,25 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
     expect(onSaveFields).toHaveBeenCalledWith(task, { title: 'Committed via Enter' });
   });
 
+  it('does not commit on Enter while an IME composition is active', () => {
+    const onSaveFields = jest.fn();
+    const task = makeTask('WO-1', 'inbox');
+    const { header } = openHeader(task, { ...makeCallbacks(), onSaveFields });
+    const title = titleEl(header)!;
+
+    title.textContent = 'composing 日本';
+    let defaultPrevented = false;
+    title.emit('keydown', {
+      key: 'Enter',
+      isComposing: true,
+      preventDefault: () => (defaultPrevented = true),
+    });
+
+    // The IME owns this Enter (candidate confirm) — no preventDefault, no save.
+    expect(defaultPrevented).toBe(false);
+    expect(onSaveFields).not.toHaveBeenCalled();
+  });
+
   it('reverts on Escape (restores the original and does not save)', () => {
     const onSaveFields = jest.fn();
     const task = makeTask('WO-1', 'inbox');

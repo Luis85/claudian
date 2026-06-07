@@ -259,6 +259,9 @@ export class WorkOrderDetailModal extends Modal {
     title.addEventListener('blur', commit);
     title.addEventListener('keydown', (evt) => {
       const event = evt as KeyboardEvent;
+      // While an IME composition is active, Enter/Escape belong to the IME
+      // (confirm / cancel the candidate) — don't treat them as commit/revert.
+      if (event.isComposing) return;
       if (event.key === 'Enter') {
         event.preventDefault();
         title.blur();
