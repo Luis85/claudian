@@ -195,6 +195,16 @@ export type TranslationKey =
   | 'tasks.workOrderModal.startedAgo'
   | 'tasks.workOrderModal.finishedAt'
   | 'tasks.workOrderModal.closeAriaLabel'
+  | 'tasks.workOrderModal.actionOpenNote'
+  | 'tasks.workOrderModal.actionOpenConversation'
+  | 'tasks.workOrderModal.actionMarkReady'
+  | 'tasks.workOrderModal.actionStop'
+  | 'tasks.workOrderModal.actionRework'
+  | 'tasks.workOrderModal.actionAccept'
+  | 'tasks.workOrderModal.actionSendToReview'
+  | 'tasks.workOrderModal.actionMarkFailed'
+  | 'tasks.workOrderModal.actionReopen'
+  | 'tasks.workOrderModal.actionArchive'
 
   // Chat - Tabs (Q-1 chunk 13)
   | 'chat.tab.createFailed'

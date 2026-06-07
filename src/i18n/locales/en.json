@@ -755,7 +755,17 @@
       "editTitleHint": "✎ Click title to rename",
       "startedAgo": "Started {ago} ago",
       "finishedAt": "Finished {ago} ago",
-      "closeAriaLabel": "Close"
+      "closeAriaLabel": "Close",
+      "actionOpenNote": "Open note",
+      "actionOpenConversation": "Open conversation",
+      "actionMarkReady": "Mark ready",
+      "actionStop": "Stop",
+      "actionRework": "Rework",
+      "actionAccept": "Accept",
+      "actionSendToReview": "Send to review",
+      "actionMarkFailed": "Mark failed",
+      "actionReopen": "Reopen",
+      "actionArchive": "Archive"
     }
   },
   "provider": {
