@@ -810,3 +810,29 @@ describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
     expect(outcome).toEqual({ ok: false, error: 'Follow-up turn could not be sent.' });
   });
 });
+
+
+describe('ClaudianView work-order activity', () => {
+  it('mounts an activity slot beside Quick Actions', () => {
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.containerEl = createMockEl();
+    view.containerEl.ownerDocument.createDocumentFragment = () => createMockEl('fragment');
+    view.plugin = {
+      gitStatusWatcher: null,
+      vaultSkillAggregator: null,
+      settings: {},
+      workOrderActivity: {
+        getSummary: () => ({ items: [], runningCount: 0, attentionCount: 0 }),
+        subscribe: jest.fn(() => jest.fn()),
+        openItem: jest.fn(),
+      },
+    };
+    view.tabManager = { getActiveTab: jest.fn(() => null) };
+    view.syncHeaderLogo = jest.fn();
+    view.buildHeader(createMockEl());
+
+    const navContent = view.buildNavRowContent();
+
+    expect(navContent.querySelector('.claudian-work-order-activity-slot')).not.toBeNull();
+  });
+});

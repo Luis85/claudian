@@ -37,6 +37,7 @@ import { TabBar } from './tabs/TabBar';
 import { TabManager } from './tabs/TabManager';
 import type { TabData, TabId, TaskRunTabHandle, TaskRunTabTerminal } from './tabs/types';
 import { GitActionButton } from './ui/GitActionButton';
+import { WorkOrderActivityDropdown } from './ui/WorkOrderActivityDropdown';
 import { recalculateUsageForModel } from './utils/usageInfo';
 
 type LoadableView = {
@@ -69,6 +70,9 @@ export class ClaudianView extends ItemView {
   private titleTextEl: HTMLElement | null = null;
   private headerActionsEl: HTMLElement | null = null;
   private headerActionsContent: HTMLElement | null = null;
+  private workOrderActivitySlotEl: HTMLElement | null = null;
+  private workOrderActivityDropdown: WorkOrderActivityDropdown | null = null;
+  private disposeWorkOrderActivitySubscription: (() => void) | null = null;
   private newTabButtonEl: HTMLElement | null = null;
   private gitActionButton: GitActionButton | null = null;
 
@@ -318,6 +322,7 @@ export class ClaudianView extends ItemView {
     this.tabContentEl = null;
     this.navRowContent?.remove();
     this.navRowContent = null;
+    this.disposeWorkOrderActivityDropdown();
     this.headerActionsContent?.remove();
     this.headerActionsContent = null;
     this.newTabButtonEl = null;
@@ -370,6 +375,7 @@ export class ClaudianView extends ItemView {
 
     this.tabBar?.destroy();
     this.tabBar = null;
+    this.disposeWorkOrderActivityDropdown();
     this.gitActionButton?.dispose();
     this.gitActionButton = null;
     this.scope = null;
@@ -497,6 +503,9 @@ export class ClaudianView extends ItemView {
       });
     });
 
+    this.workOrderActivitySlotEl = this.headerActionsContent.createDiv({ cls: 'claudian-work-order-activity-slot' });
+    this.mountWorkOrderActivityDropdown();
+
     // New tab button (plus icon)
     this.newTabButtonEl = this.headerActionsContent.createDiv({ cls: 'claudian-header-btn claudian-new-tab-btn' });
     setIcon(this.newTabButtonEl, 'square-plus');
@@ -536,6 +545,28 @@ export class ClaudianView extends ItemView {
     wrapper.className = 'claudian-input-nav-content';
     wrapper.appendChild(fragment);
     return wrapper;
+  }
+
+
+  private mountWorkOrderActivityDropdown(): void {
+    if (!this.workOrderActivitySlotEl || !this.plugin.workOrderActivity) return;
+    this.disposeWorkOrderActivitySubscription?.();
+    this.workOrderActivityDropdown?.destroy();
+    this.workOrderActivityDropdown = new WorkOrderActivityDropdown(this.workOrderActivitySlotEl, {
+      summary: this.plugin.workOrderActivity.getSummary(),
+      onOpenItem: (id) => this.plugin.workOrderActivity?.openItem(id),
+    });
+    this.disposeWorkOrderActivitySubscription = this.plugin.workOrderActivity.subscribe((summary) => {
+      this.workOrderActivityDropdown?.update(summary);
+    });
+  }
+
+  private disposeWorkOrderActivityDropdown(): void {
+    this.disposeWorkOrderActivitySubscription?.();
+    this.disposeWorkOrderActivitySubscription = null;
+    this.workOrderActivityDropdown?.destroy();
+    this.workOrderActivityDropdown = null;
+    this.workOrderActivitySlotEl = null;
   }
 
   /**
