@@ -471,6 +471,23 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
     expect(onSaveFields).toHaveBeenCalledWith(task, { priority: '0 - urgent' });
   });
 
+  it('updates the visible chip label after a selection (no stale value)', () => {
+    const task = makeTask('t', 'inbox');
+    task.frontmatter.priority = '2 - normal';
+    const { sidebar } = openWith(task, richCallbacks({ onSaveFields: jest.fn() }));
+
+    const priorityRow = findRow(sidebar, 'priority')!;
+    const priorityLabel = find(priorityRow, 'claudian-work-order-modal-chip-label')!;
+    expect(priorityLabel.text).toBe('2 - normal');
+
+    const prioritySelect = firstSelect(priorityRow)!;
+    prioritySelect.value = '0 - urgent';
+    prioritySelect.emit('change');
+
+    // The transparent <select> changed; the visible chip label must follow.
+    expect(priorityLabel.text).toBe('0 - urgent');
+  });
+
   it('marks Created/Updated/Attempts values with the tabular-nums class', () => {
     const { sidebar } = openWith(makeTask('t', 'inbox'), richCallbacks());
     for (const key of ['created', 'updated', 'attempts']) {

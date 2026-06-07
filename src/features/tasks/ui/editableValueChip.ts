@@ -64,6 +64,9 @@ export function renderEditableValueChip(
     return list.find((o) => o.value === value)?.label ?? value;
   };
 
+  let currentList = options.options;
+  let currentEmpty = options.emptyOption;
+
   const populate = (
     value: string,
     list: EditableValueChipOption[],
@@ -75,12 +78,17 @@ export function renderEditableValueChip(
       selectEl.createEl('option', { value: option.value, text: option.label });
     }
     selectEl.value = value;
+    currentList = list;
+    currentEmpty = empty;
     labelEl.setText(labelFor(value, list, empty));
   };
 
   populate(options.value, options.options, options.emptyOption);
 
   selectEl.addEventListener('change', () => {
+    // Keep the visible chip label in sync with the (transparent) picker, then
+    // notify. Without this the sidebar shows the old value until reopen.
+    labelEl.setText(labelFor(selectEl.value, currentList, currentEmpty));
     onChange(selectEl.value);
   });
 
