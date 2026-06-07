@@ -245,7 +245,10 @@ export class WorkOrderDetailModal extends Modal {
     let committed = original;
 
     const commit = (): void => {
-      const next = (title.textContent ?? '').trim();
+      // Collapse whitespace runs — including newlines from a multi-line paste,
+      // which the plaintext-only field still accepts — so the title stays a
+      // single line (a multi-line value would break the frontmatter + body H1).
+      const next = (title.textContent ?? '').replace(/\s+/g, ' ').trim();
       if (next.length === 0 || next === committed) {
         // Reject empty/unchanged edits, but restore the displayed text so the
         // header never lingers in a blank or stray-whitespace unsaved state.
@@ -253,6 +256,8 @@ export class WorkOrderDetailModal extends Modal {
         return;
       }
       committed = next;
+      // Reflect the normalized single-line value back into the field.
+      title.setText(next);
       void this.callbacks.onSaveFields(task, { title: next });
     };
 

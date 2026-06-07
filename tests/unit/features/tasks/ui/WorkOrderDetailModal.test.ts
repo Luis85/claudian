@@ -1205,6 +1205,20 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
     expect(onSaveFields).toHaveBeenCalledWith(task, { title: 'Trimmed title' });
   });
 
+  it('collapses newlines/whitespace from a pasted multi-line title to a single line', () => {
+    const onSaveFields = jest.fn();
+    const task = makeTask('WO-1', 'inbox');
+    const { header } = openHeader(task, { ...makeCallbacks(), onSaveFields });
+    const title = titleEl(header)!;
+
+    title.textContent = 'New title\nextra   text';
+    title.emit('blur');
+
+    expect(onSaveFields).toHaveBeenCalledWith(task, { title: 'New title extra text' });
+    // The visible title reflects the normalized single-line value.
+    expect(title.textContent).toBe('New title extra text');
+  });
+
   it('does not save when the title is unchanged on blur', () => {
     const onSaveFields = jest.fn();
     const task = makeTask('WO-1', 'inbox');
