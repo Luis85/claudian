@@ -13,6 +13,9 @@
   min-height: 0;
   padding: 0;
   overflow: hidden;
+  /* Some themes paint .view-content with --background-secondary; pin it to the
+     board surface so no theme sliver shows around the board host. */
+  background: var(--background-primary);
 }
 
 .claudian-agent-board-host {
@@ -28,7 +31,10 @@
   flex: 1 1 auto;
   gap: 12px;
   min-height: 0;
-  padding: 12px;
+  /* Prototype surface is roomier than the original 12px (mock `.ab-surface`
+     padding 18px 20px 0); 14px/16px tracks it while staying bounded for a
+     narrow leaf. */
+  padding: 14px 16px;
   /* Board itself never scrolls; lanes and detail own their own scroll regions
      so a tall detail pane can't push the columns out of reach. */
   overflow: hidden;
@@ -45,7 +51,40 @@
      tall stacks of cards. Vertical scroll stays on this container (not per lane)
      so AgentBoardView.render() can snapshot/restore scrollTop across re-renders. */
   overflow: auto;
-  padding-bottom: 8px;
+  /* Bottom clearance so the horizontal scrollbar (and the last card's shadow)
+     don't sit flush against the board edge — mirrors the prototype's
+     `.ab-lanes` padding-bottom (18px), trimmed for the tighter board surface. */
+  padding-bottom: 14px;
+  /* Quiet the scroll affordance: Obsidian/Minimal style the native scrollbar a
+     bit heavy for a borderless board. Firefox uses scrollbar-width/-color; the
+     ::-webkit rules below cover Chromium (Obsidian's renderer). Both stay on
+     the muted border tokens so the bars read present-but-subtle. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--background-modifier-border) transparent;
+}
+
+.claudian-agent-board-lanes::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+.claudian-agent-board-lanes::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.claudian-agent-board-lanes::-webkit-scrollbar-thumb {
+  background: var(--background-modifier-border);
+  border-radius: var(--radius-m);
+}
+
+.claudian-agent-board-lanes::-webkit-scrollbar-thumb:hover {
+  background: var(--background-modifier-border-hover);
+}
+
+/* Hide the dead corner where the two scrollbars meet so it doesn't paint a
+   solid native square against the board surface. */
+.claudian-agent-board-lanes::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* Borderless lane: just a header + a vertical stack of floating cards. No
@@ -715,8 +754,52 @@
   color: var(--text-warning);
 }
 
+/* Reply / reject-reason text input. Obsidian's app.css styles bare `input`
+   (0-0-1) with --input-bg/--input-border/--input-shadow and a focus ring; the
+   single class (0-1-0) wins for every prop we set, so style it explicitly to
+   read intentional on Minimal (where the native input chrome washes out).
+   box-sizing:border-box keeps the 100% width inside the card padding; the
+   resting box-shadow:none neutralizes the leaked --input-shadow. */
 .claudian-agent-board-card-reply--field {
   width: 100%;
+  box-sizing: border-box;
+  padding: 6px 9px;
+  font-family: inherit;
+  font-size: var(--font-ui-small);
+  line-height: 1.4;
+  color: var(--text-normal);
+  background: var(--background-modifier-form-field, var(--input-bg, var(--background-primary)));
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  outline: none;
+  box-shadow: none;
+}
+
+.claudian-agent-board-card-reply--field::placeholder {
+  color: var(--text-faint);
+}
+
+/* Accent focus ring (matches the prototype's 2px --color-accent-3 halo). The
+   class beats the bare `input:focus` for these props; a theme's `.view-content
+   input:focus` (0-1-1) is matched at 0-2-0 via the scoped rule below. */
+.claudian-agent-board-card-reply--field:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 25%, transparent);
+}
+
+/* Theme-resistance: a theme rule like `.view-content input` (0-1-1) can
+   out-specify the single field class for the unset-or-leaked border/background.
+   Re-asserting under the board's view-type raises specificity to 0-2-0 so the
+   field stays on-design regardless of the active theme. */
+.workspace-leaf-content[data-type="claudian-agent-board-view"] .claudian-agent-board-card-reply--field {
+  background: var(--background-modifier-form-field, var(--input-bg, var(--background-primary)));
+  border: 1px solid var(--background-modifier-border);
+  box-shadow: none;
+}
+
+.workspace-leaf-content[data-type="claudian-agent-board-view"] .claudian-agent-board-card-reply--field:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 25%, transparent);
 }
 
 .claudian-agent-board-card-reply--actions {
@@ -724,9 +807,11 @@
   gap: 6px;
 }
 
-/* Reply action buttons (Send + Stop): fully styled so neither inherits
-   Obsidian's native button chrome. `… button` is 0-1-1 (beats `button` 0-0-1);
-   the green Send override is 0-2-0 (beats a theme's `button.mod-cta` 0-1-1). */
+/* Reply action buttons (Send + Stop / Approve + Reject): fully styled so neither
+   inherits Obsidian's native button chrome. `… button` is 0-1-1 (beats `button`
+   0-0-1); the green Send override is 0-2-0 (beats a theme's `button.mod-cta`
+   0-1-1). The secondary (non-CTA) reads as a ghost button — transparent with a
+   quiet border — matching the prototype's `.ab-btn-ghost` next to the CTA. */
 .claudian-agent-board-card-reply--actions button {
   padding: 6px 12px;
   border: 1px solid var(--background-modifier-border);
@@ -735,12 +820,13 @@
   font-weight: var(--font-medium);
   line-height: 1.3;
   cursor: pointer;
-  background: var(--interactive-normal);
+  background: transparent;
   color: var(--text-normal);
 }
 
 .claudian-agent-board-card-reply--actions button:hover {
-  background: var(--interactive-hover);
+  background: var(--background-modifier-hover);
+  border-color: var(--border-color-hover);
 }
 
 .claudian-agent-board-card-reply--actions .mod-cta {
@@ -762,6 +848,22 @@
   padding-top: 12px;
   color: var(--text-error);
   font-size: var(--font-ui-smaller);
+}
+
+/* The notices/skipped sections render bare <h4>s. Obsidian's app.css styles
+   bare `h4` (0-0-1) with --h4-size (~17px) and heading margins, which blow out
+   the compact errors panel; the descendant rule (0-1-1) overrides them down to
+   a section label. */
+.claudian-agent-board-errors h4 {
+  margin: 0 0 4px;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  line-height: 1.3;
+  color: var(--text-error);
+}
+
+.claudian-agent-board-errors h4:not(:first-child) {
+  margin-top: 10px;
 }
 
 .claudian-agent-board-slots {
@@ -798,6 +900,13 @@
 .claudian-agent-board-lane-criteria ul {
   margin: 2px 0 0;
   padding-left: 16px;
+}
+
+/* Bare <li> picks up Obsidian's default list line-height/margins; pin them so
+   the criteria read as a tight bullet list, not editor-spaced body copy. */
+.claudian-agent-board-lane-criteria li {
+  margin: 0;
+  line-height: 1.4;
 }
 
 .claudian-lane-editor-lane {
