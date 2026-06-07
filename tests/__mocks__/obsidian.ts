@@ -607,6 +607,15 @@ export const MarkdownRenderer = {
 
 export const setIcon = jest.fn();
 
+// Mirrors Obsidian's real normalizePath: backslashes -> forward slashes,
+// collapse duplicate slashes, trim surrounding whitespace and leading/trailing
+// slashes. Kept faithful so storage-path tests can assert normalization.
+export function normalizePath(path: string): string {
+  let result = path.replace(/([\\/])+/g, '/').trim();
+  result = result.replace(/(^\/+|\/+$)/g, '');
+  return result === '' ? '/' : result;
+}
+
 // Notice mock that tracks constructor calls
 export const Notice = jest.fn().mockImplementation((_message: string, _timeout?: number) => {});
 

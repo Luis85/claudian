@@ -1,3 +1,5 @@
+import { normalizePath } from 'obsidian';
+
 import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
 import type { AgentDefinition } from '../../../core/types';
 import { serializeAgent } from '../../../utils/agent';
@@ -65,16 +67,17 @@ export class AgentVaultStorage {
   }
 
   private resolvePath(agent: AgentDefinition): string {
+    // Agent name / filePath are user-/agent-supplied; normalize the vault path.
     if (!agent.filePath) {
-      return `${AGENTS_PATH}/${agent.name}.md`;
+      return normalizePath(`${AGENTS_PATH}/${agent.name}.md`);
     }
 
     const normalized = agent.filePath.replace(/\\/g, '/');
     const idx = normalized.lastIndexOf(`${AGENTS_PATH}/`);
     if (idx !== -1) {
-      return normalized.slice(idx);
+      return normalizePath(normalized.slice(idx));
     }
-    return `${AGENTS_PATH}/${agent.name}.md`;
+    return normalizePath(`${AGENTS_PATH}/${agent.name}.md`);
   }
 
   private isFileNotFoundError(error: unknown): boolean {

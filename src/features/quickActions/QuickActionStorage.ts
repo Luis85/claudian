@@ -1,3 +1,5 @@
+import { normalizePath } from 'obsidian';
+
 import type { VaultFileAdapter } from '../../core/storage/VaultFileAdapter';
 import { parseQuickActionContent, serializeQuickAction } from './quickActionParse';
 import type { QuickAction } from './types';
@@ -72,8 +74,30 @@ export class QuickActionStorage {
     private getFolderPath: () => string,
   ) {}
 
-  async loadAll(): Promise<QuickAction[]> {
+  /**
+   * Trimmed + normalized Quick Actions folder (`''` when unset). Saving and
+   * loading must agree on this single value — otherwise a folder configured with
+   * duplicate or backslash separators is written under the normalized path but
+   * scanned under the raw one, so saved actions vanish until the user manually
+   * fixes the setting.
+   */
+  private resolveFolder(): string {
     const folder = this.getFolderPath().trim();
+    return folder ? normalizePath(folder) : '';
+  }
+
+  /**
+   * Whether a non-empty Quick Actions folder is configured. Callers (e.g. the
+   * modal add/edit flow) must check this before saving: with a blank folder a
+   * save would land a vault-root file that `loadAll()` never scans, so the
+   * action silently vanishes on refresh.
+   */
+  hasConfiguredFolder(): boolean {
+    return this.resolveFolder() !== '';
+  }
+
+  async loadAll(): Promise<QuickAction[]> {
+    const folder = this.resolveFolder();
     if (!folder) {
       return [];
     }
@@ -115,6 +139,12 @@ export class QuickActionStorage {
   }
 
   async save(action: QuickAction): Promise<string> {
+    // Refuse to write a quick action that loadAll() could never find: a blank
+    // folder normalizes to a vault-root path the loader does not scan. Callers
+    // guard with hasConfiguredFolder() upfront; this is the storage backstop.
+    if (!this.hasConfiguredFolder()) {
+      throw new Error('Quick Actions folder is not configured');
+    }
     const filePath = action.filePath || this.getFilePathForName(action.name);
     const content = serializeQuickAction({
       name: action.name,
@@ -125,7 +155,12 @@ export class QuickActionStorage {
       favorite: action.favorite,
       favoriteRank: action.favoriteRank,
     });
-    await this.adapter.ensureFolder(this.getFolderPath());
+    // Folder is user-configured; normalize before the adapter's mkdir/write so
+    // it matches the path loadAll() scans and getFilePathForName() writes to.
+    const folder = this.resolveFolder();
+    if (folder) {
+      await this.adapter.ensureFolder(folder);
+    }
     await this.adapter.write(filePath, content);
     return filePath;
   }
@@ -162,12 +197,13 @@ export class QuickActionStorage {
   }
 
   getFilePathForName(name: string): string {
-    const folder = this.getFolderPath().trim();
+    const folder = this.resolveFolder();
     const safe = name
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '') || 'action';
-    return `${folder}/${safe}.md`;
+    // User-configured folder + action name flow into adapter writes/reads.
+    return normalizePath(`${folder}/${safe}.md`);
   }
 }

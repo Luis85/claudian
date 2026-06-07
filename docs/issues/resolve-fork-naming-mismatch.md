@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260603-fork-naming-mismatch
 title: Resolve the three-way fork/upstream naming mismatch before any release-facing work
-status: open
+status: done
 priority: 3 - low
 triage: ready-for-agent
 created: 2026-06-03

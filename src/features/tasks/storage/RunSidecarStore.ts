@@ -1,4 +1,5 @@
 import type { DataAdapter } from 'obsidian';
+import { normalizePath } from 'obsidian';
 
 import type { TaskLedgerEntry, TaskStatus } from '../model/taskTypes';
 
@@ -30,7 +31,10 @@ export class RunSidecarStore {
     private readonly baseDir: string,
   ) {}
 
-  private runDir(runId: string): string { return `${this.baseDir}/${runId}`; }
+  // runId originates from generated ids but can also be read back from a
+  // hand-editable work-order `run_id` frontmatter, so normalize before any
+  // adapter call builds on it.
+  private runDir(runId: string): string { return normalizePath(`${this.baseDir}/${runId}`); }
   private heartbeatPath(runId: string): string { return `${this.runDir(runId)}/heartbeat.json`; }
   private ledgerPath(runId: string): string { return `${this.runDir(runId)}/ledger.jsonl`; }
 

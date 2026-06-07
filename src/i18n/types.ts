@@ -273,6 +273,27 @@ export type TranslationKey =
   | 'chat.input.openConversationFailed'
   | 'chat.input.chatServiceInitFailed'
 
+  // Chat - Actionable runtime error cards (UX-F/UX-J)
+  | 'chat.runtimeError.cliNotFound.title'
+  | 'chat.runtimeError.cliNotFound.body'
+  | 'chat.runtimeError.cliNotFound.openSettings'
+  | 'chat.runtimeError.unauthenticated.title'
+  | 'chat.runtimeError.unauthenticated.body'
+  | 'chat.runtimeError.unauthenticated.hintLabel'
+  | 'chat.runtimeError.unauthenticated.claudeHint'
+  | 'chat.runtimeError.unauthenticated.codexHint'
+  | 'chat.runtimeError.unauthenticated.cursorHint'
+  | 'chat.runtimeError.unauthenticated.opencodeHint'
+  | 'chat.runtimeError.unauthenticated.genericHint'
+  | 'chat.runtimeError.unauthenticated.copyHint'
+  | 'chat.runtimeError.unauthenticated.copied'
+  | 'chat.runtimeError.unauthenticated.openSettings'
+  | 'chat.runtimeError.contextTooLarge.title'
+  | 'chat.runtimeError.contextTooLarge.body'
+  | 'chat.runtimeError.generic.title'
+  | 'chat.runtimeError.retry'
+  | 'chat.runtimeError.detailsLabel'
+
 
   // Quick Actions
   | 'quickActions.toolbar.ariaLabel'

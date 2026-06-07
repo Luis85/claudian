@@ -1,3 +1,4 @@
+import { buildAllowlistedSubprocessEnvironment } from '../../../core/providers/subprocessEnvironmentAllowlist';
 import type { ProviderId } from '../../../core/providers/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
 import { getEnhancedPath } from '../../../utils/env';
@@ -21,16 +22,15 @@ export function buildCodexAppServerEnvironment(
   providerId: ProviderId = 'codex',
 ): Record<string, string> {
   const customEnv = plugin.getResolvedEnvironmentVariables(providerId);
-  const baseEnv = Object.fromEntries(
-    Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
-  );
-  const enhancedPath = getEnhancedPath(customEnv.PATH);
-
-  return {
-    ...baseEnv,
-    ...customEnv,
-    PATH: enhancedPath,
-  };
+  // Codex is an opt-in third-party CLI launched with the vault as cwd; route the
+  // child env through the shared allowlist so host secrets aren't inherited.
+  // OPENAI_/CODEX_-prefixed host vars (e.g. OPENAI_API_KEY) pass through.
+  return buildAllowlistedSubprocessEnvironment({
+    processEnv: process.env,
+    customEnv,
+    providerPrefixPattern: /^(OPENAI|CODEX)_/i,
+    pathOverride: getEnhancedPath(customEnv.PATH),
+  });
 }
 
 export function resolveCodexAppServerLaunchSpec(

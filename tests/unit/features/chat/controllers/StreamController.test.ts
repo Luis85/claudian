@@ -483,16 +483,87 @@ describe('StreamController - Text Content', () => {
   });
 
   describe('Error and notice handling', () => {
-    it('should append error message on error chunk', async () => {
+    it('should render an actionable error card on error chunk', async () => {
       const msg = createTestMessage();
-      deps.state.currentTextEl = createMockEl();
 
       await controller.handleStreamChunk(
         { type: 'error', content: 'Something went wrong' },
         msg
       );
 
-      expect(deps.state.currentTextContent).toContain('Error');
+      expect(
+        deps.state.currentContentEl!.querySelector('.claudian-runtime-error-card'),
+      ).not.toBeNull();
+    });
+
+    it('persists a runtime_error content block so the error survives reload', async () => {
+      const msg = createTestMessage();
+
+      await controller.handleStreamChunk(
+        { type: 'error', content: 'CLI not found' },
+        msg
+      );
+
+      expect(msg.contentBlocks).toEqual(
+        expect.arrayContaining([{ type: 'runtime_error', content: 'CLI not found' }]),
+      );
+    });
+
+    it('finalizes an open thinking block before the runtime_error block', async () => {
+      const msg = createTestMessage();
+
+      // Thinking still open when the failure arrives: the persisted order must
+      // stay thinking → runtime_error so reload matches the live DOM.
+      await controller.handleStreamChunk({ type: 'thinking', content: 'pondering' }, msg);
+      await controller.handleStreamChunk({ type: 'error', content: 'CLI not found' }, msg);
+
+      expect((msg.contentBlocks ?? []).map((b) => b.type)).toEqual([
+        'thinking',
+        'runtime_error',
+      ]);
+    });
+
+    it('wires retry on the error card to onRetryLastTurn', async () => {
+      const onRetryLastTurn = jest.fn();
+      const retryDeps = { ...createMockDeps(), onRetryLastTurn };
+      const retryController = new StreamController(retryDeps);
+      retryDeps.state.currentContentEl = createMockEl();
+      const msg = createTestMessage();
+
+      await retryController.handleStreamChunk(
+        { type: 'error', content: 'Something went wrong' },
+        msg
+      );
+
+      const retryBtn = retryDeps.state.currentContentEl!.querySelector(
+        '.claudian-runtime-error-button-primary',
+      );
+      expect(retryBtn).not.toBeNull();
+      (retryBtn as unknown as { click: () => void }).click();
+      expect(onRetryLastTurn).toHaveBeenCalledTimes(1);
+    });
+
+    it('suppresses retry on the error card while rendering an auto-triggered turn', async () => {
+      const onRetryLastTurn = jest.fn();
+      const autoDeps = { ...createMockDeps(), onRetryLastTurn };
+      const autoController = new StreamController(autoDeps);
+      autoDeps.state.currentContentEl = createMockEl();
+      const msg = createTestMessage();
+
+      // An auto-turn has no user prompt to retry; retryLastTurn() would resend
+      // the unrelated last chat turn, so the card must not offer Retry here.
+      autoController.setRenderingAutoTurn(true);
+      await autoController.handleStreamChunk(
+        { type: 'error', content: 'Background task failed' },
+        msg
+      );
+
+      expect(
+        autoDeps.state.currentContentEl!.querySelector('.claudian-runtime-error-card'),
+      ).not.toBeNull();
+      expect(
+        autoDeps.state.currentContentEl!.querySelector('.claudian-runtime-error-button-primary'),
+      ).toBeNull();
     });
 
     it('should append warning notice on notice chunk', async () => {

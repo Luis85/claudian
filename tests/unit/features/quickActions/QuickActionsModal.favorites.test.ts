@@ -71,6 +71,7 @@ function makeStorage(actions: QuickAction[]): QuickActionStorage {
     delete: jest.fn().mockResolvedValue(undefined),
     setFavorite: jest.fn().mockResolvedValue(undefined),
     unsetFavorite: jest.fn().mockResolvedValue(undefined),
+    hasConfiguredFolder: jest.fn().mockReturnValue(true),
   } as unknown as QuickActionStorage;
 }
 

@@ -18,8 +18,11 @@ import { processFileLinks, registerFileLinkHandler } from '../../../utils/fileLi
 import { replaceImageEmbedsWithHtml } from '../../../utils/imageEmbed';
 import { escapeMathDelimitersForStreaming } from '../../../utils/markdownMath';
 import { getVaultFileByPath } from '../../../utils/obsidianCompat';
+import { openClaudianProviderSettings } from '../../../utils/obsidianPrivateApi';
 import { extractVaultMentions } from '../../../utils/vaultMentions';
+import { classifyRuntimeError } from '../controllers/runtimeErrorClassification';
 import { findRewindContext } from '../rewind';
+import { renderInlineRuntimeError } from './InlineRuntimeError';
 import { eligibleMessageActions } from './messageActions';
 import { renderMessageContextCard } from './MessageContextCard';
 import { scrollMessagesToBottom } from './scrollToBottom';
@@ -550,6 +553,7 @@ export class MessageRenderer {
         if (block.type === 'thinking' && block.content.trim().length > 0) return true;
         if (block.type === 'text' && block.content.trim().length > 0) return true;
         if (block.type === 'context_compacted') return true;
+        if (block.type === 'runtime_error') return true;
         if (block.type === 'subagent') return true;
         if (block.type === 'tool_use') {
           const toolCall = msg.toolCalls?.find(tc => tc.id === block.toolId);
@@ -686,6 +690,18 @@ export class MessageRenderer {
         } else if (block.type === 'context_compacted') {
           const boundaryEl = contentEl.createDiv({ cls: 'claudian-compact-boundary' });
           boundaryEl.createSpan({ cls: 'claudian-compact-boundary-label', text: 'Conversation compacted' });
+        } else if (block.type === 'runtime_error') {
+          // Re-render the actionable error card from the persisted message. Retry
+          // is omitted (no live turn to re-dispatch after a reload); open-settings
+          // still works and the card hides the button for non-actionable kinds.
+          const providerId = this.getCapabilities().providerId;
+          renderInlineRuntimeError(contentEl, {
+            kind: classifyRuntimeError(block.content),
+            content: block.content,
+            providerId,
+            onOpenSettings: () =>
+              openClaudianProviderSettings(this.app, this.plugin.manifest.id, providerId),
+          });
         } else if (block.type === 'subagent') {
           const taskToolCall = msg.toolCalls?.find(
             tc => tc.id === block.subagentId && isSubagentToolName(tc.name)

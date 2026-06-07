@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260603-codex-env-allowlist
 title: Route the Codex spawn through the subprocess env allowlist (don't inherit full process.env)
-status: open
+status: done
 priority: 2 - normal
 triage: ready-for-agent
 created: 2026-06-03

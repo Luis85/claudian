@@ -34,8 +34,10 @@ import {
 import { formatDurationMmSs } from '../../../utils/date';
 import { extractDiffData } from '../../../utils/diff';
 import { hasStreamingMathDelimiters } from '../../../utils/markdownMath';
+import { openClaudianProviderSettings } from '../../../utils/obsidianPrivateApi';
 import { getVaultPath, normalizePathForVault } from '../../../utils/path';
 import { FLAVOR_TEXTS } from '../constants';
+import { renderInlineRuntimeError } from '../rendering/InlineRuntimeError';
 import type { MessageRenderer, RenderContentOptions } from '../rendering/MessageRenderer';
 import { scrollMessagesToBottom } from '../rendering/scrollToBottom';
 import { resolveSubagentLifecycleAdapter } from '../rendering/subagentLifecycleResolution';
@@ -64,11 +66,11 @@ import {
 import type { SubagentManager } from '../services/SubagentManager';
 import type { ChatState } from '../state/ChatState';
 import type { FileContextManager } from '../ui/FileContext';
+import { classifyRuntimeError } from './runtimeErrorClassification';
 import {
   type BlockTransitionDecision,
   projectBlockTransition,
   projectCompactBoundary,
-  projectErrorText,
   type ProjectionBlockState,
   projectNoticeText,
   projectUsage,
@@ -85,6 +87,12 @@ export interface StreamControllerDeps {
   updateQueueIndicator: () => void;
   /** Get the agent service from the tab. */
   getAgentService?: () => ChatRuntime | null;
+  /**
+   * Re-dispatches the last turn for the active conversation. Wired to the retry
+   * affordance on actionable runtime-error cards (UX-F/UX-J). Omitted when the
+   * tab has no turn available to retry.
+   */
+  onRetryLastTurn?: () => void;
 }
 
 export class StreamController {
@@ -123,9 +131,22 @@ export class StreamController {
   // External observers of the neutral chunk stream (e.g. the work-order runner),
   // notified before normal processing so a card can mirror the live run.
   private streamObservers = new Set<(chunk: StreamChunk) => void>();
+  /** True while replaying an auto-triggered (background) turn — see {@link setRenderingAutoTurn}. */
+  private renderingAutoTurn = false;
 
   constructor(deps: StreamControllerDeps) {
     this.deps = deps;
+  }
+
+  /**
+   * Marks the controller as rendering an auto-triggered background turn (e.g. a
+   * task-notification response replayed through this same controller). Such a
+   * turn has no user prompt behind it, so a runtime-error card must suppress its
+   * Retry affordance rather than re-dispatch the unrelated last chat turn. Set
+   * around the auto-turn chunk loop and cleared in its `finally`.
+   */
+  setRenderingAutoTurn(active: boolean): void {
+    this.renderingAutoTurn = active;
   }
 
   /**
@@ -257,9 +278,19 @@ export class StreamController {
         break;
 
       case 'error':
-        // Flush pending tools before rendering error message
+        // Flush pending tools and finalize any open thinking + text blocks first,
+        // so the persisted block order matches the live DOM (thinking → text →
+        // error card) when the conversation reloads. Then render an actionable
+        // recovery card (open settings / login hint / retry) instead of bare text.
         this.flushPendingTools();
-        await this.appendText(projectErrorText(chunk.content));
+        await this.finalizeCurrentThinkingBlock(msg);
+        await this.finalizeCurrentTextBlock(msg);
+        // Persist a structured block so the error + its guidance survive the
+        // end-of-turn save (reload / conversation switch re-renders the card);
+        // the card itself is DOM-only, like the compact boundary below.
+        msg.contentBlocks = msg.contentBlocks || [];
+        msg.contentBlocks.push({ type: 'runtime_error', content: chunk.content });
+        this.renderRuntimeError(chunk.content);
         break;
 
       case 'done': {
@@ -1579,6 +1610,48 @@ export class StreamController {
   // ============================================
   // Compact Boundary
   // ============================================
+
+  // ============================================
+  // Runtime Error Card (UX-F/UX-J)
+  // ============================================
+
+  /**
+   * Classifies a runtime `error` chunk and renders an actionable recovery card.
+   * Open-settings and retry callbacks are wired only when the underlying surface
+   * is available, so the card never offers an action it can't perform.
+   */
+  private renderRuntimeError(content: string): void {
+    const { state, plugin } = this.deps;
+    if (!state.currentContentEl) return;
+
+    this.hideThinkingIndicator();
+
+    const kind = classifyRuntimeError(content);
+    const providerId = this.getActiveProviderId();
+
+    const onOpenSettings =
+      kind === 'cli-not-found' || kind === 'unauthenticated'
+        ? () => {
+            openClaudianProviderSettings(plugin.app, plugin.manifest.id, providerId);
+          }
+        : undefined;
+
+    // Retry re-dispatches the *user's* last turn, so it must not appear on errors
+    // from an auto-triggered background turn — there is no user prompt behind it,
+    // and retrying would resend an unrelated chat turn (duplicating work).
+    const onRetry =
+      !this.renderingAutoTurn && this.deps.onRetryLastTurn
+        ? () => this.deps.onRetryLastTurn?.()
+        : undefined;
+
+    renderInlineRuntimeError(state.currentContentEl, {
+      kind,
+      content,
+      providerId,
+      onOpenSettings,
+      onRetry,
+    });
+  }
 
   private renderCompactBoundary(): void {
     const { state } = this.deps;

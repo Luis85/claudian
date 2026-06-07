@@ -493,6 +493,25 @@ describe('MessageRenderer', () => {
     expect(renderStoredSubagent).toHaveBeenCalled();
   });
 
+  it('re-renders a persisted runtime_error block as a card on reload (no retry button)', () => {
+    const messagesEl = createMockEl();
+    const { renderer } = createRenderer(messagesEl);
+
+    renderer.renderStoredMessage({
+      id: 'a-err',
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now(),
+      contentBlocks: [{ type: 'runtime_error', content: 'spawn claude ENOENT' }],
+    });
+
+    // The error + its guidance survive the save and re-render as the card...
+    expect(messagesEl.querySelector('.claudian-runtime-error-card')).not.toBeNull();
+    expect(messagesEl.textContent).toContain('spawn claude ENOENT');
+    // ...but retry is omitted on reload (no live turn to re-dispatch).
+    expect(messagesEl.querySelector('.claudian-runtime-error-button-primary')).toBeNull();
+  });
+
   it('skips empty or whitespace-only text blocks', () => {
     const messagesEl = createMockEl();
     const { renderer } = createRenderer(messagesEl);

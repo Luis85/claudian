@@ -1,8 +1,52 @@
+import os from 'os';
+
 // `pin` is anchored to a delimited token so it does not match innocuous keys
 // that merely contain the substring (shipping, mapping, spinner, ...).
 const SECRET_KEY =
   /(token|key|secret|password|passwd|pwd|credential|api[-_]?key|authorization|bearer|cookie|signature|private[-_]?key|(?<![a-z])pin(?![a-z]))/i;
 const REDACTED = '[redacted]';
+
+// Value-level scrubbers. Every quantified run is over a single character class
+// with no nested/overlapping quantifiers, so matching is linear regardless of
+// length — an unbounded `+`/`{n,}` cannot trigger catastrophic backtracking
+// here. The runs are intentionally *un*capped so the whole delimited token is
+// consumed; capping (e.g. `{n,512}`) would leave the tail of long secrets such
+// as >512-char JWT bearer tokens exposed in the diagnostics buffer.
+const VALUE_SCRUBBERS: Array<{ pattern: RegExp; replace: string }> = [
+  // `Bearer <token>` / `Authorization: Bearer <token>` headers.
+  { pattern: /\bBearer\s+[A-Za-z0-9._~+/=-]{6,}/gi, replace: 'Bearer [redacted]' },
+  // `token=` / `api_key=` / `api-key=` / `apikey=` style key/value pairs in
+  // query strings, command args, and dumps. Stops at common delimiters.
+  {
+    pattern: /\b(api[-_]?key|token|secret|password|access[-_]?token)=[^\s&"'`)]+/gi,
+    replace: '$1=[redacted]',
+  },
+  // Provider key shapes: `sk-...`, `sk-ant-...`, `sk-proj-...`, `ghp_...`, etc.
+  { pattern: /\bsk-[A-Za-z0-9_-]{8,}/g, replace: REDACTED },
+  { pattern: /\b(ghp|gho|ghu|ghs|ghr|github_pat)_[A-Za-z0-9_]{8,}/g, replace: REDACTED },
+  // `user:pass@host` credentials in URLs / clone commands. Keep the host; mask
+  // both user and password since either half can be sensitive.
+  {
+    pattern: /([a-z][a-z0-9+.-]{0,32}:\/\/)[^\s/@:]+:[^\s/@]+@/gi,
+    replace: '$1[redacted]@',
+  },
+];
+
+/** Scrub secret-shaped substrings from a value and normalize the home path. */
+export function scrubString(text: string): string {
+  let out = text;
+  for (const { pattern, replace } of VALUE_SCRUBBERS) {
+    out = out.replace(pattern, replace);
+  }
+  return normalizeHome(out);
+}
+
+function normalizeHome(text: string): string {
+  const home = os.homedir();
+  // homedir() can be empty/'/' on odd hosts; skip to avoid corrupting paths.
+  if (!home || home === '/' || !text.includes(home)) return text;
+  return text.split(home).join('~');
+}
 
 /** Deep-clone args, masking secret-shaped object keys. Never mutates inputs. */
 export function redactArgs(args: unknown[]): unknown[] {
@@ -10,6 +54,7 @@ export function redactArgs(args: unknown[]): unknown[] {
 }
 
 function redactValue(value: unknown, seen: WeakSet<object>): unknown {
+  if (typeof value === 'string') return scrubString(value);
   if (value === null || typeof value !== 'object') return value;
   if (seen.has(value as object)) return '[circular]';
   seen.add(value as object);

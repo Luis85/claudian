@@ -118,6 +118,30 @@ export default defineConfig([
           message:
             "Hardcoded English in `new Notice(`...`)` is not allowed. Use `t('key.path', { param: value })` instead, adding the canonical string with `{param}` placeholders to src/i18n/locales/en.json.",
         },
+        // OBS-B (Obsidian security review). Raw HTML injection is the #1 risk
+        // for a streaming chat UI: any innerHTML/outerHTML/insertAdjacentHTML
+        // fed by agent/markdown/user content is an XSS vector. Build DOM with
+        // createEl/createDiv/createSpan/setText/.empty(), or route untrusted
+        // content through MarkdownRenderer. If a site is provably static, use a
+        // narrow `// eslint-disable-next-line no-restricted-syntax` with a
+        // justification comment rather than disabling this rule globally.
+        {
+          selector:
+            'AssignmentExpression > MemberExpression[property.name="innerHTML"]',
+          message:
+            'Assigning to innerHTML is banned (XSS risk). Use createEl/createDiv/createSpan/setText/.empty(), or MarkdownRenderer for markdown. See docs/issues/audit-innerhtml-rendering.md (OBS-B).',
+        },
+        {
+          selector:
+            'AssignmentExpression > MemberExpression[property.name="outerHTML"]',
+          message:
+            'Assigning to outerHTML is banned (XSS risk). Use createEl/createDiv/createSpan/setText/.empty(), or MarkdownRenderer for markdown. See docs/issues/audit-innerhtml-rendering.md (OBS-B).',
+        },
+        {
+          selector: 'CallExpression[callee.property.name="insertAdjacentHTML"]',
+          message:
+            'insertAdjacentHTML is banned (XSS risk). Use createEl/createDiv/createSpan/setText, or MarkdownRenderer for markdown. See docs/issues/audit-innerhtml-rendering.md (OBS-B).',
+        },
       ],
     },
   },

@@ -13,6 +13,7 @@ export interface StorageMockOpts {
 export function createStorageMock(opts: StorageMockOpts = {}): jest.Mocked<QuickActionStorage> {
   return {
     exists: jest.fn(async () => opts.exists ?? false),
+    hasConfiguredFolder: jest.fn(() => true),
     getFilePathForName: jest.fn((name: string) => `Quick Actions/${name.toLowerCase()}.md`),
     save: opts.save ?? jest.fn(async () => 'Quick Actions/saved.md'),
     delete: jest.fn(),

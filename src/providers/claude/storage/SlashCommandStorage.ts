@@ -1,3 +1,5 @@
+import { normalizePath } from 'obsidian';
+
 import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
 import type { SlashCommand } from '../../../core/types';
 import { parsedToSlashCommand, parseSlashCommandContent, serializeCommand } from '../../../utils/slashCommand';
@@ -58,7 +60,8 @@ export class SlashCommandStorage {
 
   getFilePath(command: SlashCommand): string {
     const safeName = command.name.replace(/[^a-zA-Z0-9_/-]/g, '-');
-    return `${COMMANDS_PATH}/${safeName}.md`;
+    // Command name is user-/agent-supplied and may contain `/` subpaths.
+    return normalizePath(`${COMMANDS_PATH}/${safeName}.md`);
   }
 
   private parseFile(content: string, filePath: string): SlashCommand {

@@ -1,3 +1,5 @@
+import { normalizePath } from 'obsidian';
+
 import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
 import type { SlashCommand } from '../../../core/types';
 import { parsedToSlashCommand, parseSlashCommandContent, serializeCommand } from '../../../utils/slashCommand';
@@ -47,8 +49,9 @@ export class SkillStorage {
 
   async save(skill: SlashCommand): Promise<void> {
     const name = skill.name;
-    const dirPath = `${SKILLS_PATH}/${name}`;
-    const filePath = `${dirPath}/SKILL.md`;
+    // Skill name is user-/agent-supplied; normalize the vault path it forms.
+    const dirPath = normalizePath(`${SKILLS_PATH}/${name}`);
+    const filePath = normalizePath(`${dirPath}/SKILL.md`);
 
     await this.adapter.ensureFolder(dirPath);
     await this.adapter.write(filePath, serializeCommand(skill));
@@ -56,8 +59,8 @@ export class SkillStorage {
 
   async delete(skillId: string): Promise<void> {
     const name = skillId.replace(/^skill-/, '');
-    const dirPath = `${SKILLS_PATH}/${name}`;
-    const filePath = `${dirPath}/SKILL.md`;
+    const dirPath = normalizePath(`${SKILLS_PATH}/${name}`);
+    const filePath = normalizePath(`${dirPath}/SKILL.md`);
     await this.adapter.delete(filePath);
     await this.adapter.deleteFolder(dirPath);
   }

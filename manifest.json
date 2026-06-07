@@ -4,7 +4,7 @@
   "version": "3.5.0",
   "minAppVersion": "1.11.5",
   "description": "Embeds Claude Code, Codex, and other coding agents as AI collaborators in your vault. Your vault becomes their working directory, giving them capabilities for file reads and writes, search, bash commands, and multi-step workflows.",
-  "author": "Yishen Tu",
-  "authorUrl": "https://github.com/YishenTu",
+  "author": "Luis85",
+  "authorUrl": "https://github.com/Luis85",
   "isDesktopOnly": true
 }

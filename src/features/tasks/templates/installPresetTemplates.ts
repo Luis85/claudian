@@ -1,3 +1,5 @@
+import { normalizePath } from 'obsidian';
+
 import type ClaudianPlugin from '../../../main';
 import { PRESET_TEMPLATES } from './presetTemplates';
 import { TemplateNoteStore } from './TemplateNoteStore';
@@ -13,7 +15,8 @@ function normalizeFolder(value: string): string {
 }
 
 export async function installPresetTemplates(plugin: ClaudianPlugin): Promise<InstallPresetTemplatesResult> {
-  const folder = normalizeFolder(plugin.settings.agentBoardTemplateFolder || 'Agent Board/templates');
+  // Settings-derived folder feeds vault.createFolder/getAbstractFileByPath below.
+  const folder = normalizePath(normalizeFolder(plugin.settings.agentBoardTemplateFolder || 'Agent Board/templates'));
   const store = new TemplateNoteStore();
   const vault = plugin.app.vault;
 

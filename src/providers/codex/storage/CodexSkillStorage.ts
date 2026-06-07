@@ -1,3 +1,4 @@
+import { normalizePath } from 'obsidian';
 import * as path from 'path';
 
 import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
@@ -241,10 +242,12 @@ export class CodexSkillStorage {
 
   private buildLocationPaths(location: CodexSkillLocation): { dirPath: string; filePath: string } {
     const rootPath = ROOT_PATH_BY_ID[location.rootId];
-    const dirPath = `${rootPath}/${location.name}`;
+    // location.name is user-/agent-supplied; normalize the vault paths before
+    // they reach the adapter's ensureFolder/write/delete calls.
+    const dirPath = normalizePath(`${rootPath}/${location.name}`);
     return {
       dirPath,
-      filePath: `${dirPath}/SKILL.md`,
+      filePath: normalizePath(`${dirPath}/SKILL.md`),
     };
   }
 }

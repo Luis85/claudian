@@ -181,6 +181,25 @@ Task`,
       );
     });
 
+    it('normalizes the vault path before writing (collapses // and backslashes)', async () => {
+      const adapter = createMockAdapter({});
+      const storage = new CodexSkillStorage(adapter);
+
+      // A name carrying stray separators must not reach the adapter unnormalized:
+      // duplicate slashes / backslashes would corrupt the vault path.
+      await storage.save({
+        name: 'nested\\\\sub//skill',
+        description: 'A new skill',
+        content: 'Do the thing',
+      });
+
+      expect(adapter.ensureFolder).toHaveBeenCalledWith('.codex/skills/nested/sub/skill');
+      expect(adapter.write).toHaveBeenCalledWith(
+        '.codex/skills/nested/sub/skill/SKILL.md',
+        expect.stringContaining('Do the thing'),
+      );
+    });
+
     it('preserves the original root when saving an .agents skill', async () => {
       const adapter = createMockAdapter({});
       const storage = new CodexSkillStorage(adapter);

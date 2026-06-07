@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260603-value-level-redaction
 title: Harden diagnostics redaction — scrub secret-bearing values and normalize home paths
-status: open
+status: done
 priority: 3 - low
 triage: ready-for-agent
 created: 2026-06-03
