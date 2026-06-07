@@ -1,4 +1,7 @@
-import { parseAcceptanceChecklist } from '../../../../../src/features/tasks/model/acceptanceChecklist';
+import {
+  isPureAcceptanceChecklist,
+  parseAcceptanceChecklist,
+} from '../../../../../src/features/tasks/model/acceptanceChecklist';
 
 describe('parseAcceptanceChecklist', () => {
   it('captures each checklist item with its checked state and label', () => {
@@ -31,5 +34,22 @@ describe('parseAcceptanceChecklist', () => {
     const items = parseAcceptanceChecklist(md);
     expect(items).toHaveLength(3);
     expect(items.filter((i) => i.checked)).toHaveLength(2);
+  });
+});
+
+describe('isPureAcceptanceChecklist', () => {
+  it('is true for a section of only checkbox items (blank lines allowed)', () => {
+    expect(isPureAcceptanceChecklist('- [ ] a\n\n- [x] b')).toBe(true);
+    expect(isPureAcceptanceChecklist('  * [x] indented')).toBe(true);
+  });
+
+  it('is false for empty or prose-only sections', () => {
+    expect(isPureAcceptanceChecklist('')).toBe(false);
+    expect(isPureAcceptanceChecklist('Just prose.\n- a plain bullet')).toBe(false);
+  });
+
+  it('is false when checkboxes are mixed with prose or nested lines', () => {
+    expect(isPureAcceptanceChecklist('- [ ] Implement API\n- Include retry behavior')).toBe(false);
+    expect(isPureAcceptanceChecklist('- [ ] Ship it\n  some continuation note')).toBe(false);
   });
 });

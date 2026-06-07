@@ -777,4 +777,16 @@ describe('WorkOrderDetailModal — Objective + Acceptance sections', () => {
       calls.some((c) => c[1] === '- Includes all task metadata\n- Renders without checkboxes'),
     ).toBe(true);
   });
+
+  it('renders mixed checkbox + prose acceptance criteria as full markdown (no dropped lines)', () => {
+    const task = makeTask('t', 'inbox');
+    task.sections.acceptanceCriteria = '- [ ] Implement API\n- Include retry behavior';
+    const { main } = openMain(task);
+    const section = findSection(main, 'Acceptance criteria')!;
+    // Mixed content (checkbox + plain bullet) must not collapse to only the checkbox row.
+    expect(find(section, 'claudian-work-order-modal-checklist')).toBeUndefined();
+    expect(find(section, 'claudian-work-order-modal-checklist-prose')).toBeDefined();
+    const calls = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
+    expect(calls.some((c) => c[1] === '- [ ] Implement API\n- Include retry behavior')).toBe(true);
+  });
 });

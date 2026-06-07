@@ -22,3 +22,19 @@ export function parseAcceptanceChecklist(markdown: string): AcceptanceChecklistI
   }
   return items;
 }
+
+/**
+ * True only when the section is a pure task-list: at least one checkbox item
+ * and no other non-blank lines. Mixed content (checkboxes interleaved with
+ * prose, nested bullets, or continuation lines) returns false so callers can
+ * render the full markdown instead of dropping the non-checkbox lines.
+ */
+export function isPureAcceptanceChecklist(markdown: string): boolean {
+  let sawCheckbox = false;
+  for (const line of markdown.split(/\r?\n/)) {
+    if (line.trim().length === 0) continue;
+    if (!CHECKBOX_ITEM.test(line)) return false;
+    sawCheckbox = true;
+  }
+  return sawCheckbox;
+}
