@@ -10,7 +10,7 @@ cta_url: https://github.com/Luis85/specorator
 related:
   - "[[Quick Actions]]"
   - "[[Multi Provider Support]]"
-user_manual: "[[chat]]"
+user_manual: "[[sidepanel-chat]]"
 image: "[[chat-sidepanel-overview.png]]"
 ---
 

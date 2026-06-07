@@ -1,6 +1,6 @@
 ---
 status: done
-parent: "[[Chat]]"
+parent: "[[sidepanel-chat]]"
 ---
 # Folder Add-to-Chat + Inline Context Card Implementation Plan
 

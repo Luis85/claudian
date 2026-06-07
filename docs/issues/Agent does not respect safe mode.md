@@ -2,7 +2,7 @@
 status: fixed
 priority: 3 - low
 relations:
-  - "[[Chat]]"
+  - "[[sidepanel-chat]]"
 tags:
 type: bug
 ---

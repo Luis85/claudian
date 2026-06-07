@@ -1,6 +1,6 @@
 ---
 status: shipped
-parent: "[[Chat]]"
+parent: "[[sidepanel-chat]]"
 ---
 # Composer context pills (Cursor-style attachments)
 

@@ -1,6 +1,6 @@
 ---
 status: shipped
-parent: "[[Chat]]"
+parent: "[[sidepanel-chat]]"
 ---
 # Git commit & push button — design
 

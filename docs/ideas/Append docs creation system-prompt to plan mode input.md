@@ -3,7 +3,7 @@ priority: 2 - normal
 status: open
 tracked-by: "[[append-docs-plan-mode]]"
 relations:
-  - "[[Chat]]"
+  - "[[sidepanel-chat]]"
 tags:
   - qol
 ---

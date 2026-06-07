@@ -2,7 +2,7 @@
 status: done
 priority: 2 - normal
 relations:
-  - "[[Chat]]"
+  - "[[sidepanel-chat]]"
   - "[[Quick Actions]]"
   - "[[2026-06-04-context-menu-quick-actions-design]]"
 tags:

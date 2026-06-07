@@ -1,6 +1,6 @@
 ---
 status: done
-parent: "[[Chat]]"
+parent: "[[sidepanel-chat]]"
 ---
 # Thumbs feedback actions Implementation Plan
 

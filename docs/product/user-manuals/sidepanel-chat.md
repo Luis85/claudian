@@ -2,13 +2,13 @@
 date: 2026-06-04
 status: shipped
 type: user-manual
-parent: "[[Chat]]"
+parent: "[[sidepanel-chat]]"
 ---
 # Claudian — Chat
 
 This manual covers the **chat sidebar**: the workspace where you talk to a provider beside your notes. The sidebar opens on a hotkey, picks up the note you're on and any selected text, and saves every conversation as a Specorator session you can resume tomorrow.
 
-For the high-level feature pitch see [[Chat]]. For how attached files and folders appear above the composer see [[composer-context-pills]]. For drafting before running, see [[plan-mode]]. For durable background handoffs see [[agent-board]].
+For the high-level feature pitch see [[sidepanel-chat]]. For how attached files and folders appear above the composer see [[composer-context-pills]]. For drafting before running, see [[plan-mode]]. For durable background handoffs see [[agent-board]].
 
 ---
 

@@ -4,7 +4,7 @@ priority: 1 - high
 status: done
 relations:
   - Performance
-  - "[[Chat]]"
+  - "[[sidepanel-chat]]"
 tags:
   - performance
   - chat

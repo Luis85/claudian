@@ -2,7 +2,7 @@
 date: 2026-06-04
 status: shipped
 type: user-manual
-parent: "[[Chat]]"
+parent: "[[sidepanel-chat]]"
 ---
 # Add folders to chat & attached-context card
 

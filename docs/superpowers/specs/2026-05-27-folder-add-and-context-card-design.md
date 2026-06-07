@@ -1,6 +1,6 @@
 ---
 status: shipped
-parent: "[[Chat]]"
+parent: "[[sidepanel-chat]]"
 ---
 # Add folders to chat + inline context card
 

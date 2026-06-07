@@ -1,6 +1,6 @@
 ---
 status: done
-parent: "[[Chat]]"
+parent: "[[sidepanel-chat]]"
 ---
 # Composer Context Pills Implementation Plan
 

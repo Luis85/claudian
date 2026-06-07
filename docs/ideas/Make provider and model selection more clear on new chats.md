@@ -2,7 +2,7 @@
 status: open
 priority: 3 - low
 relations:
-  - "[[Chat]]"
+  - "[[sidepanel-chat]]"
 tags:
 ---
 When a user starts a new conversation via tab or button, the user should also get asked on the empty chat which provider or model he wants to chose.

@@ -12,7 +12,7 @@ tags:
   - file-context
   - inline-edit
   - plan
-parent: "[[Chat]]"
+parent: "[[sidepanel-chat]]"
 ---
 
 # Drag and Drop into Chat Context — Implementation Plan

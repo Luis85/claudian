@@ -1,3 +1,6 @@
+---
+status: done
+---
 # Co-Worker - Chat Product Copy Refinement — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -246,7 +249,7 @@ Expected: no matches.
 
 ### Task 6: Final verification + commit
 
-- [ ] **Step 1: Check no stale [[Chat]] wikilinks remain in feature docs**
+- [ ] **Step 1: Check no stale [[sidepanel-chat]] wikilinks remain in feature docs**
 
 Run:
 ```bash

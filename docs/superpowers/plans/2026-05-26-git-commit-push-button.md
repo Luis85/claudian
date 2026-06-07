@@ -1,6 +1,6 @@
 ---
 status: done
-parent: "[[Chat]]"
+parent: "[[sidepanel-chat]]"
 ---
 # Git commit & push button Implementation Plan
 

@@ -6,7 +6,7 @@ scope: chat-rendering
 parent: "[[Work-Orders handoff message clutters chat]]"
 relations:
   - "[[Agent Kanban Board]]"
-  - "[[Chat]]"
+  - "[[sidepanel-chat]]"
 ---
 
 # Work Order Handoff Chat Card Design
