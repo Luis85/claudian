@@ -769,6 +769,18 @@ describe('WorkOrderDetailModal — Objective + Acceptance sections', () => {
     expect(calls.some((c) => c[1] === 'Update [[Spec]] and [docs](https://x)')).toBe(true);
   });
 
+  it('renders nested task-list acceptance criteria as markdown (preserves hierarchy)', () => {
+    const task = makeTask('t', 'inbox');
+    task.sections.acceptanceCriteria = '- [ ] Parent\n  - [ ] Child';
+    const { main } = openMain(task);
+    const section = findSection(main, 'Acceptance criteria')!;
+    // Nested lists must not be flattened into the custom card.
+    expect(find(section, 'claudian-work-order-modal-checklist')).toBeUndefined();
+    expect(find(section, 'claudian-work-order-modal-checklist-prose')).toBeDefined();
+    const calls = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
+    expect(calls.some((c) => c[1] === '- [ ] Parent\n  - [ ] Child')).toBe(true);
+  });
+
   it('falls back to an em dash when there are no acceptance criteria', () => {
     const task = makeTask('t', 'inbox');
     task.sections.acceptanceCriteria = '';

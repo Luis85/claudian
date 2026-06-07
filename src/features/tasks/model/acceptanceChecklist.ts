@@ -5,6 +5,8 @@ export interface AcceptanceChecklistItem {
 }
 
 const CHECKBOX_ITEM = /^\s*[-*]\s+\[( |x|X)\]\s+(.*)$/;
+// A flat, top-level checkbox line carries no leading indentation.
+const TOP_LEVEL_CHECKBOX = /^[-*]\s+\[( |x|X)\]\s+/;
 
 /**
  * Splits an acceptance-criteria block into checklist rows for the read-only
@@ -24,16 +26,17 @@ export function parseAcceptanceChecklist(markdown: string): AcceptanceChecklistI
 }
 
 /**
- * True only when the section is a pure task-list: at least one checkbox item
- * and no other non-blank lines. Mixed content (checkboxes interleaved with
- * prose, nested bullets, or continuation lines) returns false so callers can
- * render the full markdown instead of dropping the non-checkbox lines.
+ * True only when the section is a flat task-list: at least one top-level
+ * checkbox item and no other non-blank lines. Mixed content (checkboxes
+ * interleaved with prose), nested/indented checkboxes, and continuation lines
+ * all return false so callers render the full markdown instead of flattening
+ * the hierarchy or dropping the non-checkbox lines.
  */
 export function isPureAcceptanceChecklist(markdown: string): boolean {
   let sawCheckbox = false;
   for (const line of markdown.split(/\r?\n/)) {
     if (line.trim().length === 0) continue;
-    if (!CHECKBOX_ITEM.test(line)) return false;
+    if (!TOP_LEVEL_CHECKBOX.test(line)) return false;
     sawCheckbox = true;
   }
   return sawCheckbox;

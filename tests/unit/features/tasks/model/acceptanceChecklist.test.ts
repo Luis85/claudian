@@ -38,9 +38,9 @@ describe('parseAcceptanceChecklist', () => {
 });
 
 describe('isPureAcceptanceChecklist', () => {
-  it('is true for a section of only checkbox items (blank lines allowed)', () => {
+  it('is true for a section of only top-level checkbox items (blank lines allowed)', () => {
     expect(isPureAcceptanceChecklist('- [ ] a\n\n- [x] b')).toBe(true);
-    expect(isPureAcceptanceChecklist('  * [x] indented')).toBe(true);
+    expect(isPureAcceptanceChecklist('* [x] one\n* [ ] two')).toBe(true);
   });
 
   it('is false for empty or prose-only sections', () => {
@@ -51,5 +51,10 @@ describe('isPureAcceptanceChecklist', () => {
   it('is false when checkboxes are mixed with prose or nested lines', () => {
     expect(isPureAcceptanceChecklist('- [ ] Implement API\n- Include retry behavior')).toBe(false);
     expect(isPureAcceptanceChecklist('- [ ] Ship it\n  some continuation note')).toBe(false);
+  });
+
+  it('is false when checkbox items are nested (indented children)', () => {
+    expect(isPureAcceptanceChecklist('- [ ] Parent\n  - [ ] Child')).toBe(false);
+    expect(isPureAcceptanceChecklist('* [x] Top\n    * [ ] Deep')).toBe(false);
   });
 });
