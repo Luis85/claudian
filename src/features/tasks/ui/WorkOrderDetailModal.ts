@@ -363,11 +363,14 @@ export class WorkOrderDetailModal extends Modal {
       return;
     }
 
+    // Glyphs mirror the design prototype's handoff cards (Modal.jsx): file-text /
+    // check-square / triangle / signal. The per-section accent color is what the
+    // spec table fixes and is set in CSS off the modifier, not the glyph itself.
     const cards: HandoffCard[] = [
-      { titleKey: 'tasks.workOrderModal.handoffSummary', icon: 'align-left', modifier: 'summary', defaultOpen: true, body: parsed.summary },
-      { titleKey: 'tasks.workOrderModal.handoffVerification', icon: 'check-circle', modifier: 'verification', defaultOpen: false, body: parsed.verification },
-      { titleKey: 'tasks.workOrderModal.handoffRisks', icon: 'alert-triangle', modifier: 'risks', defaultOpen: false, body: parsed.risks },
-      { titleKey: 'tasks.workOrderModal.handoffNextAction', icon: 'arrow-right', modifier: 'next', defaultOpen: true, body: parsed.nextAction },
+      { titleKey: 'tasks.workOrderModal.handoffSummary', icon: 'file-text', modifier: 'summary', defaultOpen: true, body: parsed.summary },
+      { titleKey: 'tasks.workOrderModal.handoffVerification', icon: 'check-square', modifier: 'verification', defaultOpen: false, body: parsed.verification },
+      { titleKey: 'tasks.workOrderModal.handoffRisks', icon: 'triangle', modifier: 'risks', defaultOpen: false, body: parsed.risks },
+      { titleKey: 'tasks.workOrderModal.handoffNextAction', icon: 'signal', modifier: 'next', defaultOpen: true, body: parsed.nextAction },
     ];
 
     const group = section.createDiv({ cls: 'claudian-work-order-modal-collapse-group' });
@@ -390,7 +393,7 @@ export class WorkOrderDetailModal extends Modal {
    */
   private renderHandoffSalvage(parent: HTMLElement): void {
     const { section } = renderSectionHeader(parent, {
-      icon: 'alert-triangle',
+      icon: 'triangle',
       label: t('tasks.workOrderModal.salvageTitle'),
     });
 
