@@ -844,7 +844,9 @@
 }
 
 .claudian-agent-board-toolbar-autorun--off .claudian-agent-board-toolbar-autorun-track {
-  background-color: var(--toggle-bg);
+  /* `--toggle-bg` is a prototype token, not a default Obsidian variable; fall
+     back to a neutral host border color so the OFF track always has a fill. */
+  background-color: var(--toggle-bg, var(--background-modifier-border));
 }
 
 /* ON: accent pill + accent track, thumb slid right to white. */
