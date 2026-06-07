@@ -76,6 +76,10 @@ const EDITABLE_TITLE_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStatus>([
   'needs_fix',
 ]);
 
+// The detail modal is a singleton (one work order open at a time), so a stable
+// id is safe to use as the dialog's `aria-labelledby` target.
+const TITLE_ID = 'claudian-work-order-modal-title';
+
 // Numeric level extracted from the `N - label` priority string. Drives the
 // status/color modifier class (`--0..3`) and the count of filled priority bars
 // (urgent fills all 3, low fills 1). The status→color and priority→color maps
@@ -219,8 +223,17 @@ export class WorkOrderDetailModal extends Modal {
 
     const title = header.createDiv({ cls: 'claudian-work-order-modal-title' });
     title.setText(original);
+    // The custom header replaces the native modal title, so expose the dialog's
+    // accessible name through this element via `aria-labelledby`.
+    title.setAttr('id', TITLE_ID);
+    this.modalEl.setAttribute('aria-labelledby', TITLE_ID);
 
-    if (!editable) return;
+    if (!editable) {
+      // A static (non-editable) title also doubles as the dialog heading.
+      title.setAttr('role', 'heading');
+      title.setAttr('aria-level', '2');
+      return;
+    }
 
     title.addClass('is-editable');
     title.setAttr('contenteditable', 'plaintext-only');
@@ -233,7 +246,12 @@ export class WorkOrderDetailModal extends Modal {
 
     const commit = (): void => {
       const next = (title.textContent ?? '').trim();
-      if (next.length === 0 || next === committed) return;
+      if (next.length === 0 || next === committed) {
+        // Reject empty/unchanged edits, but restore the displayed text so the
+        // header never lingers in a blank or stray-whitespace unsaved state.
+        title.setText(committed);
+        return;
+      }
       committed = next;
       void this.callbacks.onSaveFields(task, { title: next });
     };

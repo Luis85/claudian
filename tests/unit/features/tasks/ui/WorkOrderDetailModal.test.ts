@@ -1145,6 +1145,23 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
     expect(find(header, 'claudian-work-order-modal-header-accent')).toBeDefined();
   });
 
+  it('exposes the dialog accessible name via aria-labelledby on the title', () => {
+    const { modal, header } = openHeader(makeTask('WO-1', 'inbox'));
+    expect(titleEl(header)!.attrs['id']).toBe('claudian-work-order-modal-title');
+    const setAttribute = (modal as unknown as { modalEl: { setAttribute: jest.Mock } }).modalEl
+      .setAttribute;
+    expect(setAttribute).toHaveBeenCalledWith('aria-labelledby', 'claudian-work-order-modal-title');
+  });
+
+  it('marks the static (non-editable) title as a heading', () => {
+    const { header } = openHeader(makeTask('WO-1', 'review'));
+    const title = titleEl(header)!;
+    expect(title.attrs['role']).toBe('heading');
+    expect(title.attrs['aria-level']).toBe('2');
+    // Non-editable: no contenteditable affordance.
+    expect(title.attrs['contenteditable']).toBeUndefined();
+  });
+
   // ---- Editable states (inbox / ready / needs_fix) ----
 
   it.each(['inbox', 'ready', 'needs_fix'] as const)(
@@ -1208,6 +1225,9 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
     title.textContent = '   ';
     title.emit('blur');
     expect(onSaveFields).not.toHaveBeenCalled();
+    // The rejected empty edit reverts the display to the committed title so the
+    // header never lingers in a blank unsaved state.
+    expect(title.textContent).toBe('Task WO-1');
   });
 
   it('does not save twice when blurred again after a committed rename', () => {
