@@ -22,6 +22,7 @@ Background: `docs/tech-debt/2026-06-07-agentic-quality-gates.md`.
 | Typecheck | `npm run typecheck` | `typecheck` | Type regressions. |
 | Tests | `npm run test` | `test` (Linux + Windows) | Behavior regressions on both path/spawn targets. |
 | Coverage floors | `npm run test:coverage` | `coverage` | Coverage dropping below `coverageThreshold`. |
+| Provider-boundary guards | `npm run test` | `test` | A registered provider with an incomplete `ProviderRegistration`; new hardcoded provider-id lists/switches outside `src/providers/index.ts`. See "Provider-boundary guards" below. |
 | Production build | `npm run build` | `build` | CSS concat, esbuild bundle, SDK patching, renderer-unsafe-unref guard. |
 | Artifact smoke | `npm run check:artifacts` | `build` | Missing/empty artifacts, package/manifest version desync, missing `minAppVersion`, bundle-size budget. |
 
@@ -81,24 +82,45 @@ is present and recorded in `versions.json`, and that the bundles stay within a
 byte budget with headroom for normal growth. Bump a budget deliberately, with a
 reason in the PR, when a real dependency pushes the bundle up.
 
+## Provider-boundary guards
+
+Two runtime tests assert the `ProviderRegistry` seam (ADR 0001) and run in the
+existing `test` job — no new tooling:
+
+- `tests/unit/core/providers/providerRegistrationContract.test.ts` — iterates
+  `getRegisteredProviderIds()`, so every provider (and any future one) is held
+  to the full `ProviderRegistration` contract: `displayName`, capabilities whose
+  `providerId` matches, non-empty `canonicalToolNames`,
+  `chatUIConfig`/`settingsReconciler`/`historyService` methods, a resolvable
+  `taskResultInterpreter`, a default config, and a `createChatRuntime` that
+  yields a runtime tagged with its own id. Unknown ids throw rather than
+  silently defaulting. The built-ins are checked as a subset (not an exact
+  list), so registering a new provider needs no edit here.
+- `tests/unit/core/providers/noHardcodedProviderList.test.ts` — fails when code
+  names ≥3 distinct provider ids (comment-stripped) in any shape: an array
+  literal, an array of `{ id: … }` objects, or a `switch`/comparison chain. The
+  id set is derived from the registry, so the guard can't go stale, and an
+  "allowlist honest" check drops exemptions once a file is cleaned up. Adding a
+  provider must mean registering it and nothing else. Allowlisted today:
+  `src/providers/index.ts` (the sanctioned aggregator) and
+  `src/features/settings/firstRunBanner/FirstRunBanner.ts` (grandfathered; its
+  per-provider `name`/`blurb`/`cli` list should move to the registry — see
+  `docs/tech-debt/2026-06-07-firstrun-banner-provider-list.md`).
+
 ## Next slices
 
-Not yet enforced; tracked here so the direction is explicit.
+Tracked here so the direction is explicit.
 
 1. **Burn down the `warn` backlog, then ratchet.** Resolve function-health and
    staged `obsidianmd`/`no-explicit-any` warnings incrementally; each time a
    threshold reaches zero, tighten it (or promote the rule to `error`) so the
    gain can't regress. No big-bang refactor and no day-one CI block.
-2. **Architecture gates** (remediation item 5 of the tech debt):
-   - dependency-cycle budget — **deferred**; existing cycles are too large to
-     block on and need reducing first. See
-     `docs/tech-debt/2026-06-07-import-cycle-budget.md`.
-   - provider-boundary regression tests beyond the `no-restricted-imports`
-     lint rule (assert the registry seam at runtime) — planned for a follow-up
-     PR.
-   - a no-new-provider-hardcoded-list check so adding a provider does not
-     require editing scattered switch/array literals — planned for a follow-up
-     PR.
+2. **Dependency-cycle budget** — **deferred**; existing cycles are too large to
+   block on and need reducing first. See
+   `docs/tech-debt/2026-06-07-import-cycle-budget.md`.
 3. **Perf-gate wiring.** `tests/perf/*` are monitoring-only today
    (`docs/tech-debt/2026-06-07-perf-gates-blind-spots.md`); decide which
    scaling assertions graduate into a blocking job.
+
+Done: provider-boundary regression tests and the no-new-provider-hardcoded-list
+guard (remediation item 5 of the tech debt) — see "Provider-boundary guards".
