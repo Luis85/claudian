@@ -13,6 +13,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"{src,tests}/**/*.ts\"",
     "lint:fix": "npm run lint -- --fix",
+    "check:loc": "node scripts/check-loc.mjs",
+    "check:artifacts": "node scripts/check-artifacts.mjs",
     "test": "node scripts/run-jest.js",
     "test:watch": "node scripts/run-jest.js --watch",
     "test:coverage": "node scripts/run-jest.js --coverage",
