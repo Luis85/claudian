@@ -126,6 +126,7 @@ for await (const chunk of runtime.query(preparedTurn, history)) {
 
 ## Gotchas
 
+- Work-order run tabs are real `TabManager` tabs but hidden from the visible tab badge row. The chat header Work Orders dropdown is the navigation affordance for active work-order tabs; ordinary tab badges render chat tabs only.
 - `ClaudianView.onClose()` must abort active tabs and dispose runtimes
 - `ChatState` is per-tab; `TabManager` coordinates tab-level operations such as fork targets and provider-aware command catalogs
 - Title generation runs concurrently per conversation and routes by the global title-generation model selection, not by the active chat tab provider

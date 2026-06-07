@@ -24,6 +24,7 @@ To avoid racing the agent's `Edit` tool against the work-order checklist, run st
 
 ### Components
 
+- **`ui/WorkOrderActivityProvider`**: plugin-level activity provider for the chat header dropdown. It indexes active `running` / `needs_input` / `needs_approval` work orders, exposes counts and rows through `core/types/workOrderActivity`, switches to live sidepanel tabs when possible, and falls back to a read-only-safe `WorkOrderDetailModal`.
 - **`storage/RunSidecarStore`**: filesystem only. Owns `writeHeartbeat`, `readHeartbeat`, `appendLedger`, `readLedger`, `snapshotLedgerAsMarkdown(runId)`, `listRuns()`, `cleanupRun(runId)`. Recursive `ensureBaseDir` walks `.claudian` → `.claudian/runs` once (memoized). `readLedger` skips malformed JSON lines, tolerates CRLF; snapshot flattens embedded newlines in messages so one entry = one markdown line.
 - **`storage/TaskNoteStore`**: `writeLedgerSnapshot(content, markdown)` mirrors `writeHandoff` — replaces the run-ledger region atomically. Throws on missing markers.
 - **`execution/RunSession`**: deps `writeHeartbeat`, `appendLedger`, `finalizeLedgerToNote` are REQUIRED. Heartbeat tick + `LedgerWriter` flush callback route directly to sidecar. `writeLedgerSnapshotBestEffort()` runs on every terminal path (canceled / failed / canceled / needs_handoff / review) AFTER the terminal status write and (when present) the handoff write, BEFORE `settle(...)`. Best-effort: snapshot failures are swallowed so the run still settles.
