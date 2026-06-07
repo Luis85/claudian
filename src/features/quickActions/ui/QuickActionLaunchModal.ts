@@ -62,9 +62,7 @@ export class QuickActionLaunchModal extends Modal {
     const name = rawName && rawName.length > 0
       ? rawName
       : t('quickActions.launchModal.untitledFallback');
-    root.createEl('h3', {
-      text: t('quickActions.launchModal.title', { name }),
-    });
+    this.titleEl.setText(t('quickActions.launchModal.title', { name }));
 
     if (this.options.fallbackNotice) {
       const notice = root.createDiv({

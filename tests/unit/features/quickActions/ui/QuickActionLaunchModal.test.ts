@@ -13,6 +13,7 @@ jest.mock('obsidian', () => {
   class Modal {
     contentEl = document.createElement('div');
     modalEl = document.createElement('div');
+    titleEl = document.createElement('div');
     scope = { register: jest.fn() };
     constructor(public app: unknown) {}
     open(): void { this.onOpen(); }
