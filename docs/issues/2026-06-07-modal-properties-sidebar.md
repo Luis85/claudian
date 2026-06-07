@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260607-modal-properties-sidebar
 title: Work-order modal — properties sidebar with editable value chips
-status: open
+status: done
 priority: 2 - normal
 triage: ready-for-agent
 created: 2026-06-07
@@ -44,15 +44,15 @@ Icons via `setIcon(el, name)`.
 
 #### Acceptance criteria
 
-- [ ] Sidebar lays out in the right pane with the spec rows in the spec order.
-- [ ] Provider / Model / Priority editable via value chip in editable states; persisted through `onSaveFields`.
-- [ ] Provider change resets model to provider default (existing logic preserved).
-- [ ] Read-only states render plain text / priority bars without the chip overlay.
-- [ ] Agent row exists as a placeholder slot (no avatar rendered yet — owned by the persona slice).
-- [ ] Conversation row hidden when `conversation_id` absent or `canOpenConversation?` returns false; click invokes `onOpenConversation`.
-- [ ] Created / Updated / Attempts render with `tabular-nums`.
-- [ ] Each row icon uses `setIcon`; no hardcoded hex.
-- [ ] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
+- [x] Sidebar lays out in the right pane with the spec rows in the spec order.
+- [x] Provider / Model / Priority editable via value chip in editable states; persisted through `onSaveFields`.
+- [x] Provider change resets model to provider default (existing logic preserved).
+- [x] Read-only states render plain text / priority bars without the chip overlay.
+- [x] Agent row exists as a placeholder slot (no avatar rendered yet — owned by the persona slice).
+- [x] Conversation row hidden when `conversation_id` absent or `canOpenConversation?` returns false; click invokes `onOpenConversation`.
+- [x] Created / Updated / Attempts render with `tabular-nums`.
+- [x] Each row icon uses `setIcon`; no hardcoded hex.
+- [x] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
 
 #### Blocked by
 

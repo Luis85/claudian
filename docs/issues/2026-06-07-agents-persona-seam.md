@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260607-agents-persona-seam
 title: Agents persona seam — data model + Standard built-in + avatar + assignee row
-status: open
+status: done
 priority: 1 - high
 triage: ready-for-agent
 created: 2026-06-07
@@ -62,16 +62,16 @@ Round-trip a frontmatter that has an unknown `agent` id; the writer must not dro
 
 #### Acceptance criteria
 
-- [ ] `AgentPersona` type and Standard built-in shipped under `src/features/agents/`.
-- [ ] `resolvePersona(undefined)` and `resolvePersona('unknown-id')` both return Standard.
-- [ ] `TaskFrontmatter.agent` round-trips through read/write without dropping unknown ids.
-- [ ] Avatar component renders Standard with the `cpu` icon at ~58% of the avatar size; custom personas would render initials (no custom personas exist yet — type-level only).
-- [ ] Card footer renders the avatar in the reserved assignee slot; tooltip equals the persona name.
-- [ ] Modal Agent property row renders avatar + name in non-editable states, dropdown in editable states; selection persists via `onSaveFields`.
-- [ ] `WorkOrderFieldUpdate` (modal), `WriteFieldsOptions` (note store), and `TaskFrontmatter` (model) all extended with `agent?: string` — the persistence pipe is complete end to end.
-- [ ] Avatar sizes (20px card / 18px modal) respected; no hardcoded hex.
-- [ ] Unit tests cover `resolvePersona` resolution + frontmatter round-trip (including an unknown id surviving the round-trip).
-- [ ] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
+- [x] `AgentPersona` type and Standard built-in shipped under `src/features/agents/`.
+- [x] `resolvePersona(undefined)` and `resolvePersona('unknown-id')` both return Standard.
+- [x] `TaskFrontmatter.agent` round-trips through read/write without dropping unknown ids.
+- [x] Avatar component renders Standard with the `cpu` icon at ~58% of the avatar size; custom personas would render initials (no custom personas exist yet — type-level only).
+- [x] Card footer renders the avatar in the reserved assignee slot; tooltip equals the persona name.
+- [x] Modal Agent property row renders avatar + name in non-editable states, dropdown in editable states; selection persists via `onSaveFields`.
+- [x] `WorkOrderFieldUpdate` (modal), `WriteFieldsOptions` (note store), and `TaskFrontmatter` (model) all extended with `agent?: string` — the persistence pipe is complete end to end.
+- [x] Avatar sizes (20px card / 18px modal) respected; no hardcoded hex.
+- [x] Unit tests cover `resolvePersona` resolution + frontmatter round-trip (including an unknown id surviving the round-trip).
+- [x] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
 
 #### Blocked by
 

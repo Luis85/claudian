@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260607-modal-footer-actions
 title: Work-order modal — sticky footer per-status action sets
-status: open
+status: done
 priority: 2 - normal
 triage: ready-for-agent
 created: 2026-06-07
@@ -50,14 +50,14 @@ Hide conversation actions when `canOpenConversation?` returns false or `conversa
 
 #### Acceptance criteria
 
-- [ ] Each status renders the exact action set above (label + icon + variant).
-- [ ] Footer stays visible while the body scrolls.
-- [ ] All existing callbacks fire on click; modal closes per current behavior.
-- [ ] `running` footer reflects read-only restrictions (Stop danger only on the right; Open note + Open conversation left).
-- [ ] Conversation actions hidden when `conversation_id` absent or `canOpenConversation?` returns false.
-- [ ] Buttons keyboard-focusable; Esc still closes the modal.
-- [ ] No `rgba(...)` literals — alpha shades go through `color-mix(in srgb, var(--color-X) N%, transparent)`.
-- [ ] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
+- [x] Each status renders the exact action set above (label + icon + variant).
+- [x] Footer stays visible while the body scrolls.
+- [x] All existing callbacks fire on click; modal closes per current behavior.
+- [x] `running` footer reflects read-only restrictions (Stop danger only on the right; Open note + Open conversation left).
+- [x] Conversation actions hidden when `conversation_id` absent or `canOpenConversation?` returns false.
+- [x] Buttons keyboard-focusable; Esc still closes the modal.
+- [x] No `rgba(...)` literals — alpha shades go through `color-mix(in srgb, var(--color-X) N%, transparent)`.
+- [x] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
 
 #### Blocked by
 

@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260607-board-card-actions-menu
 title: Agent Board — card hover action cluster + ⋯ overflow menu (portal-positioned)
-status: open
+status: done
 priority: 1 - high
 triage: ready-for-agent
 created: 2026-06-07
@@ -52,15 +52,15 @@ Behavior:
 
 #### Acceptance criteria
 
-- [ ] Hover or focus on idle cards reveals the action cluster; cluster hidden otherwise.
-- [ ] Live cards keep the cluster always visible; title gets `padding-right: 64px` so the button never overlaps text.
-- [ ] Primary action + ⋯ menu items match the spec table per status.
-- [ ] ⋯ menu renders outside the lane scroll container — opening near the bottom of a lane does NOT add a vertical scrollbar to the lane.
-- [ ] Menu flips upward near the viewport bottom.
-- [ ] Menu closes on scroll, resize, and outside-click.
-- [ ] Destructive items styled `--color-red`.
-- [ ] All clicks route through the existing `renderActionsFor` callbacks.
-- [ ] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
+- [x] Hover or focus on idle cards reveals the action cluster; cluster hidden otherwise.
+- [x] Live cards keep the cluster always visible; title gets `padding-right: 64px` so the button never overlaps text.
+- [x] Primary action + ⋯ menu items match the spec table per status.
+- [x] ⋯ menu renders outside the lane scroll container — opening near the bottom of a lane does NOT add a vertical scrollbar to the lane.
+- [x] Menu flips upward near the viewport bottom.
+- [x] Menu closes on scroll, resize, and outside-click.
+- [x] Destructive items styled `--color-red`.
+- [x] All clicks route through the existing `renderActionsFor` callbacks.
+- [x] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
 
 #### Blocked by
 

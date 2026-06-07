@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260607-modal-frame-sticky-shell
 title: Work-order modal — sticky header / two-pane body / sticky footer shell
-status: open
+status: done
 priority: 1 - high
 triage: ready-for-agent
 created: 2026-06-07
@@ -29,13 +29,13 @@ Keep the existing modal width (`min(960px, 92vw)`) and add `max-height: min(86vh
 
 #### Acceptance criteria
 
-- [ ] Modal opens with sticky header + sticky footer; only the body scrolls.
-- [ ] Two-pane grid renders at default width; collapses to single column under 720px with sidebar below main.
-- [ ] Duplicate Title `Setting` removed from `renderEditors`.
-- [ ] Existing fields and action buttons remain functional inside the new shell.
-- [ ] `.claudian-work-order-modal*` CSS rewritten under the new frame contract; no hardcoded hex; all values via Obsidian CSS variables.
-- [ ] Unit/integration tests covering modal open/close still pass.
-- [ ] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
+- [x] Modal opens with sticky header + sticky footer; only the body scrolls.
+- [x] Two-pane grid renders at default width; collapses to single column under 720px with sidebar below main.
+- [x] Duplicate Title `Setting` removed from `renderEditors`.
+- [x] Existing fields and action buttons remain functional inside the new shell.
+- [x] `.claudian-work-order-modal*` CSS rewritten under the new frame contract; no hardcoded hex; all values via Obsidian CSS variables.
+- [x] Unit/integration tests covering modal open/close still pass.
+- [x] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
 
 #### Blocked by
 
