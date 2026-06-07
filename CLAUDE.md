@@ -31,7 +31,13 @@ npm run lint:fix
 npm run test
 npm run test:watch
 npm run test:coverage
+npm run check:loc        # LOC ratchet guard (see docs/build-ci/quality-gates.md)
+npm run check:artifacts  # post-build artifact smoke (run after npm run build)
 ```
+
+CI gates and the lint severity policy (errors block; warnings are a tracked,
+non-blocking backlog) are catalogued in
+[`docs/build-ci/quality-gates.md`](docs/build-ci/quality-gates.md).
 
 ## Architecture
 
