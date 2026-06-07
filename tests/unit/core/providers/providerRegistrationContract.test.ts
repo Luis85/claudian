@@ -34,8 +34,15 @@ describe('provider registration contract', () => {
     ProviderWorkspaceRegistry.clear();
   });
 
-  it('registers exactly the four built-in providers', () => {
-    expect([...providerIds].sort()).toEqual(['claude', 'codex', 'cursor', 'opencode']);
+  it('registers the built-in providers (subset check; a new provider needs no edit here)', () => {
+    // Assert the built-ins are present rather than an exact set: an exact-list
+    // toEqual would itself be a hardcoded provider list that a 5th provider
+    // forces someone to edit — the very thing noHardcodedProviderList forbids.
+    // A subset check still catches an accidentally dropped built-in.
+    expect(providerIds).toEqual(
+      expect.arrayContaining(['claude', 'codex', 'cursor', 'opencode']),
+    );
+    expect(providerIds.length).toBeGreaterThanOrEqual(4);
   });
 
   it.each(providerIds)('"%s" exposes a structurally complete registration', (id) => {
