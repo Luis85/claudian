@@ -265,9 +265,12 @@ export class StreamController {
         break;
 
       case 'error':
-        // Flush pending tools, then render an actionable recovery card
-        // (open settings / login hint / retry) instead of bare error text.
+        // Flush pending tools and finalize any open thinking + text blocks first,
+        // so the persisted block order matches the live DOM (thinking → text →
+        // error card) when the conversation reloads. Then render an actionable
+        // recovery card (open settings / login hint / retry) instead of bare text.
         this.flushPendingTools();
+        await this.finalizeCurrentThinkingBlock(msg);
         await this.finalizeCurrentTextBlock(msg);
         // Persist a structured block so the error + its guidance survive the
         // end-of-turn save (reload / conversation switch re-renders the card);

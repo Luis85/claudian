@@ -509,6 +509,20 @@ describe('StreamController - Text Content', () => {
       );
     });
 
+    it('finalizes an open thinking block before the runtime_error block', async () => {
+      const msg = createTestMessage();
+
+      // Thinking still open when the failure arrives: the persisted order must
+      // stay thinking → runtime_error so reload matches the live DOM.
+      await controller.handleStreamChunk({ type: 'thinking', content: 'pondering' }, msg);
+      await controller.handleStreamChunk({ type: 'error', content: 'CLI not found' }, msg);
+
+      expect((msg.contentBlocks ?? []).map((b) => b.type)).toEqual([
+        'thinking',
+        'runtime_error',
+      ]);
+    });
+
     it('wires retry on the error card to onRetryLastTurn', async () => {
       const onRetryLastTurn = jest.fn();
       const retryDeps = { ...createMockDeps(), onRetryLastTurn };
