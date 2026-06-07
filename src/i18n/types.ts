@@ -296,6 +296,16 @@ export type TranslationKey =
   | 'chat.runtimeError.retry'
   | 'chat.runtimeError.detailsLabel'
 
+  // Work Order Activity
+  | 'workOrderActivity.toggleRunning'
+  | 'workOrderActivity.toggleAttention'
+  | 'workOrderActivity.status.running'
+  | 'workOrderActivity.status.needsInput'
+  | 'workOrderActivity.status.needsApproval'
+  | 'workOrderActivity.action.open'
+  | 'workOrderActivity.action.reply'
+  | 'workOrderActivity.action.review'
+
 
   // Quick Actions
   | 'quickActions.toolbar.ariaLabel'

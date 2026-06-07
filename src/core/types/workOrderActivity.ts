@@ -1,6 +1,8 @@
 import type { TranslationKey } from '../../i18n/types';
 
-export type WorkOrderActivityStatus = 'running' | 'needs_input' | 'needs_approval';
+const WORK_ORDER_ACTIVITY_STATUSES = ['running', 'needs_input', 'needs_approval'] as const;
+
+export type WorkOrderActivityStatus = (typeof WORK_ORDER_ACTIVITY_STATUSES)[number];
 
 export interface WorkOrderActivityItem {
   id: string;
@@ -13,9 +15,9 @@ export interface WorkOrderActivityItem {
 }
 
 export interface WorkOrderActivitySummary {
-  items: WorkOrderActivityItem[];
-  runningCount: number;
-  attentionCount: number;
+  readonly items: readonly WorkOrderActivityItem[];
+  readonly runningCount: number;
+  readonly attentionCount: number;
 }
 
 export interface WorkOrderActivityProvider {
@@ -26,12 +28,12 @@ export interface WorkOrderActivityProvider {
 }
 
 export const EMPTY_WORK_ORDER_ACTIVITY_SUMMARY: WorkOrderActivitySummary = Object.freeze({
-  items: Object.freeze([]) as WorkOrderActivityItem[],
+  items: Object.freeze([]),
   runningCount: 0,
   attentionCount: 0,
 });
 
-const ACTIVE_STATUSES = new Set<string>(['running', 'needs_input', 'needs_approval']);
+const ACTIVE_STATUSES: ReadonlySet<string> = new Set(WORK_ORDER_ACTIVITY_STATUSES);
 
 export function isWorkOrderActivityStatus(value: unknown): value is WorkOrderActivityStatus {
   return typeof value === 'string' && ACTIVE_STATUSES.has(value);

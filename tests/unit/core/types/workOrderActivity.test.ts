@@ -3,6 +3,7 @@ import {
   isWorkOrderActivityStatus,
   type WorkOrderActivityItem,
   type WorkOrderActivityProvider,
+  type WorkOrderActivitySummary,
 } from '@/core/types/workOrderActivity';
 
 describe('work-order activity contracts', () => {
@@ -33,6 +34,14 @@ describe('work-order activity contracts', () => {
 
     expect(EMPTY_WORK_ORDER_ACTIVITY_SUMMARY).toEqual({ items: [], runningCount: 0, attentionCount: 0 });
     expect(Object.isFrozen(EMPTY_WORK_ORDER_ACTIVITY_SUMMARY)).toBe(true);
+    expect(Object.isFrozen(EMPTY_WORK_ORDER_ACTIVITY_SUMMARY.items)).toBe(true);
     expect(provider.getSummary().items[0].actionHintKey).toBe('workOrderActivity.action.reply');
   });
 });
+
+function expectReadonlySummaryItems(summary: WorkOrderActivitySummary, item: WorkOrderActivityItem): void {
+  // @ts-expect-error readonly summary snapshots reject item mutation
+  summary.items.push(item);
+}
+
+void expectReadonlySummaryItems;
