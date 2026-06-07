@@ -27,12 +27,6 @@
   overflow: hidden;
 }
 
-/* The header ships its own close button; hide Obsidian's built-in one so the
-   top-right corner does not render a duplicate ×. */
-.claudian-work-order-modal .modal-close-button {
-  display: none;
-}
-
 .claudian-work-order-modal-content {
   flex: 1 1 auto;
   display: flex;
@@ -176,39 +170,6 @@
   margin-top: 7px;
   color: var(--text-faint);
   font-size: var(--font-smaller);
-}
-
-/* ---------- Close button (top-right) ---------- */
-.claudian-work-order-modal-close {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-m);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.claudian-work-order-modal-close:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
-}
-
-.claudian-work-order-modal-close svg {
-  width: 18px;
-  height: 18px;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .claudian-work-order-modal-close {
-    transition: background 0.15s ease, color 0.15s ease;
-  }
 }
 
 /* Status → header accent/live-dot color contract (mirrors the status pill). */

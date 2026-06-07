@@ -3,11 +3,30 @@
   display: none;
 }
 
+/* Bind the board to the leaf height so the lanes' own scroll regions stay
+   inside the viewport. The view-content → host → board chain must be an
+   unbroken flex column with min-height:0 at every level; otherwise a tall lane
+   grows the whole view and the horizontal scrollbar is pushed off-screen. */
+.workspace-leaf-content[data-type="claudian-agent-board-view"] .view-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.claudian-agent-board-host {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .claudian-agent-board {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   gap: 12px;
-  height: 100%;
   min-height: 0;
   padding: 12px;
   /* Board itself never scrolls; lanes and detail own their own scroll regions
@@ -294,25 +313,25 @@
   /* Portaled onto document.body; the dynamic top/left are set inline. */
   position: fixed;
   z-index: var(--layer-menu, 200);
-  min-width: 180px;
-  padding: 4px;
-  border: 1px solid var(--border-color-hover);
-  border-radius: var(--radius-m);
+  min-width: 190px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-l);
   background: var(--background-secondary);
   box-shadow: var(--shadow-l);
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
 .claudian-agent-board-card-menu-item {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   width: 100%;
-  padding: 7px 9px;
+  padding: 8px 10px;
   border: none;
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-m);
   text-align: left;
   cursor: pointer;
   background: transparent;
@@ -850,18 +869,17 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 12px;
-  border-radius: var(--radius-m);
-  border: 1px solid var(--border-color);
-  background-color: var(--background-secondary);
+  padding: 5px 6px;
+  border: none;
+  background: transparent;
   font-size: var(--font-ui-small);
   font-weight: var(--font-medium);
   cursor: pointer;
   user-select: none;
 }
 
-.claudian-agent-board-toolbar-autorun:hover {
-  border-color: var(--border-color-hover);
+.claudian-agent-board-toolbar-autorun:hover .claudian-agent-board-toolbar-autorun-label {
+  color: var(--text-normal);
 }
 
 .claudian-agent-board-toolbar-autorun-track {
@@ -898,22 +916,17 @@
 }
 
 .claudian-agent-board-toolbar-autorun--off .claudian-agent-board-toolbar-autorun-track {
-  /* `--toggle-bg` is a prototype token, not a default Obsidian variable; fall
-     back to a neutral host border color so the OFF track always has a fill. */
-  background-color: var(--toggle-bg, var(--background-modifier-border));
+  background-color: var(--background-modifier-border);
 }
 
-/* ON: accent pill + accent track, thumb slid right to white. */
+/* ON: green track signals the active/positive state; the label lifts to normal.
+   No pill chrome — just the switch + label, matching the cleaner mockup. */
 .claudian-agent-board-toolbar-autorun--on {
   color: var(--text-normal);
-  border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
-  /* `--color-accent-3` is a prototype token; fall back to a soft accent tint so
-     the ON pill keeps an accent-tinted background on default Obsidian themes. */
-  background-color: var(--color-accent-3, color-mix(in srgb, var(--color-accent) 18%, transparent));
 }
 
 .claudian-agent-board-toolbar-autorun--on .claudian-agent-board-toolbar-autorun-track {
-  background-color: var(--color-accent);
+  background-color: var(--color-green);
 }
 
 .claudian-agent-board-toolbar-autorun-thumb--on {
@@ -991,14 +1004,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   padding: 0;
   margin: 0;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  color: var(--text-muted);
+  border: none;
+  color: var(--text-faint);
   cursor: pointer;
   font-size: var(--font-ui-medium);
   line-height: 1;
@@ -1010,9 +1022,16 @@
   content: "›";
 }
 
+/* Smooth, borderless affordance: the glyph just brightens on hover — no button
+   box. */
 .claudian-agent-board-lane-collapse-toggle:hover {
   color: var(--text-normal);
-  background: var(--background-modifier-hover);
-  border-color: var(--background-modifier-border);
+  background: transparent;
   box-shadow: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .claudian-agent-board-lane-collapse-toggle {
+    transition: color 0.15s ease;
+  }
 }

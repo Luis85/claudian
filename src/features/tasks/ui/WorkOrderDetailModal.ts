@@ -2,7 +2,7 @@ import { type App, Component, MarkdownRenderer, Modal, setIcon } from 'obsidian'
 
 import { t } from '../../../i18n/i18n';
 import type { TranslationKey } from '../../../i18n/types';
-import { formatRelativeTime } from '../../../utils/date';
+import { formatDateTime, formatRelativeTime } from '../../../utils/date';
 import { renderAgentAvatar } from '../../agents/agentAvatar';
 import { listPersonas, resolvePersona } from '../../agents/personaRegistry';
 import { isPureAcceptanceChecklist, parseAcceptanceChecklist } from '../model/acceptanceChecklist';
@@ -195,13 +195,8 @@ export class WorkOrderDetailModal extends Modal {
 
     // 2px accent line on the header's bottom edge (color from the CSS modifier).
     header.createDiv({ cls: 'claudian-work-order-modal-header-accent' }).setAttr('aria-hidden', 'true');
-
-    const close = header.createEl('button', {
-      cls: 'claudian-work-order-modal-close',
-      attr: { type: 'button', 'aria-label': t('tasks.workOrderModal.closeAriaLabel') },
-    });
-    setIcon(close, 'x');
-    close.addEventListener('click', () => this.close());
+    // Closing is handled by Obsidian's built-in modal close button — no custom
+    // reimplementation of core chrome.
   }
 
   /**
@@ -712,11 +707,11 @@ export class WorkOrderDetailModal extends Modal {
 
     this.addPropertyRow(panel, 'created', 'calendar', t('tasks.workOrderModal.fieldCreated')).value.createSpan({
       cls: 'claudian-work-order-modal-prop-inner claudian-work-order-modal-prop-num',
-      text: fm.created,
+      text: formatDateTime(fm.created),
     });
     this.addPropertyRow(panel, 'updated', 'clock', t('tasks.workOrderModal.fieldUpdated')).value.createSpan({
       cls: 'claudian-work-order-modal-prop-inner claudian-work-order-modal-prop-num',
-      text: fm.updated,
+      text: formatDateTime(fm.updated),
     });
     this.addPropertyRow(panel, 'attempts', 'repeat', t('tasks.workOrderModal.fieldAttempts')).value.createSpan({
       cls: 'claudian-work-order-modal-prop-inner claudian-work-order-modal-prop-num',

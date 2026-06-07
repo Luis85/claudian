@@ -1675,15 +1675,11 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
 
   // ---- Close button ----
 
-  it('renders a keyboard-focusable close button with an accessible name that closes the modal', () => {
+  it('does not reimplement a custom close button (relies on Obsidian native modal close)', () => {
     const task = makeTask('WO-1', 'inbox');
-    const { modal, header } = openHeader(task);
-    const close = find(header, 'claudian-work-order-modal-close');
-    expect(close).toBeDefined();
-    expect(close!.tag).toBe('button');
-    expect(close!.attrs['aria-label']!.length).toBeGreaterThan(0);
-
-    close!.emit('click');
-    expect((modal as unknown as { close: jest.Mock }).close).toHaveBeenCalled();
+    const { header } = openHeader(task);
+    // Closing is handled by Obsidian's built-in modal close button; the header
+    // must not render a duplicate custom one.
+    expect(find(header, 'claudian-work-order-modal-close')).toBeUndefined();
   });
 });
