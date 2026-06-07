@@ -74,8 +74,20 @@ export class QuickActionStorage {
     private getFolderPath: () => string,
   ) {}
 
-  async loadAll(): Promise<QuickAction[]> {
+  /**
+   * Trimmed + normalized Quick Actions folder (`''` when unset). Saving and
+   * loading must agree on this single value — otherwise a folder configured with
+   * duplicate or backslash separators is written under the normalized path but
+   * scanned under the raw one, so saved actions vanish until the user manually
+   * fixes the setting.
+   */
+  private resolveFolder(): string {
     const folder = this.getFolderPath().trim();
+    return folder ? normalizePath(folder) : '';
+  }
+
+  async loadAll(): Promise<QuickAction[]> {
+    const folder = this.resolveFolder();
     if (!folder) {
       return [];
     }
@@ -127,8 +139,12 @@ export class QuickActionStorage {
       favorite: action.favorite,
       favoriteRank: action.favoriteRank,
     });
-    // Folder is user-configured; normalize before the adapter's mkdir/write.
-    await this.adapter.ensureFolder(normalizePath(this.getFolderPath()));
+    // Folder is user-configured; normalize before the adapter's mkdir/write so
+    // it matches the path loadAll() scans and getFilePathForName() writes to.
+    const folder = this.resolveFolder();
+    if (folder) {
+      await this.adapter.ensureFolder(folder);
+    }
     await this.adapter.write(filePath, content);
     return filePath;
   }
@@ -165,7 +181,7 @@ export class QuickActionStorage {
   }
 
   getFilePathForName(name: string): string {
-    const folder = this.getFolderPath().trim();
+    const folder = this.resolveFolder();
     const safe = name
       .trim()
       .toLowerCase()

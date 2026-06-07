@@ -76,6 +76,16 @@ describe('redactArgs value-level scrubbing', () => {
     expect(out.message).toBe('Authorization: Bearer [redacted]');
   });
 
+  it('redacts an entire long bearer token (>512 chars) with no tail leak', () => {
+    const longToken = `eyJ${'a1B2c3D4'.repeat(80)}`; // ~640 chars, JWT-shaped
+    const [out] = redactArgs([
+      { message: `Authorization: Bearer ${longToken}` },
+    ]) as [Record<string, unknown>];
+    expect(out.message).toBe('Authorization: Bearer [redacted]');
+    // No suffix of the token may survive past the cap.
+    expect(out.message).not.toContain('a1B2c3D4');
+  });
+
   it('scrubs token=/api_key=/api-key= kv patterns inside values', () => {
     const [out] = redactArgs([
       {

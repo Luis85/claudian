@@ -6,26 +6,28 @@ const SECRET_KEY =
   /(token|key|secret|password|passwd|pwd|credential|api[-_]?key|authorization|bearer|cookie|signature|private[-_]?key|(?<![a-z])pin(?![a-z]))/i;
 const REDACTED = '[redacted]';
 
-// Value-level scrubbers. Every pattern is bounded (capped `{n,m}` repetition on a
-// restricted character class, no nested quantifiers) so adversarial log bodies
-// cannot trigger catastrophic backtracking. Secret material is typically a single
-// unbroken token, so a bounded run is sufficient without scanning unbounded input.
+// Value-level scrubbers. Every quantified run is over a single character class
+// with no nested/overlapping quantifiers, so matching is linear regardless of
+// length — an unbounded `+`/`{n,}` cannot trigger catastrophic backtracking
+// here. The runs are intentionally *un*capped so the whole delimited token is
+// consumed; capping (e.g. `{n,512}`) would leave the tail of long secrets such
+// as >512-char JWT bearer tokens exposed in the diagnostics buffer.
 const VALUE_SCRUBBERS: Array<{ pattern: RegExp; replace: string }> = [
   // `Bearer <token>` / `Authorization: Bearer <token>` headers.
-  { pattern: /\bBearer\s+[A-Za-z0-9._~+/=-]{6,512}/gi, replace: 'Bearer [redacted]' },
+  { pattern: /\bBearer\s+[A-Za-z0-9._~+/=-]{6,}/gi, replace: 'Bearer [redacted]' },
   // `token=` / `api_key=` / `api-key=` / `apikey=` style key/value pairs in
   // query strings, command args, and dumps. Stops at common delimiters.
   {
-    pattern: /\b(api[-_]?key|token|secret|password|access[-_]?token)=[^\s&"'`)]{1,512}/gi,
+    pattern: /\b(api[-_]?key|token|secret|password|access[-_]?token)=[^\s&"'`)]+/gi,
     replace: '$1=[redacted]',
   },
   // Provider key shapes: `sk-...`, `sk-ant-...`, `sk-proj-...`, `ghp_...`, etc.
-  { pattern: /\bsk-[A-Za-z0-9_-]{8,512}/g, replace: REDACTED },
-  { pattern: /\b(ghp|gho|ghu|ghs|ghr|github_pat)_[A-Za-z0-9_]{8,512}/g, replace: REDACTED },
+  { pattern: /\bsk-[A-Za-z0-9_-]{8,}/g, replace: REDACTED },
+  { pattern: /\b(ghp|gho|ghu|ghs|ghr|github_pat)_[A-Za-z0-9_]{8,}/g, replace: REDACTED },
   // `user:pass@host` credentials in URLs / clone commands. Keep the host; mask
   // both user and password since either half can be sensitive.
   {
-    pattern: /([a-z][a-z0-9+.-]{0,32}:\/\/)[^\s/@:]{1,256}:[^\s/@]{1,256}@/gi,
+    pattern: /([a-z][a-z0-9+.-]{0,32}:\/\/)[^\s/@:]+:[^\s/@]+@/gi,
     replace: '$1[redacted]@',
   },
 ];
