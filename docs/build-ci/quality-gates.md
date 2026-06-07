@@ -90,11 +90,15 @@ Not yet enforced; tracked here so the direction is explicit.
    threshold reaches zero, tighten it (or promote the rule to `error`) so the
    gain can't regress. No big-bang refactor and no day-one CI block.
 2. **Architecture gates** (remediation item 5 of the tech debt):
-   - dependency-cycle budget (e.g. `madge`/`dpdm` over `src/`),
+   - dependency-cycle budget — **deferred**; existing cycles are too large to
+     block on and need reducing first. See
+     `docs/tech-debt/2026-06-07-import-cycle-budget.md`.
    - provider-boundary regression tests beyond the `no-restricted-imports`
-     lint rule (assert the registry seam at runtime),
+     lint rule (assert the registry seam at runtime) — planned for a follow-up
+     PR.
    - a no-new-provider-hardcoded-list check so adding a provider does not
-     require editing scattered switch/array literals.
+     require editing scattered switch/array literals — planned for a follow-up
+     PR.
 3. **Perf-gate wiring.** `tests/perf/*` are monitoring-only today
    (`docs/tech-debt/2026-06-07-perf-gates-blind-spots.md`); decide which
    scaling assertions graduate into a blocking job.
