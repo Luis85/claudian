@@ -812,7 +812,11 @@
       "salvageTitle": "Run finished without a handoff",
       "salvageCallout": "This run finished without producing a structured handoff. The transcript tail below is the available run trace.",
       "transcriptTail": "Transcript tail",
-      "transcriptTailEmpty": "No transcript available."
+      "transcriptTailEmpty": "No transcript available.",
+      "editTitleHint": "✎ Click title to rename",
+      "startedAgo": "Started {ago} ago",
+      "finishedAt": "Finished {ago} ago",
+      "closeAriaLabel": "Close"
     }
   },
   "env": {

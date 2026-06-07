@@ -236,6 +236,9 @@ ${HANDOFF_END}`);
     expect(parsed.task.frontmatter.custom_field).toBe('keep-me');
     expect(written).toContain('Intro prose that must stay.');
     expect(written).toContain('Closing prose.');
+    // The body's title H1 is kept in sync with the renamed frontmatter title.
+    expect(written).toContain('# Renamed');
+    expect(written).not.toContain('# Build agent board');
   });
 
   it('leaves omitted fields unchanged', () => {
@@ -244,6 +247,43 @@ ${HANDOFF_END}`);
     expect(parsed.task.frontmatter.title).toBe('Only title');
     expect(parsed.task.frontmatter.priority).toBe('2 - normal');
     expect(parsed.task.frontmatter.provider).toBeUndefined();
+  });
+
+  it('syncs only the title H1 in the body, leaving sub-headings untouched', () => {
+    const written = store.writeFields(VALID_NOTE, { title: 'Renamed' }, '2026-06-01T00:00:00.000Z');
+    expect(written).toContain('# Renamed');
+    expect(written).not.toContain('# Build agent board');
+    expect(written).toContain('## Objective');
+    expect(written).toContain('## Acceptance Criteria');
+  });
+
+  it('does not touch the body H1 when the title is unchanged (priority-only save)', () => {
+    const written = store.writeFields(VALID_NOTE, { priority: '1 - high' }, '2026-06-01T00:00:00.000Z');
+    expect(written).toContain('# Build agent board');
+  });
+
+  it('does not rewrite a # heading inside a code fence when syncing the title', () => {
+    const note = `---
+type: claudian-work-order
+schema_version: 1
+id: t
+title: Old
+status: ready
+priority: 2 - normal
+created: 2026-05-28T08:00:00.000Z
+updated: 2026-05-28T08:00:00.000Z
+attempts: 0
+---
+\`\`\`
+# not a title
+\`\`\`
+
+# Real Title
+`;
+    const written = store.writeFields(note, { title: 'New' }, '2026-06-01T00:00:00.000Z');
+    expect(written).toContain('# not a title');
+    expect(written).toContain('# New');
+    expect(written).not.toContain('# Real Title');
   });
 
   describe('writeStatus heartbeat + pause_reason', () => {

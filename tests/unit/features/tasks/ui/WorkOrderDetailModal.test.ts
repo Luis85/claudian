@@ -35,6 +35,10 @@ interface RecordingEl {
   tag: string;
   classes: Set<string>;
   text: string;
+  // `textContent` mirrors `text` so the editable title (a `contenteditable`
+  // element whose value the modal reads via `.textContent`) is observable and
+  // settable from tests exactly as it is in the real DOM.
+  textContent: string;
   value: string;
   attrs: Record<string, string>;
   events: Record<string, Array<(evt?: unknown) => void>>;
@@ -56,9 +60,15 @@ interface RecordingEl {
   // Detaches this node from its parent (mirrors HTMLElement.remove) so removed
   // collapsible bodies disappear from the recorded tree.
   remove(): void;
+  // The editable title calls `.focus()` (no-op here) and `.blur()` (fires the
+  // registered blur listeners) to commit / revert; mirror that contract.
+  focus(): void;
+  blur(): void;
   addEventListener(type: string, handler: (evt?: unknown) => void): void;
-  // Test helper: fire a captured DOM event (e.g. a <select> 'change').
-  emit(type: string): void;
+  // Test helper: fire a captured DOM event (e.g. a <select> 'change'). `init`
+  // merges onto the synthetic event so keyboard handlers can observe `key`
+  // (Enter commits / Esc reverts the editable title).
+  emit(type: string, init?: Record<string, unknown>): void;
 }
 
 function makeRecordingEl(tag: string): RecordingEl {
@@ -69,6 +79,7 @@ function makeRecordingEl(tag: string): RecordingEl {
     tag,
     classes: new Set<string>(),
     text: '',
+    textContent: '',
     value: '',
     attrs: {},
     events: {},
@@ -111,6 +122,7 @@ function makeRecordingEl(tag: string): RecordingEl {
     },
     setText(text: string) {
       this.text = text;
+      this.textContent = text;
     },
     setAttr(name: string, value: string) {
       this.attrs[name] = value;
@@ -121,6 +133,7 @@ function makeRecordingEl(tag: string): RecordingEl {
     empty() {
       this.children = [];
       this.text = '';
+      this.textContent = '';
     },
     remove() {
       const siblings = this.parent?.children;
@@ -129,11 +142,19 @@ function makeRecordingEl(tag: string): RecordingEl {
         if (idx >= 0) siblings.splice(idx, 1);
       }
     },
+    focus() {
+      /* no-op: focus has no observable effect in the recording stub */
+    },
+    blur() {
+      this.emit('blur');
+    },
     addEventListener(type: string, handler: (evt?: unknown) => void) {
       (this.events[type] ??= []).push(handler);
     },
-    emit(type: string) {
-      (this.events[type] ?? []).forEach((h) => h({ target: this, preventDefault: () => undefined }));
+    emit(type: string, init?: Record<string, unknown>) {
+      (this.events[type] ?? []).forEach((h) =>
+        h({ target: this, preventDefault: () => undefined, ...init }),
+      );
     },
   };
   return el;
@@ -1077,5 +1098,264 @@ describe('WorkOrderDetailModal — Objective + Acceptance sections', () => {
     expect(find(section, 'claudian-work-order-modal-checklist-prose')).toBeDefined();
     const calls = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
     expect(calls.some((c) => c[1] === '- [ ] Implement API\n- Include retry behavior')).toBe(true);
+  });
+});
+
+describe('WorkOrderDetailModal — header (title + meta)', () => {
+  function openHeader(task: TaskSpec, callbacks = makeCallbacks()): {
+    modal: WorkOrderDetailModal;
+    root: RecordingEl;
+    header: RecordingEl;
+  } {
+    const modal = new WorkOrderDetailModal(mockApp, task, callbacks);
+    const root = installRecordingContent(modal);
+    modal.onOpen();
+    const header = find(root, 'claudian-work-order-modal-header');
+    expect(header).toBeDefined();
+    return { modal, root, header: header! };
+  }
+
+  const titleEl = (header: RecordingEl): RecordingEl | undefined =>
+    find(header, 'claudian-work-order-modal-title');
+
+  it('does not drive the native modal title (the header owns it)', () => {
+    const task = makeTask('WO-7', 'inbox');
+    const { modal } = openHeader(task);
+    expect((modal as unknown as { setTitle: jest.Mock }).setTitle).not.toHaveBeenCalled();
+  });
+
+  it('renders the ID chip from frontmatter.id with a monospace class and a tooltip', () => {
+    const { header } = openHeader(makeTask('WO-204', 'inbox'));
+    const chip = find(header, 'claudian-work-order-modal-id-chip');
+    expect(chip).toBeDefined();
+    expect(chip!.text).toBe('WO-204');
+    expect(chip!.classes.has('claudian-work-order-modal-mono')).toBe(true);
+    // Tooltip surfaces the full id (truncation-safe) via title + aria-label.
+    expect(chip!.attrs['title']).toBe('WO-204');
+    expect(chip!.attrs['aria-label']).toBe('WO-204');
+  });
+
+  it('renders the title text from frontmatter.title', () => {
+    const { header } = openHeader(makeTask('WO-1', 'inbox'));
+    expect(titleEl(header)!.text).toBe('Task WO-1');
+  });
+
+  it('renders a 2px accent gradient line on the header', () => {
+    const { header } = openHeader(makeTask('WO-1', 'inbox'));
+    expect(find(header, 'claudian-work-order-modal-header-accent')).toBeDefined();
+  });
+
+  it('exposes the dialog accessible name via aria-labelledby on the title', () => {
+    const { modal, header } = openHeader(makeTask('WO-1', 'inbox'));
+    expect(titleEl(header)!.attrs['id']).toBe('claudian-work-order-modal-title');
+    const setAttribute = (modal as unknown as { modalEl: { setAttribute: jest.Mock } }).modalEl
+      .setAttribute;
+    expect(setAttribute).toHaveBeenCalledWith('aria-labelledby', 'claudian-work-order-modal-title');
+  });
+
+  it('marks the static (non-editable) title as a heading', () => {
+    const { header } = openHeader(makeTask('WO-1', 'review'));
+    const title = titleEl(header)!;
+    expect(title.attrs['role']).toBe('heading');
+    expect(title.attrs['aria-level']).toBe('2');
+    // Non-editable: no contenteditable affordance.
+    expect(title.attrs['contenteditable']).toBeUndefined();
+  });
+
+  // ---- Editable states (inbox / ready / needs_fix) ----
+
+  it.each(['inbox', 'ready', 'needs_fix'] as const)(
+    'renders an editable plaintext-only title with the rename hint in %s',
+    (status) => {
+      const { header } = openHeader(makeTask('WO-1', status));
+      const title = titleEl(header)!;
+      expect(title.classes.has('is-editable')).toBe(true);
+      // Hard requirement: a contenteditable title must clamp to plaintext-only.
+      expect(title.attrs['contenteditable']).toBe('plaintext-only');
+      // Keyboard-focusable.
+      expect(title.attrs['tabindex']).toBe('0');
+      // The rename hint is present only in editable states.
+      const hint = find(header, 'claudian-work-order-modal-title-hint');
+      expect(hint).toBeDefined();
+      expect(hint!.text.length).toBeGreaterThan(0);
+    },
+  );
+
+  it('saves a changed, non-empty title on blur via onSaveFields', () => {
+    const onSaveFields = jest.fn();
+    const task = makeTask('WO-1', 'inbox');
+    const { header } = openHeader(task, { ...makeCallbacks(), onSaveFields });
+    const title = titleEl(header)!;
+
+    title.textContent = 'Renamed work order';
+    title.emit('blur');
+
+    expect(onSaveFields).toHaveBeenCalledWith(task, { title: 'Renamed work order' });
+  });
+
+  it('trims whitespace from the saved title', () => {
+    const onSaveFields = jest.fn();
+    const task = makeTask('WO-1', 'inbox');
+    const { header } = openHeader(task, { ...makeCallbacks(), onSaveFields });
+    const title = titleEl(header)!;
+
+    title.textContent = '  Trimmed title  ';
+    title.emit('blur');
+
+    expect(onSaveFields).toHaveBeenCalledWith(task, { title: 'Trimmed title' });
+  });
+
+  it('collapses newlines/whitespace from a pasted multi-line title to a single line', () => {
+    const onSaveFields = jest.fn();
+    const task = makeTask('WO-1', 'inbox');
+    const { header } = openHeader(task, { ...makeCallbacks(), onSaveFields });
+    const title = titleEl(header)!;
+
+    title.textContent = 'New title\nextra   text';
+    title.emit('blur');
+
+    expect(onSaveFields).toHaveBeenCalledWith(task, { title: 'New title extra text' });
+    // The visible title reflects the normalized single-line value.
+    expect(title.textContent).toBe('New title extra text');
+  });
+
+  it('does not save when the title is unchanged on blur', () => {
+    const onSaveFields = jest.fn();
+    const task = makeTask('WO-1', 'inbox');
+    const { header } = openHeader(task, { ...makeCallbacks(), onSaveFields });
+    const title = titleEl(header)!;
+
+    // Blur without editing (value still equals the original).
+    title.emit('blur');
+    expect(onSaveFields).not.toHaveBeenCalled();
+  });
+
+  it('does not save when the title is emptied on blur', () => {
+    const onSaveFields = jest.fn();
+    const task = makeTask('WO-1', 'inbox');
+    const { header } = openHeader(task, { ...makeCallbacks(), onSaveFields });
+    const title = titleEl(header)!;
+
+    title.textContent = '   ';
+    title.emit('blur');
+    expect(onSaveFields).not.toHaveBeenCalled();
+    // The rejected empty edit reverts the display to the committed title so the
+    // header never lingers in a blank unsaved state.
+    expect(title.textContent).toBe('Task WO-1');
+  });
+
+  it('does not save twice when blurred again after a committed rename', () => {
+    const onSaveFields = jest.fn();
+    const task = makeTask('WO-1', 'inbox');
+    const { header } = openHeader(task, { ...makeCallbacks(), onSaveFields });
+    const title = titleEl(header)!;
+
+    title.textContent = 'First rename';
+    title.emit('blur');
+    title.emit('blur');
+    expect(onSaveFields).toHaveBeenCalledTimes(1);
+  });
+
+  it('commits on Enter (prevents default newline and blurs to save)', () => {
+    const onSaveFields = jest.fn();
+    const task = makeTask('WO-1', 'inbox');
+    const { header } = openHeader(task, { ...makeCallbacks(), onSaveFields });
+    const title = titleEl(header)!;
+
+    title.textContent = 'Committed via Enter';
+    let defaultPrevented = false;
+    title.emit('keydown', { key: 'Enter', preventDefault: () => (defaultPrevented = true) });
+
+    expect(defaultPrevented).toBe(true);
+    expect(onSaveFields).toHaveBeenCalledWith(task, { title: 'Committed via Enter' });
+  });
+
+  it('does not commit on Enter while an IME composition is active', () => {
+    const onSaveFields = jest.fn();
+    const task = makeTask('WO-1', 'inbox');
+    const { header } = openHeader(task, { ...makeCallbacks(), onSaveFields });
+    const title = titleEl(header)!;
+
+    title.textContent = 'composing 日本';
+    let defaultPrevented = false;
+    title.emit('keydown', {
+      key: 'Enter',
+      isComposing: true,
+      preventDefault: () => (defaultPrevented = true),
+    });
+
+    // The IME owns this Enter (candidate confirm) — no preventDefault, no save.
+    expect(defaultPrevented).toBe(false);
+    expect(onSaveFields).not.toHaveBeenCalled();
+  });
+
+  it('reverts on Escape (restores the original and does not save)', () => {
+    const onSaveFields = jest.fn();
+    const task = makeTask('WO-1', 'inbox');
+    const { header } = openHeader(task, { ...makeCallbacks(), onSaveFields });
+    const title = titleEl(header)!;
+
+    title.textContent = 'Discarded edit';
+    title.emit('keydown', { key: 'Escape' });
+
+    // Original text restored; the subsequent blur must not save.
+    expect(title.textContent).toBe('Task WO-1');
+    expect(onSaveFields).not.toHaveBeenCalled();
+  });
+
+  // ---- Non-editable states ----
+
+  it.each(['running', 'review', 'done', 'needs_handoff', 'failed', 'canceled'] as const)(
+    'renders a plain, non-editable title with no rename hint in %s',
+    (status) => {
+      const { header } = openHeader(makeTask('WO-1', status, 'Handoff text.', 'x'));
+      const title = titleEl(header)!;
+      expect(title.attrs['contenteditable']).toBeUndefined();
+      expect(title.classes.has('is-editable')).toBe(false);
+      expect(find(header, 'claudian-work-order-modal-title-hint')).toBeUndefined();
+    },
+  );
+
+  it('does not call onSaveFields from a non-editable title', () => {
+    const onSaveFields = jest.fn();
+    const { header } = openHeader(makeTask('WO-1', 'review', 'Handoff.'), {
+      ...makeCallbacks(),
+      onSaveFields,
+    });
+    const title = titleEl(header)!;
+    title.textContent = 'attempted edit';
+    title.emit('blur');
+    expect(onSaveFields).not.toHaveBeenCalled();
+  });
+
+  // ---- Status-aware meta caption ----
+
+  it('renders a pulsing live dot + a started caption for running', () => {
+    const task = makeTask('WO-1', 'running');
+    task.frontmatter.started = new Date(Date.now() - 5 * 60_000).toISOString();
+    const { header } = openHeader(task);
+    expect(find(header, 'claudian-work-order-modal-header-live')).toBeDefined();
+    expect(find(header, 'claudian-work-order-modal-live-dot')).toBeDefined();
+  });
+
+  it('renders a finished caption for done', () => {
+    const task = makeTask('WO-1', 'done');
+    task.frontmatter.finished = new Date(Date.now() - 2 * 3_600_000).toISOString();
+    const { header } = openHeader(task);
+    expect(find(header, 'claudian-work-order-modal-header-sub')).toBeDefined();
+  });
+
+  // ---- Close button ----
+
+  it('renders a keyboard-focusable close button with an accessible name that closes the modal', () => {
+    const task = makeTask('WO-1', 'inbox');
+    const { modal, header } = openHeader(task);
+    const close = find(header, 'claudian-work-order-modal-close');
+    expect(close).toBeDefined();
+    expect(close!.tag).toBe('button');
+    expect(close!.attrs['aria-label']!.length).toBeGreaterThan(0);
+
+    close!.emit('click');
+    expect((modal as unknown as { close: jest.Mock }).close).toHaveBeenCalled();
   });
 });

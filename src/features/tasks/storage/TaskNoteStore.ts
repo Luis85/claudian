@@ -60,6 +60,27 @@ const SECTION_HEADINGS = Object.freeze({
   constraints: 'Constraints',
 });
 
+/**
+ * Replace the body's first level-1 ATX heading (the title `# …`) with the new
+ * title, skipping fenced code blocks. Level-2+ headings (`## Objective`, …) and
+ * notes without a title heading are left untouched.
+ */
+function syncTitleHeading(body: string, title: string): string {
+  const lines = body.split('\n');
+  let inFence = false;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (/^\s*(```|~~~)/.test(lines[i])) {
+      inFence = !inFence;
+      continue;
+    }
+    if (!inFence && /^#\s+/.test(lines[i])) {
+      lines[i] = `# ${title}`;
+      return lines.join('\n');
+    }
+  }
+  return body;
+}
+
 export class TaskNoteStore {
   parse(path: string, content: string): TaskParseResult {
     const parsed = parseFrontmatter(content);
@@ -137,14 +158,21 @@ export class TaskNoteStore {
   writeFields(content: string, fields: WriteFieldsOptions, timestamp: string = new Date().toISOString()): string {
     const parsed = this.parse('', content);
     const frontmatter: Record<string, unknown> = { ...parsed.task.frontmatter };
+    let body = parsed.task.body;
 
-    if (fields.title !== undefined) frontmatter.title = fields.title;
+    if (fields.title !== undefined) {
+      frontmatter.title = fields.title;
+      // The work-order body carries the title as its first level-1 `# ` heading
+      // (templates + createWorkOrder). Keep it in sync so a rename doesn't leave
+      // the note showing one title in frontmatter and another in the H1.
+      body = syncTitleHeading(body, fields.title);
+    }
     if (fields.provider !== undefined) frontmatter.provider = fields.provider;
     if (fields.model !== undefined) frontmatter.model = fields.model;
     if (fields.priority !== undefined) frontmatter.priority = fields.priority;
     frontmatter.updated = timestamp;
 
-    return this.withFrontmatter(frontmatter, parsed.task.body);
+    return this.withFrontmatter(frontmatter, body);
   }
 
   appendLedger(content: string, entry: TaskLedgerEntry): string {
