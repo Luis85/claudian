@@ -811,5 +811,19 @@
     "noView": "Inline edit unavailable: could not access the active Markdown view.",
     "inserted": "Inserted",
     "applied": "Edit applied"
+  },
+  "workOrderActivity": {
+    "toggleRunning": "{count} 個活動工作單",
+    "toggleAttention": "{count} 個活動工作單，{attention} 個需要處理",
+    "status": {
+      "running": "執行中",
+      "needsInput": "需要輸入",
+      "needsApproval": "需要核准"
+    },
+    "action": {
+      "open": "開啟",
+      "reply": "回覆",
+      "review": "審閱"
+    }
   }
 }

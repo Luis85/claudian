@@ -811,5 +811,19 @@
     "noView": "Inline edit unavailable: could not access the active Markdown view.",
     "inserted": "Inserted",
     "applied": "Edit applied"
+  },
+  "workOrderActivity": {
+    "toggleRunning": "{count} ordem(ns) de trabalho ativa(s)",
+    "toggleAttention": "{count} ordem(ns) de trabalho ativa(s), {attention} precisa de atenção",
+    "status": {
+      "running": "Em execução",
+      "needsInput": "Precisa de resposta",
+      "needsApproval": "Precisa de aprovação"
+    },
+    "action": {
+      "open": "Abrir",
+      "reply": "Responder",
+      "review": "Revisar"
+    }
   }
 }
