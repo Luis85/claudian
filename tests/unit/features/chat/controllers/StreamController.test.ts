@@ -543,6 +543,29 @@ describe('StreamController - Text Content', () => {
       expect(onRetryLastTurn).toHaveBeenCalledTimes(1);
     });
 
+    it('suppresses retry on the error card while rendering an auto-triggered turn', async () => {
+      const onRetryLastTurn = jest.fn();
+      const autoDeps = { ...createMockDeps(), onRetryLastTurn };
+      const autoController = new StreamController(autoDeps);
+      autoDeps.state.currentContentEl = createMockEl();
+      const msg = createTestMessage();
+
+      // An auto-turn has no user prompt to retry; retryLastTurn() would resend
+      // the unrelated last chat turn, so the card must not offer Retry here.
+      autoController.setRenderingAutoTurn(true);
+      await autoController.handleStreamChunk(
+        { type: 'error', content: 'Background task failed' },
+        msg
+      );
+
+      expect(
+        autoDeps.state.currentContentEl!.querySelector('.claudian-runtime-error-card'),
+      ).not.toBeNull();
+      expect(
+        autoDeps.state.currentContentEl!.querySelector('.claudian-runtime-error-button-primary'),
+      ).toBeNull();
+    });
+
     it('should append warning notice on notice chunk', async () => {
       const msg = createTestMessage();
       deps.state.currentTextEl = createMockEl();

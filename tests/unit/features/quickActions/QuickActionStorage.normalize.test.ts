@@ -54,4 +54,18 @@ describe('QuickActionStorage folder normalization', () => {
     await expect(storage.loadAll()).resolves.toEqual([]);
     expect(adapter.listFilesRecursive).not.toHaveBeenCalled();
   });
+
+  it('reports whether a folder is configured', () => {
+    const adapter = makeAdapter();
+    expect(new QuickActionStorage(adapter, () => 'Quick Actions').hasConfiguredFolder()).toBe(true);
+    expect(new QuickActionStorage(adapter, () => '   ').hasConfiguredFolder()).toBe(false);
+  });
+
+  it('refuses to save when the folder is blank (would vanish on reload)', async () => {
+    const adapter = makeAdapter();
+    const storage = new QuickActionStorage(adapter, () => '');
+
+    await expect(storage.save({ name: 'X', prompt: 'p' } as QuickAction)).rejects.toThrow();
+    expect(adapter.write).not.toHaveBeenCalled();
+  });
 });

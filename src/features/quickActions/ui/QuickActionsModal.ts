@@ -438,6 +438,12 @@ export class QuickActionsModal extends Modal {
   }
 
   private openEditor(existing: QuickAction | null): void {
+    // Mirror the capture flow: a blank Quick Actions folder would save to vault
+    // root, which loadAll() never scans, so the action would vanish on refresh.
+    if (!this.callbacks.storage.hasConfiguredFolder()) {
+      new Notice(t('quickActions.capture.folderMissing'));
+      return;
+    }
     new QuickActionEditorModal(
       this.app,
       existing,

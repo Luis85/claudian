@@ -653,6 +653,9 @@ async function renderAutoTriggeredTurn(tab: TabData, result: AutoTurnResult): Pr
     }
   }
 
+  // Suppress the runtime-error card's Retry for this background turn: it has no
+  // user prompt, and retryLastTurn() would resend the unrelated last chat turn.
+  tab.controllers.streamController?.setRenderingAutoTurn(true);
   try {
     for (const chunk of chunks) {
       await tab.controllers.streamController?.handleStreamChunk(chunk, assistantMsg);
@@ -669,6 +672,7 @@ async function renderAutoTriggeredTurn(tab: TabData, result: AutoTurnResult): Pr
       await tab.controllers.streamController?.finalizeCurrentTextBlock(assistantMsg);
     }
   } finally {
+    tab.controllers.streamController?.setRenderingAutoTurn(false);
     if (hasVisibleContent) {
       tab.controllers.streamController?.hideThinkingIndicator();
       tab.services.subagentManager.resetStreamingState?.();

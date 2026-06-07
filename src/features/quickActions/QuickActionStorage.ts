@@ -86,6 +86,16 @@ export class QuickActionStorage {
     return folder ? normalizePath(folder) : '';
   }
 
+  /**
+   * Whether a non-empty Quick Actions folder is configured. Callers (e.g. the
+   * modal add/edit flow) must check this before saving: with a blank folder a
+   * save would land a vault-root file that `loadAll()` never scans, so the
+   * action silently vanishes on refresh.
+   */
+  hasConfiguredFolder(): boolean {
+    return this.resolveFolder() !== '';
+  }
+
   async loadAll(): Promise<QuickAction[]> {
     const folder = this.resolveFolder();
     if (!folder) {
@@ -129,6 +139,12 @@ export class QuickActionStorage {
   }
 
   async save(action: QuickAction): Promise<string> {
+    // Refuse to write a quick action that loadAll() could never find: a blank
+    // folder normalizes to a vault-root path the loader does not scan. Callers
+    // guard with hasConfiguredFolder() upfront; this is the storage backstop.
+    if (!this.hasConfiguredFolder()) {
+      throw new Error('Quick Actions folder is not configured');
+    }
     const filePath = action.filePath || this.getFilePathForName(action.name);
     const content = serializeQuickAction({
       name: action.name,

@@ -131,9 +131,22 @@ export class StreamController {
   // External observers of the neutral chunk stream (e.g. the work-order runner),
   // notified before normal processing so a card can mirror the live run.
   private streamObservers = new Set<(chunk: StreamChunk) => void>();
+  /** True while replaying an auto-triggered (background) turn — see {@link setRenderingAutoTurn}. */
+  private renderingAutoTurn = false;
 
   constructor(deps: StreamControllerDeps) {
     this.deps = deps;
+  }
+
+  /**
+   * Marks the controller as rendering an auto-triggered background turn (e.g. a
+   * task-notification response replayed through this same controller). Such a
+   * turn has no user prompt behind it, so a runtime-error card must suppress its
+   * Retry affordance rather than re-dispatch the unrelated last chat turn. Set
+   * around the auto-turn chunk loop and cleared in its `finally`.
+   */
+  setRenderingAutoTurn(active: boolean): void {
+    this.renderingAutoTurn = active;
   }
 
   /**
@@ -1623,9 +1636,13 @@ export class StreamController {
           }
         : undefined;
 
-    const onRetry = this.deps.onRetryLastTurn
-      ? () => this.deps.onRetryLastTurn?.()
-      : undefined;
+    // Retry re-dispatches the *user's* last turn, so it must not appear on errors
+    // from an auto-triggered background turn — there is no user prompt behind it,
+    // and retrying would resend an unrelated chat turn (duplicating work).
+    const onRetry =
+      !this.renderingAutoTurn && this.deps.onRetryLastTurn
+        ? () => this.deps.onRetryLastTurn?.()
+        : undefined;
 
     renderInlineRuntimeError(state.currentContentEl, {
       kind,

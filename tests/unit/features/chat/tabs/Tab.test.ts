@@ -1579,6 +1579,7 @@ describe('Tab - Service Callbacks', () => {
         finalizeCurrentThinkingBlock: jest.fn().mockResolvedValue(undefined),
         finalizeCurrentTextBlock: jest.fn().mockResolvedValue(undefined),
         hideThinkingIndicator: jest.fn(),
+        setRenderingAutoTurn: jest.fn(),
       } as any;
       tab.controllers.inputController = {
         handleApprovalRequest: jest.fn(),
