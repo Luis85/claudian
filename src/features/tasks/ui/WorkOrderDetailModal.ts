@@ -55,31 +55,44 @@ export class WorkOrderDetailModal extends Modal {
     this.setTitle(task.frontmatter.title);
     this.modalEl.addClass('claudian-work-order-modal');
 
+    // Sticky-shell frame: contentEl becomes a flex column with a pinned header,
+    // a scrollable two-pane body (main + properties sidebar), and a pinned
+    // footer. Header/footer stay reachable while only the body scrolls. This
+    // slice keeps the inner surfaces unchanged — they are just relocated into
+    // the new regions; the native modal title still owns the header text until
+    // the header slice fills this container.
+    this.contentEl.addClass('claudian-work-order-modal-content');
+    this.contentEl.createDiv({ cls: 'claudian-work-order-modal-header' });
+    const body = this.contentEl.createDiv({ cls: 'claudian-work-order-modal-body' });
+    const main = body.createDiv({ cls: 'claudian-work-order-modal-main' });
+    const sidebar = body.createDiv({ cls: 'claudian-work-order-modal-sidebar' });
+    const footer = this.contentEl.createDiv({ cls: 'claudian-work-order-modal-footer' });
+
     if (task.frontmatter.status === 'running') {
-      this.renderReadOnlyMeta();
+      this.renderReadOnlyMeta(sidebar);
     } else {
-      this.renderEditors();
+      this.renderEditors(sidebar);
     }
 
-    this.renderMarkdownBlock('Objective', task.sections.objective || '—');
+    this.renderMarkdownBlock(main, 'Objective', task.sections.objective || '—');
     const acProgress = parseAcceptanceProgress(task.sections.acceptanceCriteria);
     const acLabel = acProgress.total > 0
       ? `Acceptance criteria (${acProgress.done}/${acProgress.total})`
       : 'Acceptance criteria';
-    this.renderMarkdownBlock(acLabel, task.sections.acceptanceCriteria || '—', 'acceptance');
+    this.renderMarkdownBlock(main, acLabel, task.sections.acceptanceCriteria || '—', 'acceptance');
 
     if (
       (task.frontmatter.status === 'review' || task.frontmatter.status === 'needs_fix') &&
       task.sections.handoff.length > 0
     ) {
-      this.renderMarkdownBlock('Handoff', task.sections.handoff);
+      this.renderMarkdownBlock(main, 'Handoff', task.sections.handoff);
     }
 
     if (task.frontmatter.status === 'failed' && task.sections.ledger.length > 0) {
-      this.renderMarkdownBlock('Run ledger', task.sections.ledger);
+      this.renderMarkdownBlock(main, 'Run ledger', task.sections.ledger);
     }
 
-    this.renderActions();
+    this.renderActions(footer);
   }
 
   onClose(): void {
@@ -87,39 +100,34 @@ export class WorkOrderDetailModal extends Modal {
     this.contentEl.empty();
   }
 
-  private renderMarkdownBlock(label: string, markdown: string, variant?: 'acceptance'): void {
-    this.contentEl.createEl('h4', { text: label, cls: 'claudian-work-order-modal-heading' });
+  private renderMarkdownBlock(
+    parent: HTMLElement,
+    label: string,
+    markdown: string,
+    variant?: 'acceptance',
+  ): void {
+    parent.createEl('h4', { text: label, cls: 'claudian-work-order-modal-heading' });
     const classes = ['claudian-work-order-modal-handoff'];
     if (variant === 'acceptance') classes.push('claudian-work-order-modal-acceptance');
-    const el = this.contentEl.createDiv({ cls: classes.join(' ') });
+    const el = parent.createDiv({ cls: classes.join(' ') });
     void MarkdownRenderer.render(this.app, markdown, el, this.task.path, this.markdownComponent);
   }
 
-  private renderReadOnlyMeta(): void {
+  private renderReadOnlyMeta(parent: HTMLElement): void {
     const { task } = this;
-    const meta = this.contentEl.createDiv({ cls: 'claudian-work-order-modal-meta' });
+    const meta = parent.createDiv({ cls: 'claudian-work-order-modal-meta' });
     meta.createSpan({ text: `Status: ${task.frontmatter.status}` });
     meta.createSpan({ text: `Provider: ${task.frontmatter.provider ?? '—'}` });
     meta.createSpan({ text: `Model: ${task.frontmatter.model ?? '—'}` });
     meta.createSpan({ text: `Priority: ${task.frontmatter.priority}` });
   }
 
-  private renderEditors(): void {
+  private renderEditors(parent: HTMLElement): void {
     const { task } = this;
 
-    this.contentEl
+    parent
       .createDiv({ cls: 'claudian-work-order-modal-meta' })
       .createSpan({ text: `Status: ${task.frontmatter.status}` });
-
-    new Setting(this.contentEl).setName('Title').addText((text) => {
-      text.setValue(task.frontmatter.title);
-      text.inputEl.addEventListener('blur', () => {
-        const value = text.getValue().trim();
-        if (value.length > 0 && value !== task.frontmatter.title) {
-          void this.callbacks.onSaveFields(task, { title: value });
-        }
-      });
-    });
 
     let modelDropdown: DropdownComponent | null = null;
     const populateModels = (providerId: string, resetSelection = false): void => {
@@ -132,7 +140,7 @@ export class WorkOrderDetailModal extends Modal {
       modelDropdown.setValue(resetSelection ? '' : (task.frontmatter.model ?? ''));
     };
 
-    new Setting(this.contentEl).setName('Provider').addDropdown((dropdown) => {
+    new Setting(parent).setName('Provider').addDropdown((dropdown) => {
       for (const option of this.callbacks.getProviderOptions()) {
         dropdown.addOption(option.value, option.label);
       }
@@ -143,7 +151,7 @@ export class WorkOrderDetailModal extends Modal {
       });
     });
 
-    new Setting(this.contentEl).setName('Model').addDropdown((dropdown) => {
+    new Setting(parent).setName('Model').addDropdown((dropdown) => {
       modelDropdown = dropdown;
       populateModels(task.frontmatter.provider ?? '');
       dropdown.onChange((value) => {
@@ -151,7 +159,7 @@ export class WorkOrderDetailModal extends Modal {
       });
     });
 
-    new Setting(this.contentEl).setName('Priority').addDropdown((dropdown) => {
+    new Setting(parent).setName('Priority').addDropdown((dropdown) => {
       for (const priority of PRIORITY_OPTIONS) {
         dropdown.addOption(priority, priority);
       }
@@ -162,9 +170,9 @@ export class WorkOrderDetailModal extends Modal {
     });
   }
 
-  private renderActions(): void {
+  private renderActions(parent: HTMLElement): void {
     const { task } = this;
-    const actions = new Setting(this.contentEl);
+    const actions = new Setting(parent);
 
     const editLabel = task.frontmatter.status === 'review' ? 'Open note' : 'Edit';
     actions.addButton((btn) =>
