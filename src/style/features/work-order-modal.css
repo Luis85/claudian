@@ -9,18 +9,36 @@
  * from a left border to a top border.
  */
 
+/*
+ * Bind the sticky-shell at the `.modal` element itself (we own it via this
+ * class) so the bounded flex column wins regardless of theme modal overrides:
+ * the modal is a height-capped flex column, the body is the ONLY scroll region,
+ * and the header/footer stay pinned. Binding here (rather than only on
+ * `.modal-content`) keeps the shell intact even when a theme restyles
+ * `.modal-content`'s overflow/height.
+ */
 .claudian-work-order-modal {
+  display: flex;
+  flex-direction: column;
   width: min(960px, 92vw);
   max-width: min(960px, 92vw);
   max-height: min(86vh, 760px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* The header ships its own close button; hide Obsidian's built-in one so the
+   top-right corner does not render a duplicate ×. */
+.claudian-work-order-modal .modal-close-button {
+  display: none;
 }
 
 .claudian-work-order-modal-content {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   width: 100%;
   max-width: 100%;
-  max-height: min(86vh, 760px);
   min-height: 0;
   padding: 0;
   overflow: hidden;
@@ -306,24 +324,29 @@
   }
 }
 
-/* CTA — the accent primary. */
+/* CTA — primary positive action (Mark ready / Accept / Send to review). Green
+   from the status→color palette, not the theme accent, so the positive action
+   reads deliberately across themes. */
 .claudian-work-order-modal-action--cta {
-  background: var(--interactive-accent);
+  background: var(--color-green);
   color: var(--text-on-accent);
 }
 
 .claudian-work-order-modal-action--cta:hover {
-  background: var(--interactive-accent-hover);
+  background: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
 }
 
-/* Ghost — transparent secondary; hover surfaces the modifier-hover wash. */
+/* Secondary — a neutral surfaced button (Open note / Open conversation / Rework
+   / Archive / Reopen). Reads as a real button, not a bare ghost. */
 .claudian-work-order-modal-action--ghost {
-  background: transparent;
-  color: var(--text-muted);
+  border-color: var(--border-color);
+  background: var(--interactive-normal);
+  color: var(--text-normal);
 }
 
 .claudian-work-order-modal-action--ghost:hover {
-  background: var(--background-modifier-hover);
+  border-color: var(--border-color-hover);
+  background: var(--interactive-hover);
   color: var(--text-normal);
 }
 

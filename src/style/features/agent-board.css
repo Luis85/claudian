@@ -223,14 +223,14 @@
 }
 
 .claudian-agent-board-card-action-primary--cta {
-  background: var(--interactive-accent);
-  border-color: var(--interactive-accent);
+  background: var(--color-green);
+  border-color: var(--color-green);
   color: var(--text-on-accent);
 }
 
 .claudian-agent-board-card-action-primary--cta:hover {
-  background: var(--interactive-accent-hover);
-  border-color: var(--interactive-accent-hover);
+  background: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
+  border-color: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
 }
 
 .claudian-agent-board-card-action-primary--ghost {
@@ -667,6 +667,17 @@
   gap: 6px;
 }
 
+/* Reply Send: green primary positive action, matching the CTA palette. The
+   sibling Stop keeps the neutral button surface. */
+.claudian-agent-board-card-reply--actions .mod-cta {
+  background-color: var(--color-green);
+  color: var(--text-on-accent);
+}
+
+.claudian-agent-board-card-reply--actions .mod-cta:hover {
+  background-color: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
+}
+
 .claudian-agent-board-errors {
   flex: 0 0 auto;
   max-height: 25%;
@@ -802,6 +813,17 @@
 
 .claudian-agent-board-toolbar-btn--tool:hover {
   border-color: var(--border-color-hover);
+}
+
+/* CTA button (Add work order): green primary positive action, not the theme
+   accent, so it reads deliberately across themes (matches the modal CTA). */
+.claudian-agent-board-toolbar-btn.mod-cta {
+  background-color: var(--color-green);
+  color: var(--text-on-accent);
+}
+
+.claudian-agent-board-toolbar-btn.mod-cta:hover {
+  background-color: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
 }
 
 .claudian-agent-board-toolbar-btn-icon {
