@@ -442,7 +442,12 @@ export class AgentBoardRenderer {
 
   /** Ascending priority bars (filled per level) + the priority label. */
   private renderPriority(parent: HTMLElement, priority: TaskPriority): void {
-    const meta = PRIORITY_META[priority];
+    // Legacy or hand-authored notes can carry an unrecognized priority (e.g.
+    // `normal`); fall back to the normal styling so one bad value can't abort
+    // the whole board render. The label below still shows the raw value.
+    const meta =
+      (PRIORITY_META as Record<string, { bars: number; modifier: string }>)[priority] ??
+      PRIORITY_META['2 - normal'];
     const prio = parent.createSpan({
       cls: `claudian-agent-board-card-priority claudian-agent-board-card-priority--${meta.modifier}`,
     });

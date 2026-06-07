@@ -345,6 +345,20 @@ describe('AgentBoardRenderer — card body (title dot / meta / footer)', () => {
     expect(prio.textContent).toContain('1 - high');
   });
 
+  it('renders a legacy/unknown priority without crashing the board (falls back to normal)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const task = makeTask('legacy', 'ready');
+    // A legacy/hand-authored value outside the canonical priority set.
+    (task.frontmatter as { priority: string }).priority = 'normal';
+    expect(() => renderer.render(host, makeState({ ready: [task] }), makeCallbacks())).not.toThrow();
+    const prio = host.querySelector('.claudian-agent-board-card-priority') as HTMLElement;
+    expect(prio).not.toBeNull();
+    // Falls back to the normal styling, but still shows the raw value as the label.
+    expect(prio.classList.contains('claudian-agent-board-card-priority--normal')).toBe(true);
+    expect(host.querySelector('.claudian-agent-board-card-priority-label')?.textContent).toBe('normal');
+  });
+
   it('renders acceptance progress in the footer with done/total and a track', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
