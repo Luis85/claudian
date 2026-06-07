@@ -19,6 +19,8 @@ tags:
   - agent-board
   - background-agents
   - differentiator
+relations:
+  - "[[Agent Kanban Board]]"
 ---
 
 # Agent Board background / long-running runs

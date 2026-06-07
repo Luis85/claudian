@@ -14,6 +14,8 @@ tags:
   - security
   - path-traversal
   - opencode
+relations:
+  - "[[Multi Provider Support]]"
 ---
 
 # Opencode main-runtime path containment
