@@ -1,0 +1,150 @@
+/*
+ * Work-order detail modal — sticky-shell frame.
+ *
+ * `contentEl` (`.claudian-work-order-modal-content`) is a bounded flex column:
+ * a pinned header, a scrollable two-pane body (main + properties sidebar), and
+ * a pinned footer. Only the body scrolls; header and footer stay reachable so
+ * primary actions are always in view. Under 720px the body grid collapses to a
+ * single column with the sidebar dropping below main and its divider flipping
+ * from a left border to a top border.
+ */
+
+.claudian-work-order-modal {
+  width: min(960px, 92vw);
+  max-width: min(960px, 92vw);
+  max-height: min(86vh, 760px);
+}
+
+.claudian-work-order-modal-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  max-height: min(86vh, 760px);
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Pinned header (filled by a later header slice). */
+.claudian-work-order-modal-header {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* Scroll region: the only part of the shell that scrolls. */
+.claudian-work-order-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: grid;
+  grid-template-columns: 1fr 282px;
+  gap: 20px;
+  padding: 16px 20px;
+}
+
+.claudian-work-order-modal-main {
+  min-width: 0;
+}
+
+.claudian-work-order-modal-sidebar {
+  min-width: 0;
+  padding-left: 20px;
+  border-left: 1px solid var(--background-modifier-border);
+}
+
+/* Pinned footer hosting the action buttons. */
+.claudian-work-order-modal-footer {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--background-modifier-border);
+  padding: 12px 20px;
+}
+
+.claudian-work-order-modal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.claudian-work-order-modal-heading {
+  margin: 18px 0 8px;
+  font-size: var(--font-ui-medium);
+  color: var(--text-normal);
+}
+
+.claudian-work-order-modal-main > .claudian-work-order-modal-heading:first-child {
+  margin-top: 0;
+}
+
+.claudian-work-order-modal-handoff {
+  background: var(--background-secondary);
+  padding: 12px 16px;
+  border-radius: var(--radius-m);
+  line-height: 1.55;
+}
+
+.claudian-work-order-modal-handoff > :first-child {
+  margin-top: 0;
+}
+
+.claudian-work-order-modal-handoff > :last-child {
+  margin-bottom: 0;
+}
+
+.claudian-work-order-modal-acceptance {
+  padding: 12px 16px;
+}
+
+.claudian-work-order-modal-acceptance ul,
+.claudian-work-order-modal-acceptance ol {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.claudian-work-order-modal-acceptance li.task-list-item {
+  padding: 10px 6px 10px 30px;
+  text-indent: -24px;
+  margin: 0;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.claudian-work-order-modal-acceptance li.task-list-item + li.task-list-item {
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.claudian-work-order-modal-acceptance li.task-list-item .task-list-item-checkbox {
+  margin: 0 8px 0 0;
+  vertical-align: middle;
+  text-indent: 0;
+}
+
+.claudian-work-order-modal-acceptance li.task-list-item > p {
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+
+.claudian-work-order-modal-acceptance li.is-checked,
+.claudian-work-order-modal-acceptance li.task-list-item.is-checked {
+  color: var(--text-muted);
+}
+
+/* Collapse the two-pane grid: sidebar drops below main, divider goes to top. */
+@media (max-width: 720px) {
+  .claudian-work-order-modal-body {
+    grid-template-columns: 1fr;
+  }
+
+  .claudian-work-order-modal-sidebar {
+    padding-left: 0;
+    padding-top: 16px;
+    border-left: none;
+    border-top: 1px solid var(--background-modifier-border);
+  }
+}
