@@ -108,12 +108,14 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 9px 12px;
-  border: 1px dashed var(--border-color);
+  padding: 7px 12px;
+  border: 1px dashed var(--background-modifier-border);
   border-radius: var(--radius-l, 8px);
+  /* Stay flat by default so a theme's button surface doesn't make the row read
+     as a solid CTA; only the hover wash lifts it. */
   background: transparent;
   color: var(--text-faint);
-  font-size: var(--font-ui-small);
+  font-size: var(--font-ui-smaller);
   cursor: pointer;
   box-shadow: none;
 }
@@ -121,6 +123,7 @@
 .claudian-agent-board-lane-add:hover,
 .claudian-agent-board-lane-add:focus-visible {
   color: var(--text-muted);
+  border-color: var(--background-modifier-border-hover);
   background: var(--background-modifier-hover);
   box-shadow: none;
 }
@@ -133,18 +136,21 @@
   flex-direction: column;
   gap: 9px;
   padding: 12px 13px;
-  border: 1px solid var(--border-color);
+  /* --background-modifier-border reads more clearly than --border-color on
+     low-contrast themes (e.g. Minimal) so the card surface is always defined. */
+  border: 1px solid var(--background-modifier-border);
   /* --radius-l is the card radius in newer Obsidian; length fallback for hosts
      that predate the variable. */
   border-radius: var(--radius-l, 8px);
-  background: var(--background-tertiary);
+  background: var(--background-secondary);
+  box-shadow: var(--shadow-s);
   cursor: pointer;
 }
 
 .claudian-agent-board-card:hover {
-  border-color: var(--border-color-hover);
-  background: var(--color-base-30);
-  box-shadow: var(--shadow-s);
+  border-color: var(--background-modifier-border-hover);
+  background: var(--background-secondary-alt);
+  box-shadow: var(--shadow-l);
 }
 
 .claudian-agent-board-card:active {

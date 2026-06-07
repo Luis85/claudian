@@ -195,6 +195,10 @@
 .claudian-work-order-modal-body {
   flex: 1 1 auto;
   min-height: 0;
+  /* Hard cap tied to the modal's own max-height (minus the pinned header +
+     footer) so the body always scrolls and the footer stays in view, even when
+     a theme prevents the flex chain from bounding the content. */
+  max-height: calc(min(86vh, 760px) - 132px);
   overflow-y: auto;
   overflow-x: hidden;
   display: grid;
