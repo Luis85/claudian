@@ -1,14 +1,21 @@
 ---
-status: partially-shipped
+status: shipped
 parent: Infrastructure
+shipped_in: 3.0.0
+shipped_by: "[[Agent Board/tasks/work-order-20260606-settings-overhaul]]"
 ---
 
-> **Status (2026-06-03): mostly shipped.** The registry, search bar, first-run banner, custom-models table,
-> resolver-aware default provider, and live hotkeys all shipped (Claudian is now 3.2.0). The residual tail —
-> porting the remaining 5 imperative tabs onto the registry (only `{agentBoard, orchestrator, diagnostics}`
-> are feature-flagged on via `registry/featureFlag.ts`) — is tracked as
-> [[settings-registry-port-followup]], and the 4-bucket IA reorg as
-> [[settings-information-architecture]]. The `USE_REGISTRY_RENDERER` flag is vestigial.
+> **Status (2026-06-07): shipped in 3.0.0.** Phases A–J all landed: registry foundation, search bar, first-run
+> banner, custom-models table, resolver-aware default provider, live hotkeys, legacy-renderer cleanup in J1,
+> and v3.0.0 release tag. Claudian is now at 3.5.0. The residual tail — deepening the registry-field modules
+> for `general/claude/codex/opencode/cursor` so they match the imperative renderers (which were restored as a
+> fallback in commit `45f71576` after the J1 sweep) — is tracked as
+> [[settings-registry-port-followup]] (re-targeted to v4.0.0) and the 4-bucket IA reorg as
+> [[settings-information-architecture]]. The `USE_REGISTRY_RENDERER` flag is vestigial and the orchestrator
+> tab was removed entirely in `f0d0d5d7`, so plan Tasks C6/D6 are obsolete. Work-order
+> [[Agent Board/tasks/work-order-20260606-settings-overhaul]] (2026-06-06) was opened to drive the residual
+> port + 3.0.0 release, but on triage it was closed as superseded: 3.0.0 had already shipped (months prior)
+> and the residual was already tracked as a v4.0.0 followup.
 
 # Settings Overhaul Implementation Plan
 

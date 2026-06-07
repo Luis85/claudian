@@ -1,13 +1,23 @@
 ---
-status: partially-shipped
+status: implemented
 parent: Infrastructure
+shipped_in: 3.0.0
+shipped_by: "[[Agent Board/tasks/work-order-20260606-settings-overhaul]]"
 ---
+
+> **Status (2026-06-07): implemented in 3.0.0.** Every design contract here (typed registry, search bar,
+> first-run banner, hidden disabled provider tabs, resolver-aware Agent Board default, per-provider
+> Custom models table, live hotkeys, legacy `.claude/` path strip) shipped under v3.0.0. The follow-on
+> port of the remaining imperative tab renderers onto the registry — needed before deleting the legacy
+> fallback restored in `45f71576` — is tracked as [[settings-registry-port-followup]] (re-targeted to
+> v4.0.0). Orchestrator settings surface was removed entirely in `f0d0d5d7`, superseding the orchestrator
+> design in section 6.
 
 # Settings overhaul — design
 
-Date: 2026-05-30  
-Owner: Claudian core  
-Target version: 3.0.0 (major)
+Date: 2026-05-30
+Owner: Claudian core
+Target version: 3.0.0 (shipped — Claudian is now 3.5.0)
 
 ## Executive summary
 
