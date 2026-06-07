@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260607-modal-header-title-meta
 title: Work-order modal — header with editable inline title + meta row
-status: open
+status: done
 priority: 2 - normal
 triage: ready-for-agent
 created: 2026-06-07
@@ -41,15 +41,15 @@ Close button — top-right, 30×30, `x` icon (`setIcon`), `--text-muted` → hov
 
 #### Acceptance criteria
 
-- [ ] Meta row renders ID chip + status-aware caption above title.
-- [ ] Title is keyboard-focusable and editable inline in editable states; saves on blur when changed and non-empty.
-- [ ] Title in non-editable states (`running`, `review`, `done`, `needs_handoff`, `failed`, `canceled`) renders as plain text — no contenteditable affordance.
-- [ ] "✎ Click title to rename" hint shown only in editable states.
-- [ ] 2px accent gradient renders along the bottom of the header.
-- [ ] Pulse animation on the live indicator suppressed when user prefers reduced motion.
-- [ ] Close button is keyboard-focusable with accessible name.
-- [ ] If `contenteditable` is used, the element carries `contenteditable="plaintext-only"`; Esc cancels and Enter commits.
-- [ ] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
+- [x] Meta row renders ID chip + status-aware caption above title.
+- [x] Title is keyboard-focusable and editable inline in editable states; saves on blur when changed and non-empty.
+- [x] Title in non-editable states (`running`, `review`, `done`, `needs_handoff`, `failed`, `canceled`) renders as plain text — no contenteditable affordance.
+- [x] "✎ Click title to rename" hint shown only in editable states.
+- [x] 2px accent gradient renders along the bottom of the header.
+- [x] Pulse animation on the live indicator suppressed when user prefers reduced motion.
+- [x] Close button is keyboard-focusable with accessible name.
+- [x] If `contenteditable` is used, the element carries `contenteditable="plaintext-only"`; Esc cancels and Enter commits.
+- [x] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
 
 #### Blocked by
 

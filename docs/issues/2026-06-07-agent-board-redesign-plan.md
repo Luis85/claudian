@@ -2,7 +2,7 @@
 type: tracker
 id: issue-20260607-agent-board-redesign-plan
 title: Agent Board + Work-Order modal redesign — tracking plan
-status: open
+status: done
 priority: 1 - high
 triage: tracker
 created: 2026-06-07
@@ -28,26 +28,26 @@ Single index for the 14 tracer-bullet vertical slices that deliver the four-part
 #### Slices
 
 **Modal (Part A):**
-- [ ] [[2026-06-07-modal-frame-sticky-shell]]
-- [ ] [[2026-06-07-modal-header-title-meta]] — needs frame
-- [ ] [[2026-06-07-modal-properties-sidebar]] — needs frame
-- [ ] [[2026-06-07-modal-objective-acceptance]] — needs frame
-- [ ] [[2026-06-07-modal-activity-block]] — needs objective+acceptance
-- [ ] [[2026-06-07-modal-footer-actions]] — needs frame
+- [x] [[2026-06-07-modal-frame-sticky-shell]]
+- [x] [[2026-06-07-modal-header-title-meta]] — needs frame
+- [x] [[2026-06-07-modal-properties-sidebar]] — needs frame
+- [x] [[2026-06-07-modal-objective-acceptance]] — needs frame
+- [x] [[2026-06-07-modal-activity-block]] — needs objective+acceptance
+- [x] [[2026-06-07-modal-footer-actions]] — needs frame
 
 **Board (Part B):**
-- [ ] [[2026-06-07-board-toolbar-auto-run]]
-- [ ] [[2026-06-07-board-lanes-refresh]]
-- [ ] [[2026-06-07-board-card-body]] — needs lanes
-- [ ] [[2026-06-07-board-card-actions-menu]] — needs card body
-- [ ] [[2026-06-07-board-card-live-strip]] — needs card body
+- [x] [[2026-06-07-board-toolbar-auto-run]]
+- [x] [[2026-06-07-board-lanes-refresh]]
+- [x] [[2026-06-07-board-card-body]] — needs lanes
+- [x] [[2026-06-07-board-card-actions-menu]] — needs card body
+- [x] [[2026-06-07-board-card-live-strip]] — needs card body
 
 **Agents (Part C):**
-- [ ] [[2026-06-07-agents-persona-seam]] — needs properties sidebar + card body
+- [x] [[2026-06-07-agents-persona-seam]] — needs properties sidebar + card body
 
 **Cross-cutting:**
-- [ ] [[2026-06-07-agent-board-redesign-i18n-sweep]] — needs all visual slices
-- [ ] [[2026-06-07-agent-board-redesign-a11y-audit]] — needs all visual slices
+- [x] [[2026-06-07-agent-board-redesign-i18n-sweep]] — needs all visual slices
+- [x] [[2026-06-07-agent-board-redesign-a11y-audit]] — needs all visual slices
 
 #### Cross-cutting rules (apply to every slice)
 
@@ -120,9 +120,9 @@ The design brief explores several toggles in the prototype; the **ship configura
 
 #### Acceptance criteria
 
-- [ ] All 14 child issues closed.
-- [ ] `npm run typecheck && npm run lint && npm run test && npm run build` green at completion.
-- [ ] [[2026-06-07-agent-board-redesign-i18n-sweep]] and [[2026-06-07-agent-board-redesign-a11y-audit]] both report zero open gaps.
+- [x] All 14 child issues closed.
+- [x] `npm run typecheck && npm run lint && npm run test && npm run build` green at completion.
+- [x] [[2026-06-07-agent-board-redesign-i18n-sweep]] and [[2026-06-07-agent-board-redesign-a11y-audit]] both report zero open gaps.
 
 #### Blocked by
 

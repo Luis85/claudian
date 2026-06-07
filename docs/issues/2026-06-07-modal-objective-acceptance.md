@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260607-modal-objective-acceptance
 title: Work-order modal — Objective + Acceptance progress ring + checklist card
-status: open
+status: done
 priority: 2 - normal
 triage: ready-for-agent
 created: 2026-06-07
@@ -37,14 +37,14 @@ Restyle the left main column's top two sections under the shared section header 
 
 #### Acceptance criteria
 
-- [ ] Section header pattern in place (uppercase label + Lucide icon + `--text-faint`).
-- [ ] Objective markdown renders via `MarkdownRenderer.render`; Wikilinks, inline code, and links remain interactive.
-- [ ] Progress ring renders `done/total` and turns `--color-green` at 100%.
-- [ ] Checklist card restyled per spec; checked rows visually distinct without color cue (white check glyph carries the signal).
-- [ ] `parseAcceptanceProgress` continues to drive counts (no parser changes).
-- [ ] No hardcoded hex; SVG ring colors via Obsidian CSS variables.
-- [ ] Main-column container ships with `padding 18px 26px` and `gap 22px` so follow-up slices stack into it without re-layout.
-- [ ] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
+- [x] Section header pattern in place (uppercase label + Lucide icon + `--text-faint`).
+- [x] Objective markdown renders via `MarkdownRenderer.render`; Wikilinks, inline code, and links remain interactive.
+- [x] Progress ring renders `done/total` and turns `--color-green` at 100%.
+- [x] Checklist card restyled per spec; checked rows visually distinct without color cue (white check glyph carries the signal).
+- [x] `parseAcceptanceProgress` continues to drive counts (no parser changes).
+- [x] No hardcoded hex; SVG ring colors via Obsidian CSS variables.
+- [x] Main-column container ships with `padding 18px 26px` and `gap 22px` so follow-up slices stack into it without re-layout.
+- [x] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
 
 #### Blocked by
 

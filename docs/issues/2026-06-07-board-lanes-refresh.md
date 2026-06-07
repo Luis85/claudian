@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260607-board-lanes-refresh
 title: Agent Board — borderless lanes + new lane header
-status: open
+status: done
 priority: 1 - high
 triage: ready-for-agent
 created: 2026-06-07
@@ -35,12 +35,12 @@ Card visuals stay untouched in this slice — they get rebuilt in [[2026-06-07-b
 
 #### Acceptance criteria
 
-- [ ] Lanes render borderless with the new uppercase header + count pill.
-- [ ] Lane width fixed near 286px; horizontal scroll engages when lane count exceeds viewport.
-- [ ] Collapsed lane strip + chevron toggle preserved; Enter/Space + `aria-expanded` still work.
-- [ ] Dashed "+ Add work order" affordance appears only in the Inbox lane and triggers the existing add flow.
-- [ ] `.claudian-agent-board-lane*` CSS rewritten per spec; no hardcoded hex; all values via Obsidian variables.
-- [ ] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
+- [x] Lanes render borderless with the new uppercase header + count pill.
+- [x] Lane width fixed near 286px; horizontal scroll engages when lane count exceeds viewport.
+- [x] Collapsed lane strip + chevron toggle preserved; Enter/Space + `aria-expanded` still work.
+- [x] Dashed "+ Add work order" affordance appears only in the Inbox lane and triggers the existing add flow.
+- [x] `.claudian-agent-board-lane*` CSS rewritten per spec; no hardcoded hex; all values via Obsidian variables.
+- [x] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
 
 #### Blocked by
 

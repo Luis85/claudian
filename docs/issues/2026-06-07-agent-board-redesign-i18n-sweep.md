@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260607-agent-board-redesign-i18n-sweep
 title: Agent Board redesign — i18n sweep across 10 locales
-status: open
+status: done
 priority: 2 - normal
 triage: ready-for-agent
 created: 2026-06-07
@@ -42,10 +42,10 @@ Rule: every user-visible string resolves through the existing i18n helper. No li
 
 #### Acceptance criteria
 
-- [ ] Every new string introduced by slices 1–12 keyed via the i18n helper.
-- [ ] All 10 locale files include entries for every new key (English is authoritative; other locales fall through with English copy if no translation is available, but the key MUST be present).
-- [ ] Forbidden-string check: an automated grep (documented in the PR — e.g. a ripgrep pattern listing common English UI verbs against the slice-1–12 diff scope) finds zero untranslated string literals in `src/features/tasks/ui/` and any other touched paths. A manual diff audit alone is NOT sufficient — the check must be reproducible by future contributors.
-- [ ] `npm run lint && npm run test && npm run build` green.
+- [x] Every new string introduced by slices 1–12 keyed via the i18n helper.
+- [x] All 10 locale files include entries for every new key (English is authoritative; other locales fall through with English copy if no translation is available, but the key MUST be present).
+- [x] Forbidden-string check: an automated grep (documented in the PR — e.g. a ripgrep pattern listing common English UI verbs against the slice-1–12 diff scope) finds zero untranslated string literals in `src/features/tasks/ui/` and any other touched paths. A manual diff audit alone is NOT sufficient — the check must be reproducible by future contributors.
+- [x] `npm run lint && npm run test && npm run build` green.
 
 #### Blocked by
 
