@@ -48,10 +48,18 @@
   min-width: 0;
 }
 
+/*
+ * Properties sidebar surface. The secondary-background panel bleeds to the
+ * scroll-region edges (the body owns 16px top / 20px right / gap padding), so
+ * negative margins pull it flush while the spec's own 18px 20px padding sets
+ * the inner inset.
+ */
 .claudian-work-order-modal-sidebar {
   min-width: 0;
-  padding-left: 20px;
-  border-left: 1px solid var(--background-modifier-border);
+  margin: -16px -20px -16px 0;
+  padding: 18px 20px;
+  border-left: 1px solid var(--border-color);
+  background: var(--background-secondary);
 }
 
 /* Pinned footer hosting the action buttons. */
@@ -59,15 +67,6 @@
   flex: 0 0 auto;
   border-top: 1px solid var(--background-modifier-border);
   padding: 12px 20px;
-}
-
-.claudian-work-order-modal-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 8px;
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
 }
 
 .claudian-work-order-modal-heading {
@@ -142,9 +141,209 @@
   }
 
   .claudian-work-order-modal-sidebar {
-    padding-left: 0;
-    padding-top: 16px;
+    margin: 16px -20px -16px -20px;
     border-left: none;
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: 1px solid var(--border-color);
   }
+}
+
+/* ============================================================
+   Properties sidebar — header, rows, value chips, status pill,
+   priority bars. Colors come from the visual token contract
+   (status / priority maps) via Obsidian CSS variables only.
+   ============================================================ */
+.claudian-work-order-modal-properties-head {
+  margin-bottom: 10px;
+  padding: 0 6px;
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  color: var(--text-faint);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.claudian-work-order-modal-prop-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 32px;
+  padding: 4px 6px;
+  border-radius: var(--radius-m);
+}
+
+.claudian-work-order-modal-prop-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.claudian-work-order-modal-prop-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-faint);
+}
+
+.claudian-work-order-modal-prop-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.claudian-work-order-modal-prop-value {
+  min-width: 0;
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+  text-align: right;
+}
+
+.claudian-work-order-modal-prop-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.claudian-work-order-modal-prop-placeholder {
+  color: var(--text-faint);
+}
+
+.claudian-work-order-modal-prop-num {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.claudian-work-order-modal-mono {
+  font-family: var(--font-monospace);
+  font-size: 0.92em;
+}
+
+.claudian-work-order-modal-prop-link {
+  color: var(--text-accent);
+  font-family: var(--font-monospace);
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.claudian-work-order-modal-prop-link:hover {
+  color: var(--text-accent-hover);
+  text-decoration: underline;
+}
+
+.claudian-work-order-modal-properties-divider {
+  height: 1px;
+  margin: 10px 6px;
+  background: var(--border-color);
+}
+
+/* ---------- Status pill (status → color contract) ---------- */
+.claudian-work-order-modal-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px 3px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+  color: var(--claudian-wo-status-color, var(--text-muted));
+  background: color-mix(in srgb, var(--claudian-wo-status-color, var(--text-muted)) 14%, transparent);
+}
+
+.claudian-work-order-modal-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--claudian-wo-status-color, var(--text-muted));
+}
+
+.claudian-work-order-modal-status-pill--inbox { --claudian-wo-status-color: var(--color-base-60); }
+.claudian-work-order-modal-status-pill--ready { --claudian-wo-status-color: var(--color-blue); }
+.claudian-work-order-modal-status-pill--running { --claudian-wo-status-color: var(--color-yellow); }
+.claudian-work-order-modal-status-pill--needs_input { --claudian-wo-status-color: var(--color-blue); }
+.claudian-work-order-modal-status-pill--needs_approval { --claudian-wo-status-color: var(--color-purple); }
+.claudian-work-order-modal-status-pill--review { --claudian-wo-status-color: var(--color-blue); }
+.claudian-work-order-modal-status-pill--needs_handoff { --claudian-wo-status-color: var(--color-orange); }
+.claudian-work-order-modal-status-pill--needs_fix { --claudian-wo-status-color: var(--color-orange); }
+.claudian-work-order-modal-status-pill--done { --claudian-wo-status-color: var(--color-green); }
+.claudian-work-order-modal-status-pill--failed { --claudian-wo-status-color: var(--color-red); }
+.claudian-work-order-modal-status-pill--canceled { --claudian-wo-status-color: var(--color-base-60); }
+
+/* ---------- Priority bars (priority → color contract) ---------- */
+.claudian-work-order-modal-priority {
+  color: var(--claudian-wo-priority-color, var(--text-muted));
+}
+
+.claudian-work-order-modal-priority-label {
+  color: var(--text-normal);
+}
+
+.claudian-work-order-modal-priority-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 11px;
+}
+
+.claudian-work-order-modal-priority-bars i {
+  width: 3px;
+  border-radius: 1px;
+  background: var(--background-modifier-border);
+}
+
+.claudian-work-order-modal-priority-bars i.is-filled {
+  background: var(--claudian-wo-priority-color, var(--text-muted));
+}
+
+.claudian-work-order-modal-priority-bars i:nth-child(1) { height: 5px; }
+.claudian-work-order-modal-priority-bars i:nth-child(2) { height: 8px; }
+.claudian-work-order-modal-priority-bars i:nth-child(3) { height: 11px; }
+
+.claudian-work-order-modal-priority--0 { --claudian-wo-priority-color: var(--color-red); }
+.claudian-work-order-modal-priority--1 { --claudian-wo-priority-color: var(--color-orange); }
+.claudian-work-order-modal-priority--2 { --claudian-wo-priority-color: var(--color-yellow); }
+.claudian-work-order-modal-priority--3 { --claudian-wo-priority-color: var(--color-base-60); }
+
+/* ---------- Editable value chip (shared helper) ---------- */
+.claudian-work-order-modal-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: -3px -7px;
+  padding: 3px 7px;
+  border-radius: var(--radius-m);
+  color: var(--text-normal);
+  cursor: pointer;
+}
+
+.claudian-work-order-modal-chip:hover {
+  background: var(--background-modifier-hover);
+}
+
+.claudian-work-order-modal-chip-label {
+  font-size: var(--font-ui-small);
+}
+
+.claudian-work-order-modal-chip-chevron {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-faint);
+}
+
+.claudian-work-order-modal-chip-chevron svg {
+  width: 13px;
+  height: 13px;
+}
+
+.claudian-work-order-modal-chip-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  font-family: inherit;
 }

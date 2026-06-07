@@ -168,6 +168,18 @@ export type TranslationKey =
   | 'tasks.commitOnAccept.failed'
   | 'tasks.commitOnAccept.settingsSaveFailed'
 
+  // Tasks - Work-order detail modal properties sidebar (Agent Board redesign)
+  | 'tasks.workOrderModal.properties'
+  | 'tasks.workOrderModal.fieldStatus'
+  | 'tasks.workOrderModal.fieldAgent'
+  | 'tasks.workOrderModal.fieldProvider'
+  | 'tasks.workOrderModal.fieldModel'
+  | 'tasks.workOrderModal.fieldPriority'
+  | 'tasks.workOrderModal.fieldCreated'
+  | 'tasks.workOrderModal.fieldUpdated'
+  | 'tasks.workOrderModal.fieldAttempts'
+  | 'tasks.workOrderModal.fieldConversation'
+
   // Chat - Tabs (Q-1 chunk 13)
   | 'chat.tab.createFailed'
   | 'chat.tab.createConversationFailed'

@@ -728,6 +728,18 @@
       "commitAndPush": "Commit & push",
       "failed": "Commit prompt failed: {error}",
       "settingsSaveFailed": "Failed to save preference. Try again from settings."
+    },
+    "workOrderModal": {
+      "properties": "Properties",
+      "fieldStatus": "Status",
+      "fieldAgent": "Agent",
+      "fieldProvider": "Provider",
+      "fieldModel": "Model",
+      "fieldPriority": "Priority",
+      "fieldCreated": "Created",
+      "fieldUpdated": "Updated",
+      "fieldAttempts": "Attempts",
+      "fieldConversation": "Conversation"
     }
   },
   "provider": {
