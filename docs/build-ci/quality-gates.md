@@ -32,6 +32,14 @@ Run the whole local set before pushing:
 npm run lint && npm run check:loc && npm run typecheck && npm run test && npm run build && npm run check:artifacts
 ```
 
+Optional, before opening a PR — surfaces fallow findings on changed files vs
+`main` so review starts with signal already collected. Non-blocking; see
+"Fallow (monitoring, not a gate)" below.
+
+```bash
+npm run quality:audit
+```
+
 ## Lint severity policy
 
 Two tiers, on purpose:
@@ -147,6 +155,13 @@ Tracked here so the direction is explicit.
 3. **Perf-gate wiring.** `tests/perf/*` are monitoring-only today
    (`docs/tech-debt/2026-06-07-perf-gates-blind-spots.md`); decide which
    scaling assertions graduate into a blocking job.
+4. **Graduate specific fallow checks.** Today the whole `fallow` layer is
+   non-blocking. As individual checks prove load-bearing in review — e.g.
+   no-new-dead-exports on changed files, no-new-clone-families above a size,
+   maintainability-score floor — promote that single check to an `error`-tier
+   gate (own CI job calling `fallow <subcommand> --fail-on …`). Same posture as
+   the lint warn-tier ratchet: tighten one rule at a time so the gain can't
+   regress without big-bang risk.
 
 Done: provider-boundary regression tests and the no-new-provider-hardcoded-list
 guard (remediation item 5 of the tech debt) — see "Provider-boundary guards".
