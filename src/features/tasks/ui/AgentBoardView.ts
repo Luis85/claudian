@@ -323,6 +323,13 @@ export class AgentBoardView extends ItemView {
           onArchive: (target) => void this.archiveTask(target),
           onDelete: (target) => void this.deleteTask(target),
         }),
+        // Hover action cluster ⋯ menu items reuse the same view methods the
+        // right-click context menu uses, so both surfaces stay in lockstep.
+        onArchive: (task) => void this.archiveTask(task),
+        onOpenNote: (task) => void this.openTask(task),
+        // Spread gives both onOpenConversation and canOpenConversation so the ⋯
+        // menu gates "Open conversation" the same way the modal/right-click do.
+        ...buildWorkOrderConversationBindings(this.plugin),
         onReply: (task, content) => void this.onReply(task.frontmatter.id, content),
         onApprove: (task) => void this.onApprove(task.frontmatter.id),
         onReject: (task, reason) => void this.onReject(task.frontmatter.id, reason),
@@ -514,6 +521,14 @@ export class AgentBoardView extends ItemView {
       latest = this.noteStore.parse(task.path, content).task;
     } catch (error) {
       new Notice(t('tasks.board.runParseFailed', { error: error instanceof Error ? error.message : String(error) }));
+      await this.refresh();
+      return;
+    }
+
+    // Only ready/needs_fix may run. Guard here so no entry point (menus, future
+    // callers) can start a run from an untriaged or terminal status.
+    if (!isRunnableTaskStatus(latest.frontmatter.status)) {
+      new Notice(t('tasks.board.notRunnable', { title: latest.frontmatter.title }));
       await this.refresh();
       return;
     }

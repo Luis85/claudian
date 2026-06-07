@@ -86,6 +86,9 @@ function makeCallbacks(): AgentBoardRenderCallbacks {
     onCancelPaused: jest.fn(),
     onSendToReview: jest.fn(),
     onMarkFailed: jest.fn(),
+    onArchive: jest.fn(),
+    onOpenNote: jest.fn(),
+    onOpenConversation: jest.fn(),
   };
 }
 
@@ -156,38 +159,459 @@ describe('AgentBoardRenderer — "Run next ready" button visibility', () => {
   });
 });
 
-describe('AgentBoardRenderer — inline action cluster deferred (board-card-actions-menu slice)', () => {
-  // The old inline per-status action buttons (Mark ready / Run / Accept / Reopen /
-  // Back to inbox …) are replaced by a hover action cluster in the next slice. The
-  // card body no longer renders them; cards stay actionable via click→modal and
-  // right-click→context menu. The reply surface (Send/Stop/Approve/Reject) is NOT
-  // part of the deferred cluster and is asserted separately.
-  it('does not render the inline actions container on a card', () => {
+function findCardCluster(host: HTMLElement): HTMLElement | null {
+  return host.querySelector('.claudian-agent-board-card-actions') as HTMLElement | null;
+}
+
+function findClusterPrimary(host: HTMLElement): HTMLButtonElement | null {
+  return host.querySelector('.claudian-agent-board-card-action-primary') as HTMLButtonElement | null;
+}
+
+function findClusterTrigger(host: HTMLElement): HTMLButtonElement | null {
+  return host.querySelector('.claudian-agent-board-card-action-more') as HTMLButtonElement | null;
+}
+
+function openClusterMenu(host: HTMLElement): HTMLElement {
+  const trigger = findClusterTrigger(host);
+  if (!trigger) throw new Error('cluster ⋯ trigger not found');
+  trigger.click();
+  const menu = document.querySelector('.claudian-agent-board-card-menu') as HTMLElement | null;
+  if (!menu) throw new Error('cluster overflow menu did not open');
+  return menu;
+}
+
+function menuItemTexts(menu: HTMLElement): string[] {
+  return Array.from(menu.querySelectorAll('[role="menuitem"]')).map((el) => el.textContent ?? '');
+}
+
+function findMenuItem(menu: HTMLElement, label: string): HTMLButtonElement | null {
+  return (Array.from(menu.querySelectorAll('[role="menuitem"]')) as HTMLButtonElement[]).find(
+    (el) => el.textContent === label,
+  ) ?? null;
+}
+
+afterEach(() => {
+  // The portal popover mounts on document.body; ensure no detached menu leaks
+  // across tests if a case forgets to close it.
+  document.body.querySelectorAll('.claudian-agent-board-card-menu').forEach((el) => el.remove());
+});
+
+describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ menu)', () => {
+  it('renders an action cluster (primary + ⋯ trigger) on every card', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
+    const cluster = findCardCluster(host);
+    expect(cluster).not.toBeNull();
+    expect(findClusterPrimary(host)).not.toBeNull();
+    expect(findClusterTrigger(host)?.getAttribute('aria-label')).toBe('More actions');
+  });
+
+  it('inbox: primary Mark ready → onMarkReady; menu = Open note, Archive (no Run now)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    const task = makeTask('i', 'inbox');
+    renderer.render(host, makeState({ inbox: [task] }), callbacks);
+
+    expect(findClusterPrimary(host)?.textContent).toContain('Mark ready');
+    findClusterPrimary(host)?.click();
+    expect(callbacks.onMarkReady).toHaveBeenCalledWith(task);
+
+    // No "Run now": inbox items aren't runnable until triaged to ready.
+    const menu = openClusterMenu(host);
+    expect(menuItemTexts(menu)).toEqual(['Open note', 'Archive']);
+    findMenuItem(menu, 'Archive')?.click();
+    expect(callbacks.onArchive).toHaveBeenCalledWith(task);
+  });
+
+  it('ready: primary Run → onRun; menu = Open note, Back to inbox (no Archive)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    const task = makeTask('r', 'ready');
+    renderer.render(host, makeState({ ready: [task] }), callbacks);
+
+    expect(findClusterPrimary(host)?.textContent).toContain('Run');
+    findClusterPrimary(host)?.click();
+    expect(callbacks.onRun).toHaveBeenCalledWith(task);
+
+    // No Archive: ready/needs_fix are actionable, not archivable (ARCHIVABLE_STATUSES).
+    const menu = openClusterMenu(host);
+    expect(menuItemTexts(menu)).toEqual(['Open note', 'Back to inbox']);
+    findMenuItem(menu, 'Back to inbox')?.click();
+    expect(callbacks.onMoveToInbox).toHaveBeenCalledWith(task);
+  });
+
+  it('needs_fix: primary Run → onRun (mirrors ready)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    const task = makeTask('nf', 'needs_fix');
+    renderer.render(host, makeState({ needs_fix: [task] }), callbacks);
+    expect(findClusterPrimary(host)?.textContent).toContain('Run');
+    findClusterPrimary(host)?.click();
+    expect(callbacks.onRun).toHaveBeenCalledWith(task);
+  });
+
+  it('running: primary Stop (danger) → onStop; menu = Open note, Open conversation', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    const task = makeTask('rn', 'running');
+    task.frontmatter.conversation_id = 'c1';
+    renderer.render(host, makeState({ running: [task] }), callbacks);
+
+    const primary = findClusterPrimary(host);
+    expect(primary?.textContent).toContain('Stop');
+    expect(primary?.classList.contains('claudian-agent-board-card-action-primary--danger')).toBe(true);
+    primary?.click();
+    expect(callbacks.onStop).toHaveBeenCalledWith(task);
+
+    const menu = openClusterMenu(host);
+    expect(menuItemTexts(menu)).toEqual(['Open note', 'Open conversation']);
+  });
+
+  it('hides Open conversation when the card has no conversation_id', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const task = makeTask('rn2', 'running'); // no conversation_id
+    renderer.render(host, makeState({ running: [task] }), makeCallbacks());
+    expect(menuItemTexts(openClusterMenu(host))).toEqual(['Open note']);
+  });
+
+  it('hides Open conversation when canOpenConversation returns false (deleted conversation)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const task = makeTask('rn3', 'running');
+    task.frontmatter.conversation_id = 'gone';
+    renderer.render(host, makeState({ running: [task] }), { ...makeCallbacks(), canOpenConversation: () => false });
+    expect(menuItemTexts(openClusterMenu(host))).toEqual(['Open note']);
+  });
+
+  it('re-evaluates Open conversation on each open (conversation deleted after render)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    let canOpen = true;
+    const task = makeTask('rn4', 'running');
+    task.frontmatter.conversation_id = 'c1';
+    renderer.render(host, makeState({ running: [task] }), { ...makeCallbacks(), canOpenConversation: () => canOpen });
+
+    // First open: conversation is live → the item is present.
+    expect(menuItemTexts(openClusterMenu(host))).toEqual(['Open note', 'Open conversation']);
+    findClusterTrigger(host)!.click(); // toggle closed
+    // Conversation deleted after render; the lazy items must re-filter on re-open.
+    canOpen = false;
+    expect(menuItemTexts(openClusterMenu(host))).toEqual(['Open note']);
+  });
+
+  it.each<TaskStatus>(['needs_input', 'needs_approval'])(
+    '%s: no primary; menu = Open note, Open conversation, Stop (Stop is destructive)',
+    (status) => {
+      const renderer = new AgentBoardRenderer();
+      const host = document.createElement('div');
+      const callbacks = makeCallbacks();
+      const task = makeTask('p', status);
+      task.frontmatter.conversation_id = 'c1';
+      renderer.render(host, makeState({ live: [task] }), callbacks);
+
+      // No primary action — the reply surface owns the live controls.
+      expect(findClusterPrimary(host)).toBeNull();
+
+      const menu = openClusterMenu(host);
+      expect(menuItemTexts(menu)).toEqual(['Open note', 'Open conversation', 'Stop']);
+      const stop = findMenuItem(menu, 'Stop');
+      expect(stop?.classList.contains('claudian-agent-board-card-menu-item--danger')).toBe(true);
+      stop?.click();
+      expect(callbacks.onStop).toHaveBeenCalledWith(task);
+    },
+  );
+
+  it('review: primary Accept → onAccept; menu = Rework, Open note, Open conversation, Back to inbox', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    const task = makeTask('rv', 'review');
+    task.frontmatter.conversation_id = 'c1';
+    renderer.render(host, makeState({ review: [task] }), callbacks);
+
+    expect(findClusterPrimary(host)?.textContent).toContain('Accept');
+    findClusterPrimary(host)?.click();
+    expect(callbacks.onAccept).toHaveBeenCalledWith(task);
+
+    const menu = openClusterMenu(host);
+    expect(menuItemTexts(menu)).toEqual(['Rework', 'Open note', 'Open conversation', 'Back to inbox']);
+    findMenuItem(menu, 'Rework')?.click();
+    expect(callbacks.onRework).toHaveBeenCalledWith(task);
+  });
+
+  it('needs_handoff: primary Send to review → onSendToReview; menu = Mark failed (danger), Open note', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    const task = makeTask('nh', 'needs_handoff');
+    renderer.render(host, makeState({ needs_handoff: [task] }), callbacks);
+
+    expect(findClusterPrimary(host)?.textContent).toContain('Send to review');
+    findClusterPrimary(host)?.click();
+    expect(callbacks.onSendToReview).toHaveBeenCalledWith(task);
+
+    const menu = openClusterMenu(host);
+    expect(menuItemTexts(menu)).toEqual(['Mark failed', 'Open note']);
+    const markFailed = findMenuItem(menu, 'Mark failed');
+    expect(markFailed?.classList.contains('claudian-agent-board-card-menu-item--danger')).toBe(true);
+    markFailed?.click();
+    expect(callbacks.onMarkFailed).toHaveBeenCalledWith(task);
+  });
+
+  it('done: primary Reopen (ghost) → onReopen; menu = Open note, Archive (Archive destructive)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    const task = makeTask('d', 'done');
+    renderer.render(host, makeState({ done: [task] }), callbacks);
+
+    const primary = findClusterPrimary(host);
+    expect(primary?.textContent).toContain('Reopen');
+    expect(primary?.classList.contains('claudian-agent-board-card-action-primary--ghost')).toBe(true);
+    primary?.click();
+    expect(callbacks.onReopen).toHaveBeenCalledWith(task);
+
+    const menu = openClusterMenu(host);
+    expect(menuItemTexts(menu)).toEqual(['Open note', 'Archive']);
+    const archive = findMenuItem(menu, 'Archive');
+    expect(archive?.classList.contains('claudian-agent-board-card-menu-item--danger')).toBe(true);
+    archive?.click();
+    expect(callbacks.onArchive).toHaveBeenCalledWith(task);
+  });
+
+  it('failed: primary Retry → onMarkReady; menu = Open note, Archive', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    const task = makeTask('f', 'failed');
+    renderer.render(host, makeState({ failed: [task] }), callbacks);
+
+    expect(findClusterPrimary(host)?.textContent).toContain('Retry');
+    findClusterPrimary(host)?.click();
+    expect(callbacks.onMarkReady).toHaveBeenCalledWith(task);
+
+    const menu = openClusterMenu(host);
+    expect(menuItemTexts(menu)).toEqual(['Open note', 'Archive']);
+  });
+
+  it('canceled: primary Retry → onMarkReady (mirrors failed)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    const task = makeTask('c', 'canceled');
+    renderer.render(host, makeState({ canceled: [task] }), callbacks);
+    expect(findClusterPrimary(host)?.textContent).toContain('Retry');
+    findClusterPrimary(host)?.click();
+    expect(callbacks.onMarkReady).toHaveBeenCalledWith(task);
+  });
+
+  it('Open note / Open conversation menu items route to their callbacks', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    const task = makeTask('rn', 'running');
+    task.frontmatter.conversation_id = 'c1';
+    renderer.render(host, makeState({ running: [task] }), callbacks);
+    const menu = openClusterMenu(host);
+    findMenuItem(menu, 'Open note')?.click();
+    expect(callbacks.onOpenNote).toHaveBeenCalledWith(task);
+
+    const menu2 = openClusterMenu(host);
+    findMenuItem(menu2, 'Open conversation')?.click();
+    expect(callbacks.onOpenConversation).toHaveBeenCalledWith(task);
+  });
+
+  it('primary and ⋯ clicks do not bubble to the card click (onOpenDetail)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    const callbacks = makeCallbacks();
+    renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), callbacks);
+    findClusterPrimary(host)?.click();
+    findClusterTrigger(host)?.click();
+    expect(callbacks.onOpenDetail).not.toHaveBeenCalled();
+  });
+});
+
+describe('AgentBoardRenderer — live cards keep the cluster persistent', () => {
+  it.each<TaskStatus>(['running', 'needs_input', 'needs_approval'])(
+    '%s card marks the cluster persistent (always-visible) on the card',
+    (status) => {
+      const renderer = new AgentBoardRenderer();
+      const host = document.createElement('div');
+      renderer.render(host, makeState({ live: [makeTask('p', status)] }), makeCallbacks());
+      const card = findFirstCard(host);
+      const cluster = findCardCluster(host);
+      expect(cluster?.classList.contains('claudian-agent-board-card-actions--persistent')).toBe(true);
+      // The title row reserves right padding so the persistent buttons never
+      // overlap the title text (CSS keys off this modifier on the card).
+      expect(card?.classList.contains('claudian-agent-board-card--live-actions')).toBe(true);
+    },
+  );
+
+  it('non-live cards do not mark the cluster persistent', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
+    expect(findCardCluster(host)?.classList.contains('claudian-agent-board-card-actions--persistent')).toBe(false);
+    expect(findFirstCard(host)?.classList.contains('claudian-agent-board-card--live-actions')).toBe(false);
+  });
+});
+
+describe('AgentBoardRenderer — ⋯ overflow menu (portal-positioned popover)', () => {
+  function stubGeometry(trigger: HTMLElement, rect: Partial<DOMRect>, innerHeight: number): void {
+    trigger.getBoundingClientRect = (() => ({
+      top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0,
+      toJSON: () => ({}),
+      ...rect,
+    })) as () => DOMRect;
+    Object.defineProperty(window, 'innerHeight', { value: innerHeight, configurable: true });
+    Object.defineProperty(window, 'innerWidth', { value: 1200, configurable: true });
+  }
+
+  it('mounts the menu on document.body (a portal, NOT inside the lane scroll container)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    try {
+      renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
+      const menu = openClusterMenu(host);
+      expect(menu.getAttribute('role')).toBe('menu');
+      // The portal lives directly under document.body, not nested in the renderer host.
+      expect(menu.parentElement).toBe(document.body);
+      expect(host.querySelector('.claudian-agent-board-card-menu')).toBeNull();
+    } finally {
+      host.remove();
+    }
+  });
+
+  it('uses role=menu + role=menuitem and a leading icon span per item', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ inbox: [makeTask('i', 'inbox')] }), makeCallbacks());
+    const menu = openClusterMenu(host);
+    expect(menu.getAttribute('role')).toBe('menu');
+    const items = menu.querySelectorAll('[role="menuitem"]');
+    // inbox menu: Open note, Archive (Run now removed — inbox isn't runnable).
+    expect(items.length).toBe(2);
+    items.forEach((item) => {
+      expect(item.querySelector('.claudian-agent-board-card-menu-item-icon')).not.toBeNull();
+    });
+  });
+
+  it('positions with fixed coordinates derived from the trigger rect (drops down with room below)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
+    const trigger = findClusterTrigger(host)!;
+    stubGeometry(trigger, { top: 100, bottom: 120, left: 200, right: 226 }, 800);
+    trigger.click();
+    const menu = document.querySelector('.claudian-agent-board-card-menu') as HTMLElement;
+    // position: fixed comes from the menu CSS class; only the dynamic top/left are inline.
+    expect(menu.classList.contains('claudian-agent-board-card-menu')).toBe(true);
+    // Room below (bottom 120 + menu height < 800) → drops down just under the trigger.
+    expect(parseFloat(menu.style.top)).toBeGreaterThanOrEqual(120);
+    expect(menu.classList.contains('claudian-agent-board-card-menu--up')).toBe(false);
+  });
+
+  it('flips upward when the menu would overflow the viewport bottom', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ review: [makeTask('rv', 'review')] }), makeCallbacks());
+    const trigger = findClusterTrigger(host)!;
+    // Trigger sits near the very bottom of a short viewport → no room below.
+    stubGeometry(trigger, { top: 590, bottom: 598, left: 200, right: 226 }, 600);
+    trigger.click();
+    const menu = document.querySelector('.claudian-agent-board-card-menu') as HTMLElement;
+    expect(menu.classList.contains('claudian-agent-board-card-menu--up')).toBe(true);
+    // Dropped up: the menu's top is above the trigger's top.
+    expect(parseFloat(menu.style.top)).toBeLessThan(590);
+  });
+
+  it('closes on outside-click (mousedown) and returns focus to the trigger', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    try {
+      renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
+      const trigger = findClusterTrigger(host)!;
+      trigger.click();
+      expect(document.querySelector('.claudian-agent-board-card-menu')).not.toBeNull();
+      document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      expect(document.querySelector('.claudian-agent-board-card-menu')).toBeNull();
+      expect(document.activeElement).toBe(trigger);
+    } finally {
+      host.remove();
+    }
+  });
+
+  it('closes on Escape and returns focus to the trigger', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    try {
+      renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
+      const trigger = findClusterTrigger(host)!;
+      trigger.click();
+      const menu = document.querySelector('.claudian-agent-board-card-menu') as HTMLElement;
+      menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(document.querySelector('.claudian-agent-board-card-menu')).toBeNull();
+      expect(document.activeElement).toBe(trigger);
+    } finally {
+      host.remove();
+    }
+  });
+
+  it('closes on scroll (capture) and on resize', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
+
+    findClusterTrigger(host)!.click();
+    expect(document.querySelector('.claudian-agent-board-card-menu')).not.toBeNull();
+    window.dispatchEvent(new Event('scroll'));
+    expect(document.querySelector('.claudian-agent-board-card-menu')).toBeNull();
+
+    findClusterTrigger(host)!.click();
+    expect(document.querySelector('.claudian-agent-board-card-menu')).not.toBeNull();
+    window.dispatchEvent(new Event('resize'));
+    expect(document.querySelector('.claudian-agent-board-card-menu')).toBeNull();
+  });
+
+  it('clicking the ⋯ trigger again closes an open menu (toggle)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
+    const trigger = findClusterTrigger(host)!;
+    trigger.click();
+    expect(document.querySelector('.claudian-agent-board-card-menu')).not.toBeNull();
+    trigger.click();
+    expect(document.querySelector('.claudian-agent-board-card-menu')).toBeNull();
+  });
+
+  it('a full re-render closes any open portal menu (no leaked detached popover)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
+    findClusterTrigger(host)!.click();
+    expect(document.querySelector('.claudian-agent-board-card-menu')).not.toBeNull();
+    // Re-render (e.g. board refresh) must tear the portal down.
+    renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
+    expect(document.querySelector('.claudian-agent-board-card-menu')).toBeNull();
+  });
+
+  it('selecting a menu item closes the menu', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     renderer.render(host, makeState({ done: [makeTask('d', 'done')] }), makeCallbacks());
-    expect(host.querySelector('.claudian-agent-board-card-actions')).toBeNull();
-  });
-
-  it('does not render per-status action buttons (Reopen / Accept / Run / Mark ready)', () => {
-    const renderer = new AgentBoardRenderer();
-    const host = document.createElement('div');
-    renderer.render(
-      host,
-      makeState({
-        inbox: [makeTask('i', 'inbox')],
-        ready: [makeTask('r', 'ready')],
-        review: [makeTask('rv', 'review')],
-        done: [makeTask('d', 'done')],
-      }),
-      makeCallbacks(),
-    );
-    const texts = buttonTexts(host);
-    expect(texts).not.toContain('Reopen');
-    expect(texts).not.toContain('Accept');
-    expect(texts).not.toContain('Rework');
-    expect(texts).not.toContain('Mark ready');
-    // The Inbox add-row button and toolbar buttons are unrelated to the card cluster.
+    const menu = openClusterMenu(host);
+    findMenuItem(menu, 'Open note')?.click();
+    expect(document.querySelector('.claudian-agent-board-card-menu')).toBeNull();
   });
 });
 
@@ -533,40 +957,34 @@ describe('AgentBoardRenderer — merged board toolbar', () => {
   });
 });
 
-function buttonTexts(host: HTMLElement): string[] {
-  return Array.from(host.querySelectorAll('button')).map((btn) => btn.textContent ?? '');
-}
-
-describe('AgentBoardRenderer — recovery actions deferred to hover cluster', () => {
-  // The inline recovery buttons (Retry / Back to inbox …) move to the hover action
-  // cluster in the next slice (board-card-actions-menu). The card body no longer
-  // renders them inline; recovery stays reachable via the right-click context menu.
-  it('does not render inline recovery buttons (Back to inbox / Retry) on cards', () => {
+describe('AgentBoardRenderer — recovery actions live in the hover cluster', () => {
+  // The recovery actions restored by this slice: Retry is the in-card primary for
+  // failed/canceled; Back to inbox is a ⋯ menu item (rendered in the portal on
+  // document.body, not inline in the card body).
+  it('renders Retry as the in-card primary for failed and canceled cards', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
-    renderer.render(
-      host,
-      makeState({ ready: [makeTask('r', 'ready')], failed: [makeTask('f', 'failed')], canceled: [makeTask('c', 'canceled')] }),
-      makeCallbacks(),
-    );
-    const texts = buttonTexts(host);
-    expect(texts).not.toContain('Back to inbox');
-    expect(texts).not.toContain('Retry');
+    renderer.render(host, makeState({ failed: [makeTask('f', 'failed')] }), makeCallbacks());
+    expect(findClusterPrimary(host)?.textContent).toContain('Retry');
+
+    const host2 = document.createElement('div');
+    new AgentBoardRenderer().render(host2, makeState({ canceled: [makeTask('c', 'canceled')] }), makeCallbacks());
+    expect(findClusterPrimary(host2)?.textContent).toContain('Retry');
   });
 
-  // A live paused run (needs_input / needs_approval) is driven solely by its reply
-  // surface (Send / Approve / Reject / Stop) — the reply surface is NOT part of the
-  // deferred hover cluster and stays on the card body.
+  // A live paused run (needs_input / needs_approval) keeps its reply surface (Send /
+  // Approve / Reject / Stop) AND gains the persistent cluster ⋯ menu — the reply
+  // surface and the cluster coexist on live cards.
   it.each<TaskStatus>(['needs_input', 'needs_approval'])(
-    'keeps the reply surface on live %s cards (not part of the deferred cluster)',
+    'keeps the reply surface AND the cluster ⋯ on live %s cards',
     (status) => {
       const renderer = new AgentBoardRenderer();
       const host = document.createElement('div');
       renderer.render(host, makeState({ live: [makeTask('p', status)] }), makeCallbacks());
-      const texts = buttonTexts(host);
-      expect(texts).not.toContain('Back to inbox');
-      expect(texts).not.toContain('Resume');
       expect(host.querySelector('.claudian-agent-board-card-reply')).not.toBeNull();
+      expect(findClusterTrigger(host)).not.toBeNull();
+      // No in-card primary — the reply surface owns the live controls.
+      expect(findClusterPrimary(host)).toBeNull();
     },
   );
 });

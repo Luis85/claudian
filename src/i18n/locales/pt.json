@@ -758,6 +758,12 @@
         "archive": "Arquivar",
         "delete": "Excluir"
       },
+      "cardAction": {
+        "run": "Executar",
+        "retry": "Tentar novamente",
+        "backToInbox": "Voltar à entrada",
+        "moreActions": "Mais ações"
+      },
       "card": {
         "reply": {
           "inputPlaceholder": "Your reply…",
@@ -771,7 +777,8 @@
           "reject": "Reject",
           "defaultRejectReason": "rejected"
         }
-      }
+      },
+      "notRunnable": "Mark \"{title}\" ready before running."
     },
     "template": {
       "nameRequired": "Template name is required.",

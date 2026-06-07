@@ -758,6 +758,12 @@
         "archive": "アーカイブ",
         "delete": "削除"
       },
+      "cardAction": {
+        "run": "実行",
+        "retry": "再試行",
+        "backToInbox": "受信トレイに戻す",
+        "moreActions": "その他の操作"
+      },
       "card": {
         "reply": {
           "inputPlaceholder": "Your reply…",
@@ -771,7 +777,8 @@
           "reject": "Reject",
           "defaultRejectReason": "rejected"
         }
-      }
+      },
+      "notRunnable": "Mark \"{title}\" ready before running."
     },
     "template": {
       "nameRequired": "Template name is required.",

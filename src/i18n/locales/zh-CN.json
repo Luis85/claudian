@@ -758,6 +758,12 @@
         "archive": "归档",
         "delete": "删除"
       },
+      "cardAction": {
+        "run": "运行",
+        "retry": "重试",
+        "backToInbox": "退回收件箱",
+        "moreActions": "更多操作"
+      },
       "card": {
         "reply": {
           "inputPlaceholder": "Your reply…",
@@ -771,7 +777,8 @@
           "reject": "Reject",
           "defaultRejectReason": "rejected"
         }
-      }
+      },
+      "notRunnable": "Mark \"{title}\" ready before running."
     },
     "template": {
       "nameRequired": "Template name is required.",

@@ -758,6 +758,12 @@
         "archive": "В архив",
         "delete": "Удалить"
       },
+      "cardAction": {
+        "run": "Запустить",
+        "retry": "Повторить",
+        "backToInbox": "Назад во входящие",
+        "moreActions": "Ещё действия"
+      },
       "card": {
         "reply": {
           "inputPlaceholder": "Your reply…",
@@ -771,7 +777,8 @@
           "reject": "Reject",
           "defaultRejectReason": "rejected"
         }
-      }
+      },
+      "notRunnable": "Mark \"{title}\" ready before running."
     },
     "template": {
       "nameRequired": "Template name is required.",
