@@ -26,13 +26,14 @@ describe('work-order activity contracts', () => {
       sidepanelTabId: 'tab-1',
     };
     const provider: WorkOrderActivityProvider = {
-      getSummary: () => ({ items: [item], runningCount: 0, attentionCount: 1 }),
+      getSummary: () => ({ items: [item], closableTabs: [], runningCount: 0, attentionCount: 1 }),
       subscribe: jest.fn(() => jest.fn()),
       openItem: jest.fn(async () => undefined),
+      closeTab: jest.fn(async () => undefined),
       dispose: jest.fn(),
     };
 
-    expect(EMPTY_WORK_ORDER_ACTIVITY_SUMMARY).toEqual({ items: [], runningCount: 0, attentionCount: 0 });
+    expect(EMPTY_WORK_ORDER_ACTIVITY_SUMMARY).toEqual({ items: [], closableTabs: [], runningCount: 0, attentionCount: 0 });
     expect(Object.isFrozen(EMPTY_WORK_ORDER_ACTIVITY_SUMMARY)).toBe(true);
     expect(Object.isFrozen(EMPTY_WORK_ORDER_ACTIVITY_SUMMARY.items)).toBe(true);
     expect(provider.getSummary().items[0].actionHintKey).toBe('workOrderActivity.action.reply');

@@ -555,6 +555,7 @@ export class ClaudianView extends ItemView {
     this.workOrderActivityDropdown = new WorkOrderActivityDropdown(this.workOrderActivitySlotEl, {
       summary: this.plugin.workOrderActivity.getSummary(),
       onOpenItem: (id) => this.plugin.workOrderActivity?.openItem(id),
+      onCloseItem: (tabId) => this.plugin.workOrderActivity?.closeTab(tabId),
     });
     this.disposeWorkOrderActivitySubscription = this.plugin.workOrderActivity.subscribe((summary) => {
       this.workOrderActivityDropdown?.update(summary);

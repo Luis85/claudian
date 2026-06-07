@@ -502,6 +502,21 @@ export class TabManager implements TabManagerInterface {
   // ============================================
 
   /** Gets data for rendering the tab bar. */
+  /**
+   * Open work-order tabs with their display titles. Work-order badges are hidden
+   * from the visible tab bar, so the Work Orders dropdown uses this to offer a
+   * close affordance for finished/orphaned work-order tabs that would otherwise
+   * be invisible and keep consuming the work-order slot budget.
+   */
+  listWorkOrderTabs(): Array<{ id: string; title: string }> {
+    const out: Array<{ id: string; title: string }> = [];
+    for (const tab of this.getOrderedTabs()) {
+      if (tab.kind !== 'work-order') continue;
+      out.push({ id: tab.id, title: getTabTitle(tab, this.plugin) });
+    }
+    return out;
+  }
+
   getTabBarItems(): TabBarItem[] {
     const items: TabBarItem[] = [];
     let index = 1;

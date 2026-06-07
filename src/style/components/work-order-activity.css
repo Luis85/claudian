@@ -87,3 +87,34 @@
   font-size: 11px;
   font-weight: 600;
 }
+
+/* Finished/orphaned work-order tabs: the row itself is not a navigation target;
+   only the explicit close affordance acts. */
+.claudian-work-order-activity-item--finished {
+  cursor: default;
+}
+
+.claudian-work-order-activity-item--finished:hover,
+.claudian-work-order-activity-item--finished:focus {
+  background: transparent;
+}
+
+.claudian-work-order-activity-close {
+  grid-area: action;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.claudian-work-order-activity-close:hover,
+.claudian-work-order-activity-close:focus {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  outline: none;
+}

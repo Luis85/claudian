@@ -815,15 +815,18 @@
   "workOrderActivity": {
     "toggleRunning": "{count} 個活動工作單",
     "toggleAttention": "{count} 個活動工作單，{attention} 個需要處理",
+    "toggleFinished": "{count} 個已完成工作單",
     "status": {
       "running": "執行中",
       "needsInput": "需要輸入",
-      "needsApproval": "需要核准"
+      "needsApproval": "需要核准",
+      "finished": "已完成"
     },
     "action": {
       "open": "開啟",
       "reply": "回覆",
-      "review": "審閱"
+      "review": "審閱",
+      "close": "關閉分頁"
     }
   }
 }

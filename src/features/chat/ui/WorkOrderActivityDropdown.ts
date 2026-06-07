@@ -6,6 +6,7 @@ import { t } from '../../../i18n/i18n';
 export interface WorkOrderActivityDropdownProps {
   summary: WorkOrderActivitySummary;
   onOpenItem(id: string): void | Promise<void>;
+  onCloseItem(tabId: string): void | Promise<void>;
 }
 
 export class WorkOrderActivityDropdown {
@@ -17,7 +18,7 @@ export class WorkOrderActivityDropdown {
 
   update(summary: WorkOrderActivitySummary): void {
     this.props = { ...this.props, summary };
-    if (summary.items.length === 0) this.open = false;
+    if (this.entryCount(summary) === 0) this.open = false;
     this.render();
   }
 
@@ -25,10 +26,14 @@ export class WorkOrderActivityDropdown {
     this.hostEl.empty();
   }
 
+  private entryCount(summary: WorkOrderActivitySummary): number {
+    return summary.items.length + summary.closableTabs.length;
+  }
+
   private render(): void {
     this.hostEl.empty();
     const { summary } = this.props;
-    if (summary.items.length === 0) return;
+    if (this.entryCount(summary) === 0) return;
     const root = this.hostEl.createDiv({ cls: 'claudian-work-order-activity' });
     const classes = ['claudian-header-btn', 'claudian-work-order-activity-toggle'];
     if (summary.attentionCount > 0) classes.push('claudian-work-order-activity-toggle--attention');
@@ -39,7 +44,7 @@ export class WorkOrderActivityDropdown {
     toggle.setAttribute('aria-expanded', this.open ? 'true' : 'false');
     toggle.setAttribute('aria-label', this.toggleLabel(summary));
     setIcon(toggle.createSpan({ cls: 'claudian-work-order-activity-icon' }), 'clipboard-list');
-    toggle.createSpan({ cls: 'claudian-work-order-activity-count', text: String(summary.items.length) });
+    toggle.createSpan({ cls: 'claudian-work-order-activity-count', text: String(this.entryCount(summary)) });
     toggle.addEventListener('click', (event) => {
       event.stopPropagation();
       this.open = !this.open;
@@ -73,6 +78,29 @@ export class WorkOrderActivityDropdown {
         this.selectItem(item.id);
       });
     }
+    for (const tab of this.props.summary.closableTabs) {
+      const row = menu.createDiv({
+        cls: 'claudian-work-order-activity-item claudian-work-order-activity-item--finished',
+      });
+      row.setAttribute('role', 'menuitem');
+      row.createSpan({ cls: 'claudian-work-order-activity-title', text: tab.title });
+      row.createSpan({ cls: 'claudian-work-order-activity-status', text: t('workOrderActivity.status.finished') });
+      const close = row.createSpan({ cls: 'claudian-work-order-activity-close' });
+      close.setAttribute('role', 'button');
+      close.setAttribute('tabindex', '0');
+      close.setAttribute('aria-label', t('workOrderActivity.action.close'));
+      setIcon(close, 'x');
+      close.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.closeTab(tab.tabId);
+      });
+      close.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        event.stopPropagation();
+        this.closeTab(tab.tabId);
+      });
+    }
   }
 
   private selectItem(id: string): void {
@@ -81,12 +109,21 @@ export class WorkOrderActivityDropdown {
     this.render();
   }
 
+  private closeTab(tabId: string): void {
+    void this.props.onCloseItem(tabId);
+    // Keep the menu open so the user can dismiss several finished tabs in a row;
+    // the subsequent summary update re-renders (and collapses if nothing remains).
+  }
+
   private toggleLabel(summary: WorkOrderActivitySummary): string {
     if (summary.attentionCount > 0) {
       return t('workOrderActivity.toggleAttention', {
         count: String(summary.items.length),
         attention: String(summary.attentionCount),
       });
+    }
+    if (summary.items.length === 0 && summary.closableTabs.length > 0) {
+      return t('workOrderActivity.toggleFinished', { count: String(summary.closableTabs.length) });
     }
     return t('workOrderActivity.toggleRunning', { count: String(summary.items.length) });
   }

@@ -815,15 +815,18 @@
   "workOrderActivity": {
     "toggleRunning": "{count} ordre(s) de travail actif(s)",
     "toggleAttention": "{count} ordre(s) de travail actif(s), {attention} demande attention",
+    "toggleFinished": "{count} ordre(s) de travail terminé(s)",
     "status": {
       "running": "En cours",
       "needsInput": "Demande une réponse",
-      "needsApproval": "Demande approbation"
+      "needsApproval": "Demande approbation",
+      "finished": "Terminé"
     },
     "action": {
       "open": "Ouvrir",
       "reply": "Répondre",
-      "review": "Examiner"
+      "review": "Examiner",
+      "close": "Fermer l'onglet"
     }
   }
 }

@@ -14,17 +14,21 @@ const item = {
 };
 
 describe('WorkOrderActivityDropdown', () => {
-  it('renders nothing with no active items', () => {
+  it('renders nothing with no active items and no closable tabs', () => {
     const host = createMockEl();
-    new WorkOrderActivityDropdown(host, { summary: { items: [], runningCount: 0, attentionCount: 0 }, onOpenItem: jest.fn() });
+    new WorkOrderActivityDropdown(host, {
+      summary: { items: [], closableTabs: [], runningCount: 0, attentionCount: 0 },
+      onOpenItem: jest.fn(),
+      onCloseItem: jest.fn(),
+    });
     expect(host._children).toHaveLength(0);
   });
 
   it('renders count, attention state, rows, and delegates selection', async () => {
     const host = createMockEl();
     const onOpenItem = jest.fn(async () => undefined);
-    const summary: WorkOrderActivitySummary = { items: [item], runningCount: 0, attentionCount: 1 };
-    new WorkOrderActivityDropdown(host, { summary, onOpenItem });
+    const summary: WorkOrderActivitySummary = { items: [item], closableTabs: [], runningCount: 0, attentionCount: 1 };
+    new WorkOrderActivityDropdown(host, { summary, onOpenItem, onCloseItem: jest.fn() });
 
     const toggle = host.querySelector('.claudian-work-order-activity-toggle');
     expect(toggle?.hasClass('claudian-work-order-activity-toggle--attention')).toBe(true);
@@ -37,5 +41,30 @@ describe('WorkOrderActivityDropdown', () => {
     await Promise.resolve();
 
     expect(onOpenItem).toHaveBeenCalledWith('task-1');
+  });
+
+  it('surfaces a closable finished tab with a close affordance and delegates closing', async () => {
+    const host = createMockEl();
+    const onCloseItem = jest.fn(async () => undefined);
+    const summary: WorkOrderActivitySummary = {
+      items: [],
+      closableTabs: [{ tabId: 'tab-9', title: 'Finished WO' }],
+      runningCount: 0,
+      attentionCount: 0,
+    };
+    new WorkOrderActivityDropdown(host, { summary, onOpenItem: jest.fn(), onCloseItem });
+
+    // The dropdown shows even with no active items, counting the closable tab.
+    const toggle = host.querySelector('.claudian-work-order-activity-toggle');
+    expect(toggle).not.toBeNull();
+    expect(host.querySelector('.claudian-work-order-activity-count')?.textContent).toBe('1');
+
+    toggle?.click();
+    const close = host.querySelector('.claudian-work-order-activity-close');
+    expect(close).not.toBeNull();
+    close?.click();
+    await Promise.resolve();
+
+    expect(onCloseItem).toHaveBeenCalledWith('tab-9');
   });
 });

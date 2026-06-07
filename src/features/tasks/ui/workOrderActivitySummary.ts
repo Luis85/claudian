@@ -39,6 +39,9 @@ export function buildWorkOrderActivitySummary(tasks: TaskSpec[]): WorkOrderActiv
   items.sort((a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status] || a.title.localeCompare(b.title));
   return {
     items,
+    // Closable (finished/orphaned) tabs come from live tab state, not the vault
+    // task model, so the provider fills this in after composing the active items.
+    closableTabs: [],
     runningCount: items.filter((item) => item.status === 'running').length,
     attentionCount: items.filter((item) => item.status !== 'running').length,
   };

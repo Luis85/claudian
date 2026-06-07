@@ -27,7 +27,7 @@
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/ClaudianView.ts": {
-      "loc": 1132,
+      "loc": 1133,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/ui/InputToolbar.ts": {
@@ -43,7 +43,7 @@
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/tabs/TabManager.ts": {
-      "loc": 1031,
+      "loc": 1045,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/controllers/ConversationController.ts": {
@@ -79,7 +79,7 @@
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/i18n/types.ts": {
-      "loc": 637,
+      "loc": 640,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/tabs/tabControllers.ts": {

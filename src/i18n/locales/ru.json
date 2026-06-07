@@ -815,15 +815,18 @@
   "workOrderActivity": {
     "toggleRunning": "Активных рабочих заданий: {count}",
     "toggleAttention": "Активных рабочих заданий: {count}, требуют внимания: {attention}",
+    "toggleFinished": "Завершённых рабочих заданий: {count}",
     "status": {
       "running": "Выполняется",
       "needsInput": "Нужен ввод",
-      "needsApproval": "Нужно одобрение"
+      "needsApproval": "Нужно одобрение",
+      "finished": "Завершено"
     },
     "action": {
       "open": "Открыть",
       "reply": "Ответить",
-      "review": "Проверить"
+      "review": "Проверить",
+      "close": "Закрыть вкладку"
     }
   }
 }

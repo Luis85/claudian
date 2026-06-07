@@ -4,6 +4,8 @@ import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import { asSettingsBag } from '../../../core/types/settings';
 import type {
+  WorkOrderActivityClosableTab,
+  WorkOrderActivityItem,
   WorkOrderActivityProvider as WorkOrderActivityProviderContract,
   WorkOrderActivitySummary,
 } from '../../../core/types/workOrderActivity';
@@ -108,8 +110,46 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
     const generation = ++this.refreshGeneration;
     const model = await this.indexModel();
     if (generation !== this.refreshGeneration) return;
-    this.summary = buildWorkOrderActivitySummary(model.tasks);
+    const base = buildWorkOrderActivitySummary(model.tasks);
+    this.summary = { ...base, closableTabs: this.collectClosableTabs(base.items) };
     for (const listener of [...this.listeners]) listener(this.summary);
+  }
+
+  // Open work-order tabs whose run is no longer active. Work-order badges are
+  // hidden from the tab bar, so a finished/orphaned work-order tab would be
+  // invisible and uncloseable while still consuming the work-order slot budget
+  // (blocking the next queued/manual run). The dropdown offers an explicit close
+  // for these; "active" tabs (those backing a running/needs-input/needs-approval
+  // item) are excluded because their row already navigates to the live tab.
+  private collectClosableTabs(activeItems: readonly WorkOrderActivityItem[]): WorkOrderActivityClosableTab[] {
+    const activeTabIds = new Set(
+      activeItems.map((item) => item.sidepanelTabId).filter((id): id is string => typeof id === 'string'),
+    );
+    const seen = new Set<string>();
+    const result: WorkOrderActivityClosableTab[] = [];
+    for (const view of this.plugin.getAllViews()) {
+      const manager = view.getTabManager();
+      if (typeof manager?.listWorkOrderTabs !== 'function') continue;
+      for (const tab of manager.listWorkOrderTabs()) {
+        if (activeTabIds.has(tab.id) || seen.has(tab.id)) continue;
+        seen.add(tab.id);
+        result.push({ tabId: tab.id, title: tab.title });
+      }
+    }
+    return result;
+  }
+
+  async closeTab(tabId: string): Promise<void> {
+    for (const view of this.plugin.getAllViews()) {
+      const manager = view.getTabManager();
+      if (!manager?.getTab(tabId)) continue;
+      // Force-close: a finished work-order tab is never streaming, and this frees
+      // the work-order slot so AgentBoardView's chat:tabs-changed handler can tick
+      // the next queued run.
+      await manager.closeTab(tabId, true);
+      void this.refresh();
+      return;
+    }
   }
 
   async openItem(id: string): Promise<void> {

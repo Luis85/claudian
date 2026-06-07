@@ -815,15 +815,18 @@
   "workOrderActivity": {
     "toggleRunning": "{count} 个活动工单",
     "toggleAttention": "{count} 个活动工单，{attention} 个需要处理",
+    "toggleFinished": "{count} 个已完成工单",
     "status": {
       "running": "运行中",
       "needsInput": "需要输入",
-      "needsApproval": "需要批准"
+      "needsApproval": "需要批准",
+      "finished": "已完成"
     },
     "action": {
       "open": "打开",
       "reply": "回复",
-      "review": "审阅"
+      "review": "审阅",
+      "close": "关闭标签页"
     }
   }
 }

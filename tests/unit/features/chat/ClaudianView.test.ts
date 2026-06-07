@@ -863,9 +863,10 @@ describe('ClaudianView work-order activity', () => {
       vaultSkillAggregator: null,
       settings: {},
       workOrderActivity: {
-        getSummary: () => ({ items: [], runningCount: 0, attentionCount: 0 }),
+        getSummary: () => ({ items: [], closableTabs: [], runningCount: 0, attentionCount: 0 }),
         subscribe: jest.fn(() => jest.fn()),
         openItem: jest.fn(),
+        closeTab: jest.fn(),
       },
     };
     view.tabManager = { getActiveTab: jest.fn(() => null) };

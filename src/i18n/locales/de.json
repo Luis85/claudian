@@ -815,15 +815,18 @@
   "workOrderActivity": {
     "toggleRunning": "{count} aktive Arbeitsauftrag(e)",
     "toggleAttention": "{count} aktive Arbeitsauftrag(e), {attention} benötigt Aufmerksamkeit",
+    "toggleFinished": "{count} abgeschlossene(r) Arbeitsauftrag/Arbeitsaufträge",
     "status": {
       "running": "Läuft",
       "needsInput": "Benötigt Eingabe",
-      "needsApproval": "Benötigt Freigabe"
+      "needsApproval": "Benötigt Freigabe",
+      "finished": "Abgeschlossen"
     },
     "action": {
       "open": "Öffnen",
       "reply": "Antworten",
-      "review": "Prüfen"
+      "review": "Prüfen",
+      "close": "Tab schließen"
     }
   }
 }

@@ -220,6 +220,52 @@ describe('WorkOrderActivityProvider', () => {
     });
   });
 
+  describe('closable work-order tabs', () => {
+    function closableHarness(overrides: Record<string, unknown> = {}) {
+      const closeTab = jest.fn(async () => true);
+      const listWorkOrderTabs = jest.fn(() => [
+        { id: 'tab-1', title: 'Active WO' },
+        { id: 'tab-2', title: 'Finished WO' },
+      ]);
+      const getTab = jest.fn((id: string) => (id === 'tab-1' || id === 'tab-2' ? {} : null));
+      const manager = { getTab, switchToTab: jest.fn(), closeTab, listWorkOrderTabs, ...overrides };
+      const plugin: any = {
+        settings: { agentBoardWorkOrderFolder: 'Agent Board/tasks' },
+        events: { on: jest.fn(() => jest.fn()) },
+        getAllViews: jest.fn(() => [{ leaf: {}, getTabManager: () => manager }]),
+        app: { vault: {}, workspace: { revealLeaf: jest.fn() } },
+      };
+      const provider = new WorkOrderActivityProvider(plugin, {
+        indexTasks: jest.fn(async () => ({ tasks: [activeTask], invalidNotes: [] })),
+      });
+      return { provider, closeTab, listWorkOrderTabs };
+    }
+
+    it('lists open work-order tabs with no active run as closable (excluding active ones)', async () => {
+      // activeTask backs sidepanel tab "tab-1", so only "tab-2" is closable.
+      const { provider } = closableHarness();
+      await provider.refresh();
+
+      expect(provider.getSummary().closableTabs).toEqual([{ tabId: 'tab-2', title: 'Finished WO' }]);
+    });
+
+    it('force-closes the owning work-order tab to free the slot', async () => {
+      const { provider, closeTab } = closableHarness();
+      await provider.refresh();
+
+      await provider.closeTab('tab-2');
+
+      expect(closeTab).toHaveBeenCalledWith('tab-2', true);
+    });
+
+    it('reports no closable tabs when the tab manager cannot enumerate them', async () => {
+      const { provider } = closableHarness({ listWorkOrderTabs: undefined });
+      await provider.refresh();
+
+      expect(provider.getSummary().closableTabs).toEqual([]);
+    });
+  });
+
   it('persists field edits when the fallback detail modal saves', async () => {
     const noteContent = [
       '---',
