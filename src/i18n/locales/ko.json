@@ -752,6 +752,14 @@
       "noReady": "No ready work orders to run.",
       "laneSaveFailed": "Could not save lane change: {error}",
       "addWorkOrder": "+ Add work order",
+      "addWorkOrderButton": "Add work order",
+      "runNextReady": "Run next ready",
+      "autoRun": {
+        "label": "Auto-run",
+        "tooltip": "Automatically starts work orders once they reach Ready. Runs in the background."
+      },
+      "activeCount": "{n}/{m} active",
+      "tabCount": "Work-order tabs {n}/{m} · {k} free",
       "contextMenu": {
         "openNote": "노트 열기",
         "openConversation": "대화 열기",

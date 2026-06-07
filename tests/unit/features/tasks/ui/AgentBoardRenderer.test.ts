@@ -924,7 +924,7 @@ describe('AgentBoardRenderer — card body (title dot / meta / footer)', () => {
   });
 });
 
-describe('AgentBoardRenderer — queue toolbar', () => {
+describe('AgentBoardRenderer — Auto-run switch (renamed queue toggle)', () => {
   function renderQueue(host: HTMLElement, overrides: Partial<QueueToolbarState> = {}): void {
     new AgentBoardRenderer().render(
       host,
@@ -944,17 +944,115 @@ describe('AgentBoardRenderer — queue toolbar', () => {
     );
   }
 
-  it('renders the toolbar toggle in running state by default', () => {
+  function findSwitch(host: HTMLElement): HTMLElement | null {
+    return host.querySelector('.claudian-agent-board-toolbar-autorun') as HTMLElement | null;
+  }
+
+  it('renders a role=switch control labelled "Auto-run" with a tooltip', () => {
     const host = document.createElement('div');
     renderQueue(host);
-    const toggle = host.querySelector('.claudian-agent-board-toolbar--queue-toggle');
-    expect(toggle?.textContent).toBe('Pause queue');
-    expect(
-      host.querySelector('.claudian-agent-board-toolbar--queue-active-count')?.textContent,
-    ).toContain('0/1');
+    const sw = findSwitch(host);
+    expect(sw).not.toBeNull();
+    expect(sw?.getAttribute('role')).toBe('switch');
+    expect(sw?.textContent).toContain('Auto-run');
+    // Tooltip present on both title + aria-label so hover + SR both get it.
+    const tooltip = 'Automatically starts work orders once they reach Ready. Runs in the background.';
+    expect(sw?.getAttribute('title')).toBe(tooltip);
+    expect(sw?.getAttribute('aria-label')).toBe(tooltip);
+    // Keyboard reachable.
+    expect(sw?.getAttribute('tabindex') ?? (sw?.tagName === 'BUTTON' ? '0' : null)).not.toBeNull();
   });
 
-  it('renders failure counter when > 0', () => {
+  it('renders ON (aria-checked=true) with the on visual when not paused', () => {
+    const host = document.createElement('div');
+    renderQueue(host, { paused: false });
+    const sw = findSwitch(host)!;
+    expect(sw.getAttribute('aria-checked')).toBe('true');
+    expect(sw.classList.contains('claudian-agent-board-toolbar-autorun--on')).toBe(true);
+    expect(sw.classList.contains('claudian-agent-board-toolbar-autorun--off')).toBe(false);
+    // Thumb carries the translate class only when ON.
+    const thumb = sw.querySelector('.claudian-agent-board-toolbar-autorun-thumb') as HTMLElement;
+    expect(thumb.classList.contains('claudian-agent-board-toolbar-autorun-thumb--on')).toBe(true);
+  });
+
+  it('renders OFF (aria-checked=false) with the off visual when paused', () => {
+    const host = document.createElement('div');
+    renderQueue(host, { paused: true });
+    const sw = findSwitch(host)!;
+    expect(sw.getAttribute('aria-checked')).toBe('false');
+    expect(sw.classList.contains('claudian-agent-board-toolbar-autorun--off')).toBe(true);
+    expect(sw.classList.contains('claudian-agent-board-toolbar-autorun--on')).toBe(false);
+    const thumb = sw.querySelector('.claudian-agent-board-toolbar-autorun-thumb') as HTMLElement;
+    expect(thumb.classList.contains('claudian-agent-board-toolbar-autorun-thumb--on')).toBe(false);
+  });
+
+  it('is OFF when the watcher is halted (a halt forces a paused presentation)', () => {
+    const host = document.createElement('div');
+    renderQueue(host, { halted: true, haltReason: 'boom' });
+    const sw = findSwitch(host)!;
+    expect(sw.getAttribute('aria-checked')).toBe('false');
+    expect(sw.classList.contains('claudian-agent-board-toolbar-autorun--off')).toBe(true);
+  });
+
+  it('renders the switch track + thumb structure', () => {
+    const host = document.createElement('div');
+    renderQueue(host);
+    const sw = findSwitch(host)!;
+    expect(sw.querySelector('.claudian-agent-board-toolbar-autorun-track')).not.toBeNull();
+    expect(sw.querySelector('.claudian-agent-board-toolbar-autorun-thumb')).not.toBeNull();
+    expect(sw.querySelector('.claudian-agent-board-toolbar-autorun-label')?.textContent).toBe('Auto-run');
+  });
+
+  it('invokes onToggle on click', () => {
+    const host = document.createElement('div');
+    let clicked = 0;
+    renderQueue(host, { onToggle: () => { clicked += 1; } });
+    (findSwitch(host) as HTMLButtonElement).click();
+    expect(clicked).toBe(1);
+  });
+
+  it('invokes onToggle on Enter and Space (keyboard-operable)', () => {
+    const host = document.createElement('div');
+    let clicked = 0;
+    renderQueue(host, { onToggle: () => { clicked += 1; } });
+    const sw = findSwitch(host)!;
+    sw.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    sw.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    expect(clicked).toBe(2);
+  });
+
+  it('renders the active count with a soft-ring dot', () => {
+    const host = document.createElement('div');
+    renderQueue(host, { slotOccupied: 1, slotCapacity: 2 });
+    const active = host.querySelector('.claudian-agent-board-toolbar--queue-active-count');
+    expect(active?.textContent).toContain('1/2 active');
+    expect(active?.querySelector('.claudian-agent-board-toolbar-active-dot')).not.toBeNull();
+  });
+
+  it('renders the right-side work-order tab + free count', () => {
+    const host = document.createElement('div');
+    new AgentBoardRenderer().render(
+      host,
+      {
+        ...makeState({ ready: [makeTask('r', 'ready')] }),
+        slots: { used: 1, max: 4 },
+        queue: {
+          paused: false,
+          halted: false,
+          slotOccupied: 0,
+          slotCapacity: 1,
+          consecutiveFailures: 0,
+          onToggle: () => {},
+        },
+      },
+      makeCallbacks(),
+    );
+    const slots = host.querySelector('.claudian-agent-board-slots');
+    expect(slots?.textContent).toContain('Work-order tabs 1/4');
+    expect(slots?.textContent).toContain('3 free');
+  });
+
+  it('renders the failure counter caption when > 0', () => {
     const host = document.createElement('div');
     renderQueue(host, { consecutiveFailures: 2 });
     expect(
@@ -962,29 +1060,18 @@ describe('AgentBoardRenderer — queue toolbar', () => {
     ).toContain('2');
   });
 
-  it('surfaces the halt reason inline and flips the toggle to run', () => {
+  it('preserves the halt caption (historical "Queue halted" wording) near the switch', () => {
     const host = document.createElement('div');
     renderQueue(host, { halted: true, haltReason: '3 consecutive failures · last: boom' });
-    const toggle = host.querySelector('.claudian-agent-board-toolbar--queue-toggle');
-    expect(toggle?.textContent).toBe('Run queue');
-    expect(toggle?.classList.contains('claudian-agent-board-toolbar--queue-toggle-halted')).toBe(true);
-    expect(
-      host.querySelector('.claudian-agent-board-toolbar--queue-failure-count')?.textContent,
-    ).toContain('boom');
-  });
-
-  it('invokes the toggle callback on click', () => {
-    const host = document.createElement('div');
-    let clicked = false;
-    renderQueue(host, { onToggle: () => { clicked = true; } });
-    (host.querySelector('.claudian-agent-board-toolbar--queue-toggle') as HTMLButtonElement)?.click();
-    expect(clicked).toBe(true);
+    const caption = host.querySelector('.claudian-agent-board-toolbar--queue-failure-count');
+    expect(caption?.textContent).toContain('Queue halted');
+    expect(caption?.textContent).toContain('boom');
   });
 });
 
 
 describe('AgentBoardRenderer — merged board toolbar', () => {
-  it('renders board actions and queue information in one toolbar row', () => {
+  it('renders board actions and the Auto-run switch in one toolbar row', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     const state = makeState({ ready: [makeTask('r', 'ready')] });
@@ -1003,10 +1090,27 @@ describe('AgentBoardRenderer — merged board toolbar', () => {
 
     const toolbars = host.querySelectorAll('.claudian-agent-board-toolbar');
     expect(toolbars).toHaveLength(1);
-    expect(toolbars[0].querySelector('.claudian-agent-board-toolbar-actions')?.textContent).toContain('Add work order');
-    expect(toolbars[0].querySelector('.claudian-agent-board-toolbar-actions')?.textContent).toContain('Run queue');
+    const actions = toolbars[0].querySelector('.claudian-agent-board-toolbar-actions');
+    expect(actions?.textContent).toContain('Add work order');
+    expect(actions?.textContent).toContain('Auto-run');
+    // Equalized buttons + the vertical divider live in the actions cluster.
+    expect(actions?.querySelector('.claudian-agent-board-toolbar-divider')).not.toBeNull();
     expect(toolbars[0].querySelector('.claudian-agent-board-toolbar-info')?.textContent).toContain('Work-order tabs');
     expect(host.querySelector('.claudian-agent-board-header')).toBeNull();
+  });
+
+  it('equalizes the Add work order (cta) and Run next ready (tool) buttons', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
+    const add = findButton(host, 'Add work order');
+    const runNext = findRunNextButton(host);
+    expect(add?.classList.contains('claudian-agent-board-toolbar-btn')).toBe(true);
+    expect(add?.classList.contains('mod-cta')).toBe(true);
+    expect(runNext?.classList.contains('claudian-agent-board-toolbar-btn')).toBe(true);
+    expect(runNext?.classList.contains('claudian-agent-board-toolbar-btn--tool')).toBe(true);
+    // Run next ready carries a leading play icon.
+    expect(runNext?.querySelector('[data-icon="play"]')).not.toBeNull();
   });
 });
 

@@ -364,40 +364,94 @@ export class AgentBoardRenderer {
     const actions = bar.createDiv({ cls: 'claudian-agent-board-toolbar-actions' });
     const info = bar.createDiv({ cls: 'claudian-agent-board-toolbar-info' });
 
-    const addButton = actions.createEl('button', { cls: 'mod-cta', text: 'Add work order' });
+    // Accent CTA. Shares the equalized button size with "Run next ready" via the
+    // base toolbar-btn class; `mod-cta` keeps the accent fill.
+    const addButton = actions.createEl('button', {
+      cls: 'claudian-agent-board-toolbar-btn mod-cta',
+      text: t('tasks.board.addWorkOrderButton'),
+    });
     addButton.addEventListener('click', () => callbacks.onAddWorkOrder());
 
     if (hasRunnable) {
-      const runNextBtn = actions.createEl('button', { text: 'Run next ready' });
+      // Tool button (secondary surface) with a leading play icon.
+      const runNextBtn = actions.createEl('button', {
+        cls: 'claudian-agent-board-toolbar-btn claudian-agent-board-toolbar-btn--tool',
+      });
+      const icon = runNextBtn.createSpan({ cls: 'claudian-agent-board-toolbar-btn-icon' });
+      icon.setAttribute('aria-hidden', 'true');
+      icon.setAttribute('data-icon', 'play');
+      setIcon(icon, 'play');
+      runNextBtn.createSpan({ text: t('tasks.board.runNextReady') });
       runNextBtn.addEventListener('click', () => callbacks.onRunNextReady());
     }
 
-    if (state.queue) this.renderQueueToggle(actions, state.queue);
-    if (state.queue) this.renderQueueInfo(info, state.queue);
+    if (state.queue) {
+      // Divider separates the board actions from the Auto-run switch.
+      actions.createDiv({ cls: 'claudian-agent-board-toolbar-divider' });
+      this.renderAutoRunSwitch(actions, state.queue);
+      this.renderQueueInfo(info, state.queue);
+    }
 
     const free = Math.max(0, state.slots.max - state.slots.used);
     const slotsEl = info.createSpan({
       cls: 'claudian-agent-board-slots',
-      text: `Work-order tabs ${state.slots.used}/${state.slots.max} · ${free} free`,
+      text: t('tasks.board.tabCount', { n: state.slots.used, m: state.slots.max, k: free }),
     });
     return { free, slotsEl };
   }
 
-  private renderQueueToggle(parent: HTMLElement, state: QueueToolbarState): void {
-    const toggle = parent.createEl('button', {
-      cls: 'claudian-agent-board-toolbar--queue-toggle',
-      text: state.paused || state.halted ? 'Run queue' : 'Pause queue',
+  /**
+   * The Auto-run switch (renamed background-watcher toggle). `role="switch"`,
+   * `aria-checked` mirrors the on/off state, and a tooltip explains the
+   * background behavior. ON ⇒ watcher running, OFF ⇒ watcher paused — the click
+   * (and Enter / Space) route through the unchanged `onToggle`. A halt forces an
+   * OFF presentation: the watcher cannot auto-run while halted, so the switch
+   * reads OFF even if the user has not paused it.
+   */
+  private renderAutoRunSwitch(parent: HTMLElement, state: QueueToolbarState): void {
+    const on = !state.paused && !state.halted;
+    const sw = parent.createEl('button', {
+      cls: `claudian-agent-board-toolbar-autorun claudian-agent-board-toolbar-autorun--${on ? 'on' : 'off'}`,
+      attr: { type: 'button', role: 'switch' },
     });
-    if (state.halted) toggle.addClass('claudian-agent-board-toolbar--queue-toggle-halted');
-    toggle.addEventListener('click', () => state.onToggle());
+    sw.setAttribute('aria-checked', on ? 'true' : 'false');
+    const tooltip = t('tasks.board.autoRun.tooltip');
+    sw.setAttribute('title', tooltip);
+    sw.setAttribute('aria-label', tooltip);
+
+    const track = sw.createSpan({ cls: 'claudian-agent-board-toolbar-autorun-track' });
+    track.createSpan({
+      cls: `claudian-agent-board-toolbar-autorun-thumb${on ? ' claudian-agent-board-toolbar-autorun-thumb--on' : ''}`,
+    });
+    sw.createSpan({
+      cls: 'claudian-agent-board-toolbar-autorun-label',
+      text: t('tasks.board.autoRun.label'),
+    });
+
+    sw.addEventListener('click', () => state.onToggle());
+    // Native <button> already fires click on Enter / Space in most engines, but
+    // jsdom + some hosts don't synthesize it for role="switch"; bind explicitly
+    // so the keyboard path is guaranteed.
+    sw.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        state.onToggle();
+      }
+    });
   }
 
   private renderQueueInfo(parent: HTMLElement, state: QueueToolbarState): void {
-    parent.createSpan({
-      cls: 'claudian-agent-board-toolbar--queue-active-count',
-      text: `${state.slotOccupied}/${state.slotCapacity} active`,
+    const active = parent.createSpan({ cls: 'claudian-agent-board-toolbar--queue-active-count' });
+    // Soft-ring dot precedes the "N/M active" caption (the dot is the at-a-glance
+    // live signal; the caption is the accessible count).
+    const dot = active.createSpan({ cls: 'claudian-agent-board-toolbar-active-dot' });
+    dot.setAttribute('aria-hidden', 'true');
+    active.createSpan({
+      text: t('tasks.board.activeCount', { n: state.slotOccupied, m: state.slotCapacity }),
     });
 
+    // The halt/failure caption keeps the historical "Queue" wording for now (it
+    // gets re-keyed in the closing i18n sweep, not renamed here).
     if (state.halted && state.haltReason) {
       parent.createSpan({
         cls: 'claudian-agent-board-toolbar--queue-failure-count',
