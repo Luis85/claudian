@@ -170,6 +170,8 @@ export type TranslationKey =
 
   // Tasks - Work-order detail modal properties sidebar (Agent Board redesign)
   | 'tasks.workOrderModal.properties'
+  | 'tasks.workOrderModal.sectionObjective'
+  | 'tasks.workOrderModal.sectionAcceptance'
   | 'tasks.workOrderModal.fieldStatus'
   | 'tasks.workOrderModal.fieldAgent'
   | 'tasks.workOrderModal.fieldProvider'

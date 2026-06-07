@@ -1,9 +1,11 @@
 import { type App, Component, MarkdownRenderer, Modal, setIcon, Setting } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
+import { isPureAcceptanceChecklist, parseAcceptanceChecklist } from '../model/acceptanceChecklist';
 import { parseAcceptanceProgress } from '../model/acceptanceProgress';
 import type { TaskPriority, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderEditableValueChip } from './editableValueChip';
+import { renderSectionHeader } from './sectionHeader';
 
 export interface WorkOrderFieldUpdate {
   title?: string;
@@ -95,12 +97,8 @@ export class WorkOrderDetailModal extends Modal {
 
     this.renderPropertiesSidebar(sidebar);
 
-    this.renderMarkdownBlock(main, 'Objective', task.sections.objective || '—');
-    const acProgress = parseAcceptanceProgress(task.sections.acceptanceCriteria);
-    const acLabel = acProgress.total > 0
-      ? `Acceptance criteria (${acProgress.done}/${acProgress.total})`
-      : 'Acceptance criteria';
-    this.renderMarkdownBlock(main, acLabel, task.sections.acceptanceCriteria || '—', 'acceptance');
+    this.renderObjective(main);
+    this.renderAcceptance(main);
 
     if (
       (task.frontmatter.status === 'review' || task.frontmatter.status === 'needs_fix') &&
@@ -121,17 +119,147 @@ export class WorkOrderDetailModal extends Modal {
     this.contentEl.empty();
   }
 
-  private renderMarkdownBlock(
-    parent: HTMLElement,
-    label: string,
-    markdown: string,
-    variant?: 'acceptance',
-  ): void {
+  // Handoff / Run-ledger markdown blocks (owned by a later slice). Objective and
+  // Acceptance render through the dedicated section helpers below.
+  private renderMarkdownBlock(parent: HTMLElement, label: string, markdown: string): void {
     parent.createEl('h4', { text: label, cls: 'claudian-work-order-modal-heading' });
-    const classes = ['claudian-work-order-modal-handoff'];
-    if (variant === 'acceptance') classes.push('claudian-work-order-modal-acceptance');
-    const el = parent.createDiv({ cls: classes.join(' ') });
+    const el = parent.createDiv({ cls: 'claudian-work-order-modal-handoff' });
     void MarkdownRenderer.render(this.app, markdown, el, this.task.path, this.markdownComponent);
+  }
+
+  /**
+   * Objective: shared section header (target icon) over a paragraph whose body
+   * is rendered through `MarkdownRenderer` so Wikilinks / inline code / links
+   * stay interactive.
+   */
+  private renderObjective(parent: HTMLElement): void {
+    const { section } = renderSectionHeader(parent, {
+      icon: 'target',
+      label: t('tasks.workOrderModal.sectionObjective'),
+    });
+    const body = section.createDiv({ cls: 'claudian-work-order-modal-objective' });
+    void MarkdownRenderer.render(
+      this.app,
+      this.task.sections.objective || '—',
+      body,
+      this.task.path,
+      this.markdownComponent,
+    );
+  }
+
+  /**
+   * Acceptance criteria: shared section header (list-checks icon) with a
+   * progress ring + done/total count in the right slot, over a read-only
+   * checklist card. Counts come from `parseAcceptanceProgress`; the rows come
+   * from `parseAcceptanceChecklist` (a sibling read-only parser) — no markdown
+   * is mutated. The ring stroke follows the status→color contract and flips to
+   * green at 100%.
+   */
+  private renderAcceptance(parent: HTMLElement): void {
+    const { task } = this;
+    const markdown = task.sections.acceptanceCriteria;
+    const progress = parseAcceptanceProgress(markdown);
+    const items = parseAcceptanceChecklist(markdown);
+
+    const { section, right } = renderSectionHeader(parent, {
+      icon: 'list-checks',
+      label: t('tasks.workOrderModal.sectionAcceptance'),
+    });
+
+    if (progress.total > 0) {
+      this.renderAcceptanceRing(right(), progress.done, progress.total, task.frontmatter.status);
+    }
+
+    // Render the custom checklist card only for a pure task-list. Anything else
+    // — prose, plain bullets, or checkboxes interleaved with prose/nested lines
+    // — renders as full markdown so no criteria are dropped from view.
+    if (!isPureAcceptanceChecklist(markdown)) {
+      if (markdown.trim().length === 0) {
+        section.createDiv({ cls: 'claudian-work-order-modal-checklist-empty', text: '—' });
+      } else {
+        const prose = section.createDiv({ cls: 'claudian-work-order-modal-checklist-prose' });
+        void MarkdownRenderer.render(this.app, markdown, prose, this.task.path, this.markdownComponent);
+      }
+      return;
+    }
+
+    const card = section.createDiv({ cls: 'claudian-work-order-modal-checklist' });
+    for (const item of items) {
+      const row = card.createDiv({ cls: 'claudian-work-order-modal-checklist-item' });
+      // Read-only checkbox semantics so assistive tech hears the checked state;
+      // the visible box glyph below stays decorative (aria-hidden).
+      row.setAttr('role', 'checkbox');
+      row.setAttr('aria-checked', item.checked ? 'true' : 'false');
+      row.setAttr('aria-disabled', 'true');
+      if (item.checked) row.addClass('is-checked');
+      const box = row.createSpan({ cls: 'claudian-work-order-modal-checklist-box' });
+      box.setAttr('aria-hidden', 'true');
+      if (item.checked) {
+        // The white check glyph is the non-color cue carrying the checked signal.
+        const check = box.createSpan({ cls: 'claudian-work-order-modal-checklist-check' });
+        check.setAttr('data-icon', 'check');
+        setIcon(check, 'check');
+      }
+      // Render the label as markdown so inline links / wikilinks / code stay
+      // interactive, matching the full-markdown fallback used for non-pure sections.
+      const textEl = row.createDiv({ cls: 'claudian-work-order-modal-checklist-text' });
+      void MarkdownRenderer.render(this.app, item.text, textEl, this.task.path, this.markdownComponent);
+    }
+  }
+
+  /**
+   * 22px SVG progress ring (faint track + status-accent arc) plus a done/total
+   * count. The arc length is driven by `stroke-dasharray`/`stroke-dashoffset`
+   * from the done ratio; at 100% a `--complete` modifier flips the stroke and
+   * count color to green via CSS. Geometry mirrors the design prototype
+   * (r=9, 22×22 viewBox, 2.5 stroke, rotated -90° so the arc starts at top).
+   */
+  private renderAcceptanceRing(
+    parent: HTMLElement,
+    done: number,
+    total: number,
+    status: TaskStatus,
+  ): void {
+    const radius = 9;
+    const circumference = 2 * Math.PI * radius;
+    const ratio = total > 0 ? done / total : 0;
+    const complete = total > 0 && done >= total;
+
+    const meter = parent.createDiv({ cls: 'claudian-work-order-modal-ring-meter' });
+
+    const ringClasses = [
+      'claudian-work-order-modal-ring',
+      `claudian-work-order-modal-ring--${status}`,
+      ...(complete ? ['claudian-work-order-modal-ring--complete'] : []),
+    ].join(' ');
+    const svg = meter.createSvg('svg', {
+      cls: ringClasses,
+      attr: { width: 22, height: 22, viewBox: '0 0 22 22' },
+    });
+    svg.setAttr('aria-hidden', 'true');
+    svg.createSvg('circle', {
+      cls: 'claudian-work-order-modal-ring-track',
+      attr: { cx: 11, cy: 11, r: radius, fill: 'none', 'stroke-width': 2.5 },
+    });
+    svg.createSvg('circle', {
+      cls: 'claudian-work-order-modal-ring-arc',
+      attr: {
+        cx: 11,
+        cy: 11,
+        r: radius,
+        fill: 'none',
+        'stroke-width': 2.5,
+        'stroke-linecap': 'round',
+        'stroke-dasharray': circumference,
+        'stroke-dashoffset': circumference * (1 - ratio),
+        transform: 'rotate(-90 11 11)',
+      },
+    });
+
+    meter.createSpan({
+      cls: 'claudian-work-order-modal-ring-count',
+      text: `${done}/${total}`,
+    });
   }
 
   /**

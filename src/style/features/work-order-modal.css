@@ -32,7 +32,13 @@
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
-/* Scroll region: the only part of the shell that scrolls. */
+/*
+ * Scroll region: the only part of the shell that scrolls. The two columns own
+ * their own insets — the main column ships 18px 26px padding (shared section
+ * metrics), the sidebar ships its own padding and a left border that doubles as
+ * the column divider — so the body itself stays padding-free and the sidebar's
+ * secondary background bleeds flush to the scroll-region edges.
+ */
 .claudian-work-order-modal-body {
   flex: 1 1 auto;
   min-height: 0;
@@ -40,23 +46,27 @@
   overflow-x: hidden;
   display: grid;
   grid-template-columns: 1fr 282px;
-  gap: 20px;
-  padding: 16px 20px;
-}
-
-.claudian-work-order-modal-main {
-  min-width: 0;
 }
 
 /*
- * Properties sidebar surface. The secondary-background panel bleeds to the
- * scroll-region edges (the body owns 16px top / 20px right / gap padding), so
- * negative margins pull it flush while the spec's own 18px 20px padding sets
- * the inner inset.
+ * Main content column. The 18px 26px padding + 22px vertical gap are the
+ * shared container metrics every section (Objective, Acceptance, and the
+ * follow-up Activity block) stacks into without re-layout.
+ */
+.claudian-work-order-modal-main {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+  padding: 18px 26px;
+}
+
+/*
+ * Properties sidebar surface. Owns its own 18px 20px inset; the left border is
+ * the column divider and the secondary background fills the column edge-to-edge.
  */
 .claudian-work-order-modal-sidebar {
   min-width: 0;
-  margin: -16px -20px -16px 0;
   padding: 18px 20px;
   border-left: 1px solid var(--border-color);
   background: var(--background-secondary);
@@ -94,44 +104,197 @@
   margin-bottom: 0;
 }
 
-.claudian-work-order-modal-acceptance {
-  padding: 12px 16px;
+/* ============================================================
+   Shared section-header pattern (Objective, Acceptance, and the
+   follow-up Activity block). Uppercase muted label + leading faint
+   Lucide icon + optional right-side slot. See ui/sectionHeader.ts.
+   ============================================================ */
+.claudian-work-order-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.claudian-work-order-modal-acceptance ul,
-.claudian-work-order-modal-acceptance ol {
-  padding: 0;
-  margin: 0;
-  list-style: none;
+.claudian-work-order-modal-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.claudian-work-order-modal-acceptance li.task-list-item {
-  padding: 10px 6px 10px 30px;
-  text-indent: -24px;
-  margin: 0;
-  line-height: 1.55;
+.claudian-work-order-modal-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  color: var(--text-muted);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.claudian-work-order-modal-section-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-faint);
+}
+
+.claudian-work-order-modal-section-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.claudian-work-order-modal-section-right {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ---------- Objective ---------- */
+.claudian-work-order-modal-objective {
+  font-size: var(--font-ui-medium);
+  line-height: var(--line-height-relaxed);
+  color: var(--text-normal);
+}
+
+.claudian-work-order-modal-objective > :first-child {
+  margin-top: 0;
+}
+
+.claudian-work-order-modal-objective > :last-child {
+  margin-bottom: 0;
+}
+
+/* ---------- Acceptance progress ring + count ---------- */
+.claudian-work-order-modal-ring-meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.claudian-work-order-modal-ring {
+  display: block;
+  /* Status-accent stroke from the status→color contract; --complete overrides. */
+  color: var(--claudian-wo-ring-color, var(--color-accent));
+}
+
+.claudian-work-order-modal-ring-track {
+  stroke: var(--background-modifier-border);
+}
+
+.claudian-work-order-modal-ring-arc {
+  stroke: currentColor;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .claudian-work-order-modal-ring-arc {
+    transition: stroke-dashoffset 0.4s ease;
+  }
+}
+
+.claudian-work-order-modal-ring-count {
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+/* Status → ring color contract (mirrors the status pill map). */
+.claudian-work-order-modal-ring--inbox { --claudian-wo-ring-color: var(--color-base-60); }
+.claudian-work-order-modal-ring--ready { --claudian-wo-ring-color: var(--color-blue); }
+.claudian-work-order-modal-ring--running { --claudian-wo-ring-color: var(--color-yellow); }
+.claudian-work-order-modal-ring--needs_input { --claudian-wo-ring-color: var(--color-blue); }
+.claudian-work-order-modal-ring--needs_approval { --claudian-wo-ring-color: var(--color-purple); }
+.claudian-work-order-modal-ring--review { --claudian-wo-ring-color: var(--color-blue); }
+.claudian-work-order-modal-ring--needs_handoff { --claudian-wo-ring-color: var(--color-orange); }
+.claudian-work-order-modal-ring--needs_fix { --claudian-wo-ring-color: var(--color-orange); }
+.claudian-work-order-modal-ring--done { --claudian-wo-ring-color: var(--color-green); }
+.claudian-work-order-modal-ring--failed { --claudian-wo-ring-color: var(--color-red); }
+.claudian-work-order-modal-ring--canceled { --claudian-wo-ring-color: var(--color-base-60); }
+
+/* Fully accepted: stroke + count both go green regardless of status. */
+.claudian-work-order-modal-ring--complete { --claudian-wo-ring-color: var(--color-green); }
+
+.claudian-work-order-modal-ring--complete + .claudian-work-order-modal-ring-count {
+  color: var(--color-green);
+}
+
+/* ---------- Acceptance checklist card ---------- */
+.claudian-work-order-modal-checklist {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-l);
+  background: var(--background-primary-alt);
+  overflow: hidden;
+}
+
+.claudian-work-order-modal-checklist-empty {
+  padding: 11px 14px;
+  color: var(--text-faint);
+}
+
+/* Non-task-list acceptance criteria (prose / plain bullets) rendered as markdown. */
+.claudian-work-order-modal-checklist-prose {
+  padding: 11px 14px;
+  color: var(--text-muted);
+  line-height: var(--line-height-relaxed);
+}
+
+.claudian-work-order-modal-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 14px;
+  font-size: var(--font-ui-medium);
+  line-height: 1.4;
+  color: var(--text-normal);
+}
+
+.claudian-work-order-modal-checklist-item + .claudian-work-order-modal-checklist-item {
+  border-top: 1px solid var(--border-color);
+}
+
+.claudian-work-order-modal-checklist-item.is-checked {
+  color: var(--text-muted);
+}
+
+.claudian-work-order-modal-checklist-box {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid var(--background-modifier-border-hover);
+  border-radius: var(--radius-s);
+  background: var(--input-bg);
+}
+
+/* Checked: filled green box; the white check glyph is the non-color cue. */
+.claudian-work-order-modal-checklist-item.is-checked .claudian-work-order-modal-checklist-box {
+  border-color: var(--color-green);
+  background: var(--color-green);
+  color: var(--text-on-accent);
+}
+
+.claudian-work-order-modal-checklist-check {
+  display: inline-flex;
+  align-items: center;
+  color: currentColor;
+}
+
+.claudian-work-order-modal-checklist-check svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 3;
+}
+
+.claudian-work-order-modal-checklist-text {
+  min-width: 0;
   word-break: break-word;
 }
 
-.claudian-work-order-modal-acceptance li.task-list-item + li.task-list-item {
-  border-top: 1px solid var(--background-modifier-border);
-}
-
-.claudian-work-order-modal-acceptance li.task-list-item .task-list-item-checkbox {
-  margin: 0 8px 0 0;
-  vertical-align: middle;
-  text-indent: 0;
-}
-
-.claudian-work-order-modal-acceptance li.task-list-item > p {
-  display: inline;
+/* Collapse the paragraph MarkdownRenderer wraps a single-line label in so the
+   item label sits inline within the flex row. */
+.claudian-work-order-modal-checklist-text p {
   margin: 0;
-  padding: 0;
-}
-
-.claudian-work-order-modal-acceptance li.is-checked,
-.claudian-work-order-modal-acceptance li.task-list-item.is-checked {
-  color: var(--text-muted);
 }
 
 /* Collapse the two-pane grid: sidebar drops below main, divider goes to top. */
@@ -141,7 +304,6 @@
   }
 
   .claudian-work-order-modal-sidebar {
-    margin: 16px -20px -16px -20px;
     border-left: none;
     border-top: 1px solid var(--border-color);
   }
