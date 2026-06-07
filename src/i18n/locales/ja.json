@@ -811,5 +811,22 @@
     "noView": "Inline edit unavailable: could not access the active Markdown view.",
     "inserted": "Inserted",
     "applied": "Edit applied"
+  },
+  "workOrderActivity": {
+    "toggleRunning": "アクティブな作業指示 {count} 件",
+    "toggleAttention": "アクティブな作業指示 {count} 件、要対応 {attention} 件",
+    "toggleFinished": "完了した作業指示 {count} 件",
+    "status": {
+      "running": "実行中",
+      "needsInput": "入力が必要",
+      "needsApproval": "承認が必要",
+      "finished": "完了"
+    },
+    "action": {
+      "open": "開く",
+      "reply": "返信",
+      "review": "確認",
+      "close": "タブを閉じる"
+    }
   }
 }

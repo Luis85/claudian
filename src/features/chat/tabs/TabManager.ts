@@ -416,22 +416,33 @@ export class TabManager implements TabManagerInterface {
       workOrderCount: this.countTabsByKind('work-order'),
     });
 
-    // If we closed the active tab, switch to another
-    if (this.activeTabId === tabId) {
+    const closedActiveTab = this.activeTabId === tabId;
+    if (closedActiveTab) {
       this.activeTabId = null;
+    }
 
-      if (this.tabs.size > 0) {
-        // Fallback strategy: prefer previous tab, except for first tab (go to next)
-        const fallbackTabId = closingIndex === 0
-          ? tabIdsBefore[1]  // First tab: go to next
-          : tabIdsBefore[closingIndex - 1];  // Others: go to previous
+    // Closing the last chat tab must never strand the user. A hidden work-order
+    // tab keeps `tabs.size > 0`, so the blank-replacement path would not fire and
+    // the user would be left on a hidden work-order tab with no chat tab to
+    // return to (the tab bar renders chat badges only, and a terminal work order
+    // drops out of the activity dropdown). Recreate a blank chat home tab
+    // whenever none remain — activate it only when we just closed the active tab,
+    // otherwise keep focus put and let the tab bar surface the new chat badge as
+    // the escape route.
+    if (this.countTabsByKind('chat') === 0) {
+      await this.createTab(undefined, undefined, { activate: closedActiveTab });
+      return true;
+    }
 
-        if (fallbackTabId && this.tabs.has(fallbackTabId)) {
-          await this.switchToTab(fallbackTabId);
-        }
-      } else {
-        // Create a replacement blank tab.
-        await this.createTab();
+    // If we closed the active tab, switch to another
+    if (closedActiveTab && this.tabs.size > 0) {
+      // Fallback strategy: prefer previous tab, except for first tab (go to next)
+      const fallbackTabId = closingIndex === 0
+        ? tabIdsBefore[1]  // First tab: go to next
+        : tabIdsBefore[closingIndex - 1];  // Others: go to previous
+
+      if (fallbackTabId && this.tabs.has(fallbackTabId)) {
+        await this.switchToTab(fallbackTabId);
       }
     }
 
@@ -491,11 +502,29 @@ export class TabManager implements TabManagerInterface {
   // ============================================
 
   /** Gets data for rendering the tab bar. */
+  /**
+   * Open work-order tabs with their display titles. Work-order badges are hidden
+   * from the visible tab bar, so the Work Orders dropdown uses this to offer a
+   * close affordance for finished/orphaned work-order tabs that would otherwise
+   * be invisible and keep consuming the work-order slot budget. `isStreaming`
+   * lets the dropdown skip a live run whose note hasn't persisted its active
+   * status yet, so an in-flight run is never offered a "finished" close.
+   */
+  listWorkOrderTabs(): Array<{ id: string; title: string; isStreaming: boolean }> {
+    const out: Array<{ id: string; title: string; isStreaming: boolean }> = [];
+    for (const tab of this.getOrderedTabs()) {
+      if (tab.kind !== 'work-order') continue;
+      out.push({ id: tab.id, title: getTabTitle(tab, this.plugin), isStreaming: tab.state.isStreaming });
+    }
+    return out;
+  }
+
   getTabBarItems(): TabBarItem[] {
     const items: TabBarItem[] = [];
     let index = 1;
 
     for (const tab of this.getOrderedTabs()) {
+      if (tab.kind === 'work-order') continue;
       items.push({
         id: tab.id,
         index: index++,

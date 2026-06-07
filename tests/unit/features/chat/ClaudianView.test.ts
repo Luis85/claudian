@@ -11,6 +11,7 @@ function createViewHarness(options: {
   canCreateTab: boolean;
   tabBarPosition?: 'input' | 'header';
   tabCount?: number;
+  activeTabKind?: 'chat' | 'work-order';
 }): {
   newTabButtonEl: ReturnType<typeof createMockEl>;
   view: any;
@@ -26,6 +27,10 @@ function createViewHarness(options: {
   view.tabManager = {
     canCreateTab: jest.fn().mockReturnValue(options.canCreateTab),
     getTabCount: jest.fn().mockReturnValue(options.tabCount ?? 1),
+    countTabsByKind: jest.fn().mockReturnValue(options.tabCount ?? 1),
+    getActiveTab: jest.fn().mockReturnValue(
+      options.activeTabKind ? { kind: options.activeTabKind } : null,
+    ),
   };
   view.tabBarContainerEl = createMockEl();
   view.logoEl = createMockEl();
@@ -80,6 +85,42 @@ describe('ClaudianView tab controls', () => {
     expect(newTabButtonEl.hasClass('claudian-hidden')).toBe(false);
     expect(newTabButtonEl.getAttribute('aria-disabled')).toBeNull();
     expect(newTabButtonEl.getAttribute('aria-hidden')).toBeNull();
+  });
+
+  it('hides the tab bar with a single chat tab', () => {
+    const { view } = createViewHarness({ canCreateTab: true, tabCount: 1 });
+
+    view.updateTabBarVisibility();
+
+    expect(view.tabBarContainerEl.hasClass('claudian-hidden')).toBe(true);
+  });
+
+  it('shows the tab bar with two or more chat tabs', () => {
+    const { view } = createViewHarness({ canCreateTab: true, tabCount: 2 });
+
+    view.updateTabBarVisibility();
+
+    expect(view.tabBarContainerEl.hasClass('claudian-hidden')).toBe(false);
+  });
+
+  it('shows the tab bar when a work-order tab is active so a single chat tab stays reachable', () => {
+    // One chat tab + a hidden, active work-order tab: without surfacing the bar
+    // the user has no visible control to return to their only chat tab.
+    const { view } = createViewHarness({ canCreateTab: true, tabCount: 1, activeTabKind: 'work-order' });
+
+    view.updateTabBarVisibility();
+
+    expect(view.tabBarContainerEl.hasClass('claudian-hidden')).toBe(false);
+  });
+
+  it('keeps the tab bar hidden when a work-order tab is active but no chat tab remains', () => {
+    // Nothing to return to and work-order badges are omitted from the bar, so
+    // surfacing an empty bar would add no escape path.
+    const { view } = createViewHarness({ canCreateTab: true, tabCount: 0, activeTabKind: 'work-order' });
+
+    view.updateTabBarVisibility();
+
+    expect(view.tabBarContainerEl.hasClass('claudian-hidden')).toBe(true);
   });
 });
 
@@ -808,5 +849,32 @@ describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
 
     // No queued turn will deliver: fail fast rather than hang until the stale timer.
     expect(outcome).toEqual({ ok: false, error: 'Follow-up turn could not be sent.' });
+  });
+});
+
+
+describe('ClaudianView work-order activity', () => {
+  it('mounts an activity slot beside Quick Actions', () => {
+    const view = Object.create(ClaudianView.prototype) as any;
+    view.containerEl = createMockEl();
+    view.containerEl.ownerDocument.createDocumentFragment = () => createMockEl('fragment');
+    view.plugin = {
+      gitStatusWatcher: null,
+      vaultSkillAggregator: null,
+      settings: {},
+      workOrderActivity: {
+        getSummary: () => ({ items: [], closableTabs: [], runningCount: 0, attentionCount: 0 }),
+        subscribe: jest.fn(() => jest.fn()),
+        openItem: jest.fn(),
+        closeTab: jest.fn(),
+      },
+    };
+    view.tabManager = { getActiveTab: jest.fn(() => null) };
+    view.syncHeaderLogo = jest.fn();
+    view.buildHeader(createMockEl());
+
+    const navContent = view.buildNavRowContent();
+
+    expect(navContent.querySelector('.claudian-work-order-activity-slot')).not.toBeNull();
   });
 });

@@ -84,6 +84,17 @@ const localizedKeys = [
   'quickActions.capture.saved',
   'quickActions.capture.folderMissing',
   'quickActions.editor.nameExists',
+  'workOrderActivity.toggleRunning',
+  'workOrderActivity.toggleAttention',
+  'workOrderActivity.toggleFinished',
+  'workOrderActivity.status.running',
+  'workOrderActivity.status.needsInput',
+  'workOrderActivity.status.needsApproval',
+  'workOrderActivity.status.finished',
+  'workOrderActivity.action.open',
+  'workOrderActivity.action.reply',
+  'workOrderActivity.action.review',
+  'workOrderActivity.action.close',
 ] as const;
 
 const staleBangBashDesc =

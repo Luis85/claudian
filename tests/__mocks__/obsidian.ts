@@ -14,6 +14,7 @@ export class Plugin {
   addSettingTab = jest.fn();
   registerView = jest.fn();
   registerEvent = jest.fn();
+  register = jest.fn();
   loadData = jest.fn().mockResolvedValue({});
   saveData = jest.fn().mockResolvedValue(undefined);
 }
@@ -113,6 +114,7 @@ export class App {
       basePath: '/mock/vault/path',
     },
     on: jest.fn().mockReturnValue({ id: 'mock-event-ref' }),
+    offref: jest.fn(),
   };
   workspace: any = {
     getLeavesOfType: jest.fn().mockReturnValue([]),

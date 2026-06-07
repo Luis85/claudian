@@ -1,7 +1,7 @@
 ---
 title: Work-order activity dropdown in chat header
 date: 2026-06-07
-status: draft
+status: implemented
 scope: chat/header, chat/tabs, tasks/ui, tasks/execution
 source_idea: "[[docs/ideas/Work-Order chat tabs should not occupy the tabs row but rather be a drop-down toggle]]"
 ---
