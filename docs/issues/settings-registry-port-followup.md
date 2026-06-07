@@ -1,7 +1,7 @@
 ---
 status: open
 type: issue
-target-version: 3.1.0
+target-version: 4.0.0
 tags:
   - settings
   - registry
@@ -10,7 +10,18 @@ priority: 2 - normal
 relations:
   - "[[2026-05-30-settings-overhaul-design]]"
   - "[[2026-05-30-settings-overhaul]]"
+  - "[[Agent Board/tasks/work-order-20260606-settings-overhaul]]"
 ---
+
+> **Triage update (2026-06-07):** target-version was 3.1.0 but Claudian is now at 3.5.0 without the port
+> landing — every v3.x release after 3.0.0 has shipped on the restored legacy renderers (commit
+> `45f71576`). Re-targeted to v4.0.0 because deleting the legacy fallback is the breaking change that
+> justifies a major bump. Work-order
+> [[Agent Board/tasks/work-order-20260606-settings-overhaul]] (2026-06-06) tried to drive this port plus
+> a fresh 3.0.0 release but was closed as stale — 3.0.0 had already shipped months earlier and the
+> residual scope is what this issue tracks. The `USE_REGISTRY_RENDERER` const and the orchestrator
+> registry slot (`fields/orchestrator.ts` was never created — orchestrator surface removed in
+> `f0d0d5d7`) are obsolete; drop both when porting.
 
 # Complete the settings registry port — phase J followup (v3.1.0)
 
@@ -22,18 +33,23 @@ The registry is NOT complete. Five tabs ship with stub registrations or major fi
 
 Current `REGISTRY_TABS = { agentBoard, orchestrator, diagnostics }` — only those three tabs use the registry. The other five (`general`, `claude`, `codex`, `opencode`, `cursor`) still run the imperative renderers restored from git history.
 
-## Audit (2026-05-31)
+## Audit (2026-06-07 — supersedes 2026-05-31)
 
 | Tab | Registry fields | Legacy fields | % complete | Status |
 |---|---|---|---|---|
 | Agent Board | 7 | 7 | 100% | Registry ✓ |
-| Orchestrator | 2 | 2 | 100% | Registry ✓ |
 | Diagnostics | 4 | 4 | 100% | Registry ✓ |
 | General | 6 | 35+ | 17% | Legacy fallback |
 | Claude | 3 | 12+ | 25% | Legacy fallback |
 | Codex | 3 | 10+ | 30% | Legacy fallback |
 | Opencode | 8 (5 stubs) | 9 | 44% | Legacy fallback |
 | Cursor | 5 (2 stubs) | 6 | 67% | Legacy fallback |
+
+> **Correction:** The 2026-05-31 audit listed Orchestrator at 100% in the registry; in commit `f0d0d5d7`
+> (`refactor(settings): remove orchestrator settings surface`) the entire orchestrator settings UI was
+> deleted, so there is no orchestrator tab to port. Current `REGISTRY_TABS = { 'agentBoard', 'diagnostics' }`
+> (verified against `src/features/settings/registry/featureFlag.ts` at 3.5.0). Total registry-port scope is
+> therefore 5 tabs, not 5 + orchestrator.
 
 ## Missing fields per tab
 
@@ -89,7 +105,7 @@ Custom widgets declared but render as no-op:
 - **First-run banner UI**: spec calls for one row per provider with checkbox + name + one-line description + CLI hint + Enable selected/Dismiss buttons. Current `FirstRunBanner.ts` has the data flow but should be checked against spec wording and CLI-missing pill.
 - **Custom models source pill behavior**: spec calls for `env` source → read-only id + alias, editable context window, Remove disabled with `Set via env` tooltip. Implementation should be verified against env-discovered rows. **Polish pass (2026-05-31)**: env rows now reject `openEditorRow()` and edit/delete buttons hidden — but the `Set via env` tooltip and explicit Remove-disabled state still need verification on a vault with env-discovered models.
 - **Legacy modelOverrides migration**: one-shot migration from `{providerId}.environment.modelOverrides` to `customModels` on first v3 load. Verify on a vault that has legacy overrides.
-- **`registry/providers/registerProviderTab.ts`** is unused — provider tabs register in `src/features/settings/registry/fields/{provider}.ts` instead. Decide canonical location (spec said `src/providers/{provider}/settings/registryFields.ts`).
+- **`registry/providers/registerProviderTab.ts`** ~~is unused~~ **was wrongly tagged unused on 2026-05-31** — actually imported by all four `src/features/settings/registry/fields/{claude,codex,opencode,cursor}.ts` modules to register the provider tab + sections in one call. Decide canonical location (spec said `src/providers/{provider}/settings/registryFields.ts`), but it is wired in today; don't delete during the port.
 - **HotkeysSection refresh** currently polls every 2 s (`HotkeysSection.ts` post-polish pass) because Obsidian does not emit a `hotkey-changed` event. Either subscribe to a native Obsidian event if one becomes available, or replace polling with a single check on `settings-panel-focused` workspace event.
 
 ## Polish pass (2026-05-31) — landed
@@ -108,21 +124,21 @@ Tracked here so the registry port plan does not duplicate work. Not yet committe
 
 ## Acceptance
 
-- All 8 tab ids present in `REGISTRY_TABS`.
+- All 7 active tab ids present in `REGISTRY_TABS` (`general`, `claude`, `codex`, `opencode`, `cursor`, `agentBoard`, `diagnostics` — orchestrator removed in `f0d0d5d7`).
 - Every legacy field has a matching registry entry (id, label, type, default, keywords).
 - All four legacy renderer files removed:
   - `src/providers/claude/ui/ClaudeSettingsTab.ts`
   - `src/providers/codex/ui/CodexSettingsTab.ts`
   - `src/providers/opencode/ui/OpencodeSettingsTab.ts`
   - `src/providers/cursor/ui/CursorSettingsTab.ts`
-- Legacy section files removed:
+- Legacy section files removed (verified present on `main` at 3.5.0):
   - `src/features/settings/ui/AgentBoardSettingsSection.ts`
   - `src/features/settings/ui/EnvironmentSettingsSection.ts`
   - `src/features/settings/ui/LoggingSettingsSection.ts`
-  - `src/features/settings/ui/OrchestratorSettingsTab.ts`
   - `src/features/settings/ui/QuickActionsSettingsTab.ts`
+  - (`OrchestratorSettingsTab.ts` already deleted in `f0d0d5d7` along with the orchestrator surface.)
 - `src/features/settings/ClaudianSettings.ts` reduced to shell + search + tab strip + single `renderTab()` call per tab (no `renderHiddenProviderCommandSetting`/`renderCustomContextLimits` helpers).
-- `featureFlag.ts` deleted. `useRegistryRenderer` removed from `registry/index.ts`. Tab dispatch goes directly through registry.
+- `featureFlag.ts` deleted. `useRegistryRenderer` removed from `registry/index.ts`. Tab dispatch goes directly through registry. (Vestigial `USE_REGISTRY_RENDERER` const already removed in commit `3de65d55` — 2026-06-07 triage pass.)
 - All settings reachable via search bar (post-port, no field hidden behind unindexed widgets).
 - Workspace service `settingsTabRenderer` fields removed from all four provider services.
 - Per-tab port commit per provider so a regression can be bisected.
