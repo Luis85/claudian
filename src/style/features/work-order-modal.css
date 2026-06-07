@@ -81,6 +81,9 @@
   gap: 7px;
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);
+  /* Started/finished captions embed a relative time ("5m", "30s"); tabular-nums
+     keeps the digits from reflowing as the caption updates. */
+  font-variant-numeric: tabular-nums;
 }
 
 /* Pulsing live dot in the status color (running). The pulse is motion-gated. */

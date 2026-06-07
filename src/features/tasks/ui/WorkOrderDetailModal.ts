@@ -809,6 +809,10 @@ export class WorkOrderDetailModal extends Modal {
     const pill = parent.createSpan({
       cls: `claudian-work-order-modal-status-pill claudian-work-order-modal-status-pill--${status}`,
     });
+    // Tooltip carries the status name on hover (parity with the ID chip + the
+    // assignee avatar); the inner dot stays decorative (color is the inner cue,
+    // the label text is the non-color cue).
+    pill.setAttr('title', status);
     pill.createSpan({ cls: 'claudian-work-order-modal-status-dot' });
     pill.createSpan({ cls: 'claudian-work-order-modal-status-label', text: status });
   }

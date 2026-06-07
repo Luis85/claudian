@@ -567,6 +567,25 @@ describe('AgentBoardRenderer — ⋯ overflow menu (portal-positioned popover)',
     }
   });
 
+  it('closes on item-select and returns focus to the trigger (third close path)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    try {
+      renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
+      const trigger = findClusterTrigger(host)!;
+      const menu = openClusterMenu(host);
+      // Selecting any menuitem must close the popover and restore focus to the
+      // trigger so keyboard users are never stranded after running an action.
+      const item = menu.querySelector('[role="menuitem"]') as HTMLButtonElement;
+      item.click();
+      expect(document.querySelector('.claudian-agent-board-card-menu')).toBeNull();
+      expect(document.activeElement).toBe(trigger);
+    } finally {
+      host.remove();
+    }
+  });
+
   it('closes on scroll (capture) and on resize', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
