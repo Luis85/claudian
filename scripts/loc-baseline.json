@@ -1,0 +1,146 @@
+{
+  "maxLoc": 500,
+  "description": "Grandfathered source files above maxLoc nonblank LOC. Entries may shrink but not grow; new files above maxLoc are rejected. Regenerate with `npm run check:loc -- --update`.",
+  "allowlist": {
+    "src/providers/claude/runtime/ClaudeChatRuntime.ts": {
+      "loc": 1665,
+      "reason": "Grandfathered. Planned split: extract persistent-query lifecycle (ensureReady, needsRestart, response-consumer startup) behind a smaller module interface. See docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md."
+    },
+    "src/features/chat/controllers/StreamController.ts": {
+      "loc": 1546,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/providers/codex/history/CodexHistoryStore.ts": {
+      "loc": 1406,
+      "reason": "Grandfathered. Planned split: separate legacy, modern, and persisted parser families around shared turn-state types. See docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md."
+    },
+    "src/features/chat/controllers/InputController.ts": {
+      "loc": 1402,
+      "reason": "Grandfathered. Planned split: extract the resume dropdown and the plan/approval state machine. See docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md."
+    },
+    "src/providers/opencode/runtime/OpencodeChatRuntime.ts": {
+      "loc": 1189,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/chat/rendering/MessageRenderer.ts": {
+      "loc": 1183,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/chat/ClaudianView.ts": {
+      "loc": 1132,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/chat/ui/InputToolbar.ts": {
+      "loc": 1121,
+      "reason": "Grandfathered. Planned split: move independent widgets (ModelSelector, ModeSelector, PermissionToggle, ExternalContextSelector, McpServerSelector, ContextUsageMeter) into a toolbar directory. See docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md."
+    },
+    "src/providers/codex/runtime/CodexChatRuntime.ts": {
+      "loc": 1116,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/chat/rendering/ToolCallRenderer.ts": {
+      "loc": 1062,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/chat/tabs/TabManager.ts": {
+      "loc": 1031,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/chat/controllers/ConversationController.ts": {
+      "loc": 1025,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/chat/services/SubagentManager.ts": {
+      "loc": 956,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/tasks/ui/AgentBoardView.ts": {
+      "loc": 892,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/providers/codex/runtime/CodexNotificationRouter.ts": {
+      "loc": 886,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/settings/ClaudianSettings.ts": {
+      "loc": 844,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/inline-edit/ui/InlineEditModal.ts": {
+      "loc": 785,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/main.ts": {
+      "loc": 767,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/providers/codex/runtime/CodexSessionFileTail.ts": {
+      "loc": 687,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/i18n/types.ts": {
+      "loc": 637,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/chat/tabs/tabControllers.ts": {
+      "loc": 628,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/tasks/execution/RunSession.ts": {
+      "loc": 625,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/providers/opencode/history/OpencodeHistoryStore.ts": {
+      "loc": 625,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/providers/cursor/runtime/cursorToolNormalization.ts": {
+      "loc": 623,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/chat/rendering/InlineAskUserQuestion.ts": {
+      "loc": 609,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/providers/codex/runtime/codexAppServerTypes.ts": {
+      "loc": 593,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/providers/opencode/ui/OpencodeSettingsTab.ts": {
+      "loc": 588,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/core/providers/types.ts": {
+      "loc": 586,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/chat/rendering/SubagentRenderer.ts": {
+      "loc": 567,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/providers/claude/history/ClaudeConversationHistoryService.ts": {
+      "loc": 567,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/providers/claude/stream/transformClaudeMessage.ts": {
+      "loc": 546,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/shared/mention/MentionDropdownController.ts": {
+      "loc": 543,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/tasks/ui/AgentBoardRenderer.ts": {
+      "loc": 533,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/utils/env.ts": {
+      "loc": 519,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/providers/opencode/ui/OpencodeAgentSettings.ts": {
+      "loc": 501,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    }
+  }
+}
