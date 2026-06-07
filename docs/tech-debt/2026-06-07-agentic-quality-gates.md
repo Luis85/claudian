@@ -3,7 +3,7 @@ type: tech-debt
 title: "CI does not enforce agentic quality gates"
 date: 2026-06-07
 updated: 2026-06-07
-status: open
+status: in-progress
 priority: "1 - high"
 severity: high
 scope: build-ci
@@ -51,12 +51,21 @@ Agentic contributors optimize for finishing the requested change. Without object
 
 ## Acceptance criteria
 
-- [ ] CI fails if `npm run build` fails.
-- [ ] CI fails on lint warnings, not only lint errors.
-- [ ] CI fails when a new source file exceeds the configured max LOC unless it is explicitly allowlisted.
-- [ ] CI fails if production artifacts are stale or missing.
-- [ ] The check output is short enough for agents to act on without reading CI logs manually.
+- [x] CI fails if `npm run build` fails. — new `build` job in `.github/workflows/ci.yml`.
+- [x] CI fails on lint warnings, not only lint errors. — `lint` script now passes `--max-warnings=0` (baseline is warning-clean as of 2026-06-07).
+- [x] CI fails when a new source file exceeds the configured max LOC unless it is explicitly allowlisted. — `npm run check:loc` (`scripts/check-loc.mjs` + `scripts/loc-baseline.json`), wired into the `lint` job.
+- [x] CI fails if production artifacts are stale or missing. — `npm run check:artifacts` (`scripts/check-artifacts.mjs`) runs after build in the `build` job; covers presence, version sync, `minAppVersion`, and a bundle-size budget.
+- [x] The check output is short enough for agents to act on without reading CI logs manually. — both checks print a one-line OK summary and a compact, file-listed failure report.
 
 ## Suggested first PR
 
 Start with a non-invasive guardrail PR: `check:loc` + `npm run build` in CI + `--max-warnings=0`. Keep the LOC gate baseline-aware so this PR documents existing hotspots without forcing every split at once.
+
+## Resolution (first slice — 2026-06-07)
+
+Delivered the suggested first PR. See `docs/build-ci/quality-gates.md` for the
+catalog of gates, how to run them locally, and how to extend them. Remaining
+work tracked under "Next slices" in that doc: `--max-warnings=0` is in place but
+the staged `obsidianmd` rules and `no-explicit-any` are still `warn`; remediation
+item 5 (architecture gates: dependency-cycle budget, provider-boundary
+regression tests, no-new-provider-hardcoded-list) is not started.
