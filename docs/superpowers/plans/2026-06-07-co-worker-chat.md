@@ -1,5 +1,6 @@
 ---
 status: done
+parent: "[[Specorator - Product Vision]]"
 ---
 # Co-Worker - Chat Product Copy Refinement — Implementation Plan
 

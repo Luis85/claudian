@@ -9,7 +9,7 @@ owner: Luis Mendez
 supersedes_planning_in:
   - "[[2026-05-28-standalone-product-vision]]"
 related:
-  - "[[Specorator]]"
+  - "[[Specorator - Product Vision]]"
   - "[[2026-05-28-standalone-product-vision]]"
   - "[[agent-board-mvp]]"
 parent: Product

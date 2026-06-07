@@ -1,9 +1,9 @@
 ---
-type: product
+type: product-vision
 name: Specorator
 title: Specorator — product overview
 tagline: Plan the work, run it, review what came back, keep the record. All in your vault.
-status: shipped (core); harness roadmap in progress
+status: in-progress
 scope: product overview + v1 roadmap pointer
 features:
   - "[[sidepanel-chat]]"
