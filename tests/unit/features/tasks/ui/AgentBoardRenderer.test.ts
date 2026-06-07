@@ -289,6 +289,22 @@ describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ 
     expect(menuItemTexts(openClusterMenu(host))).toEqual(['Open note']);
   });
 
+  it('re-evaluates Open conversation on each open (conversation deleted after render)', () => {
+    const renderer = new AgentBoardRenderer();
+    const host = document.createElement('div');
+    let canOpen = true;
+    const task = makeTask('rn4', 'running');
+    task.frontmatter.conversation_id = 'c1';
+    renderer.render(host, makeState({ running: [task] }), { ...makeCallbacks(), canOpenConversation: () => canOpen });
+
+    // First open: conversation is live → the item is present.
+    expect(menuItemTexts(openClusterMenu(host))).toEqual(['Open note', 'Open conversation']);
+    findClusterTrigger(host)!.click(); // toggle closed
+    // Conversation deleted after render; the lazy items must re-filter on re-open.
+    canOpen = false;
+    expect(menuItemTexts(openClusterMenu(host))).toEqual(['Open note']);
+  });
+
   it.each<TaskStatus>(['needs_input', 'needs_approval'])(
     '%s: no primary; menu = Open note, Open conversation, Stop (Stop is destructive)',
     (status) => {

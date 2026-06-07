@@ -17,7 +17,11 @@ export interface PortalPopoverItem {
 interface PortalPopoverOptions {
   /** The button the popover anchors to (its rect drives `position: fixed`). */
   trigger: HTMLElement;
-  items: PortalPopoverItem[];
+  /**
+   * Menu items. Pass a function to (re)build them lazily on each open, so
+   * guards (e.g. a deleted conversation) re-evaluate against current state.
+   */
+  items: PortalPopoverItem[] | (() => PortalPopoverItem[]);
   /** Class applied to the popover root (caller owns the visual styling). */
   menuClass: string;
   /** Class applied to each menu item button. */
@@ -69,7 +73,9 @@ export class PortalPopover {
 
   open(): void {
     if (this.popover) return;
-    const { items, menuClass, itemClass, itemIconClass, itemDangerClass } = this.options;
+    const { menuClass, itemClass, itemIconClass, itemDangerClass } = this.options;
+    // Resolve items per-open so a function source re-evaluates current state.
+    const items = typeof this.options.items === 'function' ? this.options.items() : this.options.items;
     // Resolve the document from the trigger so the portal also works inside an
     // Obsidian popout window (and avoids referencing the global `document`).
     const ownerDoc = this.options.trigger.ownerDocument;

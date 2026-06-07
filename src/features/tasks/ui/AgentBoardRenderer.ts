@@ -730,21 +730,24 @@ export class AgentBoardRenderer {
     glyph.setAttribute('data-icon', 'more-horizontal');
     setIcon(glyph, 'more-horizontal');
 
-    const cb = this.callbacks;
-    const visible = menu.filter((action) => !action.available || (cb != null && action.available(cb, task)));
-    const items: PortalPopoverItem[] = visible.map((action) => ({
-      label: t(action.labelKey),
-      icon: action.icon,
-      danger: action.danger,
-      run: () => {
-        const callbacks = this.callbacks;
-        if (callbacks) action.run(callbacks, task);
-      },
-    }));
-
     const popover = new PortalPopover({
       trigger,
-      items,
+      // Built lazily on each open so guards (canOpenConversation, etc.)
+      // re-evaluate against current state, not the render-time snapshot.
+      items: (): PortalPopoverItem[] => {
+        const cb = this.callbacks;
+        return menu
+          .filter((action) => !action.available || (cb != null && action.available(cb, task)))
+          .map((action) => ({
+            label: t(action.labelKey),
+            icon: action.icon,
+            danger: action.danger,
+            run: () => {
+              const callbacks = this.callbacks;
+              if (callbacks) action.run(callbacks, task);
+            },
+          }));
+      },
       menuClass: 'claudian-agent-board-card-menu',
       itemClass: 'claudian-agent-board-card-menu-item',
       itemIconClass: 'claudian-agent-board-card-menu-item-icon',
