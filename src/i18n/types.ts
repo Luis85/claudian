@@ -181,6 +181,16 @@ export type TranslationKey =
   | 'tasks.workOrderModal.fieldUpdated'
   | 'tasks.workOrderModal.fieldAttempts'
   | 'tasks.workOrderModal.fieldConversation'
+  | 'tasks.workOrderModal.sectionHandoff'
+  | 'tasks.workOrderModal.sectionRunLedger'
+  | 'tasks.workOrderModal.handoffSummary'
+  | 'tasks.workOrderModal.handoffVerification'
+  | 'tasks.workOrderModal.handoffRisks'
+  | 'tasks.workOrderModal.handoffNextAction'
+  | 'tasks.workOrderModal.salvageTitle'
+  | 'tasks.workOrderModal.salvageCallout'
+  | 'tasks.workOrderModal.transcriptTail'
+  | 'tasks.workOrderModal.transcriptTailEmpty'
 
   // Chat - Tabs (Q-1 chunk 13)
   | 'chat.tab.createFailed'

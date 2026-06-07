@@ -802,7 +802,17 @@
       "fieldCreated": "Created",
       "fieldUpdated": "Updated",
       "fieldAttempts": "Attempts",
-      "fieldConversation": "Conversation"
+      "fieldConversation": "Conversation",
+      "sectionHandoff": "Agent handoff",
+      "sectionRunLedger": "Run ledger",
+      "handoffSummary": "Summary",
+      "handoffVerification": "Verification",
+      "handoffRisks": "Risks",
+      "handoffNextAction": "Next action",
+      "salvageTitle": "Run finished without a handoff",
+      "salvageCallout": "This run finished without producing a structured handoff. The transcript tail below is the available run trace.",
+      "transcriptTail": "Transcript tail",
+      "transcriptTailEmpty": "No transcript available."
     }
   },
   "env": {

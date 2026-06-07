@@ -39,6 +39,7 @@ interface RecordingEl {
   attrs: Record<string, string>;
   events: Record<string, Array<(evt?: unknown) => void>>;
   children: RecordingEl[];
+  parent?: RecordingEl;
   createEl(tag: string, opts?: ElOpts): RecordingEl;
   createDiv(opts?: ElOpts | string): RecordingEl;
   createSpan(opts?: ElOpts | string): RecordingEl;
@@ -47,10 +48,14 @@ interface RecordingEl {
   createSvg(tag: string, opts?: ElOpts): RecordingEl;
   addClass(cls: string): RecordingEl;
   removeClass(cls: string): RecordingEl;
+  toggleClass(cls: string, on: boolean): RecordingEl;
   setText(text: string): void;
   setAttr(name: string, value: string): void;
   setAttribute(name: string, value: string): void;
   empty(): void;
+  // Detaches this node from its parent (mirrors HTMLElement.remove) so removed
+  // collapsible bodies disappear from the recorded tree.
+  remove(): void;
   addEventListener(type: string, handler: (evt?: unknown) => void): void;
   // Test helper: fire a captured DOM event (e.g. a <select> 'change').
   emit(type: string): void;
@@ -78,6 +83,7 @@ function makeRecordingEl(tag: string): RecordingEl {
         }
       }
       if (opts?.href) child.attrs.href = opts.href;
+      child.parent = this;
       this.children.push(child);
       return child;
     },
@@ -98,6 +104,11 @@ function makeRecordingEl(tag: string): RecordingEl {
       this.classes.delete(cls);
       return this;
     },
+    toggleClass(cls: string, on: boolean) {
+      if (on) this.classes.add(cls);
+      else this.classes.delete(cls);
+      return this;
+    },
     setText(text: string) {
       this.text = text;
     },
@@ -110,6 +121,13 @@ function makeRecordingEl(tag: string): RecordingEl {
     empty() {
       this.children = [];
       this.text = '';
+    },
+    remove() {
+      const siblings = this.parent?.children;
+      if (siblings) {
+        const idx = siblings.indexOf(this);
+        if (idx >= 0) siblings.splice(idx, 1);
+      }
     },
     addEventListener(type: string, handler: (evt?: unknown) => void) {
       (this.events[type] ??= []).push(handler);
@@ -186,7 +204,7 @@ function installRecordingContent(modal: WorkOrderDetailModal): RecordingEl {
   return contentEl;
 }
 
-function makeTask(id: string, status: TaskStatus, handoff = ''): TaskSpec {
+function makeTask(id: string, status: TaskStatus, handoff = '', ledger = ''): TaskSpec {
   return {
     path: `tasks/${id}.md`,
     frontmatter: {
@@ -205,13 +223,28 @@ function makeTask(id: string, status: TaskStatus, handoff = ''): TaskSpec {
       acceptanceCriteria: '- [ ] Done.',
       context: '',
       constraints: '',
-      ledger: '',
+      ledger,
       handoff,
     },
     body: '',
     raw: '',
   };
 }
+
+// A canonical handoff region in the renderHandoffMarkdown shape (## Heading\nbody).
+const CANONICAL_HANDOFF = [
+  '## Summary',
+  'Implemented the activity block.',
+  '',
+  '## Verification',
+  'All gates pass.',
+  '',
+  '## Risks',
+  'Migration risk on reload.',
+  '',
+  '## Next Action',
+  'Review and merge.',
+].join('\n');
 
 function makeCallbacks(): WorkOrderDetailModalCallbacks {
   return {
@@ -227,12 +260,6 @@ function makeCallbacks(): WorkOrderDetailModalCallbacks {
     getProviderOptions: () => [],
     getModelOptions: () => [],
   };
-}
-
-function collectHeadings(modal: WorkOrderDetailModal): string[] {
-  const root = installRecordingContent(modal);
-  modal.onOpen();
-  return collectHeadingsIn(root);
 }
 
 function getButtonTexts(): string[] {
@@ -564,29 +591,258 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
   });
 });
 
-describe('WorkOrderDetailModal — Handoff visibility', () => {
-  it('renders Handoff heading on review when handoff content is present', () => {
-    const task = makeTask('t', 'review', 'Prior handoff text.');
+describe('WorkOrderDetailModal — Activity block (Agent handoff)', () => {
+  function openMain(task: TaskSpec): RecordingEl {
     const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
-    expect(collectHeadings(modal)).toContain('Handoff');
+    const root = installRecordingContent(modal);
+    modal.onOpen();
+    const main = find(root, 'claudian-work-order-modal-main');
+    expect(main).toBeDefined();
+    return main!;
+  }
+
+  // The four handoff collapsible cards, in render order.
+  function handoffCards(main: RecordingEl): RecordingEl[] {
+    return findAll(main, (el) => el.classes.has('claudian-work-order-modal-collapse'));
+  }
+
+  // The keyboard-operable header button of a collapsible card.
+  function cardButton(card: RecordingEl): RecordingEl {
+    return find(card, 'claudian-work-order-modal-collapse-head')!;
+  }
+
+  it('renders the Agent handoff section header (clipboard-check) on review', () => {
+    const main = openMain(makeTask('t', 'review', CANONICAL_HANDOFF));
+    const section = findSection(main, 'Agent handoff');
+    expect(section).toBeDefined();
+    const icon = find(section!, 'claudian-work-order-modal-section-icon');
+    expect(icon!.attrs['data-icon']).toBe('clipboard-check');
   });
 
-  it('renders Handoff heading on needs_fix when handoff content is present', () => {
-    const task = makeTask('t', 'needs_fix', 'Prior handoff text.');
-    const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
-    expect(collectHeadings(modal)).toContain('Handoff');
+  it('renders the Agent handoff section on needs_fix when handoff content is present', () => {
+    const main = openMain(makeTask('t', 'needs_fix', CANONICAL_HANDOFF));
+    expect(findSection(main, 'Agent handoff')).toBeDefined();
   });
 
-  it('does not render Handoff heading on needs_fix when handoff is empty', () => {
-    const task = makeTask('t', 'needs_fix', '');
-    const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
-    expect(collectHeadings(modal)).not.toContain('Handoff');
+  it('does not render the Agent handoff section on needs_fix when handoff is empty', () => {
+    const main = openMain(makeTask('t', 'needs_fix', ''));
+    expect(findSection(main, 'Agent handoff')).toBeUndefined();
   });
 
-  it('does not render Handoff heading on inbox status', () => {
-    const task = makeTask('t', 'inbox', 'Some handoff.');
+  it('does not render the Agent handoff section on inbox status', () => {
+    const main = openMain(makeTask('t', 'inbox', CANONICAL_HANDOFF));
+    expect(findSection(main, 'Agent handoff')).toBeUndefined();
+  });
+
+  it('renders four collapsible cards in the Summary → Verification → Risks → Next action order', () => {
+    const main = openMain(makeTask('t', 'review', CANONICAL_HANDOFF));
+    const cards = handoffCards(main);
+    expect(cards).toHaveLength(4);
+    const titles = cards.map(
+      (card) => find(card, 'claudian-work-order-modal-collapse-title')!.text,
+    );
+    expect(titles).toEqual(['Summary', 'Verification', 'Risks', 'Next action']);
+  });
+
+  it('defaults Summary and Next action open; Verification and Risks closed (aria-expanded)', () => {
+    const main = openMain(makeTask('t', 'review', CANONICAL_HANDOFF));
+    const [summary, verification, risks, nextAction] = handoffCards(main);
+    expect(cardButton(summary).attrs['aria-expanded']).toBe('true');
+    expect(cardButton(verification).attrs['aria-expanded']).toBe('false');
+    expect(cardButton(risks).attrs['aria-expanded']).toBe('false');
+    expect(cardButton(nextAction).attrs['aria-expanded']).toBe('true');
+
+    // Open cards carry the open modifier and render a body; closed cards do not.
+    expect(summary.classes.has('is-open')).toBe(true);
+    expect(find(summary, 'claudian-work-order-modal-collapse-body')).toBeDefined();
+    expect(verification.classes.has('is-open')).toBe(false);
+    expect(find(verification, 'claudian-work-order-modal-collapse-body')).toBeUndefined();
+  });
+
+  it('uses a real <button> header with a rotating chevron and a colored section icon', () => {
+    const main = openMain(makeTask('t', 'review', CANONICAL_HANDOFF));
+    const [summary] = handoffCards(main);
+    const button = cardButton(summary);
+    expect(button.tag).toBe('button');
+    // Chevron glyph (rotates via CSS on expand) + a per-section colored icon.
+    const chevron = find(summary, 'claudian-work-order-modal-collapse-chevron');
+    expect(chevron!.attrs['data-icon']).toBe('chevron-right');
+    expect(chevron!.attrs['aria-hidden']).toBe('true');
+    const sectionIcon = find(summary, 'claudian-work-order-modal-collapse-icon');
+    expect(sectionIcon).toBeDefined();
+    expect(sectionIcon!.attrs['aria-hidden']).toBe('true');
+  });
+
+  it('keys each card icon color off a per-section modifier class', () => {
+    const main = openMain(makeTask('t', 'review', CANONICAL_HANDOFF));
+    const [summary, verification, risks, nextAction] = handoffCards(main);
+    expect(summary.classes.has('claudian-work-order-modal-collapse--summary')).toBe(true);
+    expect(verification.classes.has('claudian-work-order-modal-collapse--verification')).toBe(true);
+    expect(risks.classes.has('claudian-work-order-modal-collapse--risks')).toBe(true);
+    expect(nextAction.classes.has('claudian-work-order-modal-collapse--next')).toBe(true);
+  });
+
+  it('renders each section body through MarkdownRenderer (inline links stay live)', () => {
+    const main = openMain(makeTask('t', 'review', CANONICAL_HANDOFF));
+    // Default-open cards render their body immediately.
+    const calls = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
+    expect(calls.some((c) => c[1] === 'Implemented the activity block.')).toBe(true);
+    expect(calls.some((c) => c[1] === 'Review and merge.')).toBe(true);
+
+    // Expanding a closed card renders its body through MarkdownRenderer too.
+    const [, verification] = handoffCards(main);
+    cardButton(verification).emit('click');
+    const after = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
+    expect(after.some((c) => c[1] === 'All gates pass.')).toBe(true);
+  });
+
+  it('toggles aria-expanded and the open modifier on click', () => {
+    const main = openMain(makeTask('t', 'review', CANONICAL_HANDOFF));
+    const [, verification] = handoffCards(main);
+    const button = cardButton(verification);
+    expect(button.attrs['aria-expanded']).toBe('false');
+    button.emit('click');
+    expect(button.attrs['aria-expanded']).toBe('true');
+    expect(verification.classes.has('is-open')).toBe(true);
+    expect(find(verification, 'claudian-work-order-modal-collapse-body')).toBeDefined();
+    button.emit('click');
+    expect(button.attrs['aria-expanded']).toBe('false');
+    expect(verification.classes.has('is-open')).toBe(false);
+  });
+
+  it('falls back to the full handoff markdown when it parses into no known section', () => {
+    const raw = 'Totally freeform handoff with no structured headings at all.';
+    const main = openMain(makeTask('t', 'review', raw));
+    // No structured cards — but the raw content is still rendered (no content loss).
+    expect(handoffCards(main)).toHaveLength(0);
+    const fallback = find(main, 'claudian-work-order-modal-handoff-fallback');
+    expect(fallback).toBeDefined();
+    const calls = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
+    expect(calls.some((c) => c[1] === raw)).toBe(true);
+  });
+});
+
+describe('WorkOrderDetailModal — Activity block (needs_handoff salvage)', () => {
+  function openMain(task: TaskSpec): RecordingEl {
     const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
-    expect(collectHeadings(modal)).not.toContain('Handoff');
+    const root = installRecordingContent(modal);
+    modal.onOpen();
+    return find(root, 'claudian-work-order-modal-main')!;
+  }
+
+  it('renders the warning callout only for needs_handoff', () => {
+    const main = openMain(makeTask('t', 'needs_handoff', '', '- 2026-06-04T00:00:00Z [running] step'));
+    expect(find(main, 'claudian-work-order-modal-salvage-callout')).toBeDefined();
+  });
+
+  it('does not render the salvage callout for review', () => {
+    const main = openMain(makeTask('t', 'review', CANONICAL_HANDOFF));
+    expect(find(main, 'claudian-work-order-modal-salvage-callout')).toBeUndefined();
+  });
+
+  it('renders a collapsible Transcript tail (keyboard button + aria-expanded) from the ledger', () => {
+    const main = openMain(
+      makeTask('t', 'needs_handoff', '', '- 2026-06-04T00:00:00Z [running] doing the work'),
+    );
+    const tail = find(main, 'claudian-work-order-modal-collapse');
+    expect(tail).toBeDefined();
+    const button = find(tail!, 'claudian-work-order-modal-collapse-head');
+    expect(button!.tag).toBe('button');
+    expect(button!.attrs['aria-expanded']).toBeDefined();
+    // Monospace trace surface sourced from the ledger region.
+    const traceBody = find(main, 'claudian-work-order-modal-tail-body');
+    expect(traceBody).toBeDefined();
+    expect(traceBody!.text).toContain('doing the work');
+  });
+
+  it('shows an empty-state in the transcript tail when no ledger trace exists', () => {
+    const main = openMain(makeTask('t', 'needs_handoff', '', ''));
+    const traceBody = find(main, 'claudian-work-order-modal-tail-body');
+    expect(traceBody).toBeDefined();
+    expect(traceBody!.text.length).toBeGreaterThan(0);
+  });
+});
+
+describe('WorkOrderDetailModal — Activity block (failed Run ledger)', () => {
+  const LEDGER = [
+    '- 2026-06-04T00:00:00Z [running] started the run',
+    '- 2026-06-04T00:05:00Z [failed] hit an error',
+  ].join('\n');
+
+  function openMain(task: TaskSpec): RecordingEl {
+    const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
+    const root = installRecordingContent(modal);
+    modal.onOpen();
+    return find(root, 'claudian-work-order-modal-main')!;
+  }
+
+  it('renders the Run ledger section header (scroll-text) only for failed', () => {
+    const main = openMain(makeTask('t', 'failed', '', LEDGER));
+    const section = findSection(main, 'Run ledger');
+    expect(section).toBeDefined();
+    const icon = find(section!, 'claudian-work-order-modal-section-icon');
+    expect(icon!.attrs['data-icon']).toBe('scroll-text');
+  });
+
+  it('does not render the Run ledger when the ledger is empty', () => {
+    const main = openMain(makeTask('t', 'failed', '', ''));
+    expect(findSection(main, 'Run ledger')).toBeUndefined();
+  });
+
+  it('renders one entry per parsed line with monospace time + message', () => {
+    const main = openMain(makeTask('t', 'failed', '', LEDGER));
+    const entries = findAll(main, (el) => el.classes.has('claudian-work-order-modal-ledger-entry'));
+    expect(entries).toHaveLength(2);
+    const times = entries.map((e) => find(e, 'claudian-work-order-modal-ledger-time')!.text);
+    expect(times).toEqual(['2026-06-04T00:00:00Z', '2026-06-04T00:05:00Z']);
+    const messages = entries.map((e) => find(e, 'claudian-work-order-modal-ledger-msg')!.text);
+    expect(messages).toEqual(['started the run', 'hit an error']);
+  });
+
+  it('colors each dot off the entry status modifier (status → color contract)', () => {
+    const main = openMain(makeTask('t', 'failed', '', LEDGER));
+    const entries = findAll(main, (el) => el.classes.has('claudian-work-order-modal-ledger-entry'));
+    const firstDot = find(entries[0], 'claudian-work-order-modal-ledger-dot')!;
+    const secondDot = find(entries[1], 'claudian-work-order-modal-ledger-dot')!;
+    expect(firstDot.classes.has('claudian-work-order-modal-ledger-dot--running')).toBe(true);
+    expect(secondDot.classes.has('claudian-work-order-modal-ledger-dot--failed')).toBe(true);
+  });
+
+  it('tolerates malformed lines (renders only the well-formed entries)', () => {
+    const main = openMain(
+      makeTask(
+        't',
+        'failed',
+        '',
+        ['garbage line without structure', '- 2026-06-04T00:00:00Z [done] ok'].join('\n'),
+      ),
+    );
+    const entries = findAll(main, (el) => el.classes.has('claudian-work-order-modal-ledger-entry'));
+    expect(entries).toHaveLength(1);
+    expect(find(entries[0], 'claudian-work-order-modal-ledger-msg')!.text).toBe('ok');
+  });
+});
+
+describe('WorkOrderDetailModal — Activity block (other statuses)', () => {
+  function openMain(task: TaskSpec): RecordingEl {
+    const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
+    const root = installRecordingContent(modal);
+    modal.onOpen();
+    return find(root, 'claudian-work-order-modal-main')!;
+  }
+
+  it('renders no activity block for running (even with a ledger present)', () => {
+    const main = openMain(makeTask('t', 'running', '', '- 2026-06-04T00:00:00Z [running] x'));
+    expect(findSection(main, 'Agent handoff')).toBeUndefined();
+    expect(findSection(main, 'Run ledger')).toBeUndefined();
+    expect(find(main, 'claudian-work-order-modal-salvage-callout')).toBeUndefined();
+  });
+
+  it('renders no activity block for done (even with a handoff present)', () => {
+    const main = openMain(makeTask('t', 'done', CANONICAL_HANDOFF, 'x'));
+    expect(findSection(main, 'Agent handoff')).toBeUndefined();
+    expect(findSection(main, 'Run ledger')).toBeUndefined();
+    expect(find(main, 'claudian-work-order-modal-salvage-callout')).toBeUndefined();
   });
 });
 
