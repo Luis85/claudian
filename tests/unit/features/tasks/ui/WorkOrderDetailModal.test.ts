@@ -24,35 +24,48 @@ const mockApp: any = {};
 // children so tests can assert the new sticky-shell container tree (header /
 // body / main / sidebar / footer) and locate headings rendered into nested
 // regions rather than directly on `contentEl`.
+type ElOpts = { text?: string; cls?: string; attr?: Record<string, string>; href?: string };
+
 interface RecordingEl {
   tag: string;
   classes: Set<string>;
   text: string;
+  value: string;
+  attrs: Record<string, string>;
+  events: Record<string, Array<(evt?: unknown) => void>>;
   children: RecordingEl[];
-  createEl(tag: string, opts?: { text?: string; cls?: string }): RecordingEl;
-  createDiv(opts?: { text?: string; cls?: string } | string): RecordingEl;
-  createSpan(opts?: { text?: string; cls?: string } | string): RecordingEl;
+  createEl(tag: string, opts?: ElOpts): RecordingEl;
+  createDiv(opts?: ElOpts | string): RecordingEl;
+  createSpan(opts?: ElOpts | string): RecordingEl;
   addClass(cls: string): RecordingEl;
   removeClass(cls: string): RecordingEl;
   setText(text: string): void;
+  setAttr(name: string, value: string): void;
+  setAttribute(name: string, value: string): void;
   empty(): void;
-  addEventListener(): void;
+  addEventListener(type: string, handler: (evt?: unknown) => void): void;
+  // Test helper: fire a captured DOM event (e.g. a <select> 'change').
+  emit(type: string): void;
 }
 
 function makeRecordingEl(tag: string): RecordingEl {
-  const normalizeOpts = (
-    opts?: { text?: string; cls?: string } | string,
-  ): { text?: string; cls?: string } => (typeof opts === 'string' ? { cls: opts } : (opts ?? {}));
+  const normalizeOpts = (opts?: ElOpts | string): ElOpts =>
+    typeof opts === 'string' ? { cls: opts } : (opts ?? {});
 
   const el: RecordingEl = {
     tag,
     classes: new Set<string>(),
     text: '',
+    value: '',
+    attrs: {},
+    events: {},
     children: [],
-    createEl(childTag: string, opts?: { text?: string; cls?: string }) {
+    createEl(childTag: string, opts?: ElOpts) {
       const child = makeRecordingEl(childTag);
       if (opts?.text) child.text = opts.text;
       if (opts?.cls) opts.cls.split(/\s+/).filter(Boolean).forEach((c) => child.classes.add(c));
+      if (opts?.attr) Object.assign(child.attrs, opts.attr);
+      if (opts?.href) child.attrs.href = opts.href;
       this.children.push(child);
       return child;
     },
@@ -73,12 +86,21 @@ function makeRecordingEl(tag: string): RecordingEl {
     setText(text: string) {
       this.text = text;
     },
+    setAttr(name: string, value: string) {
+      this.attrs[name] = value;
+    },
+    setAttribute(name: string, value: string) {
+      this.attrs[name] = value;
+    },
     empty() {
       this.children = [];
       this.text = '';
     },
-    addEventListener() {
-      /* noop */
+    addEventListener(type: string, handler: (evt?: unknown) => void) {
+      (this.events[type] ??= []).push(handler);
+    },
+    emit(type: string) {
+      (this.events[type] ?? []).forEach((h) => h({ target: this, preventDefault: () => undefined }));
     },
   };
   return el;
@@ -91,6 +113,29 @@ function find(root: RecordingEl, cls: string): RecordingEl | undefined {
     if (hit) return hit;
   }
   return undefined;
+}
+
+function findAll(root: RecordingEl, predicate: (el: RecordingEl) => boolean): RecordingEl[] {
+  const hits: RecordingEl[] = [];
+  const walk = (el: RecordingEl): void => {
+    if (predicate(el)) hits.push(el);
+    el.children.forEach(walk);
+  };
+  walk(root);
+  return hits;
+}
+
+// Ordered list of the sidebar property rows by their stable `data-prop` key.
+function propRowKeys(root: RecordingEl): string[] {
+  return findAll(root, (el) => 'data-prop' in el.attrs).map((el) => el.attrs['data-prop']);
+}
+
+function findRow(root: RecordingEl, key: string): RecordingEl | undefined {
+  return findAll(root, (el) => el.attrs['data-prop'] === key)[0];
+}
+
+function firstSelect(root: RecordingEl): RecordingEl | undefined {
+  return findAll(root, (el) => el.tag === 'select')[0];
 }
 
 function collectHeadingsIn(root: RecordingEl): string[] {
@@ -240,7 +285,7 @@ describe('WorkOrderDetailModal — sticky-shell frame', () => {
     expect(collectHeadingsIn(footer!)).toHaveLength(0);
   });
 
-  it('renders editor settings and status meta into the sidebar region', () => {
+  it('renders the properties sidebar with the property rows into the sidebar region', () => {
     const task = makeTask('t', 'inbox');
     const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
     const root = installRecordingContent(modal);
@@ -248,14 +293,16 @@ describe('WorkOrderDetailModal — sticky-shell frame', () => {
 
     const sidebar = find(root, 'claudian-work-order-modal-sidebar');
     expect(sidebar).toBeDefined();
-    // Status meta chip lives in the sidebar.
-    expect(find(sidebar!, 'claudian-work-order-modal-meta')).toBeDefined();
-    // Provider/Model/Priority editors render through Setting into the sidebar.
-    const sidebarSettings = settingInstances().filter((s) => s.containerEl === sidebar);
-    expect(sidebarSettings.length).toBeGreaterThanOrEqual(3);
+    // The properties panel (header + rows) lives in the sidebar.
+    expect(find(sidebar!, 'claudian-work-order-modal-properties')).toBeDefined();
+    // Status / Provider / Model / Priority rows are present in the sidebar.
+    expect(findRow(sidebar!, 'status')).toBeDefined();
+    expect(findRow(sidebar!, 'provider')).toBeDefined();
+    expect(findRow(sidebar!, 'model')).toBeDefined();
+    expect(findRow(sidebar!, 'priority')).toBeDefined();
   });
 
-  it('drops the duplicate Title Setting row from the editors', () => {
+  it('does not introduce a Title Setting row in the sidebar', () => {
     const task = makeTask('t', 'inbox');
     const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
     installRecordingContent(modal);
@@ -263,8 +310,6 @@ describe('WorkOrderDetailModal — sticky-shell frame', () => {
 
     const names = settingInstances().flatMap((s) => (s.setName as jest.Mock).mock.calls.map((c) => c[0]));
     expect(names).not.toContain('Title');
-    // The editor dropdowns survive the Title removal.
-    expect(names).toEqual(expect.arrayContaining(['Provider', 'Model', 'Priority']));
   });
 
   it('routes action buttons into the footer Setting', () => {
@@ -280,6 +325,190 @@ describe('WorkOrderDetailModal — sticky-shell frame', () => {
       .filter((c) => c.kind === 'button')
       .map((c) => c.props.buttonText);
     expect(footerButtons).toEqual(expect.arrayContaining(['Accept', 'Rework']));
+  });
+});
+
+describe('WorkOrderDetailModal — properties sidebar', () => {
+  function richCallbacks(
+    overrides: Partial<WorkOrderDetailModalCallbacks> = {},
+  ): WorkOrderDetailModalCallbacks {
+    return {
+      ...makeCallbacks(),
+      getProviderOptions: () => [
+        { value: 'claude', label: 'claude' },
+        { value: 'codex', label: 'codex' },
+      ],
+      getModelOptions: (providerId) =>
+        providerId === 'codex'
+          ? [{ value: 'gpt-5', label: 'gpt-5' }]
+          : [{ value: 'opus', label: 'Opus' }, { value: 'sonnet', label: 'Sonnet' }],
+      ...overrides,
+    };
+  }
+
+  function openWith(
+    task: TaskSpec,
+    callbacks: WorkOrderDetailModalCallbacks,
+  ): { root: RecordingEl; sidebar: RecordingEl } {
+    const modal = new WorkOrderDetailModal(mockApp, task, callbacks);
+    const root = installRecordingContent(modal);
+    modal.onOpen();
+    const sidebar = find(root, 'claudian-work-order-modal-sidebar');
+    expect(sidebar).toBeDefined();
+    return { root, sidebar: sidebar! };
+  }
+
+  it('renders a Properties header in the sidebar', () => {
+    const { sidebar } = openWith(makeTask('t', 'inbox'), richCallbacks());
+    const head = find(sidebar, 'claudian-work-order-modal-properties-head');
+    expect(head).toBeDefined();
+    expect(head!.text).toBe('Properties');
+  });
+
+  it('renders editable rows in the spec order (no Conversation without a link)', () => {
+    const { sidebar } = openWith(makeTask('t', 'inbox'), richCallbacks());
+    expect(propRowKeys(sidebar)).toEqual([
+      'status',
+      'agent',
+      'provider',
+      'model',
+      'priority',
+      'created',
+      'updated',
+      'attempts',
+    ]);
+  });
+
+  it('colors the Status pill with the status-specific class', () => {
+    const { sidebar } = openWith(makeTask('t', 'needs_approval'), richCallbacks());
+    const statusRow = findRow(sidebar, 'status')!;
+    const pill = find(statusRow, 'claudian-work-order-modal-status-pill');
+    expect(pill).toBeDefined();
+    expect(pill!.classes.has('claudian-work-order-modal-status-pill--needs_approval')).toBe(true);
+  });
+
+  it('renders the Agent placeholder row with no avatar', () => {
+    const { sidebar } = openWith(makeTask('t', 'inbox'), richCallbacks());
+    const agentRow = findRow(sidebar, 'agent');
+    expect(agentRow).toBeDefined();
+    // Placeholder only — no chip/select and no avatar surface yet.
+    expect(find(agentRow!, 'claudian-work-order-modal-chip')).toBeUndefined();
+    expect(find(agentRow!, 'claudian-work-order-modal-avatar')).toBeUndefined();
+  });
+
+  it('renders Provider/Model/Priority as editable value chips in editable states', () => {
+    const { sidebar } = openWith(makeTask('t', 'inbox'), richCallbacks());
+    for (const key of ['provider', 'model', 'priority']) {
+      const row = findRow(sidebar, key)!;
+      expect(find(row, 'claudian-work-order-modal-chip')).toBeDefined();
+      expect(firstSelect(row)).toBeDefined();
+    }
+  });
+
+  it('renders read-only Provider/Model and priority bars in the running state', () => {
+    const task = makeTask('t', 'running');
+    task.frontmatter.provider = 'codex';
+    task.frontmatter.model = 'gpt-5';
+    task.frontmatter.priority = '1 - high';
+    const { sidebar } = openWith(task, richCallbacks());
+
+    // No chips/selects when read-only.
+    expect(find(sidebar, 'claudian-work-order-modal-chip')).toBeUndefined();
+    expect(firstSelect(sidebar)).toBeUndefined();
+
+    // Provider renders as monospace plain text.
+    const providerRow = findRow(sidebar, 'provider')!;
+    expect(find(providerRow, 'claudian-work-order-modal-mono')).toBeDefined();
+
+    // Priority renders ascending bars colored per the priority contract.
+    const priorityRow = findRow(sidebar, 'priority')!;
+    const bars = find(priorityRow, 'claudian-work-order-modal-priority-bars');
+    expect(bars).toBeDefined();
+    const priorityWrap = find(priorityRow, 'claudian-work-order-modal-priority');
+    expect(priorityWrap!.classes.has('claudian-work-order-modal-priority--1')).toBe(true);
+  });
+
+  it('persists a Provider change and resets Model to provider default', () => {
+    const onSaveFields = jest.fn();
+    const task = makeTask('t', 'inbox');
+    task.frontmatter.provider = 'claude';
+    task.frontmatter.model = 'opus';
+    const { sidebar } = openWith(task, richCallbacks({ onSaveFields }));
+
+    const providerSelect = firstSelect(findRow(sidebar, 'provider')!)!;
+    providerSelect.value = 'codex';
+    providerSelect.emit('change');
+
+    expect(onSaveFields).toHaveBeenCalledWith(task, { provider: 'codex', model: '' });
+
+    // Model chip repopulated for the new provider and reset to provider default.
+    const modelSelect = firstSelect(findRow(sidebar, 'model')!)!;
+    expect(modelSelect.value).toBe('');
+    const modelChipLabel = find(findRow(sidebar, 'model')!, 'claudian-work-order-modal-chip-label');
+    expect(modelChipLabel).toBeDefined();
+  });
+
+  it('persists a Model change through onSaveFields', () => {
+    const onSaveFields = jest.fn();
+    const task = makeTask('t', 'inbox');
+    task.frontmatter.provider = 'codex';
+    const { sidebar } = openWith(task, richCallbacks({ onSaveFields }));
+
+    const modelSelect = firstSelect(findRow(sidebar, 'model')!)!;
+    modelSelect.value = 'gpt-5';
+    modelSelect.emit('change');
+    expect(onSaveFields).toHaveBeenCalledWith(task, { model: 'gpt-5' });
+  });
+
+  it('persists a Priority change through onSaveFields', () => {
+    const onSaveFields = jest.fn();
+    const task = makeTask('t', 'inbox');
+    const { sidebar } = openWith(task, richCallbacks({ onSaveFields }));
+
+    const prioritySelect = firstSelect(findRow(sidebar, 'priority')!)!;
+    prioritySelect.value = '0 - urgent';
+    prioritySelect.emit('change');
+    expect(onSaveFields).toHaveBeenCalledWith(task, { priority: '0 - urgent' });
+  });
+
+  it('marks Created/Updated/Attempts values with the tabular-nums class', () => {
+    const { sidebar } = openWith(makeTask('t', 'inbox'), richCallbacks());
+    for (const key of ['created', 'updated', 'attempts']) {
+      const row = findRow(sidebar, key)!;
+      expect(find(row, 'claudian-work-order-modal-prop-num')).toBeDefined();
+    }
+  });
+
+  it('hides the Conversation row when conversation_id is absent', () => {
+    const { sidebar } = openWith(makeTask('t', 'inbox'), richCallbacks());
+    expect(findRow(sidebar, 'conversation')).toBeUndefined();
+  });
+
+  it('hides the Conversation row when canOpenConversation returns false', () => {
+    const task = makeTask('t', 'inbox');
+    task.frontmatter.conversation_id = 'conv-1';
+    const { sidebar } = openWith(
+      task,
+      richCallbacks({ onOpenConversation: jest.fn(), canOpenConversation: () => false }),
+    );
+    expect(findRow(sidebar, 'conversation')).toBeUndefined();
+  });
+
+  it('shows the Conversation row and invokes onOpenConversation on click', () => {
+    const onOpenConversation = jest.fn();
+    const task = makeTask('t', 'inbox');
+    task.frontmatter.conversation_id = 'conv-1';
+    const { sidebar } = openWith(
+      task,
+      richCallbacks({ onOpenConversation, canOpenConversation: () => true }),
+    );
+
+    const convRow = findRow(sidebar, 'conversation');
+    expect(convRow).toBeDefined();
+    const link = find(convRow!, 'claudian-work-order-modal-prop-link');
+    expect(link).toBeDefined();
+    link!.emit('click');
+    expect(onOpenConversation).toHaveBeenCalledWith(task);
   });
 });
 
