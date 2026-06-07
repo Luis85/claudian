@@ -1,4 +1,4 @@
-import { type App, Component, MarkdownRenderer, Modal, setIcon, Setting } from 'obsidian';
+import { type App, Component, MarkdownRenderer, Modal, setIcon } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
 import type { TranslationKey } from '../../../i18n/types';
@@ -32,6 +32,24 @@ interface LedgerEntry {
 }
 
 const LEDGER_LINE = /^-\s+(\S+)\s+\[([^\]]+)\]\s*(.*)$/;
+
+// Footer button visual variant. `ghost` = transparent secondary; `cta` = the
+// accent primary; `danger` = the destructive red action. The visual tokens for
+// each live in CSS keyed off the modifier class below.
+type FooterActionVariant = 'ghost' | 'cta' | 'danger';
+
+// One sticky-footer action: a real `<button>` with a leading Lucide icon and a
+// keyed label. `side` groups the button left (secondary/ghost) or right
+// (primary group); `run` is invoked after the modal closes (close-on-click is
+// preserved for every action). Actions whose callback is optional/missing are
+// filtered out before render.
+interface FooterAction {
+  variant: FooterActionVariant;
+  icon: string;
+  labelKey: TranslationKey;
+  side: 'left' | 'right';
+  run: () => void;
+}
 
 export interface WorkOrderFieldUpdate {
   title?: string;
@@ -752,128 +770,191 @@ export class WorkOrderDetailModal extends Modal {
     wrap.createSpan({ cls: 'claudian-work-order-modal-priority-label', text: priority });
   }
 
+  /**
+   * Sticky-footer action set. Secondary (ghost) buttons group left, the primary
+   * group (CTA / danger) right — every button is a real keyboard-focusable
+   * `<button>` with a leading Lucide icon. The set is status-driven (see
+   * `footerActions`); each action closes the modal first, then runs its
+   * callback, preserving the prior close-on-click contract. Run is deliberately
+   * absent — in the redesign Run is a board-card action, not a modal action.
+   */
   private renderActions(parent: HTMLElement): void {
+    const actions = this.footerActions();
+
+    const left = parent.createDiv({
+      cls: 'claudian-work-order-modal-footer-group claudian-work-order-modal-footer-group--left',
+    });
+    const right = parent.createDiv({
+      cls: 'claudian-work-order-modal-footer-group claudian-work-order-modal-footer-group--right',
+    });
+
+    for (const action of actions) {
+      this.renderFooterButton(action.side === 'right' ? right : left, action);
+    }
+  }
+
+  /**
+   * Resolve the footer action list for the current status. Every status gets
+   * Open note (ghost, left) and — when a conversation link exists and can be
+   * opened — Open conversation (ghost, left). The right-side primary group is
+   * status-specific. Statuses the spec does not tabulate fall back to a minimal
+   * footer so none renders a dead footer.
+   */
+  private footerActions(): FooterAction[] {
     const { task } = this;
-    const actions = new Setting(parent);
+    const { status } = task.frontmatter;
+    const actions: FooterAction[] = [];
 
-    const editLabel = task.frontmatter.status === 'review' ? 'Open note' : 'Edit';
-    actions.addButton((btn) =>
-      btn.setButtonText(editLabel).onClick(() => {
-        this.close();
-        this.callbacks.onOpenNote(task);
-      }),
-    );
+    // Open note — present on every status.
+    actions.push({
+      variant: 'ghost',
+      icon: 'file-text',
+      labelKey: 'tasks.workOrderModal.actionOpenNote',
+      side: 'left',
+      run: () => this.callbacks.onOpenNote(task),
+    });
 
-    if (
-      task.frontmatter.conversation_id &&
-      this.callbacks.onOpenConversation &&
-      (this.callbacks.canOpenConversation?.(task) ?? true)
-    ) {
-      actions.addButton((btn) =>
-        btn.setButtonText('Open conversation').onClick(() => {
-          this.close();
-          this.callbacks.onOpenConversation?.(task);
-        }),
-      );
+    // Open conversation — left ghost, only when the linked conversation exists
+    // and can still be opened (mirrors the sidebar Conversation-row guard).
+    const canOpenConversation =
+      Boolean(task.frontmatter.conversation_id) &&
+      Boolean(this.callbacks.onOpenConversation) &&
+      (this.callbacks.canOpenConversation?.(task) ?? true);
+
+    const addOpenConversation = (): void => {
+      if (!canOpenConversation) return;
+      actions.push({
+        variant: 'ghost',
+        icon: 'message-square',
+        labelKey: 'tasks.workOrderModal.actionOpenConversation',
+        side: 'left',
+        run: () => this.callbacks.onOpenConversation?.(task),
+      });
+    };
+
+    switch (status) {
+      case 'inbox':
+        actions.push({
+          variant: 'cta',
+          icon: 'check',
+          labelKey: 'tasks.workOrderModal.actionMarkReady',
+          side: 'right',
+          run: () => this.callbacks.onMarkReady(task),
+        });
+        break;
+
+      // Live / read-only states: Open conversation + a single Stop danger.
+      case 'running':
+      case 'needs_input':
+      case 'needs_approval':
+        addOpenConversation();
+        actions.push({
+          variant: 'danger',
+          icon: 'square',
+          labelKey: 'tasks.workOrderModal.actionStop',
+          side: 'right',
+          run: () => this.callbacks.onStop(task),
+        });
+        break;
+
+      case 'review':
+        addOpenConversation();
+        actions.push({
+          variant: 'ghost',
+          icon: 'rotate-ccw',
+          labelKey: 'tasks.workOrderModal.actionRework',
+          side: 'right',
+          run: () => this.callbacks.onRework(task),
+        });
+        actions.push({
+          variant: 'cta',
+          icon: 'check',
+          labelKey: 'tasks.workOrderModal.actionAccept',
+          side: 'right',
+          run: () => this.callbacks.onAccept(task),
+        });
+        break;
+
+      case 'needs_handoff':
+        addOpenConversation();
+        actions.push({
+          variant: 'danger',
+          icon: 'triangle',
+          labelKey: 'tasks.workOrderModal.actionMarkFailed',
+          side: 'right',
+          run: () => this.callbacks.onMarkFailed?.(task),
+        });
+        actions.push({
+          variant: 'cta',
+          icon: 'check',
+          labelKey: 'tasks.workOrderModal.actionSendToReview',
+          side: 'right',
+          run: () => this.callbacks.onSendToReview?.(task),
+        });
+        break;
+
+      case 'done':
+        actions.push({
+          variant: 'ghost',
+          icon: 'archive',
+          labelKey: 'tasks.workOrderModal.actionArchive',
+          side: 'left',
+          run: () => this.callbacks.onArchive(task),
+        });
+        actions.push({
+          variant: 'ghost',
+          icon: 'rotate-ccw',
+          labelKey: 'tasks.workOrderModal.actionReopen',
+          side: 'right',
+          run: () => this.callbacks.onReopen(task),
+        });
+        break;
+
+      case 'failed':
+        actions.push({
+          variant: 'ghost',
+          icon: 'archive',
+          labelKey: 'tasks.workOrderModal.actionArchive',
+          side: 'right',
+          run: () => this.callbacks.onArchive(task),
+        });
+        break;
+
+      case 'canceled':
+        actions.push({
+          variant: 'ghost',
+          icon: 'archive',
+          labelKey: 'tasks.workOrderModal.actionArchive',
+          side: 'right',
+          run: () => this.callbacks.onArchive(task),
+        });
+        break;
+
+      // ready / needs_fix (and any future status): Open note + Open conversation
+      // only. Run is a board action now, so no right-side primary here.
+      default:
+        addOpenConversation();
+        break;
     }
 
-    if (task.frontmatter.status === 'inbox') {
-      actions.addButton((btn) =>
-        btn
-          .setButtonText('Mark ready')
-          .setCta()
-          .onClick(() => {
-            this.close();
-            this.callbacks.onMarkReady(task);
-          }),
-      );
-    }
+    return actions;
+  }
 
-    if (task.frontmatter.status === 'ready' || task.frontmatter.status === 'needs_fix') {
-      actions.addButton((btn) =>
-        btn
-          .setButtonText('Run')
-          .setCta()
-          .onClick(() => {
-            this.close();
-            this.callbacks.onRun(task);
-          }),
-      );
-    }
-
-    if (task.frontmatter.status === 'running') {
-      actions.addButton((btn) =>
-        btn
-          .setButtonText('Stop')
-          .setWarning()
-          .onClick(() => {
-            this.close();
-            this.callbacks.onStop(task);
-          }),
-      );
-    }
-
-    if (task.frontmatter.status === 'review') {
-      actions.addButton((btn) =>
-        btn
-          .setButtonText('Accept')
-          .setCta()
-          .onClick(() => {
-            this.close();
-            this.callbacks.onAccept(task);
-          }),
-      );
-      actions.addButton((btn) =>
-        btn.setButtonText('Rework').onClick(() => {
-          this.close();
-          this.callbacks.onRework(task);
-        }),
-      );
-    }
-
-    if (task.frontmatter.status === 'done') {
-      actions.addButton((btn) =>
-        btn.setButtonText('Reopen').onClick(() => {
-          this.close();
-          this.callbacks.onReopen(task);
-        }),
-      );
-    }
-
-    if (task.frontmatter.status === 'needs_handoff') {
-      actions.addButton((btn) =>
-        btn
-          .setButtonText('Review')
-          .setCta()
-          .onClick(() => {
-            this.close();
-            this.callbacks.onSendToReview?.(task);
-          }),
-      );
-      actions.addButton((btn) =>
-        btn
-          .setButtonText('Mark failed')
-          .setWarning()
-          .onClick(() => {
-            this.close();
-            this.callbacks.onMarkFailed?.(task);
-          }),
-      );
-    }
-
-    if (
-      task.frontmatter.status === 'done' ||
-      task.frontmatter.status === 'failed' ||
-      task.frontmatter.status === 'canceled'
-    ) {
-      actions.addButton((btn) =>
-        btn
-          .setButtonText('Archive')
-          .onClick(() => {
-            this.close();
-            this.callbacks.onArchive(task);
-          }),
-      );
-    }
+  private renderFooterButton(parent: HTMLElement, action: FooterAction): void {
+    const button = parent.createEl('button', {
+      cls: `claudian-work-order-modal-action claudian-work-order-modal-action--${action.variant}`,
+      attr: { type: 'button' },
+    });
+    const icon = button.createSpan({ cls: 'claudian-work-order-modal-action-icon' });
+    icon.setAttr('aria-hidden', 'true');
+    // The mock `setIcon` is a no-op; the data attribute records the icon intent
+    // so tests can assert it (consistent with the rest of the modal).
+    icon.setAttr('data-icon', action.icon);
+    setIcon(icon, action.icon);
+    button.createSpan({ cls: 'claudian-work-order-modal-action-label', text: t(action.labelKey) });
+    button.addEventListener('click', () => {
+      this.close();
+      action.run();
+    });
   }
 }

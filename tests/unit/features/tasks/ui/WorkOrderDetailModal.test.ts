@@ -277,17 +277,67 @@ function makeCallbacks(): WorkOrderDetailModalCallbacks {
     onMarkReady: jest.fn(),
     onArchive: jest.fn(),
     onReopen: jest.fn(),
+    onSendToReview: jest.fn(),
+    onMarkFailed: jest.fn(),
     onSaveFields: jest.fn(),
     getProviderOptions: () => [],
     getModelOptions: () => [],
   };
 }
 
-function getButtonTexts(): string[] {
-  return settingInstances()
-    .flatMap((s) => s.components)
-    .filter((c) => c.kind === 'button')
-    .map((c) => c.props.buttonText);
+// ---- Footer action helpers (the sticky footer renders custom <button>s) ----
+
+// One rendered footer button reduced to its assertable surface: the label text,
+// the variant modifier (cta / ghost / danger), the leading icon intent (the
+// mock `setIcon` is a no-op, so the modal records intent via `data-icon`), the
+// group side it landed in, and a `click()` that fires the registered handler.
+interface FooterButton {
+  label: string;
+  variant: string;
+  icon: string;
+  side: 'left' | 'right';
+  click(): void;
+}
+
+const VARIANTS = ['cta', 'ghost', 'danger'] as const;
+
+function footerButtons(root: RecordingEl): FooterButton[] {
+  const footer = find(root, 'claudian-work-order-modal-footer')!;
+  const leftGroup = find(footer, 'claudian-work-order-modal-footer-group--left');
+  return findAll(footer, (el) => el.classes.has('claudian-work-order-modal-action')).map((btn) => {
+    const variant =
+      VARIANTS.find((v) => btn.classes.has(`claudian-work-order-modal-action--${v}`)) ?? '';
+    const labelEl = find(btn, 'claudian-work-order-modal-action-label');
+    const iconEl = find(btn, 'claudian-work-order-modal-action-icon');
+    const inLeft = Boolean(leftGroup) && isDescendant(leftGroup!, btn);
+    return {
+      label: labelEl?.text ?? '',
+      variant,
+      icon: iconEl?.attrs['data-icon'] ?? '',
+      side: inLeft ? 'left' : 'right',
+      click: () => btn.emit('click'),
+    };
+  });
+}
+
+function isDescendant(ancestor: RecordingEl, node: RecordingEl): boolean {
+  return findAll(ancestor, (el) => el === node).length > 0;
+}
+
+// Open the modal against a recording contentEl and return its footer buttons.
+function openFooter(
+  task: TaskSpec,
+  callbacks: WorkOrderDetailModalCallbacks = makeCallbacks(),
+): { modal: WorkOrderDetailModal; root: RecordingEl; buttons: FooterButton[] } {
+  const modal = new WorkOrderDetailModal(mockApp, task, callbacks);
+  const root = installRecordingContent(modal);
+  modal.onOpen();
+  return { modal, root, buttons: footerButtons(root) };
+}
+
+// A button's label + variant, in render order — the unit of the action-set tables.
+function footerSummary(buttons: FooterButton[]): Array<[string, string]> {
+  return buttons.map((b) => [b.label, b.variant]);
 }
 
 beforeEach(() => {
@@ -395,19 +445,16 @@ describe('WorkOrderDetailModal — sticky-shell frame', () => {
     expect(names).not.toContain('Title');
   });
 
-  it('routes action buttons into the footer Setting', () => {
+  it('routes action buttons into the footer as custom <button> elements', () => {
     const task = makeTask('t', 'review', 'Handoff text.');
-    const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
-    const root = installRecordingContent(modal);
-    modal.onOpen();
+    const { root, buttons } = openFooter(task);
 
-    const footer = find(root, 'claudian-work-order-modal-footer');
-    const footerSettings = settingInstances().filter((s) => s.containerEl === footer);
-    const footerButtons = footerSettings
-      .flatMap((s) => s.components)
-      .filter((c) => c.kind === 'button')
-      .map((c) => c.props.buttonText);
-    expect(footerButtons).toEqual(expect.arrayContaining(['Accept', 'Rework']));
+    // The footer hosts the actions as real <button>s (no Obsidian Setting row).
+    const footer = find(root, 'claudian-work-order-modal-footer')!;
+    const buttonEls = findAll(footer, (el) => el.classes.has('claudian-work-order-modal-action'));
+    expect(buttonEls.length).toBeGreaterThan(0);
+    expect(buttonEls.every((el) => el.tag === 'button')).toBe(true);
+    expect(buttons.map((b) => b.label)).toEqual(expect.arrayContaining(['Accept', 'Rework']));
   });
 });
 
@@ -867,47 +914,252 @@ describe('WorkOrderDetailModal — Activity block (other statuses)', () => {
   });
 });
 
-describe('WorkOrderDetailModal — Reopen button', () => {
-  it('renders Reopen button for done status', () => {
-    const task = makeTask('t', 'done');
-    const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
-    installRecordingContent(modal);
-    modal.onOpen();
-    expect(getButtonTexts()).toContain('Reopen');
+describe('WorkOrderDetailModal — sticky footer action sets', () => {
+  // A task whose conversation link is present and openable — exercises the
+  // Open conversation ghost on the live / review / handoff states.
+  function taskWithConversation(status: TaskStatus): TaskSpec {
+    const task = makeTask('t', status, 'Handoff text.', 'x');
+    task.frontmatter.conversation_id = 'conv-1';
+    return task;
+  }
+
+  function convCallbacks(): WorkOrderDetailModalCallbacks {
+    return { ...makeCallbacks(), onOpenConversation: jest.fn(), canOpenConversation: () => true };
+  }
+
+  // ---- Exact per-status action sets (label + variant, in render order) ----
+
+  it('inbox: Open note (ghost) left, Mark ready (cta) right', () => {
+    const { buttons } = openFooter(makeTask('t', 'inbox'));
+    expect(footerSummary(buttons)).toEqual([
+      ['Open note', 'ghost'],
+      ['Mark ready', 'cta'],
+    ]);
+    const [openNote, markReady] = buttons;
+    expect(openNote.side).toBe('left');
+    expect(openNote.icon).toBe('file-text');
+    expect(markReady.side).toBe('right');
+    expect(markReady.icon).toBe('check');
   });
 
-  it('does not render Reopen button for failed status', () => {
-    const task = makeTask('t', 'failed');
-    const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
-    installRecordingContent(modal);
-    modal.onOpen();
-    expect(getButtonTexts()).not.toContain('Reopen');
+  it('running: Open note + Open conversation (ghost) left, Stop (danger) right', () => {
+    const { buttons } = openFooter(taskWithConversation('running'), convCallbacks());
+    expect(footerSummary(buttons)).toEqual([
+      ['Open note', 'ghost'],
+      ['Open conversation', 'ghost'],
+      ['Stop', 'danger'],
+    ]);
+    const stop = buttons[2];
+    expect(stop.side).toBe('right');
+    expect(stop.icon).toBe('square');
+    // Read-only: Stop is the only right-side action.
+    expect(buttons.filter((b) => b.side === 'right')).toHaveLength(1);
   });
 
-  it('does not render Reopen button for canceled status', () => {
-    const task = makeTask('t', 'canceled');
-    const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
-    installRecordingContent(modal);
-    modal.onOpen();
-    expect(getButtonTexts()).not.toContain('Reopen');
+  it('review: Open note + Open conversation left, Rework (ghost) + Accept (cta) right', () => {
+    const { buttons } = openFooter(taskWithConversation('review'), convCallbacks());
+    expect(footerSummary(buttons)).toEqual([
+      ['Open note', 'ghost'],
+      ['Open conversation', 'ghost'],
+      ['Rework', 'ghost'],
+      ['Accept', 'cta'],
+    ]);
+    const rework = buttons.find((b) => b.label === 'Rework')!;
+    const accept = buttons.find((b) => b.label === 'Accept')!;
+    expect(rework.side).toBe('right');
+    expect(rework.icon).toBe('rotate-ccw');
+    expect(accept.side).toBe('right');
+    expect(accept.icon).toBe('check');
   });
 
-  it('calls onReopen and closes when Reopen button is clicked', () => {
-    const task = makeTask('t', 'done');
-    const callbacks = makeCallbacks();
-    const modal = new WorkOrderDetailModal(mockApp, task, callbacks);
-    installRecordingContent(modal);
-    modal.onOpen();
+  it('needs_handoff: Mark failed (danger) + Send to review (cta) right', () => {
+    const { buttons } = openFooter(taskWithConversation('needs_handoff'), convCallbacks());
+    expect(footerSummary(buttons)).toEqual([
+      ['Open note', 'ghost'],
+      ['Open conversation', 'ghost'],
+      ['Mark failed', 'danger'],
+      ['Send to review', 'cta'],
+    ]);
+    const markFailed = buttons.find((b) => b.label === 'Mark failed')!;
+    const sendToReview = buttons.find((b) => b.label === 'Send to review')!;
+    expect(markFailed.icon).toBe('triangle');
+    expect(sendToReview.icon).toBe('check');
+  });
 
-    const reopenBtn = settingInstances()
-      .flatMap((s) => s.components)
-      .find((c) => c.kind === 'button' && c.props.buttonText === 'Reopen');
+  it('done: Open note + Archive (ghost) left, Reopen (ghost) right', () => {
+    const { buttons } = openFooter(makeTask('t', 'done'));
+    expect(footerSummary(buttons)).toEqual([
+      ['Open note', 'ghost'],
+      ['Archive', 'ghost'],
+      ['Reopen', 'ghost'],
+    ]);
+    const archive = buttons.find((b) => b.label === 'Archive')!;
+    const reopen = buttons.find((b) => b.label === 'Reopen')!;
+    expect(archive.side).toBe('left');
+    expect(archive.icon).toBe('archive');
+    expect(reopen.side).toBe('right');
+    expect(reopen.icon).toBe('rotate-ccw');
+  });
 
-    expect(reopenBtn).toBeDefined();
-    void reopenBtn!.props.clickHandler();
+  it('failed: Open note (ghost) left, Archive (ghost) right', () => {
+    const { buttons } = openFooter(makeTask('t', 'failed'));
+    expect(footerSummary(buttons)).toEqual([
+      ['Open note', 'ghost'],
+      ['Archive', 'ghost'],
+    ]);
+    expect(buttons.find((b) => b.label === 'Open note')!.side).toBe('left');
+    expect(buttons.find((b) => b.label === 'Archive')!.side).toBe('right');
+  });
 
-    expect(modal.close).toHaveBeenCalled();
-    expect(callbacks.onReopen).toHaveBeenCalledWith(task);
+  // ---- Statuses the spec does not tabulate (sensible minimal footers) ----
+
+  it('ready: Open note only (no right-side primary — Run is a board action)', () => {
+    const { buttons } = openFooter(makeTask('t', 'ready'));
+    expect(footerSummary(buttons)).toEqual([['Open note', 'ghost']]);
+    expect(buttons.some((b) => b.label === 'Run')).toBe(false);
+    expect(buttons.filter((b) => b.side === 'right')).toHaveLength(0);
+  });
+
+  it('needs_fix: Open note (+ Open conversation when available), no right-side primary', () => {
+    const { buttons } = openFooter(taskWithConversation('needs_fix'), convCallbacks());
+    expect(footerSummary(buttons)).toEqual([
+      ['Open note', 'ghost'],
+      ['Open conversation', 'ghost'],
+    ]);
+    expect(buttons.filter((b) => b.side === 'right')).toHaveLength(0);
+  });
+
+  it('needs_input mirrors running (Open conversation left, Stop danger right)', () => {
+    const { buttons } = openFooter(taskWithConversation('needs_input'), convCallbacks());
+    expect(footerSummary(buttons)).toEqual([
+      ['Open note', 'ghost'],
+      ['Open conversation', 'ghost'],
+      ['Stop', 'danger'],
+    ]);
+  });
+
+  it('needs_approval mirrors running (Open conversation left, Stop danger right)', () => {
+    const { buttons } = openFooter(taskWithConversation('needs_approval'), convCallbacks());
+    expect(footerSummary(buttons)).toEqual([
+      ['Open note', 'ghost'],
+      ['Open conversation', 'ghost'],
+      ['Stop', 'danger'],
+    ]);
+  });
+
+  it('canceled: Open note (ghost) left, Archive (ghost) right', () => {
+    const { buttons } = openFooter(makeTask('t', 'canceled'));
+    expect(footerSummary(buttons)).toEqual([
+      ['Open note', 'ghost'],
+      ['Archive', 'ghost'],
+    ]);
+    expect(buttons.find((b) => b.label === 'Archive')!.side).toBe('right');
+  });
+
+  // ---- Buttons are real, keyboard-focusable <button> elements ----
+
+  it('renders every footer action as a real <button type="button">', () => {
+    const { root } = openFooter(taskWithConversation('review'), convCallbacks());
+    const footer = find(root, 'claudian-work-order-modal-footer')!;
+    const buttonEls = findAll(footer, (el) => el.classes.has('claudian-work-order-modal-action'));
+    expect(buttonEls.length).toBeGreaterThan(0);
+    for (const el of buttonEls) {
+      expect(el.tag).toBe('button');
+      expect(el.attrs['type']).toBe('button');
+    }
+  });
+
+  // ---- Conversation actions hidden when unavailable ----
+
+  it('hides Open conversation when conversation_id is absent', () => {
+    // running without a conversation id — only Open note (left) + Stop (right).
+    const { buttons } = openFooter(makeTask('t', 'running'));
+    expect(buttons.some((b) => b.label === 'Open conversation')).toBe(false);
+    expect(footerSummary(buttons)).toEqual([
+      ['Open note', 'ghost'],
+      ['Stop', 'danger'],
+    ]);
+  });
+
+  it('hides Open conversation when canOpenConversation returns false', () => {
+    const task = taskWithConversation('review');
+    const { buttons } = openFooter(task, {
+      ...makeCallbacks(),
+      onOpenConversation: jest.fn(),
+      canOpenConversation: () => false,
+    });
+    expect(buttons.some((b) => b.label === 'Open conversation')).toBe(false);
+  });
+
+  it('hides Open conversation when onOpenConversation is not provided', () => {
+    const task = taskWithConversation('review');
+    // makeCallbacks omits onOpenConversation entirely.
+    const { buttons } = openFooter(task, makeCallbacks());
+    expect(buttons.some((b) => b.label === 'Open conversation')).toBe(false);
+  });
+
+  // ---- Every callback fires AND the modal closes on click ----
+
+  it.each([
+    ['inbox', 'Mark ready', 'onMarkReady'],
+    ['running', 'Stop', 'onStop'],
+    ['review', 'Accept', 'onAccept'],
+    ['review', 'Rework', 'onRework'],
+    ['needs_handoff', 'Send to review', 'onSendToReview'],
+    ['needs_handoff', 'Mark failed', 'onMarkFailed'],
+    ['done', 'Reopen', 'onReopen'],
+    ['done', 'Archive', 'onArchive'],
+    ['inbox', 'Open note', 'onOpenNote'],
+  ] as const)(
+    '%s: clicking "%s" closes the modal then calls %s',
+    (status, label, callbackName) => {
+      const task = taskWithConversation(status);
+      const callbacks = convCallbacks();
+      const { modal, buttons } = openFooter(task, callbacks);
+
+      const button = buttons.find((b) => b.label === label);
+      expect(button).toBeDefined();
+      button!.click();
+
+      expect((modal as unknown as { close: jest.Mock }).close).toHaveBeenCalled();
+      expect(callbacks[callbackName] as jest.Mock).toHaveBeenCalledWith(task);
+    },
+  );
+
+  it('clicking Open conversation closes the modal then calls onOpenConversation', () => {
+    const task = taskWithConversation('running');
+    const callbacks = convCallbacks();
+    const { modal, buttons } = openFooter(task, callbacks);
+
+    buttons.find((b) => b.label === 'Open conversation')!.click();
+
+    expect((modal as unknown as { close: jest.Mock }).close).toHaveBeenCalled();
+    expect(callbacks.onOpenConversation as jest.Mock).toHaveBeenCalledWith(task);
+  });
+
+  // ---- The footer never runs tasks (Run is a board-card action now) ----
+
+  it('never renders a Run action and never calls onRun on any status', () => {
+    const statuses: TaskStatus[] = [
+      'inbox',
+      'ready',
+      'running',
+      'needs_input',
+      'needs_approval',
+      'review',
+      'needs_handoff',
+      'needs_fix',
+      'done',
+      'failed',
+      'canceled',
+    ];
+    for (const status of statuses) {
+      const callbacks = convCallbacks();
+      const { buttons } = openFooter(taskWithConversation(status), callbacks);
+      expect(buttons.some((b) => b.label === 'Run')).toBe(false);
+      for (const button of buttons) button.click();
+      expect(callbacks.onRun as jest.Mock).not.toHaveBeenCalled();
+    }
   });
 });
 

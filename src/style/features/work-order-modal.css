@@ -241,11 +241,99 @@
   background: var(--background-secondary);
 }
 
-/* Pinned footer hosting the action buttons. */
+/* ============================================================
+   Pinned footer — per-status action sets. Secondary (ghost)
+   buttons group left, the primary group (CTA / danger) right.
+   Buttons are real `<button>`s with a leading Lucide icon; their
+   variant colors come from Obsidian CSS variables (the danger
+   alpha border via color-mix, never an rgba literal).
+   ============================================================ */
 .claudian-work-order-modal-footer {
   flex: 0 0 auto;
-  border-top: 1px solid var(--background-modifier-border);
-  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 26px;
+  border-top: 1px solid var(--border-color);
+  background: var(--background-secondary);
+}
+
+.claudian-work-order-modal-footer-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The right (primary) group hugs the trailing edge so an empty left group does
+   not pull it leftward. */
+.claudian-work-order-modal-footer-group--right {
+  margin-left: auto;
+}
+
+/* ---------- Footer action buttons ---------- */
+.claudian-work-order-modal-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-m);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.claudian-work-order-modal-action-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.claudian-work-order-modal-action-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .claudian-work-order-modal-action {
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+}
+
+/* CTA — the accent primary. */
+.claudian-work-order-modal-action--cta {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.claudian-work-order-modal-action--cta:hover {
+  background: var(--interactive-accent-hover);
+}
+
+/* Ghost — transparent secondary; hover surfaces the modifier-hover wash. */
+.claudian-work-order-modal-action--ghost {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.claudian-work-order-modal-action--ghost:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+/* Danger — destructive red; the soft border alpha goes through color-mix
+   (never an rgba literal). Hover flips to a solid red fill. */
+.claudian-work-order-modal-action--danger {
+  border-color: color-mix(in srgb, var(--color-red) 40%, transparent);
+  background: var(--background-modifier-error);
+  color: var(--color-red);
+}
+
+.claudian-work-order-modal-action--danger:hover {
+  background: var(--color-red);
+  border-color: var(--color-red);
+  color: var(--text-on-accent);
 }
 
 
