@@ -2,16 +2,18 @@
 type: issue
 id: issue-20260603-agent-board-background-runs
 title: Run Agent Board work orders as background/long-running agents streaming into their cards
-status: open
+status: partially-shipped
 priority: 1 - high
-triage: needs-scoping
+triage: narrowed-needs-scoping
 created: 2026-06-03
-updated: 2026-06-03
+updated: 2026-06-07
 owner: Claudian
 source: "[[2026-06-03-comprehensive-improvement-proposal]] (D4 + market research #1)"
 related:
   - "[[agent-board-evidence-review]]"
   - "[[agent-board-symphony]]"
+  - "[[Work-Order execution shall not consume available chat tabs]]"
+  - "[[2026-06-07-work-order-activity-dropdown]]"
 scope: agent-board-orchestration
 tags:
   - agent-board
@@ -22,6 +24,9 @@ tags:
 # Agent Board background / long-running runs
 
 ## Already shipped (do NOT rebuild)
+
+> **Frontmatter sync (2026-06-07):** status is `partially-shipped` because this shipped non-activated work-order tabs, but still tracks live card streaming and truly detached/provider-native background runs.
+> The separate visibility problem (work-order badges cluttering the chat tab row) is now tracked by [[Work-Order execution shall not consume available chat tabs]] and planned in [[2026-06-07-work-order-activity-dropdown]].
 
 Work orders **already run in a non-activated background tab** — `ChatTabExecutionSurface.startTaskRun` →
 `ClaudianView.startTaskRunInFreshTab` → `TabManager.createTaskRunTab`, which creates the run tab with
