@@ -8,7 +8,7 @@ personas:
   - pm
 cta_url: https://github.com/Luis85/specorator
 related:
-  - "[[Chat]]"
+  - "[[Co-Worker - Chat]]"
   - "[[Quick Actions]]"
 user_manual: "[[agent-board]]"
 image: "[[agent-board-overview.png]]"
@@ -52,7 +52,7 @@ A card might be "draft a thank-you letter to Aunt Maria", "summarize this twelve
 
 ### Goes well with
 
-- [[Chat]]: open a card as a chat tab when you want to talk it through
+- [[Co-Worker - Chat]]: open a card as a co-worker session when you want to talk it through
 - [[Quick Actions]]: run a saved prompt on the active card to draft it, tidy it, or summarize it
 
 ---

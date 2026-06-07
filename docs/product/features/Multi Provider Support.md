@@ -8,7 +8,7 @@ personas:
   - pm
 cta_url: https://github.com/Luis85/specorator
 related:
-  - "[[Chat]]"
+  - "[[Co-Worker - Chat]]"
 user_manual: "[[multi-provider]]"
 parent: Infrastructure
 image: "[[multi-provider-overview.png]]"
@@ -69,7 +69,7 @@ Claude is wired up the most fully today. Codex covers most of the same ground. O
 
 ### Goes well with
 
-- [[Chat]]: the chat surface looks and feels the same across all four providers; the matrix shows what actually differs
+- [[Co-Worker - Chat]]: the chat surface looks and feels the same across all four providers; the matrix shows what actually differs
 
 ---
 

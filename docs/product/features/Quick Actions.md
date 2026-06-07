@@ -8,9 +8,9 @@ personas:
   - pm
 cta_url: https://github.com/Luis85/specorator
 related:
-  - "[[Chat]]"
+  - "[[Co-Worker - Chat]]"
 user_manual: "[[quick-actions]]"
-parent: "[[Chat]]"
+parent: "[[Co-Worker - Chat]]"
 image: "[[quick-actions-overview.png]]"
 ---
 
@@ -48,7 +48,7 @@ The actions live in your vault as ordinary files. You can edit them in any text 
 
 ### Goes well with
 
-- [[Chat]]: quick actions fire into the active chat tab, which decides the provider and the context
+- [[Co-Worker - Chat]]: quick actions fire into the active co-worker session, which decides the provider and the context
 
 ---
 
