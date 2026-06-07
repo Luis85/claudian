@@ -1,3 +1,24 @@
+/* Work-order execution prompt collapsible (kicks off a run-tab) */
+.claudian-work-order-prompt {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-secondary);
+  padding: 4px 10px;
+}
+
+.claudian-work-order-prompt-summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  padding: 4px 0;
+  user-select: none;
+}
+
+.claudian-work-order-prompt[open] .claudian-work-order-prompt-summary {
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
 /* Messages wrapper (for scroll-to-bottom button positioning) */
 .claudian-messages-wrapper {
   position: relative;

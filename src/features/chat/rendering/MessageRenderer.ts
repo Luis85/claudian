@@ -44,6 +44,17 @@ import {
 import { renderStoredWriteEdit } from './WriteEditRenderer';
 
 /**
+ * Hard-coded signature line emitted by `renderTaskPrompt` for work-order
+ * execution prompts. Used to collapse the prompt behind a `<details>` toggle
+ * so the chat stays readable.
+ */
+const WORK_ORDER_PROMPT_SIGNATURE = 'You are executing a Claudian work order.';
+
+function isWorkOrderExecutionPrompt(text: string): boolean {
+  return text.includes(WORK_ORDER_PROMPT_SIGNATURE);
+}
+
+/**
  * Trailing window of stored messages mounted on conversation load / switch / rewind.
  * Long chats otherwise mount unbounded DOM (~56 nodes + ~7 listeners per message),
  * making each re-mount O(N). Windowing bounds it to O(K): the trailing region — where
@@ -152,6 +163,26 @@ export class MessageRenderer {
     return resolveSubagentLifecycleAdapter(this.getCapabilities().providerId, toolName);
   }
 
+  /**
+   * Renders a user message text block, collapsing the long work-order execution
+   * prompt behind a `<details>` toggle to keep the chat readable. Detection is
+   * by the hard-coded signature line emitted by `renderTaskPrompt`.
+   */
+  private renderUserTextBlock(contentEl: HTMLElement, text: string): void {
+    if (isWorkOrderExecutionPrompt(text)) {
+      const details = contentEl.createEl('details', { cls: 'claudian-work-order-prompt' });
+      details.createEl('summary', {
+        cls: 'claudian-work-order-prompt-summary',
+        text: 'Work order prompt',
+      });
+      const textEl = details.createDiv({ cls: 'claudian-text-block' });
+      void this.renderContent(textEl, text);
+      return;
+    }
+    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+    void this.renderContent(textEl, text);
+  }
+
   private renderUserContextCard(contentEl: HTMLElement, msg: ChatMessage): void {
     if (msg.isRebuiltContext) return;
     // Use msg.content (not displayContent) so that pill-folded @mentions are always
@@ -212,8 +243,7 @@ export class MessageRenderer {
       this.renderUserContextCard(contentEl, msg);
       const textToShow = msg.displayContent ?? msg.content;
       if (textToShow) {
-        const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
-        void this.renderContent(textEl, textToShow);
+        this.renderUserTextBlock(contentEl, textToShow);
         this.addUserCopyButton(msgEl, textToShow);
         this.addRegisteredMessageActions(msgEl, msg);
       }
@@ -247,8 +277,7 @@ export class MessageRenderer {
 
     const textToShow = msg.displayContent ?? msg.content;
     if (textToShow) {
-      const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
-      void this.renderContent(textEl, textToShow);
+      this.renderUserTextBlock(contentEl, textToShow);
     }
 
     const toolbar = msgEl.querySelector<HTMLElement>('.claudian-user-msg-actions');
@@ -524,8 +553,7 @@ export class MessageRenderer {
       this.renderUserContextCard(contentEl, msg);
       const textToShow = msg.displayContent ?? msg.content;
       if (textToShow) {
-        const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
-        void this.renderContent(textEl, textToShow);
+        this.renderUserTextBlock(contentEl, textToShow);
         this.addUserCopyButton(msgEl, textToShow);
         this.addRegisteredMessageActions(msgEl, msg);
       }
