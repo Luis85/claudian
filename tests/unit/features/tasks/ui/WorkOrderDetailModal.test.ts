@@ -75,6 +75,12 @@ function getButtonTexts(): string[] {
     .map((c) => c.props.buttonText);
 }
 
+function getSettingNames(): string[] {
+  return settingInstances()
+    .map((s) => (s.setName as jest.Mock).mock.calls.at(-1)?.[0])
+    .filter((name): name is string => typeof name === 'string');
+}
+
 beforeEach(() => {
   (Setting as unknown as { instances: unknown[] }).instances = [];
 });
@@ -150,5 +156,56 @@ describe('WorkOrderDetailModal â€” Reopen button', () => {
 
     expect(modal.close).toHaveBeenCalled();
     expect(callbacks.onReopen).toHaveBeenCalledWith(task);
+  });
+});
+
+
+describe('WorkOrderDetailModal — read-only callbacks', () => {
+  it('hides running-only action buttons when optional callbacks are absent', () => {
+    const modal = new WorkOrderDetailModal(mockApp, makeTask('readonly-running', 'running'), {
+      onOpenNote: jest.fn(),
+      getProviderOptions: () => [],
+      getModelOptions: () => [],
+    });
+    modal.onOpen();
+
+    expect(getButtonTexts()).toEqual(['Edit']);
+  });
+
+  it('renders Stop when the optional stop callback is present', () => {
+    const modal = new WorkOrderDetailModal(mockApp, makeTask('stoppable-running', 'running'), {
+      onOpenNote: jest.fn(),
+      onStop: jest.fn(),
+      getProviderOptions: () => [],
+      getModelOptions: () => [],
+    });
+    modal.onOpen();
+
+    expect(getButtonTexts()).toContain('Stop');
+  });
+
+
+  it('keeps running fallback modals read-only when stop callback is absent', () => {
+    const modal = new WorkOrderDetailModal(mockApp, makeTask('readonly-running', 'running'), {
+      onOpenNote: jest.fn(),
+      getProviderOptions: () => [],
+      getModelOptions: () => [],
+    });
+    modal.onOpen();
+
+    expect(getSettingNames()).not.toContain('Title');
+  });
+
+  it('renders review actions only when their callbacks are present', () => {
+    const modal = new WorkOrderDetailModal(mockApp, makeTask('accept-only', 'review'), {
+      onOpenNote: jest.fn(),
+      onAccept: jest.fn(),
+      getProviderOptions: () => [],
+      getModelOptions: () => [],
+    });
+    modal.onOpen();
+
+    expect(getButtonTexts()).toContain('Accept');
+    expect(getButtonTexts()).not.toContain('Rework');
   });
 });

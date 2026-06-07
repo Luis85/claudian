@@ -20,18 +20,18 @@ export interface WorkOrderDetailModalCallbacks {
   onOpenConversation?(task: TaskSpec): void;
   /** Whether the linked conversation still exists and can be opened. Hides the button when false. */
   canOpenConversation?(task: TaskSpec): boolean;
-  onRun(task: TaskSpec): void;
-  onStop(task: TaskSpec): void;
-  onAccept(task: TaskSpec): void;
-  onRework(task: TaskSpec): void;
-  onMarkReady(task: TaskSpec): void;
-  onReopen(task: TaskSpec): void;
+  onRun?(task: TaskSpec): void;
+  onStop?(task: TaskSpec): void;
+  onAccept?(task: TaskSpec): void;
+  onRework?(task: TaskSpec): void;
+  onMarkReady?(task: TaskSpec): void;
+  onReopen?(task: TaskSpec): void;
   /** needs_handoff → review: salvage a run that finished without a structured handoff. */
   onSendToReview?(task: TaskSpec): void;
   /** needs_handoff → failed: give up on a run that finished without a structured handoff. */
   onMarkFailed?(task: TaskSpec): void;
-  onArchive(task: TaskSpec): void;
-  onSaveFields(task: TaskSpec, fields: WorkOrderFieldUpdate): void | Promise<void>;
+  onArchive?(task: TaskSpec): void;
+  onSaveFields?(task: TaskSpec, fields: WorkOrderFieldUpdate): void | Promise<void>;
   getProviderOptions(): WorkOrderOption[];
   getModelOptions(providerId: string): WorkOrderOption[];
 }
@@ -116,7 +116,7 @@ export class WorkOrderDetailModal extends Modal {
       text.inputEl.addEventListener('blur', () => {
         const value = text.getValue().trim();
         if (value.length > 0 && value !== task.frontmatter.title) {
-          void this.callbacks.onSaveFields(task, { title: value });
+          void this.callbacks.onSaveFields?.(task, { title: value });
         }
       });
     });
@@ -138,7 +138,7 @@ export class WorkOrderDetailModal extends Modal {
       }
       dropdown.setValue(task.frontmatter.provider ?? '');
       dropdown.onChange((value) => {
-        void this.callbacks.onSaveFields(task, { provider: value, model: '' });
+        void this.callbacks.onSaveFields?.(task, { provider: value, model: '' });
         populateModels(value, true);
       });
     });
@@ -147,7 +147,7 @@ export class WorkOrderDetailModal extends Modal {
       modelDropdown = dropdown;
       populateModels(task.frontmatter.provider ?? '');
       dropdown.onChange((value) => {
-        void this.callbacks.onSaveFields(task, { model: value });
+        void this.callbacks.onSaveFields?.(task, { model: value });
       });
     });
 
@@ -157,7 +157,7 @@ export class WorkOrderDetailModal extends Modal {
       }
       dropdown.setValue(task.frontmatter.priority);
       dropdown.onChange((value) => {
-        void this.callbacks.onSaveFields(task, { priority: value as TaskPriority });
+        void this.callbacks.onSaveFields?.(task, { priority: value as TaskPriority });
       });
     });
   }
@@ -187,70 +187,73 @@ export class WorkOrderDetailModal extends Modal {
       );
     }
 
-    if (task.frontmatter.status === 'inbox') {
+    if (task.frontmatter.status === 'inbox' && this.callbacks.onMarkReady) {
       actions.addButton((btn) =>
         btn
           .setButtonText('Mark ready')
           .setCta()
           .onClick(() => {
             this.close();
-            this.callbacks.onMarkReady(task);
+            this.callbacks.onMarkReady?.(task);
           }),
       );
     }
 
-    if (task.frontmatter.status === 'ready' || task.frontmatter.status === 'needs_fix') {
+    if ((task.frontmatter.status === 'ready' || task.frontmatter.status === 'needs_fix') && this.callbacks.onRun) {
       actions.addButton((btn) =>
         btn
           .setButtonText('Run')
           .setCta()
           .onClick(() => {
             this.close();
-            this.callbacks.onRun(task);
+            this.callbacks.onRun?.(task);
           }),
       );
     }
 
-    if (task.frontmatter.status === 'running') {
+    if (task.frontmatter.status === 'running' && this.callbacks.onStop) {
       actions.addButton((btn) =>
         btn
           .setButtonText('Stop')
           .setWarning()
           .onClick(() => {
             this.close();
-            this.callbacks.onStop(task);
+            this.callbacks.onStop?.(task);
           }),
       );
     }
 
-    if (task.frontmatter.status === 'review') {
+    if (task.frontmatter.status === 'review' && this.callbacks.onAccept) {
       actions.addButton((btn) =>
         btn
           .setButtonText('Accept')
           .setCta()
           .onClick(() => {
             this.close();
-            this.callbacks.onAccept(task);
+            this.callbacks.onAccept?.(task);
           }),
       );
+    }
+
+    if (task.frontmatter.status === 'review' && this.callbacks.onRework) {
       actions.addButton((btn) =>
         btn.setButtonText('Rework').onClick(() => {
           this.close();
-          this.callbacks.onRework(task);
+          this.callbacks.onRework?.(task);
         }),
       );
     }
 
-    if (task.frontmatter.status === 'done') {
+    if (task.frontmatter.status === 'done' && this.callbacks.onReopen) {
       actions.addButton((btn) =>
         btn.setButtonText('Reopen').onClick(() => {
           this.close();
-          this.callbacks.onReopen(task);
+          this.callbacks.onReopen?.(task);
         }),
       );
     }
 
-    if (task.frontmatter.status === 'needs_handoff') {
+    if (task.frontmatter.status === 'needs_handoff' && this.callbacks.onSendToReview) {
       actions.addButton((btn) =>
         btn
           .setButtonText('Review')
@@ -260,6 +263,9 @@ export class WorkOrderDetailModal extends Modal {
             this.callbacks.onSendToReview?.(task);
           }),
       );
+    }
+
+    if (task.frontmatter.status === 'needs_handoff' && this.callbacks.onMarkFailed) {
       actions.addButton((btn) =>
         btn
           .setButtonText('Mark failed')
@@ -272,16 +278,17 @@ export class WorkOrderDetailModal extends Modal {
     }
 
     if (
-      task.frontmatter.status === 'done' ||
-      task.frontmatter.status === 'failed' ||
-      task.frontmatter.status === 'canceled'
+      this.callbacks.onArchive &&
+      (task.frontmatter.status === 'done' ||
+        task.frontmatter.status === 'failed' ||
+        task.frontmatter.status === 'canceled')
     ) {
       actions.addButton((btn) =>
         btn
           .setButtonText('Archive')
           .onClick(() => {
             this.close();
-            this.callbacks.onArchive(task);
+            this.callbacks.onArchive?.(task);
           }),
       );
     }
