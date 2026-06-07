@@ -535,12 +535,14 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
     ]);
   });
 
-  it('colors the Status pill with the status-specific class', () => {
+  it('colors the Status pill with the status-specific class and carries a status tooltip', () => {
     const { sidebar } = openWith(makeTask('t', 'needs_approval'), richCallbacks());
     const statusRow = findRow(sidebar, 'status')!;
     const pill = find(statusRow, 'claudian-work-order-modal-status-pill');
     expect(pill).toBeDefined();
     expect(pill!.classes.has('claudian-work-order-modal-status-pill--needs_approval')).toBe(true);
+    // Tooltip parity with the ID chip + assignee avatar (a11y audit, item #9).
+    expect(pill!.attrs['title']).toBe('needs_approval');
   });
 
   it('renders the Agent row as a persona dropdown (chip + avatar) in an editable state', () => {
