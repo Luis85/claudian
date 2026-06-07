@@ -584,9 +584,12 @@
 }
 
 /* Reduced-motion gated: the freshness dot only pulses when the user has not
-   requested reduced motion. */
+   requested reduced motion. Scoped to the live card-status classes so a strip
+   left behind by a patchCard transition to a non-live status stops pulsing. */
 @media (prefers-reduced-motion: no-preference) {
-  .claudian-agent-board-card-live-strip--dot {
+  .claudian-agent-board-card--running .claudian-agent-board-card-live-strip--dot,
+  .claudian-agent-board-card--needs_input .claudian-agent-board-card-live-strip--dot,
+  .claudian-agent-board-card--needs_approval .claudian-agent-board-card-live-strip--dot {
     animation: claudian-pulse-dot 1.2s ease-in-out infinite;
   }
 }
