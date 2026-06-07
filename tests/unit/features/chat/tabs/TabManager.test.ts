@@ -2307,6 +2307,54 @@ describe('TabManager - closeTab Edge Cases', () => {
     expect(manager.getTabCount()).toBe(1);
   });
 
+  it('recreates a chat home tab when the last chat tab is closed while a hidden work-order tab is active', async () => {
+    jest.clearAllMocks();
+    let counter = 0;
+    mockCreateTab.mockImplementation((opts: { kind?: 'chat' | 'work-order' }) => {
+      counter++;
+      return createMockTabData({ id: `tab-${counter}`, kind: opts?.kind ?? 'chat' });
+    });
+    const manager = new TabManager(createMockPlugin(), createMockMcpManager(), createMockEl(), createMockView(), {});
+
+    const chat = await manager.createTab(undefined, undefined, { kind: 'chat' });
+    const wo = await manager.createTab(undefined, undefined, { kind: 'work-order' });
+    await manager.switchToTab(wo!.id);
+
+    const closed = await manager.closeTab(chat!.id);
+
+    expect(closed).toBe(true);
+    // The user must keep a visible chat tab to return to even though the hidden
+    // work-order tab kept tabs.size > 0.
+    expect(manager.countTabsByKind('chat')).toBe(1);
+    // Focus stays on the active work-order tab; the replacement chat tab is
+    // created inactive (the tab bar surfaces its badge as the escape route).
+    expect(manager.getActiveTabId()).toBe(wo!.id);
+  });
+
+  it('recreates and activates a chat home tab when the active last chat tab is closed beside a hidden work-order tab', async () => {
+    jest.clearAllMocks();
+    let counter = 0;
+    mockCreateTab.mockImplementation((opts: { kind?: 'chat' | 'work-order' }) => {
+      counter++;
+      return createMockTabData({ id: `tab-${counter}`, kind: opts?.kind ?? 'chat' });
+    });
+    const manager = new TabManager(createMockPlugin(), createMockMcpManager(), createMockEl(), createMockView(), {});
+
+    const chat = await manager.createTab(undefined, undefined, { kind: 'chat' });
+    await manager.createTab(undefined, undefined, { kind: 'work-order' });
+    await manager.switchToTab(chat!.id);
+
+    const closed = await manager.closeTab(chat!.id);
+
+    expect(closed).toBe(true);
+    expect(manager.countTabsByKind('chat')).toBe(1);
+    // Closing the active tab moves focus to the fresh chat tab, never leaving
+    // the user on the hidden work-order tab.
+    const active = manager.getActiveTab();
+    expect(active?.kind).toBe('chat');
+    expect(active?.id).not.toBe(chat!.id);
+  });
+
   it('should create new blank tab (stays cold) when closing the last tab with conversation', async () => {
     const callbacks: TabManagerCallbacks = {
       onTabCreated: jest.fn(),
