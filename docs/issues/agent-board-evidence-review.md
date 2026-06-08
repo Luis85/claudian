@@ -12,6 +12,7 @@ source: "[[agent-board-symphony]]"
 related:
   - "[[agent-board-mvp]]"
   - "[[2026-05-28-standalone-product-vision]]"
+  - "[[2026-06-07-agent-board-redesign-plan]]"
 scope: phase-2-richer-evidence-before-worktrees
 tags:
   - agent-board

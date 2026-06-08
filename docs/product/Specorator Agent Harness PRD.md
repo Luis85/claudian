@@ -1,18 +1,25 @@
 ---
 type: prd
 name: Specorator (v1)
-title: "Specorator — from Claudian's CLI bridge to a trustworthy vault agent for everyone"
+title: Specorator — from Claudian's CLI bridge to a trustworthy vault agent for everyone
 codename: Vault-Operator-Klasse
 version: 0.1
 status: draft / review
 date: 2026-06-04
 owner: Luis
-product: "[[Specorator]]"
+product: "[[Specorator - Product Vision]]"
 scope: src/app, src/core, src/providers/*, src/features/* (chat, settings, tasks), docs/product
 method: two research rounds, 8 parallel subagents total — round 1 (codebase harness audit; Vault Operator + competitive landscape; harness/security best-practice research; UX/onboarding gap audit); round 2 feasibility deep-dives (Vault MCP + universal-undo architecture; provider-agnostic Harness Library compile matrix; zero-terminal onboarding feasibility; security operationalisation + verification) — synthesised against the user-supplied "Obsidian Agent Harness" draft
-tags: [prd, specorator, agent-harness, obsidian, onboarding, safety, ux]
+tags:
+  - prd
+  - specorator
+  - agent-harness
+  - obsidian
+  - onboarding
+  - safety
+  - ux
 related:
-  - "[[Specorator]]"
+  - "[[Specorator - Product Vision]]"
   - "[[Specorator RAG Layer Spec]]"
   - "[[Specorator Architecture (C4)]]"
   - "[[Specorator UI Map]]"
@@ -29,7 +36,7 @@ related:
 > 1. The **brand/standalone migration** ([[2026-05-30-specorator-standalone-migration]]) ships **Specorator v1.0.0** = *today's* feature set (chat, Agent Board, inline edit, Quick Actions) rebranded, moved to its own repo (`Luis85/specorator`), with `.claudian/` → `.specorator/` storage and `claudian-*` → `specorator-*` identifiers. It is a packaging release, not new capability.
 > 2. **This PRD** describes the **agent-harness program that ships *after* v1.0.0** (the phased roadmap in §12 — onboarding, undo, Vault MCP, RAG, Harness Library), i.e. Specorator **v1.x → v2**.
 >
-> So wherever this document says "Specorator v1," read *"the harness roadmap layered on top of the v1.0.0 rebrand."* One dependency already handled: the harness's in-app key entry (F-ON-4) needs Obsidian **`minAppVersion` 1.11.5** for `SecretStorage`, and the live manifest is **already at 1.11.5** — the migration plan's Task 2 draft has been updated to preserve that floor. See [[Specorator]] for the product overview and [[Specorator Architecture (C4)]] for the C4 canvas.
+> So wherever this document says "Specorator v1," read *"the harness roadmap layered on top of the v1.0.0 rebrand."* One dependency already handled: the harness's in-app key entry (F-ON-4) needs Obsidian **`minAppVersion` 1.11.5** for `SecretStorage`, and the live manifest is **already at 1.11.5** — the migration plan's Task 2 draft has been updated to preserve that floor. See [[Specorator - Product Vision]] for the product overview and [[Specorator Architecture (C4)]] for the C4 canvas.
 
 > **Product vision.** Bring frontier AI coding tools (Claude Code, Codex, Cursor) into the **mainstream** as a user-friendly Obsidian plugin. The defining primitives of an agent harness — **skills, tools (MCP), and rules** — must be configurable through **easy, provider-agnostic interfaces** that feel like the [[Quick Actions]] we already ship: a card you tap, not a config file you edit. The technical surface of the underlying CLIs stays hidden; the user thinks in *workflows, tools, and rules*, not in `.claude/`, `.cursor/rules`, or MCP JSON.
 

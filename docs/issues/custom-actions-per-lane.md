@@ -11,6 +11,7 @@ owner: Claudian
 source: "[[Custom Actions per Lane or Work-Order Type]]"
 related:
   - "[[agent-board-configurable-lanes]]"
+  - "[[2026-06-07-agent-board-redesign-plan]]"
 scope: agent-board
 tags:
   - agent-board

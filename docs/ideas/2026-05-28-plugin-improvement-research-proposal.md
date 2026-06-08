@@ -1,12 +1,18 @@
 ---
 tags:
   - deferred
-priority: 3 - low
+priority: 4 - archive
 relations:
   - Quality
-status: open
+status: superseded
+superseded_by:
+  - "[[Specorator Agent Harness PRD]]"
+  - "[[2026-06-05-plugin-improvement-roadmap]]"
 ---
 # Plugin improvement research proposal
+
+> **Superseded 2026-06-07.** Findings were absorbed into [[Specorator Agent Harness PRD]] (vision + harness program) and [[2026-06-05-plugin-improvement-roadmap]] (phase-level execution). Kept as historical research record.
+
 
 Date: 2026-05-28
 Revised: 2026-06-01 (status reconciliation against work landed since the original draft)

@@ -2,7 +2,7 @@
 type: feature
 name: Agent Kanban Board
 tagline: A board for things you have handed off. Inbox to done, never lost in chat history.
-status: draft
+status: shipped
 personas:
   - knowledge-worker
   - pm
@@ -19,6 +19,8 @@ image: "[[agent-board-overview.png]]"
 By Thursday you have thirty open chat tabs, a sticky note that says "ask about the lease clause", and three things you started but never finished. The draft thank-you letter, the four vacation rentals you wanted compared, the long report you meant to summarize. Chat is great for one conversation at a time. It is the wrong shape for a list of things you are working on.
 
 **Agent Kanban Board** is a place where everything you have handed off has a home. New ideas land in the inbox, get a little detail added, run when you are ready, and wait in review so you can read the result before deciding what is next.
+
+Use it when you want to hand work **to** the assistant instead of working through it live in chat. The board is for bigger chunks of work that need a queue, a priority, acceptance criteria, background-style running, and a review step before you call them done.
 
 ---
 
@@ -42,6 +44,15 @@ A card might be "draft a thank-you letter to Aunt Maria", "summarize this twelve
 - Filter and sort by engine, status, and tag
 - Turn a chat conversation into a card so the work has somewhere to live after you close the tab
 - Re-open any card's saved conversation later as a chat tab when you want to follow up
+
+### When to use the board instead of chat
+
+- You have more than one thing to hand off and need a visible queue
+- The work should be scoped before it runs: objective, context, constraints, acceptance criteria
+- You want to prioritize tasks and run the next ready item
+- You want the assistant to work on a managed item while you focus elsewhere
+- You need to review, accept, rework, archive, or reopen the result
+- You want the handoff and result preserved as Markdown in your vault
 
 ### What it doesn't do
 

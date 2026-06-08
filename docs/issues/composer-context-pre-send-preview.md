@@ -31,7 +31,7 @@ controllers, and the provider prompt encoders — there is no normalized envelop
 
 ## Evidence
 
-- `src/features/chat/ui/file-context/FileChipsView.ts`, `MessageContextCard.ts` (basename-only, post-send).
+- `src/features/chat/ui/file-context/view/FileChipsView.ts`, `MessageContextCard.ts` (basename-only, post-send).
 - No `ComposerContextBuilder` / context-envelope module exists.
 
 ## Proposed change

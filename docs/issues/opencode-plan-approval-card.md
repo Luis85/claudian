@@ -14,6 +14,8 @@ tags:
   - opencode
   - plan-mode
   - approval
+relations:
+  - "[[Multi Provider Support]]"
 ---
 
 # Opencode plan-approval card gap

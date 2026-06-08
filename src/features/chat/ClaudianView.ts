@@ -37,6 +37,7 @@ import { TabBar } from './tabs/TabBar';
 import { TabManager } from './tabs/TabManager';
 import type { TabData, TabId, TaskRunTabHandle, TaskRunTabTerminal } from './tabs/types';
 import { GitActionButton } from './ui/GitActionButton';
+import { WorkOrderActivityDropdown } from './ui/WorkOrderActivityDropdown';
 import { recalculateUsageForModel } from './utils/usageInfo';
 
 type LoadableView = {
@@ -69,6 +70,9 @@ export class ClaudianView extends ItemView {
   private titleTextEl: HTMLElement | null = null;
   private headerActionsEl: HTMLElement | null = null;
   private headerActionsContent: HTMLElement | null = null;
+  private workOrderActivitySlotEl: HTMLElement | null = null;
+  private workOrderActivityDropdown: WorkOrderActivityDropdown | null = null;
+  private disposeWorkOrderActivitySubscription: (() => void) | null = null;
   private newTabButtonEl: HTMLElement | null = null;
   private gitActionButton: GitActionButton | null = null;
 
@@ -318,6 +322,7 @@ export class ClaudianView extends ItemView {
     this.tabContentEl = null;
     this.navRowContent?.remove();
     this.navRowContent = null;
+    this.disposeWorkOrderActivityDropdown();
     this.headerActionsContent?.remove();
     this.headerActionsContent = null;
     this.newTabButtonEl = null;
@@ -370,6 +375,7 @@ export class ClaudianView extends ItemView {
 
     this.tabBar?.destroy();
     this.tabBar = null;
+    this.disposeWorkOrderActivityDropdown();
     this.gitActionButton?.dispose();
     this.gitActionButton = null;
     this.scope = null;
@@ -469,7 +475,14 @@ export class ClaudianView extends ItemView {
     this.headerActionsContent = activeDocument.createElement('div');
     this.headerActionsContent.className = 'claudian-header-actions';
 
-    // Quick actions button (first) — opens the QuickActionsModal scoped to the active tab.
+    // Work-order activity slot (first) — mounts the WO dropdown when any
+    // running / needs-input / finished work-order tab exists. Placed before
+    // Quick Actions so the persistent button order stays stable; the dropdown
+    // toggles `claudian-hidden` when empty so flex gap collapses.
+    this.workOrderActivitySlotEl = this.headerActionsContent.createDiv({ cls: 'claudian-work-order-activity-slot' });
+    this.mountWorkOrderActivityDropdown();
+
+    // Quick actions button — opens the QuickActionsModal scoped to the active tab.
     // Lives above the textarea in nav row mode and at the top of the header in header mode.
     const quickActionsBtn = this.headerActionsContent.createDiv({ cls: 'claudian-header-btn' });
     setIcon(quickActionsBtn, 'zap');
@@ -536,6 +549,29 @@ export class ClaudianView extends ItemView {
     wrapper.className = 'claudian-input-nav-content';
     wrapper.appendChild(fragment);
     return wrapper;
+  }
+
+
+  private mountWorkOrderActivityDropdown(): void {
+    if (!this.workOrderActivitySlotEl || !this.plugin.workOrderActivity) return;
+    this.disposeWorkOrderActivitySubscription?.();
+    this.workOrderActivityDropdown?.destroy();
+    this.workOrderActivityDropdown = new WorkOrderActivityDropdown(this.workOrderActivitySlotEl, {
+      summary: this.plugin.workOrderActivity.getSummary(),
+      onOpenItem: (id) => this.plugin.workOrderActivity?.openItem(id),
+      onCloseItem: (tabId) => this.plugin.workOrderActivity?.closeTab(tabId),
+    });
+    this.disposeWorkOrderActivitySubscription = this.plugin.workOrderActivity.subscribe((summary) => {
+      this.workOrderActivityDropdown?.update(summary);
+    });
+  }
+
+  private disposeWorkOrderActivityDropdown(): void {
+    this.disposeWorkOrderActivitySubscription?.();
+    this.disposeWorkOrderActivitySubscription = null;
+    this.workOrderActivityDropdown?.destroy();
+    this.workOrderActivityDropdown = null;
+    this.workOrderActivitySlotEl = null;
   }
 
   /**
@@ -794,6 +830,13 @@ export class ClaudianView extends ItemView {
           if (!ic) {
             throw new Error('Chat tab is missing an input controller.');
           }
+          // Drain background hydration first. TabManager.switchToTab → ConversationController.switchTo
+          // only awaits Phase A (sync UI swap); Phase B (transcript hydration) is
+          // fire-and-forget and leaves `state.isHydrating = true`. InputController.sendMessage
+          // early-returns while isHydrating is set, so without this await the
+          // commit prompt would silently drop on cold WO tabs (post-restart,
+          // post-close, or any tab whose transcript hasn't been hydrated yet).
+          await ownerTab?.controllers.conversationController?.whenHydrated?.();
           await ic.sendMessage({ content: options.prompt });
           return;
         }
@@ -875,8 +918,16 @@ export class ClaudianView extends ItemView {
   private updateTabBarVisibility(): void {
     if (!this.tabBarContainerEl || !this.tabManager) return;
 
-    const tabCount = this.tabManager.getTabCount();
-    const showTabBar = tabCount >= 2;
+    const tabCount = this.tabManager.countTabsByKind('chat');
+    // Normally the bar hides with a single chat tab. But a hidden work-order
+    // tab can be the active tab (opened from the Work Orders dropdown), and
+    // work-order badges are omitted from getTabBarItems(); once that work order
+    // is terminal it also drops out of the dropdown. Without surfacing the bar
+    // here the user is stranded on the work-order tab with no visible control
+    // to switch back. Show it whenever a work-order tab is active and at least
+    // one chat tab exists to return to.
+    const activeIsWorkOrder = this.tabManager.getActiveTab()?.kind === 'work-order';
+    const showTabBar = tabCount >= 2 || (activeIsWorkOrder && tabCount >= 1);
     const isHeaderMode = this.plugin.settings.tabBarPosition === 'header';
 
     // Hide tab badges when only 1 tab, show when 2+

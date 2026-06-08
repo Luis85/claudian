@@ -1,10 +1,11 @@
 ---
-status: in-progress
+status: done
 parent: Security
 issue: "[[docs/issues/adopt-secretstorage-for-secrets.md]]"
 research: "[[docs/research/2026-06-04-obsidian-secret-storage.md]]"
+handoff: "[[2026-06-04-sec-a-secretstorage]]"
 created: 2026-06-03
-updated: 2026-06-04
+updated: 2026-06-07
 scope: SEC-A — provider secrets + MCP auth headers at rest
 ---
 

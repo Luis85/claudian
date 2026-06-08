@@ -75,6 +75,7 @@ import { QueueSlotTracker } from './features/tasks/execution/QueueSlotTracker';
 import { RunSidecarStore } from './features/tasks/storage/RunSidecarStore';
 import { TaskNoteStore } from './features/tasks/storage/TaskNoteStore';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
+import { WorkOrderActivityProvider } from './features/tasks/ui/WorkOrderActivityProvider';
 import { setLocale, t } from './i18n/i18n';
 import type { Locale } from './i18n/types';
 import type { BrowserSelectionContext } from './utils/browser';
@@ -129,6 +130,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   /** Chat tabs queue runs have committed to opening but not yet created. Shared
    * so concurrent Agent Board panes can't double-book the same free tabs. */
   readonly chatTabReservations = new ChatTabReservations();
+  workOrderActivity: WorkOrderActivityProvider | null = null;
   lastKnownTabManagerState: AppTabManagerState | null = null;
 
   async onload() {
@@ -152,6 +154,12 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     this.envApply = new EnvironmentApplyService(this);
     this.queueSlotTracker = new QueueSlotTracker(this.settings.agentBoardQueueCap);
     this.runSidecarStore = new RunSidecarStore(this.app.vault.adapter, '.claudian/runs');
+    this.workOrderActivity = new WorkOrderActivityProvider(this);
+    this.workOrderActivity.start();
+    this.register(() => {
+      this.workOrderActivity?.dispose();
+      this.workOrderActivity = null;
+    });
 
     this.registerView(
       VIEW_TYPE_CLAUDIAN,

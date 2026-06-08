@@ -41,11 +41,10 @@ Steps:
    - Execution Instructions: Subagent-Driven (recommended) on an isolated worktree — fresh subagent per task, review between tasks and keep the work-order updated between tasks, two-stage check with dedicated subagents; follow up with a dedicated review and polishing pass once done 
    - Important: Update docs during execution to keep underlying work-order and docs up-to-date;
    - Add wikilinks to the referenced plan to link WO and plan together for better visibility
-   - Run Ledger section:
+   - Run Ledger section (leave the marker region empty — the plugin writes a single terminal snapshot from `.claudian/runs/<runId>/ledger.jsonl`; pre-seeding the markers will be clobbered or race the plugin's `Edit`):
      ```
      ## Run Ledger
      <!-- claudian:run-ledger-start -->
-     - <ISO timestamp> [inbox] Created from plan.
      <!-- claudian:run-ledger-end -->
      ```
    - Result / Handoff section:

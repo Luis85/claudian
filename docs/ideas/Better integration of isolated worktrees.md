@@ -1,6 +1,6 @@
 ---
 status: open
-priority:
+priority: 2 - normal
 relations:
 tags:
 ---

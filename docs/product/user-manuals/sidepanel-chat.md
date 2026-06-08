@@ -2,13 +2,13 @@
 date: 2026-06-04
 status: shipped
 type: user-manual
-parent: "[[sidepanel-chat]]"
+parent: "[[Co-Worker - Chat]]"
 ---
 # Claudian — Chat
 
 This manual covers the **chat sidebar**: the workspace where you talk to a provider beside your notes. The sidebar opens on a hotkey, picks up the note you're on and any selected text, and saves every conversation as a Specorator session you can resume tomorrow.
 
-For the high-level feature pitch see [[sidepanel-chat]]. For how attached files and folders appear above the composer see [[composer-context-pills]]. For drafting before running, see [[plan-mode]]. For durable background handoffs see [[agent-board]].
+For the high-level feature pitch see [[sidepanel-chat]]. For how attached files and folders appear above the composer see [[composer-context-pills]]. For drafting before running, see [[plan-mode]]. For durable background handoffs see [[agent-board]]. For a side-by-side decision guide, see [[chat-vs-agent-board]].
 
 ---
 
@@ -18,6 +18,19 @@ For the high-level feature pitch see [[sidepanel-chat]]. For how attached files 
 - A hotkey bound to **Open Chat** in Obsidian's Hotkeys settings (optional but recommended). The default ribbon icon also opens the chat view.
 
 The chat view position is controlled by **Settings → Specorator → General → Display → Open Claudian in**: **Right sidebar** (default), **Left sidebar**, or **Main editor tab**.
+
+---
+
+## When chat is the right place
+
+Use chat when you want quick, foreground collaboration with the assistant:
+
+- Ask about the current note or selection.
+- Draft, rewrite, summarize, compare, or explain something now.
+- Work through a messy idea before you know the exact task.
+- Try a provider or model without setting up a work order.
+
+If the conversation turns into work that needs priority, acceptance criteria, background-style running, or a review record, create a work order and move it to the [[agent-board|Agent Board]].
 
 ---
 

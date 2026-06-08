@@ -8,7 +8,9 @@ parent: "[[Agent Kanban Board]]"
 
 The Agent Board is a kanban-style view for **work orders**: Markdown notes (`type: claudian-work-order`) that Claudian tracks through a set of status lanes and runs through a fresh chat tab. This manual covers the base board — opening it, the work-order note structure, the default lanes, the detail view, and running.
 
-Capture (creating work orders from chat, selections, browser pages, file menus) is covered in [[agent-board-chat-interop-and-capture]]. Templates that prefill a work order's body are covered in [[work-order-templates]].
+Capture (creating work orders from chat, selections, browser pages, file menus) is covered in [[agent-board-chat-interop-and-capture]]. Templates that prefill a work order's body are covered in [[work-order-templates]]. For the high-level choice between live chat and managed handoffs, see [[chat-vs-agent-board]].
+
+Use chat when you want to work through something immediately. Use the Agent Board when the work should become a durable handoff: scoped, prioritized, queued, run as a tracked item, and reviewed before you call it done.
 
 ---
 

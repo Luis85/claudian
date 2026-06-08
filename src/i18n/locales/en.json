@@ -949,5 +949,22 @@
     "persona": {
       "standard": "Standard"
     }
+  },
+  "workOrderActivity": {
+    "toggleRunning": "{count} active work order(s)",
+    "toggleAttention": "{count} active work order(s), {attention} needs attention",
+    "toggleFinished": "{count} finished work order(s)",
+    "status": {
+      "running": "Running",
+      "needsInput": "Needs input",
+      "needsApproval": "Needs approval",
+      "finished": "Finished"
+    },
+    "action": {
+      "open": "Open",
+      "reply": "Reply",
+      "review": "Review",
+      "close": "Close tab"
+    }
   }
 }

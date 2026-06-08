@@ -1,7 +1,7 @@
 ---
 title: Co-Worker - Chat — Product Copy Refinement
 date: 2026-06-07
-status: approved
+status: shipped
 scope: docs/product/features/
 ---
 

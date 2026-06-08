@@ -949,5 +949,22 @@
     "persona": {
       "standard": "Estándar"
     }
+  },
+  "workOrderActivity": {
+    "toggleRunning": "{count} orden(es) de trabajo activa(s)",
+    "toggleAttention": "{count} orden(es) de trabajo activa(s), {attention} requiere atención",
+    "toggleFinished": "{count} orden(es) de trabajo finalizada(s)",
+    "status": {
+      "running": "En ejecución",
+      "needsInput": "Necesita entrada",
+      "needsApproval": "Necesita aprobación",
+      "finished": "Finalizada"
+    },
+    "action": {
+      "open": "Abrir",
+      "reply": "Responder",
+      "review": "Revisar",
+      "close": "Cerrar pestaña"
+    }
   }
 }

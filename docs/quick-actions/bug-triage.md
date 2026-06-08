@@ -3,8 +3,6 @@ type: quick-action
 name: Bug Triage
 description: Triage a Bug or Issue to refine the issue before writing code
 icon: zoom-in
-favorite: true
-favoriteRank: 5
 ---
 
 Act as a bug triage assistant. 

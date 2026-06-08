@@ -1,18 +1,21 @@
 ---
 status: shipped
-parent: Product
+parent: "[[Specorator - Product Vision]]"
+superseded_for_scope: "Orchestrator feature removed 2026-06-06"
 ---
 # Feature docs content design
 
-Date: 2026-05-30
+Date: 2026-05-30 (revised 2026-06-07 to reflect Orchestrator removal + path move under `docs/product/features/`)
+
+> **Scope correction (2026-06-07).** Original scope listed five feature docs under `docs/features/`, including `Orchestrator.md`. Actual landed location is `docs/product/features/`. The Orchestrator feature was **removed** 2026-06-06 (see [[Remove the Orchestrator feature]]) and `Orchestrator.md` was never created. Current feature-doc set: `Co-Worker - Chat.md`, `Multi Provider Support.md`, `Agent Kanban Board.md`, `Quick Actions.md`, plus the post-2026-05-30 additions `Workspace Isolation.md` and `RAG Layer - Ask your Vault.md`. The content-design principles in the rest of this spec stand; only the file list and the Orchestrator worked example below are stale.
 
 ## Scope
 
-Design for the five feature docs under `docs/features/`:
+Design for the feature docs under `docs/product/features/`:
 
-- `Chat.md`
+- `Co-Worker - Chat.md` (formerly `Chat.md` in the original draft)
 - `Multi Provider Support.md`
-- `Orchestrator.md`
+- ~~`Orchestrator.md`~~ — removed 2026-06-06
 - `Agent Kanban Board.md`
 - `Quick Actions.md`
 

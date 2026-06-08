@@ -3,6 +3,7 @@ date: 2026-06-04
 status: shipped
 scope: user-manual
 parent: "[[Multi Provider Support]]"
+type: user-install-guide
 ---
 # Claudian — Install Codex (Windows)
 

@@ -11,6 +11,7 @@ owner: Claudian
 source: "[[2026-06-03-comprehensive-improvement-proposal]] (UX-G drag)"
 related:
   - "[[accessibility-pass]]"
+  - "[[2026-06-07-agent-board-redesign-plan]]"
 scope: agent-board-ux
 tags:
   - ux

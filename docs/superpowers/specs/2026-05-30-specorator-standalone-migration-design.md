@@ -9,7 +9,7 @@ owner: Luis Mendez
 supersedes_planning_in:
   - "[[2026-05-28-standalone-product-vision]]"
 related:
-  - "[[Specorator]]"
+  - "[[Specorator - Product Vision]]"
   - "[[2026-05-28-standalone-product-vision]]"
   - "[[agent-board-mvp]]"
 parent: Product
@@ -103,7 +103,7 @@ All work in this section happens locally on the existing `claudian-cursor` repos
 2. Update `package.json` per Section 1 table.
 3. Update `LICENSE`: append `Copyright (c) 2026 Luis Mendez` line beneath the existing Yishen Tu copyright line. Keep the MIT license body unchanged.
 4. Create `CREDITS.md` at the repo root with the content defined in Section 5.
-5. Replace `README.md` with content derived from `docs/Specorator.md`, with the additions defined in Section 5.
+5. Replace `README.md` with content derived from `docs/product/Specorator - Product Vision.md`, with the additions defined in Section 5.
 6. Rename storage constants throughout the codebase: `.claudian/` → `.specorator/`. This includes any string literal, path builder, and default-value reference.
 7. Rename settings filename: `claudian-settings.json` → `specorator-settings.json` in source, defaults, and tests.
 8. Rename user-visible UI strings: ribbon tooltip, view titles, settings tab labels, command palette entries, modal headers, status-bar items. The transformation is `Claudian` → `Specorator` in product copy. Provider labels (Claude, Codex, Opencode, Cursor) remain unchanged inside provider-scoped UI.
@@ -167,7 +167,7 @@ The Specorator v1.0 commit history starts fresh. Steps:
    - Build artefacts: `main.js`, `styles.css` (these are produced by `npm run build` and should be excluded from source unless required for BRAT delivery — confirm Obsidian plugin convention before final push)
    - `.context/`
    - Vault-only root paths that do not belong in the published source tree: `Agent Board/`, `Wikipedia - Signs of AI writing - Wikipedia.md`, `test-output.log`, and any other vault-private root note identified during execution.
-3. **Ship the whole `docs/` tree.** Every subdirectory under `docs/` (`Backlog.base`, `examples/`, `ideas/`, `issues/`, `product/`, `quick-actions/`, `research/`, `superpowers/`) migrates into the public repository as-is. This includes the vision doc, this migration spec at its original `docs/superpowers/specs/` location, prior design specs, brainstorming artefacts, idea notes, research notes, and quick-action templates. The published `docs/` tree becomes part of Specorator's source of truth and product memory. Wikilinks inside those notes (e.g. `[[docs/features/Chat]]`) will render as plain text on GitHub but remain readable; no automated rewrite happens at migration time.
+3. **Ship the whole `docs/` tree.** Every subdirectory under `docs/` (`Backlog.base`, `adr/`, `decisions/`, `design/`, `handoffs/`, `ideas/`, `issues/`, `migration/`, `product/`, `quick-actions/`, `research/`, `reviews/`, `superpowers/`, `tech-debt/`) migrates into the public repository as-is. This includes the vision doc, this migration spec at its original `docs/superpowers/specs/` location, prior design specs, brainstorming artefacts, idea notes, research notes, and quick-action templates. The published `docs/` tree becomes part of Specorator's source of truth and product memory. Wikilinks inside those notes (e.g. `[[docs/product/features/Co-Worker - Chat]]`) will render as plain text on GitHub but remain readable; no automated rewrite happens at migration time.
 4. `git add -A`.
 5. `git commit -m "chore: initial Specorator v1.0"`.
 
@@ -306,7 +306,7 @@ Specorator is currently maintained by Luis Mendez (https://github.com/Luis85).
 
 ### 5.3 README.md
 
-The new README replaces the existing Claudian README in full. Source content is `docs/Specorator.md`. The following changes apply when promoting that note to repository README:
+The new README replaces the existing Claudian README in full. Source content is `docs/product/Specorator - Product Vision.md`. The following changes apply when promoting that note to repository README:
 
 - Add an installation section near the top with BRAT instructions pointing at `Luis85/specorator` and a note that the community-plugin registry submission is planned for after v1.0.x stabilises.
 - Add a short "Origins" footer that links to `CREDITS.md` for the full provenance.
@@ -369,7 +369,7 @@ The migration spec ships at its native path under `docs/superpowers/specs/` as p
 
 - The `v1.0.0` GitHub release is published as the primary launch artefact.
 - A pinned issue titled "Welcome to Specorator v1.0 — migration notes" is created in the new repository, linking to the migration spec at `docs/superpowers/specs/2026-05-30-specorator-standalone-migration-design.md` and to `CREDITS.md`.
-- `docs/Specorator.md` remains the canonical product narrative in the vault and is mirrored as `README.md` in the repository.
+- `docs/product/Specorator - Product Vision.md` remains the canonical product narrative in the vault and is mirrored as `README.md` in the repository.
 - No social or forum push happens with v1.0. Distribution is BRAT-first and intentionally low-pressure.
 
 ### 6.2 The patch window

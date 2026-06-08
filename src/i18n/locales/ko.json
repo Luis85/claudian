@@ -949,5 +949,22 @@
     "persona": {
       "standard": "표준"
     }
+  },
+  "workOrderActivity": {
+    "toggleRunning": "활성 작업 지시 {count}개",
+    "toggleAttention": "활성 작업 지시 {count}개, 주의 필요 {attention}개",
+    "toggleFinished": "완료된 작업 지시 {count}개",
+    "status": {
+      "running": "실행 중",
+      "needsInput": "입력 필요",
+      "needsApproval": "승인 필요",
+      "finished": "완료됨"
+    },
+    "action": {
+      "open": "열기",
+      "reply": "응답",
+      "review": "검토",
+      "close": "탭 닫기"
+    }
   }
 }

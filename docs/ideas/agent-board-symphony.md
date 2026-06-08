@@ -1,23 +1,102 @@
 ---
-status: partially-shipped
-priority: 1 - high
+status: superseded
+priority: 4 - archive
+superseded_by: "[[Specorator Agent Harness PRD]]"
 relations:
   - "[[Agent Kanban Board]]"
+  - "[[Specorator - Product Vision]]"
+  - "[[Specorator Agent Harness PRD]]"
 ---
 
-> **Status (2026-06-03): partially shipped / decomposed.** The MVP, configurable lanes, work-order
-> templates, and chat-interop/capture have **shipped** (`src/features/tasks/`). The remaining orchestration
-> ambitions are tracked as discrete issues: [[agent-board-evidence-review]],
-> [[agent-board-background-runs]], [[integrate-orchestrator-with-agent-board]],
-> [[agent-board-drag-and-drop]], [[custom-actions-per-lane]],
-> [[work-orders-with-specialized-agents]], [[perf-gates-agent-board-and-multitab]].
-> Treat this note as the umbrella vision, not untouched high-priority work.
+> **Status (2026-06-07): superseded.** This note predates the persona pivot from coder-only ops board to
+> *"vault agent for everyone — writers, planners, researchers"* captured in [[Specorator - Product Vision]]
+> and detailed in [[Specorator Agent Harness PRD]]. The Symphony framing positions Claudian as an agent
+> operations layer for **coding agents**; the shipped product positions it as a **non-technical vault
+> assistant** where the board is one of two work surfaces (see [[chat-vs-agent-board]]). Keep this note as
+> a historical record of how the board was scoped; do not treat it as canonical roadmap.
+>
+> **What shipped from this idea:** MVP, configurable lanes, work-order templates, chat-interop/capture
+> (`src/features/tasks/`). The `<claudian_handoff>` block fills the "evidence bundle" role. The run ledger
+> moved off the note body into the `.claudian/runs/<runId>/ledger.jsonl` sidecar to avoid racing the
+> agent's `Edit` tool (see project `CLAUDE.md` Storage table).
+>
+> **What was killed:** the orchestrator feature (see [[Remove the Orchestrator feature]], done 2026-06-06)
+> — the board is now the **only** orchestration surface, which retires this note's "Agent Team / lead
+> delegates child runs" execution mode.
+>
+> **Where the remaining ambitions live now:** discrete issues
+> [[agent-board-evidence-review]], [[agent-board-background-runs]], [[agent-board-drag-and-drop]],
+> [[custom-actions-per-lane]], [[work-orders-with-specialized-agents]],
+> [[perf-gates-agent-board-and-multitab]] — re-expressed through three PRD lanes rather than Symphony
+> plumbing (see "Reconciliation against the PRD" section below).
 
 # Claudian Agent Board: Obsidian-Native Symphony Orchestration
 
-Status: idea / design draft  
-Date: 2026-05-28  
-Owner: Claudian  
+Status: superseded by [[Specorator Agent Harness PRD]]
+Date: 2026-05-28 (idea), reconciled 2026-06-07
+Owner: Claudian
+
+## Reconciliation against the PRD (2026-06-07)
+
+This idea was reviewed against the current product vision, the harness PRD, and the shipped
+feature/user-manual set. The review found that **most concrete mechanisms already shipped or were
+decomposed into tracked issues**, while the surrounding **framing is now misaligned** with the
+non-technical persona pivot. The breakdown below routes remaining ambitions through PRD primitives
+instead of Symphony-style plumbing.
+
+### Pursue — aligned, re-expressed through current roadmap
+
+| Symphony concept here | Where it now lives |
+|---|---|
+| Evidence-first review gate / Review Guard | **F-VERIFY-1** deterministic pre-approval checks (wikilink integrity, citation resolves, frontmatter schema, diff containment) + shipped `needs_fix` lane |
+| Lane contracts / per-lane workflows | [[custom-actions-per-lane]] + [[work-orders-with-specialized-agents]] expressed as **Harness Library cards (F-HARN-1/4)** — tap, not edit |
+| Workspace allocation (git-worktree) | [[Workspace Isolation]] feature + [[Better integration of isolated worktrees]] idea |
+| Operator observability (AgentWatch shape) | **F-SAFE-1** Shadow-Git per-turn snapshot + **F-OBS-2** persistent trace; file attribution + `unknown`/`conflicted` warning |
+| Cross-session memory of runs | **F-MEM-1** three-tier vault-Markdown memory |
+| Headless / background execution seam | [[agent-board-background-runs]] — already promised by shipped Board copy *"run as a tracked item while you focus elsewhere"* |
+| Vault-as-control-plane tools | **F-VAULT-* / F-RAG-*** via Vault MCP, uniform across all four providers |
+
+### Drop — misaligned with the shipped product
+
+1. **Symphony positioning itself.** "OpenAI Symphony for Obsidian" frames the product as coder ops. The
+   PRD persona pivot (Maya/Sam/Priya) kills it. Keep the board; drop the Symphony narrative.
+2. **Architecture Rule DSL** (`claudian.agent-board.rules/v1` YAML packs). Contradicts the mainstream
+   pivot rule *"no config files, no JSON."* Use **`.obsidian-agentignore`** (F-SAFE-4) and
+   **F-HARN-2 Rules cards** that compile to `AGENTS.md` / `CLAUDE.md` / `.cursor/rules/*.mdc`.
+3. **`claudian-workflow` YAML frontmatter schema** with Liquid templating. Same anti-pattern. Ship as
+   **Harness Library skill cards (F-HARN-4)** — one neutral note, compiled to each provider's native
+   skill format.
+4. **Autonomous orchestrator + lane-triggered daemons + DAGs + cron + concurrency pool.** Killed by
+   [[Remove the Orchestrator feature]]. WIP cap already enforced by the **Maximum chat tabs** setting.
+5. **"Agent Team" execution mode** (lead agent delegates child runs). Collides with the orchestrator
+   removal and with PRD design rule R1 (co-evolution — do not out-orchestrate the provider).
+6. **Six-specialist Routa-style pipeline** (Backlog Refiner → Todo Orchestrator → Dev Executor →
+   Review Guard → Done Reporter → Blocked Resolver). Over-engineered. The two thin entry points
+   ([[custom-actions-per-lane]] + [[work-orders-with-specialized-agents]]) cover 80% without committing
+   to specialist agents per lane.
+7. **Trace-learning playbooks (this note's Phase 5).** Defer indefinitely. Provider models are
+   post-trained with their own harness; pre-empting them with playbooks risks R1.
+8. **External PR/push automation + GitHub/Linear sync (Phase 5).** [[Push and Commit accepted Work-Orders]]
+   covers the commit slice; full PM sync is explicit non-goal of [[Agent Kanban Board]]
+   (*"not a project management tool. No assignees and no due dates."*).
+9. **Re-naming debate** (Work Orders / Mission Board / Run Board). Settled — "Agent Kanban Board."
+
+### Stale references — read with caution
+
+- **Generated-region run ledger inside the note body.** Superseded by the sidecar
+  `.claudian/runs/<runId>/ledger.jsonl`; only a snapshot is written into the note at terminal. The
+  marker-comment design (`<!-- claudian:run-ledger-start -->`) lost the race against the agent's `Edit`
+  tool.
+- **Uniform HITL / "evidence-first review blocks transition" assumptions.** The enforceability matrix in
+  PRD §9.1 is the canonical reality: pre-execution gate is plugin-owned only on Claude; advisory on
+  Cursor; provider-mediated on Codex/Opencode. Symphony-style "approval boundary" claims here should be
+  read through that matrix.
+- **`type: claudian-work-order` storage paths.** Will rebrand to `.specorator/` under the standalone
+  migration ([[2026-05-30-specorator-standalone-migration]]); shipped code still uses `.claudian/`.
+
+---
+
+
 
 Research sources:
 

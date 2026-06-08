@@ -1,7 +1,7 @@
 ---
 type: issue
 priority: 1 - high
-status: open
+status: done
 relations:
 tags:
 ---

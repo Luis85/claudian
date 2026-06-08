@@ -2,15 +2,17 @@
 type: issue
 id: issue-20260603-capture-prompt-as-quick-action
 title: Capture a sent chat prompt as a Quick Action
-status: open
+status: shipped
 priority: 3 - low
-triage: ready-for-agent
+triage: shipped
 created: 2026-06-03
-updated: 2026-06-03
+updated: 2026-06-07
 owner: Claudian
 source: "[[Create a new Quick-Action from an Users prompt]]"
 related:
   - "[[quick-actions]]"
+  - "[[2026-06-04-capture-prompt-as-quick-action-design]]"
+  - "[[2026-06-04-capture-prompt-as-quick-action]]"
 scope: quick-actions
 tags:
   - quick-actions

@@ -19,29 +19,18 @@ tags:
   - wont-do
 ---
 
-Superseded by [[2026-06-06-remove-orchestrator-feature-design]]: Orchestrator will be removed instead of integrated with Agent Board.
+Superseded by [[2026-06-06-remove-orchestrator-feature-design]]: Orchestrator was **removed** 2026-06-06 instead of being integrated with the Agent Board. The Agent Board is now the only orchestration surface. Sections below are kept as historical record of the original problem framing.
 
+# Orchestrator ↔ Agent Board integration (historical)
 
-# Orchestrator ↔ Agent Board integration
+## Problem (historical)
 
-## Problem
-
-The Orchestrator ships as a chat service that spawns tabs, but it is **not integrated with the Agent
+The Orchestrator shipped as a chat service that spawned tabs, but it was **not integrated with the Agent
 Board** (no `orchestrat*` references in `src/features/tasks/`). The "spec → parallel work → combined
-review" promise is largely manual, and the orchestrator's parallel-task output is not turned into board
+review" promise was largely manual, and the orchestrator's parallel-task output was not turned into board
 work orders with ledger/handoff/evidence.
 
-## Proposed change
+## Resolution
 
-Wire the Orchestrator's parallel-task output into Agent Board work orders so each parallel task becomes a
-tracked card with run ledger, handoff, and evidence; surface a combined review across the parallel lane.
-
-## Acceptance criteria
-
-- Orchestrator runs can materialize as Agent Board work orders (one card per parallel task) with ledger/handoff.
-- A combined review surface spans the parallel set.
-
-## Related
-
-`agent-board-background-runs`, `agent-board-evidence-review`. Tracks the existing idea doc
-`Integrate the Orchestrator with the Agent Board.md`.
+Killed by [[Remove the Orchestrator feature]] (status: done, 2026-06-06). The parallel-runs ambition lives
+on as [[agent-board-background-runs]] + [[agent-board-evidence-review]], handled inside the Agent Board.

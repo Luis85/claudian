@@ -12,51 +12,10 @@ import { parseQuickActionContent } from '@/features/quickActions/quickActionPars
 import { QuickActionStorage } from '@/features/quickActions/QuickActionStorage';
 import type { QuickActionEditorModal } from '@/features/quickActions/ui/QuickActionEditorModal';
 
-// jsdom modal/setting stand-ins so the real QuickActionEditorModal can run end-to-end.
-jest.mock('obsidian', () => {
-  class Modal {
-    app: any;
-    contentEl: any;
-    modalEl: any;
-    constructor(app: any) {
-      this.app = app;
-      this.contentEl = document.createElement('div');
-      this.modalEl = document.createElement('div');
-    }
-    setTitle() {}
-    open() { this.onOpen?.(); }
-    close() {}
-    onOpen?(): void;
-  }
-  class Setting {
-    settingEl: HTMLElement;
-    controlEl: HTMLElement;
-    constructor(container: HTMLElement) {
-      this.settingEl = document.createElement('div');
-      this.controlEl = document.createElement('div');
-      container.appendChild(this.settingEl);
-    }
-    setName() { return this; }
-    setDesc() { return this; }
-    addText(cb: (i: any) => void) {
-      const input: any = { setValue() { return input; }, setDisabled() { return input; }, onChange() { return input; } };
-      cb(input);
-      return this;
-    }
-    addTextArea(cb: (a: any) => void) {
-      const area: any = { setValue() { return area; }, onChange() { return area; }, inputEl: { rows: 0, addClass() {} } };
-      cb(area);
-      return this;
-    }
-    addButton(cb: (b: any) => void) {
-      const btn: any = { setButtonText() { return btn; }, setCta() { return btn; }, onClick() { return btn; } };
-      cb(btn);
-      return this;
-    }
-  }
-  return { Modal, Notice: jest.fn(), Setting, normalizePath: (p: string) => p };
-});
-
+// Uses the canonical obsidian mock (tests/__mocks__/obsidian.ts) via
+// moduleNameMapper — no inline override. This flow constructs the real
+// QuickActionEditorModal and drives handleSave directly (never open()/onOpen),
+// so the canonical Modal/Setting/Notice/normalizePath are sufficient.
 jest.mock('@/i18n/i18n', () => ({ t: (key: string) => key }));
 
 jest.mock('@/shared/components/LucideIconPicker', () => ({

@@ -4,7 +4,7 @@ id: issue-20260530-architecture-deepening-proposal
 title: Architecture Deepening Proposal — Chat tab composition, stream projection, conversation store, provider contracts, and auxiliary query reuse
 status: done
 priority: 1 - high
-triage: ready-for-agent
+triage: shipped
 created: 2026-05-30
 updated: 2026-06-02
 owner: Claudian

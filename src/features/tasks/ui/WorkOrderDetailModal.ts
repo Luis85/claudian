@@ -72,18 +72,18 @@ export interface WorkOrderDetailModalCallbacks {
   onOpenConversation?(task: TaskSpec): void;
   /** Whether the linked conversation still exists and can be opened. Hides the button when false. */
   canOpenConversation?(task: TaskSpec): boolean;
-  onRun(task: TaskSpec): void;
-  onStop(task: TaskSpec): void;
-  onAccept(task: TaskSpec): void;
-  onRework(task: TaskSpec): void;
-  onMarkReady(task: TaskSpec): void;
-  onReopen(task: TaskSpec): void;
+  onRun?(task: TaskSpec): void;
+  onStop?(task: TaskSpec): void;
+  onAccept?(task: TaskSpec): void;
+  onRework?(task: TaskSpec): void;
+  onMarkReady?(task: TaskSpec): void;
+  onReopen?(task: TaskSpec): void;
   /** needs_handoff → review: salvage a run that finished without a structured handoff. */
   onSendToReview?(task: TaskSpec): void;
   /** needs_handoff → failed: give up on a run that finished without a structured handoff. */
   onMarkFailed?(task: TaskSpec): void;
-  onArchive(task: TaskSpec): void;
-  onSaveFields(task: TaskSpec, fields: WorkOrderFieldUpdate): void | Promise<void>;
+  onArchive?(task: TaskSpec): void;
+  onSaveFields?(task: TaskSpec, fields: WorkOrderFieldUpdate): void | Promise<void>;
   getProviderOptions(): WorkOrderOption[];
   getModelOptions(providerId: string): WorkOrderOption[];
 }
