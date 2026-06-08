@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260607-board-toolbar-auto-run
 title: Agent Board — toolbar refresh + Auto-run switch (renames the queue toggle)
-status: open
+status: done
 priority: 1 - high
 triage: ready-for-agent
 created: 2026-06-07
@@ -34,15 +34,15 @@ Right-side info reads `N/M active` (dot in `--color-yellow` with soft ring) · `
 
 #### Acceptance criteria
 
-- [ ] All top-row toolbar buttons share size (`padding 6px 12px; --font-ui-small`).
-- [ ] "Add work order" remains the accent CTA; "Run next ready" remains a tool button with `play` icon.
-- [ ] Auto-run switch renders with OFF visual (track `--toggle-bg`, label `--text-muted`) AND ON visual (track `--color-accent`, thumb translated +12px to white, pill bg `--color-accent-3`, label `--text-normal`).
-- [ ] Auto-run starts OFF after every plugin reload, regardless of prior session state.
-- [ ] Switching ON resumes the background watcher; switching OFF pauses it (existing wiring unchanged).
-- [ ] Switch carries `role="switch"`, `aria-checked` reflects state, tooltip present.
-- [ ] Right-info caption shows active count + tab count + free slots; halt caption preserved when watcher reports failure.
-- [ ] Auto-run switch thumb transition gated behind `@media (prefers-reduced-motion: no-preference)`.
-- [ ] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
+- [x] All top-row toolbar buttons share size (`padding 6px 12px; --font-ui-small`).
+- [x] "Add work order" remains the accent CTA; "Run next ready" remains a tool button with `play` icon.
+- [x] Auto-run switch renders with OFF visual (track `--toggle-bg`, label `--text-muted`) AND ON visual (track `--color-accent`, thumb translated +12px to white, pill bg `--color-accent-3`, label `--text-normal`).
+- [x] Auto-run starts OFF after every plugin reload, regardless of prior session state.
+- [x] Switching ON resumes the background watcher; switching OFF pauses it (existing wiring unchanged).
+- [x] Switch carries `role="switch"`, `aria-checked` reflects state, tooltip present.
+- [x] Right-info caption shows active count + tab count + free slots; halt caption preserved when watcher reports failure.
+- [x] Auto-run switch thumb transition gated behind `@media (prefers-reduced-motion: no-preference)`.
+- [x] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
 
 #### Blocked by
 

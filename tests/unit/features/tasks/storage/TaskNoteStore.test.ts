@@ -236,6 +236,9 @@ ${HANDOFF_END}`);
     expect(parsed.task.frontmatter.custom_field).toBe('keep-me');
     expect(written).toContain('Intro prose that must stay.');
     expect(written).toContain('Closing prose.');
+    // The body's title H1 is kept in sync with the renamed frontmatter title.
+    expect(written).toContain('# Renamed');
+    expect(written).not.toContain('# Build agent board');
   });
 
   it('leaves omitted fields unchanged', () => {
@@ -244,6 +247,91 @@ ${HANDOFF_END}`);
     expect(parsed.task.frontmatter.title).toBe('Only title');
     expect(parsed.task.frontmatter.priority).toBe('2 - normal');
     expect(parsed.task.frontmatter.provider).toBeUndefined();
+  });
+
+  it('persists the agent persona id through writeFields', () => {
+    const written = store.writeFields(VALID_NOTE, { agent: 'standard' }, '2026-06-01T00:00:00.000Z');
+    const parsed = store.parse('tasks/task-1.md', written);
+    expect(parsed.task.frontmatter.agent).toBe('standard');
+  });
+
+  it('round-trips an unknown agent id through parse → write without dropping it', () => {
+    // A persona id this build does not know (a future Agents feature may own it).
+    // It must survive both the parse and a later unrelated field write so the
+    // assignment is never silently lost.
+    const noteWithUnknownAgent = VALID_NOTE.replace(
+      'attempts: 0',
+      'attempts: 0\nagent: refactorer-from-the-future',
+    );
+
+    const parsed = store.parse('tasks/task-1.md', noteWithUnknownAgent);
+    expect(parsed.task.frontmatter.agent).toBe('refactorer-from-the-future');
+
+    // An unrelated write (priority only) must preserve the unknown agent id.
+    const written = store.writeFields(
+      noteWithUnknownAgent,
+      { priority: '1 - high' },
+      '2026-06-01T00:00:00.000Z',
+    );
+    const reparsed = store.parse('tasks/task-1.md', written);
+    expect(reparsed.task.frontmatter.agent).toBe('refactorer-from-the-future');
+    expect(reparsed.task.frontmatter.priority).toBe('1 - high');
+  });
+
+  it('syncs only the title H1 in the body, leaving sub-headings untouched', () => {
+    const written = store.writeFields(VALID_NOTE, { title: 'Renamed' }, '2026-06-01T00:00:00.000Z');
+    expect(written).toContain('# Renamed');
+    expect(written).not.toContain('# Build agent board');
+    expect(written).toContain('## Objective');
+    expect(written).toContain('## Acceptance Criteria');
+  });
+
+  it('does not touch the body H1 when the title is unchanged (priority-only save)', () => {
+    const written = store.writeFields(VALID_NOTE, { priority: '1 - high' }, '2026-06-01T00:00:00.000Z');
+    expect(written).toContain('# Build agent board');
+  });
+
+  it('does not rewrite a # heading inside a code fence when syncing the title', () => {
+    const note = `---
+type: claudian-work-order
+schema_version: 1
+id: t
+title: Old
+status: ready
+priority: 2 - normal
+created: 2026-05-28T08:00:00.000Z
+updated: 2026-05-28T08:00:00.000Z
+attempts: 0
+---
+\`\`\`
+# not a title
+\`\`\`
+
+# Real Title
+`;
+    const written = store.writeFields(note, { title: 'New' }, '2026-06-01T00:00:00.000Z');
+    expect(written).toContain('# not a title');
+    expect(written).toContain('# New');
+    expect(written).not.toContain('# Real Title');
+  });
+
+  it('strips embedded Claudian region markers from a renamed title before writing the body H1', () => {
+    // A rename is arbitrary user input. If it carried a `<!-- claudian:… -->`
+    // marker into the H1, that marker would shadow the real ledger/handoff
+    // region markers (located by indexOf), corrupting those generated blocks.
+    const malicious = 'Hijack <!-- claudian:run-ledger-start --> ledger';
+    const written = store.writeFields(VALID_NOTE, { title: malicious }, '2026-06-01T00:00:00.000Z');
+
+    // The body H1 must not carry the marker (the frontmatter title may keep it
+    // verbatim — region lookups operate on the body only, so it is harmless there).
+    expect(written).not.toMatch(/#.*claudian:run-ledger-start/);
+    expect(written).toContain('# Hijack  ledger');
+
+    // The generated ledger region is still locatable and intact after the rename.
+    // Had the H1 leaked a marker, indexOf would match the earlier H1 marker and
+    // slice the wrong region, so this is the load-bearing assertion.
+    const ledger = store.extractGeneratedRegion(written, RUN_LEDGER_START, RUN_LEDGER_END);
+    expect(ledger).toBe('- Existing generated entry.');
   });
 
   describe('writeStatus heartbeat + pause_reason', () => {

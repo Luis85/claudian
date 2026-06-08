@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260607-agent-board-redesign-a11y-audit
 title: Agent Board redesign — accessibility + reduced-motion audit
-status: open
+status: done
 priority: 2 - normal
 triage: ready-for-agent
 created: 2026-06-07
@@ -44,10 +44,10 @@ Failures discovered during the audit are fixed within the audit PR (not split ou
 
 #### Acceptance criteria
 
-- [ ] Every checklist item above verified; failures fixed in the audit PR.
-- [ ] Reduced-motion preference suppresses every pulse / live animation while leaving non-motion visuals intact.
-- [ ] Keyboard-only walkthrough (open card → edit title → tab through properties → reach footer → close modal) passes.
-- [ ] `npm run lint && npm run test && npm run build` green.
+- [x] Every checklist item above verified; failures fixed in the audit PR.
+- [x] Reduced-motion preference suppresses every pulse / live animation while leaving non-motion visuals intact.
+- [x] Keyboard-only walkthrough (open card → edit title → tab through properties → reach footer → close modal) passes.
+- [x] `npm run lint && npm run test && npm run build` green.
 
 #### Blocked by
 

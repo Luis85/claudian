@@ -506,9 +506,10 @@ export class Component {
 
 export class Modal {
   app: any;
-  modalEl: any = { addClass: jest.fn() };
+  modalEl: any = { addClass: jest.fn(), setAttribute: jest.fn(), setCssProps: jest.fn() };
   containerEl: any = makeStubContentEl();
   contentEl: any = makeStubContentEl();
+  titleEl: any = makeStubContentEl();
 
   constructor(app: any) {
     this.app = app;

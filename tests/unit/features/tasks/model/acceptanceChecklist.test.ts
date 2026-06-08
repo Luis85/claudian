@@ -1,0 +1,60 @@
+import {
+  isPureAcceptanceChecklist,
+  parseAcceptanceChecklist,
+} from '../../../../../src/features/tasks/model/acceptanceChecklist';
+
+describe('parseAcceptanceChecklist', () => {
+  it('captures each checklist item with its checked state and label', () => {
+    const md = '- [ ] one\n- [x] two\n- [X] three\nnot a checkbox';
+    expect(parseAcceptanceChecklist(md)).toEqual([
+      { checked: false, text: 'one' },
+      { checked: true, text: 'two' },
+      { checked: true, text: 'three' },
+    ]);
+  });
+
+  it('supports asterisk bullets and leading indentation', () => {
+    const md = '  * [x] indented\n* [ ] another';
+    expect(parseAcceptanceChecklist(md)).toEqual([
+      { checked: true, text: 'indented' },
+      { checked: false, text: 'another' },
+    ]);
+  });
+
+  it('ignores non-checkbox lines and trims trailing whitespace', () => {
+    expect(parseAcceptanceChecklist('Just prose.\n- a plain bullet')).toEqual([]);
+    expect(parseAcceptanceChecklist('')).toEqual([]);
+    expect(parseAcceptanceChecklist('- [ ] trailing space   ')).toEqual([
+      { checked: false, text: 'trailing space' },
+    ]);
+  });
+
+  it('agrees with the done/total contract row-for-row', () => {
+    const md = '- [x] a\n- [ ] b\n- [x] c';
+    const items = parseAcceptanceChecklist(md);
+    expect(items).toHaveLength(3);
+    expect(items.filter((i) => i.checked)).toHaveLength(2);
+  });
+});
+
+describe('isPureAcceptanceChecklist', () => {
+  it('is true for a section of only top-level checkbox items (blank lines allowed)', () => {
+    expect(isPureAcceptanceChecklist('- [ ] a\n\n- [x] b')).toBe(true);
+    expect(isPureAcceptanceChecklist('* [x] one\n* [ ] two')).toBe(true);
+  });
+
+  it('is false for empty or prose-only sections', () => {
+    expect(isPureAcceptanceChecklist('')).toBe(false);
+    expect(isPureAcceptanceChecklist('Just prose.\n- a plain bullet')).toBe(false);
+  });
+
+  it('is false when checkboxes are mixed with prose or nested lines', () => {
+    expect(isPureAcceptanceChecklist('- [ ] Implement API\n- Include retry behavior')).toBe(false);
+    expect(isPureAcceptanceChecklist('- [ ] Ship it\n  some continuation note')).toBe(false);
+  });
+
+  it('is false when checkbox items are nested (indented children)', () => {
+    expect(isPureAcceptanceChecklist('- [ ] Parent\n  - [ ] Child')).toBe(false);
+    expect(isPureAcceptanceChecklist('* [x] Top\n    * [ ] Deep')).toBe(false);
+  });
+});

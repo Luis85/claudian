@@ -751,12 +751,60 @@
       "runFailed": "Work order run failed: {error}",
       "noReady": "No ready work orders to run.",
       "laneSaveFailed": "Could not save lane change: {error}",
+      "addWorkOrder": "+ Add work order",
+      "addWorkOrderButton": "Add work order",
+      "runNextReady": "Run next ready",
+      "autoRun": {
+        "label": "Auto-run",
+        "tooltip": "Automatically starts work orders once they reach Ready. Runs in the background."
+      },
+      "activeCount": "{n}/{m} active",
+      "tabCount": "Work-order tabs {n}/{m} · {k} free",
       "contextMenu": {
         "openNote": "開啟筆記",
         "openConversation": "開啟對話",
         "archive": "封存",
         "delete": "刪除"
-      }
+      },
+      "cardAction": {
+        "run": "執行",
+        "retry": "重試",
+        "backToInbox": "退回收件匣",
+        "moreActions": "更多動作"
+      },
+      "card": {
+        "reply": {
+          "inputPlaceholder": "Your reply…",
+          "send": "Send",
+          "stop": "Stop",
+          "waitingForInput": "The agent is waiting for your input.",
+          "requestsApproval": "The agent requests approval to proceed.",
+          "risk": "Risk: {risk}",
+          "rejectReasonPlaceholder": "Reason (used if you reject)…",
+          "approve": "Approve",
+          "reject": "Reject",
+          "defaultRejectReason": "rejected"
+        },
+        "liveStrip": {
+          "attempt": "{elapsed} · attempt {attempt}",
+          "starting": "starting…",
+          "heartbeatFresh": "Fresh heartbeat ({age} ago)",
+          "heartbeatStale": "Stale heartbeat ({age} ago)",
+          "heartbeatVeryStale": "Very stale heartbeat ({age} ago)"
+        }
+      },
+      "notRunnable": "Mark \"{title}\" ready before running.",
+      "noFreeSlots": "沒有空閒的工單槽位。執行工單需要一個空閒槽位——在聊天面板中關閉一個工單分頁，或在 Agent Board 設定中提高 \"Concurrent work-order runs\"。",
+      "collapseLane": "折疊泳道",
+      "expandLane": "展開泳道 {title}",
+      "readyWhen": "就緒條件",
+      "doneWhen": "完成條件",
+      "boardNotices": "看板通知",
+      "skippedNotes": "已略過的筆記",
+      "queueHalted": "佇列已停止：{reason}",
+      "failureOne": "{n} 個失敗",
+      "failureMany": "{n} 個失敗",
+      "queueSkipped": "⊘ 佇列已略過：{reason}"
     },
     "template": {
       "nameRequired": "Template name is required.",
@@ -789,6 +837,91 @@
       "commitAndPush": "Commit & push",
       "failed": "Commit prompt failed: {error}",
       "settingsSaveFailed": "Failed to save preference. Try again from settings."
+    },
+    "workOrderModal": {
+      "properties": "Properties",
+      "sectionObjective": "Objective",
+      "sectionAcceptance": "Acceptance criteria",
+      "fieldStatus": "Status",
+      "fieldAgent": "Agent",
+      "fieldProvider": "Provider",
+      "fieldModel": "Model",
+      "fieldPriority": "Priority",
+      "fieldCreated": "Created",
+      "fieldUpdated": "Updated",
+      "fieldAttempts": "Attempts",
+      "fieldConversation": "Conversation",
+      "sectionHandoff": "Agent handoff",
+      "sectionRunLedger": "Run ledger",
+      "handoffSummary": "Summary",
+      "handoffVerification": "Verification",
+      "handoffRisks": "Risks",
+      "handoffNextAction": "Next action",
+      "salvageTitle": "Run finished without a handoff",
+      "salvageCallout": "This run finished without producing a structured handoff. The transcript tail below is the available run trace.",
+      "transcriptTail": "Transcript tail",
+      "transcriptTailEmpty": "No transcript available.",
+      "editTitleHint": "✎ Click title to rename",
+      "startedAgo": "Started {ago} ago",
+      "finishedAt": "Finished {ago} ago",
+      "closeAriaLabel": "Close",
+      "actionOpenNote": "Open note",
+      "actionOpenConversation": "Open conversation",
+      "actionMarkReady": "Mark ready",
+      "actionStop": "Stop",
+      "actionRework": "Rework",
+      "actionAccept": "Accept",
+      "actionSendToReview": "Send to review",
+      "actionMarkFailed": "Mark failed",
+      "actionReopen": "Reopen",
+      "actionArchive": "Archive"
+    },
+    "templateEditor": {
+      "titleNew": "新增工單範本",
+      "titleEdit": "編輯工單範本",
+      "useDefault": "使用預設",
+      "nameName": "Name",
+      "nameDesc": "顯示在選擇器中。對於新範本，將成為範本檔名。",
+      "descriptionName": "Description",
+      "descriptionDesc": "選用的一行摘要，顯示在選擇器中名稱下方。",
+      "iconName": "Icon",
+      "iconDesc": "選擇器列的選用 Lucide 圖示。",
+      "providerName": "Provider",
+      "providerDesc": "選用。未設定時回退到 Agent Board 預設提供方。",
+      "modelName": "Model",
+      "modelDesc": "選用。未設定時回退到 Agent Board 預設模型。",
+      "priorityName": "Priority",
+      "priorityDesc": "選用。未設定時回退到 normal。",
+      "bodyName": "Body",
+      "bodyDesc": "範本內文。佔位符：{{title}}、{{date}}、{{source}}。",
+      "save": "保存",
+      "cancel": "取消"
+    },
+    "templatePicker": {
+      "title": "工單範本",
+      "newTemplate": "新增範本",
+      "emptyState": "還沒有範本。選擇空白以建立一般工單，或新增範本以便日後重複使用。",
+      "lead": "選擇要套用的範本，或從空白開始。",
+      "blankTitle": "空白工單",
+      "blankDesc": "包含目標、驗收、上下文、限制的空白骨架。",
+      "edit": "編輯",
+      "delete": "刪除"
+    },
+    "laneEditor": {
+      "untitledLane": "未命名泳道",
+      "laneDesc": "標題以及泳道是否顯示在看板上。",
+      "moveUp": "上移",
+      "moveDown": "下移",
+      "removeLane": "移除泳道",
+      "collapsible": "可折疊",
+      "routedTo": "路由到「{title}」",
+      "routedElsewhere": "⚠ 已路由到他處：{summary}",
+      "routedSummaryItem": "{status} → 「{lane}」",
+      "definitionOfReady": "就緒定義",
+      "definitionOfDone": "完成定義",
+      "addLane": "新增泳道",
+      "resetToDefault": "重設為預設",
+      "newLaneTitle": "新泳道"
     }
   },
   "env": {
@@ -811,6 +944,11 @@
     "noView": "Inline edit unavailable: could not access the active Markdown view.",
     "inserted": "Inserted",
     "applied": "Edit applied"
+  },
+  "agents": {
+    "persona": {
+      "standard": "標準"
+    }
   },
   "workOrderActivity": {
     "toggleRunning": "{count} 個活動工作單",

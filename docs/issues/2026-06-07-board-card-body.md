@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260607-board-card-body
 title: Agent Board — minimal card body + acceptance progress footer + assignee slot
-status: open
+status: done
 priority: 1 - high
 triage: ready-for-agent
 created: 2026-06-07
@@ -41,15 +41,15 @@ Live strip and hover action cluster ship in their own slices: [[2026-06-07-board
 
 #### Acceptance criteria
 
-- [ ] Card frame matches spec (padding, radius, bg, border, hover/active states).
-- [ ] Title row shows status dot + title; live statuses pulse the dot (reduced-motion respected).
-- [ ] Meta row layout `1fr auto`; provider/model truncates with `overflow: hidden`, `white-space: nowrap`, `text-overflow: ellipsis`; priority bars + label render right-aligned with priority colors from the contract in [[2026-06-07-agent-board-redesign-plan]].
-- [ ] Footer renders acceptance progress (4px track + `done/total`, green at 100%) + reserved 20px assignee slot at far right.
-- [ ] When acceptance progress absent/hidden, spacer keeps the assignee slot right-aligned.
-- [ ] Reply surface restyle preserves wiring + 4000-char cap; footer omitted while reply visible.
-- [ ] Card click opens detail modal; right-click opens context menu.
-- [ ] No hardcoded hex; all colors via Obsidian variables; status + priority colors read from the contract in [[2026-06-07-agent-board-redesign-plan]].
-- [ ] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
+- [x] Card frame matches spec (padding, radius, bg, border, hover/active states).
+- [x] Title row shows status dot + title; live statuses pulse the dot (reduced-motion respected).
+- [x] Meta row layout `1fr auto`; provider/model truncates with `overflow: hidden`, `white-space: nowrap`, `text-overflow: ellipsis`; priority bars + label render right-aligned with priority colors from the contract in [[2026-06-07-agent-board-redesign-plan]].
+- [x] Footer renders acceptance progress (4px track + `done/total`, green at 100%) + reserved 20px assignee slot at far right.
+- [x] When acceptance progress absent/hidden, spacer keeps the assignee slot right-aligned.
+- [x] Reply surface restyle preserves wiring + 4000-char cap; footer omitted while reply visible.
+- [x] Card click opens detail modal; right-click opens context menu.
+- [x] No hardcoded hex; all colors via Obsidian variables; status + priority colors read from the contract in [[2026-06-07-agent-board-redesign-plan]].
+- [x] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
 
 #### Blocked by
 

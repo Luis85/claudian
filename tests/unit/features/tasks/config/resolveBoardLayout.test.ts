@@ -38,10 +38,35 @@ const config: BoardConfig = {
 describe('resolveBoardLayout', () => {
   it('buckets tasks into matching visible lanes', () => {
     const layout = resolveBoardLayout(config, model(task('a', 'ready'), task('b', 'running'), task('c', 'done')));
-    expect(layout.lanes.map((lane) => lane.id)).toEqual(['active', 'closed']);
-    expect(layout.lanes[0].tasks.map((t) => t.frontmatter.id)).toEqual(['a', 'b']);
-    expect(layout.lanes[1].tasks.map((t) => t.frontmatter.id)).toEqual(['c']);
+    const routed = layout.lanes.filter((lane) => !lane.isCatchAll);
+    expect(routed.map((lane) => lane.id)).toEqual(['active', 'closed']);
+    expect(routed[0].tasks.map((t) => t.frontmatter.id)).toEqual(['a', 'b']);
+    expect(routed[1].tasks.map((t) => t.frontmatter.id)).toEqual(['c']);
     expect(layout.errors).toEqual([]);
+  });
+
+  it('flags the visible lane that receives new (inbox) work orders as the host', () => {
+    const c: BoardConfig = {
+      schemaVersion: 1,
+      lanes: [
+        { id: 'in', title: 'In', statuses: ['inbox', 'ready'], visible: true, definitionOfReady: [], definitionOfDone: [], collapsible: false, collapsed: false },
+        { id: 'done', title: 'Done', statuses: ['done'], visible: true, definitionOfReady: [], definitionOfDone: [], collapsible: false, collapsed: false },
+      ],
+    };
+    const layout = resolveBoardLayout(c, model(task('a', 'ready')));
+    expect(layout.lanes.filter((lane) => lane.hostsNewWorkOrders).map((lane) => lane.id)).toEqual(['in']);
+  });
+
+  it('flags only the first visible owner when the inbox status is mapped twice', () => {
+    const c: BoardConfig = {
+      schemaVersion: 1,
+      lanes: [
+        { id: 'first', title: 'First', statuses: ['inbox'], visible: true, definitionOfReady: [], definitionOfDone: [], collapsible: false, collapsed: false },
+        { id: 'second', title: 'Second', statuses: ['inbox'], visible: true, definitionOfReady: [], definitionOfDone: [], collapsible: false, collapsed: false },
+      ],
+    };
+    const layout = resolveBoardLayout(c, model());
+    expect(layout.lanes.filter((lane) => lane.hostsNewWorkOrders).map((lane) => lane.id)).toEqual(['first']);
   });
 
   it('routes tasks with no visible lane into a catch-all appended last', () => {
@@ -53,8 +78,25 @@ describe('resolveBoardLayout', () => {
     expect(layout.errors.length).toBe(1);
   });
 
-  it('omits the catch-all when every task has a visible lane', () => {
+  it('renders an empty catch-all as the inbox host when no visible lane owns inbox', () => {
+    // The shared config has no inbox lane, so the catch-all is where new work
+    // orders land and must appear (empty, no error) to host the add row.
     const layout = resolveBoardLayout(config, model(task('a', 'ready')));
+    const catchAll = layout.lanes.find((lane) => lane.isCatchAll);
+    expect(catchAll).toBeDefined();
+    expect(catchAll!.tasks).toEqual([]);
+    expect(catchAll!.hostsNewWorkOrders).toBe(true);
+    expect(layout.errors).toEqual([]);
+  });
+
+  it('omits the catch-all when a visible lane owns inbox and every task is routed', () => {
+    const c: BoardConfig = {
+      schemaVersion: 1,
+      lanes: [
+        { id: 'in', title: 'In', statuses: ['inbox', 'ready'], visible: true, definitionOfReady: [], definitionOfDone: [], collapsible: false, collapsed: false },
+      ],
+    };
+    const layout = resolveBoardLayout(c, model(task('a', 'ready')));
     expect(layout.lanes.some((lane) => lane.isCatchAll)).toBe(false);
   });
 

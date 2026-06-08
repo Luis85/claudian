@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260607-board-card-live-strip
 title: Agent Board â€” card live strip restyle (freshness dot + ledger tail)
-status: open
+status: done
 priority: 2 - normal
 triage: ready-for-agent
 created: 2026-06-07
@@ -33,12 +33,12 @@ Reuse the existing `patchLiveStrip` and `staleTier` logic, the per-tier glyph (â
 
 #### Acceptance criteria
 
-- [ ] Live strip renders for live statuses (`running`, `needs_input`, `needs_approval`) and is absent for all others.
-- [ ] Freshness tier color + glyph + aria-label preserved from the current implementation.
-- [ ] Attempt counter + last ledger line wired to the existing data sources (no new state).
-- [ ] Pulse animation suppressed when the user prefers reduced motion.
-- [ ] Live strip continues to update via `patchLiveStrip` (no full re-render on heartbeat).
-- [ ] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
+- [x] Live strip renders for live statuses (`running`, `needs_input`, `needs_approval`) and is absent for all others.
+- [x] Freshness tier color + glyph + aria-label preserved from the current implementation.
+- [x] Attempt counter + last ledger line wired to the existing data sources (no new state).
+- [x] Pulse animation suppressed when the user prefers reduced motion.
+- [x] Live strip continues to update via `patchLiveStrip` (no full re-render on heartbeat).
+- [x] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
 
 #### Blocked by
 

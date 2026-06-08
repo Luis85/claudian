@@ -18,16 +18,16 @@
       "loc": 1402,
       "reason": "Grandfathered. Planned split: extract the resume dropdown and the plan/approval state machine. See docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md."
     },
+    "src/features/chat/rendering/MessageRenderer.ts": {
+      "loc": 1208,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
     "src/providers/opencode/runtime/OpencodeChatRuntime.ts": {
       "loc": 1189,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
-    "src/features/chat/rendering/MessageRenderer.ts": {
-      "loc": 1183,
-      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
-    },
     "src/features/chat/ClaudianView.ts": {
-      "loc": 1133,
+      "loc": 1144,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/ui/InputToolbar.ts": {
@@ -54,8 +54,16 @@
       "loc": 956,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
+    "src/features/tasks/ui/WorkOrderDetailModal.ts": {
+      "loc": 952,
+      "reason": "Grandfathered by the Agent Board redesign (native-Modal sticky shell + properties sidebar + objective ring/checklist + activity + per-status footer). Planned split: extract the header, properties, and footer-action renderers into sibling modules. See docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/tasks/ui/AgentBoardRenderer.ts": {
+      "loc": 948,
+      "reason": "Grew with the Agent Board redesign (rebuilt cards, hover action cluster, portal overflow menu, live strip). Planned split: extract card rendering and the overflow/portal menu into sibling modules. See docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
     "src/features/tasks/ui/AgentBoardView.ts": {
-      "loc": 892,
+      "loc": 906,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/providers/codex/runtime/CodexNotificationRouter.ts": {
@@ -74,12 +82,12 @@
       "loc": 767,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
-    "src/providers/codex/runtime/CodexSessionFileTail.ts": {
-      "loc": 687,
+    "src/i18n/types.ts": {
+      "loc": 763,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
-    "src/i18n/types.ts": {
-      "loc": 640,
+    "src/providers/codex/runtime/CodexSessionFileTail.ts": {
+      "loc": 687,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/tabs/tabControllers.ts": {
@@ -128,10 +136,6 @@
     },
     "src/shared/mention/MentionDropdownController.ts": {
       "loc": 543,
-      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
-    },
-    "src/features/tasks/ui/AgentBoardRenderer.ts": {
-      "loc": 533,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/utils/env.ts": {

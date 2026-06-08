@@ -751,12 +751,60 @@
       "runFailed": "Work order run failed: {error}",
       "noReady": "No ready work orders to run.",
       "laneSaveFailed": "Could not save lane change: {error}",
+      "addWorkOrder": "+ Add work order",
+      "addWorkOrderButton": "Add work order",
+      "runNextReady": "Run next ready",
+      "autoRun": {
+        "label": "Auto-run",
+        "tooltip": "Automatically starts work orders once they reach Ready. Runs in the background."
+      },
+      "activeCount": "{n}/{m} active",
+      "tabCount": "Work-order tabs {n}/{m} · {k} free",
       "contextMenu": {
         "openNote": "Abrir nota",
         "openConversation": "Abrir conversa",
         "archive": "Arquivar",
         "delete": "Excluir"
-      }
+      },
+      "cardAction": {
+        "run": "Executar",
+        "retry": "Tentar novamente",
+        "backToInbox": "Voltar à entrada",
+        "moreActions": "Mais ações"
+      },
+      "card": {
+        "reply": {
+          "inputPlaceholder": "Your reply…",
+          "send": "Send",
+          "stop": "Stop",
+          "waitingForInput": "The agent is waiting for your input.",
+          "requestsApproval": "The agent requests approval to proceed.",
+          "risk": "Risk: {risk}",
+          "rejectReasonPlaceholder": "Reason (used if you reject)…",
+          "approve": "Approve",
+          "reject": "Reject",
+          "defaultRejectReason": "rejected"
+        },
+        "liveStrip": {
+          "attempt": "{elapsed} · attempt {attempt}",
+          "starting": "starting…",
+          "heartbeatFresh": "Fresh heartbeat ({age} ago)",
+          "heartbeatStale": "Stale heartbeat ({age} ago)",
+          "heartbeatVeryStale": "Very stale heartbeat ({age} ago)"
+        }
+      },
+      "notRunnable": "Mark \"{title}\" ready before running.",
+      "noFreeSlots": "Sem espaços livres para ordens de trabalho. Uma execução precisa de um espaço livre — feche uma aba de ordem de trabalho no painel de chat, ou aumente \"Concurrent work-order runs\" nas configurações do Agent Board.",
+      "collapseLane": "Recolher faixa",
+      "expandLane": "Expandir faixa {title}",
+      "readyWhen": "Pronto quando",
+      "doneWhen": "Concluído quando",
+      "boardNotices": "Avisos do quadro",
+      "skippedNotes": "Notas ignoradas",
+      "queueHalted": "Fila interrompida: {reason}",
+      "failureOne": "{n} falha",
+      "failureMany": "{n} falhas",
+      "queueSkipped": "⊘ Fila ignorada: {reason}"
     },
     "template": {
       "nameRequired": "Template name is required.",
@@ -789,6 +837,91 @@
       "commitAndPush": "Commit & push",
       "failed": "Commit prompt failed: {error}",
       "settingsSaveFailed": "Failed to save preference. Try again from settings."
+    },
+    "workOrderModal": {
+      "properties": "Properties",
+      "sectionObjective": "Objective",
+      "sectionAcceptance": "Acceptance criteria",
+      "fieldStatus": "Status",
+      "fieldAgent": "Agent",
+      "fieldProvider": "Provider",
+      "fieldModel": "Model",
+      "fieldPriority": "Priority",
+      "fieldCreated": "Created",
+      "fieldUpdated": "Updated",
+      "fieldAttempts": "Attempts",
+      "fieldConversation": "Conversation",
+      "sectionHandoff": "Agent handoff",
+      "sectionRunLedger": "Run ledger",
+      "handoffSummary": "Summary",
+      "handoffVerification": "Verification",
+      "handoffRisks": "Risks",
+      "handoffNextAction": "Next action",
+      "salvageTitle": "Run finished without a handoff",
+      "salvageCallout": "This run finished without producing a structured handoff. The transcript tail below is the available run trace.",
+      "transcriptTail": "Transcript tail",
+      "transcriptTailEmpty": "No transcript available.",
+      "editTitleHint": "✎ Click title to rename",
+      "startedAgo": "Started {ago} ago",
+      "finishedAt": "Finished {ago} ago",
+      "closeAriaLabel": "Close",
+      "actionOpenNote": "Open note",
+      "actionOpenConversation": "Open conversation",
+      "actionMarkReady": "Mark ready",
+      "actionStop": "Stop",
+      "actionRework": "Rework",
+      "actionAccept": "Accept",
+      "actionSendToReview": "Send to review",
+      "actionMarkFailed": "Mark failed",
+      "actionReopen": "Reopen",
+      "actionArchive": "Archive"
+    },
+    "templateEditor": {
+      "titleNew": "Novo modelo de ordem de trabalho",
+      "titleEdit": "Editar modelo de ordem de trabalho",
+      "useDefault": "Usar padrão",
+      "nameName": "Name",
+      "nameDesc": "Mostrado no seletor. Torna-se o nome de arquivo do modelo para novos modelos.",
+      "descriptionName": "Description",
+      "descriptionDesc": "Resumo opcional de uma linha mostrado abaixo do nome no seletor.",
+      "iconName": "Icon",
+      "iconDesc": "Ícone Lucide opcional para a linha do seletor.",
+      "providerName": "Provider",
+      "providerDesc": "Opcional. Usa o provedor padrão do Agent Board quando não definido.",
+      "modelName": "Model",
+      "modelDesc": "Opcional. Usa o modelo padrão do Agent Board quando não definido.",
+      "priorityName": "Priority",
+      "priorityDesc": "Opcional. Usa normal quando não definido.",
+      "bodyName": "Body",
+      "bodyDesc": "Corpo do modelo. Espaços reservados: {{title}}, {{date}}, {{source}}.",
+      "save": "Salvar",
+      "cancel": "Cancelar"
+    },
+    "templatePicker": {
+      "title": "Modelo de ordem de trabalho",
+      "newTemplate": "Novo modelo",
+      "emptyState": "Ainda não há modelos. Escolha em branco para criar uma ordem de trabalho simples, ou adicione um modelo para reutilizar depois.",
+      "lead": "Escolha um modelo para aplicar, ou comece em branco.",
+      "blankTitle": "Ordem de trabalho em branco",
+      "blankDesc": "Esqueleto vazio com Objetivo, Aceitação, Contexto e Restrições.",
+      "edit": "Editar",
+      "delete": "Excluir"
+    },
+    "laneEditor": {
+      "untitledLane": "Faixa sem título",
+      "laneDesc": "Título e se a faixa aparece no quadro.",
+      "moveUp": "Mover para cima",
+      "moveDown": "Mover para baixo",
+      "removeLane": "Remover faixa",
+      "collapsible": "Recolhível",
+      "routedTo": "Roteado para \"{title}\"",
+      "routedElsewhere": "⚠ Roteado para outro lugar: {summary}",
+      "routedSummaryItem": "{status} → \"{lane}\"",
+      "definitionOfReady": "Definição de pronto",
+      "definitionOfDone": "Definição de concluído",
+      "addLane": "Adicionar faixa",
+      "resetToDefault": "Restaurar padrão",
+      "newLaneTitle": "Nova faixa"
     }
   },
   "env": {
@@ -811,6 +944,11 @@
     "noView": "Inline edit unavailable: could not access the active Markdown view.",
     "inserted": "Inserted",
     "applied": "Edit applied"
+  },
+  "agents": {
+    "persona": {
+      "standard": "Padrão"
+    }
   },
   "workOrderActivity": {
     "toggleRunning": "{count} ordem(ns) de trabalho ativa(s)",

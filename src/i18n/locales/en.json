@@ -690,12 +690,60 @@
       "runFailed": "Work order run failed: {error}",
       "noReady": "No ready work orders to run.",
       "laneSaveFailed": "Could not save lane change: {error}",
+      "addWorkOrder": "+ Add work order",
+      "addWorkOrderButton": "Add work order",
+      "runNextReady": "Run next ready",
+      "autoRun": {
+        "label": "Auto-run",
+        "tooltip": "Automatically starts work orders once they reach Ready. Runs in the background."
+      },
+      "activeCount": "{n}/{m} active",
+      "tabCount": "Work-order tabs {n}/{m} · {k} free",
       "contextMenu": {
         "openNote": "Open note",
         "openConversation": "Open conversation",
         "archive": "Archive",
         "delete": "Delete"
-      }
+      },
+      "cardAction": {
+        "run": "Run",
+        "retry": "Retry",
+        "backToInbox": "Back to inbox",
+        "moreActions": "More actions"
+      },
+      "card": {
+        "reply": {
+          "inputPlaceholder": "Your reply…",
+          "send": "Send",
+          "stop": "Stop",
+          "waitingForInput": "The agent is waiting for your input.",
+          "requestsApproval": "The agent requests approval to proceed.",
+          "risk": "Risk: {risk}",
+          "rejectReasonPlaceholder": "Reason (used if you reject)…",
+          "approve": "Approve",
+          "reject": "Reject",
+          "defaultRejectReason": "rejected"
+        },
+        "liveStrip": {
+          "attempt": "{elapsed} · attempt {attempt}",
+          "starting": "starting…",
+          "heartbeatFresh": "Fresh heartbeat ({age} ago)",
+          "heartbeatStale": "Stale heartbeat ({age} ago)",
+          "heartbeatVeryStale": "Very stale heartbeat ({age} ago)"
+        }
+      },
+      "notRunnable": "Mark \"{title}\" ready before running.",
+      "noFreeSlots": "No free work-order slots. A work-order run needs a free slot — close a work-order tab in the chat panel, or raise \"Concurrent work-order runs\" in Agent Board settings.",
+      "collapseLane": "Collapse lane",
+      "expandLane": "Expand lane {title}",
+      "readyWhen": "Ready when",
+      "doneWhen": "Done when",
+      "boardNotices": "Board notices",
+      "skippedNotes": "Skipped notes",
+      "queueHalted": "Queue halted: {reason}",
+      "failureOne": "{n} failure",
+      "failureMany": "{n} failures",
+      "queueSkipped": "⊘ Queue skipped: {reason}"
     },
     "template": {
       "nameRequired": "Template name is required.",
@@ -728,6 +776,91 @@
       "commitAndPush": "Commit & push",
       "failed": "Commit prompt failed: {error}",
       "settingsSaveFailed": "Failed to save preference. Try again from settings."
+    },
+    "workOrderModal": {
+      "properties": "Properties",
+      "sectionObjective": "Objective",
+      "sectionAcceptance": "Acceptance criteria",
+      "fieldStatus": "Status",
+      "fieldAgent": "Agent",
+      "fieldProvider": "Provider",
+      "fieldModel": "Model",
+      "fieldPriority": "Priority",
+      "fieldCreated": "Created",
+      "fieldUpdated": "Updated",
+      "fieldAttempts": "Attempts",
+      "fieldConversation": "Conversation",
+      "sectionHandoff": "Agent handoff",
+      "sectionRunLedger": "Run ledger",
+      "handoffSummary": "Summary",
+      "handoffVerification": "Verification",
+      "handoffRisks": "Risks",
+      "handoffNextAction": "Next action",
+      "salvageTitle": "Run finished without a handoff",
+      "salvageCallout": "This run finished without producing a structured handoff. The transcript tail below is the available run trace.",
+      "transcriptTail": "Transcript tail",
+      "transcriptTailEmpty": "No transcript available.",
+      "editTitleHint": "✎ Click title to rename",
+      "startedAgo": "Started {ago} ago",
+      "finishedAt": "Finished {ago} ago",
+      "closeAriaLabel": "Close",
+      "actionOpenNote": "Open note",
+      "actionOpenConversation": "Open conversation",
+      "actionMarkReady": "Mark ready",
+      "actionStop": "Stop",
+      "actionRework": "Rework",
+      "actionAccept": "Accept",
+      "actionSendToReview": "Send to review",
+      "actionMarkFailed": "Mark failed",
+      "actionReopen": "Reopen",
+      "actionArchive": "Archive"
+    },
+    "templateEditor": {
+      "titleNew": "New work-order template",
+      "titleEdit": "Edit work-order template",
+      "useDefault": "Use default",
+      "nameName": "Name",
+      "nameDesc": "Shown in the picker. Becomes the template filename for new templates.",
+      "descriptionName": "Description",
+      "descriptionDesc": "Optional one-line summary shown under the name in the picker.",
+      "iconName": "Icon",
+      "iconDesc": "Optional Lucide icon for the picker row.",
+      "providerName": "Provider",
+      "providerDesc": "Optional. Falls back to the Agent Board default provider when unset.",
+      "modelName": "Model",
+      "modelDesc": "Optional. Falls back to the Agent Board default model when unset.",
+      "priorityName": "Priority",
+      "priorityDesc": "Optional. Falls back to normal when unset.",
+      "bodyName": "Body",
+      "bodyDesc": "Template body. Placeholders: {{title}}, {{date}}, {{source}}.",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "templatePicker": {
+      "title": "Work-order template",
+      "newTemplate": "New template",
+      "emptyState": "No templates yet. Pick blank to create a plain work order, or add a template to reuse later.",
+      "lead": "Pick a template to apply, or start blank.",
+      "blankTitle": "Blank work order",
+      "blankDesc": "Empty skeleton with Objective, Acceptance, Context, Constraints.",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "laneEditor": {
+      "untitledLane": "Untitled lane",
+      "laneDesc": "Title and whether the lane shows on the board.",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "removeLane": "Remove lane",
+      "collapsible": "Collapsible",
+      "routedTo": "Routed to \"{title}\"",
+      "routedElsewhere": "⚠ Routed elsewhere: {summary}",
+      "routedSummaryItem": "{status} → \"{lane}\"",
+      "definitionOfReady": "Definition of ready",
+      "definitionOfDone": "Definition of done",
+      "addLane": "Add lane",
+      "resetToDefault": "Reset to default",
+      "newLaneTitle": "New lane"
     }
   },
   "provider": {
@@ -811,6 +944,11 @@
     "noView": "Inline edit unavailable: could not access the active Markdown view.",
     "inserted": "Inserted",
     "applied": "Edit applied"
+  },
+  "agents": {
+    "persona": {
+      "standard": "Standard"
+    }
   },
   "workOrderActivity": {
     "toggleRunning": "{count} active work order(s)",

@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260607-modal-activity-block
 title: Work-order modal — Activity block (handoff sections + needs_handoff salvage + failed Run ledger)
-status: open
+status: done
 priority: 2 - normal
 triage: ready-for-agent
 created: 2026-06-07
@@ -48,14 +48,14 @@ Other statuses render no activity block.
 
 #### Acceptance criteria
 
-- [ ] Handoff parses via `ParsedHandoff`; section sequence is Summary → Verification → Risks → Next action.
-- [ ] Summary and Next action collapsibles default open; Verification and Risks default closed.
-- [ ] Section icon colors match the table above; chevron rotates on expand.
-- [ ] Needs-handoff callout renders only for `needs_handoff`; transcript tail block collapsible.
-- [ ] Run ledger renders only for `failed`; reads from `task.sections.ledger`; dots use status colors via Obsidian variables.
-- [ ] Collapsible state is local UI only and not persisted.
-- [ ] No `rgba(...)` literals — alpha shades go through `color-mix(in srgb, var(--color-X) N%, transparent)`.
-- [ ] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
+- [x] Handoff parses via `ParsedHandoff`; section sequence is Summary → Verification → Risks → Next action.
+- [x] Summary and Next action collapsibles default open; Verification and Risks default closed.
+- [x] Section icon colors match the table above; chevron rotates on expand.
+- [x] Needs-handoff callout renders only for `needs_handoff`; transcript tail block collapsible.
+- [x] Run ledger renders only for `failed`; reads from `task.sections.ledger`; dots use status colors via Obsidian variables.
+- [x] Collapsible state is local UI only and not persisted.
+- [x] No `rgba(...)` literals — alpha shades go through `color-mix(in srgb, var(--color-X) N%, transparent)`.
+- [x] All new user-visible strings introduced by this slice keyed through the i18n helper (no literal English strings).
 
 #### Blocked by
 

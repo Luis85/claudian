@@ -751,12 +751,60 @@
       "runFailed": "Work order run failed: {error}",
       "noReady": "No ready work orders to run.",
       "laneSaveFailed": "Could not save lane change: {error}",
+      "addWorkOrder": "+ Add work order",
+      "addWorkOrderButton": "Add work order",
+      "runNextReady": "Run next ready",
+      "autoRun": {
+        "label": "Auto-run",
+        "tooltip": "Automatically starts work orders once they reach Ready. Runs in the background."
+      },
+      "activeCount": "{n}/{m} active",
+      "tabCount": "Work-order tabs {n}/{m} · {k} free",
       "contextMenu": {
         "openNote": "노트 열기",
         "openConversation": "대화 열기",
         "archive": "보관",
         "delete": "삭제"
-      }
+      },
+      "cardAction": {
+        "run": "실행",
+        "retry": "재시도",
+        "backToInbox": "받은 편지함으로",
+        "moreActions": "추가 작업"
+      },
+      "card": {
+        "reply": {
+          "inputPlaceholder": "Your reply…",
+          "send": "Send",
+          "stop": "Stop",
+          "waitingForInput": "The agent is waiting for your input.",
+          "requestsApproval": "The agent requests approval to proceed.",
+          "risk": "Risk: {risk}",
+          "rejectReasonPlaceholder": "Reason (used if you reject)…",
+          "approve": "Approve",
+          "reject": "Reject",
+          "defaultRejectReason": "rejected"
+        },
+        "liveStrip": {
+          "attempt": "{elapsed} · attempt {attempt}",
+          "starting": "starting…",
+          "heartbeatFresh": "Fresh heartbeat ({age} ago)",
+          "heartbeatStale": "Stale heartbeat ({age} ago)",
+          "heartbeatVeryStale": "Very stale heartbeat ({age} ago)"
+        }
+      },
+      "notRunnable": "Mark \"{title}\" ready before running.",
+      "noFreeSlots": "사용 가능한 작업 지시 슬롯이 없습니다. 작업 지시 실행에는 빈 슬롯이 필요합니다. 채팅 패널에서 작업 지시 탭을 닫거나 Agent Board 설정에서 \"Concurrent work-order runs\"를 늘리세요.",
+      "collapseLane": "레인 접기",
+      "expandLane": "레인 {title} 펼치기",
+      "readyWhen": "준비 완료 조건",
+      "doneWhen": "완료 조건",
+      "boardNotices": "보드 알림",
+      "skippedNotes": "건너뛴 노트",
+      "queueHalted": "대기열 중지됨: {reason}",
+      "failureOne": "실패 {n}건",
+      "failureMany": "실패 {n}건",
+      "queueSkipped": "⊘ 대기열 건너뜀: {reason}"
     },
     "template": {
       "nameRequired": "Template name is required.",
@@ -789,6 +837,91 @@
       "commitAndPush": "Commit & push",
       "failed": "Commit prompt failed: {error}",
       "settingsSaveFailed": "Failed to save preference. Try again from settings."
+    },
+    "workOrderModal": {
+      "properties": "Properties",
+      "sectionObjective": "Objective",
+      "sectionAcceptance": "Acceptance criteria",
+      "fieldStatus": "Status",
+      "fieldAgent": "Agent",
+      "fieldProvider": "Provider",
+      "fieldModel": "Model",
+      "fieldPriority": "Priority",
+      "fieldCreated": "Created",
+      "fieldUpdated": "Updated",
+      "fieldAttempts": "Attempts",
+      "fieldConversation": "Conversation",
+      "sectionHandoff": "Agent handoff",
+      "sectionRunLedger": "Run ledger",
+      "handoffSummary": "Summary",
+      "handoffVerification": "Verification",
+      "handoffRisks": "Risks",
+      "handoffNextAction": "Next action",
+      "salvageTitle": "Run finished without a handoff",
+      "salvageCallout": "This run finished without producing a structured handoff. The transcript tail below is the available run trace.",
+      "transcriptTail": "Transcript tail",
+      "transcriptTailEmpty": "No transcript available.",
+      "editTitleHint": "✎ Click title to rename",
+      "startedAgo": "Started {ago} ago",
+      "finishedAt": "Finished {ago} ago",
+      "closeAriaLabel": "Close",
+      "actionOpenNote": "Open note",
+      "actionOpenConversation": "Open conversation",
+      "actionMarkReady": "Mark ready",
+      "actionStop": "Stop",
+      "actionRework": "Rework",
+      "actionAccept": "Accept",
+      "actionSendToReview": "Send to review",
+      "actionMarkFailed": "Mark failed",
+      "actionReopen": "Reopen",
+      "actionArchive": "Archive"
+    },
+    "templateEditor": {
+      "titleNew": "새 작업 지시 템플릿",
+      "titleEdit": "작업 지시 템플릿 편집",
+      "useDefault": "기본값 사용",
+      "nameName": "Name",
+      "nameDesc": "선택기에 표시됩니다. 새 템플릿의 경우 템플릿 파일 이름이 됩니다.",
+      "descriptionName": "Description",
+      "descriptionDesc": "선택기에서 이름 아래에 표시되는 선택적 한 줄 요약입니다.",
+      "iconName": "Icon",
+      "iconDesc": "선택기 행에 사용할 선택적 Lucide 아이콘입니다.",
+      "providerName": "Provider",
+      "providerDesc": "선택 사항. 설정하지 않으면 Agent Board 기본 제공자를 사용합니다.",
+      "modelName": "Model",
+      "modelDesc": "선택 사항. 설정하지 않으면 Agent Board 기본 모델을 사용합니다.",
+      "priorityName": "Priority",
+      "priorityDesc": "선택 사항. 설정하지 않으면 normal로 설정됩니다.",
+      "bodyName": "Body",
+      "bodyDesc": "템플릿 본문. 자리표시자: {{title}}, {{date}}, {{source}}.",
+      "save": "저장",
+      "cancel": "취소"
+    },
+    "templatePicker": {
+      "title": "작업 지시 템플릿",
+      "newTemplate": "새 템플릿",
+      "emptyState": "아직 템플릿이 없습니다. 빈 항목을 선택해 간단한 작업 지시를 만들거나, 나중에 재사용할 템플릿을 추가하세요.",
+      "lead": "적용할 템플릿을 선택하거나 빈 상태로 시작하세요.",
+      "blankTitle": "빈 작업 지시",
+      "blankDesc": "목표, 수락 기준, 컨텍스트, 제약으로 구성된 빈 골격입니다.",
+      "edit": "편집",
+      "delete": "삭제"
+    },
+    "laneEditor": {
+      "untitledLane": "제목 없는 레인",
+      "laneDesc": "제목과 레인을 보드에 표시할지 여부입니다.",
+      "moveUp": "위로 이동",
+      "moveDown": "아래로 이동",
+      "removeLane": "레인 제거",
+      "collapsible": "접을 수 있음",
+      "routedTo": "\"{title}\"(으)로 라우팅됨",
+      "routedElsewhere": "⚠ 다른 곳으로 라우팅됨: {summary}",
+      "routedSummaryItem": "{status} → \"{lane}\"",
+      "definitionOfReady": "준비 완료 정의",
+      "definitionOfDone": "완료 정의",
+      "addLane": "레인 추가",
+      "resetToDefault": "기본값으로 재설정",
+      "newLaneTitle": "새 레인"
     }
   },
   "env": {
@@ -811,6 +944,11 @@
     "noView": "Inline edit unavailable: could not access the active Markdown view.",
     "inserted": "Inserted",
     "applied": "Edit applied"
+  },
+  "agents": {
+    "persona": {
+      "standard": "표준"
+    }
   },
   "workOrderActivity": {
     "toggleRunning": "활성 작업 지시 {count}개",

@@ -751,12 +751,60 @@
       "runFailed": "Work order run failed: {error}",
       "noReady": "No ready work orders to run.",
       "laneSaveFailed": "Could not save lane change: {error}",
+      "addWorkOrder": "+ Add work order",
+      "addWorkOrderButton": "Add work order",
+      "runNextReady": "Run next ready",
+      "autoRun": {
+        "label": "Auto-run",
+        "tooltip": "Automatically starts work orders once they reach Ready. Runs in the background."
+      },
+      "activeCount": "{n}/{m} active",
+      "tabCount": "Work-order tabs {n}/{m} · {k} free",
       "contextMenu": {
         "openNote": "ノートを開く",
         "openConversation": "会話を開く",
         "archive": "アーカイブ",
         "delete": "削除"
-      }
+      },
+      "cardAction": {
+        "run": "実行",
+        "retry": "再試行",
+        "backToInbox": "受信トレイに戻す",
+        "moreActions": "その他の操作"
+      },
+      "card": {
+        "reply": {
+          "inputPlaceholder": "Your reply…",
+          "send": "Send",
+          "stop": "Stop",
+          "waitingForInput": "The agent is waiting for your input.",
+          "requestsApproval": "The agent requests approval to proceed.",
+          "risk": "Risk: {risk}",
+          "rejectReasonPlaceholder": "Reason (used if you reject)…",
+          "approve": "Approve",
+          "reject": "Reject",
+          "defaultRejectReason": "rejected"
+        },
+        "liveStrip": {
+          "attempt": "{elapsed} · attempt {attempt}",
+          "starting": "starting…",
+          "heartbeatFresh": "Fresh heartbeat ({age} ago)",
+          "heartbeatStale": "Stale heartbeat ({age} ago)",
+          "heartbeatVeryStale": "Very stale heartbeat ({age} ago)"
+        }
+      },
+      "notRunnable": "Mark \"{title}\" ready before running.",
+      "noFreeSlots": "空いている作業指示スロットがありません。作業指示の実行には空きスロットが必要です。チャットパネルで作業指示タブを閉じるか、Agent Board の設定で「Concurrent work-order runs」を増やしてください。",
+      "collapseLane": "レーンを折りたたむ",
+      "expandLane": "レーン {title} を展開",
+      "readyWhen": "準備完了の条件",
+      "doneWhen": "完了の条件",
+      "boardNotices": "ボードの通知",
+      "skippedNotes": "スキップされたノート",
+      "queueHalted": "キューを停止しました: {reason}",
+      "failureOne": "{n} 件の失敗",
+      "failureMany": "{n} 件の失敗",
+      "queueSkipped": "⊘ キューをスキップ: {reason}"
     },
     "template": {
       "nameRequired": "Template name is required.",
@@ -789,6 +837,91 @@
       "commitAndPush": "Commit & push",
       "failed": "Commit prompt failed: {error}",
       "settingsSaveFailed": "Failed to save preference. Try again from settings."
+    },
+    "workOrderModal": {
+      "properties": "Properties",
+      "sectionObjective": "Objective",
+      "sectionAcceptance": "Acceptance criteria",
+      "fieldStatus": "Status",
+      "fieldAgent": "Agent",
+      "fieldProvider": "Provider",
+      "fieldModel": "Model",
+      "fieldPriority": "Priority",
+      "fieldCreated": "Created",
+      "fieldUpdated": "Updated",
+      "fieldAttempts": "Attempts",
+      "fieldConversation": "Conversation",
+      "sectionHandoff": "Agent handoff",
+      "sectionRunLedger": "Run ledger",
+      "handoffSummary": "Summary",
+      "handoffVerification": "Verification",
+      "handoffRisks": "Risks",
+      "handoffNextAction": "Next action",
+      "salvageTitle": "Run finished without a handoff",
+      "salvageCallout": "This run finished without producing a structured handoff. The transcript tail below is the available run trace.",
+      "transcriptTail": "Transcript tail",
+      "transcriptTailEmpty": "No transcript available.",
+      "editTitleHint": "✎ Click title to rename",
+      "startedAgo": "Started {ago} ago",
+      "finishedAt": "Finished {ago} ago",
+      "closeAriaLabel": "Close",
+      "actionOpenNote": "Open note",
+      "actionOpenConversation": "Open conversation",
+      "actionMarkReady": "Mark ready",
+      "actionStop": "Stop",
+      "actionRework": "Rework",
+      "actionAccept": "Accept",
+      "actionSendToReview": "Send to review",
+      "actionMarkFailed": "Mark failed",
+      "actionReopen": "Reopen",
+      "actionArchive": "Archive"
+    },
+    "templateEditor": {
+      "titleNew": "新しい作業指示テンプレート",
+      "titleEdit": "作業指示テンプレートを編集",
+      "useDefault": "デフォルトを使用",
+      "nameName": "Name",
+      "nameDesc": "ピッカーに表示されます。新しいテンプレートではテンプレートのファイル名になります。",
+      "descriptionName": "Description",
+      "descriptionDesc": "ピッカーで名前の下に表示される、省略可能な 1 行の概要です。",
+      "iconName": "Icon",
+      "iconDesc": "ピッカー行に使用する省略可能な Lucide アイコンです。",
+      "providerName": "Provider",
+      "providerDesc": "省略可能。未設定の場合は Agent Board のデフォルトプロバイダーが使用されます。",
+      "modelName": "Model",
+      "modelDesc": "省略可能。未設定の場合は Agent Board のデフォルトモデルが使用されます。",
+      "priorityName": "Priority",
+      "priorityDesc": "省略可能。未設定の場合は normal が使用されます。",
+      "bodyName": "Body",
+      "bodyDesc": "テンプレート本文。プレースホルダー: {{title}}, {{date}}, {{source}}。",
+      "save": "保存",
+      "cancel": "キャンセル"
+    },
+    "templatePicker": {
+      "title": "作業指示テンプレート",
+      "newTemplate": "新しいテンプレート",
+      "emptyState": "まだテンプレートがありません。「空」を選んでシンプルな作業指示を作成するか、後で再利用するテンプレートを追加してください。",
+      "lead": "適用するテンプレートを選ぶか、空の状態で開始します。",
+      "blankTitle": "空の作業指示",
+      "blankDesc": "目的・受け入れ条件・コンテキスト・制約からなる空のひな形です。",
+      "edit": "編集",
+      "delete": "削除"
+    },
+    "laneEditor": {
+      "untitledLane": "無題のレーン",
+      "laneDesc": "タイトルと、レーンをボードに表示するかどうか。",
+      "moveUp": "上へ移動",
+      "moveDown": "下へ移動",
+      "removeLane": "レーンを削除",
+      "collapsible": "折りたたみ可能",
+      "routedTo": "「{title}」へルーティング",
+      "routedElsewhere": "⚠ 別の場所へルーティング: {summary}",
+      "routedSummaryItem": "{status} → 「{lane}」",
+      "definitionOfReady": "準備完了の定義",
+      "definitionOfDone": "完了の定義",
+      "addLane": "レーンを追加",
+      "resetToDefault": "デフォルトに戻す",
+      "newLaneTitle": "新しいレーン"
     }
   },
   "env": {
@@ -811,6 +944,11 @@
     "noView": "Inline edit unavailable: could not access the active Markdown view.",
     "inserted": "Inserted",
     "applied": "Edit applied"
+  },
+  "agents": {
+    "persona": {
+      "standard": "標準"
+    }
   },
   "workOrderActivity": {
     "toggleRunning": "アクティブな作業指示 {count} 件",
