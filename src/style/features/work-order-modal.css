@@ -27,6 +27,9 @@
   width: min(960px, 92vw);
   max-width: min(960px, 92vw);
   max-height: min(86vh, 760px);
+  /* Override the native `.modal` padding (var(--size-4-4)) so the header and
+     footer fill edge-to-edge; each region owns its own insets. */
+  padding: 0;
   display: flex;
   flex-direction: column;
 }
