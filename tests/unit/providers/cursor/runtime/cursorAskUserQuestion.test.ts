@@ -5,6 +5,7 @@ import {
   CURSOR_ASK_ANSWER_FOLLOWUP_NOTE,
   CursorAskUserQuestionInterceptState,
   isCursorAskUserQuestionSkippedResult,
+  resolveCursorAnswerLabels,
 } from '@/providers/cursor/runtime/cursorAskUserQuestion';
 
 type AskCallback = (
@@ -41,6 +42,40 @@ describe('cursorAskUserQuestion', () => {
     });
     expect(prompt).toContain('- Next focus: Trust foundation');
     expect(prompt).toContain('- Scope: A, B');
+  });
+
+  it('re-keys id-keyed answers back to the displayed question text', () => {
+    const labeled = resolveCursorAnswerLabels(
+      { focus: 'A', plain: 'B' },
+      { questions: [
+        { id: 'focus', question: 'Pick a focus' },
+        { question: 'plain' },
+      ] },
+    );
+    // id-keyed answers resolve to prompt text; un-mapped keys pass through.
+    expect(labeled).toEqual({ 'Pick a focus': 'A', plain: 'B' });
+  });
+
+  it('surfaces answers re-keyed by question text when the question carries an id', async () => {
+    const chunks: StreamChunk[] = [
+      {
+        type: 'tool_use',
+        id: 'ask-1',
+        name: TOOL_ASK_USER_QUESTION,
+        input: { questions: [{ id: 'focus', question: 'Pick a focus', options: [{ label: 'A' }] }] },
+      },
+      {
+        type: 'tool_result',
+        id: 'ask-1',
+        content: JSON.stringify({ rejected: { reason: 'Questions skipped by user' } }),
+        isError: true,
+      },
+    ];
+    // The widget keys the answer by the question's id, not its text.
+    const callback = jest.fn().mockResolvedValue({ focus: 'A' });
+    const onAnswers = jest.fn();
+    await runIntercept(chunks, callback, undefined, onAnswers);
+    expect(onAnswers).toHaveBeenCalledWith({ 'Pick a focus': 'A' });
   });
 
   it('marks the tool block neutral and surfaces answers for a follow-up turn', async () => {

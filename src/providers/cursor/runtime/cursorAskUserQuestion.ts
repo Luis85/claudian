@@ -36,7 +36,8 @@ export function isCursorAskUserQuestionSkippedResult(content: string): boolean {
 /**
  * Formats collected answers into the prompt for the resumed follow-up turn.
  * cursor-agent's `--print` CLI is one-shot and auto-rejects AskUserQuestion, so
- * the answer can only reach the agent as the next (resumed) user message.
+ * the answer can only reach the agent as the next (resumed) user message. Keys
+ * are the displayed question text (see {@link resolveCursorAnswerLabels}).
  */
 export function buildCursorAnswerFollowUpPrompt(
   answers: Record<string, string | string[]>,
@@ -46,6 +47,34 @@ export function buildCursorAnswerFollowUpPrompt(
     return `- ${question}: ${formatted}`;
   });
   return `Here are my answers to your question(s):\n${lines.join('\n')}`;
+}
+
+/**
+ * The inline widget keys answers by `question.id ?? question.question`, so when a
+ * question carries an `id` the answer map is keyed by that opaque id. Re-key by
+ * the displayed question text (from the original tool input) so the resumed
+ * follow-up reads `- Pick a focus: A`, not `- focus: A`.
+ */
+export function resolveCursorAnswerLabels(
+  answers: Record<string, string | string[]>,
+  input: Record<string, unknown> | undefined,
+): Record<string, string | string[]> {
+  const questions = Array.isArray(input?.questions) ? (input!.questions as unknown[]) : [];
+  const textByKey = new Map<string, string>();
+  for (const q of questions) {
+    if (!q || typeof q !== 'object') continue;
+    const record = q as Record<string, unknown>;
+    const text = typeof record.question === 'string' ? record.question : undefined;
+    if (!text) continue;
+    const key = typeof record.id === 'string' && record.id ? record.id : text;
+    textByKey.set(key, text);
+  }
+
+  const labeled: Record<string, string | string[]> = {};
+  for (const [key, value] of Object.entries(answers)) {
+    labeled[textByKey.get(key) ?? key] = value;
+  }
+  return labeled;
 }
 
 function hasUsableAskUserAnswers(
@@ -94,6 +123,7 @@ export class CursorAskUserQuestionInterceptState {
 
       if (chunk.type === 'tool_result' && this.pendingInput.has(chunk.id)) {
         const answers = this.resolvedAnswers.get(chunk.id);
+        const questionInput = this.pendingInput.get(chunk.id);
         this.pendingInput.delete(chunk.id);
         this.resolvedAnswers.delete(chunk.id);
 
@@ -102,7 +132,7 @@ export class CursorAskUserQuestionInterceptState {
           // delivered as a resumed follow-up turn (the runtime builds it from
           // these answers). Replace the misleading "skipped by user" result with
           // a neutral marker instead of pretending the tool was answered in-turn.
-          onAnswers?.(answers!);
+          onAnswers?.(resolveCursorAnswerLabels(answers!, questionInput));
           yield {
             type: 'tool_result',
             id: chunk.id,

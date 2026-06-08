@@ -336,7 +336,9 @@ describe('CursorChatRuntime', () => {
 
   it('consumeTurnMetadata carries an answer follow-up after AskUserQuestion is answered', async () => {
     const runtime = new CursorChatRuntime(createMockPlugin());
-    runtime.setAskUserQuestionCallback(jest.fn().mockResolvedValue({ 'Pick a focus': 'A' }));
+    // The inline widget keys answers by question id; the follow-up must resolve
+    // that id back to the displayed prompt text.
+    runtime.setAskUserQuestionCallback(jest.fn().mockResolvedValue({ focus: 'A' }));
 
     readlineLines = [
       JSON.stringify({ type: 'system', subtype: 'init', session_id: 'ask-sess' }),
