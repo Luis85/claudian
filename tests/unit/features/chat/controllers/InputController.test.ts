@@ -3281,6 +3281,35 @@ describe('InputController - Message Queue', () => {
       expect(mockAgentService.query).toHaveBeenCalledTimes(2);
     });
 
+    it('does not auto-send the Cursor answer when the plan is cancelled', async () => {
+      const restoreFn = jest.fn();
+      const deps = createSendableDeps({ restorePrePlanPermissionModeIfNeeded: restoreFn });
+      const mockAgentService = (deps as any).mockAgentService;
+      mockAgentService.providerId = 'cursor';
+      mockAgentService.consumeTurnMetadata = jest.fn().mockReturnValue({
+        planCompleted: true,
+        autoFollowUpText: 'Here are my answers to your question(s):\n- Pick a focus: A',
+        wasSent: true,
+      });
+      mockAgentService.query = jest.fn().mockImplementation(() =>
+        createMockStream([{ type: 'text', content: 'Plan content' }, { type: 'done' }]),
+      );
+
+      const controller = new InputController(deps);
+      (controller as any).showPlanApproval = jest.fn().mockResolvedValue({
+        decision: { type: 'cancel' },
+        invalidated: false,
+      });
+
+      deps.getInputEl().value = 'Plan this';
+      await controller.sendMessage();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Cancelling the plan must not auto-send the buffered answer.
+      expect(mockAgentService.query).toHaveBeenCalledTimes(1);
+      expect(restoreFn).toHaveBeenCalled();
+    });
+
     it('revise keeps plan mode active and populates input', async () => {
       const restoreFn = jest.fn();
       const deps = createSendableDeps({

@@ -661,9 +661,9 @@ export class InputController {
           // Auto-implement takes precedence over both approve-new-session and queued input
           if (planAutoSendContent) {
             this.autoResumeWith(planAutoSendContent);
-          } else if (turnMetadata.autoFollowUpText && !didCancelThisTurn && shouldProcessQueuedMessage) {
-            // Cursor delivers its one-shot AskUserQuestion answer as a resumed follow-up. Gated on
-            // shouldProcessQueuedMessage so a plan Revise (which parks feedback in the composer) wins.
+          } else if (turnMetadata.autoFollowUpText && !didCancelThisTurn && !planCompleted) {
+            // Cursor's one-shot AskUserQuestion answer, resumed as a follow-up — only when no plan
+            // completed, since each plan-approval outcome owns it (implement merges, revise/cancel hold).
             this.autoResumeWith(turnMetadata.autoFollowUpText);
           } else {
             // approve-new-session: create fresh conversation and send plan content
