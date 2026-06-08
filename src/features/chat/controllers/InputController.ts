@@ -636,7 +636,7 @@ export class InputController {
             planApprovalInvalidated = true;
           } else if (decision?.type === 'implement') {
             this.deps.restorePrePlanPermissionModeIfNeeded?.();
-            planAutoSendContent = 'Implement the plan.';
+            planAutoSendContent = turnMetadata.autoFollowUpText ? `${turnMetadata.autoFollowUpText}\n\nImplement the plan.` : 'Implement the plan.';
           } else if (decision?.type === 'revise') {
             // Keep plan mode active, populate input with feedback text
             this.deps.getInputEl().value = decision.text;

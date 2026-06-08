@@ -3248,6 +3248,39 @@ describe('InputController - Message Queue', () => {
       expect(mockAgentService.query).toHaveBeenCalledTimes(2);
     });
 
+    it('merges the Cursor answer into the implement prompt', async () => {
+      const deps = createSendableDeps({ restorePrePlanPermissionModeIfNeeded: jest.fn() });
+      const mockAgentService = (deps as any).mockAgentService;
+      mockAgentService.providerId = 'cursor';
+      // A plan turn that also collected an AskUserQuestion answer.
+      mockAgentService.consumeTurnMetadata = jest.fn()
+        .mockReturnValueOnce({
+          planCompleted: true,
+          autoFollowUpText: 'Here are my answers to your question(s):\n- Pick a focus: A',
+          wasSent: true,
+        })
+        .mockReturnValueOnce({ wasSent: true });
+      mockAgentService.query = jest.fn().mockImplementation(() =>
+        createMockStream([{ type: 'text', content: 'Plan content' }, { type: 'done' }]),
+      );
+
+      const controller = new InputController(deps);
+      (controller as any).showPlanApproval = jest.fn().mockResolvedValue({
+        decision: { type: 'implement' },
+        invalidated: false,
+      });
+      const autoResumeSpy = jest.spyOn(controller as any, 'autoResumeWith');
+
+      deps.getInputEl().value = 'Plan this';
+      await controller.sendMessage();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // The resumed implement turn carries BOTH the answer and the implement instruction.
+      expect(autoResumeSpy).toHaveBeenCalledWith(expect.stringContaining('Pick a focus: A'));
+      expect(autoResumeSpy).toHaveBeenCalledWith(expect.stringContaining('Implement the plan.'));
+      expect(mockAgentService.query).toHaveBeenCalledTimes(2);
+    });
+
     it('revise keeps plan mode active and populates input', async () => {
       const restoreFn = jest.fn();
       const deps = createSendableDeps({
