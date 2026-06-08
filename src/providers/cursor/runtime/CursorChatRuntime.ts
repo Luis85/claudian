@@ -199,7 +199,13 @@ export class CursorChatRuntime implements ChatRuntime {
         }
 
         const stream = processCursorAgentNdjsonLines(ndjsonLines(), {
-          askCallback: this.askUserQuestionCallback,
+          // Cursor's `--print --output-format stream-json` surface emits
+          // AskQuestion tool events but does not expose the bidirectional
+          // interaction-response channel on stdout/stdin. Collecting answers in
+          // Claudian would only patch the rendered stream after cursor-agent had
+          // already skipped the tool, so do not prompt users until native
+          // interaction responses are wired.
+          askCallback: null,
           askSignal: this.askUserQuestionAbortController?.signal,
           isPlanTurn,
           isCanceled: () => this.canceled,

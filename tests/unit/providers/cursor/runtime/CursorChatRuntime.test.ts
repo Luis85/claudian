@@ -363,6 +363,57 @@ describe('CursorChatRuntime', () => {
     expect(chunks[chunks.length - 1]).toEqual({ type: 'done' });
   });
 
+  it('does not collect AskUserQuestion answers because Cursor print mode cannot receive them yet', async () => {
+    const runtime = new CursorChatRuntime(createMockPlugin());
+    const callback = jest.fn().mockResolvedValue({ 'Pick a focus': 'A' });
+    runtime.setAskUserQuestionCallback(callback);
+
+    readlineLines = [
+      JSON.stringify({ type: 'system', subtype: 'init', session_id: 'ask-sess' }),
+      JSON.stringify({
+        type: 'tool_call',
+        subtype: 'started',
+        call_id: 'ask-1',
+        tool_call: {
+          askQuestionToolCall: {
+            args: {
+              questions: [{
+                id: 'focus',
+                question: 'Pick a focus',
+                options: [{ id: 'a', label: 'A' }],
+              }],
+            },
+          },
+        },
+      }),
+      JSON.stringify({
+        type: 'tool_call',
+        subtype: 'completed',
+        call_id: 'ask-1',
+        tool_call: {
+          askQuestionToolCall: {
+            args: { questions: [{ id: 'focus', question: 'Pick a focus' }] },
+            result: { rejected: { reason: 'Questions skipped by user' } },
+          },
+        },
+      }),
+      JSON.stringify({ type: 'result', subtype: 'success', is_error: false }),
+    ];
+    setupMockChild();
+
+    const chunks = [];
+    for await (const chunk of runtime.query(createPreparedTurn('ask the user'))) {
+      chunks.push(chunk);
+    }
+
+    expect(callback).not.toHaveBeenCalled();
+    expect(chunks).toContainEqual(expect.objectContaining({
+      type: 'tool_result',
+      id: 'ask-1',
+      content: expect.stringContaining('Questions skipped by user'),
+    }));
+  });
+
   it('yields stderr error when CLI exits non-zero without a result event', async () => {
     const runtime = new CursorChatRuntime(createMockPlugin());
     readlineLines = [];
