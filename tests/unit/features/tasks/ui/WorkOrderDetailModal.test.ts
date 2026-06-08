@@ -1487,9 +1487,9 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
     expect(titleEl(header)!.text).toBe('Task WO-1');
   });
 
-  it('renders a 2px accent gradient line on the header', () => {
+  it('does not render the custom accent element (removed — caused layout issues in the native header)', () => {
     const { header } = openHeader(makeTask('WO-1', 'inbox'));
-    expect(find(header, 'claudian-work-order-modal-header-accent')).toBeDefined();
+    expect(find(header, 'claudian-work-order-modal-header-accent')).toBeUndefined();
   });
 
   it('exposes the dialog accessible name via aria-labelledby on the title', () => {

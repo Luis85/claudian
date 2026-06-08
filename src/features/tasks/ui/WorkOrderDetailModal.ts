@@ -205,9 +205,6 @@ export class WorkOrderDetailModal extends Modal {
 
     this.renderHeaderMeta(header);
     this.renderHeaderTitle(header);
-
-    // 2px accent line on the header's bottom edge (color from the CSS modifier).
-    header.createDiv({ cls: 'claudian-work-order-modal-header-accent' }).setAttr('aria-hidden', 'true');
     // Closing is handled by Obsidian's built-in modal close button — no custom
     // reimplementation of core chrome.
   }
@@ -609,21 +606,18 @@ export class WorkOrderDetailModal extends Modal {
 
     const meter = parent.createDiv({ cls: 'claudian-work-order-modal-ring-meter' });
 
-    // Pass the classes as an ARRAY, not a joined string: Obsidian's createSvg
-    // applies `cls` via classList.add(), which throws InvalidCharacterError on a
-    // space-separated string (unlike createEl). A joined string here aborted
-    // onOpen mid-render, so acceptance items, the activity block, and the footer
-    // never rendered.
-    const ringClasses = [
-      'claudian-work-order-modal-ring',
-      `claudian-work-order-modal-ring--${status}`,
-      ...(complete ? ['claudian-work-order-modal-ring--complete'] : []),
-    ];
     const svg = meter.createSvg('svg', {
-      cls: ringClasses,
       attr: { width: 22, height: 22, viewBox: '0 0 22 22' },
     });
     svg.setAttr('aria-hidden', 'true');
+    // Add the ring classes one token at a time. Obsidian's createSvg applies a
+    // `cls` value via classList.add(), which throws on any space-containing
+    // token — so never pass a joined string (or rely on array handling); set
+    // each class individually. A joined-string cls here previously crashed
+    // onOpen mid-render (no acceptance items, no activity, empty footer).
+    svg.addClass('claudian-work-order-modal-ring');
+    svg.addClass(`claudian-work-order-modal-ring--${status}`);
+    if (complete) svg.addClass('claudian-work-order-modal-ring--complete');
     svg.createSvg('circle', {
       cls: 'claudian-work-order-modal-ring-track',
       attr: { cx: 11, cy: 11, r: radius, fill: 'none', 'stroke-width': 2.5 },
