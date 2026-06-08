@@ -2,7 +2,7 @@ import { type App, Component, MarkdownRenderer, Modal, setIcon } from 'obsidian'
 
 import { t } from '../../../i18n/i18n';
 import type { TranslationKey } from '../../../i18n/types';
-import { formatRelativeTime } from '../../../utils/date';
+import { formatDateTime, formatRelativeTime } from '../../../utils/date';
 import { renderAgentAvatar } from '../../agents/agentAvatar';
 import { listPersonas, resolvePersona } from '../../agents/personaRegistry';
 import { isPureAcceptanceChecklist, parseAcceptanceChecklist } from '../model/acceptanceChecklist';
@@ -151,20 +151,33 @@ export class WorkOrderDetailModal extends Modal {
   onOpen(): void {
     this.markdownComponent.load();
     this.modalEl.addClass('claudian-work-order-modal');
+    // Size the modal through the variables Obsidian's own `.modal` rule consumes
+    // so the height cap applies regardless of how the active theme out-specifies
+    // a bare `.modal` selector. Writing them on modalEl is the most reliable
+    // hook; the CSS mirrors these as a fallback.
+    this.modalEl.setCssProps({
+      '--modal-max-height': 'min(86vh, 760px)',
+      '--dialog-max-height': 'min(86vh, 760px)',
+      '--modal-width': 'min(960px, 92vw)',
+      '--dialog-width': 'min(960px, 92vw)',
+      '--modal-max-width': 'min(960px, 92vw)',
+      '--dialog-max-width': 'min(960px, 92vw)',
+    });
 
-    // Sticky-shell frame: contentEl becomes a flex column with a pinned header,
-    // a scrollable two-pane body (main + properties sidebar), and a pinned
-    // footer. Header/footer stay reachable while only the body scrolls. The
-    // header now owns the title (meta row + editable title + close button), so
-    // the native modal title is intentionally left empty.
+    // Pinned header → the NATIVE modal header. `this.titleEl` is Obsidian's
+    // `.modal-title`, which sits inside a `.modal-header` that is a SIBLING of
+    // `.modal-content` — so it stays pinned above the scrolling content without a
+    // custom sticky layer, and we reuse the native chrome instead of duplicating
+    // it. The body + footer live in the scrolling content.
+    const header = this.titleEl;
+    header.addClass('claudian-work-order-modal-header');
+    this.renderHeader(header);
+
     this.contentEl.addClass('claudian-work-order-modal-content');
-    const header = this.contentEl.createDiv({ cls: 'claudian-work-order-modal-header' });
     const body = this.contentEl.createDiv({ cls: 'claudian-work-order-modal-body' });
     const main = body.createDiv({ cls: 'claudian-work-order-modal-main' });
     const sidebar = body.createDiv({ cls: 'claudian-work-order-modal-sidebar' });
     const footer = this.contentEl.createDiv({ cls: 'claudian-work-order-modal-footer' });
-
-    this.renderHeader(header);
 
     this.renderPropertiesSidebar(sidebar);
 
@@ -192,16 +205,8 @@ export class WorkOrderDetailModal extends Modal {
 
     this.renderHeaderMeta(header);
     this.renderHeaderTitle(header);
-
-    // 2px accent line on the header's bottom edge (color from the CSS modifier).
-    header.createDiv({ cls: 'claudian-work-order-modal-header-accent' }).setAttr('aria-hidden', 'true');
-
-    const close = header.createEl('button', {
-      cls: 'claudian-work-order-modal-close',
-      attr: { type: 'button', 'aria-label': t('tasks.workOrderModal.closeAriaLabel') },
-    });
-    setIcon(close, 'x');
-    close.addEventListener('click', () => this.close());
+    // Closing is handled by Obsidian's built-in modal close button — no custom
+    // reimplementation of core chrome.
   }
 
   /**
@@ -309,9 +314,6 @@ export class WorkOrderDetailModal extends Modal {
         title.blur();
       }
     });
-
-    const hint = header.createDiv({ cls: 'claudian-work-order-modal-title-hint' });
-    hint.setText(t('tasks.workOrderModal.editTitleHint'));
   }
 
   /**
@@ -356,11 +358,14 @@ export class WorkOrderDetailModal extends Modal {
       return;
     }
 
+    // Glyphs mirror the design prototype's handoff cards (Modal.jsx): file-text /
+    // check-square / triangle / signal. The per-section accent color is what the
+    // spec table fixes and is set in CSS off the modifier, not the glyph itself.
     const cards: HandoffCard[] = [
-      { titleKey: 'tasks.workOrderModal.handoffSummary', icon: 'align-left', modifier: 'summary', defaultOpen: true, body: parsed.summary },
-      { titleKey: 'tasks.workOrderModal.handoffVerification', icon: 'check-circle', modifier: 'verification', defaultOpen: false, body: parsed.verification },
-      { titleKey: 'tasks.workOrderModal.handoffRisks', icon: 'alert-triangle', modifier: 'risks', defaultOpen: false, body: parsed.risks },
-      { titleKey: 'tasks.workOrderModal.handoffNextAction', icon: 'arrow-right', modifier: 'next', defaultOpen: true, body: parsed.nextAction },
+      { titleKey: 'tasks.workOrderModal.handoffSummary', icon: 'file-text', modifier: 'summary', defaultOpen: true, body: parsed.summary },
+      { titleKey: 'tasks.workOrderModal.handoffVerification', icon: 'check-square', modifier: 'verification', defaultOpen: false, body: parsed.verification },
+      { titleKey: 'tasks.workOrderModal.handoffRisks', icon: 'triangle', modifier: 'risks', defaultOpen: false, body: parsed.risks },
+      { titleKey: 'tasks.workOrderModal.handoffNextAction', icon: 'signal', modifier: 'next', defaultOpen: true, body: parsed.nextAction },
     ];
 
     const group = section.createDiv({ cls: 'claudian-work-order-modal-collapse-group' });
@@ -383,7 +388,7 @@ export class WorkOrderDetailModal extends Modal {
    */
   private renderHandoffSalvage(parent: HTMLElement): void {
     const { section } = renderSectionHeader(parent, {
-      icon: 'alert-triangle',
+      icon: 'triangle',
       label: t('tasks.workOrderModal.salvageTitle'),
     });
 
@@ -598,16 +603,18 @@ export class WorkOrderDetailModal extends Modal {
 
     const meter = parent.createDiv({ cls: 'claudian-work-order-modal-ring-meter' });
 
-    const ringClasses = [
-      'claudian-work-order-modal-ring',
-      `claudian-work-order-modal-ring--${status}`,
-      ...(complete ? ['claudian-work-order-modal-ring--complete'] : []),
-    ].join(' ');
     const svg = meter.createSvg('svg', {
-      cls: ringClasses,
       attr: { width: 22, height: 22, viewBox: '0 0 22 22' },
     });
     svg.setAttr('aria-hidden', 'true');
+    // Add the ring classes one token at a time. Obsidian's createSvg applies a
+    // `cls` value via classList.add(), which throws on any space-containing
+    // token — so never pass a joined string (or rely on array handling); set
+    // each class individually. A joined-string cls here previously crashed
+    // onOpen mid-render (no acceptance items, no activity, empty footer).
+    svg.addClass('claudian-work-order-modal-ring');
+    svg.addClass(`claudian-work-order-modal-ring--${status}`);
+    if (complete) svg.addClass('claudian-work-order-modal-ring--complete');
     svg.createSvg('circle', {
       cls: 'claudian-work-order-modal-ring-track',
       attr: { cx: 11, cy: 11, r: radius, fill: 'none', 'stroke-width': 2.5 },
@@ -712,11 +719,11 @@ export class WorkOrderDetailModal extends Modal {
 
     this.addPropertyRow(panel, 'created', 'calendar', t('tasks.workOrderModal.fieldCreated')).value.createSpan({
       cls: 'claudian-work-order-modal-prop-inner claudian-work-order-modal-prop-num',
-      text: fm.created,
+      text: formatDateTime(fm.created),
     });
     this.addPropertyRow(panel, 'updated', 'clock', t('tasks.workOrderModal.fieldUpdated')).value.createSpan({
       cls: 'claudian-work-order-modal-prop-inner claudian-work-order-modal-prop-num',
-      text: fm.updated,
+      text: formatDateTime(fm.updated),
     });
     this.addPropertyRow(panel, 'attempts', 'repeat', t('tasks.workOrderModal.fieldAttempts')).value.createSpan({
       cls: 'claudian-work-order-modal-prop-inner claudian-work-order-modal-prop-num',

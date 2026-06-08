@@ -26,7 +26,7 @@ const mockApp: any = {};
 // regions rather than directly on `contentEl`.
 type ElOpts = {
   text?: string;
-  cls?: string;
+  cls?: string | string[];
   attr?: Record<string, string | number | boolean | null>;
   href?: string;
 };
@@ -97,7 +97,11 @@ function makeRecordingEl(tag: string): RecordingEl {
     createEl(childTag: string, opts?: ElOpts) {
       const child = makeRecordingEl(childTag);
       if (opts?.text) child.text = opts.text;
-      if (opts?.cls) opts.cls.split(/\s+/).filter(Boolean).forEach((c) => child.classes.add(c));
+      if (opts?.cls) {
+        // Accept string | string[] like Obsidian's createEl/createSvg.
+        const tokens = Array.isArray(opts.cls) ? opts.cls : opts.cls.split(/\s+/);
+        tokens.filter(Boolean).forEach((c) => child.classes.add(c));
+      }
       if (opts?.attr) {
         for (const [k, v] of Object.entries(opts.attr)) {
           if (v !== null && v !== undefined) child.attrs[k] = String(v);
@@ -115,6 +119,14 @@ function makeRecordingEl(tag: string): RecordingEl {
       return this.createEl('span', normalizeOpts(opts));
     },
     createSvg(svgTag: string, opts?: ElOpts) {
+      // Mirror Obsidian: createSvg applies `cls` via classList.add(), which
+      // throws on a space-separated string (unlike createEl). Guards against
+      // reintroducing a joined-string cls that crashes onOpen in-app.
+      if (typeof opts?.cls === 'string' && /\s/.test(opts.cls)) {
+        throw new Error(
+          `createSvg cls must be a single token or string[]; got "${opts.cls}"`,
+        );
+      }
       return this.createEl(svgTag, opts);
     },
     addClass(cls: string) {
@@ -247,8 +259,16 @@ function findSection(root: RecordingEl, label: string): RecordingEl | undefined 
 // shell structure and headings are observable. Returns the recording root.
 function installRecordingContent(modal: WorkOrderDetailModal): RecordingEl {
   const contentEl = makeRecordingEl('div');
+  // The header renders into the native `.modal-title` (this.titleEl), so install
+  // a recording title element too.
+  const titleEl = makeRecordingEl('div');
   (modal as unknown as { contentEl: RecordingEl }).contentEl = contentEl;
+  (modal as unknown as { titleEl: RecordingEl }).titleEl = titleEl;
   return contentEl;
+}
+
+function recordingTitleEl(modal: WorkOrderDetailModal): RecordingEl {
+  return (modal as unknown as { titleEl: RecordingEl }).titleEl;
 }
 
 function makeTask(id: string, status: TaskStatus, handoff = '', ledger = ''): TaskSpec {
@@ -372,13 +392,13 @@ beforeEach(() => {
 });
 
 describe('WorkOrderDetailModal — sticky-shell frame', () => {
-  it('renders header, scrollable body, and footer containers off contentEl', () => {
+  it('renders the header off the native title, and body + footer off contentEl', () => {
     const task = makeTask('t', 'inbox');
     const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
     const root = installRecordingContent(modal);
     modal.onOpen();
 
-    const header = find(root, 'claudian-work-order-modal-header');
+    const header = find(recordingTitleEl(modal), 'claudian-work-order-modal-header');
     const body = find(root, 'claudian-work-order-modal-body');
     const footer = find(root, 'claudian-work-order-modal-footer');
 
@@ -386,11 +406,10 @@ describe('WorkOrderDetailModal — sticky-shell frame', () => {
     expect(body).toBeDefined();
     expect(footer).toBeDefined();
 
-    // All three regions are direct children of contentEl (the flex column).
+    // The header IS the native modal title element (pinned outside the scroll);
+    // body + footer are direct children of contentEl (the scroll region).
+    expect([...recordingTitleEl(modal).classes]).toContain('claudian-work-order-modal-header');
     const directChildClasses = root.children.map((c) => [...c.classes]);
-    expect(directChildClasses).toContainEqual(
-      expect.arrayContaining(['claudian-work-order-modal-header']),
-    );
     expect(directChildClasses).toContainEqual(
       expect.arrayContaining(['claudian-work-order-modal-body']),
     );
@@ -1438,7 +1457,7 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
     const modal = new WorkOrderDetailModal(mockApp, task, callbacks);
     const root = installRecordingContent(modal);
     modal.onOpen();
-    const header = find(root, 'claudian-work-order-modal-header');
+    const header = find(recordingTitleEl(modal), 'claudian-work-order-modal-header');
     expect(header).toBeDefined();
     return { modal, root, header: header! };
   }
@@ -1468,9 +1487,9 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
     expect(titleEl(header)!.text).toBe('Task WO-1');
   });
 
-  it('renders a 2px accent gradient line on the header', () => {
+  it('does not render the custom accent element (removed — caused layout issues in the native header)', () => {
     const { header } = openHeader(makeTask('WO-1', 'inbox'));
-    expect(find(header, 'claudian-work-order-modal-header-accent')).toBeDefined();
+    expect(find(header, 'claudian-work-order-modal-header-accent')).toBeUndefined();
   });
 
   it('exposes the dialog accessible name via aria-labelledby on the title', () => {
@@ -1502,10 +1521,8 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
       expect(title.attrs['contenteditable']).toBe('plaintext-only');
       // Keyboard-focusable.
       expect(title.attrs['tabindex']).toBe('0');
-      // The rename hint is present only in editable states.
-      const hint = find(header, 'claudian-work-order-modal-title-hint');
-      expect(hint).toBeDefined();
-      expect(hint!.text.length).toBeGreaterThan(0);
+      // The rename hint was dropped — editable states no longer render it.
+      expect(find(header, 'claudian-work-order-modal-title-hint')).toBeUndefined();
     },
   );
 
@@ -1675,15 +1692,11 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
 
   // ---- Close button ----
 
-  it('renders a keyboard-focusable close button with an accessible name that closes the modal', () => {
+  it('does not reimplement a custom close button (relies on Obsidian native modal close)', () => {
     const task = makeTask('WO-1', 'inbox');
-    const { modal, header } = openHeader(task);
-    const close = find(header, 'claudian-work-order-modal-close');
-    expect(close).toBeDefined();
-    expect(close!.tag).toBe('button');
-    expect(close!.attrs['aria-label']!.length).toBeGreaterThan(0);
-
-    close!.emit('click');
-    expect((modal as unknown as { close: jest.Mock }).close).toHaveBeenCalled();
+    const { header } = openHeader(task);
+    // Closing is handled by Obsidian's built-in modal close button; the header
+    // must not render a duplicate custom one.
+    expect(find(header, 'claudian-work-order-modal-close')).toBeUndefined();
   });
 });

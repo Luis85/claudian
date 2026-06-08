@@ -9,21 +9,66 @@
  * from a left border to a top border.
  */
 
+/*
+ * Modal frame. Size the native `.modal` through the variables Obsidian's own
+ * `.modal` rule consumes (`--modal-max-height` / `--dialog-max-height`, also set
+ * inline on modalEl in onOpen) so the height cap applies even when a theme
+ * out-specifies a bare `.modal` selector. The native `.modal-content` is the
+ * flex column + height owner and the body is the ONLY scroll region — the same
+ * pattern as base/modal.css and the working MCP modals, kept native-Modal-safe.
+ */
 .claudian-work-order-modal {
+  --modal-max-height: min(86vh, 760px);
+  --dialog-max-height: min(86vh, 760px);
+  --modal-width: min(960px, 92vw);
+  --dialog-width: min(960px, 92vw);
+  --modal-max-width: min(960px, 92vw);
+  --dialog-max-width: min(960px, 92vw);
   width: min(960px, 92vw);
   max-width: min(960px, 92vw);
   max-height: min(86vh, 760px);
-}
-
-.claudian-work-order-modal-content {
+  /* Override the native `.modal` padding (var(--size-4-4)) so the header and
+     footer fill edge-to-edge; each region owns its own insets. */
+  padding: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* Scoped under the modal class (→ specificity 0-2-0) so it reliably out-specifies
+   a theme's bare `.modal-content { overflow }`. The native content fills the
+   capped frame; the body owns the single scroll region. */
+.claudian-work-order-modal .claudian-work-order-modal-content {
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
   max-width: 100%;
-  max-height: min(86vh, 760px);
-  min-height: 0;
   padding: 0;
-  overflow: hidden;
+  /* The native content is the SINGLE scroll region — Obsidian's proven modal
+     scroll. The header/footer pin via position:sticky inside it; the body flows.
+     Do NOT set overflow:hidden or a flex column here — that disabled the native
+     scroll and was the root of the earlier no-scroll / missing-footer regression. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--background-modifier-border) transparent;
+}
+
+/* ---------- Native modal close button (Obsidian-owned) ----------
+   The native close button is kept (no custom reimplementation of core chrome);
+   nudge it inside the header's 26px inset so it aligns with the header rhythm
+   and clears the title's reserved 40px right padding. Scoped 0-2-0 to beat the
+   theme's `.modal .modal-close-button` (0-1-1). NOTE: the native `.modal-title`
+   is NOT hidden — it now holds our rendered header. */
+.claudian-work-order-modal .modal-close-button {
+  top: 16px;
+  right: 18px;
+  color: var(--text-muted);
+  border-radius: var(--radius-m);
+}
+
+.claudian-work-order-modal .modal-close-button:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
 }
 
 /* ============================================================
@@ -33,27 +78,31 @@
    `--claudian-wo-header-color`, set by the status modifiers below
    (the status→color contract, shared with the pill / ring / ledger).
    ============================================================ */
-.claudian-work-order-modal-header {
-  position: relative;
-  flex: 0 0 auto;
-  padding: 18px 26px 16px;
-  border-bottom: 1px solid var(--border-color);
+/* Native modal header wrapper (a pinned sibling of the scrolling content): drop
+   its default padding/border/min-height so our header fills it edge-to-edge. */
+.claudian-work-order-modal .modal-header {
+  padding: 0;
+  margin: 0;
+  border: none;
 }
 
-/* 2px accent line on the header's bottom edge: left-anchored gradient that
-   fades out by 240px. Sits over the 1px border. */
-.claudian-work-order-modal-header-accent {
-  position: absolute;
-  left: 0;
-  bottom: -1px;
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    var(--claudian-wo-header-color, var(--border-color)) 0,
-    var(--claudian-wo-header-color, var(--border-color)) 64px,
-    transparent 240px
-  );
+/* The header is rendered into the native `.modal-title`, so it stays pinned above
+   the scroll with no custom sticky layer. position:relative makes it the
+   containing block for the accent line; the resets neutralize Obsidian's native
+   `.modal-title` styling (centering, font, margins). */
+.claudian-work-order-modal-header {
+  padding: 18px 26px 16px;
+  margin: 0;
+  /* Round the top corners to match the modal frame — the header is the topmost
+     element inside the native `.modal-header`. */
+  border-radius: var(--modal-radius, 12px) var(--modal-radius, 12px) 0 0;
+  border-bottom: 1px solid var(--background-secondary);
+  background: var(--background-primary);
+  text-align: left;
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-normal);
+  line-height: var(--line-height-normal);
+  color: var(--text-normal);
 }
 
 /* ---------- Meta row (above the title) ---------- */
@@ -151,48 +200,6 @@
   }
 }
 
-.claudian-work-order-modal-title-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 7px;
-  color: var(--text-faint);
-  font-size: var(--font-smaller);
-}
-
-/* ---------- Close button (top-right) ---------- */
-.claudian-work-order-modal-close {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-m);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.claudian-work-order-modal-close:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
-}
-
-.claudian-work-order-modal-close svg {
-  width: 18px;
-  height: 18px;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .claudian-work-order-modal-close {
-    transition: background 0.15s ease, color 0.15s ease;
-  }
-}
-
 /* Status → header accent/live-dot color contract (mirrors the status pill). */
 .claudian-work-order-modal-header--inbox { --claudian-wo-header-color: var(--color-base-60); }
 .claudian-work-order-modal-header--ready { --claudian-wo-header-color: var(--color-blue); }
@@ -213,13 +220,32 @@
  * the column divider — so the body itself stays padding-free and the sidebar's
  * secondary background bleeds flush to the scroll-region edges.
  */
-.claudian-work-order-modal-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+.claudian-work-order-modal .claudian-work-order-modal-body {
   display: grid;
   grid-template-columns: 1fr 282px;
+}
+
+/* Chromium/Electron scrollbar on the scroll region (the content) — track stays
+   transparent so the gutter blends into the surfaces; the thumb insets via a
+   padding-box border so it reads as a slim pill (matches the board). */
+.claudian-work-order-modal .claudian-work-order-modal-content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.claudian-work-order-modal .claudian-work-order-modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.claudian-work-order-modal .claudian-work-order-modal-content::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: var(--radius-l);
+  background-color: var(--background-modifier-border);
+  background-clip: padding-box;
+}
+
+.claudian-work-order-modal .claudian-work-order-modal-content::-webkit-scrollbar-thumb:hover {
+  background-color: var(--background-modifier-border-hover);
+  background-clip: padding-box;
 }
 
 /*
@@ -254,12 +280,18 @@
    alpha border via color-mix, never an rgba literal).
    ============================================================ */
 .claudian-work-order-modal-footer {
-  flex: 0 0 auto;
+  /* Pinned to the bottom of the scrolling content; solid background. */
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   padding: 12px 26px;
+  /* Round the bottom-left corner to match the modal frame; the right side hosts
+     the content scrollbar gutter, so it stays square. */
+  border-radius: 0 0 0 var(--modal-radius, 12px);
   border-top: 1px solid var(--border-color);
   background: var(--background-secondary);
 }
@@ -276,6 +308,25 @@
   margin-left: auto;
 }
 
+/* Native <button> reset (see agent-board.css). Scoped under the modal class
+   (0-2-0) so it out-specifies the theme's `.modal button` (0-1-1): neutralizes
+   the box-shadow / appearance / default font + sizing leak on EVERY modal button
+   (footer actions + collapse heads), without disturbing each variant's own set
+   styling defined below. */
+.claudian-work-order-modal .claudian-work-order-modal-action,
+.claudian-work-order-modal .claudian-work-order-modal-collapse-head {
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  /* Inherit the interface font + drop the forced min-width/height a theme may
+     stamp on bare `.modal button`. Width + text-align stay with each component
+     block (the collapse head is full-width; footer actions are inline-flex). */
+  font-family: inherit;
+  min-width: 0;
+  height: auto;
+}
+
 /* ---------- Footer action buttons ---------- */
 .claudian-work-order-modal-action {
   display: inline-flex;
@@ -286,7 +337,8 @@
   border-radius: var(--radius-m);
   font-size: var(--font-ui-small);
   font-weight: var(--font-medium);
-  line-height: 1;
+  line-height: 1.4;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -306,36 +358,45 @@
   }
 }
 
-/* CTA — the accent primary. */
-.claudian-work-order-modal-action--cta {
-  background: var(--interactive-accent);
+/* CTA — primary positive action (Mark ready / Accept / Send to review). Green
+   from the status→color palette, not the theme accent, so the positive action
+   reads deliberately across themes. */
+.claudian-work-order-modal .claudian-work-order-modal-action--cta {
+  /* The border gives the green fill a defined edge on pale themes (Minimal),
+     matching the board CTA treatment. */
+  border-color: var(--color-green);
+  background: var(--color-green);
   color: var(--text-on-accent);
 }
 
-.claudian-work-order-modal-action--cta:hover {
-  background: var(--interactive-accent-hover);
+.claudian-work-order-modal .claudian-work-order-modal-action--cta:hover {
+  background: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
+  border-color: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
 }
 
-/* Ghost — transparent secondary; hover surfaces the modifier-hover wash. */
-.claudian-work-order-modal-action--ghost {
-  background: transparent;
-  color: var(--text-muted);
+/* Secondary — a neutral surfaced button (Open note / Open conversation / Rework
+   / Archive / Reopen). Reads as a real button, not a bare ghost. */
+.claudian-work-order-modal .claudian-work-order-modal-action--ghost {
+  border-color: var(--border-color);
+  background: var(--interactive-normal);
+  color: var(--text-normal);
 }
 
-.claudian-work-order-modal-action--ghost:hover {
-  background: var(--background-modifier-hover);
+.claudian-work-order-modal .claudian-work-order-modal-action--ghost:hover {
+  border-color: var(--border-color-hover);
+  background: var(--interactive-hover);
   color: var(--text-normal);
 }
 
 /* Danger — destructive red; the soft border alpha goes through color-mix
    (never an rgba literal). Hover flips to a solid red fill. */
-.claudian-work-order-modal-action--danger {
+.claudian-work-order-modal .claudian-work-order-modal-action--danger {
   border-color: color-mix(in srgb, var(--color-red) 40%, transparent);
   background: var(--background-modifier-error);
   color: var(--color-red);
 }
 
-.claudian-work-order-modal-action--danger:hover {
+.claudian-work-order-modal .claudian-work-order-modal-action--danger:hover {
   background: var(--color-red);
   border-color: var(--color-red);
   color: var(--text-on-accent);
@@ -387,11 +448,137 @@
   align-items: center;
 }
 
+/* ============================================================
+   Rendered-markdown reset — HIGHEST-PRIORITY native override.
+
+   The Objective, the acceptance prose / checklist-item labels, and the
+   Agent-handoff card bodies are produced by Obsidian's MarkdownRenderer, so the
+   emitted nodes inherit Obsidian app.css `.markdown-rendered` styling: large
+   h1–h6, generous p / list margins, code + pre chrome, blockquote, hr, link
+   color. Left alone, the rendered regions read like a full note preview instead
+   of the compact modal design. Every selector here is scoped under the modal
+   class (→ specificity 0-2-0) so it out-specifies BOTH bare-element rules
+   (0-0-1) and the theme's `.markdown-rendered` / `.markdown-preview-view`
+   (0-1-0) for the props we set — no `!important` needed. Colors/sizes resolve
+   from Obsidian tokens only.
+
+   `:is(...)` groups the five MarkdownRenderer sinks so each rule covers them
+   all in one pass; flat selectors (no `&` nesting) match the rest of the
+   stylesheet and avoid relying on the build's nesting support. */
+
+/* Tame heading sizes to the section scale — the rendered region must not
+   out-shout the uppercase section labels around it. h1/h2 collapse toward the
+   body title rhythm; deeper levels step down to the inline-label scale. */
+.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) :is(h1, h2, h3, h4, h5, h6) {
+  margin: 8px 0 4px;
+  line-height: var(--line-height-tight);
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+}
+
+.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) :is(h1, h2) {
+  font-size: var(--font-ui-medium);
+}
+
+.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) :is(h3, h4, h5, h6) {
+  font-size: var(--font-ui-small);
+}
+
+/* Flush the first/last rendered block against the container edges. Scoped here
+   (0-2-1) so it wins over the generic p/heading rules below that would otherwise
+   re-add a leading/trailing margin; mirrors the per-container first/last-child
+   resets but reaches every block (p, headings, lists, pre, …). */
+.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) > :first-child {
+  margin-top: 0;
+}
+
+.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) > :last-child {
+  margin-bottom: 0;
+}
+
+/* Paragraph + list rhythm collapses to the modal's compact spacing. */
+.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) p {
+  margin: 0 0 8px;
+}
+
+.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) :is(ul, ol) {
+  margin: 8px 0;
+  padding-inline-start: 20px;
+}
+
+.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) li + li {
+  margin-top: 2px;
+}
+
+.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) li > :is(ul, ol) {
+  margin: 2px 0;
+}
+
+/* Inline code → a subtle chip (Obsidian's default leans heavy in modal copy). */
+.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) :not(pre) > code {
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  font-size: 0.86em;
+  font-family: var(--font-monospace);
+}
+
+.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) pre {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-m);
+  background: var(--background-primary-alt);
+  font-size: var(--font-smaller);
+  line-height: var(--line-height-normal);
+}
+
+/* Reset the chip styling for code that lives inside a fenced block. */
+.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) pre > code {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: inherit;
+}
+
+.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) blockquote {
+  margin: 8px 0;
+  padding: 2px 0 2px 12px;
+  border-inline-start: 2px solid var(--border-color);
+  color: var(--text-muted);
+}
+
+.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) hr {
+  margin: 8px 0;
+  border: none;
+  border-top: 1px solid var(--border-color);
+}
+
+/* Keep links on the accent token regardless of the active theme. */
+.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) a {
+  color: var(--text-accent);
+  text-decoration: none;
+}
+
+.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) a:hover {
+  color: var(--text-accent-hover);
+  text-decoration: underline;
+}
+
+.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-s);
+}
+
 /* ---------- Objective ---------- */
 .claudian-work-order-modal-objective {
   font-size: var(--font-ui-medium);
   line-height: var(--line-height-relaxed);
   color: var(--text-normal);
+  /* Inherits to the rendered <p> so the objective breaks for even ragging. */
+  text-wrap: pretty;
 }
 
 .claudian-work-order-modal-objective > :first-child {
@@ -578,12 +765,18 @@
   overflow: hidden;
 }
 
+/* Expanded cards shift to the secondary surface (spec), so an open handoff
+   section reads as distinct from the collapsed ones around it. */
+.claudian-work-order-modal-collapse.is-open {
+  background: var(--background-secondary);
+}
+
 .claudian-work-order-modal-collapse-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   width: 100%;
-  padding: 10px 12px;
+  padding: 11px 14px;
   border: none;
   background: transparent;
   color: var(--text-normal);
@@ -635,11 +828,13 @@
   min-width: 0;
 }
 
-/* Body aligns under the title (chevron + icon + two 8px gaps = 46px inset). */
+/* Body left-aligns under the section icon (head left-pad 14 + chevron 15 + gap 9
+   = 38px), matching the prototype's `padding: 2px 16px 14px 38px`. */
 .claudian-work-order-modal-collapse-body {
-  padding: 0 12px 12px 46px;
+  padding: 2px 16px 14px 38px;
   color: var(--text-muted);
   line-height: var(--line-height-relaxed);
+  text-wrap: pretty;
 }
 
 .claudian-work-order-modal-collapse-body > :first-child {
@@ -650,20 +845,22 @@
   margin-bottom: 0;
 }
 
-/* Per-section handoff card icon colors (color is what the spec table fixes). */
+/* Per-section handoff card icon colors (color is what the spec table fixes);
+   mirrors Modal.jsx: summary=blue, verification=green, risks=orange,
+   next=accent. The transcript-tail card carries the salvage orange. */
 .claudian-work-order-modal-collapse--summary { --claudian-wo-collapse-color: var(--color-blue); }
 .claudian-work-order-modal-collapse--verification { --claudian-wo-collapse-color: var(--color-green); }
 .claudian-work-order-modal-collapse--risks { --claudian-wo-collapse-color: var(--color-orange); }
-.claudian-work-order-modal-collapse--next { --claudian-wo-collapse-color: var(--interactive-accent); }
+.claudian-work-order-modal-collapse--next { --claudian-wo-collapse-color: var(--color-accent); }
 .claudian-work-order-modal-collapse--tail { --claudian-wo-collapse-color: var(--color-orange); }
 
 /* ---------- Needs-handoff salvage callout + transcript tail ---------- */
 .claudian-work-order-modal-salvage-callout {
-  padding: 11px 14px;
+  padding: 12px 14px;
   border: 1px solid color-mix(in srgb, var(--color-orange) 25%, transparent);
   border-radius: var(--radius-l);
   background: var(--background-modifier-warning);
-  color: var(--text-normal);
+  color: var(--text-muted);
   font-size: var(--font-ui-small);
   line-height: var(--line-height-relaxed);
 }
@@ -676,22 +873,21 @@
   word-break: break-word;
 }
 
-/* ---------- Failed Run ledger ---------- */
+/* ---------- Failed Run ledger ----------
+   A bare list (no card border/background), per the prototype: a three-column
+   grid (dot | time | message) with top-aligned rows and hairline separators. */
 .claudian-work-order-modal-ledger {
   margin: 0;
   padding: 0;
   list-style: none;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-l);
-  background: var(--background-primary-alt);
-  overflow: hidden;
 }
 
 .claudian-work-order-modal-ledger-entry {
-  display: flex;
-  align-items: baseline;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: start;
   gap: 10px;
-  padding: 9px 14px;
+  padding: 9px 0;
   font-size: var(--font-ui-small);
 }
 
@@ -699,17 +895,17 @@
   border-top: 1px solid var(--border-color);
 }
 
+/* 8px status dot, nudged down to sit on the first text line of the row. */
 .claudian-work-order-modal-ledger-dot {
-  flex: 0 0 auto;
-  align-self: center;
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
   border-radius: 50%;
   background: var(--claudian-wo-ledger-color, var(--text-muted));
 }
 
 .claudian-work-order-modal-ledger-time {
-  flex: 0 0 auto;
+  margin-top: 1px;
   font-family: var(--font-monospace);
   font-size: 0.85em;
   color: var(--text-faint);
@@ -718,6 +914,7 @@
 .claudian-work-order-modal-ledger-msg {
   min-width: 0;
   color: var(--text-normal);
+  line-height: 1.5;
   word-break: break-word;
 }
 
@@ -734,9 +931,11 @@
 .claudian-work-order-modal-ledger-dot--failed { --claudian-wo-ledger-color: var(--color-red); }
 .claudian-work-order-modal-ledger-dot--canceled { --claudian-wo-ledger-color: var(--color-base-60); }
 
-/* Collapse the two-pane grid: sidebar drops below main, divider goes to top. */
+/* Collapse the two-pane grid: sidebar drops below main, divider goes to top.
+   Scoped under the modal class to match the base body rule's specificity (0-2-0)
+   so this override still wins by source order. */
 @media (max-width: 720px) {
-  .claudian-work-order-modal-body {
+  .claudian-work-order-modal .claudian-work-order-modal-body {
     grid-template-columns: 1fr;
   }
 
@@ -936,6 +1135,21 @@
   background: var(--background-modifier-hover);
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  .claudian-work-order-modal-chip {
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+  }
+}
+
+/* The picker is a transparent (opacity:0) <select> overlay, so its native focus
+   outline is invisible — surface a real focus ring on the chip wrapper instead
+   so keyboard users get a visible indicator (parity with the editable title +
+   the rest of the app's :focus-visible rings). */
+.claudian-work-order-modal-chip:focus-within {
+  background: var(--background-modifier-hover);
+  box-shadow: 0 0 0 2px var(--color-accent-3, color-mix(in srgb, var(--color-accent) 40%, transparent));
+}
+
 .claudian-work-order-modal-chip-label {
   font-size: var(--font-ui-small);
 }
@@ -951,13 +1165,25 @@
   height: 13px;
 }
 
-.claudian-work-order-modal-chip-select {
+/* Scoped under the modal class (0-2-0) so a theme's `.modal select` / `--input-*`
+   form styling can't leak a visible border, background, or focus outline through
+   the transparent picker. The chip wrapper owns the visuals + the focus ring. */
+.claudian-work-order-modal .claudian-work-order-modal-chip-select {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-m);
+  background: transparent;
+  color: inherit;
   opacity: 0;
+  outline: none;
   cursor: pointer;
   font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  box-shadow: none;
 }

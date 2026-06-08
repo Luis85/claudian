@@ -53,3 +53,20 @@ export function formatRelativeTime(
   if (hours < 24) return `${hours}h`;
   return `${Math.floor(hours / 24)}d`;
 }
+
+/**
+ * Formats an ISO timestamp as a short, locale-aware date for property rows
+ * (e.g. "Jun 6, 2026") instead of the raw ISO string. Returns the trimmed raw
+ * input when it can't be parsed so a malformed value is surfaced, not dropped,
+ * and an empty string for a missing value.
+ */
+export function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) return iso.trim();
+  return new Date(ms).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}

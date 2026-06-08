@@ -3,13 +3,38 @@
   display: none;
 }
 
+/* Bind the board to the leaf height so the lanes' own scroll regions stay
+   inside the viewport. The view-content → host → board chain must be an
+   unbroken flex column with min-height:0 at every level; otherwise a tall lane
+   grows the whole view and the horizontal scrollbar is pushed off-screen. */
+.workspace-leaf-content[data-type="claudian-agent-board-view"] .view-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  /* Some themes paint .view-content with --background-secondary; pin it to the
+     board surface so no theme sliver shows around the board host. */
+  background: var(--background-primary);
+}
+
+.claudian-agent-board-host {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .claudian-agent-board {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   gap: 12px;
-  height: 100%;
   min-height: 0;
-  padding: 12px;
+  /* Prototype surface is roomier than the original 12px (mock `.ab-surface`
+     padding 18px 20px 0); 14px/16px tracks it while staying bounded for a
+     narrow leaf. */
+  padding: 14px 16px;
   /* Board itself never scrolls; lanes and detail own their own scroll regions
      so a tall detail pane can't push the columns out of reach. */
   overflow: hidden;
@@ -26,7 +51,40 @@
      tall stacks of cards. Vertical scroll stays on this container (not per lane)
      so AgentBoardView.render() can snapshot/restore scrollTop across re-renders. */
   overflow: auto;
-  padding-bottom: 8px;
+  /* Bottom clearance so the horizontal scrollbar (and the last card's shadow)
+     don't sit flush against the board edge — mirrors the prototype's
+     `.ab-lanes` padding-bottom (18px), trimmed for the tighter board surface. */
+  padding-bottom: 14px;
+  /* Quiet the scroll affordance: Obsidian/Minimal style the native scrollbar a
+     bit heavy for a borderless board. Firefox uses scrollbar-width/-color; the
+     ::-webkit rules below cover Chromium (Obsidian's renderer). Both stay on
+     the muted border tokens so the bars read present-but-subtle. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--background-modifier-border) transparent;
+}
+
+.claudian-agent-board-lanes::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+.claudian-agent-board-lanes::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.claudian-agent-board-lanes::-webkit-scrollbar-thumb {
+  background: var(--background-modifier-border);
+  border-radius: var(--radius-m);
+}
+
+.claudian-agent-board-lanes::-webkit-scrollbar-thumb:hover {
+  background: var(--background-modifier-border-hover);
+}
+
+/* Hide the dead corner where the two scrollbars meet so it doesn't paint a
+   solid native square against the board surface. */
+.claudian-agent-board-lanes::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* Borderless lane: just a header + a vertical stack of floating cards. No
@@ -34,7 +92,7 @@
 .claudian-agent-board-lane {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 9px;
   flex: 0 0 286px;
   width: 286px;
   /* Natural height — the lanes container owns the vertical scroll so a tall lane
@@ -74,6 +132,7 @@
   font-size: var(--font-ui-smaller);
   color: var(--text-faint);
   font-variant-numeric: tabular-nums;
+  min-width: 18px;
   text-align: center;
   padding: 1px 6px;
   /* --radius-full is the pill radius in newer Obsidian; the length fallback
@@ -87,11 +146,16 @@
 .claudian-agent-board-lane-add {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  text-align: left;
   width: 100%;
   padding: 9px 12px;
-  border: 1px dashed var(--border-color);
+  /* color-mix dashed edge stays visible-but-quiet on Minimal (where
+     --background-modifier-border washes out). */
+  border: 1px dashed color-mix(in srgb, var(--text-normal) 12%, transparent);
   border-radius: var(--radius-l, 8px);
+  /* Stay flat by default so a theme's button surface doesn't make the row read
+     as a solid CTA; only the hover wash lifts it. */
   background: transparent;
   color: var(--text-faint);
   font-size: var(--font-ui-small);
@@ -102,8 +166,29 @@
 .claudian-agent-board-lane-add:hover,
 .claudian-agent-board-lane-add:focus-visible {
   color: var(--text-muted);
+  border-color: var(--background-modifier-border-hover);
   background: var(--background-modifier-hover);
   box-shadow: none;
+}
+
+/* Native <button> reset. Obsidian's app.css styles bare `button` (injected
+   before plugin CSS) with --interactive-normal bg, --input-shadow, padding, and
+   a medium font-weight. Our component rules set bg/border/padding/font/cursor
+   explicitly; the only defaults that still leak are box-shadow and native
+   appearance chrome — neutralize just those (0-1-0 beats `button` 0-0-1, and
+   these props are unset by the component rules so there's no conflict). */
+.claudian-agent-board-toolbar-btn,
+.claudian-agent-board-toolbar-autorun,
+.claudian-agent-board-card-action-primary,
+.claudian-agent-board-card-action-more,
+.claudian-agent-board-lane-add,
+.claudian-agent-board-lane-collapse-toggle,
+.claudian-agent-board-card-menu-item,
+.claudian-agent-board-card-reply--actions button {
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ===== Linear-style minimal work-order card ===== */
@@ -114,18 +199,26 @@
   flex-direction: column;
   gap: 9px;
   padding: 12px 13px;
-  border: 1px solid var(--border-color);
+  /* Spec: the card sits a step LIGHTER than the board. On Minimal the
+     --background-tertiary/--text-normal-12% tokens wash out, so use a guaranteed
+     color-mix floor (board is --background-primary) for a visible-but-quiet edge. */
+  border: 1px solid color-mix(in srgb, var(--text-normal) 12%, transparent);
   /* --radius-l is the card radius in newer Obsidian; length fallback for hosts
      that predate the variable. */
   border-radius: var(--radius-l, 8px);
-  background: var(--background-tertiary);
+  background: color-mix(in srgb, var(--background-primary) 94%, var(--text-normal) 6%);
+  /* No resting shadow (matches the target); the border + lighter surface define
+     the card. The shadow appears on hover as the lift cue. */
+  box-shadow: none;
   cursor: pointer;
 }
 
 .claudian-agent-board-card:hover {
-  border-color: var(--border-color-hover);
-  background: var(--color-base-30);
-  box-shadow: var(--shadow-s);
+  /* Lift, not recede: lighten the surface a touch more, brighten the edge, and
+     raise the card with a clear shadow (the visible hover cue). */
+  border-color: color-mix(in srgb, var(--text-normal) 20%, transparent);
+  background: color-mix(in srgb, var(--background-primary) 90%, var(--text-normal) 10%);
+  box-shadow: var(--shadow-l);
 }
 
 .claudian-agent-board-card:active {
@@ -173,7 +266,8 @@
 /* Reveal on card hover/focus. Motion-gated transition; the reveal itself still
    works (opacity flip) when reduced motion is requested. */
 .claudian-agent-board-card:hover .claudian-agent-board-card-actions,
-.claudian-agent-board-card:focus-within .claudian-agent-board-card-actions {
+.claudian-agent-board-card:focus-within .claudian-agent-board-card-actions,
+.claudian-agent-board-card.is-menu-open .claudian-agent-board-card-actions {
   opacity: 1;
   pointer-events: auto;
 }
@@ -223,14 +317,14 @@
 }
 
 .claudian-agent-board-card-action-primary--cta {
-  background: var(--interactive-accent);
-  border-color: var(--interactive-accent);
+  background: var(--color-green);
+  border-color: var(--color-green);
   color: var(--text-on-accent);
 }
 
 .claudian-agent-board-card-action-primary--cta:hover {
-  background: var(--interactive-accent-hover);
-  border-color: var(--interactive-accent-hover);
+  background: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
+  border-color: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
 }
 
 .claudian-agent-board-card-action-primary--ghost {
@@ -291,18 +385,19 @@
    CSS. Mounting on the body (a portal) keeps a tall menu from adding a scrollbar
    to the overflow:auto lane card list. */
 .claudian-agent-board-card-menu {
-  /* Portaled onto document.body; the dynamic top/left are set inline. */
+  /* Portaled onto document.body; the dynamic top/left are set inline.
+     min-width matches the JS MENU_MIN_WIDTH so the flip/clamp math agrees. */
   position: fixed;
   z-index: var(--layer-menu, 200);
   min-width: 180px;
-  padding: 4px;
+  padding: 6px;
   border: 1px solid var(--border-color-hover);
   border-radius: var(--radius-m);
   background: var(--background-secondary);
   box-shadow: var(--shadow-l);
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
 .claudian-agent-board-card-menu-item {
@@ -395,6 +490,9 @@
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 10px;
+  /* Render the monospace provider/model line at the intended ~11px rather than
+     inheriting the card's 14px. */
+  font-size: var(--font-ui-smaller);
   color: var(--text-muted);
 }
 
@@ -607,7 +705,7 @@
 /* Heartbeat freshness tier → dot color (green fresh / amber stale / red very
    stale), per the redesign freshness contract. */
 .claudian-agent-board-card-live-strip--dot.claudian-stale-green { color: var(--color-green); }
-.claudian-agent-board-card-live-strip--dot.claudian-stale-amber { color: var(--color-orange); }
+.claudian-agent-board-card-live-strip--dot.claudian-stale-amber { color: var(--color-yellow); }
 .claudian-agent-board-card-live-strip--dot.claudian-stale-red { color: var(--color-red); }
 
 @keyframes claudian-pulse-dot {
@@ -658,13 +756,90 @@
   color: var(--text-warning);
 }
 
+/* Reply / reject-reason text input. Obsidian's app.css styles bare `input`
+   (0-0-1) with --input-bg/--input-border/--input-shadow and a focus ring; the
+   single class (0-1-0) wins for every prop we set, so style it explicitly to
+   read intentional on Minimal (where the native input chrome washes out).
+   box-sizing:border-box keeps the 100% width inside the card padding; the
+   resting box-shadow:none neutralizes the leaked --input-shadow. */
 .claudian-agent-board-card-reply--field {
   width: 100%;
+  box-sizing: border-box;
+  padding: 6px 9px;
+  font-family: inherit;
+  font-size: var(--font-ui-small);
+  line-height: 1.4;
+  color: var(--text-normal);
+  background: var(--background-modifier-form-field, var(--input-bg, var(--background-primary)));
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  outline: none;
+  box-shadow: none;
+}
+
+.claudian-agent-board-card-reply--field::placeholder {
+  color: var(--text-faint);
+}
+
+/* Accent focus ring (matches the prototype's 2px --color-accent-3 halo). The
+   class beats the bare `input:focus` for these props; a theme's `.view-content
+   input:focus` (0-1-1) is matched at 0-2-0 via the scoped rule below. */
+.claudian-agent-board-card-reply--field:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 25%, transparent);
+}
+
+/* Theme-resistance: a theme rule like `.view-content input` (0-1-1) can
+   out-specify the single field class for the unset-or-leaked border/background.
+   Re-asserting under the board's view-type raises specificity to 0-2-0 so the
+   field stays on-design regardless of the active theme. */
+.workspace-leaf-content[data-type="claudian-agent-board-view"] .claudian-agent-board-card-reply--field {
+  background: var(--background-modifier-form-field, var(--input-bg, var(--background-primary)));
+  border: 1px solid var(--background-modifier-border);
+  box-shadow: none;
+}
+
+.workspace-leaf-content[data-type="claudian-agent-board-view"] .claudian-agent-board-card-reply--field:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 25%, transparent);
 }
 
 .claudian-agent-board-card-reply--actions {
   display: flex;
   gap: 6px;
+}
+
+/* Reply action buttons (Send + Stop / Approve + Reject): fully styled so neither
+   inherits Obsidian's native button chrome. `… button` is 0-1-1 (beats `button`
+   0-0-1); the green Send override is 0-2-0 (beats a theme's `button.mod-cta`
+   0-1-1). The secondary (non-CTA) reads as a ghost button — transparent with a
+   quiet border — matching the prototype's `.ab-btn-ghost` next to the CTA. */
+.claudian-agent-board-card-reply--actions button {
+  padding: 6px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
+  line-height: 1.3;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-normal);
+}
+
+.claudian-agent-board-card-reply--actions button:hover {
+  background: var(--background-modifier-hover);
+  border-color: var(--border-color-hover);
+}
+
+.claudian-agent-board-card-reply--actions .mod-cta {
+  background-color: var(--color-green);
+  border-color: var(--color-green);
+  color: var(--text-on-accent);
+}
+
+.claudian-agent-board-card-reply--actions .mod-cta:hover {
+  background-color: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
+  border-color: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
 }
 
 .claudian-agent-board-errors {
@@ -675,6 +850,22 @@
   padding-top: 12px;
   color: var(--text-error);
   font-size: var(--font-ui-smaller);
+}
+
+/* The notices/skipped sections render bare <h4>s. Obsidian's app.css styles
+   bare `h4` (0-0-1) with --h4-size (~17px) and heading margins, which blow out
+   the compact errors panel; the descendant rule (0-1-1) overrides them down to
+   a section label. */
+.claudian-agent-board-errors h4 {
+  margin: 0 0 4px;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  line-height: 1.3;
+  color: var(--text-error);
+}
+
+.claudian-agent-board-errors h4:not(:first-child) {
+  margin-top: 10px;
 }
 
 .claudian-agent-board-slots {
@@ -711,6 +902,13 @@
 .claudian-agent-board-lane-criteria ul {
   margin: 2px 0 0;
   padding-left: 16px;
+}
+
+/* Bare <li> picks up Obsidian's default list line-height/margins; pin them so
+   the criteria read as a tight bullet list, not editor-spaced body copy. */
+.claudian-agent-board-lane-criteria li {
+  margin: 0;
+  line-height: 1.4;
 }
 
 .claudian-lane-editor-lane {
@@ -763,7 +961,6 @@
   justify-content: space-between;
   gap: 12px;
   padding: 6px 0 10px;
-  border-bottom: 1px solid var(--background-modifier-border);
 }
 
 .claudian-agent-board-toolbar-actions,
@@ -804,6 +1001,19 @@
   border-color: var(--border-color-hover);
 }
 
+/* CTA button (Add work order): green primary positive action, not the theme
+   accent, so it reads deliberately across themes (matches the modal CTA). */
+.claudian-agent-board-toolbar-btn.mod-cta {
+  background-color: var(--color-green);
+  /* The pale green fill has no edge on Minimal; a green border defines it. */
+  border: 1px solid var(--color-green);
+  color: var(--text-on-accent);
+}
+
+.claudian-agent-board-toolbar-btn.mod-cta:hover {
+  background-color: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
+}
+
 .claudian-agent-board-toolbar-btn-icon {
   display: inline-flex;
   align-items: center;
@@ -823,15 +1033,16 @@
   flex-shrink: 0;
 }
 
-/* Auto-run switch (renamed background-watcher toggle). */
+/* Auto-run switch (renamed background-watcher toggle). Spec ships a pill: a
+   quiet bordered chip around the switch + label (mock.css:36-41). */
 .claudian-agent-board-toolbar-autorun {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 12px;
+  padding: 5px 12px 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--text-normal) 10%, transparent);
   border-radius: var(--radius-m);
-  border: 1px solid var(--border-color);
-  background-color: var(--background-secondary);
+  background: var(--background-secondary);
   font-size: var(--font-ui-small);
   font-weight: var(--font-medium);
   cursor: pointer;
@@ -839,7 +1050,11 @@
 }
 
 .claudian-agent-board-toolbar-autorun:hover {
-  border-color: var(--border-color-hover);
+  border-color: var(--background-modifier-border-hover);
+}
+
+.claudian-agent-board-toolbar-autorun:hover .claudian-agent-board-toolbar-autorun-label {
+  color: var(--text-normal);
 }
 
 .claudian-agent-board-toolbar-autorun-track {
@@ -870,28 +1085,26 @@
   white-space: nowrap;
 }
 
-/* OFF: muted label, neutral toggle track. */
+/* OFF: muted label, neutral toggle track. --toggle-bg fallback keeps the track
+   visible on Minimal where it washes out. */
 .claudian-agent-board-toolbar-autorun--off {
   color: var(--text-muted);
 }
 
 .claudian-agent-board-toolbar-autorun--off .claudian-agent-board-toolbar-autorun-track {
-  /* `--toggle-bg` is a prototype token, not a default Obsidian variable; fall
-     back to a neutral host border color so the OFF track always has a fill. */
-  background-color: var(--toggle-bg, var(--background-modifier-border));
+  background-color: var(--toggle-bg, color-mix(in srgb, var(--text-normal) 22%, transparent));
 }
 
-/* ON: accent pill + accent track, thumb slid right to white. */
+/* ON: green-tinted pill (border + wash) signals the active/positive state and
+   the green track confirms it; the label lifts to normal. */
 .claudian-agent-board-toolbar-autorun--on {
+  border-color: color-mix(in srgb, var(--color-green) 40%, transparent);
+  background: color-mix(in srgb, var(--color-green) 15%, transparent);
   color: var(--text-normal);
-  border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
-  /* `--color-accent-3` is a prototype token; fall back to a soft accent tint so
-     the ON pill keeps an accent-tinted background on default Obsidian themes. */
-  background-color: var(--color-accent-3, color-mix(in srgb, var(--color-accent) 18%, transparent));
 }
 
 .claudian-agent-board-toolbar-autorun--on .claudian-agent-board-toolbar-autorun-track {
-  background-color: var(--color-accent);
+  background-color: var(--color-green);
 }
 
 .claudian-agent-board-toolbar-autorun-thumb--on {
@@ -947,7 +1160,7 @@
   cursor: pointer;
   background: var(--background-secondary);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-m, 6px);
+  border-radius: var(--radius-l, 8px);
 }
 
 .claudian-agent-board-lane--collapsed:hover {
@@ -965,6 +1178,8 @@
   white-space: nowrap;
 }
 
+/* Borderless icon button — holds a real Lucide chevron (rendered in JS via
+   setIcon), matching the icon language of every other card glyph. */
 .claudian-agent-board-lane-collapse-toggle {
   display: inline-flex;
   align-items: center;
@@ -974,23 +1189,41 @@
   padding: 0;
   margin: 0;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  color: var(--text-muted);
+  border: none;
+  color: var(--text-faint);
   cursor: pointer;
-  font-size: var(--font-ui-medium);
   line-height: 1;
   box-shadow: none;
 }
 
-/* Decorative chevron glyph (the accessible name lives on the button's aria-label). */
-.claudian-agent-board-lane-collapse-toggle::before {
-  content: "›";
+.claudian-agent-board-lane-collapse-toggle svg {
+  width: 14px;
+  height: 14px;
 }
 
+/* Smooth, borderless affordance: the glyph just brightens on hover — no button
+   box. */
 .claudian-agent-board-lane-collapse-toggle:hover {
   color: var(--text-normal);
-  background: var(--background-modifier-hover);
-  border-color: var(--background-modifier-border);
+  background: transparent;
   box-shadow: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .claudian-agent-board-lane-collapse-toggle {
+    transition: color 0.15s ease;
+  }
+}
+
+/* Leading chevron at the top of the collapsed vertical strip (spec Board.jsx). */
+.claudian-agent-board-lane-collapsed-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.claudian-agent-board-lane-collapsed-chevron svg {
+  width: 14px;
+  height: 14px;
 }
