@@ -10,6 +10,7 @@ function createPlugin(opts: {
     getTabCount?: () => number;
     countTabsByKind?: (kind: 'chat' | 'work-order') => number;
   } | null;
+  lastKnownOpenTabs?: Array<{ tabId: string; conversationId: string | null; kind?: 'chat' | 'work-order' }>;
   lastKnownOpenTabCount?: number;
   maxChatTabs?: number;
   agentBoardQueueCap?: number;
@@ -44,7 +45,10 @@ function createPlugin(opts: {
       agentBoardQueueCap: opts.agentBoardQueueCap ?? 3,
     },
     getView: jest.fn().mockReturnValue(view),
-    lastKnownTabManagerState: { openTabs: new Array(opts.lastKnownOpenTabCount ?? 0).fill({}) },
+    lastKnownTabManagerState: {
+      openTabs: opts.lastKnownOpenTabs
+        ?? new Array(opts.lastKnownOpenTabCount ?? 0).fill({ tabId: 'tab', conversationId: null }),
+    },
     chatTabReservations: { pending: opts.pendingReservations ?? 0 },
     activateView: jest.fn(),
   } as unknown as ClaudianPlugin;
@@ -158,6 +162,21 @@ describe('PluginViewActivator.getTabSlotUsage (work-order budget)', () => {
     const activator = new PluginViewActivator(plugin);
     const usage = activator.getTabSlotUsage();
     expect(usage.max - usage.used).toBe(0);
+  });
+
+  it('counts persisted WO tabs for a deferred chat leaf at plugin startup', () => {
+    const { plugin } = createPlugin({
+      existingViewLeaves: [{ isDeferred: true }],
+      lastKnownOpenTabs: [
+        { tabId: 'chat-1', conversationId: null, kind: 'chat' },
+        { tabId: 'chat-2', conversationId: null },
+        { tabId: 'wo-1', conversationId: 'conv-1', kind: 'work-order' },
+      ],
+      pendingReservations: 1,
+      agentBoardQueueCap: 5,
+    });
+    const activator = new PluginViewActivator(plugin);
+    expect(activator.getTabSlotUsage()).toEqual({ used: 2, max: 5 });
   });
 
   it('reports only reservations when no view is mounted (no WO tabs live yet)', () => {

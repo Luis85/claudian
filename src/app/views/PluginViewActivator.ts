@@ -101,9 +101,15 @@ export class PluginViewActivator {
       const wo = tabManager.countTabsByKind('work-order');
       return { used: wo + this.plugin.chatTabReservations.pending, max };
     }
-    const hasClaudianLeaf =
-      this.plugin.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN).length > 0;
-    if (hasClaudianLeaf) {
+    const leaves = this.plugin.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN);
+    if (leaves.length > 0) {
+      if (leaves.every((leaf) => leaf.isDeferred)) {
+        const persistedWorkOrderTabs = this.getLastKnownOpenTabCountFor('work-order');
+        return {
+          used: persistedWorkOrderTabs + this.plugin.chatTabReservations.pending,
+          max,
+        };
+      }
       return { used: max, max };
     }
     return { used: this.plugin.chatTabReservations.pending, max };
@@ -132,6 +138,11 @@ export class PluginViewActivator {
 
   private getLastKnownOpenTabCount(): number {
     return this.plugin.lastKnownTabManagerState?.openTabs.length ?? 0;
+  }
+
+  private getLastKnownOpenTabCountFor(kind: 'chat' | 'work-order'): number {
+    const tabs = this.plugin.lastKnownTabManagerState?.openTabs ?? [];
+    return tabs.filter((tab) => (tab.kind ?? 'chat') === kind).length;
   }
 
   private getMaxTabsLimitFor(kind: 'chat' | 'work-order'): number {
