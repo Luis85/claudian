@@ -3,6 +3,7 @@ import type { StreamChunk } from '@/core/types';
 import {
   CURSOR_ASK_ANSWER_FOLLOWUP_NOTE,
   CursorAskUserQuestionInterceptState,
+  type CursorLabeledAnswer,
   isCursorAskUserQuestionSkippedResult,
 } from '@/providers/cursor/runtime/cursorAskUserQuestion';
 import { finalizeCursorAgentStream, processCursorAgentNdjsonLines } from '@/providers/cursor/runtime/cursorQueryProcessing';
@@ -13,7 +14,7 @@ import { SAMPLE_CURSOR_PLAN_TURN_STREAM_LINES } from '../../../../fixtures/provi
 async function collectStreamChunks(
   lines: readonly string[],
   askCallback: ((input: Record<string, unknown>) => Promise<Record<string, string | string[]> | null>) | null,
-  onAskUserAnswers?: (answers: Record<string, string | string[]>) => void,
+  onAskUserAnswers?: (answers: CursorLabeledAnswer[]) => void,
 ): Promise<StreamChunk[]> {
   const chunks: StreamChunk[] = [];
   const stream = processCursorAgentNdjsonLines(async function* () {
@@ -46,7 +47,7 @@ describe('Cursor ask-user NDJSON pipeline fixture', () => {
     );
 
     expect(callback).toHaveBeenCalledTimes(1);
-    expect(onAskUserAnswers).toHaveBeenCalledWith({ 'Pick a focus': 'Cursor parity' });
+    expect(onAskUserAnswers).toHaveBeenCalledWith([{ label: 'Pick a focus', answer: 'Cursor parity' }]);
     const toolUse = chunks.find((c) => c.type === 'tool_use');
     const toolResult = chunks.find((c) => c.type === 'tool_result');
     expect(toolUse).toMatchObject({ name: TOOL_ASK_USER_QUESTION, id: 'call-ask-1' });
@@ -112,7 +113,10 @@ describe('Cursor ask-user NDJSON pipeline fixture', () => {
       }
     }
 
-    expect(onAnswers.mock.calls).toEqual([[{ Q1: 'A' }], [{ Q2: 'B' }]]);
+    expect(onAnswers.mock.calls).toEqual([
+      [[{ label: 'Q1', answer: 'A' }]],
+      [[{ label: 'Q2', answer: 'B' }]],
+    ]);
     expect(out.filter((c) => c.type === 'tool_result')).toEqual([
       expect.objectContaining({ id: 'a1', content: CURSOR_ASK_ANSWER_FOLLOWUP_NOTE, isError: false }),
       expect.objectContaining({ id: 'a2', content: CURSOR_ASK_ANSWER_FOLLOWUP_NOTE, isError: false }),

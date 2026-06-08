@@ -4,6 +4,7 @@ import {
   buildCursorAnswerFollowUpPrompt,
   CURSOR_ASK_ANSWER_FOLLOWUP_NOTE,
   CursorAskUserQuestionInterceptState,
+  type CursorLabeledAnswer,
   isCursorAskUserQuestionSkippedResult,
   resolveCursorAnswerLabels,
 } from '@/providers/cursor/runtime/cursorAskUserQuestion';
@@ -17,7 +18,7 @@ async function runIntercept(
   chunks: StreamChunk[],
   callback: AskCallback,
   signal?: AbortSignal,
-  onAnswers?: (answers: Record<string, string | string[]>) => void,
+  onAnswers?: (answers: CursorLabeledAnswer[]) => void,
   state: CursorAskUserQuestionInterceptState = new CursorAskUserQuestionInterceptState(),
 ): Promise<StreamChunk[]> {
   const out: StreamChunk[] = [];
@@ -36,10 +37,10 @@ describe('cursorAskUserQuestion', () => {
   });
 
   it('formats collected answers into a resume follow-up prompt', () => {
-    const prompt = buildCursorAnswerFollowUpPrompt({
-      'Next focus': 'Trust foundation',
-      Scope: ['A', 'B'],
-    });
+    const prompt = buildCursorAnswerFollowUpPrompt([
+      { label: 'Next focus', answer: 'Trust foundation' },
+      { label: 'Scope', answer: ['A', 'B'] },
+    ]);
     expect(prompt).toContain('- Next focus: Trust foundation');
     expect(prompt).toContain('- Scope: A, B');
   });
@@ -53,7 +54,28 @@ describe('cursorAskUserQuestion', () => {
       ] },
     );
     // id-keyed answers resolve to prompt text; un-mapped keys pass through.
-    expect(labeled).toEqual({ 'Pick a focus': 'A', plain: 'B' });
+    expect(labeled).toEqual([
+      { label: 'Pick a focus', answer: 'A' },
+      { label: 'plain', answer: 'B' },
+    ]);
+  });
+
+  it('keeps answers distinct when two questions share the same prompt text', () => {
+    // Distinct ids, identical displayed text — must not collapse to one answer.
+    const labeled = resolveCursorAnswerLabels(
+      { a: 'X', b: 'Y' },
+      { questions: [
+        { id: 'a', question: 'Which file?' },
+        { id: 'b', question: 'Which file?' },
+      ] },
+    );
+    expect(labeled).toEqual([
+      { label: 'Which file?', answer: 'X' },
+      { label: 'Which file?', answer: 'Y' },
+    ]);
+    expect(buildCursorAnswerFollowUpPrompt(labeled)).toBe(
+      'Here are my answers to your question(s):\n- Which file?: X\n- Which file?: Y',
+    );
   });
 
   it('surfaces answers re-keyed by question text when the question carries an id', async () => {
@@ -75,7 +97,7 @@ describe('cursorAskUserQuestion', () => {
     const callback = jest.fn().mockResolvedValue({ focus: 'A' });
     const onAnswers = jest.fn();
     await runIntercept(chunks, callback, undefined, onAnswers);
-    expect(onAnswers).toHaveBeenCalledWith({ 'Pick a focus': 'A' });
+    expect(onAnswers).toHaveBeenCalledWith([{ label: 'Pick a focus', answer: 'A' }]);
   });
 
   it('marks the tool block neutral and surfaces answers for a follow-up turn', async () => {
@@ -105,7 +127,7 @@ describe('cursorAskUserQuestion', () => {
 
     expect(callback).toHaveBeenCalledTimes(1);
     // The answer is delivered out-of-band, never folded back into the card.
-    expect(onAnswers).toHaveBeenCalledWith({ 'Pick a focus': 'A' });
+    expect(onAnswers).toHaveBeenCalledWith([{ label: 'Pick a focus', answer: 'A' }]);
     expect(out).toHaveLength(2);
     expect(out[1]).toEqual({
       type: 'tool_result',

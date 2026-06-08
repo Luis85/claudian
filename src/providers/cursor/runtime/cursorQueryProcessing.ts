@@ -1,7 +1,7 @@
 import type { AskUserQuestionCallback } from '../../../core/runtime/types';
 import type { ChatTurnMetadata } from '../../../core/runtime/types';
 import type { StreamChunk } from '../../../core/types';
-import { CursorAskUserQuestionInterceptState } from './cursorAskUserQuestion';
+import { type CursorAskUserAnswersListener, CursorAskUserQuestionInterceptState } from './cursorAskUserQuestion';
 import {
   createCursorQueryChunkTracker,
   type CursorQueryChunkTracker,
@@ -18,8 +18,8 @@ export interface ProcessCursorAgentStreamOptions {
   isPlanTurn: boolean;
   isCanceled: () => boolean;
   onSessionId?: (sessionId: string) => void;
-  /** Fired with the user's answers when an AskUserQuestion is answered (not declined). */
-  onAskUserAnswers?: (answers: Record<string, string | string[]>) => void;
+  /** Fired with the labeled answers when an AskUserQuestion is answered (not declined). */
+  onAskUserAnswers?: CursorAskUserAnswersListener;
 }
 
 export async function* processCursorAgentNdjsonLines(

@@ -28,7 +28,7 @@ import { getCursorEnabledModels } from '../settings';
 import { getCursorState, resolveCursorSessionId } from '../types';
 import { buildCursorAgentEnvironment } from './cursorAgentEnv';
 import { acquireCursorAgentSpawnLock } from './cursorAgentSpawnLock';
-import { buildCursorAnswerFollowUpPrompt } from './cursorAskUserQuestion';
+import { buildCursorAnswerFollowUpPrompt, type CursorLabeledAnswer } from './cursorAskUserQuestion';
 import { resolveCursorModelSelectionForCli } from './cursorCliModel';
 import { buildCursorAgentPrompt, resolveCursorCliPromptArg } from './cursorCliPrompt';
 import { resolveCursorLaunch } from './cursorLaunch';
@@ -116,9 +116,9 @@ export class CursorChatRuntime implements ChatRuntime {
     this.askUserQuestionAbortController = new AbortController();
 
     // Cursor's one-shot CLI cannot answer AskUserQuestion in-process, so any
-    // answer the user gives mid-stream is buffered here and delivered to the
-    // agent as a resumed follow-up turn once this turn completes.
-    let collectedAskAnswers: Record<string, string | string[]> | null = null;
+    // answer the user gives mid-stream is buffered here (ordered, so duplicate
+    // prompts stay distinct) and delivered as a resumed follow-up turn on done.
+    let collectedAskAnswers: CursorLabeledAnswer[] = [];
 
     const cli = this.plugin.getResolvedProviderCliPath('cursor');
     if (!cli) {
@@ -213,7 +213,7 @@ export class CursorChatRuntime implements ChatRuntime {
             this.lastSessionId = sessionId;
           },
           onAskUserAnswers: (answers) => {
-            collectedAskAnswers = { ...(collectedAskAnswers ?? {}), ...answers };
+            collectedAskAnswers = [...collectedAskAnswers, ...answers];
           },
         });
 
@@ -263,7 +263,7 @@ export class CursorChatRuntime implements ChatRuntime {
 
       // Deliver the collected answer to the agent as a resumed follow-up turn.
       // Skipped on cancel so a torn-down turn never auto-fires another query.
-      if (collectedAskAnswers && !this.canceled) {
+      if (collectedAskAnswers.length > 0 && !this.canceled) {
         this.turnMetadata.autoFollowUpText = buildCursorAnswerFollowUpPrompt(collectedAskAnswers);
       }
     } finally {

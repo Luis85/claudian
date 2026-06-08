@@ -33,18 +33,21 @@ export function isCursorAskUserQuestionSkippedResult(content: string): boolean {
   return false;
 }
 
+/** One answered question, label = displayed prompt text (see {@link resolveCursorAnswerLabels}). */
+export interface CursorLabeledAnswer {
+  label: string;
+  answer: string | string[];
+}
+
 /**
  * Formats collected answers into the prompt for the resumed follow-up turn.
  * cursor-agent's `--print` CLI is one-shot and auto-rejects AskUserQuestion, so
- * the answer can only reach the agent as the next (resumed) user message. Keys
- * are the displayed question text (see {@link resolveCursorAnswerLabels}).
+ * the answer can only reach the agent as the next (resumed) user message.
  */
-export function buildCursorAnswerFollowUpPrompt(
-  answers: Record<string, string | string[]>,
-): string {
-  const lines = Object.entries(answers).map(([question, answer]) => {
+export function buildCursorAnswerFollowUpPrompt(answers: CursorLabeledAnswer[]): string {
+  const lines = answers.map(({ label, answer }) => {
     const formatted = Array.isArray(answer) ? answer.join(', ') : answer;
-    return `- ${question}: ${formatted}`;
+    return `- ${label}: ${formatted}`;
   });
   return `Here are my answers to your question(s):\n${lines.join('\n')}`;
 }
@@ -53,12 +56,14 @@ export function buildCursorAnswerFollowUpPrompt(
  * The inline widget keys answers by `question.id ?? question.question`, so when a
  * question carries an `id` the answer map is keyed by that opaque id. Re-key by
  * the displayed question text (from the original tool input) so the resumed
- * follow-up reads `- Pick a focus: A`, not `- focus: A`.
+ * follow-up reads `- Pick a focus: A`, not `- focus: A`. Returns an ordered list
+ * rather than a text-keyed map so two questions sharing the same prompt text but
+ * distinct ids each keep their own answer instead of one overwriting the other.
  */
 export function resolveCursorAnswerLabels(
   answers: Record<string, string | string[]>,
   input: Record<string, unknown> | undefined,
-): Record<string, string | string[]> {
+): CursorLabeledAnswer[] {
   const questions = Array.isArray(input?.questions) ? (input!.questions as unknown[]) : [];
   const textByKey = new Map<string, string>();
   for (const q of questions) {
@@ -70,11 +75,10 @@ export function resolveCursorAnswerLabels(
     textByKey.set(key, text);
   }
 
-  const labeled: Record<string, string | string[]> = {};
-  for (const [key, value] of Object.entries(answers)) {
-    labeled[textByKey.get(key) ?? key] = value;
-  }
-  return labeled;
+  return Object.entries(answers).map(([key, answer]) => ({
+    label: textByKey.get(key) ?? key,
+    answer,
+  }));
 }
 
 function hasUsableAskUserAnswers(
@@ -84,7 +88,7 @@ function hasUsableAskUserAnswers(
 }
 
 export type CursorAskUserAnswersListener = (
-  answers: Record<string, string | string[]>,
+  answers: CursorLabeledAnswer[],
 ) => void;
 
 /**
