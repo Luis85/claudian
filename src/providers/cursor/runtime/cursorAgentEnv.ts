@@ -10,13 +10,20 @@ function windowsSystemRoot(): string | undefined {
 
 function ensureWindowsCursorAgentPath(pathValue: string): string {
   const systemRoot = windowsSystemRoot();
-  if (!systemRoot) {
-    return pathValue;
-  }
+  const programFiles = process.env.ProgramFiles || 'C:\\Program Files';
+  const programFilesX86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';
 
   const extras = [
-    path.win32.join(systemRoot, 'System32'),
-    path.win32.join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0'),
+    ...(systemRoot
+      ? [
+        path.win32.join(systemRoot, 'System32'),
+        path.win32.join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0'),
+      ]
+      : []),
+    path.win32.join(programFiles, 'Git', 'cmd'),
+    path.win32.join(programFiles, 'Git', 'bin'),
+    path.win32.join(programFilesX86, 'Git', 'cmd'),
+    path.win32.join(programFilesX86, 'Git', 'bin'),
   ];
 
   const segments = pathValue.split(';').filter(Boolean);
@@ -52,15 +59,13 @@ function applyWindowsCursorAgentShellEnvironment(
 ): void {
   const userSet = (key: string) => Object.prototype.hasOwnProperty.call(customEnv, key);
 
-  // Git-for-Windows signals route to the Bash executor unless the user opted in.
-  if (!userSet('MSYSTEM')) {
-    delete env.MSYSTEM;
-  }
-  if (!userSet('EXEPATH')) {
-    delete env.EXEPATH;
-  }
-  if (!userSet('MINGW_PREFIX')) {
-    delete env.MINGW_PREFIX;
+  // Cursor Agent uses these Git-for-Windows signals to select its Bash executor.
+  // They are paths/mode flags rather than secrets, and preserving them keeps Bash
+  // tool calls running in Bash instead of silently switching to PowerShell.
+  for (const key of ['MSYSTEM', 'EXEPATH', 'MINGW_PREFIX']) {
+    if (!userSet(key) && typeof process.env[key] === 'string' && !env[key]) {
+      env[key] = process.env[key] as string;
+    }
   }
 
   env.PATH = ensureWindowsCursorAgentPath(env.PATH ?? '');
@@ -68,7 +73,8 @@ function applyWindowsCursorAgentShellEnvironment(
   if (!userSet('SHELL')) {
     const shell = env.SHELL ?? '';
     const looksLikeGitBash = /[\\/]git[\\/].*bash\.exe/i.test(shell) || /msys/i.test(shell);
-    if (!shell || looksLikeGitBash) {
+    const hasGitBashSignals = !!env.MSYSTEM || !!env.EXEPATH || !!env.MINGW_PREFIX || looksLikeGitBash;
+    if (!shell && !hasGitBashSignals) {
       const powershell = resolveWindowsPowerShellShell();
       if (powershell) {
         env.SHELL = powershell;
