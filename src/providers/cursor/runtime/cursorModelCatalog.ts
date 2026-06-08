@@ -2,6 +2,7 @@ import { spawn } from 'child_process';
 
 import { acquireCursorAgentSpawnLock } from './cursorAgentSpawnLock';
 import { resolveCursorLaunch } from './cursorLaunch';
+import { forceKillCursorProcessTree } from './cursorProcessKill';
 
 // Minimal, safe set used before any live discovery completes. Never empty so
 // the picker always has something selectable. composer-1 is a real model (not
@@ -150,6 +151,7 @@ async function runListModels(
     const child = spawn(launch.command, launch.args, {
       cwd,
       env: launch.extraEnv ? { ...env, ...launch.extraEnv } : env,
+      stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
       ...(launch.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
     });
@@ -160,7 +162,10 @@ async function runListModels(
     const timer = window.setTimeout(() => {
       if (!settled) {
         settled = true;
-        child.kill('SIGTERM');
+        // This is a timed-out background probe, so reap the whole tree at once
+        // rather than a SIGTERM the CLI (or a descendant) may ignore on Windows,
+        // which would otherwise leave an orphaned cursor-agent behind.
+        forceKillCursorProcessTree(child);
         reject(new Error('Timed out listing Cursor models'));
       }
     }, LIST_MODELS_TIMEOUT_MS);

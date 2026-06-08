@@ -1,5 +1,7 @@
-// Pattern from live Cursor turns: pre-tool line duplicated via cumulative snapshot,
-// then tools, then a fresh post-tool assistant segment.
+// Pattern from an early cursor-agent build: a pre-tool line doubled via a
+// cumulative snapshot (segment re-sent after a newline), then a tool call, then
+// a fresh post-tool segment with its own snapshot. Exercises the reducer's
+// exact-repeat dedupe plus segment closing on tool calls.
 export const SAMPLE_CURSOR_README_SUMMARIZE_STREAM_LINES: readonly string[] = [
   JSON.stringify({
     type: 'assistant',

@@ -70,4 +70,49 @@ describe('resolveCursorModelSelectionForCli', () => {
 
     resetCursorModelCatalog();
   });
+
+  it('maps claude-opus-4-8 + max to a runnable variant from enabled models', () => {
+    resetCursorModelCatalog();
+    seedCursorModelCatalogForTest(['auto', 'composer-2']);
+    const enabled = [
+      'claude-opus-4-8-low',
+      'claude-opus-4-8-medium',
+      'claude-opus-4-8-max',
+    ];
+
+    expect(resolveCursorModelSelectionForCli('cursor:claude-opus-4-8', 'max', enabled))
+      .toBe('claude-opus-4-8-max');
+
+    resetCursorModelCatalog();
+  });
+
+  it('remaps claude-opus-4-8 to claude-4.8-opus when enabled ids use the new taxonomy', () => {
+    resetCursorModelCatalog();
+    seedCursorModelCatalogForTest(['auto']);
+    const context = {
+      catalogIds: ['auto'],
+      enabledIds: ['claude-4.8-opus-max', 'claude-4.8-opus-high'],
+    };
+
+    expect(resolveCursorModelSelectionForCli('cursor:claude-opus-4-8', 'max', context))
+      .toBe('claude-4.8-opus-max');
+
+    resetCursorModelCatalog();
+  });
+
+  it('does not emit a bare family id when only suffixed variants are enabled', () => {
+    resetCursorModelCatalog();
+    seedCursorModelCatalogForTest(['claude-opus-4-8', 'auto']);
+    const context = {
+      catalogIds: ['claude-opus-4-8', 'auto'],
+      enabledIds: ['claude-opus-4-8-max', 'claude-opus-4-8-high'],
+    };
+
+    expect(resolveCursorModelSelectionForCli('cursor:claude-opus-4-8', 'standard', context))
+      .toBe('claude-opus-4-8-high');
+    expect(resolveCursorModelSelectionForCli('cursor:claude-opus-4-8', 'max', context))
+      .toBe('claude-opus-4-8-max');
+
+    resetCursorModelCatalog();
+  });
 });

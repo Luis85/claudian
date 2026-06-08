@@ -27,6 +27,10 @@ function makePlugin(envText: string): PluginContext {
 
 describe('buildCursorAgentEnvironment', () => {
   const originalEnv = process.env;
+  const originalPlatform = process.platform;
+  function setPlatform(platform: NodeJS.Platform) {
+    Object.defineProperty(process, 'platform', { value: platform, configurable: true });
+  }
   beforeEach(() => {
     process.env = {
       PATH: '/usr/bin',
@@ -38,6 +42,7 @@ describe('buildCursorAgentEnvironment', () => {
   });
   afterEach(() => {
     process.env = originalEnv;
+    setPlatform(originalPlatform);
   });
 
   it('does not leak unrelated host env vars', () => {
@@ -58,5 +63,41 @@ describe('buildCursorAgentEnvironment', () => {
   it('lets custom env override host values', () => {
     const env = buildCursorAgentEnvironment(makePlugin('CURSOR_API_KEY=override'));
     expect(env.CURSOR_API_KEY).toBe('override');
+  });
+
+  describe('on Windows', () => {
+    beforeEach(() => {
+      setPlatform('win32');
+      process.env = {
+        ...process.env,
+        SystemRoot: 'C:\\Windows',
+        PATH: 'C:\\Users\\test\\AppData\\Local\\cursor-agent',
+        MSYSTEM: 'MINGW64',
+        EXEPATH: 'C:\\Program Files\\Git\\bin',
+        SHELL: 'C:\\Program Files\\Git\\bin\\bash.exe',
+      };
+    });
+
+    it('prefers PowerShell over Git Bash signals from the host', () => {
+      const env = buildCursorAgentEnvironment(makePlugin(''));
+      expect(env.MSYSTEM).toBeUndefined();
+      expect(env.EXEPATH).toBeUndefined();
+      expect(env.SHELL).toBe('C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe');
+    });
+
+    it('prepends System32 and WindowsPowerShell to PATH for shell discovery', () => {
+      const env = buildCursorAgentEnvironment(makePlugin(''));
+      expect(env.PATH?.startsWith('C:\\Windows\\System32;C:\\Windows\\System32\\WindowsPowerShell\\v1.0;')).toBe(true);
+      expect(env.PATH).toContain('C:\\Users\\test\\AppData\\Local\\cursor-agent');
+    });
+
+    it('keeps Git Bash env when the user set it in custom env', () => {
+      const env = buildCursorAgentEnvironment(makePlugin(
+        'MSYSTEM=MINGW64\nEXEPATH=C:\\Program Files\\Git\\bin\nSHELL=C:\\Program Files\\Git\\bin\\bash.exe',
+      ));
+      expect(env.MSYSTEM).toBe('MINGW64');
+      expect(env.EXEPATH).toBe('C:\\Program Files\\Git\\bin');
+      expect(env.SHELL).toBe('C:\\Program Files\\Git\\bin\\bash.exe');
+    });
   });
 });

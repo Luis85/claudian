@@ -24,6 +24,7 @@ import { asSettingsBag } from '../../../core/types/settings';
 import { getVaultPath } from '../../../utils/path';
 import { CURSOR_PROVIDER_CAPABILITIES } from '../capabilities';
 import { encodeCursorTurn } from '../prompt/encodeCursorTurn';
+import { getCursorEnabledModels } from '../settings';
 import { getCursorState, resolveCursorSessionId } from '../types';
 import { buildCursorAgentEnvironment } from './cursorAgentEnv';
 import { acquireCursorAgentSpawnLock } from './cursorAgentSpawnLock';
@@ -31,6 +32,8 @@ import { resolveCursorModelSelectionForCli } from './cursorCliModel';
 import { buildCursorAgentPrompt, resolveCursorCliPromptArg } from './cursorCliPrompt';
 import { resolveCursorLaunch } from './cursorLaunch';
 import { buildCursorAgentFlagArgs, type CursorPermissionMode } from './cursorLaunchArgs';
+import { getCachedCursorModelIds } from './cursorModelCatalog';
+import { forceKillCursorProcessTree } from './cursorProcessKill';
 import type { CursorQueryChunkTracker } from './cursorQueryLifecycle';
 import { finalizeCursorAgentStream, processCursorAgentNdjsonLines } from './cursorQueryProcessing';
 
@@ -127,7 +130,11 @@ export class CursorChatRuntime implements ChatRuntime {
     const familyValue = queryOptions?.model
       ?? (typeof snapshot.model === 'string' && snapshot.model.trim() ? snapshot.model.trim() : undefined);
     const mode = typeof snapshot.effortLevel === 'string' ? snapshot.effortLevel : undefined;
-    const model = resolveCursorModelSelectionForCli(familyValue, mode);
+    const settingsBag = asSettingsBag(this.plugin.settings);
+    const model = resolveCursorModelSelectionForCli(familyValue, mode, {
+      catalogIds: getCachedCursorModelIds(),
+      enabledIds: getCursorEnabledModels(settingsBag),
+    });
     const resumeId = this.activeResumeId;
 
     yield {
@@ -161,10 +168,22 @@ export class CursorChatRuntime implements ChatRuntime {
       child = spawn(launch.command, launch.args, {
         cwd: workspaceDir,
         env: launch.extraEnv ? { ...env, ...launch.extraEnv } : env,
+        stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true,
         ...(launch.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
       });
       this.child = child;
+
+      // A failed spawn (ENOENT/EINVAL/EPERM) emits 'error' and may never emit
+      // 'close'. Capture it so the close-promise below can resolve instead of
+      // hanging the turn forever, and surface the reason as the stderr text.
+      let spawnError: Error | null = null;
+      let spawnErrored = false;
+      const onSpawnError = (err: Error) => {
+        spawnError = err;
+        spawnErrored = true;
+      };
+      child.on('error', onSpawnError);
 
       child.stderr?.on('data', (d: Buffer) => {
         stderrAcc += d.toString('utf8');
@@ -200,10 +219,17 @@ export class CursorChatRuntime implements ChatRuntime {
       }
 
       const exitCode = await new Promise<number | null>((resolve) => {
+        if (spawnErrored || child.exitCode !== null) {
+          resolve(child.exitCode);
+          return;
+        }
         child.on('close', (code) => resolve(code));
+        child.on('error', () => resolve(child.exitCode));
       });
 
-      const stderrText = stderrAcc;
+      const stderrText = spawnError
+        ? `${stderrAcc}${stderrAcc ? '\n' : ''}${(spawnError as Error).message}`.trim()
+        : stderrAcc;
       this.child = null;
       this.askUserQuestionAbortController?.abort();
       this.askUserQuestionAbortController = null;
@@ -268,15 +294,12 @@ export class CursorChatRuntime implements ChatRuntime {
         resolve();
       };
       const onExit = () => finish();
-      // Escalate to SIGKILL if cursor-agent (or a descendant holding a pipe
-      // open) ignores SIGTERM, so cancel/teardown can't hang on child exit.
+      // Escalate if cursor-agent (or a descendant holding a pipe open) ignores
+      // SIGTERM, so cancel/teardown can't hang on child exit. On Windows this
+      // tree-kills via taskkill to also reap orphaned bash/git grandchildren.
       const killTimer = window.setTimeout(() => {
-        try {
-          if (child.exitCode === null && child.signalCode === null) {
-            child.kill('SIGKILL');
-          }
-        } catch {
-          // already exited / not killable — the give-up timer will resolve
+        if (child.exitCode === null && child.signalCode === null) {
+          forceKillCursorProcessTree(child);
         }
       }, SIGKILL_TIMEOUT_MS);
       // Hard ceiling: never let teardown hang if 'exit' never fires.

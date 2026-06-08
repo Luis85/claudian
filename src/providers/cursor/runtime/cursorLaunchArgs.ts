@@ -13,6 +13,11 @@ export interface BuildCursorAgentFlagArgsOptions {
   permissionMode: CursorPermissionMode;
   resumeSessionId?: string | null;
   approveMcps?: boolean;
+  /**
+   * Pins a read-only posture (Cursor `ask` mode + engaged sandbox) and ignores
+   * `permissionMode`. Set for auxiliary one-shot queries that must never write.
+   */
+  readOnly?: boolean;
   /** Override for tests; defaults to `process.platform`. */
   platform?: NodeJS.Platform;
 }
@@ -58,6 +63,21 @@ function appendCursorPermissionModeArgs(
   }
 }
 
+/**
+ * Forces a read-only posture regardless of the chat permission mode: Cursor's
+ * `ask` mode is read-only, and we keep the OS sandbox engaged (allowlist on
+ * Windows). This deliberately ignores `yolo`/`plan` so that auxiliary text
+ * transforms (title generation, instruction refine, inline edit) can never
+ * escalate to `--force`/`--sandbox disabled`. Mirrors Codex's aux runner,
+ * which pins `sandbox: 'read-only'` + `approvalPolicy: 'never'`.
+ */
+function appendCursorReadOnlyModeArgs(
+  args: string[],
+  platform: NodeJS.Platform = process.platform,
+): void {
+  args.push('--mode', 'ask', '--sandbox', resolveCursorSandboxMode(platform));
+}
+
 export function buildCursorAgentJsonModeFlagArgs(
   options: BuildCursorAgentFlagArgsOptions,
 ): string[] {
@@ -68,7 +88,11 @@ export function buildCursorAgentJsonModeFlagArgs(
     '--trust',
   ];
 
-  appendCursorPermissionModeArgs(args, options.permissionMode, options.platform);
+  if (options.readOnly) {
+    appendCursorReadOnlyModeArgs(args, options.platform);
+  } else {
+    appendCursorPermissionModeArgs(args, options.permissionMode, options.platform);
+  }
 
   if (options.model) {
     args.push('--model', options.model);

@@ -42,124 +42,127 @@ function extractAssistantText(record: Record<string, unknown>): string {
   return out;
 }
 
-/** stream-partial-output lines are small deltas; final assistant rows are full snapshots. */
-const CURSOR_PARTIAL_ASSISTANT_FRAGMENT_MAX_LEN = 512;
-
-function longestSuffixPrefixOverlap(accumulated: string, incoming: string): number {
-  const max = Math.min(accumulated.length, incoming.length);
-  for (let length = max; length > 0; length -= 1) {
-    if (accumulated.endsWith(incoming.slice(0, length))) {
-      return length;
-    }
-  }
-  return 0;
+/**
+ * Streaming text state for one assistant message in a turn.
+ *
+ * cursor-agent `--stream-partial-output` has a precise, observed contract
+ * (verified against live captures in `.context/stream-capture/`): each text
+ * *segment* is streamed as pure delta fragments (`"I"`, `"'ll list"`, …) and
+ * then closed by exactly one cumulative snapshot of *that segment only*. A tool
+ * call starts a new segment whose snapshot does NOT re-include earlier segments.
+ *
+ * - `committed` is everything already emitted in prior, closed segments.
+ * - `segment` is the fragments accumulated in the current (open) segment.
+ *
+ * Recognizing a snapshot is therefore exact-equality, not fuzzy matching:
+ * `incoming === segment` (segment-local snapshot) or, defensively,
+ * `incoming === committed + segment` (whole-turn snapshot, not seen in practice
+ * but cheap to absorb). A back-to-back doubled snapshot (`X + X`, from a doubled
+ * prompt or a CLI hiccup) is also dropped so the answer never renders twice.
+ */
+export interface CursorAssistantTextState {
+  committed: string;
+  segment: string;
 }
 
-function isCursorRepeatedSuffixExtension(accumulated: string, suffix: string): boolean {
-  if (!suffix) {
-    return true;
-  }
-  const withoutLeadingWs = suffix.replace(/^[\s\n]+/, '');
-  const accTrimmed = accumulated.trimEnd();
-  if (!withoutLeadingWs) {
-    return true;
-  }
-  if (withoutLeadingWs === accumulated || withoutLeadingWs === accTrimmed) {
-    return true;
-  }
-  return false;
+export function createCursorAssistantTextState(): CursorAssistantTextState {
+  return { committed: '', segment: '' };
 }
 
-function startsNewAssistantSegmentAfterBreak(accumulated: string, incoming: string): boolean {
-  if (!accumulated || !incoming) {
-    return false;
-  }
-  if (!accumulated.endsWith('\n')) {
-    return false;
-  }
-  if (incoming.length > CURSOR_PARTIAL_ASSISTANT_FRAGMENT_MAX_LEN) {
-    return false;
-  }
-  if (incoming.startsWith(accumulated) || accumulated.startsWith(incoming)) {
-    return false;
-  }
-  return /^[A-Z]/.test(incoming);
+/** Closes the current segment (e.g. on a tool call) and folds it into committed. */
+export function closeCursorAssistantSegment(state: CursorAssistantTextState): void {
+  state.committed += state.segment;
+  state.segment = '';
 }
 
-function startsNewAssistantSegment(accumulated: string, incoming: string): boolean {
-  if (!accumulated || !incoming) {
-    return false;
-  }
-  if (incoming.length > CURSOR_PARTIAL_ASSISTANT_FRAGMENT_MAX_LEN) {
-    return false;
-  }
-  if (incoming.startsWith(accumulated) || accumulated.startsWith(incoming)) {
-    return false;
-  }
-  if (startsNewAssistantSegmentAfterBreak(accumulated, incoming)) {
-    return true;
-  }
-  const endsParagraph = /[.!?:]\s*$/.test(accumulated) || accumulated.endsWith('\n');
-  const startsNewBlock = /^#{1,6}\s/.test(incoming) || /^[A-Z]/.test(incoming);
-  return endsParagraph && startsNewBlock;
+function isDoubled(text: string, incoming: string): boolean {
+  return text.length > 0 && incoming === text + text;
 }
 
 /**
- * Merges Cursor assistant text whether the NDJSON line is a stream-partial fragment
- * (`"Shell"`, `" output"`, …) or a cumulative snapshot (final assistant row).
+ * True when `tail` is just `text` repeated (optionally after a single newline or
+ * space separator). Used to drop a cumulative snapshot that re-sends the segment
+ * it just streamed — an exact-equality check, not a fuzzy ratio.
+ */
+function isExactRepeat(text: string, tail: string): boolean {
+  if (!text) {
+    return false;
+  }
+  if (tail === text) {
+    return true;
+  }
+  const sep = tail.slice(0, tail.length - text.length);
+  return tail.endsWith(text) && /^[\s]*$/.test(sep) && sep.length <= 2;
+}
+
+/**
+ * Merges one assistant text event into the segment-aware state, returning the
+ * delta to emit (empty when the event is a snapshot or duplicate).
+ */
+export function mergeCursorAssistantText(
+  state: CursorAssistantTextState,
+  incoming: string,
+): string {
+  if (!incoming) {
+    return '';
+  }
+
+  const whole = state.committed + state.segment;
+
+  // Cumulative snapshot of the current segment — already streamed as fragments.
+  if (state.segment && incoming === state.segment) {
+    return '';
+  }
+
+  // Cumulative snapshot of the whole turn so far (defensive; not seen live).
+  if (incoming === whole) {
+    return '';
+  }
+
+  // Doubled snapshot pasted back-to-back (X+X), for the segment or whole turn.
+  if (isDoubled(state.segment, incoming) || isDoubled(whole, incoming)) {
+    return '';
+  }
+
+  // A snapshot that restates the open segment then extends it. If the tail just
+  // repeats the segment (a doubled re-send), drop it; otherwise emit the tail.
+  if (state.segment && incoming.startsWith(state.segment)) {
+    const delta = incoming.slice(state.segment.length);
+    if (isExactRepeat(state.segment, delta)) {
+      return '';
+    }
+    state.segment = incoming;
+    return delta;
+  }
+
+  // Whole-turn cumulative snapshot that re-includes the committed prefix (older
+  // cursor-agent behavior where a post-tool snapshot restates pre-tool text).
+  // Emit only the new tail and adopt it as the current segment so subsequent
+  // fragments append correctly. Guard against the empty-committed case so a
+  // normal first fragment isn't misread (every string startsWith '').
+  if (state.committed && state.segment === '' && incoming.startsWith(state.committed)) {
+    const delta = incoming.slice(state.committed.length);
+    state.segment = delta;
+    return delta;
+  }
+
+  // A normal delta fragment for the open segment.
+  state.segment += incoming;
+  return incoming;
+}
+
+/**
+ * Back-compat shim for callers/tests that thread a single accumulated string.
+ * Treats the whole accumulated text as one open segment. Prefer the
+ * segment-aware {@link mergeCursorAssistantText} in new code.
  */
 export function computeCursorAssistantTextDelta(
   accumulated: string,
   incoming: string,
 ): { delta: string; next: string } {
-  if (!incoming) {
-    return { delta: '', next: accumulated };
-  }
-
-  if (incoming === accumulated) {
-    return { delta: '', next: accumulated };
-  }
-
-  if (incoming.startsWith(accumulated)) {
-    const delta = incoming.slice(accumulated.length);
-    if (isCursorRepeatedSuffixExtension(accumulated, delta)) {
-      return { delta: '', next: accumulated };
-    }
-    if (delta && accumulated.includes(delta)) {
-      return { delta: '', next: accumulated };
-    }
-    return { delta, next: incoming };
-  }
-
-  if (!accumulated) {
-    return { delta: incoming, next: incoming };
-  }
-
-  if (accumulated.startsWith(incoming) || accumulated.endsWith(incoming)) {
-    return { delta: '', next: accumulated };
-  }
-
-  if (incoming.length <= CURSOR_PARTIAL_ASSISTANT_FRAGMENT_MAX_LEN) {
-    if (startsNewAssistantSegment(accumulated, incoming)) {
-      return { delta: incoming, next: incoming };
-    }
-    return { delta: incoming, next: accumulated + incoming };
-  }
-
-  const overlap = longestSuffixPrefixOverlap(accumulated, incoming);
-  if (overlap > 0) {
-    const delta = incoming.slice(overlap);
-    if (delta && accumulated.includes(delta)) {
-      return { delta: '', next: accumulated };
-    }
-    return { delta, next: accumulated + delta };
-  }
-
-  if (accumulated.includes(incoming)) {
-    return { delta: '', next: accumulated };
-  }
-
-  return { delta: incoming, next: incoming };
+  const state: CursorAssistantTextState = { committed: '', segment: accumulated };
+  const delta = mergeCursorAssistantText(state, incoming);
+  return { delta, next: state.segment };
 }
 
 // Reasoning/thinking is undocumented for Cursor. Be liberal about which block
@@ -331,13 +334,13 @@ function parseToolCompletion(record: Record<string, unknown>): CursorToolComplet
 }
 
 export class CursorNdjsonStreamReducer {
-  private assistantAcc = '';
-  private thinkingAcc = '';
+  private assistantText = createCursorAssistantTextState();
+  private thinkingText = createCursorAssistantTextState();
   private model: string | undefined;
 
   reset(): void {
-    this.assistantAcc = '';
-    this.thinkingAcc = '';
+    this.assistantText = createCursorAssistantTextState();
+    this.thinkingText = createCursorAssistantTextState();
   }
 
   reduceLine(line: string): CursorReduceResult {
@@ -379,8 +382,7 @@ export class CursorNdjsonStreamReducer {
               : typeof rec.reasoning === 'string'
                 ? rec.reasoning
                 : '';
-      const { delta, next } = computeCursorAssistantTextDelta(this.thinkingAcc, payload);
-      this.thinkingAcc = next;
+      const delta = mergeCursorAssistantText(this.thinkingText, payload);
       const chunks: StreamChunk[] = delta ? [{ type: 'thinking', content: delta }] : [];
       return { chunks, sessionId };
     }
@@ -419,19 +421,14 @@ export class CursorNdjsonStreamReducer {
       // dedupe so accumulated thinking is never re-sent.
       const fullThinking = extractAssistantThinking(rec);
       if (fullThinking) {
-        const { delta: thinkingDelta, next } = computeCursorAssistantTextDelta(
-          this.thinkingAcc,
-          fullThinking,
-        );
-        this.thinkingAcc = next;
+        const thinkingDelta = mergeCursorAssistantText(this.thinkingText, fullThinking);
         if (thinkingDelta) {
           chunks.push({ type: 'thinking', content: thinkingDelta });
         }
       }
 
       const incoming = extractAssistantText(rec);
-      const { delta, next } = computeCursorAssistantTextDelta(this.assistantAcc, incoming);
-      this.assistantAcc = next;
+      const delta = mergeCursorAssistantText(this.assistantText, incoming);
       if (delta) {
         chunks.push({ type: 'text', content: delta });
       }
@@ -441,10 +438,13 @@ export class CursorNdjsonStreamReducer {
     if (type === 'tool_call') {
       const subtype = rec.subtype;
       if (subtype === 'started') {
-        // Do not reset assistantAcc here. Cursor emits cumulative assistant text
-        // across the whole turn, so wiping the accumulator makes the next assistant
-        // event (which still contains the pre-tool text) re-emit everything already
-        // shown — the answer would appear twice on any tool-using turn.
+        // A tool call closes the current text segment. cursor-agent's next
+        // assistant snapshot is segment-local (it covers only the post-tool
+        // text, not the whole turn), so we fold the open segment into committed
+        // and start fresh. The committed prefix still lets us absorb a stray
+        // whole-turn snapshot defensively without re-emitting prior text.
+        closeCursorAssistantSegment(this.assistantText);
+        closeCursorAssistantSegment(this.thinkingText);
         const tool = parseToolStart(rec);
         if (!tool) {
           return { chunks: [], sessionId };
@@ -475,8 +475,7 @@ export class CursorNdjsonStreamReducer {
     }
 
     if (type === 'result') {
-      this.assistantAcc = '';
-      this.thinkingAcc = '';
+      this.reset();
       if (rec.is_error === true) {
         const msg = typeof rec.result === 'string'
           ? rec.result

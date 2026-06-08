@@ -4,6 +4,7 @@ import {
 } from '../../../core/providers/EnvHashReconciler';
 import type { ProviderSettingsReconciler } from '../../../core/providers/types';
 import { parseEnvironmentVariables } from '../../../utils/env';
+import { mergeCursorKnownModelIds } from '../runtime/cursorCliModel';
 import { getCachedCursorModelIds } from '../runtime/cursorModelCatalog';
 import {
   CURSOR_STANDARD_MODE,
@@ -12,6 +13,7 @@ import {
 } from '../runtime/cursorModelFamily';
 import { fromCursorModelValue, isCursorModelValue, toCursorModelValue } from '../runtime/cursorModelId';
 import {
+  getCursorEnabledModels,
   getCursorProviderSettings,
   updateCursorProviderSettings,
 } from '../settings';
@@ -29,13 +31,16 @@ function collapseModelSelection(settings: Record<string, unknown>): boolean {
     return false;
   }
   const rawId = fromCursorModelValue(model);
-  const cachedIds = getCachedCursorModelIds();
-  const familyId = resolveCursorFamilyId(rawId, cachedIds);
+  const knownIds = mergeCursorKnownModelIds(
+    getCachedCursorModelIds(),
+    getCursorEnabledModels(settings),
+  );
+  const familyId = resolveCursorFamilyId(rawId, knownIds);
   if (familyId === rawId) {
     return false;
   }
 
-  const mode = extractCursorModeValue(rawId, cachedIds);
+  const mode = extractCursorModeValue(rawId, knownIds);
   settings.model = toCursorModelValue(familyId);
   if (mode) {
     settings.effortLevel = mode;

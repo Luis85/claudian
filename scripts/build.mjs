@@ -4,16 +4,23 @@
  * Avoids npm echoing commands
  */
 
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 
-// Run CSS build silently, forwarding args (e.g. `production`) so minify kicks in.
-const args = process.argv.slice(2).join(' ');
-execSync(`node scripts/build-css.mjs ${args}`, { cwd: ROOT, stdio: 'inherit' });
+// Use the absolute path of the running node, not the bare command name. On
+// Windows a PATH polluted with dead version-manager shims (nvm/fnm/scoop/App
+// Execution Alias stubs ordered ahead of the real install) makes `cmd` resolve
+// `node` to a non-functional entry and fail with "command not found". Spawning
+// process.execPath directly (no shell) sidesteps PATH resolution entirely.
+const node = process.execPath;
 
-// Run esbuild with args passed through
-execSync(`node esbuild.config.mjs ${args}`, { cwd: ROOT, stdio: 'inherit' });
+// Forward extra args (e.g. `production`) so minify kicks in.
+const args = process.argv.slice(2);
+execFileSync(node, ['scripts/build-css.mjs', ...args], { cwd: ROOT, stdio: 'inherit' });
+
+// Run esbuild with args passed through.
+execFileSync(node, ['esbuild.config.mjs', ...args], { cwd: ROOT, stdio: 'inherit' });

@@ -315,3 +315,46 @@ export function getCursorModelVariants(
     ?? [{ value: CURSOR_STANDARD_MODE, label: 'Standard' }]
   );
 }
+
+// Cursor has shipped Claude families under both `claude-opus-4-7` and
+// `claude-4.6-opus` shapes. When the picker still carries the legacy family id
+// but the live catalog only exposes the dotted form, remap before combining.
+function flipClaudeFamilyNaming(familyId: string): string | null {
+  const opusLegacy = familyId.match(/^claude-opus-(\d+)-(\d+)$/);
+  if (opusLegacy) {
+    return `claude-${opusLegacy[1]}.${opusLegacy[2]}-opus`;
+  }
+  const opusDotted = familyId.match(/^claude-(\d+)\.(\d+)-opus$/);
+  if (opusDotted) {
+    return `claude-opus-${opusDotted[1]}-${opusDotted[2]}`;
+  }
+  const sonnetLegacy = familyId.match(/^claude-sonnet-(\d+)-(\d+)$/);
+  if (sonnetLegacy) {
+    return `claude-${sonnetLegacy[1]}.${sonnetLegacy[2]}-sonnet`;
+  }
+  const sonnetDotted = familyId.match(/^claude-(\d+)\.(\d+)-sonnet$/);
+  if (sonnetDotted) {
+    return `claude-sonnet-${sonnetDotted[1]}-${sonnetDotted[2]}`;
+  }
+  return null;
+}
+
+/** Resolves a picker family id to the taxonomy present in the known id set. */
+export function resolveCursorFamilyIdInCatalog(
+  familyId: string,
+  rawIds: Iterable<string>,
+): string {
+  const trimmed = familyId.trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+  const families = buildCursorFamilies(rawIds);
+  if (families.some((family) => family.familyId === trimmed)) {
+    return trimmed;
+  }
+  const alternate = flipClaudeFamilyNaming(trimmed);
+  if (alternate && families.some((family) => family.familyId === alternate)) {
+    return alternate;
+  }
+  return trimmed;
+}

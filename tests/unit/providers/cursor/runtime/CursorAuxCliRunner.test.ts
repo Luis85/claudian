@@ -105,4 +105,61 @@ describe('CursorAuxCliRunner shared-runner contract', () => {
 
     await expect(runner.query({ systemPrompt: 'sys' }, 'prompt')).rejects.toThrow('boom');
   });
+
+  it('pins a read-only posture (ask mode, no force) regardless of chat mode', async () => {
+    queueReply(JSON.stringify({ type: 'result', result: 'ok', is_error: false }));
+    const plugin = createMockPlugin();
+    plugin.settings.permissionMode = 'yolo';
+    const runner = new CursorAuxCliRunner(plugin);
+
+    await runner.query({ systemPrompt: 'sys' }, 'prompt');
+
+    const args = (mockSpawn.mock.calls[0][1] as string[]).join(' ');
+    expect(args).toContain('--mode ask');
+    expect(args).not.toContain('--force');
+  });
+
+  it('escalates an aborted aux query to a taskkill tree-kill on win32', async () => {
+    const realPlatform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    try {
+      // A child that never emits close: the abort path must reap it instead of
+      // hanging or leaving an orphaned cursor-agent behind.
+      const child = createMockChild();
+      (child as any).exitCode = null;
+      (child as any).signalCode = null;
+      (child as any).pid = 9911;
+      mockSpawn.mockImplementationOnce(() => child);
+
+      const controller = new AbortController();
+      const runner = new CursorAuxCliRunner(createMockPlugin());
+      // Fire-and-forget; we assert on the kill escalation, not the rejection.
+      const pending = runner
+        .query({ systemPrompt: 'sys', abortController: controller }, 'prompt')
+        .catch(() => undefined);
+
+      // Let the spawn lock + spawnOnce attach its listeners before aborting.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      jest.useFakeTimers();
+      controller.abort();
+      expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+
+      jest.advanceTimersByTime(3_000);
+      const treeKill = mockSpawn.mock.calls.find((call) => call[0] === 'taskkill');
+      expect(treeKill).toBeDefined();
+      expect(treeKill?.[1]).toEqual(
+        expect.arrayContaining(['/PID', '9911', '/T', '/F']),
+      );
+
+      jest.useRealTimers();
+      // Release the never-closing child so the pending promise settles.
+      child.emit('close', null, 'SIGKILL');
+      await pending;
+    } finally {
+      jest.useRealTimers();
+      Object.defineProperty(process, 'platform', { value: realPlatform, configurable: true });
+    }
+  });
 });

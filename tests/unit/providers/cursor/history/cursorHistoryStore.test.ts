@@ -128,6 +128,24 @@ describe('buildChatMessagesFromCursorHistoryRecords', () => {
     expect(messages).toHaveLength(1);
     expect(messages[0].content).toBe('hello');
   });
+
+  it('assigns strictly increasing timestamps so messages sort by order, not one instant', () => {
+    // Cursor blobs carry no timestamp, so hydration synthesizes a monotonic
+    // sequence from a base time rather than stamping every message with an
+    // identical Date.now() (which collapses any time-based ordering/grouping).
+    const messages = buildChatMessagesFromCursorHistoryRecords(
+      [
+        { rowId: 'u1', record: { role: 'user', content: 'first' } },
+        { rowId: 'a1', record: { role: 'assistant', content: 'second' } },
+        { rowId: 'u2', record: { role: 'user', content: 'third' } },
+      ],
+      1_000,
+    );
+
+    expect(messages.map((m) => m.timestamp)).toEqual([1_000, 1_001, 1_002]);
+    const sorted = [...messages].sort((a, b) => a.timestamp - b.timestamp);
+    expect(sorted.map((m) => m.content)).toEqual(['first', 'second', 'third']);
+  });
 });
 
 describe('cursorWorkspaceHash (normalized)', () => {

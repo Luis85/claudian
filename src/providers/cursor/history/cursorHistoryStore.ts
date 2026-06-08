@@ -210,8 +210,16 @@ function openCursorSqliteReadonly(dbPath: string): CursorSqliteOpenResult {
  */
 export function buildChatMessagesFromCursorHistoryRecords(
   records: Array<{ rowId: string; record: Record<string, unknown> }>,
+  baseTimestamp: number = Date.now(),
 ): ChatMessage[] {
   const messages: ChatMessage[] = [];
+  // Cursor's blob records carry no per-message timestamp (only role/content/id/
+  // providerOptions), so we can't recover wall-clock times. Synthesize a
+  // monotonic sequence in blob order instead of stamping every message with an
+  // identical `Date.now()`, which would collapse any time-based ordering or
+  // grouping downstream. `seq` advances only for emitted (pushed) messages;
+  // tool blobs mutate the prior assistant message and don't consume a slot.
+  let seq = 0;
 
   for (const { rowId, record } of records) {
     const role = record.role;
@@ -229,7 +237,7 @@ export function buildChatMessagesFromCursorHistoryRecords(
         id: `cursor-${rowId.slice(0, 12)}`,
         role: 'user',
         content: text,
-        timestamp: Date.now(),
+        timestamp: baseTimestamp + seq++,
       });
       continue;
     }
@@ -240,7 +248,7 @@ export function buildChatMessagesFromCursorHistoryRecords(
         id: `cursor-${rowId.slice(0, 12)}`,
         role: 'assistant',
         content: text,
-        timestamp: Date.now(),
+        timestamp: baseTimestamp + seq++,
         toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
       });
       continue;

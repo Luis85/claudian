@@ -1,8 +1,10 @@
 // Reconstructs the shell + glob tools turn originally captured in the
-// (uncommitted) .context/cursor-stream-tools.ndjson. Cursor emits cumulative
-// assistant snapshots across a whole turn, so pre-tool text is re-sent verbatim
-// (and sometimes doubled) after the tools run; replaying these lines exercises
-// the reducer's dedupe so the answer is shown exactly once.
+// (uncommitted) .context/cursor-stream-tools.ndjson from an early cursor-agent
+// build. That build emitted a whole-turn cumulative snapshot after tools (the
+// post-tool snapshot restated the pre-tool text, and sometimes doubled it).
+// Newer builds emit segment-local snapshots instead (see sampleMultiSegmentStream).
+// The reducer must handle BOTH: this fixture guards the whole-turn-cumulative
+// path so the answer is still shown exactly once.
 export const SAMPLE_CURSOR_TOOLS_STREAM_LINES: readonly string[] = [
   JSON.stringify({
     type: 'system',

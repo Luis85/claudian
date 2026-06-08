@@ -45,4 +45,38 @@ describe('findCursorAgentBinaryPath (win32)', () => {
     const result = findCursorAgentBinaryPath('C:\\fakebin', 'win32');
     expect(result!.endsWith('agent')).toBe(true);
   });
+
+  it('resolves the cursor-agent.cmd shim when only that name is present', () => {
+    mockExisting(p => p.endsWith('cursor-agent.cmd'));
+    const result = findCursorAgentBinaryPath('C:\\fakebin', 'win32');
+    expect(result).not.toBeNull();
+    expect(result!.endsWith('cursor-agent.cmd')).toBe(true);
+  });
+
+  it('prefers agent.exe over cursor-agent.cmd in the same directory', () => {
+    mockExisting(p => p.endsWith('agent.exe') || p.endsWith('cursor-agent.cmd'));
+    const result = findCursorAgentBinaryPath('C:\\fakebin', 'win32');
+    expect(result!.endsWith('agent.exe')).toBe(true);
+  });
+});
+
+describe('findCursorAgentBinaryPath (posix)', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  // The test host may be win32, so assert on the basename rather than a
+  // forward-slash suffix (path.join uses the host separator).
+  const basename = (p: string) => p.replace(/[\\/]+$/, '').split(/[\\/]/).pop() ?? '';
+
+  it('resolves the extensionless cursor-agent name', () => {
+    mockExisting(p => basename(p) === 'cursor-agent');
+    const result = findCursorAgentBinaryPath('/fakebin', 'linux');
+    expect(result).not.toBeNull();
+    expect(basename(result!)).toBe('cursor-agent');
+  });
+
+  it('prefers agent over cursor-agent in the same directory', () => {
+    mockExisting(p => basename(p) === 'agent' || basename(p) === 'cursor-agent');
+    const result = findCursorAgentBinaryPath('/fakebin', 'linux');
+    expect(basename(result!)).toBe('agent');
+  });
 });

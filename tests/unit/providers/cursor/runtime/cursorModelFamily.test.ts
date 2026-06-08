@@ -5,6 +5,7 @@ import {
   extractCursorModeValue,
   getCursorModelVariants,
   resolveCursorFamilyId,
+  resolveCursorFamilyIdInCatalog,
   resolveCursorVendor,
 } from '../../../../../src/providers/cursor/runtime/cursorModelFamily';
 
@@ -23,6 +24,18 @@ describe('resolveCursorFamilyId', () => {
     expect(resolveCursorFamilyId('claude-opus-4-7', ['claude-opus-4-7'])).toBe('claude-opus-4-7');
     expect(resolveCursorFamilyId('gpt-5.5', ['gpt-5.5'])).toBe('gpt-5.5');
     expect(resolveCursorFamilyId('composer-1.5', ['composer-1.5'])).toBe('composer-1.5');
+  });
+});
+
+describe('resolveCursorFamilyIdInCatalog', () => {
+  it('remaps legacy claude-opus family ids to the dotted catalog taxonomy', () => {
+    const known = ['claude-4.8-opus-max', 'claude-4.8-opus-high'];
+    expect(resolveCursorFamilyIdInCatalog('claude-opus-4-8', known)).toBe('claude-4.8-opus');
+  });
+
+  it('keeps the requested id when it already exists in the catalog', () => {
+    const known = ['claude-opus-4-8-max', 'claude-opus-4-8-high'];
+    expect(resolveCursorFamilyIdInCatalog('claude-opus-4-8', known)).toBe('claude-opus-4-8');
   });
 });
 

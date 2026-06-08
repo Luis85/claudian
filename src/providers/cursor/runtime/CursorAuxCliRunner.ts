@@ -5,14 +5,20 @@ import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSet
 import type { PluginContext } from '../../../core/types/PluginContext';
 import { asSettingsBag } from '../../../core/types/settings';
 import { getVaultPath } from '../../../utils/path';
+import { getCursorEnabledModels } from '../settings';
 import { buildCursorAgentEnvironment } from './cursorAgentEnv';
 import { runWithCursorAgentSpawnLock } from './cursorAgentSpawnLock';
-import { resolveCursorModelForCli } from './cursorCliModel';
+import { resolveCursorModelSelectionForCli } from './cursorCliModel';
 import { resolveCursorCliPromptArg } from './cursorCliPrompt';
 import { resolveCursorLaunch } from './cursorLaunch';
-import { buildCursorAgentJsonModeFlagArgs, type CursorPermissionMode } from './cursorLaunchArgs';
+import { buildCursorAgentJsonModeFlagArgs } from './cursorLaunchArgs';
+import { getCachedCursorModelIds } from './cursorModelCatalog';
+import { forceKillCursorProcessTree } from './cursorProcessKill';
 
 export type CursorAuxQueryConfig = AuxQueryConfig;
+
+/** Grace period after SIGTERM before force-killing the aux process tree. */
+const CURSOR_AUX_SIGKILL_TIMEOUT_MS = 3_000;
 
 interface CursorJsonResult {
   type?: string;
@@ -38,15 +44,16 @@ export class CursorAuxCliRunner implements AuxQueryRunner {
     }
 
     const workspaceDir = getVaultPath(this.plugin.app) ?? process.cwd();
-    const permissionMode = this.plugin.settings.permissionMode as CursorPermissionMode;
-    const model = resolveCursorModelForCli(
-      config.model ?? this.resolveProviderModel(),
-    );
+    const model = this.resolveCliModel(config.model);
 
+    // Aux queries (title generation, instruction refine, inline edit) are pure
+    // text transforms. Pin a read-only posture so they never inherit the chat's
+    // yolo/plan permissions or escalate to --force/--sandbox disabled.
     const flagArgs = buildCursorAgentJsonModeFlagArgs({
       workspaceDir,
       model,
-      permissionMode,
+      permissionMode: 'normal',
+      readOnly: true,
       resumeSessionId: this.sessionId,
     });
 
@@ -104,13 +111,23 @@ export class CursorAuxCliRunner implements AuxQueryRunner {
     return resultText;
   }
 
-  private resolveProviderModel(): string | undefined {
+  private resolveCliModel(modelOverride: string | undefined): string | undefined {
+    const settingsBag = asSettingsBag(this.plugin.settings);
     const providerSettings = ProviderSettingsCoordinator.getProviderSettingsSnapshot(
-      asSettingsBag(this.plugin.settings),
+      settingsBag,
       'cursor',
     );
-    const m = providerSettings.model;
-    return typeof m === 'string' && m.trim() ? m.trim() : undefined;
+    const familyValue = modelOverride?.trim()
+      || (typeof providerSettings.model === 'string' && providerSettings.model.trim()
+        ? providerSettings.model.trim()
+        : undefined);
+    const mode = typeof providerSettings.effortLevel === 'string'
+      ? providerSettings.effortLevel
+      : undefined;
+    return resolveCursorModelSelectionForCli(familyValue, mode, {
+      catalogIds: getCachedCursorModelIds(),
+      enabledIds: getCursorEnabledModels(settingsBag),
+    });
   }
 
   private async spawnOnce(
@@ -125,6 +142,7 @@ export class CursorAuxCliRunner implements AuxQueryRunner {
         const child = spawn(launch.command, launch.args, {
           cwd: options.cwd,
           env: launch.extraEnv ? { ...options.env, ...launch.extraEnv } : options.env,
+          stdio: ['pipe', 'pipe', 'pipe'],
           windowsHide: true,
           ...(launch.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
         });
@@ -139,8 +157,25 @@ export class CursorAuxCliRunner implements AuxQueryRunner {
           stderr += chunk.toString('utf8');
         });
 
+        let killTimer: number | null = null;
+        const clearKillTimer = (): void => {
+          if (killTimer !== null) {
+            window.clearTimeout(killTimer);
+            killTimer = null;
+          }
+        };
+
         const onAbort = (): void => {
           child.kill('SIGTERM');
+          // Escalate if cursor-agent (or a descendant holding a pipe open)
+          // ignores SIGTERM. On Windows this tree-kills via taskkill so an
+          // aborted aux query can't orphan bash/git grandchildren.
+          clearKillTimer();
+          killTimer = window.setTimeout(() => {
+            if (child.exitCode === null && child.signalCode === null) {
+              forceKillCursorProcessTree(child);
+            }
+          }, CURSOR_AUX_SIGKILL_TIMEOUT_MS);
         };
         if (signal) {
           if (signal.aborted) {
@@ -151,6 +186,7 @@ export class CursorAuxCliRunner implements AuxQueryRunner {
         }
 
         child.on('error', (err) => {
+          clearKillTimer();
           if (signal) {
             signal.removeEventListener('abort', onAbort);
           }
@@ -158,6 +194,7 @@ export class CursorAuxCliRunner implements AuxQueryRunner {
         });
 
         child.on('close', (code, killSignal) => {
+          clearKillTimer();
           if (signal) {
             signal.removeEventListener('abort', onAbort);
           }

@@ -141,7 +141,9 @@ describe('CursorChatRuntime', () => {
     expect((runtime as any).child).toBeNull();
   });
 
-  it('cancel escalates to SIGKILL when the child ignores SIGTERM', () => {
+  it('cancel escalates to SIGKILL when the child ignores SIGTERM (posix)', () => {
+    const realPlatform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
     jest.useFakeTimers();
     try {
       const runtime = new CursorChatRuntime(createMockPlugin());
@@ -158,6 +160,38 @@ describe('CursorChatRuntime', () => {
       expect(child.kill).toHaveBeenCalledWith('SIGKILL');
     } finally {
       jest.useRealTimers();
+      Object.defineProperty(process, 'platform', { value: realPlatform, configurable: true });
+    }
+  });
+
+  it('escalates to a taskkill tree-kill on win32 when the child ignores the initial signal', () => {
+    const realPlatform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    jest.useFakeTimers();
+    try {
+      const runtime = new CursorChatRuntime(createMockPlugin());
+      const child = setupMockChild();
+      (child as any).exitCode = null;
+      (child as any).signalCode = null;
+      (child as any).pid = 4242;
+      (runtime as any).child = child;
+
+      runtime.cancel();
+      expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+
+      jest.advanceTimersByTime(3_000);
+      // On Windows SIGKILL is unreliable and orphans bash/git descendants, so
+      // teardown reaps the whole tree with taskkill /T /F instead.
+      const treeKill = mockSpawn.mock.calls.find(
+        (call) => call[0] === 'taskkill',
+      );
+      expect(treeKill).toBeDefined();
+      expect(treeKill?.[1]).toEqual(
+        expect.arrayContaining(['/PID', '4242', '/T', '/F']),
+      );
+    } finally {
+      jest.useRealTimers();
+      Object.defineProperty(process, 'platform', { value: realPlatform, configurable: true });
     }
   });
 
@@ -200,6 +234,8 @@ describe('CursorChatRuntime', () => {
   });
 
   it('cleanup escalates to SIGKILL and then resolves on the give-up ceiling', async () => {
+    const realPlatform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
     jest.useFakeTimers();
     try {
       const runtime = new CursorChatRuntime(createMockPlugin());
@@ -227,6 +263,7 @@ describe('CursorChatRuntime', () => {
       expect(resolved).toBe(true);
     } finally {
       jest.useRealTimers();
+      Object.defineProperty(process, 'platform', { value: realPlatform, configurable: true });
     }
   });
 
@@ -295,6 +332,35 @@ describe('CursorChatRuntime', () => {
     }
 
     expect(runtime.consumeTurnMetadata()).toEqual({ planCompleted: true });
+  });
+
+  it('yields an error and terminates when the child fails to spawn (never emits close)', async () => {
+    const runtime = new CursorChatRuntime(createMockPlugin());
+    readlineLines = [];
+
+    // A child that emits 'error' (spawn ENOENT/EINVAL) and never emits 'close'.
+    // Without an 'error' handler the query's close-promise would hang forever.
+    const child = new EventEmitter() as EventEmitter & {
+      stdout: EventEmitter;
+      stderr: EventEmitter;
+      kill: jest.Mock;
+    };
+    child.stdout = new EventEmitter();
+    child.stderr = new EventEmitter();
+    child.kill = jest.fn();
+    (child as unknown as { exitCode: number | null }).exitCode = null;
+    mockSpawn.mockImplementation(() => {
+      queueMicrotask(() => child.emit('error', new Error('spawn ENOENT')));
+      return child;
+    });
+
+    const chunks = [];
+    for await (const chunk of runtime.query(createPreparedTurn())) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks.some(c => c.type === 'error' && /spawn ENOENT/.test((c as { content: string }).content))).toBe(true);
+    expect(chunks[chunks.length - 1]).toEqual({ type: 'done' });
   });
 
   it('yields stderr error when CLI exits non-zero without a result event', async () => {

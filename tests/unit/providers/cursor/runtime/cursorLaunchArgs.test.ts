@@ -100,4 +100,36 @@ describe('cursorLaunchArgs', () => {
     expect(args).not.toContain('stream-json');
     expect(args).not.toContain('--stream-partial-output');
   });
+
+  it('read-only json mode forces ask mode and never escalates to force/disabled sandbox', () => {
+    // Even when the surrounding chat is in yolo, a read-only aux query must
+    // stay read-only: ask mode, no --force, no disabled sandbox on mac/linux.
+    const args = buildCursorAgentJsonModeFlagArgs({
+      workspaceDir: workspace,
+      permissionMode: 'yolo',
+      readOnly: true,
+      platform: 'darwin',
+    });
+    expect(args).toContain('--mode');
+    expect(args).toContain('ask');
+    expect(args).not.toContain('--force');
+    expect(args).toContain('--sandbox');
+    expect(args).toContain('enabled');
+    expect(args).not.toContain('disabled');
+    expect(args).not.toContain('plan');
+  });
+
+  it('read-only json mode uses allowlist sandbox on Windows', () => {
+    const args = buildCursorAgentJsonModeFlagArgs({
+      workspaceDir: workspace,
+      permissionMode: 'plan',
+      readOnly: true,
+      platform: 'win32',
+    });
+    expect(args).toContain('--mode');
+    expect(args).toContain('ask');
+    expect(args).toContain('--sandbox');
+    expect(args).toContain('disabled');
+    expect(args).not.toContain('--force');
+  });
 });
