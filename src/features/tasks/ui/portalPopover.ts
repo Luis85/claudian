@@ -32,6 +32,8 @@ interface PortalPopoverOptions {
   itemDangerClass: string;
   /** Modifier class added when the popover flips above the trigger. */
   upClass: string;
+  /** Invoked whenever the popover closes (any path: select / outside / Esc / scroll). */
+  onClose?: () => void;
 }
 
 // Per-item height + padding used to estimate the popover height before it is
@@ -148,6 +150,7 @@ export class PortalPopover {
     const pop = this.popover;
     this.popover = null;
     pop.remove();
+    this.options.onClose?.();
     // Return focus to the trigger so keyboard users are not stranded.
     this.options.trigger.focus();
   }

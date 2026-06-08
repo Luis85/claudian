@@ -207,17 +207,18 @@
      that predate the variable. */
   border-radius: var(--radius-l, 8px);
   background: color-mix(in srgb, var(--background-primary) 94%, var(--text-normal) 6%);
-  /* Deliberate resting shadow as a Minimal contrast aid (spec drops it, but the
-     washed-out tokens leave the card under-defined without it). */
-  box-shadow: var(--shadow-s);
+  /* No resting shadow (matches the target); the border + lighter surface define
+     the card. The shadow appears on hover as the lift cue. */
+  box-shadow: none;
   cursor: pointer;
 }
 
 .claudian-agent-board-card:hover {
-  /* Lift, not recede: lighten the surface a touch more and brighten the edge. */
+  /* Lift, not recede: lighten the surface a touch more, brighten the edge, and
+     raise the card with a clear shadow (the visible hover cue). */
   border-color: color-mix(in srgb, var(--text-normal) 20%, transparent);
   background: color-mix(in srgb, var(--background-primary) 90%, var(--text-normal) 10%);
-  box-shadow: var(--shadow-s);
+  box-shadow: var(--shadow-l);
 }
 
 .claudian-agent-board-card:active {
@@ -265,7 +266,8 @@
 /* Reveal on card hover/focus. Motion-gated transition; the reveal itself still
    works (opacity flip) when reduced motion is requested. */
 .claudian-agent-board-card:hover .claudian-agent-board-card-actions,
-.claudian-agent-board-card:focus-within .claudian-agent-board-card-actions {
+.claudian-agent-board-card:focus-within .claudian-agent-board-card-actions,
+.claudian-agent-board-card.is-menu-open .claudian-agent-board-card-actions {
   opacity: 1;
   pointer-events: auto;
 }

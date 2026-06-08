@@ -806,6 +806,11 @@ export class AgentBoardRenderer {
     glyph.setAttribute('data-icon', 'more-horizontal');
     setIcon(glyph, 'more-horizontal');
 
+    // The hover cluster hides on mouseleave (it shows on card :hover/:focus-within);
+    // keep it visible while THIS card's ⋯ menu is open so the trigger isn't
+    // orphaned when the pointer moves onto the (body-portaled) menu.
+    const card = cluster.closest('.claudian-agent-board-card') as HTMLElement | null;
+
     const popover = new PortalPopover({
       trigger,
       // Built lazily on each open so guards (canOpenConversation, etc.)
@@ -829,6 +834,7 @@ export class AgentBoardRenderer {
       itemIconClass: 'claudian-agent-board-card-menu-item-icon',
       itemDangerClass: 'claudian-agent-board-card-menu-item--danger',
       upClass: 'claudian-agent-board-card-menu--up',
+      onClose: () => card?.removeClass('is-menu-open'),
     });
 
     trigger.addEventListener('click', (event) => {
@@ -841,6 +847,7 @@ export class AgentBoardRenderer {
       // Only one card menu is open at a time — close any other before opening.
       this.closePopover();
       this.openPopover = popover;
+      card?.addClass('is-menu-open');
       popover.open();
     });
   }

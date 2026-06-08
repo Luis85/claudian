@@ -37,12 +37,17 @@
 .claudian-work-order-modal .claudian-work-order-modal-content {
   flex: 1 1 auto;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
   width: 100%;
   max-width: 100%;
   padding: 0;
-  overflow: hidden;
+  /* The native content is the SINGLE scroll region — Obsidian's proven modal
+     scroll. The header/footer pin via position:sticky inside it; the body flows.
+     Do NOT set overflow:hidden or a flex column here — that disabled the native
+     scroll and was the root of the earlier no-scroll / missing-footer regression. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--background-modifier-border) transparent;
 }
 
 /* ---------- Native modal chrome (Obsidian-owned) ----------
@@ -76,10 +81,15 @@
    (the status→color contract, shared with the pill / ring / ledger).
    ============================================================ */
 .claudian-work-order-modal-header {
-  position: relative;
-  flex: 0 0 auto;
+  /* Pinned to the top of the scrolling content. A solid background keeps the
+     scrolling body from bleeding through. `sticky` is still a containing block
+     for the absolutely-positioned accent line below. */
+  position: sticky;
+  top: 0;
+  z-index: 3;
   padding: 18px 26px 16px;
   border-bottom: 1px solid var(--border-color);
+  background: var(--background-primary);
 }
 
 /* 2px accent line on the header's bottom edge: left-anchored gradient that
@@ -225,40 +235,29 @@
  * secondary background bleeds flush to the scroll-region edges.
  */
 .claudian-work-order-modal .claudian-work-order-modal-body {
-  flex: 1 1 auto;
-  /* The single scroll region. min-height:0 lets this flex child shrink below its
-     content inside the capped `.modal-content`, so it scrolls instead of growing
-     the modal — no hard-coded header/footer subtraction needed. */
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
   display: grid;
   grid-template-columns: 1fr 282px;
-  /* Subtle scrollbar consistent with the sibling Agent Board + the rest of the
-     app (which all key off --background-modifier-border). Firefox/standards path. */
-  scrollbar-width: thin;
-  scrollbar-color: var(--background-modifier-border) transparent;
 }
 
-/* Chromium/Electron scrollbar — track stays transparent so the gutter blends
-   into the sidebar/main surfaces; the thumb insets via a padding-box border so
-   it reads as a slim pill (matches the prototype + the board). */
-.claudian-work-order-modal .claudian-work-order-modal-body::-webkit-scrollbar {
+/* Chromium/Electron scrollbar on the scroll region (the content) — track stays
+   transparent so the gutter blends into the surfaces; the thumb insets via a
+   padding-box border so it reads as a slim pill (matches the board). */
+.claudian-work-order-modal .claudian-work-order-modal-content::-webkit-scrollbar {
   width: 10px;
 }
 
-.claudian-work-order-modal .claudian-work-order-modal-body::-webkit-scrollbar-track {
+.claudian-work-order-modal .claudian-work-order-modal-content::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.claudian-work-order-modal .claudian-work-order-modal-body::-webkit-scrollbar-thumb {
+.claudian-work-order-modal .claudian-work-order-modal-content::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: var(--radius-l);
   background-color: var(--background-modifier-border);
   background-clip: padding-box;
 }
 
-.claudian-work-order-modal .claudian-work-order-modal-body::-webkit-scrollbar-thumb:hover {
+.claudian-work-order-modal .claudian-work-order-modal-content::-webkit-scrollbar-thumb:hover {
   background-color: var(--background-modifier-border-hover);
   background-clip: padding-box;
 }
@@ -295,7 +294,10 @@
    alpha border via color-mix, never an rgba literal).
    ============================================================ */
 .claudian-work-order-modal-footer {
-  flex: 0 0 auto;
+  /* Pinned to the bottom of the scrolling content; solid background. */
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: space-between;
