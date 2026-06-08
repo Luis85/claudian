@@ -3280,6 +3280,36 @@ describe('InputController - Message Queue', () => {
       expect(inputEl.value).toBe('Add more tests');
     });
 
+    it('revise wins over a Cursor answer follow-up (no auto-send, revision preserved)', async () => {
+      const deps = createSendableDeps();
+      const mockAgentService = (deps as any).mockAgentService;
+      mockAgentService.providerId = 'cursor';
+      // A Cursor plan turn that also collected an AskUserQuestion answer.
+      mockAgentService.consumeTurnMetadata = jest.fn().mockReturnValue({
+        planCompleted: true,
+        autoFollowUpText: 'Here are my answers to your question(s):\n- Pick a focus: A',
+        wasSent: true,
+      });
+      mockAgentService.query = jest.fn().mockImplementation(() =>
+        createMockStream([{ type: 'text', content: 'Plan content' }, { type: 'done' }]),
+      );
+
+      const controller = new InputController(deps);
+      (controller as any).showPlanApproval = jest.fn().mockResolvedValue({
+        decision: { type: 'revise', text: 'Tweak the plan' },
+        invalidated: false,
+      });
+
+      const inputEl = deps.getInputEl();
+      inputEl.value = 'Plan this';
+      await controller.sendMessage();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Revision feedback stays in the composer; the answer follow-up is NOT auto-sent.
+      expect(inputEl.value).toBe('Tweak the plan');
+      expect(mockAgentService.query).toHaveBeenCalledTimes(1);
+    });
+
     it('revise does not let queued input overwrite the revision text', async () => {
       const restoreFn = jest.fn();
       const deps = createSendableDeps({
