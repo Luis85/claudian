@@ -68,6 +68,11 @@ const SECTION_HEADINGS = Object.freeze({
  * notes without a title heading are left untouched.
  */
 function syncTitleHeading(body: string, title: string): string {
+  // A title is arbitrary user input (rename). Strip any Claudian generated-region
+  // marker (`<!-- claudian:… -->`) before writing it into the body H1: otherwise
+  // the marker would shadow the real ledger/handoff region markers, which
+  // extract/replaceGeneratedRegion locate by indexOf — corrupting those blocks.
+  const safeTitle = title.replace(/<!--\s*claudian:[\s\S]*?-->/g, '').trim();
   const lines = body.split('\n');
   let inFence = false;
   for (let i = 0; i < lines.length; i += 1) {
@@ -76,7 +81,7 @@ function syncTitleHeading(body: string, title: string): string {
       continue;
     }
     if (!inFence && /^#\s+/.test(lines[i])) {
-      lines[i] = `# ${title}`;
+      lines[i] = `# ${safeTitle}`;
       return lines.join('\n');
     }
   }

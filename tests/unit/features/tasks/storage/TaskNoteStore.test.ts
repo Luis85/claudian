@@ -315,6 +315,25 @@ attempts: 0
     expect(written).not.toContain('# Real Title');
   });
 
+  it('strips embedded Claudian region markers from a renamed title before writing the body H1', () => {
+    // A rename is arbitrary user input. If it carried a `<!-- claudian:… -->`
+    // marker into the H1, that marker would shadow the real ledger/handoff
+    // region markers (located by indexOf), corrupting those generated blocks.
+    const malicious = 'Hijack <!-- claudian:run-ledger-start --> ledger';
+    const written = store.writeFields(VALID_NOTE, { title: malicious }, '2026-06-01T00:00:00.000Z');
+
+    // The body H1 must not carry the marker (the frontmatter title may keep it
+    // verbatim — region lookups operate on the body only, so it is harmless there).
+    expect(written).not.toMatch(/#.*claudian:run-ledger-start/);
+    expect(written).toContain('# Hijack  ledger');
+
+    // The generated ledger region is still locatable and intact after the rename.
+    // Had the H1 leaked a marker, indexOf would match the earlier H1 marker and
+    // slice the wrong region, so this is the load-bearing assertion.
+    const ledger = store.extractGeneratedRegion(written, RUN_LEDGER_START, RUN_LEDGER_END);
+    expect(ledger).toBe('- Existing generated entry.');
+  });
+
   describe('writeStatus heartbeat + pause_reason', () => {
     const baseNote = `---
 type: claudian-work-order

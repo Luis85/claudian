@@ -297,7 +297,7 @@ export class WorkOrderDetailModal extends Modal {
       committed = next;
       // Reflect the normalized single-line value back into the field.
       title.setText(next);
-      void this.callbacks.onSaveFields(task, { title: next });
+      void this.callbacks.onSaveFields?.(task, { title: next });
     };
 
     title.addEventListener('blur', commit);
@@ -676,14 +676,14 @@ export class WorkOrderDetailModal extends Modal {
         value: fm.model ?? '',
         options: this.callbacks.getModelOptions(fm.provider ?? ''),
         emptyOption: { value: '', label: 'Provider default' },
-        onChange: (value) => void this.callbacks.onSaveFields(task, { model: value }),
+        onChange: (value) => void this.callbacks.onSaveFields?.(task, { model: value }),
       });
       renderEditableValueChip({
         parent: providerValue,
         value: fm.provider ?? '',
         options: this.callbacks.getProviderOptions(),
         onChange: (value) => {
-          void this.callbacks.onSaveFields(task, { provider: value, model: '' });
+          void this.callbacks.onSaveFields?.(task, { provider: value, model: '' });
           modelChip.setOptions({
             value: '',
             options: this.callbacks.getModelOptions(value),
@@ -709,7 +709,7 @@ export class WorkOrderDetailModal extends Modal {
         parent: priorityValue,
         value: fm.priority,
         options: PRIORITY_OPTIONS.map((p) => ({ value: p, label: p })),
-        onChange: (value) => void this.callbacks.onSaveFields(task, { priority: value as TaskPriority }),
+        onChange: (value) => void this.callbacks.onSaveFields?.(task, { priority: value as TaskPriority }),
       });
     } else {
       this.renderPriorityBars(priorityValue, fm.priority);
@@ -777,7 +777,7 @@ export class WorkOrderDetailModal extends Modal {
       parent,
       value: persona.id,
       options: personas.map((p) => ({ value: p.id, label: p.name })),
-      onChange: (value) => void this.callbacks.onSaveFields(task, { agent: value }),
+      onChange: (value) => void this.callbacks.onSaveFields?.(task, { agent: value }),
     });
 
     // Lead the chip with the selected persona's avatar (kept in sync on change).
@@ -902,13 +902,15 @@ export class WorkOrderDetailModal extends Modal {
 
     switch (status) {
       case 'inbox':
-        actions.push({
-          variant: 'cta',
-          icon: 'check',
-          labelKey: 'tasks.workOrderModal.actionMarkReady',
-          side: 'right',
-          run: () => this.callbacks.onMarkReady(task),
-        });
+        if (this.callbacks.onMarkReady) {
+          actions.push({
+            variant: 'cta',
+            icon: 'check',
+            labelKey: 'tasks.workOrderModal.actionMarkReady',
+            side: 'right',
+            run: () => this.callbacks.onMarkReady?.(task),
+          });
+        }
         break;
 
       // Live / read-only states: Open conversation + a single Stop danger.
@@ -916,86 +918,104 @@ export class WorkOrderDetailModal extends Modal {
       case 'needs_input':
       case 'needs_approval':
         addOpenConversation();
-        actions.push({
-          variant: 'danger',
-          icon: 'square',
-          labelKey: 'tasks.workOrderModal.actionStop',
-          side: 'right',
-          run: () => this.callbacks.onStop(task),
-        });
+        if (this.callbacks.onStop) {
+          actions.push({
+            variant: 'danger',
+            icon: 'square',
+            labelKey: 'tasks.workOrderModal.actionStop',
+            side: 'right',
+            run: () => this.callbacks.onStop?.(task),
+          });
+        }
         break;
 
       case 'review':
         addOpenConversation();
-        actions.push({
-          variant: 'ghost',
-          icon: 'rotate-ccw',
-          labelKey: 'tasks.workOrderModal.actionRework',
-          side: 'right',
-          run: () => this.callbacks.onRework(task),
-        });
-        actions.push({
-          variant: 'cta',
-          icon: 'check',
-          labelKey: 'tasks.workOrderModal.actionAccept',
-          side: 'right',
-          run: () => this.callbacks.onAccept(task),
-        });
+        if (this.callbacks.onRework) {
+          actions.push({
+            variant: 'ghost',
+            icon: 'rotate-ccw',
+            labelKey: 'tasks.workOrderModal.actionRework',
+            side: 'right',
+            run: () => this.callbacks.onRework?.(task),
+          });
+        }
+        if (this.callbacks.onAccept) {
+          actions.push({
+            variant: 'cta',
+            icon: 'check',
+            labelKey: 'tasks.workOrderModal.actionAccept',
+            side: 'right',
+            run: () => this.callbacks.onAccept?.(task),
+          });
+        }
         break;
 
       case 'needs_handoff':
         addOpenConversation();
-        actions.push({
-          variant: 'danger',
-          icon: 'triangle',
-          labelKey: 'tasks.workOrderModal.actionMarkFailed',
-          side: 'right',
-          run: () => this.callbacks.onMarkFailed?.(task),
-        });
-        actions.push({
-          variant: 'cta',
-          icon: 'check',
-          labelKey: 'tasks.workOrderModal.actionSendToReview',
-          side: 'right',
-          run: () => this.callbacks.onSendToReview?.(task),
-        });
+        if (this.callbacks.onMarkFailed) {
+          actions.push({
+            variant: 'danger',
+            icon: 'triangle',
+            labelKey: 'tasks.workOrderModal.actionMarkFailed',
+            side: 'right',
+            run: () => this.callbacks.onMarkFailed?.(task),
+          });
+        }
+        if (this.callbacks.onSendToReview) {
+          actions.push({
+            variant: 'cta',
+            icon: 'check',
+            labelKey: 'tasks.workOrderModal.actionSendToReview',
+            side: 'right',
+            run: () => this.callbacks.onSendToReview?.(task),
+          });
+        }
         break;
 
       case 'done':
-        actions.push({
-          variant: 'ghost',
-          icon: 'archive',
-          labelKey: 'tasks.workOrderModal.actionArchive',
-          side: 'left',
-          run: () => this.callbacks.onArchive(task),
-        });
-        actions.push({
-          variant: 'ghost',
-          icon: 'rotate-ccw',
-          labelKey: 'tasks.workOrderModal.actionReopen',
-          side: 'right',
-          run: () => this.callbacks.onReopen(task),
-        });
+        if (this.callbacks.onArchive) {
+          actions.push({
+            variant: 'ghost',
+            icon: 'archive',
+            labelKey: 'tasks.workOrderModal.actionArchive',
+            side: 'left',
+            run: () => this.callbacks.onArchive?.(task),
+          });
+        }
+        if (this.callbacks.onReopen) {
+          actions.push({
+            variant: 'ghost',
+            icon: 'rotate-ccw',
+            labelKey: 'tasks.workOrderModal.actionReopen',
+            side: 'right',
+            run: () => this.callbacks.onReopen?.(task),
+          });
+        }
         break;
 
       case 'failed':
-        actions.push({
-          variant: 'ghost',
-          icon: 'archive',
-          labelKey: 'tasks.workOrderModal.actionArchive',
-          side: 'right',
-          run: () => this.callbacks.onArchive(task),
-        });
+        if (this.callbacks.onArchive) {
+          actions.push({
+            variant: 'ghost',
+            icon: 'archive',
+            labelKey: 'tasks.workOrderModal.actionArchive',
+            side: 'right',
+            run: () => this.callbacks.onArchive?.(task),
+          });
+        }
         break;
 
       case 'canceled':
-        actions.push({
-          variant: 'ghost',
-          icon: 'archive',
-          labelKey: 'tasks.workOrderModal.actionArchive',
-          side: 'right',
-          run: () => this.callbacks.onArchive(task),
-        });
+        if (this.callbacks.onArchive) {
+          actions.push({
+            variant: 'ghost',
+            icon: 'archive',
+            labelKey: 'tasks.workOrderModal.actionArchive',
+            side: 'right',
+            run: () => this.callbacks.onArchive?.(task),
+          });
+        }
         break;
 
       // ready / needs_fix (and any future status): Open note + Open conversation
