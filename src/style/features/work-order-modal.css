@@ -80,16 +80,30 @@
    `--claudian-wo-header-color`, set by the status modifiers below
    (the status→color contract, shared with the pill / ring / ledger).
    ============================================================ */
+/* Native modal header wrapper (a pinned sibling of the scrolling content): drop
+   its default padding/border/min-height so our header fills it edge-to-edge. */
+.claudian-work-order-modal .modal-header {
+  padding: 0;
+  margin: 0;
+  border: none;
+  min-height: 0;
+}
+
+/* The header is rendered into the native `.modal-title`, so it stays pinned above
+   the scroll with no custom sticky layer. position:relative makes it the
+   containing block for the accent line; the resets neutralize Obsidian's native
+   `.modal-title` styling (centering, font, margins). */
 .claudian-work-order-modal-header {
-  /* Pinned to the top of the scrolling content. A solid background keeps the
-     scrolling body from bleeding through. `sticky` is still a containing block
-     for the absolutely-positioned accent line below. */
-  position: sticky;
-  top: 0;
-  z-index: 3;
+  position: relative;
   padding: 18px 26px 16px;
+  margin: 0;
   border-bottom: 1px solid var(--border-color);
   background: var(--background-primary);
+  text-align: left;
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-normal);
+  line-height: var(--line-height-normal);
+  color: var(--text-normal);
 }
 
 /* 2px accent line on the header's bottom edge: left-anchored gradient that

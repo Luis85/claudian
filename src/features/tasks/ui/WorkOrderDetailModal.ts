@@ -164,19 +164,20 @@ export class WorkOrderDetailModal extends Modal {
       '--dialog-max-width': 'min(960px, 92vw)',
     });
 
-    // Sticky-shell frame: contentEl (the native `.modal-content`) becomes a flex
-    // column with a pinned header, a scrollable two-pane body (main + properties
-    // sidebar), and a pinned footer. Only the body scrolls; the header/footer
-    // stay reachable. The header owns the title, so the native modal title is
-    // left empty, and Obsidian's built-in close button is used as-is.
+    // Pinned header → the NATIVE modal header. `this.titleEl` is Obsidian's
+    // `.modal-title`, which sits inside a `.modal-header` that is a SIBLING of
+    // `.modal-content` — so it stays pinned above the scrolling content without a
+    // custom sticky layer, and we reuse the native chrome instead of duplicating
+    // it. The body + footer live in the scrolling content.
+    const header = this.titleEl;
+    header.addClass('claudian-work-order-modal-header');
+    this.renderHeader(header);
+
     this.contentEl.addClass('claudian-work-order-modal-content');
-    const header = this.contentEl.createDiv({ cls: 'claudian-work-order-modal-header' });
     const body = this.contentEl.createDiv({ cls: 'claudian-work-order-modal-body' });
     const main = body.createDiv({ cls: 'claudian-work-order-modal-main' });
     const sidebar = body.createDiv({ cls: 'claudian-work-order-modal-sidebar' });
     const footer = this.contentEl.createDiv({ cls: 'claudian-work-order-modal-footer' });
-
-    this.renderHeader(header);
 
     this.renderPropertiesSidebar(sidebar);
 
@@ -608,11 +609,16 @@ export class WorkOrderDetailModal extends Modal {
 
     const meter = parent.createDiv({ cls: 'claudian-work-order-modal-ring-meter' });
 
+    // Pass the classes as an ARRAY, not a joined string: Obsidian's createSvg
+    // applies `cls` via classList.add(), which throws InvalidCharacterError on a
+    // space-separated string (unlike createEl). A joined string here aborted
+    // onOpen mid-render, so acceptance items, the activity block, and the footer
+    // never rendered.
     const ringClasses = [
       'claudian-work-order-modal-ring',
       `claudian-work-order-modal-ring--${status}`,
       ...(complete ? ['claudian-work-order-modal-ring--complete'] : []),
-    ].join(' ');
+    ];
     const svg = meter.createSvg('svg', {
       cls: ringClasses,
       attr: { width: 22, height: 22, viewBox: '0 0 22 22' },
