@@ -198,15 +198,6 @@
   }
 }
 
-.claudian-work-order-modal-title-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 7px;
-  color: var(--text-faint);
-  font-size: var(--font-smaller);
-}
-
 /* Status → header accent/live-dot color contract (mirrors the status pill). */
 .claudian-work-order-modal-header--inbox { --claudian-wo-header-color: var(--color-base-60); }
 .claudian-work-order-modal-header--ready { --claudian-wo-header-color: var(--color-blue); }

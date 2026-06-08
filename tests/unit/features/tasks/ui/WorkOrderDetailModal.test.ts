@@ -1521,10 +1521,8 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
       expect(title.attrs['contenteditable']).toBe('plaintext-only');
       // Keyboard-focusable.
       expect(title.attrs['tabindex']).toBe('0');
-      // The rename hint is present only in editable states.
-      const hint = find(header, 'claudian-work-order-modal-title-hint');
-      expect(hint).toBeDefined();
-      expect(hint!.text.length).toBeGreaterThan(0);
+      // The rename hint was dropped — editable states no longer render it.
+      expect(find(header, 'claudian-work-order-modal-title-hint')).toBeUndefined();
     },
   );
 

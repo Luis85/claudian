@@ -314,9 +314,6 @@ export class WorkOrderDetailModal extends Modal {
         title.blur();
       }
     });
-
-    const hint = header.createDiv({ cls: 'claudian-work-order-modal-title-hint' });
-    hint.setText(t('tasks.workOrderModal.editTitleHint'));
   }
 
   /**
