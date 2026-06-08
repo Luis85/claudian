@@ -3213,6 +3213,41 @@ describe('InputController - Message Queue', () => {
       expect(mockAgentService.query).toHaveBeenCalledTimes(2);
     });
 
+    it('auto-sends a Cursor answer as a resumed follow-up turn', async () => {
+      const deps = createSendableDeps();
+      const mockAgentService = (deps as any).mockAgentService;
+      mockAgentService.providerId = 'cursor';
+      // First turn surfaces the collected answer; the resumed follow-up does not.
+      mockAgentService.consumeTurnMetadata = jest.fn()
+        .mockReturnValueOnce({ autoFollowUpText: 'Here are my answers to your question(s):\n- Pick a focus: A', wasSent: true })
+        .mockReturnValueOnce({ wasSent: true });
+
+      let callCount = 0;
+      mockAgentService.query = jest.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return createMockStream([
+            { type: 'tool_use', id: 'ask-1', name: 'AskUserQuestion', input: {} },
+            { type: 'tool_result', id: 'ask-1', content: 'Answer sent as a follow-up message.' },
+            { type: 'done' },
+          ]);
+        }
+        return createMockStream([
+          { type: 'text', content: 'Continuing with your answer.' },
+          { type: 'done' },
+        ]);
+      });
+
+      const controller = new InputController(deps);
+      const inputEl = deps.getInputEl();
+      inputEl.value = 'Help me pick';
+      await controller.sendMessage();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // The follow-up turn was auto-sent, carrying the answer to the resumed session.
+      expect(mockAgentService.query).toHaveBeenCalledTimes(2);
+    });
+
     it('revise keeps plan mode active and populates input', async () => {
       const restoreFn = jest.fn();
       const deps = createSendableDeps({

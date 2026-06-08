@@ -18,6 +18,8 @@ export interface ProcessCursorAgentStreamOptions {
   isPlanTurn: boolean;
   isCanceled: () => boolean;
   onSessionId?: (sessionId: string) => void;
+  /** Fired with the user's answers when an AskUserQuestion is answered (not declined). */
+  onAskUserAnswers?: (answers: Record<string, string | string[]>) => void;
 }
 
 export async function* processCursorAgentNdjsonLines(
@@ -40,6 +42,7 @@ export async function* processCursorAgentNdjsonLines(
       chunks,
       options.askCallback,
       options.askSignal,
+      options.onAskUserAnswers,
     )) {
       observeCursorStreamChunk(chunk, chunkTracker);
       yield chunk;

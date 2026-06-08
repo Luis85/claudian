@@ -455,6 +455,9 @@ export class InputController {
     let wasInvalidated = false;
     let didEnqueueToSdk = false;
     let planCompleted = false;
+    // Set by providers (Cursor) that cannot answer an AskUserQuestion in-process:
+    // the collected answer is auto-sent as a resumed follow-up turn.
+    let autoFollowUpContent: string | null = null;
 
     // Lazy initialization: ensure service is ready before first query
     if (this.deps.ensureServiceInitialized) {
@@ -540,6 +543,7 @@ export class InputController {
       finalAssistantMsg.assistantMessageId = turnMetadata.assistantMessageId ?? finalAssistantMsg.assistantMessageId;
       didEnqueueToSdk = didEnqueueToSdk || turnMetadata.wasSent === true;
       planCompleted = planCompleted || turnMetadata.planCompleted === true;
+      autoFollowUpContent = turnMetadata.autoFollowUpText ?? autoFollowUpContent;
 
       // ALWAYS clear the timer interval, even on stream invalidation (prevents memory leaks)
       state.clearFlavorTimerInterval();
@@ -661,6 +665,14 @@ export class InputController {
           // Auto-implement takes precedence over both approve-new-session and queued input
           if (planAutoSendContent) {
             this.deps.getInputEl().value = planAutoSendContent;
+            this.sendMessage().catch((err: unknown) => {
+              this.deps.plugin.logger.scope('input').error('sendMessage failed unexpectedly', err);
+            });
+          } else if (autoFollowUpContent && !didCancelThisTurn) {
+            // Cursor answered an AskUserQuestion out-of-band (its one-shot CLI
+            // can't answer in-process); resume the session carrying the answer so
+            // the agent actually continues with it. Renders as a follow-up message.
+            this.deps.getInputEl().value = autoFollowUpContent;
             this.sendMessage().catch((err: unknown) => {
               this.deps.plugin.logger.scope('input').error('sendMessage failed unexpectedly', err);
             });

@@ -3,7 +3,7 @@ import '@/providers';
 import { EventEmitter } from 'events';
 
 import type { PreparedChatTurn } from '@/core/runtime/types';
-import type { ChatMessage } from '@/core/types';
+import type { ChatMessage, StreamChunk } from '@/core/types';
 import { CursorChatRuntime } from '@/providers/cursor/runtime/CursorChatRuntime';
 import { CURSOR_CLI_INLINE_PROMPT_MAX_CHARS } from '@/providers/cursor/runtime/cursorCliPrompt';
 
@@ -332,6 +332,93 @@ describe('CursorChatRuntime', () => {
     }
 
     expect(runtime.consumeTurnMetadata()).toEqual({ planCompleted: true });
+  });
+
+  it('consumeTurnMetadata carries an answer follow-up after AskUserQuestion is answered', async () => {
+    const runtime = new CursorChatRuntime(createMockPlugin());
+    runtime.setAskUserQuestionCallback(jest.fn().mockResolvedValue({ 'Pick a focus': 'A' }));
+
+    readlineLines = [
+      JSON.stringify({ type: 'system', subtype: 'init', session_id: 'ask-sess' }),
+      JSON.stringify({
+        type: 'tool_call',
+        subtype: 'started',
+        call_id: 'ask-1',
+        tool_call: {
+          askQuestionToolCall: {
+            args: { questions: [{ id: 'focus', question: 'Pick a focus', options: [{ id: 'a', label: 'A' }] }] },
+          },
+        },
+      }),
+      JSON.stringify({
+        type: 'tool_call',
+        subtype: 'completed',
+        call_id: 'ask-1',
+        tool_call: {
+          askQuestionToolCall: {
+            args: { questions: [{ id: 'focus', question: 'Pick a focus' }] },
+            result: { rejected: { reason: 'Questions skipped by user' } },
+          },
+        },
+      }),
+      JSON.stringify({ type: 'result', subtype: 'success', is_error: false }),
+    ];
+    setupMockChild();
+
+    const chunks: StreamChunk[] = [];
+    for await (const chunk of runtime.query(createPreparedTurn('ask the user'))) {
+      chunks.push(chunk);
+    }
+
+    // The tool result is a neutral marker, not the answer (delivered as follow-up).
+    expect(chunks).toContainEqual(expect.objectContaining({
+      type: 'tool_result',
+      id: 'ask-1',
+      content: 'Answer sent as a follow-up message.',
+    }));
+    const metadata = runtime.consumeTurnMetadata();
+    expect(metadata.autoFollowUpText).toContain('Pick a focus: A');
+  });
+
+  it('omits the answer follow-up when the turn is canceled', async () => {
+    const runtime = new CursorChatRuntime(createMockPlugin());
+    runtime.setAskUserQuestionCallback(jest.fn().mockResolvedValue({ 'Pick a focus': 'A' }));
+
+    readlineLines = [
+      JSON.stringify({ type: 'system', subtype: 'init', session_id: 'ask-sess' }),
+      JSON.stringify({
+        type: 'tool_call',
+        subtype: 'started',
+        call_id: 'ask-1',
+        tool_call: {
+          askQuestionToolCall: {
+            args: { questions: [{ id: 'focus', question: 'Pick a focus', options: [{ id: 'a', label: 'A' }] }] },
+          },
+        },
+      }),
+      JSON.stringify({
+        type: 'tool_call',
+        subtype: 'completed',
+        call_id: 'ask-1',
+        tool_call: {
+          askQuestionToolCall: {
+            args: { questions: [{ id: 'focus', question: 'Pick a focus' }] },
+            result: { rejected: { reason: 'Questions skipped by user' } },
+          },
+        },
+      }),
+      JSON.stringify({ type: 'result', subtype: 'success', is_error: false }),
+    ];
+    setupMockChild();
+
+    const gen = runtime.query(createPreparedTurn('ask the user'));
+    await gen.next();
+    runtime.cancel();
+    for await (const chunk of gen) {
+      void chunk;
+    }
+
+    expect(runtime.consumeTurnMetadata().autoFollowUpText).toBeUndefined();
   });
 
   it('yields an error and terminates when the child fails to spawn (never emits close)', async () => {

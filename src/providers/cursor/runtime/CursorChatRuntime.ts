@@ -28,6 +28,7 @@ import { getCursorEnabledModels } from '../settings';
 import { getCursorState, resolveCursorSessionId } from '../types';
 import { buildCursorAgentEnvironment } from './cursorAgentEnv';
 import { acquireCursorAgentSpawnLock } from './cursorAgentSpawnLock';
+import { buildCursorAnswerFollowUpPrompt } from './cursorAskUserQuestion';
 import { resolveCursorModelSelectionForCli } from './cursorCliModel';
 import { buildCursorAgentPrompt, resolveCursorCliPromptArg } from './cursorCliPrompt';
 import { resolveCursorLaunch } from './cursorLaunch';
@@ -113,6 +114,11 @@ export class CursorChatRuntime implements ChatRuntime {
     this.canceled = false;
     this.askUserQuestionAbortController?.abort();
     this.askUserQuestionAbortController = new AbortController();
+
+    // Cursor's one-shot CLI cannot answer AskUserQuestion in-process, so any
+    // answer the user gives mid-stream is buffered here and delivered to the
+    // agent as a resumed follow-up turn once this turn completes.
+    let collectedAskAnswers: Record<string, string | string[]> | null = null;
 
     const cli = this.plugin.getResolvedProviderCliPath('cursor');
     if (!cli) {
@@ -206,6 +212,9 @@ export class CursorChatRuntime implements ChatRuntime {
           onSessionId: (sessionId) => {
             this.lastSessionId = sessionId;
           },
+          onAskUserAnswers: (answers) => {
+            collectedAskAnswers = { ...(collectedAskAnswers ?? {}), ...answers };
+          },
         });
 
         let next = await stream.next();
@@ -251,6 +260,12 @@ export class CursorChatRuntime implements ChatRuntime {
       }
 
       this.turnMetadata = { ...this.turnMetadata, ...turnMetadata };
+
+      // Deliver the collected answer to the agent as a resumed follow-up turn.
+      // Skipped on cancel so a torn-down turn never auto-fires another query.
+      if (collectedAskAnswers && !this.canceled) {
+        this.turnMetadata.autoFollowUpText = buildCursorAnswerFollowUpPrompt(collectedAskAnswers);
+      }
     } finally {
       cleanupPromptFile?.();
       releaseSpawnLock();

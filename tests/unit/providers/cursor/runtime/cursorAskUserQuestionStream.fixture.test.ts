@@ -1,6 +1,7 @@
 import { TOOL_ASK_USER_QUESTION } from '@/core/tools/toolNames';
 import type { StreamChunk } from '@/core/types';
 import {
+  CURSOR_ASK_ANSWER_FOLLOWUP_NOTE,
   CursorAskUserQuestionInterceptState,
   isCursorAskUserQuestionSkippedResult,
 } from '@/providers/cursor/runtime/cursorAskUserQuestion';
@@ -12,6 +13,7 @@ import { SAMPLE_CURSOR_PLAN_TURN_STREAM_LINES } from '../../../../fixtures/provi
 async function collectStreamChunks(
   lines: readonly string[],
   askCallback: ((input: Record<string, unknown>) => Promise<Record<string, string | string[]> | null>) | null,
+  onAskUserAnswers?: (answers: Record<string, string | string[]>) => void,
 ): Promise<StreamChunk[]> {
   const chunks: StreamChunk[] = [];
   const stream = processCursorAgentNdjsonLines(async function* () {
@@ -22,6 +24,7 @@ async function collectStreamChunks(
     askCallback,
     isPlanTurn: false,
     isCanceled: () => false,
+    onAskUserAnswers,
   });
 
   let next = await stream.next();
@@ -33,28 +36,37 @@ async function collectStreamChunks(
 }
 
 describe('Cursor ask-user NDJSON pipeline fixture', () => {
-  it('replaces CLI skipped result when answers arrive on a later NDJSON line', async () => {
+  it('marks the tool block neutral and surfaces answers for the follow-up turn', async () => {
     const callback = jest.fn().mockResolvedValue({ 'Pick a focus': 'Cursor parity' });
-    const chunks = await collectStreamChunks(SAMPLE_CURSOR_ASK_USER_QUESTION_STREAM_LINES, callback);
+    const onAskUserAnswers = jest.fn();
+    const chunks = await collectStreamChunks(
+      SAMPLE_CURSOR_ASK_USER_QUESTION_STREAM_LINES,
+      callback,
+      onAskUserAnswers,
+    );
 
     expect(callback).toHaveBeenCalledTimes(1);
+    expect(onAskUserAnswers).toHaveBeenCalledWith({ 'Pick a focus': 'Cursor parity' });
     const toolUse = chunks.find((c) => c.type === 'tool_use');
     const toolResult = chunks.find((c) => c.type === 'tool_result');
     expect(toolUse).toMatchObject({ name: TOOL_ASK_USER_QUESTION, id: 'call-ask-1' });
     expect(toolResult).toMatchObject({
       id: 'call-ask-1',
       isError: false,
-      content: 'Pick a focus: Cursor parity',
+      content: CURSOR_ASK_ANSWER_FOLLOWUP_NOTE,
     });
     expect(isCursorAskUserQuestionSkippedResult(String(toolResult?.content))).toBe(false);
   });
 
-  it('keeps skipped result when the user declines across NDJSON lines', async () => {
+  it('keeps skipped result and surfaces no answers when the user declines', async () => {
+    const onAskUserAnswers = jest.fn();
     const chunks = await collectStreamChunks(
       SAMPLE_CURSOR_ASK_USER_QUESTION_STREAM_LINES,
       jest.fn().mockResolvedValue(null),
+      onAskUserAnswers,
     );
     const toolResult = chunks.find((c) => c.type === 'tool_result');
+    expect(onAskUserAnswers).not.toHaveBeenCalled();
     expect(toolResult).toBeDefined();
     expect(isCursorAskUserQuestionSkippedResult(String(toolResult?.content))).toBe(true);
   });
@@ -64,6 +76,7 @@ describe('Cursor ask-user NDJSON pipeline fixture', () => {
     const callback = jest.fn()
       .mockResolvedValueOnce({ Q1: 'A' })
       .mockResolvedValueOnce({ Q2: 'B' });
+    const onAnswers = jest.fn();
 
     const batches: StreamChunk[][] = [
       [{
@@ -94,14 +107,15 @@ describe('Cursor ask-user NDJSON pipeline fixture', () => {
 
     const out: StreamChunk[] = [];
     for (const batch of batches) {
-      for await (const chunk of state.interceptChunks(batch, callback)) {
+      for await (const chunk of state.interceptChunks(batch, callback, undefined, onAnswers)) {
         out.push(chunk);
       }
     }
 
+    expect(onAnswers.mock.calls).toEqual([[{ Q1: 'A' }], [{ Q2: 'B' }]]);
     expect(out.filter((c) => c.type === 'tool_result')).toEqual([
-      expect.objectContaining({ id: 'a1', content: 'Q1: A', isError: false }),
-      expect.objectContaining({ id: 'a2', content: 'Q2: B', isError: false }),
+      expect.objectContaining({ id: 'a1', content: CURSOR_ASK_ANSWER_FOLLOWUP_NOTE, isError: false }),
+      expect.objectContaining({ id: 'a2', content: CURSOR_ASK_ANSWER_FOLLOWUP_NOTE, isError: false }),
     ]);
   });
 });

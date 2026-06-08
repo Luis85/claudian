@@ -2,6 +2,14 @@ import type { AskUserQuestionCallback } from '../../../core/runtime/types';
 import { TOOL_ASK_USER_QUESTION } from '../../../core/tools/toolNames';
 import type { StreamChunk } from '../../../core/types';
 
+/**
+ * Marks the question's tool block once the user has answered. The answer itself
+ * is NOT folded in here — it is delivered to the agent as a resumed follow-up
+ * turn (see {@link buildCursorAnswerFollowUpPrompt}), so the tool result only
+ * records that the out-of-band answer was sent.
+ */
+export const CURSOR_ASK_ANSWER_FOLLOWUP_NOTE = 'Answer sent as a follow-up message.';
+
 export function isCursorAskUserQuestionSkippedResult(content: string): boolean {
   const trimmed = content.trim();
   if (!trimmed) {
@@ -25,22 +33,19 @@ export function isCursorAskUserQuestionSkippedResult(content: string): boolean {
   return false;
 }
 
-export interface CursorAskUserQuestionToolResultPayload {
-  content: string;
-  toolUseResult: { answers: Record<string, string | string[]> };
-}
-
-export function buildCursorAskUserQuestionToolResult(
+/**
+ * Formats collected answers into the prompt for the resumed follow-up turn.
+ * cursor-agent's `--print` CLI is one-shot and auto-rejects AskUserQuestion, so
+ * the answer can only reach the agent as the next (resumed) user message.
+ */
+export function buildCursorAnswerFollowUpPrompt(
   answers: Record<string, string | string[]>,
-): CursorAskUserQuestionToolResultPayload {
+): string {
   const lines = Object.entries(answers).map(([question, answer]) => {
     const formatted = Array.isArray(answer) ? answer.join(', ') : answer;
-    return `${question}: ${formatted}`;
+    return `- ${question}: ${formatted}`;
   });
-  return {
-    content: lines.join('\n'),
-    toolUseResult: { answers },
-  };
+  return `Here are my answers to your question(s):\n${lines.join('\n')}`;
 }
 
 function hasUsableAskUserAnswers(
@@ -48,6 +53,10 @@ function hasUsableAskUserAnswers(
 ): boolean {
   return !!answers && Object.keys(answers).length > 0;
 }
+
+export type CursorAskUserAnswersListener = (
+  answers: Record<string, string | string[]>,
+) => void;
 
 /**
  * Holds ask-user state across NDJSON lines (tool_use and tool_result arrive separately).
@@ -65,6 +74,7 @@ export class CursorAskUserQuestionInterceptState {
     chunks: StreamChunk[],
     callback: AskUserQuestionCallback | null,
     signal?: AbortSignal,
+    onAnswers?: CursorAskUserAnswersListener,
   ): AsyncGenerator<StreamChunk> {
     if (!callback) {
       for (const chunk of chunks) {
@@ -88,12 +98,15 @@ export class CursorAskUserQuestionInterceptState {
         this.resolvedAnswers.delete(chunk.id);
 
         if (hasUsableAskUserAnswers(answers)) {
-          const built = buildCursorAskUserQuestionToolResult(answers!);
+          // The agent's one-shot CLI already skipped the tool, so the answer is
+          // delivered as a resumed follow-up turn (the runtime builds it from
+          // these answers). Replace the misleading "skipped by user" result with
+          // a neutral marker instead of pretending the tool was answered in-turn.
+          onAnswers?.(answers!);
           yield {
             type: 'tool_result',
             id: chunk.id,
-            content: built.content,
-            toolUseResult: built.toolUseResult,
+            content: CURSOR_ASK_ANSWER_FOLLOWUP_NOTE,
             isError: false,
           };
           continue;
@@ -107,19 +120,4 @@ export class CursorAskUserQuestionInterceptState {
       yield chunk;
     }
   }
-}
-
-/**
- * When the Cursor CLI cannot prompt in Obsidian it returns "skipped by user".
- * Pause on tool_use, collect answers via Claudian UI, and replace the CLI result.
- *
- * @deprecated Prefer {@link CursorAskUserQuestionInterceptState} for multi-line NDJSON streams.
- */
-export async function* interceptCursorAskUserQuestionChunks(
-  chunks: StreamChunk[],
-  callback: AskUserQuestionCallback | null,
-  signal?: AbortSignal,
-  state: CursorAskUserQuestionInterceptState = new CursorAskUserQuestionInterceptState(),
-): AsyncGenerator<StreamChunk> {
-  yield* state.interceptChunks(chunks, callback, signal);
 }
