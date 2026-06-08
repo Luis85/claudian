@@ -50,17 +50,12 @@
   scrollbar-color: var(--background-modifier-border) transparent;
 }
 
-/* ---------- Native modal chrome (Obsidian-owned) ----------
-   The custom header owns the title, so the native `.modal-title` stays empty —
-   collapse it so it contributes no height/spacing above our header. The native
-   close button is kept (no custom reimplementation of core chrome); nudge it to
-   sit inside the header's 26px inset so it aligns with the header rhythm and
-   clears the title's reserved 40px right padding. Scoped 0-2-0 to beat the
-   theme's `.modal .modal-close-button` (0-1-1). */
-.claudian-work-order-modal .modal-title {
-  display: none;
-}
-
+/* ---------- Native modal close button (Obsidian-owned) ----------
+   The native close button is kept (no custom reimplementation of core chrome);
+   nudge it inside the header's 26px inset so it aligns with the header rhythm
+   and clears the title's reserved 40px right padding. Scoped 0-2-0 to beat the
+   theme's `.modal .modal-close-button` (0-1-1). NOTE: the native `.modal-title`
+   is NOT hidden — it now holds our rendered header. */
 .claudian-work-order-modal .modal-close-button {
   top: 16px;
   right: 18px;
