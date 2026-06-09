@@ -98,10 +98,13 @@ export interface StreamControllerDeps {
 export class StreamController {
   private static readonly ASYNC_SUBAGENT_RESULT_RETRY_DELAYS_MS = [200, 600, 1500] as const;
 
-  // Size-aware streaming backoff (PERF-3): full markdown re-parse of the live block is
-  // O(C²) as it grows. Below the threshold we re-render every frame for snappy feedback;
-  // past it we coalesce continuation renders behind a delay to cap the re-parse rate.
-  // The final render is always exact because finalize flushes synchronously.
+  // Size-aware streaming backoff (PERF-3): streaming render is NOT a delta append —
+  // each throttled tick re-parses the entire accumulated block, so cost is O(C) per
+  // tick (O(C²) cumulative as the block grows). Below the threshold we re-render every
+  // frame for snappy feedback; past it we coalesce continuation renders behind a delay
+  // to cap the re-parse rate. The final render is always exact because finalize flushes
+  // synchronously. Delta-append rendering is deliberately deferred unless users report
+  // jank on very long single answers (docs/issues/streaming-render-cost.md).
   private static readonly STREAM_REPARSE_BACKOFF_THRESHOLD_CHARS = 4096;
   private static readonly STREAM_REPARSE_BACKOFF_MS = 200;
 
@@ -873,6 +876,8 @@ export class StreamController {
     await pendingRender;
   }
 
+  // Full re-parse of the accumulated block on every throttled tick (O(C)/tick, see
+  // PERF-3 note on the backoff constants above) — not an O(1) delta append.
   private async renderPendingText(): Promise<void> {
     if (this.isTextRenderRunning) return;
     this.isTextRenderRunning = true;
@@ -916,9 +921,11 @@ export class StreamController {
   }
 
   /**
-   * Schedules the next streaming render of a growing block. Small blocks re-render every
-   * animation frame; large blocks coalesce behind a delay so the O(C²) full re-parse cost
-   * stays bounded. Either way the trailing render is exact via the synchronous flush path.
+   * Schedules the next streaming render of a growing block. Each render is a full
+   * re-parse of the accumulated content — O(C) per throttled tick, not O(1)/chunk.
+   * Small blocks re-render every animation frame; large blocks coalesce behind a delay
+   * (PERF-3 backoff) so the O(C²) cumulative re-parse cost stays bounded. Either way
+   * the trailing render is exact via the synchronous flush path.
    */
   private scheduleStreamContinuation(
     content: string,

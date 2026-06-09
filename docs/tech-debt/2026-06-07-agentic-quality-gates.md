@@ -2,7 +2,7 @@
 type: tech-debt
 title: "CI does not enforce agentic quality gates"
 date: 2026-06-07
-updated: 2026-06-07
+updated: 2026-06-09
 status: in-progress
 priority: "1 - high"
 severity: high
@@ -65,7 +65,31 @@ Start with a non-invasive guardrail PR: `check:loc` + `npm run build` in CI + `-
 
 Delivered the suggested first PR. See `docs/build-ci/quality-gates.md` for the
 catalog of gates, how to run them locally, and how to extend them. Remaining
-work tracked under "Next slices" in that doc: `--max-warnings=0` is in place but
-the staged `obsidianmd` rules and `no-explicit-any` are still `warn`; remediation
-item 5 (architecture gates: dependency-cycle budget, provider-boundary
-regression tests, no-new-provider-hardcoded-list) is not started.
+work tracked under "Next slices" in that doc. Note: `--max-warnings=0` was
+**not** adopted — by decision (see the revised acceptance criterion above),
+warnings are a non-blocking backlog burned down incrementally; error-tier rules
+block CI.
+
+## Progress (2026-06-09)
+
+Reconciled against current reality (`.github/workflows/ci.yml`, `package.json`
+scripts, `scripts/check-loc.mjs`, `scripts/check-artifacts.mjs`):
+
+- **Shipped:** CI `lint` job runs `npm run lint` + `npm run check:loc`;
+  `typecheck`, `test` (Linux + Windows), and `coverage` jobs; `build` job runs
+  `npm run build` + `npm run check:artifacts`. All jobs on Node 22, now matched
+  by the release workflow and `package.json` `engines` (see
+  `[[2026-06-07-release-artifact-reproducibility]]`, closed 2026-06-09).
+- **Shipped (remediation item 5, partial):** provider-boundary regression tests
+  (`tests/unit/core/providers/providerRegistrationContract.test.ts`) and the
+  no-new-provider-hardcoded-list guard
+  (`tests/unit/core/providers/noHardcodedProviderList.test.ts`) run in the
+  existing `test` job — see `docs/build-ci/quality-gates.md`
+  § "Provider-boundary guards".
+- **Open:** dependency-cycle budget — deferred until existing cycles shrink
+  (`[[2026-06-07-import-cycle-budget]]`); the lint `warn`-tier backlog (staged
+  `obsidianmd` rules, `no-explicit-any`, function-health rules) is still being
+  burned down and ratcheted.
+
+Status stays `in-progress` until the architecture-gate slice
+(dependency-cycle budget) lands or is explicitly retired.
