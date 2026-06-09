@@ -48,6 +48,12 @@ describe('getDeniedIpReason', () => {
       ['172.16.0.1', 'private'],
       ['172.31.255.254', 'private'],
       ['192.168.1.1', 'private'],
+      // RFC6598 shared address space (CGNAT), 100.64.0.0/10 — hosts some
+      // cloud-provider metadata endpoints (e.g. 100.100.100.200)
+      ['100.64.0.0', 'private'],
+      ['100.100.100.200', 'private'],
+      ['100.127.255.255', 'private'],
+      ['::ffff:100.64.0.1', 'private'],
       // IPv6 ULA fc00::/7
       ['fc00::1', 'unique-local'],
       ['fd12:3456:789a::1', 'unique-local'],
@@ -85,6 +91,8 @@ describe('getDeniedIpReason', () => {
       '172.32.0.1', // just above 172.16/12
       '169.253.255.255',
       '11.0.0.1',
+      '100.63.255.255', // just below 100.64.0.0/10
+      '100.128.0.1', // just above 100.64.0.0/10
       '2606:4700::1111',
       '2001:db8::1',
       '::ffff:8.8.8.8', // IPv4-mapped public stays allowed

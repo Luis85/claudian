@@ -95,6 +95,9 @@ function deniedIpv4Reason(octets: [number, number, number, number]): DeniedIpRea
   if (a === 10) return 'private'; // 10.0.0.0/8
   if (a === 172 && b >= 16 && b <= 31) return 'private'; // 172.16.0.0/12
   if (a === 192 && b === 168) return 'private'; // 192.168.0.0/16
+  // RFC6598 shared address space (CGNAT) — not publicly routable and hosts
+  // some cloud-provider metadata endpoints (e.g. 100.100.100.200).
+  if (a === 100 && b >= 64 && b <= 127) return 'private'; // 100.64.0.0/10
   if (a === 169 && b === 254) return 'link-local'; // 169.254.0.0/16 incl. metadata
   return null;
 }
