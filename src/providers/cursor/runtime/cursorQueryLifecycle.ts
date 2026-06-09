@@ -1,10 +1,13 @@
 import type { ChatTurnMetadata } from '../../../core/runtime/types';
 import type { StreamChunk } from '../../../core/types';
+import type { CursorLabeledAnswer } from './cursorAskUserQuestion';
 
 export interface CursorQueryChunkTracker {
   pendingToolNames: Map<string, string>;
   sawPlanToolComplete: boolean;
   sawDone: boolean;
+  /** Answered AskUserQuestion entries, delivered by the runtime as a resumed follow-up turn. */
+  askUserAnswers: CursorLabeledAnswer[];
 }
 
 export function createCursorQueryChunkTracker(): CursorQueryChunkTracker {
@@ -12,6 +15,7 @@ export function createCursorQueryChunkTracker(): CursorQueryChunkTracker {
     pendingToolNames: new Map(),
     sawPlanToolComplete: false,
     sawDone: false,
+    askUserAnswers: [],
   };
 }
 

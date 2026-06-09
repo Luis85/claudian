@@ -97,6 +97,15 @@ describe('buildCursorAgentEnvironment', () => {
       expect(env.PATH).toContain('C:\\Program Files\\Git\\bin');
     });
 
+    it('appends Git paths after the existing PATH so a user-pinned git keeps winning', () => {
+      const env = buildCursorAgentEnvironment(makePlugin(''));
+      const segments = (env.PATH ?? '').split(';');
+      const existingIdx = segments.indexOf('C:\\Users\\test\\AppData\\Local\\cursor-agent');
+      const gitIdx = segments.indexOf('C:\\Program Files\\Git\\cmd');
+      expect(existingIdx).toBeGreaterThanOrEqual(0);
+      expect(gitIdx).toBeGreaterThan(existingIdx);
+    });
+
     it('keeps Git Bash env when the user set it in custom env', () => {
       const env = buildCursorAgentEnvironment(makePlugin(
         'MSYSTEM=MINGW64\nEXEPATH=C:\\Program Files\\Git\\bin\nSHELL=C:\\Program Files\\Git\\bin\\bash.exe',

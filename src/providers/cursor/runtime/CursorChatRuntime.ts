@@ -28,7 +28,7 @@ import { getCursorEnabledModels } from '../settings';
 import { getCursorState, resolveCursorSessionId } from '../types';
 import { buildCursorAgentEnvironment } from './cursorAgentEnv';
 import { acquireCursorAgentSpawnLock } from './cursorAgentSpawnLock';
-import { buildCursorAnswerFollowUpPrompt, type CursorLabeledAnswer } from './cursorAskUserQuestion';
+import { buildCursorAnswerFollowUpPrompt } from './cursorAskUserQuestion';
 import { resolveCursorModelSelectionForCli } from './cursorCliModel';
 import { buildCursorAgentPrompt, resolveCursorCliPromptArg } from './cursorCliPrompt';
 import { resolveCursorLaunch } from './cursorLaunch';
@@ -114,11 +114,6 @@ export class CursorChatRuntime implements ChatRuntime {
     this.canceled = false;
     this.askUserQuestionAbortController?.abort();
     this.askUserQuestionAbortController = new AbortController();
-
-    // Cursor's one-shot CLI cannot answer AskUserQuestion in-process, so any
-    // answer the user gives mid-stream is buffered here (ordered, so duplicate
-    // prompts stay distinct) and delivered as a resumed follow-up turn on done.
-    let collectedAskAnswers: CursorLabeledAnswer[] = [];
 
     const cli = this.plugin.getResolvedProviderCliPath('cursor');
     if (!cli) {
@@ -212,9 +207,6 @@ export class CursorChatRuntime implements ChatRuntime {
           onSessionId: (sessionId) => {
             this.lastSessionId = sessionId;
           },
-          onAskUserAnswers: (answers) => {
-            collectedAskAnswers = [...collectedAskAnswers, ...answers];
-          },
         });
 
         let next = await stream.next();
@@ -261,10 +253,11 @@ export class CursorChatRuntime implements ChatRuntime {
 
       this.turnMetadata = { ...this.turnMetadata, ...turnMetadata };
 
-      // Deliver the collected answer to the agent as a resumed follow-up turn.
-      // Skipped on cancel so a torn-down turn never auto-fires another query.
-      if (collectedAskAnswers.length > 0 && !this.canceled) {
-        this.turnMetadata.autoFollowUpText = buildCursorAnswerFollowUpPrompt(collectedAskAnswers);
+      // Deliver collected AskUserQuestion answers (the one-shot CLI cannot take
+      // them in-process) to the agent as a resumed follow-up turn. Skipped on
+      // cancel so a torn-down turn never auto-fires another query.
+      if (chunkTracker.askUserAnswers.length > 0 && !this.canceled) {
+        this.turnMetadata.autoFollowUpText = buildCursorAnswerFollowUpPrompt(chunkTracker.askUserAnswers);
       }
     } finally {
       cleanupPromptFile?.();

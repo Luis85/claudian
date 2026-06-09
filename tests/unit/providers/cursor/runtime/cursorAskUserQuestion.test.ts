@@ -4,7 +4,6 @@ import {
   buildCursorAnswerFollowUpPrompt,
   CURSOR_ASK_ANSWER_FOLLOWUP_NOTE,
   CursorAskUserQuestionInterceptState,
-  type CursorLabeledAnswer,
   isCursorAskUserQuestionSkippedResult,
   resolveCursorAnswerLabels,
 } from '@/providers/cursor/runtime/cursorAskUserQuestion';
@@ -18,11 +17,10 @@ async function runIntercept(
   chunks: StreamChunk[],
   callback: AskCallback,
   signal?: AbortSignal,
-  onAnswers?: (answers: CursorLabeledAnswer[]) => void,
   state: CursorAskUserQuestionInterceptState = new CursorAskUserQuestionInterceptState(),
 ): Promise<StreamChunk[]> {
   const out: StreamChunk[] = [];
-  for await (const chunk of state.interceptChunks(chunks, callback, signal, onAnswers)) {
+  for await (const chunk of state.interceptChunks(chunks, callback, signal)) {
     out.push(chunk);
   }
   return out;
@@ -95,9 +93,9 @@ describe('cursorAskUserQuestion', () => {
     ];
     // The widget keys the answer by the question's id, not its text.
     const callback = jest.fn().mockResolvedValue({ focus: 'A' });
-    const onAnswers = jest.fn();
-    await runIntercept(chunks, callback, undefined, onAnswers);
-    expect(onAnswers).toHaveBeenCalledWith([{ label: 'Pick a focus', answer: 'A' }]);
+    const state = new CursorAskUserQuestionInterceptState();
+    await runIntercept(chunks, callback, undefined, state);
+    expect(state.collectedAnswers).toEqual([{ label: 'Pick a focus', answer: 'A' }]);
   });
 
   it('marks the tool block neutral and surfaces answers for a follow-up turn', async () => {
@@ -122,12 +120,12 @@ describe('cursorAskUserQuestion', () => {
     ];
 
     const callback = jest.fn().mockResolvedValue({ 'Pick a focus': 'A' });
-    const onAnswers = jest.fn();
-    const out = await runIntercept(chunks, callback, undefined, onAnswers);
+    const state = new CursorAskUserQuestionInterceptState();
+    const out = await runIntercept(chunks, callback, undefined, state);
 
     expect(callback).toHaveBeenCalledTimes(1);
     // The answer is delivered out-of-band, never folded back into the card.
-    expect(onAnswers).toHaveBeenCalledWith([{ label: 'Pick a focus', answer: 'A' }]);
+    expect(state.collectedAnswers).toEqual([{ label: 'Pick a focus', answer: 'A' }]);
     expect(out).toHaveLength(2);
     expect(out[1]).toEqual({
       type: 'tool_result',
@@ -141,7 +139,6 @@ describe('cursorAskUserQuestion', () => {
   it('marks neutral across separate chunk batches with shared state', async () => {
     const state = new CursorAskUserQuestionInterceptState();
     const callback = jest.fn().mockResolvedValue({ 'Pick a focus': 'A' });
-    const onAnswers = jest.fn();
 
     const started: StreamChunk[] = [{
       type: 'tool_use',
@@ -156,11 +153,11 @@ describe('cursorAskUserQuestion', () => {
       isError: true,
     }];
 
-    const out = await runIntercept(started, callback, undefined, onAnswers, state);
-    out.push(...await runIntercept(completed, callback, undefined, onAnswers, state));
+    const out = await runIntercept(started, callback, undefined, state);
+    out.push(...await runIntercept(completed, callback, undefined, state));
 
     expect(callback).toHaveBeenCalledTimes(1);
-    expect(onAnswers).toHaveBeenCalledTimes(1);
+    expect(state.collectedAnswers).toHaveLength(1);
     expect(out[1]).toMatchObject({
       type: 'tool_result',
       id: 'ask-1',
@@ -185,9 +182,9 @@ describe('cursorAskUserQuestion', () => {
       },
     ];
     const callback = jest.fn().mockResolvedValue({});
-    const onAnswers = jest.fn();
-    const out = await runIntercept(chunks, callback, undefined, onAnswers);
-    expect(onAnswers).not.toHaveBeenCalled();
+    const state = new CursorAskUserQuestionInterceptState();
+    const out = await runIntercept(chunks, callback, undefined, state);
+    expect(state.collectedAnswers).toHaveLength(0);
     expect(out[1]).toEqual(chunks[1]);
   });
 
@@ -230,10 +227,10 @@ describe('cursorAskUserQuestion', () => {
     ];
 
     const callback = jest.fn().mockResolvedValue(null);
-    const onAnswers = jest.fn();
-    const out = await runIntercept(chunks, callback, undefined, onAnswers);
+    const state = new CursorAskUserQuestionInterceptState();
+    const out = await runIntercept(chunks, callback, undefined, state);
 
-    expect(onAnswers).not.toHaveBeenCalled();
+    expect(state.collectedAnswers).toHaveLength(0);
     expect(out[1]).toEqual(rejected);
   });
 });

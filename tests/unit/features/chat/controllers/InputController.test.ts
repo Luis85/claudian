@@ -3228,7 +3228,7 @@ describe('InputController - Message Queue', () => {
         if (callCount === 1) {
           return createMockStream([
             { type: 'tool_use', id: 'ask-1', name: 'AskUserQuestion', input: {} },
-            { type: 'tool_result', id: 'ask-1', content: 'Answer sent as a follow-up message.' },
+            { type: 'tool_result', id: 'ask-1', content: 'Answer collected; sent as a follow-up message when the conversation continues.' },
             { type: 'done' },
           ]);
         }

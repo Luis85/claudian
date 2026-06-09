@@ -5,10 +5,12 @@ import type { StreamChunk } from '../../../core/types';
 /**
  * Marks the question's tool block once the user has answered. The answer itself
  * is NOT folded in here — it is delivered to the agent as a resumed follow-up
- * turn (see {@link buildCursorAnswerFollowUpPrompt}), so the tool result only
- * records that the out-of-band answer was sent.
+ * turn (see {@link buildCursorAnswerFollowUpPrompt}). Worded conditionally
+ * because delivery is decided later: a plan Revise/Cancel suppresses the
+ * follow-up, so the marker must not record a send that never happened.
  */
-export const CURSOR_ASK_ANSWER_FOLLOWUP_NOTE = 'Answer sent as a follow-up message.';
+export const CURSOR_ASK_ANSWER_FOLLOWUP_NOTE =
+  'Answer collected; sent as a follow-up message when the conversation continues.';
 
 export function isCursorAskUserQuestionSkippedResult(content: string): boolean {
   const trimmed = content.trim();
@@ -87,27 +89,26 @@ function hasUsableAskUserAnswers(
   return !!answers && Object.keys(answers).length > 0;
 }
 
-export type CursorAskUserAnswersListener = (
-  answers: CursorLabeledAnswer[],
-) => void;
-
 /**
  * Holds ask-user state across NDJSON lines (tool_use and tool_result arrive separately).
+ * Answered questions accumulate in {@link collectedAnswers} for the runtime to
+ * deliver as the resumed follow-up turn.
  */
 export class CursorAskUserQuestionInterceptState {
+  readonly collectedAnswers: CursorLabeledAnswer[] = [];
   private readonly pendingInput = new Map<string, Record<string, unknown>>();
   private readonly resolvedAnswers = new Map<string, Record<string, string | string[]> | null>();
 
   reset(): void {
     this.pendingInput.clear();
     this.resolvedAnswers.clear();
+    this.collectedAnswers.length = 0;
   }
 
   async *interceptChunks(
     chunks: StreamChunk[],
     callback: AskUserQuestionCallback | null,
     signal?: AbortSignal,
-    onAnswers?: CursorAskUserAnswersListener,
   ): AsyncGenerator<StreamChunk> {
     if (!callback) {
       for (const chunk of chunks) {
@@ -136,7 +137,7 @@ export class CursorAskUserQuestionInterceptState {
           // delivered as a resumed follow-up turn (the runtime builds it from
           // these answers). Replace the misleading "skipped by user" result with
           // a neutral marker instead of pretending the tool was answered in-turn.
-          onAnswers?.(resolveCursorAnswerLabels(answers!, questionInput));
+          this.collectedAnswers.push(...resolveCursorAnswerLabels(answers!, questionInput));
           yield {
             type: 'tool_result',
             id: chunk.id,

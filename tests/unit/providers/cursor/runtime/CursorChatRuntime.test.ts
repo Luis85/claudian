@@ -4,6 +4,7 @@ import { EventEmitter } from 'events';
 
 import type { PreparedChatTurn } from '@/core/runtime/types';
 import type { ChatMessage, StreamChunk } from '@/core/types';
+import { CURSOR_ASK_ANSWER_FOLLOWUP_NOTE } from '@/providers/cursor/runtime/cursorAskUserQuestion';
 import { CursorChatRuntime } from '@/providers/cursor/runtime/CursorChatRuntime';
 import { CURSOR_CLI_INLINE_PROMPT_MAX_CHARS } from '@/providers/cursor/runtime/cursorCliPrompt';
 
@@ -376,7 +377,7 @@ describe('CursorChatRuntime', () => {
     expect(chunks).toContainEqual(expect.objectContaining({
       type: 'tool_result',
       id: 'ask-1',
-      content: 'Answer sent as a follow-up message.',
+      content: CURSOR_ASK_ANSWER_FOLLOWUP_NOTE,
     }));
     const metadata = runtime.consumeTurnMetadata();
     expect(metadata.autoFollowUpText).toContain('Pick a focus: A');

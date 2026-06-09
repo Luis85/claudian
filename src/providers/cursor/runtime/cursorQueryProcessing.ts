@@ -1,7 +1,7 @@
 import type { AskUserQuestionCallback } from '../../../core/runtime/types';
 import type { ChatTurnMetadata } from '../../../core/runtime/types';
 import type { StreamChunk } from '../../../core/types';
-import { type CursorAskUserAnswersListener, CursorAskUserQuestionInterceptState } from './cursorAskUserQuestion';
+import { CursorAskUserQuestionInterceptState } from './cursorAskUserQuestion';
 import {
   createCursorQueryChunkTracker,
   type CursorQueryChunkTracker,
@@ -18,8 +18,6 @@ export interface ProcessCursorAgentStreamOptions {
   isPlanTurn: boolean;
   isCanceled: () => boolean;
   onSessionId?: (sessionId: string) => void;
-  /** Fired with the labeled answers when an AskUserQuestion is answered (not declined). */
-  onAskUserAnswers?: CursorAskUserAnswersListener;
 }
 
 export async function* processCursorAgentNdjsonLines(
@@ -29,6 +27,9 @@ export async function* processCursorAgentNdjsonLines(
   const reducer = new CursorNdjsonStreamReducer();
   const chunkTracker = createCursorQueryChunkTracker();
   const askIntercept = new CursorAskUserQuestionInterceptState();
+  // The interceptor appends answered questions in place; the tracker exposes them
+  // to the runtime alongside the other per-turn stream state.
+  chunkTracker.askUserAnswers = askIntercept.collectedAnswers;
 
   for await (const line of lines) {
     if (options.isCanceled()) {
@@ -42,7 +43,6 @@ export async function* processCursorAgentNdjsonLines(
       chunks,
       options.askCallback,
       options.askSignal,
-      options.onAskUserAnswers,
     )) {
       observeCursorStreamChunk(chunk, chunkTracker);
       yield chunk;
