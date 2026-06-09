@@ -4,9 +4,12 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport';
 import * as http from 'http';
 import * as https from 'https';
+import type { LookupFunction } from 'net';
 
 import { curateStdioMcpEnv } from '../../utils/env';
 import { parseCommand } from '../../utils/mcp';
+import type { HostResolver, VettedRemoteUrl } from '../security/urlSafety';
+import { assertSafeRemoteUrl, createPinnedLookup } from '../security/urlSafety';
 import type { ManagedMcpServer } from '../types';
 import { getMcpServerType } from '../types';
 import type { McpSecretResolver } from './mcpSecrets';
@@ -45,11 +48,21 @@ function createLegacySseTransport(url: URL, options: StreamableHttpTransportOpti
   return new module.SSEClientTransport(url, options);
 }
 
+export interface NodeFetchOptions {
+  /**
+   * SECURITY (SEC-D): custom DNS lookup handed to `http(s).request` so the
+   * socket dials only SSRF-vetted addresses (DNS-rebinding defense). Hostname,
+   * Host header, and TLS SNI/cert validation are untouched — only address
+   * resolution is constrained.
+   */
+  lookup?: LookupFunction;
+}
+
 /**
  * Use Node's HTTP stack for MCP server verification to avoid renderer CORS restrictions.
  * We still rely on official SDK transports for MCP protocol semantics.
  */
-export function createNodeFetch(): (input: string | URL | Request, init?: RequestInit) => Promise<Response> {
+export function createNodeFetch(options?: NodeFetchOptions): (input: string | URL | Request, init?: RequestInit) => Promise<Response> {
   return async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
     const requestUrl = getRequestUrl(input);
     const method = init?.method ?? (input instanceof Request ? input.method : 'GET');
@@ -86,6 +99,7 @@ export function createNodeFetch(): (input: string | URL | Request, init?: Reques
         {
           method,
           headers: requestHeaders,
+          lookup: options?.lookup,
         },
         (res: http.IncomingMessage) => {
           if (settled) return;
@@ -228,11 +242,15 @@ async function getRequestBody(body: BodyInit | null | undefined): Promise<Buffer
   return Buffer.from(serialized);
 }
 
-const nodeFetch = createNodeFetch();
+export interface McpTestOptions {
+  /** DNS seam for the SSRF guard; tests inject a fake resolver. */
+  resolveHost?: HostResolver;
+}
 
 export async function testMcpServer(
   server: ManagedMcpServer,
   resolveSecret?: McpSecretResolver,
+  options?: McpTestOptions,
 ): Promise<McpTestResult> {
   const type = getMcpServerType(server.config);
   // SEC-A Phase 3: verify against the resolved config (secret headers/env overlaid
@@ -272,14 +290,22 @@ export async function testMcpServer(
       });
     } else {
       const config = resolvedConfig as UrlServerConfig;
-      const url = new URL(config.url);
-      const options = {
-        fetch: nodeFetch,
+      // SECURITY (SEC-D): SSRF guard for vault-suppliable URLs. Refuse
+      // loopback/link-local/private/metadata targets BEFORE any socket opens,
+      // then pin the transport's connections to the vetted addresses so a DNS
+      // rebind between preflight and connect cannot redirect the socket.
+      const vetted: VettedRemoteUrl = await assertSafeRemoteUrl(config.url, {
+        resolveHost: options?.resolveHost,
+      });
+      const transportOptions = {
+        fetch: createNodeFetch({
+          lookup: createPinnedLookup(vetted, { resolveHost: options?.resolveHost }),
+        }),
         requestInit: config.headers ? { headers: config.headers } : undefined,
       };
       transport = type === 'sse'
-        ? createLegacySseTransport(url, options)
-        : new StreamableHTTPClientTransport(url, options);
+        ? createLegacySseTransport(vetted.url, transportOptions)
+        : new StreamableHTTPClientTransport(vetted.url, transportOptions);
     }
   } catch (error) {
     return {

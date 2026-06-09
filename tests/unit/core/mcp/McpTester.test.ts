@@ -1,5 +1,13 @@
 import { testMcpServer } from '@/core/mcp/McpTester';
+import type { HostResolver } from '@/core/security/urlSafety';
 import type { ManagedMcpServer } from '@/core/types';
+
+// SSRF guard seam: unit tests never hit real DNS. Default to a public answer
+// so the pre-guard URL tests keep exercising the happy path.
+const publicResolver: HostResolver = jest.fn(async () => [
+  { address: '93.184.216.34', family: 4 as const },
+]);
+const testOptions = { resolveHost: publicResolver };
 
 // Mock the MCP SDK transports and client
 jest.mock('@modelcontextprotocol/sdk/client', () => ({
@@ -57,7 +65,7 @@ describe('testMcpServer', () => {
         contextSaving: false,
       };
 
-      const result = await testMcpServer(server);
+      const result = await testMcpServer(server, undefined, testOptions);
 
       expect(result.success).toBe(true);
       expect(result.serverName).toBe('test-server');
@@ -79,7 +87,7 @@ describe('testMcpServer', () => {
         contextSaving: false,
       };
 
-      const result = await testMcpServer(server);
+      const result = await testMcpServer(server, undefined, testOptions);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Missing command');
@@ -97,7 +105,7 @@ describe('testMcpServer', () => {
         contextSaving: false,
       };
 
-      const result = await testMcpServer(server);
+      const result = await testMcpServer(server, undefined, testOptions);
 
       expect(result.success).toBe(true);
       expect(result.tools).toHaveLength(2);
@@ -120,7 +128,7 @@ describe('testMcpServer', () => {
         contextSaving: false,
       };
 
-      const result = await testMcpServer(server);
+      const result = await testMcpServer(server, undefined, testOptions);
 
       expect(result.success).toBe(true);
       expect(StreamableHTTPClientTransport).toHaveBeenCalledWith(
@@ -144,7 +152,7 @@ describe('testMcpServer', () => {
         contextSaving: false,
       };
 
-      const result = await testMcpServer(server);
+      const result = await testMcpServer(server, undefined, testOptions);
 
       expect(result.success).toBe(true);
       expect(StreamableHTTPClientTransport).toHaveBeenCalledWith(
@@ -153,6 +161,107 @@ describe('testMcpServer', () => {
           fetch: expect.any(Function),
           requestInit: { headers: { Authorization: 'Bearer token' } },
         }),
+      );
+    });
+  });
+
+  describe('SSRF guard (SEC-D)', () => {
+    function urlServer(url: string): ManagedMcpServer {
+      return {
+        name: 'remote',
+        config: { type: 'http' as const, url },
+        enabled: true,
+        contextSaving: false,
+      };
+    }
+
+    function expectNoConnectionAttempt() {
+      const { StreamableHTTPClientTransport } = jest.requireMock('@modelcontextprotocol/sdk/client/streamableHttp');
+      const { SSEClientTransport } = jest.requireMock('@modelcontextprotocol/sdk/client/sse');
+      const { Client } = jest.requireMock('@modelcontextprotocol/sdk/client');
+      expect(StreamableHTTPClientTransport).not.toHaveBeenCalled();
+      expect(SSEClientTransport).not.toHaveBeenCalled();
+      expect(Client).not.toHaveBeenCalled();
+    }
+
+    it.each([
+      'http://127.0.0.1:8080/mcp',
+      'http://[::1]:8080/mcp',
+      'http://169.254.169.254/latest/meta-data',
+      'https://10.0.0.5/mcp',
+      'http://192.168.1.20/mcp',
+      'http://[fd00::1]/mcp',
+    ])('refuses literal denied IP %s before any transport is built', async (url) => {
+      const neverResolve: HostResolver = jest.fn(async () => {
+        throw new Error('must not resolve literal IPs');
+      });
+
+      const result = await testMcpServer(urlServer(url), undefined, { resolveHost: neverResolve });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/Blocked for safety/);
+      expect(neverResolve).not.toHaveBeenCalled();
+      expectNoConnectionAttempt();
+    });
+
+    it('refuses hostnames that resolve to loopback (localhost)', async () => {
+      const resolveHost: HostResolver = jest.fn(async () => [
+        { address: '127.0.0.1', family: 4 as const },
+      ]);
+
+      const result = await testMcpServer(urlServer('http://localhost:3000/mcp'), undefined, { resolveHost });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/loopback/);
+      expectNoConnectionAttempt();
+    });
+
+    it('refuses hostnames where ANY DNS record is private', async () => {
+      const resolveHost: HostResolver = jest.fn(async () => [
+        { address: '93.184.216.34', family: 4 as const },
+        { address: '10.0.0.9', family: 4 as const },
+      ]);
+
+      const result = await testMcpServer(urlServer('https://mixed.example/mcp'), undefined, { resolveHost });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/10\.0\.0\.9/);
+      expectNoConnectionAttempt();
+    });
+
+    it('refuses non-http(s) schemes', async () => {
+      const result = await testMcpServer(urlServer('ftp://example.com/mcp'), undefined, testOptions);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/scheme/i);
+      expectNoConnectionAttempt();
+    });
+
+    it('fails closed when DNS resolution fails', async () => {
+      const resolveHost: HostResolver = jest.fn(async () => {
+        throw new Error('ENOTFOUND');
+      });
+
+      const result = await testMcpServer(urlServer('https://nx.example/mcp'), undefined, { resolveHost });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/Could not resolve/);
+      expectNoConnectionAttempt();
+    });
+
+    it('connects to public hosts with a rebinding-pinned fetch', async () => {
+      const { StreamableHTTPClientTransport } = jest.requireMock('@modelcontextprotocol/sdk/client/streamableHttp');
+      const resolveHost: HostResolver = jest.fn(async () => [
+        { address: '93.184.216.34', family: 4 as const },
+      ]);
+
+      const result = await testMcpServer(urlServer('https://mcp.example.com/mcp'), undefined, { resolveHost });
+
+      expect(result.success).toBe(true);
+      expect(resolveHost).toHaveBeenCalledWith('mcp.example.com');
+      expect(StreamableHTTPClientTransport).toHaveBeenCalledWith(
+        expect.any(URL),
+        expect.objectContaining({ fetch: expect.any(Function) }),
       );
     });
   });
@@ -171,7 +280,7 @@ describe('testMcpServer', () => {
         contextSaving: false,
       };
 
-      const result = await testMcpServer(server);
+      const result = await testMcpServer(server, undefined, testOptions);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Transport init failed');
@@ -191,7 +300,7 @@ describe('testMcpServer', () => {
         contextSaving: false,
       };
 
-      const result = await testMcpServer(server);
+      const result = await testMcpServer(server, undefined, testOptions);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Invalid server configuration');
@@ -211,7 +320,7 @@ describe('testMcpServer', () => {
         contextSaving: false,
       };
 
-      const result = await testMcpServer(server);
+      const result = await testMcpServer(server, undefined, testOptions);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Connection refused');
@@ -231,7 +340,7 @@ describe('testMcpServer', () => {
         contextSaving: false,
       };
 
-      const result = await testMcpServer(server);
+      const result = await testMcpServer(server, undefined, testOptions);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Unknown error');
@@ -253,7 +362,7 @@ describe('testMcpServer', () => {
         contextSaving: false,
       };
 
-      const result = await testMcpServer(server);
+      const result = await testMcpServer(server, undefined, testOptions);
 
       expect(result.success).toBe(true);
       expect(result.serverName).toBe('partial');
@@ -276,7 +385,7 @@ describe('testMcpServer', () => {
         contextSaving: false,
       };
 
-      const result = await testMcpServer(server);
+      const result = await testMcpServer(server, undefined, testOptions);
 
       expect(result.success).toBe(true);
       expect(result.serverName).toBeUndefined();
