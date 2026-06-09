@@ -1,7 +1,9 @@
 import { TOOL_ASK_USER_QUESTION } from '@/core/tools/toolNames';
 import type { StreamChunk } from '@/core/types';
 import {
+  CURSOR_ASK_ANSWER_FOLLOWUP_NOTE,
   CursorAskUserQuestionInterceptState,
+  type CursorLabeledAnswer,
   isCursorAskUserQuestionSkippedResult,
 } from '@/providers/cursor/runtime/cursorAskUserQuestion';
 import { finalizeCursorAgentStream, processCursorAgentNdjsonLines } from '@/providers/cursor/runtime/cursorQueryProcessing';
@@ -12,7 +14,7 @@ import { SAMPLE_CURSOR_PLAN_TURN_STREAM_LINES } from '../../../../fixtures/provi
 async function collectStreamChunks(
   lines: readonly string[],
   askCallback: ((input: Record<string, unknown>) => Promise<Record<string, string | string[]> | null>) | null,
-): Promise<StreamChunk[]> {
+): Promise<{ chunks: StreamChunk[]; askUserAnswers: CursorLabeledAnswer[] }> {
   const chunks: StreamChunk[] = [];
   const stream = processCursorAgentNdjsonLines(async function* () {
     for (const line of lines) {
@@ -29,32 +31,37 @@ async function collectStreamChunks(
     chunks.push(next.value);
     next = await stream.next();
   }
-  return chunks;
+  return { chunks, askUserAnswers: next.value.askUserAnswers };
 }
 
 describe('Cursor ask-user NDJSON pipeline fixture', () => {
-  it('replaces CLI skipped result when answers arrive on a later NDJSON line', async () => {
+  it('marks the tool block neutral and surfaces answers for the follow-up turn', async () => {
     const callback = jest.fn().mockResolvedValue({ 'Pick a focus': 'Cursor parity' });
-    const chunks = await collectStreamChunks(SAMPLE_CURSOR_ASK_USER_QUESTION_STREAM_LINES, callback);
+    const { chunks, askUserAnswers } = await collectStreamChunks(
+      SAMPLE_CURSOR_ASK_USER_QUESTION_STREAM_LINES,
+      callback,
+    );
 
     expect(callback).toHaveBeenCalledTimes(1);
+    expect(askUserAnswers).toEqual([{ label: 'Pick a focus', answer: 'Cursor parity' }]);
     const toolUse = chunks.find((c) => c.type === 'tool_use');
     const toolResult = chunks.find((c) => c.type === 'tool_result');
     expect(toolUse).toMatchObject({ name: TOOL_ASK_USER_QUESTION, id: 'call-ask-1' });
     expect(toolResult).toMatchObject({
       id: 'call-ask-1',
       isError: false,
-      content: 'Pick a focus: Cursor parity',
+      content: CURSOR_ASK_ANSWER_FOLLOWUP_NOTE,
     });
     expect(isCursorAskUserQuestionSkippedResult(String(toolResult?.content))).toBe(false);
   });
 
-  it('keeps skipped result when the user declines across NDJSON lines', async () => {
-    const chunks = await collectStreamChunks(
+  it('keeps skipped result and surfaces no answers when the user declines', async () => {
+    const { chunks, askUserAnswers } = await collectStreamChunks(
       SAMPLE_CURSOR_ASK_USER_QUESTION_STREAM_LINES,
       jest.fn().mockResolvedValue(null),
     );
     const toolResult = chunks.find((c) => c.type === 'tool_result');
+    expect(askUserAnswers).toHaveLength(0);
     expect(toolResult).toBeDefined();
     expect(isCursorAskUserQuestionSkippedResult(String(toolResult?.content))).toBe(true);
   });
@@ -94,14 +101,18 @@ describe('Cursor ask-user NDJSON pipeline fixture', () => {
 
     const out: StreamChunk[] = [];
     for (const batch of batches) {
-      for await (const chunk of state.interceptChunks(batch, callback)) {
+      for await (const chunk of state.interceptChunks(batch, callback, undefined)) {
         out.push(chunk);
       }
     }
 
+    expect(state.collectedAnswers).toEqual([
+      { label: 'Q1', answer: 'A' },
+      { label: 'Q2', answer: 'B' },
+    ]);
     expect(out.filter((c) => c.type === 'tool_result')).toEqual([
-      expect.objectContaining({ id: 'a1', content: 'Q1: A', isError: false }),
-      expect.objectContaining({ id: 'a2', content: 'Q2: B', isError: false }),
+      expect.objectContaining({ id: 'a1', content: CURSOR_ASK_ANSWER_FOLLOWUP_NOTE, isError: false }),
+      expect.objectContaining({ id: 'a2', content: CURSOR_ASK_ANSWER_FOLLOWUP_NOTE, isError: false }),
     ]);
   });
 });

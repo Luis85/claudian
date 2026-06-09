@@ -2,6 +2,16 @@ import type { AskUserQuestionCallback } from '../../../core/runtime/types';
 import { TOOL_ASK_USER_QUESTION } from '../../../core/tools/toolNames';
 import type { StreamChunk } from '../../../core/types';
 
+/**
+ * Marks the question's tool block once the user has answered. The answer itself
+ * is NOT folded in here — it is delivered to the agent as a resumed follow-up
+ * turn (see {@link buildCursorAnswerFollowUpPrompt}). Worded conditionally
+ * because delivery is decided later: a plan Revise/Cancel suppresses the
+ * follow-up, so the marker must not record a send that never happened.
+ */
+export const CURSOR_ASK_ANSWER_FOLLOWUP_NOTE =
+  'Answer collected; sent as a follow-up message when the conversation continues.';
+
 export function isCursorAskUserQuestionSkippedResult(content: string): boolean {
   const trimmed = content.trim();
   if (!trimmed) {
@@ -25,22 +35,52 @@ export function isCursorAskUserQuestionSkippedResult(content: string): boolean {
   return false;
 }
 
-export interface CursorAskUserQuestionToolResultPayload {
-  content: string;
-  toolUseResult: { answers: Record<string, string | string[]> };
+/** One answered question, label = displayed prompt text (see {@link resolveCursorAnswerLabels}). */
+export interface CursorLabeledAnswer {
+  label: string;
+  answer: string | string[];
 }
 
-export function buildCursorAskUserQuestionToolResult(
-  answers: Record<string, string | string[]>,
-): CursorAskUserQuestionToolResultPayload {
-  const lines = Object.entries(answers).map(([question, answer]) => {
+/**
+ * Formats collected answers into the prompt for the resumed follow-up turn.
+ * cursor-agent's `--print` CLI is one-shot and auto-rejects AskUserQuestion, so
+ * the answer can only reach the agent as the next (resumed) user message.
+ */
+export function buildCursorAnswerFollowUpPrompt(answers: CursorLabeledAnswer[]): string {
+  const lines = answers.map(({ label, answer }) => {
     const formatted = Array.isArray(answer) ? answer.join(', ') : answer;
-    return `${question}: ${formatted}`;
+    return `- ${label}: ${formatted}`;
   });
-  return {
-    content: lines.join('\n'),
-    toolUseResult: { answers },
-  };
+  return `Here are my answers to your question(s):\n${lines.join('\n')}`;
+}
+
+/**
+ * The inline widget keys answers by `question.id ?? question.question`, so when a
+ * question carries an `id` the answer map is keyed by that opaque id. Re-key by
+ * the displayed question text (from the original tool input) so the resumed
+ * follow-up reads `- Pick a focus: A`, not `- focus: A`. Returns an ordered list
+ * rather than a text-keyed map so two questions sharing the same prompt text but
+ * distinct ids each keep their own answer instead of one overwriting the other.
+ */
+export function resolveCursorAnswerLabels(
+  answers: Record<string, string | string[]>,
+  input: Record<string, unknown> | undefined,
+): CursorLabeledAnswer[] {
+  const questions = Array.isArray(input?.questions) ? (input!.questions as unknown[]) : [];
+  const textByKey = new Map<string, string>();
+  for (const q of questions) {
+    if (!q || typeof q !== 'object') continue;
+    const record = q as Record<string, unknown>;
+    const text = typeof record.question === 'string' ? record.question : undefined;
+    if (!text) continue;
+    const key = typeof record.id === 'string' && record.id ? record.id : text;
+    textByKey.set(key, text);
+  }
+
+  return Object.entries(answers).map(([key, answer]) => ({
+    label: textByKey.get(key) ?? key,
+    answer,
+  }));
 }
 
 function hasUsableAskUserAnswers(
@@ -51,14 +91,18 @@ function hasUsableAskUserAnswers(
 
 /**
  * Holds ask-user state across NDJSON lines (tool_use and tool_result arrive separately).
+ * Answered questions accumulate in {@link collectedAnswers} for the runtime to
+ * deliver as the resumed follow-up turn.
  */
 export class CursorAskUserQuestionInterceptState {
+  readonly collectedAnswers: CursorLabeledAnswer[] = [];
   private readonly pendingInput = new Map<string, Record<string, unknown>>();
   private readonly resolvedAnswers = new Map<string, Record<string, string | string[]> | null>();
 
   reset(): void {
     this.pendingInput.clear();
     this.resolvedAnswers.clear();
+    this.collectedAnswers.length = 0;
   }
 
   async *interceptChunks(
@@ -84,16 +128,20 @@ export class CursorAskUserQuestionInterceptState {
 
       if (chunk.type === 'tool_result' && this.pendingInput.has(chunk.id)) {
         const answers = this.resolvedAnswers.get(chunk.id);
+        const questionInput = this.pendingInput.get(chunk.id);
         this.pendingInput.delete(chunk.id);
         this.resolvedAnswers.delete(chunk.id);
 
         if (hasUsableAskUserAnswers(answers)) {
-          const built = buildCursorAskUserQuestionToolResult(answers!);
+          // The agent's one-shot CLI already skipped the tool, so the answer is
+          // delivered as a resumed follow-up turn (the runtime builds it from
+          // these answers). Replace the misleading "skipped by user" result with
+          // a neutral marker instead of pretending the tool was answered in-turn.
+          this.collectedAnswers.push(...resolveCursorAnswerLabels(answers!, questionInput));
           yield {
             type: 'tool_result',
             id: chunk.id,
-            content: built.content,
-            toolUseResult: built.toolUseResult,
+            content: CURSOR_ASK_ANSWER_FOLLOWUP_NOTE,
             isError: false,
           };
           continue;
@@ -107,19 +155,4 @@ export class CursorAskUserQuestionInterceptState {
       yield chunk;
     }
   }
-}
-
-/**
- * When the Cursor CLI cannot prompt in Obsidian it returns "skipped by user".
- * Pause on tool_use, collect answers via Claudian UI, and replace the CLI result.
- *
- * @deprecated Prefer {@link CursorAskUserQuestionInterceptState} for multi-line NDJSON streams.
- */
-export async function* interceptCursorAskUserQuestionChunks(
-  chunks: StreamChunk[],
-  callback: AskUserQuestionCallback | null,
-  signal?: AbortSignal,
-  state: CursorAskUserQuestionInterceptState = new CursorAskUserQuestionInterceptState(),
-): AsyncGenerator<StreamChunk> {
-  yield* state.interceptChunks(chunks, callback, signal);
 }

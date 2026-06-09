@@ -3213,6 +3213,103 @@ describe('InputController - Message Queue', () => {
       expect(mockAgentService.query).toHaveBeenCalledTimes(2);
     });
 
+    it('auto-sends a Cursor answer as a resumed follow-up turn', async () => {
+      const deps = createSendableDeps();
+      const mockAgentService = (deps as any).mockAgentService;
+      mockAgentService.providerId = 'cursor';
+      // First turn surfaces the collected answer; the resumed follow-up does not.
+      mockAgentService.consumeTurnMetadata = jest.fn()
+        .mockReturnValueOnce({ autoFollowUpText: 'Here are my answers to your question(s):\n- Pick a focus: A', wasSent: true })
+        .mockReturnValueOnce({ wasSent: true });
+
+      let callCount = 0;
+      mockAgentService.query = jest.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return createMockStream([
+            { type: 'tool_use', id: 'ask-1', name: 'AskUserQuestion', input: {} },
+            { type: 'tool_result', id: 'ask-1', content: 'Answer collected; sent as a follow-up message when the conversation continues.' },
+            { type: 'done' },
+          ]);
+        }
+        return createMockStream([
+          { type: 'text', content: 'Continuing with your answer.' },
+          { type: 'done' },
+        ]);
+      });
+
+      const controller = new InputController(deps);
+      const inputEl = deps.getInputEl();
+      inputEl.value = 'Help me pick';
+      await controller.sendMessage();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // The follow-up turn was auto-sent, carrying the answer to the resumed session.
+      expect(mockAgentService.query).toHaveBeenCalledTimes(2);
+    });
+
+    it('merges the Cursor answer into the implement prompt', async () => {
+      const deps = createSendableDeps({ restorePrePlanPermissionModeIfNeeded: jest.fn() });
+      const mockAgentService = (deps as any).mockAgentService;
+      mockAgentService.providerId = 'cursor';
+      // A plan turn that also collected an AskUserQuestion answer.
+      mockAgentService.consumeTurnMetadata = jest.fn()
+        .mockReturnValueOnce({
+          planCompleted: true,
+          autoFollowUpText: 'Here are my answers to your question(s):\n- Pick a focus: A',
+          wasSent: true,
+        })
+        .mockReturnValueOnce({ wasSent: true });
+      mockAgentService.query = jest.fn().mockImplementation(() =>
+        createMockStream([{ type: 'text', content: 'Plan content' }, { type: 'done' }]),
+      );
+
+      const controller = new InputController(deps);
+      (controller as any).showPlanApproval = jest.fn().mockResolvedValue({
+        decision: { type: 'implement' },
+        invalidated: false,
+      });
+      const autoResumeSpy = jest.spyOn(controller as any, 'autoResumeWith');
+
+      deps.getInputEl().value = 'Plan this';
+      await controller.sendMessage();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // The resumed implement turn carries BOTH the answer and the implement instruction.
+      expect(autoResumeSpy).toHaveBeenCalledWith(expect.stringContaining('Pick a focus: A'));
+      expect(autoResumeSpy).toHaveBeenCalledWith(expect.stringContaining('Implement the plan.'));
+      expect(mockAgentService.query).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not auto-send the Cursor answer when the plan is cancelled', async () => {
+      const restoreFn = jest.fn();
+      const deps = createSendableDeps({ restorePrePlanPermissionModeIfNeeded: restoreFn });
+      const mockAgentService = (deps as any).mockAgentService;
+      mockAgentService.providerId = 'cursor';
+      mockAgentService.consumeTurnMetadata = jest.fn().mockReturnValue({
+        planCompleted: true,
+        autoFollowUpText: 'Here are my answers to your question(s):\n- Pick a focus: A',
+        wasSent: true,
+      });
+      mockAgentService.query = jest.fn().mockImplementation(() =>
+        createMockStream([{ type: 'text', content: 'Plan content' }, { type: 'done' }]),
+      );
+
+      const controller = new InputController(deps);
+      (controller as any).showPlanApproval = jest.fn().mockResolvedValue({
+        decision: { type: 'cancel' },
+        invalidated: false,
+      });
+
+      deps.getInputEl().value = 'Plan this';
+      await controller.sendMessage();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Cancelling the plan must not auto-send the buffered answer.
+      expect(mockAgentService.query).toHaveBeenCalledTimes(1);
+      expect(restoreFn).toHaveBeenCalled();
+    });
+
     it('revise keeps plan mode active and populates input', async () => {
       const restoreFn = jest.fn();
       const deps = createSendableDeps({
@@ -3243,6 +3340,36 @@ describe('InputController - Message Queue', () => {
 
       expect(restoreFn).not.toHaveBeenCalled();
       expect(inputEl.value).toBe('Add more tests');
+    });
+
+    it('revise wins over a Cursor answer follow-up (no auto-send, revision preserved)', async () => {
+      const deps = createSendableDeps();
+      const mockAgentService = (deps as any).mockAgentService;
+      mockAgentService.providerId = 'cursor';
+      // A Cursor plan turn that also collected an AskUserQuestion answer.
+      mockAgentService.consumeTurnMetadata = jest.fn().mockReturnValue({
+        planCompleted: true,
+        autoFollowUpText: 'Here are my answers to your question(s):\n- Pick a focus: A',
+        wasSent: true,
+      });
+      mockAgentService.query = jest.fn().mockImplementation(() =>
+        createMockStream([{ type: 'text', content: 'Plan content' }, { type: 'done' }]),
+      );
+
+      const controller = new InputController(deps);
+      (controller as any).showPlanApproval = jest.fn().mockResolvedValue({
+        decision: { type: 'revise', text: 'Tweak the plan' },
+        invalidated: false,
+      });
+
+      const inputEl = deps.getInputEl();
+      inputEl.value = 'Plan this';
+      await controller.sendMessage();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Revision feedback stays in the composer; the answer follow-up is NOT auto-sent.
+      expect(inputEl.value).toBe('Tweak the plan');
+      expect(mockAgentService.query).toHaveBeenCalledTimes(1);
     });
 
     it('revise does not let queued input overwrite the revision text', async () => {
