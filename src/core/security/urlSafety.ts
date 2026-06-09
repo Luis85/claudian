@@ -152,6 +152,23 @@ function deniedIpv6Reason(ip: string): DeniedIpReason | null {
   const firstSevenZero = groups.slice(0, 7).every((value) => value === 0);
   if (firstSevenZero && groups[7] === 0) return 'unspecified'; // ::
   if (firstSevenZero && groups[7] === 1) return 'loopback'; // ::1
+
+  // IPv4-compatible (::/96, deprecated RFC 4291) and NAT64 (64:ff9b::/96,
+  // RFC 6052) also embed an IPv4 address in the low 32 bits; classify it so
+  // e.g. ::127.0.0.1 or 64:ff9b::7f00:1 cannot sidestep the IPv4 denylist.
+  const ipv4Compatible = groups.slice(0, 6).every((value) => value === 0);
+  const nat64 =
+    groups[0] === 0x0064 && groups[1] === 0xff9b &&
+    groups[2] === 0 && groups[3] === 0 && groups[4] === 0 && groups[5] === 0;
+  if (ipv4Compatible || nat64) {
+    return deniedIpv4Reason([
+      groups[6] >> 8,
+      groups[6] & 0xff,
+      groups[7] >> 8,
+      groups[7] & 0xff,
+    ]);
+  }
+
   if ((groups[0] & 0xffc0) === 0xfe80) return 'link-local'; // fe80::/10
   if ((groups[0] & 0xfe00) === 0xfc00) return 'unique-local'; // fc00::/7
   return null;

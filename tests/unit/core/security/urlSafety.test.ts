@@ -60,6 +60,16 @@ describe('getDeniedIpReason', () => {
       ['::ffff:169.254.169.254', 'link-local'],
       ['::ffff:192.168.0.1', 'private'],
       ['::ffff:a00:1', 'private'], // hex spelling of ::ffff:10.0.0.1
+      // IPv4-compatible IPv6 (::/96, deprecated RFC 4291) embedded forms
+      ['::127.0.0.1', 'loopback'],
+      ['::7f00:1', 'loopback'], // hex spelling of ::127.0.0.1
+      ['::10.0.0.1', 'private'],
+      ['::169.254.169.254', 'link-local'],
+      // NAT64 (64:ff9b::/96, RFC 6052) embedded forms
+      ['64:ff9b::127.0.0.1', 'loopback'],
+      ['64:ff9b::7f00:1', 'loopback'],
+      ['64:ff9b::a00:1', 'private'],
+      ['64:ff9b::169.254.169.254', 'link-local'],
     ];
 
     it.each(denied)('denies %s as %s', (ip, reason) => {
@@ -78,6 +88,8 @@ describe('getDeniedIpReason', () => {
       '2606:4700::1111',
       '2001:db8::1',
       '::ffff:8.8.8.8', // IPv4-mapped public stays allowed
+      '64:ff9b::808:808', // NAT64 of public 8.8.8.8 stays allowed
+      '64:ff9c::7f00:1', // outside 64:ff9b::/96, plain global unicast
       'fe00::1', // below fe80::/10
     ];
 

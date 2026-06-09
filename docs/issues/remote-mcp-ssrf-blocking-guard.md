@@ -66,7 +66,8 @@ untrusted-tool-description framing.
   DNS answers vetted in full — ANY private record denies; resolution failure
   fails closed) over a denylist covering loopback (127/8, `::1`), link-local
   (169.254/16 incl. `169.254.169.254`, fe80::/10), RFC1918, IPv6 ULA
-  (fc00::/7), unspecified (0.0.0.0/8, `::`), and IPv4-mapped IPv6 forms.
+  (fc00::/7), unspecified (0.0.0.0/8, `::`), and embedded-IPv4 forms
+  (IPv4-mapped `::ffff:0:0/96`, IPv4-compatible `::/96`, NAT64 `64:ff9b::/96`).
 - **Rebinding pin implemented**: `createPinnedLookup` returns a custom
   `net.LookupFunction` passed through `createNodeFetch({ lookup })` into
   `http(s).request`, so the socket receives the preflight-vetted addresses for
