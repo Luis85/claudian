@@ -127,6 +127,20 @@ describe('CursorChatRuntime', () => {
     })();
   });
 
+  it('does not spawn cursor-agent at construction or passive session sync (load-time contract)', () => {
+    const runtime = new CursorChatRuntime(createMockPlugin());
+    runtime.syncConversationState({
+      sessionId: 'sess-1',
+      providerId: 'cursor',
+      providerState: { chatSessionId: 'cursor-sess-99' },
+      messages: [],
+    } as any);
+
+    // Plugin onload / view restore only constructs runtimes and syncs state;
+    // the CLI process must spawn on the first query(), not at load time.
+    expect(mockSpawn).not.toHaveBeenCalled();
+  });
+
   it('cancel kills the child and aborts the ask-user controller', () => {
     const runtime = new CursorChatRuntime(createMockPlugin());
     const child = setupMockChild();
@@ -210,6 +224,20 @@ describe('CursorChatRuntime', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it('cleanup issues SIGTERM synchronously within the cleanup() call frame (onunload contract)', async () => {
+    const runtime = new CursorChatRuntime(createMockPlugin());
+    const child = setupMockChild();
+    (runtime as any).child = child;
+
+    const cleanupPromise = runtime.cleanup();
+    // Plugin onunload is synchronous and fire-and-forget: the SIGTERM must be
+    // initiated before cleanup() first suspends, or cursor-agent can be orphaned.
+    expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+
+    child.emit('exit', 0);
+    await cleanupPromise;
   });
 
   it('cleanup resolves once the child emits exit', async () => {

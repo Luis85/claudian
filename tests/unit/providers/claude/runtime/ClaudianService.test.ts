@@ -379,6 +379,20 @@ describe('ClaudianService', () => {
       expect(closePersistentQuerySpy).toHaveBeenCalledWith('plugin cleanup');
       expect(cancelSpy).toHaveBeenCalled();
     });
+
+    it('cleanup aborts the query AbortController synchronously within the call frame (onunload contract)', () => {
+      // Plugin onunload is synchronous and fire-and-forget. The SDK child is
+      // killed by the spawn-side abort listener (customSpawn.ts) which fires
+      // synchronously on abort(), so abort() must be reached before cleanup()
+      // could suspend — guarded here by asserting in the same call frame.
+      (service as any).persistentQuery = { interrupt: jest.fn().mockResolvedValue(undefined) };
+      const abortSpy = jest.fn();
+      (service as any).queryAbortController = { abort: abortSpy };
+
+      service.cleanup();
+
+      expect(abortSpy).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('Query Cancellation', () => {
