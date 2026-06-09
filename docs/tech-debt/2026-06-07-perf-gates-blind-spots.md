@@ -2,7 +2,7 @@
 type: tech-debt
 title: "Performance gates miss Agent Board and concurrent streaming hot paths"
 date: 2026-06-07
-updated: 2026-06-07
+updated: 2026-06-09
 status: open
 priority: "2 - normal"
 severity: medium
@@ -44,7 +44,29 @@ The Agent Board is the feature most likely to create many live cards, many activ
 
 ## Acceptance criteria
 
-- [ ] Perf suite covers Agent Board rendering growth.
-- [ ] Perf suite covers multi-tab concurrent streaming.
+- [x] Perf suite covers Agent Board rendering growth.
+- [x] Perf suite covers multi-tab concurrent streaming.
 - [ ] CI runs at least deterministic perf gates that do not depend on wall-clock timing.
-- [ ] Report-only timing metrics stay separated from pass/fail assertions.
+- [x] Report-only timing metrics stay separated from pass/fail assertions.
+
+## Progress (2026-06-09)
+
+Remediation items 1–3 shipped (see [[perf-gates-agent-board-and-multitab]], now `done`):
+
+1. **Agent Board rendering** — `tests/perf/agentBoard.perf.test.ts` guards full-board render
+   linearity (flat per-card DOM/listener cost at 50/200/1000 cards) and O(1) live patches
+   (`patchLiveStrip` zero-churn, `patchCard` constant delta independent of board size).
+2. **Queue / run-coordination concurrency** — `tests/perf/taskRunCoordinator.perf.test.ts`
+   guards O(1) launch validation vs active-run count and multi-slot drain passes bounded by
+   capacity × runnable, independent of terminal-card count (complements `queueRunner.perf`).
+3. **Multi-tab streaming** — `tests/perf/multiTabStreaming.perf.test.ts` drives 1/8/32 real
+   `StreamController` instances over a shared counting frame scheduler: constant pending
+   callbacks per tab per frame, per-tab render work independent of other open tabs.
+
+Still open (status stays `open`):
+
+4. MCP server enumeration perf guard — not yet warranted; revisit when unified MCP
+   management expands across providers.
+5. CI gating decision — the suite remains monitoring-only by design (`npm run test:perf`,
+   excluded from `npm test`/CI/coverage per `jest.perf.config.js`); promoting the
+   deterministic assertions into a CI gate is an unmade policy decision.
