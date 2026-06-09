@@ -60,6 +60,21 @@ describe('getDeniedIpReason', () => {
       // unspecified / "this network"
       ['0.0.0.0', 'unspecified'],
       ['::', 'unspecified'],
+      // IANA non-global IPv4 ranges
+      ['224.0.0.1', 'reserved'], // multicast 224.0.0.0/4
+      ['239.255.255.255', 'reserved'],
+      ['240.0.0.1', 'reserved'], // reserved 240.0.0.0/4
+      ['255.255.255.255', 'reserved'], // broadcast
+      ['192.0.0.1', 'reserved'], // IETF protocol assignments 192.0.0.0/24
+      ['192.0.2.1', 'reserved'], // documentation TEST-NET-1
+      ['198.51.100.7', 'reserved'], // documentation TEST-NET-2
+      ['203.0.113.9', 'reserved'], // documentation TEST-NET-3
+      ['198.18.0.1', 'reserved'], // benchmarking 198.18.0.0/15
+      ['198.19.255.255', 'reserved'],
+      ['192.88.99.1', 'reserved'], // deprecated 6to4 anycast (RFC 7526)
+      ['::ffff:224.0.0.1', 'reserved'], // embedded multicast
+      ['ff02::1', 'reserved'], // IPv6 multicast ff00::/8
+      ['2001:db8::1', 'reserved'], // IPv6 documentation 2001:db8::/32
       // IPv4-mapped IPv6 forms of denied ranges
       ['::ffff:127.0.0.1', 'loopback'],
       ['::ffff:10.0.0.1', 'private'],
@@ -94,7 +109,13 @@ describe('getDeniedIpReason', () => {
       '100.63.255.255', // just below 100.64.0.0/10
       '100.128.0.1', // just above 100.64.0.0/10
       '2606:4700::1111',
-      '2001:db8::1',
+      '2001:db7::1', // just below documentation 2001:db8::/32
+      '2001:db9::1', // just above documentation 2001:db8::/32
+      '223.255.255.255', // just below multicast 224.0.0.0/4
+      '198.17.255.255', // just below benchmarking 198.18.0.0/15
+      '198.20.0.1', // just above benchmarking 198.18.0.0/15
+      '192.0.1.1', // just below TEST-NET-1
+      '192.0.3.1', // just above TEST-NET-1
       '::ffff:8.8.8.8', // IPv4-mapped public stays allowed
       '64:ff9b::808:808', // NAT64 of public 8.8.8.8 stays allowed
       '64:ff9c::7f00:1', // outside 64:ff9b::/96, plain global unicast

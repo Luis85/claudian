@@ -60,6 +60,7 @@ export type DeniedIpReason =
   | 'private'
   | 'unique-local'
   | 'unspecified'
+  | 'reserved'
   | 'invalid';
 
 const defaultResolveHost: HostResolver = (hostname) =>
@@ -88,17 +89,39 @@ export function parseIpv4Octets(ip: string): [number, number, number, number] | 
   return octets as [number, number, number, number];
 }
 
-function deniedIpv4Reason(octets: [number, number, number, number]): DeniedIpReason | null {
-  const [a, b] = octets;
-  if (a === 0) return 'unspecified'; // 0.0.0.0/8 ("this network", incl. 0.0.0.0)
-  if (a === 127) return 'loopback'; // 127.0.0.0/8
-  if (a === 10) return 'private'; // 10.0.0.0/8
-  if (a === 172 && b >= 16 && b <= 31) return 'private'; // 172.16.0.0/12
-  if (a === 192 && b === 168) return 'private'; // 192.168.0.0/16
+/** IANA special-purpose IPv4 denylist as [CIDR prefix octets, prefix length, reason]. */
+const DENIED_IPV4_RANGES: Array<[[number, number, number, number], number, DeniedIpReason]> = [
+  [[0, 0, 0, 0], 8, 'unspecified'], // "this network", incl. 0.0.0.0
+  [[127, 0, 0, 0], 8, 'loopback'],
+  [[10, 0, 0, 0], 8, 'private'],
+  [[172, 16, 0, 0], 12, 'private'],
+  [[192, 168, 0, 0], 16, 'private'],
   // RFC6598 shared address space (CGNAT) — not publicly routable and hosts
   // some cloud-provider metadata endpoints (e.g. 100.100.100.200).
-  if (a === 100 && b >= 64 && b <= 127) return 'private'; // 100.64.0.0/10
-  if (a === 169 && b === 254) return 'link-local'; // 169.254.0.0/16 incl. metadata
+  [[100, 64, 0, 0], 10, 'private'],
+  [[169, 254, 0, 0], 16, 'link-local'], // incl. metadata 169.254.169.254
+  // Remaining IANA non-global ranges: an HTTP(S) MCP endpoint can never
+  // legitimately live here, so deny rather than assume "not RFC1918" is routable.
+  [[224, 0, 0, 0], 3, 'reserved'], // 224/4 multicast + 240/4 reserved incl. broadcast
+  [[192, 0, 0, 0], 24, 'reserved'], // IETF protocol assignments
+  [[192, 0, 2, 0], 24, 'reserved'], // documentation TEST-NET-1
+  [[192, 88, 99, 0], 24, 'reserved'], // deprecated 6to4 anycast (RFC 7526)
+  [[198, 18, 0, 0], 15, 'reserved'], // benchmarking
+  [[198, 51, 100, 0], 24, 'reserved'], // documentation TEST-NET-2
+  [[203, 0, 113, 0], 24, 'reserved'], // documentation TEST-NET-3
+];
+
+function ipv4ToInt(octets: [number, number, number, number]): number {
+  // >>> 0 keeps the value an unsigned 32-bit int (<< yields signed).
+  return ((octets[0] << 24) | (octets[1] << 16) | (octets[2] << 8) | octets[3]) >>> 0;
+}
+
+function deniedIpv4Reason(octets: [number, number, number, number]): DeniedIpReason | null {
+  const value = ipv4ToInt(octets);
+  for (const [prefix, bits, reason] of DENIED_IPV4_RANGES) {
+    const mask = bits === 0 ? 0 : (~0 << (32 - bits)) >>> 0;
+    if ((value & mask) >>> 0 === ipv4ToInt(prefix)) return reason;
+  }
   return null;
 }
 
@@ -174,6 +197,8 @@ function deniedIpv6Reason(ip: string): DeniedIpReason | null {
 
   if ((groups[0] & 0xffc0) === 0xfe80) return 'link-local'; // fe80::/10
   if ((groups[0] & 0xfe00) === 0xfc00) return 'unique-local'; // fc00::/7
+  if ((groups[0] & 0xff00) === 0xff00) return 'reserved'; // ff00::/8 multicast
+  if (groups[0] === 0x2001 && groups[1] === 0x0db8) return 'reserved'; // 2001:db8::/32 documentation
   return null;
 }
 

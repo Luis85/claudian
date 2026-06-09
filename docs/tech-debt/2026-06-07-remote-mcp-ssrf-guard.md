@@ -58,7 +58,10 @@ MCP servers can be vault-defined and therefore untrusted. Testing a server is an
   - `getDeniedIpReason` classifies loopback (127/8, `::1`), link-local
     (169.254/16 incl. metadata, fe80::/10), RFC1918 (10/8, 172.16/12,
     192.168/16), RFC6598 shared/CGNAT (100.64/10), IPv6 ULA (fc00::/7),
-    unspecified (0.0.0.0/8, `::`), and
+    unspecified (0.0.0.0/8, `::`), IANA non-global ranges (multicast 224/4 +
+    ff00::/8, reserved 240/4 incl. broadcast, benchmarking 198.18/15,
+    documentation TEST-NET-1/2/3 + 2001:db8::/32, IETF 192.0.0/24, deprecated
+    6to4 anycast 192.88.99/24), and
     embedded-IPv4 spellings of all of the above (IPv4-mapped `::ffff:0:0/96`,
     IPv4-compatible `::/96`, NAT64 `64:ff9b::/96`). Non-IP input fails closed.
   - `assertSafeRemoteUrl` preflights scheme (http/https only), checks literal
