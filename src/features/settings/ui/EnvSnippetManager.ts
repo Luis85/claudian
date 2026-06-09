@@ -12,6 +12,7 @@ import type { EnvironmentScope, EnvSnippet } from '../../../core/types';
 import { VIEW_TYPE_CLAUDIAN } from '../../../core/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
 import { t } from '../../../i18n/i18n';
+import { createSettingsActionButton } from '../../../shared/components/settingsListUI';
 import { confirmDelete } from '../../../shared/modals/ConfirmModal';
 import { formatContextLimit, parseContextLimit, parseEnvironmentVariables } from '../../../utils/env';
 import { isClaudianView } from '../../chat/isClaudianView';
@@ -290,45 +291,43 @@ export class EnvSnippetManager {
 
       const actionsEl = itemEl.createDiv({ cls: 'claudian-snippet-actions' });
 
-      const restoreBtn = actionsEl.createEl('button', {
-        cls: 'claudian-settings-action-btn',
-        attr: { 'aria-label': 'Insert' },
-      });
-      setIcon(restoreBtn, 'clipboard-paste');
-      restoreBtn.addEventListener('click', () => {
-        void (async (): Promise<void> => {
-        try {
-          await this.insertSnippet(snippet);
-        } catch {
-          new Notice(t('settings.envSnippets.insertFailed'));
-        }
-        })();
-      });
-
-      const editBtn = actionsEl.createEl('button', {
-        cls: 'claudian-settings-action-btn',
-        attr: { 'aria-label': 'Edit' },
-      });
-      setIcon(editBtn, 'pencil');
-      editBtn.addEventListener('click', () => {
-        this.editSnippet(snippet);
-      });
-
-      const deleteBtn = actionsEl.createEl('button', {
-        cls: 'claudian-settings-action-btn claudian-settings-delete-btn',
-        attr: { 'aria-label': 'Delete' },
-      });
-      setIcon(deleteBtn, 'trash-2');
-      deleteBtn.addEventListener('click', () => {
-        void (async (): Promise<void> => {
-        try {
-          if (await confirmDelete(this.plugin.app, `Delete environment snippet "${snippet.name}"?`)) {
-            await this.deleteSnippet(snippet);
+      createSettingsActionButton(actionsEl, {
+        icon: 'clipboard-paste',
+        ariaLabel: 'Insert',
+        onClick: () => {
+          void (async (): Promise<void> => {
+          try {
+            await this.insertSnippet(snippet);
+          } catch {
+            new Notice(t('settings.envSnippets.insertFailed'));
           }
-        } catch {
-          new Notice(t('settings.envSnippets.deleteFailed'));
-        }
-        })();
+          })();
+        },
+      });
+
+      createSettingsActionButton(actionsEl, {
+        icon: 'pencil',
+        ariaLabel: 'Edit',
+        onClick: () => {
+          this.editSnippet(snippet);
+        },
+      });
+
+      createSettingsActionButton(actionsEl, {
+        icon: 'trash-2',
+        ariaLabel: 'Delete',
+        danger: true,
+        onClick: () => {
+          void (async (): Promise<void> => {
+          try {
+            if (await confirmDelete(this.plugin.app, `Delete environment snippet "${snippet.name}"?`)) {
+              await this.deleteSnippet(snippet);
+            }
+          } catch {
+            new Notice(t('settings.envSnippets.deleteFailed'));
+          }
+          })();
+        },
       });
     }
   }

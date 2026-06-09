@@ -2,7 +2,6 @@ import { collectMissingMcpSecrets, extractMcpServerSecrets } from '../../../core
 import { McpServerManager } from '../../../core/mcp/McpServerManager';
 import { CachedCliResolver } from '../../../core/providers/CachedCliResolver';
 import type { ProviderCommandCatalog } from '../../../core/providers/commands/ProviderCommandCatalog';
-import { ProviderWorkspaceRegistry } from '../../../core/providers/ProviderWorkspaceRegistry';
 import type {
   AppAgentManager,
   AppAgentStorage,
@@ -153,11 +152,3 @@ async function maybePromptVaultTrust(plugin: PluginContext): Promise<void> {
 export const claudeWorkspaceRegistration: ProviderWorkspaceRegistration<ClaudeWorkspaceServices> = {
   initialize: async ({ plugin, vaultAdapter }) => createClaudeWorkspaceServices(plugin, vaultAdapter),
 };
-
-export function maybeGetClaudeWorkspaceServices(): ClaudeWorkspaceServices | null {
-  return ProviderWorkspaceRegistry.getServices('claude') as ClaudeWorkspaceServices | null;
-}
-
-export function getClaudeWorkspaceServices(): ClaudeWorkspaceServices {
-  return ProviderWorkspaceRegistry.requireServices('claude') as ClaudeWorkspaceServices;
-}

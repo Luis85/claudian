@@ -87,6 +87,29 @@ function setPromptText(promptBodyEl: HTMLElement, prompt: string): void {
   textEl.setText(prompt || 'No prompt provided');
 }
 
+function createSubagentHeader(
+  wrapperEl: HTMLElement,
+  description: string,
+  ariaLabel?: string,
+): { headerEl: HTMLElement; labelEl: HTMLElement } {
+  const headerEl = wrapperEl.createDiv({ cls: 'claudian-subagent-header' });
+  headerEl.setAttribute('tabindex', '0');
+  headerEl.setAttribute('role', 'button');
+  if (ariaLabel !== undefined) {
+    headerEl.setAttribute('aria-expanded', 'false');
+    headerEl.setAttribute('aria-label', ariaLabel);
+  }
+
+  const iconEl = headerEl.createDiv({ cls: 'claudian-subagent-icon' });
+  iconEl.setAttribute('aria-hidden', 'true');
+  setIcon(iconEl, getToolIcon(TOOL_TASK));
+
+  const labelEl = headerEl.createDiv({ cls: 'claudian-subagent-label' });
+  labelEl.setText(truncateDescription(description));
+
+  return { headerEl, labelEl };
+}
+
 function updateSyncHeaderAria(state: SubagentState): void {
   state.headerEl.setAttribute(
     'aria-label',
@@ -239,16 +262,7 @@ export function createSubagentBlock(
   const wrapperEl = parentEl.createDiv({ cls: 'claudian-subagent-list' });
   wrapperEl.dataset.subagentId = taskToolId;
 
-  const headerEl = wrapperEl.createDiv({ cls: 'claudian-subagent-header' });
-  headerEl.setAttribute('tabindex', '0');
-  headerEl.setAttribute('role', 'button');
-
-  const iconEl = headerEl.createDiv({ cls: 'claudian-subagent-icon' });
-  iconEl.setAttribute('aria-hidden', 'true');
-  setIcon(iconEl, getToolIcon(TOOL_TASK));
-
-  const labelEl = headerEl.createDiv({ cls: 'claudian-subagent-label' });
-  labelEl.setText(truncateDescription(description));
+  const { headerEl, labelEl } = createSubagentHeader(wrapperEl, description);
 
   const statusEl = headerEl.createDiv({ cls: 'claudian-subagent-status status-running' });
   statusEl.setAttribute('aria-label', 'Status: running');
@@ -505,18 +519,11 @@ export function createAsyncSubagentBlock(
   setAsyncWrapperStatus(wrapperEl, 'pending');
   wrapperEl.dataset.asyncSubagentId = taskToolId;
 
-  const headerEl = wrapperEl.createDiv({ cls: 'claudian-subagent-header' });
-  headerEl.setAttribute('tabindex', '0');
-  headerEl.setAttribute('role', 'button');
-  headerEl.setAttribute('aria-expanded', 'false');
-  headerEl.setAttribute('aria-label', `Background task: ${description} - Initializing - click to expand`);
-
-  const iconEl = headerEl.createDiv({ cls: 'claudian-subagent-icon' });
-  iconEl.setAttribute('aria-hidden', 'true');
-  setIcon(iconEl, getToolIcon(TOOL_TASK));
-
-  const labelEl = headerEl.createDiv({ cls: 'claudian-subagent-label' });
-  labelEl.setText(truncateDescription(description));
+  const { headerEl, labelEl } = createSubagentHeader(
+    wrapperEl,
+    description,
+    `Background task: ${description} - Initializing - click to expand`,
+  );
 
   const statusTextEl = headerEl.createDiv({ cls: 'claudian-subagent-status-text' });
   statusTextEl.setText('Initializing');
@@ -631,21 +638,11 @@ export function renderStoredAsyncSubagent(
   const statusText = getAsyncStatusText(subagent.asyncStatus);
   const statusAriaLabel = getAsyncStatusAriaLabel(subagent.asyncStatus);
 
-  const headerEl = wrapperEl.createDiv({ cls: 'claudian-subagent-header' });
-  headerEl.setAttribute('tabindex', '0');
-  headerEl.setAttribute('role', 'button');
-  headerEl.setAttribute('aria-expanded', 'false');
-  headerEl.setAttribute(
-    'aria-label',
-    `Background task: ${subagent.description} - ${statusAriaLabel} - click to expand`
+  const { headerEl } = createSubagentHeader(
+    wrapperEl,
+    subagent.description,
+    `Background task: ${subagent.description} - ${statusAriaLabel} - click to expand`,
   );
-
-  const iconEl = headerEl.createDiv({ cls: 'claudian-subagent-icon' });
-  iconEl.setAttribute('aria-hidden', 'true');
-  setIcon(iconEl, getToolIcon(TOOL_TASK));
-
-  const labelEl = headerEl.createDiv({ cls: 'claudian-subagent-label' });
-  labelEl.setText(truncateDescription(subagent.description));
 
   const statusTextEl = headerEl.createDiv({ cls: 'claudian-subagent-status-text' });
   statusTextEl.setText(statusText);

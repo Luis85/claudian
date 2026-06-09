@@ -1,6 +1,5 @@
 import { CachedCliResolver } from '../../../core/providers/CachedCliResolver';
 import type { ProviderCommandCatalog } from '../../../core/providers/commands/ProviderCommandCatalog';
-import { ProviderWorkspaceRegistry } from '../../../core/providers/ProviderWorkspaceRegistry';
 import type {
   ProviderTabWarmupPolicy,
   ProviderWorkspaceRegistration,
@@ -50,7 +49,3 @@ export async function createOpencodeWorkspaceServices(
 export const opencodeWorkspaceRegistration: ProviderWorkspaceRegistration<OpencodeWorkspaceServices> = {
   initialize: async ({ vaultAdapter }) => createOpencodeWorkspaceServices(vaultAdapter),
 };
-
-export function maybeGetOpencodeWorkspaceServices(): OpencodeWorkspaceServices | null {
-  return ProviderWorkspaceRegistry.getServices('opencode') as OpencodeWorkspaceServices | null;
-}
