@@ -1,12 +1,6 @@
+import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import type { SettingsCtx } from '../registry/SettingsField';
-
-const PROVIDERS: Array<{ id: ProviderId; name: string; blurb: string; cli: string }> = [
-  { id: 'claude', name: 'Claude', blurb: 'Anthropic Claude Code', cli: 'claude' },
-  { id: 'codex', name: 'Codex', blurb: 'OpenAI Codex CLI', cli: 'codex' },
-  { id: 'opencode', name: 'Opencode', blurb: 'Opencode CLI server', cli: 'opencode' },
-  { id: 'cursor', name: 'Cursor', blurb: 'Cursor Agent CLI', cli: 'cursor-agent' },
-];
 
 export class FirstRunBanner {
   private rows: Array<{ id: ProviderId; cb: HTMLInputElement }> = [];
@@ -21,17 +15,18 @@ export class FirstRunBanner {
     card.createEl('p', {
       text: 'Claudian wraps coding agents inside Obsidian. Enable one or more to start.',
     });
-    for (const p of PROVIDERS) {
+    for (const id of ProviderRegistry.getRegisteredProviderIds()) {
+      const name = ProviderRegistry.getProviderDisplayName(id);
       const row = card.createDiv({ cls: 'claudian-first-run-row' });
-      row.dataset.provider = p.id;
+      row.dataset.provider = id;
       const cb = row.createEl('input', {
-        attr: { type: 'checkbox', 'aria-label': `Enable ${p.name}` },
+        attr: { type: 'checkbox', 'aria-label': `Enable ${name}` },
       }) as HTMLInputElement;
-      this.rows.push({ id: p.id, cb });
+      this.rows.push({ id, cb });
       const text = row.createDiv();
-      text.createEl('strong', { text: p.name });
-      text.createEl('span', { text: ` — ${p.blurb}. Requires ` });
-      text.createEl('code', { text: p.cli });
+      text.createEl('strong', { text: name });
+      text.createEl('span', { text: ` — ${ProviderRegistry.getFirstRunBlurb(id)}. Requires ` });
+      text.createEl('code', { text: ProviderRegistry.getCliCommand(id) });
       // eslint-disable-next-line obsidianmd/ui/sentence-case -- trailing fragment of "requires `cli` on path."
       text.createEl('span', { text: ' on path.' });
     }
