@@ -339,8 +339,9 @@ export class WorkOrderDetailModal extends Modal {
   }
 
   /**
-   * Agent handoff: parse the `## Heading\nbody` region into the four
-   * ParsedHandoff fields and render them as collapsible bordered cards
+   * Agent handoff: parse the handoff region (marker-delimited fields, with a
+   * legacy `## Heading\nbody` fallback) into the four ParsedHandoff fields and
+   * render them as collapsible bordered cards
    * (Summary / Verification / Risks / Next action). If the region parses into no
    * known section, fall back to rendering the full raw markdown so handoff text
    * is never dropped.

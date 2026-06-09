@@ -1,7 +1,71 @@
 import {
   hasAnyHandoffSection,
   parseHandoffSections,
+  renderHandoffMarkdown,
 } from '../../../../../src/features/tasks/model/handoffSections';
+
+describe('renderHandoffMarkdown + parseHandoffSections (marker-delimited format)', () => {
+  const fields = {
+    summary: 'Shipped the activity block.',
+    verification: 'All four gates pass.',
+    risks: 'None observed.',
+    nextAction: 'Review and merge.',
+  };
+
+  it('round-trips the four fields verbatim', () => {
+    expect(parseHandoffSections(renderHandoffMarkdown(fields))).toEqual(fields);
+  });
+
+  it('keeps human-readable headings in the rendered region', () => {
+    const md = renderHandoffMarkdown(fields);
+    expect(md).toContain('## Summary');
+    expect(md).toContain('## Verification');
+    expect(md).toContain('## Risks');
+    expect(md).toContain('## Next Action');
+  });
+
+  it('round-trips a body containing the next expected section heading', () => {
+    // The core collision the heading-delimited format could not represent: a
+    // Summary that literally contains a "## Verification" line.
+    const colliding = {
+      ...fields,
+      summary: 'We verified manually first.\n## Verification\nThat heading is summary content.',
+    };
+    const parsed = parseHandoffSections(renderHandoffMarkdown(colliding));
+    expect(parsed).toEqual(colliding);
+  });
+
+  it('round-trips bodies containing every section heading and markdown structure', () => {
+    const adversarial = {
+      summary: '## Summary\n## Verification\n## Risks\n## Next Action',
+      verification: '- [x] `npm test`\n\n## Risks\nnested heading',
+      risks: '# Risks\nNone.',
+      nextAction: '## Next action\nMerge.',
+    };
+    expect(parseHandoffSections(renderHandoffMarkdown(adversarial))).toEqual(adversarial);
+  });
+
+  it('treats a field whose marker pair is absent as empty', () => {
+    const md = renderHandoffMarkdown(fields)
+      .split('\n')
+      .filter((line) => !line.includes('claudian:handoff:risks'))
+      .join('\n');
+    const parsed = parseHandoffSections(md);
+    expect(parsed.risks).toBe('');
+    expect(parsed.summary).toBe(fields.summary);
+    expect(parsed.nextAction).toBe(fields.nextAction);
+  });
+
+  it('salvages a field whose end marker was hand-removed instead of dropping it', () => {
+    const md = renderHandoffMarkdown(fields)
+      .split('\n')
+      .filter((line) => line !== '<!-- claudian:handoff:summary:end -->')
+      .join('\n');
+    const parsed = parseHandoffSections(md);
+    expect(parsed.summary).toContain(fields.summary);
+    expect(parsed.verification).toBe(fields.verification);
+  });
+});
 
 describe('parseHandoffSections', () => {
   const canonical = [

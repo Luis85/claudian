@@ -1,6 +1,7 @@
 import { stringifyYaml } from 'obsidian';
 
 import { parseFrontmatter } from '../../../utils/frontmatter';
+import { HANDOFF_FIELD_MARKER_STRINGS } from '../model/handoffSections';
 import type { TaskLedgerEntry, TaskPriority, TaskSpec, TaskStatus } from '../model/taskTypes';
 
 export const RUN_LEDGER_START = '<!-- claudian:run-ledger-start -->';
@@ -199,7 +200,15 @@ export class TaskNoteStore {
   }
 
   writeHandoff(content: string, markdown: string): string {
-    this.assertNoEmbeddedClaudianMarkers(markdown);
+    // The per-field markers emitted by renderHandoffMarkdown are the one
+    // sanctioned use of the claudian marker namespace inside a generated
+    // region; scrub exactly those, then reject anything else. Field bodies are
+    // already marker-free — parseTaskHandoff rejects them upstream.
+    let scrubbed = markdown;
+    for (const marker of HANDOFF_FIELD_MARKER_STRINGS) {
+      scrubbed = scrubbed.split(marker).join('');
+    }
+    this.assertNoEmbeddedClaudianMarkers(scrubbed);
 
     return this.replaceGeneratedRegion(content, HANDOFF_START, HANDOFF_END, markdown.trim());
   }
