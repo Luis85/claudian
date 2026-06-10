@@ -2,8 +2,8 @@
 type: tech-debt
 title: "Performance gates miss Agent Board and concurrent streaming hot paths"
 date: 2026-06-07
-updated: 2026-06-09
-status: open
+updated: 2026-06-10
+status: done
 priority: "2 - normal"
 severity: medium
 scope: performance-testing
@@ -46,7 +46,7 @@ The Agent Board is the feature most likely to create many live cards, many activ
 
 - [x] Perf suite covers Agent Board rendering growth.
 - [x] Perf suite covers multi-tab concurrent streaming.
-- [ ] CI runs at least deterministic perf gates that do not depend on wall-clock timing.
+- [x] CI runs at least deterministic perf gates that do not depend on wall-clock timing.
 - [x] Report-only timing metrics stay separated from pass/fail assertions.
 
 ## Progress (2026-06-09)
@@ -63,10 +63,18 @@ Remediation items 1–3 shipped (see [[perf-gates-agent-board-and-multitab]], no
    `StreamController` instances over a shared counting frame scheduler: constant pending
    callbacks per tab per frame, per-tab render work independent of other open tabs.
 
-Still open (status stays `open`):
+## Resolution (2026-06-10)
 
-4. MCP server enumeration perf guard — not yet warranted; revisit when unified MCP
-   management expands across providers.
-5. CI gating decision — the suite remains monitoring-only by design (`npm run test:perf`,
-   excluded from `npm test`/CI/coverage per `jest.perf.config.js`); promoting the
-   deterministic assertions into a CI gate is an unmade policy decision.
+5. **CI gating decided and shipped**: the whole perf suite now runs as the
+   blocking `perf` job in `.github/workflows/ci.yml` (`npm run test:perf`).
+   The policy: every pass/fail assertion in `tests/perf/*` is a deterministic
+   count (DOM nodes, listeners, scheduler callbacks, parse passes) against a
+   bounded window — never a wall-clock timing — so the suite is stable on
+   shared runners. Timing tables remain report-only monitoring in the job log
+   (`CLAUDIAN_PERF_JSON` for trend capture stays opt-in, local). The suite
+   stays excluded from `npm test` and coverage.
+
+Retired without action:
+
+4. MCP server enumeration perf guard — still not warranted; revisit if unified
+   MCP management expands across providers (reopen or file a fresh note then).

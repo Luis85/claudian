@@ -24,6 +24,7 @@ Background: `docs/tech-debt/2026-06-07-agentic-quality-gates.md`.
 | Tests | `npm run test` | `test` (Linux + Windows) | Behavior regressions on both path/spawn targets. |
 | Coverage floors | `npm run test:coverage` | `coverage` | Coverage dropping below `coverageThreshold`. |
 | Provider-boundary guards | `npm run test` | `test` | A registered provider with an incomplete `ProviderRegistration`; new hardcoded provider-id lists/switches outside `src/providers/index.ts`. See "Provider-boundary guards" below. |
+| Perf scaling guards | `npm run test:perf` | `perf` | A hot path's cost scaling with unbounded input instead of its bounded window (render window, per-turn tools, slot cap). Deterministic count assertions only — timings stay report-only. |
 | Production build | `npm run build` | `build` | CSS concat, esbuild bundle, SDK patching, renderer-unsafe-unref guard. |
 | Artifact smoke | `npm run check:artifacts` | `build` | Missing/empty artifacts, package/manifest version desync, missing `minAppVersion`, bundle-size budget. |
 
@@ -215,10 +216,7 @@ Tracked here so the direction is explicit.
    staged `obsidianmd`/`no-explicit-any` warnings incrementally; each time a
    threshold reaches zero, tighten it (or promote the rule to `error`) so the
    gain can't regress. No big-bang refactor and no day-one CI block.
-2. **Perf-gate wiring.** `tests/perf/*` are monitoring-only today
-   (`docs/tech-debt/2026-06-07-perf-gates-blind-spots.md`); decide which
-   scaling assertions graduate into a blocking job.
-3. **Tighten the quality-ratchet floors.** The ratchet freezes today's debt;
+2. **Tighten the quality-ratchet floors.** The ratchet freezes today's debt;
    the complexity backlog (`complexFunctions`, `criticalComplexity` in
    `scripts/quality-baseline.json`) still has to be burned down hotspot by
    hotspot (`npm run quality:health` prioritizes targets). Each refactor PR
@@ -236,3 +234,7 @@ budget. See `docs/tech-debt/2026-06-07-import-cycle-budget.md`.
 Done 2026-06-10 (second pass): the provider→`features` zone allowance closed —
 shared settings-UI helpers moved to `shared/settings/`, so provider zones now
 import only `app`/`core`/`shared`/`utils`/`i18n` (+ `acp` for Opencode).
+Done 2026-06-10 (third pass): perf scaling guards graduated into a blocking CI
+job (`perf`, `npm run test:perf`) — gateable because every assertion is a
+deterministic count, never a timing; timings remain report-only monitoring.
+See `docs/tech-debt/2026-06-07-perf-gates-blind-spots.md`.
