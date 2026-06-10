@@ -4,6 +4,7 @@ import { Modal, Notice, setIcon, Setting } from 'obsidian';
 import type { ProviderCommandCatalog } from '../../../core/providers/commands/ProviderCommandCatalog';
 import type { ProviderCommandEntry } from '../../../core/providers/commands/ProviderCommandEntry';
 import { t } from '../../../i18n/i18n';
+import { renderModalButtonRow, renderSettingsListItem, type SettingsActionButtonOptions } from '../../../shared/components/settingsListUI';
 import { extractFirstParagraph, normalizeArgumentHint, parseSlashCommandContent, validateCommandName } from '../../../utils/slashCommand';
 
 function resolveAllowedTools(inputValue: string, parsedTools?: string[]): string[] | undefined {
@@ -206,20 +207,12 @@ export class SlashCommandModal extends Modal {
       : '';
     contentArea.value = initialContent;
 
-    const buttonContainer = contentEl.createDiv({ cls: 'claudian-sp-modal-buttons' });
-
-    const cancelBtn = buttonContainer.createEl('button', {
-      text: 'Cancel',
-      cls: 'claudian-cancel-btn',
-    });
-    cancelBtn.addEventListener('click', () => this.close());
-
-    const saveBtn = buttonContainer.createEl('button', {
-      text: 'Save',
-      cls: 'claudian-save-btn',
-    });
-    saveBtn.addEventListener('click', () => {
-      void (async (): Promise<void> => {
+    renderModalButtonRow(contentEl, {
+      cls: 'claudian-sp-modal-buttons',
+      saveText: 'Save',
+      onCancel: () => this.close(),
+      onSave: () => {
+        void (async (): Promise<void> => {
       const name = nameInput.value.trim();
       const nameError = validateCommandName(name);
       if (nameError) {
@@ -285,7 +278,8 @@ export class SlashCommandModal extends Modal {
         return;
       }
       this.close();
-      })();
+        })();
+      },
     });
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -364,14 +358,54 @@ export class SlashCommandSettings {
   }
 
   private renderCommandItem(listEl: HTMLElement, cmd: ProviderCommandEntry): void {
-    const itemEl = listEl.createDiv({ cls: 'claudian-sp-item' });
+    const actions: SettingsActionButtonOptions[] = [];
 
-    const infoEl = itemEl.createDiv({ cls: 'claudian-sp-info' });
+    if (cmd.isEditable) {
+      actions.push({ icon: 'pencil', ariaLabel: 'Edit', onClick: () => this.openCommandModal(cmd) });
+    }
 
-    const headerRow = infoEl.createDiv({ cls: 'claudian-sp-item-header' });
+    if (!isSkillEntry(cmd) && cmd.isEditable) {
+      actions.push({
+        icon: 'package',
+        ariaLabel: 'Convert to skill',
+        onClick: () => {
+          void (async (): Promise<void> => {
+          try {
+            await this.transformToSkill(cmd);
+          } catch {
+            new Notice(t('settings.slashCommands.convertFailed'));
+          }
+          })();
+        },
+      });
+    }
 
-    const nameEl = headerRow.createSpan({ cls: 'claudian-sp-item-name' });
-    nameEl.setText(`/${cmd.name}`);
+    if (cmd.isDeletable) {
+      actions.push({
+        icon: 'trash-2',
+        ariaLabel: 'Delete',
+        danger: true,
+        onClick: () => {
+          void (async (): Promise<void> => {
+          try {
+            await this.deleteCommand(cmd);
+          } catch {
+            new Notice(t(
+              isSkillEntry(cmd)
+                ? 'settings.slashCommands.skillDeleteFailed'
+                : 'settings.slashCommands.commandDeleteFailed',
+            ));
+          }
+          })();
+        },
+      });
+    }
+
+    const { headerRow } = renderSettingsListItem(listEl, {
+      name: `/${cmd.name}`,
+      description: cmd.description,
+      actions,
+    });
 
     if (isSkillEntry(cmd)) {
       headerRow.createSpan({ text: 'skill', cls: 'claudian-slash-item-badge' });
@@ -380,60 +414,6 @@ export class SlashCommandSettings {
     if (cmd.argumentHint) {
       const hintEl = headerRow.createSpan({ cls: 'claudian-slash-item-hint' });
       hintEl.setText(cmd.argumentHint);
-    }
-
-    if (cmd.description) {
-      const descEl = infoEl.createDiv({ cls: 'claudian-sp-item-desc' });
-      descEl.setText(cmd.description);
-    }
-
-    const actionsEl = itemEl.createDiv({ cls: 'claudian-sp-item-actions' });
-
-    if (cmd.isEditable) {
-      const editBtn = actionsEl.createEl('button', {
-        cls: 'claudian-settings-action-btn',
-        attr: { 'aria-label': 'Edit' },
-      });
-      setIcon(editBtn, 'pencil');
-      editBtn.addEventListener('click', () => this.openCommandModal(cmd));
-    }
-
-    if (!isSkillEntry(cmd) && cmd.isEditable) {
-      const convertBtn = actionsEl.createEl('button', {
-        cls: 'claudian-settings-action-btn',
-        attr: { 'aria-label': 'Convert to skill' },
-      });
-      setIcon(convertBtn, 'package');
-      convertBtn.addEventListener('click', () => {
-        void (async (): Promise<void> => {
-        try {
-          await this.transformToSkill(cmd);
-        } catch {
-          new Notice(t('settings.slashCommands.convertFailed'));
-        }
-        })();
-      });
-    }
-
-    if (cmd.isDeletable) {
-      const deleteBtn = actionsEl.createEl('button', {
-        cls: 'claudian-settings-action-btn claudian-settings-delete-btn',
-        attr: { 'aria-label': 'Delete' },
-      });
-      setIcon(deleteBtn, 'trash-2');
-      deleteBtn.addEventListener('click', () => {
-        void (async (): Promise<void> => {
-        try {
-          await this.deleteCommand(cmd);
-        } catch {
-          new Notice(t(
-            isSkillEntry(cmd)
-              ? 'settings.slashCommands.skillDeleteFailed'
-              : 'settings.slashCommands.commandDeleteFailed',
-          ));
-        }
-        })();
-      });
     }
   }
 

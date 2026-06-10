@@ -6,7 +6,7 @@ import { asSettingsBag } from '../../../core/types';
 import { renderEnvironmentSettingsSection } from '../../../features/settings/ui/EnvironmentSettingsSection';
 import { getHostnameKey } from '../../../utils/env';
 import { expandHomePath } from '../../../utils/path';
-import { maybeGetOpencodeWorkspaceServices } from '../app/OpencodeWorkspaceServices';
+import { maybeGetOpencodeWorkspaceServices } from '../app/opencodeWorkspaceAccess';
 import { clearOpencodeDiscoveryState } from '../discoveryState';
 import { sameStringList } from '../internal/compareCollections';
 import {

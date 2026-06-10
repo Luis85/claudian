@@ -11,7 +11,12 @@
     "**/.fallow/**",
     "**/coverage/**",
     "**/main.js",
-    "**/styles.css"
+    "**/styles.css",
+    "src/style/**"
+  ],
+  "ignoreDependencies": [
+    "tslib",
+    "electron"
   ],
   "duplicates": {
     "minOccurrences": 3,

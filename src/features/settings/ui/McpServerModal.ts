@@ -12,6 +12,7 @@ import type {
 } from '../../../core/types';
 import { DEFAULT_MCP_SERVER, getMcpServerType } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
+import { renderModalButtonRow } from '../../../shared/components/settingsListUI';
 import { parseCommand } from '../../../utils/mcp';
 
 export class McpServerModal extends Modal {
@@ -142,19 +143,13 @@ export class McpServerModal extends Modal {
         });
       });
 
-    const buttonContainer = contentEl.createDiv({ cls: 'claudian-mcp-buttons' });
-
-    const cancelBtn = buttonContainer.createEl('button', {
-      text: 'Cancel',
-      cls: 'claudian-cancel-btn',
+    renderModalButtonRow(contentEl, {
+      cls: 'claudian-mcp-buttons',
+      saveText: this.existingServer ? 'Update' : 'Add',
+      saveCls: 'claudian-save-btn mod-cta',
+      onCancel: () => this.close(),
+      onSave: () => this.save(),
     });
-    cancelBtn.addEventListener('click', () => this.close());
-
-    const saveBtn = buttonContainer.createEl('button', {
-      text: this.existingServer ? 'Update' : 'Add',
-      cls: 'claudian-save-btn mod-cta',
-    });
-    saveBtn.addEventListener('click', () => this.save());
   }
 
   private renderTypeFields() {

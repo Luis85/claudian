@@ -9,7 +9,7 @@ import { McpSettingsManager } from '../../../features/settings/ui/McpSettingsMan
 import { t } from '../../../i18n/i18n';
 import { getHostnameKey } from '../../../utils/env';
 import { expandHomePath } from '../../../utils/path';
-import { getClaudeWorkspaceServices } from '../app/ClaudeWorkspaceServices';
+import { getClaudeWorkspaceServices } from '../app/claudeWorkspaceAccess';
 import { resolveClaudeModelSelection } from '../modelOptions';
 import {
   isClaudeVaultTrusted,

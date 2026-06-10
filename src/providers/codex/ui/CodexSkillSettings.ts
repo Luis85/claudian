@@ -3,6 +3,7 @@ import { type App, Modal, Notice, setIcon, Setting } from 'obsidian';
 import type { ProviderCommandCatalog } from '../../../core/providers/commands/ProviderCommandCatalog';
 import type { ProviderCommandEntry } from '../../../core/providers/commands/ProviderCommandEntry';
 import { t } from '../../../i18n/i18n';
+import { renderModalButtonRow, renderSettingsListItem, type SettingsActionButtonOptions } from '../../../shared/components/settingsListUI';
 import { validateCommandName } from '../../../utils/slashCommand';
 import {
   CODEX_SKILL_ROOT_OPTIONS,
@@ -131,20 +132,13 @@ export class CodexSkillModal extends Modal {
     };
     this._triggerSave = doSave;
 
-    const buttonContainer = contentEl.createDiv({ cls: 'claudian-sp-modal-buttons' });
-
-    const cancelBtn = buttonContainer.createEl('button', {
-      text: 'Cancel',
-      cls: 'claudian-cancel-btn',
-    });
-    cancelBtn.addEventListener('click', () => this.close());
-
-    const saveBtn = buttonContainer.createEl('button', {
-      text: 'Save',
-      cls: 'claudian-save-btn',
-    });
-    saveBtn.addEventListener('click', () => {
-      void doSave();
+    renderModalButtonRow(contentEl, {
+      cls: 'claudian-sp-modal-buttons',
+      saveText: 'Save',
+      onCancel: () => this.close(),
+      onSave: () => {
+        void doSave();
+      },
     });
   }
 
@@ -216,47 +210,37 @@ export class CodexSkillSettings {
   }
 
   private renderItem(listEl: HTMLElement, entry: ProviderCommandEntry): void {
-    const itemEl = listEl.createDiv({ cls: 'claudian-sp-item' });
-    const infoEl = itemEl.createDiv({ cls: 'claudian-sp-info' });
-
-    const headerRow = infoEl.createDiv({ cls: 'claudian-sp-item-header' });
-    const nameEl = headerRow.createSpan({ cls: 'claudian-sp-item-name' });
-    nameEl.setText(`$${entry.name}`);
-    headerRow.createSpan({ text: 'skill', cls: 'claudian-slash-item-badge' });
-
-    if (entry.description) {
-      const descEl = infoEl.createDiv({ cls: 'claudian-sp-item-desc' });
-      descEl.setText(entry.description);
-    }
-
-    const actionsEl = itemEl.createDiv({ cls: 'claudian-sp-item-actions' });
+    const actions: SettingsActionButtonOptions[] = [];
 
     if (entry.isEditable) {
-      const editBtn = actionsEl.createEl('button', {
-        cls: 'claudian-settings-action-btn',
-        attr: { 'aria-label': 'Edit' },
-      });
-      setIcon(editBtn, 'pencil');
-      editBtn.addEventListener('click', () => this.openModal(entry));
+      actions.push({ icon: 'pencil', ariaLabel: 'Edit', onClick: () => this.openModal(entry) });
     }
 
     if (entry.isDeletable) {
-      const deleteBtn = actionsEl.createEl('button', {
-        cls: 'claudian-settings-action-btn claudian-settings-delete-btn',
-        attr: { 'aria-label': 'Delete' },
-      });
-      setIcon(deleteBtn, 'trash-2');
-      deleteBtn.addEventListener('click', () => {
-        void (async (): Promise<void> => {
-        try {
-          await this.deleteEntry(entry);
-          new Notice(t('provider.codex.skill.deleted', { name: entry.name }));
-        } catch {
-          new Notice(t('provider.codex.skill.deleteFailed'));
-        }
-        })();
+      actions.push({
+        icon: 'trash-2',
+        ariaLabel: 'Delete',
+        danger: true,
+        onClick: () => {
+          void (async (): Promise<void> => {
+          try {
+            await this.deleteEntry(entry);
+            new Notice(t('provider.codex.skill.deleted', { name: entry.name }));
+          } catch {
+            new Notice(t('provider.codex.skill.deleteFailed'));
+          }
+          })();
+        },
       });
     }
+
+    const { headerRow } = renderSettingsListItem(listEl, {
+      name: `$${entry.name}`,
+      description: entry.description,
+      actions,
+    });
+
+    headerRow.createSpan({ text: 'skill', cls: 'claudian-slash-item-badge' });
   }
 
   private openModal(existing: ProviderCommandEntry | null): void {

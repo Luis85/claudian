@@ -3,10 +3,8 @@ import type {
   ProviderTaskTerminalStatus,
 } from '../../../core/providers/types';
 import type { ToolCallInfo } from '../../../core/types';
-import {
-  extractCursorNestedToolCalls,
-  extractCursorTaskResultText,
-} from './cursorTaskSubagent';
+import { extractCursorTaskResultText } from './cursorTaskPayload';
+import { extractCursorNestedToolCalls } from './cursorTaskSubagent';
 
 function readTaskPayload(toolUseResult: unknown): Record<string, unknown> | null {
   if (!toolUseResult || typeof toolUseResult !== 'object' || Array.isArray(toolUseResult)) {

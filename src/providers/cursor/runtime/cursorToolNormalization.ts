@@ -31,7 +31,7 @@ import {
   buildCursorTaskToolUseResult,
   extractCursorTaskResultText,
   parseCursorSubagentType,
-} from './cursorTaskSubagent';
+} from './cursorTaskPayload';
 
 interface CursorToolEnvelope {
   kind: string;
