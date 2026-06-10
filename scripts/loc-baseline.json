@@ -133,10 +133,6 @@
     "src/shared/mention/MentionDropdownController.ts": {
       "loc": 543,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
-    },
-    "src/utils/env.ts": {
-      "loc": 519,
-      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     }
   }
 }
