@@ -95,6 +95,12 @@ untrusted-tool-description framing.
 - Transport-hygiene UX: provenance (vault vs user-added) + destination-host
   labels, non-loopback `http://` warning, and untrusted-tool-description
   framing are not implemented in the MCP settings UI.
-- No settings surface yet wires `allowLoopback` for localhost MCP developers.
-- Scope: the guard covers the plugin's own Test/connection path. Provider CLI
-  subprocesses establish their own MCP connections and are out of reach here.
+- No settings surface yet wires the loopback policy (Test path: strict deny;
+  runtime path: allow — localhost MCP is a supported dev workflow).
+- Runtime activation is vetted too (2026-06-10, PR #74 review follow-up):
+  `src/core/mcp/mcpRuntimeVetting.ts` drops unsafe URL-based servers (fail
+  closed, per-server) at both Claude seams — cold start (`queryViaSDK`, warns
+  via notice chunk) and `applyClaudeDynamicUpdates`/`setMcpServers` (warns via
+  `notifyFailure`) — before configs reach the CLI. Remaining scope gap: the
+  rebinding pin only covers the plugin's own sockets; provider CLIs resolve
+  DNS themselves after the vetted handoff.

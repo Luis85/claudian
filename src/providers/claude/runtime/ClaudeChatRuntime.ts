@@ -24,6 +24,7 @@ import type {
 import { query as agentQuery } from '@anthropic-ai/claude-agent-sdk';
 import { Notice } from 'obsidian';
 
+import { vetActiveServersForRuntime } from '../../../core/mcp/mcpRuntimeVetting';
 import type { McpServerManager } from '../../../core/mcp/McpServerManager';
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type {
@@ -1601,6 +1602,21 @@ export class ClaudianService implements ChatRuntime {
     };
 
     const options = QueryOptionsBuilder.buildColdStartQueryOptions(ctx);
+
+    // SECURITY (SEC-D): vet URL-based MCP servers before the config reaches
+    // the Claude CLI — the settings Test button is not on this path. Unsafe
+    // servers are dropped (fail closed) instead of failing the turn.
+    if (options.mcpServers && Object.keys(options.mcpServers).length > 0) {
+      const vetted = await vetActiveServersForRuntime(options.mcpServers);
+      options.mcpServers = vetted.safe;
+      for (const entry of vetted.dropped) {
+        yield {
+          type: 'notice',
+          content: `MCP server "${entry.name}" was not activated: ${entry.reason}`,
+          level: 'warning',
+        };
+      }
+    }
 
     let sawStreamText = false;
     let sawStreamThinking = false;

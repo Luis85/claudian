@@ -88,14 +88,26 @@ MCP servers can be vault-defined and therefore untrusted. Testing a server is an
   `tests/unit/core/mcp/createNodeFetch.test.ts` (refusal before transport
   construction; socket dials the pinned IP for the vetted hostname),
   `tests/integration/core/mcp/mcp.test.ts` (loopback refusal end-to-end).
+- Runtime-activation vet (2026-06-10, PR #74 review follow-up):
+  `src/core/mcp/mcpRuntimeVetting.ts` runs the same preflight on the chat
+  path before active-server configs leave the plugin — wired at both Claude
+  seams (`queryViaSDK` cold start, which yields a warning notice chunk, and
+  `applyClaudeDynamicUpdates` before `setMcpServers`, which surfaces drops
+  via `notifyFailure`). Unsafe servers are dropped per-server (fail closed,
+  incl. DNS failure) instead of failing the turn. Loopback is **allowed** on
+  the runtime path — localhost MCP servers are a supported dev workflow that
+  predates the guard; the strict no-loopback policy stays on the Test path.
+  Tests: `tests/unit/core/mcp/mcpRuntimeVetting.test.ts` plus both-seam
+  integration tests in `ClaudianService.test.ts`.
 
 **Residual (why partially-shipped):**
 
 - UI provenance + destination-host display (criterion 3) and untrusted
   tool-description framing (criterion 4) are not implemented — UI work was out
   of scope for this hardening pass.
-- No user-facing opt-in yet for developers running MCP servers on localhost;
-  the `allowLoopback` option exists in the module but nothing sets it.
-- The guard protects the plugin's own connection path (`McpTester`). Provider
-  CLIs (Claude/Codex/etc.) open their own MCP connections at chat time outside
-  the plugin process and cannot be pinned from here.
+- No user-facing toggle yet for loopback policy; the Test path hardcodes
+  strict (deny) and the runtime path hardcodes allow.
+- The rebinding **pin** applies only to the plugin's own connections
+  (`McpTester`). Provider CLIs open their own MCP sockets at chat time, so
+  the runtime path gets preflight vetting (drop before handoff) but a DNS
+  rebind after the CLI's own resolution cannot be prevented from here.

@@ -4,6 +4,7 @@ import type {
   Query,
 } from '@anthropic-ai/claude-agent-sdk';
 
+import { vetActiveServersForRuntime } from '../../../core/mcp/mcpRuntimeVetting';
 import type { McpServerManager } from '../../../core/mcp/McpServerManager';
 import type {
   ChatRuntimeQueryOptions,
@@ -124,8 +125,16 @@ export async function applyClaudeDynamicUpdates(
   const mcpServersKey = JSON.stringify(mcpServers);
 
   if (deps.getCurrentConfig() && mcpServersKey !== deps.getCurrentConfig()!.mcpServersKey) {
+    // SECURITY (SEC-D): vet URL-based servers before their configs reach the
+    // Claude CLI — the settings Test button is not on this path. Unsafe
+    // servers are dropped (fail closed) rather than failing the turn; the key
+    // still tracks the raw set so the drop is not re-announced every turn.
+    const vetted = await vetActiveServersForRuntime(mcpServers);
+    for (const entry of vetted.dropped) {
+      deps.notifyFailure(`MCP server "${entry.name}" was not activated: ${entry.reason}`);
+    }
     const serverConfigs: Record<string, McpServerConfig> = {};
-    for (const [name, config] of Object.entries(mcpServers)) {
+    for (const [name, config] of Object.entries(vetted.safe)) {
       serverConfigs[name] = config;
     }
 
