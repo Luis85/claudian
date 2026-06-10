@@ -44,6 +44,29 @@ function shortenPath(filePath: string, maxLength = 40): string {
   return `${firstDir}/.../${filename}`;
 }
 
+/** Builds the icon/name/summary/stats header cells shared by live and stored blocks. */
+function buildWriteEditHeaderParts(
+  app: App,
+  headerEl: HTMLElement,
+  toolName: string,
+  filePath: string,
+): { nameEl: HTMLElement; summaryEl: HTMLElement; statsEl: HTMLElement } {
+  const iconEl = headerEl.createDiv({ cls: 'claudian-write-edit-icon' });
+  iconEl.setAttribute('aria-hidden', 'true');
+  setIcon(iconEl, getToolIcon(toolName));
+
+  const nameEl = headerEl.createDiv({ cls: 'claudian-write-edit-name' });
+  nameEl.setText(toolName);
+  const summaryEl = headerEl.createDiv({ cls: 'claudian-write-edit-summary' });
+  summaryEl.setText(fileNameOnly(filePath) || 'file');
+  decorateVaultFileLink(app, summaryEl, filePath);
+
+  // Populated when diff is computed
+  const statsEl = headerEl.createDiv({ cls: 'claudian-write-edit-stats' });
+
+  return { nameEl, summaryEl, statsEl };
+}
+
 export function createWriteEditBlock(
   app: App,
   parentEl: HTMLElement,
@@ -61,19 +84,7 @@ export function createWriteEditBlock(
   headerEl.setAttribute('role', 'button');
   headerEl.setAttribute('aria-label', `${toolName}: ${shortenPath(filePath)} - click to expand`);
 
-  // File icon
-  const iconEl = headerEl.createDiv({ cls: 'claudian-write-edit-icon' });
-  iconEl.setAttribute('aria-hidden', 'true');
-  setIcon(iconEl, getToolIcon(toolName));
-
-  const nameEl = headerEl.createDiv({ cls: 'claudian-write-edit-name' });
-  nameEl.setText(toolName);
-  const summaryEl = headerEl.createDiv({ cls: 'claudian-write-edit-summary' });
-  summaryEl.setText(fileNameOnly(filePath) || 'file');
-  decorateVaultFileLink(app, summaryEl, filePath);
-
-  // Populated when diff is computed
-  const statsEl = headerEl.createDiv({ cls: 'claudian-write-edit-stats' });
+  const { nameEl, summaryEl, statsEl } = buildWriteEditHeaderParts(app, headerEl, toolName, filePath);
 
   const statusEl = headerEl.createDiv({ cls: 'claudian-write-edit-status status-running' });
   statusEl.setAttribute('aria-label', 'Status: running');
@@ -176,18 +187,7 @@ export function renderStoredWriteEdit(
   headerEl.setAttribute('tabindex', '0');
   headerEl.setAttribute('role', 'button');
 
-  // File icon
-  const iconEl = headerEl.createDiv({ cls: 'claudian-write-edit-icon' });
-  iconEl.setAttribute('aria-hidden', 'true');
-  setIcon(iconEl, getToolIcon(toolName));
-
-  const nameEl = headerEl.createDiv({ cls: 'claudian-write-edit-name' });
-  nameEl.setText(toolName);
-  const summaryEl = headerEl.createDiv({ cls: 'claudian-write-edit-summary' });
-  summaryEl.setText(fileNameOnly(filePath) || 'file');
-  decorateVaultFileLink(app, summaryEl, filePath);
-
-  const statsEl = headerEl.createDiv({ cls: 'claudian-write-edit-stats' });
+  const { statsEl } = buildWriteEditHeaderParts(app, headerEl, toolName, filePath);
   if (toolCall.diffData) {
     renderDiffStats(statsEl, toolCall.diffData.stats);
   }

@@ -36,9 +36,11 @@ import type { PluginContext } from '../../../core/types/PluginContext';
 import { asSettingsBag } from '../../../core/types/settings';
 import { getEnhancedPath } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
+import type {
+  AcpJsonRpcTransport,
+  AcpSubprocess} from '../../acp';
 import {
   AcpClientConnection,
-  AcpJsonRpcTransport,
   type AcpReadTextFileRequest,
   type AcpRequestPermissionRequest,
   type AcpRequestPermissionResponse,
@@ -47,7 +49,6 @@ import {
   type AcpSessionModeState,
   type AcpSessionNotification,
   AcpSessionUpdateNormalizer,
-  AcpSubprocess,
   type AcpUsage,
   type AcpUsageUpdate,
   type AcpWriteTextFileRequest,
@@ -55,6 +56,8 @@ import {
   extractAcpSessionModelState,
   extractAcpSessionModeState,
   extractAcpSessionThoughtLevelState,
+  readWorkspaceTextFile,
+  resolveWorkspaceScopedPath,
 } from '../../acp';
 import { OPENCODE_PROVIDER_CAPABILITIES } from '../capabilities';
 import { updateOpencodeDiscoveryState } from '../discoveryState';
@@ -94,7 +97,7 @@ import {
   mapApprovalDecision,
   normalizeApprovalInput,
 } from './opencodeApprovalHelpers';
-import { prepareOpencodeLaunchArtifacts } from './OpencodeLaunchArtifacts';
+import { prepareOpencodeLaunchArtifacts, startOpencodeAcpProcess } from './OpencodeLaunchArtifacts';
 import { buildOpencodeRuntimeEnv } from './OpencodeRuntimeEnvironment';
 
 interface ActiveTurn {
@@ -613,20 +616,13 @@ export class OpencodeChatRuntime implements ChatRuntime {
       ),
     };
 
-    this.process = new AcpSubprocess({
-      args: ['acp', `--cwd=${params.cwd}`],
+    const { process, transport } = startOpencodeAcpProcess({
       command: params.command,
       cwd: params.cwd,
       env: processEnv,
     });
-    this.process.start();
-
-    this.transport = new AcpJsonRpcTransport({
-      input: this.process.stdout,
-      onClose: (listener) => this.process!.onClose(listener),
-      output: this.process.stdin,
-    });
-    const transport = this.transport;
+    this.process = process;
+    this.transport = transport;
     this.unregisterTransportClose = transport.onClose(() => {
       if (this.transport === transport) {
         this.setReady(false);
@@ -1289,21 +1285,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
     request: AcpReadTextFileRequest,
   ): Promise<{ content: string }> {
     const resolvedPath = this.resolveSessionPath(request.sessionId, request.path);
-    const content = await fs.readFile(resolvedPath, 'utf-8');
-
-    if (request.line === undefined && request.limit === undefined) {
-      return { content };
-    }
-
-    const lines = content.split(/\r?\n/);
-    const startIndex = Math.max(0, (request.line ?? 1) - 1);
-    const endIndex = request.limit
-      ? startIndex + Math.max(0, request.limit)
-      : lines.length;
-
-    return {
-      content: lines.slice(startIndex, endIndex).join('\n'),
-    };
+    return readWorkspaceTextFile(resolvedPath, request);
   }
 
   private async writeTextFile(
@@ -1319,15 +1301,11 @@ export class OpencodeChatRuntime implements ChatRuntime {
     const cwd = this.sessionCwds.get(sessionId)
       ?? getVaultPath(this.plugin.app)
       ?? process.cwd();
-    const resolvedPath = path.isAbsolute(rawPath)
-      ? path.resolve(rawPath)
-      : path.resolve(cwd, rawPath);
-    const relative = path.relative(cwd, resolvedPath);
-    if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) {
-      return resolvedPath;
-    }
-
-    throw new Error('OpenCode file access is limited to the current workspace.');
+    return resolveWorkspaceScopedPath(
+      cwd,
+      rawPath,
+      'OpenCode file access is limited to the current workspace.',
+    );
   }
 
   private formatRuntimeError(error: unknown): string {

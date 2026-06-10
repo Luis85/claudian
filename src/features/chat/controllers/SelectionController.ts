@@ -1,11 +1,11 @@
 import type { App } from 'obsidian';
 import { MarkdownView } from 'obsidian';
 
-import { INPUT_HANDOFF_GRACE_MS, SELECTION_POLL_INTERVAL_MS } from '../../../core/constants';
+import { INPUT_HANDOFF_GRACE_MS } from '../../../core/constants';
 import { hideSelectionHighlight, showSelectionHighlight } from '../../../shared/components/SelectionHighlight';
 import { type EditorSelectionContext, getEditorView } from '../../../utils/editor';
 import type { StoredSelection } from '../state/types';
-import { updateContextRowHasContent } from './contextRowVisibility';
+import { SelectionPollingController } from './selectionPollingBase';
 
 const HIGHLIGHT_KEY = 'claudian-selection';
 
@@ -15,16 +15,10 @@ type CustomHighlightRegistry = {
 };
 type CustomHighlightConstructor = new (...ranges: Range[]) => unknown;
 
-export class SelectionController {
-  private app: App;
-  private indicatorEl: HTMLElement;
-  private inputEl: HTMLElement;
+export class SelectionController extends SelectionPollingController {
   private focusScopeEl: HTMLElement;
-  private contextRowEl: HTMLElement;
-  private onVisibilityChange: (() => void) | null;
   private storedSelection: StoredSelection | null = null;
   private inputHandoffGraceUntil: number | null = null;
-  private pollInterval: number | null = null;
   private readonly focusScopePointerDownHandler = () => {
     if (!this.storedSelection) return;
     this.inputHandoffGraceUntil = Date.now() + INPUT_HANDOFF_GRACE_MS;
@@ -38,12 +32,8 @@ export class SelectionController {
     onVisibilityChange?: () => void,
     focusScopeEl?: HTMLElement
   ) {
-    this.app = app;
-    this.indicatorEl = indicatorEl;
-    this.inputEl = inputEl;
+    super(app, indicatorEl, inputEl, contextRowEl, onVisibilityChange);
     this.focusScopeEl = focusScopeEl ?? inputEl;
-    this.contextRowEl = contextRowEl;
-    this.onVisibilityChange = onVisibilityChange ?? null;
   }
 
   start(): void {
@@ -52,14 +42,11 @@ export class SelectionController {
     if (this.focusScopeEl !== this.inputEl) {
       this.focusScopeEl.addEventListener('pointerdown', this.focusScopePointerDownHandler);
     }
-    this.pollInterval = window.setInterval(() => this.poll(), SELECTION_POLL_INTERVAL_MS);
+    super.start();
   }
 
   stop(): void {
-    if (this.pollInterval) {
-      window.clearInterval(this.pollInterval);
-      this.pollInterval = null;
-    }
+    this.stopPolling();
     this.inputEl.removeEventListener('pointerdown', this.focusScopePointerDownHandler);
     if (this.focusScopeEl !== this.inputEl) {
       this.focusScopeEl.removeEventListener('pointerdown', this.focusScopePointerDownHandler);
@@ -75,7 +62,7 @@ export class SelectionController {
   // Selection Polling
   // ============================================
 
-  private poll(): void {
+  protected poll(): void {
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!view) {
       // Keep the captured selection only while focus is transitioning into
@@ -271,19 +258,7 @@ export class SelectionController {
   }
 
   private clearWhenMarkdownContextIsUnavailable(): void {
-    if (!this.storedSelection) return;
-    if (this.isFocusWithinChatSidebar()) {
-      this.inputHandoffGraceUntil = null;
-      return;
-    }
-    if (this.inputHandoffGraceUntil !== null && Date.now() <= this.inputHandoffGraceUntil) {
-      return;
-    }
-
-    this.inputHandoffGraceUntil = null;
-    this.clearHighlight();
-    this.storedSelection = null;
-    this.updateIndicator();
+    this.handleDeselection();
   }
 
   private handleDeselection(): void {
@@ -361,12 +336,6 @@ export class SelectionController {
       this.indicatorEl.addClass('claudian-hidden');
     }
     this.updateContextRowVisibility();
-  }
-
-  updateContextRowVisibility(): void {
-    if (!this.contextRowEl) return;
-    updateContextRowHasContent(this.contextRowEl);
-    this.onVisibilityChange?.();
   }
 
   // ============================================

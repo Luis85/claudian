@@ -14,6 +14,14 @@ export interface BuildUsageInfoParams {
   costUsd?: number;
 }
 
+/**
+ * Coerces a parsed wire value into a positive finite token count, else 0.
+ * Shared by the history-backed `extractLastUsage` implementations.
+ */
+export function readPositiveTokenCount(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
+}
+
 export function clampPercentage(used: number, window: number): number {
   if (!Number.isFinite(window) || window <= 0) {
     return 0;

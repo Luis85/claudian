@@ -1,31 +1,8 @@
-import * as fs from 'fs';
-import * as path from 'path';
-
-import { getEnhancedPath, parseEnvironmentVariables } from '../../../utils/env';
-import { expandHomePath, parsePathEntries } from '../../../utils/path';
+import {
+  findBinaryOnPath,
+  resolveConfiguredOrDiscoveredCliPath,
+} from '../../../utils/cliBinaryLocator';
 import type { CodexInstallationMethod } from '../settings';
-
-function isExistingFile(filePath: string): boolean {
-  try {
-    return fs.statSync(filePath).isFile();
-  } catch {
-    return false;
-  }
-}
-
-function resolveConfiguredPath(configuredPath: string | undefined): string | null {
-  const trimmed = (configuredPath ?? '').trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  try {
-    const expandedPath = expandHomePath(trimmed);
-    return isExistingFile(expandedPath) ? expandedPath : null;
-  } catch {
-    return null;
-  }
-}
 
 export function isWindowsStyleCliReference(value: string | null | undefined): boolean {
   const trimmed = (value ?? '').trim();
@@ -45,20 +22,7 @@ export function findCodexBinaryPath(
   const binaryNames = platform === 'win32'
     ? ['codex.exe', 'codex.cmd', 'codex']
     : ['codex'];
-  const searchEntries = parsePathEntries(getEnhancedPath(additionalPath));
-
-  for (const dir of searchEntries) {
-    if (!dir) continue;
-
-    for (const binaryName of binaryNames) {
-      const candidate = path.join(dir, binaryName);
-      if (isExistingFile(candidate)) {
-        return candidate;
-      }
-    }
-  }
-
-  return null;
+  return findBinaryOnPath(binaryNames, additionalPath);
 }
 
 export function resolveCodexCliPath(
@@ -75,16 +39,10 @@ export function resolveCodexCliPath(
     return configuredCommand || 'codex';
   }
 
-  const configuredHostnamePath = resolveConfiguredPath(hostnamePath);
-  if (configuredHostnamePath) {
-    return configuredHostnamePath;
-  }
-
-  const configuredLegacyPath = resolveConfiguredPath(legacyPath);
-  if (configuredLegacyPath) {
-    return configuredLegacyPath;
-  }
-
-  const customEnv = parseEnvironmentVariables(envText || '');
-  return findCodexBinaryPath(customEnv.PATH, hostPlatform);
+  return resolveConfiguredOrDiscoveredCliPath(
+    hostnamePath,
+    legacyPath,
+    envText,
+    (additionalPath) => findCodexBinaryPath(additionalPath, hostPlatform),
+  );
 }

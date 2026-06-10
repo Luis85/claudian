@@ -4,7 +4,7 @@ import type {
   HistoryLoadOutcome,
   HydrationContext,
 } from '../../../core/providers/types';
-import { buildUsageInfo } from '../../../core/providers/usage';
+import { buildUsageInfo, readPositiveTokenCount } from '../../../core/providers/usage';
 import type { Conversation, UsageInfo } from '../../../core/types';
 import { OPENCODE_DEFAULT_CONTEXT_WINDOW } from '../models';
 import { getOpencodeState, type OpencodeProviderState } from '../types';
@@ -92,10 +92,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function readNumber(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
-}
-
 export function extractLastUsageFromOpencodeMessageData(
   data: Record<string, unknown>,
 ): UsageInfo | null {
@@ -107,12 +103,12 @@ export function extractLastUsageFromOpencodeMessageData(
     : null;
   if (!modelID) return null;
 
-  const inputTokens = readNumber(tokens.input);
-  const outputTokens = readNumber(tokens.output);
-  const reasoningTokens = readNumber(tokens.reasoning);
+  const inputTokens = readPositiveTokenCount(tokens.input);
+  const outputTokens = readPositiveTokenCount(tokens.output);
+  const reasoningTokens = readPositiveTokenCount(tokens.reasoning);
   const cache = isRecord(tokens.cache) ? tokens.cache : null;
-  const cacheReadTokens = readNumber(cache?.read);
-  const cacheWriteTokens = readNumber(cache?.write);
+  const cacheReadTokens = readPositiveTokenCount(cache?.read);
+  const cacheWriteTokens = readPositiveTokenCount(cache?.write);
 
   if (
     inputTokens === 0

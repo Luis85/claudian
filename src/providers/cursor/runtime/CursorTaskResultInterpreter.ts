@@ -1,3 +1,4 @@
+import { readTaskResultOrOutput } from '../../../core/providers/taskResultText';
 import type {
   ProviderTaskResultInterpreter,
   ProviderTaskTerminalStatus,
@@ -54,13 +55,7 @@ export class CursorTaskResultInterpreter implements ProviderTaskResultInterprete
       return fromSteps;
     }
 
-    const result = typeof record.result === 'string' ? record.result.trim() : '';
-    if (result.length > 0) {
-      return result;
-    }
-
-    const output = typeof record.output === 'string' ? record.output.trim() : '';
-    return output.length > 0 ? output : null;
+    return readTaskResultOrOutput(record);
   }
 
   resolveTerminalStatus(

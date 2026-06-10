@@ -1,21 +1,21 @@
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
-
 import type { AuxQueryConfig, AuxQueryRunner } from '../../../core/auxiliary/AuxQueryRunner';
 import { serializeEnvironmentVariables } from '../../../core/providers/providerEnvironment';
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type { PluginContext } from '../../../core/types/PluginContext';
 import { asSettingsBag } from '../../../core/types/settings';
 import { getVaultPath } from '../../../utils/path';
+import type {
+  AcpJsonRpcTransport,
+  AcpSubprocess} from '../../acp';
 import {
   AcpClientConnection,
-  AcpJsonRpcTransport,
   type AcpReadTextFileRequest,
   type AcpRequestPermissionRequest,
   type AcpRequestPermissionResponse,
   AcpSessionUpdateNormalizer,
-  AcpSubprocess,
   extractAcpSessionModelState,
+  readWorkspaceTextFile,
+  resolveWorkspaceScopedPath,
 } from '../../acp';
 import { decodeOpencodeModelId } from '../models';
 import { opencodeChatUIConfig } from '../ui/OpencodeChatUIConfig';
@@ -23,6 +23,7 @@ import { selectPermissionOption } from './opencodeApprovalHelpers';
 import {
   type OpencodeManagedAgentConfig,
   prepareOpencodeLaunchArtifacts,
+  startOpencodeAcpProcess,
 } from './OpencodeLaunchArtifacts';
 import { buildOpencodeRuntimeEnv } from './OpencodeRuntimeEnvironment';
 
@@ -261,19 +262,13 @@ export class OpencodeAuxQueryRunner implements AuxQueryRunner {
       PATH: params.runtimeEnv.PATH,
     };
 
-    this.process = new AcpSubprocess({
-      args: ['acp', `--cwd=${params.cwd}`],
+    const { process, transport } = startOpencodeAcpProcess({
       command: params.command,
       cwd: params.cwd,
       env: processEnv,
     });
-    this.process.start();
-
-    this.transport = new AcpJsonRpcTransport({
-      input: this.process.stdout,
-      onClose: (listener) => this.process!.onClose(listener),
-      output: this.process.stdin,
-    });
+    this.process = process;
+    this.transport = transport;
 
     this.connection = new AcpClientConnection({
       clientInfo: {
@@ -299,21 +294,7 @@ export class OpencodeAuxQueryRunner implements AuxQueryRunner {
     request: AcpReadTextFileRequest,
   ): Promise<{ content: string }> {
     const resolvedPath = this.resolveSessionPath(request.sessionId, request.path);
-    const content = await fs.readFile(resolvedPath, 'utf-8');
-
-    if (request.line === undefined && request.limit === undefined) {
-      return { content };
-    }
-
-    const lines = content.split(/\r?\n/);
-    const startIndex = Math.max(0, (request.line ?? 1) - 1);
-    const endIndex = request.limit
-      ? startIndex + Math.max(0, request.limit)
-      : lines.length;
-
-    return {
-      content: lines.slice(startIndex, endIndex).join('\n'),
-    };
+    return readWorkspaceTextFile(resolvedPath, request);
   }
 
   private async handlePermissionRequest(
@@ -373,15 +354,11 @@ export class OpencodeAuxQueryRunner implements AuxQueryRunner {
     const cwd = this.sessionCwds.get(sessionId)
       ?? getVaultPath(this.plugin.app)
       ?? process.cwd();
-    const resolvedPath = path.isAbsolute(rawPath)
-      ? path.resolve(rawPath)
-      : path.resolve(cwd, rawPath);
-    const relative = path.relative(cwd, resolvedPath);
-    if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) {
-      return resolvedPath;
-    }
-
-    throw new Error('OpenCode aux read access is limited to the current workspace.');
+    return resolveWorkspaceScopedPath(
+      cwd,
+      rawPath,
+      'OpenCode aux read access is limited to the current workspace.',
+    );
   }
 }
 

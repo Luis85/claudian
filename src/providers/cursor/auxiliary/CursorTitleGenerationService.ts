@@ -1,4 +1,5 @@
 import { QueryBackedTitleGenerationService } from '../../../core/auxiliary/QueryBackedTitleGenerationService';
+import { stripSurroundingQuotes } from '../../../core/prompt/titleGeneration';
 import type { PluginContext } from '../../../core/types/PluginContext';
 import { CursorAuxCliRunner } from '../runtime/CursorAuxCliRunner';
 
@@ -13,18 +14,7 @@ export class CursorTitleGenerationService extends QueryBackedTitleGenerationServ
 }
 
 function parseCursorTitle(responseText: string): string | null {
-  const trimmed = responseText.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  let title = trimmed;
-  if (
-    (title.startsWith('"') && title.endsWith('"'))
-    || (title.startsWith("'") && title.endsWith("'"))
-  ) {
-    title = title.slice(1, -1);
-  }
+  const title = stripSurroundingQuotes(responseText);
   const oneLine = title.split('\n')[0]?.trim() ?? '';
   if (!oneLine) {
     return null;

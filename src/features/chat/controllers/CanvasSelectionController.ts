@@ -1,8 +1,7 @@
-import type { App, ItemView } from 'obsidian';
+import type { ItemView } from 'obsidian';
 
-import { SELECTION_POLL_INTERVAL_MS } from '../../../core/constants';
 import type { CanvasSelectionContext } from '../../../utils/canvas';
-import { updateContextRowHasContent } from './contextRowVisibility';
+import { SelectionPollingController } from './selectionPollingBase';
 
 type CanvasSelectionNode = { id?: unknown };
 
@@ -15,43 +14,10 @@ type CanvasViewLike = ItemView & {
   };
 };
 
-export class CanvasSelectionController {
-  private app: App;
-  private indicatorEl: HTMLElement;
-  private inputEl: HTMLElement;
-  private contextRowEl: HTMLElement;
-  private onVisibilityChange: (() => void) | null;
+export class CanvasSelectionController extends SelectionPollingController {
   private storedSelection: CanvasSelectionContext | null = null;
-  private pollInterval: number | null = null;
 
-  constructor(
-    app: App,
-    indicatorEl: HTMLElement,
-    inputEl: HTMLElement,
-    contextRowEl: HTMLElement,
-    onVisibilityChange?: () => void
-  ) {
-    this.app = app;
-    this.indicatorEl = indicatorEl;
-    this.inputEl = inputEl;
-    this.contextRowEl = contextRowEl;
-    this.onVisibilityChange = onVisibilityChange ?? null;
-  }
-
-  start(): void {
-    if (this.pollInterval) return;
-    this.pollInterval = window.setInterval(() => this.poll(), SELECTION_POLL_INTERVAL_MS);
-  }
-
-  stop(): void {
-    if (this.pollInterval) {
-      window.clearInterval(this.pollInterval);
-      this.pollInterval = null;
-    }
-    this.clear();
-  }
-
-  private poll(): void {
+  protected poll(): void {
     const canvasView = this.getCanvasView();
     if (!canvasView) return;
 
@@ -114,12 +80,6 @@ export class CanvasSelectionController {
       this.indicatorEl.addClass('claudian-hidden');
     }
     this.updateContextRowVisibility();
-  }
-
-  updateContextRowVisibility(): void {
-    if (!this.contextRowEl) return;
-    updateContextRowHasContent(this.contextRowEl);
-    this.onVisibilityChange?.();
   }
 
   getContext(): CanvasSelectionContext | null {

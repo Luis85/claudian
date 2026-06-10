@@ -19,6 +19,36 @@ export function formatTokens(tokens: number): string {
   return `${(tokens / 1_000_000).toFixed(1)}M`;
 }
 
+/**
+ * Count-driven icon+badge state shared by the toolbar selectors: the icon goes
+ * active with a tooltip when count > 0; the numeric badge shows only past 1.
+ */
+export function updateCountBadgeDisplay(params: {
+  iconEl: HTMLElement;
+  badgeEl: HTMLElement;
+  count: number;
+  activeTitle: string;
+  inactiveTitle: string;
+}): void {
+  const { iconEl, badgeEl, count, activeTitle, inactiveTitle } = params;
+
+  if (count > 0) {
+    iconEl.addClass('active');
+    iconEl.setAttribute('title', activeTitle);
+
+    if (count > 1) {
+      badgeEl.setText(String(count));
+      badgeEl.addClass('visible');
+    } else {
+      badgeEl.removeClass('visible');
+    }
+  } else {
+    iconEl.removeClass('active');
+    iconEl.setAttribute('title', inactiveTitle);
+    badgeEl.removeClass('visible');
+  }
+}
+
 export interface ToolbarSettings {
   model: string;
   thinkingBudget: string;

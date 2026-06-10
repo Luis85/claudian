@@ -20,18 +20,22 @@ export function buildTitleGenerationPrompt(userMessage: string): string {
   return `User's request:\n"""\n${truncated}\n"""\n\nGenerate a title for this conversation:`;
 }
 
-export function parseTitleGenerationResponse(responseText: string): string | null {
-  const trimmed = responseText.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  let title = trimmed;
+/** Trims the model response and removes one matching pair of surrounding quotes. */
+export function stripSurroundingQuotes(responseText: string): string {
+  let title = responseText.trim();
   if (
     (title.startsWith('"') && title.endsWith('"'))
     || (title.startsWith("'") && title.endsWith("'"))
   ) {
     title = title.slice(1, -1);
+  }
+  return title;
+}
+
+export function parseTitleGenerationResponse(responseText: string): string | null {
+  let title = stripSurroundingQuotes(responseText);
+  if (!title) {
+    return null;
   }
 
   title = title.replace(/[.!?:;,]+$/, '');

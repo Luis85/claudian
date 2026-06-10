@@ -1,3 +1,5 @@
+import { parseKeyedProtocolBody } from '../../../utils/protocolBlock';
+
 export type ClaudianBlockKind = 'progress' | 'needs_input' | 'needs_approval';
 
 export interface ClaudianBlock {
@@ -151,37 +153,15 @@ function parseBody(
   kind: ClaudianBlockKind,
   body: string,
 ): { ok: true; fields: Record<string, string> } | { ok: false; error: string } {
-  const fields: Record<string, string> = {};
-  const lines = body.split(/\r?\n/);
-  let currentKey: string | null = null;
-  let currentValue: string[] = [];
-
-  const commit = () => {
-    if (currentKey === null) return;
-    fields[currentKey] = currentValue.join('\n').trim();
-    currentKey = null;
-    currentValue = [];
-  };
-
-  for (const line of lines) {
-    const match = line.match(/^([a-z_]+):\s*(.*)$/);
-    if (match) {
-      commit();
-      currentKey = match[1];
-      currentValue = [match[2]];
-    } else if (currentKey !== null) {
-      currentValue.push(line);
-    }
-  }
-  commit();
+  const fields = parseKeyedProtocolBody(body);
 
   for (const required of REQUIRED_FIELDS[kind]) {
-    if (!fields[required]) return { ok: false, error: `${kind} missing required field: ${required}` };
+    if (!fields.get(required)) return { ok: false, error: `${kind} missing required field: ${required}` };
   }
 
   const filtered: Record<string, string> = {};
-  for (const key of Object.keys(fields)) {
-    if (KNOWN_FIELDS[kind].has(key)) filtered[key] = fields[key];
+  for (const [key, value] of fields) {
+    if (KNOWN_FIELDS[kind].has(key)) filtered[key] = value;
   }
   return { ok: true, fields: filtered };
 }

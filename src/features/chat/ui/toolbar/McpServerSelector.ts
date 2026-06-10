@@ -1,6 +1,7 @@
 import type { McpServerManager } from '../../../../core/mcp/McpServerManager';
 import type { ManagedMcpServer } from '../../../../core/types';
 import { appendCheckIcon, appendMcpIcon } from '../../../../shared/icons';
+import { updateCountBadgeDisplay } from './shared';
 
 export class McpServerSelector {
   private container: HTMLElement;
@@ -207,21 +208,12 @@ export class McpServerSelector {
     }
     this.container.removeClass('claudian-hidden');
 
-    if (count > 0) {
-      this.iconEl.addClass('active');
-      this.iconEl.setAttribute('title', `${count} MCP server${count > 1 ? 's' : ''} enabled (click to manage)`);
-
-      // Show badge only when more than 1
-      if (count > 1) {
-        this.badgeEl.setText(String(count));
-        this.badgeEl.addClass('visible');
-      } else {
-        this.badgeEl.removeClass('visible');
-      }
-    } else {
-      this.iconEl.removeClass('active');
-      this.iconEl.setAttribute('title', 'Mcp servers (click to enable)');
-      this.badgeEl.removeClass('visible');
-    }
+    updateCountBadgeDisplay({
+      iconEl: this.iconEl,
+      badgeEl: this.badgeEl,
+      count,
+      activeTitle: `${count} MCP server${count > 1 ? 's' : ''} enabled (click to manage)`,
+      inactiveTitle: 'Mcp servers (click to enable)',
+    });
   }
 }

@@ -6,7 +6,7 @@ import { asSettingsBag } from '../../../../core/types/settings';
 import { t } from '../../../../i18n/i18n';
 import { resolveAgentBoardDefaultModel } from '../../../tasks/defaultModelResolver';
 import { resolveAgentBoardDefaultProvider } from '../../../tasks/defaultProviderResolver';
-import { installPresetTemplates } from '../../../tasks/templates/installPresetTemplates';
+import { installPresetTemplatesWithNotice } from '../../../tasks/templates/installPresetTemplates';
 import { renderAgentBoardLaneEditor } from '../../../tasks/ui/AgentBoardLaneEditor';
 import { writePathInPlace } from '../path';
 import { getSettingsRegistry } from '../registry';
@@ -223,14 +223,7 @@ export function registerAgentBoardTabFields(): void {
       label: 'Install common templates',
       onClick: async (ctx) => {
         try {
-          const result = await installPresetTemplates(ctx.plugin);
-          const parts: string[] = [];
-          if (result.installed > 0) parts.push(`installed ${result.installed}`);
-          if (result.skipped > 0) parts.push(`skipped ${result.skipped} already present`);
-          const summary = parts.join(', ');
-          new Notice(summary
-            ? t('settings.agentBoard.commonTemplates', { templates: summary })
-            : t('settings.agentBoard.commonTemplatesEmpty'));
+          await installPresetTemplatesWithNotice(ctx.plugin);
         } catch (error) {
           new Notice(t('settings.agentBoard.installFailed', { error: error instanceof Error ? error.message : String(error) }));
         }

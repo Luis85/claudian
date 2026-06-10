@@ -9,25 +9,11 @@ import type {
   InlineEditResult,
   InlineEditService,
 } from '../providers/types';
-import type { AuxQueryRunner } from './AuxQueryRunner';
+import { QueryBackedConversationService } from './QueryBackedConversationService';
 
-export class QueryBackedInlineEditService implements InlineEditService {
-  private abortController: AbortController | null = null;
-  private hasConversation = false;
-  private modelOverride: string | undefined;
-
-  constructor(private readonly runner: AuxQueryRunner) {}
-
-  setModelOverride(model?: string): void {
-    const trimmed = model?.trim();
-    this.modelOverride = trimmed ? trimmed : undefined;
-  }
-
-  resetConversation(): void {
-    this.runner.reset();
-    this.hasConversation = false;
-  }
-
+export class QueryBackedInlineEditService
+  extends QueryBackedConversationService
+  implements InlineEditService {
   async editText(request: InlineEditRequest): Promise<InlineEditResult> {
     this.resetConversation();
     return this.sendMessage(buildInlineEditPrompt(request));
@@ -43,11 +29,6 @@ export class QueryBackedInlineEditService implements InlineEditService {
       prompt = appendContextFiles(message, contextFiles);
     }
     return this.sendMessage(prompt);
-  }
-
-  cancel(): void {
-    this.abortController?.abort();
-    this.abortController = null;
   }
 
   private async sendMessage(prompt: string): Promise<InlineEditResult> {
