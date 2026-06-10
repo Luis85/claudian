@@ -69,8 +69,10 @@ untrusted-tool-description framing.
   shared/CGNAT (100.64/10), IPv6 ULA
   (fc00::/7), unspecified (0.0.0.0/8, `::`), IANA non-global ranges
   (multicast 224/4 + ff00::/8, reserved 240/4 incl. broadcast, benchmarking
-  198.18/15, documentation TEST-NET-1/2/3 + 2001:db8::/32, IETF 192.0.0/24,
-  deprecated 6to4 anycast 192.88.99/24), and embedded-IPv4 forms
+  198.18/15 + 2001:2::/48, documentation TEST-NET-1/2/3 + 2001:db8::/32 +
+  3fff::/20, IETF 192.0.0/24, deprecated 6to4 anycast 192.88.99/24, IPv6
+  discard-only 100::/64, ORCHID 2001:10::/28 + 2001:20::/28, SRv6 5f00::/16,
+  local-use NAT64 64:ff9b:1::/48), and embedded-IPv4 forms
   (IPv4-mapped `::ffff:0:0/96`, IPv4-compatible `::/96`, NAT64 `64:ff9b::/96`).
 - **Rebinding pin implemented**: `createPinnedLookup` returns a custom
   `net.LookupFunction` passed through `createNodeFetch({ lookup })` into

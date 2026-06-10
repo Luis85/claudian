@@ -158,6 +158,42 @@ export function expandIpv6Groups(input: string): number[] | null {
   return values;
 }
 
+/**
+ * IANA special-purpose IPv6 denylist as [prefix literal, prefix length, reason].
+ * Embedded-IPv4 forms (mapped/compatible/NAT64) are classified separately so
+ * they inherit the IPv4 denylist instead of needing rows here.
+ */
+const DENIED_IPV6_RANGES: Array<[number[], number, DeniedIpReason]> = (
+  [
+    ['fe80::', 10, 'link-local'],
+    ['fc00::', 7, 'unique-local'],
+    ['ff00::', 8, 'reserved'], // multicast
+    ['2001:db8::', 32, 'reserved'], // documentation
+    ['100::', 64, 'reserved'], // discard-only (RFC 6666)
+    ['2001:2::', 48, 'reserved'], // benchmarking (RFC 5180)
+    ['2001:10::', 28, 'reserved'], // ORCHID (deprecated)
+    ['2001:20::', 28, 'reserved'], // ORCHIDv2 (RFC 7343)
+    ['3fff::', 20, 'reserved'], // documentation (RFC 9637)
+    ['5f00::', 16, 'reserved'], // SRv6 SIDs (RFC 9602)
+    ['64:ff9b:1::', 48, 'reserved'], // local-use NAT64 (RFC 8215)
+  ] as Array<[string, number, DeniedIpReason]>
+).map(([prefix, bits, reason]) => {
+  const groups = expandIpv6Groups(prefix);
+  if (!groups) throw new Error(`Invalid IPv6 denylist prefix: ${prefix}`);
+  return [groups, bits, reason];
+});
+
+function ipv6MatchesPrefix(groups: number[], prefixGroups: number[], bits: number): boolean {
+  let remaining = bits;
+  for (let i = 0; i < 8 && remaining > 0; i++) {
+    const take = Math.min(16, remaining);
+    const mask = take === 16 ? 0xffff : (0xffff << (16 - take)) & 0xffff;
+    if ((groups[i] & mask) !== (prefixGroups[i] & mask)) return false;
+    remaining -= take;
+  }
+  return true;
+}
+
 function deniedIpv6Reason(ip: string): DeniedIpReason | null {
   const groups = expandIpv6Groups(ip);
   if (!groups) return 'invalid'; // fail closed on anything we cannot parse
@@ -195,10 +231,9 @@ function deniedIpv6Reason(ip: string): DeniedIpReason | null {
     ]);
   }
 
-  if ((groups[0] & 0xffc0) === 0xfe80) return 'link-local'; // fe80::/10
-  if ((groups[0] & 0xfe00) === 0xfc00) return 'unique-local'; // fc00::/7
-  if ((groups[0] & 0xff00) === 0xff00) return 'reserved'; // ff00::/8 multicast
-  if (groups[0] === 0x2001 && groups[1] === 0x0db8) return 'reserved'; // 2001:db8::/32 documentation
+  for (const [prefixGroups, bits, reason] of DENIED_IPV6_RANGES) {
+    if (ipv6MatchesPrefix(groups, prefixGroups, bits)) return reason;
+  }
   return null;
 }
 

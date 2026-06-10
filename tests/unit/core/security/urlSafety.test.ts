@@ -75,6 +75,15 @@ describe('getDeniedIpReason', () => {
       ['::ffff:224.0.0.1', 'reserved'], // embedded multicast
       ['ff02::1', 'reserved'], // IPv6 multicast ff00::/8
       ['2001:db8::1', 'reserved'], // IPv6 documentation 2001:db8::/32
+      // remaining IANA non-global IPv6 ranges
+      ['100::', 'reserved'], // discard-only 100::/64 (RFC 6666)
+      ['100::1', 'reserved'],
+      ['2001:2::1', 'reserved'], // benchmarking 2001:2::/48 (RFC 5180)
+      ['2001:10::1', 'reserved'], // ORCHID 2001:10::/28 (deprecated)
+      ['2001:20::1', 'reserved'], // ORCHIDv2 2001:20::/28 (RFC 7343)
+      ['3fff::1', 'reserved'], // documentation 3fff::/20 (RFC 9637)
+      ['5f00::1', 'reserved'], // SRv6 SIDs 5f00::/16 (RFC 9602)
+      ['64:ff9b:1::1', 'reserved'], // local-use NAT64 64:ff9b:1::/48 (RFC 8215)
       // IPv4-mapped IPv6 forms of denied ranges
       ['::ffff:127.0.0.1', 'loopback'],
       ['::ffff:10.0.0.1', 'private'],
@@ -111,6 +120,12 @@ describe('getDeniedIpReason', () => {
       '2606:4700::1111',
       '2001:db7::1', // just below documentation 2001:db8::/32
       '2001:db9::1', // just above documentation 2001:db8::/32
+      '2001:1::1', // PCP anycast — globally reachable, just below benchmarking 2001:2::/48
+      '2001:3::1', // AMT — globally reachable, just above benchmarking
+      '100:0:0:1::1', // just outside discard-only 100::/64
+      '3fff:1000::1', // just outside documentation 3fff::/20
+      '5eff::1', // just below SRv6 5f00::/16
+      '6000::1', // just above SRv6 5f00::/16
       '223.255.255.255', // just below multicast 224.0.0.0/4
       '198.17.255.255', // just below benchmarking 198.18.0.0/15
       '198.20.0.1', // just above benchmarking 198.18.0.0/15
