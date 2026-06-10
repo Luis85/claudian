@@ -1,7 +1,7 @@
 import type { App } from 'obsidian';
 import { Modal, Notice, Setting } from 'obsidian';
 
-import { MCP_SECRET_PLACEHOLDER, reconcileEditedMcpSecrets } from '../../../core/mcp/mcpSecrets';
+import { MCP_SECRET_PLACEHOLDER, reconcileEditedMcpSecrets } from '../../core/mcp/mcpSecrets';
 import type {
   ManagedMcpServer,
   McpHttpServerConfig,
@@ -9,11 +9,11 @@ import type {
   McpServerType,
   McpSSEServerConfig,
   McpStdioServerConfig,
-} from '../../../core/types';
-import { DEFAULT_MCP_SERVER, getMcpServerType } from '../../../core/types';
-import { t } from '../../../i18n/i18n';
-import { renderModalButtonRow } from '../../../shared/components/settingsListUI';
-import { parseCommand } from '../../../utils/mcp';
+} from '../../core/types';
+import { DEFAULT_MCP_SERVER, getMcpServerType } from '../../core/types';
+import { t } from '../../i18n/i18n';
+import { parseCommand } from '../../utils/mcp';
+import { renderModalButtonRow } from '../components/settingsListUI';
 
 export class McpServerModal extends Modal {
   private existingServer: ManagedMcpServer | null;

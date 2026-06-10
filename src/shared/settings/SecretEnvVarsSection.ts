@@ -1,9 +1,9 @@
 import { SecretComponent, Setting } from 'obsidian';
 
-import { isClaudianGeneratedSecretId } from '../../../core/security/secretIds';
-import type { PluginContext } from '../../../core/types/PluginContext';
-import type { EnvironmentScope, SecretEnvVarRef } from '../../../core/types/settings';
-import { t } from '../../../i18n/i18n';
+import { isClaudianGeneratedSecretId } from '../../core/security/secretIds';
+import type { PluginContext } from '../../core/types/PluginContext';
+import type { EnvironmentScope, SecretEnvVarRef } from '../../core/types/settings';
+import { t } from '../../i18n/i18n';
 
 interface SecretEnvVarsSectionOptions {
   container: HTMLElement;

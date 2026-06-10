@@ -1,16 +1,16 @@
 import type { App } from 'obsidian';
 import { Notice, setIcon } from 'obsidian';
 
-import { tryParseClipboardConfig } from '../../../core/mcp/McpConfigParser';
-import { collectMissingMcpSecrets, extractMcpServerSecrets, type MissingMcpSecret } from '../../../core/mcp/mcpSecrets';
-import { testMcpServer } from '../../../core/mcp/McpTester';
-import type { AppMcpStorage } from '../../../core/providers/types';
-import { isClaudianGeneratedSecretId } from '../../../core/security/secretIds';
-import type { SecretStore } from '../../../core/security/secretStore';
-import type { ManagedMcpServer, McpServerConfig, McpServerType } from '../../../core/types';
-import { DEFAULT_MCP_SERVER, getMcpServerType } from '../../../core/types';
-import { t } from '../../../i18n/i18n';
-import { confirmDelete } from '../../../shared/modals/ConfirmModal';
+import { tryParseClipboardConfig } from '../../core/mcp/McpConfigParser';
+import { collectMissingMcpSecrets, extractMcpServerSecrets, type MissingMcpSecret } from '../../core/mcp/mcpSecrets';
+import { testMcpServer } from '../../core/mcp/McpTester';
+import type { AppMcpStorage } from '../../core/providers/types';
+import { isClaudianGeneratedSecretId } from '../../core/security/secretIds';
+import type { SecretStore } from '../../core/security/secretStore';
+import type { ManagedMcpServer, McpServerConfig, McpServerType } from '../../core/types';
+import { DEFAULT_MCP_SERVER, getMcpServerType } from '../../core/types';
+import { t } from '../../i18n/i18n';
+import { confirmDelete } from '../modals/ConfirmModal';
 import { McpServerModal } from './McpServerModal';
 import { McpTestModal } from './McpTestModal';
 

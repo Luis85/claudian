@@ -1,7 +1,7 @@
 import { getProviderConfig, setProviderConfig } from '../../core/providers/providerConfig';
 import { getProviderEnvironmentVariables } from '../../core/providers/providerEnvironment';
 import type { HostnameCliPaths } from '../../core/types/settings';
-import type { ProviderCustomModel } from '../../features/settings/customModels/CustomModelsTable';
+import type { ProviderCustomModel } from '../../core/types/settings';
 import {
   getHostnameKey,
   getLegacyHostnameKey,

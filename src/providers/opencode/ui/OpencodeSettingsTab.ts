@@ -3,7 +3,7 @@ import { Setting } from 'obsidian';
 
 import type { ProviderSettingsTabRenderer } from '../../../core/providers/types';
 import { asSettingsBag } from '../../../core/types';
-import { renderEnvironmentSettingsSection } from '../../../features/settings/ui/EnvironmentSettingsSection';
+import { renderEnvironmentSettingsSection } from '../../../shared/settings/EnvironmentSettingsSection';
 import { getHostnameKey } from '../../../utils/env';
 import { expandHomePath } from '../../../utils/path';
 import { maybeGetOpencodeWorkspaceServices } from '../app/opencodeWorkspaceAccess';

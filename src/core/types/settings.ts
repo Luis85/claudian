@@ -108,6 +108,18 @@ export type HostnameCliPaths = Record<string, string>;
 export type ProviderConfigMap = Partial<Record<string, Record<string, unknown>>>;
 
 /**
+ * A custom model row persisted per provider (`{providerId}.customModels`).
+ * `user` rows are hand-entered in the settings UI; `env` rows are derived from
+ * snippet parsing and stay read-only.
+ */
+export interface ProviderCustomModel {
+  id: string;
+  label?: string;
+  contextWindow?: number;
+  source: 'user' | 'env';
+}
+
+/**
  * Application settings stored in .claudian/claudian-settings.json.
  *
  * Provider-specific fields (model, thinkingBudget, effortLevel, serviceTier, etc.) use

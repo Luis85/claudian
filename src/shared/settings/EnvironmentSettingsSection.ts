@@ -1,8 +1,8 @@
 import { Setting } from 'obsidian';
 
-import { getEnvironmentReviewKeysForScope } from '../../../core/providers/providerEnvironment';
-import type { PluginContext } from '../../../core/types/PluginContext';
-import type { EnvironmentScope } from '../../../core/types/settings';
+import { getEnvironmentReviewKeysForScope } from '../../core/providers/providerEnvironment';
+import type { PluginContext } from '../../core/types/PluginContext';
+import type { EnvironmentScope } from '../../core/types/settings';
 import { EnvSnippetManager } from './EnvSnippetManager';
 import { renderSecretEnvVarsSection } from './SecretEnvVarsSection';
 

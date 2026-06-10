@@ -1,13 +1,7 @@
 import type { ProviderId } from '../../../core/providers/types';
+import type { ProviderCustomModel } from '../../../core/types/settings';
 import { writePathInPlace } from '../registry/path';
 import type { SettingsCtx } from '../registry/SettingsField';
-
-export interface ProviderCustomModel {
-  id: string;
-  label?: string;
-  contextWindow?: number;
-  source: 'user' | 'env';
-}
 
 // Editor state is intentionally separate from the persisted row list — env-sourced
 // rows come from snippet parsing and stay read-only, while user rows are appended

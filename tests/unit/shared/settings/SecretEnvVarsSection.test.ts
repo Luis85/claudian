@@ -2,7 +2,7 @@ import { SecretComponent, Setting } from 'obsidian';
 
 import type { PluginContext } from '../../../../src/core/types/PluginContext';
 import type { SecretEnvVarRef } from '../../../../src/core/types/settings';
-import { renderSecretEnvVarsSection } from '../../../../src/features/settings/ui/SecretEnvVarsSection';
+import { renderSecretEnvVarsSection } from '../../../../src/shared/settings/SecretEnvVarsSection';
 
 function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
