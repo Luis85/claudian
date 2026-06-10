@@ -86,10 +86,18 @@ scripts, `scripts/check-loc.mjs`, `scripts/check-artifacts.mjs`):
   (`tests/unit/core/providers/noHardcodedProviderList.test.ts`) run in the
   existing `test` job — see `docs/build-ci/quality-gates.md`
   § "Provider-boundary guards".
-- **Open:** dependency-cycle budget — deferred until existing cycles shrink
-  (`[[2026-06-07-import-cycle-budget]]`); the lint `warn`-tier backlog (staged
-  `obsidianmd` rules, `no-explicit-any`, function-health rules) is still being
-  burned down and ratcheted.
+- **Open:** the lint `warn`-tier backlog (staged `obsidianmd` rules,
+  `no-explicit-any`, function-health rules) is still being burned down and
+  ratcheted.
 
-Status stays `in-progress` until the architecture-gate slice
-(dependency-cycle budget) lands or is explicitly retired.
+## Progress (2026-06-10)
+
+- **Shipped (architecture-gate slice):** the dependency-cycle budget closed at
+  zero — fallow's type-aware graph shows no genuine cycles, so
+  `circularDependencies`, `reExportCycles`, and `boundaryViolations` joined the
+  `check:quality` ratchet pinned at 0, with ADR 0001 layer rules declared as
+  fallow boundary zones in `.fallowrc.json`
+  (`[[2026-06-07-import-cycle-budget]]`, now `done`).
+
+Status stays `in-progress` until the lint `warn`-tier backlog is burned down
+and its thresholds ratcheted, or that track is explicitly retired.

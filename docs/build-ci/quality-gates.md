@@ -141,10 +141,15 @@ Obsidian's runtime) are declared in `ignoreDependencies`.
 enforces a ratchet against `scripts/quality-baseline.json` — the same policy as
 the LOC guard, applied to whole-repo metrics:
 
-- **Counters may shrink but not grow**: dead-code issues, clone groups,
-  duplicated lines, functions above the complexity threshold, critical-severity
-  complexity findings.
+- **Counters may shrink but not grow**: dead-code issues, circular
+  dependencies, re-export cycles, architecture boundary violations, clone
+  groups, duplicated lines, functions above the complexity threshold,
+  critical-severity complexity findings.
 - **Floors may rise but not drop**: average maintainability.
+- The three structural counters (`circularDependencies`, `reExportCycles`,
+  `boundaryViolations`) are **0 and must stay 0**. The ratchet mechanics would
+  allow bumping them like any other baseline, but treat that as an
+  architecture decision (ADR territory), not a metric trade-off.
 - When a PR improves a metric, lock the gain in:
   `npm run check:quality -- --update` and commit the baseline diff in the same
   PR. The guard prints a reminder when unlocked improvements exist.
@@ -154,6 +159,32 @@ the LOC guard, applied to whole-repo metrics:
 The wrapper exists because fallow's own gate flags (`--fail-on-regression`,
 `--min-score`) did not reliably drive the process exit code as of 2.91; the
 JSON report is stable, so the ratchet parses that instead.
+
+### Architecture boundaries (zones)
+
+`.fallowrc.json` declares the layer architecture as fallow boundary zones with
+explicit import rules, so `boundary_violations` is a meaningful gated metric
+(enforced at 0 by the ratchet since 2026-06-10). The rules encode ADR 0001 and
+the layer table in `CLAUDE.md`:
+
+- `core` imports only `utils` at runtime (type-only edges to `app`/`i18n` are
+  allowed — today a single event-map type in `PluginContext`).
+- `features` never import provider internals; provider access goes through
+  `ProviderRegistry` / `ProviderWorkspaceRegistry`. This is the machine-checked
+  twin of the `no-restricted-imports` lint rule, and it also covers type-only
+  imports, which the lint rule's per-file exemptions do not.
+- Provider zones (`provider-claude`, `provider-codex`, `provider-cursor`,
+  `provider-opencode`) may not import each other. Only `provider-opencode`
+  may use the shared `acp` transport, and only `src/providers/index.ts`
+  (the `provider-aggregator` zone) may import provider internals.
+- `shared`, `utils`, and `i18n` stay leaf-ward: no imports from `features`,
+  `providers`, or `app`.
+
+Known looseness, deliberate for now: provider zones are allowed to import
+`features` because the provider settings tabs reuse
+`features/settings/ui/EnvironmentSettingsSection` / `McpSettingsManager` and
+the `ProviderCustomModel` type. If those helpers move to `shared/`, tighten the
+provider rules to drop `features` in the same PR.
 
 ### Advisory commands
 
@@ -181,20 +212,25 @@ Tracked here so the direction is explicit.
    staged `obsidianmd`/`no-explicit-any` warnings incrementally; each time a
    threshold reaches zero, tighten it (or promote the rule to `error`) so the
    gain can't regress. No big-bang refactor and no day-one CI block.
-2. **Dependency-cycle budget** — **deferred**; existing cycles are too large to
-   block on and need reducing first. See
-   `docs/tech-debt/2026-06-07-import-cycle-budget.md`.
-3. **Perf-gate wiring.** `tests/perf/*` are monitoring-only today
+2. **Perf-gate wiring.** `tests/perf/*` are monitoring-only today
    (`docs/tech-debt/2026-06-07-perf-gates-blind-spots.md`); decide which
    scaling assertions graduate into a blocking job.
-4. **Tighten the quality-ratchet floors.** The ratchet freezes today's debt;
+3. **Tighten the quality-ratchet floors.** The ratchet freezes today's debt;
    the complexity backlog (`complexFunctions`, `criticalComplexity` in
    `scripts/quality-baseline.json`) still has to be burned down hotspot by
    hotspot (`npm run quality:health` prioritizes targets). Each refactor PR
    that moves a metric should commit the tightened baseline so the gain is
    locked in.
+4. **Move the shared settings-UI helpers out of `features/`** so the provider
+   boundary zones can drop their `features` allowance — see "Architecture
+   boundaries (zones)" above.
 
 Done: provider-boundary regression tests and the no-new-provider-hardcoded-list
 guard (remediation item 5 of the tech debt) — see "Provider-boundary guards".
 Done 2026-06-09: fallow graduated from monitoring to a blocking ratchet gate
 (`npm run check:quality`, CI job `quality`) — see "Fallow quality ratchet".
+Done 2026-06-10: dependency-cycle budget closed at zero — fallow's type-aware,
+barrel-aware graph found no genuine cycles (the 2026-06-07 Tarjan numbers were
+type-only/barrel artifacts), so `circularDependencies`, `reExportCycles`, and
+`boundaryViolations` joined the ratchet pinned at 0 instead of a grandfathered
+budget. See `docs/tech-debt/2026-06-07-import-cycle-budget.md`.

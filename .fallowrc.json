@@ -24,6 +24,81 @@
       "**/tests/**"
     ]
   },
+  "boundaries": {
+    "zones": [
+      { "name": "main", "patterns": ["src/main.ts", "src/types/**"] },
+      { "name": "app", "patterns": ["src/app/**"] },
+      { "name": "core", "patterns": ["src/core/**"] },
+      { "name": "features", "patterns": ["src/features/**"] },
+      { "name": "shared", "patterns": ["src/shared/**"] },
+      { "name": "utils", "patterns": ["src/utils/**"] },
+      { "name": "i18n", "patterns": ["src/i18n/**"] },
+      { "name": "provider-aggregator", "patterns": ["src/providers/index.ts"] },
+      { "name": "acp", "patterns": ["src/providers/acp/**"] },
+      { "name": "provider-claude", "patterns": ["src/providers/claude/**"] },
+      { "name": "provider-codex", "patterns": ["src/providers/codex/**"] },
+      { "name": "provider-cursor", "patterns": ["src/providers/cursor/**"] },
+      { "name": "provider-opencode", "patterns": ["src/providers/opencode/**"] }
+    ],
+    "rules": [
+      {
+        "from": "main",
+        "allow": ["app", "core", "features", "shared", "utils", "i18n", "provider-aggregator"]
+      },
+      {
+        "from": "app",
+        "allow": ["core", "features", "shared", "utils", "i18n"],
+        "allowTypeOnly": ["main"]
+      },
+      {
+        "from": "core",
+        "allow": ["utils"],
+        "allowTypeOnly": ["app", "i18n"]
+      },
+      {
+        "from": "features",
+        "allow": ["core", "shared", "utils", "i18n"],
+        "allowTypeOnly": ["app", "main"]
+      },
+      {
+        "from": "shared",
+        "allow": ["core", "utils", "i18n"]
+      },
+      {
+        "from": "utils",
+        "allow": ["core"],
+        "allowTypeOnly": ["i18n"]
+      },
+      {
+        "from": "i18n",
+        "allow": []
+      },
+      {
+        "from": "acp",
+        "allow": ["core", "utils"]
+      },
+      {
+        "from": "provider-aggregator",
+        "allow": ["core", "acp", "provider-claude", "provider-codex", "provider-cursor", "provider-opencode"]
+      },
+      {
+        "from": "provider-claude",
+        "allow": ["app", "core", "features", "shared", "utils", "i18n"]
+      },
+      {
+        "from": "provider-codex",
+        "allow": ["app", "core", "features", "shared", "utils", "i18n"]
+      },
+      {
+        "from": "provider-cursor",
+        "allow": ["app", "core", "features", "shared", "utils", "i18n"]
+      },
+      {
+        "from": "provider-opencode",
+        "allow": ["app", "core", "features", "shared", "utils", "i18n", "acp"]
+      }
+    ]
+  },
   "rules": {
     "unused-dependencies": "warn"
   }

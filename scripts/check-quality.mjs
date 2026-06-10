@@ -50,6 +50,25 @@ const METRICS = {
     read: (r) => r.check.summary.total_issues,
     label: 'dead-code issues (fallow dead-code)',
   },
+  // Structural gates (import-cycle budget + ADR 0001 boundary enforcement).
+  // All three are 0 today and must stay 0: the ratchet direction allows it,
+  // but treat any bump of these baselines as an architecture decision, not a
+  // metric trade-off. Zones/rules live in .fallowrc.json "boundaries".
+  circularDependencies: {
+    direction: 'max',
+    read: (r) => r.check.summary.circular_dependencies,
+    label: 'circular dependencies (fallow dead-code)',
+  },
+  reExportCycles: {
+    direction: 'max',
+    read: (r) => r.check.summary.re_export_cycles,
+    label: 're-export cycles (fallow dead-code)',
+  },
+  boundaryViolations: {
+    direction: 'max',
+    read: (r) => r.check.summary.boundary_violations,
+    label: 'architecture boundary violations (fallow dead-code, zones in .fallowrc.json)',
+  },
   cloneGroups: {
     direction: 'max',
     read: (r) => r.dupes.stats.clone_groups,
