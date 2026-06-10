@@ -59,13 +59,16 @@ Two tiers, on purpose:
   **not** pass `--max-warnings`, so warnings print but never fail the build.
   This keeps the bar moving without blocking unrelated work on day one.
 
-Current `warn`-tier rules: the staged `obsidianmd/*` set,
-`@typescript-eslint/no-explicit-any`, and the function-health rules
-(`max-lines-per-function` 200, `complexity` 25, `max-params` 6, `max-depth` 5
-— ~61 warnings as of 2026-06-07). As the backlog clears, ratchet a threshold
-down (or promote a clean rule to `error`) so the gain is locked in. Whole-file
-size is already a hard gate via the LOC guard; the function-health rules add
-function-level signal that file-level LOC can't see.
+Current `warn`-tier rules: `complexity` 25 and `max-lines-per-function` 200
+(32 + 12 warnings as of 2026-06-10, down from ~61 on 2026-06-07). As the
+backlog clears, ratchet a threshold down (or promote a clean rule to `error`)
+so the gain is locked in. Whole-file size is already a hard gate via the LOC
+guard; the function-health rules add function-level signal that file-level LOC
+can't see.
+
+Promoted to `error` on 2026-06-10, after their backlogs reached zero: the
+staged `obsidianmd/*` set, `@typescript-eslint/no-explicit-any` (src only;
+tests keep their mocking override), `max-params` 6, and `max-depth` 5.
 
 ## LOC guard
 
@@ -237,4 +240,10 @@ import only `app`/`core`/`shared`/`utils`/`i18n` (+ `acp` for Opencode).
 Done 2026-06-10 (third pass): perf scaling guards graduated into a blocking CI
 job (`perf`, `npm run test:perf`) — gateable because every assertion is a
 deterministic count, never a timing; timings remain report-only monitoring.
-See `docs/tech-debt/2026-06-07-perf-gates-blind-spots.md`.
+See `docs/tech-debt/2026-06-07-perf-gates-blind-spots.md`. Same pass: the
+duplication detector tightened from `minOccurrences: 3` (which reported zero
+groups) to `2`, so every new copy-paste pair now counts against the
+`cloneGroups` ratchet; the worst ~37 pair-groups were consolidated before the
+flip and the remainder grandfathered in the baseline. Same pass: lint rules
+whose backlogs hit zero were promoted to `error` (staged `obsidianmd/*`,
+`no-explicit-any`, `max-params`, `max-depth`) — see "Lint severity policy".

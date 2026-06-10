@@ -19,7 +19,7 @@
     "electron"
   ],
   "duplicates": {
-    "minOccurrences": 3,
+    "minOccurrences": 2,
     "ignore": [
       "**/tests/**"
     ]
