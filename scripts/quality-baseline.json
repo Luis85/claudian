@@ -3,10 +3,13 @@
   "fallowVersion": "2.91.0",
   "metrics": {
     "deadCodeIssues": 0,
+    "circularDependencies": 0,
+    "reExportCycles": 0,
+    "boundaryViolations": 0,
     "cloneGroups": 0,
-    "duplicatedLines": 3677,
-    "complexFunctions": 335,
-    "criticalComplexity": 59,
+    "duplicatedLines": 3602,
+    "complexFunctions": 325,
+    "criticalComplexity": 51,
     "averageMaintainability": 90.3
   }
 }

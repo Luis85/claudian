@@ -2,8 +2,8 @@
 type: tech-debt
 title: "No import-cycle budget; large existing cycles block a hard gate"
 date: 2026-06-07
-updated: 2026-06-07
-status: open
+updated: 2026-06-10
+status: done
 priority: "2 - medium"
 severity: medium
 scope: build-ci
@@ -82,9 +82,9 @@ silently degrades.
 
 ## Acceptance criteria
 
-- [ ] True cycle set is measured with type-only edges excluded and barrels resolved.
-- [ ] Genuine cycles are reduced to a documented baseline.
-- [ ] A cycle gate fails on new cycles while grandfathering the baseline, and does not block on the existing set.
+- [x] True cycle set is measured with type-only edges excluded and barrels resolved.
+- [x] Genuine cycles are reduced to a documented baseline.
+- [x] A cycle gate fails on new cycles while grandfathering the baseline, and does not block on the existing set.
 
 ## Decision log
 
@@ -92,3 +92,23 @@ silently degrades.
   Existing cycles are too large to block on, and robust detection needs either
   a new dependency or careful barrel/type-only handling. Captured here so the
   direction is not lost; the quality-gates PR shipped the non-cycle gates.
+- 2026-06-10: Closed. The crude Tarjan numbers above were measurement
+  artifacts, as the caveats suspected: fallow's import graph (type-aware,
+  barrel-aware, already wired into `npm run check:quality`) reports **zero**
+  circular dependencies and zero re-export cycles on the current tree — the
+  142-file "SCC" was `import type` edges plus barrel collapse, and the real
+  cycles found earlier had been fixed when the fallow ratchet went live
+  (2026-06-09).
+
+## Resolution (2026-06-10)
+
+No grandfathered budget was needed — the baseline is zero, so the gate is
+strict instead of ratcheted-from-debt. `scripts/check-quality.mjs` gained three
+counter metrics pinned at 0 in `scripts/quality-baseline.json`:
+`circularDependencies`, `reExportCycles`, and `boundaryViolations`. The third
+is backed by new `boundaries` zones/rules in `.fallowrc.json` that encode the
+ADR 0001 layer rules (core → utils only; features never import providers;
+provider zones never import each other; only `src/providers/index.ts` sees
+provider internals). All three run in the existing CI `quality` job via
+`npm run check:quality` — no new tooling, no new dependency. Details:
+`docs/build-ci/quality-gates.md` § "Fallow quality ratchet".

@@ -820,52 +820,41 @@ export class SubagentManager {
 
   private isStillRunningResult(result: string, isError: boolean): boolean {
     const trimmed = result?.trim() || '';
+    if (isError || !trimmed) return false;
+
     const payload = this.unwrapTextPayload(trimmed);
-
-    if (isError) return false;
-    if (!trimmed) return false;
-
     const parsed = parseJsonRecord(payload);
     if (parsed) {
-      const status = parsed.retrieval_status ?? parsed.status;
-      const agents = isRecord(parsed.agents) ? parsed.agents : null;
-      const hasAgents = agents !== null && Object.keys(agents).length > 0;
+      return this.parsedResultIndicatesRunning(parsed);
+    }
+    return this.plainPayloadIndicatesRunning(payload);
+  }
 
-      if (status === 'not_ready' || status === 'running' || status === 'pending') {
-        return true;
-      }
-
-      if (hasAgents && agents) {
-        const agentStatuses = Object.values(agents)
-          .map((agent) => (isRecord(agent) && typeof agent.status === 'string') ? agent.status.toLowerCase() : '');
-        const anyRunning = agentStatuses.some(s =>
-          s === 'running' || s === 'pending' || s === 'not_ready'
-        );
-        if (anyRunning) return true;
-        return false;
-      }
-
-      if (status === 'success' || status === 'completed') {
-        return false;
-      }
-
-      return false;
+  private parsedResultIndicatesRunning(parsed: Record<string, unknown>): boolean {
+    const status = parsed.retrieval_status ?? parsed.status;
+    if (status === 'not_ready' || status === 'running' || status === 'pending') {
+      return true;
     }
 
+    const agents = isRecord(parsed.agents) ? parsed.agents : null;
+    if (!agents || Object.keys(agents).length === 0) {
+      return false;
+    }
+    return Object.values(agents)
+      .map((agent) => (isRecord(agent) && typeof agent.status === 'string') ? agent.status.toLowerCase() : '')
+      .some(s => s === 'running' || s === 'pending' || s === 'not_ready');
+  }
+
+  private plainPayloadIndicatesRunning(payload: string): boolean {
     const lowerResult = payload.toLowerCase();
     if (lowerResult.includes('not_ready') || lowerResult.includes('not ready')) {
       return true;
     }
 
     const xmlStatusMatch = lowerResult.match(/<status>([^<]+)<\/status>/);
-    if (xmlStatusMatch) {
-      const status = xmlStatusMatch[1].trim();
-      if (status === 'running' || status === 'pending' || status === 'not_ready') {
-        return true;
-      }
-    }
-
-    return false;
+    if (!xmlStatusMatch) return false;
+    const status = xmlStatusMatch[1].trim();
+    return status === 'running' || status === 'pending' || status === 'not_ready';
   }
 
   private extractAgentResult(result: string, agentId: string, toolUseResult?: unknown): string {
@@ -879,63 +868,57 @@ export class SubagentManager {
     }
 
     const payload = this.unwrapTextPayload(result);
-
     const parsed = parseJsonRecord(payload);
-    if (parsed) {
-      const taskResult = this.extractResultFromTaskObject(parsed.task);
-      if (taskResult) {
-        return taskResult;
-      }
+    const parsedResult = parsed ? this.extractResultFromParsedRecord(parsed, agentId) : null;
+    if (parsedResult) {
+      return parsedResult;
+    }
 
-      const agents = isRecord(parsed.agents) ? parsed.agents : null;
-      const agentData = agents && agentId ? agents[agentId] : null;
-      if (isRecord(agentData)) {
-        const parsedResult = this.extractResultFromCandidateString(agentData.result);
-        if (parsedResult) {
-          return parsedResult;
-        }
-        const parsedOutput = this.extractResultFromCandidateString(agentData.output);
-        if (parsedOutput) {
-          return parsedOutput;
-        }
-        return JSON.stringify(agentData, null, 2);
-      }
+    return this.extractResultFromTaggedPayload(payload) || payload;
+  }
 
-      if (agents) {
-        const agentIds = Object.keys(agents);
-        if (agentIds.length > 0) {
-          const firstAgent = agents[agentIds[0]];
-          if (isRecord(firstAgent)) {
-            const parsedResult = this.extractResultFromCandidateString(firstAgent.result);
-            if (parsedResult) {
-              return parsedResult;
-            }
-            const parsedOutput = this.extractResultFromCandidateString(firstAgent.output);
-            if (parsedOutput) {
-              return parsedOutput;
-            }
-          }
-          return JSON.stringify(firstAgent, null, 2);
-        }
-      }
+  private extractResultFromParsedRecord(parsed: Record<string, unknown>, agentId: string): string | null {
+    const taskResult = this.extractResultFromTaskObject(parsed.task);
+    if (taskResult) {
+      return taskResult;
+    }
 
-      const parsedResult = this.extractResultFromCandidateString(parsed.result);
-      if (parsedResult) {
-        return parsedResult;
-      }
-
-      const parsedOutput = this.extractResultFromCandidateString(parsed.output);
-      if (parsedOutput) {
-        return parsedOutput;
+    const agents = isRecord(parsed.agents) ? parsed.agents : null;
+    if (agents) {
+      const agentsResult = this.extractResultFromAgentsMap(agents, agentId);
+      if (agentsResult) {
+        return agentsResult;
       }
     }
 
-    const taggedResult = this.extractResultFromTaggedPayload(payload);
-    if (taggedResult) {
-      return taggedResult;
+    return this.extractResultFromCandidateString(parsed.result)
+      ?? this.extractResultFromCandidateString(parsed.output);
+  }
+
+  private extractResultFromAgentsMap(agents: Record<string, unknown>, agentId: string): string | null {
+    const agentData = agentId ? agents[agentId] : null;
+    if (isRecord(agentData)) {
+      return this.extractResultFromAgentRecord(agentData)
+        ?? JSON.stringify(agentData, null, 2);
     }
 
-    return payload;
+    const agentIds = Object.keys(agents);
+    if (agentIds.length === 0) {
+      return null;
+    }
+    const firstAgent = agents[agentIds[0]];
+    if (isRecord(firstAgent)) {
+      const firstAgentResult = this.extractResultFromAgentRecord(firstAgent);
+      if (firstAgentResult) {
+        return firstAgentResult;
+      }
+    }
+    return JSON.stringify(firstAgent, null, 2);
+  }
+
+  private extractResultFromAgentRecord(agent: Record<string, unknown>): string | null {
+    return this.extractResultFromCandidateString(agent.result)
+      ?? this.extractResultFromCandidateString(agent.output);
   }
 
   private extractResultFromTaskObject(task: unknown): string | null {

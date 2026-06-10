@@ -13,16 +13,17 @@ import { extractToolResultContent } from '../../../core/tools/toolResultContent'
 import type { ChatMessage, ImageAttachment, SubagentInfo, ToolCallInfo } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
-import { formatDurationMmSs } from '../../../utils/date';
 import { processFileLinks, registerFileLinkHandler } from '../../../utils/fileLink';
 import { replaceImageEmbedsWithHtml } from '../../../utils/imageEmbed';
 import { escapeMathDelimitersForStreaming } from '../../../utils/markdownMath';
 import { getVaultFileByPath } from '../../../utils/obsidianCompat';
 import { openClaudianProviderSettings } from '../../../utils/obsidianPrivateApi';
 import { extractVaultMentions } from '../../../utils/vaultMentions';
-import { classifyRuntimeError } from '../controllers/runtimeErrorClassification';
 import { findRewindContext } from '../rewind';
-import { renderInlineRuntimeError } from './InlineRuntimeError';
+import {
+  type AssistantContentHost,
+  renderAssistantMessageContent,
+} from './assistantMessageContent';
 import { eligibleMessageActions } from './messageActions';
 import { renderMessageContextCard } from './MessageContextCard';
 import { scrollMessagesToBottom } from './scrollToBottom';
@@ -31,7 +32,6 @@ import {
   renderStoredAsyncSubagent,
   renderStoredSubagent,
 } from './SubagentRenderer';
-import { renderStoredThinkingBlock } from './ThinkingBlockRenderer';
 import { renderStoredToolCall } from './ToolCallRenderer';
 import { renderWorkOrderHandoffCard } from './WorkOrderHandoffCard';
 import { renderWorkOrderNeedsApprovalCard } from './WorkOrderNeedsApprovalCard';
@@ -229,15 +229,7 @@ export class MessageRenderer {
       }
     }
 
-    const msgEl = this.messagesEl.createDiv({
-      cls: `claudian-message claudian-message-${msg.role}`,
-      attr: {
-        'data-message-id': msg.id,
-        'data-role': msg.role,
-      },
-    });
-
-    const contentEl = msgEl.createDiv({ cls: 'claudian-message-content', attr: { dir: 'auto' } });
+    const { msgEl, contentEl } = this.createMessageShell(msg);
 
     if (msg.role === 'user') {
       this.renderUserContextCard(contentEl, msg);
@@ -523,22 +515,54 @@ export class MessageRenderer {
       return;
     }
 
+    if (msg.role === 'user') {
+      this.renderStoredUserMessage(msg, allMessages, index);
+      return;
+    }
+    this.renderStoredAssistantMessage(msg);
+  }
+
+  private renderStoredUserMessage(msg: ChatMessage, allMessages?: ChatMessage[], index?: number): void {
     // Render images above bubble for user messages
-    if (msg.role === 'user' && msg.images && msg.images.length > 0) {
+    if (msg.images && msg.images.length > 0) {
       this.renderMessageImages(this.messagesEl, msg.images);
     }
 
     // Skip empty bubble for image-only messages
-    if (msg.role === 'user') {
-      const textToShow = msg.displayContent ?? msg.content;
-      if (!textToShow) {
-        return;
-      }
-    }
-    if (msg.role === 'assistant' && !this.hasVisibleContent(msg)) {
+    const textToShow = msg.displayContent ?? msg.content;
+    if (!textToShow) {
       return;
     }
 
+    const { msgEl, contentEl } = this.createMessageShell(msg);
+    this.renderUserContextCard(contentEl, msg);
+    this.renderUserTextBlock(contentEl, textToShow);
+    this.addUserCopyButton(msgEl, textToShow);
+    this.addRegisteredMessageActions(msgEl, msg);
+    if (msg.userMessageId && this.isRewindEligible(allMessages, index)) {
+      if (this.rewindCallback) {
+        this.addRewindButton(msgEl, msg.id);
+      }
+      if (this.forkCallback) {
+        this.addForkButton(msgEl, msg.id);
+      }
+    }
+  }
+
+  private renderStoredAssistantMessage(msg: ChatMessage): void {
+    if (!this.hasVisibleContent(msg)) {
+      return;
+    }
+
+    const { msgEl, contentEl } = this.createMessageShell(msg);
+    this.renderAssistantContent(msg, contentEl);
+    if (msg.isInterrupt) {
+      this.appendInterruptIndicator(contentEl);
+    }
+    this.addAssistantMessageActions(msgEl, msg);
+  }
+
+  private createMessageShell(msg: ChatMessage): { msgEl: HTMLElement; contentEl: HTMLElement } {
     const msgEl = this.messagesEl.createDiv({
       cls: `claudian-message claudian-message-${msg.role}`,
       attr: {
@@ -546,32 +570,8 @@ export class MessageRenderer {
         'data-role': msg.role,
       },
     });
-
     const contentEl = msgEl.createDiv({ cls: 'claudian-message-content', attr: { dir: 'auto' } });
-
-    if (msg.role === 'user') {
-      this.renderUserContextCard(contentEl, msg);
-      const textToShow = msg.displayContent ?? msg.content;
-      if (textToShow) {
-        this.renderUserTextBlock(contentEl, textToShow);
-        this.addUserCopyButton(msgEl, textToShow);
-        this.addRegisteredMessageActions(msgEl, msg);
-      }
-      if (msg.userMessageId && this.isRewindEligible(allMessages, index)) {
-        if (this.rewindCallback) {
-          this.addRewindButton(msgEl, msg.id);
-        }
-        if (this.forkCallback) {
-          this.addForkButton(msgEl, msg.id);
-        }
-      }
-    } else if (msg.role === 'assistant') {
-      this.renderAssistantContent(msg, contentEl);
-      if (msg.isInterrupt) {
-        this.appendInterruptIndicator(contentEl);
-      }
-      this.addAssistantMessageActions(msgEl, msg);
-    }
+    return { msgEl, contentEl };
   }
 
   private hasVisibleContent(msg: ChatMessage): boolean {
@@ -690,87 +690,24 @@ export class MessageRenderer {
   }
 
   /**
-   * Renders assistant message content (content blocks or fallback).
+   * Renders assistant message content (content blocks or fallback). Block
+   * dispatch lives in `assistantMessageContent.ts` behind a host interface.
    */
   private renderAssistantContent(msg: ChatMessage, contentEl: HTMLElement): void {
-    if (msg.contentBlocks && msg.contentBlocks.length > 0) {
-      const renderedToolIds = new Set<string>();
-      for (const block of msg.contentBlocks) {
-        if (block.type === 'thinking') {
-          renderStoredThinkingBlock(
-            contentEl,
-            block.content,
-            block.durationSeconds,
-            (el, md) => this.renderContent(el, md)
-          );
-        } else if (block.type === 'text') {
-          // Skip empty or whitespace-only text blocks to avoid extra gaps
-          if (!block.content || !block.content.trim()) {
-            continue;
-          }
-          this.renderAssistantTextBlock(contentEl, block.content);
-        } else if (block.type === 'tool_use') {
-          const toolCall = msg.toolCalls?.find(tc => tc.id === block.toolId);
-          if (toolCall) {
-            this.renderToolCall(contentEl, toolCall, msg);
-            renderedToolIds.add(toolCall.id);
-          }
-        } else if (block.type === 'context_compacted') {
-          const boundaryEl = contentEl.createDiv({ cls: 'claudian-compact-boundary' });
-          boundaryEl.createSpan({ cls: 'claudian-compact-boundary-label', text: 'Conversation compacted' });
-        } else if (block.type === 'runtime_error') {
-          // Re-render the actionable error card from the persisted message. Retry
-          // is omitted (no live turn to re-dispatch after a reload); open-settings
-          // still works and the card hides the button for non-actionable kinds.
-          const providerId = this.getCapabilities().providerId;
-          renderInlineRuntimeError(contentEl, {
-            kind: classifyRuntimeError(block.content),
-            content: block.content,
-            providerId,
-            onOpenSettings: () =>
-              openClaudianProviderSettings(this.app, this.plugin.manifest.id, providerId),
-          });
-        } else if (block.type === 'subagent') {
-          const taskToolCall = msg.toolCalls?.find(
-            tc => tc.id === block.subagentId && isSubagentToolName(tc.name)
-          );
-          if (!taskToolCall) continue;
+    renderAssistantMessageContent(this.assistantContentHost(), msg, contentEl);
+  }
 
-          this.renderTaskSubagent(contentEl, taskToolCall, block.mode);
-          renderedToolIds.add(taskToolCall.id);
-        }
-      }
-
-      // Defensive fallback: preserve tool visibility when contentBlocks/toolCalls drift on reload.
-      if (msg.toolCalls && msg.toolCalls.length > 0) {
-        for (const toolCall of msg.toolCalls) {
-          if (renderedToolIds.has(toolCall.id)) continue;
-          this.renderToolCall(contentEl, toolCall, msg);
-          renderedToolIds.add(toolCall.id);
-        }
-      }
-    } else {
-      // Fallback for old conversations without contentBlocks
-      if (msg.content) {
-        this.renderAssistantTextBlock(contentEl, msg.content);
-      }
-      if (msg.toolCalls) {
-        for (const toolCall of msg.toolCalls) {
-          this.renderToolCall(contentEl, toolCall, msg);
-        }
-      }
-    }
-
-    // Render response duration footer (skip when message contains a compaction boundary)
-    const hasCompactBoundary = msg.contentBlocks?.some(b => b.type === 'context_compacted');
-    if (msg.durationSeconds && msg.durationSeconds > 0 && !hasCompactBoundary) {
-      const flavorWord = msg.durationFlavorWord || 'Baked';
-      const footerEl = contentEl.createDiv({ cls: 'claudian-response-footer' });
-      footerEl.createSpan({
-        text: `* ${flavorWord} for ${formatDurationMmSs(msg.durationSeconds)}`,
-        cls: 'claudian-baked-duration',
-      });
-    }
+  private assistantContentHost(): AssistantContentHost {
+    return {
+      getProviderId: () => this.getCapabilities().providerId,
+      openProviderSettings: (providerId) => {
+        openClaudianProviderSettings(this.app, this.plugin.manifest.id, providerId);
+      },
+      renderMarkdown: (el, md) => this.renderContent(el, md),
+      renderTextBlock: (el, md) => this.renderAssistantTextBlock(el, md),
+      renderToolCall: (el, toolCall, msg) => this.renderToolCall(el, toolCall, msg),
+      renderTaskSubagent: (el, toolCall, mode) => this.renderTaskSubagent(el, toolCall, mode),
+    };
   }
 
   /**
