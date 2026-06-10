@@ -174,26 +174,52 @@ export function parseOpencodeAgentMarkdown(
     }),
   };
 
+  applyModelFrontmatter(result, frontmatter);
+  applyBehaviorFrontmatter(result, frontmatter);
+
+  const extraFrontmatter: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(frontmatter)) {
+    if (!OPENCODE_AGENT_KNOWN_KEYS.has(key)) {
+      extraFrontmatter[key] = value;
+    }
+  }
+  if (Object.keys(extraFrontmatter).length > 0) {
+    result.extraFrontmatter = extraFrontmatter;
+  }
+
+  return result;
+}
+
+function applyModelFrontmatter(
+  result: OpencodeAgentDefinition,
+  frontmatter: Record<string, unknown>,
+): void {
   const mode = normalizeMode(frontmatter.mode);
   if (mode) result.mode = mode;
 
-  if (typeof frontmatter.model === 'string' && frontmatter.model.trim()) {
-    result.model = frontmatter.model.trim();
-  }
-  if (typeof frontmatter.variant === 'string' && frontmatter.variant.trim()) {
-    result.variant = frontmatter.variant.trim();
-  }
-  if (typeof frontmatter.temperature === 'number' && Number.isFinite(frontmatter.temperature)) {
-    result.temperature = frontmatter.temperature;
+  const model = normalizeTrimmedString(frontmatter.model);
+  if (model) result.model = model;
+
+  const variant = normalizeTrimmedString(frontmatter.variant);
+  if (variant) result.variant = variant;
+
+  const temperature = normalizeFiniteNumber(frontmatter.temperature);
+  if (temperature !== undefined) {
+    result.temperature = temperature;
   }
   const topP = normalizeFiniteNumber(frontmatter.top_p);
   if (topP !== undefined) {
     result.topP = topP;
   }
-  if (typeof frontmatter.color === 'string' && frontmatter.color.trim()) {
-    result.color = frontmatter.color.trim();
-  }
 
+  const color = normalizeTrimmedString(frontmatter.color);
+  if (color) result.color = color;
+}
+
+function applyBehaviorFrontmatter(
+  result: OpencodeAgentDefinition,
+  frontmatter: Record<string, unknown>,
+): void {
   const steps = normalizePositiveInteger(frontmatter.steps) ?? normalizePositiveInteger(frontmatter.maxSteps);
   if (steps !== undefined) {
     result.steps = steps;
@@ -215,18 +241,6 @@ export function parseOpencodeAgentMarkdown(
   if (frontmatter.permission !== undefined) {
     result.permission = frontmatter.permission;
   }
-
-  const extraFrontmatter: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(frontmatter)) {
-    if (!OPENCODE_AGENT_KNOWN_KEYS.has(key)) {
-      extraFrontmatter[key] = value;
-    }
-  }
-  if (Object.keys(extraFrontmatter).length > 0) {
-    result.extraFrontmatter = extraFrontmatter;
-  }
-
-  return result;
 }
 
 export function serializeOpencodeAgentMarkdown(agent: OpencodeAgentDefinition): string {
@@ -311,6 +325,10 @@ function normalizeMode(value: unknown): OpencodeAgentDefinition['mode'] | undefi
 
 function normalizeFiniteNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function normalizeTrimmedString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
 function normalizePositiveInteger(value: unknown): number | undefined {

@@ -153,68 +153,101 @@ export function parseSDKMessageToChat(
   sdkMsg: SDKNativeMessage,
   toolResults?: Map<string, { content: string; isError: boolean }>,
 ): ChatMessage | null {
-  if (sdkMsg.type === 'file-history-snapshot') {
-    return null;
-  }
-
   if (sdkMsg.type === 'system') {
-    if (sdkMsg.subtype === 'compact_boundary') {
-      const timestamp = sdkMsg.timestamp ? new Date(sdkMsg.timestamp).getTime() : Date.now();
-      return {
-        id: sdkMsg.uuid || `compact-${timestamp}-${Math.random().toString(36).slice(2)}`,
-        role: 'assistant',
-        content: '',
-        timestamp,
-        contentBlocks: [{ type: 'context_compacted' }],
-      };
-    }
-    return null;
-  }
-
-  if (sdkMsg.type === 'result') {
-    return null;
+    return parseCompactBoundaryMessage(sdkMsg);
   }
 
   if (sdkMsg.type !== 'user' && sdkMsg.type !== 'assistant') {
     return null;
   }
 
-  const content = sdkMsg.message?.content;
-  const textContent = extractTextContent(content);
-  const images = sdkMsg.type === 'user' ? extractImages(content) : undefined;
+  return parseConversationMessage(sdkMsg, sdkMsg.type, toolResults);
+}
 
-  const hasToolUse = Array.isArray(content) && content.some(block => block.type === 'tool_use');
-  const hasImages = !!images && images.length > 0;
-  if (!textContent && !hasToolUse && !hasImages && (!content || typeof content === 'string')) {
+function parseCompactBoundaryMessage(sdkMsg: SDKNativeMessage): ChatMessage | null {
+  if (sdkMsg.subtype !== 'compact_boundary') {
     return null;
   }
 
   const timestamp = sdkMsg.timestamp ? new Date(sdkMsg.timestamp).getTime() : Date.now();
-  const commandNameMatch = sdkMsg.type === 'user'
-    ? textContent.match(/<command-name>(\/[^<]+)<\/command-name>/)
-    : null;
+  return {
+    id: sdkMsg.uuid || `compact-${timestamp}-${Math.random().toString(36).slice(2)}`,
+    role: 'assistant',
+    content: '',
+    timestamp,
+    contentBlocks: [{ type: 'context_compacted' }],
+  };
+}
 
-  let displayContent: string | undefined;
-  if (sdkMsg.type === 'user') {
-    displayContent = commandNameMatch ? commandNameMatch[1] : extractDisplayContent(textContent);
+function isEmptySDKContent(
+  content: string | SDKNativeContentBlock[] | undefined,
+  textContent: string,
+  images: ImageAttachment[] | undefined,
+): boolean {
+  const hasToolUse = Array.isArray(content) && content.some(block => block.type === 'tool_use');
+  const hasImages = !!images && images.length > 0;
+  return !textContent && !hasToolUse && !hasImages && (!content || typeof content === 'string');
+}
+
+function parseConversationMessage(
+  sdkMsg: SDKNativeMessage,
+  role: 'user' | 'assistant',
+  toolResults?: Map<string, { content: string; isError: boolean }>,
+): ChatMessage | null {
+  const content = sdkMsg.message?.content;
+  const textContent = extractTextContent(content);
+  const images = role === 'user' ? extractImages(content) : undefined;
+
+  if (isEmptySDKContent(content, textContent, images)) {
+    return null;
   }
 
-  const isInterrupt = sdkMsg.type === 'user' && isInterruptSignalText(textContent);
-  const isRebuiltContext = sdkMsg.type === 'user' && isRebuiltContextContent(textContent);
+  const timestamp = sdkMsg.timestamp ? new Date(sdkMsg.timestamp).getTime() : Date.now();
+  const base: ChatMessage = {
+    id: sdkMsg.uuid || `sdk-${timestamp}-${Math.random().toString(36).slice(2)}`,
+    role,
+    content: textContent,
+    displayContent: undefined,
+    timestamp,
+    toolCalls: undefined,
+    contentBlocks: undefined,
+    images,
+  };
+
+  return role === 'user'
+    ? finalizeUserMessage(base, sdkMsg, textContent)
+    : finalizeAssistantMessage(base, sdkMsg, content, toolResults);
+}
+
+function finalizeUserMessage(
+  base: ChatMessage,
+  sdkMsg: SDKNativeMessage,
+  textContent: string,
+): ChatMessage {
+  const commandNameMatch = textContent.match(/<command-name>(\/[^<]+)<\/command-name>/);
+  const isInterrupt = isInterruptSignalText(textContent);
+  const isRebuiltContext = isRebuiltContextContent(textContent);
 
   return {
-    id: sdkMsg.uuid || `sdk-${timestamp}-${Math.random().toString(36).slice(2)}`,
-    role: sdkMsg.type,
-    content: textContent,
-    displayContent,
-    timestamp,
-    toolCalls: sdkMsg.type === 'assistant' ? extractToolCalls(content, toolResults) : undefined,
-    contentBlocks: sdkMsg.type === 'assistant' ? mapContentBlocks(content) : undefined,
-    images,
-    ...(sdkMsg.type === 'user' && sdkMsg.uuid && { userMessageId: sdkMsg.uuid }),
-    ...(sdkMsg.type === 'assistant' && sdkMsg.uuid && { assistantMessageId: sdkMsg.uuid }),
+    ...base,
+    displayContent: commandNameMatch ? commandNameMatch[1] : extractDisplayContent(textContent),
+    ...(sdkMsg.uuid && { userMessageId: sdkMsg.uuid }),
     ...(isInterrupt && { isInterrupt: true }),
     ...(isRebuiltContext && { isRebuiltContext: true }),
+  };
+}
+
+function finalizeAssistantMessage(
+  base: ChatMessage,
+  sdkMsg: SDKNativeMessage,
+  content: string | SDKNativeContentBlock[] | undefined,
+  toolResults?: Map<string, { content: string; isError: boolean }>,
+): ChatMessage {
+  return {
+    ...base,
+    toolCalls: extractToolCalls(content, toolResults),
+    contentBlocks: mapContentBlocks(content),
+    ...(sdkMsg.uuid && { assistantMessageId: sdkMsg.uuid }),
   };
 }
 
