@@ -174,17 +174,20 @@ the layer table in `CLAUDE.md`:
   twin of the `no-restricted-imports` lint rule, and it also covers type-only
   imports, which the lint rule's per-file exemptions do not.
 - Provider zones (`provider-claude`, `provider-codex`, `provider-cursor`,
-  `provider-opencode`) may not import each other. Only `provider-opencode`
-  may use the shared `acp` transport, and only `src/providers/index.ts`
-  (the `provider-aggregator` zone) may import provider internals.
+  `provider-opencode`) may not import each other — **and may not import
+  `features` at all** (closed 2026-06-10: the settings-UI helpers the provider
+  tabs reuse moved to `shared/settings/`, and the `ProviderCustomModel` type
+  to `core/types/settings`). Only `provider-opencode` may use the shared `acp`
+  transport, and only `src/providers/index.ts` (the `provider-aggregator`
+  zone) may import provider internals.
 - `shared`, `utils`, and `i18n` stay leaf-ward: no imports from `features`,
   `providers`, or `app`.
 
-Known looseness, deliberate for now: provider zones are allowed to import
-`features` because the provider settings tabs reuse
+The original (2026-06-10 morning) zone set allowed provider zones to import
+`features` because the provider settings tabs reused
 `features/settings/ui/EnvironmentSettingsSection` / `McpSettingsManager` and
-the `ProviderCustomModel` type. If those helpers move to `shared/`, tighten the
-provider rules to drop `features` in the same PR.
+the `ProviderCustomModel` type. Those helpers now live in `shared/settings/`
+(type in `core/types/settings`), and the allowance is gone.
 
 ### Advisory commands
 
@@ -221,10 +224,6 @@ Tracked here so the direction is explicit.
    hotspot (`npm run quality:health` prioritizes targets). Each refactor PR
    that moves a metric should commit the tightened baseline so the gain is
    locked in.
-4. **Move the shared settings-UI helpers out of `features/`** so the provider
-   boundary zones can drop their `features` allowance — see "Architecture
-   boundaries (zones)" above.
-
 Done: provider-boundary regression tests and the no-new-provider-hardcoded-list
 guard (remediation item 5 of the tech debt) — see "Provider-boundary guards".
 Done 2026-06-09: fallow graduated from monitoring to a blocking ratchet gate
@@ -234,3 +233,6 @@ barrel-aware graph found no genuine cycles (the 2026-06-07 Tarjan numbers were
 type-only/barrel artifacts), so `circularDependencies`, `reExportCycles`, and
 `boundaryViolations` joined the ratchet pinned at 0 instead of a grandfathered
 budget. See `docs/tech-debt/2026-06-07-import-cycle-budget.md`.
+Done 2026-06-10 (second pass): the provider→`features` zone allowance closed —
+shared settings-UI helpers moved to `shared/settings/`, so provider zones now
+import only `app`/`core`/`shared`/`utils`/`i18n` (+ `acp` for Opencode).
