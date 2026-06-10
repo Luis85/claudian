@@ -4,6 +4,8 @@ import { Notice } from 'obsidian';
 import { SESSIONS_PATH, SessionStorage } from '../../core/bootstrap/SessionStorage';
 import type { SharedAppStorage } from '../../core/bootstrap/storage';
 import { CLAUDIAN_STORAGE_PATH } from '../../core/bootstrap/StoragePaths';
+import { validateTabManagerState } from '../../core/bootstrap/tabManagerState';
+import type { AppTabManagerState } from '../../core/providers/types';
 import { VaultFileAdapter } from '../../core/storage/VaultFileAdapter';
 import { t } from '../../i18n/i18n';
 import { ClaudianSettingsStorage, type StoredClaudianSettings } from '../settings/ClaudianSettingsStorage';
@@ -36,7 +38,7 @@ export class SharedStorageService implements SharedAppStorage {
     await this.claudianSettings.save(settings as StoredClaudianSettings);
   }
 
-  async setTabManagerState(state: { openTabs: Array<{ tabId: string; conversationId: string | null; draftModel?: string | null }>; activeTabId: string | null }): Promise<void> {
+  async setTabManagerState(state: AppTabManagerState): Promise<void> {
     try {
       const loaded: unknown = await this.plugin.loadData();
       const data = isRecord(loaded) ? loaded : {};
@@ -47,14 +49,14 @@ export class SharedStorageService implements SharedAppStorage {
     }
   }
 
-  async getTabManagerState(): Promise<{ openTabs: Array<{ tabId: string; conversationId: string | null; draftModel?: string | null }>; activeTabId: string | null } | null> {
+  async getTabManagerState(): Promise<AppTabManagerState | null> {
     try {
       const data: unknown = await this.plugin.loadData();
       if (!isRecord(data) || !data.tabManagerState) {
         return null;
       }
 
-      return this.validateTabManagerState(data.tabManagerState);
+      return validateTabManagerState(data.tabManagerState);
     } catch {
       return null;
     }
@@ -67,41 +69,5 @@ export class SharedStorageService implements SharedAppStorage {
   private async ensureDirectories(): Promise<void> {
     await this.adapter.ensureFolder(CLAUDIAN_STORAGE_PATH);
     await this.adapter.ensureFolder(SESSIONS_PATH);
-  }
-
-  private validateTabManagerState(data: unknown): { openTabs: Array<{ tabId: string; conversationId: string | null; draftModel?: string | null }>; activeTabId: string | null } | null {
-    if (!data || typeof data !== 'object') {
-      return null;
-    }
-
-    const state = data as Record<string, unknown>;
-    if (!Array.isArray(state.openTabs)) {
-      return null;
-    }
-
-    const validatedTabs: Array<{ tabId: string; conversationId: string | null; draftModel?: string | null }> = [];
-    for (const tab of state.openTabs) {
-      if (!tab || typeof tab !== 'object') {
-        continue;
-      }
-
-      const tabObj = tab as Record<string, unknown>;
-      if (typeof tabObj.tabId !== 'string') {
-        continue;
-      }
-
-      validatedTabs.push({
-        tabId: tabObj.tabId,
-        conversationId: typeof tabObj.conversationId === 'string' ? tabObj.conversationId : null,
-        ...(typeof tabObj.draftModel === 'string'
-          ? { draftModel: tabObj.draftModel }
-          : {}),
-      });
-    }
-
-    return {
-      openTabs: validatedTabs,
-      activeTabId: typeof state.activeTabId === 'string' ? state.activeTabId : null,
-    };
   }
 }
