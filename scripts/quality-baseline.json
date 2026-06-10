@@ -4,9 +4,9 @@
   "metrics": {
     "deadCodeIssues": 0,
     "cloneGroups": 0,
-    "duplicatedLines": 3735,
-    "complexFunctions": 337,
-    "criticalComplexity": 58,
+    "duplicatedLines": 3677,
+    "complexFunctions": 335,
+    "criticalComplexity": 59,
     "averageMaintainability": 90.3
   }
 }
