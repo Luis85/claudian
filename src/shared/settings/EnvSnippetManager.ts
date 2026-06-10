@@ -4,18 +4,30 @@ import { Modal, Notice, setIcon, Setting } from 'obsidian';
 import {
   getEnvironmentScopeUpdates,
   resolveEnvironmentSnippetScope,
-} from '../../../core/providers/providerEnvironment';
-import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
-import { reconcileSnippetEdit, resolveSnippetEnvText } from '../../../core/providers/secretEnvVars';
-import { SECRET_VALUE_PLACEHOLDER } from '../../../core/security/secretIds';
-import type { EnvironmentScope, EnvSnippet } from '../../../core/types';
-import { VIEW_TYPE_CLAUDIAN } from '../../../core/types';
-import type { PluginContext } from '../../../core/types/PluginContext';
-import { t } from '../../../i18n/i18n';
-import { createSettingsActionButton } from '../../../shared/components/settingsListUI';
-import { confirmDelete } from '../../../shared/modals/ConfirmModal';
-import { formatContextLimit, parseContextLimit, parseEnvironmentVariables } from '../../../utils/env';
-import { isClaudianView } from '../../chat/isClaudianView';
+} from '../../core/providers/providerEnvironment';
+import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
+import { reconcileSnippetEdit, resolveSnippetEnvText } from '../../core/providers/secretEnvVars';
+import { SECRET_VALUE_PLACEHOLDER } from '../../core/security/secretIds';
+import type { EnvironmentScope, EnvSnippet } from '../../core/types';
+import { VIEW_TYPE_CLAUDIAN } from '../../core/types';
+import type { ChatViewHandle, PluginContext } from '../../core/types/PluginContext';
+import { t } from '../../i18n/i18n';
+import { formatContextLimit, parseContextLimit, parseEnvironmentVariables } from '../../utils/env';
+import { createSettingsActionButton } from '../components/settingsListUI';
+import { confirmDelete } from '../modals/ConfirmModal';
+
+/**
+ * Structural predicate for loaded chat-view leaves, duck-typed against the
+ * method this module actually calls. Mirrors `isClaudianView` in
+ * `features/chat` without importing it — `shared/` must stay free of
+ * `features/` dependencies, and core's `ChatViewHandle` already models the
+ * surface we need.
+ */
+function isChatViewHandle(value: unknown): value is ChatViewHandle {
+  return !!value
+    && typeof value === 'object'
+    && typeof (value as { refreshModelSelector?: unknown }).refreshModelSelector === 'function';
+}
 
 export class EnvSnippetModal extends Modal {
   plugin: PluginContext;
@@ -426,7 +438,7 @@ export class EnvSnippetManager {
     const leaf = this.plugin.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN)[0];
     if (leaf) {
       await leaf.loadIfDeferred();
-      if (isClaudianView(leaf.view)) {
+      if (isChatViewHandle(leaf.view)) {
         leaf.view.refreshModelSelector();
       }
     }

@@ -25,7 +25,6 @@ import type {
   ChatRuntimeQueryOptions,
   ChatTurnRequest,
 } from '../../../core/runtime/types';
-import { TOOL_EXIT_PLAN_MODE } from '../../../core/tools/toolNames';
 import type { ApprovalDecision, ChatMessage, ExitPlanModeDecision, StreamChunk } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
@@ -33,16 +32,14 @@ import { ResumeSessionDropdown } from '../../../shared/components/ResumeSessionD
 import { InstructionModal } from '../../../shared/modals/InstructionConfirmModal';
 import type { BrowserSelectionContext } from '../../../utils/browser';
 import type { CanvasSelectionContext } from '../../../utils/canvas';
-import { formatDurationMmSs } from '../../../utils/date';
 import type { EditorSelectionContext } from '../../../utils/editor';
 import { appendMarkdownSnippet } from '../../../utils/markdown';
 import { buildPlanArtifactFromChatState } from '../../../utils/planArtifact';
-import { COMPLETION_FLAVOR_WORDS } from '../constants';
 import { type InlineAskQuestionConfig, InlineAskUserQuestion } from '../rendering/InlineAskUserQuestion';
 import { InlineExitPlanMode } from '../rendering/InlineExitPlanMode';
 import { InlinePlanApproval, type PlanApprovalDecision } from '../rendering/InlinePlanApproval';
 import type { MessageRenderer } from '../rendering/MessageRenderer';
-import { setToolIcon, updateToolCallResult } from '../rendering/ToolCallRenderer';
+import { setToolIcon } from '../rendering/ToolCallRenderer';
 import { persistPastedImages } from '../services/persistPastedImages';
 import type { SubagentManager } from '../services/SubagentManager';
 import type { ChatState } from '../state/ChatState';
@@ -53,6 +50,24 @@ import type { InstructionModeManager } from '../ui/InstructionModeManager';
 import type { StatusPanel } from '../ui/StatusPanel';
 import type { BrowserSelectionController } from './BrowserSelectionController';
 import type { CanvasSelectionController } from './CanvasSelectionController';
+import {
+  applyPlanApprovalDecision,
+  bakeResponseDurationFooter,
+  beginStreamingTurnState,
+  completeApprovedNewSessionPlanToolCalls,
+  type ComposerSendContext,
+  type ComposerTurnOptions,
+  createAssistantPlaceholderMessage,
+  createOutgoingUserMessage,
+  type DispatchedTurnContext,
+  type FinishedTurn,
+  normalizeTabModelOverride,
+  type OutgoingTurn,
+  type PlanApprovalOutcome,
+  resolveComposerSend,
+  resolveComposerSourceImages,
+  restoreResumeCheckpointIfNeeded,
+} from './composerSendPhases';
 import type { ConversationController } from './ConversationController';
 import { QueuedMessageController } from './QueuedMessageController';
 import type { SelectionController } from './SelectionController';
@@ -222,16 +237,6 @@ export class InputController {
     return ProviderRegistry.getCapabilities(providerId);
   }
 
-  private isResumeSessionAtStillNeeded(resumeUuid: string, previousMessages: ChatMessage[]): boolean {
-    for (let i = previousMessages.length - 1; i >= 0; i--) {
-      if (previousMessages[i].role === 'assistant' && previousMessages[i].assistantMessageId === resumeUuid) {
-        // Still needed only if no messages follow the resume point
-        return i === previousMessages.length - 1;
-      }
-    }
-    return false;
-  }
-
   // ============================================
   // Message Sending
   // ============================================
@@ -244,52 +249,27 @@ export class InputController {
     images?: ChatMessage['images'];
     turnRequestOverride?: ChatTurnRequest;
   }): Promise<ProgrammaticSendResult | void> {
-    const {
-      plugin,
-      state,
-      renderer,
-      streamController,
-      selectionController,
-      browserSelectionController,
-      canvasSelectionController,
-      conversationController
-    } = this.deps;
-
-    // Set for programmatic (content-override) sends so callers like Agent Board can
-    // observe the final assistant content. User-driven sends leave this undefined.
-    let programmaticResult: ProgrammaticSendResult | undefined;
+    const { state } = this.deps;
 
     // During conversation creation/switching/hydration, don't send - input is
     // preserved so the user can retry once the target conversation is ready.
-    if (
-      state.isCreatingConversation
-      || state.isSwitchingConversation
-      || state.isHydrating
-    ) return;
+    if (this.isConversationBusy()) return;
 
-    const inputEl = this.deps.getInputEl();
-    const imageContextManager = this.deps.getImageContextManager();
-    const fileContextManager = this.deps.getFileContextManager();
-
-    const contentOverride = options?.content;
-    const shouldUseInput = contentOverride === undefined;
-    const content = (contentOverride ?? inputEl.value).trim();
-    const imageOverride = options?.images;
-    const hasImages = imageOverride !== undefined
-      ? imageOverride.length > 0
-      : (imageContextManager?.hasImages() ?? false);
-    if (!content && !hasImages) {
-      if (!shouldUseInput) return { ok: false, finalAssistantContent: '', error: 'No content to send' };
+    const send = resolveComposerSend({
+      inputEl: this.deps.getInputEl(),
+      imageContextManager: this.deps.getImageContextManager(),
+      fileContextManager: this.deps.getFileContextManager(),
+      overrides: options,
+    });
+    if (!send.content && !send.hasImages) {
+      if (!send.shouldUseInput) return { ok: false, finalAssistantContent: '', error: 'No content to send' };
       return;
     }
 
     // Check for built-in commands first (e.g., /clear, /new, /add-dir)
-    const builtInCmd = detectBuiltInCommand(content);
+    const builtInCmd = detectBuiltInCommand(send.content);
     if (builtInCmd) {
-      if (shouldUseInput) {
-        inputEl.value = '';
-        this.deps.resetInputHeight();
-      }
+      this.clearComposerInputIfUserSend(send);
       await this.executeBuiltInCommand(builtInCmd.command, builtInCmd.args);
       return;
     }
@@ -299,106 +279,148 @@ export class InputController {
     // path reuse this image snapshot. Without persisting up front, queued or
     // steered images can land in ConversationStore.save with `data` cleared
     // and no `path` — leaving an unrenderable user bubble after reload.
-    if (hasImages) {
-      const sourceImages = imageOverride ?? imageContextManager?.getAttachedImages() ?? [];
-      if (sourceImages.length > 0) {
-        await persistPastedImages(this.deps.plugin.app, sourceImages, {
-          logger: this.deps.plugin.logger.scope('chat.images'),
-        });
-      }
+    if (send.hasImages) {
+      await this.persistComposerImages(send);
     }
 
     // If agent is working, queue the message instead of dropping it
     if (state.isStreaming) {
-      const images = hasImages
-        ? [...(imageOverride ?? imageContextManager?.getAttachedImages() ?? [])]
-        : undefined;
-      const editorContext = selectionController.getContext();
-      const browserContext = browserSelectionController?.getContext() ?? null;
-      const canvasContext = canvasSelectionController.getContext();
-      const { displayContent, turnRequest } = this.buildTurnSubmission({
-        content,
-        images,
-        editorContextOverride: editorContext,
-        browserContextOverride: browserContext,
-        canvasContextOverride: canvasContext,
-      });
-      state.queuedMessage = this.queuedMessages.mergeQueuedMessages(
-        state.queuedMessage,
-        this.queuedMessages.createQueuedMessage(displayContent, turnRequest),
-      );
-
-      // Pill mentions were folded into the queued turnRequest above; clear them now
-      // so they don't linger in the composer after the user hits send while streaming.
-      fileContextManager?.clearAttachedPills();
-
-      if (shouldUseInput) {
-        inputEl.value = '';
-        this.deps.resetInputHeight();
-      }
-      if (shouldUseInput) {
-        imageContextManager?.clearImages();
-      }
-      this.queuedMessages.updateQueueIndicator();
-      // Signal "accepted but queued" so programmatic callers (Agent Board
-      // follow-ups) wait for the queued turn's stream end instead of mistaking
-      // this for a not-sent no-op. User-driven sends ignore the return.
-      return { ok: true, finalAssistantContent: '', queued: true };
+      return this.queueComposerSendWhileStreaming(send);
     }
 
-    if (shouldUseInput) {
-      inputEl.value = '';
+    return this.dispatchComposerTurn(send, options);
+  }
+
+  private isConversationBusy(): boolean {
+    const { state } = this.deps;
+    return state.isCreatingConversation
+      || state.isSwitchingConversation
+      || state.isHydrating;
+  }
+
+  private clearComposerInputIfUserSend(send: ComposerSendContext): void {
+    if (send.shouldUseInput) {
+      send.inputEl.value = '';
       this.deps.resetInputHeight();
     }
+  }
+
+  private async persistComposerImages(send: ComposerSendContext): Promise<void> {
+    const sourceImages = resolveComposerSourceImages(send);
+    if (sourceImages.length > 0) {
+      await persistPastedImages(this.deps.plugin.app, sourceImages, {
+        logger: this.deps.plugin.logger.scope('chat.images'),
+      });
+    }
+  }
+
+  private queueComposerSendWhileStreaming(send: ComposerSendContext): ProgrammaticSendResult {
+    const {
+      state,
+      selectionController,
+      browserSelectionController,
+      canvasSelectionController,
+    } = this.deps;
+
+    const images = send.hasImages ? [...resolveComposerSourceImages(send)] : undefined;
+    const editorContext = selectionController.getContext();
+    const browserContext = browserSelectionController?.getContext() ?? null;
+    const canvasContext = canvasSelectionController.getContext();
+    const { displayContent, turnRequest } = this.buildTurnSubmission({
+      content: send.content,
+      images,
+      editorContextOverride: editorContext,
+      browserContextOverride: browserContext,
+      canvasContextOverride: canvasContext,
+    });
+    state.queuedMessage = this.queuedMessages.mergeQueuedMessages(
+      state.queuedMessage,
+      this.queuedMessages.createQueuedMessage(displayContent, turnRequest),
+    );
+
+    // Pill mentions were folded into the queued turnRequest above; clear them now
+    // so they don't linger in the composer after the user hits send while streaming.
+    send.fileContextManager?.clearAttachedPills();
+
+    this.clearComposerInputIfUserSend(send);
+    if (send.shouldUseInput) {
+      send.imageContextManager?.clearImages();
+    }
+    this.queuedMessages.updateQueueIndicator();
+    // Signal "accepted but queued" so programmatic callers (Agent Board
+    // follow-ups) wait for the queued turn's stream end instead of mistaking
+    // this for a not-sent no-op. User-driven sends ignore the return.
+    return { ok: true, finalAssistantContent: '', queued: true };
+  }
+
+  private async dispatchComposerTurn(
+    send: ComposerSendContext,
+    options?: ComposerTurnOptions,
+  ): Promise<ProgrammaticSendResult | void> {
+    this.clearComposerInputIfUserSend(send);
     // Bug — selected work-order model didn't reach the runtime: capture the
     // tab-pinned model BEFORE `ensureServiceInitialized` runs, since the tab
     // lifecycle clears `draftModel` during init. Plumbed into `query()` as
     // `queryOptions.model` so the provider's per-turn override beats the
     // global `settings.model` snapshot.
-    const tabModelOverrideRaw = this.deps.getTabModelOverride?.();
-    const tabModelOverride = typeof tabModelOverrideRaw === 'string' && tabModelOverrideRaw.trim()
-      ? tabModelOverrideRaw.trim()
-      : null;
-    state.isStreaming = true;
-    state.cancelRequested = false;
-    state.ignoreUsageUpdates = false; // Allow usage updates for new query
-    this.deps.getSubagentManager().resetSpawnedCount();
-    state.autoScrollEnabled = plugin.settings.enableAutoScroll ?? true; // Reset auto-scroll based on setting
-    const streamGeneration = state.bumpStreamGeneration();
+    const tabModelOverride = normalizeTabModelOverride(this.deps.getTabModelOverride?.());
+    const streamGeneration = beginStreamingTurnState(this.deps.state, send, this.deps);
 
-    // Hide welcome message when sending first message
-    const welcomeEl = this.deps.getWelcomeEl();
-    if (welcomeEl) {
-      welcomeEl.addClass('claudian-hidden');
+    const outgoing = this.buildOutgoingTurn(send, options);
+    const { userMsg, assistantMsg, deferredAiTitleGeneration } = await this.presentOutgoingTurn(outgoing);
+
+    const agentService = await this.acquireTurnRuntime(deferredAiTitleGeneration);
+    if (!agentService) return;
+
+    await restoreResumeCheckpointIfNeeded(agentService, this.deps.state, this.deps.plugin);
+
+    const ctx: DispatchedTurnContext = {
+      agentService,
+      send,
+      turnRequest: outgoing.turnRequest,
+      userMsg,
+      assistantMsg,
+      streamGeneration,
+      tabModelOverride,
+      deferredAiTitleGeneration,
+    };
+
+    let wasInterrupted = false;
+    let wasInvalidated = false;
+    // Set for programmatic (content-override) sends so callers like Agent Board can
+    // observe the final assistant content. User-driven sends leave this undefined.
+    let programmaticResult: ProgrammaticSendResult | undefined;
+    try {
+      const streamOutcome = await this.streamPreparedTurn(ctx);
+      wasInterrupted = streamOutcome.wasInterrupted;
+      wasInvalidated = streamOutcome.wasInvalidated;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      await this.deps.streamController.appendText(`\n\n**Error:** ${errorMsg}`);
+    } finally {
+      programmaticResult = await this.finalizeTurn(ctx, { wasInterrupted, wasInvalidated });
     }
 
-    fileContextManager?.startSession();
+    return programmaticResult;
+  }
 
+  private buildOutgoingTurn(
+    send: ComposerSendContext,
+    options?: ComposerTurnOptions,
+  ): OutgoingTurn {
     // Slash commands are passed directly to SDK for handling
     // SDK handles expansion, $ARGUMENTS, @file references, and frontmatter options.
     // Image persistence already ran above (covers queue + steer paths too).
-    const images = imageOverride ?? imageContextManager?.getAttachedImages() ?? [];
+    const images = resolveComposerSourceImages(send);
     const imagesForMessage = images.length > 0 ? [...images] : undefined;
-    const isCompact = /^\/compact(\s|$)/i.test(content);
+    const isCompact = /^\/compact(\s|$)/i.test(send.content);
 
     // Only clear images if we consumed user input (not for programmatic content override)
-    if (shouldUseInput) {
-      imageContextManager?.clearImages();
+    if (send.shouldUseInput) {
+      send.imageContextManager?.clearImages();
     }
 
-    const turnSubmission = options?.turnRequestOverride
-      ? {
-        displayContent: content,
-        turnRequest: cloneChatTurnRequest(options.turnRequestOverride),
-      }
-      : this.buildTurnSubmission({
-        content,
-        images: imagesForMessage,
-        editorContextOverride: options?.editorContextOverride,
-        browserContextOverride: options?.browserContextOverride,
-        canvasContextOverride: options?.canvasContextOverride,
-      });
-    const { displayContent, turnRequest } = turnSubmission;
+    const { displayContent, turnRequest } = this.resolveTurnSubmission(send, imagesForMessage, options);
 
     // Remember this turn so an actionable runtime-error card can re-dispatch it
     // verbatim via retryLastTurn() (UX-F/UX-J). Cloned so later mutation of the
@@ -409,32 +431,49 @@ export class InputController {
       images: imagesForMessage ? [...imagesForMessage] : undefined,
     };
 
-    fileContextManager?.markCurrentNoteSent();
+    send.fileContextManager?.markCurrentNoteSent();
     // Added file/folder pills are consumed by this turn; clear them (keeps the current note).
-    fileContextManager?.clearAttachedPills();
+    send.fileContextManager?.clearAttachedPills();
 
-    const userMsg: ChatMessage = {
-      id: this.deps.generateId(),
-      role: 'user',
-      content: displayContent,
-      displayContent,                // Original user input (for UI display)
-      timestamp: Date.now(),
+    return { displayContent, turnRequest, imagesForMessage, isCompact };
+  }
+
+  private resolveTurnSubmission(
+    send: ComposerSendContext,
+    imagesForMessage: ChatMessage['images'],
+    options?: ComposerTurnOptions,
+  ): { displayContent: string; turnRequest: ChatTurnRequest } {
+    if (options?.turnRequestOverride) {
+      return {
+        displayContent: send.content,
+        turnRequest: cloneChatTurnRequest(options.turnRequestOverride),
+      };
+    }
+    return this.buildTurnSubmission({
+      content: send.content,
       images: imagesForMessage,
-    };
+      editorContextOverride: options?.editorContextOverride,
+      browserContextOverride: options?.browserContextOverride,
+      canvasContextOverride: options?.canvasContextOverride,
+    });
+  }
+
+  private async presentOutgoingTurn(outgoing: OutgoingTurn): Promise<{
+    userMsg: ChatMessage;
+    assistantMsg: ChatMessage;
+    deferredAiTitleGeneration: (() => void) | null;
+  }> {
+    const { state, renderer, streamController } = this.deps;
+    const { displayContent, imagesForMessage, isCompact } = outgoing;
+
+    const userMsg = createOutgoingUserMessage(this.deps.generateId(), displayContent, imagesForMessage);
     state.addMessage(userMsg);
     state.hasPendingConversationSave = true;
     renderer.addMessage(userMsg);
 
     const deferredAiTitleGeneration = await this.triggerTitleGeneration();
 
-    const assistantMsg: ChatMessage = {
-      id: this.deps.generateId(),
-      role: 'assistant',
-      content: '',
-      timestamp: Date.now(),
-      toolCalls: [],
-      contentBlocks: [],
-    };
+    const assistantMsg = createAssistantPlaceholderMessage(this.deps.generateId());
     state.addMessage(assistantMsg);
     this.activeStreamingAssistantMessage = assistantMsg;
     this.activateStreamingAssistantMessage(assistantMsg);
@@ -451,12 +490,14 @@ export class InputController {
     );
     state.responseStartTime = performance.now();
 
-    let wasInterrupted = false;
-    let wasInvalidated = false;
-    let didEnqueueToSdk = false;
-    let planCompleted = false;
+    return { userMsg, assistantMsg, deferredAiTitleGeneration };
+  }
 
-    // Lazy initialization: ensure service is ready before first query
+  /** Lazy initialization: ensure service is ready before first query. */
+  private async acquireTurnRuntime(
+    deferredAiTitleGeneration: (() => void) | null,
+  ): Promise<ChatRuntime | null> {
+    const { state, streamController } = this.deps;
     if (this.deps.ensureServiceInitialized) {
       const ready = await this.deps.ensureServiceInitialized();
       if (!ready) {
@@ -466,7 +507,7 @@ export class InputController {
         this.activeStreamingAssistantMessage = null;
         this.resetProviderMessageBoundaryState();
         deferredAiTitleGeneration?.();
-        return;
+        return null;
       }
     }
 
@@ -476,222 +517,208 @@ export class InputController {
       this.activeStreamingAssistantMessage = null;
       this.resetProviderMessageBoundaryState();
       deferredAiTitleGeneration?.();
-      return;
+      return null;
+    }
+    return agentService;
+  }
+
+  private async streamPreparedTurn(
+    ctx: DispatchedTurnContext,
+  ): Promise<{ wasInterrupted: boolean; wasInvalidated: boolean }> {
+    const { state, renderer, streamController } = this.deps;
+    let wasInterrupted = false;
+    let wasInvalidated = false;
+
+    const preparedTurn = ctx.agentService.prepareTurn(ctx.turnRequest);
+    ctx.userMsg.content = preparedTurn.persistedContent;
+    ctx.userMsg.currentNote = preparedTurn.isCompact
+      ? undefined
+      : preparedTurn.request.currentNotePath;
+    // Re-render now that content carries folded @mentions, so the context card appears immediately.
+    renderer.updateLiveUserMessage(ctx.userMsg);
+
+    // Pass history WITHOUT current turn (userMsg + assistantMsg we just added)
+    // This prevents duplication when rebuilding context for new sessions
+    const previousMessages = state.messages.slice(0, -2);
+    const queryOptions: ChatRuntimeQueryOptions | undefined = ctx.tabModelOverride
+      ? { model: ctx.tabModelOverride }
+      : undefined;
+    for await (const chunk of ctx.agentService.query(preparedTurn, previousMessages, queryOptions)) {
+      if (state.streamGeneration !== ctx.streamGeneration) {
+        wasInvalidated = true;
+        break;
+      }
+      if (state.cancelRequested) {
+        wasInterrupted = true;
+        break;
+      }
+
+      if (await this.handleProviderMessageBoundaryChunk(chunk)) {
+        continue;
+      }
+
+      await streamController.handleStreamChunk(
+        chunk,
+        this.activeStreamingAssistantMessage ?? ctx.assistantMsg,
+      );
     }
 
-    // Restore pendingResumeAt from persisted conversation state (survives plugin reload)
-    const conversationIdForSend = state.currentConversationId;
-    if (conversationIdForSend) {
-      const conv = plugin.getConversationSync(conversationIdForSend);
-      if (conv?.resumeAtMessageId) {
-        if (this.isResumeSessionAtStillNeeded(conv.resumeAtMessageId, state.messages.slice(0, -2))) {
-          agentService.setResumeCheckpoint(conv.resumeAtMessageId);
-        } else {
-          try {
-            await plugin.updateConversation(conversationIdForSend, { resumeAtMessageId: undefined });
-          } catch {
-            // Best-effort — don't block send
-          }
-        }
-      }
+    return { wasInterrupted, wasInvalidated };
+  }
+
+  private async finalizeTurn(
+    ctx: DispatchedTurnContext,
+    flags: { wasInterrupted: boolean; wasInvalidated: boolean },
+  ): Promise<ProgrammaticSendResult | undefined> {
+    const { state } = this.deps;
+    const finalAssistantMsg = this.activeStreamingAssistantMessage ?? ctx.assistantMsg;
+    const turnMetadata = ctx.agentService.consumeTurnMetadata();
+    ctx.userMsg.userMessageId = turnMetadata.userMessageId ?? ctx.userMsg.userMessageId;
+    finalAssistantMsg.assistantMessageId = turnMetadata.assistantMessageId ?? finalAssistantMsg.assistantMessageId;
+
+    // ALWAYS clear the timer interval, even on stream invalidation (prevents memory leaks)
+    state.clearFlavorTimerInterval();
+
+    let programmaticResult: ProgrammaticSendResult | undefined;
+    // Skip remaining cleanup if stream was invalidated (tab closed or conversation switched)
+    if (!flags.wasInvalidated && state.streamGeneration === ctx.streamGeneration) {
+      programmaticResult = await this.completeFinishedTurn(ctx, {
+        finalAssistantMsg,
+        turnMetadata,
+        didEnqueueToSdk: turnMetadata.wasSent === true,
+        planCompleted: turnMetadata.planCompleted === true,
+        wasInterrupted: flags.wasInterrupted,
+      });
     }
 
-    try {
-      const preparedTurn = agentService.prepareTurn(turnRequest);
-      userMsg.content = preparedTurn.persistedContent;
-      userMsg.currentNote = preparedTurn.isCompact
-        ? undefined
-        : preparedTurn.request.currentNotePath;
-      // Re-render now that content carries folded @mentions, so the context card appears immediately.
-      renderer.updateLiveUserMessage(userMsg);
-
-      // Pass history WITHOUT current turn (userMsg + assistantMsg we just added)
-      // This prevents duplication when rebuilding context for new sessions
-      const previousMessages = state.messages.slice(0, -2);
-      const queryOptions: ChatRuntimeQueryOptions | undefined = tabModelOverride
-        ? { model: tabModelOverride }
-        : undefined;
-      for await (const chunk of agentService.query(preparedTurn, previousMessages, queryOptions)) {
-        if (state.streamGeneration !== streamGeneration) {
-          wasInvalidated = true;
-          break;
-        }
-        if (state.cancelRequested) {
-          wasInterrupted = true;
-          break;
-        }
-
-        if (await this.handleProviderMessageBoundaryChunk(chunk)) {
-          continue;
-        }
-
-        await streamController.handleStreamChunk(
-          chunk,
-          this.activeStreamingAssistantMessage ?? assistantMsg,
-        );
-      }
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      await streamController.appendText(`\n\n**Error:** ${errorMsg}`);
-    } finally {
-      const finalAssistantMsg = this.activeStreamingAssistantMessage ?? assistantMsg;
-      const turnMetadata = agentService.consumeTurnMetadata();
-      userMsg.userMessageId = turnMetadata.userMessageId ?? userMsg.userMessageId;
-      finalAssistantMsg.assistantMessageId = turnMetadata.assistantMessageId ?? finalAssistantMsg.assistantMessageId;
-      didEnqueueToSdk = didEnqueueToSdk || turnMetadata.wasSent === true;
-      planCompleted = planCompleted || turnMetadata.planCompleted === true;
-
-      // ALWAYS clear the timer interval, even on stream invalidation (prevents memory leaks)
-      state.clearFlavorTimerInterval();
-
-      // Skip remaining cleanup if stream was invalidated (tab closed or conversation switched)
-      if (!wasInvalidated && state.streamGeneration === streamGeneration) {
-        const didCancelThisTurn = wasInterrupted || state.cancelRequested;
-        if (didCancelThisTurn && !state.pendingNewSessionPlan) {
-          await streamController.appendText('\n\n<span class="claudian-interrupted">Interrupted</span> <span class="claudian-interrupted-hint">· What should Claudian do instead?</span>');
-        }
-        streamController.hideThinkingIndicator();
-        state.isStreaming = false;
-        state.cancelRequested = false;
-        this.queuedMessages.restorePendingSteerMessageToQueue();
-
-        // Capture response duration before resetting state (skip for interrupted responses and compaction)
-        const hasCompactBoundary = finalAssistantMsg.contentBlocks?.some(b => b.type === 'context_compacted');
-        if (!didCancelThisTurn && !hasCompactBoundary) {
-          const durationSeconds = state.responseStartTime
-            ? Math.floor((performance.now() - state.responseStartTime) / 1000)
-            : 0;
-          if (durationSeconds > 0) {
-            const flavorWord =
-              COMPLETION_FLAVOR_WORDS[Math.floor(Math.random() * COMPLETION_FLAVOR_WORDS.length)];
-            finalAssistantMsg.durationSeconds = durationSeconds;
-            finalAssistantMsg.durationFlavorWord = flavorWord;
-            // Add footer to live message in DOM
-            if (state.currentContentEl) {
-              const footerEl = state.currentContentEl.createDiv({ cls: 'claudian-response-footer' });
-              footerEl.createSpan({
-                text: `* ${flavorWord} for ${formatDurationMmSs(durationSeconds)}`,
-                cls: 'claudian-baked-duration',
-              });
-            }
-          }
-        }
-
-        state.currentContentEl = null;
-
-        await streamController.finalizeCurrentThinkingBlock(finalAssistantMsg);
-        await streamController.finalizeCurrentTextBlock(finalAssistantMsg);
-        this.deps.getSubagentManager().resetStreamingState();
-
-        if (!shouldUseInput) {
-          programmaticResult = didCancelThisTurn
-            ? { ok: false, finalAssistantContent: finalAssistantMsg.content, error: 'Canceled' }
-            : { ok: true, finalAssistantContent: finalAssistantMsg.content };
-        }
-
-        // Auto-hide completed todo panel on response end
-        // Panel reappears only when new TodoWrite tool is called
-        if (state.currentTodos && state.currentTodos.every(t => t.status === 'completed')) {
-          state.currentTodos = null;
-        }
-        this.syncScrollToBottomAfterRenderUpdates();
-
-        // approve-new-session: the tool_result chunk is dropped because cancelRequested
-        // was set before the stream loop could process it — manually set the result so
-        // the saved conversation renders correctly when revisited
-        if (state.pendingNewSessionPlan && finalAssistantMsg.toolCalls) {
-          for (const tc of finalAssistantMsg.toolCalls) {
-            if (tc.name === TOOL_EXIT_PLAN_MODE && !tc.result) {
-              tc.status = 'completed';
-              tc.result = 'User approved the plan and started a new session.';
-              updateToolCallResult(
-                this.deps.plugin.app,
-                tc.id,
-                tc,
-                state.toolCallElements,
-              );
-            }
-          }
-        }
-
-        // Persist usage and message state BEFORE the plan-approval branches. This ensures
-        // a cancelled stream still saves the last usage chunk; without this, cancellation
-        // during the post-plan approval await (or any future invalidated branch) would
-        // drop `state.usage` on the floor. updateLastResponse=false on cancel keeps the
-        // partial assistant content from being claimed as a finished response, while
-        // state.usage and message state still land in the meta file.
-        // Only clear resumeAtMessageId if enqueue succeeded; preserve checkpoint on failure for retry.
-        const saveExtras = didEnqueueToSdk ? { resumeAtMessageId: undefined } : undefined;
-        await conversationController.save(!didCancelThisTurn, saveExtras);
-
-        // Provider-agnostic post-plan approval: show UI and await decision before auto-send
-        let planAutoSendContent: string | null = null;
-        let planApprovalInvalidated = false;
-        let shouldProcessQueuedMessage = true;
-        if (planCompleted && !didCancelThisTurn) {
-          const { decision, invalidated } = await this.showPlanApproval();
-
-          // Re-check invalidation after async approval prompt
-          if (state.streamGeneration !== streamGeneration || invalidated) {
-            planApprovalInvalidated = true;
-          } else if (decision?.type === 'implement') {
-            this.deps.restorePrePlanPermissionModeIfNeeded?.();
-            planAutoSendContent = turnMetadata.autoFollowUpText ? `${turnMetadata.autoFollowUpText}\n\nImplement the plan.` : 'Implement the plan.';
-          } else if (decision?.type === 'revise') {
-            // Keep plan mode active, populate input with feedback text
-            this.deps.getInputEl().value = decision.text;
-            shouldProcessQueuedMessage = false;
-          } else {
-            // cancel or null (dismissed)
-            this.deps.restorePrePlanPermissionModeIfNeeded?.();
-          }
-        }
-
-        if (!planApprovalInvalidated) {
-          // The leading save above already wrote message state and usage. Plan-approval
-          // branches re-run sendMessage() (auto-implement / approve-new-session — both
-          // call sendMessage which saves itself) or just update the input UI (revise /
-          // cancel) — neither needs an extra save here.
-
-          const userMsgIndex = state.messages.indexOf(userMsg);
-          renderer.refreshActionButtons(userMsg, state.messages, userMsgIndex >= 0 ? userMsgIndex : undefined);
-          // Surface the per-message work-order action on the just-completed agent response.
-          renderer.refreshMessageActions(finalAssistantMsg);
-
-          // Auto-implement takes precedence over both approve-new-session and queued input
-          if (planAutoSendContent) {
-            this.autoResumeWith(planAutoSendContent);
-          } else if (turnMetadata.autoFollowUpText && !didCancelThisTurn && !planCompleted) {
-            // Cursor's one-shot AskUserQuestion answer, resumed as a follow-up — only when no plan
-            // completed, since each plan-approval outcome owns it (implement merges, revise/cancel hold).
-            this.autoResumeWith(turnMetadata.autoFollowUpText);
-          } else {
-            // approve-new-session: create fresh conversation and send plan content
-            // Must be inside the invalidation guard — if the tab was closed or
-            // conversation switched, we must not create a new session on stale state.
-            const planContent = state.pendingNewSessionPlan;
-            if (planContent) {
-              state.pendingNewSessionPlan = null;
-              await conversationController.createNew();
-              this.autoResumeWith(planContent);
-            } else if (shouldProcessQueuedMessage) {
-              this.queuedMessages.processQueuedMessage();
-            }
-          }
-        }
-      }
-
-      if (wasInvalidated) {
-        this.queuedMessages.clearPendingSteerState();
-        this.queuedMessages.updateQueueIndicator();
-      }
-
-      this.activeStreamingAssistantMessage = null;
-      this.resetProviderMessageBoundaryState();
-      deferredAiTitleGeneration?.();
+    if (flags.wasInvalidated) {
+      this.queuedMessages.clearPendingSteerState();
+      this.queuedMessages.updateQueueIndicator();
     }
 
+    this.activeStreamingAssistantMessage = null;
+    this.resetProviderMessageBoundaryState();
+    ctx.deferredAiTitleGeneration?.();
     return programmaticResult;
+  }
+
+  private async completeFinishedTurn(
+    ctx: DispatchedTurnContext,
+    turn: FinishedTurn,
+  ): Promise<ProgrammaticSendResult | undefined> {
+    const { plugin, state, streamController, conversationController } = this.deps;
+    const { finalAssistantMsg } = turn;
+    const didCancelThisTurn = turn.wasInterrupted || state.cancelRequested;
+    if (didCancelThisTurn && !state.pendingNewSessionPlan) {
+      await streamController.appendText('\n\n<span class="claudian-interrupted">Interrupted</span> <span class="claudian-interrupted-hint">· What should Claudian do instead?</span>');
+    }
+    streamController.hideThinkingIndicator();
+    state.isStreaming = false;
+    state.cancelRequested = false;
+    this.queuedMessages.restorePendingSteerMessageToQueue();
+
+    // Capture response duration before resetting state (skip for interrupted responses and compaction)
+    bakeResponseDurationFooter(state, finalAssistantMsg, didCancelThisTurn);
+
+    state.currentContentEl = null;
+
+    await streamController.finalizeCurrentThinkingBlock(finalAssistantMsg);
+    await streamController.finalizeCurrentTextBlock(finalAssistantMsg);
+    this.deps.getSubagentManager().resetStreamingState();
+
+    let programmaticResult: ProgrammaticSendResult | undefined;
+    if (!ctx.send.shouldUseInput) {
+      programmaticResult = didCancelThisTurn
+        ? { ok: false, finalAssistantContent: finalAssistantMsg.content, error: 'Canceled' }
+        : { ok: true, finalAssistantContent: finalAssistantMsg.content };
+    }
+
+    // Auto-hide completed todo panel on response end
+    // Panel reappears only when new TodoWrite tool is called
+    if (state.currentTodos && state.currentTodos.every(t => t.status === 'completed')) {
+      state.currentTodos = null;
+    }
+    this.syncScrollToBottomAfterRenderUpdates();
+
+    // approve-new-session: the tool_result chunk is dropped because cancelRequested
+    // was set before the stream loop could process it — manually set the result so
+    // the saved conversation renders correctly when revisited
+    completeApprovedNewSessionPlanToolCalls(plugin.app, state, finalAssistantMsg);
+
+    // Persist usage and message state BEFORE the plan-approval branches. This ensures
+    // a cancelled stream still saves the last usage chunk; without this, cancellation
+    // during the post-plan approval await (or any future invalidated branch) would
+    // drop `state.usage` on the floor. updateLastResponse=false on cancel keeps the
+    // partial assistant content from being claimed as a finished response, while
+    // state.usage and message state still land in the meta file.
+    // Only clear resumeAtMessageId if enqueue succeeded; preserve checkpoint on failure for retry.
+    const saveExtras = turn.didEnqueueToSdk ? { resumeAtMessageId: undefined } : undefined;
+    await conversationController.save(!didCancelThisTurn, saveExtras);
+
+    await this.runPostTurnFollowUps(ctx, turn, didCancelThisTurn);
+    return programmaticResult;
+  }
+
+  private async runPostTurnFollowUps(
+    ctx: DispatchedTurnContext,
+    turn: FinishedTurn,
+    didCancelThisTurn: boolean,
+  ): Promise<void> {
+    const { state, renderer, conversationController } = this.deps;
+
+    // Provider-agnostic post-plan approval: show UI and await decision before auto-send
+    const approval = await this.resolvePlanApprovalOutcome(ctx, turn, didCancelThisTurn);
+    if (approval.invalidated) return;
+
+    // The leading save above already wrote message state and usage. Plan-approval
+    // branches re-run sendMessage() (auto-implement / approve-new-session — both
+    // call sendMessage which saves itself) or just update the input UI (revise /
+    // cancel) — neither needs an extra save here.
+
+    const userMsgIndex = state.messages.indexOf(ctx.userMsg);
+    renderer.refreshActionButtons(ctx.userMsg, state.messages, userMsgIndex >= 0 ? userMsgIndex : undefined);
+    // Surface the per-message work-order action on the just-completed agent response.
+    renderer.refreshMessageActions(turn.finalAssistantMsg);
+
+    // Auto-implement takes precedence over both approve-new-session and queued input
+    if (approval.autoSendContent) {
+      this.autoResumeWith(approval.autoSendContent);
+    } else if (turn.turnMetadata.autoFollowUpText && !didCancelThisTurn && !turn.planCompleted) {
+      // Cursor's one-shot AskUserQuestion answer, resumed as a follow-up — only when no plan
+      // completed, since each plan-approval outcome owns it (implement merges, revise/cancel hold).
+      this.autoResumeWith(turn.turnMetadata.autoFollowUpText);
+    } else {
+      // approve-new-session: create fresh conversation and send plan content
+      // Must be inside the invalidation guard — if the tab was closed or
+      // conversation switched, we must not create a new session on stale state.
+      const planContent = state.pendingNewSessionPlan;
+      if (planContent) {
+        state.pendingNewSessionPlan = null;
+        await conversationController.createNew();
+        this.autoResumeWith(planContent);
+      } else if (approval.shouldProcessQueuedMessage) {
+        this.queuedMessages.processQueuedMessage();
+      }
+    }
+  }
+
+  private async resolvePlanApprovalOutcome(
+    ctx: DispatchedTurnContext,
+    turn: FinishedTurn,
+    didCancelThisTurn: boolean,
+  ): Promise<PlanApprovalOutcome> {
+    if (!turn.planCompleted || didCancelThisTurn) {
+      return { autoSendContent: null, invalidated: false, shouldProcessQueuedMessage: true };
+    }
+
+    const { decision, invalidated } = await this.showPlanApproval();
+
+    // Re-check invalidation after async approval prompt
+    if (this.deps.state.streamGeneration !== ctx.streamGeneration || invalidated) {
+      return { autoSendContent: null, invalidated: true, shouldProcessQueuedMessage: true };
+    }
+
+    return applyPlanApprovalDecision(decision, turn.turnMetadata, this.deps);
   }
 
   /** Auto-sends `content` as the next (resumed) turn — shared by plan auto-implement,
@@ -897,14 +924,7 @@ export class InputController {
       this.deps.renderer.addMessage(userMessage);
     }
 
-    const assistantMessage: ChatMessage = {
-      id: this.deps.generateId(),
-      role: 'assistant',
-      content: '',
-      timestamp: Date.now(),
-      toolCalls: [],
-      contentBlocks: [],
-    };
+    const assistantMessage = createAssistantPlaceholderMessage(this.deps.generateId());
     this.deps.state.addMessage(assistantMessage);
     this.activeStreamingAssistantMessage = assistantMessage;
     this.activateStreamingAssistantMessage(assistantMessage);
@@ -925,14 +945,7 @@ export class InputController {
       await this.deps.streamController.finalizeCurrentTextBlock(previousAssistant);
     }
 
-    const assistantMessage: ChatMessage = {
-      id: this.deps.generateId(),
-      role: 'assistant',
-      content: '',
-      timestamp: Date.now(),
-      toolCalls: [],
-      contentBlocks: [],
-    };
+    const assistantMessage = createAssistantPlaceholderMessage(this.deps.generateId());
     this.deps.state.addMessage(assistantMessage);
     this.activeStreamingAssistantMessage = assistantMessage;
     this.activateStreamingAssistantMessage(assistantMessage);

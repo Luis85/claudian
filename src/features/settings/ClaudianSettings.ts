@@ -13,6 +13,7 @@ import { asSettingsBag, type ChatViewPlacement, type ClaudianSettings } from '..
 import { getAvailableLocales, getLocaleDisplayName, setLocale, t } from '../../i18n/i18n';
 import type { Locale, TranslationKey } from '../../i18n/types';
 import type ClaudianPlugin from '../../main';
+import { renderEnvironmentSettingsSection } from '../../shared/settings/EnvironmentSettingsSection';
 import { formatContextLimit, parseContextLimit, parseEnvironmentVariables } from '../../utils/env';
 import {
   getHotkeysForCommand,
@@ -32,7 +33,6 @@ import { SearchBar } from './search/SearchBar';
 import { SearchResultsView } from './search/SearchResultsView';
 import { searchFields } from './search/searchUtils';
 import { renderAgentBoardSettingsSection } from './ui/AgentBoardSettingsSection';
-import { renderEnvironmentSettingsSection } from './ui/EnvironmentSettingsSection';
 import { renderLoggingSettingsSection } from './ui/LoggingSettingsSection';
 import { renderQuickActionsSettingsTab } from './ui/QuickActionsSettingsTab';
 

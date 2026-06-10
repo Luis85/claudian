@@ -3,9 +3,9 @@ import { Notice, Setting } from 'obsidian';
 
 import type { ProviderSettingsTabRenderer } from '../../../core/providers/types';
 import { asSettingsBag } from '../../../core/types';
-import { renderEnvironmentSettingsSection } from '../../../features/settings/ui/EnvironmentSettingsSection';
 import { t } from '../../../i18n/i18n';
 import type { TranslationKey } from '../../../i18n/types';
+import { renderEnvironmentSettingsSection } from '../../../shared/settings/EnvironmentSettingsSection';
 import { getHostnameKey } from '../../../utils/env';
 import { expandHomePath, getVaultPath } from '../../../utils/path';
 import { buildCursorAgentEnvironment } from '../runtime/cursorAgentEnv';

@@ -83,19 +83,19 @@
       },
       {
         "from": "provider-claude",
-        "allow": ["app", "core", "features", "shared", "utils", "i18n"]
+        "allow": ["app", "core", "shared", "utils", "i18n"]
       },
       {
         "from": "provider-codex",
-        "allow": ["app", "core", "features", "shared", "utils", "i18n"]
+        "allow": ["app", "core", "shared", "utils", "i18n"]
       },
       {
         "from": "provider-cursor",
-        "allow": ["app", "core", "features", "shared", "utils", "i18n"]
+        "allow": ["app", "core", "shared", "utils", "i18n"]
       },
       {
         "from": "provider-opencode",
-        "allow": ["app", "core", "features", "shared", "utils", "i18n", "acp"]
+        "allow": ["app", "core", "shared", "utils", "i18n", "acp"]
       }
     ]
   },
