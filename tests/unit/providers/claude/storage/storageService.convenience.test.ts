@@ -346,6 +346,26 @@ describe('StorageService convenience methods', () => {
       expect(result!.openTabs[1].conversationId).toBeNull();
     });
 
+    it('preserves valid tab kind and drops unknown kind values', async () => {
+      const state = {
+        openTabs: [
+          { tabId: 'tab-1', conversationId: 'conv-1', kind: 'work-order' },
+          { tabId: 'tab-2', conversationId: null, kind: 'bogus' },
+        ],
+        activeTabId: 'tab-1',
+      };
+      const { plugin } = createMockPlugin({
+        dataJson: { tabManagerState: state },
+      });
+      const storage = new StorageService(plugin);
+
+      const result = await storage.getTabManagerState();
+      expect(result!.openTabs).toEqual([
+        { tabId: 'tab-1', conversationId: 'conv-1', kind: 'work-order' },
+        { tabId: 'tab-2', conversationId: null },
+      ]);
+    });
+
     it('normalizes non-string conversationId to null', async () => {
       const state = {
         openTabs: [{ tabId: 'tab-1', conversationId: 123 }],
