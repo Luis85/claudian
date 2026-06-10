@@ -184,7 +184,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
       this.searchBar.dispose();
     }
     this.searchBar = new SearchBar(searchBarHost, (query) => {
-      this.handleSearchQuery(query, containerEl, tabIds, ctx);
+      this.handleSearchQuery(query, containerEl, ctx);
     });
     this.searchBar.render();
 
@@ -833,7 +833,6 @@ export class ClaudianSettingTab extends PluginSettingTab {
   private handleSearchQuery(
     query: string,
     containerEl: HTMLElement,
-    tabIds: SettingsTabId[],
     ctx: SettingsCtx,
   ): void {
     const tabBar = containerEl.querySelector('.claudian-settings-tabs') as HTMLElement;
@@ -865,17 +864,8 @@ export class ClaudianSettingTab extends PluginSettingTab {
     this.searchResultsView = new SearchResultsView(
       resultsHost,
       results,
-      (tabId, sectionId, fieldId) =>
-        this.handleGoToField(
-          containerEl,
-          tabId,
-          sectionId,
-          fieldId,
-          tabIds,
-          ctx,
-          tabBar,
-          resultsHost,
-        ),
+      (tabId, _sectionId, fieldId) =>
+        this.handleGoToField(containerEl, tabId, fieldId, tabBar, resultsHost),
       () => this.handleResetSearch(containerEl, tabBar, resultsHost),
     );
     this.searchResultsView.render();
@@ -884,10 +874,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
   private handleGoToField(
     containerEl: HTMLElement,
     tabId: string,
-    sectionId: string,
     fieldId: string,
-    tabIds: SettingsTabId[],
-    ctx: SettingsCtx,
     tabBar: HTMLElement,
     resultsHost: HTMLElement,
   ): void {

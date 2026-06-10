@@ -11,7 +11,9 @@ import { fileURLToPath } from 'node:url';
 
 const jestRecommended = jestPlugin.configs['flat/recommended'];
 const tsconfigRootDir = dirname(fileURLToPath(import.meta.url));
-const obsidianRuleSeverity = 'warn';
+// Staged at 'warn' until the backlog hit zero; promoted 2026-06-10 per the
+// ratchet policy in docs/build-ci/quality-gates.md § "Lint severity policy".
+const obsidianRuleSeverity = 'error';
 
 const stagedObsidianRules = {
   'obsidianmd/commands/no-command-in-command-id': obsidianRuleSeverity,
@@ -85,11 +87,11 @@ export default defineConfig([
         'error',
         { args: 'none', ignoreRestSiblings: true },
       ],
-      // Guardrail (Q-3): the codebase is near-zero explicit `any`. Surface new
-      // ones as warnings to lock in the hygiene without failing CI (the lint
-      // script has no --max-warnings, and legitimate browser/SDK-shim `any`s
-      // remain acceptable as warnings).
-      '@typescript-eslint/no-explicit-any': 'warn',
+      // Guardrail (Q-3): src reached zero explicit `any` (tests keep their own
+      // override below), so the rule is promoted to block regressions. A
+      // genuinely unavoidable browser/SDK-shim `any` takes a narrow
+      // eslint-disable-next-line with a justification comment.
+      '@typescript-eslint/no-explicit-any': 'error',
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
     },
@@ -160,20 +162,20 @@ export default defineConfig([
   },
   {
     files: ['src/**/*.ts'],
-    // Function-health backlog. Deliberately `warn`, not `error`: `npm run lint`
-    // does not pass --max-warnings, so these surface the worst existing
-    // offenders without blocking CI, to be burned down one function at a time.
-    // Ratchet the thresholds down as the list clears. Measured 2026-06-07:
-    // ~14 over-200-line functions, ~40 over-complexity-25, 6 over-6-params,
-    // 1 over-depth-5; the LOC guard already caps whole files at 500 LOC.
+    // Function-health rules. `max-params`/`max-depth` hit zero offenders on
+    // 2026-06-10 and were promoted to `error` per the ratchet policy
+    // (docs/build-ci/quality-gates.md § "Lint severity policy").
+    // `complexity`/`max-lines-per-function` stay a `warn` backlog (32 + 12 as
+    // of 2026-06-10), burned down one function at a time — promote each when
+    // it reaches zero. The LOC guard already caps whole files at 500 LOC.
     rules: {
       'max-lines-per-function': [
         'warn',
         { max: 200, skipBlankLines: true, skipComments: true, IIFEs: true },
       ],
       complexity: ['warn', { max: 25 }],
-      'max-params': ['warn', { max: 6 }],
-      'max-depth': ['warn', { max: 5 }],
+      'max-params': ['error', { max: 6 }],
+      'max-depth': ['error', { max: 5 }],
     },
   },
   {

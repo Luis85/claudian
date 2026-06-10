@@ -9,7 +9,7 @@ import {
 } from '@/features/tasks/commands/taskCommands';
 import type { ChatTabExecutionSurface } from '@/features/tasks/execution/ChatTabExecutionSurface';
 import type { ChatWorkOrderLinker } from '@/features/tasks/execution/ChatWorkOrderLinker';
-import { installPresetTemplates } from '@/features/tasks/templates/installPresetTemplates';
+import { installPresetTemplatesWithNotice } from '@/features/tasks/templates/installPresetTemplates';
 import {
   createWorkOrderFromCurrentNoteInteractive,
   createWorkOrderFromSelectionInteractive,
@@ -115,16 +115,7 @@ export function registerPluginCommands(deps: PluginCommandDeps): void {
     id: 'install-common-work-order-templates',
     name: 'Install common work-order templates',
     callback: () => {
-      void (async () => {
-        const result = await installPresetTemplates(plugin);
-        const parts: string[] = [];
-        if (result.installed > 0) parts.push(`installed ${result.installed}`);
-        if (result.skipped > 0) parts.push(`skipped ${result.skipped} already present`);
-        const summary = parts.join(', ');
-        new Notice(summary
-          ? t('settings.agentBoard.commonTemplates', { templates: summary })
-          : t('settings.agentBoard.commonTemplatesEmpty'));
-      })();
+      void installPresetTemplatesWithNotice(plugin);
     },
   };
   plugin.addCommand(installCommonTemplatesCmd);
@@ -215,15 +206,12 @@ export function registerPluginCommands(deps: PluginCommandDeps): void {
         editContext = { mode: 'cursor', cursorContext };
       }
 
-      const modal = new InlineEditModal(
-        plugin.app,
-        plugin,
-        editor,
-        view,
+      const modal = new InlineEditModal(plugin.app, plugin, editor, view, {
         editContext,
         notePath,
-        () => plugin.getView()?.getActiveTab()?.ui.externalContextSelector?.getExternalContexts() ?? [],
-      );
+        getExternalContexts: () =>
+          plugin.getView()?.getActiveTab()?.ui.externalContextSelector?.getExternalContexts() ?? [],
+      });
       const result = await modal.openAndWait();
 
       if (result.decision === 'accept' && result.editedText !== undefined) {

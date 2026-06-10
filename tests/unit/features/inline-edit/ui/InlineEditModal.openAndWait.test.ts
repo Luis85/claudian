@@ -74,7 +74,7 @@ describe('InlineEditModal - openAndWait', () => {
       .mockReturnValueOnce(undefined)
       .mockReturnValueOnce(undefined);
 
-    const modal = new InlineEditModal(app, plugin, callbackEditor, view, editContext, 'note.md');
+    const modal = new InlineEditModal(app, plugin, callbackEditor, view, { editContext, notePath: 'note.md' });
     const result = await modal.openAndWait();
 
     expect(result).toEqual({ decision: 'reject' });
@@ -167,7 +167,7 @@ describe('InlineEditModal - openAndWait', () => {
         },
       };
 
-      const modal = new InlineEditModal(app, plugin, editor, view, editContext, 'note.md');
+      const modal = new InlineEditModal(app, plugin, editor, view, { editContext, notePath: 'note.md' });
       const resultPromise = modal.openAndWait();
 
       expect(mentionDropdownCtor).toHaveBeenCalled();
@@ -267,7 +267,7 @@ describe('InlineEditModal - openAndWait', () => {
         },
       };
 
-      const modal = new InlineEditModal(app, plugin, editor, view, editContext, 'note.md');
+      const modal = new InlineEditModal(app, plugin, editor, view, { editContext, notePath: 'note.md' });
       const resultPromise = modal.openAndWait();
 
       const { SlashCommandDropdown } = jest.requireMock('@/shared/components/SlashCommandDropdown');
@@ -378,7 +378,7 @@ describe('InlineEditModal - openAndWait', () => {
         },
       };
 
-      const modal = new InlineEditModal(app, plugin, editor, view, editContext, 'note.md');
+      const modal = new InlineEditModal(app, plugin, editor, view, { editContext, notePath: 'note.md' });
       const resultPromise = modal.openAndWait();
 
       expect(providerSpy).toHaveBeenCalledWith(plugin, 'opencode');
@@ -488,15 +488,11 @@ describe('InlineEditModal - openAndWait', () => {
         },
       };
 
-      const modal = new InlineEditModal(
-        app,
-        plugin,
-        editor,
-        view,
+      const modal = new InlineEditModal(app, plugin, editor, view, {
         editContext,
-        'note.md',
-        () => ['/external']
-      );
+        notePath: 'note.md',
+        getExternalContexts: () => ['/external'],
+      });
       const resultPromise = modal.openAndWait();
 
       const callbacks = mentionDropdownCtor.mock.calls[0]?.[2];
@@ -614,7 +610,7 @@ describe('InlineEditModal - openAndWait', () => {
         },
       };
 
-      const modal = new InlineEditModal(app, plugin, editor, view, editContext, 'note.md');
+      const modal = new InlineEditModal(app, plugin, editor, view, { editContext, notePath: 'note.md' });
       const resultPromise = modal.openAndWait();
 
       const editTextMock = jest.fn().mockResolvedValue({
@@ -735,15 +731,11 @@ describe('InlineEditModal - openAndWait', () => {
         return [];
       });
 
-      const modal = new InlineEditModal(
-        app,
-        plugin,
-        editor,
-        view,
+      const modal = new InlineEditModal(app, plugin, editor, view, {
         editContext,
-        'note.md',
-        () => ['/external']
-      );
+        notePath: 'note.md',
+        getExternalContexts: () => ['/external'],
+      });
       const resultPromise = modal.openAndWait();
 
       const editTextMock = jest.fn().mockResolvedValue({
@@ -850,7 +842,7 @@ describe('InlineEditModal - openAndWait', () => {
         },
       };
 
-      const modal = new InlineEditModal(app, plugin, editor, view, editContext, 'note.md');
+      const modal = new InlineEditModal(app, plugin, editor, view, { editContext, notePath: 'note.md' });
       const resultPromise = modal.openAndWait();
 
       const editTextMock = jest.fn().mockResolvedValue({
@@ -971,15 +963,11 @@ describe('InlineEditModal - openAndWait', () => {
         return [];
       });
 
-      const modal = new InlineEditModal(
-        app,
-        plugin,
-        editor,
-        view,
+      const modal = new InlineEditModal(app, plugin, editor, view, {
         editContext,
-        'note.md',
-        () => ['/external']
-      );
+        notePath: 'note.md',
+        getExternalContexts: () => ['/external'],
+      });
       const resultPromise = modal.openAndWait();
 
       const editTextMock = jest.fn().mockResolvedValue({
@@ -1084,7 +1072,7 @@ describe('InlineEditModal - openAndWait', () => {
         },
       };
 
-      const modal = new InlineEditModal(app, plugin, editor, view, editContext, 'math/note.md');
+      const modal = new InlineEditModal(app, plugin, editor, view, { editContext, notePath: 'math/note.md' });
       const resultPromise = modal.openAndWait();
 
       (MarkdownRenderer.renderMarkdown as jest.Mock).mockClear();
@@ -1196,7 +1184,7 @@ describe('InlineEditModal - openAndWait', () => {
         },
       };
 
-      const modal = new InlineEditModal(app, plugin, editor, view, editContext, 'math/note.md');
+      const modal = new InlineEditModal(app, plugin, editor, view, { editContext, notePath: 'math/note.md' });
       const resultPromise = modal.openAndWait();
 
       widgetRef.showAgentReply('First clarification');
@@ -1307,7 +1295,7 @@ describe('InlineEditModal - openAndWait', () => {
         selectedText: 'old',
       };
 
-      const modal = new InlineEditModal(app, plugin, editor, view, editContext, 'math/note.md');
+      const modal = new InlineEditModal(app, plugin, editor, view, { editContext, notePath: 'math/note.md' });
       const resultPromise = modal.openAndWait();
       widgetRef.inlineEditService = {
         editText: jest.fn().mockResolvedValue({

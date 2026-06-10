@@ -217,53 +217,22 @@ export function initializeTabControllers(
   forkRequestCallback?: (forkContext: ForkContext) => Promise<void>,
   openConversation?: (conversationId: string) => Promise<void>,
   getProviderCatalogConfig?: () => ProviderCatalogInfo,
-): void;
-/** @deprecated Legacy 7-arg overload — 4th arg was previously an MCP manager. */
-export function initializeTabControllers(
-  tab: TabData,
-  plugin: ClaudianPlugin,
-  component: Component,
-  _legacyArg: unknown,
-  forkRequestCallback?: (forkContext: ForkContext) => Promise<void>,
-  openConversation?: (conversationId: string) => Promise<void>,
-  getProviderCatalogConfig?: () => ProviderCatalogInfo,
-): void;
-export function initializeTabControllers(
-  tab: TabData,
-  plugin: ClaudianPlugin,
-  component: Component,
-  arg4?: unknown,
-  arg5?: unknown,
-  arg6?: unknown,
-  arg7?: unknown,
 ): void {
-  // Support legacy 7-arg call sites (4th arg was previously an MCP manager)
-  const isLegacy = arg4 !== undefined && typeof arg4 !== 'function';
-  const forkRequestCallback = (isLegacy ? arg5 : arg4) as
-    ((forkContext: ForkContext) => Promise<void>) | undefined;
-  const openConversation = (isLegacy ? arg6 : arg5) as
-    ((conversationId: string) => Promise<void>) | undefined;
-  const getProviderCatalogConfig = (isLegacy ? arg7 : arg6) as
-    (() => ProviderCatalogInfo) | undefined;
-
   const { dom, state, services, ui } = tab;
 
   // Create renderer
-  tab.renderer = new MessageRenderer(
-    plugin,
-    component,
-    dom.messagesEl,
-    (id, mode) => tab.controllers.conversationController!.rewind(id, mode),
-    forkRequestCallback
+  tab.renderer = new MessageRenderer(plugin, component, dom.messagesEl, {
+    rewindCallback: (id, mode) => tab.controllers.conversationController!.rewind(id, mode),
+    forkCallback: forkRequestCallback
       ? (id) => handleForkRequest(tab, plugin, id, forkRequestCallback)
       : undefined,
-    () => getTabCapabilities(tab, plugin),
-    () =>
+    getCapabilities: () => getTabCapabilities(tab, plugin),
+    getWorkOrderPath: () =>
       tab.workOrderPath
       ?? (tab.conversationId
         ? plugin.getConversationSync(tab.conversationId)?.workOrderPath ?? null
         : null),
-  );
+  });
 
   // Selection controller
   tab.controllers.selectionController = new SelectionController(
