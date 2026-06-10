@@ -194,42 +194,43 @@ function ipv6MatchesPrefix(groups: number[], prefixGroups: number[], bits: numbe
   return true;
 }
 
+/**
+ * Extract the low 32 bits as IPv4 octets for the prefixes that embed an IPv4
+ * address — IPv4-mapped (::ffff:0:0/96), IPv4-compatible (::/96, deprecated
+ * RFC 4291), and NAT64 (64:ff9b::/96, RFC 6052) — so e.g. ::ffff:127.0.0.1,
+ * ::127.0.0.1, or 64:ff9b::7f00:1 cannot sidestep the IPv4 denylist. `::` and
+ * `::1` are excluded: they classify as unspecified/loopback, not as embedded
+ * 0.0.0.0/0.0.0.1.
+ */
+function embeddedIpv4Octets(groups: number[]): [number, number, number, number] | null {
+  const low: [number, number, number, number] = [
+    groups[6] >> 8,
+    groups[6] & 0xff,
+    groups[7] >> 8,
+    groups[7] & 0xff,
+  ];
+  if (!groups.slice(0, 5).every((value) => value === 0)) {
+    const nat64 =
+      groups[0] === 0x0064 && groups[1] === 0xff9b &&
+      groups.slice(2, 6).every((value) => value === 0);
+    return nat64 ? low : null;
+  }
+  if (groups[5] === 0xffff) return low; // IPv4-mapped
+  if (groups[5] !== 0) return null;
+  // IPv4-compatible — but :: and ::1 classify as unspecified/loopback instead.
+  return groups[6] !== 0 || groups[7] > 1 ? low : null;
+}
+
 function deniedIpv6Reason(ip: string): DeniedIpReason | null {
   const groups = expandIpv6Groups(ip);
   if (!groups) return 'invalid'; // fail closed on anything we cannot parse
 
-  // IPv4-mapped (::ffff:0:0/96): classify the embedded IPv4 address.
-  if (
-    groups[0] === 0 && groups[1] === 0 && groups[2] === 0 &&
-    groups[3] === 0 && groups[4] === 0 && groups[5] === 0xffff
-  ) {
-    return deniedIpv4Reason([
-      groups[6] >> 8,
-      groups[6] & 0xff,
-      groups[7] >> 8,
-      groups[7] & 0xff,
-    ]);
-  }
+  const embedded = embeddedIpv4Octets(groups);
+  if (embedded) return deniedIpv4Reason(embedded);
 
   const firstSevenZero = groups.slice(0, 7).every((value) => value === 0);
   if (firstSevenZero && groups[7] === 0) return 'unspecified'; // ::
   if (firstSevenZero && groups[7] === 1) return 'loopback'; // ::1
-
-  // IPv4-compatible (::/96, deprecated RFC 4291) and NAT64 (64:ff9b::/96,
-  // RFC 6052) also embed an IPv4 address in the low 32 bits; classify it so
-  // e.g. ::127.0.0.1 or 64:ff9b::7f00:1 cannot sidestep the IPv4 denylist.
-  const ipv4Compatible = groups.slice(0, 6).every((value) => value === 0);
-  const nat64 =
-    groups[0] === 0x0064 && groups[1] === 0xff9b &&
-    groups[2] === 0 && groups[3] === 0 && groups[4] === 0 && groups[5] === 0;
-  if (ipv4Compatible || nat64) {
-    return deniedIpv4Reason([
-      groups[6] >> 8,
-      groups[6] & 0xff,
-      groups[7] >> 8,
-      groups[7] & 0xff,
-    ]);
-  }
 
   for (const [prefixGroups, bits, reason] of DENIED_IPV6_RANGES) {
     if (ipv6MatchesPrefix(groups, prefixGroups, bits)) return reason;
