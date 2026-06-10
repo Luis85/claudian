@@ -14,6 +14,8 @@ import { claudeChatUIConfig } from './ui/ClaudeChatUIConfig';
 
 export const claudeProviderRegistration: ProviderRegistration = {
   displayName: 'Claude',
+  firstRunBlurb: 'Anthropic Claude Code',
+  cliCommand: 'claude',
   blankTabOrder: 20,
   isEnabled: (settings) => getClaudeProviderSettings(settings).enabled,
   defaultConfig: { ...DEFAULT_CLAUDE_PROVIDER_SETTINGS },

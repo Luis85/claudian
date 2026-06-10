@@ -13,6 +13,8 @@ import { cursorChatUIConfig } from './ui/CursorChatUIConfig';
 
 export const cursorProviderRegistration: ProviderRegistration = {
   displayName: 'Cursor Agent',
+  firstRunBlurb: 'Cursor Agent CLI',
+  cliCommand: 'cursor-agent',
   blankTabOrder: 8,
   isEnabled: (settings) => getCursorProviderSettings(settings).enabled,
   defaultConfig: { ...DEFAULT_CURSOR_PROVIDER_SETTINGS },

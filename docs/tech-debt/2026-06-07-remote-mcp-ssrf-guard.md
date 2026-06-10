@@ -2,8 +2,8 @@
 type: tech-debt
 title: "Remote MCP connections lack an SSRF blocking guard"
 date: 2026-06-07
-updated: 2026-06-07
-status: open
+updated: 2026-06-09
+status: partially-shipped
 priority: "1 - high"
 severity: high
 scope: mcp-security
@@ -45,7 +45,71 @@ MCP servers can be vault-defined and therefore untrusted. Testing a server is an
 
 ## Acceptance criteria
 
-- [ ] A Test action against `localhost`, `127.0.0.1`, `::1`, RFC1918, or `169.254.169.254` is refused before any socket opens.
-- [ ] A hostname that resolves public during preflight but private at connect time cannot bypass the guard.
+- [x] A Test action against `localhost`, `127.0.0.1`, `::1`, RFC1918, or `169.254.169.254` is refused before any socket opens.
+- [x] A hostname that resolves public during preflight but private at connect time cannot bypass the guard.
 - [ ] UI labels the server provenance and destination host.
 - [ ] Tool descriptions from remote MCP are rendered/demarcated as untrusted content.
+
+## Resolution (2026-06-09)
+
+**Shipped (blocking, not warning):**
+
+- New URL-safety module `src/core/security/urlSafety.ts`:
+  - `getDeniedIpReason` classifies loopback (127/8, `::1`), link-local
+    (169.254/16 incl. metadata, fe80::/10), RFC1918 (10/8, 172.16/12,
+    192.168/16), RFC6598 shared/CGNAT (100.64/10), IPv6 ULA (fc00::/7),
+    unspecified (0.0.0.0/8, `::`), IANA non-global ranges (multicast 224/4 +
+    ff00::/8, reserved 240/4 incl. broadcast, benchmarking 198.18/15,
+    documentation TEST-NET-1/2/3 + 2001:db8::/32 + 3fff::/20, IETF 192.0.0/24,
+    deprecated 6to4 anycast 192.88.99/24, IPv6 discard-only 100::/64,
+    benchmarking 2001:2::/48, ORCHID 2001:10::/28 + 2001:20::/28, SRv6
+    5f00::/16, local-use NAT64 64:ff9b:1::/48), and
+    embedded-IPv4 spellings of all of the above (IPv4-mapped `::ffff:0:0/96`,
+    IPv4-compatible `::/96`, NAT64 `64:ff9b::/96`). Non-IP input fails closed.
+  - `assertSafeRemoteUrl` preflights scheme (http/https only), checks literal
+    IP hostnames without DNS (WHATWG URL canonicalizes decimal/octal/hex IPv4
+    hosts first), resolves hostnames via injectable `dns.lookup` seam, and
+    denies when **any** resolved record is in a denied range. Resolution
+    failure fails closed.
+  - `createPinnedLookup` is the DNS-rebinding (TOCTOU) defense: a
+    `net.LookupFunction` that hands the socket the *preflight-vetted*
+    addresses for the vetted hostname (never re-resolves it) and re-vets any
+    other hostname inside the same lookup call.
+- `src/core/mcp/McpTester.ts` wires both layers: `testMcpServer` refuses
+  unsafe URLs before any transport/client is constructed, and
+  `createNodeFetch({ lookup })` threads the pinned lookup into
+  `http(s).request` so both the Streamable HTTP and legacy SSE transports
+  (SDK ≥1.29 routes all requests through the custom `fetch`) dial only vetted
+  IPs. Host header and TLS SNI/cert validation are untouched.
+- Loopback is denied by default (per the acceptance criteria). The module
+  exposes an `allowLoopback` opt-in for a future settings surface; stdio MCP
+  servers are unaffected (the guard applies to URL transports only).
+- Tests: `tests/unit/core/security/urlSafety.test.ts` (deny matrix per range
+  family, literal-IP URLs, mocked-DNS private/multi-record cases, rebinding
+  pin asserting no re-resolution), `tests/unit/core/mcp/McpTester.test.ts` and
+  `tests/unit/core/mcp/createNodeFetch.test.ts` (refusal before transport
+  construction; socket dials the pinned IP for the vetted hostname),
+  `tests/integration/core/mcp/mcp.test.ts` (loopback refusal end-to-end).
+- Runtime-activation vet (2026-06-10, PR #74 review follow-up):
+  `src/core/mcp/mcpRuntimeVetting.ts` runs the same preflight on the chat
+  path before active-server configs leave the plugin — wired at both Claude
+  seams (`queryViaSDK` cold start, which yields a warning notice chunk, and
+  `applyClaudeDynamicUpdates` before `setMcpServers`, which surfaces drops
+  via `notifyFailure`). Unsafe servers are dropped per-server (fail closed,
+  incl. DNS failure) instead of failing the turn. Loopback is **allowed** on
+  the runtime path — localhost MCP servers are a supported dev workflow that
+  predates the guard; the strict no-loopback policy stays on the Test path.
+  Tests: `tests/unit/core/mcp/mcpRuntimeVetting.test.ts` plus both-seam
+  integration tests in `ClaudianService.test.ts`.
+
+**Residual (why partially-shipped):**
+
+- UI provenance + destination-host display (criterion 3) and untrusted
+  tool-description framing (criterion 4) are not implemented — UI work was out
+  of scope for this hardening pass.
+- No user-facing toggle yet for loopback policy; the Test path hardcodes
+  strict (deny) and the runtime path hardcodes allow.
+- The rebinding **pin** applies only to the plugin's own connections
+  (`McpTester`). Provider CLIs open their own MCP sockets at chat time, so
+  the runtime path gets preflight vetting (drop before handoff) but a DNS
+  rebind after the CLI's own resolution cannot be prevented from here.

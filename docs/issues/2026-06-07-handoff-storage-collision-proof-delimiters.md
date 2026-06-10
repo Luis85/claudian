@@ -2,7 +2,7 @@
 type: issue
 id: issue-20260607-handoff-storage-collision-proof-delimiters
 title: Harden handoff storage format against heading collisions
-status: open
+status: done
 priority: 3 - low
 triage: backlog
 created: 2026-06-07
@@ -76,12 +76,68 @@ state) and keep the region readable enough for users browsing the note.
 
 #### Acceptance criteria
 
-- [ ] A handoff whose field body contains a line matching any section heading
+- [x] A handoff whose field body contains a line matching any section heading
       round-trips and renders losslessly in the modal Activity block (correct
       sectioning).
-- [ ] Existing notes written by the current `renderHandoffMarkdown` still parse.
+- [x] Existing notes written by the current `renderHandoffMarkdown` still parse.
 - [ ] `npm run typecheck && npm run lint && npm run test && npm run build` green.
+      (Targeted verification only at resolution time — full-repo gates deferred
+      to the merging branch because concurrent work was in flight; see
+      Resolution.)
 
 #### Blocked by
 
 None — independent follow-up.
+
+## Resolution (2026-06-09)
+
+Implemented approach **1 — collision-proof delimiters**, shaped to keep the
+region human-readable: `renderHandoffMarkdown` (moved from
+`execution/TaskHandoffParser.ts` into `model/handoffSections.ts` so the writer
+and reader share one contract) still emits the four `## Headings`, but wraps
+each field body in HTML-comment markers:
+
+```
+## Summary
+<!-- claudian:handoff:summary:start -->
+<summary, verbatim>
+<!-- claudian:handoff:summary:end -->
+…
+```
+
+The markers are invisible in Obsidian reading view, so the note region reads
+exactly as before, while `parseHandoffSections` keys on the markers — a body
+containing the literal next-expected heading (e.g. `## Verification` inside the
+Summary) now round-trips with correct sectioning.
+
+**Backward compatibility (read old, write new):** `parseHandoffSections`
+detects the field markers; when absent it falls through to the unchanged
+legacy sequential-heading parser, so existing notes written by the old
+`renderHandoffMarkdown` still parse. New handoffs are always written in the
+marker format. A field whose markers are missing parses as empty (existing
+fallback renders the raw markdown so nothing is dropped); a hand-mangled end
+marker salvages the body up to the next field marker.
+
+**Guard interplay:** `TaskNoteStore.writeHandoff` scrubs exactly the sanctioned
+field markers (`HANDOFF_FIELD_MARKER_STRINGS`) before its embedded-marker
+assertion, so structural markers pass while any other `<!-- claudian:` content
+is still rejected. To keep bodies from spoofing markers, `parseTaskHandoff` now
+rejects a handoff whose field contains `<!-- claudian:` (run takes the graceful
+`needs_handoff` path instead of a hard note-write failure).
+
+**Tests (TDD — collision regression written first, red on old code):**
+
+- `tests/unit/features/tasks/execution/TaskHandoffParser.test.ts`: round-trip
+  regression for a summary containing a literal `## Verification` line; exact
+  new-format markdown; rejection of marker-bearing fields.
+- `tests/unit/features/tasks/model/handoffSections.test.ts`: marker-format
+  round-trips (including a body containing every section heading), readable
+  headings retained, missing-marker and mangled-end-marker degradation; all
+  legacy-format tests kept unchanged as the back-compat suite.
+- `tests/unit/features/tasks/storage/TaskNoteStore.test.ts`: `writeHandoff`
+  accepts structural field markers, still rejects foreign claudian markers.
+
+Verified with `npx jest tests/unit/features/tasks tests/integration/features/tasks`
+(59 suites / 789 tests green) plus the chat `WorkOrderProtocolDisplay` suite and
+`npx eslint` on the touched files; full-repo gates were not run here because
+other branches were being edited concurrently.

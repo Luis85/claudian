@@ -2,8 +2,8 @@
 type: tech-debt
 title: "First-run banner hardcodes the provider list (name/blurb/cli)"
 date: 2026-06-07
-updated: 2026-06-07
-status: open
+updated: 2026-06-09
+status: done
 priority: "3 - low"
 severity: low
 scope: providers
@@ -65,6 +65,19 @@ banner.
 
 ## Acceptance criteria
 
-- [ ] `blurb`/`cli` provider metadata live on `ProviderRegistration`, contributed per provider.
-- [ ] `FirstRunBanner` renders from the registry with no hardcoded provider list.
-- [ ] The `FirstRunBanner.ts` allowlist entry is removed and the guard stays green.
+- [x] `blurb`/`cli` provider metadata live on `ProviderRegistration`, contributed per provider.
+- [x] `FirstRunBanner` renders from the registry with no hardcoded provider list.
+- [x] The `FirstRunBanner.ts` allowlist entry is removed and the guard stays green.
+
+## Resolution (2026-06-09)
+
+`ProviderRegistration` (src/core/providers/types.ts) gained `firstRunBlurb` and
+`cliCommand`, exposed via `ProviderRegistry.getFirstRunBlurb`/`getCliCommand`
+and contributed by all four `src/providers/<id>/registration.ts` files with the
+exact blurb/cli strings the banner previously hardcoded. `FirstRunBanner` now
+iterates `ProviderRegistry.getRegisteredProviderIds()` and reads display name,
+blurb, and CLI command from the registry — the local `PROVIDERS` array is gone.
+The `FirstRunBanner.ts` allowlist entry was removed from
+`tests/unit/core/providers/noHardcodedProviderList.test.ts`, the registration
+contract test now requires both fields, and the banner unit test asserts
+registry-driven rendering against stub registrations.

@@ -36,12 +36,6 @@ const ALLOWLIST = new Map<string, string>([
     'src/providers/index.ts',
     'Sanctioned registration aggregator — the one place that names every provider.',
   ],
-  [
-    'src/features/settings/firstRunBanner/FirstRunBanner.ts',
-    'Grandfathered: hardcodes per-provider name/blurb/cli. Migrate to ' +
-      'registry-sourced metadata — see ' +
-      'docs/tech-debt/2026-06-07-firstrun-banner-provider-list.md.',
-  ],
 ]);
 
 const DISTINCT_THRESHOLD = 3;

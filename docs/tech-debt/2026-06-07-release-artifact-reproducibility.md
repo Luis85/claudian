@@ -2,8 +2,8 @@
 type: tech-debt
 title: "Release artifact reproducibility is not checked in PR CI"
 date: 2026-06-07
-updated: 2026-06-07
-status: open
+updated: 2026-06-09
+status: done
 priority: "2 - normal"
 severity: medium
 scope: release-build
@@ -45,7 +45,28 @@ A source-only change can pass tests and still fail the production bundle, miss a
 
 ## Acceptance criteria
 
-- [ ] Pull-request CI runs the production build.
-- [ ] CI and release use the same Node major or both supported majors are tested deliberately.
-- [ ] Artifact smoke fails on stale version fields, missing files, or abnormal bundle size growth.
-- [ ] The release workflow does not discover build failures for the first time at tag push.
+- [x] Pull-request CI runs the production build. — `build` job in `.github/workflows/ci.yml` runs `npm run build`.
+- [x] CI and release use the same Node major or both supported majors are tested deliberately. — `.github/workflows/release.yml` bumped from Node 20 to Node 22 (2026-06-09), matching all CI jobs; `package.json` now declares `"engines": { "node": ">=22" }`.
+- [x] Artifact smoke fails on stale version fields, missing files, or abnormal bundle size growth. — `npm run check:artifacts` (`scripts/check-artifacts.mjs`) runs after build in the `build` job.
+- [x] The release workflow does not discover build failures for the first time at tag push. — the same `npm run build` now gates every PR on the same Node major the release uses.
+
+## Resolution (2026-06-09)
+
+Closed. Remediation items 1 and 3 had already shipped with the agentic
+quality-gates first slice (2026-06-07): the CI `build` job runs the production
+build and `npm run check:artifacts` smoke-checks presence, version sync,
+`minAppVersion`, and bundle-size budget — see
+`docs/build-ci/quality-gates.md`.
+
+This pass delivered item 2: `.github/workflows/release.yml` was still on
+Node 20 while CI ran Node 22; release now uses Node 22 with a sync comment
+pointing at CI, and `package.json` gained `"engines": { "node": ">=22" }` so
+the supported floor is declared in one machine-readable place.
+
+Item 4 (`git diff --exit-code main.js styles.css manifest.json` after build)
+is **not applicable**: `main.js` and `styles.css` are not tracked in git
+(`git ls-files` shows only `manifest.json` and `versions.json`). Built
+artifacts are produced fresh in the release workflow and attached to the
+GitHub release, so there is no tracked-artifact staleness to diff against.
+The version-sync portion of that idea is covered by `check:artifacts`
+comparing `package.json` and `manifest.json` versions.

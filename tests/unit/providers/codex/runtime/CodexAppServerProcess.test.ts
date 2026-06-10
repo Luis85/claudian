@@ -181,6 +181,19 @@ describe('CodexAppServerProcess', () => {
   });
 
   describe('shutdown', () => {
+    it('issues SIGTERM synchronously within the shutdown() call frame (onunload contract)', async () => {
+      const server = new CodexAppServerProcess(createLaunchSpec());
+      server.start();
+
+      const shutdownPromise = server.shutdown();
+      // Plugin onunload is synchronous and fire-and-forget: the SIGTERM must be
+      // initiated before shutdown() first suspends, or the child can be orphaned.
+      expect(mockProc.kill).toHaveBeenCalledWith('SIGTERM');
+
+      mockProc.emit('exit', 0, 'SIGTERM');
+      await shutdownPromise;
+    });
+
     it('sends SIGTERM to the process', async () => {
       const server = new CodexAppServerProcess(createLaunchSpec());
       server.start();

@@ -1,3 +1,4 @@
+import { renderHandoffMarkdown } from '../model/handoffSections';
 import type { ParsedHandoff } from '../model/taskTypes';
 
 export type TaskHandoffParseResult =
@@ -6,6 +7,11 @@ export type TaskHandoffParseResult =
 
 const HANDOFF_BLOCK_PATTERN = /<claudian_handoff>\s*([\s\S]*?)\s*<\/claudian_handoff>/;
 const REQUIRED_FIELDS = ['summary', 'verification', 'risks', 'next_action'] as const;
+
+// Mirrors TaskNoteStore's embedded-marker guard. A body carrying this prefix
+// could spoof the note's region or field markers, so reject it here and let the
+// run take the graceful needs_handoff path instead of failing the note write.
+const CLAUDIAN_MARKER_PREFIX = '<!-- claudian:';
 
 type HandoffField = typeof REQUIRED_FIELDS[number];
 
@@ -20,6 +26,9 @@ export function parseTaskHandoff(content: string): TaskHandoffParseResult {
     const value = fields.get(field)?.trim();
     if (!value) {
       return { ok: false, error: `Missing handoff field: ${field}` };
+    }
+    if (value.includes(CLAUDIAN_MARKER_PREFIX)) {
+      return { ok: false, error: `Handoff field contains a reserved Claudian marker: ${field}` };
     }
   }
 
@@ -71,13 +80,4 @@ function parseFields(block: string): Map<HandoffField, string> {
   }
 
   return fields;
-}
-
-function renderHandoffMarkdown(handoff: Omit<ParsedHandoff, 'markdown'>): string {
-  return [
-    `## Summary\n${handoff.summary}`,
-    `## Verification\n${handoff.verification}`,
-    `## Risks\n${handoff.risks}`,
-    `## Next Action\n${handoff.nextAction}`,
-  ].join('\n\n');
 }
