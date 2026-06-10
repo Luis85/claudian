@@ -13,6 +13,8 @@ import { codexChatUIConfig } from './ui/CodexChatUIConfig';
 
 export const codexProviderRegistration: ProviderRegistration = {
   displayName: 'Codex',
+  firstRunBlurb: 'OpenAI Codex CLI',
+  cliCommand: 'codex',
   blankTabOrder: 15,
   isEnabled: (settings) => getCodexProviderSettings(settings).enabled,
   defaultConfig: { ...DEFAULT_CODEX_PROVIDER_SETTINGS },

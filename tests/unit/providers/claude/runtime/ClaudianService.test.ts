@@ -16,6 +16,7 @@ const sdkMock = sdkModule as unknown as {
   setMockMessages: (messages: any[], options?: { appendResult?: boolean }) => void;
   resetMockMessages: () => void;
   simulateCrash: (afterChunks?: number) => void;
+  getLastOptions: () => sdkModule.Options | undefined;
   query: typeof sdkModule.query;
 };
 
@@ -378,6 +379,20 @@ describe('ClaudianService', () => {
 
       expect(closePersistentQuerySpy).toHaveBeenCalledWith('plugin cleanup');
       expect(cancelSpy).toHaveBeenCalled();
+    });
+
+    it('cleanup aborts the query AbortController synchronously within the call frame (onunload contract)', () => {
+      // Plugin onunload is synchronous and fire-and-forget. The SDK child is
+      // killed by the spawn-side abort listener (customSpawn.ts) which fires
+      // synchronously on abort(), so abort() must be reached before cleanup()
+      // could suspend — guarded here by asserting in the same call frame.
+      (service as any).persistentQuery = { interrupt: jest.fn().mockResolvedValue(undefined) };
+      const abortSpy = jest.fn();
+      (service as any).queryAbortController = { abort: abortSpy };
+
+      service.cleanup();
+
+      expect(abortSpy).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -1824,6 +1839,21 @@ describe('ClaudianService', () => {
 
       await expect((service as any).applyDynamicUpdates({ mcpMentions: new Set(['server-1']) })).resolves.toBeUndefined();
     });
+
+    it('should drop unsafe URL-based MCP servers before setMcpServers (SSRF vet)', async () => {
+      mockMcpManager.getActiveServers.mockReturnValue({
+        metadata: { type: 'http', url: 'http://169.254.169.254/mcp' },
+        ok: { command: 'cmd' },
+        local: { type: 'sse', url: 'http://127.0.0.1:3845/sse' },
+      });
+
+      await (service as any).applyDynamicUpdates({ mcpMentions: new Set(['metadata', 'ok', 'local']) });
+
+      expect(mockPersistentQuery.setMcpServers).toHaveBeenCalledWith({
+        ok: { command: 'cmd' },
+        local: { type: 'sse', url: 'http://127.0.0.1:3845/sse' },
+      });
+    });
   });
 
   describe('query() method', () => {
@@ -1862,6 +1892,30 @@ describe('ClaudianService', () => {
       expect(chunks.length).toBeGreaterThan(0);
       const doneChunks = chunks.filter(c => c.type === 'done');
       expect(doneChunks).toHaveLength(1);
+    });
+
+    it('should drop unsafe URL-based MCP servers at cold start and warn (SSRF vet)', async () => {
+      mockMcpManager.getActiveServers.mockReturnValue({
+        metadata: { type: 'http', url: 'http://169.254.169.254/mcp' },
+        local: { type: 'sse', url: 'http://127.0.0.1:3845/sse' },
+      });
+      sdkMock.setMockMessages([
+        { type: 'system', subtype: 'init', session_id: 'vet-session' },
+        { type: 'assistant', message: { content: [{ type: 'text', text: 'Hi' }] } },
+      ]);
+
+      const chunks = await collectChunks(
+        service.query('hello', undefined, undefined, { forceColdStart: true })
+      );
+
+      expect(sdkMock.getLastOptions()?.mcpServers).toEqual({
+        local: { type: 'sse', url: 'http://127.0.0.1:3845/sse' },
+      });
+      const notice = chunks.find(c => c.type === 'notice');
+      expect(notice).toMatchObject({
+        level: 'warning',
+        content: expect.stringContaining('"metadata"'),
+      });
     });
 
     it('should capture session ID from cold-start response', async () => {

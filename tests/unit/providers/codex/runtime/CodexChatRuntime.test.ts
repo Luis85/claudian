@@ -2501,4 +2501,41 @@ describe('CodexChatRuntime', () => {
       expect(mockProcessOffExit).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('construction (load-time contract)', () => {
+    it('does not start an app-server process at construction or passive session sync', () => {
+      (MockedProcessClass as unknown as jest.Mock).mockClear();
+      mockProcessStart.mockClear();
+
+      const passive = new CodexChatRuntime(createMockPlugin());
+      passive.syncConversationState({
+        sessionId: 'thread-passive',
+        providerId: 'codex',
+        providerState: { threadId: 'thread-passive' },
+        messages: [],
+      } as any);
+
+      // Plugin onload / view restore only constructs runtimes and syncs state;
+      // the codex app-server must spawn on the first query(), not at load time.
+      expect(MockedProcessClass).not.toHaveBeenCalled();
+      expect(mockProcessStart).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cleanup (onunload contract)', () => {
+    it('initiates the subprocess shutdown synchronously within the cleanup() call frame', async () => {
+      // Get a live app-server process onto the runtime via a normal turn.
+      await collectChunks(runtime.query(createTurn('hello')));
+
+      mockProcessShutdown.mockClear();
+      const cleanupPromise = runtime.cleanup();
+      // Plugin onunload is synchronous and fire-and-forget. CodexAppServerProcess
+      // .shutdown() issues SIGTERM synchronously in its own frame (guarded in
+      // CodexAppServerProcess.test.ts), so reaching it before cleanup() first
+      // suspends guarantees the kill signal is sent even if the awaited promise
+      // never resumes.
+      expect(mockProcessShutdown).toHaveBeenCalledTimes(1);
+      await cleanupPromise;
+    });
+  });
 });

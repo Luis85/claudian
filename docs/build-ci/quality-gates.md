@@ -27,6 +27,12 @@ Background: `docs/tech-debt/2026-06-07-agentic-quality-gates.md`.
 | Production build | `npm run build` | `build` | CSS concat, esbuild bundle, SDK patching, renderer-unsafe-unref guard. |
 | Artifact smoke | `npm run check:artifacts` | `build` | Missing/empty artifacts, package/manifest version desync, missing `minAppVersion`, bundle-size budget. |
 
+All CI jobs and the release workflow (`.github/workflows/release.yml`) run the
+same Node major (22), declared as `"engines": { "node": ">=22" }` in
+`package.json` — so the release bundle is built by the same toolchain CI
+verified (aligned 2026-06-09; see
+`docs/tech-debt/2026-06-07-release-artifact-reproducibility.md`).
+
 Run the whole local set before pushing:
 
 ```bash

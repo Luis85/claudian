@@ -199,6 +199,34 @@ describe('OpencodeChatRuntime', () => {
     await expect(runtime.ensureReady({ allowSessionCreation: false })).resolves.toBe(true);
   });
 
+  it('does not spawn the opencode CLI at construction or passive session sync (load-time contract)', () => {
+    const startProcess = jest.spyOn(OpencodeChatRuntime.prototype as any, 'startProcess');
+    try {
+      const runtime = new OpencodeChatRuntime(createMockPlugin());
+      runtime.syncConversationState({ providerState: {}, sessionId: 'session-1' });
+
+      // Plugin onload / view restore only constructs runtimes and syncs state;
+      // the opencode server must spawn on first use, not at load time.
+      expect(startProcess).not.toHaveBeenCalled();
+      expect((runtime as any).process).toBeNull();
+    } finally {
+      startProcess.mockRestore();
+    }
+  });
+
+  it('cleanup invokes the subprocess shutdown synchronously within the cleanup() call frame (onunload contract)', async () => {
+    const runtime = new OpencodeChatRuntime(createMockPlugin());
+    const shutdown = jest.fn().mockResolvedValue(undefined);
+    (runtime as any).process = { isAlive: jest.fn().mockReturnValue(true), shutdown };
+
+    const cleanupPromise = runtime.cleanup();
+    // Plugin onunload is synchronous and fire-and-forget. AcpSubprocess.shutdown()
+    // issues SIGTERM synchronously in its own frame (guarded in AcpSubprocess.test.ts),
+    // so reaching it before cleanup() first suspends guarantees the kill is sent.
+    expect(shutdown).toHaveBeenCalledTimes(1);
+    await cleanupPromise;
+  });
+
   it('restarts when the ACP transport closed even if the subprocess still looks alive', async () => {
     const plugin = createMockPlugin({
       settings: {

@@ -5,10 +5,14 @@ import '../../../../setup/obsidianDom';
 
 // Stub ProviderRegistry so hasAnyProviderEnabled iterates the four built-in
 // providers without pulling the full provider bootstrap (which transitively
-// imports the MCP SDK ESM that breaks this jsdom suite).
+// imports the MCP SDK ESM that breaks this jsdom suite). FirstRunBanner also
+// renders from this registry now, so its metadata getters are stubbed too.
 jest.mock('../../../../../src/core/providers/ProviderRegistry', () => ({
   ProviderRegistry: {
     getRegisteredProviderIds: () => ['claude', 'codex', 'opencode', 'cursor'],
+    getProviderDisplayName: (id: string) => id,
+    getFirstRunBlurb: (id: string) => `${id} blurb`,
+    getCliCommand: (id: string) => id,
   },
 }));
 

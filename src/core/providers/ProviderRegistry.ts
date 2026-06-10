@@ -156,6 +156,14 @@ export class ProviderRegistry {
     return this.getProviderRegistration(providerId).displayName;
   }
 
+  static getFirstRunBlurb(providerId: ProviderId): string {
+    return this.getProviderRegistration(providerId).firstRunBlurb;
+  }
+
+  static getCliCommand(providerId: ProviderId): string {
+    return this.getProviderRegistration(providerId).cliCommand;
+  }
+
   static isEnabled(providerId: ProviderId, settings: Record<string, unknown>): boolean {
     return this.getProviderRegistration(providerId).isEnabled(settings);
   }

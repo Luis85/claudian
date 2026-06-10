@@ -6,6 +6,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { parseClipboardConfig, tryParseClipboardConfig } from '@/core/mcp/McpConfigParser';
 import { McpServerManager } from '@/core/mcp/McpServerManager';
 import { testMcpServer } from '@/core/mcp/McpTester';
+import type { HostResolver } from '@/core/security/urlSafety';
 import type {
   ManagedMcpServer,
   McpHttpServerConfig,
@@ -583,6 +584,13 @@ describe('MCP Utils', () => {
 // ============================================================================
 
 describe('McpTester', () => {
+  // SSRF guard (SEC-D) seam: URL tests inject a public DNS answer so they
+  // never hit the network and are not refused by the private-address denylist.
+  const publicResolver: HostResolver = jest.fn(async () => [
+    { address: '93.184.216.34', family: 4 as const },
+  ]);
+  const testOptions = { resolveHost: publicResolver };
+
   let mockClientInstance: {
     connect: jest.Mock;
     listTools: jest.Mock;
@@ -657,12 +665,12 @@ describe('McpTester', () => {
   it('should test http server and return tools', async () => {
     const server: ManagedMcpServer = {
       name: 'http',
-      config: { type: 'http', url: 'http://localhost:3000/mcp', headers: { Authorization: 'token' } },
+      config: { type: 'http', url: 'http://mcp.example:3000/mcp', headers: { Authorization: 'token' } },
       enabled: true,
       contextSaving: false,
     };
 
-    const result = await testMcpServer(server);
+    const result = await testMcpServer(server, undefined, testOptions);
 
     expect(result.success).toBe(true);
     expect(result.serverName).toBe('test-srv');
@@ -680,12 +688,12 @@ describe('McpTester', () => {
   it('should test sse server and return tools', async () => {
     const server: ManagedMcpServer = {
       name: 'sse',
-      config: { type: 'sse', url: 'http://localhost:3000/sse', headers: { Authorization: 'token' } },
+      config: { type: 'sse', url: 'http://mcp.example:3000/sse', headers: { Authorization: 'token' } },
       enabled: true,
       contextSaving: false,
     };
 
-    const result = await testMcpServer(server);
+    const result = await testMcpServer(server, undefined, testOptions);
 
     expect(result.success).toBe(true);
     expect(result.serverName).toBe('test-srv');
@@ -705,12 +713,12 @@ describe('McpTester', () => {
 
     const server: ManagedMcpServer = {
       name: 'fail',
-      config: { type: 'http', url: 'http://localhost:3000/mcp' },
+      config: { type: 'http', url: 'http://mcp.example:3000/mcp' },
       enabled: true,
       contextSaving: false,
     };
 
-    const result = await testMcpServer(server);
+    const result = await testMcpServer(server, undefined, testOptions);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('Connection refused');
@@ -721,12 +729,12 @@ describe('McpTester', () => {
 
     const server: ManagedMcpServer = {
       name: 'partial',
-      config: { type: 'http', url: 'http://localhost:3000/mcp' },
+      config: { type: 'http', url: 'http://mcp.example:3000/mcp' },
       enabled: true,
       contextSaving: false,
     };
 
-    const result = await testMcpServer(server);
+    const result = await testMcpServer(server, undefined, testOptions);
 
     expect(result.success).toBe(true);
     expect(result.serverName).toBe('test-srv');
@@ -746,13 +754,15 @@ describe('McpTester', () => {
 
       const server: ManagedMcpServer = {
         name: 'timeout',
-        config: { type: 'http', url: 'http://localhost:3000/mcp' },
+        config: { type: 'http', url: 'http://mcp.example:3000/mcp' },
         enabled: true,
         contextSaving: false,
       };
 
-      const resultPromise = testMcpServer(server);
-      jest.advanceTimersByTime(10000);
+      const resultPromise = testMcpServer(server, undefined, testOptions);
+      // Async variant flushes the SSRF preflight microtasks so the 10s timer
+      // is registered before the clock advances.
+      await jest.advanceTimersByTimeAsync(10000);
       const result = await resultPromise;
 
       expect(result.success).toBe(false);
@@ -760,6 +770,25 @@ describe('McpTester', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it('refuses loopback/private URL targets before any connection (SSRF guard)', async () => {
+    const loopbackResolver: HostResolver = jest.fn(async () => [
+      { address: '127.0.0.1', family: 4 as const },
+    ]);
+    const server: ManagedMcpServer = {
+      name: 'local-http',
+      config: { type: 'http', url: 'http://localhost:3000/mcp' },
+      enabled: true,
+      contextSaving: false,
+    };
+
+    const result = await testMcpServer(server, undefined, { resolveHost: loopbackResolver });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/loopback/);
+    expect(StreamableHTTPClientTransport).not.toHaveBeenCalled();
+    expect(mockClientInstance.connect).not.toHaveBeenCalled();
   });
 });
 

@@ -48,6 +48,11 @@ describe('provider registration contract', () => {
   it.each(providerIds)('"%s" exposes a structurally complete registration', (id) => {
     expect(ProviderRegistry.getProviderDisplayName(id)).toBeTruthy();
 
+    // First-run onboarding metadata (tech-debt 2026-06-07): the banner renders
+    // from the registry, so every provider must contribute both fields.
+    expect(ProviderRegistry.getFirstRunBlurb(id)).toBeTruthy();
+    expect(ProviderRegistry.getCliCommand(id)).toBeTruthy();
+
     const caps = ProviderRegistry.getCapabilities(id);
     expect(caps.providerId).toBe(id);
     expect(typeof caps.supportsPlanMode).toBe('boolean');

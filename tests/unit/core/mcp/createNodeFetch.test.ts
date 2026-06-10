@@ -2,6 +2,7 @@ import * as http from 'http';
 import type { AddressInfo } from 'net';
 
 import { createNodeFetch } from '@/core/mcp/McpTester';
+import { createPinnedLookup } from '@/core/security/urlSafety';
 
 interface ReceivedRequest {
   method: string;
@@ -168,6 +169,45 @@ describe('createNodeFetch', () => {
 
     expect(response.ok).toBe(true);
     expect(received).toHaveLength(1);
+  });
+
+  describe('SSRF rebinding pin (SEC-D)', () => {
+    it('dials the vetted IP for the pinned hostname instead of re-resolving DNS', async () => {
+      const addr = server.address() as AddressInfo;
+      // Simulate a preflight that vetted "pinned.example" to this test server's
+      // loopback address. Real DNS for that name does not exist (and a rebinder
+      // would have flipped it anyway) — the socket must use the pinned answer.
+      const pinnedFetch = createNodeFetch({
+        lookup: createPinnedLookup({
+          hostname: 'pinned.example',
+          addresses: [{ address: '127.0.0.1', family: 4 }],
+        }),
+      });
+
+      const response = await pinnedFetch(`http://pinned.example:${addr.port}/mcp`, { method: 'GET' });
+
+      expect(response.ok).toBe(true);
+      expect(received).toHaveLength(1);
+      // Host header still names the vetted hostname; only the dialed address is pinned.
+      expect(received[0].headers.host).toBe(`pinned.example:${addr.port}`);
+    });
+
+    it('refuses to dial hostnames the pinned lookup vets as private', async () => {
+      const addr = server.address() as AddressInfo;
+      const pinnedFetch = createNodeFetch({
+        lookup: createPinnedLookup(
+          { hostname: 'pinned.example', addresses: [{ address: '127.0.0.1', family: 4 }] },
+          // Connect-time re-vetting for any OTHER hostname: resolver returns a
+          // private answer, so the socket must never open.
+          { resolveHost: async () => [{ address: '169.254.169.254', family: 4 }] },
+        ),
+      });
+
+      await expect(
+        pinnedFetch(`http://other.example:${addr.port}/mcp`, { method: 'GET' }),
+      ).rejects.toThrow(/169\.254\.169\.254/);
+      expect(received).toHaveLength(0);
+    });
   });
 
   it('should handle multi-byte characters in body with correct Content-Length', async () => {

@@ -97,6 +97,9 @@ Current coverage, by user-visible path:
 | `codexHistory.perf` | `parseCodexSessionContent` stays ~linear | transcript length |
 | `conversationHistory.perf` | history-dropdown DOM growth (windowed) + `loadConversations` load/sort | conversation count |
 | `navigationSidebar.perf` | prev/next scan stays O(mounted), bounded by render window | mounted messages |
+| `agentBoard.perf` | board render stays ~linear (flat per-card DOM/listeners); `patchLiveStrip`/`patchCard` stay O(1) | work-order count |
+| `taskRunCoordinator.perf` | launch validation stays O(1) vs active runs; drain pass bounded by slot cap × runnable, not board size | active runs / runnable cards |
+| `multiTabStreaming.perf` | per-tab pending frames stay constant per flush; one tab's render work independent of other tabs | concurrent streaming tabs |
 
 ## Storage
 

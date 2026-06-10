@@ -56,6 +56,14 @@ export interface CreateChatRuntimeOptions {
  */
 export interface ProviderRegistration {
   displayName: string;
+  /**
+   * One-line product blurb for the first-run onboarding banner. Lives on the
+   * registration so the banner renders from the registry instead of a
+   * hardcoded provider list (tech-debt 2026-06-07).
+   */
+  firstRunBlurb: string;
+  /** CLI executable the provider requires on PATH (surfaced in onboarding copy). */
+  cliCommand: string;
   blankTabOrder: number;
   isEnabled: (settings: Record<string, unknown>) => boolean;
   /**

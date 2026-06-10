@@ -59,7 +59,7 @@ Large files reduce locality: a change to one behavior forces the maintainer or a
 
 Prioritize modules that pass the deletion test rather than splitting mechanically:
 
-1. `InputToolbar.ts`: split independent widgets (`ModelSelector`, `ModeSelector`, `PermissionToggle`, `ExternalContextSelector`, `McpServerSelector`, `ContextUsageMeter`) into a toolbar directory. The current file has many independent classes and little shared state.
+1. ~~`InputToolbar.ts`: split independent widgets (`ModelSelector`, `ModeSelector`, `PermissionToggle`, `ExternalContextSelector`, `McpServerSelector`, `ContextUsageMeter`) into a toolbar directory. The current file has many independent classes and little shared state.~~ **Done 2026-06-09**: widgets now live one-per-module under `src/features/chat/ui/toolbar/`; `InputToolbar.ts` is a thin barrel + `createInputToolbar` factory. See [[split-inputtoolbar-widget-classes]].
 2. `InputController.ts`: extract the resume dropdown and plan/approval state machine.
 3. `CodexHistoryStore.ts`: split legacy, modern, and persisted parser families around shared turn state types.
 4. `ClaudeChatRuntime.ts`: extract persistent-query lifecycle (`ensureReady`, `needsRestart`, response consumer startup) behind a smaller module interface.

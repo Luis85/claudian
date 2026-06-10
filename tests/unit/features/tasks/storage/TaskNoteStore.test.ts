@@ -1,3 +1,4 @@
+import { renderHandoffMarkdown } from '../../../../../src/features/tasks/model/handoffSections';
 import {
   HANDOFF_END,
   HANDOFF_START,
@@ -218,6 +219,30 @@ ${HANDOFF_END}`);
 
 <!-- claudian:handoff-end -->`
     )).toThrow('Generated task region content cannot contain Claudian markers');
+  });
+
+  it('accepts the structural field markers emitted by renderHandoffMarkdown', () => {
+    const markdown = renderHandoffMarkdown({
+      summary: 'S',
+      verification: 'V',
+      risks: 'R',
+      nextAction: 'N',
+    });
+
+    const written = store.writeHandoff(VALID_NOTE, markdown);
+    expect(store.extractGeneratedRegion(written, HANDOFF_START, HANDOFF_END)).toBe(markdown);
+  });
+
+  it('still rejects non-structural Claudian markers mixed with field markers', () => {
+    const markdown = `${renderHandoffMarkdown({
+      summary: 'S',
+      verification: 'V',
+      risks: 'R',
+      nextAction: 'N',
+    })}\n<!-- claudian:handoff-end -->`;
+
+    expect(() => store.writeHandoff(VALID_NOTE, markdown))
+      .toThrow('Generated task region content cannot contain Claudian markers');
   });
 
   it('writes frontmatter fields, bumps updated, and preserves unknown keys and body', () => {

@@ -21,6 +21,8 @@ export const opencodeProviderRegistration: ProviderRegistration = {
   createRuntime: ({ plugin }) => new OpencodeChatRuntime(plugin),
   createTitleGenerationService: (plugin) => new OpencodeTitleGenerationService(plugin),
   displayName: 'OpenCode',
+  firstRunBlurb: 'Opencode CLI server',
+  cliCommand: 'opencode',
   environmentKeyPatterns: [/^OPENCODE_/i],
   historyService: new OpencodeConversationHistoryService(),
   isEnabled: (settings) => getOpencodeProviderSettings(settings).enabled,

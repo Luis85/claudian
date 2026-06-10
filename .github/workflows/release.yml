@@ -20,10 +20,12 @@ jobs:
         with:
           fetch-depth: 0  # Full history for changelog generation
 
-      - name: Setup Node 20
+      # Keep in sync with .github/workflows/ci.yml and package.json `engines`
+      # so the release bundle is produced by the same Node major CI verified.
+      - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install dependencies
