@@ -78,17 +78,32 @@ describe('buildCursorAgentEnvironment', () => {
       };
     });
 
-    it('prefers PowerShell over Git Bash signals from the host', () => {
+    it('preserves Git Bash shell signals from the host', () => {
       const env = buildCursorAgentEnvironment(makePlugin(''));
-      expect(env.MSYSTEM).toBeUndefined();
-      expect(env.EXEPATH).toBeUndefined();
-      expect(env.SHELL).toBe('C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe');
+      expect(env.MSYSTEM).toBe('MINGW64');
+      expect(env.EXEPATH).toBe('C:\\Program Files\\Git\\bin');
+      expect(env.SHELL).toBe('C:\\Program Files\\Git\\bin\\bash.exe');
     });
 
     it('prepends System32 and WindowsPowerShell to PATH for shell discovery', () => {
       const env = buildCursorAgentEnvironment(makePlugin(''));
       expect(env.PATH?.startsWith('C:\\Windows\\System32;C:\\Windows\\System32\\WindowsPowerShell\\v1.0;')).toBe(true);
       expect(env.PATH).toContain('C:\\Users\\test\\AppData\\Local\\cursor-agent');
+    });
+
+    it('adds common Git for Windows paths so git is discoverable from GUI hosts', () => {
+      const env = buildCursorAgentEnvironment(makePlugin(''));
+      expect(env.PATH).toContain('C:\\Program Files\\Git\\cmd');
+      expect(env.PATH).toContain('C:\\Program Files\\Git\\bin');
+    });
+
+    it('appends Git paths after the existing PATH so a user-pinned git keeps winning', () => {
+      const env = buildCursorAgentEnvironment(makePlugin(''));
+      const segments = (env.PATH ?? '').split(';');
+      const existingIdx = segments.indexOf('C:\\Users\\test\\AppData\\Local\\cursor-agent');
+      const gitIdx = segments.indexOf('C:\\Program Files\\Git\\cmd');
+      expect(existingIdx).toBeGreaterThanOrEqual(0);
+      expect(gitIdx).toBeGreaterThan(existingIdx);
     });
 
     it('keeps Git Bash env when the user set it in custom env', () => {

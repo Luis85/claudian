@@ -27,6 +27,9 @@ export async function* processCursorAgentNdjsonLines(
   const reducer = new CursorNdjsonStreamReducer();
   const chunkTracker = createCursorQueryChunkTracker();
   const askIntercept = new CursorAskUserQuestionInterceptState();
+  // The interceptor appends answered questions in place; the tracker exposes them
+  // to the runtime alongside the other per-turn stream state.
+  chunkTracker.askUserAnswers = askIntercept.collectedAnswers;
 
   for await (const line of lines) {
     if (options.isCanceled()) {

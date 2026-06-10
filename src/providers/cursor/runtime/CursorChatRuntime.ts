@@ -28,6 +28,7 @@ import { getCursorEnabledModels } from '../settings';
 import { getCursorState, resolveCursorSessionId } from '../types';
 import { buildCursorAgentEnvironment } from './cursorAgentEnv';
 import { acquireCursorAgentSpawnLock } from './cursorAgentSpawnLock';
+import { buildCursorAnswerFollowUpPrompt } from './cursorAskUserQuestion';
 import { resolveCursorModelSelectionForCli } from './cursorCliModel';
 import { buildCursorAgentPrompt, resolveCursorCliPromptArg } from './cursorCliPrompt';
 import { resolveCursorLaunch } from './cursorLaunch';
@@ -251,6 +252,13 @@ export class CursorChatRuntime implements ChatRuntime {
       }
 
       this.turnMetadata = { ...this.turnMetadata, ...turnMetadata };
+
+      // Deliver collected AskUserQuestion answers (the one-shot CLI cannot take
+      // them in-process) to the agent as a resumed follow-up turn. Skipped on
+      // cancel so a torn-down turn never auto-fires another query.
+      if (chunkTracker.askUserAnswers.length > 0 && !this.canceled) {
+        this.turnMetadata.autoFollowUpText = buildCursorAnswerFollowUpPrompt(chunkTracker.askUserAnswers);
+      }
     } finally {
       cleanupPromptFile?.();
       releaseSpawnLock();

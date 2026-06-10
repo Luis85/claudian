@@ -636,7 +636,7 @@ export class InputController {
             planApprovalInvalidated = true;
           } else if (decision?.type === 'implement') {
             this.deps.restorePrePlanPermissionModeIfNeeded?.();
-            planAutoSendContent = 'Implement the plan.';
+            planAutoSendContent = turnMetadata.autoFollowUpText ? `${turnMetadata.autoFollowUpText}\n\nImplement the plan.` : 'Implement the plan.';
           } else if (decision?.type === 'revise') {
             // Keep plan mode active, populate input with feedback text
             this.deps.getInputEl().value = decision.text;
@@ -660,10 +660,11 @@ export class InputController {
 
           // Auto-implement takes precedence over both approve-new-session and queued input
           if (planAutoSendContent) {
-            this.deps.getInputEl().value = planAutoSendContent;
-            this.sendMessage().catch((err: unknown) => {
-              this.deps.plugin.logger.scope('input').error('sendMessage failed unexpectedly', err);
-            });
+            this.autoResumeWith(planAutoSendContent);
+          } else if (turnMetadata.autoFollowUpText && !didCancelThisTurn && !planCompleted) {
+            // Cursor's one-shot AskUserQuestion answer, resumed as a follow-up — only when no plan
+            // completed, since each plan-approval outcome owns it (implement merges, revise/cancel hold).
+            this.autoResumeWith(turnMetadata.autoFollowUpText);
           } else {
             // approve-new-session: create fresh conversation and send plan content
             // Must be inside the invalidation guard — if the tab was closed or
@@ -672,10 +673,7 @@ export class InputController {
             if (planContent) {
               state.pendingNewSessionPlan = null;
               await conversationController.createNew();
-              this.deps.getInputEl().value = planContent;
-              this.sendMessage().catch((err: unknown) => {
-                this.deps.plugin.logger.scope('input').error('sendMessage failed unexpectedly', err);
-              });
+              this.autoResumeWith(planContent);
             } else if (shouldProcessQueuedMessage) {
               this.queuedMessages.processQueuedMessage();
             }
@@ -694,6 +692,15 @@ export class InputController {
     }
 
     return programmaticResult;
+  }
+
+  /** Auto-sends `content` as the next (resumed) turn — shared by plan auto-implement,
+   * approve-new-session, and Cursor's AskUserQuestion answer follow-up. */
+  private autoResumeWith(content: string): void {
+    this.deps.getInputEl().value = content;
+    this.sendMessage().catch((err: unknown) => {
+      this.deps.plugin.logger.scope('input').error('sendMessage failed unexpectedly', err);
+    });
   }
 
   /** Whether a previously-dispatched turn is available to retry. */

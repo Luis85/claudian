@@ -1,5 +1,5 @@
 import type { ProviderRegistration } from '../../core/providers/types';
-import { getClaudeWorkspaceServices } from './app/ClaudeWorkspaceServices';
+import { getClaudeWorkspaceServices } from './app/claudeWorkspaceAccess';
 import { InlineEditService as ClaudeInlineEditService } from './auxiliary/ClaudeInlineEditService';
 import { InstructionRefineService as ClaudeInstructionRefineService } from './auxiliary/ClaudeInstructionRefineService';
 import { TitleGenerationService as ClaudeTitleGenerationService } from './auxiliary/ClaudeTitleGenerationService';

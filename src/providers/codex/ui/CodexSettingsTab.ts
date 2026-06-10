@@ -8,7 +8,7 @@ import { renderEnvironmentSettingsSection } from '../../../features/settings/ui/
 import { t } from '../../../i18n/i18n';
 import { getHostnameKey } from '../../../utils/env';
 import { expandHomePath } from '../../../utils/path';
-import { getCodexWorkspaceServices } from '../app/CodexWorkspaceServices';
+import { getCodexWorkspaceServices } from '../app/codexWorkspaceAccess';
 import { resolveCodexModelSelection } from '../modelOptions';
 import { isWindowsStyleCliReference } from '../runtime/CodexBinaryLocator';
 import { getCodexProviderSettings, updateCodexProviderSettings } from '../settings';

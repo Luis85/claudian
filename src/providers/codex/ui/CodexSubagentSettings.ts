@@ -3,6 +3,7 @@ import { Modal, Notice, setIcon, Setting } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
 import type { ValidationError } from '../../../i18n/types';
+import { renderModalButtonRow, renderSettingsListItem } from '../../../shared/components/settingsListUI';
 import { confirmDelete } from '../../../shared/modals/ConfirmModal';
 import type { CodexSubagentStorage } from '../storage/CodexSubagentStorage';
 import { DEFAULT_CODEX_PRIMARY_MODEL } from '../types/models';
@@ -260,20 +261,13 @@ class CodexSubagentModal extends Modal {
     };
     this._triggerSave = doSave;
 
-    const buttonContainer = contentEl.createDiv({ cls: 'claudian-sp-modal-buttons' });
-
-    const cancelBtn = buttonContainer.createEl('button', {
-      text: 'Cancel',
-      cls: 'claudian-cancel-btn',
-    });
-    cancelBtn.addEventListener('click', () => this.close());
-
-    const saveBtn = buttonContainer.createEl('button', {
-      text: 'Save',
-      cls: 'claudian-save-btn',
-    });
-    saveBtn.addEventListener('click', () => {
-      void doSave();
+    renderModalButtonRow(contentEl, {
+      cls: 'claudian-sp-modal-buttons',
+      saveText: 'Save',
+      onCancel: () => this.close(),
+      onSave: () => {
+        void doSave();
+      },
     });
   }
 
@@ -338,54 +332,40 @@ export class CodexSubagentSettings {
   }
 
   private renderItem(listEl: HTMLElement, agent: CodexSubagentDefinition): void {
-    const itemEl = listEl.createDiv({ cls: 'claudian-sp-item' });
-    const infoEl = itemEl.createDiv({ cls: 'claudian-sp-info' });
-
-    const headerRow = infoEl.createDiv({ cls: 'claudian-sp-item-header' });
-    const nameEl = headerRow.createSpan({ cls: 'claudian-sp-item-name' });
-    nameEl.setText(agent.name);
+    const { headerRow } = renderSettingsListItem(listEl, {
+      name: agent.name,
+      description: agent.description,
+      actions: [
+        { icon: 'pencil', ariaLabel: 'Edit', onClick: () => this.openModal(agent) },
+        {
+          icon: 'trash-2',
+          ariaLabel: 'Delete',
+          danger: true,
+          onClick: () => {
+            void (async (): Promise<void> => {
+            if (!this.app) return;
+            const confirmed = await confirmDelete(
+              this.app,
+              `Delete subagent "${agent.name}"?`,
+            );
+            if (!confirmed) return;
+            try {
+              await this.storage.delete(agent);
+              await this.render();
+              this.onChanged?.();
+              new Notice(t('provider.codex.subagent.deleted', { name: agent.name }));
+            } catch {
+              new Notice(t('provider.codex.subagent.deleteFailed'));
+            }
+            })();
+          },
+        },
+      ],
+    });
 
     if (agent.model) {
       headerRow.createSpan({ text: agent.model, cls: 'claudian-slash-item-badge' });
     }
-
-    if (agent.description) {
-      const descEl = infoEl.createDiv({ cls: 'claudian-sp-item-desc' });
-      descEl.setText(agent.description);
-    }
-
-    const actionsEl = itemEl.createDiv({ cls: 'claudian-sp-item-actions' });
-
-    const editBtn = actionsEl.createEl('button', {
-      cls: 'claudian-settings-action-btn',
-      attr: { 'aria-label': 'Edit' },
-    });
-    setIcon(editBtn, 'pencil');
-    editBtn.addEventListener('click', () => this.openModal(agent));
-
-    const deleteBtn = actionsEl.createEl('button', {
-      cls: 'claudian-settings-action-btn claudian-settings-delete-btn',
-      attr: { 'aria-label': 'Delete' },
-    });
-    setIcon(deleteBtn, 'trash-2');
-    deleteBtn.addEventListener('click', () => {
-      void (async (): Promise<void> => {
-      if (!this.app) return;
-      const confirmed = await confirmDelete(
-        this.app,
-        `Delete subagent "${agent.name}"?`,
-      );
-      if (!confirmed) return;
-      try {
-        await this.storage.delete(agent);
-        await this.render();
-        this.onChanged?.();
-        new Notice(t('provider.codex.subagent.deleted', { name: agent.name }));
-      } catch {
-        new Notice(t('provider.codex.subagent.deleteFailed'));
-      }
-      })();
-    });
   }
 
   private openModal(existing: CodexSubagentDefinition | null): void {

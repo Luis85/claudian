@@ -32,6 +32,32 @@ function formatGenericLabel(id: string): string {
     .join(' ');
 }
 
+// GPT keeps its conventional hyphen ("GPT-5 Codex"); the others join with a
+// space ("Gemini 2.5 Pro", "Grok 4 Fast").
+const VERSIONED_FAMILIES: ReadonlyArray<{ family: string; joiner: string }> = [
+  { family: 'GPT', joiner: '-' },
+  { family: 'Gemini', joiner: ' ' },
+  { family: 'Grok', joiner: ' ' },
+];
+
+function formatVersionedFamilyLabel(lower: string, family: string, joiner: string): string | null {
+  const match = lower.match(new RegExp(`^${family.toLowerCase()}-?(\\d+(?:\\.\\d+)?)(?:-(.*))?$`));
+  if (!match) {
+    return null;
+  }
+  const prefix = `${family}${joiner}${match[1]}`;
+  const tail = match[2];
+  if (!tail) {
+    return prefix;
+  }
+  const tailLabel = tail
+    .split('-')
+    .filter(Boolean)
+    .map(titleCaseWord)
+    .join(' ');
+  return tailLabel ? `${prefix} ${tailLabel}` : prefix;
+}
+
 function formatClaudeLabel(lower: string): string | null {
   const family = lower.includes('opus')
     ? 'Opus'
@@ -73,49 +99,11 @@ export function formatCursorModelLabel(id: string): string {
     }
   }
 
-  const gptMatch = lower.match(/^gpt-?(\d+(?:\.\d+)?)(?:-(.*))?$/);
-  if (gptMatch) {
-    const version = gptMatch[1];
-    const tail = gptMatch[2];
-    if (!tail) {
-      return `GPT-${version}`;
+  for (const { family, joiner } of VERSIONED_FAMILIES) {
+    const label = formatVersionedFamilyLabel(lower, family, joiner);
+    if (label) {
+      return label;
     }
-    const tailLabel = tail
-      .split('-')
-      .filter(Boolean)
-      .map(titleCaseWord)
-      .join(' ');
-    return tailLabel ? `GPT-${version} ${tailLabel}` : `GPT-${version}`;
-  }
-
-  const geminiMatch = lower.match(/^gemini-?(\d+(?:\.\d+)?)(?:-(.*))?$/);
-  if (geminiMatch) {
-    const version = geminiMatch[1];
-    const tail = geminiMatch[2];
-    if (!tail) {
-      return `Gemini ${version}`;
-    }
-    const tailLabel = tail
-      .split('-')
-      .filter(Boolean)
-      .map(titleCaseWord)
-      .join(' ');
-    return tailLabel ? `Gemini ${version} ${tailLabel}` : `Gemini ${version}`;
-  }
-
-  const grokMatch = lower.match(/^grok-?(\d+(?:\.\d+)?)(?:-(.*))?$/);
-  if (grokMatch) {
-    const version = grokMatch[1];
-    const tail = grokMatch[2];
-    if (!tail) {
-      return `Grok ${version}`;
-    }
-    const tailLabel = tail
-      .split('-')
-      .filter(Boolean)
-      .map(titleCaseWord)
-      .join(' ');
-    return tailLabel ? `Grok ${version} ${tailLabel}` : `Grok ${version}`;
   }
 
   if (lower === 'sonic' || lower.startsWith('sonic-')) {

@@ -19,6 +19,7 @@ Background: `docs/tech-debt/2026-06-07-agentic-quality-gates.md`.
 |------|---------|--------|-----------------|
 | Lint (errors) | `npm run lint` | `lint` | Error-level rules block CI. Warnings print but do **not** fail — see "Lint severity policy" below. |
 | LOC guard | `npm run check:loc` | `lint` | New `src/**/*.ts` files above the cap; grandfathered hotspots that grow; stale baseline entries. |
+| Quality ratchet | `npm run check:quality` | `quality` | A fallow metric (dead code, duplication, complexity, maintainability) regressing past `scripts/quality-baseline.json`. See "Fallow quality ratchet" below. |
 | Typecheck | `npm run typecheck` | `typecheck` | Type regressions. |
 | Tests | `npm run test` | `test` (Linux + Windows) | Behavior regressions on both path/spawn targets. |
 | Coverage floors | `npm run test:coverage` | `coverage` | Coverage dropping below `coverageThreshold`. |
@@ -35,12 +36,12 @@ verified (aligned 2026-06-09; see
 Run the whole local set before pushing:
 
 ```bash
-npm run lint && npm run check:loc && npm run typecheck && npm run test && npm run build && npm run check:artifacts
+npm run lint && npm run check:loc && npm run check:quality && npm run typecheck && npm run test && npm run build && npm run check:artifacts
 ```
 
 Optional, before opening a PR — surfaces fallow findings on changed files vs
-`main` so review starts with signal already collected. Non-blocking; see
-"Fallow (monitoring, not a gate)" below.
+`main` so review starts with signal already collected. Advisory; the blocking
+counterpart is `npm run check:quality` — see "Fallow quality ratchet" below.
 
 ```bash
 npm run quality:audit
@@ -121,31 +122,56 @@ existing `test` job — no new tooling:
   per-provider `name`/`blurb`/`cli` list should move to the registry — see
   `docs/tech-debt/2026-06-07-firstrun-banner-provider-list.md`).
 
-## Fallow (monitoring, not a gate)
+## Fallow quality ratchet
 
 `fallow` is a deterministic codebase-intelligence layer for TypeScript / JavaScript
 ([fallow-rs/fallow](https://github.com/fallow-rs/fallow)). It surfaces dead code,
 duplication, complexity hotspots, and architecture-boundary violations as
-**structured signal** for humans and agents. Findings are **non-blocking** today —
-same posture as the perf suite — so the bar moves without day-one CI churn.
+**structured signal** for humans and agents.
 
 Config lives in `.fallowrc.json` at the repo root. Cache and intermediate output
-go to `.fallow/` (already in `.gitignore`).
+go to `.fallow/` (already in `.gitignore`). `src/style/**` is excluded (the CSS
+files are concatenated by `scripts/build-css.mjs`, outside the TS import graph),
+and `tslib` (`importHelpers` runtime for ts-jest) / `electron` (provided by
+Obsidian's runtime) are declared in `ignoreDependencies`.
+
+### The gate
+
+`scripts/check-quality.mjs` (CI job `quality`) runs `fallow --format json` and
+enforces a ratchet against `scripts/quality-baseline.json` — the same policy as
+the LOC guard, applied to whole-repo metrics:
+
+- **Counters may shrink but not grow**: dead-code issues, clone groups,
+  duplicated lines, functions above the complexity threshold, critical-severity
+  complexity findings.
+- **Floors may rise but not drop**: average maintainability.
+- When a PR improves a metric, lock the gain in:
+  `npm run check:quality -- --update` and commit the baseline diff in the same
+  PR. The guard prints a reminder when unlocked improvements exist.
+- A deliberate regression (rare, reviewed trade-off) bumps the baseline the
+  same way, justified in the PR.
+
+The wrapper exists because fallow's own gate flags (`--fail-on-regression`,
+`--min-score`) did not reliably drive the process exit code as of 2.91; the
+JSON report is stable, so the ratchet parses that instead.
+
+### Advisory commands
 
 | Command | What it does |
 |---------|--------------|
+| `npm run check:quality` | the CI ratchet gate (add `-- --update` to rewrite the baseline) |
 | `npm run quality` | dead-code + dupes + health in one pass |
 | `npm run quality:audit` | changed-files review vs `main` (use before opening a PR) |
 | `npm run quality:health` | maintainability score, hotspots, prioritized refactor targets |
 | `npm run quality:dead-code` | unused exports / files / deps only |
 | `npm run quality:dupes` | clone families across `src/**` (tests excluded by config) |
 
-Baseline on 2026-06-07: 72 dead-code issues, 8 clone groups, 800 functions above
-the complexity threshold, maintainability 90.2 (good). Use these as the trend
-zero — treat regressions as PR-review signal, not as a merge block. If a finding
-proves load-bearing, promote the specific check (not the whole tool) to an
-`error`-tier gate the same way function-health rules will graduate from the lint
-backlog.
+History: the 2026-06-07 monitoring-only baseline was 72 dead-code issues,
+8 clone groups, 800 functions above the complexity threshold, maintainability
+90.2. On 2026-06-09 the false positives were configured away (CSS files,
+provided deps), the remaining real findings (import cycles, clone groups) were
+fixed, and the ratchet went live — `scripts/quality-baseline.json` is the
+authoritative current bar.
 
 ## Next slices
 
@@ -161,13 +187,14 @@ Tracked here so the direction is explicit.
 3. **Perf-gate wiring.** `tests/perf/*` are monitoring-only today
    (`docs/tech-debt/2026-06-07-perf-gates-blind-spots.md`); decide which
    scaling assertions graduate into a blocking job.
-4. **Graduate specific fallow checks.** Today the whole `fallow` layer is
-   non-blocking. As individual checks prove load-bearing in review — e.g.
-   no-new-dead-exports on changed files, no-new-clone-families above a size,
-   maintainability-score floor — promote that single check to an `error`-tier
-   gate (own CI job calling `fallow <subcommand> --fail-on …`). Same posture as
-   the lint warn-tier ratchet: tighten one rule at a time so the gain can't
-   regress without big-bang risk.
+4. **Tighten the quality-ratchet floors.** The ratchet freezes today's debt;
+   the complexity backlog (`complexFunctions`, `criticalComplexity` in
+   `scripts/quality-baseline.json`) still has to be burned down hotspot by
+   hotspot (`npm run quality:health` prioritizes targets). Each refactor PR
+   that moves a metric should commit the tightened baseline so the gain is
+   locked in.
 
 Done: provider-boundary regression tests and the no-new-provider-hardcoded-list
 guard (remediation item 5 of the tech debt) — see "Provider-boundary guards".
+Done 2026-06-09: fallow graduated from monitoring to a blocking ratchet gate
+(`npm run check:quality`, CI job `quality`) — see "Fallow quality ratchet".

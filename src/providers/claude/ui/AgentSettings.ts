@@ -7,6 +7,7 @@ import type {
 } from '../../../core/providers/types';
 import type { AgentDefinition } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
+import { renderSettingsListItem } from '../../../shared/components/settingsListUI';
 import { confirmDelete } from '../../../shared/modals/ConfirmModal';
 import { validateAgentName } from '../../../utils/agent';
 
@@ -271,48 +272,36 @@ export class AgentSettings {
   }
 
   private renderAgentItem(listEl: HTMLElement, agent: AgentDefinition): void {
-    const itemEl = listEl.createDiv({ cls: 'claudian-sp-item' });
-
-    const infoEl = itemEl.createDiv({ cls: 'claudian-sp-info' });
-
-    const headerRow = infoEl.createDiv({ cls: 'claudian-sp-item-header' });
-
-    const nameEl = headerRow.createSpan({ cls: 'claudian-sp-item-name' });
-    nameEl.setText(agent.name);
-
-    if (agent.description) {
-      const descEl = infoEl.createDiv({ cls: 'claudian-sp-item-desc' });
-      descEl.setText(agent.description);
-    }
-
-    const actionsEl = itemEl.createDiv({ cls: 'claudian-sp-item-actions' });
-
-    const editBtn = actionsEl.createEl('button', {
-      cls: 'claudian-settings-action-btn',
-      attr: { 'aria-label': t('common.edit') },
-    });
-    setIcon(editBtn, 'pencil');
-    editBtn.addEventListener('click', () => { void this.openAgentModal(agent); });
-
-    const deleteBtn = actionsEl.createEl('button', {
-      cls: 'claudian-settings-action-btn claudian-settings-delete-btn',
-      attr: { 'aria-label': t('common.delete') },
-    });
-    setIcon(deleteBtn, 'trash-2');
-    deleteBtn.addEventListener('click', () => {
-      void (async (): Promise<void> => {
-      const confirmed = await confirmDelete(
-        this.app,
-        t('settings.subagents.deleteConfirm', { name: agent.name })
-      );
-      if (!confirmed) return;
-      try {
-        await this.deleteAgent(agent);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        new Notice(t('settings.subagents.deleteFailed', { message }));
-      }
-      })();
+    renderSettingsListItem(listEl, {
+      name: agent.name,
+      description: agent.description,
+      actions: [
+        {
+          icon: 'pencil',
+          ariaLabel: t('common.edit'),
+          onClick: () => { void this.openAgentModal(agent); },
+        },
+        {
+          icon: 'trash-2',
+          ariaLabel: t('common.delete'),
+          danger: true,
+          onClick: () => {
+            void (async (): Promise<void> => {
+            const confirmed = await confirmDelete(
+              this.app,
+              t('settings.subagents.deleteConfirm', { name: agent.name })
+            );
+            if (!confirmed) return;
+            try {
+              await this.deleteAgent(agent);
+            } catch (err) {
+              const message = err instanceof Error ? err.message : 'Unknown error';
+              new Notice(t('settings.subagents.deleteFailed', { message }));
+            }
+            })();
+          },
+        },
+      ],
     });
   }
 

@@ -103,6 +103,13 @@ export interface ChatTurnMetadata {
   assistantMessageId?: string;
   wasSent?: boolean;
   planCompleted?: boolean;
+  /**
+   * Text the controller should auto-send as a resumed follow-up turn once this
+   * turn completes. Cursor uses it to deliver an AskUserQuestion answer back to
+   * the agent: its one-shot CLI cannot answer the tool in-process, so the
+   * collected answer continues the conversation as the next (resumed) turn.
+   */
+  autoFollowUpText?: string;
 }
 
 export interface AutoTurnResult {

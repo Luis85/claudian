@@ -1,6 +1,5 @@
 import { CachedCliResolver } from '../../../core/providers/CachedCliResolver';
 import type { ProviderCommandCatalog } from '../../../core/providers/commands/ProviderCommandCatalog';
-import { ProviderWorkspaceRegistry } from '../../../core/providers/ProviderWorkspaceRegistry';
 import type {
   ProviderCliResolver,
   ProviderWorkspaceRegistration,
@@ -68,11 +67,3 @@ export const codexWorkspaceRegistration: ProviderWorkspaceRegistration<CodexWork
     homeAdapter,
   ),
 };
-
-export function maybeGetCodexWorkspaceServices(): CodexWorkspaceServices | null {
-  return ProviderWorkspaceRegistry.getServices('codex') as CodexWorkspaceServices | null;
-}
-
-export function getCodexWorkspaceServices(): CodexWorkspaceServices {
-  return ProviderWorkspaceRegistry.requireServices('codex') as CodexWorkspaceServices;
-}

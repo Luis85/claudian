@@ -1,10 +1,10 @@
 import { TOOL_GLOB, TOOL_SUBAGENT } from '@/core/tools/toolNames';
 import type { ToolCallInfo } from '@/core/types';
+import { parseCursorSubagentType } from '@/providers/cursor/runtime/cursorTaskPayload';
 import { CursorTaskResultInterpreter } from '@/providers/cursor/runtime/CursorTaskResultInterpreter';
 import {
   attachCursorSubagentToTaskToolCall,
   extractCursorNestedToolCalls,
-  parseCursorSubagentType,
 } from '@/providers/cursor/runtime/cursorTaskSubagent';
 import {
   normalizeCursorToolCompletion,
