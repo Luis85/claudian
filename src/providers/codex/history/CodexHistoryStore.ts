@@ -13,6 +13,25 @@ import {
   normalizeCodexToolResult,
   parseCodexArguments,
 } from '../normalization/codexToolNormalization';
+import type { CodexItem } from './codexLegacyItemMapping';
+import {
+  processLegacyItem,
+  processLegacyItemInModernContext,
+} from './codexLegacyItemMapping';
+import type { CodexTurnState, PersistedParseContext } from './codexTurnState';
+import {
+  appendUniqueChunk,
+  appendUserChunk,
+  closeAssistantBubble,
+  createPersistedParseContext,
+  ensureAssistantBubble,
+  ensureTurn,
+  findPersistedToolCallById,
+  flushTurn,
+  newTurn,
+  nextTurnId,
+  pushToolInvocation,
+} from './codexTurnState';
 
 interface CodexEvent {
   type: string;
@@ -26,21 +45,6 @@ interface CodexEvent {
   };
   error?: { message: string };
   message?: string;
-}
-
-interface CodexItem {
-  id: string;
-  type: string;
-  text?: string;
-  command?: string;
-  aggregated_output?: string;
-  exit_code?: number;
-  status?: string;
-  changes?: Array<{ path: string; kind: string }>;
-  query?: string;
-  message?: string;
-  server?: string;
-  tool?: string;
 }
 
 interface PersistedMessagePart {
@@ -123,34 +127,6 @@ interface ParsedSessionRecord {
   payload?: PersistedPayload;
 }
 
-// ---------------------------------------------------------------------------
-// Multi-bubble turn model
-// ---------------------------------------------------------------------------
-
-interface CodexAssistantBubble {
-  contentChunks: string[];
-  thinkingChunks: string[];
-  toolCalls: ToolCallInfo[];
-  toolIndexesById: Map<string, number>;
-  contentBlocks: ContentBlock[];
-  startedAt: number;
-  lastEventAt: number;
-  interrupted: boolean;
-}
-
-interface CodexTurnState {
-  id: string;
-  serverTurnId?: string;
-  startedAt: number;
-  completedAt?: number;
-  completed?: boolean;
-  lastEventAt: number;
-  userTimestamp?: number;
-  userChunks: string[];
-  assistantBubbles: CodexAssistantBubble[];
-  activeBubbleIndex: number | null;
-}
-
 type PersistedPayload =
   | PersistedMessagePayload
   | PersistedReasoningPayload
@@ -161,200 +137,6 @@ type PersistedPayload =
   | PersistedCompactionPayload
   | PersistedEventPayload
   | undefined;
-
-// ---------------------------------------------------------------------------
-// Turn/bubble lifecycle helpers
-// ---------------------------------------------------------------------------
-
-function newBubble(timestamp: number): CodexAssistantBubble {
-  return {
-    contentChunks: [],
-    thinkingChunks: [],
-    toolCalls: [],
-    toolIndexesById: new Map(),
-    contentBlocks: [],
-    startedAt: timestamp,
-    lastEventAt: timestamp,
-    interrupted: false,
-  };
-}
-
-function newTurnState(id: string, timestamp: number): CodexTurnState {
-  return {
-    id,
-    startedAt: timestamp,
-    lastEventAt: timestamp,
-    userChunks: [],
-    assistantBubbles: [],
-    activeBubbleIndex: null,
-  };
-}
-
-function createPersistedParseContext(): PersistedParseContext {
-  return {
-    turns: new Map(),
-    turnOrder: [],
-    currentTurnId: null,
-    toolCallToTurn: new Map(),
-    suppressedToolOutputIds: new Set(),
-    terminalSessionToCommandId: new Map(),
-    stdinCallToCommandId: new Map(),
-    turnCounter: 0,
-  };
-}
-
-function ensureTurn(
-  turns: Map<string, CodexTurnState>,
-  turnOrder: string[],
-  preferredTurnId: string,
-  currentTurnId: string | null,
-  timestamp: number,
-): CodexTurnState {
-  const id = currentTurnId ?? preferredTurnId;
-  const existing = turns.get(id);
-  if (existing) {
-    if (timestamp > 0 && timestamp > existing.lastEventAt) {
-      existing.lastEventAt = timestamp;
-    }
-    return existing;
-  }
-
-  const turn = newTurnState(id, timestamp);
-  turns.set(id, turn);
-  turnOrder.push(id);
-  return turn;
-}
-
-function ensureAssistantBubble(turn: CodexTurnState, timestamp: number): CodexAssistantBubble {
-  if (turn.activeBubbleIndex !== null) {
-    const bubble = turn.assistantBubbles[turn.activeBubbleIndex];
-    if (timestamp > 0 && timestamp > bubble.lastEventAt) {
-      bubble.lastEventAt = timestamp;
-    }
-    return bubble;
-  }
-
-  const bubble = newBubble(timestamp);
-  turn.assistantBubbles.push(bubble);
-  turn.activeBubbleIndex = turn.assistantBubbles.length - 1;
-  return bubble;
-}
-
-function closeAssistantBubble(turn: CodexTurnState): void {
-  turn.activeBubbleIndex = null;
-}
-
-function pushToolInvocation(bubble: CodexAssistantBubble, toolCall: ToolCallInfo): void {
-  const existingIndex = bubble.toolIndexesById.get(toolCall.id);
-  if (existingIndex !== undefined) {
-    bubble.toolCalls[existingIndex] = toolCall;
-    return;
-  }
-
-  bubble.toolIndexesById.set(toolCall.id, bubble.toolCalls.length);
-  bubble.toolCalls.push(toolCall);
-  bubble.contentBlocks.push({ type: 'tool_use', toolId: toolCall.id });
-}
-
-function appendUniqueChunk(chunks: string[], value: string): void {
-  const trimmed = value.trim();
-  if (!trimmed) return;
-  if (chunks[chunks.length - 1] === trimmed) return;
-  chunks.push(trimmed);
-}
-
-function replaceLatestChunk(chunks: string[], value: string): void {
-  const trimmed = value.trim();
-  if (!trimmed) return;
-  chunks.length = 0;
-  chunks.push(trimmed);
-}
-
-function appendUserChunk(turn: CodexTurnState, value: string, timestamp: number): void {
-  const chunkCountBefore = turn.userChunks.length;
-  appendUniqueChunk(turn.userChunks, value);
-
-  if (turn.userChunks.length > chunkCountBefore && !turn.userTimestamp && timestamp > 0) {
-    turn.userTimestamp = timestamp;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Legacy TurnAccumulator — kept for the `event` wrapper format
-// ---------------------------------------------------------------------------
-
-interface TurnAccumulator {
-  assistantText: string;
-  thinkingText: string;
-  toolCalls: ToolCallInfo[];
-  contentBlocks: ContentBlock[];
-  interrupted: boolean;
-  timestamp: number;
-}
-
-function newTurn(timestamp = 0): TurnAccumulator {
-  return {
-    assistantText: '',
-    thinkingText: '',
-    toolCalls: [],
-    contentBlocks: [],
-    interrupted: false,
-    timestamp,
-  };
-}
-
-function flushTurn(turn: TurnAccumulator, messages: ChatMessage[], msgIndex: number): number {
-  if (
-    !turn.assistantText &&
-    !turn.thinkingText &&
-    turn.toolCalls.length === 0
-  ) {
-    return msgIndex;
-  }
-
-  const msg: ChatMessage = {
-    id: `codex-msg-${msgIndex}`,
-    role: 'assistant',
-    content: turn.assistantText,
-    timestamp: turn.timestamp || Date.now(),
-    toolCalls: turn.toolCalls.length > 0 ? turn.toolCalls : undefined,
-    contentBlocks: turn.contentBlocks.length > 0 ? turn.contentBlocks : undefined,
-  };
-
-  if (turn.interrupted) {
-    msg.isInterrupt = true;
-  }
-
-  messages.push(msg);
-  return msgIndex + 1;
-}
-
-function setTextBlock(turn: TurnAccumulator, content: string): void {
-  const index = turn.contentBlocks.findIndex(block => block.type === 'text');
-  if (index === -1) {
-    turn.contentBlocks.push({ type: 'text', content });
-    return;
-  }
-
-  turn.contentBlocks[index] = { type: 'text', content };
-}
-
-function setThinkingBlock(turn: TurnAccumulator, content: string): void {
-  const normalized = content.trim();
-  if (!normalized) {
-    return;
-  }
-
-  turn.thinkingText = normalized;
-
-  const index = turn.contentBlocks.findIndex(block => block.type === 'thinking');
-  if (index === -1) {
-    turn.contentBlocks.push({ type: 'thinking', content: normalized });
-    return;
-  }
-
-  turn.contentBlocks[index] = { type: 'thinking', content: normalized };
-}
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -451,134 +233,8 @@ function extractReasoningText(payload: PersistedReasoningPayload | PersistedEven
 }
 
 // ---------------------------------------------------------------------------
-// Legacy event wrapper processing (kept as-is)
-// ---------------------------------------------------------------------------
-
-function processLegacyItem(
-  eventType: string,
-  item: CodexItem,
-  turn: TurnAccumulator,
-): void {
-  switch (item.type) {
-    case 'agent_message':
-      if (eventType === 'item.completed' || eventType === 'item.updated') {
-        if (item.text) {
-          turn.assistantText = item.text;
-          setTextBlock(turn, item.text);
-        }
-      }
-      break;
-
-    case 'reasoning':
-      if (eventType === 'item.completed' || eventType === 'item.updated') {
-        if (item.text) {
-          setThinkingBlock(turn, item.text);
-        }
-      }
-      break;
-
-    case 'command_execution':
-      if (eventType === 'item.started') {
-        turn.toolCalls.push({
-          id: item.id,
-          name: normalizeCodexToolName(item.type),
-          input: normalizeCodexToolInput(item.type, { command: item.command ?? '' }),
-          status: 'running',
-        });
-        turn.contentBlocks.push({ type: 'tool_use', toolId: item.id });
-      } else if (eventType === 'item.completed') {
-        const tc = turn.toolCalls.find(tool => tool.id === item.id);
-        if (tc) {
-          const rawOutput = item.aggregated_output ?? '';
-          tc.result = normalizeCodexToolResult(tc.name, rawOutput);
-          tc.status = item.exit_code === 0 ? 'completed' : 'error';
-        }
-      }
-      break;
-
-    case 'file_change': {
-      const changes = item.changes ?? [];
-      if (eventType === 'item.started' || eventType === 'item.completed') {
-        const existing = turn.toolCalls.find(tool => tool.id === item.id);
-        if (!existing) {
-          const paths = changes.map(change => `${change.kind}: ${change.path}`).join(', ');
-          turn.toolCalls.push({
-            id: item.id,
-            name: normalizeCodexToolName('file_change'),
-            input: { changes },
-            status: item.status === 'completed' ? 'completed' : 'error',
-            result: paths ? `Applied: ${paths}` : 'Applied',
-          });
-          turn.contentBlocks.push({ type: 'tool_use', toolId: item.id });
-        } else if (eventType === 'item.completed') {
-          existing.status = item.status === 'completed' ? 'completed' : 'error';
-        }
-      }
-      break;
-    }
-
-    case 'web_search':
-      if (eventType === 'item.started') {
-        turn.toolCalls.push({
-          id: item.id,
-          name: normalizeCodexToolName(item.type),
-          input: normalizeCodexToolInput(item.type, { query: item.query ?? '' }),
-          status: 'running',
-        });
-        turn.contentBlocks.push({ type: 'tool_use', toolId: item.id });
-      } else if (eventType === 'item.completed') {
-        const tc = turn.toolCalls.find(tool => tool.id === item.id);
-        if (tc) {
-          tc.result = 'Search complete';
-          tc.status = 'completed';
-        }
-      }
-      break;
-
-    case 'mcp_tool_call':
-      if (eventType === 'item.started') {
-        const server = item.server ?? '';
-        const tool = item.tool ?? '';
-        turn.toolCalls.push({
-          id: item.id,
-          name: `mcp__${server}__${tool}`,
-          input: {},
-          status: 'running',
-        });
-        turn.contentBlocks.push({ type: 'tool_use', toolId: item.id });
-      } else if (eventType === 'item.completed') {
-        const tc = turn.toolCalls.find(tool => tool.id === item.id);
-        if (tc) {
-          tc.status = item.status === 'completed' ? 'completed' : 'error';
-          tc.result = item.status === 'completed' ? 'Completed' : 'Failed';
-        }
-      }
-      break;
-
-    default:
-      break;
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Persisted-format (response_item) processing — with bubble model
 // ---------------------------------------------------------------------------
-
-interface PersistedParseContext {
-  turns: Map<string, CodexTurnState>;
-  turnOrder: string[];
-  currentTurnId: string | null;
-  toolCallToTurn: Map<string, { turnId: string; bubbleIndex: number }>;
-  suppressedToolOutputIds: Set<string>;
-  terminalSessionToCommandId: Map<string, string>;
-  stdinCallToCommandId: Map<string, string>;
-  turnCounter: number;
-}
-
-function nextTurnId(ctx: PersistedParseContext): string {
-  ctx.turnCounter += 1;
-  return `turn-${ctx.turnCounter}`;
-}
 
 function processPersistedToolCall(
   payload: PersistedToolCallPayload,
@@ -688,20 +344,6 @@ function processPersistedToolOutput(
     status: isCodexToolOutputError(rawOutput) ? 'error' : 'completed',
     result: normalizedResult,
   });
-}
-
-function findPersistedToolCallById(ctx: PersistedParseContext, callId: string): ToolCallInfo | null {
-  const origin = ctx.toolCallToTurn.get(callId);
-  if (!origin) {
-    return null;
-  }
-
-  const turn = ctx.turns.get(origin.turnId);
-  if (!turn || origin.bubbleIndex >= turn.assistantBubbles.length) {
-    return null;
-  }
-
-  return turn.assistantBubbles[origin.bubbleIndex].toolCalls.find(tool => tool.id === callId) ?? null;
 }
 
 function readTerminalSessionIdArgument(input: Record<string, unknown>): string | undefined {
@@ -1407,177 +1049,6 @@ function flushBubbleTurnsGrouped(
   }
 
   return result;
-}
-
-function findToolCallOrigin(
-  ctx: PersistedParseContext,
-  callId: string,
-): ToolCallInfo | null {
-  const origin = ctx.toolCallToTurn.get(callId);
-  if (!origin) {
-    return null;
-  }
-
-  const turn = ctx.turns.get(origin.turnId);
-  if (!turn || origin.bubbleIndex >= turn.assistantBubbles.length) {
-    return null;
-  }
-
-  return turn.assistantBubbles[origin.bubbleIndex].toolCalls.find(tool => tool.id === callId) ?? null;
-}
-
-function trackToolCallOrigin(
-  ctx: PersistedParseContext,
-  callId: string,
-  turn: CodexTurnState,
-): void {
-  ctx.toolCallToTurn.set(callId, {
-    turnId: turn.id,
-    bubbleIndex: turn.activeBubbleIndex!,
-  });
-}
-
-function ensureModernLegacyToolCall(
-  ctx: PersistedParseContext,
-  timestamp: number,
-  item: CodexItem,
-  build: () => ToolCallInfo,
-): ToolCallInfo {
-  const existing = findToolCallOrigin(ctx, item.id);
-  if (existing) {
-    return existing;
-  }
-
-  const turn = ensureTurn(ctx.turns, ctx.turnOrder, nextTurnId(ctx), ctx.currentTurnId, timestamp);
-  const bubble = ensureAssistantBubble(turn, timestamp);
-  const toolCall = build();
-  pushToolInvocation(bubble, toolCall);
-  trackToolCallOrigin(ctx, item.id, turn);
-  return toolCall;
-}
-
-function processLegacyItemInModernContext(
-  eventType: string,
-  item: CodexItem,
-  timestamp: number,
-  ctx: PersistedParseContext,
-): void {
-  switch (item.type) {
-    case 'agent_message': {
-      if ((eventType === 'item.updated' || eventType === 'item.completed') && item.text) {
-        const turn = ensureTurn(ctx.turns, ctx.turnOrder, nextTurnId(ctx), ctx.currentTurnId, timestamp);
-        const bubble = ensureAssistantBubble(turn, timestamp);
-        replaceLatestChunk(bubble.contentChunks, item.text);
-      }
-      break;
-    }
-
-    case 'reasoning': {
-      if ((eventType === 'item.updated' || eventType === 'item.completed') && item.text) {
-        const turn = ensureTurn(ctx.turns, ctx.turnOrder, nextTurnId(ctx), ctx.currentTurnId, timestamp);
-        const bubble = ensureAssistantBubble(turn, timestamp);
-        replaceLatestChunk(bubble.thinkingChunks, item.text);
-      }
-      break;
-    }
-
-    case 'command_execution': {
-      if (eventType === 'item.started') {
-        ensureModernLegacyToolCall(ctx, timestamp, item, () => ({
-          id: item.id,
-          name: normalizeCodexToolName(item.type),
-          input: normalizeCodexToolInput(item.type, { command: item.command ?? '' }),
-          status: 'running',
-        }));
-        break;
-      }
-
-      if (eventType === 'item.completed') {
-        const toolCall = ensureModernLegacyToolCall(ctx, timestamp, item, () => ({
-          id: item.id,
-          name: normalizeCodexToolName(item.type),
-          input: normalizeCodexToolInput(item.type, { command: item.command ?? '' }),
-          status: 'running',
-        }));
-        const rawOutput = item.aggregated_output ?? '';
-        toolCall.result = normalizeCodexToolResult(toolCall.name, rawOutput);
-        toolCall.status = item.exit_code === 0 ? 'completed' : 'error';
-      }
-      break;
-    }
-
-    case 'file_change': {
-      if (eventType !== 'item.started' && eventType !== 'item.completed') {
-        break;
-      }
-
-      const changes = item.changes ?? [];
-      const toolCall = ensureModernLegacyToolCall(ctx, timestamp, item, () => ({
-        id: item.id,
-        name: normalizeCodexToolName('file_change'),
-        input: { changes },
-        status: 'running',
-      }));
-
-      if (eventType === 'item.completed') {
-        const paths = changes.map(change => `${change.kind}: ${change.path}`).join(', ');
-        toolCall.result = paths ? `Applied: ${paths}` : 'Applied';
-        toolCall.status = item.status === 'completed' ? 'completed' : 'error';
-      }
-      break;
-    }
-
-    case 'web_search': {
-      if (eventType === 'item.started') {
-        ensureModernLegacyToolCall(ctx, timestamp, item, () => ({
-          id: item.id,
-          name: normalizeCodexToolName(item.type),
-          input: normalizeCodexToolInput(item.type, { query: item.query ?? '' }),
-          status: 'running',
-        }));
-        break;
-      }
-
-      if (eventType === 'item.completed') {
-        const toolCall = ensureModernLegacyToolCall(ctx, timestamp, item, () => ({
-          id: item.id,
-          name: normalizeCodexToolName(item.type),
-          input: normalizeCodexToolInput(item.type, { query: item.query ?? '' }),
-          status: 'running',
-        }));
-        toolCall.result = 'Search complete';
-        toolCall.status = 'completed';
-      }
-      break;
-    }
-
-    case 'mcp_tool_call': {
-      if (eventType === 'item.started') {
-        ensureModernLegacyToolCall(ctx, timestamp, item, () => ({
-          id: item.id,
-          name: `mcp__${item.server ?? ''}__${item.tool ?? ''}`,
-          input: {},
-          status: 'running',
-        }));
-        break;
-      }
-
-      if (eventType === 'item.completed') {
-        const toolCall = ensureModernLegacyToolCall(ctx, timestamp, item, () => ({
-          id: item.id,
-          name: `mcp__${item.server ?? ''}__${item.tool ?? ''}`,
-          input: {},
-          status: 'running',
-        }));
-        toolCall.status = item.status === 'completed' ? 'completed' : 'error';
-        toolCall.result = item.status === 'completed' ? 'Completed' : 'Failed';
-      }
-      break;
-    }
-
-    default:
-      break;
-  }
 }
 
 function processLegacyEventInModernContext(

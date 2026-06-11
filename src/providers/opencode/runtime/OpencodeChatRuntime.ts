@@ -12,22 +12,18 @@ import type {
   ProviderCapabilities,
 } from '../../../core/providers/types';
 import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
+import type { RuntimeHost } from '../../../core/runtime/RuntimeHost';
 import type {
-  ApprovalCallback,
-  AskUserQuestionCallback,
-  AutoTurnCallback,
   ChatRuntimeEnsureReadyOptions,
   ChatRuntimeQueryOptions,
   ChatTurnMetadata,
   ChatTurnRequest,
   PreparedChatTurn,
   SessionUpdateResult,
-  SubagentRuntimeState,
 } from '../../../core/runtime/types';
 import type {
   ChatMessage,
   Conversation,
-  ExitPlanModeCallback,
   SlashCommand,
   StreamChunk,
   ToolCallInfo,
@@ -149,7 +145,6 @@ export class OpencodeChatRuntime implements ChatRuntime {
   readonly providerId = 'opencode' as const;
 
   private activeTurn: ActiveTurn | null = null;
-  private approvalCallback: ApprovalCallback | null = null;
   private connection: AcpClientConnection | null = null;
   private contextUsage: AcpUsageUpdate | null = null;
   private currentDatabasePath: string | null = null;
@@ -163,7 +158,6 @@ export class OpencodeChatRuntime implements ChatRuntime {
   private currentTurnSawAssistantContent = false;
   private currentTurnMetadata: ChatTurnMetadata = {};
   private loadedSessionId: string | null = null;
-  private permissionModeSyncCallback: ((mode: string) => void) | null = null;
   private process: AcpSubprocess | null = null;
   private promptUsage: AcpUsage | null = null;
   private readonly readyListeners: Array<(ready: boolean) => void> = [];
@@ -180,6 +174,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
 
   constructor(
     private readonly plugin: PluginContext,
+    private readonly host: RuntimeHost,
   ) {}
 
   getCapabilities(): Readonly<ProviderCapabilities> {
@@ -525,24 +520,6 @@ export class OpencodeChatRuntime implements ChatRuntime {
 
   // rewind() omitted — Opencode does not support rewind
   // (supportsRewind: false). Callers gate on capability; ADR-0001 Phase 2.
-
-  setApprovalCallback(callback: ApprovalCallback | null): void {
-    this.approvalCallback = callback;
-  }
-
-  setApprovalDismisser(_dismisser: (() => void) | null): void {}
-
-  setAskUserQuestionCallback(_callback: AskUserQuestionCallback | null): void {}
-
-  setExitPlanModeCallback(_callback: ExitPlanModeCallback | null): void {}
-
-  setPermissionModeSyncCallback(callback: ((sdkMode: string) => void) | null): void {
-    this.permissionModeSyncCallback = callback;
-  }
-
-  setSubagentHookProvider(_getState: () => SubagentRuntimeState): void {}
-
-  setAutoTurnCallback(_callback: AutoTurnCallback | null): void {}
 
   consumeTurnMetadata(): ChatTurnMetadata {
     const metadata = this.currentTurnMetadata;
@@ -1074,12 +1051,12 @@ export class OpencodeChatRuntime implements ChatRuntime {
 
   private emitPermissionModeSync(modeId: string): void {
     const permissionMode = resolvePermissionModeForManagedOpencodeMode(modeId);
-    if (!permissionMode || !this.permissionModeSyncCallback) {
+    if (!permissionMode) {
       return;
     }
 
     try {
-      this.permissionModeSyncCallback(permissionMode);
+      this.host.permissionModeSync(permissionMode);
     } catch {
       // Non-critical UI sync callback.
     }
@@ -1230,13 +1207,9 @@ export class OpencodeChatRuntime implements ChatRuntime {
   private async handlePermissionRequest(
     request: AcpRequestPermissionRequest,
   ): Promise<AcpRequestPermissionResponse> {
-    if (!this.approvalCallback) {
-      return { outcome: { outcome: 'cancelled' } };
-    }
-
     const input = normalizeApprovalInput(request.toolCall.rawInput);
     const presentation = buildOpencodePermissionPresentation(request.toolCall.title, input, request.toolCall.locations);
-    const decision = await this.approvalCallback(
+    const decision = await this.host.approval(
       presentation.toolName,
       input,
       presentation.description,

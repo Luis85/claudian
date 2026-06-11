@@ -53,120 +53,112 @@ function findClosingTokenIndex(tokens: JsonToken[], value: string): number {
   return -1;
 }
 
+const PUNCTUATION_TOKEN_TYPES: Readonly<Record<string, JsonTokenType | undefined>> = {
+  '{': 'brace',
+  '}': 'brace',
+  '[': 'bracket',
+  ']': 'bracket',
+  ':': 'separator',
+  ',': 'delimiter',
+};
+
+function isNumberStartChar(char: string): boolean {
+  return /[0-9]/.test(char) || char === '-' || char === '.';
+}
+
+/**
+ * Consumes one string literal starting at the opening quote. Pushes a token
+ * only when the closing quote was reached (a dangling string is dropped so
+ * the repaired JSON stays parseable). Returns the index just past the
+ * consumed characters — each character is visited exactly once.
+ */
+function scanStringToken(input: string, startIndex: number, tokens: JsonToken[]): number {
+  let index = startIndex + 1;
+  let value = '';
+
+  while (index < input.length && input[index] !== '"') {
+    const char = input[index] ?? '';
+    if (char === '\\') {
+      value += char + (input[index + 1] ?? '');
+      index += 2;
+    } else {
+      value += char;
+      index += 1;
+    }
+  }
+
+  const isDanglingString = index >= input.length;
+  index += 1;
+  if (!isDanglingString) {
+    tokens.push({ type: 'string', value });
+  }
+  return index;
+}
+
+function scanNumberToken(input: string, startIndex: number, tokens: JsonToken[]): number {
+  let index = startIndex;
+  let value = '';
+  let char = input[index] ?? '';
+
+  if (char === '-') {
+    value += char;
+    index += 1;
+    char = input[index] ?? '';
+  }
+
+  while (/[0-9]/.test(char) || char === '.') {
+    value += char;
+    index += 1;
+    char = input[index] ?? '';
+  }
+
+  tokens.push({ type: 'number', value });
+  return index;
+}
+
+function scanNameToken(input: string, startIndex: number, tokens: JsonToken[]): number {
+  let index = startIndex;
+  let value = '';
+  let char = input[index] ?? '';
+
+  while (/[a-z]/i.test(char)) {
+    value += char;
+    index += 1;
+    char = input[index] ?? '';
+  }
+
+  if (value === 'true' || value === 'false' || value === 'null') {
+    tokens.push({ type: 'name', value });
+  } else {
+    // Unknown bare word: skip the delimiter that stopped the scan too, so a
+    // malformed run cannot stall the tokenizer.
+    index += 1;
+  }
+  return index;
+}
+
 function tokenizePartialJson(input: string): JsonToken[] {
   const tokens: JsonToken[] = [];
   let index = 0;
 
   while (index < input.length) {
-    let char = input[index] ?? '';
+    const char = input[index] ?? '';
+    const punctuationType = PUNCTUATION_TOKEN_TYPES[char];
 
-    if (char === '\\') {
+    if (punctuationType) {
+      tokens.push({ type: punctuationType, value: char });
       index += 1;
-      continue;
-    }
-
-    if (char === '{' || char === '}') {
-      tokens.push({ type: 'brace', value: char });
+    } else if (char === '"') {
+      index = scanStringToken(input, index, tokens);
+    } else if (isNumberStartChar(char)) {
+      index = scanNumberToken(input, index, tokens);
+    } else if (/[a-z]/i.test(char)) {
+      index = scanNameToken(input, index, tokens);
+    } else {
+      // Whitespace, stray top-level backslashes, and any other noise advance
+      // by one character; the next iteration re-dispatches on what follows.
       index += 1;
-      continue;
     }
-
-    if (char === '[' || char === ']') {
-      tokens.push({ type: 'bracket', value: char });
-      index += 1;
-      continue;
-    }
-
-    if (char === ':') {
-      tokens.push({ type: 'separator', value: char });
-      index += 1;
-      continue;
-    }
-
-    if (char === ',') {
-      tokens.push({ type: 'delimiter', value: char });
-      index += 1;
-      continue;
-    }
-
-    if (char === '"') {
-      let value = '';
-      let isDanglingString = false;
-      index += 1;
-      char = input[index] ?? '';
-
-      while (char !== '"') {
-        if (index === input.length) {
-          isDanglingString = true;
-          break;
-        }
-
-        if (char === '\\') {
-          index += 1;
-          if (index === input.length) {
-            isDanglingString = true;
-            break;
-          }
-          value += char + (input[index] ?? '');
-          index += 1;
-          char = input[index] ?? '';
-          continue;
-        }
-
-        value += char;
-        index += 1;
-        char = input[index] ?? '';
-      }
-
-      index += 1;
-      if (!isDanglingString) {
-        tokens.push({ type: 'string', value });
-      }
-      continue;
-    }
-
-    if (/\s/.test(char)) {
-      index += 1;
-      continue;
-    }
-
-    if (/[0-9]/.test(char) || char === '-' || char === '.') {
-      let value = '';
-
-      if (char === '-') {
-        value += char;
-        index += 1;
-        char = input[index] ?? '';
-      }
-
-      while (/[0-9]/.test(char) || char === '.') {
-        value += char;
-        index += 1;
-        char = input[index] ?? '';
-      }
-
-      tokens.push({ type: 'number', value });
-      continue;
-    }
-
-    if (/[a-z]/i.test(char)) {
-      let value = '';
-
-      while (/[a-z]/i.test(char)) {
-        value += char;
-        index += 1;
-        char = input[index] ?? '';
-      }
-
-      if (value === 'true' || value === 'false' || value === 'null') {
-        tokens.push({ type: 'name', value });
-      } else {
-        index += 1;
-      }
-      continue;
-    }
-
-    index += 1;
   }
 
   return tokens;

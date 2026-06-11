@@ -49,3 +49,23 @@ export interface RuntimeHost {
   /** Lazy accessor for subagent runtime state, called per dispatch. */
   getSubagentState(): SubagentRuntimeState;
 }
+
+/**
+ * Host for runtimes constructed outside a chat tab (settings-tab model
+ * warmups, command discovery). These runtimes never dispatch a user prompt,
+ * so no host method should fire; each member resolves to the neutral
+ * "no user present" answer. `approval` resolves `'cancel'`, which providers
+ * map to their cancelled/declined outcome — the same answer the previous
+ * null-callback guards produced.
+ */
+export function createHeadlessRuntimeHost(): RuntimeHost {
+  return {
+    approval: async () => 'cancel',
+    dismissApproval: () => {},
+    askUser: async () => null,
+    exitPlanMode: async () => null,
+    permissionModeSync: () => {},
+    autoTurn: () => {},
+    getSubagentState: () => ({ hasRunning: false }),
+  };
+}

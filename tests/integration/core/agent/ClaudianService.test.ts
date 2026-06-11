@@ -17,6 +17,7 @@ import * as path from 'path';
 jest.mock('fs');
 
 // Now import after all mocks are set up
+import { createMockRuntimeHost } from '@test/helpers/runtimeHost';
 import { buildResultErrorMessage } from '@test/helpers/sdkMessages';
 
 import { Logger } from '@/core/logging/Logger';
@@ -145,7 +146,7 @@ describe('ClaudianService', () => {
     jest.clearAllMocks();
     resetMockMessages();
     mockPlugin = createMockPlugin();
-    service = new ClaudianService(mockPlugin, createMockMcpManager());
+    service = new ClaudianService(mockPlugin, createMockMcpManager(), createMockRuntimeHost());
   });
 
   afterEach(() => {
@@ -217,7 +218,7 @@ describe('ClaudianService', () => {
           mockPlugin.getActiveEnvironmentVariables()
         )
       );
-      service = new ClaudianService(mockPlugin, createMockMcpManager());
+      service = new ClaudianService(mockPlugin, createMockMcpManager(), createMockRuntimeHost());
 
       (fs.existsSync as jest.Mock).mockImplementation((p: string) => p === customPath);
       (fs.statSync as jest.Mock).mockReturnValue({ isFile: () => true });
@@ -248,7 +249,7 @@ describe('ClaudianService', () => {
           mockPlugin.getActiveEnvironmentVariables()
         )
       );
-      service = new ClaudianService(mockPlugin, createMockMcpManager());
+      service = new ClaudianService(mockPlugin, createMockMcpManager(), createMockRuntimeHost());
 
       const homeDir = os.homedir();
       const autoDetectedPath = path.join(homeDir, '.claude', 'local', 'claude');
@@ -284,7 +285,7 @@ describe('ClaudianService', () => {
           mockPlugin.getActiveEnvironmentVariables()
         )
       );
-      service = new ClaudianService(mockPlugin, createMockMcpManager());
+      service = new ClaudianService(mockPlugin, createMockMcpManager(), createMockRuntimeHost());
 
       const homeDir = os.homedir();
       const autoDetectedPath = path.join(homeDir, '.claude', 'local', 'claude');
@@ -320,7 +321,7 @@ describe('ClaudianService', () => {
           mockPlugin.getActiveEnvironmentVariables()
         )
       );
-      service = new ClaudianService(mockPlugin, createMockMcpManager());
+      service = new ClaudianService(mockPlugin, createMockMcpManager(), createMockRuntimeHost());
 
       const homeDir = os.homedir();
       const autoDetectedPath = path.join(homeDir, '.claude', 'local', 'claude');
@@ -366,7 +367,7 @@ describe('ClaudianService', () => {
           mockPlugin.getActiveEnvironmentVariables()
         )
       );
-      service = new ClaudianService(mockPlugin, createMockMcpManager());
+      service = new ClaudianService(mockPlugin, createMockMcpManager(), createMockRuntimeHost());
 
       (fs.existsSync as jest.Mock).mockImplementation((p: string) => p === firstPath);
       (fs.statSync as jest.Mock).mockReturnValue({ isFile: () => true });
@@ -874,7 +875,7 @@ describe('ClaudianService', () => {
           },
         },
       };
-      service = new ClaudianService(mockPlugin, createMockMcpManager());
+      service = new ClaudianService(mockPlugin, createMockMcpManager(), createMockRuntimeHost());
 
       const chunks: any[] = [];
       for await (const chunk of service.query('hello')) {
@@ -1594,7 +1595,7 @@ describe('ClaudianService', () => {
     it('updates permission mode via setPermissionMode when going from YOLO to normal', async () => {
       // Start in YOLO mode
       mockPlugin.settings.permissionMode = 'yolo';
-      service = new ClaudianService(mockPlugin, createMockMcpManager());
+      service = new ClaudianService(mockPlugin, createMockMcpManager(), createMockRuntimeHost());
 
       const chunks1: any[] = [];
       for await (const c of service.query('first')) chunks1.push(c);
@@ -1613,7 +1614,7 @@ describe('ClaudianService', () => {
     it('updates permission mode via setPermissionMode when going from normal to YOLO', async () => {
       // Start in normal mode
       mockPlugin.settings.permissionMode = 'normal';
-      service = new ClaudianService(mockPlugin, createMockMcpManager());
+      service = new ClaudianService(mockPlugin, createMockMcpManager(), createMockRuntimeHost());
 
       const chunks1: any[] = [];
       for await (const c of service.query('first')) chunks1.push(c);

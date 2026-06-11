@@ -1,5 +1,7 @@
 import '@/providers';
 
+import { createMockRuntimeHost } from '@test/helpers/runtimeHost';
+
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import { ProviderWorkspaceRegistry } from '@/core/providers/ProviderWorkspaceRegistry';
 
@@ -84,7 +86,11 @@ describe('provider registration contract', () => {
   });
 
   it.each(providerIds)('"%s" createChatRuntime yields a runtime tagged with its own id', (id) => {
-    const runtime = ProviderRegistry.createChatRuntime({ providerId: id, plugin: {} as never });
+    const runtime = ProviderRegistry.createChatRuntime({
+      providerId: id,
+      plugin: {} as never,
+      host: createMockRuntimeHost(),
+    });
     expect(runtime.providerId).toBe(id);
     expect(typeof runtime.query).toBe('function');
     expect(typeof runtime.getCapabilities).toBe('function');

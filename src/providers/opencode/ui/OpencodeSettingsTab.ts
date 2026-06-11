@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import { Setting } from 'obsidian';
 
 import type { ProviderSettingsTabRenderer } from '../../../core/providers/types';
+import { createHeadlessRuntimeHost } from '../../../core/runtime/RuntimeHost';
 import { asSettingsBag } from '../../../core/types';
 import { renderEnvironmentSettingsSection } from '../../../shared/settings/EnvironmentSettingsSection';
 import { getHostnameKey } from '../../../utils/env';
@@ -9,12 +10,7 @@ import { expandHomePath } from '../../../utils/path';
 import { maybeGetOpencodeWorkspaceServices } from '../app/opencodeWorkspaceAccess';
 import { clearOpencodeDiscoveryState } from '../discoveryState';
 import { sameStringList } from '../internal/compareCollections';
-import {
-  buildOpencodeBaseModels,
-  encodeOpencodeModelId,
-  type OpencodeDiscoveredModel,
-  splitOpencodeModelLabel,
-} from '../models';
+import { buildOpencodeBaseModels, encodeOpencodeModelId, type OpencodeDiscoveredModel, splitOpencodeModelLabel } from '../models';
 import { OpencodeChatRuntime } from '../runtime/OpencodeChatRuntime';
 import {
   getOpencodeProviderSettings,
@@ -254,7 +250,7 @@ export const opencodeSettingsTabRenderer: ProviderSettingsTabRenderer = {
     };
 
     const persistModelMetadata = async (rawId: string): Promise<void> => {
-      const runtime = new OpencodeChatRuntime(context.plugin);
+      const runtime = new OpencodeChatRuntime(context.plugin, createHeadlessRuntimeHost());
       try {
         runtime.syncConversationState({
           providerState: { databasePath: OPENCODE_METADATA_WARMUP_DB },
@@ -551,7 +547,7 @@ export const opencodeSettingsTabRenderer: ProviderSettingsTabRenderer = {
       modelCatalogLoadFailed = false;
       renderAll();
 
-      const runtime = new OpencodeChatRuntime(context.plugin);
+      const runtime = new OpencodeChatRuntime(context.plugin, createHeadlessRuntimeHost());
       try {
         runtime.syncConversationState({
           providerState: { databasePath: OPENCODE_METADATA_WARMUP_DB },

@@ -7,11 +7,14 @@ describe('CodexServerRequestRouter', () => {
   let mockAskUserCallback: jest.MockedFunction<AskUserQuestionCallback>;
 
   beforeEach(() => {
-    router = new CodexServerRequestRouter();
     mockApprovalCallback = jest.fn();
     mockAskUserCallback = jest.fn();
-    router.setApprovalCallback(mockApprovalCallback);
-    router.setAskUserCallback(mockAskUserCallback);
+    // Host injected at construction (ADR-0001 Phase 2): the router never holds
+    // null callbacks, so requests always reach the host prompts.
+    router = new CodexServerRequestRouter({
+      approval: mockApprovalCallback,
+      askUser: mockAskUserCallback,
+    });
   });
 
   // -----------------------------------------------------------------------
@@ -410,53 +413,6 @@ describe('CodexServerRequestRouter', () => {
         },
       );
 
-      expect(result).toEqual({ answers: {} });
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // Fail-closed for missing callbacks
-  // -----------------------------------------------------------------------
-
-  describe('fail-closed for missing callbacks', () => {
-    it('declines command approval when no callback is set', async () => {
-      router.setApprovalCallback(null);
-      const result = await router.handleServerRequest(
-        'item/commandExecution/requestApproval',
-        { threadId: 't1', turnId: 'turn1', itemId: 'call_1', command: 'echo hi', cwd: '/' },
-      );
-      expect(result).toEqual({ decision: 'decline' });
-    });
-
-    it('declines file change approval when no callback is set', async () => {
-      router.setApprovalCallback(null);
-      const result = await router.handleServerRequest(
-        'item/fileChange/requestApproval',
-        { threadId: 't1', turnId: 'turn1', itemId: 'fc_1' },
-      );
-      expect(result).toEqual({ decision: 'decline' });
-    });
-
-    it('returns empty permissions when no callback is set', async () => {
-      router.setApprovalCallback(null);
-      const result = await router.handleServerRequest(
-        'item/permissions/requestApproval',
-        {
-          threadId: 't1',
-          turnId: 'turn1',
-          itemId: 'perm1',
-          permissions: { network: { enabled: true } },
-        },
-      );
-      expect(result).toEqual({ permissions: {}, scope: 'turn' });
-    });
-
-    it('returns empty answers when no ask-user callback is set', async () => {
-      router.setAskUserCallback(null);
-      const result = await router.handleServerRequest(
-        'item/tool/requestUserInput',
-        { threadId: 't1', turnId: 'turn1', questions: [{ id: 'q1', text: 'Q?' }] },
-      );
       expect(result).toEqual({ answers: {} });
     });
   });

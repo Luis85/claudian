@@ -3,6 +3,7 @@ import type {
   PermissionMode as SDKPermissionMode,
   PermissionResult,
 } from '@anthropic-ai/claude-agent-sdk';
+import { createMockRuntimeHost } from '@test/helpers/runtimeHost';
 
 import type {
   ApprovalCallback,
@@ -43,9 +44,7 @@ function makeDeps(overrides: Partial<ClaudeApprovalHandlerDeps> = {}): ClaudeApp
   };
   return {
     getAllowedTools: () => null,
-    getApprovalCallback: () => null,
-    getAskUserQuestionCallback: () => null,
-    getExitPlanModeCallback: () => null,
+    host: createMockRuntimeHost(),
     getPermissionMode: () => 'normal',
     resolveSDKPermissionMode: (mode: PermissionMode) => sdkMap[mode],
     syncPermissionMode: jest.fn(),
@@ -61,23 +60,27 @@ describe('createClaudeApprovalCallback', () => {
 
   describe('allowed-tools gate', () => {
     it('skips the gate when allowedTools is null', async () => {
-      // No approval callback set, so a null allowedTools list lets the request
-      // fall through to the "No approval handler available." branch — proving
-      // the gate did not short-circuit first.
-      const cb = createClaudeApprovalCallback(makeDeps({ getAllowedTools: () => null }));
-      const result = await cb(TOOL_BASH, { command: 'ls' }, makeOptions());
-      expect(result).toEqual({ behavior: 'deny', message: 'No approval handler available.' });
+      // A null allowedTools list lets the request fall through to the host
+      // approval prompt — proving the gate did not short-circuit first.
+      const host = createMockRuntimeHost();
+      const cb = createClaudeApprovalCallback(makeDeps({ getAllowedTools: () => null, host }));
+      await cb(TOOL_BASH, { command: 'ls' }, makeOptions());
+      expect(host.approval).toHaveBeenCalledWith(
+        TOOL_BASH, { command: 'ls' }, expect.any(String), expect.any(Object),
+      );
     });
 
     it('passes through tools in the allow list', async () => {
-      const cb = createClaudeApprovalCallback(makeDeps({ getAllowedTools: () => [TOOL_BASH] }));
-      const result = await cb(TOOL_BASH, {}, makeOptions());
-      expect(result).toEqual({ behavior: 'deny', message: 'No approval handler available.' });
+      const host = createMockRuntimeHost();
+      const cb = createClaudeApprovalCallback(makeDeps({ getAllowedTools: () => [TOOL_BASH], host }));
+      await cb(TOOL_BASH, {}, makeOptions());
+      expect(host.approval).toHaveBeenCalled();
     });
 
     it('denies tools not in the allow list with the full allowed list appended', async () => {
+      const host = createMockRuntimeHost();
       const cb = createClaudeApprovalCallback(
-        makeDeps({ getAllowedTools: () => ['Read', 'Grep'] }),
+        makeDeps({ getAllowedTools: () => ['Read', 'Grep'], host }),
       );
       const result = await cb(TOOL_BASH, {}, makeOptions()) as Extract<
         PermissionResult,
@@ -86,6 +89,8 @@ describe('createClaudeApprovalCallback', () => {
       expect(result.behavior).toBe('deny');
       expect(result.message).toContain(`Tool "${TOOL_BASH}" is not allowed`);
       expect(result.message).toContain('Allowed tools: Read, Grep.');
+      // The gate denies before the host is ever consulted.
+      expect(host.approval).not.toHaveBeenCalled();
     });
 
     it('denies with the "No tools are allowed" suffix when the allow list is empty', async () => {
@@ -100,9 +105,10 @@ describe('createClaudeApprovalCallback', () => {
     it('always allows the Skill tool through even when not on the allow list', async () => {
       // Skill bypasses the per-query allow list because user-authored skill
       // payloads define their own tool surface.
-      const cb = createClaudeApprovalCallback(makeDeps({ getAllowedTools: () => ['Read'] }));
-      const result = await cb(TOOL_SKILL, {}, makeOptions());
-      expect(result).toEqual({ behavior: 'deny', message: 'No approval handler available.' });
+      const host = createMockRuntimeHost();
+      const cb = createClaudeApprovalCallback(makeDeps({ getAllowedTools: () => ['Read'], host }));
+      await cb(TOOL_SKILL, {}, makeOptions());
+      expect(host.approval).toHaveBeenCalled();
     });
   });
 
@@ -111,7 +117,7 @@ describe('createClaudeApprovalCallback', () => {
       callback: ExitPlanModeCallback,
       override: Partial<ClaudeApprovalHandlerDeps> = {},
     ): ClaudeApprovalHandlerDeps {
-      return makeDeps({ getExitPlanModeCallback: () => callback, ...override });
+      return makeDeps({ host: createMockRuntimeHost({ exitPlanMode: callback }), ...override });
     }
 
     it('returns a User-cancelled deny with interrupt when the callback returns null', async () => {
@@ -188,16 +194,20 @@ describe('createClaudeApprovalCallback', () => {
       expect(result.message).toBe('Failed to handle plan mode exit: Unknown error');
     });
 
-    it('falls through to the default approval branch when no exit-plan callback is set', async () => {
-      const cb = createClaudeApprovalCallback(makeDeps());
-      const result = await cb(TOOL_EXIT_PLAN_MODE, {}, makeOptions());
-      expect(result).toEqual({ behavior: 'deny', message: 'No approval handler available.' });
+    it('never routes ExitPlanMode through the generic approval prompt', async () => {
+      // The host is always present (ADR-0001 Phase 2), so plan-exit decisions
+      // are owned by host.exitPlanMode and must not fall through to approval.
+      const host = createMockRuntimeHost();
+      const cb = createClaudeApprovalCallback(makeDeps({ host }));
+      await cb(TOOL_EXIT_PLAN_MODE, {}, makeOptions());
+      expect(host.exitPlanMode).toHaveBeenCalled();
+      expect(host.approval).not.toHaveBeenCalled();
     });
   });
 
   describe('AskUserQuestion handling', () => {
     function makeAskDeps(callback: AskUserQuestionCallback): ClaudeApprovalHandlerDeps {
-      return makeDeps({ getAskUserQuestionCallback: () => callback });
+      return makeDeps({ host: createMockRuntimeHost({ askUser: callback }) });
     }
 
     it('injects isOther: true on every question that does not declare it', async () => {
@@ -291,23 +301,19 @@ describe('createClaudeApprovalCallback', () => {
       expect(signal).toBe(controller.signal);
     });
 
-    it('falls through to the default approval branch when no ask callback is set', async () => {
-      const cb = createClaudeApprovalCallback(makeDeps());
-      const result = await cb(TOOL_ASK_USER_QUESTION, { questions: [] }, makeOptions());
-      expect(result).toEqual({ behavior: 'deny', message: 'No approval handler available.' });
+    it('never routes AskUserQuestion through the generic approval prompt', async () => {
+      const host = createMockRuntimeHost();
+      const cb = createClaudeApprovalCallback(makeDeps({ host }));
+      await cb(TOOL_ASK_USER_QUESTION, { questions: [] }, makeOptions());
+      expect(host.askUser).toHaveBeenCalled();
+      expect(host.approval).not.toHaveBeenCalled();
     });
   });
 
   describe('default approval path', () => {
-    it('denies with "No approval handler available." when no approval callback is wired', async () => {
-      const cb = createClaudeApprovalCallback(makeDeps());
-      const result = await cb(TOOL_BASH, { command: 'ls' }, makeOptions());
-      expect(result).toEqual({ behavior: 'deny', message: 'No approval handler available.' });
-    });
-
     it('returns a User-interrupted deny with interrupt on cancel', async () => {
       const approval: ApprovalCallback = jest.fn().mockResolvedValue('cancel' as ApprovalDecision);
-      const cb = createClaudeApprovalCallback(makeDeps({ getApprovalCallback: () => approval }));
+      const cb = createClaudeApprovalCallback(makeDeps({ host: createMockRuntimeHost({ approval }) }));
       const result = await cb(TOOL_BASH, { command: 'ls' }, makeOptions());
       expect(result).toEqual({
         behavior: 'deny',
@@ -318,7 +324,7 @@ describe('createClaudeApprovalCallback', () => {
 
     it('returns allow with a session-destination addRules update on "allow"', async () => {
       const approval: ApprovalCallback = jest.fn().mockResolvedValue('allow' as ApprovalDecision);
-      const cb = createClaudeApprovalCallback(makeDeps({ getApprovalCallback: () => approval }));
+      const cb = createClaudeApprovalCallback(makeDeps({ host: createMockRuntimeHost({ approval }) }));
       const input = { command: 'ls' };
       const result = await cb(TOOL_BASH, input, makeOptions()) as Extract<
         PermissionResult,
@@ -340,7 +346,7 @@ describe('createClaudeApprovalCallback', () => {
       const approval: ApprovalCallback = jest
         .fn()
         .mockResolvedValue('allow-always' as ApprovalDecision);
-      const cb = createClaudeApprovalCallback(makeDeps({ getApprovalCallback: () => approval }));
+      const cb = createClaudeApprovalCallback(makeDeps({ host: createMockRuntimeHost({ approval }) }));
       const result = await cb(TOOL_BASH, { command: 'ls' }, makeOptions()) as Extract<
         PermissionResult,
         { behavior: 'allow' }
@@ -353,7 +359,7 @@ describe('createClaudeApprovalCallback', () => {
 
     it('forwards the suggestion list through buildPermissionUpdates', async () => {
       const approval: ApprovalCallback = jest.fn().mockResolvedValue('allow' as ApprovalDecision);
-      const cb = createClaudeApprovalCallback(makeDeps({ getApprovalCallback: () => approval }));
+      const cb = createClaudeApprovalCallback(makeDeps({ host: createMockRuntimeHost({ approval }) }));
       const result = await cb(
         TOOL_BASH,
         { command: 'ls' },
@@ -379,7 +385,7 @@ describe('createClaudeApprovalCallback', () => {
 
     it('returns a User-denied deny without interrupt on "deny"', async () => {
       const approval: ApprovalCallback = jest.fn().mockResolvedValue('deny' as ApprovalDecision);
-      const cb = createClaudeApprovalCallback(makeDeps({ getApprovalCallback: () => approval }));
+      const cb = createClaudeApprovalCallback(makeDeps({ host: createMockRuntimeHost({ approval }) }));
       const result = await cb(TOOL_BASH, { command: 'ls' }, makeOptions());
       expect(result).toEqual({
         behavior: 'deny',
@@ -390,7 +396,7 @@ describe('createClaudeApprovalCallback', () => {
 
     it('returns a generic deny without interrupt when the callback throws', async () => {
       const approval: ApprovalCallback = jest.fn().mockRejectedValue(new Error('approval boom'));
-      const cb = createClaudeApprovalCallback(makeDeps({ getApprovalCallback: () => approval }));
+      const cb = createClaudeApprovalCallback(makeDeps({ host: createMockRuntimeHost({ approval }) }));
       const result = await cb(TOOL_BASH, { command: 'ls' }, makeOptions());
       expect(result).toEqual({
         behavior: 'deny',
@@ -401,7 +407,7 @@ describe('createClaudeApprovalCallback', () => {
 
     it('forwards decisionReason, blockedPath, and agentID into the approval callback options', async () => {
       const approval: ApprovalCallback = jest.fn().mockResolvedValue('allow' as ApprovalDecision);
-      const cb = createClaudeApprovalCallback(makeDeps({ getApprovalCallback: () => approval }));
+      const cb = createClaudeApprovalCallback(makeDeps({ host: createMockRuntimeHost({ approval }) }));
       await cb(
         TOOL_BASH,
         { command: 'ls' },

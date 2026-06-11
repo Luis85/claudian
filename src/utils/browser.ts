@@ -1,9 +1,16 @@
+import type { ContextTrust } from '../core/context/untrustedContent';
+import { wrapUntrustedExternalData } from '../core/context/untrustedContent';
+
 export interface BrowserSelectionContext {
   source: string;
   selectedText: string;
   title?: string;
   url?: string;
 }
+
+// Web selections are the one context source that crosses the trust boundary;
+// the attribute makes the provenance machine-readable in transcripts.
+const BROWSER_SELECTION_TRUST: ContextTrust = 'untrusted-external';
 
 function escapeXmlAttribute(value: string): string {
   return value
@@ -26,6 +33,8 @@ function buildAttributeList(context: BrowserSelectionContext): string {
     attrs.push(`url="${escapeXmlAttribute(context.url.trim())}"`);
   }
 
+  attrs.push(`trust="${BROWSER_SELECTION_TRUST}"`);
+
   return attrs.join(' ');
 }
 
@@ -37,7 +46,8 @@ export function formatBrowserContext(context: BrowserSelectionContext): string {
   const selectedText = context.selectedText.trim();
   if (!selectedText) return '';
   const attrs = buildAttributeList(context);
-  return `<browser_selection ${attrs}>\n${escapeXmlBody(selectedText)}\n</browser_selection>`;
+  const body = wrapUntrustedExternalData(escapeXmlBody(selectedText));
+  return `<browser_selection ${attrs}>\n${body}\n</browser_selection>`;
 }
 
 export function appendBrowserContext(prompt: string, context: BrowserSelectionContext): string {

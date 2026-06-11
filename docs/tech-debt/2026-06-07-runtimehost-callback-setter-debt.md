@@ -2,8 +2,8 @@
 type: tech-debt
 title: "RuntimeHost exists but ChatRuntime still exposes mutable callback setters"
 date: 2026-06-07
-updated: 2026-06-07
-status: open
+updated: 2026-06-10
+status: done
 priority: "2 - normal"
 severity: medium
 scope: provider-runtime-interface
@@ -52,8 +52,23 @@ The current interface is wider than callers need to understand, and it permits n
 
 ## Acceptance criteria
 
-- [ ] `ChatRuntime` no longer exposes the seven callback setters.
-- [ ] Providers receive a non-null `RuntimeHost` at construction or initialization.
-- [ ] Cancel/reset paths still dismiss approval UI.
-- [ ] Cursor and Opencode no-op callback methods are removed rather than preserved as stubs.
-- [ ] Runtime tests cover the host interaction through behavior, not setter call counts.
+- [x] `ChatRuntime` no longer exposes the seven callback setters.
+- [x] Providers receive a non-null `RuntimeHost` at construction or initialization.
+- [x] Cancel/reset paths still dismiss approval UI.
+- [x] Cursor and Opencode no-op callback methods are removed rather than preserved as stubs.
+- [x] Runtime tests cover the host interaction through behavior, not setter call counts.
+
+## Resolution (2026-06-10)
+
+`CreateChatRuntimeOptions` carries a required `host: RuntimeHost`; all four
+provider registrations pass it to their runtime constructors. The production
+host is built in `src/features/chat/tabs/tabRuntimeHost.ts` at the single
+runtime-creation site (`tabLifecycle.initializeTabService`);
+`setupServiceCallbacks` is deleted. Runtimes created outside a chat tab
+(Opencode warmup paths) use `createHeadlessRuntimeHost()`, whose members
+reproduce the old null-callback fail-closed outcomes by construction.
+Provider-side nullable callback fields, no-op stubs, and null-guard branches
+are gone; `ClaudeApprovalHandler` / `CodexServerRequestRouter` depend on
+narrowed `Pick<RuntimeHost, …>` views. Cancel→dismiss is asserted through
+host behavior for Claude and Codex, and the setter-call test suites were
+rewritten against a typed `MockRuntimeHost` (tests/helpers/runtimeHost.ts).

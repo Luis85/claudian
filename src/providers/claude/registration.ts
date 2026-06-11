@@ -24,7 +24,7 @@ export const claudeProviderRegistration: ProviderRegistration = {
   environmentKeyPatterns: [/^ANTHROPIC_/i, /^CLAUDE_/i],
   chatUIConfig: claudeChatUIConfig,
   settingsReconciler: claudeSettingsReconciler,
-  createRuntime: ({ plugin }) => {
+  createRuntime: ({ plugin, host }) => {
     const workspace = getClaudeWorkspaceServices();
     const resolvedMcpManager = workspace?.mcpManager;
     if (!resolvedMcpManager) {
@@ -35,7 +35,7 @@ export const claudeProviderRegistration: ProviderRegistration = {
       mcpManager: resolvedMcpManager,
       pluginManager: workspace?.pluginManager,
       agentManager: workspace?.agentManager,
-    });
+    }, host);
   },
   createTitleGenerationService: (plugin) => new ClaudeTitleGenerationService(plugin),
   createInstructionRefineService: (plugin) => new ClaudeInstructionRefineService(plugin),

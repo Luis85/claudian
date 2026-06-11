@@ -66,6 +66,10 @@ describe('encodeCodexTurn', () => {
 
     expect(result.prompt).toContain('[Browser selection from https://example.com:');
     expect(result.prompt).toContain('Article content here');
+    // Web content crosses the trust boundary and must be demarcated.
+    expect(result.prompt).toContain(
+      '<untrusted_external_data>\nArticle content here\n</untrusted_external_data>'
+    );
   });
 
   it('should include canvas selection context', () => {

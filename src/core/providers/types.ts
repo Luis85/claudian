@@ -2,6 +2,7 @@ import type { CursorContext } from '../../utils/editor';
 import type { SharedAppStorage } from '../bootstrap/storage';
 import type { McpServerManager } from '../mcp/McpServerManager';
 import type { ChatRuntime } from '../runtime/ChatRuntime';
+import type { RuntimeHost } from '../runtime/RuntimeHost';
 import type { HomeFileAdapter } from '../storage/HomeFileAdapter';
 import type { VaultFileAdapter } from '../storage/VaultFileAdapter';
 import type {
@@ -44,6 +45,8 @@ export const DEFAULT_CHAT_PROVIDER_ID = 'claude' as const satisfies ProviderId;
 export interface CreateChatRuntimeOptions {
   plugin: PluginContext;
   providerId?: ProviderId;
+  /** Construction-time UI callback host (ADR-0001 Phase 2 / Move 3); replaces the former mutable callback setters. */
+  host: RuntimeHost;
 }
 
 /**
@@ -56,11 +59,7 @@ export interface CreateChatRuntimeOptions {
  */
 export interface ProviderRegistration {
   displayName: string;
-  /**
-   * One-line product blurb for the first-run onboarding banner. Lives on the
-   * registration so the banner renders from the registry instead of a
-   * hardcoded provider list (tech-debt 2026-06-07).
-   */
+  /** One-line product blurb for the first-run onboarding banner — rendered from the registry, not a hardcoded provider list (tech-debt 2026-06-07). */
   firstRunBlurb: string;
   /** CLI executable the provider requires on PATH (surfaced in onboarding copy). */
   cliCommand: string;

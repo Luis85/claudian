@@ -1,5 +1,7 @@
 import '@/providers';
 
+import { createMockRuntimeHost } from '@test/helpers/runtimeHost';
+
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import { ProviderWorkspaceRegistry } from '@/core/providers/ProviderWorkspaceRegistry';
 import type {
@@ -26,6 +28,7 @@ describe('ProviderRegistry', () => {
   it('creates a runtime with the default provider id', () => {
     const runtime = ProviderRegistry.createChatRuntime({
       plugin: {} as any,
+      host: createMockRuntimeHost(),
     });
 
     expect(runtime.providerId).toBe('claude');
@@ -68,6 +71,7 @@ describe('ProviderRegistry', () => {
     const runtime = ProviderRegistry.createChatRuntime({
       providerId: 'codex',
       plugin: {} as any,
+      host: createMockRuntimeHost(),
     });
     expect(runtime.providerId).toBe('codex');
   });
@@ -252,6 +256,7 @@ describe('ProviderRegistry', () => {
     const runtime = ProviderRegistry.createChatRuntime({
       providerId: 'cursor',
       plugin: {} as any,
+      host: createMockRuntimeHost(),
     });
     expect(runtime.providerId).toBe('cursor');
   });

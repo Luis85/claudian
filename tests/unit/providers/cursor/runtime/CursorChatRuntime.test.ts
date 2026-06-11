@@ -1,5 +1,6 @@
 import '@/providers';
 
+import { createMockRuntimeHost } from '@test/helpers/runtimeHost';
 import { EventEmitter } from 'events';
 
 import type { PreparedChatTurn } from '@/core/runtime/types';
@@ -103,7 +104,7 @@ describe('CursorChatRuntime', () => {
   });
 
   it('syncConversationState sets active resume id from provider state', () => {
-    const runtime = new CursorChatRuntime(createMockPlugin());
+    const runtime = new CursorChatRuntime(createMockPlugin(), createMockRuntimeHost());
     runtime.syncConversationState({
       sessionId: 'sess-1',
       providerId: 'cursor',
@@ -129,7 +130,7 @@ describe('CursorChatRuntime', () => {
   });
 
   it('does not spawn cursor-agent at construction or passive session sync (load-time contract)', () => {
-    const runtime = new CursorChatRuntime(createMockPlugin());
+    const runtime = new CursorChatRuntime(createMockPlugin(), createMockRuntimeHost());
     runtime.syncConversationState({
       sessionId: 'sess-1',
       providerId: 'cursor',
@@ -143,7 +144,7 @@ describe('CursorChatRuntime', () => {
   });
 
   it('cancel kills the child and aborts the ask-user controller', () => {
-    const runtime = new CursorChatRuntime(createMockPlugin());
+    const runtime = new CursorChatRuntime(createMockPlugin(), createMockRuntimeHost());
     const child = setupMockChild();
     (runtime as any).child = child;
     (runtime as any).askUserQuestionAbortController = new AbortController();
@@ -161,7 +162,7 @@ describe('CursorChatRuntime', () => {
     Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
     jest.useFakeTimers();
     try {
-      const runtime = new CursorChatRuntime(createMockPlugin());
+      const runtime = new CursorChatRuntime(createMockPlugin(), createMockRuntimeHost());
       const child = setupMockChild();
       (child as any).exitCode = null;
       (child as any).signalCode = null;
@@ -184,7 +185,7 @@ describe('CursorChatRuntime', () => {
     Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
     jest.useFakeTimers();
     try {
-      const runtime = new CursorChatRuntime(createMockPlugin());
+      const runtime = new CursorChatRuntime(createMockPlugin(), createMockRuntimeHost());
       const child = setupMockChild();
       (child as any).exitCode = null;
       (child as any).signalCode = null;
@@ -213,7 +214,7 @@ describe('CursorChatRuntime', () => {
   it('cancel does not SIGKILL a child that already exited', () => {
     jest.useFakeTimers();
     try {
-      const runtime = new CursorChatRuntime(createMockPlugin());
+      const runtime = new CursorChatRuntime(createMockPlugin(), createMockRuntimeHost());
       const child = setupMockChild();
       (child as any).exitCode = 0;
       (child as any).signalCode = null;
@@ -228,7 +229,7 @@ describe('CursorChatRuntime', () => {
   });
 
   it('cleanup issues SIGTERM synchronously within the cleanup() call frame (onunload contract)', async () => {
-    const runtime = new CursorChatRuntime(createMockPlugin());
+    const runtime = new CursorChatRuntime(createMockPlugin(), createMockRuntimeHost());
     const child = setupMockChild();
     (runtime as any).child = child;
 
@@ -242,7 +243,7 @@ describe('CursorChatRuntime', () => {
   });
 
   it('cleanup resolves once the child emits exit', async () => {
-    const runtime = new CursorChatRuntime(createMockPlugin());
+    const runtime = new CursorChatRuntime(createMockPlugin(), createMockRuntimeHost());
     const child = setupMockChild();
     (runtime as any).child = child;
 
@@ -267,7 +268,7 @@ describe('CursorChatRuntime', () => {
     Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
     jest.useFakeTimers();
     try {
-      const runtime = new CursorChatRuntime(createMockPlugin());
+      const runtime = new CursorChatRuntime(createMockPlugin(), createMockRuntimeHost());
       const child = setupMockChild();
       (child as any).exitCode = null;
       (child as any).signalCode = null;
@@ -297,7 +298,7 @@ describe('CursorChatRuntime', () => {
   });
 
   it('cleanup resolves immediately when there is no live child', async () => {
-    const runtime = new CursorChatRuntime(createMockPlugin());
+    const runtime = new CursorChatRuntime(createMockPlugin(), createMockRuntimeHost());
     await expect(runtime.cleanup()).resolves.toBeUndefined();
   });
 
@@ -305,7 +306,7 @@ describe('CursorChatRuntime', () => {
     // cancel() starts terminateChild() and nulls this.child; a following cleanup()
     // (e.g. immediate provider switch) must await that in-flight kill rather than
     // resolving early while cursor-agent is still alive.
-    const runtime = new CursorChatRuntime(createMockPlugin());
+    const runtime = new CursorChatRuntime(createMockPlugin(), createMockRuntimeHost());
     const child = setupMockChild();
     (child as any).exitCode = null;
     (runtime as any).child = child;
@@ -330,7 +331,7 @@ describe('CursorChatRuntime', () => {
   it('consumeTurnMetadata returns planCompleted after a plan turn', async () => {
     const runtime = new CursorChatRuntime(createMockPlugin({
       settings: { permissionMode: 'plan' },
-    }));
+    }), createMockRuntimeHost());
 
     readlineLines = [
       JSON.stringify({ type: 'system', subtype: 'init', session_id: 'plan-sess' }),
@@ -364,10 +365,12 @@ describe('CursorChatRuntime', () => {
   });
 
   it('consumeTurnMetadata carries an answer follow-up after AskUserQuestion is answered', async () => {
-    const runtime = new CursorChatRuntime(createMockPlugin());
     // The inline widget keys answers by question id; the follow-up must resolve
     // that id back to the displayed prompt text.
-    runtime.setAskUserQuestionCallback(jest.fn().mockResolvedValue({ focus: 'A' }));
+    const runtime = new CursorChatRuntime(
+      createMockPlugin(),
+      createMockRuntimeHost({ askUser: jest.fn().mockResolvedValue({ focus: 'A' }) }),
+    );
 
     readlineLines = [
       JSON.stringify({ type: 'system', subtype: 'init', session_id: 'ask-sess' }),
@@ -412,8 +415,10 @@ describe('CursorChatRuntime', () => {
   });
 
   it('omits the answer follow-up when the turn is canceled', async () => {
-    const runtime = new CursorChatRuntime(createMockPlugin());
-    runtime.setAskUserQuestionCallback(jest.fn().mockResolvedValue({ 'Pick a focus': 'A' }));
+    const runtime = new CursorChatRuntime(
+      createMockPlugin(),
+      createMockRuntimeHost({ askUser: jest.fn().mockResolvedValue({ 'Pick a focus': 'A' }) }),
+    );
 
     readlineLines = [
       JSON.stringify({ type: 'system', subtype: 'init', session_id: 'ask-sess' }),
@@ -453,7 +458,7 @@ describe('CursorChatRuntime', () => {
   });
 
   it('yields an error and terminates when the child fails to spawn (never emits close)', async () => {
-    const runtime = new CursorChatRuntime(createMockPlugin());
+    const runtime = new CursorChatRuntime(createMockPlugin(), createMockRuntimeHost());
     readlineLines = [];
 
     // A child that emits 'error' (spawn ENOENT/EINVAL) and never emits 'close'.
@@ -482,7 +487,7 @@ describe('CursorChatRuntime', () => {
   });
 
   it('yields stderr error when CLI exits non-zero without a result event', async () => {
-    const runtime = new CursorChatRuntime(createMockPlugin());
+    const runtime = new CursorChatRuntime(createMockPlugin(), createMockRuntimeHost());
     readlineLines = [];
     setupMockChild(2);
 
@@ -496,7 +501,7 @@ describe('CursorChatRuntime', () => {
   });
 
   it('spills oversized prompts to @file argv (ENAMETOOLONG regression)', async () => {
-    const runtime = new CursorChatRuntime(createMockPlugin());
+    const runtime = new CursorChatRuntime(createMockPlugin(), createMockRuntimeHost());
     const longPrompt = 'x'.repeat(CURSOR_CLI_INLINE_PROMPT_MAX_CHARS + 1);
     readlineLines = [
       JSON.stringify({ type: 'result', subtype: 'success', is_error: false }),
@@ -516,7 +521,7 @@ describe('CursorChatRuntime', () => {
   });
 
   it('rebuilds conversation history into the prompt when resume is unavailable', async () => {
-    const runtime = new CursorChatRuntime(createMockPlugin());
+    const runtime = new CursorChatRuntime(createMockPlugin(), createMockRuntimeHost());
     const history: ChatMessage[] = [
       { id: 'u1', role: 'user', content: 'first question', timestamp: 1 },
       { id: 'a1', role: 'assistant', content: 'first answer', timestamp: 2 },
@@ -541,7 +546,7 @@ describe('CursorChatRuntime', () => {
   });
 
   it('buildSessionUpdates persists session id on the conversation', () => {
-    const runtime = new CursorChatRuntime(createMockPlugin());
+    const runtime = new CursorChatRuntime(createMockPlugin(), createMockRuntimeHost());
     (runtime as any).lastSessionId = 'stored-session';
 
     const updates = runtime.buildSessionUpdates({

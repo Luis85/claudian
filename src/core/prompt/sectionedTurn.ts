@@ -1,3 +1,4 @@
+import { wrapUntrustedExternalData } from '../context/untrustedContent';
 import type { ChatTurnRequest, PreparedChatTurn } from '../runtime/types';
 
 function isCompactCommand(text: string): boolean {
@@ -34,8 +35,13 @@ export function encodeSectionedTurn(
   }
 
   if (request.browserSelection?.selectedText) {
+    // Web content crosses the trust boundary: demarcate it so the model
+    // treats it as quoted data, mirroring the XML providers' envelope.
+    const wrapped = wrapUntrustedExternalData(
+      request.browserSelection.selectedText,
+    );
     sections.push(
-      `\n[Browser selection from ${request.browserSelection.url ?? 'unknown page'}:\n${request.browserSelection.selectedText}\n]`,
+      `\n[Browser selection from ${request.browserSelection.url ?? 'unknown page'}:\n${wrapped}\n]`,
     );
   }
 

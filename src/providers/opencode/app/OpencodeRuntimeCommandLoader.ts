@@ -2,6 +2,7 @@ import type {
   ProviderRuntimeCommandLoader,
   ProviderRuntimeCommandLoaderContext,
 } from '../../../core/providers/types';
+import { createHeadlessRuntimeHost } from '../../../core/runtime/RuntimeHost';
 import { OpencodeChatRuntime } from '../runtime/OpencodeChatRuntime';
 import { getOpencodeProviderSettings } from '../settings';
 
@@ -36,7 +37,7 @@ export class OpencodeRuntimeCommandLoader implements ProviderRuntimeCommandLoade
       && !shouldWarmPreSessionConversation;
     const runtime = canReuseRuntime
       ? context.runtime!
-      : new OpencodeChatRuntime(context.plugin);
+      : new OpencodeChatRuntime(context.plugin, createHeadlessRuntimeHost());
 
     try {
       if (context.conversation) {

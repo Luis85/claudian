@@ -5,7 +5,6 @@ export { getTabProviderId } from './providerResolution';
 export {
   type ForkContext,
   initializeTabControllers,
-  setupServiceCallbacks,
 } from './tabControllers';
 export {
   createTab,

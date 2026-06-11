@@ -4,19 +4,15 @@ import * as readline from 'readline';
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type { ProviderCapabilities, ProviderId } from '../../../core/providers/types';
 import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
+import type { RuntimeHost } from '../../../core/runtime/RuntimeHost';
 import type {
-  ApprovalCallback,
-  AskUserQuestionCallback,
-  AutoTurnResult,
   ChatRuntimeConversationState,
   ChatRuntimeEnsureReadyOptions,
   ChatRuntimeQueryOptions,
   ChatTurnMetadata,
   ChatTurnRequest,
-  ExitPlanModeCallback,
   PreparedChatTurn,
   SessionUpdateResult,
-  SubagentRuntimeState,
 } from '../../../core/runtime/types';
 import type { ChatMessage, Conversation, SlashCommand, StreamChunk } from '../../../core/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
@@ -51,13 +47,14 @@ export class CursorChatRuntime implements ChatRuntime {
   private lastSessionId: string | null = null;
   private activeResumeId: string | null = null;
   private turnMetadata: ChatTurnMetadata = {};
-  private askUserQuestionCallback: AskUserQuestionCallback | null = null;
+  private readonly host: RuntimeHost;
   private askUserQuestionAbortController: AbortController | null = null;
   /** In-flight child termination, so a later cleanup() can await a cancel()-started kill. */
   private pendingTermination: Promise<void> | null = null;
 
-  constructor(plugin: PluginContext) {
+  constructor(plugin: PluginContext, host: RuntimeHost) {
     this.plugin = plugin;
+    this.host = host;
   }
 
   getCapabilities(): Readonly<ProviderCapabilities> {
@@ -200,7 +197,7 @@ export class CursorChatRuntime implements ChatRuntime {
         }
 
         const stream = processCursorAgentNdjsonLines(ndjsonLines(), {
-          askCallback: this.askUserQuestionCallback,
+          askCallback: (input, signal) => this.host.askUser(input, signal),
           askSignal: this.askUserQuestionAbortController?.signal,
           isPlanTurn,
           isCanceled: () => this.canceled,
@@ -355,22 +352,6 @@ export class CursorChatRuntime implements ChatRuntime {
 
   // rewind() omitted — Cursor Agent does not support rewind
   // (supportsRewind: false). Callers gate on capability; ADR-0001 Phase 2.
-
-  setApprovalCallback(_callback: ApprovalCallback | null): void {}
-
-  setApprovalDismisser(_dismisser: (() => void) | null): void {}
-
-  setAskUserQuestionCallback(callback: AskUserQuestionCallback | null): void {
-    this.askUserQuestionCallback = callback;
-  }
-
-  setExitPlanModeCallback(_callback: ExitPlanModeCallback | null): void {}
-
-  setPermissionModeSyncCallback(_callback: ((sdkMode: string) => void) | null): void {}
-
-  setSubagentHookProvider(_getState: () => SubagentRuntimeState): void {}
-
-  setAutoTurnCallback(_callback: ((result: AutoTurnResult) => void) | null): void {}
 
   buildSessionUpdates(params: {
     conversation: Conversation | null;

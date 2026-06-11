@@ -10,19 +10,15 @@ import {
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type { ProviderCapabilities, ProviderId } from '../../../core/providers/types';
 import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
+import type { RuntimeHost } from '../../../core/runtime/RuntimeHost';
 import type {
-  ApprovalCallback,
-  AskUserQuestionCallback,
-  AutoTurnCallback,
   ChatRuntimeConversationState,
   ChatRuntimeEnsureReadyOptions,
   ChatRuntimeQueryOptions,
   ChatTurnMetadata,
   ChatTurnRequest,
-  ExitPlanModeCallback,
   PreparedChatTurn,
   SessionUpdateResult,
-  SubagentRuntimeState,
 } from '../../../core/runtime/types';
 import type { ChatMessage, Conversation, ForkSource, SlashCommand, StreamChunk } from '../../../core/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
@@ -111,7 +107,7 @@ export class CodexChatRuntime implements ChatRuntime {
   private launchSpec: CodexLaunchSpec | null = null;
   private runtimeContext: CodexRuntimeContext | null = null;
   private notificationRouter: CodexNotificationRouter | null = null;
-  private serverRequestRouter = new CodexServerRequestRouter();
+  private readonly serverRequestRouter: CodexServerRequestRouter;
   private ready = false;
   private readyListeners = new Set<(ready: boolean) => void>();
   private clientConfigKey: string | null = null;
@@ -125,13 +121,7 @@ export class CodexChatRuntime implements ChatRuntime {
   private chunkBuffer: StreamChunk[] = [];
   private chunkResolve: (() => void) | null = null;
 
-  private approvalCallback: ApprovalCallback | null = null;
-  private approvalDismisser: (() => void) | null = null;
-  private askUserCallback: AskUserQuestionCallback | null = null;
-  private exitPlanModeCallback: ExitPlanModeCallback | null = null;
-  private permissionModeSyncCallback: ((sdkMode: string) => void) | null = null;
-  private subagentHookProvider: (() => SubagentRuntimeState) | null = null;
-  private autoTurnCallback: AutoTurnCallback | null = null;
+  private readonly host: RuntimeHost;
   private resumeCheckpoint: string | undefined;
   private activeInputBundles = new Set<CodexInputBundle>();
 
@@ -142,8 +132,10 @@ export class CodexChatRuntime implements ChatRuntime {
   private canceled = false;
   private turnMetadata: ChatTurnMetadata = {};
 
-  constructor(plugin: PluginContext) {
+  constructor(plugin: PluginContext, host: RuntimeHost) {
     this.plugin = plugin;
+    this.host = host;
+    this.serverRequestRouter = new CodexServerRequestRouter(host);
   }
 
   getCapabilities(): Readonly<ProviderCapabilities> {
@@ -638,36 +630,6 @@ export class CodexChatRuntime implements ChatRuntime {
   // rewind() omitted — Codex does not support rewind (supportsRewind: false).
   // Callers gate on capability before invoking; ADR-0001 Phase 2.
 
-  setApprovalCallback(callback: ApprovalCallback | null): void {
-    this.approvalCallback = callback;
-    this.serverRequestRouter.setApprovalCallback(callback);
-  }
-
-  setApprovalDismisser(dismisser: (() => void) | null): void {
-    this.approvalDismisser = dismisser;
-  }
-
-  setAskUserQuestionCallback(callback: AskUserQuestionCallback | null): void {
-    this.askUserCallback = callback;
-    this.serverRequestRouter.setAskUserCallback(callback);
-  }
-
-  setExitPlanModeCallback(callback: ExitPlanModeCallback | null): void {
-    this.exitPlanModeCallback = callback;
-  }
-
-  setPermissionModeSyncCallback(callback: ((sdkMode: string) => void) | null): void {
-    this.permissionModeSyncCallback = callback;
-  }
-
-  setSubagentHookProvider(getState: () => SubagentRuntimeState): void {
-    this.subagentHookProvider = getState;
-  }
-
-  setAutoTurnCallback(callback: AutoTurnCallback | null): void {
-    this.autoTurnCallback = callback;
-  }
-
   buildSessionUpdates(params: {
     conversation: Conversation | null;
     sessionInvalidated: boolean;
@@ -744,9 +706,7 @@ export class CodexChatRuntime implements ChatRuntime {
   }
 
   private dismissApprovalUI(): void {
-    if (this.approvalDismisser) {
-      this.approvalDismisser();
-    }
+    this.host.dismissApproval();
   }
 
   private dismissAllPendingPrompts(): void {

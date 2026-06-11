@@ -15,7 +15,7 @@ Core modules stay provider-neutral. Features depend on `core/`; providers implem
 |--------|---------|-----------|
 | `bootstrap/` | Provider-neutral session metadata storage and shared app-storage contracts | `SessionStorage`, `storage.ts` |
 | `commands/` | Built-in cross-provider commands | `builtInCommands` |
-| `context/` | Provider-neutral context envelope substrate (planned, slice 1.1 of [[2026-06-05-plugin-improvement-roadmap]]) | `buildContextEnvelope`, `ContextEnvelope`, `ContextSourceHandle` |
+| `context/` | Provider-neutral context trust substrate: `ContextTrust` provenance levels and the `<untrusted_external_data>` envelope every external (web) context block must pass through before entering a prompt. The full `ContextEnvelope`/`ContextSourceHandle` model (pre-send preview, citations) is still planned — see `docs/tech-debt/2026-06-07-context-trust-envelope.md` | `untrustedContent` (`ContextTrust`, `wrapUntrustedExternalData`, `UNTRUSTED_CONTENT_PROMPT_SECTION`) |
 | `events/` | Typed in-process event bus (synchronous, error-isolated, optional error sink) | `EventBus` |
 | `logging/` | Leveled, namespaced diagnostic logger: console + bounded ring buffer, secret redaction | `Logger`, `types`, `redact`, `consoleSink`, `formatLogEntries` |
 | `mcp/` | Provider-neutral MCP coordination and config parsing | `McpConfigParser`, `McpServerManager`, `McpTester`, `McpStorageAdapter` |

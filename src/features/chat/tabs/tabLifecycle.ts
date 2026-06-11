@@ -4,6 +4,7 @@ import type { Conversation } from '../../../core/types';
 import type ClaudianPlugin from '../../../main';
 import { cleanupThinkingBlock } from '../rendering/ThinkingBlockRenderer';
 import { getTabProviderId } from './providerResolution';
+import { createTabRuntimeHost } from './tabRuntimeHost';
 import { isClosingLifecycleState, isConversationLike } from './tabShared';
 import type { TabData } from './types';
 
@@ -80,7 +81,13 @@ export async function initializeTabService(
       await tab.pendingRuntimeCleanup;
     }
 
-    const runtime = ProviderRegistry.createChatRuntime({ plugin, providerId });
+    // Construction-time UI host (ADR-0001 Phase 2): the host closes over live
+    // tab state, so it is built once per runtime and never re-wired.
+    const runtime = ProviderRegistry.createChatRuntime({
+      plugin,
+      providerId,
+      host: createTabRuntimeHost(tab, plugin),
+    });
     service = runtime;
     unsubscribeReadyState = runtime.onReadyStateChange(() => {});
     tab.dom.eventCleanups.push(() => unsubscribeReadyState?.());
