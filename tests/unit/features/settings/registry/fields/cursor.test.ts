@@ -1,6 +1,8 @@
 import { registerCursorTabFields } from '../../../../../../src/features/settings/registry/fields/cursor';
 import { getSettingsRegistry, resetSettingsRegistryForTests } from '../../../../../../src/features/settings/registry/registry';
 
+const enabled = { providerConfigs: { cursor: { enabled: true } } } as any;
+
 describe('Cursor tab registry fields', () => {
   beforeEach(() => {
     resetSettingsRegistryForTests();
@@ -9,7 +11,7 @@ describe('Cursor tab registry fields', () => {
   it('registers Cursor tab only when enabled', () => {
     registerCursorTabFields();
     const r = getSettingsRegistry();
-    const tabs = r.getTabs({ providerConfigs: { cursor: { enabled: true } } } as any);
+    const tabs = r.getTabs(enabled);
     expect(tabs.find((t) => t.id === 'cursor')).toBeDefined();
 
     const disabledTabs = r.getTabs({ providerConfigs: { cursor: { enabled: false } } } as any);
@@ -19,28 +21,52 @@ describe('Cursor tab registry fields', () => {
   it('registers 2 sections under Cursor in spec order', () => {
     registerCursorTabFields();
     const r = getSettingsRegistry();
-    const sections = r.getSections('cursor', { providerConfigs: { cursor: { enabled: true } } } as any);
+    const sections = r.getSections('cursor', enabled);
     expect(sections.map((s) => s.id)).toEqual(['models', 'environment']);
   });
 
-  it('registers cliPath field in models section with default ""', () => {
+  it('replaces the flat cliPath field with the hostname-keyed cliPathsByHost widget', () => {
     registerCursorTabFields();
     const r = getSettingsRegistry();
-    const fields = r.getFields('cursor', 'models', { providerConfigs: { cursor: { enabled: true } } } as any);
-    const cliPath = fields.find((f) => f.id === 'providerConfigs.cursor.cliPath');
-    expect(cliPath).toBeDefined();
-    expect(cliPath?.label).toBe('CLI path');
-    expect(cliPath?.default).toBe('');
+    const modelIds = r.getFields('cursor', 'models', enabled).map((f) => f.id);
+    expect(modelIds).toContain('providerConfigs.cursor.cliPathsByHost');
+    expect(r.getAllFields().find((f) => f.id === 'providerConfigs.cursor.cliPath')).toBeUndefined();
   });
 
-  it('registers providerConfigs.cursor.customModels under models', () => {
+  it('registers the family-grouped picker at the real persisted path', () => {
     registerCursorTabFields();
     const r = getSettingsRegistry();
-    const s = { providerConfigs: { cursor: { enabled: true } } } as any;
-    const field = r
-      .getFields('cursor', 'models', s)
-      .find((f) => f.id === 'providerConfigs.cursor.customModels');
-    expect(field).toBeDefined();
-    expect(field?.type.kind).toBe('custom');
+    const all = r.getAllFields();
+    const picker = all.find((f) => f.id === 'providerConfigs.cursor.enabledModelsByHost');
+    expect(picker).toBeDefined();
+    expect(picker?.type.kind).toBe('custom');
+    // The old stub id (a settings path that never existed) must be gone.
+    expect(all.find((f) => f.id === 'providerConfigs.cursor.enabledModels')).toBeUndefined();
+  });
+
+  it('does not register a modelAliases editor (Cursor persists no such setting)', () => {
+    registerCursorTabFields();
+    const r = getSettingsRegistry();
+    expect(r.getAllFields().find((f) => f.id === 'providerConfigs.cursor.modelAliases')).toBeUndefined();
+  });
+
+  it('registers providerConfigs.cursor.customModels and environment with keywords', () => {
+    registerCursorTabFields();
+    const r = getSettingsRegistry();
+    const fields = r.getAllFields().filter((f) => f.tabId === 'cursor');
+    const ids = fields.map((f) => f.id);
+    expect(ids).toEqual(expect.arrayContaining([
+      'providerConfigs.cursor.customModels',
+      'providerConfigs.cursor.environmentVariables',
+    ]));
+    for (const field of fields) {
+      expect(field.keywords?.length ?? 0).toBeGreaterThan(0);
+    }
+  });
+
+  it('does not register a providerConfigs.cursor.enabled field (lives on General tab)', () => {
+    registerCursorTabFields();
+    const r = getSettingsRegistry();
+    expect(r.getAllFields().find((f) => f.id === 'providerConfigs.cursor.enabled')).toBeUndefined();
   });
 });
