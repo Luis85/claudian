@@ -21,6 +21,24 @@ import {
   parseCodexSessionTurns,
 } from './CodexHistoryStore';
 
+function pendingForkSourceRef(state: CodexProviderState): string {
+  return `pending-fork::${state.forkSource?.sessionId ?? ''}`;
+}
+
+function resolveSessionTarget(
+  state: CodexProviderState,
+  conversationSessionId: string | null,
+  transcriptRootPath: string | null,
+): { threadId: string | null; sessionFilePath: string | null } {
+  const threadId = state.threadId ?? conversationSessionId ?? null;
+  const sessionFilePath = state.sessionFilePath ?? (
+    threadId
+      ? findCodexSessionFile(threadId, transcriptRootPath ?? undefined)
+      : null
+  );
+  return { threadId, sessionFilePath };
+}
+
 function readSessionTurns(sessionFilePath: string): CodexParsedTurn[] {
   let content: string;
   try {
@@ -88,98 +106,110 @@ export class CodexConversationHistoryService extends BaseHistoryService<CodexPro
       this.forkSupport!.isPendingForkConversation(conversation)
       && conversation.messages.length > 0
     ) {
-      return {
-        kind: 'cached',
-        sourceRef: `pending-fork::${state.forkSource?.sessionId ?? ''}`,
-      };
+      return { kind: 'cached', sourceRef: pendingForkSourceRef(state) };
     }
 
     // Branch 2: Pending fork without messages → hydrate from source truncated at resumeAt.
     if (this.forkSupport!.isPendingForkConversation(conversation)) {
-      const sourceSessionFile = this.resolveSourceSessionFile(state);
-      if (!sourceSessionFile) {
-        return { kind: 'empty', reason: 'no-session', sourceRef: null };
-      }
-
-      const turns = readSessionTurns(sourceSessionFile);
-      const resumeAt = state.forkSource!.resumeAt;
-      const truncated = this.truncateTurnsAtCheckpoint(turns, resumeAt);
-      if (!truncated) {
-        return {
-          kind: 'error',
-          error: {
-            code: 'fork-checkpoint-not-found',
-            message: 'Fork checkpoint (resumeAt) not found in source transcript.',
-            detail: `resumeAt=${resumeAt} sourceSessionFile=${sourceSessionFile}`,
-          },
-          sourceRef: `pending-fork::${state.forkSource?.sessionId ?? ''}`,
-        };
-      }
-      const messages = truncated.flatMap(t => t.messages);
-      if (messages.length === 0) {
-        return {
-          kind: 'empty',
-          reason: 'no-rows',
-          sourceRef: `pending-fork::${state.forkSource?.sessionId ?? ''}`,
-        };
-      }
-      return {
-        kind: 'loaded',
-        messages,
-        sourceRef: `pending-fork::${state.forkSource?.sessionId ?? ''}`,
-      };
+      return this.loadPendingForkMessages(state);
     }
 
     // Branch 3: Established fork → source prefix (through resumeAt) + fork-only turns.
     if (state.forkSource && state.threadId) {
-      const sourceSessionFile = this.resolveSourceSessionFile(state);
-      const forkSessionFile = state.sessionFilePath ?? (
-        state.threadId
-          ? findCodexSessionFile(state.threadId, transcriptRootPath ?? undefined)
-          : null
-      );
-
-      const sourceRef = `fork::${state.threadId}`;
-
-      if (sourceSessionFile && forkSessionFile) {
-        const sourceTurns = readSessionTurns(sourceSessionFile);
-        const forkTurns = readSessionTurns(forkSessionFile);
-
-        const resumeAt = state.forkSource.resumeAt;
-        const sourcePrefix = this.truncateTurnsAtCheckpoint(sourceTurns, resumeAt);
-        if (!sourcePrefix) {
-          return {
-            kind: 'error',
-            error: {
-              code: 'fork-checkpoint-not-found',
-              message: 'Fork checkpoint (resumeAt) not found in source transcript.',
-              detail: `resumeAt=${resumeAt} sourceSessionFile=${sourceSessionFile}`,
-            },
-            sourceRef,
-          };
-        }
-        const sourceTurnIds = new Set(sourceTurns.map(t => t.turnId).filter(Boolean));
-        const forkOnlyTurns = forkTurns.filter(t => !t.turnId || !sourceTurnIds.has(t.turnId));
-
-        const messages = [
-          ...sourcePrefix.flatMap(t => t.messages),
-          ...forkOnlyTurns.flatMap(t => t.messages),
-        ];
-
-        if (messages.length === 0) {
-          return { kind: 'empty', reason: 'no-rows', sourceRef };
-        }
-        return { kind: 'loaded', messages, sourceRef };
-      }
+      const outcome = this.loadEstablishedForkMessages(state, transcriptRootPath);
+      if (outcome) return outcome;
       // Fall through: incomplete fork file resolution → treat as normal hydration.
     }
 
     // Branch 4: Normal hydration.
-    const threadId = state.threadId ?? conversation.sessionId ?? null;
-    const sessionFilePath = state.sessionFilePath ?? (
-      threadId
-        ? findCodexSessionFile(threadId, transcriptRootPath ?? undefined)
+    return this.loadNormalHydrationMessages(conversation, state, transcriptRootPath);
+  }
+
+  private loadPendingForkMessages(state: CodexProviderState): HistoryLoadOutcome {
+    const sourceSessionFile = this.resolveSourceSessionFile(state);
+    if (!sourceSessionFile) {
+      return { kind: 'empty', reason: 'no-session', sourceRef: null };
+    }
+
+    const sourceRef = pendingForkSourceRef(state);
+    const turns = readSessionTurns(sourceSessionFile);
+    const resumeAt = state.forkSource!.resumeAt;
+    const truncated = this.truncateTurnsAtCheckpoint(turns, resumeAt);
+    if (!truncated) {
+      return {
+        kind: 'error',
+        error: {
+          code: 'fork-checkpoint-not-found',
+          message: 'Fork checkpoint (resumeAt) not found in source transcript.',
+          detail: `resumeAt=${resumeAt} sourceSessionFile=${sourceSessionFile}`,
+        },
+        sourceRef,
+      };
+    }
+    const messages = truncated.flatMap(t => t.messages);
+    if (messages.length === 0) {
+      return { kind: 'empty', reason: 'no-rows', sourceRef };
+    }
+    return { kind: 'loaded', messages, sourceRef };
+  }
+
+  /** Returns null when fork file resolution is incomplete → caller falls back to normal hydration. */
+  private loadEstablishedForkMessages(
+    state: CodexProviderState,
+    transcriptRootPath: string | null,
+  ): HistoryLoadOutcome | null {
+    const sourceSessionFile = this.resolveSourceSessionFile(state);
+    const forkSessionFile = state.sessionFilePath ?? (
+      state.threadId
+        ? findCodexSessionFile(state.threadId, transcriptRootPath ?? undefined)
         : null
+    );
+
+    const sourceRef = `fork::${state.threadId}`;
+
+    if (!sourceSessionFile || !forkSessionFile) {
+      return null;
+    }
+
+    const sourceTurns = readSessionTurns(sourceSessionFile);
+    const forkTurns = readSessionTurns(forkSessionFile);
+
+    const resumeAt = state.forkSource!.resumeAt;
+    const sourcePrefix = this.truncateTurnsAtCheckpoint(sourceTurns, resumeAt);
+    if (!sourcePrefix) {
+      return {
+        kind: 'error',
+        error: {
+          code: 'fork-checkpoint-not-found',
+          message: 'Fork checkpoint (resumeAt) not found in source transcript.',
+          detail: `resumeAt=${resumeAt} sourceSessionFile=${sourceSessionFile}`,
+        },
+        sourceRef,
+      };
+    }
+    const sourceTurnIds = new Set(sourceTurns.map(t => t.turnId).filter(Boolean));
+    const forkOnlyTurns = forkTurns.filter(t => !t.turnId || !sourceTurnIds.has(t.turnId));
+
+    const messages = [
+      ...sourcePrefix.flatMap(t => t.messages),
+      ...forkOnlyTurns.flatMap(t => t.messages),
+    ];
+
+    if (messages.length === 0) {
+      return { kind: 'empty', reason: 'no-rows', sourceRef };
+    }
+    return { kind: 'loaded', messages, sourceRef };
+  }
+
+  private loadNormalHydrationMessages(
+    conversation: Conversation,
+    state: CodexProviderState,
+    transcriptRootPath: string | null,
+  ): HistoryLoadOutcome {
+    const { threadId, sessionFilePath } = resolveSessionTarget(
+      state,
+      conversation.sessionId,
+      transcriptRootPath,
     );
     const resolvedTranscriptRootPath = transcriptRootPath
       ?? deriveCodexSessionsRootFromSessionPath(sessionFilePath);
@@ -188,8 +218,25 @@ export class CodexConversationHistoryService extends BaseHistoryService<CodexPro
       return { kind: 'empty', reason: 'no-session', sourceRef: null };
     }
 
-    // Preserve the existing side-effect: backfill resolved paths into providerState so
-    // subsequent reads and persistence carry the discovered transcript location.
+    this.backfillResolvedPaths(conversation, state, threadId, sessionFilePath, resolvedTranscriptRootPath);
+
+    const sourceRef = `${threadId ?? ''}::${sessionFilePath}`;
+    const sdkMessages = parseCodexSessionFile(sessionFilePath);
+    if (sdkMessages.length === 0) {
+      return { kind: 'empty', reason: 'no-rows', sourceRef };
+    }
+    return { kind: 'loaded', messages: sdkMessages, sourceRef };
+  }
+
+  // Preserve the existing side-effect: backfill resolved paths into providerState so
+  // subsequent reads and persistence carry the discovered transcript location.
+  private backfillResolvedPaths(
+    conversation: Conversation,
+    state: CodexProviderState,
+    threadId: string | null,
+    sessionFilePath: string,
+    resolvedTranscriptRootPath: string | null,
+  ): void {
     if (sessionFilePath !== state.sessionFilePath) {
       conversation.providerState = {
         ...(conversation.providerState ?? {}),
@@ -204,13 +251,6 @@ export class CodexConversationHistoryService extends BaseHistoryService<CodexPro
         transcriptRootPath: resolvedTranscriptRootPath,
       };
     }
-
-    const sourceRef = `${threadId ?? ''}::${sessionFilePath}`;
-    const sdkMessages = parseCodexSessionFile(sessionFilePath);
-    if (sdkMessages.length === 0) {
-      return { kind: 'empty', reason: 'no-rows', sourceRef };
-    }
-    return { kind: 'loaded', messages: sdkMessages, sourceRef };
   }
 
   resolveSessionIdForConversation(conversation: Conversation | null): string | null {
