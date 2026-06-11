@@ -82,10 +82,6 @@
       "loc": 763,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
-    "src/providers/codex/runtime/CodexSessionFileTail.ts": {
-      "loc": 687,
-      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
-    },
     "src/features/chat/tabs/tabControllers.ts": {
       "loc": 628,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."

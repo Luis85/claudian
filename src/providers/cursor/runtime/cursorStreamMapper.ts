@@ -333,6 +333,73 @@ function parseToolCompletion(record: Record<string, unknown>): CursorToolComplet
   return { content: capCursorToolResultLength(JSON.stringify(record)), isError: false };
 }
 
+function parseCursorNdjsonLine(line: string): Record<string, unknown> | null {
+  const trimmed = line.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(trimmed) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function readCursorSessionId(rec: Record<string, unknown>): string | undefined {
+  return typeof rec.session_id === 'string' ? rec.session_id : undefined;
+}
+
+function firstStringField(rec: Record<string, unknown>, keys: string[]): string {
+  for (const key of keys) {
+    const value = rec[key];
+    if (typeof value === 'string') {
+      return value;
+    }
+  }
+  return '';
+}
+
+function buildCursorUsageChunk(
+  rec: Record<string, unknown>,
+  model: string,
+  sessionId: string | undefined,
+): StreamChunk {
+  const usage = extractCursorUsage(rec, model);
+  return {
+    type: 'usage',
+    usage: buildUsageInfo({
+      model,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      cacheReadInputTokens: usage.cacheReadInputTokens,
+      contextTokens: usage.contextTokens,
+      contextWindow: usage.contextWindow,
+      contextWindowIsAuthoritative: usage.contextWindowIsAuthoritative,
+    }),
+    sessionId: sessionId ?? null,
+  };
+}
+
+function reduceToolCallCompleted(
+  rec: Record<string, unknown>,
+  sessionId: string | undefined,
+): CursorReduceResult {
+  const callId = typeof rec.call_id === 'string' ? rec.call_id : '';
+  if (!callId) {
+    return { chunks: [], sessionId };
+  }
+  const completion = parseToolCompletion(rec);
+  const chunk: StreamChunk = {
+    type: 'tool_result',
+    id: callId,
+    content: completion.content,
+    ...(completion.isError ? { isError: true } : {}),
+    ...(completion.toolUseResult ? { toolUseResult: completion.toolUseResult } : {}),
+  };
+  return { chunks: [chunk], sessionId };
+}
+
 export class CursorNdjsonStreamReducer {
   private assistantText = createCursorAssistantTextState();
   private thinkingText = createCursorAssistantTextState();
@@ -344,173 +411,134 @@ export class CursorNdjsonStreamReducer {
   }
 
   reduceLine(line: string): CursorReduceResult {
-    const trimmed = line.trim();
-    if (!trimmed) {
+    const rec = parseCursorNdjsonLine(line);
+    if (!rec) {
       return { chunks: [] };
     }
 
-    let rec: Record<string, unknown>;
-    try {
-      rec = JSON.parse(trimmed) as Record<string, unknown>;
-    } catch {
-      return { chunks: [] };
-    }
+    const sessionId = readCursorSessionId(rec);
 
-    const sessionId = typeof rec.session_id === 'string' ? rec.session_id : undefined;
-    const type = rec.type;
-
-    if (type === 'system') {
-      if (typeof rec.model === 'string' && rec.model) {
-        this.model = rec.model;
-      }
-      return { chunks: [], sessionId };
-    }
-
-    if (type === 'user') {
-      return { chunks: [], sessionId };
-    }
-
-    // A standalone reasoning event (if Cursor ever emits one) with a string payload.
-    if (type === 'thinking' || type === 'reasoning') {
-      const payload =
-        typeof rec.content === 'string'
-          ? rec.content
-          : typeof rec.text === 'string'
-            ? rec.text
-            : typeof rec.thinking === 'string'
-              ? rec.thinking
-              : typeof rec.reasoning === 'string'
-                ? rec.reasoning
-                : '';
-      const delta = mergeCursorAssistantText(this.thinkingText, payload);
-      const chunks: StreamChunk[] = delta ? [{ type: 'thinking', content: delta }] : [];
-      return { chunks, sessionId };
-    }
-
-    if (type === 'usage') {
-      if (!this.model) {
-        // Model not yet stamped from the `system` event — drop this usage event;
-        // we'll emit the next one once `system.model` is observed.
+    switch (rec.type) {
+      case 'system':
+        return this.reduceSystem(rec, sessionId);
+      case 'thinking':
+      case 'reasoning':
+        return this.reduceStandaloneThinking(rec, sessionId);
+      case 'usage':
+        return this.reduceUsage(rec, sessionId);
+      case 'assistant':
+        return this.reduceAssistant(rec, sessionId);
+      case 'tool_call':
+        return this.reduceToolCall(rec, sessionId);
+      case 'result':
+        return this.reduceResult(rec, sessionId);
+      default:
+        // Includes `user` echo events, which carry nothing to render.
         return { chunks: [], sessionId };
+    }
+  }
+
+  private reduceSystem(rec: Record<string, unknown>, sessionId: string | undefined): CursorReduceResult {
+    if (typeof rec.model === 'string' && rec.model) {
+      this.model = rec.model;
+    }
+    return { chunks: [], sessionId };
+  }
+
+  // A standalone reasoning event (if Cursor ever emits one) with a string payload.
+  private reduceStandaloneThinking(
+    rec: Record<string, unknown>,
+    sessionId: string | undefined,
+  ): CursorReduceResult {
+    const payload = firstStringField(rec, ['content', 'text', 'thinking', 'reasoning']);
+    const delta = mergeCursorAssistantText(this.thinkingText, payload);
+    const chunks: StreamChunk[] = delta ? [{ type: 'thinking', content: delta }] : [];
+    return { chunks, sessionId };
+  }
+
+  private reduceUsage(rec: Record<string, unknown>, sessionId: string | undefined): CursorReduceResult {
+    const model = this.model;
+    if (!model) {
+      // Model not yet stamped from the `system` event — drop this usage event;
+      // we'll emit the next one once `system.model` is observed.
+      return { chunks: [], sessionId };
+    }
+    return { chunks: [buildCursorUsageChunk(rec, model, sessionId)], sessionId };
+  }
+
+  private reduceAssistant(rec: Record<string, unknown>, sessionId: string | undefined): CursorReduceResult {
+    const chunks: StreamChunk[] = [];
+
+    // Emit reasoning deltas before the visible text, mirroring the text-delta
+    // dedupe so accumulated thinking is never re-sent.
+    const fullThinking = extractAssistantThinking(rec);
+    if (fullThinking) {
+      const thinkingDelta = mergeCursorAssistantText(this.thinkingText, fullThinking);
+      if (thinkingDelta) {
+        chunks.push({ type: 'thinking', content: thinkingDelta });
       }
-      const usage = extractCursorUsage(rec, this.model);
+    }
+
+    const incoming = extractAssistantText(rec);
+    const delta = mergeCursorAssistantText(this.assistantText, incoming);
+    if (delta) {
+      chunks.push({ type: 'text', content: delta });
+    }
+    return { chunks, sessionId };
+  }
+
+  private reduceToolCall(rec: Record<string, unknown>, sessionId: string | undefined): CursorReduceResult {
+    const subtype = rec.subtype;
+    if (subtype === 'started') {
+      return this.reduceToolCallStarted(rec, sessionId);
+    }
+    if (subtype === 'completed') {
+      return reduceToolCallCompleted(rec, sessionId);
+    }
+    return { chunks: [], sessionId };
+  }
+
+  private reduceToolCallStarted(
+    rec: Record<string, unknown>,
+    sessionId: string | undefined,
+  ): CursorReduceResult {
+    // A tool call closes the current text segment. cursor-agent's next
+    // assistant snapshot is segment-local (it covers only the post-tool
+    // text, not the whole turn), so we fold the open segment into committed
+    // and start fresh. The committed prefix still lets us absorb a stray
+    // whole-turn snapshot defensively without re-emitting prior text.
+    closeCursorAssistantSegment(this.assistantText);
+    closeCursorAssistantSegment(this.thinkingText);
+    const tool = parseToolStart(rec);
+    if (!tool) {
+      return { chunks: [], sessionId };
+    }
+    return {
+      chunks: [{ type: 'tool_use', id: tool.id, name: tool.name, input: tool.input }],
+      sessionId,
+    };
+  }
+
+  private reduceResult(rec: Record<string, unknown>, sessionId: string | undefined): CursorReduceResult {
+    this.reset();
+    if (rec.is_error === true) {
+      const msg = typeof rec.result === 'string'
+        ? rec.result
+        : 'Cursor Agent run failed';
       return {
-        chunks: [
-          {
-            type: 'usage',
-            usage: buildUsageInfo({
-              model: this.model,
-              inputTokens: usage.inputTokens,
-              outputTokens: usage.outputTokens,
-              cacheReadInputTokens: usage.cacheReadInputTokens,
-              contextTokens: usage.contextTokens,
-              contextWindow: usage.contextWindow,
-              contextWindowIsAuthoritative: usage.contextWindowIsAuthoritative,
-            }),
-            sessionId: sessionId ?? null,
-          },
-        ],
+        chunks: [{ type: 'error', content: msg }, { type: 'done' }],
         sessionId,
       };
     }
-
-    if (type === 'assistant') {
-      const chunks: StreamChunk[] = [];
-
-      // Emit reasoning deltas before the visible text, mirroring the text-delta
-      // dedupe so accumulated thinking is never re-sent.
-      const fullThinking = extractAssistantThinking(rec);
-      if (fullThinking) {
-        const thinkingDelta = mergeCursorAssistantText(this.thinkingText, fullThinking);
-        if (thinkingDelta) {
-          chunks.push({ type: 'thinking', content: thinkingDelta });
-        }
-      }
-
-      const incoming = extractAssistantText(rec);
-      const delta = mergeCursorAssistantText(this.assistantText, incoming);
-      if (delta) {
-        chunks.push({ type: 'text', content: delta });
-      }
-      return { chunks, sessionId };
+    if (!this.model) {
+      return {
+        chunks: [{ type: 'done' }],
+        sessionId,
+      };
     }
-
-    if (type === 'tool_call') {
-      const subtype = rec.subtype;
-      if (subtype === 'started') {
-        // A tool call closes the current text segment. cursor-agent's next
-        // assistant snapshot is segment-local (it covers only the post-tool
-        // text, not the whole turn), so we fold the open segment into committed
-        // and start fresh. The committed prefix still lets us absorb a stray
-        // whole-turn snapshot defensively without re-emitting prior text.
-        closeCursorAssistantSegment(this.assistantText);
-        closeCursorAssistantSegment(this.thinkingText);
-        const tool = parseToolStart(rec);
-        if (!tool) {
-          return { chunks: [], sessionId };
-        }
-        return {
-          chunks: [{ type: 'tool_use', id: tool.id, name: tool.name, input: tool.input }],
-          sessionId,
-        };
-      }
-
-      if (subtype === 'completed') {
-        const callId = typeof rec.call_id === 'string' ? rec.call_id : '';
-        if (!callId) {
-          return { chunks: [], sessionId };
-        }
-        const completion = parseToolCompletion(rec);
-        const chunk: StreamChunk = {
-          type: 'tool_result',
-          id: callId,
-          content: completion.content,
-          ...(completion.isError ? { isError: true } : {}),
-          ...(completion.toolUseResult ? { toolUseResult: completion.toolUseResult } : {}),
-        };
-        return { chunks: [chunk], sessionId };
-      }
-
-      return { chunks: [], sessionId };
-    }
-
-    if (type === 'result') {
-      this.reset();
-      if (rec.is_error === true) {
-        const msg = typeof rec.result === 'string'
-          ? rec.result
-          : 'Cursor Agent run failed';
-        return {
-          chunks: [{ type: 'error', content: msg }, { type: 'done' }],
-          sessionId,
-        };
-      }
-      if (!this.model) {
-        return {
-          chunks: [{ type: 'done' }],
-          sessionId,
-        };
-      }
-      const usage = extractCursorUsage(rec, this.model);
-      const chunks: StreamChunk[] = [
-        {
-          type: 'usage',
-          usage: buildUsageInfo({
-            model: this.model,
-            inputTokens: usage.inputTokens,
-            outputTokens: usage.outputTokens,
-            cacheReadInputTokens: usage.cacheReadInputTokens,
-            contextTokens: usage.contextTokens,
-            contextWindow: usage.contextWindow,
-            contextWindowIsAuthoritative: usage.contextWindowIsAuthoritative,
-          }),
-          sessionId: sessionId ?? null,
-        },
-        { type: 'done' },
-      ];
-      return { chunks, sessionId };
-    }
-
-    return { chunks: [], sessionId };
+    return {
+      chunks: [buildCursorUsageChunk(rec, this.model, sessionId), { type: 'done' }],
+      sessionId,
+    };
   }
 }
