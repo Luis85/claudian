@@ -177,13 +177,16 @@ describe('codex tab registry port', () => {
   });
 
   it('gates the Windows installation fields exactly like the legacy tab', () => {
-    // This suite runs on a POSIX host: the rows must be absent...
-    mounted = mountCodex();
-    for (const fieldId of WINDOWS_ONLY_FIELD_IDS) {
-      expect(fieldRow(mounted.host, fieldId)).toBeNull();
-    }
-    mounted.dispose();
-    mounted = null;
+    // Force a POSIX platform (CI also runs this suite on windows-latest,
+    // where the host platform would legitimately show the rows): absent...
+    withPlatform('linux', () => {
+      mounted = mountCodex();
+      for (const fieldId of WINDOWS_ONLY_FIELD_IDS) {
+        expect(fieldRow(mounted!.host, fieldId)).toBeNull();
+      }
+      mounted!.dispose();
+      mounted = null;
+    });
 
     // ...and present (with the legacy dropdown options) on Windows.
     withPlatform('win32', () => {
@@ -221,7 +224,13 @@ describe('codex tab registry port', () => {
     const cliRow = fieldRow(host, 'providerConfigs.codex.cliPathsByHost');
     expect(cliRow?.querySelector('.claudian-cli-path-validation')).not.toBeNull();
     const cliText = componentFor(host, 'providerConfigs.codex.cliPathsByHost', 'text');
-    expect(cliText?.props.placeholder).toBe('/usr/local/bin/codex');
+    // The widget picks a platform-specific example path; this suite also runs
+    // on the windows-latest CI leg.
+    expect(cliText?.props.placeholder).toBe(
+      process.platform === 'win32'
+        ? 'C:\\Users\\you\\AppData\\Roaming\\npm\\codex.exe'
+        : '/usr/local/bin/codex',
+    );
 
     const skillsRow = fieldRow(host, 'codex.skills');
     const skillsContainer = skillsRow?.querySelector('.claudian-slash-commands-container');
