@@ -16,20 +16,20 @@ describe('General tab registry fields', () => {
     expect(tabs.find((t) => t.id === 'general')).toBeDefined();
   });
 
-  it('registers 8 sections under General', () => {
+  it('registers 8 sections under General, mirroring the legacy renderer', () => {
     registerGeneralTabFields();
     const r = getSettingsRegistry();
     const sections = r.getSections('general', { providerConfigs: {} } as any);
     expect(sections.length).toBe(8);
     expect(sections.map((s) => s.id)).toEqual([
       'providers',
-      'appearance',
-      'chat',
-      'inlineEdit',
-      'agentMentions',
-      'performance',
-      'diagnostics',
+      'general',
+      'display',
+      'conversations',
+      'content',
+      'input',
       'hotkeys',
+      'environment',
     ]);
   });
 
@@ -64,17 +64,20 @@ describe('General tab registry fields', () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
-  describe('provider enable toggles in General > Providers section', () => {
+  describe('provider enable rows in General > Providers section', () => {
     const providers = ['claude', 'codex', 'opencode', 'cursor'] as const;
 
-    it.each(providers)('registers providerConfigs.%s.enabled toggle', (id) => {
+    // Ported as `custom` (not bare toggles): the rows mount
+    // renderProviderEnableSetting so enabling a provider also reveals its
+    // settings tab, matching the legacy renderer's behavior.
+    it.each(providers)('registers providerConfigs.%s.enabled row', (id) => {
       resetSettingsRegistryForTests();
       registerGeneralTabFields();
       const r = getSettingsRegistry();
       const fields = r.getFields('general', 'providers', { providerConfigs: {} } as any);
       const field = fields.find((f) => f.id === `providerConfigs.${id}.enabled`);
       expect(field).toBeDefined();
-      expect(field?.type.kind).toBe('toggle');
+      expect(field?.type.kind).toBe('custom');
     });
   });
 });

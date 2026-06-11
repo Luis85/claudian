@@ -176,6 +176,9 @@ export interface MockTextComponent {
     dataset: Record<string, string>;
     addEventListener: jest.Mock;
     removeEventListener: jest.Mock;
+    addClass: jest.Mock;
+    removeClass: jest.Mock;
+    toggleClass: jest.Mock;
   };
   setValue: (v: string) => MockTextComponent;
   setPlaceholder: (v: string) => MockTextComponent;
@@ -205,12 +208,23 @@ export interface MockButtonComponent {
   onClick: (fn: () => void | Promise<void>) => MockButtonComponent;
 }
 
+export interface MockSliderComponent {
+  value: number;
+  limits: { min: number; max: number; step: number } | null;
+  changeHandler: (v: number) => void;
+  setLimits: (min: number, max: number, step: number) => MockSliderComponent;
+  setValue: (v: number) => MockSliderComponent;
+  setDynamicTooltip: () => MockSliderComponent;
+  onChange: (fn: (v: number) => void) => MockSliderComponent;
+}
+
 export type MockSettingComponent =
   | { kind: 'toggle'; props: MockToggleComponent }
   | { kind: 'text'; props: MockTextComponent }
   | { kind: 'textarea'; props: MockTextComponent }
   | { kind: 'dropdown'; props: MockDropdownComponent }
-  | { kind: 'button'; props: MockButtonComponent };
+  | { kind: 'button'; props: MockButtonComponent }
+  | { kind: 'slider'; props: MockSliderComponent };
 
 function createStubEl(tag: string): any {
   const el: any = {
@@ -295,7 +309,7 @@ export class Setting {
       placeholder: '',
       changeHandler: () => undefined,
       disabled: false,
-      inputEl: { type: 'text', min: '', max: '', step: '', dataset: {}, addEventListener: jest.fn(), removeEventListener: jest.fn() },
+      inputEl: { type: 'text', min: '', max: '', step: '', dataset: {}, addEventListener: jest.fn(), removeEventListener: jest.fn(), addClass: jest.fn(), removeClass: jest.fn(), toggleClass: jest.fn() },
       setValue(v: string) {
         this.value = v;
         return this;
@@ -324,7 +338,7 @@ export class Setting {
       placeholder: '',
       changeHandler: () => undefined,
       disabled: false,
-      inputEl: { type: 'textarea', min: '', max: '', step: '', dataset: {}, addEventListener: jest.fn(), removeEventListener: jest.fn() },
+      inputEl: { type: 'textarea', min: '', max: '', step: '', dataset: {}, addEventListener: jest.fn(), removeEventListener: jest.fn(), addClass: jest.fn(), removeClass: jest.fn(), toggleClass: jest.fn() },
       setValue(v: string) {
         this.value = v;
         return this;
@@ -343,6 +357,32 @@ export class Setting {
       },
     };
     this.components.push({ kind: 'textarea', props: component });
+    if (cb) cb(component);
+    return this;
+  }
+
+  addSlider(cb?: (s: MockSliderComponent) => unknown): this {
+    const component: MockSliderComponent = {
+      value: 0,
+      limits: null,
+      changeHandler: () => undefined,
+      setLimits(min: number, max: number, step: number) {
+        this.limits = { min, max, step };
+        return this;
+      },
+      setValue(v: number) {
+        this.value = v;
+        return this;
+      },
+      setDynamicTooltip() {
+        return this;
+      },
+      onChange(fn: (v: number) => void) {
+        this.changeHandler = fn;
+        return this;
+      },
+    };
+    this.components.push({ kind: 'slider', props: component });
     if (cb) cb(component);
     return this;
   }

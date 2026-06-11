@@ -105,6 +105,12 @@ export function installObsidianDom(): void {
     };
   }
 
+  if (typeof protoRecord.appendText !== 'function') {
+    protoRecord.appendText = function appendText(this: HTMLElement, value: string): void {
+      this.appendChild(this.ownerDocument.createTextNode(value));
+    };
+  }
+
   if (typeof protoRecord.createSpan !== 'function') {
     protoRecord.createSpan = function createSpan(
       this: HTMLElement,
