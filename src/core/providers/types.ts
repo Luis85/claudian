@@ -356,6 +356,14 @@ export interface ProviderChatUIConfig {
   /** Apply model change side effects to settings (defaults, tracking). */
   applyModelDefaults(model: string, settings: unknown): void;
 
+  /**
+   * Optional: re-validate the active `settings.model` against the provider's
+   * current option list (after custom-model edits), repointing it — with
+   * `applyModelDefaults` side effects — when it no longer resolves. Returns
+   * whether the selection changed.
+   */
+  reconcileModelSelection?(settings: Record<string, unknown>): boolean;
+
   /** Optional provider hook to discover model-scoped metadata after a model is selected. */
   prepareModelMetadata?(
     model: string,

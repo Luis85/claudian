@@ -1,4 +1,5 @@
 import { t } from '../../../../i18n/i18n';
+import { customModelsCommitHooks } from '../../customModels/customModelsCommitHooks';
 import { CustomModelsTable } from '../../customModels/CustomModelsTable';
 import { renderProviderSettingsWidget } from '../providers/providerWidgets';
 import { registerProviderTab } from '../providers/registerProviderTab';
@@ -141,7 +142,7 @@ function registerModelFields(r: Registry): void {
     type: {
       kind: 'custom',
       render: (ctx, host) => {
-        const table = new CustomModelsTable(host, 'claude', ctx);
+        const table = new CustomModelsTable(host, 'claude', ctx, customModelsCommitHooks(ctx, 'claude'));
         table.render();
       },
     },

@@ -176,4 +176,44 @@ describe('claudeChatUIConfig', () => {
       expect(claudeChatUIConfig.getPermissionModeToggle?.()?.planLabel).toBe('Plan');
     });
   });
+
+  describe('reconcileModelSelection', () => {
+    it('keeps a still-valid selection untouched', () => {
+      const settings: Record<string, unknown> = {
+        model: 'sonnet',
+        providerConfigs: {},
+      };
+
+      expect(claudeChatUIConfig.reconcileModelSelection?.(settings)).toBe(false);
+      expect(settings.model).toBe('sonnet');
+    });
+
+    it('repoints a removed custom model and applies model defaults', () => {
+      // The previously selected custom model is no longer in customModels —
+      // the exact state a delete in the custom-models table leaves behind.
+      const settings: Record<string, unknown> = {
+        model: 'my-removed-model',
+        providerConfigs: { claude: { customModels: [] } },
+      };
+
+      expect(claudeChatUIConfig.reconcileModelSelection?.(settings)).toBe(true);
+      const nextModel = settings.model as string;
+      expect(nextModel).not.toBe('my-removed-model');
+      expect(
+        claudeChatUIConfig.getModelOptions(settings).some((o) => o.value === nextModel),
+      ).toBe(true);
+      // applyModelDefaults side effect for built-in models.
+      expect(settings.effortLevel).toBeDefined();
+    });
+
+    it('falls back to the provider lastModel when the selection is invalid', () => {
+      const settings: Record<string, unknown> = {
+        model: 'my-removed-model',
+        providerConfigs: { claude: { customModels: [], lastModel: 'opus' } },
+      };
+
+      expect(claudeChatUIConfig.reconcileModelSelection?.(settings)).toBe(true);
+      expect(settings.model).toBe('opus');
+    });
+  });
 });
