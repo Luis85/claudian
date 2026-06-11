@@ -1,8 +1,5 @@
-import type {
-  ApprovalCallback,
-  ApprovalDecisionOption,
-  AskUserQuestionCallback,
-} from '../../../core/runtime/types';
+import type { RuntimeHost } from '../../../core/runtime/RuntimeHost';
+import type { ApprovalDecisionOption } from '../../../core/runtime/types';
 import type { ApprovalDecision } from '../../../core/types';
 import { normalizeCodexToolName } from '../normalization/codexToolNormalization';
 import type {
@@ -20,20 +17,14 @@ import type {
 } from './codexAppServerTypes';
 
 export class CodexServerRequestRouter {
-  private approvalCallback: ApprovalCallback | null = null;
-  private askUserCallback: AskUserQuestionCallback | null = null;
   private pendingApprovalRequests = new Map<RequestId, string>();
   private askUserAbortController: AbortController | null = null;
   private pendingAskUserRequestId: RequestId | null = null;
   private pendingAskUserThreadId: string | null = null;
 
-  setApprovalCallback(callback: ApprovalCallback | null): void {
-    this.approvalCallback = callback;
-  }
-
-  setAskUserCallback(callback: AskUserQuestionCallback | null): void {
-    this.askUserCallback = callback;
-  }
+  constructor(
+    private readonly host: Pick<RuntimeHost, 'approval' | 'askUser'>,
+  ) {}
 
   async handleServerRequest(
     requestIdOrMethod: RequestId | string,
@@ -71,8 +62,6 @@ export class CodexServerRequestRouter {
     requestId: RequestId | undefined,
     params: CommandApprovalRequest,
   ): Promise<CommandExecutionApprovalResponse> {
-    if (!this.approvalCallback) return { decision: 'decline' };
-
     const command = params.command ?? '';
     const toolName = normalizeCodexToolName('command_execution');
     const input = {
@@ -94,7 +83,7 @@ export class CodexServerRequestRouter {
     }
 
     try {
-      const decision = await this.approvalCallback(toolName, input, description, {
+      const decision = await this.host.approval(toolName, input, description, {
         ...(params.reason ? { decisionReason: params.reason } : {}),
         ...(params.networkApprovalContext ? { networkApprovalContext: params.networkApprovalContext } : {}),
         ...(params.additionalPermissions ? { additionalPermissions: params.additionalPermissions } : {}),
@@ -112,8 +101,6 @@ export class CodexServerRequestRouter {
     requestId: RequestId | undefined,
     params: FileChangeApprovalRequest,
   ): Promise<FileChangeApprovalResponse> {
-    if (!this.approvalCallback) return { decision: 'decline' };
-
     const reason = params.reason ?? undefined;
     const toolName = normalizeCodexToolName('file_change');
     const input: Record<string, unknown> = { reason: reason ?? null };
@@ -124,7 +111,7 @@ export class CodexServerRequestRouter {
     }
 
     try {
-      const decision = await this.approvalCallback(toolName, input, description, {});
+      const decision = await this.host.approval(toolName, input, description, {});
       return { decision: mapFileChangeApprovalDecision(decision) };
     } finally {
       if (requestId !== undefined) {
@@ -137,8 +124,6 @@ export class CodexServerRequestRouter {
     requestId: RequestId | undefined,
     params: PermissionsApprovalRequest,
   ): Promise<PermissionsApprovalResponse> {
-    if (!this.approvalCallback) return { permissions: {}, scope: 'turn' };
-
     const requestedPermissions = params.permissions as Record<string, unknown> | undefined ?? {};
     const reason = params.reason ?? undefined;
     const toolName = 'permissions';
@@ -150,7 +135,7 @@ export class CodexServerRequestRouter {
 
     let decision: ApprovalDecision;
     try {
-      decision = await this.approvalCallback(toolName, requestedPermissions, description, {});
+      decision = await this.host.approval(toolName, requestedPermissions, description, {});
     } finally {
       if (requestId !== undefined) {
         this.pendingApprovalRequests.delete(requestId);
@@ -191,8 +176,6 @@ export class CodexServerRequestRouter {
     requestId: RequestId | undefined,
     params: UserInputRequest,
   ): Promise<UserInputResponse> {
-    if (!this.askUserCallback) return { answers: {} };
-
     const questions = params.questions ?? [];
     const input: Record<string, unknown> = { questions };
 
@@ -202,7 +185,7 @@ export class CodexServerRequestRouter {
 
     let userAnswers: Record<string, string | string[]> | null;
     try {
-      userAnswers = await this.askUserCallback(input, this.askUserAbortController.signal);
+      userAnswers = await this.host.askUser(input, this.askUserAbortController.signal);
     } finally {
       this.askUserAbortController = null;
       this.pendingAskUserRequestId = null;

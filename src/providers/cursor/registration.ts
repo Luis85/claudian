@@ -23,7 +23,7 @@ export const cursorProviderRegistration: ProviderRegistration = {
   environmentKeyPatterns: [/^CURSOR_/i],
   chatUIConfig: cursorChatUIConfig,
   settingsReconciler: cursorSettingsReconciler,
-  createRuntime: ({ plugin }) => new CursorChatRuntime(plugin),
+  createRuntime: ({ plugin, host }) => new CursorChatRuntime(plugin, host),
   createTitleGenerationService: (plugin) => new CursorTitleGenerationService(plugin),
   createInstructionRefineService: (plugin) => new CursorInstructionRefineService(plugin),
   createInlineEditService: (plugin) => new CursorInlineEditService(plugin),

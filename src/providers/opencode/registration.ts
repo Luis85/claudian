@@ -18,7 +18,7 @@ export const opencodeProviderRegistration: ProviderRegistration = {
   chatUIConfig: opencodeChatUIConfig,
   createInlineEditService: (plugin) => new OpencodeInlineEditService(plugin),
   createInstructionRefineService: (plugin) => new OpencodeInstructionRefineService(plugin),
-  createRuntime: ({ plugin }) => new OpencodeChatRuntime(plugin),
+  createRuntime: ({ plugin, host }) => new OpencodeChatRuntime(plugin, host),
   createTitleGenerationService: (plugin) => new OpencodeTitleGenerationService(plugin),
   displayName: 'OpenCode',
   firstRunBlurb: 'Opencode CLI server',

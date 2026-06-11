@@ -4,10 +4,7 @@ import type {
   PermissionResult,
 } from '@anthropic-ai/claude-agent-sdk';
 
-import type {
-  ApprovalCallback,
-  AskUserQuestionCallback,
-} from '../../../core/runtime/types';
+import type { RuntimeHost } from '../../../core/runtime/RuntimeHost';
 import { getActionDescription } from '../../../core/security/ApprovalManager';
 import {
   TOOL_ASK_USER_QUESTION,
@@ -16,7 +13,6 @@ import {
 } from '../../../core/tools/toolNames';
 import type {
   ApprovalDecision,
-  ExitPlanModeCallback,
   ExitPlanModeDecision,
 } from '../../../core/types';
 import type { PermissionMode } from '../../../core/types/settings';
@@ -24,9 +20,7 @@ import { buildPermissionUpdates } from '../security/ClaudePermissionUpdates';
 
 export interface ClaudeApprovalHandlerDeps {
   getAllowedTools: () => string[] | null;
-  getApprovalCallback: () => ApprovalCallback | null;
-  getAskUserQuestionCallback: () => AskUserQuestionCallback | null;
-  getExitPlanModeCallback: () => ExitPlanModeCallback | null;
+  host: Pick<RuntimeHost, 'approval' | 'askUser' | 'exitPlanMode'>;
   getPermissionMode: () => PermissionMode;
   resolveSDKPermissionMode: (mode: PermissionMode) => SDKPermissionMode;
   syncPermissionMode: (mode: PermissionMode, sdkMode: SDKPermissionMode) => void;
@@ -49,10 +43,9 @@ export function createClaudeApprovalCallback(
       }
     }
 
-    const exitPlanModeCallback = deps.getExitPlanModeCallback();
-    if (toolName === TOOL_EXIT_PLAN_MODE && exitPlanModeCallback) {
+    if (toolName === TOOL_EXIT_PLAN_MODE) {
       try {
-        const decision: ExitPlanModeDecision | null = await exitPlanModeCallback(input, options.signal);
+        const decision: ExitPlanModeDecision | null = await deps.host.exitPlanMode(input, options.signal);
         if (decision === null) {
           return { behavior: 'deny', message: 'User cancelled.', interrupt: true };
         }
@@ -79,8 +72,7 @@ export function createClaudeApprovalCallback(
       }
     }
 
-    const askUserQuestionCallback = deps.getAskUserQuestionCallback();
-    if (toolName === TOOL_ASK_USER_QUESTION && askUserQuestionCallback) {
+    if (toolName === TOOL_ASK_USER_QUESTION) {
       try {
         // The SDK's JSDoc says "Other will be provided automatically" but
         // the SDK doesn't inject isOther into the canUseTool input. Claudian
@@ -94,7 +86,7 @@ export function createClaudeApprovalCallback(
             }
           }
         }
-        const answers = await askUserQuestionCallback(input, options.signal);
+        const answers = await deps.host.askUser(input, options.signal);
         if (answers === null) {
           return { behavior: 'deny', message: 'User declined to answer.', interrupt: true };
         }
@@ -108,15 +100,10 @@ export function createClaudeApprovalCallback(
       }
     }
 
-    const approvalCallback = deps.getApprovalCallback();
-    if (!approvalCallback) {
-      return { behavior: 'deny', message: 'No approval handler available.' };
-    }
-
     try {
       const { decisionReason, blockedPath, agentID } = options;
       const description = getActionDescription(toolName, input);
-      const decision: ApprovalDecision = await approvalCallback(
+      const decision: ApprovalDecision = await deps.host.approval(
         toolName,
         input,
         description,

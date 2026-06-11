@@ -26,7 +26,6 @@ import {
   initializeTabControllers,
   initializeTabService,
   initializeTabUI,
-  setupServiceCallbacks,
   wireTabInputEvents,
 } from './Tab';
 import {
@@ -980,7 +979,6 @@ export class TabManager implements TabManagerInterface {
   ): Promise<void> {
     if (!context.runtime || context.runtime.providerId !== providerId || !tab.serviceInitialized) {
       await initializeTabService(tab, this.plugin, context.conversation);
-      setupServiceCallbacks(tab, this.plugin);
     }
 
     const runtime = tab.service?.providerId === providerId ? tab.service : null;

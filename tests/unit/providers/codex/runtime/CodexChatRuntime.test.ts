@@ -73,6 +73,8 @@ jest.mock('@/providers/codex/runtime/codexAppServerSupport', () => {
 // ---------------------------------------------------------------------------
 // Import after mocks
 // ---------------------------------------------------------------------------
+import { createMockRuntimeHost, type MockRuntimeHost } from '@test/helpers/runtimeHost';
+
 import { CodexAppServerProcess as MockedProcessClass } from '@/providers/codex/runtime/CodexAppServerProcess';
 import { CodexChatRuntime } from '@/providers/codex/runtime/CodexChatRuntime';
 
@@ -331,6 +333,7 @@ function buildRequestHandler(
 
 describe('CodexChatRuntime', () => {
   let runtime: CodexChatRuntime;
+  let host: MockRuntimeHost;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -364,7 +367,8 @@ describe('CodexChatRuntime', () => {
     }));
     captureHandlers();
     setupDefaultRequestMock();
-    runtime = new CodexChatRuntime(createMockPlugin());
+    host = createMockRuntimeHost();
+    runtime = new CodexChatRuntime(createMockPlugin(), host);
   });
 
   afterEach(() => {
@@ -531,7 +535,7 @@ describe('CodexChatRuntime', () => {
             reasoningSummary: 'detailed',
           },
         },
-      }));
+      }), host);
 
       await collectChunks(runtime.query(createTurn('hi')));
 
@@ -550,7 +554,7 @@ describe('CodexChatRuntime', () => {
             reasoningSummary: 'concise',
           },
         },
-      }));
+      }), host);
 
       await collectChunks(runtime.query(createTurn('hi')));
 
@@ -704,7 +708,7 @@ describe('CodexChatRuntime', () => {
 
     it('passes baseInstructions (no temp file)', async () => {
       const plugin = createMockPlugin({ systemPrompt: 'Be helpful.' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
 
       await collectChunks(rt.query(createTurn()));
 
@@ -1248,9 +1252,8 @@ describe('CodexChatRuntime', () => {
     });
 
     it('only dismisses approval UI when serverRequest/resolved matches the active request and thread', async () => {
-      const dismisser = jest.fn();
-      runtime.setApprovalDismisser(dismisser);
-      runtime.setApprovalCallback(jest.fn().mockImplementation(async () => new Promise(() => {})));
+      const dismisser = host.dismissApproval;
+      host.approval.mockImplementation(async () => new Promise(() => {}));
 
       mockTransportRequest.mockImplementation(buildRequestHandler({
         'thread/start': () => threadStartResponse('thread-dismiss'),
@@ -1294,9 +1297,8 @@ describe('CodexChatRuntime', () => {
   });
 
   describe('cancel dismisses approval UI', () => {
-    it('calls approvalDismisser on cancel', async () => {
-      const dismisser = jest.fn();
-      runtime.setApprovalDismisser(dismisser);
+    it('dismisses pending approval UI through the host on cancel', async () => {
+      const dismisser = host.dismissApproval;
 
       mockTransportRequest.mockImplementation(buildRequestHandler({
         'thread/start': () => threadStartResponse('thread-cancel-dismiss'),
@@ -1322,7 +1324,7 @@ describe('CodexChatRuntime', () => {
   describe('thread/resume reasserts current settings', () => {
     it('sends approvalPolicy and sandbox on thread/resume', async () => {
       const plugin = createMockPlugin({ permissionMode: 'yolo' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
 
       rt.syncConversationState({
         sessionId: 'thread-resume-settings',
@@ -1344,7 +1346,7 @@ describe('CodexChatRuntime', () => {
 
     it('sends model on thread/resume', async () => {
       const plugin = createMockPlugin({ model: 'gpt-5.4-mini' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
 
       rt.syncConversationState({
         sessionId: 'thread-resume-model',
@@ -1365,7 +1367,7 @@ describe('CodexChatRuntime', () => {
 
     it('sends serviceTier on thread/resume when fast mode is enabled', async () => {
       const plugin = createMockPlugin({ model: DEFAULT_CODEX_PRIMARY_MODEL, serviceTier: 'fast' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
 
       rt.syncConversationState({
         sessionId: 'thread-resume-fast',
@@ -1386,7 +1388,7 @@ describe('CodexChatRuntime', () => {
 
     it('reasserts approvalPolicy and sandboxPolicy on turn/start for already-loaded threads', async () => {
       const plugin = createMockPlugin({ permissionMode: 'normal' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
 
       await collectChunks(rt.query(createTurn('first')));
 
@@ -1409,7 +1411,7 @@ describe('CodexChatRuntime', () => {
   describe('query - permission modes', () => {
     it('uses danger-full-access for yolo mode', async () => {
       const plugin = createMockPlugin({ permissionMode: 'yolo' });
-      const yoloRuntime = new CodexChatRuntime(plugin);
+      const yoloRuntime = new CodexChatRuntime(plugin, createMockRuntimeHost());
 
       await collectChunks(yoloRuntime.query(createTurn()));
 
@@ -1422,7 +1424,7 @@ describe('CodexChatRuntime', () => {
 
     it('sends serviceTier fast on thread/start and turn/start when fast mode is enabled', async () => {
       const plugin = createMockPlugin({ serviceTier: 'fast' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
 
       await collectChunks(rt.query(createTurn()));
 
@@ -1436,7 +1438,7 @@ describe('CodexChatRuntime', () => {
 
     it('sends serviceTier null on turn/start when fast mode is disabled', async () => {
       const plugin = createMockPlugin({ serviceTier: 'default' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
 
       await collectChunks(rt.query(createTurn()));
 
@@ -1448,7 +1450,7 @@ describe('CodexChatRuntime', () => {
 
     it('uses workspace-write with on-request for normal mode', async () => {
       const plugin = createMockPlugin({ permissionMode: 'normal' });
-      const safeRuntime = new CodexChatRuntime(plugin);
+      const safeRuntime = new CodexChatRuntime(plugin, createMockRuntimeHost());
 
       await collectChunks(safeRuntime.query(createTurn()));
 
@@ -1461,7 +1463,7 @@ describe('CodexChatRuntime', () => {
 
     it('falls back to normal mode for unrecognized permissionMode', async () => {
       const plugin = createMockPlugin({ permissionMode: 'plan' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
 
       await collectChunks(rt.query(createTurn()));
 
@@ -1474,7 +1476,7 @@ describe('CodexChatRuntime', () => {
 
     it('always sends baseline sandboxPolicy even without external context', async () => {
       const plugin = createMockPlugin({ permissionMode: 'normal' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
 
       await collectChunks(rt.query(createTurn()));
 
@@ -1488,7 +1490,7 @@ describe('CodexChatRuntime', () => {
 
     it('sends explicit dangerFullAccess sandboxPolicy in yolo mode', async () => {
       const plugin = createMockPlugin({ permissionMode: 'yolo' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
 
       await collectChunks(rt.query(createTurn()));
 
@@ -1642,7 +1644,7 @@ describe('CodexChatRuntime', () => {
   describe('query - codexSafeMode read-only', () => {
     it('sends sandbox read-only on thread/resume when codexSafeMode is read-only', async () => {
       const plugin = createMockPlugin({ permissionMode: 'normal', codexSafeMode: 'read-only' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
 
       rt.syncConversationState({
         sessionId: 'thread-resume-read-only',
@@ -1664,7 +1666,7 @@ describe('CodexChatRuntime', () => {
 
     it('sends sandbox read-only on thread/start when codexSafeMode is read-only', async () => {
       const plugin = createMockPlugin({ permissionMode: 'normal', codexSafeMode: 'read-only' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
       captureHandlers();
       setupDefaultRequestMock();
 
@@ -1678,7 +1680,7 @@ describe('CodexChatRuntime', () => {
 
     it('sends readOnly sandboxPolicy on turn/start when codexSafeMode is read-only', async () => {
       const plugin = createMockPlugin({ permissionMode: 'normal', codexSafeMode: 'read-only' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
       captureHandlers();
       setupDefaultRequestMock();
 
@@ -1695,7 +1697,7 @@ describe('CodexChatRuntime', () => {
 
     it('reasserts readOnly sandboxPolicy on already-loaded threads when codexSafeMode changes', async () => {
       const plugin = createMockPlugin({ permissionMode: 'normal', codexSafeMode: 'workspace-write' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
 
       await collectChunks(rt.query(createTurn('first')));
 
@@ -1767,7 +1769,7 @@ describe('CodexChatRuntime', () => {
   describe('query - plan mode (collaborationMode)', () => {
     it('includes collaborationMode in turn/start when permissionMode is plan', async () => {
       const plugin = createMockPlugin({ permissionMode: 'plan' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
       captureHandlers();
       setupDefaultRequestMock();
 
@@ -1789,7 +1791,7 @@ describe('CodexChatRuntime', () => {
 
     it('includes default collaborationMode when permissionMode is normal', async () => {
       const plugin = createMockPlugin({ permissionMode: 'normal' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
       captureHandlers();
       setupDefaultRequestMock();
 
@@ -1811,7 +1813,7 @@ describe('CodexChatRuntime', () => {
 
     it('includes default collaborationMode when permissionMode is yolo', async () => {
       const plugin = createMockPlugin({ permissionMode: 'yolo' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
       captureHandlers();
       setupDefaultRequestMock();
 
@@ -1833,7 +1835,7 @@ describe('CodexChatRuntime', () => {
 
     it('sends default collaborationMode after switching out of plan mode on the same thread', async () => {
       const plugin = createMockPlugin({ permissionMode: 'plan' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
       captureHandlers();
       setupDefaultRequestMock();
 
@@ -1868,7 +1870,7 @@ describe('CodexChatRuntime', () => {
 
     it('configures router beginTurn before turn/start so buffered notifications see plan state', async () => {
       const plugin = createMockPlugin({ permissionMode: 'plan' });
-      const rt = new CodexChatRuntime(plugin);
+      const rt = new CodexChatRuntime(plugin, createMockRuntimeHost());
       captureHandlers();
 
       // Intercept the turn/start request to verify router state was set before it
@@ -2507,7 +2509,7 @@ describe('CodexChatRuntime', () => {
       (MockedProcessClass as unknown as jest.Mock).mockClear();
       mockProcessStart.mockClear();
 
-      const passive = new CodexChatRuntime(createMockPlugin());
+      const passive = new CodexChatRuntime(createMockPlugin(), createMockRuntimeHost());
       passive.syncConversationState({
         sessionId: 'thread-passive',
         providerId: 'codex',

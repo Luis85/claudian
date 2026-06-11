@@ -19,10 +19,10 @@ import {
   maybeWarnYoloMode,
   onProviderAvailabilityChanged,
   resolveBlankTabDefaultProviderId,
-  setupServiceCallbacks,
   type TabCreateOptions,
   wireTabInputEvents,
 } from '@/features/chat/tabs/Tab';
+import { createTabRuntimeHost } from '@/features/chat/tabs/tabRuntimeHost';
 import {
   DEFAULT_CODEX_PRIMARY_MODEL,
   DEFAULT_CODEX_PRIMARY_MODEL_LABEL,
@@ -1547,8 +1547,8 @@ describe('Tab - Destruction', () => {
   });
 });
 
-describe('Tab - Service Callbacks', () => {
-  describe('setupServiceCallbacks', () => {
+describe('Tab - Runtime Host', () => {
+  describe('createTabRuntimeHost autoTurn rendering', () => {
     function setupAutoTurnTest() {
       const plugin = createMockPlugin();
       const tab = createTab(createMockOptions({ plugin }));
@@ -1592,20 +1592,10 @@ describe('Tab - Service Callbacks', () => {
         resetStreamingState: jest.fn(),
       } as any;
 
-      const service = {
-        setApprovalCallback: jest.fn(),
-        setApprovalDismisser: jest.fn(),
-        setAskUserQuestionCallback: jest.fn(),
-        setExitPlanModeCallback: jest.fn(),
-        setSubagentHookProvider: jest.fn(),
-        setAutoTurnCallback: jest.fn(),
-        setPermissionModeSyncCallback: jest.fn(),
-      };
-      tab.service = service as any;
-
-      setupServiceCallbacks(tab, plugin);
-
-      const autoTurnCallback = service.setAutoTurnCallback.mock.calls[0][0];
+      // The host closes over live tab state; runtimes invoke host.autoTurn
+      // directly (no setter indirection since ADR-0001 Phase 2).
+      const host = createTabRuntimeHost(tab, plugin);
+      const autoTurnCallback = host.autoTurn;
       return { tab, addMessageSpy, addMessage, handleStreamChunk, scrollToBottom, autoTurnCallback };
     }
 

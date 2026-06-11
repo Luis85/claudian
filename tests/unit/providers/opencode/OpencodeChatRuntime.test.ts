@@ -1,4 +1,5 @@
 import { itPosix, itWin32 } from '@test/helpers/platform';
+import { createMockRuntimeHost } from '@test/helpers/runtimeHost';
 
 import { getRuntimeEnvironmentVariables } from '@/core/providers/providerEnvironment';
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
@@ -42,7 +43,7 @@ describe('OpencodeChatRuntime', () => {
   });
 
   it('captures available ACP commands even when no turn is active', async () => {
-    const runtime = new OpencodeChatRuntime(createMockPlugin());
+    const runtime = new OpencodeChatRuntime(createMockPlugin(), createMockRuntimeHost());
     runtime.syncConversationState({ providerState: {}, sessionId: 'session-1' });
 
     (runtime as any).loadedSessionId = 'session-1';
@@ -79,7 +80,7 @@ describe('OpencodeChatRuntime', () => {
   });
 
   it('does not create a session when commands are requested before a session exists', async () => {
-    const runtime = new OpencodeChatRuntime(createMockPlugin());
+    const runtime = new OpencodeChatRuntime(createMockPlugin(), createMockRuntimeHost());
 
     (runtime as any).ready = true;
     (runtime as any).createSession = jest.fn();
@@ -98,7 +99,7 @@ describe('OpencodeChatRuntime', () => {
         },
       },
     });
-    const runtime = new OpencodeChatRuntime(plugin);
+    const runtime = new OpencodeChatRuntime(plugin, createMockRuntimeHost());
     runtime.syncConversationState({
       providerState: { databasePath: '/persisted/opencode.db' },
       sessionId: 'session-1',
@@ -138,7 +139,7 @@ describe('OpencodeChatRuntime', () => {
         },
       },
     });
-    const runtime = new OpencodeChatRuntime(plugin);
+    const runtime = new OpencodeChatRuntime(plugin, createMockRuntimeHost());
     runtime.syncConversationState({
       providerState: { databasePath: '/persisted/opencode.db' },
       sessionId: 'session-1',
@@ -176,7 +177,7 @@ describe('OpencodeChatRuntime', () => {
         },
       },
     });
-    const runtime = new OpencodeChatRuntime(plugin);
+    const runtime = new OpencodeChatRuntime(plugin, createMockRuntimeHost());
     runtime.syncConversationState({
       providerState: { databasePath: ':memory:' },
       sessionId: null,
@@ -202,7 +203,7 @@ describe('OpencodeChatRuntime', () => {
   it('does not spawn the opencode CLI at construction or passive session sync (load-time contract)', () => {
     const startProcess = jest.spyOn(OpencodeChatRuntime.prototype as any, 'startProcess');
     try {
-      const runtime = new OpencodeChatRuntime(createMockPlugin());
+      const runtime = new OpencodeChatRuntime(createMockPlugin(), createMockRuntimeHost());
       runtime.syncConversationState({ providerState: {}, sessionId: 'session-1' });
 
       // Plugin onload / view restore only constructs runtimes and syncs state;
@@ -215,7 +216,7 @@ describe('OpencodeChatRuntime', () => {
   });
 
   it('cleanup invokes the subprocess shutdown synchronously within the cleanup() call frame (onunload contract)', async () => {
-    const runtime = new OpencodeChatRuntime(createMockPlugin());
+    const runtime = new OpencodeChatRuntime(createMockPlugin(), createMockRuntimeHost());
     const shutdown = jest.fn().mockResolvedValue(undefined);
     (runtime as any).process = { isAlive: jest.fn().mockReturnValue(true), shutdown };
 
@@ -237,7 +238,7 @@ describe('OpencodeChatRuntime', () => {
         },
       },
     });
-    const runtime = new OpencodeChatRuntime(plugin);
+    const runtime = new OpencodeChatRuntime(plugin, createMockRuntimeHost());
     const mockTransport = { dispose: jest.fn(), isClosed: false };
     const mockProcess = { isAlive: jest.fn().mockReturnValue(true), shutdown: jest.fn() };
     const mockConnection = { dispose: jest.fn() };
@@ -265,10 +266,11 @@ describe('OpencodeChatRuntime', () => {
   });
 
   it('maps ACP permission options through the shared approval UI', async () => {
-    const runtime = new OpencodeChatRuntime(createMockPlugin());
     const approvalCallback = jest.fn().mockResolvedValue('allow');
-
-    runtime.setApprovalCallback(approvalCallback);
+    const runtime = new OpencodeChatRuntime(
+      createMockPlugin(),
+      createMockRuntimeHost({ approval: approvalCallback }),
+    );
 
     await expect((runtime as any).handlePermissionRequest({
       options: [
@@ -311,7 +313,7 @@ describe('OpencodeChatRuntime', () => {
       settings: {
         sharedEnvironmentVariables: 'OPENCODE_DISABLE_PROJECT_CONFIG=false\nOPENCODE_DISABLE_CLAUDE_CODE_PROMPT=false',
       },
-    }));
+    }), createMockRuntimeHost());
 
     const env = (runtime as any).buildRuntimeEnv('/usr/local/bin/opencode', '/tmp/opencode.db');
 
@@ -321,8 +323,10 @@ describe('OpencodeChatRuntime', () => {
   });
 
   it('returns the nested ACP approval envelope for allow-always selections', async () => {
-    const runtime = new OpencodeChatRuntime(createMockPlugin());
-    runtime.setApprovalCallback(jest.fn().mockResolvedValue('allow-always'));
+    const runtime = new OpencodeChatRuntime(
+      createMockPlugin(),
+      createMockRuntimeHost({ approval: jest.fn().mockResolvedValue('allow-always') }),
+    );
 
     await expect((runtime as any).handlePermissionRequest({
       options: [
@@ -360,7 +364,7 @@ describe('OpencodeChatRuntime', () => {
         },
       },
     });
-    const runtime = new OpencodeChatRuntime(plugin);
+    const runtime = new OpencodeChatRuntime(plugin, createMockRuntimeHost());
 
     await (runtime as any).syncSessionModeState({
       configOptions: [{
@@ -396,7 +400,7 @@ describe('OpencodeChatRuntime', () => {
         },
       },
     });
-    const runtime = new OpencodeChatRuntime(plugin);
+    const runtime = new OpencodeChatRuntime(plugin, createMockRuntimeHost());
 
     await (runtime as any).syncSessionModeState({
       currentModeId: OPENCODE_BUILD_MODE_ID,
@@ -417,7 +421,7 @@ describe('OpencodeChatRuntime', () => {
         },
       },
     });
-    const runtime = new OpencodeChatRuntime(plugin);
+    const runtime = new OpencodeChatRuntime(plugin, createMockRuntimeHost());
     jest.spyOn(ProviderSettingsCoordinator, 'getProviderSettingsSnapshot').mockReturnValue(plugin.settings);
 
     expect((runtime as any).resolveSelectedModeId()).toBe(OPENCODE_YOLO_MODE_ID);
@@ -435,7 +439,7 @@ describe('OpencodeChatRuntime', () => {
         },
       },
     });
-    const runtime = new OpencodeChatRuntime(plugin);
+    const runtime = new OpencodeChatRuntime(plugin, createMockRuntimeHost());
     jest.spyOn(ProviderSettingsCoordinator, 'getProviderSettingsSnapshot').mockReturnValue(plugin.settings);
 
     expect((runtime as any).resolveSelectedModeId()).toBe(OPENCODE_YOLO_MODE_ID);
@@ -458,7 +462,7 @@ describe('OpencodeChatRuntime', () => {
         },
       },
     });
-    const runtime = new OpencodeChatRuntime(plugin);
+    const runtime = new OpencodeChatRuntime(plugin, createMockRuntimeHost());
     jest.spyOn(ProviderSettingsCoordinator, 'getProviderSettingsSnapshot').mockReturnValue(plugin.settings);
 
     expect((runtime as any).resolveSelectedModeId()).toBe(OPENCODE_YOLO_MODE_ID);
@@ -480,7 +484,7 @@ describe('OpencodeChatRuntime', () => {
         },
       },
     });
-    const runtime = new OpencodeChatRuntime(plugin);
+    const runtime = new OpencodeChatRuntime(plugin, createMockRuntimeHost());
     jest.spyOn(ProviderSettingsCoordinator, 'getProviderSettingsSnapshot').mockReturnValue(plugin.settings);
 
     expect((runtime as any).resolveSelectedModeId()).toBe(OPENCODE_SAFE_MODE_ID);
@@ -497,10 +501,11 @@ describe('OpencodeChatRuntime', () => {
         },
       },
     });
-    const runtime = new OpencodeChatRuntime(plugin);
     const syncCallback = jest.fn();
-
-    runtime.setPermissionModeSyncCallback(syncCallback);
+    const runtime = new OpencodeChatRuntime(
+      plugin,
+      createMockRuntimeHost({ permissionModeSync: syncCallback }),
+    );
 
     await (runtime as any).syncSessionModeState({
       currentModeId: OPENCODE_SAFE_MODE_ID,
@@ -510,10 +515,11 @@ describe('OpencodeChatRuntime', () => {
   });
 
   it('maps the legacy build alias back through the permission-mode callback as YOLO', async () => {
-    const runtime = new OpencodeChatRuntime(createMockPlugin());
     const syncCallback = jest.fn();
-
-    runtime.setPermissionModeSyncCallback(syncCallback);
+    const runtime = new OpencodeChatRuntime(
+      createMockPlugin(),
+      createMockRuntimeHost({ permissionModeSync: syncCallback }),
+    );
 
     await (runtime as any).syncSessionModeState({
       currentModeId: OPENCODE_BUILD_MODE_ID,
@@ -523,10 +529,11 @@ describe('OpencodeChatRuntime', () => {
   });
 
   it('summarizes workflow approval prompts with tool metadata', async () => {
-    const runtime = new OpencodeChatRuntime(createMockPlugin());
     const approvalCallback = jest.fn().mockResolvedValue('allow');
-
-    runtime.setApprovalCallback(approvalCallback);
+    const runtime = new OpencodeChatRuntime(
+      createMockPlugin(),
+      createMockRuntimeHost({ approval: approvalCallback }),
+    );
 
     await (runtime as any).handlePermissionRequest({
       options: [
@@ -596,7 +603,7 @@ describe('OpencodeChatRuntime', () => {
         settingsProvider: 'opencode',
       },
     });
-    const runtime = new OpencodeChatRuntime(plugin);
+    const runtime = new OpencodeChatRuntime(plugin, createMockRuntimeHost());
     jest.spyOn(ProviderRegistry, 'resolveSettingsProviderId').mockReturnValue('opencode');
     jest.spyOn(ProviderSettingsCoordinator, 'getProviderSettingsSnapshot').mockReturnValue(plugin.settings);
 
@@ -641,7 +648,7 @@ describe('OpencodeChatRuntime', () => {
         settingsProvider: 'opencode',
       },
     });
-    const runtime = new OpencodeChatRuntime(plugin);
+    const runtime = new OpencodeChatRuntime(plugin, createMockRuntimeHost());
     jest.spyOn(ProviderRegistry, 'resolveSettingsProviderId').mockReturnValue('opencode');
 
     await (runtime as any).syncSessionModelState({
@@ -712,7 +719,7 @@ describe('OpencodeChatRuntime', () => {
         settingsProvider: 'opencode',
       },
     });
-    const runtime = new OpencodeChatRuntime(plugin);
+    const runtime = new OpencodeChatRuntime(plugin, createMockRuntimeHost());
     const setConfigOption = jest.fn().mockResolvedValue({
       configOptions: [
         {
@@ -782,7 +789,7 @@ describe('OpencodeChatRuntime', () => {
         settingsProvider: 'opencode',
       },
     });
-    const runtime = new OpencodeChatRuntime(plugin);
+    const runtime = new OpencodeChatRuntime(plugin, createMockRuntimeHost());
     const setConfigOption = jest.fn().mockResolvedValue({
       configOptions: [{
         category: 'thought_level',
@@ -814,7 +821,7 @@ describe('OpencodeChatRuntime', () => {
 
   describe('plan-completion metadata', () => {
     function setupPlanTurn(modeId: string) {
-      const runtime = new OpencodeChatRuntime(createMockPlugin());
+      const runtime = new OpencodeChatRuntime(createMockPlugin(), createMockRuntimeHost());
       const queue = { push: jest.fn(), close: jest.fn() } as any;
       (runtime as any).sessionId = 'session-1';
       (runtime as any).activeTurn = { queue, sessionId: 'session-1' };
@@ -866,7 +873,7 @@ describe('OpencodeChatRuntime', () => {
 
   // POSIX-only path assertion; source resolves Windows drive paths on win32.
   itPosix('rejects main-runtime read/write paths that escape the session workspace (posix)', () => {
-    const runtime = new OpencodeChatRuntime(createMockPlugin());
+    const runtime = new OpencodeChatRuntime(createMockPlugin(), createMockRuntimeHost());
 
     (runtime as any).sessionCwds = new Map([['session-1', '/tmp/claudian-test-vault']]);
 
@@ -893,7 +900,7 @@ describe('OpencodeChatRuntime', () => {
 
   // Windows-only path assertion; uses drive-rooted absolute paths.
   itWin32('rejects main-runtime read/write paths that escape the session workspace (win32)', () => {
-    const runtime = new OpencodeChatRuntime(createMockPlugin());
+    const runtime = new OpencodeChatRuntime(createMockPlugin(), createMockRuntimeHost());
 
     (runtime as any).sessionCwds = new Map([['session-1', 'C:\\vault']]);
 
@@ -941,7 +948,7 @@ describe('OpencodeChatRuntime', () => {
         settingsProvider: 'opencode',
       },
     });
-    const runtime = new OpencodeChatRuntime(plugin);
+    const runtime = new OpencodeChatRuntime(plugin, createMockRuntimeHost());
 
     jest.spyOn(ProviderRegistry, 'resolveSettingsProviderId').mockReturnValue('opencode');
     jest.spyOn(ProviderSettingsCoordinator, 'getProviderSettingsSnapshot').mockReturnValue(plugin.settings);

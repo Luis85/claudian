@@ -1,6 +1,7 @@
 import '@/providers';
 
 import * as sdkModule from '@anthropic-ai/claude-agent-sdk';
+import { createMockRuntimeHost, type MockRuntimeHost } from '@test/helpers/runtimeHost';
 import { Notice } from 'obsidian';
 
 import { Logger } from '@/core/logging/Logger';
@@ -25,6 +26,7 @@ type MockMcpServerManager = jest.Mocked<McpServerManager>;
 describe('ClaudianService', () => {
   let mockPlugin: Partial<ClaudianPlugin>;
   let mockMcpManager: MockMcpServerManager;
+  let host: MockRuntimeHost;
   let service: ClaudianService;
 
   async function collectChunks(gen: AsyncGenerator<any>): Promise<any[]> {
@@ -79,7 +81,8 @@ describe('ClaudianService', () => {
       transformMentions: jest.fn().mockImplementation((text: string) => text),
     } as unknown as MockMcpServerManager;
 
-    service = new ClaudianService(mockPlugin as ClaudianPlugin, mockMcpManager);
+    host = createMockRuntimeHost();
+    service = new ClaudianService(mockPlugin as ClaudianPlugin, mockMcpManager, host);
   });
 
   describe('prepareTurn', () => {
@@ -415,55 +418,24 @@ describe('ClaudianService', () => {
       expect(sessionManager.wasInterrupted()).toBe(true);
     });
 
-    it('should call approval dismisser on cancel', () => {
-      const dismisser = jest.fn();
-      service.setApprovalDismisser(dismisser);
-
+    it('dismisses pending approval UI through the host on cancel', () => {
+      // RuntimeHost cancel-dismiss invariant (ADR-0001 Phase 2): cancel must
+      // clear pending approval prompts or they stay stuck on screen.
       service.cancel();
 
-      expect(dismisser).toHaveBeenCalled();
-    });
-
-    it('should not throw when no approval dismisser is set', () => {
-      expect(() => service.cancel()).not.toThrow();
+      expect(host.dismissApproval).toHaveBeenCalled();
     });
   });
 
   describe('Approval Callback', () => {
-    // approvalCallback is private with no observable side effect from setApprovalCallback alone.
-    // Verifying the stored value requires direct access.
-    it('should set approval callback', () => {
-      const callback = jest.fn();
-      service.setApprovalCallback(callback);
-
-      expect((service as any).approvalCallback).toBe(callback);
-    });
-
-    it('should set null approval callback', () => {
-      const callback = jest.fn();
-      service.setApprovalCallback(callback);
-      service.setApprovalCallback(null);
-
-      expect((service as any).approvalCallback).toBeNull();
-    });
-
     describe('createApprovalCallback permission flow', () => {
       const canUseToolOptions = {
         signal: new AbortController().signal,
         toolUseID: 'test-tool-use-id',
       };
 
-      it('should deny when no approvalCallback is set', async () => {
-        const canUseTool = (service as any).createApprovalCallback();
-        const result = await canUseTool('Bash', { command: 'ls' }, canUseToolOptions);
-
-        expect(result.behavior).toBe('deny');
-        expect(result.message).toBe('No approval handler available.');
-      });
-
       it('should return deny when user denies', async () => {
-        const callback = jest.fn().mockResolvedValue('deny');
-        service.setApprovalCallback(callback);
+        host.approval.mockResolvedValue('deny');
 
         const canUseTool = (service as any).createApprovalCallback();
         const result = await canUseTool('Bash', { command: 'ls' }, canUseToolOptions);
@@ -474,8 +446,7 @@ describe('ClaudianService', () => {
       });
 
       it('should return deny without interrupt when approvalCallback throws', async () => {
-        const callback = jest.fn().mockRejectedValue(new Error('Modal render failed'));
-        service.setApprovalCallback(callback);
+        host.approval.mockRejectedValue(new Error('Modal render failed'));
 
         const canUseTool = (service as any).createApprovalCallback();
         const result = await canUseTool('Bash', { command: 'ls' }, canUseToolOptions);
@@ -486,8 +457,7 @@ describe('ClaudianService', () => {
       });
 
       it('should return deny with interrupt for cancel decisions', async () => {
-        const callback = jest.fn().mockResolvedValue('cancel');
-        service.setApprovalCallback(callback);
+        host.approval.mockResolvedValue('cancel');
 
         const canUseTool = (service as any).createApprovalCallback();
         const result = await canUseTool('Bash', { command: 'ls' }, canUseToolOptions);
@@ -498,8 +468,7 @@ describe('ClaudianService', () => {
       });
 
       it('should prompt again after deny (no session cache)', async () => {
-        const callback = jest.fn().mockResolvedValue('deny');
-        service.setApprovalCallback(callback);
+        const callback = host.approval.mockResolvedValue('deny');
 
         const canUseTool = (service as any).createApprovalCallback();
 
@@ -510,8 +479,7 @@ describe('ClaudianService', () => {
       });
 
       it('should forward decisionReason and blockedPath to approvalCallback', async () => {
-        const callback = jest.fn().mockResolvedValue('allow');
-        service.setApprovalCallback(callback);
+        const callback = host.approval.mockResolvedValue('allow');
 
         const canUseTool = (service as any).createApprovalCallback();
         await canUseTool('Read', { file_path: '/etc/passwd' }, {
@@ -533,8 +501,7 @@ describe('ClaudianService', () => {
       });
 
       it('should forward agentID to approvalCallback', async () => {
-        const callback = jest.fn().mockResolvedValue('allow');
-        service.setApprovalCallback(callback);
+        const callback = host.approval.mockResolvedValue('allow');
 
         const canUseTool = (service as any).createApprovalCallback();
         await canUseTool('Bash', { command: 'ls' }, {
@@ -555,8 +522,7 @@ describe('ClaudianService', () => {
       });
 
       it('should return updatedPermissions with session destination for allow decisions', async () => {
-        const callback = jest.fn().mockResolvedValue('allow');
-        service.setApprovalCallback(callback);
+        host.approval.mockResolvedValue('allow');
 
         const canUseTool = (service as any).createApprovalCallback();
         const result = await canUseTool('Bash', { command: 'git status' }, canUseToolOptions);
@@ -571,8 +537,7 @@ describe('ClaudianService', () => {
       });
 
       it('should return updatedPermissions for allow-always decisions', async () => {
-        const callback = jest.fn().mockResolvedValue('allow-always');
-        service.setApprovalCallback(callback);
+        host.approval.mockResolvedValue('allow-always');
 
         const canUseTool = (service as any).createApprovalCallback();
         const result = await canUseTool('Bash', { command: 'git status' }, canUseToolOptions);
@@ -1087,8 +1052,7 @@ describe('ClaudianService', () => {
 
     it('should deny tools not in allowedTools list', async () => {
       (service as any).currentAllowedTools = ['Read', 'Glob'];
-      const callback = jest.fn().mockResolvedValue('allow');
-      service.setApprovalCallback(callback);
+      const callback = host.approval.mockResolvedValue('allow');
 
       const canUseTool = (service as any).createApprovalCallback();
       const result = await canUseTool('Bash', { command: 'ls' }, canUseToolOptions);
@@ -1101,8 +1065,7 @@ describe('ClaudianService', () => {
 
     it('should deny when allowedTools is empty', async () => {
       (service as any).currentAllowedTools = [];
-      const callback = jest.fn().mockResolvedValue('allow');
-      service.setApprovalCallback(callback);
+      host.approval.mockResolvedValue('allow');
 
       const canUseTool = (service as any).createApprovalCallback();
       const result = await canUseTool('Read', { file_path: 'test.md' }, canUseToolOptions);
@@ -1113,8 +1076,7 @@ describe('ClaudianService', () => {
 
     it('should allow Skill tool even when not in allowedTools', async () => {
       (service as any).currentAllowedTools = ['Read'];
-      const callback = jest.fn().mockResolvedValue('allow');
-      service.setApprovalCallback(callback);
+      const callback = host.approval.mockResolvedValue('allow');
 
       const canUseTool = (service as any).createApprovalCallback();
       const result = await canUseTool('Skill', { name: 'commit' }, canUseToolOptions);
@@ -1125,8 +1087,7 @@ describe('ClaudianService', () => {
 
     it('should allow tools in the allowedTools list', async () => {
       (service as any).currentAllowedTools = ['Read', 'Glob'];
-      const callback = jest.fn().mockResolvedValue('allow');
-      service.setApprovalCallback(callback);
+      const callback = host.approval.mockResolvedValue('allow');
 
       const canUseTool = (service as any).createApprovalCallback();
       const result = await canUseTool('Read', { file_path: 'test.md' }, canUseToolOptions);
@@ -1137,8 +1098,7 @@ describe('ClaudianService', () => {
 
     it('should not restrict when currentAllowedTools is null', async () => {
       (service as any).currentAllowedTools = null;
-      const callback = jest.fn().mockResolvedValue('allow');
-      service.setApprovalCallback(callback);
+      const callback = host.approval.mockResolvedValue('allow');
 
       const canUseTool = (service as any).createApprovalCallback();
       const result = await canUseTool('Bash', { command: 'rm -rf /' }, canUseToolOptions);
@@ -1210,8 +1170,7 @@ describe('ClaudianService', () => {
 
     it('should flush task_notification completion through auto-turn callback without waiting for a result message', async () => {
       (service as any).responseHandlers = [];
-      const autoTurnCallback = jest.fn();
-      service.setAutoTurnCallback(autoTurnCallback);
+      const autoTurnCallback = host.autoTurn;
 
       await (service as any).routeMessage({
         type: 'system',
@@ -1450,8 +1409,7 @@ describe('ClaudianService', () => {
 
     it('should reset auto-turn stream-text dedup after a buffered turn completes', async () => {
       (service as any).responseHandlers = [];
-      const autoTurnCallback = jest.fn();
-      service.setAutoTurnCallback(autoTurnCallback);
+      const autoTurnCallback = host.autoTurn;
 
       await (service as any).routeMessage({
         type: 'stream_event',
@@ -1489,7 +1447,7 @@ describe('ClaudianService', () => {
     it('should notify when auto-turn callback rendering fails', async () => {
       (service as any).responseHandlers = [];
       const callbackError = new Error('renderer exploded');
-      service.setAutoTurnCallback(() => {
+      host.autoTurn.mockImplementation(() => {
         throw callbackError;
       });
 

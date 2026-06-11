@@ -18,7 +18,6 @@ const mockDeactivateTab = jest.fn();
 const mockInitializeTabUI = jest.fn();
 const mockInitializeTabControllers = jest.fn();
 const mockInitializeTabService = jest.fn().mockResolvedValue(undefined);
-const mockSetupServiceCallbacks = jest.fn();
 const mockWireTabInputEvents = jest.fn();
 const mockGetTabTitle = jest.fn().mockReturnValue('Test Tab');
 const mockCreateChatRuntime = jest.fn();
@@ -33,7 +32,6 @@ jest.mock('@/features/chat/tabs/Tab', () => ({
   initializeTabUI: (...args: any[]) => mockInitializeTabUI(...args),
   initializeTabControllers: (...args: any[]) => mockInitializeTabControllers(...args),
   initializeTabService: (...args: any[]) => mockInitializeTabService(...args),
-  setupServiceCallbacks: (...args: any[]) => mockSetupServiceCallbacks(...args),
   wireTabInputEvents: (...args: any[]) => mockWireTabInputEvents(...args),
   getTabTitle: (...args: any[]) => mockGetTabTitle(...args),
 }));
@@ -1328,7 +1326,6 @@ describe('TabManager - SDK Commands', () => {
 
     await expect(manager.getSdkCommands(tab!.id)).resolves.toEqual([]);
     expect(mockInitializeTabService).not.toHaveBeenCalled();
-    expect(mockSetupServiceCallbacks).not.toHaveBeenCalled();
     expect(runtimeCommandLoader.loadCommands).not.toHaveBeenCalled();
     expect(mockCatalog.setRuntimeCommands).toHaveBeenLastCalledWith([]);
     expect(tab!.lifecycleState).toBe('blank');
@@ -1757,7 +1754,6 @@ describe('TabManager - SDK Commands', () => {
     await flushMicrotasks();
 
     expect(mockInitializeTabService).not.toHaveBeenCalled();
-    expect(mockSetupServiceCallbacks).not.toHaveBeenCalled();
     expect(tab!.service).toBeNull();
     expect(tab!.serviceInitialized).toBe(false);
   });

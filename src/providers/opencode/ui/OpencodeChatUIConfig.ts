@@ -4,6 +4,7 @@ import type {
   ProviderReasoningOption,
   ProviderUIOption,
 } from '../../../core/providers/types';
+import { createHeadlessRuntimeHost } from '../../../core/runtime/RuntimeHost';
 import { OPENCODE_PROVIDER_ICON } from '../../../shared/icons';
 import {
   buildOpencodeBaseModels,
@@ -192,7 +193,7 @@ export const opencodeChatUIConfig: ProviderChatUIConfig = {
       return;
     }
 
-    const runtime = new OpencodeChatRuntime(context.plugin);
+    const runtime = new OpencodeChatRuntime(context.plugin, createHeadlessRuntimeHost());
     try {
       runtime.syncConversationState({
         providerState: { databasePath: OPENCODE_METADATA_WARMUP_DB },

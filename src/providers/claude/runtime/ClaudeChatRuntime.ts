@@ -32,10 +32,8 @@ import type {
   AppPluginManager,
 } from '../../../core/providers/types';
 import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
+import type { RuntimeHost } from '../../../core/runtime/RuntimeHost';
 import type {
-  ApprovalCallback,
-  AskUserQuestionCallback,
-  AutoTurnCallback,
   ChatRewindMode,
   ChatRewindResult,
   ChatRuntimeConversationState,
@@ -50,7 +48,6 @@ import type {
   ApprovalDecision,
   ChatMessage,
   Conversation,
-  ExitPlanModeCallback,
   ImageAttachment,
   SlashCommand,
   StreamChunk,
@@ -70,7 +67,7 @@ import {
 } from '../../../utils/session';
 import { CLAUDE_PROVIDER_CAPABILITIES } from '../capabilities';
 import { loadSubagentFinalResult, loadSubagentToolCalls } from '../history/ClaudeHistoryStore';
-import { createStopSubagentHook, type SubagentHookState } from '../hooks/SubagentHooks';
+import { createStopSubagentHook } from '../hooks/SubagentHooks';
 import { encodeClaudeTurn } from '../prompt/ClaudeTurnEncoder';
 import { isContextWindowEvent, isSessionInitEvent, isStreamChunk } from '../sdk/typeGuards';
 import type { TransformEvent } from '../sdk/types';
@@ -151,11 +148,7 @@ export class ClaudianService implements ChatRuntime {
   private agentManager: Pick<AppAgentManager, 'setBuiltinAgentNames'> | null;
   private pluginManager: AppPluginManager | null;
   private abortController: AbortController | null = null;
-  private approvalCallback: ApprovalCallback | null = null;
-  private approvalDismisser: (() => void) | null = null;
-  private askUserQuestionCallback: AskUserQuestionCallback | null = null;
-  private exitPlanModeCallback: ExitPlanModeCallback | null = null;
-  private permissionModeSyncCallback: ((sdkMode: string) => void) | null = null;
+  private readonly host: RuntimeHost;
   private vaultPath: string | null = null;
   private currentExternalContextPaths: string[] = [];
   private readyStateListeners = new Set<(ready: boolean) => void>();
@@ -190,14 +183,10 @@ export class ClaudianService implements ChatRuntime {
   // SDK command cache — populated on system/init, cleared on persistent query close
   private cachedSdkCommands: SlashCommand[] = [];
 
-  // Subagent hook state provider (set from feature layer to avoid core→feature dependency)
-  private _subagentStateProvider: (() => SubagentHookState) | null = null;
-
   // Auto-triggered turn handling (e.g., task-notification delivery by the SDK)
   private _autoTurnBuffer: StreamChunk[] = [];
   private _autoTurnSawStreamText = false;
   private _autoTurnSawStreamThinking = false;
-  private _autoTurnCallback: AutoTurnCallback | null = null;
   private turnMetadata: ChatTurnMetadata = {};
   private bufferedUsageChunk: StreamChunk & { type: 'usage' } | null = null;
   private streamTransformState = createTransformStreamState();
@@ -210,8 +199,13 @@ export class ClaudianService implements ChatRuntime {
     return this.plugin;
   }
 
-  constructor(plugin: PluginContext, services: ClaudeRuntimeServices | McpServerManager) {
+  constructor(
+    plugin: PluginContext,
+    services: ClaudeRuntimeServices | McpServerManager,
+    host: RuntimeHost,
+  ) {
     this.plugin = plugin;
+    this.host = host;
     const legacyPlugin = this.getLegacyPluginDeps();
 
     if ('mcpManager' in services) {
@@ -748,7 +742,7 @@ export class ClaudianService implements ChatRuntime {
     // Always register subagent hooks — closures resolve provider at execution time
     // so hooks work even when provider is set after the persistent query starts.
     hooks.Stop = [createStopSubagentHook(
-      () => this._subagentStateProvider?.() ?? { hasRunning: false }
+      () => this.host.getSubagentState()
     )];
 
     return hooks;
@@ -912,8 +906,8 @@ export class ClaudianService implements ChatRuntime {
         if (event.agents) {
           try { this.getAgentManager()?.setBuiltinAgentNames(event.agents); } catch { /* non-critical */ }
         }
-        if (event.permissionMode && this.permissionModeSyncCallback) {
-          try { this.permissionModeSyncCallback(event.permissionMode); } catch { /* non-critical */ }
+        if (event.permissionMode) {
+          try { this.host.permissionModeSync(event.permissionMode); } catch { /* non-critical */ }
         }
         // Cache SDK commands on init (SDK already scans the vault).
         // Pass the current query instance so late completions from a dead query
@@ -951,9 +945,7 @@ export class ClaudianService implements ChatRuntime {
             this.currentConfig.permissionMode = 'plan';
             this.currentConfig.sdkPermissionMode = 'plan';
           }
-          if (this.permissionModeSyncCallback) {
-            try { this.permissionModeSyncCallback('plan'); } catch { /* non-critical */ }
-          }
+          try { this.host.permissionModeSync('plan'); } catch { /* non-critical */ }
         }
 
         const normalizedChunk = event.type === 'usage'
@@ -1010,7 +1002,7 @@ export class ClaudianService implements ChatRuntime {
     const metadata = this.consumeTurnMetadata();
     this._autoTurnBuffer = [];
     try {
-      await this._autoTurnCallback?.({ chunks, metadata });
+      await this.host.autoTurn({ chunks, metadata });
     } catch {
       new Notice(t('provider.claude.task.resultRenderFailed'));
     }
@@ -1691,7 +1683,7 @@ export class ClaudianService implements ChatRuntime {
   }
 
   cancel() {
-    this.approvalDismisser?.();
+    this.host.dismissApproval();
 
     if (this.abortController) {
       this.abortController.abort();
@@ -1843,40 +1835,10 @@ export class ClaudianService implements ChatRuntime {
     });
   }
 
-  setApprovalCallback(callback: ApprovalCallback | null) {
-    this.approvalCallback = callback;
-  }
-
-  setApprovalDismisser(dismisser: (() => void) | null) {
-    this.approvalDismisser = dismisser;
-  }
-
-  setAskUserQuestionCallback(callback: AskUserQuestionCallback | null) {
-    this.askUserQuestionCallback = callback;
-  }
-
-  setExitPlanModeCallback(callback: ExitPlanModeCallback | null): void {
-    this.exitPlanModeCallback = callback;
-  }
-
-  setPermissionModeSyncCallback(callback: ((sdkMode: string) => void) | null): void {
-    this.permissionModeSyncCallback = callback;
-  }
-
-  setSubagentHookProvider(getState: () => SubagentHookState): void {
-    this._subagentStateProvider = getState;
-  }
-
-  setAutoTurnCallback(callback: AutoTurnCallback | null): void {
-    this._autoTurnCallback = callback;
-  }
-
   private createApprovalCallback(): CanUseTool {
     return createClaudeApprovalCallback({
       getAllowedTools: () => this.currentAllowedTools,
-      getApprovalCallback: () => this.approvalCallback,
-      getAskUserQuestionCallback: () => this.askUserQuestionCallback,
-      getExitPlanModeCallback: () => this.exitPlanModeCallback,
+      host: this.host,
       // Same projection fix as applyDynamicUpdates: read the Claude-projected
       // mode so ExitPlanMode restores the correct post-plan permission level.
       getPermissionMode: () => this.getScopedSettings().permissionMode as PermissionMode,
