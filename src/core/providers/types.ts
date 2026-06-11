@@ -21,8 +21,15 @@ import type {
 import type { PluginContext } from '../types/PluginContext';
 import type { ProviderId } from '../types/provider';
 import type { ProviderCommandCatalog } from './commands/ProviderCommandCatalog';
+import type { ProviderSettingsTabRenderer } from './settingsWidgets';
 
 export type { ProviderId } from '../types/provider';
+export type {
+  ProviderSettingsTabRenderer,
+  ProviderSettingsTabRendererContext,
+  ProviderSettingsWidgetContext,
+  ProviderSettingsWidgetMount,
+} from './settingsWidgets';
 
 export interface ProviderCapabilities {
   providerId: ProviderId;
@@ -462,21 +469,6 @@ export interface ProviderWorkspaceServices {
   mcpServerManager?: McpServerManager | null;
   settingsTabRenderer?: ProviderSettingsTabRenderer | null;
   refreshAgentMentions?(): Promise<void>;
-}
-
-export interface ProviderSettingsTabRendererContext {
-  plugin: PluginContext;
-  renderHiddenProviderCommandSetting(
-    container: HTMLElement,
-    providerId: ProviderId,
-    copy: { name: string; desc: string; placeholder: string },
-  ): void;
-  refreshModelSelectors(): void;
-  renderCustomContextLimits(container: HTMLElement, providerId?: ProviderId): void;
-}
-
-export interface ProviderSettingsTabRenderer {
-  render(container: HTMLElement, context: ProviderSettingsTabRendererContext): void;
 }
 
 export interface ProviderWorkspaceInitContext {

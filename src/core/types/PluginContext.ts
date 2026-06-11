@@ -43,6 +43,8 @@ export interface ChatViewHandle {
   getTabManager(): ChatTabManagerHandle | null;
   refreshModelSelector(): void;
   invalidateProviderCommandCaches(providerIds?: ProviderId | ProviderId[]): void;
+  /** Re-applies `hiddenProviderCommands` to open command dropdowns. Optional: implemented by the full chat view. */
+  updateHiddenProviderCommands?(): void;
 }
 
 /**

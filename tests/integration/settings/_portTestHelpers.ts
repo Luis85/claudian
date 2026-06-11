@@ -52,7 +52,8 @@ export interface PortTestOptions {
 interface StubPlugin {
   settings: Record<string, unknown>;
   // Minimal Obsidian `app` surface. Widgets feature-detect the private
-  // hotkeyManager / secretStorage surfaces, so an empty bag is enough.
+  // hotkeyManager / secretStorage surfaces; provider trust widgets read
+  // `app.vault.adapter.basePath`, so the vault bag must exist.
   app: Record<string, unknown>;
   saveSettings: jest.Mock;
   getAllViews: jest.Mock;
@@ -62,7 +63,12 @@ interface StubPlugin {
   getEnvironmentVariablesForScope: jest.Mock;
   applyEnvironmentVariables: jest.Mock;
   applySecretEnvVars: jest.Mock;
-  secretStore: { clear: jest.Mock };
+  // Provider-tab widget hooks (Claude model-variant toggles, MCP manager,
+  // Cursor model discovery).
+  normalizeModelVariantSettings: jest.Mock;
+  warnMissingMcpSecrets: jest.Mock;
+  getResolvedProviderCliPath: jest.Mock;
+  secretStore: { clear: jest.Mock; get: jest.Mock };
   // Minimum events surface required by registry custom widgets (F4 default-
   // provider chip subscribes to `task:board-config-changed`).
   events: { on: jest.Mock; emit: jest.Mock };
@@ -93,7 +99,7 @@ export function createStubPlugin(opts: PortTestOptions): StubPlugin {
       },
       ...(opts.extraSettings ?? {}),
     },
-    app: {},
+    app: { vault: { adapter: {} } },
     saveSettings: jest.fn().mockResolvedValue(undefined),
     getAllViews: jest.fn().mockReturnValue([]),
     getView: jest.fn().mockReturnValue(undefined),
@@ -102,7 +108,11 @@ export function createStubPlugin(opts: PortTestOptions): StubPlugin {
     getEnvironmentVariablesForScope: jest.fn().mockReturnValue(''),
     applyEnvironmentVariables: jest.fn().mockResolvedValue(undefined),
     applySecretEnvVars: jest.fn().mockResolvedValue(undefined),
-    secretStore: { clear: jest.fn() },
+    normalizeModelVariantSettings: jest.fn().mockReturnValue(false),
+    warnMissingMcpSecrets: jest.fn(),
+    // Null keeps the Cursor picker's best-effort warm discovery a no-op.
+    getResolvedProviderCliPath: jest.fn().mockReturnValue(null),
+    secretStore: { clear: jest.fn(), get: jest.fn().mockReturnValue(null) },
     events: {
       on: jest.fn(() => () => undefined),
       emit: jest.fn(),
