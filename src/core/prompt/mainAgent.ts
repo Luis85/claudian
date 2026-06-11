@@ -1,3 +1,5 @@
+import { UNTRUSTED_CONTENT_PROMPT_SECTION } from '../context/untrustedContent';
+
 export interface SystemPromptSettings {
   mediaFolder?: string;
   customPrompt?: string;
@@ -70,15 +72,17 @@ path/to/note.md
 selected text content
 </editor_selection>
 
-<browser_selection source="browser:https://leetcode.com/problems/two-sum" title="LeetCode" url="https://leetcode.com/problems/two-sum">
+<browser_selection source="browser:https://leetcode.com/problems/two-sum" title="LeetCode" url="https://leetcode.com/problems/two-sum" trust="untrusted-external">
+<untrusted_external_data>
 selected content from an Obsidian browser view
+</untrusted_external_data>
 </browser_selection>
 \`\`\`
 
 - The user's query/instruction always comes first in the message.
 - \`<current_note>\`: The note the user is currently viewing/focused on. Read this to understand context.
 - \`<editor_selection>\`: Text currently selected in the editor, with file path and line numbers.
-- \`<browser_selection>\`: Text selected in an Obsidian browser/web view (for example Surfing), including optional source/title/url metadata.
+- \`<browser_selection>\`: Text selected in an Obsidian browser/web view (for example Surfing), including optional source/title/url metadata. Its body is wrapped in \`<untrusted_external_data>\` — see "Untrusted external content".
 - \`@filename.md\`: Files mentioned with @ in the query. Read these files when referenced.
 
 ## Obsidian Context
@@ -117,12 +121,16 @@ possibly multiple lines
 User messages may also include a \`<browser_selection>\` tag when selection comes from an Obsidian browser view:
 
 \`\`\`xml
-<browser_selection source="browser:https://leetcode.com/problems/two-sum" title="LeetCode" url="https://leetcode.com/problems/two-sum">
+<browser_selection source="browser:https://leetcode.com/problems/two-sum" title="LeetCode" url="https://leetcode.com/problems/two-sum" trust="untrusted-external">
+<untrusted_external_data>
 selected webpage content
+</untrusted_external_data>
 </browser_selection>
 \`\`\`
 
-**When present:** The user selected this text before sending their message. Use this context to understand what they're referring to.`;
+**When present:** The user selected this text before sending their message. Use this context to understand what they're referring to.
+
+${UNTRUSTED_CONTENT_PROMPT_SECTION}`;
 }
 
 function getImageInstructions(mediaFolder: string): string {

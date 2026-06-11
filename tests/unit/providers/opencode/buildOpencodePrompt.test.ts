@@ -24,7 +24,8 @@ describe('buildOpencodePromptText', () => {
     expect(prompt).toContain('<current_note>');
     expect(prompt).toContain('notes/today.md');
     expect(prompt).toContain('<editor_selection path="notes/today.md" lines="4-5">');
-    expect(prompt).toContain('<browser_selection source="browser:https://example.com" title="Example" url="https://example.com">');
+    expect(prompt).toContain('<browser_selection source="browser:https://example.com" title="Example" url="https://example.com" trust="untrusted-external">');
+    expect(prompt).toContain('<untrusted_external_data>');
   });
 
   it('does not auto-attach external context folders to the OpenCode prompt', () => {
