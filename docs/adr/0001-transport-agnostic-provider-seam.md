@@ -237,7 +237,13 @@ Prerequisite: land the open subprocess-lifecycle fixes (the `docs/reviews/2026-0
 CON-1/2/3: Cursor SIGTERM-only, hang-forever shutdown) **before** extraction, so the shared helper
 encodes the corrected cancellation behavior once.
 
-### Move 3 — Slim the runtime: a single `RuntimeHost` *(endorsed)*; mixins are a minor tidy
+### Move 3 — Slim the runtime: a single `RuntimeHost` *(endorsed; shipped 2026-06-10)*; mixins are a minor tidy
+
+> **Status:** completed as designed — the seven setters are deleted,
+> `CreateChatRuntimeOptions` carries a required `host`, the production host
+> lives in `features/chat/tabs/tabRuntimeHost.ts`, and headless contexts use
+> `createHeadlessRuntimeHost()`. See
+> `docs/tech-debt/2026-06-07-runtimehost-callback-setter-debt.md` (done).
 
 Replace the **7** callback setters (`setApprovalCallback`, `setApprovalDismisser`,
 `setAskUserQuestionCallback`, `setExitPlanModeCallback`, `setPermissionModeSyncCallback`,

@@ -2,8 +2,8 @@
 type: tech-debt
 title: "Oversized modules and test files exceed maintainable agent context"
 date: 2026-06-07
-updated: 2026-06-07
-status: open
+updated: 2026-06-11
+status: in-progress
 priority: "1 - high"
 severity: high
 scope: module-depth
@@ -67,7 +67,33 @@ Prioritize modules that pass the deletion test rather than splitting mechanicall
 
 ## Acceptance criteria
 
-- [ ] New source files stay under the configured max-LOC gate unless explicitly allowlisted.
-- [ ] Each split creates a deeper module with a small interface, not merely smaller files with the same shared mutable state.
-- [ ] Tests target the new interface and preserve behavior.
-- [ ] Existing cohesive owners are not split just to satisfy a number; the LOC rule includes a documented exception path.
+- [x] New source files stay under the configured max-LOC gate unless explicitly allowlisted. — `npm run check:loc` ratchet, live since 2026-06-07.
+- [x] Each split creates a deeper module with a small interface, not merely smaller files with the same shared mutable state.
+- [x] Tests target the new interface and preserve behavior.
+- [x] Existing cohesive owners are not split just to satisfy a number; the LOC rule includes a documented exception path. — per-entry `reason` in `scripts/loc-baseline.json`.
+
+## Progress (2026-06-11, quality runs 1–5)
+
+The 2026-06-07 hotspot table is largely retired; splits landed behind smaller
+interfaces with behavior-preserving tests (fallow criticalComplexity 59 → 33
+over the same runs):
+
+- `ClaudeChatRuntime.ts` 1,665 → 1,636 with the query-turn family extracted to
+  `claudeQueryTurnHelpers` (remediation item 4 — done).
+- `CodexHistoryStore.ts` 1,406 → 940, split along the suggested seam into
+  `codexTurnState` + `codexLegacyItemMapping` (item 3 — done).
+- `InputController.ts`: `sendMessage` (457 lines) decomposed into
+  `composerSendPhases` + private state-machine methods (item 2 — done for the
+  send path; the resume dropdown remains in place).
+- `InputToolbar.ts` split (item 1 — done 2026-06-09).
+- `MessageRenderer.ts` shrank via `assistantMessageContent`;
+  `CodexSessionFileTail`, `transformClaudeMessage`, `cursorStreamMapper`,
+  `toolInputStreamState`, `sdkBranchFilter` all decomposed below thresholds.
+- Settings tabs collapsed during the registry port: `OpencodeSettingsTab`
+  671 → 73, `ClaudeSettingsTab` 448 → 173, `CodexSettingsTab` 447 → 214,
+  `CursorSettingsTab` 326 → 33.
+
+Remaining (status stays `in-progress`): 29 grandfathered source hotspots in
+`scripts/loc-baseline.json` (shrink-only; largest `StreamController.ts`), and
+remediation item 5 — the oversized **test** files (`Tab.test.ts` ~3.6k LOC,
+`ClaudianService.test.ts` ~3.1k LOC) have not been split by behavior surface.

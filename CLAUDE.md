@@ -56,7 +56,7 @@ non-blocking backlog) are catalogued in
 | **providers/cursor** | Cursor Agent adaptor over the `cursor-agent` stream-json CLI (not ACP) | Runtime, NDJSON stream/tool mapping, prompt encoding, JSONL history hydration, settings reconciliation, plan-path conventions, settings UI |
 | **features/chat** | Main sidebar interface | See [`src/features/chat/CLAUDE.md`](src/features/chat/CLAUDE.md) |
 | **features/inline-edit** | Inline edit modal and provider-backed edit services | `InlineEditModal` plus provider-owned inline edit services |
-| **features/settings** | Shared settings shell with provider tabs | General tab plus provider-owned Claude, Codex, Opencode, and Cursor tab renderers |
+| **features/settings** | Settings shell + registry renderer | All seven tabs render through the settings registry (`registry/`, parity tests in `tests/integration/settings/`); provider-owned widgets mount via the `widgets` map on each provider's `settingsTabRenderer`. Legacy imperative renderers remain as fallback until the v4.0.0 deletion pass |
 | **features/tasks** | Agent Board work orders and run coordination | See [`src/features/tasks/CLAUDE.md`](src/features/tasks/CLAUDE.md) |
 | **features/quickActions** | Quick action parsing and storage | Vault-defined quick actions surfaced in chat |
 | **shared** | Reusable UI building blocks | Dropdowns, modals, mention UI, icons |
