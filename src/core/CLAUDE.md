@@ -44,13 +44,20 @@ features/ -> core contracts only
 ### ChatRuntime
 
 ```typescript
-const runtime = ProviderRegistry.createChatRuntime({ plugin, providerId });
+// host: RuntimeHost built by the chat-tab composition layer
+// (tabRuntimeHost.ts); headless contexts use createHeadlessRuntimeHost().
+const runtime = ProviderRegistry.createChatRuntime({ plugin, providerId, host });
 const preparedTurn = runtime.prepareTurn(request);
 
 for await (const chunk of runtime.query(preparedTurn, history)) {
   // Feature layer consumes provider-neutral StreamChunk values.
 }
 ```
+
+UI callbacks (approval, ask-user, plan exit, permission-mode sync, subagent
+hooks, auto turns) are construction-time `RuntimeHost` members — there are no
+mutable `set*Callback` methods on `ChatRuntime` (ADR 0001 Move 3, completed
+2026-06-10).
 
 ### Provider Factories
 

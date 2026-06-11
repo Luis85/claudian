@@ -2,8 +2,8 @@
 type: tech-debt
 title: "Settings registry port is incomplete and legacy renderers remain live"
 date: 2026-06-07
-updated: 2026-06-07
-status: open
+updated: 2026-06-11
+status: in-progress
 priority: "2 - normal"
 severity: medium
 scope: settings-architecture
@@ -43,7 +43,17 @@ Two settings systems divide locality. Adding or changing a setting requires know
 
 ## Acceptance criteria
 
-- [ ] `REGISTRY_TABS` includes `general`, `claude`, `codex`, `opencode`, `cursor`, `agentBoard`, and `diagnostics`.
-- [ ] Search can find every user-visible setting through registry metadata.
-- [ ] Legacy renderer files for provider tabs are removed.
-- [ ] `ClaudianSettings.ts` becomes a shell around the registry renderer, not a second settings implementation.
+- [x] `REGISTRY_TABS` includes `general`, `claude`, `codex`, `opencode`, `cursor`, `agentBoard`, and `diagnostics`. — shipped 2026-06-11; provider ids derive from `ProviderRegistry` at call time.
+- [x] Search can find every user-visible setting through registry metadata. — every ported field carries `keywords`; search integration suite green.
+- [ ] Legacy renderer files for provider tabs are removed. — **deferred to v4.0.0**, gated on manual vault verification (fresh + existing vault); the renderers shrank to thin shells over the same widget mounts and stay wired as fallback.
+- [x] `ClaudianSettings.ts` becomes a shell around the registry renderer, not a second settings implementation. — general-tab imperative rendering moved into registry fields + extracted sections.
+
+## Progress (2026-06-11)
+
+The port itself is complete — all seven tabs render through the registry at
+field-for-field parity, each flipped together with a passing parity test
+(`tests/integration/settings/<tab>Port.test.ts`). Implementation details and
+the per-tab commit trail: [[2026-06-11-settings-registry-port-completion]]
+(plan) and `docs/issues/settings-registry-port-followup.md` (status). Status
+stays `in-progress` until the v4.0.0 deletion pass removes the legacy
+renderer files and `featureFlag.ts` after manual vault verification.

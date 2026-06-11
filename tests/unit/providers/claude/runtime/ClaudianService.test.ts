@@ -9,6 +9,7 @@ import type { McpServerManager } from '@/core/mcp/McpServerManager';
 import type ClaudianPlugin from '@/main';
 import { ClaudianService } from '@/providers/claude/runtime/ClaudeChatRuntime';
 import { MessageChannel } from '@/providers/claude/runtime/ClaudeMessageChannel';
+import { buildHistoryRebuildRequest } from '@/providers/claude/runtime/claudeQueryTurnHelpers';
 import { createResponseHandler } from '@/providers/claude/runtime/types';
 import * as envUtils from '@/utils/env';
 import * as sessionUtils from '@/utils/session';
@@ -1957,7 +1958,7 @@ describe('ClaudianService', () => {
         { id: '2', role: 'assistant', content: 'X is great', timestamp: 1001 },
       ];
 
-      const result = (service as any).buildHistoryRebuildRequest('New question', history);
+      const result = buildHistoryRebuildRequest('New question', history);
 
       expect(result.prompt).toContain('Tell me about X');
       expect(result.prompt).toContain('X is great');
@@ -1969,7 +1970,7 @@ describe('ClaudianService', () => {
         { id: '1', role: 'user', content: 'Look', timestamp: 1000, images },
       ];
 
-      const result = (service as any).buildHistoryRebuildRequest('Follow up', history);
+      const result = buildHistoryRebuildRequest('Follow up', history);
 
       expect(result.images).toEqual(images);
     });
@@ -1979,7 +1980,7 @@ describe('ClaudianService', () => {
         { id: '1', role: 'user', content: 'No images', timestamp: 1000 },
       ];
 
-      const result = (service as any).buildHistoryRebuildRequest('Follow up', history);
+      const result = buildHistoryRebuildRequest('Follow up', history);
 
       expect(result.images).toBeUndefined();
     });

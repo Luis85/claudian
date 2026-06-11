@@ -1,20 +1,35 @@
+import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
+
 // Tabs whose imperative renderer has been replaced by the registry walker.
-// Only tabs whose registry registration is FEATURE-COMPLETE belong here.
-// Incomplete tabs (general, claude, codex, opencode, cursor) fall back to the
-// legacy imperative renderer until their registry port matches the legacy UI.
+// Only tabs whose registry registration is FEATURE-COMPLETE belongs here.
 //
-// Audit (2026-05-31):
-//   - general: 30+ fields missing (locale, display, conversations, content, input, env)
-//   - claude: 10+ fields missing (loadUserSettings, model toggles, env, mcp/plugins widgets)
-//   - codex: 8+ fields missing (safeMode, installMethod, reasoningSummary, env, etc.)
-//   - opencode: visibleModels/modelAliases custom widgets still placeholders
-//   - cursor: visibleModels custom widget still placeholder
-//   - agentBoard, diagnostics: COMPLETE — keep on registry
-export const REGISTRY_TABS: ReadonlySet<string> = new Set<string>([
+// 2026-06-11: all seven tabs render through the registry, each flipped in the
+// same change as its passing parity test (tests/integration/settings/
+// <tab>Port.test.ts asserts the legacy field inventory renders through the
+// registry walker). The legacy renderers and provider settingsTabRenderer
+// wiring stay in place as fallback until the v4.0.0 deletion pass, gated on
+// manual vault verification (fresh vault + existing vault) — see
+// docs/issues/settings-registry-port-followup.md and
+// docs/superpowers/plans/2026-06-11-settings-registry-port-completion.md.
+const STATIC_REGISTRY_TABS: ReadonlySet<string> = new Set<string>([
+  'general',
   'agentBoard',
   'diagnostics',
 ]);
 
+// Provider tab ids come from the registry at call time (not import time, so
+// provider bootstrap order can't race this module) — registering a new
+// provider is the only step (guarded by noHardcodedProviderList.test.ts);
+// its fields module must register the tab as feature-complete before
+// shipping.
+export function getRegistryTabIds(): ReadonlySet<string> {
+  return new Set<string>([
+    ...STATIC_REGISTRY_TABS,
+    ...ProviderRegistry.getRegisteredProviderIds(),
+  ]);
+}
+
 export function useRegistryRenderer(tabId: string): boolean {
-  return REGISTRY_TABS.has(tabId);
+  if (STATIC_REGISTRY_TABS.has(tabId)) return true;
+  return ProviderRegistry.getRegisteredProviderIds().includes(tabId);
 }

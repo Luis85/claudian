@@ -60,7 +60,7 @@ Two tiers, on purpose:
   This keeps the bar moving without blocking unrelated work on day one.
 
 Current `warn`-tier rules: `complexity` 25 and `max-lines-per-function` 200
-(32 + 12 warnings as of 2026-06-10, down from ~61 on 2026-06-07). As the
+(17 + 5 warnings as of 2026-06-11, down from ~61 on 2026-06-07). As the
 backlog clears, ratchet a threshold down (or promote a clean rule to `error`)
 so the gain is locked in. Whole-file size is already a hard gate via the LOC
 guard; the function-health rules add function-level signal that file-level LOC

@@ -3,6 +3,16 @@ import type { ProviderCustomModel } from '../../../core/types/settings';
 import { writePathInPlace } from '../registry/path';
 import type { SettingsCtx } from '../registry/SettingsField';
 
+// Model-list edits can invalidate the active chat/title model selection, so
+// commits expose two seams: `beforeSave` runs after the row write but inside
+// the same save (reconcile selections by mutating settings), `afterSave` runs
+// once persisted (refresh model selectors). Mirrors the legacy tab's
+// commit-then-reconcile-then-refresh order.
+export interface CustomModelsCommitHooks {
+  beforeSave?: () => void;
+  afterSave?: () => void;
+}
+
 // Editor state is intentionally separate from the persisted row list — env-sourced
 // rows come from snippet parsing and stay read-only, while user rows are appended
 // through the editor below the table.
@@ -11,7 +21,19 @@ export class CustomModelsTable {
     private readonly host: HTMLElement,
     private readonly providerId: ProviderId,
     private readonly ctx: SettingsCtx,
+    private readonly hooks: CustomModelsCommitHooks = {},
   ) {}
+
+  private async commitRows(updated: ProviderCustomModel[]): Promise<void> {
+    writePathInPlace(
+      this.ctx.settings as object,
+      `providerConfigs.${this.providerId}.customModels`,
+      updated,
+    );
+    this.hooks.beforeSave?.();
+    await this.ctx.saveSettings();
+    this.hooks.afterSave?.();
+  }
 
   render(): void {
     this.host.empty();
@@ -78,12 +100,7 @@ export class CustomModelsTable {
     if (updated.length === rows.length) {
       return;
     }
-    writePathInPlace(
-      this.ctx.settings as object,
-      `providerConfigs.${this.providerId}.customModels`,
-      updated,
-    );
-    await this.ctx.saveSettings();
+    await this.commitRows(updated);
     this.render();
   }
 
@@ -189,12 +206,7 @@ export class CustomModelsTable {
       updated = [...rows, next];
     }
 
-    writePathInPlace(
-      this.ctx.settings as object,
-      `providerConfigs.${this.providerId}.customModels`,
-      updated,
-    );
-    await this.ctx.saveSettings();
+    await this.commitRows(updated);
     this.render();
   }
 

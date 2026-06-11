@@ -5,6 +5,8 @@ import { registerOpencodeTabFields } from '../../../../../../src/features/settin
 import { getSettingsRegistry, resetSettingsRegistryForTests } from '../../../../../../src/features/settings/registry/registry';
 import { updateOpencodeProviderSettings } from '../../../../../../src/providers/opencode/settings';
 
+const enabled = { providerConfigs: { opencode: { enabled: true } } } as any;
+
 describe('Opencode tab registry fields', () => {
   beforeEach(() => {
     resetSettingsRegistryForTests();
@@ -13,7 +15,7 @@ describe('Opencode tab registry fields', () => {
   it('registers Opencode tab only when enabled', () => {
     registerOpencodeTabFields();
     const r = getSettingsRegistry();
-    const tabs = r.getTabs({ providerConfigs: { opencode: { enabled: true } } } as any);
+    const tabs = r.getTabs(enabled);
     expect(tabs.find((t) => t.id === 'opencode')).toBeDefined();
 
     const disabledTabs = r.getTabs({ providerConfigs: { opencode: { enabled: false } } } as any);
@@ -23,7 +25,7 @@ describe('Opencode tab registry fields', () => {
   it('registers 5 sections under Opencode in spec order', () => {
     registerOpencodeTabFields();
     const r = getSettingsRegistry();
-    const sections = r.getSections('opencode', { providerConfigs: { opencode: { enabled: true } } } as any);
+    const sections = r.getSections('opencode', enabled);
     expect(sections.map((s) => s.id)).toEqual([
       'setup',
       'models',
@@ -33,14 +35,12 @@ describe('Opencode tab registry fields', () => {
     ]);
   });
 
-  it('registers cliPath field in setup section with default ""', () => {
+  it('replaces the flat cliPath field with the hostname-keyed cliPathsByHost widget', () => {
     registerOpencodeTabFields();
     const r = getSettingsRegistry();
-    const fields = r.getFields('opencode', 'setup', { providerConfigs: { opencode: { enabled: true } } } as any);
-    const cliPath = fields.find((f) => f.id === 'providerConfigs.opencode.cliPath');
-    expect(cliPath).toBeDefined();
-    expect(cliPath?.label).toBe('CLI path');
-    expect(cliPath?.default).toBe('');
+    const setupIds = r.getFields('opencode', 'setup', enabled).map((f) => f.id);
+    expect(setupIds).toContain('providerConfigs.opencode.cliPathsByHost');
+    expect(r.getAllFields().find((f) => f.id === 'providerConfigs.opencode.cliPath')).toBeUndefined();
   });
 
   it('sources selectedMode dropdown options from the Opencode discovery state', () => {
@@ -83,27 +83,32 @@ describe('Opencode tab registry fields', () => {
     expect(type.options(settings)).toEqual([]);
   });
 
-  it('registers providerConfigs.opencode.customModels under models', () => {
+  it('registers the model widgets and workspace widgets as custom fields with keywords', () => {
     registerOpencodeTabFields();
     const r = getSettingsRegistry();
-    const s = { providerConfigs: { opencode: { enabled: true } } } as any;
-    const field = r
-      .getFields('opencode', 'models', s)
-      .find((f) => f.id === 'providerConfigs.opencode.customModels');
-    expect(field).toBeDefined();
-    expect(field?.type.kind).toBe('custom');
+    const fields = r.getAllFields().filter((f) => f.tabId === 'opencode');
+    const ids = fields.map((f) => f.id);
+    expect(ids).toEqual(expect.arrayContaining([
+      'providerConfigs.opencode.visibleModels',
+      'providerConfigs.opencode.modelAliases',
+      'providerConfigs.opencode.customModels',
+      'hiddenProviderCommands.opencode',
+      'opencode.subagents',
+      'providerConfigs.opencode.environmentVariables',
+    ]));
+
+    for (const id of ids.filter((entry) => entry !== 'providerConfigs.opencode.selectedMode')) {
+      const field = fields.find((f) => f.id === id);
+      expect(field?.type.kind).toBe('custom');
+    }
+    for (const field of fields) {
+      expect(field.keywords?.length ?? 0).toBeGreaterThan(0);
+    }
   });
 
   it('does not register a providerConfigs.opencode.enabled field (lives on General tab)', () => {
-    resetSettingsRegistryForTests();
     registerOpencodeTabFields();
     const r = getSettingsRegistry();
-    const s = { providerConfigs: { opencode: { enabled: true } } } as any;
-    const allFields = r.getAllFields ? r.getAllFields() : [];
-    expect(allFields.find((f: any) => f.id === 'providerConfigs.opencode.enabled')).toBeUndefined();
-    for (const section of r.getSections('opencode', s)) {
-      const fields = r.getFields('opencode', section.id, s);
-      expect(fields.find((f) => f.id === 'providerConfigs.opencode.enabled')).toBeUndefined();
-    }
+    expect(r.getAllFields().find((f) => f.id === 'providerConfigs.opencode.enabled')).toBeUndefined();
   });
 });

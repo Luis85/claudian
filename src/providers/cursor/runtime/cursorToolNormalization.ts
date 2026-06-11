@@ -317,216 +317,201 @@ export function mapCursorToolName(kind: string): string {
   }
 }
 
+type CursorInputMapper = (args: Record<string, unknown>, description: string | undefined) => Record<string, unknown>;
+
+const mapWriteInput: CursorInputMapper = (args) => ({
+  file_path: stringValue(args.path),
+  content: stringValue(args.streamContent ?? args.content),
+});
+
+const mapFetchInput: CursorInputMapper = (args) => ({
+  url: stringValue(args.url ?? args.target),
+});
+
+const mapTodosInput: CursorInputMapper = (args) => ({ todos: normalizeTodosArg(args) });
+
+function mapShellInput(args: Record<string, unknown>, description: string | undefined): Record<string, unknown> {
+  const command = stringValue(args.command);
+  const cwd = stringValue(args.workingDirectory);
+  const out: Record<string, unknown> = { command };
+  if (cwd) out.cwd = cwd;
+  if (description) out.description = description;
+  return out;
+}
+
+function mapGlobInput(args: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {
+    pattern: stringValue(args.globPattern ?? args.pattern),
+  };
+  const target = stringValue(args.targetDirectory ?? args.target_directory ?? args.path);
+  if (target) out.path = target;
+  return out;
+}
+
+function mapGrepInput(args: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {
+    pattern: stringValue(args.pattern),
+  };
+  const target = stringValue(args.path ?? args.targetDirectory);
+  if (target) out.path = target;
+  if (args.outputMode) out.output_mode = stringValue(args.outputMode);
+  if (args.glob) out.glob = stringValue(args.glob);
+  if (args.caseInsensitive === true) out['-i'] = true;
+  if (args.multiline === true) out.multiline = true;
+  return out;
+}
+
+function mapWebSearchInput(args: Record<string, unknown>): Record<string, unknown> {
+  const queries = stringArray(args.queries);
+  const query = stringValue(args.query) || queries[0] || '';
+  const out: Record<string, unknown> = {};
+  if (query) out.query = query;
+  if (queries.length > 0) out.queries = queries;
+  return out;
+}
+
+function resolveTaskRunInBackground(args: Record<string, unknown>): boolean | undefined {
+  if (typeof args.run_in_background === 'boolean') return args.run_in_background;
+  if (typeof args.runInBackground === 'boolean') return args.runInBackground;
+  const mode = stringValue(args.mode);
+  if (mode === 'TASK_MODE_BACKGROUND') return true;
+  if (mode === 'TASK_MODE_SYNCHRONOUS' || mode === 'TASK_MODE_SYNC') return false;
+  return undefined;
+}
+
+function mapTaskInput(args: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {
+    description: stringValue(args.description),
+    prompt: stringValue(args.prompt ?? args.message ?? args.task),
+  };
+  const runInBackground = resolveTaskRunInBackground(args);
+  if (runInBackground !== undefined) out.run_in_background = runInBackground;
+  const subagent =
+    parseCursorSubagentType(args.subagentType ?? args.subagent_type)
+    ?? stringValue(args.subagent_type ?? args.subagentType ?? args.agent);
+  if (subagent) out.subagent_type = subagent;
+  return out;
+}
+
+function mapMcpInput(args: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...args };
+  const server = stringValue(args.server);
+  const tool = stringValue(args.tool ?? args.name);
+  if (server) out.server = server;
+  if (tool) out.tool = tool;
+  return out;
+}
+
+const CURSOR_TOOL_INPUT_MAPPERS: Partial<Record<string, CursorInputMapper>> = {
+  readToolCall: (args) => ({ file_path: stringValue(args.path) }),
+  writeToolCall: mapWriteInput,
+  editToolCall: mapWriteInput,
+  replaceEnvToolCall: (args) => ({
+    file_path: stringValue(args.path),
+    old_string: stringValue(args.oldString ?? args.old_string),
+    new_string: stringValue(args.newString ?? args.new_string),
+  }),
+  deleteToolCall: (args) => ({ path: stringValue(args.path) }),
+  shellToolCall: mapShellInput,
+  writeShellStdinToolCall: (args) => ({
+    session_id: stringValue(args.sessionId ?? args.session_id),
+    chars: stringValue(args.chars ?? args.text),
+  }),
+  globToolCall: mapGlobInput,
+  grepToolCall: mapGrepInput,
+  lsToolCall: (args) => ({ path: stringValue(args.path ?? args.targetDirectory) || '.' }),
+  webFetchToolCall: mapFetchInput,
+  fetchToolCall: mapFetchInput,
+  webSearchToolCall: mapWebSearchInput,
+  semSearchToolCall: (args) => ({ query: stringValue(args.query) }),
+  updateTodosToolCall: mapTodosInput,
+  readTodosToolCall: mapTodosInput,
+  askQuestionToolCall: (args) => ({ questions: normalizeQuestionsArg(args) }),
+  taskToolCall: mapTaskInput,
+  mcpToolCall: mapMcpInput,
+};
+
 function mapCursorToolInput(
   kind: string,
   args: Record<string, unknown>,
   description: string | undefined,
 ): Record<string, unknown> {
-  switch (kind) {
-    case 'readToolCall':
-      return { file_path: stringValue(args.path) };
-
-    case 'writeToolCall':
-    case 'editToolCall':
-      return {
-        file_path: stringValue(args.path),
-        content: stringValue(args.streamContent ?? args.content),
-      };
-
-    case 'replaceEnvToolCall':
-      return {
-        file_path: stringValue(args.path),
-        old_string: stringValue(args.oldString ?? args.old_string),
-        new_string: stringValue(args.newString ?? args.new_string),
-      };
-
-    case 'deleteToolCall':
-      return { path: stringValue(args.path) };
-
-    case 'shellToolCall': {
-      const command = stringValue(args.command);
-      const cwd = stringValue(args.workingDirectory);
-      const out: Record<string, unknown> = { command };
-      if (cwd) out.cwd = cwd;
-      if (description) out.description = description;
-      return out;
-    }
-
-    case 'writeShellStdinToolCall':
-      return {
-        session_id: stringValue(args.sessionId ?? args.session_id),
-        chars: stringValue(args.chars ?? args.text),
-      };
-
-    case 'globToolCall': {
-      const out: Record<string, unknown> = {
-        pattern: stringValue(args.globPattern ?? args.pattern),
-      };
-      const target = stringValue(args.targetDirectory ?? args.target_directory ?? args.path);
-      if (target) out.path = target;
-      return out;
-    }
-
-    case 'grepToolCall': {
-      const out: Record<string, unknown> = {
-        pattern: stringValue(args.pattern),
-      };
-      const target = stringValue(args.path ?? args.targetDirectory);
-      if (target) out.path = target;
-      if (args.outputMode) out.output_mode = stringValue(args.outputMode);
-      if (args.glob) out.glob = stringValue(args.glob);
-      if (args.caseInsensitive === true) out['-i'] = true;
-      if (args.multiline === true) out.multiline = true;
-      return out;
-    }
-
-    case 'lsToolCall':
-      return { path: stringValue(args.path ?? args.targetDirectory) || '.' };
-
-    case 'webFetchToolCall':
-    case 'fetchToolCall':
-      return { url: stringValue(args.url ?? args.target) };
-
-    case 'webSearchToolCall': {
-      const queries = stringArray(args.queries);
-      const query = stringValue(args.query) || queries[0] || '';
-      const out: Record<string, unknown> = {};
-      if (query) out.query = query;
-      if (queries.length > 0) out.queries = queries;
-      return out;
-    }
-
-    case 'semSearchToolCall':
-      return { query: stringValue(args.query) };
-
-    case 'updateTodosToolCall':
-    case 'readTodosToolCall':
-      return { todos: normalizeTodosArg(args) };
-
-    case 'askQuestionToolCall':
-      return { questions: normalizeQuestionsArg(args) };
-
-    case 'taskToolCall': {
-      const out: Record<string, unknown> = {
-        description: stringValue(args.description),
-        prompt: stringValue(args.prompt ?? args.message ?? args.task),
-      };
-      if (typeof args.run_in_background === 'boolean') {
-        out.run_in_background = args.run_in_background;
-      } else if (typeof args.runInBackground === 'boolean') {
-        out.run_in_background = args.runInBackground;
-      } else {
-        const mode = stringValue(args.mode);
-        if (mode === 'TASK_MODE_BACKGROUND') {
-          out.run_in_background = true;
-        } else if (mode === 'TASK_MODE_SYNCHRONOUS' || mode === 'TASK_MODE_SYNC') {
-          out.run_in_background = false;
-        }
-      }
-      const subagent =
-        parseCursorSubagentType(args.subagentType ?? args.subagent_type)
-        ?? stringValue(args.subagent_type ?? args.subagentType ?? args.agent);
-      if (subagent) out.subagent_type = subagent;
-      return out;
-    }
-
-    case 'mcpToolCall': {
-      const out: Record<string, unknown> = { ...args };
-      const server = stringValue(args.server);
-      const tool = stringValue(args.tool ?? args.name);
-      if (server) out.server = server;
-      if (tool) out.tool = tool;
-      return out;
-    }
-
-    default:
-      return { ...args };
-  }
+  const mapper = CURSOR_TOOL_INPUT_MAPPERS[kind];
+  return mapper ? mapper(args, description) : { ...args };
 }
+
+type CursorSuccessFormatter = (success: Record<string, unknown>, args: Record<string, unknown>) => string;
+
+const formatWriteSuccess: CursorSuccessFormatter = (success) => {
+  const message = stringValue(success.message);
+  const diff = stringValue(success.diffString);
+  return diff ? `${message}\n\n${diff}`.trim() : message;
+};
+
+const formatFetchSuccess: CursorSuccessFormatter = (success) =>
+  stringValue(success.content ?? success.body ?? success.text);
+
+const formatTodosSuccess: CursorSuccessFormatter = (success) =>
+  stringValue(success.message) || 'Updated todos';
+
+function formatShellSuccess(success: Record<string, unknown>): string {
+  const stdout = stringValue(success.interleavedOutput ?? success.stdout);
+  const stderr = stringValue(success.stderr);
+  const exitCode = numericValue(success.exitCode);
+  const lines: string[] = [];
+  if (stdout) lines.push(stdout.trimEnd());
+  if (stderr && stderr.trim() && stderr !== stdout) {
+    lines.push(`[stderr]\n${stderr.trimEnd()}`);
+  }
+  if (exitCode !== null && exitCode !== 0) {
+    lines.push(`Exit code: ${exitCode}`);
+  }
+  return lines.join('\n').trim();
+}
+
+function formatGlobSuccess(success: Record<string, unknown>, args: Record<string, unknown>): string {
+  const files = stringArray(success.files).map(cleanToolPathCandidate).filter(Boolean);
+  if (files.length === 0) {
+    return `No files matched ${stringValue(args.globPattern ?? args.pattern) || 'pattern'}`;
+  }
+  const total = numericValue(success.totalFiles) ?? files.length;
+  const header = `Found ${total} file${total === 1 ? '' : 's'}:`;
+  return `${header}\n${files.join('\n')}`;
+}
+
+function formatTaskSuccess(success: Record<string, unknown>): string {
+  const structured = extractCursorTaskResultText(success);
+  if (structured) return structured;
+  return stringValue(success.result ?? success.output ?? success.message);
+}
+
+const CURSOR_SUCCESS_FORMATTERS: Partial<Record<string, CursorSuccessFormatter>> = {
+  readToolCall: (success) => stringValue(success.content),
+  writeToolCall: formatWriteSuccess,
+  editToolCall: formatWriteSuccess,
+  shellToolCall: formatShellSuccess,
+  writeShellStdinToolCall: (success) => stringValue(success.message) || 'Sent',
+  globToolCall: formatGlobSuccess,
+  grepToolCall: formatGrepSuccess,
+  lsToolCall: (success) => stringArray(success.files ?? success.entries).join('\n'),
+  webFetchToolCall: formatFetchSuccess,
+  fetchToolCall: formatFetchSuccess,
+  webSearchToolCall: (success) => stringifyResultPayload(success, 'WebSearch'),
+  semSearchToolCall: (success) => stringifyResultPayload(success, 'SemanticSearch'),
+  updateTodosToolCall: formatTodosSuccess,
+  readTodosToolCall: formatTodosSuccess,
+  askQuestionToolCall: (success) => stringifyResultPayload(success, 'AskUserQuestion'),
+  taskToolCall: formatTaskSuccess,
+  deleteToolCall: (success, args) => stringValue(success.message) || `Deleted ${stringValue(args.path)}`,
+};
 
 function formatSuccessContent(
   kind: string,
   success: Record<string, unknown>,
   args: Record<string, unknown>,
 ): string {
-  switch (kind) {
-    case 'readToolCall':
-      return stringValue(success.content);
-
-    case 'writeToolCall':
-    case 'editToolCall': {
-      const message = stringValue(success.message);
-      const diff = stringValue(success.diffString);
-      return diff ? `${message}\n\n${diff}`.trim() : message;
-    }
-
-    case 'shellToolCall': {
-      const stdout = stringValue(success.interleavedOutput ?? success.stdout);
-      const stderr = stringValue(success.stderr);
-      const exitCode = numericValue(success.exitCode);
-      const lines: string[] = [];
-      if (stdout) lines.push(stdout.trimEnd());
-      if (stderr && stderr.trim() && stderr !== stdout) {
-        lines.push(`[stderr]\n${stderr.trimEnd()}`);
-      }
-      if (exitCode !== null && exitCode !== 0) {
-        lines.push(`Exit code: ${exitCode}`);
-      }
-      return lines.join('\n').trim();
-    }
-
-    case 'writeShellStdinToolCall':
-      return stringValue(success.message) || 'Sent';
-
-    case 'globToolCall': {
-      const files = stringArray(success.files).map(cleanToolPathCandidate).filter(Boolean);
-      if (files.length === 0) {
-        return `No files matched ${stringValue(args.globPattern ?? args.pattern) || 'pattern'}`;
-      }
-      const total = numericValue(success.totalFiles) ?? files.length;
-      const header = `Found ${total} file${total === 1 ? '' : 's'}:`;
-      return `${header}\n${files.join('\n')}`;
-    }
-
-    case 'grepToolCall':
-      return formatGrepSuccess(success);
-
-    case 'lsToolCall': {
-      const entries = stringArray(success.files ?? success.entries);
-      return entries.join('\n');
-    }
-
-    case 'webFetchToolCall':
-    case 'fetchToolCall':
-      return stringValue(success.content ?? success.body ?? success.text);
-
-    case 'webSearchToolCall':
-      return stringifyResultPayload(success, 'WebSearch');
-
-    case 'semSearchToolCall':
-      return stringifyResultPayload(success, 'SemanticSearch');
-
-    case 'updateTodosToolCall':
-    case 'readTodosToolCall':
-      return stringValue(success.message) || 'Updated todos';
-
-    case 'askQuestionToolCall':
-      return stringifyResultPayload(success, 'AskUserQuestion');
-
-    case 'taskToolCall': {
-      const structured = extractCursorTaskResultText(success);
-      if (structured) {
-        return structured;
-      }
-      return stringValue(success.result ?? success.output ?? success.message);
-    }
-
-    case 'deleteToolCall':
-      return stringValue(success.message) || `Deleted ${stringValue(args.path)}`;
-
-    default:
-      return stringifyResultPayload(success, kind);
-  }
+  const formatter = CURSOR_SUCCESS_FORMATTERS[kind];
+  return formatter ? formatter(success, args) : stringifyResultPayload(success, kind);
 }
 
 function buildToolUseResult(

@@ -43,6 +43,8 @@ describe('Settings search integration', () => {
     reg.getChatUIConfig.mockReturnValue({
       ownsModel: () => false,
       getModelOptions: () => [],
+      // Backs the custom-context-limits widget the general tab now mounts.
+      getCustomModelIds: () => [],
     });
   });
 
@@ -309,12 +311,20 @@ function createStubPlugin() {
       hiddenProviderCommands: {},
       customContextLimits: {},
       customModelAliases: {},
+      // Read synchronously by the shared env widgets the general tab mounts.
+      envSnippets: [],
+      secretEnvVars: [],
     },
+    app: { vault: { adapter: {} } },
     saveSettings: jest.fn().mockResolvedValue(undefined),
     getAllViews: jest.fn().mockReturnValue([]),
     getView: jest.fn().mockReturnValue(undefined),
     getActiveEnvironmentVariables: jest.fn().mockReturnValue(''),
     getResolvedEnvironmentVariables: jest.fn().mockReturnValue({}),
+    // Search results mount real registry fields; the general tab's
+    // environment custom field reads these.
+    getEnvironmentVariablesForScope: jest.fn().mockReturnValue(''),
+    setEnvironmentVariablesForScope: jest.fn().mockResolvedValue(undefined),
     events: {
       on: jest.fn(() => () => undefined),
       emit: jest.fn(),

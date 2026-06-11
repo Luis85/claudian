@@ -2,7 +2,7 @@ export { buildDefaultsFromRegistry } from './buildDefaultsFromRegistry';
 export { useRegistryRenderer } from './featureFlag';
 export { readPath, writePath } from './path';
 export { registerAllSettings } from './registerAll';
-export { getSettingsRegistry, resetSettingsRegistryForTests } from './registry';
+export { getSettingsRegistry, resetSettingsRegistry, resetSettingsRegistryForTests } from './registry';
 export { renderField } from './renderField';
 export { renderTab } from './renderTab';
 export type {

@@ -167,6 +167,35 @@ describe('CustomModelsTable', () => {
     expect(remainingRows).toHaveLength(1);
   });
 
+  it('runs commit hooks around the save: beforeSave sees the new rows pre-persist, afterSave runs post-persist', async () => {
+    const host = document.createElement('div');
+    const ctx = makeCtx({
+      providerConfigs: {
+        claude: { customModels: [{ id: 'gone', source: 'user' }] },
+      },
+    });
+    const order: string[] = [];
+    const beforeSave = jest.fn(() => {
+      order.push('beforeSave');
+      // The row write has already landed, so reconciliation hooks can
+      // validate the selection against the NEW list inside the same save.
+      expect(ctx.settings.providerConfigs.claude?.customModels).toEqual([]);
+      expect(ctx.saveSettings).not.toHaveBeenCalled();
+    });
+    const afterSave = jest.fn(() => {
+      order.push('afterSave');
+      expect(ctx.saveSettings).toHaveBeenCalledTimes(1);
+    });
+    new CustomModelsTable(host, 'claude', ctx, { beforeSave, afterSave }).render();
+
+    const deleteBtn = host.querySelector('button[data-action="delete"]') as HTMLButtonElement;
+    deleteBtn.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(order).toEqual(['beforeSave', 'afterSave']);
+  });
+
   it('opens the editor pre-filled with the row id, label, and contextWindow when Edit is clicked', () => {
     const host = document.createElement('div');
     const ctx = makeCtx({

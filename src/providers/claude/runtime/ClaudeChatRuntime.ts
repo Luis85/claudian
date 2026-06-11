@@ -43,7 +43,7 @@ import type {
   PreparedChatTurn,
   SessionUpdateResult,
 } from '../../../core/runtime/types';
-import { TOOL_ENTER_PLAN_MODE, TOOL_SKILL } from '../../../core/tools/toolNames';
+import { TOOL_ENTER_PLAN_MODE } from '../../../core/tools/toolNames';
 import type {
   ApprovalDecision,
   ChatMessage,
@@ -56,21 +56,15 @@ import type {
 import type { PluginContext } from '../../../core/types/PluginContext';
 import type { ClaudianSettings, PermissionMode } from '../../../core/types/settings';
 import { t } from '../../../i18n/i18n';
-import { stripCurrentNoteContext } from '../../../utils/context';
 import { getEnhancedPath, getMissingNodeError } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
-import {
-  buildContextFromHistory,
-  buildPromptWithHistoryContext,
-  getLastUserMessage,
-  isSessionExpiredError,
-} from '../../../utils/session';
+import { isSessionExpiredError } from '../../../utils/session';
 import { CLAUDE_PROVIDER_CAPABILITIES } from '../capabilities';
 import { loadSubagentFinalResult, loadSubagentToolCalls } from '../history/ClaudeHistoryStore';
 import { createStopSubagentHook } from '../hooks/SubagentHooks';
 import { encodeClaudeTurn } from '../prompt/ClaudeTurnEncoder';
 import { isContextWindowEvent, isSessionInitEvent, isStreamChunk } from '../sdk/typeGuards';
-import type { TransformEvent } from '../sdk/types';
+import type { ContextWindowEvent, SessionInitEvent, TransformEvent } from '../sdk/types';
 import { getClaudeProviderSettings } from '../settings';
 import {
   createTransformStreamState,
@@ -87,6 +81,21 @@ import {
   QueryOptionsBuilder,
   type QueryOptionsContext,
 } from './ClaudeQueryOptionsBuilder';
+import {
+  buildHistoryContextPrompt,
+  buildHistoryRebuildRequest,
+  buildLegacyTurnRequest,
+  buildQueryOptionsFromTurnRequest,
+  createStreamingTurnHandler,
+  drainStreamingTurn,
+  isChatMessageArray,
+  isImageAttachmentArray,
+  mergeCustomModelContextLimits,
+  noteVisibleStreamContent,
+  resolveColdStartAllowedTools,
+  resolveTurnAllowedTools,
+  tryEnqueueTurnMessage,
+} from './claudeQueryTurnHelpers';
 import { executeClaudeRewind } from './ClaudeRewindService';
 import { SessionManager } from './ClaudeSessionManager';
 import {
@@ -96,7 +105,6 @@ import {
 import {
   type ClaudeEnsureReadyOptions,
   type ClosePersistentQueryOptions,
-  createResponseHandler,
   isTurnCompleteMessage,
   type PersistentQueryConfig,
   type ResponseHandler,
@@ -117,29 +125,26 @@ export interface ClaudeRuntimeServices {
 
 type QueryOptions = ChatRuntimeQueryOptions;
 
-function isChatMessageArray(value: unknown): value is ChatMessage[] {
-  return Array.isArray(value) && value.length > 0 &&
-    !!value[0] && typeof value[0] === 'object' && 'role' in value[0] && 'content' in value[0];
+/** Bundled inputs for the persistent-path turn so helpers stay under max-params. */
+interface PersistentTurnContext {
+  prompt: string;
+  promptToSend: string;
+  images?: ImageAttachment[];
+  conversationHistory?: ChatMessage[];
+  vaultPath: string;
+  cliPath: string;
+  queryOptions?: QueryOptions;
+  effectiveQueryOptions?: QueryOptions;
 }
 
-function isImageAttachmentArray(value: unknown): value is ImageAttachment[] {
-  return Array.isArray(value) && value.length > 0 &&
-    !!value[0] && typeof value[0] === 'object' && 'mediaType' in value[0] && 'data' in value[0];
-}
-
-// Catalog rows override legacy map entries so user-edited customModels[].contextWindow
-// values flow into the usage transform without restructuring the deeper pipeline.
-function mergeCustomModelContextLimits(
-  legacyLimits: Record<string, number> | undefined,
-  customModels: ReadonlyArray<{ id: string; contextWindow?: number }>,
-): Record<string, number> {
-  const merged: Record<string, number> = { ...(legacyLimits ?? {}) };
-  for (const row of customModels) {
-    if (row.contextWindow !== undefined) {
-      merged[row.id] = row.contextWindow;
-    }
-  }
-  return merged;
+/** Mutable per-turn stream state for the cold-start path. */
+interface ColdStartStreamState {
+  selectedModel: string;
+  sawStreamText: boolean;
+  sawStreamThinking: boolean;
+  streamSessionId: string | null;
+  streamState: ReturnType<typeof createTransformStreamState>;
+  usageState: ReturnType<typeof createTransformUsageState>;
 }
 
 export class ClaudianService implements ChatRuntime {
@@ -771,62 +776,7 @@ export class ClaudianService implements ChatRuntime {
           await this.routeMessage(message);
         }
       } catch (error) {
-        // Skip error handling if this consumer was replaced by a new one.
-        // This prevents race conditions where the OLD consumer's error handler
-        // interferes with the NEW handler after a restart (e.g., from applyDynamicUpdates).
-        if (this.persistentQuery !== queryForThisConsumer && this.persistentQuery !== null) {
-          return;
-        }
-
-        // Skip restart if cold-start is in progress (it will handle session capture)
-        if (!this.shuttingDown && !this.coldStartInProgress) {
-          const handler = this.responseHandlers[this.responseHandlers.length - 1];
-          const errorInstance = error instanceof Error ? error : new Error(String(error));
-          const messageToReplay = this.lastSentMessage;
-
-          if (!this.crashRecoveryAttempted && messageToReplay && handler && !handler.sawAnyChunk) {
-            this.crashRecoveryAttempted = true;
-            try {
-              await this.ensureReady({ force: true, preserveHandlers: true });
-              if (!this.messageChannel) {
-                throw new Error('Persistent query restart did not create message channel', {
-                  cause: error,
-                });
-              }
-              await this.applyDynamicUpdates(this.lastSentQueryOptions ?? undefined, { preserveHandlers: true });
-              this.messageChannel.enqueue(messageToReplay);
-              return;
-            } catch (restartError) {
-              // If restart failed due to session expiration, invalidate session
-              // so next query triggers noSessionButHasHistory → history rebuild
-              if (isSessionExpiredError(restartError)) {
-                this.sessionManager.invalidateSession();
-              }
-              handler.onError(errorInstance);
-              return;
-            }
-          }
-
-          // Notify active handler of error
-          if (handler) {
-            handler.onError(errorInstance);
-          }
-
-          // Crash recovery: restart persistent query to prepare for next user message.
-          if (!this.crashRecoveryAttempted) {
-            this.crashRecoveryAttempted = true;
-            try {
-              await this.ensureReady({ force: true });
-            } catch (restartError) {
-              // If restart failed due to session expiration, invalidate session
-              // so next query triggers noSessionButHasHistory → history rebuild
-              if (isSessionExpiredError(restartError)) {
-                this.sessionManager.invalidateSession();
-              }
-              // Restart failed - next query will start fresh.
-            }
-          }
-        }
+        await this.handleConsumerError(error, queryForThisConsumer);
       } finally {
         // Only clear the flag if this consumer wasn't replaced by a new one (e.g., after restart)
         // If ensureReady() restarted, it starts a new consumer which sets the flag true,
@@ -836,6 +786,76 @@ export class ClaudianService implements ChatRuntime {
         }
       }
     })();
+  }
+
+  private async handleConsumerError(error: unknown, queryForThisConsumer: Query | null): Promise<void> {
+    // Skip error handling if this consumer was replaced by a new one.
+    // This prevents race conditions where the OLD consumer's error handler
+    // interferes with the NEW handler after a restart (e.g., from applyDynamicUpdates).
+    if (this.persistentQuery !== queryForThisConsumer && this.persistentQuery !== null) {
+      return;
+    }
+
+    // Skip restart if cold-start is in progress (it will handle session capture)
+    if (this.shuttingDown || this.coldStartInProgress) {
+      return;
+    }
+
+    const handler = this.responseHandlers[this.responseHandlers.length - 1];
+    const errorInstance = error instanceof Error ? error : new Error(String(error));
+    const messageToReplay = this.lastSentMessage;
+
+    if (!this.crashRecoveryAttempted && messageToReplay && handler && !handler.sawAnyChunk) {
+      this.crashRecoveryAttempted = true;
+      await this.replayLastMessageAfterCrash(messageToReplay, handler, error, errorInstance);
+      return;
+    }
+
+    // Notify active handler of error
+    if (handler) {
+      handler.onError(errorInstance);
+    }
+
+    // Crash recovery: restart persistent query to prepare for next user message.
+    if (this.crashRecoveryAttempted) {
+      return;
+    }
+    this.crashRecoveryAttempted = true;
+    try {
+      await this.ensureReady({ force: true });
+    } catch (restartError) {
+      // If restart failed due to session expiration, invalidate session
+      // so next query triggers noSessionButHasHistory → history rebuild
+      if (isSessionExpiredError(restartError)) {
+        this.sessionManager.invalidateSession();
+      }
+      // Restart failed - next query will start fresh.
+    }
+  }
+
+  private async replayLastMessageAfterCrash(
+    messageToReplay: SDKUserMessage,
+    handler: ResponseHandler,
+    cause: unknown,
+    errorInstance: Error,
+  ): Promise<void> {
+    try {
+      await this.ensureReady({ force: true, preserveHandlers: true });
+      if (!this.messageChannel) {
+        throw new Error('Persistent query restart did not create message channel', {
+          cause,
+        });
+      }
+      await this.applyDynamicUpdates(this.lastSentQueryOptions ?? undefined, { preserveHandlers: true });
+      this.messageChannel.enqueue(messageToReplay);
+    } catch (restartError) {
+      // If restart failed due to session expiration, invalidate session
+      // so next query triggers noSessionButHasHistory → history rebuild
+      if (isSessionExpiredError(restartError)) {
+        this.sessionManager.invalidateSession();
+      }
+      handler.onError(errorInstance);
+    }
   }
 
   /** @param modelOverride - Optional model override for cold-start queries */
@@ -877,90 +897,132 @@ export class ClaudianService implements ChatRuntime {
 
     // Transform SDK message to StreamChunks
     for (const event of transformSDKMessage(message, this.getTransformOptions())) {
-      this.noteVisibleStreamContent(message, event, {
-        onText: () => {
-          if (handler) {
-            handler.markStreamTextSeen();
-          } else {
-            this._autoTurnSawStreamText = true;
-          }
-        },
-        onThinking: () => {
-          if (handler) {
-            handler.markStreamThinkingSeen();
-          } else {
-            this._autoTurnSawStreamThinking = true;
-          }
-        },
-      });
+      this.markRoutedStreamContent(message, event, handler);
 
       if (isSessionInitEvent(event)) {
-        // Fork: suppress needsHistoryRebuild since SDK returns a different session ID by design
-        const wasFork = this.pendingForkSession;
-        this.sessionManager.captureSession(event.sessionId);
-        if (wasFork) {
-          this.sessionManager.clearHistoryRebuild();
-          this.pendingForkSession = false;
-        }
-        this.messageChannel?.setSessionId(event.sessionId);
-        if (event.agents) {
-          try { this.getAgentManager()?.setBuiltinAgentNames(event.agents); } catch { /* non-critical */ }
-        }
-        if (event.permissionMode) {
-          try { this.host.permissionModeSync(event.permissionMode); } catch { /* non-critical */ }
-        }
-        // Cache SDK commands on init (SDK already scans the vault).
-        // Pass the current query instance so late completions from a dead query
-        // cannot overwrite the active cache after a restart or shutdown.
-        void this.fetchAndCacheCommands(this.persistentQuery);
+        this.handleRoutedSessionInit(event);
       } else if (isContextWindowEvent(event)) {
-        const usageChunk = this.updateBufferedUsageContextWindow(event.contextWindow);
-        if (!usageChunk) {
-          continue;
-        }
-        if (handler) {
-          handler.onChunk(usageChunk);
-        } else {
-          this._autoTurnBuffer.push(usageChunk);
-        }
+        this.deliverRoutedContextWindow(event, handler);
       } else if (isStreamChunk(event)) {
-        // Dedup: SDK delivers text via stream_events (incremental) AND the assistant message
-        // (complete). Skip the assistant message text if stream text was already seen.
-        if (message.type === 'assistant' && event.type === 'text') {
-          if (handler?.sawStreamText || (!handler && this._autoTurnSawStreamText)) {
-            continue;
-          }
-        }
-        if (message.type === 'assistant' && event.type === 'thinking') {
-          if (handler?.sawStreamThinking || (!handler && this._autoTurnSawStreamThinking)) {
-            continue;
-          }
-        }
-
-        // SDK auto-approves EnterPlanMode (checkPermissions → allow),
-        // so canUseTool is never called. Detect the tool_use in the stream
-        // and fire the sync callback to update the UI.
-        if (event.type === 'tool_use' && event.name === TOOL_ENTER_PLAN_MODE) {
-          if (this.currentConfig) {
-            this.currentConfig.permissionMode = 'plan';
-            this.currentConfig.sdkPermissionMode = 'plan';
-          }
-          try { this.host.permissionModeSync('plan'); } catch { /* non-critical */ }
-        }
-
-        const normalizedChunk = event.type === 'usage'
-          ? this.bufferUsageChunk({ ...event, sessionId: this.sessionManager.getSessionId() })
-          : event;
-
-        if (handler) {
-          handler.onChunk(normalizedChunk);
-        } else {
-          // No handler — buffer for auto-triggered turn (e.g., task-notification delivery)
-          this._autoTurnBuffer.push(normalizedChunk);
-        }
+        this.deliverRoutedStreamChunk(message, event, handler);
       }
     }
 
+    await this.finishRoutedMessage(message, handler, autoTurnBufferStartLength);
+  }
+
+  private markRoutedStreamContent(
+    message: SDKMessage,
+    event: TransformEvent,
+    handler: ResponseHandler | undefined,
+  ): void {
+    noteVisibleStreamContent(message, event, {
+      onText: () => {
+        if (handler) {
+          handler.markStreamTextSeen();
+        } else {
+          this._autoTurnSawStreamText = true;
+        }
+      },
+      onThinking: () => {
+        if (handler) {
+          handler.markStreamThinkingSeen();
+        } else {
+          this._autoTurnSawStreamThinking = true;
+        }
+      },
+    });
+  }
+
+  private handleRoutedSessionInit(event: SessionInitEvent): void {
+    // Fork: suppress needsHistoryRebuild since SDK returns a different session ID by design
+    const wasFork = this.pendingForkSession;
+    this.sessionManager.captureSession(event.sessionId);
+    if (wasFork) {
+      this.sessionManager.clearHistoryRebuild();
+      this.pendingForkSession = false;
+    }
+    this.messageChannel?.setSessionId(event.sessionId);
+    if (event.agents) {
+      try { this.getAgentManager()?.setBuiltinAgentNames(event.agents); } catch { /* non-critical */ }
+    }
+    if (event.permissionMode) {
+      try { this.host.permissionModeSync(event.permissionMode); } catch { /* non-critical */ }
+    }
+    // Cache SDK commands on init (SDK already scans the vault).
+    // Pass the current query instance so late completions from a dead query
+    // cannot overwrite the active cache after a restart or shutdown.
+    void this.fetchAndCacheCommands(this.persistentQuery);
+  }
+
+  private deliverRoutedContextWindow(event: ContextWindowEvent, handler: ResponseHandler | undefined): void {
+    const usageChunk = this.updateBufferedUsageContextWindow(event.contextWindow);
+    if (!usageChunk) {
+      return;
+    }
+    if (handler) {
+      handler.onChunk(usageChunk);
+    } else {
+      this._autoTurnBuffer.push(usageChunk);
+    }
+  }
+
+  // Dedup: SDK delivers text via stream_events (incremental) AND the assistant message
+  // (complete). Skip the assistant message text if stream text was already seen.
+  private isDuplicateAssistantContent(
+    message: SDKMessage,
+    event: StreamChunk,
+    handler: ResponseHandler | undefined,
+  ): boolean {
+    if (message.type !== 'assistant') {
+      return false;
+    }
+    if (event.type === 'text') {
+      return handler ? handler.sawStreamText : this._autoTurnSawStreamText;
+    }
+    if (event.type === 'thinking') {
+      return handler ? handler.sawStreamThinking : this._autoTurnSawStreamThinking;
+    }
+    return false;
+  }
+
+  private deliverRoutedStreamChunk(
+    message: SDKMessage,
+    event: StreamChunk,
+    handler: ResponseHandler | undefined,
+  ): void {
+    if (this.isDuplicateAssistantContent(message, event, handler)) {
+      return;
+    }
+
+    // SDK auto-approves EnterPlanMode (checkPermissions → allow),
+    // so canUseTool is never called. Detect the tool_use in the stream
+    // and fire the sync callback to update the UI.
+    if (event.type === 'tool_use' && event.name === TOOL_ENTER_PLAN_MODE) {
+      if (this.currentConfig) {
+        this.currentConfig.permissionMode = 'plan';
+        this.currentConfig.sdkPermissionMode = 'plan';
+      }
+      try { this.host.permissionModeSync('plan'); } catch { /* non-critical */ }
+    }
+
+    const normalizedChunk = event.type === 'usage'
+      ? this.bufferUsageChunk({ ...event, sessionId: this.sessionManager.getSessionId() })
+      : event;
+
+    if (handler) {
+      handler.onChunk(normalizedChunk);
+    } else {
+      // No handler — buffer for auto-triggered turn (e.g., task-notification delivery)
+      this._autoTurnBuffer.push(normalizedChunk);
+    }
+  }
+
+  private async finishRoutedMessage(
+    message: SDKMessage,
+    handler: ResponseHandler | undefined,
+    autoTurnBufferStartLength: number,
+  ): Promise<void> {
     if (
       !handler
       && message.type === 'system'
@@ -1019,51 +1081,6 @@ export class ClaudianService implements ChatRuntime {
     }
   }
 
-  private buildLegacyTurnRequest(
-    prompt: string,
-    images?: ImageAttachment[],
-    queryOptions?: QueryOptions,
-  ): ChatTurnRequest {
-    return {
-      text: prompt,
-      images,
-      externalContextPaths: queryOptions?.externalContextPaths,
-      enabledMcpServers: queryOptions?.enabledMcpServers,
-    };
-  }
-
-  private buildQueryOptionsFromTurnRequest(
-    request: ChatTurnRequest,
-    encodedTurn: PreparedChatTurn,
-    legacyQueryOptions?: QueryOptions,
-  ): QueryOptions | undefined {
-    const mcpMentions = legacyQueryOptions?.mcpMentions
-      ? new Set([...legacyQueryOptions.mcpMentions, ...encodedTurn.mcpMentions])
-      : encodedTurn.mcpMentions;
-
-    const effectiveQueryOptions: QueryOptions = {
-      allowedTools: legacyQueryOptions?.allowedTools,
-      model: legacyQueryOptions?.model,
-      mcpMentions,
-      enabledMcpServers: request.enabledMcpServers ?? legacyQueryOptions?.enabledMcpServers,
-      forceColdStart: legacyQueryOptions?.forceColdStart,
-      externalContextPaths: request.externalContextPaths ?? legacyQueryOptions?.externalContextPaths,
-    };
-
-    if (
-      effectiveQueryOptions.allowedTools === undefined &&
-      effectiveQueryOptions.model === undefined &&
-      effectiveQueryOptions.enabledMcpServers === undefined &&
-      effectiveQueryOptions.forceColdStart === undefined &&
-      effectiveQueryOptions.externalContextPaths === undefined &&
-      (effectiveQueryOptions.mcpMentions?.size ?? 0) === 0
-    ) {
-      return undefined;
-    }
-
-    return effectiveQueryOptions;
-  }
-
   private normalizeTurnInvocation(
     turnOrPrompt: PreparedChatTurn | string,
     imagesOrHistory?: ImageAttachment[] | ChatMessage[],
@@ -1087,7 +1104,7 @@ export class ClaudianService implements ChatRuntime {
         request: turn.request,
         encodedTurn: turn,
         conversationHistory,
-        queryOptions: this.buildQueryOptionsFromTurnRequest(turn.request, turn, explicitQueryOptions),
+        queryOptions: buildQueryOptionsFromTurnRequest(turn.request, turn, explicitQueryOptions),
       };
     }
 
@@ -1098,14 +1115,14 @@ export class ClaudianService implements ChatRuntime {
     const queryOptions = isChatMessageArray(conversationHistoryOrQueryOptions)
       ? legacyQueryOptions
       : conversationHistoryOrQueryOptions ?? legacyQueryOptions;
-    const request = this.buildLegacyTurnRequest(turnOrPrompt, images, queryOptions);
+    const request = buildLegacyTurnRequest(turnOrPrompt, images, queryOptions);
     const encodedTurn = this.prepareTurn(request);
 
     return {
       request,
       encodedTurn,
       conversationHistory,
-      queryOptions: this.buildQueryOptionsFromTurnRequest(request, encodedTurn, queryOptions),
+      queryOptions: buildQueryOptionsFromTurnRequest(request, encodedTurn, queryOptions),
     };
   }
 
@@ -1155,58 +1172,13 @@ export class ClaudianService implements ChatRuntime {
       });
     }
 
-    const vaultPath = getVaultPath(this.plugin.app);
-    if (!vaultPath) {
-      yield { type: 'error', content: 'Could not determine vault path' };
+    const env = this.resolveQueryEnvironment();
+    if (!env.ok) {
+      yield { type: 'error', content: env.error };
       return;
     }
 
-    const resolvedClaudePath = this.plugin.getResolvedProviderCliPath('claude');
-    if (!resolvedClaudePath) {
-      yield { type: 'error', content: 'Claude CLI not found. Please install Claude Code CLI.' };
-      return;
-    }
-
-    const customEnv = this.plugin.getResolvedEnvironmentVariables(this.providerId);
-    const enhancedPath = getEnhancedPath(customEnv.PATH, resolvedClaudePath);
-    const missingNodeError = getMissingNodeError(resolvedClaudePath, enhancedPath);
-    if (missingNodeError) {
-      yield { type: 'error', content: missingNodeError };
-      return;
-    }
-
-    // Rebuild history if needed before choosing persistent vs cold-start
-    let promptToSend = prompt;
-    let forceColdStart = false;
-
-    // Clear interrupted flag - persistent query handles interruption gracefully,
-    // no need to force cold-start just because user cancelled previous response
-    if (this.sessionManager.wasInterrupted()) {
-      this.sessionManager.clearInterrupted();
-    }
-
-    // Session mismatch recovery: SDK returned a different session ID (context lost)
-    // Inject history to restore context without forcing cold-start
-    if (this.sessionManager.needsHistoryRebuild() && conversationHistory && conversationHistory.length > 0) {
-      const historyContext = buildContextFromHistory(conversationHistory);
-      const actualPrompt = stripCurrentNoteContext(prompt);
-      promptToSend = buildPromptWithHistoryContext(historyContext, prompt, actualPrompt, conversationHistory);
-      this.sessionManager.clearHistoryRebuild();
-    }
-
-    const noSessionButHasHistory = !this.sessionManager.getSessionId() &&
-      conversationHistory && conversationHistory.length > 0;
-
-    if (noSessionButHasHistory) {
-      const historyContext = buildContextFromHistory(conversationHistory);
-      const actualPrompt = stripCurrentNoteContext(prompt);
-      promptToSend = buildPromptWithHistoryContext(historyContext, prompt, actualPrompt, conversationHistory);
-
-      // Note: Do NOT call invalidateSession() here. The cold-start will capture
-      // a new session ID anyway, and invalidating would break any persistent query
-      // restart that happens during the cold-start (causing SESSION MISMATCH).
-      forceColdStart = true;
-    }
+    const { promptToSend, forceColdStart } = this.prepareQueryPrompt(prompt, conversationHistory);
 
     const effectiveQueryOptions = forceColdStart
       ? { ...queryOptions, forceColdStart: true }
@@ -1222,55 +1194,18 @@ export class ClaudianService implements ChatRuntime {
     const shouldUsePersistent = !effectiveQueryOptions?.forceColdStart;
 
     if (shouldUsePersistent) {
-      // Start persistent query if not running.
-      // Pass the per-turn model override so the CLI process is spawned with
-      // the correct --model flag immediately, without relying on setModel()
-      // which only takes effect at turn boundaries.
-      if (!this.persistentQuery && !this.shuttingDown) {
-        await this.startPersistentQuery(
-          vaultPath,
-          resolvedClaudePath,
-          this.sessionManager.getSessionId() ?? undefined,
-          undefined,
-          queryOptions?.model,
-        );
-      }
-
-      if (this.persistentQuery && !this.shuttingDown) {
-        // Use persistent query path
-        try {
-          yield* this.queryViaPersistent(promptToSend, images, vaultPath, resolvedClaudePath, effectiveQueryOptions);
-          return;
-        } catch (error) {
-          if (isSessionExpiredError(error) && conversationHistory && conversationHistory.length > 0) {
-            this.sessionManager.invalidateSession();
-            const retryRequest = this.buildHistoryRebuildRequest(prompt, conversationHistory);
-
-            this.coldStartInProgress = true;
-            this.abortController = new AbortController();
-
-            try {
-              yield* this.queryViaSDK(
-                retryRequest.prompt,
-                vaultPath,
-                resolvedClaudePath,
-                // Use current message's images, fallback to history images
-                images ?? retryRequest.images,
-                effectiveQueryOptions
-              );
-            } catch (retryError) {
-              const msg = retryError instanceof Error ? retryError.message : 'Unknown error';
-              yield { type: 'error', content: msg };
-            } finally {
-              this.coldStartInProgress = false;
-              this.abortController = null;
-            }
-            return;
-          }
-
-          log.error('persistent query failed', error);
-          throw error;
-        }
+      const handled = yield* this.runPersistentTurn({
+        prompt,
+        promptToSend,
+        images,
+        conversationHistory,
+        vaultPath: env.vaultPath,
+        cliPath: env.cliPath,
+        queryOptions,
+        effectiveQueryOptions,
+      });
+      if (handled) {
+        return;
       }
     }
 
@@ -1280,25 +1215,17 @@ export class ClaudianService implements ChatRuntime {
     this.abortController = new AbortController();
 
     try {
-      yield* this.queryViaSDK(promptToSend, vaultPath, resolvedClaudePath, images, effectiveQueryOptions);
+      yield* this.queryViaSDK(promptToSend, env.vaultPath, env.cliPath, images, effectiveQueryOptions);
     } catch (error) {
       if (isSessionExpiredError(error) && conversationHistory && conversationHistory.length > 0) {
-        this.sessionManager.invalidateSession();
-        const retryRequest = this.buildHistoryRebuildRequest(prompt, conversationHistory);
-
-        try {
-          yield* this.queryViaSDK(
-            retryRequest.prompt,
-            vaultPath,
-            resolvedClaudePath,
-            // Use current message's images, fallback to history images
-            images ?? retryRequest.images,
-            effectiveQueryOptions
-          );
-        } catch (retryError) {
-          const msg = retryError instanceof Error ? retryError.message : 'Unknown error';
-          yield { type: 'error', content: msg };
-        }
+        yield* this.retryColdStartWithHistory(
+          prompt,
+          images,
+          env.vaultPath,
+          env.cliPath,
+          conversationHistory,
+          effectiveQueryOptions,
+        );
         return;
       }
 
@@ -1311,19 +1238,140 @@ export class ClaudianService implements ChatRuntime {
     }
   }
 
-  private buildHistoryRebuildRequest(
-    prompt: string,
-    conversationHistory: ChatMessage[]
-  ): { prompt: string; images?: ImageAttachment[] } {
-    const historyContext = buildContextFromHistory(conversationHistory);
-    const actualPrompt = stripCurrentNoteContext(prompt);
-    const fullPrompt = buildPromptWithHistoryContext(historyContext, prompt, actualPrompt, conversationHistory);
-    const lastUserMessage = getLastUserMessage(conversationHistory);
+  private resolveQueryEnvironment():
+    | { ok: true; vaultPath: string; cliPath: string }
+    | { ok: false; error: string } {
+    const vaultPath = getVaultPath(this.plugin.app);
+    if (!vaultPath) {
+      return { ok: false, error: 'Could not determine vault path' };
+    }
 
-    return {
-      prompt: fullPrompt,
-      images: lastUserMessage?.images,
-    };
+    const cliPath = this.plugin.getResolvedProviderCliPath('claude');
+    if (!cliPath) {
+      return { ok: false, error: 'Claude CLI not found. Please install Claude Code CLI.' };
+    }
+
+    const customEnv = this.plugin.getResolvedEnvironmentVariables(this.providerId);
+    const enhancedPath = getEnhancedPath(customEnv.PATH, cliPath);
+    const missingNodeError = getMissingNodeError(cliPath, enhancedPath);
+    if (missingNodeError) {
+      return { ok: false, error: missingNodeError };
+    }
+
+    return { ok: true, vaultPath, cliPath };
+  }
+
+  /** Rebuild history if needed before choosing persistent vs cold-start. */
+  private prepareQueryPrompt(
+    prompt: string,
+    conversationHistory?: ChatMessage[],
+  ): { promptToSend: string; forceColdStart: boolean } {
+    let promptToSend = prompt;
+    let forceColdStart = false;
+
+    // Clear interrupted flag - persistent query handles interruption gracefully,
+    // no need to force cold-start just because user cancelled previous response
+    if (this.sessionManager.wasInterrupted()) {
+      this.sessionManager.clearInterrupted();
+    }
+
+    // Session mismatch recovery: SDK returned a different session ID (context lost)
+    // Inject history to restore context without forcing cold-start
+    if (this.sessionManager.needsHistoryRebuild() && conversationHistory && conversationHistory.length > 0) {
+      promptToSend = buildHistoryContextPrompt(prompt, conversationHistory);
+      this.sessionManager.clearHistoryRebuild();
+    }
+
+    const noSessionButHasHistory = !this.sessionManager.getSessionId() &&
+      conversationHistory && conversationHistory.length > 0;
+
+    if (noSessionButHasHistory) {
+      promptToSend = buildHistoryContextPrompt(prompt, conversationHistory);
+
+      // Note: Do NOT call invalidateSession() here. The cold-start will capture
+      // a new session ID anyway, and invalidating would break any persistent query
+      // restart that happens during the cold-start (causing SESSION MISMATCH).
+      forceColdStart = true;
+    }
+
+    return { promptToSend, forceColdStart };
+  }
+
+  /** Returns true when the turn was fully handled; false falls through to cold-start. */
+  private async *runPersistentTurn(ctx: PersistentTurnContext): AsyncGenerator<StreamChunk, boolean> {
+    // Start persistent query if not running.
+    // Pass the per-turn model override so the CLI process is spawned with
+    // the correct --model flag immediately, without relying on setModel()
+    // which only takes effect at turn boundaries.
+    if (!this.persistentQuery && !this.shuttingDown) {
+      await this.startPersistentQuery(
+        ctx.vaultPath,
+        ctx.cliPath,
+        this.sessionManager.getSessionId() ?? undefined,
+        undefined,
+        ctx.queryOptions?.model,
+      );
+    }
+
+    if (!this.persistentQuery || this.shuttingDown) {
+      return false;
+    }
+
+    // Use persistent query path
+    try {
+      yield* this.queryViaPersistent(ctx.promptToSend, ctx.images, ctx.vaultPath, ctx.cliPath, ctx.effectiveQueryOptions);
+      return true;
+    } catch (error) {
+      if (isSessionExpiredError(error) && ctx.conversationHistory && ctx.conversationHistory.length > 0) {
+        this.coldStartInProgress = true;
+        this.abortController = new AbortController();
+
+        try {
+          yield* this.retryColdStartWithHistory(
+            ctx.prompt,
+            ctx.images,
+            ctx.vaultPath,
+            ctx.cliPath,
+            ctx.conversationHistory,
+            ctx.effectiveQueryOptions,
+          );
+        } finally {
+          this.coldStartInProgress = false;
+          this.abortController = null;
+        }
+        return true;
+      }
+
+      this.plugin.logger.scope('claude.runtime').error('persistent query failed', error);
+      throw error;
+    }
+  }
+
+  /** Session-expired fallback: rebuild context from history and retry via cold-start. */
+  private async *retryColdStartWithHistory(
+    prompt: string,
+    images: ImageAttachment[] | undefined,
+    vaultPath: string,
+    cliPath: string,
+    conversationHistory: ChatMessage[],
+    queryOptions?: QueryOptions,
+  ): AsyncGenerator<StreamChunk> {
+    this.sessionManager.invalidateSession();
+    const retryRequest = buildHistoryRebuildRequest(prompt, conversationHistory);
+
+    try {
+      yield* this.queryViaSDK(
+        retryRequest.prompt,
+        vaultPath,
+        cliPath,
+        // Use current message's images, fallback to history images
+        images ?? retryRequest.images,
+        queryOptions,
+      );
+    } catch (retryError) {
+      const msg = retryError instanceof Error ? retryError.message : 'Unknown error';
+      yield { type: 'error', content: msg };
+    }
   }
 
   /**
@@ -1345,32 +1393,11 @@ export class ClaudianService implements ChatRuntime {
       return;
     }
 
-    // Set allowed tools for canUseTool enforcement
-    // undefined = no restriction, [] = no tools, [...] = restricted
-    if (queryOptions?.allowedTools !== undefined) {
-      this.currentAllowedTools = queryOptions.allowedTools.length > 0
-        ? [...queryOptions.allowedTools, TOOL_SKILL]
-        : [];
-    } else {
-      this.currentAllowedTools = null;
-    }
-
-    // Save allowedTools before applyDynamicUpdates - restart would clear it
-    const savedAllowedTools = this.currentAllowedTools;
-
-    // Apply dynamic updates before sending (Phase 1.6)
-    await this.applyDynamicUpdates(queryOptions);
-
-    // Restore allowedTools in case restart cleared it
-    this.currentAllowedTools = savedAllowedTools;
+    await this.applyTurnToolRestrictions(queryOptions);
 
     // Check if applyDynamicUpdates triggered a restart that failed
     // (e.g., CLI path not found, vault path missing)
-    if (!this.persistentQuery || !this.messageChannel) {
-      yield* this.queryViaSDK(prompt, vaultPath, cliPath, images, queryOptions);
-      return;
-    }
-    if (!this.responseConsumerRunning) {
+    if (!this.persistentQuery || !this.messageChannel || !this.responseConsumerRunning) {
       yield* this.queryViaSDK(prompt, vaultPath, cliPath, images, queryOptions);
       return;
     }
@@ -1378,42 +1405,7 @@ export class ClaudianService implements ChatRuntime {
     const message = this.buildSDKUserMessage(prompt, images);
 
     // Create a promise-based handler to yield chunks
-    // Use a mutable state object to work around TypeScript's control flow analysis
-    const state = {
-      chunks: [] as StreamChunk[],
-      resolveChunk: null as ((chunk: StreamChunk | null) => void) | null,
-      done: false,
-      error: null as Error | null,
-    };
-
-    const handlerId = `handler-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const handler = createResponseHandler({
-      id: handlerId,
-      onChunk: (chunk) => {
-        handler.markChunkSeen();
-        if (state.resolveChunk) {
-          state.resolveChunk(chunk);
-          state.resolveChunk = null;
-        } else {
-          state.chunks.push(chunk);
-        }
-      },
-      onDone: () => {
-        state.done = true;
-        if (state.resolveChunk) {
-          state.resolveChunk(null);
-          state.resolveChunk = null;
-        }
-      },
-      onError: (err) => {
-        state.error = err;
-        state.done = true;
-        if (state.resolveChunk) {
-          state.resolveChunk(null);
-          state.resolveChunk = null;
-        }
-      },
-    });
+    const { state, handler, handlerId } = createStreamingTurnHandler();
 
     this.registerResponseHandler(handler);
 
@@ -1425,38 +1417,16 @@ export class ClaudianService implements ChatRuntime {
 
       // Enqueue the message with race condition protection
       // The channel could close between our null check above and this call
-      try {
-        this.messageChannel.enqueue(message);
-      } catch (error) {
-        if (error instanceof Error && error.message.includes('closed')) {
-          yield* this.queryViaSDK(prompt, vaultPath, cliPath, images, queryOptions);
-          return;
-        }
-        throw error;
+      if (!tryEnqueueTurnMessage(this.messageChannel, message)) {
+        yield* this.queryViaSDK(prompt, vaultPath, cliPath, images, queryOptions);
+        return;
       }
       this.recordTurnMetadata({
         userMessageId: message.uuid ?? undefined,
         wasSent: true,
       });
 
-      // Yield chunks as they arrive
-      while (!state.done) {
-        if (state.chunks.length > 0) {
-          yield state.chunks.shift()!;
-        } else {
-          const chunk = await new Promise<StreamChunk | null>((resolve) => {
-            state.resolveChunk = resolve;
-          });
-          if (chunk) {
-            yield chunk;
-          }
-        }
-      }
-
-      // Yield any remaining chunks
-      while (state.chunks.length > 0) {
-        yield state.chunks.shift()!;
-      }
+      yield* drainStreamingTurn(state);
 
       // Check if an error occurred (assigned in onError callback)
       if (state.error) {
@@ -1476,6 +1446,21 @@ export class ClaudianService implements ChatRuntime {
       this.unregisterResponseHandler(handlerId);
       this.currentAllowedTools = null;
     }
+  }
+
+  private async applyTurnToolRestrictions(queryOptions?: QueryOptions): Promise<void> {
+    // Set allowed tools for canUseTool enforcement
+    // undefined = no restriction, [] = no tools, [...] = restricted
+    this.currentAllowedTools = resolveTurnAllowedTools(queryOptions?.allowedTools);
+
+    // Save allowedTools before applyDynamicUpdates - restart would clear it
+    const savedAllowedTools = this.currentAllowedTools;
+
+    // Apply dynamic updates before sending (Phase 1.6)
+    await this.applyDynamicUpdates(queryOptions);
+
+    // Restore allowedTools in case restart cleared it
+    this.currentAllowedTools = savedAllowedTools;
   }
 
   private buildSDKUserMessage(prompt: string, images?: ImageAttachment[]): SDKUserMessage {
@@ -1531,25 +1516,6 @@ export class ClaudianService implements ChatRuntime {
     );
   }
 
-  private noteVisibleStreamContent(
-    message: SDKMessage,
-    event: TransformEvent,
-    callbacks: { onText: () => void; onThinking: () => void },
-  ): void {
-    // Drive dedup off transformed chunks rather than raw SDK message shapes.
-    // transformSDKMessage already filters out empty payloads and subagent-only
-    // stream events, so these callbacks only fire for content the user can see.
-    if (message.type !== 'stream_event') {
-      return;
-    }
-
-    if (event.type === 'text') {
-      callbacks.onText();
-    } else if (event.type === 'thinking') {
-      callbacks.onThinking();
-    }
-  }
-
   private buildPromptWithImages(prompt: string, images?: ImageAttachment[]): ReturnType<typeof buildClaudePromptWithImages> {
     return buildClaudePromptWithImages(prompt, images);
   }
@@ -1568,56 +1534,22 @@ export class ClaudianService implements ChatRuntime {
     this.vaultPath = cwd;
 
     const queryPrompt = this.buildPromptWithImages(prompt, images);
-    const baseContext = this.buildQueryOptionsContext(cwd, cliPath);
-    const externalContextPaths = queryOptions?.externalContextPaths || [];
-    const hooks = this.buildHooks();
-    const hasEditorContext = prompt.includes('<editor_selection');
+    const options = this.buildColdStartOptions(prompt, cwd, cliPath, queryOptions);
 
-    let allowedTools: string[] | undefined;
-    if (queryOptions?.allowedTools !== undefined && queryOptions.allowedTools.length > 0) {
-      const toolSet = new Set([...queryOptions.allowedTools, TOOL_SKILL]);
-      allowedTools = [...toolSet];
-    }
+    yield* this.vetColdStartMcpServers(options);
 
-    const ctx: ColdStartQueryContext = {
-      ...baseContext,
-      abortController: this.abortController ?? undefined,
-      sessionId: this.sessionManager.getSessionId() ?? undefined,
-      modelOverride: queryOptions?.model,
-      canUseTool: this.createApprovalCallback(),
-      hooks,
-      mcpMentions: queryOptions?.mcpMentions,
-      enabledMcpServers: queryOptions?.enabledMcpServers,
-      allowedTools,
-      hasEditorContext,
-      externalContextPaths,
+    const state: ColdStartStreamState = {
+      selectedModel,
+      sawStreamText: false,
+      sawStreamThinking: false,
+      streamSessionId: this.sessionManager.getSessionId(),
+      streamState: createTransformStreamState(),
+      usageState: createTransformUsageState(),
     };
 
-    const options = QueryOptionsBuilder.buildColdStartQueryOptions(ctx);
-
-    // SECURITY (SEC-D): vet URL-based MCP servers before the config reaches
-    // the Claude CLI — the settings Test button is not on this path. Unsafe
-    // servers are dropped (fail closed) instead of failing the turn.
-    if (options.mcpServers && Object.keys(options.mcpServers).length > 0) {
-      const vetted = await vetActiveServersForRuntime(options.mcpServers);
-      options.mcpServers = vetted.safe;
-      for (const entry of vetted.dropped) {
-        yield {
-          type: 'notice',
-          content: `MCP server "${entry.name}" was not activated: ${entry.reason}`,
-          level: 'warning',
-        };
-      }
-    }
-
-    let sawStreamText = false;
-    let sawStreamThinking = false;
-    const streamState = createTransformStreamState();
-    const usageState = createTransformUsageState();
     try {
       const response = agentQuery({ prompt: queryPrompt, options });
       this.recordTurnMetadata({ wasSent: true });
-      let streamSessionId: string | null = this.sessionManager.getSessionId();
 
       for await (const message of response) {
         if (this.abortController?.signal.aborted) {
@@ -1625,47 +1557,7 @@ export class ClaudianService implements ChatRuntime {
           break;
         }
 
-        for (const event of transformSDKMessage(message, this.getTransformOptions(selectedModel, streamState, usageState))) {
-          this.noteVisibleStreamContent(message, event, {
-            onText: () => {
-              sawStreamText = true;
-            },
-            onThinking: () => {
-              sawStreamThinking = true;
-            },
-          });
-
-          if (isSessionInitEvent(event)) {
-            this.sessionManager.captureSession(event.sessionId);
-            streamSessionId = event.sessionId;
-          } else if (isContextWindowEvent(event)) {
-            const usageChunk = this.updateBufferedUsageContextWindow(event.contextWindow);
-            if (usageChunk) {
-              yield usageChunk;
-            }
-          } else if (isStreamChunk(event)) {
-            if (message.type === 'assistant' && sawStreamText && event.type === 'text') {
-              continue;
-            }
-            if (message.type === 'assistant' && sawStreamThinking && event.type === 'thinking') {
-              continue;
-            }
-            if (event.type === 'usage') {
-              yield this.bufferUsageChunk({ ...event, sessionId: streamSessionId });
-            } else {
-              yield event;
-            }
-          }
-        }
-
-        if (message.type === 'assistant' && message.uuid) {
-          this.recordTurnMetadata({ assistantMessageId: message.uuid });
-        }
-
-        if (message.type === 'result') {
-          sawStreamText = false;
-          sawStreamThinking = false;
-        }
+        yield* this.projectColdStartMessage(message, state);
       }
     } catch (error) {
       // Re-throw session expired errors for outer retry logic to handle
@@ -1680,6 +1572,109 @@ export class ClaudianService implements ChatRuntime {
     }
 
     yield { type: 'done' };
+  }
+
+  private buildColdStartOptions(
+    prompt: string,
+    cwd: string,
+    cliPath: string,
+    queryOptions?: QueryOptions,
+  ): Options {
+    const baseContext = this.buildQueryOptionsContext(cwd, cliPath);
+    const externalContextPaths = queryOptions?.externalContextPaths || [];
+    const hooks = this.buildHooks();
+    const hasEditorContext = prompt.includes('<editor_selection');
+
+    const ctx: ColdStartQueryContext = {
+      ...baseContext,
+      abortController: this.abortController ?? undefined,
+      sessionId: this.sessionManager.getSessionId() ?? undefined,
+      modelOverride: queryOptions?.model,
+      canUseTool: this.createApprovalCallback(),
+      hooks,
+      mcpMentions: queryOptions?.mcpMentions,
+      enabledMcpServers: queryOptions?.enabledMcpServers,
+      allowedTools: resolveColdStartAllowedTools(queryOptions?.allowedTools),
+      hasEditorContext,
+      externalContextPaths,
+    };
+
+    return QueryOptionsBuilder.buildColdStartQueryOptions(ctx);
+  }
+
+  private async *vetColdStartMcpServers(options: Options): AsyncGenerator<StreamChunk> {
+    // SECURITY (SEC-D): vet URL-based MCP servers before the config reaches
+    // the Claude CLI — the settings Test button is not on this path. Unsafe
+    // servers are dropped (fail closed) instead of failing the turn.
+    if (!options.mcpServers || Object.keys(options.mcpServers).length === 0) {
+      return;
+    }
+    const vetted = await vetActiveServersForRuntime(options.mcpServers);
+    options.mcpServers = vetted.safe;
+    for (const entry of vetted.dropped) {
+      yield {
+        type: 'notice',
+        content: `MCP server "${entry.name}" was not activated: ${entry.reason}`,
+        level: 'warning',
+      };
+    }
+  }
+
+  private *projectColdStartMessage(
+    message: SDKMessage,
+    state: ColdStartStreamState,
+  ): Generator<StreamChunk> {
+    const transformOptions = this.getTransformOptions(state.selectedModel, state.streamState, state.usageState);
+
+    for (const event of transformSDKMessage(message, transformOptions)) {
+      noteVisibleStreamContent(message, event, {
+        onText: () => {
+          state.sawStreamText = true;
+        },
+        onThinking: () => {
+          state.sawStreamThinking = true;
+        },
+      });
+
+      if (isSessionInitEvent(event)) {
+        this.sessionManager.captureSession(event.sessionId);
+        state.streamSessionId = event.sessionId;
+      } else if (isContextWindowEvent(event)) {
+        const usageChunk = this.updateBufferedUsageContextWindow(event.contextWindow);
+        if (usageChunk) {
+          yield usageChunk;
+        }
+      } else if (isStreamChunk(event)) {
+        yield* this.projectColdStartChunk(message, event, state);
+      }
+    }
+
+    if (message.type === 'assistant' && message.uuid) {
+      this.recordTurnMetadata({ assistantMessageId: message.uuid });
+    }
+
+    if (message.type === 'result') {
+      state.sawStreamText = false;
+      state.sawStreamThinking = false;
+    }
+  }
+
+  private *projectColdStartChunk(
+    message: SDKMessage,
+    event: StreamChunk,
+    state: ColdStartStreamState,
+  ): Generator<StreamChunk> {
+    if (message.type === 'assistant' && state.sawStreamText && event.type === 'text') {
+      return;
+    }
+    if (message.type === 'assistant' && state.sawStreamThinking && event.type === 'thinking') {
+      return;
+    }
+    if (event.type === 'usage') {
+      yield this.bufferUsageChunk({ ...event, sessionId: state.streamSessionId });
+    } else {
+      yield event;
+    }
   }
 
   cancel() {

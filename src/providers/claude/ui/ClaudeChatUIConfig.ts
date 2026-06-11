@@ -6,7 +6,7 @@ import type {
 } from '../../../core/providers/types';
 import { CLAUDE_PROVIDER_ICON } from '../../../shared/icons';
 import { getCustomModelIds } from '../env/claudeModelEnv';
-import { getClaudeModelOptions } from '../modelOptions';
+import { getClaudeModelOptions, resolveClaudeModelSelection } from '../modelOptions';
 import { getClaudeProviderSettings, updateClaudeProviderSettings } from '../settings';
 import {
   DEFAULT_CLAUDE_MODELS,
@@ -69,6 +69,17 @@ export const claudeChatUIConfig: ProviderChatUIConfig = {
       target.lastCustomModel = model;
       target.effortLevel = normalizeEffortLevel(model, target.effortLevel);
     }
+  },
+
+  reconcileModelSelection(settings: Record<string, unknown>): boolean {
+    const currentModel = typeof settings.model === 'string' ? settings.model : '';
+    const nextModel = resolveClaudeModelSelection(settings, currentModel);
+    if (!nextModel || nextModel === currentModel) {
+      return false;
+    }
+    settings.model = nextModel;
+    claudeChatUIConfig.applyModelDefaults(nextModel, settings);
+    return true;
   },
 
   normalizeModelVariant(model: string, settings) {

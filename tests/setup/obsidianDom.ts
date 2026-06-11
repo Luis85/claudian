@@ -10,6 +10,7 @@
 interface CreateOpts {
   cls?: string | string[];
   text?: string;
+  type?: string;
   attr?: Record<string, string | number | boolean | null | undefined>;
   [key: string]: unknown;
 }
@@ -24,6 +25,8 @@ function applyCreateOpts(el: HTMLElement, opts?: CreateOpts | string): void {
     el.className = Array.isArray(opts.cls) ? opts.cls.join(' ') : opts.cls;
   }
   if (opts.text !== undefined) el.textContent = opts.text;
+  // Obsidian's DomElementInfo sets `type` as an attribute (inputs, buttons).
+  if (typeof opts.type === 'string') el.setAttribute('type', opts.type);
   if (opts.attr) {
     for (const [name, value] of Object.entries(opts.attr)) {
       if (value === null || value === undefined) continue;
@@ -102,6 +105,12 @@ export function installObsidianDom(): void {
   if (typeof protoRecord.setText !== 'function') {
     protoRecord.setText = function setText(this: HTMLElement, value: string): void {
       this.textContent = value;
+    };
+  }
+
+  if (typeof protoRecord.appendText !== 'function') {
+    protoRecord.appendText = function appendText(this: HTMLElement, value: string): void {
+      this.appendChild(this.ownerDocument.createTextNode(value));
     };
   }
 
