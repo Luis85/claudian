@@ -1,3 +1,5 @@
+import { parseKeyedProtocolBody } from '../../../utils/protocolBlock';
+
 export interface ProgressData {
   step: string;
   done?: { complete: number; total: number };
@@ -122,7 +124,7 @@ function parseBlock(
   kind: 'progress' | 'needs_input' | 'needs_approval' | 'handoff',
   body: string,
 ): WorkOrderProtocolSegment | null {
-  const fields = parseKeyedBody(body);
+  const fields = parseKeyedProtocolBody(body);
   if (kind === 'progress') {
     const step = fields.get('step');
     if (!step) return null;
@@ -171,32 +173,6 @@ function parseBlock(
   };
 }
 
-function parseKeyedBody(body: string): Map<string, string> {
-  const fields = new Map<string, string>();
-  const lines = body.split(/\r?\n/);
-  let currentKey: string | null = null;
-  let currentValue: string[] = [];
-
-  const commit = () => {
-    if (currentKey === null) return;
-    fields.set(currentKey, currentValue.join('\n').trim());
-    currentKey = null;
-    currentValue = [];
-  };
-
-  for (const line of lines) {
-    const match = line.match(/^([a-z_]+):\s*(.*)$/);
-    if (match) {
-      commit();
-      currentKey = match[1];
-      currentValue = [match[2]];
-    } else if (currentKey !== null) {
-      currentValue.push(line);
-    }
-  }
-  commit();
-  return fields;
-}
 
 function truncatePreview(summary: string, maxLength = HANDOFF_PREVIEW_MAX_CHARS): string {
   const normalized = summary.replace(/\s+/g, ' ').trim();

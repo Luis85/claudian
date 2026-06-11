@@ -1,3 +1,4 @@
+import { readTaskResultOrOutput } from '../../../core/providers/taskResultText';
 import type {
   ProviderTaskResultInterpreter,
   ProviderTaskTerminalStatus,
@@ -31,14 +32,7 @@ function extractResultFromTaskObject(task: unknown): string | null {
     return null;
   }
 
-  const record = task as Record<string, unknown>;
-  const result = typeof record.result === 'string' ? record.result.trim() : '';
-  if (result.length > 0) {
-    return result;
-  }
-
-  const output = typeof record.output === 'string' ? record.output.trim() : '';
-  return output.length > 0 ? output : null;
+  return readTaskResultOrOutput(task as Record<string, unknown>);
 }
 
 function extractTextFromContentBlocks(content: unknown): string | null {
@@ -137,14 +131,9 @@ export class ClaudeTaskResultInterpreter implements ProviderTaskResultInterprete
       return taskResult;
     }
 
-    const result = typeof record.result === 'string' ? record.result.trim() : '';
-    if (result.length > 0) {
-      return result;
-    }
-
-    const output = typeof record.output === 'string' ? record.output.trim() : '';
-    if (output.length > 0) {
-      return output;
+    const direct = readTaskResultOrOutput(record);
+    if (direct) {
+      return direct;
     }
 
     return extractTextFromContentBlocks(record.content);

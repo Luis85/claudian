@@ -71,21 +71,20 @@ export class VaultFileAdapter {
     }
   }
 
-  async listFiles(folder: string): Promise<string[]> {
+  private async list(folder: string): Promise<{ files: string[]; folders: string[] }> {
     if (!(await this.exists(folder))) {
-      return [];
+      return { files: [], folders: [] };
     }
-    const listing = await this.app.vault.adapter.list(folder);
-    return listing.files;
+    return this.app.vault.adapter.list(folder);
+  }
+
+  async listFiles(folder: string): Promise<string[]> {
+    return (await this.list(folder)).files;
   }
 
   /** List subfolders in a folder. Returns relative paths from the folder. */
   async listFolders(folder: string): Promise<string[]> {
-    if (!(await this.exists(folder))) {
-      return [];
-    }
-    const listing = await this.app.vault.adapter.list(folder);
-    return listing.folders;
+    return (await this.list(folder)).folders;
   }
 
   /** Recursively list all files in a folder and subfolders. */

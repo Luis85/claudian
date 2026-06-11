@@ -1,53 +1,17 @@
-import type { App, ItemView } from 'obsidian';
+import type { ItemView } from 'obsidian';
 
-import { SELECTION_POLL_INTERVAL_MS } from '../../../core/constants';
 import type { BrowserSelectionContext } from '../../../utils/browser';
-import { updateContextRowHasContent } from './contextRowVisibility';
+import { SelectionPollingController } from './selectionPollingBase';
 
 type BrowserLikeWebview = HTMLElement & {
   executeJavaScript?: (code: string, userGesture?: boolean) => Promise<unknown>;
 };
 
-export class BrowserSelectionController {
-  private app: App;
-  private indicatorEl: HTMLElement;
-  private inputEl: HTMLElement;
-  private contextRowEl: HTMLElement;
-  private onVisibilityChange: (() => void) | null;
+export class BrowserSelectionController extends SelectionPollingController {
   private storedSelection: BrowserSelectionContext | null = null;
-  private pollInterval: number | null = null;
   private pollInFlight = false;
 
-  constructor(
-    app: App,
-    indicatorEl: HTMLElement,
-    inputEl: HTMLElement,
-    contextRowEl: HTMLElement,
-    onVisibilityChange?: () => void
-  ) {
-    this.app = app;
-    this.indicatorEl = indicatorEl;
-    this.inputEl = inputEl;
-    this.contextRowEl = contextRowEl;
-    this.onVisibilityChange = onVisibilityChange ?? null;
-  }
-
-  start(): void {
-    if (this.pollInterval) return;
-    this.pollInterval = window.setInterval(() => {
-      void this.poll();
-    }, SELECTION_POLL_INTERVAL_MS);
-  }
-
-  stop(): void {
-    if (this.pollInterval) {
-      window.clearInterval(this.pollInterval);
-      this.pollInterval = null;
-    }
-    this.clear();
-  }
-
-  private async poll(): Promise<void> {
+  protected async poll(): Promise<void> {
     if (this.pollInFlight) return;
     this.pollInFlight = true;
     try {
@@ -271,12 +235,6 @@ export class BrowserSelectionController {
       lines.push(this.storedSelection.url);
     }
     return lines.join('\n');
-  }
-
-  updateContextRowVisibility(): void {
-    if (!this.contextRowEl) return;
-    updateContextRowHasContent(this.contextRowEl);
-    this.onVisibilityChange?.();
   }
 
   getContext(): BrowserSelectionContext | null {

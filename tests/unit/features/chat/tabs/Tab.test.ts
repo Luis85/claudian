@@ -1266,7 +1266,7 @@ describe('Tab - Service Initialization', () => {
       const plugin = createMockPlugin();
       const tab = createTab(createMockOptions({ plugin }));
       initializeTabUI(tab, plugin);
-      initializeTabControllers(tab, plugin, {} as any, createMockMcpManager());
+      initializeTabControllers(tab, plugin, {} as any);
 
       // Simulate a bound tab
       tab.lifecycleState = 'bound_cold';
@@ -1297,7 +1297,7 @@ describe('Tab - Service Initialization', () => {
       plugin.settings.savedProviderModel = { claude: 'claude-sonnet-4-5', codex: DEFAULT_CODEX_PRIMARY_MODEL };
       const tab = createTab(createMockOptions({ plugin }));
       initializeTabUI(tab, plugin);
-      initializeTabControllers(tab, plugin, {} as any, createMockMcpManager());
+      initializeTabControllers(tab, plugin, {} as any);
 
       // Simulate a bound Codex tab
       tab.lifecycleState = 'bound_cold';
@@ -1325,7 +1325,7 @@ describe('Tab - Service Initialization', () => {
       plugin.settings.savedProviderModel = { claude: 'claude-sonnet-4-5', codex: DEFAULT_CODEX_PRIMARY_MODEL };
       const tab = createTab(createMockOptions({ plugin }));
       initializeTabUI(tab, plugin);
-      initializeTabControllers(tab, plugin, {} as any, createMockMcpManager());
+      initializeTabControllers(tab, plugin, {} as any);
 
       const staleService = createMockClaudianService({ providerId: 'codex' });
       tab.lifecycleState = 'bound_active';
@@ -1912,7 +1912,7 @@ describe('Tab - Controller Initialization', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       expect(tab.renderer).toBeDefined();
     });
@@ -1923,7 +1923,7 @@ describe('Tab - Controller Initialization', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       expect(tab.controllers.selectionController).toBeDefined();
     });
@@ -1934,7 +1934,7 @@ describe('Tab - Controller Initialization', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       expect(tab.controllers.streamController).toBeDefined();
     });
@@ -1945,7 +1945,7 @@ describe('Tab - Controller Initialization', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       expect(tab.controllers.conversationController).toBeDefined();
     });
@@ -1956,11 +1956,11 @@ describe('Tab - Controller Initialization', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       const { MessageRenderer } = jest.requireMock('@/features/chat/rendering/MessageRenderer') as { MessageRenderer: jest.Mock };
       const lastCall = MessageRenderer.mock.calls[MessageRenderer.mock.calls.length - 1];
-      const rewindCallback = lastCall[3];
+      const rewindCallback = lastCall[3].rewindCallback;
 
       await rewindCallback('message-1', 'conversation');
 
@@ -1973,7 +1973,7 @@ describe('Tab - Controller Initialization', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       expect(tab.controllers.inputController).toBeDefined();
     });
@@ -1984,7 +1984,7 @@ describe('Tab - Controller Initialization', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       expect(tab.controllers.navigationController).toBeDefined();
       expect(mockNavigationController.initialize).toHaveBeenCalled();
@@ -1996,7 +1996,7 @@ describe('Tab - Controller Initialization', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       // The subagent manager should have its callback set
       expect(tab.services.subagentManager).toBeDefined();
@@ -2008,7 +2008,7 @@ describe('Tab - Controller Initialization', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       tab.state.currentConversationId = 'conv-1';
       tab.state.isStreaming = false;
@@ -2041,7 +2041,7 @@ describe('Tab - Controller Initialization', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       tab.state.currentConversationId = 'conv-1';
       tab.state.isStreaming = true;
@@ -2737,7 +2737,7 @@ describe('Tab - UI Callback Wiring', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       // Get the InstructionModeManager constructor arguments
       const { InstructionModeManager } = jest.requireMock('@/features/chat/ui/InstructionModeManager');
@@ -2896,7 +2896,7 @@ describe('Tab - Controller Configuration', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       // Get InputController constructor config
       const constructorCall = InputController.mock.calls[0];
@@ -2916,7 +2916,7 @@ describe('Tab - Controller Configuration', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       const constructorCall = InputController.mock.calls[0];
       const config = constructorCall[0];
@@ -2933,7 +2933,7 @@ describe('Tab - Controller Configuration', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       const constructorCall = InputController.mock.calls[0];
       const config = constructorCall[0];
@@ -2960,7 +2960,7 @@ describe('Tab - Controller Configuration', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       const constructorCall = StreamController.mock.calls[0];
       const config = constructorCall[0];
@@ -2977,7 +2977,7 @@ describe('Tab - Controller Configuration', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       tab.service = { id: 'test-service' } as any;
 
@@ -2994,7 +2994,7 @@ describe('Tab - Controller Configuration', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       const constructorCall = StreamController.mock.calls[0];
       const config = constructorCall[0];
@@ -3011,7 +3011,7 @@ describe('Tab - Controller Configuration', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       const constructorCall = NavigationController.mock.calls[0];
       const config = constructorCall[0];
@@ -3047,7 +3047,7 @@ describe('Tab - Controller Configuration', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       const constructorCall = NavigationController.mock.calls[0];
       const config = constructorCall[0];
@@ -3077,7 +3077,7 @@ describe('Tab - Controller Configuration', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, plugin);
-      initializeTabControllers(tab, plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, plugin, mockComponent);
 
       const constructorCall = NavigationController.mock.calls[0];
       const config = constructorCall[0];
@@ -3094,7 +3094,7 @@ describe('Tab - Controller Configuration', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       const constructorCall = ConversationController.mock.calls[0];
       const config = constructorCall[0];
@@ -3109,7 +3109,7 @@ describe('Tab - Controller Configuration', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       const constructorCall = ConversationController.mock.calls[0];
       const config = constructorCall[0];
@@ -3132,7 +3132,7 @@ describe('Tab - Controller Configuration', () => {
       const mockComponent = {} as any;
 
       initializeTabUI(tab, options.plugin);
-      initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+      initializeTabControllers(tab, options.plugin, mockComponent);
 
       const constructorCall = ConversationController.mock.calls[0];
       const callbacks = constructorCall[1];
@@ -3157,12 +3157,12 @@ describe('Tab - handleForkRequest', () => {
     const forkRequestCallback = jest.fn().mockResolvedValue(undefined);
 
     initializeTabUI(tab, options.plugin);
-    initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager, forkRequestCallback);
+    initializeTabControllers(tab, options.plugin, mockComponent, forkRequestCallback);
 
     // Extract the fork callback from the MessageRenderer constructor
     const { MessageRenderer } = jest.requireMock('@/features/chat/rendering/MessageRenderer') as { MessageRenderer: jest.Mock };
     const lastCall = MessageRenderer.mock.calls[MessageRenderer.mock.calls.length - 1];
-    const forkCallback = lastCall[4]; // 5th argument is forkCallback
+    const forkCallback = lastCall[3].forkCallback;
 
     return { tab, forkCallback, forkRequestCallback, plugin: options.plugin };
   }
@@ -3425,11 +3425,11 @@ describe('Tab - handleForkRequest', () => {
     const mockComponent = {} as any;
 
     initializeTabUI(tab, options.plugin);
-    initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+    initializeTabControllers(tab, options.plugin, mockComponent);
 
     const { MessageRenderer } = jest.requireMock('@/features/chat/rendering/MessageRenderer') as { MessageRenderer: jest.Mock };
     const lastCall = MessageRenderer.mock.calls[MessageRenderer.mock.calls.length - 1];
-    const forkCallback = lastCall[4];
+    const forkCallback = lastCall[3].forkCallback;
 
     expect(forkCallback).toBeUndefined();
   });
@@ -3444,7 +3444,7 @@ describe('Tab - handleForkAll (via /fork command)', () => {
     const forkRequestCallback = jest.fn().mockResolvedValue(undefined);
 
     initializeTabUI(tab, options.plugin);
-    initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager, forkRequestCallback);
+    initializeTabControllers(tab, options.plugin, mockComponent, forkRequestCallback);
 
     // Extract onForkAll from InputController constructor call
     const { InputController } = jest.requireMock('@/features/chat/controllers/InputController') as { InputController: jest.Mock };
@@ -3636,7 +3636,7 @@ describe('Tab - handleForkAll (via /fork command)', () => {
     const mockComponent = {} as any;
 
     initializeTabUI(tab, options.plugin);
-    initializeTabControllers(tab, options.plugin, mockComponent, options.mcpManager);
+    initializeTabControllers(tab, options.plugin, mockComponent);
 
     const { InputController } = jest.requireMock('@/features/chat/controllers/InputController') as { InputController: jest.Mock };
     const lastCall = InputController.mock.calls[InputController.mock.calls.length - 1];
@@ -4245,7 +4245,7 @@ describe('Tab - History Bind Without Runtime', () => {
     const plugin = createMockPlugin();
     const tab = createTab(createMockOptions({ plugin }));
     initializeTabUI(tab, plugin);
-    initializeTabControllers(tab, plugin, {} as any, createMockMcpManager());
+    initializeTabControllers(tab, plugin, {} as any);
 
     const convCtrlModule = jest.requireMock('@/features/chat/controllers/ConversationController') as {
       ConversationController: jest.Mock;
@@ -4354,7 +4354,6 @@ describe('Tab - History Bind Without Runtime', () => {
       tab,
       plugin,
       {} as any,
-      createMockMcpManager(),
       undefined,
       undefined,
       () => (
@@ -4454,7 +4453,7 @@ describe('Tab - InputController getTabProviderId wiring', () => {
     const plugin = createMockPlugin();
     const tab = createTab(createMockOptions({ plugin }));
     initializeTabUI(tab, plugin);
-    initializeTabControllers(tab, plugin, {} as any, createMockMcpManager());
+    initializeTabControllers(tab, plugin, {} as any);
 
     const { InputController } = jest.requireMock('@/features/chat/controllers/InputController') as { InputController: jest.Mock };
     const lastCall = InputController.mock.calls[InputController.mock.calls.length - 1];

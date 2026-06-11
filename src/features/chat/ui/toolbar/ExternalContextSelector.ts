@@ -5,7 +5,7 @@ import * as path from 'path';
 import { t } from '../../../../i18n/i18n';
 import { filterValidPaths, findConflictingPath, isDuplicatePath, isValidDirectoryPath, validateDirectoryPath } from '../../../../utils/externalContext';
 import { expandHomePath, normalizePathForFilesystem } from '../../../../utils/path';
-import type { ToolbarCallbacks } from './shared';
+import { type ToolbarCallbacks, updateCountBadgeDisplay } from './shared';
 
 interface ElectronOpenDialogResult {
   canceled: boolean;
@@ -348,22 +348,12 @@ export class ExternalContextSelector {
     if (!this.iconEl || !this.badgeEl) return;
 
     const count = this.externalContextPaths.length;
-
-    if (count > 0) {
-      this.iconEl.addClass('active');
-      this.iconEl.setAttribute('title', `${count} external context${count > 1 ? 's' : ''} (click to add more)`);
-
-      // Show badge only when more than 1 path
-      if (count > 1) {
-        this.badgeEl.setText(String(count));
-        this.badgeEl.addClass('visible');
-      } else {
-        this.badgeEl.removeClass('visible');
-      }
-    } else {
-      this.iconEl.removeClass('active');
-      this.iconEl.setAttribute('title', 'Add external contexts (click)');
-      this.badgeEl.removeClass('visible');
-    }
+    updateCountBadgeDisplay({
+      iconEl: this.iconEl,
+      badgeEl: this.badgeEl,
+      count,
+      activeTitle: `${count} external context${count > 1 ? 's' : ''} (click to add more)`,
+      inactiveTitle: 'Add external contexts (click)',
+    });
   }
 }

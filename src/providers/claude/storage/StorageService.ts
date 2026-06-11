@@ -1,16 +1,14 @@
 import type { App } from 'obsidian';
-import { Notice } from 'obsidian';
 
 import { ClaudianSettingsStorage, type StoredClaudianSettings } from '../../../app/settings/ClaudianSettingsStorage';
+import { persistTabManagerState, readTabManagerState } from '../../../app/storage/SharedStorageService';
 import { SESSIONS_PATH, SessionStorage } from '../../../core/bootstrap/SessionStorage';
 import { CLAUDIAN_STORAGE_PATH } from '../../../core/bootstrap/StoragePaths';
-import { validateTabManagerState } from '../../../core/bootstrap/tabManagerState';
 import type { AppTabManagerState } from '../../../core/providers/types';
 import { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
 import type {
   SlashCommand,
 } from '../../../core/types';
-import { t } from '../../../i18n/i18n';
 import {
   type CCPermissions,
   type CCSettings,
@@ -23,10 +21,6 @@ import { SKILLS_PATH, SkillStorage } from './SkillStorage';
 import { COMMANDS_PATH, SlashCommandStorage } from './SlashCommandStorage';
 
 export const CLAUDE_PATH = '.claude';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === 'object' && !Array.isArray(value);
-}
 
 export interface CombinedSettings {
   cc: CCSettings;
@@ -127,26 +121,11 @@ export class StorageService {
   }
 
   async getTabManagerState(): Promise<TabManagerPersistedState | null> {
-    try {
-      const data: unknown = await this.plugin.loadData();
-      if (isRecord(data) && data.tabManagerState) {
-        return validateTabManagerState(data.tabManagerState);
-      }
-      return null;
-    } catch {
-      return null;
-    }
+    return readTabManagerState(this.plugin);
   }
 
   async setTabManagerState(state: TabManagerPersistedState): Promise<void> {
-    try {
-      const loaded: unknown = await this.plugin.loadData();
-      const data = isRecord(loaded) ? loaded : {};
-      data.tabManagerState = state;
-      await this.plugin.saveData(data);
-    } catch {
-      new Notice(t('chat.storage.tabLayoutSaveFailed'));
-    }
+    await persistTabManagerState(this.plugin, state);
   }
 }
 

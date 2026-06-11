@@ -1,5 +1,9 @@
 import { getProviderConfig, setProviderConfig } from '../../core/providers/providerConfig';
 import { getProviderEnvironmentVariables } from '../../core/providers/providerEnvironment';
+import {
+  normalizeCustomModels,
+  normalizeHostnameCliPaths,
+} from '../../core/providers/providerSettingsNormalization';
 import type { HostnameCliPaths } from '../../core/types/settings';
 import type { ProviderCustomModel } from '../../core/types/settings';
 import {
@@ -62,52 +66,6 @@ export const DEFAULT_OPENCODE_PROVIDER_SETTINGS: Readonly<PersistedOpencodeProvi
   thinkingOptionsByModel: {},
   visibleModels: [],
 });
-
-// Opencode never persisted a legacy string-shaped customModels field, but we
-// keep the same defensive normalizer for symmetry with Claude/Codex and to
-// drop any junk entries that might appear in malformed configs.
-function normalizeCustomModels(value: unknown): ProviderCustomModel[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  const result: ProviderCustomModel[] = [];
-  const seen = new Set<string>();
-  for (const entry of value) {
-    if (!entry || typeof entry !== 'object') continue;
-    const row = entry as Record<string, unknown>;
-    const id = typeof row.id === 'string' ? row.id.trim() : '';
-    if (!id) continue;
-    const key = id.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    const normalized: ProviderCustomModel = {
-      id,
-      source: row.source === 'env' ? 'env' : 'user',
-    };
-    if (typeof row.label === 'string' && row.label.trim()) {
-      normalized.label = row.label.trim();
-    }
-    if (typeof row.contextWindow === 'number' && Number.isFinite(row.contextWindow) && row.contextWindow > 0) {
-      normalized.contextWindow = row.contextWindow;
-    }
-    result.push(normalized);
-  }
-  return result;
-}
-
-function normalizeHostnameCliPaths(value: unknown): HostnameCliPaths {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return {};
-  }
-
-  const result: HostnameCliPaths = {};
-  for (const [key, entry] of Object.entries(value)) {
-    if (typeof entry === 'string' && entry.trim()) {
-      result[key] = entry.trim();
-    }
-  }
-  return result;
-}
 
 export function normalizeOpencodeVisibleModels(
   value: unknown,

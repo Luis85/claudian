@@ -82,38 +82,38 @@ function isEmptyRecord(value: unknown): boolean {
   return Object.keys(value as Record<string, unknown>).length === 0;
 }
 
-function normalizeContextLimits(value: unknown): Record<string, number> {
+function normalizeModelKeyedRecord<T>(
+  value: unknown,
+  coerce: (raw: unknown) => T | null,
+): Record<string, T> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {};
   }
 
-  const result: Record<string, number> = {};
+  const result: Record<string, T> = {};
   for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
-    if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) {
-      const modelId = key.trim();
-      if (modelId) {
-        result[modelId] = raw;
-      }
+    const modelId = key.trim();
+    if (!modelId) continue;
+    const coerced = coerce(raw);
+    if (coerced !== null) {
+      result[modelId] = coerced;
     }
   }
   return result;
 }
 
-function normalizeAliases(value: unknown): Record<string, string> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return {};
-  }
+function normalizeContextLimits(value: unknown): Record<string, number> {
+  return normalizeModelKeyedRecord(value, raw => (
+    typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? raw : null
+  ));
+}
 
-  const result: Record<string, string> = {};
-  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
-    if (typeof raw !== 'string') continue;
-    const modelId = key.trim();
+function normalizeAliases(value: unknown): Record<string, string> {
+  return normalizeModelKeyedRecord(value, raw => {
+    if (typeof raw !== 'string') return null;
     const alias = raw.trim();
-    if (modelId && alias) {
-      result[modelId] = alias;
-    }
-  }
-  return result;
+    return alias || null;
+  });
 }
 
 function cloneProviderConfigs(value: unknown): ProviderConfigMap {

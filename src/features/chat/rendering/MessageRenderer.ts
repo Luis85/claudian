@@ -98,6 +98,14 @@ function runRendererAction(action: () => Promise<void>): void {
   });
 }
 
+/** Optional host hooks wired by the owning tab; all default to inert no-ops. */
+export interface MessageRendererHooks {
+  rewindCallback?: (messageId: string, mode?: ChatRewindMode) => Promise<void>;
+  forkCallback?: (messageId: string) => Promise<void>;
+  getCapabilities?: () => ProviderCapabilities;
+  getWorkOrderPath?: () => string | null | undefined;
+}
+
 export class MessageRenderer {
   private app: App;
   private plugin: ClaudianPlugin;
@@ -124,19 +132,16 @@ export class MessageRenderer {
     plugin: ClaudianPlugin,
     component: Component,
     messagesEl: HTMLElement,
-    rewindCallback?: (messageId: string, mode?: ChatRewindMode) => Promise<void>,
-    forkCallback?: (messageId: string) => Promise<void>,
-    getCapabilities?: () => ProviderCapabilities,
-    getWorkOrderPath?: () => string | null | undefined,
+    hooks: MessageRendererHooks = {},
   ) {
     this.app = plugin.app;
     this.plugin = plugin;
     this.component = component;
     this.messagesEl = messagesEl;
-    this.rewindCallback = rewindCallback;
-    this.forkCallback = forkCallback;
-    this.getWorkOrderPath = getWorkOrderPath ?? (() => null);
-    this.getCapabilities = getCapabilities ?? (() => ({
+    this.rewindCallback = hooks.rewindCallback;
+    this.forkCallback = hooks.forkCallback;
+    this.getWorkOrderPath = hooks.getWorkOrderPath ?? (() => null);
+    this.getCapabilities = hooks.getCapabilities ?? (() => ({
       providerId: DEFAULT_CHAT_PROVIDER_ID,
       supportsPersistentRuntime: false,
       supportsNativeHistory: false,

@@ -84,15 +84,10 @@ function createRenderer(
   const comp = createMockComponent();
   const plugin = mockRendererPlugin();
   return {
-    renderer: new MessageRenderer(
-      plugin as any,
-      comp as any,
-      el,
-      undefined,
-      undefined,
-      mockCapabilities(providerId),
-      () => isWorkOrderTab ? 'docs/work-orders/example.md' : null,
-    ),
+    renderer: new MessageRenderer(plugin as any, comp as any, el, {
+      getCapabilities: mockCapabilities(providerId),
+      getWorkOrderPath: () => isWorkOrderTab ? 'docs/work-orders/example.md' : null,
+    }),
     messagesEl: el,
     plugin,
   };
@@ -365,7 +360,7 @@ describe('MessageRenderer', () => {
   it('adds a rewind button for eligible stored user messages', () => {
     const messagesEl = createMockEl();
     const rewindCallback = jest.fn().mockResolvedValue(undefined);
-    const renderer = new MessageRenderer(mockRendererPlugin() as any, createMockComponent() as any, messagesEl, rewindCallback, undefined, mockCapabilities());
+    const renderer = new MessageRenderer(mockRendererPlugin() as any, createMockComponent() as any, messagesEl, { rewindCallback, getCapabilities: mockCapabilities() });
     jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
 
     const allMessages: ChatMessage[] = [
@@ -382,7 +377,7 @@ describe('MessageRenderer', () => {
   it('does not add a rewind button when stored render is called without context', () => {
     const messagesEl = createMockEl();
     const rewindCallback = jest.fn().mockResolvedValue(undefined);
-    const renderer = new MessageRenderer(mockRendererPlugin() as any, createMockComponent() as any, messagesEl, rewindCallback, undefined, mockCapabilities());
+    const renderer = new MessageRenderer(mockRendererPlugin() as any, createMockComponent() as any, messagesEl, { rewindCallback, getCapabilities: mockCapabilities() });
     jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
 
     const msg: ChatMessage = {
@@ -401,7 +396,7 @@ describe('MessageRenderer', () => {
   it('shows rewind mode menu for eligible streamed user messages', async () => {
     const messagesEl = createMockEl();
     const rewindCallback = jest.fn().mockResolvedValue(undefined);
-    const renderer = new MessageRenderer(mockRendererPlugin() as any, createMockComponent() as any, messagesEl, rewindCallback, undefined, mockCapabilities());
+    const renderer = new MessageRenderer(mockRendererPlugin() as any, createMockComponent() as any, messagesEl, { rewindCallback, getCapabilities: mockCapabilities() });
     jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
 
     const userMsg: ChatMessage = {
@@ -1061,9 +1056,7 @@ describe('MessageRenderer', () => {
       mockRendererPlugin() as any,
       createMockComponent() as any,
       messagesEl,
-      rewindCallback,
-      undefined,
-      mockCapabilities(),
+      { rewindCallback, getCapabilities: mockCapabilities() },
     );
     const msg: ChatMessage = {
       id: 'u-rewind',
@@ -1344,10 +1337,7 @@ next_action: Review the result.
       mockRendererPlugin({ chatMessageActions: [action] }) as any,
       createMockComponent() as any,
       messagesEl,
-      undefined,
-      undefined,
-      mockCapabilities('claude'),
-      () => 'docs/work-orders/example.md',
+      { getCapabilities: mockCapabilities('claude'), getWorkOrderPath: () => 'docs/work-orders/example.md' },
     );
     jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
 
@@ -1422,10 +1412,7 @@ next_action: Review the result.
       mockRendererPlugin({ chatMessageActions: [action] }) as any,
       createMockComponent() as any,
       messagesEl,
-      undefined,
-      undefined,
-      mockCapabilities('claude'),
-      () => 'docs/work-orders/example.md',
+      { getCapabilities: mockCapabilities('claude'), getWorkOrderPath: () => 'docs/work-orders/example.md' },
     );
     jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
 
@@ -2518,9 +2505,7 @@ next_action: Review the result.
           plugin as any,
           comp as any,
           messagesEl,
-          undefined,
-          undefined,
-          mockCapabilities(),
+          { getCapabilities: mockCapabilities() },
         ),
         messagesEl,
       };

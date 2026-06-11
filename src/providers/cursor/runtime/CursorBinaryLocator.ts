@@ -1,30 +1,7 @@
-import * as fs from 'fs';
-import * as path from 'path';
-
-import { getEnhancedPath, parseEnvironmentVariables } from '../../../utils/env';
-import { expandHomePath, parsePathEntries } from '../../../utils/path';
-
-function isExistingFile(filePath: string): boolean {
-  try {
-    return fs.statSync(filePath).isFile();
-  } catch {
-    return false;
-  }
-}
-
-function resolveConfiguredPath(configuredPath: string | undefined): string | null {
-  const trimmed = (configuredPath ?? '').trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  try {
-    const expandedPath = expandHomePath(trimmed);
-    return isExistingFile(expandedPath) ? expandedPath : null;
-  } catch {
-    return null;
-  }
-}
+import {
+  findBinaryOnPath,
+  resolveConfiguredOrDiscoveredCliPath,
+} from '../../../utils/cliBinaryLocator';
 
 export function findCursorAgentBinaryPath(
   additionalPath?: string,
@@ -39,20 +16,7 @@ export function findCursorAgentBinaryPath(
   const binaryNames = platform === 'win32'
     ? ['agent.exe', 'agent.cmd', 'cursor-agent.exe', 'cursor-agent.cmd', 'agent', 'cursor-agent']
     : ['agent', 'cursor-agent'];
-  const searchEntries = parsePathEntries(getEnhancedPath(additionalPath));
-
-  for (const dir of searchEntries) {
-    if (!dir) continue;
-
-    for (const binaryName of binaryNames) {
-      const candidate = path.join(dir, binaryName);
-      if (isExistingFile(candidate)) {
-        return candidate;
-      }
-    }
-  }
-
-  return null;
+  return findBinaryOnPath(binaryNames, additionalPath);
 }
 
 export function resolveCursorCliPath(
@@ -61,16 +25,10 @@ export function resolveCursorCliPath(
   envText: string,
   hostPlatform: NodeJS.Platform = process.platform,
 ): string | null {
-  const configuredHostnamePath = resolveConfiguredPath(hostnamePath);
-  if (configuredHostnamePath) {
-    return configuredHostnamePath;
-  }
-
-  const configuredLegacyPath = resolveConfiguredPath(legacyPath);
-  if (configuredLegacyPath) {
-    return configuredLegacyPath;
-  }
-
-  const customEnv = parseEnvironmentVariables(envText || '');
-  return findCursorAgentBinaryPath(customEnv.PATH, hostPlatform);
+  return resolveConfiguredOrDiscoveredCliPath(
+    hostnamePath,
+    legacyPath,
+    envText,
+    (additionalPath) => findCursorAgentBinaryPath(additionalPath, hostPlatform),
+  );
 }

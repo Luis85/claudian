@@ -8,6 +8,7 @@ import {
   type SystemPromptSettings,
 } from '../../../core/prompt/mainAgent';
 import { expandHomePath } from '../../../utils/path';
+import { AcpJsonRpcTransport, AcpSubprocess } from '../../acp';
 import {
   OPENCODE_BUILD_MODE_ID,
   OPENCODE_PLAN_MODE_ID,
@@ -228,4 +229,31 @@ function requireSettings(
   }
 
   throw new Error('prepareOpencodeLaunchArtifacts requires settings when no systemPromptText is provided');
+}
+
+/**
+ * Spawns the `opencode acp` subprocess and wires the JSON-RPC transport over
+ * its stdio. Shared by the chat runtime and aux query runner so the launch
+ * shape cannot drift between them.
+ */
+export function startOpencodeAcpProcess(params: {
+  command: string;
+  cwd: string;
+  env: NodeJS.ProcessEnv;
+}): { process: AcpSubprocess; transport: AcpJsonRpcTransport } {
+  const process = new AcpSubprocess({
+    args: ['acp', `--cwd=${params.cwd}`],
+    command: params.command,
+    cwd: params.cwd,
+    env: params.env,
+  });
+  process.start();
+
+  const transport = new AcpJsonRpcTransport({
+    input: process.stdout,
+    onClose: (listener) => process.onClose(listener),
+    output: process.stdin,
+  });
+
+  return { process, transport };
 }

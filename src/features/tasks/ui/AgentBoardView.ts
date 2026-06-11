@@ -728,33 +728,8 @@ export class AgentBoardView extends ItemView {
       // previous view instance that was closed and reopened) — only genuinely
       // orphaned runs (no live session, e.g. after a plugin reload) are failed.
       if (sharedRunRegistry.has(task.frontmatter.id)) continue;
-      // Sidecar heartbeat safety net: a sidecar timestamp newer than the stale
-      // threshold means a writer was alive very recently. After a true plugin
-      // reload nothing is still writing, so on the next pass this check will
-      // age out and recovery succeeds — but during a fast hot-reload window
-      // this avoids stranding a card that is actually being driven.
       const runId = task.frontmatter.run_id;
-      if (runId) {
-        try {
-          const sidecar = await this.plugin.runSidecarStore.readHeartbeat(runId);
-          if (sidecar) {
-            // RuntimeId mismatch = the previous plugin load wrote this and is
-            // now gone. Recover immediately regardless of `at` freshness, so a
-            // mid-run reload doesn't strand the card for the full stale window.
-            // A legacy sidecar without runtimeId falls back to the `at` check
-            // below — upgrading the plugin must not strand existing sidecars.
-            if (sidecar.runtimeId && sidecar.runtimeId !== this.plugin.runtimeId) {
-              // Fall through to recovery.
-            } else {
-              const sidecarMs = Date.parse(sidecar.at);
-              if (Number.isFinite(sidecarMs) && nowMs - sidecarMs < ORPHAN_STALE_THRESHOLD_MS) continue;
-            }
-          }
-        } catch {
-          // Corrupt or unreadable sidecar must not strand the card — fall
-          // through to recovery so the run doesn't sit "running" forever.
-        }
-      }
+      if (runId && await this.hasFreshSidecarHeartbeat(runId, nowMs)) continue;
       try {
         // Write the failed status first: it only rewrites frontmatter, so a note
         // missing the generated run-ledger markers (hand-edited or older) is
@@ -781,6 +756,31 @@ export class AgentBoardView extends ItemView {
       }
     }
     if (recovered) await this.refresh();
+  }
+
+  /**
+   * Sidecar heartbeat safety net: a sidecar timestamp newer than the stale
+   * threshold means a writer was alive very recently (e.g. a fast hot-reload
+   * window), so skip recovery. After a true plugin reload nothing keeps
+   * writing, so on the next pass the check ages out and recovery succeeds.
+   */
+  private async hasFreshSidecarHeartbeat(runId: string, nowMs: number): Promise<boolean> {
+    try {
+      const sidecar = await this.plugin.runSidecarStore.readHeartbeat(runId);
+      if (!sidecar) return false;
+      // RuntimeId mismatch = the previous plugin load wrote this and is now
+      // gone — recover immediately regardless of `at` freshness, so a mid-run
+      // reload doesn't strand the card for the full stale window. A legacy
+      // sidecar without runtimeId falls back to the `at` check below, so
+      // upgrading the plugin must not strand existing sidecars.
+      if (sidecar.runtimeId && sidecar.runtimeId !== this.plugin.runtimeId) return false;
+      const sidecarMs = Date.parse(sidecar.at);
+      return Number.isFinite(sidecarMs) && nowMs - sidecarMs < ORPHAN_STALE_THRESHOLD_MS;
+    } catch {
+      // Corrupt or unreadable sidecar must not strand the card — recover so
+      // the run doesn't sit "running" forever.
+      return false;
+    }
   }
 
   async runNextReady(): Promise<void> {

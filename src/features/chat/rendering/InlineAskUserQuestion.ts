@@ -1,4 +1,5 @@
 import type { AskUserQuestionItem, AskUserQuestionOption } from '../../../core/types/tools';
+import { activateInlineCard } from './inlineChoiceCard';
 
 const HINTS_TEXT = 'Enter to select \u00B7 Tab/Arrow keys to navigate \u00B7 Esc to cancel';
 const HINTS_TEXT_IMMEDIATE = 'Enter to select \u00B7 Arrow keys to navigate \u00B7 Esc to cancel';
@@ -32,7 +33,7 @@ export class InlineAskUserQuestion {
   private tabElements: HTMLElement[] = [];
   private currentItems: HTMLElement[] = [];
   private boundKeyDown: (e: KeyboardEvent) => void;
-  private abortHandler: (() => void) | null = null;
+  private disposeActivation: (() => void) | null = null;
 
   constructor(
     containerEl: HTMLElement,
@@ -87,19 +88,12 @@ export class InlineAskUserQuestion {
     this.contentArea = this.rootEl.createDiv({ cls: 'claudian-ask-content' });
     this.renderTabContent();
 
-    this.rootEl.setAttribute('tabindex', '0');
-    this.rootEl.addEventListener('keydown', this.boundKeyDown);
-
-    // Defer focus to after the element is in the DOM and laid out
-    window.requestAnimationFrame(() => {
-      this.rootEl.focus();
-      this.rootEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    this.disposeActivation = activateInlineCard({
+      rootEl: this.rootEl,
+      onKeyDown: this.boundKeyDown,
+      signal: this.signal,
+      onAbort: () => this.handleResolve(null),
     });
-
-    if (this.signal) {
-      this.abortHandler = () => this.handleResolve(null);
-      this.signal.addEventListener('abort', this.abortHandler, { once: true });
-    }
   }
 
   destroy(): void {
@@ -690,11 +684,8 @@ export class InlineAskUserQuestion {
   private handleResolve(result: Record<string, string | string[]> | null): void {
     if (!this.resolved) {
       this.resolved = true;
-      this.rootEl?.removeEventListener('keydown', this.boundKeyDown);
-      if (this.signal && this.abortHandler) {
-        this.signal.removeEventListener('abort', this.abortHandler);
-        this.abortHandler = null;
-      }
+      this.disposeActivation?.();
+      this.disposeActivation = null;
       this.rootEl?.remove();
       this.resolveCallback(result);
     }

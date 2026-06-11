@@ -266,6 +266,12 @@ function diffOpsEqual(left: DiffOp[], right: DiffOp[]): boolean {
 
 export type InlineEditDecision = 'accept' | 'edit' | 'reject';
 
+export interface InlineEditRequest {
+  editContext: InlineEditContext;
+  notePath: string;
+  getExternalContexts?: () => string[];
+}
+
 export class InlineEditModal {
   private controller: InlineEditController | null = null;
 
@@ -274,9 +280,7 @@ export class InlineEditModal {
     private plugin: ClaudianPlugin,
     private editor: Editor,
     private view: MarkdownView,
-    private editContext: InlineEditContext,
-    private notePath: string,
-    private getExternalContexts: () => string[] = () => []
+    private request: InlineEditRequest,
   ) {}
 
   async openAndWait(): Promise<{ decision: InlineEditDecision; editedText?: string }> {
@@ -307,9 +311,7 @@ export class InlineEditModal {
         this.plugin,
         editorView,
         editor,
-        this.editContext,
-        this.notePath,
-        this.getExternalContexts,
+        this.request,
         resolve
       );
       activeController = this.controller;
@@ -340,15 +342,14 @@ class InlineEditController {
   private mentionDropdown: MentionDropdownController | null = null;
   private mentionDataProvider: VaultMentionDataProvider;
   private agentReplyRenderVersion = 0;
+  private readonly externalContexts = (): string[] => this.request.getExternalContexts?.() ?? [];
 
   constructor(
     private app: App,
     private plugin: ClaudianPlugin,
     private editorView: EditorView,
     private editor: Editor,
-    editContext: InlineEditContext,
-    private notePath: string,
-    private getExternalContexts: () => string[],
+    private request: InlineEditRequest,
     private resolve: (result: { decision: InlineEditDecision; editedText?: string }) => void
   ) {
     const activeView = typeof plugin.getView === 'function'
@@ -376,12 +377,12 @@ class InlineEditController {
       },
     });
     this.mentionDataProvider.initializeInBackground();
-    this.mode = editContext.mode;
-    if (editContext.mode === 'cursor') {
-      this.cursorContext = editContext.cursorContext;
+    this.mode = request.editContext.mode;
+    if (request.editContext.mode === 'cursor') {
+      this.cursorContext = request.editContext.cursorContext;
       this.selectedText = '';
     } else {
-      this.selectedText = editContext.selectedText;
+      this.selectedText = request.editContext.selectedText;
     }
 
     this.updatePositionsFromEditor();
@@ -546,7 +547,7 @@ class InlineEditController {
         getMentionedMcpServers: () => new Set(),
         setMentionedMcpServers: () => false,
         addMentionedMcpServer: () => {},
-        getExternalContexts: this.getExternalContexts,
+        getExternalContexts: this.externalContexts,
         getCachedVaultFolders: () => this.mentionDataProvider.getCachedVaultFolders(),
         getCachedVaultFiles: () => this.mentionDataProvider.getCachedVaultFiles(),
         normalizePathForVault: (rawPath) => this.normalizePathForVault(rawPath),
@@ -580,7 +581,7 @@ class InlineEditController {
       component: this.plugin,
       container,
       markdown,
-      sourcePath: this.notePath,
+      sourcePath: this.request.notePath,
       mediaFolder: this.plugin.settings?.mediaFolder ?? '',
     });
   }
@@ -622,7 +623,7 @@ class InlineEditController {
         result = await this.inlineEditService.editText({
           mode: 'cursor',
           instruction: userMessage,
-          notePath: this.notePath,
+          notePath: this.request.notePath,
           cursorContext: this.cursorContext as CursorContext,
           contextFiles,
         });
@@ -631,7 +632,7 @@ class InlineEditController {
         result = await this.inlineEditService.editText({
           mode: 'selection',
           instruction: userMessage,
-          notePath: this.notePath,
+          notePath: this.request.notePath,
           selectedText: this.selectedText,
           startLine: this.startLine,
           lineCount,
@@ -857,7 +858,7 @@ class InlineEditController {
     }
 
     const resolved = new Set<string>();
-    const externalEntries = buildExternalContextDisplayEntries(this.getExternalContexts())
+    const externalEntries = buildExternalContextDisplayEntries(this.externalContexts())
       .sort((a, b) => b.displayNameLower.length - a.displayNameLower.length);
     const getExternalLookup = createExternalContextLookupGetter(
       contextRoot => externalContextScanner.scanPaths([contextRoot])

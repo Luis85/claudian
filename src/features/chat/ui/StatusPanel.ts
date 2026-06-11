@@ -63,27 +63,7 @@ export class StatusPanel {
     }
 
     // Remove old event listeners before removing DOM
-    if (this.todoHeaderEl) {
-      if (this.todoClickHandler) {
-        this.todoHeaderEl.removeEventListener('click', this.todoClickHandler);
-      }
-      if (this.todoKeydownHandler) {
-        this.todoHeaderEl.removeEventListener('keydown', this.todoKeydownHandler);
-      }
-    }
-    this.todoClickHandler = null;
-    this.todoKeydownHandler = null;
-
-    if (this.bashHeaderEl) {
-      if (this.bashClickHandler) {
-        this.bashHeaderEl.removeEventListener('click', this.bashClickHandler);
-      }
-      if (this.bashKeydownHandler) {
-        this.bashHeaderEl.removeEventListener('keydown', this.bashKeydownHandler);
-      }
-    }
-    this.bashClickHandler = null;
-    this.bashKeydownHandler = null;
+    this.detachHeaderListeners();
 
     // Remove old panel from DOM
     if (this.panelEl) {
@@ -543,11 +523,8 @@ export class StatusPanel {
   // Cleanup
   // ============================================
 
-  /**
-   * Destroy the panel.
-   */
-  destroy(): void {
-    // Remove event listeners before removing elements
+  /** Detaches the todo/bash header listeners and clears their handler refs. */
+  private detachHeaderListeners(): void {
     if (this.todoHeaderEl) {
       if (this.todoClickHandler) {
         this.todoHeaderEl.removeEventListener('click', this.todoClickHandler);
@@ -569,6 +546,14 @@ export class StatusPanel {
     }
     this.bashClickHandler = null;
     this.bashKeydownHandler = null;
+  }
+
+  /**
+   * Destroy the panel.
+   */
+  destroy(): void {
+    // Remove event listeners before removing elements
+    this.detachHeaderListeners();
 
     // Clear bash output tracking
     this.currentBashOutputs.clear();

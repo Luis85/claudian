@@ -304,9 +304,9 @@ export class ClaudianView extends ItemView {
     this.tabManager?.primeProviderRuntime();
   }
 
-  /** Tears down the tab UI (manager + tab bar + DOM) without touching the
-   * view-lifecycle event handlers/scope, so the empty state can take over. */
-  private async teardownTabContent(): Promise<void> {
+  /** Flushes pending tab-bar work, persists tab state, and destroys the tab
+   * manager + tab bar. Shared by the in-place teardown and view close paths. */
+  private async destroyTabRuntime(): Promise<void> {
     if (this.pendingTabBarUpdate !== null) {
       cancelScheduledAnimationFrame(this.pendingTabBarUpdate);
       this.pendingTabBarUpdate = null;
@@ -316,6 +316,12 @@ export class ClaudianView extends ItemView {
     this.tabManager = null;
     this.tabBar?.destroy();
     this.tabBar = null;
+  }
+
+  /** Tears down the tab UI (manager + tab bar + DOM) without touching the
+   * view-lifecycle event handlers/scope, so the empty state can take over. */
+  private async teardownTabContent(): Promise<void> {
+    await this.destroyTabRuntime();
     this.tabBarContainerEl?.remove();
     this.tabBarContainerEl = null;
     this.tabContentEl?.remove();
@@ -360,21 +366,9 @@ export class ClaudianView extends ItemView {
   }
 
   async onClose() {
-    if (this.pendingTabBarUpdate !== null) {
-      cancelScheduledAnimationFrame(this.pendingTabBarUpdate);
-      this.pendingTabBarUpdate = null;
-    }
-
     // Vault events registered via registerEvent are auto-released by the
     // Component lifecycle — no manual offref sweep needed.
-
-    await this.persistTabStateImmediate();
-
-    await this.tabManager?.destroy();
-    this.tabManager = null;
-
-    this.tabBar?.destroy();
-    this.tabBar = null;
+    await this.destroyTabRuntime();
     this.disposeWorkOrderActivityDropdown();
     this.gitActionButton?.dispose();
     this.gitActionButton = null;

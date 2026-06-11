@@ -4,25 +4,12 @@ import type {
   RefineProgressCallback,
 } from '../providers/types';
 import type { InstructionRefineResult } from '../types';
-import type { AuxQueryRunner } from './AuxQueryRunner';
+import { QueryBackedConversationService } from './QueryBackedConversationService';
 
-export class QueryBackedInstructionRefineService implements InstructionRefineService {
-  private abortController: AbortController | null = null;
+export class QueryBackedInstructionRefineService
+  extends QueryBackedConversationService
+  implements InstructionRefineService {
   private existingInstructions = '';
-  private hasConversation = false;
-  private modelOverride: string | undefined;
-
-  constructor(private readonly runner: AuxQueryRunner) {}
-
-  setModelOverride(model?: string): void {
-    const trimmed = model?.trim();
-    this.modelOverride = trimmed ? trimmed : undefined;
-  }
-
-  resetConversation(): void {
-    this.runner.reset();
-    this.hasConversation = false;
-  }
 
   async refineInstruction(
     rawInstruction: string,
@@ -42,11 +29,6 @@ export class QueryBackedInstructionRefineService implements InstructionRefineSer
       return { success: false, error: 'No active conversation to continue' };
     }
     return this.sendMessage(message, onProgress);
-  }
-
-  cancel(): void {
-    this.abortController?.abort();
-    this.abortController = null;
   }
 
   private async sendMessage(

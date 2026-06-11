@@ -14,6 +14,41 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
+/** Minimal persistence surface needed to round-trip the tab layout through plugin data.json. */
+interface TabManagerStateHost {
+  loadData(): Promise<unknown>;
+  saveData(data: unknown): Promise<void>;
+}
+
+export async function persistTabManagerState(
+  host: TabManagerStateHost,
+  state: AppTabManagerState,
+): Promise<void> {
+  try {
+    const loaded: unknown = await host.loadData();
+    const data = isRecord(loaded) ? loaded : {};
+    data.tabManagerState = state;
+    await host.saveData(data);
+  } catch {
+    new Notice(t('chat.storage.tabLayoutSaveFailed'));
+  }
+}
+
+export async function readTabManagerState(
+  host: TabManagerStateHost,
+): Promise<AppTabManagerState | null> {
+  try {
+    const data: unknown = await host.loadData();
+    if (!isRecord(data) || !data.tabManagerState) {
+      return null;
+    }
+
+    return validateTabManagerState(data.tabManagerState);
+  } catch {
+    return null;
+  }
+}
+
 export class SharedStorageService implements SharedAppStorage {
   readonly claudianSettings: ClaudianSettingsStorage;
   readonly sessions: SessionStorage;
@@ -39,27 +74,11 @@ export class SharedStorageService implements SharedAppStorage {
   }
 
   async setTabManagerState(state: AppTabManagerState): Promise<void> {
-    try {
-      const loaded: unknown = await this.plugin.loadData();
-      const data = isRecord(loaded) ? loaded : {};
-      data.tabManagerState = state;
-      await this.plugin.saveData(data);
-    } catch {
-      new Notice(t('chat.storage.tabLayoutSaveFailed'));
-    }
+    await persistTabManagerState(this.plugin, state);
   }
 
   async getTabManagerState(): Promise<AppTabManagerState | null> {
-    try {
-      const data: unknown = await this.plugin.loadData();
-      if (!isRecord(data) || !data.tabManagerState) {
-        return null;
-      }
-
-      return validateTabManagerState(data.tabManagerState);
-    } catch {
-      return null;
-    }
+    return readTabManagerState(this.plugin);
   }
 
   getAdapter(): VaultFileAdapter {

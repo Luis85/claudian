@@ -105,6 +105,29 @@ export class ConversationController {
     return this.deps.getAgentService?.() ?? null;
   }
 
+  /**
+   * Clears per-conversation state back to the entry point (no conversation)
+   * and resets the agent service session. Passes persistent paths so stale
+   * external contexts don't leak into the next conversation.
+   */
+  private resetToEntryPointState(): void {
+    const { plugin, state } = this.deps;
+    state.currentConversationId = null;
+    state.clearMessages();
+    state.usage = null;
+    state.currentTodos = null;
+    state.pendingNewSessionPlan = null;
+    state.planFilePath = null;
+    state.prePlanPermissionMode = null;
+    state.autoScrollEnabled = plugin.settings.enableAutoScroll ?? true;
+    state.hasPendingConversationSave = false;
+
+    this.getAgentService()?.syncConversationState(
+      null,
+      plugin.settings.persistentExternalContextPaths || []
+    );
+  }
+
   // ============================================
   // Conversation Lifecycle
   // ============================================
@@ -153,22 +176,7 @@ export class ConversationController {
       state.isStreaming = false;
 
       // Reset to entry point state - no conversation created yet
-      state.currentConversationId = null;
-      state.clearMessages();
-      state.usage = null;
-      state.currentTodos = null;
-      state.pendingNewSessionPlan = null;
-      state.planFilePath = null;
-      state.prePlanPermissionMode = null;
-      state.autoScrollEnabled = plugin.settings.enableAutoScroll ?? true;
-      state.hasPendingConversationSave = false;
-
-      // Reset agent service session (no session ID for entry point)
-      // Pass persistent paths to prevent stale external contexts
-      this.getAgentService()?.syncConversationState(
-        null,
-        plugin.settings.persistentExternalContextPaths || []
-      );
+      this.resetToEntryPointState();
 
       const messagesEl = this.deps.getMessagesEl();
       messagesEl.empty();
@@ -219,21 +227,7 @@ export class ConversationController {
 
     // No active conversation - start at entry point
     if (!conversation) {
-      state.currentConversationId = null;
-      state.clearMessages();
-      state.usage = null;
-      state.currentTodos = null;
-      state.pendingNewSessionPlan = null;
-      state.planFilePath = null;
-      state.prePlanPermissionMode = null;
-      state.autoScrollEnabled = plugin.settings.enableAutoScroll ?? true;
-      state.hasPendingConversationSave = false;
-
-      // Pass persistent paths to prevent stale external contexts
-      this.getAgentService()?.syncConversationState(
-        null,
-        plugin.settings.persistentExternalContextPaths || []
-      );
+      this.resetToEntryPointState();
 
       const fileCtx = this.deps.getFileContextManager();
       fileCtx?.resetForNewConversation();

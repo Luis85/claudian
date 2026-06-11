@@ -7,7 +7,7 @@ import type {
   HydrationContext,
   ProviderForkSupport,
 } from '../../../core/providers/types';
-import { buildUsageInfo } from '../../../core/providers/usage';
+import { buildUsageInfo, readPositiveTokenCount } from '../../../core/providers/usage';
 import type { Conversation, UsageInfo } from '../../../core/types';
 import { getCodexContextWindow } from '../runtime/CodexSessionFileTail';
 import type { CodexProviderState } from '../types';
@@ -308,10 +308,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function readNumber(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
-}
-
 interface CodexLastTokenUsage {
   inputTokens: number;
   cachedInputTokens: number;
@@ -326,10 +322,10 @@ function readLastTokenUsageBlock(payload: Record<string, unknown>): CodexLastTok
   if (!lastTokenUsage) return null;
 
   return {
-    inputTokens: readNumber(lastTokenUsage.input_tokens ?? lastTokenUsage.input),
-    cachedInputTokens: readNumber(lastTokenUsage.cached_input_tokens ?? lastTokenUsage.cached_input),
-    outputTokens: readNumber(lastTokenUsage.output_tokens ?? lastTokenUsage.output),
-    reasoningOutputTokens: readNumber(
+    inputTokens: readPositiveTokenCount(lastTokenUsage.input_tokens ?? lastTokenUsage.input),
+    cachedInputTokens: readPositiveTokenCount(lastTokenUsage.cached_input_tokens ?? lastTokenUsage.cached_input),
+    outputTokens: readPositiveTokenCount(lastTokenUsage.output_tokens ?? lastTokenUsage.output),
+    reasoningOutputTokens: readPositiveTokenCount(
       lastTokenUsage.reasoning_output_tokens ?? lastTokenUsage.reasoning_output,
     ),
   };

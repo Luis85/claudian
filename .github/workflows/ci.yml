@@ -108,6 +108,28 @@ jobs:
       - name: Test with coverage thresholds
         run: npm run test:coverage
 
+  perf:
+    # Deterministic perf scaling guards (docs/build-ci/quality-gates.md).
+    # These specs assert that cost scales with a bounded window (counts of
+    # DOM nodes, listeners, scheduler callbacks, parse passes) — never
+    # wall-clock timings — so they are stable on noisy shared runners. The
+    # report-only timing tables remain monitoring signal in the job log.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Perf scaling guards
+        run: npm run test:perf
+
   build:
     # Exercise the production build (CSS concat, esbuild bundle, SDK patching,
     # renderer-unsafe-unref guard) on PRs, not only at release time, then smoke

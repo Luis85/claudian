@@ -1,13 +1,16 @@
 import type { PlanArtifact } from '../../../core/types/plan';
 import { readPlanMarkdownFromArtifact } from '../../../utils/planArtifact';
+import {
+  activateInlineCard,
+  CHOICE_CARD_HINTS_TEXT,
+  InlineChoiceList,
+} from './inlineChoiceCard';
 import type { RenderContentFn } from './MessageRenderer';
 
 export type PlanApprovalDecision =
   | { type: 'implement' }
   | { type: 'revise'; text: string }
   | { type: 'cancel' };
-
-const HINTS_TEXT = 'Arrow keys to navigate \u00B7 Enter to select \u00B7 Esc to cancel';
 
 export interface InlinePlanApprovalOptions {
   artifact?: PlanArtifact;
@@ -22,11 +25,8 @@ export class InlinePlanApproval {
   private resolved = false;
 
   private rootEl!: HTMLElement;
-  private focusedIndex = 0;
-  private items: HTMLElement[] = [];
-  private feedbackInput!: HTMLInputElement;
-  private isInputFocused = false;
-  private boundKeyDown: (e: KeyboardEvent) => void;
+  private choices: InlineChoiceList | null = null;
+  private disposeActivation: (() => void) | null = null;
 
   constructor(
     containerEl: HTMLElement,
@@ -36,7 +36,6 @@ export class InlinePlanApproval {
     this.containerEl = containerEl;
     this.resolveCallback = resolve;
     this.options = options;
-    this.boundKeyDown = (event) => this.handleKeyDown(event);
   }
 
   render(): void {
@@ -62,58 +61,34 @@ export class InlinePlanApproval {
       });
     }
 
-    const actionsEl = this.rootEl.createDiv({ cls: 'claudian-ask-list' });
+    this.choices = new InlineChoiceList(
+      this.rootEl,
+      [
+        {
+          kind: 'action',
+          label: 'Implement',
+          onSelect: () => this.handleResolve({ type: 'implement' }),
+        },
+        {
+          kind: 'input',
+          placeholder: 'Enter feedback to revise plan...',
+          onSubmit: (text) => this.handleResolve({ type: 'revise', text }),
+        },
+        {
+          kind: 'action',
+          label: 'Cancel',
+          onSelect: () => this.handleResolve({ type: 'cancel' }),
+        },
+      ],
+      () => this.handleResolve(null),
+    );
+    this.choices.render(this.rootEl.createDiv({ cls: 'claudian-ask-list' }));
 
-    // 1. Implement
-    const implementRow = actionsEl.createDiv({ cls: 'claudian-ask-item' });
-    implementRow.addClass('is-focused');
-    implementRow.createSpan({ text: '\u203A', cls: 'claudian-ask-cursor' });
-    implementRow.createSpan({ text: '1. ', cls: 'claudian-ask-item-num' });
-    implementRow.createSpan({ text: 'Implement', cls: 'claudian-ask-item-label' });
-    implementRow.addEventListener('click', () => {
-      this.focusedIndex = 0;
-      this.updateFocus();
-      this.handleResolve({ type: 'implement' });
-    });
-    this.items.push(implementRow);
+    this.rootEl.createDiv({ text: CHOICE_CARD_HINTS_TEXT, cls: 'claudian-ask-hints' });
 
-    // 2. Revise (with feedback input)
-    const reviseRow = actionsEl.createDiv({ cls: 'claudian-ask-item claudian-ask-custom-item' });
-    reviseRow.createSpan({ text: '\u00A0', cls: 'claudian-ask-cursor' });
-    reviseRow.createSpan({ text: '2. ', cls: 'claudian-ask-item-num' });
-    this.feedbackInput = reviseRow.createEl('input', {
-      type: 'text',
-      cls: 'claudian-ask-custom-text',
-      placeholder: 'Enter feedback to revise plan...',
-    });
-    this.feedbackInput.addEventListener('focus', () => { this.isInputFocused = true; });
-    this.feedbackInput.addEventListener('blur', () => { this.isInputFocused = false; });
-    reviseRow.addEventListener('click', () => {
-      this.focusedIndex = 1;
-      this.updateFocus();
-    });
-    this.items.push(reviseRow);
-
-    // 3. Cancel
-    const cancelRow = actionsEl.createDiv({ cls: 'claudian-ask-item' });
-    cancelRow.createSpan({ text: '\u00A0', cls: 'claudian-ask-cursor' });
-    cancelRow.createSpan({ text: '3. ', cls: 'claudian-ask-item-num' });
-    cancelRow.createSpan({ text: 'Cancel', cls: 'claudian-ask-item-label' });
-    cancelRow.addEventListener('click', () => {
-      this.focusedIndex = 2;
-      this.updateFocus();
-      this.handleResolve({ type: 'cancel' });
-    });
-    this.items.push(cancelRow);
-
-    this.rootEl.createDiv({ text: HINTS_TEXT, cls: 'claudian-ask-hints' });
-
-    this.rootEl.setAttribute('tabindex', '0');
-    this.rootEl.addEventListener('keydown', this.boundKeyDown);
-
-    window.requestAnimationFrame(() => {
-      this.rootEl.focus();
-      this.rootEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    this.disposeActivation = activateInlineCard({
+      rootEl: this.rootEl,
+      onKeyDown: (e) => this.choices?.handleKeyDown(e),
     });
   }
 
@@ -121,92 +96,31 @@ export class InlinePlanApproval {
     this.handleResolve(null);
   }
 
-  private handleKeyDown(e: KeyboardEvent): void {
-    if (this.isInputFocused) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        this.isInputFocused = false;
-        this.feedbackInput.blur();
-        this.rootEl.focus();
-        return;
-      }
-      if (e.key === 'Enter' && this.feedbackInput.value.trim()) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.handleResolve({ type: 'revise', text: this.feedbackInput.value.trim() });
-        return;
-      }
-      return;
-    }
+  // Back-compat seam: this state lived on the class before the choice list was
+  // shared; existing specs still reach it, so delegate to the widget.
+  private get focusedIndex(): number {
+    return this.choices ? this.choices.focusedIndex : 0;
+  }
 
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        e.stopPropagation();
-        this.focusedIndex = Math.min(this.focusedIndex + 1, this.items.length - 1);
-        this.updateFocus();
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        e.stopPropagation();
-        this.focusedIndex = Math.max(this.focusedIndex - 1, 0);
-        this.updateFocus();
-        break;
-      case 'Enter':
-        e.preventDefault();
-        e.stopPropagation();
-        if (this.focusedIndex === 0) {
-          this.handleResolve({ type: 'implement' });
-        } else if (this.focusedIndex === 1) {
-          this.feedbackInput.focus();
-        } else if (this.focusedIndex === 2) {
-          this.handleResolve({ type: 'cancel' });
-        }
-        break;
-      case 'Escape':
-        e.preventDefault();
-        e.stopPropagation();
-        this.handleResolve(null);
-        break;
+  private get isInputFocused(): boolean {
+    return this.choices?.isInputFocused ?? false;
+  }
+
+  private set isInputFocused(value: boolean) {
+    if (this.choices) {
+      this.choices.isInputFocused = value;
     }
   }
 
-  private updateFocus(): void {
-    for (let i = 0; i < this.items.length; i++) {
-      const item = this.items[i];
-      const cursor = item.querySelector('.claudian-ask-cursor');
-      if (i === this.focusedIndex) {
-        item.addClass('is-focused');
-        if (cursor) cursor.textContent = '\u203A';
-        item.scrollIntoView({ block: 'nearest' });
-
-        if (item.hasClass('claudian-ask-custom-item')) {
-          const input = item.querySelector('.claudian-ask-custom-text') as HTMLInputElement;
-          if (input) {
-            input.focus();
-            this.isInputFocused = true;
-          }
-        }
-      } else {
-        item.removeClass('is-focused');
-        if (cursor) cursor.textContent = '\u00A0';
-
-        if (item.hasClass('claudian-ask-custom-item') && this.isInputFocused) {
-          const input = item.querySelector('.claudian-ask-custom-text') as HTMLInputElement;
-          if (input) {
-            input.blur();
-            this.isInputFocused = false;
-          }
-        }
-      }
-    }
+  private get feedbackInput(): HTMLInputElement | null {
+    return this.choices?.inputEl ?? null;
   }
 
   private handleResolve(decision: PlanApprovalDecision | null): void {
     if (!this.resolved) {
       this.resolved = true;
-      this.rootEl?.removeEventListener('keydown', this.boundKeyDown);
+      this.disposeActivation?.();
+      this.disposeActivation = null;
       this.rootEl?.remove();
       this.resolveCallback(decision);
     }
