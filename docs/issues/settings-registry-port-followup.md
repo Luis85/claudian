@@ -164,4 +164,31 @@ Follow the writing-plans skill to create `docs/superpowers/plans/2026-XX-XX-sett
 
 ## Status
 
-Open. Tracked for v3.1.0 — not blocking v3.0.0 release because legacy renderers cover every gap as fallback. Polish pass on 2026-05-31 closed every immediate bug surfaced by the parallel review agents.
+**Port complete (2026-06-11)** — deletion pass remains, gated on manual vault
+verification. Implemented per
+[[2026-06-11-settings-registry-port-completion]]:
+
+- `REGISTRY_TABS` now contains all seven tab ids; every tab renders through
+  the registry walker, each flipped together with a passing parity test
+  (`tests/integration/settings/<tab>Port.test.ts`) that asserts the legacy
+  field inventory, real widget mounts, and representative round-trips.
+- Provider-owned widgets mount through a new seam: named mounts on
+  `ProviderSettingsTabRenderer.widgets`
+  (`src/core/providers/settingsWidgets.ts`), resolved from registry custom
+  fields via `ProviderWorkspaceRegistry` — features never imports
+  `src/providers/**` (boundary gate holds).
+- Field-name unification resolved per the plan: hostname-keyed persisted paths
+  (`cliPathsByHost`, `installationMethodsByHost`, `wslDistroOverridesByHost`,
+  `enabledModelsByHost`) replaced the wrong flat registry ids; user data is
+  preserved because the persisted shape never changed.
+- Cursor `modelAliases` was removed rather than ported: no such setting is
+  persisted or read; the legacy tab (source of truth) has no editor.
+- Legacy renderers shrank to thin shells over the same widget mounts
+  (Claude 448→173, Codex 447→214, Opencode 671→73, Cursor 326→33 lines) and
+  stay wired as the fallback.
+
+**Remaining for v4.0.0 (deliberately NOT done here):** delete the legacy
+renderer files + `settingsTabRenderer` render path + `featureFlag.ts`, per
+the acceptance list above — only after manual verification on a fresh vault
+and a vault with existing settings (the phase-J1 lesson). Until then the
+fallback remains one flag-flip away.
