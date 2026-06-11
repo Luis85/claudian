@@ -9,6 +9,16 @@ export function getSettingsRegistry(): SettingsRegistry {
   return instance;
 }
 
-export function resetSettingsRegistryForTests(): void {
+/**
+ * Drops the singleton so the next `getSettingsRegistry()` starts empty.
+ * Production use: locale changes — field labels/descriptions are captured by
+ * `t()` at registration time, so the registry must be rebuilt under the new
+ * locale (see ClaudianSettingTab.display).
+ */
+export function resetSettingsRegistry(): void {
   instance = null;
+}
+
+export function resetSettingsRegistryForTests(): void {
+  resetSettingsRegistry();
 }

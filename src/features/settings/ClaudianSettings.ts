@@ -23,6 +23,7 @@ import {
   getSettingsRegistry,
   registerAllSettings,
   renderTab,
+  resetSettingsRegistry,
   type SettingsCtx,
   useRegistryRenderer,
 } from './registry';
@@ -87,7 +88,9 @@ function addHotkeySettingRow(
 export class ClaudianSettingTab extends PluginSettingTab {
   plugin: ClaudianPlugin;
   private activeTab: SettingsTabId = 'general';
-  private registryInitialized = false;
+  // Locale the registry's t()-captured labels were registered under; null
+  // until first registry render.
+  private registryLocale: string | null = null;
   private searchBar: SearchBar | null = null;
   private searchResultsView: SearchResultsView | null = null;
   private highlightTimeouts: Map<HTMLElement, number> = new Map();
@@ -165,13 +168,23 @@ export class ClaudianSettingTab extends PluginSettingTab {
       this.activeTab = 'general';
     }
 
-    // Lazy-init the registry only if any visible tab requires it. The shell
-    // keeps the legacy imperative path when every tab opts out (the default
-    // until D4 flips `general`). The guard prevents `registerAllSettings`
-    // (which throws on duplicate registration) from running twice.
-    if (!this.registryInitialized && tabIds.some(useRegistryRenderer)) {
-      registerAllSettings();
-      this.registryInitialized = true;
+    // Lazy-init the registry only if any visible tab requires it, and rebuild
+    // it when the locale changed: field labels/descriptions are captured by
+    // `t()` at registration time, so a registry built under the previous
+    // locale would keep rendering the old language until plugin reload
+    // (PR #82 review). `setLocale` above runs first, so re-registration
+    // captures the new translations. The locale guard also prevents
+    // `registerAllSettings` (which throws on duplicate registration) from
+    // running twice.
+    if (tabIds.some(useRegistryRenderer)) {
+      const locale = this.plugin.settings.locale;
+      if (this.registryLocale !== locale) {
+        if (this.registryLocale !== null) {
+          resetSettingsRegistry();
+        }
+        registerAllSettings();
+        this.registryLocale = locale;
+      }
     }
 
     const ctx: SettingsCtx = {
