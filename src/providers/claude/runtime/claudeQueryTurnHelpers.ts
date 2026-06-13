@@ -12,8 +12,10 @@ import type {
   ChatTurnRequest,
   PreparedChatTurn,
 } from '../../../core/runtime/types';
+import type { SessionUpdateResult } from '../../../core/runtime/types';
 import { TOOL_SKILL } from '../../../core/tools/toolNames';
 import type { ChatMessage, ImageAttachment, StreamChunk } from '../../../core/types';
+import type { Conversation } from '../../../core/types';
 import { stripCurrentNoteContext } from '../../../utils/context';
 import {
   buildContextFromHistory,
@@ -21,6 +23,8 @@ import {
   getLastUserMessage,
 } from '../../../utils/session';
 import type { TransformEvent } from '../sdk/types';
+import type { ClaudeProviderState } from '../types/providerState';
+import { getClaudeState } from '../types/providerState';
 import type { MessageChannel } from './ClaudeMessageChannel';
 import { createResponseHandler, type ResponseHandler } from './types';
 
@@ -228,6 +232,79 @@ export function noteVisibleStreamContent(
   } else if (event.type === 'thinking') {
     callbacks.onThinking();
   }
+}
+
+/**
+ * Pure computation behind `ClaudianService.buildSessionUpdates`: derive the
+ * conversation-level session id plus the next ClaudeProviderState from the
+ * runtime's current session id and the conversation's existing state.
+ *
+ * Preserves the exact precedence the runtime relied on:
+ * - a changed SDK session id is accumulated into `previousProviderSessionIds`
+ * - a fork-source-only conversation keeps the conversation session id and does
+ *   not promote the runtime session id into `providerSessionId`
+ * - an invalidated session clears the resolved session id
+ * - the fork source is dropped once a distinct real session id is observed
+ */
+export function computeClaudeSessionUpdates(args: {
+  sessionId: string | null;
+  conversation: Conversation | null;
+  sessionInvalidated: boolean;
+}): SessionUpdateResult {
+  const { sessionId, conversation, sessionInvalidated } = args;
+  const existingState = getClaudeState(conversation?.providerState);
+
+  const oldSdkSessionId = existingState.providerSessionId;
+  const sessionChanged = sessionId && oldSdkSessionId && sessionId !== oldSdkSessionId;
+  const previousProviderSessionIds = sessionChanged
+    ? [...new Set([...(existingState.previousProviderSessionIds || []), oldSdkSessionId])]
+    : existingState.previousProviderSessionIds;
+
+  const isForkSourceOnly = !!existingState.forkSource &&
+    !existingState.providerSessionId &&
+    sessionId === existingState.forkSource.sessionId;
+
+  const resolvedSessionId = resolveClaudeUpdateSessionId({
+    sessionId,
+    conversation,
+    existingState,
+    sessionInvalidated,
+    isForkSourceOnly,
+  });
+
+  const newProviderState: ClaudeProviderState = {
+    ...existingState,
+    providerSessionId: sessionId && !isForkSourceOnly ? sessionId : existingState.providerSessionId,
+    previousProviderSessionIds,
+  };
+
+  if (existingState.forkSource && sessionId && sessionId !== existingState.forkSource.sessionId) {
+    delete newProviderState.forkSource;
+  }
+
+  return {
+    updates: {
+      sessionId: resolvedSessionId,
+      providerState: newProviderState as Record<string, unknown>,
+    },
+  };
+}
+
+function resolveClaudeUpdateSessionId(args: {
+  sessionId: string | null;
+  conversation: Conversation | null;
+  existingState: ClaudeProviderState;
+  sessionInvalidated: boolean;
+  isForkSourceOnly: boolean;
+}): string | null {
+  const { sessionId, conversation, sessionInvalidated, isForkSourceOnly } = args;
+  if (sessionInvalidated) {
+    return null;
+  }
+  if (isForkSourceOnly) {
+    return conversation?.sessionId ?? null;
+  }
+  return sessionId ?? conversation?.sessionId ?? null;
 }
 
 /** Returns false when the channel closed underneath us (caller falls back to cold-start). */

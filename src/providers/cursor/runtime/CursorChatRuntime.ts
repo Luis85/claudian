@@ -1,7 +1,6 @@
 import { spawn } from 'child_process';
 import * as readline from 'readline';
 
-import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type { ProviderCapabilities, ProviderId } from '../../../core/providers/types';
 import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
 import type { RuntimeHost } from '../../../core/runtime/RuntimeHost';
@@ -16,21 +15,17 @@ import type {
 } from '../../../core/runtime/types';
 import type { ChatMessage, Conversation, SlashCommand, StreamChunk } from '../../../core/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
-import { asSettingsBag } from '../../../core/types/settings';
-import { getVaultPath } from '../../../utils/path';
 import { CURSOR_PROVIDER_CAPABILITIES } from '../capabilities';
 import { encodeCursorTurn } from '../prompt/encodeCursorTurn';
-import { getCursorEnabledModels } from '../settings';
 import { getCursorState, resolveCursorSessionId } from '../types';
-import { buildCursorAgentEnvironment } from './cursorAgentEnv';
 import { acquireCursorAgentSpawnLock } from './cursorAgentSpawnLock';
 import { buildCursorAnswerFollowUpPrompt } from './cursorAskUserQuestion';
-import { resolveCursorModelSelectionForCli } from './cursorCliModel';
-import { buildCursorAgentPrompt, resolveCursorCliPromptArg } from './cursorCliPrompt';
-import { resolveCursorLaunch } from './cursorLaunch';
-import { buildCursorAgentFlagArgs, type CursorPermissionMode } from './cursorLaunchArgs';
-import { getCachedCursorModelIds } from './cursorModelCatalog';
 import { forceKillCursorProcessTree } from './cursorProcessKill';
+import {
+  awaitCursorExitCode,
+  resolveCursorQueryLaunch,
+  spawnCursorChild,
+} from './cursorQueryLaunch';
 import type { CursorQueryChunkTracker } from './cursorQueryLifecycle';
 import { finalizeCursorAgentStream, processCursorAgentNdjsonLines } from './cursorQueryProcessing';
 
@@ -119,20 +114,6 @@ export class CursorChatRuntime implements ChatRuntime {
       return;
     }
 
-    const workspaceDir = getVaultPath(this.plugin.app) ?? process.cwd();
-    const permissionMode = this.plugin.settings.permissionMode as CursorPermissionMode;
-    const snapshot = ProviderSettingsCoordinator.getProviderSettingsSnapshot(
-      asSettingsBag(this.plugin.settings),
-      'cursor',
-    );
-    const familyValue = queryOptions?.model
-      ?? (typeof snapshot.model === 'string' && snapshot.model.trim() ? snapshot.model.trim() : undefined);
-    const mode = typeof snapshot.effortLevel === 'string' ? snapshot.effortLevel : undefined;
-    const settingsBag = asSettingsBag(this.plugin.settings);
-    const model = resolveCursorModelSelectionForCli(familyValue, mode, {
-      catalogIds: getCachedCursorModelIds(),
-      enabledIds: getCursorEnabledModels(settingsBag),
-    });
     const resumeId = this.activeResumeId;
 
     yield {
@@ -141,51 +122,20 @@ export class CursorChatRuntime implements ChatRuntime {
     };
     yield { type: 'assistant_message_start' };
 
-    const flagArgs = buildCursorAgentFlagArgs({
-      workspaceDir,
-      model,
-      permissionMode,
-      resumeSessionId: resumeId,
-      approveMcps: (turn.request.enabledMcpServers?.size ?? 0) > 0,
-    });
-
-    const env = buildCursorAgentEnvironment(this.plugin);
-    const isPlanTurn = permissionMode === 'plan';
-    const cliPrompt = buildCursorAgentPrompt({
+    const { workspaceDir, launch, env, isPlanTurn, cleanupPromptFile } = resolveCursorQueryLaunch({
+      plugin: this.plugin,
+      cli,
       turn,
       conversationHistory,
-      resumeSessionId: resumeId,
+      queryOptions,
+      resumeId,
     });
-    const { arg: promptArg, cleanup: cleanupPromptFile } = resolveCursorCliPromptArg(cliPrompt);
-    const launch = resolveCursorLaunch(cli, [...flagArgs, promptArg]);
     const releaseSpawnLock = await acquireCursorAgentSpawnLock();
-    let child: ReturnType<typeof spawn>;
-    let stderrAcc = '';
     let chunkTracker: CursorQueryChunkTracker;
     try {
-      child = spawn(launch.command, launch.args, {
-        cwd: workspaceDir,
-        env: launch.extraEnv ? { ...env, ...launch.extraEnv } : env,
-        stdio: ['pipe', 'pipe', 'pipe'],
-        windowsHide: true,
-        ...(launch.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
-      });
+      const spawned = spawnCursorChild(spawn, launch, env, workspaceDir);
+      const child = spawned.child;
       this.child = child;
-
-      // A failed spawn (ENOENT/EINVAL/EPERM) emits 'error' and may never emit
-      // 'close'. Capture it so the close-promise below can resolve instead of
-      // hanging the turn forever, and surface the reason as the stderr text.
-      let spawnError: Error | null = null;
-      let spawnErrored = false;
-      const onSpawnError = (err: Error) => {
-        spawnError = err;
-        spawnErrored = true;
-      };
-      child.on('error', onSpawnError);
-
-      child.stderr?.on('data', (d: Buffer) => {
-        stderrAcc += d.toString('utf8');
-      });
 
       const rl = readline.createInterface({ input: child.stdout! });
 
@@ -216,18 +166,8 @@ export class CursorChatRuntime implements ChatRuntime {
         rl.close();
       }
 
-      const exitCode = await new Promise<number | null>((resolve) => {
-        if (spawnErrored || child.exitCode !== null) {
-          resolve(child.exitCode);
-          return;
-        }
-        child.on('close', (code) => resolve(code));
-        child.on('error', () => resolve(child.exitCode));
-      });
+      const exitCode = await awaitCursorExitCode(child, spawned.hadSpawnError);
 
-      const stderrText = spawnError
-        ? `${stderrAcc}${stderrAcc ? '\n' : ''}${(spawnError as Error).message}`.trim()
-        : stderrAcc;
       this.child = null;
       this.askUserQuestionAbortController?.abort();
       this.askUserQuestionAbortController = null;
@@ -239,26 +179,36 @@ export class CursorChatRuntime implements ChatRuntime {
           canceled: this.canceled,
           sawDone: chunkTracker.sawDone,
           exitCode,
-          stderr: stderrText,
+          stderr: spawned.stderrText(),
         },
       );
       yield* completionChunks;
 
-      if (this.lastSessionId) {
-        this.activeResumeId = this.lastSessionId;
-      }
-
-      this.turnMetadata = { ...this.turnMetadata, ...turnMetadata };
-
-      // Deliver collected AskUserQuestion answers (the one-shot CLI cannot take
-      // them in-process) to the agent as a resumed follow-up turn. Skipped on
-      // cancel so a torn-down turn never auto-fires another query.
-      if (chunkTracker.askUserAnswers.length > 0 && !this.canceled) {
-        this.turnMetadata.autoFollowUpText = buildCursorAnswerFollowUpPrompt(chunkTracker.askUserAnswers);
-      }
+      this.applyCursorTurnResult(chunkTracker, turnMetadata);
     } finally {
       cleanupPromptFile?.();
       releaseSpawnLock();
+    }
+  }
+
+  /**
+   * Commits per-turn state after the stream drains: promote the new session id
+   * to the active resume id, merge plan/turn metadata, and stage any collected
+   * AskUserQuestion answers as an auto-resumed follow-up. The follow-up is
+   * skipped on cancel so a torn-down turn never auto-fires another query.
+   */
+  private applyCursorTurnResult(
+    chunkTracker: CursorQueryChunkTracker,
+    turnMetadata: ChatTurnMetadata,
+  ): void {
+    if (this.lastSessionId) {
+      this.activeResumeId = this.lastSessionId;
+    }
+
+    this.turnMetadata = { ...this.turnMetadata, ...turnMetadata };
+
+    if (chunkTracker.askUserAnswers.length > 0 && !this.canceled) {
+      this.turnMetadata.autoFollowUpText = buildCursorAnswerFollowUpPrompt(chunkTracker.askUserAnswers);
     }
   }
 

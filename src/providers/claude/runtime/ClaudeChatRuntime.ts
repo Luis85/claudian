@@ -71,7 +71,7 @@ import {
   createTransformUsageState,
   transformSDKMessage,
 } from '../stream/transformClaudeMessage';
-import { type ClaudeProviderState, getClaudeState } from '../types/providerState';
+import { getClaudeState } from '../types/providerState';
 import { createClaudeApprovalCallback } from './ClaudeApprovalHandler';
 import { applyClaudeDynamicUpdates } from './ClaudeDynamicUpdates';
 import { MessageChannel } from './ClaudeMessageChannel';
@@ -86,6 +86,7 @@ import {
   buildHistoryRebuildRequest,
   buildLegacyTurnRequest,
   buildQueryOptionsFromTurnRequest,
+  computeClaudeSessionUpdates,
   createStreamingTurnHandler,
   drainStreamingTurn,
   isChatMessageArray,
@@ -102,6 +103,12 @@ import {
   buildClaudePromptWithImages,
   buildClaudeSDKUserMessage,
 } from './ClaudeUserMessageFactory';
+import {
+  createEnsureReadyDeps,
+  type EnsureReadyResolvedOptions,
+  type EnsureReadyRuntime,
+  runEnsureReady,
+} from './ensureReadyController';
 import {
   type ClaudeEnsureReadyOptions,
   type ClosePersistentQueryOptions,
@@ -348,44 +355,11 @@ export class ClaudianService implements ChatRuntime {
     conversation: Conversation | null;
     sessionInvalidated: boolean;
   }): SessionUpdateResult {
-    const sessionId = this.getSessionId();
-    const existingState = getClaudeState(conversation?.providerState);
-
-    const oldSdkSessionId = existingState.providerSessionId;
-    const sessionChanged = sessionId && oldSdkSessionId && sessionId !== oldSdkSessionId;
-    const previousProviderSessionIds = sessionChanged
-      ? [...new Set([...(existingState.previousProviderSessionIds || []), oldSdkSessionId])]
-      : existingState.previousProviderSessionIds;
-
-    const isForkSourceOnly = !!existingState.forkSource &&
-      !existingState.providerSessionId &&
-      sessionId === existingState.forkSource.sessionId;
-
-    let resolvedSessionId: string | null;
-    if (sessionInvalidated) {
-      resolvedSessionId = null;
-    } else if (isForkSourceOnly) {
-      resolvedSessionId = conversation?.sessionId ?? null;
-    } else {
-      resolvedSessionId = sessionId ?? conversation?.sessionId ?? null;
-    }
-
-    const newProviderState: ClaudeProviderState = {
-      ...existingState,
-      providerSessionId: sessionId && !isForkSourceOnly ? sessionId : existingState.providerSessionId,
-      previousProviderSessionIds,
-    };
-
-    if (existingState.forkSource && sessionId && sessionId !== existingState.forkSource.sessionId) {
-      delete newProviderState.forkSource;
-    }
-
-    return {
-      updates: {
-        sessionId: resolvedSessionId,
-        providerState: newProviderState as Record<string, unknown>,
-      },
-    };
+    return computeClaudeSessionUpdates({
+      sessionId: this.getSessionId(),
+      conversation,
+      sessionInvalidated,
+    });
   }
 
   resolveSessionIdForFork(conversation: Conversation | null): string | null {
@@ -430,63 +404,41 @@ export class ClaudianService implements ChatRuntime {
    * @returns true if the query was (re)started, false otherwise
    */
   async ensureReady(options?: ClaudeEnsureReadyOptions): Promise<boolean> {
-    const vaultPath = getVaultPath(this.plugin.app);
+    const deps = createEnsureReadyDeps(this.ensureReadyRuntime, this.resolveEnsureReadyOptions(options));
+    return runEnsureReady(deps, options?.force ?? false);
+  }
 
-    // Track external context paths for dynamic updates (empty list clears)
+  /**
+   * Resolves the per-call inputs `ensureReady` needs, including the external
+   * context-path side effect (an explicit empty list clears tracking) and the
+   * sessionManager fallback for an unspecified session id.
+   */
+  private resolveEnsureReadyOptions(
+    options: ClaudeEnsureReadyOptions | undefined,
+  ): EnsureReadyResolvedOptions {
     if (options && options.externalContextPaths !== undefined) {
       this.currentExternalContextPaths = options.externalContextPaths;
     }
+    return {
+      sessionId: options?.sessionId ?? this.sessionManager.getSessionId() ?? undefined,
+      externalContextPaths: options?.externalContextPaths ?? this.currentExternalContextPaths,
+      preserveHandlers: options?.preserveHandlers,
+    };
+  }
 
-    // Auto-resolve session ID from sessionManager if not explicitly provided
-    const effectiveSessionId = options?.sessionId ?? this.sessionManager.getSessionId() ?? undefined;
-    const externalContextPaths = options?.externalContextPaths ?? this.currentExternalContextPaths;
-
-    // Case 1: Not running → try to start
-    if (!this.persistentQuery) {
-      if (!vaultPath) return false;
-      const cliPath = this.plugin.getResolvedProviderCliPath('claude');
-      if (!cliPath) return false;
-      await this.startPersistentQuery(vaultPath, cliPath, effectiveSessionId, externalContextPaths);
-      return true;
-    }
-
-    // Case 2: Force restart (session switch, crash recovery)
-    // Close FIRST, then try to start new one (allows fallback if CLI unavailable)
-    if (options?.force) {
-      this.closePersistentQuery('forced restart', { preserveHandlers: options.preserveHandlers });
-      if (!vaultPath) return false;
-      const cliPath = this.plugin.getResolvedProviderCliPath('claude');
-      if (!cliPath) return false;
-      await this.startPersistentQuery(vaultPath, cliPath, effectiveSessionId, externalContextPaths);
-      return true;
-    }
-
-    // Case 3: Check if config changed → restart if needed
-    // We need vaultPath and cliPath to build config for comparison
-    if (!vaultPath) return false;
-    const cliPath = this.plugin.getResolvedProviderCliPath('claude');
-    if (!cliPath) return false;
-
-    const newConfig = this.buildPersistentQueryConfig(
-      vaultPath,
-      cliPath,
-      externalContextPaths,
-    );
-    if (this.needsRestart(newConfig)) {
-      // Close FIRST, then try to start new one (allows fallback if CLI unavailable)
-      this.closePersistentQuery('config changed', { preserveHandlers: options?.preserveHandlers });
-      // Re-check CLI path as it might have changed during close
-      const cliPathAfterClose = this.plugin.getResolvedProviderCliPath('claude');
-      if (cliPathAfterClose) {
-        await this.startPersistentQuery(vaultPath, cliPathAfterClose, effectiveSessionId, externalContextPaths);
-        return true;
-      }
-      // CLI unavailable after close - query is closed, will fallback to cold-start
-      return false;
-    }
-
-    // Case 4: Running and config unchanged → no-op
-    return false;
+  /** Adapts this runtime's lifecycle methods to the {@link EnsureReadyRuntime} surface. */
+  private get ensureReadyRuntime(): EnsureReadyRuntime {
+    return {
+      getVaultPath: () => getVaultPath(this.plugin.app),
+      getCliPath: () => this.plugin.getResolvedProviderCliPath('claude'),
+      isRunning: () => !!this.persistentQuery,
+      startPersistentQuery: (vaultPath, cliPath, sessionId, externalContextPaths) =>
+        this.startPersistentQuery(vaultPath, cliPath, sessionId, externalContextPaths),
+      closePersistentQuery: (reason, preserveHandlers) =>
+        this.closePersistentQuery(reason, { preserveHandlers }),
+      needsRestartForConfig: (vaultPath, cliPath, externalContextPaths) =>
+        this.needsRestart(this.buildPersistentQueryConfig(vaultPath, cliPath, externalContextPaths)),
+    };
   }
 
   /**

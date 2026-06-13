@@ -20,10 +20,13 @@ import {
   processLegacyItem,
   processLegacyItemInModernContext,
 } from './codexLegacyItemMapping';
+import {
+  type PersistedItemTextExtractors,
+  processPersistedMessagePayload,
+  processPersistedReasoningPayload,
+} from './codexPersistedItems';
 import type { CodexTurnState, PersistedParseContext } from './codexTurnState';
 import {
-  appendUniqueChunk,
-  appendUserChunk,
   closeAssistantBubble,
   createPersistedParseContext,
   ensureAssistantBubble,
@@ -227,6 +230,15 @@ function extractReasoningText(payload: PersistedReasoningPayload | PersistedEven
 
   return typeof payload.text === 'string' ? payload.text.trim() : '';
 }
+
+// Text extraction stays owned here; the persisted message/reasoning handlers in
+// codexPersistedItems.ts receive these so that module never imports the store.
+const persistedItemTextExtractors: PersistedItemTextExtractors = {
+  extractMessageText: (content) => extractMessageText(content as PersistedMessagePart[] | undefined),
+  isCodexSystemMessage,
+  extractReasoningText: (payload) =>
+    extractReasoningText(payload as PersistedReasoningPayload | PersistedEventPayload),
+};
 
 // ---------------------------------------------------------------------------
 // Persisted-format (response_item) processing — with bubble model
@@ -493,82 +505,43 @@ function processPersistedMcpToolCall(
   });
 }
 
+// Dispatch by persisted-item type instead of a switch so the fan-out stays flat
+// (low cyclomatic). Types absent from the table — e.g. `compaction` — are no-ops,
+// matching the original switch's empty/`default` arms.
+type PersistedPayloadHandler = (
+  payload: PersistedPayload,
+  timestamp: number,
+  lineIndex: number,
+  ctx: PersistedParseContext,
+) => void;
+
+const PERSISTED_PAYLOAD_HANDLERS: Record<string, PersistedPayloadHandler> = {
+  message: (payload, timestamp, _lineIndex, ctx) =>
+    processPersistedMessagePayload(payload as PersistedMessagePayload, timestamp, ctx, persistedItemTextExtractors),
+  reasoning: (payload, timestamp, _lineIndex, ctx) =>
+    processPersistedReasoningPayload(payload as PersistedReasoningPayload, timestamp, ctx, persistedItemTextExtractors),
+  function_call: (payload, timestamp, _lineIndex, ctx) =>
+    processPersistedToolCall(payload as PersistedToolCallPayload, timestamp, ctx),
+  custom_tool_call: (payload, timestamp, _lineIndex, ctx) =>
+    processPersistedToolCall(payload as PersistedToolCallPayload, timestamp, ctx),
+  function_call_output: (payload, timestamp, _lineIndex, ctx) =>
+    processPersistedToolOutput(payload as PersistedToolCallOutputPayload, timestamp, ctx),
+  custom_tool_call_output: (payload, timestamp, _lineIndex, ctx) =>
+    processPersistedToolOutput(payload as PersistedToolCallOutputPayload, timestamp, ctx),
+  web_search_call: (payload, timestamp, lineIndex, ctx) =>
+    processPersistedWebSearchCall(payload as PersistedWebSearchCallPayload, timestamp, lineIndex, ctx),
+  mcp_tool_call: (payload, timestamp, _lineIndex, ctx) =>
+    processPersistedMcpToolCall(payload as PersistedMcpToolCallPayload, timestamp, ctx),
+};
+
 function processPersistedPayload(
   payload: PersistedPayload,
   timestamp: number,
   lineIndex: number,
   ctx: PersistedParseContext,
 ): void {
-  if (!payload?.type) {
-    return;
-  }
-
-  switch (payload.type) {
-    case 'message': {
-      const messagePayload = payload as PersistedMessagePayload;
-      const text = extractMessageText(messagePayload.content);
-
-      if (messagePayload.role === 'user') {
-        if (isCodexSystemMessage(text)) break;
-
-        // Close any active bubble in the current turn before starting user content
-        if (ctx.currentTurnId) {
-          const prevTurn = ctx.turns.get(ctx.currentTurnId);
-          if (prevTurn) closeAssistantBubble(prevTurn);
-        }
-
-        // User message opens a new turn
-        ctx.currentTurnId = null;
-        const turn = ensureTurn(ctx.turns, ctx.turnOrder, nextTurnId(ctx), null, timestamp);
-        ctx.currentTurnId = turn.id;
-        if (text) {
-          appendUserChunk(turn, text, timestamp);
-        }
-      } else if (messagePayload.role === 'assistant') {
-        const turn = ensureTurn(ctx.turns, ctx.turnOrder, nextTurnId(ctx), ctx.currentTurnId, timestamp);
-        const bubble = ensureAssistantBubble(turn, timestamp);
-        if (text) {
-          appendUniqueChunk(bubble.contentChunks, text);
-        }
-      }
-      break;
-    }
-
-    case 'reasoning': {
-      const reasoningPayload = payload as PersistedReasoningPayload;
-      const text = extractReasoningText(reasoningPayload);
-      if (!text) break;
-
-      const turn = ensureTurn(ctx.turns, ctx.turnOrder, nextTurnId(ctx), ctx.currentTurnId, timestamp);
-      const bubble = ensureAssistantBubble(turn, timestamp);
-      appendUniqueChunk(bubble.thinkingChunks, text);
-      break;
-    }
-
-    case 'function_call':
-    case 'custom_tool_call':
-      processPersistedToolCall(payload as PersistedToolCallPayload, timestamp, ctx);
-      break;
-
-    case 'function_call_output':
-    case 'custom_tool_call_output':
-      processPersistedToolOutput(payload as PersistedToolCallOutputPayload, timestamp, ctx);
-      break;
-
-    case 'web_search_call':
-      processPersistedWebSearchCall(payload as PersistedWebSearchCallPayload, timestamp, lineIndex, ctx);
-      break;
-
-    case 'mcp_tool_call':
-      processPersistedMcpToolCall(payload as PersistedMcpToolCallPayload, timestamp, ctx);
-      break;
-
-    case 'compaction':
-      break;
-
-    default:
-      break;
-  }
+  const handler = payload?.type ? PERSISTED_PAYLOAD_HANDLERS[payload.type] : undefined;
+  handler?.(payload, timestamp, lineIndex, ctx);
 }
 
 function applyCompactedReplacementHistory(
