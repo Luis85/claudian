@@ -115,50 +115,66 @@ function extractRecordSecrets(
  * changed.
  */
 export function extractMcpServerSecrets(servers: ManagedMcpServer[], store: McpSecretStore): boolean {
-  // Seed used ids from the store and from refs already recorded, so a derived id
-  // never clobbers an unrelated secret (the id space is global within the vault).
+  const usedIds = seedUsedSecretIds(servers, store);
+
+  let changed = false;
+  for (const server of servers) {
+    if (extractServerSecrets(server, store, usedIds)) changed = true;
+  }
+  return changed;
+}
+
+/**
+ * Seed used ids from the store and from refs already recorded, so a derived id
+ * never clobbers an unrelated secret (the id space is global within the vault).
+ */
+function seedUsedSecretIds(servers: ManagedMcpServer[], store: McpSecretStore): Set<string> {
   const usedIds = new Set<string>(store.list());
   for (const server of servers) {
     for (const id of Object.values(server.secretHeaders ?? {})) usedIds.add(id);
     for (const id of Object.values(server.secretEnv ?? {})) usedIds.add(id);
   }
+  return usedIds;
+}
 
-  let changed = false;
-  for (const server of servers) {
-    if (getMcpServerType(server.config) === 'stdio') {
-      const stdio = server.config as McpStdioServerConfig;
-      const result = extractRecordSecrets(
-        stdio.env,
-        isSecretEnvKey,
-        (key) => migratedMcpEnvSecretId(server.name, key),
-        store,
-        usedIds,
-        server.secretEnv,
-      );
-      if (result.changed) {
-        server.secretEnv = result.refs;
-        if (stdio.env && Object.keys(stdio.env).length === 0) delete stdio.env;
-        changed = true;
-      }
-    } else {
-      const url = server.config as McpSSEServerConfig | McpHttpServerConfig;
-      const result = extractRecordSecrets(
-        url.headers,
-        isSecretHeaderName,
-        (key) => migratedMcpHeaderSecretId(server.name, key),
-        store,
-        usedIds,
-        server.secretHeaders,
-      );
-      if (result.changed) {
-        server.secretHeaders = result.refs;
-        if (url.headers && Object.keys(url.headers).length === 0) delete url.headers;
-        changed = true;
-      }
-    }
+/**
+ * Extract one server's plaintext secrets (stdio env or url headers) into the
+ * store, mutating the server's refs/config in place. Returns whether it changed.
+ */
+function extractServerSecrets(
+  server: ManagedMcpServer,
+  store: McpSecretStore,
+  usedIds: Set<string>,
+): boolean {
+  if (getMcpServerType(server.config) === 'stdio') {
+    const stdio = server.config as McpStdioServerConfig;
+    const result = extractRecordSecrets(
+      stdio.env,
+      isSecretEnvKey,
+      (key) => migratedMcpEnvSecretId(server.name, key),
+      store,
+      usedIds,
+      server.secretEnv,
+    );
+    if (!result.changed) return false;
+    server.secretEnv = result.refs;
+    if (stdio.env && Object.keys(stdio.env).length === 0) delete stdio.env;
+    return true;
   }
 
-  return changed;
+  const url = server.config as McpSSEServerConfig | McpHttpServerConfig;
+  const result = extractRecordSecrets(
+    url.headers,
+    isSecretHeaderName,
+    (key) => migratedMcpHeaderSecretId(server.name, key),
+    store,
+    usedIds,
+    server.secretHeaders,
+  );
+  if (!result.changed) return false;
+  server.secretHeaders = result.refs;
+  if (url.headers && Object.keys(url.headers).length === 0) delete url.headers;
+  return true;
 }
 
 /**

@@ -48,6 +48,29 @@ export function isSessionExpiredError(error: unknown): boolean {
 // ============================================
 
 /**
+ * Renders a single non-null tool-input value to its display string. Flattening the
+ * `typeof` dispatch out of the entry loop keeps both this and the loop shallow.
+ */
+function formatToolInputValue(value: unknown): string {
+  if (typeof value === 'string') {
+    return value.length > 100 ? `${value.slice(0, 100)}...` : value;
+  }
+  if (typeof value === 'object') {
+    return '[object]';
+  }
+  if (typeof value === 'function') {
+    return '[function]';
+  }
+  if (typeof value === 'symbol') {
+    return value.description ? `[symbol:${value.description}]` : '[symbol]';
+  }
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return `${value}`;
+  }
+  return '[unknown]';
+}
+
+/**
  * Formats tool input for inclusion in rebuilt context.
  * Includes all non-null parameters, truncates long string values.
  */
@@ -58,22 +81,7 @@ function formatToolInput(input: Record<string, unknown>, maxLength = 200): strin
     const parts: string[] = [];
     for (const [key, value] of Object.entries(input)) {
       if (value === undefined || value === null) continue;
-
-      let valueStr: string;
-      if (typeof value === 'string') {
-        valueStr = value.length > 100 ? `${value.slice(0, 100)}...` : value;
-      } else if (typeof value === 'object') {
-        valueStr = '[object]';
-      } else if (typeof value === 'function') {
-        valueStr = '[function]';
-      } else if (typeof value === 'symbol') {
-        valueStr = value.description ? `[symbol:${value.description}]` : '[symbol]';
-      } else if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-        valueStr = `${value}`;
-      } else {
-        valueStr = '[unknown]';
-      }
-      parts.push(`${key}=${valueStr}`);
+      parts.push(`${key}=${formatToolInputValue(value)}`);
     }
 
     const result = parts.join(', ');
@@ -147,56 +155,78 @@ function formatThinkingBlocks(message: ChatMessage): string[] {
   return [`[Thinking: ${thinkingBlocks.length} block(s)${durationPart}]`];
 }
 
+/**
+ * Decides whether a message contributes nothing to the rebuilt context and
+ * should be dropped. Non-user/assistant roles, interrupts, and empty assistant
+ * turns (no content, tool calls, or thinking) carry no signal.
+ */
+function shouldSkipHistoryMessage(message: ChatMessage): boolean {
+  if (message.role !== 'user' && message.role !== 'assistant') {
+    return true;
+  }
+
+  if (message.isInterrupt) {
+    return true;
+  }
+
+  if (message.role === 'assistant') {
+    const hasContent = message.content && message.content.trim().length > 0;
+    const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
+    const hasThinking = message.contentBlocks?.some(b => b.type === 'thinking');
+    if (!hasContent && !hasToolCalls && !hasThinking) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Builds the leading `Role: ...` line, prepending the current-note context
+ * (when present) above the message content.
+ */
+function formatHistoryRoleLine(message: ChatMessage): string {
+  const role = message.role === 'user' ? 'User' : 'Assistant';
+  const content = message.content?.trim();
+  const contextLine = formatContextLine(message);
+
+  const userPayload = contextLine
+    ? content
+      ? `${contextLine}\n\n${content}`
+      : contextLine
+    : content;
+
+  return userPayload ? `${role}: ${userPayload}` : `${role}:`;
+}
+
+/**
+ * Collects the assistant-only follow-up lines (thinking summary + tool calls)
+ * that trail the role line. Returns an empty array for user messages.
+ */
+function formatAssistantExtraLines(message: ChatMessage): string[] {
+  if (message.role !== 'assistant') return [];
+
+  const lines: string[] = [...formatThinkingBlocks(message)];
+
+  if (message.toolCalls?.length) {
+    const toolLines = message.toolCalls
+      .map(tc => formatToolCallForContext(tc))
+      .filter(Boolean);
+    lines.push(...toolLines);
+  }
+
+  return lines;
+}
+
 export function buildContextFromHistory(messages: ChatMessage[]): string {
   const parts: string[] = [];
 
   for (const message of messages) {
-    if (message.role !== 'user' && message.role !== 'assistant') {
+    if (shouldSkipHistoryMessage(message)) {
       continue;
     }
 
-    if (message.isInterrupt) {
-      continue;
-    }
-
-    if (message.role === 'assistant') {
-      const hasContent = message.content && message.content.trim().length > 0;
-      const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
-      const hasThinking = message.contentBlocks?.some(b => b.type === 'thinking');
-      if (!hasContent && !hasToolCalls && !hasThinking) {
-        continue;
-      }
-    }
-
-    const role = message.role === 'user' ? 'User' : 'Assistant';
-    const lines: string[] = [];
-    const content = message.content?.trim();
-    const contextLine = formatContextLine(message);
-
-    const userPayload = contextLine
-      ? content
-        ? `${contextLine}\n\n${content}`
-        : contextLine
-      : content;
-
-    lines.push(userPayload ? `${role}: ${userPayload}` : `${role}:`);
-
-    if (message.role === 'assistant') {
-      const thinkingLines = formatThinkingBlocks(message);
-      if (thinkingLines.length > 0) {
-        lines.push(...thinkingLines);
-      }
-    }
-
-    if (message.role === 'assistant' && message.toolCalls?.length) {
-      const toolLines = message.toolCalls
-        .map(tc => formatToolCallForContext(tc))
-        .filter(Boolean);
-      if (toolLines.length > 0) {
-        lines.push(...toolLines);
-      }
-    }
-
+    const lines = [formatHistoryRoleLine(message), ...formatAssistantExtraLines(message)];
     parts.push(lines.join('\n'));
   }
 

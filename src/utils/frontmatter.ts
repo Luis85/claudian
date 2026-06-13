@@ -34,68 +34,99 @@ function parseScalarValue(rawValue: string): unknown {
   return unquote(value);
 }
 
-/** Handles malformed YAML (e.g. unquoted values with colons) by line-by-line key:value extraction. */
-function parseFrontmatterFallback(yamlContent: string): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  const lines = yamlContent.split(/\r?\n/);
-  let currentListKey: string | null = null;
-  let currentList: unknown[] = [];
+/**
+ * Line-by-line YAML fallback for malformed frontmatter (e.g. unquoted values with
+ * colons). Tracks the open list and pending bare key as mutable state so the parent
+ * loop reads as a sequence of guarded phases that mirror the original fall-through.
+ */
+class FrontmatterFallbackParser {
+  readonly result: Record<string, unknown> = {};
+  private currentListKey: string | null = null;
+  private currentList: unknown[] = [];
+  private pendingBareKey: string | null = null;
 
-  function flushList(): void {
-    if (!currentListKey) return;
-    result[currentListKey] = currentList;
-    currentListKey = null;
-    currentList = [];
+  private flushList(): void {
+    if (!this.currentListKey) return;
+    this.result[this.currentListKey] = this.currentList;
+    this.currentListKey = null;
+    this.currentList = [];
   }
 
-  let pendingBareKey: string | null = null;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-
-    if (currentListKey) {
-      if (trimmed.startsWith('- ')) {
-        currentList.push(parseScalarValue(trimmed.slice(2)));
-        continue;
-      }
-      flushList();
+  /**
+   * Phase 1 — an open list either absorbs another `- ` item (line consumed) or ends,
+   * letting the line fall through to later phases. Returns true when the line is consumed.
+   */
+  private consumeListItem(trimmed: string): boolean {
+    if (!this.currentListKey) return false;
+    if (trimmed.startsWith('- ')) {
+      this.currentList.push(parseScalarValue(trimmed.slice(2)));
+      return true;
     }
+    this.flushList();
+    return false;
+  }
 
-    if (pendingBareKey) {
-      if (trimmed.startsWith('- ')) {
-        currentListKey = pendingBareKey;
-        currentList = [];
-        pendingBareKey = null;
-        currentList.push(parseScalarValue(trimmed.slice(2)));
-        continue;
-      }
-      result[pendingBareKey] = '';
-      pendingBareKey = null;
+  /**
+   * Phase 2 — a pending bare key opens a list when followed by a `- ` item (line
+   * consumed); otherwise it resolves to an empty string and the line falls through.
+   * Returns true when the line is consumed.
+   */
+  private resolvePendingBareKey(trimmed: string): boolean {
+    if (!this.pendingBareKey) return false;
+    if (trimmed.startsWith('- ')) {
+      this.currentListKey = this.pendingBareKey;
+      this.currentList = [parseScalarValue(trimmed.slice(2))];
+      this.pendingBareKey = null;
+      return true;
     }
+    this.result[this.pendingBareKey] = '';
+    this.pendingBareKey = null;
+    return false;
+  }
 
+  /** Phase 3 — a `key: value` line, or a bare `key:` that arms a pending list/empty value. */
+  private parseKeyValueLine(trimmed: string): void {
     const colonIndex = trimmed.indexOf(': ');
     if (colonIndex === -1) {
       if (trimmed.endsWith(':')) {
         const key = trimmed.slice(0, -1).trim();
         if (isValidKey(key)) {
-          pendingBareKey = key;
+          this.pendingBareKey = key;
         }
       }
-      continue;
+      return;
     }
 
     const key = trimmed.slice(0, colonIndex).trim();
-    if (!isValidKey(key)) continue;
-    result[key] = parseScalarValue(trimmed.slice(colonIndex + 2));
+    if (!isValidKey(key)) return;
+    this.result[key] = parseScalarValue(trimmed.slice(colonIndex + 2));
   }
 
-  if (pendingBareKey) {
-    result[pendingBareKey] = '';
+  private processLine(line: string): void {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) return;
+
+    if (this.consumeListItem(trimmed)) return;
+    if (this.resolvePendingBareKey(trimmed)) return;
+    this.parseKeyValueLine(trimmed);
   }
 
-  flushList();
-  return result;
+  parse(yamlContent: string): Record<string, unknown> {
+    for (const line of yamlContent.split(/\r?\n/)) {
+      this.processLine(line);
+    }
+
+    if (this.pendingBareKey) {
+      this.result[this.pendingBareKey] = '';
+    }
+    this.flushList();
+    return this.result;
+  }
+}
+
+/** Handles malformed YAML (e.g. unquoted values with colons) by line-by-line key:value extraction. */
+function parseFrontmatterFallback(yamlContent: string): Record<string, unknown> {
+  return new FrontmatterFallbackParser().parse(yamlContent);
 }
 
 export function parseFrontmatter(

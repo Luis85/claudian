@@ -27,6 +27,7 @@ import {
   TOOL_WRITE,
 } from '../../../core/tools/toolNames';
 import { cleanToolPathCandidate } from '../../../utils/fileLink';
+import { formatCursorGrepSuccess } from './cursorGrepFormatting';
 import {
   buildCursorTaskToolUseResult,
   extractCursorTaskResultText,
@@ -451,7 +452,7 @@ const CURSOR_SUCCESS_FORMATTERS: Partial<Record<string, CursorSuccessFormatter>>
   shellToolCall: formatShellSuccess,
   writeShellStdinToolCall: (success) => stringValue(success.message) || 'Sent',
   globToolCall: formatGlobSuccess,
-  grepToolCall: formatGrepSuccess,
+  grepToolCall: (success) => formatCursorGrepSuccess(success, { stringValue, numericValue }),
   lsToolCall: (success) => stringArray(success.files ?? success.entries).join('\n'),
   webFetchToolCall: formatFetchSuccess,
   fetchToolCall: formatFetchSuccess,
@@ -502,43 +503,6 @@ function buildToolUseResult(
       ? { after: success.afterFullFileContent }
       : {}),
   };
-}
-
-function formatGrepSuccess(success: Record<string, unknown>): string {
-  const workspaceResults = success.workspaceResults;
-  if (!workspaceResults || typeof workspaceResults !== 'object') {
-    return '';
-  }
-
-  const lines: string[] = [];
-  for (const [workspace, payload] of Object.entries(workspaceResults as Record<string, unknown>)) {
-    if (!payload || typeof payload !== 'object') continue;
-    const content = (payload as { content?: unknown }).content;
-    if (!content || typeof content !== 'object') continue;
-
-    const totalLines = numericValue((content as { totalLines?: unknown }).totalLines) ?? 0;
-    const totalMatched = numericValue((content as { totalMatchedLines?: unknown }).totalMatchedLines) ?? 0;
-    const matches = (content as { matches?: unknown }).matches;
-
-    lines.push(
-      Object.keys(workspaceResults).length > 1
-        ? `[${workspace}] ${totalMatched} matches across ${totalLines} lines`
-        : `${totalMatched} matches across ${totalLines} lines`,
-    );
-
-    if (Array.isArray(matches) && matches.length > 0) {
-      for (const match of matches) {
-        if (!match || typeof match !== 'object') continue;
-        const file = stringValue((match as { file?: unknown }).file);
-        const line = numericValue((match as { line?: unknown }).line);
-        const text = stringValue((match as { text?: unknown }).text);
-        const prefix = [file, line].filter(Boolean).join(':');
-        lines.push(prefix ? `${prefix}: ${text}` : text);
-      }
-    }
-  }
-
-  return lines.join('\n').trim();
 }
 
 function pickErrorPayload(result: Record<string, unknown>): unknown {

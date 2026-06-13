@@ -176,45 +176,28 @@ function getNpmClaudeCodeEntrypointPaths(): string[] {
   return entrypointPaths;
 }
 
-export function findClaudeCLIPath(pathValue?: string): string | null {
-  const homeDir = os.homedir();
-  const isWindows = process.platform === 'win32';
-
-  const customEntries = dedupePaths(parsePathEntries(pathValue));
-
-  if (customEntries.length > 0) {
-    const customResolution = resolveClaudeFromPathEntries(customEntries, isWindows);
-    if (customResolution) {
-      return customResolution;
-    }
+function resolveFromPathValue(pathValue: string | undefined, isWindows: boolean): string | null {
+  const entries = dedupePaths(parsePathEntries(pathValue));
+  if (entries.length === 0) {
+    return null;
   }
+  return resolveClaudeFromPathEntries(entries, isWindows);
+}
 
-  // On Windows, prefer native .exe, then Node-backed package entrypoints. Avoid .cmd fallback
-  // because it requires shell: true and breaks SDK stdio streaming.
-  if (isWindows) {
-    const exePaths: string[] = [
-      path.join(homeDir, '.claude', 'local', 'claude.exe'),
-      path.join(homeDir, 'AppData', 'Local', 'Claude', 'claude.exe'),
-      path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Claude', 'claude.exe'),
-      path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Claude', 'claude.exe'),
-      path.join(homeDir, '.local', 'bin', 'claude.exe'),
-    ];
+// On Windows, prefer native .exe over Node-backed package entrypoints. Avoid .cmd fallback
+// because it requires shell: true and breaks SDK stdio streaming.
+function probeWindowsExePaths(homeDir: string): string | null {
+  const exePaths: string[] = [
+    path.join(homeDir, '.claude', 'local', 'claude.exe'),
+    path.join(homeDir, 'AppData', 'Local', 'Claude', 'claude.exe'),
+    path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Claude', 'claude.exe'),
+    path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Claude', 'claude.exe'),
+    path.join(homeDir, '.local', 'bin', 'claude.exe'),
+  ];
+  return findFirstExistingFile(exePaths);
+}
 
-    for (const p of exePaths) {
-      if (isExistingFile(p)) {
-        return p;
-      }
-    }
-
-    const packageEntrypointPaths = getNpmClaudeCodeEntrypointPaths();
-    for (const p of packageEntrypointPaths) {
-      if (isExistingFile(p)) {
-        return p;
-      }
-    }
-
-  }
-
+function buildCommonPaths(homeDir: string): string[] {
   const commonPaths: string[] = [
     path.join(homeDir, '.claude', 'local', 'claude'),
     path.join(homeDir, '.local', 'bin', 'claude'),
@@ -238,28 +221,46 @@ export function findClaudeCLIPath(pathValue?: string): string | null {
     commonPaths.push(path.join(nvmBin, 'claude'));
   }
 
-  for (const p of commonPaths) {
+  return commonPaths;
+}
+
+function findFirstExistingFile(paths: string[]): string | null {
+  for (const p of paths) {
     if (isExistingFile(p)) {
       return p;
     }
   }
+  return null;
+}
+
+export function findClaudeCLIPath(pathValue?: string): string | null {
+  const homeDir = os.homedir();
+  const isWindows = process.platform === 'win32';
+
+  const customResolution = resolveFromPathValue(pathValue, isWindows);
+  if (customResolution) {
+    return customResolution;
+  }
+
+  if (isWindows) {
+    const windowsResolution = probeWindowsExePaths(homeDir)
+      ?? findFirstExistingFile(getNpmClaudeCodeEntrypointPaths());
+    if (windowsResolution) {
+      return windowsResolution;
+    }
+  }
+
+  const commonResolution = findFirstExistingFile(buildCommonPaths(homeDir));
+  if (commonResolution) {
+    return commonResolution;
+  }
 
   if (!isWindows) {
-    const packageEntrypointPaths = getNpmClaudeCodeEntrypointPaths();
-    for (const p of packageEntrypointPaths) {
-      if (isExistingFile(p)) {
-        return p;
-      }
+    const npmResolution = findFirstExistingFile(getNpmClaudeCodeEntrypointPaths());
+    if (npmResolution) {
+      return npmResolution;
     }
   }
 
-  const envEntries = dedupePaths(parsePathEntries(getEnvValue('PATH')));
-  if (envEntries.length > 0) {
-    const envResolution = resolveClaudeFromPathEntries(envEntries, isWindows);
-    if (envResolution) {
-      return envResolution;
-    }
-  }
-
-  return null;
+  return resolveFromPathValue(getEnvValue('PATH'), isWindows);
 }

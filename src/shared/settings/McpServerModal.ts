@@ -240,94 +240,105 @@ export class McpServerModal extends Modal {
   }
 
   private save() {
+    const name = this.validateServerName();
+    if (name === null) return;
+
+    // SEC-A Phase 3: reconcile edited textarea entries against existing secret refs
+    // for the CURRENT type only. Switching type drops the other type's refs; an
+    // unchanged placeholder keeps a ref; deleting/emptying a key removes it.
+    const built = this.serverType === 'stdio'
+      ? this.buildStdioConfig()
+      : this.buildUrlConfig();
+    if (!built) return;
+
+    const server: ManagedMcpServer = {
+      name,
+      config: built.config,
+      enabled: this.enabled,
+      contextSaving: this.contextSaving,
+      disabledTools: this.existingServer?.disabledTools,
+      secretHeaders: built.secretHeaders,
+      secretEnv: built.secretEnv,
+    };
+
+    this.onSave(server);
+    this.close();
+  }
+
+  /** Trimmed server name, or null after notifying+refocusing when missing/invalid. */
+  private validateServerName(): string | null {
     const name = this.serverName.trim();
     if (!name) {
       new Notice(t('settings.mcp.modal.serverNameRequired'));
       this.nameInputEl?.focus();
-      return;
+      return null;
     }
 
     if (!/^[a-zA-Z0-9._-]+$/.test(name)) {
       new Notice(t('settings.mcp.modal.serverNameInvalid'));
       this.nameInputEl?.focus();
-      return;
+      return null;
     }
 
-    let config: McpServerConfig;
-    // SEC-A Phase 3: reconcile edited textarea entries against existing secret refs
-    // for the CURRENT type only. Switching type drops the other type's refs; an
-    // unchanged placeholder keeps a ref; deleting/emptying a key removes it.
-    let secretHeaders: Record<string, string> | undefined;
-    let secretEnv: Record<string, string> | undefined;
+    return name;
+  }
 
-    if (this.serverType === 'stdio') {
-      const fullCommand = this.command.trim();
-      if (!fullCommand) {
-        new Notice(t('settings.mcp.modal.commandRequired'));
-        return;
-      }
-
-      const { cmd, args } = parseCommand(fullCommand);
-      const stdioConfig: McpStdioServerConfig = { command: cmd };
-
-      if (args.length > 0) {
-        stdioConfig.args = args;
-      }
-
-      const { plaintext, refs } = reconcileEditedMcpSecrets(
-        this.parseEnvString(this.env),
-        this.existingServer?.secretEnv,
-      );
-      if (Object.keys(plaintext).length > 0) {
-        stdioConfig.env = plaintext;
-      }
-      if (Object.keys(refs).length > 0) {
-        secretEnv = refs;
-      }
-
-      config = stdioConfig;
-    } else {
-      const url = this.url.trim();
-      if (!url) {
-        new Notice(t('settings.mcp.modal.urlRequired'));
-        return;
-      }
-
-      const { plaintext, refs } = reconcileEditedMcpSecrets(
-        this.parseEnvString(this.headers),
-        this.existingServer?.secretHeaders,
-      );
-      if (Object.keys(refs).length > 0) {
-        secretHeaders = refs;
-      }
-
-      if (this.serverType === 'sse') {
-        const sseConfig: McpSSEServerConfig = { type: 'sse', url };
-        if (Object.keys(plaintext).length > 0) {
-          sseConfig.headers = plaintext;
-        }
-        config = sseConfig;
-      } else {
-        const httpConfig: McpHttpServerConfig = { type: 'http', url };
-        if (Object.keys(plaintext).length > 0) {
-          httpConfig.headers = plaintext;
-        }
-        config = httpConfig;
-      }
+  private buildStdioConfig(): {
+    config: McpServerConfig;
+    secretEnv?: Record<string, string>;
+    secretHeaders?: undefined;
+  } | null {
+    const fullCommand = this.command.trim();
+    if (!fullCommand) {
+      new Notice(t('settings.mcp.modal.commandRequired'));
+      return null;
     }
 
-    const server: ManagedMcpServer = {
-      name,
-      config,
-      enabled: this.enabled,
-      contextSaving: this.contextSaving,
-      disabledTools: this.existingServer?.disabledTools,
-      secretHeaders,
-      secretEnv,
+    const { cmd, args } = parseCommand(fullCommand);
+    const stdioConfig: McpStdioServerConfig = { command: cmd };
+
+    if (args.length > 0) {
+      stdioConfig.args = args;
+    }
+
+    const { plaintext, refs } = reconcileEditedMcpSecrets(
+      this.parseEnvString(this.env),
+      this.existingServer?.secretEnv,
+    );
+    if (Object.keys(plaintext).length > 0) {
+      stdioConfig.env = plaintext;
+    }
+
+    return {
+      config: stdioConfig,
+      secretEnv: Object.keys(refs).length > 0 ? refs : undefined,
     };
+  }
 
-    this.onSave(server);
-    this.close();
+  private buildUrlConfig(): {
+    config: McpServerConfig;
+    secretEnv?: undefined;
+    secretHeaders?: Record<string, string>;
+  } | null {
+    const url = this.url.trim();
+    if (!url) {
+      new Notice(t('settings.mcp.modal.urlRequired'));
+      return null;
+    }
+
+    const { plaintext, refs } = reconcileEditedMcpSecrets(
+      this.parseEnvString(this.headers),
+      this.existingServer?.secretHeaders,
+    );
+    const headers = Object.keys(plaintext).length > 0 ? plaintext : undefined;
+    const config: McpSSEServerConfig | McpHttpServerConfig = this.serverType === 'sse'
+      ? { type: 'sse', url, ...(headers ? { headers } : {}) }
+      : { type: 'http', url, ...(headers ? { headers } : {}) };
+
+    return {
+      config,
+      secretHeaders: Object.keys(refs).length > 0 ? refs : undefined,
+    };
   }
 
   private parseEnvString(envStr: string): Record<string, string> {

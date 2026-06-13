@@ -307,69 +307,104 @@ function isMainAgentAssistant(msg: Record<string, unknown>): boolean {
   return parent === null || parent === undefined;
 }
 
-export function extractLastUsageFromSdkMessages(
-  messages: readonly Record<string, unknown>[],
-): UsageInfo | null {
-  // Walk back to front. Capture the latest result-message modelUsage (carries
-  // authoritative contextWindow) and the latest main-agent assistant usage.
-  let lastAssistantUsage: ClaudeMessageUsage | null = null;
-  let lastAssistantModel: string | undefined;
-  let lastResultModelUsage: Record<string, { contextWindow?: number }> | null = null;
+interface ScannedSdkUsage {
+  assistantUsage: ClaudeMessageUsage | null;
+  assistantModel: string | undefined;
+  resultModelUsage: Record<string, { contextWindow?: number }> | null;
+}
+
+/**
+ * Walk the raw SDK rows back to front, capturing the latest result-message
+ * modelUsage (authoritative contextWindow) and the latest main-agent assistant
+ * usage. Subagent assistant rows are skipped so windows are not conflated.
+ */
+function scanSdkUsageRows(messages: readonly Record<string, unknown>[]): ScannedSdkUsage {
+  const scanned: ScannedSdkUsage = {
+    assistantUsage: null,
+    assistantModel: undefined,
+    resultModelUsage: null,
+  };
 
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
     if (!isRecord(msg)) continue;
 
-    if (msg.type === 'result' && !lastResultModelUsage) {
+    if (msg.type === 'result' && !scanned.resultModelUsage) {
       const modelUsage = readModelUsageMap(msg);
       if (modelUsage) {
-        lastResultModelUsage = modelUsage;
+        scanned.resultModelUsage = modelUsage;
       }
       continue;
     }
 
-    if (msg.type === 'assistant' && !lastAssistantUsage && isMainAgentAssistant(msg)) {
+    if (msg.type === 'assistant' && !scanned.assistantUsage && isMainAgentAssistant(msg)) {
       const usage = readNestedUsage(msg);
       if (usage) {
-        lastAssistantUsage = usage;
-        lastAssistantModel = readNestedModel(msg);
+        scanned.assistantUsage = usage;
+        scanned.assistantModel = readNestedModel(msg);
       }
     }
 
-    if (lastAssistantUsage && lastResultModelUsage) break;
+    if (scanned.assistantUsage && scanned.resultModelUsage) break;
   }
 
-  if (!lastAssistantUsage) return null;
-  const model = lastAssistantModel;
+  return scanned;
+}
+
+interface ResolvedContextWindow {
+  contextWindow: number;
+  contextWindowIsAuthoritative: boolean;
+}
+
+/**
+ * Resolve the context window: prefer the result-message authoritative entry for
+ * the same model, then the single-entry case (trust it even if the model id
+ * doesn't literal-match), else fall back to the model's heuristic window.
+ */
+function resolveContextWindow(
+  model: string,
+  resultModelUsage: Record<string, { contextWindow?: number }> | null,
+): ResolvedContextWindow {
+  const fallback: ResolvedContextWindow = {
+    contextWindow: getContextWindowSize(model),
+    contextWindowIsAuthoritative: false,
+  };
+  if (!resultModelUsage) return fallback;
+
+  const entryWindow = resultModelUsage[model]?.contextWindow;
+  if (typeof entryWindow === 'number' && entryWindow > 0) {
+    return { contextWindow: entryWindow, contextWindowIsAuthoritative: true };
+  }
+
+  const entries = Object.values(resultModelUsage)
+    .filter((u): u is { contextWindow: number } =>
+      typeof u?.contextWindow === 'number' && u.contextWindow > 0);
+  if (entries.length === 1) {
+    return { contextWindow: entries[0].contextWindow, contextWindowIsAuthoritative: true };
+  }
+
+  return fallback;
+}
+
+export function extractLastUsageFromSdkMessages(
+  messages: readonly Record<string, unknown>[],
+): UsageInfo | null {
+  const { assistantUsage, assistantModel, resultModelUsage } = scanSdkUsageRows(messages);
+
+  if (!assistantUsage) return null;
+  const model = assistantModel;
   if (!model) return null;
 
-  const inputTokens = normalizeNonNegInteger(lastAssistantUsage.input_tokens);
-  const outputTokens = normalizeNonNegInteger(lastAssistantUsage.output_tokens);
-  const cacheCreationInputTokens = normalizeNonNegInteger(lastAssistantUsage.cache_creation_input_tokens);
-  const cacheReadInputTokens = normalizeNonNegInteger(lastAssistantUsage.cache_read_input_tokens);
+  const inputTokens = normalizeNonNegInteger(assistantUsage.input_tokens);
+  const outputTokens = normalizeNonNegInteger(assistantUsage.output_tokens);
+  const cacheCreationInputTokens = normalizeNonNegInteger(assistantUsage.cache_creation_input_tokens);
+  const cacheReadInputTokens = normalizeNonNegInteger(assistantUsage.cache_read_input_tokens);
   const contextTokens = inputTokens + cacheCreationInputTokens + cacheReadInputTokens;
 
-  // Resolve context window: prefer result-message authoritative entry for the
-  // same model; fall back to the model's heuristic window.
-  let contextWindow = getContextWindowSize(model);
-  let contextWindowIsAuthoritative = false;
-  if (lastResultModelUsage) {
-    const entry = lastResultModelUsage[model];
-    const entryWindow = entry?.contextWindow;
-    if (typeof entryWindow === 'number' && entryWindow > 0) {
-      contextWindow = entryWindow;
-      contextWindowIsAuthoritative = true;
-    } else {
-      // Single-entry case: trust it even if the model id doesn't literal-match.
-      const entries = Object.values(lastResultModelUsage)
-        .filter((u): u is { contextWindow: number } =>
-          typeof u?.contextWindow === 'number' && u.contextWindow > 0);
-      if (entries.length === 1) {
-        contextWindow = entries[0].contextWindow;
-        contextWindowIsAuthoritative = true;
-      }
-    }
-  }
+  const { contextWindow, contextWindowIsAuthoritative } = resolveContextWindow(
+    model,
+    resultModelUsage,
+  );
 
   return buildUsageInfo({
     model,

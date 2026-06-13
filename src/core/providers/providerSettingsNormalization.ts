@@ -13,46 +13,55 @@ export function normalizeCustomModels(
   options: { acceptLegacyNewlineString?: boolean } = {},
 ): ProviderCustomModel[] {
   if (Array.isArray(value)) {
-    const result: ProviderCustomModel[] = [];
-    const seen = new Set<string>();
-    for (const entry of value) {
-      if (!entry || typeof entry !== 'object') continue;
-      const row = entry as Record<string, unknown>;
-      const id = typeof row.id === 'string' ? row.id.trim() : '';
-      if (!id) continue;
-      const key = id.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const normalized: ProviderCustomModel = {
-        id,
-        source: row.source === 'env' ? 'env' : 'user',
-      };
-      if (typeof row.label === 'string' && row.label.trim()) {
-        normalized.label = row.label.trim();
-      }
-      if (typeof row.contextWindow === 'number' && Number.isFinite(row.contextWindow) && row.contextWindow > 0) {
-        normalized.contextWindow = row.contextWindow;
-      }
-      result.push(normalized);
-    }
-    return result;
+    return dedupeModelsById(value.map(normalizeCustomModelRow));
   }
 
   if (options.acceptLegacyNewlineString && typeof value === 'string') {
-    const result: ProviderCustomModel[] = [];
-    const seen = new Set<string>();
-    for (const line of value.split(/\r?\n/)) {
-      const id = line.trim();
-      if (!id) continue;
-      const key = id.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      result.push({ id, source: 'user' });
-    }
-    return result;
+    const rows = value.split(/\r?\n/).map(normalizeLegacyModelLine);
+    return dedupeModelsById(rows);
   }
 
   return [];
+}
+
+/** Coerce one persisted row into a model, or `null` for a junk/idless entry. */
+function normalizeCustomModelRow(entry: unknown): ProviderCustomModel | null {
+  if (!entry || typeof entry !== 'object') return null;
+  const row = entry as Record<string, unknown>;
+  const id = typeof row.id === 'string' ? row.id.trim() : '';
+  if (!id) return null;
+
+  const normalized: ProviderCustomModel = {
+    id,
+    source: row.source === 'env' ? 'env' : 'user',
+  };
+  if (typeof row.label === 'string' && row.label.trim()) {
+    normalized.label = row.label.trim();
+  }
+  if (typeof row.contextWindow === 'number' && Number.isFinite(row.contextWindow) && row.contextWindow > 0) {
+    normalized.contextWindow = row.contextWindow;
+  }
+  return normalized;
+}
+
+/** Coerce one legacy newline-delimited line into a model, or `null` when blank. */
+function normalizeLegacyModelLine(line: string): ProviderCustomModel | null {
+  const id = line.trim();
+  return id ? { id, source: 'user' } : null;
+}
+
+/** Drop `null` entries and case-insensitive duplicate ids, keeping first occurrence. */
+function dedupeModelsById(rows: (ProviderCustomModel | null)[]): ProviderCustomModel[] {
+  const result: ProviderCustomModel[] = [];
+  const seen = new Set<string>();
+  for (const row of rows) {
+    if (!row) continue;
+    const key = row.id.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(row);
+  }
+  return result;
 }
 
 /** Coerces persisted data into a hostname -> trimmed CLI path map, dropping junk entries. */

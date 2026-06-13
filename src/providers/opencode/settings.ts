@@ -201,82 +201,9 @@ export function updateOpencodeProviderSettings(
   updates: Partial<OpencodeProviderSettings>,
 ): OpencodeProviderSettings {
   const current = getOpencodeProviderSettings(settings);
-  const hostnameKey = getHostnameKey();
-  if ('availableModes' in updates || 'discoveredModels' in updates || 'thinkingOptionsByModel' in updates) {
-    updateOpencodeDiscoveryState(settings, {
-      ...(updates.availableModes !== undefined ? { availableModes: updates.availableModes } : {}),
-      ...(updates.discoveredModels !== undefined ? { discoveredModels: updates.discoveredModels } : {}),
-      ...(updates.thinkingOptionsByModel !== undefined
-        ? { thinkingOptionsByModel: updates.thinkingOptionsByModel }
-        : {}),
-    });
-  }
-  const discoveryState = getOpencodeDiscoveryState(settings);
-  const nextAvailableModes = discoveryState.availableModes;
-  const nextDiscoveredModels = discoveryState.discoveredModels;
-  const nextThinkingOptionsByModel = updates.thinkingOptionsByModel !== undefined
-    ? discoveryState.thinkingOptionsByModel
-    : normalizeOpencodeThinkingOptionsByModel(
-      current.thinkingOptionsByModel,
-      nextDiscoveredModels,
-    );
-  const nextSelectedMode = normalizeManagedOpencodeSelectedMode(
-    updates.selectedMode ?? current.selectedMode,
-    nextAvailableModes,
-  );
-  const nextVisibleModels = normalizeOpencodeVisibleModels(
-    updates.visibleModels ?? current.visibleModels,
-    nextDiscoveredModels,
-  );
-  const nextModelAliases = pruneModelAliasesToVisible(
-    normalizeOpencodeModelAliases(
-      updates.modelAliases ?? current.modelAliases,
-      nextDiscoveredModels,
-    ),
-    nextVisibleModels,
-  );
-  const nextCliPathsByHost = 'cliPathsByHost' in updates
-    ? normalizeHostnameCliPaths(updates.cliPathsByHost)
-    : { ...current.cliPathsByHost };
-  let nextCliPath = 'cliPathsByHost' in updates
-    ? (
-      typeof updates.cliPath === 'string'
-        ? updates.cliPath.trim()
-        : DEFAULT_OPENCODE_PROVIDER_SETTINGS.cliPath
-    )
-    : current.cliPath.trim();
+  syncOpencodeDiscoveryStateFromUpdates(settings, updates);
 
-  if ('cliPath' in updates && !('cliPathsByHost' in updates)) {
-    const trimmedCliPath = typeof updates.cliPath === 'string' ? updates.cliPath.trim() : '';
-    if (trimmedCliPath) {
-      nextCliPathsByHost[hostnameKey] = trimmedCliPath;
-    } else {
-      delete nextCliPathsByHost[hostnameKey];
-    }
-    nextCliPath = DEFAULT_OPENCODE_PROVIDER_SETTINGS.cliPath;
-  }
-
-  const nextCustomModels = 'customModels' in updates
-    ? normalizeCustomModels(updates.customModels)
-    : current.customModels;
-
-  const next: OpencodeProviderSettings = {
-    ...current,
-    ...updates,
-    availableModes: nextAvailableModes,
-    cliPath: nextCliPath,
-    cliPathsByHost: nextCliPathsByHost,
-    customModels: nextCustomModels,
-    discoveredModels: nextDiscoveredModels,
-    modelAliases: nextModelAliases,
-    preferredThinkingByModel: normalizeOpencodePreferredThinkingByModel(
-      updates.preferredThinkingByModel ?? current.preferredThinkingByModel,
-      nextDiscoveredModels,
-    ),
-    selectedMode: nextSelectedMode,
-    thinkingOptionsByModel: nextThinkingOptionsByModel,
-    visibleModels: nextVisibleModels,
-  };
+  const next = buildNextOpencodeSettings(settings, current, updates);
 
   if (updates.visibleModels !== undefined) {
     retargetRemovedOpencodeSelections(settings, next);
@@ -302,6 +229,107 @@ export function updateOpencodeProviderSettings(
   });
 
   return next;
+}
+
+/** Persist any discovery-derived fields (modes/models/thinking) carried on the update into shared discovery state. */
+function syncOpencodeDiscoveryStateFromUpdates(
+  settings: Record<string, unknown>,
+  updates: Partial<OpencodeProviderSettings>,
+): void {
+  if (!('availableModes' in updates || 'discoveredModels' in updates || 'thinkingOptionsByModel' in updates)) {
+    return;
+  }
+  updateOpencodeDiscoveryState(settings, {
+    ...(updates.availableModes !== undefined ? { availableModes: updates.availableModes } : {}),
+    ...(updates.discoveredModels !== undefined ? { discoveredModels: updates.discoveredModels } : {}),
+    ...(updates.thinkingOptionsByModel !== undefined
+      ? { thinkingOptionsByModel: updates.thinkingOptionsByModel }
+      : {}),
+  });
+}
+
+/**
+ * Resolve the persisted hostname-keyed CLI map and the top-level cliPath. When a
+ * bare `cliPath` is provided (without an explicit host map), it is folded into the
+ * current host's entry and the top-level path is cleared.
+ */
+function resolveOpencodeCliPaths(
+  current: OpencodeProviderSettings,
+  updates: Partial<OpencodeProviderSettings>,
+): { cliPath: string; cliPathsByHost: HostnameCliPaths } {
+  const cliPathsByHost = 'cliPathsByHost' in updates
+    ? normalizeHostnameCliPaths(updates.cliPathsByHost)
+    : { ...current.cliPathsByHost };
+  let cliPath = 'cliPathsByHost' in updates
+    ? (
+      typeof updates.cliPath === 'string'
+        ? updates.cliPath.trim()
+        : DEFAULT_OPENCODE_PROVIDER_SETTINGS.cliPath
+    )
+    : current.cliPath.trim();
+
+  if ('cliPath' in updates && !('cliPathsByHost' in updates)) {
+    const trimmedCliPath = typeof updates.cliPath === 'string' ? updates.cliPath.trim() : '';
+    if (trimmedCliPath) {
+      cliPathsByHost[getHostnameKey()] = trimmedCliPath;
+    } else {
+      delete cliPathsByHost[getHostnameKey()];
+    }
+    cliPath = DEFAULT_OPENCODE_PROVIDER_SETTINGS.cliPath;
+  }
+
+  return { cliPath, cliPathsByHost };
+}
+
+/** Merge `current`, `updates`, and freshly-normalized derived fields into the next settings snapshot. */
+function buildNextOpencodeSettings(
+  settings: Record<string, unknown>,
+  current: OpencodeProviderSettings,
+  updates: Partial<OpencodeProviderSettings>,
+): OpencodeProviderSettings {
+  const discoveryState = getOpencodeDiscoveryState(settings);
+  const nextAvailableModes = discoveryState.availableModes;
+  const nextDiscoveredModels = discoveryState.discoveredModels;
+  const nextThinkingOptionsByModel = updates.thinkingOptionsByModel !== undefined
+    ? discoveryState.thinkingOptionsByModel
+    : normalizeOpencodeThinkingOptionsByModel(
+      current.thinkingOptionsByModel,
+      nextDiscoveredModels,
+    );
+  const nextVisibleModels = normalizeOpencodeVisibleModels(
+    updates.visibleModels ?? current.visibleModels,
+    nextDiscoveredModels,
+  );
+  const { cliPath, cliPathsByHost } = resolveOpencodeCliPaths(current, updates);
+
+  return {
+    ...current,
+    ...updates,
+    availableModes: nextAvailableModes,
+    cliPath,
+    cliPathsByHost,
+    customModels: 'customModels' in updates
+      ? normalizeCustomModels(updates.customModels)
+      : current.customModels,
+    discoveredModels: nextDiscoveredModels,
+    modelAliases: pruneModelAliasesToVisible(
+      normalizeOpencodeModelAliases(
+        updates.modelAliases ?? current.modelAliases,
+        nextDiscoveredModels,
+      ),
+      nextVisibleModels,
+    ),
+    preferredThinkingByModel: normalizeOpencodePreferredThinkingByModel(
+      updates.preferredThinkingByModel ?? current.preferredThinkingByModel,
+      nextDiscoveredModels,
+    ),
+    selectedMode: normalizeManagedOpencodeSelectedMode(
+      updates.selectedMode ?? current.selectedMode,
+      nextAvailableModes,
+    ),
+    thinkingOptionsByModel: nextThinkingOptionsByModel,
+    visibleModels: nextVisibleModels,
+  };
 }
 
 export function hasLegacyOpencodeDiscoveryFields(settings: Record<string, unknown>): boolean {
