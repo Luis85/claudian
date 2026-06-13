@@ -247,7 +247,7 @@ Tracked here so the direction is explicit.
    the boundary-legal cross-zone settings/spawn ones; what remains is mostly
    entangled provider↔provider runtime clones (tool normalization, `ChatRuntime`)
    whose only shared home is `core/` — diminishing, judgment-call payoff.
-   `complexFunctions` (237) is burned down hotspot by hotspot
+   `complexFunctions` (236) is burned down hotspot by hotspot
    (`npm run quality:health`), but the metric folds in coverage-weighted CRAP, so
    the remaining lower-cognitive tail yields ever-smaller gate deltas. Each
    refactor PR that moves a metric commits the tightened baseline so the gain is
@@ -360,3 +360,12 @@ all-error (a committed `.skip`/commented-out test, or a test with no assertion, 
 (every remediation item it tracked has shipped: the ratchet gate, the structural/boundary
 counters at 0, the LOC guard, perf gates, and the full lint-policy promotion). No metric
 counters moved this run — it is a policy-lock + documentation-accuracy pass.
+Done 2026-06-13 (quality campaign run 14): split the two oversized test files (oversized-modules
+remediation item 5, now `done`). `Tab.test.ts` (3,673 LOC / 178 tests) → `tabTestKit` + 4
+behavior-surface siblings (lifecycle/wiring/model/fork); `ClaudianService.test.ts` (3,127 LOC /
+204 tests) → `claudianServiceTestKit` + 5 siblings. The 382 tests are preserved exactly (repo
+stays at 8,493), with a shared per-file kit of pure factories/fixtures (ts-jest hoisting accepts
+imported `createMock*` inside `jest.mock` factories; the per-file mock blocks repeat freely since
+tests are excluded from the clone gate). `complexFunctions` 237 → 236 (incidental), all other
+counters held. Test files are not LOC- or clone-gated, so this is a maintainability/navigability
+win rather than a ratcheted-metric move.

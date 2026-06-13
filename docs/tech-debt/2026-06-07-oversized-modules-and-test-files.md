@@ -2,8 +2,8 @@
 type: tech-debt
 title: "Oversized modules and test files exceed maintainable agent context"
 date: 2026-06-07
-updated: 2026-06-11
-status: in-progress
+updated: 2026-06-13
+status: done
 priority: "1 - high"
 severity: high
 scope: module-depth
@@ -116,3 +116,25 @@ Still open (keeps `in-progress`): remediation item 5 — the oversized **test**
 files (`Tab.test.ts` is now ~4.5k LOC, `ClaudianService.test.ts` ~3.1k) remain
 unsplit — and the eight >1,000-LOC source coordinators above. Splitting the test
 files by behavior surface is the highest-value remaining slice here.
+
+## Resolution (2026-06-13, run 14)
+
+`done`. Remediation item 5 landed — both oversized test files were split by
+behavior surface, with the exact test set preserved (382 tests; the whole repo
+stays at 8,493):
+
+- `Tab.test.ts` (3,673 nonblank LOC, 178 tests) → `tabTestKit.ts` (shared pure
+  factories/fixtures) + `Tab.lifecycle`/`Tab.wiring`/`Tab.model`/`Tab.fork`
+  spec files. The 20 file-scoped `jest.mock()` blocks are replicated per sibling
+  (ts-jest hoisting accepts the kit's imported `createMock*` factories; tests are
+  excluded from the clone gate, so the repetition is free).
+- `ClaudianService.test.ts` (3,127 nonblank LOC, 204 tests) → `claudianServiceTestKit.ts`
+  (shared `beforeEach`/fixtures + the `import '@/providers'` registration side
+  effect) + `turns`/`persistentQuery`/`routing`/`session`/`misc` spec files.
+
+Items 1–5 are now all addressed and every acceptance criterion is met. The eight
+remaining >1,000-LOC source coordinators (`ClaudeChatRuntime`, `StreamController`,
+`InputController`, …) are the **accepted grandfathered exception** — cohesive
+owners with documented `reason` entries in `scripts/loc-baseline.json`, held
+shrink-only by the LOC ratchet — not open work. Further decomposition of any of
+them, if desired, can be filed fresh.
