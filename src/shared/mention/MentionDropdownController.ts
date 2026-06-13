@@ -7,6 +7,16 @@ import { extractMcpMentions } from '../../utils/mcp';
 import { SelectableDropdown } from '../components/SelectableDropdown';
 import { appendMcpIcon } from '../icons';
 import {
+  type ActiveContextFilter,
+  buildAgentItems,
+  buildContextFileItems,
+  buildContextFolderItems,
+  buildMcpServerItems,
+  buildVaultItems,
+  resolveContextFilter,
+  scanContextFiles,
+} from './mentionItemBuilders';
+import {
   type AgentMentionProvider,
   type FolderMentionItem,
   type MentionItem,
@@ -46,7 +56,7 @@ export class MentionDropdownController {
   private selectedMentionIndex = 0;
   private filteredMentionItems: MentionItem[] = [];
   private filteredContextFiles: ExternalContextFile[] = [];
-  private activeContextFilter: { folderName: string; contextRoot: string } | null = null;
+  private activeContextFilter: ActiveContextFilter | null = null;
   private activeAgentFilter = false;
   private mcpManager: McpMentionProvider | null = null;
   private agentService: AgentMentionProvider | null = null;
@@ -208,133 +218,77 @@ export class MentionDropdownController {
     this.filteredMentionItems = [];
     this.filteredContextFiles = [];
 
-    const externalContexts = this.callbacks.getExternalContexts() || [];
-    const contextEntries = buildExternalContextDisplayEntries(externalContexts);
-
+    const contextEntries = buildExternalContextDisplayEntries(
+      this.callbacks.getExternalContexts() || []
+    );
     const isFilterSearch = searchText.includes('/');
-    let fileSearchText = searchLower;
 
     if (isFilterSearch && searchLower.startsWith('agents/')) {
-      this.activeAgentFilter = true;
-      this.activeContextFilter = null;
-      const agentSearchText = searchText.substring('agents/'.length).toLowerCase();
-
-      if (this.agentService) {
-        const matchingAgents = this.agentService.searchAgents(agentSearchText);
-        for (const agent of matchingAgents) {
-          this.filteredMentionItems.push({
-            type: 'agent',
-            id: agent.id,
-            name: agent.name,
-            description: agent.description,
-            source: agent.source,
-          });
-        }
-      }
-
-      this.selectedMentionIndex = 0;
-      this.renderMentionDropdown();
+      this.populateAgentFilterItems(searchText);
       return;
     }
 
     if (isFilterSearch) {
-      const matchingContext = contextEntries
-        .filter(entry => searchLower.startsWith(`${entry.displayNameLower}/`))
-        .sort((a, b) => b.displayNameLower.length - a.displayNameLower.length)[0];
-
-      if (matchingContext) {
-        const prefixLength = matchingContext.displayName.length + 1;
-        fileSearchText = searchText.substring(prefixLength).toLowerCase();
-        this.activeContextFilter = {
-          folderName: matchingContext.displayName,
-          contextRoot: matchingContext.contextRoot,
-        };
-      } else {
-        this.activeContextFilter = null;
+      const { filter, fileSearchText } = resolveContextFilter(searchText, searchLower, contextEntries);
+      this.activeContextFilter = filter;
+      if (filter) {
+        this.populateContextFilterItems(searchLower, fileSearchText);
+        return;
       }
     }
 
-    if (this.activeContextFilter && isFilterSearch) {
-      const contextFiles = externalContextScanner.scanPaths([this.activeContextFilter.contextRoot]);
-      this.filteredContextFiles = contextFiles
-        .filter(file => {
-          const relativePath = file.relativePath.replace(/\\/g, '/');
-          const pathLower = relativePath.toLowerCase();
-          const nameLower = file.name.toLowerCase();
-          return pathLower.includes(fileSearchText) || nameLower.includes(fileSearchText);
-        })
-        .sort((a, b) => {
-          const aNameMatch = a.name.toLowerCase().startsWith(fileSearchText);
-          const bNameMatch = b.name.toLowerCase().startsWith(fileSearchText);
-          if (aNameMatch && !bNameMatch) return -1;
-          if (!aNameMatch && bNameMatch) return 1;
-          return b.mtime - a.mtime;
-        });
+    this.populateDefaultItems(searchLower, contextEntries);
+  }
 
-      for (const file of this.filteredContextFiles) {
-        const relativePath = file.relativePath.replace(/\\/g, '/');
-        this.filteredMentionItems.push({
-          type: 'context-file',
-          name: relativePath,
-          absolutePath: file.path,
-          contextRoot: file.contextRoot,
-          folderName: this.activeContextFilter.folderName,
-        });
-      }
+  /** `@agents/<query>` submenu: list matching agents only. */
+  private populateAgentFilterItems(searchText: string): void {
+    this.activeAgentFilter = true;
+    this.activeContextFilter = null;
+    const agentSearchText = searchText.substring('agents/'.length).toLowerCase();
 
-      const firstVaultItemIndex = this.filteredMentionItems.length;
-      const vaultItemCount = this.appendVaultItems(searchLower);
+    this.filteredMentionItems.push(
+      ...buildAgentItems(this.agentService?.searchAgents(agentSearchText) ?? [])
+    );
 
-      if (this.filteredContextFiles.length === 0 && vaultItemCount > 0) {
-        this.selectedMentionIndex = firstVaultItemIndex;
-      } else {
-        this.selectedMentionIndex = 0;
-      }
+    this.selectedMentionIndex = 0;
+    this.renderMentionDropdown();
+  }
 
-      this.renderMentionDropdown();
-      return;
-    }
+  /** `@folder/<query>` submenu: context files for the active filter plus vault items. */
+  private populateContextFilterItems(searchLower: string, fileSearchText: string): void {
+    const activeFilter = this.activeContextFilter;
+    if (!activeFilter) return;
 
+    this.filteredContextFiles = scanContextFiles(activeFilter.contextRoot, fileSearchText);
+    this.filteredMentionItems.push(
+      ...buildContextFileItems(this.filteredContextFiles, activeFilter.folderName)
+    );
+
+    const firstVaultItemIndex = this.filteredMentionItems.length;
+    const vaultItemCount = this.appendVaultItems(searchLower);
+
+    this.selectedMentionIndex = this.filteredContextFiles.length === 0 && vaultItemCount > 0
+      ? firstVaultItemIndex
+      : 0;
+
+    this.renderMentionDropdown();
+  }
+
+  /** First-level `@` menu: MCP servers, agents folder, context folders, then vault items. */
+  private populateDefaultItems(
+    searchLower: string,
+    contextEntries: ReturnType<typeof buildExternalContextDisplayEntries>,
+  ): void {
     this.activeContextFilter = null;
     this.activeAgentFilter = false;
 
-    if (this.mcpManager) {
-      const mcpServers = this.mcpManager.getContextSavingServers();
-
-      for (const server of mcpServers) {
-        if (server.name.toLowerCase().includes(searchLower)) {
-          this.filteredMentionItems.push({
-            type: 'mcp-server',
-            name: server.name,
-          });
-        }
-      }
+    this.filteredMentionItems.push(
+      ...buildMcpServerItems(this.mcpManager?.getContextSavingServers() ?? [], searchLower)
+    );
+    if (this.agentService && this.agentService.searchAgents('').length > 0 && 'agents'.includes(searchLower)) {
+      this.filteredMentionItems.push({ type: 'agent-folder', name: 'Agents' });
     }
-
-    if (this.agentService) {
-      const hasAgents = this.agentService.searchAgents('').length > 0;
-      if (hasAgents && 'agents'.includes(searchLower)) {
-        this.filteredMentionItems.push({
-          type: 'agent-folder',
-          name: 'Agents',
-        });
-      }
-    }
-
-    if (contextEntries.length > 0) {
-      const matchingFolders = new Set<string>();
-      for (const entry of contextEntries) {
-        if (entry.displayNameLower.includes(searchLower) && !matchingFolders.has(entry.displayName)) {
-          matchingFolders.add(entry.displayName);
-          this.filteredMentionItems.push({
-            type: 'context-folder',
-            name: entry.displayName,
-            contextRoot: entry.contextRoot,
-            folderName: entry.displayName,
-          });
-        }
-      }
-    }
+    this.filteredMentionItems.push(...buildContextFolderItems(contextEntries, searchLower));
 
     const firstVaultItemIndex = this.filteredMentionItems.length;
     const vaultItemCount = this.appendVaultItems(searchLower);
@@ -345,77 +299,13 @@ export class MentionDropdownController {
   }
 
   private appendVaultItems(searchLower: string): number {
-    type ScoredItem =
-      | { type: 'folder'; name: string; path: string; startsWithQuery: boolean; mtime: number }
-      | { type: 'file'; name: string; path: string; file: TFile; startsWithQuery: boolean; mtime: number };
-
-    const compare = (a: ScoredItem, b: ScoredItem): number => {
-      if (a.startsWithQuery !== b.startsWithQuery) return a.startsWithQuery ? -1 : 1;
-      if (a.mtime !== b.mtime) return b.mtime - a.mtime;
-      if (a.type !== b.type) return a.type === 'file' ? -1 : 1;
-      return a.path.localeCompare(b.path);
-    };
-
-    const allFiles = this.callbacks.getCachedVaultFiles();
-
-    // Derive folder mtime from the most recently modified file within each folder
-    const folderMtimeMap = new Map<string, number>();
-    for (const f of allFiles) {
-      const parts = f.path.split('/');
-      for (let i = 1; i < parts.length; i++) {
-        const folderPath = parts.slice(0, i).join('/');
-        const existing = folderMtimeMap.get(folderPath) ?? 0;
-        if (f.stat.mtime > existing) {
-          folderMtimeMap.set(folderPath, f.stat.mtime);
-        }
-      }
-    }
-
-    const scoredFolders: ScoredItem[] = this.callbacks.getCachedVaultFolders()
-      .map(f => ({
-        name: f.name,
-        path: f.path.replace(/\\/g, '/').replace(/\/+$/, ''),
-      }))
-      .filter(f =>
-        f.path.length > 0 &&
-        (f.path.toLowerCase().includes(searchLower) || f.name.toLowerCase().includes(searchLower))
-      )
-      .map(f => ({
-        type: 'folder' as const,
-        name: f.name,
-        path: f.path,
-        startsWithQuery: f.name.toLowerCase().startsWith(searchLower),
-        mtime: folderMtimeMap.get(f.path) ?? 0,
-      }))
-      .sort(compare)
-      .slice(0, 50);
-
-    const scoredFiles: ScoredItem[] = allFiles
-      .filter(f =>
-        f.path.toLowerCase().includes(searchLower) || f.name.toLowerCase().includes(searchLower)
-      )
-      .map(f => ({
-        type: 'file' as const,
-        name: f.name,
-        path: f.path,
-        file: f,
-        startsWithQuery: f.name.toLowerCase().startsWith(searchLower),
-        mtime: f.stat.mtime,
-      }))
-      .sort(compare)
-      .slice(0, 100);
-
-    const merged = [...scoredFolders, ...scoredFiles].sort(compare);
-
-    for (const item of merged) {
-      if (item.type === 'folder') {
-        this.filteredMentionItems.push({ type: 'folder', name: item.name, path: item.path });
-      } else {
-        this.filteredMentionItems.push({ type: 'file', name: item.name, path: item.path, file: item.file });
-      }
-    }
-
-    return merged.length;
+    const vaultItems = buildVaultItems(
+      this.callbacks.getCachedVaultFolders(),
+      this.callbacks.getCachedVaultFiles(),
+      searchLower,
+    );
+    this.filteredMentionItems.push(...vaultItems);
+    return vaultItems.length;
   }
 
   private renderMentionDropdown(): void {
