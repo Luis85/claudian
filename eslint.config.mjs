@@ -221,8 +221,10 @@ export default defineConfig([
         'error',
         { additionalTestBlockFunctions: ['itPosix', 'itWin32'] },
       ],
+      // Promoted warn -> error 2026-06-13 (quality campaign run 13): the backlog
+      // reached zero, so the last warn-tier rule now blocks CI like the rest.
       'jest/expect-expect': [
-        'warn',
+        'error',
         {
           // Helper functions that wrap `expect()` for shared test scaffolding.
           assertFunctionNames: ['expect', 'assertTabRendersRegistry', 'mountSettingsShell'],

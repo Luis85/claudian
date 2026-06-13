@@ -97,3 +97,22 @@ Remaining (status stays `in-progress`): 29 grandfathered source hotspots in
 `scripts/loc-baseline.json` (shrink-only; largest `StreamController.ts`), and
 remediation item 5 — the oversized **test** files (`Tab.test.ts` ~3.6k LOC,
 `ClaudianService.test.ts` ~3.1k LOC) have not been split by behavior surface.
+
+## Progress (2026-06-13, quality runs 6–13)
+
+The source side shrank further and the baseline was re-locked to reality:
+
+- Clone consolidation (runs 8, 11, 12b) and complexity decomposition (runs 9–10)
+  extracted logic out of the grandfathered hotspots into smaller sibling modules,
+  so many entries shrank again — e.g. `CodexHistoryStore` 940 → 746,
+  `MessageRenderer` 1,208(recorded) → 1,061, `cursorToolNormalization` 572 → 542.
+- Run 12a re-locked every grandfathered entry to current size
+  (`check:loc --update`), so the count is now **27** (not 29) and each ceiling
+  reflects reality — future growth is caught earlier.
+- Eight source files still exceed 1,000 nonblank LOC (largest `ClaudeChatRuntime`
+  1,599, then `StreamController` 1,514, `InputController` 1,404), all shrink-only.
+
+Still open (keeps `in-progress`): remediation item 5 — the oversized **test**
+files (`Tab.test.ts` is now ~4.5k LOC, `ClaudianService.test.ts` ~3.1k) remain
+unsplit — and the eight >1,000-LOC source coordinators above. Splitting the test
+files by behavior surface is the highest-value remaining slice here.

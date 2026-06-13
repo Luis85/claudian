@@ -64,8 +64,10 @@ The function-health `warn` backlog is now cleared. `complexity` 25 and
 campaign run 7) once their last 10 offenders were decomposed — see the
 promotion note below. Whole-file size is already a hard gate via the LOC
 guard; the function-health rules add the function-level signal that file-level
-LOC can't see. The only remaining `warn`-tier rule is `jest/expect-expect`
-(tests only).
+LOC can't see. As of run 13, `jest/expect-expect` — the last staged rule — was
+promoted too, so **no `warn`-tier rules remain**; the `warn` tier stays available
+for staging a future rule but is currently empty, and the lint gate is effectively
+all-or-nothing.
 
 Promoted to `error` on 2026-06-10, after their backlogs reached zero: the
 staged `obsidianmd/*` set, `@typescript-eslint/no-explicit-any` (src only;
@@ -76,6 +78,10 @@ final 10 offenders were cleared by genuine decomposition (lookup-table
 dispatch and sibling-module extraction, never `eslint-disable`), which also
 dropped `complexFunctions` 271 → 264 and `duplicatedLines` 1804 → 1790 while
 holding `criticalComplexity` at 0.
+Promoted to `error` on 2026-06-13 (quality campaign run 13): `jest/expect-expect`
+(tests), the final staged rule — its backlog was already at zero, so the promotion
+just locks the gain. A test added without an assertion (outside the allowlisted
+`assertFunctionNames` wrappers) now fails CI instead of printing a warning.
 
 ## LOC guard
 
@@ -222,18 +228,22 @@ authoritative current bar.
 
 Tracked here so the direction is explicit.
 
-1. **Burn down the `warn` backlog, then ratchet.** The function-health rules
-   (`complexity`, `max-lines-per-function`) reached zero offenders and were
-   promoted to `error` on 2026-06-13 (see "Lint severity policy"). The only
-   `warn`-tier rule left is `jest/expect-expect` (tests); burn it down and
-   promote it the same way.
-2. **Tighten the quality-ratchet floors.** The ratchet freezes today's debt;
-   `complexFunctions` (237) is still burned down hotspot by hotspot
-   (`npm run quality:health` prioritizes targets), and `cloneGroups` /
-   `duplicatedLines` are ground down family by family (`npm run quality:dupes`
-   prioritizes the same-file and same-zone clones, which extract cleanly). Each
-   refactor PR that moves a metric should commit the tightened baseline so the
-   gain is locked in.
+1. **Burn down the `warn` backlog, then ratchet — DONE.** Every staged
+   function-health / test rule reached zero offenders and was promoted to
+   `error`: `complexity` 25 + `max-lines-per-function` 200 (run 7), and
+   `jest/expect-expect` (run 13). No `warn`-tier rules remain (see "Lint
+   severity policy"); the lint gate is now all-error.
+2. **Tighten the quality-ratchet floors.** The ratchet freezes today's debt and
+   is driven down each PR. After runs 8–12, `cloneGroups` (33) and
+   `duplicatedLines` (819) have shed the clean same-file/same-zone families and
+   the boundary-legal cross-zone settings/spawn ones; what remains is mostly
+   entangled provider↔provider runtime clones (tool normalization, `ChatRuntime`)
+   whose only shared home is `core/` — diminishing, judgment-call payoff.
+   `complexFunctions` (237) is burned down hotspot by hotspot
+   (`npm run quality:health`), but the metric folds in coverage-weighted CRAP, so
+   the remaining lower-cognitive tail yields ever-smaller gate deltas. Each
+   refactor PR that moves a metric commits the tightened baseline so the gain is
+   locked in.
    **`criticalComplexity` reached 0 in run 6 (was 59 across the campaign)** — it
    is now effectively a must-stay-0 counter like the structural metrics; any
    new critical-severity function should be split before merge rather than
@@ -333,3 +343,10 @@ Boundary-legal (providers → utils), with a dedicated `windowsSpawn` unit spec 
 `cloneGroups` 35 → 33, `duplicatedLines` 869 → 819, structural counters held at 0. This is the
 "design pass" the run-11 note deferred; the remaining cross-zone runtime clones (tool
 normalization, ChatRuntime) are more entangled with provider-specific shapes and were left.
+Done 2026-06-13 (quality campaign run 13): lint-severity policy completed + tech-debt docs
+refreshed. `jest/expect-expect` (the last `warn`-tier rule) was promoted to `error` — its
+backlog was already zero, so the lint gate is now all-error with no warn tier in use. The
+`docs/tech-debt/2026-06-07-agentic-quality-gates.md` debt note was moved `in-progress → done`
+(every remediation item it tracked has shipped: the ratchet gate, the structural/boundary
+counters at 0, the LOC guard, perf gates, and the full lint-policy promotion). No metric
+counters moved this run — it is a policy-lock + documentation-accuracy pass.
