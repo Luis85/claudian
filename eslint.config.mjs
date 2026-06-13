@@ -162,18 +162,18 @@ export default defineConfig([
   },
   {
     files: ['src/**/*.ts'],
-    // Function-health rules. `max-params`/`max-depth` hit zero offenders on
-    // 2026-06-10 and were promoted to `error` per the ratchet policy
-    // (docs/build-ci/quality-gates.md § "Lint severity policy").
-    // `complexity`/`max-lines-per-function` stay a `warn` backlog (32 + 12 as
-    // of 2026-06-10), burned down one function at a time — promote each when
-    // it reaches zero. The LOC guard already caps whole files at 500 LOC.
+    // Function-health rules, all promoted to `error` per the ratchet policy
+    // (docs/build-ci/quality-gates.md § "Lint severity policy"):
+    // `max-params`/`max-depth` on 2026-06-10, then `complexity`/
+    // `max-lines-per-function` on 2026-06-13 once their backlog reached zero
+    // (quality campaign run 7). The LOC guard already caps whole files at
+    // 500 LOC; these add the function-level signal file-level LOC can't see.
     rules: {
       'max-lines-per-function': [
-        'warn',
+        'error',
         { max: 200, skipBlankLines: true, skipComments: true, IIFEs: true },
       ],
-      complexity: ['warn', { max: 25 }],
+      complexity: ['error', { max: 25 }],
       'max-params': ['error', { max: 6 }],
       'max-depth': ['error', { max: 5 }],
     },
