@@ -1,8 +1,6 @@
-import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import type { Readable, Writable } from 'node:stream';
 
-const SIGKILL_TIMEOUT_MS = 3_000;
-const STDERR_BUFFER_LIMIT = 8_000;
+import { AgentSubprocess } from '../../core/transport/AgentSubprocess';
 
 export interface AcpSubprocessLaunchSpec {
   args: string[];
@@ -13,142 +11,47 @@ export interface AcpSubprocessLaunchSpec {
 
 type CloseListener = (error?: Error) => void;
 
+/**
+ * Opencode's stdio subprocess. A thin adapter over the shared
+ * `core/transport/AgentSubprocess` (ADR-0001 Move 2) that keeps Opencode's
+ * close-listener contract (`onClose(error?)`).
+ */
 export class AcpSubprocess {
-  private closeError: Error | null = null;
-  private readonly closeListeners = new Set<CloseListener>();
-  private notifiedClose = false;
-  private proc: ChildProcessWithoutNullStreams | null = null;
-  private stderrBuffer = '';
+  private readonly proc: AgentSubprocess;
 
-  constructor(private readonly launchSpec: AcpSubprocessLaunchSpec) {}
+  constructor(launchSpec: AcpSubprocessLaunchSpec) {
+    this.proc = new AgentSubprocess(launchSpec);
+  }
 
   get stdin(): Writable {
-    return this.requireProc().stdin;
+    return this.proc.stdin;
   }
 
   get stdout(): Readable {
-    return this.requireProc().stdout;
+    return this.proc.stdout;
   }
 
   get stderr(): Readable {
-    return this.requireProc().stderr;
-  }
-
-  private requireProc(): ChildProcessWithoutNullStreams {
-    if (!this.proc) {
-      throw new Error('ACP subprocess is not started');
-    }
-    return this.proc;
+    return this.proc.stderr;
   }
 
   start(): void {
-    if (this.proc) {
-      return;
-    }
-
-    const proc = spawn(this.launchSpec.command, this.launchSpec.args, {
-      cwd: this.launchSpec.cwd,
-      env: this.launchSpec.env,
-      stdio: 'pipe',
-      windowsHide: true,
-    });
-
-    proc.stderr.on('data', (chunk: Buffer | string) => {
-      const text = typeof chunk === 'string' ? chunk : chunk.toString('utf-8');
-      this.stderrBuffer = `${this.stderrBuffer}${text}`.slice(-STDERR_BUFFER_LIMIT);
-    });
-
-    proc.on('error', (error) => {
-      this.closeError = error;
-      this.notifyClose(error);
-    });
-
-    proc.on('exit', (code, signal) => {
-      const exitError = this.closeError ?? (
-        code === 0 && signal === null
-          ? undefined
-          : new Error(`ACP subprocess exited (${formatExit(code, signal)})`)
-      );
-      this.notifyClose(exitError);
-    });
-
-    this.proc = proc;
+    this.proc.start();
   }
 
   isAlive(): boolean {
-    return this.proc !== null && this.proc.exitCode === null && !this.proc.killed;
+    return this.proc.isAlive();
   }
 
   getStderrSnapshot(): string {
-    return this.stderrBuffer.trim();
+    return this.proc.getStderrSnapshot();
   }
 
   onClose(listener: CloseListener): () => void {
-    this.closeListeners.add(listener);
-    return () => {
-      this.closeListeners.delete(listener);
-    };
+    return this.proc.onClose((info) => listener(info.error));
   }
 
-  async shutdown(): Promise<void> {
-    const proc = this.proc;
-    if (!proc || proc.exitCode !== null) {
-      return;
-    }
-
-    await new Promise<void>((resolve) => {
-      let settled = false;
-      const finish = () => {
-        if (settled) return;
-        settled = true;
-        window.clearTimeout(killTimer);
-        window.clearTimeout(giveUpTimer);
-        proc.off('exit', onClose);
-        resolve();
-      };
-      const onClose = () => finish();
-      const killTimer = window.setTimeout(() => {
-        try {
-          proc.kill('SIGKILL');
-        } catch {
-          // already exited / not killable — the give-up timer will resolve
-        }
-      }, SIGKILL_TIMEOUT_MS);
-      // Hard ceiling: never let teardown hang if 'exit' never fires.
-      const giveUpTimer = window.setTimeout(finish, SIGKILL_TIMEOUT_MS * 2);
-
-      proc.once('exit', onClose);
-      try {
-        proc.kill('SIGTERM');
-      } catch {
-        // Process already gone between the guard and the kill — nothing to await.
-        finish();
-      }
-    });
+  shutdown(): Promise<void> {
+    return this.proc.shutdown();
   }
-
-  private notifyClose(error?: Error): void {
-    if (this.notifiedClose) {
-      return;
-    }
-
-    this.notifiedClose = true;
-    for (const listener of this.closeListeners) {
-      try {
-        listener(error);
-      } catch {
-        // Best-effort cleanup notification.
-      }
-    }
-  }
-}
-
-function formatExit(code: number | null, signal: string | null): string {
-  if (signal) {
-    return `signal ${signal}`;
-  }
-  if (code === null) {
-    return 'unknown';
-  }
-  return `code ${code}`;
 }

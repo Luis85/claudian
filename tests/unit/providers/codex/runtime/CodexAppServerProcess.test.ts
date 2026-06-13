@@ -1,11 +1,15 @@
-import type { ChildProcess } from 'child_process';
+import type { ChildProcess } from 'node:child_process';
+
 import { EventEmitter, Readable, Writable } from 'stream';
 
-jest.mock('child_process', () => ({
+// spawn now lives in the shared core/transport/AgentSubprocess (ADR-0001 Move 2),
+// which imports from 'node:child_process' — mock that specifier so the wrapper's
+// delegated spawn is intercepted.
+jest.mock('node:child_process', () => ({
   spawn: jest.fn(),
 }));
 
-import { spawn } from 'child_process';
+import { spawn } from 'node:child_process';
 
 import { CodexAppServerProcess } from '@/providers/codex/runtime/CodexAppServerProcess';
 import type { CodexLaunchSpec } from '@/providers/codex/runtime/codexLaunchTypes';
@@ -73,7 +77,8 @@ describe('CodexAppServerProcess', () => {
         '/usr/bin/codex',
         ['app-server', '--listen', 'stdio://'],
         expect.objectContaining({
-          stdio: ['pipe', 'pipe', 'pipe'],
+          // Shared AgentSubprocess uses the 'pipe' shorthand (≡ ['pipe','pipe','pipe']).
+          stdio: 'pipe',
           cwd: '/workspace',
         }),
       );
