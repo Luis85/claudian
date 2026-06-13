@@ -1,4 +1,4 @@
-import type { Editor } from 'obsidian';
+import type { Command, Editor } from 'obsidian';
 import { MarkdownView, Notice } from 'obsidian';
 
 import { registerCommandHotkey } from '@/core/commands/commandHotkeyRegistry';
@@ -25,159 +25,126 @@ export interface PluginCommandDeps {
   chatWorkOrderLinker: ChatWorkOrderLinker;
 }
 
-export function registerPluginCommands(deps: PluginCommandDeps): void {
-  const { plugin, chatWorkOrderLinker } = deps;
-  // taskExecutionSurface is reserved for future commands that need it (currently
-  // consumed by AgentBoardView via main.ts onload). Kept on the deps object to
-  // keep the factory's contract stable.
-  void deps.taskExecutionSurface;
+// Registers an Obsidian command and its companion hotkey entry in lockstep so
+// every command id appears in both registries in the same order.
+type RegisterCommand = (command: Command) => void;
 
-  const openViewCmd = {
+function createRegistrar(plugin: ClaudianPlugin): RegisterCommand {
+  return (command) => {
+    plugin.addCommand(command);
+    registerCommandHotkey({ commandId: command.id, label: command.name });
+  };
+}
+
+function registerViewCommands(plugin: ClaudianPlugin, register: RegisterCommand): void {
+  register({
     id: 'open-view',
     name: 'Open chat view',
     callback: () => {
       void plugin.activateView();
     },
-  };
-  plugin.addCommand(openViewCmd);
-  registerCommandHotkey({ commandId: openViewCmd.id, label: openViewCmd.name });
+  });
 
-  const openAgentBoardCmd = {
+  register({
     id: 'open-agent-board',
     name: 'Open Agent Board',
     callback: () => {
       void plugin.activateAgentBoardView();
     },
-  };
-  plugin.addCommand(openAgentBoardCmd);
-  registerCommandHotkey({ commandId: openAgentBoardCmd.id, label: openAgentBoardCmd.name });
+  });
 
-  const runNextReadyCmd = {
+  register({
     id: 'run-next-ready-work-order',
     name: 'Run next ready work order',
     callback: () => {
       void plugin.runNextReadyWorkOrder();
     },
-  };
-  plugin.addCommand(runNextReadyCmd);
-  registerCommandHotkey({ commandId: runNextReadyCmd.id, label: runNextReadyCmd.name });
+  });
+}
 
-  const createWorkOrderCmd = {
+function registerWorkOrderCommands(
+  plugin: ClaudianPlugin,
+  chatWorkOrderLinker: ChatWorkOrderLinker,
+  register: RegisterCommand,
+): void {
+  register({
     id: 'create-work-order',
     name: 'Create work order',
     callback: () => {
       void createWorkOrderInteractive(plugin);
     },
-  };
-  plugin.addCommand(createWorkOrderCmd);
-  registerCommandHotkey({ commandId: createWorkOrderCmd.id, label: createWorkOrderCmd.name });
+  });
 
-  const createWorkOrderFromCurrentNoteCmd = {
+  register({
     id: 'create-work-order-from-current-note',
     name: 'Create work order from current note',
     callback: () => {
       void createWorkOrderFromCurrentNoteInteractive(plugin);
     },
-  };
-  plugin.addCommand(createWorkOrderFromCurrentNoteCmd);
-  registerCommandHotkey({
-    commandId: createWorkOrderFromCurrentNoteCmd.id,
-    label: createWorkOrderFromCurrentNoteCmd.name,
   });
 
-  const createWorkOrderFromSelectionCmd = {
+  register({
     id: 'create-work-order-from-selection',
     name: 'Create work order from selection',
     editorCallback: () => {
       void createWorkOrderFromSelectionInteractive(plugin);
     },
-  };
-  plugin.addCommand(createWorkOrderFromSelectionCmd);
-  registerCommandHotkey({
-    commandId: createWorkOrderFromSelectionCmd.id,
-    label: createWorkOrderFromSelectionCmd.name,
   });
 
-  const createWorkOrderTemplateCmd = {
+  register({
     id: 'create-work-order-template',
     name: 'Create work-order template',
     callback: () => {
       void createWorkOrderTemplate(plugin);
     },
-  };
-  plugin.addCommand(createWorkOrderTemplateCmd);
-  registerCommandHotkey({
-    commandId: createWorkOrderTemplateCmd.id,
-    label: createWorkOrderTemplateCmd.name,
   });
 
-  const installCommonTemplatesCmd = {
+  register({
     id: 'install-common-work-order-templates',
     name: 'Install common work-order templates',
     callback: () => {
       void installPresetTemplatesWithNotice(plugin);
     },
-  };
-  plugin.addCommand(installCommonTemplatesCmd);
-  registerCommandHotkey({
-    commandId: installCommonTemplatesCmd.id,
-    label: installCommonTemplatesCmd.name,
   });
 
-  const createWorkOrderFromBrowserSelectionCmd = {
+  register({
     id: 'create-work-order-from-browser-selection',
     name: 'Create work order from browser selection',
     callback: () => {
       void createWorkOrderFromBrowserSelection(plugin);
     },
-  };
-  plugin.addCommand(createWorkOrderFromBrowserSelectionCmd);
-  registerCommandHotkey({
-    commandId: createWorkOrderFromBrowserSelectionCmd.id,
-    label: createWorkOrderFromBrowserSelectionCmd.name,
   });
 
-  const createWorkOrderFromChatConvCmd = {
+  register({
     id: 'create-work-order-from-chat-conversation',
     name: 'Create work order from current chat conversation',
     callback: () => {
       void chatWorkOrderLinker.promoteActiveConversationToWorkOrder();
     },
-  };
-  plugin.addCommand(createWorkOrderFromChatConvCmd);
-  registerCommandHotkey({
-    commandId: createWorkOrderFromChatConvCmd.id,
-    label: createWorkOrderFromChatConvCmd.name,
   });
+}
 
-  const copyDiagnosticLogsCmd = {
+function registerDiagnosticCommands(plugin: ClaudianPlugin, register: RegisterCommand): void {
+  register({
     id: 'copy-diagnostic-logs',
     name: 'Copy diagnostic logs',
     callback: () => {
       void plugin.copyDiagnosticLogs();
     },
-  };
-  plugin.addCommand(copyDiagnosticLogsCmd);
-  registerCommandHotkey({
-    commandId: copyDiagnosticLogsCmd.id,
-    label: copyDiagnosticLogsCmd.name,
   });
 
-  const clearDiagnosticLogsCmd = {
+  register({
     id: 'clear-diagnostic-logs',
     name: 'Clear diagnostic logs',
     callback: () => {
       plugin.logger.clear();
       new Notice(t('diagnostics.logsCleared'));
     },
-  };
-  plugin.addCommand(clearDiagnosticLogsCmd);
-  registerCommandHotkey({
-    commandId: clearDiagnosticLogsCmd.id,
-    label: clearDiagnosticLogsCmd.name,
   });
+}
 
-  const inlineEditCmd = {
+function registerInlineEditCommand(plugin: ClaudianPlugin, register: RegisterCommand): void {
+  register({
     id: 'inline-edit',
     name: 'Inline edit',
     editorCallback: async (editor: Editor, ctx: unknown) => {
@@ -218,11 +185,11 @@ export function registerPluginCommands(deps: PluginCommandDeps): void {
         new Notice(t(editContext.mode === 'cursor' ? 'inlineEdit.inserted' : 'inlineEdit.applied'));
       }
     },
-  };
-  plugin.addCommand(inlineEditCmd);
-  registerCommandHotkey({ commandId: inlineEditCmd.id, label: inlineEditCmd.name });
+  });
+}
 
-  const newTabCmd = {
+function registerTabCommands(plugin: ClaudianPlugin, register: RegisterCommand): void {
+  register({
     id: 'new-tab',
     name: 'New tab',
     checkCallback: (checking: boolean) => {
@@ -232,11 +199,9 @@ export function registerPluginCommands(deps: PluginCommandDeps): void {
       }
       return true;
     },
-  };
-  plugin.addCommand(newTabCmd);
-  registerCommandHotkey({ commandId: newTabCmd.id, label: newTabCmd.name });
+  });
 
-  const newSessionCmd = {
+  register({
     id: 'new-session',
     name: 'New session (in current tab)',
     checkCallback: (checking: boolean) => {
@@ -252,11 +217,9 @@ export function registerPluginCommands(deps: PluginCommandDeps): void {
       }
       return true;
     },
-  };
-  plugin.addCommand(newSessionCmd);
-  registerCommandHotkey({ commandId: newSessionCmd.id, label: newSessionCmd.name });
+  });
 
-  const closeCurrentTabCmd = {
+  register({
     id: 'close-current-tab',
     name: 'Close current tab',
     checkCallback: (checking: boolean) => {
@@ -272,7 +235,21 @@ export function registerPluginCommands(deps: PluginCommandDeps): void {
       }
       return true;
     },
-  };
-  plugin.addCommand(closeCurrentTabCmd);
-  registerCommandHotkey({ commandId: closeCurrentTabCmd.id, label: closeCurrentTabCmd.name });
+  });
+}
+
+export function registerPluginCommands(deps: PluginCommandDeps): void {
+  const { plugin, chatWorkOrderLinker } = deps;
+  // taskExecutionSurface is reserved for future commands that need it (currently
+  // consumed by AgentBoardView via main.ts onload). Kept on the deps object to
+  // keep the factory's contract stable.
+  void deps.taskExecutionSurface;
+
+  const register = createRegistrar(plugin);
+
+  registerViewCommands(plugin, register);
+  registerWorkOrderCommands(plugin, chatWorkOrderLinker, register);
+  registerDiagnosticCommands(plugin, register);
+  registerInlineEditCommand(plugin, register);
+  registerTabCommands(plugin, register);
 }

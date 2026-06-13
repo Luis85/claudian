@@ -371,75 +371,126 @@ function readLastTokenUsageBlock(payload: Record<string, unknown>): CodexLastTok
   };
 }
 
-export function extractLastUsageFromCodexJsonl(content: string): UsageInfo | null {
-  const lines = content.split('\n').filter(line => line.trim().length > 0);
-  if (lines.length === 0) return null;
+interface CodexJsonlRecord {
+  parsed: Record<string, unknown>;
+  payload: Record<string, unknown>;
+}
 
-  let lastTokenUsage: CodexLastTokenUsage | null = null;
-  let modelContextWindow: number | null = null;
-  let model: string | null = null;
+/** Parses one JSONL line into its record + payload, or null when unusable. */
+function parseCodexJsonlRecord(line: string): CodexJsonlRecord | null {
+  let parsed: Record<string, unknown>;
+  try {
+    const rawParsed = JSON.parse(line) as unknown;
+    if (!isRecord(rawParsed)) return null;
+    parsed = rawParsed;
+  } catch {
+    return null;
+  }
+  const payload = isRecord(parsed.payload) ? parsed.payload : parsed;
+  return { parsed, payload };
+}
 
-  // Walk back to front so the most recent records win.
-  for (let i = lines.length - 1; i >= 0; i--) {
-    let parsed: Record<string, unknown>;
-    try {
-      const rawParsed = JSON.parse(lines[i]) as unknown;
-      if (!isRecord(rawParsed)) continue;
-      parsed = rawParsed;
-    } catch {
-      continue;
-    }
+/** Positive `model_context_window` from a `task_started` payload, else null. */
+function readModelContextWindow(payload: Record<string, unknown>): number | null {
+  const window = payload.model_context_window;
+  return typeof window === 'number' && window > 0 ? window : null;
+}
 
-    const payload = isRecord(parsed.payload) ? parsed.payload : parsed;
+/**
+ * Codex session files can stamp model id on session_meta, turn_context, or
+ * legacy event wrappers. Accept any record carrying a non-empty `model` string.
+ */
+function readModelId(record: CodexJsonlRecord): string | null {
+  const candidate = record.payload.model ?? record.parsed.model;
+  if (typeof candidate === 'string' && candidate.trim().length > 0) {
+    return candidate.trim();
+  }
+  return null;
+}
 
-    if (parsed.type === 'event_msg' && payload.type === 'token_count' && !lastTokenUsage) {
-      lastTokenUsage = readLastTokenUsageBlock(payload);
-      continue;
-    }
+interface CodexUsageScanState {
+  lastTokenUsage: CodexLastTokenUsage | null;
+  modelContextWindow: number | null;
+  model: string | null;
+}
 
-    if (parsed.type === 'event_msg' && payload.type === 'task_started') {
-      if (modelContextWindow === null) {
-        const window = payload.model_context_window;
-        if (typeof window === 'number' && window > 0) {
-          modelContextWindow = window;
-        }
-      }
-      continue;
-    }
+/** True once every field a back-to-front scan can still discover is resolved. */
+function isCodexUsageScanComplete(state: CodexUsageScanState): boolean {
+  return state.lastTokenUsage !== null && state.modelContextWindow !== null && state.model !== null;
+}
 
-    if (!model) {
-      // Codex session files can stamp model id on session_meta, turn_context, or
-      // legacy event wrappers. Accept any record carrying a `model` string field.
-      const candidate = payload.model ?? parsed.model;
-      if (typeof candidate === 'string' && candidate.trim().length > 0) {
-        model = candidate.trim();
-      }
-    }
+/**
+ * Folds one parsed record into the scan state. Each field keeps its first
+ * (i.e. most recent, since the caller walks back to front) discovered value.
+ */
+function accumulateCodexUsageRecord(state: CodexUsageScanState, record: CodexJsonlRecord): void {
+  const { parsed, payload } = record;
+  const isEventMsg = parsed.type === 'event_msg';
 
-    if (lastTokenUsage && modelContextWindow !== null && model) break;
+  if (isEventMsg && payload.type === 'token_count' && !state.lastTokenUsage) {
+    state.lastTokenUsage = readLastTokenUsageBlock(payload);
+    return;
   }
 
-  if (!lastTokenUsage) return null;
+  if (isEventMsg && payload.type === 'task_started') {
+    if (state.modelContextWindow === null) {
+      state.modelContextWindow = readModelContextWindow(payload);
+    }
+    return;
+  }
 
+  if (!state.model) {
+    state.model = readModelId(record);
+  }
+}
+
+/** Walks the JSONL lines back to front, accumulating the latest usage fields. */
+function scanCodexUsage(lines: string[]): CodexUsageScanState {
+  const state: CodexUsageScanState = {
+    lastTokenUsage: null,
+    modelContextWindow: null,
+    model: null,
+  };
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const record = parseCodexJsonlRecord(lines[i]);
+    if (!record) continue;
+    accumulateCodexUsageRecord(state, record);
+    if (isCodexUsageScanComplete(state)) break;
+  }
+  return state;
+}
+
+/** Assembles the final `UsageInfo` from a completed (token-usage-bearing) scan. */
+function buildCodexUsageInfo(
+  lastTokenUsage: CodexLastTokenUsage,
+  modelContextWindow: number | null,
+  model: string | null,
+): UsageInfo {
   const resolvedModel = model ?? DEFAULT_CODEX_PRIMARY_MODEL;
-  const inputTokens = lastTokenUsage.inputTokens;
-  const outputTokens = lastTokenUsage.outputTokens;
-  const reasoningOutputTokens = lastTokenUsage.reasoningOutputTokens;
-  const cacheReadInputTokens = lastTokenUsage.cachedInputTokens;
+  const { inputTokens, outputTokens, reasoningOutputTokens, cachedInputTokens } = lastTokenUsage;
   // contextTokens = input + output + reasoning. cached_input is part of input
   // on the wire, so don't add it again. Mirrors CodexSessionFileTail.buildUsageInfo.
   const contextTokens = inputTokens + outputTokens + reasoningOutputTokens;
   const contextWindow = modelContextWindow ?? getCodexContextWindow(resolvedModel);
-  const contextWindowIsAuthoritative = modelContextWindow !== null;
 
   return buildUsageInfo({
     model: resolvedModel,
     inputTokens,
     outputTokens: outputTokens > 0 ? outputTokens : undefined,
     reasoningOutputTokens: reasoningOutputTokens > 0 ? reasoningOutputTokens : undefined,
-    cacheReadInputTokens: cacheReadInputTokens > 0 ? cacheReadInputTokens : undefined,
+    cacheReadInputTokens: cachedInputTokens > 0 ? cachedInputTokens : undefined,
     contextTokens,
     contextWindow,
-    contextWindowIsAuthoritative,
+    contextWindowIsAuthoritative: modelContextWindow !== null,
   });
+}
+
+export function extractLastUsageFromCodexJsonl(content: string): UsageInfo | null {
+  const lines = content.split('\n').filter(line => line.trim().length > 0);
+  if (lines.length === 0) return null;
+
+  const { lastTokenUsage, modelContextWindow, model } = scanCodexUsage(lines);
+  if (!lastTokenUsage) return null;
+
+  return buildCodexUsageInfo(lastTokenUsage, modelContextWindow, model);
 }

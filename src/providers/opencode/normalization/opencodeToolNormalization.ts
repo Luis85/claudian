@@ -324,58 +324,101 @@ export function normalizeOpencodeToolName(rawName: string | undefined): string {
   return TOOL_NAME_MAP[knownName];
 }
 
+function normalizeQuestionInput(input: Record<string, unknown>): Record<string, unknown> {
+  return { questions: normalizeQuestionItems(input.questions) };
+}
+
+function normalizeReadInput(input: Record<string, unknown>): Record<string, unknown> {
+  const filePath = firstString(input.file_path, input.filePath);
+  return {
+    ...(filePath ? { file_path: filePath } : {}),
+    ...(typeof input.limit === 'number' ? { limit: input.limit } : {}),
+    ...(typeof input.offset === 'number' ? { offset: input.offset } : {}),
+  };
+}
+
+function normalizeWriteInput(input: Record<string, unknown>): Record<string, unknown> {
+  const filePath = firstString(input.file_path, input.filePath);
+  return {
+    ...(typeof input.content === 'string' ? { content: input.content } : {}),
+    ...(filePath ? { file_path: filePath } : {}),
+  };
+}
+
+function normalizeReplaceAll(input: Record<string, unknown>): Record<string, unknown> {
+  if (typeof input.replace_all === 'boolean') {
+    return { replace_all: input.replace_all };
+  }
+  if (typeof input.replaceAll === 'boolean') {
+    return { replace_all: input.replaceAll };
+  }
+  return {};
+}
+
+function normalizeEditInput(input: Record<string, unknown>): Record<string, unknown> {
+  const filePath = firstString(input.file_path, input.filePath);
+  const oldString = firstString(input.old_string, input.oldString);
+  const newString = firstString(input.new_string, input.newString);
+  return {
+    ...(filePath ? { file_path: filePath } : {}),
+    ...(oldString ? { old_string: oldString } : {}),
+    ...(newString ? { new_string: newString } : {}),
+    ...normalizeReplaceAll(input),
+  };
+}
+
+function normalizeTaskInput(input: Record<string, unknown>): Record<string, unknown> {
+  const command = firstTrimmedString(input.command);
+  const description = firstTrimmedString(input.description);
+  const prompt = firstTrimmedString(input.prompt);
+  const subagentType = firstTrimmedString(input.subagent_type);
+  const taskId = firstTrimmedString(input.task_id);
+  return {
+    ...(command ? { command } : {}),
+    ...(description ? { description } : {}),
+    ...(prompt ? { prompt } : {}),
+    ...(input.run_in_background === true || input.run_in_background === false
+      ? { run_in_background: input.run_in_background }
+      : {}),
+    ...(subagentType ? { subagent_type: subagentType } : {}),
+    ...(taskId ? { task_id: taskId } : {}),
+  };
+}
+
+function normalizeTodoWriteInput(input: Record<string, unknown>): Record<string, unknown> {
+  return { todos: normalizeTodos(input.todos) };
+}
+
+function normalizeSkillInput(input: Record<string, unknown>): Record<string, unknown> {
+  const skill = firstTrimmedString(input.skill, input.name);
+  return skill ? { skill } : {};
+}
+
+/**
+ * Per-tool input normalizers, keyed by canonical Opencode tool name. Dispatching
+ * through this table keeps {@link normalizeOpencodeToolInput} flat: each tool's
+ * conditional shaping lives in its own helper instead of one large switch.
+ */
+const TOOL_INPUT_NORMALIZERS: Partial<
+  Record<OpencodeKnownToolName, (input: Record<string, unknown>) => Record<string, unknown>>
+> = {
+  edit: normalizeEditInput,
+  question: normalizeQuestionInput,
+  read: normalizeReadInput,
+  skill: normalizeSkillInput,
+  task: normalizeTaskInput,
+  todowrite: normalizeTodoWriteInput,
+  websearch: normalizeWebSearchInput,
+  write: normalizeWriteInput,
+};
+
 export function normalizeOpencodeToolInput(
   rawName: string | undefined,
   input: Record<string, unknown>,
 ): Record<string, unknown> {
   const knownName = toKnownToolName(rawName);
-  switch (knownName) {
-    case 'question':
-      return { questions: normalizeQuestionItems(input.questions) };
-    case 'read':
-      return {
-        ...(firstString(input.file_path, input.filePath) ? { file_path: firstString(input.file_path, input.filePath) } : {}),
-        ...(typeof input.limit === 'number' ? { limit: input.limit } : {}),
-        ...(typeof input.offset === 'number' ? { offset: input.offset } : {}),
-      };
-    case 'write':
-      return {
-        ...(typeof input.content === 'string' ? { content: input.content } : {}),
-        ...(firstString(input.file_path, input.filePath) ? { file_path: firstString(input.file_path, input.filePath) } : {}),
-      };
-    case 'edit':
-      return {
-        ...(firstString(input.file_path, input.filePath) ? { file_path: firstString(input.file_path, input.filePath) } : {}),
-        ...(firstString(input.old_string, input.oldString) ? { old_string: firstString(input.old_string, input.oldString) } : {}),
-        ...(firstString(input.new_string, input.newString) ? { new_string: firstString(input.new_string, input.newString) } : {}),
-        ...(typeof input.replace_all === 'boolean'
-          ? { replace_all: input.replace_all }
-          : typeof input.replaceAll === 'boolean'
-          ? { replace_all: input.replaceAll }
-          : {}),
-      };
-    case 'task':
-      return {
-        ...(firstTrimmedString(input.command) ? { command: firstTrimmedString(input.command) } : {}),
-        ...(firstTrimmedString(input.description) ? { description: firstTrimmedString(input.description) } : {}),
-        ...(firstTrimmedString(input.prompt) ? { prompt: firstTrimmedString(input.prompt) } : {}),
-        ...(input.run_in_background === true || input.run_in_background === false
-          ? { run_in_background: input.run_in_background }
-          : {}),
-        ...(firstTrimmedString(input.subagent_type) ? { subagent_type: firstTrimmedString(input.subagent_type) } : {}),
-        ...(firstTrimmedString(input.task_id) ? { task_id: firstTrimmedString(input.task_id) } : {}),
-      };
-    case 'todowrite':
-      return { todos: normalizeTodos(input.todos) };
-    case 'skill':
-      return firstTrimmedString(input.skill, input.name)
-        ? { skill: firstTrimmedString(input.skill, input.name) }
-        : {};
-    case 'websearch':
-      return normalizeWebSearchInput(input);
-    default:
-      return input;
-  }
+  const normalizer = knownName ? TOOL_INPUT_NORMALIZERS[knownName] : undefined;
+  return normalizer ? normalizer(input) : input;
 }
 
 export function normalizeOpencodeToolUseResult(

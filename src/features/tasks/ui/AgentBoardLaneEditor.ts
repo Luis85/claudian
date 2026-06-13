@@ -17,6 +17,20 @@ interface StatusOccurrence {
   laneTitle: string;
 }
 
+// Shared seam between `renderAgentBoardLaneEditor` and its per-section
+// renderers. The closures inside the editor own the mutable `config` /
+// `pendingFocusKey` state and the persistence + rerender lifecycle; the section
+// renderers stay pure DOM builders that route every mutation back through here.
+interface LaneEditorCtx {
+  snapshot(): BoardConfig;
+  persist(snapshot: BoardConfig): Promise<boolean>;
+  swap(a: number, b: number): void;
+  rerender(): void;
+  laneCount(): number;
+  removeLane(index: number): void;
+  setFocus(key: string): void;
+}
+
 // Maps each status to every VISIBLE lane that currently claims it. Only visible
 // lanes participate in board routing (`resolveBoardLayout` filters by
 // `lane.visible` before its first-wins lookup), so the duplicate hint must use
@@ -81,6 +95,21 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
     [lanes[a], lanes[b]] = [lanes[b], lanes[a]];
   };
 
+  // Bundle the mutable editor state + callbacks the per-section renderers need.
+  // `config` and `pendingFocusKey` are reassigned by `persist`/`rerender`, so
+  // the accessors read them lazily rather than capturing a stale value.
+  const ctx: LaneEditorCtx = {
+    snapshot: () => cloneConfig(config),
+    persist,
+    swap,
+    rerender: () => rerender(),
+    laneCount: () => config.lanes.length,
+    removeLane: (index) => config.lanes.splice(index, 1),
+    setFocus: (key) => {
+      pendingFocusKey = key;
+    },
+  };
+
   const renderLaneBlock = (
     lane: BoardLaneConfig,
     index: number,
@@ -88,167 +117,10 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
   ): void => {
     const block = wrap.createDiv({ cls: 'claudian-lane-editor-lane' });
     block.dataset.laneId = lane.id;
-
-    // Use the lane's own title as the row header so users can identify the
-    // lane after reorder. Positional names like `Lane ${index + 1}` lied after
-    // any move-up / move-down click.
-    const headName = lane.title.trim().length > 0 ? lane.title : t('tasks.laneEditor.untitledLane');
-    const head = new Setting(block).setName(headName).setDesc(t('tasks.laneEditor.laneDesc'));
-    head.addText((text) => {
-      text
-        .setValue(lane.title)
-        .onChange(async (value) => {
-          const snapshot = cloneConfig(config);
-          lane.title = value;
-          await persist(snapshot);
-        });
-      text.inputEl.dataset.focusKey = `lane:${lane.id}:title`;
-      // Refresh duplicate hints only after the user is done typing so we do
-      // not destroy the input mid-keystroke. `onChange` already persists each
-      // keystroke; `blur` is the natural commit signal.
-      text.inputEl.addEventListener('blur', () => rerender());
-    });
-    head.addToggle((toggle) =>
-      toggle.setValue(lane.visible).onChange(async (value) => {
-        const snapshot = cloneConfig(config);
-        lane.visible = value;
-        const ok = await persist(snapshot);
-        if (ok) {
-          // Visibility changes the visible-only occurrence map, so duplicate
-          // hints in other lanes need to be recomputed. Without this, hiding
-          // the canonical lane would silently reroute work orders while the
-          // editor kept naming the hidden lane.
-          rerender();
-        }
-      }),
-    );
-    head.addExtraButton((btn) =>
-      btn
-        .setIcon('arrow-up')
-        .setTooltip(t('tasks.laneEditor.moveUp'))
-        .onClick(async () => {
-          if (index === 0) return;
-          const snapshot = cloneConfig(config);
-          swap(index - 1, index);
-          const ok = await persist(snapshot);
-          if (ok) rerender();
-        }),
-    );
-    head.addExtraButton((btn) =>
-      btn
-        .setIcon('arrow-down')
-        .setTooltip(t('tasks.laneEditor.moveDown'))
-        .onClick(async () => {
-          if (index >= config.lanes.length - 1) return;
-          const snapshot = cloneConfig(config);
-          swap(index + 1, index);
-          const ok = await persist(snapshot);
-          if (ok) rerender();
-        }),
-    );
-    head.addExtraButton((btn) =>
-      btn
-        .setIcon('trash-2')
-        .setTooltip(t('tasks.laneEditor.removeLane'))
-        .onClick(async () => {
-          const snapshot = cloneConfig(config);
-          config.lanes.splice(index, 1);
-          const ok = await persist(snapshot);
-          if (ok) rerender();
-        }),
-    );
-
-    // Collapsible toggle — uses a raw checkbox (not Setting.addToggle) so the
-    // editor mirrors the status-checkbox pattern and stays testable under the
-    // Obsidian mock, whose ToggleComponent has no `toggleEl` to hang a
-    // `data-focus-key` on. Turning Collapsible OFF clears `collapsed` so the
-    // board can't strand a non-collapsible lane in the collapsed strip variant.
-    const collapsibleRow = block.createDiv({ cls: 'claudian-lane-editor-collapsible' });
-    const collapsibleLabel = collapsibleRow.createEl('label', {
-      cls: 'claudian-lane-editor-collapsible-label',
-    });
-    const collapsibleInput = collapsibleLabel.createEl('input', { type: 'checkbox' });
-    collapsibleInput.dataset.focusKey = `lane:${lane.id}:collapsible`;
-    collapsibleInput.checked = lane.collapsible;
-    collapsibleInput.addEventListener('change', async () => {
-      const snapshot = cloneConfig(config);
-      lane.collapsible = collapsibleInput.checked;
-      if (!collapsibleInput.checked) lane.collapsed = false;
-      const ok = await persist(snapshot);
-      if (ok) {
-        pendingFocusKey = `lane:${lane.id}:collapsible`;
-        rerender();
-      }
-    });
-    collapsibleLabel.createSpan({ text: t('tasks.laneEditor.collapsible') });
-
-    const statusRow = block.createDiv({ cls: 'claudian-lane-editor-statuses' });
-    const conflicts: Array<{ status: TaskStatus; canonicalTitle: string }> = [];
-
-    for (const status of TASK_STATUSES) {
-      const label = statusRow.createEl('label', { cls: 'claudian-lane-editor-status' });
-      const checkbox = label.createEl('input', { type: 'checkbox' });
-      checkbox.dataset.focusKey = `lane:${lane.id}:status:${status}`;
-      const isChecked = lane.statuses.includes(status);
-      checkbox.checked = isChecked;
-      checkbox.addEventListener('change', async () => {
-        const snapshot = cloneConfig(config);
-        if (checkbox.checked) {
-          if (!lane.statuses.includes(status)) lane.statuses.push(status);
-        } else {
-          lane.statuses = lane.statuses.filter((value) => value !== status);
-        }
-        const ok = await persist(snapshot);
-        if (ok) {
-          // Restore focus to the same checkbox after the rebuild so keyboard
-          // users keep their place. The DOM node is replaced, but the
-          // `data-focus-key` selector finds the new instance.
-          pendingFocusKey = `lane:${lane.id}:status:${status}`;
-          rerender();
-        }
-      });
-      label.createSpan({ text: status });
-
-      // Non-canonical occurrences (this lane is not the first VISIBLE one that
-      // claims the status) get a marker class and feed into the per-lane
-      // combined hint below. We deliberately do NOT add a per-status hint span
-      // inside the `<label>` — screen readers would read it as part of the
-      // checkbox label ("ready Routed to …"), and a lane with many duplicates
-      // would render as an unreadable wall of italics. The label's `title`
-      // attribute still surfaces a per-status tooltip for sighted users.
-      if (isChecked && lane.visible) {
-        const owners = occurrences.get(status) ?? [];
-        if (owners.length > 1 && owners[0].laneIndex !== index) {
-          label.classList.add('claudian-lane-editor-status--duplicate');
-          label.setAttribute('title', t('tasks.laneEditor.routedTo', { title: owners[0].laneTitle }));
-          conflicts.push({ status, canonicalTitle: owners[0].laneTitle });
-        }
-      }
-    }
-
-    if (conflicts.length > 0) {
-      // Single lane-level note that lists every duplicate status with the
-      // lane the board actually routes to. `role="note"` keeps screen readers
-      // from confusing it with the status checkboxes. A leading warning icon
-      // gives a non-colour cue.
-      const hint = block.createDiv({ cls: 'claudian-lane-editor-status-hint' });
-      hint.setAttribute('role', 'note');
-      const summary = conflicts
-        .map((entry) => t('tasks.laneEditor.routedSummaryItem', { status: entry.status, lane: entry.canonicalTitle }))
-        .join(', ');
-      hint.setText(t('tasks.laneEditor.routedElsewhere', { summary }));
-    }
-
-    renderCriteria(block, t('tasks.laneEditor.definitionOfReady'), lane.definitionOfReady, async (lines) => {
-      const snapshot = cloneConfig(config);
-      lane.definitionOfReady = lines;
-      await persist(snapshot);
-    });
-    renderCriteria(block, t('tasks.laneEditor.definitionOfDone'), lane.definitionOfDone, async (lines) => {
-      const snapshot = cloneConfig(config);
-      lane.definitionOfDone = lines;
-      await persist(snapshot);
-    });
+    renderLaneHeader(block, lane, index, ctx);
+    renderCollapsibleRow(block, lane, ctx);
+    renderLaneStatuses(block, lane, index, occurrences, ctx);
+    renderLaneCriteria(block, lane, ctx);
   };
 
   const rerender = (): void => {
@@ -299,6 +171,180 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
   };
 
   rerender();
+}
+
+// Lane header row: title input, visibility toggle, reorder + remove buttons.
+function renderLaneHeader(
+  block: HTMLElement,
+  lane: BoardLaneConfig,
+  index: number,
+  ctx: LaneEditorCtx,
+): void {
+  // Use the lane's own title as the row header so users can identify the lane
+  // after reorder. Positional names like `Lane ${index + 1}` lied after any
+  // move-up / move-down click.
+  const headName = lane.title.trim().length > 0 ? lane.title : t('tasks.laneEditor.untitledLane');
+  const head = new Setting(block).setName(headName).setDesc(t('tasks.laneEditor.laneDesc'));
+  head.addText((text) => {
+    text.setValue(lane.title).onChange(async (value) => {
+      const snapshot = ctx.snapshot();
+      lane.title = value;
+      await ctx.persist(snapshot);
+    });
+    text.inputEl.dataset.focusKey = `lane:${lane.id}:title`;
+    // Refresh duplicate hints only after the user is done typing so we do not
+    // destroy the input mid-keystroke. `onChange` already persists each
+    // keystroke; `blur` is the natural commit signal.
+    text.inputEl.addEventListener('blur', () => ctx.rerender());
+  });
+  head.addToggle((toggle) =>
+    toggle.setValue(lane.visible).onChange(async (value) => {
+      const snapshot = ctx.snapshot();
+      lane.visible = value;
+      // Visibility changes the visible-only occurrence map, so duplicate hints
+      // in other lanes need to be recomputed. Without this, hiding the
+      // canonical lane would silently reroute work orders while the editor kept
+      // naming the hidden lane.
+      if (await ctx.persist(snapshot)) ctx.rerender();
+    }),
+  );
+  head.addExtraButton((btn) =>
+    btn
+      .setIcon('arrow-up')
+      .setTooltip(t('tasks.laneEditor.moveUp'))
+      .onClick(async () => {
+        if (index === 0) return;
+        const snapshot = ctx.snapshot();
+        ctx.swap(index - 1, index);
+        if (await ctx.persist(snapshot)) ctx.rerender();
+      }),
+  );
+  head.addExtraButton((btn) =>
+    btn
+      .setIcon('arrow-down')
+      .setTooltip(t('tasks.laneEditor.moveDown'))
+      .onClick(async () => {
+        if (index >= ctx.laneCount() - 1) return;
+        const snapshot = ctx.snapshot();
+        ctx.swap(index + 1, index);
+        if (await ctx.persist(snapshot)) ctx.rerender();
+      }),
+  );
+  head.addExtraButton((btn) =>
+    btn
+      .setIcon('trash-2')
+      .setTooltip(t('tasks.laneEditor.removeLane'))
+      .onClick(async () => {
+        const snapshot = ctx.snapshot();
+        ctx.removeLane(index);
+        if (await ctx.persist(snapshot)) ctx.rerender();
+      }),
+  );
+}
+
+// Collapsible toggle — uses a raw checkbox (not Setting.addToggle) so the
+// editor mirrors the status-checkbox pattern and stays testable under the
+// Obsidian mock, whose ToggleComponent has no `toggleEl` to hang a
+// `data-focus-key` on. Turning Collapsible OFF clears `collapsed` so the board
+// can't strand a non-collapsible lane in the collapsed strip variant.
+function renderCollapsibleRow(block: HTMLElement, lane: BoardLaneConfig, ctx: LaneEditorCtx): void {
+  const collapsibleRow = block.createDiv({ cls: 'claudian-lane-editor-collapsible' });
+  const collapsibleLabel = collapsibleRow.createEl('label', {
+    cls: 'claudian-lane-editor-collapsible-label',
+  });
+  const collapsibleInput = collapsibleLabel.createEl('input', { type: 'checkbox' });
+  collapsibleInput.dataset.focusKey = `lane:${lane.id}:collapsible`;
+  collapsibleInput.checked = lane.collapsible;
+  collapsibleInput.addEventListener('change', async () => {
+    const snapshot = ctx.snapshot();
+    lane.collapsible = collapsibleInput.checked;
+    if (!collapsibleInput.checked) lane.collapsed = false;
+    if (await ctx.persist(snapshot)) {
+      ctx.setFocus(`lane:${lane.id}:collapsible`);
+      ctx.rerender();
+    }
+  });
+  collapsibleLabel.createSpan({ text: t('tasks.laneEditor.collapsible') });
+}
+
+// One checkbox per task status, plus a single combined "routed elsewhere" hint
+// for any status this lane duplicates from an earlier visible owner.
+function renderLaneStatuses(
+  block: HTMLElement,
+  lane: BoardLaneConfig,
+  index: number,
+  occurrences: Map<TaskStatus, StatusOccurrence[]>,
+  ctx: LaneEditorCtx,
+): void {
+  const statusRow = block.createDiv({ cls: 'claudian-lane-editor-statuses' });
+  const conflicts: Array<{ status: TaskStatus; canonicalTitle: string }> = [];
+
+  for (const status of TASK_STATUSES) {
+    const label = statusRow.createEl('label', { cls: 'claudian-lane-editor-status' });
+    const checkbox = label.createEl('input', { type: 'checkbox' });
+    checkbox.dataset.focusKey = `lane:${lane.id}:status:${status}`;
+    const isChecked = lane.statuses.includes(status);
+    checkbox.checked = isChecked;
+    checkbox.addEventListener('change', async () => {
+      const snapshot = ctx.snapshot();
+      if (checkbox.checked) {
+        if (!lane.statuses.includes(status)) lane.statuses.push(status);
+      } else {
+        lane.statuses = lane.statuses.filter((value) => value !== status);
+      }
+      if (await ctx.persist(snapshot)) {
+        // Restore focus to the same checkbox after the rebuild so keyboard
+        // users keep their place. The DOM node is replaced, but the
+        // `data-focus-key` selector finds the new instance.
+        ctx.setFocus(`lane:${lane.id}:status:${status}`);
+        ctx.rerender();
+      }
+    });
+    label.createSpan({ text: status });
+
+    // Non-canonical occurrences (this lane is not the first VISIBLE one that
+    // claims the status) get a marker class and feed into the per-lane combined
+    // hint below. We deliberately do NOT add a per-status hint span inside the
+    // `<label>` — screen readers would read it as part of the checkbox label
+    // ("ready Routed to …"), and a lane with many duplicates would render as an
+    // unreadable wall of italics. The label's `title` attribute still surfaces a
+    // per-status tooltip for sighted users.
+    if (isChecked && lane.visible) {
+      const owners = occurrences.get(status) ?? [];
+      if (owners.length > 1 && owners[0].laneIndex !== index) {
+        label.classList.add('claudian-lane-editor-status--duplicate');
+        label.setAttribute('title', t('tasks.laneEditor.routedTo', { title: owners[0].laneTitle }));
+        conflicts.push({ status, canonicalTitle: owners[0].laneTitle });
+      }
+    }
+  }
+
+  if (conflicts.length > 0) {
+    // Single lane-level note that lists every duplicate status with the lane the
+    // board actually routes to. `role="note"` keeps screen readers from
+    // confusing it with the status checkboxes. A leading warning icon gives a
+    // non-colour cue.
+    const hint = block.createDiv({ cls: 'claudian-lane-editor-status-hint' });
+    hint.setAttribute('role', 'note');
+    const summary = conflicts
+      .map((entry) => t('tasks.laneEditor.routedSummaryItem', { status: entry.status, lane: entry.canonicalTitle }))
+      .join(', ');
+    hint.setText(t('tasks.laneEditor.routedElsewhere', { summary }));
+  }
+}
+
+// Definition-of-ready / definition-of-done text areas for a lane.
+function renderLaneCriteria(block: HTMLElement, lane: BoardLaneConfig, ctx: LaneEditorCtx): void {
+  renderCriteria(block, t('tasks.laneEditor.definitionOfReady'), lane.definitionOfReady, async (lines) => {
+    const snapshot = ctx.snapshot();
+    lane.definitionOfReady = lines;
+    await ctx.persist(snapshot);
+  });
+  renderCriteria(block, t('tasks.laneEditor.definitionOfDone'), lane.definitionOfDone, async (lines) => {
+    const snapshot = ctx.snapshot();
+    lane.definitionOfDone = lines;
+    await ctx.persist(snapshot);
+  });
 }
 
 function renderCriteria(

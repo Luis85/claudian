@@ -65,88 +65,13 @@ export async function applyClaudeDynamicUpdates(
   const selectedModel = queryOptions?.model || settings.model;
   const permissionMode = deps.getPermissionMode();
 
-  const currentConfig = deps.getCurrentConfig();
-  if (currentConfig && selectedModel !== currentConfig.model) {
-    try {
-      await persistentQuery.setModel(selectedModel);
-      deps.mutateCurrentConfig(config => {
-        config.model = selectedModel;
-      });
-    } catch {
-      deps.notifyFailure('Failed to update model');
-    }
-  }
-
-  const effortLevel = resolveEffortLevel(selectedModel, settings.effortLevel);
-  const currentEffort = deps.getCurrentConfig()?.effortLevel ?? null;
-  if (effortLevel !== currentEffort) {
-    try {
-      // SDK runtime accepts `max`, but the current type definition for
-      // Settings.effortLevel has not caught up yet.
-      await persistentQuery.applyFlagSettings({ effortLevel } as unknown as Parameters<Query['applyFlagSettings']>[0]);
-      deps.mutateCurrentConfig(config => {
-        config.effortLevel = effortLevel;
-      });
-    } catch {
-      deps.notifyFailure('Failed to update effort level');
-    }
-  }
-
-  const configBeforePermissionUpdate = deps.getCurrentConfig();
-  if (configBeforePermissionUpdate) {
-    const sdkMode = deps.resolveSDKPermissionMode(permissionMode);
-    const currentSdkMode = configBeforePermissionUpdate.sdkPermissionMode ?? null;
-    const requiresAutoModeRestart = sdkMode === 'auto' && !configBeforePermissionUpdate.enableAutoMode;
-    if (requiresAutoModeRestart) {
-      // The Claude Code auto-mode opt-in is a startup flag. The restart path below
-      // will rebuild the query with that capability before auto becomes active.
-    } else if (sdkMode !== currentSdkMode) {
-      try {
-        await persistentQuery.setPermissionMode(sdkMode);
-        deps.mutateCurrentConfig(config => {
-          config.permissionMode = permissionMode;
-          config.sdkPermissionMode = sdkMode;
-        });
-      } catch {
-        deps.notifyFailure('Failed to update permission mode');
-      }
-    } else {
-      deps.mutateCurrentConfig(config => {
-        config.permissionMode = permissionMode;
-        config.sdkPermissionMode = sdkMode;
-      });
-    }
-  }
-
-  const mcpMentions = queryOptions?.mcpMentions || new Set<string>();
-  const uiEnabledServers = queryOptions?.enabledMcpServers || new Set<string>();
-  const combinedMentions = new Set([...mcpMentions, ...uiEnabledServers]);
-  const mcpServers = deps.mcpManager.getActiveServers(combinedMentions);
-  const mcpServersKey = JSON.stringify(mcpServers);
-
-  if (deps.getCurrentConfig() && mcpServersKey !== deps.getCurrentConfig()!.mcpServersKey) {
-    // SECURITY (SEC-D): vet URL-based servers before their configs reach the
-    // Claude CLI — the settings Test button is not on this path. Unsafe
-    // servers are dropped (fail closed) rather than failing the turn; the key
-    // still tracks the raw set so the drop is not re-announced every turn.
-    const vetted = await vetActiveServersForRuntime(mcpServers);
-    for (const entry of vetted.dropped) {
-      deps.notifyFailure(`MCP server "${entry.name}" was not activated: ${entry.reason}`);
-    }
-    const serverConfigs: Record<string, McpServerConfig> = {};
-    for (const [name, config] of Object.entries(vetted.safe)) {
-      serverConfigs[name] = config;
-    }
-
-    try {
-      await persistentQuery.setMcpServers(serverConfigs);
-      deps.mutateCurrentConfig(config => {
-        config.mcpServersKey = mcpServersKey;
-      });
-    } catch {
-      deps.notifyFailure('Failed to update MCP servers');
-    }
-  }
+  // Each helper re-reads the live config so an earlier mutation is visible to
+  // later branches. Ordering (model → effort → permission → MCP) is load-bearing
+  // and must match the original sequence.
+  await updateModel(deps, persistentQuery, selectedModel);
+  await updateEffortLevel(deps, persistentQuery, selectedModel, settings.effortLevel);
+  await updatePermissionMode(deps, persistentQuery, permissionMode);
+  await updateMcpServers(deps, persistentQuery, queryOptions);
 
   const newExternalContextPaths = queryOptions?.externalContextPaths || [];
   deps.setCurrentExternalContextPaths(newExternalContextPaths);
@@ -155,13 +80,155 @@ export async function applyClaudeDynamicUpdates(
     return;
   }
 
-  const newConfig = deps.buildPersistentQueryConfig(vaultPath, cliPath, newExternalContextPaths);
+  await maybeRestart(deps, queryOptions, restartOptions, {
+    vaultPath,
+    cliPath,
+    newExternalContextPaths,
+  });
+}
+
+async function updateModel(
+  deps: ClaudeDynamicUpdateDeps,
+  persistentQuery: Query,
+  selectedModel: string,
+): Promise<void> {
+  const currentConfig = deps.getCurrentConfig();
+  if (!currentConfig || selectedModel === currentConfig.model) {
+    return;
+  }
+  try {
+    await persistentQuery.setModel(selectedModel);
+    deps.mutateCurrentConfig(config => {
+      config.model = selectedModel;
+    });
+  } catch {
+    deps.notifyFailure('Failed to update model');
+  }
+}
+
+async function updateEffortLevel(
+  deps: ClaudeDynamicUpdateDeps,
+  persistentQuery: Query,
+  selectedModel: string,
+  settingsEffortLevel: ClaudianSettings['effortLevel'],
+): Promise<void> {
+  const effortLevel = resolveEffortLevel(selectedModel, settingsEffortLevel);
+  const currentEffort = deps.getCurrentConfig()?.effortLevel ?? null;
+  if (effortLevel === currentEffort) {
+    return;
+  }
+  try {
+    // SDK runtime accepts `max`, but the current type definition for
+    // Settings.effortLevel has not caught up yet.
+    await persistentQuery.applyFlagSettings({ effortLevel } as unknown as Parameters<Query['applyFlagSettings']>[0]);
+    deps.mutateCurrentConfig(config => {
+      config.effortLevel = effortLevel;
+    });
+  } catch {
+    deps.notifyFailure('Failed to update effort level');
+  }
+}
+
+async function updatePermissionMode(
+  deps: ClaudeDynamicUpdateDeps,
+  persistentQuery: Query,
+  permissionMode: PermissionMode,
+): Promise<void> {
+  const currentConfig = deps.getCurrentConfig();
+  if (!currentConfig) {
+    return;
+  }
+  const sdkMode = deps.resolveSDKPermissionMode(permissionMode);
+  const currentSdkMode = currentConfig.sdkPermissionMode ?? null;
+
+  // The Claude Code auto-mode opt-in is a startup flag. The restart path below
+  // will rebuild the query with that capability before auto becomes active.
+  const requiresAutoModeRestart = sdkMode === 'auto' && !currentConfig.enableAutoMode;
+  if (requiresAutoModeRestart) {
+    return;
+  }
+
+  if (sdkMode === currentSdkMode) {
+    deps.mutateCurrentConfig(config => {
+      config.permissionMode = permissionMode;
+      config.sdkPermissionMode = sdkMode;
+    });
+    return;
+  }
+
+  try {
+    await persistentQuery.setPermissionMode(sdkMode);
+    deps.mutateCurrentConfig(config => {
+      config.permissionMode = permissionMode;
+      config.sdkPermissionMode = sdkMode;
+    });
+  } catch {
+    deps.notifyFailure('Failed to update permission mode');
+  }
+}
+
+async function updateMcpServers(
+  deps: ClaudeDynamicUpdateDeps,
+  persistentQuery: Query,
+  queryOptions?: ChatRuntimeQueryOptions,
+): Promise<void> {
+  const mcpMentions = queryOptions?.mcpMentions || new Set<string>();
+  const uiEnabledServers = queryOptions?.enabledMcpServers || new Set<string>();
+  const combinedMentions = new Set([...mcpMentions, ...uiEnabledServers]);
+  const mcpServers = deps.mcpManager.getActiveServers(combinedMentions);
+  const mcpServersKey = JSON.stringify(mcpServers);
+
+  const currentConfig = deps.getCurrentConfig();
+  if (!currentConfig || mcpServersKey === currentConfig.mcpServersKey) {
+    return;
+  }
+
+  // SECURITY (SEC-D): vet URL-based servers before their configs reach the
+  // Claude CLI — the settings Test button is not on this path. Unsafe
+  // servers are dropped (fail closed) rather than failing the turn; the key
+  // still tracks the raw set so the drop is not re-announced every turn.
+  const vetted = await vetActiveServersForRuntime(mcpServers);
+  for (const entry of vetted.dropped) {
+    deps.notifyFailure(`MCP server "${entry.name}" was not activated: ${entry.reason}`);
+  }
+  const serverConfigs: Record<string, McpServerConfig> = {};
+  for (const [name, config] of Object.entries(vetted.safe)) {
+    serverConfigs[name] = config;
+  }
+
+  try {
+    await persistentQuery.setMcpServers(serverConfigs);
+    deps.mutateCurrentConfig(config => {
+      config.mcpServersKey = mcpServersKey;
+    });
+  } catch {
+    deps.notifyFailure('Failed to update MCP servers');
+  }
+}
+
+interface RestartContext {
+  vaultPath: string;
+  cliPath: string;
+  newExternalContextPaths: string[];
+}
+
+async function maybeRestart(
+  deps: ClaudeDynamicUpdateDeps,
+  queryOptions: ChatRuntimeQueryOptions | undefined,
+  restartOptions: ClosePersistentQueryOptions | undefined,
+  context: RestartContext,
+): Promise<void> {
+  const newConfig = deps.buildPersistentQueryConfig(
+    context.vaultPath,
+    context.cliPath,
+    context.newExternalContextPaths,
+  );
   if (!deps.needsRestart(newConfig)) {
     return;
   }
 
   const restarted = await deps.ensureReady({
-    externalContextPaths: newExternalContextPaths,
+    externalContextPaths: context.newExternalContextPaths,
     preserveHandlers: restartOptions?.preserveHandlers,
     force: true,
   });
