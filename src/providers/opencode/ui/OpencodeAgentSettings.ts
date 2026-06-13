@@ -1,9 +1,12 @@
 import type { App } from 'obsidian';
-import { Modal, Notice, setIcon, Setting } from 'obsidian';
+import { Modal, Notice, Setting } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
-import { renderModalButtonRow, renderSettingsListItem } from '../../../shared/components/settingsListUI';
-import { confirmDelete } from '../../../shared/modals/ConfirmModal';
+import { renderModalButtonRow } from '../../../shared/components/settingsListUI';
+import {
+  renderVaultAgentListItem,
+  renderVaultListPanel,
+} from '../../../shared/settings/vaultAgentListPanel';
 import type { OpencodeAgentStorage } from '../storage/OpencodeAgentStorage';
 import type { OpencodeAgentDefinition } from '../types/agent';
 import {
@@ -449,67 +452,31 @@ export class OpencodeAgentSettings {
 
     const visibleAgents = this.agents.filter((agent) => agent.mode === 'subagent');
 
-    const headerEl = this.containerEl.createDiv({ cls: 'claudian-sp-header' });
-    headerEl.createSpan({ text: 'OpenCode Subagents', cls: 'claudian-sp-label' });
-
-    const actionsEl = headerEl.createDiv({ cls: 'claudian-sp-header-actions' });
-
-    const refreshBtn = actionsEl.createEl('button', {
-      cls: 'claudian-settings-action-btn',
-      attr: { 'aria-label': 'Refresh' },
+    renderVaultListPanel(this.containerEl, {
+      label: 'OpenCode Subagents',
+      emptyText: 'No OpenCode subagents in vault. Click + to create one.',
+      items: visibleAgents,
+      onRefresh: () => { void this.render(); },
+      onAdd: () => this.openModal(null),
+      renderItem: (listEl, agent) => this.renderItem(listEl, agent),
     });
-    setIcon(refreshBtn, 'refresh-cw');
-    refreshBtn.addEventListener('click', () => { void this.render(); });
-
-    const addBtn = actionsEl.createEl('button', {
-      cls: 'claudian-settings-action-btn',
-      attr: { 'aria-label': 'Add' },
-    });
-    setIcon(addBtn, 'plus');
-    addBtn.addEventListener('click', () => this.openModal(null));
-
-    if (visibleAgents.length === 0) {
-      const emptyEl = this.containerEl.createDiv({ cls: 'claudian-sp-empty-state' });
-      emptyEl.setText('No OpenCode subagents in vault. Click + to create one.');
-      return;
-    }
-
-    const listEl = this.containerEl.createDiv({ cls: 'claudian-sp-list' });
-    for (const agent of visibleAgents) {
-      this.renderItem(listEl, agent);
-    }
   }
 
   private renderItem(listEl: HTMLElement, agent: OpencodeAgentDefinition): void {
-    const { headerRow } = renderSettingsListItem(listEl, {
+    const { headerRow } = renderVaultAgentListItem(listEl, this.app, {
       name: agent.name,
       description: agent.description,
-      actions: [
-        { icon: 'pencil', ariaLabel: 'Edit', onClick: () => this.openModal(agent) },
-        {
-          icon: 'trash-2',
-          ariaLabel: 'Delete',
-          danger: true,
-          onClick: () => {
-            void (async (): Promise<void> => {
-            if (!this.app) return;
-            const confirmed = await confirmDelete(
-              this.app,
-              `Delete subagent "${agent.name}"?`,
-            );
-            if (!confirmed) return;
-            try {
-              await this.storage.delete(agent);
-              await this.render();
-              await this.onChanged?.();
-              new Notice(t('provider.opencode.subagent.deleted', { name: agent.name }));
-            } catch {
-              new Notice(t('provider.opencode.subagent.deleteFailed'));
-            }
-            })();
-          },
-        },
-      ],
+      onEdit: () => this.openModal(agent),
+      deleteConfirmMessage: `Delete subagent "${agent.name}"?`,
+      onDelete: async () => {
+        await this.storage.delete(agent);
+        await this.render();
+        await this.onChanged?.();
+        new Notice(t('provider.opencode.subagent.deleted', { name: agent.name }));
+      },
+      onDeleteFailed: () => {
+        new Notice(t('provider.opencode.subagent.deleteFailed'));
+      },
     });
 
     headerRow.createSpan({

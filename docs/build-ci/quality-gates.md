@@ -228,7 +228,7 @@ Tracked here so the direction is explicit.
    `warn`-tier rule left is `jest/expect-expect` (tests); burn it down and
    promote it the same way.
 2. **Tighten the quality-ratchet floors.** The ratchet freezes today's debt;
-   `complexFunctions` (239) is still burned down hotspot by hotspot
+   `complexFunctions` (237) is still burned down hotspot by hotspot
    (`npm run quality:health` prioritizes targets), and `cloneGroups` /
    `duplicatedLines` are ground down family by family (`npm run quality:dupes`
    prioritizes the same-file and same-zone clones, which extract cleanly). Each
@@ -305,3 +305,15 @@ helper to cyclomatic ~≤6 so it stays under CRAP≥30 — the run-9 lesson appl
 Instance-`this`-coupled blocks that could only be private methods (not pure siblings) were
 kept in place — a small LOC bump on a GF file is acceptable when it avoids threading many
 fields through free functions.
+Done 2026-06-13 (quality campaign run 11): cross-zone clone consolidation into `shared/`.
+The provider/feature clones that boundary rules forbid deduping in place (providers↛each-other,
+features↛providers) were lifted into `shared/settings/` modules imported by both sides:
+`customModelsSetting` (Claude + Codex settings tabs — the 86-line headliner, parameterized by
+each provider's `update*`/`reconcile*` hooks plus Codex's optional inactive-projection),
+`vaultAgentListPanel` (Codex subagent + Opencode agent list rendering; `codexListPanel` became
+a re-export shim), and the editor-modal `addIconPickerRow` in `nameDescriptionRows` (quick-action
++ work-order template modals). `cloneGroups` 42 → 35, `duplicatedLines` 1063 → 869, with a bonus
+`complexFunctions` 239 → 237 (the headliner extraction thinned each tab's `render`), and
+`criticalComplexity`/maintainability/structural counters all held. Cross-zone runtime clones
+(subprocess spawn, tool normalization, ChatRuntime) were left for a dedicated design pass —
+their only shared home is `core/`, and the shared module would be more invasive than the win.
