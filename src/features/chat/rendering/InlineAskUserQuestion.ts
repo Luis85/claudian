@@ -1,4 +1,5 @@
 import type { AskUserQuestionItem, AskUserQuestionOption } from '../../../core/types/tools';
+import { renderAskCustomInputRow, renderAskOptionRow } from './askQuestionTabRenderer';
 import { coerceOption, deduplicateOptions } from './askUserQuestionOptions';
 import { activateInlineCard } from './inlineChoiceCard';
 
@@ -191,8 +192,6 @@ export class InlineAskUserQuestion {
 
   private renderQuestionTab(idx: number): void {
     const q = this.questions[idx];
-    const isMulti = q.multiSelect;
-    const selected = this.answers.get(idx)!;
 
     this.contentArea.createDiv({
       text: q.question,
@@ -202,94 +201,71 @@ export class InlineAskUserQuestion {
     const listEl = this.contentArea.createDiv({ cls: 'claudian-ask-list' });
 
     for (let optIdx = 0; optIdx < q.options.length; optIdx++) {
-      const option = q.options[optIdx];
-      const isFocused = optIdx === this.focusedItemIndex;
-      const optionValue = this.getOptionValue(option);
-      const isSelected = selected.has(optionValue);
-
-      const row = listEl.createDiv({ cls: 'claudian-ask-item' });
-      if (isFocused) row.addClass('is-focused');
-      if (isSelected) row.addClass('is-selected');
-
-      row.createSpan({ text: isFocused ? '\u203A' : '\u00A0', cls: 'claudian-ask-cursor' });
-      row.createSpan({ text: `${optIdx + 1}. `, cls: 'claudian-ask-item-num' });
-
-      if (isMulti) {
-        this.renderMultiSelectCheckbox(row, isSelected);
-      }
-
-      const labelBlock = row.createDiv({ cls: 'claudian-ask-item-content' });
-      const labelRow = labelBlock.createDiv({ cls: 'claudian-ask-label-row' });
-      labelRow.createSpan({ text: option.label, cls: 'claudian-ask-item-label' });
-
-      if (!isMulti && isSelected) {
-        labelRow.createSpan({ text: ' \u2713', cls: 'claudian-ask-check-mark' });
-      }
-
-      if (option.description) {
-        labelBlock.createDiv({ text: option.description, cls: 'claudian-ask-item-desc' });
-      }
-
-      row.addEventListener('click', () => {
-        this.focusedItemIndex = optIdx;
-        this.updateFocusIndicator();
-        this.selectOption(idx, option);
-      });
-
-      this.currentItems.push(row);
+      this.appendQuestionOptionRow(listEl, idx, optIdx);
     }
 
     if (this.canShowCustomInputForQuestion(q)) {
-      const customIdx = q.options.length;
-      const customFocused = customIdx === this.focusedItemIndex;
-      const customText = this.customInputs.get(idx) ?? '';
-      const hasCustomText = customText.trim().length > 0;
-
-      const customRow = listEl.createDiv({ cls: 'claudian-ask-item claudian-ask-custom-item' });
-      if (customFocused) customRow.addClass('is-focused');
-
-      customRow.createSpan({ text: customFocused ? '\u203A' : '\u00A0', cls: 'claudian-ask-cursor' });
-      customRow.createSpan({ text: `${customIdx + 1}. `, cls: 'claudian-ask-item-num' });
-
-      if (isMulti) {
-        this.renderMultiSelectCheckbox(customRow, hasCustomText);
-      }
-
-      const inputEl = customRow.createEl('input', {
-        cls: 'claudian-ask-custom-text',
-        value: customText,
-      });
-      inputEl.setAttribute('type', q.isSecret ? 'password' : 'text');
-      inputEl.setAttribute('placeholder', q.isSecret ? 'Enter secret.' : 'Type something.');
-
-      inputEl.addEventListener('input', () => {
-        this.customInputs.set(idx, inputEl.value);
-        if (!isMulti && inputEl.value.trim()) {
-          selected.clear();
-          this.updateOptionVisuals(idx);
-        }
-        this.updateTabIndicators();
-      });
-      inputEl.addEventListener('focus', () => {
-        this.isInputFocused = true;
-      });
-      inputEl.addEventListener('blur', () => {
-        this.isInputFocused = false;
-      });
-
-      customRow.addEventListener('click', () => {
-        this.focusedItemIndex = customIdx;
-        this.updateFocusIndicator();
-        inputEl.focus();
-      });
-
-      this.currentItems.push(customRow);
+      this.appendQuestionCustomRow(listEl, idx);
     }
 
     this.contentArea.createDiv({
       text: this.config.immediateSelect ? HINTS_TEXT_IMMEDIATE : HINTS_TEXT,
       cls: 'claudian-ask-hints',
     });
+  }
+
+  private appendQuestionOptionRow(listEl: HTMLElement, idx: number, optIdx: number): void {
+    const q = this.questions[idx];
+    const option = q.options[optIdx];
+    const optionValue = this.getOptionValue(option);
+    const row = renderAskOptionRow(listEl, {
+      option,
+      optIdx,
+      isFocused: optIdx === this.focusedItemIndex,
+      isSelected: this.answers.get(idx)!.has(optionValue),
+      isMulti: q.multiSelect,
+      renderCheckbox: (parent, checked) => this.renderMultiSelectCheckbox(parent, checked),
+      onSelect: () => {
+        this.focusedItemIndex = optIdx;
+        this.updateFocusIndicator();
+        this.selectOption(idx, option);
+      },
+    });
+    this.currentItems.push(row);
+  }
+
+  private appendQuestionCustomRow(listEl: HTMLElement, idx: number): void {
+    const q = this.questions[idx];
+    const isMulti = q.multiSelect;
+    const selected = this.answers.get(idx)!;
+    const customIdx = q.options.length;
+    const customText = this.customInputs.get(idx) ?? '';
+    const customRow = renderAskCustomInputRow(listEl, {
+      customIdx,
+      isFocused: customIdx === this.focusedItemIndex,
+      isMulti,
+      isSecret: q.isSecret === true,
+      initialText: customText,
+      hasCustomText: customText.trim().length > 0,
+      renderCheckbox: (parent, checked) => this.renderMultiSelectCheckbox(parent, checked),
+      onInput: (value) => {
+        this.customInputs.set(idx, value);
+        if (!isMulti && value.trim()) {
+          selected.clear();
+          this.updateOptionVisuals(idx);
+        }
+        this.updateTabIndicators();
+      },
+      onFocusChange: (focused) => {
+        this.isInputFocused = focused;
+      },
+      onRowClick: (inputEl) => {
+        this.focusedItemIndex = customIdx;
+        this.updateFocusIndicator();
+        inputEl.focus();
+      },
+    });
+    this.currentItems.push(customRow);
   }
 
   private renderSubmitTab(): void {

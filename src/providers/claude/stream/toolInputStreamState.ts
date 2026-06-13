@@ -199,42 +199,52 @@ function stripIncompleteTail(tokens: JsonToken[]): JsonToken[] {
   }
 }
 
-function closeOpenContainers(tokens: JsonToken[]): JsonToken[] {
-  const completedTokens = [...tokens];
-  const closingTokens: JsonToken[] = [];
+function dropPendingClosingToken(closingTokens: JsonToken[], closingValue: string): void {
+  const closingIndex = findClosingTokenIndex(closingTokens, closingValue);
+  if (closingIndex >= 0) {
+    closingTokens.splice(closingIndex, 1);
+  }
+}
 
-  for (const token of completedTokens) {
-      if (token.type === 'brace') {
-        if (token.value === '{') {
-          closingTokens.push({ type: 'brace', value: '}' });
-        } else {
-          const closingIndex = findClosingTokenIndex(closingTokens, '}');
-          if (closingIndex >= 0) {
-            closingTokens.splice(closingIndex, 1);
-          }
-        }
-        continue;
+// Tracks one container token against the pending stack: an opener pushes its
+// matching closer, a closer cancels the nearest pending closer.
+function trackContainerToken(closingTokens: JsonToken[], token: JsonToken): void {
+  if (token.type === 'brace') {
+    if (token.value === '{') {
+      closingTokens.push({ type: 'brace', value: '}' });
+    } else {
+      dropPendingClosingToken(closingTokens, '}');
     }
-
-    if (token.type === 'bracket') {
-      if (token.value === '[') {
-        closingTokens.push({ type: 'bracket', value: ']' });
-      } else {
-        const closingIndex = findClosingTokenIndex(closingTokens, ']');
-        if (closingIndex >= 0) {
-          closingTokens.splice(closingIndex, 1);
-        }
-      }
-    }
+    return;
   }
 
+  if (token.type === 'bracket') {
+    if (token.value === '[') {
+      closingTokens.push({ type: 'bracket', value: ']' });
+    } else {
+      dropPendingClosingToken(closingTokens, ']');
+    }
+  }
+}
+
+function appendPendingClosingTokens(completedTokens: JsonToken[], closingTokens: JsonToken[]): void {
   for (let index = closingTokens.length - 1; index >= 0; index -= 1) {
     const token = closingTokens[index];
     if (token) {
       completedTokens.push(token);
     }
   }
+}
 
+function closeOpenContainers(tokens: JsonToken[]): JsonToken[] {
+  const completedTokens = [...tokens];
+  const closingTokens: JsonToken[] = [];
+
+  for (const token of completedTokens) {
+    trackContainerToken(closingTokens, token);
+  }
+
+  appendPendingClosingTokens(completedTokens, closingTokens);
   return completedTokens;
 }
 

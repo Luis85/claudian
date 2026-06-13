@@ -15,6 +15,7 @@ import { t } from '../../i18n/i18n';
 import { formatContextLimit, parseContextLimit, parseEnvironmentVariables } from '../../utils/env';
 import { createSettingsActionButton } from '../components/settingsListUI';
 import { confirmDelete } from '../modals/ConfirmModal';
+import { mergeSnippetContextLimits, mergeSnippetModelAliases } from './envSnippetApply';
 
 /**
  * Structural predicate for loaded chat-view leaves, duck-typed against the
@@ -388,49 +389,52 @@ export class EnvSnippetManager {
     // the target scope's env instead of doing nothing. The missing-secret warning above
     // prompts re-entry; env limits/aliases below still apply.
     if (snippetContent) {
-      const updates = getEnvironmentScopeUpdates(
-        snippetContent,
-        snippet.scope ?? this.scope,
-      );
-
-      if (updates.length === 1) {
-        const [update] = updates;
-        this.syncTextareaValue(update.scope, update.envText);
-        await this.plugin.applyEnvironmentVariables(update.scope, update.envText);
-      } else if (updates.length > 1) {
-        for (const update of updates) {
-          this.syncTextareaValue(update.scope, update.envText);
-        }
-        await this.plugin.applyEnvironmentVariablesBatch(updates);
-      }
+      await this.applySnippetEnvUpdates(snippetContent, snippet.scope ?? this.scope);
     }
 
     // Legacy snippets without contextLimits don't modify limits
     if (snippet.contextLimits) {
-      this.plugin.settings.customContextLimits = {
-        ...this.plugin.settings.customContextLimits,
-        ...snippet.contextLimits,
-      };
+      this.plugin.settings.customContextLimits = mergeSnippetContextLimits(
+        this.plugin.settings.customContextLimits,
+        snippet.contextLimits,
+      );
     }
 
     // Legacy snippets without modelAliases don't modify aliases. Snippets saved
     // with alias fields clear aliases for their own model IDs when left empty.
     if (snippet.modelAliases) {
       const modelIds = ProviderRegistry.getCustomModelIds(parseEnvironmentVariables(snippet.envVars));
-      const nextAliases = { ...(this.plugin.settings.customModelAliases ?? {}) };
-      for (const modelId of modelIds) {
-        const alias = snippet.modelAliases[modelId]?.trim();
-        if (alias) {
-          nextAliases[modelId] = alias;
-        } else {
-          delete nextAliases[modelId];
-        }
-      }
-      this.plugin.settings.customModelAliases = nextAliases;
+      this.plugin.settings.customModelAliases = mergeSnippetModelAliases(
+        this.plugin.settings.customModelAliases,
+        modelIds,
+        snippet.modelAliases,
+      );
     }
     await this.plugin.saveSettings();
 
     this.onContextLimitsChange?.();
+    await this.refreshChatModelSelector();
+  }
+
+  // Applies a snippet's resolved env text to its owning scope(s).
+  private async applySnippetEnvUpdates(
+    snippetContent: string,
+    fallbackScope: EnvironmentScope,
+  ): Promise<void> {
+    const updates = getEnvironmentScopeUpdates(snippetContent, fallbackScope);
+    if (updates.length === 1) {
+      const [update] = updates;
+      this.syncTextareaValue(update.scope, update.envText);
+      await this.plugin.applyEnvironmentVariables(update.scope, update.envText);
+    } else if (updates.length > 1) {
+      for (const update of updates) {
+        this.syncTextareaValue(update.scope, update.envText);
+      }
+      await this.plugin.applyEnvironmentVariablesBatch(updates);
+    }
+  }
+
+  private async refreshChatModelSelector(): Promise<void> {
     // Use the safe predicate + loadIfDeferred() instead of an unchecked cast:
     // workspace.getLeavesOfType can hand back deferred leaves whose .view is a
     // stub until activation, and the cast would silently no-op (or worse,

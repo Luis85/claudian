@@ -54,43 +54,13 @@ export class ClaudianBlockParser {
     let plainText = '';
 
     while (this.buffer.length > 0) {
-      if (this.openKind === null) {
-        const next = this.findNextOpen();
-        if (!next) {
-          // Keep a tail buffer in case an open tag is split across chunks.
-          if (this.buffer.length > MAX_TAIL) {
-            plainText += this.buffer.slice(0, this.buffer.length - MAX_TAIL);
-            this.buffer = this.buffer.slice(-MAX_TAIL);
-          }
-          break;
-        }
-        plainText += this.buffer.slice(0, next.index);
-        this.openKind = next.kind;
-        this.openBody = '';
-        this.buffer = this.buffer.slice(next.index + KIND_TO_OPEN[next.kind].length);
-      } else {
-        const closeTag = KIND_TO_CLOSE[this.openKind];
-        const idx = this.buffer.indexOf(closeTag);
-        if (idx === -1) {
-          // The close tag can be split across chunks (e.g. `</claudian_needs_in`
-          // then `put>`). Append everything except a possible partial close-tag
-          // suffix to the body, and keep that suffix in the buffer so the next
-          // chunk can complete the tag — mirroring the open-tag tail handling.
-          const tail = this.partialCloseTailLength(closeTag);
-          this.openBody += this.buffer.slice(0, this.buffer.length - tail);
-          this.buffer = tail > 0 ? this.buffer.slice(this.buffer.length - tail) : '';
-          break;
-        }
-        this.openBody += this.buffer.slice(0, idx);
-        const result = parseBody(this.openKind, this.openBody);
-        if (result.ok) {
-          blocks.push({ kind: this.openKind, fields: result.fields, raw: this.openBody.trim() });
-        } else {
-          warnings.push(result.error);
-        }
-        this.buffer = this.buffer.slice(idx + closeTag.length);
-        this.openKind = null;
-        this.openBody = '';
+      const step =
+        this.openKind === null
+          ? this.consumeUntilOpen()
+          : this.consumeUntilClose(blocks, warnings);
+      plainText += step.plainText;
+      if (step.done) {
+        break;
       }
     }
 
@@ -102,6 +72,64 @@ export class ClaudianBlockParser {
     }
 
     return { plainText, blocks, warnings };
+  }
+
+  /**
+   * No block open: emit text up to the next open tag, or break (`done`) when no
+   * open tag is present, keeping a bounded tail in case one is split across chunks.
+   */
+  private consumeUntilOpen(): { plainText: string; done: boolean } {
+    const next = this.findNextOpen();
+    if (!next) {
+      // Keep a tail buffer in case an open tag is split across chunks.
+      if (this.buffer.length > MAX_TAIL) {
+        const drained = this.buffer.slice(0, this.buffer.length - MAX_TAIL);
+        this.buffer = this.buffer.slice(-MAX_TAIL);
+        return { plainText: drained, done: true };
+      }
+      return { plainText: '', done: true };
+    }
+    const plainText = this.buffer.slice(0, next.index);
+    this.openKind = next.kind;
+    this.openBody = '';
+    this.buffer = this.buffer.slice(next.index + KIND_TO_OPEN[next.kind].length);
+    return { plainText, done: false };
+  }
+
+  /**
+   * Block open: append body up to its close tag and emit the block, or break
+   * (`done`) when the close tag is absent — buffering a possible partial close
+   * suffix so the next chunk can complete it. Pushes into the shared
+   * `blocks`/`warnings` accumulators in place to preserve emission order.
+   */
+  private consumeUntilClose(
+    blocks: ClaudianBlock[],
+    warnings: string[],
+  ): { plainText: string; done: boolean } {
+    const openKind = this.openKind as ClaudianBlockKind;
+    const closeTag = KIND_TO_CLOSE[openKind];
+    const idx = this.buffer.indexOf(closeTag);
+    if (idx === -1) {
+      // The close tag can be split across chunks (e.g. `</claudian_needs_in`
+      // then `put>`). Append everything except a possible partial close-tag
+      // suffix to the body, and keep that suffix in the buffer so the next
+      // chunk can complete the tag — mirroring the open-tag tail handling.
+      const tail = this.partialCloseTailLength(closeTag);
+      this.openBody += this.buffer.slice(0, this.buffer.length - tail);
+      this.buffer = tail > 0 ? this.buffer.slice(this.buffer.length - tail) : '';
+      return { plainText: '', done: true };
+    }
+    this.openBody += this.buffer.slice(0, idx);
+    const result = parseBody(openKind, this.openBody);
+    if (result.ok) {
+      blocks.push({ kind: openKind, fields: result.fields, raw: this.openBody.trim() });
+    } else {
+      warnings.push(result.error);
+    }
+    this.buffer = this.buffer.slice(idx + closeTag.length);
+    this.openKind = null;
+    this.openBody = '';
+    return { plainText: '', done: false };
   }
 
   finalize(): ParserOutput {

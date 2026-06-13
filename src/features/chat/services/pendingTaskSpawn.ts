@@ -1,4 +1,20 @@
+import { TOOL_TASK } from '../../../core/tools/toolNames';
+import type { ToolCallInfo } from '../../../core/types';
 import type { HandleTaskResult, RenderPendingResult } from './SubagentManager';
+
+/** Builds the buffered (running, collapsed) Task tool call used while mode is unknown. */
+export function buildPendingTaskCall(
+  taskToolId: string,
+  taskInput: Record<string, unknown>,
+): ToolCallInfo {
+  return {
+    id: taskToolId,
+    name: TOOL_TASK,
+    input: taskInput || {},
+    status: 'running',
+    isExpanded: false,
+  };
+}
 
 /**
  * Resolves a buffered pending Task into its rendered subagent block.

@@ -228,7 +228,7 @@ Tracked here so the direction is explicit.
    `warn`-tier rule left is `jest/expect-expect` (tests); burn it down and
    promote it the same way.
 2. **Tighten the quality-ratchet floors.** The ratchet freezes today's debt;
-   `complexFunctions` (254) is still burned down hotspot by hotspot
+   `complexFunctions` (239) is still burned down hotspot by hotspot
    (`npm run quality:health` prioritizes targets), and `cloneGroups` /
    `duplicatedLines` are ground down family by family (`npm run quality:dupes`
    prioritizes the same-file and same-zone clones, which extract cleanly). Each
@@ -293,3 +293,15 @@ can re-trip CRAP), and (b) a stray `coverage/` directory flips fallow from
 baseline — with `coverage/` absent** (that matches CI's `quality` job, which has no
 coverage artifact); run `npm run test:coverage` last and never lock a baseline while
 `coverage/` exists.
+Done 2026-06-13 (quality campaign run 10): complexity decomposition, second pass.
+Sixteen high-cognitive functions across chat rendering/streaming/services, the Claude
+provider, Cursor, core, tasks, utils, and `shared/settings` were decomposed into small
+helpers — including the five grandfathered `feat:chat` hotspots deferred in run 9
+(`renderApplyPatchExpanded`, `hasVisibleContent`, `handleRegularToolUse`,
+`handleTaskToolUse`, `renderQuestionTab`), extracted out to siblings while the GF files
+shrank. `complexFunctions` 254 → 239 (a bigger delta than run 9's −9, by holding every new
+helper to cyclomatic ~≤6 so it stays under CRAP≥30 — the run-9 lesson applied), with
+`criticalComplexity` 0, maintainability 90.3, and clones/structural counters unchanged.
+Instance-`this`-coupled blocks that could only be private methods (not pure siblings) were
+kept in place — a small LOC bump on a GF file is acceptable when it avoids threading many
+fields through free functions.

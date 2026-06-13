@@ -5,7 +5,6 @@ import { isAbsolute, sep } from 'path';
 
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderTaskResultInterpreter } from '../../../core/providers/types';
-import { TOOL_TASK } from '../../../core/tools/toolNames';
 import { extractToolResultContent } from '../../../core/tools/toolResultContent';
 import type {
   SubagentInfo,
@@ -25,7 +24,7 @@ import {
   updateSubagentToolResult,
 } from '../rendering/SubagentRenderer';
 import type { PendingToolCall } from '../state/types';
-import { spawnPendingTask } from './pendingTaskSpawn';
+import { buildPendingTaskCall, spawnPendingTask } from './pendingTaskSpawn';
 
 export type SubagentStateChangeCallback = (subagent: SubagentInfo) => void;
 
@@ -121,62 +120,30 @@ export class SubagentManager {
     const existingAsyncState = this.asyncDomStates.get(taskToolId);
     if (existingAsyncState) {
       this.updateSubagentLabel(existingAsyncState.wrapperEl, existingAsyncState.info, taskInput);
-      // Sync to canonical SubagentInfo so status transitions don't revert updates
-      const canonical = this.getByTaskId(taskToolId);
-      if (canonical && canonical !== existingAsyncState.info) {
-        if (taskInput.description) canonical.description = taskInput.description as string;
-        if (taskInput.prompt) canonical.prompt = taskInput.prompt as string;
-      }
+      this.syncCanonicalAsyncInput(taskToolId, existingAsyncState.info, taskInput);
       return { action: 'label_updated' };
     }
 
     // Already buffered → merge input and try to render
-    const pending = this.pendingTasks.get(taskToolId);
-    if (pending) {
-      const newInput = taskInput || {};
-      if (Object.keys(newInput).length > 0) {
-        pending.toolCall.input = { ...pending.toolCall.input, ...newInput };
-      }
-      if (currentContentEl) {
-        pending.parentEl = currentContentEl;
-      }
-
-      // Do not lock mode before run_in_background is explicitly known.
-      // Sync fallback is handled when child chunks/tool_result confirm sync.
-      if (this.resolveTaskMode(pending.toolCall.input)) {
-        const result = this.renderPendingTask(taskToolId, currentContentEl);
-        if (result) {
-          return result.mode === 'sync'
-            ? { action: 'created_sync', subagentState: result.subagentState }
-            : { action: 'created_async', info: result.info, domState: result.domState };
-        }
-      }
-      return { action: 'buffered' };
+    if (this.pendingTasks.has(taskToolId)) {
+      return this.resumeBufferedTask(taskToolId, taskInput, currentContentEl);
     }
 
     // New Task without a content element — buffer for later rendering
     if (!currentContentEl) {
-      const toolCall: ToolCallInfo = {
-        id: taskToolId,
-        name: TOOL_TASK,
-        input: taskInput || {},
-        status: 'running',
-        isExpanded: false,
-      };
-      this.pendingTasks.set(taskToolId, { toolCall, parentEl: null });
+      this.pendingTasks.set(taskToolId, {
+        toolCall: buildPendingTaskCall(taskToolId, taskInput),
+        parentEl: null,
+      });
       return { action: 'buffered' };
     }
 
     const mode = this.resolveTaskMode(taskInput);
     if (!mode) {
-      const toolCall: ToolCallInfo = {
-        id: taskToolId,
-        name: TOOL_TASK,
-        input: taskInput || {},
-        status: 'running',
-        isExpanded: false,
-      };
-      this.pendingTasks.set(taskToolId, { toolCall, parentEl: currentContentEl });
+      this.pendingTasks.set(taskToolId, {
+        toolCall: buildPendingTaskCall(taskToolId, taskInput),
+        parentEl: currentContentEl,
+      });
       return { action: 'buffered' };
     }
 
@@ -185,6 +152,56 @@ export class SubagentManager {
       return this.createAsyncTask(taskToolId, taskInput, currentContentEl);
     }
     return this.createSyncTask(taskToolId, taskInput, currentContentEl);
+  }
+
+  /**
+   * Mirrors label-update input onto the canonical SubagentInfo for an async task
+   * so later status transitions (which re-read canonical state) don't revert the
+   * description/prompt edits applied to the live DOM info object.
+   */
+  private syncCanonicalAsyncInput(
+    taskToolId: string,
+    asyncInfo: SubagentInfo,
+    taskInput: Record<string, unknown>,
+  ): void {
+    const canonical = this.getByTaskId(taskToolId);
+    if (canonical && canonical !== asyncInfo) {
+      if (taskInput.description) canonical.description = taskInput.description as string;
+      if (taskInput.prompt) canonical.prompt = taskInput.prompt as string;
+    }
+  }
+
+  /**
+   * Resolves an already-buffered Task: merges the latest input, adopts a content
+   * element if one just arrived, and renders only once `run_in_background` is
+   * explicitly known. Mode is never locked early — sync fallback is handled when
+   * child chunks or the tool_result confirm sync.
+   */
+  private resumeBufferedTask(
+    taskToolId: string,
+    taskInput: Record<string, unknown>,
+    currentContentEl: HTMLElement | null,
+  ): HandleTaskResult {
+    const pending = this.pendingTasks.get(taskToolId);
+    if (!pending) return { action: 'buffered' };
+
+    const newInput = taskInput || {};
+    if (Object.keys(newInput).length > 0) {
+      pending.toolCall.input = { ...pending.toolCall.input, ...newInput };
+    }
+    if (currentContentEl) {
+      pending.parentEl = currentContentEl;
+    }
+
+    if (this.resolveTaskMode(pending.toolCall.input)) {
+      const result = this.renderPendingTask(taskToolId, currentContentEl);
+      if (result) {
+        return result.mode === 'sync'
+          ? { action: 'created_sync', subagentState: result.subagentState }
+          : { action: 'created_async', info: result.info, domState: result.domState };
+      }
+    }
+    return { action: 'buffered' };
   }
 
   // ============================================
