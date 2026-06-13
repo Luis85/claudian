@@ -94,9 +94,16 @@ Users currently manage multiple LLM provider API keys and have limited visibilit
 - This prevents model switching between follow-up turns in multi-turn conversations or work-order runs
 
 ### Model Catalog
-- Query OpenRouter API to fetch available models with metadata (pricing, availability)
+- Query OpenRouter API to fetch available models with metadata (pricing, availability, supported parameters)
 - Cache model list to avoid excessive API calls
 - Display pricing information in model selector UI
+- **For Agent Board only**: Identify tool-capable models by checking `supported_parameters` (e.g., `tools` support)
+- Separate/filter tool-capable models in the Agent Board model picker so users can easily select work-order-appropriate models
+
+### Agent Board Tool Capability Validation
+- Launch validation must verify that selected models support required tool execution:
+  - If a work order is assigned to a tool-less model, reject the launch with clear messaging
+  - Allow sidebar chat to use any OpenRouter model (inference-only), but restrict Agent Board to tool-capable models when tools are required
 
 ## Non-Functional Requirements
 
