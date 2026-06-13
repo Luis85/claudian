@@ -1,10 +1,8 @@
-import { type ChildProcess,spawn } from 'child_process';
-import type { Readable, Writable } from 'stream';
+import type { Readable, Writable } from 'node:stream';
 
+import { AgentSubprocess } from '../../../core/transport/AgentSubprocess';
 import { wrapWindowsCmdShim } from '../../../utils/windowsSpawn';
 import type { CodexLaunchSpec } from './codexLaunchTypes';
-
-const SIGKILL_TIMEOUT_MS = 3_000;
 
 interface ResolvedCodexSpawnSpec {
   command: string;
@@ -43,57 +41,61 @@ function resolveWindowsSpawnSpec(
 
 type ExitCallback = (code: number | null, signal: string | null) => void;
 
+/**
+ * Codex `app-server` stdio subprocess. A thin adapter over the shared
+ * `core/transport/AgentSubprocess` (ADR-0001 Move 2): the Windows `.cmd`-shim
+ * resolution stays here (Codex-launch-spec specific), and the shared close event
+ * is mapped onto Codex's `onExit(code, signal)` contract.
+ */
 export class CodexAppServerProcess {
-  private proc: ChildProcess | null = null;
-  private alive = false;
-  private exitCallbacks: ExitCallback[] = [];
+  private proc: AgentSubprocess | null = null;
+  private readonly exitCallbacks: ExitCallback[] = [];
 
   constructor(
     private readonly launchSpec: Pick<CodexLaunchSpec, 'command' | 'args' | 'spawnCwd' | 'env'>,
   ) {}
 
   start(): void {
-    const resolvedSpawnSpec = resolveWindowsSpawnSpec(this.launchSpec);
+    if (this.proc) {
+      return;
+    }
 
-    this.proc = spawn(resolvedSpawnSpec.command, resolvedSpawnSpec.args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
+    const resolved = resolveWindowsSpawnSpec(this.launchSpec);
+    this.proc = new AgentSubprocess({
+      command: resolved.command,
+      args: resolved.args,
       cwd: this.launchSpec.spawnCwd,
-      env: resolvedSpawnSpec.env,
-      windowsHide: true,
-      ...(resolvedSpawnSpec.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
+      env: resolved.env,
+      windowsVerbatimArguments: resolved.windowsVerbatimArguments,
     });
 
-    this.alive = true;
-
-    this.proc.on('exit', (code, signal) => {
-      this.alive = false;
-      for (const cb of this.exitCallbacks) {
-        cb(code, signal);
+    // Codex notifies only on a real process exit (not on a spawn error).
+    this.proc.onClose((info) => {
+      if (info.reason !== 'exit') {
+        return;
+      }
+      for (const cb of [...this.exitCallbacks]) {
+        cb(info.code, info.signal);
       }
     });
 
-    this.proc.on('error', () => {
-      this.alive = false;
-    });
+    this.proc.start();
   }
 
   get stdin(): Writable {
-    if (!this.proc?.stdin) throw new Error('Process not started');
-    return this.proc.stdin;
+    return this.requireProc().stdin;
   }
 
   get stdout(): Readable {
-    if (!this.proc?.stdout) throw new Error('Process not started');
-    return this.proc.stdout;
+    return this.requireProc().stdout;
   }
 
   get stderr(): Readable {
-    if (!this.proc?.stderr) throw new Error('Process not started');
-    return this.proc.stderr;
+    return this.requireProc().stderr;
   }
 
   isAlive(): boolean {
-    return this.alive;
+    return this.proc?.isAlive() ?? false;
   }
 
   onExit(callback: ExitCallback): void {
@@ -105,40 +107,14 @@ export class CodexAppServerProcess {
     if (idx !== -1) this.exitCallbacks.splice(idx, 1);
   }
 
-  async shutdown(): Promise<void> {
-    const proc = this.proc;
-    if (!proc || !this.alive) return;
+  shutdown(): Promise<void> {
+    return this.proc?.shutdown() ?? Promise.resolve();
+  }
 
-    return new Promise<void>((resolve) => {
-      let settled = false;
-      const finish = () => {
-        if (settled) return;
-        settled = true;
-        window.clearTimeout(killTimer);
-        window.clearTimeout(giveUpTimer);
-        proc.off('exit', onExit);
-        resolve();
-      };
-      const onExit = () => finish();
-      const killTimer = window.setTimeout(() => {
-        try {
-          if (this.alive) {
-            proc.kill('SIGKILL');
-          }
-        } catch {
-          // already exited — the give-up timer will resolve
-        }
-      }, SIGKILL_TIMEOUT_MS);
-      // Hard ceiling: never let teardown hang if 'exit' never fires.
-      const giveUpTimer = window.setTimeout(finish, SIGKILL_TIMEOUT_MS * 2);
-
-      proc.once('exit', onExit);
-      try {
-        proc.kill('SIGTERM');
-      } catch {
-        // Process already gone between the guard and the kill.
-        finish();
-      }
-    });
+  private requireProc(): AgentSubprocess {
+    if (!this.proc) {
+      throw new Error('Process not started');
+    }
+    return this.proc;
   }
 }
