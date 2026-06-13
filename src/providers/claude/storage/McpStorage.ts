@@ -50,8 +50,93 @@ function stripSecretKeys(server: ManagedMcpServer): McpServerConfig {
   return next;
 }
 
+interface ClaudianServerMeta {
+  enabled?: boolean;
+  contextSaving?: boolean;
+  disabledTools?: string[];
+  description?: string;
+  secretHeaders?: Record<string, string>;
+  secretEnv?: Record<string, string>;
+}
+
+/**
+ * SECURITY (SEC-3): Always persist the `enabled` flag. The presence of a
+ * metadata entry is what marks a server as user-trusted on reload; without it,
+ * a re-saved enabled server would be re-classified as untrusted vault-config
+ * and silently disabled. Writing the explicit flag keeps enabled state stable
+ * across reloads while still defaulting unknown vault-sourced servers (no
+ * metadata) to disabled.
+ */
+function buildClaudianServerMeta(server: ManagedMcpServer): ClaudianServerMeta {
+  const meta: ClaudianServerMeta = { enabled: server.enabled };
+
+  if (server.contextSaving !== DEFAULT_MCP_SERVER.contextSaving) {
+    meta.contextSaving = server.contextSaving;
+  }
+  const normalizedDisabledTools = server.disabledTools
+    ?.map((tool) => tool.trim())
+    .filter((tool) => tool.length > 0);
+  if (normalizedDisabledTools && normalizedDisabledTools.length > 0) {
+    meta.disabledTools = normalizedDisabledTools;
+  }
+  if (server.description) {
+    meta.description = server.description;
+  }
+  if (server.secretHeaders && Object.keys(server.secretHeaders).length > 0) {
+    meta.secretHeaders = server.secretHeaders;
+  }
+  if (server.secretEnv && Object.keys(server.secretEnv).length > 0) {
+    meta.secretEnv = server.secretEnv;
+  }
+
+  return meta;
+}
+
+/**
+ * Merge the freshly-built `_claudian.servers` map into the existing file's
+ * `_claudian` namespace, preserving any other `_claudian.*` keys CC or future
+ * Claudian versions may have written, and dropping `_claudian` entirely when no
+ * metadata remains.
+ */
+function mergeClaudianNamespace(
+  file: Record<string, unknown>,
+  existing: Record<string, unknown> | null,
+  claudianServers: Record<string, ClaudianServerMeta>,
+): void {
+  const existingClaudian =
+    existing && typeof existing._claudian === 'object'
+      ? (existing._claudian as Record<string, unknown>)
+      : null;
+
+  if (Object.keys(claudianServers).length > 0) {
+    file._claudian = { ...(existingClaudian ?? {}), servers: claudianServers };
+    return;
+  }
+  if (existingClaudian) {
+    const rest = { ...existingClaudian };
+    delete rest.servers;
+    if (Object.keys(rest).length > 0) {
+      file._claudian = rest;
+    } else {
+      delete file._claudian;
+    }
+    return;
+  }
+  delete file._claudian;
+}
+
 export class McpStorage {
   constructor(private adapter: VaultFileAdapter) {}
+
+  private async readExistingFile(): Promise<Record<string, unknown> | null> {
+    if (!(await this.adapter.exists(MCP_CONFIG_PATH))) return null;
+    try {
+      const parsed: unknown = JSON.parse(await this.adapter.read(MCP_CONFIG_PATH));
+      return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : null;
+    } catch {
+      return null;
+    }
+  }
 
   async load(): Promise<ManagedMcpServer[]> {
     try {
@@ -113,97 +198,23 @@ export class McpStorage {
 
   async save(servers: ManagedMcpServer[]): Promise<void> {
     const mcpServers: Record<string, McpServerConfig> = {};
-    const claudianServers: Record<
-      string,
-      {
-        enabled?: boolean;
-        contextSaving?: boolean;
-        disabledTools?: string[];
-        description?: string;
-        secretHeaders?: Record<string, string>;
-        secretEnv?: Record<string, string>;
-      }
-    > = {};
+    const claudianServers: Record<string, ClaudianServerMeta> = {};
 
     for (const server of servers) {
       // SEC-A Phase 3: never persist a secret-referenced header/env value as
       // plaintext, even if a caller left it on the config — strip those keys.
       mcpServers[server.name] = stripSecretKeys(server);
 
-      const meta: {
-        enabled?: boolean;
-        contextSaving?: boolean;
-        disabledTools?: string[];
-        description?: string;
-        secretHeaders?: Record<string, string>;
-        secretEnv?: Record<string, string>;
-      } = {};
-
-      // SECURITY (SEC-3): Always persist the `enabled` flag. The presence of a
-      // metadata entry is what marks a server as user-trusted on reload; without
-      // it, a re-saved enabled server would be re-classified as untrusted
-      // vault-config and silently disabled. Writing the explicit flag keeps
-      // enabled state stable across reloads while still defaulting unknown
-      // vault-sourced servers (no metadata) to disabled.
-      meta.enabled = server.enabled;
-      if (server.contextSaving !== DEFAULT_MCP_SERVER.contextSaving) {
-        meta.contextSaving = server.contextSaving;
-      }
-      const normalizedDisabledTools = server.disabledTools
-        ?.map((tool) => tool.trim())
-        .filter((tool) => tool.length > 0);
-      if (normalizedDisabledTools && normalizedDisabledTools.length > 0) {
-        meta.disabledTools = normalizedDisabledTools;
-      }
-      if (server.description) {
-        meta.description = server.description;
-      }
-      if (server.secretHeaders && Object.keys(server.secretHeaders).length > 0) {
-        meta.secretHeaders = server.secretHeaders;
-      }
-      if (server.secretEnv && Object.keys(server.secretEnv).length > 0) {
-        meta.secretEnv = server.secretEnv;
-      }
-
+      const meta = buildClaudianServerMeta(server);
       if (Object.keys(meta).length > 0) {
         claudianServers[server.name] = meta;
       }
     }
 
-    let existing: Record<string, unknown> | null = null;
-    if (await this.adapter.exists(MCP_CONFIG_PATH)) {
-      try {
-        const raw = await this.adapter.read(MCP_CONFIG_PATH);
-        const parsed: unknown = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') {
-          existing = parsed as Record<string, unknown>;
-        }
-      } catch {
-        existing = null;
-      }
-    }
-
+    const existing = await this.readExistingFile();
     const file: Record<string, unknown> = existing ? { ...existing } : {};
     file.mcpServers = mcpServers;
-
-    const existingClaudian =
-      existing && typeof existing._claudian === 'object'
-        ? (existing._claudian as Record<string, unknown>)
-        : null;
-
-    if (Object.keys(claudianServers).length > 0) {
-      file._claudian = { ...(existingClaudian ?? {}), servers: claudianServers };
-    } else if (existingClaudian) {
-      const rest = { ...existingClaudian };
-      delete rest.servers;
-      if (Object.keys(rest).length > 0) {
-        file._claudian = rest;
-      } else {
-        delete file._claudian;
-      }
-    } else {
-      delete file._claudian;
-    }
+    mergeClaudianNamespace(file, existing, claudianServers);
 
     const content = JSON.stringify(file, null, 2);
     await this.adapter.write(MCP_CONFIG_PATH, content);
