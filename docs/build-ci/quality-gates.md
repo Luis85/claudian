@@ -228,7 +228,7 @@ Tracked here so the direction is explicit.
    `warn`-tier rule left is `jest/expect-expect` (tests); burn it down and
    promote it the same way.
 2. **Tighten the quality-ratchet floors.** The ratchet freezes today's debt;
-   `complexFunctions` (263) is still burned down hotspot by hotspot
+   `complexFunctions` (254) is still burned down hotspot by hotspot
    (`npm run quality:health` prioritizes targets), and `cloneGroups` /
    `duplicatedLines` are ground down family by family (`npm run quality:dupes`
    prioritizes the same-file and same-zone clones, which extract cleanly). Each
@@ -279,3 +279,17 @@ in place. A latent `MessageRenderer` ↔ `windowedRenderSetup` import cycle crea
 during extraction was broken by relocating the windowing primitives
 (`RENDER_WINDOW_SIZE`, `windowStartIndex`) into the windowing module, keeping
 `circularDependencies` at 0.
+Done 2026-06-13 (quality campaign run 9): complexity decomposition. High-cognitive
+functions across `utils`, `core`, the Claude/Cursor/Opencode providers, `app`, and
+`shared/settings` were split into small, behavior-preserving helpers (parents reduced
+to thin orchestrators), dropping `complexFunctions` 263 → 254 with `criticalComplexity`
+held at 0, maintainability 90.3, and clones/structural counters unchanged. Two gotchas
+worth remembering: the gated `complexFunctions` (fallow's `functions_above_threshold`)
+counts cyclomatic≥20 **OR** cognitive≥15 **OR CRAP≥30**, and CRAP is coverage-weighted —
+so (a) the net count drops less than the number of functions fixed (a decomposed helper
+can re-trip CRAP), and (b) a stray `coverage/` directory flips fallow from
+`static_estimated` to istanbul coverage, which spikes `severity_critical_count`
+(`criticalComplexity`) from 0 to ~24. **Always run `npm run check:quality` — and lock the
+baseline — with `coverage/` absent** (that matches CI's `quality` job, which has no
+coverage artifact); run `npm run test:coverage` last and never lock a baseline while
+`coverage/` exists.
