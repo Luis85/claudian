@@ -32,6 +32,7 @@ import { decorateVaultFileLink } from '../../../utils/fileLink';
 import { setupCollapsible } from './collapsible';
 import { renderDiffContent, renderDiffStats } from './DiffRenderer';
 import { renderTodoItems } from './todoUtils';
+import { isPlaceholderWebSearchResult, shouldRenderWebSearchAction } from './webSearchExpandedHelpers';
 
 export function setToolIcon(el: HTMLElement, name: string): void {
   const icon = getToolIcon(name);
@@ -331,12 +332,6 @@ function appendToolLink(parent: HTMLElement, title: string, url: string): void {
   linkEl.createSpan({ cls: 'claudian-tool-link-title', text: title });
 }
 
-function isPlaceholderWebSearchResult(result: string | undefined): boolean {
-  if (!result) return true;
-  const normalized = result.trim().toLowerCase();
-  return normalized === '' || normalized === 'search complete';
-}
-
 function parseWebSearchResult(result: string): { links: WebSearchLink[]; summary: string } | null {
   const linksMatch = result.match(/Links:\s*(\[[\s\S]*?\])(?:\n|$)/);
   if (!linksMatch) return null;
@@ -407,6 +402,28 @@ function renderWebSearchActionExpanded(container: HTMLElement, input: Record<str
   }
 }
 
+function renderWebSearchParsedLinks(
+  container: HTMLElement,
+  parsed: { links: WebSearchLink[]; summary: string },
+): void {
+  const linksEl = container.createDiv({ cls: 'claudian-tool-lines' });
+  for (const link of parsed.links) appendToolLink(linksEl, link.title, link.url);
+  if (!parsed.summary) return;
+  const summaryEl = container.createDiv({ cls: 'claudian-tool-web-summary' });
+  summaryEl.setText(parsed.summary.length > 800 ? parsed.summary.slice(0, 800) + '...' : parsed.summary);
+}
+
+// Renders the action card and, when present, non-placeholder result lines below it.
+function renderWebSearchActionFirst(
+  container: HTMLElement,
+  input: Record<string, unknown>,
+  result: string | undefined,
+): boolean {
+  if (!renderWebSearchActionExpanded(container, input)) return false;
+  if (result && !isPlaceholderWebSearchResult(result)) renderLinesExpanded(container, result, 12);
+  return true;
+}
+
 function renderWebSearchExpanded(
   container: HTMLElement,
   input: Record<string, unknown>,
@@ -414,29 +431,12 @@ function renderWebSearchExpanded(
 ): void {
   const parsed = result ? parseWebSearchResult(result) : null;
   if (parsed && parsed.links.length > 0) {
-    const linksEl = container.createDiv({ cls: 'claudian-tool-lines' });
-    for (const link of parsed.links) {
-      appendToolLink(linksEl, link.title, link.url);
-    }
-
-    if (parsed.summary) {
-      const summaryEl = container.createDiv({ cls: 'claudian-tool-web-summary' });
-      summaryEl.setText(parsed.summary.length > 800 ? parsed.summary.slice(0, 800) + '...' : parsed.summary);
-    }
+    renderWebSearchParsedLinks(container, parsed);
     return;
   }
 
   const data = normalizeWebSearchDisplayData(input);
-  const shouldRenderAction = Boolean(data.actionType || data.query || data.queries.length || data.url || data.pattern)
-    && (!result
-      || isPlaceholderWebSearchResult(result)
-      || data.actionType === 'open_page'
-      || data.actionType === 'find_in_page');
-
-  if (shouldRenderAction && renderWebSearchActionExpanded(container, input)) {
-    if (result && !isPlaceholderWebSearchResult(result)) {
-      renderLinesExpanded(container, result, 12);
-    }
+  if (shouldRenderWebSearchAction(data, result) && renderWebSearchActionFirst(container, input, result)) {
     return;
   }
 
@@ -445,9 +445,7 @@ function renderWebSearchExpanded(
     return;
   }
 
-  if (renderWebSearchActionExpanded(container, input)) {
-    return;
-  }
+  if (renderWebSearchActionExpanded(container, input)) return;
 
   container.createDiv({ cls: 'claudian-tool-empty', text: 'No result' });
 }
