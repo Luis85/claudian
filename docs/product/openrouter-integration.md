@@ -90,8 +90,11 @@ Users currently manage multiple LLM provider API keys and have limited visibilit
 
 ### Auto Router Session Pinning
 - For Auto mode, derive a stable `session_id` from the Claudian conversation ID or Agent Board run ID
-- Send this `session_id` with each request to OpenRouter's Auto Router to ensure model selection stays consistent across turns
-- This prevents model switching between follow-up turns in multi-turn conversations or work-order runs
+- Send this `session_id` with each request to OpenRouter's Auto Router
+- **Session expiry handling**: OpenRouter's Auto Router session stickiness expires after 5 minutes of inactivity. For conversations/runs paused/resumed beyond this window:
+  - Persist the actual `model` name returned in the first Auto Router response (not just the session_id)
+  - On subsequent requests after the sticky window expires, reuse the persisted model instead of allowing Auto Router to re-route
+  - This ensures consistent model selection across the full conversation/work-order lifecycle, not just within the 5-minute window
 
 ### Model Catalog
 - Query OpenRouter API to fetch available models with metadata (pricing, availability, supported parameters)
