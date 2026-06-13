@@ -323,3 +323,13 @@ them — 19 entries tightened (e.g. `CodexHistoryStore` 1406→746, `ClaudianSet
 `WorkOrderDetailModal` 953→787, `MessageRenderer` 1208→1061), `reason` text preserved, none
 grew, none crossed the 500 cap. Pure ratchet tightening, shipped standalone — a full regen
 pulls cumulative shrinkage from unrelated files, so it stays out of feature PRs.
+Done 2026-06-13 (quality campaign run 12b): cross-zone runtime-clone design pass. The
+Windows batch-shim spawn logic duplicated between `CodexAppServerProcess` (provider-codex)
+and `cursorWindowsSpawn` (provider-cursor) — `requiresWindowsShellQuoting`,
+`quoteWindowsShellArgument`, and the cmd.exe-wrapping block — is genuinely provider-neutral
+platform code, so it moved to `utils/windowsSpawn.ts` (`wrapWindowsCmdShim` owns the *how*;
+each provider's resolver keeps its own *when* — `.cmd` vs `.cmd`/`.bat`, env threading).
+Boundary-legal (providers → utils), with a dedicated `windowsSpawn` unit spec added.
+`cloneGroups` 35 → 33, `duplicatedLines` 869 → 819, structural counters held at 0. This is the
+"design pass" the run-11 note deferred; the remaining cross-zone runtime clones (tool
+normalization, ChatRuntime) are more entangled with provider-specific shapes and were left.

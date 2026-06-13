@@ -1,30 +1,21 @@
 import { type ChildProcess,spawn } from 'child_process';
 import type { Readable, Writable } from 'stream';
 
+import { wrapWindowsCmdShim } from '../../../utils/windowsSpawn';
 import type { CodexLaunchSpec } from './codexLaunchTypes';
 
 const SIGKILL_TIMEOUT_MS = 3_000;
-const WINDOWS_CMD_ARGUMENT_CHARS = /[\s"&<>|{}^=;!'+,`~()%@]/u;
 
-function requiresWindowsShellQuoting(value: string): boolean {
-  return WINDOWS_CMD_ARGUMENT_CHARS.test(value)
-    || value.includes('[')
-    || value.includes(']');
+interface ResolvedCodexSpawnSpec {
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  windowsVerbatimArguments?: boolean;
 }
 
-function quoteWindowsShellArgument(value: string): string {
-  if (!value.length) {
-    return '""';
-  }
-
-  if (!requiresWindowsShellQuoting(value)) {
-    return value;
-  }
-
-  return `"${value.replace(/"/g, '""')}"`;
-}
-
-function resolveWindowsSpawnSpec(launchSpec: Pick<CodexLaunchSpec, 'command' | 'args' | 'spawnCwd' | 'env'>) {
+function resolveWindowsSpawnSpec(
+  launchSpec: Pick<CodexLaunchSpec, 'command' | 'args' | 'spawnCwd' | 'env'>,
+): ResolvedCodexSpawnSpec {
   const command = launchSpec.command.trim();
   const lowerCommand = command.toLowerCase();
 
@@ -37,15 +28,9 @@ function resolveWindowsSpawnSpec(launchSpec: Pick<CodexLaunchSpec, 'command' | '
   }
 
   if (lowerCommand.endsWith('.cmd')) {
-    const shellCommand = [command, ...launchSpec.args]
-      .map(value => quoteWindowsShellArgument(value))
-      .join(' ');
-
     return {
-      command: process.env.ComSpec || process.env.comspec || 'cmd.exe',
-      args: ['/d', '/s', '/c', `"${shellCommand}"`],
+      ...wrapWindowsCmdShim(command, launchSpec.args),
       env: launchSpec.env,
-      windowsVerbatimArguments: true,
     };
   }
 

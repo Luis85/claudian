@@ -1,28 +1,8 @@
-// Windows refuses to spawn `.cmd`/`.bat` batch files without a shell (Node's
-// CVE-2024-27980 fix, 18.20.2+/20.12.2+), throwing `spawn EINVAL`. The Cursor
-// CLI on Windows is typically an npm-style `.cmd` shim, so batch commands must be
-// run through cmd.exe with verbatim, manually-quoted arguments. This mirrors the
-// approach the Codex provider already uses (CodexAppServerProcess).
+// The Cursor CLI on Windows is typically an npm-style `.cmd` shim. Windows refuses
+// to spawn `.cmd`/`.bat` batch files without a shell (Node's CVE-2024-27980 fix),
+// so those are wrapped through cmd.exe via the shared `wrapWindowsCmdShim` helper.
 
-const WINDOWS_CMD_ARGUMENT_CHARS = /[\s"&<>|{}^=;!'+,`~()%@]/u;
-
-function requiresWindowsShellQuoting(value: string): boolean {
-  return WINDOWS_CMD_ARGUMENT_CHARS.test(value)
-    || value.includes('[')
-    || value.includes(']');
-}
-
-function quoteWindowsShellArgument(value: string): string {
-  if (!value.length) {
-    return '""';
-  }
-
-  if (!requiresWindowsShellQuoting(value)) {
-    return value;
-  }
-
-  return `"${value.replace(/"/g, '""')}"`;
-}
+import { wrapWindowsCmdShim } from '../../../utils/windowsSpawn';
 
 export interface CursorSpawnSpec {
   command: string;
@@ -48,15 +28,7 @@ export function resolveCursorSpawnSpec(
 
   const lower = trimmed.toLowerCase();
   if (lower.endsWith('.cmd') || lower.endsWith('.bat')) {
-    const shellCommand = [trimmed, ...args]
-      .map(value => quoteWindowsShellArgument(value))
-      .join(' ');
-
-    return {
-      command: process.env.ComSpec || process.env.comspec || 'cmd.exe',
-      args: ['/d', '/s', '/c', `"${shellCommand}"`],
-      windowsVerbatimArguments: true,
-    };
+    return wrapWindowsCmdShim(trimmed, args);
   }
 
   return { command, args };
