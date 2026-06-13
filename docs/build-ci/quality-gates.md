@@ -317,3 +317,9 @@ a re-export shim), and the editor-modal `addIconPickerRow` in `nameDescriptionRo
 `criticalComplexity`/maintainability/structural counters all held. Cross-zone runtime clones
 (subprocess spawn, tool normalization, ChatRuntime) were left for a dedicated design pass —
 their only shared home is `core/`, and the shared module would be more invasive than the win.
+Done 2026-06-13 (quality campaign run 12a): loc-baseline tidy. `npm run check:loc -- --update`
+re-locked the 27 grandfathered hotspots to their current size after runs 7–11 shrank many of
+them — 19 entries tightened (e.g. `CodexHistoryStore` 1406→746, `ClaudianSettings` 844→526,
+`WorkOrderDetailModal` 953→787, `MessageRenderer` 1208→1061), `reason` text preserved, none
+grew, none crossed the 500 cap. Pure ratchet tightening, shipped standalone — a full regen
+pulls cumulative shrinkage from unrelated files, so it stays out of feature PRs.
