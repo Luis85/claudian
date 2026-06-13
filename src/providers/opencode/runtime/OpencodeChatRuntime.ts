@@ -37,6 +37,7 @@ import type {
   AcpSubprocess} from '../../acp';
 import {
   AcpClientConnection,
+  type AcpNormalizedUpdate,
   type AcpReadTextFileRequest,
   type AcpRequestPermissionRequest,
   type AcpRequestPermissionResponse,
@@ -85,6 +86,7 @@ import { createOpencodeToolStreamAdapter } from '../normalization/opencodeToolNo
 import { getOpencodeProviderSettings, updateOpencodeProviderSettings } from '../settings';
 import { getOpencodeState, type OpencodeProviderState } from '../types';
 import { buildOpencodePromptBlocks, buildOpencodePromptText } from './buildOpencodePrompt';
+import { buildActiveTurnEffect } from './opencodeActiveTurnUpdate';
 import {
   buildAcpApprovalDecisionOptions,
   buildOpencodePermissionPresentation,
@@ -1136,25 +1138,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
     }
 
     const normalized = this.sessionUpdateNormalizer.normalize(notification.update);
-    if (normalized.type === 'config_options') {
-      await this.syncSessionModelState({
-        configOptions: normalized.configOptions,
-      });
-      await this.syncSessionModeState({
-        configOptions: normalized.configOptions,
-      });
-      return;
-    }
-
-    if (normalized.type === 'current_mode') {
-      await this.syncSessionModeState({
-        currentModeId: normalized.currentModeId,
-      });
-      return;
-    }
-
-    if (normalized.type === 'commands') {
-      this.setSupportedCommands(normalized.commands);
+    if (await this.applySessionConfigUpdate(normalized)) {
       return;
     }
 
@@ -1162,53 +1146,64 @@ export class OpencodeChatRuntime implements ChatRuntime {
       return;
     }
 
-    switch (normalized.type) {
-      case 'message_chunk': {
-        if (normalized.role === 'assistant' && normalized.messageId) {
-          this.currentTurnMetadata.assistantMessageId = normalized.messageId;
-        }
-        if (normalized.role === 'user' && normalized.messageId) {
-          this.currentTurnMetadata.userMessageId = normalized.messageId;
-        }
-        if (normalized.role === 'assistant' && normalized.streamChunks.length > 0) {
-          this.currentTurnSawAssistantContent = true;
-        }
-        for (const chunk of normalized.streamChunks) {
-          this.activeTurn.queue.push(chunk);
-        }
-        return;
-      }
-      case 'tool_call':
-      case 'tool_call_update': {
-        const streamChunks = normalized.type === 'tool_call'
-          ? this.toolStreamAdapter.normalizeToolCall(normalized.toolCall, normalized.streamChunks)
-          : this.toolStreamAdapter.normalizeToolCallUpdate(normalized.toolCallUpdate, normalized.streamChunks);
+    if (
+      normalized.type === 'message_chunk'
+      || normalized.type === 'tool_call'
+      || normalized.type === 'tool_call_update'
+      || normalized.type === 'usage'
+    ) {
+      this.applyActiveTurnUpdate(this.activeTurn, normalized, notification.sessionId);
+    }
+  }
 
-        for (const chunk of streamChunks) {
-          this.activeTurn.queue.push(chunk);
-        }
-        return;
-      }
-      case 'usage': {
-        this.contextUsage = normalized.usage;
-        const usage = buildAcpUsageInfo({
-          contextWindow: normalized.usage,
-          // Fall back to the synthetic provider id when no concrete model is selected yet:
-          // buildAcpUsageInfo requires a non-empty model string (see shared buildUsageInfo).
-          model: this.getActiveDisplayModel() ?? OPENCODE_SYNTHETIC_MODEL_ID,
-          promptUsage: this.promptUsage,
-        });
-        if (usage) {
-          this.activeTurn.queue.push({
-            sessionId: notification.sessionId,
-            type: 'usage',
-            usage,
-          });
-        }
-        return;
-      }
-      default:
-        return;
+  // Session-scoped (non-turn) updates that adjust model/mode/command state.
+  // Returns true when the update was fully handled here.
+  private async applySessionConfigUpdate(normalized: AcpNormalizedUpdate): Promise<boolean> {
+    if (normalized.type === 'config_options') {
+      await this.syncSessionModelState({ configOptions: normalized.configOptions });
+      await this.syncSessionModeState({ configOptions: normalized.configOptions });
+      return true;
+    }
+
+    if (normalized.type === 'current_mode') {
+      await this.syncSessionModeState({ currentModeId: normalized.currentModeId });
+      return true;
+    }
+
+    if (normalized.type === 'commands') {
+      this.setSupportedCommands(normalized.commands);
+      return true;
+    }
+
+    return false;
+  }
+
+  private applyActiveTurnUpdate(
+    activeTurn: ActiveTurn,
+    normalized: Parameters<typeof buildActiveTurnEffect>[0],
+    sessionId: string,
+  ): void {
+    const effect = buildActiveTurnEffect(normalized, {
+      promptUsage: this.promptUsage,
+      // Fall back to the synthetic provider id when no concrete model is selected yet:
+      // buildAcpUsageInfo requires a non-empty model string (see shared buildUsageInfo).
+      // Resolved lazily so non-usage updates never trigger model resolution.
+      resolveUsageModel: () => this.getActiveDisplayModel() ?? OPENCODE_SYNTHETIC_MODEL_ID,
+      sessionId,
+      toolStreamAdapter: this.toolStreamAdapter,
+    });
+
+    if (effect.metadataPatch) {
+      Object.assign(this.currentTurnMetadata, effect.metadataPatch);
+    }
+    if (effect.sawAssistantContent) {
+      this.currentTurnSawAssistantContent = true;
+    }
+    if (effect.contextUsage !== undefined) {
+      this.contextUsage = effect.contextUsage;
+    }
+    for (const chunk of effect.chunks) {
+      activeTurn.queue.push(chunk);
     }
   }
 

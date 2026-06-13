@@ -29,6 +29,87 @@ interface NormalizedSelection {
   variant: string | null;
 }
 
+type OpencodeDiscoveredModels = ReturnType<typeof getOpencodeProviderSettings>['discoveredModels'];
+
+function normalizeModelSelection(
+  value: unknown,
+  discoveredModels: OpencodeDiscoveredModels,
+): NormalizedSelection {
+  if (typeof value !== 'string' || !isOpencodeModelSelectionId(value)) {
+    return { baseModelId: null, variant: null };
+  }
+
+  const rawModelId = decodeOpencodeModelId(value);
+  if (!rawModelId) {
+    return { baseModelId: value, variant: null };
+  }
+
+  const baseRawId = resolveOpencodeBaseModelRawId(rawModelId, discoveredModels);
+  return {
+    baseModelId: encodeOpencodeModelId(baseRawId),
+    variant: extractOpencodeModelVariantValue(rawModelId, discoveredModels),
+  };
+}
+
+// Collapse a model-selection id stored on a settings key down to its base model id,
+// mirroring the legacy variant migration. Returns true when the key was rewritten.
+function normalizeModelKey(
+  bag: Record<string, unknown>,
+  key: string,
+  discoveredModels: OpencodeDiscoveredModels,
+): boolean {
+  const value = bag[key];
+  if (typeof value !== 'string') {
+    return false;
+  }
+  const { baseModelId } = normalizeModelSelection(value, discoveredModels);
+  if (!baseModelId || value === baseModelId) {
+    return false;
+  }
+  bag[key] = baseModelId;
+  return true;
+}
+
+function normalizeTopLevelModel(
+  settings: Record<string, unknown>,
+  discoveredModels: OpencodeDiscoveredModels,
+): boolean {
+  // Resolve the variant from the original model id before the key is rewritten to its base id.
+  const { variant } = normalizeModelSelection(settings.model, discoveredModels);
+  let changed = normalizeModelKey(settings, 'model', discoveredModels);
+
+  if (variant && (typeof settings.effortLevel !== 'string' || settings.effortLevel.trim().length === 0)) {
+    settings.effortLevel = variant;
+    changed = true;
+  }
+
+  return changed;
+}
+
+function normalizeSavedProviderModel(
+  settings: Record<string, unknown>,
+  discoveredModels: OpencodeDiscoveredModels,
+): boolean {
+  const savedProviderModelRaw = settings.savedProviderModel;
+  if (!savedProviderModelRaw || typeof savedProviderModelRaw !== 'object' || Array.isArray(savedProviderModelRaw)) {
+    return false;
+  }
+
+  const savedProviderModel = savedProviderModelRaw as Record<string, unknown>;
+  const savedSelection = normalizeModelSelection(savedProviderModel.opencode, discoveredModels);
+  let changed = normalizeModelKey(savedProviderModel, 'opencode', discoveredModels);
+
+  if (savedSelection.variant) {
+    const savedEffort = ensureProviderProjectionMap(settings, 'savedProviderEffort');
+    if (typeof savedEffort.opencode !== 'string') {
+      savedEffort.opencode = savedSelection.variant;
+      changed = true;
+    }
+  }
+
+  return changed;
+}
+
 const OPENCODE_ENV_HASH_KEYS = [
   'OPENCODE_CONFIG',
   'OPENCODE_DB',
@@ -91,67 +172,17 @@ export const opencodeSettingsReconciler: ProviderSettingsReconciler = {
     }
 
     const opencodeSettings = getOpencodeProviderSettings(settings);
+    const { discoveredModels } = opencodeSettings;
     let changed = hadLegacyDiscoveryFields;
 
-    const normalizeSelection = (value: unknown): NormalizedSelection => {
-      if (typeof value !== 'string' || !isOpencodeModelSelectionId(value)) {
-        return { baseModelId: null, variant: null };
-      }
-
-      const rawModelId = decodeOpencodeModelId(value);
-      if (!rawModelId) {
-        return { baseModelId: value, variant: null };
-      }
-
-      const baseRawId = resolveOpencodeBaseModelRawId(rawModelId, opencodeSettings.discoveredModels);
-      return {
-        baseModelId: encodeOpencodeModelId(baseRawId),
-        variant: extractOpencodeModelVariantValue(rawModelId, opencodeSettings.discoveredModels),
-      };
-    };
-
-    const modelSelection = normalizeSelection(settings.model);
-    if (typeof settings.model === 'string' && modelSelection.baseModelId && settings.model !== modelSelection.baseModelId) {
-      settings.model = modelSelection.baseModelId;
+    if (normalizeTopLevelModel(settings, discoveredModels)) {
       changed = true;
     }
-    if (
-      modelSelection.variant
-      && (typeof settings.effortLevel !== 'string' || settings.effortLevel.trim().length === 0)
-    ) {
-      settings.effortLevel = modelSelection.variant;
+    if (normalizeModelKey(settings, 'titleGenerationModel', discoveredModels)) {
       changed = true;
     }
-
-    const titleModelSelection = normalizeSelection(settings.titleGenerationModel);
-    if (
-      typeof settings.titleGenerationModel === 'string'
-      && titleModelSelection.baseModelId
-      && settings.titleGenerationModel !== titleModelSelection.baseModelId
-    ) {
-      settings.titleGenerationModel = titleModelSelection.baseModelId;
+    if (normalizeSavedProviderModel(settings, discoveredModels)) {
       changed = true;
-    }
-
-    const savedProviderModelRaw = settings.savedProviderModel;
-    if (savedProviderModelRaw && typeof savedProviderModelRaw === 'object' && !Array.isArray(savedProviderModelRaw)) {
-      const savedProviderModel = savedProviderModelRaw as Record<string, unknown>;
-      const savedSelection = normalizeSelection(savedProviderModel.opencode);
-      if (
-        typeof savedProviderModel.opencode === 'string'
-        && savedSelection.baseModelId
-        && savedProviderModel.opencode !== savedSelection.baseModelId
-      ) {
-        savedProviderModel.opencode = savedSelection.baseModelId;
-        changed = true;
-      }
-      if (savedSelection.variant) {
-        const savedEffort = ensureProviderProjectionMap(settings, 'savedProviderEffort');
-        if (typeof savedEffort.opencode !== 'string') {
-          savedEffort.opencode = savedSelection.variant;
-          changed = true;
-        }
-      }
     }
 
     const normalizedVisibleModels = normalizeOpencodeVisibleModels(
