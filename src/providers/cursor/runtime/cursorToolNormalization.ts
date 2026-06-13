@@ -32,6 +32,7 @@ import {
   extractCursorTaskResultText,
   parseCursorSubagentType,
 } from './cursorTaskPayload';
+import { mapCursorToolNameFromKind } from './cursorToolNameMap';
 
 interface CursorToolEnvelope {
   kind: string;
@@ -272,49 +273,7 @@ export function normalizeCursorToolCompletion(
 
 /** Public for re-use from the SQLite history store, where Cursor uses the same kind keys. */
 export function mapCursorToolName(kind: string): string {
-  switch (kind) {
-    case 'readToolCall': return TOOL_READ;
-    case 'writeToolCall': return TOOL_WRITE;
-    case 'editToolCall': return TOOL_WRITE;
-    case 'replaceEnvToolCall': return TOOL_EDIT;
-    case 'deleteToolCall': return 'delete';
-    case 'shellToolCall': return TOOL_BASH;
-    case 'writeShellStdinToolCall': return 'write_stdin';
-    case 'globToolCall': return TOOL_GLOB;
-    case 'grepToolCall': return TOOL_GREP;
-    case 'lsToolCall': return TOOL_LS;
-    case 'webFetchToolCall': return TOOL_WEB_FETCH;
-    case 'fetchToolCall': return TOOL_WEB_FETCH;
-    case 'webSearchToolCall': return TOOL_WEB_SEARCH;
-    case 'semSearchToolCall': return 'SemanticSearch';
-    case 'updateTodosToolCall': return TOOL_TODO_WRITE;
-    case 'readTodosToolCall': return TOOL_TODO_WRITE;
-    case 'askQuestionToolCall': return TOOL_ASK_USER_QUESTION;
-    case 'taskToolCall': return TOOL_SUBAGENT;
-    case 'mcpToolCall': return 'Mcp';
-    case 'listMcpResourcesToolCall': return 'ListMcpResources';
-    case 'readMcpResourceToolCall': return 'ReadMcpResource';
-    case 'getMcpToolsToolCall': return 'ListMcpTools';
-    case 'createPlanToolCall': return 'CreatePlan';
-    case 'switchModeToolCall': return 'SwitchMode';
-    case 'reflectToolCall': return 'Reflect';
-    case 'awaitToolCall': return 'Await';
-    case 'applyAgentDiffToolCall': return 'apply_patch';
-    case 'computerUseToolCall': return 'ComputerUse';
-    case 'generateImageToolCall': return 'GenerateImage';
-    case 'recordScreenToolCall': return 'RecordScreen';
-    case 'readLintsToolCall': return 'ReadLints';
-    case 'startGrindPlanningToolCall': return 'GrindPlan';
-    case 'startGrindExecutionToolCall': return 'GrindExecute';
-    case 'reportBugfixResultsToolCall': return 'ReportBugfix';
-    case 'setupVmEnvironmentToolCall': return 'SetupVm';
-    case 'aiAttributionToolCall': return 'AiAttribution';
-    case 'partialToolCall':
-    case 'truncatedToolCall':
-      return 'tool';
-    default:
-      return humanizeKind(kind);
-  }
+  return mapCursorToolNameFromKind(kind);
 }
 
 type CursorInputMapper = (args: Record<string, unknown>, description: string | undefined) => Record<string, unknown>;
@@ -680,10 +639,4 @@ function normalizeQuestionsArg(args: Record<string, unknown>): Array<Record<stri
     });
   });
   return out;
-}
-
-function humanizeKind(kind: string): string {
-  const stripped = kind.endsWith('ToolCall') ? kind.slice(0, -'ToolCall'.length) : kind;
-  if (!stripped) return 'tool';
-  return stripped.charAt(0).toLowerCase() + stripped.slice(1);
 }

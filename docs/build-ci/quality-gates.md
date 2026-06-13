@@ -59,16 +59,23 @@ Two tiers, on purpose:
   **not** pass `--max-warnings`, so warnings print but never fail the build.
   This keeps the bar moving without blocking unrelated work on day one.
 
-Current `warn`-tier rules: `complexity` 25 and `max-lines-per-function` 200
-(17 + 5 warnings as of 2026-06-11, down from ~61 on 2026-06-07). As the
-backlog clears, ratchet a threshold down (or promote a clean rule to `error`)
-so the gain is locked in. Whole-file size is already a hard gate via the LOC
-guard; the function-health rules add function-level signal that file-level LOC
-can't see.
+The function-health `warn` backlog is now cleared. `complexity` 25 and
+`max-lines-per-function` 200 were promoted to `error` on 2026-06-13 (quality
+campaign run 7) once their last 10 offenders were decomposed — see the
+promotion note below. Whole-file size is already a hard gate via the LOC
+guard; the function-health rules add the function-level signal that file-level
+LOC can't see. The only remaining `warn`-tier rule is `jest/expect-expect`
+(tests only).
 
 Promoted to `error` on 2026-06-10, after their backlogs reached zero: the
 staged `obsidianmd/*` set, `@typescript-eslint/no-explicit-any` (src only;
 tests keep their mocking override), `max-params` 6, and `max-depth` 5.
+Promoted to `error` on 2026-06-13 (quality campaign run 7), after their
+backlog reached zero: `complexity` 25 and `max-lines-per-function` 200. The
+final 10 offenders were cleared by genuine decomposition (lookup-table
+dispatch and sibling-module extraction, never `eslint-disable`), which also
+dropped `complexFunctions` 271 → 264 and `duplicatedLines` 1804 → 1790 while
+holding `criticalComplexity` at 0.
 
 ## LOC guard
 
@@ -215,12 +222,13 @@ authoritative current bar.
 
 Tracked here so the direction is explicit.
 
-1. **Burn down the `warn` backlog, then ratchet.** Resolve function-health and
-   staged `obsidianmd`/`no-explicit-any` warnings incrementally; each time a
-   threshold reaches zero, tighten it (or promote the rule to `error`) so the
-   gain can't regress. No big-bang refactor and no day-one CI block.
+1. **Burn down the `warn` backlog, then ratchet.** The function-health rules
+   (`complexity`, `max-lines-per-function`) reached zero offenders and were
+   promoted to `error` on 2026-06-13 (see "Lint severity policy"). The only
+   `warn`-tier rule left is `jest/expect-expect` (tests); burn it down and
+   promote it the same way.
 2. **Tighten the quality-ratchet floors.** The ratchet freezes today's debt;
-   `complexFunctions` (271) is still burned down hotspot by hotspot
+   `complexFunctions` (264) is still burned down hotspot by hotspot
    (`npm run quality:health` prioritizes targets). Each refactor PR that moves a
    metric should commit the tightened baseline so the gain is locked in.
    **`criticalComplexity` reached 0 in run 6 (was 59 across the campaign)** — it
@@ -249,3 +257,9 @@ groups) to `2`, so every new copy-paste pair now counts against the
 flip and the remainder grandfathered in the baseline. Same pass: lint rules
 whose backlogs hit zero were promoted to `error` (staged `obsidianmd/*`,
 `no-explicit-any`, `max-params`, `max-depth`) — see "Lint severity policy".
+Done 2026-06-13 (quality campaign run 7): the function-health `warn` rules
+`complexity` 25 and `max-lines-per-function` 200 reached zero offenders and
+were promoted to `error`. The last 10 offenders were decomposed (lookup-table
+dispatch, sibling-module extraction) across 10 files in 6 zones, which also
+moved `complexFunctions` 271 → 264 and `duplicatedLines` 1804 → 1790 with
+`criticalComplexity` held at 0 — see "Lint severity policy".

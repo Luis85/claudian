@@ -1,7 +1,5 @@
 import { normalizePath, Notice, TFile, TFolder } from 'obsidian';
 
-import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
-import type { ProviderId } from '../../../core/providers/types';
 import { asSettingsBag } from '../../../core/types/settings';
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
@@ -10,8 +8,12 @@ import { resolveAgentBoardDefaultModel } from '../defaultModelResolver';
 import { resolveAgentBoardDefaultProvider } from '../defaultProviderResolver';
 import type { TaskPriority, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { HANDOFF_END, HANDOFF_START, RUN_LEDGER_END, RUN_LEDGER_START } from '../storage/TaskNoteStore';
-import { buildTemplateVars, renderWorkOrderBody, resolvePriority, resolveProviderModel } from '../templates/templateResolution';
 import type { WorkOrderTemplate } from '../templates/templateTypes';
+import {
+  buildWorkOrderMarkdownForSeed,
+  resolveRunTarget,
+  type WorkOrderMarkdownBuilders,
+} from './workOrderResolution';
 
 interface BuildWorkOrderArgs {
   id: string;
@@ -277,46 +279,26 @@ function buildSeedFromSource(source?: TFile | TFolder | null): WorkOrderSeed {
   return { title, sourcePath: sourceFile?.path ?? null, sourceFolderPath: sourceFolder?.path ?? null };
 }
 
+const WORK_ORDER_MARKDOWN_BUILDERS: WorkOrderMarkdownBuilders = {
+  fromTemplate: buildWorkOrderFromTemplate,
+  fromSeed: buildWorkOrderMarkdown,
+};
+
 export async function createWorkOrderFromSeed(
   plugin: ClaudianPlugin,
   seed: WorkOrderSeed,
   options?: CreateWorkOrderOptions,
 ): Promise<TFile | null> {
-  const settings = asSettingsBag(plugin.settings);
-  const defaults = {
-    provider: resolveAgentBoardDefaultProvider(plugin.settings) ?? '',
-    model: resolveAgentBoardDefaultModel(plugin.settings) ?? '',
-  };
   const template = options?.template;
-
-  let provider = defaults.provider;
-  let model = defaults.model;
-  let priority: TaskPriority = '2 - normal';
-  if (template) {
-    const resolved = resolveProviderModel(template, defaults, {
-      isValidProvider: (id) =>
-        ProviderRegistry.getRegisteredProviderIds().includes(id as ProviderId) &&
-        ProviderRegistry.isEnabled(id as ProviderId, settings),
-      ownsModel: (id, candidate) =>
-        ProviderRegistry.getRegisteredProviderIds().includes(id as ProviderId) &&
-        ProviderRegistry.getChatUIConfig(id as ProviderId).ownsModel(candidate, settings),
-    });
-    provider = resolved.provider;
-    model = resolved.model;
-    priority = resolvePriority(template);
-    for (const warning of resolved.warnings) {
-      new Notice(warning);
-    }
-  }
-
-  if (!provider) {
-    new Notice(t('tasks.run.needsProvider'));
-    return null;
-  }
-  if (!model) {
-    new Notice(t('tasks.run.needsModel'));
-    return null;
-  }
+  const target = resolveRunTarget(
+    asSettingsBag(plugin.settings),
+    {
+      provider: resolveAgentBoardDefaultProvider(plugin.settings) ?? '',
+      model: resolveAgentBoardDefaultModel(plugin.settings) ?? '',
+    },
+    template,
+  );
+  if (!target) return null;
 
   const folder = normalizePath(plugin.settings.agentBoardWorkOrderFolder || 'Agent Board/tasks');
   await ensureFolder(plugin, folder);
@@ -329,57 +311,33 @@ export async function createWorkOrderFromSeed(
   const title = template?.name?.trim() || seed.title || 'New work order';
   const slug = slugifyTitle(title) || 'work-order';
   const id = `task-${timestampId(now)}-${slug}`;
-  const status = options?.status ?? seed.status ?? 'inbox';
 
-  let markdown: string;
-  if (template) {
-    const vars = buildTemplateVars({
-      title,
-      date: isoDate(now),
-      sourcePath: seed.sourcePath ?? null,
-      sourceFolderPath: seed.sourceFolderPath ?? null,
-    });
-    const rendered = renderWorkOrderBody(template, vars);
-    if (rendered.errors.length > 0) {
-      new Notice(t('tasks.run.templateProblems', { name: template.name, errors: rendered.errors.join('; ') }));
-      return null;
-    }
-    markdown = buildWorkOrderFromTemplate({
+  const markdown = buildWorkOrderMarkdownForSeed(
+    {
       id,
       title,
-      status,
-      priority,
+      status: options?.status ?? seed.status ?? 'inbox',
       timestamp: now.toISOString(),
-      provider,
-      model,
+      isoDate: isoDate(now),
       conversationId: seed.conversationId ?? null,
-      body: rendered.body,
-    });
-  } else {
-    markdown = buildWorkOrderMarkdown({
-      id,
-      title,
-      provider,
-      model,
-      timestamp: now.toISOString(),
-      status,
       sourcePath: seed.sourcePath ?? null,
       sourceFolderPath: seed.sourceFolderPath ?? null,
       objective: seed.objective,
       contextMarkdown: seed.contextMarkdown,
-      conversationId: seed.conversationId ?? null,
-    });
-  }
+    },
+    target,
+    template,
+    WORK_ORDER_MARKDOWN_BUILDERS,
+  );
+  if (markdown === null) return null;
 
   const filePath = uniquePath(plugin, normalizePath(`${folder}/${id}.md`));
   const created = await plugin.app.vault.create(filePath, markdown);
-  if (created instanceof TFile) {
-    if ((options?.reveal ?? 'note') === 'note') {
-      await plugin.app.workspace.getLeaf('tab').openFile(created);
-    }
-    return created;
+  if (!(created instanceof TFile)) return null;
+  if ((options?.reveal ?? 'note') === 'note') {
+    await plugin.app.workspace.getLeaf('tab').openFile(created);
   }
-  return null;
+  return created;
 }
 
 export async function createWorkOrder(
