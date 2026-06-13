@@ -2021,35 +2021,47 @@ describe('ConversationController - Persistent External Context Paths', () => {
   });
 });
 
+// The mock below mirrors production buildSessionUpdates branching. These pure
+// helpers keep each decision isolated so the mock factory stays simple.
+function mockLegacyCutoffAt(conversation: any, hasSession: boolean): any {
+  if (hasSession && !conversation?.providerSessionId) {
+    const legacyMessages = conversation?.messages ?? [];
+    return legacyMessages[legacyMessages.length - 1]?.timestamp;
+  }
+  return conversation?.legacyCutoffAt;
+}
+
+function mockPreviousProviderSessionIds(conversation: any, sessionChanged: any, oldSdkSessionId: any): any {
+  return sessionChanged
+    ? [...new Set([...(conversation?.previousProviderSessionIds || []), oldSdkSessionId])]
+    : conversation?.previousProviderSessionIds;
+}
+
+function mockResolvedSessionId(
+  sessionInvalidated: any,
+  isForkSourceOnly: boolean,
+  sessionId: any,
+  conversation: any,
+): string | null {
+  if (sessionInvalidated) return null;
+  if (isForkSourceOnly) return conversation?.sessionId ?? null;
+  return sessionId ?? conversation?.sessionId ?? null;
+}
+
 function createMockBuildSessionUpdates(mockService: any) {
   return jest.fn().mockImplementation(({ conversation, sessionInvalidated }: any) => {
     const sessionId = mockService.getSessionId();
-    const legacyMessages = conversation?.messages ?? [];
     const hasSession = !!sessionId;
-    const legacyCutoffAt = hasSession && !conversation?.providerSessionId
-      ? legacyMessages[legacyMessages.length - 1]?.timestamp
-      : conversation?.legacyCutoffAt;
     const oldSdkSessionId = conversation?.providerSessionId;
     const sessionChanged = hasSession && sessionId && oldSdkSessionId && sessionId !== oldSdkSessionId;
-    const previousProviderSessionIds = sessionChanged
-      ? [...new Set([...(conversation?.previousProviderSessionIds || []), oldSdkSessionId])]
-      : conversation?.previousProviderSessionIds;
     const isForkSourceOnly = !!conversation?.forkSource &&
       !conversation?.providerSessionId &&
       sessionId === conversation.forkSource.sessionId;
-    let resolvedSessionId: string | null;
-    if (sessionInvalidated) {
-      resolvedSessionId = null;
-    } else if (isForkSourceOnly) {
-      resolvedSessionId = conversation?.sessionId ?? null;
-    } else {
-      resolvedSessionId = sessionId ?? conversation?.sessionId ?? null;
-    }
     const updates: any = {
-      sessionId: resolvedSessionId,
+      sessionId: mockResolvedSessionId(sessionInvalidated, isForkSourceOnly, sessionId, conversation),
       providerSessionId: hasSession && sessionId && !isForkSourceOnly ? sessionId : conversation?.providerSessionId,
-      previousProviderSessionIds,
-      legacyCutoffAt,
+      previousProviderSessionIds: mockPreviousProviderSessionIds(conversation, sessionChanged, oldSdkSessionId),
+      legacyCutoffAt: mockLegacyCutoffAt(conversation, hasSession),
     };
     if (conversation?.forkSource && sessionId && sessionId !== conversation.forkSource.sessionId) {
       updates.forkSource = undefined;

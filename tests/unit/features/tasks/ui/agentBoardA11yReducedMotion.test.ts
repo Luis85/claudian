@@ -42,6 +42,51 @@ interface AnimationDecl {
   text: string;
 }
 
+interface ScanPos {
+  index: number;
+  line: number;
+}
+
+/** Skip a `/* *\/` block comment starting at `i` (CSS has no line comments). */
+function skipBlockComment(source: string, i: number, line: number): ScanPos {
+  i += 2;
+  while (i < source.length && !(source[i] === '*' && source[i + 1] === '/')) {
+    if (source[i] === '\n') line += 1;
+    i += 1;
+  }
+  return { index: i + 2, line };
+}
+
+/**
+ * Read a string literal starting at the opening quote `i`, returning the new
+ * position and the consumed text (so a `{`/`}`/`;` inside it stays inert while
+ * the quoted value still lands in the current declaration prelude).
+ */
+function readStringLiteral(
+  source: string,
+  i: number,
+  line: number,
+): ScanPos & { text: string } {
+  const quote = source[i];
+  let text = quote;
+  i += 1;
+  while (i < source.length && source[i] !== quote) {
+    if (source[i] === '\\') {
+      text += source[i] + (source[i + 1] ?? '');
+      i += 2;
+      continue;
+    }
+    if (source[i] === '\n') line += 1;
+    text += source[i];
+    i += 1;
+  }
+  if (i < source.length) {
+    text += source[i];
+    i += 1;
+  }
+  return { index: i, line, text };
+}
+
 /**
  * Walk a stylesheet character by character tracking brace depth. For each `{`
  * we record what kind of block it opens (a `@media (prefers-reduced-motion:
@@ -83,34 +128,16 @@ function findAnimationDeclarations(file: string, source: string): AnimationDecl[
 
     // Skip block comments wholesale (CSS has no line comments).
     if (ch === '/' && next === '*') {
-      i += 2;
-      while (i < source.length && !(source[i] === '*' && source[i + 1] === '/')) {
-        if (source[i] === '\n') line += 1;
-        i += 1;
-      }
-      i += 2;
+      ({ index: i, line } = skipBlockComment(source, i, line));
       continue;
     }
 
     // Skip string literals so a `{`/`}`/`;` inside a quoted value is inert.
     if (ch === '"' || ch === "'") {
-      const quote = ch;
-      pending += ch;
-      i += 1;
-      while (i < source.length && source[i] !== quote) {
-        if (source[i] === '\\') {
-          pending += source[i] + (source[i + 1] ?? '');
-          i += 2;
-          continue;
-        }
-        if (source[i] === '\n') line += 1;
-        pending += source[i];
-        i += 1;
-      }
-      if (i < source.length) {
-        pending += source[i];
-        i += 1;
-      }
+      const result = readStringLiteral(source, i, line);
+      pending += result.text;
+      i = result.index;
+      line = result.line;
       continue;
     }
 
