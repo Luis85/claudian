@@ -2,8 +2,8 @@
 type: tech-debt
 title: "CI does not enforce agentic quality gates"
 date: 2026-06-07
-updated: 2026-06-09
-status: in-progress
+updated: 2026-06-13
+status: done
 priority: "1 - high"
 severity: high
 scope: build-ci
@@ -52,7 +52,7 @@ Agentic contributors optimize for finishing the requested change. Without object
 ## Acceptance criteria
 
 - [x] CI fails if `npm run build` fails. — new `build` job in `.github/workflows/ci.yml`.
-- [~] CI fails on lint warnings, not only lint errors. — **Revised by decision (2026-06-07):** warnings are a deliberate non-blocking backlog, not a hard gate, so adopting new aspirational rules does not block unrelated work on day one. Error-level rules block CI; the `warn` tier (staged `obsidianmd`, `no-explicit-any`, and the new function-health rules) is burned down incrementally and ratcheted as it clears. See `docs/build-ci/quality-gates.md` § "Lint severity policy".
+- [x] CI fails on lint warnings, not only lint errors. — **Achieved via the staged-promotion path (completed 2026-06-13):** rather than flipping `--max-warnings=0` on day one, each aspirational rule started at `warn`, was burned down to zero offenders, then promoted to `error`. All staged rules are now promoted (`obsidianmd/*`, `no-explicit-any`, `max-params`, `max-depth` on 2026-06-10; `complexity` 25 + `max-lines-per-function` 200 on 2026-06-13 run 7; and the remaining test rules `jest/expect-expect` + `jest/no-disabled-tests` + `jest/no-commented-out-tests` on 2026-06-13 run 13), so **no `warn`-tier rules remain** (`eslint --print-config` confirms) and the lint gate is all-error. See `docs/build-ci/quality-gates.md` § "Lint severity policy".
 - [x] CI fails when a new source file exceeds the configured max LOC unless it is explicitly allowlisted. — `npm run check:loc` (`scripts/check-loc.mjs` + `scripts/loc-baseline.json`), wired into the `lint` job.
 - [x] CI fails if production artifacts are stale or missing. — `npm run check:artifacts` (`scripts/check-artifacts.mjs`) runs after build in the `build` job; covers presence, version sync, `minAppVersion`, and a bundle-size budget.
 - [x] The check output is short enough for agents to act on without reading CI logs manually. — both checks print a one-line OK summary and a compact, file-listed failure report.
@@ -99,5 +99,30 @@ scripts, `scripts/check-loc.mjs`, `scripts/check-artifacts.mjs`):
   fallow boundary zones in `.fallowrc.json`
   (`[[2026-06-07-import-cycle-budget]]`, now `done`).
 
-Status stays `in-progress` until the lint `warn`-tier backlog is burned down
-and its thresholds ratcheted, or that track is explicitly retired.
+## Resolution (2026-06-13)
+
+`done`. Every acceptance criterion is met and every suggested-remediation item
+has shipped:
+
+- **Gates live in CI** (`.github/workflows/ci.yml`): `lint` (+ `check:loc`),
+  `typecheck`, `test` (Linux + Windows), `coverage`, `build` (+
+  `check:artifacts`), `perf`, and `quality` (the fallow ratchet,
+  `npm run check:quality`).
+- **LOC guard** with a baseline-aware ratchet (`scripts/check-loc.mjs`);
+  grandfathered hotspots are shrink-only and were re-locked to current size in
+  run 12a.
+- **Architecture gates** (remediation item 5): provider-boundary contract test,
+  no-new-provider-hardcoded-list guard, and the fallow structural counters
+  (`circularDependencies`, `reExportCycles`, `boundaryViolations`) pinned at 0.
+- **Lint-severity policy complete:** the `warn`-tier backlog was burned to zero
+  and every staged rule promoted to `error` (the final test rules —
+  `jest/expect-expect`, `jest/no-disabled-tests`, `jest/no-commented-out-tests` —
+  in run 13). `eslint --print-config` reports no rule at `warn`, so the "CI fails
+  on lint warnings" intent is satisfied by there being no warn-tier rules at all.
+
+The fallow quality campaign (runs 1–13) then drove the ratcheted metrics down
+from the monitoring-only baseline: `criticalComplexity` 59→0, `cloneGroups`
+68→33, `duplicatedLines` 1790→819, `complexFunctions` 271→237, all structural
+counters at 0, maintainability 90.2→90.3. Ongoing metric burn-down is tracked
+under "Next slices" in `docs/build-ci/quality-gates.md`; the gate *machinery*
+this debt called for is fully delivered.

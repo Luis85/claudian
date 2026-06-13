@@ -221,13 +221,22 @@ export default defineConfig([
         'error',
         { additionalTestBlockFunctions: ['itPosix', 'itWin32'] },
       ],
+      // Promoted warn -> error 2026-06-13 (quality campaign run 13). CI does not
+      // pass `--max-warnings`, so any `warn` rule is effectively unenforced;
+      // these jest rules all had zero offenders, so promoting them makes the lint
+      // gate genuinely all-error (no warn tier in use). `jest/expect-expect` was
+      // the staged-backlog rule; `no-disabled-tests` / `no-commented-out-tests`
+      // ship at `warn` from the jest-recommended preset and are promoted with it
+      // so committed skipped or commented-out tests also block CI.
       'jest/expect-expect': [
-        'warn',
+        'error',
         {
           // Helper functions that wrap `expect()` for shared test scaffolding.
           assertFunctionNames: ['expect', 'assertTabRendersRegistry', 'mountSettingsShell'],
         },
       ],
+      'jest/no-disabled-tests': 'error',
+      'jest/no-commented-out-tests': 'error',
     },
   },
 ]);
