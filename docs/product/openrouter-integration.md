@@ -51,6 +51,7 @@ Users currently manage multiple LLM provider API keys and have limited visibilit
 - An "Auto" or "Recommended" mode is available
 - When enabled, OpenRouter picks the optimal model based on its routing algorithm
 - User can see which model was selected in the chat UI
+- The selected model remains consistent across follow-up turns in the same conversation
 
 ### US-4: Agent Board Support
 **As a** user  
@@ -82,6 +83,11 @@ Users currently manage multiple LLM provider API keys and have limited visibilit
 - OpenRouter available as a provider option in Agent Board settings
 - Work-order runs respect the OpenRouter model selection
 - Model metadata (pricing, capabilities) propagates to work-order context
+
+### Auto Router Session Pinning
+- For Auto mode, derive a stable `session_id` from the Claudian conversation ID or Agent Board run ID
+- Send this `session_id` with each request to OpenRouter's Auto Router to ensure model selection stays consistent across turns
+- This prevents model switching between follow-up turns in multi-turn conversations or work-order runs
 
 ### Model Catalog
 - Query OpenRouter API to fetch available models with metadata (pricing, availability)
