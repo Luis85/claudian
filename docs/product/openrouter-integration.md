@@ -110,6 +110,10 @@ Users currently manage multiple LLM provider API keys and have limited visibilit
 - Launch validation must verify that selected models support required tool execution:
   - If a work order is assigned to a tool-less model, reject the launch with clear messaging
   - Allow sidebar chat to use any OpenRouter model (inference-only), but restrict Agent Board to tool-capable models when tools are required
+- **For Auto mode**: OpenRouter's Auto Router may select tool-less models by default. Require one of:
+  1. Constraint mode: Query Auto Router with a filter/constraint to only consider tool-capable models for Agent Board requests, or
+  2. Response validation: After the first Auto Router response, validate that the routed model supports `tools`; if not, either re-route with constraints or fail the launch
+  3. Explicit gate: Disable Auto mode for Agent Board (only allow manual model selection) until tool-capable Auto routing is available
 
 ## Non-Functional Requirements
 
