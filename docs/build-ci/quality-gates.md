@@ -228,9 +228,12 @@ Tracked here so the direction is explicit.
    `warn`-tier rule left is `jest/expect-expect` (tests); burn it down and
    promote it the same way.
 2. **Tighten the quality-ratchet floors.** The ratchet freezes today's debt;
-   `complexFunctions` (264) is still burned down hotspot by hotspot
-   (`npm run quality:health` prioritizes targets). Each refactor PR that moves a
-   metric should commit the tightened baseline so the gain is locked in.
+   `complexFunctions` (263) is still burned down hotspot by hotspot
+   (`npm run quality:health` prioritizes targets), and `cloneGroups` /
+   `duplicatedLines` are ground down family by family (`npm run quality:dupes`
+   prioritizes the same-file and same-zone clones, which extract cleanly). Each
+   refactor PR that moves a metric should commit the tightened baseline so the
+   gain is locked in.
    **`criticalComplexity` reached 0 in run 6 (was 59 across the campaign)** — it
    is now effectively a must-stay-0 counter like the structural metrics; any
    new critical-severity function should be split before merge rather than
@@ -263,3 +266,16 @@ were promoted to `error`. The last 10 offenders were decomposed (lookup-table
 dispatch, sibling-module extraction) across 10 files in 6 zones, which also
 moved `complexFunctions` 271 → 264 and `duplicatedLines` 1804 → 1790 with
 `criticalComplexity` held at 0 — see "Lint severity policy".
+Done 2026-06-13 (quality campaign run 8): clone-group reduction. Same-file and
+same-zone duplicated blocks were extracted into shared siblings/helpers across
+chat rendering, chat/tasks controllers, codex settings UI, shared dropdowns,
+`i18n`/`path`/binary-path utils, and the four provider runtimes, dropping
+`cloneGroups` 68 → 42 and `duplicatedLines` 1790 → 1063 while holding every
+structural counter at 0 (`complexFunctions` 264 → 263, maintainability
+90.2 → 90.3). Cross-zone clones (provider↔provider, feature↔provider) that would
+only dedupe through an awkward `shared/`/`core/` module were deliberately left.
+Grandfathered hotspots shrank by extracting out to siblings rather than editing
+in place. A latent `MessageRenderer` ↔ `windowedRenderSetup` import cycle created
+during extraction was broken by relocating the windowing primitives
+(`RENDER_WINDOW_SIZE`, `windowStartIndex`) into the windowing module, keeping
+`circularDependencies` at 0.
