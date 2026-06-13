@@ -220,11 +220,13 @@ Tracked here so the direction is explicit.
    threshold reaches zero, tighten it (or promote the rule to `error`) so the
    gain can't regress. No big-bang refactor and no day-one CI block.
 2. **Tighten the quality-ratchet floors.** The ratchet freezes today's debt;
-   the complexity backlog (`complexFunctions`, `criticalComplexity` in
-   `scripts/quality-baseline.json`) still has to be burned down hotspot by
-   hotspot (`npm run quality:health` prioritizes targets). Each refactor PR
-   that moves a metric should commit the tightened baseline so the gain is
-   locked in.
+   `complexFunctions` (271) is still burned down hotspot by hotspot
+   (`npm run quality:health` prioritizes targets). Each refactor PR that moves a
+   metric should commit the tightened baseline so the gain is locked in.
+   **`criticalComplexity` reached 0 in run 6 (was 59 across the campaign)** — it
+   is now effectively a must-stay-0 counter like the structural metrics; any
+   new critical-severity function should be split before merge rather than
+   bumping the baseline.
 Done: provider-boundary regression tests and the no-new-provider-hardcoded-list
 guard (remediation item 5 of the tech debt) — see "Provider-boundary guards".
 Done 2026-06-09: fallow graduated from monitoring to a blocking ratchet gate

@@ -21,15 +21,20 @@ import {
 // setEnabled is provided by the registered ProviderSettingsReconciler.
 import {
   getSettingsRegistry,
-  registerAllSettings,
   renderTab,
-  resetSettingsRegistry,
   type SettingsCtx,
   useRegistryRenderer,
 } from './registry';
 import { SearchBar } from './search/SearchBar';
 import { SearchResultsView } from './search/SearchResultsView';
 import { searchFields } from './search/searchUtils';
+import {
+  buildTabBar,
+  buildTabContents,
+  computeTabIds,
+  ensureRegistryForLocale,
+  type SettingsTabId,
+} from './settingsTabStrip';
 import { renderAgentBoardSettingsSection } from './ui/AgentBoardSettingsSection';
 import { renderCustomContextLimits } from './ui/CustomContextLimits';
 import {
@@ -45,8 +50,6 @@ import {
 } from './ui/GeneralTabSections';
 import { renderLoggingSettingsSection } from './ui/LoggingSettingsSection';
 import { renderQuickActionsSettingsTab } from './ui/QuickActionsSettingsTab';
-
-type SettingsTabId = string;
 
 function formatHotkey(hotkey: ObsidianHotkey): string {
   const isMac = Platform.isMacOS;
@@ -155,37 +158,18 @@ export class ClaudianSettingTab extends PluginSettingTab {
 
     setLocale(this.plugin.settings.locale as Locale);
 
-    const providerTabs = ProviderRegistry.getEnabledProviderIds(
-      asSettingsBag(this.plugin.settings),
-    );
-    const tabIds: SettingsTabId[] = [
-      'general',
-      'agentBoard',
-      'diagnostics',
-      ...providerTabs,
-    ];
+    const tabIds = computeTabIds(this.plugin.settings);
     if (!tabIds.includes(this.activeTab)) {
       this.activeTab = 'general';
     }
 
-    // Lazy-init the registry only if any visible tab requires it, and rebuild
-    // it when the locale changed: field labels/descriptions are captured by
-    // `t()` at registration time, so a registry built under the previous
-    // locale would keep rendering the old language until plugin reload
-    // (PR #82 review). `setLocale` above runs first, so re-registration
-    // captures the new translations. The locale guard also prevents
-    // `registerAllSettings` (which throws on duplicate registration) from
-    // running twice.
-    if (tabIds.some(useRegistryRenderer)) {
-      const locale = this.plugin.settings.locale;
-      if (this.registryLocale !== locale) {
-        if (this.registryLocale !== null) {
-          resetSettingsRegistry();
-        }
-        registerAllSettings();
-        this.registryLocale = locale;
-      }
-    }
+    // `setLocale` above runs first so the (re)registered registry captures the
+    // active locale; see `ensureRegistryForLocale` for why this is required.
+    this.registryLocale = ensureRegistryForLocale(
+      tabIds,
+      this.plugin.settings.locale,
+      this.registryLocale,
+    );
 
     const ctx: SettingsCtx = {
       // Cast: `ClaudianPlugin.settings` carries provider-typed extensions
@@ -197,18 +181,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
       plugin: this.plugin,
     };
 
-    // Mount search bar at top
-    const searchBarHost = containerEl.createDiv({
-      cls: 'claudian-settings-search-bar',
-    });
-
-    if (this.searchBar) {
-      this.searchBar.dispose();
-    }
-    this.searchBar = new SearchBar(searchBarHost, (query) => {
-      this.handleSearchQuery(query, containerEl, ctx);
-    });
-    this.searchBar.render();
+    this.mountSearchBar(containerEl, ctx);
 
     const tabBar = containerEl.createDiv({ cls: 'claudian-settings-tabs' });
     containerEl.createDiv({
@@ -217,96 +190,123 @@ export class ClaudianSettingTab extends PluginSettingTab {
     const tabButtons = new Map<SettingsTabId, HTMLButtonElement>();
     const tabContents = new Map<SettingsTabId, HTMLDivElement>();
 
-    for (const id of tabIds) {
-      let label: string;
-      if (id === 'general') {
-        label = t('settings.tabs.general' as TranslationKey);
-      } else if (id === 'agentBoard') {
-        label = 'Agent Board';
-      } else if (id === 'diagnostics') {
-        label = 'Diagnostics';
-      } else {
-        label = ProviderRegistry.getProviderDisplayName(id);
-      }
-      const button = tabBar.createEl('button', {
-        cls: `claudian-settings-tab${id === this.activeTab ? ' claudian-settings-tab--active' : ''}`,
-        attr: { 'data-tab-id': id },
-        text: label,
-      });
-      button.addEventListener('click', () => {
+    buildTabBar(
+      tabBar,
+      tabIds,
+      this.activeTab,
+      (id) => {
         this.activeTab = id;
-        for (const tabId of tabIds) {
-          tabButtons.get(tabId)?.toggleClass('claudian-settings-tab--active', tabId === id);
-          tabContents.get(tabId)?.toggleClass('claudian-settings-tab-content--active', tabId === id);
-        }
-      });
-      tabButtons.set(id, button);
-    }
+      },
+      tabButtons,
+      tabContents,
+    );
+    buildTabContents(containerEl, tabIds, this.activeTab, tabContents);
 
+    this.renderTabBodies(tabIds, tabContents, ctx);
+  }
+
+  // Mount (replacing any prior instance) the top search bar wired to the
+  // current render context.
+  private mountSearchBar(containerEl: HTMLElement, ctx: SettingsCtx): void {
+    const searchBarHost = containerEl.createDiv({
+      cls: 'claudian-settings-search-bar',
+    });
+    if (this.searchBar) {
+      this.searchBar.dispose();
+    }
+    this.searchBar = new SearchBar(searchBarHost, (query) => {
+      this.handleSearchQuery(query, containerEl, ctx);
+    });
+    this.searchBar.render();
+  }
+
+  // Render every tab's body into its content host. The fixed tabs each have a
+  // registry-or-legacy fork; provider tabs route through `renderProviderTab`.
+  // Ordering matches the legacy inline sequence exactly.
+  private renderTabBodies(
+    tabIds: readonly SettingsTabId[],
+    tabContents: Map<SettingsTabId, HTMLDivElement>,
+    ctx: SettingsCtx,
+  ): void {
+    this.renderFixedTabBodies(tabContents, ctx);
+
+    // Provider tabs are every tab id that is not one of the three fixed tabs,
+    // preserving the original enabled-provider iteration order.
     for (const id of tabIds) {
-      const content = containerEl.createDiv({
-        cls: `claudian-settings-tab-content${id === this.activeTab ? ' claudian-settings-tab-content--active' : ''}`,
-      });
-      tabContents.set(id, content);
+      if (id === 'general' || id === 'agentBoard' || id === 'diagnostics') {
+        continue;
+      }
+      const content = tabContents.get(id);
+      if (content) {
+        this.renderProviderTab(id, content, ctx);
+      }
     }
+  }
 
-    if (useRegistryRenderer('general')) {
-      this.tabDisposers.push(
-        renderTab(tabContents.get('general')!, 'general', ctx, getSettingsRegistry()),
-      );
-    } else {
-      this.renderGeneralTab(tabContents.get('general')!);
+  // Render the general / agentBoard / diagnostics bodies. Each prefers the
+  // registry renderer when enabled and falls back to the legacy imperative
+  // renderer (diagnostics has none, so it renders only under the registry).
+  private renderFixedTabBodies(
+    tabContents: Map<SettingsTabId, HTMLDivElement>,
+    ctx: SettingsCtx,
+  ): void {
+    const generalContent = tabContents.get('general')!;
+    if (!this.pushRegistryTab(generalContent, 'general', ctx)) {
+      this.renderGeneralTab(generalContent);
     }
 
     const agentBoardContent = tabContents.get('agentBoard');
-    if (agentBoardContent) {
-      if (useRegistryRenderer('agentBoard')) {
-        this.tabDisposers.push(
-          renderTab(agentBoardContent, 'agentBoard', ctx, getSettingsRegistry()),
-        );
-      } else {
-        renderAgentBoardSettingsSection(agentBoardContent, this.plugin);
-      }
+    if (agentBoardContent && !this.pushRegistryTab(agentBoardContent, 'agentBoard', ctx)) {
+      renderAgentBoardSettingsSection(agentBoardContent, this.plugin);
     }
 
-
+    // Diagnostics has no legacy tab renderer — its imperative collaborators
+    // still surface inside the General tab's Diagnostics section. Until the
+    // flag flips, the dedicated tab simply renders nothing.
     const diagnosticsContent = tabContents.get('diagnostics');
-    if (diagnosticsContent && useRegistryRenderer('diagnostics')) {
-      // Diagnostics has no legacy tab renderer — its imperative collaborators
-      // still surface inside the General tab's Diagnostics section. Until the
-      // flag flips, the dedicated tab simply renders nothing.
-      this.tabDisposers.push(
-        renderTab(diagnosticsContent, 'diagnostics', ctx, getSettingsRegistry()),
-      );
+    if (diagnosticsContent) {
+      this.pushRegistryTab(diagnosticsContent, 'diagnostics', ctx);
+    }
+  }
+
+  // Render `id` through the registry renderer (tracking its disposer) when the
+  // registry is enabled for it. Returns whether the registry handled the tab,
+  // so callers can fall back to a legacy renderer.
+  private pushRegistryTab(
+    content: HTMLElement,
+    id: SettingsTabId,
+    ctx: SettingsCtx,
+  ): boolean {
+    if (!useRegistryRenderer(id)) {
+      return false;
+    }
+    this.tabDisposers.push(renderTab(content, id, ctx, getSettingsRegistry()));
+    return true;
+  }
+
+  // Render a single provider tab: registry renderer when enabled for the
+  // provider, otherwise the provider-owned imperative settings tab renderer.
+  private renderProviderTab(
+    providerId: SettingsTabId,
+    content: HTMLElement,
+    ctx: SettingsCtx,
+  ): void {
+    if (this.pushRegistryTab(content, providerId, ctx)) {
+      return;
     }
 
-    for (const providerId of providerTabs) {
-      const content = tabContents.get(providerId);
-      if (!content) {
-        continue;
-      }
-
-      if (useRegistryRenderer(providerId)) {
-        this.tabDisposers.push(renderTab(content, providerId, ctx, getSettingsRegistry()));
-        continue;
-      }
-
-      ProviderWorkspaceRegistry.getSettingsTabRenderer(providerId)?.render(content, {
-        plugin: this.plugin,
-        renderHiddenProviderCommandSetting: (
-          target,
-          targetProviderId,
-          copy,
-        ) => this.renderHiddenProviderCommandSetting(target, targetProviderId, copy),
-        refreshModelSelectors: () => {
-          for (const view of this.plugin.getAllViews()) {
-            view.refreshModelSelector();
-          }
-        },
-        renderCustomContextLimits: (target, providerId) =>
-          renderCustomContextLimits(this.plugin, target, providerId),
-      });
-    }
+    ProviderWorkspaceRegistry.getSettingsTabRenderer(providerId)?.render(content, {
+      plugin: this.plugin,
+      renderHiddenProviderCommandSetting: (target, targetProviderId, copy) =>
+        this.renderHiddenProviderCommandSetting(target, targetProviderId, copy),
+      refreshModelSelectors: () => {
+        for (const view of this.plugin.getAllViews()) {
+          view.refreshModelSelector();
+        }
+      },
+      renderCustomContextLimits: (target, innerProviderId) =>
+        renderCustomContextLimits(this.plugin, target, innerProviderId),
+    });
   }
 
   private renderGeneralTab(container: HTMLElement): void {

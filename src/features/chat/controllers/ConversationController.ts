@@ -3,19 +3,31 @@ import { Menu, Notice, setIcon } from 'obsidian';
 import type { TitleGenerationService } from '../../../core/providers/types';
 import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
 import type { ChatRewindMode } from '../../../core/runtime/types';
-import type { Conversation, ConversationMeta } from '../../../core/types';
+import type { ChatMessage, Conversation, ConversationMeta } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import type { MessageRenderer } from '../rendering/MessageRenderer';
 import { cleanupThinkingBlock } from '../rendering/ThinkingBlockRenderer';
-import { findRewindContext } from '../rewind';
 import type { SubagentManager } from '../services/SubagentManager';
 import type { ChatState } from '../state/ChatState';
 import type { FileContextManager } from '../ui/FileContext';
 import type { ImageContextManager } from '../ui/ImageContext';
 import type { ExternalContextSelector, McpServerSelector } from '../ui/InputToolbar';
 import type { StatusPanel } from '../ui/StatusPanel';
+import {
+  resolveRewindTarget,
+  rewindConfirmMessage,
+  rewindSaveFailedNotice,
+  rewindSuccessNotice,
+  runRewind,
+} from './rewindHelpers';
+import {
+  buildConversationUpdates,
+  collectSaveSelections,
+  ensureConversationForSave,
+  resolveSessionUpdates,
+} from './saveHelpers';
 
 function runConversationAction(action: () => Promise<void>, failureMessage: string): void {
   void action().catch(() => {
@@ -384,78 +396,75 @@ export class ConversationController {
     userMessageId: string,
     mode: ChatRewindMode = 'code-and-conversation',
   ): Promise<void> {
-    const { plugin, state, renderer } = this.deps;
-
-    const agentServiceForCheck = this.getAgentService();
-    if (agentServiceForCheck && !agentServiceForCheck.getCapabilities().supportsRewind) {
-      new Notice(t('chat.rewind.failed', { error: t('chat.rewind.errUnsupported') }));
+    const start = this.resolveRewindStart(userMessageId);
+    if (!start.ok) {
+      new Notice(start.notice);
       return;
     }
-
-    if (state.isStreaming) {
-      new Notice(t('chat.rewind.unavailableStreaming'));
-      return;
-    }
-
-    const msgs = state.messages;
-    const userIdx = msgs.findIndex(m => m.id === userMessageId);
-    if (userIdx === -1) {
-      new Notice(t('chat.rewind.failed', { error: t('chat.rewind.errMessageNotFound') }));
-      return;
-    }
-    const userMsg = msgs[userIdx];
-    if (!userMsg.userMessageId) {
-      new Notice(t('chat.rewind.unavailableNoUuid'));
-      return;
-    }
-
-    const rewindCtx = findRewindContext(msgs, userIdx);
-    if (!rewindCtx.hasResponse || !rewindCtx.prevAssistantUuid) {
-      new Notice(t('chat.rewind.unavailableNoUuid'));
-      return;
-    }
-    const prevAssistantUuid = rewindCtx.prevAssistantUuid;
+    const { userMsg, rewindUserMessageId, prevAssistantUuid } = start;
 
     const confirmed = await confirm(
-      plugin.app,
-      mode === 'conversation'
-        ? t('chat.rewind.confirmMessageConversationOnly')
-        : t('chat.rewind.confirmMessage'),
+      this.deps.plugin.app,
+      rewindConfirmMessage(mode),
       t('chat.rewind.confirmButton')
     );
     if (!confirmed) return;
 
-    if (state.isStreaming) {
+    if (this.deps.state.isStreaming) {
       new Notice(t('chat.rewind.unavailableStreaming'));
       return;
     }
 
+    const outcome = await runRewind(this.getAgentService(), rewindUserMessageId, prevAssistantUuid, mode);
+    if (!outcome.ok) {
+      new Notice(outcome.notice);
+      return;
+    }
+
+    await this.finalizeRewind(outcome.result, userMsg, userMessageId, prevAssistantUuid, mode);
+  }
+
+  /**
+   * Runs the streaming/capability guards and resolves the rewind target. Returns
+   * a ready-to-show notice on any rejection rather than emitting it, so `rewind`
+   * stays a thin orchestrator.
+   */
+  private resolveRewindStart(userMessageId: string):
+    | { ok: true; userMsg: ChatMessage; rewindUserMessageId: string; prevAssistantUuid: string }
+    | { ok: false; notice: string } {
     const agentService = this.getAgentService();
-    if (!agentService) {
-      new Notice(t('chat.rewind.failed', { error: t('chat.rewind.errServiceUnavailable') }));
-      return;
+    if (agentService && !agentService.getCapabilities().supportsRewind) {
+      return { ok: false, notice: t('chat.rewind.failed', { error: t('chat.rewind.errUnsupported') }) };
     }
-    // rewind is optional on ChatRuntime (ADR-0001 Phase 2); providers without
-    // the capability omit the method entirely. The supportsRewind gate above
-    // already prevents this path on unsupported providers — this is the TS
-    // narrowing for the runtime-side optional signature.
-    if (typeof agentService.rewind !== 'function') {
-      new Notice(t('chat.rewind.failed', { error: t('chat.rewind.errUnsupported') }));
-      return;
+    if (this.deps.state.isStreaming) {
+      return { ok: false, notice: t('chat.rewind.unavailableStreaming') };
     }
 
-    let result;
-    try {
-      result = await agentService.rewind(userMsg.userMessageId, prevAssistantUuid, mode);
-    } catch (e) {
-      new Notice(t('chat.rewind.failed', { error: e instanceof Error ? e.message : t('chat.rewind.errUnknown') }));
-      return;
-    }
-    if (!result.canRewind) {
-      new Notice(t('chat.rewind.cannot', { error: result.error ?? t('chat.rewind.errUnknown') }));
-      return;
+    const target = resolveRewindTarget(this.deps.state.messages, userMessageId);
+    if (!target.ok) {
+      const notice = target.noticeKey === 'errMessageNotFound'
+        ? t('chat.rewind.failed', { error: t('chat.rewind.errMessageNotFound') })
+        : t('chat.rewind.unavailableNoUuid');
+      return { ok: false, notice };
     }
 
+    return {
+      ok: true,
+      userMsg: target.userMsg,
+      rewindUserMessageId: target.userMessageId,
+      prevAssistantUuid: target.prevAssistantUuid,
+    };
+  }
+
+  /** Truncates the transcript, re-renders, and persists the post-rewind state. */
+  private async finalizeRewind(
+    result: { filesChanged?: string[] },
+    userMsg: ChatMessage,
+    userMessageId: string,
+    prevAssistantUuid: string,
+    mode: ChatRewindMode,
+  ): Promise<void> {
+    const { state, renderer } = this.deps;
     state.truncateAt(userMessageId);
 
     const inputEl = this.deps.getInputEl();
@@ -474,19 +483,10 @@ export class ConversationController {
       saveError = e instanceof Error ? e.message : 'Failed to save';
     }
 
-    if (saveError) {
-      new Notice(
-        mode === 'conversation'
-          ? t('chat.rewind.noticeConversationOnlySaveFailed', { error: saveError })
-          : t('chat.rewind.noticeSaveFailed', { count: String(filesChanged), error: saveError })
-      );
-      return;
-    }
-
     new Notice(
-      mode === 'conversation'
-        ? t('chat.rewind.noticeConversationOnly')
-        : t('chat.rewind.notice', { count: String(filesChanged) })
+      saveError
+        ? rewindSaveFailedNotice(mode, filesChanged, saveError)
+        : rewindSuccessNotice(mode, filesChanged)
     );
   }
 
@@ -510,50 +510,25 @@ export class ConversationController {
     const agentService = this.getAgentService();
     const sessionInvalidated = agentService?.consumeSessionInvalidation?.() ?? false;
 
-    // Entry point with messages - create conversation lazily
-    // New conversations always use SDK-native storage.
-    if (!state.currentConversationId && state.messages.length > 0) {
-      const initialSessionId = agentService?.getSessionId() ?? undefined;
-      const conversation = await plugin.createConversation({
-        providerId: agentService?.providerId,
-        sessionId: initialSessionId,
-      });
-      state.currentConversationId = conversation.id;    }
+    await ensureConversationForSave(plugin, state, agentService);
 
-    const fileCtx = this.deps.getFileContextManager();
-    const currentNote = fileCtx?.getCurrentNotePath() || undefined;
-    const externalContextSelector = this.deps.getExternalContextSelector();
-    const externalContextPaths = externalContextSelector?.getExternalContexts() ?? [];
-    const mcpServerSelector = this.deps.getMcpServerSelector();
-    const enabledMcpServers = mcpServerSelector ? Array.from(mcpServerSelector.getEnabledServers()) : [];
+    const selections = collectSaveSelections(
+      this.deps.getFileContextManager(),
+      this.deps.getExternalContextSelector(),
+      this.deps.getMcpServerSelector(),
+    );
 
     const conversation = plugin.getConversationSync(state.currentConversationId!);
+    const sessionUpdates = resolveSessionUpdates(agentService, conversation, sessionInvalidated);
 
-    const { updates: sessionUpdates } = agentService
-      ? agentService.buildSessionUpdates({ conversation, sessionInvalidated })
-      : { updates: {} };
-
-    // `Partial<Conversation>`: a `null` from a normal tab omits the key and
-    // leaves any stored value intact, so this only writes when the active tab
-    // resolves to a work-order path.
-    const workOrderPath = this.deps.getWorkOrderPath?.() ?? null;
-    const updates: Partial<Conversation> = {
-      ...sessionUpdates,
-      messages: state.messages,
-      currentNote: currentNote,
-      externalContextPaths: externalContextPaths.length > 0 ? externalContextPaths : undefined,
-      usage: state.usage ?? undefined,
-      enabledMcpServers: enabledMcpServers.length > 0 ? enabledMcpServers : undefined,
-      ...(workOrderPath ? { workOrderPath } : {}),
-    };
-
-    if (updateLastResponse) {
-      updates.lastResponseAt = Date.now();
-    }
-
-    if (options) {
-      updates.resumeAtMessageId = options.resumeAtMessageId;
-    }
+    const updates = buildConversationUpdates({
+      sessionUpdates,
+      state,
+      selections,
+      workOrderPath: this.deps.getWorkOrderPath?.() ?? null,
+      updateLastResponse,
+      options,
+    });
 
     await plugin.updateConversation(state.currentConversationId!, updates);
     state.hasPendingConversationSave = false;

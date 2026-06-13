@@ -11,6 +11,7 @@ import { hasAnyHandoffSection, parseHandoffSections } from '../model/handoffSect
 import type { TaskPriority, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderEditableValueChip } from './editableValueChip';
 import { renderSectionHeader } from './sectionHeader';
+import { type FooterAction, footerActionsForStatus } from './workOrderFooterActions';
 
 // One collapsible Agent-handoff card. `body` is the section's raw markdown
 // (rendered through MarkdownRenderer so inline links stay live); `modifier`
@@ -34,24 +35,6 @@ interface LedgerEntry {
 }
 
 const LEDGER_LINE = /^-\s+(\S+)\s+\[([^\]]+)\]\s*(.*)$/;
-
-// Footer button visual variant. `ghost` = transparent secondary; `cta` = the
-// accent primary; `danger` = the destructive red action. The visual tokens for
-// each live in CSS keyed off the modifier class below.
-type FooterActionVariant = 'ghost' | 'cta' | 'danger';
-
-// One sticky-footer action: a real `<button>` with a leading Lucide icon and a
-// keyed label. `side` groups the button left (secondary/ghost) or right
-// (primary group); `run` is invoked after the modal closes (close-on-click is
-// preserved for every action). Actions whose callback is optional/missing are
-// filtered out before render.
-interface FooterAction {
-  variant: FooterActionVariant;
-  icon: string;
-  labelKey: TranslationKey;
-  side: 'left' | 'right';
-  run: () => void;
-}
 
 export interface WorkOrderFieldUpdate {
   title?: string;
@@ -862,171 +845,8 @@ export class WorkOrderDetailModal extends Modal {
     }
   }
 
-  /**
-   * Resolve the footer action list for the current status. Every status gets
-   * Open note (ghost, left) and — when a conversation link exists and can be
-   * opened — Open conversation (ghost, left). The right-side primary group is
-   * status-specific. Statuses the spec does not tabulate fall back to a minimal
-   * footer so none renders a dead footer.
-   */
   private footerActions(): FooterAction[] {
-    const { task } = this;
-    const { status } = task.frontmatter;
-    const actions: FooterAction[] = [];
-
-    // Open note — present on every status.
-    actions.push({
-      variant: 'ghost',
-      icon: 'file-text',
-      labelKey: 'tasks.workOrderModal.actionOpenNote',
-      side: 'left',
-      run: () => this.callbacks.onOpenNote(task),
-    });
-
-    // Open conversation — left ghost, only when the linked conversation exists
-    // and can still be opened (mirrors the sidebar Conversation-row guard).
-    const canOpenConversation =
-      Boolean(task.frontmatter.conversation_id) &&
-      Boolean(this.callbacks.onOpenConversation) &&
-      (this.callbacks.canOpenConversation?.(task) ?? true);
-
-    const addOpenConversation = (): void => {
-      if (!canOpenConversation) return;
-      actions.push({
-        variant: 'ghost',
-        icon: 'message-square',
-        labelKey: 'tasks.workOrderModal.actionOpenConversation',
-        side: 'left',
-        run: () => this.callbacks.onOpenConversation?.(task),
-      });
-    };
-
-    switch (status) {
-      case 'inbox':
-        if (this.callbacks.onMarkReady) {
-          actions.push({
-            variant: 'cta',
-            icon: 'check',
-            labelKey: 'tasks.workOrderModal.actionMarkReady',
-            side: 'right',
-            run: () => this.callbacks.onMarkReady?.(task),
-          });
-        }
-        break;
-
-      // Live / read-only states: Open conversation + a single Stop danger.
-      case 'running':
-      case 'needs_input':
-      case 'needs_approval':
-        addOpenConversation();
-        if (this.callbacks.onStop) {
-          actions.push({
-            variant: 'danger',
-            icon: 'square',
-            labelKey: 'tasks.workOrderModal.actionStop',
-            side: 'right',
-            run: () => this.callbacks.onStop?.(task),
-          });
-        }
-        break;
-
-      case 'review':
-        addOpenConversation();
-        if (this.callbacks.onRework) {
-          actions.push({
-            variant: 'ghost',
-            icon: 'rotate-ccw',
-            labelKey: 'tasks.workOrderModal.actionRework',
-            side: 'right',
-            run: () => this.callbacks.onRework?.(task),
-          });
-        }
-        if (this.callbacks.onAccept) {
-          actions.push({
-            variant: 'cta',
-            icon: 'check',
-            labelKey: 'tasks.workOrderModal.actionAccept',
-            side: 'right',
-            run: () => this.callbacks.onAccept?.(task),
-          });
-        }
-        break;
-
-      case 'needs_handoff':
-        addOpenConversation();
-        if (this.callbacks.onMarkFailed) {
-          actions.push({
-            variant: 'danger',
-            icon: 'triangle',
-            labelKey: 'tasks.workOrderModal.actionMarkFailed',
-            side: 'right',
-            run: () => this.callbacks.onMarkFailed?.(task),
-          });
-        }
-        if (this.callbacks.onSendToReview) {
-          actions.push({
-            variant: 'cta',
-            icon: 'check',
-            labelKey: 'tasks.workOrderModal.actionSendToReview',
-            side: 'right',
-            run: () => this.callbacks.onSendToReview?.(task),
-          });
-        }
-        break;
-
-      case 'done':
-        if (this.callbacks.onArchive) {
-          actions.push({
-            variant: 'ghost',
-            icon: 'archive',
-            labelKey: 'tasks.workOrderModal.actionArchive',
-            side: 'left',
-            run: () => this.callbacks.onArchive?.(task),
-          });
-        }
-        if (this.callbacks.onReopen) {
-          actions.push({
-            variant: 'ghost',
-            icon: 'rotate-ccw',
-            labelKey: 'tasks.workOrderModal.actionReopen',
-            side: 'right',
-            run: () => this.callbacks.onReopen?.(task),
-          });
-        }
-        break;
-
-      case 'failed':
-        if (this.callbacks.onArchive) {
-          actions.push({
-            variant: 'ghost',
-            icon: 'archive',
-            labelKey: 'tasks.workOrderModal.actionArchive',
-            side: 'right',
-            run: () => this.callbacks.onArchive?.(task),
-          });
-        }
-        break;
-
-      case 'canceled':
-        if (this.callbacks.onArchive) {
-          actions.push({
-            variant: 'ghost',
-            icon: 'archive',
-            labelKey: 'tasks.workOrderModal.actionArchive',
-            side: 'right',
-            run: () => this.callbacks.onArchive?.(task),
-          });
-        }
-        break;
-
-      // ready / needs_fix (and any future status): Open note + Open conversation
-      // only. Run is a board action now, so no right-side primary here.
-      default:
-        addOpenConversation();
-        break;
-    }
-
-    return actions;
+    return footerActionsForStatus(this.task, this.callbacks);
   }
 
   private renderFooterButton(parent: HTMLElement, action: FooterAction): void {

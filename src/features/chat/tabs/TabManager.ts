@@ -19,7 +19,6 @@ import { getTabProviderId } from './providerResolution';
 import {
   activateTab,
   createTab,
-  deactivateTab,
   destroyTab,
   type ForkContext,
   getTabTitle,
@@ -28,6 +27,7 @@ import {
   initializeTabUI,
   wireTabInputEvents,
 } from './Tab';
+import { applyPostActivateAction, deactivatePreviousTab } from './tabSwitchHelpers';
 import {
   DEFAULT_MAX_CHAT_TABS,
   MAX_TABS,
@@ -322,49 +322,13 @@ export class TabManager implements TabManagerInterface {
     const previousTabId = this.activeTabId;
 
     try {
-      // Deactivate current tab
-      if (previousTabId && previousTabId !== tabId) {
-        const currentTab = this.tabs.get(previousTabId);
-        if (currentTab) {
-          deactivateTab(currentTab);
-        }
-      }
+      deactivatePreviousTab(this.tabs, previousTabId, tabId);
 
       // Activate new tab
       this.activeTabId = tabId;
       activateTab(tab);
 
-      // Load conversation if not already loaded. `isHydrating` covers the
-      // window between the instant tab swap + spinner render in `switchTo`
-      // and the async transcript load resolving — without this guard a
-      // re-activation in that window would restart the hydration mid-flight.
-      if (
-        tab.conversationId
-        && tab.state.messages.length === 0
-        && !tab.state.isHydrating
-      ) {
-        await tab.controllers.conversationController?.switchTo(tab.conversationId);
-      } else if (
-        tab.conversationId
-        && tab.state.messages.length > 0
-        && tab.service
-        && !tab.state.isStreaming
-        && !tab.state.hasPendingConversationSave
-      ) {
-        // Passive sync is only safe once local tab state has been persisted.
-        const conversation = this.plugin.getConversationSync(tab.conversationId);
-        if (conversation) {
-          const hasMessages = conversation.messages.length > 0;
-          const externalContextPaths = hasMessages
-            ? conversation.externalContextPaths || []
-            : (this.plugin.settings.persistentExternalContextPaths || []);
-
-          tab.service.syncConversationState(conversation, externalContextPaths);
-        }
-      } else if (!tab.conversationId && tab.state.messages.length === 0) {
-        // New tab with no conversation - initialize welcome greeting
-        tab.controllers.conversationController?.initializeWelcome();
-      }
+      await applyPostActivateAction(this.plugin, tab);
 
       this.callbacks.onTabSwitched?.(previousTabId, tabId);
       this.maybePrimeProviderRuntime(tab);

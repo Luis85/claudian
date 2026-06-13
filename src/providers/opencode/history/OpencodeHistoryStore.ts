@@ -2,20 +2,19 @@ import { spawnSync } from 'node:child_process';
 import * as fs from 'node:fs';
 
 import type { HistoryLoadError } from '../../../core/providers/types';
-import { extractResolvedAnswersFromResultText } from '../../../core/tools/toolInput';
-import { isWriteEditTool, TOOL_ASK_USER_QUESTION } from '../../../core/tools/toolNames';
-import type { ChatMessage, ContentBlock, ToolCallInfo } from '../../../core/types';
+import type { ChatMessage, ContentBlock } from '../../../core/types';
 import { extractUserQuery } from '../../../utils/context';
-import { extractDiffData } from '../../../utils/diff';
-import {
-  normalizeOpencodeToolInput,
-  normalizeOpencodeToolName,
-  normalizeOpencodeToolUseResult,
-} from '../normalization/opencodeToolNormalization';
 import { resolveExistingOpencodeDatabasePath } from '../runtime/OpencodePaths';
 import type { OpencodeProviderState } from '../types';
-
-type StoredRow = Record<string, unknown>;
+import {
+  getBoolean,
+  getNestedNumber,
+  getNumber,
+  getString,
+  isPlainObject,
+  type StoredRow,
+} from './opencodeStoredRow';
+import { buildAssistantToolCalls } from './opencodeToolCallBuilder';
 
 interface StoredMessage {
   info: StoredRow;
@@ -372,52 +371,6 @@ function buildAssistantContentBlocks(parts: StoredRow[]): ContentBlock[] {
   return blocks;
 }
 
-function buildAssistantToolCalls(parts: StoredRow[]): ToolCallInfo[] {
-  return parts.flatMap((part) => {
-    if (getString(part.type) !== 'tool') {
-      return [];
-    }
-
-    const id = getString(part.callID);
-    const rawName = getString(part.tool);
-    const state = getObject(part.state);
-    const status = mapToolStatus(getString(state?.status));
-    if (!id || !rawName || !status) {
-      return [];
-    }
-
-    const input = normalizeOpencodeToolInput(rawName, getObject(state?.input) ?? {});
-    const name = normalizeOpencodeToolName(rawName);
-    const result = getString(state?.output) ?? getString(state?.error) ?? undefined;
-    const toolUseResult = normalizeOpencodeToolUseResult(rawName, input, {
-      ...(result ? { output: result } : {}),
-      ...(getObject(state?.metadata) ? { metadata: getObject(state?.metadata) } : {}),
-    });
-
-    const toolCall: ToolCallInfo = {
-      id,
-      input,
-      name,
-      result,
-      status,
-    };
-
-    if (name === TOOL_ASK_USER_QUESTION) {
-      toolCall.resolvedAnswers = toolUseResult?.answers as ToolCallInfo['resolvedAnswers']
-        ?? extractResolvedAnswersFromResultText(result);
-    }
-
-    if (status === 'completed' && isWriteEditTool(name)) {
-      const diffData = extractDiffData(toolUseResult, toolCall);
-      if (diffData) {
-        toolCall.diffData = diffData;
-      }
-    }
-
-    return [toolCall];
-  });
-}
-
 function getJoinedTextParts(parts: StoredRow[]): string {
   return parts
     .filter((part) => getString(part.type) === 'text' && !getBoolean(part.ignored))
@@ -435,20 +388,6 @@ function getDurationSeconds(part: StoredRow): number | undefined {
   return Math.max(0, (end - start) / 1_000);
 }
 
-function mapToolStatus(status: string | null): ToolCallInfo['status'] | null {
-  switch (status) {
-    case 'pending':
-    case 'running':
-      return 'running';
-    case 'completed':
-      return 'completed';
-    case 'error':
-      return 'error';
-    default:
-      return null;
-  }
-}
-
 function parseJsonObject(value: unknown): StoredRow | null {
   if (typeof value !== 'string') {
     return null;
@@ -460,40 +399,6 @@ function parseJsonObject(value: unknown): StoredRow | null {
   } catch {
     return null;
   }
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-function getBoolean(value: unknown): boolean {
-  return value === true;
-}
-
-function getObject(value: unknown): StoredRow | null {
-  return isPlainObject(value) ? value : null;
-}
-
-function getString(value: unknown): string | null {
-  return typeof value === 'string' ? value : null;
-}
-
-function getNumber(value: unknown): number | null {
-  return typeof value === 'number' ? value : null;
-}
-
-function getNestedNumber(
-  value: StoredRow,
-  keys: string[],
-): number | null {
-  let current: unknown = value;
-  for (const key of keys) {
-    if (!isPlainObject(current)) {
-      return null;
-    }
-    current = current[key];
-  }
-  return getNumber(current);
 }
 
 async function loadSqliteModule(): Promise<SqliteModule | null> {

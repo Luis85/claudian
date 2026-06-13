@@ -19,7 +19,16 @@ import {
   type DroppedPayload,
   getFilePath,
 } from './dropPayloadDetection';
-import { classifyOsPath } from './osPathClassification';
+import { classifyOsPath, type OsPathClassification } from './osPathClassification';
+
+type ClassifiedOsPath = OsPathClassification;
+
+type RejectionReason = 'attach-failed' | 'image-failed' | 'outside-context' | 'external-folder-unsupported';
+
+interface DropSink {
+  attached: string[];
+  rejected: Array<{ path: string; reason: RejectionReason }>;
+}
 
 export interface ChatDropDeps {
   fileContext: Pick<FileContextManager,
@@ -120,74 +129,85 @@ export class ChatDropController {
 
     const payload = detectPayload(dataTransfer, this.deps.getDragManager());
 
-    const attached: string[] = [];
-    const rejected: Array<{ path: string; reason: 'attach-failed' | 'image-failed' | 'outside-context' | 'external-folder-unsupported' }> = [];
+    const sink: DropSink = { attached: [], rejected: [] };
 
+    this.routeVaultPayload(payload, sink);
+    // The OS-image loop is awaited inline (not delegated to an async method)
+    // so handleDrop's microtask budget matches the single awaited hop callers
+    // and tests rely on — wrapping it in an extra `async` method delays the
+    // synchronous routeOsPaths/fireNotices past one microtask turn.
+    for (const img of payload.osImageFiles) {
+      const ok = await this.deps.imageContext.addImageFromFile(img, 'drop');
+      if (ok) sink.attached.push(img.name);
+      else sink.rejected.push({ path: img.name, reason: 'image-failed' });
+    }
+    this.routeOsPaths(payload, sink);
+
+    this.fireNotices(sink.attached.length, sink.rejected);
+    this.deps.inputEl.focus();
+  }
+
+  private routeVaultPayload(payload: DroppedPayload, sink: DropSink): void {
     for (const file of payload.vaultFiles) {
-      if (this.deps.fileContext.attachFileAsPill(file.path)) attached.push(file.path);
-      else rejected.push({ path: file.path, reason: 'attach-failed' });
+      if (this.deps.fileContext.attachFileAsPill(file.path)) sink.attached.push(file.path);
+      else sink.rejected.push({ path: file.path, reason: 'attach-failed' });
     }
 
     for (const folder of payload.vaultFolders) {
-      if (this.deps.fileContext.attachFolderAsPill(folder.path)) attached.push(folder.path);
-      else rejected.push({ path: folder.path, reason: 'attach-failed' });
+      if (this.deps.fileContext.attachFolderAsPill(folder.path)) sink.attached.push(folder.path);
+      else sink.rejected.push({ path: folder.path, reason: 'attach-failed' });
     }
+  }
 
-    for (const img of payload.osImageFiles) {
-      const ok = await this.deps.imageContext.addImageFromFile(img, 'drop');
-      if (ok) attached.push(img.name);
-      else rejected.push({ path: img.name, reason: 'image-failed' });
-    }
-
+  private routeOsPaths(payload: DroppedPayload, sink: DropSink): void {
     const vaultPath = this.deps.getVaultPath();
     const externalRoots = this.deps.getExternalContexts();
 
     for (const file of payload.osFiles) {
       const absolutePath = getFilePath(file) ?? file.name;
       const classified = classifyOsPath(absolutePath, vaultPath, externalRoots, { isDirectory: false });
-      switch (classified.kind) {
-        case 'vault-file':
-          if (this.deps.fileContext.attachFileAsPill(classified.relPath)) attached.push(classified.relPath);
-          else rejected.push({ path: absolutePath, reason: 'attach-failed' });
-          break;
-        case 'external-file':
-          if (this.deps.fileContext.attachExternalContextMention(absolutePath)) attached.push(absolutePath);
-          else rejected.push({ path: absolutePath, reason: 'attach-failed' });
-          break;
-        case 'rejected':
-          rejected.push({ path: absolutePath, reason: 'outside-context' });
-          break;
-        default:
-          // Unreachable: isDirectory:false rules out vault-folder/external-folder.
-          // Kept for exhaustiveness across the shared OsPathClassification union.
-          rejected.push({ path: absolutePath, reason: 'outside-context' });
-          break;
-      }
+      this.applyClassifiedOsFile(absolutePath, classified, sink);
     }
 
     for (const folder of payload.osFolders) {
       const classified = classifyOsPath(folder.path, vaultPath, externalRoots, { isDirectory: true });
-      switch (classified.kind) {
-        case 'vault-folder':
-          if (this.deps.fileContext.attachFolderAsPill(classified.relPath)) attached.push(classified.relPath);
-          else rejected.push({ path: folder.path, reason: 'attach-failed' });
-          break;
-        case 'external-folder':
-          rejected.push({ path: folder.path, reason: 'external-folder-unsupported' });
-          break;
-        case 'rejected':
-          rejected.push({ path: folder.path, reason: 'outside-context' });
-          break;
-        default:
-          // Unreachable: isDirectory:true rules out vault-file/external-file.
-          // Kept for exhaustiveness across the shared OsPathClassification union.
-          rejected.push({ path: folder.path, reason: 'outside-context' });
-          break;
-      }
+      this.applyClassifiedOsFolder(folder.path, classified, sink);
     }
+  }
 
-    this.fireNotices(attached.length, rejected);
-    this.deps.inputEl.focus();
+  private applyClassifiedOsFile(absolutePath: string, classified: ClassifiedOsPath, sink: DropSink): void {
+    switch (classified.kind) {
+      case 'vault-file':
+        if (this.deps.fileContext.attachFileAsPill(classified.relPath)) sink.attached.push(classified.relPath);
+        else sink.rejected.push({ path: absolutePath, reason: 'attach-failed' });
+        break;
+      case 'external-file':
+        if (this.deps.fileContext.attachExternalContextMention(absolutePath)) sink.attached.push(absolutePath);
+        else sink.rejected.push({ path: absolutePath, reason: 'attach-failed' });
+        break;
+      default:
+        // 'rejected' plus the unreachable folder kinds (isDirectory:false rules
+        // them out) collapse to outside-context for exhaustiveness.
+        sink.rejected.push({ path: absolutePath, reason: 'outside-context' });
+        break;
+    }
+  }
+
+  private applyClassifiedOsFolder(folderPath: string, classified: ClassifiedOsPath, sink: DropSink): void {
+    switch (classified.kind) {
+      case 'vault-folder':
+        if (this.deps.fileContext.attachFolderAsPill(classified.relPath)) sink.attached.push(classified.relPath);
+        else sink.rejected.push({ path: folderPath, reason: 'attach-failed' });
+        break;
+      case 'external-folder':
+        sink.rejected.push({ path: folderPath, reason: 'external-folder-unsupported' });
+        break;
+      default:
+        // 'rejected' plus the unreachable file kinds (isDirectory:true rules
+        // them out) collapse to outside-context for exhaustiveness.
+        sink.rejected.push({ path: folderPath, reason: 'outside-context' });
+        break;
+    }
   }
 
   private fireNotices(
