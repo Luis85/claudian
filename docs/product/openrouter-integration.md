@@ -116,8 +116,9 @@ Users currently manage multiple LLM provider API keys and have limited visibilit
 ### Included in MVP
 - OpenRouter provider registration and settings UI
 - Manual model selection with catalog browsing
+- Automatic model selection (routing delegation)
 - Chat sidebar integration
-- Agent Board integration (provider selection only)
+- Agent Board integration (provider selection + manual/automatic model selection)
 
 ### Future / Out of Scope
 - Pricing analytics dashboard
