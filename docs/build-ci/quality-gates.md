@@ -64,10 +64,14 @@ The function-health `warn` backlog is now cleared. `complexity` 25 and
 campaign run 7) once their last 10 offenders were decomposed — see the
 promotion note below. Whole-file size is already a hard gate via the LOC
 guard; the function-health rules add the function-level signal that file-level
-LOC can't see. As of run 13, `jest/expect-expect` — the last staged rule — was
-promoted too, so **no `warn`-tier rules remain**; the `warn` tier stays available
-for staging a future rule but is currently empty, and the lint gate is effectively
-all-or-nothing.
+LOC can't see. As of run 13, the last `warn`-tier rules were promoted:
+`jest/expect-expect` (the staged-backlog rule) plus `jest/no-disabled-tests` and
+`jest/no-commented-out-tests`, which ship at `warn` from the jest-recommended
+preset (`...jestRecommended.rules`). `eslint --print-config` now reports **no
+rule at `warn`** for any file, so the lint gate is genuinely all-error — which
+matters because CI does not pass `--max-warnings`, so a `warn` rule would
+otherwise never fail the build. The `warn` tier stays available for staging a
+future rule but is currently empty.
 
 Promoted to `error` on 2026-06-10, after their backlogs reached zero: the
 staged `obsidianmd/*` set, `@typescript-eslint/no-explicit-any` (src only;
@@ -78,10 +82,13 @@ final 10 offenders were cleared by genuine decomposition (lookup-table
 dispatch and sibling-module extraction, never `eslint-disable`), which also
 dropped `complexFunctions` 271 → 264 and `duplicatedLines` 1804 → 1790 while
 holding `criticalComplexity` at 0.
-Promoted to `error` on 2026-06-13 (quality campaign run 13): `jest/expect-expect`
-(tests), the final staged rule — its backlog was already at zero, so the promotion
-just locks the gain. A test added without an assertion (outside the allowlisted
-`assertFunctionNames` wrappers) now fails CI instead of printing a warning.
+Promoted to `error` on 2026-06-13 (quality campaign run 13): the remaining
+test-suite `warn` rules — `jest/expect-expect` (the staged-backlog rule) and the
+jest-recommended preset's `jest/no-disabled-tests` + `jest/no-commented-out-tests`.
+All three had zero offenders, so the promotions just lock the gain: a test with no
+assertion (outside the allowlisted `assertFunctionNames` wrappers), or a committed
+`.skip`/commented-out test, now fails CI instead of printing a warning.
+`eslint --print-config` confirms no rule remains at `warn`.
 
 ## LOC guard
 
@@ -230,9 +237,10 @@ Tracked here so the direction is explicit.
 
 1. **Burn down the `warn` backlog, then ratchet — DONE.** Every staged
    function-health / test rule reached zero offenders and was promoted to
-   `error`: `complexity` 25 + `max-lines-per-function` 200 (run 7), and
-   `jest/expect-expect` (run 13). No `warn`-tier rules remain (see "Lint
-   severity policy"); the lint gate is now all-error.
+   `error`: `complexity` 25 + `max-lines-per-function` 200 (run 7), and the
+   test-suite rules `jest/expect-expect` + `jest/no-disabled-tests` +
+   `jest/no-commented-out-tests` (run 13). No `warn`-tier rules remain
+   (`eslint --print-config` confirms); the lint gate is now all-error.
 2. **Tighten the quality-ratchet floors.** The ratchet freezes today's debt and
    is driven down each PR. After runs 8–12, `cloneGroups` (33) and
    `duplicatedLines` (819) have shed the clean same-file/same-zone families and
@@ -344,8 +352,10 @@ Boundary-legal (providers → utils), with a dedicated `windowsSpawn` unit spec 
 "design pass" the run-11 note deferred; the remaining cross-zone runtime clones (tool
 normalization, ChatRuntime) are more entangled with provider-specific shapes and were left.
 Done 2026-06-13 (quality campaign run 13): lint-severity policy completed + tech-debt docs
-refreshed. `jest/expect-expect` (the last `warn`-tier rule) was promoted to `error` — its
-backlog was already zero, so the lint gate is now all-error with no warn tier in use. The
+refreshed. The last `warn`-tier rules were promoted to `error` — `jest/expect-expect` plus
+the jest-recommended preset's `jest/no-disabled-tests` and `jest/no-commented-out-tests` (all
+zero-offender) — so `eslint --print-config` now shows no rule at `warn` and the lint gate is
+all-error (a committed `.skip`/commented-out test, or a test with no assertion, now fails CI). The
 `docs/tech-debt/2026-06-07-agentic-quality-gates.md` debt note was moved `in-progress → done`
 (every remediation item it tracked has shipped: the ratchet gate, the structural/boundary
 counters at 0, the LOC guard, perf gates, and the full lint-policy promotion). No metric

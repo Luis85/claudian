@@ -52,7 +52,7 @@ Agentic contributors optimize for finishing the requested change. Without object
 ## Acceptance criteria
 
 - [x] CI fails if `npm run build` fails. — new `build` job in `.github/workflows/ci.yml`.
-- [x] CI fails on lint warnings, not only lint errors. — **Achieved via the staged-promotion path (completed 2026-06-13):** rather than flipping `--max-warnings=0` on day one, each aspirational rule started at `warn`, was burned down to zero offenders, then promoted to `error`. All staged rules are now promoted (`obsidianmd/*`, `no-explicit-any`, `max-params`, `max-depth` on 2026-06-10; `complexity` 25 + `max-lines-per-function` 200 on 2026-06-13 run 7; `jest/expect-expect` on 2026-06-13 run 13), so **no `warn`-tier rules remain** and the lint gate is all-error. See `docs/build-ci/quality-gates.md` § "Lint severity policy".
+- [x] CI fails on lint warnings, not only lint errors. — **Achieved via the staged-promotion path (completed 2026-06-13):** rather than flipping `--max-warnings=0` on day one, each aspirational rule started at `warn`, was burned down to zero offenders, then promoted to `error`. All staged rules are now promoted (`obsidianmd/*`, `no-explicit-any`, `max-params`, `max-depth` on 2026-06-10; `complexity` 25 + `max-lines-per-function` 200 on 2026-06-13 run 7; and the remaining test rules `jest/expect-expect` + `jest/no-disabled-tests` + `jest/no-commented-out-tests` on 2026-06-13 run 13), so **no `warn`-tier rules remain** (`eslint --print-config` confirms) and the lint gate is all-error. See `docs/build-ci/quality-gates.md` § "Lint severity policy".
 - [x] CI fails when a new source file exceeds the configured max LOC unless it is explicitly allowlisted. — `npm run check:loc` (`scripts/check-loc.mjs` + `scripts/loc-baseline.json`), wired into the `lint` job.
 - [x] CI fails if production artifacts are stale or missing. — `npm run check:artifacts` (`scripts/check-artifacts.mjs`) runs after build in the `build` job; covers presence, version sync, `minAppVersion`, and a bundle-size budget.
 - [x] The check output is short enough for agents to act on without reading CI logs manually. — both checks print a one-line OK summary and a compact, file-listed failure report.
@@ -115,9 +115,10 @@ has shipped:
   no-new-provider-hardcoded-list guard, and the fallow structural counters
   (`circularDependencies`, `reExportCycles`, `boundaryViolations`) pinned at 0.
 - **Lint-severity policy complete:** the `warn`-tier backlog was burned to zero
-  and every staged rule promoted to `error` (last one, `jest/expect-expect`, in
-  run 13) — so the "CI fails on lint warnings" intent is satisfied by there being
-  no warnings and no warn-tier rules.
+  and every staged rule promoted to `error` (the final test rules —
+  `jest/expect-expect`, `jest/no-disabled-tests`, `jest/no-commented-out-tests` —
+  in run 13). `eslint --print-config` reports no rule at `warn`, so the "CI fails
+  on lint warnings" intent is satisfied by there being no warn-tier rules at all.
 
 The fallow quality campaign (runs 1–13) then drove the ratcheted metrics down
 from the monitoring-only baseline: `criticalComplexity` 59→0, `cloneGroups`
