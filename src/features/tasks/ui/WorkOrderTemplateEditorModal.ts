@@ -6,7 +6,8 @@ import type { ProviderId } from '../../../core/providers/types';
 import { asSettingsBag } from '../../../core/types/settings';
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
-import { LucideIconPicker } from '../../../shared/components/LucideIconPicker';
+import type { LucideIconPicker } from '../../../shared/components/LucideIconPicker';
+import { addIconPickerRow, addNameAndDescriptionRows } from '../../../shared/settings/nameDescriptionRows';
 import type { TaskPriority } from '../model/taskTypes';
 import type { SaveTemplateInput } from '../templates/TemplateNoteStore';
 import type { WorkOrderTemplate } from '../templates/templateTypes';
@@ -51,28 +52,25 @@ export class WorkOrderTemplateEditorModal extends Modal {
     let priority: '' | TaskPriority = this.existing?.priority ?? '';
     let body = this.existing?.body ?? defaultBody();
 
-    new Setting(this.contentEl)
-      .setName(t('tasks.templateEditor.nameName'))
-      .setDesc(t('tasks.templateEditor.nameDesc'))
-      .addText((text) => {
-        text.setValue(name).onChange((v) => { name = v; });
-        if (isEdit) {
-          text.setDisabled(true);
-        }
-      });
+    addNameAndDescriptionRows(this.contentEl, {
+      name: {
+        name: t('tasks.templateEditor.nameName'),
+        desc: t('tasks.templateEditor.nameDesc'),
+        value: name,
+        onChange: (v) => { name = v; },
+        disabled: isEdit,
+      },
+      description: {
+        name: t('tasks.templateEditor.descriptionName'),
+        desc: t('tasks.templateEditor.descriptionDesc'),
+        value: description,
+        onChange: (v) => { description = v; },
+      },
+    });
 
-    new Setting(this.contentEl)
-      .setName(t('tasks.templateEditor.descriptionName'))
-      .setDesc(t('tasks.templateEditor.descriptionDesc'))
-      .addText((text) => {
-        text.setValue(description).onChange((v) => { description = v; });
-      });
-
-    const iconSetting = new Setting(this.contentEl)
-      .setName(t('tasks.templateEditor.iconName'))
-      .setDesc(t('tasks.templateEditor.iconDesc'));
-    iconSetting.settingEl.addClass('claudian-icon-picker-setting');
-    this.iconPicker = new LucideIconPicker(iconSetting.controlEl, {
+    this.iconPicker = addIconPickerRow(this.contentEl, {
+      name: t('tasks.templateEditor.iconName'),
+      desc: t('tasks.templateEditor.iconDesc'),
       value: icon,
       onChange: (v) => { icon = v; },
     });

@@ -2,7 +2,8 @@ import type { App } from 'obsidian';
 import { Modal, Notice, Setting } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
-import { LucideIconPicker } from '../../../shared/components/LucideIconPicker';
+import type { LucideIconPicker } from '../../../shared/components/LucideIconPicker';
+import { addIconPickerRow, addNameAndDescriptionRows } from '../../../shared/settings/nameDescriptionRows';
 import type { QuickActionStorage } from '../QuickActionStorage';
 import type { QuickAction } from '../types';
 
@@ -39,27 +40,24 @@ export class QuickActionEditorModal extends Modal {
     let icon = this.existing?.icon ?? '';
     let prompt = this.existing?.prompt ?? this.seed?.prompt ?? '';
 
-    new Setting(this.contentEl)
-      .setName(t('quickActions.editor.name'))
-      .setDesc(t('quickActions.editor.nameDesc'))
-      .addText((text) => {
-        text.setValue(name).onChange((v) => { name = v; });
-        if (isEdit) {
-          text.setDisabled(true);
-        }
-      });
+    addNameAndDescriptionRows(this.contentEl, {
+      name: {
+        name: t('quickActions.editor.name'),
+        desc: t('quickActions.editor.nameDesc'),
+        value: name,
+        onChange: (v) => { name = v; },
+        disabled: isEdit,
+      },
+      description: {
+        name: t('quickActions.editor.description'),
+        value: description,
+        onChange: (v) => { description = v; },
+      },
+    });
 
-    new Setting(this.contentEl)
-      .setName(t('quickActions.editor.description'))
-      .addText((text) => {
-        text.setValue(description).onChange((v) => { description = v; });
-      });
-
-    const iconSetting = new Setting(this.contentEl)
-      .setName(t('quickActions.editor.icon'))
-      .setDesc(t('quickActions.editor.iconDesc'));
-    iconSetting.settingEl.addClass('claudian-icon-picker-setting');
-    this.iconPicker = new LucideIconPicker(iconSetting.controlEl, {
+    this.iconPicker = addIconPickerRow(this.contentEl, {
+      name: t('quickActions.editor.icon'),
+      desc: t('quickActions.editor.iconDesc'),
       value: icon,
       onChange: (v) => { icon = v; },
     });

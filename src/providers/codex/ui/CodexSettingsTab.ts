@@ -1,10 +1,10 @@
 import { Setting } from 'obsidian';
 
-import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import { widgetContextFromTabRenderer } from '../../../core/providers/settingsWidgets';
 import type { ProviderSettingsTabRenderer } from '../../../core/providers/types';
 import { asSettingsBag } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
+import { mountCustomModelsSetting } from '../../../shared/settings/customModelsSetting';
 import { getCodexWorkspaceServices } from '../app/codexWorkspaceAccess';
 import { resolveCodexModelSelection } from '../modelOptions';
 import { getCodexProviderSettings, updateCodexProviderSettings } from '../settings';
@@ -43,6 +43,48 @@ export const codexSettingsTabRenderer: ProviderSettingsTabRenderer = {
       }
 
       settingsBag.model = nextModel;
+    };
+
+    const reconcileInactiveCodexProjection = (
+      previousCustomModels: string,
+    ): boolean => {
+      if (settingsBag.settingsProvider === 'codex') {
+        return false;
+      }
+
+      const savedProviderModel = (
+        settingsBag.savedProviderModel
+        && typeof settingsBag.savedProviderModel === 'object'
+      )
+        ? settingsBag.savedProviderModel as Record<string, unknown>
+        : {};
+      const currentSavedModel = typeof savedProviderModel.codex === 'string'
+        ? savedProviderModel.codex
+        : '';
+      if (!currentSavedModel) {
+        return false;
+      }
+
+      const previousCustomModelIds = new Set(
+        previousCustomModels
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter(Boolean),
+      );
+      if (!previousCustomModelIds.has(currentSavedModel)) {
+        return false;
+      }
+
+      const nextSavedModel = resolveCodexModelSelection(settingsBag, currentSavedModel);
+      if (!nextSavedModel || nextSavedModel === currentSavedModel) {
+        return false;
+      }
+
+      settingsBag.savedProviderModel = {
+        ...savedProviderModel,
+        codex: nextSavedModel,
+      };
+      return true;
     };
 
     // --- Setup ---
@@ -104,110 +146,20 @@ export const codexSettingsTabRenderer: ProviderSettingsTabRenderer = {
       { value: 'none', label: 'Off' },
     ];
 
-    new Setting(container)
-      .setName('Custom models')
-      .setDesc('Append additional Codex model ids to the picker, one per line. `OPENAI_MODEL` still takes precedence when set.')
-      .addTextArea((text) => {
-        // Dead code path (J1 cleanup pending): the textarea still operates on a
-        // newline-delimited string, while the persisted shape is now ProviderCustomModel[].
-        // Coerce between the two so the legacy UI keeps compiling and roundtripping ids.
-        const serialize = (rows: { id: string }[]): string => rows.map(row => row.id).join('\n');
-        let pendingCustomModels = serialize(codexSettings.customModels);
-        let savedCustomModels = pendingCustomModels;
-
-        const reconcileInactiveCodexProjection = (
-          previousCustomModels: string,
-        ): boolean => {
-          if (settingsBag.settingsProvider === 'codex') {
-            return false;
-          }
-
-          const savedProviderModel = (
-            settingsBag.savedProviderModel
-            && typeof settingsBag.savedProviderModel === 'object'
-          )
-            ? settingsBag.savedProviderModel as Record<string, unknown>
-            : {};
-          const currentSavedModel = typeof savedProviderModel.codex === 'string'
-            ? savedProviderModel.codex
-            : '';
-          if (!currentSavedModel) {
-            return false;
-          }
-
-          const previousCustomModelIds = new Set(
-            previousCustomModels
-              .split(/\r?\n/)
-              .map((line) => line.trim())
-              .filter(Boolean),
-          );
-          if (!previousCustomModelIds.has(currentSavedModel)) {
-            return false;
-          }
-
-          const nextSavedModel = resolveCodexModelSelection(settingsBag, currentSavedModel);
-          if (!nextSavedModel || nextSavedModel === currentSavedModel) {
-            return false;
-          }
-
-          settingsBag.savedProviderModel = {
-            ...savedProviderModel,
-            codex: nextSavedModel,
-          };
-          return true;
-        };
-
-        const commitCustomModels = async (): Promise<void> => {
-          const previousCustomModels = savedCustomModels;
-          const previousModel = typeof settingsBag.model === 'string' ? settingsBag.model : '';
-          const previousTitleModel = typeof settingsBag.titleGenerationModel === 'string'
-            ? settingsBag.titleGenerationModel
-            : '';
-
-          if (pendingCustomModels !== savedCustomModels) {
-            updateCodexProviderSettings(settingsBag, {
-              customModels: pendingCustomModels
-                .split(/\r?\n/)
-                .map((line) => line.trim())
-                .filter((id, index, list) => id.length > 0 && list.indexOf(id) === index)
-                .map((id) => ({ id, source: 'user' as const })),
-            });
-            savedCustomModels = pendingCustomModels;
-          }
-
-          reconcileActiveCodexModelSelection();
-          const didReconcileInactiveProjection = reconcileInactiveCodexProjection(previousCustomModels);
-          const didReconcileTitleModel = ProviderSettingsCoordinator
-            .reconcileTitleGenerationModelSelection(settingsBag);
-          const nextModel = typeof settingsBag.model === 'string' ? settingsBag.model : '';
-          const nextTitleModel = typeof settingsBag.titleGenerationModel === 'string'
-            ? settingsBag.titleGenerationModel
-            : '';
-          const didModelSelectionChange = previousModel !== nextModel;
-          const didCustomModelsChange = previousCustomModels !== savedCustomModels;
-
-          if (!didCustomModelsChange && !didModelSelectionChange && !didReconcileInactiveProjection
-            && !didReconcileTitleModel
-            && previousTitleModel === nextTitleModel) {
-            return;
-          }
-
-          await context.plugin.saveSettings();
-          context.refreshModelSelectors();
-        };
-
-        text
-          .setPlaceholder('gpt-5.4\ngpt-5.3-codex-spark')
-          .setValue(serialize(codexSettings.customModels))
-          .onChange((value) => {
-            pendingCustomModels = value;
-          });
-        text.inputEl.rows = 4;
-        text.inputEl.cols = 40;
-        text.inputEl.addEventListener('blur', () => {
-          void commitCustomModels();
-        });
-      });
+    mountCustomModelsSetting(container, {
+      name: 'Custom models',
+      desc: 'Append additional Codex model ids to the picker, one per line. `OPENAI_MODEL` still takes precedence when set.',
+      placeholder: 'gpt-5.4\ngpt-5.3-codex-spark',
+      rows: 4,
+      settingsBag,
+      currentModels: codexSettings.customModels,
+      applyCustomModels: (models) =>
+        updateCodexProviderSettings(settingsBag, { customModels: models }),
+      reconcileActiveModelSelection: reconcileActiveCodexModelSelection,
+      reconcileInactiveProjection: reconcileInactiveCodexProjection,
+      saveSettings: () => context.plugin.saveSettings(),
+      refreshModelSelectors: () => context.refreshModelSelectors(),
+    });
 
     new Setting(container)
       .setName('Reasoning summary')

@@ -3,8 +3,7 @@ import { Modal, Notice, Setting } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
 import type { ValidationError } from '../../../i18n/types';
-import { renderSettingsListItem } from '../../../shared/components/settingsListUI';
-import { confirmDelete } from '../../../shared/modals/ConfirmModal';
+import { renderVaultAgentListItem } from '../../../shared/settings/vaultAgentListPanel';
 import type { CodexSubagentStorage } from '../storage/CodexSubagentStorage';
 import { DEFAULT_CODEX_PRIMARY_MODEL } from '../types/models';
 import type { CodexSubagentDefinition } from '../types/subagent';
@@ -300,35 +299,20 @@ export class CodexSubagentSettings extends CodexVaultListSettings<CodexSubagentD
   }
 
   protected renderItem(listEl: HTMLElement, agent: CodexSubagentDefinition): void {
-    const { headerRow } = renderSettingsListItem(listEl, {
+    const { headerRow } = renderVaultAgentListItem(listEl, this.app, {
       name: agent.name,
       description: agent.description,
-      actions: [
-        { icon: 'pencil', ariaLabel: 'Edit', onClick: () => this.openModal(agent) },
-        {
-          icon: 'trash-2',
-          ariaLabel: 'Delete',
-          danger: true,
-          onClick: () => {
-            void (async (): Promise<void> => {
-            if (!this.app) return;
-            const confirmed = await confirmDelete(
-              this.app,
-              `Delete subagent "${agent.name}"?`,
-            );
-            if (!confirmed) return;
-            try {
-              await this.storage.delete(agent);
-              await this.render();
-              this.onChanged?.();
-              new Notice(t('provider.codex.subagent.deleted', { name: agent.name }));
-            } catch {
-              new Notice(t('provider.codex.subagent.deleteFailed'));
-            }
-            })();
-          },
-        },
-      ],
+      onEdit: () => this.openModal(agent),
+      deleteConfirmMessage: `Delete subagent "${agent.name}"?`,
+      onDelete: async () => {
+        await this.storage.delete(agent);
+        await this.render();
+        this.onChanged?.();
+        new Notice(t('provider.codex.subagent.deleted', { name: agent.name }));
+      },
+      onDeleteFailed: () => {
+        new Notice(t('provider.codex.subagent.deleteFailed'));
+      },
     });
 
     if (agent.model) {

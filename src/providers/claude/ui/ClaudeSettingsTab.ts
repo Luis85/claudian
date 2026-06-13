@@ -1,10 +1,10 @@
 import { Setting } from 'obsidian';
 
-import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import { widgetContextFromTabRenderer } from '../../../core/providers/settingsWidgets';
 import type { ProviderSettingsTabRenderer } from '../../../core/providers/types';
 import { asSettingsBag } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
+import { mountCustomModelsSetting } from '../../../shared/settings/customModelsSetting';
 import { resolveClaudeModelSelection } from '../modelOptions';
 import {
   CLAUDE_SAFE_MODES,
@@ -102,66 +102,19 @@ export const claudeSettingsTabRenderer: ProviderSettingsTabRenderer = {
     mountClaudeOpus1MToggle(container, widgetCtx);
     mountClaudeSonnet1MToggle(container, widgetCtx);
 
-    new Setting(container)
-      .setName(t('settings.customModels.name'))
-      .setDesc(t('settings.customModels.desc'))
-      .addTextArea((text) => {
-        // Dead code path (J1 cleanup pending): the textarea still operates on a
-        // newline-delimited string, while the persisted shape is now ProviderCustomModel[].
-        // Coerce between the two so the legacy UI keeps compiling and roundtripping ids.
-        const serialize = (rows: { id: string }[]): string => rows.map(row => row.id).join('\n');
-        let pendingCustomModels = serialize(claudeSettings.customModels);
-        let savedCustomModels = pendingCustomModels;
-
-        const commitCustomModels = async (): Promise<void> => {
-          const previousCustomModels = savedCustomModels;
-          const previousModel = typeof settingsBag.model === 'string' ? settingsBag.model : '';
-          const previousTitleModel = typeof settingsBag.titleGenerationModel === 'string'
-            ? settingsBag.titleGenerationModel
-            : '';
-
-          if (pendingCustomModels !== savedCustomModels) {
-            updateClaudeProviderSettings(settingsBag, {
-              customModels: pendingCustomModels
-                .split(/\r?\n/)
-                .map((line) => line.trim())
-                .filter((id, index, list) => id.length > 0 && list.indexOf(id) === index)
-                .map((id) => ({ id, source: 'user' as const })),
-            });
-            savedCustomModels = pendingCustomModels;
-          }
-
-          reconcileActiveClaudeModelSelection();
-          const didReconcileTitleModel = ProviderSettingsCoordinator
-            .reconcileTitleGenerationModelSelection(settingsBag);
-          const nextModel = typeof settingsBag.model === 'string' ? settingsBag.model : '';
-          const nextTitleModel = typeof settingsBag.titleGenerationModel === 'string'
-            ? settingsBag.titleGenerationModel
-            : '';
-          const didModelSelectionChange = previousModel !== nextModel;
-          const didCustomModelsChange = previousCustomModels !== savedCustomModels;
-
-          if (!didCustomModelsChange && !didModelSelectionChange && !didReconcileTitleModel
-            && previousTitleModel === nextTitleModel) {
-            return;
-          }
-
-          await context.plugin.saveSettings();
-          context.refreshModelSelectors();
-        };
-
-        text
-          .setPlaceholder(t('settings.customModels.placeholder'))
-          .setValue(serialize(claudeSettings.customModels))
-          .onChange((value) => {
-            pendingCustomModels = value;
-          });
-        text.inputEl.rows = 6;
-        text.inputEl.cols = 40;
-        text.inputEl.addEventListener('blur', () => {
-          void commitCustomModels();
-        });
-      });
+    mountCustomModelsSetting(container, {
+      name: t('settings.customModels.name'),
+      desc: t('settings.customModels.desc'),
+      placeholder: t('settings.customModels.placeholder'),
+      rows: 6,
+      settingsBag,
+      currentModels: claudeSettings.customModels,
+      applyCustomModels: (models) =>
+        updateClaudeProviderSettings(settingsBag, { customModels: models }),
+      reconcileActiveModelSelection: reconcileActiveClaudeModelSelection,
+      saveSettings: () => context.plugin.saveSettings(),
+      refreshModelSelectors: () => context.refreshModelSelectors(),
+    });
 
     // --- Slash Commands ---
 
