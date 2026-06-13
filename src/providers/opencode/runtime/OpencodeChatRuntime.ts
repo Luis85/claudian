@@ -58,11 +58,7 @@ import {
 import { OPENCODE_PROVIDER_CAPABILITIES } from '../capabilities';
 import { updateOpencodeDiscoveryState } from '../discoveryState';
 import {
-  sameDiscoveredModels,
   sameModes,
-  sameStringList,
-  sameStringMap,
-  sameThinkingOptionsByModel,
 } from '../internal/compareCollections';
 import { ensureProviderProjectionMap } from '../internal/providerProjection';
 import {
@@ -73,6 +69,8 @@ import {
   normalizeOpencodeModelVariants,
   OPENCODE_DEFAULT_THINKING_LEVEL,
   OPENCODE_SYNTHETIC_MODEL_ID,
+  type OpencodeDiscoveredModel,
+  type OpencodeModelVariant,
   resolveOpencodeBaseModelRawId,
 } from '../models';
 import {
@@ -94,6 +92,10 @@ import {
   normalizeApprovalInput,
 } from './opencodeApprovalHelpers';
 import { prepareOpencodeLaunchArtifacts, startOpencodeAcpProcess } from './OpencodeLaunchArtifacts';
+import {
+  type OpencodeModelStateProjection,
+  projectOpencodeModelState,
+} from './opencodeModelStateProjection';
 import { buildOpencodeRuntimeEnv } from './OpencodeRuntimeEnvironment';
 
 interface ActiveTurn {
@@ -854,10 +856,10 @@ export class OpencodeChatRuntime implements ChatRuntime {
     });
   }
 
-  private async syncSessionModelState(params: {
+  private resolveSessionModelInfo(params: {
     configOptions?: AcpSessionConfigOption[] | null;
     models?: AcpSessionModelState | null;
-  }): Promise<void> {
+  }): { discoveredModels: OpencodeDiscoveredModel[]; currentBaseRawModelId: string | null } {
     const acpState = extractAcpSessionModelState(params);
     const currentRawModelId = acpState.currentModelId ?? this.currentSessionModelId;
     const discoveredModels = normalizeOpencodeDiscoveredModels(
@@ -871,11 +873,18 @@ export class OpencodeChatRuntime implements ChatRuntime {
       this.currentSessionModelId = currentRawModelId;
     }
 
-    const settingsBag = asSettingsBag(this.plugin.settings);
-    const currentSettings = getOpencodeProviderSettings(settingsBag);
-    const currentBaseRawModelId = currentRawModelId
-      ? resolveOpencodeBaseModelRawId(currentRawModelId, discoveredModels)
-      : null;
+    return {
+      discoveredModels,
+      currentBaseRawModelId: currentRawModelId
+        ? resolveOpencodeBaseModelRawId(currentRawModelId, discoveredModels)
+        : null,
+    };
+  }
+
+  private resolveSessionThinkingInfo(params: {
+    configOptions?: AcpSessionConfigOption[] | null;
+    models?: AcpSessionModelState | null;
+  }): { currentThinkingOptions: OpencodeModelVariant[]; currentThinkingLevel: string | null } {
     const thoughtLevelState = extractAcpSessionThoughtLevelState(params);
     const currentThinkingOptions = normalizeOpencodeModelVariants(
       thoughtLevelState.availableLevels.map((level) => ({
@@ -893,76 +902,75 @@ export class OpencodeChatRuntime implements ChatRuntime {
       : null;
     this.currentSessionEffortValues = new Set(currentThinkingOptions.map((option) => option.value));
 
-    const nextThinkingOptionsByModel = { ...currentSettings.thinkingOptionsByModel };
-    if (currentBaseRawModelId) {
-      if (currentThinkingOptions.length > 0) {
-        nextThinkingOptionsByModel[currentBaseRawModelId] = currentThinkingOptions;
-      } else {
-        delete nextThinkingOptionsByModel[currentBaseRawModelId];
-      }
+    return { currentThinkingOptions, currentThinkingLevel };
+  }
+
+  private async syncSessionModelState(params: {
+    configOptions?: AcpSessionConfigOption[] | null;
+    models?: AcpSessionModelState | null;
+  }): Promise<void> {
+    const settingsBag = asSettingsBag(this.plugin.settings);
+    const currentSettings = getOpencodeProviderSettings(settingsBag);
+    const { discoveredModels, currentBaseRawModelId } = this.resolveSessionModelInfo(params);
+    const { currentThinkingOptions, currentThinkingLevel } = this.resolveSessionThinkingInfo(params);
+
+    const projection = projectOpencodeModelState({
+      currentSettings,
+      currentBaseRawModelId,
+      currentThinkingLevel,
+      currentThinkingOptions,
+      currentThinkingOptionValues: this.currentSessionEffortValues,
+      discoveredModels,
+    });
+
+    const discoveryChanged = projection.shouldUpdateDiscoveredModels
+      && updateOpencodeDiscoveryState(settingsBag, { discoveredModels });
+    const changed = this.applyModelStateProjection(settingsBag, projection, {
+      currentBaseRawModelId,
+      currentThinkingLevel,
+    });
+
+    if (!changed && !discoveryChanged && !projection.shouldUpdateThinkingOptions) {
+      return;
     }
 
-    const nextVisibleModels = currentSettings.visibleModels.length === 0 && currentBaseRawModelId
-      ? [currentBaseRawModelId]
-      : currentSettings.visibleModels;
-    const currentPreferredThinking = currentBaseRawModelId
-      ? currentSettings.preferredThinkingByModel[currentBaseRawModelId]
-      : '';
-    const shouldSeedCurrentThinking = currentBaseRawModelId
-      && currentThinkingLevel
-      && (
-        !currentPreferredThinking
-        || (
-          currentThinkingOptions.length > 0
-          && !this.currentSessionEffortValues.has(currentPreferredThinking)
-        )
-      );
-    const nextPreferredThinkingByModel = shouldSeedCurrentThinking && currentBaseRawModelId && currentThinkingLevel
-      ? {
-        ...currentSettings.preferredThinkingByModel,
-        [currentBaseRawModelId]: currentThinkingLevel,
-      }
-      : currentSettings.preferredThinkingByModel;
-    const shouldSeedVisibleModels = !sameStringList(currentSettings.visibleModels, nextVisibleModels);
-    const shouldSeedPreferredThinking = !sameStringMap(
-      currentSettings.preferredThinkingByModel,
-      nextPreferredThinkingByModel,
-    );
-    const shouldUpdateDiscoveredModels = discoveredModels.length > 0
-      && !sameDiscoveredModels(currentSettings.discoveredModels, discoveredModels);
-    const shouldUpdateThinkingOptions = !sameThinkingOptionsByModel(
-      currentSettings.thinkingOptionsByModel,
-      nextThinkingOptionsByModel,
-    );
-    const discoveryChanged = shouldUpdateDiscoveredModels
-      && updateOpencodeDiscoveryState(settingsBag, { discoveredModels });
-    let changed = shouldSeedVisibleModels || shouldSeedPreferredThinking;
+    if (changed || projection.shouldUpdateThinkingOptions) {
+      await this.plugin.saveSettings();
+    }
+    this.refreshModelSelectors();
+  }
 
-    if (currentBaseRawModelId) {
+  private applyModelStateProjection(
+    settingsBag: Record<string, unknown>,
+    projection: OpencodeModelStateProjection,
+    active: { currentBaseRawModelId: string | null; currentThinkingLevel: string | null },
+  ): boolean {
+    let changed = projection.shouldSeedVisibleModels || projection.shouldSeedPreferredThinking;
+
+    if (active.currentBaseRawModelId) {
       const seeded = this.seedActiveModelSelection(
         settingsBag,
-        encodeOpencodeModelId(currentBaseRawModelId),
-        currentThinkingLevel,
+        encodeOpencodeModelId(active.currentBaseRawModelId),
+        active.currentThinkingLevel,
       );
       changed = changed || seeded;
     }
 
-    if (shouldUpdateThinkingOptions || shouldSeedPreferredThinking || shouldSeedVisibleModels) {
+    if (projection.shouldUpdateThinkingOptions
+      || projection.shouldSeedPreferredThinking
+      || projection.shouldSeedVisibleModels) {
       updateOpencodeProviderSettings(settingsBag, {
-        ...(shouldSeedPreferredThinking ? { preferredThinkingByModel: nextPreferredThinkingByModel } : {}),
-        ...(shouldUpdateThinkingOptions ? { thinkingOptionsByModel: nextThinkingOptionsByModel } : {}),
-        ...(shouldSeedVisibleModels ? { visibleModels: nextVisibleModels } : {}),
+        ...(projection.shouldSeedPreferredThinking
+          ? { preferredThinkingByModel: projection.nextPreferredThinkingByModel }
+          : {}),
+        ...(projection.shouldUpdateThinkingOptions
+          ? { thinkingOptionsByModel: projection.nextThinkingOptionsByModel }
+          : {}),
+        ...(projection.shouldSeedVisibleModels ? { visibleModels: projection.nextVisibleModels } : {}),
       });
     }
 
-    if (!changed && !discoveryChanged && !shouldUpdateThinkingOptions) {
-      return;
-    }
-
-    if (changed || shouldUpdateThinkingOptions) {
-      await this.plugin.saveSettings();
-    }
-    this.refreshModelSelectors();
+    return changed;
   }
 
   private seedActiveModelSelection(

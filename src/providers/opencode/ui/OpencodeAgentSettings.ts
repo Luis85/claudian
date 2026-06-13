@@ -2,55 +2,62 @@ import type { App } from 'obsidian';
 import { Modal, Notice, setIcon, Setting } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
-import type { ValidationError } from '../../../i18n/types';
 import { renderModalButtonRow, renderSettingsListItem } from '../../../shared/components/settingsListUI';
 import { confirmDelete } from '../../../shared/modals/ConfirmModal';
 import type { OpencodeAgentStorage } from '../storage/OpencodeAgentStorage';
 import type { OpencodeAgentDefinition } from '../types/agent';
+import {
+  parseOptionalJson,
+  parseOptionalJsonObject,
+  parseOptionalJsonObjectOfBooleans,
+  parseOptionalNumber,
+  parseOptionalPositiveInteger,
+} from './opencodeAgentFormParsers';
+import {
+  findOpencodeAgentNameConflict,
+  validateOpencodeAgentName,
+} from './opencodeAgentValidation';
 
-const OPENCODE_AGENT_INVALID_SEGMENT_PATTERN = /[<>:"\\|?*]/;
+export {
+  findOpencodeAgentNameConflict,
+  validateOpencodeAgentName,
+} from './opencodeAgentValidation';
 
-export function validateOpencodeAgentName(name: string): ValidationError | null {
-  if (!name) {
-    return { key: 'provider.opencode.subagent.validation.required' };
-  }
-
-  const segments = name.split('/');
-  if (segments.length === 0 || segments.some((segment) => segment.length === 0)) {
-    return { key: 'provider.opencode.subagent.validation.slashSegments' };
-  }
-
-  for (const segment of segments) {
-    if (!segment.trim()) {
-      return { key: 'provider.opencode.subagent.validation.emptySegment' };
-    }
-
-    if (segment !== segment.trim()) {
-      return { key: 'provider.opencode.subagent.validation.whitespaceSegment' };
-    }
-
-    if (segment === '.' || segment === '..') {
-      return { key: 'provider.opencode.subagent.validation.dotSegment' };
-    }
-
-    if (segment.includes('\0') || OPENCODE_AGENT_INVALID_SEGMENT_PATTERN.test(segment)) {
-      return { key: 'provider.opencode.subagent.validation.reservedChars' };
-    }
-  }
-
-  return null;
+interface OpencodeAgentFormRefs {
+  nameInput: HTMLInputElement;
+  descriptionInput: HTMLInputElement;
+  modelInput: HTMLInputElement;
+  variantInput: HTMLInputElement;
+  temperatureInput: HTMLInputElement;
+  topPInput: HTMLInputElement;
+  colorInput: HTMLInputElement;
+  stepsInput: HTMLInputElement;
+  toolsInput: HTMLTextAreaElement;
+  permissionInput: HTMLTextAreaElement;
+  optionsInput: HTMLTextAreaElement;
+  promptArea: HTMLTextAreaElement;
+  getHidden: () => boolean;
+  getDisable: () => boolean;
 }
 
-export function findOpencodeAgentNameConflict(
-  agents: OpencodeAgentDefinition[],
-  name: string,
-  currentPersistenceKey?: string,
-): OpencodeAgentDefinition | null {
-  const normalizedName = name.toLowerCase();
-  return agents.find(
-    (agent) => agent.name.toLowerCase() === normalizedName
-      && agent.persistenceKey !== currentPersistenceKey,
-  ) ?? null;
+function hasOpencodeAdvancedFields(existing: OpencodeAgentDefinition | null): boolean {
+  if (!existing) {
+    return false;
+  }
+
+  return Boolean(
+    existing.model
+    || existing.variant
+    || existing.temperature !== undefined
+    || existing.topP !== undefined
+    || existing.color
+    || existing.steps !== undefined
+    || existing.hidden
+    || existing.disable
+    || existing.tools
+    || existing.permission !== undefined
+    || existing.options,
+  );
 }
 
 class OpencodeAgentModal extends Modal {
@@ -75,20 +82,31 @@ class OpencodeAgentModal extends Modal {
     this.modalEl.addClass('claudian-sp-modal');
 
     const { contentEl } = this;
+    const refs = this.buildForm(contentEl);
 
+    renderModalButtonRow(contentEl, {
+      cls: 'claudian-sp-modal-buttons',
+      saveText: 'Save',
+      onCancel: () => this.close(),
+      onSave: () => {
+        void this.collectAndSave(refs);
+      },
+    });
+  }
+
+  private buildForm(contentEl: HTMLElement): OpencodeAgentFormRefs {
+    const basic = this.buildBasicFields(contentEl);
+    const advanced = this.buildAdvancedFields(contentEl);
+    const promptArea = this.buildPromptField(contentEl);
+    return { ...basic, ...advanced, promptArea };
+  }
+
+  private buildBasicFields(contentEl: HTMLElement): {
+    nameInput: HTMLInputElement;
+    descriptionInput: HTMLInputElement;
+  } {
     let nameInput!: HTMLInputElement;
     let descriptionInput!: HTMLInputElement;
-    let modelInput!: HTMLInputElement;
-    let variantInput!: HTMLInputElement;
-    let temperatureInput!: HTMLInputElement;
-    let topPInput!: HTMLInputElement;
-    let colorInput!: HTMLInputElement;
-    let stepsInput!: HTMLInputElement;
-    let hiddenValue = this.existing?.hidden ?? false;
-    let disableValue = this.existing?.disable ?? false;
-    let toolsInput!: HTMLTextAreaElement;
-    let permissionInput!: HTMLTextAreaElement;
-    let optionsInput!: HTMLTextAreaElement;
 
     new Setting(contentEl)
       .setName('Name')
@@ -108,24 +126,31 @@ class OpencodeAgentModal extends Modal {
           .setPlaceholder('Reviews code for correctness and maintainability');
       });
 
+    return { nameInput, descriptionInput };
+  }
+
+  private buildAdvancedFields(contentEl: HTMLElement): Omit<
+    OpencodeAgentFormRefs,
+    'nameInput' | 'descriptionInput' | 'promptArea'
+  > {
+    let modelInput!: HTMLInputElement;
+    let variantInput!: HTMLInputElement;
+    let temperatureInput!: HTMLInputElement;
+    let topPInput!: HTMLInputElement;
+    let colorInput!: HTMLInputElement;
+    let stepsInput!: HTMLInputElement;
+    let hiddenValue = this.existing?.hidden ?? false;
+    let disableValue = this.existing?.disable ?? false;
+    let toolsInput!: HTMLTextAreaElement;
+    let permissionInput!: HTMLTextAreaElement;
+    let optionsInput!: HTMLTextAreaElement;
+
     const details = contentEl.createEl('details', { cls: 'claudian-sp-advanced-section' });
     details.createEl('summary', {
       text: 'Advanced options',
       cls: 'claudian-sp-advanced-summary',
     });
-    if (
-      this.existing?.model ||
-      this.existing?.variant ||
-      this.existing?.temperature !== undefined ||
-      this.existing?.topP !== undefined ||
-      this.existing?.color ||
-      this.existing?.steps !== undefined ||
-      this.existing?.hidden ||
-      this.existing?.disable ||
-      this.existing?.tools ||
-      this.existing?.permission !== undefined ||
-      this.existing?.options
-    ) {
+    if (hasOpencodeAdvancedFields(this.existing)) {
       details.open = true;
     }
 
@@ -228,6 +253,22 @@ class OpencodeAgentModal extends Modal {
           .setPlaceholder('{\n  "focus": "security"\n}');
       });
 
+    return {
+      modelInput,
+      variantInput,
+      temperatureInput,
+      topPInput,
+      colorInput,
+      stepsInput,
+      toolsInput,
+      permissionInput,
+      optionsInput,
+      getHidden: () => hiddenValue,
+      getDisable: () => disableValue,
+    };
+  }
+
+  private buildPromptField(contentEl: HTMLElement): HTMLTextAreaElement {
     new Setting(contentEl)
       .setName('Prompt')
       .setDesc('Markdown body used as the agent prompt');
@@ -240,109 +281,136 @@ class OpencodeAgentModal extends Modal {
       },
     });
     promptArea.value = this.existing?.prompt ?? '';
+    return promptArea;
+  }
 
-    renderModalButtonRow(contentEl, {
-      cls: 'claudian-sp-modal-buttons',
-      saveText: 'Save',
-      onCancel: () => this.close(),
-      onSave: () => {
-        void (async (): Promise<void> => {
-      const name = nameInput.value.trim();
-      const nameError = validateOpencodeAgentName(name);
-      if (nameError) {
-        new Notice(t(nameError.key, nameError.params));
-        return;
-      }
+  private async collectAndSave(refs: OpencodeAgentFormRefs): Promise<void> {
+    const agent = this.collectAgent(refs);
+    if (!agent) {
+      return;
+    }
 
-      const description = descriptionInput.value.trim();
-      if (!description) {
-        new Notice(t('provider.opencode.subagent.descriptionRequired'));
-        return;
-      }
+    try {
+      await this.onSave(agent);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      new Notice(t('provider.opencode.subagent.saveFailed', { message }));
+      return;
+    }
+    this.close();
+  }
 
-      const prompt = promptArea.value;
-      if (!prompt.trim()) {
-        new Notice(t('provider.opencode.subagent.promptRequired'));
-        return;
-      }
+  private collectAgent(refs: OpencodeAgentFormRefs): OpencodeAgentDefinition | null {
+    const name = refs.nameInput.value.trim();
+    const nameError = validateOpencodeAgentName(name);
+    if (nameError) {
+      new Notice(t(nameError.key, nameError.params));
+      return null;
+    }
 
-      const duplicate = findOpencodeAgentNameConflict(
-        this.allAgents,
-        name,
-        this.existing?.persistenceKey,
-      );
-      if (duplicate) {
-        new Notice(t('provider.opencode.subagent.duplicate', { name }));
-        return;
-      }
+    const description = refs.descriptionInput.value.trim();
+    if (!description) {
+      new Notice(t('provider.opencode.subagent.descriptionRequired'));
+      return null;
+    }
 
-      const temperature = parseOptionalNumber(temperatureInput.value, 'Temperature');
-      if (temperature.error) {
-        new Notice(temperature.error);
-        return;
-      }
+    const prompt = refs.promptArea.value;
+    if (!prompt.trim()) {
+      new Notice(t('provider.opencode.subagent.promptRequired'));
+      return null;
+    }
 
-      const topP = parseOptionalNumber(topPInput.value, 'Top P');
-      if (topP.error) {
-        new Notice(topP.error);
-        return;
-      }
+    const duplicate = findOpencodeAgentNameConflict(
+      this.allAgents,
+      name,
+      this.existing?.persistenceKey,
+    );
+    if (duplicate) {
+      new Notice(t('provider.opencode.subagent.duplicate', { name }));
+      return null;
+    }
 
-      const steps = parseOptionalPositiveInteger(stepsInput.value, 'Steps');
-      if (steps.error) {
-        new Notice(steps.error);
-        return;
-      }
+    const numeric = this.collectNumericFields(refs);
+    if (!numeric) {
+      return null;
+    }
 
-      const tools = parseOptionalJsonObjectOfBooleans(toolsInput.value, 'Enabled Tools');
-      if (tools.error) {
-        new Notice(tools.error);
-        return;
-      }
+    const json = this.collectJsonFields(refs);
+    if (!json) {
+      return null;
+    }
 
-      const permission = parseOptionalJson(permissionInput.value, 'Permission');
-      if (permission.error) {
-        new Notice(permission.error);
-        return;
-      }
+    return {
+      name,
+      description,
+      prompt,
+      mode: 'subagent',
+      hidden: refs.getHidden() || undefined,
+      disable: refs.getDisable() || undefined,
+      model: refs.modelInput.value.trim() || undefined,
+      variant: refs.variantInput.value.trim() || undefined,
+      temperature: numeric.temperature,
+      topP: numeric.topP,
+      color: refs.colorInput.value.trim() || undefined,
+      steps: numeric.steps,
+      tools: json.tools,
+      permission: json.permission,
+      options: json.options,
+      persistenceKey: this.existing?.persistenceKey,
+      extraFrontmatter: this.existing?.extraFrontmatter,
+    };
+  }
 
-      const options = parseOptionalJsonObject(optionsInput.value, 'Options');
-      if (options.error) {
-        new Notice(options.error);
-        return;
-      }
+  private collectNumericFields(refs: OpencodeAgentFormRefs): {
+    temperature?: number;
+    topP?: number;
+    steps?: number;
+  } | null {
+    const temperature = parseOptionalNumber(refs.temperatureInput.value, 'Temperature');
+    if (temperature.error) {
+      new Notice(temperature.error);
+      return null;
+    }
 
-      const agent: OpencodeAgentDefinition = {
-        name,
-        description,
-        prompt,
-        mode: 'subagent',
-        hidden: hiddenValue || undefined,
-        disable: disableValue || undefined,
-        model: modelInput.value.trim() || undefined,
-        variant: variantInput.value.trim() || undefined,
-        temperature: temperature.value,
-        topP: topP.value,
-        color: colorInput.value.trim() || undefined,
-        steps: steps.value,
-        tools: tools.value,
-        permission: permission.value,
-        options: options.value,
-        persistenceKey: this.existing?.persistenceKey,
-        extraFrontmatter: this.existing?.extraFrontmatter,
-      };
+    const topP = parseOptionalNumber(refs.topPInput.value, 'Top P');
+    if (topP.error) {
+      new Notice(topP.error);
+      return null;
+    }
 
-      try {
-        await this.onSave(agent);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        new Notice(t('provider.opencode.subagent.saveFailed', { message }));
-        return;
-      }
-      this.close();
-        })();
-      },
-    });
+    const steps = parseOptionalPositiveInteger(refs.stepsInput.value, 'Steps');
+    if (steps.error) {
+      new Notice(steps.error);
+      return null;
+    }
+
+    return { temperature: temperature.value, topP: topP.value, steps: steps.value };
+  }
+
+  private collectJsonFields(refs: OpencodeAgentFormRefs): {
+    tools?: Record<string, boolean>;
+    permission?: unknown;
+    options?: Record<string, unknown>;
+  } | null {
+    const tools = parseOptionalJsonObjectOfBooleans(refs.toolsInput.value, 'Enabled Tools');
+    if (tools.error) {
+      new Notice(tools.error);
+      return null;
+    }
+
+    const permission = parseOptionalJson(refs.permissionInput.value, 'Permission');
+    if (permission.error) {
+      new Notice(permission.error);
+      return null;
+    }
+
+    const options = parseOptionalJsonObject(refs.optionsInput.value, 'Options');
+    if (options.error) {
+      new Notice(options.error);
+      return null;
+    }
+
+    return { tools: tools.value, permission: permission.value, options: options.value };
   }
 
   onClose() {
@@ -474,90 +542,4 @@ export class OpencodeAgentSettings {
     );
     modal.open();
   }
-}
-
-function parseOptionalNumber(
-  value: string,
-  label: string,
-): { error?: string; value?: number } {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return {};
-  }
-
-  const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed)) {
-    return { error: `${label} must be a valid number` };
-  }
-
-  return { value: parsed };
-}
-
-function parseOptionalPositiveInteger(
-  value: string,
-  label: string,
-): { error?: string; value?: number } {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return {};
-  }
-
-  const parsed = Number(trimmed);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    return { error: `${label} must be a positive integer` };
-  }
-
-  return { value: parsed };
-}
-
-function parseOptionalJson(
-  value: string,
-  label: string,
-): { error?: string; value?: unknown } {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return {};
-  }
-
-  try {
-    return { value: JSON.parse(trimmed) };
-  } catch {
-    return { error: `${label} must be valid JSON` };
-  }
-}
-
-function parseOptionalJsonObject(
-  value: string,
-  label: string,
-): { error?: string; value?: Record<string, unknown> } {
-  const parsed = parseOptionalJson(value, label);
-  if (parsed.error || parsed.value === undefined) {
-    return parsed.error ? { error: parsed.error } : {};
-  }
-
-  if (!isJsonObject(parsed.value)) {
-    return { error: `${label} must be a JSON object` };
-  }
-
-  return { value: parsed.value };
-}
-
-function parseOptionalJsonObjectOfBooleans(
-  value: string,
-  label: string,
-): { error?: string; value?: Record<string, boolean> } {
-  const parsed = parseOptionalJsonObject(value, label);
-  if (parsed.error || parsed.value === undefined) {
-    return parsed.error ? { error: parsed.error } : {};
-  }
-
-  if (!Object.values(parsed.value).every((entry) => typeof entry === 'boolean')) {
-    return { error: `${label} must map tool names to boolean values` };
-  }
-
-  return { value: parsed.value as Record<string, boolean> };
-}
-
-function isJsonObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }

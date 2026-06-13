@@ -98,6 +98,169 @@ function normalizeProviderModel(
   return uiConfig.normalizeModelVariant(model, settings);
 }
 
+// Reasoning selections captured before applyModelDefaults overwrites them, so
+// the project* helpers can restore the user's choice instead of the model
+// default when the projection is reusing the current selection.
+interface CurrentReasoningSelections {
+  effort: string | undefined;
+  serviceTier: string | undefined;
+  budget: string | undefined;
+}
+
+interface ResolvedProjectionModel {
+  model: string;
+  isAdaptive: boolean;
+  /** True when the projected model equals the (normalized) current top-level model. */
+  canReuseCurrentProjection: boolean;
+}
+
+function isDefaultModelOfAnotherProvider(model: string, providerId: ProviderId): boolean {
+  if (model.length === 0) {
+    return false;
+  }
+  return ProviderRegistry.getRegisteredProviderIds()
+    .filter(id => id !== providerId)
+    .some(id => ProviderRegistry.getChatUIConfig(id).isDefaultModel(model));
+}
+
+function resolveProjectionModel(
+  uiConfig: ProviderChatUIConfig,
+  settings: Record<string, unknown>,
+  providerId: ProviderId,
+  preferCurrent: boolean,
+): ResolvedProjectionModel {
+  const savedModel = settings.savedProviderModel as ProviderProjectionMap | undefined;
+  const currentModelRaw = typeof settings.model === 'string' ? settings.model : '';
+  const currentModel = preferCurrent
+    ? (normalizeProviderModel(uiConfig, settings, currentModelRaw) ?? '')
+    : currentModelRaw;
+  const modelOptions = uiConfig.getModelOptions(settings);
+
+  const canReuseCurrentModel = currentModel.length > 0
+    && !isDefaultModelOfAnotherProvider(currentModel, providerId)
+    && (preferCurrent || modelOptions.some(option => option.value === currentModel));
+  const fallbackModel = canReuseCurrentModel
+    ? currentModel
+    : (modelOptions[0]?.value ?? currentModel);
+
+  const savedModelValue = normalizeProviderModel(uiConfig, settings, savedModel?.[providerId]);
+  const isSavedModelValid = savedModelValue !== undefined
+    && modelOptions.some(option => option.value === savedModelValue);
+  const model = (isSavedModelValid ? savedModelValue : undefined) ?? fallbackModel;
+
+  return {
+    model,
+    isAdaptive: Boolean(model) && uiConfig.isAdaptiveReasoningModel(model, settings),
+    canReuseCurrentProjection: canReuseCurrentModel && model === currentModel,
+  };
+}
+
+function projectEffortLevel(
+  uiConfig: ProviderChatUIConfig,
+  settings: Record<string, unknown>,
+  providerId: ProviderId,
+  resolved: ResolvedProjectionModel,
+  currentEffort: string | undefined,
+): void {
+  const savedEffort = settings.savedProviderEffort as ProviderProjectionMap | undefined;
+  const { model, isAdaptive, canReuseCurrentProjection } = resolved;
+
+  if (savedEffort?.[providerId] !== undefined) {
+    settings.effortLevel = savedEffort[providerId];
+  } else if (canReuseCurrentProjection && currentEffort !== undefined) {
+    settings.effortLevel = currentEffort;
+  } else if (isAdaptive) {
+    settings.effortLevel = uiConfig.getDefaultReasoningValue(model, settings);
+  }
+
+  if (isAdaptive) {
+    settings.effortLevel = normalizeReasoningValue(uiConfig, settings, model, settings.effortLevel);
+  }
+}
+
+function projectServiceTier(
+  uiConfig: ProviderChatUIConfig,
+  settings: Record<string, unknown>,
+  providerId: ProviderId,
+  resolved: ResolvedProjectionModel,
+  currentServiceTier: string | undefined,
+): void {
+  const savedServiceTier = settings.savedProviderServiceTier as ProviderProjectionMap | undefined;
+  const serviceTierToggle = uiConfig.getServiceTierToggle?.({
+    ...settings,
+    ...(resolved.model ? { model: resolved.model } : {}),
+  }) ?? null;
+
+  if (savedServiceTier?.[providerId] !== undefined) {
+    settings.serviceTier = savedServiceTier[providerId];
+  } else if (resolved.canReuseCurrentProjection && currentServiceTier !== undefined) {
+    settings.serviceTier = currentServiceTier;
+  } else {
+    settings.serviceTier = serviceTierToggle?.inactiveValue ?? 'default';
+  }
+}
+
+function projectThinkingBudget(
+  uiConfig: ProviderChatUIConfig,
+  settings: Record<string, unknown>,
+  providerId: ProviderId,
+  resolved: ResolvedProjectionModel,
+  currentBudget: string | undefined,
+): void {
+  const { model, isAdaptive, canReuseCurrentProjection } = resolved;
+  if (!model || isAdaptive) {
+    return;
+  }
+
+  const savedBudget = settings.savedProviderThinkingBudget as ProviderProjectionMap | undefined;
+
+  if (savedBudget?.[providerId] !== undefined) {
+    settings.thinkingBudget = savedBudget[providerId];
+  } else if (canReuseCurrentProjection && currentBudget !== undefined) {
+    settings.thinkingBudget = currentBudget;
+  } else {
+    settings.thinkingBudget = uiConfig.getDefaultReasoningValue(model, settings);
+  }
+  settings.thinkingBudget = normalizeReasoningValue(uiConfig, settings, model, settings.thinkingBudget);
+}
+
+function projectPermissionMode(
+  uiConfig: ProviderChatUIConfig,
+  settings: Record<string, unknown>,
+  providerId: ProviderId,
+  preferCurrent: boolean,
+): void {
+  const permissionToggle = uiConfig.getPermissionModeToggle?.() ?? null;
+  if (!permissionToggle) {
+    return;
+  }
+
+  const allowedPermissionModes = new Set([
+    permissionToggle.inactiveValue,
+    permissionToggle.activeValue,
+    ...(permissionToggle.planValue ? [permissionToggle.planValue] : []),
+  ]);
+  const savedPermissionMode = settings.savedProviderPermissionMode as ProviderProjectionMap | undefined;
+  const currentPermissionMode = normalizeToggleValue(settings.permissionMode, allowedPermissionModes);
+  const savedPermissionModeValue = normalizeToggleValue(
+    savedPermissionMode?.[providerId],
+    allowedPermissionModes,
+  );
+  const derivedPermissionMode = normalizeToggleValue(
+    uiConfig.resolvePermissionMode?.(settings),
+    allowedPermissionModes,
+  );
+
+  const projectedPermissionMode = savedPermissionModeValue
+    ?? derivedPermissionMode
+    ?? (preferCurrent ? currentPermissionMode : undefined)
+    ?? currentPermissionMode;
+
+  if (projectedPermissionMode !== undefined) {
+    settings.permissionMode = projectedPermissionMode;
+  }
+}
+
 export class ProviderSettingsCoordinator {
   /**
    * Run every registered provider's load-time settings normalization. Keeps
@@ -250,113 +413,28 @@ export class ProviderSettingsCoordinator {
     providerId: ProviderId,
   ): void {
     const uiConfig = ProviderRegistry.getChatUIConfig(providerId);
-    const savedModel = settings.savedProviderModel as ProviderProjectionMap | undefined;
-    const savedEffort = settings.savedProviderEffort as ProviderProjectionMap | undefined;
-    const savedServiceTier = settings.savedProviderServiceTier as ProviderProjectionMap | undefined;
-    const savedBudget = settings.savedProviderThinkingBudget as ProviderProjectionMap | undefined;
-    const savedPermissionMode = settings.savedProviderPermissionMode as ProviderProjectionMap | undefined;
+    const preferCurrent = providerId === getSettingsProviderId(settings);
+    const resolved = resolveProjectionModel(uiConfig, settings, providerId, preferCurrent);
 
-    const shouldPreferCurrentProjection = providerId === getSettingsProviderId(settings);
-    const currentModelRaw = typeof settings.model === 'string' ? settings.model : '';
-    const currentModel = shouldPreferCurrentProjection
-      ? (normalizeProviderModel(uiConfig, settings, currentModelRaw) ?? '')
-      : currentModelRaw;
-    const currentEffort = typeof settings.effortLevel === 'string' ? settings.effortLevel : undefined;
-    const currentServiceTier = typeof settings.serviceTier === 'string' ? settings.serviceTier : undefined;
-    const currentBudget = typeof settings.thinkingBudget === 'string' ? settings.thinkingBudget : undefined;
-    const modelOptions = uiConfig.getModelOptions(settings);
-    const isDefaultModelOfAnotherProvider = currentModel.length > 0
-      && ProviderRegistry.getRegisteredProviderIds()
-        .filter(id => id !== providerId)
-        .some(id => ProviderRegistry.getChatUIConfig(id).isDefaultModel(currentModel));
-    const canReuseCurrentModel = currentModel.length > 0
-      && !isDefaultModelOfAnotherProvider
-      && (
-        shouldPreferCurrentProjection
-        || modelOptions.some(option => option.value === currentModel)
-      );
-    const fallbackModel = canReuseCurrentModel
-      ? currentModel
-      : (modelOptions[0]?.value ?? currentModel);
-    const savedModelValue = normalizeProviderModel(uiConfig, settings, savedModel?.[providerId]);
-    const isSavedModelValid = savedModelValue !== undefined
-      && modelOptions.some(option => option.value === savedModelValue);
-    const model = (isSavedModelValid ? savedModelValue : undefined) ?? fallbackModel;
-    const canReuseCurrentProjection = canReuseCurrentModel && model === currentModel;
+    // Capture the current reasoning selections BEFORE applyModelDefaults runs:
+    // it overwrites settings.effortLevel (and friends) with the model's
+    // defaults, so the project* helpers must restore from these snapshots, not
+    // re-read the already-clobbered settings.
+    const current: CurrentReasoningSelections = {
+      effort: typeof settings.effortLevel === 'string' ? settings.effortLevel : undefined,
+      serviceTier: typeof settings.serviceTier === 'string' ? settings.serviceTier : undefined,
+      budget: typeof settings.thinkingBudget === 'string' ? settings.thinkingBudget : undefined,
+    };
 
-    if (model) {
-      settings.model = model;
-      uiConfig.applyModelDefaults(model, settings);
+    if (resolved.model) {
+      settings.model = resolved.model;
+      uiConfig.applyModelDefaults(resolved.model, settings);
     }
 
-    const serviceTierToggle = uiConfig.getServiceTierToggle?.({
-      ...settings,
-      ...(model ? { model } : {}),
-    }) ?? null;
-
-    const isAdaptive = Boolean(model) && uiConfig.isAdaptiveReasoningModel(model, settings);
-
-    if (savedEffort?.[providerId] !== undefined) {
-      settings.effortLevel = savedEffort[providerId];
-    } else if (canReuseCurrentProjection && currentEffort !== undefined) {
-      settings.effortLevel = currentEffort;
-    } else if (isAdaptive) {
-      settings.effortLevel = uiConfig.getDefaultReasoningValue(model, settings);
-    }
-
-    if (isAdaptive) {
-      settings.effortLevel = normalizeReasoningValue(uiConfig, settings, model, settings.effortLevel);
-    }
-
-    if (savedServiceTier?.[providerId] !== undefined) {
-      settings.serviceTier = savedServiceTier[providerId];
-    } else if (canReuseCurrentProjection && currentServiceTier !== undefined) {
-      settings.serviceTier = currentServiceTier;
-    } else {
-      settings.serviceTier = serviceTierToggle?.inactiveValue ?? 'default';
-    }
-
-    const usesBudget = Boolean(model) && !isAdaptive;
-
-    if (usesBudget) {
-      if (savedBudget?.[providerId] !== undefined) {
-        settings.thinkingBudget = savedBudget[providerId];
-      } else if (canReuseCurrentProjection && currentBudget !== undefined) {
-        settings.thinkingBudget = currentBudget;
-      } else {
-        settings.thinkingBudget = uiConfig.getDefaultReasoningValue(model, settings);
-      }
-      settings.thinkingBudget = normalizeReasoningValue(uiConfig, settings, model, settings.thinkingBudget);
-    }
-
-    const permissionToggle = uiConfig.getPermissionModeToggle?.() ?? null;
-    if (!permissionToggle) {
-      return;
-    }
-
-    const allowedPermissionModes = new Set([
-      permissionToggle.inactiveValue,
-      permissionToggle.activeValue,
-      ...(permissionToggle.planValue ? [permissionToggle.planValue] : []),
-    ]);
-    const currentPermissionMode = normalizeToggleValue(settings.permissionMode, allowedPermissionModes);
-    const derivedPermissionMode = normalizeToggleValue(
-      uiConfig.resolvePermissionMode?.(settings),
-      allowedPermissionModes,
-    );
-    const savedPermissionModeValue = normalizeToggleValue(
-      savedPermissionMode?.[providerId],
-      allowedPermissionModes,
-    );
-
-    const projectedPermissionMode = savedPermissionModeValue
-      ?? derivedPermissionMode
-      ?? (shouldPreferCurrentProjection ? currentPermissionMode : undefined)
-      ?? currentPermissionMode;
-
-    if (projectedPermissionMode !== undefined) {
-      settings.permissionMode = projectedPermissionMode;
-    }
+    projectEffortLevel(uiConfig, settings, providerId, resolved, current.effort);
+    projectServiceTier(uiConfig, settings, providerId, resolved, current.serviceTier);
+    projectThinkingBudget(uiConfig, settings, providerId, resolved, current.budget);
+    projectPermissionMode(uiConfig, settings, providerId, preferCurrent);
   }
 
   /** Each provider's reconciler only processes its own conversations. */

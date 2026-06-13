@@ -1,5 +1,3 @@
-import { TFile } from 'obsidian';
-
 import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import {
   DEFAULT_CHAT_PROVIDER_ID,
@@ -10,12 +8,10 @@ import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
 import { parseTodoInput } from '../../../core/tools/todo';
 import { extractResolvedAnswers, extractResolvedAnswersFromResultText } from '../../../core/tools/toolInput';
 import {
-  isEditTool,
   isSubagentToolName,
   isWriteEditTool,
   skipsBlockedDetection,
   TOOL_AGENT_OUTPUT,
-  TOOL_APPLY_PATCH,
   TOOL_ASK_USER_QUESTION,
   TOOL_TASK,
   TOOL_TODO_WRITE,
@@ -35,7 +31,6 @@ import { formatDurationMmSs } from '../../../utils/date';
 import { extractDiffData } from '../../../utils/diff';
 import { hasStreamingMathDelimiters } from '../../../utils/markdownMath';
 import { openClaudianProviderSettings } from '../../../utils/obsidianPrivateApi';
-import { getVaultPath, normalizePathForVault } from '../../../utils/path';
 import { FLAVOR_TEXTS } from '../constants';
 import { renderInlineRuntimeError } from '../rendering/InlineRuntimeError';
 import type { MessageRenderer, RenderContentOptions } from '../rendering/MessageRenderer';
@@ -76,6 +71,7 @@ import {
   projectUsage,
 } from './StreamProjection';
 import { ToolCallIndex } from './toolCallIndex';
+import { notifyVaultForToolResult } from './vaultFileNotifier';
 
 export interface StreamControllerDeps {
   plugin: ClaudianPlugin;
@@ -204,131 +200,115 @@ export class StreamController {
   // ============================================
 
   async handleStreamChunk(chunk: StreamChunk, msg: ChatMessage): Promise<void> {
-    const { state } = this.deps;
-
-    if (this.streamObservers.size > 0) {
-      for (const observer of this.streamObservers) {
-        try {
-          observer(chunk);
-        } catch {
-          // An observer must never break the stream for the chat UI.
-        }
-      }
+    this.notifyStreamObservers(chunk);
+    if (!(await this.routeContentChunk(chunk, msg))) {
+      await this.routeLifecycleChunk(chunk, msg);
     }
+    this.scrollToBottom();
+  }
 
+  /** Handles content/tool stream chunks. Returns false if `chunk` is not a content chunk. */
+  private async routeContentChunk(chunk: StreamChunk, msg: ChatMessage): Promise<boolean> {
     switch (chunk.type) {
       case 'thinking':
         await this.applyBlockTransition(projectBlockTransition('thinking', this.blockState()), msg);
         await this.appendThinking(chunk.content);
-        break;
+        return true;
 
       case 'text':
         await this.applyBlockTransition(projectBlockTransition('text', this.blockState()), msg);
         msg.content += chunk.content;
         await this.appendText(chunk.content);
-        break;
+        return true;
 
-      case 'tool_use': {
+      case 'tool_use':
         await this.applyBlockTransition(projectBlockTransition('tool_use', this.blockState()), msg);
+        this.dispatchToolUseChunk(chunk, msg);
+        return true;
 
-        if (isSubagentToolName(chunk.name)) {
-          // Flush pending tools before Agent
-          this.flushPendingTools();
-          this.handleTaskToolUseViaManager(chunk, msg);
-          break;
-        }
-
-        if (chunk.name === TOOL_AGENT_OUTPUT) {
-          this.handleAgentOutputToolUse(chunk, msg);
-          break;
-        }
-
-        const subagentLifecycleAdapter = this.getSubagentLifecycleAdapter(chunk.name);
-        if (subagentLifecycleAdapter?.isSpawnTool(chunk.name)) {
-          this.handleProviderSubagentSpawn(chunk, msg, subagentLifecycleAdapter);
-          break;
-        }
-        if (subagentLifecycleAdapter?.isHiddenTool(chunk.name)) {
-          this.handleProviderHiddenSubagentTool(chunk, msg);
-          break;
-        }
-
-        this.handleRegularToolUse(chunk, msg);
-        break;
-      }
-
-      case 'tool_result': {
+      case 'tool_result':
         await this.handleToolResult(chunk, msg);
-        break;
-      }
+        return true;
 
       case 'subagent_tool_use':
       case 'subagent_tool_result':
         await this.handleSubagentChunk(chunk, msg);
-        break;
+        return true;
 
       case 'async_subagent_result':
         await this.handleAsyncSubagentResult(chunk);
-        break;
+        return true;
 
       case 'tool_output':
         this.handleToolOutput(chunk, msg);
-        break;
+        return true;
 
+      default:
+        return false;
+    }
+  }
+
+  /** Handles turn-lifecycle stream chunks (notice/error/done/compaction/usage). */
+  private async routeLifecycleChunk(chunk: StreamChunk, msg: ChatMessage): Promise<void> {
+    switch (chunk.type) {
       case 'notice':
         this.flushPendingTools();
         await this.appendText(projectNoticeText(chunk));
         break;
 
       case 'error':
-        // Flush pending tools and finalize any open thinking + text blocks first,
-        // so the persisted block order matches the live DOM (thinking → text →
-        // error card) when the conversation reloads. Then render an actionable
-        // recovery card (open settings / login hint / retry) instead of bare text.
-        this.flushPendingTools();
-        await this.finalizeCurrentThinkingBlock(msg);
-        await this.finalizeCurrentTextBlock(msg);
-        // Persist a structured block so the error + its guidance survive the
-        // end-of-turn save (reload / conversation switch re-renders the card);
-        // the card itself is DOM-only, like the compact boundary below.
-        msg.contentBlocks = msg.contentBlocks || [];
-        msg.contentBlocks.push({ type: 'runtime_error', content: chunk.content });
-        this.renderRuntimeError(chunk.content);
+        await this.handleErrorChunk(chunk, msg);
         break;
 
-      case 'done': {
+      case 'done':
         // Flush any remaining pending tools
         this.flushPendingTools();
         await this.finalizeCurrentTextBlock(msg);
         break;
-      }
 
-      case 'context_compacted': {
-        await this.applyBlockTransition(projectCompactBoundary(this.blockState()), msg);
-        msg.contentBlocks = msg.contentBlocks || [];
-        msg.contentBlocks.push({ type: 'context_compacted' });
-        this.renderCompactBoundary();
+      case 'context_compacted':
+        await this.handleContextCompactedChunk(msg);
         break;
-      }
 
-      case 'usage': {
-        const decision = projectUsage(chunk, {
-          currentSessionId: this.deps.getAgentService?.()?.getSessionId() ?? null,
-          subagentsSpawnedThisStream: this.deps.subagentManager.subagentsSpawnedThisStream,
-          ignoreUsageUpdates: state.ignoreUsageUpdates,
-          activeProviderModel: this.getActiveProviderModel(),
-        });
-        if (decision.action === 'update') {
-          state.usage = decision.usage;
-        }
+      case 'usage':
+        this.handleUsageChunk(chunk);
         break;
-      }
 
       default:
         break;
     }
+  }
 
-    this.scrollToBottom();
+  private async handleContextCompactedChunk(msg: ChatMessage): Promise<void> {
+    await this.applyBlockTransition(projectCompactBoundary(this.blockState()), msg);
+    msg.contentBlocks = msg.contentBlocks || [];
+    msg.contentBlocks.push({ type: 'context_compacted' });
+    this.renderCompactBoundary();
+  }
+
+  private handleUsageChunk(chunk: Extract<StreamChunk, { type: 'usage' }>): void {
+    const { state } = this.deps;
+    const decision = projectUsage(chunk, {
+      currentSessionId: this.deps.getAgentService?.()?.getSessionId() ?? null,
+      subagentsSpawnedThisStream: this.deps.subagentManager.subagentsSpawnedThisStream,
+      ignoreUsageUpdates: state.ignoreUsageUpdates,
+      activeProviderModel: this.getActiveProviderModel(),
+    });
+    if (decision.action === 'update') {
+      state.usage = decision.usage;
+    }
+  }
+
+  /** Fans the neutral chunk out to registered observers; an observer error never breaks the stream. */
+  private notifyStreamObservers(chunk: StreamChunk): void {
+    if (this.streamObservers.size === 0) return;
+    for (const observer of this.streamObservers) {
+      try {
+        observer(chunk);
+      } catch {
+        // An observer must never break the stream for the chat UI.
+      }
+    }
   }
 
   /** Current open-block snapshot the projection's block-transition decisions read. */
@@ -354,6 +334,51 @@ export class StreamController {
     if (decision.finalizeText) {
       await this.finalizeCurrentTextBlock(msg);
     }
+  }
+
+  /** Routes a tool_use chunk to its specialized handler (subagent / output / lifecycle / regular). */
+  private dispatchToolUseChunk(
+    chunk: { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> },
+    msg: ChatMessage,
+  ): void {
+    if (isSubagentToolName(chunk.name)) {
+      // Flush pending tools before Agent
+      this.flushPendingTools();
+      this.handleTaskToolUseViaManager(chunk, msg);
+      return;
+    }
+
+    if (chunk.name === TOOL_AGENT_OUTPUT) {
+      this.handleAgentOutputToolUse(chunk, msg);
+      return;
+    }
+
+    const subagentLifecycleAdapter = this.getSubagentLifecycleAdapter(chunk.name);
+    if (subagentLifecycleAdapter?.isSpawnTool(chunk.name)) {
+      this.handleProviderSubagentSpawn(chunk, msg, subagentLifecycleAdapter);
+      return;
+    }
+    if (subagentLifecycleAdapter?.isHiddenTool(chunk.name)) {
+      this.handleProviderHiddenSubagentTool(chunk, msg);
+      return;
+    }
+
+    this.handleRegularToolUse(chunk, msg);
+  }
+
+  // Finalizes open thinking + text blocks before the error card so the persisted
+  // block order matches the live DOM (thinking → text → error) on reload, then
+  // persists a structured block and renders an actionable recovery card.
+  private async handleErrorChunk(
+    chunk: { type: 'error'; content: string },
+    msg: ChatMessage,
+  ): Promise<void> {
+    this.flushPendingTools();
+    await this.finalizeCurrentThinkingBlock(msg);
+    await this.finalizeCurrentTextBlock(msg);
+    msg.contentBlocks = msg.contentBlocks || [];
+    msg.contentBlocks.push({ type: 'runtime_error', content: chunk.content });
+    this.renderRuntimeError(chunk.content);
   }
 
   // ============================================
@@ -615,56 +640,14 @@ export class StreamController {
     if (adapter.isSpawnTool(existingToolCall.name)) {
       existingToolCall.status = chunk.isError ? 'error' : 'completed';
       existingToolCall.result = normalizedContent;
-
-      const spawnResult = adapter.extractSpawnResult(normalizedContent);
-      if (spawnResult.agentId) {
-        this.lifecycleAgentIdToSpawnId.set(spawnResult.agentId, chunk.id);
-      }
-
-      const subagentInfo = adapter.buildSubagentInfo(existingToolCall, msg.toolCalls ?? []);
-      const subagentState = this.lifecycleSubagentStates.get(chunk.id);
-      if (subagentState) {
-        subagentState.info.description = subagentInfo.description;
-        subagentState.info.prompt = subagentInfo.prompt;
-        subagentState.labelEl.setText(
-          subagentInfo.description.length > 40
-            ? subagentInfo.description.substring(0, 40) + '...'
-            : subagentInfo.description
-        );
-      }
-
-      if (chunk.isError) {
-        if (subagentState) {
-          finalizeSubagentBlock(subagentState, normalizedContent || 'Error', true);
-        }
-      }
+      this.applyProviderSubagentSpawnResult(chunk, msg, adapter, existingToolCall, normalizedContent);
       return true;
     }
 
     if (adapter.isWaitTool(existingToolCall.name)) {
       existingToolCall.status = chunk.isError ? 'error' : 'completed';
       existingToolCall.result = normalizedContent;
-
-      for (const spawnId of adapter.resolveSpawnToolIds(
-        existingToolCall,
-        this.lifecycleAgentIdToSpawnId,
-      )) {
-        const spawnToolCall = this.findToolCall(msg, spawnId);
-        const subagentState = this.lifecycleSubagentStates.get(spawnId);
-        if (!spawnToolCall || !subagentState) continue;
-
-        const subagentInfo = adapter.buildSubagentInfo(spawnToolCall, msg.toolCalls ?? []);
-        subagentState.info.description = subagentInfo.description;
-        subagentState.info.prompt = subagentInfo.prompt;
-
-        if (subagentInfo.status === 'completed' || subagentInfo.status === 'error') {
-          finalizeSubagentBlock(
-            subagentState,
-            subagentInfo.result || (subagentInfo.status === 'error' ? 'Error' : 'DONE'),
-            subagentInfo.status === 'error'
-          );
-        }
-      }
+      this.applyProviderSubagentWaitResult(msg, adapter, existingToolCall);
       return true;
     }
 
@@ -675,6 +658,64 @@ export class StreamController {
     }
 
     return false;
+  }
+
+  /** Maps a completed spawn tool's result onto its lifecycle subagent block. */
+  private applyProviderSubagentSpawnResult(
+    chunk: { id: string; isError?: boolean },
+    msg: ChatMessage,
+    adapter: ProviderSubagentLifecycleAdapter,
+    existingToolCall: ToolCallInfo,
+    normalizedContent: string,
+  ): void {
+    const spawnResult = adapter.extractSpawnResult(normalizedContent);
+    if (spawnResult.agentId) {
+      this.lifecycleAgentIdToSpawnId.set(spawnResult.agentId, chunk.id);
+    }
+
+    const subagentState = this.lifecycleSubagentStates.get(chunk.id);
+    if (!subagentState) return;
+
+    const subagentInfo = adapter.buildSubagentInfo(existingToolCall, msg.toolCalls ?? []);
+    subagentState.info.description = subagentInfo.description;
+    subagentState.info.prompt = subagentInfo.prompt;
+    subagentState.labelEl.setText(
+      subagentInfo.description.length > 40
+        ? subagentInfo.description.substring(0, 40) + '...'
+        : subagentInfo.description
+    );
+
+    if (chunk.isError) {
+      finalizeSubagentBlock(subagentState, normalizedContent || 'Error', true);
+    }
+  }
+
+  /** Finalizes each spawned subagent block resolved by a completed wait tool. */
+  private applyProviderSubagentWaitResult(
+    msg: ChatMessage,
+    adapter: ProviderSubagentLifecycleAdapter,
+    existingToolCall: ToolCallInfo,
+  ): void {
+    for (const spawnId of adapter.resolveSpawnToolIds(
+      existingToolCall,
+      this.lifecycleAgentIdToSpawnId,
+    )) {
+      const spawnToolCall = this.findToolCall(msg, spawnId);
+      const subagentState = this.lifecycleSubagentStates.get(spawnId);
+      if (!spawnToolCall || !subagentState) continue;
+
+      const subagentInfo = adapter.buildSubagentInfo(spawnToolCall, msg.toolCalls ?? []);
+      subagentState.info.description = subagentInfo.description;
+      subagentState.info.prompt = subagentInfo.prompt;
+
+      if (subagentInfo.status === 'completed' || subagentInfo.status === 'error') {
+        finalizeSubagentBlock(
+          subagentState,
+          subagentInfo.result || (subagentInfo.status === 'error' ? 'Error' : 'DONE'),
+          subagentInfo.status === 'error'
+        );
+      }
+    }
   }
 
   private async handleToolResult(
@@ -720,61 +761,75 @@ export class StreamController {
     }
 
     const existingToolCall = this.findToolCall(msg, chunk.id);
-
-    // Regular tool result
-    const isBlocked = isBlockedToolResult(normalizedContent, chunk.isError);
-
     if (existingToolCall) {
-      // Tools that resolve via dedicated callbacks (not content-based) skip
-      // blocked detection — their status is determined solely by isError
-      if (chunk.isError) {
-        existingToolCall.status = 'error';
-      } else if (!skipsBlockedDetection(existingToolCall.name) && isBlocked) {
-        existingToolCall.status = 'blocked';
-      } else {
-        existingToolCall.status = 'completed';
-      }
-      existingToolCall.result = normalizedContent;
-
-      if (existingToolCall.name === TOOL_ASK_USER_QUESTION) {
-        const answers =
-          extractResolvedAnswers(chunk.toolUseResult) ??
-          extractResolvedAnswersFromResultText(normalizedContent);
-        if (answers) existingToolCall.resolvedAnswers = answers;
-      }
-
-      const writeEditState = state.writeEditStates.get(chunk.id);
-      if (writeEditState && isWriteEditTool(existingToolCall.name)) {
-        if (!chunk.isError && !isBlocked) {
-          const diffData = extractDiffData(chunk.toolUseResult, existingToolCall);
-          if (diffData) {
-            existingToolCall.diffData = diffData;
-            updateWriteEditWithDiff(writeEditState, diffData);
-          }
-        }
-        finalizeWriteEditBlock(writeEditState, chunk.isError || isBlocked);
-      } else {
-        this.cancelPendingToolOutputRender(chunk.id);
-        updateToolCallResult(
-          this.deps.plugin.app,
-          chunk.id,
-          existingToolCall,
-          state.toolCallElements,
-        );
-      }
-
-      // Notify Obsidian vault so the file tree refreshes after Write/Edit/NotebookEdit
-      if (!chunk.isError && !isBlocked && isEditTool(existingToolCall.name)) {
-        this.notifyVaultFileChange(existingToolCall.input);
-      }
-
-      // Runtime apply_patch: refresh each changed file path
-      if (!chunk.isError && !isBlocked && existingToolCall.name === TOOL_APPLY_PATCH) {
-        this.notifyApplyPatchFileChanges(existingToolCall.input);
-      }
+      this.applyRegularToolResult(chunk, existingToolCall, normalizedContent);
     }
 
     this.showThinkingIndicator();
+  }
+
+  // Applies a regular (non-subagent) tool_result: status (error → blocked →
+  // completed, with the skipsBlockedDetection exemption), result text,
+  // AskUserQuestion answers, the rendered block, then the vault refresh.
+  private applyRegularToolResult(
+    chunk: { id: string; isError?: boolean; toolUseResult?: SDKToolUseResult },
+    existingToolCall: ToolCallInfo,
+    normalizedContent: string,
+  ): void {
+    const isBlocked = isBlockedToolResult(normalizedContent, chunk.isError);
+
+    // Tools that resolve via dedicated callbacks (not content-based) skip
+    // blocked detection — their status is determined solely by isError
+    if (chunk.isError) {
+      existingToolCall.status = 'error';
+    } else if (!skipsBlockedDetection(existingToolCall.name) && isBlocked) {
+      existingToolCall.status = 'blocked';
+    } else {
+      existingToolCall.status = 'completed';
+    }
+    existingToolCall.result = normalizedContent;
+
+    if (existingToolCall.name === TOOL_ASK_USER_QUESTION) {
+      const answers =
+        extractResolvedAnswers(chunk.toolUseResult) ??
+        extractResolvedAnswersFromResultText(normalizedContent);
+      if (answers) existingToolCall.resolvedAnswers = answers;
+    }
+
+    this.renderToolResultBlock(chunk, existingToolCall, isBlocked);
+
+    if (!chunk.isError && !isBlocked) {
+      notifyVaultForToolResult(this.deps.plugin.app, existingToolCall);
+    }
+  }
+
+  /** Finalizes the write/edit diff block or refreshes the generic tool block for a result. */
+  private renderToolResultBlock(
+    chunk: { id: string; isError?: boolean; toolUseResult?: SDKToolUseResult },
+    existingToolCall: ToolCallInfo,
+    isBlocked: boolean,
+  ): void {
+    const { state } = this.deps;
+    const writeEditState = state.writeEditStates.get(chunk.id);
+    if (writeEditState && isWriteEditTool(existingToolCall.name)) {
+      if (!chunk.isError && !isBlocked) {
+        const diffData = extractDiffData(chunk.toolUseResult, existingToolCall);
+        if (diffData) {
+          existingToolCall.diffData = diffData;
+          updateWriteEditWithDiff(writeEditState, diffData);
+        }
+      }
+      finalizeWriteEditBlock(writeEditState, chunk.isError || isBlocked);
+      return;
+    }
+
+    this.cancelPendingToolOutputRender(chunk.id);
+    updateToolCallResult(
+      this.deps.plugin.app,
+      chunk.id,
+      existingToolCall,
+      state.toolCallElements,
+    );
   }
 
   // ============================================
@@ -1671,64 +1726,6 @@ export class StreamController {
   // ============================================
   // Utilities
   // ============================================
-
-  /**
-   * Nudges Obsidian's vault after a Write/Edit/NotebookEdit so the file tree
-   * refreshes. Direct `fs` writes bypass the Vault API, and macOS + iCloud
-   * FSWatcher often misses the event.
-   */
-  private notifyVaultFileChange(input: Record<string, unknown>): void {
-    const rawPathValue = input.file_path ?? input.notebook_path;
-    const rawPath = typeof rawPathValue === 'string' ? rawPathValue : undefined;
-    const vaultPath = getVaultPath(this.deps.plugin.app);
-    const relativePath = normalizePathForVault(rawPath, vaultPath);
-    if (!relativePath || relativePath.startsWith('/')) return;
-
-    window.setTimeout(() => {
-      const { vault } = this.deps.plugin.app;
-      const file = vault.getAbstractFileByPath(relativePath);
-      if (file instanceof TFile) {
-        // Existing file — tell listeners the content changed
-        vault.trigger('modify', file);
-      } else {
-        // New file — scan parent directory so Obsidian discovers it
-        const parentDir = relativePath.includes('/')
-          ? relativePath.substring(0, relativePath.lastIndexOf('/'))
-          : '';
-        vault.adapter.list(parentDir).catch(() => { /* ignore */ });
-      }
-    }, 200);
-  }
-
-  /** Refreshes vault for each file path in an apply_patch changes array or patch text. */
-  private notifyApplyPatchFileChanges(input: Record<string, unknown>): void {
-    const notified = new Set<string>();
-
-    // Legacy changes array
-    const changes = input.changes;
-    if (Array.isArray(changes)) {
-      for (const change of changes) {
-        if (change && typeof change === 'object' && !Array.isArray(change)) {
-          const changeRecord = change as Record<string, unknown>;
-          if (typeof changeRecord.path === 'string') {
-            notified.add(changeRecord.path);
-            this.notifyVaultFileChange({ file_path: changeRecord.path });
-          }
-        }
-      }
-    }
-
-    // Parse file paths from patch text markers (current custom_tool_call format)
-    const patchText = typeof input.patch === 'string' ? input.patch : '';
-    if (patchText) {
-      for (const match of patchText.matchAll(/^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm)) {
-        const filePath = match[1]?.trim();
-        if (filePath && !notified.has(filePath)) {
-          this.notifyVaultFileChange({ file_path: filePath });
-        }
-      }
-    }
-  }
 
   /** Scrolls messages to bottom if auto-scroll is enabled. */
   private scrollToBottom(): void {

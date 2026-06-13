@@ -1,4 +1,5 @@
 import type { AskUserQuestionItem, AskUserQuestionOption } from '../../../core/types/tools';
+import { coerceOption, deduplicateOptions } from './askUserQuestionOptions';
 import { activateInlineCard } from './inlineChoiceCard';
 
 const HINTS_TEXT = 'Enter to select \u00B7 Tab/Arrow keys to navigate \u00B7 Esc to cancel';
@@ -127,53 +128,11 @@ export class InlineAskUserQuestion {
         question: q.question,
         id: typeof (q as Record<string, unknown>).id === 'string' ? (q as Record<string, unknown>).id as string : undefined,
         header: typeof q.header === 'string' ? q.header.slice(0, 12) : `Q${idx + 1}`,
-        options: this.deduplicateOptions((q.options ?? []).map((o) => this.coerceOption(o))),
+        options: deduplicateOptions((q.options ?? []).map((o) => coerceOption(o))),
         multiSelect: q.multiSelect === true,
         isOther: q.isOther === true,
         isSecret: q.isSecret === true,
       }));
-  }
-
-  private coerceOption(opt: unknown): AskUserQuestionOption {
-    if (typeof opt === 'object' && opt !== null) {
-      const obj = opt as Record<string, unknown>;
-      const label = this.extractLabel(obj);
-      const description = typeof obj.description === 'string' ? obj.description : '';
-      const value = this.extractValue(obj, label);
-      return { label, description, ...(value !== label ? { value } : {}) };
-    }
-    return { label: this.stringifyOptionValue(opt), description: '' };
-  }
-
-  private deduplicateOptions(options: AskUserQuestionOption[]): AskUserQuestionOption[] {
-    const seen = new Set<string>();
-    return options.filter((o) => {
-      if (seen.has(o.label)) return false;
-      seen.add(o.label);
-      return true;
-    });
-  }
-
-  private extractLabel(obj: Record<string, unknown>): string {
-    if (typeof obj.label === 'string') return obj.label;
-    if (typeof obj.value === 'string') return obj.value;
-    if (typeof obj.text === 'string') return obj.text;
-    if (typeof obj.name === 'string') return obj.name;
-    return 'Option';
-  }
-
-  private stringifyOptionValue(value: unknown): string {
-    if (typeof value === 'string') return value;
-    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-      return `${value}`;
-    }
-    return 'Option';
-  }
-
-  private extractValue(obj: Record<string, unknown>, fallback: string): string {
-    if (typeof obj.value === 'string') return obj.value;
-    if (typeof obj.id === 'string') return obj.id;
-    return fallback;
   }
 
   private renderTabBar(): void {
@@ -547,78 +506,91 @@ export class InlineAskUserQuestion {
 
   private handleKeyDown(e: KeyboardEvent): void {
     if (this.isInputFocused) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        this.isInputFocused = false;
-        (this.rootEl.ownerDocument.activeElement as HTMLElement | null)?.blur();
-        this.rootEl.focus();
-        return;
-      }
-      if (e.key === 'Tab' || e.key === 'Enter') {
-        e.preventDefault();
-        e.stopPropagation();
-        this.isInputFocused = false;
-        (this.rootEl.ownerDocument.activeElement as HTMLElement | null)?.blur();
-        if (e.key === 'Tab' && e.shiftKey) {
-          this.switchTab(this.activeTabIndex - 1);
-        } else {
-          this.switchTab(this.activeTabIndex + 1);
-        }
-        return;
-      }
-      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-        e.preventDefault();
-        e.stopPropagation();
-        (this.rootEl.ownerDocument.activeElement as HTMLElement | null)?.blur();
-        this.isInputFocused = false;
-        const q = this.questions[this.activeTabIndex];
-        const maxIdx = this.canShowCustomInputForQuestion(q) ? q.options.length : q.options.length - 1;
-        if (e.key === 'ArrowUp') {
-          this.focusedItemIndex = Math.max(this.focusedItemIndex - 1, 0);
-        } else {
-          this.focusedItemIndex = Math.min(this.focusedItemIndex + 1, maxIdx);
-        }
-        this.updateFocusIndicator();
-        this.rootEl.focus();
-        return;
-      }
+      this.handleInputFocusedKey(e);
       return;
     }
 
     if (this.config.immediateSelect) {
-      const q = this.questions[this.activeTabIndex];
-      const maxIdx = q.options.length - 1;
-      if (this.handleNavigationKey(e, maxIdx)) return;
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        e.stopPropagation();
-        if (this.focusedItemIndex <= maxIdx) {
-          this.selectOption(this.activeTabIndex, q.options[this.focusedItemIndex]);
-        }
-      }
+      this.handleImmediateSelectKey(e);
       return;
     }
 
-    const isSubmitTab = this.activeTabIndex === this.questions.length;
-    const q = this.questions[this.activeTabIndex];
-    const maxFocusIndex = isSubmitTab
-      ? 1
-      : (this.canShowCustomInputForQuestion(q) ? q.options.length : q.options.length - 1);
+    if (this.activeTabIndex === this.questions.length) {
+      this.handleSubmitTabKey(e);
+      return;
+    }
 
+    this.handleQuestionTabKey(e);
+  }
+
+  private blurActiveElement(): void {
+    (this.rootEl.ownerDocument.activeElement as HTMLElement | null)?.blur();
+  }
+
+  private handleInputFocusedKey(e: KeyboardEvent): void {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      this.isInputFocused = false;
+      this.blurActiveElement();
+      this.rootEl.focus();
+      return;
+    }
+    if (e.key === 'Tab' || e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      this.isInputFocused = false;
+      this.blurActiveElement();
+      this.switchTab(
+        e.key === 'Tab' && e.shiftKey ? this.activeTabIndex - 1 : this.activeTabIndex + 1,
+      );
+      return;
+    }
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      e.stopPropagation();
+      this.blurActiveElement();
+      this.isInputFocused = false;
+      const q = this.questions[this.activeTabIndex];
+      const maxIdx = this.canShowCustomInputForQuestion(q) ? q.options.length : q.options.length - 1;
+      this.focusedItemIndex = e.key === 'ArrowUp'
+        ? Math.max(this.focusedItemIndex - 1, 0)
+        : Math.min(this.focusedItemIndex + 1, maxIdx);
+      this.updateFocusIndicator();
+      this.rootEl.focus();
+    }
+  }
+
+  private handleImmediateSelectKey(e: KeyboardEvent): void {
+    const q = this.questions[this.activeTabIndex];
+    const maxIdx = q.options.length - 1;
+    if (this.handleNavigationKey(e, maxIdx)) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (this.focusedItemIndex <= maxIdx) {
+        this.selectOption(this.activeTabIndex, q.options[this.focusedItemIndex]);
+      }
+    }
+  }
+
+  private handleSubmitTabKey(e: KeyboardEvent): void {
+    if (this.handleNavigationKey(e, 1)) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (this.focusedItemIndex === 0) this.handleSubmit();
+      else this.handleResolve(null);
+    }
+  }
+
+  private handleQuestionTabKey(e: KeyboardEvent): void {
+    const q = this.questions[this.activeTabIndex];
+    const maxFocusIndex = this.canShowCustomInputForQuestion(q)
+      ? q.options.length
+      : q.options.length - 1;
     if (this.handleNavigationKey(e, maxFocusIndex)) return;
 
-    if (isSubmitTab) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        e.stopPropagation();
-        if (this.focusedItemIndex === 0) this.handleSubmit();
-        else this.handleResolve(null);
-      }
-      return;
-    }
-
-    // Question tab: ArrowRight and Enter
     switch (e.key) {
       case 'ArrowRight':
         e.preventDefault();

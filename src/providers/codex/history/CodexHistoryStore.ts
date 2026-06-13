@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
-import type { ChatMessage, ContentBlock, ToolCallInfo } from '../../../core/types';
+import type { ChatMessage, ToolCallInfo } from '../../../core/types';
 import {
   isCodexToolOutputError,
   normalizeCodexMcpToolInput,
@@ -13,6 +13,8 @@ import {
   normalizeCodexToolResult,
   parseCodexArguments,
 } from '../normalization/codexToolNormalization';
+import { flushBubbleTurnMessages } from './codexBubbleFlush';
+import { type PersistedEventPayload,processEventMsg } from './codexEventMsg';
 import type { CodexItem } from './codexLegacyItemMapping';
 import {
   processLegacyItem,
@@ -102,12 +104,6 @@ interface PersistedMcpToolCallPayload {
   result?: { content?: Array<{ type?: string; text?: string }> } | null;
   error?: string | null;
   duration_ms?: number | null;
-}
-
-interface PersistedEventPayload {
-  type?: string;
-  text?: string;
-  message?: string;
 }
 
 interface PersistedCompactionPayload {
@@ -606,208 +602,7 @@ function applyCompactedReplacementHistory(
   }
 }
 
-// ---------------------------------------------------------------------------
-// event_msg processing
-// ---------------------------------------------------------------------------
 
-function extractServerTurnId(payload: PersistedEventPayload): string | undefined {
-  const turnId = (payload as Record<string, unknown>).turn_id;
-  return typeof turnId === 'string' ? turnId : undefined;
-}
-
-function processEventMsg(
-  payload: PersistedEventPayload,
-  timestamp: number,
-  ctx: PersistedParseContext,
-): void {
-  if (!payload?.type) return;
-
-  switch (payload.type) {
-    case 'task_started': {
-      const serverTurnId = extractServerTurnId(payload);
-      const id = nextTurnId(ctx);
-      const turn = ensureTurn(ctx.turns, ctx.turnOrder, id, null, timestamp);
-      turn.startedAt = timestamp;
-      if (serverTurnId) turn.serverTurnId = serverTurnId;
-      ctx.currentTurnId = turn.id;
-      break;
-    }
-
-    case 'task_complete': {
-      if (ctx.currentTurnId) {
-        const turn = ctx.turns.get(ctx.currentTurnId);
-        if (turn) {
-          turn.completedAt = timestamp;
-          turn.completed = true;
-          closeAssistantBubble(turn);
-          const serverTurnId = extractServerTurnId(payload);
-          if (serverTurnId && !turn.serverTurnId) turn.serverTurnId = serverTurnId;
-        }
-      }
-      ctx.currentTurnId = null;
-      break;
-    }
-
-    case 'turn_aborted': {
-      if (ctx.currentTurnId) {
-        const turn = ctx.turns.get(ctx.currentTurnId);
-        if (turn) {
-          const bubble = ensureAssistantBubble(turn, timestamp);
-          bubble.interrupted = true;
-          closeAssistantBubble(turn);
-          turn.completedAt = timestamp;
-        }
-      }
-      ctx.currentTurnId = null;
-      break;
-    }
-
-    case 'user_message': {
-      const turn = ensureTurn(ctx.turns, ctx.turnOrder, nextTurnId(ctx), ctx.currentTurnId, timestamp);
-      const msg = payload.message;
-      if (typeof msg === 'string' && msg.trim()) {
-        appendUserChunk(turn, msg, timestamp);
-      }
-      break;
-    }
-
-    case 'agent_message': {
-      const turn = ensureTurn(ctx.turns, ctx.turnOrder, nextTurnId(ctx), ctx.currentTurnId, timestamp);
-      const bubble = ensureAssistantBubble(turn, timestamp);
-      const msg = payload.message;
-      if (typeof msg === 'string') {
-        appendUniqueChunk(bubble.contentChunks, msg);
-      }
-      break;
-    }
-
-    case 'agent_reasoning': {
-      const text = extractReasoningText(payload);
-      if (!text) break;
-
-      const turn = ensureTurn(ctx.turns, ctx.turnOrder, nextTurnId(ctx), ctx.currentTurnId, timestamp);
-      const bubble = ensureAssistantBubble(turn, timestamp);
-      appendUniqueChunk(bubble.thinkingChunks, text);
-      break;
-    }
-
-    case 'context_compacted': {
-      // Close any active bubble so the boundary stays standalone
-      if (ctx.currentTurnId) {
-        const prevTurn = ctx.turns.get(ctx.currentTurnId);
-        if (prevTurn) closeAssistantBubble(prevTurn);
-      }
-
-      // Create a dedicated turn for the compact boundary
-      const id = nextTurnId(ctx);
-      const turn = ensureTurn(ctx.turns, ctx.turnOrder, id, null, timestamp);
-      const bubble = ensureAssistantBubble(turn, timestamp);
-      bubble.contentBlocks.push({ type: 'context_compacted' });
-      closeAssistantBubble(turn);
-      ctx.currentTurnId = null;
-      break;
-    }
-
-    default:
-      break;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Flush multi-bubble turns to ChatMessage[]
-// ---------------------------------------------------------------------------
-
-function flushBubbleTurnMessages(
-  turn: CodexTurnState,
-  msgIndex: number,
-): { messages: ChatMessage[]; nextMsgIndex: number } {
-  const messages: ChatMessage[] = [];
-
-  const userText = turn.userChunks.join('\n').trim();
-  if (userText && !isCodexSystemMessage(userText)) {
-    const displayContent = extractCodexDisplayContent(userText);
-    messages.push({
-      id: `codex-msg-${msgIndex}`,
-      role: 'user',
-      content: userText,
-      ...(displayContent !== undefined ? { displayContent } : {}),
-      ...(turn.serverTurnId ? { userMessageId: turn.serverTurnId } : {}),
-      timestamp: turn.userTimestamp || turn.startedAt || Date.now(),
-    });
-    msgIndex += 1;
-  }
-
-  let lastAssistantTimestamp = 0;
-  const assistantMessages: ChatMessage[] = [];
-
-  for (const bubble of turn.assistantBubbles) {
-    const contentText = bubble.contentChunks.join('\n\n');
-    const thinkingText = bubble.thinkingChunks.join('\n\n');
-    const hasContent = contentText.trim().length > 0;
-    const hasThinking = thinkingText.trim().length > 0;
-    const hasToolCalls = bubble.toolCalls.length > 0;
-    const hasCompactBoundary = bubble.contentBlocks.some(b => b.type === 'context_compacted');
-
-    if (!hasContent && !hasThinking && !hasToolCalls && !hasCompactBoundary) {
-      if (bubble.interrupted) {
-        messages.push({
-          id: `codex-msg-${msgIndex}`,
-          role: 'assistant',
-          content: '',
-          timestamp: bubble.startedAt || turn.startedAt || Date.now(),
-          isInterrupt: true,
-        });
-        msgIndex += 1;
-      }
-      continue;
-    }
-
-    const contentBlocks: ContentBlock[] = [];
-    if (hasThinking) {
-      contentBlocks.push({ type: 'thinking', content: thinkingText.trim() });
-    }
-    contentBlocks.push(...bubble.contentBlocks);
-    if (hasContent) {
-      contentBlocks.push({ type: 'text', content: contentText.trim() });
-    }
-
-    const msg: ChatMessage = {
-      id: `codex-msg-${msgIndex}`,
-      role: 'assistant',
-      content: contentText.trim(),
-      timestamp: bubble.startedAt || turn.startedAt || Date.now(),
-      toolCalls: hasToolCalls ? bubble.toolCalls : undefined,
-      contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
-    };
-
-    if (bubble.interrupted) {
-      msg.isInterrupt = true;
-    }
-
-    if (bubble.lastEventAt > lastAssistantTimestamp) {
-      lastAssistantTimestamp = bubble.lastEventAt;
-    }
-
-    assistantMessages.push(msg);
-    messages.push(msg);
-    msgIndex += 1;
-  }
-
-  if (assistantMessages.length > 0 && turn.userTimestamp && lastAssistantTimestamp > turn.userTimestamp) {
-    const durationMs = lastAssistantTimestamp - turn.userTimestamp;
-    const lastMsg = assistantMessages[assistantMessages.length - 1];
-    lastMsg.durationSeconds = Math.round(durationMs / 1000);
-  }
-
-  if (turn.serverTurnId && turn.completed && assistantMessages.length > 0) {
-    const lastNonInterrupt = [...assistantMessages].reverse().find(m => !m.isInterrupt);
-    if (lastNonInterrupt) {
-      lastNonInterrupt.assistantMessageId = turn.serverTurnId;
-    }
-  }
-
-  return { messages, nextMsgIndex: msgIndex };
-}
 
 // ---------------------------------------------------------------------------
 // Session file discovery
@@ -1011,7 +806,7 @@ function parseModernSessionTurns(records: ParsedSessionRecord[]): CodexParsedTur
     }
 
     if (parsed.type === 'event_msg') {
-      processEventMsg(parsed.payload as PersistedEventPayload, timestamp, ctx);
+      processEventMsg(parsed.payload as PersistedEventPayload, timestamp, ctx, { extractReasoningText });
       continue;
     }
 
@@ -1038,7 +833,10 @@ function flushBubbleTurnsGrouped(
   for (const turnId of turnOrder) {
     const turn = turns.get(turnId);
     if (!turn) continue;
-    const { messages: turnMessages, nextMsgIndex } = flushBubbleTurnMessages(turn, messageOffset);
+    const { messages: turnMessages, nextMsgIndex } = flushBubbleTurnMessages(turn, messageOffset, {
+      extractCodexDisplayContent,
+      isCodexSystemMessage,
+    });
     if (turnMessages.length === 0) continue;
     messageOffset = nextMsgIndex;
 
