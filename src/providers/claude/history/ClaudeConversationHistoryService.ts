@@ -51,6 +51,124 @@ function sanitizeProviderState(
   return Object.fromEntries(sanitizedEntries);
 }
 
+interface SdkSessionReadAccumulator {
+  messages: ChatMessage[];
+  missingSessionCount: number;
+  errorCount: number;
+  successCount: number;
+  cancelled: boolean;
+}
+
+// The per-session truncation inputs travel together; bundling them keeps the
+// read loop's parameter list within the lint cap.
+interface SessionTruncateContext {
+  currentSessionId: string | null | undefined;
+  isPendingFork: boolean;
+  state: ClaudeProviderState;
+  conversation: Conversation;
+}
+
+function resolveSessionTruncateAt(
+  sessionId: string,
+  ctx: SessionTruncateContext,
+): string | undefined {
+  if (sessionId !== ctx.currentSessionId) {
+    return undefined;
+  }
+  return ctx.isPendingFork ? ctx.state.forkSource!.resumeAt : ctx.conversation.resumeAtMessageId;
+}
+
+// Walks every candidate session, honoring mid-load abort, and tallies the
+// outcome counts the caller maps to a HistoryLoadOutcome.
+async function readSdkSessionMessages(
+  allSessionIds: string[],
+  truncateContext: SessionTruncateContext,
+  vaultPath: string,
+  signal: AbortSignal | undefined,
+): Promise<SdkSessionReadAccumulator> {
+  const acc: SdkSessionReadAccumulator = {
+    messages: [],
+    missingSessionCount: 0,
+    errorCount: 0,
+    successCount: 0,
+    cancelled: false,
+  };
+
+  for (const sessionId of allSessionIds) {
+    // Plan EDIT 7: mid-load abort. Check before each session read so a long
+    // multi-session walk releases promptly when the tab is switched.
+    if (signal?.aborted) {
+      acc.cancelled = true;
+      return acc;
+    }
+
+    if (!sdkSessionExists(vaultPath, sessionId)) {
+      acc.missingSessionCount++;
+      continue;
+    }
+
+    const truncateAt = resolveSessionTruncateAt(sessionId, truncateContext);
+    const result = await loadSDKSessionMessages(vaultPath, sessionId, truncateAt);
+
+    if (result.error) {
+      acc.errorCount++;
+      continue;
+    }
+
+    acc.successCount++;
+    acc.messages.push(...result.messages);
+  }
+
+  return acc;
+}
+
+function resolveSessionIds(
+  isPendingFork: boolean,
+  state: ClaudeProviderState,
+  conversation: Conversation,
+): string[] {
+  if (isPendingFork) {
+    return [state.forkSource!.sessionId];
+  }
+  return [
+    ...(state.previousProviderSessionIds || []),
+    state.providerSessionId ?? conversation.sessionId,
+  ].filter((id): id is string => !!id);
+}
+
+// Maps the read tally to a terminal outcome (cancel / all-missing / total
+// failure). Returns null when the read produced usable messages to merge.
+function resolveSessionReadFailure(
+  acc: SdkSessionReadAccumulator,
+  totalSessionCount: number,
+  sourceRef: string,
+): HistoryLoadOutcome | null {
+  if (acc.cancelled) {
+    return {
+      kind: 'error',
+      error: { code: 'cancelled', message: 'Hydration cancelled' },
+      sourceRef,
+    };
+  }
+
+  if (acc.missingSessionCount === totalSessionCount) {
+    return { kind: 'empty', reason: 'no-session', sourceRef };
+  }
+
+  if (acc.errorCount > 0 && acc.successCount === 0) {
+    return {
+      kind: 'error',
+      error: {
+        code: 'store-unreadable',
+        message: 'Failed to read Claude SDK session transcripts.',
+      },
+      sourceRef,
+    };
+  }
+
+  return null;
+}
+
 export class ClaudeConversationHistoryService extends BaseHistoryService<ClaudeProviderState> {
   forkSupport: ProviderForkSupport = {
     isPendingForkConversation: (conversation: Conversation): boolean => {
@@ -126,12 +244,7 @@ export class ClaudeConversationHistoryService extends BaseHistoryService<ClaudeP
 
     const state = getClaudeState(conversation.providerState);
     const isPendingFork = this.forkSupport!.isPendingForkConversation(conversation);
-    const allSessionIds: string[] = isPendingFork
-      ? [state.forkSource!.sessionId]
-      : [
-          ...(state.previousProviderSessionIds || []),
-          state.providerSessionId ?? conversation.sessionId,
-        ].filter((id): id is string => !!id);
+    const allSessionIds = resolveSessionIds(isPendingFork, state, conversation);
 
     if (allSessionIds.length === 0) {
       return { kind: 'empty', reason: 'no-session', sourceRef: null };
@@ -142,59 +255,19 @@ export class ClaudeConversationHistoryService extends BaseHistoryService<ClaudeP
       : (state.providerSessionId ?? conversation.sessionId);
     const sourceRef = allSessionIds.join('|');
 
-    const allSdkMessages: ChatMessage[] = [];
-    let missingSessionCount = 0;
-    let errorCount = 0;
-    let successCount = 0;
+    const acc = await readSdkSessionMessages(
+      allSessionIds,
+      { currentSessionId, isPendingFork, state, conversation },
+      vaultPath,
+      ctx.signal,
+    );
 
-    for (const sessionId of allSessionIds) {
-      // Plan EDIT 7: mid-load abort. Check before each session read so a long
-      // multi-session walk releases promptly when the tab is switched.
-      if (ctx.signal?.aborted) {
-        return {
-          kind: 'error',
-          error: { code: 'cancelled', message: 'Hydration cancelled' },
-          sourceRef,
-        };
-      }
-
-      if (!sdkSessionExists(vaultPath, sessionId)) {
-        missingSessionCount++;
-        continue;
-      }
-
-      const isCurrentSession = sessionId === currentSessionId;
-      const truncateAt = isCurrentSession
-        ? (isPendingFork ? state.forkSource!.resumeAt : conversation.resumeAtMessageId)
-        : undefined;
-      const result = await loadSDKSessionMessages(vaultPath, sessionId, truncateAt);
-
-      if (result.error) {
-        errorCount++;
-        continue;
-      }
-
-      successCount++;
-      allSdkMessages.push(...result.messages);
+    const failure = resolveSessionReadFailure(acc, allSessionIds.length, sourceRef);
+    if (failure) {
+      return failure;
     }
 
-    const allSessionsMissing = missingSessionCount === allSessionIds.length;
-    if (allSessionsMissing) {
-      return { kind: 'empty', reason: 'no-session', sourceRef };
-    }
-
-    if (errorCount > 0 && successCount === 0) {
-      return {
-        kind: 'error',
-        error: {
-          code: 'store-unreadable',
-          message: 'Failed to read Claude SDK session transcripts.',
-        },
-        sourceRef,
-      };
-    }
-
-    const filteredSdkMessages = allSdkMessages.filter(msg => !msg.isRebuiltContext);
+    const filteredSdkMessages = acc.messages.filter(msg => !msg.isRebuiltContext);
 
     const merged = dedupeMessages([
       ...conversation.messages,

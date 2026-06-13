@@ -35,6 +35,7 @@ import {
   renderStoredSubagent,
 } from './SubagentRenderer';
 import { renderStoredToolCall } from './ToolCallRenderer';
+import { hasVisibleBlock, hasVisibleText } from './visibleContentHelpers';
 import { RENDER_WINDOW_SIZE, setupWindowedRender } from './windowedRenderSetup';
 import { renderWorkOrderHandoffCard } from './WorkOrderHandoffCard';
 import { renderWorkOrderNeedsApprovalCard } from './WorkOrderNeedsApprovalCard';
@@ -567,22 +568,13 @@ export class MessageRenderer {
   }
 
   private hasVisibleContent(msg: ChatMessage): boolean {
-    if (msg.content && msg.content.trim().length > 0) return true;
-    if (msg.contentBlocks && msg.contentBlocks.length > 0) {
-      for (const block of msg.contentBlocks) {
-        if (block.type === 'thinking' && block.content.trim().length > 0) return true;
-        if (block.type === 'text' && block.content.trim().length > 0) return true;
-        if (block.type === 'context_compacted') return true;
-        if (block.type === 'runtime_error') return true;
-        if (block.type === 'subagent') return true;
-        if (block.type === 'tool_use') {
-          const toolCall = msg.toolCalls?.find(tc => tc.id === block.toolId);
-          if (toolCall && this.shouldRenderToolCall(toolCall)) return true;
-        }
-      }
-    }
-    if (msg.toolCalls?.some(toolCall => this.shouldRenderToolCall(toolCall))) return true;
-    return false;
+    const isToolVisible = (toolId: string): boolean => {
+      const toolCall = msg.toolCalls?.find(tc => tc.id === toolId);
+      return Boolean(toolCall && this.shouldRenderToolCall(toolCall));
+    };
+    if (hasVisibleText(msg)) return true;
+    if (hasVisibleBlock(msg.contentBlocks, isToolVisible)) return true;
+    return Boolean(msg.toolCalls?.some(toolCall => this.shouldRenderToolCall(toolCall)));
   }
 
   private isRewindEligible(allMessages?: ChatMessage[], index?: number): boolean {

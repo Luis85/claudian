@@ -42,6 +42,61 @@ function parseTimestampMs(raw: unknown): number {
   return Number.isNaN(parsed) ? Date.now() : parsed;
 }
 
+type SubagentContentBlock = {
+  type?: unknown;
+  id?: unknown;
+  name?: unknown;
+  input?: unknown;
+  tool_use_id?: unknown;
+  content?: unknown;
+  is_error?: unknown;
+};
+
+function parseToolUseBlock(block: SubagentContentBlock, timestamp: number): SubagentToolEvent | null {
+  if (typeof block.id !== 'string' || typeof block.name !== 'string') {
+    return null;
+  }
+
+  return {
+    type: 'tool_use',
+    toolUseId: block.id,
+    toolName: block.name,
+    toolInput: block.input && typeof block.input === 'object'
+      ? (block.input as Record<string, unknown>)
+      : {},
+    timestamp,
+  };
+}
+
+function parseToolResultBlock(block: SubagentContentBlock, timestamp: number): SubagentToolEvent | null {
+  if (typeof block.tool_use_id !== 'string') {
+    return null;
+  }
+
+  return {
+    type: 'tool_result',
+    toolUseId: block.tool_use_id,
+    content: extractToolResultContent(block.content),
+    isError: block.is_error === true,
+    timestamp,
+  };
+}
+
+function parseSubagentEventBlock(blockRaw: unknown, timestamp: number): SubagentToolEvent | null {
+  if (!blockRaw || typeof blockRaw !== 'object') {
+    return null;
+  }
+
+  const block = blockRaw as SubagentContentBlock;
+  if (block.type === 'tool_use') {
+    return parseToolUseBlock(block, timestamp);
+  }
+  if (block.type === 'tool_result') {
+    return parseToolResultBlock(block, timestamp);
+  }
+  return null;
+}
+
 function parseSubagentEvents(entry: unknown): SubagentToolEvent[] {
   if (!entry || typeof entry !== 'object') {
     return [];
@@ -57,49 +112,9 @@ function parseSubagentEvents(entry: unknown): SubagentToolEvent[] {
   const events: SubagentToolEvent[] = [];
 
   for (const blockRaw of content) {
-    if (!blockRaw || typeof blockRaw !== 'object') {
-      continue;
-    }
-
-    const block = blockRaw as {
-      type?: unknown;
-      id?: unknown;
-      name?: unknown;
-      input?: unknown;
-      tool_use_id?: unknown;
-      content?: unknown;
-      is_error?: unknown;
-    };
-
-    if (block.type === 'tool_use') {
-      if (typeof block.id !== 'string' || typeof block.name !== 'string') {
-        continue;
-      }
-
-      events.push({
-        type: 'tool_use',
-        toolUseId: block.id,
-        toolName: block.name,
-        toolInput: block.input && typeof block.input === 'object'
-          ? (block.input as Record<string, unknown>)
-          : {},
-        timestamp,
-      });
-      continue;
-    }
-
-    if (block.type === 'tool_result') {
-      if (typeof block.tool_use_id !== 'string') {
-        continue;
-      }
-
-      events.push({
-        type: 'tool_result',
-        toolUseId: block.tool_use_id,
-        content: extractToolResultContent(block.content),
-        isError: block.is_error === true,
-        timestamp,
-      });
+    const event = parseSubagentEventBlock(blockRaw, timestamp);
+    if (event) {
+      events.push(event);
     }
   }
 

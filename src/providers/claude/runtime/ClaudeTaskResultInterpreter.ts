@@ -27,6 +27,34 @@ function extractAgentIdFromString(value: string): string | null {
   return null;
 }
 
+function extractAgentIdFromContentBlock(block: unknown): string | null {
+  if (typeof block === 'string') {
+    return extractAgentIdFromString(block);
+  }
+
+  if (!block || typeof block !== 'object') {
+    return null;
+  }
+
+  const text = (block as Record<string, unknown>).text;
+  if (typeof text !== 'string') {
+    return null;
+  }
+
+  return extractAgentIdFromString(text);
+}
+
+function extractAgentIdFromContentArray(content: unknown[]): string | null {
+  for (const block of content) {
+    const extracted = extractAgentIdFromContentBlock(block);
+    if (extracted) {
+      return extracted;
+    }
+  }
+
+  return null;
+}
+
 function extractResultFromTaskObject(task: unknown): string | null {
   if (!task || typeof task !== 'object') {
     return null;
@@ -83,29 +111,7 @@ export class ClaudeTaskResultInterpreter implements ProviderTaskResultInterprete
 
     const record = toolUseResult as Record<string, unknown>;
     if (Array.isArray(record.content)) {
-      for (const block of record.content) {
-        if (typeof block === 'string') {
-          const extracted = extractAgentIdFromString(block);
-          if (extracted) {
-            return extracted;
-          }
-          continue;
-        }
-
-        if (!block || typeof block !== 'object') {
-          continue;
-        }
-
-        const text = (block as Record<string, unknown>).text;
-        if (typeof text !== 'string') {
-          continue;
-        }
-
-        const extracted = extractAgentIdFromString(text);
-        if (extracted) {
-          return extracted;
-        }
-      }
+      return extractAgentIdFromContentArray(record.content);
     }
 
     if (typeof record.content === 'string') {

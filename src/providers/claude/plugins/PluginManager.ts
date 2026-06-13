@@ -71,6 +71,63 @@ function extractPluginName(pluginId: string): string {
   return pluginId;
 }
 
+// Coerces a raw installed_plugins value into an entry array, surfacing a
+// notice when the stored shape isn't the expected array.
+function normalizeInstalledEntries(
+  pluginId: string,
+  entries: InstalledPluginEntry | InstalledPluginEntry[],
+): InstalledPluginEntry[] {
+  if (Array.isArray(entries)) {
+    return entries;
+  }
+
+  new Notice(t('provider.claude.plugin.malformedEntry', { id: pluginId, type: typeof entries }));
+  return [entries];
+}
+
+interface PluginEnabledLookup {
+  project: Record<string, boolean>;
+  // Named `userGlobal` (not `global`) to satisfy obsidianmd/no-global-this.
+  userGlobal: Record<string, boolean>;
+}
+
+// Resolves one installed plugin id to a PluginInfo, or null when no entry
+// matches this vault. Project enabled-state wins, then global, then default-on.
+function buildPluginInfo(
+  pluginId: string,
+  entries: InstalledPluginEntry | InstalledPluginEntry[],
+  normalizedVaultPath: string,
+  enabledLookup: PluginEnabledLookup,
+): PluginInfo | null {
+  if (!entries || (Array.isArray(entries) && entries.length === 0)) {
+    return null;
+  }
+
+  const entriesArray = normalizeInstalledEntries(pluginId, entries);
+  const entry = selectInstalledPluginEntry(entriesArray, normalizedVaultPath);
+  if (!entry) {
+    return null;
+  }
+
+  const scope: PluginScope = entry.scope === 'project' ? 'project' : 'user';
+  const enabled = enabledLookup.project[pluginId] ?? enabledLookup.userGlobal[pluginId] ?? true;
+
+  return {
+    id: pluginId,
+    name: extractPluginName(pluginId),
+    enabled,
+    scope,
+    installPath: entry.installPath,
+  };
+}
+
+function comparePluginsByScopeThenId(a: PluginInfo, b: PluginInfo): number {
+  if (a.scope !== b.scope) {
+    return a.scope === 'project' ? -1 : 1;
+  }
+  return a.id.localeCompare(b.id);
+}
+
 export class PluginManager {
   private ccSettingsStorage: CCSettingsStorage;
   private vaultPath: string;
@@ -86,44 +143,24 @@ export class PluginManager {
     const globalSettings = readJsonFile<SettingsFile>(GLOBAL_SETTINGS_PATH);
     const projectSettings = await this.loadProjectSettings();
 
-    const globalEnabled = globalSettings?.enabledPlugins ?? {};
-    const projectEnabled = projectSettings?.enabledPlugins ?? {};
+    const enabledLookup: PluginEnabledLookup = {
+      project: projectSettings?.enabledPlugins ?? {},
+      userGlobal: globalSettings?.enabledPlugins ?? {},
+    };
 
     const plugins: PluginInfo[] = [];
     const normalizedVaultPath = normalizePathForComparison(this.vaultPath);
 
     if (installedPlugins?.plugins) {
       for (const [pluginId, entries] of Object.entries(installedPlugins.plugins)) {
-        if (!entries || entries.length === 0) continue;
-
-        const entriesArray = Array.isArray(entries) ? entries : [entries];
-        if (!Array.isArray(entries)) {
-          new Notice(t('provider.claude.plugin.malformedEntry', { id: pluginId, type: typeof entries }));
+        const plugin = buildPluginInfo(pluginId, entries, normalizedVaultPath, enabledLookup);
+        if (plugin) {
+          plugins.push(plugin);
         }
-        const entry = selectInstalledPluginEntry(entriesArray, normalizedVaultPath);
-        if (!entry) continue;
-
-        const scope: PluginScope = entry.scope === 'project' ? 'project' : 'user';
-
-        // Project setting takes precedence, then global, then default enabled
-        const enabled = projectEnabled[pluginId] ?? globalEnabled[pluginId] ?? true;
-
-        plugins.push({
-          id: pluginId,
-          name: extractPluginName(pluginId),
-          enabled,
-          scope,
-          installPath: entry.installPath,
-        });
       }
     }
 
-    this.plugins = plugins.sort((a, b) => {
-      if (a.scope !== b.scope) {
-        return a.scope === 'project' ? -1 : 1;
-      }
-      return a.id.localeCompare(b.id);
-    });
+    this.plugins = plugins.sort(comparePluginsByScopeThenId);
   }
 
   private async loadProjectSettings(): Promise<SettingsFile | null> {

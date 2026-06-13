@@ -46,9 +46,6 @@ import {
   finalizeThinkingBlock,
 } from '../rendering/ThinkingBlockRenderer';
 import {
-  decorateToolSummaryPath,
-  getToolName,
-  getToolSummary,
   isBlockedToolResult,
   renderToolCall,
   updateToolCallResult,
@@ -70,7 +67,11 @@ import {
   projectNoticeText,
   projectUsage,
 } from './StreamProjection';
-import { appendToolCallToMessage, createRunningToolCall } from './toolCallAppend';
+import {
+  appendToolCallToMessage,
+  createRunningToolCall,
+  updateRenderedToolCallHeader,
+} from './toolCallAppend';
 import { ToolCallIndex } from './toolCallIndex';
 import { notifyVaultForToolResult } from './vaultFileNotifier';
 
@@ -399,45 +400,7 @@ export class StreamController {
     // Check if this is an update to an existing tool call
     const existingToolCall = this.findToolCall(msg, chunk.id);
     if (existingToolCall) {
-      const newInput = chunk.input || {};
-      if (Object.keys(newInput).length > 0) {
-        existingToolCall.input = { ...existingToolCall.input, ...newInput };
-
-        // Re-parse TodoWrite on input updates (streaming may complete the input)
-        if (existingToolCall.name === TOOL_TODO_WRITE) {
-          const todos = parseTodoInput(existingToolCall.input);
-          if (todos) {
-            this.deps.state.currentTodos = todos;
-          }
-        }
-
-        // Capture plan file path on input updates (file_path may arrive in a later chunk)
-        if (existingToolCall.name === TOOL_WRITE) {
-          this.capturePlanFilePath(existingToolCall.input);
-        }
-
-        // If already rendered, update the header name + summary
-        const toolEl = state.toolCallElements.get(chunk.id);
-        if (toolEl) {
-          const nameEl = toolEl.querySelector('.claudian-tool-name')
-            ?? toolEl.querySelector('.claudian-write-edit-name');
-          if (nameEl) {
-            nameEl.setText(getToolName(existingToolCall.name, existingToolCall.input));
-          }
-          const summaryEl = toolEl.querySelector('.claudian-tool-summary')
-            ?? toolEl.querySelector('.claudian-write-edit-summary');
-          if (summaryEl) {
-            summaryEl.setText(getToolSummary(existingToolCall.name, existingToolCall.input));
-            decorateToolSummaryPath(
-              this.deps.plugin.app,
-              summaryEl as HTMLElement,
-              existingToolCall.name,
-              existingToolCall.input,
-            );
-          }
-        }
-        // If still pending, the updated input is already in the toolCall object
-      }
+      this.mergeExistingToolCallInput(existingToolCall, chunk.input, chunk.id);
       return;
     }
 
@@ -445,18 +408,8 @@ export class StreamController {
     const toolCall = createRunningToolCall(chunk);
     appendToolCallToMessage(msg, toolCall);
 
-    // TodoWrite: update panel state immediately (side effect), but still buffer render
-    if (chunk.name === TOOL_TODO_WRITE) {
-      const todos = parseTodoInput(chunk.input);
-      if (todos) {
-        this.deps.state.currentTodos = todos;
-      }
-    }
-
-    // Track Write to provider plan directory for plan mode (used by approve-new-session)
-    if (chunk.name === TOOL_WRITE) {
-      this.capturePlanFilePath(chunk.input);
-    }
+    // Apply panel/plan side effects immediately, but still buffer the render
+    this.applyToolInputSideEffects(chunk.name, chunk.input);
 
     // Buffer the tool call instead of rendering immediately
     if (state.currentContentEl) {
@@ -465,6 +418,53 @@ export class StreamController {
         parentEl: state.currentContentEl,
       });
       this.showThinkingIndicator();
+    }
+  }
+
+  /**
+   * Merges a later tool_use chunk's input into an existing tool call, applies the
+   * same panel/plan side effects as a fresh tool, and refreshes the rendered
+   * header if the block is already on screen. If still pending, the merged input
+   * is already on the toolCall object and gets picked up at render time.
+   */
+  private mergeExistingToolCallInput(
+    existingToolCall: ToolCallInfo,
+    chunkInput: Record<string, unknown>,
+    toolId: string,
+  ): void {
+    const newInput = chunkInput || {};
+    if (Object.keys(newInput).length === 0) return;
+
+    existingToolCall.input = { ...existingToolCall.input, ...newInput };
+
+    // Re-run side effects on input updates (streaming may complete the input)
+    this.applyToolInputSideEffects(existingToolCall.name, existingToolCall.input);
+
+    const toolEl = this.deps.state.toolCallElements.get(toolId);
+    if (toolEl) {
+      updateRenderedToolCallHeader(
+        this.deps.plugin.app,
+        toolEl,
+        existingToolCall.name,
+        existingToolCall.input,
+      );
+    }
+  }
+
+  /**
+   * Applies the immediate, render-independent side effects of a tool's input:
+   * updating the todo panel for TodoWrite and capturing the plan file path for
+   * Writes into the provider plan directory.
+   */
+  private applyToolInputSideEffects(name: string, input: Record<string, unknown>): void {
+    if (name === TOOL_TODO_WRITE) {
+      const todos = parseTodoInput(input);
+      if (todos) {
+        this.deps.state.currentTodos = todos;
+      }
+    }
+    if (name === TOOL_WRITE) {
+      this.capturePlanFilePath(input);
     }
   }
 

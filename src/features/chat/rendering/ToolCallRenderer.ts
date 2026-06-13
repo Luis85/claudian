@@ -29,6 +29,11 @@ import type { DiffStats } from '../../../core/types/diff';
 import { appendMcpIcon } from '../../../shared/icons';
 import { parseApplyPatchDiffs, parseFileUpdateChangeDiffs } from '../../../utils/diff';
 import { decorateVaultFileLink } from '../../../utils/fileLink';
+import {
+  isApplyPatchErrorResult,
+  renderApplyPatchChangeList,
+  renderApplyPatchResultFallback,
+} from './applyPatchExpandedHelpers';
 import { setupCollapsible } from './collapsible';
 import { renderDiffContent, renderDiffStats } from './DiffRenderer';
 import { renderTodoItems } from './todoUtils';
@@ -354,8 +359,8 @@ function renderApplyPatchExpanded(
   const patchText = typeof input.patch === 'string' ? input.patch : '';
   const parsedDiffs = getApplyPatchFileDiffs(input);
 
-  if (result && /verification failed|^[Ee]rror:/.test(result.trim())) {
-    renderLinesExpanded(container, result, 20);
+  if (isApplyPatchErrorResult(result)) {
+    renderLinesExpanded(container, result as string, 20);
   }
 
   if (parsedDiffs.length > 0) {
@@ -363,44 +368,16 @@ function renderApplyPatchExpanded(
     return;
   }
 
-  const changes = Array.isArray(input.changes) ? input.changes : [];
-  if (changes.length > 0) {
-    const linesEl = container.createDiv({ cls: 'claudian-tool-lines' });
-    for (const change of changes as unknown[]) {
-      if (!change || typeof change !== 'object' || Array.isArray(change)) continue;
-      const changeRecord = change as Record<string, unknown>;
-      const path = typeof changeRecord.path === 'string' ? changeRecord.path : '';
-      if (!path) continue;
-      const movedTo = readMoveTarget(changeRecord.kind);
-      const pathText = movedTo ? `${path} -> ${movedTo}` : path;
-      linesEl.createDiv({ cls: 'claudian-tool-line', text: pathText });
-    }
-    return;
-  }
+  if (renderApplyPatchChangeList(container, input.changes)) return;
 
   if (patchText) {
     renderLinesExpanded(container, patchText, 80);
     return;
   }
 
-  if (result) {
-    const fileMatches = [...result.matchAll(/(?:update|add|delete|create|modify|Applied:\s*)(?:\w+:\s*)?([^\n,]+)/gi)];
-    if (fileMatches.length > 0) {
-      const linesEl = container.createDiv({ cls: 'claudian-tool-lines' });
-      for (const match of fileMatches) {
-        const filePath = match[1]?.trim();
-        if (filePath) {
-          const lineEl = linesEl.createDiv({ cls: 'claudian-tool-line' });
-          lineEl.setText(filePath);
-        }
-      }
-      return;
-    }
-    renderLinesExpanded(container, result, 20);
-    return;
-  }
-
-  container.createDiv({ cls: 'claudian-tool-empty', text: 'No result' });
+  renderApplyPatchResultFallback(container, result, (text, max) =>
+    renderLinesExpanded(container, text, max),
+  );
 }
 
 function renderApplyPatchDiffSections(
@@ -424,14 +401,6 @@ function renderApplyPatchDiffSections(
     const diffEl = diffRow.createDiv({ cls: 'claudian-write-edit-diff' });
     renderDiffContent(diffEl, fileDiff.diffLines);
   }
-}
-
-function readMoveTarget(kind: unknown): string | undefined {
-  if (!kind || typeof kind !== 'object' || Array.isArray(kind)) {
-    return undefined;
-  }
-  const record = kind as Record<string, unknown>;
-  return typeof record.move_path === 'string' ? record.move_path : undefined;
 }
 
 function getApplyPatchFileDiffs(input: Record<string, unknown>): ReturnType<typeof parseApplyPatchDiffs> {

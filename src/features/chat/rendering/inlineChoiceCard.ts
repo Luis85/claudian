@@ -161,31 +161,45 @@ export class InlineChoiceList {
   private updateFocus(): void {
     for (let i = 0; i < this.items.length; i++) {
       const item = this.items[i];
-      const cursor = item.querySelector('.claudian-ask-cursor');
       if (i === this.focusedIndex) {
-        item.addClass('is-focused');
-        if (cursor) cursor.textContent = '\u203A';
-        item.scrollIntoView({ block: 'nearest' });
-
-        if (item.hasClass('claudian-ask-custom-item')) {
-          const input = item.querySelector('.claudian-ask-custom-text') as HTMLInputElement;
-          if (input) {
-            input.focus();
-            this.isInputFocused = true;
-          }
-        }
+        this.focusItem(item);
       } else {
-        item.removeClass('is-focused');
-        if (cursor) cursor.textContent = '\u00A0';
-
-        if (item.hasClass('claudian-ask-custom-item')) {
-          const input = item.querySelector('.claudian-ask-custom-text') as HTMLInputElement;
-          if (input && this.rootEl.ownerDocument.activeElement === input) {
-            input.blur();
-            this.isInputFocused = false;
-          }
-        }
+        this.unfocusItem(item);
       }
     }
+  }
+
+  private focusItem(item: HTMLElement): void {
+    item.addClass('is-focused');
+    this.setCursor(item, '\u203A');
+    item.scrollIntoView({ block: 'nearest' });
+
+    const input = this.customInputOf(item);
+    if (input) {
+      input.focus();
+      this.isInputFocused = true;
+    }
+  }
+
+  private unfocusItem(item: HTMLElement): void {
+    item.removeClass('is-focused');
+    this.setCursor(item, '\u00A0');
+
+    const input = this.customInputOf(item);
+    if (input && this.rootEl.ownerDocument.activeElement === input) {
+      input.blur();
+      this.isInputFocused = false;
+    }
+  }
+
+  private setCursor(item: HTMLElement, text: string): void {
+    const cursor = item.querySelector('.claudian-ask-cursor');
+    if (cursor) cursor.textContent = text;
+  }
+
+  /** The custom-text input inside a free-text row, or null for action rows. */
+  private customInputOf(item: HTMLElement): HTMLInputElement | null {
+    if (!item.hasClass('claudian-ask-custom-item')) return null;
+    return item.querySelector<HTMLInputElement>('.claudian-ask-custom-text');
   }
 }

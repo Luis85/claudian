@@ -247,94 +247,122 @@ export interface McpTestOptions {
   resolveHost?: HostResolver;
 }
 
-export async function testMcpServer(
+/**
+ * SEC-A Phase 3: a secret missing on this device (e.g. synced settings) is
+ * reported up front rather than silently tested without the credential.
+ * Returns a failing result to short-circuit, or null when nothing is missing.
+ */
+function missingSecretsResult(
   server: ManagedMcpServer,
-  resolveSecret?: McpSecretResolver,
-  options?: McpTestOptions,
-): Promise<McpTestResult> {
-  const type = getMcpServerType(server.config);
-  // SEC-A Phase 3: verify against the resolved config (secret headers/env overlaid
-  // from SecretStorage), so testing a server with migrated credentials still works.
-  // A secret missing on this device (e.g. synced settings) is reported up front
-  // rather than silently tested without the credential.
-  if (resolveSecret) {
-    const missing = collectMissingMcpSecrets([server], resolveSecret);
-    if (missing.length > 0) {
-      return {
-        success: false,
-        tools: [],
-        error: `Secret not set on this device: ${missing
-          .map((m) => m.name)
-          .join(', ')}. Re-enter it in the server settings.`,
-      };
-    }
+  resolveSecret: McpSecretResolver | undefined,
+): McpTestResult | null {
+  if (!resolveSecret) {
+    return null;
   }
-  const resolvedConfig = resolveSecret ? resolveMcpServerConfig(server, resolveSecret) : server.config;
+  const missing = collectMissingMcpSecrets([server], resolveSecret);
+  if (missing.length === 0) {
+    return null;
+  }
+  return {
+    success: false,
+    tools: [],
+    error: `Secret not set on this device: ${missing
+      .map((m) => m.name)
+      .join(', ')}. Re-enter it in the server settings.`,
+  };
+}
 
-  let transport: Transport;
+type TransportBuildResult =
+  | { ok: true; transport: Transport }
+  | { ok: false; result: McpTestResult };
+
+function buildStdioTransport(resolvedConfig: unknown): TransportBuildResult {
+  const config = resolvedConfig as { command: string; args?: string[]; env?: Record<string, string> };
+  const { cmd, args } = parseCommand(config.command, config.args);
+  if (!cmd) {
+    return { ok: false, result: { success: false, tools: [], error: 'Missing command' } };
+  }
+  const transport = new StdioClientTransport({
+    command: cmd,
+    args,
+    // SECURITY (SEC-4): MCP servers can be vault-defined/untrusted. Spawn them
+    // with a curated env (system-essentials + the server's own configured vars)
+    // rather than forwarding the host's full process.env.
+    env: curateStdioMcpEnv(config.env),
+    stderr: 'ignore',
+  });
+  return { ok: true, transport };
+}
+
+async function buildUrlTransport(
+  resolvedConfig: unknown,
+  type: ReturnType<typeof getMcpServerType>,
+  options: McpTestOptions | undefined,
+): Promise<Transport> {
+  const config = resolvedConfig as UrlServerConfig;
+  // SECURITY (SEC-D): SSRF guard for vault-suppliable URLs. Refuse
+  // loopback/link-local/private/metadata targets BEFORE any socket opens,
+  // then pin the transport's connections to the vetted addresses so a DNS
+  // rebind between preflight and connect cannot redirect the socket.
+  const vetted: VettedRemoteUrl = await assertSafeRemoteUrl(config.url, {
+    resolveHost: options?.resolveHost,
+  });
+  const transportOptions = {
+    fetch: createNodeFetch({
+      lookup: createPinnedLookup(vetted, { resolveHost: options?.resolveHost }),
+    }),
+    requestInit: config.headers ? { headers: config.headers } : undefined,
+  };
+  return type === 'sse'
+    ? createLegacySseTransport(vetted.url, transportOptions)
+    : new StreamableHTTPClientTransport(vetted.url, transportOptions);
+}
+
+async function buildTestTransport(
+  resolvedConfig: unknown,
+  type: ReturnType<typeof getMcpServerType>,
+  options: McpTestOptions | undefined,
+): Promise<TransportBuildResult> {
   try {
     if (type === 'stdio') {
-      const config = resolvedConfig as { command: string; args?: string[]; env?: Record<string, string> };
-      const { cmd, args } = parseCommand(config.command, config.args);
-      if (!cmd) {
-        return { success: false, tools: [], error: 'Missing command' };
-      }
-      transport = new StdioClientTransport({
-        command: cmd,
-        args,
-        // SECURITY (SEC-4): MCP servers can be vault-defined/untrusted. Spawn them
-        // with a curated env (system-essentials + the server's own configured vars)
-        // rather than forwarding the host's full process.env.
-        env: curateStdioMcpEnv(config.env),
-        stderr: 'ignore',
-      });
-    } else {
-      const config = resolvedConfig as UrlServerConfig;
-      // SECURITY (SEC-D): SSRF guard for vault-suppliable URLs. Refuse
-      // loopback/link-local/private/metadata targets BEFORE any socket opens,
-      // then pin the transport's connections to the vetted addresses so a DNS
-      // rebind between preflight and connect cannot redirect the socket.
-      const vetted: VettedRemoteUrl = await assertSafeRemoteUrl(config.url, {
-        resolveHost: options?.resolveHost,
-      });
-      const transportOptions = {
-        fetch: createNodeFetch({
-          lookup: createPinnedLookup(vetted, { resolveHost: options?.resolveHost }),
-        }),
-        requestInit: config.headers ? { headers: config.headers } : undefined,
-      };
-      transport = type === 'sse'
-        ? createLegacySseTransport(vetted.url, transportOptions)
-        : new StreamableHTTPClientTransport(vetted.url, transportOptions);
+      return buildStdioTransport(resolvedConfig);
     }
+    return { ok: true, transport: await buildUrlTransport(resolvedConfig, type, options) };
   } catch (error) {
     return {
-      success: false,
-      tools: [],
-      error: error instanceof Error ? error.message : 'Invalid server configuration',
+      ok: false,
+      result: {
+        success: false,
+        tools: [],
+        error: error instanceof Error ? error.message : 'Invalid server configuration',
+      },
     };
   }
+}
 
+async function listToolsBestEffort(client: Client, signal: AbortSignal): Promise<McpTool[]> {
+  try {
+    const result = await client.listTools(undefined, { signal });
+    return result.tools.map((t: { name: string; description?: string; inputSchema?: Record<string, unknown> }) => ({
+      name: t.name,
+      description: t.description,
+      inputSchema: t.inputSchema as Record<string, unknown>,
+    }));
+  } catch {
+    // listTools failure after successful connect = partial success
+    return [];
+  }
+}
+
+async function connectAndProbe(transport: Transport): Promise<McpTestResult> {
   const client = new Client({ name: 'claudian-tester', version: '1.0.0' });
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 10000);
 
   try {
     await client.connect(transport, { signal: controller.signal });
-
     const serverVersion = client.getServerVersion();
-    let tools: McpTool[] = [];
-    try {
-      const result = await client.listTools(undefined, { signal: controller.signal });
-      tools = result.tools.map((t: { name: string; description?: string; inputSchema?: Record<string, unknown> }) => ({
-        name: t.name,
-        description: t.description,
-        inputSchema: t.inputSchema as Record<string, unknown>,
-      }));
-    } catch {
-      // listTools failure after successful connect = partial success
-    }
-
+    const tools = await listToolsBestEffort(client, controller.signal);
     return {
       success: true,
       serverName: serverVersion?.name,
@@ -358,4 +386,26 @@ export async function testMcpServer(
       // Ignore close errors
     }
   }
+}
+
+export async function testMcpServer(
+  server: ManagedMcpServer,
+  resolveSecret?: McpSecretResolver,
+  options?: McpTestOptions,
+): Promise<McpTestResult> {
+  const type = getMcpServerType(server.config);
+  // SEC-A Phase 3: verify against the resolved config (secret headers/env overlaid
+  // from SecretStorage), so testing a server with migrated credentials still works.
+  const missing = missingSecretsResult(server, resolveSecret);
+  if (missing) {
+    return missing;
+  }
+  const resolvedConfig = resolveSecret ? resolveMcpServerConfig(server, resolveSecret) : server.config;
+
+  const built = await buildTestTransport(resolvedConfig, type, options);
+  if (!built.ok) {
+    return built.result;
+  }
+
+  return connectAndProbe(built.transport);
 }

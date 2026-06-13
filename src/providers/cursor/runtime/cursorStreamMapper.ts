@@ -1,13 +1,18 @@
 import { buildUsageInfo } from '../../../core/providers/usage';
 import type { StreamChunk } from '../../../core/types';
 import type { SDKToolUseResult } from '../../../core/types/diff';
-import { cursorModelContextWindow } from './cursorModelWindowCatalog';
 import {
   capCursorToolResultLength,
   normalizeCursorToolCompletion,
   normalizeCursorToolStart,
   readCursorToolEnvelope,
 } from './cursorToolNormalization';
+import { extractCursorUsage } from './cursorUsageMapping';
+
+// Usage extraction lives in a sibling to keep this file under the LOC cap;
+// re-exported so existing importers keep their `cursorStreamMapper` import path.
+export type { CursorUsage } from './cursorUsageMapping';
+export { extractCursorUsage } from './cursorUsageMapping';
 
 export interface CursorReduceResult {
   chunks: StreamChunk[];
@@ -182,88 +187,6 @@ function extractAssistantThinking(record: Record<string, unknown>): string {
     }
   }
   return out;
-}
-
-function numericField(source: unknown, keys: string[]): number | undefined {
-  if (!source || typeof source !== 'object') {
-    return undefined;
-  }
-  const obj = source as Record<string, unknown>;
-  for (const key of keys) {
-    const value = obj[key];
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      return value;
-    }
-  }
-  return undefined;
-}
-
-export interface CursorUsage {
-  inputTokens: number;
-  outputTokens?: number;
-  cacheReadInputTokens?: number;
-  contextTokens: number;
-  contextWindow: number;
-  contextWindowIsAuthoritative: boolean;
-  percentage: number;
-}
-
-// The shape of Cursor's token/usage data is undocumented, so probe several
-// plausible locations (first match wins) and never throw on odd input.
-export function extractCursorUsage(
-  rec: Record<string, unknown>,
-  model: string | undefined,
-): CursorUsage {
-  const usageObj =
-    rec.usage && typeof rec.usage === 'object'
-      ? (rec.usage as Record<string, unknown>)
-      : rec.message && typeof rec.message === 'object'
-        ? ((rec.message as Record<string, unknown>).usage as unknown)
-        : undefined;
-
-  const input = numericField(usageObj, ['input_tokens', 'inputTokens']);
-  const output = numericField(usageObj, ['output_tokens', 'outputTokens']);
-  const total =
-    numericField(usageObj, ['total_tokens', 'totalTokens']) ??
-    numericField(rec, ['num_tokens', 'tokens']);
-  const cacheRead = numericField(usageObj, ['cache_read_input_tokens']);
-
-  let contextTokens = 0;
-  if (typeof total === 'number') {
-    contextTokens = total;
-  } else if (typeof input === 'number' || typeof output === 'number' || typeof cacheRead === 'number') {
-    contextTokens = (input ?? 0) + (output ?? 0) + (cacheRead ?? 0);
-  }
-
-  const explicitWindow =
-    numericField(usageObj, ['context_window', 'contextWindow', 'context_size']) ??
-    numericField(rec, ['context_window', 'contextWindow', 'context_size']);
-  const catalogWindow = cursorModelContextWindow(model);
-  const isAuthoritative =
-    typeof explicitWindow === 'number' && explicitWindow > 0
-      ? true
-      : catalogWindow > 0;
-  const contextWindow =
-    typeof explicitWindow === 'number' && explicitWindow > 0
-      ? explicitWindow
-      : catalogWindow;
-
-  const inputTokens = typeof input === 'number' ? input : 0;
-  const percentage =
-    contextTokens > 0 && contextWindow > 0
-      ? Math.max(0, Math.min(100, Math.round((contextTokens / contextWindow) * 100)))
-      : 0;
-
-  const result: CursorUsage = {
-    inputTokens,
-    contextTokens,
-    contextWindow,
-    contextWindowIsAuthoritative: isAuthoritative,
-    percentage,
-  };
-  if (typeof output === 'number') result.outputTokens = output;
-  if (typeof cacheRead === 'number') result.cacheReadInputTokens = cacheRead;
-  return result;
 }
 
 interface CursorToolStartChunk {
