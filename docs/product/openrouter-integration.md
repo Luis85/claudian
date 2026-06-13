@@ -75,6 +75,11 @@ Users currently manage multiple LLM provider API keys and have limited visibilit
   - For auto mode: informational text explaining OpenRouter's routing logic
 - Auto mode model representation: Register `openrouter/auto` as a selectable model option so Agent Board can persist Auto mode as a work-order frontmatter value (required for launch validation and card-to-card portability)
 
+### Provider Registration
+- Unlike other providers (Claude, Codex, Opencode, Cursor), OpenRouter is API-key-only and does not require a CLI command
+- Provider registration should make CLI requirement optional: the first-run banner and registration UI should not show "Requires CLI on path" for OpenRouter
+- Onboarding path: API key input → model catalog fetch → ready for use (no CLI validation step)
+
 ### Chat Sidebar Integration
 - Provider selector includes "OpenRouter" when enabled
 - Selecting OpenRouter allows switching between manual and auto model modes
@@ -84,9 +89,7 @@ Users currently manage multiple LLM provider API keys and have limited visibilit
 - OpenRouter available as a provider option in Agent Board settings
 - Work-order runs respect the OpenRouter model selection (both manual and `openrouter/auto`)
 - Model metadata (pricing, capabilities) propagates to work-order context
-- **Tool execution requirement**: Agent Board work orders must support tool invocation (file edits, checklist updates, CLI runs) so agents can complete actual work. OpenRouter as a model-only provider requires either:
-  - Integration with a local agent runtime that executes tools (e.g., Claude Agent SDK), or
-  - Explicit documentation that OpenRouter work orders are limited to read-only model inference without tool execution
+- **Tool execution requirement (MVP gate)**: Agent Board work orders must perform file edits and checklist updates as required by the work-order prompt. For MVP, OpenRouter integration requires integration with a local agent runtime that executes tools (e.g., Claude Agent SDK). Read-only inference-only work orders are explicitly out of MVP scope.
 
 ### Auto Router Session Pinning
 - For Auto mode, derive a stable `session_id` from the Claudian conversation ID or Agent Board run ID
