@@ -12,8 +12,15 @@ import { DEFAULT_CHAT_PROVIDER_ID } from '@/core/providers/types';
 import type { Conversation } from '@/core/types';
 import { asSettingsBag } from '@/core/types';
 import type { EnvironmentScope, SecretEnvVarRef } from '@/core/types/settings';
+import type { TabData } from '@/features/chat/tabs/types';
 import { t } from '@/i18n/i18n';
 import type ClaudianPlugin from '@/main';
+
+/** The slice of a chat tab the env-apply runtime sync touches. */
+type SyncableTab = Pick<
+  TabData,
+  'service' | 'serviceInitialized' | 'conversationId' | 'ui' | 'state' | 'controllers' | 'providerId'
+>;
 
 export class EnvironmentApplyService {
   constructor(private readonly plugin: ClaudianPlugin) {}
@@ -69,64 +76,91 @@ export class EnvironmentApplyService {
     const { changed, invalidatedConversations } = this.reconcileWithEnvironment(affected);
     await this.plugin.saveSettings();
 
-    if (invalidatedConversations.length > 0) {
-      for (const conv of invalidatedConversations) {
-        await this.plugin.storage.sessions.saveMetadata(
-          this.plugin.storage.sessions.toSessionMetadata(conv),
-        );
-      }
-    }
+    await this.persistInvalidatedConversations(invalidatedConversations);
+    await this.syncAffectedTabs(affected, changed);
+    this.refreshAffectedViews(affected);
 
-    const view = this.plugin.getView();
-    const tabManager = view?.getTabManager();
+    new Notice(t(changed ? 'env.appliedRebuild' : 'env.applied'));
+  }
 
-    if (tabManager) {
-      const affectedTabs = tabManager.getAllTabs().filter((tab) =>
-        affected.includes(tab.providerId ?? DEFAULT_CHAT_PROVIDER_ID),
+  private async persistInvalidatedConversations(
+    invalidatedConversations: Conversation[],
+  ): Promise<void> {
+    for (const conv of invalidatedConversations) {
+      await this.plugin.storage.sessions.saveMetadata(
+        this.plugin.storage.sessions.toSessionMetadata(conv),
       );
-      const syncRuntime = (tab: (typeof affectedTabs)[number]): void => {
-        if (!tab.service || !tab.serviceInitialized) return;
-        const conversation = tab.conversationId
-          ? this.plugin.getConversationSync(tab.conversationId)
-          : null;
-        const hasContext = (conversation?.messages.length ?? 0) > 0;
-        const externalContextPaths = tab.ui.externalContextSelector?.getExternalContexts()
-          ?? (hasContext
-            ? conversation?.externalContextPaths ?? []
-            : this.plugin.settings.persistentExternalContextPaths ?? []);
-        tab.service.syncConversationState(conversation, externalContextPaths);
-      };
+    }
+  }
 
-      for (const tab of affectedTabs) {
-        if (tab.state.isStreaming) tab.controllers.inputController?.cancelStreaming();
-      }
+  /** Cancel in-flight streams, then re-sync/restart each affected tab's runtime. */
+  private async syncAffectedTabs(affected: ProviderId[], changed: boolean): Promise<void> {
+    const tabManager = this.plugin.getView()?.getTabManager();
+    if (!tabManager) return;
 
-      let failedTabs = 0;
-      for (const tab of affectedTabs) {
-        if (!tab.service || !tab.serviceInitialized) continue;
-        try {
-          syncRuntime(tab);
-          if (changed) {
-            tab.service.resetSession();
-            await tab.service.ensureReady();
-          } else {
-            await tab.service.ensureReady({ force: true });
-          }
-        } catch {
-          failedTabs++;
-        }
-      }
-      if (failedTabs > 0) {
-        new Notice(t('env.applyPartial', { count: failedTabs }));
-      }
+    const affectedTabs = tabManager.getAllTabs().filter((tab) =>
+      affected.includes(tab.providerId ?? DEFAULT_CHAT_PROVIDER_ID),
+    );
+
+    for (const tab of affectedTabs) {
+      if (tab.state.isStreaming) tab.controllers.inputController?.cancelStreaming();
     }
 
+    let failedTabs = 0;
+    for (const tab of affectedTabs) {
+      if (!(await this.resyncTab(tab, changed))) failedTabs++;
+    }
+    if (failedTabs > 0) {
+      new Notice(t('env.applyPartial', { count: failedTabs }));
+    }
+  }
+
+  /**
+   * Re-sync one tab's runtime: skip uninitialized tabs (counted as success),
+   * else sync state + restart/refresh. Returns false when the runtime throws.
+   */
+  private async resyncTab(tab: SyncableTab, changed: boolean): Promise<boolean> {
+    if (!tab.service || !tab.serviceInitialized) return true;
+    try {
+      this.syncTabRuntimeState(tab);
+      if (changed) {
+        tab.service.resetSession();
+        await tab.service.ensureReady();
+      } else {
+        await tab.service.ensureReady({ force: true });
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private syncTabRuntimeState(tab: SyncableTab): void {
+    if (!tab.service || !tab.serviceInitialized) return;
+    const conversation = tab.conversationId
+      ? this.plugin.getConversationSync(tab.conversationId)
+      : null;
+    tab.service.syncConversationState(
+      conversation,
+      this.resolveExternalContextPaths(tab, conversation),
+    );
+  }
+
+  /** Prefer the tab's live selection; else the conversation's (when it has context), else the persistent default. */
+  private resolveExternalContextPaths(tab: SyncableTab, conversation: Conversation | null): string[] {
+    const selected = tab.ui.externalContextSelector?.getExternalContexts();
+    if (selected) return selected;
+    const hasContext = (conversation?.messages.length ?? 0) > 0;
+    return hasContext
+      ? conversation?.externalContextPaths ?? []
+      : this.plugin.settings.persistentExternalContextPaths ?? [];
+  }
+
+  private refreshAffectedViews(affected: ProviderId[]): void {
     for (const openView of this.plugin.getAllViews()) {
       openView.invalidateProviderCommandCaches(affected);
       openView.refreshModelSelector();
     }
-
-    new Notice(t(changed ? 'env.appliedRebuild' : 'env.applied'));
   }
 
   reconcileWithEnvironment(

@@ -54,6 +54,30 @@ function isIdeBootstrapUser(content: string): boolean {
   return content.includes('<user_info>');
 }
 
+/**
+ * Builds a `ToolCallInfo` from a single `tool-call` content block, or returns
+ * null when the block has no usable id (blank ids can't be matched against a
+ * later tool-result, so they're dropped here rather than emitted unresolvable).
+ */
+function parseAssistantToolCallBlock(b: Record<string, unknown>): ToolCallInfo | null {
+  const id = typeof b.toolCallId === 'string' ? b.toolCallId : '';
+  if (!id) {
+    return null;
+  }
+  const rawName = typeof b.toolName === 'string' ? b.toolName : 'tool';
+  const rawArgs = b.args && typeof b.args === 'object' && !Array.isArray(b.args)
+    ? b.args as Record<string, unknown>
+    : {};
+  const description = typeof b.description === 'string' ? b.description : undefined;
+  const normalized = normalizeCursorPersistedToolCall(rawName, rawArgs, description);
+  return {
+    id,
+    name: normalized.name,
+    input: normalized.input,
+    status: 'running',
+  };
+}
+
 function parseAssistantBlob(record: Record<string, unknown>): { text: string; toolCalls: ToolCallInfo[] } {
   const content = record.content;
   if (typeof content === 'string') {
@@ -71,32 +95,51 @@ function parseAssistantBlob(record: Record<string, unknown>): { text: string; to
       continue;
     }
     const b = block as Record<string, unknown>;
-    if (b.type === 'redacted-reasoning') {
-      continue;
-    }
     if (b.type === 'text' && typeof b.text === 'string') {
       text += b.text;
-    }
-    if (b.type === 'tool-call') {
-      const id = typeof b.toolCallId === 'string' ? b.toolCallId : '';
-      const rawName = typeof b.toolName === 'string' ? b.toolName : 'tool';
-      const rawArgs = b.args && typeof b.args === 'object' && !Array.isArray(b.args)
-        ? b.args as Record<string, unknown>
-        : {};
-      const description = typeof b.description === 'string' ? b.description : undefined;
-      if (id) {
-        const normalized = normalizeCursorPersistedToolCall(rawName, rawArgs, description);
-        toolCalls.push({
-          id,
-          name: normalized.name,
-          input: normalized.input,
-          status: 'running',
-        });
+    } else if (b.type === 'tool-call') {
+      const toolCall = parseAssistantToolCallBlock(b);
+      if (toolCall) {
+        toolCalls.push(toolCall);
       }
     }
   }
 
   return { text, toolCalls };
+}
+
+/**
+ * Finds the running tool call matching `toolCallId`, scanning assistant
+ * messages newest-first so a later tool-result resolves against the most
+ * recent matching tool call (Cursor reuses ids only across distinct turns).
+ */
+function findToolCallById(messages: ChatMessage[], toolCallId: string): ToolCallInfo | undefined {
+  const assistant = [...messages].reverse().find(
+    m => m.role === 'assistant' && m.toolCalls?.some(t => t.id === toolCallId),
+  );
+  return assistant?.toolCalls?.find(t => t.id === toolCallId);
+}
+
+/** Mutates `tc` in place with the normalized result, status, and diff data. */
+function applyToolResultToCall(
+  tc: ToolCallInfo,
+  rawResult: unknown,
+  blockToolName: string,
+): void {
+  const toolName = blockToolName || tc.name;
+  const normalized = normalizeCursorPersistedToolResult(toolName, rawResult, tc.input);
+  tc.result = normalized.content;
+  tc.status = normalized.isError ? 'error' : 'completed';
+  if (normalized.toolUseResult) {
+    const diffData = extractDiffData(normalized.toolUseResult, tc);
+    if (diffData) {
+      tc.diffData = diffData;
+    }
+  }
+
+  if (isSubagentToolName(tc.name)) {
+    attachCursorSubagentToTaskToolCall(tc, rawResult);
+  }
 }
 
 function applyToolBlob(record: Record<string, unknown>, messages: ChatMessage[]): void {
@@ -117,38 +160,14 @@ function applyToolBlob(record: Record<string, unknown>, messages: ChatMessage[])
     if (!toolCallId) {
       continue;
     }
-    const rawResult = b.result;
-    const blockToolName = typeof b.toolName === 'string' ? b.toolName : '';
 
-    const assistant = [...messages].reverse().find(
-      m => m.role === 'assistant' && m.toolCalls?.some(t => t.id === toolCallId),
-    );
-    if (!assistant?.toolCalls) {
-      continue;
-    }
-    const tc = assistant.toolCalls.find(t => t.id === toolCallId);
+    const tc = findToolCallById(messages, toolCallId);
     if (!tc) {
       continue;
     }
 
-    const toolName = blockToolName || tc.name;
-    const normalized = normalizeCursorPersistedToolResult(
-      toolName,
-      rawResult,
-      tc.input,
-    );
-    tc.result = normalized.content;
-    tc.status = normalized.isError ? 'error' : 'completed';
-    if (normalized.toolUseResult) {
-      const diffData = extractDiffData(normalized.toolUseResult, tc);
-      if (diffData) {
-        tc.diffData = diffData;
-      }
-    }
-
-    if (isSubagentToolName(tc.name)) {
-      attachCursorSubagentToTaskToolCall(tc, rawResult);
-    }
+    const blockToolName = typeof b.toolName === 'string' ? b.toolName : '';
+    applyToolResultToCall(tc, b.result, blockToolName);
   }
 }
 
