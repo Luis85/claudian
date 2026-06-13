@@ -22,17 +22,37 @@ export interface BuildCursorAgentFlagArgsOptions {
   platform?: NodeJS.Platform;
 }
 
-export function buildCursorAgentFlagArgs(options: BuildCursorAgentFlagArgsOptions): string[] {
-  const args: string[] = [
+/**
+ * Builds the leading flags common to every Cursor invocation shape: print mode,
+ * the output format, any format-specific flags (e.g. `--stream-partial-output`),
+ * the workspace directory, and `--trust`. Permission and tail flags are appended
+ * by the per-shape builders.
+ */
+function buildCursorBaseArgs(
+  outputFormat: 'stream-json' | 'json' | 'text',
+  workspaceDir: string,
+  extraFlags: string[] = [],
+): string[] {
+  return [
     '-p',
-    '--output-format', 'stream-json',
-    '--stream-partial-output',
-    '--workspace', options.workspaceDir,
+    '--output-format', outputFormat,
+    ...extraFlags,
+    '--workspace', workspaceDir,
     '--trust',
   ];
+}
 
-  appendCursorPermissionModeArgs(args, options.permissionMode, options.platform);
-
+/**
+ * Appends the flags shared by every Cursor invocation shape after the
+ * base/permission flags: model selection, session resume, and (unless
+ * `includeApproveMcps` is false, as the text-mode variant requires) MCP
+ * approval.
+ */
+function appendCursorCommonTailArgs(
+  args: string[],
+  options: BuildCursorAgentFlagArgsOptions,
+  includeApproveMcps = true,
+): void {
   if (options.model) {
     args.push('--model', options.model);
   }
@@ -41,9 +61,16 @@ export function buildCursorAgentFlagArgs(options: BuildCursorAgentFlagArgsOption
     args.push('--resume', options.resumeSessionId);
   }
 
-  if (options.approveMcps) {
+  if (includeApproveMcps && options.approveMcps) {
     args.push('--approve-mcps');
   }
+}
+
+export function buildCursorAgentFlagArgs(options: BuildCursorAgentFlagArgsOptions): string[] {
+  const args = buildCursorBaseArgs('stream-json', options.workspaceDir, ['--stream-partial-output']);
+
+  appendCursorPermissionModeArgs(args, options.permissionMode, options.platform);
+  appendCursorCommonTailArgs(args, options);
 
   return args;
 }
@@ -81,12 +108,7 @@ function appendCursorReadOnlyModeArgs(
 export function buildCursorAgentJsonModeFlagArgs(
   options: BuildCursorAgentFlagArgsOptions,
 ): string[] {
-  const args: string[] = [
-    '-p',
-    '--output-format', 'json',
-    '--workspace', options.workspaceDir,
-    '--trust',
-  ];
+  const args = buildCursorBaseArgs('json', options.workspaceDir);
 
   if (options.readOnly) {
     appendCursorReadOnlyModeArgs(args, options.platform);
@@ -94,17 +116,7 @@ export function buildCursorAgentJsonModeFlagArgs(
     appendCursorPermissionModeArgs(args, options.permissionMode, options.platform);
   }
 
-  if (options.model) {
-    args.push('--model', options.model);
-  }
-
-  if (options.resumeSessionId) {
-    args.push('--resume', options.resumeSessionId);
-  }
-
-  if (options.approveMcps) {
-    args.push('--approve-mcps');
-  }
+  appendCursorCommonTailArgs(args, options);
 
   return args;
 }
@@ -112,22 +124,10 @@ export function buildCursorAgentJsonModeFlagArgs(
 export function buildCursorAgentTextModeFlagArgs(
   options: Omit<BuildCursorAgentFlagArgsOptions, never>,
 ): string[] {
-  const args: string[] = [
-    '-p',
-    '--output-format', 'text',
-    '--workspace', options.workspaceDir,
-    '--trust',
-  ];
+  const args = buildCursorBaseArgs('text', options.workspaceDir);
 
   appendCursorPermissionModeArgs(args, options.permissionMode, options.platform);
-
-  if (options.model) {
-    args.push('--model', options.model);
-  }
-
-  if (options.resumeSessionId) {
-    args.push('--resume', options.resumeSessionId);
-  }
+  appendCursorCommonTailArgs(args, options, false);
 
   return args;
 }

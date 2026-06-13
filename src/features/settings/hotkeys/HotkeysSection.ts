@@ -1,38 +1,8 @@
-import type { App } from 'obsidian';
-import { Platform } from 'obsidian';
-
 import { getCommandHotkeys } from '@/core/commands/commandHotkeyRegistry';
 import { HOTKEY_BINDING_POLL_INTERVAL_MS } from '@/core/constants';
+import { formatBoundHotkeys } from '@/features/settings/hotkeyFormat';
 import type { SettingsCtx } from '@/features/settings/registry/SettingsField';
-import {
-  getHotkeysForCommand,
-  type ObsidianHotkey,
-  openHotkeySettingsWithFilter,
-} from '@/utils/obsidianPrivateApi';
-
-/**
- * Format a single hotkey object into a display string (e.g. "Ctrl+Shift+B")
- */
-function formatHotkey(hotkey: ObsidianHotkey): string {
-  const isMac = Platform.isMacOS;
-  const modMap: Record<string, string> = isMac
-    ? { Mod: '⌘', Ctrl: '⌃', Alt: '⌥', Shift: '⇧', Meta: '⌘' }
-    : { Mod: 'Ctrl', Ctrl: 'Ctrl', Alt: 'Alt', Shift: 'Shift', Meta: 'Win' };
-
-  const mods = hotkey.modifiers.map((modifier) => modMap[modifier] || modifier);
-  const key = hotkey.key.length === 1 ? hotkey.key.toUpperCase() : hotkey.key;
-
-  return isMac ? [...mods, key].join('') : [...mods, key].join('+');
-}
-
-/**
- * Get the formatted hotkey binding string for a command from Obsidian's hotkeyManager.
- * Returns the joined display form, or `null` when no binding is set.
- */
-function formatBoundHotkeys(app: App, commandId: string): string | null {
-  const hotkeys = getHotkeysForCommand(app, commandId);
-  return hotkeys ? hotkeys.map(formatHotkey).join(', ') : null;
-}
+import { openHotkeySettingsWithFilter } from '@/utils/obsidianPrivateApi';
 
 /**
  * Render the Hotkeys section with live bindings

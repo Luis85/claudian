@@ -120,21 +120,15 @@ export class CodexNotificationRouter {
 
   beginTurn(params: { isPlanTurn: boolean }): void {
     this.isPlanTurn = params.isPlanTurn;
-    this.sawPlanDelta = false;
-    this.startedUserMessageIds.clear();
-    this.startedAgentMessageIds.clear();
-    this.agentMessageDeltaIds.clear();
-    this.resetAssistantTextTracking();
-    this.rawStartedCallIds.clear();
-    this.rawToolNamesByCallId.clear();
-    this.rawToolInputsByCallId.clear();
-    this.rawToolOutputsByCallId.clear();
-    this.suppressedRawCallIds.clear();
-    this.fileChangeInputsById.clear();
+    this.resetTurnTracking();
   }
 
   endTurn(): void {
     this.isPlanTurn = false;
+    this.resetTurnTracking();
+  }
+
+  private resetTurnTracking(): void {
     this.sawPlanDelta = false;
     this.startedUserMessageIds.clear();
     this.startedAgentMessageIds.clear();

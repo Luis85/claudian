@@ -1,5 +1,5 @@
 import type { App } from 'obsidian';
-import { Platform, PluginSettingTab, Setting } from 'obsidian';
+import { PluginSettingTab, Setting } from 'obsidian';
 
 import { SETTINGS_FIELD_HIGHLIGHT_MS } from '../../core/constants';
 import {
@@ -13,12 +13,9 @@ import { asSettingsBag, type ChatViewPlacement, type ClaudianSettings } from '..
 import { getAvailableLocales, getLocaleDisplayName, setLocale, t } from '../../i18n/i18n';
 import type { Locale, TranslationKey } from '../../i18n/types';
 import type ClaudianPlugin from '../../main';
-import {
-  getHotkeysForCommand,
-  type ObsidianHotkey,
-  openHotkeySettingsWithFilter,
-} from '../../utils/obsidianPrivateApi';
+import { openHotkeySettingsWithFilter } from '../../utils/obsidianPrivateApi';
 // setEnabled is provided by the registered ProviderSettingsReconciler.
+import { formatBoundHotkeys } from './hotkeyFormat';
 import {
   getSettingsRegistry,
   renderTab,
@@ -27,6 +24,7 @@ import {
 } from './registry';
 import { SearchBar } from './search/SearchBar';
 import { SearchResultsView } from './search/SearchResultsView';
+import { clearSearchAndShowTabs } from './search/searchTabToggle';
 import { searchFields } from './search/searchUtils';
 import {
   buildTabBar,
@@ -50,23 +48,6 @@ import {
 } from './ui/GeneralTabSections';
 import { renderLoggingSettingsSection } from './ui/LoggingSettingsSection';
 import { renderQuickActionsSettingsTab } from './ui/QuickActionsSettingsTab';
-
-function formatHotkey(hotkey: ObsidianHotkey): string {
-  const isMac = Platform.isMacOS;
-  const modMap: Record<string, string> = isMac
-    ? { Mod: '⌘', Ctrl: '⌃', Alt: '⌥', Shift: '⇧', Meta: '⌘' }
-    : { Mod: 'Ctrl', Ctrl: 'Ctrl', Alt: 'Alt', Shift: 'Shift', Meta: 'Win' };
-
-  const mods = hotkey.modifiers.map((modifier) => modMap[modifier] || modifier);
-  const key = hotkey.key.length === 1 ? hotkey.key.toUpperCase() : hotkey.key;
-
-  return isMac ? [...mods, key].join('') : [...mods, key].join('+');
-}
-
-function formatBoundHotkeys(app: App, commandId: string): string | null {
-  const hotkeys = getHotkeysForCommand(app, commandId);
-  return hotkeys ? hotkeys.map(formatHotkey).join(', ') : null;
-}
 
 function addHotkeySettingRow(
   containerEl: HTMLElement,
@@ -568,17 +549,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
     tabBar: HTMLElement,
     resultsHost: HTMLElement,
   ): void {
-    // Clear search
-    const searchInput = containerEl.querySelector(
-      '.claudian-settings-search-bar input[type="search"]',
-    ) as HTMLInputElement;
-    if (searchInput) {
-      searchInput.value = '';
-    }
-
-    // Hide results, show tabs
-    tabBar.toggleClass('claudian-hidden', false);
-    resultsHost.toggleClass('claudian-hidden', true);
+    clearSearchAndShowTabs(containerEl, tabBar, resultsHost);
 
     // Switch to target tab
     this.activeTab = tabId as SettingsTabId;
@@ -627,14 +598,6 @@ export class ClaudianSettingTab extends PluginSettingTab {
     tabBar: HTMLElement,
     resultsHost: HTMLElement,
   ): void {
-    const searchInput = containerEl.querySelector(
-      '.claudian-settings-search-bar input[type="search"]',
-    ) as HTMLInputElement;
-    if (searchInput) {
-      searchInput.value = '';
-    }
-
-    tabBar.toggleClass('claudian-hidden', false);
-    resultsHost.toggleClass('claudian-hidden', true);
+    clearSearchAndShowTabs(containerEl, tabBar, resultsHost);
   }
 }

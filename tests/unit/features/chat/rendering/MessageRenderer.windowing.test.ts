@@ -1,7 +1,8 @@
 import { createMockEl } from '@test/helpers/mockElement';
 
 import type { ChatMessage } from '@/core/types';
-import { MessageRenderer, windowStartIndex } from '@/features/chat/rendering/MessageRenderer';
+import { MessageRenderer } from '@/features/chat/rendering/MessageRenderer';
+import { windowStartIndex } from '@/features/chat/rendering/windowedRenderSetup';
 
 jest.mock('@/utils/imageEmbed', () => ({
   replaceImageEmbedsWithHtml: jest.fn().mockImplementation((md: string) => md),

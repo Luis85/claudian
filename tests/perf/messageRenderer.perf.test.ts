@@ -13,7 +13,8 @@
 import { createMockEl } from '@test/helpers/mockElement';
 
 import type { ChatMessage } from '@/core/types';
-import { MessageRenderer, RENDER_WINDOW_SIZE } from '@/features/chat/rendering/MessageRenderer';
+import { MessageRenderer } from '@/features/chat/rendering/MessageRenderer';
+import { RENDER_WINDOW_SIZE } from '@/features/chat/rendering/windowedRenderSetup';
 
 import { reportMetrics, timeMs } from './perfReport';
 

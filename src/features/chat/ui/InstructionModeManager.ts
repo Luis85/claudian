@@ -1,12 +1,9 @@
+import { TriggerInputMode } from './triggerInputMode';
+
 export interface InstructionModeCallbacks {
   onSubmit: (rawInstruction: string) => Promise<void>;
   getInputWrapper: () => HTMLElement | null;
   resetInputHeight?: () => void;
-}
-
-export interface InstructionModeState {
-  active: boolean;
-  rawInstruction: string;
 }
 
 const INSTRUCTION_MODE_PLACEHOLDER = '# Save in custom system prompt';
@@ -14,9 +11,8 @@ const INSTRUCTION_MODE_PLACEHOLDER = '# Save in custom system prompt';
 export class InstructionModeManager {
   private inputEl: HTMLTextAreaElement;
   private callbacks: InstructionModeCallbacks;
-  private state: InstructionModeState = { active: false, rawInstruction: '' };
+  private mode: TriggerInputMode;
   private isSubmitting = false;
-  private originalPlaceholder: string = '';
 
   constructor(
     inputEl: HTMLTextAreaElement,
@@ -24,7 +20,11 @@ export class InstructionModeManager {
   ) {
     this.inputEl = inputEl;
     this.callbacks = callbacks;
-    this.originalPlaceholder = inputEl.placeholder;
+    this.mode = new TriggerInputMode(inputEl, callbacks.getInputWrapper, {
+      triggerKey: '#',
+      wrapperClass: 'claudian-input-instruction-mode',
+      activePlaceholder: INSTRUCTION_MODE_PLACEHOLDER,
+    });
   }
 
   /**
@@ -33,8 +33,8 @@ export class InstructionModeManager {
    */
   handleTriggerKey(e: KeyboardEvent): boolean {
     // Only trigger on # keystroke when input is empty and not already in mode
-    if (!this.state.active && this.inputEl.value === '' && e.key === '#') {
-      if (this.enterMode()) {
+    if (this.mode.shouldTrigger(e)) {
+      if (this.mode.enter()) {
         e.preventDefault();
         return true;
       }
@@ -44,50 +44,26 @@ export class InstructionModeManager {
 
   /** Handles input changes to track instruction text. */
   handleInputChange(): void {
-    if (!this.state.active) return;
+    if (!this.mode.isActive()) return;
 
     const text = this.inputEl.value;
     if (text === '') {
-      this.exitMode();
+      // Clearing the field exits instruction mode (unlike bang-bash, which stays
+      // active so the user can re-type a command).
+      this.mode.exit();
     } else {
-      this.state.rawInstruction = text;
+      this.mode.setRaw(text);
     }
-  }
-
-  /**
-   * Enters instruction mode.
-   * Only enters if the indicator can be successfully shown.
-   * Returns true if mode was entered, false otherwise.
-   */
-  private enterMode(): boolean {
-    // Indicator is single source of truth - only enter mode if we can show it
-    const wrapper = this.callbacks.getInputWrapper();
-    if (!wrapper) return false;
-
-    wrapper.addClass('claudian-input-instruction-mode');
-    this.state = { active: true, rawInstruction: '' };
-    this.inputEl.placeholder = INSTRUCTION_MODE_PLACEHOLDER;
-    return true;
-  }
-
-  /** Exits instruction mode, restoring original state. */
-  private exitMode(): void {
-    const wrapper = this.callbacks.getInputWrapper();
-    if (wrapper) {
-      wrapper.removeClass('claudian-input-instruction-mode');
-    }
-    this.state = { active: false, rawInstruction: '' };
-    this.inputEl.placeholder = this.originalPlaceholder;
   }
 
   /** Handles keydown events. Returns true if handled. */
   handleKeydown(e: KeyboardEvent): boolean {
-    if (!this.state.active) return false;
+    if (!this.mode.isActive()) return false;
 
     // Check !e.isComposing for IME support (Chinese, Japanese, Korean, etc.)
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
       // Don't handle if instruction is empty
-      if (!this.state.rawInstruction.trim()) {
+      if (!this.mode.getRaw().trim()) {
         return false;
       }
 
@@ -108,19 +84,19 @@ export class InstructionModeManager {
 
   /** Checks if instruction mode is active. */
   isActive(): boolean {
-    return this.state.active;
+    return this.mode.isActive();
   }
 
   /** Gets the current raw instruction text. */
   getRawInstruction(): string {
-    return this.state.rawInstruction;
+    return this.mode.getRaw();
   }
 
   /** Submits the instruction for refinement. */
   private async submit(): Promise<void> {
     if (this.isSubmitting) return;
 
-    const rawInstruction = this.state.rawInstruction.trim();
+    const rawInstruction = this.mode.getRaw().trim();
     if (!rawInstruction) return;
 
     this.isSubmitting = true;
@@ -135,24 +111,19 @@ export class InstructionModeManager {
   /** Cancels instruction mode and clears input. */
   private cancel(): void {
     this.inputEl.value = '';
-    this.exitMode();
+    this.mode.exit();
     this.callbacks.resetInputHeight?.();
   }
 
   /** Clears the input and resets state (called after successful submission). */
   clear(): void {
     this.inputEl.value = '';
-    this.exitMode();
+    this.mode.exit();
     this.callbacks.resetInputHeight?.();
   }
 
   /** Cleans up event listeners. */
   destroy(): void {
-    // Remove indicator class and restore placeholder on destroy
-    const wrapper = this.callbacks.getInputWrapper();
-    if (wrapper) {
-      wrapper.removeClass('claudian-input-instruction-mode');
-    }
-    this.inputEl.placeholder = this.originalPlaceholder;
+    this.mode.exit();
   }
 }

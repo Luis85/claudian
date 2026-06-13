@@ -83,6 +83,45 @@ function resolveForkSource(tab: TabData, plugin: ClaudianPlugin): ForkSource | n
   };
 }
 
+/**
+ * Builds the fork request payload from a resolved source plus the per-call
+ * checkpoint fields (the only parts that differ between single-message and
+ * fork-all). Keeps the shared `source.*` mapping in one place.
+ */
+function buildForkContext(
+  source: ForkSource,
+  checkpoint: { messages: ChatMessage[]; resumeAt: string; forkAtUserMessage: number },
+): ForkContext {
+  return {
+    messages: checkpoint.messages,
+    providerId: source.providerId,
+    sourceSessionId: source.sourceSessionId,
+    sourceProviderState: source.sourceProviderState,
+    resumeAt: checkpoint.resumeAt,
+    sourceTitle: source.sourceTitle,
+    forkAtUserMessage: checkpoint.forkAtUserMessage,
+    currentNote: source.currentNote,
+  };
+}
+
+/**
+ * Shared fork guard: fork must be supported and the tab must not be streaming.
+ * Surfaces the matching notice and returns false when forking can't proceed.
+ */
+function canFork(tab: TabData, plugin: ClaudianPlugin): boolean {
+  if (!getTabCapabilities(tab, plugin).supportsFork) {
+    new Notice(t('chat.fork.unsupportedProvider'));
+    return false;
+  }
+
+  if (tab.state.isStreaming) {
+    new Notice(t('chat.fork.unavailableStreaming'));
+    return false;
+  }
+
+  return true;
+}
+
 async function handleForkRequest(
   tab: TabData,
   plugin: ClaudianPlugin,
@@ -91,15 +130,7 @@ async function handleForkRequest(
 ): Promise<void> {
   const { state } = tab;
 
-  if (!getTabCapabilities(tab, plugin).supportsFork) {
-    new Notice(t('chat.fork.unsupportedProvider'));
-    return;
-  }
-
-  if (state.isStreaming) {
-    new Notice(t('chat.fork.unavailableStreaming'));
-    return;
-  }
+  if (!canFork(tab, plugin)) return;
 
   const msgs = state.messages;
   const userIdx = msgs.findIndex(m => m.id === userMessageId);
@@ -122,16 +153,11 @@ async function handleForkRequest(
   const source = resolveForkSource(tab, plugin);
   if (!source) return;
 
-  await forkRequestCallback({
+  await forkRequestCallback(buildForkContext(source, {
     messages: deepCloneMessages(msgs.slice(0, userIdx)),
-    providerId: source.providerId,
-    sourceSessionId: source.sourceSessionId,
-    sourceProviderState: source.sourceProviderState,
     resumeAt: rewindCtx.prevAssistantUuid,
-    sourceTitle: source.sourceTitle,
     forkAtUserMessage: countUserMessagesForForkTitle(msgs.slice(0, userIdx + 1)),
-    currentNote: source.currentNote,
-  });
+  }));
 }
 
 async function handleForkAll(
@@ -141,15 +167,7 @@ async function handleForkAll(
 ): Promise<void> {
   const { state } = tab;
 
-  if (!getTabCapabilities(tab, plugin).supportsFork) {
-    new Notice(t('chat.fork.unsupportedProvider'));
-    return;
-  }
-
-  if (state.isStreaming) {
-    new Notice(t('chat.fork.unavailableStreaming'));
-    return;
-  }
+  if (!canFork(tab, plugin)) return;
 
   const msgs = state.messages;
   if (msgs.length === 0) {
@@ -173,16 +191,11 @@ async function handleForkAll(
   const source = resolveForkSource(tab, plugin);
   if (!source) return;
 
-  await forkRequestCallback({
+  await forkRequestCallback(buildForkContext(source, {
     messages: deepCloneMessages(msgs),
-    providerId: source.providerId,
-    sourceSessionId: source.sourceSessionId,
-    sourceProviderState: source.sourceProviderState,
     resumeAt: lastAssistantUuid,
-    sourceTitle: source.sourceTitle,
     forkAtUserMessage: countUserMessagesForForkTitle(msgs) + 1,
-    currentNote: source.currentNote,
-  });
+  }));
 }
 
 export function initializeTabControllers(

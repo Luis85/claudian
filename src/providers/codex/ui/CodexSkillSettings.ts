@@ -1,9 +1,9 @@
-import { type App, Modal, Notice, setIcon, Setting } from 'obsidian';
+import { type App, Modal, Notice, Setting } from 'obsidian';
 
 import type { ProviderCommandCatalog } from '../../../core/providers/commands/ProviderCommandCatalog';
 import type { ProviderCommandEntry } from '../../../core/providers/commands/ProviderCommandEntry';
 import { t } from '../../../i18n/i18n';
-import { renderModalButtonRow, renderSettingsListItem, type SettingsActionButtonOptions } from '../../../shared/components/settingsListUI';
+import { renderSettingsListItem, type SettingsActionButtonOptions } from '../../../shared/components/settingsListUI';
 import { validateCommandName } from '../../../utils/slashCommand';
 import {
   CODEX_SKILL_ROOT_OPTIONS,
@@ -11,6 +11,8 @@ import {
   createCodexSkillPersistenceKey,
   parseCodexSkillPersistenceKey,
 } from '../storage/CodexSkillStorage';
+import { renderCodexModalFooter } from './codexSettingsModal';
+import { CodexVaultListSettings } from './codexVaultListSettings';
 
 export class CodexSkillModal extends Modal {
   private existing: ProviderCommandEntry | null;
@@ -132,13 +134,9 @@ export class CodexSkillModal extends Modal {
     };
     this._triggerSave = doSave;
 
-    renderModalButtonRow(contentEl, {
-      cls: 'claudian-sp-modal-buttons',
-      saveText: 'Save',
+    renderCodexModalFooter(contentEl, {
       onCancel: () => this.close(),
-      onSave: () => {
-        void doSave();
-      },
+      onSave: doSave,
     });
   }
 
@@ -147,14 +145,12 @@ export class CodexSkillModal extends Modal {
   }
 }
 
-export class CodexSkillSettings {
-  private containerEl: HTMLElement;
+export class CodexSkillSettings extends CodexVaultListSettings<ProviderCommandEntry> {
   private catalog: ProviderCommandCatalog;
-  private entries: ProviderCommandEntry[] = [];
   private app?: App;
 
   constructor(containerEl: HTMLElement, catalog: ProviderCommandCatalog, app?: App) {
-    this.containerEl = containerEl;
+    super(containerEl);
     this.catalog = catalog;
     this.app = app;
     void this.render();
@@ -170,46 +166,23 @@ export class CodexSkillSettings {
     await this.render();
   }
 
-  async render(): Promise<void> {
-    this.containerEl.empty();
-
-    try {
-      this.entries = await this.catalog.listVaultEntries();
-    } catch {
-      this.entries = [];
-    }
-
-    const headerEl = this.containerEl.createDiv({ cls: 'claudian-sp-header' });
-    headerEl.createSpan({ text: 'Codex Skills', cls: 'claudian-sp-label' });
-
-    const actionsEl = headerEl.createDiv({ cls: 'claudian-sp-header-actions' });
-    const refreshBtn = actionsEl.createEl('button', {
-      cls: 'claudian-settings-action-btn',
-      attr: { 'aria-label': 'Refresh' },
-    });
-    setIcon(refreshBtn, 'refresh-cw');
-    refreshBtn.addEventListener('click', () => { void this.refresh(); });
-
-    const addBtn = actionsEl.createEl('button', {
-      cls: 'claudian-settings-action-btn',
-      attr: { 'aria-label': 'Add' },
-    });
-    setIcon(addBtn, 'plus');
-    addBtn.addEventListener('click', () => this.openModal(null));
-
-    if (this.entries.length === 0) {
-      const emptyEl = this.containerEl.createDiv({ cls: 'claudian-sp-empty-state' });
-      emptyEl.setText('No Codex skills in vault. Click + to create one.');
-      return;
-    }
-
-    const listEl = this.containerEl.createDiv({ cls: 'claudian-sp-list' });
-    for (const entry of this.entries) {
-      this.renderItem(listEl, entry);
-    }
+  protected getLabel(): string {
+    return 'Codex Skills';
   }
 
-  private renderItem(listEl: HTMLElement, entry: ProviderCommandEntry): void {
+  protected getEmptyText(): string {
+    return 'No Codex skills in vault. Click + to create one.';
+  }
+
+  protected loadItems(): Promise<ProviderCommandEntry[]> {
+    return this.catalog.listVaultEntries();
+  }
+
+  protected onRefresh(): void {
+    void this.refresh();
+  }
+
+  protected renderItem(listEl: HTMLElement, entry: ProviderCommandEntry): void {
     const actions: SettingsActionButtonOptions[] = [];
 
     if (entry.isEditable) {
@@ -243,7 +216,7 @@ export class CodexSkillSettings {
     headerRow.createSpan({ text: 'skill', cls: 'claudian-slash-item-badge' });
   }
 
-  private openModal(existing: ProviderCommandEntry | null): void {
+  protected openModal(existing: ProviderCommandEntry | null): void {
     if (!this.app) return;
 
     const modal = new CodexSkillModal(

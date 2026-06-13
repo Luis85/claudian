@@ -8,6 +8,16 @@ function getHomeDir(): string {
   return process.env.HOME || process.env.USERPROFILE || '';
 }
 
+// Home-relative bin dirs common to both Windows and Unix lookups.
+function getCommonHomeBinPaths(home: string): string[] {
+  if (!home) return [];
+  return [
+    path.join(home, '.local', 'bin'),
+    path.join(home, '.bun', 'bin'),
+    path.join(home, '.opencode', 'bin'),
+  ];
+}
+
 // Linux excluded: Obsidian registers the CLI through stable symlinks (/usr/local/bin,
 // ~/.local/bin), while process.execPath may point to a transient AppImage mount.
 function getAppProvidedCliPaths(): string[] {
@@ -46,6 +56,36 @@ function getWindowsNodePaths(programFiles: string, programFilesX86: string): str
   return paths;
 }
 
+// volta: active toolchain lives under $VOLTA_HOME/bin, falling back to the
+// platform default install dir (~/.volta/bin) when the env var is unset.
+function getVoltaPaths(fallbackBin?: string): string[] {
+  const voltaHome = process.env.VOLTA_HOME;
+  if (voltaHome) {
+    return [path.join(voltaHome, 'bin')];
+  }
+  return fallbackBin ? [fallbackBin] : [];
+}
+
+// fnm (Fast Node Manager): $FNM_MULTISHELL_PATH is the active Node.js bin,
+// while $FNM_DIR (or the platform fallback) is the install root.
+function getFnmPaths(dirFallback?: string): string[] {
+  const paths: string[] = [];
+
+  const fnmMultishell = process.env.FNM_MULTISHELL_PATH;
+  if (fnmMultishell) {
+    paths.push(fnmMultishell);
+  }
+
+  const fnmDir = process.env.FNM_DIR;
+  if (fnmDir) {
+    paths.push(fnmDir);
+  } else if (dirFallback) {
+    paths.push(dirFallback);
+  }
+
+  return paths;
+}
+
 function getWindowsNodeManagerPaths(home: string): string[] {
   const paths: string[] = [];
   const localAppData = process.env.LOCALAPPDATA;
@@ -65,27 +105,8 @@ function getWindowsNodeManagerPaths(home: string): string[] {
     paths.push(path.join(appData, 'nvm'));
   }
 
-  // volta: installs to %VOLTA_HOME%\bin or %USERPROFILE%\.volta\bin
-  const voltaHome = process.env.VOLTA_HOME;
-  if (voltaHome) {
-    paths.push(path.join(voltaHome, 'bin'));
-  } else if (home) {
-    paths.push(path.join(home, '.volta', 'bin'));
-  }
-
-  // fnm (Fast Node Manager): %FNM_MULTISHELL_PATH% is the active Node.js bin
-  const fnmMultishell = process.env.FNM_MULTISHELL_PATH;
-  if (fnmMultishell) {
-    paths.push(fnmMultishell);
-  }
-
-  // fnm (Fast Node Manager): %FNM_DIR% or %LOCALAPPDATA%\fnm
-  const fnmDir = process.env.FNM_DIR;
-  if (fnmDir) {
-    paths.push(fnmDir);
-  } else if (localAppData) {
-    paths.push(path.join(localAppData, 'fnm'));
-  }
+  paths.push(...getVoltaPaths(home ? path.join(home, '.volta', 'bin') : undefined));
+  paths.push(...getFnmPaths(localAppData ? path.join(localAppData, 'fnm') : undefined));
 
   return paths;
 }
@@ -131,11 +152,7 @@ function getWindowsBinaryPaths(home: string): string[] {
   paths.push(path.join(programFiles, 'Docker', 'Docker', 'resources', 'bin'));
 
   // User bin (if exists)
-  if (home) {
-    paths.push(path.join(home, '.local', 'bin'));
-    paths.push(path.join(home, '.bun', 'bin'));
-    paths.push(path.join(home, '.opencode', 'bin'));
-  }
+  paths.push(...getCommonHomeBinPaths(home));
 
   return paths;
 }
@@ -148,10 +165,7 @@ function getUnixBinaryPaths(home: string): string[] {
     '/bin',
   ];
 
-  const voltaHome = process.env.VOLTA_HOME;
-  if (voltaHome) {
-    paths.push(path.join(voltaHome, 'bin'));
-  }
+  paths.push(...getVoltaPaths());
 
   const asdfRoot = process.env.ASDF_DATA_DIR || process.env.ASDF_DIR;
   if (asdfRoot) {
@@ -159,20 +173,10 @@ function getUnixBinaryPaths(home: string): string[] {
     paths.push(path.join(asdfRoot, 'bin'));
   }
 
-  const fnmMultishell = process.env.FNM_MULTISHELL_PATH;
-  if (fnmMultishell) {
-    paths.push(fnmMultishell);
-  }
-
-  const fnmDir = process.env.FNM_DIR;
-  if (fnmDir) {
-    paths.push(fnmDir);
-  }
+  paths.push(...getFnmPaths());
 
   if (home) {
-    paths.push(path.join(home, '.local', 'bin'));
-    paths.push(path.join(home, '.bun', 'bin'));
-    paths.push(path.join(home, '.opencode', 'bin'));
+    paths.push(...getCommonHomeBinPaths(home));
     paths.push(path.join(home, '.docker', 'bin'));
     paths.push(path.join(home, '.volta', 'bin'));
     paths.push(path.join(home, '.asdf', 'shims'));

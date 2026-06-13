@@ -8,6 +8,11 @@
 import { setIcon } from 'obsidian';
 
 import type { ConversationMeta } from '../../core/types';
+import {
+  applySelectionClass,
+  clampSelectionIndex,
+  handleDropdownNavigationKey,
+} from './dropdownNavigation';
 
 export interface ResumeSessionDropdownCallbacks {
   onSelect: (conversationId: string) => void;
@@ -49,29 +54,12 @@ export class ResumeSessionDropdown {
   handleKeydown(e: KeyboardEvent): boolean {
     if (!this.isVisible()) return false;
 
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        this.navigate(1);
-        return true;
-      case 'ArrowUp':
-        e.preventDefault();
-        this.navigate(-1);
-        return true;
-      case 'Enter':
-      case 'Tab':
-        if (this.conversations.length > 0) {
-          e.preventDefault();
-          this.selectItem();
-          return true;
-        }
-        return false;
-      case 'Escape':
-        e.preventDefault();
-        this.dismiss();
-        return true;
-    }
-    return false;
+    return handleDropdownNavigationKey(e, {
+      itemCount: this.conversations.length,
+      navigate: (direction) => this.navigate(direction),
+      select: () => this.selectItem(),
+      dismiss: () => this.dismiss(),
+    });
   }
 
   isVisible(): boolean {
@@ -103,21 +91,19 @@ export class ResumeSessionDropdown {
   }
 
   private navigate(direction: number): void {
-    const maxIndex = this.conversations.length - 1;
-    this.selectedIndex = Math.max(0, Math.min(maxIndex, this.selectedIndex + direction));
+    this.selectedIndex = clampSelectionIndex(
+      this.selectedIndex,
+      direction,
+      this.conversations.length - 1,
+    );
     this.updateSelection();
   }
 
   private updateSelection(): void {
-    const items = this.dropdownEl.querySelectorAll('.claudian-resume-item');
-    items?.forEach((item, index) => {
-      if (index === this.selectedIndex) {
-        item.addClass('selected');
-        (item as HTMLElement).scrollIntoView({ block: 'nearest' });
-      } else {
-        item.removeClass('selected');
-      }
-    });
+    applySelectionClass(
+      this.dropdownEl.querySelectorAll('.claudian-resume-item'),
+      this.selectedIndex,
+    );
   }
 
   private sortConversations(conversations: ConversationMeta[]): ConversationMeta[] {

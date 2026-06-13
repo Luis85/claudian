@@ -6,6 +6,7 @@ import {
   InlineChoiceList,
 } from './inlineChoiceCard';
 import type { RenderContentFn } from './MessageRenderer';
+import { renderPlanContentPreview } from './planContentPreview';
 
 export type PlanApprovalDecision =
   | { type: 'implement' }
@@ -47,19 +48,12 @@ export class InlinePlanApproval {
       this.options.artifact,
       this.options.planPathPrefix,
     );
-    if (content) {
-      const previewEl = this.rootEl.createDiv({ cls: 'claudian-plan-content-preview' });
-      if (this.options.renderContent) {
-        void this.options.renderContent(previewEl, content);
-      } else {
-        previewEl.createDiv({ cls: 'claudian-plan-content-text', text: content });
-      }
-    } else if (error) {
-      this.rootEl.createDiv({
-        cls: 'claudian-plan-content-preview claudian-plan-read-error',
-        text: `Could not read plan file: ${error}`,
-      });
-    }
+    renderPlanContentPreview({
+      rootEl: this.rootEl,
+      content,
+      errorMessage: error ? `Could not read plan file: ${error}` : null,
+      renderContent: this.options.renderContent,
+    });
 
     this.choices = new InlineChoiceList(
       this.rootEl,
