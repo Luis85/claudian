@@ -2,8 +2,8 @@
 type: tech-debt
 title: "Shared transport helpers from ADR-0001 are still unextracted"
 date: 2026-06-07
-updated: 2026-06-07
-status: open
+updated: 2026-06-13
+status: in-progress
 priority: "2 - normal"
 severity: medium
 scope: provider-transport
@@ -48,7 +48,18 @@ Transport failures are high-risk because they appear as hung turns, stuck approv
 
 ## Acceptance criteria
 
-- [ ] `src/core/transport/` contains a reusable process helper used by Codex and Opencode.
-- [ ] Provider-native differences remain inside provider adapters.
-- [ ] Transport tests cover shutdown, pending request rejection, and stderr diagnostics.
-- [ ] No provider loses current cancellation or approval-dismiss behavior.
+- [x] `src/core/transport/` contains a reusable process helper used by Codex and Opencode. — `AgentSubprocess` (2026-06-13), wrapped by `CodexAppServerProcess` and `AcpSubprocess`.
+- [x] Provider-native differences remain inside provider adapters. — Codex keeps `resolveWindowsSpawnSpec` (`.cmd`-shim) + its `onExit(code,signal)` contract; Opencode keeps `onClose(error?)`; the helper exposes a normalized `onClose({ reason, code, signal, error })` both map from.
+- [~] Transport tests cover shutdown, pending request rejection, and stderr diagnostics. — shutdown (SIGTERM→SIGKILL escalation + give-up ceiling), stderr bounding/snapshot, and close-notification covered in `AgentSubprocess.test.ts`. Pending-request rejection belongs to the JSON-RPC client (step 2, deferred).
+- [x] No provider loses current cancellation or approval-dismiss behavior. — the existing `AcpSubprocess`/`CodexAppServerProcess` + transport/runtime consumer suites pass unchanged.
+
+## Progress (2026-06-13, quality campaign run 15)
+
+Remediation **step 1 shipped**: extracted `src/core/transport/AgentSubprocess.ts` — spawn, an
+8 KB stderr ring buffer, liveness, a single normalized close notification, and the hardened
+SIGTERM→SIGKILL→give-up `shutdown()` (the CON-2 fix, now in one tested place). `CodexAppServerProcess`
+and `AcpSubprocess` are thin adapters over it; Codex additionally gained free stderr diagnostics
+(it previously buffered none). Incidentally removed the cross-zone `shutdown()` clone
+(`cloneGroups` 33 → 32, `duplicatedLines` 819 → 803). **Deferred (step 2):** the optional
+capability-aware JSON-RPC client (`CodexRpcTransport` / `AcpJsonRpcTransport` share request-map /
+line-framing / shutdown concepts) and its pending-request-rejection tests — a larger, separate slice.

@@ -242,9 +242,10 @@ Tracked here so the direction is explicit.
    `jest/no-commented-out-tests` (run 13). No `warn`-tier rules remain
    (`eslint --print-config` confirms); the lint gate is now all-error.
 2. **Tighten the quality-ratchet floors.** The ratchet freezes today's debt and
-   is driven down each PR. After runs 8–12, `cloneGroups` (33) and
-   `duplicatedLines` (819) have shed the clean same-file/same-zone families and
-   the boundary-legal cross-zone settings/spawn ones; what remains is mostly
+   is driven down each PR. After runs 8–15, `cloneGroups` (32) and
+   `duplicatedLines` (803) have shed the clean same-file/same-zone families, the
+   boundary-legal cross-zone settings/spawn ones, and the subprocess-lifecycle
+   clone (extracted to `core/transport/` in run 15); what remains is mostly
    entangled provider↔provider runtime clones (tool normalization, `ChatRuntime`)
    whose only shared home is `core/` — diminishing, judgment-call payoff.
    `complexFunctions` (236) is burned down hotspot by hotspot
@@ -369,3 +370,14 @@ imported `createMock*` inside `jest.mock` factories; the per-file mock blocks re
 tests are excluded from the clone gate). `complexFunctions` 237 → 236 (incidental), all other
 counters held. Test files are not LOC- or clone-gated, so this is a maintainability/navigability
 win rather than a ratcheted-metric move.
+Done 2026-06-13 (quality campaign run 15): shared-transport process helper (ADR-0001 Move 2,
+step 1; the CON-1/2/3 prerequisites had already shipped). Extracted `core/transport/AgentSubprocess`
+— spawn, 8 KB stderr ring buffer, liveness, a normalized `onClose`, and the hardened
+SIGTERM→SIGKILL→give-up `shutdown()` (one tested copy of the CON-2 teardown). `CodexAppServerProcess`
+(codex) and `AcpSubprocess` (opencode) are now thin adapters that keep their own public contracts
+(`onExit(code,signal)` / `onClose(error?)`) and provider-native launch details (Codex's Windows
+`.cmd`-shim resolution); Codex gained free stderr diagnostics. Boundary-clean (`core/` → node +
+`utils`; providers → `core/`), behavior-preserving (existing adapter + consumer suites pass), with
+a new `AgentSubprocess` spec. Incidentally dropped the cross-zone `shutdown()` clone: `cloneGroups`
+33 → 32, `duplicatedLines` 819 → 803; complexFunctions/structural counters held. The optional
+JSON-RPC client (step 2) is deferred.
