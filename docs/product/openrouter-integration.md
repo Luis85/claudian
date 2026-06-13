@@ -73,6 +73,7 @@ Users currently manage multiple LLM provider API keys and have limited visibilit
   - Model selection mode: "Manual" or "Auto"
   - For manual mode: dropdown/search of available models with pricing display
   - For auto mode: informational text explaining OpenRouter's routing logic
+- Auto mode model representation: Register `openrouter/auto` as a selectable model option so Agent Board can persist Auto mode as a work-order frontmatter value (required for launch validation and card-to-card portability)
 
 ### Chat Sidebar Integration
 - Provider selector includes "OpenRouter" when enabled
@@ -81,8 +82,11 @@ Users currently manage multiple LLM provider API keys and have limited visibilit
 
 ### Agent Board Integration
 - OpenRouter available as a provider option in Agent Board settings
-- Work-order runs respect the OpenRouter model selection
+- Work-order runs respect the OpenRouter model selection (both manual and `openrouter/auto`)
 - Model metadata (pricing, capabilities) propagates to work-order context
+- **Tool execution requirement**: Agent Board work orders must support tool invocation (file edits, checklist updates, CLI runs) so agents can complete actual work. OpenRouter as a model-only provider requires either:
+  - Integration with a local agent runtime that executes tools (e.g., Claude Agent SDK), or
+  - Explicit documentation that OpenRouter work orders are limited to read-only model inference without tool execution
 
 ### Auto Router Session Pinning
 - For Auto mode, derive a stable `session_id` from the Claudian conversation ID or Agent Board run ID
