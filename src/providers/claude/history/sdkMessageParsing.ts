@@ -17,6 +17,37 @@ import type {
   SDKNativeMessage,
 } from './sdkHistoryTypes';
 
+/**
+ * Invokes `fn` for each `tool_result` block carrying a `tool_use_id`, skipping
+ * string/empty content. Centralizes the content guard + block filter that every
+ * tool-result collector shares; callers differ only in what they store.
+ */
+function forEachToolResultBlock(
+  content: string | SDKNativeContentBlock[] | undefined,
+  fn: (toolUseId: string, block: SDKNativeContentBlock) => void,
+): void {
+  if (!content || typeof content === 'string') {
+    return;
+  }
+
+  for (const block of content) {
+    if (block.type === 'tool_result' && block.tool_use_id) {
+      fn(block.tool_use_id, block);
+    }
+  }
+}
+
+function recordToolResultContent(
+  results: Map<string, { content: string; isError: boolean }>,
+  toolUseId: string,
+  block: SDKNativeContentBlock,
+): void {
+  results.set(toolUseId, {
+    content: extractToolResultContent(block.content),
+    isError: block.is_error ?? false,
+  });
+}
+
 function extractTextContent(content: string | SDKNativeContentBlock[] | undefined): string {
   if (!content) {
     return '';
@@ -46,19 +77,33 @@ function extractDisplayContent(textContent: string): string | undefined {
   return extractContentBeforeXmlContext(textContent);
 }
 
-function extractImages(content: string | SDKNativeContentBlock[] | undefined): ImageAttachment[] | undefined {
+/**
+ * Narrows array content to the blocks matching `predicate`, returning undefined
+ * when content is absent, a bare string, or yields no matches. Centralizes the
+ * guard-filter-empty preamble shared by the block extractors.
+ */
+function filterContentBlocks<T extends SDKNativeContentBlock>(
+  content: string | SDKNativeContentBlock[] | undefined,
+  predicate: (block: SDKNativeContentBlock) => block is T,
+): T[] | undefined {
   if (!content || typeof content === 'string') {
     return undefined;
   }
 
-  const imageBlocks = content.filter(
+  const matches = content.filter(predicate);
+  return matches.length > 0 ? matches : undefined;
+}
+
+function extractImages(content: string | SDKNativeContentBlock[] | undefined): ImageAttachment[] | undefined {
+  const imageBlocks = filterContentBlocks(
+    content,
     (block): block is SDKNativeContentBlock & {
       type: 'image';
       source: { type: 'base64'; media_type: string; data: string };
     } => block.type === 'image' && !!block.source?.data,
   );
 
-  if (imageBlocks.length === 0) {
+  if (!imageBlocks) {
     return undefined;
   }
 
@@ -76,29 +121,20 @@ function extractToolCalls(
   content: string | SDKNativeContentBlock[] | undefined,
   toolResults?: Map<string, { content: string; isError: boolean }>,
 ): ToolCallInfo[] | undefined {
-  if (!content || typeof content === 'string') {
-    return undefined;
-  }
-
-  const toolUses = content.filter(
+  const toolUses = filterContentBlocks(
+    content,
     (block): block is SDKNativeContentBlock & { type: 'tool_use'; id: string; name: string } =>
       block.type === 'tool_use' && !!block.id && !!block.name,
   );
 
-  if (toolUses.length === 0) {
+  if (!toolUses) {
     return undefined;
   }
 
   const results = toolResults ?? new Map<string, { content: string; isError: boolean }>();
   if (!toolResults) {
-    for (const block of content) {
-      if (block.type === 'tool_result' && block.tool_use_id) {
-        results.set(block.tool_use_id, {
-          content: extractToolResultContent(block.content),
-          isError: block.is_error ?? false,
-        });
-      }
-    }
+    forEachToolResultBlock(content, (toolUseId, block) =>
+      recordToolResultContent(results, toolUseId, block));
   }
 
   return toolUses.map(block => {
@@ -257,19 +293,8 @@ export function collectToolResults(
   const results = new Map<string, { content: string; isError: boolean }>();
 
   for (const sdkMsg of sdkMessages) {
-    const content = sdkMsg.message?.content;
-    if (!content || typeof content === 'string') {
-      continue;
-    }
-
-    for (const block of content) {
-      if (block.type === 'tool_result' && block.tool_use_id) {
-        results.set(block.tool_use_id, {
-          content: extractToolResultContent(block.content),
-          isError: block.is_error ?? false,
-        });
-      }
-    }
+    forEachToolResultBlock(sdkMsg.message?.content, (toolUseId, block) =>
+      recordToolResultContent(results, toolUseId, block));
   }
 
   return results;
@@ -283,16 +308,9 @@ export function collectStructuredPatchResults(sdkMessages: SDKNativeMessage[]): 
       continue;
     }
 
-    const content = sdkMsg.message?.content;
-    if (!content || typeof content === 'string') {
-      continue;
-    }
-
-    for (const block of content) {
-      if (block.type === 'tool_result' && block.tool_use_id) {
-        results.set(block.tool_use_id, sdkMsg.toolUseResult);
-      }
-    }
+    forEachToolResultBlock(sdkMsg.message?.content, (toolUseId) => {
+      results.set(toolUseId, sdkMsg.toolUseResult);
+    });
   }
 
   return results;

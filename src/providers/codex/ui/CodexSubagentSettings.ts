@@ -1,13 +1,15 @@
 import type { App } from 'obsidian';
-import { Modal, Notice, setIcon, Setting } from 'obsidian';
+import { Modal, Notice, Setting } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
 import type { ValidationError } from '../../../i18n/types';
-import { renderModalButtonRow, renderSettingsListItem } from '../../../shared/components/settingsListUI';
+import { renderSettingsListItem } from '../../../shared/components/settingsListUI';
 import { confirmDelete } from '../../../shared/modals/ConfirmModal';
 import type { CodexSubagentStorage } from '../storage/CodexSubagentStorage';
 import { DEFAULT_CODEX_PRIMARY_MODEL } from '../types/models';
 import type { CodexSubagentDefinition } from '../types/subagent';
+import { renderCodexModalFooter } from './codexSettingsModal';
+import { CodexVaultListSettings } from './codexVaultListSettings';
 
 const REASONING_EFFORT_OPTIONS = [
   { value: '', label: 'Inherit' },
@@ -261,13 +263,9 @@ class CodexSubagentModal extends Modal {
     };
     this._triggerSave = doSave;
 
-    renderModalButtonRow(contentEl, {
-      cls: 'claudian-sp-modal-buttons',
-      saveText: 'Save',
+    renderCodexModalFooter(contentEl, {
       onCancel: () => this.close(),
-      onSave: () => {
-        void doSave();
-      },
+      onSave: doSave,
     });
   }
 
@@ -276,62 +274,32 @@ class CodexSubagentModal extends Modal {
   }
 }
 
-export class CodexSubagentSettings {
-  private containerEl: HTMLElement;
+export class CodexSubagentSettings extends CodexVaultListSettings<CodexSubagentDefinition> {
   private storage: CodexSubagentStorage;
-  private agents: CodexSubagentDefinition[] = [];
   private app?: App;
   private onChanged?: () => void;
 
   constructor(containerEl: HTMLElement, storage: CodexSubagentStorage, app?: App, onChanged?: () => void) {
-    this.containerEl = containerEl;
+    super(containerEl);
     this.storage = storage;
     this.app = app;
     this.onChanged = onChanged;
     void this.render();
   }
 
-  async render(): Promise<void> {
-    this.containerEl.empty();
-
-    try {
-      this.agents = await this.storage.loadAll();
-    } catch {
-      this.agents = [];
-    }
-
-    const headerEl = this.containerEl.createDiv({ cls: 'claudian-sp-header' });
-    headerEl.createSpan({ text: 'Codex Subagents', cls: 'claudian-sp-label' });
-
-    const actionsEl = headerEl.createDiv({ cls: 'claudian-sp-header-actions' });
-
-    const refreshBtn = actionsEl.createEl('button', {
-      cls: 'claudian-settings-action-btn',
-      attr: { 'aria-label': 'Refresh' },
-    });
-    setIcon(refreshBtn, 'refresh-cw');
-    refreshBtn.addEventListener('click', () => { void this.render(); });
-
-    const addBtn = actionsEl.createEl('button', {
-      cls: 'claudian-settings-action-btn',
-      attr: { 'aria-label': 'Add' },
-    });
-    setIcon(addBtn, 'plus');
-    addBtn.addEventListener('click', () => this.openModal(null));
-
-    if (this.agents.length === 0) {
-      const emptyEl = this.containerEl.createDiv({ cls: 'claudian-sp-empty-state' });
-      emptyEl.setText('No Codex subagents in vault. Click + to create one.');
-      return;
-    }
-
-    const listEl = this.containerEl.createDiv({ cls: 'claudian-sp-list' });
-    for (const agent of this.agents) {
-      this.renderItem(listEl, agent);
-    }
+  protected getLabel(): string {
+    return 'Codex Subagents';
   }
 
-  private renderItem(listEl: HTMLElement, agent: CodexSubagentDefinition): void {
+  protected getEmptyText(): string {
+    return 'No Codex subagents in vault. Click + to create one.';
+  }
+
+  protected loadItems(): Promise<CodexSubagentDefinition[]> {
+    return this.storage.loadAll();
+  }
+
+  protected renderItem(listEl: HTMLElement, agent: CodexSubagentDefinition): void {
     const { headerRow } = renderSettingsListItem(listEl, {
       name: agent.name,
       description: agent.description,
@@ -368,13 +336,13 @@ export class CodexSubagentSettings {
     }
   }
 
-  private openModal(existing: CodexSubagentDefinition | null): void {
+  protected openModal(existing: CodexSubagentDefinition | null): void {
     if (!this.app) return;
 
     const modal = new CodexSubagentModal(
       this.app,
       existing,
-      this.agents,
+      this.items,
       async (agent) => {
         await this.storage.save(agent, existing);
         await this.render();

@@ -8,6 +8,7 @@ import {
   InlineChoiceList,
 } from './inlineChoiceCard';
 import type { RenderContentFn } from './MessageRenderer';
+import { renderPlanContentPreview } from './planContentPreview';
 
 export class InlineExitPlanMode {
   private containerEl: HTMLElement;
@@ -47,19 +48,14 @@ export class InlineExitPlanMode {
     titleEl.setText('Plan complete');
 
     this.planContent = this.readPlanContent();
-    if (this.planContent) {
-      const contentEl = this.rootEl.createDiv({ cls: 'claudian-plan-content-preview' });
-      if (this.renderContent) {
-        void this.renderContent(contentEl, this.planContent);
-      } else {
-        contentEl.createDiv({ cls: 'claudian-plan-content-text', text: this.planContent });
-      }
-    } else if (this.planReadError) {
-      this.rootEl.createDiv({
-        cls: 'claudian-plan-content-preview claudian-plan-read-error',
-        text: `Could not read plan file: ${this.planReadError}. "Approve (new session)" will not include plan details.`,
-      });
-    }
+    renderPlanContentPreview({
+      rootEl: this.rootEl,
+      content: this.planContent,
+      errorMessage: this.planReadError
+        ? `Could not read plan file: ${this.planReadError}. "Approve (new session)" will not include plan details.`
+        : null,
+      renderContent: this.renderContent,
+    });
 
     const allowedPrompts = this.input.allowedPrompts as Array<{ tool: string; prompt: string }> | undefined;
     if (allowedPrompts && Array.isArray(allowedPrompts) && allowedPrompts.length > 0) {

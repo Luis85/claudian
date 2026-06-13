@@ -3,6 +3,11 @@ import type { ProviderCommandDropdownConfig } from '../../core/providers/command
 import type { ProviderCommandEntry } from '../../core/providers/commands/ProviderCommandEntry';
 import type { SlashCommand } from '../../core/types';
 import { normalizeArgumentHint } from '../../utils/slashCommand';
+import {
+  applySelectionClass,
+  clampSelectionIndex,
+  handleDropdownNavigationKey,
+} from './dropdownNavigation';
 
 interface DropdownItem {
   name: string;
@@ -135,29 +140,12 @@ export class SlashCommandDropdown {
   handleKeydown(e: KeyboardEvent): boolean {
     if (!this.enabled || !this.isVisible()) return false;
 
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        this.navigate(1);
-        return true;
-      case 'ArrowUp':
-        e.preventDefault();
-        this.navigate(-1);
-        return true;
-      case 'Enter':
-      case 'Tab':
-        if (this.filteredItems.length > 0) {
-          e.preventDefault();
-          this.selectItem();
-          return true;
-        }
-        return false;
-      case 'Escape':
-        e.preventDefault();
-        this.hide();
-        return true;
-    }
-    return false;
+    return handleDropdownNavigationKey(e, {
+      itemCount: this.filteredItems.length,
+      navigate: (direction) => this.navigate(direction),
+      select: () => this.selectItem(),
+      dismiss: () => this.hide(),
+    });
   }
 
   isVisible(): boolean {
@@ -381,21 +369,19 @@ export class SlashCommandDropdown {
   }
 
   private navigate(direction: number): void {
-    const maxIndex = this.filteredItems.length - 1;
-    this.selectedIndex = Math.max(0, Math.min(maxIndex, this.selectedIndex + direction));
+    this.selectedIndex = clampSelectionIndex(
+      this.selectedIndex,
+      direction,
+      this.filteredItems.length - 1,
+    );
     this.updateSelection();
   }
 
   private updateSelection(): void {
-    const items = this.dropdownEl?.querySelectorAll('.claudian-slash-item');
-    items?.forEach((item, index) => {
-      if (index === this.selectedIndex) {
-        item.addClass('selected');
-        (item as HTMLElement).scrollIntoView({ block: 'nearest' });
-      } else {
-        item.removeClass('selected');
-      }
-    });
+    applySelectionClass(
+      this.dropdownEl?.querySelectorAll('.claudian-slash-item'),
+      this.selectedIndex,
+    );
   }
 
   private selectItem(): void {

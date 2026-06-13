@@ -31,6 +31,7 @@ import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
 import { TaskNoteStore } from '../storage/TaskNoteStore';
 import { type AgentBoardPauseState, AgentBoardRenderer } from './AgentBoardRenderer';
 import { createWorkOrderInteractive } from './createWorkOrderInteractive';
+import { loadLatestTaskSpec } from './loadLatestTaskSpec';
 import { showWorkOrderContextMenu } from './WorkOrderContextMenu';
 import { buildWorkOrderConversationBindings } from './workOrderConversationBindings';
 import { WorkOrderDetailModal, type WorkOrderFieldUpdate } from './WorkOrderDetailModal';
@@ -471,19 +472,10 @@ export class AgentBoardView extends ItemView {
   }
 
   private async transitionTask(task: TaskSpec, to: TaskStatus, message: string): Promise<void> {
-    const file = this.plugin.app.vault.getAbstractFileByPath(task.path);
-    if (!(file instanceof TFile)) {
-      new Notice(t('tasks.board.fileNotFound'));
-      await this.refresh();
-      return;
-    }
-
-    let latest: TaskSpec;
-    try {
-      const content = await this.plugin.app.vault.read(file);
-      latest = this.noteStore.parse(task.path, content).task;
-    } catch (error) {
-      new Notice(t('tasks.board.updateFailed', { error: error instanceof Error ? error.message : String(error) }));
+    const latest = await loadLatestTaskSpec(
+      this.plugin.app, this.noteStore, task.path, 'tasks.board.updateFailed',
+    );
+    if (!latest) {
       await this.refresh();
       return;
     }
@@ -508,19 +500,10 @@ export class AgentBoardView extends ItemView {
   }
 
   private async runTask(task: TaskSpec): Promise<void> {
-    const file = this.plugin.app.vault.getAbstractFileByPath(task.path);
-    if (!(file instanceof TFile)) {
-      new Notice(t('tasks.board.fileNotFound'));
-      await this.refresh();
-      return;
-    }
-
-    let latest: TaskSpec;
-    try {
-      const content = await this.plugin.app.vault.read(file);
-      latest = this.noteStore.parse(task.path, content).task;
-    } catch (error) {
-      new Notice(t('tasks.board.runParseFailed', { error: error instanceof Error ? error.message : String(error) }));
+    const latest = await loadLatestTaskSpec(
+      this.plugin.app, this.noteStore, task.path, 'tasks.board.runParseFailed',
+    );
+    if (!latest) {
       await this.refresh();
       return;
     }

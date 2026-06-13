@@ -70,6 +70,7 @@ import {
   projectNoticeText,
   projectUsage,
 } from './StreamProjection';
+import { appendToolCallToMessage, createRunningToolCall } from './toolCallAppend';
 import { ToolCallIndex } from './toolCallIndex';
 import { notifyVaultForToolResult } from './vaultFileNotifier';
 
@@ -441,19 +442,8 @@ export class StreamController {
     }
 
     // Create new tool call
-    const toolCall: ToolCallInfo = {
-      id: chunk.id,
-      name: chunk.name,
-      input: chunk.input,
-      status: 'running',
-      isExpanded: false,
-    };
-    msg.toolCalls = msg.toolCalls || [];
-    msg.toolCalls.push(toolCall);
-
-    // Add to contentBlocks for ordering
-    msg.contentBlocks = msg.contentBlocks || [];
-    msg.contentBlocks.push({ type: 'tool_use', toolId: chunk.id });
+    const toolCall = createRunningToolCall(chunk);
+    appendToolCallToMessage(msg, toolCall);
 
     // TodoWrite: update panel state immediately (side effect), but still buffer render
     if (chunk.name === TOOL_TODO_WRITE) {
@@ -581,17 +571,8 @@ export class StreamController {
   ): void {
     const { state } = this.deps;
 
-    const toolCall: ToolCallInfo = {
-      id: chunk.id,
-      name: chunk.name,
-      input: chunk.input,
-      status: 'running',
-      isExpanded: false,
-    };
-    msg.toolCalls = msg.toolCalls || [];
-    msg.toolCalls.push(toolCall);
-    msg.contentBlocks = msg.contentBlocks || [];
-    msg.contentBlocks.push({ type: 'tool_use', toolId: chunk.id });
+    const toolCall = createRunningToolCall(chunk);
+    appendToolCallToMessage(msg, toolCall);
 
     // Render as subagent block immediately
     if (state.currentContentEl) {
@@ -611,13 +592,7 @@ export class StreamController {
     msg: ChatMessage
   ): void {
     // Track in toolCalls for data completeness, but don't create DOM or content block
-    const toolCall: ToolCallInfo = {
-      id: chunk.id,
-      name: chunk.name,
-      input: chunk.input,
-      status: 'running',
-      isExpanded: false,
-    };
+    const toolCall = createRunningToolCall(chunk);
     msg.toolCalls = msg.toolCalls || [];
     msg.toolCalls.push(toolCall);
   }
@@ -1284,13 +1259,7 @@ export class StreamController {
 
     switch (chunk.type) {
       case 'subagent_tool_use': {
-        const toolCall: ToolCallInfo = {
-          id: chunk.id,
-          name: chunk.name,
-          input: chunk.input,
-          status: 'running',
-          isExpanded: false,
-        };
+        const toolCall = createRunningToolCall(chunk);
         subagentManager.addSyncToolCall(parentToolUseId, toolCall);
         this.showThinkingIndicator();
         break;
@@ -1350,13 +1319,7 @@ export class StreamController {
     chunk: { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> },
     _msg: ChatMessage
   ): void {
-    const toolCall: ToolCallInfo = {
-      id: chunk.id,
-      name: chunk.name,
-      input: chunk.input,
-      status: 'running',
-      isExpanded: false,
-    };
+    const toolCall = createRunningToolCall(chunk);
 
     this.deps.subagentManager.handleAgentOutputToolUse(toolCall);
 

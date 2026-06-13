@@ -20,10 +20,12 @@ import { getVaultFileByPath } from '../../../utils/obsidianCompat';
 import { openClaudianProviderSettings } from '../../../utils/obsidianPrivateApi';
 import { extractVaultMentions } from '../../../utils/vaultMentions';
 import { findRewindContext } from '../rewind';
+import { openImageModal } from '../ui/imageModal';
 import {
   type AssistantContentHost,
   renderAssistantMessageContent,
 } from './assistantMessageContent';
+import { renderMessageActionButton, wireCopyButton } from './messageActionButtons';
 import { eligibleMessageActions } from './messageActions';
 import { renderMessageContextCard } from './MessageContextCard';
 import { scrollMessagesToBottom } from './scrollToBottom';
@@ -33,6 +35,7 @@ import {
   renderStoredSubagent,
 } from './SubagentRenderer';
 import { renderStoredToolCall } from './ToolCallRenderer';
+import { RENDER_WINDOW_SIZE, setupWindowedRender } from './windowedRenderSetup';
 import { renderWorkOrderHandoffCard } from './WorkOrderHandoffCard';
 import { renderWorkOrderNeedsApprovalCard } from './WorkOrderNeedsApprovalCard';
 import { renderWorkOrderNeedsInputCard } from './WorkOrderNeedsInputCard';
@@ -52,20 +55,6 @@ const WORK_ORDER_PROMPT_SIGNATURE = 'You are executing a Claudian work order.';
 
 function isWorkOrderExecutionPrompt(text: string): boolean {
   return text.includes(WORK_ORDER_PROMPT_SIGNATURE);
-}
-
-/**
- * Trailing window of stored messages mounted on conversation load / switch / rewind.
- * Long chats otherwise mount unbounded DOM (~56 nodes + ~7 listeners per message),
- * making each re-mount O(N). Windowing bounds it to O(K): the trailing region — where
- * streaming and the bottom anchor live — is always mounted, and earlier messages mount
- * on demand through the "load earlier" control.
- */
-export const RENDER_WINDOW_SIZE = 80;
-
-/** First message index to mount, capping to the trailing window of {@link windowSize}. */
-export function windowStartIndex(total: number, windowSize = RENDER_WINDOW_SIZE): number {
-  return Math.max(0, total - windowSize);
 }
 
 export interface RenderContentOptions {
@@ -344,21 +333,13 @@ export class MessageRenderer {
     // appending stale rows into this freshly-emptied pane.
     this.chunkedRenderGeneration += 1;
 
-    // Recreate welcome element after clearing
-    const newWelcomeEl = this.messagesEl.createDiv({ cls: 'claudian-welcome' });
-    newWelcomeEl.createDiv({ cls: 'claudian-welcome-greeting', text: getGreeting() });
-
     // A hydration failure is surfaced as a banner kept in renderer state, not as
-    // a one-shot DOM insert. `empty()` above wiped any prior copy, so re-render
-    // it from state — otherwise the banner the failure subscriber adds before
-    // this restore-driven render would be silently dropped, leaving a blank pane.
-    this.renderHydrationErrorBanner();
-
-    const start = windowStartIndex(messages.length);
+    // a one-shot DOM insert. `empty()` above wiped any prior copy, so the shared
+    // setup re-renders it from state — otherwise the banner the failure
+    // subscriber adds before this restore-driven render would be silently
+    // dropped, leaving a blank pane.
+    const { welcomeEl: newWelcomeEl, start } = this.setupWindowedRender(messages.length, getGreeting);
     this.renderWindowStart = start;
-    if (start > 0) {
-      this.renderLoadEarlierControl();
-    }
 
     for (let i = start; i < messages.length; i++) {
       this.renderStoredMessage(messages[i], messages, i);
@@ -393,16 +374,8 @@ export class MessageRenderer {
     this.windowedMessages = messages;
     const generation = ++this.chunkedRenderGeneration;
 
-    const newWelcomeEl = this.messagesEl.createDiv({ cls: 'claudian-welcome' });
-    newWelcomeEl.createDiv({ cls: 'claudian-welcome-greeting', text: getGreeting() });
-
-    this.renderHydrationErrorBanner();
-
-    const start = windowStartIndex(messages.length);
+    const { welcomeEl: newWelcomeEl, start } = this.setupWindowedRender(messages.length, getGreeting);
     this.renderWindowStart = start;
-    if (start > 0) {
-      this.renderLoadEarlierControl();
-    }
 
     const finished = (async () => {
       for (let i = start; i < messages.length; i++) {
@@ -418,6 +391,20 @@ export class MessageRenderer {
     })();
 
     return { welcomeEl: newWelcomeEl, finished };
+  }
+
+  /** Binds the shared windowed-render setup to this renderer's callbacks. */
+  private setupWindowedRender(
+    total: number,
+    getGreeting: () => string,
+  ): { welcomeEl: HTMLElement; start: number } {
+    return setupWindowedRender({
+      messagesEl: this.messagesEl,
+      getGreeting,
+      renderHydrationErrorBanner: () => this.renderHydrationErrorBanner(),
+      renderLoadEarlierControl: () => this.renderLoadEarlierControl(),
+      total,
+    });
   }
 
   /**
@@ -927,28 +914,7 @@ export class MessageRenderer {
     }
 
     const ownerDocument = this.messagesEl.ownerDocument ?? window.document;
-    const overlay = ownerDocument.body.createDiv({ cls: 'claudian-image-modal-overlay' });
-    const modal = overlay.createDiv({ cls: 'claudian-image-modal' });
-
-    modal.createEl('img', {
-      attr: { src, alt: image.name },
-    });
-
-    const closeBtn = modal.createDiv({ cls: 'claudian-image-modal-close' });
-    closeBtn.setText('\u00D7');
-
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close();
-    };
-    const close = () => {
-      ownerDocument.removeEventListener('keydown', handleEsc);
-      overlay.remove();
-    };
-    closeBtn.addEventListener('click', close);
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) close();
-    });
-    ownerDocument.addEventListener('keydown', handleEsc);
+    openImageModal({ ownerDocument, src, alt: image.name });
   }
 
   // ============================================
@@ -1050,39 +1016,7 @@ export class MessageRenderer {
    */
   addTextCopyButton(textEl: HTMLElement, markdown: string): void {
     const copyBtn = textEl.createSpan({ cls: 'claudian-text-copy-btn' });
-    setIcon(copyBtn, 'copy');
-
-    let feedbackTimeout: number | null = null;
-
-    copyBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      runRendererAction(async () => {
-
-        try {
-          await navigator.clipboard.writeText(markdown);
-        } catch {
-          // Clipboard API may fail in non-secure contexts
-          return;
-        }
-
-        // Clear any pending timeout from rapid clicks
-        if (feedbackTimeout) {
-          window.clearTimeout(feedbackTimeout);
-        }
-
-        // Show "copied!" feedback
-        copyBtn.empty();
-        copyBtn.setText('Copied!');
-        copyBtn.classList.add('copied');
-
-        feedbackTimeout = window.setTimeout(() => {
-          copyBtn.empty();
-          setIcon(copyBtn, 'copy');
-          copyBtn.classList.remove('copied');
-          feedbackTimeout = null;
-        }, 1500);
-      });
-    });
+    wireCopyButton(copyBtn, () => markdown);
   }
 
   refreshActionButtons(msg: ChatMessage, allMessages?: ChatMessage[], index?: number): void {
@@ -1117,31 +1051,8 @@ export class MessageRenderer {
   private addUserCopyButton(msgEl: HTMLElement, content: string): void {
     const toolbar = this.getOrCreateActionsToolbar(msgEl);
     const copyBtn = toolbar.createSpan({ cls: 'claudian-user-msg-copy-btn' });
-    setIcon(copyBtn, 'copy');
     copyBtn.setAttribute('aria-label', 'Copy message');
-
-    let feedbackTimeout: number | null = null;
-
-    copyBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      runRendererAction(async () => {
-        try {
-          await navigator.clipboard.writeText(content);
-        } catch {
-          return;
-        }
-        if (feedbackTimeout) window.clearTimeout(feedbackTimeout);
-        copyBtn.empty();
-        copyBtn.setText('Copied!');
-        copyBtn.classList.add('copied');
-        feedbackTimeout = window.setTimeout(() => {
-          copyBtn.empty();
-          setIcon(copyBtn, 'copy');
-          copyBtn.classList.remove('copied');
-          feedbackTimeout = null;
-        }, 1500);
-      });
-    });
+    wireCopyButton(copyBtn, () => content);
   }
 
   /** Adds registered message actions (e.g. Create work order) to a completed agent message. */
@@ -1156,11 +1067,7 @@ export class MessageRenderer {
     toolbar.querySelectorAll('.claudian-user-msg-action-btn').forEach((el) => el.remove());
 
     for (const action of eligibleMessageActions(this.plugin.chatMessageActions, msg)) {
-      const btn = toolbar.createSpan({ cls: 'claudian-user-msg-action-btn' });
-      setIcon(btn, action.icon);
-      btn.setAttribute('aria-label', action.label);
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
+      renderMessageActionButton(toolbar, action, 'claudian-user-msg-action-btn', () => {
         action.run(msg, this.plugin.getActiveConversationSnapshot()?.id ?? null);
       });
     }
@@ -1201,11 +1108,7 @@ export class MessageRenderer {
 
     const container = anchorEl.createDiv({ cls: 'claudian-text-actions' });
     for (const action of actions) {
-      const btn = container.createSpan({ cls: 'claudian-text-action-btn' });
-      setIcon(btn, action.icon);
-      btn.setAttribute('aria-label', action.label);
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
+      renderMessageActionButton(container, action, 'claudian-text-action-btn', () => {
         action.run(msg, this.plugin.getActiveConversationSnapshot()?.id ?? null);
       });
     }

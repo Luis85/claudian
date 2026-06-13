@@ -193,6 +193,47 @@ export function classifyCursorSqliteOpenError(err: unknown): HistoryLoadError {
   };
 }
 
+type CursorBlobRow = { rowid: number; id: string; data: Buffer | Uint8Array };
+
+/**
+ * Reads every blob row ordered by `rowid`. Throws on SQL failure; callers wrap
+ * this in their own try/catch because they diverge on how a read error surfaces
+ * (structured store-unreadable string vs. a null short-circuit).
+ */
+function fetchCursorBlobRows(db: CursorSqliteHandle): CursorBlobRow[] {
+  const stmt = db.prepare('SELECT rowid, id, data FROM blobs ORDER BY rowid');
+  return stmt.all() as CursorBlobRow[];
+}
+
+/**
+ * Decodes each blob row to a JSON object, skipping rows whose payload isn't a
+ * brace-prefixed JSON object (the `{`-prefix guard makes the non-object/array
+ * case unreachable, so both callers see the same record set). Malformed rows are
+ * dropped silently — partial history beats a hard read failure.
+ */
+function parseCursorBlobRecords(
+  rows: CursorBlobRow[],
+): Array<{ rowId: string; record: Record<string, unknown> }> {
+  const records: Array<{ rowId: string; record: Record<string, unknown> }> = [];
+  for (const row of rows) {
+    const buf = Buffer.isBuffer(row.data) ? row.data : Buffer.from(row.data);
+    const raw = buf.toString('utf8');
+    if (!raw.startsWith('{')) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        records.push({ rowId: row.id, record: parsed as Record<string, unknown> });
+      }
+    } catch {
+      continue;
+    }
+  }
+  return records;
+}
+
 function openCursorSqliteReadonly(dbPath: string): CursorSqliteOpenResult {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/consistent-type-imports
@@ -291,35 +332,15 @@ export function loadCursorChatMessagesFromStoreResult(dbPath: string): CursorHis
     return { messages: [], error: `Cursor history: could not open ${redactHomeInPath(dbPath)}` };
   }
   try {
-    let rows: Array<{ rowid: number; id: string; data: Buffer | Uint8Array }>;
+    let rows: CursorBlobRow[];
     try {
-      const stmt = db.prepare('SELECT rowid, id, data FROM blobs ORDER BY rowid');
-      rows = stmt.all() as Array<{ rowid: number; id: string; data: Buffer | Uint8Array }>;
+      rows = fetchCursorBlobRows(db);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return { messages: [], error: `Cursor history: SQL read failed (${redactHomeInPath(msg)})` };
     }
 
-    const records: Array<{ rowId: string; record: Record<string, unknown> }> = [];
-
-    for (const row of rows) {
-      const buf = Buffer.isBuffer(row.data) ? row.data : Buffer.from(row.data);
-      const raw = buf.toString('utf8');
-      if (!raw.startsWith('{')) {
-        continue;
-      }
-
-      let record: Record<string, unknown>;
-      try {
-        record = JSON.parse(raw) as Record<string, unknown>;
-      } catch {
-        continue;
-      }
-
-      records.push({ rowId: row.id, record });
-    }
-
-    return { messages: buildChatMessagesFromCursorHistoryRecords(records) };
+    return { messages: buildChatMessagesFromCursorHistoryRecords(parseCursorBlobRecords(rows)) };
   } finally {
     try { db.close(); } catch { /* ignore close errors */ }
   }
@@ -343,31 +364,14 @@ export function loadCursorRawRecords(dbPath: string): Record<string, unknown>[] 
   }
   const db = openResult.handle;
   try {
-    let rows: Array<{ rowid: number; id: string; data: Buffer | Uint8Array }>;
+    let rows: CursorBlobRow[];
     try {
-      const stmt = db.prepare('SELECT rowid, id, data FROM blobs ORDER BY rowid');
-      rows = stmt.all() as Array<{ rowid: number; id: string; data: Buffer | Uint8Array }>;
+      rows = fetchCursorBlobRows(db);
     } catch {
       return null;
     }
 
-    const records: Record<string, unknown>[] = [];
-    for (const row of rows) {
-      const buf = Buffer.isBuffer(row.data) ? row.data : Buffer.from(row.data);
-      const raw = buf.toString('utf8');
-      if (!raw.startsWith('{')) continue;
-
-      try {
-        const parsed = JSON.parse(raw) as unknown;
-        if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
-          records.push(parsed as Record<string, unknown>);
-        }
-      } catch {
-        continue;
-      }
-    }
-
-    return records;
+    return parseCursorBlobRecords(rows).map(({ record }) => record);
   } finally {
     try { db.close(); } catch { /* ignore close errors */ }
   }

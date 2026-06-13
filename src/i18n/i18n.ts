@@ -33,65 +33,58 @@ const translations: Record<Locale, typeof en> = {
 const DEFAULT_LOCALE: Locale = 'en';
 let currentLocale: Locale = DEFAULT_LOCALE;
 
+// Walk a dotted key into a locale dictionary. Returns the leaf string, or
+// undefined when any segment is missing or the leaf is not a string.
+function lookupTranslation(dict: typeof en, key: TranslationKey): string | undefined {
+  let value: unknown = dict;
+
+  for (const k of key.split('.')) {
+    if (value && typeof value === 'object' && k in value) {
+      value = (value as Record<string, unknown>)[k];
+    } else {
+      return undefined;
+    }
+  }
+
+  return typeof value === 'string' ? value : undefined;
+}
+
+function interpolate(value: string, params?: Record<string, string | number>): string {
+  if (!params) {
+    return value;
+  }
+
+  return value.replace(/\{(\w+)\}/g, (match: string, param: string): string => {
+    const replacement = params[param];
+    return replacement !== undefined ? `${replacement}` : match;
+  });
+}
+
+// Resolve a key against one locale's dictionary, returning the interpolated
+// string or undefined when the locale has no translation for it.
+function resolveForLocale(
+  locale: Locale,
+  key: TranslationKey,
+  params?: Record<string, string | number>,
+): string | undefined {
+  const value = lookupTranslation(translations[locale], key);
+  return value === undefined ? undefined : interpolate(value, params);
+}
+
 /**
  * Get a translation by key with optional parameters
  */
 export function t(key: TranslationKey, params?: Record<string, string | number>): string {
-  const dict = translations[currentLocale];
-
-  const keys = key.split('.');
-  let value: unknown = dict;
-
-  for (const k of keys) {
-    if (value && typeof value === 'object' && k in value) {
-      value = (value as Record<string, unknown>)[k];
-    } else {
-      if (currentLocale !== DEFAULT_LOCALE) {
-        return tFallback(key, params);
-      }
-      return key;
-    }
+  const resolved = resolveForLocale(currentLocale, key, params);
+  if (resolved !== undefined) {
+    return resolved;
   }
 
-  if (typeof value !== 'string') {
+  if (currentLocale === DEFAULT_LOCALE) {
     return key;
   }
 
-  if (params) {
-    return value.replace(/\{(\w+)\}/g, (match: string, param: string): string => {
-      const replacement = params[param];
-      return replacement !== undefined ? `${replacement}` : match;
-    });
-  }
-
-  return value;
-}
-
-function tFallback(key: TranslationKey, params?: Record<string, string | number>): string {
-  const dict = translations[DEFAULT_LOCALE];
-  const keys = key.split('.');
-  let value: unknown = dict;
-
-  for (const k of keys) {
-    if (value && typeof value === 'object' && k in value) {
-      value = (value as Record<string, unknown>)[k];
-    } else {
-      return key;
-    }
-  }
-
-  if (typeof value !== 'string') {
-    return key;
-  }
-
-  if (params) {
-    return value.replace(/\{(\w+)\}/g, (match: string, param: string): string => {
-      const replacement = params[param];
-      return replacement !== undefined ? `${replacement}` : match;
-    });
-  }
-
-  return value;
+  return resolveForLocale(DEFAULT_LOCALE, key, params) ?? key;
 }
 
 /**

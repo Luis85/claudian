@@ -80,26 +80,11 @@ function maybeMapLinuxToWslUnc(targetPath: string, distroName?: string): string 
   return tail ? `\\\\wsl$\\${distroName}\\${tail}` : `\\\\wsl$\\${distroName}`;
 }
 
-function createIdentityMapper(target: CodexExecutionTarget): CodexPathMapper {
-  const toTargetPath = (hostPath: string): string | null => {
-    if (!hostPath) {
-      return null;
-    }
-
-    return target.platformFamily === 'windows'
-      ? normalizeWindowsPath(hostPath)
-      : normalizePosixPath(hostPath);
-  };
-  const toHostPath = (targetPath: string): string | null => {
-    if (!targetPath) {
-      return null;
-    }
-
-    return target.platformFamily === 'windows'
-      ? normalizeWindowsPath(targetPath)
-      : normalizePosixPath(targetPath);
-  };
-
+function assembleMapper(
+  target: CodexExecutionTarget,
+  toTargetPath: (hostPath: string) => string | null,
+  toHostPath: (targetPath: string) => string | null,
+): CodexPathMapper {
   return {
     target,
     toTargetPath,
@@ -113,6 +98,28 @@ function createIdentityMapper(target: CodexExecutionTarget): CodexPathMapper {
       return toTargetPath(hostPath) !== null;
     },
   };
+}
+
+function normalizeForPlatformFamily(
+  value: string,
+  platformFamily: CodexExecutionTarget['platformFamily'],
+): string | null {
+  if (!value) {
+    return null;
+  }
+
+  return platformFamily === 'windows'
+    ? normalizeWindowsPath(value)
+    : normalizePosixPath(value);
+}
+
+function createIdentityMapper(target: CodexExecutionTarget): CodexPathMapper {
+  // Identity mapping is symmetric: host and target paths normalize the same way,
+  // so both directions share one platform-family normalizer.
+  const normalize = (value: string): string | null =>
+    normalizeForPlatformFamily(value, target.platformFamily);
+
+  return assembleMapper(target, normalize, normalize);
 }
 
 function createWslPathMapper(target: CodexExecutionTarget): CodexPathMapper {
@@ -133,19 +140,7 @@ function createWslPathMapper(target: CodexExecutionTarget): CodexPathMapper {
       ?? maybeMapLinuxToWslUnc(targetPath, target.distroName);
   };
 
-  return {
-    target,
-    toTargetPath,
-    toHostPath,
-    mapTargetPathList(hostPaths: string[]): string[] {
-      return hostPaths
-        .map(toTargetPath)
-        .filter((value): value is string => typeof value === 'string' && value.length > 0);
-    },
-    canRepresentHostPath(hostPath: string): boolean {
-      return toTargetPath(hostPath) !== null;
-    },
-  };
+  return assembleMapper(target, toTargetPath, toHostPath);
 }
 
 export function createCodexPathMapper(target: CodexExecutionTarget): CodexPathMapper {

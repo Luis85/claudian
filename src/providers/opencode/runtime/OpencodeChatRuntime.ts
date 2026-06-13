@@ -99,6 +99,7 @@ import {
   projectOpencodeModelState,
 } from './opencodeModelStateProjection';
 import { buildOpencodeRuntimeEnv } from './OpencodeRuntimeEnvironment';
+import { syncOpencodeSessionState } from './opencodeSessionStateSync';
 
 interface ActiveTurn {
   queue: StreamChunkQueue;
@@ -1086,14 +1087,11 @@ export class OpencodeChatRuntime implements ChatRuntime {
       this.loadedSessionId = response.sessionId;
       this.sessionId = response.sessionId;
       this.sessionCwds.set(response.sessionId, cwd);
-      await this.syncSessionModelState({
-        configOptions: response.configOptions ?? null,
-        models: response.models ?? null,
-      });
-      await this.syncSessionModeState({
-        configOptions: response.configOptions ?? null,
-        modes: response.modes ?? null,
-      });
+      await syncOpencodeSessionState(
+        response,
+        params => this.syncSessionModelState(params),
+        params => this.syncSessionModeState(params),
+      );
       return response.sessionId;
     } catch {
       return null;
@@ -1116,14 +1114,11 @@ export class OpencodeChatRuntime implements ChatRuntime {
       this.loadedSessionId = response.sessionId;
       this.sessionId = response.sessionId;
       this.sessionCwds.set(response.sessionId, cwd);
-      await this.syncSessionModelState({
-        configOptions: response.configOptions ?? null,
-        models: response.models ?? null,
-      });
-      await this.syncSessionModeState({
-        configOptions: response.configOptions ?? null,
-        modes: response.modes ?? null,
-      });
+      await syncOpencodeSessionState(
+        response,
+        params => this.syncSessionModelState(params),
+        params => this.syncSessionModeState(params),
+      );
       return true;
     } catch {
       return false;

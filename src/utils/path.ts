@@ -251,41 +251,29 @@ function normalizeWindowsPathPrefix(value: string): string {
   return normalized;
 }
 
+// Expand (~, env vars, MSYS) then platform-normalize. Falls back to the
+// expanded value if path.normalize throws on a malformed input.
+function expandAndNormalize(value: string): string {
+  const expanded = normalizePathBeforeResolution(value);
+  try {
+    return process.platform === 'win32'
+      ? path.win32.normalize(expanded)
+      : path.normalize(expanded);
+  } catch {
+    return expanded;
+  }
+}
+
 export function normalizePathForFilesystem(value: string): string {
   if (!value || typeof value !== 'string') {
     return '';
   }
-  const expanded = normalizePathBeforeResolution(value);
-  const normalized = (() => {
-    try {
-      return process.platform === 'win32'
-        ? path.win32.normalize(expanded)
-        : path.normalize(expanded);
-    } catch {
-      return expanded;
-    }
-  })();
 
-  return normalizeWindowsPathPrefix(normalized);
+  return normalizeWindowsPathPrefix(expandAndNormalize(value));
 }
 
 export function normalizePathForComparison(value: string): string {
-  if (!value || typeof value !== 'string') {
-    return '';
-  }
-
-  const expanded = normalizePathBeforeResolution(value);
-  const normalized = (() => {
-    try {
-      return process.platform === 'win32'
-        ? path.win32.normalize(expanded)
-        : path.normalize(expanded);
-    } catch {
-      return expanded;
-    }
-  })();
-
-  const normalizedWithPrefix = normalizeWindowsPathPrefix(normalized)
+  const normalizedWithPrefix = normalizePathForFilesystem(value)
     .replace(/\\/g, '/')
     .replace(/\/+$/, '');
 
