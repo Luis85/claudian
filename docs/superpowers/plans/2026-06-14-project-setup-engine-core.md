@@ -238,6 +238,15 @@ test('detectPackageManager returns bun for a bun.lock file (v1.2+ text lockfile)
   }
 });
 
+test('detectPackageManager honors package.json#packageManager before the npm fallback', () => {
+  const p = tmpProject({ 'package.json': { packageManager: 'pnpm@9.1.0' } }); // no lockfile yet
+  try {
+    assert.equal(detectPackageManager(p.dir), 'pnpm');
+  } finally {
+    p.cleanup();
+  }
+});
+
 test('detectGithubRemote is true only when a github remote exists', () => {
   const gh = tmpProject({ '.git/config': '[remote "origin"]\n  url = https://github.com/o/r.git\n' });
   const gl = tmpProject({ '.git/config': '[remote "origin"]\n  url = https://gitlab.com/o/r.git\n' });
@@ -260,6 +269,7 @@ Expected: FAIL — `Cannot find module '../lib/detect.mjs'`.
 
 ```js
 // .claude/skills/project-setup/scripts/lib/detect.mjs
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -271,10 +281,21 @@ const PM_LOCKFILES = [
   ['package-lock.json', 'npm'],
 ];
 
+const PM_NAMES = new Set(['npm', 'pnpm', 'yarn', 'bun']);
+
 export function detectPackageManager(cwd) {
+  // 1. Explicit corepack field, e.g. "packageManager": "pnpm@9.1.0" — wins even
+  //    before a lockfile exists, so a first apply targets the right manager.
+  const declared = readJsonSafe(join(cwd, 'package.json'))?.packageManager;
+  if (typeof declared === 'string') {
+    const name = declared.split('@')[0];
+    if (PM_NAMES.has(name)) return name;
+  }
+  // 2. Lockfile.
   for (const [file, pm] of PM_LOCKFILES) {
     if (existsSync(join(cwd, file))) return pm;
   }
+  // 3. Default.
   return 'npm';
 }
 
@@ -287,6 +308,18 @@ function readJsonSafe(path) {
 }
 
 export function detectGithubRemote(cwd) {
+  // Ask git first — robust for worktrees/submodules where `.git` is a FILE
+  // pointing at the real gitdir (so `.git/config` doesn't exist here).
+  try {
+    const url = execFileSync('git', ['config', '--get', 'remote.origin.url'], {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    if (url) return /github\.com/.test(url);
+  } catch {
+    // git missing or not a repo — fall through to the on-disk config.
+  }
   const cfg = join(cwd, '.git', 'config');
   if (!existsSync(cfg)) return false;
   return /github\.com/.test(readFileSync(cfg, 'utf8'));

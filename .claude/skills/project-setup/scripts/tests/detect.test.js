@@ -42,6 +42,15 @@ test('detectPackageManager returns bun for a bun.lock file (v1.2+ text lockfile)
   }
 });
 
+test('detectPackageManager honors package.json#packageManager before the npm fallback', () => {
+  const p = tmpProject({ 'package.json': { packageManager: 'pnpm@9.1.0' } }); // no lockfile yet
+  try {
+    assert.equal(detectPackageManager(p.dir), 'pnpm');
+  } finally {
+    p.cleanup();
+  }
+});
+
 test('detectGithubRemote is true only when a github remote exists', () => {
   const gh = tmpProject({ '.git/config': '[remote "origin"]\n  url = https://github.com/o/r.git\n' });
   const gl = tmpProject({ '.git/config': '[remote "origin"]\n  url = https://gitlab.com/o/r.git\n' });
