@@ -2,8 +2,8 @@
 type: tech-debt
 title: "Shared transport helpers from ADR-0001 are still unextracted"
 date: 2026-06-07
-updated: 2026-06-13
-status: in-progress
+updated: 2026-06-14
+status: done
 priority: "2 - normal"
 severity: medium
 scope: provider-transport
@@ -50,7 +50,7 @@ Transport failures are high-risk because they appear as hung turns, stuck approv
 
 - [x] `src/core/transport/` contains a reusable process helper used by Codex and Opencode. — `AgentSubprocess` (2026-06-13), wrapped by `CodexAppServerProcess` and `AcpSubprocess`.
 - [x] Provider-native differences remain inside provider adapters. — Codex keeps `resolveWindowsSpawnSpec` (`.cmd`-shim) + its `onExit(code,signal)` contract; Opencode keeps `onClose(error?)`; the helper exposes a normalized `onClose({ reason, code, signal, error })` both map from.
-- [~] Transport tests cover shutdown, pending request rejection, and stderr diagnostics. — shutdown (SIGTERM→SIGKILL escalation + give-up ceiling), stderr bounding/snapshot, and close-notification covered in `AgentSubprocess.test.ts`. Pending-request rejection belongs to the JSON-RPC client (step 2, deferred).
+- [x] Transport tests cover shutdown, pending request rejection, and stderr diagnostics. — shutdown (SIGTERM→SIGKILL escalation + give-up ceiling), stderr bounding/snapshot, and close-notification in `AgentSubprocess.test.ts`; pending-request rejection on dispose/stream-close, plus timeout/abort cleanup, in `JsonRpcStdioClient.test.ts` (step 2, 2026-06-14).
 - [x] No provider loses current cancellation or approval-dismiss behavior. — the existing `AcpSubprocess`/`CodexAppServerProcess` + transport/runtime consumer suites pass unchanged.
 
 ## Progress (2026-06-13, quality campaign run 15)
@@ -63,3 +63,20 @@ and `AcpSubprocess` are thin adapters over it; Codex additionally gained free st
 (`cloneGroups` 33 → 32, `duplicatedLines` 819 → 803). **Deferred (step 2):** the optional
 capability-aware JSON-RPC client (`CodexRpcTransport` / `AcpJsonRpcTransport` share request-map /
 line-framing / shutdown concepts) and its pending-request-rejection tests — a larger, separate slice.
+
+## Resolution (2026-06-14, quality campaign run 16)
+
+`done`. Remediation **step 2 shipped**: extracted `src/core/transport/JsonRpcStdioClient.ts` — the
+newline-delimited JSON-RPC 2.0 client (request/response correlation map, request timeouts + abort,
+server-notification and server-request routing, line framing, and pending-request rejection on
+close/dispose) riding a `JsonRpcMessageStreams` abstraction. `AcpJsonRpcTransport` was already
+provider-agnostic, so it became a re-export of the core client (zero Opencode-consumer churn);
+`CodexRpcTransport` is now a thin adapter bridging the Codex subprocess to the client and keeping
+its API (including server-request handlers that receive the request id). Capability-aware as the
+remediation required — ACP keeps abort/typed-errors, Codex keeps its id-passing server requests —
+and **no provider is forced through a fake common transport** (Cursor's NDJSON and Claude's SDK
+paths are untouched). Behavior-preserving: the existing transport unit suites + the
+transport/runtime consumer suites (`CodexChatRuntime`, `CodexAuxQueryRunner`, `CodexSkillListingService`,
+`AcpClientConnection`, Opencode runtime) pass unchanged, with a new `JsonRpcStdioClient` spec.
+Remediation item 4 (a JSON-RPC request-volume perf gate) stays optional/deferred — request volume is
+not a current hot path.
