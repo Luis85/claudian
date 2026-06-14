@@ -4,6 +4,12 @@ import { Platform, Scope } from 'obsidian';
 import { join } from 'path';
 
 import { ClaudianView } from '@/features/chat/ClaudianView';
+import { ChatState } from '@/features/chat/state/ChatState';
+
+jest.mock('@/features/chat/utils/editedFiles', () => ({
+  ...jest.requireActual('@/features/chat/utils/editedFiles'),
+  deriveEditedFilesFromMessages: jest.fn(() => [{ path: 'derived.md', changeKind: 'created' }]),
+}));
 
 const MockScope = Scope as typeof Scope & { instances: Scope[] };
 
@@ -963,5 +969,32 @@ describe('ClaudianView work-order activity', () => {
     expect(slotIndex).toBeGreaterThanOrEqual(0);
     expect(quickIndex).toBeGreaterThanOrEqual(0);
     expect(slotIndex).toBeLessThan(quickIndex);
+  });
+});
+
+describe('ClaudianView applyEditedFilesSetting', () => {
+  function viewWithTab(showAgentEditedFiles?: boolean): { view: any; state: ChatState } {
+    const view = Object.create(ClaudianView.prototype) as any;
+    const state = new ChatState();
+    view.plugin = { settings: { showAgentEditedFiles }, app: {} };
+    view.tabManager = { getAllTabs: () => [{ state }] };
+    return { view, state };
+  }
+
+  it('clears edited files on each open tab when disabled', () => {
+    const { view, state } = viewWithTab(false);
+    state.recordEditedFile({ path: 'a.md', changeKind: 'edited' });
+
+    view.applyEditedFilesSetting();
+
+    expect(state.editedFiles).toEqual([]);
+  });
+
+  it('rebuilds edited files from each tab transcript when enabled', () => {
+    const { view, state } = viewWithTab(true);
+
+    view.applyEditedFilesSetting();
+
+    expect(state.editedFiles).toEqual([{ path: 'derived.md', changeKind: 'created' }]);
   });
 });

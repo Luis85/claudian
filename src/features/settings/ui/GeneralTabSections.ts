@@ -125,6 +125,29 @@ export function renderMaxChatTabsSetting(
   });
 }
 
+export function renderShowAgentEditedFilesSetting(
+  plugin: ClaudianPlugin,
+  container: HTMLElement,
+): void {
+  new Setting(container)
+    .setName(t('settings.showAgentEditedFiles.name'))
+    .setDesc(t('settings.showAgentEditedFiles.desc'))
+    .addToggle((toggle) =>
+      toggle
+        .setValue(plugin.settings.showAgentEditedFiles ?? true)
+        .onChange(async (value) => {
+          plugin.settings.showAgentEditedFiles = value;
+          await plugin.saveSettings();
+          // Apply immediately to open chats so disabling hides the strip (and
+          // re-enabling restores it) in the current session, not just on the
+          // next conversation switch/reload.
+          for (const view of plugin.getAllViews()) {
+            view.applyEditedFilesSetting();
+          }
+        })
+    );
+}
+
 export function renderUserNameSetting(
   plugin: ClaudianPlugin,
   container: HTMLElement,

@@ -50,7 +50,9 @@ function collectApplyPatchTextPaths(input: Record<string, unknown>): string[] {
   const patchText = typeof input.patch === 'string' ? input.patch : '';
   if (!patchText) return [];
   const paths: string[] = [];
-  for (const match of patchText.matchAll(/^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm)) {
+  // `Move to` is included so a rename refreshes the destination's parent (the new
+  // file), not just the removed source — matters on FSWatcher-miss environments.
+  for (const match of patchText.matchAll(/^\*\*\* (?:Add File|Update File|Delete File|Move to): (.+)$/gm)) {
     const filePath = match[1]?.trim();
     if (filePath) paths.push(filePath);
   }
