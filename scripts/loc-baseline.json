@@ -98,10 +98,6 @@
       "loc": 564,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
-    "src/providers/opencode/history/OpencodeHistoryStore.ts": {
-      "loc": 545,
-      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
-    },
     "src/providers/cursor/runtime/cursorToolNormalization.ts": {
       "loc": 542,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
