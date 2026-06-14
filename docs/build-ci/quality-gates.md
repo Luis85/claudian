@@ -13,6 +13,12 @@ by hand, and prints output short enough to act on without opening CI logs.
 
 Background: `docs/tech-debt/2026-06-07-agentic-quality-gates.md`.
 
+This document is the gate **catalogue** (what each gate catches, ratchet
+mechanics, history). For the how-to companion — running fallow and ESLint
+locally, the severity-staging workflow, extending rules and baselines, agent
+usage, and where this repo diverges from the generic fallow template — see
+[`quality-integration-guide.md`](quality-integration-guide.md).
+
 ## Gates
 
 | Gate | Command | CI job | What it catches |
