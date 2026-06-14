@@ -149,6 +149,9 @@ export function detect(cwd) {
     scripts: pkg.scripts ?? {},
     legacyEslintrc: existsAny(cwd, ESLINTRC),
     eslintFlatConfig: existsAny(cwd, ESLINT_FLAT),
+    // The same-name config we write (skip-if-exists) — flagged only when it's the
+    // user's own (no marker), so a re-apply of our generated one won't false-fire.
+    eslintConfigMjs: hasUnmarkedConfig(cwd, ['eslint.config.mjs']),
     ciWorkflow: existsSync(join(cwd, '.github', 'workflows', 'ci.yml')),
     jestConfig: hasUnmarkedConfig(cwd, JEST_CONFIGS),
     vitestConfig: hasUnmarkedConfig(cwd, VITEST_CONFIGS),

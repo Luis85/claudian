@@ -147,7 +147,7 @@ export function planTest(options, state) {
     return [
       ...scriptCollision(state, 'test:coverage', 'vitest run --coverage --passWithNoTests'),
       { type: 'writeFile', path: 'vitest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('vitest.config.mjs.tmpl'), { coverageThreshold, coverageGlobs }) },
-      { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'vitest run --passWithNoTests', 'test:coverage': 'vitest run --coverage --passWithNoTests' }, devDependencies: dep('vitest', '@vitest/coverage-istanbul', 'eslint-plugin-vitest', 'typescript') } },
+      { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'vitest run --passWithNoTests', 'test:coverage': 'vitest run --coverage --passWithNoTests' }, devDependencies: dep('vitest', '@vitest/coverage-istanbul', 'typescript') } },
     ];
   }
   // ts-jest preset + its deps only for a TypeScript project — on a JS-only repo
@@ -156,7 +156,7 @@ export function planTest(options, state) {
   return [
     ...scriptCollision(state, 'test:coverage', 'jest --coverage --passWithNoTests'),
     { type: 'writeFile', path: 'jest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('jest.config.mjs.tmpl'), { coverageThreshold, coverageGlobs, presetLine: tsJest ? "  preset: 'ts-jest',\n" : '' }) },
-    { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'jest --passWithNoTests', 'test:coverage': 'jest --coverage --passWithNoTests' }, devDependencies: tsJest ? dep('jest', 'ts-jest', '@types/jest', 'eslint-plugin-jest', 'typescript') : dep('jest', 'eslint-plugin-jest') } },
+    { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'jest --passWithNoTests', 'test:coverage': 'jest --coverage --passWithNoTests' }, devDependencies: tsJest ? dep('jest', 'ts-jest', '@types/jest', 'typescript') : dep('jest') } },
   ];
 }
 
@@ -187,9 +187,16 @@ export function planEslint(options, state) {
   if (state?.eslintFlatConfig) {
     notices.push(notice('An existing eslint.config.{js,cjs,ts} sits beside the generated eslint.config.mjs — ESLint loads only ONE (it checks .js before .mjs), so the staged config may not run. Remove/rename one, or merge the staged rules into yours.'));
   }
+  if (state?.eslintConfigMjs) {
+    notices.push(notice('You already have an eslint.config.mjs — the staged config was NOT written (skip-if-exists), so your config runs, not the severity-staged one. Merge the staged rules in, or back up and replace.'));
+  }
+  // The plugin DEP lives here (where its import is rendered), not in planTest —
+  // planTest's hand-written-config path returns without deps, which would leave
+  // the rendered `import eslint-plugin-{jest,vitest}` unresolved and break lint.
+  const testPlugin = options.testFramework === 'jest' ? ['eslint-plugin-jest'] : options.testFramework === 'vitest' ? ['eslint-plugin-vitest'] : [];
   const deps = ts
-    ? dep('eslint', 'typescript-eslint', '@eslint/js', 'eslint-plugin-simple-import-sort')
-    : dep('eslint', '@eslint/js', 'eslint-plugin-simple-import-sort');
+    ? dep('eslint', 'typescript-eslint', '@eslint/js', 'eslint-plugin-simple-import-sort', ...testPlugin)
+    : dep('eslint', '@eslint/js', 'eslint-plugin-simple-import-sort', ...testPlugin);
   return [
     ...notices,
     { type: 'writeFile', path: 'eslint.config.mjs', mode: 'skip-if-exists', content },

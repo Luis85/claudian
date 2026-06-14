@@ -80,6 +80,18 @@ test('planEslint reports an existing flat config in another extension (precedenc
   assert.ok(actions.some((a) => a.type === 'notice' && /eslint\.config\.\{js,cjs,ts\}/.test(a.message)));
 });
 
+test('planEslint reports an existing same-name eslint.config.mjs (skip-if-exists keeps theirs)', () => {
+  const actions = planEslint(opts, { eslintConfigMjs: true });
+  assert.ok(actions.some((a) => a.type === 'notice' && /already have an eslint\.config\.mjs/.test(a.message)));
+});
+
+test('planEslint installs the test-lint plugin dep it imports (so lint resolves on the standdown path)', () => {
+  const jestDeps = planEslint({ testFramework: 'jest', guardrails: { eslintSeverityStaging: true } }).find((a) => a.type === 'mergeJson').patch.devDependencies;
+  assert.ok('eslint-plugin-jest' in jestDeps);
+  const vitestDeps = planEslint({ testFramework: 'vitest', guardrails: { eslintSeverityStaging: true } }).find((a) => a.type === 'mergeJson').patch.devDependencies;
+  assert.ok('eslint-plugin-vitest' in vitestDeps);
+});
+
 test('planEslint emits no collision notice on a clean greenfield repo', () => {
   const actions = planEslint(opts, { scripts: {}, legacyEslintrc: false });
   assert.ok(!actions.some((a) => a.type === 'notice'));
