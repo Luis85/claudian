@@ -97,6 +97,18 @@ test('plan --config --dry-run prints actions and mutates nothing', async () => {
   }
 });
 
+test('report runs the generated quality-report file directly, bypassing a shadowed report script', async () => {
+  const p = tmpProject({ 'package.json': { scripts: { report: 'their-own-report' } } });
+  try {
+    const calls = [];
+    await cli(['report'], { cwd: p.dir, exec: (cmd, args) => calls.push(`${cmd} ${args.join(' ')}`), stdout: () => {}, stderr: () => {} });
+    assert.ok(calls.some((c) => c.includes('node scripts/quality-report.mjs')));
+    assert.ok(!calls.some((c) => c.includes('their-own-report')));
+  } finally {
+    p.cleanup();
+  }
+});
+
 test('apply without --config exits 2', async () => {
   const p = tmpProject({});
   try {

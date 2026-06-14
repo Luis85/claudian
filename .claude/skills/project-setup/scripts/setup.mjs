@@ -9,7 +9,6 @@ import { apply } from './lib/apply.mjs';
 import { initBaselines } from './lib/baseline.mjs';
 import { detect } from './lib/detect.mjs';
 import { freezeOptions, loadOptions } from './lib/options.mjs';
-import { runScriptArgs } from './lib/packageManager.mjs';
 import { effectiveOptions, plan } from './lib/plan.mjs';
 import { runGates } from './lib/verify.mjs';
 
@@ -128,11 +127,14 @@ export async function cli(argv, io = {}) {
     }
     case 'report': {
       const cwd = io.cwd ?? process.cwd();
-      // Run the installed `report` script through the package manager (not bare
-      // `node`) so Yarn PnP's loader is present for the report's
-      // require.resolve('fallow/bin/fallow').
-      const [bin, cargs] = runScriptArgs(detect(cwd).packageManager, 'report');
-      execFileSync(bin, cargs, { cwd, stdio: 'inherit' });
+      const exec = io.exec ?? ((c, a, o) => execFileSync(c, a, { stdio: 'inherit', ...o }));
+      // Run the GENERATED report file directly (not the `report` npm script, which a
+      // brownfield repo may have shadowed). `yarn node` carries Yarn PnP's loader for
+      // the report's require.resolve('fallow/bin/fallow'); bare node elsewhere.
+      const [bin, cargs] = detect(cwd).packageManager === 'yarn'
+        ? ['yarn', ['node', 'scripts/quality-report.mjs']]
+        : ['node', ['scripts/quality-report.mjs']];
+      exec(bin, cargs, { cwd, stdio: 'inherit' });
       return 0;
     }
     case 'verify': {
