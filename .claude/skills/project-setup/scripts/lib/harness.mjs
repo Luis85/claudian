@@ -76,6 +76,36 @@ export function planFallow(options, state) {
   ];
 }
 
+export function planLoc(options) {
+  if (!options.guardrails?.locGuard) return [];
+  return [
+    { type: 'writeFile', path: 'scripts/check-loc.mjs', mode: 'overwrite-backup', content: loadTemplate('check-loc.mjs') },
+    { type: 'mergeJson', path: 'package.json', patch: { scripts: { 'check:loc': 'node scripts/check-loc.mjs' } } },
+  ];
+}
+
+export function planTest(options, state) {
+  // Prefer an explicit answer, else the framework detected in the repo, else
+  // Jest. This keeps a brownfield Vitest project on Vitest when the user accepts
+  // the detected default.
+  const fw = options.testFramework ?? state?.testFramework ?? 'jest';
+  // Thresholds are filled by baseline; until then default to 0 (a no-op floor)
+  // rendered as a JSON object so the config is valid immediately.
+  const coverageThreshold = JSON.stringify(
+    options.guardrails?.coverageFloors ? { statements: 0, branches: 0, functions: 0, lines: 0 } : {},
+  );
+  if (fw === 'vitest') {
+    return [
+      { type: 'writeFile', path: 'vitest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('vitest.config.mjs.tmpl'), { coverageThreshold }) },
+      { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'vitest run', 'test:coverage': 'vitest run --coverage' }, devDependencies: dep('vitest', '@vitest/coverage-istanbul', 'eslint-plugin-vitest', 'typescript') } },
+    ];
+  }
+  return [
+    { type: 'writeFile', path: 'jest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('jest.config.mjs.tmpl'), { coverageThreshold }) },
+    { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'jest', 'test:coverage': 'jest --coverage' }, devDependencies: dep('jest', 'ts-jest', '@types/jest', 'eslint-plugin-jest', 'typescript') } },
+  ];
+}
+
 export function planEslint(options) {
   if (!options.guardrails?.eslintSeverityStaging) return [];
   // Render the test-lint plugin import + config from the (resolved) test
