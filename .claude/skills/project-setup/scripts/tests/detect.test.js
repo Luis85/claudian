@@ -1,9 +1,23 @@
 // .claude/skills/project-setup/scripts/tests/detect.test.js
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { test } from 'node:test';
 
-import { detect, detectEntry, detectGithubRemote, detectPackageManager } from '../lib/detect.mjs';
+import { detect, detectDefaultBranch, detectEntry, detectGithubRemote, detectPackageManager } from '../lib/detect.mjs';
 import { tmpProject } from './helpers.js';
+
+test('detectDefaultBranch reads the repo branch, falling back to main outside a repo', () => {
+  const none = tmpProject({});
+  const repo = tmpProject({});
+  try {
+    assert.equal(detectDefaultBranch(none.dir), 'main'); // no git -> fallback
+    execFileSync('git', ['init', '-b', 'develop'], { cwd: repo.dir, stdio: 'ignore' });
+    assert.equal(detectDefaultBranch(repo.dir), 'develop');
+  } finally {
+    none.cleanup();
+    repo.cleanup();
+  }
+});
 
 test('detectPackageManager reads the lockfile, defaults to npm', () => {
   const a = tmpProject({ 'pnpm-lock.yaml': '' });

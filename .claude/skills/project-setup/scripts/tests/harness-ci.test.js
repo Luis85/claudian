@@ -65,6 +65,15 @@ test('planCi emits a notice when an existing ci.yml would be left untouched', ()
   assert.ok(actions.some((a) => a.type === 'notice' && /ci\.yml kept/.test(a.message)));
 });
 
+test('planCi targets the detected default branch, not a hardcoded main', () => {
+  const wf = planCi(
+    { github: { integrate: true }, guardrails: { ci: true, fallowRatchet: true } },
+    { packageManager: 'npm', defaultBranch: 'develop' },
+  ).find((a) => a.path === '.github/workflows/ci.yml');
+  assert.match(wf.content, /branches: \[develop\]/);
+  assert.doesNotMatch(wf.content, /\[main\]/);
+});
+
 test('planInstall emits one installDeps action for the detected package manager', () => {
   assert.deepEqual(planInstall({}, { packageManager: 'pnpm' }), [{ type: 'installDeps', packageManager: 'pnpm' }]);
 });

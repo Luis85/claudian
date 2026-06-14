@@ -9,6 +9,7 @@ import { apply } from './lib/apply.mjs';
 import { initBaselines } from './lib/baseline.mjs';
 import { detect } from './lib/detect.mjs';
 import { loadOptions } from './lib/options.mjs';
+import { runScriptArgs } from './lib/packageManager.mjs';
 import { effectiveOptions, plan } from './lib/plan.mjs';
 import { runGates } from './lib/verify.mjs';
 
@@ -112,7 +113,11 @@ export async function cli(argv, io = {}) {
     }
     case 'report': {
       const cwd = io.cwd ?? process.cwd();
-      execFileSync('node', ['scripts/quality-report.mjs'], { cwd, stdio: 'inherit' });
+      // Run the installed `report` script through the package manager (not bare
+      // `node`) so Yarn PnP's loader is present for the report's
+      // require.resolve('fallow/bin/fallow').
+      const [cmd, cargs] = runScriptArgs(detect(cwd).packageManager, 'report');
+      execFileSync(cmd, cargs, { cwd, stdio: 'inherit' });
       return 0;
     }
     case 'verify': {

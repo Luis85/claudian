@@ -62,3 +62,11 @@ test('planEslint wires the test-lint plugin for the resolved framework', () => {
     .find((a) => a.path === 'eslint.config.mjs');
   assert.match(vitestCfg.content, /eslint-plugin-vitest/);
 });
+
+test('planEslint(vitest) declares the Vitest globals so no-undef passes on describe/it/expect', () => {
+  const cfg = planEslint({ testFramework: 'vitest', guardrails: { eslintSeverityStaging: true } })
+    .find((a) => a.path === 'eslint.config.mjs');
+  assert.match(cfg.content, /languageOptions: \{ globals:/);
+  assert.match(cfg.content, /expect: 'readonly'/);
+  assert.match(cfg.content, /vi: 'readonly'/);
+});

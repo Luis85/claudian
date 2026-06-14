@@ -41,9 +41,12 @@ function eslintTestBlock(fw) {
     };
   }
   if (fw === 'vitest') {
+    // Declare Vitest's globals: with `test.globals: true` the recommended rules
+    // alone leave describe/it/expect undefined, so the base `no-undef` fails lint.
+    const vitestGlobals = "{ suite: 'readonly', test: 'readonly', describe: 'readonly', it: 'readonly', expect: 'readonly', beforeAll: 'readonly', afterAll: 'readonly', beforeEach: 'readonly', afterEach: 'readonly', vi: 'readonly', expectTypeOf: 'readonly', assertType: 'readonly' }";
     return {
       testImport: "import vitestPlugin from 'eslint-plugin-vitest';",
-      testConfigBlock: "  { files: ['**/*.{test,spec}.{ts,tsx,js,jsx}'], plugins: { vitest: vitestPlugin }, rules: vitestPlugin.configs.recommended.rules },",
+      testConfigBlock: `  { files: ['**/*.{test,spec}.{ts,tsx,js,jsx}'], languageOptions: { globals: ${vitestGlobals} }, plugins: { vitest: vitestPlugin }, rules: vitestPlugin.configs.recommended.rules },`,
     };
   }
   return { testImport: '', testConfigBlock: '' };
@@ -196,6 +199,7 @@ export function planCi(options, state) {
   steps.push(`      - run: ${pm.run} ${g.coverageFloors ? 'test:coverage' : 'test'}`);
   const content = renderTemplate(loadTemplate('ci.yml.tmpl'), {
     pmSetup: pm.setup, pmCache: pm.cache, pmInstall: pm.install, steps: steps.join('\n'),
+    defaultBranch: state?.defaultBranch ?? 'main',
   });
   return [...notices, { type: 'writeFile', path: '.github/workflows/ci.yml', mode: 'skip-if-exists', content }];
 }

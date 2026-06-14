@@ -97,6 +97,29 @@ export function detectGithubRemote(cwd) {
   return /github\.com/.test(readFileSync(cfg, 'utf8'));
 }
 
+export function detectDefaultBranch(cwd) {
+  // The remote's default branch, so generated CI targets the real trunk instead
+  // of a hardcoded `main`. Falls back to the current branch, then `main`.
+  try {
+    const ref = execFileSync('git', ['rev-parse', '--abbrev-ref', 'origin/HEAD'], {
+      cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    if (ref && ref !== 'origin/HEAD') return ref.replace(/^origin\//, '');
+  } catch {
+    // no remote HEAD ref — fall through
+  }
+  try {
+    // symbolic-ref (not rev-parse) so it resolves on an unborn branch too.
+    const cur = execFileSync('git', ['symbolic-ref', '--short', 'HEAD'], {
+      cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    if (cur) return cur;
+  } catch {
+    // detached HEAD or not a git repo — fall through
+  }
+  return 'main';
+}
+
 export function detect(cwd) {
   const pkg = readJsonSafe(join(cwd, 'package.json')) ?? {};
   const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
@@ -109,6 +132,7 @@ export function detect(cwd) {
     testFramework: has('vitest') ? 'vitest' : has('jest') ? 'jest' : null,
     git: existsSync(join(cwd, '.git')),
     github: detectGithubRemote(cwd),
+    defaultBranch: detectDefaultBranch(cwd),
     entry: detectEntry(cwd),
     // Brownfield collision signals — planners turn these into user-facing notices
     // instead of silently no-op'ing on a pre-existing config/script/workflow.
