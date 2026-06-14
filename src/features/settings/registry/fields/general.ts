@@ -273,6 +273,17 @@ function registerDisplayFields(r: Registry): void {
     default: true,
     keywords: ['edited', 'files', 'changed', 'agent', 'open', 'list'],
   });
+
+  r.registerField({
+    id: 'expandFileEditsByDefault',
+    tabId: 'general',
+    sectionId: 'display',
+    label: t('settings.expandFileEditsByDefault.name'),
+    description: t('settings.expandFileEditsByDefault.desc'),
+    type: { kind: 'toggle' },
+    default: false,
+    keywords: ['diff', 'write', 'edit', 'expand', 'apply_patch'],
+  });
 }
 
 function registerConversationsFields(r: Registry): void {

@@ -198,6 +198,7 @@ export interface ClaudianSettings {
   deferMathRenderingDuringStreaming: boolean;
   /** Show a clickable list of files the agent created/edited above the composer. */
   showAgentEditedFiles: boolean;
+  expandFileEditsByDefault: boolean;
   chatViewPlacement: ChatViewPlacement;
   firstRunDismissed: boolean;
   /** When true, prompt the user to commit & push after Accepting a Work-Order in a dirty git-backed vault. */

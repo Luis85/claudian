@@ -703,7 +703,7 @@ export class MessageRenderer {
     const subagentLifecycleAdapter = this.getSubagentLifecycleAdapter(toolCall.name);
 
     if (isWriteEditTool(toolCall.name)) {
-      renderStoredWriteEdit(this.app, contentEl, toolCall);
+      renderStoredWriteEdit(this.app, contentEl, toolCall, { initiallyExpanded: this.plugin.settings.expandFileEditsByDefault === true });
     } else if (isSubagentToolName(toolCall.name)) {
       this.renderTaskSubagent(contentEl, toolCall);
     } else if (subagentLifecycleAdapter?.isSpawnTool(toolCall.name) && msg) {
