@@ -92,12 +92,19 @@ the preview/citations consume it later. Domain terms **Context source** /
   `ContextSource[]`. Each source: `sourceType` (discriminant), `trust:
   ContextTrust`, the raw selection context it carries, a `tokenEstimate`
   (chars/4 for v1) and a stable `citationHandle` (e.g. `ctx:editor:<path>:<range>`).
-- **`renderContextEnvelope(envelope, style: 'xml' | 'sectioned'): string`** —
-  the XML style reuses the existing `utils/{context,editor,browser,canvas}`
-  `format*` helpers; the sectioned style reuses `core/prompt/sectionedTurn`'s
-  bracket format. Renderers are byte-identical to today, so the four encoders
-  (`ClaudeTurnEncoder`, `buildOpencodePrompt`, `sectionedTurn`,
-  later `inlineEdit`) collapse onto build+render.
+- **`renderContextEnvelope`** renders the envelope to a Provider's wire format —
+  keyed **per Provider, not by a bare `'xml'|'sectioned'`**. Claude + Opencode
+  reuse the `utils/{context,editor,browser,canvas}` `format*` helpers (XML);
+  Codex + Cursor reuse `core/prompt/sectionedTurn`'s brackets for the **selection**
+  sources (editor / browser / canvas), which are byte-identical within the style.
+  The four encoders still collapse onto build+render, byte-identical to today.
+  **Caveat — the current-note hint stays provider-specific glue, outside the
+  shared renderer:** `encodeSectionedTurn` already takes a per-provider
+  `buildContextHints` callback because Codex emits a terse `[Current note: <path>]`
+  while Cursor emits a longer actionable instruction (the bare hint is ignored by
+  cursor-agent). So `buildContextEnvelope` owns gather / trust / estimate / handles
+  for all four sources, but the **current-note rendering** remains each provider's
+  callback — folding it into a style-keyed renderer would regress one of the two.
 - **Trust:** `buildContextEnvelope` owns trust *assignment* (browser →
   `untrusted-external`). Byte-parity needs style-specific escaping of untrusted
   bodies (XML escapes, sectioned doesn't), so the `wrapUntrustedExternalData`
