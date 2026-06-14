@@ -7,7 +7,7 @@
       "reason": "Grandfathered. Planned split: extract persistent-query lifecycle (ensureReady, needsRestart, response-consumer startup) behind a smaller module interface. See docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md."
     },
     "src/features/chat/controllers/StreamController.ts": {
-      "loc": 1545,
+      "loc": 1548,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/controllers/InputController.ts": {

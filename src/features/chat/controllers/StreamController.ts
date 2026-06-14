@@ -1499,6 +1499,9 @@ export class StreamController {
 
     if (hasHydrated) {
       this.deps.subagentManager.refreshAsyncSubagent(subagent);
+      // Async sub-agents load their child tools here (not via finalizeSubagent),
+      // so surface + vault-refresh their edits the same way.
+      this.recordSubagentEditedFiles(subagent);
     }
 
     if (!finalResultHydrated) {

@@ -3066,6 +3066,34 @@ describe('StreamController - edited files', () => {
     expect(deps.state.editedFiles.map((entry) => entry.path)).toEqual(['sub/hydrated.md']);
   });
 
+  it('records async sub-agent edits after tool-call hydration', async () => {
+    const agentService = deps.getAgentService!() as unknown as {
+      loadSubagentToolCalls: jest.Mock;
+      loadSubagentFinalResult: jest.Mock;
+    };
+    agentService.loadSubagentToolCalls = jest.fn().mockResolvedValue([
+      { id: 'w', name: 'Write', input: { file_path: 'async/made.md' }, status: 'completed' },
+    ]);
+    agentService.loadSubagentFinalResult = jest.fn().mockResolvedValue('done');
+    deps.subagentManager.handleAsyncSubagentResult = jest.fn().mockReturnValue({
+      id: 'a',
+      description: 'sub',
+      isExpanded: false,
+      status: 'completed',
+      mode: 'async',
+      agentId: 'agent-1',
+      asyncStatus: 'completed',
+      toolCalls: [],
+    });
+
+    await controller.handleStreamChunk(
+      { type: 'async_subagent_result', agentId: 'agent-1', status: 'completed', result: 'done' },
+      createTestMessage(),
+    );
+
+    expect(deps.state.editedFiles.map((entry) => entry.path)).toEqual(['async/made.md']);
+  });
+
   it('drops the source chip and shows the destination when apply_patch renames a file', async () => {
     const msg = createTestMessage();
     await completeTool(msg, { id: 't1', name: 'Write', input: { file_path: 'a/old.md', content: 'hi' } });
