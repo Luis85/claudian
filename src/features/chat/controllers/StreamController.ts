@@ -1304,6 +1304,8 @@ export class StreamController {
           toolCall.status = isBlocked ? 'blocked' : (chunk.isError ? 'error' : 'completed');
           toolCall.result = normalizedContent;
           subagentManager.updateSyncToolResult(parentToolUseId, chunk.id, toolCall);
+          // Surface files a sub-agent edits in the same strip as top-level edits.
+          if (toolCall.status === 'completed') this.recordEditedFiles(toolCall);
         }
         break;
       }

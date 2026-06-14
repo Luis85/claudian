@@ -2902,6 +2902,26 @@ describe('StreamController - edited files', () => {
     expect(deps.state.editedFiles).toEqual([]);
   });
 
+  it('records a file edited by a sync sub-agent', async () => {
+    const msg = createTestMessage();
+    const subToolCalls: Array<{ id: string; name: string; input: Record<string, unknown>; status: string }> = [];
+    const subagentState = { info: { id: 'p', description: 'sub', status: 'running', toolCalls: subToolCalls } };
+    deps.subagentManager.getSyncSubagent = jest.fn().mockReturnValue(subagentState);
+    deps.subagentManager.addSyncToolCall = jest.fn((_pid: string, tc: never) => subToolCalls.push(tc));
+    deps.subagentManager.updateSyncToolResult = jest.fn();
+
+    await controller.handleStreamChunk(
+      { type: 'subagent_tool_use', subagentId: 'p', id: 'w', name: 'Write', input: { file_path: 'sub/new.md' } },
+      msg,
+    );
+    await controller.handleStreamChunk(
+      { type: 'subagent_tool_result', subagentId: 'p', id: 'w', content: 'ok' },
+      msg,
+    );
+
+    expect(deps.state.editedFiles.map((entry) => entry.path)).toEqual(['sub/new.md']);
+  });
+
   it('drops the source chip and shows the destination when apply_patch renames a file', async () => {
     const msg = createTestMessage();
     await completeTool(msg, { id: 't1', name: 'Write', input: { file_path: 'a/old.md', content: 'hi' } });

@@ -220,16 +220,35 @@ export function mergeEditedFileEntry(
 export function deriveEditedFilesFromMessages(app: App, messages: readonly ChatMessage[]): EditedFileEntry[] {
   let list: EditedFileEntry[] = [];
   for (const message of messages) {
-    const toolCalls = message.toolCalls;
-    if (!toolCalls) continue;
-    for (const toolCall of toolCalls) {
-      if (toolCall.status !== 'completed') continue;
-      for (const raw of collectEditedPathsFromToolCall(toolCall)) {
-        const openable = resolveExistingVaultFilePath(app, raw.path);
-        if (!openable) continue;
-        list = mergeEditedFileEntry(list, { path: openable, changeKind: raw.changeKind });
-      }
+    if (message.toolCalls) {
+      list = collectEditedFromToolCalls(app, message.toolCalls, list);
     }
   }
   return list;
+}
+
+/**
+ * Collects edited files from a tool-call list, recursing into sub-agent tool calls
+ * (a sync sub-agent's Write/Edit/apply_patch live under `ToolCallInfo.subagent`,
+ * not the top-level message). Only completed calls that resolve to an existing
+ * vault file are included.
+ */
+function collectEditedFromToolCalls(
+  app: App,
+  toolCalls: readonly ToolCallInfo[],
+  list: EditedFileEntry[],
+): EditedFileEntry[] {
+  let next = list;
+  for (const toolCall of toolCalls) {
+    if (toolCall.status !== 'completed') continue;
+    for (const raw of collectEditedPathsFromToolCall(toolCall)) {
+      const openable = resolveExistingVaultFilePath(app, raw.path);
+      if (openable) next = mergeEditedFileEntry(next, { path: openable, changeKind: raw.changeKind });
+    }
+    const nested = toolCall.subagent?.toolCalls;
+    if (nested && nested.length > 0) {
+      next = collectEditedFromToolCalls(app, nested, next);
+    }
+  }
+  return next;
 }

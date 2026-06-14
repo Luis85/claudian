@@ -228,6 +228,34 @@ describe('deriveEditedFilesFromMessages', () => {
     ]);
   });
 
+  it('includes files edited by a sync sub-agent (nested tool calls)', () => {
+    const messages: ChatMessage[] = [
+      assistantMessage([
+        toolCall({
+          id: 'agent',
+          name: 'Agent',
+          input: {},
+          status: 'completed',
+          subagent: {
+            id: 'agent',
+            description: 'sub',
+            isExpanded: false,
+            status: 'completed',
+            toolCalls: [
+              toolCall({ id: 'w', name: 'Write', input: { file_path: 'sub/created.md' } }),
+              toolCall({ id: 'e', name: 'Edit', input: { file_path: 'sub/edited.ts' } }),
+            ],
+          },
+        }),
+      ]),
+    ];
+
+    expect(deriveEditedFilesFromMessages(app, messages)).toEqual([
+      { path: 'sub/edited.ts', changeKind: 'edited' },
+      { path: 'sub/created.md', changeKind: 'created' },
+    ]);
+  });
+
   it('returns an empty list when there are no tool calls', () => {
     const messages: ChatMessage[] = [
       { id: 'u', role: 'user', content: 'hi', timestamp: 1 },
