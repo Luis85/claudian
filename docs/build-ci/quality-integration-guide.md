@@ -67,7 +67,7 @@ What the config does:
 | `ignoreDependencies` | `tslib`, `electron` | `tslib` is the `importHelpers` runtime for ts-jest; `electron` is provided by Obsidian's runtime. Neither is a real unused dep. |
 | `duplicates.minOccurrences` | `2` (tests ignored) | Every copy-paste **pair** counts against the clone ratchet, not just triples. |
 | `boundaries` | zones + rules (the layer architecture) | Machine-checks ADR 0001. See [Divergence 2](#divergence-2-boundary-zones-are-on-on-purpose). |
-| `rules.unused-dependencies` | `"warn"` | Kept visible but not verdict-driving (the generic guide's "downgrade a noisy rule" pattern). |
+| `rules.unused-dependencies` | `"warn"` | Softens **fallow's own** verdict only. The ratchet reads the raw issue count (`deadCodeIssues` = `total_issues`, pinned at 0), so a *new* unused dependency still **fails the `quality` job** — remove it, or add a genuinely-provided dep to `ignoreDependencies`. |
 
 ### The scripts
 
@@ -200,8 +200,11 @@ workflow, plus fallow's machine-readable surfaces:
   - The boundary constraint is enforced **twice** (ESLint + fallow zones) **on
     purpose** ([Divergence 2](#divergence-2-boundary-zones-are-on-on-purpose)) —
     don't collapse it to one source.
-  - `unused-dependencies` is `warn` (visible, not gating); the gate is the
-    ratchet, not the raw `fallow` exit code.
+  - `unused-dependencies` is `warn`, but that only softens **fallow's own**
+    exit code — the gate is the ratchet, which counts these under
+    `deadCodeIssues` (pinned at 0), so a *new* unused dependency **does** fail
+    the `quality` job. Remove it or add it to `ignoreDependencies`; don't
+    ignore the finding.
   - Lint `warn`s never fail CI — promoting a rule to `error` is what enforces it.
 
 ### Optional, not yet wired here
@@ -332,7 +335,7 @@ starts cleanly and `node_modules/fallow/skills/fallow/SKILL.md` resolves.
 | Ratchet failed but I didn't add debt | Check for a stray `coverage/` first. Otherwise a metric genuinely grew — run `npm run quality` for detail. Lock real improvements with `npm run check:quality -- --update`. |
 | `boundaryViolations` > 0 | A cross-zone import slipped in. Fix the import; do **not** bump the baseline (it's an architecture decision). The matching ESLint `no-restricted-imports` error usually points at the same line. |
 | "Unused file" false positive | Add the entry point to `entry` in `.fallowrc.json` (already declares `src/main.ts`). |
-| Unused dependency reported | It's `warn` here (`unused-dependencies`), so it won't gate. If it's a genuine runtime/provided dep like `tslib`/`electron`, add it to `ignoreDependencies`. |
+| Unused dependency reported | The `warn` severity only softens fallow's own verdict; the ratchet still counts it under `deadCodeIssues` (baseline 0), so a *new* one **fails the `quality` job**. Remove the dep, or — for a genuinely runtime/provided dep like `tslib`/`electron` — add it to `ignoreDependencies`. |
 | A lint `warn` isn't failing CI | Expected — CI doesn't pass `--max-warnings`. Promote the rule to `error` to enforce it ([severity policy](#eslint-the-severity-policy)). |
 | `fallow audit` reports findings in files I only touched | With new-only attribution, inherited findings show as **context** (`introduced: false`) and don't fail. Only `introduced: true` findings are yours to fix. |
 
