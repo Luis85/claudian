@@ -85,3 +85,29 @@ test('apply without --config exits 2', async () => {
     p.cleanup();
   }
 });
+
+test('apply rejects a malformed answers file with exit 2 (clean error, no stack trace)', async () => {
+  const p = tmpProject({});
+  try {
+    const cfg = join(p.dir, 'answers.json');
+    writeFileSync(cfg, '{ not json');
+    const { io, chunks } = capture(p.dir);
+    assert.equal(await cli(['apply', '--config', cfg], io), 2);
+    assert.match(chunks.err, /Could not read answers JSON|must be a JSON object/);
+  } finally {
+    p.cleanup();
+  }
+});
+
+test('apply rejects a --backup-dir outside the project with exit 2', async () => {
+  const p = tmpProject({ 'package.json': { name: 'x' } });
+  try {
+    const cfg = join(p.dir, 'answers.json');
+    writeFileSync(cfg, JSON.stringify({ guardrails: {}, github: { integrate: false }, docs: {} }));
+    const { io, chunks } = capture(p.dir);
+    assert.equal(await cli(['apply', '--config', cfg, '--backup-dir', '../escape'], io), 2);
+    assert.match(chunks.err, /backup-dir must be inside/);
+  } finally {
+    p.cleanup();
+  }
+});

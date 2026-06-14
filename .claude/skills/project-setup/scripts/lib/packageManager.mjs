@@ -1,5 +1,14 @@
 // scripts/lib/packageManager.mjs
 
+const KNOWN_PMS = new Set(['npm', 'pnpm', 'yarn', 'bun']);
+
+// Only ever exec a KNOWN package manager: a value from answers.json flows into
+// exec(pm, ['install']) (argv[0]), so an unknown/crafted name must not run as a
+// binary. Falls back to npm.
+export function safePackageManager(pm) {
+  return KNOWN_PMS.has(pm) ? pm : 'npm';
+}
+
 // Args to run a package.json script with the given manager (matches CI/verify).
 // `extra` is forwarded to the script (npm needs the `--` separator).
 export function runScriptArgs(pm, script, extra = []) {

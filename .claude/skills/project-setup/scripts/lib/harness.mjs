@@ -1,5 +1,5 @@
 // scripts/lib/harness.mjs
-import { runPrefix } from './packageManager.mjs';
+import { runPrefix, safePackageManager } from './packageManager.mjs';
 import { loadTemplate, renderTemplate } from './templates.mjs';
 
 // EXACT pins (no caret/tilde). A first install with no lockfile must be
@@ -68,7 +68,10 @@ function eslintTestBlock(fw) {
 
 export function planFallow(options, state) {
   if (!options.guardrails?.fallowRatchet) return [];
-  const entry = state?.entry ?? 'src/index.ts';
+  // JSON.stringify the entry array: `entry` comes from an untrusted repo's
+  // filesystem (a crafted filename could break out of an unescaped JSON string
+  // and inject keys into .fallowrc.json).
+  const entry = JSON.stringify([state?.entry ?? 'src/index.ts']);
   return [
     ...scriptCollision(state, 'check:quality', 'node scripts/check-quality.mjs'),
     {
@@ -261,7 +264,9 @@ export function planCi(options, state) {
 }
 
 export function planInstall(options, state) {
-  return [{ type: 'installDeps', packageManager: options.packageManager ?? state?.packageManager ?? 'npm' }];
+  // safePackageManager: the value is exec'd as argv[0], so never pass an
+  // unknown/crafted name through to the install.
+  return [{ type: 'installDeps', packageManager: safePackageManager(options.packageManager ?? state?.packageManager ?? 'npm') }];
 }
 
 export function planReport(options, state) {

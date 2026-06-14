@@ -86,6 +86,10 @@ test('planInstall emits one installDeps action for the detected package manager'
   assert.deepEqual(planInstall({}, { packageManager: 'pnpm' }), [{ type: 'installDeps', packageManager: 'pnpm' }]);
 });
 
+test('planInstall sanitizes an unknown/crafted package manager to npm (never exec it)', () => {
+  assert.deepEqual(planInstall({ packageManager: '/tmp/evil.sh' }, {}), [{ type: 'installDeps', packageManager: 'npm' }]);
+});
+
 test('planInstall: resolved option wins over state (options.packageManager takes precedence)', () => {
   assert.deepEqual(
     planInstall({ packageManager: 'pnpm' }, { packageManager: 'npm' }),

@@ -1,7 +1,7 @@
 // .claude/skills/project-setup/scripts/setup.mjs
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
@@ -76,7 +76,13 @@ export async function cli(argv, io = {}) {
         err('--config is required for plan/apply.\n');
         return 2;
       }
-      const options = loadOptions(resolve(cwd, args.flags.config));
+      let options;
+      try {
+        options = loadOptions(resolve(cwd, args.flags.config));
+      } catch (e) {
+        err(`${e.message}\n`);
+        return 2;
+      }
       const state = detect(cwd);
       // Freeze install-volatile fields against the FIRST apply's resolution.
       // Once the harness installs typescript/jest/vitest, a re-detect flips these,
@@ -90,6 +96,10 @@ export async function cli(argv, io = {}) {
       const actions = plan(options, state);
       const dryRun = cmd === 'plan' || args.flags.dryRun === true;
       const backupDir = args.flags.backupDir ? resolve(cwd, args.flags.backupDir) : undefined;
+      if (backupDir && backupDir !== cwd && !backupDir.startsWith(cwd + sep)) {
+        err('--backup-dir must be inside the project directory.\n');
+        return 2;
+      }
       const result = apply(actions, { cwd, dryRun, backupDir, exec: io.exec });
       if (!dryRun && result.changed.length > 0) {
         // Effective options so baselining matches the plan (coverage gate may be off).
@@ -126,7 +136,13 @@ export async function cli(argv, io = {}) {
         err('--config is required for verify.\n');
         return 2;
       }
-      const options = loadOptions(resolve(cwd, args.flags.config));
+      let options;
+      try {
+        options = loadOptions(resolve(cwd, args.flags.config));
+      } catch (e) {
+        err(`${e.message}\n`);
+        return 2;
+      }
       const state = detect(cwd);
       // Resolve packageManager + testFramework the same way apply does (answer ->
       // prior report -> detected), so verify runs the gates with the PM that

@@ -14,6 +14,13 @@ test('planFallow renders .fallowrc.json with the detected entry and copies the r
   assert.equal(pkg.patch.scripts.quality, 'fallow');
 });
 
+test('planFallow JSON-escapes the entry (no .fallowrc injection from a crafted filename)', () => {
+  const rc = planFallow({ guardrails: { fallowRatchet: true } }, { entry: 'src/a"], "evil": ["b.ts' }).find((a) => a.path === '.fallowrc.json');
+  const parsed = JSON.parse(rc.content); // still valid JSON
+  assert.deepEqual(parsed.entry, ['src/a"], "evil": ["b.ts']);
+  assert.ok(!('evil' in parsed)); // no injected top-level key
+});
+
 test('planFallow ignores the generated harness scripts so fallow does not flag them as dead code', () => {
   const rc = planFallow({ guardrails: { fallowRatchet: true } }, { entry: 'src/index.ts' }).find((a) => a.path === '.fallowrc.json');
   const ignores = JSON.parse(rc.content).ignorePatterns;
