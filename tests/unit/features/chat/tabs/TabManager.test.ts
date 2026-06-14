@@ -1957,7 +1957,9 @@ describe('TabManager - Provider Command Catalog', () => {
     const options = mockInitializeTabUI.mock.calls[0][2];
 
     let releaseWarmup!: () => void;
-    const prewarmSpy = jest.spyOn(manager as any, 'prewarmProviderTab').mockImplementation(
+    // prewarmProviderTab moved to TabProviderCommandCoordinator; the lazy getter
+    // materializes the same instance the onProviderChanged callback delegates to.
+    const prewarmSpy = jest.spyOn((manager as any).commandCoordinator, 'prewarmProviderTab').mockImplementation(
       () => new Promise<void>((resolve) => {
         releaseWarmup = resolve;
       }),
