@@ -379,6 +379,24 @@ describe('StreamController - Text Content', () => {
         'Segment one'
       );
     });
+
+    it('still renders the finalized block if collapse is disabled mid-stream', async () => {
+      const msg = createTestMessage();
+
+      // Block begins in collapse mode (beforeEach) — live rendering is suppressed.
+      await controller.appendText('Hello ');
+      // User toggles the setting off before any further chunk re-renders.
+      (deps.plugin.settings as any).collapseStreamingResponse = false;
+      await controller.finalizeCurrentTextBlock(msg);
+
+      expect(deps.renderer.renderContent).toHaveBeenCalledTimes(1);
+      expect(deps.renderer.renderContent).toHaveBeenCalledWith(
+        expect.anything(),
+        'Hello '
+      );
+      expect(msg.contentBlocks).toContainEqual({ type: 'text', content: 'Hello ' });
+      expect(deps.state.thinkingEl).toBeNull();
+    });
   });
 
   describe('Size-aware streaming backoff (PERF-3)', () => {

@@ -27,11 +27,9 @@ import {
   type ScheduledAnimationFrame,
   scheduleDelayedFrame,
 } from '../../../utils/animationFrame';
-import { formatDurationMmSs } from '../../../utils/date';
 import { extractDiffData } from '../../../utils/diff';
 import { hasStreamingMathDelimiters } from '../../../utils/markdownMath';
 import { openClaudianProviderSettings } from '../../../utils/obsidianPrivateApi';
-import { FLAVOR_TEXTS, STREAMING_RESPONSE_LABEL } from '../constants';
 import { renderInlineRuntimeError } from '../rendering/InlineRuntimeError';
 import type { MessageRenderer, RenderContentOptions } from '../rendering/MessageRenderer';
 import { scrollMessagesToBottom } from '../rendering/scrollToBottom';
@@ -59,6 +57,7 @@ import type { SubagentManager } from '../services/SubagentManager';
 import type { ChatState } from '../state/ChatState';
 import type { FileContextManager } from '../ui/FileContext';
 import { classifyRuntimeError } from './runtimeErrorClassification';
+import { StreamingIndicator } from './streamingIndicator';
 import {
   type BlockTransitionDecision,
   projectBlockTransition,
@@ -111,6 +110,10 @@ export class StreamController {
   private pendingTextRenderPromise: Promise<void> | null = null;
   private resolvePendingTextRender: (() => void) | null = null;
   private isTextRenderRunning = false;
+  // Whether the current text block has had at least one live render. Drives the
+  // finalize render decision so it reflects what actually happened during
+  // streaming, not the (possibly toggled) collapse setting read at finalize.
+  private currentTextLiveRendered = false;
   private pendingThinkingRenderFrame: ScheduledAnimationFrame | null = null;
   private pendingThinkingRenderPromise: Promise<void> | null = null;
   private resolvePendingThinkingRender: (() => void) | null = null;
@@ -135,8 +138,15 @@ export class StreamController {
   /** True while replaying an auto-triggered (background) turn — see {@link setRenderingAutoTurn}. */
   private renderingAutoTurn = false;
 
+  private readonly indicator: StreamingIndicator;
+
   constructor(deps: StreamControllerDeps) {
     this.deps = deps;
+    this.indicator = new StreamingIndicator({
+      state: deps.state,
+      getMessagesEl: deps.getMessagesEl,
+      updateQueueIndicator: deps.updateQueueIndicator,
+    });
   }
 
   /**
@@ -827,6 +837,7 @@ export class StreamController {
     if (!state.currentTextEl) {
       state.currentTextEl = state.currentContentEl.createDiv({ cls: 'claudian-text-block' });
       state.currentTextContent = '';
+      this.currentTextLiveRendered = false;
     }
 
     state.currentTextContent += text;
@@ -834,7 +845,7 @@ export class StreamController {
     if (collapse) {
       // Hide the half-formed render: keep an immediate placeholder up and render
       // the whole block once it finalizes.
-      this.showWritingIndicator();
+      this.indicator.showWriting();
       return;
     }
 
@@ -845,14 +856,18 @@ export class StreamController {
     const { state, renderer } = this.deps;
     await this.flushPendingTextRender();
 
-    // In collapse mode the "Writing response..." placeholder is up for the whole
-    // block; drop it on finalize regardless of whether content was persisted.
-    if (this.shouldCollapseStreamingResponse()) {
+    // Decide from what actually happened during streaming, not the current
+    // setting — the user may have toggled collapse mid-block. If no live render
+    // occurred (collapse mode, or toggled off before any re-render), the
+    // placeholder is still up and the element is unrendered, so drop the
+    // placeholder and render the finished block once below.
+    const liveRendered = this.currentTextLiveRendered;
+    if (!liveRendered) {
       this.hideThinkingIndicator();
     }
 
     if (msg && state.currentTextContent) {
-      await this.renderFinalizedTextBlock(state.currentTextEl, state.currentTextContent);
+      await this.renderFinalizedTextBlock(state.currentTextEl, state.currentTextContent, liveRendered);
       msg.contentBlocks = msg.contentBlocks || [];
       msg.contentBlocks.push({ type: 'text', content: state.currentTextContent });
       // Work-order tabs swap a completed handoff block for the compact card on
@@ -885,17 +900,23 @@ export class StreamController {
     }
     state.currentTextEl = null;
     state.currentTextContent = '';
+    this.currentTextLiveRendered = false;
   }
 
   /**
    * Renders the finalized text into its element when the live stream did not
-   * already produce the exact render: collapse mode rendered nothing during
-   * streaming, and deferred math left escaped delimiters that must be rendered
-   * once now. In the normal path the element already holds the streamed render.
+   * already produce the exact render. When `liveRendered` is false (collapse
+   * mode, or the setting toggled off mid-block before any re-render) the element
+   * is unrendered, so render once now; otherwise only re-render to bake deferred
+   * math. In the normal path the element already holds the streamed render.
    */
-  private async renderFinalizedTextBlock(textEl: HTMLElement | null, content: string): Promise<void> {
+  private async renderFinalizedTextBlock(
+    textEl: HTMLElement | null,
+    content: string,
+    liveRendered: boolean,
+  ): Promise<void> {
     if (!textEl) return;
-    if (this.shouldCollapseStreamingResponse()) {
+    if (!liveRendered) {
       await this.deps.renderer.renderContent(textEl, content);
       return;
     }
@@ -950,6 +971,7 @@ export class StreamController {
 
     try {
       if (textEl) {
+        this.currentTextLiveRendered = true;
         const options = this.getStreamingRenderOptions(content);
         if (options) {
           await renderer.renderContent(textEl, content, options);
@@ -1572,130 +1594,18 @@ export class StreamController {
   // Thinking Indicator
   // ============================================
 
-  /** Debounce delay before showing thinking indicator (ms). */
-  private static readonly THINKING_INDICATOR_DELAY = 400;
-
   /**
-   * Schedules showing the thinking indicator after a delay.
-   * If content arrives before the delay, the indicator won't show.
-   * This prevents the indicator from appearing during active streaming.
-   * Note: Flavor text is hidden when model thinking block is active (thinking takes priority).
+   * Shows the debounced "thinking" status indicator beneath the active turn.
+   * Public because InputController and tabRuntimeHost drive it too; delegates to
+   * the shared {@link StreamingIndicator}.
    */
   showThinkingIndicator(overrideText?: string, overrideCls?: string): void {
-    const { state } = this.deps;
-
-    // Early return if no content element
-    if (!state.currentContentEl) return;
-
-    // Clear any existing timeout
-    if (state.thinkingIndicatorTimeout) {
-      const timerWindow = state.currentContentEl.ownerDocument.defaultView ?? window;
-      state.clearThinkingIndicatorTimeout(timerWindow);
-    }
-
-    // Don't show flavor text while model thinking block is active
-    if (state.currentThinkingState) {
-      return;
-    }
-
-    // If indicator already exists, just re-append it to the bottom
-    if (state.thinkingEl) {
-      state.currentContentEl.appendChild(state.thinkingEl);
-      this.deps.updateQueueIndicator();
-      return;
-    }
-
-    // Schedule showing the indicator after a delay
-    const timerWindow = state.currentContentEl.ownerDocument.defaultView ?? window;
-    state.setThinkingIndicatorTimeout(timerWindow.setTimeout(() => {
-      state.setThinkingIndicatorTimeout(null, null);
-      // Double-check we still have a content element, no indicator exists, and no thinking block
-      if (!state.currentContentEl || state.thinkingEl || state.currentThinkingState) return;
-
-      const text = overrideText || FLAVOR_TEXTS[Math.floor(Math.random() * FLAVOR_TEXTS.length)];
-      this.renderStreamingIndicator(text, overrideCls);
-    }, StreamController.THINKING_INDICATOR_DELAY), timerWindow);
-  }
-
-  /**
-   * Builds the streaming-indicator DOM (label span + live `esc to interrupt`
-   * timer) and starts its 1s timer. Shared by the debounced thinking indicator
-   * and the immediate writing placeholder. The label span carries a stable class
-   * so the writing path can relabel an already-mounted indicator.
-   */
-  private renderStreamingIndicator(text: string, overrideCls?: string): void {
-    const { state } = this.deps;
-    if (!state.currentContentEl) return;
-
-    const cls = overrideCls ? `claudian-thinking ${overrideCls}` : 'claudian-thinking';
-    state.thinkingEl = state.currentContentEl.createDiv({ cls });
-    state.thinkingEl.createSpan({ cls: 'claudian-thinking-flavor', text });
-
-    // Create timer span with initial value
-    const timerSpan = state.thinkingEl.createSpan({ cls: 'claudian-thinking-hint' });
-    const updateTimer = () => {
-      if (!state.responseStartTime) return;
-      // Check if element is still connected to DOM (prevents orphaned interval updates)
-      if (!timerSpan.isConnected) {
-        if (state.flavorTimerInterval) {
-          state.clearFlavorTimerInterval();
-        }
-        return;
-      }
-      const elapsedSeconds = Math.floor((performance.now() - state.responseStartTime) / 1000);
-      timerSpan.setText(` (esc to interrupt · ${formatDurationMmSs(elapsedSeconds)})`);
-    };
-    updateTimer(); // Initial update
-
-    // Start interval to update timer every second
-    if (state.flavorTimerInterval) {
-      state.clearFlavorTimerInterval();
-    }
-    const thinkingWindow = state.currentContentEl.ownerDocument.defaultView ?? window;
-    state.setFlavorTimerInterval(thinkingWindow.setInterval(updateTimer, 1000), thinkingWindow);
-  }
-
-  /**
-   * Immediately shows (or relabels) the streaming placeholder for collapse mode.
-   * Unlike {@link showThinkingIndicator}, this bypasses the debounce — a
-   * continuous text-only answer never produces the 400ms idle gap the debounce
-   * waits for, so the placeholder must appear as soon as text starts streaming.
-   */
-  private showWritingIndicator(): void {
-    const { state } = this.deps;
-    if (!state.currentContentEl || state.currentThinkingState) return;
-
-    if (state.thinkingIndicatorTimeout) {
-      state.clearThinkingIndicatorTimeout(state.currentContentEl.ownerDocument.defaultView ?? null);
-    }
-
-    if (state.thinkingEl) {
-      const labelSpan = state.thinkingEl.querySelector<HTMLElement>('.claudian-thinking-flavor');
-      labelSpan?.setText(STREAMING_RESPONSE_LABEL);
-      state.currentContentEl.appendChild(state.thinkingEl);
-    } else {
-      this.renderStreamingIndicator(STREAMING_RESPONSE_LABEL);
-    }
-    this.deps.updateQueueIndicator();
+    this.indicator.show(overrideText, overrideCls);
   }
 
   /** Hides the thinking indicator and cancels any pending show timeout. */
   hideThinkingIndicator(): void {
-    const { state } = this.deps;
-
-    // Cancel any pending show timeout
-    if (state.thinkingIndicatorTimeout) {
-      const activeWindow = this.deps.getMessagesEl().ownerDocument.defaultView ?? window;
-      state.clearThinkingIndicatorTimeout(activeWindow);
-    }
-
-    // Clear timer interval (but preserve responseStartTime for duration capture)
-    state.clearFlavorTimerInterval();
-
-    if (state.thinkingEl) {
-      state.thinkingEl.remove();
-      state.thinkingEl = null;
-    }
+    this.indicator.hide();
   }
 
   // ============================================
@@ -1812,6 +1722,7 @@ export class StreamController {
     state.currentContentEl = null;
     state.currentTextEl = null;
     state.currentTextContent = '';
+    this.currentTextLiveRendered = false;
     state.currentThinkingState = null;
     this.deps.subagentManager.resetStreamingState();
     state.pendingTools.clear();
