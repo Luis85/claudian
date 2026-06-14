@@ -141,13 +141,16 @@ shell + header + objective/acceptance + footer.
 `CodexNotificationRouter` 879, `ToolCallRenderer` 854,
 `InlineEditModal` 785, `main` 767, `i18n/types` 763, `CodexHistoryStore` 746,
 `ConversationController` 655 (history-list UI extracted to `ConversationHistoryView`, #102),
-`RunSession` 625, `core/providers/types` 594, `codexAppServerTypes` 593,
+`RunSession` 625, `core/providers/types` 594,
+`codexAppServerTypes` 535 (JSON-RPC envelope → `codexJsonRpcTypes`, skills/list
+→ `codexAppServerSkillTypes`, both re-exported from the barrel),
 `SubagentRenderer` 566, `InlineAskUserQuestion` 564, `cursorToolNormalization` 542,
 `ClaudianSettings` 526. Lower individual payoff; tackle opportunistically when a
-feature already touches one. Two are **type/declaration** files
-(`core/providers/types`, `codexAppServerTypes`) — splitting by domain (per
-ADR-0001 seam) is low-risk. `i18n/types` grows ~2 lines per new setting and is a
-poor split target; accept it or generate it.
+feature already touches one. The remaining **type/declaration** file
+`core/providers/types` splits by domain (per ADR-0001 seam) the same low-risk way
+— move clean leaf groups to sub-files behind a barrel re-export (no runtime edge,
+so `circularDependencies`/`reExportCycles` stay 0). `i18n/types` grows ~2 lines
+per new setting and is a poor split target; accept it or generate it.
 
 ---
 
