@@ -13,7 +13,7 @@ Deterministic setup engine. Node ≥18, zero runtime deps.
 
 ## Tests
 
-    node --test scripts/tests/
+    node --test scripts/tests/*.test.js
 
 All tests are `node:test` specs operating on temp-dir fixtures — no network,
 no global state.

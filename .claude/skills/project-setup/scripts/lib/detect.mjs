@@ -5,7 +5,8 @@ import { join } from 'node:path';
 const PM_LOCKFILES = [
   ['pnpm-lock.yaml', 'pnpm'],
   ['yarn.lock', 'yarn'],
-  ['bun.lockb', 'bun'],
+  ['bun.lock', 'bun'],   // Bun v1.2+ text lockfile (current default)
+  ['bun.lockb', 'bun'],  // legacy binary lockfile
   ['package-lock.json', 'npm'],
 ];
 

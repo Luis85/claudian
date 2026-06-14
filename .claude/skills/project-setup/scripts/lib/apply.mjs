@@ -1,13 +1,14 @@
 // .claude/skills/project-setup/scripts/lib/apply.mjs
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import process from 'node:process';
 
 import { backupFile, mergeJsonFile, mergeTextLines } from './merge.mjs';
 
 export function apply(actions, opts = {}) {
   const cwd = opts.cwd ?? process.cwd();
   const dryRun = opts.dryRun ?? false;
-  const backupDir = opts.backupDir ?? join(cwd, '.project-setup-backup');
+  const backupDir = opts.backupDir ?? join(cwd, '.project-setup-backup', String(Date.now()));
   const changed = [];
   const planned = [];
 
@@ -34,7 +35,7 @@ export function apply(actions, opts = {}) {
       const exists = existsSync(abs);
       if (action.mode === 'skip-if-exists' && exists) continue;
       if (exists && readFileSync(abs, 'utf8') === action.content) continue; // idempotent
-      if (action.mode === 'overwrite-backup' && exists && !dryRun) backupFile(abs, backupDir);
+      if (action.mode === 'overwrite-backup' && exists && !dryRun) backupFile(abs, backupDir, cwd);
       if (!dryRun) {
         mkdirSync(dirname(abs), { recursive: true });
         writeFileSync(abs, action.content);

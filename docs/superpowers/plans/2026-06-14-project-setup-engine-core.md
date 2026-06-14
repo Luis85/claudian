@@ -13,7 +13,7 @@
 - **Plan 2: Quality-harness templates + baseline** — `templates/` (ESLint, fallow, `check-loc.mjs`, `check-quality.mjs`, Jest/Vitest, CI), `lib/templates.mjs`, `lib/baseline.mjs`, harness sub-planners, dep install.
 - **Plan 3: User-facing skill** — docs scaffold templates, `quality-report.mjs`, `setup.mjs report`/`verify`, `SKILL.md` orchestration, `references/`, opt-in GitHub wiring, end-to-end smoke tests (greenfield + brownfield fixtures).
 
-**Conventions for every task:** exact paths under `.claude/skills/project-setup/scripts/`. Run tests with `node --test scripts/tests/` from the skill root (`.claude/skills/project-setup/`). Commit identity is already configured (`Claude <noreply@anthropic.com>`).
+**Conventions for every task:** exact paths under `.claude/skills/project-setup/scripts/`. Run tests with `node --test scripts/tests/*.test.js` from the skill root (`.claude/skills/project-setup/`). Commit identity is already configured (`Claude <noreply@anthropic.com>`).
 
 ---
 
@@ -229,6 +229,15 @@ test('detect reports tooling presence from package.json', () => {
   }
 });
 
+test('detectPackageManager returns bun for a bun.lock file (v1.2+ text lockfile)', () => {
+  const p = tmpProject({ 'bun.lock': '' });
+  try {
+    assert.equal(detectPackageManager(p.dir), 'bun');
+  } finally {
+    p.cleanup();
+  }
+});
+
 test('detectGithubRemote is true only when a github remote exists', () => {
   const gh = tmpProject({ '.git/config': '[remote "origin"]\n  url = https://github.com/o/r.git\n' });
   const gl = tmpProject({ '.git/config': '[remote "origin"]\n  url = https://gitlab.com/o/r.git\n' });
@@ -257,7 +266,8 @@ import { join } from 'node:path';
 const PM_LOCKFILES = [
   ['pnpm-lock.yaml', 'pnpm'],
   ['yarn.lock', 'yarn'],
-  ['bun.lockb', 'bun'],
+  ['bun.lock', 'bun'],   // Bun v1.2+ text lockfile (current default)
+  ['bun.lockb', 'bun'],  // legacy binary lockfile
   ['package-lock.json', 'npm'],
 ];
 
@@ -305,7 +315,7 @@ export function detect(cwd) {
 - [ ] **Step 5: Run test to verify it passes**
 
 Run: `node --test scripts/tests/detect.test.js`
-Expected: PASS (3 tests).
+Expected: PASS (4 tests).
 
 - [ ] **Step 6: Commit**
 
@@ -377,6 +387,25 @@ test('backupFile copies an existing file into the backup dir', () => {
     p.cleanup();
   }
 });
+
+test('backupFile with cwd path-preserves so same-basename files in different dirs never collide', () => {
+  const p = tmpProject({
+    'a/config.json': '{"src":"a"}',
+    'b/config.json': '{"src":"b"}',
+  });
+  try {
+    const bak = join(p.dir, '.bak');
+    const destA = backupFile(join(p.dir, 'a/config.json'), bak, p.dir);
+    const destB = backupFile(join(p.dir, 'b/config.json'), bak, p.dir);
+    assert.notEqual(destA, destB);
+    assert.ok(existsSync(destA));
+    assert.ok(existsSync(destB));
+    assert.equal(readFileSync(destA, 'utf8'), '{"src":"a"}');
+    assert.equal(readFileSync(destB, 'utf8'), '{"src":"b"}');
+  } finally {
+    p.cleanup();
+  }
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -389,7 +418,7 @@ Expected: FAIL — `Cannot find module '../lib/merge.mjs'`.
 ```js
 // .claude/skills/project-setup/scripts/lib/merge.mjs
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, dirname, join, relative } from 'node:path';
 
 function isObject(v) {
   return v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -433,11 +462,15 @@ export function mergeTextLines(existing, lines, marker) {
   return { text: `${existing}${sep}${block}\n`, changed: true };
 }
 
-export function backupFile(path, backupDir) {
-  if (!existsSync(path)) return null;
-  mkdirSync(backupDir, { recursive: true });
-  const dest = join(backupDir, basename(path));
-  copyFileSync(path, dest);
+export function backupFile(absPath, backupDir, cwd) {
+  if (!existsSync(absPath)) return null;
+  // Path-preserve under backupDir (mirror the file's location relative to cwd)
+  // so two files with the same basename never collide; fall back to basename
+  // when cwd is not provided.
+  const sub = cwd ? relative(cwd, absPath) : basename(absPath);
+  const dest = join(backupDir, sub);
+  mkdirSync(dirname(dest), { recursive: true });
+  copyFileSync(absPath, dest);
   return dest;
 }
 ```
@@ -445,7 +478,7 @@ export function backupFile(path, backupDir) {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `node --test scripts/tests/merge.test.js`
-Expected: PASS (4 tests).
+Expected: PASS (5 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -465,7 +498,7 @@ git commit -m "feat(project-setup): additive non-destructive merge helpers + bac
 The `Action` shapes (the contract Plans 2–3 extend):
 - `{ type: 'mergeText', path, lines: string[], marker }`
 - `{ type: 'mergeJson', path, patch }`
-- `{ type: 'writeFile', path, content, mode: 'create' | 'skip-if-exists' | 'overwrite-backup' }`
+- `{ type: 'writeFile', path, content, mode: 'skip-if-exists' | 'overwrite-backup' }`
 
 `plan()` concatenates pure sub-planners so each new concern is one function. Plan 1 ships `planGitignore` (ensure the engine's own artifacts are ignored) and `planRunReport` (record the run).
 
@@ -497,7 +530,7 @@ test('plan ignores the engine artifacts in .gitignore', () => {
   assert.ok(gi.lines.includes('.fallow/'));
 });
 
-test('plan writes a run report (create mode, never clobbering a user file)', () => {
+test('plan writes a run report (overwrite-backup mode)', () => {
   const actions = plan(options, state);
   const report = actions.find((a) => a.path === 'project-setup.report.json');
   assert.ok(report);
@@ -655,13 +688,14 @@ Expected: FAIL — `Cannot find module '../lib/apply.mjs'`.
 // .claude/skills/project-setup/scripts/lib/apply.mjs
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import process from 'node:process';
 
 import { backupFile, mergeJsonFile, mergeTextLines } from './merge.mjs';
 
 export function apply(actions, opts = {}) {
   const cwd = opts.cwd ?? process.cwd();
   const dryRun = opts.dryRun ?? false;
-  const backupDir = opts.backupDir ?? join(cwd, '.project-setup-backup');
+  const backupDir = opts.backupDir ?? join(cwd, '.project-setup-backup', String(Date.now()));
   const changed = [];
   const planned = [];
 
@@ -688,7 +722,7 @@ export function apply(actions, opts = {}) {
       const exists = existsSync(abs);
       if (action.mode === 'skip-if-exists' && exists) continue;
       if (exists && readFileSync(abs, 'utf8') === action.content) continue; // idempotent
-      if (action.mode === 'overwrite-backup' && exists && !dryRun) backupFile(abs, backupDir);
+      if (action.mode === 'overwrite-backup' && exists && !dryRun) backupFile(abs, backupDir, cwd);
       if (!dryRun) {
         mkdirSync(dirname(abs), { recursive: true });
         writeFileSync(abs, action.content);
@@ -897,7 +931,7 @@ Deterministic setup engine. Node ≥18, zero runtime deps.
 
 ## Tests
 
-    node --test scripts/tests/
+    node --test scripts/tests/*.test.js
 
 All tests are `node:test` specs operating on temp-dir fixtures — no network,
 no global state.
@@ -905,7 +939,7 @@ no global state.
 
 - [ ] **Step 6: Run the full suite to verify it passes**
 
-Run: `node --test scripts/tests/`
+Run: `node --test scripts/tests/*.test.js`
 Expected: PASS (all specs across cli, detect, merge, plan, apply, integration).
 
 - [ ] **Step 7: Commit**

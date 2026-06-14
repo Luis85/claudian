@@ -23,7 +23,7 @@ test('plan ignores the engine artifacts in .gitignore', () => {
   assert.ok(gi.lines.includes('.fallow/'));
 });
 
-test('plan writes a run report (create mode, never clobbering a user file)', () => {
+test('plan writes a run report (overwrite-backup mode)', () => {
   const actions = plan(options, state);
   const report = actions.find((a) => a.path === 'project-setup.report.json');
   assert.ok(report);

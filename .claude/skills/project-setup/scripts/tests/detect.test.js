@@ -33,6 +33,15 @@ test('detect reports tooling presence from package.json', () => {
   }
 });
 
+test('detectPackageManager returns bun for a bun.lock file (v1.2+ text lockfile)', () => {
+  const p = tmpProject({ 'bun.lock': '' });
+  try {
+    assert.equal(detectPackageManager(p.dir), 'bun');
+  } finally {
+    p.cleanup();
+  }
+});
+
 test('detectGithubRemote is true only when a github remote exists', () => {
   const gh = tmpProject({ '.git/config': '[remote "origin"]\n  url = https://github.com/o/r.git\n' });
   const gl = tmpProject({ '.git/config': '[remote "origin"]\n  url = https://gitlab.com/o/r.git\n' });

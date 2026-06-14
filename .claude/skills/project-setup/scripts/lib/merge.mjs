@@ -1,6 +1,6 @@
 // .claude/skills/project-setup/scripts/lib/merge.mjs
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, dirname, join, relative } from 'node:path';
 
 function isObject(v) {
   return v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -44,10 +44,14 @@ export function mergeTextLines(existing, lines, marker) {
   return { text: `${existing}${sep}${block}\n`, changed: true };
 }
 
-export function backupFile(path, backupDir) {
-  if (!existsSync(path)) return null;
-  mkdirSync(backupDir, { recursive: true });
-  const dest = join(backupDir, basename(path));
-  copyFileSync(path, dest);
+export function backupFile(absPath, backupDir, cwd) {
+  if (!existsSync(absPath)) return null;
+  // Path-preserve under backupDir (mirror the file's location relative to cwd)
+  // so two files with the same basename never collide; fall back to basename
+  // when cwd is not provided.
+  const sub = cwd ? relative(cwd, absPath) : basename(absPath);
+  const dest = join(backupDir, sub);
+  mkdirSync(dirname(dest), { recursive: true });
+  copyFileSync(absPath, dest);
   return dest;
 }

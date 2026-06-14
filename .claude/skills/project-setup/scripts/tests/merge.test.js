@@ -50,3 +50,22 @@ test('backupFile copies an existing file into the backup dir', () => {
     p.cleanup();
   }
 });
+
+test('backupFile with cwd path-preserves so same-basename files in different dirs never collide', () => {
+  const p = tmpProject({
+    'a/config.json': '{"src":"a"}',
+    'b/config.json': '{"src":"b"}',
+  });
+  try {
+    const bak = join(p.dir, '.bak');
+    const destA = backupFile(join(p.dir, 'a/config.json'), bak, p.dir);
+    const destB = backupFile(join(p.dir, 'b/config.json'), bak, p.dir);
+    assert.notEqual(destA, destB);
+    assert.ok(existsSync(destA));
+    assert.ok(existsSync(destB));
+    assert.equal(readFileSync(destA, 'utf8'), '{"src":"a"}');
+    assert.equal(readFileSync(destB, 'utf8'), '{"src":"b"}');
+  } finally {
+    p.cleanup();
+  }
+});
