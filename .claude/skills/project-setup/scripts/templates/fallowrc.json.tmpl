@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
   "entry": {{entry}},
-  "ignorePatterns": ["**/docs/**", "**/coverage/**", "**/dist/**", "**/.fallow/**", "**/scripts/check-quality.mjs", "**/scripts/check-loc.mjs", "**/scripts/quality-report.mjs"],
+  "ignorePatterns": ["**/docs/**", "**/coverage/**", "**/dist/**", "**/.fallow/**", "**/tests/**", "**/__tests__/**", "**/*.test.*", "**/*.spec.*", "**/scripts/check-quality.mjs", "**/scripts/check-loc.mjs", "**/scripts/quality-report.mjs"],
   "duplicates": { "minOccurrences": 2, "ignore": ["**/tests/**", "**/*.test.*"] },
   "rules": { "unused-dependencies": "warn" }
 }

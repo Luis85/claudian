@@ -29,6 +29,14 @@ test('planFallow ignores the generated harness scripts so fallow does not flag t
   assert.ok(ignores.some((p) => p.endsWith('scripts/quality-report.mjs')));
 });
 
+test('planFallow ignores test files in the dead-code ratchet (writing tests must not trip it)', () => {
+  const rc = planFallow({ guardrails: { fallowRatchet: true } }, { entry: 'src/index.ts' }).find((a) => a.path === '.fallowrc.json');
+  const ignores = JSON.parse(rc.content).ignorePatterns;
+  assert.ok(ignores.includes('**/*.test.*'));
+  assert.ok(ignores.includes('**/*.spec.*'));
+  assert.ok(ignores.some((p) => /tests/.test(p)));
+});
+
 test('planFallow reports a check:quality script collision (guardrail would silently not run)', () => {
   const actions = planFallow({ guardrails: { fallowRatchet: true } }, { scripts: { 'check:quality': 'old-cmd' } });
   assert.ok(actions.some((a) => a.type === 'notice' && /"check:quality" script kept/.test(a.message)));

@@ -26,7 +26,13 @@ export function isCoverageBaselined(cwd, framework) {
 
 export function floorThresholds(summary) {
   const t = summary.total;
-  const f = (k) => Math.floor(t[k].pct);
+  // Istanbul reports "Unknown" (a string) for a pct when nothing was collected
+  // (fresh repo / globs match no source); coerce to 0 so the config gets a valid
+  // numeric floor, not a `null` from Math.floor(NaN).
+  const f = (k) => {
+    const pct = Number(t[k]?.pct);
+    return Number.isFinite(pct) ? Math.floor(pct) : 0;
+  };
   return { statements: f('statements'), branches: f('branches'), functions: f('functions'), lines: f('lines') };
 }
 
