@@ -212,6 +212,13 @@ nothing fails on adoption:
   `warn` (CI does not pass `--max-warnings`, so existing violations print but do
   not block); the current per-rule offender counts are captured in the report as
   the backlog to burn down.
+- **Coverage floors** — if enabled, measure current coverage once and set the
+  thresholds to the *current* values (rounded down), making coverage a rise-only
+  floor that cannot drop. Day-one CI then passes even on a sparsely-tested repo,
+  and the team ratchets the floor up over time (the same shape as the fallow
+  maintainability floor). If coverage cannot be measured at adoption (e.g. the
+  suite does not run yet), the coverage job is left **disabled** until the user
+  sets thresholds, rather than shipping a gate that fails on day one.
 
 The result: green CI on day one, with today's debt frozen as the bar. The team
 ratchets down per PR, promoting `warn`→`error` as each backlog reaches zero —
