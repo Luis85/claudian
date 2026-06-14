@@ -120,9 +120,13 @@ export function planTest(options, state) {
   // test step doesn't fail with "Missing script: test".
   if (standsDownTestConfig(options, state)) {
     const testCmd = fw === 'vitest' ? 'vitest run --passWithNoTests' : 'jest --passWithNoTests';
+    // Install the selected runner too: a Vite app selecting Vitest (or a stale jest
+    // config) may not have the runner dep yet, and the `test` script we add invokes
+    // it — mergeJson keeps an existing version, fills only when absent.
+    const runnerDep = fw === 'vitest' ? dep('vitest') : dep('jest');
     return [
       notice('Existing test config kept — the coverage gate was NOT wired (a hand-written config\'s thresholds can\'t be safely baselined to current). Set your thresholds to current coverage, or run `report` for an advisory snapshot.'),
-      { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: testCmd } } },
+      { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: testCmd }, devDependencies: runnerDep } },
     ];
   }
   // Thresholds are filled by baseline; until then default to 0 (a no-op floor)

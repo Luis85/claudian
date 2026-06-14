@@ -94,6 +94,13 @@ test('planTest(vitest) hand-written config keeps a vitest test script', () => {
   assert.equal(actions.find((a) => a.type === 'mergeJson').patch.scripts.test, 'vitest run --passWithNoTests');
 });
 
+test('planTest standdown installs the selected runner so its test script resolves', () => {
+  const jestDeps = planTest({ testFramework: 'jest', guardrails: {} }, { jestConfig: true }).find((a) => a.type === 'mergeJson').patch.devDependencies;
+  assert.ok('jest' in jestDeps);
+  const vitestDeps = planTest({ testFramework: 'vitest', guardrails: {} }, { viteConfig: true }).find((a) => a.type === 'mergeJson').patch.devDependencies;
+  assert.ok('vitest' in vitestDeps);
+});
+
 test('planTest does NOT stand down on the OTHER runner\'s config (Jest selected, vitest.config present)', () => {
   const actions = planTest({ testFramework: 'jest', typescript: true, guardrails: { coverageFloors: true } }, { vitestConfig: true });
   assert.ok(actions.some((a) => a.path === 'jest.config.mjs')); // Jest ignores vitest.config -> write jest config

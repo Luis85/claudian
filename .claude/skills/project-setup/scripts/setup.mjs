@@ -95,9 +95,12 @@ export async function cli(argv, io = {}) {
         return 2;
       }
       const result = apply(actions, { cwd, dryRun, backupDir, exec: io.exec });
-      if (!dryRun && result.changed.length > 0) {
+      if (!dryRun) {
+        // Call on EVERY apply, not just when files changed: initBaselines is
+        // idempotent (per-artifact existence checks), so this completes a baseline
+        // left missing by an interrupted apply and no-ops when all already exist.
         // Effective options so baselining matches the plan (coverage gate may be off).
-        initBaselines(cwd, effectiveOptions(options, state), io.exec); // snapshot current debt (brownfield-safe)
+        initBaselines(cwd, effectiveOptions(options, state), io.exec);
       }
       if (dryRun) {
         // Dedupe (package.json is touched by several planners) and name the

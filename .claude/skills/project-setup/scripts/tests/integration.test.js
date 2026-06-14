@@ -61,6 +61,28 @@ test('apply --config creates engine artifacts; second run is idempotent', async 
   }
 });
 
+test('apply re-runs baseline init on a converged apply (recovers a baseline left by an interrupted apply)', async () => {
+  // Pre-populate deps so the SECOND apply is fully converged (changed === 0). The
+  // stubbed exec never creates the baseline artifacts, so a re-apply must still run
+  // initBaselines (its per-artifact checks gate the actual work).
+  const p = tmpProject({
+    'package.json': { name: 'x', devDependencies: { fallow: '2.91.0', jest: '30.3.0', 'ts-jest': '29.4.9', '@types/jest': '30.0.0', typescript: '5.9.3' } },
+    '.gitignore': 'node_modules/\n',
+  });
+  try {
+    const cfg = join(p.dir, 'answers.json');
+    writeFileSync(cfg, JSON.stringify({ guardrails: { fallowRatchet: true, locGuard: true, coverageFloors: false, eslintSeverityStaging: false, ci: false }, github: { integrate: false }, docs: { scaffold: false } }));
+    const rec = (sink, out) => ({ cwd: p.dir, exec: (cmd, args) => sink.push(`${cmd} ${args.join(' ')}`), stdout: (s) => out.push(s), stderr: () => {} });
+    await cli(['apply', '--config', cfg], rec([], [])); // apply #1
+    const calls = []; const out = [];
+    await cli(['apply', '--config', cfg], rec(calls, out)); // apply #2: converged
+    assert.match(out.join(''), /already converged/); // changed === 0
+    assert.ok(calls.some((c) => /check:quality.* --update/.test(c)), 'baseline init re-ran on converged apply');
+  } finally {
+    p.cleanup();
+  }
+});
+
 test('plan --config --dry-run prints actions and mutates nothing', async () => {
   const p = tmpProject({ 'package.json': { name: 'x' } });
   try {

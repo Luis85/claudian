@@ -23,11 +23,12 @@ export function initBaselines(cwd, options, exec = defaultExec) {
     const [cmd, cargs] = runScriptArgs(pm, script, extra);
     exec(cmd, cargs, { cwd });
   };
-  // Remove any pre-existing coverage BEFORE the fallow baseline: a stray
-  // ./coverage flips fallow CRAP to coverage-weighted, which would bless
-  // inflated complexity debt into the baseline (docs/CI require coverage absent).
-  rmSync(join(cwd, 'coverage'), { recursive: true, force: true });
   if (g.fallowRatchet && !existsSync(join(cwd, 'scripts', 'quality-baseline.json'))) {
+    // Remove any pre-existing coverage BEFORE the fallow baseline: a stray
+    // ./coverage flips fallow CRAP to coverage-weighted, which would bless inflated
+    // complexity debt into the baseline (docs/CI require coverage absent). Scoped to
+    // the fallow-baseline path so a fully-baselined re-apply is a true no-op.
+    rmSync(join(cwd, 'coverage'), { recursive: true, force: true });
     runScript('check:quality', ['--update']);
   }
   if (g.locGuard && !existsSync(join(cwd, 'scripts', 'loc-baseline.json'))) {
