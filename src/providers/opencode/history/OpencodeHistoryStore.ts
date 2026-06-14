@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process';
 import * as fs from 'node:fs';
 
 import type { HistoryLoadError } from '../../../core/providers/types';
@@ -6,6 +5,13 @@ import type { ChatMessage, ContentBlock } from '../../../core/types';
 import { extractUserQuery } from '../../../utils/context';
 import { resolveExistingOpencodeDatabasePath } from '../runtime/OpencodePaths';
 import type { OpencodeProviderState } from '../types';
+import {
+  escapeSqlLiteral,
+  isSqliteTransportAvailable,
+  loadSqliteModule,
+  runSqlite3JsonQuery,
+  type SqliteModule,
+} from './opencodeSqlite';
 import {
   getBoolean,
   getNestedNumber,
@@ -24,15 +30,6 @@ interface StoredMessage {
 interface OpencodeHydrationDiagnosticContext {
   databasePath?: string;
   sessionId?: string;
-}
-
-interface SqliteModule {
-  DatabaseSync: new (location: string, options?: Record<string, unknown>) => {
-    close(): void;
-    prepare(sql: string): {
-      all(...params: unknown[]): StoredRow[];
-    };
-  };
 }
 
 export const OPENCODE_MESSAGE_ROW_SQL = buildOpencodeMessageRowsSql('?');
@@ -401,47 +398,6 @@ function parseJsonObject(value: unknown): StoredRow | null {
   }
 }
 
-// Large OpenCode sessions overflow the default 1MB child stdout buffer, which
-// surfaced as ENOBUFS on Windows; lift the cap on every spawned query (#776).
-const OPENCODE_SQLITE_QUERY_MAX_BUFFER = 100 * 1024 * 1024;
-
-/**
- * Acquire node:sqlite through the CommonJS require bound to this module rather
- * than a dynamic import. Obsidian's Electron renderer cannot reliably
- * dynamic-import Node builtins, so module.require keeps in-process SQLite
- * working there (#776).
- */
-function requireSqliteModule(): SqliteModule | null {
-  try {
-    if (typeof module === 'undefined' || typeof module.require !== 'function') {
-      return null;
-    }
-    const sqlite = module.require('node:sqlite') as unknown;
-    return isSqliteModule(sqlite) ? sqlite : null;
-  } catch {
-    return null;
-  }
-}
-
-function isSqliteModule(value: unknown): value is SqliteModule {
-  return isPlainObject(value) && typeof value.DatabaseSync === 'function';
-}
-
-async function loadSqliteModule(): Promise<SqliteModule | null> {
-  return requireSqliteModule();
-}
-
-async function isSqliteTransportAvailable(): Promise<boolean> {
-  const sqliteModule = await loadSqliteModule();
-  if (sqliteModule) return true;
-  return isSqlite3CliAvailable();
-}
-
-function isSqlite3CliAvailable(): boolean {
-  const probe = spawnSync('sqlite3', ['-version'], { encoding: 'utf8' });
-  return !probe.error && probe.status === 0;
-}
-
 interface StoredSessionRows {
   messageRows: StoredRow[];
   partRows: StoredRow[];
@@ -500,38 +456,6 @@ function loadSessionRowsWithSqliteCli(
   }
 
   return { messageRows, partRows };
-}
-
-function runSqlite3JsonQuery(
-  databasePath: string,
-  sql: string,
-): StoredRow[] | null {
-  const result = spawnSync(
-    'sqlite3',
-    ['-json', databasePath, sql],
-    {
-      encoding: 'utf8',
-      maxBuffer: OPENCODE_SQLITE_QUERY_MAX_BUFFER,
-      windowsHide: true,
-    },
-  );
-
-  if (result.error || result.status !== 0) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(result.stdout || '[]') as unknown;
-    return Array.isArray(parsed)
-      ? parsed.filter((row): row is StoredRow => isPlainObject(row))
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function escapeSqlLiteral(value: string): string {
-  return value.replaceAll('\'', '\'\'');
 }
 
 function buildOpencodeMessageRowsSql(sessionIdExpression: string): string {

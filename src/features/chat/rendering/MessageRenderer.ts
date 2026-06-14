@@ -7,7 +7,6 @@ import {
   isSubagentToolName,
   isWriteEditTool,
   TOOL_AGENT_OUTPUT,
-  TOOL_APPLY_PATCH,
   TOOL_WRITE_STDIN,
 } from '../../../core/tools/toolNames';
 import { extractToolResultContent } from '../../../core/tools/toolResultContent';
@@ -703,17 +702,14 @@ export class MessageRenderer {
     if (!this.shouldRenderToolCall(toolCall)) return;
     const subagentLifecycleAdapter = this.getSubagentLifecycleAdapter(toolCall.name);
 
-    const expandFileEdits = this.plugin.settings.expandFileEditsByDefault === true;
     if (isWriteEditTool(toolCall.name)) {
-      renderStoredWriteEdit(this.app, contentEl, toolCall, { initiallyExpanded: expandFileEdits });
+      renderStoredWriteEdit(this.app, contentEl, toolCall, { initiallyExpanded: this.plugin.settings.expandFileEditsByDefault === true });
     } else if (isSubagentToolName(toolCall.name)) {
       this.renderTaskSubagent(contentEl, toolCall);
     } else if (subagentLifecycleAdapter?.isSpawnTool(toolCall.name) && msg) {
       this.renderProviderLifecycleSubagent(contentEl, toolCall, msg);
     } else {
-      renderStoredToolCall(this.app, contentEl, toolCall, {
-        initiallyExpanded: expandFileEdits && toolCall.name === TOOL_APPLY_PATCH,
-      });
+      renderStoredToolCall(this.app, contentEl, toolCall);
     }
   }
 

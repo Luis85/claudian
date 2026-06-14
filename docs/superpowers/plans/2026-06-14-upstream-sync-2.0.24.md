@@ -107,7 +107,7 @@ No further action.
 
 ## Task 2: #767 — expand Write/Edit diffs by default (setting only)
 
-> **Status: DONE** (PR #100). `expandFileEditsByDefault` setting (type + default `false` + registry field + legacy toggle + 10 i18n locales, copied verbatim from upstream `65ca3ec5`). `initiallyExpanded` threaded through `WriteEditRenderer` (streaming + stored) and the generic `ToolCallRenderer` (gated to Codex `apply_patch` at the StreamController/MessageRenderer call sites). Upstream's display-text-from-context-wrappers half intentionally skipped — the Context Trust Envelope owns it here.
+> **Status: DONE** (PR #100). `expandFileEditsByDefault` setting (type + default `false` + registry field + 10 i18n locales, copied verbatim from upstream `65ca3ec5`). `initiallyExpanded` threaded through `WriteEditRenderer` (streaming + stored). Scoped to **Write/Edit only**, matching the setting's own name/desc ("Show Write and Edit diffs expanded") — the earlier Codex `apply_patch` gating in the generic `ToolCallRenderer` was dropped during the LOC-ratchet hold (Codex review) to avoid leaking apply_patch-awareness into the generic renderer and to keep the `ToolCallRenderer` hotspot at its ceiling. The legacy `ClaudianSettings.ts` toggle was omitted (the registry is the live renderer for the General tab via `STATIC_REGISTRY_TABS`). Upstream's display-text-from-context-wrappers half intentionally skipped — the Context Trust Envelope owns it here.
 
 **Adopt scope:** the user-facing setting that defaults Write/Edit (and Codex `apply_patch`) diffs to expanded, across stored + streaming render paths. **Do not** port upstream's "derive display text from hidden context wrappers / shared display-content extraction" — our **Context Trust Envelope** (`docs/superpowers/specs/2026-06-07-context-trust-envelope.md`) already owns that concern differently; porting it would conflict.
 
@@ -143,11 +143,13 @@ No further action.
 
 ## Task 3: #776 — OpenCode history hydration robustness (conditional)
 
-> **Status: core fixes DONE** (PR #100). Ported the two high-value robustness wins **in place** (the fork's store diverged ~248 lines from upstream pre-#776 and carries a second sqlite-reading path — `loadOpencodeLastAssistantData` — so a full reader extraction was higher-risk than warranted; both reading paths share the hardened helpers):
+> **Status: core fixes DONE** (PR #100). Ported the two high-value robustness wins (the fork's store diverged ~248 lines from upstream pre-#776 and carries a second sqlite-reading path — `loadOpencodeLastAssistantData` — so a full upstream-shaped reader port was higher-risk than warranted):
 > 1. `requireSqliteModule()` via `module.require('node:sqlite')` (renderer-safe) replacing `await import('node:sqlite')`.
 > 2. `OPENCODE_SQLITE_QUERY_MAX_BUFFER` (100MB) + `windowsHide` on the `sqlite3` CLI spawn — the direct ENOBUFS fix for #775.
 >
-> **Deferred follow-up:** the spawned-Node middle tier (`loadSessionRowsWithNodeProcess` via `findNodeExecutable` + child script). It is purely additive (a third fallback between in-process node:sqlite and the sqlite3 CLI) and the module.require + maxBuffer fixes already address #775's reported symptom; deferred to keep the diverged-store change low-risk and because the tier is hard to unit-test in place without DI. Track separately if a real-world session still fails to hydrate.
+> The sqlite-execution primitives now live in a sibling `opencodeSqlite.ts` (extracted during the LOC-ratchet hold, Codex review) — both reading paths import the hardened helpers from there, and the store holds its 545 ceiling.
+>
+> **Deferred follow-up:** the spawned-Node middle tier (`loadSessionRowsWithNodeProcess` via `findNodeExecutable` + child script). It is purely additive (a third fallback between in-process node:sqlite and the sqlite3 CLI) and the module.require + maxBuffer fixes already address #775's reported symptom; deferred because the tier is hard to unit-test without DI. Track separately if a real-world session still fails to hydrate.
 
 **Adopt if** Windows and/or large OpenCode session support matters to fork users. Upstream replaces a renderer-side dynamic SQLite import with a `module.require` + spawned-Node reader and adds a 100MB `maxBuffer` to dodge ENOBUFS on large sessions (issue #775). Our store already has the relevant seam: `loadSqliteModule` does `await import('node:sqlite')` (`OpencodeHistoryStore.ts:406`), with a `sqlite3` CLI probe (`:419`) and `spawnSync` already imported (`:1`). This builds on our prior #713 large-metadata guard.
 

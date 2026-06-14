@@ -85,51 +85,6 @@ describe('ToolCallRenderer', () => {
     });
   });
 
-  describe('initiallyExpanded option (#767)', () => {
-    it('renderToolCall starts apply_patch expanded when requested', () => {
-      const parentEl = createMockEl();
-      const toolCall = createToolCall({ name: 'apply_patch' });
-      const toolCallElements = new Map<string, HTMLElement>();
-
-      const toolEl = renderToolCall(mockApp, parentEl, toolCall, toolCallElements, {
-        initiallyExpanded: true,
-      });
-
-      expect(toolCall.isExpanded).toBe(true);
-      expect(toolEl.hasClass('expanded')).toBe(true);
-    });
-
-    it('renderToolCall stays collapsed without the option', () => {
-      const parentEl = createMockEl();
-      const toolCall = createToolCall({ name: 'apply_patch' });
-      const toolCallElements = new Map<string, HTMLElement>();
-
-      const toolEl = renderToolCall(mockApp, parentEl, toolCall, toolCallElements);
-
-      expect(toolEl.hasClass('expanded')).toBe(false);
-    });
-
-    it('renderStoredToolCall starts apply_patch expanded when requested', () => {
-      const parentEl = createMockEl();
-      const toolCall = createToolCall({ name: 'apply_patch', status: 'completed' });
-
-      const toolEl = renderStoredToolCall(mockApp, parentEl, toolCall, {
-        initiallyExpanded: true,
-      });
-
-      expect(toolEl.hasClass('expanded')).toBe(true);
-    });
-
-    it('renderStoredToolCall stays collapsed without the option', () => {
-      const parentEl = createMockEl();
-      const toolCall = createToolCall({ name: 'apply_patch', status: 'completed' });
-
-      const toolEl = renderStoredToolCall(mockApp, parentEl, toolCall);
-
-      expect(toolEl.hasClass('expanded')).toBe(false);
-    });
-  });
-
   describe('renderStoredToolCall', () => {
     it('should show completed status icon', () => {
       const parentEl = createMockEl();

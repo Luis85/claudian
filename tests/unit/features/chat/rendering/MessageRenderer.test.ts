@@ -593,7 +593,6 @@ describe('MessageRenderer', () => {
         name: TOOL_WRITE_STDIN,
         input: { session_id: '2404', chars: 'y\n' },
       }),
-      expect.objectContaining({ initiallyExpanded: false }),
     );
     expect(messagesEl.children).toHaveLength(1);
   });
@@ -729,7 +728,6 @@ describe('MessageRenderer', () => {
       expect.anything(),
       expect.anything(),
       expect.objectContaining({ id: 'read-1', name: 'Read' }),
-      expect.objectContaining({ initiallyExpanded: false }),
     );
   });
 
@@ -962,13 +960,11 @@ describe('MessageRenderer', () => {
       expect.anything(),
       expect.anything(),
       expect.objectContaining({ id: 'read-1', name: 'Read' }),
-      expect.objectContaining({ initiallyExpanded: false }),
     );
     expect(renderStoredToolCall).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
       expect.objectContaining({ id: 'grep-1', name: 'Grep' }),
-      expect.objectContaining({ initiallyExpanded: false }),
     );
   });
 

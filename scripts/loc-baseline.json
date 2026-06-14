@@ -7,7 +7,7 @@
       "reason": "Grandfathered. Planned split: extract persistent-query lifecycle (ensureReady, needsRestart, response-consumer startup) behind a smaller module interface. See docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md."
     },
     "src/features/chat/controllers/StreamController.ts": {
-      "loc": 1520,
+      "loc": 1514,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/controllers/InputController.ts": {
@@ -27,7 +27,7 @@
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/rendering/MessageRenderer.ts": {
-      "loc": 1065,
+      "loc": 1061,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/tabs/TabManager.ts": {
@@ -55,7 +55,7 @@
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/rendering/ToolCallRenderer.ts": {
-      "loc": 861,
+      "loc": 854,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/tasks/ui/WorkOrderDetailModal.ts": {
@@ -71,7 +71,7 @@
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/i18n/types.ts": {
-      "loc": 765,
+      "loc": 763,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/providers/codex/history/CodexHistoryStore.ts": {
@@ -94,12 +94,12 @@
       "loc": 566,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
-    "src/providers/opencode/history/OpencodeHistoryStore.ts": {
-      "loc": 566,
-      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
-    },
     "src/features/chat/rendering/InlineAskUserQuestion.ts": {
       "loc": 564,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/providers/opencode/history/OpencodeHistoryStore.ts": {
+      "loc": 545,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/providers/cursor/runtime/cursorToolNormalization.ts": {
@@ -107,7 +107,7 @@
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/settings/ClaudianSettings.ts": {
-      "loc": 537,
+      "loc": 526,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     }
   }
