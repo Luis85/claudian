@@ -180,6 +180,63 @@
   background: var(--background-modifier-hover);
 }
 
+/* Edited-files row (files the agent created/edited, above the context row) */
+.claudian-edited-files-row {
+  flex-wrap: wrap;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 6px;
+  padding: 6px 10px 0 10px;
+}
+
+.claudian-edited-files-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.claudian-edited-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1;
+  max-width: 200px;
+  cursor: pointer;
+}
+
+.claudian-edited-file-chip:hover {
+  background: var(--background-modifier-hover);
+}
+
+.claudian-edited-file-chip-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.claudian-edited-file-chip-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.claudian-edited-file-chip--created .claudian-edited-file-chip-icon {
+  color: var(--text-success);
+}
+
+.claudian-edited-file-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-normal);
+}
+
 /* Composer queue status row (queued follow-up preview + steer action) */
 .claudian-input-queue-row {
   display: none;

@@ -196,6 +196,8 @@ export interface ClaudianSettings {
   tabBarPosition: TabBarPosition;
   enableAutoScroll: boolean;
   deferMathRenderingDuringStreaming: boolean;
+  /** Show a clickable list of files the agent created/edited above the composer. */
+  showAgentEditedFiles: boolean;
   chatViewPlacement: ChatViewPlacement;
   firstRunDismissed: boolean;
   /** When true, prompt the user to commit & push after Accepting a Work-Order in a dirty git-backed vault. */

@@ -194,6 +194,9 @@
       "unsupported": "Image attachments are not supported by this provider.",
       "unavailable": "Image is no longer available in the vault."
     },
+    "editedFiles": {
+      "label": "Geänderte Dateien"
+    },
     "fileOpen": {
       "notFound": "Could not open file: {path}",
       "failed": "Failed to open file: {error}"
@@ -466,6 +469,10 @@
     "enableAutoScroll": {
       "name": "Automatisches Scrollen während Streaming",
       "desc": "Automatisch nach unten scrollen, während Claude Antworten streamt. Deaktivieren, um oben zu bleiben und von Anfang an zu lesen."
+    },
+    "showAgentEditedFiles": {
+      "name": "Vom Agenten geänderte Dateien anzeigen",
+      "desc": "Listet die vom Agenten erstellten oder bearbeiteten Dateien über dem Chat-Eingabefeld auf, damit du sie mit einem Klick öffnen kannst. Deaktivieren, um das bisherige stille Verhalten beizubehalten."
     },
     "deferMathRenderingDuringStreaming": {
       "name": "Mathe-Rendering während Streaming aufschieben",

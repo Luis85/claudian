@@ -367,6 +367,18 @@ export class ClaudianSettingTab extends PluginSettingTab {
           })
       );
 
+    new Setting(container)
+      .setName(t('settings.showAgentEditedFiles.name'))
+      .setDesc(t('settings.showAgentEditedFiles.desc'))
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.showAgentEditedFiles ?? true)
+          .onChange(async (value) => {
+            this.plugin.settings.showAgentEditedFiles = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
     // --- Conversations ---
 
     new Setting(container).setName(t('settings.conversations')).setHeading();

@@ -177,6 +177,8 @@ export async function destroyTab(tab: TabData): Promise<void> {
 
   tab.controllers.inputController?.destroyResumeDropdown();
   tab.ui.fileContextManager?.destroy();
+  tab.ui.editedFilesView?.destroy();
+  tab.ui.editedFilesView = null;
   tab.ui.chatDropController?.destroy();
   tab.ui.chatDropController = undefined;
   tab.ui.slashCommandDropdown?.destroy();

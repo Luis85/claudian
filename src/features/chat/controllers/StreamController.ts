@@ -29,6 +29,7 @@ import {
 } from '../../../utils/animationFrame';
 import { formatDurationMmSs } from '../../../utils/date';
 import { extractDiffData } from '../../../utils/diff';
+import { resolveOpenableVaultPath } from '../../../utils/fileLink';
 import { hasStreamingMathDelimiters } from '../../../utils/markdownMath';
 import { openClaudianProviderSettings } from '../../../utils/obsidianPrivateApi';
 import { FLAVOR_TEXTS } from '../constants';
@@ -58,6 +59,7 @@ import {
 import type { SubagentManager } from '../services/SubagentManager';
 import type { ChatState } from '../state/ChatState';
 import type { FileContextManager } from '../ui/FileContext';
+import { collectEditedPathsFromToolCall } from '../utils/editedFiles';
 import { classifyRuntimeError } from './runtimeErrorClassification';
 import {
   type BlockTransitionDecision,
@@ -775,6 +777,28 @@ export class StreamController {
 
     if (!chunk.isError && !isBlocked) {
       notifyVaultForToolResult(this.deps.plugin.app, existingToolCall);
+      this.recordEditedFiles(existingToolCall);
+    }
+  }
+
+  /**
+   * Adds the file(s) a successful Write/Edit/NotebookEdit/apply_patch touched to
+   * the per-tab "files changed by the agent" list. Only in-vault, openable paths
+   * are listed (so every chip opens). Opt-out via the `showAgentEditedFiles`
+   * setting. Runs after {@link renderToolResultBlock} so the Write/Edit diff is
+   * already on the tool call for the created-vs-edited heuristic.
+   */
+  private recordEditedFiles(toolCall: ToolCallInfo): void {
+    if (this.deps.plugin.settings.showAgentEditedFiles === false) return;
+
+    const rawPaths = collectEditedPathsFromToolCall(toolCall);
+    if (rawPaths.length === 0) return;
+
+    const { app } = this.deps.plugin;
+    for (const raw of rawPaths) {
+      const openable = resolveOpenableVaultPath(app, raw.path);
+      if (!openable) continue;
+      this.deps.state.recordEditedFile({ path: openable, changeKind: raw.changeKind });
     }
   }
 

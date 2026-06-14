@@ -20,6 +20,7 @@ jest.mock('@/core/tools/todo', () => ({
 }));
 
 jest.mock('@/core/tools/toolInput', () => ({
+  ...jest.requireActual('@/core/tools/toolInput'),
   extractResolvedAnswers: jest.fn().mockReturnValue(undefined),
   extractResolvedAnswersFromResultText: jest.fn().mockReturnValue(undefined),
 }));
@@ -60,6 +61,15 @@ jest.mock('@/features/chat/rendering/WriteEditRenderer', () => ({
 
 jest.mock('@/utils/path', () => ({
   getVaultPath: jest.fn().mockReturnValue('/test/vault'),
+}));
+
+jest.mock('@/features/chat/controllers/vaultFileNotifier', () => ({
+  notifyVaultForToolResult: jest.fn(),
+}));
+
+jest.mock('@/utils/fileLink', () => ({
+  // Echo the path back as "openable" so the edited-files hook records it.
+  resolveOpenableVaultPath: jest.fn((_app: unknown, p: string) => p),
 }));
 
 const originalWindow = (globalThis as { window?: Window }).window;
@@ -2812,5 +2822,67 @@ describe('StreamController - stream observers', () => {
       controller.handleStreamChunk({ type: 'text', content: 'hi' }, msg),
     ).resolves.toBeUndefined();
     expect(seen).toEqual(['text']);
+  });
+});
+
+describe('StreamController - edited files', () => {
+  let controller: StreamController;
+  let deps: StreamControllerDeps;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    installTestWindow();
+    deps = createMockDeps();
+    controller = new StreamController(deps);
+    deps.state.currentContentEl = createMockEl();
+  });
+
+  afterEach(() => {
+    deps.state.resetStreamingState();
+    restoreTestWindow();
+    jest.useRealTimers();
+  });
+
+  async function completeTool(
+    msg: ChatMessage,
+    toolCall: { id: string; name: string; input: Record<string, unknown> },
+    result: { content?: string; isError?: boolean } = {},
+  ): Promise<void> {
+    await controller.handleStreamChunk({ type: 'tool_use', ...toolCall }, msg);
+    await controller.handleStreamChunk(
+      { type: 'tool_result', id: toolCall.id, content: result.content ?? 'ok', isError: result.isError },
+      msg,
+    );
+  }
+
+  it('records a completed Write as an openable edited file', async () => {
+    const msg = createTestMessage();
+    await completeTool(msg, { id: 't1', name: 'Write', input: { file_path: 'notes/new.md', content: 'hi' } });
+
+    expect(deps.state.editedFiles).toHaveLength(1);
+    expect(deps.state.editedFiles[0].path).toBe('notes/new.md');
+  });
+
+  it('does not record edits when the setting is disabled', async () => {
+    (deps.plugin.settings as Record<string, unknown>).showAgentEditedFiles = false;
+    const msg = createTestMessage();
+    await completeTool(msg, { id: 't1', name: 'Edit', input: { file_path: 'a.md' } });
+
+    expect(deps.state.editedFiles).toEqual([]);
+  });
+
+  it('does not record a failed edit', async () => {
+    const msg = createTestMessage();
+    await completeTool(msg, { id: 't1', name: 'Edit', input: { file_path: 'a.md' } }, { isError: true });
+
+    expect(deps.state.editedFiles).toEqual([]);
+  });
+
+  it('ignores read-only tools', async () => {
+    const msg = createTestMessage();
+    await completeTool(msg, { id: 't1', name: 'Read', input: { file_path: 'a.md' } });
+
+    expect(deps.state.editedFiles).toEqual([]);
   });
 });

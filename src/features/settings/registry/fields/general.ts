@@ -254,6 +254,17 @@ function registerDisplayFields(r: Registry): void {
     default: true,
     keywords: ['math', 'latex', 'streaming', 'render'],
   });
+
+  r.registerField({
+    id: 'showAgentEditedFiles',
+    tabId: 'general',
+    sectionId: 'display',
+    label: t('settings.showAgentEditedFiles.name'),
+    description: t('settings.showAgentEditedFiles.desc'),
+    type: { kind: 'toggle' },
+    default: true,
+    keywords: ['edited', 'files', 'changed', 'agent', 'open', 'list'],
+  });
 }
 
 function registerConversationsFields(r: Registry): void {

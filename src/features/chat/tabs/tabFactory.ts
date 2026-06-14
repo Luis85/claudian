@@ -113,6 +113,7 @@ export function createTab(options: TabCreateOptions): TabData {
     ui: {
       fileContextManager: null,
       imageContextManager: null,
+      editedFilesView: null,
       modelSelector: null,
       modeSelector: null,
       thinkingBudgetSelector: null,
@@ -147,6 +148,7 @@ function buildTabDOM(contentEl: HTMLElement): TabDOMElements {
   const queueIndicatorEl = inputContainerEl.createDiv({ cls: 'claudian-input-queue-row' });
   const navRowEl = inputContainerEl.createDiv({ cls: 'claudian-input-nav-row' });
   const inputWrapper = inputContainerEl.createDiv({ cls: 'claudian-input-wrapper' });
+  const editedFilesRowEl = inputWrapper.createDiv({ cls: 'claudian-edited-files-row claudian-hidden' });
   const contextRowEl = inputWrapper.createDiv({ cls: 'claudian-context-row' });
   const inputEl = inputWrapper.createEl('textarea', {
     cls: 'claudian-input',
@@ -167,6 +169,7 @@ function buildTabDOM(contentEl: HTMLElement): TabDOMElements {
     inputWrapper,
     inputEl,
     navRowEl,
+    editedFilesRowEl,
     contextRowEl,
     selectionIndicatorEl: null,
     browserIndicatorEl: null,

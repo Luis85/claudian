@@ -194,6 +194,9 @@
       "unsupported": "Image attachments are not supported by this provider.",
       "unavailable": "Image is no longer available in the vault."
     },
+    "editedFiles": {
+      "label": "Изменённые файлы"
+    },
     "fileOpen": {
       "notFound": "Could not open file: {path}",
       "failed": "Failed to open file: {error}"
@@ -466,6 +469,10 @@
     "enableAutoScroll": {
       "name": "Автопрокрутка во время потоковой передачи",
       "desc": "Автоматически прокручивать вниз, пока Claude передает ответы. Отключите, чтобы оставаться наверху и читать с начала."
+    },
+    "showAgentEditedFiles": {
+      "name": "Показывать файлы, изменённые агентом",
+      "desc": "Показывает над полем ввода файлы, созданные или изменённые агентом, чтобы открывать их одним щелчком. Отключите, чтобы сохранить прежнее тихое поведение."
     },
     "deferMathRenderingDuringStreaming": {
       "name": "Отложить рендеринг формул во время потока",

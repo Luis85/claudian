@@ -15,6 +15,7 @@ import type { FileContextManager } from '../ui/FileContext';
 import type { ImageContextManager } from '../ui/ImageContext';
 import type { ExternalContextSelector, McpServerSelector } from '../ui/InputToolbar';
 import type { StatusPanel } from '../ui/StatusPanel';
+import { deriveEditedFilesFromMessages } from '../utils/editedFiles';
 import {
   resolveRewindTarget,
   rewindConfirmMessage,
@@ -128,6 +129,7 @@ export class ConversationController {
     state.clearMessages();
     state.usage = null;
     state.currentTodos = null;
+    state.clearEditedFiles();
     state.pendingNewSessionPlan = null;
     state.planFilePath = null;
     state.prePlanPermissionMode = null;
@@ -308,6 +310,7 @@ export class ConversationController {
       state.messages = [];
       state.usage = null;
       state.currentTodos = null;
+      state.clearEditedFiles();
       state.hasPendingConversationSave = false;
       this.deps.getInputEl().value = '';
       this.deps.clearQueuedMessage();
@@ -466,6 +469,8 @@ export class ConversationController {
   ): Promise<void> {
     const { state, renderer } = this.deps;
     state.truncateAt(userMessageId);
+    // Rewind drops later turns; re-derive so the edited-files list isn't stale.
+    state.setEditedFiles(deriveEditedFilesFromMessages(this.deps.plugin.app, state.messages));
 
     const inputEl = this.deps.getInputEl();
     inputEl.value = userMsg.content;
@@ -552,6 +557,10 @@ export class ConversationController {
 
     // Clear status panels (auto-hide: panels reappear when agent creates new todos)
     state.currentTodos = null;
+
+    // Rebuild the "files changed by the agent" list from this conversation's
+    // transcript so it stays tied to the conversation across switches/reloads.
+    state.setEditedFiles(deriveEditedFilesFromMessages(plugin.app, state.messages));
 
     const hasMessages = state.messages.length > 0;
 
