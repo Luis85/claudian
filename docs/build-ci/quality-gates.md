@@ -381,3 +381,15 @@ SIGTERM→SIGKILL→give-up `shutdown()` (one tested copy of the CON-2 teardown)
 a new `AgentSubprocess` spec. Incidentally dropped the cross-zone `shutdown()` clone: `cloneGroups`
 33 → 32, `duplicatedLines` 819 → 803; complexFunctions/structural counters held. The optional
 JSON-RPC client (step 2) is deferred.
+Done 2026-06-14 (quality campaign run 16): shared-transport JSON-RPC client (ADR-0001 Move 2,
+step 2 — completes the `shared-transport-extraction` debt, now `done`). Extracted
+`core/transport/JsonRpcStdioClient` — request/response correlation, timeouts + abort,
+notification/server-request routing, line framing, and pending-request rejection on close/dispose,
+over a `JsonRpcMessageStreams` abstraction. `AcpJsonRpcTransport` was already provider-agnostic so it
+became a re-export of the core client (zero Opencode-consumer churn); `CodexRpcTransport` is a thin
+adapter that bridges the Codex subprocess and keeps its API (server requests still receive the id).
+Capability-aware (ACP abort/typed-errors, Codex id-passing) with no provider forced through a fake
+common transport. Behavior-preserving — transport unit + consumer suites pass unchanged; new
+`JsonRpcStdioClient` spec covers pending-request rejection, timeout, abort, and routing. No gated
+metric moved (the two transports weren't a tracked clone): an architectural dedup, counters held at
+32 / 803 / 236 / 0.
