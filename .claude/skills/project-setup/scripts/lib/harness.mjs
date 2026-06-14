@@ -85,14 +85,21 @@ export function planFallow(options, state) {
   // filesystem (a crafted filename could break out of an unescaped JSON string
   // and inject keys into .fallowrc.json).
   const entry = JSON.stringify([state?.entry ?? 'src/index.ts']);
+  // A fallow config in another form (.fallowrc.jsonc / fallow.toml / ...) already
+  // owns the analysis graph. Writing our .fallowrc.json would take PRECEDENCE and
+  // shadow theirs, so the ratchet would baseline/gate the wrong graph. Stand down
+  // and surface a notice — check:quality still wraps `fallow`, now reading THEIR config.
+  const fallowrc = state?.fallowConfig
+    ? [notice('Existing fallow config (.fallowrc.jsonc / fallow.toml / ...) kept — the generated .fallowrc.json was NOT written (it would take precedence and shadow yours). check:quality ratchets your config; add scripts/check-*.mjs, scripts/quality-report.mjs, and test files to its ignore patterns so the ratchet doesn\'t bank them as dead code.')]
+    : [{
+        type: 'writeFile',
+        path: '.fallowrc.json',
+        mode: 'skip-if-exists',
+        content: renderTemplate(loadTemplate('fallowrc.json.tmpl'), { entry }),
+      }];
   return [
     ...scriptCollision(options, state, 'check:quality', 'node scripts/check-quality.mjs'),
-    {
-      type: 'writeFile',
-      path: '.fallowrc.json',
-      mode: 'skip-if-exists',
-      content: renderTemplate(loadTemplate('fallowrc.json.tmpl'), { entry }),
-    },
+    ...fallowrc,
     {
       type: 'writeFile',
       path: 'scripts/check-quality.mjs',

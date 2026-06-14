@@ -42,6 +42,9 @@ const ESLINTRC = ['.eslintrc', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.json'
 // ESLint loads only one (it checks .js before .mjs), so either theirs wins (ours
 // is ignored) or ours shadows theirs. Both are collisions worth reporting.
 const ESLINT_FLAT = ['eslint.config.js', 'eslint.config.cjs', 'eslint.config.ts', 'eslint.config.mts', 'eslint.config.cts'];
+// Fallow config in another form than the .fallowrc.json we write — .fallowrc.json
+// takes precedence and would shadow these.
+const FALLOW_CONFIGS = ['.fallowrc.jsonc', 'fallow.toml', '.fallow.toml', '.fallowrc'];
 // Per-runner config signals — kept SEPARATE so the standdown decision can be
 // scoped to the resolved runner (Jest ignores vitest.config, and vice versa).
 // Vitest also reads vite.config by default, so a generated vitest.config would
@@ -158,6 +161,10 @@ export function detect(cwd) {
     scripts: pkg.scripts ?? {},
     legacyEslintrc: existsAny(cwd, ESLINTRC),
     eslintFlatConfig: existsAny(cwd, ESLINT_FLAT),
+    // A fallow config in another form (.fallowrc.jsonc / fallow.toml / ...). The
+    // generated .fallowrc.json would take precedence and shadow it, so planFallow
+    // stands down and ratchets THEIR config instead.
+    fallowConfig: existsAny(cwd, FALLOW_CONFIGS),
     // The same-name config we write (skip-if-exists) — flagged only when it's the
     // user's own (no marker), so a re-apply of our generated one won't false-fire.
     eslintConfigMjs: hasUnmarkedConfig(cwd, ['eslint.config.mjs']),

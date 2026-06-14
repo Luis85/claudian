@@ -48,6 +48,17 @@ test('script-collision notices render the real package manager, not a literal <p
   assert.doesNotMatch(n.message, /<pm>/);
 });
 
+test('planFallow stands down for an existing fallow config in another form (would be shadowed by .fallowrc.json)', () => {
+  // A repo with .fallowrc.jsonc / fallow.toml etc.: writing .fallowrc.json takes
+  // precedence and shadows theirs, so the ratchet would gate the wrong graph.
+  const actions = planFallow({ guardrails: { fallowRatchet: true } }, { entry: 'src/index.ts', fallowConfig: true });
+  assert.ok(!actions.some((a) => a.path === '.fallowrc.json')); // never shadow their config
+  assert.ok(actions.some((a) => a.type === 'notice' && /generated \.fallowrc\.json was NOT written/.test(a.message)));
+  // The ratchet itself still installs and wraps `fallow` (now reading THEIR config).
+  assert.ok(actions.some((a) => a.path === 'scripts/check-quality.mjs' && a.type === 'writeFile'));
+  assert.equal(actions.find((a) => a.type === 'mergeJson').patch.scripts['check:quality'], 'node scripts/check-quality.mjs');
+});
+
 test('planFallow is a no-op when disabled', () => {
   assert.deepEqual(planFallow({ guardrails: { fallowRatchet: false } }, {}), []);
 });

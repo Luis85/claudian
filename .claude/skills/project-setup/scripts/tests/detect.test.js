@@ -203,6 +203,21 @@ test('detect recognizes a package.json jest key and the .cts/.cjs config forms',
   }
 });
 
+test('detect flags an existing fallow config in another form (.fallowrc.jsonc / fallow.toml)', () => {
+  const jsonc = tmpProject({ '.fallowrc.jsonc': '{}\n' });
+  const toml = tmpProject({ 'fallow.toml': '\n' });
+  const none = tmpProject({});
+  try {
+    assert.equal(detect(jsonc.dir).fallowConfig, true);
+    assert.equal(detect(toml.dir).fallowConfig, true);
+    assert.equal(detect(none.dir).fallowConfig, false);
+  } finally {
+    jsonc.cleanup();
+    toml.cleanup();
+    none.cleanup();
+  }
+});
+
 test('detect exposes per-runner config signals (scoped standdown is decided at plan time)', () => {
   const jestP = tmpProject({ 'jest.config.ts': 'export default {};\n' });
   const vitestP = tmpProject({ 'vitest.config.ts': 'export default {};\n' });
