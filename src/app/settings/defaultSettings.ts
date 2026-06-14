@@ -63,6 +63,7 @@ export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
   enableAutoScroll: true,
   deferMathRenderingDuringStreaming: true,
   showAgentEditedFiles: true,
+  collapseStreamingResponse: true,
   expandFileEditsByDefault: false,
   chatViewPlacement: 'right-sidebar',
   firstRunDismissed: false,

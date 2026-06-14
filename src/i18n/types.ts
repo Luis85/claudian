@@ -752,6 +752,8 @@ export type TranslationKey =
   | 'settings.deferMathRenderingDuringStreaming.desc'
   | 'settings.showAgentEditedFiles.name'
   | 'settings.showAgentEditedFiles.desc'
+  | 'settings.collapseStreamingResponse.name'
+  | 'settings.collapseStreamingResponse.desc'
   | 'settings.expandFileEditsByDefault.name'
   | 'settings.expandFileEditsByDefault.desc'
   | 'settings.chatViewPlacement.name'

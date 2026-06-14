@@ -166,8 +166,7 @@ function mapStoredMessage(
     return null;
   }
 
-  const createdAt = getMessageCreatedAt(message.info)
-    ?? Date.now();
+  const createdAt = getMessageCreatedAt(message.info) ?? Date.now();
 
   if (role === 'user') {
     const promptText = extractUserQuery(getJoinedTextParts(message.parts));
@@ -236,10 +235,7 @@ function mergeOptionalArrays<T>(left?: T[], right?: T[]): T[] | undefined {
     return undefined;
   }
 
-  return [
-    ...(left ?? []),
-    ...(right ?? []),
-  ];
+  return [...(left ?? []), ...(right ?? [])];
 }
 
 function mergeAssistantDurationSeconds(

@@ -275,6 +275,17 @@ function registerDisplayFields(r: Registry): void {
   });
 
   r.registerField({
+    id: 'collapseStreamingResponse',
+    tabId: 'general',
+    sectionId: 'display',
+    label: t('settings.collapseStreamingResponse.name'),
+    description: t('settings.collapseStreamingResponse.desc'),
+    type: { kind: 'toggle' },
+    default: true,
+    keywords: ['streaming', 'render', 'response', 'placeholder', 'collapse'],
+  });
+
+  r.registerField({
     id: 'expandFileEditsByDefault',
     tabId: 'general',
     sectionId: 'display',

@@ -24,6 +24,9 @@ export const COMPLETION_FLAVOR_WORDS = [
   'Cogitated',
 ] as const;
 
+/** Placeholder shown while a streamed response is hidden until it completes (collapseStreamingResponse). */
+export const STREAMING_RESPONSE_LABEL = 'Writing response...';
+
 /** Random flavor texts shown while Claude is thinking. */
 export const FLAVOR_TEXTS = [
   // Classic

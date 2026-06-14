@@ -38,6 +38,7 @@ const LEGACY_FIELD_IDS = [
   'enableAutoScroll',
   'deferMathRenderingDuringStreaming',
   'showAgentEditedFiles',
+  'collapseStreamingResponse',
   'enableAutoTitleGeneration',
   'titleGenerationModel',
   'userName',

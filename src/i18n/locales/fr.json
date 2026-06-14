@@ -478,6 +478,10 @@
       "name": "Différer le rendu mathématique pendant le streaming",
       "desc": "Afficher le LaTeX brut pendant la diffusion, puis rendre les formules une fois chaque bloc de texte terminé."
     },
+    "collapseStreamingResponse": {
+      "name": "Masquer les réponses incomplètes pendant le streaming",
+      "desc": "Afficher un espace réservé « Writing response... » pendant la diffusion d'une réponse, puis rendre chaque bloc de texte en une fois lorsqu'il est terminé — évite d'afficher du Markdown ou XML à moitié formé."
+    },
     "expandFileEditsByDefault": {
       "name": "Développer les modifications de fichiers par défaut",
       "desc": "Afficher les diffs Write et Edit développés lors de leur première apparition."
