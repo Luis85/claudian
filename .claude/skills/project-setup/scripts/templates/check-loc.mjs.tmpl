@@ -9,7 +9,7 @@ const ROOT = process.cwd();
 const BASELINE = join(ROOT, 'scripts', 'loc-baseline.json');
 const MAX_LOC = {{locCap}};
 const SRC = join(ROOT, 'src');
-const EXT = /\.(ts|tsx|js|jsx|mjs)$/;
+const EXT = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
 const update = process.argv.includes('--update');
 
 function walk(dir, out = []) {

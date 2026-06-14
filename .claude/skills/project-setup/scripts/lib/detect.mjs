@@ -7,7 +7,7 @@ import { join } from 'node:path';
 // apps (e.g. src/app.js, src/app.jsx) — not just the TypeScript variants — so a
 // JS entrypoint isn't mis-fallen-back to src/index.ts and flagged unused.
 const ENTRY_BASENAMES = ['index', 'main', 'app'];
-const ENTRY_EXTS = ['ts', 'tsx', 'js', 'jsx', 'mjs'];
+const ENTRY_EXTS = ['ts', 'tsx', 'mts', 'cts', 'js', 'jsx', 'mjs', 'cjs'];
 const ENTRY_CANDIDATES = [
   ...ENTRY_BASENAMES.flatMap((b) => ENTRY_EXTS.map((e) => `src/${b}.${e}`)),
   ...ENTRY_BASENAMES.flatMap((b) => ENTRY_EXTS.map((e) => `${b}.${e}`)),
@@ -22,6 +22,10 @@ export function detectEntry(cwd) {
 }
 
 const ESLINTRC = ['.eslintrc', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.json', '.eslintrc.yml', '.eslintrc.yaml'];
+// Flat configs in a different extension than the eslint.config.mjs we write —
+// ESLint loads only one (it checks .js before .mjs), so either theirs wins (ours
+// is ignored) or ours shadows theirs. Both are collisions worth reporting.
+const ESLINT_FLAT = ['eslint.config.js', 'eslint.config.cjs', 'eslint.config.ts', 'eslint.config.mts', 'eslint.config.cts'];
 const TEST_CONFIGS = ['jest.config.js', 'jest.config.ts', 'jest.config.mjs', 'jest.config.cjs', 'jest.config.json', 'vitest.config.ts', 'vitest.config.js', 'vitest.config.mjs'];
 // Vitest reads vite.config by default; a generated vitest.config would override
 // the project's plugins/aliases/setup, so a Vitest repo's vite.config counts as
@@ -144,6 +148,7 @@ export function detect(cwd) {
     // instead of silently no-op'ing on a pre-existing config/script/workflow.
     scripts: pkg.scripts ?? {},
     legacyEslintrc: existsAny(cwd, ESLINTRC),
+    eslintFlatConfig: existsAny(cwd, ESLINT_FLAT),
     ciWorkflow: existsSync(join(cwd, '.github', 'workflows', 'ci.yml')),
     handwrittenTestConfig: hasHandwrittenTestConfig(cwd, testFramework),
     docs: {

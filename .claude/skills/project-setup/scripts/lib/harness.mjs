@@ -173,6 +173,9 @@ export function planEslint(options, state) {
   if (state?.legacyEslintrc) {
     notices.push(notice('Legacy .eslintrc* found alongside the new flat eslint.config.mjs — ESLint 9 reads only the flat config; remove the legacy file once migrated.'));
   }
+  if (state?.eslintFlatConfig) {
+    notices.push(notice('An existing eslint.config.{js,cjs,ts} sits beside the generated eslint.config.mjs — ESLint loads only ONE (it checks .js before .mjs), so the staged config may not run. Remove/rename one, or merge the staged rules into yours.'));
+  }
   const deps = ts
     ? dep('eslint', 'typescript-eslint', '@eslint/js', 'eslint-plugin-simple-import-sort')
     : dep('eslint', '@eslint/js', 'eslint-plugin-simple-import-sort');

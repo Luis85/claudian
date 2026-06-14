@@ -75,6 +75,11 @@ test('planEslint reports a legacy .eslintrc alongside the flat config', () => {
   assert.ok(actions.some((a) => a.type === 'notice' && /eslintrc/i.test(a.message)));
 });
 
+test('planEslint reports an existing flat config in another extension (precedence collision)', () => {
+  const actions = planEslint(opts, { eslintFlatConfig: true });
+  assert.ok(actions.some((a) => a.type === 'notice' && /eslint\.config\.\{js,cjs,ts\}/.test(a.message)));
+});
+
 test('planEslint emits no collision notice on a clean greenfield repo', () => {
   const actions = planEslint(opts, { scripts: {}, legacyEslintrc: false });
   assert.ok(!actions.some((a) => a.type === 'notice'));

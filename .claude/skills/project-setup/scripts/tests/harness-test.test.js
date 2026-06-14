@@ -17,6 +17,12 @@ test('planLoc renders the locCap into MAX_LOC', () => {
   assert.match(file.content, /MAX_LOC = 300/);
 });
 
+test('planLoc check-loc tracks modern module extensions (.mts/.cts/.cjs)', () => {
+  const file = planLoc({ guardrails: { locGuard: true } }).find((a) => a.path === 'scripts/check-loc.mjs');
+  assert.match(file.content, /mts\|cts/);
+  assert.match(file.content, /\|cjs\)/);
+});
+
 test('planTest(jest) renders jest config + jest deps + test scripts', () => {
   const actions = planTest({ testFramework: 'jest', guardrails: { coverageFloors: true } });
   const cfg = actions.find((a) => a.path === 'jest.config.mjs');

@@ -98,6 +98,24 @@ test('detectEntry finds a JS/JSX app entrypoint, not only the .ts variant', () =
   }
 });
 
+test('detectEntry matches modern module extensions (.mts/.cts/.cjs)', () => {
+  const mts = tmpProject({ 'src/index.mts': '' });
+  try {
+    assert.equal(detectEntry(mts.dir), 'src/index.mts');
+  } finally {
+    mts.cleanup();
+  }
+});
+
+test('detect flags an existing flat ESLint config in another extension', () => {
+  const p = tmpProject({ 'eslint.config.js': 'export default [];\n' });
+  try {
+    assert.equal(detect(p.dir).eslintFlatConfig, true);
+  } finally {
+    p.cleanup();
+  }
+});
+
 test('detect surfaces brownfield collision signals', () => {
   const p = tmpProject({
     'package.json': { scripts: { lint: 'eslint src' } },
