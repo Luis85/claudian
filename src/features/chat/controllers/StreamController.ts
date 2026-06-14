@@ -845,21 +845,14 @@ export class StreamController {
     const { state, renderer } = this.deps;
     await this.flushPendingTextRender();
 
+    // In collapse mode the "Writing response..." placeholder is up for the whole
+    // block; drop it on finalize regardless of whether content was persisted.
+    if (this.shouldCollapseStreamingResponse()) {
+      this.hideThinkingIndicator();
+    }
+
     if (msg && state.currentTextContent) {
-      if (this.shouldCollapseStreamingResponse()) {
-        // Streaming rendered nothing in collapse mode — do the one and only
-        // render now (exact, no deferMath), then drop the placeholder.
-        this.hideThinkingIndicator();
-        if (state.currentTextEl) {
-          await renderer.renderContent(state.currentTextEl, state.currentTextContent);
-        }
-      } else if (
-        state.currentTextEl
-        && this.shouldDeferMathRendering()
-        && hasStreamingMathDelimiters(state.currentTextContent)
-      ) {
-        await renderer.renderContent(state.currentTextEl, state.currentTextContent);
-      }
+      await this.renderFinalizedTextBlock(state.currentTextEl, state.currentTextContent);
       msg.contentBlocks = msg.contentBlocks || [];
       msg.contentBlocks.push({ type: 'text', content: state.currentTextContent });
       // Work-order tabs swap a completed handoff block for the compact card on
@@ -890,11 +883,25 @@ export class StreamController {
         renderer.refreshMessageActions?.(msg);
       }
     }
-    if (this.shouldCollapseStreamingResponse()) {
-      this.hideThinkingIndicator();
-    }
     state.currentTextEl = null;
     state.currentTextContent = '';
+  }
+
+  /**
+   * Renders the finalized text into its element when the live stream did not
+   * already produce the exact render: collapse mode rendered nothing during
+   * streaming, and deferred math left escaped delimiters that must be rendered
+   * once now. In the normal path the element already holds the streamed render.
+   */
+  private async renderFinalizedTextBlock(textEl: HTMLElement | null, content: string): Promise<void> {
+    if (!textEl) return;
+    if (this.shouldCollapseStreamingResponse()) {
+      await this.deps.renderer.renderContent(textEl, content);
+      return;
+    }
+    if (this.shouldDeferMathRendering() && hasStreamingMathDelimiters(content)) {
+      await this.deps.renderer.renderContent(textEl, content);
+    }
   }
 
   private scheduleCurrentTextRender(): Promise<void> {
