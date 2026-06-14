@@ -23,8 +23,8 @@ test('planTest(jest) renders jest config + jest deps + test scripts', () => {
   assert.match(cfg.content, /ts-jest/);
   assert.match(cfg.content, /"100"|\{[^}]*\}/); // placeholder threshold rendered to a JSON object
   const pkg = actions.find((a) => a.type === 'mergeJson');
-  assert.equal(pkg.patch.scripts.test, 'jest');
-  assert.equal(pkg.patch.scripts['test:coverage'], 'jest --coverage');
+  assert.equal(pkg.patch.scripts.test, 'jest --passWithNoTests');
+  assert.equal(pkg.patch.scripts['test:coverage'], 'jest --coverage --passWithNoTests');
   assert.ok('jest' in pkg.patch.devDependencies);
 });
 
@@ -33,7 +33,7 @@ test('planTest(vitest) renders vitest config with the istanbul provider', () => 
   const cfg = actions.find((a) => a.path === 'vitest.config.mjs');
   assert.match(cfg.content, /istanbul/);
   const pkg = actions.find((a) => a.type === 'mergeJson');
-  assert.equal(pkg.patch.scripts.test, 'vitest run');
+  assert.equal(pkg.patch.scripts.test, 'vitest run --passWithNoTests');
   assert.ok('@vitest/coverage-istanbul' in pkg.patch.devDependencies);
 });
 

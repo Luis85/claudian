@@ -603,8 +603,8 @@ test('planTest(jest) renders jest config + jest deps + test scripts', () => {
   assert.match(cfg.content, /ts-jest/);
   assert.match(cfg.content, /"100"|\{[^}]*\}/); // placeholder threshold rendered to a JSON object
   const pkg = actions.find((a) => a.type === 'mergeJson');
-  assert.equal(pkg.patch.scripts.test, 'jest');
-  assert.equal(pkg.patch.scripts['test:coverage'], 'jest --coverage');
+  assert.equal(pkg.patch.scripts.test, 'jest --passWithNoTests');
+  assert.equal(pkg.patch.scripts['test:coverage'], 'jest --coverage --passWithNoTests');
   assert.ok('jest' in pkg.patch.devDependencies);
 });
 
@@ -613,7 +613,7 @@ test('planTest(vitest) renders vitest config with the istanbul provider', () => 
   const cfg = actions.find((a) => a.path === 'vitest.config.mjs');
   assert.match(cfg.content, /istanbul/);
   const pkg = actions.find((a) => a.type === 'mergeJson');
-  assert.equal(pkg.patch.scripts.test, 'vitest run');
+  assert.equal(pkg.patch.scripts.test, 'vitest run --passWithNoTests');
   assert.ok('@vitest/coverage-istanbul' in pkg.patch.devDependencies);
 });
 
@@ -654,12 +654,12 @@ export function planTest(options, state) {
   if (fw === 'vitest') {
     return [
       { type: 'writeFile', path: 'vitest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('vitest.config.mjs.tmpl'), { coverageThreshold }) },
-      { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'vitest run', 'test:coverage': 'vitest run --coverage' }, devDependencies: dep('vitest', '@vitest/coverage-istanbul', 'eslint-plugin-vitest', 'typescript') } },
+      { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'vitest run --passWithNoTests', 'test:coverage': 'vitest run --coverage --passWithNoTests' }, devDependencies: dep('vitest', '@vitest/coverage-istanbul', 'eslint-plugin-vitest', 'typescript') } },
     ];
   }
   return [
     { type: 'writeFile', path: 'jest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('jest.config.mjs.tmpl'), { coverageThreshold }) },
-    { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'jest', 'test:coverage': 'jest --coverage' }, devDependencies: dep('jest', 'ts-jest', '@types/jest', 'eslint-plugin-jest', 'typescript') } },
+    { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'jest --passWithNoTests', 'test:coverage': 'jest --coverage --passWithNoTests' }, devDependencies: dep('jest', 'ts-jest', '@types/jest', 'eslint-plugin-jest', 'typescript') } },
   ];
 }
 ```

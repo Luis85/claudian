@@ -622,15 +622,15 @@ function planGitignore() {
   ];
 }
 
-function planRunReport(options, state) {
-  // Deterministic: NO timestamp. The report content must be a pure function of
-  // options + state so a re-apply produces identical content and the writeFile
-  // idempotency check (content-equal -> skip) holds. Run timing, if ever
-  // needed, must live outside this idempotent plan artifact.
+function planRunReport(options) {
+  // Deterministic AND stable across applies: the report is a pure function of
+  // the resolved `options` only. It must NOT include the raw `detected` state
+  // (which changes once the harness installs deps — eslint/fallow/testFramework
+  // become present) or a timestamp, or the writeFile idempotency check
+  // (content-equal -> skip) would fail on the next apply.
   const report = {
     engine: ENGINE_VERSION,
     options,
-    detected: state,
   };
   return [
     {

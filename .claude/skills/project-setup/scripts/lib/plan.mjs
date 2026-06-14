@@ -14,11 +14,14 @@ function planGitignore() {
   ];
 }
 
-function planRunReport(options, state) {
+function planRunReport(options) {
+  // Record only the resolved `options` (the stable desired config). NOT the raw
+  // `detected` state: detection changes after the harness installs deps (eslint/
+  // fallow/testFramework become present), which would make the report differ on
+  // the next apply and break the second-apply no-op (idempotency).
   const report = {
     engine: ENGINE_VERSION,
     options,
-    detected: state,
   };
   return [
     {
@@ -46,7 +49,7 @@ function planHarness(options, state) {
 export function plan(options, state) {
   return [
     ...planGitignore(options, state),
-    ...planRunReport(options, state),
+    ...planRunReport(options),
     ...planHarness(options, state),
   ];
 }
