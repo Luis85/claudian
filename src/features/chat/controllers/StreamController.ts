@@ -1395,7 +1395,26 @@ export class StreamController {
       this.applySubagentToTaskToolCall(taskToolCall, finalized);
     }
 
+    // Cursor Task sub-agents hydrate their child edits into the parent result
+    // instead of emitting subagent_tool_result chunks, so record the finalized
+    // nested edits here too (deduped against any recorded live during the run).
+    this.recordSubagentEditedFiles(taskToolCall.subagent);
+
     this.showThinkingIndicator();
+  }
+
+  /**
+   * Records files a sync sub-agent's completed nested tools created/edited (vault
+   * refresh + chip), covering providers that hydrate child tools into the parent
+   * result rather than streaming `subagent_tool_result` chunks.
+   */
+  private recordSubagentEditedFiles(subagent: SubagentInfo | undefined): void {
+    if (!subagent?.toolCalls) return;
+    for (const toolCall of subagent.toolCalls) {
+      if (toolCall.status !== 'completed') continue;
+      notifyVaultForToolResult(this.deps.plugin.app, toolCall);
+      this.recordEditedFiles(toolCall);
+    }
   }
 
   // ============================================

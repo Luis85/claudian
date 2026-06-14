@@ -3041,6 +3041,31 @@ describe('StreamController - edited files', () => {
     );
   });
 
+  it('records hydrated sub-agent edits when a sync Task tool result finalizes', async () => {
+    const msg = createTestMessage();
+    // Cursor Task shape: child edits are hydrated onto the parent's subagent
+    // rather than streamed as subagent_tool_result chunks.
+    msg.toolCalls = [{
+      id: 'task',
+      name: 'Agent',
+      input: {},
+      status: 'running',
+      subagent: {
+        id: 'task',
+        description: 'sub',
+        isExpanded: false,
+        status: 'running',
+        toolCalls: [{ id: 'w', name: 'Write', input: { file_path: 'sub/hydrated.md' }, status: 'completed' }],
+      },
+    }] as never;
+    deps.subagentManager.getSyncSubagent = jest.fn().mockReturnValue({});
+    deps.subagentManager.finalizeSyncSubagent = jest.fn().mockReturnValue(null);
+
+    await controller.handleStreamChunk({ type: 'tool_result', id: 'task', content: 'done' }, msg);
+
+    expect(deps.state.editedFiles.map((entry) => entry.path)).toEqual(['sub/hydrated.md']);
+  });
+
   it('drops the source chip and shows the destination when apply_patch renames a file', async () => {
     const msg = createTestMessage();
     await completeTool(msg, { id: 't1', name: 'Write', input: { file_path: 'a/old.md', content: 'hi' } });
