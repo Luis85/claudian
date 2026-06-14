@@ -77,7 +77,7 @@ test('apply re-runs baseline init on a converged apply (recovers a baseline left
     const calls = []; const out = [];
     await cli(['apply', '--config', cfg], rec(calls, out)); // apply #2: converged
     assert.match(out.join(''), /already converged/); // changed === 0
-    assert.ok(calls.some((c) => /check:quality.* --update/.test(c)), 'baseline init re-ran on converged apply');
+    assert.ok(calls.some((c) => /check-quality\.mjs --update/.test(c)), 'baseline init re-ran on converged apply');
   } finally {
     p.cleanup();
   }

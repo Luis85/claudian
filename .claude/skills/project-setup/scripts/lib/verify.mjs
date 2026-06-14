@@ -1,5 +1,7 @@
 // scripts/lib/verify.mjs
 import { execFileSync } from 'node:child_process';
+import { rmSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { runScriptArgs } from './packageManager.mjs';
 
@@ -27,7 +29,12 @@ export function runGates(cwd, options, exec = defaultExec) {
     }
   };
   for (const [flag, script] of GATES) {
-    if (g[flag]) run(script);
+    if (!g[flag]) continue;
+    // The fallow ratchet is defined for ./coverage ABSENT (matching CI's fresh
+    // checkout); clear a stale local coverage dir first so verify is idempotent
+    // and can't false-fail with coverage-weighted CRAP.
+    if (script === 'check:quality') rmSync(join(cwd, 'coverage'), { recursive: true, force: true });
+    run(script);
   }
   run(g.coverageFloors ? 'test:coverage' : 'test'); // always run a test gate, like CI
   return { ok: failed.length === 0, failed };

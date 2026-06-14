@@ -24,11 +24,23 @@ test('initBaselines updates fallow + LOC before coverage, only for enabled guard
   const exec = (cmd, args) => order.push(`${cmd} ${args.join(' ')}`);
   try {
     initBaselines(p.dir, { guardrails: { fallowRatchet: true, locGuard: true, coverageFloors: false } }, exec);
-    // Routed through the package manager (npm default) so Yarn PnP's loader is present.
+    // Run the generated FILE directly (not the npm script a brownfield repo may shadow).
     assert.deepEqual(order, [
-      'npm run check:quality -- --update',
-      'npm run check:loc -- --update',
+      'node scripts/check-quality.mjs --update',
+      'node scripts/check-loc.mjs --update',
     ]);
+  } finally {
+    p.cleanup();
+  }
+});
+
+test('initBaselines runs the ratchet via `yarn node` for Yarn (carries the PnP loader)', () => {
+  const p = tmpProject({ 'package.json': { name: 'x' } });
+  const order = [];
+  try {
+    initBaselines(p.dir, { packageManager: 'yarn', guardrails: { fallowRatchet: true, locGuard: false, coverageFloors: false } },
+      (cmd, args) => order.push(`${cmd} ${args.join(' ')}`));
+    assert.deepEqual(order, ['yarn node scripts/check-quality.mjs --update']);
   } finally {
     p.cleanup();
   }
