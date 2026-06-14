@@ -1574,43 +1574,43 @@ describe('InputController - Message Queue', () => {
     it('should dismiss pending inline and clear reference', () => {
       controller = new InputController(deps);
       const mockInline = { destroy: jest.fn() };
-      (controller as any).pendingApprovalInline = mockInline;
+      (controller as any).inlinePrompts.pendingApprovalInline = mockInline;
 
       controller.dismissPendingApproval();
 
       expect(mockInline.destroy).toHaveBeenCalled();
-      expect((controller as any).pendingApprovalInline).toBeNull();
+      expect((controller as any).inlinePrompts.pendingApprovalInline).toBeNull();
     });
 
     it('should dismiss pending ask inline and clear reference', () => {
       controller = new InputController(deps);
       const mockAskInline = { destroy: jest.fn() };
-      (controller as any).pendingAskInline = mockAskInline;
+      (controller as any).inlinePrompts.pendingAskInline = mockAskInline;
 
       controller.dismissPendingApproval();
 
       expect(mockAskInline.destroy).toHaveBeenCalled();
-      expect((controller as any).pendingAskInline).toBeNull();
+      expect((controller as any).inlinePrompts.pendingAskInline).toBeNull();
     });
 
     it('should dismiss both approval and ask inlines', () => {
       controller = new InputController(deps);
       const mockApproval = { destroy: jest.fn() };
       const mockAsk = { destroy: jest.fn() };
-      (controller as any).pendingApprovalInline = mockApproval;
-      (controller as any).pendingAskInline = mockAsk;
+      (controller as any).inlinePrompts.pendingApprovalInline = mockApproval;
+      (controller as any).inlinePrompts.pendingAskInline = mockAsk;
 
       controller.dismissPendingApproval();
 
       expect(mockApproval.destroy).toHaveBeenCalled();
       expect(mockAsk.destroy).toHaveBeenCalled();
-      expect((controller as any).pendingApprovalInline).toBeNull();
-      expect((controller as any).pendingAskInline).toBeNull();
+      expect((controller as any).inlinePrompts.pendingApprovalInline).toBeNull();
+      expect((controller as any).inlinePrompts.pendingAskInline).toBeNull();
     });
 
     it('should be a no-op when no inline is pending', () => {
       controller = new InputController(deps);
-      expect((controller as any).pendingApprovalInline).toBeNull();
+      expect((controller as any).inlinePrompts.pendingApprovalInline).toBeNull();
       expect(() => controller.dismissPendingApproval()).not.toThrow();
     });
   });
@@ -2460,10 +2460,10 @@ describe('InputController - Message Queue', () => {
         'Run shell command'
       );
 
-      expect((controller as any).pendingApprovalInline).not.toBeNull();
+      expect((controller as any).inlinePrompts.pendingApprovalInline).not.toBeNull();
 
       controller.dismissPendingApproval();
-      expect((controller as any).pendingApprovalInline).toBeNull();
+      expect((controller as any).inlinePrompts.pendingApprovalInline).toBeNull();
 
       const result = await approvalPromise;
       expect(result).toBe('cancel');
@@ -3162,7 +3162,7 @@ describe('InputController - Message Queue', () => {
       const inputEl = deps.getInputEl();
       inputEl.value = 'Plan the migration';
       const controller = new InputController(deps);
-      const showPlanApproval = jest.spyOn(controller as any, 'showPlanApproval').mockResolvedValue({
+      const showPlanApproval = jest.spyOn((controller as any).inlinePrompts, 'showPlanApproval').mockResolvedValue({
         decision: null,
         invalidated: false,
       });
@@ -3198,7 +3198,7 @@ describe('InputController - Message Queue', () => {
       const controller = new InputController(deps);
 
       // Mock the showPlanApproval to return 'implement'
-      (controller as any).showPlanApproval = jest.fn().mockResolvedValue({
+      (controller as any).inlinePrompts.showPlanApproval = jest.fn().mockResolvedValue({
         decision: { type: 'implement' },
         invalidated: false,
       });
@@ -3265,7 +3265,7 @@ describe('InputController - Message Queue', () => {
       );
 
       const controller = new InputController(deps);
-      (controller as any).showPlanApproval = jest.fn().mockResolvedValue({
+      (controller as any).inlinePrompts.showPlanApproval = jest.fn().mockResolvedValue({
         decision: { type: 'implement' },
         invalidated: false,
       });
@@ -3296,7 +3296,7 @@ describe('InputController - Message Queue', () => {
       );
 
       const controller = new InputController(deps);
-      (controller as any).showPlanApproval = jest.fn().mockResolvedValue({
+      (controller as any).inlinePrompts.showPlanApproval = jest.fn().mockResolvedValue({
         decision: { type: 'cancel' },
         invalidated: false,
       });
@@ -3326,7 +3326,7 @@ describe('InputController - Message Queue', () => {
       );
 
       const controller = new InputController(deps);
-      (controller as any).showPlanApproval = jest.fn().mockResolvedValue({
+      (controller as any).inlinePrompts.showPlanApproval = jest.fn().mockResolvedValue({
         decision: {
           type: 'revise',
           text: 'Add more tests',
@@ -3357,7 +3357,7 @@ describe('InputController - Message Queue', () => {
       );
 
       const controller = new InputController(deps);
-      (controller as any).showPlanApproval = jest.fn().mockResolvedValue({
+      (controller as any).inlinePrompts.showPlanApproval = jest.fn().mockResolvedValue({
         decision: { type: 'revise', text: 'Tweak the plan' },
         invalidated: false,
       });
@@ -3395,7 +3395,7 @@ describe('InputController - Message Queue', () => {
       );
 
       const controller = new InputController(deps);
-      (controller as any).showPlanApproval = jest.fn().mockResolvedValue({
+      (controller as any).inlinePrompts.showPlanApproval = jest.fn().mockResolvedValue({
         decision: { type: 'revise', text: 'Add more tests' },
         invalidated: false,
       });
@@ -3431,7 +3431,7 @@ describe('InputController - Message Queue', () => {
       );
 
       const controller = new InputController(deps);
-      (controller as any).showPlanApproval = jest.fn().mockResolvedValue({
+      (controller as any).inlinePrompts.showPlanApproval = jest.fn().mockResolvedValue({
         decision: { type: 'cancel' },
         invalidated: false,
       });
@@ -3471,7 +3471,7 @@ describe('InputController - Message Queue', () => {
       const sendPromise = controller.sendMessage();
       await new Promise(resolve => setTimeout(resolve, 0));
 
-      expect((controller as any).pendingPlanApproval).not.toBeNull();
+      expect((controller as any).inlinePrompts.pendingPlanApproval).not.toBeNull();
 
       controller.dismissPendingApproval();
       await sendPromise;
@@ -3502,7 +3502,7 @@ describe('InputController - Message Queue', () => {
       );
 
       const controller = new InputController(deps);
-      (controller as any).showPlanApproval = jest.fn().mockResolvedValue({
+      (controller as any).inlinePrompts.showPlanApproval = jest.fn().mockResolvedValue({
         decision: null,
         invalidated: false,
       });

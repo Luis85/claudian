@@ -11,7 +11,7 @@
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/controllers/InputController.ts": {
-      "loc": 1404,
+      "loc": 1149,
       "reason": "Grandfathered. Planned split: extract the resume dropdown and the plan/approval state machine. See docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md."
     },
     "src/providers/opencode/runtime/OpencodeChatRuntime.ts": {

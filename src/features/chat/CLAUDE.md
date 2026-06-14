@@ -24,6 +24,7 @@ ClaudianView (lifecycle + assembly)
 │   ├── ConversationController
 │   ├── StreamController
 │   ├── InputController
+│   ├── InlinePromptController
 │   ├── ChatDropController
 │   ├── SelectionController
 │   ├── BrowserSelectionController
@@ -79,7 +80,8 @@ The feature layer consumes provider-neutral `StreamChunk` values. Providers own 
 |------------|----------------|
 | `ConversationController` | Session switching, history reload, save, and rewind. Delegates the history-dropdown list UI to `ConversationHistoryView` (in `ui/`), passing it the two lifecycle escapes — `switchTo` and `loadActive` — as callbacks |
 | `StreamController` | Consume stream chunks, update streaming state, auto-scroll, abort handling |
-| `InputController` | Text input, mentions, images, resume dispatch, command dispatch, and post-plan approval flow |
+| `InputController` | Text input, mentions, images, resume dispatch, command dispatch, and post-plan approval flow. Delegates the inline blocking prompts (tool approval, ask-user, exit-plan-mode, post-plan approval) to `InlinePromptController` |
+| `InlinePromptController` | Inline prompts that block a turn on user input — tool-approval cards, ask-user-question, exit-plan-mode, post-plan approval — plus the input-container hide/restore and the "needs attention" tab badge. Reached through `InputController`'s RuntimeHost-wired delegators |
 | `SelectionController` | Editor selection polling and CM6 decorations |
 | `BrowserSelectionController` | Browser view selection tracking |
 | `CanvasSelectionController` | Canvas selection tracking |
