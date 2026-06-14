@@ -1,174 +1,79 @@
-import { createInterface, type Interface as ReadlineInterface } from 'readline';
-
+import { JsonRpcStdioClient } from '../../../core/transport/JsonRpcStdioClient';
 import type { CodexAppServerProcess } from './CodexAppServerProcess';
-import type { JsonRpcError } from './codexAppServerTypes';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
-
-interface PendingRequest {
-  resolve: (result: unknown) => void;
-  reject: (error: Error) => void;
-  timer: number | null;
-}
 
 type NotificationHandler = (params: unknown) => void;
 type ServerRequestHandler = (requestId: string | number, params: unknown) => Promise<unknown>;
 
+/**
+ * Codex `app-server` JSON-RPC transport. A thin adapter over the shared
+ * `core/transport/JsonRpcStdioClient` (ADR-0001 Move 2): it bridges the Codex
+ * subprocess (`stdout`/`stdin` + `onExit`) to the client's stream abstraction and
+ * keeps Codex's API, including server-request handlers that receive the request
+ * id (`(requestId, params)`).
+ */
 export class CodexRpcTransport {
-  private nextId = 1;
-  private pending = new Map<number, PendingRequest>();
-  private notificationHandlers = new Map<string, NotificationHandler>();
-  private serverRequestHandlers = new Map<string, ServerRequestHandler>();
-  private disposed = false;
-  private rl: ReadlineInterface | null = null;
+  private client: JsonRpcStdioClient | null = null;
+  private readonly notificationHandlers = new Map<string, NotificationHandler>();
+  private readonly serverRequestHandlers = new Map<string, ServerRequestHandler>();
 
   constructor(private readonly proc: CodexAppServerProcess) {}
 
   start(): void {
-    this.rl = createInterface({ input: this.proc.stdout });
-    this.rl.on('line', (line) => this.handleLine(line));
+    if (this.client) {
+      return;
+    }
 
-    this.proc.onExit(() => {
-      this.rejectAllPending(new Error('App-server process exited'));
+    const client = new JsonRpcStdioClient({
+      input: this.proc.stdout,
+      output: this.proc.stdin,
+      onClose: (listener) => {
+        const handler = (): void => listener(new Error('App-server process exited'));
+        this.proc.onExit(handler);
+        return () => this.proc.offExit(handler);
+      },
     });
+
+    for (const [method, handler] of this.notificationHandlers) {
+      client.onNotification(method, handler);
+    }
+    for (const [method, handler] of this.serverRequestHandlers) {
+      client.onRequest(method, (params, id) => handler(id as string | number, params));
+    }
+
+    this.client = client;
+    client.start();
   }
 
   request<T = unknown>(method: string, params: unknown, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<T> {
-    const id = this.nextId++;
-    const msg = { jsonrpc: '2.0' as const, id, method, params };
-
-    return new Promise<T>((resolve, reject) => {
-      const timer = timeoutMs > 0
-        ? window.setTimeout(() => {
-          this.pending.delete(id);
-          reject(new Error(`Request timeout: ${method} (${timeoutMs}ms)`));
-        }, timeoutMs)
-        : null;
-
-      const resolvePending = (result: unknown): void => {
-        resolve(result as T);
-      };
-
-      this.pending.set(id, {
-        resolve: resolvePending,
-        reject,
-        timer,
-      });
-
-      this.sendRaw(msg);
-    });
+    this.start();
+    return this.requireClient().request<T>(method, params, { timeoutMs });
   }
 
   notify(method: string, params?: unknown): void {
-    const msg: Record<string, unknown> = { jsonrpc: '2.0', method };
-    if (params !== undefined) msg.params = params;
-    this.sendRaw(msg);
+    this.start();
+    this.requireClient().notify(method, params);
   }
 
   onNotification(method: string, handler: NotificationHandler): void {
     this.notificationHandlers.set(method, handler);
+    this.client?.onNotification(method, handler);
   }
 
   onServerRequest(method: string, handler: ServerRequestHandler): void {
     this.serverRequestHandlers.set(method, handler);
+    this.client?.onRequest(method, (params, id) => handler(id as string | number, params));
   }
 
   dispose(): void {
-    this.disposed = true;
-    this.rejectAllPending(new Error('Transport disposed'));
-    this.rl?.close();
-    this.rl = null;
+    this.client?.dispose();
   }
 
-  // -----------------------------------------------------------------------
-  // Private
-  // -----------------------------------------------------------------------
-
-  private sendRaw(msg: unknown): void {
-    if (this.disposed) return;
-    this.proc.stdin.write(JSON.stringify(msg) + '\n');
-  }
-
-  private handleLine(line: string): void {
-    let msg: Record<string, unknown>;
-    try {
-      msg = JSON.parse(line) as Record<string, unknown>;
-    } catch {
-      return; // malformed line
+  private requireClient(): JsonRpcStdioClient {
+    if (!this.client) {
+      throw new Error('Transport not started');
     }
-
-    const id = msg.id as string | number | undefined;
-    const method = msg.method as string | undefined;
-
-    // Server response to our request
-    if (typeof id === 'number' && !method) {
-      this.handleResponse(id, msg);
-      return;
-    }
-
-    // Server notification (no id, has method)
-    if (method && id === undefined) {
-      this.handleNotification(method, msg.params);
-      return;
-    }
-
-    // Server-initiated request (has both id and method)
-    if (method && id !== undefined) {
-      this.handleServerRequest(id, method, msg.params);
-      return;
-    }
-  }
-
-  private handleResponse(id: number, msg: Record<string, unknown>): void {
-    const pending = this.pending.get(id);
-    if (!pending) return;
-
-    this.pending.delete(id);
-    if (pending.timer) window.clearTimeout(pending.timer);
-
-    if (msg.error) {
-      const err = msg.error as JsonRpcError;
-      pending.reject(new Error(err.message));
-    } else {
-      pending.resolve(msg.result);
-    }
-  }
-
-  private handleNotification(method: string, params: unknown): void {
-    const handler = this.notificationHandlers.get(method);
-    if (handler) handler(params);
-  }
-
-  private handleServerRequest(id: string | number, method: string, params: unknown): void {
-    const handler = this.serverRequestHandlers.get(method);
-    if (!handler) {
-      this.sendRaw({
-        jsonrpc: '2.0',
-        id,
-        error: { code: -32601, message: `Unhandled server request: ${method}` },
-      });
-      return;
-    }
-
-    handler(id, params).then(
-      (result) => {
-        this.sendRaw({ jsonrpc: '2.0', id, result });
-      },
-      (err) => {
-        this.sendRaw({
-          jsonrpc: '2.0',
-          id,
-          error: { code: -32603, message: err instanceof Error ? err.message : 'Internal error' },
-        });
-      },
-    );
-  }
-
-  private rejectAllPending(error: Error): void {
-    for (const [, pending] of this.pending) {
-      if (pending.timer) window.clearTimeout(pending.timer);
-      pending.reject(error);
-    }
-    this.pending.clear();
+    return this.client;
   }
 }

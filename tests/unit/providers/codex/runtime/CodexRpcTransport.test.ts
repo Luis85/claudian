@@ -24,6 +24,7 @@ function createMockServerProcess(): CodexAppServerProcess & {
     stderr: new Readable({ read() {} }),
     isAlive: jest.fn().mockReturnValue(true),
     onExit: jest.fn(),
+    offExit: jest.fn(),
     _stdout: stdout,
     _stdin: stdin,
     _written: written,
