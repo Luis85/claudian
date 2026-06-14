@@ -24,9 +24,10 @@ test('initBaselines updates fallow + LOC before coverage, only for enabled guard
   const exec = (cmd, args) => order.push(`${cmd} ${args.join(' ')}`);
   try {
     initBaselines(p.dir, { guardrails: { fallowRatchet: true, locGuard: true, coverageFloors: false } }, exec);
+    // Routed through the package manager (npm default) so Yarn PnP's loader is present.
     assert.deepEqual(order, [
-      'node scripts/check-quality.mjs --update',
-      'node scripts/check-loc.mjs --update',
+      'npm run check:quality -- --update',
+      'npm run check:loc -- --update',
     ]);
   } finally {
     p.cleanup();

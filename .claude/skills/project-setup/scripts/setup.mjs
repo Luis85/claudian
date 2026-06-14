@@ -127,8 +127,13 @@ export async function cli(argv, io = {}) {
         return 2;
       }
       const options = loadOptions(resolve(cwd, args.flags.config));
+      const state = detect(cwd);
+      // Resolve the package manager the same way apply does (answer -> prior
+      // report -> detected), so verify runs the gates with the PM that installed
+      // the harness, not the npm fallback.
+      options.packageManager = options.packageManager ?? readPriorReport(cwd)?.options?.packageManager ?? state.packageManager ?? 'npm';
       // Mirror plan(): a hand-written test config drops the coverage gate here too.
-      const res = runGates(cwd, effectiveOptions(options, detect(cwd)));
+      const res = runGates(cwd, effectiveOptions(options, state), io.exec);
       out(res.ok ? 'All gates passed.\n' : `Gates failed: ${res.failed.join(', ')}\n`);
       return res.ok ? 0 : 1;
     }

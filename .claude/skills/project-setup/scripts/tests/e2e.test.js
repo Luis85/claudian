@@ -69,6 +69,19 @@ test('brownfield idempotency: install flips detection, but a re-apply stays a no
   }
 });
 
+test('verify resolves the package manager from detection, not the npm fallback', async () => {
+  const p = tmpProject({ 'package.json': { name: 'x' }, 'pnpm-lock.yaml': '' }); // detect -> pnpm
+  try {
+    const cfg = join(p.dir, 'answers.json');
+    writeFileSync(cfg, JSON.stringify({ guardrails: { eslintSeverityStaging: true, coverageFloors: false } })); // no packageManager
+    const calls = [];
+    await cli(['verify', '--config', cfg], { cwd: p.dir, exec: (cmd) => calls.push(cmd), stdout: () => {}, stderr: () => {} });
+    assert.ok(calls.length > 0 && calls.every((c) => c === 'pnpm')); // pnpm, never npm
+  } finally {
+    p.cleanup();
+  }
+});
+
 test('brownfield: never clobbers an existing eslint config', () => {
   const p = tmpProject({
     'package.json': { name: 'old', scripts: { lint: 'my-own-lint' } },

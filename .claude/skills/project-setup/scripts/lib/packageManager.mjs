@@ -1,12 +1,13 @@
 // scripts/lib/packageManager.mjs
 
 // Args to run a package.json script with the given manager (matches CI/verify).
-export function runScriptArgs(pm, script) {
+// `extra` is forwarded to the script (npm needs the `--` separator).
+export function runScriptArgs(pm, script, extra = []) {
   switch (pm) {
-    case 'pnpm': return ['pnpm', [script]];
-    case 'yarn': return ['yarn', [script]];
-    case 'bun': return ['bun', ['run', script]];
-    default: return ['npm', ['run', script]];
+    case 'pnpm': return ['pnpm', [script, ...extra]];
+    case 'yarn': return ['yarn', [script, ...extra]];
+    case 'bun': return ['bun', ['run', script, ...extra]];
+    default: return ['npm', extra.length ? ['run', script, '--', ...extra] : ['run', script]];
   }
 }
 

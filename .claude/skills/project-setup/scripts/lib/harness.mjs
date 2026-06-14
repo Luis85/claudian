@@ -131,7 +131,9 @@ export function planTest(options, state) {
   const coverageThreshold = JSON.stringify(
     options.guardrails?.coverageFloors ? { statements: 0, branches: 0, functions: 0, lines: 0 } : {},
   );
-  const coverageGlobs = options.typescript === false ? 'src/**/*.{js,jsx,mjs}' : 'src/**/*.{ts,tsx}';
+  // Match the lint globs (incl. .mts/.cts/.cjs) so coverage can't be dodged by
+  // putting uncovered source behind a modern module extension.
+  const coverageGlobs = options.typescript === false ? 'src/**/*.{js,jsx,mjs,cjs}' : 'src/**/*.{ts,tsx,mts,cts}';
   if (fw === 'vitest') {
     return [
       { type: 'writeFile', path: 'vitest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('vitest.config.mjs.tmpl'), { coverageThreshold, coverageGlobs }) },

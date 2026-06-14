@@ -37,11 +37,12 @@ test('planTest(vitest) renders vitest config with the istanbul provider', () => 
   assert.ok('@vitest/coverage-istanbul' in pkg.patch.devDependencies);
 });
 
-test('planTest(jest, typescript: false) uses js/jsx/mjs coverage globs', () => {
-  const actions = planTest({ testFramework: 'jest', typescript: false, guardrails: { coverageFloors: true } });
-  const cfg = actions.find((a) => a.path === 'jest.config.mjs');
-  assert.match(cfg.content, /js,jsx,mjs/);
-  assert.doesNotMatch(cfg.content, /ts,tsx/);
+test('planTest coverage globs include modern module extensions (.cjs / .mts,.cts)', () => {
+  const js = planTest({ testFramework: 'jest', typescript: false, guardrails: { coverageFloors: true } }).find((a) => a.path === 'jest.config.mjs');
+  assert.match(js.content, /js,jsx,mjs,cjs/);
+  assert.doesNotMatch(js.content, /ts,tsx/);
+  const ts = planTest({ testFramework: 'jest', typescript: true, guardrails: { coverageFloors: true } }).find((a) => a.path === 'jest.config.mjs');
+  assert.match(ts.content, /ts,tsx,mts,cts/);
 });
 
 test('planTest(jest, JS) drops the ts-jest preset and its TS-only deps', () => {
