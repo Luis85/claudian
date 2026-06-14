@@ -27,7 +27,17 @@ export function apply(actions, opts = {}) {
       // NEVER push to `changed`: install is an effect, not a tracked file mutation,
       // so a converged re-apply stays a no-op and the baseline hook does not re-run.
       planned.push('(install)');
-      if (!dryRun && changed.includes('package.json')) exec(action.packageManager, ['install'], { cwd });
+      // Install when package.json changed this run OR a prior install never
+      // completed (the marker is written only AFTER a successful install). So a
+      // re-apply after a failed/interrupted install retries it instead of
+      // converging with missing deps; a fully-converged re-apply (marker present,
+      // no change) stays a no-op.
+      const marker = join(cwd, '.project-setup-backup', '.installed');
+      if (!dryRun && (changed.includes('package.json') || !existsSync(marker))) {
+        exec(action.packageManager, ['install'], { cwd });
+        mkdirSync(dirname(marker), { recursive: true });
+        writeFileSync(marker, '');
+      }
       continue;
     }
 

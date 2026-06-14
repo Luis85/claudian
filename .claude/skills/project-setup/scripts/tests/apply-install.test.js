@@ -22,15 +22,29 @@ test('installDeps runs the package manager when package.json changed, and is not
   }
 });
 
-test('installDeps is skipped when package.json did not change (idempotent re-apply)', () => {
-  const p = tmpProject({ 'package.json': { name: 'x', devDependencies: { left: '1.0.0' } } });
+test('installDeps is skipped when package.json did not change and a prior install completed', () => {
+  const p = tmpProject({ 'package.json': { name: 'x', devDependencies: { left: '1.0.0' } }, '.project-setup-backup/.installed': '' });
   const calls = [];
   try {
     apply([
       { type: 'mergeJson', path: 'package.json', patch: { devDependencies: { left: '1.0.0' } } },
       { type: 'installDeps', packageManager: 'npm' },
     ], { cwd: p.dir, exec: (...a) => calls.push(a) });
-    assert.equal(calls.length, 0); // package.json already converged -> no install
+    assert.equal(calls.length, 0); // converged + install marker present -> no install
+  } finally {
+    p.cleanup();
+  }
+});
+
+test('installDeps RETRIES when package.json is unchanged but the prior install never completed', () => {
+  const p = tmpProject({ 'package.json': { name: 'x', devDependencies: { left: '1.0.0' } } }); // no .installed marker
+  const calls = [];
+  try {
+    apply([
+      { type: 'mergeJson', path: 'package.json', patch: { devDependencies: { left: '1.0.0' } } },
+      { type: 'installDeps', packageManager: 'npm' },
+    ], { cwd: p.dir, exec: (cmd, args) => calls.push(`${cmd} ${args.join(' ')}`) });
+    assert.deepEqual(calls, ['npm install']); // retried because install hadn't completed
   } finally {
     p.cleanup();
   }
