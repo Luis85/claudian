@@ -32,9 +32,9 @@ const ESLINT_FLAT = ['eslint.config.js', 'eslint.config.cjs', 'eslint.config.ts'
 // scoped to the resolved runner (Jest ignores vitest.config, and vice versa).
 // Vitest also reads vite.config by default, so a generated vitest.config would
 // override the project's plugins/aliases/setup.
-const JEST_CONFIGS = ['jest.config.js', 'jest.config.ts', 'jest.config.mjs', 'jest.config.cjs', 'jest.config.json'];
-const VITEST_CONFIGS = ['vitest.config.ts', 'vitest.config.js', 'vitest.config.mjs', 'vitest.config.cts', 'vitest.config.mts'];
-const VITE_CONFIGS = ['vite.config.ts', 'vite.config.js', 'vite.config.mjs', 'vite.config.cts', 'vite.config.mts'];
+const JEST_CONFIGS = ['jest.config.js', 'jest.config.ts', 'jest.config.mjs', 'jest.config.cjs', 'jest.config.cts', 'jest.config.mts', 'jest.config.json'];
+const VITEST_CONFIGS = ['vitest.config.ts', 'vitest.config.js', 'vitest.config.mjs', 'vitest.config.cjs', 'vitest.config.cts', 'vitest.config.mts'];
+const VITE_CONFIGS = ['vite.config.ts', 'vite.config.js', 'vite.config.mjs', 'vite.config.cjs', 'vite.config.cts', 'vite.config.mts'];
 
 function existsAny(cwd, names) {
   return names.some((n) => existsSync(join(cwd, n)));
@@ -154,7 +154,9 @@ export function detect(cwd) {
     // user's own (no marker), so a re-apply of our generated one won't false-fire.
     eslintConfigMjs: hasUnmarkedConfig(cwd, ['eslint.config.mjs']),
     ciWorkflow: existsSync(join(cwd, '.github', 'workflows', 'ci.yml')),
-    jestConfig: hasUnmarkedConfig(cwd, JEST_CONFIGS),
+    // Jest also reads a `jest` key in package.json — writing jest.config.mjs beside
+    // it makes Jest 30 error "Multiple configurations found".
+    jestConfig: hasUnmarkedConfig(cwd, JEST_CONFIGS) || pkg.jest != null,
     vitestConfig: hasUnmarkedConfig(cwd, VITEST_CONFIGS),
     viteConfig: existsAny(cwd, VITE_CONFIGS),
     docs: {

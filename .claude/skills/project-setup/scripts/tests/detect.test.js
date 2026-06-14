@@ -155,6 +155,21 @@ test("detect does not flag the engine's own marked test config as hand-written",
   }
 });
 
+test('detect recognizes a package.json jest key and the .cts/.cjs config forms', () => {
+  const pkgJest = tmpProject({ 'package.json': { jest: { testEnvironment: 'node' } } });
+  const cts = tmpProject({ 'jest.config.cts': 'export default {};\n' });
+  const viteCjs = tmpProject({ 'vite.config.cjs': 'module.exports = {};\n' });
+  try {
+    assert.equal(detect(pkgJest.dir).jestConfig, true); // package.json#jest -> Jest "Multiple configs" risk
+    assert.equal(detect(cts.dir).jestConfig, true); // jest.config.cts
+    assert.equal(detect(viteCjs.dir).viteConfig, true); // vite.config.cjs
+  } finally {
+    pkgJest.cleanup();
+    cts.cleanup();
+    viteCjs.cleanup();
+  }
+});
+
 test('detect exposes per-runner config signals (scoped standdown is decided at plan time)', () => {
   const jestP = tmpProject({ 'jest.config.ts': 'export default {};\n' });
   const vitestP = tmpProject({ 'vitest.config.ts': 'export default {};\n' });
