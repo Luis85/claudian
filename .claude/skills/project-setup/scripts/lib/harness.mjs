@@ -162,3 +162,26 @@ export function planReport() {
     { type: 'mergeJson', path: 'package.json', patch: { scripts: { report: 'node scripts/quality-report.mjs' } } },
   ];
 }
+
+export function planDocs(options) {
+  if (!options.docs?.scaffold) return [];
+  // Document only the gates whose guardrail is enabled — otherwise the guide
+  // tells users to run scripts that were never installed.
+  const g = options.guardrails ?? {};
+  const gates = [];
+  if (g.eslintSeverityStaging) gates.push('- `npm run lint` — ESLint, error-tier rules (`warn` stages a backlog; promote warn->error as each reaches zero).');
+  if (g.locGuard) gates.push(`- \`npm run check:loc\` — per-file LOC ratchet (cap ${options.locCap ?? 500}).`);
+  if (g.fallowRatchet) gates.push('- `npm run check:quality` — fallow metric ratchet. **Run with ./coverage absent.**');
+  if (g.coverageFloors) gates.push('- `npm run test:coverage` — coverage floors (rise-only; baselined to current).');
+  const guide = renderTemplate(loadTemplate('docs/quality-integration-guide.md.tmpl'), {
+    gates: gates.length ? gates.join('\n') : '_No blocking gates enabled._',
+    testFramework: options.testFramework ?? 'jest',
+  });
+  const file = (path, name) => ({ type: 'writeFile', path, mode: 'skip-if-exists', content: loadTemplate(name) });
+  return [
+    file('CONTEXT.md', 'docs/CONTEXT.md'),
+    file('docs/adr/0000-template.md', 'docs/adr-0000-template.md'),
+    { type: 'writeFile', path: 'docs/quality-integration-guide.md', mode: 'skip-if-exists', content: guide },
+    file('CONTRIBUTING.md', 'docs/CONTRIBUTING-quality.md'),
+  ];
+}
