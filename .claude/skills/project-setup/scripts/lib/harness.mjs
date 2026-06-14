@@ -134,12 +134,13 @@ export function planTest(options, state) {
   const coverageThreshold = JSON.stringify(
     options.guardrails?.coverageFloors ? { statements: 0, branches: 0, functions: 0, lines: 0 } : {},
   );
-  // Match the lint globs so coverage can't be dodged by a module extension; a TS
-  // project also includes JS sources (ESLint lints both), so .js production code
-  // in a TS repo isn't excluded from the floor.
-  const coverageGlobs = options.typescript === false
-    ? 'src/**/*.{js,jsx,mjs,cjs}'
-    : 'src/**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}';
+  // Match the lint globs (a TS project also includes JS sources), and derive the
+  // coverage ROOT from the detected entry so a non-src/root layout isn't missed:
+  // src/index.ts -> src/, lib/main.ts -> lib/, index.js -> repo root.
+  const exts = options.typescript === false ? 'js,jsx,mjs,cjs' : 'ts,tsx,mts,cts,js,jsx,mjs,cjs';
+  const entry = state?.entry ?? 'src/index.ts';
+  const srcDir = entry.includes('/') ? entry.slice(0, entry.indexOf('/')) : '';
+  const coverageGlobs = srcDir ? `${srcDir}/**/*.{${exts}}` : `**/*.{${exts}}`;
   if (fw === 'vitest') {
     return [
       ...scriptCollision(options, state, 'test:coverage', 'vitest run --coverage --passWithNoTests'),

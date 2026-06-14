@@ -43,6 +43,14 @@ test('planTest(vitest) renders vitest config with the istanbul provider', () => 
   assert.ok('@vitest/coverage-istanbul' in pkg.patch.devDependencies);
 });
 
+test('planTest derives the coverage root from the detected entry (non-src / root layouts)', () => {
+  const lib = planTest({ testFramework: 'jest', guardrails: { coverageFloors: true } }, { entry: 'lib/main.ts' }).find((a) => a.path === 'jest.config.mjs');
+  assert.match(lib.content, /'lib\/\*\*\/\*\.\{/); // lib/, not src/
+  assert.doesNotMatch(lib.content, /'src\//);
+  const root = planTest({ testFramework: 'jest', guardrails: { coverageFloors: true } }, { entry: 'index.js' }).find((a) => a.path === 'jest.config.mjs');
+  assert.match(root.content, /collectCoverageFrom: \['\*\*\/\*\.\{/); // repo-root glob
+});
+
 test('planTest coverage globs include modern module extensions (.cjs / .mts,.cts)', () => {
   const js = planTest({ testFramework: 'jest', typescript: false, guardrails: { coverageFloors: true } }).find((a) => a.path === 'jest.config.mjs');
   assert.match(js.content, /js,jsx,mjs,cjs/);

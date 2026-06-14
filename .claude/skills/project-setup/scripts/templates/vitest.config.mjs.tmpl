@@ -7,6 +7,7 @@ export default defineConfig({
       provider: 'istanbul', // istanbul so fallow's CRAP can read ./coverage
       reporter: ['json-summary', 'text'], // json-summary writes coverage/coverage-summary.json
       include: ['{{coverageGlobs}}'],
+      exclude: ['**/*.{test,spec}.*', '**/dist/**', '**/scripts/check-loc.mjs', '**/scripts/check-quality.mjs', '**/scripts/quality-report.mjs'],
       thresholds: {{coverageThreshold}},
     },
   },
