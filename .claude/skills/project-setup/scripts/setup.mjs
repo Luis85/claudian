@@ -1,6 +1,7 @@
 // .claude/skills/project-setup/scripts/setup.mjs
 import { execFileSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
@@ -28,6 +29,14 @@ Options:
   --backup-dir <dir>     Override backup location (default .project-setup-backup).
   -h, --help             Show this help.
 `;
+
+function readPriorReport(cwd) {
+  try {
+    return JSON.parse(readFileSync(join(cwd, 'project-setup.report.json'), 'utf8'));
+  } catch {
+    return null;
+  }
+}
 
 export function parseArgs(argv) {
   const args = { _: [], flags: {} };
@@ -68,9 +77,15 @@ export async function cli(argv, io = {}) {
       }
       const options = loadOptions(resolve(cwd, args.flags.config));
       const state = detect(cwd);
-      options.testFramework = options.testFramework ?? state.testFramework ?? 'jest';
-      options.packageManager = options.packageManager ?? state.packageManager;
-      options.typescript = options.typescript ?? state.typescript ?? true;
+      // Freeze install-volatile fields against the FIRST apply's resolution.
+      // Once the harness installs typescript/jest/vitest, a re-detect flips these,
+      // which would rewrite project-setup.report.json and re-trigger baselining —
+      // breaking the "second apply is a no-op" contract. An explicit answer still
+      // wins; otherwise the prior run report's resolved value is authoritative.
+      const frozen = readPriorReport(cwd)?.options ?? {};
+      options.testFramework = options.testFramework ?? frozen.testFramework ?? state.testFramework ?? 'jest';
+      options.packageManager = options.packageManager ?? frozen.packageManager ?? state.packageManager ?? 'npm';
+      options.typescript = options.typescript ?? frozen.typescript ?? state.typescript ?? true;
       const actions = plan(options, state);
       const dryRun = cmd === 'plan' || args.flags.dryRun === true;
       const backupDir = args.flags.backupDir ? resolve(cwd, args.flags.backupDir) : undefined;

@@ -8,6 +8,7 @@ import { apply } from '../lib/apply.mjs';
 import { detect } from '../lib/detect.mjs';
 import { loadOptions } from '../lib/options.mjs';
 import { plan } from '../lib/plan.mjs';
+import { cli } from '../setup.mjs';
 import { tmpProject } from './helpers.js';
 
 function setup(dir, answers) {
@@ -32,6 +33,37 @@ test('greenfield: applies the harness, second run is idempotent', () => {
 
     const second = setup(p.dir, answers);
     assert.deepEqual(second.changed, []); // fully converged
+  } finally {
+    p.cleanup();
+  }
+});
+
+test('brownfield idempotency: install flips detection, but a re-apply stays a no-op', async () => {
+  // Adopting TS tooling on a repo that had neither tsconfig nor the dep: the
+  // first apply installs `typescript`, which flips detect() from false->true.
+  // The second apply must NOT see that flip as a change (it would re-baseline).
+  const p = tmpProject({ 'package.json': { name: 'adopts-ts' } });
+  try {
+    const cfg = join(p.dir, 'answers.json');
+    writeFileSync(cfg, JSON.stringify({
+      guardrails: { fallowRatchet: true, locGuard: true, eslintSeverityStaging: true, coverageFloors: true, ci: false },
+      github: { integrate: false }, docs: { scaffold: false },
+    }));
+    const exec = (cmd, args) => {
+      if (args[0] === 'install') {
+        const pkgPath = join(p.dir, 'package.json');
+        const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+        pkg.devDependencies = { ...pkg.devDependencies, typescript: '5.9.3' };
+        writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+      }
+    };
+    const io = (sink) => ({ cwd: p.dir, exec, stdout: (s) => sink.push(s), stderr: () => {} });
+    await cli(['apply', '--config', cfg], io([]));
+    assert.equal(detect(p.dir).typescript, true); // install flipped detection
+
+    const out = [];
+    await cli(['apply', '--config', cfg], io(out));
+    assert.match(out.join(''), /already converged/);
   } finally {
     p.cleanup();
   }
