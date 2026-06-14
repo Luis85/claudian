@@ -46,10 +46,6 @@
       "loc": 812,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
-    "src/features/tasks/ui/WorkOrderDetailModal.ts": {
-      "loc": 787,
-      "reason": "Grandfathered by the Agent Board redesign (native-Modal sticky shell + properties sidebar + objective ring/checklist + activity + per-status footer). Planned split: extract the header, properties, and footer-action renderers into sibling modules. See docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
-    },
     "src/features/inline-edit/ui/InlineEditModal.ts": {
       "loc": 785,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
