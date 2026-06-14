@@ -1,4 +1,5 @@
 // .claude/skills/project-setup/scripts/setup.mjs
+import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +9,7 @@ import { initBaselines } from './lib/baseline.mjs';
 import { detect } from './lib/detect.mjs';
 import { loadOptions } from './lib/options.mjs';
 import { plan } from './lib/plan.mjs';
+import { runGates } from './lib/verify.mjs';
 
 const USAGE = `project-setup engine
 
@@ -84,10 +86,22 @@ export async function cli(argv, io = {}) {
       }
       return 0;
     }
-    case 'report':
-    case 'verify':
-      err(`'${cmd}' is not implemented yet (Plan 3).\n`);
-      return 2;
+    case 'report': {
+      const cwd = io.cwd ?? process.cwd();
+      execFileSync('node', ['scripts/quality-report.mjs'], { cwd, stdio: 'inherit' });
+      return 0;
+    }
+    case 'verify': {
+      const cwd = io.cwd ?? process.cwd();
+      if (!args.flags.config) {
+        err('--config is required for verify.\n');
+        return 2;
+      }
+      const options = loadOptions(resolve(cwd, args.flags.config));
+      const res = runGates(cwd, options);
+      out(res.ok ? 'All gates passed.\n' : `Gates failed: ${res.failed.join(', ')}\n`);
+      return res.ok ? 0 : 1;
+    }
     default:
       err(`Unknown command: ${cmd}\n${USAGE}`);
       return 2;

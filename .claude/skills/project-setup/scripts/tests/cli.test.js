@@ -33,8 +33,8 @@ test('unknown command exits 2 with usage on stderr', async () => {
   assert.match(chunks.err, /Unknown command: frobnicate/);
 });
 
-test('not-yet-implemented commands exit 2', async () => {
-  const { io } = capture();
-  assert.equal(await cli(['report'], io), 2);
+test('verify with no --config exits 2', async () => {
+  const { io, chunks } = capture();
   assert.equal(await cli(['verify'], io), 2);
+  assert.match(chunks.err, /--config is required/);
 });
