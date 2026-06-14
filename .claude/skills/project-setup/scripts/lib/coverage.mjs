@@ -11,12 +11,12 @@ const ANCHOR = {
   jest: /coverageThreshold:\s*\{\s*global:\s*\{[^}]*\}\s*\}/,
   vitest: /thresholds:\s*\{[^}]*\}/,
 };
-const BASELINE_MARK = join('.project-setup-backup', '.coverage-baselined');
+// Committed (under scripts/, NOT the gitignored .project-setup-backup/), so a
+// teammate's fresh-clone re-apply doesn't treat coverage as unbaselined and reset
+// the rise-only floor. A marker file (not the threshold value) so a legitimately-0%
+// floor still counts as baselined vs the initial {0,0,0,0} placeholder.
+const BASELINE_MARK = join('scripts', '.coverage-baselined');
 
-// True once the coverage floor has been baselined. A marker FILE (not the config
-// value) tracks this so a legitimately-0% floor is distinguished from the initial
-// {0,0,0,0} placeholder — otherwise a converged re-apply would re-measure and could
-// silently raise the floor.
 export function isCoverageBaselined(cwd) {
   return existsSync(join(cwd, BASELINE_MARK));
 }

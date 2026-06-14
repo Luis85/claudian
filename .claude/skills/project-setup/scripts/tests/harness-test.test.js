@@ -17,6 +17,14 @@ test('planLoc renders the locCap into MAX_LOC', () => {
   assert.match(file.content, /MAX_LOC = 300/);
 });
 
+test('planLoc derives the LOC scan root from the entry (non-src layouts), skipping node_modules', () => {
+  const lib = planLoc({ guardrails: { locGuard: true } }, { entry: 'lib/main.ts' }).find((a) => a.path === 'scripts/check-loc.mjs');
+  assert.match(lib.content, /const SRC = join\(ROOT, 'lib'\)/);
+  const root = planLoc({ guardrails: { locGuard: true } }, { entry: 'index.js' }).find((a) => a.path === 'scripts/check-loc.mjs');
+  assert.match(root.content, /const SRC = join\(ROOT, '\.'\)/);
+  assert.match(root.content, /IGNORE_DIRS/); // root walk must skip node_modules etc.
+});
+
 test('planLoc check-loc tracks modern module extensions (.mts/.cts/.cjs)', () => {
   const file = planLoc({ guardrails: { locGuard: true } }).find((a) => a.path === 'scripts/check-loc.mjs');
   assert.match(file.content, /mts\|cts/);

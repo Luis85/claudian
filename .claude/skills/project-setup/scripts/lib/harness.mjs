@@ -105,9 +105,13 @@ export function planFallow(options, state) {
 
 export function planLoc(options, state) {
   if (!options.guardrails?.locGuard) return [];
+  // Scan root from the detected entry (like coverage), so a non-src/root layout is
+  // checked. '.' = repo root, walked with IGNORE_DIRS so node_modules isn't scanned.
+  const entry = state?.entry ?? 'src/index.ts';
+  const srcDir = entry.includes('/') ? entry.slice(0, entry.indexOf('/')) : '.';
   return [
     ...scriptCollision(options, state, 'check:loc', 'node scripts/check-loc.mjs'),
-    { type: 'writeFile', path: 'scripts/check-loc.mjs', mode: 'overwrite-backup', content: renderTemplate(loadTemplate('check-loc.mjs.tmpl'), { locCap: String(options.locCap ?? 500) }) },
+    { type: 'writeFile', path: 'scripts/check-loc.mjs', mode: 'overwrite-backup', content: renderTemplate(loadTemplate('check-loc.mjs.tmpl'), { locCap: String(options.locCap ?? 500), srcDir }) },
     { type: 'mergeJson', path: 'package.json', patch: { scripts: { 'check:loc': 'node scripts/check-loc.mjs' } } },
   ];
 }

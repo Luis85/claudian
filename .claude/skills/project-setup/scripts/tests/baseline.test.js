@@ -67,7 +67,7 @@ test('initBaselines does NOT re-baseline a guardrail that already has its baseli
 test('initBaselines skips coverage when already baselined (marker present, even a 0% floor)', () => {
   const p = tmpProject({
     'package.json': { name: 'x' },
-    '.project-setup-backup/.coverage-baselined': '',
+    'scripts/.coverage-baselined': '',
   });
   const order = [];
   try {
