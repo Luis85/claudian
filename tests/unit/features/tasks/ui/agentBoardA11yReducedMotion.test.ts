@@ -235,10 +235,14 @@ describe('Agent Board critical ARIA attributes are present in source', () => {
       needles: ["'role', 'menu'", "'role', 'menuitem'"],
     },
     {
-      // Modal collapsible sections (aria-expanded) + read-only acceptance
-      // checklist (role=checkbox + aria-checked).
+      // Modal read-only acceptance checklist (role=checkbox + aria-checked).
       file: 'src/features/tasks/ui/WorkOrderDetailModal.ts',
-      needles: ["'aria-expanded'", "'role', 'checkbox'", "'aria-checked'"],
+      needles: ["'role', 'checkbox'", "'aria-checked'"],
+    },
+    {
+      // Modal collapsible activity cards (aria-expanded), extracted sibling.
+      file: 'src/features/tasks/ui/workOrderActivitySection.ts',
+      needles: ["'aria-expanded'"],
     },
   ];
 

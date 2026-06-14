@@ -30,8 +30,11 @@ module.exports = {
   //
   // Actuals (stmt/branch/func/lines), re-measured 2026-06-14; floors below sit a
   // few points under each (regression floors, not aspirations). src/utils is
-  // held — its actual slipped vs the 2026-05-31 baseline but stays above floor:
-  //   global                          80.56 / 69.99 / 77.24 / 81.74
+  // held — its actual slipped vs the 2026-05-31 baseline but stays above floor.
+  // The global floor was tightened 2026-06-14 (78/67/74/79 → 79/68/75/80) toward
+  // the crept-up actuals; per-dir floors stay as set (runtime dirs are
+  // variance-prone, so their ~3-pt margin is kept to avoid flaky CI):
+  //   global                          80.76 / 70.21 / 77.44 / 81.94
   //   src/utils/                      90.45 / 83.78 / 94.64 / 92.19
   //   src/core/security/              98.71 / 97.46 / 100.0 / 99.63
   //   src/core/logging/               95.50 / 96.36 / 93.54 / 97.43
@@ -41,7 +44,7 @@ module.exports = {
   //   src/providers/cursor/runtime/   83.18 / 68.44 / 82.02 / 84.58
   //   src/providers/opencode/runtime/ 71.30 / 59.14 / 65.83 / 71.21
   coverageThreshold: {
-    global: { statements: 78, branches: 67, functions: 74, lines: 79 },
+    global: { statements: 79, branches: 68, functions: 75, lines: 80 },
     'src/utils/': { statements: 88, branches: 80, functions: 92, lines: 90 },
     'src/core/security/': { statements: 96, branches: 95, functions: 98, lines: 97 },
     'src/core/logging/': { statements: 93, branches: 94, functions: 91, lines: 95 },
