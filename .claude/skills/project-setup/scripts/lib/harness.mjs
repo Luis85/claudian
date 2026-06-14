@@ -119,7 +119,11 @@ export function planTest(options, state) {
   // consistent.) Still ensure a `test` script EXISTS so CI/verify's base test
   // step doesn't fail with "Missing script: test" — mergeJson keeps an existing
   // one and fills only when absent.
-  if (state?.handwrittenTestConfig) {
+  // Vitest reads vite.config by default; a generated vitest.config would override
+  // its plugins/aliases/setup — so stand down for a vite.config too when Vitest is
+  // the RESOLVED runner (the user may select Vitest before adding its dep).
+  const handwritten = state?.handwrittenTestConfig || (fw === 'vitest' && state?.viteConfig);
+  if (handwritten) {
     const testCmd = fw === 'vitest' ? 'vitest run --passWithNoTests' : 'jest --passWithNoTests';
     return [
       notice('Existing test config kept — the coverage gate was NOT wired (a hand-written config\'s thresholds can\'t be safely baselined to current). Set your thresholds to current coverage, or run `report` for an advisory snapshot.'),
@@ -136,6 +140,7 @@ export function planTest(options, state) {
   const coverageGlobs = options.typescript === false ? 'src/**/*.{js,jsx,mjs,cjs}' : 'src/**/*.{ts,tsx,mts,cts}';
   if (fw === 'vitest') {
     return [
+      ...scriptCollision(state, 'test:coverage', 'vitest run --coverage --passWithNoTests'),
       { type: 'writeFile', path: 'vitest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('vitest.config.mjs.tmpl'), { coverageThreshold, coverageGlobs }) },
       { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'vitest run --passWithNoTests', 'test:coverage': 'vitest run --coverage --passWithNoTests' }, devDependencies: dep('vitest', '@vitest/coverage-istanbul', 'eslint-plugin-vitest', 'typescript') } },
     ];
@@ -144,6 +149,7 @@ export function planTest(options, state) {
   // ts-jest with no tsconfig refuses to transform .js, so coverage never runs.
   const tsJest = options.typescript !== false;
   return [
+    ...scriptCollision(state, 'test:coverage', 'jest --coverage --passWithNoTests'),
     { type: 'writeFile', path: 'jest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('jest.config.mjs.tmpl'), { coverageThreshold, coverageGlobs, presetLine: tsJest ? "  preset: 'ts-jest',\n" : '' }) },
     { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'jest --passWithNoTests', 'test:coverage': 'jest --coverage --passWithNoTests' }, devDependencies: tsJest ? dep('jest', 'ts-jest', '@types/jest', 'eslint-plugin-jest', 'typescript') : dep('jest', 'eslint-plugin-jest') } },
   ];

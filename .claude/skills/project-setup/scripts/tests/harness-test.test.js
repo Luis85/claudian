@@ -93,3 +93,14 @@ test('planTest(vitest) hand-written config keeps a vitest test script', () => {
   const actions = planTest({ testFramework: 'vitest', guardrails: { coverageFloors: true } }, { handwrittenTestConfig: true });
   assert.equal(actions.find((a) => a.type === 'mergeJson').patch.scripts.test, 'vitest run --passWithNoTests');
 });
+
+test('planTest stands down for a Vite config when Vitest is the SELECTED runner (no vitest dep yet)', () => {
+  const actions = planTest({ testFramework: 'vitest', guardrails: { coverageFloors: true } }, { viteConfig: true, handwrittenTestConfig: false });
+  assert.ok(!actions.some((a) => a.path === 'vitest.config.mjs')); // don't override their vite config
+  assert.ok(actions.some((a) => a.type === 'notice' && /coverage gate was NOT wired/.test(a.message)));
+});
+
+test('planTest reports a test:coverage script collision', () => {
+  const actions = planTest({ testFramework: 'jest', typescript: true, guardrails: { coverageFloors: true } }, { scripts: { 'test:coverage': 'old' } });
+  assert.ok(actions.some((a) => a.type === 'notice' && /"test:coverage" script kept/.test(a.message)));
+});

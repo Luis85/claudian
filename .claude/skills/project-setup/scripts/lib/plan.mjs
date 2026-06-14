@@ -50,11 +50,18 @@ function planHarness(options, state) {
   ];
 }
 
-// State can force a guardrail off: a hand-written test config can't be safely
-// baselined, so the coverage gate stands down everywhere (planTest, planCi,
-// initBaselines, and verify — which calls this too) to keep day-one CI green.
+// State can force a guardrail off: a hand-written test config (or a Vite config
+// when Vitest is the resolved runner — Vitest reads vite.config, which our
+// vitest.config would override) can't be safely baselined, so the coverage gate
+// stands down everywhere (planTest, planCi, initBaselines, and verify) to keep
+// day-one CI green.
+export function standsDownTestConfig(options, state) {
+  const fw = options.testFramework ?? state?.testFramework ?? 'jest';
+  return Boolean(state?.handwrittenTestConfig || (fw === 'vitest' && state?.viteConfig));
+}
+
 export function effectiveOptions(options, state) {
-  if (!state?.handwrittenTestConfig) return options;
+  if (!standsDownTestConfig(options, state)) return options;
   return { ...options, guardrails: { ...(options.guardrails ?? {}), coverageFloors: false } };
 }
 

@@ -20,6 +20,12 @@ test('effectiveOptions drops the coverage gate when a hand-written test config i
   assert.equal(effectiveOptions({ guardrails: { coverageFloors: true } }, {}).guardrails.coverageFloors, true);
 });
 
+test('effectiveOptions stands the coverage gate down for a Vite config + resolved Vitest', () => {
+  assert.equal(effectiveOptions({ testFramework: 'vitest', guardrails: { coverageFloors: true } }, { viteConfig: true }).guardrails.coverageFloors, false);
+  // a vite.config but Jest selected -> not a Vitest config concern -> gate stays
+  assert.equal(effectiveOptions({ testFramework: 'jest', guardrails: { coverageFloors: true } }, { viteConfig: true }).guardrails.coverageFloors, true);
+});
+
 test('plan ignores the engine artifacts in .gitignore', () => {
   const actions = plan(options, state);
   const gi = actions.find((a) => a.type === 'mergeText' && a.path === '.gitignore');

@@ -151,6 +151,7 @@ export function detect(cwd) {
     eslintFlatConfig: existsAny(cwd, ESLINT_FLAT),
     ciWorkflow: existsSync(join(cwd, '.github', 'workflows', 'ci.yml')),
     handwrittenTestConfig: hasHandwrittenTestConfig(cwd, testFramework),
+    viteConfig: existsAny(cwd, VITE_CONFIGS),
     docs: {
       context: existsSync(join(cwd, 'CONTEXT.md')),
       dir: existsSync(join(cwd, 'docs')),

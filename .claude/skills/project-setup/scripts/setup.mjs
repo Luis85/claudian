@@ -128,10 +128,13 @@ export async function cli(argv, io = {}) {
       }
       const options = loadOptions(resolve(cwd, args.flags.config));
       const state = detect(cwd);
-      // Resolve the package manager the same way apply does (answer -> prior
-      // report -> detected), so verify runs the gates with the PM that installed
-      // the harness, not the npm fallback.
-      options.packageManager = options.packageManager ?? readPriorReport(cwd)?.options?.packageManager ?? state.packageManager ?? 'npm';
+      // Resolve packageManager + testFramework the same way apply does (answer ->
+      // prior report -> detected), so verify runs the gates with the PM that
+      // installed the harness (not the npm fallback), and effectiveOptions sees
+      // the resolved runner for its Vite/hand-written-config standdown.
+      const frozen = readPriorReport(cwd)?.options ?? {};
+      options.packageManager = options.packageManager ?? frozen.packageManager ?? state.packageManager ?? 'npm';
+      options.testFramework = options.testFramework ?? frozen.testFramework ?? state.testFramework ?? 'jest';
       // Mirror plan(): a hand-written test config drops the coverage gate here too.
       const res = runGates(cwd, effectiveOptions(options, state), io.exec);
       out(res.ok ? 'All gates passed.\n' : `Gates failed: ${res.failed.join(', ')}\n`);

@@ -148,6 +148,7 @@ test('detect treats a vite.config as a hand-written test config for Vitest, not 
   const jest = tmpProject({ 'package.json': { devDependencies: { jest: '^30' } }, 'vite.config.ts': 'export default {};\n' });
   try {
     assert.equal(detect(vitest.dir).handwrittenTestConfig, true); // vitest reads vite.config
+    assert.equal(detect(vitest.dir).viteConfig, true); // raw signal for selected-but-undetected Vitest
     assert.equal(detect(jest.dir).handwrittenTestConfig, false); // jest ignores it
   } finally {
     vitest.cleanup();
