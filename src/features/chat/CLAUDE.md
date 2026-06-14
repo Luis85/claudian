@@ -23,6 +23,8 @@ ClaudianView (lifecycle + assembly)
 ├── Controllers
 │   ├── ConversationController
 │   ├── StreamController
+│   ├── SubagentStreamCoordinator
+│   ├── ProviderLifecycleSubagentCoordinator
 │   ├── InputController
 │   ├── InlinePromptController
 │   ├── ChatDropController
@@ -79,7 +81,9 @@ The feature layer consumes provider-neutral `StreamChunk` values. Providers own 
 | Controller | Responsibility |
 |------------|----------------|
 | `ConversationController` | Session switching, history reload, save, and rewind. Delegates the history-dropdown list UI to `ConversationHistoryView` (in `ui/`), passing it the two lifecycle escapes — `switchTo` and `loadActive` — as callbacks |
-| `StreamController` | Consume stream chunks, update streaming state, auto-scroll, abort handling |
+| `StreamController` | Consume stream chunks, update streaming state, auto-scroll, abort handling. Delegates subagent chunks (`tool_use`/`tool_result`/`subagent_*`/`async_subagent_result`) to the two subagent coordinators |
+| `SubagentStreamCoordinator` | The `SubagentManager`-mediated Task subagent state machine (sync/async Task, child `subagent_*` chunks, `TaskOutput`, async hydration/retry, Task tool-call ↔ subagent linking). Reached via `StreamController`'s `dispatchToolUse`/`handleToolResult`/`handleSubagentChunk`/`handleAsyncSubagentResult` delegations; streaming primitives arrive as `deps` callbacks |
+| `ProviderLifecycleSubagentCoordinator` | Provider lifecycle subagents (spawn → wait/close) for CLI providers; owns the spawn-callId/agentId tracking maps. Distinct mechanism from the `SubagentManager` Task path above |
 | `InputController` | Text input, mentions, images, resume dispatch, command dispatch, and post-plan approval flow. Delegates the inline blocking prompts (tool approval, ask-user, exit-plan-mode, post-plan approval) to `InlinePromptController` |
 | `InlinePromptController` | Inline prompts that block a turn on user input — tool-approval cards, ask-user-question, exit-plan-mode, post-plan approval — plus the input-container hide/restore and the "needs attention" tab badge. Reached through `InputController`'s RuntimeHost-wired delegators |
 | `SelectionController` | Editor selection polling and CM6 decorations |
