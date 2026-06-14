@@ -45,6 +45,16 @@ function scriptCollision(options, state, name, desired) {
 // silently inert on those extensions.
 const TEST_GLOB = "'**/*.{test,spec}.{ts,mts,cts,tsx,js,mjs,cjs,jsx}'";
 
+// The first path segment of the detected entry, sanitized: it comes from an
+// untrusted repo's package.json#source and is templated into generated executables
+// (check-loc scan root, coverage globs), so reject anything that isn't a plain path
+// segment to prevent injection. Returns null for a root entry.
+function entryDir(entry) {
+  if (!entry.includes('/')) return null;
+  const seg = entry.slice(0, entry.indexOf('/'));
+  return /^[A-Za-z0-9._-]+$/.test(seg) ? seg : 'src';
+}
+
 // Test-lint plugin wiring by framework. Empty when no framework (so eslint still
 // installs); jest/vitest get their recommended test rules imported AND applied
 // (staged to warn) — otherwise the installed plugin would never run, or would
@@ -105,10 +115,10 @@ export function planFallow(options, state) {
 
 export function planLoc(options, state) {
   if (!options.guardrails?.locGuard) return [];
-  // Scan root from the detected entry (like coverage), so a non-src/root layout is
-  // checked. '.' = repo root, walked with IGNORE_DIRS so node_modules isn't scanned.
-  const entry = state?.entry ?? 'src/index.ts';
-  const srcDir = entry.includes('/') ? entry.slice(0, entry.indexOf('/')) : '.';
+  // Scan root from the (sanitized) detected entry (like coverage), so a non-src/root
+  // layout is checked. '.' = repo root, walked with IGNORE_DIRS so node_modules isn't
+  // scanned.
+  const srcDir = entryDir(state?.entry ?? 'src/index.ts') ?? '.';
   return [
     ...scriptCollision(options, state, 'check:loc', 'node scripts/check-loc.mjs'),
     { type: 'writeFile', path: 'scripts/check-loc.mjs', mode: 'overwrite-backup', content: renderTemplate(loadTemplate('check-loc.mjs.tmpl'), { locCap: String(options.locCap ?? 500), srcDir }) },
@@ -142,23 +152,33 @@ export function planTest(options, state) {
   // coverage ROOT from the detected entry so a non-src/root layout isn't missed:
   // src/index.ts -> src/, lib/main.ts -> lib/, index.js -> repo root.
   const exts = options.typescript === false ? 'js,jsx,mjs,cjs' : 'ts,tsx,mts,cts,js,jsx,mjs,cjs';
-  const entry = state?.entry ?? 'src/index.ts';
-  const srcDir = entry.includes('/') ? entry.slice(0, entry.indexOf('/')) : '';
+  const srcDir = entryDir(state?.entry ?? 'src/index.ts'); // sanitized; null => root
   const coverageGlobs = srcDir ? `${srcDir}/**/*.{${exts}}` : `**/*.{${exts}}`;
+  const cov = Boolean(options.guardrails?.coverageFloors);
   if (fw === 'vitest') {
+    // coverageFloors off => don't add the test:coverage script or its coverage
+    // provider dep (honor the opt-out); the base `test` gate still works.
+    const scripts = { test: 'vitest run --passWithNoTests' };
+    const deps = ['vitest', 'typescript'];
+    if (cov) {
+      scripts['test:coverage'] = 'vitest run --coverage --passWithNoTests';
+      deps.push('@vitest/coverage-istanbul');
+    }
     return [
-      ...scriptCollision(options, state, 'test:coverage', 'vitest run --coverage --passWithNoTests'),
+      ...(cov ? scriptCollision(options, state, 'test:coverage', 'vitest run --coverage --passWithNoTests') : []),
       { type: 'writeFile', path: 'vitest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('vitest.config.mjs.tmpl'), { coverageThreshold, coverageGlobs }) },
-      { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'vitest run --passWithNoTests', 'test:coverage': 'vitest run --coverage --passWithNoTests' }, devDependencies: dep('vitest', '@vitest/coverage-istanbul', 'typescript') } },
+      { type: 'mergeJson', path: 'package.json', patch: { scripts, devDependencies: dep(...deps) } },
     ];
   }
   // ts-jest preset + its deps only for a TypeScript project — on a JS-only repo
   // ts-jest with no tsconfig refuses to transform .js, so coverage never runs.
   const tsJest = options.typescript !== false;
+  const scripts = { test: 'jest --passWithNoTests' };
+  if (cov) scripts['test:coverage'] = 'jest --coverage --passWithNoTests';
   return [
-    ...scriptCollision(options, state, 'test:coverage', 'jest --coverage --passWithNoTests'),
+    ...(cov ? scriptCollision(options, state, 'test:coverage', 'jest --coverage --passWithNoTests') : []),
     { type: 'writeFile', path: 'jest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('jest.config.mjs.tmpl'), { coverageThreshold, coverageGlobs, presetLine: tsJest ? "  preset: 'ts-jest',\n" : '' }) },
-    { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'jest --passWithNoTests', 'test:coverage': 'jest --coverage --passWithNoTests' }, devDependencies: tsJest ? dep('jest', 'ts-jest', '@types/jest', 'typescript') : dep('jest') } },
+    { type: 'mergeJson', path: 'package.json', patch: { scripts, devDependencies: tsJest ? dep('jest', 'ts-jest', '@types/jest', 'typescript') : dep('jest') } },
   ];
 }
 

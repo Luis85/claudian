@@ -17,6 +17,23 @@ test('planLoc renders the locCap into MAX_LOC', () => {
   assert.match(file.content, /MAX_LOC = 300/);
 });
 
+test('planLoc/planTest sanitize a malicious entry path (no injection into generated files)', () => {
+  const evil = { entry: "a');b('/index.js" };
+  const loc = planLoc({ guardrails: { locGuard: true } }, evil).find((a) => a.path === 'scripts/check-loc.mjs');
+  assert.match(loc.content, /const SRC = join\(ROOT, 'src'\)/); // unsafe segment -> safe 'src' fallback
+  const cfg = planTest({ testFramework: 'jest', guardrails: { coverageFloors: true } }, evil).find((a) => a.path === 'jest.config.mjs');
+  assert.doesNotMatch(cfg.content, /b\('/); // not spliced into the config string
+});
+
+test('planTest omits test:coverage + the coverage dep when coverageFloors is off (honors opt-out)', () => {
+  const jestPkg = planTest({ testFramework: 'jest', guardrails: { coverageFloors: false } }).find((a) => a.type === 'mergeJson').patch;
+  assert.equal(jestPkg.scripts.test, 'jest --passWithNoTests');
+  assert.ok(!('test:coverage' in jestPkg.scripts));
+  const vitestPkg = planTest({ testFramework: 'vitest', guardrails: { coverageFloors: false } }).find((a) => a.type === 'mergeJson').patch;
+  assert.ok(!('test:coverage' in vitestPkg.scripts));
+  assert.ok(!('@vitest/coverage-istanbul' in vitestPkg.devDependencies));
+});
+
 test('planLoc derives the LOC scan root from the entry (non-src layouts), skipping node_modules', () => {
   const lib = planLoc({ guardrails: { locGuard: true } }, { entry: 'lib/main.ts' }).find((a) => a.path === 'scripts/check-loc.mjs');
   assert.match(lib.content, /const SRC = join\(ROOT, 'lib'\)/);
