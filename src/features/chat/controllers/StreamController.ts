@@ -59,7 +59,7 @@ import {
 import type { SubagentManager } from '../services/SubagentManager';
 import type { ChatState } from '../state/ChatState';
 import type { FileContextManager } from '../ui/FileContext';
-import { collectEditedPathsFromToolCall } from '../utils/editedFiles';
+import { collectDeletedPathsFromToolCall, collectEditedPathsFromToolCall } from '../utils/editedFiles';
 import { classifyRuntimeError } from './runtimeErrorClassification';
 import {
   type BlockTransitionDecision,
@@ -795,14 +795,17 @@ export class StreamController {
   private recordEditedFiles(toolCall: ToolCallInfo): void {
     if (this.deps.plugin.settings.showAgentEditedFiles === false) return;
 
-    const rawPaths = collectEditedPathsFromToolCall(toolCall);
-    if (rawPaths.length === 0) return;
-
     const { app } = this.deps.plugin;
-    for (const raw of rawPaths) {
+
+    for (const raw of collectEditedPathsFromToolCall(toolCall)) {
       const openable = toVaultRelativeOpenPath(app, raw.path);
-      if (!openable) continue;
-      this.deps.state.recordEditedFile({ path: openable, changeKind: raw.changeKind });
+      if (openable) this.deps.state.recordEditedFile({ path: openable, changeKind: raw.changeKind });
+    }
+
+    // A delete removes a file the list may already show; drop the stale chip.
+    for (const deleted of collectDeletedPathsFromToolCall(toolCall)) {
+      const openable = toVaultRelativeOpenPath(app, deleted);
+      if (openable) this.deps.state.removeEditedFile(openable);
     }
   }
 

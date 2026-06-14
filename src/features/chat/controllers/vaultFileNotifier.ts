@@ -37,9 +37,13 @@ function collectApplyPatchChangePaths(changes: unknown): string[] {
   if (!Array.isArray(changes)) return [];
   const paths: string[] = [];
   for (const change of changes) {
-    if (change && typeof change === 'object' && !Array.isArray(change)) {
-      const path = (change as Record<string, unknown>).path;
-      if (typeof path === 'string') paths.push(path);
+    if (!change || typeof change !== 'object' || Array.isArray(change)) continue;
+    const record = change as Record<string, unknown>;
+    // Refresh the source AND any rename destination so the moved file's new
+    // parent dir gets scanned too, not just the vacated source parent.
+    for (const key of ['path', 'movePath', 'new_path', 'newPath']) {
+      const value = record[key];
+      if (typeof value === 'string' && value.trim()) paths.push(value.trim());
     }
   }
   return paths;

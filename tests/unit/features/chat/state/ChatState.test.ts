@@ -377,6 +377,22 @@ describe('ChatState', () => {
       expect(onEditedFilesChanged).not.toHaveBeenCalled();
     });
 
+    it('removeEditedFile drops a matching entry and fires once; no-op when absent', () => {
+      const onEditedFilesChanged = jest.fn();
+      const chatState = new ChatState({ onEditedFilesChanged });
+      chatState.recordEditedFile({ path: 'a.md', changeKind: 'created' });
+      chatState.recordEditedFile({ path: 'b.ts', changeKind: 'edited' });
+      onEditedFilesChanged.mockClear();
+
+      chatState.removeEditedFile('a.md');
+      expect(chatState.editedFiles).toEqual([{ path: 'b.ts', changeKind: 'edited' }]);
+      expect(onEditedFilesChanged).toHaveBeenCalledTimes(1);
+
+      onEditedFilesChanged.mockClear();
+      chatState.removeEditedFile('missing.md');
+      expect(onEditedFilesChanged).not.toHaveBeenCalled();
+    });
+
     it('resetForNewConversation clears edited files', () => {
       const chatState = new ChatState();
       chatState.recordEditedFile({ path: 'a.md', changeKind: 'created' });

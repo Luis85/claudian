@@ -318,6 +318,13 @@ export class ChatState {
     this._callbacks.onEditedFilesChanged?.(this.editedFiles);
   }
 
+  /** Removes one path (e.g. after the agent deletes it). No-op when not present. */
+  removeEditedFile(path: string): void {
+    if (!this.state.editedFiles.some((entry) => entry.path === path)) return;
+    this.state.editedFiles = this.state.editedFiles.filter((entry) => entry.path !== path);
+    this._callbacks.onEditedFilesChanged?.(this.editedFiles);
+  }
+
   /** Clears the list. No-op (no callback) when already empty. */
   clearEditedFiles(): void {
     if (this.state.editedFiles.length === 0) return;

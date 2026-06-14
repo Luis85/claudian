@@ -44,6 +44,19 @@ describe('notifyApplyPatchFileChanges', () => {
     expect(scannedDirs).toContain('dirA');
   });
 
+  it('refreshes the destination parent for a structured changes[] rename', () => {
+    const { app, list } = createApp();
+
+    notifyApplyPatchFileChanges(app, {
+      changes: [{ path: 'dirA/old.md', movePath: 'dirB/new.md', kind: 'update' }],
+    });
+    jest.advanceTimersByTime(300);
+
+    const scannedDirs = list.mock.calls.map((call) => call[0]);
+    expect(scannedDirs).toContain('dirB');
+    expect(scannedDirs).toContain('dirA');
+  });
+
   it('refreshes Add/Update parents and skips nothing for a normal patch', () => {
     const { app, list } = createApp();
     const patch = [

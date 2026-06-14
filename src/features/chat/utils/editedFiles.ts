@@ -52,6 +52,44 @@ export function collectEditedPathsFromToolCall(toolCall: ToolCallInfo): RawEdite
 }
 
 /**
+ * Paths a completed apply_patch removed (patch-text `*** Delete File:` markers or
+ * structured `changes[]` deletes). The live list uses these to drop a stale chip
+ * for a file that was created/edited earlier in the conversation and then deleted.
+ * Returns raw paths — the caller normalizes them against the vault.
+ */
+export function collectDeletedPathsFromToolCall(toolCall: ToolCallInfo): string[] {
+  if (toolCall.name !== TOOL_APPLY_PATCH) return [];
+  const patchText = typeof toolCall.input.patch === 'string' ? toolCall.input.patch : '';
+  return [
+    ...collectPatchTextDeletes(patchText),
+    ...collectStructuredDeletes(toolCall.input.changes),
+  ];
+}
+
+function collectPatchTextDeletes(patchText: string): string[] {
+  const out: string[] = [];
+  for (const match of patchText.matchAll(APPLY_PATCH_MARKER)) {
+    if (match[1] !== 'Delete File') continue;
+    const path = match[2]?.trim();
+    if (path) out.push(path);
+  }
+  return out;
+}
+
+function collectStructuredDeletes(changes: unknown): string[] {
+  if (!Array.isArray(changes)) return [];
+  const out: string[] = [];
+  for (const change of changes) {
+    if (!isPlainObject(change)) continue;
+    const operation = (firstStringField(change, ['kind', 'type']) ?? '').toLowerCase();
+    if (!isDeleteOperation(operation)) continue;
+    const path = firstStringField(change, ['path']);
+    if (path) out.push(path);
+  }
+  return out;
+}
+
+/**
  * Write authors a whole file: a brand-new file (no lines removed) reads as
  * "created", while overwriting existing content reads as "edited". Edit and
  * NotebookEdit always modify an existing file.

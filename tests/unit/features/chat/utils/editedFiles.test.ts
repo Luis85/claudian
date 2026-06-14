@@ -2,6 +2,7 @@ import type { App } from 'obsidian';
 
 import type { ChatMessage, ToolCallInfo } from '@/core/types';
 import {
+  collectDeletedPathsFromToolCall,
   collectEditedPathsFromToolCall,
   deriveEditedFilesFromMessages,
   type EditedFileEntry,
@@ -123,6 +124,31 @@ describe('collectEditedPathsFromToolCall', () => {
       { path: 'updated.ts', changeKind: 'edited' },
       { path: 'new.ts', changeKind: 'edited' },
     ]);
+  });
+});
+
+describe('collectDeletedPathsFromToolCall', () => {
+  it('collects patch-text Delete File markers', () => {
+    const patch = [
+      '*** Begin Patch',
+      '*** Delete File: notes/gone.md',
+      '*** Update File: notes/kept.md',
+      '*** End Patch',
+    ].join('\n');
+    expect(collectDeletedPathsFromToolCall(toolCall({ name: 'apply_patch', input: { patch } })))
+      .toEqual(['notes/gone.md']);
+  });
+
+  it('collects structured changes[] deletes by kind/type', () => {
+    const tc = toolCall({
+      name: 'apply_patch',
+      input: { changes: [{ path: 'a.ts', kind: 'delete' }, { path: 'b.ts', type: 'remove' }, { path: 'c.ts', kind: 'update' }] },
+    });
+    expect(collectDeletedPathsFromToolCall(tc)).toEqual(['a.ts', 'b.ts']);
+  });
+
+  it('returns nothing for non-apply_patch tools', () => {
+    expect(collectDeletedPathsFromToolCall(toolCall({ name: 'Edit', input: { file_path: 'a.md' } }))).toEqual([]);
   });
 });
 

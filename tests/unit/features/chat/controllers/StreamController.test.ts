@@ -2886,4 +2886,18 @@ describe('StreamController - edited files', () => {
 
     expect(deps.state.editedFiles).toEqual([]);
   });
+
+  it('removes a previously recorded chip when apply_patch deletes the file', async () => {
+    const msg = createTestMessage();
+    await completeTool(msg, { id: 't1', name: 'Write', input: { file_path: 'notes/x.md', content: 'hi' } });
+    expect(deps.state.editedFiles.map((entry) => entry.path)).toEqual(['notes/x.md']);
+
+    await completeTool(msg, {
+      id: 't2',
+      name: 'apply_patch',
+      input: { patch: '*** Begin Patch\n*** Delete File: notes/x.md\n*** End Patch' },
+    });
+
+    expect(deps.state.editedFiles).toEqual([]);
+  });
 });
