@@ -16,7 +16,6 @@ function planGitignore() {
 function planRunReport(options, state) {
   const report = {
     engine: ENGINE_VERSION,
-    generatedAt: new Date().toISOString(),
     options,
     detected: state,
   };

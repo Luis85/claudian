@@ -3,6 +3,11 @@ import { resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+import { apply } from './lib/apply.mjs';
+import { detect } from './lib/detect.mjs';
+import { loadOptions } from './lib/options.mjs';
+import { plan } from './lib/plan.mjs';
+
 const USAGE = `project-setup engine
 
 Usage: node setup.mjs <command> [options]
@@ -47,12 +52,31 @@ export async function cli(argv, io = {}) {
   }
 
   switch (cmd) {
-    case 'detect':
+    case 'detect': {
+      out(JSON.stringify(detect(io.cwd ?? process.cwd()), null, 2) + '\n');
+      return 0;
+    }
     case 'plan':
-    case 'apply':
-      // Wired to the lib modules in Task 6.
-      err(`'${cmd}' is not wired yet.\n`);
-      return 2;
+    case 'apply': {
+      const cwd = io.cwd ?? process.cwd();
+      if (!args.flags.config) {
+        err('--config is required for plan/apply.\n');
+        return 2;
+      }
+      const options = loadOptions(resolve(cwd, args.flags.config));
+      const actions = plan(options, detect(cwd));
+      const dryRun = cmd === 'plan' || args.flags.dryRun === true;
+      const backupDir = args.flags.backupDir ? resolve(cwd, args.flags.backupDir) : undefined;
+      const result = apply(actions, { cwd, dryRun, backupDir });
+      if (dryRun) {
+        out(`Planned ${result.planned.length} action(s):\n` + result.planned.map((p) => `  ${p}`).join('\n') + '\n');
+      } else if (result.changed.length === 0) {
+        out('No changes — project already converged.\n');
+      } else {
+        out(`Applied ${result.changed.length} change(s):\n` + result.changed.map((p) => `  ${p}`).join('\n') + '\n');
+      }
+      return 0;
+    }
     case 'report':
     case 'verify':
       err(`'${cmd}' is not implemented yet (Plan 3).\n`);
