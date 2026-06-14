@@ -37,7 +37,10 @@ ClaudianView (lifecycle + assembly)
 │   ├── SubagentManager
 │   └── BangBashService
 ├── Rendering
-│   ├── MessageRenderer
+│   ├── MessageRenderer (orchestration; delegates to the three below)
+│   │   ├── MessageSubagentRenderer (Task / provider-lifecycle subagent projection)
+│   │   ├── MessageImageRenderer (attachment src resolution + image modal)
+│   │   └── MessageActionBar (copy / rewind / fork / registered-action toolbar)
 │   ├── ToolCallRenderer
 │   ├── ThinkingBlockRenderer
 │   ├── WriteEditRenderer
@@ -98,7 +101,7 @@ The feature layer consumes provider-neutral `StreamChunk` values. Providers own 
 
 | Renderer | Handles |
 |----------|---------|
-| `MessageRenderer` | Main message orchestration, rewind/fork affordances, interrupt markers |
+| `MessageRenderer` | Main message orchestration + interrupt markers; delegates subagent projection (`MessageSubagentRenderer`), image attachments (`MessageImageRenderer`), and the copy/rewind/fork action toolbar (`MessageActionBar`) |
 | `ToolCallRenderer` | Tool blocks and tool state |
 | `ThinkingBlockRenderer` | Thinking / reasoning summaries |
 | `WriteEditRenderer` | File writes and edits with diff previews |
