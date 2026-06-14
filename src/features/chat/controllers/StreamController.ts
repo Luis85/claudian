@@ -29,7 +29,7 @@ import {
 } from '../../../utils/animationFrame';
 import { formatDurationMmSs } from '../../../utils/date';
 import { extractDiffData } from '../../../utils/diff';
-import { resolveOpenableVaultPath } from '../../../utils/fileLink';
+import { toVaultRelativeOpenPath } from '../../../utils/fileLink';
 import { hasStreamingMathDelimiters } from '../../../utils/markdownMath';
 import { openClaudianProviderSettings } from '../../../utils/obsidianPrivateApi';
 import { FLAVOR_TEXTS } from '../constants';
@@ -783,10 +783,14 @@ export class StreamController {
 
   /**
    * Adds the file(s) a successful Write/Edit/NotebookEdit/apply_patch touched to
-   * the per-tab "files changed by the agent" list. Only in-vault, openable paths
-   * are listed (so every chip opens). Opt-out via the `showAgentEditedFiles`
-   * setting. Runs after {@link renderToolResultBlock} so the Write/Edit diff is
-   * already on the tool call for the created-vs-edited heuristic.
+   * the per-tab "files changed by the agent" list. Only in-vault paths are listed.
+   * Resolution does NOT require the file to be indexed yet: a just-created file's
+   * vault discovery (scheduled by {@link notifyVaultForToolResult}) is still in
+   * flight here, so an existence check would drop brand-new files. The chip's
+   * click handler re-resolves with an existence check and surfaces a Notice if the
+   * file is truly gone. Opt-out via the `showAgentEditedFiles` setting. Runs after
+   * {@link renderToolResultBlock} so the Write/Edit diff is already on the tool
+   * call for the created-vs-edited heuristic.
    */
   private recordEditedFiles(toolCall: ToolCallInfo): void {
     if (this.deps.plugin.settings.showAgentEditedFiles === false) return;
@@ -796,7 +800,7 @@ export class StreamController {
 
     const { app } = this.deps.plugin;
     for (const raw of rawPaths) {
-      const openable = resolveOpenableVaultPath(app, raw.path);
+      const openable = toVaultRelativeOpenPath(app, raw.path);
       if (!openable) continue;
       this.deps.state.recordEditedFile({ path: openable, changeKind: raw.changeKind });
     }

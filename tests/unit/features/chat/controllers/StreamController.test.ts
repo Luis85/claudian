@@ -68,8 +68,9 @@ jest.mock('@/features/chat/controllers/vaultFileNotifier', () => ({
 }));
 
 jest.mock('@/utils/fileLink', () => ({
-  // Echo the path back as "openable" so the edited-files hook records it.
-  resolveOpenableVaultPath: jest.fn((_app: unknown, p: string) => p),
+  // Echo the path back as in-vault so the edited-files hook records it. The hook
+  // uses the existence-agnostic resolver so just-created files are not dropped.
+  toVaultRelativeOpenPath: jest.fn((_app: unknown, p: string) => p),
 }));
 
 const originalWindow = (globalThis as { window?: Window }).window;

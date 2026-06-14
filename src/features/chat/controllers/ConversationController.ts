@@ -142,6 +142,21 @@ export class ConversationController {
     );
   }
 
+  /**
+   * Rebuilds the "files changed by the agent" strip from the current transcript,
+   * honoring the opt-out: when `showAgentEditedFiles` is disabled the list is
+   * cleared instead, so opting out also suppresses it on reload/switch (matching
+   * the live-recording skip in StreamController).
+   */
+  private rebuildEditedFiles(): void {
+    const { plugin, state } = this.deps;
+    if (plugin.settings.showAgentEditedFiles === false) {
+      state.clearEditedFiles();
+      return;
+    }
+    state.setEditedFiles(deriveEditedFilesFromMessages(plugin.app, state.messages));
+  }
+
   // ============================================
   // Conversation Lifecycle
   // ============================================
@@ -470,7 +485,7 @@ export class ConversationController {
     const { state, renderer } = this.deps;
     state.truncateAt(userMessageId);
     // Rewind drops later turns; re-derive so the edited-files list isn't stale.
-    state.setEditedFiles(deriveEditedFilesFromMessages(this.deps.plugin.app, state.messages));
+    this.rebuildEditedFiles();
 
     const inputEl = this.deps.getInputEl();
     inputEl.value = userMsg.content;
@@ -560,7 +575,7 @@ export class ConversationController {
 
     // Rebuild the "files changed by the agent" list from this conversation's
     // transcript so it stays tied to the conversation across switches/reloads.
-    state.setEditedFiles(deriveEditedFilesFromMessages(plugin.app, state.messages));
+    this.rebuildEditedFiles();
 
     const hasMessages = state.messages.length > 0;
 

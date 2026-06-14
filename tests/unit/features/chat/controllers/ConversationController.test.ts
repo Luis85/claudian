@@ -3,10 +3,16 @@ import { Menu, Notice } from 'obsidian';
 
 import { ConversationController, type ConversationControllerDeps } from '@/features/chat/controllers/ConversationController';
 import { ChatState } from '@/features/chat/state/ChatState';
+import { deriveEditedFilesFromMessages } from '@/features/chat/utils/editedFiles';
 import { confirm } from '@/shared/modals/ConfirmModal';
 
 jest.mock('@/shared/modals/ConfirmModal', () => ({
   confirm: jest.fn().mockResolvedValue(true),
+}));
+
+jest.mock('@/features/chat/utils/editedFiles', () => ({
+  ...jest.requireActual('@/features/chat/utils/editedFiles'),
+  deriveEditedFilesFromMessages: jest.fn(() => [{ path: 'derived.md', changeKind: 'created' }]),
 }));
 
 const mockNotice = Notice as jest.Mock;
@@ -109,6 +115,48 @@ describe('ConversationController', () => {
     (Menu as typeof Menu & { instances: unknown[] }).instances.length = 0;
     deps = createMockDeps();
     controller = new ConversationController(deps);
+  });
+
+  describe('edited files list', () => {
+    function conversationWithEdit() {
+      return {
+        id: 'c1',
+        title: 't',
+        sessionId: null,
+        createdAt: 1,
+        updatedAt: 1,
+        messages: [{
+          id: 'm',
+          role: 'assistant',
+          content: '',
+          timestamp: 1,
+          toolCalls: [{ id: 'w', name: 'Write', input: { file_path: 'a.md' }, status: 'completed' }],
+        }],
+      } as any;
+    }
+
+    it('rebuilds the list from the transcript on load when enabled', async () => {
+      (deps.plugin.getConversationById as jest.Mock).mockResolvedValue(conversationWithEdit());
+      deps.state.currentConversationId = 'c1';
+
+      await controller.loadActive();
+
+      expect(deriveEditedFilesFromMessages as jest.Mock).toHaveBeenCalled();
+      expect(deps.state.editedFiles).toEqual([{ path: 'derived.md', changeKind: 'created' }]);
+    });
+
+    it('clears the list and skips the rebuild when showAgentEditedFiles is disabled', async () => {
+      (deps.plugin as any).settings.showAgentEditedFiles = false;
+      deps.state.recordEditedFile({ path: 'stale.md', changeKind: 'edited' });
+      (deps.plugin.getConversationById as jest.Mock).mockResolvedValue(conversationWithEdit());
+      deps.state.currentConversationId = 'c1';
+      (deriveEditedFilesFromMessages as jest.Mock).mockClear();
+
+      await controller.loadActive();
+
+      expect(deriveEditedFilesFromMessages as jest.Mock).not.toHaveBeenCalled();
+      expect(deps.state.editedFiles).toEqual([]);
+    });
   });
 
   describe('Queue Management', () => {

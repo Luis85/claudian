@@ -50,10 +50,7 @@ function isVaultRelativeOpenPath(relative: string | null): relative is string {
   return !/^[A-Za-z]:/.test(relative) && !relative.includes('://');
 }
 
-/**
- * Resolves a path to a vault-relative file only when it lives in the vault and exists.
- */
-export function resolveOpenableVaultPath(app: App, rawPath: string): string | null {
+function findVaultRelativePath(app: App, rawPath: string, requireExists: boolean): string | null {
   const trimmed = rawPath.trim();
   if (!trimmed) {
     return null;
@@ -76,12 +73,29 @@ export function resolveOpenableVaultPath(app: App, rawPath: string): string | nu
       continue;
     }
 
-    if (getVaultFileByPath(app, relative)) {
+    if (!requireExists || getVaultFileByPath(app, relative)) {
       return relative;
     }
   }
 
   return null;
+}
+
+/**
+ * Resolves a path to a vault-relative file only when it lives in the vault and exists.
+ */
+export function resolveOpenableVaultPath(app: App, rawPath: string): string | null {
+  return findVaultRelativePath(app, rawPath, true);
+}
+
+/**
+ * Resolves a path to a vault-relative path when it lives inside the vault, WITHOUT
+ * requiring the file to already exist in Obsidian's index. Use for paths a tool
+ * just wrote, where new-file vault discovery may still be in flight (so an
+ * existence check would spuriously reject a freshly created file).
+ */
+export function toVaultRelativeOpenPath(app: App, rawPath: string): string | null {
+  return findVaultRelativePath(app, rawPath, false);
 }
 
 /** Opens a vault file when the target is a resolvable path or wikilink. */
