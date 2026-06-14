@@ -30,7 +30,7 @@ export interface RawEditedPath {
 }
 
 /** Matches the per-file action markers in a Codex apply_patch patch body. */
-const APPLY_PATCH_FILE_MARKER = /^\*\*\* (Add|Update|Delete) File: (.+)$/gm;
+const APPLY_PATCH_MARKER = /^\*\*\* (Add File|Update File|Delete File|Move to): (.+)$/gm;
 
 /**
  * Pulls the created/edited file path(s) out of a completed file-mutating tool
@@ -72,13 +72,27 @@ function collectApplyPatchPaths(input: Record<string, unknown>): RawEditedPath[]
 
 function collectApplyPatchMarkerPaths(patchText: string): RawEditedPath[] {
   const out: RawEditedPath[] = [];
-  for (const match of patchText.matchAll(APPLY_PATCH_FILE_MARKER)) {
-    const action = match[1];
-    const path = match[2]?.trim();
-    if (!path || action === 'Delete') continue;
-    out.push({ path, changeKind: action === 'Add' ? 'created' : 'edited' });
+  let pending: RawEditedPath | null = null;
+  for (const match of patchText.matchAll(APPLY_PATCH_MARKER)) {
+    const marker = match[1];
+    const value = match[2]?.trim();
+    if (!value) continue;
+    // A rename emits `*** Update File: old` then `*** Move to: new`; record the
+    // destination rather than the (now removed) source path.
+    if (marker === 'Move to') {
+      if (pending) pending.path = value;
+      continue;
+    }
+    if (pending) out.push(pending);
+    pending = markerToEntry(marker, value);
   }
+  if (pending) out.push(pending);
   return out;
+}
+
+function markerToEntry(marker: string, path: string): RawEditedPath | null {
+  if (marker === 'Delete File') return null;
+  return { path, changeKind: marker === 'Add File' ? 'created' : 'edited' };
 }
 
 function collectApplyPatchChangesPaths(changes: unknown): RawEditedPath[] {

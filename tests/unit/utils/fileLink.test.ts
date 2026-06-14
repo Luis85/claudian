@@ -259,5 +259,9 @@ describe('wikilink pattern matching', () => {
     it('rejects an out-of-vault absolute path instead of stripping it into the vault', () => {
       expect(toVaultRelativeOpenPath(app, '/tmp/generated.md')).toBeNull();
     });
+
+    it('rejects an out-of-vault escaping relative path instead of cleaning it into the vault', () => {
+      expect(toVaultRelativeOpenPath(app, '../scratch/result.md')).toBeNull();
+    });
   });
 });

@@ -82,6 +82,22 @@ describe('collectEditedPathsFromToolCall', () => {
     ]);
   });
 
+  it('records the destination path for an apply_patch rename (Move to)', () => {
+    const patch = [
+      '*** Begin Patch',
+      '*** Update File: src/old-name.ts',
+      '*** Move to: src/new-name.ts',
+      '@@',
+      '-a',
+      '+b',
+      '*** End Patch',
+    ].join('\n');
+
+    expect(collectEditedPathsFromToolCall(toolCall({ name: 'apply_patch', input: { patch } }))).toEqual([
+      { path: 'src/new-name.ts', changeKind: 'edited' },
+    ]);
+  });
+
   it('parses a legacy apply_patch changes[] array as edits', () => {
     const tc = toolCall({ name: 'apply_patch', input: { changes: [{ path: 'x.ts' }, { path: 'y.ts' }] } });
     expect(collectEditedPathsFromToolCall(tc)).toEqual([
