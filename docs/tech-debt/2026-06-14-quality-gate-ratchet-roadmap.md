@@ -161,13 +161,17 @@ The easy wins are spent (campaign runs 8–16 took `duplicatedLines` 1,790 → 8
 **diminishing-returns tail**; treat further movement as opportunistic, not a
 sprint.
 
-- **`cloneGroups` 32 / `duplicatedLines` 803.** The remaining clones are the
+- **`cloneGroups` 31 / `duplicatedLines` 781.** The remaining clones are the
   *entangled cross-zone runtime* families — provider↔provider tool normalization
   and the `ChatRuntime` shapes — whose only shared home is `core/`. Deduping
   them means a `core/` module more invasive than the win (run 11/15 deferred
   them deliberately). Only pursue when a runtime is being reworked anyway.
   Same-zone/same-file copy-paste should still be extracted on sight (the gate
-  catches new pairs at `minOccurrences: 2`).
+  catches new pairs at `minOccurrences: 2`) — e.g. the `codexSessionTailMapping`
+  call-id claim block was hoisted to a `claimResponseItemCallId` helper
+  (32 → 31). Note: a same-file dedup that crosses an `await`/event-emit boundary
+  can shift microtask ordering (the `RunSession` pause-persist pair was left
+  as-is for that reason) — only hoist pure blocks.
 - **`complexFunctions` 236.** Fallow counts cyclomatic ≥ 20 **OR** cognitive
   ≥ 15 **OR CRAP ≥ 30**. CRAP is coverage-weighted, so the remaining tail is
   *low-cognitive, low-coverage* functions where the cheapest fix is often a
