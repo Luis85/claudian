@@ -2,17 +2,17 @@
  * Provider-neutral extraction + bookkeeping for "files the agent changed".
  *
  * A completed Write/Edit/NotebookEdit (Claude/Opencode/Cursor) or apply_patch
- * (Codex) names the file(s) the agent created or edited. The chat tab surfaces
- * those as a clickable list above the composer; this module owns the pure path
- * extraction and the dedupe/order rules, so both the live streaming hook and the
- * history-derived rebuild produce an identical list.
+ * (Codex) names the file(s) the agent created, edited, renamed, or deleted. The
+ * chat tab surfaces created/edited files as a clickable list above the composer;
+ * this module owns the pure path extraction and the dedupe/order rules, so the
+ * live streaming hook and the history-derived rebuild produce an identical list.
  */
 import type { App } from 'obsidian';
 
 import { getPathFromToolInput } from '../../../core/tools/toolInput';
 import { isEditTool, TOOL_APPLY_PATCH, TOOL_WRITE } from '../../../core/tools/toolNames';
 import type { ChatMessage, ToolCallInfo } from '../../../core/types';
-import { resolveOpenableVaultPath } from '../../../utils/fileLink';
+import { resolveExistingVaultFilePath } from '../../../utils/fileLink';
 
 export type EditedFileChangeKind = 'created' | 'edited';
 
@@ -32,61 +32,38 @@ export interface RawEditedPath {
 /** Matches the per-file action markers in a Codex apply_patch patch body. */
 const APPLY_PATCH_MARKER = /^\*\*\* (Add File|Update File|Delete File|Move to): (.+)$/gm;
 
+/** The add/edit targets and the removals (deletes + vacated rename sources) of a patch. */
+interface ApplyPatchOps {
+  added: RawEditedPath[];
+  removed: string[];
+}
+
 /**
- * Pulls the created/edited file path(s) out of a completed file-mutating tool
- * call. Deletions are intentionally dropped (the list is "files you can open").
- * Returns raw paths — the caller resolves them against the vault.
+ * Paths a completed file-mutating tool created or edited — the chip targets.
+ * Renames resolve to the destination; deletions are excluded. Returns raw paths;
+ * the caller resolves them against the vault.
  */
 export function collectEditedPathsFromToolCall(toolCall: ToolCallInfo): RawEditedPath[] {
   if (toolCall.name === TOOL_APPLY_PATCH) {
-    return collectApplyPatchPaths(toolCall.input);
+    return parseApplyPatch(toolCall.input).added;
   }
 
   if (isEditTool(toolCall.name)) {
     const path = getPathFromToolInput(toolCall.name, toolCall.input) ?? toolCall.diffData?.filePath ?? null;
-    if (!path) return [];
-    return [{ path, changeKind: resolveEditToolKind(toolCall) }];
+    return path ? [{ path, changeKind: resolveEditToolKind(toolCall) }] : [];
   }
 
   return [];
 }
 
 /**
- * Paths a completed apply_patch removed (patch-text `*** Delete File:` markers or
- * structured `changes[]` deletes). The live list uses these to drop a stale chip
- * for a file that was created/edited earlier in the conversation and then deleted.
- * Returns raw paths — the caller normalizes them against the vault.
+ * Paths a completed apply_patch removed from their original location — explicit
+ * deletes and vacated rename sources — so the live list can drop stale chips for
+ * files that no longer exist there. Returns raw paths.
  */
-export function collectDeletedPathsFromToolCall(toolCall: ToolCallInfo): string[] {
+export function collectRemovedPathsFromToolCall(toolCall: ToolCallInfo): string[] {
   if (toolCall.name !== TOOL_APPLY_PATCH) return [];
-  const patchText = typeof toolCall.input.patch === 'string' ? toolCall.input.patch : '';
-  return [
-    ...collectPatchTextDeletes(patchText),
-    ...collectStructuredDeletes(toolCall.input.changes),
-  ];
-}
-
-function collectPatchTextDeletes(patchText: string): string[] {
-  const out: string[] = [];
-  for (const match of patchText.matchAll(APPLY_PATCH_MARKER)) {
-    if (match[1] !== 'Delete File') continue;
-    const path = match[2]?.trim();
-    if (path) out.push(path);
-  }
-  return out;
-}
-
-function collectStructuredDeletes(changes: unknown): string[] {
-  if (!Array.isArray(changes)) return [];
-  const out: string[] = [];
-  for (const change of changes) {
-    if (!isPlainObject(change)) continue;
-    const operation = (firstStringField(change, ['kind', 'type']) ?? '').toLowerCase();
-    if (!isDeleteOperation(operation)) continue;
-    const path = firstStringField(change, ['path']);
-    if (path) out.push(path);
-  }
-  return out;
+  return parseApplyPatch(toolCall.input).removed;
 }
 
 /**
@@ -100,64 +77,103 @@ function resolveEditToolKind(toolCall: ToolCallInfo): EditedFileChangeKind {
   return removed > 0 ? 'edited' : 'created';
 }
 
-function collectApplyPatchPaths(input: Record<string, unknown>): RawEditedPath[] {
-  return [
-    ...collectApplyPatchMarkerPaths(typeof input.patch === 'string' ? input.patch : ''),
-    // Legacy structured-array shape (some Codex transports emit `changes[]`).
-    ...collectApplyPatchChangesPaths(input.changes),
-  ];
+function parseApplyPatch(input: Record<string, unknown>): ApplyPatchOps {
+  const patchText = typeof input.patch === 'string' ? input.patch : '';
+  const fromText = parseApplyPatchMarkers(patchText);
+  // Legacy structured-array shape (some Codex transports emit `changes[]`).
+  const fromChanges = parseApplyPatchChanges(input.changes);
+  return {
+    added: [...fromText.added, ...fromChanges.added],
+    removed: [...fromText.removed, ...fromChanges.removed],
+  };
 }
 
-function collectApplyPatchMarkerPaths(patchText: string): RawEditedPath[] {
-  const out: RawEditedPath[] = [];
+function parseApplyPatchMarkers(patchText: string): ApplyPatchOps {
+  const added: RawEditedPath[] = [];
+  const removed: string[] = [];
   let pending: RawEditedPath | null = null;
+
   for (const match of patchText.matchAll(APPLY_PATCH_MARKER)) {
-    const marker = match[1];
     const value = match[2]?.trim();
     if (!value) continue;
-    // A rename emits `*** Update File: old` then `*** Move to: new`; record the
-    // destination rather than the (now removed) source path.
-    if (marker === 'Move to') {
-      if (pending) pending.path = value;
-      continue;
-    }
-    if (pending) out.push(pending);
-    pending = markerToEntry(marker, value);
+    pending = applyPatchMarker(match[1], value, pending, added, removed);
   }
-  if (pending) out.push(pending);
-  return out;
-}
 
-function markerToEntry(marker: string, path: string): RawEditedPath | null {
-  if (marker === 'Delete File') return null;
-  return { path, changeKind: marker === 'Add File' ? 'created' : 'edited' };
-}
-
-function collectApplyPatchChangesPaths(changes: unknown): RawEditedPath[] {
-  if (!Array.isArray(changes)) return [];
-  const out: RawEditedPath[] = [];
-  for (const change of changes) {
-    const entry = readApplyPatchChange(change);
-    if (entry) out.push(entry);
-  }
-  return out;
+  if (pending) added.push(pending);
+  return { added, removed };
 }
 
 /**
- * Reads one structured apply_patch change entry, honoring its operation: deletes
- * are dropped (the list is "files you can open"), renames prefer the destination
- * path over the source, and adds map to created.
+ * Folds one patch marker into the running parse. Returns the still-open entry
+ * (an Add/Update awaiting a possible `Move to`), pushing completed entries into
+ * `added` and vacated sources/deletes into `removed`.
  */
-function readApplyPatchChange(change: unknown): RawEditedPath | null {
+function applyPatchMarker(
+  marker: string,
+  value: string,
+  pending: RawEditedPath | null,
+  added: RawEditedPath[],
+  removed: string[],
+): RawEditedPath | null {
+  if (marker === 'Move to') {
+    // `Update File: old` then `Move to: new`: the source is vacated; the
+    // destination is the file to show.
+    if (pending) {
+      removed.push(pending.path);
+      pending.path = value;
+    }
+    return pending;
+  }
+
+  if (pending) added.push(pending);
+  if (marker === 'Delete File') {
+    removed.push(value);
+    return null;
+  }
+  return { path: value, changeKind: marker === 'Add File' ? 'created' : 'edited' };
+}
+
+function parseApplyPatchChanges(changes: unknown): ApplyPatchOps {
+  const added: RawEditedPath[] = [];
+  const removed: string[] = [];
+  if (!Array.isArray(changes)) return { added, removed };
+
+  for (const change of changes) {
+    const op = classifyApplyPatchChange(change);
+    if (!op) continue;
+    if (op.added) added.push(op.added);
+    if (op.removed) removed.push(op.removed);
+  }
+
+  return { added, removed };
+}
+
+/**
+ * Classifies one structured apply_patch change: deletes become a removal, renames
+ * add the destination and remove the vacated source, and adds/updates add the path.
+ */
+function classifyApplyPatchChange(change: unknown): { added?: RawEditedPath; removed?: string } | null {
   if (!isPlainObject(change)) return null;
 
   const operation = (firstStringField(change, ['kind', 'type']) ?? '').toLowerCase();
-  if (isDeleteOperation(operation)) return null;
+  const source = firstStringField(change, ['path']);
+  if (isDeleteOperation(operation)) {
+    return source ? { removed: source } : null;
+  }
 
-  const path = firstStringField(change, ['new_path', 'newPath', 'movePath', 'path']);
+  const dest = firstStringField(change, ['new_path', 'newPath', 'movePath']);
+  const path = dest ?? source;
   if (!path) return null;
 
-  return { path, changeKind: isCreateOperation(operation) ? 'created' : 'edited' };
+  return {
+    added: { path, changeKind: isCreateOperation(operation) ? 'created' : 'edited' },
+    removed: renameSource(source, dest),
+  };
+}
+
+/** The vacated source of a rename, or undefined when the change isn't a move. */
+function renameSource(source: string | null, dest: string | null): string | undefined {
+  return dest && source && dest !== source ? source : undefined;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -197,8 +213,9 @@ export function mergeEditedFileEntry(
 
 /**
  * Rebuilds the edited-files list from a conversation transcript. Only completed
- * top-level tool calls that resolve to an openable vault file are included, so
- * deleted or out-of-vault paths drop out naturally. Ordered most-recent first.
+ * top-level tool calls whose path resolves to an EXISTING vault file are included
+ * (strict, no junk-prefix recovery), so deleted, renamed-away, and out-of-vault
+ * paths drop out naturally. Ordered most-recent first.
  */
 export function deriveEditedFilesFromMessages(app: App, messages: readonly ChatMessage[]): EditedFileEntry[] {
   let list: EditedFileEntry[] = [];
@@ -208,7 +225,7 @@ export function deriveEditedFilesFromMessages(app: App, messages: readonly ChatM
     for (const toolCall of toolCalls) {
       if (toolCall.status !== 'completed') continue;
       for (const raw of collectEditedPathsFromToolCall(toolCall)) {
-        const openable = resolveOpenableVaultPath(app, raw.path);
+        const openable = resolveExistingVaultFilePath(app, raw.path);
         if (!openable) continue;
         list = mergeEditedFileEntry(list, { path: openable, changeKind: raw.changeKind });
       }

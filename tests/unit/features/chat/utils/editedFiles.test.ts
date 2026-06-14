@@ -2,17 +2,17 @@ import type { App } from 'obsidian';
 
 import type { ChatMessage, ToolCallInfo } from '@/core/types';
 import {
-  collectDeletedPathsFromToolCall,
   collectEditedPathsFromToolCall,
+  collectRemovedPathsFromToolCall,
   deriveEditedFilesFromMessages,
   type EditedFileEntry,
   mergeEditedFileEntry,
 } from '@/features/chat/utils/editedFiles';
 
 jest.mock('@/utils/fileLink', () => ({
-  // Echo the path back as "openable" except a sentinel that simulates a
-  // deleted / out-of-vault file.
-  resolveOpenableVaultPath: jest.fn((_app: unknown, path: string) =>
+  // Echo the path back as an existing vault file except a sentinel that simulates
+  // a deleted / renamed-away / out-of-vault file. Derive uses the strict resolver.
+  resolveExistingVaultFilePath: jest.fn((_app: unknown, path: string) =>
     path === 'gone.md' ? null : path,
   ),
 }));
@@ -127,28 +127,46 @@ describe('collectEditedPathsFromToolCall', () => {
   });
 });
 
-describe('collectDeletedPathsFromToolCall', () => {
-  it('collects patch-text Delete File markers', () => {
+describe('collectRemovedPathsFromToolCall', () => {
+  it('collects patch-text Delete File markers (but not plain updates)', () => {
     const patch = [
       '*** Begin Patch',
       '*** Delete File: notes/gone.md',
       '*** Update File: notes/kept.md',
       '*** End Patch',
     ].join('\n');
-    expect(collectDeletedPathsFromToolCall(toolCall({ name: 'apply_patch', input: { patch } })))
+    expect(collectRemovedPathsFromToolCall(toolCall({ name: 'apply_patch', input: { patch } })))
       .toEqual(['notes/gone.md']);
   });
 
-  it('collects structured changes[] deletes by kind/type', () => {
+  it('treats a patch-text rename source as removed', () => {
+    const patch = [
+      '*** Begin Patch',
+      '*** Update File: src/old.ts',
+      '*** Move to: src/new.ts',
+      '*** End Patch',
+    ].join('\n');
+    expect(collectRemovedPathsFromToolCall(toolCall({ name: 'apply_patch', input: { patch } })))
+      .toEqual(['src/old.ts']);
+  });
+
+  it('collects structured changes[] deletes and rename sources', () => {
     const tc = toolCall({
       name: 'apply_patch',
-      input: { changes: [{ path: 'a.ts', kind: 'delete' }, { path: 'b.ts', type: 'remove' }, { path: 'c.ts', kind: 'update' }] },
+      input: {
+        changes: [
+          { path: 'a.ts', kind: 'delete' },
+          { path: 'b.ts', type: 'remove' },
+          { path: 'c.ts', kind: 'update' },
+          { path: 'old.ts', movePath: 'new.ts', kind: 'update' },
+        ],
+      },
     });
-    expect(collectDeletedPathsFromToolCall(tc)).toEqual(['a.ts', 'b.ts']);
+    expect(collectRemovedPathsFromToolCall(tc)).toEqual(['a.ts', 'b.ts', 'old.ts']);
   });
 
   it('returns nothing for non-apply_patch tools', () => {
-    expect(collectDeletedPathsFromToolCall(toolCall({ name: 'Edit', input: { file_path: 'a.md' } }))).toEqual([]);
+    expect(collectRemovedPathsFromToolCall(toolCall({ name: 'Edit', input: { file_path: 'a.md' } }))).toEqual([]);
   });
 });
 

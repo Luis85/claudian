@@ -2900,4 +2900,18 @@ describe('StreamController - edited files', () => {
 
     expect(deps.state.editedFiles).toEqual([]);
   });
+
+  it('drops the source chip and shows the destination when apply_patch renames a file', async () => {
+    const msg = createTestMessage();
+    await completeTool(msg, { id: 't1', name: 'Write', input: { file_path: 'a/old.md', content: 'hi' } });
+    expect(deps.state.editedFiles.map((entry) => entry.path)).toEqual(['a/old.md']);
+
+    await completeTool(msg, {
+      id: 't2',
+      name: 'apply_patch',
+      input: { patch: '*** Begin Patch\n*** Update File: a/old.md\n*** Move to: b/new.md\n*** End Patch' },
+    });
+
+    expect(deps.state.editedFiles.map((entry) => entry.path)).toEqual(['b/new.md']);
+  });
 });

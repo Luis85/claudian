@@ -50,7 +50,19 @@ function isVaultRelativeOpenPath(relative: string | null): relative is string {
   return !/^[A-Za-z]:/.test(relative) && !relative.includes('://');
 }
 
-function findVaultRelativePath(app: App, rawPath: string, requireExists: boolean): string | null {
+/**
+ * `allowCleaning` controls the junk-prefix recovery (`cleanToolPathCandidate`,
+ * which strips `../`, `.\`, leading `/`). That recovery can rescue an out-of-vault
+ * path (`/tmp/x`, `../x`) into a vault-looking one, so it's only safe for
+ * user-authored references (chat links); tool-edit paths must trust the path as
+ * written. `requireExists` gates on the file already being indexed.
+ */
+interface VaultResolveOptions {
+  requireExists: boolean;
+  allowCleaning: boolean;
+}
+
+function findVaultRelativePath(app: App, rawPath: string, opts: VaultResolveOptions): string | null {
   const trimmed = rawPath.trim();
   if (!trimmed) {
     return null;
@@ -61,7 +73,7 @@ function findVaultRelativePath(app: App, rawPath: string, requireExists: boolean
     return null;
   }
 
-  const candidates = buildVaultPathCandidates(trimmed, requireExists);
+  const candidates = opts.allowCleaning ? [trimmed, cleanToolPathCandidate(trimmed)] : [trimmed];
 
   for (const candidate of candidates) {
     if (!candidatePathIsInsideVault(candidate, vaultPath)) {
@@ -73,7 +85,7 @@ function findVaultRelativePath(app: App, rawPath: string, requireExists: boolean
       continue;
     }
 
-    if (!requireExists || getVaultFileByPath(app, relative)) {
+    if (!opts.requireExists || getVaultFileByPath(app, relative)) {
       return relative;
     }
   }
@@ -82,32 +94,32 @@ function findVaultRelativePath(app: App, rawPath: string, requireExists: boolean
 }
 
 /**
- * Candidate paths to try, in order. The cleaned candidate strips junk prefixes
- * (`../`, `.\`, leading `/`) to recover Cursor-style tool paths — but that can
- * rescue an out-of-vault path (absolute `/tmp/x` or escaping `../x`) into a
- * vault-looking one. The existence check filters those false positives out; the
- * existence-agnostic resolver has no such backstop, so it trusts only the path as
- * written (a just-created in-vault file resolves directly without cleaning).
- */
-function buildVaultPathCandidates(trimmed: string, requireExists: boolean): string[] {
-  return requireExists ? [trimmed, cleanToolPathCandidate(trimmed)] : [trimmed];
-}
-
-/**
- * Resolves a path to a vault-relative file only when it lives in the vault and exists.
+ * Resolves a path to a vault-relative file only when it lives in the vault and
+ * exists. Junk-prefix recovery is on — for user-authored references (chat links,
+ * Cursor inline path citations).
  */
 export function resolveOpenableVaultPath(app: App, rawPath: string): string | null {
-  return findVaultRelativePath(app, rawPath, true);
+  return findVaultRelativePath(app, rawPath, { requireExists: true, allowCleaning: true });
 }
 
 /**
- * Resolves a path to a vault-relative path when it lives inside the vault, WITHOUT
- * requiring the file to already exist in Obsidian's index. Use for paths a tool
- * just wrote, where new-file vault discovery may still be in flight (so an
- * existence check would spuriously reject a freshly created file).
+ * Resolves a tool-reported path to a vault-relative path WITHOUT requiring the
+ * file to be indexed yet and WITHOUT junk-prefix recovery. Use for paths a tool
+ * just wrote: a brand-new file's vault discovery may still be in flight, and an
+ * out-of-vault path must not be cleaned into the vault.
  */
 export function toVaultRelativeOpenPath(app: App, rawPath: string): string | null {
-  return findVaultRelativePath(app, rawPath, false);
+  return findVaultRelativePath(app, rawPath, { requireExists: false, allowCleaning: false });
+}
+
+/**
+ * Resolves a tool-reported path to an EXISTING vault file under the same strict
+ * (no junk-prefix recovery) contract as {@link toVaultRelativeOpenPath}. Use when
+ * rebuilding from a transcript, so deleted/renamed-away paths drop out while an
+ * out-of-vault path can't be cleaned into an unrelated same-named vault file.
+ */
+export function resolveExistingVaultFilePath(app: App, rawPath: string): string | null {
+  return findVaultRelativePath(app, rawPath, { requireExists: true, allowCleaning: false });
 }
 
 /** Opens a vault file when the target is a resolvable path or wikilink. */

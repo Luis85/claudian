@@ -59,7 +59,7 @@ import {
 import type { SubagentManager } from '../services/SubagentManager';
 import type { ChatState } from '../state/ChatState';
 import type { FileContextManager } from '../ui/FileContext';
-import { collectDeletedPathsFromToolCall, collectEditedPathsFromToolCall } from '../utils/editedFiles';
+import { collectEditedPathsFromToolCall, collectRemovedPathsFromToolCall } from '../utils/editedFiles';
 import { classifyRuntimeError } from './runtimeErrorClassification';
 import {
   type BlockTransitionDecision,
@@ -802,9 +802,9 @@ export class StreamController {
       if (openable) this.deps.state.recordEditedFile({ path: openable, changeKind: raw.changeKind });
     }
 
-    // A delete removes a file the list may already show; drop the stale chip.
-    for (const deleted of collectDeletedPathsFromToolCall(toolCall)) {
-      const openable = toVaultRelativeOpenPath(app, deleted);
+    // A delete or rename vacates a file the list may already show; drop that chip.
+    for (const removed of collectRemovedPathsFromToolCall(toolCall)) {
+      const openable = toVaultRelativeOpenPath(app, removed);
       if (openable) this.deps.state.removeEditedFile(openable);
     }
   }
