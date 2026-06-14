@@ -19,6 +19,7 @@ Main sidebar chat interface. `ClaudianView` assembles tabs, controllers, rendere
 
 ```text
 ClaudianView (lifecycle + assembly)
+├── ClaudianViewWorkOrderBridge (Agent Board integration: task-run tab launch + commit-turn routing)
 ├── ChatState
 ├── Controllers
 │   ├── ConversationController
@@ -134,6 +135,7 @@ for await (const chunk of runtime.query(preparedTurn, history)) {
 ## Gotchas
 
 - Work-order run tabs are real `TabManager` tabs but hidden from the visible tab badge row. The chat header Work Orders dropdown is the navigation affordance for active work-order tabs; ordinary tab badges render chat tabs only.
+- `ClaudianView.startTaskRunInFreshTab` / `injectCommitTurnForConversation` are thin delegators to `ClaudianViewWorkOrderBridge` (the Agent Board integration surface `ChatTabExecutionSurface` calls). The bridge never imports `ClaudianView` — the cross-view conversation lookup is supplied as a `findConversationTab` callback — so there's no view↔bridge cycle. The view builds the bridge lazily so prototype-only test instances resolve it through the same callbacks.
 - `ClaudianView.onClose()` must abort active tabs and dispose runtimes
 - `ChatState` is per-tab; `TabManager` coordinates tab-level operations such as fork targets and provider-aware command catalogs
 - Title generation runs concurrently per conversation and routes by the global title-generation model selection, not by the active chat tab provider
