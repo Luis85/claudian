@@ -27,10 +27,10 @@ scope: .claude/skills/project-setup
 ## As-built notes (implemented & review-hardened)
 
 **Status: implemented and shipped in PR #97.** The authoritative artifact is the
-code under `.claude/skills/project-setup/scripts/` (the full skill suite is **74
-`node:test` cases, green**; a live CLI smoke confirmed `detect` + `plan --dry-run`
-end-to-end). This plan was executed task-by-task, then hardened across **11 rounds
-of automated review**. The task steps below are kept as the original plan of
+code under `.claude/skills/project-setup/scripts/` (the full `node:test` suite is
+**green**; a live CLI smoke confirmed `detect` + `plan --dry-run` end-to-end).
+This plan was executed task-by-task, then hardened across many rounds of automated
+and product review. The task steps below are kept as the original plan of
 record; where the shipped engine differs from them, the code and these notes win.
 Notable engine deltas, and **why**:
 
@@ -1075,7 +1075,7 @@ git commit -m "feat(project-setup): wire CLI to detect/plan/apply with options l
 
 - **Determinism model (spec §"Determinism and safety model"):** detect→plan→apply ✓ (Tasks 2/4/5/6); idempotent re-run ✓ (Task 5/6 tests); non-destructive merge + backup ✓ (Tasks 3/5); dry-run ✓ (Tasks 5/6); explicit `--config` intent ✓ (Task 6). Run report (`project-setup.report.json`) ✓ (Task 4). *Pinned versions / dirty-tree warning* are deferred — versions belong to Plan 2 (dep install), the dirty-tree warning to the SKILL.md orchestration in Plan 3; noted here so they are not lost.
 - **Engine CLI contract (spec):** `detect | plan | apply` implemented; `report | verify` correctly stubbed to exit 2 with a "Plan 3" message ✓.
-- **Action contract:** `mergeText` / `mergeJson` / `writeFile{create,skip-if-exists,overwrite-backup}` defined in Task 4, consumed unchanged in Task 5 — names match across tasks ✓.
+- **Action contract:** `mergeText` / `mergeJson` / `writeFile{skip-if-exists,overwrite-backup}` (the `create` mode was dropped — see As-built notes) plus `installDeps` and `notice`, defined in Task 4, consumed unchanged in Task 5 — names match across tasks ✓.
 - **Portability (spec):** only `node:*` built-ins used across all modules ✓.
 - **Placeholder scan:** every step has runnable code and an exact command. The one risk flagged inline (the unused `writeIfChanged` helper in Task 5) carries an explicit "remove it" correction so it can't ship.
 - **Out of engine-core scope (correctly deferred to Plans 2–3):** templates, dep install, baselines, coverage, docs scaffold, report/verify bodies, SKILL.md, GitHub. These are listed in the decomposition header so the roadmap is explicit.

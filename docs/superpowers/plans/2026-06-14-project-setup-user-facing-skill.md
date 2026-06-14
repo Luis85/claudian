@@ -49,15 +49,18 @@ deltas, and **why**:
   injection (no real installs under `node:test`), and the run report must be written
   before the harness's install action.
 
-Verified end-to-end: **74 `node:test` cases green**, plus a live CLI smoke
-(`detect` + a 20-action `plan --dry-run`, zero mutation).
+Verified end-to-end: **the full `node:test` suite green**, plus a live CLI smoke
+(`detect` + a `plan --dry-run`, zero mutation).
 
-> **Polishing pass (post-#97):** a review-driven pass reworked the report to read
+> **Polishing pass (post-#97):** review-driven passes reworked the report to read
 > fallow's real schema (`findings`/`targets`, not a nonexistent `hotspots` key),
 > render "n/a" for an unscored fresh repo, generate the `quality:dead-code`/
 > `quality:dupes` scripts it references, and resolve fallow locally (fail-loud,
-> not `npx`/false-green); SKILL.md gained a concrete post-apply summary. The
-> suite is now 91 `node:test` cases. See the spec's "Post-ship polishing" section.
+> not `npx`/false-green); SKILL.md gained a concrete post-apply summary. Later
+> rounds added a security pass, a config-matrix audit, and a notice-coherence
+> pass. The inline Task-1/Task-2 code snippets below (e.g. `npx`/`hotspots`,
+> the unconditional `initBaselines --update`) are the original plan of record —
+> the shipped code supersedes them; see the spec's "Post-ship polishing" section.
 
 ---
 

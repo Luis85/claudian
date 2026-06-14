@@ -8,8 +8,8 @@ scope: .claude/skills/project-setup
 # Project-setup skill — design
 
 > **Status — as built (shipped in PR #97).** Approach A was implemented under
-> `.claude/skills/project-setup/` and hardened across 11 review rounds (74
-> `node:test` cases green + a live CLI smoke). Task-level deltas between this
+> `.claude/skills/project-setup/` and hardened across many review rounds (the
+> full `node:test` suite green + a live CLI smoke). Task-level deltas between this
 > design and the shipped engine — each with its rationale — live in the
 > **"As-built notes"** sections of the three plan docs
 > (`docs/superpowers/plans/2026-06-14-project-setup-{engine-core,harness-templates,user-facing-skill}.md`);
@@ -162,8 +162,10 @@ Claudian-specifics (provider-boundary zones, `obsidianmd/*` rules, Notice-i18n).
 - **Explicit intent.** `apply`/`plan` require a `--config <answers.json>`; the
   engine refuses to mutate without one. A dirty git working tree triggers a
   warning (proceed with `--yes`).
-- **Pinned versions.** The engine installs pinned tool versions and records them
-  (plus every action taken) in `project-setup.report.json`.
+- **Pinned versions.** The engine installs pinned tool versions (they ship in the
+  generated `package.json`). `project-setup.report.json` records the resolved
+  `options` only — not every action — so a re-apply stays a no-op (see the
+  As-built note above).
 
 ### Engine CLI contract
 

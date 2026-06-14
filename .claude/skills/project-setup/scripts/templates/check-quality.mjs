@@ -3,9 +3,8 @@
  * Quality ratchet: fail when a fallow codebase metric regresses past the
  * committed baseline.
  *
- * Why this exists: `npm run quality` (fallow) was monitoring-only, so dead
- * code, duplication, and complexity could regress silently between reviews
- * (see docs/build-ci/quality-gates.md, "Fallow"). fallow's own gate flags
+ * Why this exists: a monitoring-only fallow run lets dead code, duplication, and
+ * complexity regress silently between reviews. fallow's own gate flags
  * (`--fail-on-regression`, `--min-score`) do not reliably drive the exit code
  * as of 2.91, so this wrapper parses `fallow --format json` and applies the
  * same ratchet policy as scripts/check-loc.mjs.
@@ -140,7 +139,7 @@ if (update) {
     description:
       'Fallow quality baseline. Counters may shrink but not grow; ' +
       'averageMaintainability may rise but not drop. Regenerate with ' +
-      '`npm run check:quality -- --update` (commit the diff in the same PR ' +
+      '`check:quality --update (via your package manager)` (commit the diff in the same PR ' +
       'that moves the metric).',
     fallowVersion: report.version ?? 'unknown',
     metrics: current,
@@ -161,7 +160,7 @@ try {
 } catch {
   console.error(
     'Quality ratchet ERROR: missing or unreadable scripts/quality-baseline.json. ' +
-      'Generate it with `npm run check:quality -- --update`.',
+      'Generate it with `check:quality --update (via your package manager)`.',
   );
   process.exit(2);
 }
@@ -175,7 +174,7 @@ for (const [name, metric] of Object.entries(METRICS)) {
     regressions.push({
       name,
       message:
-        `  ${name}: missing from baseline — run \`npm run check:quality -- --update\``,
+        `  ${name}: missing from baseline — run \`check:quality --update (via your package manager)\``,
     });
     continue;
   }
@@ -213,9 +212,9 @@ if (regressions.length > 0) {
     console.error('Quality ratchet FAILED — metric(s) regressed past the baseline:');
     for (const r of regressions) console.error(r.message);
     console.error(
-      '\nFix the regression (run `npm run quality` for details), or — only for a ' +
+      '\nFix the regression (run the `quality` script for details), or — only for a ' +
         'deliberate, reviewed trade-off — bump the baseline with ' +
-        '`npm run check:quality -- --update` and justify it in the PR.',
+        '`check:quality --update (via your package manager)` and justify it in the PR.',
     );
   }
   process.exit(1);
@@ -227,7 +226,7 @@ const summary = Object.entries(current)
 console.log(`Quality ratchet OK: ${summary}.`);
 if (improvements.length > 0) {
   console.log(
-    'Improvement(s) not yet locked in — run `npm run check:quality -- --update` ' +
+    'Improvement(s) not yet locked in — run `check:quality --update (via your package manager)` ' +
       'and commit the baseline so the gain cannot regress:',
   );
   for (const line of improvements) console.log(line);
