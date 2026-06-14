@@ -2,11 +2,9 @@ import type { App } from 'obsidian';
 
 import {
   extractLinkTarget,
-  resolveExistingVaultFilePath,
   resolveOpenableVaultPath,
   toVaultRelativeOpenPath,
 } from '@/utils/fileLink';
-import { getVaultFileByPath } from '@/utils/obsidianCompat';
 
 jest.mock('@/utils/path', () => ({
   ...jest.requireActual('@/utils/path'),
@@ -16,8 +14,6 @@ jest.mock('@/utils/path', () => ({
 jest.mock('@/utils/obsidianCompat', () => ({
   getVaultFileByPath: jest.fn(() => null),
 }));
-
-const mockGetVaultFileByPath = getVaultFileByPath as jest.Mock;
 
 // Extract the pattern from the module for testing
 // This matches the pattern in src/utils/fileLink.ts
@@ -270,28 +266,6 @@ describe('wikilink pattern matching', () => {
 
     it('rejects an out-of-vault escaping relative path instead of cleaning it into the vault', () => {
       expect(toVaultRelativeOpenPath(app, '../scratch/result.md')).toBeNull();
-    });
-  });
-
-  describe('resolveExistingVaultFilePath', () => {
-    const app = {} as App;
-
-    afterEach(() => mockGetVaultFileByPath.mockReturnValue(null));
-
-    it('resolves an existing in-vault path', () => {
-      mockGetVaultFileByPath.mockImplementation((_a: unknown, p: string) => (p === 'notes/new.md' ? {} : null));
-      expect(resolveExistingVaultFilePath(app, 'notes/new.md')).toBe('notes/new.md');
-    });
-
-    it('returns null for a path with no existing vault file', () => {
-      expect(resolveExistingVaultFilePath(app, 'notes/missing.md')).toBeNull();
-    });
-
-    it('rejects an out-of-vault path even when a same-named vault file exists', () => {
-      // The vault contains tmp/generated.md, but the strict resolver must not
-      // clean /tmp/generated.md into that unrelated file.
-      mockGetVaultFileByPath.mockImplementation((_a: unknown, p: string) => (p === 'tmp/generated.md' ? {} : null));
-      expect(resolveExistingVaultFilePath(app, '/tmp/generated.md')).toBeNull();
     });
   });
 });

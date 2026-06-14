@@ -10,9 +10,9 @@ import {
 } from '@/features/chat/utils/editedFiles';
 
 jest.mock('@/utils/fileLink', () => ({
-  // Echo the path back as an existing vault file except a sentinel that simulates
-  // a deleted / renamed-away / out-of-vault file. Derive uses the strict resolver.
-  resolveExistingVaultFilePath: jest.fn((_app: unknown, path: string) =>
+  // Echo the path back as in-vault except a sentinel that simulates an
+  // out-of-vault path. Derive uses the existence-agnostic resolver (no cleaning).
+  toVaultRelativeOpenPath: jest.fn((_app: unknown, path: string) =>
     path === 'gone.md' ? null : path,
   ),
 }));
@@ -259,6 +259,43 @@ describe('deriveEditedFilesFromMessages', () => {
     expect(deriveEditedFilesFromMessages(app, messages)).toEqual([
       { path: 'sub/edited.ts', changeKind: 'edited' },
       { path: 'sub/created.md', changeKind: 'created' },
+    ]);
+  });
+
+  it('nets out a file created and then deleted later in the transcript', () => {
+    const messages: ChatMessage[] = [
+      assistantMessage([toolCall({ id: '1', name: 'Write', input: { file_path: 'a.md' } })], 'm1'),
+      assistantMessage([
+        toolCall({
+          id: '2',
+          name: 'apply_patch',
+          input: { patch: '*** Begin Patch\n*** Delete File: a.md\n*** End Patch' },
+        }),
+      ], 'm2'),
+    ];
+    expect(deriveEditedFilesFromMessages(app, messages)).toEqual([]);
+  });
+
+  it('includes a sub-agent edit even when the parent Agent tool failed', () => {
+    const messages: ChatMessage[] = [
+      assistantMessage([
+        toolCall({
+          id: 'agent',
+          name: 'Agent',
+          input: {},
+          status: 'error',
+          subagent: {
+            id: 'agent',
+            description: 'sub',
+            isExpanded: false,
+            status: 'error',
+            toolCalls: [toolCall({ id: 'w', name: 'Write', input: { file_path: 'sub/made.md' } })],
+          },
+        }),
+      ]),
+    ];
+    expect(deriveEditedFilesFromMessages(app, messages)).toEqual([
+      { path: 'sub/made.md', changeKind: 'created' },
     ]);
   });
 

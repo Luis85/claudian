@@ -12,7 +12,7 @@ import type { App } from 'obsidian';
 import { getPathFromToolInput } from '../../../core/tools/toolInput';
 import { isEditTool, TOOL_APPLY_PATCH, TOOL_WRITE } from '../../../core/tools/toolNames';
 import type { ChatMessage, ToolCallInfo } from '../../../core/types';
-import { resolveExistingVaultFilePath } from '../../../utils/fileLink';
+import { toVaultRelativeOpenPath } from '../../../utils/fileLink';
 
 export type EditedFileChangeKind = 'created' | 'edited';
 
@@ -221,43 +221,61 @@ export function mergeEditedFileEntry(
 }
 
 /**
- * Rebuilds the edited-files list from a conversation transcript. Only completed
- * top-level tool calls whose path resolves to an EXISTING vault file are included
- * (strict, no junk-prefix recovery), so deleted, renamed-away, and out-of-vault
- * paths drop out naturally. Ordered most-recent first.
+ * Rebuilds the edited-files list from a conversation transcript by replaying each
+ * completed tool's adds then removals (deletes + rename sources), in order. Uses
+ * the same in-vault-but-existence-agnostic resolver as live recording, so a
+ * just-created file whose vault discovery is still in flight is kept (not dropped),
+ * a created-then-deleted/renamed file nets out, and out-of-vault paths are rejected
+ * (no junk-prefix recovery). Ordered most-recent first.
  */
 export function deriveEditedFilesFromMessages(app: App, messages: readonly ChatMessage[]): EditedFileEntry[] {
   let list: EditedFileEntry[] = [];
   for (const message of messages) {
     if (message.toolCalls) {
-      list = collectEditedFromToolCalls(app, message.toolCalls, list);
+      list = applyToolCallsToList(app, message.toolCalls, list);
     }
   }
   return list;
 }
 
 /**
- * Collects edited files from a tool-call list, recursing into sub-agent tool calls
- * (a sync sub-agent's Write/Edit/apply_patch live under `ToolCallInfo.subagent`,
- * not the top-level message). Only completed calls that resolve to an existing
- * vault file are included.
+ * Replays a tool-call list onto the edited-files list, recursing into sub-agent
+ * tool calls regardless of the parent's status (a sub-agent can succeed under a
+ * parent Agent tool that later errors). The parent's own effects apply only when
+ * it completed.
  */
-function collectEditedFromToolCalls(
+function applyToolCallsToList(
   app: App,
   toolCalls: readonly ToolCallInfo[],
   list: EditedFileEntry[],
 ): EditedFileEntry[] {
   let next = list;
   for (const toolCall of toolCalls) {
-    if (toolCall.status !== 'completed') continue;
-    for (const raw of collectEditedPathsFromToolCall(toolCall)) {
-      const openable = resolveExistingVaultFilePath(app, raw.path);
-      if (openable) next = mergeEditedFileEntry(next, { path: openable, changeKind: raw.changeKind });
+    if (toolCall.status === 'completed') {
+      next = applyToolCallEffects(app, toolCall, next);
     }
     const nested = toolCall.subagent?.toolCalls;
     if (nested && nested.length > 0) {
-      next = collectEditedFromToolCalls(app, nested, next);
+      next = applyToolCallsToList(app, nested, next);
     }
+  }
+  return next;
+}
+
+/** Applies one completed tool's adds (created/edited) then removals to the list. */
+function applyToolCallEffects(
+  app: App,
+  toolCall: ToolCallInfo,
+  list: EditedFileEntry[],
+): EditedFileEntry[] {
+  let next = list;
+  for (const raw of collectEditedPathsFromToolCall(toolCall)) {
+    const openable = toVaultRelativeOpenPath(app, raw.path);
+    if (openable) next = mergeEditedFileEntry(next, { path: openable, changeKind: raw.changeKind });
+  }
+  for (const removed of collectRemovedPathsFromToolCall(toolCall)) {
+    const openable = toVaultRelativeOpenPath(app, removed);
+    if (openable) next = next.filter((entry) => entry.path !== openable);
   }
   return next;
 }

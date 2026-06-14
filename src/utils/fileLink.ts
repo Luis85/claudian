@@ -112,16 +112,6 @@ export function toVaultRelativeOpenPath(app: App, rawPath: string): string | nul
   return findVaultRelativePath(app, rawPath, { requireExists: false, allowCleaning: false });
 }
 
-/**
- * Resolves a tool-reported path to an EXISTING vault file under the same strict
- * (no junk-prefix recovery) contract as {@link toVaultRelativeOpenPath}. Use when
- * rebuilding from a transcript, so deleted/renamed-away paths drop out while an
- * out-of-vault path can't be cleaned into an unrelated same-named vault file.
- */
-export function resolveExistingVaultFilePath(app: App, rawPath: string): string | null {
-  return findVaultRelativePath(app, rawPath, { requireExists: true, allowCleaning: false });
-}
-
 /** Opens a vault file when the target is a resolvable path or wikilink. */
 export function openVaultFileLink(app: App, rawTarget: string): void {
   const trimmed = rawTarget.trim();
