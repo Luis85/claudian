@@ -12,6 +12,7 @@ import {
   isWriteEditTool,
   skipsBlockedDetection,
   TOOL_AGENT_OUTPUT,
+  TOOL_APPLY_PATCH,
   TOOL_ASK_USER_QUESTION,
   TOOL_TASK,
   TOOL_TODO_WRITE,
@@ -530,12 +531,17 @@ export class StreamController {
 
     const { toolCall, parentEl } = pending;
     if (!parentEl) return;
+    const expandFileEdits = this.deps.plugin.settings.expandFileEditsByDefault === true;
     if (isWriteEditTool(toolCall.name)) {
-      const writeEditState = createWriteEditBlock(this.deps.plugin.app, parentEl, toolCall);
+      const writeEditState = createWriteEditBlock(this.deps.plugin.app, parentEl, toolCall, {
+        initiallyExpanded: expandFileEdits,
+      });
       state.writeEditStates.set(toolId, writeEditState);
       state.toolCallElements.set(toolId, writeEditState.wrapperEl);
     } else {
-      renderToolCall(this.deps.plugin.app, parentEl, toolCall, state.toolCallElements);
+      renderToolCall(this.deps.plugin.app, parentEl, toolCall, state.toolCallElements, {
+        initiallyExpanded: expandFileEdits && toolCall.name === TOOL_APPLY_PATCH,
+      });
     }
     state.pendingTools.delete(toolId);
   }

@@ -864,11 +864,17 @@ function renderToolContent(
   }
 }
 
+export interface ToolCallRenderOptions {
+  /** When true, the tool block renders expanded on first paint (#767, used for apply_patch). */
+  initiallyExpanded?: boolean;
+}
+
 export function renderToolCall(
   app: App,
   parentEl: HTMLElement,
   toolCall: ToolCallInfo,
   toolCallElements: Map<string, HTMLElement>,
+  options: ToolCallRenderOptions = {},
 ): HTMLElement {
   const { toolEl, header, statusEl, content, currentTaskEl } =
     createToolElementStructure(app, parentEl, toolCall);
@@ -880,11 +886,12 @@ export function renderToolCall(
 
   renderToolContent(app, content, toolCall, 'Running...');
 
+  const initiallyExpanded = options.initiallyExpanded ?? false;
   const state = { isExpanded: false };
-  toolCall.isExpanded = false;
+  toolCall.isExpanded = initiallyExpanded;
   const todoStatusEl = toolCall.name === TOOL_TODO_WRITE ? statusEl : null;
   setupCollapsible(toolEl, header, content, state, {
-    initiallyExpanded: false,
+    initiallyExpanded,
     onToggle: createTodoToggleHandler(currentTaskEl, todoStatusEl, (expanded) => {
       toolCall.isExpanded = expanded;
     }),
@@ -952,6 +959,7 @@ export function renderStoredToolCall(
   app: App,
   parentEl: HTMLElement,
   toolCall: ToolCallInfo,
+  options: ToolCallRenderOptions = {},
 ): HTMLElement {
   const { toolEl, header, statusEl, content, currentTaskEl } =
     createToolElementStructure(app, parentEl, toolCall);
@@ -967,7 +975,7 @@ export function renderStoredToolCall(
   const state = { isExpanded: false };
   const todoStatusEl = toolCall.name === TOOL_TODO_WRITE ? statusEl : null;
   setupCollapsible(toolEl, header, content, state, {
-    initiallyExpanded: false,
+    initiallyExpanded: options.initiallyExpanded ?? false,
     onToggle: createTodoToggleHandler(currentTaskEl, todoStatusEl),
     baseAriaLabel: getToolLabel(toolCall.name, toolCall.input)
   });
