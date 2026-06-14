@@ -205,14 +205,17 @@ not margin-shaving).
 
 ### 3b. Lift the genuinely under-covered area
 
-`src/providers/opencode/runtime/` is still the laggard — actual **71 / 59 / 66 / 71**
-(stmt/branch/func/lines), floor now 68/56/62/68 (branch cleared 50 % in the
-2026-06-14 re-lock). Branch coverage at ~59 % still leaves ~40 % of the runtime's
-decision points untested; this is the same provider whose history hydration just
-needed hardening (#776). `src/providers/cursor/runtime/` is next (83/68/82/85,
-floor 80/65/79/82). Targeted tests here are a real robustness win, not just a
-number — and every point earned lets the floor rise. The security/utils/logging/
-mcp areas are already 90–99 % and need only floor maintenance.
+`src/providers/opencode/runtime/` **was lifted 2026-06-14** — actual
+**73.39 / 63.40 / 68.32 / 73.11** (stmt/branch/func/lines), up from
+71/59/66/71, by adding pure-helper unit tests (`opencodeSessionStateSync`,
+`OpencodePaths`, `opencodeActiveTurnUpdate`); branch +4.3 pts. Floor raised
+68/56/62/68 → **70/60/65/70**. The remaining gap is concentrated in
+`OpencodeChatRuntime` (45 % branch in isolation, ACP-mock-heavy) and
+`OpencodeAuxQueryRunner` — the next, harder lift. `src/providers/cursor/runtime/`
+is also still open (83/68/82/85, floor 80/65/79/82). Targeted tests here are a
+real robustness win, not just a number — and every point earned lets the floor
+rise. The security/utils/logging/mcp areas are already 90–99 % and need only
+floor maintenance.
 
 ---
 
