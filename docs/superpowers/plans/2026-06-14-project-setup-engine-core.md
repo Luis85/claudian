@@ -531,9 +531,12 @@ function planGitignore() {
 }
 
 function planRunReport(options, state) {
+  // Deterministic: NO timestamp. The report content must be a pure function of
+  // options + state so a re-apply produces identical content and the writeFile
+  // idempotency check (content-equal -> skip) holds. Run timing, if ever
+  // needed, must live outside this idempotent plan artifact.
   const report = {
     engine: ENGINE_VERSION,
-    generatedAt: new Date().toISOString(),
     options,
     detected: state,
   };

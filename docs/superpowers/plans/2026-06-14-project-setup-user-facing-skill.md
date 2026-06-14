@@ -104,7 +104,17 @@ export function applyCoverageFloor(cwd, framework) {
 ```js
   if (g.coverageFloors) {
     exec('npm', ['run', 'test:coverage'], { cwd });
-    applyCoverageFloor(cwd, options.testFramework ?? 'jest'); // floor = current (rise-only)
+    const r = applyCoverageFloor(cwd, options.testFramework ?? 'jest'); // floor = current (rise-only)
+    if (!r.updated && r.reason === 'user config') {
+      // Brownfield with a hand-written test config: we do NOT rewrite it
+      // (non-destructive), so we cannot guarantee a safe day-one floor. Warn
+      // loudly rather than silently shipping a config that may over-enforce.
+      console.warn(
+        '[project-setup] Existing test config detected — coverage floor NOT set. ' +
+          'Your config owns its thresholds; set them to current coverage (or drop ' +
+          'the coverage gate) so CI stays green on day one.',
+      );
+    }
   }
 ```
 
@@ -700,7 +710,7 @@ engine owns every mutation; you detect, interview, then invoke it.
 
 - [ ] **Step 4: Write the four reference docs**
 
-`references/quality-harness.md` — document each guardrail, the ratchet/severity-staging mechanics, the coverage-absent caveat, and the `answers.json` shape (copy the options object from the spec §"Options object").
+`references/quality-harness.md` — document each guardrail, the ratchet/severity-staging mechanics, the coverage-absent caveat, the brownfield-existing-config coverage caveat (we never rewrite a user's hand-written test config, so its thresholds stay user-managed — the engine warns instead of silently over-enforcing), and the `answers.json` shape (copy the options object from the spec §"Options object").
 
 `references/docs-taxonomy.md` — the scaffolded doc folders (`CONTEXT.md`, `docs/adr/`, `docs/specs/`, `docs/plans/`) and the frontmatter convention (`title`, `date`, `status`, `scope`).
 

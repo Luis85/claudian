@@ -104,14 +104,31 @@ import { test } from 'node:test';
 import { apply } from '../lib/apply.mjs';
 import { tmpProject } from './helpers.js';
 
-test('installDeps runs the package manager via the injected exec', () => {
+test('installDeps runs the package manager when package.json changed, and is not a tracked change', () => {
   const p = tmpProject({ 'package.json': { name: 'x' } });
   const calls = [];
   const exec = (cmd, args, opts) => calls.push({ cmd, args, cwd: opts.cwd });
   try {
-    const res = apply([{ type: 'installDeps', packageManager: 'pnpm' }], { cwd: p.dir, exec });
+    const res = apply([
+      { type: 'mergeJson', path: 'package.json', patch: { devDependencies: { left: '1.0.0' } } },
+      { type: 'installDeps', packageManager: 'pnpm' },
+    ], { cwd: p.dir, exec });
     assert.deepEqual(calls, [{ cmd: 'pnpm', args: ['install'], cwd: p.dir }]);
-    assert.ok(res.changed.includes('(install)'));
+    assert.ok(!res.changed.includes('(install)')); // install is an effect, not a tracked change
+  } finally {
+    p.cleanup();
+  }
+});
+
+test('installDeps is skipped when package.json did not change (idempotent re-apply)', () => {
+  const p = tmpProject({ 'package.json': { name: 'x', devDependencies: { left: '1.0.0' } } });
+  const calls = [];
+  try {
+    apply([
+      { type: 'mergeJson', path: 'package.json', patch: { devDependencies: { left: '1.0.0' } } },
+      { type: 'installDeps', packageManager: 'npm' },
+    ], { cwd: p.dir, exec: (...a) => calls.push(a) });
+    assert.equal(calls.length, 0); // package.json already converged -> no install
   } finally {
     p.cleanup();
   }
@@ -153,8 +170,11 @@ Add this branch alongside the existing `mergeText` / `mergeJson` / `writeFile` b
 
 ```js
     } else if (action.type === 'installDeps') {
-      if (!dryRun) exec(action.packageManager, ['install'], { cwd });
-      changed.push('(install)');
+      // Install only when package.json was (re)written this run; otherwise the
+      // deps are already present. NEVER push to `changed`: install is an effect,
+      // not a tracked file mutation, so a converged re-apply stays a no-op and
+      // the Task 8 baseline hook does not re-run.
+      if (!dryRun && changed.includes('package.json')) exec(action.packageManager, ['install'], { cwd });
 ```
 
 - [ ] **Step 4: Run to verify it passes**
@@ -253,22 +273,25 @@ export default [
 // scripts/lib/harness.mjs
 import { loadTemplate, renderTemplate } from './templates.mjs';
 
-// Pinned versions are recorded into package.json devDependencies (and thus the
-// run report). Bump deliberately.
+// EXACT pins (no caret/tilde). A first install with no lockfile must be
+// reproducible — same answers + same state => same installed versions, per the
+// spec's determinism guarantee. The resolved versions are also recorded in
+// project-setup.report.json. Refresh deliberately to current exact releases
+// (verify each with `npm view <pkg> version` when bumping).
 export const PINNED = {
-  eslint: '^9.0.0',
-  'typescript-eslint': '^8.0.0',
-  '@eslint/js': '^9.0.0',
-  'eslint-plugin-simple-import-sort': '^12.0.0',
-  fallow: '^2.91.0',
-  jest: '^30.0.0',
-  'ts-jest': '^29.0.0',
-  '@types/jest': '^30.0.0',
-  'eslint-plugin-jest': '^28.0.0',
-  vitest: '^2.0.0',
-  '@vitest/coverage-istanbul': '^2.0.0',
-  'eslint-plugin-vitest': '^0.5.0',
-  typescript: '^5.0.0',
+  eslint: '9.36.0',
+  'typescript-eslint': '8.45.0',
+  '@eslint/js': '9.36.0',
+  'eslint-plugin-simple-import-sort': '12.1.1',
+  fallow: '2.91.0',
+  jest: '30.3.0',
+  'ts-jest': '29.4.9',
+  '@types/jest': '30.0.0',
+  'eslint-plugin-jest': '28.14.0',
+  vitest: '2.1.9',
+  '@vitest/coverage-istanbul': '2.1.9',
+  'eslint-plugin-vitest': '0.5.4',
+  typescript: '5.9.3',
 };
 
 function dep(...names) {
@@ -628,12 +651,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run check:loc
-      - run: npm run check:quality   # runs with ./coverage absent (CRAP stays static)
+{{pmSetup}}      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: {{pmCache}} }
+      - run: {{pmInstall}}
+      - run: {{pmRun}} lint
+      - run: {{pmRun}} check:loc
+      - run: {{pmRun}} check:quality   # runs with ./coverage absent (CRAP stays static)
       - run: {{coverageStep}}
 ```
 
@@ -647,12 +670,22 @@ import { test } from 'node:test';
 import { planCi, planInstall } from '../lib/harness.mjs';
 
 test('planCi only emits the workflow when GitHub integration is opted in', () => {
-  assert.deepEqual(planCi({ github: { integrate: false }, guardrails: { ci: true } }), []);
-  const actions = planCi({ github: { integrate: true }, guardrails: { ci: true, coverageFloors: true } });
+  assert.deepEqual(planCi({ github: { integrate: false }, guardrails: { ci: true } }, { packageManager: 'npm' }), []);
+  const actions = planCi({ github: { integrate: true }, guardrails: { ci: true, coverageFloors: true } }, { packageManager: 'npm' });
   const wf = actions.find((a) => a.path === '.github/workflows/ci.yml');
   assert.equal(wf.mode, 'skip-if-exists');
+  assert.match(wf.content, /npm ci/);
   assert.match(wf.content, /npm run check:quality/);
-  assert.match(wf.content, /test:coverage/);
+  assert.match(wf.content, /npm run test:coverage/);
+});
+
+test('planCi renders the detected package manager (pnpm)', () => {
+  const actions = planCi({ github: { integrate: true }, guardrails: { ci: true } }, { packageManager: 'pnpm' });
+  const wf = actions.find((a) => a.path === '.github/workflows/ci.yml');
+  assert.match(wf.content, /pnpm\/action-setup/);
+  assert.match(wf.content, /pnpm install --frozen-lockfile/);
+  assert.match(wf.content, /cache: pnpm/);
+  assert.match(wf.content, /pnpm check:quality/);
 });
 
 test('planInstall emits one installDeps action for the detected package manager', () => {
@@ -668,17 +701,22 @@ Expected: FAIL — `planCi`/`planInstall` not exported.
 - [ ] **Step 4: Implement** (append to `harness.mjs`)
 
 ```js
-export function planCi(options) {
+// Per-package-manager CI rendering. npm/pnpm/yarn are fully supported; an
+// unknown manager (incl. bun) falls back to npm-style so the workflow is valid.
+const CI_PM = {
+  npm: { setup: '', cache: 'npm', install: 'npm ci', run: 'npm run' },
+  pnpm: { setup: '      - uses: pnpm/action-setup@v4\n', cache: 'pnpm', install: 'pnpm install --frozen-lockfile', run: 'pnpm' },
+  yarn: { setup: '', cache: 'yarn', install: 'yarn install --immutable', run: 'yarn' },
+};
+
+export function planCi(options, state) {
   if (!options.github?.integrate || !options.guardrails?.ci) return [];
-  const coverageStep = options.guardrails?.coverageFloors ? 'npm run test:coverage' : 'npm test';
-  return [
-    {
-      type: 'writeFile',
-      path: '.github/workflows/ci.yml',
-      mode: 'skip-if-exists',
-      content: renderTemplate(loadTemplate('ci.yml.tmpl'), { coverageStep }),
-    },
-  ];
+  const pm = CI_PM[state?.packageManager] ?? CI_PM.npm;
+  const coverageStep = options.guardrails?.coverageFloors ? `${pm.run} test:coverage` : `${pm.run} test`;
+  const content = renderTemplate(loadTemplate('ci.yml.tmpl'), {
+    pmSetup: pm.setup, pmCache: pm.cache, pmInstall: pm.install, pmRun: pm.run, coverageStep,
+  });
+  return [{ type: 'writeFile', path: '.github/workflows/ci.yml', mode: 'skip-if-exists', content }];
 }
 
 export function planInstall(options, state) {
