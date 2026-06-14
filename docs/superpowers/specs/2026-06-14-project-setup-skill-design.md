@@ -309,9 +309,45 @@ implementation rather than duplicating it.
 
 ## Portability
 
-Copy `.claude/skills/project-setup/` into any repo with a modern Node (≥18).
-The engine has no runtime deps; templates carry the tool deps that get installed
-into the target. Nothing references this repo.
+Copy `.claude/skills/project-setup/` into any repo with Node ≥20 (the engine
+itself runs on ≥18, but the harness installs ESLint 9 / typescript-eslint 8,
+which require ≥20). The engine has no runtime deps; templates carry the tool deps
+that get installed into the target. Nothing references this repo.
+
+## Post-ship polishing (review-driven, 2026-06-14)
+
+After the initial ship, a four-perspective product review (first-run UX,
+brownfield adoption, portability, safety/report) plus automated review drove a
+second hardening pass. The themes, and **why** — all TDD'd, with the real
+install→detect→apply loop now exercised (it was previously stubbed, which is why
+several of these were invisible):
+
+- **Idempotency across an install-induced detection flip.** A brownfield repo
+  adopting TS installs `typescript`, flipping `detect()` true on the next run,
+  which rewrote the run report and re-triggered baselining. The volatile fields
+  (`typescript`/`testFramework`/`packageManager`) are now frozen from the first
+  apply's report — the "second apply is a no-op" contract holds on that path.
+- **The quality report was misleading and is now accurate + actionable.** It
+  read a nonexistent `hotspots` key (so a CRAP-132 critical function reported as
+  "Grade A / green"), fabricated "Grade F / 0%" on fresh repos, pointed at npm
+  scripts that didn't exist, and used `npx` (network/yarn-PnP-fragile, and a
+  failure became a false-green). It now reads fallow's real `findings`/`targets`,
+  renders "n/a" for an unscored repo, generates the scripts it references, and
+  resolves fallow locally with a fail-loud path.
+- **Brownfield is green day-one and collisions are reported, not silent.** The
+  ESLint template ships opinionated rules at `warn` (was `error` → day-one RED,
+  contradicting this spec's severity-staging contract); a new `notice` action
+  surfaces a kept `lint`/`test` script, a legacy `.eslintrc*`, an existing
+  `ci.yml`, a skipped CI (GitHub-off / bun), and a hand-written test config whose
+  coverage gate is stood down everywhere rather than wired to a RED.
+- **Portability/onboarding polish.** Scaffolded docs render the detected package
+  manager (not hardcoded `npm run`); the Node floor is stated as ≥20 (ESLint 9);
+  Yarn CI uses `--frozen-lockfile` (valid on the default Yarn Classic); the
+  dry-run preview is deduped and the install step is named; JS/JSX app
+  entrypoints are detected; `setup.mjs report`/`verify` are documented.
+
+The per-plan "As-built notes" cover the original ship; this section and the git
+history are the record of the polishing pass.
 
 ## Risks and open questions
 

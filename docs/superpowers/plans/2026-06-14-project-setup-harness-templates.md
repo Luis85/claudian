@@ -1,3 +1,10 @@
+---
+title: Project-setup skill — harness templates + baseline (Plan 2 of 3)
+date: 2026-06-14
+status: shipped
+scope: .claude/skills/project-setup
+---
+
 # Project-setup Skill — Harness Templates + Baseline (Plan 2 of 3) Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -59,11 +66,16 @@ the original plan of record). Harness deltas, and **why**:
 
 ### Deferred (flagged in review, intentionally not shipped)
 Niche edge cases raised by review and deferred rather than expanding scope:
-honouring a declared **pnpm major** in CI (vs the v9 default), choosing
-**Yarn-Classic `--frozen-lockfile` vs Berry `--immutable`** install flags, and a
-broader ESLint Node override for a **brownfield repo's own pre-existing
-`scripts/*.mjs`**. The mainstream paths (npm / pnpm-9 / Yarn Berry, TS or JS) are
-covered and tested; these are documented follow-ups.
+honouring a declared **pnpm major** in CI (vs the v9 default) and a broader
+ESLint Node override for a **brownfield repo's own pre-existing `scripts/*.mjs`**.
+The mainstream paths (npm / pnpm-9 / Yarn, TS or JS) are covered and tested;
+these are documented follow-ups.
+
+> **Polishing pass (post-#97):** a review-driven pass shipped several brownfield
+> fixes — ESLint opinionated rules at `warn` (was `error` → day-one RED),
+> collision/CI `notice`s, the hand-written-config coverage standdown, PM-aware
+> scaffolded docs, and Yarn CI `--frozen-lockfile` (so the Classic-vs-Berry flag
+> above is no longer deferred). See the spec's "Post-ship polishing" section.
 
 ---
 

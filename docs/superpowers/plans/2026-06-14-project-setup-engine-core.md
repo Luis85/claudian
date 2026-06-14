@@ -1,3 +1,10 @@
+---
+title: Project-setup skill — engine core (Plan 1 of 3)
+date: 2026-06-14
+status: shipped
+scope: .claude/skills/project-setup
+---
+
 # Project-setup Skill — Engine Core (Plan 1 of 3) Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -62,6 +69,12 @@ Notable engine deltas, and **why**:
   get Jest/npm/TS defaults.
 - **Tests run as `node --test scripts/tests/*.test.js`.** *Why:* the bare-directory
   form fails on Node 22; the glob also skips the non-test `helpers.js`.
+
+> **Polishing pass (post-#97):** a review-driven pass added the install-flip
+> idempotency freeze (`setup.mjs` freezes `typescript`/`testFramework`/
+> `packageManager` from the first run's report), the `notice` action type
+> (`apply` collects, the CLI prints), and the deduped/named `plan --dry-run`
+> preview. See the spec's "Post-ship polishing" section.
 
 ---
 

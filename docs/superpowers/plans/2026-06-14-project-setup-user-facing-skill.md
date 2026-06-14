@@ -1,3 +1,10 @@
+---
+title: Project-setup skill — user-facing skill (Plan 3 of 3)
+date: 2026-06-14
+status: shipped
+scope: .claude/skills/project-setup
+---
+
 # Project-setup Skill — User-Facing Skill (Plan 3 of 3) Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -44,6 +51,13 @@ deltas, and **why**:
 
 Verified end-to-end: **74 `node:test` cases green**, plus a live CLI smoke
 (`detect` + a 20-action `plan --dry-run`, zero mutation).
+
+> **Polishing pass (post-#97):** a review-driven pass reworked the report to read
+> fallow's real schema (`findings`/`targets`, not a nonexistent `hotspots` key),
+> render "n/a" for an unscored fresh repo, generate the `quality:dead-code`/
+> `quality:dupes` scripts it references, and resolve fallow locally (fail-loud,
+> not `npx`/false-green); SKILL.md gained a concrete post-apply summary. The
+> suite is now 91 `node:test` cases. See the spec's "Post-ship polishing" section.
 
 ---
 
