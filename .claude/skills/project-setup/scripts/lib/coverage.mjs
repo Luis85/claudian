@@ -11,6 +11,18 @@ const ANCHOR = {
   vitest: /thresholds:\s*\{[^}]*\}/,
 };
 
+// True once the floor has been set (a non-zero threshold), or the config is the
+// user's own. A later apply must NOT re-measure coverage and silently lower the
+// threshold to a regressed value.
+export function isCoverageBaselined(cwd, framework) {
+  const configPath = join(cwd, CONFIG[framework]);
+  if (!existsSync(configPath)) return false; // no config yet -> not baselined
+  const content = readFileSync(configPath, 'utf8');
+  if (!content.includes(MARKER)) return true; // user-owned config -> not ours to floor
+  const m = content.match(ANCHOR[framework]);
+  return m ? /[1-9]/.test(m[0]) : false; // any non-zero threshold digit => floored
+}
+
 export function floorThresholds(summary) {
   const t = summary.total;
   const f = (k) => Math.floor(t[k].pct);

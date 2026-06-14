@@ -208,8 +208,15 @@ export function planInstall(options, state) {
   return [{ type: 'installDeps', packageManager: options.packageManager ?? state?.packageManager ?? 'npm' }];
 }
 
-export function planReport() {
+export function planReport(options, state) {
+  const notices = [];
+  // mergeJson keeps an existing scalar, so a brownfield `report` script would
+  // win — `<pm> report` and the docs would run it, not scripts/quality-report.mjs.
+  if (state?.scripts?.report && state.scripts.report !== 'node scripts/quality-report.mjs') {
+    notices.push(notice(`Existing "report" script kept (\`${state.scripts.report}\`) — \`<pm> report\` and the generated docs run it, not the new scripts/quality-report.mjs. Rename one if you want the project-setup report.`));
+  }
   return [
+    ...notices,
     { type: 'writeFile', path: 'scripts/quality-report.mjs', mode: 'overwrite-backup', content: loadTemplate('quality-report.mjs') },
     // The report shells out to fallow AND its action items point at quality:dead-code
     // / quality:dupes — install fallow and those scripts here (planReport always

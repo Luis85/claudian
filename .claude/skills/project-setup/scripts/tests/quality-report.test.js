@@ -95,3 +95,10 @@ test('planReport installs the detail scripts the report references (even when th
   const fallowPkg = planFallow({ guardrails: { fallowRatchet: true } }, {}).find((a) => a.type === 'mergeJson');
   assert.ok(!('quality:dead-code' in fallowPkg.patch.scripts));
 });
+
+test('planReport reports an existing report-script collision', () => {
+  const actions = planReport({}, { scripts: { report: 'my-old-report' } });
+  assert.ok(actions.some((a) => a.type === 'notice' && /"report" script kept/.test(a.message)));
+  const clean = planReport({}, { scripts: {} });
+  assert.ok(!clean.some((a) => a.type === 'notice'));
+});
