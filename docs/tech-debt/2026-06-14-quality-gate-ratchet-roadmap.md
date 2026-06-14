@@ -141,13 +141,16 @@ shell + header + objective/acceptance + footer.
 `CodexNotificationRouter` 879, `ToolCallRenderer` 854,
 `InlineEditModal` 785, `main` 767, `i18n/types` 763, `CodexHistoryStore` 746,
 `ConversationController` 655 (history-list UI extracted to `ConversationHistoryView`, #102),
-`RunSession` 625, `core/providers/types` 594, `codexAppServerTypes` 593,
+`RunSession` 625, `core/providers/types` 594,
+`codexAppServerTypes` 535 (JSON-RPC envelope → `codexJsonRpcTypes`, skills/list
+→ `codexAppServerSkillTypes`, both re-exported from the barrel),
 `SubagentRenderer` 566, `InlineAskUserQuestion` 564, `cursorToolNormalization` 542,
 `ClaudianSettings` 526. Lower individual payoff; tackle opportunistically when a
-feature already touches one. Two are **type/declaration** files
-(`core/providers/types`, `codexAppServerTypes`) — splitting by domain (per
-ADR-0001 seam) is low-risk. `i18n/types` grows ~2 lines per new setting and is a
-poor split target; accept it or generate it.
+feature already touches one. The remaining **type/declaration** file
+`core/providers/types` splits by domain (per ADR-0001 seam) the same low-risk way
+— move clean leaf groups to sub-files behind a barrel re-export (no runtime edge,
+so `circularDependencies`/`reExportCycles` stay 0). `i18n/types` grows ~2 lines
+per new setting and is a poor split target; accept it or generate it.
 
 ---
 
@@ -158,13 +161,17 @@ The easy wins are spent (campaign runs 8–16 took `duplicatedLines` 1,790 → 8
 **diminishing-returns tail**; treat further movement as opportunistic, not a
 sprint.
 
-- **`cloneGroups` 32 / `duplicatedLines` 803.** The remaining clones are the
+- **`cloneGroups` 31 / `duplicatedLines` 781.** The remaining clones are the
   *entangled cross-zone runtime* families — provider↔provider tool normalization
   and the `ChatRuntime` shapes — whose only shared home is `core/`. Deduping
   them means a `core/` module more invasive than the win (run 11/15 deferred
   them deliberately). Only pursue when a runtime is being reworked anyway.
   Same-zone/same-file copy-paste should still be extracted on sight (the gate
-  catches new pairs at `minOccurrences: 2`).
+  catches new pairs at `minOccurrences: 2`) — e.g. the `codexSessionTailMapping`
+  call-id claim block was hoisted to a `claimResponseItemCallId` helper
+  (32 → 31). Note: a same-file dedup that crosses an `await`/event-emit boundary
+  can shift microtask ordering (the `RunSession` pause-persist pair was left
+  as-is for that reason) — only hoist pure blocks.
 - **`complexFunctions` 236.** Fallow counts cyclomatic ≥ 20 **OR** cognitive
   ≥ 15 **OR CRAP ≥ 30**. CRAP is coverage-weighted, so the remaining tail is
   *low-cognitive, low-coverage* functions where the cheapest fix is often a
@@ -205,14 +212,17 @@ not margin-shaving).
 
 ### 3b. Lift the genuinely under-covered area
 
-`src/providers/opencode/runtime/` is still the laggard — actual **71 / 59 / 66 / 71**
-(stmt/branch/func/lines), floor now 68/56/62/68 (branch cleared 50 % in the
-2026-06-14 re-lock). Branch coverage at ~59 % still leaves ~40 % of the runtime's
-decision points untested; this is the same provider whose history hydration just
-needed hardening (#776). `src/providers/cursor/runtime/` is next (83/68/82/85,
-floor 80/65/79/82). Targeted tests here are a real robustness win, not just a
-number — and every point earned lets the floor rise. The security/utils/logging/
-mcp areas are already 90–99 % and need only floor maintenance.
+`src/providers/opencode/runtime/` **was lifted 2026-06-14** — actual
+**73.39 / 63.40 / 68.32 / 73.11** (stmt/branch/func/lines), up from
+71/59/66/71, by adding pure-helper unit tests (`opencodeSessionStateSync`,
+`OpencodePaths`, `opencodeActiveTurnUpdate`); branch +4.3 pts. Floor raised
+68/56/62/68 → **70/60/65/70**. The remaining gap is concentrated in
+`OpencodeChatRuntime` (45 % branch in isolation, ACP-mock-heavy) and
+`OpencodeAuxQueryRunner` — the next, harder lift. `src/providers/cursor/runtime/`
+is also still open (83/68/82/85, floor 80/65/79/82). Targeted tests here are a
+real robustness win, not just a number — and every point earned lets the floor
+rise. The security/utils/logging/mcp areas are already 90–99 % and need only
+floor maintenance.
 
 ---
 

@@ -2,35 +2,10 @@
 // Field names match the wire format (camelCase).
 // Probed against codex-cli 0.118.0 on 2026-04-01.
 
-// ---------------------------------------------------------------------------
-// JSON-RPC base
-// ---------------------------------------------------------------------------
-
-export interface JsonRpcRequest {
-  jsonrpc: '2.0';
-  id: number;
-  method: string;
-  params?: unknown;
-}
-
-export interface JsonRpcNotification {
-  jsonrpc: '2.0';
-  method: string;
-  params?: unknown;
-}
-
-export interface JsonRpcResponse {
-  jsonrpc: '2.0';
-  id: number;
-  result?: unknown;
-  error?: JsonRpcError;
-}
-
-export interface JsonRpcError {
-  code: number;
-  message: string;
-  data?: unknown;
-}
+// JSON-RPC envelope + skills/list wire types live in domain sub-files; both are
+// re-exported here so existing importers keep importing from this module.
+export * from './codexAppServerSkillTypes';
+export * from './codexJsonRpcTypes';
 
 // ---------------------------------------------------------------------------
 // Initialize
@@ -256,51 +231,6 @@ export interface MentionInput {
 }
 
 export type UserInput = TextInput | LocalImageInput | SkillInput | MentionInput;
-
-// ---------------------------------------------------------------------------
-// skills/list
-// ---------------------------------------------------------------------------
-
-export type SkillScope = 'user' | 'repo' | 'system' | 'admin';
-
-export interface SkillInterface {
-  displayName?: string;
-  shortDescription?: string;
-}
-
-export interface SkillMetadata {
-  name: string;
-  description: string;
-  shortDescription?: string;
-  interface?: SkillInterface;
-  path: string;
-  scope: SkillScope;
-  enabled: boolean;
-}
-
-export interface SkillErrorInfo {
-  path: string;
-  message: string;
-}
-
-export interface SkillsListEntry {
-  cwd: string;
-  skills: SkillMetadata[];
-  errors: SkillErrorInfo[];
-}
-
-export interface SkillsListParams {
-  cwds?: string[];
-  forceReload?: boolean;
-  perCwdExtraUserRoots?: Array<{
-    cwd: string;
-    extraUserRoots: string[];
-  }> | null;
-}
-
-export interface SkillsListResult {
-  data: SkillsListEntry[];
-}
 
 // ---------------------------------------------------------------------------
 // thread/start

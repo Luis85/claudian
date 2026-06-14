@@ -275,15 +275,32 @@ function mapResponseItemReasoning(payload: Record<string, unknown>, state: Sessi
   return emitDelta(fullText, state.lastThinkingByTurn, turnId, 'thinking');
 }
 
+/**
+ * Claims a response-item call id for first emission: returns the resolved id, or
+ * null when this tail line's tool_use was already emitted (so the caller skips
+ * re-emitting). Shared by the function-call and web-search-call mappers.
+ */
+function claimResponseItemCallId(
+  payload: Record<string, unknown>,
+  lineIndex: number,
+  state: SessionTailState,
+  fallbackPrefix: string,
+): string | null {
+  const riState = state.responseItemState;
+  const callId = getNonEmptyString(payload.call_id, `${fallbackPrefix}-${lineIndex}`);
+  if (riState.emittedToolUseIds.has(callId)) return null;
+  riState.emittedToolUseIds.add(callId);
+  return callId;
+}
+
 function mapResponseItemToolCall(
   payload: Record<string, unknown>,
   lineIndex: number,
   state: SessionTailState,
 ): StreamChunk[] {
+  const callId = claimResponseItemCallId(payload, lineIndex, state, 'tail-call');
+  if (callId === null) return [];
   const riState = state.responseItemState;
-  const callId = getNonEmptyString(payload.call_id, `tail-call-${lineIndex}`);
-  if (riState.emittedToolUseIds.has(callId)) return [];
-  riState.emittedToolUseIds.add(callId);
 
   const rawName = typeof payload.name === 'string' ? payload.name : undefined;
   const rawArgs = typeof payload.arguments === 'string'
@@ -315,10 +332,9 @@ function mapResponseItemWebSearchCall(
   lineIndex: number,
   state: SessionTailState,
 ): StreamChunk[] {
+  const callId = claimResponseItemCallId(payload, lineIndex, state, 'tail-ws');
+  if (callId === null) return [];
   const riState = state.responseItemState;
-  const callId = getNonEmptyString(payload.call_id, `tail-ws-${lineIndex}`);
-  if (riState.emittedToolUseIds.has(callId)) return [];
-  riState.emittedToolUseIds.add(callId);
 
   const input = normalizeCodexToolInput('web_search_call', {
     action: payload.action ?? {},

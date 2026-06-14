@@ -42,7 +42,7 @@ module.exports = {
   //   src/providers/claude/runtime/   91.01 / 82.43 / 92.33 / 91.36
   //   src/providers/codex/runtime/    85.67 / 71.33 / 88.59 / 86.64
   //   src/providers/cursor/runtime/   83.18 / 68.44 / 82.02 / 84.58
-  //   src/providers/opencode/runtime/ 71.30 / 59.14 / 65.83 / 71.21
+  //   src/providers/opencode/runtime/ 73.39 / 63.40 / 68.32 / 73.11 (lifted 2026-06-14: pure-helper tests)
   coverageThreshold: {
     global: { statements: 79, branches: 68, functions: 75, lines: 80 },
     'src/utils/': { statements: 88, branches: 80, functions: 92, lines: 90 },
@@ -52,6 +52,6 @@ module.exports = {
     'src/providers/claude/runtime/': { statements: 88, branches: 79, functions: 89, lines: 88 },
     'src/providers/codex/runtime/': { statements: 82, branches: 68, functions: 85, lines: 83 },
     'src/providers/cursor/runtime/': { statements: 80, branches: 65, functions: 79, lines: 82 },
-    'src/providers/opencode/runtime/': { statements: 68, branches: 56, functions: 62, lines: 68 },
+    'src/providers/opencode/runtime/': { statements: 70, branches: 60, functions: 65, lines: 70 },
   },
 };
