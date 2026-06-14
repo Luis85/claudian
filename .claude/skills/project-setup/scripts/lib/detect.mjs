@@ -20,16 +20,19 @@ const BUILD_DIRS = new Set(['dist', 'build', 'out', 'esm', 'cjs', 'umd', 'lib-es
 
 export function detectEntry(cwd) {
   const pkg = readJsonSafe(join(cwd, 'package.json'));
+  const strip = (p) => p.replace(/^\.\//, ''); // normalize a leading ./ so roots derive correctly
   // A bundler `source` field is unambiguously the source entry.
   const src = pkg?.source;
-  if (typeof src === 'string' && existsSync(join(cwd, src))) return src;
+  if (typeof src === 'string' && existsSync(join(cwd, src))) return strip(src);
   // The first existing common source entry (src/lib/app/source/root).
   for (const c of ENTRY_CANDIDATES) if (existsSync(join(cwd, c))) return c;
   // `module`/`main` may name the source for a build-less package — use it if it
   // exists and its top dir isn't a build-output dir.
   for (const field of ['module', 'main']) {
-    const p = pkg?.[field];
-    if (typeof p === 'string' && existsSync(join(cwd, p)) && !BUILD_DIRS.has(p.split('/')[0])) return p;
+    const raw = pkg?.[field];
+    if (typeof raw !== 'string') continue;
+    const p = strip(raw);
+    if (existsSync(join(cwd, p)) && !BUILD_DIRS.has(p.split('/')[0])) return p;
   }
   return 'src/index.ts';
 }

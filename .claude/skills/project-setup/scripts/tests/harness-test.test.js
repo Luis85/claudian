@@ -34,6 +34,11 @@ test('planTest omits test:coverage + the coverage dep when coverageFloors is off
   assert.ok(!('@vitest/coverage-istanbul' in vitestPkg.devDependencies));
 });
 
+test('planLoc handles a ./-prefixed entry (scan root is src, not the repo root)', () => {
+  const loc = planLoc({ guardrails: { locGuard: true } }, { entry: './src/index.ts' }).find((a) => a.path === 'scripts/check-loc.mjs');
+  assert.match(loc.content, /const SRC = join\(ROOT, 'src'\)/);
+});
+
 test('planLoc derives the LOC scan root from the entry (non-src layouts), skipping node_modules', () => {
   const lib = planLoc({ guardrails: { locGuard: true } }, { entry: 'lib/main.ts' }).find((a) => a.path === 'scripts/check-loc.mjs');
   assert.match(lib.content, /const SRC = join\(ROOT, 'lib'\)/);

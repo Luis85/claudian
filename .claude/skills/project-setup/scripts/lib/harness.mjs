@@ -50,8 +50,9 @@ const TEST_GLOB = "'**/*.{test,spec}.{ts,mts,cts,tsx,js,mjs,cjs,jsx}'";
 // (check-loc scan root, coverage globs), so reject anything that isn't a plain path
 // segment to prevent injection. Returns null for a root entry.
 function entryDir(entry) {
-  if (!entry.includes('/')) return null;
-  const seg = entry.slice(0, entry.indexOf('/'));
+  const e = entry.replace(/^\.\//, ''); // normalize a leading ./ so the root isn't '.'
+  if (!e.includes('/')) return null;
+  const seg = e.slice(0, e.indexOf('/'));
   return /^[A-Za-z0-9._-]+$/.test(seg) ? seg : 'src';
 }
 

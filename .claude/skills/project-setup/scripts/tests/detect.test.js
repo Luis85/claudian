@@ -98,6 +98,18 @@ test('detectEntry finds a JS/JSX app entrypoint, not only the .ts variant', () =
   }
 });
 
+test('detectEntry strips a leading ./ and still skips ./dist build paths', () => {
+  const srcDot = tmpProject({ 'package.json': { source: './src/index.ts' }, 'src/index.ts': '' });
+  const distDot = tmpProject({ 'package.json': { main: './dist/index.js' }, 'dist/index.js': '' });
+  try {
+    assert.equal(detectEntry(srcDot.dir), 'src/index.ts'); // ./ normalized away
+    assert.equal(detectEntry(distDot.dir), 'src/index.ts'); // ./dist still recognized as build -> fallback
+  } finally {
+    srcDot.cleanup();
+    distDot.cleanup();
+  }
+});
+
 test('detectEntry finds a lib/ entry (expanded source-dir candidates)', () => {
   const p = tmpProject({ 'lib/index.ts': '' });
   try {
