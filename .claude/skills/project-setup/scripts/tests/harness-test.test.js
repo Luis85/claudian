@@ -37,6 +37,13 @@ test('planTest(vitest) renders vitest config with the istanbul provider', () => 
   assert.ok('@vitest/coverage-istanbul' in pkg.patch.devDependencies);
 });
 
+test('planTest(jest, typescript: false) uses js/jsx/mjs coverage globs', () => {
+  const actions = planTest({ testFramework: 'jest', typescript: false, guardrails: { coverageFloors: true } });
+  const cfg = actions.find((a) => a.path === 'jest.config.mjs');
+  assert.match(cfg.content, /js,jsx,mjs/);
+  assert.doesNotMatch(cfg.content, /ts,tsx/);
+});
+
 test('planTest falls back to the DETECTED framework when no explicit answer', () => {
   // options.testFramework null (user accepted the default) + detected vitest.
   const actions = planTest({ testFramework: null, guardrails: {} }, { testFramework: 'vitest' });

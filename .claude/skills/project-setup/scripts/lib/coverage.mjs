@@ -21,7 +21,13 @@ export function applyCoverageFloor(cwd, framework) {
   if (!readFileSync(configPath, 'utf8').includes(MARKER)) return { updated: false, reason: 'user config' };
 
   const thresholds = floorThresholds(JSON.parse(readFileSync(summaryPath, 'utf8')));
-  const content = renderTemplate(loadTemplate(TEMPLATE[framework]), { coverageThreshold: JSON.stringify(thresholds) });
+  // Preserve the globs already in the generated config: if it contains js/jsx/mjs
+  // the project was set up without TypeScript; otherwise default to ts/tsx.
+  const existingConfig = readFileSync(configPath, 'utf8');
+  const coverageGlobs = existingConfig.includes('js,jsx,mjs')
+    ? 'src/**/*.{js,jsx,mjs}'
+    : 'src/**/*.{ts,tsx}';
+  const content = renderTemplate(loadTemplate(TEMPLATE[framework]), { coverageThreshold: JSON.stringify(thresholds), coverageGlobs });
   writeFileSync(configPath, content);
   return { updated: true, thresholds };
 }

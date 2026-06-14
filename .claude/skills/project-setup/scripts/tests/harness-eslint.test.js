@@ -23,6 +23,14 @@ test('planEslint is a no-op when the guardrail is disabled', () => {
   assert.deepEqual(planEslint({ guardrails: { eslintSeverityStaging: false } }), []);
 });
 
+test('planEslint rendered config ignores the generated scripts and config files', () => {
+  const cfg = planEslint(opts).find((a) => a.path === 'eslint.config.mjs');
+  assert.match(cfg.content, /scripts\/check-quality\.mjs/);
+  assert.match(cfg.content, /scripts\/check-loc\.mjs/);
+  assert.match(cfg.content, /scripts\/quality-report\.mjs/);
+  assert.match(cfg.content, /eslint\.config\.mjs/);
+});
+
 test('planEslint wires the test-lint plugin for the resolved framework', () => {
   const jestCfg = planEslint({ testFramework: 'jest', guardrails: { eslintSeverityStaging: true } })
     .find((a) => a.path === 'eslint.config.mjs');

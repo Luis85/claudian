@@ -6,7 +6,7 @@ import simpleImportSort from 'eslint-plugin-simple-import-sort';
 // `warn` stages a backlog (CI does not pass --max-warnings). Promote warn->error
 // as each backlog reaches zero. See docs/quality-integration-guide.md.
 export default [
-  { ignores: ['dist/**', 'node_modules/**', 'coverage/**'] },
+  { ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'eslint.config.mjs', 'scripts/check-loc.mjs', 'scripts/check-quality.mjs', 'scripts/quality-report.mjs'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

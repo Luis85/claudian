@@ -248,6 +248,8 @@ Expected: FAIL — `Cannot find module '../lib/harness.mjs'`.
 
 - [ ] **Step 3: Create the ESLint template**
 
+> **Review fix (2026-06-14):** The `ignores` list must also exclude the generated Node scripts and the config file itself, so `npm run lint` (`eslint .`) doesn't fail on files that legitimately use `console`/`process` or don't match import-sort. Add `eslint.config.mjs`, `scripts/check-loc.mjs`, `scripts/check-quality.mjs`, and `scripts/quality-report.mjs` to the ignores array. The harness-eslint test asserts each of these is present in the rendered content.
+
 ```
 // scripts/templates/eslint.config.mjs.tmpl
 import js from '@eslint/js';
@@ -258,7 +260,7 @@ import simpleImportSort from 'eslint-plugin-simple-import-sort';
 // `warn` stages a backlog (CI does not pass --max-warnings). Promote warn->error
 // as each backlog reaches zero. See docs/quality-integration-guide.md.
 export default [
-  { ignores: ['dist/**', 'node_modules/**', 'coverage/**'] },
+  { ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'eslint.config.mjs', 'scripts/check-loc.mjs', 'scripts/check-quality.mjs', 'scripts/quality-report.mjs'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -542,6 +544,8 @@ console.log('LOC guard OK.');
 
 - [ ] **Step 2: Create the test-framework templates**
 
+> **Review fix (2026-06-14):** The coverage glob is hardcoded to `{ts,tsx}`. JS-only projects (`typescript: false`) should get `{js,jsx,mjs}`. Replace the literal glob with a `{{coverageGlobs}}` token in both templates; `planTest` computes `coverageGlobs` from `options.typescript` and passes it to both `renderTemplate` calls. `applyCoverageFloor` in `lib/coverage.mjs` also re-renders these templates and must supply the token — it detects the correct value by reading the existing config file. Add a `harness-test.test.js` assertion: `planTest({ testFramework: 'jest', typescript: false, ... })` → jest config includes `js,jsx,mjs`.
+
 `scripts/templates/jest.config.mjs.tmpl`:
 
 ```
@@ -549,7 +553,7 @@ console.log('LOC guard OK.');
 export default {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  collectCoverageFrom: ['src/**/*.{ts,tsx}'],
+  collectCoverageFrom: ['{{coverageGlobs}}'],
   // Coverage thresholds are written by project-setup's baseline step (current
   // coverage becomes a rise-only floor). Run the ratchet (check:quality) with
   // ./coverage ABSENT — a stray coverage dir flips fallow CRAP and spikes
@@ -568,7 +572,7 @@ export default defineConfig({
   test: {
     coverage: {
       provider: 'istanbul', // istanbul so fallow's CRAP can read ./coverage
-      include: ['src/**/*.{ts,tsx}'],
+      include: ['{{coverageGlobs}}'],
       thresholds: {{coverageThreshold}},
     },
   },
@@ -617,6 +621,14 @@ test('planTest(vitest) renders vitest config with the istanbul provider', () => 
   assert.ok('@vitest/coverage-istanbul' in pkg.patch.devDependencies);
 });
 
+// Review fix (2026-06-14): typescript: false → js/jsx/mjs coverage globs
+test('planTest(jest, typescript: false) uses js/jsx/mjs coverage globs', () => {
+  const actions = planTest({ testFramework: 'jest', typescript: false, guardrails: { coverageFloors: true } });
+  const cfg = actions.find((a) => a.path === 'jest.config.mjs');
+  assert.match(cfg.content, /js,jsx,mjs/);
+  assert.doesNotMatch(cfg.content, /ts,tsx/);
+});
+
 test('planTest falls back to the DETECTED framework when no explicit answer', () => {
   // options.testFramework null (user accepted the default) + detected vitest.
   const actions = planTest({ testFramework: null, guardrails: {} }, { testFramework: 'vitest' });
@@ -651,14 +663,16 @@ export function planTest(options, state) {
   const coverageThreshold = JSON.stringify(
     options.guardrails?.coverageFloors ? { statements: 0, branches: 0, functions: 0, lines: 0 } : {},
   );
+  // Review fix (2026-06-14): honor typescript: false by using js/jsx/mjs globs.
+  const coverageGlobs = options.typescript === false ? 'src/**/*.{js,jsx,mjs}' : 'src/**/*.{ts,tsx}';
   if (fw === 'vitest') {
     return [
-      { type: 'writeFile', path: 'vitest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('vitest.config.mjs.tmpl'), { coverageThreshold }) },
+      { type: 'writeFile', path: 'vitest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('vitest.config.mjs.tmpl'), { coverageThreshold, coverageGlobs }) },
       { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'vitest run --passWithNoTests', 'test:coverage': 'vitest run --coverage --passWithNoTests' }, devDependencies: dep('vitest', '@vitest/coverage-istanbul', 'eslint-plugin-vitest', 'typescript') } },
     ];
   }
   return [
-    { type: 'writeFile', path: 'jest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('jest.config.mjs.tmpl'), { coverageThreshold }) },
+    { type: 'writeFile', path: 'jest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('jest.config.mjs.tmpl'), { coverageThreshold, coverageGlobs }) },
     { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'jest --passWithNoTests', 'test:coverage': 'jest --coverage --passWithNoTests' }, devDependencies: dep('jest', 'ts-jest', '@types/jest', 'eslint-plugin-jest', 'typescript') } },
   ];
 }
@@ -685,6 +699,10 @@ git commit -m "feat(project-setup): LOC guard + Jest/Vitest templates and planne
 - Create: `.claude/skills/project-setup/scripts/templates/ci.yml.tmpl`
 - Modify: `.claude/skills/project-setup/scripts/lib/harness.mjs` (add `planCi`, `planInstall`)
 - Test: `.claude/skills/project-setup/scripts/tests/harness-ci.test.js`
+
+> **Review fixes (2026-06-14):**
+> 1. **Resolved package manager wins**: `planInstall` and `planCi` should prefer `options.packageManager` over `state.packageManager` (the explicit option wins). Both functions now use `options.packageManager ?? state?.packageManager`.
+> 2. **pnpm CI setup needs a version**: `pnpm/action-setup@v4` requires `version` for lockfile-only repos. The `CI_PM.pnpm.setup` now includes `with: { version: 9 }`. Tests assert `version: 9` in the rendered pnpm workflow.
 
 - [ ] **Step 1: Create the CI template**
 
@@ -754,10 +772,29 @@ test('planCi renders the detected package manager (pnpm)', () => {
   assert.match(wf.content, /pnpm install --frozen-lockfile/);
   assert.match(wf.content, /cache: pnpm/);
   assert.match(wf.content, /pnpm check:quality/);
+  // Review fix (2026-06-14): pnpm/action-setup@v4 requires version for lockfile-only repos
+  assert.match(wf.content, /version: 9/);
 });
 
 test('planInstall emits one installDeps action for the detected package manager', () => {
   assert.deepEqual(planInstall({}, { packageManager: 'pnpm' }), [{ type: 'installDeps', packageManager: 'pnpm' }]);
+});
+
+// Review fix (2026-06-14): resolved option wins over state
+test('planInstall: resolved option wins over state (options.packageManager takes precedence)', () => {
+  assert.deepEqual(
+    planInstall({ packageManager: 'pnpm' }, { packageManager: 'npm' }),
+    [{ type: 'installDeps', packageManager: 'pnpm' }],
+  );
+});
+
+test('planCi: resolved option wins over state (options.packageManager takes precedence)', () => {
+  const actions = planCi(
+    { packageManager: 'pnpm', github: { integrate: true }, guardrails: { ci: true } },
+    { packageManager: 'npm' },
+  );
+  const wf = actions.find((a) => a.path === '.github/workflows/ci.yml');
+  assert.match(wf.content, /pnpm install --frozen-lockfile/);
 });
 ```
 
@@ -773,14 +810,16 @@ Expected: FAIL — `planCi`/`planInstall` not exported.
 // unknown manager (incl. bun) falls back to npm-style so the workflow is valid.
 const CI_PM = {
   npm: { setup: '', cache: 'npm', install: 'npm ci', run: 'npm run' },
-  pnpm: { setup: '      - uses: pnpm/action-setup@v4\n', cache: 'pnpm', install: 'pnpm install --frozen-lockfile', run: 'pnpm' },
+  // Review fix (2026-06-14): pnpm/action-setup@v4 requires version: for lockfile-only repos
+  pnpm: { setup: '      - uses: pnpm/action-setup@v4\n        with: { version: 9 }\n', cache: 'pnpm', install: 'pnpm install --frozen-lockfile', run: 'pnpm' },
   yarn: { setup: '', cache: 'yarn', install: 'yarn install --immutable', run: 'yarn' },
 };
 
 export function planCi(options, state) {
   if (!options.github?.integrate || !options.guardrails?.ci) return [];
   const g = options.guardrails ?? {};
-  const pm = CI_PM[state?.packageManager] ?? CI_PM.npm;
+  // Review fix (2026-06-14): options.packageManager wins over state.packageManager
+  const pm = CI_PM[options.packageManager ?? state?.packageManager] ?? CI_PM.npm;
   // Emit a CI step only for a guardrail that is actually installed (its npm
   // script exists). The test step is always present; it uses the coverage
   // variant when coverage floors are on.
@@ -796,13 +835,14 @@ export function planCi(options, state) {
 }
 
 export function planInstall(options, state) {
-  return [{ type: 'installDeps', packageManager: state?.packageManager ?? 'npm' }];
+  // Review fix (2026-06-14): options.packageManager wins over state.packageManager
+  return [{ type: 'installDeps', packageManager: options.packageManager ?? state?.packageManager ?? 'npm' }];
 }
 ```
 
 - [ ] **Step 5: Run to verify it passes**
 
-Run: `node --test scripts/tests/harness-ci.test.js` → PASS (2 tests).
+Run: `node --test scripts/tests/harness-ci.test.js` → PASS (4 tests).
 
 - [ ] **Step 6: Commit**
 

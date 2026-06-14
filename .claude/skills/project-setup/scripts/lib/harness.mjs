@@ -94,14 +94,15 @@ export function planTest(options, state) {
   const coverageThreshold = JSON.stringify(
     options.guardrails?.coverageFloors ? { statements: 0, branches: 0, functions: 0, lines: 0 } : {},
   );
+  const coverageGlobs = options.typescript === false ? 'src/**/*.{js,jsx,mjs}' : 'src/**/*.{ts,tsx}';
   if (fw === 'vitest') {
     return [
-      { type: 'writeFile', path: 'vitest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('vitest.config.mjs.tmpl'), { coverageThreshold }) },
+      { type: 'writeFile', path: 'vitest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('vitest.config.mjs.tmpl'), { coverageThreshold, coverageGlobs }) },
       { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'vitest run --passWithNoTests', 'test:coverage': 'vitest run --coverage --passWithNoTests' }, devDependencies: dep('vitest', '@vitest/coverage-istanbul', 'eslint-plugin-vitest', 'typescript') } },
     ];
   }
   return [
-    { type: 'writeFile', path: 'jest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('jest.config.mjs.tmpl'), { coverageThreshold }) },
+    { type: 'writeFile', path: 'jest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('jest.config.mjs.tmpl'), { coverageThreshold, coverageGlobs }) },
     { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'jest --passWithNoTests', 'test:coverage': 'jest --coverage --passWithNoTests' }, devDependencies: dep('jest', 'ts-jest', '@types/jest', 'eslint-plugin-jest', 'typescript') } },
   ];
 }
@@ -130,14 +131,14 @@ export function planEslint(options) {
 // unknown manager (incl. bun) falls back to npm-style so the workflow is valid.
 const CI_PM = {
   npm: { setup: '', cache: 'npm', install: 'npm ci', run: 'npm run' },
-  pnpm: { setup: '      - uses: pnpm/action-setup@v4\n', cache: 'pnpm', install: 'pnpm install --frozen-lockfile', run: 'pnpm' },
+  pnpm: { setup: '      - uses: pnpm/action-setup@v4\n        with: { version: 9 }\n', cache: 'pnpm', install: 'pnpm install --frozen-lockfile', run: 'pnpm' },
   yarn: { setup: '', cache: 'yarn', install: 'yarn install --immutable', run: 'yarn' },
 };
 
 export function planCi(options, state) {
   if (!options.github?.integrate || !options.guardrails?.ci) return [];
   const g = options.guardrails ?? {};
-  const pm = CI_PM[state?.packageManager] ?? CI_PM.npm;
+  const pm = CI_PM[options.packageManager ?? state?.packageManager] ?? CI_PM.npm;
   // Emit a CI step only for a guardrail that is actually installed (its npm
   // script exists). The test step is always present; it uses the coverage
   // variant when coverage floors are on.
@@ -153,7 +154,7 @@ export function planCi(options, state) {
 }
 
 export function planInstall(options, state) {
-  return [{ type: 'installDeps', packageManager: state?.packageManager ?? 'npm' }];
+  return [{ type: 'installDeps', packageManager: options.packageManager ?? state?.packageManager ?? 'npm' }];
 }
 
 export function planReport() {

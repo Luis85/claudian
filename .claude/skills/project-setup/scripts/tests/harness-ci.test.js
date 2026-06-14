@@ -42,8 +42,25 @@ test('planCi renders the detected package manager (pnpm)', () => {
   assert.match(wf.content, /pnpm install --frozen-lockfile/);
   assert.match(wf.content, /cache: pnpm/);
   assert.match(wf.content, /pnpm check:quality/);
+  assert.match(wf.content, /version: 9/);
 });
 
 test('planInstall emits one installDeps action for the detected package manager', () => {
   assert.deepEqual(planInstall({}, { packageManager: 'pnpm' }), [{ type: 'installDeps', packageManager: 'pnpm' }]);
+});
+
+test('planInstall: resolved option wins over state (options.packageManager takes precedence)', () => {
+  assert.deepEqual(
+    planInstall({ packageManager: 'pnpm' }, { packageManager: 'npm' }),
+    [{ type: 'installDeps', packageManager: 'pnpm' }],
+  );
+});
+
+test('planCi: resolved option wins over state (options.packageManager takes precedence)', () => {
+  const actions = planCi(
+    { packageManager: 'pnpm', github: { integrate: true }, guardrails: { ci: true } },
+    { packageManager: 'npm' },
+  );
+  const wf = actions.find((a) => a.path === '.github/workflows/ci.yml');
+  assert.match(wf.content, /pnpm install --frozen-lockfile/);
 });
