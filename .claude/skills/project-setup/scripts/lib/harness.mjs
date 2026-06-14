@@ -92,18 +92,24 @@ export function planLoc(options) {
 }
 
 export function planTest(options, state) {
-  // A hand-written test config owns its thresholds; we can't safely baseline it
-  // to current coverage (non-destructive), so wiring our coverage gate would risk
-  // a day-one-RED CI on a pre-existing high threshold. Stand the gate down and
-  // say so. (plan() drops coverageFloors for the same state, keeping CI/verify
-  // consistent.)
-  if (state?.handwrittenTestConfig) {
-    return [notice('Existing test config kept — the coverage gate was NOT wired (a hand-written config\'s thresholds can\'t be safely baselined to current). Set your thresholds to current coverage, or run `report` for an advisory snapshot.')];
-  }
   // Prefer an explicit answer, else the framework detected in the repo, else
   // Jest. This keeps a brownfield Vitest project on Vitest when the user accepts
   // the detected default.
   const fw = options.testFramework ?? state?.testFramework ?? 'jest';
+  // A hand-written test config owns its thresholds; we can't safely baseline it
+  // to current coverage (non-destructive), so wiring our coverage gate would risk
+  // a day-one-RED CI on a pre-existing high threshold. Stand the gate down and
+  // say so. (plan() drops coverageFloors for the same state, keeping CI/verify
+  // consistent.) Still ensure a `test` script EXISTS so CI/verify's base test
+  // step doesn't fail with "Missing script: test" — mergeJson keeps an existing
+  // one and fills only when absent.
+  if (state?.handwrittenTestConfig) {
+    const testCmd = fw === 'vitest' ? 'vitest run --passWithNoTests' : 'jest --passWithNoTests';
+    return [
+      notice('Existing test config kept — the coverage gate was NOT wired (a hand-written config\'s thresholds can\'t be safely baselined to current). Set your thresholds to current coverage, or run `report` for an advisory snapshot.'),
+      { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: testCmd } } },
+    ];
+  }
   // Thresholds are filled by baseline; until then default to 0 (a no-op floor)
   // rendered as a JSON object so the config is valid immediately.
   const coverageThreshold = JSON.stringify(

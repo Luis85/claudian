@@ -51,9 +51,16 @@ test('planTest falls back to the DETECTED framework when no explicit answer', ()
   assert.ok(!actions.some((a) => a.path === 'jest.config.mjs'));
 });
 
-test('planTest stands the coverage gate down for a hand-written test config (notice only)', () => {
+test('planTest stands the coverage gate down for a hand-written test config, but keeps a test script', () => {
   const actions = planTest({ testFramework: 'jest', guardrails: { coverageFloors: true } }, { handwrittenTestConfig: true });
   assert.ok(!actions.some((a) => a.path === 'jest.config.mjs')); // never write a competing config
-  assert.ok(!actions.some((a) => a.type === 'mergeJson')); // no test:coverage gate wired
+  const pkg = actions.find((a) => a.type === 'mergeJson');
+  assert.equal(pkg.patch.scripts.test, 'jest --passWithNoTests'); // CI/verify's base test step must resolve
+  assert.ok(!('test:coverage' in pkg.patch.scripts)); // but NOT the unbaselineable coverage gate
   assert.ok(actions.some((a) => a.type === 'notice' && /coverage gate was NOT wired/.test(a.message)));
+});
+
+test('planTest(vitest) hand-written config keeps a vitest test script', () => {
+  const actions = planTest({ testFramework: 'vitest', guardrails: { coverageFloors: true } }, { handwrittenTestConfig: true });
+  assert.equal(actions.find((a) => a.type === 'mergeJson').patch.scripts.test, 'vitest run --passWithNoTests');
 });

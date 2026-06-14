@@ -14,6 +14,14 @@ test('planFallow renders .fallowrc.json with the detected entry and copies the r
   assert.equal(pkg.patch.scripts.quality, 'fallow');
 });
 
+test('planFallow ignores the generated harness scripts so fallow does not flag them as dead code', () => {
+  const rc = planFallow({ guardrails: { fallowRatchet: true } }, { entry: 'src/index.ts' }).find((a) => a.path === '.fallowrc.json');
+  const ignores = JSON.parse(rc.content).ignorePatterns;
+  assert.ok(ignores.some((p) => p.endsWith('scripts/check-quality.mjs')));
+  assert.ok(ignores.some((p) => p.endsWith('scripts/check-loc.mjs')));
+  assert.ok(ignores.some((p) => p.endsWith('scripts/quality-report.mjs')));
+});
+
 test('planFallow is a no-op when disabled', () => {
   assert.deepEqual(planFallow({ guardrails: { fallowRatchet: false } }, {}), []);
 });
