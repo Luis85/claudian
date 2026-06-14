@@ -967,6 +967,13 @@ export class StreamController {
   // PERF-3 note on the backoff constants above) — not an O(1) delta append.
   private async renderPendingText(): Promise<void> {
     if (this.isTextRenderRunning) return;
+    // Collapse mode renders only at finalize. Ignore a render scheduled before it
+    // was enabled so a stale frame can't flip the block live again or strand the
+    // "Writing response..." placeholder under the finished answer.
+    if (this.shouldCollapseStreamingResponse()) {
+      this.cancelPendingTextRender();
+      return;
+    }
     this.isTextRenderRunning = true;
 
     const { state, renderer } = this.deps;

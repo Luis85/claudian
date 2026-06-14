@@ -420,6 +420,31 @@ describe('StreamController - Text Content', () => {
       expect(msg.contentBlocks).toContainEqual({ type: 'text', content: 'Hello World' });
       expect(deps.state.thinkingEl).toBeNull();
     });
+
+    it('ignores a render scheduled before collapse was enabled, leaving no stranded placeholder', async () => {
+      const msg = createTestMessage();
+
+      // Schedule a live render while collapse is OFF, but don't let the frame fire yet.
+      (deps.plugin.settings as any).collapseStreamingResponse = false;
+      await controller.appendText('Hello ');
+
+      // Enable collapse before the frame fires; the suppressed append shows the placeholder.
+      (deps.plugin.settings as any).collapseStreamingResponse = true;
+      await controller.appendText('World');
+
+      // The previously-scheduled frame now fires — it must no-op under collapse.
+      jest.advanceTimersByTime(300);
+      await Promise.resolve();
+
+      await controller.finalizeCurrentTextBlock(msg);
+
+      expect(deps.renderer.renderContent).toHaveBeenLastCalledWith(
+        expect.anything(),
+        'Hello World'
+      );
+      expect(msg.contentBlocks).toContainEqual({ type: 'text', content: 'Hello World' });
+      expect(deps.state.thinkingEl).toBeNull();
+    });
   });
 
   describe('Size-aware streaming backoff (PERF-3)', () => {
