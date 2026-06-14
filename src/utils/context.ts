@@ -21,10 +21,6 @@ export function formatCurrentNote(notePath: string): string {
   return `<current_note>\n${notePath}\n</current_note>`;
 }
 
-export function appendCurrentNote(prompt: string, notePath: string): string {
-  return `${prompt}\n\n${formatCurrentNote(notePath)}`;
-}
-
 /**
  * Strips current note context from a prompt (both prefix and suffix formats).
  * Handles legacy (prefix) and current (suffix) formats.

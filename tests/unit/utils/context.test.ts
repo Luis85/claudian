@@ -1,6 +1,5 @@
 import {
   appendContextFiles,
-  appendCurrentNote,
   extractContentBeforeXmlContext,
   extractUserQuery,
   formatCurrentNote,
@@ -19,20 +18,6 @@ describe('formatCurrentNote', () => {
     expect(formatCurrentNote('notes/my file (1).md')).toBe(
       '<current_note>\nnotes/my file (1).md\n</current_note>'
     );
-  });
-});
-
-describe('appendCurrentNote', () => {
-  it('appends current note to prompt with double newline separator', () => {
-    const result = appendCurrentNote('Hello', 'notes/test.md');
-    expect(result).toBe(
-      'Hello\n\n<current_note>\nnotes/test.md\n</current_note>'
-    );
-  });
-
-  it('preserves original prompt content', () => {
-    const result = appendCurrentNote('Multi\nline\nprompt', 'test.md');
-    expect(result.startsWith('Multi\nline\nprompt\n\n')).toBe(true);
   });
 });
 

@@ -49,8 +49,3 @@ export function formatBrowserContext(context: BrowserSelectionContext): string {
   const body = wrapUntrustedExternalData(escapeXmlBody(selectedText));
   return `<browser_selection ${attrs}>\n${body}\n</browser_selection>`;
 }
-
-export function appendBrowserContext(prompt: string, context: BrowserSelectionContext): string {
-  const formatted = formatBrowserContext(context);
-  return formatted ? `${prompt}\n\n${formatted}` : prompt;
-}

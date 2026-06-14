@@ -97,8 +97,3 @@ export function formatEditorContext(context: EditorSelectionContext): string {
   }
   return '';
 }
-
-export function appendEditorContext(prompt: string, context: EditorSelectionContext): string {
-  const formatted = formatEditorContext(context);
-  return formatted ? `${prompt}\n\n${formatted}` : prompt;
-}
