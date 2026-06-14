@@ -6,10 +6,6 @@
       "loc": 1599,
       "reason": "Grandfathered. Planned split: extract persistent-query lifecycle (ensureReady, needsRestart, response-consumer startup) behind a smaller module interface. See docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md."
     },
-    "src/features/chat/controllers/StreamController.ts": {
-      "loc": 1496,
-      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
-    },
     "src/features/chat/controllers/InputController.ts": {
       "loc": 1149,
       "reason": "Grandfathered. Planned split: extract the resume dropdown and the plan/approval state machine. See docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md."
@@ -28,6 +24,10 @@
     },
     "src/features/chat/rendering/MessageRenderer.ts": {
       "loc": 1061,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/chat/controllers/StreamController.ts": {
+      "loc": 1036,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/tabs/TabManager.ts": {
