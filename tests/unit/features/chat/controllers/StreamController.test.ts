@@ -12,6 +12,7 @@ import {
 } from '@/core/tools/toolNames';
 import type { ChatMessage } from '@/core/types';
 import { StreamController, type StreamControllerDeps } from '@/features/chat/controllers/StreamController';
+import { notifyVaultForToolResult } from '@/features/chat/controllers/vaultFileNotifier';
 import { ChatState } from '@/features/chat/state/ChatState';
 import { DEFAULT_CODEX_PRIMARY_MODEL } from '@/providers/codex/types/models';
 
@@ -2920,6 +2921,10 @@ describe('StreamController - edited files', () => {
     );
 
     expect(deps.state.editedFiles.map((entry) => entry.path)).toEqual(['sub/new.md']);
+    expect(notifyVaultForToolResult as jest.Mock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ name: 'Write' }),
+    );
   });
 
   it('drops the source chip and shows the destination when apply_patch renames a file', async () => {

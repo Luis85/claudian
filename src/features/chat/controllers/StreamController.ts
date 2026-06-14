@@ -1304,8 +1304,11 @@ export class StreamController {
           toolCall.status = isBlocked ? 'blocked' : (chunk.isError ? 'error' : 'completed');
           toolCall.result = normalizedContent;
           subagentManager.updateSyncToolResult(parentToolUseId, chunk.id, toolCall);
-          // Surface files a sub-agent edits in the same strip as top-level edits.
-          if (toolCall.status === 'completed') this.recordEditedFiles(toolCall);
+          // Vault-refresh + surface files a sub-agent edits, same as the top-level path.
+          if (toolCall.status === 'completed') {
+            notifyVaultForToolResult(this.deps.plugin.app, toolCall);
+            this.recordEditedFiles(toolCall);
+          }
         }
         break;
       }
