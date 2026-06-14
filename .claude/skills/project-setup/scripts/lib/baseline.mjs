@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { rmSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { applyCoverageFloor } from './coverage.mjs';
 import { runScriptArgs } from './packageManager.mjs';
 
 const defaultExec = (cmd, args, opts) => execFileSync(cmd, args, { stdio: 'inherit', ...opts });
@@ -21,5 +22,16 @@ export function initBaselines(cwd, options, exec = defaultExec) {
     // step (Plan 3 report / a coverage helper) reads it to set the floor.
     const [cmd, cargs] = runScriptArgs(options.packageManager ?? 'npm', 'test:coverage');
     exec(cmd, cargs, { cwd });
+    const r = applyCoverageFloor(cwd, options.testFramework ?? 'jest'); // floor = current (rise-only)
+    if (!r.updated && r.reason === 'user config') {
+      // Brownfield with a hand-written test config: we do NOT rewrite it
+      // (non-destructive), so we cannot guarantee a safe day-one floor. Warn
+      // loudly rather than silently shipping a config that may over-enforce.
+      console.warn(
+        '[project-setup] Existing test config detected — coverage floor NOT set. ' +
+          'Your config owns its thresholds; set them to current coverage (or drop ' +
+          'the coverage gate) so CI stays green on day one.',
+      );
+    }
   }
 }
