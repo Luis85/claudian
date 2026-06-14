@@ -32,6 +32,9 @@ export interface RawEditedPath {
 /** Matches the per-file action markers in a Codex apply_patch patch body. */
 const APPLY_PATCH_MARKER = /^\*\*\* (Add File|Update File|Delete File|Move to): (.+)$/gm;
 
+/** Cursor's standalone file-delete tool (see `cursorToolNameMap`). */
+const TOOL_DELETE = 'delete';
+
 /** The add/edit targets and the removals (deletes + vacated rename sources) of a patch. */
 interface ApplyPatchOps {
   added: RawEditedPath[];
@@ -57,13 +60,19 @@ export function collectEditedPathsFromToolCall(toolCall: ToolCallInfo): RawEdite
 }
 
 /**
- * Paths a completed apply_patch removed from their original location — explicit
- * deletes and vacated rename sources — so the live list can drop stale chips for
- * files that no longer exist there. Returns raw paths.
+ * Paths a completed tool removed from their original location — apply_patch
+ * deletes + vacated rename sources, and Cursor's standalone `delete` tool — so
+ * the live list can drop stale chips for files that no longer exist. Raw paths.
  */
 export function collectRemovedPathsFromToolCall(toolCall: ToolCallInfo): string[] {
-  if (toolCall.name !== TOOL_APPLY_PATCH) return [];
-  return parseApplyPatch(toolCall.input).removed;
+  if (toolCall.name === TOOL_APPLY_PATCH) {
+    return parseApplyPatch(toolCall.input).removed;
+  }
+  if (toolCall.name === TOOL_DELETE) {
+    const path = firstStringField(toolCall.input, ['path', 'file_path']);
+    return path ? [path] : [];
+  }
+  return [];
 }
 
 /**

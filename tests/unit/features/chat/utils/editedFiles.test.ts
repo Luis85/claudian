@@ -165,8 +165,14 @@ describe('collectRemovedPathsFromToolCall', () => {
     expect(collectRemovedPathsFromToolCall(tc)).toEqual(['a.ts', 'b.ts', 'old.ts']);
   });
 
-  it('returns nothing for non-apply_patch tools', () => {
+  it('treats a Cursor delete tool (input.path) as a removal', () => {
+    expect(collectRemovedPathsFromToolCall(toolCall({ name: 'delete', input: { path: 'notes/gone.md' } })))
+      .toEqual(['notes/gone.md']);
+  });
+
+  it('returns nothing for non-removing tools', () => {
     expect(collectRemovedPathsFromToolCall(toolCall({ name: 'Edit', input: { file_path: 'a.md' } }))).toEqual([]);
+    expect(collectRemovedPathsFromToolCall(toolCall({ name: 'Read', input: { file_path: 'a.md' } }))).toEqual([]);
   });
 });
 

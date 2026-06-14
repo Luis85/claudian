@@ -2903,6 +2903,16 @@ describe('StreamController - edited files', () => {
     expect(deps.state.editedFiles).toEqual([]);
   });
 
+  it('removes a previously recorded chip when a Cursor delete tool runs', async () => {
+    const msg = createTestMessage();
+    await completeTool(msg, { id: 't1', name: 'Write', input: { file_path: 'notes/x.md', content: 'hi' } });
+    expect(deps.state.editedFiles.map((entry) => entry.path)).toEqual(['notes/x.md']);
+
+    await completeTool(msg, { id: 't2', name: 'delete', input: { path: 'notes/x.md' } });
+
+    expect(deps.state.editedFiles).toEqual([]);
+  });
+
   it('records a file edited by a sync sub-agent', async () => {
     const msg = createTestMessage();
     const subToolCalls: Array<{ id: string; name: string; input: Record<string, unknown>; status: string }> = [];
