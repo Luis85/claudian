@@ -49,10 +49,9 @@ const METRICS = {
     read: (r) => r.check.summary.total_issues,
     label: 'dead-code issues (fallow dead-code)',
   },
-  // Structural gate (import-cycle budget).
-  // Must stay 0: the ratchet direction allows it,
-  // but treat any bump of these baselines as an architecture decision, not a
-  // metric trade-off.
+  // Structural gate (import-cycle budget): should stay 0. The ratchet allows a
+  // bump, but treat any increase as an architecture decision, not a metric
+  // trade-off.
   circularDependencies: {
     direction: 'max',
     read: (r) => r.check.summary.circular_dependencies,

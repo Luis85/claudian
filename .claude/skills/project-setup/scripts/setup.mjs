@@ -21,8 +21,8 @@ Commands:
   detect                 Print project-state JSON. No mutation.
   plan   --config <f>    Print the ordered action plan. No mutation.
   apply  --config <f>    Execute the plan idempotently. --dry-run to preview.
-  report                 Write the quality report. (Plan 3)
-  verify                 Run the enabled gates once. (Plan 3)
+  report                 Write the advisory quality report (quality-report.md + .json).
+  verify                 Run the enabled gates once; non-zero exit on failure.
 
 Options:
   --config <file>        JSON options (answers).

@@ -14,7 +14,7 @@ typescript-eslint 8, which require it), zero runtime deps.
 
 ## Tests
 
-    node --test scripts/tests/*.test.js
+    node --test tests/*.test.js
 
 All tests are `node:test` specs operating on temp-dir fixtures — no network,
 no global state.

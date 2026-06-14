@@ -22,7 +22,7 @@ Requires `github.integrate: true`. Writes `.github/workflows/ci.yml` with steps 
 ## Ratchet + severity-staging mechanics
 
 - **Fallow ratchet:** Snapshots are stored in `scripts/quality-baseline.json`. Each `check:quality` run compares current counts against the snapshot. Any regression (increase) fails. To tighten the ratchet, run `node scripts/check-quality.mjs --update` after improving the code.
-- **LOC ratchet:** Snapshot is the current maximum LOC across all files. Stored as a single number in `scripts/loc-baseline.json`. Each `check:loc` run rejects any file that now exceeds both the cap and the snapshot.
+- **LOC ratchet:** Snapshot is a per-file map (in `scripts/loc-baseline.json`) of every file currently over `locCap`. Each `check:loc` run fails any *new* file over the cap, or any grandfathered file that grew past its own recorded baseline (existing oversized files may shrink but not grow).
 - **Coverage floor:** Stored as thresholds in the test framework config itself. Jest enforces them on every `test:coverage` run.
 
 ## `answers.json` shape (options object)

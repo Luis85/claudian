@@ -1,7 +1,7 @@
 // scripts/lib/harness.mjs
 import { runPrefix, safePackageManager } from './packageManager.mjs';
 import { loadTemplate, renderTemplate } from './templates.mjs';
-import { standsDownTestConfig } from './testConfig.mjs';
+import { standsDownTestConfig, resolveFramework } from './testConfig.mjs';
 
 // EXACT pins (no caret/tilde). A first install with no lockfile must be
 // reproducible — same answers + same state => same installed versions, per the
@@ -113,10 +113,7 @@ export function planLoc(options, state) {
 }
 
 export function planTest(options, state) {
-  // Prefer an explicit answer, else the framework detected in the repo, else
-  // Jest. This keeps a brownfield Vitest project on Vitest when the user accepts
-  // the detected default.
-  const fw = options.testFramework ?? state?.testFramework ?? 'jest';
+  const fw = resolveFramework(options, state);
   // A hand-written test config owns its thresholds; we can't safely baseline it
   // (non-destructive), so stand the coverage gate down (plan() drops coverageFloors
   // for the same state) and still ensure a `test` script exists so CI/verify's base
@@ -158,10 +155,10 @@ export function planTest(options, state) {
 
 export function planEslint(options, state) {
   if (!options.guardrails?.eslintSeverityStaging) return [];
-  // Render the test-lint plugin import + config from the (resolved) test
-  // framework so the test-lint guardrails actually run (setup.mjs resolves
-  // options.testFramework before plan()).
-  const { testImport, testConfigBlock } = eslintTestBlock(options.testFramework);
+  // Render the test-lint plugin import + config from the resolved test framework
+  // (same resolution as planTest) so the lint plugin always matches the runner.
+  const fw = resolveFramework(options, state);
+  const { testImport, testConfigBlock } = eslintTestBlock(fw);
   // Only a TypeScript project loads the typescript-eslint preset; on a JS-only
   // repo it applies TS rules (e.g. no-require-imports) to .js and fails lint.
   const ts = options.typescript !== false;
@@ -189,7 +186,7 @@ export function planEslint(options, state) {
   // The plugin DEP lives here (where its import is rendered), not in planTest —
   // planTest's hand-written-config path returns without deps, which would leave
   // the rendered `import eslint-plugin-{jest,vitest}` unresolved and break lint.
-  const testPlugin = options.testFramework === 'jest' ? ['eslint-plugin-jest'] : options.testFramework === 'vitest' ? ['eslint-plugin-vitest'] : [];
+  const testPlugin = fw === 'vitest' ? ['eslint-plugin-vitest'] : ['eslint-plugin-jest'];
   const deps = ts
     ? dep('eslint', 'typescript-eslint', '@eslint/js', 'eslint-plugin-simple-import-sort', ...testPlugin)
     : dep('eslint', '@eslint/js', 'eslint-plugin-simple-import-sort', ...testPlugin);
@@ -328,7 +325,7 @@ export function planDocs(options, state) {
     gates: gates.length ? gates.join('\n') : '_No blocking gates enabled._',
     verifyCmd,
     advisory: advisory.join('\n'),
-    testFramework: options.testFramework ?? 'jest',
+    testFramework: resolveFramework(options, state),
   });
   const file = (path, name) => ({ type: 'writeFile', path, mode: 'skip-if-exists', content: loadTemplate(name) });
   return [
