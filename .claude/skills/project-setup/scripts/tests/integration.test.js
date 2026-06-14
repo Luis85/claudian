@@ -9,7 +9,9 @@ import { tmpProject } from './helpers.js';
 
 function capture(cwd) {
   const chunks = { out: '', err: '' };
-  return { io: { stdout: (s) => (chunks.out += s), stderr: (s) => (chunks.err += s), cwd }, chunks };
+  // Stub exec so installDeps and initBaselines never touch the network in tests.
+  const exec = () => {};
+  return { io: { stdout: (s) => (chunks.out += s), stderr: (s) => (chunks.err += s), cwd, exec }, chunks };
 }
 
 test('detect prints state JSON for the cwd', async () => {
@@ -25,7 +27,22 @@ test('detect prints state JSON for the cwd', async () => {
 });
 
 test('apply --config creates engine artifacts; second run is idempotent', async () => {
-  const p = tmpProject({ 'package.json': { name: 'x' }, '.gitignore': 'node_modules/\n' });
+  // Pre-populate devDependencies with everything planHarness will merge so that
+  // detect() produces an identical state on both runs. Without this, the first
+  // run merges eslint/jest/typescript etc into package.json; on the second run
+  // detect() picks them up and the state (and therefore the report) differs.
+  const p = tmpProject({
+    'package.json': {
+      name: 'x',
+      devDependencies: {
+        jest: '30.3.0', 'ts-jest': '29.4.9', '@types/jest': '30.0.0',
+        'eslint-plugin-jest': '28.14.0', typescript: '5.9.3',
+        eslint: '9.36.0', 'typescript-eslint': '8.45.0', '@eslint/js': '9.36.0',
+        'eslint-plugin-simple-import-sort': '12.1.1', fallow: '2.91.0',
+      },
+    },
+    '.gitignore': 'node_modules/\n',
+  });
   try {
     const cfg = join(p.dir, 'answers.json');
     writeFileSync(cfg, JSON.stringify({ guardrails: {}, github: { integrate: false }, docs: {} }));

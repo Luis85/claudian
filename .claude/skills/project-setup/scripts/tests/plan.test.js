@@ -11,7 +11,7 @@ test('plan returns an ordered array of known action types', () => {
   const actions = plan(options, state);
   assert.ok(Array.isArray(actions) && actions.length >= 2);
   for (const a of actions) {
-    assert.ok(['mergeText', 'mergeJson', 'writeFile'].includes(a.type));
+    assert.ok(['mergeText', 'mergeJson', 'writeFile', 'installDeps'].includes(a.type));
   }
 });
 

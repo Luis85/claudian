@@ -4,6 +4,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 import { apply } from './lib/apply.mjs';
+import { initBaselines } from './lib/baseline.mjs';
 import { detect } from './lib/detect.mjs';
 import { loadOptions } from './lib/options.mjs';
 import { plan } from './lib/plan.mjs';
@@ -64,10 +65,15 @@ export async function cli(argv, io = {}) {
         return 2;
       }
       const options = loadOptions(resolve(cwd, args.flags.config));
-      const actions = plan(options, detect(cwd));
+      const state = detect(cwd);
+      options.testFramework = options.testFramework ?? state.testFramework ?? 'jest';
+      const actions = plan(options, state);
       const dryRun = cmd === 'plan' || args.flags.dryRun === true;
       const backupDir = args.flags.backupDir ? resolve(cwd, args.flags.backupDir) : undefined;
-      const result = apply(actions, { cwd, dryRun, backupDir });
+      const result = apply(actions, { cwd, dryRun, backupDir, exec: io.exec });
+      if (!dryRun && result.changed.length > 0) {
+        initBaselines(cwd, options, io.exec); // snapshot current debt (brownfield-safe)
+      }
       if (dryRun) {
         out(`Planned ${result.planned.length} action(s):\n` + result.planned.map((p) => `  ${p}`).join('\n') + '\n');
       } else if (result.changed.length === 0) {
