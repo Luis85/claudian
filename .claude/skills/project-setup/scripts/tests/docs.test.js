@@ -35,6 +35,18 @@ test('planDocs renders the detected package manager into the guide + CONTRIBUTIN
   assert.doesNotMatch(contributing.content, /npm run/);
 });
 
+test('CONTRIBUTING reflects only enabled gates and uses the coverage test gate', () => {
+  const actions = planDocs(
+    { docs: { scaffold: true }, guardrails: { eslintSeverityStaging: true, locGuard: false, fallowRatchet: false, coverageFloors: true } },
+    {},
+  );
+  const c = actions.find((a) => a.path === 'CONTRIBUTING.md').content;
+  assert.match(c, /npm run lint/);
+  assert.doesNotMatch(c, /check:loc/); // disabled gate not advertised
+  assert.doesNotMatch(c, /check:quality/);
+  assert.match(c, /test:coverage/); // matches what CI/verify enforce
+});
+
 test('planDocs is a no-op when scaffold is off', () => {
   assert.deepEqual(planDocs({ docs: { scaffold: false } }), []);
 });

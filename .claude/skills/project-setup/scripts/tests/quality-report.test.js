@@ -83,16 +83,15 @@ test('detectRunCmd resolves the package manager from the lockfile', () => {
   }
 });
 
-test('planFallow generates the quality:dead-code / quality:dupes scripts the report references', () => {
-  const actions = planFallow({ guardrails: { fallowRatchet: true } }, {});
-  const pkg = actions.find((a) => a.type === 'mergeJson');
+test('planReport installs the detail scripts the report references (even when the ratchet is off)', () => {
+  // planReport always runs; the report's actions point at these, so they live
+  // here — not in planFallow, which a user can disable.
+  const pkg = planReport().find((a) => a.type === 'mergeJson');
+  assert.equal(pkg.patch.scripts.report, 'node scripts/quality-report.mjs');
   assert.equal(pkg.patch.scripts['quality:dead-code'], 'fallow dead-code');
   assert.equal(pkg.patch.scripts['quality:dupes'], 'fallow dupes');
-});
-
-test('planReport pins fallow (the report shells out to it) alongside the report script', () => {
-  const actions = planReport();
-  const pkg = actions.find((a) => a.type === 'mergeJson');
-  assert.equal(pkg.patch.scripts.report, 'node scripts/quality-report.mjs');
   assert.ok('fallow' in pkg.patch.devDependencies);
+  // planFallow no longer owns them (avoids the fallowRatchet-off gap).
+  const fallowPkg = planFallow({ guardrails: { fallowRatchet: true } }, {}).find((a) => a.type === 'mergeJson');
+  assert.ok(!('quality:dead-code' in fallowPkg.patch.scripts));
 });

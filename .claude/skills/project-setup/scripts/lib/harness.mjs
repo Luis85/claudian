@@ -73,9 +73,6 @@ export function planFallow(options, state) {
           quality: 'fallow',
           'quality:audit': 'fallow audit',
           'check:quality': 'node scripts/check-quality.mjs',
-          // The advisory report points users at these; they must exist to run.
-          'quality:dead-code': 'fallow dead-code',
-          'quality:dupes': 'fallow dupes',
         },
         devDependencies: dep('fallow'),
       },
@@ -210,8 +207,21 @@ export function planInstall(options, state) {
 export function planReport() {
   return [
     { type: 'writeFile', path: 'scripts/quality-report.mjs', mode: 'overwrite-backup', content: loadTemplate('quality-report.mjs') },
-    // quality-report.mjs shells out to fallow, so pin + install it with the report.
-    { type: 'mergeJson', path: 'package.json', patch: { scripts: { report: 'node scripts/quality-report.mjs' }, devDependencies: dep('fallow') } },
+    // The report shells out to fallow AND its action items point at quality:dead-code
+    // / quality:dupes — install fallow and those scripts here (planReport always
+    // runs), so the report's advice resolves even when the fallowRatchet gate is off.
+    {
+      type: 'mergeJson',
+      path: 'package.json',
+      patch: {
+        scripts: {
+          report: 'node scripts/quality-report.mjs',
+          'quality:dead-code': 'fallow dead-code',
+          'quality:dupes': 'fallow dupes',
+        },
+        devDependencies: dep('fallow'),
+      },
+    },
   ];
 }
 
@@ -247,9 +257,10 @@ export function planDocs(options, state) {
   // Advisory commands (the report script is always installed; fallow's sweep only when its ratchet is on).
   const advisory = [`- \`${run} report\` — actionable quality report (quality-report.md + .json).`];
   if (g.fallowRatchet) advisory.push(`- \`${run} quality\` / \`${run} quality:audit\` — fallow full sweep / changed-files review.`);
+  const verifyCmd = gateScripts.map((s) => `${run} ${s}`).join(' && ');
   const guide = renderTemplate(loadTemplate('docs/quality-integration-guide.md.tmpl'), {
     gates: gates.length ? gates.join('\n') : '_No blocking gates enabled._',
-    verifyCmd: gateScripts.map((s) => `${run} ${s}`).join(' && '),
+    verifyCmd,
     advisory: advisory.join('\n'),
     testFramework: options.testFramework ?? 'jest',
   });
@@ -258,6 +269,8 @@ export function planDocs(options, state) {
     file('CONTEXT.md', 'docs/CONTEXT.md'),
     file('docs/adr/0000-template.md', 'docs/adr-0000-template.md'),
     { type: 'writeFile', path: 'docs/quality-integration-guide.md', mode: 'skip-if-exists', content: guide },
-    { type: 'writeFile', path: 'CONTRIBUTING.md', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('docs/CONTRIBUTING-quality.md'), { runCmd: run }) },
+    // Render CONTRIBUTING from the same enabled-gate command, so it never lists a
+    // script that wasn't installed, and uses test:coverage when CI does.
+    { type: 'writeFile', path: 'CONTRIBUTING.md', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('docs/CONTRIBUTING-quality.md'), { runCmd: run, verifyCmd }) },
   ];
 }
