@@ -50,3 +50,10 @@ test('planTest falls back to the DETECTED framework when no explicit answer', ()
   assert.ok(actions.some((a) => a.path === 'vitest.config.mjs'));
   assert.ok(!actions.some((a) => a.path === 'jest.config.mjs'));
 });
+
+test('planTest stands the coverage gate down for a hand-written test config (notice only)', () => {
+  const actions = planTest({ testFramework: 'jest', guardrails: { coverageFloors: true } }, { handwrittenTestConfig: true });
+  assert.ok(!actions.some((a) => a.path === 'jest.config.mjs')); // never write a competing config
+  assert.ok(!actions.some((a) => a.type === 'mergeJson')); // no test:coverage gate wired
+  assert.ok(actions.some((a) => a.type === 'notice' && /coverage gate was NOT wired/.test(a.message)));
+});

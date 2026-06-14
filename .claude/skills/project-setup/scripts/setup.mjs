@@ -9,7 +9,7 @@ import { apply } from './lib/apply.mjs';
 import { initBaselines } from './lib/baseline.mjs';
 import { detect } from './lib/detect.mjs';
 import { loadOptions } from './lib/options.mjs';
-import { plan } from './lib/plan.mjs';
+import { effectiveOptions, plan } from './lib/plan.mjs';
 import { runGates } from './lib/verify.mjs';
 
 const USAGE = `project-setup engine
@@ -91,7 +91,8 @@ export async function cli(argv, io = {}) {
       const backupDir = args.flags.backupDir ? resolve(cwd, args.flags.backupDir) : undefined;
       const result = apply(actions, { cwd, dryRun, backupDir, exec: io.exec });
       if (!dryRun && result.changed.length > 0) {
-        initBaselines(cwd, options, io.exec); // snapshot current debt (brownfield-safe)
+        // Effective options so baselining matches the plan (coverage gate may be off).
+        initBaselines(cwd, effectiveOptions(options, state), io.exec); // snapshot current debt (brownfield-safe)
       }
       if (dryRun) {
         out(`Planned ${result.planned.length} action(s):\n` + result.planned.map((p) => `  ${p}`).join('\n') + '\n');
@@ -99,6 +100,9 @@ export async function cli(argv, io = {}) {
         out('No changes — project already converged.\n');
       } else {
         out(`Applied ${result.changed.length} change(s):\n` + result.changed.map((p) => `  ${p}`).join('\n') + '\n');
+      }
+      if (result.notices?.length) {
+        out('\nNotices (review these):\n' + result.notices.map((n) => `  [${n.level}] ${n.message}`).join('\n') + '\n');
       }
       return 0;
     }
@@ -114,7 +118,8 @@ export async function cli(argv, io = {}) {
         return 2;
       }
       const options = loadOptions(resolve(cwd, args.flags.config));
-      const res = runGates(cwd, options);
+      // Mirror plan(): a hand-written test config drops the coverage gate here too.
+      const res = runGates(cwd, effectiveOptions(options, detect(cwd)));
       out(res.ok ? 'All gates passed.\n' : `Gates failed: ${res.failed.join(', ')}\n`);
       return res.ok ? 0 : 1;
     }

@@ -50,12 +50,20 @@ function planHarness(options, state) {
   ];
 }
 
-// Ordered composition of pure sub-planners. Plans 2-3 add planHarness,
-// planBaseline, planDocs, planGithub here.
+// State can force a guardrail off: a hand-written test config can't be safely
+// baselined, so the coverage gate stands down everywhere (planTest, planCi,
+// initBaselines, and verify — which calls this too) to keep day-one CI green.
+export function effectiveOptions(options, state) {
+  if (!state?.handwrittenTestConfig) return options;
+  return { ...options, guardrails: { ...(options.guardrails ?? {}), coverageFloors: false } };
+}
+
+// Ordered composition of pure sub-planners.
 export function plan(options, state) {
+  const opts = effectiveOptions(options, state);
   return [
-    ...planGitignore(options, state),
-    ...planRunReport(options),
-    ...planHarness(options, state),
+    ...planGitignore(opts, state),
+    ...planRunReport(opts),
+    ...planHarness(opts, state),
   ];
 }

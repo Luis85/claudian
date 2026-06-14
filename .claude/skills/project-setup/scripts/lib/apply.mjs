@@ -14,8 +14,14 @@ export function apply(actions, opts = {}) {
     opts.exec ?? ((cmd, args, options) => execFileSync(cmd, args, { stdio: 'inherit', ...options }));
   const changed = [];
   const planned = [];
+  const notices = [];
 
   for (const action of actions) {
+    if (action.type === 'notice') {
+      // Surfaced to the user (collisions, skipped CI) — never a file mutation.
+      notices.push({ level: action.level ?? 'warn', message: action.message });
+      continue;
+    }
     if (action.type === 'installDeps') {
       // Always include in the plan so dry-run/plan previews the install side effect.
       // NEVER push to `changed`: install is an effect, not a tracked file mutation,
@@ -58,5 +64,5 @@ export function apply(actions, opts = {}) {
     }
   }
 
-  return { changed, planned, dryRun };
+  return { changed, planned, dryRun, notices };
 }

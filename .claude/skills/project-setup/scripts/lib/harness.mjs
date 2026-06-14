@@ -26,6 +26,9 @@ function dep(...names) {
   return Object.fromEntries(names.map((n) => [n, PINNED[n]]));
 }
 
+// A non-mutating action the engine surfaces to the user (collisions, skipped CI).
+const notice = (message, level = 'warn') => ({ type: 'notice', level, message });
+
 // Test-lint plugin wiring by framework. Empty when no framework (so eslint still
 // installs); jest/vitest get their recommended test rules imported AND applied —
 // otherwise the installed plugin would never run.
@@ -88,6 +91,14 @@ export function planLoc(options) {
 }
 
 export function planTest(options, state) {
+  // A hand-written test config owns its thresholds; we can't safely baseline it
+  // to current coverage (non-destructive), so wiring our coverage gate would risk
+  // a day-one-RED CI on a pre-existing high threshold. Stand the gate down and
+  // say so. (plan() drops coverageFloors for the same state, keeping CI/verify
+  // consistent.)
+  if (state?.handwrittenTestConfig) {
+    return [notice('Existing test config kept — the coverage gate was NOT wired (a hand-written config\'s thresholds can\'t be safely baselined to current). Set your thresholds to current coverage, or run `report` for an advisory snapshot.')];
+  }
   // Prefer an explicit answer, else the framework detected in the repo, else
   // Jest. This keeps a brownfield Vitest project on Vitest when the user accepts
   // the detected default.
@@ -110,14 +121,26 @@ export function planTest(options, state) {
   ];
 }
 
-export function planEslint(options) {
+export function planEslint(options, state) {
   if (!options.guardrails?.eslintSeverityStaging) return [];
   // Render the test-lint plugin import + config from the (resolved) test
   // framework so the test-lint guardrails actually run (setup.mjs resolves
   // options.testFramework before plan()).
   const { testImport, testConfigBlock } = eslintTestBlock(options.testFramework);
   const content = renderTemplate(loadTemplate('eslint.config.mjs.tmpl'), { testImport, testConfigBlock });
+  const notices = [];
+  // Report (not silently no-op) the brownfield collisions: a kept `lint` script
+  // means the generated config never runs through CI/verify, and a stray
+  // `--max-warnings 0` there would invert the warn-staging policy.
+  const existingLint = state?.scripts?.lint;
+  if (existingLint && existingLint !== 'eslint .') {
+    notices.push(notice(`Existing "lint" script kept (\`${existingLint}\`) — the generated eslint.config.mjs won't run through it, and a "--max-warnings 0" there would block on staged warnings. Point lint at \`eslint .\`, or add a separate \`lint:quality\` script.`));
+  }
+  if (state?.legacyEslintrc) {
+    notices.push(notice('Legacy .eslintrc* found alongside the new flat eslint.config.mjs — ESLint 9 reads only the flat config; remove the legacy file once migrated.'));
+  }
   return [
+    ...notices,
     { type: 'writeFile', path: 'eslint.config.mjs', mode: 'skip-if-exists', content },
     {
       type: 'mergeJson',
@@ -135,17 +158,30 @@ export function planEslint(options) {
 const CI_PM = {
   npm: { setup: '', cache: 'npm', install: 'npm ci', run: 'npm run' },
   pnpm: { setup: '      - uses: pnpm/action-setup@v4\n        with: { version: 9 }\n', cache: 'pnpm', install: 'pnpm install --frozen-lockfile', run: 'pnpm' },
-  yarn: { setup: '', cache: 'yarn', install: 'yarn install --immutable', run: 'yarn' },
+  // --frozen-lockfile (not Berry's --immutable): setup-node defaults to Yarn
+  // Classic, which errors on --immutable. Berry accepts --frozen-lockfile too.
+  yarn: { setup: '', cache: 'yarn', install: 'yarn install --frozen-lockfile', run: 'yarn' },
 };
 
 export function planCi(options, state) {
-  if (!options.github?.integrate || !options.guardrails?.ci) return [];
+  if (!options.guardrails?.ci) return []; // CI not requested — nothing to surface
+  // CI requested but unproducible: say so rather than silently dropping it.
+  if (!options.github?.integrate) {
+    return [notice('CI is enabled but GitHub integration is off, so no .github/workflows/ci.yml was written. Re-run with github.integrate:true to add it, or wire CI on your platform manually.')];
+  }
   const g = options.guardrails ?? {};
-  // npm/pnpm/yarn get a working workflow; bun (and any unknown manager) is NOT
-  // auto-CI'd here — npm-style CI would break a bun-only repo, so we skip it and
-  // the agent sets up CI manually. An absent manager defaults to npm.
-  const pm = CI_PM[options.packageManager ?? state?.packageManager ?? 'npm'];
-  if (!pm) return [];
+  // npm/pnpm/yarn get a working workflow; bun (and any unknown manager) has no
+  // profile — an npm-style CI would break a bun-only repo, so emit a notice and
+  // let the agent wire CI manually rather than ship a broken workflow.
+  const pmName = options.packageManager ?? state?.packageManager ?? 'npm';
+  const pm = CI_PM[pmName];
+  if (!pm) {
+    return [notice(`CI is enabled but there's no built-in workflow profile for "${pmName}" — set up CI manually (npm/pnpm/yarn are generated automatically).`)];
+  }
+  const notices = [];
+  if (state?.ciWorkflow) {
+    notices.push(notice('Existing .github/workflows/ci.yml kept — the quality gates were NOT added to it. Merge the generated steps in, or they won\'t run in CI.'));
+  }
   // Emit a CI step only for a guardrail that is actually installed (its npm
   // script exists). The test step is always present; it uses the coverage
   // variant when coverage floors are on.
@@ -157,7 +193,7 @@ export function planCi(options, state) {
   const content = renderTemplate(loadTemplate('ci.yml.tmpl'), {
     pmSetup: pm.setup, pmCache: pm.cache, pmInstall: pm.install, steps: steps.join('\n'),
   });
-  return [{ type: 'writeFile', path: '.github/workflows/ci.yml', mode: 'skip-if-exists', content }];
+  return [...notices, { type: 'writeFile', path: '.github/workflows/ci.yml', mode: 'skip-if-exists', content }];
 }
 
 export function planInstall(options, state) {

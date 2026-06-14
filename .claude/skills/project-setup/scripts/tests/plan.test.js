@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { plan } from '../lib/plan.mjs';
+import { effectiveOptions, plan } from '../lib/plan.mjs';
 
 const options = { guardrails: {}, github: { integrate: false }, docs: {} };
 const state = { packageManager: 'npm', github: false };
@@ -11,8 +11,13 @@ test('plan returns an ordered array of known action types', () => {
   const actions = plan(options, state);
   assert.ok(Array.isArray(actions) && actions.length >= 2);
   for (const a of actions) {
-    assert.ok(['mergeText', 'mergeJson', 'writeFile', 'installDeps'].includes(a.type));
+    assert.ok(['mergeText', 'mergeJson', 'writeFile', 'installDeps', 'notice'].includes(a.type));
   }
+});
+
+test('effectiveOptions drops the coverage gate when a hand-written test config is present', () => {
+  assert.equal(effectiveOptions({ guardrails: { coverageFloors: true } }, { handwrittenTestConfig: true }).guardrails.coverageFloors, false);
+  assert.equal(effectiveOptions({ guardrails: { coverageFloors: true } }, {}).guardrails.coverageFloors, true);
 });
 
 test('plan ignores the engine artifacts in .gitignore', () => {
