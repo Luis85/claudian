@@ -42,6 +42,9 @@ engine owns every mutation; you detect, interview, then invoke it.
 - The engine is idempotent and non-destructive (merge + backup). Re-running is
   safe.
 - Requires Node ≥20 (the installed ESLint 9 / typescript-eslint 8 need it).
+- If CI was generated, commit the **lockfile** (`package-lock.json` / `pnpm-lock.yaml`
+  / `yarn.lock`) with the changes — the generated CI's strict install + dependency
+  cache require a committed lockfile (a fresh `apply` creates one but won't commit it).
 - Apply on a clean git tree (`git status`) so the change is easy to review; the
   engine backs up any file it must overwrite.
 - Run `check:quality` with `./coverage` absent (see `references/quality-harness.md`).

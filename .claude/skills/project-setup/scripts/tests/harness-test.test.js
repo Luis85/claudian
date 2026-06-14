@@ -44,6 +44,21 @@ test('planTest(jest, typescript: false) uses js/jsx/mjs coverage globs', () => {
   assert.doesNotMatch(cfg.content, /ts,tsx/);
 });
 
+test('planTest(jest, JS) drops the ts-jest preset and its TS-only deps', () => {
+  const actions = planTest({ testFramework: 'jest', typescript: false, guardrails: { coverageFloors: true } });
+  const cfg = actions.find((a) => a.path === 'jest.config.mjs');
+  assert.doesNotMatch(cfg.content, /ts-jest/); // JS has no tsconfig; ts-jest can't transform .js
+  const pkg = actions.find((a) => a.type === 'mergeJson');
+  assert.ok(!('ts-jest' in pkg.patch.devDependencies));
+  assert.ok(!('typescript' in pkg.patch.devDependencies));
+  assert.ok('jest' in pkg.patch.devDependencies);
+});
+
+test('planTest(jest, TS) keeps the ts-jest preset', () => {
+  const cfg = planTest({ testFramework: 'jest', typescript: true, guardrails: { coverageFloors: true } }).find((a) => a.path === 'jest.config.mjs');
+  assert.match(cfg.content, /preset: 'ts-jest'/);
+});
+
 test('planTest requests the json-summary reporter the floor/report depend on', () => {
   const jestCfg = planTest({ testFramework: 'jest', guardrails: { coverageFloors: true } }).find((a) => a.path === 'jest.config.mjs');
   assert.match(jestCfg.content, /json-summary/);

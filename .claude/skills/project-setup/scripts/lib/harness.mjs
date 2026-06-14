@@ -30,14 +30,28 @@ function dep(...names) {
 // A non-mutating action the engine surfaces to the user (collisions, skipped CI).
 const notice = (message, level = 'warn') => ({ type: 'notice', level, message });
 
+// mergeJson keeps an existing scalar on conflict, so a brownfield script that
+// shadows a guardrail's command means the guardrail silently never runs through
+// `<pm> <name>` (CI/verify/docs). Report it rather than no-op.
+function scriptCollision(state, name, desired) {
+  const existing = state?.scripts?.[name];
+  if (!existing || existing === desired) return [];
+  return [notice(`Existing "${name}" script kept (\`${existing}\`) — \`<pm> ${name}\` runs yours, not the generated harness command (\`${desired}\`). Rename one so the ${name} guardrail actually runs.`)];
+}
+
+// Lint a wide test glob (incl. .mts/.cts/.cjs) so the test-lint guardrail isn't
+// silently inert on those extensions.
+const TEST_GLOB = "'**/*.{test,spec}.{ts,mts,cts,tsx,js,mjs,cjs,jsx}'";
+
 // Test-lint plugin wiring by framework. Empty when no framework (so eslint still
-// installs); jest/vitest get their recommended test rules imported AND applied —
-// otherwise the installed plugin would never run.
+// installs); jest/vitest get their recommended test rules imported AND applied
+// (staged to warn) — otherwise the installed plugin would never run, or would
+// fail day-one CI on a focused/duplicate test.
 function eslintTestBlock(fw) {
   if (fw === 'jest') {
     return {
       testImport: "import jestPlugin from 'eslint-plugin-jest';",
-      testConfigBlock: "  { files: ['**/*.{test,spec}.{ts,tsx,js,jsx}'], ...jestPlugin.configs['flat/recommended'] },",
+      testConfigBlock: `  { files: [${TEST_GLOB}], ...stage(jestPlugin.configs['flat/recommended']) },`,
     };
   }
   if (fw === 'vitest') {
@@ -46,7 +60,7 @@ function eslintTestBlock(fw) {
     const vitestGlobals = "{ suite: 'readonly', test: 'readonly', describe: 'readonly', it: 'readonly', expect: 'readonly', beforeAll: 'readonly', afterAll: 'readonly', beforeEach: 'readonly', afterEach: 'readonly', vi: 'readonly', expectTypeOf: 'readonly', assertType: 'readonly' }";
     return {
       testImport: "import vitestPlugin from 'eslint-plugin-vitest';",
-      testConfigBlock: `  { files: ['**/*.{test,spec}.{ts,tsx,js,jsx}'], languageOptions: { globals: ${vitestGlobals} }, plugins: { vitest: vitestPlugin }, rules: vitestPlugin.configs.recommended.rules },`,
+      testConfigBlock: `  { files: [${TEST_GLOB}], languageOptions: { globals: ${vitestGlobals} }, plugins: { vitest: vitestPlugin }, rules: staged(vitestPlugin.configs.recommended.rules) },`,
     };
   }
   return { testImport: '', testConfigBlock: '' };
@@ -56,6 +70,7 @@ export function planFallow(options, state) {
   if (!options.guardrails?.fallowRatchet) return [];
   const entry = state?.entry ?? 'src/index.ts';
   return [
+    ...scriptCollision(state, 'check:quality', 'node scripts/check-quality.mjs'),
     {
       type: 'writeFile',
       path: '.fallowrc.json',
@@ -83,9 +98,10 @@ export function planFallow(options, state) {
   ];
 }
 
-export function planLoc(options) {
+export function planLoc(options, state) {
   if (!options.guardrails?.locGuard) return [];
   return [
+    ...scriptCollision(state, 'check:loc', 'node scripts/check-loc.mjs'),
     { type: 'writeFile', path: 'scripts/check-loc.mjs', mode: 'overwrite-backup', content: renderTemplate(loadTemplate('check-loc.mjs.tmpl'), { locCap: String(options.locCap ?? 500) }) },
     { type: 'mergeJson', path: 'package.json', patch: { scripts: { 'check:loc': 'node scripts/check-loc.mjs' } } },
   ];
@@ -122,9 +138,12 @@ export function planTest(options, state) {
       { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'vitest run --passWithNoTests', 'test:coverage': 'vitest run --coverage --passWithNoTests' }, devDependencies: dep('vitest', '@vitest/coverage-istanbul', 'eslint-plugin-vitest', 'typescript') } },
     ];
   }
+  // ts-jest preset + its deps only for a TypeScript project — on a JS-only repo
+  // ts-jest with no tsconfig refuses to transform .js, so coverage never runs.
+  const tsJest = options.typescript !== false;
   return [
-    { type: 'writeFile', path: 'jest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('jest.config.mjs.tmpl'), { coverageThreshold, coverageGlobs }) },
-    { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'jest --passWithNoTests', 'test:coverage': 'jest --coverage --passWithNoTests' }, devDependencies: dep('jest', 'ts-jest', '@types/jest', 'eslint-plugin-jest', 'typescript') } },
+    { type: 'writeFile', path: 'jest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('jest.config.mjs.tmpl'), { coverageThreshold, coverageGlobs, presetLine: tsJest ? "  preset: 'ts-jest',\n" : '' }) },
+    { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'jest --passWithNoTests', 'test:coverage': 'jest --coverage --passWithNoTests' }, devDependencies: tsJest ? dep('jest', 'ts-jest', '@types/jest', 'eslint-plugin-jest', 'typescript') : dep('jest', 'eslint-plugin-jest') } },
   ];
 }
 
@@ -134,18 +153,27 @@ export function planEslint(options, state) {
   // framework so the test-lint guardrails actually run (setup.mjs resolves
   // options.testFramework before plan()).
   const { testImport, testConfigBlock } = eslintTestBlock(options.testFramework);
-  const content = renderTemplate(loadTemplate('eslint.config.mjs.tmpl'), { testImport, testConfigBlock });
-  const notices = [];
-  // Report (not silently no-op) the brownfield collisions: a kept `lint` script
-  // means the generated config never runs through CI/verify, and a stray
-  // `--max-warnings 0` there would invert the warn-staging policy.
-  const existingLint = state?.scripts?.lint;
-  if (existingLint && existingLint !== 'eslint .') {
-    notices.push(notice(`Existing "lint" script kept (\`${existingLint}\`) — the generated eslint.config.mjs won't run through it, and a "--max-warnings 0" there would block on staged warnings. Point lint at \`eslint .\`, or add a separate \`lint:quality\` script.`));
-  }
+  // Only a TypeScript project loads the typescript-eslint preset; on a JS-only
+  // repo it applies TS rules (e.g. no-require-imports) to .js and fails lint.
+  const ts = options.typescript !== false;
+  const content = renderTemplate(loadTemplate('eslint.config.mjs.tmpl'), {
+    testImport,
+    testConfigBlock,
+    tsImport: ts ? "import tseslint from 'typescript-eslint';\n" : '',
+    tsConfigs: ts ? '  ...tseslint.configs.recommended.map(stage),\n' : '',
+    tsRules: ts
+      ? "'@typescript-eslint/no-unused-vars': 'warn',\n      '@typescript-eslint/no-explicit-any': 'warn',\n      '@typescript-eslint/consistent-type-imports': 'warn',\n      "
+      : '',
+  });
+  const notices = [
+    ...scriptCollision(state, 'lint', 'eslint .'),
+  ];
   if (state?.legacyEslintrc) {
     notices.push(notice('Legacy .eslintrc* found alongside the new flat eslint.config.mjs — ESLint 9 reads only the flat config; remove the legacy file once migrated.'));
   }
+  const deps = ts
+    ? dep('eslint', 'typescript-eslint', '@eslint/js', 'eslint-plugin-simple-import-sort')
+    : dep('eslint', '@eslint/js', 'eslint-plugin-simple-import-sort');
   return [
     ...notices,
     { type: 'writeFile', path: 'eslint.config.mjs', mode: 'skip-if-exists', content },
@@ -154,7 +182,7 @@ export function planEslint(options, state) {
       path: 'package.json',
       patch: {
         scripts: { lint: 'eslint .', 'lint:fix': 'eslint . --fix' },
-        devDependencies: dep('eslint', 'typescript-eslint', '@eslint/js', 'eslint-plugin-simple-import-sort'),
+        devDependencies: deps,
       },
     },
   ];
@@ -185,7 +213,12 @@ export function planCi(options, state) {
   if (!pm) {
     return [notice(`CI is enabled but there's no built-in workflow profile for "${pmName}" — set up CI manually (npm/pnpm/yarn are generated automatically).`)];
   }
-  const notices = [];
+  // The generated CI does a strict install + dependency cache, both of which
+  // require a committed lockfile — which a fresh `apply` creates but does not
+  // commit. Tell the user, or day-one CI fails before any gate runs.
+  const notices = [
+    notice(`Commit your ${pmName} lockfile with the generated files — the CI runs \`${pm.install}\` + a dependency cache, which need a committed lockfile (a fresh apply creates one but doesn't commit it).`),
+  ];
   if (state?.ciWorkflow) {
     notices.push(notice('Existing .github/workflows/ci.yml kept — the quality gates were NOT added to it. Merge the generated steps in, or they won\'t run in CI.'));
   }
@@ -209,14 +242,8 @@ export function planInstall(options, state) {
 }
 
 export function planReport(options, state) {
-  const notices = [];
-  // mergeJson keeps an existing scalar, so a brownfield `report` script would
-  // win — `<pm> report` and the docs would run it, not scripts/quality-report.mjs.
-  if (state?.scripts?.report && state.scripts.report !== 'node scripts/quality-report.mjs') {
-    notices.push(notice(`Existing "report" script kept (\`${state.scripts.report}\`) — \`<pm> report\` and the generated docs run it, not the new scripts/quality-report.mjs. Rename one if you want the project-setup report.`));
-  }
   return [
-    ...notices,
+    ...scriptCollision(state, 'report', 'node scripts/quality-report.mjs'),
     { type: 'writeFile', path: 'scripts/quality-report.mjs', mode: 'overwrite-backup', content: loadTemplate('quality-report.mjs') },
     // The report shells out to fallow AND its action items point at quality:dead-code
     // / quality:dupes — install fallow and those scripts here (planReport always

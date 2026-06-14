@@ -36,6 +36,35 @@ test('planEslint turns no-undef off (JS sources false-fail without declared glob
   assert.match(cfg.content, /'no-undef': 'off'/);
 });
 
+test('planEslint stages EVERY preset error->warn (not just the named local rules)', () => {
+  const cfg = planEslint({ ...opts, testFramework: 'jest' }).find((a) => a.path === 'eslint.config.mjs');
+  assert.match(cfg.content, /const stage = \(config\)/); // the downgrade helper exists
+  assert.match(cfg.content, /tseslint\.configs\.recommended\.map\(stage\)/); // TS preset staged
+  assert.match(cfg.content, /stage\(js\.configs\.recommended\)/); // JS preset staged
+  assert.match(cfg.content, /\.\.\.stage\(jestPlugin\.configs\['flat\/recommended'\]\)/); // jest staged
+});
+
+test('planEslint(vitest) stages the recommended test rules to warn', () => {
+  const cfg = planEslint({ testFramework: 'vitest', guardrails: { eslintSeverityStaging: true } }).find((a) => a.path === 'eslint.config.mjs');
+  assert.match(cfg.content, /staged\(vitestPlugin\.configs\.recommended\.rules\)/);
+});
+
+test('planEslint(JS) omits the TypeScript preset + import + dep', () => {
+  const actions = planEslint({ typescript: false, testFramework: 'jest', guardrails: { eslintSeverityStaging: true } });
+  const cfg = actions.find((a) => a.path === 'eslint.config.mjs');
+  assert.doesNotMatch(cfg.content, /typescript-eslint/);
+  assert.doesNotMatch(cfg.content, /@typescript-eslint/);
+  const pkg = actions.find((a) => a.type === 'mergeJson');
+  assert.ok(!('typescript-eslint' in pkg.patch.devDependencies));
+  assert.ok('eslint' in pkg.patch.devDependencies);
+});
+
+test('planEslint lints .mts/.cts in both the source and test globs', () => {
+  const cfg = planEslint({ ...opts, testFramework: 'jest' }).find((a) => a.path === 'eslint.config.mjs');
+  assert.match(cfg.content, /ts,mts,cts,tsx,js,mjs,cjs,jsx/); // source glob
+  assert.match(cfg.content, /test,spec\}\.\{ts,mts,cts/); // test glob
+});
+
 test('planEslint reports a colliding lint script instead of silently keeping it', () => {
   const actions = planEslint(opts, { scripts: { lint: 'eslint src --max-warnings 0' } });
   assert.ok(actions.some((a) => a.type === 'notice' && /"lint" script kept/.test(a.message)));

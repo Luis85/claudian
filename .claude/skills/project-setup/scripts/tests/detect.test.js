@@ -124,3 +124,15 @@ test("detect does not flag the engine's own marked test config as hand-written",
     p.cleanup();
   }
 });
+
+test('detect treats a vite.config as a hand-written test config for Vitest, not Jest', () => {
+  const vitest = tmpProject({ 'package.json': { devDependencies: { vitest: '^2' } }, 'vite.config.ts': 'export default {};\n' });
+  const jest = tmpProject({ 'package.json': { devDependencies: { jest: '^30' } }, 'vite.config.ts': 'export default {};\n' });
+  try {
+    assert.equal(detect(vitest.dir).handwrittenTestConfig, true); // vitest reads vite.config
+    assert.equal(detect(jest.dir).handwrittenTestConfig, false); // jest ignores it
+  } finally {
+    vitest.cleanup();
+    jest.cleanup();
+  }
+});

@@ -1,9 +1,22 @@
 // scripts/tests/baseline.test.js
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { test } from 'node:test';
 
 import { initBaselines } from '../lib/baseline.mjs';
 import { tmpProject } from './helpers.js';
+
+test('initBaselines removes a stale coverage dir BEFORE the fallow baseline', () => {
+  // A leftover ./coverage would make fallow snapshot coverage-weighted CRAP.
+  const p = tmpProject({ 'package.json': { name: 'x' }, 'coverage/coverage-summary.json': '{}' });
+  try {
+    initBaselines(p.dir, { guardrails: { fallowRatchet: true } }, () => {});
+    assert.equal(existsSync(join(p.dir, 'coverage')), false);
+  } finally {
+    p.cleanup();
+  }
+});
 
 test('initBaselines updates fallow + LOC before coverage, only for enabled guardrails', () => {
   const p = tmpProject({ 'package.json': { name: 'x' } });
