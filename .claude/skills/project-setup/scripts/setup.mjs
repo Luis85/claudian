@@ -67,6 +67,7 @@ export async function cli(argv, io = {}) {
       const options = loadOptions(resolve(cwd, args.flags.config));
       const state = detect(cwd);
       options.testFramework = options.testFramework ?? state.testFramework ?? 'jest';
+      options.packageManager = options.packageManager ?? state.packageManager;
       const actions = plan(options, state);
       const dryRun = cmd === 'plan' || args.flags.dryRun === true;
       const backupDir = args.flags.backupDir ? resolve(cwd, args.flags.backupDir) : undefined;

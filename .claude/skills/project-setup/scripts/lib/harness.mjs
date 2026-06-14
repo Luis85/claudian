@@ -79,7 +79,7 @@ export function planFallow(options, state) {
 export function planLoc(options) {
   if (!options.guardrails?.locGuard) return [];
   return [
-    { type: 'writeFile', path: 'scripts/check-loc.mjs', mode: 'overwrite-backup', content: loadTemplate('check-loc.mjs') },
+    { type: 'writeFile', path: 'scripts/check-loc.mjs', mode: 'overwrite-backup', content: renderTemplate(loadTemplate('check-loc.mjs.tmpl'), { locCap: String(options.locCap ?? 500) }) },
     { type: 'mergeJson', path: 'package.json', patch: { scripts: { 'check:loc': 'node scripts/check-loc.mjs' } } },
   ];
 }

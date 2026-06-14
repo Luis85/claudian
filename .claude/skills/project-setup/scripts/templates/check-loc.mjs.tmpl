@@ -7,7 +7,7 @@ import { join, relative, sep } from 'node:path';
 
 const ROOT = process.cwd();
 const BASELINE = join(ROOT, 'scripts', 'loc-baseline.json');
-const MAX_LOC = 500;
+const MAX_LOC = {{locCap}};
 const SRC = join(ROOT, 'src');
 const EXT = /\.(ts|tsx|js|jsx|mjs)$/;
 const update = process.argv.includes('--update');

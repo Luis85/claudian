@@ -11,6 +11,12 @@ test('planLoc copies check-loc.mjs and adds the check:loc script', () => {
   assert.equal(pkg.patch.scripts['check:loc'], 'node scripts/check-loc.mjs');
 });
 
+test('planLoc renders the locCap into MAX_LOC', () => {
+  const actions = planLoc({ guardrails: { locGuard: true }, locCap: 300 });
+  const file = actions.find((a) => a.path === 'scripts/check-loc.mjs');
+  assert.match(file.content, /MAX_LOC = 300/);
+});
+
 test('planTest(jest) renders jest config + jest deps + test scripts', () => {
   const actions = planTest({ testFramework: 'jest', guardrails: { coverageFloors: true } });
   const cfg = actions.find((a) => a.path === 'jest.config.mjs');

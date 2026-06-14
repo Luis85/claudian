@@ -3,6 +3,19 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+const ENTRY_CANDIDATES = [
+  'src/index.ts', 'src/index.tsx', 'src/main.ts', 'src/main.tsx',
+  'src/app.ts', 'src/index.js', 'src/main.js', 'index.ts', 'index.js',
+];
+
+export function detectEntry(cwd) {
+  // A bundler `source` field wins; else the first existing common source entry; else the fallback.
+  const src = readJsonSafe(join(cwd, 'package.json'))?.source;
+  if (typeof src === 'string' && existsSync(join(cwd, src))) return src;
+  for (const c of ENTRY_CANDIDATES) if (existsSync(join(cwd, c))) return c;
+  return 'src/index.ts';
+}
+
 const PM_LOCKFILES = [
   ['pnpm-lock.yaml', 'pnpm'],
   ['yarn.lock', 'yarn'],
@@ -67,6 +80,7 @@ export function detect(cwd) {
     testFramework: has('vitest') ? 'vitest' : has('jest') ? 'jest' : null,
     git: existsSync(join(cwd, '.git')),
     github: detectGithubRemote(cwd),
+    entry: detectEntry(cwd),
     docs: {
       context: existsSync(join(cwd, 'CONTEXT.md')),
       dir: existsSync(join(cwd, 'docs')),

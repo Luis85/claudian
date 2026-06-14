@@ -17,10 +17,10 @@ export function apply(actions, opts = {}) {
 
   for (const action of actions) {
     if (action.type === 'installDeps') {
-      // Install only when package.json was (re)written this run; otherwise the
-      // deps are already present. NEVER push to `changed`: install is an effect,
-      // not a tracked file mutation, so a converged re-apply stays a no-op and
-      // the Task 8 baseline hook does not re-run.
+      // Always include in the plan so dry-run/plan previews the install side effect.
+      // NEVER push to `changed`: install is an effect, not a tracked file mutation,
+      // so a converged re-apply stays a no-op and the baseline hook does not re-run.
+      planned.push('(install)');
       if (!dryRun && changed.includes('package.json')) exec(action.packageManager, ['install'], { cwd });
       continue;
     }

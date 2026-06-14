@@ -15,6 +15,7 @@ test('installDeps runs the package manager when package.json changed, and is not
       { type: 'installDeps', packageManager: 'pnpm' },
     ], { cwd: p.dir, exec });
     assert.deepEqual(calls, [{ cmd: 'pnpm', args: ['install'], cwd: p.dir }]);
+    assert.ok(res.planned.includes('(install)')); // install is previewed in the plan
     assert.ok(!res.changed.includes('(install)')); // install is an effect, not a tracked change
   } finally {
     p.cleanup();
@@ -35,12 +36,13 @@ test('installDeps is skipped when package.json did not change (idempotent re-app
   }
 });
 
-test('installDeps is skipped in dry-run', () => {
+test('installDeps is skipped in dry-run but still appears in planned', () => {
   const p = tmpProject({ 'package.json': { name: 'x' } });
   const calls = [];
   try {
-    apply([{ type: 'installDeps', packageManager: 'npm' }], { cwd: p.dir, dryRun: true, exec: (...a) => calls.push(a) });
+    const res = apply([{ type: 'installDeps', packageManager: 'npm' }], { cwd: p.dir, dryRun: true, exec: (...a) => calls.push(a) });
     assert.equal(calls.length, 0);
+    assert.ok(res.planned.includes('(install)'));
   } finally {
     p.cleanup();
   }

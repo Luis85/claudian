@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { detect, detectGithubRemote, detectPackageManager } from '../lib/detect.mjs';
+import { detect, detectEntry, detectGithubRemote, detectPackageManager } from '../lib/detect.mjs';
 import { tmpProject } from './helpers.js';
 
 test('detectPackageManager reads the lockfile, defaults to npm', () => {
@@ -60,5 +60,17 @@ test('detectGithubRemote is true only when a github remote exists', () => {
   } finally {
     gh.cleanup();
     gl.cleanup();
+  }
+});
+
+test('detectEntry returns src/main.ts when it exists, falling back to src/index.ts', () => {
+  const withMain = tmpProject({ 'src/main.ts': '' });
+  const empty = tmpProject({});
+  try {
+    assert.equal(detectEntry(withMain.dir), 'src/main.ts');
+    assert.equal(detectEntry(empty.dir), 'src/index.ts');
+  } finally {
+    withMain.cleanup();
+    empty.cleanup();
   }
 });

@@ -323,6 +323,8 @@ Expected: FAIL — module not found.
 // scripts/lib/verify.mjs
 import { execFileSync } from 'node:child_process';
 
+import { runScriptArgs } from './packageManager.mjs';
+
 const defaultExec = (cmd, args, opts) => execFileSync(cmd, args, { stdio: 'inherit', ...opts });
 
 // Map each guardrail to the npm script that gates it.
@@ -339,7 +341,8 @@ export function runGates(cwd, options, exec = defaultExec) {
   for (const [flag, script] of GATES) {
     if (!g[flag]) continue;
     try {
-      exec('npm', ['run', script], { cwd });
+      const [cmd, cargs] = runScriptArgs(options.packageManager ?? 'npm', script);
+      exec(cmd, cargs, { cwd });
     } catch {
       failed.push(script);
     }
