@@ -45,6 +45,37 @@ function eslintTestBlock(fw) {
   return { testImport: '', testConfigBlock: '' };
 }
 
+export function planFallow(options, state) {
+  if (!options.guardrails?.fallowRatchet) return [];
+  const entry = state?.entry ?? 'src/index.ts';
+  return [
+    {
+      type: 'writeFile',
+      path: '.fallowrc.json',
+      mode: 'skip-if-exists',
+      content: renderTemplate(loadTemplate('fallowrc.json.tmpl'), { entry }),
+    },
+    {
+      type: 'writeFile',
+      path: 'scripts/check-quality.mjs',
+      mode: 'overwrite-backup',
+      content: loadTemplate('check-quality.mjs'),
+    },
+    {
+      type: 'mergeJson',
+      path: 'package.json',
+      patch: {
+        scripts: {
+          quality: 'fallow',
+          'quality:audit': 'fallow audit',
+          'check:quality': 'node scripts/check-quality.mjs',
+        },
+        devDependencies: dep('fallow'),
+      },
+    },
+  ];
+}
+
 export function planEslint(options) {
   if (!options.guardrails?.eslintSeverityStaging) return [];
   // Render the test-lint plugin import + config from the (resolved) test

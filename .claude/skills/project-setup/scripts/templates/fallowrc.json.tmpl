@@ -1,0 +1,7 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": ["{{entry}}"],
+  "ignorePatterns": ["**/docs/**", "**/coverage/**", "**/dist/**", "**/.fallow/**"],
+  "duplicates": { "minOccurrences": 2, "ignore": ["**/tests/**", "**/*.test.*"] },
+  "rules": { "unused-dependencies": "warn" }
+}
