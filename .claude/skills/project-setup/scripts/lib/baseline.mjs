@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { applyCoverageFloor, isCoverageBaselined } from './coverage.mjs';
+import { applyCoverageFloor, isCoverageBaselined, markCoverageBaselined } from './coverage.mjs';
 import { runScriptArgs } from './packageManager.mjs';
 
 const defaultExec = (cmd, args, opts) => execFileSync(cmd, args, { stdio: 'inherit', ...opts });
@@ -36,7 +36,7 @@ export function initBaselines(cwd, options, exec = defaultExec) {
   if (g.locGuard && !existsSync(join(cwd, 'scripts', 'loc-baseline.json'))) {
     runRatchet('scripts/check-loc.mjs', '--update');
   }
-  if (g.coverageFloors && !isCoverageBaselined(cwd, options.testFramework ?? 'jest')) {
+  if (g.coverageFloors && !isCoverageBaselined(cwd)) {
     // Delete any pre-existing coverage dir so the ratchet snapshots static-estimated
     // CRAP (matching CI, which has no coverage artifact).
     rmSync(join(cwd, 'coverage'), { recursive: true, force: true });
@@ -47,5 +47,7 @@ export function initBaselines(cwd, options, exec = defaultExec) {
     // Leave the tree coverage-absent (the state CI uses) so the immediate local
     // check:quality can't disagree with the static_estimated baseline.
     rmSync(join(cwd, 'coverage'), { recursive: true, force: true });
+    // Mark baselined (a 0% floor counts) so a later apply doesn't re-measure/raise it.
+    markCoverageBaselined(cwd);
   }
 }

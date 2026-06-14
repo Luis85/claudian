@@ -4,8 +4,19 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
-import { applyCoverageFloor, floorThresholds } from '../lib/coverage.mjs';
+import { applyCoverageFloor, floorThresholds, isCoverageBaselined, markCoverageBaselined } from '../lib/coverage.mjs';
 import { tmpProject } from './helpers.js';
+
+test('isCoverageBaselined tracks a marker file, so a 0% floor still counts as baselined', () => {
+  const p = tmpProject({});
+  try {
+    assert.equal(isCoverageBaselined(p.dir), false);
+    markCoverageBaselined(p.dir);
+    assert.equal(isCoverageBaselined(p.dir), true);
+  } finally {
+    p.cleanup();
+  }
+});
 
 test('floorThresholds floors each istanbul total pct', () => {
   const summary = { total: { statements: { pct: 84.7 }, branches: { pct: 60.2 }, functions: { pct: 90 }, lines: { pct: 84.9 } } };

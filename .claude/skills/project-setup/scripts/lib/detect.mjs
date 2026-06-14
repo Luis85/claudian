@@ -108,8 +108,11 @@ export function detectGithubRemote(cwd) {
 }
 
 export function detectDefaultBranch(cwd) {
-  // The remote's default branch, so generated CI targets the real trunk instead
-  // of a hardcoded `main`. Falls back to the current branch, then `main`.
+  // The remote's default branch, so generated CI targets the real trunk instead of
+  // a hardcoded `main`. Do NOT fall back to the current branch: running setup from a
+  // feature branch would otherwise filter CI to that branch and skip PRs to the real
+  // trunk. Default to `main` when origin/HEAD is unknown (the pull_request CI trigger
+  // is unfiltered, so PRs still run).
   try {
     const ref = execFileSync('git', ['rev-parse', '--abbrev-ref', 'origin/HEAD'], {
       cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
@@ -117,15 +120,6 @@ export function detectDefaultBranch(cwd) {
     if (ref && ref !== 'origin/HEAD') return ref.replace(/^origin\//, '');
   } catch {
     // no remote HEAD ref — fall through
-  }
-  try {
-    // symbolic-ref (not rev-parse) so it resolves on an unborn branch too.
-    const cur = execFileSync('git', ['symbolic-ref', '--short', 'HEAD'], {
-      cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim();
-    if (cur) return cur;
-  } catch {
-    // detached HEAD or not a git repo — fall through
   }
   return 'main';
 }

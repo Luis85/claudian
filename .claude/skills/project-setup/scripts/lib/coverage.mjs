@@ -1,6 +1,6 @@
 // scripts/lib/coverage.mjs
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 import { MARKER } from './marker.mjs';
 
@@ -11,17 +11,20 @@ const ANCHOR = {
   jest: /coverageThreshold:\s*\{\s*global:\s*\{[^}]*\}\s*\}/,
   vitest: /thresholds:\s*\{[^}]*\}/,
 };
+const BASELINE_MARK = join('.project-setup-backup', '.coverage-baselined');
 
-// True once the floor has been set (a non-zero threshold), or the config is the
-// user's own. A later apply must NOT re-measure coverage and silently lower the
-// threshold to a regressed value.
-export function isCoverageBaselined(cwd, framework) {
-  const configPath = join(cwd, CONFIG[framework]);
-  if (!existsSync(configPath)) return false; // no config yet -> not baselined
-  const content = readFileSync(configPath, 'utf8');
-  if (!content.includes(MARKER)) return true; // user-owned config -> not ours to floor
-  const m = content.match(ANCHOR[framework]);
-  return m ? /[1-9]/.test(m[0]) : false; // any non-zero threshold digit => floored
+// True once the coverage floor has been baselined. A marker FILE (not the config
+// value) tracks this so a legitimately-0% floor is distinguished from the initial
+// {0,0,0,0} placeholder — otherwise a converged re-apply would re-measure and could
+// silently raise the floor.
+export function isCoverageBaselined(cwd) {
+  return existsSync(join(cwd, BASELINE_MARK));
+}
+
+export function markCoverageBaselined(cwd) {
+  const p = join(cwd, BASELINE_MARK);
+  mkdirSync(dirname(p), { recursive: true });
+  writeFileSync(p, '');
 }
 
 export function floorThresholds(summary) {

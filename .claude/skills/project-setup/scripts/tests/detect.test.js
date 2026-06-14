@@ -6,16 +6,16 @@ import { test } from 'node:test';
 import { detect, detectDefaultBranch, detectEntry, detectGithubRemote, detectPackageManager } from '../lib/detect.mjs';
 import { tmpProject } from './helpers.js';
 
-test('detectDefaultBranch reads the repo branch, falling back to main outside a repo', () => {
+test('detectDefaultBranch returns the remote default, else main (never the current feature branch)', () => {
   const none = tmpProject({});
-  const repo = tmpProject({});
+  const feature = tmpProject({});
   try {
-    assert.equal(detectDefaultBranch(none.dir), 'main'); // no git -> fallback
-    execFileSync('git', ['init', '-b', 'develop'], { cwd: repo.dir, stdio: 'ignore' });
-    assert.equal(detectDefaultBranch(repo.dir), 'develop');
+    assert.equal(detectDefaultBranch(none.dir), 'main'); // no git
+    execFileSync('git', ['init', '-b', 'feature/x'], { cwd: feature.dir, stdio: 'ignore' });
+    assert.equal(detectDefaultBranch(feature.dir), 'main'); // no origin/HEAD -> NOT the feature branch
   } finally {
     none.cleanup();
-    repo.cleanup();
+    feature.cleanup();
   }
 });
 

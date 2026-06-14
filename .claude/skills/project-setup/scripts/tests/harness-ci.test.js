@@ -70,8 +70,10 @@ test('planCi targets the detected default branch, not a hardcoded main', () => {
     { github: { integrate: true }, guardrails: { ci: true, fallowRatchet: true } },
     { packageManager: 'npm', defaultBranch: 'develop' },
   ).find((a) => a.path === '.github/workflows/ci.yml');
-  assert.match(wf.content, /branches: \[develop\]/);
+  assert.match(wf.content, /branches: \[develop\]/); // push targets the detected trunk
   assert.doesNotMatch(wf.content, /\[main\]/);
+  // pull_request is unfiltered so PRs to the real trunk run even if detection is off.
+  assert.doesNotMatch(wf.content, /pull_request:\s*\n\s*branches:/);
 });
 
 test('planCi reminds the user to commit the lockfile as an INFO next step (not a collision)', () => {
