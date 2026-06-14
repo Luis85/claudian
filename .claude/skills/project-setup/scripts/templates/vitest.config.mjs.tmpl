@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     coverage: {
       provider: 'istanbul', // istanbul so fallow's CRAP can read ./coverage
+      reporter: ['json-summary', 'text'], // json-summary writes coverage/coverage-summary.json
       include: ['{{coverageGlobs}}'],
       thresholds: {{coverageThreshold}},
     },

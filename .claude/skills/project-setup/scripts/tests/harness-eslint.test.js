@@ -31,6 +31,11 @@ test('planEslint stages the opinionated rules at warn (green day-one on brownfie
   assert.doesNotMatch(cfg.content, /: 'error'/); // nothing ships at error
 });
 
+test('planEslint turns no-undef off (JS sources false-fail without declared globals)', () => {
+  const cfg = planEslint(opts).find((a) => a.path === 'eslint.config.mjs');
+  assert.match(cfg.content, /'no-undef': 'off'/);
+});
+
 test('planEslint reports a colliding lint script instead of silently keeping it', () => {
   const actions = planEslint(opts, { scripts: { lint: 'eslint src --max-warnings 0' } });
   assert.ok(actions.some((a) => a.type === 'notice' && /"lint" script kept/.test(a.message)));

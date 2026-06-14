@@ -44,6 +44,13 @@ test('planTest(jest, typescript: false) uses js/jsx/mjs coverage globs', () => {
   assert.doesNotMatch(cfg.content, /ts,tsx/);
 });
 
+test('planTest requests the json-summary reporter the floor/report depend on', () => {
+  const jestCfg = planTest({ testFramework: 'jest', guardrails: { coverageFloors: true } }).find((a) => a.path === 'jest.config.mjs');
+  assert.match(jestCfg.content, /json-summary/);
+  const vitestCfg = planTest({ testFramework: 'vitest', guardrails: { coverageFloors: true } }).find((a) => a.path === 'vitest.config.mjs');
+  assert.match(vitestCfg.content, /json-summary/);
+});
+
 test('planTest falls back to the DETECTED framework when no explicit answer', () => {
   // options.testFramework null (user accepted the default) + detected vitest.
   const actions = planTest({ testFramework: null, guardrails: {} }, { testFramework: 'vitest' });

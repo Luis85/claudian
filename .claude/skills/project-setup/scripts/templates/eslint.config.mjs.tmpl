@@ -16,6 +16,10 @@ export default [
     files: ['**/*.{ts,tsx,js,jsx,mjs}'],
     plugins: { 'simple-import-sort': simpleImportSort },
     rules: {
+      // Off: without env/globals detection it false-fails on standard
+      // Node/browser globals in JS sources (TS uses the compiler instead) — a
+      // day-one lint failure the staged-warning policy is meant to avoid.
+      'no-undef': 'off',
       'no-console': 'warn',
       // The recommended presets set these to error; stage them so a brownfield
       // repo's existing unused vars don't block day one.
