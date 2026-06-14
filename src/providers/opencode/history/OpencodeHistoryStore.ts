@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process';
 import * as fs from 'node:fs';
 
 import type { HistoryLoadError } from '../../../core/providers/types';
@@ -6,6 +5,13 @@ import type { ChatMessage, ContentBlock } from '../../../core/types';
 import { extractUserQuery } from '../../../utils/context';
 import { resolveExistingOpencodeDatabasePath } from '../runtime/OpencodePaths';
 import type { OpencodeProviderState } from '../types';
+import {
+  escapeSqlLiteral,
+  isSqliteTransportAvailable,
+  loadSqliteModule,
+  runSqlite3JsonQuery,
+  type SqliteModule,
+} from './opencodeSqlite';
 import {
   getBoolean,
   getNestedNumber,
@@ -24,15 +30,6 @@ interface StoredMessage {
 interface OpencodeHydrationDiagnosticContext {
   databasePath?: string;
   sessionId?: string;
-}
-
-interface SqliteModule {
-  DatabaseSync: new (location: string, options?: Record<string, unknown>) => {
-    close(): void;
-    prepare(sql: string): {
-      all(...params: unknown[]): StoredRow[];
-    };
-  };
 }
 
 export const OPENCODE_MESSAGE_ROW_SQL = buildOpencodeMessageRowsSql('?');
@@ -401,25 +398,6 @@ function parseJsonObject(value: unknown): StoredRow | null {
   }
 }
 
-async function loadSqliteModule(): Promise<SqliteModule | null> {
-  try {
-    return await import('node:sqlite');
-  } catch {
-    return null;
-  }
-}
-
-async function isSqliteTransportAvailable(): Promise<boolean> {
-  const sqliteModule = await loadSqliteModule();
-  if (sqliteModule) return true;
-  return isSqlite3CliAvailable();
-}
-
-function isSqlite3CliAvailable(): boolean {
-  const probe = spawnSync('sqlite3', ['-version'], { encoding: 'utf8' });
-  return !probe.error && probe.status === 0;
-}
-
 interface StoredSessionRows {
   messageRows: StoredRow[];
   partRows: StoredRow[];
@@ -478,36 +456,6 @@ function loadSessionRowsWithSqliteCli(
   }
 
   return { messageRows, partRows };
-}
-
-function runSqlite3JsonQuery(
-  databasePath: string,
-  sql: string,
-): StoredRow[] | null {
-  const result = spawnSync(
-    'sqlite3',
-    ['-json', databasePath, sql],
-    {
-      encoding: 'utf8',
-    },
-  );
-
-  if (result.error || result.status !== 0) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(result.stdout || '[]') as unknown;
-    return Array.isArray(parsed)
-      ? parsed.filter((row): row is StoredRow => isPlainObject(row))
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function escapeSqlLiteral(value: string): string {
-  return value.replaceAll('\'', '\'\'');
 }
 
 function buildOpencodeMessageRowsSql(sessionIdExpression: string): string {

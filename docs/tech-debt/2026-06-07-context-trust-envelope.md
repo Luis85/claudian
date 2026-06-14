@@ -2,7 +2,7 @@
 type: tech-debt
 title: "Context has no pre-send trust envelope or citation handle"
 date: 2026-06-07
-updated: 2026-06-10
+updated: 2026-06-14
 status: in-progress
 priority: "1 - high"
 severity: high
@@ -120,3 +120,36 @@ the preview/citations consume it later. Domain terms **Context source** /
   invariant test that untrusted sources come out wrapped in both styles, and the
   existing encoder suites stay green as the safety net (the interface is the
   test surface).
+
+## Progress (2026-06-14): envelope seam shipped (v1 deepening)
+
+The deepening landed exactly as settled above. `src/core/context/contextEnvelope.ts`
+now owns the gather/trust/estimate/handle step, and the four turn encoders render
+it instead of re-implementing the gather:
+
+- **`buildContextEnvelope(request)`** returns a `ContextSource[]` (discriminated
+  union: `vault-note` / `editor-selection` / `browser-selection` /
+  `canvas-selection`), each tagged with `trust`, a `tokenEstimate` (chars/4) and a
+  stable `citationHandle` (`ctx:note:…`, `ctx:editor:<path>:<range>`,
+  `ctx:browser:<url|source>`, `ctx:canvas:<path>`). Browser sources are tagged
+  `untrusted-external` here, but the body is left raw — assignment only.
+- **`renderContextEnvelopeXml`** (Claude + Opencode) maps each source through the
+  `utils/{context,editor,browser,canvas}` `format*` helpers and drops empties;
+  callers join `[text, ...blocks]` with `\n\n`, byte-identical to the old
+  `append*` chain. **`renderContextEnvelopeSectioned`** (Codex + Cursor) emits the
+  bracketed editor/browser/canvas sections; the untrusted browser body is wrapped
+  here (no XML escaping in this style). The current-note hint stays each provider's
+  `buildContextHints` callback (Codex terse / Cursor verbose), outside the shared
+  renderer — folding it in would regress one of the two.
+- The now-dead `append{CurrentNote,EditorContext,BrowserContext,CanvasContext}`
+  wrappers were removed (their only callers were the migrated encoders);
+  `appendContextFiles` stays (inline-edit). The `format*` helpers stay (the
+  renderer + `utils/session` consume them).
+- Coverage: `tests/unit/core/context/contextEnvelope.test.ts` (builder trust/field/
+  estimate/handle + no-wrap, per-style byte-parity, the cross-style untrusted-wrap
+  invariant); the four encoder suites stayed green as the behaviour-preservation
+  net. Quality ratchet unchanged (metric-flat deepening).
+
+Still open (deferred follow-ups, unchanged acceptance criteria): the pre-send
+preview drawer, output citations, the `inlineEdit` migration, and new source types
+(file / folder / image / MCP resource).

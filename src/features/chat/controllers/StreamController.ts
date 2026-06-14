@@ -545,7 +545,7 @@ export class StreamController {
     const { toolCall, parentEl } = pending;
     if (!parentEl) return;
     if (isWriteEditTool(toolCall.name)) {
-      const writeEditState = createWriteEditBlock(this.deps.plugin.app, parentEl, toolCall);
+      const writeEditState = createWriteEditBlock(this.deps.plugin.app, parentEl, toolCall, { initiallyExpanded: this.deps.plugin.settings.expandFileEditsByDefault === true });
       state.writeEditStates.set(toolId, writeEditState);
       state.toolCallElements.set(toolId, writeEditState.wrapperEl);
     } else {

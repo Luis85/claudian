@@ -1,4 +1,4 @@
-import { wrapUntrustedExternalData } from '../context/untrustedContent';
+import { buildContextEnvelope, renderContextEnvelopeSectioned } from '../context/contextEnvelope';
 import type { ChatTurnRequest, PreparedChatTurn } from '../runtime/types';
 
 function isCompactCommand(text: string): boolean {
@@ -26,33 +26,11 @@ export function encodeSectionedTurn(
     };
   }
 
-  const sections: string[] = [request.text, ...buildContextHints(request)];
-
-  if (request.editorSelection?.selectedText) {
-    sections.push(
-      `\n[Editor selection from ${request.editorSelection.notePath || 'current note'}:\n${request.editorSelection.selectedText}\n]`,
-    );
-  }
-
-  if (request.browserSelection?.selectedText) {
-    // Web content crosses the trust boundary: demarcate it so the model
-    // treats it as quoted data, mirroring the XML providers' envelope.
-    const wrapped = wrapUntrustedExternalData(
-      request.browserSelection.selectedText,
-    );
-    sections.push(
-      `\n[Browser selection from ${request.browserSelection.url ?? 'unknown page'}:\n${wrapped}\n]`,
-    );
-  }
-
-  if (request.canvasSelection) {
-    const nodeList = request.canvasSelection.nodeIds.join(', ');
-    if (nodeList) {
-      sections.push(
-        `\n[Canvas selection from ${request.canvasSelection.canvasPath}:\n${nodeList}\n]`,
-      );
-    }
-  }
+  const sections: string[] = [
+    request.text,
+    ...buildContextHints(request),
+    ...renderContextEnvelopeSectioned(buildContextEnvelope(request)),
+  ];
 
   return {
     request,

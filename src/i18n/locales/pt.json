@@ -475,6 +475,10 @@
       "name": "Ocultar respostas incompletas durante o streaming",
       "desc": "Mostrar um espaço reservado \"Writing response...\" enquanto uma resposta é transmitida e renderizar cada bloco de texto de uma vez quando terminar — evita mostrar Markdown ou XML pela metade."
     },
+    "expandFileEditsByDefault": {
+      "name": "Expandir edições de arquivo por padrão",
+      "desc": "Mostrar os diffs de Write e Edit expandidos quando aparecerem pela primeira vez."
+    },
     "chatViewPlacement": {
       "name": "Abrir Claudian em",
       "desc": "Escolha onde o painel de chat abre quando é criado",

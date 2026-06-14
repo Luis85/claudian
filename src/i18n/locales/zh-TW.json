@@ -475,6 +475,10 @@
       "name": "串流傳輸時隱藏未完成的回應",
       "desc": "回應串流傳輸時顯示「Writing response...」佔位符，並在每個文字區塊完成後一次性渲染，避免顯示尚未成形的 Markdown 或 XML。"
     },
+    "expandFileEditsByDefault": {
+      "name": "預設展開檔案編輯",
+      "desc": "Write 和 Edit diff 首次出現時以展開狀態顯示。"
+    },
     "chatViewPlacement": {
       "name": "Claudian 開啟位置",
       "desc": "選擇新建聊天面板時的開啟位置",

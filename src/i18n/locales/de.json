@@ -475,6 +475,10 @@
       "name": "Unvollständige Antworten während des Streamings ausblenden",
       "desc": "Während eine Antwort gestreamt wird, einen Platzhalter „Writing response...“ anzeigen und jeden Textblock erst beim Abschluss in einem Durchgang rendern – verhindert halbfertiges Markdown oder XML."
     },
+    "expandFileEditsByDefault": {
+      "name": "Dateibearbeitungen standardmäßig ausklappen",
+      "desc": "Write- und Edit-Diffs beim ersten Erscheinen ausgeklappt anzeigen."
+    },
     "chatViewPlacement": {
       "name": "Claudian öffnen in",
       "desc": "Wählen Sie, wo das Chat-Panel beim Erstellen geöffnet wird",

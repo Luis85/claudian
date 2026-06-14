@@ -1,5 +1,4 @@
 import {
-  appendBrowserContext,
   type BrowserSelectionContext,
   formatBrowserContext,
 } from '../../../src/utils/browser';
@@ -62,29 +61,5 @@ describe('formatBrowserContext', () => {
     };
 
     expect(formatBrowserContext(context)).toBe('');
-  });
-});
-
-describe('appendBrowserContext', () => {
-  it('appends browser selection context to prompt', () => {
-    const context: BrowserSelectionContext = {
-      source: 'surfing-view',
-      selectedText: 'selected text',
-    };
-
-    expect(appendBrowserContext('Summarize this', context)).toBe(
-      'Summarize this\n\n<browser_selection source="surfing-view" trust="untrusted-external">\n' +
-        '<untrusted_external_data>\nselected text\n</untrusted_external_data>\n' +
-        '</browser_selection>'
-    );
-  });
-
-  it('returns original prompt when context is empty', () => {
-    const context: BrowserSelectionContext = {
-      source: 'surfing-view',
-      selectedText: '',
-    };
-
-    expect(appendBrowserContext('Prompt', context)).toBe('Prompt');
   });
 });
