@@ -107,7 +107,9 @@ the preview/citations consume it later. Domain terms **Context source** /
   sources, byte-parity. Deferred to follow-ups: `inlineEdit` migration, the
   pre-send preview drawer, output citations, and new source types (file /
   folder / image / MCP resource). Those are the remaining acceptance criteria.
-- **Tests:** `buildContextEnvelope` (per source → trust/fields/estimate/handle;
-  browser wrapped; empty/compact), per-style render byte-parity, and the
+- **Tests:** `buildContextEnvelope` (per source → trust *assignment* / fields /
+  estimate / handle; browser → `untrusted-external`; empty/compact — no wrapping
+  here), per-style render byte-parity, the single `renderContextEnvelope`
+  invariant test that untrusted sources come out wrapped in both styles, and the
   existing encoder suites stay green as the safety net (the interface is the
   test surface).
