@@ -76,6 +76,38 @@ substrate the roadmap names (`untrustedContent.ts`):
 
 Still open: the pre-send context preview (needs the full
 `ContextSourceHandle`/`ContextEnvelope` model with token estimates), citation
-handles, and item-level unit coverage for the remaining source types. Build
-the envelope model when the preview drawer is designed, so the types ship
-with a real consumer.
+handles, and item-level unit coverage for the remaining source types.
+
+## Settled design (2026-06-14, architecture grilling)
+
+Revises the line above ("build the envelope model when the preview drawer is
+designed"): the **four turn encoders are themselves the real consumer**, so the
+envelope ships now as their shared seam (a behaviour-preserving deepening), and
+the preview/citations consume it later. Domain terms **Context source** /
+**Context envelope** added to `CONTEXT.md`.
+
+- **`buildContextEnvelope(request: ChatTurnRequest): ContextEnvelope`** in
+  `core/context/` — gathers the four request sources (current note, editor
+  selection, browser selection, canvas selection) into a normalized
+  `ContextSource[]`. Each source: `sourceType` (discriminant), `trust:
+  ContextTrust`, the raw selection context it carries, a `tokenEstimate`
+  (chars/4 for v1) and a stable `citationHandle` (e.g. `ctx:editor:<path>:<range>`).
+- **`renderContextEnvelope(envelope, style: 'xml' | 'sectioned'): string`** —
+  the XML style reuses the existing `utils/{context,editor,browser,canvas}`
+  `format*` helpers; the sectioned style reuses `core/prompt/sectionedTurn`'s
+  bracket format. Renderers are byte-identical to today, so the four encoders
+  (`ClaudeTurnEncoder`, `buildOpencodePrompt`, `sectionedTurn`,
+  later `inlineEdit`) collapse onto build+render.
+- **Trust:** `buildContextEnvelope` owns trust *assignment* (browser →
+  `untrusted-external`). Byte-parity needs style-specific escaping of untrusted
+  bodies (XML escapes, sectioned doesn't), so the `wrapUntrustedExternalData`
+  call stays inside the renderers; a single test over `renderContextEnvelope`
+  enforces the "untrusted is always wrapped" invariant across both styles.
+- **v1 scope:** the deepening only — model + seam + migrate the four chat-turn
+  sources, byte-parity. Deferred to follow-ups: `inlineEdit` migration, the
+  pre-send preview drawer, output citations, and new source types (file /
+  folder / image / MCP resource). Those are the remaining acceptance criteria.
+- **Tests:** `buildContextEnvelope` (per source → trust/fields/estimate/handle;
+  browser wrapped; empty/compact), per-style render byte-parity, and the
+  existing encoder suites stay green as the safety net (the interface is the
+  test surface).

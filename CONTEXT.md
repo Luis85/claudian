@@ -48,6 +48,14 @@ _Avoid_: helper, manager (when unqualified)
 The narrow seam between run coordination and the **Runtime** that decides *where* a run is observed. MVP ships `ChatTabExecutionSurface` (visible sidepanel); `HeadlessExecutionSurface` is a later adapter.
 _Avoid_: runner, executor, backend
 
+**Context source**:
+A single normalized, trust-tagged unit of context attached to a turn — a vault note, an editor selection, a browser selection, or a canvas selection (later: external file, image, MCP resource). Carries its `ContextTrust` provenance, location, token estimate, and a stable citation handle.
+_Avoid_: attachment, context block, snippet
+
+**Context envelope**:
+The assembled, provider-neutral set of **Context sources** sent with one turn, produced once by `buildContextEnvelope` before a **Provider adaptor** renders it to its wire format. The single seam that owns what context is gathered and its trust level (and, later, the pre-send preview and output citations).
+_Avoid_: context bundle, prompt context, payload
+
 ## Agent Board language
 
 These terms are defined by the Agent Board work (see [[docs/issues/agent-board-mvp.md]] and [[docs/ideas/agent-board-symphony.md]]). They are scoped to the `features/tasks` module.
@@ -85,6 +93,7 @@ _Avoid_: ticket, work order (a **Work order** is an Agent Board execution artifa
 - A **Conversation** belongs to exactly one **Provider** (via `providerId`) and holds opaque `providerState`.
 - A **Provider** is implemented by one **Provider adaptor** and creates **Runtimes** plus **Workspace services** via `ProviderRegistry` / `ProviderWorkspaceRegistry`.
 - A **Runtime** produces a **Session** (provider-neutral metadata) and a **Transcript** (provider-native detail).
+- A turn carries one **Context envelope** of **Context sources**; `buildContextEnvelope` assembles it once and each **Provider adaptor** renders it to its wire format, wrapping `untrusted-external` sources at build time.
 - A **Command catalog** surfaces **Skills** and commands; a run may spawn **Subagents**.
 - An **Execution surface** binds a **Work order** run to a **Runtime**; the **ChatTabExecutionSurface** observes it in the sidepanel.
 - The **Agent Board** holds many **Work orders**; each **Work order** sits in one **Lane** at a time and accumulates a **Run ledger** and a **Handoff**.
