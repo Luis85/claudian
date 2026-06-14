@@ -1,5 +1,4 @@
 import {
-  appendEditorContext,
   buildCursorContext,
   type EditorSelectionContext,
   findNearestNonEmptyLine,
@@ -223,27 +222,5 @@ describe('formatEditorContext', () => {
       mode: 'cursor',
     };
     expect(formatEditorContext(context)).toBe('');
-  });
-});
-
-describe('appendEditorContext', () => {
-  it('appends formatted context to prompt', () => {
-    const context: EditorSelectionContext = {
-      notePath: 'test.md',
-      mode: 'selection',
-      selectedText: 'text',
-      startLine: 1,
-      lineCount: 1,
-    };
-    const result = appendEditorContext('Fix this', context);
-    expect(result).toBe('Fix this\n\n<editor_selection path="test.md" lines="1-1">\ntext\n</editor_selection>');
-  });
-
-  it('returns prompt unchanged when context is none', () => {
-    const context: EditorSelectionContext = {
-      notePath: 'test.md',
-      mode: 'none',
-    };
-    expect(appendEditorContext('Fix this', context)).toBe('Fix this');
   });
 });
