@@ -380,70 +380,55 @@ describe('StreamController - Text Content', () => {
       );
     });
 
-    it('still renders the finalized block if collapse is disabled mid-stream', async () => {
+    it('keeps a block collapsed when the setting is toggled off mid-stream', async () => {
       const msg = createTestMessage();
 
-      // Block begins in collapse mode (beforeEach) — live rendering is suppressed.
+      // Block begins collapsed (beforeEach) — the mode is snapshotted at block start.
       await controller.appendText('Hello ');
-      // User toggles the setting off before any further chunk re-renders.
+      expect(deps.state.thinkingEl).not.toBeNull(); // placeholder shown
+
+      // Toggle off mid-stream — the in-flight block keeps its collapsed snapshot.
       (deps.plugin.settings as any).collapseStreamingResponse = false;
+      await controller.appendText('World');
+      jest.advanceTimersByTime(300);
+      await Promise.resolve();
+      expect(deps.renderer.renderContent).not.toHaveBeenCalled(); // still no live render
+
       await controller.finalizeCurrentTextBlock(msg);
 
       expect(deps.renderer.renderContent).toHaveBeenCalledTimes(1);
       expect(deps.renderer.renderContent).toHaveBeenCalledWith(
         expect.anything(),
-        'Hello '
+        'Hello World'
       );
-      expect(msg.contentBlocks).toContainEqual({ type: 'text', content: 'Hello ' });
+      expect(msg.contentBlocks).toContainEqual({ type: 'text', content: 'Hello World' });
       expect(deps.state.thinkingEl).toBeNull();
     });
 
-    it('renders the finalized block when collapse is enabled mid-stream after a live render', async () => {
+    it('keeps a block live when collapse is enabled mid-stream (snapshot applies next block)', async () => {
       const msg = createTestMessage();
 
-      // Block begins with collapse OFF and live-renders once.
+      // Block begins with collapse OFF — the mode is snapshotted at block start.
       (deps.plugin.settings as any).collapseStreamingResponse = false;
       await controller.appendText('Hello ');
       jest.advanceTimersByTime(16);
       await Promise.resolve();
       expect(deps.renderer.renderContent).toHaveBeenCalledWith(expect.anything(), 'Hello ');
 
-      // User enables collapse mid-stream; the suppressed append leaves the DOM stale.
+      // Toggle on mid-stream — the in-flight block keeps its non-collapsed snapshot.
       (deps.plugin.settings as any).collapseStreamingResponse = true;
       await controller.appendText('World');
-      await controller.finalizeCurrentTextBlock(msg);
-
-      expect(deps.renderer.renderContent).toHaveBeenLastCalledWith(
-        expect.anything(),
-        'Hello World'
-      );
-      expect(msg.contentBlocks).toContainEqual({ type: 'text', content: 'Hello World' });
-      expect(deps.state.thinkingEl).toBeNull();
-    });
-
-    it('ignores a render scheduled before collapse was enabled, leaving no stranded placeholder', async () => {
-      const msg = createTestMessage();
-
-      // Schedule a live render while collapse is OFF, but don't let the frame fire yet.
-      (deps.plugin.settings as any).collapseStreamingResponse = false;
-      await controller.appendText('Hello ');
-
-      // Enable collapse before the frame fires; the suppressed append shows the placeholder.
-      (deps.plugin.settings as any).collapseStreamingResponse = true;
-      await controller.appendText('World');
-
-      // The previously-scheduled frame now fires — it must no-op under collapse.
-      jest.advanceTimersByTime(300);
+      jest.advanceTimersByTime(16);
       await Promise.resolve();
 
-      await controller.finalizeCurrentTextBlock(msg);
-
       expect(deps.renderer.renderContent).toHaveBeenLastCalledWith(
         expect.anything(),
         'Hello World'
       );
+      expect(deps.state.thinkingEl).toBeNull(); // non-collapsed block shows no placeholder
+
+      await controller.finalizeCurrentTextBlock(msg);
       expect(msg.contentBlocks).toContainEqual({ type: 'text', content: 'Hello World' });
-      expect(deps.state.thinkingEl).toBeNull();
     });
   });
 

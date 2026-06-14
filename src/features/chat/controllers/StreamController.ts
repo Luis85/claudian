@@ -110,11 +110,10 @@ export class StreamController {
   private pendingTextRenderPromise: Promise<void> | null = null;
   private resolvePendingTextRender: (() => void) | null = null;
   private isTextRenderRunning = false;
-  // Whether the live DOM for the current text block reflects its latest content.
-  // Set true by a live render; reset to false when a collapse-suppressed append
-  // leaves the DOM behind. Read at finalize so the final render decision follows
-  // what the DOM actually shows, not the (possibly toggled mid-stream) setting.
-  private currentTextLiveRendered = false;
+  // Collapse setting snapshotted once when the current text block starts. Read
+  // (not re-evaluated) through the block's append/render/finalize lifecycle so a
+  // mid-block toggle can't race those steps; the toggle takes effect next block.
+  private currentTextBlockCollapsed = false;
   private pendingThinkingRenderFrame: ScheduledAnimationFrame | null = null;
   private pendingThinkingRenderPromise: Promise<void> | null = null;
   private resolvePendingThinkingRender: (() => void) | null = null;
@@ -830,25 +829,24 @@ export class StreamController {
     const { state } = this.deps;
     if (!state.currentContentEl) return;
 
-    const collapse = this.shouldCollapseStreamingResponse();
-    if (!collapse) {
-      this.hideThinkingIndicator();
-    }
-
+    // Snapshot the collapse setting once, when the block starts. Reading it again
+    // mid-block would let a toggle race the append/render/finalize steps; instead
+    // a block keeps the mode it started in and a toggle applies to the next block.
     if (!state.currentTextEl) {
       state.currentTextEl = state.currentContentEl.createDiv({ cls: 'claudian-text-block' });
       state.currentTextContent = '';
-      this.currentTextLiveRendered = false;
+      this.currentTextBlockCollapsed = this.shouldCollapseStreamingResponse();
+    }
+
+    if (!this.currentTextBlockCollapsed) {
+      this.hideThinkingIndicator();
     }
 
     state.currentTextContent += text;
 
-    if (collapse) {
+    if (this.currentTextBlockCollapsed) {
       // Hide the half-formed render: keep an immediate placeholder up and render
-      // the whole block once it finalizes. Mark the live DOM stale so a block
-      // that already rendered (before collapse was enabled mid-stream) still
-      // gets its final render — and its placeholder dropped — at finalize.
-      this.currentTextLiveRendered = false;
+      // the whole block in one pass when it finalizes.
       this.indicator.showWriting();
       return;
     }
@@ -860,18 +858,17 @@ export class StreamController {
     const { state, renderer } = this.deps;
     await this.flushPendingTextRender();
 
-    // Decide from what actually happened during streaming, not the current
-    // setting — the user may have toggled collapse mid-block. If no live render
-    // occurred (collapse mode, or toggled off before any re-render), the
-    // placeholder is still up and the element is unrendered, so drop the
-    // placeholder and render the finished block once below.
-    const liveRendered = this.currentTextLiveRendered;
-    if (!liveRendered) {
+    // A block keeps the collapse mode it started in (snapshotted in appendText),
+    // so finalize follows that snapshot, not the live setting.
+    const collapsed = this.currentTextBlockCollapsed;
+    // A collapsed block kept its "Writing response..." placeholder up for the
+    // whole block; drop it before the one-pass render below.
+    if (collapsed) {
       this.hideThinkingIndicator();
     }
 
     if (msg && state.currentTextContent) {
-      await this.renderFinalizedTextBlock(state.currentTextEl, state.currentTextContent, liveRendered);
+      await this.renderFinalizedTextBlock(state.currentTextEl, state.currentTextContent, collapsed);
       msg.contentBlocks = msg.contentBlocks || [];
       msg.contentBlocks.push({ type: 'text', content: state.currentTextContent });
       // Work-order tabs swap a completed handoff block for the compact card on
@@ -904,23 +901,21 @@ export class StreamController {
     }
     state.currentTextEl = null;
     state.currentTextContent = '';
-    this.currentTextLiveRendered = false;
+    this.currentTextBlockCollapsed = false;
   }
 
   /**
-   * Renders the finalized text into its element when the live stream did not
-   * already produce the exact render. When `liveRendered` is false (collapse
-   * mode, or the setting toggled off mid-block before any re-render) the element
-   * is unrendered, so render once now; otherwise only re-render to bake deferred
-   * math. In the normal path the element already holds the streamed render.
+   * Renders the finalized text into its element. A collapsed block was never
+   * live-rendered, so render it once now; a non-collapsed block already holds the
+   * streamed render and only needs a re-render to bake deferred math.
    */
   private async renderFinalizedTextBlock(
     textEl: HTMLElement | null,
     content: string,
-    liveRendered: boolean,
+    collapsed: boolean,
   ): Promise<void> {
     if (!textEl) return;
-    if (!liveRendered) {
+    if (collapsed) {
       await this.deps.renderer.renderContent(textEl, content);
       return;
     }
@@ -967,13 +962,6 @@ export class StreamController {
   // PERF-3 note on the backoff constants above) — not an O(1) delta append.
   private async renderPendingText(): Promise<void> {
     if (this.isTextRenderRunning) return;
-    // Collapse mode renders only at finalize. Ignore a render scheduled before it
-    // was enabled so a stale frame can't flip the block live again or strand the
-    // "Writing response..." placeholder under the finished answer.
-    if (this.shouldCollapseStreamingResponse()) {
-      this.cancelPendingTextRender();
-      return;
-    }
     this.isTextRenderRunning = true;
 
     const { state, renderer } = this.deps;
@@ -982,7 +970,6 @@ export class StreamController {
 
     try {
       if (textEl) {
-        this.currentTextLiveRendered = true;
         const options = this.getStreamingRenderOptions(content);
         if (options) {
           await renderer.renderContent(textEl, content, options);
@@ -1733,7 +1720,7 @@ export class StreamController {
     state.currentContentEl = null;
     state.currentTextEl = null;
     state.currentTextContent = '';
-    this.currentTextLiveRendered = false;
+    this.currentTextBlockCollapsed = false;
     state.currentThinkingState = null;
     this.deps.subagentManager.resetStreamingState();
     state.pendingTools.clear();
