@@ -194,6 +194,9 @@
       "unsupported": "Image attachments are not supported by this provider.",
       "unavailable": "Image is no longer available in the vault."
     },
+    "editedFiles": {
+      "label": "変更されたファイル"
+    },
     "fileOpen": {
       "notFound": "Could not open file: {path}",
       "failed": "Failed to open file: {error}"
@@ -466,6 +469,10 @@
     "enableAutoScroll": {
       "name": "ストリーミング中の自動スクロール",
       "desc": "Claudeが応答をストリーミングしている間、自動的に下にスクロールします。無効にすると上部に留まり、最初から読むことができます。"
+    },
+    "showAgentEditedFiles": {
+      "name": "エージェントが変更したファイルを表示",
+      "desc": "エージェントが作成・編集したファイルをチャット入力欄の上に一覧表示し、ワンクリックで開けるようにします。オフにすると従来の通知なしの動作になります。"
     },
     "deferMathRenderingDuringStreaming": {
       "name": "ストリーミング中の数式レンダリングを遅延",

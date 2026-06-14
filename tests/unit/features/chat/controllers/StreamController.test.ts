@@ -12,6 +12,7 @@ import {
 } from '@/core/tools/toolNames';
 import type { ChatMessage } from '@/core/types';
 import { StreamController, type StreamControllerDeps } from '@/features/chat/controllers/StreamController';
+import { notifyVaultForToolResult } from '@/features/chat/controllers/vaultFileNotifier';
 import { ChatState } from '@/features/chat/state/ChatState';
 import { DEFAULT_CODEX_PRIMARY_MODEL } from '@/providers/codex/types/models';
 
@@ -20,6 +21,7 @@ jest.mock('@/core/tools/todo', () => ({
 }));
 
 jest.mock('@/core/tools/toolInput', () => ({
+  ...jest.requireActual('@/core/tools/toolInput'),
   extractResolvedAnswers: jest.fn().mockReturnValue(undefined),
   extractResolvedAnswersFromResultText: jest.fn().mockReturnValue(undefined),
 }));
@@ -60,6 +62,16 @@ jest.mock('@/features/chat/rendering/WriteEditRenderer', () => ({
 
 jest.mock('@/utils/path', () => ({
   getVaultPath: jest.fn().mockReturnValue('/test/vault'),
+}));
+
+jest.mock('@/features/chat/controllers/vaultFileNotifier', () => ({
+  notifyVaultForToolResult: jest.fn(),
+}));
+
+jest.mock('@/utils/fileLink', () => ({
+  // Echo the path back as in-vault so the edited-files hook records it. The hook
+  // uses the existence-agnostic resolver so just-created files are not dropped.
+  toVaultRelativeOpenPath: jest.fn((_app: unknown, p: string) => p),
 }));
 
 const originalWindow = (globalThis as { window?: Window }).window;
@@ -2917,5 +2929,182 @@ describe('StreamController - stream observers', () => {
       controller.handleStreamChunk({ type: 'text', content: 'hi' }, msg),
     ).resolves.toBeUndefined();
     expect(seen).toEqual(['text']);
+  });
+});
+
+describe('StreamController - edited files', () => {
+  let controller: StreamController;
+  let deps: StreamControllerDeps;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    installTestWindow();
+    deps = createMockDeps();
+    controller = new StreamController(deps);
+    deps.state.currentContentEl = createMockEl();
+  });
+
+  afterEach(() => {
+    deps.state.resetStreamingState();
+    restoreTestWindow();
+    jest.useRealTimers();
+  });
+
+  async function completeTool(
+    msg: ChatMessage,
+    toolCall: { id: string; name: string; input: Record<string, unknown> },
+    result: { content?: string; isError?: boolean } = {},
+  ): Promise<void> {
+    await controller.handleStreamChunk({ type: 'tool_use', ...toolCall }, msg);
+    await controller.handleStreamChunk(
+      { type: 'tool_result', id: toolCall.id, content: result.content ?? 'ok', isError: result.isError },
+      msg,
+    );
+  }
+
+  it('records a completed Write as an openable edited file', async () => {
+    const msg = createTestMessage();
+    await completeTool(msg, { id: 't1', name: 'Write', input: { file_path: 'notes/new.md', content: 'hi' } });
+
+    expect(deps.state.editedFiles).toHaveLength(1);
+    expect(deps.state.editedFiles[0].path).toBe('notes/new.md');
+  });
+
+  it('does not record edits when the setting is disabled', async () => {
+    (deps.plugin.settings as Record<string, unknown>).showAgentEditedFiles = false;
+    const msg = createTestMessage();
+    await completeTool(msg, { id: 't1', name: 'Edit', input: { file_path: 'a.md' } });
+
+    expect(deps.state.editedFiles).toEqual([]);
+  });
+
+  it('does not record a failed edit', async () => {
+    const msg = createTestMessage();
+    await completeTool(msg, { id: 't1', name: 'Edit', input: { file_path: 'a.md' } }, { isError: true });
+
+    expect(deps.state.editedFiles).toEqual([]);
+  });
+
+  it('ignores read-only tools', async () => {
+    const msg = createTestMessage();
+    await completeTool(msg, { id: 't1', name: 'Read', input: { file_path: 'a.md' } });
+
+    expect(deps.state.editedFiles).toEqual([]);
+  });
+
+  it('removes a previously recorded chip when apply_patch deletes the file', async () => {
+    const msg = createTestMessage();
+    await completeTool(msg, { id: 't1', name: 'Write', input: { file_path: 'notes/x.md', content: 'hi' } });
+    expect(deps.state.editedFiles.map((entry) => entry.path)).toEqual(['notes/x.md']);
+
+    await completeTool(msg, {
+      id: 't2',
+      name: 'apply_patch',
+      input: { patch: '*** Begin Patch\n*** Delete File: notes/x.md\n*** End Patch' },
+    });
+
+    expect(deps.state.editedFiles).toEqual([]);
+  });
+
+  it('removes a previously recorded chip when a Cursor delete tool runs', async () => {
+    const msg = createTestMessage();
+    await completeTool(msg, { id: 't1', name: 'Write', input: { file_path: 'notes/x.md', content: 'hi' } });
+    expect(deps.state.editedFiles.map((entry) => entry.path)).toEqual(['notes/x.md']);
+
+    await completeTool(msg, { id: 't2', name: 'delete', input: { path: 'notes/x.md' } });
+
+    expect(deps.state.editedFiles).toEqual([]);
+  });
+
+  it('records a file edited by a sync sub-agent', async () => {
+    const msg = createTestMessage();
+    const subToolCalls: Array<{ id: string; name: string; input: Record<string, unknown>; status: string }> = [];
+    const subagentState = { info: { id: 'p', description: 'sub', status: 'running', toolCalls: subToolCalls } };
+    deps.subagentManager.getSyncSubagent = jest.fn().mockReturnValue(subagentState);
+    deps.subagentManager.addSyncToolCall = jest.fn((_pid: string, tc: never) => subToolCalls.push(tc));
+    deps.subagentManager.updateSyncToolResult = jest.fn();
+
+    await controller.handleStreamChunk(
+      { type: 'subagent_tool_use', subagentId: 'p', id: 'w', name: 'Write', input: { file_path: 'sub/new.md' } },
+      msg,
+    );
+    await controller.handleStreamChunk(
+      { type: 'subagent_tool_result', subagentId: 'p', id: 'w', content: 'ok' },
+      msg,
+    );
+
+    expect(deps.state.editedFiles.map((entry) => entry.path)).toEqual(['sub/new.md']);
+    expect(notifyVaultForToolResult as jest.Mock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ name: 'Write' }),
+    );
+  });
+
+  it('records hydrated sub-agent edits when a sync Task tool result finalizes', async () => {
+    const msg = createTestMessage();
+    // Cursor Task shape: child edits are hydrated onto the parent's subagent
+    // rather than streamed as subagent_tool_result chunks.
+    msg.toolCalls = [{
+      id: 'task',
+      name: 'Agent',
+      input: {},
+      status: 'running',
+      subagent: {
+        id: 'task',
+        description: 'sub',
+        isExpanded: false,
+        status: 'running',
+        toolCalls: [{ id: 'w', name: 'Write', input: { file_path: 'sub/hydrated.md' }, status: 'completed' }],
+      },
+    }] as never;
+    deps.subagentManager.getSyncSubagent = jest.fn().mockReturnValue({});
+    deps.subagentManager.finalizeSyncSubagent = jest.fn().mockReturnValue(null);
+
+    await controller.handleStreamChunk({ type: 'tool_result', id: 'task', content: 'done' }, msg);
+
+    expect(deps.state.editedFiles.map((entry) => entry.path)).toEqual(['sub/hydrated.md']);
+  });
+
+  it('records async sub-agent edits after tool-call hydration', async () => {
+    const agentService = deps.getAgentService!() as unknown as {
+      loadSubagentToolCalls: jest.Mock;
+      loadSubagentFinalResult: jest.Mock;
+    };
+    agentService.loadSubagentToolCalls = jest.fn().mockResolvedValue([
+      { id: 'w', name: 'Write', input: { file_path: 'async/made.md' }, status: 'completed' },
+    ]);
+    agentService.loadSubagentFinalResult = jest.fn().mockResolvedValue('done');
+    deps.subagentManager.handleAsyncSubagentResult = jest.fn().mockReturnValue({
+      id: 'a',
+      description: 'sub',
+      isExpanded: false,
+      status: 'completed',
+      mode: 'async',
+      agentId: 'agent-1',
+      asyncStatus: 'completed',
+      toolCalls: [],
+    });
+
+    await controller.handleStreamChunk(
+      { type: 'async_subagent_result', agentId: 'agent-1', status: 'completed', result: 'done' },
+      createTestMessage(),
+    );
+
+    expect(deps.state.editedFiles.map((entry) => entry.path)).toEqual(['async/made.md']);
+  });
+
+  it('drops the source chip and shows the destination when apply_patch renames a file', async () => {
+    const msg = createTestMessage();
+    await completeTool(msg, { id: 't1', name: 'Write', input: { file_path: 'a/old.md', content: 'hi' } });
+    expect(deps.state.editedFiles.map((entry) => entry.path)).toEqual(['a/old.md']);
+
+    await completeTool(msg, {
+      id: 't2',
+      name: 'apply_patch',
+      input: { patch: '*** Begin Patch\n*** Update File: a/old.md\n*** Move to: b/new.md\n*** End Patch' },
+    });
+
+    expect(deps.state.editedFiles.map((entry) => entry.path)).toEqual(['b/new.md']);
   });
 });

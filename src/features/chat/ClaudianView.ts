@@ -38,6 +38,7 @@ import { TabManager } from './tabs/TabManager';
 import type { TabData, TabId, TaskRunTabHandle, TaskRunTabTerminal } from './tabs/types';
 import { GitActionButton } from './ui/GitActionButton';
 import { WorkOrderActivityDropdown } from './ui/WorkOrderActivityDropdown';
+import { deriveEditedFilesFromMessages } from './utils/editedFiles';
 import { recalculateUsageForModel } from './utils/usageInfo';
 
 type LoadableView = {
@@ -169,6 +170,22 @@ export class ClaudianView extends ItemView {
 
     this.gitActionButton?.updateDisplay();
     this.tabManager?.primeProviderRuntime();
+  }
+
+  /**
+   * Re-applies the "show files changed by the agent" setting to open tabs so the
+   * toggle takes effect immediately in the current session: clears the strip when
+   * disabled, and rebuilds it from each tab's transcript when re-enabled.
+   */
+  applyEditedFilesSetting(): void {
+    const enabled = this.plugin.settings.showAgentEditedFiles !== false;
+    for (const tab of this.tabManager?.getAllTabs() ?? []) {
+      if (enabled) {
+        tab.state.setEditedFiles(deriveEditedFilesFromMessages(this.plugin.app, tab.state.messages));
+      } else {
+        tab.state.clearEditedFiles();
+      }
+    }
   }
 
   invalidateProviderCommandCaches(providerIds?: ProviderId | ProviderId[]): void {

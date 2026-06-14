@@ -318,6 +318,9 @@ export type TranslationKey =
   | 'chat.fileOpen.notFound'
   | 'chat.fileOpen.failed'
 
+  // Chat - Files changed by the agent (edited-files strip)
+  | 'chat.editedFiles.label'
+
   // Chat - Rewind
   | 'chat.rewind.confirmMessage'
   | 'chat.rewind.confirmMessageConversationOnly'
@@ -743,10 +746,16 @@ export type TranslationKey =
   | 'settings.tabBarPosition.desc'
   | 'settings.tabBarPosition.input'
   | 'settings.tabBarPosition.header'
-  | 'settings.enableAutoScroll.name' | 'settings.enableAutoScroll.desc'
-  | 'settings.deferMathRenderingDuringStreaming.name' | 'settings.deferMathRenderingDuringStreaming.desc'
-  | 'settings.collapseStreamingResponse.name' | 'settings.collapseStreamingResponse.desc'
-  | 'settings.expandFileEditsByDefault.name' | 'settings.expandFileEditsByDefault.desc'
+  | 'settings.enableAutoScroll.name'
+  | 'settings.enableAutoScroll.desc'
+  | 'settings.deferMathRenderingDuringStreaming.name'
+  | 'settings.deferMathRenderingDuringStreaming.desc'
+  | 'settings.showAgentEditedFiles.name'
+  | 'settings.showAgentEditedFiles.desc'
+  | 'settings.collapseStreamingResponse.name'
+  | 'settings.collapseStreamingResponse.desc'
+  | 'settings.expandFileEditsByDefault.name'
+  | 'settings.expandFileEditsByDefault.desc'
   | 'settings.chatViewPlacement.name'
   | 'settings.chatViewPlacement.desc'
   | 'settings.chatViewPlacement.rightSidebar'

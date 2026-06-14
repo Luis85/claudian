@@ -25,6 +25,7 @@ import {
   scheduleDelayedFrame,
 } from '../../../utils/animationFrame';
 import { extractDiffData } from '../../../utils/diff';
+import { toVaultRelativeOpenPath } from '../../../utils/fileLink';
 import { hasStreamingMathDelimiters } from '../../../utils/markdownMath';
 import { openClaudianProviderSettings } from '../../../utils/obsidianPrivateApi';
 import { renderInlineRuntimeError } from '../rendering/InlineRuntimeError';
@@ -48,6 +49,7 @@ import {
 import type { SubagentManager } from '../services/SubagentManager';
 import type { ChatState } from '../state/ChatState';
 import type { FileContextManager } from '../ui/FileContext';
+import { collectEditedPathsFromToolCall, collectRemovedPathsFromToolCall } from '../utils/editedFiles';
 import { ProviderLifecycleSubagentCoordinator } from './ProviderLifecycleSubagentCoordinator';
 import { classifyRuntimeError } from './runtimeErrorClassification';
 import { StreamingIndicator } from './streamingIndicator';
@@ -146,6 +148,10 @@ export class StreamController {
       flushPendingTools: () => this.flushPendingTools(),
       showThinkingIndicator: () => this.showThinkingIndicator(),
       scrollToBottom: () => this.scrollToBottom(),
+      recordEditedFiles: (toolCall) => {
+        notifyVaultForToolResult(this.deps.plugin.app, toolCall);
+        this.recordEditedFiles(toolCall);
+      },
     });
     this.lifecycleSubagents = new ProviderLifecycleSubagentCoordinator({
       plugin: deps.plugin,
@@ -628,6 +634,35 @@ export class StreamController {
 
     if (!chunk.isError && !isBlocked) {
       notifyVaultForToolResult(this.deps.plugin.app, existingToolCall);
+      this.recordEditedFiles(existingToolCall);
+    }
+  }
+
+  /**
+   * Adds the file(s) a successful Write/Edit/NotebookEdit/apply_patch touched to
+   * the per-tab "files changed by the agent" list. Only in-vault paths are listed.
+   * Resolution does NOT require the file to be indexed yet: a just-created file's
+   * vault discovery (scheduled by {@link notifyVaultForToolResult}) is still in
+   * flight here, so an existence check would drop brand-new files. The chip's
+   * click handler re-resolves with an existence check and surfaces a Notice if the
+   * file is truly gone. Opt-out via the `showAgentEditedFiles` setting. Runs after
+   * {@link renderToolResultBlock} so the Write/Edit diff is already on the tool
+   * call for the created-vs-edited heuristic.
+   */
+  private recordEditedFiles(toolCall: ToolCallInfo): void {
+    if (this.deps.plugin.settings.showAgentEditedFiles === false) return;
+
+    const { app } = this.deps.plugin;
+
+    for (const raw of collectEditedPathsFromToolCall(toolCall)) {
+      const openable = toVaultRelativeOpenPath(app, raw.path);
+      if (openable) this.deps.state.recordEditedFile({ path: openable, changeKind: raw.changeKind });
+    }
+
+    // A delete or rename vacates a file the list may already show; drop that chip.
+    for (const removed of collectRemovedPathsFromToolCall(toolCall)) {
+      const openable = toVaultRelativeOpenPath(app, removed);
+      if (openable) this.deps.state.removeEditedFile(openable);
     }
   }
 

@@ -37,9 +37,13 @@ function collectApplyPatchChangePaths(changes: unknown): string[] {
   if (!Array.isArray(changes)) return [];
   const paths: string[] = [];
   for (const change of changes) {
-    if (change && typeof change === 'object' && !Array.isArray(change)) {
-      const path = (change as Record<string, unknown>).path;
-      if (typeof path === 'string') paths.push(path);
+    if (!change || typeof change !== 'object' || Array.isArray(change)) continue;
+    const record = change as Record<string, unknown>;
+    // Refresh the source AND any rename destination so the moved file's new
+    // parent dir gets scanned too, not just the vacated source parent.
+    for (const key of ['path', 'movePath', 'new_path', 'newPath']) {
+      const value = record[key];
+      if (typeof value === 'string' && value.trim()) paths.push(value.trim());
     }
   }
   return paths;
@@ -50,7 +54,9 @@ function collectApplyPatchTextPaths(input: Record<string, unknown>): string[] {
   const patchText = typeof input.patch === 'string' ? input.patch : '';
   if (!patchText) return [];
   const paths: string[] = [];
-  for (const match of patchText.matchAll(/^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm)) {
+  // `Move to` is included so a rename refreshes the destination's parent (the new
+  // file), not just the removed source — matters on FSWatcher-miss environments.
+  for (const match of patchText.matchAll(/^\*\*\* (?:Add File|Update File|Delete File|Move to): (.+)$/gm)) {
     const filePath = match[1]?.trim();
     if (filePath) paths.push(filePath);
   }

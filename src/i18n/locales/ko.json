@@ -194,6 +194,9 @@
       "unsupported": "Image attachments are not supported by this provider.",
       "unavailable": "Image is no longer available in the vault."
     },
+    "editedFiles": {
+      "label": "변경된 파일"
+    },
     "fileOpen": {
       "notFound": "Could not open file: {path}",
       "failed": "Failed to open file: {error}"
@@ -466,6 +469,10 @@
     "enableAutoScroll": {
       "name": "스트리밍 중 자동 스크롤",
       "desc": "Claude가 응답을 스트리밍하는 동안 자동으로 아래로 스크롤합니다. 비활성화하면 상단에 머물러 처음부터 읽을 수 있습니다."
+    },
+    "showAgentEditedFiles": {
+      "name": "에이전트가 변경한 파일 표시",
+      "desc": "에이전트가 만들거나 편집한 파일을 채팅 입력창 위에 표시하여 한 번의 클릭으로 열 수 있습니다. 끄면 이전의 조용한 동작이 유지됩니다."
     },
     "deferMathRenderingDuringStreaming": {
       "name": "스트리밍 중 수식 렌더링 지연",

@@ -28,6 +28,7 @@ function setup(overrides: Partial<SubagentStreamCoordinatorDeps> = {}) {
     flushPendingTools,
     showThinkingIndicator,
     scrollToBottom: jest.fn(),
+    recordEditedFiles: jest.fn(),
     ...overrides,
   };
 

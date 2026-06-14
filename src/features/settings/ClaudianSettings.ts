@@ -42,6 +42,7 @@ import {
   renderNavMappingsSetting,
   renderProviderEnableSetting,
   renderSharedEnvironmentSection,
+  renderShowAgentEditedFilesSetting,
   renderSystemPromptSetting,
   renderTabBarPositionSetting,
   renderUserNameSetting,
@@ -366,6 +367,8 @@ export class ClaudianSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+
+    renderShowAgentEditedFilesSetting(this.plugin, container);
 
     new Setting(container)
       .setName(t('settings.collapseStreamingResponse.name'))

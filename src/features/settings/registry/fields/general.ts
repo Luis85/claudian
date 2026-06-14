@@ -11,6 +11,7 @@ import {
   renderNavMappingsSetting,
   renderProviderEnableSetting,
   renderSharedEnvironmentSection,
+  renderShowAgentEditedFilesSetting,
   renderSystemPromptSetting,
   renderTabBarPositionSetting,
   renderUserNameSetting,
@@ -253,6 +254,24 @@ function registerDisplayFields(r: Registry): void {
     type: { kind: 'toggle' },
     default: true,
     keywords: ['math', 'latex', 'streaming', 'render'],
+  });
+
+  r.registerField({
+    id: 'showAgentEditedFiles',
+    tabId: 'general',
+    sectionId: 'display',
+    label: t('settings.showAgentEditedFiles.name'),
+    description: t('settings.showAgentEditedFiles.desc'),
+    // Custom (not a plain toggle) because the change handler also pushes the new
+    // value to open chats so the opt-out takes effect immediately.
+    type: {
+      kind: 'custom',
+      render: (ctx, host) => {
+        renderShowAgentEditedFilesSetting(ctx.plugin, host);
+      },
+    },
+    default: true,
+    keywords: ['edited', 'files', 'changed', 'agent', 'open', 'list'],
   });
 
   r.registerField({

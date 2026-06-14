@@ -1,4 +1,4 @@
-import { Notice } from 'obsidian';
+import { type App, Notice } from 'obsidian';
 
 import type { ProviderCommandDropdownConfig } from '../../../core/providers/commands/ProviderCommandCatalog';
 import type { ProviderCommandEntry } from '../../../core/providers/commands/ProviderCommandEntry';
@@ -10,12 +10,14 @@ import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { SlashCommandDropdown } from '../../../shared/components/SlashCommandDropdown';
 import { getEnhancedPath } from '../../../utils/env';
+import { resolveOpenableVaultPath } from '../../../utils/fileLink';
 import { getVaultPath } from '../../../utils/path';
 import { resolveModelContextWindow } from '../../settings/customModels/resolveModelContextWindow';
 import { ChatDropController } from '../controllers/ChatDropController';
 import type { DragManagerLike } from '../controllers/dropPayloadDetection';
 import { BangBashService } from '../services/BangBashService';
 import { BangBashModeManager as BangBashModeManagerClass } from '../ui/BangBashModeManager';
+import { EditedFilesView } from '../ui/EditedFilesView';
 import { FileContextManager } from '../ui/FileContext';
 import { ImageContextManager } from '../ui/ImageContext';
 import { createInputToolbar } from '../ui/InputToolbar';
@@ -451,6 +453,10 @@ export function initializeTabUI(
   initializeInstructionAndTodo(tab, plugin);
   initializeInputToolbar(tab, plugin, options.getProviderCatalogConfig, options.onProviderChanged);
 
+  tab.ui.editedFilesView = new EditedFilesView(dom.editedFilesRowEl, {
+    onOpenFile: (rawPath) => openEditedFile(plugin.app, rawPath),
+  });
+
   state.callbacks = {
     ...state.callbacks,
     onUsageChanged: (usage) => {
@@ -458,7 +464,13 @@ export function initializeTabUI(
     },
     onTodosChanged: (todos) => tab.ui.statusPanel?.updateTodos(todos),
     onAutoScrollChanged: () => tab.ui.navigationSidebar?.updateVisibility(),
+    onEditedFilesChanged: (files) => {
+      tab.ui.editedFilesView?.render(files);
+      autoResizeTextarea(dom.inputEl);
+      tab.renderer?.scrollToBottomIfNeeded();
+    },
   };
+  tab.ui.editedFilesView.render(state.editedFiles);
 
   // ResizeObserver to detect overflow changes (e.g., content growth)
   const resizeObserver = new ResizeObserver(() => {
@@ -466,6 +478,17 @@ export function initializeTabUI(
   });
   resizeObserver.observe(dom.messagesEl);
   dom.eventCleanups.push(() => resizeObserver.disconnect());
+}
+
+// Opens a file from the agent-edited-files strip. Re-resolves at click time so a
+// file deleted after it was listed surfaces a Notice instead of opening nothing.
+function openEditedFile(app: App, rawPath: string): void {
+  const openPath = resolveOpenableVaultPath(app, rawPath);
+  if (!openPath) {
+    new Notice(t('chat.fileOpen.notFound', { path: rawPath }));
+    return;
+  }
+  void app.workspace.openLinkText(openPath, '', 'tab');
 }
 
 // SECURITY (SEC-1): 'yolo' maps to SDK bypassPermissions — tools run with no

@@ -196,6 +196,8 @@ export interface ClaudianSettings {
   tabBarPosition: TabBarPosition;
   enableAutoScroll: boolean;
   deferMathRenderingDuringStreaming: boolean;
+  /** Show a clickable list of files the agent created/edited above the composer. */
+  showAgentEditedFiles: boolean;
   /** When true, hide the live partial render of an answer and show a "Writing response..." placeholder until each text block completes. */
   collapseStreamingResponse: boolean;
   expandFileEditsByDefault: boolean;

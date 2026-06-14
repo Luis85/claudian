@@ -194,6 +194,9 @@
       "unsupported": "Image attachments are not supported by this provider.",
       "unavailable": "Image is no longer available in the vault."
     },
+    "editedFiles": {
+      "label": "已更改的文件"
+    },
     "fileOpen": {
       "notFound": "Could not open file: {path}",
       "failed": "Failed to open file: {error}"
@@ -466,6 +469,10 @@
     "enableAutoScroll": {
       "name": "流式传输时自动滚动",
       "desc": "在 Claude 流式传输响应时自动滚动到底部。禁用后将停留在顶部，从头开始阅读。"
+    },
+    "showAgentEditedFiles": {
+      "name": "显示助手更改的文件",
+      "desc": "在聊天输入框上方列出助手创建或编辑的文件，便于一键打开。关闭后保持原先的静默行为。"
     },
     "deferMathRenderingDuringStreaming": {
       "name": "流式传输时延迟渲染数学公式",

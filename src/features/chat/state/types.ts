@@ -14,6 +14,7 @@ import type { CanvasSelectionContext } from '../../../utils/canvas';
 import type { EditorSelectionContext } from '../../../utils/editor';
 import type { ThinkingBlockState } from '../rendering/ThinkingBlockRenderer';
 import type { WriteEditState } from '../rendering/WriteEditRenderer';
+import type { EditedFileEntry } from '../utils/editedFiles';
 
 /** Queued message waiting to be sent after current streaming completes. */
 export interface QueuedMessage {
@@ -95,6 +96,13 @@ export interface ChatStateData {
   // Current todo items for the persistent bottom panel
   currentTodos: TodoItem[] | null;
 
+  /**
+   * Files the agent created or edited in this conversation, most-recent first.
+   * Surfaced as a clickable list above the composer; appended live during
+   * streaming and rebuilt from the transcript when a conversation loads.
+   */
+  editedFiles: EditedFileEntry[];
+
   // Attention state (approval pending, error, etc.)
   needsAttention: boolean;
 
@@ -125,6 +133,7 @@ export interface ChatStateCallbacks {
   onTodosChanged?: (todos: TodoItem[] | null) => void;
   onAttentionChanged?: (needsAttention: boolean) => void;
   onAutoScrollChanged?: (enabled: boolean) => void;
+  onEditedFilesChanged?: (files: EditedFileEntry[]) => void;
 }
 
 /** Options for query execution. */
@@ -133,6 +142,7 @@ export type QueryOptions = ChatRuntimeQueryOptions;
 // Re-export types that are used across the chat feature
 export type {
   ChatMessage,
+  EditedFileEntry,
   EditorSelectionContext,
   ImageAttachment,
   SubagentInfo,

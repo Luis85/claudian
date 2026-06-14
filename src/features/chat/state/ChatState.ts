@@ -1,4 +1,5 @@
 import type { UsageInfo } from '../../../core/types';
+import { type EditedFileEntry, mergeEditedFileEntry } from '../utils/editedFiles';
 import type {
   ChatMessage,
   ChatStateCallbacks,
@@ -35,6 +36,7 @@ function createInitialState(): ChatStateData {
     usage: null,
     ignoreUsageUpdates: false,
     currentTodos: null,
+    editedFiles: [],
     needsAttention: false,
     autoScrollEnabled: true, // Default; controllers will override based on settings
     responseStartTime: null,
@@ -297,6 +299,40 @@ export class ChatState {
   }
 
   // ============================================
+  // Edited Files (agent-changed files, shown above the composer)
+  // ============================================
+
+  get editedFiles(): EditedFileEntry[] {
+    return [...this.state.editedFiles];
+  }
+
+  /** Appends one agent-changed file (deduped, most-recent first). */
+  recordEditedFile(entry: EditedFileEntry): void {
+    this.state.editedFiles = mergeEditedFileEntry(this.state.editedFiles, entry);
+    this._callbacks.onEditedFilesChanged?.(this.editedFiles);
+  }
+
+  /** Replaces the list wholesale (used when a conversation's transcript loads). */
+  setEditedFiles(entries: EditedFileEntry[]): void {
+    this.state.editedFiles = [...entries];
+    this._callbacks.onEditedFilesChanged?.(this.editedFiles);
+  }
+
+  /** Removes one path (e.g. after the agent deletes it). No-op when not present. */
+  removeEditedFile(path: string): void {
+    if (!this.state.editedFiles.some((entry) => entry.path === path)) return;
+    this.state.editedFiles = this.state.editedFiles.filter((entry) => entry.path !== path);
+    this._callbacks.onEditedFilesChanged?.(this.editedFiles);
+  }
+
+  /** Clears the list. No-op (no callback) when already empty. */
+  clearEditedFiles(): void {
+    if (this.state.editedFiles.length === 0) return;
+    this.state.editedFiles = [];
+    this._callbacks.onEditedFilesChanged?.(this.editedFiles);
+  }
+
+  // ============================================
   // Attention State (approval pending, error, etc.)
   // ============================================
 
@@ -430,6 +466,7 @@ export class ChatState {
     this.state.queuedMessage = null;
     this.usage = null;
     this.currentTodos = null;
+    this.clearEditedFiles();
     this.autoScrollEnabled = true;
   }
 

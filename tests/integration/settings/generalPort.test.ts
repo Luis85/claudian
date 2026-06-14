@@ -37,6 +37,7 @@ const LEGACY_FIELD_IDS = [
   'chatViewPlacement',
   'enableAutoScroll',
   'deferMathRenderingDuringStreaming',
+  'showAgentEditedFiles',
   'collapseStreamingResponse',
   'enableAutoTitleGeneration',
   'titleGenerationModel',

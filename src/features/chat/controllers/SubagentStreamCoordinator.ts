@@ -28,6 +28,8 @@ export interface SubagentStreamCoordinatorDeps {
   flushPendingTools: () => void;
   showThinkingIndicator: () => void;
   scrollToBottom: () => void;
+  /** Surfaces + vault-refreshes a completed sub-agent tool's file edits (chip strip). */
+  recordEditedFiles: (toolCall: ToolCallInfo) => void;
 }
 
 export class SubagentStreamCoordinator {
@@ -222,6 +224,8 @@ export class SubagentStreamCoordinator {
           toolCall.status = isBlocked ? 'blocked' : (chunk.isError ? 'error' : 'completed');
           toolCall.result = normalizedContent;
           subagentManager.updateSyncToolResult(parentToolUseId, chunk.id, toolCall);
+          // Surface files a sub-agent edits in the same strip as top-level edits.
+          if (toolCall.status === 'completed') this.deps.recordEditedFiles(toolCall);
         }
         break;
       }
@@ -256,7 +260,24 @@ export class SubagentStreamCoordinator {
       this.applySubagentToTaskToolCall(taskToolCall, finalized);
     }
 
+    // Cursor Task sub-agents hydrate their child edits into the parent result
+    // instead of emitting subagent_tool_result chunks, so record the finalized
+    // nested edits here too (deduped against any recorded live during the run).
+    this.recordSubagentEditedFiles(taskToolCall.subagent);
+
     this.deps.showThinkingIndicator();
+  }
+
+  /**
+   * Records files a sync sub-agent's completed nested tools created/edited,
+   * covering providers that hydrate child tools into the parent result rather
+   * than streaming `subagent_tool_result` chunks.
+   */
+  private recordSubagentEditedFiles(subagent: SubagentInfo | undefined): void {
+    if (!subagent?.toolCalls) return;
+    for (const toolCall of subagent.toolCalls) {
+      if (toolCall.status === 'completed') this.deps.recordEditedFiles(toolCall);
+    }
   }
 
   // ============================================
@@ -341,6 +362,9 @@ export class SubagentStreamCoordinator {
 
     if (hasHydrated) {
       this.deps.subagentManager.refreshAsyncSubagent(subagent);
+      // Async sub-agents load their child tools here (not via finalizeSubagent),
+      // so surface + vault-refresh their edits the same way.
+      this.recordSubagentEditedFiles(subagent);
     }
 
     if (!finalResultHydrated) {

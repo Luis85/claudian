@@ -61,6 +61,7 @@ describe('ChatState', () => {
       expect(state.usage).toBeNull();
       expect(state.ignoreUsageUpdates).toBe(false);
       expect(state.currentTodos).toBeNull();
+      expect(state.editedFiles).toEqual([]);
       expect(state.needsAttention).toBe(false);
       expect(state.autoScrollEnabled).toBe(true);
       expect(state.responseStartTime).toBeNull();
@@ -319,6 +320,86 @@ describe('ChatState', () => {
     it('returns null when not set', () => {
       const chatState = new ChatState();
       expect(chatState.currentTodos).toBeNull();
+    });
+  });
+
+  describe('editedFiles', () => {
+    it('records a file, fires onEditedFilesChanged, and returns a copy', () => {
+      const onEditedFilesChanged = jest.fn();
+      const chatState = new ChatState({ onEditedFilesChanged });
+
+      chatState.recordEditedFile({ path: 'a.md', changeKind: 'created' });
+
+      expect(chatState.editedFiles).toEqual([{ path: 'a.md', changeKind: 'created' }]);
+      expect(onEditedFilesChanged).toHaveBeenCalledWith([{ path: 'a.md', changeKind: 'created' }]);
+
+      const snapshot = chatState.editedFiles;
+      snapshot.push({ path: 'b.md', changeKind: 'edited' });
+      expect(chatState.editedFiles).toHaveLength(1);
+    });
+
+    it('dedupes by path, most-recent first, with sticky created', () => {
+      const chatState = new ChatState();
+      chatState.recordEditedFile({ path: 'a.md', changeKind: 'created' });
+      chatState.recordEditedFile({ path: 'b.ts', changeKind: 'edited' });
+      chatState.recordEditedFile({ path: 'a.md', changeKind: 'edited' });
+
+      expect(chatState.editedFiles).toEqual([
+        { path: 'a.md', changeKind: 'created' },
+        { path: 'b.ts', changeKind: 'edited' },
+      ]);
+    });
+
+    it('setEditedFiles replaces the list and fires the callback', () => {
+      const onEditedFilesChanged = jest.fn();
+      const chatState = new ChatState({ onEditedFilesChanged });
+      chatState.recordEditedFile({ path: 'a.md', changeKind: 'created' });
+      onEditedFilesChanged.mockClear();
+
+      chatState.setEditedFiles([{ path: 'b.ts', changeKind: 'edited' }]);
+
+      expect(chatState.editedFiles).toEqual([{ path: 'b.ts', changeKind: 'edited' }]);
+      expect(onEditedFilesChanged).toHaveBeenCalledTimes(1);
+    });
+
+    it('clearEditedFiles empties and fires once, but is a no-op when already empty', () => {
+      const onEditedFilesChanged = jest.fn();
+      const chatState = new ChatState({ onEditedFilesChanged });
+      chatState.recordEditedFile({ path: 'a.md', changeKind: 'created' });
+      onEditedFilesChanged.mockClear();
+
+      chatState.clearEditedFiles();
+      expect(chatState.editedFiles).toEqual([]);
+      expect(onEditedFilesChanged).toHaveBeenCalledTimes(1);
+
+      onEditedFilesChanged.mockClear();
+      chatState.clearEditedFiles();
+      expect(onEditedFilesChanged).not.toHaveBeenCalled();
+    });
+
+    it('removeEditedFile drops a matching entry and fires once; no-op when absent', () => {
+      const onEditedFilesChanged = jest.fn();
+      const chatState = new ChatState({ onEditedFilesChanged });
+      chatState.recordEditedFile({ path: 'a.md', changeKind: 'created' });
+      chatState.recordEditedFile({ path: 'b.ts', changeKind: 'edited' });
+      onEditedFilesChanged.mockClear();
+
+      chatState.removeEditedFile('a.md');
+      expect(chatState.editedFiles).toEqual([{ path: 'b.ts', changeKind: 'edited' }]);
+      expect(onEditedFilesChanged).toHaveBeenCalledTimes(1);
+
+      onEditedFilesChanged.mockClear();
+      chatState.removeEditedFile('missing.md');
+      expect(onEditedFilesChanged).not.toHaveBeenCalled();
+    });
+
+    it('resetForNewConversation clears edited files', () => {
+      const chatState = new ChatState();
+      chatState.recordEditedFile({ path: 'a.md', changeKind: 'created' });
+
+      chatState.resetForNewConversation();
+
+      expect(chatState.editedFiles).toEqual([]);
     });
   });
 
