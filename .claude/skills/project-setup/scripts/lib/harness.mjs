@@ -125,3 +125,33 @@ export function planEslint(options) {
     },
   ];
 }
+
+// Per-package-manager CI rendering. npm/pnpm/yarn are fully supported; an
+// unknown manager (incl. bun) falls back to npm-style so the workflow is valid.
+const CI_PM = {
+  npm: { setup: '', cache: 'npm', install: 'npm ci', run: 'npm run' },
+  pnpm: { setup: '      - uses: pnpm/action-setup@v4\n', cache: 'pnpm', install: 'pnpm install --frozen-lockfile', run: 'pnpm' },
+  yarn: { setup: '', cache: 'yarn', install: 'yarn install --immutable', run: 'yarn' },
+};
+
+export function planCi(options, state) {
+  if (!options.github?.integrate || !options.guardrails?.ci) return [];
+  const g = options.guardrails ?? {};
+  const pm = CI_PM[state?.packageManager] ?? CI_PM.npm;
+  // Emit a CI step only for a guardrail that is actually installed (its npm
+  // script exists). The test step is always present; it uses the coverage
+  // variant when coverage floors are on.
+  const steps = [];
+  if (g.eslintSeverityStaging) steps.push(`      - run: ${pm.run} lint`);
+  if (g.locGuard) steps.push(`      - run: ${pm.run} check:loc`);
+  if (g.fallowRatchet) steps.push(`      - run: ${pm.run} check:quality   # runs with ./coverage absent`);
+  steps.push(`      - run: ${pm.run} ${g.coverageFloors ? 'test:coverage' : 'test'}`);
+  const content = renderTemplate(loadTemplate('ci.yml.tmpl'), {
+    pmSetup: pm.setup, pmCache: pm.cache, pmInstall: pm.install, steps: steps.join('\n'),
+  });
+  return [{ type: 'writeFile', path: '.github/workflows/ci.yml', mode: 'skip-if-exists', content }];
+}
+
+export function planInstall(options, state) {
+  return [{ type: 'installDeps', packageManager: state?.packageManager ?? 'npm' }];
+}
