@@ -166,12 +166,9 @@ export class MentionDropdownController {
         return;
       }
 
+      // Spaces are allowed in the query so multi-word filenames stay searchable
+      // (#748); the default path closes the dropdown when nothing matches instead.
       const searchText = textBeforeCursor.substring(lastAtIndex + 1);
-
-      if (/\s/.test(searchText)) {
-        this.hide();
-        return;
-      }
 
       this.mentionStartIndex = lastAtIndex;
       this.showMentionDropdown(searchText);
@@ -292,6 +289,14 @@ export class MentionDropdownController {
 
     const firstVaultItemIndex = this.filteredMentionItems.length;
     const vaultItemCount = this.appendVaultItems(searchLower);
+
+    // Close instead of showing an empty list so prose that merely contains an
+    // "@" (now that spaces no longer gate the search, #748) doesn't keep the
+    // dropdown open. Submenu paths keep their "No matches" affordance.
+    if (this.filteredMentionItems.length === 0) {
+      this.hide();
+      return;
+    }
 
     this.selectedMentionIndex = vaultItemCount > 0 ? firstVaultItemIndex : 0;
 
