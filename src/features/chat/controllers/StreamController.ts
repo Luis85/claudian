@@ -110,9 +110,10 @@ export class StreamController {
   private pendingTextRenderPromise: Promise<void> | null = null;
   private resolvePendingTextRender: (() => void) | null = null;
   private isTextRenderRunning = false;
-  // Whether the current text block has had at least one live render. Drives the
-  // finalize render decision so it reflects what actually happened during
-  // streaming, not the (possibly toggled) collapse setting read at finalize.
+  // Whether the live DOM for the current text block reflects its latest content.
+  // Set true by a live render; reset to false when a collapse-suppressed append
+  // leaves the DOM behind. Read at finalize so the final render decision follows
+  // what the DOM actually shows, not the (possibly toggled mid-stream) setting.
   private currentTextLiveRendered = false;
   private pendingThinkingRenderFrame: ScheduledAnimationFrame | null = null;
   private pendingThinkingRenderPromise: Promise<void> | null = null;
@@ -844,7 +845,10 @@ export class StreamController {
 
     if (collapse) {
       // Hide the half-formed render: keep an immediate placeholder up and render
-      // the whole block once it finalizes.
+      // the whole block once it finalizes. Mark the live DOM stale so a block
+      // that already rendered (before collapse was enabled mid-stream) still
+      // gets its final render — and its placeholder dropped — at finalize.
+      this.currentTextLiveRendered = false;
       this.indicator.showWriting();
       return;
     }

@@ -397,6 +397,29 @@ describe('StreamController - Text Content', () => {
       expect(msg.contentBlocks).toContainEqual({ type: 'text', content: 'Hello ' });
       expect(deps.state.thinkingEl).toBeNull();
     });
+
+    it('renders the finalized block when collapse is enabled mid-stream after a live render', async () => {
+      const msg = createTestMessage();
+
+      // Block begins with collapse OFF and live-renders once.
+      (deps.plugin.settings as any).collapseStreamingResponse = false;
+      await controller.appendText('Hello ');
+      jest.advanceTimersByTime(16);
+      await Promise.resolve();
+      expect(deps.renderer.renderContent).toHaveBeenCalledWith(expect.anything(), 'Hello ');
+
+      // User enables collapse mid-stream; the suppressed append leaves the DOM stale.
+      (deps.plugin.settings as any).collapseStreamingResponse = true;
+      await controller.appendText('World');
+      await controller.finalizeCurrentTextBlock(msg);
+
+      expect(deps.renderer.renderContent).toHaveBeenLastCalledWith(
+        expect.anything(),
+        'Hello World'
+      );
+      expect(msg.contentBlocks).toContainEqual({ type: 'text', content: 'Hello World' });
+      expect(deps.state.thinkingEl).toBeNull();
+    });
   });
 
   describe('Size-aware streaming backoff (PERF-3)', () => {
