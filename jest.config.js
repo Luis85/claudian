@@ -28,25 +28,27 @@ module.exports = {
   // Path keys match by prefix; the most specific match wins, so the looser
   // `global` floor only applies to files no per-path key covers.
   //
-  // Baseline (stmt/branch/func/lines), measured 2026-05-31:
-  //   global                          73.61 / 65.06 / 69.68 / 74.51
-  //   src/utils/                      92.12 / 85.22 / 96.60 / 94.04
-  //   src/core/security/              98.89 / 96.15 / 100.0 / 98.82
-  //   src/core/logging/               94.74 / 95.83 / 93.10 / 97.01
-  //   src/core/mcp/                   96.02 / 83.06 / 95.74 / 97.10
-  //   src/providers/claude/runtime/   85.18 / 77.05 / 88.79 / 85.63
-  //   src/providers/codex/runtime/    84.88 / 70.58 / 85.49 / 85.78
-  //   src/providers/cursor/runtime/   76.26 / 62.45 / 75.68 / 77.40
-  //   src/providers/opencode/runtime/ 64.29 / 50.86 / 58.90 / 64.19
+  // Actuals (stmt/branch/func/lines), re-measured 2026-06-14; floors below sit a
+  // few points under each (regression floors, not aspirations). src/utils is
+  // held — its actual slipped vs the 2026-05-31 baseline but stays above floor:
+  //   global                          80.56 / 69.99 / 77.24 / 81.74
+  //   src/utils/                      90.45 / 83.78 / 94.64 / 92.19
+  //   src/core/security/              98.71 / 97.46 / 100.0 / 99.63
+  //   src/core/logging/               95.50 / 96.36 / 93.54 / 97.43
+  //   src/core/mcp/                   94.05 / 85.71 / 95.52 / 96.40
+  //   src/providers/claude/runtime/   91.01 / 82.43 / 92.33 / 91.36
+  //   src/providers/codex/runtime/    85.67 / 71.33 / 88.59 / 86.64
+  //   src/providers/cursor/runtime/   83.18 / 68.44 / 82.02 / 84.58
+  //   src/providers/opencode/runtime/ 71.30 / 59.14 / 65.83 / 71.21
   coverageThreshold: {
-    global: { statements: 70, branches: 60, functions: 65, lines: 70 },
+    global: { statements: 78, branches: 67, functions: 74, lines: 79 },
     'src/utils/': { statements: 88, branches: 80, functions: 92, lines: 90 },
-    'src/core/security/': { statements: 95, branches: 92, functions: 96, lines: 95 },
-    'src/core/logging/': { statements: 90, branches: 90, functions: 88, lines: 93 },
-    'src/core/mcp/': { statements: 92, branches: 78, functions: 92, lines: 93 },
-    'src/providers/claude/runtime/': { statements: 80, branches: 72, functions: 84, lines: 81 },
-    'src/providers/codex/runtime/': { statements: 80, branches: 65, functions: 80, lines: 81 },
-    'src/providers/cursor/runtime/': { statements: 71, branches: 57, functions: 70, lines: 72 },
-    'src/providers/opencode/runtime/': { statements: 59, branches: 45, functions: 53, lines: 59 },
+    'src/core/security/': { statements: 96, branches: 95, functions: 98, lines: 97 },
+    'src/core/logging/': { statements: 93, branches: 94, functions: 91, lines: 95 },
+    'src/core/mcp/': { statements: 92, branches: 83, functions: 93, lines: 94 },
+    'src/providers/claude/runtime/': { statements: 88, branches: 79, functions: 89, lines: 88 },
+    'src/providers/codex/runtime/': { statements: 82, branches: 68, functions: 85, lines: 83 },
+    'src/providers/cursor/runtime/': { statements: 80, branches: 65, functions: 79, lines: 82 },
+    'src/providers/opencode/runtime/': { statements: 68, branches: 56, functions: 62, lines: 68 },
   },
 };
