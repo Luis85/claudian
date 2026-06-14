@@ -254,6 +254,17 @@ function registerDisplayFields(r: Registry): void {
     default: true,
     keywords: ['math', 'latex', 'streaming', 'render'],
   });
+
+  r.registerField({
+    id: 'collapseStreamingResponse',
+    tabId: 'general',
+    sectionId: 'display',
+    label: t('settings.collapseStreamingResponse.name'),
+    description: t('settings.collapseStreamingResponse.desc'),
+    type: { kind: 'toggle' },
+    default: true,
+    keywords: ['streaming', 'render', 'response', 'placeholder', 'collapse'],
+  });
 }
 
 function registerConversationsFields(r: Registry): void {

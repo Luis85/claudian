@@ -471,6 +471,10 @@
       "name": "Adiar renderização matemática durante streaming",
       "desc": "Mostrar LaTeX bruto enquanto a resposta é transmitida e renderizar a matemática uma vez quando cada bloco de texto terminar."
     },
+    "collapseStreamingResponse": {
+      "name": "Ocultar respostas incompletas durante o streaming",
+      "desc": "Mostrar um espaço reservado \"Writing response...\" enquanto uma resposta é transmitida e renderizar cada bloco de texto de uma vez quando terminar — evita mostrar Markdown ou XML pela metade."
+    },
     "chatViewPlacement": {
       "name": "Abrir Claudian em",
       "desc": "Escolha onde o painel de chat abre quando é criado",

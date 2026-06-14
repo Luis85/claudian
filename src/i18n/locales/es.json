@@ -471,6 +471,10 @@
       "name": "Diferir renderizado matemático durante streaming",
       "desc": "Mostrar LaTeX sin procesar mientras se transmite la respuesta y renderizar las fórmulas una vez al completar cada bloque de texto."
     },
+    "collapseStreamingResponse": {
+      "name": "Ocultar respuestas incompletas durante el streaming",
+      "desc": "Mostrar un marcador de posición «Writing response...» mientras se transmite una respuesta y renderizar cada bloque de texto de una vez al completarse — evita mostrar Markdown o XML a medio formar."
+    },
     "chatViewPlacement": {
       "name": "Abrir Claudian en",
       "desc": "Elige dónde se abre el panel de chat cuando se crea",
