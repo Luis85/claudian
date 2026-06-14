@@ -31,7 +31,7 @@ import { formatDurationMmSs } from '../../../utils/date';
 import { extractDiffData } from '../../../utils/diff';
 import { hasStreamingMathDelimiters } from '../../../utils/markdownMath';
 import { openClaudianProviderSettings } from '../../../utils/obsidianPrivateApi';
-import { FLAVOR_TEXTS } from '../constants';
+import { FLAVOR_TEXTS, STREAMING_RESPONSE_LABEL } from '../constants';
 import { renderInlineRuntimeError } from '../rendering/InlineRuntimeError';
 import type { MessageRenderer, RenderContentOptions } from '../rendering/MessageRenderer';
 import { scrollMessagesToBottom } from '../rendering/scrollToBottom';
@@ -485,6 +485,10 @@ export class StreamController {
     return this.deps.plugin.settings.deferMathRenderingDuringStreaming !== false;
   }
 
+  private shouldCollapseStreamingResponse(): boolean {
+    return this.deps.plugin.settings.collapseStreamingResponse !== false;
+  }
+
   private getStreamingRenderOptions(content: string): RenderContentOptions | undefined {
     return this.shouldDeferMathRendering() && hasStreamingMathDelimiters(content)
       ? { deferMath: true }
@@ -815,7 +819,10 @@ export class StreamController {
     const { state } = this.deps;
     if (!state.currentContentEl) return;
 
-    this.hideThinkingIndicator();
+    const collapse = this.shouldCollapseStreamingResponse();
+    if (!collapse) {
+      this.hideThinkingIndicator();
+    }
 
     if (!state.currentTextEl) {
       state.currentTextEl = state.currentContentEl.createDiv({ cls: 'claudian-text-block' });
@@ -823,6 +830,14 @@ export class StreamController {
     }
 
     state.currentTextContent += text;
+
+    if (collapse) {
+      // Hide the half-formed render: keep an immediate placeholder up and render
+      // the whole block once it finalizes.
+      this.showWritingIndicator();
+      return;
+    }
+
     void this.scheduleCurrentTextRender();
   }
 
@@ -831,7 +846,14 @@ export class StreamController {
     await this.flushPendingTextRender();
 
     if (msg && state.currentTextContent) {
-      if (
+      if (this.shouldCollapseStreamingResponse()) {
+        // Streaming rendered nothing in collapse mode — do the one and only
+        // render now (exact, no deferMath), then drop the placeholder.
+        this.hideThinkingIndicator();
+        if (state.currentTextEl) {
+          await renderer.renderContent(state.currentTextEl, state.currentTextContent);
+        }
+      } else if (
         state.currentTextEl
         && this.shouldDeferMathRendering()
         && hasStreamingMathDelimiters(state.currentTextContent)
@@ -867,6 +889,9 @@ export class StreamController {
       if (replacedWithCard && msg) {
         renderer.refreshMessageActions?.(msg);
       }
+    }
+    if (this.shouldCollapseStreamingResponse()) {
+      this.hideThinkingIndicator();
     }
     state.currentTextEl = null;
     state.currentTextContent = '';
@@ -1580,37 +1605,71 @@ export class StreamController {
       // Double-check we still have a content element, no indicator exists, and no thinking block
       if (!state.currentContentEl || state.thinkingEl || state.currentThinkingState) return;
 
-      const cls = overrideCls
-        ? `claudian-thinking ${overrideCls}`
-        : 'claudian-thinking';
-      state.thinkingEl = state.currentContentEl.createDiv({ cls });
       const text = overrideText || FLAVOR_TEXTS[Math.floor(Math.random() * FLAVOR_TEXTS.length)];
-      state.thinkingEl.createSpan({ text });
-
-      // Create timer span with initial value
-      const timerSpan = state.thinkingEl.createSpan({ cls: 'claudian-thinking-hint' });
-      const updateTimer = () => {
-        if (!state.responseStartTime) return;
-        // Check if element is still connected to DOM (prevents orphaned interval updates)
-        if (!timerSpan.isConnected) {
-          if (state.flavorTimerInterval) {
-            state.clearFlavorTimerInterval();
-          }
-          return;
-        }
-        const elapsedSeconds = Math.floor((performance.now() - state.responseStartTime) / 1000);
-        timerSpan.setText(` (esc to interrupt · ${formatDurationMmSs(elapsedSeconds)})`);
-      };
-      updateTimer(); // Initial update
-
-      // Start interval to update timer every second
-      if (state.flavorTimerInterval) {
-        state.clearFlavorTimerInterval();
-      }
-      const thinkingWindow = state.currentContentEl.ownerDocument.defaultView ?? timerWindow;
-      state.setFlavorTimerInterval(thinkingWindow.setInterval(updateTimer, 1000), thinkingWindow);
-
+      this.renderStreamingIndicator(text, overrideCls);
     }, StreamController.THINKING_INDICATOR_DELAY), timerWindow);
+  }
+
+  /**
+   * Builds the streaming-indicator DOM (label span + live `esc to interrupt`
+   * timer) and starts its 1s timer. Shared by the debounced thinking indicator
+   * and the immediate writing placeholder. The label span carries a stable class
+   * so the writing path can relabel an already-mounted indicator.
+   */
+  private renderStreamingIndicator(text: string, overrideCls?: string): void {
+    const { state } = this.deps;
+    if (!state.currentContentEl) return;
+
+    const cls = overrideCls ? `claudian-thinking ${overrideCls}` : 'claudian-thinking';
+    state.thinkingEl = state.currentContentEl.createDiv({ cls });
+    state.thinkingEl.createSpan({ cls: 'claudian-thinking-flavor', text });
+
+    // Create timer span with initial value
+    const timerSpan = state.thinkingEl.createSpan({ cls: 'claudian-thinking-hint' });
+    const updateTimer = () => {
+      if (!state.responseStartTime) return;
+      // Check if element is still connected to DOM (prevents orphaned interval updates)
+      if (!timerSpan.isConnected) {
+        if (state.flavorTimerInterval) {
+          state.clearFlavorTimerInterval();
+        }
+        return;
+      }
+      const elapsedSeconds = Math.floor((performance.now() - state.responseStartTime) / 1000);
+      timerSpan.setText(` (esc to interrupt · ${formatDurationMmSs(elapsedSeconds)})`);
+    };
+    updateTimer(); // Initial update
+
+    // Start interval to update timer every second
+    if (state.flavorTimerInterval) {
+      state.clearFlavorTimerInterval();
+    }
+    const thinkingWindow = state.currentContentEl.ownerDocument.defaultView ?? window;
+    state.setFlavorTimerInterval(thinkingWindow.setInterval(updateTimer, 1000), thinkingWindow);
+  }
+
+  /**
+   * Immediately shows (or relabels) the streaming placeholder for collapse mode.
+   * Unlike {@link showThinkingIndicator}, this bypasses the debounce — a
+   * continuous text-only answer never produces the 400ms idle gap the debounce
+   * waits for, so the placeholder must appear as soon as text starts streaming.
+   */
+  private showWritingIndicator(): void {
+    const { state } = this.deps;
+    if (!state.currentContentEl || state.currentThinkingState) return;
+
+    if (state.thinkingIndicatorTimeout) {
+      state.clearThinkingIndicatorTimeout(state.currentContentEl.ownerDocument.defaultView ?? null);
+    }
+
+    if (state.thinkingEl) {
+      const labelSpan = state.thinkingEl.querySelector<HTMLElement>('.claudian-thinking-flavor');
+      labelSpan?.setText(STREAMING_RESPONSE_LABEL);
+      state.currentContentEl.appendChild(state.thinkingEl);
+    } else {
+      this.renderStreamingIndicator(STREAMING_RESPONSE_LABEL);
+    }
+    this.deps.updateQueueIndicator();
   }
 
   /** Hides the thinking indicator and cancels any pending show timeout. */

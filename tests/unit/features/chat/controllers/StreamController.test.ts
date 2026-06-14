@@ -125,6 +125,7 @@ function createMockDeps(): StreamControllerDeps {
     plugin: {
       settings: {
         permissionMode: 'yolo',
+        collapseStreamingResponse: false,
       },
       app: {
         vault: {
@@ -324,6 +325,58 @@ describe('StreamController - Text Content', () => {
       expect(deps.renderer.addTextCopyButton).toHaveBeenCalledWith(
         expect.anything(),
         'Final $x^2$'
+      );
+    });
+  });
+
+  describe('Collapsed streaming response', () => {
+    beforeEach(() => {
+      (deps.plugin.settings as any).collapseStreamingResponse = true;
+    });
+
+    it('does not render the text block live while streaming, and shows a placeholder', async () => {
+      await controller.appendText('Partial <claudian_hand');
+      await controller.appendText('off>more');
+
+      jest.advanceTimersByTime(500);
+      await Promise.resolve();
+
+      expect(deps.renderer.renderContent).not.toHaveBeenCalled();
+      expect(deps.state.thinkingEl).not.toBeNull();
+    });
+
+    it('renders the full block once on finalize, persists it, and hides the placeholder', async () => {
+      const msg = createTestMessage();
+
+      await controller.appendText('Hello ');
+      await controller.appendText('World');
+      await controller.finalizeCurrentTextBlock(msg);
+
+      expect(deps.renderer.renderContent).toHaveBeenCalledTimes(1);
+      expect(deps.renderer.renderContent).toHaveBeenCalledWith(
+        expect.anything(),
+        'Hello World'
+      );
+      expect(deps.renderer.addTextCopyButton).toHaveBeenCalledWith(
+        expect.anything(),
+        'Hello World'
+      );
+      expect(msg.contentBlocks).toContainEqual({ type: 'text', content: 'Hello World' });
+      expect(deps.state.thinkingEl).toBeNull();
+    });
+
+    it('renders a completed text segment at a block transition (text -> tool)', async () => {
+      const msg = createTestMessage();
+
+      await controller.handleStreamChunk({ type: 'text', content: 'Segment one' }, msg);
+      await controller.handleStreamChunk(
+        { type: 'tool_use', id: 't1', name: 'Read', input: {} },
+        msg,
+      );
+
+      expect(deps.renderer.renderContent).toHaveBeenCalledWith(
+        expect.anything(),
+        'Segment one'
       );
     });
   });

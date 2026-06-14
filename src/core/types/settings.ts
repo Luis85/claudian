@@ -196,6 +196,8 @@ export interface ClaudianSettings {
   tabBarPosition: TabBarPosition;
   enableAutoScroll: boolean;
   deferMathRenderingDuringStreaming: boolean;
+  /** When true, hide the live partial render of an answer and show a "Writing response..." placeholder until each text block completes. */
+  collapseStreamingResponse: boolean;
   chatViewPlacement: ChatViewPlacement;
   firstRunDismissed: boolean;
   /** When true, prompt the user to commit & push after Accepting a Work-Order in a dirty git-backed vault. */

@@ -91,7 +91,7 @@ function makeTab(id: number): Tab {
   let renderCalls = 0;
 
   const deps: StreamControllerDeps = {
-    plugin: { settings: { enableAutoScroll: true }, app: { vault: {} } } as never,
+    plugin: { settings: { enableAutoScroll: true, collapseStreamingResponse: false }, app: { vault: {} } } as never,
     state,
     renderer: {
       renderContent: async () => {
