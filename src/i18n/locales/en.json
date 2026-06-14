@@ -618,6 +618,10 @@
       "name": "Defer math rendering during streaming",
       "desc": "Show raw LaTeX while responses stream, then render math once when each text block completes."
     },
+    "collapseStreamingResponse": {
+      "name": "Hide incomplete responses while streaming",
+      "desc": "Show a 'Writing response...' placeholder while a response streams, then render each text block in one pass when it completes — avoids showing half-formed Markdown or XML."
+    },
     "expandFileEditsByDefault": {
       "name": "Expand file edits by default",
       "desc": "Show Write and Edit diffs expanded when they first appear."

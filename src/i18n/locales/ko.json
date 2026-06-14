@@ -471,6 +471,10 @@
       "name": "스트리밍 중 수식 렌더링 지연",
       "desc": "응답이 스트리밍되는 동안 원본 LaTeX를 표시하고 각 텍스트 블록이 완료되면 수식을 한 번 렌더링합니다."
     },
+    "collapseStreamingResponse": {
+      "name": "스트리밍 중 미완성 응답 숨기기",
+      "desc": "응답이 스트리밍되는 동안 'Writing response...' 자리표시자를 표시하고 각 텍스트 블록이 완료되면 한 번에 렌더링합니다. 완성되지 않은 Markdown이나 XML 표시를 방지합니다."
+    },
     "expandFileEditsByDefault": {
       "name": "파일 편집을 기본적으로 펼치기",
       "desc": "Write 및 Edit diff가 처음 표시될 때 펼친 상태로 보여줍니다."

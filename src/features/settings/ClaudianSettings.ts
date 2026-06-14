@@ -367,6 +367,18 @@ export class ClaudianSettingTab extends PluginSettingTab {
           })
       );
 
+    new Setting(container)
+      .setName(t('settings.collapseStreamingResponse.name'))
+      .setDesc(t('settings.collapseStreamingResponse.desc'))
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.collapseStreamingResponse ?? true)
+          .onChange(async (value) => {
+            this.plugin.settings.collapseStreamingResponse = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
     // --- Conversations ---
 
     new Setting(container).setName(t('settings.conversations')).setHeading();

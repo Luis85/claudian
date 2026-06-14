@@ -125,6 +125,7 @@ function createMockDeps(): StreamControllerDeps {
     plugin: {
       settings: {
         permissionMode: 'yolo',
+        collapseStreamingResponse: false,
       },
       app: {
         vault: {
@@ -325,6 +326,109 @@ describe('StreamController - Text Content', () => {
         expect.anything(),
         'Final $x^2$'
       );
+    });
+  });
+
+  describe('Collapsed streaming response', () => {
+    beforeEach(() => {
+      (deps.plugin.settings as any).collapseStreamingResponse = true;
+    });
+
+    it('does not render the text block live while streaming, and shows a placeholder', async () => {
+      await controller.appendText('Partial <claudian_hand');
+      await controller.appendText('off>more');
+
+      jest.advanceTimersByTime(500);
+      await Promise.resolve();
+
+      expect(deps.renderer.renderContent).not.toHaveBeenCalled();
+      expect(deps.state.thinkingEl).not.toBeNull();
+    });
+
+    it('renders the full block once on finalize, persists it, and hides the placeholder', async () => {
+      const msg = createTestMessage();
+
+      await controller.appendText('Hello ');
+      await controller.appendText('World');
+      await controller.finalizeCurrentTextBlock(msg);
+
+      expect(deps.renderer.renderContent).toHaveBeenCalledTimes(1);
+      expect(deps.renderer.renderContent).toHaveBeenCalledWith(
+        expect.anything(),
+        'Hello World'
+      );
+      expect(deps.renderer.addTextCopyButton).toHaveBeenCalledWith(
+        expect.anything(),
+        'Hello World'
+      );
+      expect(msg.contentBlocks).toContainEqual({ type: 'text', content: 'Hello World' });
+      expect(deps.state.thinkingEl).toBeNull();
+    });
+
+    it('renders a completed text segment at a block transition (text -> tool)', async () => {
+      const msg = createTestMessage();
+
+      await controller.handleStreamChunk({ type: 'text', content: 'Segment one' }, msg);
+      await controller.handleStreamChunk(
+        { type: 'tool_use', id: 't1', name: 'Read', input: {} },
+        msg,
+      );
+
+      expect(deps.renderer.renderContent).toHaveBeenCalledWith(
+        expect.anything(),
+        'Segment one'
+      );
+    });
+
+    it('keeps a block collapsed when the setting is toggled off mid-stream', async () => {
+      const msg = createTestMessage();
+
+      // Block begins collapsed (beforeEach) — the mode is snapshotted at block start.
+      await controller.appendText('Hello ');
+      expect(deps.state.thinkingEl).not.toBeNull(); // placeholder shown
+
+      // Toggle off mid-stream — the in-flight block keeps its collapsed snapshot.
+      (deps.plugin.settings as any).collapseStreamingResponse = false;
+      await controller.appendText('World');
+      jest.advanceTimersByTime(300);
+      await Promise.resolve();
+      expect(deps.renderer.renderContent).not.toHaveBeenCalled(); // still no live render
+
+      await controller.finalizeCurrentTextBlock(msg);
+
+      expect(deps.renderer.renderContent).toHaveBeenCalledTimes(1);
+      expect(deps.renderer.renderContent).toHaveBeenCalledWith(
+        expect.anything(),
+        'Hello World'
+      );
+      expect(msg.contentBlocks).toContainEqual({ type: 'text', content: 'Hello World' });
+      expect(deps.state.thinkingEl).toBeNull();
+    });
+
+    it('keeps a block live when collapse is enabled mid-stream (snapshot applies next block)', async () => {
+      const msg = createTestMessage();
+
+      // Block begins with collapse OFF — the mode is snapshotted at block start.
+      (deps.plugin.settings as any).collapseStreamingResponse = false;
+      await controller.appendText('Hello ');
+      jest.advanceTimersByTime(16);
+      await Promise.resolve();
+      expect(deps.renderer.renderContent).toHaveBeenCalledWith(expect.anything(), 'Hello ');
+
+      // Toggle on mid-stream — the in-flight block keeps its non-collapsed snapshot.
+      (deps.plugin.settings as any).collapseStreamingResponse = true;
+      await controller.appendText('World');
+      jest.advanceTimersByTime(16);
+      await Promise.resolve();
+
+      expect(deps.renderer.renderContent).toHaveBeenLastCalledWith(
+        expect.anything(),
+        'Hello World'
+      );
+      expect(deps.state.thinkingEl).toBeNull(); // non-collapsed block shows no placeholder
+
+      await controller.finalizeCurrentTextBlock(msg);
+      expect(msg.contentBlocks).toContainEqual({ type: 'text', content: 'Hello World' });
     });
   });
 

@@ -196,6 +196,8 @@ export interface ClaudianSettings {
   tabBarPosition: TabBarPosition;
   enableAutoScroll: boolean;
   deferMathRenderingDuringStreaming: boolean;
+  /** When true, hide the live partial render of an answer and show a "Writing response..." placeholder until each text block completes. */
+  collapseStreamingResponse: boolean;
   expandFileEditsByDefault: boolean;
   chatViewPlacement: ChatViewPlacement;
   firstRunDismissed: boolean;

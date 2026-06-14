@@ -471,6 +471,10 @@
       "name": "流式传输时延迟渲染数学公式",
       "desc": "响应流式传输时显示原始 LaTeX，并在每个文本块完成后只渲染一次数学公式。"
     },
+    "collapseStreamingResponse": {
+      "name": "流式传输时隐藏未完成的响应",
+      "desc": "响应流式传输时显示「Writing response...」占位符，并在每个文本块完成后一次性渲染，避免显示尚未成形的 Markdown 或 XML。"
+    },
     "expandFileEditsByDefault": {
       "name": "默认展开文件编辑",
       "desc": "Write 和 Edit diff 首次出现时以展开状态显示。"

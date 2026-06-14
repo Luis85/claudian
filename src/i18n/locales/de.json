@@ -471,6 +471,10 @@
       "name": "Mathe-Rendering während Streaming aufschieben",
       "desc": "LaTeX während des Streamings roh anzeigen und Mathematik einmal rendern, wenn der Textblock abgeschlossen ist."
     },
+    "collapseStreamingResponse": {
+      "name": "Unvollständige Antworten während des Streamings ausblenden",
+      "desc": "Während eine Antwort gestreamt wird, einen Platzhalter „Writing response...“ anzeigen und jeden Textblock erst beim Abschluss in einem Durchgang rendern – verhindert halbfertiges Markdown oder XML."
+    },
     "expandFileEditsByDefault": {
       "name": "Dateibearbeitungen standardmäßig ausklappen",
       "desc": "Write- und Edit-Diffs beim ersten Erscheinen ausgeklappt anzeigen."
