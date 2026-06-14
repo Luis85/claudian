@@ -93,7 +93,7 @@ _Avoid_: ticket, work order (a **Work order** is an Agent Board execution artifa
 - A **Conversation** belongs to exactly one **Provider** (via `providerId`) and holds opaque `providerState`.
 - A **Provider** is implemented by one **Provider adaptor** and creates **Runtimes** plus **Workspace services** via `ProviderRegistry` / `ProviderWorkspaceRegistry`.
 - A **Runtime** produces a **Session** (provider-neutral metadata) and a **Transcript** (provider-native detail).
-- A turn carries one **Context envelope** of **Context sources**; `buildContextEnvelope` assembles it once and each **Provider adaptor** renders it to its wire format, wrapping `untrusted-external` sources at build time.
+- A turn carries one **Context envelope** of **Context sources**; `buildContextEnvelope` assembles it once and assigns each source's trust, and each **Provider adaptor** renders the envelope to its wire format — `untrusted-external` sources are wrapped per style at render time.
 - A **Command catalog** surfaces **Skills** and commands; a run may spawn **Subagents**.
 - An **Execution surface** binds a **Work order** run to a **Runtime**; the **ChatTabExecutionSurface** observes it in the sidepanel.
 - The **Agent Board** holds many **Work orders**; each **Work order** sits in one **Lane** at a time and accumulates a **Run ledger** and a **Handoff**.
