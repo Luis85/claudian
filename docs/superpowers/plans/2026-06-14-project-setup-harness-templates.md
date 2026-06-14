@@ -576,6 +576,13 @@ test('planTest(vitest) renders vitest config with the istanbul provider', () => 
   assert.equal(pkg.patch.scripts.test, 'vitest run');
   assert.ok('@vitest/coverage-istanbul' in pkg.patch.devDependencies);
 });
+
+test('planTest falls back to the DETECTED framework when no explicit answer', () => {
+  // options.testFramework null (user accepted the default) + detected vitest.
+  const actions = planTest({ testFramework: null, guardrails: {} }, { testFramework: 'vitest' });
+  assert.ok(actions.some((a) => a.path === 'vitest.config.mjs'));
+  assert.ok(!actions.some((a) => a.path === 'jest.config.mjs'));
+});
 ```
 
 - [ ] **Step 4: Run to verify it fails**
@@ -594,8 +601,11 @@ export function planLoc(options) {
   ];
 }
 
-export function planTest(options) {
-  const fw = options.testFramework ?? 'jest';
+export function planTest(options, state) {
+  // Prefer an explicit answer, else the framework detected in the repo, else
+  // Jest. This keeps a brownfield Vitest project on Vitest when the user accepts
+  // the detected default.
+  const fw = options.testFramework ?? state?.testFramework ?? 'jest';
   // Thresholds are filled by baseline; until then default to 0 (a no-op floor)
   // rendered as a JSON object so the config is valid immediately.
   const coverageThreshold = JSON.stringify(
@@ -654,10 +664,7 @@ jobs:
 {{pmSetup}}      - uses: actions/setup-node@v4
         with: { node-version: 22, cache: {{pmCache}} }
       - run: {{pmInstall}}
-      - run: {{pmRun}} lint
-      - run: {{pmRun}} check:loc
-      - run: {{pmRun}} check:quality   # runs with ./coverage absent (CRAP stays static)
-      - run: {{coverageStep}}
+{{steps}}
 ```
 
 - [ ] **Step 2: Write the failing test**
@@ -671,16 +678,37 @@ import { planCi, planInstall } from '../lib/harness.mjs';
 
 test('planCi only emits the workflow when GitHub integration is opted in', () => {
   assert.deepEqual(planCi({ github: { integrate: false }, guardrails: { ci: true } }, { packageManager: 'npm' }), []);
-  const actions = planCi({ github: { integrate: true }, guardrails: { ci: true, coverageFloors: true } }, { packageManager: 'npm' });
+  const actions = planCi(
+    { github: { integrate: true }, guardrails: { ci: true, eslintSeverityStaging: true, locGuard: true, fallowRatchet: true, coverageFloors: true } },
+    { packageManager: 'npm' },
+  );
   const wf = actions.find((a) => a.path === '.github/workflows/ci.yml');
   assert.equal(wf.mode, 'skip-if-exists');
   assert.match(wf.content, /npm ci/);
+  assert.match(wf.content, /npm run lint/);
+  assert.match(wf.content, /npm run check:loc/);
   assert.match(wf.content, /npm run check:quality/);
   assert.match(wf.content, /npm run test:coverage/);
 });
 
+test('planCi gates each step on its guardrail flag (no step for a disabled guardrail)', () => {
+  const actions = planCi(
+    { github: { integrate: true }, guardrails: { ci: true, eslintSeverityStaging: true, locGuard: false, fallowRatchet: false, coverageFloors: false } },
+    { packageManager: 'npm' },
+  );
+  const wf = actions.find((a) => a.path === '.github/workflows/ci.yml');
+  assert.match(wf.content, /npm run lint/);
+  assert.doesNotMatch(wf.content, /check:loc/); // guardrail off -> script absent -> no step
+  assert.doesNotMatch(wf.content, /check:quality/);
+  assert.match(wf.content, /npm run test\b/); // base test step always present
+  assert.doesNotMatch(wf.content, /test:coverage/);
+});
+
 test('planCi renders the detected package manager (pnpm)', () => {
-  const actions = planCi({ github: { integrate: true }, guardrails: { ci: true } }, { packageManager: 'pnpm' });
+  const actions = planCi(
+    { github: { integrate: true }, guardrails: { ci: true, fallowRatchet: true } },
+    { packageManager: 'pnpm' },
+  );
   const wf = actions.find((a) => a.path === '.github/workflows/ci.yml');
   assert.match(wf.content, /pnpm\/action-setup/);
   assert.match(wf.content, /pnpm install --frozen-lockfile/);
@@ -711,10 +739,18 @@ const CI_PM = {
 
 export function planCi(options, state) {
   if (!options.github?.integrate || !options.guardrails?.ci) return [];
+  const g = options.guardrails ?? {};
   const pm = CI_PM[state?.packageManager] ?? CI_PM.npm;
-  const coverageStep = options.guardrails?.coverageFloors ? `${pm.run} test:coverage` : `${pm.run} test`;
+  // Emit a CI step only for a guardrail that is actually installed (its npm
+  // script exists). The test step is always present; it uses the coverage
+  // variant when coverage floors are on.
+  const steps = [];
+  if (g.eslintSeverityStaging) steps.push(`      - run: ${pm.run} lint`);
+  if (g.locGuard) steps.push(`      - run: ${pm.run} check:loc`);
+  if (g.fallowRatchet) steps.push(`      - run: ${pm.run} check:quality   # runs with ./coverage absent`);
+  steps.push(`      - run: ${pm.run} ${g.coverageFloors ? 'test:coverage' : 'test'}`);
   const content = renderTemplate(loadTemplate('ci.yml.tmpl'), {
-    pmSetup: pm.setup, pmCache: pm.cache, pmInstall: pm.install, pmRun: pm.run, coverageStep,
+    pmSetup: pm.setup, pmCache: pm.cache, pmInstall: pm.install, steps: steps.join('\n'),
   });
   return [{ type: 'writeFile', path: '.github/workflows/ci.yml', mode: 'skip-if-exists', content }];
 }
@@ -905,7 +941,19 @@ export function plan(options, state) {
 
 Add the import: `import { initBaselines } from './lib/baseline.mjs';`
 
-In the `apply` branch of the CLI (from Plan 1 Task 6), after `const result = apply(...)` and before the output block, add:
+In the `apply`/`plan` branch (from Plan 1 Task 6) the handler currently does
+`const actions = plan(options, detect(cwd));`. Change it to capture `state` once
+and **resolve the test framework** so every downstream planner *and* the baseline
+agree (this preserves a brownfield project's existing Jest/Vitest):
+
+```js
+      const options = loadOptions(resolve(cwd, args.flags.config));
+      const state = detect(cwd);
+      options.testFramework = options.testFramework ?? state.testFramework ?? 'jest';
+      const actions = plan(options, state);
+```
+
+Then, after `const result = apply(...)` and before the output block, add:
 
 ```js
       if (!dryRun && result.changed.length > 0) {
