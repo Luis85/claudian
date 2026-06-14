@@ -163,6 +163,11 @@ export function planReport() {
   ];
 }
 
+export function planGithubMcp(options) {
+  if (!options.github?.integrate || !options.github?.mcp) return [];
+  return [{ type: 'writeFile', path: '.mcp.json', mode: 'skip-if-exists', content: loadTemplate('mcp.json.tmpl') }];
+}
+
 export function planDocs(options) {
   if (!options.docs?.scaffold) return [];
   // Document only the gates whose guardrail is enabled — otherwise the guide

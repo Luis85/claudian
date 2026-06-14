@@ -1,5 +1,8 @@
 // .claude/skills/project-setup/scripts/lib/plan.mjs
-import { planCi, planEslint, planFallow, planInstall, planLoc, planTest } from './harness.mjs';
+import {
+  planCi, planDocs, planEslint, planFallow, planGithubMcp,
+  planInstall, planLoc, planReport, planTest,
+} from './harness.mjs';
 
 const ENGINE_VERSION = '0.1.0';
 
@@ -39,8 +42,11 @@ function planHarness(options, state) {
     ...planFallow(options, state),
     ...planLoc(options, state),
     ...planTest(options, state),
+    ...planReport(options, state),
+    ...planDocs(options, state),
     ...planCi(options, state),
-    ...planInstall(options, state), // must be last so deps are in package.json first
+    ...planGithubMcp(options, state),
+    ...planInstall(options, state), // last: deps in package.json first
   ];
 }
 
