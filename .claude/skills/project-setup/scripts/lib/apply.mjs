@@ -1,4 +1,5 @@
 // .claude/skills/project-setup/scripts/lib/apply.mjs
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import process from 'node:process';
@@ -9,10 +10,21 @@ export function apply(actions, opts = {}) {
   const cwd = opts.cwd ?? process.cwd();
   const dryRun = opts.dryRun ?? false;
   const backupDir = opts.backupDir ?? join(cwd, '.project-setup-backup', String(Date.now()));
+  const exec =
+    opts.exec ?? ((cmd, args, options) => execFileSync(cmd, args, { stdio: 'inherit', ...options }));
   const changed = [];
   const planned = [];
 
   for (const action of actions) {
+    if (action.type === 'installDeps') {
+      // Install only when package.json was (re)written this run; otherwise the
+      // deps are already present. NEVER push to `changed`: install is an effect,
+      // not a tracked file mutation, so a converged re-apply stays a no-op and
+      // the Task 8 baseline hook does not re-run.
+      if (!dryRun && changed.includes('package.json')) exec(action.packageManager, ['install'], { cwd });
+      continue;
+    }
+
     const abs = join(cwd, action.path);
     planned.push(action.path); // every action is part of the plan
 
