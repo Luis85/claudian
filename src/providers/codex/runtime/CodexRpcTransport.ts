@@ -16,6 +16,7 @@ type ServerRequestHandler = (requestId: string | number, params: unknown) => Pro
 export class CodexRpcTransport {
   private client: JsonRpcStdioClient | null = null;
   private readonly notificationHandlers = new Map<string, NotificationHandler>();
+  private readonly notificationUnsubs = new Map<string, () => void>();
   private readonly serverRequestHandlers = new Map<string, ServerRequestHandler>();
 
   constructor(private readonly proc: CodexAppServerProcess) {}
@@ -36,7 +37,7 @@ export class CodexRpcTransport {
     });
 
     for (const [method, handler] of this.notificationHandlers) {
-      client.onNotification(method, handler);
+      this.notificationUnsubs.set(method, client.onNotification(method, handler));
     }
     for (const [method, handler] of this.serverRequestHandlers) {
       client.onRequest(method, (params, id) => handler(id as string | number, params));
@@ -57,8 +58,16 @@ export class CodexRpcTransport {
   }
 
   onNotification(method: string, handler: NotificationHandler): void {
+    // Codex has one handler per method (the original used a replacing Map); the
+    // shared client's notification map is a Set, so drop the previous registration
+    // before adding the new one — otherwise re-wiring per turn (CodexChatRuntime
+    // rebuilds its router each turn) would leak stale handlers onto a long-lived
+    // transport and double-dispatch notifications.
     this.notificationHandlers.set(method, handler);
-    this.client?.onNotification(method, handler);
+    if (this.client) {
+      this.notificationUnsubs.get(method)?.();
+      this.notificationUnsubs.set(method, this.client.onNotification(method, handler));
+    }
   }
 
   onServerRequest(method: string, handler: ServerRequestHandler): void {

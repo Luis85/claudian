@@ -122,6 +122,24 @@ describe('CodexRpcTransport', () => {
       expect(handler).toHaveBeenCalledWith({ delta: 'Hello' });
     });
 
+    it('replaces a prior handler when the same method is re-registered (no stale accumulation)', async () => {
+      const stale = jest.fn();
+      const current = jest.fn();
+      transport.onNotification('item/agentMessage/delta', stale);
+      // CodexChatRuntime re-wires handlers per turn on a long-lived transport.
+      transport.onNotification('item/agentMessage/delta', current);
+
+      proc._pushLine({
+        jsonrpc: '2.0',
+        method: 'item/agentMessage/delta',
+        params: { delta: 'Hi' },
+      });
+
+      await new Promise(r => setTimeout(r, 10));
+      expect(current).toHaveBeenCalledWith({ delta: 'Hi' });
+      expect(stale).not.toHaveBeenCalled();
+    });
+
     it('ignores notifications without a registered handler', async () => {
       proc._pushLine({
         jsonrpc: '2.0',
