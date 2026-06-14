@@ -89,7 +89,7 @@ and PR #100 (the OpenCode sqlite extraction) shrank one to the edge:
   Ship it **standalone** — a full regen pulls cumulative shrinkage from
   unrelated files into a feature PR (per run 12a).
 
-### 1b. The seven > 1,000-LOC coordinators (the real depth debt)
+### 1b. The six > 1,000-LOC coordinators (the real depth debt)
 
 These are the accepted grandfathered exception: cohesive owners held shrink-only.
 Each carries a planned seam; none is "open work" until someone picks one up, but
@@ -102,12 +102,15 @@ this is where agent-navigability cost concentrates.
 | 1,143 | `providers/opencode/runtime/OpencodeChatRuntime.ts` | ACP wiring vs. turn/session coordination |
 | 1,079 | `providers/codex/runtime/CodexChatRuntime.ts` | app-server turn lifecycle vs. collaboration-mode/plan handling |
 | 1,067 | `features/chat/controllers/StreamController.ts` | split the per-chunk tool/stream reducers from the lifecycle/scroll/abort coordination (subagent split already extracted in #107) |
-| 1,061 | `features/chat/rendering/MessageRenderer.ts` | message orchestration vs. the per-block renderers it still inlines |
 | 1,010 | `features/chat/ClaudianView.ts` | lifecycle/assembly vs. the scope/shortcut + work-order-tab wiring |
 
 `TabManager` graduated out of this tier (1,010 → 762) when its provider-aware
 command-catalog + runtime-warmup coordination was extracted to
 `TabProviderCommandCoordinator`; tab CRUD/fork/restore stay on the manager.
+`MessageRenderer` graduated next (1,061 → 812) by extracting its subagent
+projection (`MessageSubagentRenderer`), image attachments
+(`MessageImageRenderer`), and copy/rewind/fork action toolbar
+(`MessageActionBar`) to siblings; message orchestration stays on the renderer.
 
 Guidance (unchanged from the oversized-modules doc): split only what passes the
 **deletion test** — where deleting the module would smear ordering constraints
@@ -117,7 +120,7 @@ the new interface, not at collaborator-call wiring.
 
 ### 1c. The 500–1,000 tier (18 entries)
 
-`AgentBoardRenderer` 948, `SubagentManager` 936, `AgentBoardView` 890,
+`AgentBoardRenderer` 690 (card hover-action cluster + ⋯ overflow/portal menu extracted to `agentBoardCardActions`), `SubagentManager` 936, `AgentBoardView` 890,
 `CodexNotificationRouter` 879, `ToolCallRenderer` 854, `WorkOrderDetailModal` 787,
 `InlineEditModal` 785, `main` 767, `i18n/types` 763, `CodexHistoryStore` 746,
 `ConversationController` 655 (history-list UI extracted to `ConversationHistoryView`, #102),
@@ -214,13 +217,14 @@ Ranked by payoff ÷ effort. Each is independently shippable.
 3. **Lift `opencode/runtime` (and then `cursor/runtime`) branch coverage** (M;
    genuine robustness win on the least-tested runtimes; unlocks floor raises).
 4. **Pick one > 1,000-LOC coordinator and split it behind a smaller interface**
-   (L each; the real depth debt). `InputController`'s plan/approval state machine
-   was extracted to `InlinePromptController` (#104, 1,404 → 1,149),
-   `ConversationController`'s history-list UI to `ConversationHistoryView`
-   (#102, 999 → 655), and `TabManager`'s provider command-catalog + runtime-warmup
-   coordination to `TabProviderCommandCoordinator` (1,010 → 762, graduating it out
-   of the > 1,000 tier); `StreamController` (1,067) is now the prime remaining
-   chat-controller target. Behavior-preserving, extract-to-sibling.
+   (L each; the real depth debt). Landed: `InputController` → `InlinePromptController`
+   (#104, 1,404 → 1,149); `ConversationController` → `ConversationHistoryView`
+   (#102, 999 → 655); `TabManager` → `TabProviderCommandCoordinator`
+   (1,010 → 762); `MessageRenderer` → `MessageSubagentRenderer` +
+   `MessageImageRenderer` + `MessageActionBar` (1,061 → 812, graduating it out of
+   the tier). `AgentBoardRenderer`'s card-action/overflow-menu cluster also
+   graduated to `agentBoardCardActions` (948 → 690). `StreamController` (1,067) is
+   the prime remaining chat-controller target. Behavior-preserving, extract-to-sibling.
 5. **Opportunistic clone/complexity burn-down** (S, diminishing returns) — only
    when a runtime/file is already open; do not sprint the entangled cross-zone
    tail.
@@ -244,7 +248,7 @@ splitting cohesive owners purely to hit a number.
 ## Acceptance criteria (per threshold; check off as they graduate)
 
 - [x] LOC allowlist drops below 27 entries — `OpencodeHistoryStore` graduated (→ 26).
-- [x] At least one > 1,000-LOC coordinator split behind a smaller interface — `InputController` → `InlinePromptController` (#104, 1,404 → 1,149); `ConversationController` → `ConversationHistoryView` (#102); `TabManager` → `TabProviderCommandCoordinator` (1,010 → 762).
+- [x] At least one > 1,000-LOC coordinator split behind a smaller interface — `InputController` → `InlinePromptController` (#104, 1,404 → 1,149); `ConversationController` → `ConversationHistoryView` (#102); `TabManager` → `TabProviderCommandCoordinator` (1,010 → 762); `MessageRenderer` → `MessageSubagentRenderer`/`MessageImageRenderer`/`MessageActionBar` (1,061 → 812); `AgentBoardRenderer` → `agentBoardCardActions` (948 → 690).
 - [x] Coverage floors re-locked to within a few points of current actuals — 2026-06-14.
 - [x] `opencode/runtime` branch coverage floor raised above 50 % — 45 → 56.
 - [ ] `criticalComplexity` and the three structural counters held at 0.

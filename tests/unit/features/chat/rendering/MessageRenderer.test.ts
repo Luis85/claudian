@@ -2318,8 +2318,12 @@ next_action: Review the result.
     it('should add click handler on image elements', () => {
       const containerEl = createMockEl();
       const { renderer } = createRenderer();
-      const showFullImageSpy = jest.spyOn(renderer, 'showFullImage').mockImplementation(() => {});
-      jest.spyOn(renderer, 'setImageSrc').mockImplementation(() => {});
+      // renderMessageImages + showFullImage moved to MessageImageRenderer; the image
+      // click handler routes through that instance, so spy on it (not the MR delegator).
+      const imageRenderer = (renderer as unknown as {
+        imageRenderer: { showFullImage: (image: ImageAttachment) => void };
+      }).imageRenderer;
+      const showFullImageSpy = jest.spyOn(imageRenderer, 'showFullImage').mockImplementation(() => {});
 
       const images: ImageAttachment[] = [
         { id: 'img-1', name: 'photo.png', mediaType: 'image/png', data: 'base64data', size: 200, source: 'file' },

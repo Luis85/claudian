@@ -1,14 +1,15 @@
 import { setIcon } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
-import type { TranslationKey } from '../../../i18n/types';
 import { renderAgentAvatar } from '../../agents/agentAvatar';
 import { resolvePersona } from '../../agents/personaRegistry';
 import { DEFAULT_LANE_TITLES, type ResolvedBoardLayout, type ResolvedLane } from '../config/boardConfigTypes';
 import { parseAcceptanceProgress } from '../model/acceptanceProgress';
 import { isRunnableTaskStatus } from '../model/taskStateMachine';
 import type { InvalidTaskNote, TaskPriority, TaskSpec, TaskStatus } from '../model/taskTypes';
-import { PortalPopover, type PortalPopoverItem } from './portalPopover';
+import { AgentBoardCardActions, type AgentBoardRenderCallbacks } from './agentBoardCardActions';
+
+export type { AgentBoardRenderCallbacks } from './agentBoardCardActions';
 
 /** Lane id of the Inbox lane — the only lane that hosts the add-work-order row. */
 
@@ -28,41 +29,6 @@ export interface AgentBoardLiveStripPayload {
   elapsedMs: number;
   attemptNumber: number;
   heartbeatAgeMs: number;
-}
-
-export interface AgentBoardRenderCallbacks {
-  onOpenDetail(task: TaskSpec): void;
-  onRun(task: TaskSpec): void;
-  onStop(task: TaskSpec): void;
-  onAccept(task: TaskSpec): void;
-  onRework(task: TaskSpec): void;
-  onMarkReady(task: TaskSpec): void;
-  onReopen(task: TaskSpec): void;
-  onMoveToInbox(task: TaskSpec): void;
-  onAddWorkOrder(): void;
-  onRunNextReady(): void;
-  /** Queue skip reason for a card, or null when the card is not skipped. */
-  getSkipReason?: (task: TaskSpec) => string | null;
-  /** Dismiss a card's queue skip chip. */
-  onAckSkip?: (task: TaskSpec) => void;
-  onContextMenu(task: TaskSpec, event: MouseEvent): void;
-  onToggleLaneCollapse(laneId: string): void;
-  onReply?(task: TaskSpec, content: string): void;
-  onApprove?(task: TaskSpec): void;
-  onReject?(task: TaskSpec, reason: string): void;
-  onCancelPaused?(task: TaskSpec): void;
-  /** needs_handoff → review: salvage a run that finished without a structured handoff. */
-  onSendToReview?(task: TaskSpec): void;
-  /** needs_handoff → failed: give up on a run that finished without a structured handoff. */
-  onMarkFailed?(task: TaskSpec): void;
-  /** ⋯ menu: move a terminal/inbox work order to the archive folder. */
-  onArchive(task: TaskSpec): void;
-  /** ⋯ menu: open the work-order note in a new tab. */
-  onOpenNote(task: TaskSpec): void;
-  /** ⋯ menu: open the linked conversation in a new tab. */
-  onOpenConversation(task: TaskSpec): void;
-  /** Whether the linked conversation still exists; gates "Open conversation". */
-  canOpenConversation?(task: TaskSpec): boolean;
 }
 
 export interface AgentBoardRenderState {
@@ -89,128 +55,6 @@ interface CardRefs {
 }
 
 const LIVE_STATUSES: ReadonlySet<TaskStatus> = new Set(['running', 'needs_input', 'needs_approval']);
-
-/**
- * One card action — the per-status primary button or a ⋯ overflow-menu item.
- * `labelKey` resolves through the i18n helper; `icon` is a Lucide glyph;
- * `variant` keys the primary button styling; `danger` marks destructive ⋯ menu
- * items (red). `run` is resolved against the live callbacks at click time.
- */
-interface CardAction {
-  labelKey: TranslationKey;
-  icon: string;
-  variant?: 'cta' | 'danger' | 'ghost';
-  danger?: boolean;
-  run: (callbacks: AgentBoardRenderCallbacks, task: TaskSpec) => void;
-  /** When present, the action is only shown if this returns true. */
-  available?: (callbacks: AgentBoardRenderCallbacks, task: TaskSpec) => boolean;
-}
-
-interface CardActionModel {
-  primary: CardAction | null;
-  menu: CardAction[];
-}
-
-// Reusable ⋯ menu items (labels reuse the modal/context-menu keys where they
-// already exist; board-only labels live under tasks.board.cardAction.*).
-const MENU_OPEN_NOTE: CardAction = {
-  labelKey: 'tasks.board.contextMenu.openNote',
-  icon: 'file-text',
-  run: (cb, task) => cb.onOpenNote(task),
-};
-const MENU_OPEN_CONVERSATION: CardAction = {
-  labelKey: 'tasks.board.contextMenu.openConversation',
-  icon: 'message-square',
-  run: (cb, task) => cb.onOpenConversation(task),
-  // Same guard the detail modal + right-click menu use: a persisted
-  // conversation_id whose conversation still resolves.
-  available: (cb, task) => Boolean(task.frontmatter.conversation_id) && (cb.canOpenConversation?.(task) ?? true),
-};
-const MENU_ARCHIVE: CardAction = {
-  labelKey: 'tasks.board.contextMenu.archive',
-  icon: 'archive',
-  danger: true,
-  run: (cb, task) => cb.onArchive(task),
-};
-const MENU_BACK_TO_INBOX: CardAction = {
-  labelKey: 'tasks.board.cardAction.backToInbox',
-  icon: 'rotate-ccw',
-  run: (cb, task) => cb.onMoveToInbox(task),
-};
-const MENU_STOP: CardAction = {
-  labelKey: 'tasks.workOrderModal.actionStop',
-  icon: 'square',
-  danger: true,
-  run: (cb, task) => cb.onStop(task),
-};
-const MENU_REWORK: CardAction = {
-  labelKey: 'tasks.workOrderModal.actionRework',
-  icon: 'rotate-ccw',
-  run: (cb, task) => cb.onRework(task),
-};
-const MENU_MARK_FAILED: CardAction = {
-  labelKey: 'tasks.workOrderModal.actionMarkFailed',
-  icon: 'triangle',
-  danger: true,
-  run: (cb, task) => cb.onMarkFailed?.(task),
-};
-
-/**
- * Per-status primary action + ⋯ overflow menu (the spec table). `needs_fix`
- * mirrors `ready` and `canceled` mirrors `failed` (both restored from the
- * pre-cluster recovery actions); any status the spec does not tabulate falls
- * back to an Open-note-only menu so every card stays actionable.
- */
-const CARD_ACTIONS: Partial<Record<TaskStatus, CardActionModel>> = {
-  inbox: {
-    primary: { labelKey: 'tasks.workOrderModal.actionMarkReady', icon: 'check', variant: 'cta', run: (cb, task) => cb.onMarkReady(task) },
-    // No "Run now": inbox items aren't runnable (must transition to ready first).
-    menu: [MENU_OPEN_NOTE, MENU_ARCHIVE],
-  },
-  ready: {
-    primary: { labelKey: 'tasks.board.cardAction.run', icon: 'play', variant: 'cta', run: (cb, task) => cb.onRun(task) },
-    // No Archive: ready/needs_fix are actionable, not archivable (ARCHIVABLE_STATUSES).
-    menu: [MENU_OPEN_NOTE, MENU_BACK_TO_INBOX],
-  },
-  needs_fix: {
-    primary: { labelKey: 'tasks.board.cardAction.run', icon: 'play', variant: 'cta', run: (cb, task) => cb.onRun(task) },
-    menu: [MENU_OPEN_NOTE, MENU_BACK_TO_INBOX],
-  },
-  running: {
-    primary: { labelKey: 'tasks.workOrderModal.actionStop', icon: 'square', variant: 'danger', run: (cb, task) => cb.onStop(task) },
-    menu: [MENU_OPEN_NOTE, MENU_OPEN_CONVERSATION],
-  },
-  needs_input: {
-    primary: null,
-    menu: [MENU_OPEN_NOTE, MENU_OPEN_CONVERSATION, MENU_STOP],
-  },
-  needs_approval: {
-    primary: null,
-    menu: [MENU_OPEN_NOTE, MENU_OPEN_CONVERSATION, MENU_STOP],
-  },
-  review: {
-    primary: { labelKey: 'tasks.workOrderModal.actionAccept', icon: 'check', variant: 'cta', run: (cb, task) => cb.onAccept(task) },
-    menu: [MENU_REWORK, MENU_OPEN_NOTE, MENU_OPEN_CONVERSATION, MENU_BACK_TO_INBOX],
-  },
-  needs_handoff: {
-    primary: { labelKey: 'tasks.workOrderModal.actionSendToReview', icon: 'check', variant: 'cta', run: (cb, task) => cb.onSendToReview?.(task) },
-    menu: [MENU_MARK_FAILED, MENU_OPEN_NOTE],
-  },
-  done: {
-    primary: { labelKey: 'tasks.workOrderModal.actionReopen', icon: 'rotate-ccw', variant: 'ghost', run: (cb, task) => cb.onReopen(task) },
-    menu: [MENU_OPEN_NOTE, MENU_ARCHIVE],
-  },
-  failed: {
-    primary: { labelKey: 'tasks.board.cardAction.retry', icon: 'rotate-ccw', variant: 'cta', run: (cb, task) => cb.onMarkReady(task) },
-    menu: [MENU_OPEN_NOTE, MENU_ARCHIVE],
-  },
-  canceled: {
-    primary: { labelKey: 'tasks.board.cardAction.retry', icon: 'rotate-ccw', variant: 'cta', run: (cb, task) => cb.onMarkReady(task) },
-    menu: [MENU_OPEN_NOTE, MENU_ARCHIVE],
-  },
-};
-
-const FALLBACK_CARD_ACTIONS: CardActionModel = { primary: null, menu: [MENU_OPEN_NOTE] };
 
 const PRIORITY_TOTAL_BARS = 3;
 
@@ -253,15 +97,20 @@ export interface SkipChipState {
 export class AgentBoardRenderer {
   private cardRefs = new Map<string, CardRefs>();
   private callbacks: AgentBoardRenderCallbacks | null = null;
-  // The single open ⋯ overflow popover (only one card menu is open at a time).
-  // Tracked so a full re-render or a removed card tears it down — the popover is
-  // portaled onto document.body, so it would otherwise leak a detached node and
-  // its scroll/resize/click listeners across renders.
-  private openPopover: PortalPopover | null = null;
+  private cardActionsInstance: AgentBoardCardActions | null = null;
+
+  private get cardActions(): AgentBoardCardActions {
+    if (!this.cardActionsInstance) {
+      this.cardActionsInstance = new AgentBoardCardActions({
+        getCallbacks: () => this.callbacks,
+      });
+    }
+    return this.cardActionsInstance;
+  }
 
   render(container: HTMLElement, state: AgentBoardRenderState, callbacks: AgentBoardRenderCallbacks): void {
     this.callbacks = callbacks;
-    this.closePopover();
+    this.cardActions.closePopover();
     this.cardRefs.clear();
     container.empty();
     const root = container.createDiv({ cls: 'claudian-agent-board' });
@@ -308,9 +157,9 @@ export class AgentBoardRenderer {
     // change which primary/menu applies; rebuilding (rather than mutating in
     // place) keeps the action seam in sync. Any open ⋯ popover this card owned
     // is closed first so its portaled node + listeners don't outlive its trigger.
-    this.closePopover();
+    this.cardActions.closePopover();
     refs.actions.remove();
-    refs.actions = this.insertCardActions(refs.card, refs.statusDot, task, live);
+    refs.actions = this.cardActions.insertCardActions(refs.card, refs.statusDot, task, live);
 
     // The footer is hidden (not destroyed) while a reply surface shows, so a
     // resumed card recovers its progress + assignee seam without a full render.
@@ -345,15 +194,9 @@ export class AgentBoardRenderer {
     if (!refs) return;
     // A removed card may own the open ⋯ popover; tear it down so the portaled
     // node + its listeners don't outlive the card they acted on.
-    this.closePopover();
+    this.cardActions.closePopover();
     refs.card.remove();
     this.cardRefs.delete(taskId);
-  }
-
-  /** Tear down the open ⋯ overflow popover (portaled on document.body), if any. */
-  private closePopover(): void {
-    this.openPopover?.close();
-    this.openPopover = null;
   }
 
   private renderBoardToolbar(
@@ -606,7 +449,7 @@ export class AgentBoardRenderer {
     // Hover action cluster: floats over the card's top-right (absolute), so it
     // reserves no layout width — titles keep their full width. Always-visible on
     // live cards; reveal-on-hover/focus otherwise (CSS-gated).
-    const actions = this.renderCardActions(card, task, live);
+    const actions = this.cardActions.renderCardActions(card, task, live);
 
     this.renderMetaRow(card, task);
 
@@ -736,120 +579,6 @@ export class AgentBoardRenderer {
       AgentBoardRenderer.ASSIGNEE_AVATAR_SIZE,
     );
     return { footer, assignee };
-  }
-
-  /**
-   * Hover action cluster: the single per-status primary button + the ⋯
-   * overflow-menu trigger, floated over the card's top-right. The cluster
-   * reserves no layout width (CSS `position: absolute`), so titles keep their
-   * full width; it reveals on card hover/focus, and stays visible on live cards
-   * (running / needs_input / needs_approval). `persistent` keys the always-on
-   * styling for live cards. Every click routes through the supplied callbacks.
-   */
-  private renderCardActions(card: HTMLElement, task: TaskSpec, persistent: boolean): HTMLElement {
-    const model = CARD_ACTIONS[task.frontmatter.status] ?? FALLBACK_CARD_ACTIONS;
-    const cluster = card.createDiv({
-      cls: `claudian-agent-board-card-actions${persistent ? ' claudian-agent-board-card-actions--persistent' : ''}`,
-    });
-    // The card opens the detail view on click; keep cluster interactions local.
-    cluster.addEventListener('click', (event) => event.stopPropagation());
-
-    if (model.primary) this.renderPrimaryAction(cluster, task, model.primary);
-    this.renderOverflowMenu(cluster, task, model.menu);
-    return cluster;
-  }
-
-  /**
-   * Build the cluster and place it immediately after the title row (its DOM slot
-   * on first render). The cluster is `position: absolute`, so order doesn't
-   * affect its placement, but keeping the slot stable avoids surprising the
-   * `cardRefs` consumers. Used by `patchCard` after removing the stale cluster.
-   */
-  private insertCardActions(
-    card: HTMLElement,
-    statusDot: HTMLElement,
-    task: TaskSpec,
-    persistent: boolean,
-  ): HTMLElement {
-    const cluster = this.renderCardActions(card, task, persistent);
-    const titleRow = statusDot.parentElement;
-    if (titleRow && titleRow.nextSibling) card.insertBefore(cluster, titleRow.nextSibling);
-    return cluster;
-  }
-
-  private renderPrimaryAction(cluster: HTMLElement, task: TaskSpec, action: CardAction): void {
-    const variant = action.variant ?? 'cta';
-    const button = cluster.createEl('button', {
-      cls: `claudian-agent-board-card-action-primary claudian-agent-board-card-action-primary--${variant}`,
-      attr: { type: 'button' },
-    });
-    const label = t(action.labelKey);
-    const icon = button.createSpan({ cls: 'claudian-agent-board-card-action-icon' });
-    icon.setAttribute('aria-hidden', 'true');
-    icon.setAttribute('data-icon', action.icon);
-    setIcon(icon, action.icon);
-    button.createSpan({ cls: 'claudian-agent-board-card-action-label', text: label });
-    button.addEventListener('click', (event) => {
-      event.stopPropagation();
-      const callbacks = this.callbacks;
-      if (callbacks) action.run(callbacks, task);
-    });
-  }
-
-  private renderOverflowMenu(cluster: HTMLElement, task: TaskSpec, menu: CardAction[]): void {
-    const trigger = cluster.createEl('button', {
-      cls: 'claudian-agent-board-card-action-more',
-      attr: { type: 'button', 'aria-label': t('tasks.board.cardAction.moreActions'), 'aria-haspopup': 'menu' },
-    });
-    const glyph = trigger.createSpan({ cls: 'claudian-agent-board-card-action-icon' });
-    glyph.setAttribute('aria-hidden', 'true');
-    glyph.setAttribute('data-icon', 'more-horizontal');
-    setIcon(glyph, 'more-horizontal');
-
-    // The hover cluster hides on mouseleave (it shows on card :hover/:focus-within);
-    // keep it visible while THIS card's ⋯ menu is open so the trigger isn't
-    // orphaned when the pointer moves onto the (body-portaled) menu.
-    const card = cluster.closest('.claudian-agent-board-card') as HTMLElement | null;
-
-    const popover = new PortalPopover({
-      trigger,
-      // Built lazily on each open so guards (canOpenConversation, etc.)
-      // re-evaluate against current state, not the render-time snapshot.
-      items: (): PortalPopoverItem[] => {
-        const cb = this.callbacks;
-        return menu
-          .filter((action) => !action.available || (cb != null && action.available(cb, task)))
-          .map((action) => ({
-            label: t(action.labelKey),
-            icon: action.icon,
-            danger: action.danger,
-            run: () => {
-              const callbacks = this.callbacks;
-              if (callbacks) action.run(callbacks, task);
-            },
-          }));
-      },
-      menuClass: 'claudian-agent-board-card-menu',
-      itemClass: 'claudian-agent-board-card-menu-item',
-      itemIconClass: 'claudian-agent-board-card-menu-item-icon',
-      itemDangerClass: 'claudian-agent-board-card-menu-item--danger',
-      upClass: 'claudian-agent-board-card-menu--up',
-      onClose: () => card?.removeClass('is-menu-open'),
-    });
-
-    trigger.addEventListener('click', (event) => {
-      event.stopPropagation();
-      // Toggle: a second click on an already-open menu (this trigger's) closes it.
-      if (popover.isOpen()) {
-        this.closePopover();
-        return;
-      }
-      // Only one card menu is open at a time — close any other before opening.
-      this.closePopover();
-      this.openPopover = popover;
-      card?.addClass('is-menu-open');
-      popover.open();
-    });
   }
 
   private renderSkipChipFor(card: HTMLElement, task: TaskSpec, callbacks: AgentBoardRenderCallbacks): void {

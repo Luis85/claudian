@@ -215,15 +215,19 @@ describe('Agent Board critical ARIA attributes are present in source', () => {
   // tripwire that catches an attribute being deleted outright.
   const cases: ReadonlyArray<{ file: string; needles: string[] }> = [
     {
-      // Auto-run switch + ⋯ overflow trigger + lane toggles.
+      // Auto-run switch + lane toggles.
       file: 'src/features/tasks/ui/AgentBoardRenderer.ts',
       needles: [
         "role: 'switch'",
         "'aria-checked'",
         "'aria-expanded'",
-        "'aria-haspopup': 'menu'",
         "setAttribute('tabindex', '0')",
       ],
+    },
+    {
+      // ⋯ overflow trigger (extracted card-action cluster).
+      file: 'src/features/tasks/ui/agentBoardCardActions.ts',
+      needles: ["'aria-haspopup': 'menu'"],
     },
     {
       // Portal overflow menu container + items.

@@ -1,5 +1,5 @@
 import type { App, Component } from 'obsidian';
-import { MarkdownRenderer, Menu, Notice, setIcon, TFile, TFolder } from 'obsidian';
+import { MarkdownRenderer, TFile, TFolder } from 'obsidian';
 
 import { DEFAULT_CHAT_PROVIDER_ID, type ProviderCapabilities } from '../../../core/providers/types';
 import type { ChatRewindMode } from '../../../core/runtime/types';
@@ -9,31 +9,25 @@ import {
   TOOL_AGENT_OUTPUT,
   TOOL_WRITE_STDIN,
 } from '../../../core/tools/toolNames';
-import { extractToolResultContent } from '../../../core/tools/toolResultContent';
-import type { ChatMessage, ImageAttachment, SubagentInfo, ToolCallInfo } from '../../../core/types';
+import type { ChatMessage, ImageAttachment, ToolCallInfo } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { processFileLinks, registerFileLinkHandler } from '../../../utils/fileLink';
 import { replaceImageEmbedsWithHtml } from '../../../utils/imageEmbed';
 import { escapeMathDelimitersForStreaming } from '../../../utils/markdownMath';
-import { getVaultFileByPath } from '../../../utils/obsidianCompat';
 import { openClaudianProviderSettings } from '../../../utils/obsidianPrivateApi';
 import { extractVaultMentions } from '../../../utils/vaultMentions';
 import { findRewindContext } from '../rewind';
-import { openImageModal } from '../ui/imageModal';
 import {
   type AssistantContentHost,
   renderAssistantMessageContent,
 } from './assistantMessageContent';
-import { renderMessageActionButton, wireCopyButton } from './messageActionButtons';
-import { eligibleMessageActions } from './messageActions';
+import { MessageActionBar } from './MessageActionBar';
 import { renderMessageContextCard } from './MessageContextCard';
+import { MessageImageRenderer } from './MessageImageRenderer';
+import { MessageSubagentRenderer } from './MessageSubagentRenderer';
 import { scrollMessagesToBottom } from './scrollToBottom';
 import { resolveSubagentLifecycleAdapter } from './subagentLifecycleResolution';
-import {
-  renderStoredAsyncSubagent,
-  renderStoredSubagent,
-} from './SubagentRenderer';
 import { renderStoredToolCall } from './ToolCallRenderer';
 import { hasVisibleBlock, hasVisibleText } from './visibleContentHelpers';
 import { RENDER_WINDOW_SIZE, setupWindowedRender } from './windowedRenderSetup';
@@ -117,6 +111,9 @@ export class MessageRenderer {
    * transcript into the new tab's DOM.
    */
   private chunkedRenderGeneration = 0;
+  private subagentRendererInstance: MessageSubagentRenderer | null = null;
+  private actionBarInstance: MessageActionBar | null = null;
+  private imageRendererInstance: MessageImageRenderer | null = null;
 
   constructor(
     plugin: ClaudianPlugin,
@@ -156,6 +153,42 @@ export class MessageRenderer {
 
   private getSubagentLifecycleAdapter(toolName?: string) {
     return resolveSubagentLifecycleAdapter(this.getCapabilities().providerId, toolName);
+  }
+
+  private get subagentRenderer(): MessageSubagentRenderer {
+    if (!this.subagentRendererInstance) {
+      this.subagentRendererInstance = new MessageSubagentRenderer({
+        app: this.app,
+        getCapabilities: () => this.getCapabilities(),
+      });
+    }
+    return this.subagentRendererInstance;
+  }
+
+  private get actionBar(): MessageActionBar {
+    if (!this.actionBarInstance) {
+      this.actionBarInstance = new MessageActionBar({
+        plugin: this.plugin,
+        getCapabilities: () => this.getCapabilities(),
+        rewindCallback: this.rewindCallback,
+        forkCallback: this.forkCallback,
+        isRewindEligible: (allMessages, index) => this.isRewindEligible(allMessages, index),
+        getMessageEl: (messageId) => this.getMessageEl(messageId),
+        getLiveMessageEl: (messageId) => this.liveMessageEls.get(messageId),
+        deleteLiveMessageEl: (messageId) => { this.liveMessageEls.delete(messageId); },
+      });
+    }
+    return this.actionBarInstance;
+  }
+
+  private get imageRenderer(): MessageImageRenderer {
+    if (!this.imageRendererInstance) {
+      this.imageRendererInstance = new MessageImageRenderer({
+        app: this.app,
+        getOwnerDocument: () => this.messagesEl.ownerDocument ?? window.document,
+      });
+    }
+    return this.imageRendererInstance;
   }
 
   /**
@@ -231,8 +264,8 @@ export class MessageRenderer {
       const textToShow = msg.displayContent ?? msg.content;
       if (textToShow) {
         this.renderUserTextBlock(contentEl, textToShow);
-        this.addUserCopyButton(msgEl, textToShow);
-        this.addRegisteredMessageActions(msgEl, msg);
+        this.actionBar.addUserCopyButton(msgEl, textToShow);
+        this.actionBar.addRegisteredMessageActions(msgEl, msg);
       }
       if (this.rewindCallback || this.forkCallback) {
         this.liveMessageEls.set(msg.id, msgEl);
@@ -274,8 +307,8 @@ export class MessageRenderer {
     }
 
     if (textToShow) {
-      this.addUserCopyButton(msgEl, textToShow);
-      this.addRegisteredMessageActions(msgEl, msg);
+      this.actionBar.addUserCopyButton(msgEl, textToShow);
+      this.actionBar.addRegisteredMessageActions(msgEl, msg);
     }
   }
 
@@ -530,14 +563,14 @@ export class MessageRenderer {
     const { msgEl, contentEl } = this.createMessageShell(msg);
     this.renderUserContextCard(contentEl, msg);
     this.renderUserTextBlock(contentEl, textToShow);
-    this.addUserCopyButton(msgEl, textToShow);
-    this.addRegisteredMessageActions(msgEl, msg);
+    this.actionBar.addUserCopyButton(msgEl, textToShow);
+    this.actionBar.addRegisteredMessageActions(msgEl, msg);
     if (msg.userMessageId && this.isRewindEligible(allMessages, index)) {
       if (this.rewindCallback) {
-        this.addRewindButton(msgEl, msg.id);
+        this.actionBar.addRewindButton(msgEl, msg.id);
       }
       if (this.forkCallback) {
-        this.addForkButton(msgEl, msg.id);
+        this.actionBar.addForkButton(msgEl, msg.id);
       }
     }
   }
@@ -552,7 +585,7 @@ export class MessageRenderer {
     if (msg.isInterrupt) {
       this.appendInterruptIndicator(contentEl);
     }
-    this.addAssistantMessageActions(msgEl, msg);
+    this.actionBar.addAssistantMessageActions(msgEl, msg);
   }
 
   private createMessageShell(msg: ChatMessage): { msgEl: HTMLElement; contentEl: HTMLElement } {
@@ -690,7 +723,7 @@ export class MessageRenderer {
       renderMarkdown: (el, md) => this.renderContent(el, md),
       renderTextBlock: (el, md) => this.renderAssistantTextBlock(el, md),
       renderToolCall: (el, toolCall, msg) => this.renderToolCall(el, toolCall, msg),
-      renderTaskSubagent: (el, toolCall, mode) => this.renderTaskSubagent(el, toolCall, mode),
+      renderTaskSubagent: (el, toolCall, mode) => this.subagentRenderer.renderTaskSubagent(el, toolCall, mode),
     };
   }
 
@@ -705,9 +738,9 @@ export class MessageRenderer {
     if (isWriteEditTool(toolCall.name)) {
       renderStoredWriteEdit(this.app, contentEl, toolCall, { initiallyExpanded: this.plugin.settings.expandFileEditsByDefault === true });
     } else if (isSubagentToolName(toolCall.name)) {
-      this.renderTaskSubagent(contentEl, toolCall);
+      this.subagentRenderer.renderTaskSubagent(contentEl, toolCall);
     } else if (subagentLifecycleAdapter?.isSpawnTool(toolCall.name) && msg) {
-      this.renderProviderLifecycleSubagent(contentEl, toolCall, msg);
+      this.subagentRenderer.renderProviderLifecycleSubagent(contentEl, toolCall, msg);
     } else {
       renderStoredToolCall(this.app, contentEl, toolCall);
     }
@@ -728,185 +761,23 @@ export class MessageRenderer {
     return typeof toolCall.input.chars !== 'string' || toolCall.input.chars.length === 0;
   }
 
-  private renderTaskSubagent(
-    contentEl: HTMLElement,
-    toolCall: ToolCallInfo,
-    modeHint?: 'sync' | 'async'
-  ): void {
-    const subagentInfo = this.resolveTaskSubagent(toolCall, modeHint);
-    if (subagentInfo.mode === 'async') {
-      renderStoredAsyncSubagent(this.app, contentEl, subagentInfo);
-      return;
-    }
-    renderStoredSubagent(this.app, contentEl, subagentInfo);
-  }
-
-  /**
-   * Consolidates provider lifecycle tools (spawn + wait/close)
-   * into a single subagent block with prompt and result.
-   */
-  private renderProviderLifecycleSubagent(
-    contentEl: HTMLElement,
-    spawnToolCall: ToolCallInfo,
-    msg: ChatMessage,
-  ): void {
-    const subagentLifecycleAdapter = this.getSubagentLifecycleAdapter(spawnToolCall.name);
-    if (!subagentLifecycleAdapter) {
-      renderStoredToolCall(this.app, contentEl, spawnToolCall);
-      return;
-    }
-
-    const subagentInfo = subagentLifecycleAdapter.buildSubagentInfo(
-      spawnToolCall,
-      msg.toolCalls ?? [],
-    );
-    renderStoredSubagent(this.app, contentEl, subagentInfo);
-  }
-
-  private resolveTaskSubagent(toolCall: ToolCallInfo, modeHint?: 'sync' | 'async'): SubagentInfo {
-    if (toolCall.subagent) {
-      if (!modeHint || toolCall.subagent.mode === modeHint) {
-        return toolCall.subagent;
-      }
-      return {
-        ...toolCall.subagent,
-        mode: modeHint,
-      };
-    }
-
-    const description = (toolCall.input?.description as string) || 'Subagent task';
-    const prompt = (toolCall.input?.prompt as string) || '';
-    const mode = modeHint ?? (toolCall.input?.run_in_background === true ? 'async' : 'sync');
-
-    if (mode !== 'async') {
-      return {
-        id: toolCall.id,
-        description,
-        prompt,
-        status: this.mapToolStatusToSubagentStatus(toolCall.status),
-        toolCalls: [],
-        isExpanded: false,
-        result: toolCall.result,
-      };
-    }
-
-    const asyncStatus = this.inferAsyncStatusFromTaskTool(toolCall);
-    return {
-      id: toolCall.id,
-      description,
-      prompt,
-      mode: 'async',
-      status: asyncStatus,
-      asyncStatus,
-      toolCalls: [],
-      isExpanded: false,
-      result: toolCall.result,
-    };
-  }
-
-  private mapToolStatusToSubagentStatus(
-    status: ToolCallInfo['status']
-  ): 'completed' | 'error' | 'running' {
-    switch (status) {
-      case 'completed':
-        return 'completed';
-      case 'error':
-      case 'blocked':
-        return 'error';
-      default:
-        return 'running';
-    }
-  }
-
-  private inferAsyncStatusFromTaskTool(toolCall: ToolCallInfo): 'running' | 'completed' | 'error' {
-    if (toolCall.status === 'error' || toolCall.status === 'blocked') return 'error';
-    if (toolCall.status === 'running') return 'running';
-
-    const lowerResult = extractToolResultContent(toolCall.result, { fallbackIndent: 2 }).toLowerCase();
-    if (
-      lowerResult.includes('not_ready') ||
-      lowerResult.includes('not ready') ||
-      lowerResult.includes('"status":"running"') ||
-      lowerResult.includes('"status":"pending"') ||
-      lowerResult.includes('"retrieval_status":"running"') ||
-      lowerResult.includes('"retrieval_status":"not_ready"')
-    ) {
-      return 'running';
-    }
-
-    return 'completed';
-  }
-
   // ============================================
   // Image Rendering
   // ============================================
 
-  /**
-   * Returns the best <img src> for an attachment: vault resource path when the
-   * file exists, base64 data URI otherwise, null if neither is usable.
-   */
-  private resolveImageSrc(image: ImageAttachment): string | null {
-    if (image.path) {
-      const file = getVaultFileByPath(this.app, image.path);
-      if (file) return this.app.vault.getResourcePath(file);
-    }
-    if (image.data) return `data:${image.mediaType};base64,${image.data}`;
-    return null;
-  }
-
-  /**
-   * Sets image src from attachment — prefers vault file over base64 blob.
-   */
+  /** Sets image src from attachment — prefers vault file over base64 blob. */
   setImageSrc(imgEl: HTMLImageElement, image: ImageAttachment): void {
-    const src = this.resolveImageSrc(image);
-    if (src) {
-      imgEl.setAttribute('src', src);
-    }
+    this.imageRenderer.setImageSrc(imgEl, image);
   }
 
-  /**
-   * Renders image attachments above a message.
-   */
+  /** Renders image attachments above a message. */
   renderMessageImages(containerEl: HTMLElement, images: ImageAttachment[]): void {
-    const imagesEl = containerEl.createDiv({ cls: 'claudian-message-images' });
-
-    for (const image of images) {
-      const src = this.resolveImageSrc(image);
-      if (!src) {
-        const fallback = imagesEl.createDiv({ cls: 'claudian-message-image-fallback' });
-        fallback.setText(image.name || 'image');
-        continue;
-      }
-
-      const imageWrapper = imagesEl.createDiv({ cls: 'claudian-message-image' });
-      const imgEl = imageWrapper.createEl('img', {
-        attr: {
-          alt: image.name,
-          loading: 'lazy',
-          decoding: 'async',
-        },
-      });
-      imgEl.setAttribute('src', src);
-
-      imgEl.addEventListener('click', () => {
-        void this.showFullImage(image);
-      });
-    }
+    this.imageRenderer.renderMessageImages(containerEl, images);
   }
 
-  /**
-   * Shows full-size image in modal overlay.
-   */
+  /** Shows full-size image in modal overlay. */
   showFullImage(image: ImageAttachment): void {
-    const src = this.resolveImageSrc(image);
-    if (!src) {
-      // Nothing to show — surface a brief fallback rather than a blank modal.
-      new Notice(t('chat.image.unavailable'));
-      return;
-    }
-
-    const ownerDocument = this.messagesEl.ownerDocument ?? window.document;
-    openImageModal({ ownerDocument, src, alt: image.name });
+    this.imageRenderer.showFullImage(image);
   }
 
   // ============================================
@@ -997,7 +868,7 @@ export class MessageRenderer {
   }
 
   // ============================================
-  // Copy Button
+  // Message Actions
   // ============================================
 
   /**
@@ -1007,163 +878,16 @@ export class MessageRenderer {
    * @param markdown The original markdown content to copy
    */
   addTextCopyButton(textEl: HTMLElement, markdown: string): void {
-    const copyBtn = textEl.createSpan({ cls: 'claudian-text-copy-btn' });
-    wireCopyButton(copyBtn, () => markdown);
+    this.actionBar.addTextCopyButton(textEl, markdown);
   }
 
   refreshActionButtons(msg: ChatMessage, allMessages?: ChatMessage[], index?: number): void {
-    if (!msg.userMessageId) return;
-    if (!this.isRewindEligible(allMessages, index)) return;
-    const msgEl = this.liveMessageEls.get(msg.id);
-    if (!msgEl) return;
-
-    if (this.rewindCallback && !msgEl.querySelector('.claudian-message-rewind-btn')) {
-      this.addRewindButton(msgEl, msg.id);
-    }
-    if (this.forkCallback && !msgEl.querySelector('.claudian-message-fork-btn')) {
-      this.addForkButton(msgEl, msg.id);
-    }
-    this.cleanupLiveMessageEl(msg.id, msgEl);
-  }
-
-  private cleanupLiveMessageEl(msgId: string, msgEl: HTMLElement): void {
-    const needsRewind = this.rewindCallback && !msgEl.querySelector('.claudian-message-rewind-btn');
-    const needsFork = this.forkCallback && !msgEl.querySelector('.claudian-message-fork-btn');
-    if (!needsRewind && !needsFork) {
-      this.liveMessageEls.delete(msgId);
-    }
-  }
-
-  private getOrCreateActionsToolbar(msgEl: HTMLElement): HTMLElement {
-    const existing = msgEl.querySelector<HTMLElement>('.claudian-user-msg-actions');
-    if (existing) return existing;
-    return msgEl.createDiv({ cls: 'claudian-user-msg-actions' });
-  }
-
-  private addUserCopyButton(msgEl: HTMLElement, content: string): void {
-    const toolbar = this.getOrCreateActionsToolbar(msgEl);
-    const copyBtn = toolbar.createSpan({ cls: 'claudian-user-msg-copy-btn' });
-    copyBtn.setAttribute('aria-label', 'Copy message');
-    wireCopyButton(copyBtn, () => content);
+    this.actionBar.refreshActionButtons(msg, allMessages, index);
   }
 
   /** Adds registered message actions (e.g. Create work order) to a completed agent message. */
   refreshMessageActions(msg: ChatMessage): void {
-    const msgEl = this.getMessageEl(msg.id);
-    if (!msgEl) return;
-    this.addAssistantMessageActions(msgEl, msg);
-  }
-
-  private addRegisteredMessageActions(msgEl: HTMLElement, msg: ChatMessage): void {
-    const toolbar = this.getOrCreateActionsToolbar(msgEl);
-    toolbar.querySelectorAll('.claudian-user-msg-action-btn').forEach((el) => el.remove());
-
-    for (const action of eligibleMessageActions(this.plugin.chatMessageActions, msg)) {
-      renderMessageActionButton(toolbar, action, 'claudian-user-msg-action-btn', () => {
-        action.run(msg, this.plugin.getActiveConversationSnapshot()?.id ?? null);
-      });
-    }
-  }
-
-  /**
-   * Renders registered message actions (e.g. Create work order) on an agent message,
-   * inline beside the last text block's copy button so they share its hover affordance.
-   */
-  private addAssistantMessageActions(msgEl: HTMLElement, msg: ChatMessage): void {
-    msgEl.querySelector('.claudian-text-actions')?.remove();
-
-    const actions = eligibleMessageActions(this.plugin.chatMessageActions, msg);
-    if (actions.length === 0) return;
-
-    const textBlocks = msgEl.querySelectorAll('.claudian-text-block');
-    // A protocol-card-only assistant message (handoff / progress / needs_input /
-    // needs_approval) renders with no text block; fall back to the last
-    // protocol card so actions stay reachable in work-order tabs.
-    const protocolCardSelectors = [
-      '.claudian-work-order-handoff-card',
-      '.claudian-work-order-needs-approval-card',
-      '.claudian-work-order-needs-input-card',
-      '.claudian-work-order-progress-card',
-    ];
-    let cardAnchor: HTMLElement | null = null;
-    for (const selector of protocolCardSelectors) {
-      const matches = msgEl.querySelectorAll<HTMLElement>(selector);
-      if (matches.length > 0) {
-        cardAnchor = matches[matches.length - 1] as HTMLElement;
-        break;
-      }
-    }
-    const anchorEl = textBlocks.length > 0
-      ? (textBlocks[textBlocks.length - 1] as HTMLElement)
-      : cardAnchor;
-    if (!anchorEl) return;
-
-    const container = anchorEl.createDiv({ cls: 'claudian-text-actions' });
-    for (const action of actions) {
-      renderMessageActionButton(container, action, 'claudian-text-action-btn', () => {
-        action.run(msg, this.plugin.getActiveConversationSnapshot()?.id ?? null);
-      });
-    }
-  }
-
-  private addRewindButton(msgEl: HTMLElement, messageId: string): void {
-    if (!this.getCapabilities().supportsRewind) return;
-    const toolbar = this.getOrCreateActionsToolbar(msgEl);
-    const btn = toolbar.createSpan({ cls: 'claudian-message-rewind-btn' });
-    if (toolbar.firstChild !== btn) toolbar.insertBefore(btn, toolbar.firstChild);
-    setIcon(btn, 'rotate-ccw');
-    btn.setAttribute('aria-label', t('chat.rewind.ariaLabel'));
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.showRewindMenu(e, messageId);
-    });
-  }
-
-  private showRewindMenu(event: MouseEvent, messageId: string): void {
-    const menu = new Menu();
-    this.addRewindMenuItem(menu, messageId, 'conversation');
-    this.addRewindMenuItem(menu, messageId, 'code-and-conversation');
-    menu.showAtMouseEvent(event);
-  }
-
-  private addRewindMenuItem(menu: Menu, messageId: string, mode: ChatRewindMode): void {
-    menu.addItem((item) => {
-      item
-        .setTitle(
-          mode === 'conversation'
-            ? t('chat.rewind.menuConversationOnly')
-            : t('chat.rewind.menuCodeAndConversation')
-        )
-        .setIcon(mode === 'conversation' ? 'message-square' : 'rotate-ccw')
-        .onClick(() => {
-          runRendererAction(async () => {
-            try {
-              await this.rewindCallback?.(messageId, mode);
-            } catch (err) {
-              new Notice(t('chat.rewind.failed', { error: err instanceof Error ? err.message : 'Unknown error' }));
-            }
-          });
-        });
-    });
-  }
-
-  private addForkButton(msgEl: HTMLElement, messageId: string): void {
-    if (!this.getCapabilities().supportsFork) return;
-    const toolbar = this.getOrCreateActionsToolbar(msgEl);
-    const btn = toolbar.createSpan({ cls: 'claudian-message-fork-btn' });
-    if (toolbar.firstChild !== btn) toolbar.insertBefore(btn, toolbar.firstChild);
-    setIcon(btn, 'git-fork');
-    btn.setAttribute('aria-label', t('chat.fork.ariaLabel'));
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      runRendererAction(async () => {
-        try {
-          await this.forkCallback?.(messageId);
-        } catch (err) {
-          new Notice(t('chat.fork.failed', { error: err instanceof Error ? err.message : 'Unknown error' }));
-        }
-      });
-    });
+    this.actionBar.refreshMessageActions(msg);
   }
 
   // ============================================
