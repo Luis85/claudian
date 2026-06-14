@@ -265,7 +265,8 @@ if (invokedDirectly) main();
 export function planReport() {
   return [
     { type: 'writeFile', path: 'scripts/quality-report.mjs', mode: 'overwrite-backup', content: loadTemplate('quality-report.mjs') },
-    { type: 'mergeJson', path: 'package.json', patch: { scripts: { report: 'node scripts/quality-report.mjs' } } },
+    // quality-report.mjs shells out to fallow, so pin + install it with the report.
+    { type: 'mergeJson', path: 'package.json', patch: { scripts: { report: 'node scripts/quality-report.mjs' }, devDependencies: dep('fallow') } },
   ];
 }
 ```
@@ -327,26 +328,31 @@ import { runScriptArgs } from './packageManager.mjs';
 
 const defaultExec = (cmd, args, opts) => execFileSync(cmd, args, { stdio: 'inherit', ...opts });
 
-// Map each guardrail to the npm script that gates it.
+// Each guardrail maps to the npm script that gates it. The test gate is ALWAYS
+// run (mirroring the generated CI workflow): test:coverage when coverage floors
+// are on, else the plain test script — so local verify can't pass while CI fails.
 const GATES = [
   ['eslintSeverityStaging', 'lint'],
   ['locGuard', 'check:loc'],
   ['fallowRatchet', 'check:quality'],
-  ['coverageFloors', 'test:coverage'],
 ];
 
 export function runGates(cwd, options, exec = defaultExec) {
   const g = options.guardrails ?? {};
+  const pm = options.packageManager ?? 'npm';
   const failed = [];
-  for (const [flag, script] of GATES) {
-    if (!g[flag]) continue;
+  const run = (script) => {
     try {
-      const [cmd, cargs] = runScriptArgs(options.packageManager ?? 'npm', script);
+      const [cmd, cargs] = runScriptArgs(pm, script);
       exec(cmd, cargs, { cwd });
     } catch {
       failed.push(script);
     }
+  };
+  for (const [flag, script] of GATES) {
+    if (g[flag]) run(script);
   }
+  run(g.coverageFloors ? 'test:coverage' : 'test'); // always run a test gate, like CI
   return { ok: failed.length === 0, failed };
 }
 ```

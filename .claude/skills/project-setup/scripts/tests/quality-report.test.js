@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { planReport } from '../lib/harness.mjs';
 import { buildReport } from '../templates/quality-report.mjs';
 
 const data = {
@@ -31,4 +32,11 @@ test('buildReport tolerates a clean project (no findings)', () => {
   });
   assert.match(markdown, /No action items/);
   assert.deepEqual(json.actions, []);
+});
+
+test('planReport pins fallow (the report shells out to it) alongside the report script', () => {
+  const actions = planReport();
+  const pkg = actions.find((a) => a.type === 'mergeJson');
+  assert.equal(pkg.patch.scripts.report, 'node scripts/quality-report.mjs');
+  assert.ok('fallow' in pkg.patch.devDependencies);
 });

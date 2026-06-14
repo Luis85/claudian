@@ -160,7 +160,8 @@ export function planInstall(options, state) {
 export function planReport() {
   return [
     { type: 'writeFile', path: 'scripts/quality-report.mjs', mode: 'overwrite-backup', content: loadTemplate('quality-report.mjs') },
-    { type: 'mergeJson', path: 'package.json', patch: { scripts: { report: 'node scripts/quality-report.mjs' } } },
+    // quality-report.mjs shells out to fallow, so pin + install it with the report.
+    { type: 'mergeJson', path: 'package.json', patch: { scripts: { report: 'node scripts/quality-report.mjs' }, devDependencies: dep('fallow') } },
   ];
 }
 
