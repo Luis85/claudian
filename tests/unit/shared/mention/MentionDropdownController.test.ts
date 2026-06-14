@@ -345,11 +345,14 @@ describe('MentionDropdownController', () => {
       expect(() => jest.advanceTimersByTime(200)).not.toThrow();
     });
 
-    it('hides dropdown when space follows @mention', () => {
+    it('closes the dropdown when a space-containing query matches nothing', () => {
+      // Spaces are allowed in the query (#748); the dropdown closes because the
+      // empty default vault yields no matches, not because a space was typed.
       inputEl.value = '@test ';
       inputEl.selectionStart = 6;
       controller.handleInputChange();
-      expect(() => jest.advanceTimersByTime(200)).not.toThrow();
+      jest.advanceTimersByTime(200);
+      expect(controller.isVisible()).toBe(false);
     });
 
     it('handles @ at start of line', () => {
@@ -378,6 +381,62 @@ describe('MentionDropdownController', () => {
       jest.advanceTimersByTime(200);
 
       expect(agentService.searchAgents).toHaveBeenCalled();
+    });
+  });
+
+  describe('@mention filenames with spaces (#748)', () => {
+    it('keeps the dropdown open while searching a filename that contains spaces', () => {
+      const fileWithSpaces = {
+        path: 'test file 2.md',
+        name: 'test file 2.md',
+        stat: { mtime: Date.now() },
+      } as any;
+      const localCallbacks = createMockCallbacks({
+        getCachedVaultFiles: jest.fn().mockReturnValue([fileWithSpaces]),
+      });
+      const localInput = createMockInput();
+      const localController = new MentionDropdownController(createMockEl(), localInput, localCallbacks);
+
+      localInput.value = '@test file';
+      localInput.selectionStart = 10;
+      localController.handleInputChange();
+      jest.advanceTimersByTime(200);
+
+      expect(localController.isVisible()).toBe(true);
+      const renderOptions = getLatestDropdownRenderOptions();
+      const fileItems = renderOptions.items.filter((item: any) => item.type === 'file');
+      expect(fileItems.map((item: any) => item.path)).toContain('test file 2.md');
+
+      localController.destroy();
+    });
+
+    it('auto-closes the dropdown when a multi-word query matches no vault item', () => {
+      const onlyNote = {
+        path: 'note.md',
+        name: 'note.md',
+        stat: { mtime: Date.now() },
+      } as any;
+      const localCallbacks = createMockCallbacks({
+        getCachedVaultFiles: jest.fn().mockReturnValue([onlyNote]),
+      });
+      const localInput = createMockInput();
+      const localController = new MentionDropdownController(createMockEl(), localInput, localCallbacks);
+
+      // A matching query first opens the dropdown.
+      localInput.value = '@note';
+      localInput.selectionStart = 5;
+      localController.handleInputChange();
+      jest.advanceTimersByTime(200);
+      expect(localController.isVisible()).toBe(true);
+
+      // Continuing into prose with spaces that matches nothing closes it again.
+      localInput.value = '@note then some prose';
+      localInput.selectionStart = 21;
+      localController.handleInputChange();
+      jest.advanceTimersByTime(200);
+      expect(localController.isVisible()).toBe(false);
+
+      localController.destroy();
     });
   });
 

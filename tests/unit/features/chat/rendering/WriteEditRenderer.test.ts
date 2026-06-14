@@ -413,6 +413,38 @@ describe('WriteEditRenderer', () => {
       expect(types.equal).toBe(2);
     });
   });
+
+  describe('initiallyExpanded option (#767)', () => {
+    it('createWriteEditBlock stays collapsed by default', () => {
+      const state = createWriteEditBlock(mockApp, createMockEl(), createToolCall());
+      expect(state.wrapperEl.hasClass('expanded')).toBe(false);
+      expect(state.isExpanded).toBe(false);
+    });
+
+    it('createWriteEditBlock starts expanded when initiallyExpanded is true', () => {
+      const state = createWriteEditBlock(mockApp, createMockEl(), createToolCall(), {
+        initiallyExpanded: true,
+      });
+      expect(state.wrapperEl.hasClass('expanded')).toBe(true);
+      expect(state.isExpanded).toBe(true);
+      expect(state.headerEl.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('renderStoredWriteEdit stays collapsed by default', () => {
+      const block = renderStoredWriteEdit(mockApp, createMockEl(), createToolCall({ status: 'completed' }));
+      expect(block.hasClass('expanded')).toBe(false);
+    });
+
+    it('renderStoredWriteEdit starts expanded when initiallyExpanded is true', () => {
+      const block = renderStoredWriteEdit(
+        mockApp,
+        createMockEl(),
+        createToolCall({ status: 'completed' }),
+        { initiallyExpanded: true },
+      );
+      expect(block.hasClass('expanded')).toBe(true);
+    });
+  });
 });
 
 // Helper to get text content recursively

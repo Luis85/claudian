@@ -63,6 +63,10 @@ describe('types.ts', () => {
     it('should have lastCustomModel as empty string by default', () => {
       expect(DEFAULT_SETTINGS.lastCustomModel).toBe('');
     });
+
+    it('should collapse file edits by default', () => {
+      expect(DEFAULT_SETTINGS.expandFileEditsByDefault).toBe(false);
+    });
   });
 
   describe('ClaudianSettings type', () => {
@@ -102,6 +106,7 @@ describe('types.ts', () => {
         tabBarPosition: 'input',
         enableAutoScroll: true,
         deferMathRenderingDuringStreaming: true,
+        expandFileEditsByDefault: false,
         chatViewPlacement: 'right-sidebar',
         agentBoardWorkOrderFolder: 'Agent Board/tasks',
         agentBoardTemplateFolder: 'Agent Board/templates',
@@ -165,6 +170,7 @@ describe('types.ts', () => {
         tabBarPosition: 'input',
         enableAutoScroll: true,
         deferMathRenderingDuringStreaming: true,
+        expandFileEditsByDefault: false,
         chatViewPlacement: 'right-sidebar',
         agentBoardWorkOrderFolder: 'Agent Board/tasks',
         agentBoardTemplateFolder: 'Agent Board/templates',
@@ -229,6 +235,7 @@ describe('types.ts', () => {
         tabBarPosition: 'header',
         enableAutoScroll: false,
         deferMathRenderingDuringStreaming: true,
+        expandFileEditsByDefault: true,
         chatViewPlacement: 'right-sidebar',
         agentBoardWorkOrderFolder: 'Agent Board/tasks',
         agentBoardTemplateFolder: 'Agent Board/templates',

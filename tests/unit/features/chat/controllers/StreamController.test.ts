@@ -950,6 +950,7 @@ describe('StreamController - Text Content', () => {
         expect.anything(),
         expect.anything(),
         expect.objectContaining({ id: 'write-1', name: 'Write' }),
+        expect.objectContaining({ initiallyExpanded: false }),
       );
       // renderToolCall should NOT be called for Write/Edit tools
       expect(renderToolCall).not.toHaveBeenCalled();
