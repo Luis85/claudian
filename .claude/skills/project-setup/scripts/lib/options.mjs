@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 
 const DEFAULTS = {
   packageManager: null, // null => use detected
-  typescript: true,
+  typescript: null, // null => use detected
   testFramework: null, // null => use detected
   guardrails: { fallowRatchet: true, locGuard: true, eslintSeverityStaging: true, coverageFloors: true, ci: true },
   github: { integrate: false, mcp: false, fixApply: false },

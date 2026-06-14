@@ -45,6 +45,10 @@ test('planCi renders the detected package manager (pnpm)', () => {
   assert.match(wf.content, /version: 9/);
 });
 
+test('planCi skips CI generation for bun (npm-style CI would break a bun-only repo)', () => {
+  assert.deepEqual(planCi({ github: { integrate: true }, guardrails: { ci: true } }, { packageManager: 'bun' }), []);
+});
+
 test('planInstall emits one installDeps action for the detected package manager', () => {
   assert.deepEqual(planInstall({}, { packageManager: 'pnpm' }), [{ type: 'installDeps', packageManager: 'pnpm' }]);
 });

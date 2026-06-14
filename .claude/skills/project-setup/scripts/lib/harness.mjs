@@ -138,7 +138,11 @@ const CI_PM = {
 export function planCi(options, state) {
   if (!options.github?.integrate || !options.guardrails?.ci) return [];
   const g = options.guardrails ?? {};
-  const pm = CI_PM[options.packageManager ?? state?.packageManager] ?? CI_PM.npm;
+  // npm/pnpm/yarn get a working workflow; bun (and any unknown manager) is NOT
+  // auto-CI'd here — npm-style CI would break a bun-only repo, so we skip it and
+  // the agent sets up CI manually. An absent manager defaults to npm.
+  const pm = CI_PM[options.packageManager ?? state?.packageManager ?? 'npm'];
+  if (!pm) return [];
   // Emit a CI step only for a guardrail that is actually installed (its npm
   // script exists). The test step is always present; it uses the coverage
   // variant when coverage floors are on.
