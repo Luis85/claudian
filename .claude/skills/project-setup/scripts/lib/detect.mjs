@@ -10,16 +10,27 @@ import { MARKER } from './marker.mjs';
 // JS entrypoint isn't mis-fallen-back to src/index.ts and flagged unused.
 const ENTRY_BASENAMES = ['index', 'main', 'app'];
 const ENTRY_EXTS = ['ts', 'tsx', 'mts', 'cts', 'js', 'jsx', 'mjs', 'cjs'];
-const ENTRY_CANDIDATES = [
-  ...ENTRY_BASENAMES.flatMap((b) => ENTRY_EXTS.map((e) => `src/${b}.${e}`)),
-  ...ENTRY_BASENAMES.flatMap((b) => ENTRY_EXTS.map((e) => `${b}.${e}`)),
-];
+// Common source dirs (src, lib, app, source) + repo root.
+const ENTRY_DIRS = ['src', 'lib', 'app', 'source', ''];
+const ENTRY_CANDIDATES = ENTRY_DIRS.flatMap((d) =>
+  ENTRY_BASENAMES.flatMap((b) => ENTRY_EXTS.map((e) => (d ? `${d}/${b}.${e}` : `${b}.${e}`))),
+);
+// `main`/`module` often point at BUILD output, not source — skip those roots.
+const BUILD_DIRS = new Set(['dist', 'build', 'out', 'esm', 'cjs', 'umd', 'lib-esm', 'node_modules', '.next']);
 
 export function detectEntry(cwd) {
-  // A bundler `source` field wins; else the first existing common source entry; else the fallback.
-  const src = readJsonSafe(join(cwd, 'package.json'))?.source;
+  const pkg = readJsonSafe(join(cwd, 'package.json'));
+  // A bundler `source` field is unambiguously the source entry.
+  const src = pkg?.source;
   if (typeof src === 'string' && existsSync(join(cwd, src))) return src;
+  // The first existing common source entry (src/lib/app/source/root).
   for (const c of ENTRY_CANDIDATES) if (existsSync(join(cwd, c))) return c;
+  // `module`/`main` may name the source for a build-less package — use it if it
+  // exists and its top dir isn't a build-output dir.
+  for (const field of ['module', 'main']) {
+    const p = pkg?.[field];
+    if (typeof p === 'string' && existsSync(join(cwd, p)) && !BUILD_DIRS.has(p.split('/')[0])) return p;
+  }
   return 'src/index.ts';
 }
 

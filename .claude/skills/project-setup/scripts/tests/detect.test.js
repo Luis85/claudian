@@ -98,6 +98,27 @@ test('detectEntry finds a JS/JSX app entrypoint, not only the .ts variant', () =
   }
 });
 
+test('detectEntry finds a lib/ entry (expanded source-dir candidates)', () => {
+  const p = tmpProject({ 'lib/index.ts': '' });
+  try {
+    assert.equal(detectEntry(p.dir), 'lib/index.ts');
+  } finally {
+    p.cleanup();
+  }
+});
+
+test('detectEntry uses main/module for a build-less package, but not a dist build path', () => {
+  const core = tmpProject({ 'package.json': { main: 'core/index.js' }, 'core/index.js': '' });
+  const dist = tmpProject({ 'package.json': { main: 'dist/index.js' }, 'dist/index.js': '' });
+  try {
+    assert.equal(detectEntry(core.dir), 'core/index.js'); // non-build dir -> used
+    assert.equal(detectEntry(dist.dir), 'src/index.ts'); // dist is build output -> fallback
+  } finally {
+    core.cleanup();
+    dist.cleanup();
+  }
+});
+
 test('detectEntry matches modern module extensions (.mts/.cts/.cjs)', () => {
   const mts = tmpProject({ 'src/index.mts': '' });
   try {
