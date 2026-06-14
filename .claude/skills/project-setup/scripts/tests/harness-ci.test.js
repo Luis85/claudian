@@ -74,12 +74,14 @@ test('planCi targets the detected default branch, not a hardcoded main', () => {
   assert.doesNotMatch(wf.content, /\[main\]/);
 });
 
-test('planCi reminds the user to commit the lockfile (CI strict install needs it)', () => {
+test('planCi reminds the user to commit the lockfile as an INFO next step (not a collision)', () => {
   const actions = planCi(
     { github: { integrate: true }, guardrails: { ci: true, fallowRatchet: true } },
     { packageManager: 'pnpm' },
   );
-  assert.ok(actions.some((a) => a.type === 'notice' && /lockfile/.test(a.message)));
+  const n = actions.find((a) => a.type === 'notice' && /lockfile/.test(a.message));
+  assert.ok(n);
+  assert.equal(n.level, 'info');
 });
 
 test('planInstall emits one installDeps action for the detected package manager', () => {

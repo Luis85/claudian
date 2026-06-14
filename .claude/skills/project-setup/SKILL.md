@@ -22,8 +22,10 @@ engine owns every mutation; you detect, interview, then invoke it.
    installed before applying.
 4. **Apply:** `node .../setup.mjs apply --config answers.json`. This installs
    deps, writes/merges configs, and baselines every ratchet from the **current**
-   state (brownfield-safe — green CI on day one). Relay any **Notices** the
-   engine prints (collisions, skipped CI) — they need a human decision.
+   state (brownfield-safe — green CI on day one). Relay the output: a **Notice**
+   means your existing file/script was kept and that generated gate won't run
+   until you merge or rename it — surface these for a decision. **Next steps**
+   (e.g. commit the lockfile) are routine.
 5. **Optional grill:** if requested, run the interview in `references/grill.md`
    to fill `CONTEXT.md`, seed ADRs, and a first requirements doc.
 6. **Verify + report:** `node .../setup.mjs verify --config answers.json` then

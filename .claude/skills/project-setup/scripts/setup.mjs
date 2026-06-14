@@ -116,8 +116,16 @@ export async function cli(argv, io = {}) {
       } else {
         out(`Applied ${result.changed.length} change(s):\n` + result.changed.map((p) => `  ${p}`).join('\n') + '\n');
       }
-      if (result.notices?.length) {
-        out('\nNotices (review these):\n' + result.notices.map((n) => `  [${n.level}] ${n.message}`).join('\n') + '\n');
+      // Separate real collisions (your file/script kept; a gate won't run) from
+      // routine next steps (info) so a clean greenfield apply doesn't end with a
+      // scary "review these" block.
+      const warnings = (result.notices ?? []).filter((n) => n.level !== 'info');
+      const infos = (result.notices ?? []).filter((n) => n.level === 'info');
+      if (warnings.length) {
+        out('\nNotices — your file/script was kept; the generated one did NOT apply (review):\n' + warnings.map((n) => `  - ${n.message}`).join('\n') + '\n');
+      }
+      if (infos.length) {
+        out('\nNext steps:\n' + infos.map((n) => `  - ${n.message}`).join('\n') + '\n');
       }
       return 0;
     }

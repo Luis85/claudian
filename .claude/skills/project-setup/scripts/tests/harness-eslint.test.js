@@ -85,6 +85,13 @@ test('planEslint reports an existing same-name eslint.config.mjs (skip-if-exists
   assert.ok(actions.some((a) => a.type === 'notice' && /already have an eslint\.config\.mjs/.test(a.message)));
 });
 
+test('planEslint emits ONE eslint-config notice (highest precedence) when several config shapes exist', () => {
+  const notices = planEslint(opts, { eslintConfigMjs: true, eslintFlatConfig: true, legacyEslintrc: true })
+    .filter((a) => a.type === 'notice');
+  assert.equal(notices.length, 1); // no overlapping/contradictory advice
+  assert.match(notices[0].message, /already have an eslint\.config\.mjs/);
+});
+
 test('planEslint installs the test-lint plugin dep it imports (so lint resolves on the standdown path)', () => {
   const jestDeps = planEslint({ testFramework: 'jest', guardrails: { eslintSeverityStaging: true } }).find((a) => a.type === 'mergeJson').patch.devDependencies;
   assert.ok('eslint-plugin-jest' in jestDeps);

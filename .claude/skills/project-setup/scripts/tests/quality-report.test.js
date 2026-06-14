@@ -96,9 +96,12 @@ test('planReport installs the detail scripts the report references (even when th
   assert.ok(!('quality:dead-code' in fallowPkg.patch.scripts));
 });
 
-test('planReport reports an existing report-script collision', () => {
+test('planReport reports an existing report-script collision as an INFO notice (advisory, not a gate)', () => {
   const actions = planReport({}, { scripts: { report: 'my-old-report' } });
-  assert.ok(actions.some((a) => a.type === 'notice' && /"report" script kept/.test(a.message)));
+  const n = actions.find((a) => a.type === 'notice');
+  assert.ok(n && /"report" script kept/.test(n.message));
+  assert.equal(n.level, 'info'); // benign: nothing in CI/verify calls report
+  assert.doesNotMatch(n.message, /guardrail|gate/);
   const clean = planReport({}, { scripts: {} });
   assert.ok(!clean.some((a) => a.type === 'notice'));
 });

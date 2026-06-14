@@ -31,12 +31,14 @@ function dep(...names) {
 const notice = (message, level = 'warn') => ({ type: 'notice', level, message });
 
 // mergeJson keeps an existing scalar on conflict, so a brownfield script that
-// shadows a guardrail's command means the guardrail silently never runs through
-// `<pm> <name>` (CI/verify/docs). Report it rather than no-op.
-function scriptCollision(state, name, desired) {
+// shadows a gate's command means the gate silently never runs through
+// `<pm> <name>` (CI/verify/docs). Report it (with the real package manager)
+// rather than no-op.
+function scriptCollision(options, state, name, desired) {
   const existing = state?.scripts?.[name];
   if (!existing || existing === desired) return [];
-  return [notice(`Existing "${name}" script kept (\`${existing}\`) — \`<pm> ${name}\` runs yours, not the generated harness command (\`${desired}\`). Rename one so the ${name} guardrail actually runs.`)];
+  const run = runPrefix(options?.packageManager ?? state?.packageManager ?? 'npm');
+  return [notice(`Existing "${name}" script kept (\`${existing}\`) — \`${run} ${name}\` runs yours, not the generated \`${desired}\`. Rename one so the ${name} gate actually runs.`)];
 }
 
 // Lint a wide test glob (incl. .mts/.cts/.cjs) so the test-lint guardrail isn't
@@ -73,7 +75,7 @@ export function planFallow(options, state) {
   // and inject keys into .fallowrc.json).
   const entry = JSON.stringify([state?.entry ?? 'src/index.ts']);
   return [
-    ...scriptCollision(state, 'check:quality', 'node scripts/check-quality.mjs'),
+    ...scriptCollision(options, state, 'check:quality', 'node scripts/check-quality.mjs'),
     {
       type: 'writeFile',
       path: '.fallowrc.json',
@@ -104,7 +106,7 @@ export function planFallow(options, state) {
 export function planLoc(options, state) {
   if (!options.guardrails?.locGuard) return [];
   return [
-    ...scriptCollision(state, 'check:loc', 'node scripts/check-loc.mjs'),
+    ...scriptCollision(options, state, 'check:loc', 'node scripts/check-loc.mjs'),
     { type: 'writeFile', path: 'scripts/check-loc.mjs', mode: 'overwrite-backup', content: renderTemplate(loadTemplate('check-loc.mjs.tmpl'), { locCap: String(options.locCap ?? 500) }) },
     { type: 'mergeJson', path: 'package.json', patch: { scripts: { 'check:loc': 'node scripts/check-loc.mjs' } } },
   ];
@@ -148,7 +150,7 @@ export function planTest(options, state) {
     : 'src/**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}';
   if (fw === 'vitest') {
     return [
-      ...scriptCollision(state, 'test:coverage', 'vitest run --coverage --passWithNoTests'),
+      ...scriptCollision(options, state, 'test:coverage', 'vitest run --coverage --passWithNoTests'),
       { type: 'writeFile', path: 'vitest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('vitest.config.mjs.tmpl'), { coverageThreshold, coverageGlobs }) },
       { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'vitest run --passWithNoTests', 'test:coverage': 'vitest run --coverage --passWithNoTests' }, devDependencies: dep('vitest', '@vitest/coverage-istanbul', 'typescript') } },
     ];
@@ -157,7 +159,7 @@ export function planTest(options, state) {
   // ts-jest with no tsconfig refuses to transform .js, so coverage never runs.
   const tsJest = options.typescript !== false;
   return [
-    ...scriptCollision(state, 'test:coverage', 'jest --coverage --passWithNoTests'),
+    ...scriptCollision(options, state, 'test:coverage', 'jest --coverage --passWithNoTests'),
     { type: 'writeFile', path: 'jest.config.mjs', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('jest.config.mjs.tmpl'), { coverageThreshold, coverageGlobs, presetLine: tsJest ? "  preset: 'ts-jest',\n" : '' }) },
     { type: 'mergeJson', path: 'package.json', patch: { scripts: { test: 'jest --passWithNoTests', 'test:coverage': 'jest --coverage --passWithNoTests' }, devDependencies: tsJest ? dep('jest', 'ts-jest', '@types/jest', 'typescript') : dep('jest') } },
   ];
@@ -182,16 +184,16 @@ export function planEslint(options, state) {
       : '',
   });
   const notices = [
-    ...scriptCollision(state, 'lint', 'eslint .'),
+    ...scriptCollision(options, state, 'lint', 'eslint .'),
   ];
-  if (state?.legacyEslintrc) {
-    notices.push(notice('Legacy .eslintrc* found alongside the new flat eslint.config.mjs — ESLint 9 reads only the flat config; remove the legacy file once migrated.'));
-  }
-  if (state?.eslintFlatConfig) {
-    notices.push(notice('An existing eslint.config.{js,cjs,ts} sits beside the generated eslint.config.mjs — ESLint loads only ONE (it checks .js before .mjs), so the staged config may not run. Remove/rename one, or merge the staged rules into yours.'));
-  }
+  // One ESLint-config notice, in precedence order, so a repo with several config
+  // shapes doesn't get overlapping/contradictory advice.
   if (state?.eslintConfigMjs) {
     notices.push(notice('You already have an eslint.config.mjs — the staged config was NOT written (skip-if-exists), so your config runs, not the severity-staged one. Merge the staged rules in, or back up and replace.'));
+  } else if (state?.eslintFlatConfig) {
+    notices.push(notice('An existing eslint.config.{js,cjs,ts} sits beside the generated eslint.config.mjs — ESLint loads only ONE (it checks .js before .mjs), so the staged config may not run. Remove/rename one, or merge the staged rules into yours.'));
+  } else if (state?.legacyEslintrc) {
+    notices.push(notice('Legacy .eslintrc* found — ESLint 9 reads only the flat eslint.config.mjs the harness wrote; remove the legacy file once migrated.'));
   }
   // The plugin DEP lives here (where its import is rendered), not in planTest —
   // planTest's hand-written-config path returns without deps, which would leave
@@ -243,7 +245,8 @@ export function planCi(options, state) {
   // require a committed lockfile — which a fresh `apply` creates but does not
   // commit. Tell the user, or day-one CI fails before any gate runs.
   const notices = [
-    notice(`Commit your ${pmName} lockfile with the generated files — the CI runs \`${pm.install}\` + a dependency cache, which need a committed lockfile (a fresh apply creates one but doesn't commit it).`),
+    // info, not warn: a routine next step, not a collision to resolve.
+    notice(`Commit your ${pmName} lockfile with the generated files — the CI runs \`${pm.install}\` + a dependency cache, which need a committed lockfile (a fresh apply creates one but doesn't commit it).`, 'info'),
   ];
   if (state?.ciWorkflow) {
     notices.push(notice('Existing .github/workflows/ci.yml kept — the quality gates were NOT added to it. Merge the generated steps in, or they won\'t run in CI.'));
@@ -270,8 +273,14 @@ export function planInstall(options, state) {
 }
 
 export function planReport(options, state) {
+  // report is ADVISORY (nothing in CI/verify calls it), so a collision is benign —
+  // a softer, info-level notice, not the "a gate won't run" framing.
+  const existingReport = state?.scripts?.report;
+  const reportNotice = existingReport && existingReport !== 'node scripts/quality-report.mjs'
+    ? [notice('Existing "report" script kept — the advisory quality report was installed at scripts/quality-report.mjs (run `node scripts/quality-report.mjs`, or rename one).', 'info')]
+    : [];
   return [
-    ...scriptCollision(state, 'report', 'node scripts/quality-report.mjs'),
+    ...reportNotice,
     { type: 'writeFile', path: 'scripts/quality-report.mjs', mode: 'overwrite-backup', content: loadTemplate('quality-report.mjs') },
     // The report shells out to fallow AND its action items point at quality:dead-code
     // / quality:dupes — install fallow and those scripts here (planReport always

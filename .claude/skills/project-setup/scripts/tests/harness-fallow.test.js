@@ -34,6 +34,12 @@ test('planFallow reports a check:quality script collision (guardrail would silen
   assert.ok(actions.some((a) => a.type === 'notice' && /"check:quality" script kept/.test(a.message)));
 });
 
+test('script-collision notices render the real package manager, not a literal <pm>', () => {
+  const n = planFallow({ packageManager: 'pnpm', guardrails: { fallowRatchet: true } }, { scripts: { 'check:quality': 'old' } }).find((a) => a.type === 'notice');
+  assert.match(n.message, /pnpm check:quality/);
+  assert.doesNotMatch(n.message, /<pm>/);
+});
+
 test('planFallow is a no-op when disabled', () => {
   assert.deepEqual(planFallow({ guardrails: { fallowRatchet: false } }, {}), []);
 });
