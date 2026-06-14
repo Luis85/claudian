@@ -155,3 +155,10 @@ export function planCi(options, state) {
 export function planInstall(options, state) {
   return [{ type: 'installDeps', packageManager: state?.packageManager ?? 'npm' }];
 }
+
+export function planReport() {
+  return [
+    { type: 'writeFile', path: 'scripts/quality-report.mjs', mode: 'overwrite-backup', content: loadTemplate('quality-report.mjs') },
+    { type: 'mergeJson', path: 'package.json', patch: { scripts: { report: 'node scripts/quality-report.mjs' } } },
+  ];
+}
