@@ -1,4 +1,5 @@
 // scripts/lib/harness.mjs
+import { runPrefix } from './packageManager.mjs';
 import { loadTemplate, renderTemplate } from './templates.mjs';
 
 // EXACT pins (no caret/tilde). A first install with no lockfile must be
@@ -213,18 +214,37 @@ export function planGithubMcp(options) {
   return [{ type: 'writeFile', path: '.mcp.json', mode: 'skip-if-exists', content: loadTemplate('mcp.json.tmpl') }];
 }
 
-export function planDocs(options) {
+export function planDocs(options, state) {
   if (!options.docs?.scaffold) return [];
   // Document only the gates whose guardrail is enabled — otherwise the guide
-  // tells users to run scripts that were never installed.
+  // tells users to run scripts that were never installed. Render the run prefix
+  // from the detected package manager so the commands work on pnpm/yarn/bun,
+  // not just npm.
   const g = options.guardrails ?? {};
+  const run = runPrefix(options.packageManager ?? state?.packageManager ?? 'npm');
   const gates = [];
-  if (g.eslintSeverityStaging) gates.push('- `npm run lint` — ESLint, error-tier rules (`warn` stages a backlog; promote warn->error as each reaches zero).');
-  if (g.locGuard) gates.push(`- \`npm run check:loc\` — per-file LOC ratchet (cap ${options.locCap ?? 500}).`);
-  if (g.fallowRatchet) gates.push('- `npm run check:quality` — fallow metric ratchet. **Run with ./coverage absent.**');
-  if (g.coverageFloors) gates.push('- `npm run test:coverage` — coverage floors (rise-only; baselined to current).');
+  const gateScripts = [];
+  if (g.eslintSeverityStaging) {
+    gates.push(`- \`${run} lint\` — ESLint; opinionated rules start at \`warn\` (a staged backlog), promote warn->error as each reaches zero.`);
+    gateScripts.push('lint');
+  }
+  if (g.locGuard) {
+    gates.push(`- \`${run} check:loc\` — per-file LOC ratchet (cap ${options.locCap ?? 500}).`);
+    gateScripts.push('check:loc');
+  }
+  if (g.fallowRatchet) {
+    gates.push(`- \`${run} check:quality\` — fallow metric ratchet. **Run with ./coverage absent.**`);
+    gateScripts.push('check:quality');
+  }
+  if (g.coverageFloors) gates.push(`- \`${run} test:coverage\` — coverage floors (rise-only; baselined to current).`);
+  gateScripts.push(g.coverageFloors ? 'test:coverage' : 'test'); // always a test gate, like CI/verify
+  // Advisory commands (the report script is always installed; fallow's sweep only when its ratchet is on).
+  const advisory = [`- \`${run} report\` — actionable quality report (quality-report.md + .json).`];
+  if (g.fallowRatchet) advisory.push(`- \`${run} quality\` / \`${run} quality:audit\` — fallow full sweep / changed-files review.`);
   const guide = renderTemplate(loadTemplate('docs/quality-integration-guide.md.tmpl'), {
     gates: gates.length ? gates.join('\n') : '_No blocking gates enabled._',
+    verifyCmd: gateScripts.map((s) => `${run} ${s}`).join(' && '),
+    advisory: advisory.join('\n'),
     testFramework: options.testFramework ?? 'jest',
   });
   const file = (path, name) => ({ type: 'writeFile', path, mode: 'skip-if-exists', content: loadTemplate(name) });
@@ -232,6 +252,6 @@ export function planDocs(options) {
     file('CONTEXT.md', 'docs/CONTEXT.md'),
     file('docs/adr/0000-template.md', 'docs/adr-0000-template.md'),
     { type: 'writeFile', path: 'docs/quality-integration-guide.md', mode: 'skip-if-exists', content: guide },
-    file('CONTRIBUTING.md', 'docs/CONTRIBUTING-quality.md'),
+    { type: 'writeFile', path: 'CONTRIBUTING.md', mode: 'skip-if-exists', content: renderTemplate(loadTemplate('docs/CONTRIBUTING-quality.md'), { runCmd: run }) },
   ];
 }

@@ -95,7 +95,11 @@ export async function cli(argv, io = {}) {
         initBaselines(cwd, effectiveOptions(options, state), io.exec); // snapshot current debt (brownfield-safe)
       }
       if (dryRun) {
-        out(`Planned ${result.planned.length} action(s):\n` + result.planned.map((p) => `  ${p}`).join('\n') + '\n');
+        // Dedupe (package.json is touched by several planners) and name the
+        // install step, so the preview reads as an approvable change list.
+        const unique = [...new Set(result.planned)].map((p) =>
+          p === '(install)' ? `install dependencies (${options.packageManager ?? 'npm'})` : p);
+        out(`Planned ${unique.length} change(s):\n` + unique.map((p) => `  ${p}`).join('\n') + '\n');
       } else if (result.changed.length === 0) {
         out('No changes — project already converged.\n');
       } else {

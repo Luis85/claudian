@@ -9,3 +9,8 @@ export function runScriptArgs(pm, script) {
     default: return ['npm', ['run', script]];
   }
 }
+
+// The command prefix a human types to run a script (for generated docs/readme).
+export function runPrefix(pm) {
+  return pm === 'pnpm' ? 'pnpm' : pm === 'yarn' ? 'yarn' : pm === 'bun' ? 'bun run' : 'npm run';
+}

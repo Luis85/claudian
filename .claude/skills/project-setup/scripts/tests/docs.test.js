@@ -25,6 +25,16 @@ test('planDocs renders only the enabled gates in the guide', () => {
   assert.doesNotMatch(guide.content, /test:coverage/);
 });
 
+test('planDocs renders the detected package manager into the guide + CONTRIBUTING', () => {
+  const actions = planDocs({ docs: { scaffold: true }, guardrails: { eslintSeverityStaging: true } }, { packageManager: 'pnpm' });
+  const guide = actions.find((a) => a.path === 'docs/quality-integration-guide.md');
+  const contributing = actions.find((a) => a.path === 'CONTRIBUTING.md');
+  assert.match(guide.content, /pnpm lint/);
+  assert.doesNotMatch(guide.content, /npm run lint/);
+  assert.match(contributing.content, /pnpm lint/);
+  assert.doesNotMatch(contributing.content, /npm run/);
+});
+
 test('planDocs is a no-op when scaffold is off', () => {
   assert.deepEqual(planDocs({ docs: { scaffold: false } }), []);
 });

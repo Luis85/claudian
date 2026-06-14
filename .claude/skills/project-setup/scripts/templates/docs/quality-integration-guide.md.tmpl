@@ -6,9 +6,17 @@ This project's quality harness, installed by project-setup.
 
 {{gates}}
 
+Run them all locally before pushing (same set CI runs):
+
+    {{verifyCmd}}
+
 ## Advisory
 
-- `npm run report` — actionable quality report (quality-report.md + .json).
-- `npm run quality` / `quality:audit` — fallow full sweep / changed-files review.
+{{advisory}}
+
+The harness is **idempotent and re-runnable**: re-run the project-setup skill's
+`apply` any time to add a guardrail or refresh the scaffold — it merges and backs
+up, never clobbering your edits. The ratchets only allow improvement from the
+baseline captured at setup.
 
 Test framework: **{{testFramework}}**.
