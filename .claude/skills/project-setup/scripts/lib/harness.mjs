@@ -69,6 +69,9 @@ export function planFallow(options, state) {
           quality: 'fallow',
           'quality:audit': 'fallow audit',
           'check:quality': 'node scripts/check-quality.mjs',
+          // The advisory report points users at these; they must exist to run.
+          'quality:dead-code': 'fallow dead-code',
+          'quality:dupes': 'fallow dupes',
         },
         devDependencies: dep('fallow'),
       },
