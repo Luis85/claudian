@@ -89,6 +89,25 @@ describe('collectEditedPathsFromToolCall', () => {
       { path: 'y.ts', changeKind: 'edited' },
     ]);
   });
+
+  it('honors structured apply_patch change kinds: skips deletes, marks adds, prefers move targets', () => {
+    const tc = toolCall({
+      name: 'apply_patch',
+      input: {
+        changes: [
+          { path: 'added.ts', kind: 'add' },
+          { path: 'updated.ts', kind: 'update' },
+          { path: 'gone.ts', kind: 'delete' },
+          { path: 'old.ts', kind: 'update', new_path: 'new.ts' },
+        ],
+      },
+    });
+    expect(collectEditedPathsFromToolCall(tc)).toEqual([
+      { path: 'added.ts', changeKind: 'created' },
+      { path: 'updated.ts', changeKind: 'edited' },
+      { path: 'new.ts', changeKind: 'edited' },
+    ]);
+  });
 });
 
 describe('mergeEditedFileEntry', () => {

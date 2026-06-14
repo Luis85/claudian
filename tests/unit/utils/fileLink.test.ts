@@ -1,4 +1,15 @@
-import { extractLinkTarget } from '@/utils/fileLink';
+import type { App } from 'obsidian';
+
+import { extractLinkTarget, resolveOpenableVaultPath, toVaultRelativeOpenPath } from '@/utils/fileLink';
+
+jest.mock('@/utils/path', () => ({
+  ...jest.requireActual('@/utils/path'),
+  getVaultPath: jest.fn(() => '/vault'),
+}));
+
+jest.mock('@/utils/obsidianCompat', () => ({
+  getVaultFileByPath: jest.fn(() => null),
+}));
 
 // Extract the pattern from the module for testing
 // This matches the pattern in src/utils/fileLink.ts
@@ -228,6 +239,25 @@ describe('wikilink pattern matching', () => {
 
     it('drops display text while preserving anchors', () => {
       expect(extractLinkTarget('[[note#section|Alias]]')).toBe('note#section');
+    });
+  });
+
+  describe('toVaultRelativeOpenPath', () => {
+    const app = {} as App;
+
+    it('resolves an in-vault path without requiring the file to exist yet', () => {
+      // getVaultFileByPath is mocked to null (file not indexed), so the
+      // existence-checked resolver returns null while the relaxed one does not.
+      expect(toVaultRelativeOpenPath(app, 'notes/new.md')).toBe('notes/new.md');
+      expect(resolveOpenableVaultPath(app, 'notes/new.md')).toBeNull();
+    });
+
+    it('resolves an in-vault absolute path', () => {
+      expect(toVaultRelativeOpenPath(app, '/vault/notes/new.md')).toBe('notes/new.md');
+    });
+
+    it('rejects an out-of-vault absolute path instead of stripping it into the vault', () => {
+      expect(toVaultRelativeOpenPath(app, '/tmp/generated.md')).toBeNull();
     });
   });
 });

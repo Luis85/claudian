@@ -61,7 +61,7 @@ function findVaultRelativePath(app: App, rawPath: string, requireExists: boolean
     return null;
   }
 
-  const candidates = [trimmed, cleanToolPathCandidate(trimmed)];
+  const candidates = buildVaultPathCandidates(trimmed, requireExists);
 
   for (const candidate of candidates) {
     if (!candidatePathIsInsideVault(candidate, vaultPath)) {
@@ -79,6 +79,23 @@ function findVaultRelativePath(app: App, rawPath: string, requireExists: boolean
   }
 
   return null;
+}
+
+/**
+ * Candidate paths to try, in order. The cleaned candidate strips junk prefixes
+ * (`../`, `.\`, leading `/`) to recover Cursor-style relative tool paths — but
+ * stripping a leading slash off an absolute path turns an out-of-vault path like
+ * `/tmp/x` into a vault-looking `tmp/x`. An existence check filters that false
+ * positive out; the existence-agnostic resolver has no such backstop, so it must
+ * not apply the cleaned candidate to absolute inputs.
+ */
+function buildVaultPathCandidates(trimmed: string, requireExists: boolean): string[] {
+  const candidates = [trimmed];
+  const isAbsoluteInput = path.isAbsolute(trimmed.replace(/\\/g, '/'));
+  if (requireExists || !isAbsoluteInput) {
+    candidates.push(cleanToolPathCandidate(trimmed));
+  }
+  return candidates;
 }
 
 /**

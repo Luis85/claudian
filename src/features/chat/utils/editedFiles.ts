@@ -85,16 +85,47 @@ function collectApplyPatchChangesPaths(changes: unknown): RawEditedPath[] {
   if (!Array.isArray(changes)) return [];
   const out: RawEditedPath[] = [];
   for (const change of changes) {
-    const path = readApplyPatchChangePath(change);
-    if (path) out.push({ path, changeKind: 'edited' });
+    const entry = readApplyPatchChange(change);
+    if (entry) out.push(entry);
   }
   return out;
 }
 
-function readApplyPatchChangePath(change: unknown): string | null {
-  if (!change || typeof change !== 'object' || Array.isArray(change)) return null;
-  const path = (change as Record<string, unknown>).path;
-  return typeof path === 'string' && path.trim() ? path.trim() : null;
+/**
+ * Reads one structured apply_patch change entry, honoring its operation: deletes
+ * are dropped (the list is "files you can open"), renames prefer the destination
+ * path over the source, and adds map to created.
+ */
+function readApplyPatchChange(change: unknown): RawEditedPath | null {
+  if (!isPlainObject(change)) return null;
+
+  const operation = (firstStringField(change, ['kind', 'type']) ?? '').toLowerCase();
+  if (isDeleteOperation(operation)) return null;
+
+  const path = firstStringField(change, ['new_path', 'newPath', 'movePath', 'path']);
+  if (!path) return null;
+
+  return { path, changeKind: isCreateOperation(operation) ? 'created' : 'edited' };
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isDeleteOperation(operation: string): boolean {
+  return operation.includes('delete') || operation.includes('remove');
+}
+
+function isCreateOperation(operation: string): boolean {
+  return operation.startsWith('add') || operation.startsWith('create');
+}
+
+function firstStringField(record: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return null;
 }
 
 /**
