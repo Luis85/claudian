@@ -53,6 +53,7 @@ ClaudianView (lifecycle + assembly)
     ├── FileContextManager
     ├── ImageContextManager
     ├── StatusPanel
+    ├── ConversationHistoryView
     ├── NavigationSidebar
     ├── InstructionModeManager
     └── BangBashModeManager
@@ -76,7 +77,7 @@ The feature layer consumes provider-neutral `StreamChunk` values. Providers own 
 
 | Controller | Responsibility |
 |------------|----------------|
-| `ConversationController` | Session switching, history reload, save, and rewind |
+| `ConversationController` | Session switching, history reload, save, and rewind. Delegates the history-dropdown list UI to `ConversationHistoryView` (in `ui/`), passing it the two lifecycle escapes — `switchTo` and `loadActive` — as callbacks |
 | `StreamController` | Consume stream chunks, update streaming state, auto-scroll, abort handling |
 | `InputController` | Text input, mentions, images, resume dispatch, command dispatch, and post-plan approval flow |
 | `SelectionController` | Editor selection polling and CM6 decorations |

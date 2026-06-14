@@ -34,10 +34,6 @@
       "loc": 1010,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
-    "src/features/chat/controllers/ConversationController.ts": {
-      "loc": 1021,
-      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
-    },
     "src/features/tasks/ui/AgentBoardRenderer.ts": {
       "loc": 948,
       "reason": "Grew with the Agent Board redesign (rebuilt cards, hover action cluster, portal overflow menu, live strip). Planned split: extract card rendering and the overflow/portal menu into sibling modules. See docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
@@ -77,6 +73,10 @@
     "src/providers/codex/history/CodexHistoryStore.ts": {
       "loc": 746,
       "reason": "Grandfathered. Planned split: separate legacy, modern, and persisted parser families around shared turn-state types. See docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md."
+    },
+    "src/features/chat/controllers/ConversationController.ts": {
+      "loc": 677,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/tasks/execution/RunSession.ts": {
       "loc": 625,
