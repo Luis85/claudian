@@ -1,11 +1,11 @@
 // scripts/lib/harness.mjs
 import { runPrefix, safePackageManager } from './packageManager.mjs';
 import { loadTemplate, renderTemplate } from './templates.mjs';
+import { standsDownTestConfig } from './testConfig.mjs';
 
 // EXACT pins (no caret/tilde). A first install with no lockfile must be
 // reproducible — same answers + same state => same installed versions, per the
-// spec's determinism guarantee. The resolved versions are also recorded in
-// project-setup.report.json. Refresh deliberately to current exact releases
+// spec's determinism guarantee. Refresh deliberately to current exact releases
 // (verify each with `npm view <pkg> version` when bumping).
 export const PINNED = {
   eslint: '9.36.0',
@@ -118,19 +118,10 @@ export function planTest(options, state) {
   // the detected default.
   const fw = options.testFramework ?? state?.testFramework ?? 'jest';
   // A hand-written test config owns its thresholds; we can't safely baseline it
-  // to current coverage (non-destructive), so wiring our coverage gate would risk
-  // a day-one-RED CI on a pre-existing high threshold. Stand the gate down and
-  // say so. (plan() drops coverageFloors for the same state, keeping CI/verify
-  // consistent.) Still ensure a `test` script EXISTS so CI/verify's base test
-  // step doesn't fail with "Missing script: test" — mergeJson keeps an existing
-  // one and fills only when absent.
-  // Stand down on the SELECTED runner's hand-written config only (Jest ignores a
-  // vitest.config and vice versa); Vitest also reads vite.config, which a generated
-  // vitest.config would override.
-  const handwritten = fw === 'vitest'
-    ? Boolean(state?.vitestConfig || state?.viteConfig)
-    : Boolean(state?.jestConfig);
-  if (handwritten) {
+  // (non-destructive), so stand the coverage gate down (plan() drops coverageFloors
+  // for the same state) and still ensure a `test` script exists so CI/verify's base
+  // test step doesn't fail with "Missing script: test".
+  if (standsDownTestConfig(options, state)) {
     const testCmd = fw === 'vitest' ? 'vitest run --passWithNoTests' : 'jest --passWithNoTests';
     return [
       notice('Existing test config kept — the coverage gate was NOT wired (a hand-written config\'s thresholds can\'t be safely baselined to current). Set your thresholds to current coverage, or run `report` for an advisory snapshot.'),

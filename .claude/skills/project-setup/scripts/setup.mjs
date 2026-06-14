@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { apply } from './lib/apply.mjs';
 import { initBaselines } from './lib/baseline.mjs';
 import { detect } from './lib/detect.mjs';
-import { loadOptions } from './lib/options.mjs';
+import { freezeOptions, loadOptions } from './lib/options.mjs';
 import { runScriptArgs } from './lib/packageManager.mjs';
 import { effectiveOptions, plan } from './lib/plan.mjs';
 import { runGates } from './lib/verify.mjs';
@@ -84,15 +84,9 @@ export async function cli(argv, io = {}) {
         return 2;
       }
       const state = detect(cwd);
-      // Freeze install-volatile fields against the FIRST apply's resolution.
-      // Once the harness installs typescript/jest/vitest, a re-detect flips these,
-      // which would rewrite project-setup.report.json and re-trigger baselining —
-      // breaking the "second apply is a no-op" contract. An explicit answer still
-      // wins; otherwise the prior run report's resolved value is authoritative.
-      const frozen = readPriorReport(cwd)?.options ?? {};
-      options.testFramework = options.testFramework ?? frozen.testFramework ?? state.testFramework ?? 'jest';
-      options.packageManager = options.packageManager ?? frozen.packageManager ?? state.packageManager ?? 'npm';
-      options.typescript = options.typescript ?? frozen.typescript ?? state.typescript ?? true;
+      // Freeze install-volatile fields so a post-install re-detect can't flip them
+      // and break the "second apply is a no-op" contract (see freezeOptions).
+      freezeOptions(options, readPriorReport(cwd)?.options, state);
       const actions = plan(options, state);
       const dryRun = cmd === 'plan' || args.flags.dryRun === true;
       const backupDir = args.flags.backupDir ? resolve(cwd, args.flags.backupDir) : undefined;
@@ -134,8 +128,8 @@ export async function cli(argv, io = {}) {
       // Run the installed `report` script through the package manager (not bare
       // `node`) so Yarn PnP's loader is present for the report's
       // require.resolve('fallow/bin/fallow').
-      const [cmd, cargs] = runScriptArgs(detect(cwd).packageManager, 'report');
-      execFileSync(cmd, cargs, { cwd, stdio: 'inherit' });
+      const [bin, cargs] = runScriptArgs(detect(cwd).packageManager, 'report');
+      execFileSync(bin, cargs, { cwd, stdio: 'inherit' });
       return 0;
     }
     case 'verify': {
@@ -152,13 +146,9 @@ export async function cli(argv, io = {}) {
         return 2;
       }
       const state = detect(cwd);
-      // Resolve packageManager + testFramework the same way apply does (answer ->
-      // prior report -> detected), so verify runs the gates with the PM that
-      // installed the harness (not the npm fallback), and effectiveOptions sees
-      // the resolved runner for its Vite/hand-written-config standdown.
-      const frozen = readPriorReport(cwd)?.options ?? {};
-      options.packageManager = options.packageManager ?? frozen.packageManager ?? state.packageManager ?? 'npm';
-      options.testFramework = options.testFramework ?? frozen.testFramework ?? state.testFramework ?? 'jest';
+      // Same resolution as apply, so verify runs the gates with the PM that
+      // installed the harness and effectiveOptions sees the resolved runner.
+      freezeOptions(options, readPriorReport(cwd)?.options, state);
       // Mirror plan(): a hand-written test config drops the coverage gate here too.
       const res = runGates(cwd, effectiveOptions(options, state), io.exec);
       out(res.ok ? 'All gates passed.\n' : `Gates failed: ${res.failed.join(', ')}\n`);
