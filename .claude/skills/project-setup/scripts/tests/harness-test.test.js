@@ -48,7 +48,7 @@ test('planTest coverage globs include modern module extensions (.cjs / .mts,.cts
   assert.match(js.content, /js,jsx,mjs,cjs/);
   assert.doesNotMatch(js.content, /ts,tsx/);
   const ts = planTest({ testFramework: 'jest', typescript: true, guardrails: { coverageFloors: true } }).find((a) => a.path === 'jest.config.mjs');
-  assert.match(ts.content, /ts,tsx,mts,cts/);
+  assert.match(ts.content, /ts,tsx,mts,cts,js,jsx,mjs,cjs/); // TS repos cover their JS sources too
 });
 
 test('planTest(jest, JS) drops the ts-jest preset and its TS-only deps', () => {
@@ -81,7 +81,7 @@ test('planTest falls back to the DETECTED framework when no explicit answer', ()
 });
 
 test('planTest stands the coverage gate down for a hand-written test config, but keeps a test script', () => {
-  const actions = planTest({ testFramework: 'jest', guardrails: { coverageFloors: true } }, { handwrittenTestConfig: true });
+  const actions = planTest({ testFramework: 'jest', guardrails: { coverageFloors: true } }, { jestConfig: true });
   assert.ok(!actions.some((a) => a.path === 'jest.config.mjs')); // never write a competing config
   const pkg = actions.find((a) => a.type === 'mergeJson');
   assert.equal(pkg.patch.scripts.test, 'jest --passWithNoTests'); // CI/verify's base test step must resolve
@@ -90,12 +90,17 @@ test('planTest stands the coverage gate down for a hand-written test config, but
 });
 
 test('planTest(vitest) hand-written config keeps a vitest test script', () => {
-  const actions = planTest({ testFramework: 'vitest', guardrails: { coverageFloors: true } }, { handwrittenTestConfig: true });
+  const actions = planTest({ testFramework: 'vitest', guardrails: { coverageFloors: true } }, { vitestConfig: true });
   assert.equal(actions.find((a) => a.type === 'mergeJson').patch.scripts.test, 'vitest run --passWithNoTests');
 });
 
+test('planTest does NOT stand down on the OTHER runner\'s config (Jest selected, vitest.config present)', () => {
+  const actions = planTest({ testFramework: 'jest', typescript: true, guardrails: { coverageFloors: true } }, { vitestConfig: true });
+  assert.ok(actions.some((a) => a.path === 'jest.config.mjs')); // Jest ignores vitest.config -> write jest config
+});
+
 test('planTest stands down for a Vite config when Vitest is the SELECTED runner (no vitest dep yet)', () => {
-  const actions = planTest({ testFramework: 'vitest', guardrails: { coverageFloors: true } }, { viteConfig: true, handwrittenTestConfig: false });
+  const actions = planTest({ testFramework: 'vitest', guardrails: { coverageFloors: true } }, { viteConfig: true });
   assert.ok(!actions.some((a) => a.path === 'vitest.config.mjs')); // don't override their vite config
   assert.ok(actions.some((a) => a.type === 'notice' && /coverage gate was NOT wired/.test(a.message)));
 });

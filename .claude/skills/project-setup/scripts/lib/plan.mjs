@@ -57,7 +57,11 @@ function planHarness(options, state) {
 // day-one CI green.
 export function standsDownTestConfig(options, state) {
   const fw = options.testFramework ?? state?.testFramework ?? 'jest';
-  return Boolean(state?.handwrittenTestConfig || (fw === 'vitest' && state?.viteConfig));
+  // Scope to the resolved runner: Jest ignores a vitest.config (and vice versa),
+  // so the other runner's config must NOT stand the gate down.
+  return fw === 'vitest'
+    ? Boolean(state?.vitestConfig || state?.viteConfig)
+    : Boolean(state?.jestConfig);
 }
 
 export function effectiveOptions(options, state) {

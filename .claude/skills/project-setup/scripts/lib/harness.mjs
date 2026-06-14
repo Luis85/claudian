@@ -119,10 +119,12 @@ export function planTest(options, state) {
   // consistent.) Still ensure a `test` script EXISTS so CI/verify's base test
   // step doesn't fail with "Missing script: test" — mergeJson keeps an existing
   // one and fills only when absent.
-  // Vitest reads vite.config by default; a generated vitest.config would override
-  // its plugins/aliases/setup — so stand down for a vite.config too when Vitest is
-  // the RESOLVED runner (the user may select Vitest before adding its dep).
-  const handwritten = state?.handwrittenTestConfig || (fw === 'vitest' && state?.viteConfig);
+  // Stand down on the SELECTED runner's hand-written config only (Jest ignores a
+  // vitest.config and vice versa); Vitest also reads vite.config, which a generated
+  // vitest.config would override.
+  const handwritten = fw === 'vitest'
+    ? Boolean(state?.vitestConfig || state?.viteConfig)
+    : Boolean(state?.jestConfig);
   if (handwritten) {
     const testCmd = fw === 'vitest' ? 'vitest run --passWithNoTests' : 'jest --passWithNoTests';
     return [
@@ -135,9 +137,12 @@ export function planTest(options, state) {
   const coverageThreshold = JSON.stringify(
     options.guardrails?.coverageFloors ? { statements: 0, branches: 0, functions: 0, lines: 0 } : {},
   );
-  // Match the lint globs (incl. .mts/.cts/.cjs) so coverage can't be dodged by
-  // putting uncovered source behind a modern module extension.
-  const coverageGlobs = options.typescript === false ? 'src/**/*.{js,jsx,mjs,cjs}' : 'src/**/*.{ts,tsx,mts,cts}';
+  // Match the lint globs so coverage can't be dodged by a module extension; a TS
+  // project also includes JS sources (ESLint lints both), so .js production code
+  // in a TS repo isn't excluded from the floor.
+  const coverageGlobs = options.typescript === false
+    ? 'src/**/*.{js,jsx,mjs,cjs}'
+    : 'src/**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}';
   if (fw === 'vitest') {
     return [
       ...scriptCollision(state, 'test:coverage', 'vitest run --coverage --passWithNoTests'),

@@ -15,8 +15,10 @@ test('plan returns an ordered array of known action types', () => {
   }
 });
 
-test('effectiveOptions drops the coverage gate when a hand-written test config is present', () => {
-  assert.equal(effectiveOptions({ guardrails: { coverageFloors: true } }, { handwrittenTestConfig: true }).guardrails.coverageFloors, false);
+test('effectiveOptions drops the coverage gate for the SELECTED runner\'s hand-written config', () => {
+  // Jest selected + jest.config -> stand down; Jest selected + vitest.config -> not.
+  assert.equal(effectiveOptions({ testFramework: 'jest', guardrails: { coverageFloors: true } }, { jestConfig: true }).guardrails.coverageFloors, false);
+  assert.equal(effectiveOptions({ testFramework: 'jest', guardrails: { coverageFloors: true } }, { vitestConfig: true }).guardrails.coverageFloors, true);
   assert.equal(effectiveOptions({ guardrails: { coverageFloors: true } }, {}).guardrails.coverageFloors, true);
 });
 
