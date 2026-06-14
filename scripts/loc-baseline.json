@@ -14,20 +14,20 @@
       "loc": 1143,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
-    "src/features/chat/ClaudianView.ts": {
-      "loc": 1157,
-      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
-    },
     "src/providers/codex/runtime/CodexChatRuntime.ts": {
       "loc": 1079,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/features/chat/controllers/StreamController.ts": {
+      "loc": 1067,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/rendering/MessageRenderer.ts": {
       "loc": 1061,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
-    "src/features/chat/controllers/StreamController.ts": {
-      "loc": 1067,
+    "src/features/chat/ClaudianView.ts": {
+      "loc": 1010,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/tabs/TabManager.ts": {
@@ -62,12 +62,12 @@
       "loc": 785,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
-    "src/main.ts": {
-      "loc": 767,
-      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
-    },
     "src/i18n/types.ts": {
       "loc": 771,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/main.ts": {
+      "loc": 767,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/providers/codex/history/CodexHistoryStore.ts": {

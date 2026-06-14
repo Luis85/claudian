@@ -197,6 +197,10 @@ describe('ClaudianView.injectCommitTurnForConversation', () => {
     findConversationAcrossViews
       .mockReturnValueOnce(resolveCross(opts.postOpenCross ?? opts.initialCross ?? null));
     view.plugin = { findConversationAcrossViews };
+    // injectCommit delegates to the work-order bridge, which calls its OWN
+    // startTaskRunInFreshTab for the fallback path; point that at the same mock
+    // so the fallback assertions intercept it (the view method just delegates).
+    view.workOrderBridge.startTaskRunInFreshTab = startTaskRunInFreshTab;
 
     return {
       view,
@@ -383,7 +387,7 @@ describe('ClaudianView.injectCommitTurnForConversation', () => {
   it('disposes the fresh-tab stream observer after the commit fallback settles', async () => {
     const h = makeHarness({ initialCross: null });
     const dispose = jest.fn();
-    h.view.startTaskRunInFreshTab = jest.fn(async () => ({
+    h.view.workOrderBridge.startTaskRunInFreshTab = jest.fn(async () => ({
       conversationId: 'conv-1',
       sidepanelTabId: 'tab-fresh',
       subscribe: jest.fn(() => dispose),
