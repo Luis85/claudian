@@ -169,6 +169,13 @@ No further action.
 
 ## Task 4: #761 — inline-edit Accept/Reject visibility (verify first)
 
+> **Status: SKIPPED** (maintainer decision, 2026-06-14). Investigation found our `DiffWidget` is byte-for-byte upstream's pre-#761 version: Accept/Reject buttons live inside a `Decoration.replace` inline widget (`InlineEditModal.ts` `showDiff`), the exact fragile structure #734 reports as non-rendering on Intel Mac x86_64 — so our fork **likely reproduces** the bug. We skipped the port anyway because:
+> 1. **Unverifiable here** — the bug is Intel-Mac-x86_64-specific and cannot be reproduced in CI / this environment.
+> 2. **Working fallback** — keyboard Accept (Enter) / Reject (Esc) already work via `installAcceptRejectHandler`, so the impact is "clickable buttons missing on x86_64," not "cannot accept/reject."
+> 3. **Divergence conflict** — upstream #761 repurposes the preview block widget to render the *diff*, but our fork already uses that block (`PreviewWidget` → `renderInlineEditMarkdownPreview`, from the 2.0.21 sync) to render the agent's *markdown reply*. A faithful port would need a fork-specific redesign reconciling both, on the 891-line modal — disproportionate to a narrow, unverifiable, keyboard-recoverable bug.
+>
+> Documented as a known limitation in `src/features/inline-edit/CLAUDE.md`. Revisit (likely via the "minimal fork fix" — move the buttons into the reliably-rendered block widget) if a fork user on Intel Mac x86_64 reports missing buttons.
+
 Upstream #761 fixes issue #734 (*Accept/Reject buttons do not appear, Intel Mac x86_64*) by replacing inline glyph button widgets with explicit preview-action buttons, hiding the original selected range during preview, and rendering the diff as a markdown block. **Our `InlineEditModal` diverges**: it uses `PreviewWidget`/`DiffWidget`/`InputWidget` CodeMirror decorations, already calls `renderInlineEditMarkdownPreview` (from the 2.0.21 sync), and already toggles `hideSelectionHighlight`/`showSelectionHighlight`. The fix may not be needed, or may need a different shape.
 
 - [ ] **Step 1: Reproduce / root-cause** Determine the upstream root cause from `.context/upstream-761.patch` (why the glyph-button widget failed to mount on x86_64). Check whether our `InputWidget`/`DiffWidget` mount path has the same flaw (e.g., a widget that renders buttons conditionally on a layout measurement). If our architecture cannot exhibit the bug, **stop and record SKIP** with the reasoning in `docs/reviews/`.
