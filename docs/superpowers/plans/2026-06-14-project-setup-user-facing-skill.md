@@ -12,6 +12,41 @@
 
 ---
 
+## As-built notes (implemented & review-hardened)
+
+**Status: implemented and shipped in PR #97** (`.claude/skills/project-setup/`).
+Completes the skill; hardened across **11 review rounds**. The shipped code + these
+notes are authoritative where they differ from the task steps below. User-facing
+deltas, and **why**:
+
+- **The report reads fallow's `health_score`** for the score/grade (with a
+  `gradeFor` fallback), not `summary`. *Why:* `summary` holds analysis counts; the
+  score/grade live under `health_score`, so the original read showed a default
+  grade for healthy projects.
+- **`applyCoverageFloor` preserves the existing coverage glob** when it re-renders
+  a project-setup-marked config (and still leaves a hand-written config untouched,
+  warning instead). *Why:* the rise-only floor must not silently revert the JS/TS
+  coverage globs `planTest` chose.
+- **`planDocs` renders the guide's gate list from `options.guardrails`.** *Why:*
+  the scaffolded guide must not tell users to run `check:loc` / `check:quality` /
+  `test:coverage` when those guardrails are off.
+- **`verify` / `runGates` mirrors CI exactly:** package-manager-aware
+  (`runScriptArgs`) and it *always* runs a test gate (`test:coverage` when coverage
+  floors are on, else `test`). *Why:* otherwise local `verify` could report success
+  while the generated CI fails the same suite.
+- **`planReport` pins `fallow`** alongside the `report` script. *Why:*
+  `quality-report.mjs` shells out to `npx fallow`, so the report must install a
+  pinned fallow to stay offline/deterministic.
+- **`setup.mjs` threads an injectable `exec`** into `apply` + `initBaselines`, and
+  `plan()` composes `[gitignore, runReport, harness]` (install last). *Why:* test
+  injection (no real installs under `node:test`), and the run report must be written
+  before the harness's install action.
+
+Verified end-to-end: **74 `node:test` cases green**, plus a live CLI smoke
+(`detect` + a 20-action `plan --dry-run`, zero mutation).
+
+---
+
 ### Task 1: `coverage.mjs` — set the floor from measured coverage
 
 **Files:**

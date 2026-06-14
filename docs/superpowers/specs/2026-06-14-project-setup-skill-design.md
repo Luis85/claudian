@@ -1,11 +1,41 @@
 ---
 title: Project-setup skill
 date: 2026-06-14
-status: draft
+status: shipped
 scope: .claude/skills/project-setup
 ---
 
 # Project-setup skill — design
+
+> **Status — as built (shipped in PR #97).** Approach A was implemented under
+> `.claude/skills/project-setup/` and hardened across 11 review rounds (74
+> `node:test` cases green + a live CLI smoke). Task-level deltas between this
+> design and the shipped engine — each with its rationale — live in the
+> **"As-built notes"** sections of the three plan docs
+> (`docs/superpowers/plans/2026-06-14-project-setup-{engine-core,harness-templates,user-facing-skill}.md`);
+> the code and those notes are authoritative where they differ from this spec.
+> The design-level decisions that changed during implementation, and **why**:
+>
+> - **The `Action` `writeFile` mode union dropped `create`** — only
+>   `skip-if-exists` and `overwrite-backup` shipped. *Why:* no planner needed a
+>   third mode, and silent-overwrite-without-backup was a footgun the two
+>   remaining modes already cover safely.
+> - **`project-setup.report.json` records `{ engine, options }` only** — not the
+>   "every action taken" log this spec's *Determinism and safety model* implies.
+>   *Why:* the action list and detected state change once the harness installs
+>   deps, which rewrote the report on every re-apply and broke the "second `apply`
+>   is a no-op" idempotency contract; recording the resolved `options` keeps the
+>   artifact stable. (Pinned versions still ship — they live in the generated
+>   `package.json`, not the report.)
+> - **`packageManager` / `testFramework` / `typescript` resolve from `detect()`**
+>   when the answer is unset (the `answers.json` defaults are `null`/`null`/`null`,
+>   not the illustrative literals shown under *Options object* below). *Why:* a
+>   brownfield repo's real toolchain (pnpm / Vitest / plain JS) must win over the
+>   greenfield defaults instead of being silently overwritten.
+> - **The dirty-tree warning and `--yes` confirmation live in the SKILL.md
+>   orchestration layer, not the engine CLI.** *Why:* the engine stays a pure,
+>   non-interactive detect→plan→apply core; interactive guardrails belong to the
+>   skill that drives it.
 
 ## Problem
 

@@ -14,6 +14,59 @@
 
 ---
 
+## As-built notes (implemented & review-hardened)
+
+**Status: implemented and shipped in PR #97** (`.claude/skills/project-setup/`).
+Built on the engine, then hardened across **11 review rounds**. The shipped code +
+these notes are authoritative where they differ from the task steps below (kept as
+the original plan of record). Harness deltas, and **why**:
+
+- **Tool versions are exact, not caret ranges** (`PINNED`). *Why:* a first install
+  with no lockfile must resolve identically every time — caret ranges break the
+  determinism guarantee.
+- **`planEslint` wires the test-lint plugin AND ignores the generated harness
+  files.** It renders the framework's plugin import + config block
+  (`{{testImport}}` / `{{testConfigBlock}}`), and the generated flat config
+  `ignores` the project-setup-written `scripts/*.mjs` + `eslint.config.mjs`. *Why:*
+  otherwise the installed `eslint-plugin-jest`/`-vitest` is never applied (the
+  guardrail silently doesn't run), and `eslint .` fails on the generated Node
+  scripts (`console`/`process`) before any user code is checked.
+- **`planTest` resolves framework + JS/TS coverage globs + greenfield safety.**
+  Framework = `options.testFramework ?? state.testFramework ?? 'jest'`; coverage
+  globs are `src/**/*.{ts,tsx}` or `{js,jsx,mjs}` from `options.typescript`; the
+  `test` / `test:coverage` scripts carry `--passWithNoTests`. *Why:* preserve a
+  detected Vitest project, cover JS sources when TS is off, and let a greenfield
+  repo with no test files pass its CI test step on day one.
+- **`check-loc.mjs` is a rendered template** (`check-loc.mjs.tmpl`,
+  `MAX_LOC = {{locCap}}`). *Why:* the LOC guard must enforce the chosen `locCap`,
+  not a hardcoded 500 the generated docs would contradict.
+- **`planCi` is guardrail-gated, package-manager-aware, and skips Bun.** It emits a
+  step only for an enabled guardrail, renders cache/install/run for the detected
+  manager (npm `npm ci`; pnpm `pnpm install --frozen-lockfile` + `pnpm/action-setup`
+  pinned to v9; yarn `--immutable`), and returns *no* workflow for Bun/unknown
+  rather than a broken `npm ci`. *Why:* a missing script or an npm-only workflow
+  would fail CI before any guardrail runs.
+- **Install/CI honor the resolved `options.packageManager`**, not only detected
+  `state`. *Why:* a `packageManager` set in `answers.json` (corepack) must win
+  before a lockfile exists.
+- **`baseline.mjs` is package-manager-aware and coverage-clean.** It runs the
+  ratchet `--update`s first with `coverage/` removed (so fallow CRAP stays
+  `static_estimated`, matching CI), then snapshots coverage via
+  `runScriptArgs(pm, 'test:coverage')`. A new `lib/packageManager.mjs`
+  (`runScriptArgs`) is the shared run-command mapping used here and by `verify`.
+  *Why:* an npm-only coverage run breaks Yarn-PnP/Bun, and a stray `coverage/`
+  would lock coverage-weighted CRAP into the baseline.
+
+### Deferred (flagged in review, intentionally not shipped)
+Niche edge cases raised by review and deferred rather than expanding scope:
+honouring a declared **pnpm major** in CI (vs the v9 default), choosing
+**Yarn-Classic `--frozen-lockfile` vs Berry `--immutable`** install flags, and a
+broader ESLint Node override for a **brownfield repo's own pre-existing
+`scripts/*.mjs`**. The mainstream paths (npm / pnpm-9 / Yarn Berry, TS or JS) are
+covered and tested; these are documented follow-ups.
+
+---
+
 ### Task 1: `templates` — load + render bundled template files
 
 **Files:**

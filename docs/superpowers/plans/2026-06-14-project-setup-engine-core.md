@@ -17,6 +17,54 @@
 
 ---
 
+## As-built notes (implemented & review-hardened)
+
+**Status: implemented and shipped in PR #97.** The authoritative artifact is the
+code under `.claude/skills/project-setup/scripts/` (the full skill suite is **74
+`node:test` cases, green**; a live CLI smoke confirmed `detect` + `plan --dry-run`
+end-to-end). This plan was executed task-by-task, then hardened across **11 rounds
+of automated review**. The task steps below are kept as the original plan of
+record; where the shipped engine differs from them, the code and these notes win.
+Notable engine deltas, and **why**:
+
+- **The run report carries only `{ engine, options }`** — not the `generatedAt`
+  timestamp or the raw `detected` state shown in early drafts of Task 4. *Why:*
+  both are volatile (a timestamp changes every run; detection flips once the
+  harness installs eslint/fallow/test deps), which rewrote `project-setup.report.json`
+  on every re-apply and broke the "second apply is a no-op" idempotency contract.
+  Recording the resolved `options` only keeps the artifact stable. (Already
+  reflected in Task 4 below.)
+- **`detect()` does real detection.** It resolves the package manager from
+  `package.json#packageManager` (corepack) *before* the lockfile, recognises Bun's
+  current `bun.lock` (not only legacy `bun.lockb`), resolves the source `entry`
+  (`package.json#source` → first existing `src/main.ts|app.ts|index.*` →
+  `src/index.ts`), and detects the GitHub remote via `git config --get
+  remote.origin.url` (so worktree/submodule `.git` *files* resolve). *Why:* the
+  placeholder defaults would otherwise mis-target the wrong manager/entry/remote —
+  and the worktree case is exactly the isolated checkout coding agents run in.
+- **Backups are non-clobbering.** `backupFile` path-preserves under the backup dir
+  and `apply` defaults to a per-run timestamped backup dir. *Why:* a fixed-basename
+  destination overwrote a prior backup when two files shared a name or on re-apply.
+- **`installDeps` is a top-of-loop guard, not a sibling `else if` branch.** It runs
+  before the shared `abs`/`planned.push(action.path)` lines, always records a
+  `(install)` descriptor in `planned` (so `plan --dry-run` previews the only network
+  side effect), execs the install only when `package.json` actually changed this
+  run, and never marks it in `changed`. *Why:* the action carries no `path` (the
+  sibling-branch placement would have thrown); this preserves both the dry-run
+  preview and the no-op re-apply.
+- **The `writeFile` `mode` union dropped `'create'`.** *Why:* no planner emitted
+  it and its silent-overwrite-without-backup behaviour was a footgun; only
+  `skip-if-exists` and `overwrite-backup` remain.
+- **`setup.mjs` resolves `testFramework`, `packageManager`, and `typescript` from
+  `detect()` before `plan()`** (see Plan 2 Task 8 / Plan 1 Task 6 — `options.mjs`
+  now defaults `typescript: null`). *Why:* when the user doesn't override an answer,
+  detected reality should win — a brownfield Vitest/pnpm/JS project must not silently
+  get Jest/npm/TS defaults.
+- **Tests run as `node --test scripts/tests/*.test.js`.** *Why:* the bare-directory
+  form fails on Node 22; the glob also skips the non-test `helpers.js`.
+
+---
+
 ### Task 1: CLI skeleton — argument parsing and command dispatch
 
 **Files:**
