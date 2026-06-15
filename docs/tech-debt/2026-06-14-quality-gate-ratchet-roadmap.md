@@ -212,14 +212,21 @@ not margin-shaving).
 
 ### 3b. Lift the genuinely under-covered area
 
-`src/providers/opencode/runtime/` **was lifted 2026-06-14** — actual
-**73.39 / 63.40 / 68.32 / 73.11** (stmt/branch/func/lines), up from
-71/59/66/71, by adding pure-helper unit tests (`opencodeSessionStateSync`,
-`OpencodePaths`, `opencodeActiveTurnUpdate`); branch +4.3 pts. Floor raised
-68/56/62/68 → **70/60/65/70**. The remaining gap is concentrated in
-`OpencodeChatRuntime` (45 % branch in isolation, ACP-mock-heavy) and
-`OpencodeAuxQueryRunner` — the next, harder lift. `src/providers/cursor/runtime/`
-is also still open (83/68/82/85, floor 80/65/79/82). Targeted tests here are a
+`src/providers/opencode/runtime/` **lifted twice (2026-06-14)** — actual now
+**73.91 / 64.57 / 68.94 / 73.63** (stmt/branch/func/lines), up from 71/59/66/71:
+first the pure helpers (`opencodeSessionStateSync`, `OpencodePaths`,
+`opencodeActiveTurnUpdate`), then `OpencodeAuxQueryRunner` (model/session/permission
+helpers) + `OpencodeChatRuntime.formatRuntimeError` via the constructors'
+side-effect-free seam. Floor 68/56/62/68 → **71/61/66/71** (branch +5 total).
+
+`src/providers/cursor/runtime/` **lifted 2026-06-14** — actual
+**86.27 / 72.43 / 84.64 / 87.82**, up from 83/68/82/85, by testing the untested
+`cursorGrepFormatting` (was 0 % branch) and `CursorTaskResultInterpreter`
+(40 % → covered). Floor 80/65/79/82 → **83/69/82/85** (branch +4).
+
+Both dirs' remaining gap is the ACP/spawn-mock-heavy turn lifecycle
+(`OpencodeChatRuntime`, `cursorStreamMapper`/`cursorToolNormalization`) — the
+harder lift, only worth it when those are reworked. Targeted tests here are a
 real robustness win, not just a number — and every point earned lets the floor
 rise. The security/utils/logging/mcp areas are already 90–99 % and need only
 floor maintenance.
