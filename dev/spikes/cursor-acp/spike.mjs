@@ -320,7 +320,11 @@ function handleClientSideMethod(frame) {
       return true;
     }
     if (method === 'fs/write_text_file') {
-      writeFileSync(resolveInCwd(params.path), params.content ?? '');
+      const target = resolveInCwd(params.path);
+      // Production's ACP write path creates the parent dir first; mirror it so a
+      // new nested path (e.g. .cursor/plans/...) doesn't record a spurious ENOENT.
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, params.content ?? '');
       send({ jsonrpc: '2.0', id: frame.id, result: {} });
       return true;
     }
