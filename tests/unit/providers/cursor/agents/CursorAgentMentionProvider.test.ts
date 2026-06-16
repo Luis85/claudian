@@ -24,15 +24,16 @@ describe('CursorAgentMentionProvider', () => {
     expect(byName.has('Explore')).toBe(false);
   });
 
-  it('maps compat agents to the vault source label', async () => {
+  it('excludes compat agents from @mentions (Cursor cannot delegate to them by name)', async () => {
     const provider = providerWith([
       { name: 'researcher', description: 'Compat. (from .claude/agents)', prompt: '', source: 'claude-compat' },
       { name: 'builder', description: 'Compat. (from .codex/agents)', prompt: '', source: 'codex-compat' },
+      { name: 'reviewer', description: 'Vault.', prompt: '', source: 'vault' },
     ]);
     await provider.loadAgents();
 
-    expect(provider.searchAgents('researcher')[0]!.source).toBe('vault');
-    expect(provider.searchAgents('builder')[0]!.source).toBe('vault');
+    // Only the vault agent — Cursor loads .cursor/agents, not the compat roots.
+    expect(provider.searchAgents('').map((r) => r.name)).toEqual(['reviewer']);
   });
 
   it('filters by name or description substring', async () => {
