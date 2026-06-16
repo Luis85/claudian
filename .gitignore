@@ -86,7 +86,9 @@ test-results/
 
 # Development files
 sandbox/
-dev
+# dev/ is local scratch, except committed durable tooling under dev/spikes/
+dev/*
+!dev/spikes/
 
 # Lock files (uncomment based on package manager)
 # yarn.lock

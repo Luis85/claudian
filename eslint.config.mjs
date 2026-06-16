@@ -50,7 +50,7 @@ const stagedObsidianRules = {
       ignoreWords: ['Claudian', 'Codex', 'OpenCode', 'WSL'],
       brands: [...DEFAULT_BRANDS, 'Claudian', 'Codex', 'OpenCode'],
       acronyms: [...DEFAULT_ACRONYMS, 'TOML', 'WSL'],
-      ignoreRegex: ['\\.(?:claude|codex|opencode)/'],
+      ignoreRegex: ['\\.(?:claude|codex|cursor|opencode)/'],
       enforceCamelCaseLower: true,
     },
   ],
@@ -63,12 +63,14 @@ export default defineConfig([
   },
   js.configs.recommended,
   {
-    files: ['esbuild.config.mjs', 'scripts/**/*.js', 'scripts/**/*.mjs'],
+    files: ['esbuild.config.mjs', 'scripts/**/*.js', 'scripts/**/*.mjs', 'dev/**/*.mjs'],
     languageOptions: {
       globals: {
         console: 'readonly',
         module: 'readonly',
         process: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
       },
     },
   },
