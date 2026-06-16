@@ -1,4 +1,13 @@
+---
+title: "Cursor ACP Spike + Subagent Foundation Implementation Plan"
+date: 2026-06-11
+status: in-progress
+scope: providers/cursor
+---
+
 # Cursor ACP Spike + Subagent Foundation Implementation Plan
+
+> **Scope note (post-split):** This branch (PR #81) contains only **Part A — the ACP spike harness (Tasks 1–2)** plus the research/spec/plan docs. **Part B — the Cursor subagent foundation (Tasks 3–9: storage, discovery, @-mentions, prompt hint, settings UI) — was extracted to PR #115 and is not in this branch.** Read Tasks 3–9 and their completion criteria below as a record of work that landed in #115, not as work present here.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -1932,6 +1941,6 @@ git push -u origin claude/zealous-mccarthy-g6zr9w
 ## Completion criteria
 
 - Spike harness + protocol committed (Tasks 1–2); running it is a human step outside this plan.
-- Cursor agents are discoverable, @-mentionable with correct source labels, and manageable in settings; the encoder hints delegation for mentioned agents (Tasks 3–9).
+- Cursor agents are discoverable, @-mentionable with correct source labels, and manageable in settings; the encoder hints delegation for mentioned agents (Tasks 3–9). **[Landed in PR #115, not this branch — see the scope note at the top.]**
 - All gates green and pushed (Task 10).
 - NOT in this plan (by design): spike findings doc, the ADR, Part C transport/runtime work, async subagent lifecycle.
