@@ -297,12 +297,31 @@ function resolveInCwd(requestedPath) {
   return resolved;
 }
 
+// Cursor may send camelCase ACP aliases (fs/readTextFile, terminalCreate, ...)
+// that the production client treats as equivalent to the snake_case names — see
+// src/providers/acp/methodNames.ts ACP_SERVER_REQUEST_ALIASES. Normalize so the
+// stub services them instead of falling through to the interactive prompt.
+const ACP_METHOD_ALIASES = {
+  'fs/readTextFile': 'fs/read_text_file',
+  'fs/writeTextFile': 'fs/write_text_file',
+  terminalCreate: 'terminal/create',
+  terminalOutput: 'terminal/output',
+  terminalRelease: 'terminal/release',
+  terminalWaitForExit: 'terminal/wait_for_exit',
+  terminalKill: 'terminal/kill',
+  requestPermission: 'session/request_permission',
+};
+function canonicalMethod(method) {
+  return ACP_METHOD_ALIASES[method] ?? method;
+}
+
 // fs/terminal requests only arrive once the client advertises those
 // capabilities (default). They must be serviced or the agent's tool call hangs.
 // Returning real results keeps the turn alive so we can observe whether
 // session/request_permission and cursor/ask_question fire afterwards.
 function handleClientSideMethod(frame) {
-  const { method, params } = frame;
+  const { params } = frame;
+  const method = canonicalMethod(frame.method);
   try {
     if (method === 'fs/read_text_file') {
       // Resolve relative paths against the ACP session cwd, not the harness
@@ -360,7 +379,7 @@ async function answerServerRequest(frame) {
     return;
   }
 
-  if (frame.method === 'session/request_permission') {
+  if (canonicalMethod(frame.method) === 'session/request_permission') {
     const options = frame.params?.options ?? [];
     for (const opt of options) console.log(`  option: ${JSON.stringify(opt)}`);
     // Auto-select an allow-once option when running non-interactively so the
@@ -413,7 +432,9 @@ function ask(prompt) {
 function buildPromptContent() {
   const content = [];
   if (typeof args.image === 'string') {
-    const data = readFileSync(resolve(args.image)).toString('base64');
+    // Resolve a relative --image against the session cwd (not the harness
+    // process cwd); resolve() leaves an absolute path untouched.
+    const data = readFileSync(resolve(cwd, args.image)).toString('base64');
     const ext = args.image.toLowerCase().split('.').pop();
     const mimeTypes = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp' };
     content.push({ type: 'image', mimeType: mimeTypes[ext] ?? 'image/png', data });
