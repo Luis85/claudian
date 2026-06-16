@@ -456,7 +456,9 @@ function buildPromptContent() {
   // multi-word --prompt value on spaces), which silently truncates prompts.
   let promptText = 'Reply with the single word: pong';
   if (typeof args['prompt-file'] === 'string') {
-    promptText = readFileSync(resolve(args['prompt-file']), 'utf8').trim();
+    // Resolve a relative --prompt-file against the session cwd (like --image and
+    // the fs handlers); resolve() leaves an absolute path untouched.
+    promptText = readFileSync(resolve(cwd, args['prompt-file']), 'utf8').trim();
   } else if (typeof args.prompt === 'string') {
     promptText = args.prompt;
   }
