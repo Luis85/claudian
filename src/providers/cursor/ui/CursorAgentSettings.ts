@@ -184,7 +184,7 @@ export function validateCursorAgentDraft(
   const nameError = validateCursorAgentName(name);
   if (nameError) return nameError;
   // Only an editable same-name agent is a real conflict. Read-only compat
-  // (.claude/.codex) and built-in agents are shadowed — not overwritten — by a
+  // (.claude/agents) and built-in agents are shadowed — not overwritten — by a
   // vault/global save, which is the storage layer's intended precedence.
   const conflict = allAgents.some(
     (agent) =>
@@ -193,7 +193,10 @@ export function validateCursorAgentDraft(
       && isEditable(agent),
   );
   if (conflict) return t('provider.cursor.subagent.duplicate', { name });
-  if (!description.trim()) return t('provider.cursor.subagent.descriptionRequired');
+  // Description is required only on create. Cursor accepts description-less agents
+  // and the parser preserves them, so editing an existing one must not force the
+  // user to invent a description to save unrelated changes (prompt/model/source).
+  if (!existing && !description.trim()) return t('provider.cursor.subagent.descriptionRequired');
   return null;
 }
 

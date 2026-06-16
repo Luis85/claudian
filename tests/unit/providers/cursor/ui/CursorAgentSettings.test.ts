@@ -103,6 +103,11 @@ describe('validateCursorAgentDraft', () => {
   it('still rejects a duplicate editable (vault/global) name', () => {
     expect(validateCursorAgentDraft('foo', 'desc', [vaultFoo], null)).not.toBeNull();
   });
+
+  it('requires a description on create but allows saving an edit without one', () => {
+    expect(validateCursorAgentDraft('brandnew', '', [], null)).not.toBeNull();
+    expect(validateCursorAgentDraft('foo', '', [], vaultFoo)).toBeNull();
+  });
 });
 
 describe('buildCursorAgentDraft', () => {
