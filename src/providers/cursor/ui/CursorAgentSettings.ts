@@ -80,7 +80,7 @@ export class CursorAgentSettings {
       items: this.agents,
       emptyText: this.agents.some(isEditable)
         ? null
-        : 'No vault or global Cursor subagents yet. Click + to create one. Built-in and compat (.claude/.codex) agents below are read-only.',
+        : 'No vault or global Cursor subagents yet. Click + to create one. Built-in and .claude/agents compat agents below are read-only.',
       renderItem: (listEl, agent) => { this.renderItem(listEl, agent); },
     });
   }
