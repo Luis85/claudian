@@ -61,7 +61,12 @@ export function parseCursorAgentMarkdown(
   const rawName = typeof frontmatter.name === 'string' ? frontmatter.name.trim() : '';
   const name = rawName || nameFromPath(filePath);
   const rawDescription = typeof frontmatter.description === 'string' ? frontmatter.description.trim() : '';
-  if (!name || !rawDescription) return null;
+  if (!name) return null;
+  // Cursor treats `description` as optional for its own agents, so keep an
+  // undescribed `.cursor/agents` file rather than silently hiding it. Compat
+  // (foreign-tool) roots stay strict: a description-less agent isn't valid in
+  // its owning tool, so it isn't something that root would actually load.
+  if (!rawDescription && isCompatSource(source)) return null;
 
   const description = isCompatSource(source)
     ? `${rawDescription} (from ${COMPAT_ROOTS[source]})`

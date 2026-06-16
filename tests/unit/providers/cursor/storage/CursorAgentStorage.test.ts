@@ -50,8 +50,16 @@ describe('parseCursorAgentMarkdown', () => {
     expect(result!.extraFrontmatter).toEqual({ custom_key: 'custom-value' });
   });
 
-  it('returns null when description is missing', () => {
-    expect(parseCursorAgentMarkdown('---\nname: x\n---\nbody', '.cursor/agents/x.md', 'vault')).toBeNull();
+  it('keeps a description-less agent for the user\'s own Cursor sources', () => {
+    const result = parseCursorAgentMarkdown('---\nname: x\n---\nbody', '.cursor/agents/x.md', 'vault');
+
+    expect(result).not.toBeNull();
+    expect(result!.name).toBe('x');
+    expect(result!.description).toBe('');
+  });
+
+  it('drops a description-less agent from a read-only compat root', () => {
+    expect(parseCursorAgentMarkdown('---\nname: x\n---\nbody', '.claude/agents/x.md', 'claude-compat')).toBeNull();
   });
 
   it('labels claude-compat agents and notes their origin in the description', () => {
