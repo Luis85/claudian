@@ -1,3 +1,5 @@
+import { parse as parseToml } from 'smol-toml';
+
 import { extractBoolean, parseFrontmatter } from '../../../utils/frontmatter';
 import { serializeExtraFrontmatter, yamlString } from '../../../utils/slashCommand';
 import {
@@ -8,20 +10,21 @@ import {
 
 export const CURSOR_AGENT_VAULT_ROOT = '.cursor/agents';
 export const CLAUDE_AGENT_COMPAT_ROOT = '.claude/agents';
+export const CODEX_AGENT_COMPAT_ROOT = '.codex/agents';
 /** Relative to the user's home directory (HomeFileAdapter root). */
 export const CURSOR_AGENT_HOME_ROOT = '.cursor/agents';
 
 const PERSISTENCE_PREFIX = 'cursor-agent';
-const FILE_SOURCES = ['vault', 'global', 'claude-compat'] as const;
+const FILE_SOURCES = ['vault', 'global', 'claude-compat', 'codex-compat'] as const;
 type CursorAgentFileSource = (typeof FILE_SOURCES)[number];
 
-// Read-only compat root: agents Cursor also loads from another tool's project
-// folder (`.cursor/` wins on a name conflict). Maps each compat source to the
-// root used in its parse-time origin suffix. `.codex/agents` is intentionally
-// omitted — Codex agents are TOML, so a Markdown scan there surfaces nothing;
-// re-add with a TOML parser once Cursor's read behavior for that root is verified.
+// Read-only compat roots: agents another tool also keeps in its project folder
+// (`.cursor/` wins on a name conflict). `.claude/agents` is Markdown (parsed like
+// Cursor's own); `.codex/agents` is TOML (see scanCodexCompatRoot). The map gives
+// each source the root used in its parse-time origin suffix.
 const COMPAT_ROOTS = {
   'claude-compat': CLAUDE_AGENT_COMPAT_ROOT,
+  'codex-compat': CODEX_AGENT_COMPAT_ROOT,
 } as const satisfies Partial<Record<CursorAgentFileSource, string>>;
 type CompatSource = keyof typeof COMPAT_ROOTS;
 
@@ -129,11 +132,46 @@ export function serializeCursorAgentMarkdown(agent: CursorAgentDefinition): stri
 }
 
 // Inverse of the parse-time compat suffix; kept as a literal because the compat
-// root is a fixed constant and the dynamic escaping read ambiguously.
-const COMPAT_SUFFIX_PATTERN = / \(from \.claude\/agents\)$/;
+// roots are fixed constants and the dynamic escaping read ambiguously.
+const COMPAT_SUFFIX_PATTERN = / \(from \.(?:claude|codex)\/agents\)$/;
 
 function stripCompatSuffix(description: string): string {
   return description.replace(COMPAT_SUFFIX_PATTERN, '');
+}
+
+// Codex subagents are TOML with a different schema (see CodexSubagentStorage).
+// Surface them read-only by mapping the shared fields onto a Cursor agent; parsed
+// with smol-toml directly rather than importing the Codex store, to keep the
+// provider boundary intact. Strict like the agent's own tool: name, description,
+// and developer_instructions are all required, so we never advertise an agent
+// Codex itself would reject.
+export function parseCodexCompatAgent(content: string, filePath: string): CursorAgentDefinition | null {
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = parseToml(content) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  const name = typeof parsed.name === 'string' ? parsed.name.trim() : '';
+  const description = typeof parsed.description === 'string' ? parsed.description.trim() : '';
+  const prompt = typeof parsed.developer_instructions === 'string'
+    ? parsed.developer_instructions.trim()
+    : '';
+  if (!name || !description || !prompt) return null;
+
+  const result: CursorAgentDefinition = {
+    name,
+    description: `${description} (from ${CODEX_AGENT_COMPAT_ROOT})`,
+    prompt,
+    source: 'codex-compat',
+    readonly: true,
+    persistenceKey: createCursorAgentPersistenceKey({
+      source: 'codex-compat',
+      filePath: normalizeSlashes(filePath),
+    }),
+  };
+  if (typeof parsed.model === 'string' && parsed.model.trim()) result.model = parsed.model.trim();
+  return result;
 }
 
 function nameFromPath(filePath: string): string {
@@ -184,6 +222,7 @@ export class CursorAgentStorage {
     };
 
     collect(await this.scanVaultRoot(CLAUDE_AGENT_COMPAT_ROOT, 'claude-compat'));
+    collect(await this.scanCodexCompatRoot());
     collect(await this.scanHomeRoot());
     collect(await this.scanVaultRoot(CURSOR_AGENT_VAULT_ROOT, 'vault'));
 
@@ -290,6 +329,27 @@ export class CursorAgentStorage {
         (p) => this.homeAdapter.read(p),
         'global',
       );
+    } catch {
+      return [];
+    }
+  }
+
+  // .codex/agents holds TOML, not Markdown, so it needs its own parse path
+  // (parseCodexCompatAgent) rather than the shared Markdown scan above.
+  private async scanCodexCompatRoot(): Promise<CursorAgentDefinition[]> {
+    try {
+      const paths = (await this.vaultAdapter.listFiles(CODEX_AGENT_COMPAT_ROOT))
+        .filter((p) => p.endsWith('.toml'));
+      const agents: CursorAgentDefinition[] = [];
+      for (const filePath of paths) {
+        try {
+          const agent = parseCodexCompatAgent(await this.vaultAdapter.read(filePath), filePath);
+          if (agent) agents.push(agent);
+        } catch {
+          // Skip malformed TOML.
+        }
+      }
+      return agents;
     } catch {
       return [];
     }

@@ -2,6 +2,7 @@ import {
   createCursorAgentPersistenceKey,
   CursorAgentStorage,
   loadCursorAgentsWithBuiltins,
+  parseCodexCompatAgent,
   parseCursorAgentMarkdown,
   parseCursorAgentPersistenceKey,
   serializeCursorAgentMarkdown,
@@ -236,14 +237,39 @@ function createCaseInsensitiveVaultAdapter(files: Record<string, string> = {}) {
   };
 }
 
+describe('parseCodexCompatAgent', () => {
+  const TOML = 'name = "builder"\ndescription = "Builds things."\ndeveloper_instructions = "Build carefully."\nmodel = "gpt-5.3-codex"\n';
+
+  it('maps a Codex TOML agent to a read-only codex-compat Cursor agent', () => {
+    const result = parseCodexCompatAgent(TOML, '.codex/agents/builder.toml');
+
+    expect(result).not.toBeNull();
+    expect(result!.name).toBe('builder');
+    expect(result!.source).toBe('codex-compat');
+    expect(result!.readonly).toBe(true);
+    expect(result!.prompt).toBe('Build carefully.');
+    expect(result!.model).toBe('gpt-5.3-codex');
+    expect(result!.description).toBe('Builds things. (from .codex/agents)');
+  });
+
+  it('drops agents missing required Codex fields or with invalid TOML', () => {
+    // no developer_instructions
+    expect(parseCodexCompatAgent('name = "x"\ndescription = "d"\n', '.codex/agents/x.toml')).toBeNull();
+    // no name/description
+    expect(parseCodexCompatAgent('developer_instructions = "d"\n', '.codex/agents/y.toml')).toBeNull();
+    expect(parseCodexCompatAgent('{{not toml', '.codex/agents/z.toml')).toBeNull();
+  });
+});
+
 describe('CursorAgentStorage', () => {
-  it('scans the vault, the claude compat root, and global, with vault winning name conflicts', async () => {
+  it('scans the vault, both compat roots, and global, with vault winning name conflicts', async () => {
     const vault = createVaultAdapter({
       '.cursor/agents/reviewer.md': AGENT_MD('reviewer', 'Vault reviewer.'),
       '.claude/agents/reviewer.md': AGENT_MD('reviewer', 'Claude compat reviewer.'),
       '.claude/agents/researcher.md': AGENT_MD('researcher', 'Claude compat researcher.'),
-      // .codex/agents holds Codex's TOML agents, not Cursor markdown — not a compat root.
-      '.codex/agents/builder.md': AGENT_MD('builder', 'Codex compat builder.'),
+      // Codex agents are TOML with a different schema, parsed via parseCodexCompatAgent.
+      '.codex/agents/builder.toml':
+        'name = "builder"\ndescription = "Codex compat builder."\ndeveloper_instructions = "Build carefully."\n',
     });
     const home = createHomeAdapter({
       '.cursor/agents/helper.md': AGENT_MD('helper', 'Global helper.'),
@@ -257,8 +283,10 @@ describe('CursorAgentStorage', () => {
     expect(byName.get('reviewer')!.description).toBe('Vault reviewer.');
     expect(byName.get('researcher')!.source).toBe('claude-compat');
     expect(byName.get('helper')!.source).toBe('global');
-    // .codex/agents is not scanned — Codex agents are TOML, so the root is omitted.
-    expect(byName.has('builder')).toBe(false);
+    // .codex/agents is read as TOML, surfaced read-only with its origin suffix.
+    expect(byName.get('builder')!.source).toBe('codex-compat');
+    expect(byName.get('builder')!.description).toBe('Codex compat builder. (from .codex/agents)');
+    expect(byName.get('builder')!.prompt).toBe('Build carefully.');
   });
 
   it('does not discover agents nested below the vault root (flat scan only)', async () => {

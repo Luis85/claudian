@@ -8,7 +8,7 @@ function providerWith(agents: CursorAgentDefinition[]): CursorAgentMentionProvid
 }
 
 describe('CursorAgentMentionProvider', () => {
-  it('surfaces file agents and builtins with their sources', async () => {
+  it('surfaces file agents but excludes automatic built-ins', async () => {
     const provider = providerWith([
       { name: 'reviewer', description: 'Vault reviewer.', prompt: '', source: 'vault' },
       { name: 'helper', description: 'Global helper.', prompt: '', source: 'global' },
@@ -20,16 +20,19 @@ describe('CursorAgentMentionProvider', () => {
 
     expect(byName.get('reviewer')!.source).toBe('vault');
     expect(byName.get('helper')!.source).toBe('global');
-    expect(byName.get('Explore')!.source).toBe('builtin');
+    // Built-ins (Explore/Bash/Browser) are automatic — not manually @-mentionable.
+    expect(byName.has('Explore')).toBe(false);
   });
 
-  it('maps claude-compat agents to the vault source label', async () => {
+  it('maps compat agents to the vault source label', async () => {
     const provider = providerWith([
       { name: 'researcher', description: 'Compat. (from .claude/agents)', prompt: '', source: 'claude-compat' },
+      { name: 'builder', description: 'Compat. (from .codex/agents)', prompt: '', source: 'codex-compat' },
     ]);
     await provider.loadAgents();
 
     expect(provider.searchAgents('researcher')[0]!.source).toBe('vault');
+    expect(provider.searchAgents('builder')[0]!.source).toBe('vault');
   });
 
   it('filters by name or description substring', async () => {

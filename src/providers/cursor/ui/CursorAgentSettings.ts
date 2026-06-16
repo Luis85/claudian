@@ -30,6 +30,7 @@ function isEditable(agent: CursorAgentDefinition): boolean {
 
 function sourceBadge(agent: CursorAgentDefinition): string {
   if (agent.source === 'claude-compat') return 'claude compat';
+  if (agent.source === 'codex-compat') return 'codex compat';
   return agent.source;
 }
 
@@ -80,7 +81,7 @@ export class CursorAgentSettings {
       items: this.agents,
       emptyText: this.agents.some(isEditable)
         ? null
-        : 'No vault or global Cursor subagents yet. Click + to create one. Built-in and .claude/agents compat agents below are read-only.',
+        : 'No vault or global Cursor subagents yet. Click + to create one. Built-in, .claude/agents, and .codex/agents compat agents below are read-only.',
       renderItem: (listEl, agent) => { this.renderItem(listEl, agent); },
     });
   }
