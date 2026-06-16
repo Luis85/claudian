@@ -126,7 +126,9 @@ function probeAgentCli(cliPath) {
     options.windowsVerbatimArguments = true;
   }
   const probe = spawnSync(launch.command, launch.args, options);
-  return !probe.error;
+  // spawnSync leaves `error` unset when the binary runs but exits non-zero (a
+  // non-Cursor `agent` on PATH, or a broken shim), so require a clean exit too.
+  return !probe.error && probe.status === 0;
 }
 
 function discoverAgentCliPath() {
