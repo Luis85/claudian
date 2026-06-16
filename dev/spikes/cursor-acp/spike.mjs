@@ -121,14 +121,22 @@ function resolveAgentLaunch(cliPath, cmdArgs) {
 
 function probeAgentCli(cliPath) {
   const launch = resolveAgentLaunch(cliPath, ['--version']);
-  const options = { stdio: 'ignore', env: launch.env ? { ...process.env, ...launch.env } : process.env };
+  const options = {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    encoding: 'utf8',
+    env: launch.env ? { ...process.env, ...launch.env } : process.env,
+  };
   if (launch.windowsVerbatimArguments) {
     options.windowsVerbatimArguments = true;
   }
   const probe = spawnSync(launch.command, launch.args, options);
   // spawnSync leaves `error` unset when the binary runs but exits non-zero (a
   // non-Cursor `agent` on PATH, or a broken shim), so require a clean exit too.
-  return !probe.error && probe.status === 0;
+  if (probe.error || probe.status !== 0) return false;
+  // ...and require version-shaped output (Cursor's is date-stamped, e.g.
+  // 2026.6.16-<hash>), so an unrelated `agent` that merely exits 0 on --version
+  // isn't selected. Pass --bin <path> for a deterministic choice.
+  return /\d+\.\d+/.test(`${probe.stdout ?? ''} ${probe.stderr ?? ''}`);
 }
 
 function discoverAgentCliPath() {
@@ -386,8 +394,12 @@ async function answerServerRequest(frame) {
     // probe completes; --auto-answer drives this. Falls back to interactive.
     const auto = args['auto-answer'];
     if (auto) {
-      const allow = options.find((o) => /allow.?once|allow_once|allowonce/i.test(o.optionId ?? o.kind ?? ''))
-        ?? options.find((o) => /allow/i.test(o.optionId ?? o.kind ?? ''))
+      // Match either the opaque optionId or the standardized `kind`. `??` would
+      // stop at a present-but-non-matching optionId and never check kind, so a
+      // reject-first option list could mis-select options[0] as the "allow".
+      const matches = (o, re) => re.test(o.optionId ?? '') || re.test(o.kind ?? '');
+      const allow = options.find((o) => matches(o, /allow.?once|allow_once|allowonce/i))
+        ?? options.find((o) => matches(o, /allow/i))
         ?? options[0];
       const optionId = allow?.optionId;
       console.log(`[spike] auto-answer permission → ${optionId}`);
