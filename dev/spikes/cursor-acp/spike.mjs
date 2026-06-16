@@ -429,6 +429,15 @@ function buildPromptContent() {
   return content;
 }
 
+// Did the caller supply any prompt input buildPromptContent() honors? The resume
+// probe uses this to decide whether to send a resumed turn or only replay history
+// — checking args.prompt alone would skip the turn for the --prompt-file path.
+function hasPromptInput() {
+  return typeof args.prompt === 'string'
+    || typeof args['prompt-file'] === 'string'
+    || typeof args.image === 'string';
+}
+
 async function initialize() {
   // Cursor's ACP server only delegates session/request_permission and
   // cursor/ask_question back to the client when the client advertises that it
@@ -505,7 +514,7 @@ async function runRawRepl() {
 const scenarios = {
   handshake: async () => { await initialize(); },
   prompt: async () => { await initialize(); await openSession(); await runPrompt(); },
-  resume: async () => { await initialize(); await openSession(); if (args.prompt) await runPrompt(); },
+  resume: async () => { await initialize(); await openSession(); if (hasPromptInput()) await runPrompt(); },
   raw: async () => { await initialize(); await runRawRepl(); },
 };
 
