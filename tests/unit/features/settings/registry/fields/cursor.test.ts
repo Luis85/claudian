@@ -18,11 +18,11 @@ describe('Cursor tab registry fields', () => {
     expect(disabledTabs.find((t) => t.id === 'cursor')).toBeUndefined();
   });
 
-  it('registers 2 sections under Cursor in spec order', () => {
+  it('registers 3 sections under Cursor in spec order', () => {
     registerCursorTabFields();
     const r = getSettingsRegistry();
     const sections = r.getSections('cursor', enabled);
-    expect(sections.map((s) => s.id)).toEqual(['models', 'environment']);
+    expect(sections.map((s) => s.id)).toEqual(['models', 'subagents', 'environment']);
   });
 
   it('replaces the flat cliPath field with the hostname-keyed cliPathsByHost widget', () => {
@@ -50,13 +50,14 @@ describe('Cursor tab registry fields', () => {
     expect(r.getAllFields().find((f) => f.id === 'providerConfigs.cursor.modelAliases')).toBeUndefined();
   });
 
-  it('registers providerConfigs.cursor.customModels and environment with keywords', () => {
+  it('registers custom models, subagents, and environment fields with keywords', () => {
     registerCursorTabFields();
     const r = getSettingsRegistry();
     const fields = r.getAllFields().filter((f) => f.tabId === 'cursor');
     const ids = fields.map((f) => f.id);
     expect(ids).toEqual(expect.arrayContaining([
       'providerConfigs.cursor.customModels',
+      'cursor.subagents',
       'providerConfigs.cursor.environmentVariables',
     ]));
     for (const field of fields) {

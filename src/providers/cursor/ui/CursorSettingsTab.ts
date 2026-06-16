@@ -3,10 +3,12 @@ import { Setting } from 'obsidian';
 import { widgetContextFromTabRenderer } from '../../../core/providers/settingsWidgets';
 import type { ProviderSettingsTabRenderer } from '../../../core/providers/types';
 import { t } from '../../../i18n/i18n';
+import { maybeGetCursorWorkspaceServices } from '../app/cursorWorkspaceAccess';
 import {
   cursorSettingsWidgets,
   mountCursorCliPathSetting,
   mountCursorEnvironmentSection,
+  mountCursorSubagentsSection,
 } from './cursorSettingsWidgets';
 import { mountCursorVisibleModelsPicker } from './visibleModelsPicker';
 
@@ -26,6 +28,11 @@ export const cursorSettingsTabRenderer: ProviderSettingsTabRenderer = {
     new Setting(container).setName('Models').setHeading();
     mountCursorVisibleModelsPicker(container, widgetContext);
     mountCursorCliPathSetting(container, widgetContext);
+
+    if (maybeGetCursorWorkspaceServices()?.agentStorage) {
+      new Setting(container).setName('Subagents').setHeading();
+      mountCursorSubagentsSection(container, widgetContext);
+    }
 
     mountCursorEnvironmentSection(container, widgetContext, t('settings.environment'));
   },

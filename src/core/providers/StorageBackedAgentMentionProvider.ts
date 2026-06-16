@@ -1,9 +1,10 @@
-import type { AgentMentionProvider } from './types';
+import type { AgentMentionProvider, AgentMentionSource } from './types';
 
 /**
  * Shared `@`-mention provider over a vault subagent store. Providers supply
- * their definition type and an optional mentionability filter (e.g. Opencode
- * hides non-subagent or disabled definitions).
+ * their definition type, an optional mentionability filter (e.g. Opencode
+ * hides non-subagent or disabled definitions), and an optional source
+ * resolver (e.g. Cursor labels builtin/global/vault).
  */
 export class StorageBackedAgentMentionProvider<
   T extends { name: string; description: string },
@@ -13,6 +14,7 @@ export class StorageBackedAgentMentionProvider<
   constructor(
     private readonly storage: { loadAll(): Promise<T[]> },
     private readonly isMentionable: (agent: T) => boolean = () => true,
+    private readonly resolveSource: (agent: T) => AgentMentionSource = () => 'vault',
   ) {}
 
   async loadAgents(): Promise<void> {
@@ -23,7 +25,7 @@ export class StorageBackedAgentMentionProvider<
     id: string;
     name: string;
     description?: string;
-    source: 'plugin' | 'vault' | 'global' | 'builtin';
+    source: AgentMentionSource;
   }> {
     const q = query.toLowerCase();
     return this.agents
@@ -36,7 +38,7 @@ export class StorageBackedAgentMentionProvider<
         id: agent.name,
         name: agent.name,
         description: agent.description,
-        source: 'vault' as const,
+        source: this.resolveSource(agent),
       }));
   }
 }
