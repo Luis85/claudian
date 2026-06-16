@@ -282,9 +282,6 @@ function handleFrame(line) {
   }
 }
 
-// fs/terminal requests only arrive once the client advertises those
-// capabilities (default). They must be serviced or the agent's tool call hangs.
-// Returning real results keeps the turn alive so we can observe whether
 // Resolve an ACP-supplied path against the session cwd and reject anything that
 // escapes it (absolute paths elsewhere, ../ traversal), so a buggy or adversarial
 // ACP server can't read or clobber files outside the disposable test workspace.
@@ -298,6 +295,9 @@ function resolveInCwd(requestedPath) {
   return resolved;
 }
 
+// fs/terminal requests only arrive once the client advertises those
+// capabilities (default). They must be serviced or the agent's tool call hangs.
+// Returning real results keeps the turn alive so we can observe whether
 // session/request_permission and cursor/ask_question fire afterwards.
 function handleClientSideMethod(frame) {
   const { method, params } = frame;
@@ -515,7 +515,10 @@ const scenarios = {
   handshake: async () => { await initialize(); },
   prompt: async () => { await initialize(); await openSession(); await runPrompt(); },
   resume: async () => { await initialize(); await openSession(); if (hasPromptInput()) await runPrompt(); },
-  raw: async () => { await initialize(); await runRawRepl(); },
+  // raw skips the automatic initialize so an operator can probe alternate
+  // initialize/session/new shapes by hand when the default frame is rejected
+  // (protocol drift) — that's the documented escape hatch in the README.
+  raw: async () => { await runRawRepl(); },
 };
 
 const run = scenarios[scenario];
