@@ -6,7 +6,7 @@
 // See README.md in this directory for the full spike protocol.
 import { spawn, spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join, resolve, win32 } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep, win32 } from 'node:path';
 import { createInterface } from 'node:readline';
 
 const VERSION_DIR_PATTERN = /^\d{4}\.\d{1,2}\.\d{1,2}-[a-f0-9]+$/u;
@@ -285,6 +285,19 @@ function handleFrame(line) {
 // fs/terminal requests only arrive once the client advertises those
 // capabilities (default). They must be serviced or the agent's tool call hangs.
 // Returning real results keeps the turn alive so we can observe whether
+// Resolve an ACP-supplied path against the session cwd and reject anything that
+// escapes it (absolute paths elsewhere, ../ traversal), so a buggy or adversarial
+// ACP server can't read or clobber files outside the disposable test workspace.
+// Mirrors the intent of production resolveWorkspaceScopedPath().
+function resolveInCwd(requestedPath) {
+  const resolved = resolve(cwd, requestedPath);
+  const rel = relative(cwd, resolved);
+  if (rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
+    throw new Error(`path escapes session cwd: ${requestedPath}`);
+  }
+  return resolved;
+}
+
 // session/request_permission and cursor/ask_question fire afterwards.
 function handleClientSideMethod(frame) {
   const { method, params } = frame;
@@ -292,7 +305,7 @@ function handleClientSideMethod(frame) {
     if (method === 'fs/read_text_file') {
       // Resolve relative paths against the ACP session cwd, not the harness
       // process cwd, so captures reflect the workspace the agent was told to use.
-      const content = readFileSync(resolve(cwd, params.path), 'utf8');
+      const content = readFileSync(resolveInCwd(params.path), 'utf8');
       // Honor the ACP line/limit read window (1-based line) like a real client,
       // so captures don't over-feed the agent on large files. Mirrors the
       // production readWorkspaceTextFile slicing in src/providers/acp/acpWorkspaceFs.ts.
@@ -307,7 +320,7 @@ function handleClientSideMethod(frame) {
       return true;
     }
     if (method === 'fs/write_text_file') {
-      writeFileSync(resolve(cwd, params.path), params.content ?? '');
+      writeFileSync(resolveInCwd(params.path), params.content ?? '');
       send({ jsonrpc: '2.0', id: frame.id, result: {} });
       return true;
     }

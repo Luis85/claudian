@@ -63,7 +63,7 @@ export default defineConfig([
   },
   js.configs.recommended,
   {
-    files: ['esbuild.config.mjs', 'scripts/**/*.js', 'scripts/**/*.mjs', 'dev/**/*.mjs'],
+    files: ['esbuild.config.mjs', 'scripts/**/*.js', 'scripts/**/*.mjs', 'dev/spikes/**/*.mjs'],
     languageOptions: {
       globals: {
         console: 'readonly',
