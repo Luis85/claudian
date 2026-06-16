@@ -610,6 +610,15 @@ describe('yamlString', () => {
     // A lone backslash with no other trigger stays an unquoted (literal) scalar.
     expect(yamlString('a\\b')).toBe('a\\b');
   });
+
+  it('quotes values starting with a YAML indicator character', () => {
+    for (const name of ['@reviewer', '!tag', '&anchor', '*alias', '%pct', '`tick', '>fold', '|lit']) {
+      expect(yamlString(name)).toBe(`"${name}"`);
+    }
+    // An indicator only mid-string doesn't force quoting.
+    expect(yamlString('code-reviewer')).toBe('code-reviewer');
+    expect(yamlString('reviewer@v2')).toBe('reviewer@v2');
+  });
 });
 
 describe('serializeCommand', () => {
