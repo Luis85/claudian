@@ -8,20 +8,20 @@ import {
 
 export const CURSOR_AGENT_VAULT_ROOT = '.cursor/agents';
 export const CLAUDE_AGENT_COMPAT_ROOT = '.claude/agents';
-export const CODEX_AGENT_COMPAT_ROOT = '.codex/agents';
 /** Relative to the user's home directory (HomeFileAdapter root). */
 export const CURSOR_AGENT_HOME_ROOT = '.cursor/agents';
 
 const PERSISTENCE_PREFIX = 'cursor-agent';
-const FILE_SOURCES = ['vault', 'global', 'claude-compat', 'codex-compat'] as const;
+const FILE_SOURCES = ['vault', 'global', 'claude-compat'] as const;
 type CursorAgentFileSource = (typeof FILE_SOURCES)[number];
 
-// Read-only compat roots: agents Cursor also loads from another tool's project
+// Read-only compat root: agents Cursor also loads from another tool's project
 // folder (`.cursor/` wins on a name conflict). Maps each compat source to the
-// root used in its parse-time origin suffix.
+// root used in its parse-time origin suffix. `.codex/agents` is intentionally
+// omitted — Codex agents are TOML, so a Markdown scan there surfaces nothing;
+// re-add with a TOML parser once Cursor's read behavior for that root is verified.
 const COMPAT_ROOTS = {
   'claude-compat': CLAUDE_AGENT_COMPAT_ROOT,
-  'codex-compat': CODEX_AGENT_COMPAT_ROOT,
 } as const satisfies Partial<Record<CursorAgentFileSource, string>>;
 type CompatSource = keyof typeof COMPAT_ROOTS;
 
@@ -124,8 +124,8 @@ export function serializeCursorAgentMarkdown(agent: CursorAgentDefinition): stri
 }
 
 // Inverse of the parse-time compat suffix; kept as a literal because the compat
-// roots are fixed constants and the dynamic escaping read ambiguously.
-const COMPAT_SUFFIX_PATTERN = / \(from \.(?:claude|codex)\/agents\)$/;
+// root is a fixed constant and the dynamic escaping read ambiguously.
+const COMPAT_SUFFIX_PATTERN = / \(from \.claude\/agents\)$/;
 
 function stripCompatSuffix(description: string): string {
   return description.replace(COMPAT_SUFFIX_PATTERN, '');
@@ -179,7 +179,6 @@ export class CursorAgentStorage {
     };
 
     collect(await this.scanVaultRoot(CLAUDE_AGENT_COMPAT_ROOT, 'claude-compat'));
-    collect(await this.scanVaultRoot(CODEX_AGENT_COMPAT_ROOT, 'codex-compat'));
     collect(await this.scanHomeRoot());
     collect(await this.scanVaultRoot(CURSOR_AGENT_VAULT_ROOT, 'vault'));
 

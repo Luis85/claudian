@@ -229,11 +229,12 @@ function createCaseInsensitiveVaultAdapter(files: Record<string, string> = {}) {
 }
 
 describe('CursorAgentStorage', () => {
-  it('scans vault, both compat roots, and global, with vault winning name conflicts', async () => {
+  it('scans the vault, the claude compat root, and global, with vault winning name conflicts', async () => {
     const vault = createVaultAdapter({
       '.cursor/agents/reviewer.md': AGENT_MD('reviewer', 'Vault reviewer.'),
       '.claude/agents/reviewer.md': AGENT_MD('reviewer', 'Claude compat reviewer.'),
       '.claude/agents/researcher.md': AGENT_MD('researcher', 'Claude compat researcher.'),
+      // .codex/agents holds Codex's TOML agents, not Cursor markdown — not a compat root.
       '.codex/agents/builder.md': AGENT_MD('builder', 'Codex compat builder.'),
     });
     const home = createHomeAdapter({
@@ -248,9 +249,8 @@ describe('CursorAgentStorage', () => {
     expect(byName.get('reviewer')!.description).toBe('Vault reviewer.');
     expect(byName.get('researcher')!.source).toBe('claude-compat');
     expect(byName.get('helper')!.source).toBe('global');
-    // Codex-compat root is discovered, read-only, with its origin suffix.
-    expect(byName.get('builder')!.source).toBe('codex-compat');
-    expect(byName.get('builder')!.description).toBe('Codex compat builder. (from .codex/agents)');
+    // .codex/agents is not scanned — Codex agents are TOML, so the root is omitted.
+    expect(byName.has('builder')).toBe(false);
   });
 
   it('does not discover agents nested below the vault root (flat scan only)', async () => {

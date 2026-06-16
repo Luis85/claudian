@@ -10,9 +10,7 @@ export class CursorAgentMentionProvider
       () => true,
       // compat sources are not AgentMentionSources; those agents read as vault
       // entries (their description carries the origin suffix).
-      (agent) => (agent.source === 'claude-compat' || agent.source === 'codex-compat'
-        ? 'vault'
-        : agent.source),
+      (agent) => (agent.source === 'claude-compat' ? 'vault' : agent.source),
     );
   }
 }

@@ -1,4 +1,4 @@
-export type CursorAgentSource = 'builtin' | 'vault' | 'global' | 'claude-compat' | 'codex-compat';
+export type CursorAgentSource = 'builtin' | 'vault' | 'global' | 'claude-compat';
 
 export interface CursorAgentDefinition {
   name: string;

@@ -30,7 +30,6 @@ function isEditable(agent: CursorAgentDefinition): boolean {
 
 function sourceBadge(agent: CursorAgentDefinition): string {
   if (agent.source === 'claude-compat') return 'claude compat';
-  if (agent.source === 'codex-compat') return 'codex compat';
   return agent.source;
 }
 
