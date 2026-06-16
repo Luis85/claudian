@@ -324,10 +324,11 @@ function handleClientSideMethod(frame) {
       send({ jsonrpc: '2.0', id: frame.id, result: {} });
       return true;
     }
-    if (method === 'terminal/create' || method === 'terminal/output' || method === 'terminal/release' || method === 'terminal/wait_for_exit') {
-      // Minimal terminal stub: acknowledge so the agent can proceed. We are not
-      // running real shell here; the point is to keep the turn alive to observe
-      // permission/question delegation, not to execute commands.
+    if (method === 'terminal/create' || method === 'terminal/output' || method === 'terminal/release' || method === 'terminal/wait_for_exit' || method === 'terminal/kill') {
+      // Minimal terminal stub: acknowledge so the agent can proceed (including
+      // terminal/kill, so non-interactive --auto-answer/--cancel-after probes
+      // don't hang waiting on a human). We are not running real shell here; the
+      // point is to keep the turn alive to observe permission/question delegation.
       const result = method === 'terminal/create'
         ? { terminalId: `spike-term-${frame.id}` }
         : method === 'terminal/output'
