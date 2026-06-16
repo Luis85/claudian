@@ -13,7 +13,9 @@ import {
 } from '../../../shared/settings/cliPathSetting';
 import { renderEnvironmentSettingsSection } from '../../../shared/settings/EnvironmentSettingsSection';
 import { getHostnameKey } from '../../../utils/env';
+import { maybeGetCursorWorkspaceServices } from '../app/cursorWorkspaceAccess';
 import { getCursorProviderSettings, updateCursorProviderSettings } from '../settings';
+import { CursorAgentSettings } from './CursorAgentSettings';
 import { mountCursorVisibleModelsPicker } from './visibleModelsPicker';
 
 /**
@@ -49,6 +51,29 @@ export const mountCursorCliPathSetting: ProviderSettingsWidgetMount = (host, con
   });
 };
 
+export const mountCursorSubagentsSection: ProviderSettingsWidgetMount = (host, context) => {
+  const cursorWorkspace = maybeGetCursorWorkspaceServices();
+  if (!cursorWorkspace?.agentStorage) {
+    return;
+  }
+
+  const subagentsDesc = host.createDiv({ cls: 'claudian-sp-settings-desc' });
+  subagentsDesc.createEl('p', {
+    cls: 'setting-item-description',
+    text: 'Manage Cursor subagents in .cursor/agents/ (vault) and ~/.cursor/agents/ (global). Claude vault agents from .claude/agents/ and the built-in Explore, Bash, and Browser agents are listed read-only. Entries appear in the @mention menu.',
+  });
+
+  const subagentsContainer = host.createDiv({ cls: 'claudian-slash-commands-container' });
+  new CursorAgentSettings(
+    subagentsContainer,
+    cursorWorkspace.agentStorage,
+    context.plugin.app,
+    async () => {
+      await cursorWorkspace.refreshAgentMentions?.();
+    },
+  );
+};
+
 export function mountCursorEnvironmentSection(
   host: HTMLElement,
   context: ProviderSettingsWidgetContext,
@@ -70,5 +95,6 @@ export function mountCursorEnvironmentSection(
 export const cursorSettingsWidgets: Readonly<Record<string, ProviderSettingsWidgetMount>> = {
   cliPathsByHost: mountCursorCliPathSetting,
   visibleModels: mountCursorVisibleModelsPicker,
+  subagents: mountCursorSubagentsSection,
   environment: (host, context) => mountCursorEnvironmentSection(host, context),
 };

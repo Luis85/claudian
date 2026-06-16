@@ -103,13 +103,49 @@ export function normalizeArgumentHint(hint: string): string {
   return `[${hint}]`;
 }
 
+// YAML scalar tokens a reader decodes as boolean/null rather than text, so a
+// string equal to one of these must be quoted to round-trip unchanged.
+const YAML_RESERVED_SCALAR = /^(?:true|false|null|yes|no|on|off|~)$/i;
+// Integer/float literals (optionally signed, with exponent) are likewise decoded
+// as numbers unless quoted.
+const YAML_NUMERIC_SCALAR = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$/;
+// A leading YAML indicator character makes a plain scalar invalid or changes its
+// meaning (e.g. `@reviewer`, `!tag`, `&anchor`, `*alias`, `[`, `{`), so a value
+// starting with one must be quoted. `:`/`#` anywhere are handled below; `-`/`?`
+// only act as indicators when followed by a space.
+const YAML_LEADING_INDICATOR = /^[!&*{}[\],|>@`"'%]/;
+
 export function yamlString(value: string): string {
   if (value.includes(':') || value.includes('#') || value.includes('\n') ||
       value.startsWith(' ') || value.endsWith(' ') ||
-      value.startsWith('[') || value.startsWith('{')) {
-    return `"${value.replace(/"/g, '\\"')}"`;
+      value.startsWith('- ') || value.startsWith('? ') ||
+      YAML_LEADING_INDICATOR.test(value) ||
+      YAML_RESERVED_SCALAR.test(value) || YAML_NUMERIC_SCALAR.test(value)) {
+    // Double-quoted YAML scalars decode backslash escapes (\t, \n, ...), so
+    // escape backslashes first (before quotes, whose escape adds its own
+    // backslash) or a value like `C:\temp` would round-trip corrupted.
+    return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
   }
   return value;
+}
+
+/** Serialize an arbitrary frontmatter value to a single-line YAML literal. */
+export function serializeFrontmatterValue(value: unknown): string {
+  if (typeof value === 'string') return yamlString(value);
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (value === null) return 'null';
+  return JSON.stringify(value);
+}
+
+/** Append extra (unknown) frontmatter key/value pairs as YAML lines. */
+export function serializeExtraFrontmatter(
+  lines: string[],
+  extra: Record<string, unknown> | undefined,
+): void {
+  if (!extra) return;
+  for (const [key, value] of Object.entries(extra)) {
+    lines.push(`${key}: ${serializeFrontmatterValue(value)}`);
+  }
 }
 
 export function serializeCommand(cmd: SlashCommand): string {

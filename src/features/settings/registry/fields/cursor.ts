@@ -28,7 +28,8 @@ export function registerCursorTabFields(): void {
     order: 50,
     sections: [
       { id: 'models', label: t('settings.models'), order: 10 },
-      { id: 'environment', label: t('settings.environment'), order: 20 },
+      { id: 'subagents', label: t('settings.subagents.name'), order: 20 },
+      { id: 'environment', label: t('settings.environment'), order: 30 },
     ],
   });
 
@@ -79,6 +80,21 @@ export function registerCursorTabFields(): void {
     },
     default: null,
     keywords: ['cli', 'path', 'executable', 'binary', 'agent', 'cursor'],
+  });
+
+  r.registerField({
+    id: 'cursor.subagents',
+    tabId: 'cursor',
+    sectionId: 'subagents',
+    label: 'Vault subagents',
+    description:
+      'Manage Cursor subagents in .cursor/agents/ (vault) and ~/.cursor/agents/ (global).',
+    type: {
+      kind: 'custom',
+      render: (ctx, host) => renderProviderSettingsWidget(ctx, host, 'cursor', 'subagents'),
+    },
+    default: null,
+    keywords: ['subagents', 'agents', 'mention', 'vault', 'cursor'],
   });
 
   r.registerField({

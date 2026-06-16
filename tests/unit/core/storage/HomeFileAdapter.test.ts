@@ -191,4 +191,20 @@ describe('HomeFileAdapter', () => {
   // Cancellation: HomeFileAdapter exposes no AbortSignal — every method is a
   // single fs.promises call. Cancellation must happen upstream of the await,
   // so there is no in-adapter contract to assert here.
+
+  describe('listFiles', () => {
+    it('lists only files, prefixed with the folder path', async () => {
+      await fsp.mkdir(path.join(root, '.cursor/agents/nested'), { recursive: true });
+      await fsp.writeFile(path.join(root, '.cursor/agents/reviewer.md'), 'x');
+      await fsp.writeFile(path.join(root, '.cursor/agents/helper.md'), 'y');
+
+      const files = await adapter.listFiles('.cursor/agents');
+
+      expect(files.sort()).toEqual(['.cursor/agents/helper.md', '.cursor/agents/reviewer.md']);
+    });
+
+    it('returns an empty array for a missing folder', async () => {
+      await expect(adapter.listFiles('.cursor/agents')).resolves.toEqual([]);
+    });
+  });
 });

@@ -585,6 +585,40 @@ describe('yamlString', () => {
   it('escapes double quotes inside quoted strings', () => {
     expect(yamlString('has "quotes" inside: yes')).toBe('"has \\"quotes\\" inside: yes"');
   });
+
+  it('quotes reserved scalar tokens so they round-trip as strings', () => {
+    for (const token of ['true', 'False', 'NULL', 'yes', 'no', 'on', 'off', '~']) {
+      expect(yamlString(token)).toBe(`"${token}"`);
+    }
+  });
+
+  it('quotes numeric-looking values so they round-trip as strings', () => {
+    for (const token of ['0', '123', '-4', '+5', '1.5', '.5', '1e10']) {
+      expect(yamlString(token)).toBe(`"${token}"`);
+    }
+    // Non-numeric strings that merely contain digits stay unquoted.
+    expect(yamlString('v2')).toBe('v2');
+    expect(yamlString('1.2.3')).toBe('1.2.3');
+  });
+
+  it('escapes backslashes in double-quoted scalars so they round-trip literally', () => {
+    // The colon forces double-quoting; without escaping the backslash a YAML
+    // reader decodes \t and the value comes back as "C:<tab>emp".
+    expect(yamlString('C:\\temp')).toBe('"C:\\\\temp"');
+    // Backslash escaped before the quote, so neither is mis-decoded.
+    expect(yamlString('a\\b"c: d')).toBe('"a\\\\b\\"c: d"');
+    // A lone backslash with no other trigger stays an unquoted (literal) scalar.
+    expect(yamlString('a\\b')).toBe('a\\b');
+  });
+
+  it('quotes values starting with a YAML indicator character', () => {
+    for (const name of ['@reviewer', '!tag', '&anchor', '*alias', '%pct', '`tick', '>fold', '|lit']) {
+      expect(yamlString(name)).toBe(`"${name}"`);
+    }
+    // An indicator only mid-string doesn't force quoting.
+    expect(yamlString('code-reviewer')).toBe('code-reviewer');
+    expect(yamlString('reviewer@v2')).toBe('reviewer@v2');
+  });
 });
 
 describe('serializeCommand', () => {

@@ -10,7 +10,7 @@ import type { VaultFileAdapter } from './VaultFileAdapter';
  * classes (like CodexSkillStorage) can scan home-level paths.
  */
 export class HomeFileAdapter implements Pick<VaultFileAdapter,
-  'exists' | 'read' | 'write' | 'delete' | 'deleteFolder' | 'listFolders' | 'ensureFolder'
+  'exists' | 'read' | 'write' | 'delete' | 'deleteFolder' | 'listFiles' | 'listFolders' | 'ensureFolder'
 > {
   private readonly root: string;
 
@@ -57,12 +57,23 @@ export class HomeFileAdapter implements Pick<VaultFileAdapter,
     }
   }
 
+  async listFiles(folder: string): Promise<string[]> {
+    return this.listEntries(folder, (e) => e.isFile());
+  }
+
   async listFolders(folder: string): Promise<string[]> {
+    return this.listEntries(folder, (e) => e.isDirectory());
+  }
+
+  private async listEntries(
+    folder: string,
+    predicate: (entry: fs.Dirent) => boolean,
+  ): Promise<string[]> {
     const full = this.resolve(folder);
     try {
       const entries = await fs.promises.readdir(full, { withFileTypes: true });
       return entries
-        .filter(e => e.isDirectory())
+        .filter(predicate)
         .map(e => `${folder}/${e.name}`);
     } catch {
       return [];

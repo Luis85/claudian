@@ -826,4 +826,16 @@ export type TranslationKey =
   | 'provider.codex.skill.deleteFailed'
   | 'provider.codex.skill.deleted'
   | 'provider.codex.skill.updated'
-  | 'provider.codex.skill.created';
+  | 'provider.codex.skill.created'
+
+  // Provider - Cursor subagent notices
+  | 'provider.cursor.subagent.saved'
+  | 'provider.cursor.subagent.saveFailed'
+  | 'provider.cursor.subagent.deleted'
+  | 'provider.cursor.subagent.deleteFailed'
+  | 'provider.cursor.subagent.duplicate'
+  | 'provider.cursor.subagent.descriptionRequired'
+  | 'provider.cursor.subagent.nameRequired'
+  | 'provider.cursor.subagent.nameWhitespace'
+  | 'provider.cursor.subagent.nameDotSegment'
+  | 'provider.cursor.subagent.nameReservedChars';

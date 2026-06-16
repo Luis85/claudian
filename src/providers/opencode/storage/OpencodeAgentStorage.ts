@@ -4,7 +4,7 @@ import { normalizePath } from 'obsidian';
 
 import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
 import { extractBoolean, isRecord, parseFrontmatter } from '../../../utils/frontmatter';
-import { yamlString } from '../../../utils/slashCommand';
+import { serializeExtraFrontmatter, serializeFrontmatterValue, yamlString } from '../../../utils/slashCommand';
 import {
   OPENCODE_AGENT_KNOWN_KEYS,
   type OpencodeAgentDefinition,
@@ -253,22 +253,22 @@ export function serializeOpencodeAgentMarkdown(agent: OpencodeAgentDefinition): 
     lines.push(`mode: ${agent.mode}`);
   }
   if (agent.model) {
-    lines.push(`model: ${serializeYamlValue(agent.model)}`);
+    lines.push(`model: ${serializeFrontmatterValue(agent.model)}`);
   }
   if (agent.variant) {
-    lines.push(`variant: ${serializeYamlValue(agent.variant)}`);
+    lines.push(`variant: ${serializeFrontmatterValue(agent.variant)}`);
   }
   if (agent.temperature !== undefined) {
-    lines.push(`temperature: ${serializeYamlValue(agent.temperature)}`);
+    lines.push(`temperature: ${serializeFrontmatterValue(agent.temperature)}`);
   }
   if (agent.topP !== undefined) {
-    lines.push(`top_p: ${serializeYamlValue(agent.topP)}`);
+    lines.push(`top_p: ${serializeFrontmatterValue(agent.topP)}`);
   }
   if (agent.color) {
-    lines.push(`color: ${serializeYamlValue(agent.color)}`);
+    lines.push(`color: ${serializeFrontmatterValue(agent.color)}`);
   }
   if (agent.steps !== undefined) {
-    lines.push(`steps: ${serializeYamlValue(agent.steps)}`);
+    lines.push(`steps: ${serializeFrontmatterValue(agent.steps)}`);
   }
   if (agent.hidden) {
     lines.push('hidden: true');
@@ -277,20 +277,16 @@ export function serializeOpencodeAgentMarkdown(agent: OpencodeAgentDefinition): 
     lines.push('disable: true');
   }
   if (agent.tools && Object.keys(agent.tools).length > 0) {
-    lines.push(`tools: ${serializeYamlValue(agent.tools)}`);
+    lines.push(`tools: ${serializeFrontmatterValue(agent.tools)}`);
   }
   if (agent.options && Object.keys(agent.options).length > 0) {
-    lines.push(`options: ${serializeYamlValue(agent.options)}`);
+    lines.push(`options: ${serializeFrontmatterValue(agent.options)}`);
   }
   if (agent.permission !== undefined) {
-    lines.push(`permission: ${serializeYamlValue(agent.permission)}`);
+    lines.push(`permission: ${serializeFrontmatterValue(agent.permission)}`);
   }
 
-  if (agent.extraFrontmatter) {
-    for (const [key, value] of Object.entries(agent.extraFrontmatter)) {
-      lines.push(`${key}: ${serializeYamlValue(value)}`);
-    }
-  }
+  serializeExtraFrontmatter(lines, agent.extraFrontmatter);
 
   lines.push('---');
   lines.push(agent.prompt);
@@ -343,19 +339,6 @@ function isBooleanRecord(value: unknown): value is Record<string, boolean> {
   }
 
   return Object.values(value).every((entry) => typeof entry === 'boolean');
-}
-
-function serializeYamlValue(value: unknown): string {
-  if (typeof value === 'string') {
-    return yamlString(value);
-  }
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return String(value);
-  }
-  if (value === null) {
-    return 'null';
-  }
-  return JSON.stringify(value);
 }
 
 function normalizeVaultPath(filePath: string): string {

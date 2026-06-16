@@ -50,7 +50,7 @@ const stagedObsidianRules = {
       ignoreWords: ['Claudian', 'Codex', 'OpenCode', 'WSL'],
       brands: [...DEFAULT_BRANDS, 'Claudian', 'Codex', 'OpenCode'],
       acronyms: [...DEFAULT_ACRONYMS, 'TOML', 'WSL'],
-      ignoreRegex: ['\\.(?:claude|codex|opencode)/'],
+      ignoreRegex: ['\\.(?:claude|codex|cursor|opencode)/'],
       enforceCamelCaseLower: true,
     },
   ],

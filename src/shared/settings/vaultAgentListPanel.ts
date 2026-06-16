@@ -1,7 +1,6 @@
 import type { App } from 'obsidian';
-import { setIcon } from 'obsidian';
 
-import { renderSettingsListItem } from '../components/settingsListUI';
+import { renderSettingsListBody, renderSettingsListHeader, renderSettingsListItem } from '../components/settingsListUI';
 import { confirmDelete } from '../modals/ConfirmModal';
 
 interface VaultListPanelOptions<T> {
@@ -29,35 +28,21 @@ export function renderVaultListPanel<T>(
   containerEl: HTMLElement,
   options: VaultListPanelOptions<T>,
 ): void {
-  const headerEl = containerEl.createDiv({ cls: 'claudian-sp-header' });
-  headerEl.createSpan({ text: options.label, cls: 'claudian-sp-label' });
-
-  const actionsEl = headerEl.createDiv({ cls: 'claudian-sp-header-actions' });
-
-  const refreshBtn = actionsEl.createEl('button', {
-    cls: 'claudian-settings-action-btn',
-    attr: { 'aria-label': 'Refresh' },
+  renderSettingsListHeader(containerEl, {
+    label: options.label,
+    onRefresh: options.onRefresh,
+    onAdd: options.onAdd,
   });
-  setIcon(refreshBtn, 'refresh-cw');
-  refreshBtn.addEventListener('click', options.onRefresh);
-
-  const addBtn = actionsEl.createEl('button', {
-    cls: 'claudian-settings-action-btn',
-    attr: { 'aria-label': 'Add' },
+  // This panel shows its empty hint only when there is nothing to list and never
+  // renders an empty list container, so gate the hint on item count and return
+  // early when empty.
+  renderSettingsListBody({
+    containerEl,
+    items: options.items,
+    emptyText: options.items.length === 0 ? options.emptyText : null,
+    returnEarlyIfEmpty: true,
+    renderItem: options.renderItem,
   });
-  setIcon(addBtn, 'plus');
-  addBtn.addEventListener('click', options.onAdd);
-
-  if (options.items.length === 0) {
-    const emptyEl = containerEl.createDiv({ cls: 'claudian-sp-empty-state' });
-    emptyEl.setText(options.emptyText);
-    return;
-  }
-
-  const listEl = containerEl.createDiv({ cls: 'claudian-sp-list' });
-  for (const item of options.items) {
-    options.renderItem(listEl, item);
-  }
 }
 
 interface VaultAgentListItemOptions {

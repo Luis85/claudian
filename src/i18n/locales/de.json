@@ -746,6 +746,18 @@
         "discoveredOne": "Discovered 1 Cursor model.",
         "discoveredMany": "Discovered {count} Cursor models.",
         "refreshFailed": "Failed to refresh Cursor models."
+      },
+      "subagent": {
+        "saved": "Saved subagent \"{name}\".",
+        "saveFailed": "Failed to save the subagent.",
+        "deleted": "Deleted subagent \"{name}\".",
+        "deleteFailed": "Failed to delete the subagent.",
+        "duplicate": "An agent named \"{name}\" already exists.",
+        "descriptionRequired": "Description is required.",
+        "nameRequired": "Name is required.",
+        "nameWhitespace": "Name cannot start or end with whitespace.",
+        "nameDotSegment": "Name cannot be a dot segment.",
+        "nameReservedChars": "Name cannot contain path separators or reserved characters."
       }
     }
   },
