@@ -167,6 +167,10 @@ function findClusterPrimary(host: HTMLElement): HTMLButtonElement | null {
   return host.querySelector('.claudian-agent-board-card-action-primary') as HTMLButtonElement | null;
 }
 
+function findClusterSecondary(host: HTMLElement): HTMLButtonElement | null {
+  return host.querySelector('.claudian-agent-board-card-action-secondary') as HTMLButtonElement | null;
+}
+
 function findClusterTrigger(host: HTMLElement): HTMLButtonElement | null {
   return host.querySelector('.claudian-agent-board-card-action-more') as HTMLButtonElement | null;
 }
@@ -254,7 +258,7 @@ describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ 
     expect(callbacks.onRun).toHaveBeenCalledWith(task);
   });
 
-  it('running: primary Stop (danger) → onStop; menu = Open note, Open conversation', () => {
+  it('running: primary Stop (danger) → onStop; secondary Go to conversation → onOpenConversation; menu = Open note', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     const callbacks = makeCallbacks();
@@ -268,41 +272,50 @@ describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ 
     primary?.click();
     expect(callbacks.onStop).toHaveBeenCalledWith(task);
 
-    const menu = openClusterMenu(host);
-    expect(menuItemTexts(menu)).toEqual(['Open note', 'Open conversation']);
+    // "Go to conversation" is a visible button (not a ⋯ menu entry) on running cards.
+    const secondary = findClusterSecondary(host);
+    expect(secondary?.textContent).toContain('Go to conversation');
+    secondary?.click();
+    expect(callbacks.onOpenConversation).toHaveBeenCalledWith(task);
+
+    // The ⋯ menu drops its old duplicate Open-conversation entry.
+    expect(menuItemTexts(openClusterMenu(host))).toEqual(['Open note']);
   });
 
-  it('hides Open conversation when the card has no conversation_id', () => {
+  it('hides the Go to conversation button when the card has no conversation_id', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     const task = makeTask('rn2', 'running'); // no conversation_id
     renderer.render(host, makeState({ running: [task] }), makeCallbacks());
+    expect(findClusterSecondary(host)).toBeNull();
     expect(menuItemTexts(openClusterMenu(host))).toEqual(['Open note']);
   });
 
-  it('hides Open conversation when canOpenConversation returns false (deleted conversation)', () => {
+  it('hides the Go to conversation button when canOpenConversation returns false (deleted conversation)', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     const task = makeTask('rn3', 'running');
     task.frontmatter.conversation_id = 'gone';
     renderer.render(host, makeState({ running: [task] }), { ...makeCallbacks(), canOpenConversation: () => false });
-    expect(menuItemTexts(openClusterMenu(host))).toEqual(['Open note']);
+    expect(findClusterSecondary(host)).toBeNull();
   });
 
   it('re-evaluates Open conversation on each open (conversation deleted after render)', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     let canOpen = true;
-    const task = makeTask('rn4', 'running');
+    // review keeps Open conversation in its ⋯ menu, so it exercises the lazy
+    // re-filter that running's secondary button no longer routes through.
+    const task = makeTask('rv4', 'review');
     task.frontmatter.conversation_id = 'c1';
-    renderer.render(host, makeState({ running: [task] }), { ...makeCallbacks(), canOpenConversation: () => canOpen });
+    renderer.render(host, makeState({ review: [task] }), { ...makeCallbacks(), canOpenConversation: () => canOpen });
 
     // First open: conversation is live → the item is present.
-    expect(menuItemTexts(openClusterMenu(host))).toEqual(['Open note', 'Open conversation']);
+    expect(menuItemTexts(openClusterMenu(host))).toEqual(['Rework', 'Open note', 'Open conversation', 'Back to inbox']);
     findClusterTrigger(host)!.click(); // toggle closed
     // Conversation deleted after render; the lazy items must re-filter on re-open.
     canOpen = false;
-    expect(menuItemTexts(openClusterMenu(host))).toEqual(['Open note']);
+    expect(menuItemTexts(openClusterMenu(host))).toEqual(['Rework', 'Open note', 'Back to inbox']);
   });
 
   it.each<TaskStatus>(['needs_input', 'needs_approval'])(
@@ -415,9 +428,10 @@ describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ 
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     const callbacks = makeCallbacks();
-    const task = makeTask('rn', 'running');
+    // review keeps both Open note and Open conversation in its ⋯ menu.
+    const task = makeTask('rv', 'review');
     task.frontmatter.conversation_id = 'c1';
-    renderer.render(host, makeState({ running: [task] }), callbacks);
+    renderer.render(host, makeState({ review: [task] }), callbacks);
     const menu = openClusterMenu(host);
     findMenuItem(menu, 'Open note')?.click();
     expect(callbacks.onOpenNote).toHaveBeenCalledWith(task);

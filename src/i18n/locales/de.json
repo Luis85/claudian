@@ -797,6 +797,7 @@
         "run": "Ausführen",
         "retry": "Wiederholen",
         "backToInbox": "Zurück zum Eingang",
+        "goToConversation": "Zur Unterhaltung",
         "moreActions": "Weitere Aktionen"
       },
       "card": {

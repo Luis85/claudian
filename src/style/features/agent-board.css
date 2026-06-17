@@ -294,6 +294,12 @@
   padding-right: 64px;
 }
 
+/* Running cards carry an extra labeled "Go to conversation" secondary button, so
+   reserve more right padding than the base live-card cluster (Stop + ⋯). */
+.claudian-agent-board-card--running .claudian-agent-board-card-title {
+  padding-right: 176px;
+}
+
 /* Primary action button — small; per-status variant (cta / danger / ghost). */
 .claudian-agent-board-card-action-primary {
   display: inline-flex;
@@ -348,6 +354,33 @@
 }
 
 .claudian-agent-board-card-action-primary .claudian-agent-board-card-action-icon {
+  display: inline-flex;
+}
+
+/* Secondary action button — labeled, neutral/ghost (e.g. "Go to conversation"
+   on running cards). Sits between the primary and the ⋯ trigger. */
+.claudian-agent-board-card-action-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-m);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+  line-height: 1.3;
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--interactive-normal);
+  color: var(--text-normal);
+}
+
+.claudian-agent-board-card-action-secondary:hover {
+  background: var(--interactive-hover);
+  border-color: var(--border-color-hover);
+}
+
+.claudian-agent-board-card-action-secondary .claudian-agent-board-card-action-icon {
   display: inline-flex;
 }
 

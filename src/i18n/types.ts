@@ -154,6 +154,7 @@ export type TranslationKey =
   | 'tasks.board.cardAction.run'
   | 'tasks.board.cardAction.retry'
   | 'tasks.board.cardAction.backToInbox'
+  | 'tasks.board.cardAction.goToConversation'
   | 'tasks.board.cardAction.moreActions'
   | 'tasks.board.card.reply.inputPlaceholder'
   | 'tasks.board.card.reply.send'

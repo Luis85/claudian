@@ -58,6 +58,8 @@ interface CardAction {
 
 interface CardActionModel {
   primary: CardAction | null;
+  /** Optional labeled button rendered between the primary and the ⋯ menu. */
+  secondary?: CardAction;
   menu: CardAction[];
 }
 
@@ -74,6 +76,16 @@ const MENU_OPEN_CONVERSATION: CardAction = {
   run: (cb, task) => cb.onOpenConversation(task),
   // Same guard the detail modal + right-click menu use: a persisted
   // conversation_id whose conversation still resolves.
+  available: (cb, task) => Boolean(task.frontmatter.conversation_id) && (cb.canOpenConversation?.(task) ?? true),
+};
+// Visible "Go to conversation" button (live cards surface it next to Stop rather
+// than burying it in the ⋯ menu). Same guard as MENU_OPEN_CONVERSATION: a
+// persisted conversation_id whose conversation still resolves.
+const GO_TO_CONVERSATION: CardAction = {
+  labelKey: 'tasks.board.cardAction.goToConversation',
+  icon: 'message-square',
+  variant: 'ghost',
+  run: (cb, task) => cb.onOpenConversation(task),
   available: (cb, task) => Boolean(task.frontmatter.conversation_id) && (cb.canOpenConversation?.(task) ?? true),
 };
 const MENU_ARCHIVE: CardAction = {
@@ -128,7 +140,10 @@ const CARD_ACTIONS: Partial<Record<TaskStatus, CardActionModel>> = {
   },
   running: {
     primary: { labelKey: 'tasks.workOrderModal.actionStop', icon: 'square', variant: 'danger', run: (cb, task) => cb.onStop(task) },
-    menu: [MENU_OPEN_NOTE, MENU_OPEN_CONVERSATION],
+    // "Go to conversation" is a visible button on the live card; the ⋯ menu drops
+    // the duplicate Open-conversation entry it used to carry.
+    secondary: GO_TO_CONVERSATION,
+    menu: [MENU_OPEN_NOTE],
   },
   needs_input: {
     primary: null,
@@ -204,6 +219,7 @@ export class AgentBoardCardActions {
     cluster.addEventListener('click', (event) => event.stopPropagation());
 
     if (model.primary) this.renderPrimaryAction(cluster, task, model.primary);
+    if (model.secondary) this.renderSecondaryAction(cluster, task, model.secondary);
     this.renderOverflowMenu(cluster, task, model.menu);
     return cluster;
   }
@@ -242,6 +258,32 @@ export class AgentBoardCardActions {
       event.stopPropagation();
       const callbacks = this.deps.getCallbacks();
       if (callbacks) action.run(callbacks, task);
+    });
+  }
+
+  /**
+   * Labeled secondary button (e.g. "Go to conversation" on running cards). Honors
+   * the action's `available` guard at render time so a missing/deleted
+   * conversation hides it rather than rendering a dead button; the cluster is
+   * rebuilt on every `patchCard`, so the guard re-evaluates as state changes.
+   */
+  private renderSecondaryAction(cluster: HTMLElement, task: TaskSpec, action: CardAction): void {
+    const callbacks = this.deps.getCallbacks();
+    if (action.available && !(callbacks != null && action.available(callbacks, task))) return;
+
+    const button = cluster.createEl('button', {
+      cls: 'claudian-agent-board-card-action-secondary',
+      attr: { type: 'button' },
+    });
+    const icon = button.createSpan({ cls: 'claudian-agent-board-card-action-icon' });
+    icon.setAttribute('aria-hidden', 'true');
+    icon.setAttribute('data-icon', action.icon);
+    setIcon(icon, action.icon);
+    button.createSpan({ cls: 'claudian-agent-board-card-action-label', text: t(action.labelKey) });
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const cb = this.deps.getCallbacks();
+      if (cb) action.run(cb, task);
     });
   }
 

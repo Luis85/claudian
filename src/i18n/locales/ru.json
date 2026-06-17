@@ -797,6 +797,7 @@
         "run": "Запустить",
         "retry": "Повторить",
         "backToInbox": "Назад во входящие",
+        "goToConversation": "К беседе",
         "moreActions": "Ещё действия"
       },
       "card": {
