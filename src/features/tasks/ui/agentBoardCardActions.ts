@@ -244,21 +244,12 @@ export class AgentBoardCardActions {
 
   private renderPrimaryAction(cluster: HTMLElement, task: TaskSpec, action: CardAction): void {
     const variant = action.variant ?? 'cta';
-    const button = cluster.createEl('button', {
-      cls: `claudian-agent-board-card-action-primary claudian-agent-board-card-action-primary--${variant}`,
-      attr: { type: 'button' },
-    });
-    const label = t(action.labelKey);
-    const icon = button.createSpan({ cls: 'claudian-agent-board-card-action-icon' });
-    icon.setAttribute('aria-hidden', 'true');
-    icon.setAttribute('data-icon', action.icon);
-    setIcon(icon, action.icon);
-    button.createSpan({ cls: 'claudian-agent-board-card-action-label', text: label });
-    button.addEventListener('click', (event) => {
-      event.stopPropagation();
-      const callbacks = this.deps.getCallbacks();
-      if (callbacks) action.run(callbacks, task);
-    });
+    this.buildLabeledButton(
+      cluster,
+      task,
+      action,
+      `claudian-agent-board-card-action-primary claudian-agent-board-card-action-primary--${variant}`,
+    );
   }
 
   /**
@@ -270,11 +261,12 @@ export class AgentBoardCardActions {
   private renderSecondaryAction(cluster: HTMLElement, task: TaskSpec, action: CardAction): void {
     const callbacks = this.deps.getCallbacks();
     if (action.available && !(callbacks != null && action.available(callbacks, task))) return;
+    this.buildLabeledButton(cluster, task, action, 'claudian-agent-board-card-action-secondary');
+  }
 
-    const button = cluster.createEl('button', {
-      cls: 'claudian-agent-board-card-action-secondary',
-      attr: { type: 'button' },
-    });
+  /** Icon + label button shared by the primary and secondary card actions. */
+  private buildLabeledButton(cluster: HTMLElement, task: TaskSpec, action: CardAction, cls: string): void {
+    const button = cluster.createEl('button', { cls, attr: { type: 'button' } });
     const icon = button.createSpan({ cls: 'claudian-agent-board-card-action-icon' });
     icon.setAttribute('aria-hidden', 'true');
     icon.setAttribute('data-icon', action.icon);
@@ -282,8 +274,8 @@ export class AgentBoardCardActions {
     button.createSpan({ cls: 'claudian-agent-board-card-action-label', text: t(action.labelKey) });
     button.addEventListener('click', (event) => {
       event.stopPropagation();
-      const cb = this.deps.getCallbacks();
-      if (cb) action.run(cb, task);
+      const callbacks = this.deps.getCallbacks();
+      if (callbacks) action.run(callbacks, task);
     });
   }
 
