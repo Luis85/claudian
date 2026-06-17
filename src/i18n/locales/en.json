@@ -724,6 +724,7 @@
         "run": "Run",
         "retry": "Retry",
         "backToInbox": "Back to inbox",
+        "goToConversation": "Go to conversation",
         "moreActions": "More actions"
       },
       "card": {

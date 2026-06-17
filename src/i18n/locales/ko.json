@@ -797,6 +797,7 @@
         "run": "실행",
         "retry": "재시도",
         "backToInbox": "받은 편지함으로",
+        "goToConversation": "대화로 이동",
         "moreActions": "추가 작업"
       },
       "card": {

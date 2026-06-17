@@ -797,6 +797,7 @@
         "run": "実行",
         "retry": "再試行",
         "backToInbox": "受信トレイに戻す",
+        "goToConversation": "会話へ移動",
         "moreActions": "その他の操作"
       },
       "card": {
