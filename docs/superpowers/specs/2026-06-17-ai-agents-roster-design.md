@@ -22,6 +22,22 @@ related:
 - **Direction (user-confirmed):** *new layer on top.* A Claudian **Agent** is a
   higher-level, provider-neutral roster entity that **references/composes**
   existing provider subagents, skills, and tools — it does not replace them.
+- **Provider-agnostic, user-friendly (user-confirmed):** the end user is never
+  asked to understand AI-provider intricacies. Providers are an implementation
+  detail the plugin resolves; Agents are perceived as a native plugin concept.
+  - **Provider resolution:** *global default + hidden override.* A single
+    plugin-wide default provider is set once in global settings. A per-agent
+    provider override exists but is **advanced/hidden**, not part of the normal
+    authoring flow.
+  - **Model:** an Agent inherits the **global default model** by default. The
+    user may **opt in** to choose a specific model, presented as a friendly,
+    merged list of **models from the currently active providers** (no "provider"
+    framing forced on them). Kept deliberately careful so the roster stays
+    flexible as providers are enabled/disabled.
+- **Dedicated UI (user-confirmed):** the roster does **not** live in a settings
+  tab. It is its own **workspace view** — an **Agent Roster list/dashboard** plus
+  an **Agent detail view** where the user composes an agent and grants it
+  **skills and tools from a repository (library)**.
 - **This document is a design spec**, not an implementation plan. It defines the
   data model, storage, UI surfaces, runtime binding, and a phased rollout. The
   research that grounds it is in
@@ -82,9 +98,14 @@ export interface RosterAgent {
   disallowedTools?: string[];       // canonical denylist (MCP patterns allowed)
   skills?: string[];                // skill names from the existing `$` skill catalog
 
-  // Provider binding
-  defaultProviderId?: ProviderId;   // preferred provider; null = pick at use time
-  model?: string;                   // model id/alias; validated against the bound provider
+  // Provider binding — hidden from the normal authoring flow (advanced only)
+  providerOverride?: ProviderId;    // advanced; absent = use the global default provider
+  // Model — opt-in. Absent = inherit the global default model. When set, it is a
+  // concrete model chosen from the currently-active providers' model lists.
+  modelSelection?: {
+    modelId: string;                // friendly id surfaced in the merged active-provider list
+    providerId: ProviderId;         // recorded so resolution is unambiguous; not shown by default
+  };
   permissionMode?: string;          // maps to provider permission modes where supported
 
   // Composition (the "new layer on top" hook — references, not copies)
@@ -111,10 +132,11 @@ Notes:
 - **ID namespace.** Roster ids are prefixed `roster:` so they never collide with
   file-backed agents (`plugin:agent-id`, vault, global) in the merged mention
   provider.
-- **Capabilities are stored provider-neutrally** and **projected** onto the bound
-  provider's real vocabulary at run time (Codex tool names ≠ Claude's). Selections
-  invalid for the bound provider are surfaced as warnings in the editor, not
-  silently dropped.
+- **Capabilities are stored provider-neutrally** and **projected** onto the
+  resolved provider's real vocabulary at run time (Codex tool names ≠ Claude's).
+  Selections invalid for the resolved provider are surfaced as gentle warnings in
+  the detail view, not silently dropped — but the user is never asked to reason
+  about *which* provider; the warning is phrased in capability terms.
 - **Composition is by reference.** `composedAgentRefs` points at existing
   provider subagents; the roster never duplicates their file content. This is the
   literal "layer on top."
@@ -143,9 +165,15 @@ because a roster Agent is structured config, not a prose document, and the
 ```
 src/features/agents/roster/
   rosterTypes.ts
-  AgentRosterStore.ts        // CRUD over .claudian/agents/*.json; EventBus on change
+  AgentRosterStore.ts            // CRUD over .claudian/agents/*.json; EventBus on change
   RosterAgentMentionProvider.ts  // merges roster + file-backed agents for @-mentions
-  rosterProjection.ts        // RosterAgent + ProviderId -> provider-native agent config
+  rosterResolution.ts            // RosterAgent -> resolved { providerId, modelId } (hidden from user)
+  rosterProjection.ts            // RosterAgent + resolved provider/model -> provider-native config
+  view/
+    AgentRosterView.ts           // ItemView (workspace leaf); ribbon + command registration
+    RosterDashboard.ts           // A1: list/cards + dashboard actions
+    AgentDetailView.ts           // A2: compose/maintain; skills+tools library pickers
+    capabilityLibrary.ts         // friendly tool/skill catalog projection for the pickers
 ```
 
 1. **`AgentRosterStore`** — load/save/list/delete; emits `roster:changed` on the
@@ -154,25 +182,67 @@ src/features/agents/roster/
    `StorageBackedAgentMentionProvider` results and merges roster agents, so `@`
    in chat surfaces both. Resolves the current no-op `onAgentMentionSelect` stub
    into a real **bind** action (see chat binding).
-3. **`rosterProjection`** — pure function turning a `RosterAgent` + target
-   `ProviderId` into that provider's native agent config (Claude
+3. **`rosterResolution`** — pure function implementing the hidden provider/model
+   resolution order (override → surface → global default; opt-in model wins its
+   provider). Keeps the provider-agnostic promise in one testable place.
+4. **`rosterProjection`** — pure function turning a `RosterAgent` + the resolved
+   provider/model into that provider's native agent config (Claude
    `AgentDefinition`, Codex `CodexSubagentDefinition`, etc.), validating
-   tool/skill/model selections against the provider's `canonicalToolNames` and
-   skill catalog.
+   tool/skill selections against the provider's `canonicalToolNames` and skill
+   catalog.
+5. **`capabilityLibrary`** — backs the detail-view pickers: exposes the `$` skill
+   catalog and the canonical tool vocabulary as a provider-neutral, friendly
+   library (capability-phrased tool toggles + MCP tools when configured).
 
 ## UI surfaces
 
-### A. Roster management (new app-level Settings tab "Agents")
+### A. The Agent Roster view (dedicated workspace view — primary surface)
 
-Registered at the **app level** (not provider-gated by `isProviderEnabled`), via
-the settings registry. Provides:
-- A list/cards view of roster Agents (`getAgents()`-style enumeration).
-- An editor: name, description, prompt, model, **tool picker** (over canonical
-  tool vocabulary), **skill picker** (over the `$` skill catalog), default
-  provider, permission mode, board color/initials/icon, and a **composed
-  subagents** multi-select drawing from the merged file-backed agent set.
-- Provider-capability validation inline (warn when a selected tool/skill/model
-  is unavailable for the chosen `defaultProviderId`).
+A first-class Obsidian **`ItemView`** (its own workspace leaf), opened from a
+**ribbon icon** and a **command** ("Open Agent Roster"), the same way the chat
+sidebar and Agent Board are surfaced. This is *not* a settings tab — Agents are a
+native plugin destination, not buried configuration. Two screens within the view:
+
+**A1. Roster list & dashboard.**
+- Card/grid of all roster Agents (avatar = color/initials/icon, name, routing
+  `description`, a capability summary chip: "3 skills · 5 tools").
+- Dashboard affordances: search/filter, "New Agent", duplicate, delete, and
+  light usage signals where cheap (e.g. recent work-orders / chats that used the
+  agent — reuses existing run/conversation metadata; no new tracking).
+- Primary actions per card map straight to the bindings: **Start chat with
+  this Agent**, **Assign to a Work-Order**, **Edit**.
+
+**A2. Agent detail view (compose & maintain an agent).**
+The authoring surface. Plain-language fields only; no provider jargon:
+- **Identity & behaviour:** name, avatar (color/initials/icon), a short
+  "what it's for" (`description`, the routing blurb), and the instructions
+  (`prompt`).
+- **Skills & Tools from a repository (library):** two pickers backed by the
+  existing catalogs —
+  - **Skills repository** = the existing `$` skill catalog
+    (`VaultSkillAggregator` over `.claude/skills`, `.codex/skills`, …),
+    presented as a searchable library the user grants to the agent
+    (`skills: string[]`).
+  - **Tools repository** = the canonical tool vocabulary
+    (`src/core/tools/toolNames.ts`), presented as friendly capability toggles
+    (e.g. "Read files", "Edit files", "Run commands", "Search the web") that map
+    to the allow/deny lists (`tools` / `disallowedTools`). MCP-provided tools
+    appear here too once their server is configured.
+  - Both pickers read from a shared, **provider-neutral** library; what an agent
+    is granted is stored neutrally and validated per resolved provider at run
+    time.
+- **Brain (model) — collapsed by default.** Shows "Uses the default model" with
+  an **opt-in** "Choose a specific model" control that reveals a friendly,
+  merged list of models from the **currently active providers** (writes
+  `modelSelection`). No provider picker in the normal flow.
+- **Advanced (hidden/expandable):** `permissionMode`, the per-agent
+  `providerOverride`, and **composed agents** (`composedAgentRefs`) — a
+  multi-select over the merged file-backed subagent set, for the "layer on top"
+  composition.
+
+Global settings (the existing settings shell) keeps only the **plugin-wide
+default provider/model** the roster inherits from — set once, away from the
+day-to-day Agent authoring flow.
 
 ### B. Work-Order assignment
 
@@ -206,10 +276,16 @@ the settings registry. Provides:
 
 When a work-order run or bound chat turn starts:
 1. Resolve `RosterAgent` by id from `AgentRosterStore`.
-2. Determine the provider (`defaultProviderId` → conversation/work-order provider
-   → default).
-3. `rosterProjection(agent, providerId)` → native agent config.
-4. Pass it to the provider runtime as the turn's agent definition (Claude SDK
+2. **Resolve the provider (user never prompted):**
+   `agent.providerOverride` (advanced) → the surface's existing provider if any
+   (e.g. a work-order's `provider`) → **the plugin-wide default provider**.
+3. **Resolve the model:** `agent.modelSelection` (opt-in) → otherwise the
+   **plugin-wide default model**. If the opt-in model belongs to a provider other
+   than the resolved one, the model's recorded `providerId` wins the provider
+   resolution (so an explicit model choice stays coherent).
+4. `rosterProjection(agent, resolvedProvider, resolvedModel)` → native agent
+   config.
+5. Pass it to the provider runtime as the turn's agent definition (Claude SDK
    accepts `AgentDefinition` at query time; Codex/others via their existing
    subagent paths). Composed subagent refs are passed through as that provider's
    delegatable agents.
@@ -225,16 +301,19 @@ provider files.
 | Two "agent" meanings (`AgentPersona` vs `AgentDefinition`) | Keep persona lightweight; a roster Agent *projects onto* a persona for board display via `resolvePersona()`. |
 | ID collisions with file-backed agents | Reserve `roster:` prefix in the merged mention provider. |
 | Provider boundary | Roster is app-level/provider-neutral; provider subagents stay provider-scoped and are referenced, not absorbed. |
-| Tool/skill vocabulary differs per provider | `rosterProjection` validates+projects; editor warns on unavailable selections. |
+| Tool/skill vocabulary differs per provider | `rosterProjection` validates+projects; the detail view shows capability-phrased warnings (never provider jargon). |
 | Mention callback ambiguity (chat vs assignment) | `onAgentMentionSelect` resolves to context-aware bind: in chat → bind conversation; in work-order field → set `agent:`. |
-| Settings tab visibility | Roster "Agents" tab registers app-level, always visible. |
+| Exposing provider/model to a provider-agnostic user | Provider is hidden (global default + advanced override); model defaults to the global default with an opt-in friendly model list from active providers. |
+| Where the roster lives | A dedicated workspace `ItemView` (ribbon + command), not a settings tab; global settings holds only the default provider/model. |
 
 ## Phasing
 
-- **Phase 1 — Roster core.** `RosterAgent` type, `AgentRosterStore`,
-  `.claudian/agents/*.json`, the app-level "Agents" settings tab with the editor
-  (name/description/prompt/model/tool picker/skill picker). No bindings yet.
-  Ship value: authored, reusable agent definitions.
+- **Phase 1 — Roster core + dedicated view.** `RosterAgent` type,
+  `AgentRosterStore`, `.claudian/agents/*.json`, and the **Agent Roster
+  `ItemView`** (ribbon + command): list/dashboard (A1) and the detail view (A2)
+  with the skills/tools library pickers and the opt-in model control. Provider is
+  resolved to the global default; no work-order/chat bindings yet. Ship value: a
+  native place to author and maintain reusable, provider-agnostic agents.
 - **Phase 2 — Chat binding.** `boundAgentId` on `Conversation`,
   `createConversation({ agentId })`, runtime projection + injection,
   `RosterAgentMentionProvider`, resolved bind action. Ship value: "new chat with
@@ -255,12 +334,21 @@ provider files.
 - Per-agent isolated VM/snapshot environments (Devin-style); Claudian runs in
   the vault's working context.
 
+## Resolved decisions
+
+- **Cross-provider Agents:** Agents are provider-neutral; provider is hidden
+  (global default + advanced override), so a single roster entry works regardless
+  of which provider is active. *(Confirmed.)*
+- **Model UX:** inherit the global default; opt-in to a concrete model from the
+  active providers' merged list. *(Confirmed.)*
+- **Roster home:** a dedicated workspace view, not a settings tab. *(Confirmed.)*
+
 ## Decisions still needing the user
 
-1. **Cross-provider Agents:** one roster entry reusable across providers (project
-   tool/skill sets per provider) vs. each entry pinned to one `defaultProviderId`.
-   *Recommendation: allow neutral entries, pin a default, validate per provider.*
-2. **Write-through vs inject:** confirm inject-at-runtime (recommended) over
+1. **Write-through vs inject:** confirm inject-at-runtime (recommended) over
    materialising provider subagent files.
-3. **Composition depth:** whether Phase 1 ships `composedAgentRefs` as display-only
+2. **Composition depth:** whether Phase 1 ships `composedAgentRefs` as display-only
    metadata or wires it immediately (recommend display-only until Phase 4).
+3. **Tool capability grouping:** confirm the friendly tool toggles (e.g. "Read
+   files", "Run commands") and how granular they should be vs. exposing raw
+   canonical tool names in an advanced sub-list.
