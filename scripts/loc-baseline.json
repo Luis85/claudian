@@ -50,10 +50,6 @@
       "loc": 785,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
-    "src/i18n/types.ts": {
-      "loc": 783,
-      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only. +1 for the tasks.board.cardAction.goToConversation key (one literal per union line)."
-    },
     "src/main.ts": {
       "loc": 767,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."

@@ -1,0 +1,23 @@
+export type CommonTranslationKey =
+  // Common UI elements
+  | 'common.save'
+  | 'common.cancel'
+  | 'common.delete'
+  | 'common.edit'
+  | 'common.add'
+  | 'common.remove'
+  | 'common.clear'
+  | 'common.clearAll'
+  | 'common.loading'
+  | 'common.error'
+  | 'common.success'
+  | 'common.warning'
+  | 'common.confirm'
+  | 'common.settings'
+  | 'common.advanced'
+  | 'common.enabled'
+  | 'common.disabled'
+  | 'common.platform'
+  | 'common.refresh'
+  | 'common.rewind'
+  | 'common.errorWithDetail';
