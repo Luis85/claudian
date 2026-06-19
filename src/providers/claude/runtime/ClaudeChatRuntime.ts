@@ -1549,6 +1549,9 @@ export class ClaudianService implements ChatRuntime {
       allowedTools: resolveColdStartAllowedTools(queryOptions?.allowedTools),
       hasEditorContext,
       externalContextPaths,
+      getClaudianToolServer: this.plugin.getClaudianToolServer
+        ? () => this.plugin.getClaudianToolServer!()
+        : undefined,
     };
 
     return QueryOptionsBuilder.buildColdStartQueryOptions(ctx);

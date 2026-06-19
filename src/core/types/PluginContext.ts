@@ -114,6 +114,14 @@ export interface PluginContext
 
   persistTabManagerState(state: AppTabManagerState): Promise<void>;
 
+  /**
+   * Returns an in-process Claudian user-tool MCP server built from the current
+   * tool registry, or `undefined` when no tools are loaded. The callback is
+   * typed as `() => unknown` to avoid a `core/` → `features/` import; the
+   * Claude runtime casts through `unknown` when merging into `mcpServers`.
+   */
+  getClaudianToolServer?: () => unknown;
+
   getView(): ChatViewHandle | null;
   getAllViews(): ChatViewHandle[];
   findConversationAcrossViews(

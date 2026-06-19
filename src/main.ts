@@ -6,6 +6,7 @@ import './providers';
 
 import type { TFile, TFolder } from 'obsidian';
 import { Notice, Plugin } from 'obsidian';
+import { z } from 'zod';
 
 import { registerPluginCommands } from './app/commands/registerPluginCommands';
 import { registerWorkspaceMenus } from './app/commands/registerWorkspaceMenus';
@@ -55,6 +56,7 @@ import type { EnvironmentScope, SecretEnvVarRef } from './core/types/settings';
 import type { UsageEventMap } from './core/usage/events';
 import { UsageStorage } from './core/usage/UsageStorage';
 import { UsageTracker } from './core/usage/UsageTracker';
+import { AgentRosterView, VIEW_TYPE_AGENT_ROSTER } from './features/agents/roster/view/AgentRosterView';
 import { ClaudianView } from './features/chat/ClaudianView';
 import { sendFeedbackPrompt } from './features/chat/feedback/sendFeedbackPrompt';
 import { isClaudianView } from './features/chat/isClaudianView';
@@ -66,6 +68,7 @@ import { QuickActionStorage } from './features/quickActions/QuickActionStorage';
 import { buildProviderRecords } from './features/quickActions/skills/buildProviderRecords';
 import { VaultSkillAggregator } from './features/quickActions/skills/VaultSkillAggregator';
 import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
+import { SkillLibraryView, VIEW_TYPE_SKILL_LIBRARY } from './features/skills/view/SkillLibraryView';
 import { CommitOnAcceptCoordinator } from './features/tasks/commit/CommitOnAcceptCoordinator';
 import { CommitOnAcceptModal } from './features/tasks/commit/CommitOnAcceptModal';
 import { ChatTabExecutionSurface } from './features/tasks/execution/ChatTabExecutionSurface';
@@ -76,6 +79,10 @@ import { RunSidecarStore } from './features/tasks/storage/RunSidecarStore';
 import { TaskNoteStore } from './features/tasks/storage/TaskNoteStore';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
 import { WorkOrderActivityProvider } from './features/tasks/ui/WorkOrderActivityProvider';
+import { ClaudianToolRegistry } from './features/tools/ClaudianToolRegistry';
+import { buildClaudianToolMcpServer } from './features/tools/host/InProcessToolMcpServer';
+import { transpileToolSource } from './features/tools/transpile';
+import { ToolLibraryView, VIEW_TYPE_TOOL_LIBRARY } from './features/tools/view/ToolLibraryView';
 import { setLocale, t } from './i18n/i18n';
 import type { Locale } from './i18n/types';
 import type { BrowserSelectionContext } from './utils/browser';
@@ -101,6 +108,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   public quickActionFavoritesCache: QuickActionFavoritesCache | null = null;
   public quickActionLastUsedStore: QuickActionLastUsedStore | null = null;
   public vaultSkillAggregator: VaultSkillAggregator | null = null;
+  public vaultFileAdapter!: VaultFileAdapter;
+  public toolRegistry!: ClaudianToolRegistry;
   public usageTracker: UsageTracker | null = null;
   private lifecycle!: PluginLifecycle;
   private unloaded = true;
@@ -218,6 +227,23 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       void this.activateAgentBoardView();
     });
 
+    this.registerView(VIEW_TYPE_AGENT_ROSTER, (leaf) => new AgentRosterView(leaf, this));
+    this.registerView(VIEW_TYPE_TOOL_LIBRARY, (leaf) => new ToolLibraryView(leaf, this));
+    this.registerView(VIEW_TYPE_SKILL_LIBRARY, (leaf) => new SkillLibraryView(leaf, this));
+
+    const openView = async (viewType: string) => {
+      const leaf = this.app.workspace.getLeaf('tab');
+      await leaf.setViewState({ type: viewType, active: true });
+      this.app.workspace.revealLeaf(leaf);
+    };
+    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Roster" is the product feature name.
+    this.addRibbonIcon('users', 'Open Agent Roster', () => void openView(VIEW_TYPE_AGENT_ROSTER));
+    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Roster" is the product feature name.
+    this.addCommand({ id: 'open-agent-roster', name: 'Open Agent Roster', callback: () => void openView(VIEW_TYPE_AGENT_ROSTER) });
+    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Tool Library" is the product feature name.
+    this.addCommand({ id: 'open-tool-library', name: 'Open Tool Library', callback: () => void openView(VIEW_TYPE_TOOL_LIBRARY) });
+    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Skill Library" is the product feature name.
+    this.addCommand({ id: 'open-skill-library', name: 'Open Skill Library', callback: () => void openView(VIEW_TYPE_SKILL_LIBRARY) });
 
     const chatWorkOrderLinker = new ChatWorkOrderLinker(this);
 
@@ -275,6 +301,25 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       () => this.settings.quickActionsFolder ?? 'Quick Actions',
     );
     this.quickActionFavoritesCache.start();
+
+    // Tool registry: discover/transpile/validate user-authored tools under .claudian/tools/.
+    this.vaultFileAdapter = new VaultFileAdapter(this.app);
+    this.toolRegistry = new ClaudianToolRegistry(this.vaultFileAdapter, {
+      transpile: transpileToolSource,
+      requireResolve: (id) => {
+        if (id === 'zod' || id === 'claudian/tools') return { z };
+        const req = (window as { require?: (m: string) => unknown }).require;
+        return req ? req(id) : undefined;
+      },
+    });
+    await this.toolRegistry.load();
+    this.registerEvent(
+      this.app.vault.on('modify', (file) => {
+        if (file.path.startsWith('.claudian/tools/')) {
+          void this.toolRegistry.load().then(() => this.events.emit('toolLibrary:changed'));
+        }
+      }),
+    );
 
     // Usage tracker must subscribe to the bus BEFORE any entry point that
     // can emit `usage.recorded` is registered. The file/folder context menu
@@ -382,6 +427,15 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     void this.lifecycle?.persistOpenTabStates();
   }
 
+  getClaudianToolServer(): unknown {
+    if (!this.toolRegistry) return undefined;
+    const loaded = this.toolRegistry.list().filter((t) => t.module && !t.error);
+    if (loaded.length === 0) return undefined;
+    return buildClaudianToolMcpServer(loaded, () => ({
+      app: this.app,
+      signal: new AbortController().signal,
+    }));
+  }
 
   async addFileToActiveChat(file: TFile): Promise<boolean> {
     const view = await this.ensureViewOpen();

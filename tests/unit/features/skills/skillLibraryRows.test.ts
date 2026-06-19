@@ -1,5 +1,5 @@
-import { toSkillLibraryRows } from '@/features/skills/skillLibraryRows';
 import type { SkillTabEntry } from '@/features/quickActions/skills/types';
+import { toSkillLibraryRows } from '@/features/skills/skillLibraryRows';
 
 const entry = (over: Partial<SkillTabEntry>): SkillTabEntry => ({
   id: 'claude:tdd',

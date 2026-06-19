@@ -978,6 +978,18 @@
       "standard": "Estándar"
     }
   },
+  "agentRoster": {
+    "title": "Agent Roster",
+    "newAgent": "New Agent",
+    "emptyState": "No agents yet. Create one to get started.",
+    "back": "← back",
+    "skills": "Skills",
+    "tools": "Tools",
+    "save": "Save"
+  },
+  "toolLibrary": {
+    "toolCreated": "Created {path}. Edit it, then it loads automatically."
+  },
   "workOrderActivity": {
     "toggleRunning": "{count} orden(es) de trabajo activa(s)",
     "toggleAttention": "{count} orden(es) de trabajo activa(s), {attention} requiere atención",

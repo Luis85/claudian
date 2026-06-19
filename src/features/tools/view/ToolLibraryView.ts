@@ -1,4 +1,6 @@
 import { ItemView, Notice, type WorkspaceLeaf } from 'obsidian';
+
+import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { TOOLS_DIR } from '../ClaudianToolRegistry';
 
@@ -24,6 +26,7 @@ export class ToolLibraryView extends ItemView {
   }
 
   getViewType(): string { return VIEW_TYPE_TOOL_LIBRARY; }
+  // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Tool Library" is the product feature name.
   getDisplayText(): string { return 'Tool Library'; }
   getIcon(): string { return 'wrench'; }
 
@@ -36,7 +39,9 @@ export class ToolLibraryView extends ItemView {
     root.empty();
     root.addClass('claudian-tool-library');
     const header = root.createDiv();
+    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Tool Library" is the product feature name.
     header.createEl('h2', { text: 'Tool Library' });
+    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "New Tool" is a product UI label.
     header.createEl('button', { text: 'New Tool' }).onclick = async () => {
       const adapter = this.plugin.vaultFileAdapter;
       const dir = `${TOOLS_DIR}/my-tool`;
@@ -46,7 +51,7 @@ export class ToolLibraryView extends ItemView {
         await adapter.write(path, TEMPLATE);
       }
       await this.plugin.toolRegistry.load();
-      new Notice(`Created ${path}. Edit it, then it loads automatically.`);
+      new Notice(t('toolLibrary.toolCreated', { path }));
       await this.render();
     };
     header.createEl('button', { text: 'Reload' }).onclick = async () => {

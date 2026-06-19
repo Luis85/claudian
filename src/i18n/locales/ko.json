@@ -978,6 +978,18 @@
       "standard": "표준"
     }
   },
+  "agentRoster": {
+    "title": "Agent Roster",
+    "newAgent": "New Agent",
+    "emptyState": "No agents yet. Create one to get started.",
+    "back": "← back",
+    "skills": "Skills",
+    "tools": "Tools",
+    "save": "Save"
+  },
+  "toolLibrary": {
+    "toolCreated": "Created {path}. Edit it, then it loads automatically."
+  },
   "workOrderActivity": {
     "toggleRunning": "활성 작업 지시 {count}개",
     "toggleAttention": "활성 작업 지시 {count}개, 주의 필요 {attention}개",

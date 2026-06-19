@@ -978,6 +978,18 @@
       "standard": "标准"
     }
   },
+  "agentRoster": {
+    "title": "Agent Roster",
+    "newAgent": "New Agent",
+    "emptyState": "No agents yet. Create one to get started.",
+    "back": "← back",
+    "skills": "Skills",
+    "tools": "Tools",
+    "save": "Save"
+  },
+  "toolLibrary": {
+    "toolCreated": "Created {path}. Edit it, then it loads automatically."
+  },
   "workOrderActivity": {
     "toggleRunning": "{count} 个活动工单",
     "toggleAttention": "{count} 个活动工单，{attention} 个需要处理",

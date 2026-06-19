@@ -978,6 +978,18 @@
       "standard": "標準"
     }
   },
+  "agentRoster": {
+    "title": "Agent Roster",
+    "newAgent": "New Agent",
+    "emptyState": "No agents yet. Create one to get started.",
+    "back": "← back",
+    "skills": "Skills",
+    "tools": "Tools",
+    "save": "Save"
+  },
+  "toolLibrary": {
+    "toolCreated": "Created {path}. Edit it, then it loads automatically."
+  },
   "workOrderActivity": {
     "toggleRunning": "アクティブな作業指示 {count} 件",
     "toggleAttention": "アクティブな作業指示 {count} 件、要対応 {attention} 件",

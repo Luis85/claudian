@@ -1,4 +1,5 @@
 import { ItemView, type WorkspaceLeaf } from 'obsidian';
+
 import type ClaudianPlugin from '../../../main';
 import { toSkillLibraryRows } from '../skillLibraryRows';
 
@@ -10,6 +11,7 @@ export class SkillLibraryView extends ItemView {
   }
 
   getViewType(): string { return VIEW_TYPE_SKILL_LIBRARY; }
+  // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Skill Library" is the product feature name.
   getDisplayText(): string { return 'Skill Library'; }
   getIcon(): string { return 'book-open'; }
 
@@ -17,6 +19,7 @@ export class SkillLibraryView extends ItemView {
     const root = this.contentEl;
     root.empty();
     root.addClass('claudian-skill-library');
+    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Skill Library" is the product feature name.
     root.createEl('h2', { text: 'Skill Library' });
     const entries = (await this.plugin.vaultSkillAggregator?.listAll()) ?? [];
     const rows = toSkillLibraryRows(entries);
