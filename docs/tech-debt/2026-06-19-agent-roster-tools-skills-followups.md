@@ -30,10 +30,14 @@ final review and remain open.
    (the key tracks claudian presence, not its tool-set contents) — a minor,
    acceptable limitation; a fresh conversation always cold-starts with current tools.
 
-2. **No exposure to Codex / Cursor / Opencode.** Only the Claude in-process tier
-   shipped. The shared local **stdio MCP server** tier (one Node entrypoint via
-   `@modelcontextprotocol/sdk`, marshalled into each provider's config dialect) is
-   the planned Phase 2 (see tool/skill spec). Respect the Cursor ~40-tool cap.
+2. **Cross-provider tools — PARTIAL (Opencode done).** Superseded the stdio plan
+   with an **in-process local HTTP MCP server** (full Obsidian context; see
+   `2026-06-19-http-tool-tier-design`). Shipped 2026-06-19: the plugin hosts a
+   loopback Streamable-HTTP MCP server (per-process bearer token, constant-time
+   auth) and **Opencode** is wired (`mcp.claudian` remote entry, written
+   pre-spawn). *Deferred:* **Cursor** (net-new `~/.cursor/mcp.json` writer +
+   pre-spawn hook) and **Codex** (its `app-server` MCP-config path is uncertain —
+   needs runtime investigation). Respect the Cursor ~40-tool cap when wired.
 
 3. **Skill Library is view + discovery only; no canonical `.claudian/skills`
    store or provider projection.** Skills are surfaced from existing provider
