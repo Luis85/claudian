@@ -40,11 +40,15 @@ final review and remain open.
    catalogs; the provider-neutral canonical store + write-through projection from
    the spec is deferred.
 
-4. **Roster is not yet consumed by any run path.** `RosterAgent` definitions
-   persist to `.claudian/agents/*.json` and are granted tools/skills, but nothing
-   reads them into a chat or work-order run yet (agent binding / projection is the
-   next integration). The `roster:changed` / `toolLibrary:changed` events are
-   emitted but have no subscribers (live refresh is imperative for now).
+4. **Roster → run binding — PARTIAL.** Chat binding shipped (2026-06-19): a
+   "Start chat with this Agent" action opens a Claude conversation bound to a
+   `RosterAgent`, and the agent's **system prompt + model** are applied to every
+   turn (`Conversation.boundAgentId` → `resolveBoundAgent` → query options →
+   ClaudeQueryOptionsBuilder). *Still deferred:* **tool/skill enforcement** at
+   run time (Claude's persistent query has no `allowedTools` API — needs the
+   `canUseTool` path), **work-order → roster assignment** (touches
+   `TaskRunCoordinator`), and non-Claude providers. The `roster:changed` /
+   `toolLibrary:changed` events are emitted but still have no subscribers.
 
 ## Quality / polish
 
