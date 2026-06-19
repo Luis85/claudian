@@ -1,9 +1,9 @@
 import {
   CLAUDIAN_TOOL_MCP_PREFIX,
-  toolCapabilityId,
+  createRosterAgent,
   rosterIdFromSlug,
   slugifyRosterName,
-  createRosterAgent,
+  toolCapabilityId,
 } from '@/features/agents/roster/rosterCapabilities';
 
 describe('rosterCapabilities', () => {
