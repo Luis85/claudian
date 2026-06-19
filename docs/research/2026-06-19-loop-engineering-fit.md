@@ -11,6 +11,7 @@ tags:
   - agents
   - work-orders
 related:
+  - "[[docs/superpowers/specs/2026-06-19-work-order-loop-controls-design]]"
   - "[[docs/superpowers/specs/2026-06-17-ai-agents-roster-design]]"
   - "[[docs/superpowers/specs/2026-06-19-tool-and-skill-library-design]]"
   - "[[docs/research/2026-06-17-ai-agents-roster-frameworks]]"
@@ -40,6 +41,11 @@ The user asked whether the emerging "loop engineering / loopcraft / prompt loops
 ideas should be combined with the agent-roster + tool/skill-library designs, and
 whether it makes sense to ingrain this **now**. This note answers from deep web
 research (gathered 2026-06-19; see `sources`).
+
+> **Folded in:** this recommendation is realized in
+> [`2026-06-19-work-order-loop-controls-design`](../superpowers/specs/2026-06-19-work-order-loop-controls-design.md)
+> (completion oracles, multi-axis budgets, verifier role) as part of the Agent
+> Board and its Work-Orders.
 
 ## TL;DR recommendation
 

@@ -10,6 +10,7 @@ tags:
   - multi-agent
 related:
   - "[[docs/research/2026-06-17-ai-agents-roster-frameworks]]"
+  - "[[docs/superpowers/specs/2026-06-19-work-order-loop-controls-design]]"
   - "[[docs/superpowers/specs/2026-05-28-agent-board-thin-slice-design]]"
   - "[[docs/superpowers/specs/2026-05-29-work-order-templates-design]]"
   - "[[docs/superpowers/specs/2026-06-07-co-worker-chat-design]]"
@@ -107,6 +108,10 @@ export interface RosterAgent {
     providerId: ProviderId;         // recorded so resolution is unambiguous; not shown by default
   };
   permissionMode?: string;          // maps to provider permission modes where supported
+
+  // Loop participation (see work-order loop-controls spec)
+  roles?: Array<'worker' | 'verifier'>;   // default ['worker']; 'verifier' = selectable as a completion-oracle judge
+  defaultBudgets?: { maxTurns?: number; maxCostUsd?: number; maxRuntimeSec?: number }; // inherited by work-orders unless overridden
 
   // Composition (the "new layer on top" hook — references, not copies)
   composedAgentRefs?: ProviderAgentRef[]; // existing file-backed subagents this Agent reuses

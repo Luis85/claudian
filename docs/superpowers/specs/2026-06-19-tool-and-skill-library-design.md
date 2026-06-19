@@ -12,6 +12,7 @@ tags:
 related:
   - "[[docs/research/2026-06-19-user-tools-and-mcp-transport]]"
   - "[[docs/superpowers/specs/2026-06-17-ai-agents-roster-design]]"
+  - "[[docs/superpowers/specs/2026-06-19-work-order-loop-controls-design]]"
   - "[[docs/research/2026-06-17-ai-agents-roster-frameworks]]"
 ---
 
@@ -282,6 +283,18 @@ The roster spec's detail-view pickers now read from these libraries:
 - **Phase 4 — Roster integration polish.** Detail-view pickers read both
   libraries; capability validation incl. Cursor cap; "adopt provider-native into
   Claudian" flows.
+
+## Tools as work-order verifiers
+
+A user Tool is the ideal **programmatic completion oracle** for a Work-Order:
+because handlers return a structured `CallToolResult`, a tool such as
+`tests_pass`, `lint_clean`, or `acceptance_check` can be wired as a Work-Order's
+`done_when: { kind: 'tool', toolId }` and asserted by the run loop. This is the
+bridge between the Tool Library and the verification loop — user-authored checks
+become the board's external ground truth. See
+[`2026-06-19-work-order-loop-controls-design`](2026-06-19-work-order-loop-controls-design.md).
+No new mechanism is required; the tool is invoked through the same registry/MCP
+host, and its result is what the oracle evaluates.
 
 ## Out of scope
 - Web Worker / true sandbox isolation (revisit if untrusted sharing emerges).
