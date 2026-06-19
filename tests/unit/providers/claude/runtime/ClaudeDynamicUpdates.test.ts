@@ -3,6 +3,7 @@ import { applyClaudeDynamicUpdates, type ClaudeDynamicUpdateDeps } from '@/provi
 function makeDeps(over: Partial<ClaudeDynamicUpdateDeps> = {}): {
   deps: ClaudeDynamicUpdateDeps;
   setMcpServers: jest.Mock;
+  setModel: jest.Mock;
   config: { model: string; effortLevel: null; permissionMode: string; sdkPermissionMode: string; mcpServersKey: string; enableAutoMode: boolean };
 } {
   const setMcpServers = jest.fn().mockResolvedValue({ added: [], removed: [], errors: {} });
@@ -37,8 +38,24 @@ function makeDeps(over: Partial<ClaudeDynamicUpdateDeps> = {}): {
     notifyFailure: () => {},
     ...over,
   };
-  return { deps, setMcpServers, config };
+  return { deps, setMcpServers, setModel: query.setModel, config };
 }
+
+describe('applyClaudeDynamicUpdates — bound-agent model precedence', () => {
+  it('keeps the bound-agent model across persistent turns (no revert to settings model)', async () => {
+    // currentConfig already at the bound model 'opus'; global default is 'sonnet'.
+    const { deps, setModel, config } = makeDeps({
+      getScopedSettings: () => ({ model: 'sonnet', effortLevel: undefined, permissionMode: 'normal' }) as never,
+    });
+    config.model = 'opus';
+
+    await applyClaudeDynamicUpdates(deps, { boundAgentModel: 'opus' } as never, undefined, false);
+
+    // Effective model resolves to the bound 'opus' (== currentConfig.model), so
+    // updateModel must NOT clobber it back to the global 'sonnet'.
+    expect(setModel).not.toHaveBeenCalledWith('sonnet');
+  });
+});
 
 describe('applyClaudeDynamicUpdates — claudian tool server', () => {
   it('includes the in-process claudian tool server in setMcpServers', async () => {

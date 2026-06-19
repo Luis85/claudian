@@ -13,6 +13,7 @@ import type { ClaudianSettings, PermissionMode } from '../../../core/types/setti
 import {
   resolveEffortLevel,
 } from '../types/models';
+import { QueryOptionsBuilder } from './ClaudeQueryOptionsBuilder';
 import type {
   ClaudeEnsureReadyOptions,
   ClosePersistentQueryOptions,
@@ -65,7 +66,14 @@ export async function applyClaudeDynamicUpdates(
   }
 
   const settings = deps.getScopedSettings();
-  const selectedModel = queryOptions?.model || settings.model;
+  // Match the options-builder precedence (explicit override > bound-agent model >
+  // settings) so a bound agent's model survives across persistent turns rather
+  // than reverting to the global default after the first (restart) turn.
+  const selectedModel = QueryOptionsBuilder.resolveEffectiveModel(
+    queryOptions?.model,
+    queryOptions?.boundAgentModel,
+    settings.model,
+  );
   const permissionMode = deps.getPermissionMode();
 
   // Each helper re-reads the live config so an earlier mutation is visible to
