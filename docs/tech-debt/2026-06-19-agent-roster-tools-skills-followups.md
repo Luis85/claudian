@@ -20,16 +20,15 @@ final review and remain open.
 
 ## Functional gaps
 
-1. **User tools reach Claude's cold-start path only, not the persistent query.**
-   `getClaudianToolServer` is merged in `ClaudeQueryOptionsBuilder.buildColdStartQueryOptions`,
-   so the `claudian` MCP server is present in the *initial* options of a
-   conversation's persistent query. But `applyClaudeDynamicUpdates`/`setMcpServers`
-   (used when model/permission/MCP change mid-session) rebuilds the server set from
-   `mcpManager.getActiveServers()`, which does **not** include the in-process tool
-   server — so user tools can be dropped for the rest of a session after a dynamic
-   update. **Fix:** also inject the in-process server into the persistent-query
-   update path. *Highest-priority follow-up — it affects the core "tools usable in
-   chat" promise.*
+1. ~~**User tools reach Claude's cold-start path only, not the persistent query.**~~
+   **RESOLVED (2026-06-19).** `applyClaudeDynamicUpdates`/`updateMcpServers` now
+   merges the in-process `claudian` server into every `setMcpServers` call (after
+   SSRF vetting, since it's an `sdk`-type server) and tracks its presence in the
+   MCP key, so it is no longer dropped on dynamic model/permission/MCP updates.
+   *Residual:* adding a tool **mid-session** isn't reflected on the live persistent
+   query until the managed-MCP set changes or a new conversation cold-starts
+   (the key tracks claudian presence, not its tool-set contents) — a minor,
+   acceptable limitation; a fresh conversation always cold-starts with current tools.
 
 2. **No exposure to Codex / Cursor / Opencode.** Only the Claude in-process tier
    shipped. The shared local **stdio MCP server** tier (one Node entrypoint via

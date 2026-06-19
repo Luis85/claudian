@@ -29,6 +29,8 @@ export interface ClaudeDynamicUpdateDeps {
   getPermissionMode: () => PermissionMode;
   resolveSDKPermissionMode: (mode: PermissionMode) => SDKPermissionMode;
   mcpManager: McpServerManager;
+  /** Optional in-process Claudian user-tool MCP server (Claude only). */
+  getClaudianToolServer?: () => unknown;
   buildPersistentQueryConfig: (
     vaultPath: string,
     cliPath: string,
@@ -176,7 +178,11 @@ async function updateMcpServers(
   const uiEnabledServers = queryOptions?.enabledMcpServers || new Set<string>();
   const combinedMentions = new Set([...mcpMentions, ...uiEnabledServers]);
   const mcpServers = deps.mcpManager.getActiveServers(combinedMentions);
-  const mcpServersKey = JSON.stringify(mcpServers);
+  // The in-process Claudian tool server (Claude only) is added after vetting —
+  // it's an `sdk`-type server, not a URL-based one. Track its presence in the
+  // key so toggling tools on/off re-applies (setMcpServers replaces the full set).
+  const claudianToolServer = deps.getClaudianToolServer?.();
+  const mcpServersKey = JSON.stringify(mcpServers) + (claudianToolServer ? '|claudian' : '');
 
   const currentConfig = deps.getCurrentConfig();
   if (!currentConfig || mcpServersKey === currentConfig.mcpServersKey) {
@@ -194,6 +200,11 @@ async function updateMcpServers(
   const serverConfigs: Record<string, McpServerConfig> = {};
   for (const [name, config] of Object.entries(vetted.safe)) {
     serverConfigs[name] = config;
+  }
+  if (claudianToolServer) {
+    // Key matches CLAUDIAN_TOOL_SERVER_NAME in features/tools; kept as a literal
+    // because providers must not import from the features layer.
+    serverConfigs['claudian'] = claudianToolServer as McpServerConfig;
   }
 
   try {

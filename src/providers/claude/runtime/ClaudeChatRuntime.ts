@@ -1451,6 +1451,9 @@ export class ClaudianService implements ChatRuntime {
         getPermissionMode: () => this.getScopedSettings().permissionMode as PermissionMode,
         resolveSDKPermissionMode: (mode) => this.resolveSDKPermissionMode(mode),
         mcpManager: this.mcpManager,
+        getClaudianToolServer: this.plugin.getClaudianToolServer
+          ? () => this.plugin.getClaudianToolServer!()
+          : undefined,
         buildPersistentQueryConfig: (vaultPath, cliPath, externalContextPaths) =>
           this.buildPersistentQueryConfig(vaultPath, cliPath, externalContextPaths),
         needsRestart: (newConfig) => this.needsRestart(newConfig),
