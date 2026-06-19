@@ -232,9 +232,13 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     this.registerView(VIEW_TYPE_SKILL_LIBRARY, (leaf) => new SkillLibraryView(leaf, this));
 
     const openView = async (viewType: string) => {
-      const leaf = this.app.workspace.getLeaf('tab');
-      await leaf.setViewState({ type: viewType, active: true });
-      this.app.workspace.revealLeaf(leaf);
+      const { workspace } = this.app;
+      const existing = workspace.getLeavesOfType(viewType)[0];
+      const leaf = existing ?? workspace.getLeaf('tab');
+      if (!existing) {
+        await leaf.setViewState({ type: viewType, active: true });
+      }
+      workspace.revealLeaf(leaf);
     };
     // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Roster" is the product feature name.
     this.addRibbonIcon('users', 'Open Agent Roster', () => void openView(VIEW_TYPE_AGENT_ROSTER));
