@@ -1,5 +1,6 @@
 // src/features/tools/ClaudianToolRegistry.ts
 import { z } from 'zod';
+
 import type { VaultFileAdapter } from '../../core/storage/VaultFileAdapter';
 import type { ClaudianToolModule, LoadedTool } from './toolTypes';
 
@@ -18,12 +19,12 @@ function evaluateModule(js: string, requireResolve: (id: string) => unknown): un
     }
     const resolved = requireResolve(id);
     if (resolved !== undefined) return resolved;
-    const globalRequire = (globalThis as { require?: (id: string) => unknown }).require;
+    const globalRequire = (window as { require?: (id: string) => unknown }).require;
     if (globalRequire) return globalRequire(id);
     throw new Error(`Cannot resolve module '${id}'`);
   };
   const module = { exports: {} as Record<string, unknown> };
-  // eslint-disable-next-line no-new-func -- intentional user-tool execution (full-trust, documented)
+   
   const fn = new Function('module', 'exports', 'require', 'Z', `${js}\n//# sourceURL=claudian-tool`);
   const zodModule = requireResolve('zod') ?? { z };
   // Expose zod as `Z` global: if the resolved module has a `z` property (named export shape),
@@ -33,17 +34,20 @@ function evaluateModule(js: string, requireResolve: (id: string) => unknown): un
   return (module.exports as { default?: unknown }).default ?? module.exports;
 }
 
-function validateModule(value: unknown): ClaudianToolModule {
-  const mod = value as Partial<ClaudianToolModule>;
-  if (!mod || typeof mod !== 'object' || !mod.manifest) {
-    throw new Error('Tool module is missing a `manifest` export.');
-  }
-  const m = mod.manifest;
+function assertManifestValid(m: Partial<ClaudianToolModule['manifest']>): void {
   if (typeof m.name !== 'string' || !m.name) throw new Error('manifest.name is required.');
   if (typeof m.description !== 'string') throw new Error('manifest.description is required.');
   if (!m.input || typeof (m.input as { safeParse?: unknown }).safeParse !== 'function') {
     throw new Error('manifest.input must be a zod object schema.');
   }
+}
+
+function validateModule(value: unknown): ClaudianToolModule {
+  const mod = value as Partial<ClaudianToolModule>;
+  if (!mod || typeof mod !== 'object' || !mod.manifest) {
+    throw new Error('Tool module is missing a `manifest` export.');
+  }
+  assertManifestValid(mod.manifest);
   if (typeof mod.handler !== 'function') throw new Error('handler must be a function.');
   return mod as ClaudianToolModule;
 }

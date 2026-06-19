@@ -1,7 +1,8 @@
 // tests/unit/features/tools/ClaudianToolRegistry.test.ts
 import { z } from 'zod';
-import { ClaudianToolRegistry, TOOLS_DIR } from '@/features/tools/ClaudianToolRegistry';
+
 import type { VaultFileAdapter } from '@/core/storage/VaultFileAdapter';
+import { ClaudianToolRegistry, TOOLS_DIR } from '@/features/tools/ClaudianToolRegistry';
 
 const TOOL_SRC = `
 module.exports.default = {
