@@ -30,29 +30,34 @@ final review and remain open.
    (the key tracks claudian presence, not its tool-set contents) — a minor,
    acceptable limitation; a fresh conversation always cold-starts with current tools.
 
-2. **Cross-provider tools — PARTIAL (Opencode done).** Superseded the stdio plan
-   with an **in-process local HTTP MCP server** (full Obsidian context; see
-   `2026-06-19-http-tool-tier-design`). Shipped 2026-06-19: the plugin hosts a
-   loopback Streamable-HTTP MCP server (per-process bearer token, constant-time
-   auth) and **Opencode** is wired (`mcp.claudian` remote entry, written
-   pre-spawn). *Deferred:* **Cursor** (net-new `~/.cursor/mcp.json` writer +
-   pre-spawn hook) and **Codex** (its `app-server` MCP-config path is uncertain —
-   needs runtime investigation). Respect the Cursor ~40-tool cap when wired.
+2. **Cross-provider tools — Opencode + Cursor done; Codex deferred.** Superseded
+   the stdio plan with an **in-process local HTTP MCP server** (full Obsidian
+   context; see `2026-06-19-http-tool-tier-design`). Shipped 2026-06-19: the
+   plugin hosts a loopback Streamable-HTTP MCP server (per-process bearer token,
+   constant-time auth); **Opencode** (`mcp.claudian` in the managed config) and
+   **Cursor** (`~/.cursor/mcp.json` written pre-spawn, preserving user servers)
+   are wired. *Deferred:* **Codex** — its `app-server` exposes no MCP-config seam
+   in the plugin (`reloadMcpServers` is a no-op; unclear whether it reads
+   `mcp_servers` from config.toml). Needs upstream/runtime investigation. Respect
+   the Cursor ~40-tool cap.
 
 3. **Skill Library is view + discovery only; no canonical `.claudian/skills`
    store or provider projection.** Skills are surfaced from existing provider
    catalogs; the provider-neutral canonical store + write-through projection from
    the spec is deferred.
 
-4. **Roster → run binding — PARTIAL.** Chat binding shipped (2026-06-19): a
-   "Start chat with this Agent" action opens a Claude conversation bound to a
-   `RosterAgent`, and the agent's **system prompt + model** are applied to every
-   turn (`Conversation.boundAgentId` → `resolveBoundAgent` → query options →
-   ClaudeQueryOptionsBuilder). *Still deferred:* **tool/skill enforcement** at
-   run time (Claude's persistent query has no `allowedTools` API — needs the
-   `canUseTool` path), **work-order → roster assignment** (touches
-   `TaskRunCoordinator`), and non-Claude providers. The `roster:changed` /
-   `toolLibrary:changed` events are emitted but still have no subscribers.
+4. **Roster → run binding — chat + work-order done.** Shipped 2026-06-19:
+   "Start chat with this Agent" (roster cards + detail) reliably opens a Claude
+   conversation bound to a `RosterAgent`; a header chip shows the bound agent with
+   an unbind action; the agent's **system prompt + model** apply to every turn.
+   **Work-orders** can be assigned a roster agent (agent picker lists
+   `roster:<id>` agents) and runs consume it (`boundAgentId` threaded
+   coordinator → execution surface → run conversation, consume-once per tab).
+   *Still deferred:* **tool/skill enforcement** at run time (Claude's persistent
+   query has no `allowedTools` API — needs `canUseTool`); **non-Claude
+   projection** (Codex/Cursor/Opencode runs store `boundAgentId` but don't apply
+   prompt/model yet); **roster-agent board avatars** (resolvePersona keeps
+   unknown ids as Standard).
 
 ## Quality / polish
 
