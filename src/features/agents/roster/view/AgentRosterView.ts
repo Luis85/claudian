@@ -2,18 +2,18 @@ import { ItemView, type WorkspaceLeaf } from 'obsidian';
 
 import { t } from '../../../../i18n/i18n';
 import type ClaudianPlugin from '../../../../main';
-import { AgentRosterStore } from '../AgentRosterStore';
 import { createRosterAgent, dedupeRosterId, toolCapabilityId } from '../rosterCapabilities';
 import type { RosterAgent } from '../rosterTypes';
 
 export const VIEW_TYPE_AGENT_ROSTER = 'claudian-agent-roster';
 
 export class AgentRosterView extends ItemView {
-  private store: AgentRosterStore;
-
   constructor(leaf: WorkspaceLeaf, private plugin: ClaudianPlugin) {
     super(leaf);
-    this.store = new AgentRosterStore(plugin.vaultFileAdapter, plugin.events);
+  }
+
+  private get store() {
+    return this.plugin.agentRosterStore;
   }
 
   getViewType(): string { return VIEW_TYPE_AGENT_ROSTER; }
@@ -113,6 +113,15 @@ export class AgentRosterView extends ItemView {
       agent.updatedAt = Date.now();
       await this.store.save(agent);
       await this.renderList();
+    };
+
+    const startChat = root.createEl('button', { text: t('agentRoster.startChat') });
+    startChat.onclick = async () => {
+      const conversation = await this.plugin.createConversation({
+        providerId: 'claude',
+        boundAgentId: agent.id,
+      });
+      await this.plugin.openConversation(conversation.id);
     };
   }
 
