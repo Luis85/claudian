@@ -24,7 +24,10 @@ describe('AgentRosterStore', () => {
 
     await store.save(agent);
 
-    expect(adapter.ensureFolder).toHaveBeenCalledWith(ROSTER_DIR);
+    expect(adapter.write).toHaveBeenCalledWith(
+      `${ROSTER_DIR}/reviewer.json`,
+      expect.stringContaining('"name": "Reviewer"'),
+    );
     expect(files[`${ROSTER_DIR}/reviewer.json`]).toContain('"name": "Reviewer"');
   });
 
@@ -54,5 +57,16 @@ describe('AgentRosterStore', () => {
     await store.delete('roster:reviewer');
 
     expect(adapter.delete).toHaveBeenCalledWith(`${ROSTER_DIR}/reviewer.json`);
+  });
+
+  it('does not delete or emit when the agent is absent', async () => {
+    const adapter = makeAdapter({});
+    const emit = jest.fn();
+    const store = new AgentRosterStore(adapter, { emit } as never);
+
+    await store.delete('roster:ghost');
+
+    expect(adapter.delete).not.toHaveBeenCalled();
+    expect(emit).not.toHaveBeenCalled();
   });
 });

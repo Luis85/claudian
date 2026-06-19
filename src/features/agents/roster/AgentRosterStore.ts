@@ -41,16 +41,15 @@ export class AgentRosterStore {
   }
 
   async save(agent: RosterAgent): Promise<void> {
-    await this.adapter.ensureFolder(ROSTER_DIR);
+    // VaultFileAdapter.write ensures the parent folder, so no explicit ensureFolder.
     await this.adapter.write(fileNameForId(agent.id), JSON.stringify(agent, null, 2));
     this.events?.emit('roster:changed');
   }
 
   async delete(id: string): Promise<void> {
     const path = fileNameForId(id);
-    if (await this.adapter.exists(path)) {
-      await this.adapter.delete(path);
-    }
+    if (!(await this.adapter.exists(path))) return;
+    await this.adapter.delete(path);
     this.events?.emit('roster:changed');
   }
 }
