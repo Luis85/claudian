@@ -56,6 +56,7 @@ import type { EnvironmentScope, SecretEnvVarRef } from './core/types/settings';
 import type { UsageEventMap } from './core/usage/events';
 import { UsageStorage } from './core/usage/UsageStorage';
 import { UsageTracker } from './core/usage/UsageTracker';
+import { AgentRosterStore } from './features/agents/roster/AgentRosterStore';
 import { AgentRosterView, VIEW_TYPE_AGENT_ROSTER } from './features/agents/roster/view/AgentRosterView';
 import { ClaudianView } from './features/chat/ClaudianView';
 import { sendFeedbackPrompt } from './features/chat/feedback/sendFeedbackPrompt';
@@ -110,6 +111,9 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   public vaultSkillAggregator: VaultSkillAggregator | null = null;
   public vaultFileAdapter!: VaultFileAdapter;
   public toolRegistry!: ClaudianToolRegistry;
+  /** Shared plugin-lifetime store for roster agent definitions. Constructed in onload
+   * after vaultFileAdapter; consumers must not build their own instance. */
+  public agentRosterStore!: AgentRosterStore;
   public usageTracker: UsageTracker | null = null;
   private lifecycle!: PluginLifecycle;
   private unloaded = true;
@@ -308,6 +312,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
     // Tool registry: discover/transpile/validate user-authored tools under .claudian/tools/.
     this.vaultFileAdapter = new VaultFileAdapter(this.app);
+    this.agentRosterStore = new AgentRosterStore(this.vaultFileAdapter, this.events);
     this.toolRegistry = new ClaudianToolRegistry(this.vaultFileAdapter, {
       transpile: transpileToolSource,
       requireResolve: (id) => {

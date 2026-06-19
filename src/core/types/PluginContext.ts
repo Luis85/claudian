@@ -1,6 +1,7 @@
 import type { Plugin } from 'obsidian';
 
 import type { ClaudianEventMap } from '../../app/events/claudianEvents';
+import type { AgentRosterStore } from '../../features/agents/roster/AgentRosterStore';
 import type { BrowserSelectionContext } from '../../utils/browser';
 import type { SharedAppStorage } from '../bootstrap/storage';
 import type { EventBus } from '../events/EventBus';
@@ -114,6 +115,13 @@ export interface PluginContext
   getConversationList(): ConversationMeta[];
 
   persistTabManagerState(state: AppTabManagerState): Promise<void>;
+
+  /**
+   * Shared plugin-lifetime roster store for resolving bound agents at query time.
+   * Constructed in onload alongside toolRegistry; consumers must not construct
+   * their own instance (DRY — single in-memory reader for the same JSONL files).
+   */
+  agentRosterStore?: AgentRosterStore;
 
   /**
    * Returns an in-process Claudian user-tool MCP server built from the current

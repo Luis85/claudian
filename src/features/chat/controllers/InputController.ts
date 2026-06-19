@@ -520,9 +520,10 @@ export class InputController {
     // Pass history WITHOUT current turn (userMsg + assistantMsg we just added)
     // This prevents duplication when rebuilding context for new sessions
     const previousMessages = state.messages.slice(0, -2);
-    const queryOptions: ChatRuntimeQueryOptions | undefined = ctx.tabModelOverride
-      ? { model: ctx.tabModelOverride }
-      : undefined;
+    const queryOptions: ChatRuntimeQueryOptions = await this.resolveTurnQueryOptions(
+      state.currentConversationId,
+      ctx.tabModelOverride,
+    );
     for await (const chunk of ctx.agentService.query(preparedTurn, previousMessages, queryOptions)) {
       if (state.streamGeneration !== ctx.streamGeneration) {
         wasInvalidated = true;
@@ -544,6 +545,39 @@ export class InputController {
     }
 
     return { wasInterrupted, wasInvalidated };
+  }
+
+  /**
+   * Builds per-turn ChatRuntimeQueryOptions, merging any bound-agent overrides
+   * (prompt and model) into the base tab-model-override options. The builder's
+   * precedence (explicit model > boundAgentModel > settings.model) ensures an
+   * explicit tab/work-order model is never clobbered by the agent binding.
+   */
+  private async resolveTurnQueryOptions(
+    conversationId: string | null,
+    tabModelOverride: string | null | undefined,
+  ): Promise<ChatRuntimeQueryOptions> {
+    const base: ChatRuntimeQueryOptions = tabModelOverride ? { model: tabModelOverride } : {};
+
+    if (!conversationId) {
+      return base;
+    }
+
+    const conversation = await this.deps.plugin.getConversationById(conversationId);
+    if (!conversation?.boundAgentId) {
+      return base;
+    }
+
+    const agent = await this.deps.plugin.agentRosterStore?.get(conversation.boundAgentId);
+    if (!agent) {
+      return base;
+    }
+
+    return {
+      ...base,
+      boundAgentPrompt: agent.prompt || undefined,
+      boundAgentModel: agent.modelSelection?.modelId || undefined,
+    };
   }
 
   private async finalizeTurn(

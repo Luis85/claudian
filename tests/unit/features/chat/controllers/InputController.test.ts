@@ -1137,7 +1137,9 @@ describe('InputController - Message Queue', () => {
 
       const queryMock = (localDeps as any).mockAgentService.query as jest.Mock;
       const [, , queryOptions] = queryMock.mock.calls[0];
-      expect(queryOptions).toBeUndefined();
+      // queryOptions is always an object now (may contain bound-agent fields from
+      // the current conversation); verify model is absent, not that options is undefined.
+      expect(queryOptions?.model).toBeUndefined();
     });
 
     it('treats whitespace-only tab override as no override', async () => {
@@ -1155,7 +1157,8 @@ describe('InputController - Message Queue', () => {
 
       const queryMock = (localDeps as any).mockAgentService.query as jest.Mock;
       const [, , queryOptions] = queryMock.mock.calls[0];
-      expect(queryOptions).toBeUndefined();
+      // queryOptions is always an object now; verify model is absent.
+      expect(queryOptions?.model).toBeUndefined();
     });
   });
 
