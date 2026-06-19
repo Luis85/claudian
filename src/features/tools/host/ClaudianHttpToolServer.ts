@@ -157,9 +157,9 @@ export class ClaudianHttpToolServer {
   }
 
   private handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
-    // Validate bearer token before delegating to MCP transport.
+    // Validate bearer token (constant-time) before delegating to MCP transport.
     const authHeader = req.headers['authorization'];
-    if (authHeader !== `Bearer ${this.bearerToken}`) {
+    if (!this.isAuthorized(authHeader)) {
       res.writeHead(401, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Unauthorized' }));
       return;
@@ -172,5 +172,13 @@ export class ClaudianHttpToolServer {
     }
 
     void this.transport.handleRequest(req, res);
+  }
+
+  private isAuthorized(authHeader: string | string[] | undefined): boolean {
+    if (typeof authHeader !== 'string') return false;
+    const expected = Buffer.from(`Bearer ${this.bearerToken}`);
+    const got = Buffer.from(authHeader);
+    // Length check first: timingSafeEqual throws on length mismatch.
+    return got.length === expected.length && crypto.timingSafeEqual(got, expected);
   }
 }

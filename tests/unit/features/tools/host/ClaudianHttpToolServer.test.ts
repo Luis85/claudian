@@ -20,7 +20,7 @@ jest.mock('@modelcontextprotocol/sdk/server/streamableHttp.js', () => ({
 
 import { z } from 'zod';
 
-import { buildHttpMcpServer } from '@/features/tools/host/ClaudianHttpToolServer';
+import { buildHttpMcpServer, ClaudianHttpToolServer } from '@/features/tools/host/ClaudianHttpToolServer';
 import type { ClaudianToolModule, LoadedTool, ToolHostContext } from '@/features/tools/toolTypes';
 
 beforeEach(() => {
@@ -98,5 +98,58 @@ describe('buildHttpMcpServer', () => {
     buildHttpMcpServer(loaded, () => ({ app: {} as never, signal: new AbortController().signal }));
 
     expect(mockRegisterTool).not.toHaveBeenCalled();
+  });
+});
+
+describe('ClaudianHttpToolServer — bearer auth', () => {
+  function makeServer() {
+    const server = new ClaudianHttpToolServer(
+      () => [],
+      () => ({ app: {} as never, signal: new AbortController().signal }),
+    );
+    const handleRequest = jest.fn().mockResolvedValue(undefined);
+    // Inject a ready transport so the authorized path delegates.
+    (server as unknown as { transport: unknown }).transport = { handleRequest };
+    const token = (server as unknown as { bearerToken: string }).bearerToken;
+    const call = (
+      server as unknown as { handleHttpRequest(req: unknown, res: unknown): void }
+    ).handleHttpRequest.bind(server);
+    return { handleRequest, token, call };
+  }
+
+  function makeReqRes(auth?: string) {
+    const req = { headers: auth === undefined ? {} : { authorization: auth } };
+    const res = { writeHead: jest.fn(), end: jest.fn() };
+    return { req, res };
+  }
+
+  it('rejects a request with no Authorization header (401, transport untouched)', () => {
+    const { handleRequest, call } = makeServer();
+    const { req, res } = makeReqRes(undefined);
+
+    call(req, res);
+
+    expect(res.writeHead).toHaveBeenCalledWith(401, expect.anything());
+    expect(handleRequest).not.toHaveBeenCalled();
+  });
+
+  it('rejects a wrong bearer token (401, transport untouched)', () => {
+    const { handleRequest, call } = makeServer();
+    const { req, res } = makeReqRes('Bearer wrong-token');
+
+    call(req, res);
+
+    expect(res.writeHead).toHaveBeenCalledWith(401, expect.anything());
+    expect(handleRequest).not.toHaveBeenCalled();
+  });
+
+  it('delegates to the transport with the correct bearer token', () => {
+    const { handleRequest, token, call } = makeServer();
+    const { req, res } = makeReqRes(`Bearer ${token}`);
+
+    call(req, res);
+
+    expect(res.writeHead).not.toHaveBeenCalledWith(401, expect.anything());
+    expect(handleRequest).toHaveBeenCalledWith(req, res);
   });
 });
