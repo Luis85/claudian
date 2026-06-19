@@ -68,6 +68,10 @@ export interface ChatRuntimeQueryOptions {
   enabledMcpServers?: Set<string>;
   forceColdStart?: boolean;
   externalContextPaths?: string[];
+  /** System prompt appendix sourced from the conversation's bound roster agent. Claude-only. */
+  boundAgentPrompt?: string;
+  /** Model override sourced from the conversation's bound roster agent. Beats settings.model but loses to an explicit tab/work-order override. Claude-only. */
+  boundAgentModel?: string;
 }
 
 export interface ChatRuntimeEnsureReadyOptions {
