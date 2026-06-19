@@ -105,6 +105,8 @@ export interface TabManagerInterface {
     model: string;
     conversationId?: string | null;
     workOrderPath?: string | null;
+    /** Roster agent id to bind to the tab's lazily-created conversation. */
+    boundAgentId?: string | null;
   }): Promise<TabData | null>;
 }
 
@@ -240,6 +242,14 @@ export interface TabData {
 
   /** Vault-relative work-order note path when this tab hosts an Agent Board run. */
   workOrderPath?: string | null;
+
+  /**
+   * Roster agent id to bind to this tab's lazily-created conversation.
+   * Set by `createTaskRunTab` when `task.frontmatter.agent` starts with
+   * `roster:`. Cleared once the conversation is created so a subsequent
+   * rebind or new-conversation action doesn't carry the stale binding.
+   */
+  boundAgentId?: string | null;
 
   /** Active provider for this tab's current conversation/runtime. */
   providerId: ProviderId;

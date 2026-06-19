@@ -100,6 +100,14 @@ export interface InputControllerDeps {
   /** Tab-level provider fallback for blank tabs (derived from draft model). */
   getTabProviderId?: () => ProviderId;
   /**
+   * Roster agent id to bind to the lazily-created conversation for this tab
+   * (e.g. `roster:foo`). Set for Agent Board task-run tabs whose work order
+   * assigned a roster agent; absent for normal chat tabs. Once consumed by
+   * `triggerTitleGeneration`, the tab clears it so subsequent rebinds don't
+   * carry the stale id.
+   */
+  getBoundAgentId?: () => string | null | undefined;
+  /**
    * Tab-pinned model that should override the provider's global `settings.model`
    * on the next send. Returns the work-order's selected model for Agent Board
    * task runs (and the draft model for blank tabs that haven't committed yet);
@@ -1001,11 +1009,14 @@ export class InputController {
 
     if (!state.currentConversationId) {
       const sessionId = this.getAgentService()?.getSessionId() ?? undefined;
+      const boundAgentId = this.deps.getBoundAgentId?.() ?? undefined;
       const conversation = await plugin.createConversation({
         providerId: this.getActiveProviderId(),
         sessionId,
+        boundAgentId,
       });
-      state.currentConversationId = conversation.id;    }
+      state.currentConversationId = conversation.id;
+    }
 
     // Find first user message by role (not by index)
     const firstUserMsg = state.messages.find(m => m.role === 'user');

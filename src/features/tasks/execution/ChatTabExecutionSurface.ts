@@ -42,6 +42,7 @@ export class ChatTabExecutionSurface implements TaskExecutionSurface {
       prompt: options.prompt,
       tabReservation: options.tabReservation,
       workOrderPath: task.path,
+      boundAgentId: options.boundAgentId,
     });
     if (!handle) {
       return this.failed('Could not open a work-order tab (work-order tab limit reached).');

@@ -276,6 +276,8 @@ export class TabManager implements TabManagerInterface {
     model: string;
     conversationId?: string | null;
     workOrderPath?: string | null;
+    /** Roster agent id to bind to the lazily-created conversation. */
+    boundAgentId?: string | null;
   }): Promise<TabData | null> {
     // Do not steal focus: the work order run streams in a background tab so the
     // user stays on whatever tab/view they were on. They can switch to it manually.
@@ -290,6 +292,7 @@ export class TabManager implements TabManagerInterface {
     });
     if (tab) {
       tab.workOrderPath = options.workOrderPath ?? null;
+      tab.boundAgentId = options.boundAgentId ?? null;
     }
     return tab;
   }

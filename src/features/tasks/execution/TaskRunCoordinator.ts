@@ -123,9 +123,16 @@ export class TaskRunCoordinator {
     const reservation = externalReservation ?? this.deps.reservations?.reserve();
     try {
       const prompt = (this.deps.renderPrompt ?? renderTaskPrompt)(task);
+      // Thread the roster agent id through to the surface so the run's
+      // conversation is bound from creation. Non-roster / absent agent values
+      // are left as undefined (the existing persona field has no effect here).
+      const boundAgentId = task.frontmatter.agent?.startsWith('roster:')
+        ? task.frontmatter.agent
+        : undefined;
       const handle = await this.deps.executionSurface.startTaskRun(task, {
         prompt,
         tabReservation: reservation,
+        boundAgentId,
       });
       if (!handle.runId) {
         const terminal = await handle.terminal;

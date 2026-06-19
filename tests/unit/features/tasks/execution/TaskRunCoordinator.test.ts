@@ -46,6 +46,7 @@ function makeTask(overrides: Partial<TaskSpec['frontmatter']> = {}): TaskSpec {
 class FakeSurface implements TaskExecutionSurface {
   prompts: string[] = [];
   reservations: Array<ChatTabReservation | undefined> = [];
+  boundAgentIds: Array<string | undefined> = [];
   readonly adapter = new SyntheticStreamAdapter();
 
   constructor(private readonly opts: { runId?: string; terminal?: TaskRunTerminal } = {}) {}
@@ -53,6 +54,7 @@ class FakeSurface implements TaskExecutionSurface {
   async startTaskRun(_task: TaskSpec, options: TaskRunOptions): Promise<TaskRunHandle> {
     this.prompts.push(options.prompt);
     this.reservations.push(options.tabReservation);
+    this.boundAgentIds.push(options.boundAgentId);
     return {
       runId: this.opts.runId ?? 'run-1',
       conversationId: 'conv-1',
@@ -449,5 +451,40 @@ describe('TaskRunCoordinator — shared chat-tab reservations', () => {
     surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
     await p;
     expect(reservations.pending).toBe(0);
+  });
+});
+
+describe('TaskRunCoordinator — roster agent binding', () => {
+  it('passes boundAgentId to startTaskRun when task.frontmatter.agent starts with roster:', async () => {
+    const surface = new FakeSurface();
+    const { coordinator } = makeCoordinator(surface);
+    const p = coordinator.run(makeTask({ agent: 'roster:researcher' }));
+    await flushMicrotasks();
+    surface.adapter.emitText(VALID_HANDOFF);
+    surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await p;
+    expect(surface.boundAgentIds[0]).toBe('roster:researcher');
+  });
+
+  it('passes boundAgentId: undefined when task.frontmatter.agent is a persona id', async () => {
+    const surface = new FakeSurface();
+    const { coordinator } = makeCoordinator(surface);
+    const p = coordinator.run(makeTask({ agent: 'standard' }));
+    await flushMicrotasks();
+    surface.adapter.emitText(VALID_HANDOFF);
+    surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await p;
+    expect(surface.boundAgentIds[0]).toBeUndefined();
+  });
+
+  it('passes boundAgentId: undefined when task.frontmatter.agent is absent', async () => {
+    const surface = new FakeSurface();
+    const { coordinator } = makeCoordinator(surface);
+    const p = coordinator.run(makeTask({ agent: undefined }));
+    await flushMicrotasks();
+    surface.adapter.emitText(VALID_HANDOFF);
+    surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await p;
+    expect(surface.boundAgentIds[0]).toBeUndefined();
   });
 });

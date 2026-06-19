@@ -714,6 +714,7 @@ export class ClaudianView extends ItemView {
     prompt: string;
     tabReservation?: ChatTabReservation;
     workOrderPath?: string;
+    boundAgentId?: string;
   }): Promise<TaskRunTabHandle | null> {
     return this.workOrderBridge.startTaskRunInFreshTab(options);
   }
