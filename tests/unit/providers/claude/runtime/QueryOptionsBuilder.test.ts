@@ -862,6 +862,54 @@ describe('QueryOptionsBuilder', () => {
     });
   });
 
+  describe('boundAgentPrompt in systemPromptKey', () => {
+    it('same prompt produces same key', () => {
+      const ctx = createMockContext();
+      const a = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, undefined);
+      const b = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, undefined);
+      expect(a.systemPromptKey).toBe(b.systemPromptKey);
+    });
+
+    it('different boundAgentPrompt produces different key', () => {
+      const ctx = createMockContext();
+      const a = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, undefined);
+      const b = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, 'You are a researcher.');
+      expect(a.systemPromptKey).not.toBe(b.systemPromptKey);
+    });
+
+    it('needsRestart when boundAgentPrompt changes', () => {
+      const ctx = createMockContext();
+      const a = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, undefined);
+      const b = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, 'New agent prompt.');
+      expect(QueryOptionsBuilder.needsRestart(a, b)).toBe(true);
+    });
+
+    it('no restart when boundAgentPrompt unchanged', () => {
+      const ctx = createMockContext();
+      const prompt = 'You are a researcher.';
+      const a = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, prompt);
+      const b = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, prompt);
+      expect(QueryOptionsBuilder.needsRestart(a, b)).toBe(false);
+    });
+  });
+
+  describe('resolveEffectiveModel precedence', () => {
+    it('explicit model overrides boundAgentModel', () => {
+      expect(QueryOptionsBuilder.resolveEffectiveModel('explicit', 'agent-model', 'settings-model'))
+        .toBe('explicit');
+    });
+
+    it('boundAgentModel beats settings when no explicit override', () => {
+      expect(QueryOptionsBuilder.resolveEffectiveModel(undefined, 'agent-model', 'settings-model'))
+        .toBe('agent-model');
+    });
+
+    it('falls back to settings when no override or boundAgentModel', () => {
+      expect(QueryOptionsBuilder.resolveEffectiveModel(undefined, undefined, 'settings-model'))
+        .toBe('settings-model');
+    });
+  });
+
   describe('SEC-2 project-settings trust gate', () => {
     beforeEach(() => {
       mockFiles = {};
