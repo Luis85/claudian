@@ -112,6 +112,8 @@ export interface Conversation {
   resumeAtMessageId?: string;
   /** Optional link to a work-order note path. Absent for ad-hoc chat. */
   workOrderPath?: string;
+  /** Roster agent this conversation is bound to (e.g. 'roster:researcher'). Applied as system prompt appendix + model override. */
+  boundAgentId?: string;
 }
 
 /** Lightweight conversation metadata for the history dropdown. */
@@ -153,6 +155,8 @@ export interface SessionMetadata {
   resumeAtMessageId?: string;
   /** Optional link to a work-order note path. Absent for ad-hoc chat. */
   workOrderPath?: string;
+  /** Roster agent bound to this conversation. Persisted so the binding survives reload. */
+  boundAgentId?: string;
 }
 
 /**
