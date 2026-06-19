@@ -59,6 +59,21 @@ export class AgentRosterView extends ItemView {
         text: `${agent.skills.length} skills · ${agent.tools.length} tools`,
       });
       card.onclick = () => void this.renderDetail(agent);
+
+      // Per-card "Start chat" action — stopPropagation so the card body click
+      // (which opens the detail view) doesn't also fire.
+      const actions = card.createDiv({ cls: 'claudian-roster-card-actions' });
+      const startChatBtn = actions.createEl('button', { text: t('agentRoster.startChat') });
+      startChatBtn.onclick = (e) => {
+        e.stopPropagation();
+        void (async () => {
+          const conversation = await this.plugin.createConversation({
+            providerId: 'claude',
+            boundAgentId: agent.id,
+          });
+          await this.plugin.openConversation(conversation.id);
+        })();
+      };
     }
   }
 
