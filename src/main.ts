@@ -791,7 +791,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       return;
     }
     await this.activateView();
-    await this.getView()?.getTabManager()?.openConversation(conversationId, options);
+    const view = await this.ensureViewOpen();
+    await view?.getTabManager()?.openConversation(conversationId, options);
   }
 
   getEnvironmentVariablesForScope(scope: EnvironmentScope): string {
