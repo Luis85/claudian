@@ -446,6 +446,12 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     }));
   }
 
+  async resolveBoundAgent(boundAgentId: string): Promise<{ prompt?: string; model?: string } | null> {
+    const agent = await this.agentRosterStore?.get(boundAgentId);
+    if (!agent) return null;
+    return { prompt: agent.prompt, model: agent.modelSelection?.modelId };
+  }
+
   async addFileToActiveChat(file: TFile): Promise<boolean> {
     const view = await this.ensureViewOpen();
     const activeTab = view?.getActiveTab();

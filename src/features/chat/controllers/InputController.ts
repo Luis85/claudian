@@ -568,15 +568,15 @@ export class InputController {
       return base;
     }
 
-    const agent = await this.deps.plugin.agentRosterStore?.get(conversation.boundAgentId);
-    if (!agent) {
+    const projection = await this.deps.plugin.resolveBoundAgent?.(conversation.boundAgentId);
+    if (!projection) {
       return base;
     }
 
     return {
       ...base,
-      boundAgentPrompt: agent.prompt || undefined,
-      boundAgentModel: agent.modelSelection?.modelId || undefined,
+      boundAgentPrompt: projection.prompt || undefined,
+      boundAgentModel: projection.model || undefined,
     };
   }
 
