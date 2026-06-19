@@ -3,7 +3,7 @@ import { ItemView, type WorkspaceLeaf } from 'obsidian';
 import { t } from '../../../../i18n/i18n';
 import type ClaudianPlugin from '../../../../main';
 import { AgentRosterStore } from '../AgentRosterStore';
-import { createRosterAgent, toolCapabilityId } from '../rosterCapabilities';
+import { createRosterAgent, dedupeRosterId, toolCapabilityId } from '../rosterCapabilities';
 import type { RosterAgent } from '../rosterTypes';
 
 export const VIEW_TYPE_AGENT_ROSTER = 'claudian-agent-roster';
@@ -34,7 +34,13 @@ export class AgentRosterView extends ItemView {
     header.createEl('h2', { text: t('agentRoster.title') });
      
     header.createEl('button', { text: t('agentRoster.newAgent') }).onclick = async () => {
+      const existing = await this.store.list();
       const agent = createRosterAgent('New Agent', Date.now());
+      const uniqueId = dedupeRosterId(agent.id, existing.map((a) => a.id));
+      if (uniqueId !== agent.id) {
+        agent.id = uniqueId;
+        agent.name = `New Agent ${uniqueId.split('-').pop()}`;
+      }
       await this.store.save(agent);
       await this.renderDetail(agent);
     };

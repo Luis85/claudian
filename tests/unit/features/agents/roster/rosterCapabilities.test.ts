@@ -1,6 +1,7 @@
 import {
   CLAUDIAN_TOOL_MCP_PREFIX,
   createRosterAgent,
+  dedupeRosterId,
   rosterIdFromSlug,
   slugifyRosterName,
   toolCapabilityId,
@@ -26,5 +27,13 @@ describe('rosterCapabilities', () => {
     expect(a.skills).toEqual([]);
     expect(a.createdAt).toBe(1000);
     expect(a.updatedAt).toBe(1000);
+  });
+
+  it('dedupes a roster id against existing ids', () => {
+    expect(dedupeRosterId('roster:new-agent', [])).toBe('roster:new-agent');
+    expect(dedupeRosterId('roster:new-agent', ['roster:new-agent'])).toBe('roster:new-agent-2');
+    expect(
+      dedupeRosterId('roster:new-agent', ['roster:new-agent', 'roster:new-agent-2']),
+    ).toBe('roster:new-agent-3');
   });
 });
