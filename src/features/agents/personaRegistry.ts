@@ -1,5 +1,6 @@
 import { t } from '../../i18n/i18n';
 import { type AgentPersona, STANDARD_PERSONA_ID } from './agentTypes';
+import type { AgentRosterStore } from './roster/AgentRosterStore';
 
 /**
  * The built-in Standard persona. Neutral color, no initials (rendered with the
@@ -34,4 +35,29 @@ export function listPersonas(): AgentPersona[] {
 export function resolvePersona(id?: string): AgentPersona {
   if (!id) return standardPersona();
   return listPersonas().find((persona) => persona.id === id) ?? standardPersona();
+}
+
+/**
+ * Returns a `getAgentOptions` callback and kicks off an async preload of roster
+ * agents so the callback stays synchronous at call time. Persona options are
+ * always available immediately; roster agents are available once the preload
+ * resolves (typically before the modal renders, since the list call is fast).
+ *
+ * Usage:
+ * ```ts
+ * const getAgentOptions = buildAgentOptionsLoader(plugin.agentRosterStore);
+ * // then pass as: getAgentOptions,
+ * ```
+ */
+export function buildAgentOptionsLoader(
+  store: AgentRosterStore | null | undefined,
+): () => Array<{ value: string; label: string }> {
+  let rosterOptions: Array<{ value: string; label: string }> = [];
+  void store?.list().then((agents) => {
+    rosterOptions = agents.map((a) => ({ value: a.id, label: `Agent: ${a.name}` }));
+  });
+  return () => [
+    ...listPersonas().map((p) => ({ value: p.id, label: p.name })),
+    ...rosterOptions,
+  ];
 }

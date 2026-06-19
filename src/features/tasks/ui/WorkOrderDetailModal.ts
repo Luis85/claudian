@@ -43,6 +43,12 @@ export interface WorkOrderDetailModalCallbacks {
   onSaveFields?(task: TaskSpec, fields: WorkOrderFieldUpdate): void | Promise<void>;
   getProviderOptions(): WorkOrderOption[];
   getModelOptions(providerId: string): WorkOrderOption[];
+  /**
+   * Combined persona + roster agent options for the agent picker. Preloaded at
+   * modal-open time by the caller so `renderAgentRow` stays synchronous.
+   * Personas are labelled as their name; roster agents as "Agent: <name>".
+   */
+  getAgentOptions(): WorkOrderOption[];
 }
 
 // Statuses whose title can still be renamed inline. Every other status

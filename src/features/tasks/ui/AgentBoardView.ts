@@ -9,6 +9,7 @@ import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { promptReason } from '../../../shared/modals/PromptModal';
+import { buildAgentOptionsLoader } from '../../agents/personaRegistry';
 import { archiveWorkOrder, deleteWorkOrder } from '../commands/taskCommands';
 import {
   getLaneForStatus,
@@ -386,6 +387,7 @@ export class AgentBoardView extends ItemView {
         ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId)
           ? ProviderRegistry.getChatUIConfig(providerId as ProviderId).getModelOptions(settings)
           : [],
+      getAgentOptions: buildAgentOptionsLoader(this.plugin.agentRosterStore),
     }).open();
   }
 

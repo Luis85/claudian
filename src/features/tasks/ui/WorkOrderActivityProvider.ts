@@ -12,6 +12,7 @@ import type {
 import { EMPTY_WORK_ORDER_ACTIVITY_SUMMARY } from '../../../core/types/workOrderActivity';
 import type ClaudianPlugin from '../../../main';
 import { revealWorkspaceLeaf } from '../../../utils/obsidianCompat';
+import { buildAgentOptionsLoader } from '../../agents/personaRegistry';
 import { TaskIndexer } from '../indexing/TaskIndexer';
 import type { TaskBoardModel, TaskSpec } from '../model/taskTypes';
 import { TaskNoteStore } from '../storage/TaskNoteStore';
@@ -225,6 +226,7 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
         ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId)
           ? ProviderRegistry.getChatUIConfig(providerId as ProviderId).getModelOptions(settings)
           : [],
+      getAgentOptions: buildAgentOptionsLoader(this.plugin.agentRosterStore),
     };
   }
 

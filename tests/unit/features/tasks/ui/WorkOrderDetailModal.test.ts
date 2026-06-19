@@ -328,6 +328,7 @@ function makeCallbacks(): WorkOrderDetailModalCallbacks {
     onSaveFields: jest.fn(),
     getProviderOptions: () => [],
     getModelOptions: () => [],
+    getAgentOptions: () => [],
   };
 }
 
@@ -517,6 +518,8 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
         providerId === 'codex'
           ? [{ value: 'gpt-5', label: 'gpt-5' }]
           : [{ value: 'opus', label: 'Opus' }, { value: 'sonnet', label: 'Sonnet' }],
+      // Standard persona option so the agent picker renders correctly.
+      getAgentOptions: () => [{ value: 'standard', label: 'Standard' }],
       ...overrides,
     };
   }
