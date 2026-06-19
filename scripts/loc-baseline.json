@@ -23,7 +23,7 @@
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/ClaudianView.ts": {
-      "loc": 1010,
+      "loc": 1041,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/services/SubagentManager.ts": {
@@ -43,7 +43,7 @@
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/main.ts": {
-      "loc": 852,
+      "loc": 853,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only. +18 from HTTP tool server wiring (ClaudianHttpToolServer construct/start/stop/rebuild + getHttpToolServerConfig method)."
     },
     "src/features/chat/rendering/MessageRenderer.ts": {

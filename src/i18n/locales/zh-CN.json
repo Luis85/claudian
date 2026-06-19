@@ -986,7 +986,9 @@
     "skills": "Skills",
     "tools": "Tools",
     "save": "Save",
-    "startChat": "与此代理开始聊天"
+    "startChat": "与此代理开始聊天",
+    "chattingWith": "正在与 {name} 聊天",
+    "unbind": "×"
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically."

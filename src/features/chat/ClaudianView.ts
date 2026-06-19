@@ -80,6 +80,7 @@ export class ClaudianView extends ItemView {
 
   // Header elements
   private historyDropdown: HTMLElement | null = null;
+  private boundAgentChipSlotEl: HTMLElement | null = null;
 
   // Debouncing for tab bar updates
   private pendingTabBarUpdate: ScheduledAnimationFrame | null = null;
@@ -276,6 +277,7 @@ export class ClaudianView extends ItemView {
           this.gitActionButton?.updateDisplay();
           this.persistTabState();
           this.syncProviderBrandColor();
+          void this.syncBoundAgentChip();
         },
         onTabClosed: () => {
           this.updateTabBar();
@@ -294,6 +296,7 @@ export class ClaudianView extends ItemView {
           this.gitActionButton?.updateDisplay();
           this.persistTabState();
           this.syncProviderBrandColor();
+          void this.syncBoundAgentChip();
         },
         onTabProviderChanged: () => {
           this.updateTabBar();
@@ -318,6 +321,7 @@ export class ClaudianView extends ItemView {
     });
     this.syncProviderBrandColor();
     this.syncHeaderTitle();
+    void this.syncBoundAgentChip();
     this.updateLayoutForPosition();
     this.tabManager?.primeProviderRuntime();
   }
@@ -351,6 +355,7 @@ export class ClaudianView extends ItemView {
     this.headerActionsContent = null;
     this.newTabButtonEl = null;
     this.historyDropdown = null;
+    this.boundAgentChipSlotEl?.empty();
     this.gitActionButton?.dispose();
     this.gitActionButton = null;
   }
@@ -457,6 +462,9 @@ export class ClaudianView extends ItemView {
       });
       this.headerActionsEl.removeClass('claudian-hidden');
     }
+
+    // Bound-agent chip slot — rendered below the main header row.
+    this.boundAgentChipSlotEl = this.headerEl.createDiv({ cls: 'claudian-bound-agent-chip-slot' });
   }
 
   /**
@@ -846,6 +854,36 @@ export class ClaudianView extends ItemView {
     this.titleTextEl.setText(title);
     this.titleTextEl.setAttribute('aria-label', title);
     this.titleTextEl.title = title;
+  }
+
+  /** Renders or clears the bound-agent chip below the header. */
+  private async syncBoundAgentChip(): Promise<void> {
+    const slot = this.boundAgentChipSlotEl;
+    if (!slot) return;
+    slot.empty();
+
+    const conversationId = this.tabManager?.getActiveTab()?.conversationId;
+    if (!conversationId) return;
+
+    const conversation = await this.plugin.getConversationById(conversationId);
+    if (!conversation?.boundAgentId) return;
+
+    const agent = await this.plugin.agentRosterStore?.get(conversation.boundAgentId);
+    if (!agent) return;
+
+    const chip = slot.createDiv({ cls: 'claudian-bound-agent-chip' });
+    const label = chip.createSpan({ cls: 'claudian-bound-agent-chip-label' });
+    label.setText(t('agentRoster.chattingWith', { name: agent.name }));
+
+    const unbindBtn = chip.createEl('button', { cls: 'claudian-bound-agent-chip-unbind' });
+    unbindBtn.setText(t('agentRoster.unbind'));
+    unbindBtn.setAttribute('aria-label', t('agentRoster.unbind'));
+    unbindBtn.addEventListener('click', () => {
+      void (async () => {
+        await this.plugin.updateConversation(conversationId, { boundAgentId: undefined });
+        await this.syncBoundAgentChip();
+      })();
+    });
   }
 
   /**

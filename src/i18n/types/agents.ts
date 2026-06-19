@@ -9,4 +9,6 @@ export type AgentsTranslationKey =
   | 'agentRoster.skills'
   | 'agentRoster.tools'
   | 'agentRoster.save'
-  | 'agentRoster.startChat';
+  | 'agentRoster.startChat'
+  | 'agentRoster.chattingWith'
+  | 'agentRoster.unbind';

@@ -986,7 +986,9 @@
     "skills": "Skills",
     "tools": "Tools",
     "save": "Save",
-    "startChat": "Chat mit diesem Agenten starten"
+    "startChat": "Chat mit diesem Agenten starten",
+    "chattingWith": "Chat mit {name}",
+    "unbind": "×"
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically."

@@ -986,7 +986,9 @@
     "skills": "Skills",
     "tools": "Tools",
     "save": "Save",
-    "startChat": "このエージェントとチャットを開始"
+    "startChat": "このエージェントとチャットを開始",
+    "chattingWith": "{name} とチャット中",
+    "unbind": "×"
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically."
