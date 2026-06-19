@@ -836,6 +836,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   createConversation(options?: {
     providerId?: ProviderId;
     sessionId?: string;
+    boundAgentId?: string;
   }): Promise<Conversation> {
     return this.conversationStore.createConversation(options);
   }

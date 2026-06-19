@@ -210,6 +210,7 @@ export class SessionStorage {
       usage: conversation.usage,
       resumeAtMessageId: conversation.resumeAtMessageId,
       workOrderPath: conversation.workOrderPath,
+      boundAgentId: conversation.boundAgentId,
     };
   }
 

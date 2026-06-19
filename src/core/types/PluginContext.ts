@@ -100,6 +100,7 @@ export interface PluginContext
   createConversation(options?: {
     providerId?: ProviderId;
     sessionId?: string;
+    boundAgentId?: string;
   }): Promise<Conversation>;
   switchConversation(
     id: string,
