@@ -35,6 +35,7 @@ export interface ClaudeDynamicUpdateDeps {
     vaultPath: string,
     cliPath: string,
     externalContextPaths?: string[],
+    boundAgentPrompt?: string,
   ) => PersistentQueryConfig;
   needsRestart: (newConfig: PersistentQueryConfig) => boolean;
   ensureReady: (options: ClaudeEnsureReadyOptions) => Promise<boolean>;
@@ -233,6 +234,7 @@ async function maybeRestart(
     context.vaultPath,
     context.cliPath,
     context.newExternalContextPaths,
+    queryOptions?.boundAgentPrompt,
   );
   if (!deps.needsRestart(newConfig)) {
     return;
