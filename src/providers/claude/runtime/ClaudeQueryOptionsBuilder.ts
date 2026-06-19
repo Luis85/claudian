@@ -208,6 +208,8 @@ export class QueryOptionsBuilder {
     };
     const claudianToolServer = ctx.getClaudianToolServer?.();
     if (claudianToolServer) {
+      // Key must match CLAUDIAN_TOOL_SERVER_NAME in features/tools; kept as a
+      // literal because providers must not import from the features layer.
       mcpServers['claudian'] = claudianToolServer;
     }
 

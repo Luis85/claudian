@@ -14,6 +14,8 @@ export interface ToolRegistryDeps {
 
 function evaluateModule(js: string, requireResolve: (id: string) => unknown): unknown {
   const requireShim = (id: string): unknown => {
+    // `claudian/tools` is the plugin's bundled re-export of zod: authored tools
+    // write `import { z } from 'claudian/tools'`. Both ids resolve to zod.
     if (id === 'claudian/tools' || id === 'zod') {
       return requireResolve(id) ?? requireResolve('zod') ?? { z };
     }
@@ -24,7 +26,6 @@ function evaluateModule(js: string, requireResolve: (id: string) => unknown): un
     throw new Error(`Cannot resolve module '${id}'`);
   };
   const module = { exports: {} as Record<string, unknown> };
-   
   const fn = new Function('module', 'exports', 'require', 'Z', `${js}\n//# sourceURL=claudian-tool`);
   const zodModule = requireResolve('zod') ?? { z };
   // Expose zod as `Z` global: if the resolved module has a `z` property (named export shape),

@@ -11,6 +11,7 @@ export interface ClaudianToolManifest {
   name: string;                       // -> mcp__claudian__<name>
   description: string;
   input: z.ZodObject<z.ZodRawShape>;  // single schema -> validation + JSON schema
+  // Reserved for a future result-validation pass; not yet consumed by the registry.
   output?: z.ZodTypeAny;
 }
 
