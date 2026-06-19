@@ -985,7 +985,8 @@
     "back": "← back",
     "skills": "Skills",
     "tools": "Tools",
-    "save": "Save"
+    "save": "Save",
+    "startChat": "Démarrer un chat avec cet agent"
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically."

@@ -985,7 +985,8 @@
     "back": "← back",
     "skills": "Skills",
     "tools": "Tools",
-    "save": "Save"
+    "save": "Save",
+    "startChat": "이 에이전트와 채팅 시작"
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically."

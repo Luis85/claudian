@@ -8,4 +8,5 @@ export type AgentsTranslationKey =
   | 'agentRoster.back'
   | 'agentRoster.skills'
   | 'agentRoster.tools'
-  | 'agentRoster.save';
+  | 'agentRoster.save'
+  | 'agentRoster.startChat';
