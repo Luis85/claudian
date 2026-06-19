@@ -17,7 +17,7 @@ export function buildClaudianToolMcpServer(
         t.module.manifest.input.shape,
         async (args: unknown) => {
           const result: ToolTextResult = await t.module.handler(args, ctxFactory());
-          return result;
+          return result as unknown as never;
         },
       ),
     );

@@ -68,6 +68,8 @@ export interface ColdStartQueryContext extends QueryOptionsContext {
   allowedTools?: string[];
   hasEditorContext: boolean;
   externalContextPaths?: string[];
+  /** Optional in-process Claudian user-tool MCP server (Claude only). */
+  getClaudianToolServer?: () => unknown;
 }
 
 export class QueryOptionsBuilder {
@@ -201,10 +203,16 @@ export class QueryOptionsBuilder {
     const mcpMentions = ctx.mcpMentions || new Set<string>();
     const uiEnabledServers = ctx.enabledMcpServers || new Set<string>();
     const combinedMentions = new Set([...mcpMentions, ...uiEnabledServers]);
-    const mcpServers = ctx.mcpManager.getActiveServers(combinedMentions);
+    const mcpServers: Record<string, unknown> = {
+      ...ctx.mcpManager.getActiveServers(combinedMentions),
+    };
+    const claudianToolServer = ctx.getClaudianToolServer?.();
+    if (claudianToolServer) {
+      mcpServers['claudian'] = claudianToolServer;
+    }
 
     if (Object.keys(mcpServers).length > 0) {
-      options.mcpServers = mcpServers;
+      options.mcpServers = mcpServers as typeof options.mcpServers;
     }
 
     const disallowedMcpTools = ctx.mcpManager.getDisallowedMcpTools(combinedMentions);
