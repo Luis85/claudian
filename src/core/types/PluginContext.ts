@@ -131,6 +131,13 @@ export interface PluginContext
    */
   getClaudianToolServer?: () => unknown;
 
+  /**
+   * Returns the URL and auth header for the in-process HTTP MCP tool server,
+   * or `null` when unavailable. Plain-data shape so `core/` and `providers/`
+   * can consume it without importing `features/` types.
+   */
+  getHttpToolServerConfig?(): { url: string; headers: Record<string, string> } | null;
+
   getView(): ChatViewHandle | null;
   getAllViews(): ChatViewHandle[];
   findConversationAcrossViews(

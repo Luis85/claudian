@@ -288,11 +288,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
       this.currentDatabasePath,
     );
     const promptSettings = this.getSystemPromptSettings(cwd);
-    const artifacts = await prepareOpencodeLaunchArtifacts({
-      runtimeEnv,
-      settings: promptSettings,
-      workspaceRoot: cwd,
-    });
+    const artifacts = await this.prepareLaunchArtifacts(promptSettings, runtimeEnv, cwd);
     this.currentDatabasePath = artifacts.databasePath;
 
     const nextLaunchKey = JSON.stringify({
@@ -1283,6 +1279,19 @@ export class OpencodeChatRuntime implements ChatRuntime {
     const baseMessage = error instanceof Error ? error.message : 'OpenCode request failed';
     const stderr = this.process?.getStderrSnapshot();
     return stderr ? `${baseMessage}\n\n${stderr}` : baseMessage;
+  }
+
+  private prepareLaunchArtifacts(
+    settings: SystemPromptSettings,
+    runtimeEnv: NodeJS.ProcessEnv,
+    cwd: string,
+  ): ReturnType<typeof prepareOpencodeLaunchArtifacts> {
+    return prepareOpencodeLaunchArtifacts({
+      httpToolServerConfig: this.plugin.getHttpToolServerConfig?.() ?? null,
+      runtimeEnv,
+      settings,
+      workspaceRoot: cwd,
+    });
   }
 
   private clearActiveSession(): void {

@@ -81,6 +81,7 @@ import { TaskNoteStore } from './features/tasks/storage/TaskNoteStore';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
 import { WorkOrderActivityProvider } from './features/tasks/ui/WorkOrderActivityProvider';
 import { ClaudianToolRegistry } from './features/tools/ClaudianToolRegistry';
+import { ClaudianHttpToolServer } from './features/tools/host/ClaudianHttpToolServer';
 import { buildClaudianToolMcpServer } from './features/tools/host/InProcessToolMcpServer';
 import { transpileToolSource } from './features/tools/transpile';
 import { ToolLibraryView, VIEW_TYPE_TOOL_LIBRARY } from './features/tools/view/ToolLibraryView';
@@ -115,6 +116,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
    * after vaultFileAdapter; consumers must not build their own instance. */
   public agentRosterStore!: AgentRosterStore;
   public usageTracker: UsageTracker | null = null;
+  private httpToolServer: ClaudianHttpToolServer | null = null;
   private lifecycle!: PluginLifecycle;
   private unloaded = true;
   private viewActivator!: PluginViewActivator;
@@ -322,10 +324,18 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       },
     });
     await this.toolRegistry.load();
+    this.httpToolServer = new ClaudianHttpToolServer(
+      () => this.toolRegistry.list(),
+      () => ({ app: this.app, signal: new AbortController().signal }),
+    );
+    await this.httpToolServer.start();
     this.registerEvent(
       this.app.vault.on('modify', (file) => {
         if (file.path.startsWith('.claudian/tools/')) {
-          void this.toolRegistry.load().then(() => this.events.emit('toolLibrary:changed'));
+          void this.toolRegistry.load().then(() => {
+            this.events.emit('toolLibrary:changed');
+            void this.httpToolServer?.rebuild();
+          });
         }
       }),
     );
@@ -432,6 +442,11 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.quickActionLastUsedStore = null;
       await store.flush();
     }
+    if (this.httpToolServer) {
+      const server = this.httpToolServer;
+      this.httpToolServer = null;
+      await server.stop();
+    }
     this.lifecycle?.shutdownActiveRuntimes();
     void this.lifecycle?.persistOpenTabStates();
   }
@@ -444,6 +459,10 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       app: this.app,
       signal: new AbortController().signal,
     }));
+  }
+
+  getHttpToolServerConfig(): { url: string; headers: Record<string, string> } | null {
+    return this.httpToolServer?.getConfig() ?? null;
   }
 
   async resolveBoundAgent(boundAgentId: string): Promise<{ prompt?: string; model?: string } | null> {
