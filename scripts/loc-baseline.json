@@ -7,15 +7,15 @@
       "reason": "Grandfathered. Planned split: extract persistent-query lifecycle (ensureReady, needsRestart, response-consumer startup) behind a smaller module interface. See docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md."
     },
     "src/features/chat/controllers/InputController.ts": {
-      "loc": 1189,
+      "loc": 1194,
       "reason": "Grandfathered. Planned split: extract the resume dropdown and the plan/approval state machine. See docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md."
     },
     "src/providers/opencode/runtime/OpencodeChatRuntime.ts": {
-      "loc": 1151,
+      "loc": 1152,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/providers/codex/runtime/CodexChatRuntime.ts": {
-      "loc": 1079,
+      "loc": 1082,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/controllers/StreamController.ts": {
@@ -31,7 +31,7 @@
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/tasks/ui/AgentBoardView.ts": {
-      "loc": 902,
+      "loc": 892,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/providers/codex/runtime/CodexNotificationRouter.ts": {
