@@ -411,6 +411,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
       prompt: buildOpencodePromptBlocks(
         turn.request,
         shouldBootstrapHistory ? previousMessages : [],
+        queryOptions?.boundAgentPrompt,
       ),
       sessionId,
     }).then((response) => {

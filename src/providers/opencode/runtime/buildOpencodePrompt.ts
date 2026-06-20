@@ -27,9 +27,18 @@ export function buildOpencodePromptText(
 export function buildOpencodePromptBlocks(
   request: ChatTurnRequest,
   conversationHistory: ChatMessage[] = [],
+  boundAgentPrompt?: string,
 ): AcpContentBlock[] {
+  let promptText = buildOpencodePromptText(request, conversationHistory);
+
+  if (boundAgentPrompt) {
+    // Append per-turn via connection.prompt(); minor redundancy of re-sending
+    // each turn is acceptable for MVP (no session restart required).
+    promptText += `\n\n# Agent Instructions\n\n${boundAgentPrompt}`;
+  }
+
   const blocks: AcpContentBlock[] = [
-    { type: 'text', text: buildOpencodePromptText(request, conversationHistory) },
+    { type: 'text', text: promptText },
   ];
 
   for (const image of request.images ?? []) {
