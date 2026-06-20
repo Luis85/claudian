@@ -53,6 +53,44 @@ describe('buildCursorAgentPrompt', () => {
     expect(prompt).toContain('Assistant: first answer');
     expect(prompt).toContain('User: second question');
   });
+
+  it('appends a delimited Agent Instructions section when boundAgentPrompt is present', () => {
+    const prompt = buildCursorAgentPrompt({
+      turn: createTurn('do the thing'),
+      resumeSessionId: 'cursor-session-1',
+      boundAgentPrompt: 'You are a TypeScript expert.',
+    });
+
+    expect(prompt).toContain('do the thing');
+    expect(prompt).toContain('\n\n# Agent Instructions\n\nYou are a TypeScript expert.');
+  });
+
+  it('does not append Agent Instructions when boundAgentPrompt is absent', () => {
+    const prompt = buildCursorAgentPrompt({
+      turn: createTurn('do the thing'),
+      resumeSessionId: 'cursor-session-1',
+    });
+
+    expect(prompt).toBe('do the thing');
+    expect(prompt).not.toContain('# Agent Instructions');
+  });
+
+  it('appends Agent Instructions even when history is rebuilt (no resume)', () => {
+    const history: ChatMessage[] = [
+      { id: 'u1', role: 'user', content: 'prior', timestamp: 1 },
+      { id: 'a1', role: 'assistant', content: 'prior answer', timestamp: 2 },
+    ];
+
+    const prompt = buildCursorAgentPrompt({
+      turn: createTurn('next turn'),
+      conversationHistory: history,
+      resumeSessionId: null,
+      boundAgentPrompt: 'Be concise.',
+    });
+
+    expect(prompt).toContain('User: next turn');
+    expect(prompt).toContain('\n\n# Agent Instructions\n\nBe concise.');
+  });
 });
 
 describe('resolveCursorCliPromptArg', () => {

@@ -20,17 +20,23 @@ export interface BuildCursorAgentPromptOptions {
   turn: PreparedChatTurn;
   conversationHistory?: ChatMessage[];
   resumeSessionId?: string | null;
+  boundAgentPrompt?: string;
 }
 
 /**
  * Cursor relies on `--resume` for multi-turn context. When that session id is
  * missing, rebuild prior turns into the prompt (OpenCode-style recovery).
+ *
+ * When a bound agent prompt is present it is appended as a clearly-delimited
+ * section so the agent's instructions reach the model on every turn (Cursor is
+ * one-shot per turn; re-appending each time is correct).
  */
 export function buildCursorAgentPrompt(options: BuildCursorAgentPromptOptions): string {
   const {
     turn,
     conversationHistory,
     resumeSessionId,
+    boundAgentPrompt,
   } = options;
 
   let prompt = turn.prompt;
@@ -43,6 +49,10 @@ export function buildCursorAgentPrompt(options: BuildCursorAgentPromptOptions): 
       turn.request.text,
       conversationHistory,
     );
+  }
+
+  if (boundAgentPrompt) {
+    prompt += `\n\n# Agent Instructions\n\n${boundAgentPrompt}`;
   }
 
   return prompt;
