@@ -9,7 +9,7 @@ import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { promptReason } from '../../../shared/modals/PromptModal';
-import { buildAgentOptionsLoader } from '../../agents/personaRegistry';
+import { buildAgentOptionsLoader, buildPersonaResolver, type PersonaResolver } from '../../agents/personaRegistry';
 import { archiveWorkOrder, deleteWorkOrder } from '../commands/taskCommands';
 import {
   getLaneForStatus,
@@ -50,6 +50,9 @@ export class AgentBoardView extends ItemView {
   private readonly noteStore = new TaskNoteStore();
   private readonly indexer = new TaskIndexer(this.noteStore);
   private readonly renderer = new AgentBoardRenderer();
+  // Preloaded persona resolver for roster-agent avatars. Rebuilt lazily and
+  // invalidated on `roster:changed` so renamed/recolored agents repaint.
+  private personaResolver: PersonaResolver | null = null;
   private model: TaskBoardModel = { tasks: [], invalidNotes: [] };
   private config: BoardConfig = loadBoardConfig({}).config;
   private layout: ResolvedBoardLayout = { lanes: [], errors: [] };
@@ -159,6 +162,10 @@ export class AgentBoardView extends ItemView {
       this.runner?.tick();
     }));
     this.register(this.plugin.events.on('task:board-config-changed', () => void this.refresh()));
+    this.register(this.plugin.events.on('roster:changed', () => {
+      this.personaResolver = null;
+      void this.refresh();
+    }));
 
     // Live-run visibility: patch cards in place from run events without a full
     // re-render, and tick the elapsed timer every second.
@@ -280,6 +287,15 @@ export class AgentBoardView extends ItemView {
     this.render();
   }
 
+  // Lazily builds (and caches) the roster-agent persona resolver. Invalidated on
+  // `roster:changed` so the next render rebuilds it from the updated roster.
+  private getPersonaResolver(): PersonaResolver {
+    if (!this.personaResolver) {
+      this.personaResolver = buildPersonaResolver(this.plugin.agentRosterStore);
+    }
+    return this.personaResolver;
+  }
+
   private render(): void {
     // Preserve lane scroll position across full re-renders so interacting with a
     // card (which triggers refresh) doesn't jump the board back to the left.
@@ -338,6 +354,7 @@ export class AgentBoardView extends ItemView {
         onCancelPaused: (task) => this.stopTask(task),
         onSendToReview: (task) => void this.transitionTask(task, 'review', 'Sent to review without a structured handoff.'),
         onMarkFailed: (task) => void this.transitionTask(task, 'failed', 'Marked failed: run produced no structured handoff.'),
+        resolvePersona: this.getPersonaResolver(),
       },
     );
 
@@ -388,6 +405,7 @@ export class AgentBoardView extends ItemView {
           ? ProviderRegistry.getChatUIConfig(providerId as ProviderId).getModelOptions(settings)
           : [],
       getAgentOptions: buildAgentOptionsLoader(this.plugin.agentRosterStore),
+      resolvePersona: this.getPersonaResolver(),
     }).open();
   }
 

@@ -1,6 +1,10 @@
 import { t } from '../../i18n/i18n';
 import { type AgentPersona, STANDARD_PERSONA_ID } from './agentTypes';
 import type { AgentRosterStore } from './roster/AgentRosterStore';
+import type { RosterAgent } from './roster/rosterTypes';
+
+/** Resolves an `agent` frontmatter id to the persona used to render its avatar. */
+export type PersonaResolver = (id?: string) => AgentPersona;
 
 /**
  * The built-in Standard persona. Neutral color, no initials (rendered with the
@@ -35,6 +39,43 @@ export function listPersonas(): AgentPersona[] {
 export function resolvePersona(id?: string): AgentPersona {
   if (!id) return standardPersona();
   return listPersonas().find((persona) => persona.id === id) ?? standardPersona();
+}
+
+/**
+ * Projects a roster agent onto the persona shape so the board / modal can render
+ * its avatar. Uses the agent's own color + initials when present, otherwise
+ * derives a two-letter monogram from the name and a neutral color.
+ */
+export function rosterAgentToPersona(agent: RosterAgent): AgentPersona {
+  const derived = agent.name
+    .split(/\s+/)
+    .map((word) => word[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+  return {
+    id: agent.id,
+    name: agent.name,
+    color: agent.color || 'var(--color-base-70)',
+    initials: agent.initials?.trim() || derived || 'AG',
+    builtin: false,
+  };
+}
+
+/**
+ * Returns a synchronous persona resolver and kicks off an async preload of
+ * roster agents (mirrors `buildAgentOptionsLoader`). Built-in personas resolve
+ * immediately; `roster:<id>` ids resolve to their custom avatar once the preload
+ * lands, falling back to `resolvePersona` (Standard) until then.
+ */
+export function buildPersonaResolver(
+  store: AgentRosterStore | null | undefined,
+): PersonaResolver {
+  const rosterPersonas = new Map<string, AgentPersona>();
+  void store?.list().then((agents) => {
+    for (const agent of agents) rosterPersonas.set(agent.id, rosterAgentToPersona(agent));
+  });
+  return (id?: string) => (id && rosterPersonas.get(id)) || resolvePersona(id);
 }
 
 /**

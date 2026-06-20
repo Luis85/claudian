@@ -171,8 +171,9 @@ export function renderWorkOrderProperties(
  * `onSaveFields`. Non-editable states render a static avatar + persona name.
  *
  * When the stored id is a `roster:` id the chip shows the label supplied by
- * `getAgentOptions()` ("Agent: <name>"); the avatar falls back to the Standard
- * persona because roster agents don't carry a custom avatar in the picker.
+ * `getAgentOptions()` ("Agent: <name>"); the avatar comes from the preloaded
+ * `callbacks.resolvePersona` (roster agent color + initials), falling back to
+ * Standard only when no resolver is supplied.
  */
 function renderAgentRow(
   parent: HTMLElement,
@@ -181,7 +182,8 @@ function renderAgentRow(
   task: TaskSpec,
   callbacks: WorkOrderDetailModalCallbacks,
 ): void {
-  const persona = resolvePersona(agentId);
+  const resolve = callbacks.resolvePersona ?? resolvePersona;
+  const persona = resolve(agentId);
 
   if (!editable) {
     const wrap = parent.createSpan({ cls: 'claudian-work-order-modal-agent' });
@@ -212,7 +214,7 @@ function renderAgentRow(
   let avatar = renderAgentAvatar(chip.el, persona, AGENT_AVATAR_SIZE);
   chip.el.insertBefore(avatar, chip.el.firstChild);
   chip.selectEl.addEventListener('change', () => {
-    const next = resolvePersona(chip.selectEl.value);
+    const next = resolve(chip.selectEl.value);
     const replacement = renderAgentAvatar(chip.el, next, AGENT_AVATAR_SIZE);
     chip.el.insertBefore(replacement, chip.el.firstChild);
     avatar.remove();

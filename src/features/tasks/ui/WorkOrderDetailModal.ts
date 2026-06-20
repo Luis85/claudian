@@ -2,6 +2,7 @@ import { type App, Component, MarkdownRenderer, Modal, setIcon } from 'obsidian'
 
 import { t } from '../../../i18n/i18n';
 import { formatRelativeTime } from '../../../utils/date';
+import { type PersonaResolver } from '../../agents/personaRegistry';
 import { isPureAcceptanceChecklist, parseAcceptanceChecklist } from '../model/acceptanceChecklist';
 import { parseAcceptanceProgress } from '../model/acceptanceProgress';
 import type { TaskPriority, TaskSpec, TaskStatus } from '../model/taskTypes';
@@ -49,6 +50,12 @@ export interface WorkOrderDetailModalCallbacks {
    * Personas are labelled as their name; roster agents as "Agent: <name>".
    */
   getAgentOptions(): WorkOrderOption[];
+  /**
+   * Resolves an `agent` id to the persona whose avatar the row renders. Preloaded
+   * by the caller (mirrors `getAgentOptions`); when omitted the row falls back to
+   * the module `resolvePersona` (built-in personas only).
+   */
+  resolvePersona?: PersonaResolver;
 }
 
 // Statuses whose title can still be renamed inline. Every other status
