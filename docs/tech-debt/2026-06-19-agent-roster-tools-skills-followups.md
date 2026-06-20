@@ -44,7 +44,7 @@ final review and remain open.
 3. **Skill Library is view + discovery only; no canonical `.claudian/skills`
    store or provider projection.** Skills are surfaced from existing provider
    catalogs; the provider-neutral canonical store + write-through projection from
-   the spec is deferred.
+   the spec is deferred. *(Its own increment — not a quick follow-up.)*
 
 4. **Roster → run binding — chat + work-order done.** Shipped 2026-06-19:
    "Start chat with this Agent" (roster cards + detail) reliably opens a Claude
@@ -63,27 +63,58 @@ final review and remain open.
    `# Agent Instructions` section in the CLI prompt, Opencode via the same
    appended section in the ACP prompt blocks. Claude is unchanged
    (`resolveEffectiveModel` already reads `boundAgentModel` separately).
-   *Still deferred:* **tool/skill enforcement** at run time (Claude's persistent
-   query has no `allowedTools` API — needs `canUseTool`); **roster-agent board
-   avatars** (resolvePersona keeps unknown ids as Standard).
+   **Roster-agent board avatars done (2026-06-20).** `rosterAgentToPersona` +
+   a preloaded `buildPersonaResolver` (mirroring `buildAgentOptionsLoader`,
+   invalidated on `roster:changed`) now render each roster agent's color +
+   initials on the board card footer, the work-order detail modal agent row, and
+   the read-only activity modal. *Still open:* **tool/skill enforcement** at run
+   time — see item 9.
 
 ## Quality / polish
 
-5. **Inconsistent i18n.** `AgentRosterView` routes most strings through `t()`, but
-   its detail field labels (`Name`, `What it's for`, `Instructions`) and the
-   `ToolLibraryView` / `SkillLibraryView` literals are not localized; the 9
-   non-English locales currently hold English copies of the new keys. Localize the
-   remaining literals and translate the keys.
+5. ~~**Inconsistent i18n.**~~ **RESOLVED (2026-06-20).** The roster detail field
+   labels and the `ToolLibraryView` / `SkillLibraryView` literals now route
+   through `t()` (`agentRoster.field*`, `toolLibrary.*`, `skillLibrary.*`). The 9
+   non-English locales hold English copies of the new keys (structural parity
+   passes; translation of the copies remains open as ordinary i18n backlog).
 
-6. **`ToolHostContext.signal` is inert.** `getClaudianToolServer` mints a fresh
-   `AbortController` whose signal is never aborted, so a long-running user tool
-   handler can't be cancelled when a turn is aborted. Wire it to the turn's
-   abort signal.
+6. ~~**`ToolHostContext.signal` is inert.**~~ **RESOLVED (2026-06-20).** Both tool
+   host boundaries (SDK + HTTP) now thread the MCP request's `AbortSignal` (from
+   the handler's `extra`) into `ToolHostContext` via the shared `requestSignal()`
+   helper, so an aborted turn cancels a long-running user tool. Falls back to a
+   fresh never-aborted signal when the host supplies none.
 
-7. **Output schema unused.** `ClaudianToolManifest.output` is reserved but the
-   registry does not yet validate handler results against it.
+7. **Output schema unused — needs a structured-output channel first.**
+   `ClaudianToolManifest.output` is reserved, but handlers return only a
+   `ToolTextResult` text envelope, so there is nothing structured to validate
+   `output` against today. Validating the text envelope against a zod schema is
+   meaningless; this needs a structured-result channel (handler returns parsed
+   data alongside text) before `output` can be enforced. Deferred by design, not
+   an oversight.
 
-8. **`buildColdStartOptions` CRAP score.** Adding the `getClaudianToolServer`
-   branch tipped this pre-existing function over the critical-complexity threshold
-   under partial coverage. A targeted unit test for the new conditional (server
-   present / absent) is the proportionate fix (no structural refactor needed).
+8. ~~**`buildColdStartOptions` CRAP score.**~~ **RESOLVED (2026-06-20).** Added
+   targeted unit coverage for the `getClaudianToolServer` branch (server present
+   merges `mcpServers.claudian`; absent omits it), the proportionate fix.
+
+9. **Roster tool/skill enforcement at run time — design fork, not a quick fix.**
+   The roster's tools picker only grants user tools (`mcp__claudian__*`); built-in
+   Claude tools (Read/Write/Bash) are never listed, so setting cold-start
+   `allowedTools` to the agent's grant list would strip the built-ins an agent
+   needs. Safe, well-defined options: (a) **deny-list** — merge the agent's
+   `disallowedTools` into cold-start `options.disallowedTools` (purely additive,
+   can't break built-ins, but the roster UI has no deny editor yet); (b)
+   **scope user tools per conversation** — thread a filter into
+   `getClaudianToolServer` so a bound agent sees only its granted user tools
+   (empty grant = all, preserving today's default). True per-call enforcement on
+   the live persistent query still needs `canUseTool`. Pick a direction before
+   implementing.
+
+## New starter-agent presets (2026-06-20)
+
+Shipped eight installable starter agents (Feature Builder, Debugger, Refactorer,
+Test Author, Researcher, Documentation Writer, Planner, Code Reviewer) via
+`presetAgents.ts` + an "Install starter agents" button in the roster view,
+mirroring the work-order template presets (non-destructive: skips ids that
+already exist). Presets ship prompt + identity only; tools/skills start empty
+because those are vault-specific. *Open polish:* the preset prompts are English
+literals (not i18n'd, same as work-order template bodies).
