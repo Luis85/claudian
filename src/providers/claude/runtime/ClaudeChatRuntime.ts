@@ -184,6 +184,7 @@ export class ClaudianService implements ChatRuntime {
   // picks them up from buildPersistentQueryOptions at startPersistentQuery time.
   private currentBoundAgentPrompt: string | undefined;
   private currentBoundAgentModel: string | undefined;
+  private currentBoundAgentTools: string[] | undefined;
 
   // Current allowed tools for canUseTool enforcement (null = no restriction)
   private currentAllowedTools: string[] | null = null;
@@ -1361,6 +1362,7 @@ export class ClaudianService implements ChatRuntime {
     // sees the correct values when a restart is triggered inside maybeRestart.
     this.currentBoundAgentPrompt = queryOptions?.boundAgentPrompt;
     this.currentBoundAgentModel = queryOptions?.boundAgentModel;
+    this.currentBoundAgentTools = queryOptions?.boundAgentTools;
 
     await this.applyTurnToolRestrictions(queryOptions);
 
@@ -1469,7 +1471,7 @@ export class ClaudianService implements ChatRuntime {
         resolveSDKPermissionMode: (mode) => this.resolveSDKPermissionMode(mode),
         mcpManager: this.mcpManager,
         getClaudianToolServer: this.plugin.getClaudianToolServer
-          ? () => this.plugin.getClaudianToolServer!()
+          ? () => this.plugin.getClaudianToolServer!(this.currentBoundAgentTools)
           : undefined,
         buildPersistentQueryConfig: (vaultPath, cliPath, externalContextPaths, boundAgentPrompt) =>
           this.buildPersistentQueryConfig(vaultPath, cliPath, externalContextPaths, undefined, boundAgentPrompt),
@@ -1504,6 +1506,7 @@ export class ClaudianService implements ChatRuntime {
     // on the cold-start path (covers direct cold-starts and restarts from queryViaPersistent).
     this.currentBoundAgentPrompt = queryOptions?.boundAgentPrompt;
     this.currentBoundAgentModel = queryOptions?.boundAgentModel;
+    this.currentBoundAgentTools = queryOptions?.boundAgentTools;
     const selectedModel = queryOptions?.model || this.getScopedSettings().model;
 
     this.sessionManager.setPendingModel(selectedModel);
@@ -1574,7 +1577,7 @@ export class ClaudianService implements ChatRuntime {
       hasEditorContext,
       externalContextPaths,
       getClaudianToolServer: this.plugin.getClaudianToolServer
-        ? () => this.plugin.getClaudianToolServer!()
+        ? () => this.plugin.getClaudianToolServer!(this.currentBoundAgentTools)
         : undefined,
     };
 
@@ -1686,6 +1689,7 @@ export class ClaudianService implements ChatRuntime {
     // Clear bound-agent state so the next conversation starts without stale overrides
     this.currentBoundAgentPrompt = undefined;
     this.currentBoundAgentModel = undefined;
+    this.currentBoundAgentTools = undefined;
 
     this.sessionManager.reset();
   }
@@ -1768,6 +1772,7 @@ export class ClaudianService implements ChatRuntime {
       // The correct bound-agent values are threaded per-turn from queryOptions.
       this.currentBoundAgentPrompt = undefined;
       this.currentBoundAgentModel = undefined;
+      this.currentBoundAgentTools = undefined;
     }
 
     this.sessionManager.setSessionId(id, this.getScopedSettings().model);

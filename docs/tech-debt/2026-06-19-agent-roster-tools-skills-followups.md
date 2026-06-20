@@ -96,18 +96,20 @@ final review and remain open.
    targeted unit coverage for the `getClaudianToolServer` branch (server present
    merges `mcpServers.claudian`; absent omits it), the proportionate fix.
 
-9. **Roster tool/skill enforcement at run time — design fork, not a quick fix.**
-   The roster's tools picker only grants user tools (`mcp__claudian__*`); built-in
-   Claude tools (Read/Write/Bash) are never listed, so setting cold-start
-   `allowedTools` to the agent's grant list would strip the built-ins an agent
-   needs. Safe, well-defined options: (a) **deny-list** — merge the agent's
-   `disallowedTools` into cold-start `options.disallowedTools` (purely additive,
-   can't break built-ins, but the roster UI has no deny editor yet); (b)
-   **scope user tools per conversation** — thread a filter into
-   `getClaudianToolServer` so a bound agent sees only its granted user tools
-   (empty grant = all, preserving today's default). True per-call enforcement on
-   the live persistent query still needs `canUseTool`. Pick a direction before
-   implementing.
+9. **Roster tool/skill enforcement — user-tool scoping done (2026-06-20).**
+   Chosen direction: **scope user tools per conversation.** A bound agent's
+   granted capability ids (`RosterAgent.tools`) now flow `resolveBoundAgent` →
+   `boundAgentTools` on `ChatRuntimeQueryOptions` → `currentBoundAgentTools` on
+   the Claude runtime → `getClaudianToolServer(grantedToolIds)`, which scopes the
+   in-process claudian tool server to only the granted ids (empty/absent grant =
+   all user tools, preserving the prior default). Applies on both the cold-start
+   and dynamic-update (persistent-query `setMcpServers`) paths. Built-in Claude
+   tools (Read/Write/Bash) are untouched. *Still open:* the roster UI grants only
+   user tools — built-in tool allow/deny and `disallowedTools` editing have no UI
+   yet; **non-Claude (HTTP-tier) scoping** (Opencode/Cursor share one long-running
+   HTTP server that lists all tools — per-conversation scoping there needs
+   per-session request filtering); true per-call enforcement still needs
+   `canUseTool`.
 
 ## New starter-agent presets (2026-06-20)
 

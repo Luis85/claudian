@@ -1250,6 +1250,50 @@ describe('InputController - Message Queue', () => {
       expect(queryOptions.model).toBeUndefined();
       expect(queryOptions.boundAgentModel).toBeUndefined();
     });
+
+    it('threads a non-empty bound-agent tool grant into boundAgentTools', async () => {
+      const localDeps = createSendableDeps({ getTabModelOverride: () => null });
+      (localDeps.plugin.getConversationById as jest.Mock).mockResolvedValue({
+        id: 'conv-1',
+        boundAgentId: 'agent-abc',
+      });
+      (localDeps.plugin as any).resolveBoundAgent = jest.fn().mockResolvedValue({
+        prompt: 'You are a Rust expert.',
+        tools: ['mcp__claudian__search_tasks'],
+      });
+      (localDeps as any).mockAgentService.query = jest
+        .fn()
+        .mockImplementation(() => createMockStream([{ type: 'done' }]));
+      const localController = new InputController(localDeps);
+      (localDeps.getInputEl() as ReturnType<typeof createMockInputEl>).value = 'go';
+
+      await localController.sendMessage();
+
+      const [, , queryOptions] = ((localDeps as any).mockAgentService.query as jest.Mock).mock.calls[0];
+      expect(queryOptions.boundAgentTools).toEqual(['mcp__claudian__search_tasks']);
+    });
+
+    it('omits boundAgentTools when the agent grants no tools (empty grant = all)', async () => {
+      const localDeps = createSendableDeps({ getTabModelOverride: () => null });
+      (localDeps.plugin.getConversationById as jest.Mock).mockResolvedValue({
+        id: 'conv-1',
+        boundAgentId: 'agent-abc',
+      });
+      (localDeps.plugin as any).resolveBoundAgent = jest.fn().mockResolvedValue({
+        prompt: 'You are a Rust expert.',
+        tools: [],
+      });
+      (localDeps as any).mockAgentService.query = jest
+        .fn()
+        .mockImplementation(() => createMockStream([{ type: 'done' }]));
+      const localController = new InputController(localDeps);
+      (localDeps.getInputEl() as ReturnType<typeof createMockInputEl>).value = 'go';
+
+      await localController.sendMessage();
+
+      const [, , queryOptions] = ((localDeps as any).mockAgentService.query as jest.Mock).mock.calls[0];
+      expect(queryOptions.boundAgentTools).toBeUndefined();
+    });
   });
 
   describe('Conversation operation guards', () => {

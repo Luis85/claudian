@@ -72,6 +72,13 @@ export interface ChatRuntimeQueryOptions {
   boundAgentPrompt?: string;
   /** Model override sourced from the conversation's bound roster agent. Beats settings.model but loses to an explicit tab/work-order override. Claude-only. */
   boundAgentModel?: string;
+  /**
+   * Granted user-tool capability ids (`mcp__claudian__*`) from the bound roster
+   * agent. When non-empty, the in-process claudian tool server is scoped to only
+   * these tools for the conversation; empty/absent grants expose all user tools
+   * (today's default). Claude-only.
+   */
+  boundAgentTools?: string[];
 }
 
 export interface ChatRuntimeEnsureReadyOptions {

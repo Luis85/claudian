@@ -121,15 +121,21 @@ export interface PluginContext
    * needs no `core/` → `features/` import; the plugin implements it via its
    * roster store.
    */
-  resolveBoundAgent?(boundAgentId: string): Promise<{ prompt?: string; model?: string } | null>;
+  resolveBoundAgent?(
+    boundAgentId: string,
+  ): Promise<{ prompt?: string; model?: string; tools?: string[] } | null>;
 
   /**
    * Returns an in-process Claudian user-tool MCP server built from the current
    * tool registry, or `undefined` when no tools are loaded. The callback is
-   * typed as `() => unknown` to avoid a `core/` → `features/` import; the
+   * typed to return `unknown` to avoid a `core/` → `features/` import; the
    * Claude runtime casts through `unknown` when merging into `mcpServers`.
+   *
+   * When `grantedToolIds` is non-empty the server is scoped to only those
+   * capability ids (`mcp__claudian__*`) — used to project a bound roster agent's
+   * tool grant onto the conversation. An empty/absent list exposes all tools.
    */
-  getClaudianToolServer?: () => unknown;
+  getClaudianToolServer?: (grantedToolIds?: string[]) => unknown;
 
   /**
    * Returns the URL and auth header for the in-process HTTP MCP tool server,

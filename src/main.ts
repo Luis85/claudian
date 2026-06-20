@@ -57,6 +57,7 @@ import type { UsageEventMap } from './core/usage/events';
 import { UsageStorage } from './core/usage/UsageStorage';
 import { UsageTracker } from './core/usage/UsageTracker';
 import { AgentRosterStore } from './features/agents/roster/AgentRosterStore';
+import { toolCapabilityId } from './features/agents/roster/rosterCapabilities';
 import { AgentRosterView, VIEW_TYPE_AGENT_ROSTER } from './features/agents/roster/view/AgentRosterView';
 import { ClaudianView } from './features/chat/ClaudianView';
 import { sendFeedbackPrompt } from './features/chat/feedback/sendFeedbackPrompt';
@@ -451,9 +452,17 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     void this.lifecycle?.persistOpenTabStates();
   }
 
-  getClaudianToolServer(): unknown {
+  getClaudianToolServer(grantedToolIds?: string[]): unknown {
     if (!this.toolRegistry) return undefined;
-    const loaded = this.toolRegistry.list().filter((t) => t.module && !t.error);
+    let loaded = this.toolRegistry.list().filter((t) => t.module && !t.error);
+    // A bound agent with a non-empty tool grant scopes the server to only its
+    // granted capability ids; an empty/absent grant exposes all user tools.
+    if (grantedToolIds && grantedToolIds.length > 0) {
+      const granted = new Set(grantedToolIds);
+      loaded = loaded.filter(
+        (t) => t.module && granted.has(toolCapabilityId(t.module.manifest.name)),
+      );
+    }
     if (loaded.length === 0) return undefined;
     return buildClaudianToolMcpServer(loaded, (signal) => ({
       app: this.app,
@@ -465,10 +474,12 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     return this.httpToolServer?.getConfig() ?? null;
   }
 
-  async resolveBoundAgent(boundAgentId: string): Promise<{ prompt?: string; model?: string } | null> {
+  async resolveBoundAgent(
+    boundAgentId: string,
+  ): Promise<{ prompt?: string; model?: string; tools?: string[] } | null> {
     const agent = await this.agentRosterStore?.get(boundAgentId);
     if (!agent) return null;
-    return { prompt: agent.prompt, model: agent.modelSelection?.modelId };
+    return { prompt: agent.prompt, model: agent.modelSelection?.modelId, tools: agent.tools };
   }
 
   async addFileToActiveChat(file: TFile): Promise<boolean> {
