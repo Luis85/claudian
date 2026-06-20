@@ -988,7 +988,13 @@
     "save": "Save",
     "startChat": "與此代理開始聊天",
     "chattingWith": "正在與 {name} 聊天",
-    "unbind": "×"
+    "unbind": "×",
+    "installStarter": "Install starter agents",
+    "installStarterDone": "Installed {installed} starter agent(s); skipped {skipped} existing.",
+    "installStarterNone": "All starter agents are already installed.",
+    "fieldName": "Name",
+    "fieldDescription": "What it's for",
+    "fieldInstructions": "Instructions"
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically."

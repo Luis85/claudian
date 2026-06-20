@@ -1,7 +1,8 @@
-import { ItemView, type WorkspaceLeaf } from 'obsidian';
+import { ItemView, Notice, type WorkspaceLeaf } from 'obsidian';
 
 import { t } from '../../../../i18n/i18n';
 import type ClaudianPlugin from '../../../../main';
+import { installPresetAgents } from '../presetAgents';
 import { createRosterAgent, dedupeRosterId, toolCapabilityId } from '../rosterCapabilities';
 import type { RosterAgent } from '../rosterTypes';
 
@@ -45,6 +46,19 @@ export class AgentRosterView extends ItemView {
       await this.renderDetail(agent);
     };
 
+    header.createEl('button', { text: t('agentRoster.installStarter') }).onclick = async () => {
+      const result = await installPresetAgents(this.store);
+      new Notice(
+        result.installed.length > 0
+          ? t('agentRoster.installStarterDone', {
+              installed: String(result.installed.length),
+              skipped: String(result.skipped.length),
+            })
+          : t('agentRoster.installStarterNone'),
+      );
+      await this.renderList();
+    };
+
     const agents = await this.store.list();
     const list = root.createDiv({ cls: 'claudian-roster-list' });
     if (agents.length === 0) {
@@ -83,9 +97,9 @@ export class AgentRosterView extends ItemView {
     const back = root.createEl('button', { text: t('agentRoster.back') });
     back.onclick = () => void this.renderList();
 
-    const nameInput = this.field(root, 'Name', agent.name);
-    const descInput = this.field(root, "What it's for", agent.description);
-    const promptArea = this.textArea(root, 'Instructions', agent.prompt);
+    const nameInput = this.field(root, t('agentRoster.fieldName'), agent.name);
+    const descInput = this.field(root, t('agentRoster.fieldDescription'), agent.description);
+    const promptArea = this.textArea(root, t('agentRoster.fieldInstructions'), agent.prompt);
 
     // Skills picker
     root.createEl('h3', { text: t('agentRoster.skills') });

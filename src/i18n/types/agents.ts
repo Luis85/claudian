@@ -11,4 +11,10 @@ export type AgentsTranslationKey =
   | 'agentRoster.save'
   | 'agentRoster.startChat'
   | 'agentRoster.chattingWith'
-  | 'agentRoster.unbind';
+  | 'agentRoster.unbind'
+  | 'agentRoster.installStarter'
+  | 'agentRoster.installStarterDone'
+  | 'agentRoster.installStarterNone'
+  | 'agentRoster.fieldName'
+  | 'agentRoster.fieldDescription'
+  | 'agentRoster.fieldInstructions';
