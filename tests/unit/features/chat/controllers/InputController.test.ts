@@ -1162,6 +1162,96 @@ describe('InputController - Message Queue', () => {
     });
   });
 
+  describe('resolveTurnQueryOptions - bound agent model fold', () => {
+    // When a conversation has a bound agent with a model, non-Claude runtimes
+    // need `queryOptions.model` set (they only read `model`, not
+    // `boundAgentModel`). Claude's resolveEffectiveModel also reads
+    // `boundAgentModel`, so the fold is transparent for Claude.
+    it('folds boundAgentModel into queryOptions.model when no tab override is set', async () => {
+      const localDeps = createSendableDeps({
+        getTabModelOverride: () => null,
+      });
+      (localDeps.plugin.getConversationById as jest.Mock).mockResolvedValue({
+        id: 'conv-1',
+        boundAgentId: 'agent-abc',
+      });
+      (localDeps.plugin as any).resolveBoundAgent = jest.fn().mockResolvedValue({
+        prompt: 'You are a Rust expert.',
+        model: 'opus',
+      });
+      (localDeps as any).mockAgentService.query = jest
+        .fn()
+        .mockImplementation(() => createMockStream([{ type: 'done' }]));
+      const localController = new InputController(localDeps);
+      const localInput = localDeps.getInputEl() as ReturnType<typeof createMockInputEl>;
+      localInput.value = 'Help me with Rust';
+
+      await localController.sendMessage();
+
+      const queryMock = (localDeps as any).mockAgentService.query as jest.Mock;
+      const [, , queryOptions] = queryMock.mock.calls[0];
+      expect(queryOptions.model).toBe('opus');
+      expect(queryOptions.boundAgentModel).toBe('opus');
+      expect(queryOptions.boundAgentPrompt).toBe('You are a Rust expert.');
+    });
+
+    it('tab override takes precedence over boundAgentModel', async () => {
+      const localDeps = createSendableDeps({
+        getTabModelOverride: () => 'haiku',
+      });
+      (localDeps.plugin.getConversationById as jest.Mock).mockResolvedValue({
+        id: 'conv-1',
+        boundAgentId: 'agent-abc',
+      });
+      (localDeps.plugin as any).resolveBoundAgent = jest.fn().mockResolvedValue({
+        prompt: 'You are a Rust expert.',
+        model: 'opus',
+      });
+      (localDeps as any).mockAgentService.query = jest
+        .fn()
+        .mockImplementation(() => createMockStream([{ type: 'done' }]));
+      const localController = new InputController(localDeps);
+      const localInput = localDeps.getInputEl() as ReturnType<typeof createMockInputEl>;
+      localInput.value = 'Help me with Rust';
+
+      await localController.sendMessage();
+
+      const queryMock = (localDeps as any).mockAgentService.query as jest.Mock;
+      const [, , queryOptions] = queryMock.mock.calls[0];
+      // Explicit tab override wins; boundAgentModel is still threaded through
+      // for Claude's resolveEffectiveModel to consume.
+      expect(queryOptions.model).toBe('haiku');
+      expect(queryOptions.boundAgentModel).toBe('opus');
+    });
+
+    it('model is undefined when agent has no model and no tab override', async () => {
+      const localDeps = createSendableDeps({
+        getTabModelOverride: () => null,
+      });
+      (localDeps.plugin.getConversationById as jest.Mock).mockResolvedValue({
+        id: 'conv-1',
+        boundAgentId: 'agent-abc',
+      });
+      (localDeps.plugin as any).resolveBoundAgent = jest.fn().mockResolvedValue({
+        prompt: 'You are a Rust expert.',
+        model: '',
+      });
+      (localDeps as any).mockAgentService.query = jest
+        .fn()
+        .mockImplementation(() => createMockStream([{ type: 'done' }]));
+      const localController = new InputController(localDeps);
+      const localInput = localDeps.getInputEl() as ReturnType<typeof createMockInputEl>;
+      localInput.value = 'Help me with Rust';
+
+      await localController.sendMessage();
+
+      const queryMock = (localDeps as any).mockAgentService.query as jest.Mock;
+      const [, , queryOptions] = queryMock.mock.calls[0];
+      expect(queryOptions.model).toBeUndefined();
+      expect(queryOptions.boundAgentModel).toBeUndefined();
+    });
+  });
+
   describe('Conversation operation guards', () => {
     it('should not send message when isCreatingConversation is true', async () => {
       deps.state.isCreatingConversation = true;

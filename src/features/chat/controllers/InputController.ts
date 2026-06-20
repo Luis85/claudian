@@ -581,10 +581,16 @@ export class InputController {
       return base;
     }
 
+    const boundAgentModel = projection.model || undefined;
+
     return {
       ...base,
+      // Fold the bound model into `model` so non-Claude runtimes that only read
+      // `queryOptions.model` (not `boundAgentModel`) receive it. Explicit
+      // tab/work-order override takes precedence; boundAgentModel is the fallback.
+      model: tabModelOverride ?? boundAgentModel,
       boundAgentPrompt: projection.prompt || undefined,
-      boundAgentModel: projection.model || undefined,
+      boundAgentModel,
     };
   }
 
