@@ -746,6 +746,33 @@ describe('QueryOptionsBuilder', () => {
       expect(options.mcpServers?.['test-server']).toBeDefined();
     });
 
+    it('merges the in-process claudian tool server when getClaudianToolServer returns one', () => {
+      const claudianServer = { type: 'sdk', name: 'claudian' };
+      const ctx = {
+        ...createMockContext(),
+        abortController: new AbortController(),
+        hooks: {},
+        getClaudianToolServer: () => claudianServer,
+        hasEditorContext: false,
+      };
+      const options = QueryOptionsBuilder.buildColdStartQueryOptions(ctx);
+
+      expect(options.mcpServers?.['claudian']).toBe(claudianServer);
+    });
+
+    it('omits the claudian server when getClaudianToolServer returns nothing', () => {
+      const ctx = {
+        ...createMockContext(),
+        abortController: new AbortController(),
+        hooks: {},
+        getClaudianToolServer: () => undefined,
+        hasEditorContext: false,
+      };
+      const options = QueryOptionsBuilder.buildColdStartQueryOptions(ctx);
+
+      expect(options.mcpServers?.['claudian']).toBeUndefined();
+    });
+
     it('uses model override when provided', () => {
       const ctx = {
         ...createMockContext({

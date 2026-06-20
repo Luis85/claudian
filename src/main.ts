@@ -326,7 +326,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     await this.toolRegistry.load();
     this.httpToolServer = new ClaudianHttpToolServer(
       () => this.toolRegistry.list(),
-      () => ({ app: this.app, signal: new AbortController().signal }),
+      (signal) => ({ app: this.app, signal }),
     );
     await this.httpToolServer.start();
     this.registerEvent(
@@ -455,9 +455,9 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     if (!this.toolRegistry) return undefined;
     const loaded = this.toolRegistry.list().filter((t) => t.module && !t.error);
     if (loaded.length === 0) return undefined;
-    return buildClaudianToolMcpServer(loaded, () => ({
+    return buildClaudianToolMcpServer(loaded, (signal) => ({
       app: this.app,
-      signal: new AbortController().signal,
+      signal,
     }));
   }
 

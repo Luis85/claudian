@@ -997,7 +997,12 @@
     "fieldInstructions": "Instructions"
   },
   "toolLibrary": {
-    "toolCreated": "Created {path}. Edit it, then it loads automatically."
+    "toolCreated": "Created {path}. Edit it, then it loads automatically.",
+    "title": "Tool Library",
+    "newTool": "New Tool",
+    "reload": "Reload",
+    "empty": "No tools yet.",
+    "errorPrefix": "Error: {error}"
   },
   "workOrderActivity": {
     "toggleRunning": "활성 작업 지시 {count}개",
@@ -1015,5 +1020,10 @@
       "review": "검토",
       "close": "탭 닫기"
     }
+  },
+  "skillLibrary": {
+    "title": "Skill Library",
+    "empty": "No skills discovered.",
+    "readOnlySuffix": "read-only"
   }
 }

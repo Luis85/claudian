@@ -39,10 +39,8 @@ export class ToolLibraryView extends ItemView {
     root.empty();
     root.addClass('claudian-tool-library');
     const header = root.createDiv();
-    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Tool Library" is the product feature name.
-    header.createEl('h2', { text: 'Tool Library' });
-    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "New Tool" is a product UI label.
-    header.createEl('button', { text: 'New Tool' }).onclick = async () => {
+    header.createEl('h2', { text: t('toolLibrary.title') });
+    header.createEl('button', { text: t('toolLibrary.newTool') }).onclick = async () => {
       const adapter = this.plugin.vaultFileAdapter;
       const dir = `${TOOLS_DIR}/my-tool`;
       await adapter.ensureFolder(dir);
@@ -54,21 +52,21 @@ export class ToolLibraryView extends ItemView {
       new Notice(t('toolLibrary.toolCreated', { path }));
       await this.render();
     };
-    header.createEl('button', { text: 'Reload' }).onclick = async () => {
+    header.createEl('button', { text: t('toolLibrary.reload') }).onclick = async () => {
       await this.plugin.toolRegistry.load();
       await this.render();
     };
 
     const list = root.createDiv();
     const tools = this.plugin.toolRegistry.list();
-    if (tools.length === 0) list.createEl('p', { text: 'No tools yet.' });
-    for (const t of tools) {
+    if (tools.length === 0) list.createEl('p', { text: t('toolLibrary.empty') });
+    for (const tool of tools) {
       const card = list.createDiv({ cls: 'claudian-tool-card' });
-      card.createEl('div', { cls: 'claudian-tool-name', text: t.id });
-      if (t.error) {
-        card.createEl('div', { cls: 'claudian-tool-error', text: `Error: ${t.error}` });
-      } else if (t.module) {
-        card.createEl('div', { text: t.module.manifest.description });
+      card.createEl('div', { cls: 'claudian-tool-name', text: tool.id });
+      if (tool.error) {
+        card.createEl('div', { cls: 'claudian-tool-error', text: t('toolLibrary.errorPrefix', { error: tool.error }) });
+      } else if (tool.module) {
+        card.createEl('div', { text: tool.module.manifest.description });
       }
     }
   }
