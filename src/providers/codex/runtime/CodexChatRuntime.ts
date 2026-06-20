@@ -242,7 +242,10 @@ export class CodexChatRuntime implements ChatRuntime {
     this.pendingTurnNotifications = [];
 
     const model = this.resolveModel(queryOptions);
-    const promptText = buildSystemPrompt(this.getSystemPromptSettings());
+    const promptText = buildSystemPrompt(
+      this.getSystemPromptSettings(),
+      { appendices: queryOptions?.boundAgentPrompt ? [queryOptions.boundAgentPrompt] : undefined },
+    );
 
     // Set up notification router to push chunks
     this.notificationRouter = new CodexNotificationRouter(
