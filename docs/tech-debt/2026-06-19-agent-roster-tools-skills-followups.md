@@ -53,11 +53,19 @@ final review and remain open.
    **Work-orders** can be assigned a roster agent (agent picker lists
    `roster:<id>` agents) and runs consume it (`boundAgentId` threaded
    coordinator → execution surface → run conversation, consume-once per tab).
+   **Non-Claude projection done (2026-06-19).** Binding an agent now applies its
+   **system prompt + model** across all four providers: `InputController` folds
+   `boundAgentModel` into `queryOptions.model` (explicit tab/work-order override
+   wins; bound model is the fallback) so the three providers that read
+   `queryOptions.model` pick it up for free, and each runtime appends the bound
+   prompt per turn — Codex via `buildSystemPrompt` appendices (`baseInstructions`
+   re-sent on `thread/start` **and** `thread/resume`), Cursor via a delimited
+   `# Agent Instructions` section in the CLI prompt, Opencode via the same
+   appended section in the ACP prompt blocks. Claude is unchanged
+   (`resolveEffectiveModel` already reads `boundAgentModel` separately).
    *Still deferred:* **tool/skill enforcement** at run time (Claude's persistent
-   query has no `allowedTools` API — needs `canUseTool`); **non-Claude
-   projection** (Codex/Cursor/Opencode runs store `boundAgentId` but don't apply
-   prompt/model yet); **roster-agent board avatars** (resolvePersona keeps
-   unknown ids as Standard).
+   query has no `allowedTools` API — needs `canUseTool`); **roster-agent board
+   avatars** (resolvePersona keeps unknown ids as Standard).
 
 ## Quality / polish
 
