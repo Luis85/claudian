@@ -186,7 +186,7 @@ Twelve skills: one **router/overview** plus eleven **workflow skills**, one per 
 |----------------|------|----------|------------------------|
 | **`running-product-discovery`** | PM | router | The operating model, roles, the four risks, the AI guardrails, and an index that routes to the other skills |
 | **`framing-the-opportunity`** | PM | 1 | Problem-space framing: outcome vs output, problem statement, POV, HMW, four-risk scan; gates against solution-jumping |
-| **`mapping-discovery-assumptions`** | Trio | 2 | Assumptions map (desirability/feasibility/viability), 2×2 importance×evidence, riskiest-assumption test, experiment design |
+| **`mapping-discovery-assumptions`** | Trio | 2 | Assumptions map (desirability/usability/feasibility/viability), 2×2 importance×evidence, riskiest-assumption test, experiment design |
 | **`planning-discovery-interviews`** | UX | 3 | Discovery interview guide: open/funnel questions, leading-question check, critical-incident, laddering, sample-to-saturation |
 | **`synthesizing-discovery-research`** | UX | 4 | Affinity + thematic analysis + atomic nuggets, with the AI anti-fabrication/evidence-traceability guardrails |
 | **`building-evidence-based-personas`** | UX | 5 | Goal-directed persona construction; proto-persona-as-hypothesis; anti AI-stereotype guardrail; empathy maps |
