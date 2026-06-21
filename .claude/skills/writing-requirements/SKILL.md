@@ -26,7 +26,7 @@ Turns validated discovery into **buildable, testable** specifications. The core 
 ## Non-functional requirements (quality attributes)
 
 - Organize with **ISO/IEC 25010** (2011: functional suitability, performance efficiency, compatibility, usability, reliability, security, maintainability, portability; 2023 adds Interaction Capability, Flexibility, Safety).
-- Make each **measurable** — bad: "the system shall be fast." Good: a metric + scale + threshold ("95th-percentile API response < 200 ms at 1,000 concurrent users"). Use Gilb's **Planguage** (Scale + Meter + Must/Plan/Wish) for fuzzy qualities.
+- Make each **measurable** — bad: "the system shall be fast." Good: a metric + scale + threshold whose target is **set from a real baseline/SLA/benchmark, not invented** — e.g. "95th-percentile API response ≤ *[current p95 baseline − agreed regression budget]* at *[expected peak concurrency]*"; leave the number as a sourced `[TBD]` placeholder until it exists. Use Gilb's **Planguage** (Scale + Meter + Must/Plan/Wish) for fuzzy qualities.
 - **Accessibility:** WCAG 2.2, commonly **AA**.
 - Elicit NFRs **early** — they are architectural drivers, expensive to retrofit.
 

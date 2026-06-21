@@ -11,13 +11,13 @@ A persona is a **behavioral model** of a user type, built from research — not 
 
 ## AI guardrail
 
-**Do not generate personas from an AI's general knowledge.** AI personas are "a generic stereotype based on averaged internet content" — blind to real context of use and B2B complexity, and they describe idealized rather than actual behavior. AI may help *structure* a persona *from your own research data*; it must not be the source of the user.
+**Do not generate personas from an AI's general knowledge.** AI personas are "a generic stereotype based on averaged internet content" — blind to real context of use and B2B complexity, and they describe idealized rather than actual behavior. AI may help *structure* a persona *from your own research data*; it must not be the source of the user. **If you have neither research nor a named human team's stated assumptions, STOP and ask for them — never generate personas (not even labeled "proto") from your own knowledge.**
 
 ## Choose the right rigor
 
 | Type | Built from | Use when |
 |------|-----------|----------|
-| **Proto-persona** | Team's existing assumptions, no new research | Aligning beliefs fast / low maturity — **label it a hypothesis and validate later** |
+| **Proto-persona** | A **named human team's** stated assumptions (never the model's), no new research | Aligning beliefs fast / low maturity — **label it a hypothesis and validate later**; if no human assumptions exist, ask rather than generate |
 | **Qualitative persona** (sweet spot) | ~5–30 interviews, coded into patterns | Most teams, most decisions |
 | **Statistical persona** | Qual + large survey (100–500+), clustered | Large orgs with statistical expertise and need for population proportions |
 
