@@ -32,6 +32,7 @@ export interface ClaudeDynamicUpdateDeps {
   mcpManager: McpServerManager;
   /** Optional in-process Claudian user-tool MCP server (Claude only). */
   getClaudianToolServer?: () => unknown;
+  getClaudianToolKey?: () => string;
   buildPersistentQueryConfig: (
     vaultPath: string,
     cliPath: string,
@@ -191,7 +192,10 @@ async function updateMcpServers(
   // it's an `sdk`-type server, not a URL-based one. Track its presence in the
   // key so toggling tools on/off re-applies (setMcpServers replaces the full set).
   const claudianToolServer = deps.getClaudianToolServer?.();
-  const mcpServersKey = JSON.stringify(mcpServers) + (claudianToolServer ? '|claudian' : '');
+  // Encode the scoped tool *contents* (not just presence) so a mid-session
+  // grant edit or a tool added/removed/errored re-applies the server.
+  const claudianKey = claudianToolServer ? `|claudian:${deps.getClaudianToolKey?.() ?? ''}` : '';
+  const mcpServersKey = JSON.stringify(mcpServers) + claudianKey;
 
   const currentConfig = deps.getCurrentConfig();
   if (!currentConfig || mcpServersKey === currentConfig.mcpServersKey) {

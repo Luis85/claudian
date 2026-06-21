@@ -1473,6 +1473,7 @@ export class ClaudianService implements ChatRuntime {
         getClaudianToolServer: this.plugin.getClaudianToolServer
           ? () => this.plugin.getClaudianToolServer!(this.currentBoundAgentTools)
           : undefined,
+        getClaudianToolKey: () => this.plugin.getClaudianToolKey?.(this.currentBoundAgentTools) ?? '',
         buildPersistentQueryConfig: (vaultPath, cliPath, externalContextPaths, boundAgentPrompt) =>
           this.buildPersistentQueryConfig(vaultPath, cliPath, externalContextPaths, undefined, boundAgentPrompt),
         needsRestart: (newConfig) => this.needsRestart(newConfig),

@@ -138,6 +138,13 @@ export interface PluginContext
   getClaudianToolServer?: (grantedToolIds?: string[]) => unknown;
 
   /**
+   * Stable fingerprint of the user tools the claudian server exposes for the
+   * given grant. The Claude runtime folds it into the persistent-query MCP key
+   * so a mid-session grant edit / registry change re-applies the scoped server.
+   */
+  getClaudianToolKey?: (grantedToolIds?: string[]) => string;
+
+  /**
    * Returns the URL and auth header for the in-process HTTP MCP tool server,
    * or `null` when unavailable. Plain-data shape so `core/` and `providers/`
    * can consume it without importing `features/` types.

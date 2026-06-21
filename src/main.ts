@@ -86,6 +86,7 @@ import { WorkOrderActivityProvider } from './features/tasks/ui/WorkOrderActivity
 import { ClaudianToolRegistry } from './features/tools/ClaudianToolRegistry';
 import { ClaudianHttpToolServer } from './features/tools/host/ClaudianHttpToolServer';
 import { buildClaudianToolMcpServer } from './features/tools/host/InProcessToolMcpServer';
+import type { LoadedTool } from './features/tools/toolTypes';
 import { transpileToolSource } from './features/tools/transpile';
 import { ToolLibraryView, VIEW_TYPE_TOOL_LIBRARY } from './features/tools/view/ToolLibraryView';
 import { setLocale, t } from './i18n/i18n';
@@ -451,22 +452,37 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     void this.lifecycle?.persistOpenTabStates();
   }
 
+  /** The error-free user tools exposed to a conversation, scoped to a bound
+   *  agent's grant when non-empty (empty/absent grant = all). */
+  private getScopedClaudianTools(grantedToolIds?: string[]): LoadedTool[] {
+    if (!this.toolRegistry) return [];
+    const loaded = this.toolRegistry.list().filter((t) => t.module && !t.error);
+    if (!grantedToolIds || grantedToolIds.length === 0) return loaded;
+    const granted = new Set(grantedToolIds);
+    return loaded.filter((t) => t.module && granted.has(toolCapabilityId(t.module.manifest.name)));
+  }
+
   getClaudianToolServer(grantedToolIds?: string[]): unknown {
-    if (!this.toolRegistry) return undefined;
-    let loaded = this.toolRegistry.list().filter((t) => t.module && !t.error);
-    // A bound agent with a non-empty tool grant scopes the server to only its
-    // granted capability ids; an empty/absent grant exposes all user tools.
-    if (grantedToolIds && grantedToolIds.length > 0) {
-      const granted = new Set(grantedToolIds);
-      loaded = loaded.filter(
-        (t) => t.module && granted.has(toolCapabilityId(t.module.manifest.name)),
-      );
-    }
+    const loaded = this.getScopedClaudianTools(grantedToolIds);
     if (loaded.length === 0) return undefined;
     return buildClaudianToolMcpServer(loaded, (signal) => ({
       app: this.app,
       signal,
     }));
+  }
+
+  /**
+   * A stable fingerprint of the user tools the claudian server currently exposes
+   * for the given grant. Folded into the persistent-query MCP key so a
+   * mid-session tool-grant edit OR a tool added/removed/errored in the registry
+   * forces `setMcpServers` to re-apply the freshly-scoped server (the presence
+   * flag alone would miss a contents change).
+   */
+  getClaudianToolKey(grantedToolIds?: string[]): string {
+    return this.getScopedClaudianTools(grantedToolIds)
+      .map((t) => t.module!.manifest.name)
+      .sort()
+      .join(',');
   }
 
   getHttpToolServerConfig(): { url: string; headers: Record<string, string> } | null {
