@@ -78,7 +78,7 @@ This is the spine the skill catalog follows. Each row is a step most discovery e
 | # | Step | Lead | Core methods | Output artifact |
 |---|------|------|--------------|-----------------|
 | 1 | **Frame the opportunity** | PM | Outcome vs output, problem statement, "How Might We", point-of-view statement, four-risk scan | Problem/opportunity brief, framed HMW questions |
-| 2 | **Surface & rank assumptions** | Trio | Assumption mapping (desirability/feasibility/viability), 2×2 importance × evidence, riskiest-assumption test (RAT) | Assumptions map, prioritized test backlog |
+| 2 | **Surface & rank assumptions** | Trio | Assumption mapping (desirability/usability/feasibility/viability), 2×2 importance × evidence, riskiest-assumption test (RAT) | Assumptions map, prioritized test backlog |
 | 3 | **Plan & run research** | UX (+ RE) | Discovery interviews, contextual inquiry, diary/field studies, surveys (sparingly) | Interview guide, raw transcripts/notes |
 | 4 | **Synthesize** | UX | Affinity/thematic analysis, atomic nuggets, coding | Themes, evidence-linked insights |
 | 5 | **Model the user** | UX | Personas (proto → research-based), empathy maps | Persona set, empathy maps |
