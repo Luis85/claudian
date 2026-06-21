@@ -1,6 +1,5 @@
 import { t } from '../../i18n/i18n';
 import { type AgentPersona, STANDARD_PERSONA_ID } from './agentTypes';
-import type { AgentRosterStore } from './roster/AgentRosterStore';
 import type { RosterAgent } from './roster/rosterTypes';
 
 /** Resolves an `agent` frontmatter id to the persona used to render its avatar. */
@@ -63,19 +62,14 @@ export function rosterAgentToPersona(agent: RosterAgent): AgentPersona {
 }
 
 /**
- * Returns a synchronous persona resolver and kicks off an async preload of
- * roster agents (mirrors `buildAgentOptionsLoader`). Built-in personas resolve
- * immediately; `roster:<id>` ids resolve to their custom avatar once the preload
- * lands, falling back to `resolvePersona` (Standard) until then.
+ * Synchronous persona resolver built from an already-loaded roster list — no
+ * async race, so avatars are correct on the first paint. Callers await
+ * `store.list()` once and feed the result here.
  */
-export function buildPersonaResolver(
-  store: AgentRosterStore | null | undefined,
-): PersonaResolver {
-  const rosterPersonas = new Map<string, AgentPersona>();
-  void store?.list().then((agents) => {
-    for (const agent of agents) rosterPersonas.set(agent.id, rosterAgentToPersona(agent));
-  });
-  return (id?: string) => (id && rosterPersonas.get(id)) || resolvePersona(id);
+export function buildPersonaResolverFromAgents(agents: RosterAgent[]): PersonaResolver {
+  const map = new Map<string, AgentPersona>();
+  for (const agent of agents) map.set(agent.id, rosterAgentToPersona(agent));
+  return (id?: string) => (id && map.get(id)) || resolvePersona(id);
 }
 
 /**

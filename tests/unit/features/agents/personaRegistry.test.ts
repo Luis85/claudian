@@ -1,12 +1,11 @@
 import { STANDARD_PERSONA_ID } from '../../../../src/features/agents/agentTypes';
 import {
   buildAgentOptions,
-  buildPersonaResolver,
+  buildPersonaResolverFromAgents,
   listPersonas,
   resolvePersona,
   rosterAgentToPersona,
 } from '../../../../src/features/agents/personaRegistry';
-import type { AgentRosterStore } from '../../../../src/features/agents/roster/AgentRosterStore';
 import { createRosterAgent } from '../../../../src/features/agents/roster/rosterCapabilities';
 
 describe('personaRegistry', () => {
@@ -73,20 +72,10 @@ describe('personaRegistry', () => {
     });
   });
 
-  describe('buildPersonaResolver', () => {
-    it('resolves a roster id to its persona once preloaded', async () => {
+  describe('buildPersonaResolverFromAgents', () => {
+    it('resolves a roster id to its persona synchronously', () => {
       const agent = { ...createRosterAgent('Debugger', 1), color: 'var(--color-red)', initials: 'DB' };
-      let resolveList!: (a: typeof agent[]) => void;
-      const store = {
-        list: jest.fn(() => new Promise<typeof agent[]>((r) => { resolveList = r; })),
-      } as unknown as AgentRosterStore;
-      const resolve = buildPersonaResolver(store);
-
-      // Before the preload lands, unknown roster ids fall back to Standard.
-      expect(resolve('roster:debugger').id).toBe(STANDARD_PERSONA_ID);
-
-      resolveList([agent]);
-      await Promise.resolve();
+      const resolve = buildPersonaResolverFromAgents([agent]);
 
       const persona = resolve('roster:debugger');
       expect(persona.id).toBe('roster:debugger');
@@ -94,9 +83,10 @@ describe('personaRegistry', () => {
     });
 
     it('falls back to resolvePersona for built-in and unknown ids', () => {
-      const resolve = buildPersonaResolver(null);
+      const resolve = buildPersonaResolverFromAgents([]);
       expect(resolve(undefined).id).toBe(STANDARD_PERSONA_ID);
       expect(resolve(STANDARD_PERSONA_ID).id).toBe(STANDARD_PERSONA_ID);
+      expect(resolve('roster:nope').id).toBe(STANDARD_PERSONA_ID);
     });
   });
 

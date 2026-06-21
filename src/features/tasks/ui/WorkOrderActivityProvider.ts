@@ -1,7 +1,5 @@
 import { type TAbstractFile,TFile } from 'obsidian';
 
-import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
-import type { ProviderId } from '../../../core/providers/types';
 import { asSettingsBag } from '../../../core/types/settings';
 import type {
   WorkOrderActivityClosableTab,
@@ -12,7 +10,6 @@ import type {
 import { EMPTY_WORK_ORDER_ACTIVITY_SUMMARY } from '../../../core/types/workOrderActivity';
 import type ClaudianPlugin from '../../../main';
 import { revealWorkspaceLeaf } from '../../../utils/obsidianCompat';
-import { buildAgentOptions, buildPersonaResolver } from '../../agents/personaRegistry';
 import type { RosterAgent } from '../../agents/roster/rosterTypes';
 import { TaskIndexer } from '../indexing/TaskIndexer';
 import type { TaskBoardModel, TaskSpec } from '../model/taskTypes';
@@ -20,6 +17,7 @@ import { TaskNoteStore } from '../storage/TaskNoteStore';
 import { buildWorkOrderActivitySummary } from './workOrderActivitySummary';
 import { buildWorkOrderConversationBindings } from './workOrderConversationBindings';
 import { WorkOrderDetailModal, type WorkOrderDetailModalCallbacks, type WorkOrderFieldUpdate } from './WorkOrderDetailModal';
+import { buildWorkOrderFieldOptions } from './workOrderFieldOptions';
 
 export interface WorkOrderActivityProviderDeps {
   indexTasks?: () => Promise<TaskBoardModel>;
@@ -224,13 +222,7 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
       // editable title/provider/model/priority controls whose edits silently
       // no-op'd through the optional callback, losing user input on close.
       onSaveFields: (target, fields) => this.saveTaskFields(target, fields),
-      getProviderOptions: () => ProviderRegistry.getEnabledProviderIds(settings).map((id) => ({ value: id, label: id })),
-      getModelOptions: (providerId) =>
-        ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId)
-          ? ProviderRegistry.getChatUIConfig(providerId as ProviderId).getModelOptions(settings)
-          : [],
-      getAgentOptions: () => buildAgentOptions(agents),
-      resolvePersona: buildPersonaResolver(this.plugin.agentRosterStore),
+      ...buildWorkOrderFieldOptions(settings, agents),
     };
   }
 

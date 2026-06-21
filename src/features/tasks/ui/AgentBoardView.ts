@@ -9,7 +9,8 @@ import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { promptReason } from '../../../shared/modals/PromptModal';
-import { buildAgentOptions, buildPersonaResolver, type PersonaResolver } from '../../agents/personaRegistry';
+import { buildPersonaResolverFromAgents, type PersonaResolver } from '../../agents/personaRegistry';
+import type { RosterAgent } from '../../agents/roster/rosterTypes';
 import { archiveWorkOrder, deleteWorkOrder } from '../commands/taskCommands';
 import {
   getLaneForStatus,
@@ -36,6 +37,7 @@ import { loadLatestTaskSpec } from './loadLatestTaskSpec';
 import { showWorkOrderContextMenu } from './WorkOrderContextMenu';
 import { buildWorkOrderConversationBindings } from './workOrderConversationBindings';
 import { WorkOrderDetailModal, type WorkOrderFieldUpdate } from './WorkOrderDetailModal';
+import { buildWorkOrderFieldOptions } from './workOrderFieldOptions';
 
 // Orphan recovery uses the same stale window as RunSession's own stale check,
 // so a sidecar heartbeat newer than this is treated as a still-live writer.
@@ -52,7 +54,8 @@ export class AgentBoardView extends ItemView {
   private readonly renderer = new AgentBoardRenderer();
   // Preloaded persona resolver for roster-agent avatars. Rebuilt lazily and
   // invalidated on `roster:changed` so renamed/recolored agents repaint.
-  private personaResolver: PersonaResolver | null = null;
+  // Reloaded synchronously in refresh() so avatars are correct on first paint.
+  private rosterAgents: RosterAgent[] = [];
   private model: TaskBoardModel = { tasks: [], invalidNotes: [] };
   private config: BoardConfig = loadBoardConfig({}).config;
   private layout: ResolvedBoardLayout = { lanes: [], errors: [] };
@@ -163,10 +166,7 @@ export class AgentBoardView extends ItemView {
       this.runner?.tick();
     }));
     this.register(this.plugin.events.on('task:board-config-changed', () => void this.refresh()));
-    this.register(this.plugin.events.on('roster:changed', () => {
-      this.personaResolver = null;
-      void this.refresh();
-    }));
+    this.register(this.plugin.events.on('roster:changed', () => void this.refresh()));
 
     // Live-run visibility: patch cards in place from run events without a full
     // re-render, and tick the elapsed timer every second.
@@ -238,6 +238,9 @@ export class AgentBoardView extends ItemView {
 
   async refresh(): Promise<void> {
     const settings = asSettingsBag(this.plugin.settings);
+    // Preload roster agents so the persona resolver paints correct avatars on
+    // the synchronous render below (no async resolver race on first paint).
+    this.rosterAgents = (await this.plugin.agentRosterStore?.list()) ?? [];
     this.model = await this.indexer.indexVaultFolder(this.plugin.app.vault, this.folder);
     const { config, errors } = loadBoardConfig(settings);
     this.config = config;
@@ -288,13 +291,10 @@ export class AgentBoardView extends ItemView {
     this.render();
   }
 
-  // Lazily builds (and caches) the roster-agent persona resolver. Invalidated on
-  // `roster:changed` so the next render rebuilds it from the updated roster.
+  // Synchronous persona resolver built from the roster list preloaded in
+  // refresh() — no async race, so avatars are correct on the first paint.
   private getPersonaResolver(): PersonaResolver {
-    if (!this.personaResolver) {
-      this.personaResolver = buildPersonaResolver(this.plugin.agentRosterStore);
-    }
-    return this.personaResolver;
+    return buildPersonaResolverFromAgents(this.rosterAgents);
   }
 
   private render(): void {
@@ -402,14 +402,7 @@ export class AgentBoardView extends ItemView {
       onMarkFailed: (target) => void this.transitionTask(target, 'failed', 'Marked failed: run produced no structured handoff.'),
       onArchive: (target) => void this.archiveTask(target),
       onSaveFields: (target, fields) => this.saveTaskFields(target, fields),
-      getProviderOptions: () =>
-        ProviderRegistry.getEnabledProviderIds(settings).map((id) => ({ value: id, label: id })),
-      getModelOptions: (providerId) =>
-        ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId)
-          ? ProviderRegistry.getChatUIConfig(providerId as ProviderId).getModelOptions(settings)
-          : [],
-      getAgentOptions: () => buildAgentOptions(agents),
-      resolvePersona: this.getPersonaResolver(),
+      ...buildWorkOrderFieldOptions(settings, agents),
     }).open();
   }
 
