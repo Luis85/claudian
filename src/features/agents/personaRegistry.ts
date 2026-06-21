@@ -82,14 +82,14 @@ export function buildPersonaResolver(
  * Builds the combined persona + roster-agent options for the agent picker from
  * an already-loaded roster list. Callers preload the list (e.g. `await
  * store.list()`) before opening the modal so the dropdown is populated on first
- * render — an async preload would leave roster agents missing on open. Personas
- * are labelled as their name; roster agents as `Agent: <name>`.
+ * render — an async preload would leave roster agents missing on open. Both
+ * personas and roster agents are labelled by their plain name.
  */
 export function buildAgentOptions(
   agents: RosterAgent[],
 ): Array<{ value: string; label: string }> {
   return [
     ...listPersonas().map((p) => ({ value: p.id, label: p.name })),
-    ...agents.map((a) => ({ value: a.id, label: `Agent: ${a.name}` })),
+    ...agents.map((a) => ({ value: a.id, label: a.name })),
   ];
 }

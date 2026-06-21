@@ -101,14 +101,14 @@ describe('personaRegistry', () => {
   });
 
   describe('buildAgentOptions', () => {
-    it('lists personas first, then roster agents labelled "Agent: <name>"', () => {
+    it('lists personas first, then roster agents by their plain name', () => {
       const options = buildAgentOptions([
         createRosterAgent('Debugger', 1),
         createRosterAgent('Planner', 2),
       ]);
       expect(options[0].value).toBe(STANDARD_PERSONA_ID);
-      expect(options).toContainEqual({ value: 'roster:debugger', label: 'Agent: Debugger' });
-      expect(options).toContainEqual({ value: 'roster:planner', label: 'Agent: Planner' });
+      expect(options).toContainEqual({ value: 'roster:debugger', label: 'Debugger' });
+      expect(options).toContainEqual({ value: 'roster:planner', label: 'Planner' });
     });
 
     it('returns just the personas when no roster agents are loaded', () => {

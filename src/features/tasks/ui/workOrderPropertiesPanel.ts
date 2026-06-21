@@ -171,9 +171,9 @@ export function renderWorkOrderProperties(
  * `onSaveFields`. Non-editable states render a static avatar + persona name.
  *
  * When the stored id is a `roster:` id the chip shows the label supplied by
- * `getAgentOptions()` ("Agent: <name>"); the avatar comes from the preloaded
- * `callbacks.resolvePersona` (roster agent color + initials), falling back to
- * Standard only when no resolver is supplied.
+ * `getAgentOptions()` (the agent's plain name); the avatar comes from the
+ * preloaded `callbacks.resolvePersona` (roster agent color + initials), falling
+ * back to Standard only when no resolver is supplied.
  */
 function renderAgentRow(
   parent: HTMLElement,

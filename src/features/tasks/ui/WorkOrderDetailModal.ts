@@ -47,7 +47,7 @@ export interface WorkOrderDetailModalCallbacks {
   /**
    * Combined persona + roster agent options for the agent picker. Preloaded at
    * modal-open time by the caller so `renderAgentRow` stays synchronous.
-   * Personas are labelled as their name; roster agents as "Agent: <name>".
+   * Both personas and roster agents are labelled by their plain name.
    */
   getAgentOptions(): WorkOrderOption[];
   /**
