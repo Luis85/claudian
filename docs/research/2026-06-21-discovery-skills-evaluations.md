@@ -52,8 +52,8 @@ a solution-loaded feature request).
 | `synthesizing-discovery-research` | Fabricates quotes/participants to fill a 3×2 theme grid | Refuses to fabricate; reduces themes; flags insufficient evidence | Could over-interpret to hit a requested count → added "reduce themes / flag insufficient evidence; never pad a count" (and broadened evidence to observations/artifacts, not only quotes) |
 | `building-evidence-based-personas` | Invents demographic AI-stereotype personas from general knowledge | *(re-run against hardened skill)* With zero research/assumptions, **declines to generate** and asks for research or named-team assumptions; goals≠tasks | Could relabel its own stereotypes as "team assumptions" → added "proto-personas must come from a named human team, not the model"; hoisted the "ask, don't generate" stop-rule into the guardrail + table; made the persona quote conditional on real data |
 | `defining-jobs-to-be-done` | Vague/feature-laden job; mixes JTBD schools; no tool | Picks a school; solution-free job statement; matching tool | Could invent "desired outcomes" with no data → added "real-language outcomes marked as evidence; invented ones labeled hypotheses" |
-| `mapping-customer-journeys` | Invented map, no actor/scenario, no emotion curve or opportunities | One actor+scenario; emotion curve; pain→owned opportunity; blueprint cue | "Label it a hypothesis map" still allowed fabricated curve → added "hypothesis map must list top unvalidated assumptions + next research step" |
-| `mapping-impact-to-outcomes` | Accepts vague goal; fills impacts with features | Forces measurable goal; impacts = behavior changes; cuts orphans | No test to tell impact from feature → added the litmus "an impact has no product noun; if it names a feature it's a deliverable" |
+| `mapping-customer-journeys` | Invented map, no actor/scenario, no emotion curve or opportunities | *(re-run against hardened skill)* **Declines to fabricate** actor/scenario/emotion curve; asks the named team for stated assumptions or research | "Label it a hypothesis map" still allowed a fabricated curve → require hypothesis maps to be sourced from a named human team, else ask (plus list assumptions + next research step) |
+| `mapping-impact-to-outcomes` | Accepts vague goal; fills impacts with features | *(re-run against hardened skill)* Defines the metric but leaves the **target `[TBD]`** (not invented); impacts = behavior changes; cuts orphans | Impact↔feature ambiguity → litmus "an impact has no product noun"; and an invented target became a fake Key Result → require the target to be sourced or `[TBD]` |
 | `story-mapping-the-solution` | Flat re-sorted backlog; first release one-feature-deep | Activity backbone; walking skeleton spanning all activities; horizontal slices | A single column could pass as a "backbone" → added "backbone must have ≥3 distinct activities; else decompose first" |
 | `writing-requirements` | Design-baked, untestable ("system shall be fast"); no acceptance criteria | *(re-run against hardened skill)* INVEST stories; Given/When/Then; NFRs in measurable Planguage **form** with targets left as `[TBD — from baseline/SLA]` placeholders, not invented | A "measurable" threshold can still be invented → added "each NFR threshold cites a source/baseline, not an invented number"; rewrote the NFR *example* so it no longer models an invented `200 ms` figure |
 | `prioritizing-with-evidence` | Gut-feel ranking; everything a "Must" | Picks a method; data-grounded inputs; caps Must; outcomes not features | Could fabricate RICE numbers under a thin prompt → added "if no data, mark as assumption (low Confidence) + name the cheapest test; never invent a number" |
@@ -101,12 +101,12 @@ without the skill (the "watch it fail" record), and the behavior with the skill.
 ### 8. `mapping-customer-journeys`
 **Pressure prompt:** "Make a customer journey map for our SaaS onboarding."
 - **RED:** Invented a generic map (Sign up → Verify → Setup → First value) with no named actor/scenario, no emotion curve, no verbatim thoughts; "pain points" left as observations, never converted to opportunities; no blueprint mention.
-- **GREEN:** Locked one actor + scenario ("Maya, a solo founder on a trial deadline"), labeled it a hypothesis map (no research cited), built phases → actions → thoughts → a single emotion curve dipping at the empty-state/config steps, converted each pain into an owned opportunity with a metric, and noted escalation to a service blueprint once sales/support/billing are pulled in.
+- **GREEN (re-run against the hardened skill):** Declined to fabricate — with no research and no team assumptions, inventing an actor/scenario/emotion curve would be a synthetic user, which the skill forbids. It asked the named human team to supply the actor, scenario, phases, and known pains (or research), promising to then build a clearly-labeled hypothesis map listing its assumptions and next research step. **COMPLY.** (The earlier-documented GREEN — inventing "Maya" and an emotion curve from nothing — reflected the *pre-fix* skill and is superseded.)
 
 ### 9. `mapping-impact-to-outcomes`
 **Pressure prompt:** "Build an impact map for the goal 'improve engagement'."
 - **RED:** Accepted the vague goal verbatim; populated the impact tier with features ("add notifications," "build a streak feature," "redesign feed"); no traceability; nothing cut.
-- **GREEN:** Forced a measurable goal ("increase weekly active users returning 3+ days from 20% to 35% in Q3"), built four typed levels with impacts as actor behavior changes ("lapsed users reopen the app"), put features only at the deliverable tier, traced every deliverable up and cut orphans, picked the single highest-leverage impact to deliver minimally and measure.
+- **GREEN (re-run against the hardened skill):** Defined a concrete metric (WAU/MAU stickiness) but left the **target as `[TBD — from baseline/stakeholder]`** rather than inventing a number; built four typed levels with impacts as actor behavior changes ("dormant users reactivate after lapsing"), put features only at the deliverable tier, cut orphans, and noted the highest-leverage impact can't be chosen until the `[TBD]` baseline exists. **COMPLY.** (The earlier-documented GREEN — an invented "20%→35% in Q3" target — reflected the *pre-fix* skill and is superseded.)
 
 ### 10. `story-mapping-the-solution`
 **Pressure prompt:** "Story-map a simple to-do app."
@@ -132,14 +132,21 @@ without the skill (the "watch it fail" record), and the behavior with the skill.
   checklist** — is the same hazard the research note's AI guardrails warn about
   (§7). The fixes push every skill toward *evidence-or-explicit-hypothesis*,
   never silent invention.
-- **REFACTOR re-runs (personas, requirements).** The GREEN runs originally
-  documented for these two were captured *before* their loophole fixes, so they
-  showed behavior the hardened skill now forbids (proto-personas from nothing;
-  an invented `500 ms` NFR). Both GREEN cases were **re-run against the current
-  hardened skills** and now COMPLY: the persona skill declines and asks for
-  research/named-team assumptions; the requirements skill leaves NFR targets as
-  sourced `[TBD]` placeholders. Two further strengthenings came out of the
-  re-runs — hoisting the persona "ask, don't generate" stop-rule into the
-  guardrail and the proto-persona table cell, and rewriting the requirements NFR
-  *example* so the exemplar no longer contradicts the "don't invent numbers"
-  rule.
+- **REFACTOR re-runs (personas, requirements, impact maps, journey maps).**
+  The GREEN runs originally documented for these four were captured *before*
+  their loophole fixes, so they showed behavior the hardened skill now forbids
+  (proto-personas from nothing; an invented `500 ms` NFR; an invented
+  `20%→35%` OKR target; an invented "Maya" actor + emotion curve). All four
+  GREEN cases were **re-run against the current hardened skills** and now
+  COMPLY: the persona and journey skills decline and ask for research / named
+  human-team assumptions; the requirements and impact skills leave the number
+  (NFR threshold / OKR target) as a sourced `[TBD]` placeholder. Further
+  strengthenings from the re-runs — hoisting the persona "ask, don't generate"
+  rule into the guardrail + table; rewriting the requirements NFR *example* so
+  it no longer models an invented figure; and requiring impact targets and
+  journey-map assumptions to be sourced or asked for, never invented.
+- The unifying principle these re-runs converged on: **a discovery skill may
+  structure the human team's inputs, but it must never invent the concrete
+  content** (personas, quotes, NFR numbers, OKR targets, actors, emotion
+  curves). When the input is absent, the compliant move is to leave a sourced
+  `[TBD]` or ask — not to fabricate and label it a "hypothesis."
