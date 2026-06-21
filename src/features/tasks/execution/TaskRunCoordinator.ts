@@ -124,7 +124,13 @@ export class TaskRunCoordinator {
 
   async run(task: TaskSpec, externalReservation?: ChatTabReservation): Promise<TaskRunResult> {
     const { id } = task.frontmatter;
-    const { provider, model } = await this.resolveRunProviderModel(task);
+    let { provider, model } = task.frontmatter;
+    // Only the agent-adoption path (frontmatter missing provider/model) needs an
+    // async lookup; the common path stays synchronous so the reservation below
+    // still happens before run()'s first await — a contract other panes rely on.
+    if (!provider || !model) {
+      ({ provider, model } = await this.resolveRunProviderModel(task));
+    }
 
     if (!provider) return { ok: false, error: 'Work order is missing provider' };
     if (!model) return { ok: false, error: 'Work order is missing model' };
