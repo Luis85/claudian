@@ -106,7 +106,7 @@ without the skill (the "watch it fail" record), and the behavior with the skill.
 ### 9. `mapping-impact-to-outcomes`
 **Pressure prompt:** "Build an impact map for the goal 'improve engagement'."
 - **RED:** Accepted the vague goal verbatim; populated the impact tier with features ("add notifications," "build a streak feature," "redesign feed"); no traceability; nothing cut.
-- **GREEN (re-run against the hardened skill):** Defined a concrete metric (WAU/MAU stickiness) but left the **target as `[TBD — from baseline/stakeholder]`** rather than inventing a number; built four typed levels with impacts as actor behavior changes ("dormant users reactivate after lapsing"), put features only at the deliverable tier, cut orphans, and noted the highest-leverage impact can't be chosen until the `[TBD]` baseline exists. **COMPLY.** (The earlier-documented GREEN — an invented "20%→35% in Q3" target — reflected the *pre-fix* skill and is superseded.)
+- **GREEN (re-run against the hardened skill):** Defined a concrete metric (WAU/MAU stickiness) but left the **target as `[TBD — from baseline/stakeholder]`** rather than inventing a number; built four typed levels with impacts as actor behavior changes ("dormant users reactivate after lapsing"), put features only at the deliverable tier, cut orphans, and noted the highest-leverage impact can't be chosen until the `[TBD]` baseline exists. **COMPLY.** (The earlier-documented GREEN — an invented "20%→35% in Q3" target — reflected the *pre-fix* skill and is superseded. The skill now also asks the **metric** to be proposed-and-confirmed with stakeholders, not silently committed.)
 
 ### 10. `story-mapping-the-solution`
 **Pressure prompt:** "Story-map a simple to-do app."

@@ -34,14 +34,14 @@ Every deliverable must trace up through an impact and actor to the goal. **Orpha
 
 ## Workflow
 
-1. State the measurable goal (an OKR Key Result or roadmap goal). Define the **metric**, but take the **target number** from product data or a stakeholder — if none is supplied, write the metric and leave the target as `[TBD — from baseline/stakeholder]`. **Never invent a target** (an invented number becomes an authoritative-looking Key Result that drives prioritization from nothing).
+1. State the measurable goal (an OKR Key Result or roadmap goal). The **metric** is the Key Result axis that drives the whole map, so don't silently commit the model's pick — **propose** candidate metrics and have the team **confirm which one matters**, marking an unconfirmed choice *proposed (confirm with stakeholders)*. Take the **target number** from product data or a stakeholder; if none is supplied, leave it `[TBD — from baseline/stakeholder]`. **Never invent the metric or its target as authoritative** (an invented Key Result drives prioritization from nothing, or optimizes the wrong behavior).
 2. Map actors → behavior-change impacts → candidate deliverables.
 3. Cut any deliverable that doesn't trace to an impact and the goal.
 4. Pick the highest-leverage impact; deliver the minimum, measure, decide.
 
 ## Quality bar
 
-- [ ] The goal is specific and measurable; its **target number is sourced** from data/stakeholders or left `[TBD]` — not invented.
+- [ ] The goal is specific and measurable; its **metric is confirmed** with stakeholders (or marked *proposed*) and its **target is sourced** from data/stakeholders or left `[TBD]` — neither invented as authoritative.
 - [ ] Impacts are behavior changes, never features.
 - [ ] Every deliverable traces up to the goal; orphans removed.
 - [ ] Outcomes (behavior/result), not outputs, define success.
