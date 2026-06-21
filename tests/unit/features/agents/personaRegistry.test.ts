@@ -1,5 +1,6 @@
 import { STANDARD_PERSONA_ID } from '../../../../src/features/agents/agentTypes';
 import {
+  buildAgentOptions,
   buildPersonaResolver,
   listPersonas,
   resolvePersona,
@@ -96,6 +97,23 @@ describe('personaRegistry', () => {
       const resolve = buildPersonaResolver(null);
       expect(resolve(undefined).id).toBe(STANDARD_PERSONA_ID);
       expect(resolve(STANDARD_PERSONA_ID).id).toBe(STANDARD_PERSONA_ID);
+    });
+  });
+
+  describe('buildAgentOptions', () => {
+    it('lists personas first, then roster agents labelled "Agent: <name>"', () => {
+      const options = buildAgentOptions([
+        createRosterAgent('Debugger', 1),
+        createRosterAgent('Planner', 2),
+      ]);
+      expect(options[0].value).toBe(STANDARD_PERSONA_ID);
+      expect(options).toContainEqual({ value: 'roster:debugger', label: 'Agent: Debugger' });
+      expect(options).toContainEqual({ value: 'roster:planner', label: 'Agent: Planner' });
+    });
+
+    it('returns just the personas when no roster agents are loaded', () => {
+      const options = buildAgentOptions([]);
+      expect(options).toHaveLength(listPersonas().length);
     });
   });
 });

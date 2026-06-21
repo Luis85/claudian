@@ -12,7 +12,8 @@ import type {
 import { EMPTY_WORK_ORDER_ACTIVITY_SUMMARY } from '../../../core/types/workOrderActivity';
 import type ClaudianPlugin from '../../../main';
 import { revealWorkspaceLeaf } from '../../../utils/obsidianCompat';
-import { buildAgentOptionsLoader, buildPersonaResolver } from '../../agents/personaRegistry';
+import { buildAgentOptions, buildPersonaResolver } from '../../agents/personaRegistry';
+import type { RosterAgent } from '../../agents/roster/rosterTypes';
 import { TaskIndexer } from '../indexing/TaskIndexer';
 import type { TaskBoardModel, TaskSpec } from '../model/taskTypes';
 import { TaskNoteStore } from '../storage/TaskNoteStore';
@@ -177,7 +178,7 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
     }
     const model = await this.indexModel();
     const task = model.tasks.find((candidate) => candidate.frontmatter.id === id || candidate.path === item.path);
-    if (task) this.openDetailModal(task);
+    if (task) void this.openDetailModal(task);
   }
 
   private get workOrderFolder(): string {
@@ -201,18 +202,20 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
     return this.indexer.indexVaultFolder(vault, this.workOrderFolder);
   }
 
-  private openDetailModal(task: TaskSpec): void {
+  private async openDetailModal(task: TaskSpec): Promise<void> {
     if (this.deps.openDetailModal) {
       this.deps.openDetailModal(task);
       return;
     }
-    new WorkOrderDetailModal(this.plugin.app, task, this.buildDetailModalCallbacks(task)).open();
+    // Preload the roster so the agent picker is populated on first render.
+    const agents = (await this.plugin.agentRosterStore?.list()) ?? [];
+    new WorkOrderDetailModal(this.plugin.app, task, this.buildDetailModalCallbacks(task, agents)).open();
   }
 
   // Public-ish (accessed via cast in tests) so the modal callback wiring —
   // including the persisting `onSaveFields` — can be unit-tested without
   // spinning up Obsidian's modal stack.
-  private buildDetailModalCallbacks(_task: TaskSpec): WorkOrderDetailModalCallbacks {
+  private buildDetailModalCallbacks(_task: TaskSpec, agents: RosterAgent[] = []): WorkOrderDetailModalCallbacks {
     const settings = asSettingsBag(this.plugin.settings);
     return {
       onOpenNote: (target) => { void this.openNote(target); },
@@ -226,7 +229,7 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
         ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId)
           ? ProviderRegistry.getChatUIConfig(providerId as ProviderId).getModelOptions(settings)
           : [],
-      getAgentOptions: buildAgentOptionsLoader(this.plugin.agentRosterStore),
+      getAgentOptions: () => buildAgentOptions(agents),
       resolvePersona: buildPersonaResolver(this.plugin.agentRosterStore),
     };
   }

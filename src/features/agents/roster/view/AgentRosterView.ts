@@ -80,15 +80,24 @@ export class AgentRosterView extends ItemView {
       const startChatBtn = actions.createEl('button', { text: t('agentRoster.startChat') });
       startChatBtn.onclick = (e) => {
         e.stopPropagation();
-        void (async () => {
-          const conversation = await this.plugin.createConversation({
-            providerId: 'claude',
-            boundAgentId: agent.id,
-          });
-          await this.plugin.openConversation(conversation.id);
-        })();
+        void this.startChatWithAgent(agent);
       };
     }
+  }
+
+  /**
+   * Opens a chat bound to the agent on its preferred provider: an explicit
+   * `providerOverride` wins, else the model selection's provider, else the
+   * conversation store's default. The agent is provider-neutral, so this lets it
+   * run on whichever backend the user configured for it.
+   */
+  private async startChatWithAgent(agent: RosterAgent): Promise<void> {
+    const providerId = agent.providerOverride ?? agent.modelSelection?.providerId;
+    const conversation = await this.plugin.createConversation({
+      providerId,
+      boundAgentId: agent.id,
+    });
+    await this.plugin.openConversation(conversation.id);
   }
 
   private async renderDetail(agent: RosterAgent): Promise<void> {
@@ -145,13 +154,7 @@ export class AgentRosterView extends ItemView {
     };
 
     const startChat = root.createEl('button', { text: t('agentRoster.startChat') });
-    startChat.onclick = async () => {
-      const conversation = await this.plugin.createConversation({
-        providerId: 'claude',
-        boundAgentId: agent.id,
-      });
-      await this.plugin.openConversation(conversation.id);
-    };
+    startChat.onclick = () => void this.startChatWithAgent(agent);
   }
 
   private field(parent: HTMLElement, label: string, value: string): HTMLInputElement {

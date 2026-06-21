@@ -81,6 +81,8 @@ export class ClaudianView extends ItemView {
   // Header elements
   private historyDropdown: HTMLElement | null = null;
   private boundAgentChipSlotEl: HTMLElement | null = null;
+  // Monotonic token so concurrent syncBoundAgentChip calls don't double-render.
+  private boundAgentChipGen = 0;
 
   // Debouncing for tab bar updates
   private pendingTabBarUpdate: ScheduledAnimationFrame | null = null;
@@ -861,16 +863,23 @@ export class ClaudianView extends ItemView {
   private async syncBoundAgentChip(): Promise<void> {
     const slot = this.boundAgentChipSlotEl;
     if (!slot) return;
-    slot.empty();
 
+    // Resolve everything BEFORE touching the DOM, guarded by a generation token.
+    // Two near-simultaneous calls (e.g. active-tab change + refresh on chat open)
+    // would otherwise each `empty()` then `await`, rendering two chips. Only the
+    // latest invocation past the awaits mutates the slot.
+    const gen = ++this.boundAgentChipGen;
     const conversationId = this.tabManager?.getActiveTab()?.conversationId;
-    if (!conversationId) return;
+    const conversation = conversationId
+      ? await this.plugin.getConversationById(conversationId)
+      : null;
+    const agent = conversation?.boundAgentId
+      ? await this.plugin.agentRosterStore?.get(conversation.boundAgentId)
+      : null;
+    if (gen !== this.boundAgentChipGen) return;
 
-    const conversation = await this.plugin.getConversationById(conversationId);
-    if (!conversation?.boundAgentId) return;
-
-    const agent = await this.plugin.agentRosterStore?.get(conversation.boundAgentId);
-    if (!agent) return;
+    slot.empty();
+    if (!conversationId || !agent) return;
 
     const chip = slot.createDiv({ cls: 'claudian-bound-agent-chip' });
     const label = chip.createSpan({ cls: 'claudian-bound-agent-chip-label' });

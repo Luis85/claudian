@@ -9,7 +9,7 @@ import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { promptReason } from '../../../shared/modals/PromptModal';
-import { buildAgentOptionsLoader, buildPersonaResolver, type PersonaResolver } from '../../agents/personaRegistry';
+import { buildAgentOptions, buildPersonaResolver, type PersonaResolver } from '../../agents/personaRegistry';
 import { archiveWorkOrder, deleteWorkOrder } from '../commands/taskCommands';
 import {
   getLaneForStatus,
@@ -316,7 +316,7 @@ export class AgentBoardView extends ItemView {
         queue: this.getQueueToolbarState(),
       },
       {
-        onOpenDetail: (task) => this.openDetail(task),
+        onOpenDetail: (task) => void this.openDetail(task),
         onRun: (task) => void this.runTask(task),
         onStop: (task) => this.stopTask(task),
         onAccept: (task) => void this.transitionTask(task, 'done', 'Accepted from review.'),
@@ -383,8 +383,11 @@ export class AgentBoardView extends ItemView {
     };
   }
 
-  private openDetail(task: TaskSpec): void {
+  private async openDetail(task: TaskSpec): Promise<void> {
     const settings = asSettingsBag(this.plugin.settings);
+    // Preload the roster so the agent picker is populated on first render; an
+    // async preload would leave roster agents missing when the modal opens.
+    const agents = (await this.plugin.agentRosterStore?.list()) ?? [];
     new WorkOrderDetailModal(this.plugin.app, task, {
       onOpenNote: (target) => void this.openTask(target),
       ...buildWorkOrderConversationBindings(this.plugin),
@@ -404,7 +407,7 @@ export class AgentBoardView extends ItemView {
         ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId)
           ? ProviderRegistry.getChatUIConfig(providerId as ProviderId).getModelOptions(settings)
           : [],
-      getAgentOptions: buildAgentOptionsLoader(this.plugin.agentRosterStore),
+      getAgentOptions: () => buildAgentOptions(agents),
       resolvePersona: this.getPersonaResolver(),
     }).open();
   }
@@ -485,7 +488,7 @@ export class AgentBoardView extends ItemView {
     try {
       const content = await this.plugin.app.vault.read(created);
       const { task } = this.noteStore.parse(created.path, content);
-      this.openDetail(task);
+      void this.openDetail(task);
     } catch {
       // Best-effort: ignore a vault read or parse failure; the board already refreshed.
     }
