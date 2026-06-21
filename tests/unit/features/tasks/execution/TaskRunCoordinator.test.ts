@@ -47,6 +47,8 @@ class FakeSurface implements TaskExecutionSurface {
   prompts: string[] = [];
   reservations: Array<ChatTabReservation | undefined> = [];
   boundAgentIds: Array<string | undefined> = [];
+  providers: Array<string | undefined> = [];
+  models: Array<string | undefined> = [];
   readonly adapter = new SyntheticStreamAdapter();
 
   constructor(private readonly opts: { runId?: string; terminal?: TaskRunTerminal } = {}) {}
@@ -55,6 +57,8 @@ class FakeSurface implements TaskExecutionSurface {
     this.prompts.push(options.prompt);
     this.reservations.push(options.tabReservation);
     this.boundAgentIds.push(options.boundAgentId);
+    this.providers.push(options.provider);
+    this.models.push(options.model);
     return {
       runId: this.opts.runId ?? 'run-1',
       conversationId: 'conv-1',
@@ -125,6 +129,40 @@ describe('TaskRunCoordinator', () => {
       ok: false,
       error: 'Work order is missing model',
     });
+  });
+
+  it('adopts the assigned roster agent provider/model when the work order omits them', async () => {
+    const surface = new FakeSurface();
+    const resolveAgentRunTarget = jest.fn().mockResolvedValue({ providerId: 'cursor', model: 'auto' });
+    const { coordinator } = makeCoordinator(surface, { resolveAgentRunTarget });
+    const task = makeTask({ provider: undefined, model: undefined, agent: 'roster:reviewer' });
+
+    const p = coordinator.run(task);
+    await flushMicrotasks();
+    surface.adapter.emitText(VALID_HANDOFF);
+    surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    const result = await p;
+
+    expect(result.ok).toBe(true);
+    expect(resolveAgentRunTarget).toHaveBeenCalledWith('roster:reviewer');
+    expect(surface.providers[0]).toBe('cursor');
+    expect(surface.models[0]).toBe('auto');
+  });
+
+  it('keeps the work order provider/model when set, ignoring the agent target', async () => {
+    const surface = new FakeSurface();
+    const resolveAgentRunTarget = jest.fn().mockResolvedValue({ providerId: 'cursor', model: 'auto' });
+    const { coordinator } = makeCoordinator(surface, { resolveAgentRunTarget });
+
+    const p = coordinator.run(makeTask({ agent: 'roster:reviewer' }));
+    await flushMicrotasks();
+    surface.adapter.emitText(VALID_HANDOFF);
+    surface.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
+    await p;
+
+    expect(resolveAgentRunTarget).not.toHaveBeenCalled();
+    expect(surface.providers[0]).toBe('codex');
+    expect(surface.models[0]).toBe('gpt-5-codex');
   });
 
   it('blocks already-running work orders', async () => {

@@ -31,16 +31,16 @@
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/tasks/ui/AgentBoardView.ts": {
-      "loc": 912,
+      "loc": 913,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+    },
+    "src/main.ts": {
+      "loc": 891,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only. +18 from HTTP tool server wiring (ClaudianHttpToolServer construct/start/stop/rebuild + getHttpToolServerConfig method)."
     },
     "src/providers/codex/runtime/CodexNotificationRouter.ts": {
       "loc": 879,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
-    },
-    "src/main.ts": {
-      "loc": 864,
-      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only. +18 from HTTP tool server wiring (ClaudianHttpToolServer construct/start/stop/rebuild + getHttpToolServerConfig method)."
     },
     "src/features/chat/rendering/ToolCallRenderer.ts": {
       "loc": 854,

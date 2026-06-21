@@ -15,6 +15,14 @@ export interface TaskRunOptions {
    * conversation is bound from the first turn. Undefined for non-roster agents.
    */
   boundAgentId?: string;
+  /**
+   * Effective provider/model resolved by `TaskRunCoordinator` — the frontmatter
+   * value, else the assigned roster agent's. The surface prefers these over
+   * `task.frontmatter` so an agent-only work order (no explicit provider/model)
+   * still launches.
+   */
+  provider?: string;
+  model?: string;
 }
 
 export interface TaskRunTerminal {

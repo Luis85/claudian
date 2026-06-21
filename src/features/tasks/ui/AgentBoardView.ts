@@ -127,6 +127,7 @@ export class AgentBoardView extends ItemView {
         this.applyNoteChange(task.path, (content) => this.noteStore.writeHandoff(content, markdown)),
       renderPrompt: (task) =>
         renderTaskPrompt(task, getLaneForStatus(this.config, task.frontmatter.status) ?? undefined),
+      resolveAgentRunTarget: (agentId) => this.plugin.resolveAgentRunTarget(agentId),
     });
   }
 

@@ -52,7 +52,7 @@ import {
   VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
 } from './core/types';
 import type { PluginContext } from './core/types/PluginContext';
-import type { EnvironmentScope, SecretEnvVarRef } from './core/types/settings';
+import { asSettingsBag, type EnvironmentScope, type SecretEnvVarRef } from './core/types/settings';
 import type { UsageEventMap } from './core/usage/events';
 import { UsageStorage } from './core/usage/UsageStorage';
 import { UsageTracker } from './core/usage/UsageTracker';
@@ -182,7 +182,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       (leaf) => new ClaudianView(leaf, this)
     );
 
-    this.addRibbonIcon('bot', 'Open Claudian', () => {
+    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Co-Worker Chat" is the product feature name.
+    this.addRibbonIcon('bot', 'Open Co-Worker Chat', () => {
       void this.activateView();
     });
 
@@ -249,6 +250,10 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     };
     // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Roster" is the product feature name.
     this.addRibbonIcon('users', 'Open Agent Roster', () => void openView(VIEW_TYPE_AGENT_ROSTER));
+    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Tool Library" is the product feature name.
+    this.addRibbonIcon('wrench', 'Open Tool Library', () => void openView(VIEW_TYPE_TOOL_LIBRARY));
+    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Skill Library" is the product feature name.
+    this.addRibbonIcon('book-open', 'Open Skill Library', () => void openView(VIEW_TYPE_SKILL_LIBRARY));
     // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Roster" is the product feature name.
     this.addCommand({ id: 'open-agent-roster', name: 'Open Agent Roster', callback: () => void openView(VIEW_TYPE_AGENT_ROSTER) });
     // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Tool Library" is the product feature name.
@@ -480,6 +485,29 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     const agent = await this.agentRosterStore?.get(boundAgentId);
     if (!agent) return null;
     return { prompt: agent.prompt, model: agent.modelSelection?.modelId, tools: agent.tools };
+  }
+
+  /**
+   * Resolves the provider + model a work-order run should adopt from its assigned
+   * roster agent, mirroring how chat resolves an agent's provider: the agent's
+   * preferred provider (override → model's provider) wins only when enabled, else
+   * the active/default enabled provider; the model is the agent's selection, else
+   * that provider's configured default. Returns `null` when the id isn't a known
+   * roster agent so the run keeps its own frontmatter provider/model.
+   */
+  async resolveAgentRunTarget(
+    agentId: string,
+  ): Promise<{ providerId: ProviderId; model: string } | null> {
+    const agent = await this.agentRosterStore?.get(agentId);
+    if (!agent) return null;
+    const settings = asSettingsBag(this.settings);
+    const preferred = agent.providerOverride ?? agent.modelSelection?.providerId;
+    const providerId = preferred && ProviderRegistry.isEnabled(preferred, settings)
+      ? preferred
+      : ProviderRegistry.resolveSettingsProviderId(settings);
+    const model = agent.modelSelection?.modelId
+      || ProviderSettingsCoordinator.getProviderSettingsSnapshot(this.settings, providerId).model;
+    return { providerId, model };
   }
 
   async addFileToActiveChat(file: TFile): Promise<boolean> {

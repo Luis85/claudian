@@ -353,7 +353,9 @@ export class AgentRosterView extends ItemView {
       providerId: this.resolveAgentProvider(agent),
       boundAgentId: agent.id,
     });
-    await this.plugin.openConversation(conversation.id);
+    // Always open the agent in a fresh tab so it never hijacks a chat already in
+    // use (e.g. a streaming conversation in the active tab).
+    await this.plugin.openConversation(conversation.id, { requireNewTab: true });
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
