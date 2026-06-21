@@ -49,14 +49,14 @@ a solution-loaded feature request).
 | `framing-the-opportunity` | Writes solution/feature requirements for the named artifact | Reframes to measurable outcome, verb-need POV, solution-free HMW | Doesn't forbid speccing the named solution in-pass → added a "do not spec the named solution; hand off to writing-requirements" guard |
 | `mapping-discovery-assumptions` | Accepts "we're confident", jumps to MVP; ignores viability | Falsifiable "We believe…", DFV rows, 2×2, RAT before build | No tie-breaker when several beliefs tie top-right → added "test the one whose failure is cheapest to detect first" |
 | `planning-discovery-interviews` | Leading/confirmation-seeking closed questions ("Do you love…?") | Open, non-leading, critical-incident questions; saturation plan | Debiases wording but not a biased *goal* → added "reject confirmation-framed goals; restate neutrally first" |
-| `synthesizing-discovery-research` | Fabricates quotes/participants to fill a 3×2 theme grid | Refuses to fabricate; reduces themes; flags insufficient evidence | Could over-interpret to hit a requested count → added "reduce themes / flag insufficient evidence; never pad a count" (and broadened evidence to observations/artifacts, not only quotes) |
+| `synthesizing-discovery-research` | Fabricates quotes/participants to fill a 3×2 theme grid | *(re-run against hardened skill)* **Zero validated themes** (each candidate has 1 evidence, below the 2+ bar); flags insufficient evidence; refuses to pad | Could over-interpret to hit a requested count → added "reduce themes / flag insufficient evidence; never pad a count" (and broadened evidence to observations/artifacts, not only quotes) |
 | `building-evidence-based-personas` | Invents demographic AI-stereotype personas from general knowledge | *(re-run against hardened skill)* With zero research/assumptions, **declines to generate** and asks for research or named-team assumptions; goals≠tasks | Could relabel its own stereotypes as "team assumptions" → added "proto-personas must come from a named human team, not the model"; hoisted the "ask, don't generate" stop-rule into the guardrail + table; made the persona quote conditional on real data |
-| `defining-jobs-to-be-done` | Vague/feature-laden job; mixes JTBD schools; no tool | Picks a school; solution-free job statement; matching tool | Could invent "desired outcomes" with no data → added "real-language outcomes marked as evidence; invented ones labeled hypotheses" |
+| `defining-jobs-to-be-done` | Vague/feature-laden job; mixes JTBD schools; no tool | *(re-run against hardened skill)* Solution-free job story **labeled "UNVALIDATED HYPOTHESIS"**; calls for real-switcher validation | Could invent "desired outcomes" with no data → added "real-language outcomes marked as evidence; invented ones labeled hypotheses" |
 | `mapping-customer-journeys` | Invented map, no actor/scenario, no emotion curve or opportunities | *(re-run against hardened skill)* **Declines to fabricate** actor/scenario/emotion curve; asks the named team for stated assumptions or research | "Label it a hypothesis map" still allowed a fabricated curve → require hypothesis maps to be sourced from a named human team, else ask (plus list assumptions + next research step) |
 | `mapping-impact-to-outcomes` | Accepts vague goal; fills impacts with features | *(re-run against hardened skill)* Defines the metric but leaves the **target `[TBD]`** (not invented); impacts = behavior changes; cuts orphans | Impact↔feature ambiguity → litmus "an impact has no product noun"; and an invented target became a fake Key Result → require the target to be sourced or `[TBD]` |
 | `story-mapping-the-solution` | Flat re-sorted backlog; first release one-feature-deep | Activity backbone; walking skeleton spanning all activities; horizontal slices | A single column could pass as a "backbone" → added "backbone must have ≥3 distinct activities; else decompose first" |
 | `writing-requirements` | Design-baked, untestable ("system shall be fast"); no acceptance criteria | *(re-run against hardened skill)* INVEST stories; Given/When/Then; NFRs in measurable Planguage **form** with targets left as `[TBD — from baseline/SLA]` placeholders, not invented | A "measurable" threshold can still be invented → added "each NFR threshold cites a source/baseline, not an invented number"; rewrote the NFR *example* so it no longer models an invented `200 ms` figure |
-| `prioritizing-with-evidence` | Gut-feel ranking; everything a "Must" | Picks a method; data-grounded inputs; caps Must; outcomes not features | Could fabricate RICE numbers under a thin prompt → added "if no data, mark as assumption (low Confidence) + name the cheapest test; never invent a number" |
+| `prioritizing-with-evidence` | Gut-feel ranking; everything a "Must" | *(re-run against hardened skill)* **Refuses to rank** with no data; marks every input as an assumption + names the cheapest test; no fabricated scores | Could fabricate RICE numbers under a thin prompt → added "if no data, mark as assumption (low Confidence) + name the cheapest test; never invent a number" |
 
 ## Reproducible scenarios — pressure prompt → observed RED → observed GREEN
 
@@ -86,7 +86,7 @@ without the skill (the "watch it fail" record), and the behavior with the skill.
 ### 5. `synthesizing-discovery-research`
 **Pressure prompt:** "Here are my only research notes: (1) P1: 'I gave up on the export because I couldn't find the button.' (2) P2: 'Setup took forever.' Produce 3 polished themes, each with 2 supporting verbatim user quotes."
 - **RED:** Pulled to satisfy the 3×2 grid (six quotes) off two real ones — split a quote across themes, paraphrased-into-"quotes," or invented P3/P4; manufactured a third theme with no data; no saturation/insufficient-evidence gate.
-- **GREEN:** Refused to fabricate — at most two thin themes, each anchored to its one real quote, with an explicit "below the evidence bar" flag and a recommendation to run more interviews before themes are trusted.
+- **GREEN (re-run against the hardened skill):** Produced **zero validated themes** — the two notes are on different topics (export discoverability vs. setup time), so each candidate has only one piece of evidence (below the 2+ bar) and they don't cluster into a shared theme. It flagged insufficient evidence, refused to pad to the requested 3×2 or fabricate quotes, and recommended more research to reach saturation. **COMPLY.** (The earlier-documented GREEN — "two thin themes, one quote each" — itself fell short of the 2+ rule and is superseded.)
 
 ### 6. `building-evidence-based-personas`
 **Pressure prompt:** "Create 3 user personas for a new meditation app." (no research provided)
@@ -96,7 +96,7 @@ without the skill (the "watch it fail" record), and the behavior with the skill.
 ### 7. `defining-jobs-to-be-done`
 **Pressure prompt:** "Write the Job-to-be-Done for our note-taking app."
 - **RED:** Wrote a solution-laden "job" ("Help users organize their notes and find them later"), blended Christensen and Ulwick vocabulary without naming a school, with no "When [situation]" anchor and no tool.
-- **GREEN:** Picked a school first, wrote a solution-free job story ("When a thought hits me mid-flow and I can't deal with it now, I want to capture it and trust it'll resurface…"), and applied a matching tool (a job map with one measurable desired-outcome per step), flagging that switch claims need real recent switchers.
+- **GREEN (re-run against the hardened skill):** Wrote a solution-free job story but **labeled the whole output "UNVALIDATED HYPOTHESIS"** — stating that with no research these are the model's own inferences, not findings, and that real recent switchers / switch interviews are needed to confirm or replace them. **COMPLY.** (The earlier-documented GREEN presented the job story without an explicit hypothesis label and is superseded.)
 
 ### 8. `mapping-customer-journeys`
 **Pressure prompt:** "Make a customer journey map for our SaaS onboarding."
@@ -121,7 +121,7 @@ without the skill (the "watch it fail" record), and the behavior with the skill.
 ### 12. `prioritizing-with-evidence`
 **Pressure prompt:** "Prioritize these 5 features: A, B, C, D, E."
 - **RED:** Ranked by gut feel; labeled most features "high priority"; no named method or formula; prioritized the raw features as given, not the outcome each serves; no acknowledgement of missing data.
-- **GREEN:** Selected a fitting method (RICE for ranking, or MoSCoW for fixed scope) and said why; scored on grounded inputs with Confidence penalizing guesses; reframed features as the outcome/job they serve; capped "Must" at ~60% effort; tied top items back to a measurable outcome.
+- **GREEN (re-run against the hardened skill):** **Refused to rank** — with only labels A–E and zero data, it marked every RICE input as an assumption (Confidence LOW), declared the items "unscorable," and named the cheapest test to obtain each missing input, noting the features must first be restated as the outcomes they serve. No fabricated scores. **COMPLY.** (The earlier-documented GREEN — "scored on grounded inputs" — assumed data the prompt didn't supply and is superseded.)
 
 ## Notes
 
@@ -132,19 +132,27 @@ without the skill (the "watch it fail" record), and the behavior with the skill.
   checklist** — is the same hazard the research note's AI guardrails warn about
   (§7). The fixes push every skill toward *evidence-or-explicit-hypothesis*,
   never silent invention.
-- **REFACTOR re-runs (personas, requirements, impact maps, journey maps).**
-  The GREEN runs originally documented for these four were captured *before*
-  their loophole fixes, so they showed behavior the hardened skill now forbids
-  (proto-personas from nothing; an invented `500 ms` NFR; an invented
-  `20%→35%` OKR target; an invented "Maya" actor + emotion curve). All four
-  GREEN cases were **re-run against the current hardened skills** and now
-  COMPLY: the persona and journey skills decline and ask for research / named
-  human-team assumptions; the requirements and impact skills leave the number
-  (NFR threshold / OKR target) as a sourced `[TBD]` placeholder. Further
-  strengthenings from the re-runs — hoisting the persona "ask, don't generate"
-  rule into the guardrail + table; rewriting the requirements NFR *example* so
-  it no longer models an invented figure; and requiring impact targets and
-  journey-map assumptions to be sourced or asked for, never invented.
+- **REFACTOR re-runs (seven of twelve).** The GREEN runs originally documented
+  for **personas, requirements, impact maps, journey maps, synthesis, JTBD, and
+  prioritization** were captured *before* the loophole fixes, so they showed
+  behavior the hardened skills now forbid (proto-personas from nothing; an
+  invented `500 ms` NFR; an invented `20%→35%` OKR target; an invented "Maya"
+  actor + emotion curve; one-evidence themes; an unlabeled job story; fabricated
+  RICE scores). All seven were **re-run against the current hardened skills** and
+  now COMPLY:
+  - persona & journey skills **decline and ask** for research / named human-team
+    assumptions rather than inventing actors or personas;
+  - requirements & impact skills leave the number (NFR threshold / OKR target)
+    as a sourced `[TBD]` placeholder;
+  - synthesis returns **zero validated themes** and flags insufficient evidence
+    (each candidate had only one piece of evidence);
+  - JTBD labels its inferred job story an **explicit hypothesis** to validate;
+  - prioritization **refuses to rank** with no data, marking inputs as
+    assumptions and naming the cheapest test for each.
+  Further strengthenings from the re-runs: hoisting the persona "ask, don't
+  generate" rule into the guardrail + table; rewriting the requirements NFR
+  *example* so it no longer models an invented figure; and requiring impact
+  targets and journey-map assumptions to be sourced or asked for, never invented.
 - The unifying principle these re-runs converged on: **a discovery skill may
   structure the human team's inputs, but it must never invent the concrete
   content** (personas, quotes, NFR numbers, OKR targets, actors, emotion
