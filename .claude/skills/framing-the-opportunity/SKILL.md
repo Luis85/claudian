@@ -23,7 +23,7 @@ This skill produces a tight **opportunity brief**: the outcome being pursued, th
 
 Create a task for each and complete in order:
 
-1. **State the desired outcome.** An outcome is *a change in customer behavior that drives business results* — not a feature. Write it measurably. If the goal is phrased as an output ("ship X"), ask "what behavior change is X supposed to cause?" and reframe.
+1. **State the desired outcome.** An outcome is *a change in customer behavior that drives business results* — not a feature. Write it measurably — but take the **metric and target from a stakeholder or product data**; if none is supplied, leave the number `[TBD]` (or propose-and-confirm), **never invent it** (a made-up target anchors downstream assumption/impact maps to a fake goal). If the goal is phrased as an output ("ship X"), ask "what behavior change is X supposed to cause?" and reframe.
 2. **Run the four-risk scan.** For value / usability / feasibility / business viability, note what you know and what is unknown. The biggest unknown drives research priority.
 3. **Write the problem / point-of-view statement.** Format: **"[User] needs [need, as a verb] in order to [insight]."** The need is a *verb*, never a solution (users don't need "a dropdown"; they need *to compare options quickly*). Ground it in evidence; flag where it's assumption.
 4. **Frame "How Might We" questions.** Derive each HMW directly from a real insight: **"How might we [desired outcome]?"** Scope it — not so narrow it embeds a solution, not so broad it loses the problem. Prefer positive framing ("increase/enable") over negative ("reduce/prevent").
@@ -31,7 +31,7 @@ Create a task for each and complete in order:
 
 ## Quality bar
 
-- [ ] The outcome is a behavior change, stated measurably — not an output.
+- [ ] The outcome is a behavior change, stated measurably — not an output; its metric/target is **sourced** from stakeholders/data or left `[TBD]`, not invented.
 - [ ] The need is a verb, with no solution baked in.
 - [ ] Every framing element is traceable to evidence, or explicitly labeled an assumption to test.
 - [ ] HMW questions pass the checklist: based on a real insight? track the outcome? positively worded? broad enough for creativity? free of embedded solutions?
