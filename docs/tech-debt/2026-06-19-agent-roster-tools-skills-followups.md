@@ -120,3 +120,33 @@ mirroring the work-order template presets (non-destructive: skips ids that
 already exist). Presets ship prompt + identity only; tools/skills start empty
 because those are vault-specific. *Open polish:* the preset prompts are English
 literals (not i18n'd, same as work-order template bodies).
+
+## Hardening pass (2026-06-21)
+
+A deep harden/polish pass over the roster + tool/skill surfaces landed the
+contained fixes (provider-projection sanitization, tool-handler timeout +
+result bounding, tool-name validation/dup detection, the persistent-query
+tool-scope staleness key, the synchronous persona resolver, error notices,
+and modal/a11y polish). Three larger items were triaged out as genuine
+decisions rather than bugs:
+
+1. **User-tool trust model (consent gate).** User tools run as trusted
+   in-process code with full Node/host privileges — a deliberate product
+   choice. The timeout + output bounds added in this pass guard the *runaway*
+   failure mode, not the *malicious* one. A first-run "this tool runs with full
+   vault/host access — enable?" consent gate (per-tool, remembered) would close
+   the trust gap without sandboxing. Open question: gate per-tool, or a single
+   "I trust my .claudian/tools" workspace toggle. Needs a product call before
+   building.
+
+2. **Opencode/Cursor HTTP-tier tool-scope relocation.** The loopback HTTP tool
+   server lists *all* user tools to every spawned provider; per-conversation
+   scoping (the Claude-tier `getClaudianToolKey` equivalent) needs per-session
+   request filtering on that shared long-running server. Touches the spawn
+   lifecycle and can't be validated without a live Opencode/Cursor runtime, so
+   it was not attempted blind.
+
+3. **Locale coverage for new strings.** The roster/tool/skill UI strings and the
+   eight preset-agent prompts are English literals; the nine non-English locales
+   fall back to English for the new keys. A full translation pass (~720 strings ×
+   9 locales) is a sizeable, separate effort.
