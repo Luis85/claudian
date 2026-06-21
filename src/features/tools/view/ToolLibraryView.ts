@@ -5,6 +5,7 @@ import type ClaudianPlugin from '../../../main';
 import { renderLibraryNav } from '../../../shared/libraryNav';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { promptReason } from '../../../shared/modals/PromptModal';
+import { withErrorNotice } from '../../../shared/uiAction';
 import { createLibraryCard, librarySlug, renderLibraryEmpty, renderLibraryShell, uniqueChildDir } from '../../../utils/libraryView';
 import { TOOLS_DIR } from '../ClaudianToolRegistry';
 import { ToolEditorModal } from './ToolEditorModal';
@@ -44,10 +45,11 @@ export class ToolLibraryView extends ItemView {
   private async render(): Promise<void> {
     const { actions, list } = renderLibraryShell(this.contentEl, t('toolLibrary.title'),
       (c) => renderLibraryNav(c, this.plugin, VIEW_TYPE_TOOL_LIBRARY));
+    const fail = t('toolLibrary.actionFailed');
     const newBtn = actions.createEl('button', { cls: 'mod-cta', text: t('toolLibrary.newTool') });
-    newBtn.onclick = () => void this.createTool();
+    newBtn.onclick = () => void withErrorNotice(() => this.createTool(), fail, (e) => this.fail(e));
     const reloadBtn = actions.createEl('button', { text: t('toolLibrary.reload') });
-    reloadBtn.onclick = () => void this.reload();
+    reloadBtn.onclick = () => void withErrorNotice(() => this.reload(), fail, (e) => this.fail(e));
 
     const tools = this.plugin.toolRegistry.list();
     if (tools.length === 0) {
@@ -70,7 +72,7 @@ export class ToolLibraryView extends ItemView {
       const editBtn = cardActions.createEl('button', { text: t('toolLibrary.edit') });
       editBtn.onclick = () => this.openEditor(tool.id);
       const deleteBtn = cardActions.createEl('button', { cls: 'claudian-library-card-delete', text: t('toolLibrary.delete') });
-      deleteBtn.onclick = () => void this.deleteTool(tool.id);
+      deleteBtn.onclick = () => void withErrorNotice(() => this.deleteTool(tool.id), fail, (e) => this.fail(e));
     }
   }
 
@@ -89,6 +91,10 @@ export class ToolLibraryView extends ItemView {
 
   private openEditor(toolId: string): void {
     new ToolEditorModal(this.plugin.app, this.plugin, toolId, () => void this.render()).open();
+  }
+
+  private fail(error: unknown): void {
+    this.plugin.logger.scope('tools').error('tool library action failed', error);
   }
 
   private async reload(): Promise<void> {

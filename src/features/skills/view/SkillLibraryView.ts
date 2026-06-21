@@ -4,6 +4,7 @@ import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { renderLibraryNav } from '../../../shared/libraryNav';
 import { promptReason } from '../../../shared/modals/PromptModal';
+import { withErrorNotice } from '../../../shared/uiAction';
 import { createLibraryCard, librarySlug, renderLibraryEmpty, renderLibraryShell, uniqueChildDir } from '../../../utils/libraryView';
 import { type SkillLibraryRow, toSkillLibraryRows } from '../skillLibraryRows';
 import { SkillEditorModal } from './SkillEditorModal';
@@ -43,7 +44,11 @@ export class SkillLibraryView extends ItemView {
     const { actions, list } = renderLibraryShell(this.contentEl, t('skillLibrary.title'),
       (c) => renderLibraryNav(c, this.plugin, VIEW_TYPE_SKILL_LIBRARY));
     const newBtn = actions.createEl('button', { cls: 'mod-cta', text: t('skillLibrary.newSkill') });
-    newBtn.onclick = () => void this.createSkill();
+    newBtn.onclick = () => void withErrorNotice(
+      () => this.createSkill(),
+      t('skillLibrary.actionFailed'),
+      (e) => this.plugin.logger.scope('skills').error('skill library action failed', e),
+    );
 
     const entries = (await this.plugin.vaultSkillAggregator?.listAll()) ?? [];
     const rows = toSkillLibraryRows(entries);

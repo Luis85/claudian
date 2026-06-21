@@ -1019,7 +1019,9 @@
     "syncProviders": "Sync to providers",
     "syncDone": "Published {written} agent file(s) to {providers}.",
     "syncNone": "No enabled providers to sync to.",
-    "navLabel": "Agents"
+    "navLabel": "Agents",
+    "actionFailed": "Something went wrong — check the developer console.",
+    "syncFailed": "Published {written}; {failed} agent(s) failed."
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically.",
@@ -1045,7 +1047,8 @@
     "metaDescription": "Description",
     "notLoaded": "Not loaded — fix the error below and save.",
     "navLabel": "Tools",
-    "nameField": "Name"
+    "nameField": "Name",
+    "actionFailed": "Something went wrong — check the developer console."
   },
   "workOrderActivity": {
     "toggleRunning": "{count} 个活动工单",
@@ -1081,6 +1084,7 @@
     "provider": "Provider",
     "readonlyNotice": "This skill is read-only and cannot be edited here.",
     "navLabel": "Skills",
-    "nameField": "Name"
+    "nameField": "Name",
+    "actionFailed": "Something went wrong — check the developer console."
   }
 }

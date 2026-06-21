@@ -3,7 +3,7 @@ import { type App, Notice } from 'obsidian';
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { LibraryEditorModal } from '../../../shared/modals/LibraryEditorModal';
-import { createModalCodeArea, librarySlug, renameLibraryItemDir, renderModalField, renderModalFooter, renderModalLabel, renderModalTextField } from '../../../utils/libraryView';
+import { createModalCodeArea, librarySlug, renameLibraryItemDir, renderModalField, renderModalLabel, renderModalTextField } from '../../../utils/libraryView';
 import { TOOLS_DIR } from '../ClaudianToolRegistry';
 import type { LoadedTool } from '../toolTypes';
 
@@ -42,11 +42,12 @@ export class ToolEditorModal extends LibraryEditorModal {
     const source = await this.plugin.vaultFileAdapter.read(path).catch(() => '');
     this.sourceEl = createModalCodeArea(root, source);
 
-    renderModalFooter(root, {
+    this.renderSaveFooter(root, {
       saveLabel: t('toolLibrary.save'),
-      onSave: () => void this.save(path),
       closeLabel: t('toolLibrary.close'),
-      onClose: () => this.close(),
+      failedMessage: t('toolLibrary.actionFailed'),
+      onSave: () => this.save(path),
+      onError: (e) => this.plugin.logger.scope('tools').error('tool save failed', e),
     });
   }
 

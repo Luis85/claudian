@@ -7,6 +7,7 @@ import { t } from '../../../../i18n/i18n';
 import type ClaudianPlugin from '../../../../main';
 import { renderLibraryNav } from '../../../../shared/libraryNav';
 import { confirm } from '../../../../shared/modals/ConfirmModal';
+import { withErrorNotice } from '../../../../shared/uiAction';
 import { renderAgentAvatar } from '../../agentAvatar';
 import { rosterAgentToPersona } from '../../personaRegistry';
 import { installPresetAgents } from '../presetAgents';
@@ -54,14 +55,15 @@ export class AgentRosterView extends ItemView {
     header.createEl('h2', { text: t('agentRoster.title') });
     const headerActions = header.createDiv({ cls: 'claudian-roster-header-actions' });
 
+    const fail = t('agentRoster.actionFailed');
     const newBtn = headerActions.createEl('button', { cls: 'mod-cta', text: t('agentRoster.newAgent') });
-    newBtn.onclick = () => void this.createAndEdit();
+    newBtn.onclick = () => void withErrorNotice(() => this.createAndEdit(), fail, (e) => this.fail(e));
 
     const installBtn = headerActions.createEl('button', { text: t('agentRoster.installStarter') });
-    installBtn.onclick = () => void this.installStarters();
+    installBtn.onclick = () => void withErrorNotice(() => this.installStarters(), fail, (e) => this.fail(e));
 
     const syncBtn = headerActions.createEl('button', { text: t('agentRoster.syncProviders') });
-    syncBtn.onclick = () => void this.syncToProviders();
+    syncBtn.onclick = () => void withErrorNotice(() => this.syncToProviders(), fail, (e) => this.fail(e));
 
     const agents = await this.store.list();
     const list = root.createDiv({ cls: 'claudian-roster-list' });
@@ -78,6 +80,7 @@ export class AgentRosterView extends ItemView {
   private renderCard(list: HTMLElement, agent: RosterAgent): void {
     const card = list.createDiv({ cls: 'claudian-roster-card' });
     card.onclick = () => void this.renderDetail(agent);
+    this.wireCardKeyboard(card, agent);
 
     const avatar = card.createDiv({ cls: 'claudian-roster-card-avatar' });
     renderAgentAvatar(avatar, rosterAgentToPersona(agent), CARD_AVATAR_SIZE);
@@ -88,7 +91,8 @@ export class AgentRosterView extends ItemView {
 
     const caps = body.createDiv({ cls: 'claudian-roster-card-caps' });
     for (const role of agent.roles) {
-      caps.createSpan({ cls: 'claudian-roster-chip claudian-roster-chip-role', text: role });
+      const roleLabel = role === 'verifier' ? t('agentRoster.roleVerifier') : t('agentRoster.roleWorker');
+      caps.createSpan({ cls: 'claudian-roster-chip claudian-roster-chip-role', text: roleLabel });
     }
     caps.createSpan({
       cls: 'claudian-roster-chip',
@@ -96,16 +100,29 @@ export class AgentRosterView extends ItemView {
     });
 
     const actions = card.createDiv({ cls: 'claudian-roster-card-actions' });
+    const fail = t('agentRoster.actionFailed');
     const startBtn = actions.createEl('button', { cls: 'mod-cta', text: t('agentRoster.startChatShort') });
     startBtn.onclick = (e) => {
       e.stopPropagation();
-      void this.startChatWithAgent(agent);
+      void withErrorNotice(() => this.startChatWithAgent(agent), fail, (err) => this.fail(err));
     };
     const deleteBtn = actions.createEl('button', { cls: 'claudian-roster-card-delete', text: t('agentRoster.delete') });
     deleteBtn.onclick = (e) => {
       e.stopPropagation();
-      void this.deleteAgent(agent);
+      void withErrorNotice(() => this.deleteAgent(agent), fail, (err) => this.fail(err));
     };
+  }
+
+  /** Makes the card open the detail editor on Enter/Space for keyboard users. */
+  private wireCardKeyboard(card: HTMLElement, agent: RosterAgent): void {
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        void this.renderDetail(agent);
+      }
+    });
   }
 
   // ── Detail editor ─────────────────────────────────────────────────────────
@@ -185,12 +202,13 @@ export class AgentRosterView extends ItemView {
 
     // Footer actions
     const footer = root.createDiv({ cls: 'claudian-roster-detail-footer' });
+    const fail = t('agentRoster.actionFailed');
     const save = footer.createEl('button', { cls: 'mod-cta', text: t('agentRoster.save') });
-    save.onclick = () => void this.saveDraft(draft);
+    save.onclick = () => void withErrorNotice(() => this.saveDraft(draft), fail, (e) => this.fail(e));
     const start = footer.createEl('button', { text: t('agentRoster.startChat') });
-    start.onclick = () => void this.startChatWithAgent(draft);
+    start.onclick = () => void withErrorNotice(() => this.startChatWithAgent(draft), fail, (e) => this.fail(e));
     const del = footer.createEl('button', { cls: 'claudian-roster-card-delete', text: t('agentRoster.delete') });
-    del.onclick = () => void this.deleteAgent(draft);
+    del.onclick = () => void withErrorNotice(() => this.deleteAgent(draft), fail, (e) => this.fail(e));
   }
 
   private renderModelSection(root: HTMLElement, draft: RosterAgent): void {
@@ -307,6 +325,10 @@ export class AgentRosterView extends ItemView {
 
   private async syncToProviders(): Promise<void> {
     const result = await this.plugin.syncRosterAgentsToProviders();
+    if (result.failed.length > 0) {
+      new Notice(t('agentRoster.syncFailed', { written: String(result.written), failed: String(result.failed.length) }));
+      return;
+    }
     new Notice(
       result.providers.length > 0
         ? t('agentRoster.syncDone', {
@@ -315,6 +337,10 @@ export class AgentRosterView extends ItemView {
           })
         : t('agentRoster.syncNone'),
     );
+  }
+
+  private fail(error: unknown): void {
+    this.plugin.logger.scope('agents').error('roster action failed', error);
   }
 
   private async installStarters(): Promise<void> {

@@ -48,11 +48,12 @@ export class SkillEditorModal extends LibraryEditorModal {
     const content = await this.plugin.vaultFileAdapter.read(this.row.sourceFilePath).catch(() => '');
     this.contentArea = createModalCodeArea(root, content);
 
-    renderModalFooter(root, {
+    this.renderSaveFooter(root, {
       saveLabel: t('skillLibrary.save'),
-      onSave: () => void this.save(),
       closeLabel: t('skillLibrary.close'),
-      onClose: () => this.close(),
+      failedMessage: t('skillLibrary.actionFailed'),
+      onSave: () => this.save(),
+      onError: (e) => this.plugin.logger.scope('skills').error('skill save failed', e),
     });
   }
 
