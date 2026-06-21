@@ -1,6 +1,6 @@
 ---
 name: building-evidence-based-personas
-description: Use when creating personas, proto-personas, or empathy maps, deciding whether a persona is research-based or an assumption, or when tempted to generate a persona with AI. For UX designers and product managers modeling who the user is. Distinguishes goals from tasks and blocks generic AI-stereotype personas.
+description: Use when creating personas, proto-personas, or empathy maps, deciding whether a persona is research-based or an assumption, separating user goals from tasks, or when tempted to generate a persona with AI. For UX designers and product managers modeling who the user is.
 ---
 
 # Building Evidence-Based Personas
@@ -29,7 +29,7 @@ Proto-personas *start a conversation*; qualitative personas *make decisions*.
 2. **List behavioral variables** — the ways interviewees differed (usually a range with two ends).
 3. **Map** each interviewee onto those ranges.
 4. **Find clusters** — people who clump across multiple variables signal a pattern → a persona.
-5. **Synthesize** each pattern's behaviors and **goals** (life / experience / end goals); add context, environment, a representative quote.
+5. **Synthesize** each pattern's behaviors and **goals** (life / experience / end goals); add context and environment, plus a representative **verbatim quote only if one exists in the data** (otherwise cite an observed behavior or artifact — never fabricate a quote to fill the slot).
 6. **Designate types** — primary (must be satisfied by their own UI), secondary, supplemental, customer, served, negative (anti-persona).
 7. **Check** for redundancy and completeness.
 

@@ -1,6 +1,6 @@
 ---
 name: synthesizing-discovery-research
-description: Use when turning raw interview notes, transcripts, or field observations into themes and insights — affinity mapping, thematic analysis, coding qualitative data, building a research repository, or using AI to help analyze research. For UX designers and requirements engineers. Enforces evidence traceability and blocks fabricated quotes and synthetic findings.
+description: Use when turning raw interview notes, transcripts, or field observations into themes and insights — affinity mapping, thematic analysis, coding qualitative data, building a research repository, or using AI to help analyze research, especially when AI assistance risks fabricated quotes or synthetic findings. For UX designers and requirements engineers.
 ---
 
 # Synthesizing Discovery Research

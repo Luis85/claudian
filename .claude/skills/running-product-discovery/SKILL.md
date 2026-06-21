@@ -1,6 +1,6 @@
 ---
 name: running-product-discovery
-description: Use when a product manager, requirements engineer, or UX designer is starting or running product discovery — understanding a problem space, deciding what to build, de-risking an idea, or kicking off research before committing to a solution. Routes to the right discovery skill for each step and enforces evidence-over-opinion.
+description: Use when a product manager, requirements engineer, or UX designer is starting or running product discovery — understanding a problem space, deciding what to build, de-risking an idea, or kicking off research before committing to a solution, or when unsure which discovery skill to reach for. Start here to orient the team.
 ---
 
 # Running Product Discovery
