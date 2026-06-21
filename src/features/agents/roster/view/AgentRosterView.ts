@@ -332,15 +332,25 @@ export class AgentRosterView extends ItemView {
   }
 
   /**
-   * Opens a chat bound to the agent on its preferred provider: an explicit
-   * `providerOverride` wins, else the model selection's provider, else the
-   * conversation store's default. The agent is provider-neutral, so this lets it
-   * run on whichever backend the user configured for it.
+   * Opens a chat bound to the agent on a supported provider. The agent's
+   * preferred provider (explicit `providerOverride`, else its model's provider)
+   * wins only when that provider is actually enabled; otherwise it falls back to
+   * the user's active/default enabled provider. This prevents defaulting to a
+   * disabled Claude (which would error with "CLI not found") when, say, only
+   * Cursor is enabled.
    */
+  private resolveAgentProvider(agent: RosterAgent): ProviderId {
+    const settings = asSettingsBag(this.plugin.settings);
+    const preferred = agent.providerOverride ?? agent.modelSelection?.providerId;
+    if (preferred && ProviderRegistry.isEnabled(preferred, settings)) {
+      return preferred;
+    }
+    return ProviderRegistry.resolveSettingsProviderId(settings);
+  }
+
   private async startChatWithAgent(agent: RosterAgent): Promise<void> {
-    const providerId = agent.providerOverride ?? agent.modelSelection?.providerId;
     const conversation = await this.plugin.createConversation({
-      providerId,
+      providerId: this.resolveAgentProvider(agent),
       boundAgentId: agent.id,
     });
     await this.plugin.openConversation(conversation.id);

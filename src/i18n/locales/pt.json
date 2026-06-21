@@ -1014,7 +1014,8 @@
     "deleted": "Deleted {name}.",
     "noToolsHint": "No user tools yet. Add tools in the Tool Library.",
     "noSkillsHint": "No skills discovered yet.",
-    "startChatShort": "Start chat"
+    "startChatShort": "Start chat",
+    "chipTag": "Agent"
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically.",

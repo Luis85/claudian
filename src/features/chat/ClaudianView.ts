@@ -17,6 +17,8 @@ import {
   type ScheduledAnimationFrame,
 } from '../../utils/animationFrame';
 import { openPluginSettingsTab } from '../../utils/obsidianPrivateApi';
+import { renderAgentAvatar } from '../agents/agentAvatar';
+import { rosterAgentToPersona } from '../agents/personaRegistry';
 import { openQuickActionsModal } from '../quickActions/openQuickActionsModal';
 import { dispatchQuickActionToTab } from '../quickActions/runQuickActionForFile';
 import { resolveModelContextWindow } from '../settings/customModels/resolveModelContextWindow';
@@ -882,11 +884,16 @@ export class ClaudianView extends ItemView {
     if (!conversationId || !agent) return;
 
     const chip = slot.createDiv({ cls: 'claudian-bound-agent-chip' });
-    const label = chip.createSpan({ cls: 'claudian-bound-agent-chip-label' });
-    label.setText(t('agentRoster.chattingWith', { name: agent.name }));
+    chip.setAttribute('title', t('agentRoster.chattingWith', { name: agent.name }));
+
+    const avatarEl = chip.createDiv({ cls: 'claudian-bound-agent-chip-avatar' });
+    renderAgentAvatar(avatarEl, rosterAgentToPersona(agent), 18);
+
+    chip.createSpan({ cls: 'claudian-bound-agent-chip-tag', text: t('agentRoster.chipTag') });
+    chip.createSpan({ cls: 'claudian-bound-agent-chip-label', text: agent.name });
 
     const unbindBtn = chip.createEl('button', { cls: 'claudian-bound-agent-chip-unbind' });
-    unbindBtn.setText(t('agentRoster.unbind'));
+    setIcon(unbindBtn, 'x');
     unbindBtn.setAttribute('aria-label', t('agentRoster.unbind'));
     unbindBtn.addEventListener('click', () => {
       void (async () => {
