@@ -32,7 +32,7 @@ The "sequel" to a journey map — same customer-actions lane on top, then organi
 
 1. Pick the artifact for the question and audience.
 2. Choose one actor + one scenario (don't blend personas).
-3. Ground every cell in research; if you must start from assumptions, label it a **hypothesis map** and plan validation.
+3. Ground every cell in research. With no research, build a **hypothesis map** only from a **named human team's stated assumptions** (actor, scenario, pains) — never invent the actor, journey, or emotion curve from your own knowledge (that is a synthetic user). If no assumptions are supplied, **ask for them** rather than fabricating. Label it a hypothesis map and plan validation.
 4. Map phases → actions → thoughts → emotion curve → pain points.
 5. Convert pain points into prioritized opportunities with owners.
 6. Escalate to a service blueprint when the experience is omnichannel or cross-departmental.
@@ -40,7 +40,7 @@ The "sequel" to a journey map — same customer-actions lane on top, then organi
 ## Quality bar
 
 - [ ] One actor + one scenario per map.
-- [ ] Actions/thoughts/emotions are research-grounded (or the map is labeled a **hypothesis map** that lists its top unvalidated assumptions and the next research step before it's shared).
+- [ ] Actions/thoughts/emotions are research-grounded — or, for a **hypothesis map**, sourced from a named human team's stated assumptions (never the model's own invention), labeled as such, listing its top unvalidated assumptions and the next research step. If no research or assumptions exist, ask rather than invent.
 - [ ] Pain points are converted into owned opportunities.
 - [ ] Blueprint backstage/support steps each tie to a visible touchpoint.
 
