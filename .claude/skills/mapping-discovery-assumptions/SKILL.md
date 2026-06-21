@@ -23,8 +23,8 @@ Every idea is a stack of beliefs. This skill makes them **explicit, falsifiable,
    - **Feasibility** — can we build/scale it? (owner: engineering)
    - **Viability** — does it work for the business? (owner: PM)
    - *(optional)* **Adaptability** — can it survive a changing environment?
-3. **Plot on the 2×2.** Axes: **Importance** (Y: if this is wrong, does the idea fail?) × **Evidence** (X: how much do we actually know?). Place fast and binary; don't debate coordinates.
-4. **Pick the riskiest.** The **top-right quadrant — important + no evidence** — is where near-term experiments go. Don't waste effort validating the already-supported or the unimportant.
+3. **Plot on the 2×2.** Axes: **Importance** (Y: if this is wrong, does the idea fail? — important at the top) × **Evidence** (X: known / have-evidence on the **left**, unknown / no-evidence on the **right**). Place fast and binary; don't debate coordinates.
+4. **Pick the riskiest.** The **top-right quadrant — important + unknown (no evidence)** — is where near-term experiments go. Don't waste effort validating the already-supported (top-left) or the unimportant (bottom).
 5. **Design a Riskiest Assumption Test (RAT).** Build only the minimum needed to learn — often no code and no UI. Learn and measure *first*; build only if the assumption holds. Define what result would *disprove* the belief.
 6. **Run, re-plot, repeat.** Move tested assumptions left (now they have evidence) and pick the next riskiest.
 
