@@ -35,8 +35,21 @@ function evaluateModule(js: string, requireResolve: (id: string) => unknown): un
   return (module.exports as { default?: unknown }).default ?? module.exports;
 }
 
+// Tool names are spliced into the MCP id `mcp__claudian__<name>`, where `__`
+// separates the segments. Restrict to a conservative identifier set so a name
+// can't introduce a separator, whitespace, or path-like character that would
+// reshape the exposed tool id the provider matches against.
+const TOOL_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
+const MAX_TOOL_NAME_LENGTH = 64;
+
 function assertManifestValid(m: Partial<ClaudianToolModule['manifest']>): void {
   if (typeof m.name !== 'string' || !m.name) throw new Error('manifest.name is required.');
+  if (m.name.length > MAX_TOOL_NAME_LENGTH) {
+    throw new Error(`manifest.name must be ${MAX_TOOL_NAME_LENGTH} characters or fewer.`);
+  }
+  if (!TOOL_NAME_PATTERN.test(m.name)) {
+    throw new Error('manifest.name must match [a-zA-Z0-9][a-zA-Z0-9_-]* (no dots, spaces, or separators).');
+  }
   if (typeof m.description !== 'string') throw new Error('manifest.description is required.');
   if (!m.input || typeof (m.input as { safeParse?: unknown }).safeParse !== 'function') {
     throw new Error('manifest.input must be a zod object schema.');
@@ -65,6 +78,10 @@ export class ClaudianToolRegistry {
     this.tools.clear();
     if (!(await this.adapter.exists(TOOLS_DIR))) return;
     const dirs = await this.adapter.listFolders(TOOLS_DIR);
+    // Two tools declaring the same `manifest.name` would collide as one
+    // `mcp__claudian__<name>` id — the provider would see only one and silently
+    // route every call to whichever registered last. Flag the later one instead.
+    const claimedNames = new Map<string, string>();
     for (const dir of dirs) {
       const id = dir.split('/').pop() ?? dir;
       const entryPath = `${dir}/tool.ts`;
@@ -73,6 +90,11 @@ export class ClaudianToolRegistry {
         const js = this.deps.transpile(source);
         const evaluated = evaluateModule(js, this.deps.requireResolve);
         const module = validateModule(evaluated);
+        const owner = claimedNames.get(module.manifest.name);
+        if (owner) {
+          throw new Error(`Tool name '${module.manifest.name}' is already used by '${owner}'.`);
+        }
+        claimedNames.set(module.manifest.name, id);
         const jsonSchema = z.toJSONSchema(module.manifest.input) as Record<string, unknown>;
         this.tools.set(id, { id, module, jsonSchema });
       } catch (err) {

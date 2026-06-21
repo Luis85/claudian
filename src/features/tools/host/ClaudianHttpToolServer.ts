@@ -4,10 +4,9 @@ import * as http from 'node:http';
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
-import { requestSignal } from '../toolRequestSignal';
-import type { LoadedTool, ToolHostContext, ToolTextResult } from '../toolTypes';
+import type { LoadedTool, ToolHostContext } from '../toolTypes';
+import { makeBoundedToolCallback } from './toolInvocation';
 
 export const CLAUDIAN_HTTP_TOOL_SERVER_NAME = 'claudian';
 
@@ -41,13 +40,7 @@ export function buildHttpMcpServer(
         description: t.module.manifest.description,
         inputSchema: t.module.manifest.input.shape,
       },
-      async (args: unknown, extra: unknown) => {
-        const result: ToolTextResult = await t.module.handler(args, ctxFactory(requestSignal(extra)));
-        // ToolTextResult is a structural subset of the SDK's CallToolResult
-        // (whose content union also allows image/audio); the cast reconciles
-        // the narrower text-only shape we expose to tool authors.
-        return result as unknown as CallToolResult;
-      },
+      makeBoundedToolCallback(t.module, ctxFactory),
     );
   }
 

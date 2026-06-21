@@ -55,6 +55,40 @@ describe('ClaudianToolRegistry', () => {
     expect(registry.list()[0].error).toMatch(/manifest/i);
   });
 
+  it('rejects a manifest name with an unsafe character', async () => {
+    const src = TOOL_SRC.replace("name: 'echo'", "name: 'echo.bad name'");
+    const files = { [`${TOOLS_DIR}/echo/tool.ts`]: src };
+    const folders = { [TOOLS_DIR]: [`${TOOLS_DIR}/echo`] };
+    const registry = new ClaudianToolRegistry(makeAdapter(files, folders), {
+      transpile: (s) => s,
+      requireResolve: (id) => (id === 'zod' ? { z } : undefined),
+    });
+
+    await registry.load();
+
+    expect(registry.list()[0].error).toMatch(/manifest\.name must match/);
+  });
+
+  it('flags the second tool that claims an already-used name', async () => {
+    const files = {
+      [`${TOOLS_DIR}/a/tool.ts`]: TOOL_SRC,
+      [`${TOOLS_DIR}/b/tool.ts`]: TOOL_SRC, // same manifest.name 'echo'
+    };
+    const folders = { [TOOLS_DIR]: [`${TOOLS_DIR}/a`, `${TOOLS_DIR}/b`] };
+    const registry = new ClaudianToolRegistry(makeAdapter(files, folders), {
+      transpile: (s) => s,
+      requireResolve: (id) => (id === 'zod' ? { z } : undefined),
+    });
+
+    await registry.load();
+    const tools = registry.list();
+
+    const a = tools.find((t) => t.id === 'a');
+    const b = tools.find((t) => t.id === 'b');
+    expect(a?.error).toBeUndefined();
+    expect(b?.error).toMatch(/already used by 'a'/);
+  });
+
   it('returns empty when the tools dir is absent', async () => {
     const registry = new ClaudianToolRegistry(makeAdapter({}, {}), {
       transpile: (src) => src,
