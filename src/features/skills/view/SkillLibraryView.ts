@@ -3,8 +3,9 @@ import { ItemView, Notice, type WorkspaceLeaf } from 'obsidian';
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { promptReason } from '../../../shared/modals/PromptModal';
-import { createLibraryCard, librarySlug, openFileInEditor, renderLibraryEmpty, renderLibraryShell, uniqueChildDir } from '../../../utils/libraryView';
-import { toSkillLibraryRows } from '../skillLibraryRows';
+import { createLibraryCard, librarySlug, renderLibraryEmpty, renderLibraryShell, uniqueChildDir } from '../../../utils/libraryView';
+import { type SkillLibraryRow, toSkillLibraryRows } from '../skillLibraryRows';
+import { SkillEditorModal } from './SkillEditorModal';
 
 export const VIEW_TYPE_SKILL_LIBRARY = 'claudian-skill-library';
 
@@ -57,11 +58,13 @@ export class SkillLibraryView extends ItemView {
       }
       body.createDiv({ cls: 'claudian-library-card-desc', text: row.description });
 
-      if (row.editable && row.sourceFilePath) {
-        const openBtn = actions.createEl('button', { text: t('skillLibrary.open') });
-        openBtn.onclick = () => void openFileInEditor(this.plugin.app, row.sourceFilePath as string);
-      }
+      const openBtn = actions.createEl('button', { text: t('skillLibrary.open') });
+      openBtn.onclick = () => this.openEditor(row);
     }
+  }
+
+  private openEditor(row: SkillLibraryRow): void {
+    new SkillEditorModal(this.plugin.app, this.plugin, row, () => void this.render()).open();
   }
 
   private async createSkill(): Promise<void> {
@@ -72,6 +75,13 @@ export class SkillLibraryView extends ItemView {
     await this.plugin.vaultFileAdapter.write(path, skillTemplate(name));
     new Notice(t('skillLibrary.created', { path }));
     await this.render();
-    await openFileInEditor(this.plugin.app, path);
+    this.openEditor({
+      id: `skill-${dir.split('/').pop()}`,
+      name,
+      description: '',
+      providerDisplayName: 'Vault',
+      sourceFilePath: path,
+      editable: true,
+    });
   }
 }

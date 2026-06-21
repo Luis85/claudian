@@ -1034,7 +1034,15 @@
     "deleted": "Deleted {name}.",
     "statusError": "Error",
     "statusReady": "Ready",
-    "reloadDone": "Reloaded tools."
+    "reloadDone": "Reloaded tools.",
+    "source": "Source",
+    "inputSchema": "Input schema",
+    "save": "Save",
+    "saved": "Saved {name}.",
+    "close": "Close",
+    "metaName": "Name",
+    "metaDescription": "Description",
+    "notLoaded": "Not loaded — fix the error below and save."
   },
   "workOrderActivity": {
     "toggleRunning": "{count} active work order(s)",
@@ -1062,6 +1070,12 @@
     "namePrompt": "New skill name",
     "created": "Created {path}.",
     "readOnlyNote": "Read-only",
-    "noProvider": "No writable skill provider is enabled."
+    "noProvider": "No writable skill provider is enabled.",
+    "content": "Content",
+    "save": "Save",
+    "saved": "Saved {name}.",
+    "close": "Close",
+    "provider": "Provider",
+    "readonlyNotice": "This skill is read-only and cannot be edited here."
   }
 }

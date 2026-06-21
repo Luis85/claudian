@@ -14,6 +14,14 @@ export type ToolLibraryTranslationKey =
   | 'toolLibrary.statusError'
   | 'toolLibrary.statusReady'
   | 'toolLibrary.reloadDone'
+  | 'toolLibrary.source'
+  | 'toolLibrary.inputSchema'
+  | 'toolLibrary.save'
+  | 'toolLibrary.saved'
+  | 'toolLibrary.close'
+  | 'toolLibrary.metaName'
+  | 'toolLibrary.metaDescription'
+  | 'toolLibrary.notLoaded'
   // Skill Library
   | 'skillLibrary.title'
   | 'skillLibrary.empty'
@@ -23,4 +31,10 @@ export type ToolLibraryTranslationKey =
   | 'skillLibrary.namePrompt'
   | 'skillLibrary.created'
   | 'skillLibrary.readOnlyNote'
-  | 'skillLibrary.noProvider';
+  | 'skillLibrary.noProvider'
+  | 'skillLibrary.content'
+  | 'skillLibrary.save'
+  | 'skillLibrary.saved'
+  | 'skillLibrary.close'
+  | 'skillLibrary.provider'
+  | 'skillLibrary.readonlyNotice';

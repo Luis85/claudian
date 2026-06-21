@@ -1,5 +1,3 @@
-import { type App, TFile } from 'obsidian';
-
 import type { VaultFileAdapter } from '../core/storage/VaultFileAdapter';
 
 /** Slugifies a user-entered library item name into a vault-safe folder name. */
@@ -20,14 +18,6 @@ export async function uniqueChildDir(
   let dir = `${parent}/${base}`;
   for (let n = 2; await adapter.exists(dir); n += 1) dir = `${parent}/${base}-${n}`;
   return dir;
-}
-
-/** Opens a vault file (by path) in a new editor tab; no-op when it isn't found. */
-export async function openFileInEditor(app: App, path: string): Promise<void> {
-  const file = app.vault.getAbstractFileByPath(path);
-  if (file instanceof TFile) {
-    await app.workspace.getLeaf('tab').openFile(file);
-  }
 }
 
 /**
@@ -51,6 +41,38 @@ export function renderLibraryShell(
 /** Renders the muted empty-state row inside a library list container. */
 export function renderLibraryEmpty(list: HTMLElement, text: string): void {
   list.createEl('p', { cls: 'claudian-library-empty', text });
+}
+
+/** Uppercase section label used inside the library editor modals. */
+export function renderModalLabel(parent: HTMLElement, text: string): void {
+  parent.createDiv({ cls: 'claudian-library-modal-label', text });
+}
+
+/** Label + value metadata row used inside the library editor modals. */
+export function renderModalField(parent: HTMLElement, label: string, value: string): void {
+  const field = parent.createDiv({ cls: 'claudian-library-modal-field' });
+  renderModalLabel(field, label);
+  field.createDiv({ cls: 'claudian-library-modal-value', text: value });
+}
+
+/** Monospace, spellcheck-off code/content textarea seeded with `value`. */
+export function createModalCodeArea(parent: HTMLElement, value: string): HTMLTextAreaElement {
+  const el = parent.createEl('textarea', { cls: 'claudian-library-modal-code' });
+  el.value = value;
+  el.spellcheck = false;
+  return el;
+}
+
+/** Right-aligned modal footer with an optional primary Save and a Close button. */
+export function renderModalFooter(
+  parent: HTMLElement,
+  opts: { saveLabel?: string; onSave?: () => void; closeLabel: string; onClose: () => void },
+): void {
+  const footer = parent.createDiv({ cls: 'claudian-library-modal-footer' });
+  if (opts.saveLabel && opts.onSave) {
+    footer.createEl('button', { cls: 'mod-cta', text: opts.saveLabel }).onclick = opts.onSave;
+  }
+  footer.createEl('button', { text: opts.closeLabel }).onclick = opts.onClose;
 }
 
 /**

@@ -101,3 +101,90 @@
 .claudian-library-card-delete {
   color: var(--text-error);
 }
+
+/* ── Editor modal (tools + skills) ── */
+.claudian-library-modal {
+  --dialog-width: min(820px, 92vw);
+  --modal-width: min(820px, 92vw);
+  --modal-max-width: min(820px, 92vw);
+}
+
+.claudian-library-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.claudian-library-modal-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+  padding: var(--size-4-3);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+}
+
+.claudian-library-modal-status {
+  display: flex;
+}
+
+.claudian-library-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.claudian-library-modal-label {
+  font-size: var(--font-ui-smaller);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.claudian-library-modal-value {
+  color: var(--text-normal);
+}
+
+.claudian-library-modal-hint {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.claudian-library-modal-schema,
+.claudian-library-modal-error {
+  margin: 0;
+  padding: var(--size-4-2);
+  max-height: 180px;
+  overflow: auto;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  white-space: pre-wrap;
+}
+
+.claudian-library-modal-error {
+  color: var(--text-error);
+}
+
+.claudian-library-modal-code {
+  width: 100%;
+  min-height: 320px;
+  resize: vertical;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-small);
+  line-height: 1.5;
+  tab-size: 2;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+
+.claudian-library-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--size-4-2);
+  margin-top: var(--size-4-1);
+}

@@ -4,8 +4,9 @@ import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { promptReason } from '../../../shared/modals/PromptModal';
-import { createLibraryCard, librarySlug, openFileInEditor, renderLibraryEmpty, renderLibraryShell, uniqueChildDir } from '../../../utils/libraryView';
+import { createLibraryCard, librarySlug, renderLibraryEmpty, renderLibraryShell, uniqueChildDir } from '../../../utils/libraryView';
 import { TOOLS_DIR } from '../ClaudianToolRegistry';
+import { ToolEditorModal } from './ToolEditorModal';
 
 export const VIEW_TYPE_TOOL_LIBRARY = 'claudian-tool-library';
 
@@ -65,7 +66,7 @@ export class ToolLibraryView extends ItemView {
       }
 
       const editBtn = cardActions.createEl('button', { text: t('toolLibrary.edit') });
-      editBtn.onclick = () => void openFileInEditor(this.plugin.app, `${TOOLS_DIR}/${tool.id}/tool.ts`);
+      editBtn.onclick = () => this.openEditor(tool.id);
       const deleteBtn = cardActions.createEl('button', { cls: 'claudian-library-card-delete', text: t('toolLibrary.delete') });
       deleteBtn.onclick = () => void this.deleteTool(tool.id);
     }
@@ -81,7 +82,11 @@ export class ToolLibraryView extends ItemView {
     await this.plugin.toolRegistry.load();
     new Notice(t('toolLibrary.toolCreated', { path }));
     await this.render();
-    await openFileInEditor(this.plugin.app, path);
+    this.openEditor(dir.split('/').pop()!);
+  }
+
+  private openEditor(toolId: string): void {
+    new ToolEditorModal(this.plugin.app, this.plugin, toolId, () => void this.render()).open();
   }
 
   private async reload(): Promise<void> {
