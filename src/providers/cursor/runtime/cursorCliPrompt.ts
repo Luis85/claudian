@@ -27,9 +27,10 @@ export interface BuildCursorAgentPromptOptions {
  * Cursor relies on `--resume` for multi-turn context. When that session id is
  * missing, rebuild prior turns into the prompt (OpenCode-style recovery).
  *
- * When a bound agent prompt is present it is appended as a clearly-delimited
- * section so the agent's instructions reach the model on every turn (Cursor is
- * one-shot per turn; re-appending each time is correct).
+ * The bound agent persona is PREPENDED as a leading directive (Cursor's CLI has
+ * no system-prompt flag), so the model adopts the role before reading the user
+ * turn instead of treating it as a trailing footnote. Re-sent every turn because
+ * Cursor is one-shot per turn.
  */
 export function buildCursorAgentPrompt(options: BuildCursorAgentPromptOptions): string {
   const {
@@ -52,7 +53,7 @@ export function buildCursorAgentPrompt(options: BuildCursorAgentPromptOptions): 
   }
 
   if (boundAgentPrompt) {
-    prompt += `\n\n# Agent Instructions\n\n${boundAgentPrompt}`;
+    prompt = `${boundAgentPrompt}\n\n---\n\n${prompt}`;
   }
 
   return prompt;

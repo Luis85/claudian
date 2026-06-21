@@ -57,6 +57,7 @@ import type { UsageEventMap } from './core/usage/events';
 import { UsageStorage } from './core/usage/UsageStorage';
 import { UsageTracker } from './core/usage/UsageTracker';
 import { AgentRosterStore } from './features/agents/roster/AgentRosterStore';
+import { formatBoundAgentPersona } from './features/agents/roster/boundAgentPersona';
 import { toolCapabilityId } from './features/agents/roster/rosterCapabilities';
 import { AgentRosterView, VIEW_TYPE_AGENT_ROSTER } from './features/agents/roster/view/AgentRosterView';
 import { ClaudianView } from './features/chat/ClaudianView';
@@ -476,7 +477,13 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   ): Promise<{ prompt?: string; model?: string; tools?: string[] } | null> {
     const agent = await this.agentRosterStore?.get(boundAgentId);
     if (!agent) return null;
-    return { prompt: agent.prompt, model: agent.modelSelection?.modelId, tools: agent.tools };
+    return {
+      // A forceful identity directive so providers without a system-prompt
+      // channel (Cursor) still adopt the persona instead of their built-in one.
+      prompt: formatBoundAgentPersona(agent),
+      model: agent.modelSelection?.modelId,
+      tools: agent.tools,
+    };
   }
 
   /**

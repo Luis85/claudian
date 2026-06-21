@@ -32,9 +32,9 @@ export function buildOpencodePromptBlocks(
   let promptText = buildOpencodePromptText(request, conversationHistory);
 
   if (boundAgentPrompt) {
-    // Append per-turn via connection.prompt(); minor redundancy of re-sending
-    // each turn is acceptable for MVP (no session restart required).
-    promptText += `\n\n# Agent Instructions\n\n${boundAgentPrompt}`;
+    // Prepend the persona as a leading directive (re-sent per turn) so the model
+    // adopts the role before the user turn rather than as a trailing footnote.
+    promptText = `${boundAgentPrompt}\n\n---\n\n${promptText}`;
   }
 
   const blocks: AcpContentBlock[] = [
