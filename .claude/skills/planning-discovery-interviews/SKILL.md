@@ -28,7 +28,7 @@ Discovery interviews explore **attitudes, motivations, and lived experience** �
 
 1. **Set research goals.** What decision will this inform? What are the unknowns (pull from `mapping-discovery-assumptions`)?
 2. **Draft the guide** — a few well-designed open questions with planned probes, not a long list of closed items. Open with easy rapport-building questions.
-3. **Self-review for bias.** Scan every question: leading? closed where it should be open? hypothetical? names a solution? Fix inline. (This is the highest-value step — do it even under time pressure.)
+3. **Self-review for bias.** First, **reject confirmation-framed goals** ("confirm users love X") — restate the goal neutrally ("understand how users experience X") before drafting. Then scan every question: leading? closed where it should be open? hypothetical? names a solution? Fix inline. (This is the highest-value step — do it even under time pressure.)
 4. **Pilot** with one person; tighten wording.
 5. **Plan sample size to saturation.** Start ~5–6 participants and continue until no new themes emerge (often ~12; ~20–30 for ~90–95% of needs). The "5 users" rule is for usability *tests*, not interviews — interview data varies far more. Add *groups*, not just people, when audiences are distinct.
 6. **Choose the method.** For *what people do* (not just say), prefer **contextual inquiry** (master–apprentice: observe + ask in their real environment) or **field/diary studies**. Reserve surveys for quantifying findings at scale — see below.

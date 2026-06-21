@@ -21,7 +21,7 @@ A mind map from a measurable goal outward, four levels — each answering one qu
 
 1. **Goal — Why?** The single, specific, **measurable** business objective at the root (e.g., "increase active players to 1M," not "improve engagement").
 2. **Actors — Who?** People who can produce or obstruct the effect.
-3. **Impacts — How?** The **behavior changes** in actors that move the goal — **not features.** (The #1 mistake is writing features here.)
+3. **Impacts — How?** The **behavior changes** in actors that move the goal — **not features.** (The #1 mistake is writing features here.) Litmus: an impact must be an actor *doing something differently*, with **no product noun in it**; if it names a feature, it belongs in level 4.
 4. **Deliverables — What?** Features/activities that *support* an impact.
 
 Every deliverable must trace up through an impact and actor to the goal. **Orphan deliverables get cut.** Each branch is a hypothesis ("if we ship this, this actor's behavior changes, which moves the goal") — deliver the smallest set for the highest-leverage impact, measure, then stop or pivot.

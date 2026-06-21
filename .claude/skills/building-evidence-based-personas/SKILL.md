@@ -42,6 +42,7 @@ One per user type: **Says** (verbatim quotes), **Thinks**, **Does**, **Feels** (
 - [ ] Built from research data (or explicitly tagged a proto-persona/hypothesis).
 - [ ] Goals separated from tasks; design targets goals.
 - [ ] No demographics-only personas; no AI-sourced stereotypes.
+- [ ] Proto-personas come from a **named human team's stated beliefs** — never the model's own knowledge; if no human assumptions exist, ask for them (or for research) rather than generating personas.
 - [ ] Persona types designated (at least one primary).
 
 ## Reference

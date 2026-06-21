@@ -24,7 +24,7 @@ Prioritization replaces the HiPPO (the loudest opinion) with a method grounded i
 1. Pick the method matching the decision (negotiating scope → MoSCoW; ranking ideas → RICE; understanding feature *type* → Kano; economic sequencing → WSJF; sizing unmet needs → opportunity scoring).
 2. Ground inputs in real data — Reach and Effort from metrics, Importance/Satisfaction from a representative survey, Kano from customer responses (not internal opinion).
 3. Prioritize **outcomes/jobs**, not pre-baked solutions.
-4. Discount uncertainty honestly (RICE Confidence penalizes hand-wavy estimates).
+4. Discount uncertainty honestly (RICE Confidence penalizes hand-wavy estimates). If an input has **no real data**, mark it as an assumption (lower Confidence) and name the cheapest test to get it — never invent a number to fill a cell.
 5. Re-rank as evidence changes; tie the top items back to the outcome from `mapping-impact-to-outcomes`.
 
 ## Quality bar

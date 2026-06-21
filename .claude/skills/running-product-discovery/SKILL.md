@@ -11,6 +11,8 @@ Discovery is **risk-reduction, not documentation**. Its job is to answer four qu
 
 This skill is the entry point and router for a discovery effort. It orients the cross-functional team and points to the workflow skill for each step. **It does not do the work itself** — it hands off.
 
+**When a request arrives as a pre-formed solution ("add a referral feature", "build a dashboard"), do NOT scope, design, or estimate it.** Start at step 1 (`framing-the-opportunity`) and treat the named feature as one untested hypothesis, not the unit of work.
+
 ## The four big product risks (the running checklist)
 
 Ask these continuously; address the *biggest* first. Teams over-index on feasibility — push on value and viability.

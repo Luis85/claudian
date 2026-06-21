@@ -47,6 +47,7 @@ A switch happens only when **Push + Pull > Anxiety + Habit**. Listen for emotion
 - [ ] Job statements are solution-free (describe progress, not features).
 - [ ] Switch findings come from real recent switchers, not speculation.
 - [ ] Desired outcomes are measurable (direction + metric + object + context).
+- [ ] Job/outcome statements drawn from real user language are marked as evidence; invented ones are explicitly labeled hypotheses to validate.
 
 ## Reference
 

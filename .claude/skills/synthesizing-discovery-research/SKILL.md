@@ -36,7 +36,7 @@ When using AI to code or summarize research:
 
 1. Choose method (affinity for speed, thematic for rigor, nuggets for reuse).
 2. Code/cluster against a visible focus question.
-3. For each theme, attach 2+ supporting verbatim quotes (real, verified).
+3. For each theme, attach 2+ pieces of real, verified evidence — verbatim quotes **or** observed behaviors/diary entries/artifacts (observation and field studies count, not only quotes).
 4. Time-box it — stop when no new themes emerge (saturation), to avoid analysis paralysis.
 5. Output evidence-linked insights → feed `building-evidence-based-personas`, `mapping-customer-journeys`, or `framing-the-opportunity`.
 
@@ -44,6 +44,7 @@ When using AI to code or summarize research:
 
 - [ ] Every insight links to a real, verified observation/quote.
 - [ ] No fabricated quotes, participants, or synthetic findings.
+- [ ] If the data can't supply real support for each theme, **reduce the number of themes and flag insufficient evidence** — never pad a requested theme/quote count.
 - [ ] Clustering is by meaning, not keyword.
 - [ ] Synthesis is time-boxed with a saturation stop rule.
 

@@ -44,6 +44,7 @@ Turns validated discovery into **buildable, testable** specifications. The core 
 - [ ] Every story passes INVEST; large stories split vertically.
 - [ ] Every story has observable, testable acceptance criteria.
 - [ ] No ambiguous terms ("fast", "user-friendly", "support") — each NFR is measurable.
+- [ ] Each NFR threshold cites a source or baseline (current measurement / SLA / benchmark) — not an invented number.
 
 ## Common mistakes
 

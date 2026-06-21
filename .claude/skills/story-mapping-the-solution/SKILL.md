@@ -28,6 +28,7 @@ A user story map (Jeff Patton) replaces a flat, context-free backlog with a **tw
 ## Quality bar
 
 - [ ] Backbone reads as a coherent left-to-right narrative.
+- [ ] Backbone has **≥3 distinct activities** in time order — one column means you've listed tasks, not activities; decompose the end-to-end flow first.
 - [ ] Top slice is a true walking skeleton: end-to-end and minimal, spanning every activity.
 - [ ] Every release slice spans the full backbone (a complete journey, not one deep feature).
 - [ ] Vertical position consistently encodes necessity.

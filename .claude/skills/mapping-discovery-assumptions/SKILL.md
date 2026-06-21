@@ -1,6 +1,6 @@
 ---
 name: mapping-discovery-assumptions
-description: Use when an idea or solution rests on untested beliefs, when deciding what to research or test next, or when running an assumptions/risk workshop. Surfaces desirability/feasibility/viability hypotheses, ranks them by importance and evidence, and designs the cheapest test of the riskiest one. For product managers, UX designers, and requirements engineers de-risking before building.
+description: Use when an idea or solution rests on untested beliefs, when deciding what to research or test next, when prioritizing risks by importance and evidence, or when running an assumptions, desirability/feasibility/viability, or riskiest-assumption-test workshop. For product managers, UX designers, and requirements engineers de-risking before building.
 ---
 
 # Mapping Discovery Assumptions
@@ -24,7 +24,7 @@ Every idea is a stack of beliefs. This skill makes them **explicit, falsifiable,
    - **Viability** — does it work for the business? (owner: PM)
    - *(optional)* **Adaptability** — can it survive a changing environment?
 3. **Plot on the 2×2.** Axes: **Importance** (Y: if this is wrong, does the idea fail? — important at the top) × **Evidence** (X: known / have-evidence on the **left**, unknown / no-evidence on the **right**). Place fast and binary; don't debate coordinates.
-4. **Pick the riskiest.** The **top-right quadrant — important + unknown (no evidence)** — is where near-term experiments go. Don't waste effort validating the already-supported (top-left) or the unimportant (bottom).
+4. **Pick the riskiest.** The **top-right quadrant — important + unknown (no evidence)** — is where near-term experiments go. Don't waste effort validating the already-supported (top-left) or the unimportant (bottom). If several beliefs tie in the top-right, test the one whose failure is **cheapest to detect** first.
 5. **Design a Riskiest Assumption Test (RAT).** Build only the minimum needed to learn — often no code and no UI. Learn and measure *first*; build only if the assumption holds. Define what result would *disprove* the belief.
 6. **Run, re-plot, repeat.** Move tested assumptions left (now they have evidence) and pick the next riskiest.
 

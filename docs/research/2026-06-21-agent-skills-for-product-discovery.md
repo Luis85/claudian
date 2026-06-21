@@ -180,7 +180,7 @@ Authoring rules the catalog follows (Anthropic / agentskills.io):
 
 ## 9. The baseline skill catalog
 
-Twelve skills: one **router/overview** plus eleven **workflow skills**, one per major discovery step. Drafts live in [`.claude/skills/`](../../.claude/skills/). They are **drafted, not yet pressure-tested** (per the `writing-skills` discipline, deploy-grade skills need baseline RED testing with subagents — see §10).
+Twelve skills: one **router/overview** plus eleven **workflow skills**, one per major discovery step. They live in [`.claude/skills/`](../../.claude/skills/). Each has been through one **RED/GREEN cycle** (baseline a subagent without the skill, confirm the skill closes the gap, close residual loopholes) — see the verification artifact: [`2026-06-21-discovery-skills-evaluations.md`](2026-06-21-discovery-skills-evaluations.md).
 
 | Skill (`name`) | Lead | Arc step | What it gives the team |
 |----------------|------|----------|------------------------|
@@ -204,7 +204,7 @@ Twelve skills: one **router/overview** plus eleven **workflow skills**, one per 
 
 ## 10. Adoption notes & next steps
 
-- **These are drafts.** The `writing-skills` Iron Law is "no skill without a failing test first." Before treating any of these as deploy-grade, run the RED step: give a subagent the task *without* the skill, capture how it goes wrong (e.g., writes leading questions, invents quotes, jumps to solutions), then verify the skill closes that gap. The drafts are written to target exactly those known failure modes.
+- **RED/GREEN verified, but keep hardening.** Each skill has been through one RED/GREEN cycle (see [`2026-06-21-discovery-skills-evaluations.md`](2026-06-21-discovery-skills-evaluations.md)) — all twelve closed their baseline failure mode, and one residual loophole per skill was fixed. The `writing-skills` discipline treats hardening as ongoing: as the skills are used, capture any new rationalizations (especially fabrication-to-satisfy-structure) and add explicit counters.
 - **Tune to your context.** Replace the generic prioritization/JTBD guidance with whichever method your org has standardized on; thin the catalog if a step doesn't apply to your product.
 - **Pair with templates.** The natural next iteration is to bundle artifact templates (interview-guide skeleton, journey-map table, story+AC template) as `assets/` beside each `SKILL.md`, and a `references/` file for the heavier method detail — keeping each `SKILL.md` body lean.
 - **Keep the human in the loop.** Every skill assumes the trio reviews and owns the output; the agent drafts and checks, it does not decide.

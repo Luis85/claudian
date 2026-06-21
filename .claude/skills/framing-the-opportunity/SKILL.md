@@ -19,6 +19,8 @@ This skill produces a tight **opportunity brief**: the outcome being pursued, th
 
 ## Workflow
 
+**Guard:** If asked to "write requirements/specs" for a named solution, stop — produce the opportunity brief here and hand requirements to `writing-requirements` only *after* the outcome is agreed. Do not spec the named solution in this pass.
+
 Create a task for each and complete in order:
 
 1. **State the desired outcome.** An outcome is *a change in customer behavior that drives business results* — not a feature. Write it measurably. If the goal is phrased as an output ("ship X"), ask "what behavior change is X supposed to cause?" and reframe.

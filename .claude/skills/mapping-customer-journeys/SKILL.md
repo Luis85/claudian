@@ -40,7 +40,7 @@ The "sequel" to a journey map — same customer-actions lane on top, then organi
 ## Quality bar
 
 - [ ] One actor + one scenario per map.
-- [ ] Actions/thoughts/emotions are research-grounded (or the map is labeled a hypothesis).
+- [ ] Actions/thoughts/emotions are research-grounded (or the map is labeled a **hypothesis map** that lists its top unvalidated assumptions and the next research step before it's shared).
 - [ ] Pain points are converted into owned opportunities.
 - [ ] Blueprint backstage/support steps each tie to a visible touchpoint.
 
