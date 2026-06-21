@@ -46,6 +46,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--size-4-2);
   margin-bottom: var(--size-4-4);
 }
@@ -66,9 +67,33 @@
 }
 
 .claudian-library-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--size-4-2);
   color: var(--text-muted);
   text-align: center;
-  padding: var(--size-4-8) 0;
+  padding: var(--size-4-8) var(--size-4-4);
+}
+
+.claudian-library-empty-icon {
+  display: flex;
+  color: var(--text-faint);
+}
+
+.claudian-library-empty-icon svg {
+  width: 36px;
+  height: 36px;
+}
+
+.claudian-library-empty-text {
+  max-width: 36ch;
+  font-size: var(--font-ui-small);
+  line-height: var(--line-height-tight);
+}
+
+.claudian-library-empty-action {
+  margin-top: var(--size-4-1);
 }
 
 .claudian-library-card {
@@ -97,6 +122,11 @@
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   margin-top: 2px;
+  /* Clamp long descriptions so a verbose tool/skill can't stretch the card. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .claudian-library-card-error {

@@ -1,3 +1,5 @@
+import { setIcon } from 'obsidian';
+
 import type { VaultFileAdapter } from '../core/storage/VaultFileAdapter';
 
 /** Slugifies a user-entered library item name into a vault-safe folder name. */
@@ -64,9 +66,28 @@ export function renderLibraryShell(
   return { actions, list };
 }
 
-/** Renders the muted empty-state row inside a library list container. */
-export function renderLibraryEmpty(list: HTMLElement, text: string): void {
-  list.createEl('p', { cls: 'claudian-library-empty', text });
+export interface LibraryEmptyStateOptions {
+  /** Lucide icon name for the empty-state glyph. */
+  icon: string;
+  message: string;
+  /** When both are present, a primary CTA button is rendered below the message. */
+  actionLabel?: string;
+  onAction?: () => void;
+}
+
+/**
+ * Renders a centered empty state — glyph, message, and an optional primary CTA —
+ * shared by the Agent Roster, Tool, and Skill library views so a first-run user
+ * sees a clear next action instead of a bare muted line.
+ */
+export function renderLibraryEmptyState(list: HTMLElement, opts: LibraryEmptyStateOptions): void {
+  const empty = list.createDiv({ cls: 'claudian-library-empty' });
+  setIcon(empty.createDiv({ cls: 'claudian-library-empty-icon' }), opts.icon);
+  empty.createDiv({ cls: 'claudian-library-empty-text', text: opts.message });
+  if (opts.actionLabel && opts.onAction) {
+    const btn = empty.createEl('button', { cls: 'mod-cta claudian-library-empty-action', text: opts.actionLabel });
+    btn.onclick = opts.onAction;
+  }
 }
 
 /** Uppercase section label used inside the library editor modals. */

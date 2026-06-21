@@ -5,7 +5,7 @@ import type ClaudianPlugin from '../../../main';
 import { renderLibraryNav } from '../../../shared/libraryNav';
 import { promptReason } from '../../../shared/modals/PromptModal';
 import { withErrorNotice } from '../../../shared/uiAction';
-import { createLibraryCard, librarySlug, renderLibraryEmpty, renderLibraryShell, uniqueChildDir } from '../../../utils/libraryView';
+import { createLibraryCard, librarySlug, renderLibraryEmptyState, renderLibraryShell, uniqueChildDir } from '../../../utils/libraryView';
 import { type SkillLibraryRow, toSkillLibraryRows } from '../skillLibraryRows';
 import { SkillEditorModal } from './SkillEditorModal';
 
@@ -44,16 +44,17 @@ export class SkillLibraryView extends ItemView {
     const { actions, list } = renderLibraryShell(this.contentEl, t('skillLibrary.title'),
       (c) => renderLibraryNav(c, this.plugin, VIEW_TYPE_SKILL_LIBRARY));
     const newBtn = actions.createEl('button', { cls: 'mod-cta', text: t('skillLibrary.newSkill') });
-    newBtn.onclick = () => void withErrorNotice(
-      () => this.createSkill(),
-      t('skillLibrary.actionFailed'),
-      (e) => this.plugin.logger.scope('skills').error('skill library action failed', e),
-    );
+    newBtn.onclick = () => this.createSkillSafely();
 
     const entries = (await this.plugin.vaultSkillAggregator?.listAll()) ?? [];
     const rows = toSkillLibraryRows(entries);
     if (rows.length === 0) {
-      renderLibraryEmpty(list, t('skillLibrary.empty'));
+      renderLibraryEmptyState(list, {
+        icon: 'book-open',
+        message: t('skillLibrary.empty'),
+        actionLabel: t('skillLibrary.newSkill'),
+        onAction: () => this.createSkillSafely(),
+      });
       return;
     }
 
@@ -68,6 +69,14 @@ export class SkillLibraryView extends ItemView {
       const openBtn = actions.createEl('button', { text: t('skillLibrary.open') });
       openBtn.onclick = () => this.openEditor(row);
     }
+  }
+
+  private createSkillSafely(): void {
+    void withErrorNotice(
+      () => this.createSkill(),
+      t('skillLibrary.actionFailed'),
+      (e) => this.plugin.logger.scope('skills').error('skill library action failed', e),
+    );
   }
 
   private openEditor(row: SkillLibraryRow): void {

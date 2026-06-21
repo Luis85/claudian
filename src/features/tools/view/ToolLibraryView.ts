@@ -6,7 +6,7 @@ import { renderLibraryNav } from '../../../shared/libraryNav';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { promptReason } from '../../../shared/modals/PromptModal';
 import { withErrorNotice } from '../../../shared/uiAction';
-import { createLibraryCard, librarySlug, renderLibraryEmpty, renderLibraryShell, uniqueChildDir } from '../../../utils/libraryView';
+import { createLibraryCard, librarySlug, renderLibraryEmptyState, renderLibraryShell, uniqueChildDir } from '../../../utils/libraryView';
 import { TOOLS_DIR } from '../ClaudianToolRegistry';
 import { ToolEditorModal } from './ToolEditorModal';
 
@@ -53,7 +53,12 @@ export class ToolLibraryView extends ItemView {
 
     const tools = this.plugin.toolRegistry.list();
     if (tools.length === 0) {
-      renderLibraryEmpty(list, t('toolLibrary.empty'));
+      renderLibraryEmptyState(list, {
+        icon: 'wrench',
+        message: t('toolLibrary.empty'),
+        actionLabel: t('toolLibrary.newTool'),
+        onAction: () => void withErrorNotice(() => this.createTool(), fail, (e) => this.fail(e)),
+      });
       return;
     }
 

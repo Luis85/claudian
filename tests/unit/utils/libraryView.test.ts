@@ -9,7 +9,7 @@ import {
   createModalCodeArea,
   librarySlug,
   renameLibraryItemDir,
-  renderLibraryEmpty,
+  renderLibraryEmptyState,
   renderLibraryShell,
   renderModalField,
   renderModalFooter,
@@ -92,10 +92,23 @@ describe('DOM helpers', () => {
     expect(list.classList.contains('claudian-library-list')).toBe(true);
   });
 
-  it('renderLibraryEmpty renders a muted row', () => {
+  it('renderLibraryEmptyState renders the message and a working CTA', () => {
     const root = container();
-    renderLibraryEmpty(root, 'Nothing here');
-    expect(root.querySelector('.claudian-library-empty')?.textContent).toBe('Nothing here');
+    const onAction = jest.fn();
+    renderLibraryEmptyState(root, { icon: 'wrench', message: 'Nothing here', actionLabel: 'New tool', onAction });
+
+    expect(root.querySelector('.claudian-library-empty-icon')).not.toBeNull();
+    expect(root.querySelector('.claudian-library-empty-text')?.textContent).toBe('Nothing here');
+    const btn = root.querySelector<HTMLButtonElement>('.claudian-library-empty-action');
+    expect(btn?.textContent).toBe('New tool');
+    btn?.click();
+    expect(onAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('renderLibraryEmptyState omits the CTA when no action is given', () => {
+    const root = container();
+    renderLibraryEmptyState(root, { icon: 'book-open', message: 'Empty' });
+    expect(root.querySelector('.claudian-library-empty-action')).toBeNull();
   });
 
   it('createLibraryCard exposes name row, body and actions', () => {
