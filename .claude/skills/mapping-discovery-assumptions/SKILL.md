@@ -18,11 +18,13 @@ Every idea is a stack of beliefs. This skill makes them **explicit, falsifiable,
 ## Workflow
 
 1. **Surface assumptions.** Write each belief as a falsifiable statement: **"We believe that…"** One belief per note. Phrasing it this way forces the mindset that you might be wrong.
-2. **Categorize by risk** (color-code):
+2. **Categorize by risk** (color-code) — cover **all four** of Cagan's big product risks, not just feasibility:
    - **Desirability** — do customers want it? (owner: design/UX)
+   - **Usability** — can users figure out how to use it? (owner: design/UX)
    - **Feasibility** — can we build/scale it? (owner: engineering)
    - **Viability** — does it work for the business? (owner: PM)
-   - *(optional)* **Adaptability** — can it survive a changing environment?
+   - *(optional)* **Adaptability** — can it survive a changing environment? · **Ethical** — should we build it at all?
+   (Strategyzer's classic set is desirability/feasibility/viability and folds usability under desirability; track usability **explicitly** so the map is a complete risk inventory consistent with `running-product-discovery`'s four risks.)
 3. **Plot on the 2×2.** Axes: **Importance** (Y: if this is wrong, does the idea fail? — important at the top) × **Evidence** (X: known / have-evidence on the **left**, unknown / no-evidence on the **right**). Place fast and binary; don't debate coordinates.
 4. **Pick the riskiest.** The **top-right quadrant — important + unknown (no evidence)** — is where near-term experiments go. Don't waste effort validating the already-supported (top-left) or the unimportant (bottom). If several beliefs tie in the top-right, test the one whose failure is **cheapest to detect** first.
 5. **Design a Riskiest Assumption Test (RAT).** Build only the minimum needed to learn — often no code and no UI. Learn and measure *first*; build only if the assumption holds. Define what result would *disprove* the belief.
@@ -31,7 +33,7 @@ Every idea is a stack of beliefs. This skill makes them **explicit, falsifiable,
 ## Quality bar
 
 - [ ] Each assumption is one falsifiable "We believe that…" statement.
-- [ ] Assumptions are categorized across desirability AND feasibility AND viability (not just feasibility — the common blind spot).
+- [ ] Assumptions cover all four product risks — desirability, **usability**, feasibility, AND viability (not just feasibility — the common blind spot).
 - [ ] The chosen test attacks the most important, least-evidenced belief.
 - [ ] The test has a pre-stated disconfirming result.
 
