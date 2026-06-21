@@ -41,4 +41,5 @@ export type AgentsTranslationKey =
   | 'agentRoster.chipTag'
   | 'agentRoster.syncProviders'
   | 'agentRoster.syncDone'
-  | 'agentRoster.syncNone';
+  | 'agentRoster.syncNone'
+  | 'agentRoster.navLabel';

@@ -21,6 +21,30 @@ export async function uniqueChildDir(
 }
 
 /**
+ * Renames a `<root>/<oldName>/<file>` library item by moving it into a fresh
+ * `<root>/<newSlug>/` directory and removing the old one. Writes `content` (the
+ * possibly-edited body) to the new file and returns its path.
+ */
+export async function renameLibraryItemDir(
+  adapter: VaultFileAdapter,
+  oldFilePath: string,
+  root: string,
+  newSlug: string,
+  content: string,
+): Promise<string> {
+  const filename = oldFilePath.slice(oldFilePath.lastIndexOf('/') + 1);
+  const oldDir = oldFilePath.slice(0, oldFilePath.length - filename.length - 1);
+  const newDir = await uniqueChildDir(adapter, root, newSlug);
+  const newPath = `${newDir}/${filename}`;
+  await adapter.write(newPath, content);
+  if (newPath !== oldFilePath) {
+    await adapter.delete(oldFilePath);
+    await adapter.deleteFolder(oldDir);
+  }
+  return newPath;
+}
+
+/**
  * Builds the shared Tool/Skill library shell — `.claudian-library` root, a
  * header with the title, an actions container, and an empty list container —
  * returning the `actions` and `list` elements the caller fills in.
@@ -28,9 +52,11 @@ export async function uniqueChildDir(
 export function renderLibraryShell(
   contentEl: HTMLElement,
   title: string,
+  renderNav?: (container: HTMLElement) => void,
 ): { actions: HTMLElement; list: HTMLElement } {
   contentEl.empty();
   contentEl.addClass('claudian-library');
+  renderNav?.(contentEl);
   const header = contentEl.createDiv({ cls: 'claudian-library-header' });
   header.createEl('h2', { text: title });
   const actions = header.createDiv({ cls: 'claudian-library-header-actions' });
@@ -53,6 +79,15 @@ export function renderModalField(parent: HTMLElement, label: string, value: stri
   const field = parent.createDiv({ cls: 'claudian-library-modal-field' });
   renderModalLabel(field, label);
   field.createDiv({ cls: 'claudian-library-modal-value', text: value });
+}
+
+/** Label + editable text input row used for rename inside the editor modals. */
+export function renderModalTextField(parent: HTMLElement, label: string, value: string): HTMLInputElement {
+  const field = parent.createDiv({ cls: 'claudian-library-modal-field' });
+  renderModalLabel(field, label);
+  const input = field.createEl('input', { type: 'text', cls: 'claudian-library-modal-input' });
+  input.value = value;
+  return input;
 }
 
 /** Monospace, spellcheck-off code/content textarea seeded with `value`. */

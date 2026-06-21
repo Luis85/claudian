@@ -1018,7 +1018,8 @@
     "chipTag": "Agent",
     "syncProviders": "Sync to providers",
     "syncDone": "Published {written} agent file(s) to {providers}.",
-    "syncNone": "No enabled providers to sync to."
+    "syncNone": "No enabled providers to sync to.",
+    "navLabel": "Agents"
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically.",
@@ -1042,7 +1043,9 @@
     "close": "Close",
     "metaName": "Name",
     "metaDescription": "Description",
-    "notLoaded": "Not loaded — fix the error below and save."
+    "notLoaded": "Not loaded — fix the error below and save.",
+    "navLabel": "Tools",
+    "nameField": "Name"
   },
   "workOrderActivity": {
     "toggleRunning": "{count} active work order(s)",
@@ -1076,6 +1079,8 @@
     "saved": "Saved {name}.",
     "close": "Close",
     "provider": "Provider",
-    "readonlyNotice": "This skill is read-only and cannot be edited here."
+    "readonlyNotice": "This skill is read-only and cannot be edited here.",
+    "navLabel": "Skills",
+    "nameField": "Name"
   }
 }

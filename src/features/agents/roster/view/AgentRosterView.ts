@@ -5,9 +5,8 @@ import type { ProviderId } from '../../../../core/providers/types';
 import { asSettingsBag } from '../../../../core/types/settings';
 import { t } from '../../../../i18n/i18n';
 import type ClaudianPlugin from '../../../../main';
+import { renderLibraryNav } from '../../../../shared/libraryNav';
 import { confirm } from '../../../../shared/modals/ConfirmModal';
-import { VIEW_TYPE_SKILL_LIBRARY } from '../../../skills/view/SkillLibraryView';
-import { VIEW_TYPE_TOOL_LIBRARY } from '../../../tools/view/ToolLibraryView';
 import { renderAgentAvatar } from '../../agentAvatar';
 import { rosterAgentToPersona } from '../../personaRegistry';
 import { installPresetAgents } from '../presetAgents';
@@ -49,6 +48,8 @@ export class AgentRosterView extends ItemView {
     root.removeClass('claudian-roster-detail');
     root.addClass('claudian-roster');
 
+    renderLibraryNav(root, this.plugin, VIEW_TYPE_AGENT_ROSTER);
+
     const header = root.createDiv({ cls: 'claudian-roster-header' });
     header.createEl('h2', { text: t('agentRoster.title') });
     const headerActions = header.createDiv({ cls: 'claudian-roster-header-actions' });
@@ -61,13 +62,6 @@ export class AgentRosterView extends ItemView {
 
     const syncBtn = headerActions.createEl('button', { text: t('agentRoster.syncProviders') });
     syncBtn.onclick = () => void this.syncToProviders();
-
-    // Quick links to the libraries an agent draws its skills + tools from.
-    const links = root.createDiv({ cls: 'claudian-roster-links' });
-    const toolLink = links.createEl('button', { cls: 'claudian-roster-link', text: t('agentRoster.tools') });
-    toolLink.onclick = () => void this.plugin.openLeafView(VIEW_TYPE_TOOL_LIBRARY);
-    const skillLink = links.createEl('button', { cls: 'claudian-roster-link', text: t('agentRoster.skills') });
-    skillLink.onclick = () => void this.plugin.openLeafView(VIEW_TYPE_SKILL_LIBRARY);
 
     const agents = await this.store.list();
     const list = root.createDiv({ cls: 'claudian-roster-list' });

@@ -23,26 +23,6 @@
   gap: var(--size-4-2);
 }
 
-/* ── Library quick-links ── */
-.claudian-roster-links {
-  display: flex;
-  gap: var(--size-4-2);
-  margin-bottom: var(--size-4-3);
-}
-
-.claudian-roster-link {
-  font-size: var(--font-ui-small);
-  color: var(--text-muted);
-  background: none;
-  border: 1px solid var(--background-modifier-border);
-  box-shadow: none;
-}
-
-.claudian-roster-link:hover {
-  color: var(--text-normal);
-  border-color: var(--interactive-accent);
-}
-
 /* ── List / cards ── */
 .claudian-roster-list {
   display: flex;

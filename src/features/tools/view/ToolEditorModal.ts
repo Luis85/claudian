@@ -3,7 +3,7 @@ import { type App, Notice } from 'obsidian';
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { LibraryEditorModal } from '../../../shared/modals/LibraryEditorModal';
-import { createModalCodeArea, renderModalField, renderModalFooter, renderModalLabel } from '../../../utils/libraryView';
+import { createModalCodeArea, librarySlug, renameLibraryItemDir, renderModalField, renderModalFooter, renderModalLabel, renderModalTextField } from '../../../utils/libraryView';
 import { TOOLS_DIR } from '../ClaudianToolRegistry';
 import type { LoadedTool } from '../toolTypes';
 
@@ -16,11 +16,12 @@ import type { LoadedTool } from '../toolTypes';
  */
 export class ToolEditorModal extends LibraryEditorModal {
   private sourceEl: HTMLTextAreaElement | null = null;
+  private nameEl: HTMLInputElement | null = null;
 
   constructor(
     app: App,
     private readonly plugin: ClaudianPlugin,
-    private readonly toolId: string,
+    private toolId: string,
     private readonly onSaved: () => void,
   ) {
     super(app);
@@ -34,6 +35,7 @@ export class ToolEditorModal extends LibraryEditorModal {
     const tool = this.plugin.toolRegistry.get(this.toolId);
     const path = `${TOOLS_DIR}/${this.toolId}/tool.ts`;
 
+    this.nameEl = renderModalTextField(root, t('toolLibrary.nameField'), this.toolId);
     this.renderMeta(root.createDiv({ cls: 'claudian-library-modal-meta' }), tool);
 
     renderModalLabel(root, t('toolLibrary.source'));
@@ -74,7 +76,15 @@ export class ToolEditorModal extends LibraryEditorModal {
 
   private async save(path: string): Promise<void> {
     if (!this.sourceEl) return;
-    await this.plugin.vaultFileAdapter.write(path, this.sourceEl.value);
+    const adapter = this.plugin.vaultFileAdapter;
+    const newSlug = librarySlug(this.nameEl?.value ?? '') || this.toolId;
+    if (newSlug === this.toolId) {
+      await adapter.write(path, this.sourceEl.value);
+    } else {
+      const newPath = await renameLibraryItemDir(adapter, path, TOOLS_DIR, newSlug, this.sourceEl.value);
+      this.toolId = newPath.slice(TOOLS_DIR.length + 1, newPath.lastIndexOf('/'));
+      this.titleEl.setText(this.toolId);
+    }
     await this.plugin.toolRegistry.load();
     this.onSaved();
     new Notice(t('toolLibrary.saved', { name: this.toolId }));

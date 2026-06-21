@@ -1,0 +1,38 @@
+import { t } from '../i18n/i18n';
+import type { TranslationKey } from '../i18n/types';
+
+/**
+ * Stable view-type ids for the three library views. Kept here (as literals, not
+ * imported from each view) so the shared nav avoids an import cycle with the
+ * view modules that render it.
+ */
+export const LIBRARY_VIEW_TYPES = {
+  agents: 'claudian-agent-roster',
+  tools: 'claudian-tool-library',
+  skills: 'claudian-skill-library',
+} as const;
+
+const LIBRARY_NAV_ITEMS: ReadonlyArray<{ type: string; labelKey: TranslationKey }> = [
+  { type: LIBRARY_VIEW_TYPES.agents, labelKey: 'agentRoster.navLabel' },
+  { type: LIBRARY_VIEW_TYPES.tools, labelKey: 'toolLibrary.navLabel' },
+  { type: LIBRARY_VIEW_TYPES.skills, labelKey: 'skillLibrary.navLabel' },
+];
+
+export interface LibraryNavHost {
+  openLeafView(viewType: string): Promise<void>;
+}
+
+/** Renders the Agents / Tools / Skills nav strip, highlighting `activeType`. */
+export function renderLibraryNav(container: HTMLElement, host: LibraryNavHost, activeType: string): void {
+  const nav = container.createDiv({ cls: 'claudian-library-nav' });
+  for (const item of LIBRARY_NAV_ITEMS) {
+    const active = item.type === activeType;
+    const btn = nav.createEl('button', {
+      cls: `claudian-library-nav-item${active ? ' is-active' : ''}`,
+      text: t(item.labelKey),
+    });
+    if (!active) {
+      btn.onclick = () => void host.openLeafView(item.type);
+    }
+  }
+}

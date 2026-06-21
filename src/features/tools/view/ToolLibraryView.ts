@@ -2,6 +2,7 @@ import { ItemView, Notice, type WorkspaceLeaf } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
+import { renderLibraryNav } from '../../../shared/libraryNav';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { promptReason } from '../../../shared/modals/PromptModal';
 import { createLibraryCard, librarySlug, renderLibraryEmpty, renderLibraryShell, uniqueChildDir } from '../../../utils/libraryView';
@@ -41,7 +42,8 @@ export class ToolLibraryView extends ItemView {
   }
 
   private async render(): Promise<void> {
-    const { actions, list } = renderLibraryShell(this.contentEl, t('toolLibrary.title'));
+    const { actions, list } = renderLibraryShell(this.contentEl, t('toolLibrary.title'),
+      (c) => renderLibraryNav(c, this.plugin, VIEW_TYPE_TOOL_LIBRARY));
     const newBtn = actions.createEl('button', { cls: 'mod-cta', text: t('toolLibrary.newTool') });
     newBtn.onclick = () => void this.createTool();
     const reloadBtn = actions.createEl('button', { text: t('toolLibrary.reload') });

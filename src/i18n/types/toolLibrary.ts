@@ -22,6 +22,8 @@ export type ToolLibraryTranslationKey =
   | 'toolLibrary.metaName'
   | 'toolLibrary.metaDescription'
   | 'toolLibrary.notLoaded'
+  | 'toolLibrary.navLabel'
+  | 'toolLibrary.nameField'
   // Skill Library
   | 'skillLibrary.title'
   | 'skillLibrary.empty'
@@ -37,4 +39,6 @@ export type ToolLibraryTranslationKey =
   | 'skillLibrary.saved'
   | 'skillLibrary.close'
   | 'skillLibrary.provider'
-  | 'skillLibrary.readonlyNotice';
+  | 'skillLibrary.readonlyNotice'
+  | 'skillLibrary.navLabel'
+  | 'skillLibrary.nameField';

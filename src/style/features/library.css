@@ -4,6 +4,44 @@
   padding: var(--size-4-4);
 }
 
+/* Hide Obsidian's per-view title bar on the three library views — the in-view
+   nav strip identifies the current view and navigates between them. */
+.workspace-leaf-content[data-type="claudian-agent-roster"] .view-header,
+.workspace-leaf-content[data-type="claudian-tool-library"] .view-header,
+.workspace-leaf-content[data-type="claudian-skill-library"] .view-header {
+  display: none;
+}
+
+/* ── Cross-library nav strip ── */
+.claudian-library-nav {
+  display: flex;
+  gap: var(--size-4-1);
+  padding-bottom: var(--size-4-3);
+  margin-bottom: var(--size-4-3);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.claudian-library-nav-item {
+  flex: 1 1 0;
+  font-weight: var(--font-medium);
+  color: var(--text-muted);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.claudian-library-nav-item:hover {
+  color: var(--text-normal);
+}
+
+.claudian-library-nav-item.is-active {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+  cursor: default;
+}
+
 .claudian-library-header {
   display: flex;
   align-items: center;

@@ -3,7 +3,7 @@ import { type App, Notice } from 'obsidian';
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { LibraryEditorModal } from '../../../shared/modals/LibraryEditorModal';
-import { createModalCodeArea, renderModalField, renderModalFooter, renderModalLabel } from '../../../utils/libraryView';
+import { createModalCodeArea, librarySlug, renameLibraryItemDir, renderModalField, renderModalFooter, renderModalLabel, renderModalTextField } from '../../../utils/libraryView';
 import type { SkillLibraryRow } from '../skillLibraryRows';
 
 /**
@@ -15,11 +15,12 @@ import type { SkillLibraryRow } from '../skillLibraryRows';
  */
 export class SkillEditorModal extends LibraryEditorModal {
   private contentArea: HTMLTextAreaElement | null = null;
+  private nameEl: HTMLInputElement | null = null;
 
   constructor(
     app: App,
     private readonly plugin: ClaudianPlugin,
-    private readonly row: SkillLibraryRow,
+    private row: SkillLibraryRow,
     private readonly onSaved: () => void,
   ) {
     super(app);
@@ -42,6 +43,7 @@ export class SkillEditorModal extends LibraryEditorModal {
       return;
     }
 
+    this.nameEl = renderModalTextField(root, t('skillLibrary.nameField'), this.row.name);
     renderModalLabel(root, t('skillLibrary.content'));
     const content = await this.plugin.vaultFileAdapter.read(this.row.sourceFilePath).catch(() => '');
     this.contentArea = createModalCodeArea(root, content);
@@ -56,7 +58,19 @@ export class SkillEditorModal extends LibraryEditorModal {
 
   private async save(): Promise<void> {
     if (!this.contentArea || !this.row.sourceFilePath) return;
-    await this.plugin.vaultFileAdapter.write(this.row.sourceFilePath, this.contentArea.value);
+    const adapter = this.plugin.vaultFileAdapter;
+    const oldPath = this.row.sourceFilePath;
+    const currentSlug = oldPath.split('/').slice(-2, -1)[0];
+    const newName = this.nameEl?.value.trim() || this.row.name;
+    const newSlug = librarySlug(newName) || currentSlug;
+    if (newSlug === currentSlug) {
+      await adapter.write(oldPath, this.contentArea.value);
+    } else {
+      // root is the directory holding the per-skill folder, e.g. `.claude/skills`.
+      const root = oldPath.split('/').slice(0, -2).join('/');
+      const newPath = await renameLibraryItemDir(adapter, oldPath, root, newSlug, this.contentArea.value);
+      this.row = { ...this.row, name: newName, sourceFilePath: newPath };
+    }
     this.onSaved();
     new Notice(t('skillLibrary.saved', { name: this.row.name }));
     this.close();

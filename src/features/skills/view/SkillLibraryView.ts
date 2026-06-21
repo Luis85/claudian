@@ -2,6 +2,7 @@ import { ItemView, Notice, type WorkspaceLeaf } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
+import { renderLibraryNav } from '../../../shared/libraryNav';
 import { promptReason } from '../../../shared/modals/PromptModal';
 import { createLibraryCard, librarySlug, renderLibraryEmpty, renderLibraryShell, uniqueChildDir } from '../../../utils/libraryView';
 import { type SkillLibraryRow, toSkillLibraryRows } from '../skillLibraryRows';
@@ -39,7 +40,8 @@ export class SkillLibraryView extends ItemView {
   }
 
   private async render(): Promise<void> {
-    const { actions, list } = renderLibraryShell(this.contentEl, t('skillLibrary.title'));
+    const { actions, list } = renderLibraryShell(this.contentEl, t('skillLibrary.title'),
+      (c) => renderLibraryNav(c, this.plugin, VIEW_TYPE_SKILL_LIBRARY));
     const newBtn = actions.createEl('button', { cls: 'mod-cta', text: t('skillLibrary.newSkill') });
     newBtn.onclick = () => void this.createSkill();
 
