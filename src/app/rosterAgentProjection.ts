@@ -14,17 +14,58 @@ import type { RosterAgent } from '../features/agents/roster/rosterTypes';
  */
 
 function rosterSlug(agent: RosterAgent): string {
-  return agent.id.startsWith('roster:') ? agent.id.slice('roster:'.length) : agent.id;
+  const raw = agent.id.startsWith('roster:') ? agent.id.slice('roster:'.length) : agent.id;
+  // Defense-in-depth: the id comes from on-disk JSON a synced/crafted file could
+  // control, so re-slugify to `[a-z0-9-]` — never trust it for path math.
+  return raw.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+/** Collapses a free-text field to a safe single line so it can't inject extra
+ *  frontmatter keys (newlines) when serialized into a provider agent file. */
+function singleLine(value: string): string {
+  return value.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 export interface RosterProjectionResult {
   written: number;
   providers: ProviderId[];
+  /** Names of agents whose projection failed or was skipped (per-agent isolation). */
+  failed: string[];
+}
+
+type ProjectionOutcome = 'written' | 'no-mapping' | { failed: string };
+
+/**
+ * Projects one agent into one provider. Sanitizes the slug/name first (skipping
+ * unsafe or blank input that's only reachable via a hand-edited roster JSON) and
+ * isolates a write failure so the caller can keep going.
+ */
+async function projectAgentToProvider(
+  providerId: ProviderId,
+  agent: RosterAgent,
+  adapter: VaultFileAdapter,
+): Promise<ProjectionOutcome> {
+  const slug = rosterSlug(agent);
+  const name = singleLine(agent.name);
+  if (!slug || !name) return { failed: name || agent.id };
+  try {
+    const file = ProviderRegistry.projectRosterAgent(
+      providerId,
+      { name, description: singleLine(agent.description), prompt: agent.prompt, skills: agent.skills, color: agent.color },
+      slug,
+    );
+    if (!file) return 'no-mapping';
+    await adapter.write(file.path, file.content);
+    return 'written';
+  } catch {
+    return { failed: name || agent.id };
+  }
 }
 
 /**
  * Writes every roster agent into every given provider's native folder. Returns
- * the count written and the providers actually touched (those with a mapping).
+ * the count written, the providers actually touched (those with a mapping), and
+ * any agents skipped/failed (a single failure doesn't abort the rest).
  */
 export async function projectRosterAgentsToProviders(
   agents: RosterAgent[],
@@ -33,26 +74,19 @@ export async function projectRosterAgentsToProviders(
 ): Promise<RosterProjectionResult> {
   let written = 0;
   const touched: ProviderId[] = [];
+  const failed = new Set<string>();
   for (const providerId of providerIds) {
     let projectedAny = false;
     for (const agent of agents) {
-      const file = ProviderRegistry.projectRosterAgent(
-        providerId,
-        {
-          name: agent.name,
-          description: agent.description,
-          prompt: agent.prompt,
-          skills: agent.skills,
-          color: agent.color,
-        },
-        rosterSlug(agent),
-      );
-      if (!file) continue;
-      await adapter.write(file.path, file.content);
-      written += 1;
-      projectedAny = true;
+      const outcome = await projectAgentToProvider(providerId, agent, adapter);
+      if (outcome === 'written') {
+        written += 1;
+        projectedAny = true;
+      } else if (outcome !== 'no-mapping') {
+        failed.add(outcome.failed);
+      }
     }
     if (projectedAny) touched.push(providerId);
   }
-  return { written, providers: touched };
+  return { written, providers: touched, failed: [...failed] };
 }

@@ -30,7 +30,10 @@ function pushYamlList(lines: string[], key: string, items?: string[]): void {
 export function serializeAgent(agent: AgentDefinition): string {
   const lines: string[] = ['---'];
 
-  lines.push(`name: ${agent.name}`);
+  // Escape the name like the description: a value with `:`/`#`/newline gets
+  // quoted (and quotes/backslashes escaped), so an unvalidated name can't inject
+  // extra frontmatter keys. Plain validated names are returned unquoted.
+  lines.push(`name: ${yamlString(agent.name)}`);
   lines.push(`description: ${yamlString(agent.description)}`);
 
   pushYamlList(lines, 'tools', agent.tools);
