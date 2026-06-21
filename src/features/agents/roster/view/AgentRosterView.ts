@@ -6,6 +6,8 @@ import { asSettingsBag } from '../../../../core/types/settings';
 import { t } from '../../../../i18n/i18n';
 import type ClaudianPlugin from '../../../../main';
 import { confirm } from '../../../../shared/modals/ConfirmModal';
+import { VIEW_TYPE_SKILL_LIBRARY } from '../../../skills/view/SkillLibraryView';
+import { VIEW_TYPE_TOOL_LIBRARY } from '../../../tools/view/ToolLibraryView';
 import { renderAgentAvatar } from '../../agentAvatar';
 import { rosterAgentToPersona } from '../../personaRegistry';
 import { installPresetAgents } from '../presetAgents';
@@ -56,6 +58,13 @@ export class AgentRosterView extends ItemView {
 
     const installBtn = headerActions.createEl('button', { text: t('agentRoster.installStarter') });
     installBtn.onclick = () => void this.installStarters();
+
+    // Quick links to the libraries an agent draws its skills + tools from.
+    const links = root.createDiv({ cls: 'claudian-roster-links' });
+    const toolLink = links.createEl('button', { cls: 'claudian-roster-link', text: t('agentRoster.tools') });
+    toolLink.onclick = () => void this.plugin.openLeafView(VIEW_TYPE_TOOL_LIBRARY);
+    const skillLink = links.createEl('button', { cls: 'claudian-roster-link', text: t('agentRoster.skills') });
+    skillLink.onclick = () => void this.plugin.openLeafView(VIEW_TYPE_SKILL_LIBRARY);
 
     const agents = await this.store.list();
     const list = root.createDiv({ cls: 'claudian-roster-list' });

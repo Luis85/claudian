@@ -1,0 +1,103 @@
+/* Shared layout for the Tool Library and Skill Library views. */
+
+.claudian-library {
+  padding: var(--size-4-4);
+}
+
+.claudian-library-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-4);
+}
+
+.claudian-library-header h2 {
+  margin: 0;
+}
+
+.claudian-library-header-actions {
+  display: flex;
+  gap: var(--size-4-2);
+}
+
+.claudian-library-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.claudian-library-empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: var(--size-4-8) 0;
+}
+
+.claudian-library-card {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-3);
+  padding: var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+}
+
+.claudian-library-card-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.claudian-library-card-name {
+  font-weight: var(--font-semibold);
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.claudian-library-card-desc {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  margin-top: 2px;
+}
+
+.claudian-library-card-error {
+  color: var(--text-error);
+  font-size: var(--font-ui-small);
+  font-family: var(--font-monospace);
+  margin-top: 2px;
+}
+
+.claudian-library-chip {
+  font-size: var(--font-ui-smaller);
+  border-radius: var(--radius-s);
+  padding: 0 5px;
+  line-height: 1.5;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.claudian-library-chip-ready {
+  color: var(--text-on-accent);
+  background: var(--color-green);
+}
+
+.claudian-library-chip-error {
+  color: var(--text-on-accent);
+  background: var(--color-red);
+}
+
+.claudian-library-chip-muted {
+  color: var(--text-muted);
+  background: var(--background-modifier-border);
+}
+
+.claudian-library-card-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: var(--size-4-1);
+}
+
+.claudian-library-card-delete {
+  color: var(--text-error);
+}

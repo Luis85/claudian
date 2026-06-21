@@ -6,7 +6,21 @@ export type ToolLibraryTranslationKey =
   | 'toolLibrary.reload'
   | 'toolLibrary.empty'
   | 'toolLibrary.errorPrefix'
+  | 'toolLibrary.edit'
+  | 'toolLibrary.delete'
+  | 'toolLibrary.namePrompt'
+  | 'toolLibrary.deleteConfirm'
+  | 'toolLibrary.deleted'
+  | 'toolLibrary.statusError'
+  | 'toolLibrary.statusReady'
+  | 'toolLibrary.reloadDone'
   // Skill Library
   | 'skillLibrary.title'
   | 'skillLibrary.empty'
-  | 'skillLibrary.readOnlySuffix';
+  | 'skillLibrary.readOnlySuffix'
+  | 'skillLibrary.open'
+  | 'skillLibrary.newSkill'
+  | 'skillLibrary.namePrompt'
+  | 'skillLibrary.created'
+  | 'skillLibrary.readOnlyNote'
+  | 'skillLibrary.noProvider';

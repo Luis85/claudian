@@ -1023,7 +1023,15 @@
     "newTool": "New Tool",
     "reload": "Reload",
     "empty": "No tools yet.",
-    "errorPrefix": "Error: {error}"
+    "errorPrefix": "Error: {error}",
+    "edit": "Edit",
+    "delete": "Delete",
+    "namePrompt": "New tool name (e.g. my_tool)",
+    "deleteConfirm": "Delete tool \"{name}\"? This removes its files.",
+    "deleted": "Deleted {name}.",
+    "statusError": "Error",
+    "statusReady": "Ready",
+    "reloadDone": "Reloaded tools."
   },
   "workOrderActivity": {
     "toggleRunning": "{count} active work order(s)",
@@ -1045,6 +1053,12 @@
   "skillLibrary": {
     "title": "Skill Library",
     "empty": "No skills discovered.",
-    "readOnlySuffix": "read-only"
+    "readOnlySuffix": "read-only",
+    "open": "Open",
+    "newSkill": "New Skill",
+    "namePrompt": "New skill name",
+    "created": "Created {path}.",
+    "readOnlyNote": "Read-only",
+    "noProvider": "No writable skill provider is enabled."
   }
 }

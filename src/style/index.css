@@ -57,6 +57,7 @@
 @import "./features/runtime-error-card.css";
 @import "./features/agent-board.css";
 @import "./features/agent-roster.css";
+@import "./features/library.css";
 @import "./features/work-order-modal.css";
 
 /* Modals */

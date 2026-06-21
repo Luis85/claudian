@@ -239,15 +239,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     this.registerView(VIEW_TYPE_TOOL_LIBRARY, (leaf) => new ToolLibraryView(leaf, this));
     this.registerView(VIEW_TYPE_SKILL_LIBRARY, (leaf) => new SkillLibraryView(leaf, this));
 
-    const openView = async (viewType: string) => {
-      const { workspace } = this.app;
-      const existing = workspace.getLeavesOfType(viewType)[0];
-      const leaf = existing ?? workspace.getLeaf('tab');
-      if (!existing) {
-        await leaf.setViewState({ type: viewType, active: true });
-      }
-      workspace.revealLeaf(leaf);
-    };
+    const openView = (viewType: string) => this.openLeafView(viewType);
     // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Roster" is the product feature name.
     this.addRibbonIcon('users', 'Open Agent Roster', () => void openView(VIEW_TYPE_AGENT_ROSTER));
     // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Tool Library" is the product feature name.
@@ -832,6 +824,17 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     await this.activateView();
     const view = await this.ensureViewOpen();
     await view?.getTabManager()?.openConversation(conversationId, options);
+  }
+
+  /** Reveals (or opens) a singleton workspace leaf for the given view type. */
+  async openLeafView(viewType: string): Promise<void> {
+    const { workspace } = this.app;
+    const existing = workspace.getLeavesOfType(viewType)[0];
+    const leaf = existing ?? workspace.getLeaf('tab');
+    if (!existing) {
+      await leaf.setViewState({ type: viewType, active: true });
+    }
+    workspace.revealLeaf(leaf);
   }
 
   getEnvironmentVariablesForScope(scope: EnvironmentScope): string {

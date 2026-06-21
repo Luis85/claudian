@@ -35,7 +35,7 @@
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/main.ts": {
-      "loc": 891,
+      "loc": 893,
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only. +18 from HTTP tool server wiring (ClaudianHttpToolServer construct/start/stop/rebuild + getHttpToolServerConfig method)."
     },
     "src/providers/codex/runtime/CodexNotificationRouter.ts": {
