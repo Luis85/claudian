@@ -8,6 +8,7 @@ import { OpencodeConversationHistoryService } from './history/OpencodeConversati
 import { OPENCODE_CANONICAL_TOOL_NAMES } from './normalization/opencodeToolNormalization';
 import { OpencodeChatRuntime } from './runtime/OpencodeChatRuntime';
 import { DEFAULT_OPENCODE_PROVIDER_SETTINGS, getOpencodeProviderSettings } from './settings';
+import { serializeOpencodeAgentMarkdown } from './storage/OpencodeAgentStorage';
 import { opencodeChatUIConfig } from './ui/OpencodeChatUIConfig';
 
 export const opencodeProviderRegistration: ProviderRegistration = {
@@ -27,4 +28,15 @@ export const opencodeProviderRegistration: ProviderRegistration = {
   historyService: new OpencodeConversationHistoryService(),
   isEnabled: (settings) => getOpencodeProviderSettings(settings).enabled,
   settingsReconciler: opencodeSettingsReconciler,
+  projectRosterAgent: (input, slug) => ({
+    path: `.opencode/agent/${slug}.md`,
+    // `mode: subagent` is what makes Opencode treat it as @-mentionable.
+    content: serializeOpencodeAgentMarkdown({
+      name: input.name,
+      description: input.description,
+      prompt: input.prompt,
+      mode: 'subagent',
+      color: input.color,
+    }),
+  }),
 };

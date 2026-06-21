@@ -1015,7 +1015,10 @@
     "noToolsHint": "No user tools yet. Add tools in the Tool Library.",
     "noSkillsHint": "No skills discovered yet.",
     "startChatShort": "Start chat",
-    "chipTag": "Agent"
+    "chipTag": "Agent",
+    "syncProviders": "Sync to providers",
+    "syncDone": "Published {written} agent file(s) to {providers}.",
+    "syncNone": "No enabled providers to sync to."
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically.",

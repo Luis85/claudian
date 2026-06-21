@@ -38,4 +38,7 @@ export type AgentsTranslationKey =
   | 'agentRoster.noToolsHint'
   | 'agentRoster.noSkillsHint'
   | 'agentRoster.startChatShort'
-  | 'agentRoster.chipTag';
+  | 'agentRoster.chipTag'
+  | 'agentRoster.syncProviders'
+  | 'agentRoster.syncDone'
+  | 'agentRoster.syncNone';

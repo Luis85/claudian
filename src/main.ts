@@ -14,6 +14,7 @@ import { ConversationStore } from './app/conversations/ConversationStore';
 import { EnvironmentApplyService } from './app/environment/EnvironmentApplyService';
 import type { ClaudianEventMap } from './app/events/claudianEvents';
 import { PluginLifecycle } from './app/lifecycle/PluginLifecycle';
+import { projectRosterAgentsToProviders, type RosterProjectionResult } from './app/rosterAgentProjection';
 import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
 import { SharedStorageService } from './app/storage/SharedStorageService';
 import { PluginViewActivator } from './app/views/PluginViewActivator';
@@ -831,6 +832,17 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     await this.activateView();
     const view = await this.ensureViewOpen();
     await view?.getTabManager()?.openConversation(conversationId, options);
+  }
+
+  /**
+   * Publishes every roster agent into each enabled provider's native subagent
+   * folder (.claude/agents, .codex/agents, .cursor/agents, .opencode/agent) so
+   * the agents are @-mentionable as that provider's own subagents.
+   */
+  async syncRosterAgentsToProviders(): Promise<RosterProjectionResult> {
+    const agents = await this.agentRosterStore.list();
+    const enabled = ProviderRegistry.getEnabledProviderIds(asSettingsBag(this.settings));
+    return projectRosterAgentsToProviders(agents, enabled, this.vaultFileAdapter);
   }
 
   /** Reveals (or opens) a singleton workspace leaf for the given view type. */

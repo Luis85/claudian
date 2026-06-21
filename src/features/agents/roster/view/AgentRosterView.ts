@@ -59,6 +59,9 @@ export class AgentRosterView extends ItemView {
     const installBtn = headerActions.createEl('button', { text: t('agentRoster.installStarter') });
     installBtn.onclick = () => void this.installStarters();
 
+    const syncBtn = headerActions.createEl('button', { text: t('agentRoster.syncProviders') });
+    syncBtn.onclick = () => void this.syncToProviders();
+
     // Quick links to the libraries an agent draws its skills + tools from.
     const links = root.createDiv({ cls: 'claudian-roster-links' });
     const toolLink = links.createEl('button', { cls: 'claudian-roster-link', text: t('agentRoster.tools') });
@@ -306,6 +309,18 @@ export class AgentRosterView extends ItemView {
     }
     await this.store.save(agent);
     await this.renderDetail(agent);
+  }
+
+  private async syncToProviders(): Promise<void> {
+    const result = await this.plugin.syncRosterAgentsToProviders();
+    new Notice(
+      result.providers.length > 0
+        ? t('agentRoster.syncDone', {
+            written: String(result.written),
+            providers: result.providers.join(', '),
+          })
+        : t('agentRoster.syncNone'),
+    );
   }
 
   private async installStarters(): Promise<void> {
