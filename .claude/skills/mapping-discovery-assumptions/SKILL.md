@@ -41,7 +41,7 @@ Every idea is a stack of beliefs. This skill makes them **explicit, falsifiable,
 
 | Mistake | Fix |
 |---------|-----|
-| Only listing feasibility risks | Force desirability + viability rows |
+| Only listing feasibility risks | Force desirability, usability, AND viability rows |
 | Vague, unfalsifiable beliefs | Rewrite so a test could prove them wrong |
 | Building an MVP before testing | Run the RAT first — learn before build |
 | Designing tests that can only confirm | State the result that would kill the belief |
