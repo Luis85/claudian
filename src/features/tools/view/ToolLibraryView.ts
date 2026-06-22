@@ -62,7 +62,7 @@ export class ToolLibraryView extends ItemView {
     }
 
     for (const tool of tools) {
-      const { nameRow, body, actions: cardActions } = createLibraryCard(list, tool.id);
+      const { nameRow, body, actions: cardActions } = createLibraryCard(list, tool.module?.manifest.name ?? tool.id);
       nameRow.createSpan({
         cls: `claudian-library-chip ${tool.error ? 'claudian-library-chip-error' : 'claudian-library-chip-ready'}`,
         text: tool.error ? t('toolLibrary.statusError') : t('toolLibrary.statusReady'),

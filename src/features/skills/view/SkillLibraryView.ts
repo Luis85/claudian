@@ -63,7 +63,9 @@ export class SkillLibraryView extends ItemView {
       const { nameRow, body, actions } = createLibraryCard(list, row.name);
       nameRow.createSpan({ cls: 'claudian-library-chip claudian-library-chip-muted', text: row.providerDisplayName });
       if (!row.editable) {
-        nameRow.createSpan({ cls: 'claudian-library-chip claudian-library-chip-muted', text: t('skillLibrary.readOnlyNote') });
+        // Outline (not filled) so the read-only marker reads as distinct from
+        // the adjacent filled provider chip rather than merging into one gray pair.
+        nameRow.createSpan({ cls: 'claudian-library-chip claudian-library-chip-outline', text: t('skillLibrary.readOnlyNote') });
       }
       body.createDiv({ cls: 'claudian-library-card-desc', text: row.description });
 

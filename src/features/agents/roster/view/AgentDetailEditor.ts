@@ -257,14 +257,16 @@ export class AgentDetailEditor {
     this.dirtyDot = footer.createSpan({ cls: 'claudian-roster-dirty', text: t('agentRoster.unsavedChanges') });
     this.dirtyDot.setAttribute('role', 'status');
     this.dirtyDot.setAttribute('aria-live', 'polite');
+    // Keep the destructive Delete on the left, separated from the Save/Start
+    // primary actions by the spacer, so it can't be hit while reaching for Save.
+    const del = footer.createEl('button', { cls: 'claudian-library-card-delete', text: t('agentRoster.delete') });
+    del.onclick = () => this.callbacks.onDeleted(this.original);
     footer.createDiv({ cls: 'claudian-roster-footer-spacer' });
 
     const save = footer.createEl('button', { cls: 'mod-cta', text: t('agentRoster.save') });
     save.onclick = () => void this.save();
     const start = footer.createEl('button', { text: t('agentRoster.startChat') });
     start.onclick = () => void this.startChatFromEditor();
-    const del = footer.createEl('button', { cls: 'claudian-roster-card-delete', text: t('agentRoster.delete') });
-    del.onclick = () => this.callbacks.onDeleted(this.original);
   }
 
   private async save(): Promise<void> {

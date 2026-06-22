@@ -188,6 +188,13 @@
   background: var(--background-modifier-border);
 }
 
+/* Outline variant: distinguishes the read-only marker from the filled provider chip. */
+.claudian-library-chip-outline {
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--background-modifier-border);
+}
+
 .claudian-library-card-actions {
   flex: 0 0 auto;
   display: flex;

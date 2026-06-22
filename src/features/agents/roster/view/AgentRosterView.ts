@@ -69,8 +69,10 @@ export class AgentRosterView extends ItemView {
       renderLibraryEmptyState(list, {
         icon: 'users',
         message: t('agentRoster.emptyState'),
-        actionLabel: t('agentRoster.installStarter'),
-        onAction: () => void withErrorNotice(() => this.installStarters(), fail, (e) => this.fail(e)),
+        // CTA must match the "Create one to get started" copy, so it creates a
+        // new agent rather than installing starters (those stay in the header).
+        actionLabel: t('agentRoster.newAgent'),
+        onAction: () => void withErrorNotice(() => this.createAndEdit(), fail, (e) => this.fail(e)),
       });
       return;
     }
