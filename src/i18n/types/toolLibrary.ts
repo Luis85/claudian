@@ -28,7 +28,6 @@ export type ToolLibraryTranslationKey =
   // Skill Library
   | 'skillLibrary.title'
   | 'skillLibrary.empty'
-  | 'skillLibrary.readOnlySuffix'
   | 'skillLibrary.open'
   | 'skillLibrary.newSkill'
   | 'skillLibrary.namePrompt'
@@ -43,4 +42,5 @@ export type ToolLibraryTranslationKey =
   | 'skillLibrary.readonlyNotice'
   | 'skillLibrary.navLabel'
   | 'skillLibrary.nameField'
+  | 'skillLibrary.providerVault'
   | 'skillLibrary.actionFailed';

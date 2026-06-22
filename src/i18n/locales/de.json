@@ -718,9 +718,9 @@
         "instructionsRequired": "Instructions are required",
         "saveFailed": "Failed to save Codex skill",
         "deleteFailed": "Failed to delete Codex skill",
-        "deleted": "Codex skill \"${name}\" deleted",
-        "updated": "Codex skill \"${name}\" updated",
-        "created": "Codex skill \"${name}\" created"
+        "deleted": "Codex skill \"{name}\" deleted",
+        "updated": "Codex skill \"{name}\" updated",
+        "created": "Codex skill \"{name}\" created"
       }
     },
     "claude": {
@@ -982,25 +982,21 @@
     "title": "Agent Roster",
     "newAgent": "New Agent",
     "emptyState": "No agents yet. Create one to get started.",
-    "back": "← back",
+    "back": "Back",
     "skills": "Skills",
     "tools": "Tools",
     "save": "Save",
     "startChat": "Chat mit diesem Agenten starten",
     "chattingWith": "Chat mit {name}",
     "installStarter": "Install starter agents",
-    "installStarterDone": "Installed {installed} starter agent(s); skipped {skipped} existing.",
+    "installStarterDone": "Installed starter agents ({installed} new, {skipped} skipped).",
     "installStarterNone": "All starter agents are already installed.",
     "fieldName": "Name",
-    "fieldDescription": "What it's for",
-    "fieldInstructions": "Instructions",
+    "fieldDescription": "Description",
     "delete": "Delete",
     "deleteConfirm": "Delete agent \"{name}\"? This cannot be undone.",
-    "sectionIdentity": "Identity",
-    "sectionAppearance": "Appearance",
     "sectionModel": "Model",
     "sectionInstructions": "Instructions",
-    "sectionRoles": "Roles",
     "provider": "Provider",
     "model": "Model",
     "providerDefault": "Default (global)",
@@ -1014,7 +1010,7 @@
     "noToolsHint": "No user tools yet. Add tools in the Tool Library.",
     "noSkillsHint": "No skills discovered yet.",
     "startChatShort": "Start chat",
-    "capsSummary": "Skills {skills} · Tools {tools}",
+    "capsSummary": "{skills} skills · {tools} tools",
     "searchSkills": "Search skills…",
     "searchTools": "Search tools…",
     "selectedCount": "{count} selected",
@@ -1022,11 +1018,12 @@
     "discardConfirm": "Discard unsaved changes?",
     "discard": "Discard",
     "syncProviders": "Sync to providers",
-    "syncDone": "Published {written} agent file(s) to {providers}.",
+    "syncDone": "Synced agents to {providers} ({written} files).",
     "syncNone": "No enabled providers to sync to.",
     "navLabel": "Agents",
     "actionFailed": "Something went wrong — check the developer console.",
-    "syncFailed": "Published {written}; {failed} agent(s) failed."
+    "syncFailed": "Synced with errors: {written} written, {failed} failed.",
+    "colorNone": "None"
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically.",
@@ -1075,7 +1072,6 @@
   "skillLibrary": {
     "title": "Skill Library",
     "empty": "No skills discovered.",
-    "readOnlySuffix": "read-only",
     "open": "Open",
     "newSkill": "New Skill",
     "namePrompt": "New skill name",
@@ -1090,6 +1086,7 @@
     "readonlyNotice": "This skill is read-only and cannot be edited here.",
     "navLabel": "Skills",
     "nameField": "Name",
-    "actionFailed": "Something went wrong — check the developer console."
+    "actionFailed": "Something went wrong — check the developer console.",
+    "providerVault": "Vault"
   }
 }

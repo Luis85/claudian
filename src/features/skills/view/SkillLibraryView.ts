@@ -95,7 +95,7 @@ export class SkillLibraryView extends ItemView {
       id: `skill-${dir.split('/').pop()}`,
       name,
       description: '',
-      providerDisplayName: 'Vault',
+      providerDisplayName: t('skillLibrary.providerVault'),
       sourceFilePath: path,
       editable: true,
     });

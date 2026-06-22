@@ -98,7 +98,7 @@ export class AgentDetailEditor {
     const row = parent.createDiv({ cls: 'claudian-roster-appearance' });
 
     const color = row.createEl('select', { cls: 'claudian-roster-appearance-color dropdown' });
-    color.createEl('option', { value: '', text: t('agentRoster.providerDefault') });
+    color.createEl('option', { value: '', text: t('agentRoster.colorNone') });
     for (const name of AVATAR_COLORS) color.createEl('option', { value: `var(--color-${name})`, text: name });
     color.value = this.draft.color ?? '';
     color.addEventListener('change', () => {

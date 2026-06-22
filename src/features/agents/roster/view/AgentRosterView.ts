@@ -149,11 +149,11 @@ export class AgentRosterView extends ItemView {
 
   private async createAndEdit(): Promise<void> {
     const existing = await this.store.list();
-    const agent = createRosterAgent('New Agent', Date.now());
+    const agent = createRosterAgent(t('agentRoster.newAgent'), Date.now());
     const uniqueId = dedupeRosterId(agent.id, existing.map((a) => a.id));
     if (uniqueId !== agent.id) {
       agent.id = uniqueId;
-      agent.name = `New Agent ${uniqueId.split('-').pop()}`;
+      agent.name = `${t('agentRoster.newAgent')} ${uniqueId.split('-').pop()}`;
     }
     await this.store.save(agent);
     await this.openDetail(agent);
