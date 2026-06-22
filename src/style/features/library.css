@@ -131,6 +131,21 @@
   gap: var(--size-4-2);
 }
 
+/* The opt-in `nameAsButton` name button (createLibraryCard) renders inline like
+   the text it replaces: reset native button chrome and inherit the name row's
+   font/color. A consumer can still layer its own deltas on top. */
+.claudian-library-card-name-button {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .claudian-library-card-desc {
   color: var(--text-muted);
   font-size: var(--font-ui-small);
