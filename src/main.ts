@@ -58,8 +58,11 @@ import type { UsageEventMap } from './core/usage/events';
 import { UsageStorage } from './core/usage/UsageStorage';
 import { UsageTracker } from './core/usage/UsageTracker';
 import { AgentRosterStore } from './features/agents/roster/AgentRosterStore';
-import { formatBoundAgentPersona } from './features/agents/roster/boundAgentPersona';
-import { toolCapabilityId } from './features/agents/roster/rosterCapabilities';
+import {
+  type BoundAgentProjection,
+  formatBoundAgentPersona,
+} from './features/agents/roster/boundAgentPersona';
+import { resolveAgentProvider } from './features/agents/roster/resolveAgentProvider';
 import { AgentRosterView, VIEW_TYPE_AGENT_ROSTER } from './features/agents/roster/view/AgentRosterView';
 import { ClaudianView } from './features/chat/ClaudianView';
 import { sendFeedbackPrompt } from './features/chat/feedback/sendFeedbackPrompt';
@@ -86,6 +89,7 @@ import { WorkOrderActivityProvider } from './features/tasks/ui/WorkOrderActivity
 import { ClaudianToolRegistry } from './features/tools/ClaudianToolRegistry';
 import { ClaudianHttpToolServer } from './features/tools/host/ClaudianHttpToolServer';
 import { buildClaudianToolMcpServer } from './features/tools/host/InProcessToolMcpServer';
+import { getScopedTools, scopedToolKey } from './features/tools/scopedTools';
 import type { LoadedTool } from './features/tools/toolTypes';
 import { transpileToolSource } from './features/tools/transpile';
 import { ToolLibraryView, VIEW_TYPE_TOOL_LIBRARY } from './features/tools/view/ToolLibraryView';
@@ -455,11 +459,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   /** The error-free user tools exposed to a conversation, scoped to a bound
    *  agent's grant when non-empty (empty/absent grant = all). */
   private getScopedClaudianTools(grantedToolIds?: string[]): LoadedTool[] {
-    if (!this.toolRegistry) return [];
-    const loaded = this.toolRegistry.list().filter((t) => t.module && !t.error);
-    if (!grantedToolIds || grantedToolIds.length === 0) return loaded;
-    const granted = new Set(grantedToolIds);
-    return loaded.filter((t) => t.module && granted.has(toolCapabilityId(t.module.manifest.name)));
+    return this.toolRegistry ? getScopedTools(this.toolRegistry.list(), grantedToolIds) : [];
   }
 
   getClaudianToolServer(grantedToolIds?: string[]): unknown {
@@ -479,10 +479,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
    * flag alone would miss a contents change).
    */
   getClaudianToolKey(grantedToolIds?: string[]): string {
-    return this.getScopedClaudianTools(grantedToolIds)
-      .map((t) => t.module!.manifest.name)
-      .sort()
-      .join(',');
+    return scopedToolKey(this.toolRegistry?.list() ?? [], grantedToolIds);
   }
 
   getHttpToolServerConfig(): { url: string; headers: Record<string, string> } | null {
@@ -491,7 +488,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
   async resolveBoundAgent(
     boundAgentId: string,
-  ): Promise<{ prompt?: string; model?: string; tools?: string[] } | null> {
+  ): Promise<BoundAgentProjection | null> {
     const agent = await this.agentRosterStore?.get(boundAgentId);
     if (!agent) return null;
     return {
@@ -517,10 +514,11 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     const agent = await this.agentRosterStore?.get(agentId);
     if (!agent) return null;
     const settings = asSettingsBag(this.settings);
-    const preferred = agent.providerOverride ?? agent.modelSelection?.providerId;
-    const providerId = preferred && ProviderRegistry.isEnabled(preferred, settings)
-      ? preferred
-      : ProviderRegistry.resolveSettingsProviderId(settings);
+    const providerId = resolveAgentProvider(
+      agent,
+      (p) => ProviderRegistry.isEnabled(p, settings),
+      ProviderRegistry.resolveSettingsProviderId(settings),
+    );
     const model = agent.modelSelection?.modelId
       || ProviderSettingsCoordinator.getProviderSettingsSnapshot(this.settings, providerId).model;
     return { providerId, model };

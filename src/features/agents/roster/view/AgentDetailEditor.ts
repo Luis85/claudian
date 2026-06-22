@@ -8,6 +8,7 @@ import type ClaudianPlugin from '../../../../main';
 import { confirm } from '../../../../shared/modals/ConfirmModal';
 import { renderAgentAvatar } from '../../agentAvatar';
 import { rosterAgentToPersona } from '../../personaRegistry';
+import { agentPreferredProviderId } from '../resolveAgentProvider';
 import { toolCapabilityId } from '../rosterCapabilities';
 import { isRosterAgentDirty } from '../rosterDirty';
 import type { RosterAgent } from '../rosterTypes';
@@ -172,13 +173,11 @@ export class AgentDetailEditor {
     new Setting(grid).setName(t('agentRoster.model')).addDropdown((c) => {
       modelDropdown = c;
       c.onChange((v) => {
-        const providerId = (this.draft.providerOverride
-          ?? this.draft.modelSelection?.providerId
-          ?? providerIds[0]) as ProviderId | undefined;
+        const providerId = agentPreferredProviderId(this.draft) ?? providerIds[0];
         this.draft.modelSelection = v && providerId ? { modelId: v, providerId } : undefined;
         this.updateDirty();
       });
-      populateModels(this.draft.providerOverride ?? this.draft.modelSelection?.providerId ?? '');
+      populateModels(agentPreferredProviderId(this.draft) ?? '');
     });
   }
 

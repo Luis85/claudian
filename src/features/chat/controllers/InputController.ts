@@ -33,6 +33,7 @@ import type { BrowserSelectionContext } from '../../../utils/browser';
 import type { CanvasSelectionContext } from '../../../utils/canvas';
 import type { EditorSelectionContext } from '../../../utils/editor';
 import { appendMarkdownSnippet } from '../../../utils/markdown';
+import type { BoundAgentProjection } from '../../agents/roster/boundAgentPersona';
 import type { MessageRenderer } from '../rendering/MessageRenderer';
 import { persistPastedImages } from '../services/persistPastedImages';
 import type { SubagentManager } from '../services/SubagentManager';
@@ -576,7 +577,7 @@ export class InputController {
       return base;
     }
 
-    const projection = await this.deps.plugin.resolveBoundAgent?.(conversation.boundAgentId);
+    const projection: BoundAgentProjection | null | undefined = await this.deps.plugin.resolveBoundAgent?.(conversation.boundAgentId);
     if (!projection) {
       return base;
     }

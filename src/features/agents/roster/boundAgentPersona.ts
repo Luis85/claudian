@@ -4,6 +4,14 @@ export interface BoundAgentPersonaInput {
   prompt?: string;
 }
 
+/** The resolved persona/model/tool projection a conversation adopts from its
+ *  bound roster agent. */
+export interface BoundAgentProjection {
+  prompt?: string;
+  model?: string;
+  tools?: string[];
+}
+
 /**
  * Builds the persona directive injected when a conversation is bound to a roster
  * agent. It leads with a forceful identity statement so providers without a

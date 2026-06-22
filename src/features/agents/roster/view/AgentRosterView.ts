@@ -12,6 +12,7 @@ import { renderLibraryEmptyState } from '../../../../utils/libraryView';
 import { renderAgentAvatar } from '../../agentAvatar';
 import { rosterAgentToPersona } from '../../personaRegistry';
 import { installPresetAgents } from '../presetAgents';
+import { resolveAgentProvider as resolveAgentProviderId } from '../resolveAgentProvider';
 import { createRosterAgent, dedupeRosterId } from '../rosterCapabilities';
 import type { RosterAgent } from '../rosterTypes';
 import { AgentDetailEditor } from './AgentDetailEditor';
@@ -214,11 +215,11 @@ export class AgentRosterView extends ItemView {
    */
   private resolveAgentProvider(agent: RosterAgent): ProviderId {
     const settings = asSettingsBag(this.plugin.settings);
-    const preferred = agent.providerOverride ?? agent.modelSelection?.providerId;
-    if (preferred && ProviderRegistry.isEnabled(preferred, settings)) {
-      return preferred;
-    }
-    return ProviderRegistry.resolveSettingsProviderId(settings);
+    return resolveAgentProviderId(
+      agent,
+      (p) => ProviderRegistry.isEnabled(p, settings),
+      ProviderRegistry.resolveSettingsProviderId(settings),
+    );
   }
 
   private async startChatWithAgent(agent: RosterAgent): Promise<void> {
