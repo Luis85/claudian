@@ -478,8 +478,12 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     return scopedToolKey(this.toolRegistry?.list() ?? [], grantedToolIds);
   }
 
-  getHttpToolServerConfig(): { url: string; headers: Record<string, string> } | null {
-    return this.httpToolServer?.getConfig() ?? null;
+  getHttpToolServerConfig(
+    grantedToolIds?: string[],
+  ): { url: string; headers: Record<string, string> } | null {
+    // A non-empty grant resolves a scoped, token-keyed layer; no/empty grant
+    // returns the default all-tools config (byte-identical to pre-scoping).
+    return this.httpToolServer?.getConfig(grantedToolIds) ?? null;
   }
 
   async resolveBoundAgent(

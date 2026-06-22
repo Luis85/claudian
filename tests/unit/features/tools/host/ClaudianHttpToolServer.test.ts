@@ -20,7 +20,9 @@ jest.mock('@modelcontextprotocol/sdk/server/streamableHttp.js', () => ({
 
 import { z } from 'zod';
 
+import type { HttpToolServerConfig } from '@/features/tools/host/ClaudianHttpToolServer';
 import { buildHttpMcpServer, ClaudianHttpToolServer } from '@/features/tools/host/ClaudianHttpToolServer';
+import { scopedToolKey } from '@/features/tools/scopedTools';
 import type { ClaudianToolModule, LoadedTool, ToolHostContext } from '@/features/tools/toolTypes';
 
 beforeEach(() => {
@@ -151,6 +153,193 @@ describe('ClaudianHttpToolServer — bearer auth', () => {
 
     expect(res.writeHead).not.toHaveBeenCalledWith(401, expect.anything());
     expect(handleRequest).toHaveBeenCalledWith(req, res);
+  });
+});
+
+describe('ClaudianHttpToolServer — grant-scoped token registry', () => {
+  function namedTool(name: string): LoadedTool {
+    return {
+      id: name,
+      module: {
+        manifest: { name, description: `${name} tool`, input: z.object({ text: z.string() }) },
+        handler: async () => ({ content: [{ type: 'text' as const, text: 'ok' }] }),
+      },
+      jsonSchema: {},
+    };
+  }
+
+  // capability ids the grant list uses: mcp__claudian__<name>
+  const cap = (name: string): string => `mcp__claudian__${name}`;
+
+  // A started-enough server: real config + httpServer injected so getConfig and
+  // the lazy/eager builds run, without binding a real socket.
+  async function makeStartedServer(loaded: LoadedTool[]) {
+    const server = new ClaudianHttpToolServer(
+      () => loaded,
+      () => ({ app: {} as never, signal: new AbortController().signal }),
+    );
+    (server as unknown as { httpServer: unknown }).httpServer = {};
+    (server as unknown as { config: HttpToolServerConfig }).config = {
+      url: 'http://127.0.0.1:1234/mcp',
+      headers: {},
+    };
+    // Mirror startServer's default-fingerprint registration + default build.
+    const internal = server as unknown as {
+      bearerToken: string;
+      tokenByFingerprint: Map<string, string>;
+      defaultLayer: { grant: string[] | undefined };
+      buildLayer(layer: unknown): Promise<void>;
+    };
+    internal.tokenByFingerprint.set(scopedToolKey(loaded, undefined), internal.bearerToken);
+    await internal.buildLayer(internal.defaultLayer);
+    return server;
+  }
+
+  const tokenOf = (cfg: HttpToolServerConfig | null): string =>
+    (cfg?.headers.Authorization ?? '').replace('Bearer ', '');
+
+  it('getConfig() and getConfig([]) return the default (all-tools) bearer token', async () => {
+    const server = await makeStartedServer([namedTool('alpha'), namedTool('beta')]);
+    const defaultToken = (server as unknown as { bearerToken: string }).bearerToken;
+
+    const noArg = server.getConfig();
+    const empty = server.getConfig([]);
+
+    expect(tokenOf(noArg)).toBe(defaultToken);
+    expect(tokenOf(empty)).toBe(defaultToken);
+    // url byte-identical to the started config; only the header carries the token.
+    expect(noArg?.url).toBe('http://127.0.0.1:1234/mcp');
+  });
+
+  it('returns null before start()', () => {
+    const server = new ClaudianHttpToolServer(
+      () => [],
+      () => ({ app: {} as never, signal: new AbortController().signal }),
+    );
+    expect(server.getConfig()).toBeNull();
+    expect(server.getConfig(['mcp__claudian__alpha'])).toBeNull();
+  });
+
+  it('mints a non-default token for a grant and dedupes identical grants', async () => {
+    const server = await makeStartedServer([namedTool('alpha'), namedTool('beta')]);
+    const defaultToken = (server as unknown as { bearerToken: string }).bearerToken;
+
+    const a1 = tokenOf(server.getConfig([cap('alpha')]));
+    const a2 = tokenOf(server.getConfig([cap('alpha')]));
+    const b = tokenOf(server.getConfig([cap('beta')]));
+
+    expect(a1).not.toBe(defaultToken);
+    expect(a1).toBe(a2); // same grant signature → same token + layer
+    expect(b).not.toBe(a1); // different grant → different token
+  });
+
+  it('gives a grant that matches no tools its own zero-tool layer (not the all-tools default)', async () => {
+    const server = await makeStartedServer([namedTool('alpha')]);
+    const defaultToken = (server as unknown as { bearerToken: string }).bearerToken;
+
+    // A non-empty grant referencing a non-existent tool must reach NOTHING — it
+    // gets a distinct token whose scoped layer registered zero tools, never the
+    // all-tools default token (which would over-grant).
+    mockRegisterTool.mockClear();
+    const ghostToken = tokenOf(server.getConfig([cap('ghost')]));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(ghostToken).not.toBe(defaultToken);
+    expect(mockRegisterTool).not.toHaveBeenCalled();
+  });
+
+  it("builds each grant's layer from getScopedTools (only granted tools registered)", async () => {
+    const loaded = [namedTool('alpha'), namedTool('beta'), namedTool('gamma')];
+    const server = await makeStartedServer(loaded);
+
+    // Mint grant-A (alpha only) and let its async layer build settle.
+    mockRegisterTool.mockClear();
+    server.getConfig([cap('alpha')]);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const registered = mockRegisterTool.mock.calls.map((c) => c[0]);
+    expect(registered).toEqual(['alpha']); // beta/gamma not registered on A's layer
+  });
+
+  it('routes a request with grant-A token to a layer that lists only A and 401s an unknown token', async () => {
+    const loaded = [namedTool('alpha'), namedTool('beta')];
+    const server = await makeStartedServer(loaded);
+
+    const aToken = tokenOf(server.getConfig([cap('alpha')]));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // Capture the transport bound to grant-A's layer.
+    const layers = (server as unknown as { layers: Map<string, { transport: { handleRequest: jest.Mock } }> }).layers;
+    const aHandle = jest.fn().mockResolvedValue(undefined);
+    layers.get(aToken)!.transport = { handleRequest: aHandle } as never;
+
+    const call = (
+      server as unknown as { handleHttpRequest(req: unknown, res: unknown): void }
+    ).handleHttpRequest.bind(server);
+
+    // grant-A token → delegates to A's layer transport.
+    const okRes = { writeHead: jest.fn(), end: jest.fn(), on: jest.fn() };
+    call({ headers: { authorization: `Bearer ${aToken}` } }, okRes);
+    expect(aHandle).toHaveBeenCalledTimes(1);
+    expect(okRes.writeHead).not.toHaveBeenCalledWith(401, expect.anything());
+
+    // unknown token → 401, no delegation.
+    const badRes = { writeHead: jest.fn(), end: jest.fn(), on: jest.fn() };
+    call({ headers: { authorization: 'Bearer garbage' } }, badRes);
+    expect(badRes.writeHead).toHaveBeenCalledWith(401, expect.anything());
+  });
+
+  it('rebuild() keeps a previously-issued grant token resolvable (no spurious 503)', async () => {
+    let loaded = [namedTool('alpha'), namedTool('beta')];
+    const server = new ClaudianHttpToolServer(
+      () => loaded,
+      () => ({ app: {} as never, signal: new AbortController().signal }),
+    );
+    (server as unknown as { httpServer: unknown }).httpServer = {};
+    (server as unknown as { config: HttpToolServerConfig }).config = {
+      url: 'http://127.0.0.1:1234/mcp',
+      headers: {},
+    };
+    const internal = server as unknown as {
+      bearerToken: string;
+      tokenByFingerprint: Map<string, string>;
+      defaultLayer: { grant: string[] | undefined };
+      buildLayer(layer: unknown): Promise<void>;
+    };
+    internal.tokenByFingerprint.set(scopedToolKey(loaded, undefined), internal.bearerToken);
+    await internal.buildLayer(internal.defaultLayer);
+
+    const aToken = tokenOf(server.getConfig([cap('alpha')]));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // Tool set changes; rebuild tears down + rebuilds every layer eagerly.
+    loaded = [namedTool('alpha'), namedTool('gamma')];
+    await (server as unknown as { rebuild(): Promise<void> }).rebuild();
+
+    // The grant-A token still resolves to a layer with a live transport (no 503).
+    const layers = (server as unknown as {
+      layers: Map<string, { transport: { handleRequest: jest.Mock } | null }>;
+    }).layers;
+    const aLayer = layers.get(aToken);
+    expect(aLayer?.transport).not.toBeNull();
+
+    // Stub the rebuilt transport's handleRequest (the SDK transport is mocked as
+    // {}), then confirm the held token delegates rather than 503/401-ing.
+    const handle = jest.fn().mockResolvedValue(undefined);
+    aLayer!.transport = { handleRequest: handle };
+
+    const call = (
+      server as unknown as { handleHttpRequest(req: unknown, res: unknown): void }
+    ).handleHttpRequest.bind(server);
+    const res = { writeHead: jest.fn(), end: jest.fn(), on: jest.fn() };
+    call({ headers: { authorization: `Bearer ${aToken}` } }, res);
+    expect(handle).toHaveBeenCalledTimes(1);
+    expect(res.writeHead).not.toHaveBeenCalledWith(503, expect.anything());
+    expect(res.writeHead).not.toHaveBeenCalledWith(401, expect.anything());
   });
 });
 
