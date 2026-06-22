@@ -31,8 +31,8 @@
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/main.ts": {
-      "loc": 923,
-      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only. +18 from HTTP tool server wiring (ClaudianHttpToolServer construct/start/stop/rebuild + getHttpToolServerConfig method). +14 from the tool-scope staleness fix (getScopedClaudianTools extraction + getClaudianToolKey fingerprint)."
+      "loc": 927,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only. +18 from HTTP tool server wiring (ClaudianHttpToolServer construct/start/stop/rebuild + getHttpToolServerConfig method). +14 from the tool-scope staleness fix (getScopedClaudianTools extraction + getClaudianToolKey fingerprint). +4 from roster/projection resilience logging (onError callbacks wired to logger.scope('agents').warn)."
     },
     "src/features/tasks/ui/AgentBoardView.ts": {
       "loc": 906,

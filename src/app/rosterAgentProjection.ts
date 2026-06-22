@@ -44,6 +44,7 @@ async function projectAgentToProvider(
   providerId: ProviderId,
   agent: RosterAgent,
   adapter: VaultFileAdapter,
+  onError?: (provider: ProviderId, agentName: string, error: unknown) => void,
 ): Promise<ProjectionOutcome> {
   const slug = rosterSlug(agent);
   const name = singleLine(agent.name);
@@ -57,7 +58,8 @@ async function projectAgentToProvider(
     if (!file) return 'no-mapping';
     await adapter.write(file.path, file.content);
     return 'written';
-  } catch {
+  } catch (error) {
+    onError?.(providerId, name || agent.id, error);
     return { failed: name || agent.id };
   }
 }
@@ -71,6 +73,7 @@ export async function projectRosterAgentsToProviders(
   agents: RosterAgent[],
   providerIds: ProviderId[],
   adapter: VaultFileAdapter,
+  onError?: (provider: ProviderId, agentName: string, error: unknown) => void,
 ): Promise<RosterProjectionResult> {
   let written = 0;
   const touched: ProviderId[] = [];
@@ -78,7 +81,7 @@ export async function projectRosterAgentsToProviders(
   for (const providerId of providerIds) {
     let projectedAny = false;
     for (const agent of agents) {
-      const outcome = await projectAgentToProvider(providerId, agent, adapter);
+      const outcome = await projectAgentToProvider(providerId, agent, adapter, onError);
       if (outcome === 'written') {
         written += 1;
         projectedAny = true;

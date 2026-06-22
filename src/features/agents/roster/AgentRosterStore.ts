@@ -14,6 +14,7 @@ export class AgentRosterStore {
   constructor(
     private readonly adapter: VaultFileAdapter,
     private readonly events?: EventBus<ClaudianEventMap>,
+    private readonly onError?: (path: string, error: unknown) => void,
   ) {}
 
   async list(): Promise<RosterAgent[]> {
@@ -23,8 +24,9 @@ export class AgentRosterStore {
       if (!path.endsWith('.json')) continue;
       try {
         agents.push(JSON.parse(await this.adapter.read(path)) as RosterAgent);
-      } catch {
+      } catch (error) {
         // skip malformed files; the editor surfaces validation elsewhere
+        this.onError?.(path, error);
       }
     }
     return agents.sort((a, b) => a.name.localeCompare(b.name));
@@ -35,7 +37,8 @@ export class AgentRosterStore {
     if (!(await this.adapter.exists(path))) return null;
     try {
       return JSON.parse(await this.adapter.read(path)) as RosterAgent;
-    } catch {
+    } catch (error) {
+      this.onError?.(path, error);
       return null;
     }
   }

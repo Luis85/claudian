@@ -68,6 +68,9 @@ function validateModule(value: unknown): ClaudianToolModule {
 
 export class ClaudianToolRegistry {
   private tools = new Map<string, LoadedTool>();
+  // The vault `modify` watcher fires `load()` several times per save. Chain
+  // overlapping calls so they run sequentially — never interleaved.
+  private loadChain: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly adapter: VaultFileAdapter,
@@ -75,8 +78,19 @@ export class ClaudianToolRegistry {
   ) {}
 
   async load(): Promise<void> {
-    this.tools.clear();
-    if (!(await this.adapter.exists(TOOLS_DIR))) return;
+    this.loadChain = this.loadChain.catch(() => {}).then(() => this.doLoad());
+    return this.loadChain;
+  }
+
+  private async doLoad(): Promise<void> {
+    // Build into a fresh map and swap at the end, so `list()`/`get()` always see
+    // a complete set (the previous one until the swap) — never a half-populated
+    // map mid-load.
+    const next = new Map<string, LoadedTool>();
+    if (!(await this.adapter.exists(TOOLS_DIR))) {
+      this.tools = next;
+      return;
+    }
     const dirs = await this.adapter.listFolders(TOOLS_DIR);
     // Two tools declaring the same `manifest.name` would collide as one
     // `mcp__claudian__<name>` id — the provider would see only one and silently
@@ -96,11 +110,12 @@ export class ClaudianToolRegistry {
         }
         claimedNames.set(module.manifest.name, id);
         const jsonSchema = z.toJSONSchema(module.manifest.input) as Record<string, unknown>;
-        this.tools.set(id, { id, module, jsonSchema });
+        next.set(id, { id, module, jsonSchema });
       } catch (err) {
-        this.tools.set(id, { id, error: err instanceof Error ? err.message : String(err) });
+        next.set(id, { id, error: err instanceof Error ? err.message : String(err) });
       }
     }
+    this.tools = next;
   }
 
   list(): LoadedTool[] {

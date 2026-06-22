@@ -319,7 +319,9 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
     // Tool registry: discover/transpile/validate user-authored tools under .claudian/tools/.
     this.vaultFileAdapter = new VaultFileAdapter(this.app);
-    this.agentRosterStore = new AgentRosterStore(this.vaultFileAdapter, this.events);
+    const rosterLog = this.logger.scope('agents');
+    this.agentRosterStore = new AgentRosterStore(this.vaultFileAdapter, this.events,
+      (path, error) => rosterLog.warn('skipped malformed roster file', path, error));
     this.toolRegistry = new ClaudianToolRegistry(this.vaultFileAdapter, {
       transpile: transpileToolSource,
       requireResolve: (id) => {
@@ -856,7 +858,9 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   async syncRosterAgentsToProviders(): Promise<RosterProjectionResult> {
     const agents = await this.agentRosterStore.list();
     const enabled = ProviderRegistry.getEnabledProviderIds(asSettingsBag(this.settings));
-    return projectRosterAgentsToProviders(agents, enabled, this.vaultFileAdapter);
+    const log = this.logger.scope('agents');
+    return projectRosterAgentsToProviders(agents, enabled, this.vaultFileAdapter,
+      (provider, name, error) => log.warn('roster agent projection failed', provider, name, error));
   }
 
   /** Reveals (or opens) a singleton workspace leaf for the given view type. */
