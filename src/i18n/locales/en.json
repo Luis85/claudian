@@ -1008,6 +1008,7 @@
     "saved": "Saved {name}.",
     "deleted": "Deleted {name}.",
     "noToolsHint": "No user tools yet. Add tools in the Tool Library.",
+    "toolGrantScopeHint": "Tool grants apply when you start a chat with this agent. Agents synced to providers as @-mentionable subagents use that provider's default tool access.",
     "noSkillsHint": "No skills discovered yet.",
     "startChatShort": "Start chat",
     "capsSummary": "{skills} skills · {tools} tools",

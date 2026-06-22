@@ -247,6 +247,7 @@ export class AgentDetailEditor {
       searchPlaceholder: t('agentRoster.searchTools'),
       onChange: (ids) => { this.draft.tools = ids; this.updateDirty(); },
     });
+    card.createDiv({ cls: 'claudian-roster-tools-scope-hint', text: t('agentRoster.toolGrantScopeHint') });
   }
 
   private renderFooter(root: HTMLElement): void {

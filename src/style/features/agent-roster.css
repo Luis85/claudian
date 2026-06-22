@@ -279,6 +279,15 @@
   padding: var(--size-4-2) 0;
 }
 
+/* Caption under the Tools picker: flags that tool grants are scoped to the
+   bound-chat path only (synced provider subagents inherit default access). */
+.claudian-roster-tools-scope-hint {
+  margin-top: var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: var(--line-height-tight);
+}
+
 /* ── Detail editor: cards + profile header ── */
 .claudian-roster-card-section {
   padding: var(--size-4-3);

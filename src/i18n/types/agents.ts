@@ -32,6 +32,7 @@ export type AgentsTranslationKey =
   | 'agentRoster.saved'
   | 'agentRoster.deleted'
   | 'agentRoster.noToolsHint'
+  | 'agentRoster.toolGrantScopeHint'
   | 'agentRoster.noSkillsHint'
   | 'agentRoster.startChatShort'
   | 'agentRoster.capsSummary'
