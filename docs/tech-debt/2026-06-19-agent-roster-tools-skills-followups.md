@@ -150,3 +150,37 @@ decisions rather than bugs:
    eight preset-agent prompts are English literals; the nine non-English locales
    fall back to English for the new keys. A full translation pass (~720 strings ×
    9 locales) is a sizeable, separate effort.
+
+## Improvement pass deferrals (2026-06-22)
+
+A 5-lens review (UX, accessibility, security/resilience, architecture, i18n) drove
+a nine-increment improvement pass. The contained items shipped; these were
+deliberately deferred (tracked here):
+
+1. **Bulk translation.** ~837 locale entries (95 agent-feature keys × 9 locales)
+   plus the 8 preset-agent prompts remain English. The structural i18n bugs
+   (dollar-brace interpolation, dead keys, hardcoded strings, color-picker label)
+   were fixed; the translation backlog is the remaining work and benefits from
+   native review.
+2. **Atomic config writes.** The roster (`AgentRosterStore`) and conversation
+   metadata stores write JSON directly (no temp-file + rename), so a crash
+   mid-write can truncate a file; a malformed file is then silently skipped (now
+   logged). Add an atomic write helper for the JSON config stores.
+3. **HTTP tool-server in-flight drain.** `ClaudianHttpToolServer.rebuild()` tears
+   down the MCP layer unconditionally; an Opencode tool call in flight when a tool
+   file is saved gets dropped (503). Needs request-count tracking + deferral, and
+   a live Opencode runtime to validate.
+4. **Project tool-grant restrictions into provider subagents.** A roster agent's
+   tool grant is enforced on the bound-chat path (`getScopedTools`) but not on the
+   projected `@`-mentionable subagent files (they inherit provider defaults). Map
+   the grant into each provider's native `tools`/`disallowedTools`, or document the
+   divergence in the UI.
+5. **Turn-cancel → running tool.** When the MCP host omits a request signal, a
+   user cancelling a turn can't abort an in-flight tool; it runs to the 30s
+   ceiling. Thread the runtime turn `AbortSignal` into the tool ctx.
+6. **`getDisplayText`/ribbon/command i18n.** View titles, ribbon tooltips, and
+   command-palette names are English (Obsidian registers them once; localizing
+   needs re-registration on locale change).
+7. **Library-shell unification.** `AgentRosterView` still hand-rolls its card/shell
+   DOM instead of the shared `renderLibraryShell`/`createLibraryCard` the Tool/Skill
+   views use; unify before a fourth library view is added.
