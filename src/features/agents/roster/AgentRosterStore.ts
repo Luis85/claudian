@@ -44,8 +44,9 @@ export class AgentRosterStore {
   }
 
   async save(agent: RosterAgent): Promise<void> {
-    // VaultFileAdapter.write ensures the parent folder, so no explicit ensureFolder.
-    await this.adapter.write(fileNameForId(agent.id), JSON.stringify(agent, null, 2));
+    // writeAtomic ensures the parent folder (via write) and uses temp+rename so a
+    // crash mid-write can't leave a truncated agent file.
+    await this.adapter.writeAtomic(fileNameForId(agent.id), JSON.stringify(agent, null, 2));
     this.events?.emit('roster:changed');
   }
 

@@ -17,6 +17,7 @@ describe('SessionStorage', () => {
       exists: jest.fn(),
       read: jest.fn(),
       write: jest.fn(),
+      writeAtomic: jest.fn(),
       delete: jest.fn(),
       listFiles: jest.fn(),
     } as unknown as jest.Mocked<VaultFileAdapter>;
@@ -51,12 +52,12 @@ describe('SessionStorage', () => {
 
       await storage.saveMetadata(metadata);
 
-      expect(mockAdapter.write).toHaveBeenCalledWith(
+      expect(mockAdapter.writeAtomic).toHaveBeenCalledWith(
         '.claudian/sessions/session-456.meta.json',
         expect.any(String)
       );
 
-      const writtenContent = mockAdapter.write.mock.calls[0][1];
+      const writtenContent = mockAdapter.writeAtomic.mock.calls[0][1];
       const parsed = JSON.parse(writtenContent);
 
       expect(parsed.id).toBe('session-456');
@@ -88,7 +89,7 @@ describe('SessionStorage', () => {
 
       await storage.saveMetadata(metadata);
 
-      const writtenContent = mockAdapter.write.mock.calls[0][1];
+      const writtenContent = mockAdapter.writeAtomic.mock.calls[0][1];
       const parsed = JSON.parse(writtenContent);
 
       expect(parsed.externalContextPaths).toEqual(['/path/to/external']);
@@ -219,7 +220,7 @@ describe('SessionStorage', () => {
       await storage.saveMetadata(metadata);
 
       // Simulate loading back what was saved
-      const writtenContent = mockAdapter.write.mock.calls[0][1];
+      const writtenContent = mockAdapter.writeAtomic.mock.calls[0][1];
       mockAdapter.exists.mockResolvedValue(true);
       mockAdapter.read.mockResolvedValue(writtenContent);
 
@@ -248,7 +249,7 @@ describe('SessionStorage', () => {
       const metadata = storage.toSessionMetadata(conversation);
       await storage.saveMetadata(metadata);
 
-      const writtenContent = mockAdapter.write.mock.calls[0][1];
+      const writtenContent = mockAdapter.writeAtomic.mock.calls[0][1];
       mockAdapter.exists.mockResolvedValue(true);
       mockAdapter.read.mockResolvedValue(writtenContent);
 

@@ -39,7 +39,8 @@ export class SessionStorage {
   async saveMetadata(metadata: SessionMetadata): Promise<void> {
     const filePath = this.getMetadataPath(metadata.id);
     const content = JSON.stringify(metadata, null, 2);
-    await this.adapter.write(filePath, content);
+    // writeAtomic (temp+rename) prevents truncated metadata if a crash lands mid-write.
+    await this.adapter.writeAtomic(filePath, content);
     // Fire-and-forget: the user-facing save is durable in the per-session file
     // regardless of whether the index update lands. A mismatched index is
     // self-healed by `listMetadata` on the next startup that detects a count

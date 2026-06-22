@@ -15,6 +15,7 @@ function makeAdapter(files: Record<string, string>) {
     ),
     read: jest.fn(async (p: string) => files[p]),
     write: jest.fn(async (p: string, c: string) => { files[p] = c; }),
+    writeAtomic: jest.fn(async (p: string, c: string) => { files[p] = c; }),
     exists: jest.fn(async (p: string) => p in files),
     delete: jest.fn(async (p: string) => { delete files[p]; }),
   } as unknown as VaultFileAdapter;
