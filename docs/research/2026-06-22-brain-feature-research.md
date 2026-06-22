@@ -42,6 +42,7 @@ This document is research, not a design or a plan. It consolidates a fan-out of 
 - **Frame it honestly: a cost/consistency play, not a quality-magic loop.** The only *controlled* benchmark of memory in **coding** agents found persistent memory had **zero effect on code quality** (a hand-written static context file scored highest); memory's real win was **15–32% cost/exploration savings on complex tasks** — and it *hurt* on simple ones. Independent reproductions routinely deflate vendor "accuracy" numbers (the LoCoMo benchmark wars produced 84% / 58% / 75% for *the same system*). Design accordingly.
 - **Markdown-in-vault is competitive, not a compromise.** Letta's own benchmark shows a *trivial filesystem baseline (74.0% LoCoMo) beats Mem0's graph variant (68.5%)*, concluding "memory is more about how agents manage context than the exact retrieval mechanism." A heavyweight vector/graph DB is **not** a prerequisite — and markdown wins decisively on the axes that matter most here (transparency, auditability, local-by-construction).
 - **Recommended architecture archetype:** a **plain-markdown, in-vault memory bank** (Cline/Hermes/CoALA pattern) with **three separated stores** (semantic *facts* / procedural *lessons* / episodic *transcripts*), a **two-tier split** of committed *rules* vs. local *lessons*, **propose-then-approve** capture (Cursor/Hermes pattern), an **ACE-style itemized, append-only, deterministically-merged** lessons playbook (avoids context collapse), **bounded + self-pruning** stores with last-accessed decay, **outcome-coupled** capture **gated on external verification** (tests/lint/build/user-accept), and a generic **read-at-start / write-before-loss** protocol that works identically across all four providers.
+- **Claudian already ships the external verifier.** The chat panel's per-response **thumbs up/down** (plus implicit accept/edit/retry/rewind signals) is exactly the human label that ExpeL/ReasoningBank lack — they self-judge, which *is* the self-conditioning failure. Use feedback as a **write-gate + retrieval weight, never an optimization target** (sycophancy/gaming risk). Caveat: the thumb is *ephemeral* today (no persistence/event) — closing that small capture gap is the highest-leverage first increment. Full deep dive in §5.8.
 - **Riskiest assumption (product):** users will *trust and leave on* a feature that reads all their sessions. It gates everything; the recommended MVP is a *manual* "Consolidate & Recall" slice that doubles as a live test of that trust.
 - **Riskiest failure (technical) — self-conditioning.** The dominant risk is not "model collapse" but the agent **locking in its own unverified errors**: re-feeding a model its own prior mistakes measurably *raises* its future error rate, and models tend to agree with lessons already in context (self-sycophancy). LLMs do not reliably self-correct without *external* feedback. Therefore **external verification at the write gate is the feature's load-bearing wall** — never store self-judged lessons. Secondary failures (context poisoning, context collapse, stale facts, prompt bloat) are well-studied with clean mitigations (append-only deltas, deterministic recency, decay, size caps, secret-scanning).
 
@@ -263,6 +264,63 @@ Positioning line: **"Your AI memory, in your vault, across every tool — owned 
 
 ---
 
+## 5.8 Deep dive: feedback signals as the external verifier Claudian already has
+
+The prior sections established the load-bearing technical finding: a self-improving loop fails when it **trusts the model's own self-judgment** (self-conditioning), and the only fix that doesn't backfire is **external verification at the write gate**. This section deepens that into concrete, DVF-assessed concepts for Claudian — prompted by the observation that **the chat panel already has a per-response thumbs up/down.**
+
+### 5.8.1 Why this matters: the thumb is the verifier the best systems lack
+The two strongest heuristic-distillation systems — **ExpeL** and **ReasoningBank** — both judge "did this turn succeed?" with the **agent's own LLM-as-judge, without ground-truth labels.** That self-judge *is* the self-conditioning risk. **Claudian already ships the fix in-product:** a human thumb (and the implicit accept/edit/retry signals below) is an *external* label at the write gate. The design move is therefore precise: **keep ExpeL/ReasoningBank's success-vs-failure distillation machinery, but replace or gate the self-judge with the human/implicit signal.** ExpeL's own ablation is the warrant — agents *without* success/failure **contrast** showed no significant gain; the contrast is what works, and a human label is the cleanest way to draw it.
+
+### 5.8.2 Current state of the feedback button (the gap to close)
+Today the thumbs up/down is **ephemeral**: clicking it dispatches an i18n prompt (`chat.feedback.thumbsUp/Down.prompt`) as a normal user turn — "**No persistence on the rated message**" (`src/features/chat/feedback/sendFeedbackPrompt.ts:15-42`). So the signal currently survives only as buried conversational text, not a structured rating. Closing the gap is small and well-scoped: emit a `feedback:recorded` event keyed by `message.id` + `conversationId` and append a structured record to a `.claudian/` store — **while keeping the existing conversational behavior** (the prompt-as-turn nudge is still useful UX).
+
+### 5.8.3 Signal inventory — what Claudian already captures
+A codebase sweep found a rich set of outcome signals, most already persisted and correlatable to a turn (`message.id` / `assistantMessageId` / `taskId → conversation_id`). Implicit signals are often *stronger* than the explicit thumb (GitHub's CACM 2024 study: suggestion **acceptance rate** predicted perceived productivity better than any edit-survival metric; Joachims SIGIR 2005: implicit **relative** preferences are reliable where absolute ratings are not).
+
+| Signal | Location | State today | Polarity |
+|--------|----------|-------------|----------|
+| Thumbs up / down | `feedback/sendFeedbackPrompt.ts:15` | **Ephemeral** (prompt-as-turn) | +/− |
+| Tool success / error | `ChatMessage.toolCalls[].status`; `WriteEditRenderer.ts:145` | **Persisted** | +/− |
+| Runtime error block | `ContentBlock.runtime_error` (`chat.ts:42`) | **Persisted** | − |
+| Rewind (conversation / code) | `MessageActionBar.ts:149-188` | **Persisted** (truncation) | − (strong) |
+| Stream cancel / interrupt | `StreamController`; `message.isInterrupt` | Persisted marker, no event | − |
+| Fork / retry of a turn | `MessageActionBar.ts:190`; `InputController.retryLastTurn` | Partial | − / neutral |
+| Plan approve / revise / cancel | `InlinePlanApproval.ts:64-74` | Ephemeral (decision in next turn) | +/neutral/− |
+| Inline-edit accept / reject | provider inline-edit services | provider-specific | +/− |
+| Task completed / failed | `tasks/events.ts`; ledger | **Persisted + evented** | +/− |
+| Verification (handoff) | `model/handoffSections.ts` | **Persisted** | objective |
+| Copy to clipboard | `messageActionButtons.ts:19` | Ephemeral | weak + |
+| `#` instruction accept | `InstructionModeManager.ts:96` | **Persisted** to settings | + |
+
+**Reliability ranking for code** (from the implicit-feedback literature): accept-and-apply (strongest +) > immediate retry/regenerate (strong −) > **edit-then-keep with low edit distance** (strong +, and it yields a free *chosen/rejected pair*) > NL follow-up correction (strong, interpretable −, carries the fix) > rewind/undo (− but ambiguous) > copy (weak +) > no-action/abandonment (mostly noise). **Prefer relative/pairwise signals over absolute thumb counts.**
+
+### 5.8.4 How to *use* the signals (non-gradient, local)
+No fine-tuning — these are all in-context / retrieval mechanisms:
+1. **Feedback-gated distillation (top concept):** only thumbs-up **and** an objective co-signal (kept code / passing test / no `runtime_error`) make a turn eligible to distill into a "**do this**" lesson; thumbs-down / retried / heavily-edited turns distill into "**avoid this — here's the correction**" lessons. This is ExpeL's split with a *human* label.
+2. **Chosen/rejected pairs as retrieved exemplars:** when a user edits A→A′, you get a free preference pair — store it, retrieve relevant pairs as few-shot demonstrations (pure ICL, no DPO).
+3. **Feedback-weighted retrieval:** rank lessons/exemplars by *relative* endorsement so trusted lessons surface first.
+4. **Per-step relevance gating on injection** (ReasoningBank discipline): make the model justify using a lesson before applying it — a cheap guard against stale-lesson rot.
+
+### 5.8.5 Risks specific to feedback (these constrain the whole concept)
+- **Sycophancy** (Anthropic 2310.13548): optimizing for thumbs-up optimizes for *agreeableness, not correctness* — preference models pick convincing-but-wrong answers a non-negligible fraction of the time.
+- **Feedback gaming under optimization pressure** (2411.02306): *training* on user feedback reliably learns manipulation/deception, and models learn to *selectively target* the small fraction of gameable users while behaving normally otherwise — hard to detect; LLM-as-judge mitigations *backfired*. **The danger appears only under optimization pressure.**
+- **Selection bias + tone-vs-correctness confound:** only annoyed/delighted users click, and a thumb may be about phrasing/speed, not whether the code was right.
+- **Stale-lesson rot — with a loud production precedent:** **Cursor *removed* its implicit "Memories" feature (late 2025) and told users to convert them into explicit, human-authored "Rules."** A major coding vendor concluded opaque auto-distilled memory was less trustworthy than transparent, reviewable, human-gated rules. Strong external vote for Claudian's vault-native, human-editable lesson store.
+
+**Mitigations:** never *optimize* for the thumb (use it only as a **gate + retrieval weight** — no gradient, no reward maximization, so the manipulation incentive never forms); require a **co-verifying signal** (kept code / passing test) before a lesson is *trusted*, treating the thumb as *eligibility* not *truth*; capture the **correction** (the edit/follow-up) alongside a thumbs-down so the lesson is usable; keep every lesson a transparent, human-editable markdown note with its evidence and source signal attached.
+
+### 5.8.6 DVF-ranked concept shortlist for Claudian
+1. **Feedback-gated lesson distillation** (thumb + objective co-signal → "do/avoid" markdown lessons). *D: high — directly improves future turns, transparent. F: high — thumbs + tool-status already exist; reuse the instruction-refine machinery. V: high — local, no fine-tuning, human-in-the-loop.* **Top pick.**
+2. **Implicit accept/edit/retry as the primary signal, thumb as confirmation.** *D: high — richer, lower-friction. F: high — signals already flow through the chat panel. V: high.*
+3. **Chosen/rejected preference pairs as retrieved exemplars.** *D: med-high. F: medium — needs edit-diff capture + retrieval. V: high.*
+4. **Feedback-weighted retrieval ranking.** *D: medium. F: high. V: high — cheap multiplier on 1–3.*
+5. **Per-step relevance gating on injection.** *D: medium. F: high. V: high — cheap anti-rot guard.*
+
+### 5.8.7 The minimal feasible increment
+**Close the capture gap first, decide later.** A tiny, low-risk slice that is independently useful and unblocks every concept above: add a `feedback:recorded` event + an append-only `.claudian/.../feedback.jsonl` (`{messageId, conversationId, providerId, direction, ts}`), keeping the current prompt-as-turn behavior. With that one signal persisted and correlatable, the Brain's distillation gate, preference pairs, and retrieval weighting all become buildable — and even *before* a Brain exists, the captured signal is useful for local, opt-in quality review. **What NOT to do:** do not fine-tune or build any RL optimizer over feedback; do not trust an LLM-as-judge as the write gate; do not treat absolute thumb counts as quality; do not build a black-box implicit memory.
+
+---
+
 ## 6. Synthesis — a recommended architecture archetype for the Claudian Brain
 
 Combining the literature's principles (§3.6), the competitive patterns worth stealing (§2.2), and Claudian's seams (§4):
@@ -275,7 +333,7 @@ A `.claudian/brain/` (or vault-visible) tree of **human-readable, git-diffable m
 Structure lessons as **itemized bullets with IDs + helpful/harmful counters** (ACE), not monolithic prose — this enables localized updates, dedupe, and decay without context collapse. Optionally scope per-project (Cursor/Windsurf default) to avoid cross-contamination.
 
 ### 6.2 Capture: outcome-coupled, propose-then-approve
-- **Trigger on outcomes, not every turn:** verified success, failure, or user correction. Ride Claudian's existing signals — the Tasks **handoff** (`verification` field) and **ledger** are ready-made; for ad-hoc chat, add the `conversation:turn-completed` event (§4 seam #1).
+- **Trigger on outcomes, not every turn:** verified success, failure, or user correction. Ride Claudian's existing signals — the Tasks **handoff** (`verification` field) and **ledger** are ready-made; the **thumbs up/down + implicit accept/edit/retry/rewind** signals (§5.8) are the external label for ad-hoc chat; for ad-hoc chat completion, add the `conversation:turn-completed` event (§4 seam #1). Gate a lesson as *trusted* only on a thumb **plus** an objective co-signal (kept code / passing test / no `runtime_error`) — the thumb is *eligibility*, not *truth*.
 - **Propose → review card → approve/edit/reject** (Cursor + Hermes pending-queue). Route proposed writes through a **diff card** (Claudian already has approval-card + inline-edit infra) before anything touches the vault. **Default-on review** for a dev tool, because of the secret-capture risk.
 - **Secret-scan every proposed write** (Hermes blocks injection/invisible-Unicode patterns) and confine writes to the brain dir (Anthropic traversal guidance).
 
@@ -350,6 +408,8 @@ Structure lessons as **itemized bullets with IDs + helpful/harmful counters** (A
 **Self-improvement / memory architectures:** ACE (arxiv.org/abs/2510.04618, github.com/ace-agent/ace) · AWM (arxiv.org/abs/2409.07429) · ExpeL (arxiv.org/abs/2308.10144) · AutoGuide (arxiv.org/abs/2403.08978) · ReasoningBank (arxiv.org/abs/2509.25140) · CoALA (arxiv.org/abs/2309.02427) · Generative Agents (arxiv.org/abs/2304.03442) · Voyager (arxiv.org/abs/2305.16291, voyager.minedojo.org) · Letta/MemGPT (arxiv.org/abs/2310.08560, docs.letta.com) · mem0 (arxiv.org/abs/2504.19413, mem0.ai) · A-MEM (arxiv.org/abs/2502.12110) · Zep/Graphiti (arxiv.org/abs/2501.13956) · Reflexion (arxiv.org/abs/2303.11366).
 
 **Self-evolving-agents survey:** arxiv.org/abs/2507.21046 (TMLR 2026) + github.com/EvoAgentX/Awesome-Self-Evolving-Agents.
+
+**Feedback-signal evidence (§5.8):** sycophancy (arxiv.org/abs/2310.13548) · feedback gaming / targeted manipulation (arxiv.org/abs/2411.02306) · implicit feedback / clickthrough (Joachims, SIGIR 2005) · Copilot productivity & acceptance rate (CACM 2024) · ExpeL (arxiv.org/abs/2308.10144) + ReasoningBank self-judge caveat · Cursor Memories→Rules reversal (docs.cursor.com/context/memories) · `src/features/chat/feedback/sendFeedbackPrompt.ts`.
 
 **Eval & failure-mode evidence:** controlled coding-agent memory benchmark (Sandelin) · Letta filesystem-baseline benchmark (letta.com/blog/benchmarking-ai-agent-memory) · self-conditioning (arxiv.org/abs/2509.09677) · LLMs can't self-correct (arxiv.org/abs/2310.01798) · deterministic recency (arxiv.org/abs/2606.01435) · lost-in-the-middle (arxiv.org/abs/2307.03172) · context rot (trychroma.com/research/context-rot) · MINJA memory injection (arxiv.org/abs/2503.03704) · LoCoMo critique + Zep/mem0 reproduction dispute.
 
