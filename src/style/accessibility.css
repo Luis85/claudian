@@ -43,7 +43,8 @@
    nav tabs need a visible focus ring (the card is a role="button" div, so it
    gets no native one). */
 .claudian-roster-card:focus-visible,
-.claudian-library-nav-item:focus-visible {
+.claudian-library-nav-item:focus-visible,
+.claudian-cap-picker-header:focus-visible {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
 }

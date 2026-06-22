@@ -113,10 +113,6 @@
   margin-bottom: var(--size-4-4);
 }
 
-.claudian-roster-detail-title {
-  margin: 0;
-}
-
 .claudian-roster-section {
   margin: var(--size-4-4) 0 var(--size-4-1);
   padding-bottom: var(--size-4-1);
@@ -127,41 +123,40 @@
   color: var(--text-muted);
 }
 
-.claudian-roster-prompt .setting-item-info {
-  display: none;
-}
-
-.claudian-roster-prompt textarea {
-  width: 100%;
-  resize: vertical;
-  font-family: var(--font-monospace);
-}
-
-.claudian-roster-picker {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4-1);
-  padding: var(--size-4-2) 0;
-}
-
-.claudian-roster-picker-row {
+.claudian-roster-detail-footer {
+  position: sticky;
+  bottom: 0;
   display: flex;
   align-items: center;
-  gap: var(--size-4-1);
-}
-
-.claudian-roster-picker-empty {
-  color: var(--text-muted);
-  font-size: var(--font-ui-small);
-  margin: 0;
-}
-
-.claudian-roster-detail-footer {
-  display: flex;
   gap: var(--size-4-2);
-  margin-top: var(--size-4-6);
-  padding-top: var(--size-4-3);
+  margin-top: var(--size-4-4);
+  padding: var(--size-4-3) 0;
+  background: var(--background-primary);
   border-top: 1px solid var(--background-modifier-border);
+}
+
+.claudian-roster-footer-spacer {
+  flex: 1 1 auto;
+}
+
+.claudian-roster-dirty {
+  display: none;
+  align-items: center;
+  gap: var(--size-4-1);
+  color: var(--text-warning, var(--text-muted));
+  font-size: var(--font-ui-smaller);
+}
+
+.claudian-roster-dirty.is-visible {
+  display: inline-flex;
+}
+
+.claudian-roster-dirty::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 /* ── Capability picker (shared Skills/Tools selector) ── */
@@ -267,4 +262,78 @@
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   padding: var(--size-4-2) 0;
+}
+
+/* ── Detail editor: cards + profile header ── */
+.claudian-roster-card-section {
+  padding: var(--size-4-3);
+  margin-bottom: var(--size-4-3);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+}
+
+.claudian-roster-detail-headfields {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.claudian-roster-detail-name {
+  font-size: var(--font-ui-large);
+  font-weight: var(--font-semibold);
+}
+
+.claudian-roster-detail-name,
+.claudian-roster-detail-desc {
+  width: 100%;
+}
+
+.claudian-roster-appearance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+  align-items: center;
+}
+
+.claudian-roster-appearance-initials {
+  width: 4em;
+  text-align: center;
+}
+
+.claudian-roster-roles {
+  display: flex;
+  gap: var(--size-4-1);
+}
+
+.claudian-roster-role-chip {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  background: var(--background-modifier-border);
+  box-shadow: none;
+}
+
+.claudian-roster-role-chip.is-on {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+}
+
+.claudian-roster-model-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0 var(--size-4-4);
+}
+
+.claudian-roster-model-grid .setting-item {
+  border-top: none;
+  padding: var(--size-4-1) 0;
+}
+
+.claudian-roster-prompt-area {
+  width: 100%;
+  resize: vertical;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-small);
 }
