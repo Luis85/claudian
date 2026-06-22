@@ -82,6 +82,7 @@ export class ClaudianView extends ItemView {
 
   // Header elements
   private historyDropdown: HTMLElement | null = null;
+  private historyBtn: HTMLElement | null = null;
   private headerMetaRowEl: HTMLElement | null = null;
   private boundAgentChipSlotEl: HTMLElement | null = null;
   // Monotonic token so concurrent syncBoundAgentChip calls don't double-render.
@@ -490,6 +491,23 @@ export class ClaudianView extends ItemView {
   }
 
   /**
+   * Makes a clickable header `<div>` keyboard-operable: routes both click and
+   * Enter/Space through one activation callback so the control is reachable by
+   * keyboard without duplicating behavior.
+   */
+  private wireHeaderButton(el: HTMLElement, onActivate: () => void): void {
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    el.addEventListener('click', () => onActivate());
+    el.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onActivate();
+      }
+    });
+  }
+
+  /**
    * Builds the nav row content (tab badges + header actions).
    * This is called once and the content is moved between locations.
    */
@@ -535,7 +553,7 @@ export class ClaudianView extends ItemView {
     quickActionsBtn.addEventListener('mouseenter', () => {
       void this.plugin.vaultSkillAggregator?.listAllStreaming(() => {});
     });
-    quickActionsBtn.addEventListener('click', () => {
+    this.wireHeaderButton(quickActionsBtn, () => {
       const activeTab = this.tabManager?.getActiveTab();
       if (!activeTab) return;
       openQuickActionsModal(this.plugin, {
@@ -556,7 +574,7 @@ export class ClaudianView extends ItemView {
     this.newTabButtonEl = this.headerActionsContent.createDiv({ cls: 'claudian-header-btn claudian-new-tab-btn' });
     setIcon(this.newTabButtonEl, 'square-plus');
     this.newTabButtonEl.setAttribute('aria-label', 'New tab');
-    this.newTabButtonEl.addEventListener('click', () => {
+    this.wireHeaderButton(this.newTabButtonEl, () => {
       void this.createNewTab().catch(() => new Notice(t('chat.tab.createFailed')));
     });
 
@@ -564,7 +582,7 @@ export class ClaudianView extends ItemView {
     const newBtn = this.headerActionsContent.createDiv({ cls: 'claudian-header-btn' });
     setIcon(newBtn, 'square-pen');
     newBtn.setAttribute('aria-label', 'New conversation');
-    newBtn.addEventListener('click', () => {
+    this.wireHeaderButton(newBtn, () => {
       void (async () => {
         await this.tabManager?.createNewConversation();
         this.updateHistoryDropdown();
@@ -576,13 +594,15 @@ export class ClaudianView extends ItemView {
     const historyBtn = historyContainer.createDiv({ cls: 'claudian-header-btn' });
     setIcon(historyBtn, 'history');
     historyBtn.setAttribute('aria-label', 'Chat history');
+    historyBtn.setAttribute('aria-haspopup', 'true');
+    historyBtn.setAttribute('aria-expanded', 'false');
+    this.historyBtn = historyBtn;
 
     this.historyDropdown = historyContainer.createDiv({ cls: 'claudian-history-menu' });
 
-    historyBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.toggleHistoryDropdown();
-    });
+    // Stop the click from reaching the document-level outside-click closer.
+    historyBtn.addEventListener('click', (e) => e.stopPropagation());
+    this.wireHeaderButton(historyBtn, () => this.toggleHistoryDropdown());
 
     fragment.appendChild(this.headerActionsContent);
 
@@ -905,9 +925,15 @@ export class ClaudianView extends ItemView {
     slot.empty();
     if (conversationId && agent) {
       const chip = slot.createDiv({ cls: 'claudian-bound-agent-chip' });
-      chip.setAttribute('title', `${t('agentRoster.chattingWith', { name: agent.name })} — ${t('agentRoster.bindingHint')}`);
+      const chattingWith = t('agentRoster.chattingWith', { name: agent.name });
+      chip.setAttribute('title', `${chattingWith} — ${t('agentRoster.bindingHint')}`);
+      // title is unreliable on non-interactive elements; mirror the core message
+      // into aria-label so screen readers surface the binding consistently.
+      chip.setAttribute('aria-label', chattingWith);
 
       const avatarEl = chip.createDiv({ cls: 'claudian-bound-agent-chip-avatar' });
+      // Avatar is decorative here; its own aria-label would duplicate the name.
+      avatarEl.setAttribute('aria-hidden', 'true');
       renderAgentAvatar(avatarEl, rosterAgentToPersona(agent), 18);
 
       chip.createSpan({ cls: 'claudian-bound-agent-chip-label', text: agent.name });
@@ -976,6 +1002,13 @@ export class ClaudianView extends ItemView {
       this.updateHistoryDropdown();
       this.historyDropdown.addClass('visible');
     }
+    this.historyBtn?.setAttribute('aria-expanded', String(!isVisible));
+  }
+
+  /** Closes the history dropdown and syncs the trigger's aria-expanded state. */
+  private closeHistoryDropdown(): void {
+    this.historyDropdown?.removeClass('visible');
+    this.historyBtn?.setAttribute('aria-expanded', 'false');
   }
 
   private updateHistoryDropdown(): void {
@@ -997,7 +1030,7 @@ export class ClaudianView extends ItemView {
 
   private async openHistoryConversation(conversationId: string): Promise<void> {
     await this.tabManager?.openConversation(conversationId);
-    this.historyDropdown?.removeClass('visible');
+    this.closeHistoryDropdown();
   }
 
   private async openHistoryConversationInNewTab(
@@ -1008,7 +1041,7 @@ export class ClaudianView extends ItemView {
       preferNewTab: true,
       activate,
     });
-    this.historyDropdown?.removeClass('visible');
+    this.closeHistoryDropdown();
   }
 
   private getHistoryConversationOpenState(conversationId: string): HistoryConversationOpenState {
@@ -1043,7 +1076,7 @@ export class ClaudianView extends ItemView {
 
     // Document-level click to close dropdowns
     this.registerDomEvent(activeDocument, 'click', () => {
-      this.historyDropdown?.removeClass('visible');
+      this.closeHistoryDropdown();
     });
 
     // View-level Shift+Tab to toggle plan mode (works from any focused element)

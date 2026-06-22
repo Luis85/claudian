@@ -19,8 +19,8 @@
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/ClaudianView.ts": {
-      "loc": 1069,
-      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only. +12 from the two-row header (title row + agent/git meta row) and updateHeaderMetaRow collapse logic."
+      "loc": 1100,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only. +12 from the two-row header (title row + agent/git meta row) and updateHeaderMetaRow collapse logic. +31 from chat-header a11y: wireHeaderButton helper (keyboard-operable header buttons), history aria-expanded/closeHistoryDropdown sync, and bound-agent chip aria-label."
     },
     "src/features/chat/controllers/StreamController.ts": {
       "loc": 1067,

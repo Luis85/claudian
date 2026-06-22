@@ -107,13 +107,25 @@ export class TabBar {
 
     // Tooltip with full title (aria-label only; adding title too causes double tooltip).
     badgeEl.setAttribute('aria-label', this.badgeAriaLabel(item));
+    // Badges form a tab strip: expose role/selection and keep them keyboard-reachable.
+    badgeEl.setAttribute('role', 'tab');
+    badgeEl.setAttribute('tabindex', '0');
+    badgeEl.setAttribute('aria-selected', String(item.isActive));
     if (item.isStreaming) {
       badgeEl.setAttribute('aria-busy', 'true');
       badgeEl.setAttribute('data-working', 'true');
     }
     badgeEl.setAttribute('data-provider', item.providerId);
     badgeEl.setAttribute('data-kind', item.kind);
-    // Click handler to switch tab
+    // Inner glyphs are decorative; the composite aria-label carries the meaning.
+    for (const iconCls of ['claudian-tab-badge-icon', 'claudian-tab-badge-agent-icon']) {
+      badgeEl.querySelector(`.${iconCls}`)?.setAttribute('aria-hidden', 'true');
+    }
+    this.wireBadgeInteraction(badgeEl, item);
+  }
+
+  /** Wires click, right-click close, and keyboard activation/close for a badge. */
+  private wireBadgeInteraction(badgeEl: HTMLElement, item: TabBarItem): void {
     badgeEl.addEventListener('click', () => {
       this.callbacks.onTabClick(item.id);
     });
@@ -124,7 +136,21 @@ export class TabBar {
         e.preventDefault();
         this.callbacks.onTabClose(item.id);
       });
+      // Delete/Backspace mirrors the right-click close as the keyboard path.
+      badgeEl.setAttribute('aria-keyshortcuts', 'Delete');
     }
+
+    badgeEl.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        this.callbacks.onTabClick(item.id);
+        return;
+      }
+      if (item.canClose && (e.key === 'Delete' || e.key === 'Backspace')) {
+        e.preventDefault();
+        this.callbacks.onTabClose(item.id);
+      }
+    });
   }
 
   /** Destroys the tab bar. */

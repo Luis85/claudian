@@ -244,6 +244,81 @@ describe('TabBar', () => {
     });
   });
 
+  describe('badge accessibility', () => {
+    it('exposes role=tab, tabindex=0, and aria-selected reflecting isActive', () => {
+      const containerEl = createMockEl();
+      const tabBar = new TabBar(containerEl, createMockCallbacks());
+
+      tabBar.update([
+        createTabBarItem({ id: 'active', isActive: true }),
+        createTabBarItem({ id: 'inactive', index: 2, isActive: false }),
+      ]);
+
+      const [activeBadge, inactiveBadge] = containerEl._children;
+      expect(activeBadge.getAttribute('role')).toBe('tab');
+      expect(activeBadge.getAttribute('tabindex')).toBe('0');
+      expect(activeBadge.getAttribute('aria-selected')).toBe('true');
+      expect(inactiveBadge.getAttribute('aria-selected')).toBe('false');
+    });
+
+    it('fires onTabClick on Enter keydown', () => {
+      const containerEl = createMockEl();
+      const callbacks = createMockCallbacks();
+      const tabBar = new TabBar(containerEl, callbacks);
+
+      tabBar.update([createTabBarItem({ id: 'kbd-tab' })]);
+
+      const preventDefault = jest.fn();
+      containerEl._children[0].dispatchEvent('keydown', { key: 'Enter', preventDefault });
+
+      expect(preventDefault).toHaveBeenCalled();
+      expect(callbacks.onTabClick).toHaveBeenCalledWith('kbd-tab');
+    });
+
+    it('fires onTabClose on Delete keydown for a closeable badge', () => {
+      const containerEl = createMockEl();
+      const callbacks = createMockCallbacks();
+      const tabBar = new TabBar(containerEl, callbacks);
+
+      tabBar.update([createTabBarItem({ id: 'closeable-tab', canClose: true })]);
+
+      const badge = containerEl._children[0];
+      expect(badge.getAttribute('aria-keyshortcuts')).toBe('Delete');
+
+      const preventDefault = jest.fn();
+      badge.dispatchEvent('keydown', { key: 'Delete', preventDefault });
+
+      expect(preventDefault).toHaveBeenCalled();
+      expect(callbacks.onTabClose).toHaveBeenCalledWith('closeable-tab');
+    });
+
+    it('does not close on Delete keydown when canClose is false', () => {
+      const containerEl = createMockEl();
+      const callbacks = createMockCallbacks();
+      const tabBar = new TabBar(containerEl, callbacks);
+
+      tabBar.update([createTabBarItem({ id: 'uncloseable-tab', canClose: false })]);
+
+      const badge = containerEl._children[0];
+      expect(badge.getAttribute('aria-keyshortcuts')).toBeNull();
+      badge.dispatchEvent('keydown', { key: 'Delete', preventDefault: jest.fn() });
+
+      expect(callbacks.onTabClose).not.toHaveBeenCalled();
+    });
+
+    it('marks inner icon glyphs aria-hidden', () => {
+      const containerEl = createMockEl();
+      const tabBar = new TabBar(containerEl, createMockCallbacks());
+
+      tabBar.update([createTabBarItem({ index: 2, isAgentBound: true })]);
+
+      const icon = containerEl._children[0]._children.find((c: MockElement) =>
+        c.hasClass('claudian-tab-badge-agent-icon'),
+      );
+      expect(icon?.getAttribute('aria-hidden')).toBe('true');
+    });
+  });
+
   describe('destroy', () => {
     it('should empty container', () => {
       const containerEl = createMockEl();

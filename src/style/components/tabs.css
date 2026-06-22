@@ -44,6 +44,9 @@
   color: var(--text-on-accent);
   background: var(--interactive-accent);
   font-weight: 600;
+  /* Non-color differentiator (inset ring) so the active tab is distinguishable
+     in high-contrast / color-blind modes, not by accent fill alone. */
+  box-shadow: inset 0 0 0 1px var(--text-on-accent);
 }
 
 .claudian-tab-badge-active:hover {
