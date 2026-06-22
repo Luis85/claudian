@@ -240,10 +240,19 @@ function renderLoopRow(
   }
   const chip = parent.createSpan({ cls: 'claudian-work-order-modal-chip' });
   chip.addClass('claudian-work-order-modal-chip--loop');
+  chip.setAttribute('role', 'button');
+  chip.setAttribute('tabindex', '0');
   chip.createSpan({ cls: 'claudian-work-order-modal-chip-value', text: label });
   const caret = chip.createSpan({ cls: 'claudian-work-order-modal-chip-caret' });
   setIcon(caret, 'chevron-down');
-  chip.addEventListener('click', () => callbacks.onPickLoop?.(task));
+  const open = (): void => { callbacks.onPickLoop?.(task); };
+  chip.addEventListener('click', open);
+  chip.addEventListener('keydown', (evt: KeyboardEvent) => {
+    if (evt.key === 'Enter' || evt.key === ' ') {
+      if (evt.key === ' ') evt.preventDefault();
+      open();
+    }
+  });
 }
 
 function addPropertyRow(
