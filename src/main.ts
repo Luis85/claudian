@@ -63,7 +63,10 @@ import {
   formatBoundAgentPersona,
   selectAgentSkills,
 } from './features/agents/roster/boundAgentPersona';
-import { resolveAgentProvider } from './features/agents/roster/resolveAgentProvider';
+import {
+  resolveAgentModelForProvider,
+  resolveAgentProvider,
+} from './features/agents/roster/resolveAgentProvider';
 import type { RosterAgent } from './features/agents/roster/rosterTypes';
 import { AgentRosterView, VIEW_TYPE_AGENT_ROSTER } from './features/agents/roster/view/AgentRosterView';
 import { ClaudianView } from './features/chat/ClaudianView';
@@ -488,6 +491,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
   async resolveBoundAgent(
     boundAgentId: string,
+    providerId?: ProviderId,
   ): Promise<BoundAgentProjection | null> {
     const agent = await this.agentRosterStore?.get(boundAgentId);
     if (!agent) return null;
@@ -498,11 +502,18 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       agent.skills,
       catalog.map((e) => ({ name: e.name, description: e.description })),
     );
+    // The agent's saved model is provider-specific. When the caller knows the
+    // conversation's provider, only forward the model if its selection targets
+    // that provider; otherwise drop it (undefined) so the conversation uses its
+    // own provider's default/selected model rather than a cross-provider id.
+    const model = providerId
+      ? resolveAgentModelForProvider(agent, providerId, undefined)
+      : agent.modelSelection?.modelId;
     return {
       // A forceful identity directive so providers without a system-prompt
       // channel (Cursor) still adopt the persona instead of their built-in one.
       prompt: formatBoundAgentPersona({ ...agent, skills }),
-      model: agent.modelSelection?.modelId,
+      model,
       tools: agent.tools,
     };
   }
@@ -526,9 +537,14 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       (p) => ProviderRegistry.isEnabled(p, settings),
       ProviderRegistry.resolveSettingsProviderId(settings),
     );
-    const model = agent.modelSelection?.modelId
-      || ProviderSettingsCoordinator.getProviderSettingsSnapshot(this.settings, providerId).model;
-    return { providerId, model };
+    // The agent's saved model is provider-specific, so it only applies when its
+    // selection targets the provider the run actually resolved to (which may be
+    // a fallback after the preferred provider was found disabled); otherwise use
+    // the resolved provider's configured default.
+    const providerDefaultModel =
+      ProviderSettingsCoordinator.getProviderSettingsSnapshot(this.settings, providerId).model;
+    const model = resolveAgentModelForProvider(agent, providerId, providerDefaultModel);
+    return { providerId, model: model ?? providerDefaultModel };
   }
 
   async addFileToActiveChat(file: TFile): Promise<boolean> {

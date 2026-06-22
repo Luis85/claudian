@@ -1,6 +1,7 @@
 import type { ProviderId } from '../../../../../src/core/providers/types';
 import {
   agentPreferredProviderId,
+  resolveAgentModelForProvider,
   resolveAgentProvider,
 } from '../../../../../src/features/agents/roster/resolveAgentProvider';
 
@@ -69,5 +70,41 @@ describe('resolveAgentProvider', () => {
       fallback,
     );
     expect(resolved).toBe(claude);
+  });
+});
+
+describe('resolveAgentModelForProvider', () => {
+  it('uses the agent model when its selection provider matches the resolved provider', () => {
+    expect(
+      resolveAgentModelForProvider(
+        { modelSelection: { modelId: 'gpt-5-codex', providerId: codex } },
+        codex,
+        'default-codex',
+      ),
+    ).toBe('gpt-5-codex');
+  });
+
+  it('falls back to the provider default when the selection targets a different provider', () => {
+    // The agent's saved model belongs to a now-disabled provider, so the run
+    // fell back to `cursor`; the codex model id must NOT leak to cursor.
+    expect(
+      resolveAgentModelForProvider(
+        { modelSelection: { modelId: 'gpt-5-codex', providerId: codex } },
+        cursor,
+        'auto',
+      ),
+    ).toBe('auto');
+  });
+
+  it('returns the provider default when there is no model selection', () => {
+    expect(
+      resolveAgentModelForProvider({ modelSelection: undefined }, claude, 'opus'),
+    ).toBe('opus');
+  });
+
+  it('returns undefined when there is no selection and no provider default', () => {
+    expect(
+      resolveAgentModelForProvider({ modelSelection: undefined }, claude, undefined),
+    ).toBeUndefined();
   });
 });

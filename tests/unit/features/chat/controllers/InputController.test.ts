@@ -1195,6 +1195,38 @@ describe('InputController - Message Queue', () => {
       expect(queryOptions.boundAgentPrompt).toBe('You are a Rust expert.');
     });
 
+    it('threads the conversation provider into resolveBoundAgent so the model is gated', async () => {
+      // The model fold must be provider-aware: the controller passes the
+      // conversation's provider so main.ts can drop a cross-provider model id.
+      const localDeps = createSendableDeps({
+        getTabModelOverride: () => null,
+      });
+      (localDeps.plugin.getConversationById as jest.Mock).mockResolvedValue({
+        id: 'conv-1',
+        providerId: 'cursor',
+        boundAgentId: 'agent-abc',
+      });
+      const resolveBoundAgent = jest.fn().mockResolvedValue({
+        prompt: 'You are a Rust expert.',
+        // main.ts already gated this to the cursor default; the controller folds
+        // whatever it receives.
+        model: 'auto',
+      });
+      (localDeps.plugin as any).resolveBoundAgent = resolveBoundAgent;
+      (localDeps as any).mockAgentService.query = jest
+        .fn()
+        .mockImplementation(() => createMockStream([{ type: 'done' }]));
+      const localController = new InputController(localDeps);
+      (localDeps.getInputEl() as ReturnType<typeof createMockInputEl>).value = 'go';
+
+      await localController.sendMessage();
+
+      expect(resolveBoundAgent).toHaveBeenCalledWith('agent-abc', 'cursor');
+      const [, , queryOptions] = ((localDeps as any).mockAgentService.query as jest.Mock).mock.calls[0];
+      expect(queryOptions.model).toBe('auto');
+      expect(queryOptions.boundAgentModel).toBe('auto');
+    });
+
     it('tab override takes precedence over boundAgentModel', async () => {
       const localDeps = createSendableDeps({
         getTabModelOverride: () => 'haiku',

@@ -24,3 +24,22 @@ export function resolveAgentProvider(
   const preferred = agentPreferredProviderId(agent);
   return preferred && isEnabled(preferred) ? preferred : fallback;
 }
+
+/**
+ * The model an agent's run should use on a *resolved* provider. A saved model id
+ * is provider-specific (a Codex model id is meaningless to Cursor/Claude), so it
+ * only applies when the selection's provider matches the provider the run will
+ * actually use; otherwise the run falls back to that provider's own default,
+ * preventing a cross-provider model id from leaking after a disabled-provider
+ * fallback. `providerDefault` may be `undefined` to let the runtime pick its own.
+ */
+export function resolveAgentModelForProvider(
+  agent: Pick<RosterAgent, 'modelSelection'>,
+  providerId: ProviderId,
+  providerDefault: string | undefined,
+): string | undefined {
+  const selection = agent.modelSelection;
+  return selection && selection.providerId === providerId
+    ? selection.modelId
+    : providerDefault;
+}

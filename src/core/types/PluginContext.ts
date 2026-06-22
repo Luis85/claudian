@@ -119,10 +119,14 @@ export interface PluginContext
    * Resolves a bound roster agent's chat projection (system prompt + model) by
    * id, or `null` when unknown. The return shape is core-local so this contract
    * needs no `core/` → `features/` import; the plugin implements it via its
-   * roster store.
+   * roster store. When `providerId` is supplied (the conversation's provider),
+   * the projected `model` is only the agent's saved model if that model targets
+   * the same provider — otherwise it is dropped so a cross-provider model id
+   * never reaches a runtime it doesn't belong to.
    */
   resolveBoundAgent?(
     boundAgentId: string,
+    providerId?: ProviderId,
   ): Promise<{ prompt?: string; model?: string; tools?: string[] } | null>;
 
   /**
@@ -148,8 +152,14 @@ export interface PluginContext
    * Returns the URL and auth header for the in-process HTTP MCP tool server,
    * or `null` when unavailable. Plain-data shape so `core/` and `providers/`
    * can consume it without importing `features/` types.
+   *
+   * When `grantedToolIds` is a non-empty bound-agent grant, the returned config
+   * carries a per-grant bearer token scoping the server to only those tools; an
+   * empty/absent grant returns the byte-identical all-tools default token.
    */
-  getHttpToolServerConfig?(): { url: string; headers: Record<string, string> } | null;
+  getHttpToolServerConfig?(
+    grantedToolIds?: string[],
+  ): { url: string; headers: Record<string, string> } | null;
 
   getView(): ChatViewHandle | null;
   getAllViews(): ChatViewHandle[];

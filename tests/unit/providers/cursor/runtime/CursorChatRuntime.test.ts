@@ -50,6 +50,11 @@ jest.mock('@/providers/cursor/runtime/cursorAgentEnv', () => ({
   buildCursorAgentEnvironment: jest.fn().mockReturnValue({}),
 }));
 
+const mockWriteCursorMcpConfig = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/providers/cursor/runtime/cursorMcpConfig', () => ({
+  writeCursorMcpConfig: (...args: unknown[]) => mockWriteCursorMcpConfig(...args),
+}));
+
 function createMockPlugin(overrides: Record<string, unknown> = {}): any {
   return {
     app: {},
@@ -543,6 +548,49 @@ describe('CursorChatRuntime', () => {
     expect(promptArg).toContain('first answer');
     expect(promptArg).toContain('second question');
     expect(launchArgs).not.toContain('--resume');
+  });
+
+  it('scopes the HTTP tool server to the bound agent grant on the MCP-config write', async () => {
+    const grant = ['mcp__claudian__search_tasks'];
+    const getHttpToolServerConfig = jest.fn().mockReturnValue({ url: 'http://127.0.0.1:1/mcp', headers: {} });
+    const runtime = new CursorChatRuntime(
+      createMockPlugin({ getHttpToolServerConfig }),
+      createMockRuntimeHost(),
+    );
+
+    readlineLines = [
+      JSON.stringify({ type: 'result', subtype: 'success', is_error: false }),
+    ];
+    setupMockChild();
+
+    for await (const _chunk of runtime.query(createPreparedTurn(), undefined, { boundAgentTools: grant })) {
+      void _chunk;
+    }
+
+    // The grant must reach the scoped-config accessor so the written
+    // ~/.cursor/mcp.json carries the per-grant (restricted) bearer token.
+    expect(getHttpToolServerConfig).toHaveBeenCalledWith(grant);
+    expect(mockWriteCursorMcpConfig).toHaveBeenCalled();
+  });
+
+  it('requests the default (all-tools) config when the turn carries no grant', async () => {
+    const getHttpToolServerConfig = jest.fn().mockReturnValue({ url: 'http://127.0.0.1:1/mcp', headers: {} });
+    const runtime = new CursorChatRuntime(
+      createMockPlugin({ getHttpToolServerConfig }),
+      createMockRuntimeHost(),
+    );
+
+    readlineLines = [
+      JSON.stringify({ type: 'result', subtype: 'success', is_error: false }),
+    ];
+    setupMockChild();
+
+    for await (const _chunk of runtime.query(createPreparedTurn())) {
+      void _chunk;
+    }
+
+    // No grant ⇒ undefined arg ⇒ byte-identical all-tools default token.
+    expect(getHttpToolServerConfig).toHaveBeenCalledWith(undefined);
   });
 
   it('buildSessionUpdates persists session id on the conversation', () => {

@@ -577,7 +577,13 @@ export class InputController {
       return base;
     }
 
-    const projection: BoundAgentProjection | null | undefined = await this.deps.plugin.resolveBoundAgent?.(conversation.boundAgentId);
+    // Pass the conversation's provider so the bound model is only folded in when
+    // the agent's saved model targets that provider; after a disabled-provider
+    // fallback the agent's cross-provider model id must not reach this runtime.
+    const projection: BoundAgentProjection | null | undefined = await this.deps.plugin.resolveBoundAgent?.(
+      conversation.boundAgentId,
+      conversation.providerId,
+    );
     if (!projection) {
       return base;
     }

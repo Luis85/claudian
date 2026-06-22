@@ -136,7 +136,11 @@ export class CursorChatRuntime implements ChatRuntime {
     // read ~/.cursor/mcp.json at startup. Written before the spawn lock because
     // the lock guards ~/.cursor/cli-config.json contention, not mcp.json.
     try {
-      const httpCfg = this.plugin.getHttpToolServerConfig?.() ?? null;
+      // Scope the loopback tool server to the bound agent's granted tools when
+      // present: an empty/absent grant returns the byte-identical all-tools
+      // config. The write is per-turn, so this scopes per-conversation (modulo
+      // the global ~/.cursor/mcp.json race — Phase 2).
+      const httpCfg = this.plugin.getHttpToolServerConfig?.(queryOptions?.boundAgentTools) ?? null;
       await writeCursorMcpConfig(httpCfg);
     } catch (err) {
       this.plugin.logger.scope('cursor.mcp').warn('Failed to write ~/.cursor/mcp.json', err);
