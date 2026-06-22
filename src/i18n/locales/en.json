@@ -1023,7 +1023,9 @@
     "navLabel": "Agents",
     "actionFailed": "Something went wrong — check the developer console.",
     "syncFailed": "Synced with errors: {written} written, {failed} failed.",
-    "colorNone": "None"
+    "colorNone": "None",
+    "icon": "Icon",
+    "iconNone": "Default"
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically.",

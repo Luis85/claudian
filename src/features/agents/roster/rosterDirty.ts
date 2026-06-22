@@ -2,7 +2,7 @@ import type { RosterAgent, RosterAgentModelSelection } from './rosterTypes';
 
 // Fields the detail editor can change; comparing only these avoids false dirty
 // from timestamps (createdAt/updatedAt) or stored-but-unedited fields.
-const SCALAR_KEYS = ['name', 'description', 'prompt', 'color', 'initials', 'providerOverride', 'permissionMode'] as const;
+const SCALAR_KEYS = ['name', 'description', 'prompt', 'color', 'initials', 'icon', 'providerOverride', 'permissionMode'] as const;
 
 function sameSet(a: readonly string[], b: readonly string[]): boolean {
   if (a.length !== b.length) return false;

@@ -35,4 +35,11 @@ describe('isRosterAgentDirty', () => {
     expect(isRosterAgentDirty(withModel, a)).toBe(true);
     expect(isRosterAgentDirty(withModel, { ...withModel, modelSelection: { modelId: 'm2', providerId: 'claude' as const } })).toBe(true);
   });
+
+  it('detects an icon change', () => {
+    const a = base();
+    expect(isRosterAgentDirty(a, { ...a, icon: 'wrench' })).toBe(true);
+    expect(isRosterAgentDirty({ ...a, icon: 'wrench' }, { ...a, icon: 'bug' })).toBe(true);
+    expect(isRosterAgentDirty({ ...a, icon: 'wrench' }, { ...a, icon: 'wrench' })).toBe(false);
+  });
 });

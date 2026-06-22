@@ -63,4 +63,40 @@ describe('renderAgentAvatar', () => {
     renderAgentAvatar(host, STANDARD, 20);
     expect(host.querySelector('.claudian-agent-avatar')).not.toBeNull();
   });
+
+  it('renders a non-builtin persona with icon: wrench using the icon glyph, not initials', () => {
+    const host = document.createElement('div');
+    const persona: AgentPersona = {
+      id: 'fixer',
+      name: 'Fixer',
+      color: 'var(--color-orange)',
+      initials: 'FX',
+      icon: 'wrench',
+    };
+    const avatar = renderAgentAvatar(host, persona, 20);
+    expect(avatar.getAttribute('data-icon')).toBe('wrench');
+    // icon takes precedence — no initials text
+    expect(avatar.textContent).toBe('');
+    expect(avatar.classList.contains('claudian-agent-avatar--initials')).toBe(false);
+  });
+
+  it('renders a non-builtin persona with only initials (no icon) using initials', () => {
+    const host = document.createElement('div');
+    const avatar = renderAgentAvatar(host, CUSTOM, 20);
+    expect(avatar.classList.contains('claudian-agent-avatar--initials')).toBe(true);
+    expect(avatar.textContent).toBe('RF');
+    expect(avatar.getAttribute('data-icon')).toBeNull();
+  });
+
+  it('falls back to cpu for a non-builtin persona with no icon and no initials', () => {
+    const host = document.createElement('div');
+    const persona: AgentPersona = {
+      id: 'empty',
+      name: 'Empty',
+      color: 'var(--color-base-70)',
+    };
+    const avatar = renderAgentAvatar(host, persona, 20);
+    expect(avatar.getAttribute('data-icon')).toBe('cpu');
+    expect(avatar.textContent).toBe('');
+  });
 });

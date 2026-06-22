@@ -57,6 +57,7 @@ export function rosterAgentToPersona(agent: RosterAgent): AgentPersona {
     name: agent.name,
     color: agent.color || 'var(--color-base-70)',
     initials: agent.initials?.trim() || derived || 'AG',
+    icon: agent.icon,
     builtin: false,
   };
 }

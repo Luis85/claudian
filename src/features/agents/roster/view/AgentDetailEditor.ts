@@ -15,6 +15,7 @@ import type { RosterAgent } from '../rosterTypes';
 import { type CapabilityItem, renderCapabilityPicker } from './CapabilityPicker';
 
 const AVATAR_COLORS = ['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink'];
+const ICON_CHOICES = ['bot', 'bug', 'wrench', 'telescope', 'flask-conical', 'map', 'shield-check', 'pencil', 'book-open', 'search', 'sparkles', 'code'];
 const DETAIL_AVATAR_SIZE = 48;
 
 export interface AgentDetailEditorCallbacks {
@@ -114,6 +115,17 @@ export class AgentDetailEditor {
     initials.placeholder = t('agentRoster.initials');
     initials.addEventListener('input', () => {
       this.draft.initials = initials.value.toUpperCase() || undefined;
+      this.refreshAvatar();
+      this.updateDirty();
+    });
+
+    const iconSelect = row.createEl('select', { cls: 'claudian-roster-appearance-icon dropdown' });
+    iconSelect.setAttribute('aria-label', t('agentRoster.icon'));
+    iconSelect.createEl('option', { value: '', text: t('agentRoster.iconNone') });
+    for (const name of ICON_CHOICES) iconSelect.createEl('option', { value: name, text: name });
+    iconSelect.value = this.draft.icon ?? '';
+    iconSelect.addEventListener('change', () => {
+      this.draft.icon = iconSelect.value || undefined;
       this.refreshAvatar();
       this.updateDirty();
     });

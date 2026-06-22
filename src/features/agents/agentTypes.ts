@@ -17,6 +17,8 @@ export interface AgentPersona {
   color: string;
   /** Two-letter monogram for custom personas (the built-in uses an icon). */
   initials?: string;
+  /** Optional Lucide icon name; takes precedence over initials for non-builtin personas. */
+  icon?: string;
   /** True only for the built-in `standard` persona. */
   builtin?: boolean;
 }
