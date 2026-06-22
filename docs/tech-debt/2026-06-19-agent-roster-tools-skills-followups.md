@@ -106,10 +106,11 @@ final review and remain open.
    and dynamic-update (persistent-query `setMcpServers`) paths. Built-in Claude
    tools (Read/Write/Bash) are untouched. *Still open:* the roster UI grants only
    user tools — built-in tool allow/deny and `disallowedTools` editing have no UI
-   yet; **non-Claude (HTTP-tier) scoping** (Opencode/Cursor share one long-running
-   HTTP server that lists all tools — per-conversation scoping there needs
-   per-session request filtering); true per-call enforcement still needs
-   `canUseTool`.
+   yet; **non-Claude (HTTP-tier) scoping Phase 1 shipped (2026-06-22)** — the HTTP
+   tool server is now grant-aware (per-grant scoped token, enforced by
+   construction) and Opencode/Cursor thread the grant in (see Hardening-pass item
+   2 + the grant-scoping spec); Phase 2 (cross-conversation re-scoping on a reused
+   provider process) remains; true per-call enforcement still needs `canUseTool`.
 
 ## New starter-agent presets (2026-06-20)
 
@@ -139,12 +140,20 @@ decisions rather than bugs:
    "I trust my .claudian/tools" workspace toggle. Needs a product call before
    building.
 
-2. **Opencode/Cursor HTTP-tier tool-scope relocation.** The loopback HTTP tool
-   server lists *all* user tools to every spawned provider; per-conversation
-   scoping (the Claude-tier `getClaudianToolKey` equivalent) needs per-session
-   request filtering on that shared long-running server. Touches the spawn
-   lifecycle and can't be validated without a live Opencode/Cursor runtime, so
-   it was not attempted blind.
+2. **Opencode/Cursor HTTP-tier tool-scope relocation — Phase 1 shipped
+   (2026-06-22).** The loopback HTTP tool server is now grant-aware: it keys a
+   per-grant scoped MCP layer by bearer token and enforces scoping by
+   construction (a tool outside the grant is never registered on that layer's
+   server), and Opencode/Cursor thread the bound agent's `boundAgentTools` into
+   `getHttpToolServerConfig(grant)` so a restricted agent gets a scoped token
+   (no grant → byte-identical all-tools default). Design + Phase split:
+   `docs/superpowers/specs/2026-06-22-http-tool-tier-grant-scoping-design.md`.
+   *Phase 2 (still deferred, needs a live runtime):* cross-conversation
+   re-scoping when a provider reuses one long-running process/config across
+   conversations with different grants — Cursor's global `~/.cursor/mcp.json`
+   race and Opencode's spawn-once config — plus the ~40-tool Cursor cap and
+   token lifecycle. The per-token server guarantee holds regardless; what needs
+   runtime validation is which token a given spawn actually picks up.
 
 3. **Locale coverage for new strings.** The roster/tool/skill UI strings and the
    eight preset-agent prompts are English literals; the nine non-English locales
