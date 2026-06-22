@@ -25,6 +25,7 @@ import { selectNextReadyTask } from '../execution/selectNextReadyTask';
 import type { TaskExecutionSurface } from '../execution/TaskExecutionSurface';
 import { TaskRunCoordinator } from '../execution/TaskRunCoordinator';
 import { TaskIndexer } from '../indexing/TaskIndexer';
+import { LoopCatalog } from '../loops/LoopCatalog';
 import { canTransitionTaskStatus, isRunnableTaskStatus } from '../model/taskStateMachine';
 import type { TaskBoardModel, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
@@ -49,6 +50,10 @@ export class AgentBoardView extends ItemView {
   private readonly noteStore = new TaskNoteStore();
   private readonly indexer = new TaskIndexer(this.noteStore);
   private readonly renderer = new AgentBoardRenderer();
+  // Resolves loop slugs attached to work orders via frontmatter `loop` field.
+  // Initialized in the constructor (after plugin is bound) because field
+  // initializers run before parameter properties are assigned.
+  private readonly loopCatalog: LoopCatalog;
   private model: TaskBoardModel = { tasks: [], invalidNotes: [] };
   private config: BoardConfig = loadBoardConfig({}).config;
   private layout: ResolvedBoardLayout = { lanes: [], errors: [] };
@@ -87,6 +92,12 @@ export class AgentBoardView extends ItemView {
     private readonly executionSurface: TaskExecutionSurface,
   ) {
     super(leaf);
+    // Reads the folder live via a getter so a settings change is picked up without
+    // reinstantiating. Must be set before the coordinator closure captures `this`.
+    this.loopCatalog = new LoopCatalog(
+      this.plugin.app.vault,
+      () => this.plugin.settings.agentBoardLoopFolder || 'Agent Board/loops',
+    );
     // One coordinator shared by manual runs and the queue runner so a single
     // in-flight set (`isActive`) prevents a card from running twice. Its deps
     // key off the task passed to `run()`, never a closure, so any task is safe.
@@ -121,8 +132,12 @@ export class AgentBoardView extends ItemView {
       finalizeLedgerToNote: (task, runId) => this.finalizeLedgerToNote(task, runId),
       writeHandoff: (task, markdown) =>
         this.applyNoteChange(task.path, (content) => this.noteStore.writeHandoff(content, markdown)),
-      renderPrompt: (task) =>
-        renderTaskPrompt(task, getLaneForStatus(this.config, task.frontmatter.status) ?? undefined),
+      renderPrompt: async (task) =>
+        renderTaskPrompt(
+          task,
+          getLaneForStatus(this.config, task.frontmatter.status) ?? undefined,
+          (await this.loopCatalog.resolveLoop(task.frontmatter.loop)) ?? undefined,
+        ),
     });
   }
 
