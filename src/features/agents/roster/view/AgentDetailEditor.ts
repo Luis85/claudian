@@ -79,6 +79,8 @@ export class AgentDetailEditor {
   private renderHeaderCard(root: HTMLElement): void {
     const head = root.createDiv({ cls: 'claudian-roster-detail-head' });
     this.avatarHost = head.createDiv({ cls: 'claudian-roster-detail-avatar' });
+    // Decorative: the adjacent name field already conveys the agent's name.
+    this.avatarHost.setAttribute('aria-hidden', 'true');
     this.refreshAvatar();
 
     const fields = head.createDiv({ cls: 'claudian-roster-detail-headfields' });

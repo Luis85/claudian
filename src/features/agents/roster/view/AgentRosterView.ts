@@ -94,6 +94,8 @@ export class AgentRosterView extends ItemView {
     card.onclick = () => void this.openDetail(agent);
 
     const avatar = card.createDiv({ cls: 'claudian-roster-card-avatar' });
+    // Decorative: the card's aria-label + name button already convey the name.
+    avatar.setAttribute('aria-hidden', 'true');
     renderAgentAvatar(avatar, rosterAgentToPersona(agent), CARD_AVATAR_SIZE);
 
     const body = card.createDiv({ cls: 'claudian-roster-card-body' });
