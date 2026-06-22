@@ -1021,6 +1021,7 @@
     "selectedCount": "{count} selected",
     "unsavedChanges": "Unsaved changes",
     "discardConfirm": "Discard unsaved changes?",
+    "discard": "Discard",
     "chipTag": "Agent",
     "syncProviders": "Sync to providers",
     "syncDone": "Published {written} agent file(s) to {providers}.",

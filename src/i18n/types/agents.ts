@@ -44,6 +44,7 @@ export type AgentsTranslationKey =
   | 'agentRoster.selectedCount'
   | 'agentRoster.unsavedChanges'
   | 'agentRoster.discardConfirm'
+  | 'agentRoster.discard'
   | 'agentRoster.chipTag'
   | 'agentRoster.syncProviders'
   | 'agentRoster.syncDone'

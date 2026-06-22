@@ -66,7 +66,7 @@ export class AgentDetailEditor {
       this.callbacks.onBack();
       return;
     }
-    void confirm(this.plugin.app, t('agentRoster.discardConfirm'), t('agentRoster.back')).then((ok) => {
+    void confirm(this.plugin.app, t('agentRoster.discardConfirm'), t('agentRoster.discard')).then((ok) => {
       if (ok) this.callbacks.onBack();
     });
   }
@@ -230,7 +230,9 @@ export class AgentDetailEditor {
     const save = footer.createEl('button', { cls: 'mod-cta', text: t('agentRoster.save') });
     save.onclick = () => void this.save();
     const start = footer.createEl('button', { text: t('agentRoster.startChat') });
-    start.onclick = () => this.callbacks.onStartChat(this.draft);
+    // Start chat binds by persisted agent id + config; pass the saved agent so a
+    // dirty, unsaved provider/model edit can't diverge from what actually launches.
+    start.onclick = () => this.callbacks.onStartChat(this.original);
     const del = footer.createEl('button', { cls: 'claudian-roster-card-delete', text: t('agentRoster.delete') });
     del.onclick = () => this.callbacks.onDeleted(this.original);
   }
