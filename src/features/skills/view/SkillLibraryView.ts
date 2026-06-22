@@ -92,6 +92,10 @@ export class SkillLibraryView extends ItemView {
     const dir = await uniqueChildDir(this.plugin.vaultFileAdapter, SKILLS_DIR, librarySlug(name) || 'skill');
     const path = `${dir}/SKILL.md`;
     await this.plugin.vaultFileAdapter.write(path, skillTemplate(name));
+    // `.claude/` is a dot-folder Obsidian's vault watcher ignores, so this direct
+    // write bypasses the provider-catalog event seam. Invalidate the aggregator's
+    // 'claude' bucket explicitly so the re-render below re-fetches the new skill.
+    this.plugin.events.emit('vaultSkill.changed', { providerId: 'claude' });
     new Notice(t('skillLibrary.created', { path }));
     await this.render();
     this.openEditor({

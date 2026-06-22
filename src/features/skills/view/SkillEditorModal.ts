@@ -72,6 +72,10 @@ export class SkillEditorModal extends LibraryEditorModal {
       const newPath = await renameLibraryItemDir(adapter, oldPath, root, newSlug, this.contentArea.value);
       this.row = { ...this.row, name: newName, sourceFilePath: newPath };
     }
+    // `.claude/` is a dot-folder Obsidian's vault watcher ignores, so this direct
+    // write/rename bypasses the provider-catalog event seam. Invalidate the
+    // aggregator's 'claude' bucket explicitly before the refresh below re-fetches.
+    this.plugin.events.emit('vaultSkill.changed', { providerId: 'claude' });
     this.onSaved();
     new Notice(t('skillLibrary.saved', { name: this.row.name }));
     this.close();
