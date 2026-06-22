@@ -51,12 +51,14 @@ interface FrontmatterArgs {
   provider: string;
   model: string;
   conversationId?: string | null;
+  loop?: string;
 }
 
 function workOrderFrontmatter(args: FrontmatterArgs): string {
   const conversationLine = args.conversationId
     ? `conversation_id: ${JSON.stringify(args.conversationId)}`
     : 'conversation_id:';
+  const loopLine = args.loop ? `\nloop: ${JSON.stringify(args.loop)}` : '';
   return `---
 type: claudian-work-order
 schema_version: 1
@@ -69,7 +71,7 @@ updated: ${args.timestamp}
 provider: ${args.provider}
 model: ${args.model}
 run_id:
-${conversationLine}
+${conversationLine}${loopLine}
 sidepanel_tab_id:
 started:
 finished:

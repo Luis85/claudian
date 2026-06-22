@@ -8,6 +8,7 @@ export interface WorkOrderTemplate {
   provider?: string;
   model?: string;
   priority?: TaskPriority;
+  loop?: string;
   body: string;
 }
 
