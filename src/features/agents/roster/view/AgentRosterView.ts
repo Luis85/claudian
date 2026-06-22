@@ -1,4 +1,4 @@
-import { type DropdownComponent, ItemView, Notice, Setting, type WorkspaceLeaf } from 'obsidian';
+import { ItemView, Notice, type WorkspaceLeaf } from 'obsidian';
 
 import { ProviderRegistry } from '../../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../../core/providers/types';
@@ -12,19 +12,15 @@ import { renderLibraryEmptyState } from '../../../../utils/libraryView';
 import { renderAgentAvatar } from '../../agentAvatar';
 import { rosterAgentToPersona } from '../../personaRegistry';
 import { installPresetAgents } from '../presetAgents';
-import { createRosterAgent, dedupeRosterId, toolCapabilityId } from '../rosterCapabilities';
+import { createRosterAgent, dedupeRosterId } from '../rosterCapabilities';
 import type { RosterAgent } from '../rosterTypes';
+import { AgentDetailEditor } from './AgentDetailEditor';
 
 export const VIEW_TYPE_AGENT_ROSTER = 'claudian-agent-roster';
 
-// Obsidian theme color variables offered for an agent's avatar accent.
-const AVATAR_COLORS = ['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink'];
-const AVATAR_AVATAR_SIZE = 48;
 const CARD_AVATAR_SIZE = 36;
 
 export class AgentRosterView extends ItemView {
-  private avatarHostEl: HTMLElement | null = null;
-
   constructor(leaf: WorkspaceLeaf, private plugin: ClaudianPlugin) {
     super(leaf);
   }
@@ -85,7 +81,7 @@ export class AgentRosterView extends ItemView {
 
   private renderCard(list: HTMLElement, agent: RosterAgent): void {
     const card = list.createDiv({ cls: 'claudian-roster-card' });
-    card.onclick = () => void this.renderDetail(agent);
+    card.onclick = () => void this.openDetail(agent);
     this.wireCardKeyboard(card, agent);
 
     const avatar = card.createDiv({ cls: 'claudian-roster-card-avatar' });
@@ -133,193 +129,20 @@ export class AgentRosterView extends ItemView {
     card.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        void this.renderDetail(agent);
+        void this.openDetail(agent);
       }
     });
   }
 
   // ── Detail editor ─────────────────────────────────────────────────────────
 
-  private async renderDetail(agent: RosterAgent): Promise<void> {
-    // Edit a working copy so unsaved field edits don't mutate the list's object.
-    const draft: RosterAgent = { ...agent, roles: [...agent.roles] };
-    const root = this.contentEl;
-    root.empty();
-    root.removeClass('claudian-roster');
-    root.addClass('claudian-roster-detail');
-
-    const topbar = root.createDiv({ cls: 'claudian-roster-detail-topbar' });
-    const back = topbar.createEl('button', { text: t('agentRoster.back') });
-    back.onclick = () => void this.renderList();
-
-    const head = root.createDiv({ cls: 'claudian-roster-detail-head' });
-    this.avatarHostEl = head.createDiv({ cls: 'claudian-roster-detail-avatar' });
-    this.refreshAvatar(draft);
-    const titleEl = head.createEl('h2', { cls: 'claudian-roster-detail-title', text: draft.name });
-
-    // Identity
-    this.sectionHeading(root, t('agentRoster.sectionIdentity'));
-    new Setting(root).setName(t('agentRoster.fieldName')).addText((c) =>
-      c.setValue(draft.name).onChange((v) => {
-        draft.name = v;
-        titleEl.setText(v);
-        this.refreshAvatar(draft);
-      }),
-    );
-    new Setting(root).setName(t('agentRoster.fieldDescription')).addText((c) =>
-      c.setValue(draft.description).onChange((v) => { draft.description = v; }),
-    );
-
-    // Appearance
-    this.sectionHeading(root, t('agentRoster.sectionAppearance'));
-    new Setting(root).setName(t('agentRoster.color')).addDropdown((c) => {
-      c.addOption('', t('agentRoster.providerDefault'));
-      for (const name of AVATAR_COLORS) c.addOption(`var(--color-${name})`, name);
-      c.setValue(draft.color ?? '').onChange((v) => {
-        draft.color = v || undefined;
-        this.refreshAvatar(draft);
-      });
+  private async openDetail(agent: RosterAgent): Promise<void> {
+    const editor = new AgentDetailEditor(this.plugin, {
+      onBack: () => void this.renderList(),
+      onStartChat: (a) => void withErrorNotice(() => this.startChatWithAgent(a), t('agentRoster.actionFailed'), (e) => this.fail(e)),
+      onDeleted: (a) => void withErrorNotice(() => this.deleteAgent(a), t('agentRoster.actionFailed'), (e) => this.fail(e)),
     });
-    new Setting(root).setName(t('agentRoster.initials')).addText((c) => {
-      c.setValue(draft.initials ?? '');
-      c.inputEl.maxLength = 2;
-      c.onChange((v) => {
-        draft.initials = v.toUpperCase() || undefined;
-        this.refreshAvatar(draft);
-      });
-    });
-
-    // Model (provider + model selectors)
-    this.sectionHeading(root, t('agentRoster.sectionModel'));
-    this.renderModelSection(root, draft);
-
-    // Instructions
-    this.sectionHeading(root, t('agentRoster.sectionInstructions'));
-    const promptSetting = new Setting(root).setClass('claudian-roster-prompt-setting');
-    promptSetting.settingEl.addClass('claudian-roster-prompt');
-    promptSetting.addTextArea((c) => {
-      c.setValue(draft.prompt).onChange((v) => { draft.prompt = v; });
-      c.inputEl.rows = 8;
-    });
-
-    // Skills + Tools
-    this.sectionHeading(root, t('agentRoster.skills'));
-    await this.renderSkillPicker(root, draft);
-    this.sectionHeading(root, t('agentRoster.tools'));
-    this.renderToolPicker(root, draft);
-
-    // Roles
-    this.sectionHeading(root, t('agentRoster.sectionRoles'));
-    this.renderRoleToggle(root, draft, 'worker', t('agentRoster.roleWorker'));
-    this.renderRoleToggle(root, draft, 'verifier', t('agentRoster.roleVerifier'));
-
-    // Footer actions
-    const footer = root.createDiv({ cls: 'claudian-roster-detail-footer' });
-    const fail = t('agentRoster.actionFailed');
-    const save = footer.createEl('button', { cls: 'mod-cta', text: t('agentRoster.save') });
-    save.onclick = () => void withErrorNotice(() => this.saveDraft(draft), fail, (e) => this.fail(e));
-    const start = footer.createEl('button', { text: t('agentRoster.startChat') });
-    start.onclick = () => void withErrorNotice(() => this.startChatWithAgent(draft), fail, (e) => this.fail(e));
-    const del = footer.createEl('button', { cls: 'claudian-roster-card-delete', text: t('agentRoster.delete') });
-    del.onclick = () => void withErrorNotice(() => this.deleteAgent(draft), fail, (e) => this.fail(e));
-  }
-
-  private renderModelSection(root: HTMLElement, draft: RosterAgent): void {
-    const settings = asSettingsBag(this.plugin.settings);
-    const providerIds = ProviderRegistry.getEnabledProviderIds(settings);
-    let modelDropdown: DropdownComponent | null = null;
-
-    const populateModels = (providerId: string): void => {
-      if (!modelDropdown) return;
-      modelDropdown.selectEl.empty();
-      modelDropdown.addOption('', t('agentRoster.modelDefault'));
-      const options = providerId
-        ? ProviderRegistry.getChatUIConfig(providerId as ProviderId).getModelOptions(settings)
-        : [];
-      for (const o of options) modelDropdown.addOption(o.value, o.label);
-      const current = draft.modelSelection?.modelId ?? '';
-      modelDropdown.setValue(options.some((o) => o.value === current) ? current : '');
-    };
-
-    new Setting(root).setName(t('agentRoster.provider')).addDropdown((c) => {
-      c.addOption('', t('agentRoster.providerDefault'));
-      for (const id of providerIds) c.addOption(id, id);
-      c.setValue(draft.providerOverride ?? '');
-      c.onChange((v) => {
-        draft.providerOverride = (v || undefined) as ProviderId | undefined;
-        // Provider changed → the stored model no longer applies; clear it.
-        draft.modelSelection = undefined;
-        populateModels(v);
-      });
-    });
-
-    new Setting(root).setName(t('agentRoster.model')).addDropdown((c) => {
-      modelDropdown = c;
-      c.onChange((v) => {
-        const providerId = (draft.providerOverride
-          ?? draft.modelSelection?.providerId
-          ?? providerIds[0]) as ProviderId | undefined;
-        draft.modelSelection = v && providerId ? { modelId: v, providerId } : undefined;
-      });
-      populateModels(draft.providerOverride ?? draft.modelSelection?.providerId ?? '');
-    });
-  }
-
-  private async renderSkillPicker(root: HTMLElement, draft: RosterAgent): Promise<void> {
-    const box = root.createDiv({ cls: 'claudian-roster-picker' });
-    const entries = (await this.plugin.vaultSkillAggregator?.listAll()) ?? [];
-    if (entries.length === 0) {
-      box.createEl('p', { cls: 'claudian-roster-picker-empty', text: t('agentRoster.noSkillsHint') });
-      return;
-    }
-    for (const s of entries) {
-      const label = box.createEl('label', { cls: 'claudian-roster-picker-row' });
-      const cb = label.createEl('input', { type: 'checkbox' });
-      cb.checked = draft.skills.includes(s.name);
-      cb.onchange = () => {
-        draft.skills = cb.checked
-          ? [...new Set([...draft.skills, s.name])]
-          : draft.skills.filter((n) => n !== s.name);
-      };
-      label.appendText(` ${s.name}`);
-    }
-  }
-
-  private renderToolPicker(root: HTMLElement, draft: RosterAgent): void {
-    const box = root.createDiv({ cls: 'claudian-roster-picker' });
-    const tools = (this.plugin.toolRegistry?.list() ?? []).filter((tool) => tool.module && !tool.error);
-    if (tools.length === 0) {
-      box.createEl('p', { cls: 'claudian-roster-picker-empty', text: t('agentRoster.noToolsHint') });
-      return;
-    }
-    for (const tool of tools) {
-      if (!tool.module) continue;
-      const cap = toolCapabilityId(tool.module.manifest.name);
-      const label = box.createEl('label', { cls: 'claudian-roster-picker-row' });
-      const cb = label.createEl('input', { type: 'checkbox' });
-      cb.checked = draft.tools.includes(cap);
-      cb.onchange = () => {
-        draft.tools = cb.checked
-          ? [...new Set([...draft.tools, cap])]
-          : draft.tools.filter((n) => n !== cap);
-      };
-      label.appendText(` ${tool.module.manifest.name} — ${tool.module.manifest.description}`);
-    }
-  }
-
-  private renderRoleToggle(
-    root: HTMLElement,
-    draft: RosterAgent,
-    role: 'worker' | 'verifier',
-    name: string,
-  ): void {
-    new Setting(root).setName(name).addToggle((c) =>
-      c.setValue(draft.roles.includes(role)).onChange((on) => {
-        draft.roles = on
-          ? [...new Set([...draft.roles, role])]
-          : draft.roles.filter((r) => r !== role);
-      }),
-    );
+    await editor.render(this.contentEl, agent);
   }
 
   // ── Actions ────────────────────────────────────────────────────────────────
@@ -333,7 +156,7 @@ export class AgentRosterView extends ItemView {
       agent.name = `New Agent ${uniqueId.split('-').pop()}`;
     }
     await this.store.save(agent);
-    await this.renderDetail(agent);
+    await this.openDetail(agent);
   }
 
   private async syncToProviders(): Promise<void> {
@@ -366,13 +189,6 @@ export class AgentRosterView extends ItemView {
           })
         : t('agentRoster.installStarterNone'),
     );
-    await this.renderList();
-  }
-
-  private async saveDraft(draft: RosterAgent): Promise<void> {
-    draft.updatedAt = Date.now();
-    await this.store.save(draft);
-    new Notice(t('agentRoster.saved', { name: draft.name }));
     await this.renderList();
   }
 
@@ -413,17 +229,5 @@ export class AgentRosterView extends ItemView {
     // Always open the agent in a fresh tab so it never hijacks a chat already in
     // use (e.g. a streaming conversation in the active tab).
     await this.plugin.openConversation(conversation.id, { requireNewTab: true });
-  }
-
-  // ── Helpers ──────────────────────────────────────────────────────────────
-
-  private sectionHeading(root: HTMLElement, text: string): void {
-    root.createEl('h3', { cls: 'claudian-roster-section', text });
-  }
-
-  private refreshAvatar(draft: RosterAgent): void {
-    if (!this.avatarHostEl) return;
-    this.avatarHostEl.empty();
-    renderAgentAvatar(this.avatarHostEl, rosterAgentToPersona(draft), AVATAR_AVATAR_SIZE);
   }
 }
