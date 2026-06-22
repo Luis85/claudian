@@ -491,6 +491,9 @@ export class TabManager implements TabManagerInterface {
         needsAttention: tab.state.needsAttention,
         canClose: this.tabs.size > 1 || !tab.state.isStreaming,
         kind: tab.kind,
+        isAgentBound: Boolean(
+          tab.conversationId && this.plugin.getConversationSync(tab.conversationId)?.boundAgentId,
+        ),
       });
     }
 

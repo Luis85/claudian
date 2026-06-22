@@ -126,6 +126,31 @@
   height: 14px;
 }
 
+/*
+ * Agent-bound chat badge — a small person glyph before the index number marks
+ * the tab as bound to a roster agent. The badge relaxes its fixed 24px square to
+ * a slightly wider pill so the glyph + number sit side by side.
+ */
+.claudian-tab-badge--agent {
+  width: auto;
+  min-width: 24px;
+  gap: 2px;
+  padding: 0 5px;
+}
+
+.claudian-tab-badge-agent-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 11px;
+  height: 11px;
+}
+
+.claudian-tab-badge-agent-icon svg {
+  width: 11px;
+  height: 11px;
+}
+
 @keyframes claudian-tab-badge-working-pulse {
   0%,
   100% {

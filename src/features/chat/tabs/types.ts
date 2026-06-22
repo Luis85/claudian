@@ -360,6 +360,8 @@ export interface TabBarItem {
   canClose: boolean;
   /** Drives badge styling — work-order badges get an accent + aria suffix. */
   kind: TabKind;
+  /** True when the tab's conversation is bound to a roster agent — drives the badge glyph. */
+  isAgentBound?: boolean;
 }
 
 /** Outcome of a programmatic task-run turn, surfaced to the work-order runner. */

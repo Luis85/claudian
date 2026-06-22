@@ -1,4 +1,4 @@
-import { createMockEl } from '@test/helpers/mockElement';
+import { createMockEl, type MockElement } from '@test/helpers/mockElement';
 
 import { TabBar, type TabBarCallbacks } from '@/features/chat/tabs/TabBar';
 import type { TabBarItem } from '@/features/chat/tabs/types';
@@ -268,6 +268,45 @@ describe('TabBar', () => {
       tabBar.destroy();
 
       expect(containerEl._classList.has('claudian-tab-badges')).toBe(false);
+    });
+  });
+
+  describe('agent-bound badge', () => {
+    it('renders a user glyph, --agent class, number span, and "agent" aria qualifier', () => {
+      const containerEl = createMockEl();
+      const tabBar = new TabBar(containerEl, createMockCallbacks());
+
+      tabBar.update([createTabBarItem({ index: 2, isAgentBound: true, title: 'My chat' })]);
+
+      const badge = containerEl._children[0];
+      expect(badge.hasClass('claudian-tab-badge--agent')).toBe(true);
+      expect(badge._children.some((c: MockElement) => c.hasClass('claudian-tab-badge-agent-icon'))).toBe(true);
+      const number = badge._children.find((c: MockElement) => c.hasClass('claudian-tab-badge-number'));
+      expect(number?.textContent).toBe('2');
+      expect(badge.getAttribute('aria-label')).toBe('My chat (agent)');
+    });
+
+    it('does not mark a non-bound chat badge', () => {
+      const containerEl = createMockEl();
+      const tabBar = new TabBar(containerEl, createMockCallbacks());
+
+      tabBar.update([createTabBarItem({ index: 3 })]);
+
+      const badge = containerEl._children[0];
+      expect(badge.hasClass('claudian-tab-badge--agent')).toBe(false);
+      expect(badge._children.some((c: MockElement) => c.hasClass('claudian-tab-badge-agent-icon'))).toBe(false);
+      expect(badge.textContent).toBe('3');
+    });
+
+    it('ignores isAgentBound on a work-order badge (glyph gated to chat)', () => {
+      const containerEl = createMockEl();
+      const tabBar = new TabBar(containerEl, createMockCallbacks());
+
+      tabBar.update([createTabBarItem({ kind: 'work-order', isAgentBound: true })]);
+
+      const badge = containerEl._children[0];
+      expect(badge.hasClass('claudian-tab-badge--agent')).toBe(false);
+      expect(badge._children.some((c: MockElement) => c.hasClass('claudian-tab-badge-agent-icon'))).toBe(false);
     });
   });
 });

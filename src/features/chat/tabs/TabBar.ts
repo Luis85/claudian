@@ -78,19 +78,27 @@ export class TabBar {
     if (item.kind === 'work-order') {
       stateClasses.push('claudian-tab-badge--work-order');
     }
+    if (item.kind !== 'work-order' && item.isAgentBound) {
+      stateClasses.push('claudian-tab-badge--agent');
+    }
     if (isFirstWorkOrder) {
       stateClasses.push('claudian-tab-badge--work-order-first');
     }
 
-    // Work-order tabs render a wrench glyph instead of the index number so the
-    // kind reads at a glance. Chat tabs keep the numeric badge.
-    const badgeEl = item.kind === 'work-order'
-      ? this.containerEl.createDiv({ cls: stateClasses.join(' ') })
-      : this.containerEl.createDiv({ cls: stateClasses.join(' '), text: String(item.index) });
-
+    // Work-order tabs render a wrench glyph instead of the index number. An
+    // agent-bound chat tab prepends a small user glyph before the number so the
+    // binding reads at a glance. A plain chat tab keeps the number as the badge's
+    // own text (unchanged).
+    let badgeEl: HTMLElement;
     if (item.kind === 'work-order') {
-      const iconEl = badgeEl.createSpan({ cls: 'claudian-tab-badge-icon' });
-      setIcon(iconEl, 'wrench');
+      badgeEl = this.containerEl.createDiv({ cls: stateClasses.join(' ') });
+      setIcon(badgeEl.createSpan({ cls: 'claudian-tab-badge-icon' }), 'wrench');
+    } else if (item.isAgentBound) {
+      badgeEl = this.containerEl.createDiv({ cls: stateClasses.join(' ') });
+      setIcon(badgeEl.createSpan({ cls: 'claudian-tab-badge-agent-icon' }), 'user');
+      badgeEl.createSpan({ cls: 'claudian-tab-badge-number', text: String(item.index) });
+    } else {
+      badgeEl = this.containerEl.createDiv({ cls: stateClasses.join(' '), text: String(item.index) });
     }
 
     // Tooltip with full title (aria-label only; adding title too causes double tooltip).
@@ -98,6 +106,7 @@ export class TabBar {
     // label doesn't accumulate two adjacent `(...)` groups on a streaming WO tab.
     const qualifiers: string[] = [];
     if (item.kind === 'work-order') qualifiers.push('work order');
+    if (item.kind !== 'work-order' && item.isAgentBound) qualifiers.push('agent');
     if (item.isStreaming) qualifiers.push('working');
     const ariaLabel = qualifiers.length > 0
       ? `${item.title} (${qualifiers.join(', ')})`
