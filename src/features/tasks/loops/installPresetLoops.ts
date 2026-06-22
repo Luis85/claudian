@@ -46,8 +46,7 @@ export async function installPresetLoopsWithNotice(plugin: ClaudianPlugin): Prom
   if (result.installed > 0) parts.push(`installed ${result.installed}`);
   if (result.skipped > 0) parts.push(`skipped ${result.skipped} already present`);
   const summary = parts.join(', ');
-  // TODO(agent-loops Task 14): switch to commonLoops/commonLoopsEmpty keys once added to i18n
   new Notice(summary
-    ? t('settings.agentBoard.commonTemplates', { templates: summary })
-    : t('settings.agentBoard.commonTemplatesEmpty'));
+    ? t('settings.agentBoard.commonLoops', { loops: summary })
+    : t('settings.agentBoard.commonLoopsEmpty'));
 }
