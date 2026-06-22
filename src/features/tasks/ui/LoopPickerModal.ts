@@ -19,7 +19,6 @@ export interface LoopPickResult {
 export class LoopPickerModal extends Modal {
   private chosen = false;
   private listEl: HTMLElement | null = null;
-  private loops: LoopDefinition[] = [];
   private readonly store = new LoopNoteStore();
 
   constructor(
@@ -49,6 +48,7 @@ export class LoopPickerModal extends Modal {
 
   onClose(): void {
     this.contentEl.empty();
+    this.listEl = null;
     // Defer the cancel fallback so a synchronous choice in the same tick wins.
     window.setTimeout(() => {
       if (!this.chosen) this.resolve({ cancelled: true });
@@ -63,7 +63,6 @@ export class LoopPickerModal extends Modal {
     if (!this.listEl) return;
     this.listEl.empty();
     const { loops } = await this.store.list(this.plugin.app.vault, this.folder());
-    this.loops = loops;
     this.renderNoneRow();
     for (const loop of loops) this.renderLoopRow(loop);
   }
