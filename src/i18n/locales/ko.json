@@ -1026,7 +1026,8 @@
     "syncFailed": "Synced with errors: {written} written, {failed} failed.",
     "colorNone": "None",
     "icon": "아이콘",
-    "iconNone": "기본값"
+    "iconNone": "기본값",
+    "bindingHint": "다른 에이전트를 사용하려면 새 채팅을 시작하세요."
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically.",

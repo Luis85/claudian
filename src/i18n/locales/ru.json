@@ -1026,7 +1026,8 @@
     "syncFailed": "Synced with errors: {written} written, {failed} failed.",
     "colorNone": "None",
     "icon": "Иконка",
-    "iconNone": "По умолчанию"
+    "iconNone": "По умолчанию",
+    "bindingHint": "Начните новый чат, чтобы использовать другого агента."
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically.",

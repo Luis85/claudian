@@ -90,6 +90,11 @@ export function renderLibraryEmptyState(list: HTMLElement, opts: LibraryEmptySta
   }
 }
 
+/** A brief muted placeholder shown while an async list resolves. */
+export function renderLibraryLoading(list: HTMLElement, text: string): void {
+  list.createDiv({ cls: 'claudian-library-loading', text });
+}
+
 /** Uppercase section label used inside the library editor modals. */
 export function renderModalLabel(parent: HTMLElement, text: string): void {
   parent.createDiv({ cls: 'claudian-library-modal-label', text });

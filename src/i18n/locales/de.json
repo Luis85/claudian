@@ -1026,7 +1026,8 @@
     "syncFailed": "Synced with errors: {written} written, {failed} failed.",
     "colorNone": "None",
     "icon": "Symbol",
-    "iconNone": "Standard"
+    "iconNone": "Standard",
+    "bindingHint": "Starte einen neuen Chat, um einen anderen Agenten zu verwenden."
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically.",

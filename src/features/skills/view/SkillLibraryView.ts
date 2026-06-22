@@ -5,7 +5,7 @@ import type ClaudianPlugin from '../../../main';
 import { renderLibraryNav } from '../../../shared/libraryNav';
 import { promptReason } from '../../../shared/modals/PromptModal';
 import { withErrorNotice } from '../../../shared/uiAction';
-import { createLibraryCard, librarySlug, renderLibraryEmptyState, renderLibraryShell, uniqueChildDir } from '../../../utils/libraryView';
+import { createLibraryCard, librarySlug, renderLibraryEmptyState, renderLibraryLoading, renderLibraryShell, uniqueChildDir } from '../../../utils/libraryView';
 import { type SkillLibraryRow, toSkillLibraryRows } from '../skillLibraryRows';
 import { SkillEditorModal } from './SkillEditorModal';
 
@@ -46,7 +46,9 @@ export class SkillLibraryView extends ItemView {
     const newBtn = actions.createEl('button', { cls: 'mod-cta', text: t('skillLibrary.newSkill') });
     newBtn.onclick = () => this.createSkillSafely();
 
+    renderLibraryLoading(list, t('common.loading'));
     const entries = (await this.plugin.vaultSkillAggregator?.listAll()) ?? [];
+    list.empty();
     const rows = toSkillLibraryRows(entries);
     if (rows.length === 0) {
       renderLibraryEmptyState(list, {

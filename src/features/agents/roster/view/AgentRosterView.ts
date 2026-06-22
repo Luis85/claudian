@@ -8,7 +8,7 @@ import type ClaudianPlugin from '../../../../main';
 import { renderLibraryNav } from '../../../../shared/libraryNav';
 import { confirm } from '../../../../shared/modals/ConfirmModal';
 import { withErrorNotice } from '../../../../shared/uiAction';
-import { renderLibraryEmptyState } from '../../../../utils/libraryView';
+import { renderLibraryEmptyState, renderLibraryLoading } from '../../../../utils/libraryView';
 import { renderAgentAvatar } from '../../agentAvatar';
 import { rosterAgentToPersona } from '../../personaRegistry';
 import { installPresetAgents } from '../presetAgents';
@@ -64,8 +64,11 @@ export class AgentRosterView extends ItemView {
     syncBtn.setAttribute('title', t('agentRoster.syncProvidersHint'));
     syncBtn.onclick = () => void withErrorNotice(() => this.syncToProviders(), fail, (e) => this.fail(e));
 
-    const agents = await this.store.list();
     const list = root.createDiv({ cls: 'claudian-roster-list' });
+    renderLibraryLoading(list, t('common.loading'));
+
+    const agents = await this.store.list();
+    list.empty();
     if (agents.length === 0) {
       renderLibraryEmptyState(list, {
         icon: 'users',
@@ -138,13 +141,13 @@ export class AgentRosterView extends ItemView {
 
   // ── Detail editor ─────────────────────────────────────────────────────────
 
-  private async openDetail(agent: RosterAgent): Promise<void> {
+  private async openDetail(agent: RosterAgent, opts?: { isNew?: boolean }): Promise<void> {
     const editor = new AgentDetailEditor(this.plugin, {
       onBack: () => void this.renderList(),
       onStartChat: (a) => void withErrorNotice(() => this.startChatWithAgent(a), t('agentRoster.actionFailed'), (e) => this.fail(e)),
       onDeleted: (a) => void withErrorNotice(() => this.deleteAgent(a), t('agentRoster.actionFailed'), (e) => this.fail(e)),
     });
-    await editor.render(this.contentEl, agent);
+    await editor.render(this.contentEl, agent, opts);
   }
 
   // ── Actions ────────────────────────────────────────────────────────────────
@@ -157,8 +160,9 @@ export class AgentRosterView extends ItemView {
       agent.id = uniqueId;
       agent.name = `${t('agentRoster.newAgent')} ${uniqueId.split('-').pop()}`;
     }
-    await this.store.save(agent);
-    await this.openDetail(agent);
+    // Don't pre-save: open the editor in-memory and let the user's first Save
+    // (or Start chat) persist it. Abandoning the editor leaves no orphan file.
+    await this.openDetail(agent, { isNew: true });
   }
 
   private async syncToProviders(): Promise<void> {

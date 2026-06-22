@@ -905,7 +905,7 @@ export class ClaudianView extends ItemView {
     slot.empty();
     if (conversationId && agent) {
       const chip = slot.createDiv({ cls: 'claudian-bound-agent-chip' });
-      chip.setAttribute('title', t('agentRoster.chattingWith', { name: agent.name }));
+      chip.setAttribute('title', `${t('agentRoster.chattingWith', { name: agent.name })} — ${t('agentRoster.bindingHint')}`);
 
       const avatarEl = chip.createDiv({ cls: 'claudian-bound-agent-chip-avatar' });
       renderAgentAvatar(avatarEl, rosterAgentToPersona(agent), 18);

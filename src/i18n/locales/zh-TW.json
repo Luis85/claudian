@@ -1026,7 +1026,8 @@
     "syncFailed": "Synced with errors: {written} written, {failed} failed.",
     "colorNone": "None",
     "icon": "圖示",
-    "iconNone": "預設"
+    "iconNone": "預設",
+    "bindingHint": "開始新對話以使用不同的助手。"
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically.",

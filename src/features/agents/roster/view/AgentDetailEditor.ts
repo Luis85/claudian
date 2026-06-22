@@ -6,6 +6,7 @@ import { asSettingsBag } from '../../../../core/types/settings';
 import { t } from '../../../../i18n/i18n';
 import type ClaudianPlugin from '../../../../main';
 import { confirm } from '../../../../shared/modals/ConfirmModal';
+import { renderLibraryLoading } from '../../../../utils/libraryView';
 import { renderAgentAvatar } from '../../agentAvatar';
 import { rosterAgentToPersona } from '../../personaRegistry';
 import { agentPreferredProviderId } from '../resolveAgentProvider';
@@ -30,10 +31,12 @@ export class AgentDetailEditor {
   private dirtyDot: HTMLElement | null = null;
   private original!: RosterAgent;
   private draft!: RosterAgent;
+  private isNew = false;
 
   constructor(private readonly plugin: ClaudianPlugin, private readonly callbacks: AgentDetailEditorCallbacks) {}
 
-  async render(root: HTMLElement, agent: RosterAgent): Promise<void> {
+  async render(root: HTMLElement, agent: RosterAgent, opts?: { isNew?: boolean }): Promise<void> {
+    this.isNew = opts?.isNew ?? false;
     this.original = agent;
     this.draft = { ...agent, roles: [...agent.roles], skills: [...agent.skills], tools: [...agent.tools] };
 
@@ -203,7 +206,9 @@ export class AgentDetailEditor {
 
   private async renderSkillsCard(root: HTMLElement): Promise<void> {
     const card = this.card(root);
+    renderLibraryLoading(card, t('common.loading'));
     const entries = (await this.plugin.vaultSkillAggregator?.listAll()) ?? [];
+    card.empty();
     const items: CapabilityItem[] = entries.map((e) => ({
       id: e.name, name: e.name, description: e.description, badge: e.providerDisplayName,
     }));
@@ -241,9 +246,7 @@ export class AgentDetailEditor {
     const save = footer.createEl('button', { cls: 'mod-cta', text: t('agentRoster.save') });
     save.onclick = () => void this.save();
     const start = footer.createEl('button', { text: t('agentRoster.startChat') });
-    // Start chat binds by persisted agent id + config; pass the saved agent so a
-    // dirty, unsaved provider/model edit can't diverge from what actually launches.
-    start.onclick = () => this.callbacks.onStartChat(this.original);
+    start.onclick = () => void this.startChatFromEditor();
     const del = footer.createEl('button', { cls: 'claudian-roster-card-delete', text: t('agentRoster.delete') });
     del.onclick = () => this.callbacks.onDeleted(this.original);
   }
@@ -252,8 +255,16 @@ export class AgentDetailEditor {
     this.draft.updatedAt = Date.now();
     await this.plugin.agentRosterStore?.save(this.draft);
     this.original = { ...this.draft, roles: [...this.draft.roles], skills: [...this.draft.skills], tools: [...this.draft.tools] };
+    this.isNew = false;
     new Notice(t('agentRoster.saved', { name: this.draft.name }));
     this.updateDirty();
+  }
+
+  private async startChatFromEditor(): Promise<void> {
+    if (this.isNew || isRosterAgentDirty(this.original, this.draft)) {
+      await this.save();
+    }
+    this.callbacks.onStartChat(this.original);
   }
 
   private updateDirty(): void {

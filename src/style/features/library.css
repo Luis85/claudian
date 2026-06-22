@@ -66,6 +66,13 @@
   gap: var(--size-4-2);
 }
 
+.claudian-library-loading {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  text-align: center;
+  padding: var(--size-4-4);
+}
+
 .claudian-library-empty {
   display: flex;
   flex-direction: column;

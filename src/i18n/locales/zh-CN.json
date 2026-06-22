@@ -1026,7 +1026,8 @@
     "syncFailed": "Synced with errors: {written} written, {failed} failed.",
     "colorNone": "None",
     "icon": "图标",
-    "iconNone": "默认"
+    "iconNone": "默认",
+    "bindingHint": "开始新对话以使用不同的助手。"
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically.",
