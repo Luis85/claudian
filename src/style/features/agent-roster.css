@@ -1,44 +1,16 @@
-/* Agent Roster view — list/dashboard + detail editor. */
+/* Agent Roster view — list/dashboard + detail editor.
+   The list shell + cards reuse the shared `.claudian-library-*` scaffold (see
+   features/library.css); the roster only layers its own deltas (clickable card,
+   avatar slot, plain-text name button, role chips) on top. */
 
-.claudian-roster,
 .claudian-roster-detail {
   padding: var(--size-4-4);
 }
 
-/* ── Header ── */
-.claudian-roster-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--size-4-2);
-  margin-bottom: var(--size-4-4);
-}
-
-.claudian-roster-header h2 {
-  margin: 0;
-}
-
-.claudian-roster-header-actions {
-  display: flex;
-  gap: var(--size-4-2);
-}
-
 /* ── List / cards ── */
-.claudian-roster-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4-2);
-}
-
+/* The card is itself clickable (mouse open affordance) — the shared library
+   card isn't, so add the cursor + hover affordance here. */
 .claudian-roster-card {
-  display: flex;
-  align-items: center;
-  gap: var(--size-4-3);
-  padding: var(--size-4-3);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-m);
-  background: var(--background-secondary);
   cursor: pointer;
   transition: border-color 120ms ease, background 120ms ease;
 }
@@ -53,15 +25,9 @@
   display: flex;
 }
 
-.claudian-roster-card-body {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
 /* The name is a real <button> (keyboard/SR open action) styled to read as plain
    text — the whole card still opens on mouse click. */
 .claudian-roster-card-name {
-  font-weight: var(--font-semibold);
   background: none;
   border: none;
   padding: 0;
@@ -100,16 +66,6 @@
   text-transform: capitalize;
   color: var(--text-on-accent);
   background: var(--interactive-accent);
-}
-
-.claudian-roster-card-actions {
-  flex: 0 0 auto;
-  display: flex;
-  gap: var(--size-4-1);
-}
-
-.claudian-roster-card-delete {
-  color: var(--text-error);
 }
 
 /* ── Detail editor ── */

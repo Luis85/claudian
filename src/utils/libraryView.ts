@@ -142,19 +142,42 @@ export function renderModalFooter(
   footer.createEl('button', { text: opts.closeLabel }).onclick = opts.onClose;
 }
 
+export interface LibraryCardOptions {
+  /**
+   * Renders a leading media slot (e.g. an avatar) before the body. The slot is
+   * a `.claudian-library-card-leading` element the caller decorates.
+   */
+  leading?: (slot: HTMLElement) => void;
+  /**
+   * When set, seeds the name as a focusable `<button>` (instead of the default
+   * plain span) so keyboard/SR users get a real open affordance. The returned
+   * `nameButton` is the element; the caller wires its click handler.
+   */
+  nameAsButton?: boolean;
+}
+
 /**
- * Builds a shared library card scaffold (card → body → name row + actions) and
- * returns the seams the caller decorates: the `nameRow` (seeded with `name`) for
- * status/provider chips, the `body` for description/error, and `actions`.
+ * Builds a shared library card scaffold (card → [leading] → body → name row +
+ * actions) and returns the seams the caller decorates: the `card` itself, the
+ * `nameRow` (seeded with `name`) for status/provider chips, the `body` for
+ * description/error, `actions`, and — when `nameAsButton` is set — the seeded
+ * name `<button>`.
  */
 export function createLibraryCard(
   list: HTMLElement,
   name: string,
-): { nameRow: HTMLElement; body: HTMLElement; actions: HTMLElement } {
+  opts?: LibraryCardOptions,
+): { card: HTMLElement; nameRow: HTMLElement; body: HTMLElement; actions: HTMLElement; nameButton?: HTMLButtonElement } {
   const card = list.createDiv({ cls: 'claudian-library-card' });
+  if (opts?.leading) opts.leading(card.createDiv({ cls: 'claudian-library-card-leading' }));
   const body = card.createDiv({ cls: 'claudian-library-card-body' });
   const nameRow = body.createDiv({ cls: 'claudian-library-card-name' });
-  nameRow.createSpan({ text: name });
+  let nameButton: HTMLButtonElement | undefined;
+  if (opts?.nameAsButton) {
+    nameButton = nameRow.createEl('button', { cls: 'claudian-library-card-name-button', text: name });
+  } else {
+    nameRow.createSpan({ text: name });
+  }
   const actions = card.createDiv({ cls: 'claudian-library-card-actions' });
-  return { nameRow, body, actions };
+  return { card, nameRow, body, actions, nameButton };
 }

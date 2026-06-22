@@ -40,10 +40,10 @@
   border-radius: 4px;
 }
 
-/* Library views: the keyboard-activatable roster card and the cross-library
-   nav tabs need a visible focus ring (the card is a role="button" div, so it
-   gets no native one). */
-.claudian-roster-card:focus-visible,
+/* Library views: the keyboard-activatable roster card name button and the
+   cross-library nav tabs need a visible focus ring. The card itself is a
+   role="group" (not focusable); its name <button> is the keyboard open
+   affordance and carries the ring. */
 .claudian-roster-card-name:focus-visible,
 .claudian-library-nav-item:focus-visible,
 .claudian-cap-picker-header:focus-visible,

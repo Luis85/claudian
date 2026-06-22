@@ -8,7 +8,7 @@ import type ClaudianPlugin from '../../../../main';
 import { renderLibraryNav } from '../../../../shared/libraryNav';
 import { confirm } from '../../../../shared/modals/ConfirmModal';
 import { withErrorNotice } from '../../../../shared/uiAction';
-import { renderLibraryEmptyState, renderLibraryLoading } from '../../../../utils/libraryView';
+import { createLibraryCard, renderLibraryEmptyState, renderLibraryLoading, renderLibraryShell } from '../../../../utils/libraryView';
 import { renderAgentAvatar } from '../../agentAvatar';
 import { rosterAgentToPersona } from '../../personaRegistry';
 import { installPresetAgents } from '../presetAgents';
@@ -41,16 +41,14 @@ export class AgentRosterView extends ItemView {
   // ── List / dashboard ──────────────────────────────────────────────────────
 
   private async renderList(): Promise<void> {
-    const root = this.contentEl;
-    root.empty();
-    root.removeClass('claudian-roster-detail');
-    root.addClass('claudian-roster');
-
-    renderLibraryNav(root, this.plugin, VIEW_TYPE_AGENT_ROSTER);
-
-    const header = root.createDiv({ cls: 'claudian-roster-header' });
-    header.createEl('h2', { text: t('agentRoster.title') });
-    const headerActions = header.createDiv({ cls: 'claudian-roster-header-actions' });
+    // The roster shares the library shell with the Tool/Skill views; only the
+    // detail editor keeps its bespoke `claudian-roster-detail` root.
+    this.contentEl.removeClass('claudian-roster-detail');
+    const { actions: headerActions, list } = renderLibraryShell(
+      this.contentEl,
+      t('agentRoster.title'),
+      (c) => renderLibraryNav(c, this.plugin, VIEW_TYPE_AGENT_ROSTER),
+    );
 
     const fail = t('agentRoster.actionFailed');
     const newBtn = headerActions.createEl('button', { cls: 'mod-cta', text: t('agentRoster.newAgent') });
@@ -63,7 +61,6 @@ export class AgentRosterView extends ItemView {
     syncBtn.setAttribute('title', t('agentRoster.syncProvidersHint'));
     syncBtn.onclick = () => void withErrorNotice(() => this.syncToProviders(), fail, (e) => this.fail(e));
 
-    const list = root.createDiv({ cls: 'claudian-roster-list' });
     renderLibraryLoading(list, t('common.loading'));
 
     const agents = await this.store.list();
@@ -84,22 +81,26 @@ export class AgentRosterView extends ItemView {
   }
 
   private renderCard(list: HTMLElement, agent: RosterAgent): void {
-    const card = list.createDiv({ cls: 'claudian-roster-card' });
+    const { card, body, actions, nameButton } = createLibraryCard(list, agent.name, {
+      // Decorative avatar leads the card; the aria-label + name button convey
+      // the name, so the avatar is hidden from the accessibility tree.
+      leading: (slot) => {
+        slot.addClass('claudian-roster-card-avatar');
+        slot.setAttribute('aria-hidden', 'true');
+        renderAgentAvatar(slot, rosterAgentToPersona(agent), CARD_AVATAR_SIZE);
+      },
+      nameAsButton: true,
+    });
+    card.addClass('claudian-roster-card');
     card.setAttribute('role', 'group');
     card.setAttribute('aria-label', agent.name);
     // Mouse convenience: clicking anywhere on the card opens the detail editor.
-    // Keyboard/SR users use the real name <button> below as the open action, so
-    // the card itself is a plain group (no nested interactive in a role=button).
+    // Keyboard/SR users use the real name <button> as the open action, so the
+    // card itself is a plain group (no nested interactive in a role=button).
     card.onclick = () => void this.openDetail(agent);
 
-    const avatar = card.createDiv({ cls: 'claudian-roster-card-avatar' });
-    // Decorative: the card's aria-label + name button already convey the name.
-    avatar.setAttribute('aria-hidden', 'true');
-    renderAgentAvatar(avatar, rosterAgentToPersona(agent), CARD_AVATAR_SIZE);
-
-    const body = card.createDiv({ cls: 'claudian-roster-card-body' });
-    const nameBtn = body.createEl('button', { cls: 'claudian-roster-card-name', text: agent.name });
-    nameBtn.onclick = (e) => { e.stopPropagation(); void this.openDetail(agent); };
+    nameButton?.addClass('claudian-roster-card-name');
+    if (nameButton) nameButton.onclick = (e) => { e.stopPropagation(); void this.openDetail(agent); };
     body.createDiv({ cls: 'claudian-roster-card-desc', text: agent.description || '—' });
 
     const caps = body.createDiv({ cls: 'claudian-roster-card-caps' });
@@ -119,14 +120,13 @@ export class AgentRosterView extends ItemView {
       });
     }
 
-    const actions = card.createDiv({ cls: 'claudian-roster-card-actions' });
     const fail = t('agentRoster.actionFailed');
     const startBtn = actions.createEl('button', { cls: 'mod-cta', text: t('agentRoster.startChatShort') });
     startBtn.onclick = (e) => {
       e.stopPropagation();
       void withErrorNotice(() => this.startChatWithAgent(agent), fail, (err) => this.fail(err));
     };
-    const deleteBtn = actions.createEl('button', { cls: 'claudian-roster-card-delete', text: t('agentRoster.delete') });
+    const deleteBtn = actions.createEl('button', { cls: 'claudian-library-card-delete', text: t('agentRoster.delete') });
     deleteBtn.onclick = (e) => {
       e.stopPropagation();
       void withErrorNotice(() => this.deleteAgent(agent), fail, (err) => this.fail(err));

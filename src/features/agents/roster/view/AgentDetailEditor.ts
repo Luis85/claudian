@@ -41,7 +41,9 @@ export class AgentDetailEditor {
     this.draft = { ...agent, roles: [...agent.roles], skills: [...agent.skills], tools: [...agent.tools] };
 
     root.empty();
-    root.removeClass('claudian-roster');
+    // The list view shares the `claudian-library` shell; the detail page has its
+    // own bespoke root, so drop the library scaffold class when switching in.
+    root.removeClass('claudian-roster', 'claudian-library');
     root.addClass('claudian-roster-detail');
 
     this.renderTopbar(root);
