@@ -82,6 +82,7 @@ export class ClaudianView extends ItemView {
 
   // Header elements
   private historyDropdown: HTMLElement | null = null;
+  private headerMetaRowEl: HTMLElement | null = null;
   private boundAgentChipSlotEl: HTMLElement | null = null;
   // Monotonic token so concurrent syncBoundAgentChip calls don't double-render.
   private boundAgentChipGen = 0;
@@ -445,8 +446,9 @@ export class ClaudianView extends ItemView {
   private buildHeader(header: HTMLElement) {
     this.headerEl = header;
 
-    // Title slot container (logo + title or tabs)
-    this.titleSlotEl = header.createDiv({ cls: 'claudian-title-slot' });
+    // Row 1: title (logo + title text; tab badges mount here in header mode).
+    const titleRow = header.createDiv({ cls: 'claudian-header-title-row' });
+    this.titleSlotEl = titleRow.createDiv({ cls: 'claudian-title-slot' });
 
     // Logo (hidden when 2+ tabs) — populated by syncHeaderLogo()
     this.logoEl = this.titleSlotEl.createSpan({ cls: 'claudian-logo' });
@@ -455,8 +457,13 @@ export class ClaudianView extends ItemView {
     // Title text (hidden in header mode when 2+ tabs)
     this.titleTextEl = this.titleSlotEl.createEl('h4', { text: 'Claudian', cls: 'claudian-title-text' });
 
-    // Header actions container (for header mode - initially hidden)
-    this.headerActionsEl = header.createDiv({ cls: 'claudian-header-actions claudian-header-actions-slot claudian-hidden' });
+    // Row 2: bound-agent chip (left) + header actions (Git, and the action
+    // cluster in header mode — right). Collapsed by updateHeaderMetaRow() when it
+    // has neither a chip nor visible actions, so an unbound conversation with
+    // nothing to commit shows only the title row.
+    this.headerMetaRowEl = header.createDiv({ cls: 'claudian-header-meta-row claudian-hidden' });
+    this.boundAgentChipSlotEl = this.headerMetaRowEl.createDiv({ cls: 'claudian-bound-agent-chip-slot' });
+    this.headerActionsEl = this.headerMetaRowEl.createDiv({ cls: 'claudian-header-actions claudian-header-actions-slot claudian-hidden' });
 
     if (this.plugin.gitStatusWatcher) {
       this.gitActionButton = new GitActionButton(this.headerActionsEl, {
@@ -467,8 +474,19 @@ export class ClaudianView extends ItemView {
       this.headerActionsEl.removeClass('claudian-hidden');
     }
 
-    // Bound-agent chip slot — rendered below the main header row.
-    this.boundAgentChipSlotEl = this.headerEl.createDiv({ cls: 'claudian-bound-agent-chip-slot' });
+    this.updateHeaderMetaRow();
+  }
+
+  /**
+   * Shows the second header row only when it carries content — a bound-agent
+   * chip and/or a visible actions slot (Git / the header-mode cluster) — so the
+   * row collapses cleanly for an unbound conversation with nothing to commit.
+   */
+  private updateHeaderMetaRow(): void {
+    if (!this.headerMetaRowEl) return;
+    const hasChip = (this.boundAgentChipSlotEl?.childElementCount ?? 0) > 0;
+    const hasActions = this.headerActionsEl != null && !this.headerActionsEl.hasClass('claudian-hidden');
+    this.headerMetaRowEl.toggleClass('claudian-hidden', !hasChip && !hasActions);
   }
 
   /**
@@ -631,6 +649,10 @@ export class ClaudianView extends ItemView {
         this.headerActionsEl.toggleClass('claudian-hidden', !this.gitActionButton);
       }
     }
+
+    // The actions-slot visibility just changed; recompute the meta row so it
+    // collapses or shows alongside the chip.
+    this.updateHeaderMetaRow();
   }
 
   /**
@@ -881,15 +903,16 @@ export class ClaudianView extends ItemView {
     if (gen !== this.boundAgentChipGen) return;
 
     slot.empty();
-    if (!conversationId || !agent) return;
+    if (conversationId && agent) {
+      const chip = slot.createDiv({ cls: 'claudian-bound-agent-chip' });
+      chip.setAttribute('title', t('agentRoster.chattingWith', { name: agent.name }));
 
-    const chip = slot.createDiv({ cls: 'claudian-bound-agent-chip' });
-    chip.setAttribute('title', t('agentRoster.chattingWith', { name: agent.name }));
+      const avatarEl = chip.createDiv({ cls: 'claudian-bound-agent-chip-avatar' });
+      renderAgentAvatar(avatarEl, rosterAgentToPersona(agent), 18);
 
-    const avatarEl = chip.createDiv({ cls: 'claudian-bound-agent-chip-avatar' });
-    renderAgentAvatar(avatarEl, rosterAgentToPersona(agent), 18);
-
-    chip.createSpan({ cls: 'claudian-bound-agent-chip-label', text: agent.name });
+      chip.createSpan({ cls: 'claudian-bound-agent-chip-label', text: agent.name });
+    }
+    this.updateHeaderMetaRow();
   }
 
   /**
