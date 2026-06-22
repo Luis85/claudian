@@ -163,3 +163,108 @@
   padding-top: var(--size-4-3);
   border-top: 1px solid var(--background-modifier-border);
 }
+
+/* ── Capability picker (shared Skills/Tools selector) ── */
+.claudian-cap-picker {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  margin-bottom: var(--size-4-3);
+}
+
+.claudian-cap-picker-header {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2) var(--size-4-3);
+  cursor: pointer;
+}
+
+.claudian-cap-picker-label {
+  font-weight: var(--font-semibold);
+}
+
+.claudian-cap-picker-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.claudian-cap-picker-caret {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.claudian-cap-picker-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-1);
+  padding: 0 var(--size-4-3) var(--size-4-2);
+}
+
+.claudian-cap-picker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  padding: var(--size-2-1) var(--size-4-2);
+  background: var(--background-modifier-hover);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
+
+.claudian-cap-picker-chip-x::before {
+  content: '\00d7';
+  color: var(--text-muted);
+}
+
+.claudian-cap-picker-body {
+  padding: 0 var(--size-4-3) var(--size-4-2);
+}
+
+.claudian-cap-picker-search {
+  width: 100%;
+  margin-bottom: var(--size-4-2);
+}
+
+.claudian-cap-picker-list {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+}
+
+.claudian-cap-picker-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--size-4-2);
+  padding: var(--size-2-1) var(--size-4-1);
+  cursor: pointer;
+}
+
+.claudian-cap-picker-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.claudian-cap-picker-row-name {
+  font-size: var(--font-ui-small);
+}
+
+.claudian-cap-picker-row-desc {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.claudian-cap-picker-row-badge {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.claudian-cap-picker-empty {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  padding: var(--size-4-2) 0;
+}
