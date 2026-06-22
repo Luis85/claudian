@@ -61,6 +61,7 @@ import { AgentRosterStore } from './features/agents/roster/AgentRosterStore';
 import {
   type BoundAgentProjection,
   formatBoundAgentPersona,
+  selectAgentSkills,
 } from './features/agents/roster/boundAgentPersona';
 import { resolveAgentProvider } from './features/agents/roster/resolveAgentProvider';
 import { AgentRosterView, VIEW_TYPE_AGENT_ROSTER } from './features/agents/roster/view/AgentRosterView';
@@ -493,10 +494,17 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   ): Promise<BoundAgentProjection | null> {
     const agent = await this.agentRosterStore?.get(boundAgentId);
     if (!agent) return null;
+    // Skills can't be runtime-scoped like tools (providers auto-discover every
+    // SKILL.md), so surface the granted ones as guidance baked into the prompt.
+    const catalog = (await this.vaultSkillAggregator?.listAll()) ?? [];
+    const skills = selectAgentSkills(
+      agent.skills,
+      catalog.map((e) => ({ name: e.name, description: e.description })),
+    );
     return {
       // A forceful identity directive so providers without a system-prompt
       // channel (Cursor) still adopt the persona instead of their built-in one.
-      prompt: formatBoundAgentPersona(agent),
+      prompt: formatBoundAgentPersona({ ...agent, skills }),
       model: agent.modelSelection?.modelId,
       tools: agent.tools,
     };
