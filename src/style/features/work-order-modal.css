@@ -1154,6 +1154,24 @@
   font-size: var(--font-ui-small);
 }
 
+/* chip-value / chip-caret: hand-built chip elements used by the loop chip
+   (renderLoopChip). They intentionally mirror chip-label / chip-chevron so
+   both chip implementations read identically. */
+.claudian-work-order-modal-chip-value {
+  font-size: var(--font-ui-small);
+}
+
+.claudian-work-order-modal-chip-caret {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-faint);
+}
+
+.claudian-work-order-modal-chip-caret svg {
+  width: 13px;
+  height: 13px;
+}
+
 .claudian-work-order-modal-chip-chevron {
   display: inline-flex;
   align-items: center;
