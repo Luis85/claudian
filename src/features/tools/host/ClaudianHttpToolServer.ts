@@ -10,6 +10,13 @@ import { makeBoundedToolCallback } from './toolInvocation';
 
 export const CLAUDIAN_HTTP_TOOL_SERVER_NAME = 'claudian';
 
+// Bounded drain on rebuild: wait out in-flight tool calls before swapping the
+// MCP layer so a tool-file save mid-request doesn't abort the call. Ceiling
+// keeps rebuild from hanging forever if a request never completes; the short
+// poll keeps the wait tight when the layer is actually idle.
+const DRAIN_TIMEOUT_MS = 5000;
+const DRAIN_POLL_INTERVAL_MS = 25;
+
 export interface HttpToolServerConfig {
   url: string;
   headers: Record<string, string>;
@@ -61,6 +68,9 @@ export class ClaudianHttpToolServer {
   private mcpServer: McpServer | null = null;
   private transport: StreamableHTTPServerTransport | null = null;
   private readonly bearerToken: string = crypto.randomUUID();
+  // Count of requests handed to the transport but not yet completed; drives the
+  // rebuild drain so the MCP layer isn't torn down mid-call.
+  private inFlight = 0;
 
   constructor(
     private readonly getLoaded: () => LoadedTool[],
@@ -86,6 +96,10 @@ export class ClaudianHttpToolServer {
       return;
     }
 
+    // Drain in-flight calls before swapping; requests arriving during the
+    // drain still hit the old (attached) transport, which is correct.
+    await this.drainInFlight();
+
     // Close old MCP layer (doesn't touch the HTTP socket).
     await this.tearDownMcpLayer();
     await this.attachMcpLayer();
@@ -102,6 +116,15 @@ export class ClaudianHttpToolServer {
       this.httpServer = null;
     });
     this.config = null;
+  }
+
+  // Polls until no requests are in flight or the ceiling elapses; proceeds
+  // anyway after the timeout so rebuild can never hang on a stuck request.
+  private async drainInFlight(): Promise<void> {
+    const deadline = Date.now() + DRAIN_TIMEOUT_MS;
+    while (this.inFlight > 0 && Date.now() < deadline) {
+      await new Promise<void>((resolve) => window.setTimeout(resolve, DRAIN_POLL_INTERVAL_MS));
+    }
   }
 
   private async startServer(): Promise<void> {
@@ -164,6 +187,22 @@ export class ClaudianHttpToolServer {
       res.end(JSON.stringify({ error: 'Server not ready' }));
       return;
     }
+
+    // Track only transport-bound requests (the ones tied to the MCP layer the
+    // rebuild drain waits on). We listen on both 'finish' and 'close': 'close'
+    // is the leak-prevention backstop — it fires even when a request is aborted
+    // or errored (no clean 'finish'), so the counter can't pin > 0 forever.
+    // A clean response emits both, so the settled guard makes the decrement
+    // fire exactly once.
+    this.inFlight++;
+    let settled = false;
+    const settle = (): void => {
+      if (settled) return;
+      settled = true;
+      this.inFlight--;
+    };
+    res.on('finish', settle);
+    res.on('close', settle);
 
     void this.transport.handleRequest(req, res);
   }

@@ -119,7 +119,7 @@ describe('ClaudianHttpToolServer — bearer auth', () => {
 
   function makeReqRes(auth?: string) {
     const req = { headers: auth === undefined ? {} : { authorization: auth } };
-    const res = { writeHead: jest.fn(), end: jest.fn() };
+    const res = { writeHead: jest.fn(), end: jest.fn(), on: jest.fn() };
     return { req, res };
   }
 
@@ -151,5 +151,131 @@ describe('ClaudianHttpToolServer — bearer auth', () => {
 
     expect(res.writeHead).not.toHaveBeenCalledWith(401, expect.anything());
     expect(handleRequest).toHaveBeenCalledWith(req, res);
+  });
+});
+
+describe('ClaudianHttpToolServer — in-flight drain on rebuild', () => {
+  // Captures res.on listeners so tests can fire 'finish'/'close' deterministically.
+  function makeServer() {
+    const server = new ClaudianHttpToolServer(
+      () => [],
+      () => ({ app: {} as never, signal: new AbortController().signal }),
+    );
+    const handleRequest = jest.fn().mockResolvedValue(undefined);
+    (server as unknown as { transport: unknown }).transport = { handleRequest };
+    const token = (server as unknown as { bearerToken: string }).bearerToken;
+    const call = (
+      server as unknown as { handleHttpRequest(req: unknown, res: unknown): void }
+    ).handleHttpRequest.bind(server);
+    const inFlight = (): number => (server as unknown as { inFlight: number }).inFlight;
+    return { server, handleRequest, token, call, inFlight };
+  }
+
+  function makeReqRes(auth: string) {
+    const listeners: Record<string, Array<() => void>> = {};
+    const req = { headers: { authorization: auth } };
+    const res = {
+      writeHead: jest.fn(),
+      end: jest.fn(),
+      on: jest.fn((event: string, cb: () => void) => {
+        (listeners[event] ??= []).push(cb);
+      }),
+    };
+    const emit = (event: string): void => {
+      for (const cb of listeners[event] ?? []) cb();
+    };
+    return { req, res, emit };
+  }
+
+  it('increments then decrements the in-flight counter on the finish path', () => {
+    const { call, token, inFlight } = makeServer();
+    const { req, res, emit } = makeReqRes(`Bearer ${token}`);
+
+    call(req, res);
+    expect(inFlight()).toBe(1);
+
+    emit('finish');
+    expect(inFlight()).toBe(0);
+  });
+
+  it('decrements only once when both finish and close fire', () => {
+    const { call, token, inFlight } = makeServer();
+    const { req, res, emit } = makeReqRes(`Bearer ${token}`);
+
+    call(req, res);
+    expect(inFlight()).toBe(1);
+
+    emit('finish');
+    emit('close');
+    expect(inFlight()).toBe(0);
+  });
+
+  it('does not track unauthorized requests (transport never reached)', () => {
+    const { call, inFlight } = makeServer();
+    const { req, res } = makeReqRes('Bearer wrong');
+
+    call(req, res);
+    expect(inFlight()).toBe(0);
+  });
+
+  it('rebuild() waits for an in-flight request to settle before tearing down', async () => {
+    jest.useFakeTimers();
+    try {
+      const { server, call, token, inFlight } = makeServer();
+      const tearDown = jest.fn(async () => {});
+      const attach = jest.fn(async () => {});
+      (server as unknown as { tearDownMcpLayer: () => Promise<void> }).tearDownMcpLayer = tearDown;
+      (server as unknown as { attachMcpLayer: () => Promise<void> }).attachMcpLayer = attach;
+      (server as unknown as { httpServer: unknown }).httpServer = {};
+      (server as unknown as { config: unknown }).config = { url: 'x', headers: {} };
+
+      const { req, res, emit } = makeReqRes(`Bearer ${token}`);
+      call(req, res);
+      expect(inFlight()).toBe(1);
+
+      const rebuildPromise = (server as unknown as { rebuild(): Promise<void> }).rebuild();
+
+      // Drain still pending: teardown must not have run yet.
+      await jest.advanceTimersByTimeAsync(100);
+      expect(tearDown).not.toHaveBeenCalled();
+
+      // Request completes → next poll lets the drain finish.
+      emit('finish');
+      await jest.advanceTimersByTimeAsync(50);
+      await rebuildPromise;
+
+      expect(tearDown).toHaveBeenCalledTimes(1);
+      expect(attach).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('rebuild() proceeds after the timeout ceiling if a request never settles', async () => {
+    jest.useFakeTimers();
+    try {
+      const { server, call, token, inFlight } = makeServer();
+      const tearDown = jest.fn(async () => {});
+      const attach = jest.fn(async () => {});
+      (server as unknown as { tearDownMcpLayer: () => Promise<void> }).tearDownMcpLayer = tearDown;
+      (server as unknown as { attachMcpLayer: () => Promise<void> }).attachMcpLayer = attach;
+      (server as unknown as { httpServer: unknown }).httpServer = {};
+      (server as unknown as { config: unknown }).config = { url: 'x', headers: {} };
+
+      const { req, res } = makeReqRes(`Bearer ${token}`);
+      call(req, res);
+      expect(inFlight()).toBe(1);
+
+      const rebuildPromise = (server as unknown as { rebuild(): Promise<void> }).rebuild();
+
+      // Never fire finish/close; advance past the 5000ms ceiling.
+      await jest.advanceTimersByTimeAsync(6000);
+      await rebuildPromise;
+
+      expect(tearDown).toHaveBeenCalledTimes(1);
+      expect(attach).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
