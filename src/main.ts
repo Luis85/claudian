@@ -14,7 +14,7 @@ import { ConversationStore } from './app/conversations/ConversationStore';
 import { EnvironmentApplyService } from './app/environment/EnvironmentApplyService';
 import type { ClaudianEventMap } from './app/events/claudianEvents';
 import { PluginLifecycle } from './app/lifecycle/PluginLifecycle';
-import { projectRosterAgentsToProviders, type RosterProjectionResult } from './app/rosterAgentProjection';
+import { projectRosterAgentsToProviders, removeProjectedAgent, type RosterProjectionResult, type RosterRemovalResult } from './app/rosterAgentProjection';
 import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
 import { SharedStorageService } from './app/storage/SharedStorageService';
 import { PluginViewActivator } from './app/views/PluginViewActivator';
@@ -64,6 +64,7 @@ import {
   selectAgentSkills,
 } from './features/agents/roster/boundAgentPersona';
 import { resolveAgentProvider } from './features/agents/roster/resolveAgentProvider';
+import type { RosterAgent } from './features/agents/roster/rosterTypes';
 import { AgentRosterView, VIEW_TYPE_AGENT_ROSTER } from './features/agents/roster/view/AgentRosterView';
 import { ClaudianView } from './features/chat/ClaudianView';
 import { sendFeedbackPrompt } from './features/chat/feedback/sendFeedbackPrompt';
@@ -869,6 +870,19 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     const log = this.logger.scope('agents');
     return projectRosterAgentsToProviders(agents, enabled, this.vaultFileAdapter,
       (provider, name, error) => log.warn('roster agent projection failed', provider, name, error));
+  }
+
+  /**
+   * Removes an agent's projected provider files (.claude/agents, .codex/agents,
+   * .cursor/agents, .opencode/agent) when it's deleted from the roster. Uses all
+   * registered providers — not just enabled ones — so a provider disabled after a
+   * prior sync still gets its orphaned subagent file cleaned up.
+   */
+  async removeRosterAgentProjection(agent: RosterAgent): Promise<RosterRemovalResult> {
+    const providers = ProviderRegistry.getRegisteredProviderIds();
+    const log = this.logger.scope('agents');
+    return removeProjectedAgent(agent, providers, this.vaultFileAdapter,
+      (path, error) => log.warn('roster agent projection cleanup failed', path, error));
   }
 
   /** Reveals (or opens) a singleton workspace leaf for the given view type. */

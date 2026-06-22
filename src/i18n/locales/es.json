@@ -1018,6 +1018,7 @@
     "discardConfirm": "Discard unsaved changes?",
     "discard": "Discard",
     "syncProviders": "Sync to providers",
+    "syncProvidersHint": "Write each agent as a native subagent file for your enabled providers (so they're @-mentionable). Deleting an agent removes its files.",
     "syncDone": "Synced agents to {providers} ({written} files).",
     "syncNone": "No enabled providers to sync to.",
     "navLabel": "Agents",

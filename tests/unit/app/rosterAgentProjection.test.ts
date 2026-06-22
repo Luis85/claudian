@@ -2,7 +2,11 @@
 // ProviderRegistry.projectRosterAgent resolves each provider's serializer.
 import '@/providers';
 
-import { projectRosterAgentsToProviders } from '@/app/rosterAgentProjection';
+import {
+  projectedAgentPaths,
+  projectRosterAgentsToProviders,
+  removeProjectedAgent,
+} from '@/app/rosterAgentProjection';
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import type { VaultFileAdapter } from '@/core/storage/VaultFileAdapter';
 import { createRosterAgent } from '@/features/agents/roster/rosterCapabilities';
@@ -100,5 +104,61 @@ describe('roster agent projection', () => {
 
     expect(result.failed).toContain('boom');
     expect(files['.claude/agents/fine.md']).toBeDefined();
+  });
+});
+
+describe('projectedAgentPaths', () => {
+  it('returns each provider its own native path for a known agent', () => {
+    const agent = { ...createRosterAgent('Code Reviewer', 1), prompt: 'Review deeply.' };
+
+    expect(projectedAgentPaths(agent, ['claude', 'codex', 'cursor', 'opencode'])).toEqual([
+      '.claude/agents/code-reviewer.md',
+      '.codex/agents/code-reviewer.toml',
+      '.cursor/agents/code-reviewer.md',
+      '.opencode/agent/code-reviewer.md',
+    ]);
+  });
+
+  it('returns no paths when the slug is empty', () => {
+    const blank = { ...createRosterAgent('Blank', 1), id: 'roster:', prompt: 'p' };
+    expect(projectedAgentPaths(blank, ['claude'])).toEqual([]);
+  });
+});
+
+describe('removeProjectedAgent', () => {
+  function makeRemovalAdapter(present: Set<string>, throwOn?: string) {
+    return {
+      exists: jest.fn(async (p: string) => present.has(p)),
+      delete: jest.fn(async (p: string) => {
+        if (throwOn && p.includes(throwOn)) throw new Error('locked');
+        present.delete(p);
+      }),
+    } as unknown as VaultFileAdapter;
+  }
+
+  it('deletes only existing projected files and counts removed', async () => {
+    const agent = { ...createRosterAgent('Code Reviewer', 1), prompt: 'p' };
+    // Only the claude + cursor files exist on disk.
+    const present = new Set(['.claude/agents/code-reviewer.md', '.cursor/agents/code-reviewer.md']);
+    const adapter = makeRemovalAdapter(present);
+
+    const result = await removeProjectedAgent(agent, ['claude', 'codex', 'cursor', 'opencode'], adapter);
+
+    expect(result.removed).toBe(2);
+    expect(result.failed).toEqual([]);
+    expect(present.size).toBe(0);
+  });
+
+  it('isolates a delete that throws into failed and calls onError', async () => {
+    const agent = { ...createRosterAgent('Code Reviewer', 1), prompt: 'p' };
+    const present = new Set(['.claude/agents/code-reviewer.md', '.cursor/agents/code-reviewer.md']);
+    const adapter = makeRemovalAdapter(present, '.cursor/');
+    const onError = jest.fn();
+
+    const result = await removeProjectedAgent(agent, ['claude', 'cursor'], adapter, onError);
+
+    expect(result.removed).toBe(1);
+    expect(result.failed).toEqual(['.cursor/agents/code-reviewer.md']);
+    expect(onError).toHaveBeenCalledWith('.cursor/agents/code-reviewer.md', expect.any(Error));
   });
 });

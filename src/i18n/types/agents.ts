@@ -42,6 +42,7 @@ export type AgentsTranslationKey =
   | 'agentRoster.discardConfirm'
   | 'agentRoster.discard'
   | 'agentRoster.syncProviders'
+  | 'agentRoster.syncProvidersHint'
   | 'agentRoster.syncDone'
   | 'agentRoster.syncNone'
   | 'agentRoster.navLabel'

@@ -93,3 +93,38 @@ export async function projectRosterAgentsToProviders(
   }
   return { written, providers: touched, failed: [...failed] };
 }
+
+/** The provider-native file paths an agent projects to (those providers that map it). */
+export function projectedAgentPaths(agent: RosterAgent, providerIds: ProviderId[]): string[] {
+  const slug = rosterSlug(agent);
+  if (!slug) return [];
+  const input = { name: singleLine(agent.name) || slug, description: singleLine(agent.description), prompt: agent.prompt, skills: agent.skills, color: agent.color };
+  const paths: string[] = [];
+  for (const providerId of providerIds) {
+    const file = ProviderRegistry.projectRosterAgent(providerId, input, slug);
+    if (file) paths.push(file.path);
+  }
+  return paths;
+}
+
+export interface RosterRemovalResult { removed: number; failed: string[]; }
+
+/** Best-effort deletes an agent's projected provider files; isolates per-file failures. */
+export async function removeProjectedAgent(
+  agent: RosterAgent,
+  providerIds: ProviderId[],
+  adapter: VaultFileAdapter,
+  onError?: (path: string, error: unknown) => void,
+): Promise<RosterRemovalResult> {
+  let removed = 0;
+  const failed: string[] = [];
+  for (const path of projectedAgentPaths(agent, providerIds)) {
+    try {
+      if (await adapter.exists(path)) { await adapter.delete(path); removed += 1; }
+    } catch (error) {
+      onError?.(path, error);
+      failed.push(path);
+    }
+  }
+  return { removed, failed };
+}

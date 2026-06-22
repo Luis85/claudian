@@ -61,6 +61,7 @@ export class AgentRosterView extends ItemView {
     installBtn.onclick = () => void withErrorNotice(() => this.installStarters(), fail, (e) => this.fail(e));
 
     const syncBtn = headerActions.createEl('button', { text: t('agentRoster.syncProviders') });
+    syncBtn.setAttribute('title', t('agentRoster.syncProvidersHint'));
     syncBtn.onclick = () => void withErrorNotice(() => this.syncToProviders(), fail, (e) => this.fail(e));
 
     const agents = await this.store.list();
@@ -201,6 +202,7 @@ export class AgentRosterView extends ItemView {
     );
     if (!ok) return;
     await this.store.delete(agent.id);
+    await this.plugin.removeRosterAgentProjection(agent);
     new Notice(t('agentRoster.deleted', { name: agent.name }));
     await this.renderList();
   }
