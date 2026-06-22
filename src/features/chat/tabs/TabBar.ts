@@ -60,58 +60,53 @@ export class TabBar {
     }
   }
 
-  /** Renders a single tab badge. */
-  private renderBadge(item: TabBarItem, isFirstWorkOrder: boolean): void {
-    const stateClasses = ['claudian-tab-badge'];
-    if (item.isActive) {
-      stateClasses.push('claudian-tab-badge-active');
-    }
-    if (item.needsAttention) {
-      stateClasses.push('claudian-tab-badge-attention');
-    }
-    if (item.isStreaming) {
-      stateClasses.push('claudian-tab-badge-working');
-    }
-    if (!item.isActive && !item.needsAttention && !item.isStreaming) {
-      stateClasses.push('claudian-tab-badge-idle');
-    }
-    if (item.kind === 'work-order') {
-      stateClasses.push('claudian-tab-badge--work-order');
-    }
-    if (item.kind !== 'work-order' && item.isAgentBound) {
-      stateClasses.push('claudian-tab-badge--agent');
-    }
-    if (isFirstWorkOrder) {
-      stateClasses.push('claudian-tab-badge--work-order-first');
-    }
+  /** Builds the state/kind class list for a badge. */
+  private badgeStateClasses(item: TabBarItem, isFirstWorkOrder: boolean): string[] {
+    const classes = ['claudian-tab-badge'];
+    if (item.isActive) classes.push('claudian-tab-badge-active');
+    if (item.needsAttention) classes.push('claudian-tab-badge-attention');
+    if (item.isStreaming) classes.push('claudian-tab-badge-working');
+    if (!item.isActive && !item.needsAttention && !item.isStreaming) classes.push('claudian-tab-badge-idle');
+    if (item.kind === 'work-order') classes.push('claudian-tab-badge--work-order');
+    if (item.kind !== 'work-order' && item.isAgentBound) classes.push('claudian-tab-badge--agent');
+    if (isFirstWorkOrder) classes.push('claudian-tab-badge--work-order-first');
+    return classes;
+  }
 
-    // Work-order tabs render a wrench glyph instead of the index number. An
-    // agent-bound chat tab prepends a small user glyph before the number so the
-    // binding reads at a glance. A plain chat tab keeps the number as the badge's
-    // own text (unchanged).
-    let badgeEl: HTMLElement;
+  // Work-order tabs render a wrench glyph instead of the index number. An
+  // agent-bound chat tab prepends a small user glyph before the number so the
+  // binding reads at a glance. A plain chat tab keeps the number as the badge's
+  // own text (unchanged).
+  private createBadgeEl(item: TabBarItem, cls: string): HTMLElement {
     if (item.kind === 'work-order') {
-      badgeEl = this.containerEl.createDiv({ cls: stateClasses.join(' ') });
-      setIcon(badgeEl.createSpan({ cls: 'claudian-tab-badge-icon' }), 'wrench');
-    } else if (item.isAgentBound) {
-      badgeEl = this.containerEl.createDiv({ cls: stateClasses.join(' ') });
-      setIcon(badgeEl.createSpan({ cls: 'claudian-tab-badge-agent-icon' }), 'user');
-      badgeEl.createSpan({ cls: 'claudian-tab-badge-number', text: String(item.index) });
-    } else {
-      badgeEl = this.containerEl.createDiv({ cls: stateClasses.join(' '), text: String(item.index) });
+      const el = this.containerEl.createDiv({ cls });
+      setIcon(el.createSpan({ cls: 'claudian-tab-badge-icon' }), 'wrench');
+      return el;
     }
+    if (item.isAgentBound) {
+      const el = this.containerEl.createDiv({ cls });
+      setIcon(el.createSpan({ cls: 'claudian-tab-badge-agent-icon' }), 'user');
+      el.createSpan({ cls: 'claudian-tab-badge-number', text: String(item.index) });
+      return el;
+    }
+    return this.containerEl.createDiv({ cls, text: String(item.index) });
+  }
 
-    // Tooltip with full title (aria-label only; adding title too causes double tooltip).
-    // Combine work-order + working into a single parenthesised qualifier so the
-    // label doesn't accumulate two adjacent `(...)` groups on a streaming WO tab.
+  /** Composes the aria-label, suffixing kind/state qualifiers in one `(...)` group. */
+  private badgeAriaLabel(item: TabBarItem): string {
     const qualifiers: string[] = [];
     if (item.kind === 'work-order') qualifiers.push('work order');
     if (item.kind !== 'work-order' && item.isAgentBound) qualifiers.push('agent');
     if (item.isStreaming) qualifiers.push('working');
-    const ariaLabel = qualifiers.length > 0
-      ? `${item.title} (${qualifiers.join(', ')})`
-      : item.title;
-    badgeEl.setAttribute('aria-label', ariaLabel);
+    return qualifiers.length > 0 ? `${item.title} (${qualifiers.join(', ')})` : item.title;
+  }
+
+  /** Renders a single tab badge. */
+  private renderBadge(item: TabBarItem, isFirstWorkOrder: boolean): void {
+    const badgeEl = this.createBadgeEl(item, this.badgeStateClasses(item, isFirstWorkOrder).join(' '));
+
+    // Tooltip with full title (aria-label only; adding title too causes double tooltip).
+    badgeEl.setAttribute('aria-label', this.badgeAriaLabel(item));
     if (item.isStreaming) {
       badgeEl.setAttribute('aria-busy', 'true');
       badgeEl.setAttribute('data-working', 'true');

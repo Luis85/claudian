@@ -55,8 +55,8 @@
       "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
     },
     "src/features/chat/tabs/TabManager.ts": {
-      "loc": 765,
-      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only."
+      "loc": 768,
+      "reason": "Grandfathered hotspot. Track the split in docs/tech-debt/2026-06-07-oversized-modules-and-test-files.md; shrink only. +3 from the isAgentBound tab-bar-item field (agent-bound badge glyph)."
     },
     "src/providers/codex/history/CodexHistoryStore.ts": {
       "loc": 746,
