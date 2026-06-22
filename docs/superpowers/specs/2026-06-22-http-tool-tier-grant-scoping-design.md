@@ -80,16 +80,30 @@ Make the **server itself** grant-aware, keyed by the bearer token.
 - Each runtime threads `queryOptions.boundAgentTools` into its config write:
   `getHttpToolServerConfig(boundAgentTools)`.
 
-### The load-bearing safety property
+### The load-bearing safety property (and its precise limit)
 
-Enforcement lives on the **server**, not the provider. A token can *only ever*
-reach the tools its grant allows, regardless of how Opencode/Cursor cache,
-re-read, or race on their config files. The provider-side injection is
+Enforcement lives on the **server**, not the provider: a given token can *only
+ever* reach the tools **its own grant** allows, regardless of how Opencode/Cursor
+cache, re-read, or race on their config files. The provider-side injection is
 best-effort; the server-side scoping is the guarantee. This is what makes the
-approach both **safe** and **fully unit-testable without the provider runtimes**.
+approach both **safe** (per-token) and **fully unit-testable without the provider
+runtimes**.
 
-A corollary: shipping the scoped path before live-runtime validation can only
-ever *tighten* what a restricted agent sees (the server caps it), never widen it.
+The guarantee is **per-token, not automatically per-conversation.** Per-conversation
+correctness additionally requires that each conversation's spawn/turn writes *its
+own* grant's token into the provider config. That holds cleanly for:
+- the single-conversation / single-grant case (the common one), and
+- Cursor's per-turn `~/.cursor/mcp.json` write (modulo the global-file race).
+
+It does **not** automatically hold when a provider reuses one long-running
+process + config across multiple conversations with **different** grants: a later
+restricted conversation could pick up an earlier conversation's (possibly broader)
+token and thus **over-grant**. Whether Opencode/Cursor re-read their MCP config
+per conversation/turn or pin it at spawn is a runtime unknown — so this
+cross-conversation, shared-process case is explicitly a **Phase 2** concern
+(validate + harden the write lifecycle). Phase 1 ships the mechanism and is
+correct for the common case; it does not claim to solve shared-process
+cross-conversation scoping.
 
 ## Rollout decision: always-on for restricted
 
@@ -97,13 +111,16 @@ Decided 2026-06-22: the scoped token is sent **whenever a bound agent has a
 restricted (non-empty) grant**; the unrestricted/default path is byte-for-byte
 unchanged. No settings flag.
 
-Rationale: the server-side guarantee means the restricted path can never
-over-grant. The only residual risk is a *functionality* degradation (a restricted
-agent on Cursor/Opencode seeing **missing** tools if a provider caches a stale
-config across concurrent conversations) — bounded, non-security, and addressed in
-Phase 2 by writing the config inside the spawn lock. The unrestricted majority
-case carries zero risk, so a dormant flag adds settings surface without
-protecting the common path.
+Rationale: for the common single-conversation case (and Cursor's per-turn write)
+the scoped token is correct, and the unrestricted majority path is unchanged
+(zero risk), so a dormant flag would add settings surface without protecting the
+common path. The residual edge is the shared-process, cross-conversation,
+different-grant case described above (a later conversation reusing an earlier
+token can under- or over-grant); it is bounded, requires a live runtime to
+characterize, and is hardened in Phase 2 (write inside the spawn lock; confirm
+per-conversation re-read). Phase 1's server-side registry is unambiguously
+correct and carries no downside on its own — the only runtime-dependent part is
+which token a given provider spawn actually picks up.
 
 ## Phasing
 
