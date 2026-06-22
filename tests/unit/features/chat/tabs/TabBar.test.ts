@@ -251,7 +251,7 @@ describe('TabBar', () => {
   });
 
   describe('badge accessibility', () => {
-    it('exposes role=tab, tabindex=0, and aria-selected reflecting isActive', () => {
+    it('exposes role=tab, roving tabindex, and aria-selected reflecting isActive', () => {
       const containerEl = createMockEl();
       const tabBar = new TabBar(containerEl, createMockCallbacks());
 
@@ -262,9 +262,188 @@ describe('TabBar', () => {
 
       const [activeBadge, inactiveBadge] = containerEl._children;
       expect(activeBadge.getAttribute('role')).toBe('tab');
+      // Roving tabindex: the active badge is the single tab stop.
       expect(activeBadge.getAttribute('tabindex')).toBe('0');
       expect(activeBadge.getAttribute('aria-selected')).toBe('true');
+      expect(inactiveBadge.getAttribute('tabindex')).toBe('-1');
       expect(inactiveBadge.getAttribute('aria-selected')).toBe('false');
+    });
+
+    it('gives exactly one badge tabindex=0 (the active one)', () => {
+      const containerEl = createMockEl();
+      const tabBar = new TabBar(containerEl, createMockCallbacks());
+
+      tabBar.update([
+        createTabBarItem({ id: 'a', index: 1, isActive: false }),
+        createTabBarItem({ id: 'b', index: 2, isActive: true }),
+        createTabBarItem({ id: 'c', index: 3, isActive: false }),
+      ]);
+
+      const tabStops = containerEl._children.filter(
+        (b: MockElement) => b.getAttribute('tabindex') === '0',
+      );
+      expect(tabStops.length).toBe(1);
+      expect(tabStops[0].getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('makes the first badge the tab stop when none is active', () => {
+      const containerEl = createMockEl();
+      const tabBar = new TabBar(containerEl, createMockCallbacks());
+
+      tabBar.update([
+        createTabBarItem({ id: 'a', index: 1, isActive: false }),
+        createTabBarItem({ id: 'b', index: 2, isActive: false }),
+      ]);
+
+      const [first, second] = containerEl._children;
+      expect(first.getAttribute('tabindex')).toBe('0');
+      expect(second.getAttribute('tabindex')).toBe('-1');
+    });
+
+    it('ArrowRight moves focus and roving tabindex to the next badge', () => {
+      const containerEl = createMockEl();
+      const callbacks = createMockCallbacks();
+      const tabBar = new TabBar(containerEl, callbacks);
+
+      tabBar.update([
+        createTabBarItem({ id: 'a', index: 1, isActive: true }),
+        createTabBarItem({ id: 'b', index: 2, isActive: false }),
+      ]);
+
+      const [first, second] = containerEl._children;
+      const focused = jest.fn();
+      second.addEventListener('focus', focused);
+
+      const preventDefault = jest.fn();
+      first.dispatchEvent('keydown', { key: 'ArrowRight', preventDefault });
+
+      expect(preventDefault).toHaveBeenCalled();
+      expect(second.getAttribute('tabindex')).toBe('0');
+      expect(first.getAttribute('tabindex')).toBe('-1');
+      expect(focused).toHaveBeenCalled();
+      // Manual activation: focus moves but the tab is not switched.
+      expect(callbacks.onTabClick).not.toHaveBeenCalled();
+    });
+
+    it('ArrowLeft moves focus and roving tabindex to the previous badge', () => {
+      const containerEl = createMockEl();
+      const tabBar = new TabBar(containerEl, createMockCallbacks());
+
+      tabBar.update([
+        createTabBarItem({ id: 'a', index: 1, isActive: false }),
+        createTabBarItem({ id: 'b', index: 2, isActive: true }),
+      ]);
+
+      const [first, second] = containerEl._children;
+      const focused = jest.fn();
+      first.addEventListener('focus', focused);
+
+      const preventDefault = jest.fn();
+      second.dispatchEvent('keydown', { key: 'ArrowLeft', preventDefault });
+
+      expect(preventDefault).toHaveBeenCalled();
+      expect(first.getAttribute('tabindex')).toBe('0');
+      expect(second.getAttribute('tabindex')).toBe('-1');
+      expect(focused).toHaveBeenCalled();
+    });
+
+    it('ArrowRight wraps from the last badge to the first', () => {
+      const containerEl = createMockEl();
+      const tabBar = new TabBar(containerEl, createMockCallbacks());
+
+      tabBar.update([
+        createTabBarItem({ id: 'a', index: 1, isActive: false }),
+        createTabBarItem({ id: 'b', index: 2, isActive: true }),
+      ]);
+
+      const [first, second] = containerEl._children;
+      const focused = jest.fn();
+      first.addEventListener('focus', focused);
+
+      second.dispatchEvent('keydown', { key: 'ArrowRight', preventDefault: jest.fn() });
+
+      expect(first.getAttribute('tabindex')).toBe('0');
+      expect(second.getAttribute('tabindex')).toBe('-1');
+      expect(focused).toHaveBeenCalled();
+    });
+
+    it('ArrowLeft wraps from the first badge to the last', () => {
+      const containerEl = createMockEl();
+      const tabBar = new TabBar(containerEl, createMockCallbacks());
+
+      tabBar.update([
+        createTabBarItem({ id: 'a', index: 1, isActive: true }),
+        createTabBarItem({ id: 'b', index: 2, isActive: false }),
+      ]);
+
+      const [first, last] = containerEl._children;
+      const focused = jest.fn();
+      last.addEventListener('focus', focused);
+
+      first.dispatchEvent('keydown', { key: 'ArrowLeft', preventDefault: jest.fn() });
+
+      expect(last.getAttribute('tabindex')).toBe('0');
+      expect(first.getAttribute('tabindex')).toBe('-1');
+      expect(focused).toHaveBeenCalled();
+    });
+
+    it('Home focuses the first badge and End focuses the last', () => {
+      const containerEl = createMockEl();
+      const tabBar = new TabBar(containerEl, createMockCallbacks());
+
+      tabBar.update([
+        createTabBarItem({ id: 'a', index: 1, isActive: false }),
+        createTabBarItem({ id: 'b', index: 2, isActive: true }),
+        createTabBarItem({ id: 'c', index: 3, isActive: false }),
+      ]);
+
+      const [first, middle, last] = containerEl._children;
+
+      const endFocus = jest.fn();
+      last.addEventListener('focus', endFocus);
+      middle.dispatchEvent('keydown', { key: 'End', preventDefault: jest.fn() });
+      expect(last.getAttribute('tabindex')).toBe('0');
+      expect(middle.getAttribute('tabindex')).toBe('-1');
+      expect(endFocus).toHaveBeenCalled();
+
+      const homeFocus = jest.fn();
+      first.addEventListener('focus', homeFocus);
+      last.dispatchEvent('keydown', { key: 'Home', preventDefault: jest.fn() });
+      expect(first.getAttribute('tabindex')).toBe('0');
+      expect(last.getAttribute('tabindex')).toBe('-1');
+      expect(homeFocus).toHaveBeenCalled();
+    });
+
+    it('treats arrows as no-ops for a single badge but consumes the key', () => {
+      const containerEl = createMockEl();
+      const callbacks = createMockCallbacks();
+      const tabBar = new TabBar(containerEl, callbacks);
+
+      tabBar.update([createTabBarItem({ id: 'only', isActive: true })]);
+
+      const [only] = containerEl._children;
+      const preventDefault = jest.fn();
+      only.dispatchEvent('keydown', { key: 'ArrowRight', preventDefault });
+
+      expect(preventDefault).toHaveBeenCalled();
+      expect(only.getAttribute('tabindex')).toBe('0');
+      expect(callbacks.onTabClick).not.toHaveBeenCalled();
+    });
+
+    it('still activates on Enter/Space and still closes on Delete with roving enabled', () => {
+      const containerEl = createMockEl();
+      const callbacks = createMockCallbacks();
+      const tabBar = new TabBar(containerEl, callbacks);
+
+      tabBar.update([createTabBarItem({ id: 'kbd', canClose: true })]);
+
+      const [badge] = containerEl._children;
+
+      badge.dispatchEvent('keydown', { key: ' ', preventDefault: jest.fn() });
+      expect(callbacks.onTabClick).toHaveBeenCalledWith('kbd');
+
+      badge.dispatchEvent('keydown', { key: 'Delete', preventDefault: jest.fn() });
+      expect(callbacks.onTabClose).toHaveBeenCalledWith('kbd');
     });
 
     it('fires onTabClick on Enter keydown', () => {
