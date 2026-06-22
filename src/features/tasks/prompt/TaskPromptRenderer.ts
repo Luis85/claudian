@@ -1,3 +1,4 @@
+import type { LoopDefinition } from '../loops/loopTypes';
 import type { TaskSpec } from '../model/taskTypes';
 
 export interface TaskPromptLaneCriteria {
@@ -53,7 +54,33 @@ function escapeClaudianMarkers(value: string): string {
   return value.replace(/<(\/?)claudian_([A-Za-z_]+)>/g, '`<$1claudian_$2>`');
 }
 
-export function renderTaskPrompt(task: TaskSpec, lane?: TaskPromptLaneCriteria): string {
+/**
+ * Render the attached loop as a `## Loop` block. `useWhen` is selection-only
+ * guidance and is deliberately never injected. All values are escaped against
+ * protocol-marker injection, identical to the work-order sections.
+ */
+function renderLoopBlock(loop?: LoopDefinition): string {
+  if (!loop) return '';
+  const parts: string[] = [
+    `\n\n## Loop: ${escapeClaudianMarkers(loop.name)}`,
+    'You are following a predefined loop. Apply its approach, work the steps, and satisfy its verify condition before handing off.',
+  ];
+  const sub = (heading: string, value: string): void => {
+    const escaped = escapeClaudianMarkers(value).trim();
+    if (escaped) parts.push(`\n### ${heading}\n${escaped}`);
+  };
+  sub('Approach', loop.approach);
+  sub('Steps', loop.steps);
+  sub('Verify', loop.verify);
+  sub('Notes', loop.notes);
+  return parts.join('\n');
+}
+
+export function renderTaskPrompt(
+  task: TaskSpec,
+  lane?: TaskPromptLaneCriteria,
+  loop?: LoopDefinition,
+): string {
   const provider = task.frontmatter.provider ?? 'unspecified';
   const model = task.frontmatter.model ?? 'unspecified';
   const title = escapeClaudianMarkers(task.frontmatter.title);
@@ -103,6 +130,7 @@ reversible: true|false
 End the entire run with one <claudian_handoff> block as specified below.`;
 
   const priorAttempts = renderPriorAttempts(task.sections.ledger);
+  const loopBlock = renderLoopBlock(loop);
 
   return `${title}
 
@@ -130,7 +158,7 @@ While executing, update the related docs referenced from Objective/Context (plan
 ${context}
 
 ## Constraints
-${constraints}${dor}${dod}${reworkNotes}${priorAttempts}
+${constraints}${dor}${dod}${reworkNotes}${priorAttempts}${loopBlock}
 
 ## Required Structured Handoff
 At the end of your final response, include exactly one strict handoff block in this format:
