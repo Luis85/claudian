@@ -889,18 +889,7 @@ export class ClaudianView extends ItemView {
     const avatarEl = chip.createDiv({ cls: 'claudian-bound-agent-chip-avatar' });
     renderAgentAvatar(avatarEl, rosterAgentToPersona(agent), 18);
 
-    chip.createSpan({ cls: 'claudian-bound-agent-chip-tag', text: t('agentRoster.chipTag') });
     chip.createSpan({ cls: 'claudian-bound-agent-chip-label', text: agent.name });
-
-    const unbindBtn = chip.createEl('button', { cls: 'claudian-bound-agent-chip-unbind' });
-    setIcon(unbindBtn, 'x');
-    unbindBtn.setAttribute('aria-label', t('agentRoster.unbind'));
-    unbindBtn.addEventListener('click', () => {
-      void (async () => {
-        await this.plugin.updateConversation(conversationId, { boundAgentId: undefined });
-        await this.syncBoundAgentChip();
-      })();
-    });
   }
 
   /**
