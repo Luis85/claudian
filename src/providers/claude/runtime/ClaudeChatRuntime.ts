@@ -443,7 +443,8 @@ export class ClaudianService implements ChatRuntime {
       closePersistentQuery: (reason, preserveHandlers) =>
         this.closePersistentQuery(reason, { preserveHandlers }),
       needsRestartForConfig: (vaultPath, cliPath, externalContextPaths) =>
-        this.needsRestart(this.buildPersistentQueryConfig(vaultPath, cliPath, externalContextPaths)),
+        // Include the bound-agent prompt so this unforced check matches the stored key.
+        this.needsRestart(this.buildPersistentQueryConfig(vaultPath, cliPath, externalContextPaths, undefined, this.currentBoundAgentPrompt)),
     };
   }
 
@@ -478,12 +479,10 @@ export class ClaudianService implements ChatRuntime {
 
     this.queryAbortController = new AbortController();
 
-    const config = this.buildPersistentQueryConfig(
-      vaultPath,
-      cliPath,
-      externalContextPaths,
-      modelOverride,
-    );
+    // Fold the bound-agent prompt into the stored config so its systemPromptKey
+    // matches the actual query options below; otherwise needsRestart fires every
+    // bound-agent turn (stored key lacks the appendix the recomputed key has).
+    const config = this.buildPersistentQueryConfig(vaultPath, cliPath, externalContextPaths, modelOverride, this.currentBoundAgentPrompt);
     this.currentConfig = config;
 
     const resumeAtMessageId = this.pendingResumeAt;
