@@ -184,3 +184,7 @@ deliberately deferred (tracked here):
 7. **Library-shell unification.** `AgentRosterView` still hand-rolls its card/shell
    DOM instead of the shared `renderLibraryShell`/`createLibraryCard` the Tool/Skill
    views use; unify before a fourth library view is added.
+8. **Tab-strip roving tabindex.** The chat tab badges are now `role="tab"` inside
+   a `role="tablist"` and keyboard-activatable (Enter/Space, Delete to close), but
+   every badge is a tab stop. Full WAI-ARIA APG conformance would use a roving
+   `tabindex` with ArrowLeft/Right navigation and a single tab stop.

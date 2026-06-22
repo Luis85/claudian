@@ -38,6 +38,12 @@ describe('TabBar', () => {
 
       expect(containerEl._classList.has('claudian-tab-badges')).toBe(true);
     });
+
+    it('marks the container as the tablist enclosing the role=tab badges', () => {
+      const containerEl = createMockEl();
+      new TabBar(containerEl, createMockCallbacks());
+      expect(containerEl.getAttribute('role')).toBe('tablist');
+    });
   });
 
   describe('update', () => {

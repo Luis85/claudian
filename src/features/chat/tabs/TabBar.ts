@@ -35,6 +35,9 @@ export class TabBar {
   /** Builds the tab bar UI. */
   private build(): void {
     this.containerEl.addClass('claudian-tab-badges');
+    // The badges are `role="tab"`; their container must be the enclosing tablist
+    // for assistive tech to announce position/count correctly.
+    this.containerEl.setAttribute('role', 'tablist');
   }
 
   /**
