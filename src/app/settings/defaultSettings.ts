@@ -71,6 +71,7 @@ export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
 
   agentBoardWorkOrderFolder: 'Agent Board/tasks',
   agentBoardTemplateFolder: 'Agent Board/templates',
+  agentBoardLoopFolder: 'Agent Board/loops',
   agentBoardArchiveFolder: 'Agent Board/archive',
   agentBoardDefaultProvider: null,
   agentBoardDefaultModel: null,
