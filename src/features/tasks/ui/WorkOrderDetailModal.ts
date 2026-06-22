@@ -17,6 +17,8 @@ export interface WorkOrderFieldUpdate {
   provider?: string;
   model?: string;
   priority?: TaskPriority;
+  /** Attached loop slug; empty string detaches. */
+  loop?: string;
 }
 
 export interface WorkOrderOption {
