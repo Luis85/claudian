@@ -191,8 +191,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       (leaf) => new ClaudianView(leaf, this)
     );
 
-    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Co-Worker Chat" is the product feature name.
-    this.addRibbonIcon('bot', 'Open Co-Worker Chat', () => {
+    this.addRibbonIcon('bot', t('ribbon.openChat'), () => {
       void this.activateView();
     });
 
@@ -239,8 +238,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       (leaf) => new AgentBoardView(leaf, this, taskExecutionSurface),
     );
 
-    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Board" is the product feature name.
-    this.addRibbonIcon('kanban-square', 'Open Agent Board', () => {
+    this.addRibbonIcon('kanban-square', t('ribbon.openAgentBoard'), () => {
       void this.activateAgentBoardView();
     });
 
@@ -249,18 +247,12 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     this.registerView(VIEW_TYPE_SKILL_LIBRARY, (leaf) => new SkillLibraryView(leaf, this));
 
     const openView = (viewType: string) => this.openLeafView(viewType);
-    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Roster" is the product feature name.
-    this.addRibbonIcon('users', 'Open Agent Roster', () => void openView(VIEW_TYPE_AGENT_ROSTER));
-    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Tool Library" is the product feature name.
-    this.addRibbonIcon('wrench', 'Open Tool Library', () => void openView(VIEW_TYPE_TOOL_LIBRARY));
-    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Skill Library" is the product feature name.
-    this.addRibbonIcon('book-open', 'Open Skill Library', () => void openView(VIEW_TYPE_SKILL_LIBRARY));
-    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Roster" is the product feature name.
-    this.addCommand({ id: 'open-agent-roster', name: 'Open Agent Roster', callback: () => void openView(VIEW_TYPE_AGENT_ROSTER) });
-    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Tool Library" is the product feature name.
-    this.addCommand({ id: 'open-tool-library', name: 'Open Tool Library', callback: () => void openView(VIEW_TYPE_TOOL_LIBRARY) });
-    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Skill Library" is the product feature name.
-    this.addCommand({ id: 'open-skill-library', name: 'Open Skill Library', callback: () => void openView(VIEW_TYPE_SKILL_LIBRARY) });
+    this.addRibbonIcon('users', t('ribbon.openAgentRoster'), () => void openView(VIEW_TYPE_AGENT_ROSTER));
+    this.addRibbonIcon('wrench', t('ribbon.openToolLibrary'), () => void openView(VIEW_TYPE_TOOL_LIBRARY));
+    this.addRibbonIcon('book-open', t('ribbon.openSkillLibrary'), () => void openView(VIEW_TYPE_SKILL_LIBRARY));
+    this.addCommand({ id: 'open-agent-roster', name: t('commands.openAgentRoster'), callback: () => void openView(VIEW_TYPE_AGENT_ROSTER) });
+    this.addCommand({ id: 'open-tool-library', name: t('commands.openToolLibrary'), callback: () => void openView(VIEW_TYPE_TOOL_LIBRARY) });
+    this.addCommand({ id: 'open-skill-library', name: t('commands.openSkillLibrary'), callback: () => void openView(VIEW_TYPE_SKILL_LIBRARY) });
 
     const chatWorkOrderLinker = new ChatWorkOrderLinker(this);
 

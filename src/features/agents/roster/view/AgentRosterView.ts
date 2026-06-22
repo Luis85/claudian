@@ -31,8 +31,7 @@ export class AgentRosterView extends ItemView {
   }
 
   getViewType(): string { return VIEW_TYPE_AGENT_ROSTER; }
-  // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Roster" is the product feature name.
-  getDisplayText(): string { return 'Agent Roster'; }
+  getDisplayText(): string { return t('agentRoster.title'); }
   getIcon(): string { return 'users'; }
 
   async onOpen(): Promise<void> {

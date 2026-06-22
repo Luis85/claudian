@@ -34,8 +34,7 @@ export class ToolLibraryView extends ItemView {
   }
 
   getViewType(): string { return VIEW_TYPE_TOOL_LIBRARY; }
-  // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Tool Library" is the product feature name.
-  getDisplayText(): string { return 'Tool Library'; }
+  getDisplayText(): string { return t('toolLibrary.title'); }
   getIcon(): string { return 'wrench'; }
 
   async onOpen(): Promise<void> {

@@ -32,8 +32,7 @@ export class SkillLibraryView extends ItemView {
   }
 
   getViewType(): string { return VIEW_TYPE_SKILL_LIBRARY; }
-  // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Skill Library" is the product feature name.
-  getDisplayText(): string { return 'Skill Library'; }
+  getDisplayText(): string { return t('skillLibrary.title'); }
   getIcon(): string { return 'book-open'; }
 
   async onOpen(): Promise<void> {
