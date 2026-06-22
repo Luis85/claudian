@@ -33,6 +33,7 @@ import { TaskNoteStore } from '../storage/TaskNoteStore';
 import { type AgentBoardPauseState, AgentBoardRenderer } from './AgentBoardRenderer';
 import { createWorkOrderInteractive } from './createWorkOrderInteractive';
 import { loadLatestTaskSpec } from './loadLatestTaskSpec';
+import { chooseLoop } from './LoopPickerModal';
 import { showWorkOrderContextMenu } from './WorkOrderContextMenu';
 import { buildWorkOrderConversationBindings } from './workOrderConversationBindings';
 import { WorkOrderDetailModal, type WorkOrderFieldUpdate } from './WorkOrderDetailModal';
@@ -54,6 +55,9 @@ export class AgentBoardView extends ItemView {
   // Initialized in the constructor (after plugin is bound) because field
   // initializers run before parameter properties are assigned.
   private readonly loopCatalog: LoopCatalog;
+  // Slug → display-name cache populated on each refresh so the properties panel
+  // can resolve loop names synchronously without an async vault read per open.
+  private loopNameCache = new Map<string, string>();
   private model: TaskBoardModel = { tasks: [], invalidNotes: [] };
   private config: BoardConfig = loadBoardConfig({}).config;
   private layout: ResolvedBoardLayout = { lanes: [], errors: [] };
@@ -249,6 +253,10 @@ export class AgentBoardView extends ItemView {
     this.config = config;
     const layout = resolveBoardLayout(config, this.model);
     this.layout = { ...layout, errors: [...errors, ...layout.errors] };
+    // Rebuild the slug→name cache so the modal's properties panel can resolve
+    // loop display names synchronously when opened (no async read at open time).
+    const loops = await this.loopCatalog.listLoops();
+    this.loopNameCache = new Map(loops.map((loop) => [loop.id, loop.name]));
     this.syncRunner();
     this.render();
   }
@@ -401,6 +409,8 @@ export class AgentBoardView extends ItemView {
         ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId)
           ? ProviderRegistry.getChatUIConfig(providerId as ProviderId).getModelOptions(settings)
           : [],
+      getLoopName: (loopId) => (loopId ? this.loopNameCache.get(loopId) : undefined),
+      onPickLoop: (target) => void this.pickLoopForTask(target),
     }).open();
   }
 
@@ -430,6 +440,13 @@ export class AgentBoardView extends ItemView {
     // debounced refresh. Three field edits in quick succession (title +
     // provider + model) collapse to one re-index instead of three.
     await this.applyNoteChange(task.path, (content) => this.noteStore.writeFields(content, fields));
+  }
+
+  private async pickLoopForTask(task: TaskSpec): Promise<void> {
+    const result = await chooseLoop(this.plugin, task.frontmatter.loop);
+    // An empty loopId detaches the loop (handled by TaskNoteStore.writeFields).
+    if (result.cancelled || result.loopId === undefined) return;
+    await this.saveTaskFields(task, { loop: result.loopId });
   }
 
   private computeSlots(): { used: number; max: number } {

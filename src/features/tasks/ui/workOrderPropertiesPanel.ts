@@ -21,6 +21,15 @@ const EDITABLE_AGENT_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStatus>([
   'needs_fix',
 ]);
 
+// Statuses where the attached loop can still be changed. Mirrors the same set
+// as Agent and the editable-title states — once a task is running or terminal
+// the loop is locked to the spec that was used for the run.
+const EDITABLE_LOOP_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStatus>([
+  'inbox',
+  'ready',
+  'needs_fix',
+]);
+
 // Avatar diameter (px) for the modal Agent property value.
 const AGENT_AVATAR_SIZE = 18;
 
@@ -110,6 +119,10 @@ export function renderWorkOrderProperties(
       text: fm.model ?? '—',
     });
   }
+
+  // Loop — picker chip when editable; static name (or "No loop") otherwise.
+  const loopValue = addPropertyRow(panel, 'loop', 'repeat', t('tasks.workOrderModal.fieldLoop')).value;
+  renderLoopRow(loopValue, task, EDITABLE_LOOP_STATUSES.has(fm.status), callbacks);
 
   // Priority — chip when editable; ascending bars + label otherwise.
   const priorityValue = addPropertyRow(panel, 'priority', 'signal', t('tasks.workOrderModal.fieldPriority')).value;
@@ -205,6 +218,32 @@ function renderAgentRow(
     avatar.remove();
     avatar = replacement;
   });
+}
+
+/**
+ * Loop value. Editable states render a click-to-open chip so the user can
+ * attach or swap the loop without opening the note; non-editable states show
+ * a static label. The display name is resolved synchronously from the cache
+ * maintained by the view (`getLoopName`) — no async call from the panel.
+ */
+function renderLoopRow(
+  parent: HTMLElement,
+  task: TaskSpec,
+  editable: boolean,
+  callbacks: WorkOrderDetailModalCallbacks,
+): void {
+  const loopName = callbacks.getLoopName?.(task.frontmatter.loop);
+  const label = loopName ?? t('tasks.workOrderModal.loopNone');
+  if (!editable) {
+    parent.createSpan({ cls: 'claudian-work-order-modal-loop', text: label });
+    return;
+  }
+  const chip = parent.createSpan({ cls: 'claudian-work-order-modal-chip' });
+  chip.addClass('claudian-work-order-modal-chip--loop');
+  chip.createSpan({ cls: 'claudian-work-order-modal-chip-value', text: label });
+  const caret = chip.createSpan({ cls: 'claudian-work-order-modal-chip-caret' });
+  setIcon(caret, 'chevron-down');
+  chip.addEventListener('click', () => callbacks.onPickLoop?.(task));
 }
 
 function addPropertyRow(

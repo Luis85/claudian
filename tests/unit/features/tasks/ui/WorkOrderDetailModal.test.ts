@@ -541,12 +541,15 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
   });
 
   it('renders editable rows in the spec order (no Conversation without a link)', () => {
+    // Loop row was added between Model and Priority (Task 11); the order here
+    // is the canonical spec order for the properties sidebar.
     const { sidebar } = openWith(makeTask('t', 'inbox'), richCallbacks());
     expect(propRowKeys(sidebar)).toEqual([
       'status',
       'agent',
       'provider',
       'model',
+      'loop',
       'priority',
       'created',
       'updated',
