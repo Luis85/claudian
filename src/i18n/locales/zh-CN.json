@@ -1027,7 +1027,9 @@
     "colorNone": "None",
     "icon": "图标",
     "iconNone": "默认",
-    "bindingHint": "开始新对话以使用不同的助手。"
+    "bindingHint": "开始新对话以使用不同的助手。",
+    "navAriaLabel": "库分区",
+    "removeCapability": "移除 {name}"
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically.",

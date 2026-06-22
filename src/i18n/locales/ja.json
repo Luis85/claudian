@@ -1027,7 +1027,9 @@
     "colorNone": "None",
     "icon": "アイコン",
     "iconNone": "デフォルト",
-    "bindingHint": "別のエージェントを使用するには、新しいチャットを開始してください。"
+    "bindingHint": "別のエージェントを使用するには、新しいチャットを開始してください。",
+    "navAriaLabel": "ライブラリのセクション",
+    "removeCapability": "{name} を削除"
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically.",

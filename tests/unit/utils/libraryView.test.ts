@@ -124,12 +124,14 @@ describe('DOM helpers', () => {
     renderModalLabel(root, 'Source');
     renderModalField(root, 'Name', 'value');
     const input = renderModalTextField(root, 'Rename', 'old');
-    const code = createModalCodeArea(root, 'const x = 1;');
+    const code = createModalCodeArea(root, 'const x = 1;', 'Source');
 
     expect(root.querySelector('.claudian-library-modal-label')?.textContent).toBe('Source');
     expect(root.querySelector('.claudian-library-modal-value')?.textContent).toBe('value');
     expect(input.value).toBe('old');
+    expect(input.getAttribute('aria-label')).toBe('Rename');
     expect(code.value).toBe('const x = 1;');
+    expect(code.getAttribute('aria-label')).toBe('Source');
     expect(code.spellcheck).toBe(false);
 
     const onSave = jest.fn();

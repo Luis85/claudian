@@ -1027,7 +1027,9 @@
     "colorNone": "None",
     "icon": "Icon",
     "iconNone": "Default",
-    "bindingHint": "Start a new chat to use a different agent."
+    "bindingHint": "Start a new chat to use a different agent.",
+    "navAriaLabel": "Library sections",
+    "removeCapability": "Remove {name}"
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically.",

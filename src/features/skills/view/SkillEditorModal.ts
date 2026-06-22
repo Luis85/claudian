@@ -46,7 +46,7 @@ export class SkillEditorModal extends LibraryEditorModal {
     this.nameEl = renderModalTextField(root, t('skillLibrary.nameField'), this.row.name);
     renderModalLabel(root, t('skillLibrary.content'));
     const content = await this.plugin.vaultFileAdapter.read(this.row.sourceFilePath).catch(() => '');
-    this.contentArea = createModalCodeArea(root, content);
+    this.contentArea = createModalCodeArea(root, content, t('skillLibrary.content'));
 
     this.renderSaveFooter(root, {
       saveLabel: t('skillLibrary.save'),

@@ -40,7 +40,7 @@ export class ToolEditorModal extends LibraryEditorModal {
 
     renderModalLabel(root, t('toolLibrary.source'));
     const source = await this.plugin.vaultFileAdapter.read(path).catch(() => '');
-    this.sourceEl = createModalCodeArea(root, source);
+    this.sourceEl = createModalCodeArea(root, source, t('toolLibrary.source'));
 
     this.renderSaveFooter(root, {
       saveLabel: t('toolLibrary.save'),

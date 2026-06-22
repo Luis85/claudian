@@ -85,6 +85,7 @@ export class AgentDetailEditor {
     const nameEl = fields.createEl('input', { cls: 'claudian-roster-detail-name', type: 'text' });
     nameEl.value = this.draft.name;
     nameEl.placeholder = t('agentRoster.fieldName');
+    nameEl.setAttribute('aria-label', t('agentRoster.fieldName'));
     nameEl.addEventListener('input', () => {
       this.draft.name = nameEl.value;
       this.refreshAvatar();
@@ -93,6 +94,7 @@ export class AgentDetailEditor {
     const descEl = fields.createEl('input', { cls: 'claudian-roster-detail-desc', type: 'text' });
     descEl.value = this.draft.description;
     descEl.placeholder = t('agentRoster.fieldDescription');
+    descEl.setAttribute('aria-label', t('agentRoster.fieldDescription'));
     descEl.addEventListener('input', () => { this.draft.description = descEl.value; this.updateDirty(); });
 
     this.renderAppearanceRow(fields);
@@ -103,6 +105,7 @@ export class AgentDetailEditor {
     const row = parent.createDiv({ cls: 'claudian-roster-appearance' });
 
     const color = row.createEl('select', { cls: 'claudian-roster-appearance-color dropdown' });
+    color.setAttribute('aria-label', t('agentRoster.color'));
     color.createEl('option', { value: '', text: t('agentRoster.colorNone') });
     for (const name of AVATAR_COLORS) color.createEl('option', { value: `var(--color-${name})`, text: name });
     color.value = this.draft.color ?? '';
@@ -116,6 +119,7 @@ export class AgentDetailEditor {
     initials.maxLength = 2;
     initials.value = this.draft.initials ?? '';
     initials.placeholder = t('agentRoster.initials');
+    initials.setAttribute('aria-label', t('agentRoster.initials'));
     initials.addEventListener('input', () => {
       this.draft.initials = initials.value.toUpperCase() || undefined;
       this.refreshAvatar();
@@ -142,7 +146,11 @@ export class AgentDetailEditor {
     ];
     for (const [role, label] of roles) {
       const chip = row.createEl('button', { cls: 'claudian-roster-role-chip', text: label });
-      const sync = (): void => { chip.classList.toggle('is-on', this.draft.roles.includes(role)); };
+      const sync = (): void => {
+        const on = this.draft.roles.includes(role);
+        chip.classList.toggle('is-on', on);
+        chip.setAttribute('aria-pressed', String(on));
+      };
       sync();
       chip.addEventListener('click', () => {
         this.draft.roles = this.draft.roles.includes(role)
@@ -199,6 +207,7 @@ export class AgentDetailEditor {
   private renderInstructionsCard(root: HTMLElement): void {
     const card = this.card(root, t('agentRoster.sectionInstructions'));
     const ta = card.createEl('textarea', { cls: 'claudian-roster-prompt-area' });
+    ta.setAttribute('aria-label', t('agentRoster.sectionInstructions'));
     ta.value = this.draft.prompt;
     ta.rows = 8;
     ta.addEventListener('input', () => { this.draft.prompt = ta.value; this.updateDirty(); });
@@ -241,6 +250,8 @@ export class AgentDetailEditor {
   private renderFooter(root: HTMLElement): void {
     const footer = root.createDiv({ cls: 'claudian-roster-detail-footer' });
     this.dirtyDot = footer.createSpan({ cls: 'claudian-roster-dirty', text: t('agentRoster.unsavedChanges') });
+    this.dirtyDot.setAttribute('role', 'status');
+    this.dirtyDot.setAttribute('aria-live', 'polite');
     footer.createDiv({ cls: 'claudian-roster-footer-spacer' });
 
     const save = footer.createEl('button', { cls: 'mod-cta', text: t('agentRoster.save') });

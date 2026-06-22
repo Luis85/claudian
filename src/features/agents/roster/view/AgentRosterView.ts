@@ -86,14 +86,19 @@ export class AgentRosterView extends ItemView {
 
   private renderCard(list: HTMLElement, agent: RosterAgent): void {
     const card = list.createDiv({ cls: 'claudian-roster-card' });
+    card.setAttribute('role', 'group');
+    card.setAttribute('aria-label', agent.name);
+    // Mouse convenience: clicking anywhere on the card opens the detail editor.
+    // Keyboard/SR users use the real name <button> below as the open action, so
+    // the card itself is a plain group (no nested interactive in a role=button).
     card.onclick = () => void this.openDetail(agent);
-    this.wireCardKeyboard(card, agent);
 
     const avatar = card.createDiv({ cls: 'claudian-roster-card-avatar' });
     renderAgentAvatar(avatar, rosterAgentToPersona(agent), CARD_AVATAR_SIZE);
 
     const body = card.createDiv({ cls: 'claudian-roster-card-body' });
-    body.createDiv({ cls: 'claudian-roster-card-name', text: agent.name });
+    const nameBtn = body.createEl('button', { cls: 'claudian-roster-card-name', text: agent.name });
+    nameBtn.onclick = (e) => { e.stopPropagation(); void this.openDetail(agent); };
     body.createDiv({ cls: 'claudian-roster-card-desc', text: agent.description || '—' });
 
     const caps = body.createDiv({ cls: 'claudian-roster-card-caps' });
@@ -125,18 +130,6 @@ export class AgentRosterView extends ItemView {
       e.stopPropagation();
       void withErrorNotice(() => this.deleteAgent(agent), fail, (err) => this.fail(err));
     };
-  }
-
-  /** Makes the card open the detail editor on Enter/Space for keyboard users. */
-  private wireCardKeyboard(card: HTMLElement, agent: RosterAgent): void {
-    card.setAttribute('role', 'button');
-    card.setAttribute('tabindex', '0');
-    card.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        void this.openDetail(agent);
-      }
-    });
   }
 
   // ── Detail editor ─────────────────────────────────────────────────────────

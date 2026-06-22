@@ -113,14 +113,20 @@ export function renderModalTextField(parent: HTMLElement, label: string, value: 
   renderModalLabel(field, label);
   const input = field.createEl('input', { type: 'text', cls: 'claudian-library-modal-input' });
   input.value = value;
+  // The preceding label is a plain <div> with no `for` association, so name the
+  // control directly for screen readers.
+  input.setAttribute('aria-label', label);
   return input;
 }
 
 /** Monospace, spellcheck-off code/content textarea seeded with `value`. */
-export function createModalCodeArea(parent: HTMLElement, value: string): HTMLTextAreaElement {
+export function createModalCodeArea(parent: HTMLElement, value: string, ariaLabel?: string): HTMLTextAreaElement {
   const el = parent.createEl('textarea', { cls: 'claudian-library-modal-code' });
   el.value = value;
   el.spellcheck = false;
+  // The preceding `renderModalLabel` div isn't associated with this textarea,
+  // so callers pass the same label text to name it for screen readers.
+  if (ariaLabel) el.setAttribute('aria-label', ariaLabel);
   return el;
 }
 

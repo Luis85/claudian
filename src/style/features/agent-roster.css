@@ -58,8 +58,19 @@
   min-width: 0;
 }
 
+/* The name is a real <button> (keyboard/SR open action) styled to read as plain
+   text — the whole card still opens on mouse click. */
 .claudian-roster-card-name {
   font-weight: var(--font-semibold);
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  font-size: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .claudian-roster-card-desc {

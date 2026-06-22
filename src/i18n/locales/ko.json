@@ -1027,7 +1027,9 @@
     "colorNone": "None",
     "icon": "아이콘",
     "iconNone": "기본값",
-    "bindingHint": "다른 에이전트를 사용하려면 새 채팅을 시작하세요."
+    "bindingHint": "다른 에이전트를 사용하려면 새 채팅을 시작하세요.",
+    "navAriaLabel": "라이브러리 섹션",
+    "removeCapability": "{name} 제거"
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically.",

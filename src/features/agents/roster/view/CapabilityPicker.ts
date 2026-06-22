@@ -31,15 +31,20 @@ export function renderCapabilityPicker(parent: HTMLElement, options: CapabilityP
 
   const root = parent.createDiv({ cls: 'claudian-cap-picker' });
 
+  const bodyId = `claudian-cap-picker-body-${Math.random().toString(36).slice(2, 10)}`;
+
   const header = root.createDiv({ cls: 'claudian-cap-picker-header' });
   header.setAttribute('role', 'button');
   header.setAttribute('tabindex', '0');
+  header.setAttribute('aria-expanded', 'false');
+  header.setAttribute('aria-controls', bodyId);
   header.createSpan({ cls: 'claudian-cap-picker-label', text: options.label });
   const countEl = header.createSpan({ cls: 'claudian-cap-picker-count' });
   const caret = header.createSpan({ cls: 'claudian-cap-picker-caret' });
 
   const chipsEl = root.createDiv({ cls: 'claudian-cap-picker-chips' });
   const body = root.createDiv({ cls: 'claudian-cap-picker-body' });
+  body.id = bodyId;
 
   const emit = (): void => options.onChange([...selected]);
 
@@ -52,6 +57,7 @@ export function renderCapabilityPicker(parent: HTMLElement, options: CapabilityP
     for (const item of options.items) {
       if (!selected.has(item.id)) continue;
       const chip = chipsEl.createEl('button', { cls: 'claudian-cap-picker-chip' });
+      chip.setAttribute('aria-label', t('agentRoster.removeCapability', { name: item.name }));
       chip.createSpan({ text: item.name });
       // Decorative close glyph rendered via CSS `::before` (no keyed literal).
       chip.createSpan({ cls: 'claudian-cap-picker-chip-x' });
@@ -108,15 +114,20 @@ export function renderCapabilityPicker(parent: HTMLElement, options: CapabilityP
     }
     const search = body.createEl('input', { cls: 'claudian-cap-picker-search', type: 'text' });
     search.placeholder = options.searchPlaceholder;
+    search.setAttribute('aria-label', options.searchPlaceholder);
     search.value = query;
     search.addEventListener('input', () => { query = search.value; renderRows(); });
     listEl = body.createDiv({ cls: 'claudian-cap-picker-list' });
+    listEl.setAttribute('role', 'group');
+    listEl.setAttribute('aria-label', options.label);
     renderRows();
+    search.focus();
   };
 
   const toggle = (): void => {
     expanded = !expanded;
     root.classList.toggle('is-expanded', expanded);
+    header.setAttribute('aria-expanded', String(expanded));
     setIcon(caret, expanded ? 'chevron-down' : 'chevron-right');
     renderBody();
   };

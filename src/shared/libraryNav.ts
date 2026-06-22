@@ -25,13 +25,17 @@ export interface LibraryNavHost {
 /** Renders the Agents / Tools / Skills nav strip, highlighting `activeType`. */
 export function renderLibraryNav(container: HTMLElement, host: LibraryNavHost, activeType: string): void {
   const nav = container.createDiv({ cls: 'claudian-library-nav' });
+  nav.setAttribute('role', 'navigation');
+  nav.setAttribute('aria-label', t('agentRoster.navAriaLabel'));
   for (const item of LIBRARY_NAV_ITEMS) {
     const active = item.type === activeType;
     const btn = nav.createEl('button', {
       cls: `claudian-library-nav-item${active ? ' is-active' : ''}`,
       text: t(item.labelKey),
     });
-    if (!active) {
+    if (active) {
+      btn.setAttribute('aria-current', 'page');
+    } else {
       btn.onclick = () => void host.openLeafView(item.type);
     }
   }

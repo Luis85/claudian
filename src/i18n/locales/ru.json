@@ -1027,7 +1027,9 @@
     "colorNone": "None",
     "icon": "Иконка",
     "iconNone": "По умолчанию",
-    "bindingHint": "Начните новый чат, чтобы использовать другого агента."
+    "bindingHint": "Начните новый чат, чтобы использовать другого агента.",
+    "navAriaLabel": "Разделы библиотеки",
+    "removeCapability": "Удалить {name}"
   },
   "toolLibrary": {
     "toolCreated": "Created {path}. Edit it, then it loads automatically.",

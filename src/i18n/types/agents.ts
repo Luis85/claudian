@@ -46,6 +46,8 @@ export type AgentsTranslationKey =
   | 'agentRoster.syncDone'
   | 'agentRoster.syncNone'
   | 'agentRoster.navLabel'
+  | 'agentRoster.navAriaLabel'
+  | 'agentRoster.removeCapability'
   | 'agentRoster.actionFailed'
   | 'agentRoster.syncFailed'
   | 'agentRoster.icon'

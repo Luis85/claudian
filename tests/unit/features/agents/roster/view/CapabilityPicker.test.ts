@@ -39,6 +39,24 @@ describe('renderCapabilityPicker', () => {
     expect(root.querySelectorAll('.claudian-cap-picker-row')).toHaveLength(3);
   });
 
+  it('flips the header aria-expanded on toggle', () => {
+    const root = host();
+    open(root);
+    const header = root.querySelector<HTMLElement>('.claudian-cap-picker-header')!;
+    expect(header.getAttribute('aria-expanded')).toBe('false');
+    header.click();
+    expect(header.getAttribute('aria-expanded')).toBe('true');
+    header.click();
+    expect(header.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('labels a selected chip with its Remove purpose', () => {
+    const root = host();
+    open(root, ['a']);
+    const chip = root.querySelector<HTMLButtonElement>('.claudian-cap-picker-chip')!;
+    expect(chip.getAttribute('aria-label')).toContain('Remove');
+  });
+
   it('filters rows by name or description', () => {
     const root = host();
     open(root);
