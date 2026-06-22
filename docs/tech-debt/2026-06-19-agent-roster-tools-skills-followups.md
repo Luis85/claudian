@@ -157,34 +157,61 @@ A 5-lens review (UX, accessibility, security/resilience, architecture, i18n) dro
 a nine-increment improvement pass. The contained items shipped; these were
 deliberately deferred (tracked here):
 
-1. **Bulk translation.** ~837 locale entries (95 agent-feature keys × 9 locales)
-   plus the 8 preset-agent prompts remain English. The structural i18n bugs
-   (dollar-brace interpolation, dead keys, hardcoded strings, color-picker label)
-   were fixed; the translation backlog is the remaining work and benefits from
-   native review.
-2. **Atomic config writes.** The roster (`AgentRosterStore`) and conversation
-   metadata stores write JSON directly (no temp-file + rename), so a crash
-   mid-write can truncate a file; a malformed file is then silently skipped (now
-   logged). Add an atomic write helper for the JSON config stores.
-3. **HTTP tool-server in-flight drain.** `ClaudianHttpToolServer.rebuild()` tears
-   down the MCP layer unconditionally; an Opencode tool call in flight when a tool
-   file is saved gets dropped (503). Needs request-count tracking + deferral, and
-   a live Opencode runtime to validate.
-4. **Project tool-grant restrictions into provider subagents.** A roster agent's
-   tool grant is enforced on the bound-chat path (`getScopedTools`) but not on the
-   projected `@`-mentionable subagent files (they inherit provider defaults). Map
-   the grant into each provider's native `tools`/`disallowedTools`, or document the
-   divergence in the UI.
-5. **Turn-cancel → running tool.** When the MCP host omits a request signal, a
-   user cancelling a turn can't abort an in-flight tool; it runs to the 30s
-   ceiling. Thread the runtime turn `AbortSignal` into the tool ctx.
-6. **`getDisplayText`/ribbon/command i18n.** View titles, ribbon tooltips, and
-   command-palette names are English (Obsidian registers them once; localizing
-   needs re-registration on locale change).
-7. **Library-shell unification.** `AgentRosterView` still hand-rolls its card/shell
-   DOM instead of the shared `renderLibraryShell`/`createLibraryCard` the Tool/Skill
-   views use; unify before a fourth library view is added.
-8. **Tab-strip roving tabindex.** The chat tab badges are now `role="tab"` inside
-   a `role="tablist"` and keyboard-activatable (Enter/Space, Delete to close), but
-   every badge is a tab stop. Full WAI-ARIA APG conformance would use a roving
-   `tabindex` with ArrowLeft/Right navigation and a single tab stop.
+1. **Bulk translation — still deferred (user call).** ~837 locale entries (95
+   agent-feature keys × 9 locales) plus the 8 preset-agent prompts remain English
+   (the `ribbon.*`/`commands.*` keys added in item 6 below are likewise English
+   copies in the 9 non-English locales). The structural i18n bugs (dollar-brace
+   interpolation, dead keys, hardcoded strings, color-picker label) were fixed;
+   the translation backlog is the remaining work and benefits from native review.
+   Kept deferred for a native-reviewed pass.
+2. ~~**Atomic config writes.**~~ **RESOLVED (2026-06-22).** Added
+   `VaultFileAdapter.writeAtomic` (write to `${path}.tmp` then rename onto the
+   target; delete-then-retry fallback for adapters that refuse to overwrite on
+   rename; the orphan `.tmp` is cleaned up before rethrow if the retry also
+   fails). `AgentRosterStore.save` and `SessionStorage.saveMetadata` now use it,
+   so a mid-write crash leaves either the intact old file or the fully-written
+   new one — never a truncated JSON config.
+3. ~~**HTTP tool-server in-flight drain.**~~ **RESOLVED (2026-06-22).**
+   `ClaudianHttpToolServer.rebuild()` now awaits a bounded drain (5s ceiling,
+   25ms poll) before tearing down the MCP layer. An in-flight counter tracks
+   transport-bound requests (incremented before `transport.handleRequest`,
+   decremented exactly once on `res` `finish`/`close` via a `settled` guard;
+   `close` is the backstop for aborted/errored requests). New requests during the
+   drain still hit the old, still-attached transport. `stop()` is unchanged.
+4. ~~**Project tool-grant restrictions into provider subagents.**~~ **RESOLVED
+   via documentation (2026-06-22).** Chose the "document the divergence in the UI"
+   option: the Tools card in the roster detail editor now carries a muted caption
+   (`agentRoster.toolGrantScopeHint`) explaining that the grant applies on the
+   bound-chat path while agents synced to providers as `@`-mentionable subagents
+   inherit the provider's default tool access. Mapping the grant into each
+   provider's native `tools`/`disallowedTools` stays deferred — it needs live
+   per-provider runtime validation and can't be done blind.
+5. **Turn-cancel → running tool — still deferred (low impact).** When the MCP
+   host omits a request signal, a user cancelling a turn can't abort an in-flight
+   tool; it runs to the 30s ceiling (the bounded-handler backstop added in the
+   2026-06-21 harden pass). Threading the runtime turn `AbortSignal` into the tool
+   ctx needs the host to actually supply a signal on the cancel path; the 30s
+   ceiling bounds the worst case, so this is left deferred as a low-impact
+   refinement rather than risk an unvalidatable change to the cancel plumbing.
+6. ~~**`getDisplayText`/ribbon/command i18n.**~~ **RESOLVED (2026-06-22).** View
+   titles (`getDisplayText`) reuse the existing `*.title` keys; ribbon tooltips
+   and command-palette names route through `t()` via new `ribbon.*`/`commands.*`
+   namespaces (all 10 locales + typed unions). `setLocale` runs inside
+   `loadSettings`, which `onload` awaits before registering ribbon icons and
+   commands, so these resolve the configured locale at registration time. (Live
+   re-registration on a mid-session locale change remains out of scope; view
+   `getDisplayText` self-heals since Obsidian re-invokes it.) `ClaudianView`
+   stays the `'Claudian'` brand name.
+7. ~~**Library-shell unification.**~~ **RESOLVED (2026-06-22).** `AgentRosterView`
+   now builds its list shell and cards on the shared `renderLibraryShell` /
+   `createLibraryCard` helpers. `createLibraryCard` gained a backward-compatible
+   options arg (a `leading` media slot for the avatar, `nameAsButton` for the
+   keyboard-focusable name button) and now also returns the card element; the
+   Tool/Skill call sites pass no opts and render identical DOM. All six roster
+   card a11y properties are preserved.
+8. ~~**Tab-strip roving tabindex.**~~ **RESOLVED (2026-06-22).** The chat tab
+   strip now follows the WAI-ARIA APG tabs-with-manual-activation pattern: exactly
+   one roving tab stop (the active badge, or the first when none is active), all
+   others `tabindex="-1"`; ArrowLeft/Right (wrap) + Home/End move focus and shift
+   the roving stop without activating (Enter/Space still activate, Delete/Backspace
+   still close).
