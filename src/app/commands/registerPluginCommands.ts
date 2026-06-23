@@ -15,6 +15,7 @@ import {
   createWorkOrderFromSelectionInteractive,
   createWorkOrderInteractive,
 } from '@/features/tasks/ui/createWorkOrderInteractive';
+import { VIEW_TYPE_LOOP_LIBRARY } from '@/features/tasks/ui/LoopLibraryView';
 import { t } from '@/i18n/i18n';
 import type ClaudianPlugin from '@/main';
 import { buildCursorContext } from '@/utils/editor';
@@ -105,6 +106,12 @@ function registerWorkOrderCommands(
     callback: () => {
       void installPresetTemplatesWithNotice(plugin);
     },
+  });
+
+  register({
+    id: 'open-loop-library',
+    name: t('commands.openLoopLibrary'),
+    callback: () => void plugin.openLeafView(VIEW_TYPE_LOOP_LIBRARY),
   });
 
   register({

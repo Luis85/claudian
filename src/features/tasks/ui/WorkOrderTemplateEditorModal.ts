@@ -8,6 +8,7 @@ import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import type { LucideIconPicker } from '../../../shared/components/LucideIconPicker';
 import { addIconPickerRow, addNameAndDescriptionRows } from '../../../shared/settings/nameDescriptionRows';
+import { LoopNoteStore } from '../loops/LoopNoteStore';
 import type { TaskPriority } from '../model/taskTypes';
 import type { SaveTemplateInput } from '../templates/TemplateNoteStore';
 import type { WorkOrderTemplate } from '../templates/templateTypes';
@@ -50,6 +51,7 @@ export class WorkOrderTemplateEditorModal extends Modal {
     let provider = this.existing?.provider ?? '';
     let model = this.existing?.model ?? '';
     let priority: '' | TaskPriority = this.existing?.priority ?? '';
+    let loop = this.existing?.loop ?? '';
     let body = this.existing?.body ?? defaultBody();
 
     addNameAndDescriptionRows(this.contentEl, {
@@ -127,6 +129,18 @@ export class WorkOrderTemplateEditorModal extends Modal {
         dd.onChange((v) => { priority = v as '' | TaskPriority; });
       });
 
+    // Loop selector: rendered synchronously then populated async to avoid
+    // blocking modal open on vault I/O. The `loop` local is seeded from
+    // `existing` so a save without touching the dropdown preserves the value.
+    const loopSetting = new Setting(this.contentEl)
+      .setName(t('tasks.templateEditor.loopName'))
+      .setDesc(t('tasks.templateEditor.loopDesc'));
+    const loopSelect = loopSetting.controlEl.createEl('select', { cls: 'dropdown' });
+    const noneOpt = loopSelect.createEl('option', { text: t('tasks.templateEditor.loopNone') });
+    noneOpt.value = '';
+    loopSelect.addEventListener('change', () => { loop = loopSelect.value; });
+    void this.populateLoopOptions(loopSelect, loop);
+
     const bodySetting = new Setting(this.contentEl)
       .setName(t('tasks.templateEditor.bodyName'))
       .setDesc(t('tasks.templateEditor.bodyDesc'))
@@ -142,7 +156,7 @@ export class WorkOrderTemplateEditorModal extends Modal {
         btn.setButtonText(t('tasks.templateEditor.save'))
           .setCta()
           .onClick(() => {
-            void this.handleSave({ name, description, icon, provider, model, priority, body });
+            void this.handleSave({ name, description, icon, provider, model, priority, loop, body });
           });
       })
       .addButton((btn) => {
@@ -164,6 +178,7 @@ export class WorkOrderTemplateEditorModal extends Modal {
     provider: string;
     model: string;
     priority: '' | TaskPriority;
+    loop: string;
     body: string;
   }): Promise<void> {
     const trimmedName = form.name.trim();
@@ -184,6 +199,7 @@ export class WorkOrderTemplateEditorModal extends Modal {
       provider: form.provider.trim() || undefined,
       model: form.model.trim() || undefined,
       priority: form.priority || undefined,
+      loop: form.loop.trim() || undefined,
       body: trimmedBody,
       originalPath: this.existing?.path,
     };
@@ -193,6 +209,16 @@ export class WorkOrderTemplateEditorModal extends Modal {
       this.close();
     } catch (error) {
       new Notice(t('tasks.template.saveFailed', { error: error instanceof Error ? error.message : String(error) }));
+    }
+  }
+
+  private async populateLoopOptions(select: HTMLSelectElement, current: string): Promise<void> {
+    const folder = this.plugin.settings.agentBoardLoopFolder || 'Agent Board/loops';
+    const { loops } = await new LoopNoteStore().list(this.plugin.app.vault, folder);
+    for (const loop of loops) {
+      const opt = select.createEl('option', { text: loop.name });
+      opt.value = loop.id;
+      if (loop.id === current) opt.selected = true;
     }
   }
 }

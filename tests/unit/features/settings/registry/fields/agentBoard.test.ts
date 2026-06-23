@@ -121,6 +121,33 @@ describe('Agent Board tab registry fields', () => {
     expect(type.label).toBe('Install common templates');
   });
 
+  it('registers installCommonLoopsButton in templates section as a button field', () => {
+    registerAgentBoardTabFields();
+    const r = getSettingsRegistry();
+    const fields = r.getFields('agentBoard', 'templates', { providerConfigs: {} } as any);
+    const button = fields.find((f) => f.id === 'installCommonLoopsButton');
+    expect(button).toBeDefined();
+    expect(button?.sectionId).toBe('templates');
+    const type = button!.type;
+    expect(type.kind).toBe('button');
+    if (type.kind !== 'button') {
+      throw new Error('installCommonLoopsButton type must be button');
+    }
+    expect(type.label).toBe('Install common loops');
+  });
+
+  it('registers agentBoardLoopFolder in folders section with correct default', () => {
+    registerAgentBoardTabFields();
+    const r = getSettingsRegistry();
+    const fields = r.getFields('agentBoard', 'folders', { providerConfigs: {} } as any);
+    const loopFolder = fields.find((f) => f.id === 'agentBoardLoopFolder');
+    expect(loopFolder).toBeDefined();
+    expect(loopFolder?.label).toBe('Loop folder');
+    expect(loopFolder?.default).toBe('Agent Board/loops');
+    expect(loopFolder?.sectionId).toBe('folders');
+    expect(loopFolder?.type.kind).toBe('folder');
+  });
+
   describe('agentBoardDefaultProvider custom field', () => {
     function makeCtx(
       enabled: string[],

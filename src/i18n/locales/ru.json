@@ -544,7 +544,13 @@
     "agentBoard": {
       "commonTemplates": "Common work-order templates: {templates}.",
       "commonTemplatesEmpty": "Common work-order templates: nothing to do.",
-      "installFailed": "Install failed: {error}"
+      "installFailed": "Install failed: {error}",
+      "commonLoops": "Common loops: {loops}.",
+      "commonLoopsEmpty": "Common loops: nothing to do.",
+      "loopFolderName": "Loop folder",
+      "loopFolderDesc": "Folder where loop notes are stored.",
+      "installLoopsName": "Install common loops",
+      "installLoopsDesc": "Add a starter set of loop notes to the loop folder."
     },
     "maxChatTabs": {
       "name": "Max chat tabs",
@@ -840,6 +846,44 @@
       "saveFailed": "Save failed: {error}",
       "deleteFailed": "Delete failed: {error}"
     },
+    "loop": {
+      "nameRequired": "A loop needs a name.",
+      "bodyRequired": "A loop needs an approach or steps.",
+      "saveFailed": "Could not save loop: {error}",
+      "deleteFailed": "Could not delete loop: {error}"
+    },
+    "loopPicker": {
+      "title": "Attach a loop",
+      "lead": "Pick a loop to guide this work order, or choose No loop.",
+      "newLoop": "New loop",
+      "noneTitle": "No loop",
+      "noneDesc": "Run the work order without an attached loop.",
+      "useWhenLabel": "Use when:",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "loopEditor": {
+      "titleNew": "New loop",
+      "titleEdit": "Edit loop",
+      "nameName": "Name",
+      "nameDesc": "A short, memorable loop name.",
+      "descriptionName": "Description",
+      "descriptionDesc": "One line shown in the picker.",
+      "iconName": "Icon",
+      "iconDesc": "Lucide icon for the loop.",
+      "useWhenName": "Use when",
+      "useWhenDesc": "Selection guidance — not sent to the agent.",
+      "approachName": "Approach",
+      "approachDesc": "The core playbook the agent follows.",
+      "stepsName": "Steps",
+      "stepsDesc": "Ordered steps to work through.",
+      "verifyName": "Verify",
+      "verifyDesc": "How the agent confirms success.",
+      "notesName": "Notes",
+      "notesDesc": "Gotchas and guardrails.",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
     "create": {
       "noActiveNote": "Open a note to create a work order from it.",
       "noSelection": "Select text in a note to create a work order from it.",
@@ -879,6 +923,8 @@
       "fieldUpdated": "Updated",
       "fieldAttempts": "Attempts",
       "fieldConversation": "Conversation",
+      "fieldLoop": "Loop",
+      "loopNone": "No loop",
       "sectionHandoff": "Agent handoff",
       "sectionRunLedger": "Run ledger",
       "handoffSummary": "Summary",
@@ -932,7 +978,10 @@
       "bodyName": "Body",
       "bodyDesc": "Текст шаблона. Подстановки: {{title}}, {{date}}, {{source}}.",
       "save": "Сохранить",
-      "cancel": "Отмена"
+      "cancel": "Отмена",
+      "loopName": "Default loop",
+      "loopDesc": "Loop attached to every work order created from this template.",
+      "loopNone": "No loop"
     },
     "templatePicker": {
       "title": "Шаблон рабочего задания",
@@ -1105,12 +1154,26 @@
     "actionFailed": "Something went wrong — check the developer console.",
     "providerVault": "Vault"
   },
+  "loopLibrary": {
+    "navLabel": "Loops",
+    "title": "Loop library",
+    "newLoop": "New loop",
+    "installStarter": "Install starter loops",
+    "empty": "No loops yet. Create one to reuse a playbook across work orders.",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Delete the loop \"{name}\"?",
+    "deleted": "Deleted {name}.",
+    "useWhenLabel": "Use when:",
+    "actionFailed": "Something went wrong — check the developer console."
+  },
   "ribbon": {
     "openChat": "Open Co-Worker Chat",
     "openAgentBoard": "Open Agent Board",
     "openAgentRoster": "Open Agent Roster",
     "openToolLibrary": "Open Tool Library",
-    "openSkillLibrary": "Open Skill Library"
+    "openSkillLibrary": "Open Skill Library",
+    "openLoopLibrary": "Open loop library"
   },
   "commands": {
     "openView": "Open chat view",
@@ -1131,6 +1194,7 @@
     "closeCurrentTab": "Close current tab",
     "openAgentRoster": "Open Agent Roster",
     "openToolLibrary": "Open Tool Library",
-    "openSkillLibrary": "Open Skill Library"
+    "openSkillLibrary": "Open Skill Library",
+    "openLoopLibrary": "Open loop library"
   }
 }

@@ -209,6 +209,7 @@ export interface ClaudianSettings {
   // Agent Board
   agentBoardWorkOrderFolder: string;
   agentBoardTemplateFolder: string;
+  agentBoardLoopFolder: string;
   agentBoardArchiveFolder: string;
   agentBoardDefaultProvider: ProviderId | null;
   agentBoardDefaultModel: string | null;

@@ -92,6 +92,7 @@ export interface WorkOrderMarkdownBuilders {
     model: string;
     conversationId: string | null;
     body: string;
+    loop?: string;
   }): string;
   fromSeed(args: {
     id: string;
@@ -158,5 +159,6 @@ export function buildWorkOrderMarkdownForSeed(
     model: target.model,
     conversationId: ctx.conversationId,
     body: rendered.body,
+    loop: template.loop,
   });
 }

@@ -19,6 +19,8 @@ export interface WorkOrderFieldUpdate {
   provider?: string;
   model?: string;
   priority?: TaskPriority;
+  /** Attached loop slug; empty string detaches. */
+  loop?: string;
 }
 
 export interface WorkOrderOption {
@@ -52,6 +54,14 @@ export interface WorkOrderDetailModalCallbacks {
   onSaveSections?(task: TaskSpec, sections: WorkOrderSectionUpdate): void | Promise<void>;
   getProviderOptions(): WorkOrderOption[];
   getModelOptions(providerId: string): WorkOrderOption[];
+  /**
+   * Open the loop picker for this task, persist the choice, and resolve to the
+   * new loop slug (`''` when detached) or `undefined` when cancelled — so the
+   * caller can update the (non-native) loop chip in place.
+   */
+  onPickLoop?(task: TaskSpec): Promise<string | undefined>;
+  /** Resolve the task's attached loop slug to a display name (sync, best-effort). */
+  getLoopName?(loopId: string | undefined): string | undefined;
   /**
    * Combined persona + roster agent options for the agent picker. Preloaded at
    * modal-open time by the caller so `renderAgentRow` stays synchronous.
@@ -170,8 +180,8 @@ export class WorkOrderDetailModal extends Modal {
     if (this.isEditableStatus()) this.renderEditToggle(main);
     this.renderObjective(main);
     this.renderAcceptance(main);
-    this.renderContext(main);
-    this.renderConstraints(main);
+    this.renderProseSection(main, 'link', 'tasks.workOrderModal.sectionContext', this.task.sections.context);
+    this.renderProseSection(main, 'shield', 'tasks.workOrderModal.sectionConstraints', this.task.sections.constraints);
     renderWorkOrderActivity(main, {
       task: this.task,
       app: this.app,
@@ -359,25 +369,12 @@ export class WorkOrderDetailModal extends Modal {
   }
 
   /**
-   * Context + Constraints: prose sections rendered through `MarkdownRenderer`
-   * (links / wikilinks / code stay live), mirroring Objective. They round out
-   * the modal so the whole work order is readable — and, via the Edit toggle,
-   * fillable — without opening the note. An empty section shows the em-dash
-   * placeholder rather than collapsing, so the document structure stays visible.
+   * Context + Constraints prose: rendered through `MarkdownRenderer` (links /
+   * wikilinks / code stay live), mirroring Objective. They round out the modal
+   * so the whole work order is readable — and, via the Edit toggle, fillable —
+   * without opening the note. An empty section shows the em-dash placeholder
+   * rather than collapsing, so the document structure stays visible.
    */
-  private renderContext(parent: HTMLElement): void {
-    this.renderProseSection(parent, 'link', 'tasks.workOrderModal.sectionContext', this.task.sections.context);
-  }
-
-  private renderConstraints(parent: HTMLElement): void {
-    this.renderProseSection(
-      parent,
-      'shield',
-      'tasks.workOrderModal.sectionConstraints',
-      this.task.sections.constraints,
-    );
-  }
-
   private renderProseSection(
     parent: HTMLElement,
     icon: string,
