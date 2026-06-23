@@ -5,7 +5,7 @@ function task(id: string, status: TaskStatus, title = id, sidepanelTabId?: strin
   return {
     path: `Agent Board/tasks/${id}.md`,
     frontmatter: {
-      type: 'claudian-work-order',
+      type: 'specorator-work-order',
       schema_version: 1,
       id,
       title,

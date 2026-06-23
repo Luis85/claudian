@@ -63,13 +63,13 @@ function makeFakeAdapter(options: FakeAdapterOptions = {}) {
 }
 
 describe('RunSidecarStore.heartbeat', () => {
-  it('round-trips a heartbeat record under .claudian/runs/<runId>/heartbeat.json', async () => {
+  it('round-trips a heartbeat record under .specorator/runs/<runId>/heartbeat.json', async () => {
     const { adapter, files } = makeFakeAdapter();
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
 
     await store.writeHeartbeat('run-abc', { at: '2026-06-06T12:00:00.000Z', status: 'running' });
 
-    expect(files.get('.claudian/runs/run-abc/heartbeat.json')).toContain('"status": "running"');
+    expect(files.get('.specorator/runs/run-abc/heartbeat.json')).toContain('"status": "running"');
     expect(await store.readHeartbeat('run-abc')).toEqual({
       at: '2026-06-06T12:00:00.000Z',
       status: 'running',
@@ -78,7 +78,7 @@ describe('RunSidecarStore.heartbeat', () => {
 
   it('returns null when no heartbeat exists', async () => {
     const { adapter } = makeFakeAdapter();
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
 
     expect(await store.readHeartbeat('nope')).toBeNull();
   });
@@ -88,7 +88,7 @@ describe('RunSidecarStore.heartbeat', () => {
     // Orphan recovery uses a mismatch to detect "previous plugin load" sidecars
     // immediately, without waiting for the 5-minute stale window.
     const { adapter } = makeFakeAdapter();
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
 
     await store.writeHeartbeat('run-rt', {
       at: '2026-06-06T12:00:00.000Z',
@@ -105,9 +105,9 @@ describe('RunSidecarStore.heartbeat', () => {
 });
 
 describe('RunSidecarStore.ledger', () => {
-  it('appends JSONL entries to .claudian/runs/<runId>/ledger.jsonl', async () => {
+  it('appends JSONL entries to .specorator/runs/<runId>/ledger.jsonl', async () => {
     const { adapter, files } = makeFakeAdapter();
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
 
     await store.appendLedger('run-1', {
       timestamp: '2026-06-06T12:00:00.000Z',
@@ -120,7 +120,7 @@ describe('RunSidecarStore.ledger', () => {
       message: 'progress: scanning files',
     });
 
-    const raw = files.get('.claudian/runs/run-1/ledger.jsonl') as string;
+    const raw = files.get('.specorator/runs/run-1/ledger.jsonl') as string;
     expect(raw.split('\n').filter((l) => l.length > 0)).toHaveLength(2);
     const entries = await store.readLedger('run-1');
     expect(entries.map((e) => e.message)).toEqual([
@@ -131,19 +131,19 @@ describe('RunSidecarStore.ledger', () => {
 
   it('returns [] for a missing ledger file', async () => {
     const { adapter } = makeFakeAdapter();
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
     expect(await store.readLedger('nope')).toEqual([]);
   });
 
   it('readLedger skips malformed JSONL lines and returns the rest', async () => {
     const { adapter, files } = makeFakeAdapter();
     files.set(
-      '.claudian/runs/r/ledger.jsonl',
+      '.specorator/runs/r/ledger.jsonl',
       `${JSON.stringify({ timestamp: 'a', status: 'running', message: 'one' })}\n` +
         '{ broken\n' +
         `${JSON.stringify({ timestamp: 'b', status: 'running', message: 'two' })}\n`,
     );
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
     const entries = await store.readLedger('r');
     expect(entries.map((e) => e.message)).toEqual(['one', 'two']);
   });
@@ -151,11 +151,11 @@ describe('RunSidecarStore.ledger', () => {
   it('readLedger tolerates CRLF line endings', async () => {
     const { adapter, files } = makeFakeAdapter();
     files.set(
-      '.claudian/runs/r/ledger.jsonl',
+      '.specorator/runs/r/ledger.jsonl',
       `${JSON.stringify({ timestamp: 'a', status: 'running', message: 'one' })}\r\n` +
         `${JSON.stringify({ timestamp: 'b', status: 'running', message: 'two' })}\r\n`,
     );
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
     expect((await store.readLedger('r')).map((e) => e.message)).toEqual(['one', 'two']);
   });
 });
@@ -163,7 +163,7 @@ describe('RunSidecarStore.ledger', () => {
 describe('RunSidecarStore.snapshotLedgerAsMarkdown', () => {
   it('renders ledger entries as one markdown line each, matching TaskNoteStore.appendLedger format', async () => {
     const { adapter } = makeFakeAdapter();
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
 
     await store.appendLedger('run-7', {
       timestamp: '2026-06-06T12:00:00.000Z',
@@ -185,19 +185,19 @@ describe('RunSidecarStore.snapshotLedgerAsMarkdown', () => {
 
   it('returns empty string for a missing ledger', async () => {
     const { adapter } = makeFakeAdapter();
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
     expect(await store.snapshotLedgerAsMarkdown('nope')).toBe('');
   });
 
   it('survives one bad line and keeps the rest', async () => {
     const { adapter, files } = makeFakeAdapter();
     files.set(
-      '.claudian/runs/r/ledger.jsonl',
+      '.specorator/runs/r/ledger.jsonl',
       `${JSON.stringify({ timestamp: 't1', status: 'running', message: 'one' })}\n` +
         '{ broken\n' +
         `${JSON.stringify({ timestamp: 't2', status: 'review', message: 'two' })}\n`,
     );
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
     expect(await store.snapshotLedgerAsMarkdown('r')).toBe(
       '- t1 [running] one\n- t2 [review] two',
     );
@@ -205,7 +205,7 @@ describe('RunSidecarStore.snapshotLedgerAsMarkdown', () => {
 
   it('flattens embedded newlines so one ledger entry stays one markdown line', async () => {
     const { adapter } = makeFakeAdapter();
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
     await store.appendLedger('run-x', {
       timestamp: 't',
       status: 'running',
@@ -219,20 +219,20 @@ describe('RunSidecarStore.snapshotLedgerAsMarkdown', () => {
 });
 
 describe('RunSidecarStore.ensureRunDir', () => {
-  it('creates baseDir and parent .claudian when nothing exists', async () => {
+  it('creates baseDir and parent .specorator when nothing exists', async () => {
     const { adapter, mkdirs } = makeFakeAdapter({ trackMkdir: true });
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
 
     await store.writeHeartbeat('run-x', { at: '2026-06-06T00:00:00Z', status: 'running' });
 
-    expect(mkdirs).toContain('.claudian');
-    expect(mkdirs).toContain('.claudian/runs');
-    expect(mkdirs).toContain('.claudian/runs/run-x');
+    expect(mkdirs).toContain('.specorator');
+    expect(mkdirs).toContain('.specorator/runs');
+    expect(mkdirs).toContain('.specorator/runs/run-x');
   });
 
   it('handles concurrent first-write to the same runId without throwing', async () => {
     const { adapter } = makeFakeAdapter({ rejectDuplicateMkdir: true });
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
 
     await expect(
       Promise.all([
@@ -246,26 +246,26 @@ describe('RunSidecarStore.ensureRunDir', () => {
 describe('RunSidecarStore.cleanupRun', () => {
   it('removes the run dir and its contents', async () => {
     const { adapter, files } = makeFakeAdapter();
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
     await store.writeHeartbeat('r', { at: 't', status: 'running' });
     await store.appendLedger('r', { timestamp: 't', status: 'running', message: 'm' });
-    expect(files.has('.claudian/runs/r/heartbeat.json')).toBe(true);
+    expect(files.has('.specorator/runs/r/heartbeat.json')).toBe(true);
 
     await store.cleanupRun('r');
 
-    expect(files.has('.claudian/runs/r/heartbeat.json')).toBe(false);
-    expect(files.has('.claudian/runs/r/ledger.jsonl')).toBe(false);
+    expect(files.has('.specorator/runs/r/heartbeat.json')).toBe(false);
+    expect(files.has('.specorator/runs/r/ledger.jsonl')).toBe(false);
   });
 
   it('is a no-op when the run dir does not exist', async () => {
     const { adapter } = makeFakeAdapter();
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
     await expect(store.cleanupRun('nope')).resolves.toBeUndefined();
   });
 
   it('swallows a transient rmdir failure rather than poisoning the terminal path', async () => {
     const { adapter } = makeFakeAdapter();
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
     await store.writeHeartbeat('r', { at: 't', status: 'running' });
     adapter.rmdir = jest.fn(async () => { throw new Error('boom'); }) as unknown as DataAdapter['rmdir'];
 
@@ -276,13 +276,13 @@ describe('RunSidecarStore.cleanupRun', () => {
 describe('RunSidecarStore.listRuns', () => {
   it('returns [] when baseDir does not exist', async () => {
     const { adapter } = makeFakeAdapter();
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
     expect(await store.listRuns()).toEqual([]);
   });
 
   it('returns the run-id subfolders under baseDir', async () => {
     const { adapter } = makeFakeAdapter();
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
     // Seed two sidecars so the per-run directories exist on disk.
     await store.writeHeartbeat('run-a', { at: 't', status: 'running' });
     await store.writeHeartbeat('run-b', { at: 't', status: 'running' });
@@ -293,7 +293,7 @@ describe('RunSidecarStore.listRuns', () => {
 
   it('returns [] when the underlying list call throws', async () => {
     const { adapter } = makeFakeAdapter();
-    const store = new RunSidecarStore(adapter, '.claudian/runs');
+    const store = new RunSidecarStore(adapter, '.specorator/runs');
     await store.writeHeartbeat('run-a', { at: 't', status: 'running' });
     adapter.list = jest.fn(async () => { throw new Error('boom'); }) as unknown as DataAdapter['list'];
 

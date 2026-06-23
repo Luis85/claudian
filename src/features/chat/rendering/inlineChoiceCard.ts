@@ -125,18 +125,18 @@ export class InlineChoiceList {
   private renderRow(listEl: HTMLElement, spec: InlineChoiceRowSpec, index: number): void {
     const isInput = spec.kind === 'input';
     const row = listEl.createDiv({
-      cls: isInput ? 'claudian-ask-item claudian-ask-custom-item' : 'claudian-ask-item',
+      cls: isInput ? 'specorator-ask-item specorator-ask-custom-item' : 'specorator-ask-item',
     });
     if (index === 0) {
       row.addClass('is-focused');
     }
-    row.createSpan({ text: index === 0 ? '\u203A' : '\u00A0', cls: 'claudian-ask-cursor' });
-    row.createSpan({ text: `${index + 1}. `, cls: 'claudian-ask-item-num' });
+    row.createSpan({ text: index === 0 ? '\u203A' : '\u00A0', cls: 'specorator-ask-cursor' });
+    row.createSpan({ text: `${index + 1}. `, cls: 'specorator-ask-item-num' });
 
     if (spec.kind === 'input') {
       const input = row.createEl('input', {
         type: 'text',
-        cls: 'claudian-ask-custom-text',
+        cls: 'specorator-ask-custom-text',
         placeholder: spec.placeholder,
       });
       input.addEventListener('focus', () => { this.isInputFocused = true; });
@@ -147,7 +147,7 @@ export class InlineChoiceList {
       });
       this.inputEl = input;
     } else {
-      row.createSpan({ text: spec.label, cls: 'claudian-ask-item-label' });
+      row.createSpan({ text: spec.label, cls: 'specorator-ask-item-label' });
       row.addEventListener('click', () => {
         this.focusedIndex = index;
         this.updateFocus();
@@ -193,13 +193,13 @@ export class InlineChoiceList {
   }
 
   private setCursor(item: HTMLElement, text: string): void {
-    const cursor = item.querySelector('.claudian-ask-cursor');
+    const cursor = item.querySelector('.specorator-ask-cursor');
     if (cursor) cursor.textContent = text;
   }
 
   /** The custom-text input inside a free-text row, or null for action rows. */
   private customInputOf(item: HTMLElement): HTMLInputElement | null {
-    if (!item.hasClass('claudian-ask-custom-item')) return null;
-    return item.querySelector<HTMLInputElement>('.claudian-ask-custom-text');
+    if (!item.hasClass('specorator-ask-custom-item')) return null;
+    return item.querySelector<HTMLInputElement>('.specorator-ask-custom-text');
   }
 }

@@ -36,7 +36,7 @@ describe('TabBar', () => {
 
       new TabBar(containerEl, callbacks);
 
-      expect(containerEl._classList.has('claudian-tab-badges')).toBe(true);
+      expect(containerEl._classList.has('specorator-tab-badges')).toBe(true);
     });
 
     it('marks the container as the tablist enclosing the role=tab badges', () => {
@@ -128,7 +128,7 @@ describe('TabBar', () => {
 
       tabBar.update([createTabBarItem({ isActive: false, isStreaming: false, needsAttention: false })]);
 
-      expect(containerEl._children[0]._classList.has('claudian-tab-badge-idle')).toBe(true);
+      expect(containerEl._children[0]._classList.has('specorator-tab-badge-idle')).toBe(true);
     });
 
     it('should apply active class for active tab', () => {
@@ -138,7 +138,7 @@ describe('TabBar', () => {
 
       tabBar.update([createTabBarItem({ isActive: true })]);
 
-      expect(containerEl._children[0]._classList.has('claudian-tab-badge-active')).toBe(true);
+      expect(containerEl._children[0]._classList.has('specorator-tab-badge-active')).toBe(true);
     });
 
     it('should apply working class for streaming tab', () => {
@@ -148,7 +148,7 @@ describe('TabBar', () => {
 
       tabBar.update([createTabBarItem({ isStreaming: true })]);
 
-      expect(containerEl._children[0]._classList.has('claudian-tab-badge-working')).toBe(true);
+      expect(containerEl._children[0]._classList.has('specorator-tab-badge-working')).toBe(true);
     });
 
     it('should stack working class with active tab', () => {
@@ -158,8 +158,8 @@ describe('TabBar', () => {
       tabBar.update([createTabBarItem({ isActive: true, isStreaming: true })]);
 
       const badge = containerEl._children[0];
-      expect(badge._classList.has('claudian-tab-badge-active')).toBe(true);
-      expect(badge._classList.has('claudian-tab-badge-working')).toBe(true);
+      expect(badge._classList.has('specorator-tab-badge-active')).toBe(true);
+      expect(badge._classList.has('specorator-tab-badge-working')).toBe(true);
       expect(badge.getAttribute('aria-busy')).toBe('true');
       expect(badge.getAttribute('data-working')).toBe('true');
       expect(badge.getAttribute('aria-label')).toContain('(working)');
@@ -172,7 +172,7 @@ describe('TabBar', () => {
       tabBar.update([createTabBarItem({ isStreaming: true, isActive: false })]);
 
       const badge = containerEl._children[0];
-      expect(badge._classList.has('claudian-tab-badge-working')).toBe(true);
+      expect(badge._classList.has('specorator-tab-badge-working')).toBe(true);
       expect(badge.getAttribute('data-working')).toBe('true');
     });
 
@@ -183,7 +183,7 @@ describe('TabBar', () => {
 
       tabBar.update([createTabBarItem({ needsAttention: true })]);
 
-      expect(containerEl._children[0]._classList.has('claudian-tab-badge-attention')).toBe(true);
+      expect(containerEl._children[0]._classList.has('specorator-tab-badge-attention')).toBe(true);
     });
 
     it('should stack active and attention classes when both apply', () => {
@@ -193,8 +193,8 @@ describe('TabBar', () => {
 
       tabBar.update([createTabBarItem({ isActive: true, needsAttention: true })]);
 
-      expect(containerEl._children[0]._classList.has('claudian-tab-badge-active')).toBe(true);
-      expect(containerEl._children[0]._classList.has('claudian-tab-badge-attention')).toBe(true);
+      expect(containerEl._children[0]._classList.has('specorator-tab-badge-active')).toBe(true);
+      expect(containerEl._children[0]._classList.has('specorator-tab-badge-attention')).toBe(true);
     });
 
     it('should stack attention and working classes when both apply', () => {
@@ -204,8 +204,8 @@ describe('TabBar', () => {
 
       tabBar.update([createTabBarItem({ isStreaming: true, needsAttention: true })]);
 
-      expect(containerEl._children[0]._classList.has('claudian-tab-badge-attention')).toBe(true);
-      expect(containerEl._children[0]._classList.has('claudian-tab-badge-working')).toBe(true);
+      expect(containerEl._children[0]._classList.has('specorator-tab-badge-attention')).toBe(true);
+      expect(containerEl._children[0]._classList.has('specorator-tab-badge-working')).toBe(true);
     });
   });
 
@@ -498,7 +498,7 @@ describe('TabBar', () => {
       tabBar.update([createTabBarItem({ index: 2, isAgentBound: true })]);
 
       const icon = containerEl._children[0]._children.find((c: MockElement) =>
-        c.hasClass('claudian-tab-badge-agent-icon'),
+        c.hasClass('specorator-tab-badge-agent-icon'),
       );
       expect(icon?.getAttribute('aria-hidden')).toBe('true');
     });
@@ -523,11 +523,11 @@ describe('TabBar', () => {
       const callbacks = createMockCallbacks();
       const tabBar = new TabBar(containerEl, callbacks);
 
-      expect(containerEl._classList.has('claudian-tab-badges')).toBe(true);
+      expect(containerEl._classList.has('specorator-tab-badges')).toBe(true);
 
       tabBar.destroy();
 
-      expect(containerEl._classList.has('claudian-tab-badges')).toBe(false);
+      expect(containerEl._classList.has('specorator-tab-badges')).toBe(false);
     });
   });
 
@@ -539,9 +539,9 @@ describe('TabBar', () => {
       tabBar.update([createTabBarItem({ index: 2, isAgentBound: true, title: 'My chat' })]);
 
       const badge = containerEl._children[0];
-      expect(badge.hasClass('claudian-tab-badge--agent')).toBe(true);
-      expect(badge._children.some((c: MockElement) => c.hasClass('claudian-tab-badge-agent-icon'))).toBe(true);
-      const number = badge._children.find((c: MockElement) => c.hasClass('claudian-tab-badge-number'));
+      expect(badge.hasClass('specorator-tab-badge--agent')).toBe(true);
+      expect(badge._children.some((c: MockElement) => c.hasClass('specorator-tab-badge-agent-icon'))).toBe(true);
+      const number = badge._children.find((c: MockElement) => c.hasClass('specorator-tab-badge-number'));
       expect(number?.textContent).toBe('2');
       expect(badge.getAttribute('aria-label')).toBe('My chat (agent)');
     });
@@ -553,8 +553,8 @@ describe('TabBar', () => {
       tabBar.update([createTabBarItem({ index: 3 })]);
 
       const badge = containerEl._children[0];
-      expect(badge.hasClass('claudian-tab-badge--agent')).toBe(false);
-      expect(badge._children.some((c: MockElement) => c.hasClass('claudian-tab-badge-agent-icon'))).toBe(false);
+      expect(badge.hasClass('specorator-tab-badge--agent')).toBe(false);
+      expect(badge._children.some((c: MockElement) => c.hasClass('specorator-tab-badge-agent-icon'))).toBe(false);
       expect(badge.textContent).toBe('3');
     });
 
@@ -565,8 +565,8 @@ describe('TabBar', () => {
       tabBar.update([createTabBarItem({ kind: 'work-order', isAgentBound: true })]);
 
       const badge = containerEl._children[0];
-      expect(badge.hasClass('claudian-tab-badge--agent')).toBe(false);
-      expect(badge._children.some((c: MockElement) => c.hasClass('claudian-tab-badge-agent-icon'))).toBe(false);
+      expect(badge.hasClass('specorator-tab-badge--agent')).toBe(false);
+      expect(badge._children.some((c: MockElement) => c.hasClass('specorator-tab-badge-agent-icon'))).toBe(false);
     });
   });
 });

@@ -1,5 +1,5 @@
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
-import { asSettingsBag, type ClaudianSettings } from '../../core/types/settings';
+import { asSettingsBag, type SpecoratorSettings } from '../../core/types/settings';
 import { resolveAgentBoardDefaultProvider } from './defaultProviderResolver';
 
 /**
@@ -11,7 +11,7 @@ import { resolveAgentBoardDefaultProvider } from './defaultProviderResolver';
  *   3. Otherwise fall back to the provider's first model option (its conventional default).
  *   4. If the provider has no models, return null.
  */
-export function resolveAgentBoardDefaultModel(settings: ClaudianSettings): string | null {
+export function resolveAgentBoardDefaultModel(settings: SpecoratorSettings): string | null {
   const provider = resolveAgentBoardDefaultProvider(settings);
   if (!provider) return null;
 

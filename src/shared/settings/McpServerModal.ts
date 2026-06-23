@@ -89,7 +89,7 @@ export class McpServerModal extends Modal {
 
   onOpen() {
     this.setTitle(this.existingServer ? 'Edit MCP Server' : 'Add MCP Server');
-    this.modalEl.addClass('claudian-mcp-modal');
+    this.modalEl.addClass('specorator-mcp-modal');
 
     const { contentEl } = this;
 
@@ -120,7 +120,7 @@ export class McpServerModal extends Modal {
         });
       });
 
-    this.typeFieldsEl = contentEl.createDiv({ cls: 'claudian-mcp-type-fields' });
+    this.typeFieldsEl = contentEl.createDiv({ cls: 'specorator-mcp-type-fields' });
     this.renderTypeFields();
 
     new Setting(contentEl)
@@ -144,9 +144,9 @@ export class McpServerModal extends Modal {
       });
 
     renderModalButtonRow(contentEl, {
-      cls: 'claudian-mcp-buttons',
+      cls: 'specorator-mcp-buttons',
       saveText: this.existingServer ? 'Update' : 'Add',
-      saveCls: 'claudian-save-btn mod-cta',
+      saveCls: 'specorator-save-btn mod-cta',
       onCancel: () => this.close(),
       onSave: () => this.save(),
     });
@@ -169,10 +169,10 @@ export class McpServerModal extends Modal {
     const cmdSetting = new Setting(this.typeFieldsEl)
       .setName('Command')
       .setDesc('Full command with arguments');
-    cmdSetting.settingEl.addClass('claudian-mcp-cmd-setting');
+    cmdSetting.settingEl.addClass('specorator-mcp-cmd-setting');
 
     const cmdTextarea = cmdSetting.controlEl.createEl('textarea', {
-      cls: 'claudian-mcp-cmd-textarea',
+      cls: 'specorator-mcp-cmd-textarea',
     });
     cmdTextarea.value = this.command;
     cmdTextarea.placeholder = 'Docker exec -i mcp-server python -m src.server';
@@ -184,10 +184,10 @@ export class McpServerModal extends Modal {
     const envSetting = new Setting(this.typeFieldsEl)
       .setName('Environment variables')
       .setDesc('Key=value per line (optional)');
-    envSetting.settingEl.addClass('claudian-mcp-env-setting');
+    envSetting.settingEl.addClass('specorator-mcp-env-setting');
 
     const envTextarea = envSetting.controlEl.createEl('textarea', {
-      cls: 'claudian-mcp-env-textarea',
+      cls: 'specorator-mcp-env-textarea',
     });
     envTextarea.value = this.env;
     envTextarea.placeholder = 'API_key=your-key';
@@ -215,10 +215,10 @@ export class McpServerModal extends Modal {
     const headersSetting = new Setting(this.typeFieldsEl)
       .setName('Headers')
       .setDesc('HTTP headers (key=value per line)');
-    headersSetting.settingEl.addClass('claudian-mcp-env-setting');
+    headersSetting.settingEl.addClass('specorator-mcp-env-setting');
 
     const headersTextarea = headersSetting.controlEl.createEl('textarea', {
-      cls: 'claudian-mcp-env-textarea',
+      cls: 'specorator-mcp-env-textarea',
     });
     headersTextarea.value = this.headers;
     headersTextarea.placeholder = 'Authorization=bearer token\ncontent-type=application/JSON';

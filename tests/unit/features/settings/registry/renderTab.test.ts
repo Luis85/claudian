@@ -18,7 +18,7 @@ jest.mock('../../../../../src/core/providers/ProviderRegistry', () => ({
 
 import { Setting } from 'obsidian';
 
-import type { ClaudianSettings } from '../../../../../src/core/types/settings';
+import type { SpecoratorSettings } from '../../../../../src/core/types/settings';
 import { renderTab } from '../../../../../src/features/settings/registry/renderTab';
 import type {
   SettingsCtx,
@@ -36,7 +36,7 @@ import { renderField } from '../../../../../src/features/settings/registry/rende
 
 function makeCtx(initial: Record<string, unknown> = {}): SettingsCtx {
   return {
-    settings: { ...initial } as unknown as ClaudianSettings,
+    settings: { ...initial } as unknown as SpecoratorSettings,
     saveSettings: jest.fn().mockResolvedValue(undefined),
     refresh: jest.fn(),
     // Plugin handle is exercised by F4/F5 widget tests; renderTab only
@@ -91,7 +91,7 @@ describe('renderTab', () => {
     (Setting as any).instances = [];
     renderTab(host, 'general', ctx, registry);
 
-    const sections = host.querySelectorAll('.claudian-settings-section');
+    const sections = host.querySelectorAll('.specorator-settings-section');
     expect(sections).toHaveLength(2);
 
     const headingCalls = (Setting as any).instances
@@ -99,9 +99,9 @@ describe('renderTab', () => {
       .map((s: any) => s.setName.mock.calls[0][0]);
     expect(headingCalls).toEqual(['Section One', 'Section Two']);
 
-    const fieldsInS1 = sections[0].querySelectorAll('.claudian-settings-field');
+    const fieldsInS1 = sections[0].querySelectorAll('.specorator-settings-field');
     expect(fieldsInS1).toHaveLength(2);
-    const fieldsInS2 = sections[1].querySelectorAll('.claudian-settings-field');
+    const fieldsInS2 = sections[1].querySelectorAll('.specorator-settings-field');
     expect(fieldsInS2).toHaveLength(2);
 
     expect((renderField as jest.Mock)).toHaveBeenCalledTimes(4);
@@ -120,7 +120,7 @@ describe('renderTab', () => {
     const host = document.createElement('div');
     renderTab(host, 'general', makeCtx(), registry);
 
-    const sections = host.querySelectorAll('.claudian-settings-section');
+    const sections = host.querySelectorAll('.specorator-settings-section');
     expect(sections).toHaveLength(1);
     expect(sections[0].getAttribute('data-section-id')).toBe('visible');
     expect((renderField as jest.Mock)).toHaveBeenCalledTimes(1);
@@ -137,7 +137,7 @@ describe('renderTab', () => {
     const host = document.createElement('div');
     renderTab(host, 'general', makeCtx(), registry);
 
-    const sections = host.querySelectorAll('.claudian-settings-section');
+    const sections = host.querySelectorAll('.specorator-settings-section');
     expect(Array.from(sections).map((s) => s.getAttribute('data-section-id'))).toEqual([
       's1',
       's2',
@@ -154,7 +154,7 @@ describe('renderTab', () => {
     const host = document.createElement('div');
     renderTab(host, 'general', makeCtx({ firstRunDismissed: true }), registry);
 
-    const sections = host.querySelectorAll('.claudian-settings-section');
+    const sections = host.querySelectorAll('.specorator-settings-section');
     expect(sections).toHaveLength(1);
     expect(sections[0].getAttribute('data-section-id')).toBe('withFields');
     expect((renderField as jest.Mock)).toHaveBeenCalledTimes(1);
@@ -170,7 +170,7 @@ describe('renderTab', () => {
     const host = document.createElement('div');
     renderTab(host, 'general', makeCtx(), registry);
 
-    const fields = host.querySelectorAll('.claudian-settings-field');
+    const fields = host.querySelectorAll('.specorator-settings-field');
     expect(Array.from(fields).map((f) => f.getAttribute('data-field-id'))).toEqual([
       'alpha.beta',
       'gamma.delta',
@@ -209,8 +209,8 @@ describe('renderTab', () => {
     renderTab(host, 'general', ctx, registry);
     renderTab(host, 'general', ctx, registry);
 
-    expect(host.querySelectorAll('.claudian-settings-section')).toHaveLength(1);
-    expect(host.querySelectorAll('.claudian-settings-field')).toHaveLength(1);
+    expect(host.querySelectorAll('.specorator-settings-section')).toHaveLength(1);
+    expect(host.querySelectorAll('.specorator-settings-field')).toHaveLength(1);
   });
 
   it('renders nothing when the tab has no visible sections', () => {
@@ -263,7 +263,7 @@ describe('renderTab', () => {
     });
 
     it('disposers from a prior render do not leak into a new render on a different host', () => {
-      // Repro of the Agent Board lane-editor freeze: each ClaudianSettings.display()
+      // Repro of the Agent Board lane-editor freeze: each SpecoratorSettings.display()
       // creates a fresh tab-content div, so a WeakMap keyed by host can never find
       // the previous disposers. The caller must hold the returned disposers and run
       // them before destroying the old host.
@@ -296,7 +296,7 @@ describe('renderTab', () => {
       // The previous WeakMap implementation auto-disposed prior disposers when
       // a host was re-rendered. That coupling masked the cross-host bug because
       // callers never had to think about lifecycle. The new contract puts the
-      // caller in charge: ClaudianSettings.display() drains its own disposer
+      // caller in charge: SpecoratorSettings.display() drains its own disposer
       // array at the top before re-rendering, and tests must lock that
       // ownership in so a future "convenience" auto-dispose cannot silently
       // come back.
@@ -378,16 +378,16 @@ describe('renderTab', () => {
 
       renderTab(host, 'general', ctx, registry);
 
-      const bannerHost = host.querySelector('.claudian-first-run-banner-host');
+      const bannerHost = host.querySelector('.specorator-first-run-banner-host');
       expect(bannerHost).not.toBeNull();
 
-      const firstSection = host.querySelector('.claudian-settings-section');
+      const firstSection = host.querySelector('.specorator-settings-section');
       expect(firstSection).not.toBeNull();
       const children = Array.from(host.children);
       expect(children.indexOf(bannerHost as Element)).toBeLessThan(
         children.indexOf(firstSection as Element),
       );
-      expect(host.querySelector('.claudian-first-run-banner')).not.toBeNull();
+      expect(host.querySelector('.specorator-first-run-banner')).not.toBeNull();
     });
 
     it('omits the banner when firstRunDismissed is true', () => {
@@ -397,7 +397,7 @@ describe('renderTab', () => {
 
       renderTab(host, 'general', ctx, registry);
 
-      expect(host.querySelector('.claudian-first-run-banner-host')).toBeNull();
+      expect(host.querySelector('.specorator-first-run-banner-host')).toBeNull();
     });
 
     it('omits the banner when any provider is enabled', () => {
@@ -410,7 +410,7 @@ describe('renderTab', () => {
 
       renderTab(host, 'general', ctx, registry);
 
-      expect(host.querySelector('.claudian-first-run-banner-host')).toBeNull();
+      expect(host.querySelector('.specorator-first-run-banner-host')).toBeNull();
     });
 
     it('omits the banner on non-general tabs even when conditions otherwise match', () => {
@@ -424,7 +424,7 @@ describe('renderTab', () => {
 
       renderTab(host, 'claude', ctx, registry);
 
-      expect(host.querySelector('.claudian-first-run-banner-host')).toBeNull();
+      expect(host.querySelector('.specorator-first-run-banner-host')).toBeNull();
     });
   });
 });

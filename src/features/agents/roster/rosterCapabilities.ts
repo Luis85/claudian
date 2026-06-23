@@ -1,9 +1,9 @@
 import type { RosterAgent } from './rosterTypes';
 
-export const CLAUDIAN_TOOL_MCP_PREFIX = 'mcp__claudian__';
+export const SPECORATOR_TOOL_MCP_PREFIX = 'mcp__specorator__';
 
 export function toolCapabilityId(toolName: string): string {
-  return `${CLAUDIAN_TOOL_MCP_PREFIX}${toolName}`;
+  return `${SPECORATOR_TOOL_MCP_PREFIX}${toolName}`;
 }
 
 export function slugifyRosterName(name: string): string {

@@ -1,15 +1,15 @@
-import type { ClaudianSettings } from '../../../core/types/settings';
-import type ClaudianPlugin from '../../../main';
+import type { SpecoratorSettings } from '../../../core/types/settings';
+import type SpecoratorPlugin from '../../../main';
 
 // `plugin` lets F4/F5 custom widgets subscribe to the event bus, dispatch
 // commands, and sync runtime services (logger, MCP). It also unblocks the
 // stubbed onClicks in agentBoard / diagnostics field definitions to invoke
-// the corresponding Claudian commands once their owners wire them up.
+// the corresponding Specorator commands once their owners wire them up.
 export interface SettingsCtx {
-  settings: ClaudianSettings;
+  settings: SpecoratorSettings;
   saveSettings: () => Promise<void>;
   refresh: () => void;
-  plugin: ClaudianPlugin;
+  plugin: SpecoratorPlugin;
 }
 
 export type SettingsFieldType =
@@ -19,7 +19,7 @@ export type SettingsFieldType =
   | { kind: 'number'; min?: number; max?: number; step?: number }
   | {
       kind: 'dropdown';
-      options: (settings: ClaudianSettings) => Array<{ value: string; label: string }>;
+      options: (settings: SpecoratorSettings) => Array<{ value: string; label: string }>;
     }
   | { kind: 'folder'; placeholder?: string }
   | { kind: 'button'; label: string; onClick: (ctx: SettingsCtx) => void | Promise<void> }
@@ -36,7 +36,7 @@ export interface SettingsField<T = unknown> {
   description?: string;
   type: SettingsFieldType;
   default: T;
-  visible?: (settings: ClaudianSettings) => boolean;
+  visible?: (settings: SpecoratorSettings) => boolean;
   keywords?: string[];
 }
 
@@ -44,7 +44,7 @@ export interface SettingsTab {
   id: string;
   label: string;
   order: number;
-  visible: (settings: ClaudianSettings) => boolean;
+  visible: (settings: SpecoratorSettings) => boolean;
 }
 
 export interface SettingsSection {
@@ -53,5 +53,5 @@ export interface SettingsSection {
   label: string;
   order: number;
   description?: string;
-  visible?: (settings: ClaudianSettings) => boolean;
+  visible?: (settings: SpecoratorSettings) => boolean;
 }

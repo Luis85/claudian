@@ -74,7 +74,7 @@ function renderHandoff(parent: HTMLElement, markdown: string, deps: WorkOrderAct
 
   const parsed = parseHandoffSections(markdown);
   if (!hasAnyHandoffSection(parsed)) {
-    const fallback = section.createDiv({ cls: 'claudian-work-order-modal-handoff-fallback' });
+    const fallback = section.createDiv({ cls: 'specorator-work-order-modal-handoff-fallback' });
     void MarkdownRenderer.render(deps.app, markdown, fallback, deps.task.path, deps.markdownComponent);
     return;
   }
@@ -89,7 +89,7 @@ function renderHandoff(parent: HTMLElement, markdown: string, deps: WorkOrderAct
     { titleKey: 'tasks.workOrderModal.handoffNextAction', icon: 'signal', modifier: 'next', defaultOpen: true, body: parsed.nextAction },
   ];
 
-  const group = section.createDiv({ cls: 'claudian-work-order-modal-collapse-group' });
+  const group = section.createDiv({ cls: 'specorator-work-order-modal-collapse-group' });
   for (const card of cards) {
     renderCollapsible(group, {
       title: t(card.titleKey),
@@ -114,19 +114,19 @@ function renderHandoffSalvage(parent: HTMLElement, deps: WorkOrderActivityDeps):
   });
 
   section.createDiv({
-    cls: 'claudian-work-order-modal-salvage-callout',
+    cls: 'specorator-work-order-modal-salvage-callout',
     text: t('tasks.workOrderModal.salvageCallout'),
   });
 
   const trace = deps.task.sections.ledger.trim();
-  const group = section.createDiv({ cls: 'claudian-work-order-modal-collapse-group' });
+  const group = section.createDiv({ cls: 'specorator-work-order-modal-collapse-group' });
   renderCollapsible(group, {
     title: t('tasks.workOrderModal.transcriptTail'),
     icon: 'scroll-text',
     modifier: 'tail',
     defaultOpen: true,
     renderBody: (body) => {
-      const trail = body.createDiv({ cls: 'claudian-work-order-modal-tail-body' });
+      const trail = body.createDiv({ cls: 'specorator-work-order-modal-tail-body' });
       trail.setText(trace.length > 0 ? trace : t('tasks.workOrderModal.transcriptTailEmpty'));
     },
   });
@@ -146,15 +146,15 @@ function renderRunLedger(parent: HTMLElement, ledger: string): void {
     label: t('tasks.workOrderModal.sectionRunLedger'),
   });
 
-  const list = section.createEl('ol', { cls: 'claudian-work-order-modal-ledger' });
+  const list = section.createEl('ol', { cls: 'specorator-work-order-modal-ledger' });
   for (const entry of entries) {
-    const row = list.createEl('li', { cls: 'claudian-work-order-modal-ledger-entry' });
+    const row = list.createEl('li', { cls: 'specorator-work-order-modal-ledger-entry' });
     const dot = row.createSpan({
-      cls: `claudian-work-order-modal-ledger-dot claudian-work-order-modal-ledger-dot--${entry.status}`,
+      cls: `specorator-work-order-modal-ledger-dot specorator-work-order-modal-ledger-dot--${entry.status}`,
     });
     dot.setAttr('aria-hidden', 'true');
-    row.createSpan({ cls: 'claudian-work-order-modal-ledger-time', text: entry.timestamp });
-    row.createSpan({ cls: 'claudian-work-order-modal-ledger-msg', text: entry.message });
+    row.createSpan({ cls: 'specorator-work-order-modal-ledger-time', text: entry.timestamp });
+    row.createSpan({ cls: 'specorator-work-order-modal-ledger-msg', text: entry.message });
   }
 }
 
@@ -186,22 +186,22 @@ function renderCollapsible(
   },
 ): void {
   const card = parent.createDiv({
-    cls: `claudian-work-order-modal-collapse claudian-work-order-modal-collapse--${options.modifier}`,
+    cls: `specorator-work-order-modal-collapse specorator-work-order-modal-collapse--${options.modifier}`,
   });
 
   const head = card.createEl('button', {
-    cls: 'claudian-work-order-modal-collapse-head',
+    cls: 'specorator-work-order-modal-collapse-head',
     attr: { type: 'button' },
   });
-  const chevron = head.createSpan({ cls: 'claudian-work-order-modal-collapse-chevron' });
+  const chevron = head.createSpan({ cls: 'specorator-work-order-modal-collapse-chevron' });
   chevron.setAttr('aria-hidden', 'true');
   chevron.setAttr('data-icon', 'chevron-right');
   setIcon(chevron, 'chevron-right');
-  const icon = head.createSpan({ cls: 'claudian-work-order-modal-collapse-icon' });
+  const icon = head.createSpan({ cls: 'specorator-work-order-modal-collapse-icon' });
   icon.setAttr('aria-hidden', 'true');
   icon.setAttr('data-icon', options.icon);
   setIcon(icon, options.icon);
-  head.createSpan({ cls: 'claudian-work-order-modal-collapse-title', text: options.title });
+  head.createSpan({ cls: 'specorator-work-order-modal-collapse-title', text: options.title });
 
   let open = false;
   let body: HTMLElement | undefined;
@@ -210,7 +210,7 @@ function renderCollapsible(
     head.setAttr('aria-expanded', open ? 'true' : 'false');
     card.toggleClass('is-open', open);
     if (open) {
-      body ??= card.createDiv({ cls: 'claudian-work-order-modal-collapse-body' });
+      body ??= card.createDiv({ cls: 'specorator-work-order-modal-collapse-body' });
       body.empty();
       options.renderBody(body);
     } else if (body) {

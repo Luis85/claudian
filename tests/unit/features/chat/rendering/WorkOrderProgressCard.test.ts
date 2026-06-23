@@ -7,26 +7,26 @@ describe('renderWorkOrderProgressCard', () => {
     const parent = createMockEl('div');
     renderWorkOrderProgressCard(parent as any, { step: 'scanning files', done: { complete: 2, total: 5 }, note: 'src/ first' });
 
-    const card = parent.querySelector('.claudian-work-order-progress-card');
+    const card = parent.querySelector('.specorator-work-order-progress-card');
     expect(card).not.toBeNull();
-    expect(card?.querySelector('.claudian-work-order-progress-card-step')?.textContent).toBe('scanning files');
-    expect(card?.querySelector('.claudian-work-order-progress-card-counter')?.textContent).toBe('2 / 5');
-    const fill = card?.querySelector('.claudian-work-order-progress-card-bar-fill') as any;
+    expect(card?.querySelector('.specorator-work-order-progress-card-step')?.textContent).toBe('scanning files');
+    expect(card?.querySelector('.specorator-work-order-progress-card-counter')?.textContent).toBe('2 / 5');
+    const fill = card?.querySelector('.specorator-work-order-progress-card-bar-fill') as any;
     expect(fill.style.width).toBe('40%'); // 2/5
-    expect(card?.querySelector('.claudian-work-order-progress-card-note')?.textContent).toBe('src/ first');
+    expect(card?.querySelector('.specorator-work-order-progress-card-note')?.textContent).toBe('src/ first');
   });
 
   it('omits counter and bar when done is missing', () => {
     const parent = createMockEl('div');
     renderWorkOrderProgressCard(parent as any, { step: 'thinking' });
-    expect(parent.querySelector('.claudian-work-order-progress-card-counter')).toBeNull();
-    expect(parent.querySelector('.claudian-work-order-progress-card-bar')).toBeNull();
+    expect(parent.querySelector('.specorator-work-order-progress-card-counter')).toBeNull();
+    expect(parent.querySelector('.specorator-work-order-progress-card-bar')).toBeNull();
   });
 
   it('omits the note line when note is missing', () => {
     const parent = createMockEl('div');
     renderWorkOrderProgressCard(parent as any, { step: 'thinking', done: { complete: 1, total: 1 } });
-    expect(parent.querySelector('.claudian-work-order-progress-card-note')).toBeNull();
+    expect(parent.querySelector('.specorator-work-order-progress-card-note')).toBeNull();
   });
 
   it('renders progress bar at 0% when total is zero', () => {
@@ -35,9 +35,9 @@ describe('renderWorkOrderProgressCard', () => {
       step: 'init',
       done: { complete: 0, total: 0 },
     });
-    const fill = parent.querySelector('.claudian-work-order-progress-card-bar-fill') as any;
+    const fill = parent.querySelector('.specorator-work-order-progress-card-bar-fill') as any;
     expect(fill?.style.width).toBe('0%');
-    const counter = parent.querySelector('.claudian-work-order-progress-card-counter');
+    const counter = parent.querySelector('.specorator-work-order-progress-card-counter');
     expect(counter?.textContent).toBe('0 / 0');
   });
 
@@ -47,7 +47,7 @@ describe('renderWorkOrderProgressCard', () => {
       step: 's',
       done: { complete: 7, total: 3 },
     });
-    const fill = parent.querySelector('.claudian-work-order-progress-card-bar-fill') as any;
+    const fill = parent.querySelector('.specorator-work-order-progress-card-bar-fill') as any;
     expect(fill?.style.width).toBe('100%');
   });
 
@@ -57,7 +57,7 @@ describe('renderWorkOrderProgressCard', () => {
       step: 'done',
       done: { complete: 5, total: 5 },
     });
-    const fill = parent.querySelector('.claudian-work-order-progress-card-bar-fill') as any;
+    const fill = parent.querySelector('.specorator-work-order-progress-card-bar-fill') as any;
     expect(fill?.style.width).toBe('100%');
   });
 });

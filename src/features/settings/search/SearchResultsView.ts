@@ -27,7 +27,7 @@ export class SearchResultsView {
   }
 
   private renderEmptyState(): void {
-    const container = this.host.createDiv({ cls: 'claudian-search-empty' });
+    const container = this.host.createDiv({ cls: 'specorator-search-empty' });
     container.createEl('p', { text: 'Nothing matches. Try fewer words.' });
     const resetBtn = container.createEl('button', { text: 'Reset' });
     resetBtn.dataset.action = 'reset';
@@ -54,14 +54,14 @@ export class SearchResultsView {
     });
 
     for (const tabId of sortedTabIds) {
-      const tabDiv = this.host.createDiv({ cls: 'claudian-search-tab-group' });
+      const tabDiv = this.host.createDiv({ cls: 'specorator-search-tab-group' });
       tabDiv.dataset.tab = tabId;
 
       const sections = grouped[tabId];
       const sortedSectionIds = Object.keys(sections).sort();
       for (const sectionId of sortedSectionIds) {
         const fields = sections[sectionId];
-        const sectionDiv = tabDiv.createDiv({ cls: 'claudian-search-section-group' });
+        const sectionDiv = tabDiv.createDiv({ cls: 'specorator-search-section-group' });
         sectionDiv.dataset.section = sectionId;
 
         for (const field of fields) {
@@ -72,11 +72,11 @@ export class SearchResultsView {
   }
 
   private renderFieldRow(container: HTMLElement, field: SettingsField): void {
-    const row = container.createDiv({ cls: 'claudian-search-field-row' });
+    const row = container.createDiv({ cls: 'specorator-search-field-row' });
     row.dataset.fieldId = field.id;
 
     // Breadcrumb
-    const breadcrumb = row.createDiv({ cls: 'claudian-search-breadcrumb' });
+    const breadcrumb = row.createDiv({ cls: 'specorator-search-breadcrumb' });
     breadcrumb.createSpan({ text: field.tabId });
     breadcrumb.createSpan({ text: ' › ' });
     breadcrumb.createSpan({ text: field.sectionId });
@@ -84,10 +84,10 @@ export class SearchResultsView {
     breadcrumb.createSpan({ text: field.label });
 
     // Label and description
-    const content = row.createDiv({ cls: 'claudian-search-content' });
+    const content = row.createDiv({ cls: 'specorator-search-content' });
     content.createEl('strong', { text: field.label });
     if (field.description) {
-      content.createEl('p', { text: field.description, cls: 'claudian-search-description' });
+      content.createEl('p', { text: field.description, cls: 'specorator-search-description' });
     }
 
     // Go button

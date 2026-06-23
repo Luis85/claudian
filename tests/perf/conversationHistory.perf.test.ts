@@ -70,7 +70,7 @@ describe('history dropdown render (renderHistoryItems)', () => {
 
       const ms = timeMs(() => controller.updateHistoryDropdown());
 
-      const rows = dropdown.querySelectorAll('.claudian-history-item').length;
+      const rows = dropdown.querySelectorAll('.specorator-history-item').length;
       return {
         n,
         rows,
@@ -109,17 +109,17 @@ describe('history dropdown render (renderHistoryItems)', () => {
     const controller = new ConversationController(deps);
 
     controller.updateHistoryDropdown();
-    expect(dropdown.querySelectorAll('.claudian-history-item')).toHaveLength(50);
+    expect(dropdown.querySelectorAll('.specorator-history-item')).toHaveLength(50);
 
     const clickShowMore = () =>
-      dropdown.querySelector('.claudian-history-show-more-btn')?.click();
+      dropdown.querySelector('.specorator-history-show-more-btn')?.click();
 
     clickShowMore();
-    expect(dropdown.querySelectorAll('.claudian-history-item')).toHaveLength(100);
+    expect(dropdown.querySelectorAll('.specorator-history-item')).toHaveLength(100);
 
     clickShowMore();
     // All conversations revealed across the chunks.
-    expect(dropdown.querySelectorAll('.claudian-history-item')).toHaveLength(120);
+    expect(dropdown.querySelectorAll('.specorator-history-item')).toHaveLength(120);
   });
 });
 

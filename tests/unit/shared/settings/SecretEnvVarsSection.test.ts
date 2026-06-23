@@ -108,7 +108,7 @@ describe('renderSecretEnvVarsSection', () => {
   });
 
   it('replaces an existing same-(scope,name) ref instead of appending a duplicate', async () => {
-    const oldId = 'claudian-env-shared-anthropic-api-key';
+    const oldId = 'specorator-env-shared-anthropic-api-key';
     const plugin = makePlugin(
       [{ scope: 'shared', name: 'ANTHROPIC_API_KEY', secretId: oldId }],
       { [oldId]: 'dummy-old' },
@@ -125,7 +125,7 @@ describe('renderSecretEnvVarsSection', () => {
     expect(plugin.settings.secretEnvVars).toEqual([
       { scope: 'shared', name: 'ANTHROPIC_API_KEY', secretId: 'new-sid' },
     ]);
-    // The replaced Claudian-owned id is orphaned → cleared so it can't re-activate.
+    // The replaced Specorator-owned id is orphaned → cleared so it can't re-activate.
     expect(plugin.secretStore.clear).toHaveBeenCalledWith(oldId);
   });
 
@@ -142,8 +142,8 @@ describe('renderSecretEnvVarsSection', () => {
     expect(plugin.applySecretEnvVars).not.toHaveBeenCalled();
   });
 
-  it('removes a ref and clears its orphaned Claudian-generated secret on delete', async () => {
-    const id = 'claudian-env-shared-openai-api-key';
+  it('removes a ref and clears its orphaned Specorator-generated secret on delete', async () => {
+    const id = 'specorator-env-shared-openai-api-key';
     const plugin = makePlugin([{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: id }], { [id]: 'dummy-x' });
     renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
 
@@ -157,7 +157,7 @@ describe('renderSecretEnvVarsSection', () => {
     expect(plugin.secretStore.get(id)).toBeNull();
   });
 
-  it('does not clear an external (non-Claudian) secret id on delete', async () => {
+  it('does not clear an external (non-Specorator) secret id on delete', async () => {
     // SecretStorage ids are global; an id another plugin owns must survive.
     const plugin = makePlugin([{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: 'external-id' }], {
       'external-id': 'dummy-x',
@@ -173,7 +173,7 @@ describe('renderSecretEnvVarsSection', () => {
   });
 
   it('does not clear a secret value still referenced by another row', async () => {
-    const id = 'claudian-env-shared-shared-key';
+    const id = 'specorator-env-shared-shared-key';
     const plugin = makePlugin(
       [
         { scope: 'shared', name: 'OPENAI_API_KEY', secretId: id },
@@ -192,15 +192,15 @@ describe('renderSecretEnvVarsSection', () => {
     expect(plugin.secretStore.clear).not.toHaveBeenCalled(); // still referenced → preserved
   });
 
-  it('clears the previous Claudian id when a row is retargeted to a new secret', async () => {
-    const oldId = 'claudian-env-shared-openai-api-key';
+  it('clears the previous Specorator id when a row is retargeted to a new secret', async () => {
+    const oldId = 'specorator-env-shared-openai-api-key';
     const plugin = makePlugin([{ scope: 'shared', name: 'OPENAI_API_KEY', secretId: oldId }], { [oldId]: 'dummy-x' });
     renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
 
-    secretComponents().find((c) => c.value === oldId)?.triggerChange('claudian-env-shared-new');
+    secretComponents().find((c) => c.value === oldId)?.triggerChange('specorator-env-shared-new');
     await flush();
 
-    expect((plugin.settings.secretEnvVars as SecretEnvVarRef[])[0].secretId).toBe('claudian-env-shared-new');
+    expect((plugin.settings.secretEnvVars as SecretEnvVarRef[])[0].secretId).toBe('specorator-env-shared-new');
     expect(plugin.secretStore.clear).toHaveBeenCalledWith(oldId); // old value no longer orphaned
   });
 
@@ -210,7 +210,7 @@ describe('renderSecretEnvVarsSection', () => {
     });
     renderSecretEnvVarsSection({ container: makeContainer(), plugin, scope: 'shared' });
 
-    secretComponents().find((c) => c.value === 'external-id')?.triggerChange('claudian-env-shared-new');
+    secretComponents().find((c) => c.value === 'external-id')?.triggerChange('specorator-env-shared-new');
     await flush();
 
     expect(plugin.secretStore.clear).not.toHaveBeenCalled();

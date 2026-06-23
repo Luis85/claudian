@@ -6,12 +6,12 @@
  * notice callout, right-aligned actions.
  */
 
-.claudian-qa-launch-modal {
+.specorator-qa-launch-modal {
   max-width: 440px;
   width: 90vw;
 }
 
-.claudian-qa-launch-notice {
+.specorator-qa-launch-notice {
   margin-bottom: 0.75em;
   padding: 0.6em 0.75em;
   border: 1px solid var(--background-modifier-border);
@@ -22,7 +22,7 @@
   line-height: 1.4;
 }
 
-.claudian-qa-launch-empty {
+.specorator-qa-launch-empty {
   margin: 0.5em 0 0.75em;
   padding: 0.75em;
   color: var(--text-muted);
@@ -30,20 +30,20 @@
   text-align: center;
 }
 
-.claudian-qa-launch-row {
+.specorator-qa-launch-row {
   display: flex;
   align-items: center;
   gap: 0.75em;
   margin-bottom: 0.6em;
 }
 
-.claudian-qa-launch-row label {
+.specorator-qa-launch-row label {
   flex: 0 0 100px;
   color: var(--text-muted);
   font-size: var(--font-ui-small);
 }
 
-.claudian-qa-launch-row select {
+.specorator-qa-launch-row select {
   flex: 1;
   min-width: 0;
   padding: 0.35em 0.5em;
@@ -54,12 +54,12 @@
   font-size: var(--font-ui-small);
 }
 
-.claudian-qa-launch-row select:focus {
+.specorator-qa-launch-row select:focus {
   border-color: var(--interactive-accent);
   outline: none;
 }
 
-.claudian-qa-launch-actions {
+.specorator-qa-launch-actions {
   display: flex;
   flex-direction: row-reverse;
   justify-content: flex-start;

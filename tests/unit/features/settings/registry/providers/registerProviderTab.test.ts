@@ -1,11 +1,11 @@
-import type { ClaudianSettings } from '../../../../../../src/core/types/settings';
+import type { SpecoratorSettings } from '../../../../../../src/core/types/settings';
 import { registerProviderTab } from '../../../../../../src/features/settings/registry/providers/registerProviderTab';
 import { SettingsRegistry } from '../../../../../../src/features/settings/registry/SettingsRegistry';
 
-function settingsWith(enabled: boolean): ClaudianSettings {
+function settingsWith(enabled: boolean): SpecoratorSettings {
   return {
     providerConfigs: { claude: { enabled } },
-  } as unknown as ClaudianSettings;
+  } as unknown as SpecoratorSettings;
 }
 
 describe('registerProviderTab', () => {

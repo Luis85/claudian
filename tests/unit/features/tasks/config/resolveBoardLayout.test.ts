@@ -8,7 +8,7 @@ function task(id: string, status: TaskStatus): TaskSpec {
     raw: '',
     body: '',
     frontmatter: {
-      type: 'claudian-work-order',
+      type: 'specorator-work-order',
       schema_version: 1,
       id,
       title: id,

@@ -2,8 +2,8 @@ import type { TAbstractFile } from 'obsidian';
 
 import type { EventBus } from '@/core/events/EventBus';
 import type { UsageEventMap } from '@/core/usage/events';
-import type ClaudianPlugin from '@/main';
-import { openClaudianProviderSettings } from '@/utils/obsidianPrivateApi';
+import type SpecoratorPlugin from '@/main';
+import { openSpecoratorProviderSettings } from '@/utils/obsidianPrivateApi';
 
 import { QuickActionStorage } from './QuickActionStorage';
 import { buildProviderRecords } from './skills/buildProviderRecords';
@@ -38,7 +38,7 @@ export interface OpenQuickActionsModalOptions {
  * toolbar, per-tab toolbar) gets identical wiring — no fourth-site drift.
  */
 export function openQuickActionsModal(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   options: OpenQuickActionsModalOptions,
 ): void {
   const storage = new QuickActionStorage(
@@ -62,7 +62,7 @@ export function openQuickActionsModal(
       void runVaultSkill(plugin, entry, file);
     },
     onEditSkill: (entry) => {
-      openClaudianProviderSettings(
+      openSpecoratorProviderSettings(
         plugin.app,
         plugin.manifest.id,
         entry.providerId,
@@ -71,7 +71,7 @@ export function openQuickActionsModal(
     onFavoritesChanged:
       options.onFavoritesChanged ?? (() => plugin.quickActionFavoritesCache?.refresh()),
     usageTracker: plugin.usageTracker,
-    // ClaudianEventMap is a superset of UsageEventMap; cast needed because
+    // SpecoratorEventMap is a superset of UsageEventMap; cast needed because
     // EventBus<M> is invariant on M.
     events: plugin.events as unknown as EventBus<UsageEventMap>,
   }).open();

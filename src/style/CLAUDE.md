@@ -9,7 +9,7 @@ src/style/
 ├── toolbar/        # model-selector, thinking-selector, permission-toggle, service-tier-toggle, external-context, mcp-selector
 ├── features/       # file-context, image-context, image-modal, inline-edit, diff, slash-commands, file-link, image-embed, plan-mode, ask-user-question, resume-session, runtime-error-card
 ├── modals/         # instruction, mcp-modal, fork-target
-├── settings/       # base (shared .claudian-sp-* panel layout), env-snippets, slash-settings, mcp-settings, plugin-settings, agent-settings
+├── settings/       # base (shared .specorator-sp-* panel layout), env-snippets, slash-settings, mcp-settings, plugin-settings, agent-settings
 ├── accessibility.css
 └── index.css       # Build order (@import list)
 ```
@@ -22,8 +22,8 @@ CSS is built into root `styles.css` via `npm run build:css`. It is invoked by bo
 
 ## Conventions
 
-- **Prefix**: Claudian-owned classes should use the `.claudian-` prefix; shared Obsidian host selectors and generic state classes may remain unprefixed
-- **BEM-lite**: Prefer `.claudian-{block}`, `.claudian-{block}-{element}`, `.claudian-{block}--{modifier}` for Claudian-owned selectors
+- **Prefix**: Specorator-owned classes should use the `.specorator-` prefix; shared Obsidian host selectors and generic state classes may remain unprefixed
+- **BEM-lite**: Prefer `.specorator-{block}`, `.specorator-{block}-{element}`, `.specorator-{block}--{modifier}` for Specorator-owned selectors
 - **No `!important`**: Avoid unless overriding Obsidian defaults
 - **CSS variables**: Use Obsidian's `--background-*`, `--text-*`, `--interactive-*` tokens
 

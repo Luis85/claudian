@@ -78,7 +78,7 @@ export class StreamingIndicator {
     }
 
     if (state.thinkingEl) {
-      const labelSpan = state.thinkingEl.querySelector<HTMLElement>('.claudian-thinking-flavor');
+      const labelSpan = state.thinkingEl.querySelector<HTMLElement>('.specorator-thinking-flavor');
       labelSpan?.setText(STREAMING_RESPONSE_LABEL);
       state.currentContentEl.appendChild(state.thinkingEl);
     } else {
@@ -116,12 +116,12 @@ export class StreamingIndicator {
     const { state } = this.deps;
     if (!state.currentContentEl) return;
 
-    const cls = overrideCls ? `claudian-thinking ${overrideCls}` : 'claudian-thinking';
+    const cls = overrideCls ? `specorator-thinking ${overrideCls}` : 'specorator-thinking';
     state.thinkingEl = state.currentContentEl.createDiv({ cls });
-    state.thinkingEl.createSpan({ cls: 'claudian-thinking-flavor', text });
+    state.thinkingEl.createSpan({ cls: 'specorator-thinking-flavor', text });
 
     // Create timer span with initial value
-    const timerSpan = state.thinkingEl.createSpan({ cls: 'claudian-thinking-hint' });
+    const timerSpan = state.thinkingEl.createSpan({ cls: 'specorator-thinking-hint' });
     const updateTimer = () => {
       if (!state.responseStartTime) return;
       // Check if element is still connected to DOM (prevents orphaned interval updates)

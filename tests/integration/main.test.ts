@@ -2,16 +2,16 @@ import { Menu, TFile, TFolder } from 'obsidian';
 
 import { resetCommandHotkeysForTests } from '@/core/commands/commandHotkeyRegistry';
 import { TOOL_SUBAGENT } from '@/core/tools/toolNames';
-import { VIEW_TYPE_CLAUDIAN } from '@/core/types';
+import { VIEW_TYPE_SPECORATOR } from '@/core/types';
 import { QuickActionFavoritesCache } from '@/features/quickActions/QuickActionFavoritesCache';
 import * as sdkSession from '@/providers/claude/history/ClaudeHistoryStore';
 import { DEFAULT_SETTINGS } from '@/providers/claude/types/settings';
 
-// Mock fs for ClaudianService
+// Mock fs for SpecoratorService
 jest.mock('fs');
 
 // Now import the plugin after mocking
-import ClaudianPlugin from '@/main';
+import SpecoratorPlugin from '@/main';
 
 const { MENU_SEPARATOR } = jest.requireActual('obsidian') as { MENU_SEPARATOR: symbol };
 
@@ -59,8 +59,8 @@ function stripInternalState<T extends Record<string, unknown>>(settings: T): T {
   return result as T;
 }
 
-describe('ClaudianPlugin', () => {
-  let plugin: ClaudianPlugin;
+describe('SpecoratorPlugin', () => {
+  let plugin: SpecoratorPlugin;
   let mockApp: any;
   let mockManifest: any;
 
@@ -121,13 +121,13 @@ describe('ClaudianPlugin', () => {
     };
 
     mockManifest = {
-      id: 'claudian',
-      name: 'Claudian',
+      id: 'specorator',
+      name: 'Specorator',
       version: '0.1.0',
     };
 
     // Create plugin instance with mocked app
-    plugin = new ClaudianPlugin(mockApp, mockManifest);
+    plugin = new SpecoratorPlugin(mockApp, mockManifest);
     (plugin.loadData as jest.Mock).mockResolvedValue({});
   });
 
@@ -150,7 +150,7 @@ describe('ClaudianPlugin', () => {
       await plugin.onload();
 
       expect((plugin.registerView as jest.Mock)).toHaveBeenCalledWith(
-        VIEW_TYPE_CLAUDIAN,
+        VIEW_TYPE_SPECORATOR,
         expect.any(Function)
       );
     });
@@ -189,7 +189,7 @@ describe('ClaudianPlugin', () => {
 
       expect(itemTitles(menu)).toEqual([
         '<sep>',
-        'Add file to Claudian chat',
+        'Add file to Specorator chat',
         'Create work order',
         'Add to work order',
         'Open Quick Actions',
@@ -215,7 +215,7 @@ describe('ClaudianPlugin', () => {
 
       expect(itemTitles(menu)).toEqual([
         '<sep>',
-        'Add folder to Claudian chat',
+        'Add folder to Specorator chat',
         'Create work order',
         'Add to work order',
         'Open Quick Actions',
@@ -312,7 +312,7 @@ describe('ClaudianPlugin', () => {
   });
 
   describe('onunload', () => {
-    // Note: With multi-tab, cleanup is handled per-tab via ClaudianView.onClose()
+    // Note: With multi-tab, cleanup is handled per-tab via SpecoratorView.onClose()
     it('should complete without error', async () => {
       await plugin.onload();
 
@@ -352,7 +352,7 @@ describe('ClaudianPlugin', () => {
 
       expect(mockApp.workspace.getRightLeaf).toHaveBeenCalledWith(false);
       expect(mockRightLeaf.setViewState).toHaveBeenCalledWith({
-        type: VIEW_TYPE_CLAUDIAN,
+        type: VIEW_TYPE_SPECORATOR,
         active: true,
       });
     });
@@ -372,7 +372,7 @@ describe('ClaudianPlugin', () => {
       expect(mockApp.workspace.getRightLeaf).not.toHaveBeenCalled();
       expect(mockApp.workspace.getLeaf).not.toHaveBeenCalled();
       expect(mockLeftLeaf.setViewState).toHaveBeenCalledWith({
-        type: VIEW_TYPE_CLAUDIAN,
+        type: VIEW_TYPE_SPECORATOR,
         active: true,
       });
     });
@@ -402,7 +402,7 @@ describe('ClaudianPlugin', () => {
       expect(mockApp.workspace.getRightLeaf).not.toHaveBeenCalled();
       expect(mockApp.workspace.getLeftLeaf).not.toHaveBeenCalled();
       expect(mockMainLeaf.setViewState).toHaveBeenCalledWith({
-        type: VIEW_TYPE_CLAUDIAN,
+        type: VIEW_TYPE_SPECORATOR,
         active: true,
       });
     });
@@ -420,12 +420,12 @@ describe('ClaudianPlugin', () => {
 
   describe('loadSettings', () => {
     it('should merge saved data with defaults', async () => {
-      // Mock claudian-settings.json exists with custom values (Claudian-specific settings)
+      // Mock specorator-settings.json exists with custom values (Specorator-specific settings)
       mockApp.vault.adapter.exists.mockImplementation(async (path: string) => {
-        return path === '.claudian/claudian-settings.json';
+        return path === '.specorator/specorator-settings.json';
       });
       mockApp.vault.adapter.read.mockImplementation(async (path: string) => {
-        if (path === '.claudian/claudian-settings.json') {
+        if (path === '.specorator/specorator-settings.json') {
           return JSON.stringify({
             userName: 'TestUser',
           });
@@ -472,15 +472,15 @@ describe('ClaudianPlugin', () => {
 
       await plugin.saveSettings();
 
-      // Claudian-specific settings should be written to .claudian/claudian-settings.json
+      // Specorator-specific settings should be written to .specorator/specorator-settings.json
       expect(mockApp.vault.adapter.write).toHaveBeenCalledWith(
-        '.claudian/claudian-settings.json',
+        '.specorator/specorator-settings.json',
         expect.any(String)
       );
 
       // The written content should include state fields
       const writeCall = (mockApp.vault.adapter.write as jest.Mock).mock.calls.find(
-        ([path]) => path === '.claudian/claudian-settings.json'
+        ([path]) => path === '.specorator/specorator-settings.json'
       );
       expect(writeCall).toBeDefined();
       const content = JSON.parse(writeCall[1]);
@@ -490,7 +490,7 @@ describe('ClaudianPlugin', () => {
       expect(content).toHaveProperty('lastCustomModel');
       expect(content).not.toHaveProperty('enableBlocklist');
       expect(content).not.toHaveProperty('blockedCommands');
-      // Permissions are now in .claude/settings.json (CC format), not claudian-settings.json
+      // Permissions are now in .claude/settings.json (CC format), not specorator-settings.json
       expect(content).not.toHaveProperty('permissions');
     });
 
@@ -733,7 +733,7 @@ describe('ClaudianPlugin', () => {
       expect(command.checkCallback(true)).toBe(false);
     });
 
-    it('keeps tab commands unavailable while a Claudian leaf view is not initialized', async () => {
+    it('keeps tab commands unavailable while a Specorator leaf view is not initialized', async () => {
       await plugin.onload();
 
       mockApp.workspace.getLeavesOfType.mockReturnValue([{ view: {} }]);
@@ -963,26 +963,26 @@ describe('ClaudianPlugin', () => {
       // Mock files exist
       mockApp.vault.adapter.exists.mockImplementation(async (path: string) => {
         // Session files
-        if (path === '.claudian/sessions' || path === '.claudian/sessions/conv-saved-1.meta.json') {
+        if (path === '.specorator/sessions' || path === '.specorator/sessions/conv-saved-1.meta.json') {
           return true;
         }
-        // claudian-settings.json exists
-        if (path === '.claudian/claudian-settings.json') {
+        // specorator-settings.json exists
+        if (path === '.specorator/specorator-settings.json') {
           return true;
         }
         return false;
       });
       mockApp.vault.adapter.list.mockImplementation(async (path: string) => {
-        if (path === '.claudian/sessions') {
-          return { files: ['.claudian/sessions/conv-saved-1.meta.json'], folders: [] };
+        if (path === '.specorator/sessions') {
+          return { files: ['.specorator/sessions/conv-saved-1.meta.json'], folders: [] };
         }
         return { files: [], folders: [] };
       });
       mockApp.vault.adapter.read.mockImplementation(async (path: string) => {
-        if (path === '.claudian/sessions/conv-saved-1.meta.json') {
+        if (path === '.specorator/sessions/conv-saved-1.meta.json') {
           return sessionMeta;
         }
-        if (path === '.claudian/claudian-settings.json') {
+        if (path === '.specorator/specorator-settings.json') {
           return JSON.stringify({});
         }
         return '';
@@ -1032,21 +1032,21 @@ describe('ClaudianPlugin', () => {
       });
 
       mockApp.vault.adapter.exists.mockImplementation(async (path: string) => {
-        return path === '.claudian/claudian-settings.json' ||
-          path === '.claudian/sessions' ||
-          path === '.claudian/sessions/conv-multi-session.meta.json';
+        return path === '.specorator/specorator-settings.json' ||
+          path === '.specorator/sessions' ||
+          path === '.specorator/sessions/conv-multi-session.meta.json';
       });
       mockApp.vault.adapter.list.mockImplementation(async (path: string) => {
-        if (path === '.claudian/sessions') {
-          return { files: ['.claudian/sessions/conv-multi-session.meta.json'], folders: [] };
+        if (path === '.specorator/sessions') {
+          return { files: ['.specorator/sessions/conv-multi-session.meta.json'], folders: [] };
         }
         return { files: [], folders: [] };
       });
       mockApp.vault.adapter.read.mockImplementation(async (path: string) => {
-        if (path === '.claudian/sessions/conv-multi-session.meta.json') {
+        if (path === '.specorator/sessions/conv-multi-session.meta.json') {
           return sessionMeta;
         }
-        if (path === '.claudian/claudian-settings.json') {
+        if (path === '.specorator/specorator-settings.json') {
           return JSON.stringify({});
         }
         return '';

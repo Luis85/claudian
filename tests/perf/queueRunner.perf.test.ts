@@ -7,7 +7,7 @@ function makeTask(id: string, status: 'ready' | 'done'): TaskSpec {
   return {
     path: `tasks/${id}.md`,
     frontmatter: {
-      type: 'claudian-work-order',
+      type: 'specorator-work-order',
       schema_version: 1,
       id,
       title: id,

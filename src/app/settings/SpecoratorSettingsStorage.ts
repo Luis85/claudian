@@ -1,24 +1,24 @@
 import {
-  CLAUDIAN_SETTINGS_PATH,
+  SPECORATOR_SETTINGS_PATH,
 } from '../../core/bootstrap/StoragePaths';
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from '../../core/providers/ProviderSettingsCoordinator';
 import type { VaultFileAdapter } from '../../core/storage/VaultFileAdapter';
 import type {
-  ClaudianSettings,
+  SpecoratorSettings,
 } from '../../core/types/settings';
-import { DEFAULT_CLAUDIAN_SETTINGS } from './defaultSettings';
+import { DEFAULT_SPECORATOR_SETTINGS } from './defaultSettings';
 import { migrateTabBudget } from './migrateTabBudget';
 import { migrateModelOverrides } from './migrations/migrateModelOverrides';
 
 export {
-  CLAUDIAN_SETTINGS_PATH,
+  SPECORATOR_SETTINGS_PATH,
 };
 
-export type StoredClaudianSettings = ClaudianSettings;
+export type StoredSpecoratorSettings = SpecoratorSettings;
 
-// Settings keys retired in earlier Claudian versions but still possibly present
-// in user-vault `claudian-settings.json`. Stripped on load and save so the
+// Settings keys retired in earlier Specorator versions but still possibly present
+// in user-vault `specorator-settings.json`. Stripped on load and save so the
 // merged settings shape never carries dead fields forward. Name kept neutral
 // per settings overhaul Phase I1 acceptance (grep cleanliness).
 const DEPRECATED_SETTING_FIELDS = [
@@ -58,15 +58,15 @@ function stripDeprecatedFields(settings: Record<string, unknown>): Record<string
   return cleaned;
 }
 
-export class ClaudianSettingsStorage {
+export class SpecoratorSettingsStorage {
   constructor(private adapter: VaultFileAdapter) {}
 
-  async load(): Promise<StoredClaudianSettings> {
-    if (!await this.adapter.exists(CLAUDIAN_SETTINGS_PATH)) {
+  async load(): Promise<StoredSpecoratorSettings> {
+    if (!await this.adapter.exists(SPECORATOR_SETTINGS_PATH)) {
       return this.getDefaults();
     }
 
-    const content = await this.adapter.read(CLAUDIAN_SETTINGS_PATH);
+    const content = await this.adapter.read(SPECORATOR_SETTINGS_PATH);
     const stored = JSON.parse(content) as Record<string, unknown>;
 
     // Migrate raw stored shape BEFORE the defaults merge so legacy values copy
@@ -94,20 +94,20 @@ export class ClaudianSettingsStorage {
     return migrated;
   }
 
-  async save(settings: StoredClaudianSettings): Promise<void> {
+  async save(settings: StoredSpecoratorSettings): Promise<void> {
     const content = JSON.stringify(
       stripDeprecatedFields(settings),
       null,
       2,
     );
-    await this.adapter.write(CLAUDIAN_SETTINGS_PATH, content);
+    await this.adapter.write(SPECORATOR_SETTINGS_PATH, content);
   }
 
   async exists(): Promise<boolean> {
-    return this.adapter.exists(CLAUDIAN_SETTINGS_PATH);
+    return this.adapter.exists(SPECORATOR_SETTINGS_PATH);
   }
 
-  async update(updates: Partial<StoredClaudianSettings>): Promise<void> {
+  async update(updates: Partial<StoredSpecoratorSettings>): Promise<void> {
     const current = await this.load();
     await this.save({ ...current, ...updates });
   }
@@ -137,12 +137,12 @@ export class ClaudianSettingsStorage {
     await this.save(current);
   }
 
-  private getDefaults(): StoredClaudianSettings {
+  private getDefaults(): StoredSpecoratorSettings {
     // Spread (not the shared reference) so `providerConfigs` is materialized as a
-    // writable data property here — DEFAULT_CLAUDIAN_SETTINGS exposes it as a
+    // writable data property here — DEFAULT_SPECORATOR_SETTINGS exposes it as a
     // getter (ARCH-2 cycle avoidance), and returning that object directly would
     // make `settings.providerConfigs = ...` throw (getter-only) on a fresh install
     // and would let mutations clobber the shared module-level default.
-    return { ...DEFAULT_CLAUDIAN_SETTINGS };
+    return { ...DEFAULT_SPECORATOR_SETTINGS };
   }
 }

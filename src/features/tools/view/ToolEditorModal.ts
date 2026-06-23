@@ -1,15 +1,15 @@
 import { type App, Notice } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { LibraryEditorModal } from '../../../shared/modals/LibraryEditorModal';
 import { createModalCodeArea, librarySlug, renameLibraryItemDir, renderModalField, renderModalLabel, renderModalTextField } from '../../../utils/libraryView';
-import { TOOLS_DIR } from '../ClaudianToolRegistry';
+import { TOOLS_DIR } from '../SpecoratorToolRegistry';
 import type { LoadedTool } from '../toolTypes';
 
 /**
  * Edits a user tool's source in a modal. The tool files live under the
- * `.claudian/` dot-folder, which Obsidian's vault index ignores — so the editor
+ * `.specorator/` dot-folder, which Obsidian's vault index ignores — so the editor
  * tab can't open them. This modal reads/writes through `vaultFileAdapter`
  * (backed by `vault.adapter`, which sees dot-files) and shows the parsed
  * metadata alongside an editable source area.
@@ -20,7 +20,7 @@ export class ToolEditorModal extends LibraryEditorModal {
 
   constructor(
     app: App,
-    private readonly plugin: ClaudianPlugin,
+    private readonly plugin: SpecoratorPlugin,
     private toolId: string,
     private readonly onSaved: () => void,
   ) {
@@ -36,7 +36,7 @@ export class ToolEditorModal extends LibraryEditorModal {
     const path = `${TOOLS_DIR}/${this.toolId}/tool.ts`;
 
     this.nameEl = renderModalTextField(root, t('toolLibrary.nameField'), this.toolId);
-    this.renderMeta(root.createDiv({ cls: 'claudian-library-modal-meta' }), tool);
+    this.renderMeta(root.createDiv({ cls: 'specorator-library-modal-meta' }), tool);
 
     renderModalLabel(root, t('toolLibrary.source'));
     const source = await this.plugin.vaultFileAdapter.read(path).catch(() => '');
@@ -53,15 +53,15 @@ export class ToolEditorModal extends LibraryEditorModal {
 
   private renderMeta(meta: HTMLElement, tool: LoadedTool | undefined): void {
     const hasError = Boolean(tool?.error);
-    meta.createDiv({ cls: 'claudian-library-modal-status' }).createSpan({
-      cls: `claudian-library-chip ${hasError ? 'claudian-library-chip-error' : 'claudian-library-chip-ready'}`,
+    meta.createDiv({ cls: 'specorator-library-modal-status' }).createSpan({
+      cls: `specorator-library-chip ${hasError ? 'specorator-library-chip-error' : 'specorator-library-chip-ready'}`,
       text: hasError ? t('toolLibrary.statusError') : t('toolLibrary.statusReady'),
     });
     if (tool?.module) {
       this.renderLoadedMeta(meta, tool);
     } else if (tool?.error) {
-      meta.createDiv({ cls: 'claudian-library-modal-hint', text: t('toolLibrary.notLoaded') });
-      meta.createEl('pre', { cls: 'claudian-library-modal-error', text: tool.error });
+      meta.createDiv({ cls: 'specorator-library-modal-hint', text: t('toolLibrary.notLoaded') });
+      meta.createEl('pre', { cls: 'specorator-library-modal-error', text: tool.error });
     }
   }
 
@@ -70,9 +70,9 @@ export class ToolEditorModal extends LibraryEditorModal {
     renderModalField(meta, t('toolLibrary.metaName'), tool.module.manifest.name);
     renderModalField(meta, t('toolLibrary.metaDescription'), tool.module.manifest.description);
     if (!tool.jsonSchema) return;
-    const schema = meta.createDiv({ cls: 'claudian-library-modal-field' });
+    const schema = meta.createDiv({ cls: 'specorator-library-modal-field' });
     renderModalLabel(schema, t('toolLibrary.inputSchema'));
-    schema.createEl('pre', { cls: 'claudian-library-modal-schema', text: JSON.stringify(tool.jsonSchema, null, 2) });
+    schema.createEl('pre', { cls: 'specorator-library-modal-schema', text: JSON.stringify(tool.jsonSchema, null, 2) });
   }
 
   private async save(path: string): Promise<void> {

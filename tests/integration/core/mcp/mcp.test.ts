@@ -275,12 +275,12 @@ describe('McpStorage', () => {
   });
 
   describe('load/save', () => {
-    it('should preserve unknown top-level keys and merge _claudian', async () => {
+    it('should preserve unknown top-level keys and merge _specorator', async () => {
       const initial = {
         mcpServers: {
           legacy: { command: 'node' },
         },
-        _claudian: {
+        _specorator: {
           servers: {
             legacy: { enabled: false },
           },
@@ -315,7 +315,7 @@ describe('McpStorage', () => {
           headers: { Authorization: 'Bearer token' },
         },
       });
-      expect(saved._claudian).toEqual({
+      expect(saved._specorator).toEqual({
         extra: { keep: true },
         servers: {
           'new-server': {
@@ -327,12 +327,12 @@ describe('McpStorage', () => {
       });
     });
 
-    it('should keep existing _claudian fields and persist trust when metadata is defaulted', async () => {
+    it('should keep existing _specorator fields and persist trust when metadata is defaulted', async () => {
       const initial = {
         mcpServers: {
           legacy: { command: 'node' },
         },
-        _claudian: {
+        _specorator: {
           extra: { keep: true },
         },
       };
@@ -351,7 +351,7 @@ describe('McpStorage', () => {
 
       const saved = JSON.parse(files.get(MCP_CONFIG_PATH) || '{}') as Record<string, unknown>;
       // SEC-3: enabled is always persisted so the server is remembered as trusted.
-      expect(saved._claudian).toEqual({
+      expect(saved._specorator).toEqual({
         extra: { keep: true },
         servers: { 'default-meta': { enabled: true } },
       });
@@ -364,7 +364,7 @@ describe('McpStorage', () => {
           stdio: { command: 'npx' },
           remote: { type: 'sse', url: 'http://localhost:3000/sse' },
         },
-        _claudian: {
+        _specorator: {
           servers: {
             stdio: { enabled: false, contextSaving: false, description: 'Local tools' },
           },
@@ -393,7 +393,7 @@ describe('McpStorage', () => {
           valid: { command: 'npx' },
           invalid: { foo: 'bar' },
         },
-        _claudian: {
+        _specorator: {
           servers: {
             invalid: { enabled: false },
           },
@@ -415,7 +415,7 @@ describe('McpStorage', () => {
         mcpServers: {
           legacy: { command: 'node' },
         },
-        _claudian: {
+        _specorator: {
           servers: {
             legacy: { enabled: false },
           },
@@ -435,8 +435,8 @@ describe('McpStorage', () => {
       await storage.save(servers);
 
       const saved = JSON.parse(files.get(MCP_CONFIG_PATH) || '{}') as Record<string, unknown>;
-      // SEC-3: enabled state is always recorded, so _claudian.servers survives.
-      expect(saved._claudian).toEqual({ servers: { legacy: { enabled: true } } });
+      // SEC-3: enabled state is always recorded, so _specorator.servers survives.
+      expect(saved._specorator).toEqual({ servers: { legacy: { enabled: true } } });
     });
   });
 });

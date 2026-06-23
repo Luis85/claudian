@@ -1,5 +1,5 @@
 /**
- * Claudian - Chat drop controller.
+ * Specorator - Chat drop controller.
  *
  * Owns the drag-and-drop lifecycle for one chat tab's input wrapper. Routes
  * dropped vault files, vault folders, OS images, and external-context files
@@ -54,12 +54,12 @@ export class ChatDropController {
   }
 
   init(): void {
-    const wrapper = this.containerEl.querySelector('.claudian-input-wrapper') as HTMLElement | null;
+    const wrapper = this.containerEl.querySelector('.specorator-input-wrapper') as HTMLElement | null;
     if (!wrapper) return;
     this.inputWrapperEl = wrapper;
 
-    this.overlayEl = wrapper.createDiv({ cls: 'claudian-drop-overlay' });
-    const content = this.overlayEl.createDiv({ cls: 'claudian-drop-content' });
+    this.overlayEl = wrapper.createDiv({ cls: 'specorator-drop-overlay' });
+    const content = this.overlayEl.createDiv({ cls: 'specorator-drop-content' });
     this.overlayLabelEl = content.createSpan();
 
     this.addListener('dragenter', (e) => this.handleDragEnter(e as DragEvent));

@@ -48,7 +48,7 @@ describe('renderHandoffMarkdown + parseHandoffSections (marker-delimited format)
   it('treats a field whose marker pair is absent as empty', () => {
     const md = renderHandoffMarkdown(fields)
       .split('\n')
-      .filter((line) => !line.includes('claudian:handoff:risks'))
+      .filter((line) => !line.includes('specorator:handoff:risks'))
       .join('\n');
     const parsed = parseHandoffSections(md);
     expect(parsed.risks).toBe('');
@@ -59,7 +59,7 @@ describe('renderHandoffMarkdown + parseHandoffSections (marker-delimited format)
   it('salvages a field whose end marker was hand-removed instead of dropping it', () => {
     const md = renderHandoffMarkdown(fields)
       .split('\n')
-      .filter((line) => line !== '<!-- claudian:handoff:summary:end -->')
+      .filter((line) => line !== '<!-- specorator:handoff:summary:end -->')
       .join('\n');
     const parsed = parseHandoffSections(md);
     expect(parsed.summary).toContain(fields.summary);

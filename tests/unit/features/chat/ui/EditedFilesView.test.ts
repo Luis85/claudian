@@ -25,7 +25,7 @@ describe('EditedFilesView', () => {
   it('starts hidden', () => {
     const row = createMockEl();
     new EditedFilesView(row, { onOpenFile: jest.fn() });
-    expect(row.hasClass('claudian-hidden')).toBe(true);
+    expect(row.hasClass('specorator-hidden')).toBe(true);
   });
 
   it('renders a chip per entry with created/edited modifiers and a label', () => {
@@ -34,12 +34,12 @@ describe('EditedFilesView', () => {
 
     view.render(entries);
 
-    expect(findAll(row, 'claudian-edited-file-chip')).toHaveLength(2);
-    expect(findAll(row, 'claudian-edited-file-chip--created')).toHaveLength(1);
-    expect(findAll(row, 'claudian-edited-file-chip--edited')).toHaveLength(1);
-    expect(findAll(row, 'claudian-edited-files-label')).toHaveLength(1);
-    expect(row.hasClass('claudian-visible-flex')).toBe(true);
-    expect(row.hasClass('claudian-hidden')).toBe(false);
+    expect(findAll(row, 'specorator-edited-file-chip')).toHaveLength(2);
+    expect(findAll(row, 'specorator-edited-file-chip--created')).toHaveLength(1);
+    expect(findAll(row, 'specorator-edited-file-chip--edited')).toHaveLength(1);
+    expect(findAll(row, 'specorator-edited-files-label')).toHaveLength(1);
+    expect(row.hasClass('specorator-visible-flex')).toBe(true);
+    expect(row.hasClass('specorator-hidden')).toBe(false);
   });
 
   it('hides and clears the row when there are no entries', () => {
@@ -49,9 +49,9 @@ describe('EditedFilesView', () => {
 
     view.render([]);
 
-    expect(findAll(row, 'claudian-edited-file-chip')).toHaveLength(0);
-    expect(row.hasClass('claudian-hidden')).toBe(true);
-    expect(row.hasClass('claudian-visible-flex')).toBe(false);
+    expect(findAll(row, 'specorator-edited-file-chip')).toHaveLength(0);
+    expect(row.hasClass('specorator-hidden')).toBe(true);
+    expect(row.hasClass('specorator-visible-flex')).toBe(false);
   });
 
   it('opens the file on chip click', () => {
@@ -60,7 +60,7 @@ describe('EditedFilesView', () => {
     const view = new EditedFilesView(row, { onOpenFile });
     view.render(entries);
 
-    findAll(row, 'claudian-edited-file-chip')[0].click();
+    findAll(row, 'specorator-edited-file-chip')[0].click();
 
     expect(onOpenFile).toHaveBeenCalledWith('src/new.ts');
   });

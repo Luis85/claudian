@@ -61,13 +61,13 @@ describe('buildWorkOrderMarkdown', () => {
       sourcePath: 'docs/specs/board.md',
     });
 
-    expect(markdown).toContain('type: claudian-work-order');
+    expect(markdown).toContain('type: specorator-work-order');
     expect(markdown).toContain('status: inbox');
     expect(markdown).toContain('provider: codex');
     expect(markdown).toContain('model: gpt-5-codex');
     expect(markdown).toContain('Source note: [[docs/specs/board]]');
-    expect(markdown).toContain('<!-- claudian:run-ledger-start -->');
-    expect(markdown).toContain('<!-- claudian:handoff-start -->');
+    expect(markdown).toContain('<!-- specorator:run-ledger-start -->');
+    expect(markdown).toContain('<!-- specorator:handoff-start -->');
     // The work order links to the source note but never copies its contents.
     expect(markdown).toContain('## Context\n\nSource note: [[docs/specs/board]]');
   });
@@ -250,7 +250,7 @@ describe('buildWorkOrderMarkdown priority + seam', () => {
 
   it('keeps the constraints-to-ledger seam intact', () => {
     expect(buildWorkOrderMarkdown(base)).toContain(
-      '- Do not modify unrelated files.\n\n## Run Ledger\n\n<!-- claudian:run-ledger-start -->',
+      '- Do not modify unrelated files.\n\n## Run Ledger\n\n<!-- specorator:run-ledger-start -->',
     );
   });
 });
@@ -275,7 +275,7 @@ describe('buildWorkOrderFromTemplate', () => {
     expect(md).toContain('provider: claude');
     expect(md).toContain('## Objective\n\nDo the thing.');
     expect(md).toContain('## Run Ledger');
-    expect(md).toContain('<!-- claudian:handoff-start -->');
+    expect(md).toContain('<!-- specorator:handoff-start -->');
 
     const { task } = new TaskNoteStore().parse('Agent Board/tasks/tpl.md', md);
     expect(task.frontmatter.status).toBe('inbox');

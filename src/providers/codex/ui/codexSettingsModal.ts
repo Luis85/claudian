@@ -11,7 +11,7 @@ export function renderCodexModalFooter(
   options: { onSave: () => void | Promise<void>; onCancel: () => void },
 ): void {
   renderModalButtonRow(contentEl, {
-    cls: 'claudian-sp-modal-buttons',
+    cls: 'specorator-sp-modal-buttons',
     saveText: 'Save',
     onCancel: options.onCancel,
     onSave: () => {

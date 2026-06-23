@@ -1,55 +1,55 @@
 import { parseKeyedProtocolBody } from '../../../utils/protocolBlock';
 
-export type ClaudianBlockKind = 'progress' | 'needs_input' | 'needs_approval';
+export type SpecoratorBlockKind = 'progress' | 'needs_input' | 'needs_approval';
 
-export interface ClaudianBlock {
-  kind: ClaudianBlockKind;
+export interface SpecoratorBlock {
+  kind: SpecoratorBlockKind;
   fields: Record<string, string>;
   raw: string;
 }
 
 export interface ParserOutput {
   plainText: string;
-  blocks: ClaudianBlock[];
+  blocks: SpecoratorBlock[];
   warnings: string[];
 }
 
-const KIND_TO_OPEN: Record<ClaudianBlockKind, string> = {
-  progress: '<claudian_progress>',
-  needs_input: '<claudian_needs_input>',
-  needs_approval: '<claudian_needs_approval>',
+const KIND_TO_OPEN: Record<SpecoratorBlockKind, string> = {
+  progress: '<specorator_progress>',
+  needs_input: '<specorator_needs_input>',
+  needs_approval: '<specorator_needs_approval>',
 };
 
-const KIND_TO_CLOSE: Record<ClaudianBlockKind, string> = {
-  progress: '</claudian_progress>',
-  needs_input: '</claudian_needs_input>',
-  needs_approval: '</claudian_needs_approval>',
+const KIND_TO_CLOSE: Record<SpecoratorBlockKind, string> = {
+  progress: '</specorator_progress>',
+  needs_input: '</specorator_needs_input>',
+  needs_approval: '</specorator_needs_approval>',
 };
 
-const REQUIRED_FIELDS: Record<ClaudianBlockKind, string[]> = {
+const REQUIRED_FIELDS: Record<SpecoratorBlockKind, string[]> = {
   progress: ['step'],
   needs_input: ['question'],
   needs_approval: ['action'],
 };
 
-const KNOWN_FIELDS: Record<ClaudianBlockKind, Set<string>> = {
+const KNOWN_FIELDS: Record<SpecoratorBlockKind, Set<string>> = {
   progress: new Set(['step', 'done', 'note']),
   needs_input: new Set(['question', 'why', 'default']),
   needs_approval: new Set(['action', 'risk', 'reversible']),
 };
 
-const ALL_KINDS: ClaudianBlockKind[] = ['progress', 'needs_input', 'needs_approval'];
+const ALL_KINDS: SpecoratorBlockKind[] = ['progress', 'needs_input', 'needs_approval'];
 
 const MAX_TAIL = 1024;
 
-export class ClaudianBlockParser {
+export class SpecoratorBlockParser {
   private buffer = '';
-  private openKind: ClaudianBlockKind | null = null;
+  private openKind: SpecoratorBlockKind | null = null;
   private openBody = '';
 
   feed(chunk: string): ParserOutput {
     this.buffer += chunk;
-    const blocks: ClaudianBlock[] = [];
+    const blocks: SpecoratorBlock[] = [];
     const warnings: string[] = [];
     let plainText = '';
 
@@ -103,14 +103,14 @@ export class ClaudianBlockParser {
    * `blocks`/`warnings` accumulators in place to preserve emission order.
    */
   private consumeUntilClose(
-    blocks: ClaudianBlock[],
+    blocks: SpecoratorBlock[],
     warnings: string[],
   ): { plainText: string; done: boolean } {
-    const openKind = this.openKind as ClaudianBlockKind;
+    const openKind = this.openKind as SpecoratorBlockKind;
     const closeTag = KIND_TO_CLOSE[openKind];
     const idx = this.buffer.indexOf(closeTag);
     if (idx === -1) {
-      // The close tag can be split across chunks (e.g. `</claudian_needs_in`
+      // The close tag can be split across chunks (e.g. `</specorator_needs_in`
       // then `put>`). Append everything except a possible partial close-tag
       // suffix to the body, and keep that suffix in the buffer so the next
       // chunk can complete the tag — mirroring the open-tag tail handling.
@@ -147,8 +147,8 @@ export class ClaudianBlockParser {
     return { plainText, blocks: [], warnings };
   }
 
-  private findNextOpen(): { kind: ClaudianBlockKind; index: number } | null {
-    let best: { kind: ClaudianBlockKind; index: number } | null = null;
+  private findNextOpen(): { kind: SpecoratorBlockKind; index: number } | null {
+    let best: { kind: SpecoratorBlockKind; index: number } | null = null;
     for (const kind of ALL_KINDS) {
       const idx = this.buffer.indexOf(KIND_TO_OPEN[kind]);
       if (idx === -1) continue;
@@ -178,7 +178,7 @@ export class ClaudianBlockParser {
 }
 
 function parseBody(
-  kind: ClaudianBlockKind,
+  kind: SpecoratorBlockKind,
   body: string,
 ): { ok: true; fields: Record<string, string> } | { ok: false; error: string } {
   const fields = parseKeyedProtocolBody(body);

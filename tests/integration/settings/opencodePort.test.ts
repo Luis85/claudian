@@ -165,23 +165,23 @@ describe('opencode tab registry port', () => {
 
     // CLI path: same validation element + text input the legacy tab has.
     const cliRow = fieldRow(host, 'providerConfigs.opencode.cliPathsByHost');
-    expect(cliRow?.querySelector('.claudian-cli-path-validation')).not.toBeNull();
+    expect(cliRow?.querySelector('.specorator-cli-path-validation')).not.toBeNull();
     expect(componentFor(host, 'providerConfigs.opencode.cliPathsByHost', 'text')).toBeDefined();
 
     // Visible-models picker: one checkbox per catalog model.
     const pickerRow = fieldRow(host, 'providerConfigs.opencode.visibleModels');
     const checkboxes = pickerRow?.querySelectorAll(
-      '.claudian-opencode-model-picker-list input[type="checkbox"]',
+      '.specorator-opencode-model-picker-list input[type="checkbox"]',
     );
     expect(checkboxes?.length).toBe(DISCOVERED_MODELS.length);
     expect(
-      pickerRow?.querySelector('.claudian-opencode-model-picker-summary')?.textContent,
+      pickerRow?.querySelector('.specorator-opencode-model-picker-summary')?.textContent,
     ).toContain('Visible: 1');
 
     // Alias editor: one row per selected model, seeded with the saved alias.
     const aliasRow = fieldRow(host, 'providerConfigs.opencode.modelAliases');
     const aliasInputs = aliasRow?.querySelectorAll<HTMLInputElement>(
-      '.claudian-opencode-model-picker-selected-alias',
+      '.specorator-opencode-model-picker-selected-alias',
     );
     expect(aliasInputs?.length).toBe(1);
     expect(aliasInputs?.[0]?.value).toBe('Opus');
@@ -193,13 +193,13 @@ describe('opencode tab registry port', () => {
     // Subagents: same container + manager header the legacy tab renders.
     const subagentsRow = fieldRow(host, 'opencode.subagents');
     expect(
-      subagentsRow?.querySelector('.claudian-slash-commands-container .claudian-sp-header'),
+      subagentsRow?.querySelector('.specorator-slash-commands-container .specorator-sp-header'),
     ).not.toBeNull();
 
     // Environment: shared snippet manager + keychain-backed secret editor.
     const envRow = fieldRow(host, 'providerConfigs.opencode.environmentVariables');
-    expect(envRow?.querySelector('.claudian-env-snippets-container')).not.toBeNull();
-    expect(envRow?.querySelector('.claudian-secret-env-vars')).not.toBeNull();
+    expect(envRow?.querySelector('.specorator-env-snippets-container')).not.toBeNull();
+    expect(envRow?.querySelector('.specorator-secret-env-vars')).not.toBeNull();
   });
 
   it('unchecking a catalog model persists visibleModels and refreshes the alias editor', async () => {
@@ -210,7 +210,7 @@ describe('opencode tab registry port', () => {
     // Rows are sorted by provider label, so Anthropic (the selected model)
     // comes first.
     const checkbox = pickerRow?.querySelector<HTMLInputElement>(
-      '.claudian-opencode-model-picker-row--selected input[type="checkbox"]',
+      '.specorator-opencode-model-picker-row--selected input[type="checkbox"]',
     );
     expect(checkbox).not.toBeNull();
     expect(checkbox?.checked).toBe(true);
@@ -226,7 +226,7 @@ describe('opencode tab registry port', () => {
     // Cross-widget sync: the alias editor re-rendered to its empty state.
     const aliasRow = fieldRow(host, 'providerConfigs.opencode.modelAliases');
     expect(
-      aliasRow?.querySelectorAll('.claudian-opencode-model-picker-selected-alias').length,
+      aliasRow?.querySelectorAll('.specorator-opencode-model-picker-selected-alias').length,
     ).toBe(0);
   });
 

@@ -1,10 +1,10 @@
 import { MessageChannel } from '@/providers/claude/runtime/ClaudeMessageChannel';
 import { createResponseHandler } from '@/providers/claude/runtime/types';
 
-import { sdkMock, setupClaudianServiceTest } from './claudianServiceTestKit';
+import { sdkMock, setupSpecoratorServiceTest } from './specoratorServiceTestKit';
 
-describe('ClaudianService', () => {
-  const ctx = setupClaudianServiceTest();
+describe('SpecoratorService', () => {
+  const ctx = setupSpecoratorServiceTest();
   let service: typeof ctx.service;
   let mockPlugin: typeof ctx.mockPlugin;
 

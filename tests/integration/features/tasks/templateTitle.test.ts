@@ -4,7 +4,7 @@ import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import type { ProviderChatUIConfig, ProviderRegistration } from '@/core/providers/types';
 import { createWorkOrderFromSeed } from '@/features/tasks/commands/taskCommands';
 import type { WorkOrderTemplate } from '@/features/tasks/templates/templateTypes';
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 
 /**
  * When the user picks a template at work-order creation time, the resulting
@@ -41,7 +41,7 @@ describe('createWorkOrderFromSeed template-title override (integration)', () => 
     Object.assign(registrations, priorRegistrations);
   });
 
-  function buildPlugin(captured: { path: string; markdown: string }[]): ClaudianPlugin {
+  function buildPlugin(captured: { path: string; markdown: string }[]): SpecoratorPlugin {
     return {
       settings: {
         agentBoardDefaultProvider: 'claude',
@@ -69,7 +69,7 @@ describe('createWorkOrderFromSeed template-title override (integration)', () => 
           }),
         },
       },
-    } as unknown as ClaudianPlugin;
+    } as unknown as SpecoratorPlugin;
   }
 
   it('uses the template name as the work-order title when a template is picked', async () => {

@@ -9,7 +9,7 @@ import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
 import { reconcileSnippetEdit, resolveSnippetEnvText } from '../../core/providers/secretEnvVars';
 import { SECRET_VALUE_PLACEHOLDER } from '../../core/security/secretIds';
 import type { EnvironmentScope, EnvSnippet } from '../../core/types';
-import { VIEW_TYPE_CLAUDIAN } from '../../core/types';
+import { VIEW_TYPE_SPECORATOR } from '../../core/types';
 import type { ChatViewHandle, PluginContext } from '../../core/types/PluginContext';
 import { t } from '../../i18n/i18n';
 import { formatContextLimit, parseContextLimit, parseEnvironmentVariables } from '../../utils/env';
@@ -19,7 +19,7 @@ import { mergeSnippetContextLimits, mergeSnippetModelAliases } from './envSnippe
 
 /**
  * Structural predicate for loaded chat-view leaves, duck-typed against the
- * method this module actually calls. Mirrors `isClaudianView` in
+ * method this module actually calls. Mirrors `isSpecoratorView` in
  * `features/chat` without importing it — `shared/` must stay free of
  * `features/` dependencies, and core's `ChatViewHandle` already models the
  * surface we need.
@@ -68,7 +68,7 @@ export class EnvSnippetModal extends Modal {
     const { contentEl } = this;
     this.setTitle(this.snippet ? t('settings.envSnippets.modal.titleEdit') : t('settings.envSnippets.modal.titleSave'));
 
-    this.modalEl.addClass('claudian-env-snippet-modal');
+    this.modalEl.addClass('specorator-env-snippet-modal');
 
     let nameEl: HTMLInputElement;
     let descEl: HTMLInputElement;
@@ -141,11 +141,11 @@ export class EnvSnippetModal extends Modal {
       const uniqueModelIds = ProviderRegistry.getCustomModelIds(envVars);
 
       if (uniqueModelIds.size === 0) {
-        contextLimitsContainer.addClass('claudian-hidden');
+        contextLimitsContainer.addClass('specorator-hidden');
         return;
       }
 
-      contextLimitsContainer.removeClass('claudian-hidden');
+      contextLimitsContainer.removeClass('specorator-hidden');
 
       const existingLimits = this.snippet?.contextLimits ?? this.plugin.settings.customContextLimits ?? {};
       const existingAliases = this.snippet?.modelAliases ?? this.plugin.settings.customModelAliases ?? {};
@@ -160,14 +160,14 @@ export class EnvSnippetModal extends Modal {
       });
 
       for (const modelId of uniqueModelIds) {
-        const row = contextLimitsContainer.createDiv({ cls: 'claudian-snippet-limit-row' });
-        row.createSpan({ text: modelId, cls: 'claudian-snippet-limit-model' });
-        row.createSpan({ cls: 'claudian-snippet-limit-spacer' });
+        const row = contextLimitsContainer.createDiv({ cls: 'specorator-snippet-limit-row' });
+        row.createSpan({ text: modelId, cls: 'specorator-snippet-limit-model' });
+        row.createSpan({ cls: 'specorator-snippet-limit-spacer' });
 
         const aliasInput = row.createEl('input', {
           type: 'text',
           placeholder: t('settings.customModelAliases.placeholder'),
-          cls: 'claudian-snippet-alias-input',
+          cls: 'specorator-snippet-alias-input',
         });
         aliasInput.value = existingAliases[modelId] ?? '';
         aliasInput.setAttribute('aria-label', `Alias for ${modelId}`);
@@ -177,7 +177,7 @@ export class EnvSnippetModal extends Modal {
         const input = row.createEl('input', {
           type: 'text',
           placeholder: '200k',
-          cls: 'claudian-snippet-limit-input',
+          cls: 'specorator-snippet-limit-input',
         });
         input.value = existingLimits[modelId] ? formatContextLimit(existingLimits[modelId]) : '';
         input.setAttribute('aria-label', `Context window for ${modelId}`);
@@ -215,23 +215,23 @@ export class EnvSnippetModal extends Modal {
         text.inputEl.rows = 8;
         text.inputEl.addEventListener('blur', () => renderContextLimitFields());
       });
-    envVarsSetting.settingEl.addClass('claudian-env-snippet-setting');
-    envVarsSetting.controlEl.addClass('claudian-env-snippet-control');
+    envVarsSetting.settingEl.addClass('specorator-env-snippet-setting');
+    envVarsSetting.controlEl.addClass('specorator-env-snippet-control');
 
-    contextLimitsContainer = contentEl.createDiv({ cls: 'claudian-snippet-context-limits' });
+    contextLimitsContainer = contentEl.createDiv({ cls: 'specorator-snippet-context-limits' });
     renderContextLimitFields();
 
-    const buttonContainer = contentEl.createDiv({ cls: 'claudian-snippet-buttons' });
+    const buttonContainer = contentEl.createDiv({ cls: 'specorator-snippet-buttons' });
 
     const cancelBtn = buttonContainer.createEl('button', {
       text: t('settings.envSnippets.modal.cancel'),
-      cls: 'claudian-cancel-btn'
+      cls: 'specorator-cancel-btn'
     });
     cancelBtn.addEventListener('click', () => this.close());
 
     const saveBtn = buttonContainer.createEl('button', {
       text: this.snippet ? t('settings.envSnippets.modal.update') : t('settings.envSnippets.modal.save'),
-      cls: 'claudian-save-btn'
+      cls: 'specorator-save-btn'
     });
     saveBtn.addEventListener('click', () => saveSnippet());
 
@@ -267,11 +267,11 @@ export class EnvSnippetManager {
   private render() {
     this.containerEl.empty();
 
-    const headerEl = this.containerEl.createDiv({ cls: 'claudian-snippet-header' });
-    headerEl.createSpan({ text: t('settings.envSnippets.name'), cls: 'claudian-snippet-label' });
+    const headerEl = this.containerEl.createDiv({ cls: 'specorator-snippet-header' });
+    headerEl.createSpan({ text: t('settings.envSnippets.name'), cls: 'specorator-snippet-label' });
 
     const saveBtn = headerEl.createEl('button', {
-      cls: 'claudian-settings-action-btn',
+      cls: 'specorator-settings-action-btn',
       attr: { 'aria-label': t('settings.envSnippets.addBtn') },
     });
     setIcon(saveBtn, 'plus');
@@ -282,27 +282,27 @@ export class EnvSnippetManager {
     const snippets = this.plugin.settings.envSnippets.filter((snippet) => this.shouldDisplaySnippet(snippet));
 
     if (snippets.length === 0) {
-      const emptyEl = this.containerEl.createDiv({ cls: 'claudian-snippet-empty' });
+      const emptyEl = this.containerEl.createDiv({ cls: 'specorator-snippet-empty' });
       emptyEl.setText(t('settings.envSnippets.noSnippets'));
       return;
     }
 
-    const listEl = this.containerEl.createDiv({ cls: 'claudian-snippet-list' });
+    const listEl = this.containerEl.createDiv({ cls: 'specorator-snippet-list' });
 
     for (const snippet of snippets) {
-      const itemEl = listEl.createDiv({ cls: 'claudian-snippet-item' });
+      const itemEl = listEl.createDiv({ cls: 'specorator-snippet-item' });
 
-      const infoEl = itemEl.createDiv({ cls: 'claudian-snippet-info' });
+      const infoEl = itemEl.createDiv({ cls: 'specorator-snippet-info' });
 
-      const nameEl = infoEl.createDiv({ cls: 'claudian-snippet-name' });
+      const nameEl = infoEl.createDiv({ cls: 'specorator-snippet-name' });
       nameEl.setText(snippet.name);
 
       if (snippet.description) {
-        const descEl = infoEl.createDiv({ cls: 'claudian-snippet-description' });
+        const descEl = infoEl.createDiv({ cls: 'specorator-snippet-description' });
         descEl.setText(snippet.description);
       }
 
-      const actionsEl = itemEl.createDiv({ cls: 'claudian-snippet-actions' });
+      const actionsEl = itemEl.createDiv({ cls: 'specorator-snippet-actions' });
 
       createSettingsActionButton(actionsEl, {
         icon: 'clipboard-paste',
@@ -439,7 +439,7 @@ export class EnvSnippetManager {
     // workspace.getLeavesOfType can hand back deferred leaves whose .view is a
     // stub until activation, and the cast would silently no-op (or worse,
     // crash on method call) in that window.
-    const leaf = this.plugin.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN)[0];
+    const leaf = this.plugin.app.workspace.getLeavesOfType(VIEW_TYPE_SPECORATOR)[0];
     if (leaf) {
       await leaf.loadIfDeferred();
       if (isChatViewHandle(leaf.view)) {
@@ -519,7 +519,7 @@ export class EnvSnippetManager {
   }
 
   private syncTextareaValue(scope: EnvironmentScope, value: string): void {
-    const selector = `.claudian-settings-env-textarea[data-env-scope="${scope}"]`;
+    const selector = `.specorator-settings-env-textarea[data-env-scope="${scope}"]`;
     const envTextarea = (this.containerEl.ownerDocument ?? window.document).querySelector<HTMLTextAreaElement>(selector);
     if (envTextarea) {
       envTextarea.value = value;

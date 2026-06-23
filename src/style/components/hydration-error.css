@@ -2,7 +2,7 @@
    or session deletion fails. Pairs with the Obsidian Notice toast surfaced by
    `registerHydrationFailedSubscriber` (Task 11). */
 
-.claudian-hydration-error {
+.specorator-hydration-error {
   margin: 8px 12px;
   padding: 8px 12px;
   border-left: 3px solid var(--color-red);

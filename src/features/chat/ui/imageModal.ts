@@ -15,14 +15,14 @@ export function openImageModal(params: {
 }): void {
   const { ownerDocument, src, alt } = params;
 
-  const overlay = ownerDocument.body.createDiv({ cls: 'claudian-image-modal-overlay' });
-  const modal = overlay.createDiv({ cls: 'claudian-image-modal' });
+  const overlay = ownerDocument.body.createDiv({ cls: 'specorator-image-modal-overlay' });
+  const modal = overlay.createDiv({ cls: 'specorator-image-modal' });
 
   modal.createEl('img', {
     attr: { src, ...(alt !== undefined ? { alt } : {}) },
   });
 
-  const closeBtn = modal.createDiv({ cls: 'claudian-image-modal-close' });
+  const closeBtn = modal.createDiv({ cls: 'specorator-image-modal-close' });
   closeBtn.setText('×');
 
   const handleEsc = (e: KeyboardEvent) => {

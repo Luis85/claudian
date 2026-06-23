@@ -46,7 +46,7 @@ function userMessages(count: number): ChatMessage[] {
 }
 
 function messageCount(messagesEl: any): number {
-  return messagesEl.querySelectorAll('.claudian-message').length;
+  return messagesEl.querySelectorAll('.specorator-message').length;
 }
 
 describe('MessageRenderer windowing', () => {
@@ -69,7 +69,7 @@ describe('MessageRenderer windowing', () => {
     renderer.renderMessages(userMessages(50), () => 'hi');
 
     expect(messageCount(messagesEl)).toBe(50);
-    expect(messagesEl.querySelector('.claudian-load-earlier')).toBeNull();
+    expect(messagesEl.querySelector('.specorator-load-earlier')).toBeNull();
   });
 
   it('mounts only the trailing window and a load-earlier control for long chats', () => {
@@ -80,8 +80,8 @@ describe('MessageRenderer windowing', () => {
 
     // 100 messages, window 80 -> only the most recent 80 are mounted.
     expect(messageCount(messagesEl)).toBe(80);
-    expect(messagesEl.querySelector('.claudian-load-earlier')).not.toBeNull();
-    expect(messagesEl.querySelector('.claudian-load-earlier-btn')).not.toBeNull();
+    expect(messagesEl.querySelector('.specorator-load-earlier')).not.toBeNull();
+    expect(messagesEl.querySelector('.specorator-load-earlier-btn')).not.toBeNull();
   });
 
   it('mounts the earlier chunk on demand across repeated load-earlier clicks', () => {
@@ -92,7 +92,7 @@ describe('MessageRenderer windowing', () => {
     expect(messageCount(messagesEl)).toBe(80);
 
     const clickLoadEarlier = () =>
-      messagesEl.querySelector('.claudian-load-earlier-btn')?.click();
+      messagesEl.querySelector('.specorator-load-earlier-btn')?.click();
 
     clickLoadEarlier();
     expect(messageCount(messagesEl)).toBe(160);

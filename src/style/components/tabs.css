@@ -1,16 +1,16 @@
-.claudian-tab-bar-container {
+.specorator-tab-bar-container {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.claudian-tab-badges {
+.specorator-tab-badges {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.claudian-tab-badge {
+.specorator-tab-badge {
   position: relative;
   display: flex;
   align-items: center;
@@ -27,7 +27,7 @@
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
-.claudian-tab-badge:hover {
+.specorator-tab-badge:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }
@@ -39,7 +39,7 @@
  * Filled accent background + bold weight makes the active tab the first
  * thing the eye lands on, even alongside attention/working pulses.
  */
-.claudian-tab-badge-active {
+.specorator-tab-badge-active {
   border-color: var(--interactive-accent);
   color: var(--text-on-accent);
   background: var(--interactive-accent);
@@ -49,12 +49,12 @@
   box-shadow: inset 0 0 0 1px var(--text-on-accent);
 }
 
-.claudian-tab-badge-active:hover {
+.specorator-tab-badge-active:hover {
   background: var(--interactive-accent-hover, var(--interactive-accent));
   color: var(--text-on-accent);
 }
 
-.claudian-tab-badge-attention {
+.specorator-tab-badge-attention {
   border-color: var(--text-error);
 }
 
@@ -65,7 +65,7 @@
  * to avoid colliding with the worker dot (top-right) and the working dot
  * (top-right).
  */
-.claudian-tab-badge.claudian-tab-badge-attention::before {
+.specorator-tab-badge.specorator-tab-badge-attention::before {
   content: '';
   position: absolute;
   bottom: 1px;
@@ -75,10 +75,10 @@
   border-radius: 50%;
   background: var(--text-error);
   box-shadow: 0 0 0 1px var(--background-primary);
-  animation: claudian-tab-badge-attention-pulse 1.8s ease-in-out infinite;
+  animation: specorator-tab-badge-attention-pulse 1.8s ease-in-out infinite;
 }
 
-@keyframes claudian-tab-badge-attention-pulse {
+@keyframes specorator-tab-badge-attention-pulse {
   0%,
   100% {
     opacity: 1;
@@ -92,12 +92,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .claudian-tab-badge.claudian-tab-badge-attention::before {
+  .specorator-tab-badge.specorator-tab-badge-attention::before {
     animation: none;
   }
 }
 
-.claudian-tab-badge-idle {
+.specorator-tab-badge-idle {
   border-color: var(--background-modifier-border);
 }
 
@@ -108,15 +108,15 @@
  *   - First WO badge after a chat group gets an extra left margin so the two
  *     groups read as separate clusters at a glance, not one continuous row.
  */
-.claudian-tab-badge--work-order {
+.specorator-tab-badge--work-order {
   border-style: dashed;
 }
 
-.claudian-tab-badge--work-order-first {
+.specorator-tab-badge--work-order-first {
   margin-left: 12px;
 }
 
-.claudian-tab-badge-icon {
+.specorator-tab-badge-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -124,7 +124,7 @@
   height: 14px;
 }
 
-.claudian-tab-badge-icon svg {
+.specorator-tab-badge-icon svg {
   width: 14px;
   height: 14px;
 }
@@ -134,14 +134,14 @@
  * the tab as bound to a roster agent. The badge relaxes its fixed 24px square to
  * a slightly wider pill so the glyph + number sit side by side.
  */
-.claudian-tab-badge--agent {
+.specorator-tab-badge--agent {
   width: auto;
   min-width: 24px;
   gap: 2px;
   padding: 0 5px;
 }
 
-.claudian-tab-badge-agent-icon {
+.specorator-tab-badge-agent-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -149,23 +149,23 @@
   height: 11px;
 }
 
-.claudian-tab-badge-agent-icon svg {
+.specorator-tab-badge-agent-icon svg {
   width: 11px;
   height: 11px;
 }
 
-@keyframes claudian-tab-badge-working-pulse {
+@keyframes specorator-tab-badge-working-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--claudian-tab-working-color) 45%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--specorator-tab-working-color) 45%, transparent);
   }
 
   50% {
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--claudian-tab-working-color) 20%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--specorator-tab-working-color) 20%, transparent);
   }
 }
 
-@keyframes claudian-tab-badge-working-dot-pulse {
+@keyframes specorator-tab-badge-working-dot-pulse {
   0%,
   100% {
     opacity: 0.85;
@@ -182,32 +182,32 @@
  * Working state — any tab running an agent turn (stacks with active / role).
  * Declared after role + active so it wins the cascade for every tab type.
  */
-.claudian-tab-badge.claudian-tab-badge-working {
-  --claudian-tab-working-color: var(--claudian-brand, #da7756);
-  border-color: var(--claudian-tab-working-color);
+.specorator-tab-badge.specorator-tab-badge-working {
+  --specorator-tab-working-color: var(--specorator-brand, #da7756);
+  border-color: var(--specorator-tab-working-color);
   color: var(--text-normal);
-  animation: claudian-tab-badge-working-pulse 1.35s ease-in-out infinite;
+  animation: specorator-tab-badge-working-pulse 1.35s ease-in-out infinite;
 }
 
-.claudian-tab-badge.claudian-tab-badge-working[data-provider="claude"] {
-  --claudian-tab-working-color: var(--claudian-brand-claude, #d97757);
+.specorator-tab-badge.specorator-tab-badge-working[data-provider="claude"] {
+  --specorator-tab-working-color: var(--specorator-brand-claude, #d97757);
 }
 
-.claudian-tab-badge.claudian-tab-badge-working[data-provider="codex"] {
-  --claudian-tab-working-color: var(--claudian-brand-codex, #d0d0d0);
+.specorator-tab-badge.specorator-tab-badge-working[data-provider="codex"] {
+  --specorator-tab-working-color: var(--specorator-brand-codex, #d0d0d0);
 }
 
-.claudian-tab-badge.claudian-tab-badge-working[data-provider="cursor"] {
-  --claudian-tab-working-color: var(--claudian-brand-cursor, #7c6fe6);
+.specorator-tab-badge.specorator-tab-badge-working[data-provider="cursor"] {
+  --specorator-tab-working-color: var(--specorator-brand-cursor, #7c6fe6);
 }
 
-.claudian-tab-badge.claudian-tab-badge-working[data-provider="opencode"] {
-  --claudian-tab-working-color: var(--claudian-brand-opencode, #c8c8c8);
+.specorator-tab-badge.specorator-tab-badge-working[data-provider="opencode"] {
+  --specorator-tab-working-color: var(--specorator-brand-opencode, #c8c8c8);
 }
 
 
 /* Universal working dot (all tab types, including plain chats) */
-.claudian-tab-badge.claudian-tab-badge-working::after {
+.specorator-tab-badge.specorator-tab-badge-working::after {
   content: '';
   position: absolute;
   top: 1px;
@@ -215,28 +215,28 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--claudian-tab-working-color);
+  background: var(--specorator-tab-working-color);
   opacity: 0.9;
-  animation: claudian-tab-badge-working-dot-pulse 1.35s ease-in-out infinite;
+  animation: specorator-tab-badge-working-dot-pulse 1.35s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .claudian-tab-badge.claudian-tab-badge-working {
+  .specorator-tab-badge.specorator-tab-badge-working {
     animation: none;
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--claudian-tab-working-color) 30%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--specorator-tab-working-color) 30%, transparent);
   }
 
-  .claudian-tab-badge.claudian-tab-badge-working::after {
+  .specorator-tab-badge.specorator-tab-badge-working::after {
     animation: none;
   }
 }
 
 /* Legacy alias */
-.claudian-tab-badge-streaming {
-  border-color: var(--claudian-brand, #da7756);
+.specorator-tab-badge-streaming {
+  border-color: var(--specorator-brand, #da7756);
 }
 
-.claudian-tab-content-container {
+.specorator-tab-content-container {
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -244,7 +244,7 @@
   overflow: hidden;
 }
 
-.claudian-tab-content {
+.specorator-tab-content {
   position: relative; /* For scroll-to-bottom button positioning */
   display: flex;
   flex-direction: column;

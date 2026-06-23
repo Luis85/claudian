@@ -1,5 +1,5 @@
-export const CLAUDIAN_STORAGE_PATH = '.claudian';
+export const SPECORATOR_STORAGE_PATH = '.specorator';
 
-export const CLAUDIAN_SETTINGS_PATH = `${CLAUDIAN_STORAGE_PATH}/claudian-settings.json`;
+export const SPECORATOR_SETTINGS_PATH = `${SPECORATOR_STORAGE_PATH}/specorator-settings.json`;
 
-export const SESSIONS_PATH = `${CLAUDIAN_STORAGE_PATH}/sessions`;
+export const SESSIONS_PATH = `${SPECORATOR_STORAGE_PATH}/sessions`;

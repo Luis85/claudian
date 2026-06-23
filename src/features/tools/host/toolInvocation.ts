@@ -2,7 +2,7 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 import { requestSignal } from '../toolRequestSignal';
-import type { ClaudianToolModule, ToolHostContext, ToolTextResult } from '../toolTypes';
+import type { SpecoratorToolModule, ToolHostContext, ToolTextResult } from '../toolTypes';
 
 // User tools run as trusted in-process code with full host privileges, so a
 // buggy or runaway handler can hang a turn or flood the provider's context with
@@ -41,7 +41,7 @@ function boundResult(result: ToolTextResult, maxChars: number): ToolTextResult {
     }
   }
   if (!truncated) return result;
-  content.push({ type: 'text', text: `\n[claudian: tool output truncated at ${maxChars} characters]` });
+  content.push({ type: 'text', text: `\n[specorator: tool output truncated at ${maxChars} characters]` });
   return { ...result, content };
 }
 
@@ -53,7 +53,7 @@ function boundResult(result: ToolTextResult, maxChars: number): ToolTextResult {
  * MCP host reports them as before. Shared by both tool hosts (SDK + HTTP).
  */
 export async function invokeBoundedToolHandler(
-  handler: ClaudianToolModule['handler'],
+  handler: SpecoratorToolModule['handler'],
   args: unknown,
   ctxFactory: (signal: AbortSignal) => ToolHostContext,
   hostSignal: AbortSignal,
@@ -99,7 +99,7 @@ export async function invokeBoundedToolHandler(
  * to the SDK's wider `CallToolResult` union (which also allows image/audio).
  */
 export function makeBoundedToolCallback(
-  module: ClaudianToolModule,
+  module: SpecoratorToolModule,
   ctxFactory: (signal: AbortSignal) => ToolHostContext,
 ): (args: unknown, extra: unknown) => Promise<CallToolResult> {
   return async (args, extra) => {

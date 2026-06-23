@@ -12,10 +12,10 @@ describe('renderLibraryNav', () => {
 
     renderLibraryNav(root, host, LIBRARY_VIEW_TYPES.skills);
 
-    const items = Array.from(root.querySelectorAll('.claudian-library-nav-item')) as HTMLButtonElement[];
+    const items = Array.from(root.querySelectorAll('.specorator-library-nav-item')) as HTMLButtonElement[];
     expect(items).toHaveLength(4);
 
-    const active = root.querySelector('.claudian-library-nav-item.is-active');
+    const active = root.querySelector('.specorator-library-nav-item.is-active');
     expect(active?.textContent).toBe('Skills');
 
     // The active item has no click handler; an inactive one navigates.

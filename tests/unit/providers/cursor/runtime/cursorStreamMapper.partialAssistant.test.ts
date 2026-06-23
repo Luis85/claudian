@@ -55,7 +55,7 @@ describe('computeCursorAssistantTextDelta', () => {
 
   it('ignores a doubled cumulative snapshot pasted back-to-back without a separator', () => {
     const opening =
-      'Here is a review of Claudian\'s Cursor integration against the CLI on this machine.\n\n'
+      'Here is a review of Specorator\'s Cursor integration against the CLI on this machine.\n\n'
       + 'Your machine\n\nOverall the integration is well-architected and largely correct. '
       + 'I can turn any of these into concrete patches — the spawn-error handler and '
       + 'binary-discovery expansion are the smallest high-value fixes.';
@@ -106,7 +106,7 @@ describe('CursorNdjsonStreamReducer partial assistant fixture', () => {
 
   it('does not duplicate when reducer receives a doubled cumulative assistant row', () => {
     const opening =
-      'Here is a review of Claudian\'s Cursor integration against the CLI on this machine.\n\n'
+      'Here is a review of Specorator\'s Cursor integration against the CLI on this machine.\n\n'
       + 'Your machine\n\nOverall the integration is well-architected and largely correct. '
       + 'I can turn any of these into concrete patches — the spawn-error handler and '
       + 'binary-discovery expansion are the smallest high-value fixes.';

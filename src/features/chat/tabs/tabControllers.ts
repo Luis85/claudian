@@ -5,7 +5,7 @@ import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import type { ChatMessage } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { findRewindContext } from '../rewind';
 import { getTabProviderId } from './providerResolution';
 import {
@@ -56,7 +56,7 @@ interface ForkSource {
  * Prefers the live service session ID; falls back to persisted conversation metadata.
  * Shows a notice and returns null when no session can be resolved.
  */
-function resolveForkSource(tab: TabData, plugin: ClaudianPlugin): ForkSource | null {
+function resolveForkSource(tab: TabData, plugin: SpecoratorPlugin): ForkSource | null {
   const conversation = tab.conversationId
     ? plugin.getConversationSync(tab.conversationId)
     : null;
@@ -108,7 +108,7 @@ function buildForkContext(
  * Shared fork guard: fork must be supported and the tab must not be streaming.
  * Surfaces the matching notice and returns false when forking can't proceed.
  */
-function canFork(tab: TabData, plugin: ClaudianPlugin): boolean {
+function canFork(tab: TabData, plugin: SpecoratorPlugin): boolean {
   if (!getTabCapabilities(tab, plugin).supportsFork) {
     new Notice(t('chat.fork.unsupportedProvider'));
     return false;
@@ -124,7 +124,7 @@ function canFork(tab: TabData, plugin: ClaudianPlugin): boolean {
 
 async function handleForkRequest(
   tab: TabData,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   userMessageId: string,
   forkRequestCallback: (forkContext: ForkContext) => Promise<void>,
 ): Promise<void> {
@@ -162,7 +162,7 @@ async function handleForkRequest(
 
 async function handleForkAll(
   tab: TabData,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   forkRequestCallback: (forkContext: ForkContext) => Promise<void>,
 ): Promise<void> {
   const { state } = tab;
@@ -200,7 +200,7 @@ async function handleForkAll(
 
 export function initializeTabControllers(
   tab: TabData,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   component: Component,
   forkRequestCallback?: (forkContext: ForkContext) => Promise<void>,
   openConversation?: (conversationId: string) => Promise<void>,

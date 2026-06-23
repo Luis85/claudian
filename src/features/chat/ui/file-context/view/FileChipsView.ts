@@ -27,7 +27,7 @@ export class FileChipsView {
     this.callbacks = callbacks;
 
     const firstChild = this.containerEl.firstChild;
-    this.fileIndicatorEl = this.containerEl.createDiv({ cls: 'claudian-file-indicator' });
+    this.fileIndicatorEl = this.containerEl.createDiv({ cls: 'specorator-file-indicator' });
     if (firstChild) {
       this.containerEl.insertBefore(this.fileIndicatorEl, firstChild);
     }
@@ -46,13 +46,13 @@ export class FileChipsView {
 
     const total = (current ? 1 : 0) + files.length + data.folders.length;
     if (total === 0) {
-      this.fileIndicatorEl.removeClass('claudian-visible-flex');
-      this.fileIndicatorEl.addClass('claudian-hidden');
+      this.fileIndicatorEl.removeClass('specorator-visible-flex');
+      this.fileIndicatorEl.addClass('specorator-hidden');
       return;
     }
 
-    this.fileIndicatorEl.addClass('claudian-visible-flex');
-    this.fileIndicatorEl.removeClass('claudian-hidden');
+    this.fileIndicatorEl.addClass('specorator-visible-flex');
+    this.fileIndicatorEl.removeClass('specorator-hidden');
 
     if (current) {
       this.renderPill(current, 'current', 'file-text', basename(current), true);
@@ -73,23 +73,23 @@ export class FileChipsView {
     openable: boolean,
   ): void {
     const chipEl = this.fileIndicatorEl.createDiv({
-      cls: `claudian-file-chip claudian-file-chip--${kind}`,
+      cls: `specorator-file-chip specorator-file-chip--${kind}`,
     });
 
-    const iconEl = chipEl.createSpan({ cls: 'claudian-file-chip-icon' });
+    const iconEl = chipEl.createSpan({ cls: 'specorator-file-chip-icon' });
     setIcon(iconEl, iconName);
 
-    const nameEl = chipEl.createSpan({ cls: 'claudian-file-chip-name' });
+    const nameEl = chipEl.createSpan({ cls: 'specorator-file-chip-name' });
     nameEl.setText(label);
     nameEl.setAttribute('title', path);
 
-    const removeEl = chipEl.createSpan({ cls: 'claudian-file-chip-remove' });
+    const removeEl = chipEl.createSpan({ cls: 'specorator-file-chip-remove' });
     removeEl.setText('×');
     removeEl.setAttribute('aria-label', 'Remove');
 
     if (openable) {
       chipEl.addEventListener('click', (e) => {
-        if (!(e.target as HTMLElement).closest('.claudian-file-chip-remove')) {
+        if (!(e.target as HTMLElement).closest('.specorator-file-chip-remove')) {
           this.callbacks.onOpenFile(path);
         }
       });

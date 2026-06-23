@@ -32,13 +32,13 @@ describe('GitActionButton', () => {
 
   it('is hidden until a dirty status arrives', () => {
     const { button } = setup();
-    expect(button.containerEl.hasClass('claudian-hidden')).toBe(true);
+    expect(button.containerEl.hasClass('specorator-hidden')).toBe(true);
   });
 
   it('becomes visible and shows the change count when dirty', () => {
     const { button, emit } = setup();
     emit({ isRepo: true, dirtyCount: 3 });
-    expect(button.containerEl.hasClass('claudian-hidden')).toBe(false);
+    expect(button.containerEl.hasClass('specorator-hidden')).toBe(false);
     expect(button.labelEl.textContent).toBe('Commit & push');
     expect(button.badgeEl.textContent).toBe('3');
     expect(button.buttonEl.getAttribute('aria-label')).toBe('Commit and push 3 changes');
@@ -49,13 +49,13 @@ describe('GitActionButton', () => {
     const { button, emit } = setup();
     emit({ isRepo: true, dirtyCount: 3 });
     emit({ isRepo: true, dirtyCount: 0 });
-    expect(button.containerEl.hasClass('claudian-hidden')).toBe(true);
+    expect(button.containerEl.hasClass('specorator-hidden')).toBe(true);
   });
 
   it('stays hidden when the provider disables git actions', () => {
     const { button, emit } = setup({ enabled: false });
     emit({ isRepo: true, dirtyCount: 3 });
-    expect(button.containerEl.hasClass('claudian-hidden')).toBe(true);
+    expect(button.containerEl.hasClass('specorator-hidden')).toBe(true);
   });
 
   it('invokes onGitCommit when clicked', () => {

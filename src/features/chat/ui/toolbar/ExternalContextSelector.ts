@@ -42,7 +42,7 @@ export class ExternalContextSelector {
 
   constructor(parentEl: HTMLElement, callbacks: ToolbarCallbacks) {
     this.callbacks = callbacks;
-    this.container = parentEl.createDiv({ cls: 'claudian-external-context-selector' });
+    this.container = parentEl.createDiv({ cls: 'specorator-external-context-selector' });
     this.render();
   }
 
@@ -204,12 +204,12 @@ export class ExternalContextSelector {
   private render() {
     this.container.empty();
 
-    const iconWrapper = this.container.createDiv({ cls: 'claudian-external-context-icon-wrapper' });
+    const iconWrapper = this.container.createDiv({ cls: 'specorator-external-context-icon-wrapper' });
 
-    this.iconEl = iconWrapper.createDiv({ cls: 'claudian-external-context-icon' });
+    this.iconEl = iconWrapper.createDiv({ cls: 'specorator-external-context-icon' });
     setIcon(this.iconEl, 'folder');
 
-    this.badgeEl = iconWrapper.createDiv({ cls: 'claudian-external-context-badge' });
+    this.badgeEl = iconWrapper.createDiv({ cls: 'specorator-external-context-badge' });
 
     this.updateDisplay();
 
@@ -219,7 +219,7 @@ export class ExternalContextSelector {
       void this.openFolderPicker();
     });
 
-    this.dropdownEl = this.container.createDiv({ cls: 'claudian-external-context-dropdown' });
+    this.dropdownEl = this.container.createDiv({ cls: 'specorator-external-context-dropdown' });
     this.renderDropdown();
   }
 
@@ -277,20 +277,20 @@ export class ExternalContextSelector {
     this.dropdownEl.empty();
 
     // Header
-    const headerEl = this.dropdownEl.createDiv({ cls: 'claudian-external-context-header' });
+    const headerEl = this.dropdownEl.createDiv({ cls: 'specorator-external-context-header' });
     headerEl.setText('External contexts');
 
     // Path list
-    const listEl = this.dropdownEl.createDiv({ cls: 'claudian-external-context-list' });
+    const listEl = this.dropdownEl.createDiv({ cls: 'specorator-external-context-list' });
 
     if (this.externalContextPaths.length === 0) {
-      const emptyEl = listEl.createDiv({ cls: 'claudian-external-context-empty' });
+      const emptyEl = listEl.createDiv({ cls: 'specorator-external-context-empty' });
       emptyEl.setText('Click folder icon to add');
     } else {
       for (const pathStr of this.externalContextPaths) {
-        const itemEl = listEl.createDiv({ cls: 'claudian-external-context-item' });
+        const itemEl = listEl.createDiv({ cls: 'specorator-external-context-item' });
 
-        const pathTextEl = itemEl.createSpan({ cls: 'claudian-external-context-text' });
+        const pathTextEl = itemEl.createSpan({ cls: 'specorator-external-context-text' });
         // Show shortened path for display
         const displayPath = this.shortenPath(pathStr);
         pathTextEl.setText(displayPath);
@@ -298,7 +298,7 @@ export class ExternalContextSelector {
 
         // Lock toggle button
         const isPersistent = this.persistentPaths.has(pathStr);
-        const lockBtn = itemEl.createSpan({ cls: 'claudian-external-context-lock' });
+        const lockBtn = itemEl.createSpan({ cls: 'specorator-external-context-lock' });
         if (isPersistent) {
           lockBtn.addClass('locked');
         }
@@ -309,7 +309,7 @@ export class ExternalContextSelector {
           this.togglePersistence(pathStr);
         });
 
-        const removeBtn = itemEl.createSpan({ cls: 'claudian-external-context-remove' });
+        const removeBtn = itemEl.createSpan({ cls: 'specorator-external-context-remove' });
         setIcon(removeBtn, 'x');
         removeBtn.setAttribute('title', 'Remove path');
         removeBtn.addEventListener('click', (e) => {

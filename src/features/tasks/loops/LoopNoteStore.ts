@@ -52,7 +52,7 @@ export class LoopNoteStore {
     if (!parsed) {
       throw new Error('Missing YAML frontmatter');
     }
-    if (parsed.frontmatter.type !== 'claudian-loop') {
+    if (parsed.frontmatter.type !== 'specorator-loop') {
       throw new Error('Invalid loop type');
     }
     if (parsed.frontmatter.schema_version !== 1) {
@@ -77,7 +77,7 @@ export class LoopNoteStore {
   build(input: SaveLoopInput): string {
     const lines: string[] = [
       '---',
-      'type: claudian-loop',
+      'type: specorator-loop',
       'schema_version: 1',
       `name: ${JSON.stringify(input.name)}`,
     ];

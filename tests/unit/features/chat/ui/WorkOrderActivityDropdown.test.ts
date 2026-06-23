@@ -31,7 +31,7 @@ describe('WorkOrderActivityDropdown', () => {
       onOpenItem: jest.fn(),
       onCloseItem: jest.fn(),
     });
-    expect(host.hasClass('claudian-hidden')).toBe(true);
+    expect(host.hasClass('specorator-hidden')).toBe(true);
   });
 
   it('unmarks hidden when entries appear', () => {
@@ -42,7 +42,7 @@ describe('WorkOrderActivityDropdown', () => {
       onCloseItem: jest.fn(),
     });
     dropdown.update({ items: [item], closableTabs: [], runningCount: 1, attentionCount: 0 });
-    expect(host.hasClass('claudian-hidden')).toBe(false);
+    expect(host.hasClass('specorator-hidden')).toBe(false);
   });
 
   it('renders count, attention state, rows, and delegates selection', async () => {
@@ -51,12 +51,12 @@ describe('WorkOrderActivityDropdown', () => {
     const summary: WorkOrderActivitySummary = { items: [item], closableTabs: [], runningCount: 0, attentionCount: 1 };
     new WorkOrderActivityDropdown(host, { summary, onOpenItem, onCloseItem: jest.fn() });
 
-    const toggle = host.querySelector('.claudian-work-order-activity-toggle');
-    expect(toggle?.hasClass('claudian-work-order-activity-toggle--attention')).toBe(true);
-    expect(host.querySelector('.claudian-work-order-activity-count')?.textContent).toBe('1');
+    const toggle = host.querySelector('.specorator-work-order-activity-toggle');
+    expect(toggle?.hasClass('specorator-work-order-activity-toggle--attention')).toBe(true);
+    expect(host.querySelector('.specorator-work-order-activity-count')?.textContent).toBe('1');
 
     toggle?.click();
-    const row = host.querySelector('.claudian-work-order-activity-item');
+    const row = host.querySelector('.specorator-work-order-activity-item');
     expect(row?.textContent).toContain('Task 1');
     row?.click();
     await Promise.resolve();
@@ -76,12 +76,12 @@ describe('WorkOrderActivityDropdown', () => {
     new WorkOrderActivityDropdown(host, { summary, onOpenItem: jest.fn(), onCloseItem });
 
     // The dropdown shows even with no active items, counting the closable tab.
-    const toggle = host.querySelector('.claudian-work-order-activity-toggle');
+    const toggle = host.querySelector('.specorator-work-order-activity-toggle');
     expect(toggle).not.toBeNull();
-    expect(host.querySelector('.claudian-work-order-activity-count')?.textContent).toBe('1');
+    expect(host.querySelector('.specorator-work-order-activity-count')?.textContent).toBe('1');
 
     toggle?.click();
-    const close = host.querySelector('.claudian-work-order-activity-close');
+    const close = host.querySelector('.specorator-work-order-activity-close');
     expect(close).not.toBeNull();
     close?.click();
     await Promise.resolve();

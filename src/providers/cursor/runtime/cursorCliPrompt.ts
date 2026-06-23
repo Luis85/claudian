@@ -64,7 +64,7 @@ export function resolveCursorCliPromptArg(prompt: string): ResolvedCursorCliProm
     return { arg: prompt };
   }
 
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'claudian-cursor-prompt-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'specorator-cursor-prompt-'));
   if (process.platform !== 'win32') {
     try {
       fs.chmodSync(dir, 0o700);

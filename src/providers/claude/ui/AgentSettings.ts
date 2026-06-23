@@ -41,7 +41,7 @@ class AgentModal extends Modal {
         ? t('settings.subagents.modal.titleEdit')
         : t('settings.subagents.modal.titleAdd')
     );
-    this.modalEl.addClass('claudian-sp-modal');
+    this.modalEl.addClass('specorator-sp-modal');
 
     const { contentEl } = this;
 
@@ -70,10 +70,10 @@ class AgentModal extends Modal {
           .setPlaceholder(t('settings.subagents.modal.descriptionPlaceholder'));
       });
 
-    const details = contentEl.createEl('details', { cls: 'claudian-sp-advanced-section' });
+    const details = contentEl.createEl('details', { cls: 'specorator-sp-advanced-section' });
     details.createEl('summary', {
       text: t('settings.subagents.modal.advancedOptions'),
-      cls: 'claudian-sp-advanced-summary',
+      cls: 'specorator-sp-advanced-summary',
     });
     if ((this.existingAgent?.model && this.existingAgent.model !== 'inherit') ||
         this.existingAgent?.tools?.length ||
@@ -123,7 +123,7 @@ class AgentModal extends Modal {
       .setDesc(t('settings.subagents.modal.promptDesc'));
 
     const contentArea = contentEl.createEl('textarea', {
-      cls: 'claudian-sp-content-area',
+      cls: 'specorator-sp-content-area',
       attr: {
         rows: '10',
         placeholder: t('settings.subagents.modal.promptPlaceholder'),
@@ -131,17 +131,17 @@ class AgentModal extends Modal {
     });
     contentArea.value = this.existingAgent?.prompt || '';
 
-    const buttonContainer = contentEl.createDiv({ cls: 'claudian-sp-modal-buttons' });
+    const buttonContainer = contentEl.createDiv({ cls: 'specorator-sp-modal-buttons' });
 
     const cancelBtn = buttonContainer.createEl('button', {
       text: t('common.cancel'),
-      cls: 'claudian-cancel-btn',
+      cls: 'specorator-cancel-btn',
     });
     cancelBtn.addEventListener('click', () => this.close());
 
     const saveBtn = buttonContainer.createEl('button', {
       text: t('common.save'),
-      cls: 'claudian-save-btn',
+      cls: 'specorator-save-btn',
     });
     saveBtn.addEventListener('click', () => {
       void (async (): Promise<void> => {
@@ -236,20 +236,20 @@ export class AgentSettings {
   private render(): void {
     this.containerEl.empty();
 
-    const headerEl = this.containerEl.createDiv({ cls: 'claudian-sp-header' });
-    headerEl.createSpan({ text: t('settings.subagents.name'), cls: 'claudian-sp-label' });
+    const headerEl = this.containerEl.createDiv({ cls: 'specorator-sp-header' });
+    headerEl.createSpan({ text: t('settings.subagents.name'), cls: 'specorator-sp-label' });
 
-    const actionsEl = headerEl.createDiv({ cls: 'claudian-sp-header-actions' });
+    const actionsEl = headerEl.createDiv({ cls: 'specorator-sp-header-actions' });
 
     const refreshBtn = actionsEl.createEl('button', {
-      cls: 'claudian-settings-action-btn',
+      cls: 'specorator-settings-action-btn',
       attr: { 'aria-label': t('common.refresh') },
     });
     setIcon(refreshBtn, 'refresh-cw');
     refreshBtn.addEventListener('click', () => { void this.refreshAgents(); });
 
     const addBtn = actionsEl.createEl('button', {
-      cls: 'claudian-settings-action-btn',
+      cls: 'specorator-settings-action-btn',
       attr: { 'aria-label': t('common.add') },
     });
     setIcon(addBtn, 'plus');
@@ -259,12 +259,12 @@ export class AgentSettings {
     const vaultAgents = allAgents.filter(a => a.source === 'vault');
 
     if (vaultAgents.length === 0) {
-      const emptyEl = this.containerEl.createDiv({ cls: 'claudian-sp-empty-state' });
+      const emptyEl = this.containerEl.createDiv({ cls: 'specorator-sp-empty-state' });
       emptyEl.setText(t('settings.subagents.noAgents'));
       return;
     }
 
-    const listEl = this.containerEl.createDiv({ cls: 'claudian-sp-list' });
+    const listEl = this.containerEl.createDiv({ cls: 'specorator-sp-list' });
 
     for (const agent of vaultAgents) {
       this.renderAgentItem(listEl, agent);

@@ -243,14 +243,14 @@ function collectHeadingsIn(root: RecordingEl): string[] {
 // Text of every section-header label rendered under the shared section-header
 // pattern (uppercased visually via CSS; the recorded text stays natural-case).
 function sectionLabels(root: RecordingEl): string[] {
-  return findAll(root, (el) => el.classes.has('claudian-work-order-modal-section-label'))
+  return findAll(root, (el) => el.classes.has('specorator-work-order-modal-section-label'))
     .map((el) => el.text)
     .filter(Boolean);
 }
 
 // The section element (icon + label + optional right slot) whose label matches.
 function findSection(root: RecordingEl, label: string): RecordingEl | undefined {
-  return findAll(root, (el) => el.classes.has('claudian-work-order-modal-section')).find((section) =>
+  return findAll(root, (el) => el.classes.has('specorator-work-order-modal-section')).find((section) =>
     sectionLabels(section).includes(label),
   );
 }
@@ -275,7 +275,7 @@ function makeTask(id: string, status: TaskStatus, handoff = '', ledger = ''): Ta
   return {
     path: `tasks/${id}.md`,
     frontmatter: {
-      type: 'claudian-work-order',
+      type: 'specorator-work-order',
       schema_version: 1,
       id,
       title: `Task ${id}`,
@@ -350,13 +350,13 @@ interface FooterButton {
 const VARIANTS = ['cta', 'ghost', 'danger'] as const;
 
 function footerButtons(root: RecordingEl): FooterButton[] {
-  const footer = find(root, 'claudian-work-order-modal-footer')!;
-  const leftGroup = find(footer, 'claudian-work-order-modal-footer-group--left');
-  return findAll(footer, (el) => el.classes.has('claudian-work-order-modal-action')).map((btn) => {
+  const footer = find(root, 'specorator-work-order-modal-footer')!;
+  const leftGroup = find(footer, 'specorator-work-order-modal-footer-group--left');
+  return findAll(footer, (el) => el.classes.has('specorator-work-order-modal-action')).map((btn) => {
     const variant =
-      VARIANTS.find((v) => btn.classes.has(`claudian-work-order-modal-action--${v}`)) ?? '';
-    const labelEl = find(btn, 'claudian-work-order-modal-action-label');
-    const iconEl = find(btn, 'claudian-work-order-modal-action-icon');
+      VARIANTS.find((v) => btn.classes.has(`specorator-work-order-modal-action--${v}`)) ?? '';
+    const labelEl = find(btn, 'specorator-work-order-modal-action-label');
+    const iconEl = find(btn, 'specorator-work-order-modal-action-icon');
     const inLeft = Boolean(leftGroup) && isDescendant(leftGroup!, btn);
     return {
       label: labelEl?.text ?? '',
@@ -400,9 +400,9 @@ describe('WorkOrderDetailModal — sticky-shell frame', () => {
     const root = installRecordingContent(modal);
     modal.onOpen();
 
-    const header = find(recordingTitleEl(modal), 'claudian-work-order-modal-header');
-    const body = find(root, 'claudian-work-order-modal-body');
-    const footer = find(root, 'claudian-work-order-modal-footer');
+    const header = find(recordingTitleEl(modal), 'specorator-work-order-modal-header');
+    const body = find(root, 'specorator-work-order-modal-body');
+    const footer = find(root, 'specorator-work-order-modal-footer');
 
     expect(header).toBeDefined();
     expect(body).toBeDefined();
@@ -410,13 +410,13 @@ describe('WorkOrderDetailModal — sticky-shell frame', () => {
 
     // The header IS the native modal title element (pinned outside the scroll);
     // body + footer are direct children of contentEl (the scroll region).
-    expect([...recordingTitleEl(modal).classes]).toContain('claudian-work-order-modal-header');
+    expect([...recordingTitleEl(modal).classes]).toContain('specorator-work-order-modal-header');
     const directChildClasses = root.children.map((c) => [...c.classes]);
     expect(directChildClasses).toContainEqual(
-      expect.arrayContaining(['claudian-work-order-modal-body']),
+      expect.arrayContaining(['specorator-work-order-modal-body']),
     );
     expect(directChildClasses).toContainEqual(
-      expect.arrayContaining(['claudian-work-order-modal-footer']),
+      expect.arrayContaining(['specorator-work-order-modal-footer']),
     );
   });
 
@@ -425,7 +425,7 @@ describe('WorkOrderDetailModal — sticky-shell frame', () => {
     const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
     const root = installRecordingContent(modal);
     modal.onOpen();
-    expect(root.classes.has('claudian-work-order-modal-content')).toBe(true);
+    expect(root.classes.has('specorator-work-order-modal-content')).toBe(true);
   });
 
   it('adds the root class to modalEl', () => {
@@ -434,7 +434,7 @@ describe('WorkOrderDetailModal — sticky-shell frame', () => {
     installRecordingContent(modal);
     modal.onOpen();
     const addClass = (modal as unknown as { modalEl: { addClass: jest.Mock } }).modalEl.addClass;
-    expect(addClass).toHaveBeenCalledWith('claudian-work-order-modal');
+    expect(addClass).toHaveBeenCalledWith('specorator-work-order-modal');
   });
 
   it('renders the two-pane body with main and sidebar regions', () => {
@@ -443,10 +443,10 @@ describe('WorkOrderDetailModal — sticky-shell frame', () => {
     const root = installRecordingContent(modal);
     modal.onOpen();
 
-    const body = find(root, 'claudian-work-order-modal-body');
+    const body = find(root, 'specorator-work-order-modal-body');
     expect(body).toBeDefined();
-    expect(find(body!, 'claudian-work-order-modal-main')).toBeDefined();
-    expect(find(body!, 'claudian-work-order-modal-sidebar')).toBeDefined();
+    expect(find(body!, 'specorator-work-order-modal-main')).toBeDefined();
+    expect(find(body!, 'specorator-work-order-modal-sidebar')).toBeDefined();
   });
 
   it('renders section content into the main column, not the footer', () => {
@@ -455,8 +455,8 @@ describe('WorkOrderDetailModal — sticky-shell frame', () => {
     const root = installRecordingContent(modal);
     modal.onOpen();
 
-    const main = find(root, 'claudian-work-order-modal-main');
-    const footer = find(root, 'claudian-work-order-modal-footer');
+    const main = find(root, 'specorator-work-order-modal-main');
+    const footer = find(root, 'specorator-work-order-modal-footer');
     // The Objective section header (uppercased via CSS, stored natural-case)
     // renders into the main column; the footer never receives section content.
     const labels = sectionLabels(main!);
@@ -471,10 +471,10 @@ describe('WorkOrderDetailModal — sticky-shell frame', () => {
     const root = installRecordingContent(modal);
     modal.onOpen();
 
-    const sidebar = find(root, 'claudian-work-order-modal-sidebar');
+    const sidebar = find(root, 'specorator-work-order-modal-sidebar');
     expect(sidebar).toBeDefined();
     // The properties panel (header + rows) lives in the sidebar.
-    expect(find(sidebar!, 'claudian-work-order-modal-properties')).toBeDefined();
+    expect(find(sidebar!, 'specorator-work-order-modal-properties')).toBeDefined();
     // Status / Provider / Model / Priority rows are present in the sidebar.
     expect(findRow(sidebar!, 'status')).toBeDefined();
     expect(findRow(sidebar!, 'provider')).toBeDefined();
@@ -497,8 +497,8 @@ describe('WorkOrderDetailModal — sticky-shell frame', () => {
     const { root, buttons } = openFooter(task);
 
     // The footer hosts the actions as real <button>s (no Obsidian Setting row).
-    const footer = find(root, 'claudian-work-order-modal-footer')!;
-    const buttonEls = findAll(footer, (el) => el.classes.has('claudian-work-order-modal-action'));
+    const footer = find(root, 'specorator-work-order-modal-footer')!;
+    const buttonEls = findAll(footer, (el) => el.classes.has('specorator-work-order-modal-action'));
     expect(buttonEls.length).toBeGreaterThan(0);
     expect(buttonEls.every((el) => el.tag === 'button')).toBe(true);
     expect(buttons.map((b) => b.label)).toEqual(expect.arrayContaining(['Accept', 'Rework']));
@@ -532,14 +532,14 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
     const modal = new WorkOrderDetailModal(mockApp, task, callbacks);
     const root = installRecordingContent(modal);
     modal.onOpen();
-    const sidebar = find(root, 'claudian-work-order-modal-sidebar');
+    const sidebar = find(root, 'specorator-work-order-modal-sidebar');
     expect(sidebar).toBeDefined();
     return { root, sidebar: sidebar! };
   }
 
   it('renders a Properties header in the sidebar', () => {
     const { sidebar } = openWith(makeTask('t', 'inbox'), richCallbacks());
-    const head = find(sidebar, 'claudian-work-order-modal-properties-head');
+    const head = find(sidebar, 'specorator-work-order-modal-properties-head');
     expect(head).toBeDefined();
     expect(head!.text).toBe('Properties');
   });
@@ -564,9 +564,9 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
   it('colors the Status pill with the status-specific class and carries a status tooltip', () => {
     const { sidebar } = openWith(makeTask('t', 'needs_approval'), richCallbacks());
     const statusRow = findRow(sidebar, 'status')!;
-    const pill = find(statusRow, 'claudian-work-order-modal-status-pill');
+    const pill = find(statusRow, 'specorator-work-order-modal-status-pill');
     expect(pill).toBeDefined();
-    expect(pill!.classes.has('claudian-work-order-modal-status-pill--needs_approval')).toBe(true);
+    expect(pill!.classes.has('specorator-work-order-modal-status-pill--needs_approval')).toBe(true);
     // Tooltip parity with the ID chip + assignee avatar (a11y audit, item #9).
     expect(pill!.attrs['title']).toBe('needs_approval');
   });
@@ -575,11 +575,11 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
     const { sidebar } = openWith(makeTask('t', 'inbox'), richCallbacks());
     const agentRow = findRow(sidebar, 'agent')!;
     // Editable: a value chip with a native <select> picker.
-    const chip = find(agentRow, 'claudian-work-order-modal-chip');
+    const chip = find(agentRow, 'specorator-work-order-modal-chip');
     expect(chip).toBeDefined();
     expect(firstSelect(agentRow)).toBeDefined();
     // The persona avatar leads the chip and carries the persona name as title.
-    const avatar = find(agentRow, 'claudian-agent-avatar');
+    const avatar = find(agentRow, 'specorator-agent-avatar');
     expect(avatar).toBeDefined();
     expect(avatar!.attrs['title']).toBe('Standard');
     // 18px avatar in the modal value.
@@ -612,10 +612,10 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
       onPickLoop,
       getLoopName: (id) => (id === 'repro' ? 'Repro loop' : undefined),
     }));
-    const value = find(findRow(sidebar, 'loop')!, 'claudian-work-order-modal-chip-value')!;
+    const value = find(findRow(sidebar, 'loop')!, 'specorator-work-order-modal-chip-value')!;
     expect(value.text).toBe('No loop');
 
-    find(findRow(sidebar, 'loop')!, 'claudian-work-order-modal-chip--loop')!.emit('click');
+    find(findRow(sidebar, 'loop')!, 'specorator-work-order-modal-chip--loop')!.emit('click');
     await Promise.resolve();
     await Promise.resolve();
 
@@ -631,10 +631,10 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
       onPickLoop: jest.fn().mockResolvedValue(''),
       getLoopName: (id) => (id === 'repro' ? 'Repro loop' : undefined),
     }));
-    const value = find(findRow(sidebar, 'loop')!, 'claudian-work-order-modal-chip-value')!;
+    const value = find(findRow(sidebar, 'loop')!, 'specorator-work-order-modal-chip-value')!;
     expect(value.text).toBe('Repro loop');
 
-    find(findRow(sidebar, 'loop')!, 'claudian-work-order-modal-chip--loop')!.emit('click');
+    find(findRow(sidebar, 'loop')!, 'specorator-work-order-modal-chip--loop')!.emit('click');
     await Promise.resolve();
     await Promise.resolve();
 
@@ -646,12 +646,12 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
     const { sidebar } = openWith(makeTask('t', 'running'), richCallbacks());
     const agentRow = findRow(sidebar, 'agent')!;
     // Non-editable: no chip/select, but the avatar + name are present.
-    expect(find(agentRow, 'claudian-work-order-modal-chip')).toBeUndefined();
+    expect(find(agentRow, 'specorator-work-order-modal-chip')).toBeUndefined();
     expect(firstSelect(agentRow)).toBeUndefined();
-    const avatar = find(agentRow, 'claudian-agent-avatar');
+    const avatar = find(agentRow, 'specorator-agent-avatar');
     expect(avatar).toBeDefined();
     expect(avatar!.attrs['data-icon']).toBe('cpu');
-    const name = find(agentRow, 'claudian-work-order-modal-agent-name');
+    const name = find(agentRow, 'specorator-work-order-modal-agent-name');
     expect(name).toBeDefined();
     expect(name!.text).toBe('Standard');
   });
@@ -661,7 +661,7 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
     task.frontmatter.agent = 'persona-not-yet-shipped';
     const { sidebar } = openWith(task, richCallbacks());
     const agentRow = findRow(sidebar, 'agent')!;
-    const name = find(agentRow, 'claudian-work-order-modal-agent-name');
+    const name = find(agentRow, 'specorator-work-order-modal-agent-name');
     expect(name!.text).toBe('Standard');
   });
 
@@ -669,7 +669,7 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
     const { sidebar } = openWith(makeTask('t', 'inbox'), richCallbacks());
     for (const key of ['provider', 'model', 'priority']) {
       const row = findRow(sidebar, key)!;
-      expect(find(row, 'claudian-work-order-modal-chip')).toBeDefined();
+      expect(find(row, 'specorator-work-order-modal-chip')).toBeDefined();
       expect(firstSelect(row)).toBeDefined();
     }
   });
@@ -682,19 +682,19 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
     const { sidebar } = openWith(task, richCallbacks());
 
     // No chips/selects when read-only.
-    expect(find(sidebar, 'claudian-work-order-modal-chip')).toBeUndefined();
+    expect(find(sidebar, 'specorator-work-order-modal-chip')).toBeUndefined();
     expect(firstSelect(sidebar)).toBeUndefined();
 
     // Provider renders as monospace plain text.
     const providerRow = findRow(sidebar, 'provider')!;
-    expect(find(providerRow, 'claudian-work-order-modal-mono')).toBeDefined();
+    expect(find(providerRow, 'specorator-work-order-modal-mono')).toBeDefined();
 
     // Priority renders ascending bars colored per the priority contract.
     const priorityRow = findRow(sidebar, 'priority')!;
-    const bars = find(priorityRow, 'claudian-work-order-modal-priority-bars');
+    const bars = find(priorityRow, 'specorator-work-order-modal-priority-bars');
     expect(bars).toBeDefined();
-    const priorityWrap = find(priorityRow, 'claudian-work-order-modal-priority');
-    expect(priorityWrap!.classes.has('claudian-work-order-modal-priority--1')).toBe(true);
+    const priorityWrap = find(priorityRow, 'specorator-work-order-modal-priority');
+    expect(priorityWrap!.classes.has('specorator-work-order-modal-priority--1')).toBe(true);
   });
 
   it('persists a Provider change and resets Model to provider default', () => {
@@ -713,7 +713,7 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
     // Model chip repopulated for the new provider and reset to provider default.
     const modelSelect = firstSelect(findRow(sidebar, 'model')!)!;
     expect(modelSelect.value).toBe('');
-    const modelChipLabel = find(findRow(sidebar, 'model')!, 'claudian-work-order-modal-chip-label');
+    const modelChipLabel = find(findRow(sidebar, 'model')!, 'specorator-work-order-modal-chip-label');
     expect(modelChipLabel).toBeDefined();
   });
 
@@ -746,7 +746,7 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
     const { sidebar } = openWith(task, richCallbacks({ onSaveFields: jest.fn() }));
 
     const priorityRow = findRow(sidebar, 'priority')!;
-    const priorityLabel = find(priorityRow, 'claudian-work-order-modal-chip-label')!;
+    const priorityLabel = find(priorityRow, 'specorator-work-order-modal-chip-label')!;
     expect(priorityLabel.text).toBe('2 - normal');
 
     const prioritySelect = firstSelect(priorityRow)!;
@@ -761,7 +761,7 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
     const { sidebar } = openWith(makeTask('t', 'inbox'), richCallbacks());
     for (const key of ['created', 'updated', 'attempts']) {
       const row = findRow(sidebar, key)!;
-      expect(find(row, 'claudian-work-order-modal-prop-num')).toBeDefined();
+      expect(find(row, 'specorator-work-order-modal-prop-num')).toBeDefined();
     }
   });
 
@@ -791,7 +791,7 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
 
     const convRow = findRow(sidebar, 'conversation');
     expect(convRow).toBeDefined();
-    const link = find(convRow!, 'claudian-work-order-modal-prop-link');
+    const link = find(convRow!, 'specorator-work-order-modal-prop-link');
     expect(link).toBeDefined();
     link!.emit('click');
     expect(onOpenConversation).toHaveBeenCalledWith(task);
@@ -803,26 +803,26 @@ describe('WorkOrderDetailModal — Activity block (Agent handoff)', () => {
     const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
     const root = installRecordingContent(modal);
     modal.onOpen();
-    const main = find(root, 'claudian-work-order-modal-main');
+    const main = find(root, 'specorator-work-order-modal-main');
     expect(main).toBeDefined();
     return main!;
   }
 
   // The four handoff collapsible cards, in render order.
   function handoffCards(main: RecordingEl): RecordingEl[] {
-    return findAll(main, (el) => el.classes.has('claudian-work-order-modal-collapse'));
+    return findAll(main, (el) => el.classes.has('specorator-work-order-modal-collapse'));
   }
 
   // The keyboard-operable header button of a collapsible card.
   function cardButton(card: RecordingEl): RecordingEl {
-    return find(card, 'claudian-work-order-modal-collapse-head')!;
+    return find(card, 'specorator-work-order-modal-collapse-head')!;
   }
 
   it('renders the Agent handoff section header (clipboard-check) on review', () => {
     const main = openMain(makeTask('t', 'review', CANONICAL_HANDOFF));
     const section = findSection(main, 'Agent handoff');
     expect(section).toBeDefined();
-    const icon = find(section!, 'claudian-work-order-modal-section-icon');
+    const icon = find(section!, 'specorator-work-order-modal-section-icon');
     expect(icon!.attrs['data-icon']).toBe('clipboard-check');
   });
 
@@ -846,7 +846,7 @@ describe('WorkOrderDetailModal — Activity block (Agent handoff)', () => {
     const cards = handoffCards(main);
     expect(cards).toHaveLength(4);
     const titles = cards.map(
-      (card) => find(card, 'claudian-work-order-modal-collapse-title')!.text,
+      (card) => find(card, 'specorator-work-order-modal-collapse-title')!.text,
     );
     expect(titles).toEqual(['Summary', 'Verification', 'Risks', 'Next action']);
   });
@@ -861,9 +861,9 @@ describe('WorkOrderDetailModal — Activity block (Agent handoff)', () => {
 
     // Open cards carry the open modifier and render a body; closed cards do not.
     expect(summary.classes.has('is-open')).toBe(true);
-    expect(find(summary, 'claudian-work-order-modal-collapse-body')).toBeDefined();
+    expect(find(summary, 'specorator-work-order-modal-collapse-body')).toBeDefined();
     expect(verification.classes.has('is-open')).toBe(false);
-    expect(find(verification, 'claudian-work-order-modal-collapse-body')).toBeUndefined();
+    expect(find(verification, 'specorator-work-order-modal-collapse-body')).toBeUndefined();
   });
 
   it('uses a real <button> header with a rotating chevron and a colored section icon', () => {
@@ -872,10 +872,10 @@ describe('WorkOrderDetailModal — Activity block (Agent handoff)', () => {
     const button = cardButton(summary);
     expect(button.tag).toBe('button');
     // Chevron glyph (rotates via CSS on expand) + a per-section colored icon.
-    const chevron = find(summary, 'claudian-work-order-modal-collapse-chevron');
+    const chevron = find(summary, 'specorator-work-order-modal-collapse-chevron');
     expect(chevron!.attrs['data-icon']).toBe('chevron-right');
     expect(chevron!.attrs['aria-hidden']).toBe('true');
-    const sectionIcon = find(summary, 'claudian-work-order-modal-collapse-icon');
+    const sectionIcon = find(summary, 'specorator-work-order-modal-collapse-icon');
     expect(sectionIcon).toBeDefined();
     expect(sectionIcon!.attrs['aria-hidden']).toBe('true');
   });
@@ -883,10 +883,10 @@ describe('WorkOrderDetailModal — Activity block (Agent handoff)', () => {
   it('keys each card icon color off a per-section modifier class', () => {
     const main = openMain(makeTask('t', 'review', CANONICAL_HANDOFF));
     const [summary, verification, risks, nextAction] = handoffCards(main);
-    expect(summary.classes.has('claudian-work-order-modal-collapse--summary')).toBe(true);
-    expect(verification.classes.has('claudian-work-order-modal-collapse--verification')).toBe(true);
-    expect(risks.classes.has('claudian-work-order-modal-collapse--risks')).toBe(true);
-    expect(nextAction.classes.has('claudian-work-order-modal-collapse--next')).toBe(true);
+    expect(summary.classes.has('specorator-work-order-modal-collapse--summary')).toBe(true);
+    expect(verification.classes.has('specorator-work-order-modal-collapse--verification')).toBe(true);
+    expect(risks.classes.has('specorator-work-order-modal-collapse--risks')).toBe(true);
+    expect(nextAction.classes.has('specorator-work-order-modal-collapse--next')).toBe(true);
   });
 
   it('renders each section body through MarkdownRenderer (inline links stay live)', () => {
@@ -911,7 +911,7 @@ describe('WorkOrderDetailModal — Activity block (Agent handoff)', () => {
     button.emit('click');
     expect(button.attrs['aria-expanded']).toBe('true');
     expect(verification.classes.has('is-open')).toBe(true);
-    expect(find(verification, 'claudian-work-order-modal-collapse-body')).toBeDefined();
+    expect(find(verification, 'specorator-work-order-modal-collapse-body')).toBeDefined();
     button.emit('click');
     expect(button.attrs['aria-expanded']).toBe('false');
     expect(verification.classes.has('is-open')).toBe(false);
@@ -922,7 +922,7 @@ describe('WorkOrderDetailModal — Activity block (Agent handoff)', () => {
     const main = openMain(makeTask('t', 'review', raw));
     // No structured cards — but the raw content is still rendered (no content loss).
     expect(handoffCards(main)).toHaveLength(0);
-    const fallback = find(main, 'claudian-work-order-modal-handoff-fallback');
+    const fallback = find(main, 'specorator-work-order-modal-handoff-fallback');
     expect(fallback).toBeDefined();
     const calls = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
     expect(calls.some((c) => c[1] === raw)).toBe(true);
@@ -934,37 +934,37 @@ describe('WorkOrderDetailModal — Activity block (needs_handoff salvage)', () =
     const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
     const root = installRecordingContent(modal);
     modal.onOpen();
-    return find(root, 'claudian-work-order-modal-main')!;
+    return find(root, 'specorator-work-order-modal-main')!;
   }
 
   it('renders the warning callout only for needs_handoff', () => {
     const main = openMain(makeTask('t', 'needs_handoff', '', '- 2026-06-04T00:00:00Z [running] step'));
-    expect(find(main, 'claudian-work-order-modal-salvage-callout')).toBeDefined();
+    expect(find(main, 'specorator-work-order-modal-salvage-callout')).toBeDefined();
   });
 
   it('does not render the salvage callout for review', () => {
     const main = openMain(makeTask('t', 'review', CANONICAL_HANDOFF));
-    expect(find(main, 'claudian-work-order-modal-salvage-callout')).toBeUndefined();
+    expect(find(main, 'specorator-work-order-modal-salvage-callout')).toBeUndefined();
   });
 
   it('renders a collapsible Transcript tail (keyboard button + aria-expanded) from the ledger', () => {
     const main = openMain(
       makeTask('t', 'needs_handoff', '', '- 2026-06-04T00:00:00Z [running] doing the work'),
     );
-    const tail = find(main, 'claudian-work-order-modal-collapse');
+    const tail = find(main, 'specorator-work-order-modal-collapse');
     expect(tail).toBeDefined();
-    const button = find(tail!, 'claudian-work-order-modal-collapse-head');
+    const button = find(tail!, 'specorator-work-order-modal-collapse-head');
     expect(button!.tag).toBe('button');
     expect(button!.attrs['aria-expanded']).toBeDefined();
     // Monospace trace surface sourced from the ledger region.
-    const traceBody = find(main, 'claudian-work-order-modal-tail-body');
+    const traceBody = find(main, 'specorator-work-order-modal-tail-body');
     expect(traceBody).toBeDefined();
     expect(traceBody!.text).toContain('doing the work');
   });
 
   it('shows an empty-state in the transcript tail when no ledger trace exists', () => {
     const main = openMain(makeTask('t', 'needs_handoff', '', ''));
-    const traceBody = find(main, 'claudian-work-order-modal-tail-body');
+    const traceBody = find(main, 'specorator-work-order-modal-tail-body');
     expect(traceBody).toBeDefined();
     expect(traceBody!.text.length).toBeGreaterThan(0);
   });
@@ -980,14 +980,14 @@ describe('WorkOrderDetailModal — Activity block (failed Run ledger)', () => {
     const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
     const root = installRecordingContent(modal);
     modal.onOpen();
-    return find(root, 'claudian-work-order-modal-main')!;
+    return find(root, 'specorator-work-order-modal-main')!;
   }
 
   it('renders the Run ledger section header (scroll-text) only for failed', () => {
     const main = openMain(makeTask('t', 'failed', '', LEDGER));
     const section = findSection(main, 'Run ledger');
     expect(section).toBeDefined();
-    const icon = find(section!, 'claudian-work-order-modal-section-icon');
+    const icon = find(section!, 'specorator-work-order-modal-section-icon');
     expect(icon!.attrs['data-icon']).toBe('scroll-text');
   });
 
@@ -998,21 +998,21 @@ describe('WorkOrderDetailModal — Activity block (failed Run ledger)', () => {
 
   it('renders one entry per parsed line with monospace time + message', () => {
     const main = openMain(makeTask('t', 'failed', '', LEDGER));
-    const entries = findAll(main, (el) => el.classes.has('claudian-work-order-modal-ledger-entry'));
+    const entries = findAll(main, (el) => el.classes.has('specorator-work-order-modal-ledger-entry'));
     expect(entries).toHaveLength(2);
-    const times = entries.map((e) => find(e, 'claudian-work-order-modal-ledger-time')!.text);
+    const times = entries.map((e) => find(e, 'specorator-work-order-modal-ledger-time')!.text);
     expect(times).toEqual(['2026-06-04T00:00:00Z', '2026-06-04T00:05:00Z']);
-    const messages = entries.map((e) => find(e, 'claudian-work-order-modal-ledger-msg')!.text);
+    const messages = entries.map((e) => find(e, 'specorator-work-order-modal-ledger-msg')!.text);
     expect(messages).toEqual(['started the run', 'hit an error']);
   });
 
   it('colors each dot off the entry status modifier (status → color contract)', () => {
     const main = openMain(makeTask('t', 'failed', '', LEDGER));
-    const entries = findAll(main, (el) => el.classes.has('claudian-work-order-modal-ledger-entry'));
-    const firstDot = find(entries[0], 'claudian-work-order-modal-ledger-dot')!;
-    const secondDot = find(entries[1], 'claudian-work-order-modal-ledger-dot')!;
-    expect(firstDot.classes.has('claudian-work-order-modal-ledger-dot--running')).toBe(true);
-    expect(secondDot.classes.has('claudian-work-order-modal-ledger-dot--failed')).toBe(true);
+    const entries = findAll(main, (el) => el.classes.has('specorator-work-order-modal-ledger-entry'));
+    const firstDot = find(entries[0], 'specorator-work-order-modal-ledger-dot')!;
+    const secondDot = find(entries[1], 'specorator-work-order-modal-ledger-dot')!;
+    expect(firstDot.classes.has('specorator-work-order-modal-ledger-dot--running')).toBe(true);
+    expect(secondDot.classes.has('specorator-work-order-modal-ledger-dot--failed')).toBe(true);
   });
 
   it('tolerates malformed lines (renders only the well-formed entries)', () => {
@@ -1024,9 +1024,9 @@ describe('WorkOrderDetailModal — Activity block (failed Run ledger)', () => {
         ['garbage line without structure', '- 2026-06-04T00:00:00Z [done] ok'].join('\n'),
       ),
     );
-    const entries = findAll(main, (el) => el.classes.has('claudian-work-order-modal-ledger-entry'));
+    const entries = findAll(main, (el) => el.classes.has('specorator-work-order-modal-ledger-entry'));
     expect(entries).toHaveLength(1);
-    expect(find(entries[0], 'claudian-work-order-modal-ledger-msg')!.text).toBe('ok');
+    expect(find(entries[0], 'specorator-work-order-modal-ledger-msg')!.text).toBe('ok');
   });
 });
 
@@ -1035,21 +1035,21 @@ describe('WorkOrderDetailModal — Activity block (other statuses)', () => {
     const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
     const root = installRecordingContent(modal);
     modal.onOpen();
-    return find(root, 'claudian-work-order-modal-main')!;
+    return find(root, 'specorator-work-order-modal-main')!;
   }
 
   it('renders no activity block for running (even with a ledger present)', () => {
     const main = openMain(makeTask('t', 'running', '', '- 2026-06-04T00:00:00Z [running] x'));
     expect(findSection(main, 'Agent handoff')).toBeUndefined();
     expect(findSection(main, 'Run ledger')).toBeUndefined();
-    expect(find(main, 'claudian-work-order-modal-salvage-callout')).toBeUndefined();
+    expect(find(main, 'specorator-work-order-modal-salvage-callout')).toBeUndefined();
   });
 
   it('renders no activity block for done (even with a handoff present)', () => {
     const main = openMain(makeTask('t', 'done', CANONICAL_HANDOFF, 'x'));
     expect(findSection(main, 'Agent handoff')).toBeUndefined();
     expect(findSection(main, 'Run ledger')).toBeUndefined();
-    expect(find(main, 'claudian-work-order-modal-salvage-callout')).toBeUndefined();
+    expect(find(main, 'specorator-work-order-modal-salvage-callout')).toBeUndefined();
   });
 });
 
@@ -1199,8 +1199,8 @@ describe('WorkOrderDetailModal — sticky footer action sets', () => {
 
   it('renders every footer action as a real <button type="button">', () => {
     const { root } = openFooter(taskWithConversation('review'), convCallbacks());
-    const footer = find(root, 'claudian-work-order-modal-footer')!;
-    const buttonEls = findAll(footer, (el) => el.classes.has('claudian-work-order-modal-action'));
+    const footer = find(root, 'specorator-work-order-modal-footer')!;
+    const buttonEls = findAll(footer, (el) => el.classes.has('specorator-work-order-modal-action'));
     expect(buttonEls.length).toBeGreaterThan(0);
     for (const el of buttonEls) {
       expect(el.tag).toBe('button');
@@ -1307,23 +1307,23 @@ describe('WorkOrderDetailModal — Objective + Acceptance sections', () => {
     const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
     const root = installRecordingContent(modal);
     modal.onOpen();
-    const main = find(root, 'claudian-work-order-modal-main');
+    const main = find(root, 'specorator-work-order-modal-main');
     expect(main).toBeDefined();
     return { root, main: main! };
   }
 
   // The acceptance-criteria SVG ring's progress arc (the second circle).
   function ringArc(section: RecordingEl): RecordingEl | undefined {
-    const ring = find(section, 'claudian-work-order-modal-ring');
+    const ring = find(section, 'specorator-work-order-modal-ring');
     if (!ring) return undefined;
-    return findAll(ring, (el) => el.classes.has('claudian-work-order-modal-ring-arc'))[0];
+    return findAll(ring, (el) => el.classes.has('specorator-work-order-modal-ring-arc'))[0];
   }
 
   it('renders the Objective section header with the target icon', () => {
     const { main } = openMain(makeTask('t', 'inbox'));
     const section = findSection(main, 'Objective');
     expect(section).toBeDefined();
-    const icon = find(section!, 'claudian-work-order-modal-section-icon');
+    const icon = find(section!, 'specorator-work-order-modal-section-icon');
     expect(icon).toBeDefined();
     expect(icon!.attrs['data-icon']).toBe('target');
   });
@@ -1341,7 +1341,7 @@ describe('WorkOrderDetailModal — Objective + Acceptance sections', () => {
     const { main } = openMain(makeTask('t', 'inbox'));
     const section = findSection(main, 'Acceptance criteria');
     expect(section).toBeDefined();
-    const icon = find(section!, 'claudian-work-order-modal-section-icon');
+    const icon = find(section!, 'specorator-work-order-modal-section-icon');
     expect(icon).toBeDefined();
     expect(icon!.attrs['data-icon']).toBe('list-checks');
   });
@@ -1353,15 +1353,15 @@ describe('WorkOrderDetailModal — Objective + Acceptance sections', () => {
     const section = findSection(main, 'Acceptance criteria')!;
 
     // Count text reflects parseAcceptanceProgress.
-    const count = find(section, 'claudian-work-order-modal-ring-count');
+    const count = find(section, 'specorator-work-order-modal-ring-count');
     expect(count).toBeDefined();
     expect(count!.text).toBe('1/3');
 
     // The ring renders an SVG with a track + a progress arc.
-    const ring = find(section, 'claudian-work-order-modal-ring');
+    const ring = find(section, 'specorator-work-order-modal-ring');
     expect(ring).toBeDefined();
     expect(ring!.tag).toBe('svg');
-    expect(find(section, 'claudian-work-order-modal-ring-track')).toBeDefined();
+    expect(find(section, 'specorator-work-order-modal-ring-track')).toBeDefined();
     const arc = ringArc(section);
     expect(arc).toBeDefined();
     // 1/3 progress is partial: the dash offset is neither full nor empty.
@@ -1378,11 +1378,11 @@ describe('WorkOrderDetailModal — Objective + Acceptance sections', () => {
     const { main } = openMain(task);
     const section = findSection(main, 'Acceptance criteria')!;
 
-    const count = find(section, 'claudian-work-order-modal-ring-count')!;
+    const count = find(section, 'specorator-work-order-modal-ring-count')!;
     expect(count.text).toBe('2/2');
     // Complete state carries a dedicated class so CSS can flip stroke → green.
-    const ring = find(section, 'claudian-work-order-modal-ring')!;
-    expect(ring.classes.has('claudian-work-order-modal-ring--complete')).toBe(true);
+    const ring = find(section, 'specorator-work-order-modal-ring')!;
+    expect(ring.classes.has('specorator-work-order-modal-ring--complete')).toBe(true);
     const arc = ringArc(section)!;
     expect(Number(arc.attrs['stroke-dashoffset'])).toBeCloseTo(0, 3);
   });
@@ -1392,10 +1392,10 @@ describe('WorkOrderDetailModal — Objective + Acceptance sections', () => {
     task.sections.acceptanceCriteria = '- [ ] Pending';
     const { main } = openMain(task);
     const section = findSection(main, 'Acceptance criteria')!;
-    const ring = find(section, 'claudian-work-order-modal-ring')!;
+    const ring = find(section, 'specorator-work-order-modal-ring')!;
     // Incomplete: the status modifier carries the accent color; not complete.
-    expect(ring.classes.has('claudian-work-order-modal-ring--running')).toBe(true);
-    expect(ring.classes.has('claudian-work-order-modal-ring--complete')).toBe(false);
+    expect(ring.classes.has('specorator-work-order-modal-ring--running')).toBe(true);
+    expect(ring.classes.has('specorator-work-order-modal-ring--complete')).toBe(false);
   });
 
   it('renders a checklist card row per criterion with checked rows marked', () => {
@@ -1404,20 +1404,20 @@ describe('WorkOrderDetailModal — Objective + Acceptance sections', () => {
     const { main } = openMain(task);
     const section = findSection(main, 'Acceptance criteria')!;
 
-    const card = find(section, 'claudian-work-order-modal-checklist');
+    const card = find(section, 'specorator-work-order-modal-checklist');
     expect(card).toBeDefined();
-    const rows = findAll(card!, (el) => el.classes.has('claudian-work-order-modal-checklist-item'));
+    const rows = findAll(card!, (el) => el.classes.has('specorator-work-order-modal-checklist-item'));
     expect(rows).toHaveLength(3);
 
     // The first row is checked: carries the checked-state class, a check glyph
     // (the non-color cue), and surfaces its text.
     const [first, second] = rows;
     expect(first.classes.has('is-checked')).toBe(true);
-    const checkIcon = find(first, 'claudian-work-order-modal-checklist-check');
+    const checkIcon = find(first, 'specorator-work-order-modal-checklist-check');
     expect(checkIcon).toBeDefined();
     expect(checkIcon!.attrs['data-icon']).toBe('check');
     // The label flows through MarkdownRenderer (inline markdown stays live).
-    const firstHasText = find(first, 'claudian-work-order-modal-checklist-text');
+    const firstHasText = find(first, 'specorator-work-order-modal-checklist-text');
     expect(firstHasText).toBeDefined();
     const calls = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
     expect(calls.some((c) => c[1] === 'First done')).toBe(true);
@@ -1438,7 +1438,7 @@ describe('WorkOrderDetailModal — Objective + Acceptance sections', () => {
     const { main } = openMain(task);
     const section = findSection(main, 'Acceptance criteria')!;
     // Pure checklist keeps the custom card, but the label renders as markdown.
-    expect(find(section, 'claudian-work-order-modal-checklist')).toBeDefined();
+    expect(find(section, 'specorator-work-order-modal-checklist')).toBeDefined();
     const calls = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
     expect(calls.some((c) => c[1] === 'Update [[Spec]] and [docs](https://x)')).toBe(true);
   });
@@ -1449,8 +1449,8 @@ describe('WorkOrderDetailModal — Objective + Acceptance sections', () => {
     const { main } = openMain(task);
     const section = findSection(main, 'Acceptance criteria')!;
     // Nested lists must not be flattened into the custom card.
-    expect(find(section, 'claudian-work-order-modal-checklist')).toBeUndefined();
-    expect(find(section, 'claudian-work-order-modal-checklist-prose')).toBeDefined();
+    expect(find(section, 'specorator-work-order-modal-checklist')).toBeUndefined();
+    expect(find(section, 'specorator-work-order-modal-checklist-prose')).toBeDefined();
     const calls = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
     expect(calls.some((c) => c[1] === '- [ ] Parent\n  - [ ] Child')).toBe(true);
   });
@@ -1461,8 +1461,8 @@ describe('WorkOrderDetailModal — Objective + Acceptance sections', () => {
     const { main } = openMain(task);
     const section = findSection(main, 'Acceptance criteria')!;
     // No ring/count without criteria; an empty-state placeholder stands in.
-    expect(find(section, 'claudian-work-order-modal-ring')).toBeUndefined();
-    expect(find(section, 'claudian-work-order-modal-checklist-empty')).toBeDefined();
+    expect(find(section, 'specorator-work-order-modal-ring')).toBeUndefined();
+    expect(find(section, 'specorator-work-order-modal-checklist-empty')).toBeDefined();
   });
 
   it('renders non-checkbox acceptance criteria as markdown instead of dropping them', () => {
@@ -1471,8 +1471,8 @@ describe('WorkOrderDetailModal — Objective + Acceptance sections', () => {
     const { main } = openMain(task);
     const section = findSection(main, 'Acceptance criteria')!;
     // Prose / plain-bullet criteria (no task-list syntax) must not collapse to an em dash.
-    expect(find(section, 'claudian-work-order-modal-checklist-empty')).toBeUndefined();
-    expect(find(section, 'claudian-work-order-modal-checklist-prose')).toBeDefined();
+    expect(find(section, 'specorator-work-order-modal-checklist-empty')).toBeUndefined();
+    expect(find(section, 'specorator-work-order-modal-checklist-prose')).toBeDefined();
     const calls = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
     expect(
       calls.some((c) => c[1] === '- Includes all task metadata\n- Renders without checkboxes'),
@@ -1485,8 +1485,8 @@ describe('WorkOrderDetailModal — Objective + Acceptance sections', () => {
     const { main } = openMain(task);
     const section = findSection(main, 'Acceptance criteria')!;
     // Mixed content (checkbox + plain bullet) must not collapse to only the checkbox row.
-    expect(find(section, 'claudian-work-order-modal-checklist')).toBeUndefined();
-    expect(find(section, 'claudian-work-order-modal-checklist-prose')).toBeDefined();
+    expect(find(section, 'specorator-work-order-modal-checklist')).toBeUndefined();
+    expect(find(section, 'specorator-work-order-modal-checklist-prose')).toBeDefined();
     const calls = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
     expect(calls.some((c) => c[1] === '- [ ] Implement API\n- Include retry behavior')).toBe(true);
   });
@@ -1501,13 +1501,13 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
     const modal = new WorkOrderDetailModal(mockApp, task, callbacks);
     const root = installRecordingContent(modal);
     modal.onOpen();
-    const header = find(recordingTitleEl(modal), 'claudian-work-order-modal-header');
+    const header = find(recordingTitleEl(modal), 'specorator-work-order-modal-header');
     expect(header).toBeDefined();
     return { modal, root, header: header! };
   }
 
   const titleEl = (header: RecordingEl): RecordingEl | undefined =>
-    find(header, 'claudian-work-order-modal-title');
+    find(header, 'specorator-work-order-modal-title');
 
   it('does not drive the native modal title (the header owns it)', () => {
     const task = makeTask('WO-7', 'inbox');
@@ -1517,10 +1517,10 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
 
   it('renders the ID chip from frontmatter.id with a monospace class and a tooltip', () => {
     const { header } = openHeader(makeTask('WO-204', 'inbox'));
-    const chip = find(header, 'claudian-work-order-modal-id-chip');
+    const chip = find(header, 'specorator-work-order-modal-id-chip');
     expect(chip).toBeDefined();
     expect(chip!.text).toBe('WO-204');
-    expect(chip!.classes.has('claudian-work-order-modal-mono')).toBe(true);
+    expect(chip!.classes.has('specorator-work-order-modal-mono')).toBe(true);
     // Tooltip surfaces the full id (truncation-safe) via title + aria-label.
     expect(chip!.attrs['title']).toBe('WO-204');
     expect(chip!.attrs['aria-label']).toBe('WO-204');
@@ -1533,15 +1533,15 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
 
   it('does not render the custom accent element (removed — caused layout issues in the native header)', () => {
     const { header } = openHeader(makeTask('WO-1', 'inbox'));
-    expect(find(header, 'claudian-work-order-modal-header-accent')).toBeUndefined();
+    expect(find(header, 'specorator-work-order-modal-header-accent')).toBeUndefined();
   });
 
   it('exposes the dialog accessible name via aria-labelledby on the title', () => {
     const { modal, header } = openHeader(makeTask('WO-1', 'inbox'));
-    expect(titleEl(header)!.attrs['id']).toBe('claudian-work-order-modal-title');
+    expect(titleEl(header)!.attrs['id']).toBe('specorator-work-order-modal-title');
     const setAttribute = (modal as unknown as { modalEl: { setAttribute: jest.Mock } }).modalEl
       .setAttribute;
-    expect(setAttribute).toHaveBeenCalledWith('aria-labelledby', 'claudian-work-order-modal-title');
+    expect(setAttribute).toHaveBeenCalledWith('aria-labelledby', 'specorator-work-order-modal-title');
   });
 
   it('marks the static (non-editable) title as a heading', () => {
@@ -1566,7 +1566,7 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
       // Keyboard-focusable.
       expect(title.attrs['tabindex']).toBe('0');
       // The rename hint was dropped — editable states no longer render it.
-      expect(find(header, 'claudian-work-order-modal-title-hint')).toBeUndefined();
+      expect(find(header, 'specorator-work-order-modal-title-hint')).toBeUndefined();
     },
   );
 
@@ -1701,7 +1701,7 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
       const title = titleEl(header)!;
       expect(title.attrs['contenteditable']).toBeUndefined();
       expect(title.classes.has('is-editable')).toBe(false);
-      expect(find(header, 'claudian-work-order-modal-title-hint')).toBeUndefined();
+      expect(find(header, 'specorator-work-order-modal-title-hint')).toBeUndefined();
     },
   );
 
@@ -1723,15 +1723,15 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
     const task = makeTask('WO-1', 'running');
     task.frontmatter.started = new Date(Date.now() - 5 * 60_000).toISOString();
     const { header } = openHeader(task);
-    expect(find(header, 'claudian-work-order-modal-header-live')).toBeDefined();
-    expect(find(header, 'claudian-work-order-modal-live-dot')).toBeDefined();
+    expect(find(header, 'specorator-work-order-modal-header-live')).toBeDefined();
+    expect(find(header, 'specorator-work-order-modal-live-dot')).toBeDefined();
   });
 
   it('renders a finished caption for done', () => {
     const task = makeTask('WO-1', 'done');
     task.frontmatter.finished = new Date(Date.now() - 2 * 3_600_000).toISOString();
     const { header } = openHeader(task);
-    expect(find(header, 'claudian-work-order-modal-header-sub')).toBeDefined();
+    expect(find(header, 'specorator-work-order-modal-header-sub')).toBeDefined();
   });
 
   // ---- Close button ----
@@ -1741,7 +1741,7 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
     const { header } = openHeader(task);
     // Closing is handled by Obsidian's built-in modal close button; the header
     // must not render a duplicate custom one.
-    expect(find(header, 'claudian-work-order-modal-close')).toBeUndefined();
+    expect(find(header, 'specorator-work-order-modal-close')).toBeUndefined();
   });
 });
 
@@ -1750,19 +1750,19 @@ describe('WorkOrderDetailModal — Context + Constraints sections', () => {
     const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
     const root = installRecordingContent(modal);
     modal.onOpen();
-    return find(root, 'claudian-work-order-modal-main')!;
+    return find(root, 'specorator-work-order-modal-main')!;
   }
 
   it('renders the Context section header with the link icon', () => {
     const section = findSection(openMain(makeTask('t', 'inbox')), 'Context');
     expect(section).toBeDefined();
-    expect(find(section!, 'claudian-work-order-modal-section-icon')!.attrs['data-icon']).toBe('link');
+    expect(find(section!, 'specorator-work-order-modal-section-icon')!.attrs['data-icon']).toBe('link');
   });
 
   it('renders the Constraints section header with the shield icon', () => {
     const section = findSection(openMain(makeTask('t', 'inbox')), 'Constraints');
     expect(section).toBeDefined();
-    expect(find(section!, 'claudian-work-order-modal-section-icon')!.attrs['data-icon']).toBe('shield');
+    expect(find(section!, 'specorator-work-order-modal-section-icon')!.attrs['data-icon']).toBe('shield');
   });
 
   it('renders the Context + Constraints bodies through MarkdownRenderer', () => {
@@ -1790,16 +1790,16 @@ describe('WorkOrderDetailModal — inline edit toggle', () => {
     const modal = new WorkOrderDetailModal(mockApp, task, callbacks);
     const root = installRecordingContent(modal);
     modal.onOpen();
-    return { modal, main: find(root, 'claudian-work-order-modal-main')! };
+    return { modal, main: find(root, 'specorator-work-order-modal-main')! };
   }
 
   const editButton = (main: RecordingEl): RecordingEl | undefined =>
-    find(main, 'claudian-work-order-modal-edit-button');
+    find(main, 'specorator-work-order-modal-edit-button');
   const textareas = (main: RecordingEl): RecordingEl[] =>
     findAll(main, (el) => el.tag === 'textarea');
   const actionButton = (main: RecordingEl, label: string): RecordingEl | undefined =>
-    findAll(main, (el) => el.classes.has('claudian-work-order-modal-action')).find(
-      (btn) => find(btn, 'claudian-work-order-modal-action-label')?.text === label,
+    findAll(main, (el) => el.classes.has('specorator-work-order-modal-action')).find(
+      (btn) => find(btn, 'specorator-work-order-modal-action-label')?.text === label,
     );
 
   it.each(['inbox', 'ready', 'needs_fix'] as const)('shows the Edit affordance in %s', (status) => {
@@ -1827,7 +1827,7 @@ describe('WorkOrderDetailModal — inline edit toggle', () => {
     expect(areas.map((a) => a.value)).toEqual(['Obj body', '- [ ] crit', 'ctx', 'cons']);
     // The read-only Objective markdown body is gone while editing.
     expect(findSection(main, 'Objective')).toBeDefined(); // header still labels the field
-    expect(find(main, 'claudian-work-order-modal-edit-form')).toBeDefined();
+    expect(find(main, 'specorator-work-order-modal-edit-form')).toBeDefined();
   });
 
   it('Save collects every textarea value (including cleared ones) and returns to view', async () => {
@@ -1853,7 +1853,7 @@ describe('WorkOrderDetailModal — inline edit toggle', () => {
     await Promise.resolve();
     await Promise.resolve();
     // Back to view mode: the form is gone, the Edit affordance is back.
-    expect(find(main, 'claudian-work-order-modal-edit-form')).toBeUndefined();
+    expect(find(main, 'specorator-work-order-modal-edit-form')).toBeUndefined();
     expect(editButton(main)).toBeDefined();
   });
 
@@ -1882,7 +1882,7 @@ describe('WorkOrderDetailModal — inline edit toggle', () => {
     actionButton(main, 'Cancel')!.emit('click');
 
     expect(onSaveSections).not.toHaveBeenCalled();
-    expect(find(main, 'claudian-work-order-modal-edit-form')).toBeUndefined();
+    expect(find(main, 'specorator-work-order-modal-edit-form')).toBeUndefined();
     expect(editButton(main)).toBeDefined();
   });
 });

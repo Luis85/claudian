@@ -1,7 +1,7 @@
 /*
  * Work-order detail modal — sticky-shell frame.
  *
- * `contentEl` (`.claudian-work-order-modal-content`) is a bounded flex column:
+ * `contentEl` (`.specorator-work-order-modal-content`) is a bounded flex column:
  * a pinned header, a scrollable two-pane body (main + properties sidebar), and
  * a pinned footer. Only the body scrolls; header and footer stay reachable so
  * primary actions are always in view. Under 720px the body grid collapses to a
@@ -17,7 +17,7 @@
  * flex column + height owner and the body is the ONLY scroll region — the same
  * pattern as base/modal.css and the working MCP modals, kept native-Modal-safe.
  */
-.claudian-work-order-modal {
+.specorator-work-order-modal {
   --modal-max-height: min(86vh, 760px);
   --dialog-max-height: min(86vh, 760px);
   --modal-width: min(960px, 92vw);
@@ -37,7 +37,7 @@
 /* Scoped under the modal class (→ specificity 0-2-0) so it reliably out-specifies
    a theme's bare `.modal-content { overflow }`. The native content fills the
    capped frame; the body owns the single scroll region. */
-.claudian-work-order-modal .claudian-work-order-modal-content {
+.specorator-work-order-modal .specorator-work-order-modal-content {
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
@@ -59,14 +59,14 @@
    and clears the title's reserved 40px right padding. Scoped 0-2-0 to beat the
    theme's `.modal .modal-close-button` (0-1-1). NOTE: the native `.modal-title`
    is NOT hidden — it now holds our rendered header. */
-.claudian-work-order-modal .modal-close-button {
+.specorator-work-order-modal .modal-close-button {
   top: 16px;
   right: 18px;
   color: var(--text-muted);
   border-radius: var(--radius-m);
 }
 
-.claudian-work-order-modal .modal-close-button:hover {
+.specorator-work-order-modal .modal-close-button:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }
@@ -75,12 +75,12 @@
    Pinned header — meta row (ID chip + status-aware caption),
    inline-editable title, a left-anchored 2px accent gradient, and
    a top-right close button. The accent + live-dot color resolve from
-   `--claudian-wo-header-color`, set by the status modifiers below
+   `--specorator-wo-header-color`, set by the status modifiers below
    (the status→color contract, shared with the pill / ring / ledger).
    ============================================================ */
 /* Native modal header wrapper (a pinned sibling of the scrolling content): drop
    its default padding/border/min-height so our header fills it edge-to-edge. */
-.claudian-work-order-modal .modal-header {
+.specorator-work-order-modal .modal-header {
   padding: 0;
   margin: 0;
   border: none;
@@ -90,7 +90,7 @@
    the scroll with no custom sticky layer. position:relative makes it the
    containing block for the accent line; the resets neutralize Obsidian's native
    `.modal-title` styling (centering, font, margins). */
-.claudian-work-order-modal-header {
+.specorator-work-order-modal-header {
   padding: 18px 26px 16px;
   margin: 0;
   /* Round the top corners to match the modal frame — the header is the topmost
@@ -106,14 +106,14 @@
 }
 
 /* ---------- Meta row (above the title) ---------- */
-.claudian-work-order-modal-header-meta {
+.specorator-work-order-modal-header-meta {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-bottom: 9px;
 }
 
-.claudian-work-order-modal-id-chip {
+.specorator-work-order-modal-id-chip {
   padding: 2px 8px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-m);
@@ -123,8 +123,8 @@
   letter-spacing: 0.02em;
 }
 
-.claudian-work-order-modal-header-live,
-.claudian-work-order-modal-header-sub {
+.specorator-work-order-modal-header-live,
+.specorator-work-order-modal-header-sub {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -136,33 +136,33 @@
 }
 
 /* Pulsing live dot in the status color (running). The pulse is motion-gated. */
-.claudian-work-order-modal-live-dot {
+.specorator-work-order-modal-live-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--claudian-wo-header-color, var(--text-muted));
+  background: var(--specorator-wo-header-color, var(--text-muted));
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .claudian-work-order-modal-live-dot {
-    animation: claudian-wo-header-pulse 1.6s ease-in-out infinite;
+  .specorator-work-order-modal-live-dot {
+    animation: specorator-wo-header-pulse 1.6s ease-in-out infinite;
   }
 }
 
-@keyframes claudian-wo-header-pulse {
+@keyframes specorator-wo-header-pulse {
   0% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--claudian-wo-header-color, var(--text-muted)) 50%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--specorator-wo-header-color, var(--text-muted)) 50%, transparent);
   }
   70% {
-    box-shadow: 0 0 0 5px color-mix(in srgb, var(--claudian-wo-header-color, var(--text-muted)) 0%, transparent);
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--specorator-wo-header-color, var(--text-muted)) 0%, transparent);
   }
   100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--claudian-wo-header-color, var(--text-muted)) 0%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--specorator-wo-header-color, var(--text-muted)) 0%, transparent);
   }
 }
 
 /* ---------- Title ---------- */
-.claudian-work-order-modal-title {
+.specorator-work-order-modal-title {
   margin: 0;
   padding-right: 40px;
   color: var(--text-normal);
@@ -175,7 +175,7 @@
 }
 
 /* Editable affordance (inbox / ready / needs_fix). */
-.claudian-work-order-modal-title.is-editable {
+.specorator-work-order-modal-title.is-editable {
   margin: -3px -7px;
   padding: 3px 7px;
   padding-right: 40px;
@@ -183,11 +183,11 @@
   cursor: text;
 }
 
-.claudian-work-order-modal-title.is-editable:hover {
+.specorator-work-order-modal-title.is-editable:hover {
   background: var(--background-modifier-hover);
 }
 
-.claudian-work-order-modal-title.is-editable:focus {
+.specorator-work-order-modal-title.is-editable:focus {
   background: var(--input-bg);
   /* `--color-accent-3` is a prototype token; fall back to an accent focus ring
      so default Obsidian themes still get a visible focus indicator. */
@@ -195,23 +195,23 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .claudian-work-order-modal-title.is-editable {
+  .specorator-work-order-modal-title.is-editable {
     transition: background 0.15s ease, box-shadow 0.15s ease;
   }
 }
 
 /* Status → header accent/live-dot color contract (mirrors the status pill). */
-.claudian-work-order-modal-header--inbox { --claudian-wo-header-color: var(--color-base-60); }
-.claudian-work-order-modal-header--ready { --claudian-wo-header-color: var(--color-blue); }
-.claudian-work-order-modal-header--running { --claudian-wo-header-color: var(--color-yellow); }
-.claudian-work-order-modal-header--needs_input { --claudian-wo-header-color: var(--color-blue); }
-.claudian-work-order-modal-header--needs_approval { --claudian-wo-header-color: var(--color-purple); }
-.claudian-work-order-modal-header--review { --claudian-wo-header-color: var(--color-blue); }
-.claudian-work-order-modal-header--needs_handoff { --claudian-wo-header-color: var(--color-orange); }
-.claudian-work-order-modal-header--needs_fix { --claudian-wo-header-color: var(--color-orange); }
-.claudian-work-order-modal-header--done { --claudian-wo-header-color: var(--color-green); }
-.claudian-work-order-modal-header--failed { --claudian-wo-header-color: var(--color-red); }
-.claudian-work-order-modal-header--canceled { --claudian-wo-header-color: var(--color-base-60); }
+.specorator-work-order-modal-header--inbox { --specorator-wo-header-color: var(--color-base-60); }
+.specorator-work-order-modal-header--ready { --specorator-wo-header-color: var(--color-blue); }
+.specorator-work-order-modal-header--running { --specorator-wo-header-color: var(--color-yellow); }
+.specorator-work-order-modal-header--needs_input { --specorator-wo-header-color: var(--color-blue); }
+.specorator-work-order-modal-header--needs_approval { --specorator-wo-header-color: var(--color-purple); }
+.specorator-work-order-modal-header--review { --specorator-wo-header-color: var(--color-blue); }
+.specorator-work-order-modal-header--needs_handoff { --specorator-wo-header-color: var(--color-orange); }
+.specorator-work-order-modal-header--needs_fix { --specorator-wo-header-color: var(--color-orange); }
+.specorator-work-order-modal-header--done { --specorator-wo-header-color: var(--color-green); }
+.specorator-work-order-modal-header--failed { --specorator-wo-header-color: var(--color-red); }
+.specorator-work-order-modal-header--canceled { --specorator-wo-header-color: var(--color-base-60); }
 
 /*
  * Scroll region: the only part of the shell that scrolls. The two columns own
@@ -220,7 +220,7 @@
  * the column divider — so the body itself stays padding-free and the sidebar's
  * secondary background bleeds flush to the scroll-region edges.
  */
-.claudian-work-order-modal .claudian-work-order-modal-body {
+.specorator-work-order-modal .specorator-work-order-modal-body {
   display: grid;
   grid-template-columns: 1fr 282px;
 }
@@ -228,22 +228,22 @@
 /* Chromium/Electron scrollbar on the scroll region (the content) — track stays
    transparent so the gutter blends into the surfaces; the thumb insets via a
    padding-box border so it reads as a slim pill (matches the board). */
-.claudian-work-order-modal .claudian-work-order-modal-content::-webkit-scrollbar {
+.specorator-work-order-modal .specorator-work-order-modal-content::-webkit-scrollbar {
   width: 10px;
 }
 
-.claudian-work-order-modal .claudian-work-order-modal-content::-webkit-scrollbar-track {
+.specorator-work-order-modal .specorator-work-order-modal-content::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.claudian-work-order-modal .claudian-work-order-modal-content::-webkit-scrollbar-thumb {
+.specorator-work-order-modal .specorator-work-order-modal-content::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: var(--radius-l);
   background-color: var(--background-modifier-border);
   background-clip: padding-box;
 }
 
-.claudian-work-order-modal .claudian-work-order-modal-content::-webkit-scrollbar-thumb:hover {
+.specorator-work-order-modal .specorator-work-order-modal-content::-webkit-scrollbar-thumb:hover {
   background-color: var(--background-modifier-border-hover);
   background-clip: padding-box;
 }
@@ -253,7 +253,7 @@
  * shared container metrics every section (Objective, Acceptance, and the
  * follow-up Activity block) stacks into without re-layout.
  */
-.claudian-work-order-modal-main {
+.specorator-work-order-modal-main {
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -265,7 +265,7 @@
  * Properties sidebar surface. Owns its own 18px 20px inset; the left border is
  * the column divider and the secondary background fills the column edge-to-edge.
  */
-.claudian-work-order-modal-sidebar {
+.specorator-work-order-modal-sidebar {
   min-width: 0;
   padding: 18px 20px;
   border-left: 1px solid var(--border-color);
@@ -279,7 +279,7 @@
    variant colors come from Obsidian CSS variables (the danger
    alpha border via color-mix, never an rgba literal).
    ============================================================ */
-.claudian-work-order-modal-footer {
+.specorator-work-order-modal-footer {
   /* Pinned to the bottom of the scrolling content; solid background. */
   position: sticky;
   bottom: 0;
@@ -296,7 +296,7 @@
   background: var(--background-secondary);
 }
 
-.claudian-work-order-modal-footer-group {
+.specorator-work-order-modal-footer-group {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -304,7 +304,7 @@
 
 /* The right (primary) group hugs the trailing edge so an empty left group does
    not pull it leftward. */
-.claudian-work-order-modal-footer-group--right {
+.specorator-work-order-modal-footer-group--right {
   margin-left: auto;
 }
 
@@ -313,8 +313,8 @@
    the box-shadow / appearance / default font + sizing leak on EVERY modal button
    (footer actions + collapse heads), without disturbing each variant's own set
    styling defined below. */
-.claudian-work-order-modal .claudian-work-order-modal-action,
-.claudian-work-order-modal .claudian-work-order-modal-collapse-head {
+.specorator-work-order-modal .specorator-work-order-modal-action,
+.specorator-work-order-modal .specorator-work-order-modal-collapse-head {
   box-shadow: none;
   appearance: none;
   -webkit-appearance: none;
@@ -328,7 +328,7 @@
 }
 
 /* ---------- Footer action buttons ---------- */
-.claudian-work-order-modal-action {
+.specorator-work-order-modal-action {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -342,18 +342,18 @@
   cursor: pointer;
 }
 
-.claudian-work-order-modal-action-icon {
+.specorator-work-order-modal-action-icon {
   display: inline-flex;
   align-items: center;
 }
 
-.claudian-work-order-modal-action-icon svg {
+.specorator-work-order-modal-action-icon svg {
   width: 15px;
   height: 15px;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .claudian-work-order-modal-action {
+  .specorator-work-order-modal-action {
     transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   }
 }
@@ -361,7 +361,7 @@
 /* CTA — primary positive action (Mark ready / Accept / Send to review). Green
    from the status→color palette, not the theme accent, so the positive action
    reads deliberately across themes. */
-.claudian-work-order-modal .claudian-work-order-modal-action--cta {
+.specorator-work-order-modal .specorator-work-order-modal-action--cta {
   /* The border gives the green fill a defined edge on pale themes (Minimal),
      matching the board CTA treatment. */
   border-color: var(--color-green);
@@ -369,20 +369,20 @@
   color: var(--text-on-accent);
 }
 
-.claudian-work-order-modal .claudian-work-order-modal-action--cta:hover {
+.specorator-work-order-modal .specorator-work-order-modal-action--cta:hover {
   background: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
   border-color: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
 }
 
 /* Secondary — a neutral surfaced button (Open note / Open conversation / Rework
    / Archive / Reopen). Reads as a real button, not a bare ghost. */
-.claudian-work-order-modal .claudian-work-order-modal-action--ghost {
+.specorator-work-order-modal .specorator-work-order-modal-action--ghost {
   border-color: var(--border-color);
   background: var(--interactive-normal);
   color: var(--text-normal);
 }
 
-.claudian-work-order-modal .claudian-work-order-modal-action--ghost:hover {
+.specorator-work-order-modal .specorator-work-order-modal-action--ghost:hover {
   border-color: var(--border-color-hover);
   background: var(--interactive-hover);
   color: var(--text-normal);
@@ -390,13 +390,13 @@
 
 /* Danger — destructive red; the soft border alpha goes through color-mix
    (never an rgba literal). Hover flips to a solid red fill. */
-.claudian-work-order-modal .claudian-work-order-modal-action--danger {
+.specorator-work-order-modal .specorator-work-order-modal-action--danger {
   border-color: color-mix(in srgb, var(--color-red) 40%, transparent);
   background: var(--background-modifier-error);
   color: var(--color-red);
 }
 
-.claudian-work-order-modal .claudian-work-order-modal-action--danger:hover {
+.specorator-work-order-modal .specorator-work-order-modal-action--danger:hover {
   background: var(--color-red);
   border-color: var(--color-red);
   color: var(--text-on-accent);
@@ -408,20 +408,20 @@
    follow-up Activity block). Uppercase muted label + leading faint
    Lucide icon + optional right-side slot. See ui/sectionHeader.ts.
    ============================================================ */
-.claudian-work-order-modal-section {
+.specorator-work-order-modal-section {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.claudian-work-order-modal-section-head {
+.specorator-work-order-modal-section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.claudian-work-order-modal-section-title {
+.specorator-work-order-modal-section-title {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -432,18 +432,18 @@
   text-transform: uppercase;
 }
 
-.claudian-work-order-modal-section-icon {
+.specorator-work-order-modal-section-icon {
   display: inline-flex;
   align-items: center;
   color: var(--text-faint);
 }
 
-.claudian-work-order-modal-section-icon svg {
+.specorator-work-order-modal-section-icon svg {
   width: 16px;
   height: 16px;
 }
 
-.claudian-work-order-modal-section-right {
+.specorator-work-order-modal-section-right {
   display: inline-flex;
   align-items: center;
 }
@@ -469,18 +469,18 @@
 /* Tame heading sizes to the section scale — the rendered region must not
    out-shout the uppercase section labels around it. h1/h2 collapse toward the
    body title rhythm; deeper levels step down to the inline-label scale. */
-.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) :is(h1, h2, h3, h4, h5, h6) {
+.specorator-work-order-modal :is(.specorator-work-order-modal-objective, .specorator-work-order-modal-handoff-fallback, .specorator-work-order-modal-collapse-body, .specorator-work-order-modal-checklist-prose, .specorator-work-order-modal-checklist-text) :is(h1, h2, h3, h4, h5, h6) {
   margin: 8px 0 4px;
   line-height: var(--line-height-tight);
   font-weight: var(--font-semibold);
   color: var(--text-normal);
 }
 
-.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) :is(h1, h2) {
+.specorator-work-order-modal :is(.specorator-work-order-modal-objective, .specorator-work-order-modal-handoff-fallback, .specorator-work-order-modal-collapse-body, .specorator-work-order-modal-checklist-prose, .specorator-work-order-modal-checklist-text) :is(h1, h2) {
   font-size: var(--font-ui-medium);
 }
 
-.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) :is(h3, h4, h5, h6) {
+.specorator-work-order-modal :is(.specorator-work-order-modal-objective, .specorator-work-order-modal-handoff-fallback, .specorator-work-order-modal-collapse-body, .specorator-work-order-modal-checklist-prose, .specorator-work-order-modal-checklist-text) :is(h3, h4, h5, h6) {
   font-size: var(--font-ui-small);
 }
 
@@ -488,34 +488,34 @@
    (0-2-1) so it wins over the generic p/heading rules below that would otherwise
    re-add a leading/trailing margin; mirrors the per-container first/last-child
    resets but reaches every block (p, headings, lists, pre, …). */
-.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) > :first-child {
+.specorator-work-order-modal :is(.specorator-work-order-modal-objective, .specorator-work-order-modal-handoff-fallback, .specorator-work-order-modal-collapse-body, .specorator-work-order-modal-checklist-prose, .specorator-work-order-modal-checklist-text) > :first-child {
   margin-top: 0;
 }
 
-.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) > :last-child {
+.specorator-work-order-modal :is(.specorator-work-order-modal-objective, .specorator-work-order-modal-handoff-fallback, .specorator-work-order-modal-collapse-body, .specorator-work-order-modal-checklist-prose, .specorator-work-order-modal-checklist-text) > :last-child {
   margin-bottom: 0;
 }
 
 /* Paragraph + list rhythm collapses to the modal's compact spacing. */
-.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) p {
+.specorator-work-order-modal :is(.specorator-work-order-modal-objective, .specorator-work-order-modal-handoff-fallback, .specorator-work-order-modal-collapse-body, .specorator-work-order-modal-checklist-prose, .specorator-work-order-modal-checklist-text) p {
   margin: 0 0 8px;
 }
 
-.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) :is(ul, ol) {
+.specorator-work-order-modal :is(.specorator-work-order-modal-objective, .specorator-work-order-modal-handoff-fallback, .specorator-work-order-modal-collapse-body, .specorator-work-order-modal-checklist-prose, .specorator-work-order-modal-checklist-text) :is(ul, ol) {
   margin: 8px 0;
   padding-inline-start: 20px;
 }
 
-.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) li + li {
+.specorator-work-order-modal :is(.specorator-work-order-modal-objective, .specorator-work-order-modal-handoff-fallback, .specorator-work-order-modal-collapse-body, .specorator-work-order-modal-checklist-prose, .specorator-work-order-modal-checklist-text) li + li {
   margin-top: 2px;
 }
 
-.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) li > :is(ul, ol) {
+.specorator-work-order-modal :is(.specorator-work-order-modal-objective, .specorator-work-order-modal-handoff-fallback, .specorator-work-order-modal-collapse-body, .specorator-work-order-modal-checklist-prose, .specorator-work-order-modal-checklist-text) li > :is(ul, ol) {
   margin: 2px 0;
 }
 
 /* Inline code → a subtle chip (Obsidian's default leans heavy in modal copy). */
-.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) :not(pre) > code {
+.specorator-work-order-modal :is(.specorator-work-order-modal-objective, .specorator-work-order-modal-handoff-fallback, .specorator-work-order-modal-collapse-body, .specorator-work-order-modal-checklist-prose, .specorator-work-order-modal-checklist-text) :not(pre) > code {
   padding: 0.1em 0.35em;
   border-radius: var(--radius-s);
   background: var(--background-modifier-hover);
@@ -524,7 +524,7 @@
   font-family: var(--font-monospace);
 }
 
-.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) pre {
+.specorator-work-order-modal :is(.specorator-work-order-modal-objective, .specorator-work-order-modal-handoff-fallback, .specorator-work-order-modal-collapse-body, .specorator-work-order-modal-checklist-prose, .specorator-work-order-modal-checklist-text) pre {
   margin: 8px 0;
   padding: 10px 12px;
   border: 1px solid var(--border-color);
@@ -535,45 +535,45 @@
 }
 
 /* Reset the chip styling for code that lives inside a fenced block. */
-.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) pre > code {
+.specorator-work-order-modal :is(.specorator-work-order-modal-objective, .specorator-work-order-modal-handoff-fallback, .specorator-work-order-modal-collapse-body, .specorator-work-order-modal-checklist-prose, .specorator-work-order-modal-checklist-text) pre > code {
   padding: 0;
   border-radius: 0;
   background: transparent;
   font-size: inherit;
 }
 
-.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) blockquote {
+.specorator-work-order-modal :is(.specorator-work-order-modal-objective, .specorator-work-order-modal-handoff-fallback, .specorator-work-order-modal-collapse-body, .specorator-work-order-modal-checklist-prose, .specorator-work-order-modal-checklist-text) blockquote {
   margin: 8px 0;
   padding: 2px 0 2px 12px;
   border-inline-start: 2px solid var(--border-color);
   color: var(--text-muted);
 }
 
-.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) hr {
+.specorator-work-order-modal :is(.specorator-work-order-modal-objective, .specorator-work-order-modal-handoff-fallback, .specorator-work-order-modal-collapse-body, .specorator-work-order-modal-checklist-prose, .specorator-work-order-modal-checklist-text) hr {
   margin: 8px 0;
   border: none;
   border-top: 1px solid var(--border-color);
 }
 
 /* Keep links on the accent token regardless of the active theme. */
-.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) a {
+.specorator-work-order-modal :is(.specorator-work-order-modal-objective, .specorator-work-order-modal-handoff-fallback, .specorator-work-order-modal-collapse-body, .specorator-work-order-modal-checklist-prose, .specorator-work-order-modal-checklist-text) a {
   color: var(--text-accent);
   text-decoration: none;
 }
 
-.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) a:hover {
+.specorator-work-order-modal :is(.specorator-work-order-modal-objective, .specorator-work-order-modal-handoff-fallback, .specorator-work-order-modal-collapse-body, .specorator-work-order-modal-checklist-prose, .specorator-work-order-modal-checklist-text) a:hover {
   color: var(--text-accent-hover);
   text-decoration: underline;
 }
 
-.claudian-work-order-modal :is(.claudian-work-order-modal-objective, .claudian-work-order-modal-handoff-fallback, .claudian-work-order-modal-collapse-body, .claudian-work-order-modal-checklist-prose, .claudian-work-order-modal-checklist-text) img {
+.specorator-work-order-modal :is(.specorator-work-order-modal-objective, .specorator-work-order-modal-handoff-fallback, .specorator-work-order-modal-collapse-body, .specorator-work-order-modal-checklist-prose, .specorator-work-order-modal-checklist-text) img {
   max-width: 100%;
   height: auto;
   border-radius: var(--radius-s);
 }
 
 /* ---------- Objective ---------- */
-.claudian-work-order-modal-objective {
+.specorator-work-order-modal-objective {
   font-size: var(--font-ui-medium);
   line-height: var(--line-height-relaxed);
   color: var(--text-normal);
@@ -581,42 +581,42 @@
   text-wrap: pretty;
 }
 
-.claudian-work-order-modal-objective > :first-child {
+.specorator-work-order-modal-objective > :first-child {
   margin-top: 0;
 }
 
-.claudian-work-order-modal-objective > :last-child {
+.specorator-work-order-modal-objective > :last-child {
   margin-bottom: 0;
 }
 
 /* ---------- Acceptance progress ring + count ---------- */
-.claudian-work-order-modal-ring-meter {
+.specorator-work-order-modal-ring-meter {
   display: inline-flex;
   align-items: center;
   gap: 9px;
 }
 
-.claudian-work-order-modal-ring {
+.specorator-work-order-modal-ring {
   display: block;
   /* Status-accent stroke from the status→color contract; --complete overrides. */
-  color: var(--claudian-wo-ring-color, var(--color-accent));
+  color: var(--specorator-wo-ring-color, var(--color-accent));
 }
 
-.claudian-work-order-modal-ring-track {
+.specorator-work-order-modal-ring-track {
   stroke: var(--background-modifier-border);
 }
 
-.claudian-work-order-modal-ring-arc {
+.specorator-work-order-modal-ring-arc {
   stroke: currentColor;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .claudian-work-order-modal-ring-arc {
+  .specorator-work-order-modal-ring-arc {
     transition: stroke-dashoffset 0.4s ease;
   }
 }
 
-.claudian-work-order-modal-ring-count {
+.specorator-work-order-modal-ring-count {
   font-size: var(--font-ui-smaller);
   font-weight: var(--font-semibold);
   font-variant-numeric: tabular-nums;
@@ -624,51 +624,51 @@
 }
 
 /* Status → ring color contract (mirrors the status pill map). */
-.claudian-work-order-modal-ring--inbox { --claudian-wo-ring-color: var(--color-base-60); }
-.claudian-work-order-modal-ring--ready { --claudian-wo-ring-color: var(--color-blue); }
-.claudian-work-order-modal-ring--running { --claudian-wo-ring-color: var(--color-yellow); }
-.claudian-work-order-modal-ring--needs_input { --claudian-wo-ring-color: var(--color-blue); }
-.claudian-work-order-modal-ring--needs_approval { --claudian-wo-ring-color: var(--color-purple); }
-.claudian-work-order-modal-ring--review { --claudian-wo-ring-color: var(--color-blue); }
-.claudian-work-order-modal-ring--needs_handoff { --claudian-wo-ring-color: var(--color-orange); }
-.claudian-work-order-modal-ring--needs_fix { --claudian-wo-ring-color: var(--color-orange); }
-.claudian-work-order-modal-ring--done { --claudian-wo-ring-color: var(--color-green); }
-.claudian-work-order-modal-ring--failed { --claudian-wo-ring-color: var(--color-red); }
-.claudian-work-order-modal-ring--canceled { --claudian-wo-ring-color: var(--color-base-60); }
+.specorator-work-order-modal-ring--inbox { --specorator-wo-ring-color: var(--color-base-60); }
+.specorator-work-order-modal-ring--ready { --specorator-wo-ring-color: var(--color-blue); }
+.specorator-work-order-modal-ring--running { --specorator-wo-ring-color: var(--color-yellow); }
+.specorator-work-order-modal-ring--needs_input { --specorator-wo-ring-color: var(--color-blue); }
+.specorator-work-order-modal-ring--needs_approval { --specorator-wo-ring-color: var(--color-purple); }
+.specorator-work-order-modal-ring--review { --specorator-wo-ring-color: var(--color-blue); }
+.specorator-work-order-modal-ring--needs_handoff { --specorator-wo-ring-color: var(--color-orange); }
+.specorator-work-order-modal-ring--needs_fix { --specorator-wo-ring-color: var(--color-orange); }
+.specorator-work-order-modal-ring--done { --specorator-wo-ring-color: var(--color-green); }
+.specorator-work-order-modal-ring--failed { --specorator-wo-ring-color: var(--color-red); }
+.specorator-work-order-modal-ring--canceled { --specorator-wo-ring-color: var(--color-base-60); }
 
 /* Fully accepted: stroke + count both go green regardless of status. */
-.claudian-work-order-modal-ring--complete { --claudian-wo-ring-color: var(--color-green); }
+.specorator-work-order-modal-ring--complete { --specorator-wo-ring-color: var(--color-green); }
 
-.claudian-work-order-modal-ring--complete + .claudian-work-order-modal-ring-count {
+.specorator-work-order-modal-ring--complete + .specorator-work-order-modal-ring-count {
   color: var(--color-green);
 }
 
 /* ---------- Acceptance checklist card ---------- */
-.claudian-work-order-modal-checklist {
+.specorator-work-order-modal-checklist {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-l);
   background: var(--background-primary-alt);
   overflow: hidden;
 }
 
-.claudian-work-order-modal-checklist-empty {
+.specorator-work-order-modal-checklist-empty {
   padding: 11px 14px;
   color: var(--text-faint);
 }
 
 /* Decorative em-dash placeholder for an empty acceptance section. */
-.claudian-work-order-modal-checklist-empty::before {
+.specorator-work-order-modal-checklist-empty::before {
   content: "—";
 }
 
 /* Non-task-list acceptance criteria (prose / plain bullets) rendered as markdown. */
-.claudian-work-order-modal-checklist-prose {
+.specorator-work-order-modal-checklist-prose {
   padding: 11px 14px;
   color: var(--text-muted);
   line-height: var(--line-height-relaxed);
 }
 
-.claudian-work-order-modal-checklist-item {
+.specorator-work-order-modal-checklist-item {
   display: flex;
   align-items: center;
   gap: 11px;
@@ -678,15 +678,15 @@
   color: var(--text-normal);
 }
 
-.claudian-work-order-modal-checklist-item + .claudian-work-order-modal-checklist-item {
+.specorator-work-order-modal-checklist-item + .specorator-work-order-modal-checklist-item {
   border-top: 1px solid var(--border-color);
 }
 
-.claudian-work-order-modal-checklist-item.is-checked {
+.specorator-work-order-modal-checklist-item.is-checked {
   color: var(--text-muted);
 }
 
-.claudian-work-order-modal-checklist-box {
+.specorator-work-order-modal-checklist-box {
   flex: 0 0 auto;
   display: grid;
   place-items: center;
@@ -698,32 +698,32 @@
 }
 
 /* Checked: filled green box; the white check glyph is the non-color cue. */
-.claudian-work-order-modal-checklist-item.is-checked .claudian-work-order-modal-checklist-box {
+.specorator-work-order-modal-checklist-item.is-checked .specorator-work-order-modal-checklist-box {
   border-color: var(--color-green);
   background: var(--color-green);
   color: var(--text-on-accent);
 }
 
-.claudian-work-order-modal-checklist-check {
+.specorator-work-order-modal-checklist-check {
   display: inline-flex;
   align-items: center;
   color: currentColor;
 }
 
-.claudian-work-order-modal-checklist-check svg {
+.specorator-work-order-modal-checklist-check svg {
   width: 12px;
   height: 12px;
   stroke-width: 3;
 }
 
-.claudian-work-order-modal-checklist-text {
+.specorator-work-order-modal-checklist-text {
   min-width: 0;
   word-break: break-word;
 }
 
 /* Collapse the paragraph MarkdownRenderer wraps a single-line label in so the
    item label sits inline within the flex row. */
-.claudian-work-order-modal-checklist-text p {
+.specorator-work-order-modal-checklist-text p {
   margin: 0;
 }
 
@@ -735,7 +735,7 @@
    ============================================================ */
 
 /* Unparseable handoff fallback: the full raw markdown, never dropped. */
-.claudian-work-order-modal-handoff-fallback {
+.specorator-work-order-modal-handoff-fallback {
   background: var(--background-secondary);
   padding: 12px 16px;
   border-radius: var(--radius-m);
@@ -743,22 +743,22 @@
   color: var(--text-muted);
 }
 
-.claudian-work-order-modal-handoff-fallback > :first-child {
+.specorator-work-order-modal-handoff-fallback > :first-child {
   margin-top: 0;
 }
 
-.claudian-work-order-modal-handoff-fallback > :last-child {
+.specorator-work-order-modal-handoff-fallback > :last-child {
   margin-bottom: 0;
 }
 
 /* ---------- Collapsible cards (handoff sections + transcript tail) ---------- */
-.claudian-work-order-modal-collapse-group {
+.specorator-work-order-modal-collapse-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.claudian-work-order-modal-collapse {
+.specorator-work-order-modal-collapse {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-l);
   background: var(--background-primary-alt);
@@ -767,11 +767,11 @@
 
 /* Expanded cards shift to the secondary surface (spec), so an open handoff
    section reads as distinct from the collapsed ones around it. */
-.claudian-work-order-modal-collapse.is-open {
+.specorator-work-order-modal-collapse.is-open {
   background: var(--background-secondary);
 }
 
-.claudian-work-order-modal-collapse-head {
+.specorator-work-order-modal-collapse-head {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -786,76 +786,76 @@
   cursor: pointer;
 }
 
-.claudian-work-order-modal-collapse-head:hover {
+.specorator-work-order-modal-collapse-head:hover {
   background: var(--background-modifier-hover);
 }
 
-.claudian-work-order-modal-collapse-chevron {
+.specorator-work-order-modal-collapse-chevron {
   display: inline-flex;
   align-items: center;
   color: var(--text-faint);
 }
 
-.claudian-work-order-modal-collapse-chevron svg {
+.specorator-work-order-modal-collapse-chevron svg {
   width: 15px;
   height: 15px;
 }
 
 /* Chevron points down when the card is open; the rotation is motion-gated. */
-.claudian-work-order-modal-collapse.is-open .claudian-work-order-modal-collapse-chevron {
+.specorator-work-order-modal-collapse.is-open .specorator-work-order-modal-collapse-chevron {
   transform: rotate(90deg);
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .claudian-work-order-modal-collapse-chevron {
+  .specorator-work-order-modal-collapse-chevron {
     transition: transform 0.15s ease;
   }
 }
 
-.claudian-work-order-modal-collapse-icon {
+.specorator-work-order-modal-collapse-icon {
   display: inline-flex;
   align-items: center;
   /* Per-section accent set by the --modifier classes below. */
-  color: var(--claudian-wo-collapse-color, var(--text-faint));
+  color: var(--specorator-wo-collapse-color, var(--text-faint));
 }
 
-.claudian-work-order-modal-collapse-icon svg {
+.specorator-work-order-modal-collapse-icon svg {
   width: 15px;
   height: 15px;
 }
 
-.claudian-work-order-modal-collapse-title {
+.specorator-work-order-modal-collapse-title {
   min-width: 0;
 }
 
 /* Body left-aligns under the section icon (head left-pad 14 + chevron 15 + gap 9
    = 38px), matching the prototype's `padding: 2px 16px 14px 38px`. */
-.claudian-work-order-modal-collapse-body {
+.specorator-work-order-modal-collapse-body {
   padding: 2px 16px 14px 38px;
   color: var(--text-muted);
   line-height: var(--line-height-relaxed);
   text-wrap: pretty;
 }
 
-.claudian-work-order-modal-collapse-body > :first-child {
+.specorator-work-order-modal-collapse-body > :first-child {
   margin-top: 0;
 }
 
-.claudian-work-order-modal-collapse-body > :last-child {
+.specorator-work-order-modal-collapse-body > :last-child {
   margin-bottom: 0;
 }
 
 /* Per-section handoff card icon colors (color is what the spec table fixes);
    mirrors Modal.jsx: summary=blue, verification=green, risks=orange,
    next=accent. The transcript-tail card carries the salvage orange. */
-.claudian-work-order-modal-collapse--summary { --claudian-wo-collapse-color: var(--color-blue); }
-.claudian-work-order-modal-collapse--verification { --claudian-wo-collapse-color: var(--color-green); }
-.claudian-work-order-modal-collapse--risks { --claudian-wo-collapse-color: var(--color-orange); }
-.claudian-work-order-modal-collapse--next { --claudian-wo-collapse-color: var(--color-accent); }
-.claudian-work-order-modal-collapse--tail { --claudian-wo-collapse-color: var(--color-orange); }
+.specorator-work-order-modal-collapse--summary { --specorator-wo-collapse-color: var(--color-blue); }
+.specorator-work-order-modal-collapse--verification { --specorator-wo-collapse-color: var(--color-green); }
+.specorator-work-order-modal-collapse--risks { --specorator-wo-collapse-color: var(--color-orange); }
+.specorator-work-order-modal-collapse--next { --specorator-wo-collapse-color: var(--color-accent); }
+.specorator-work-order-modal-collapse--tail { --specorator-wo-collapse-color: var(--color-orange); }
 
 /* ---------- Needs-handoff salvage callout + transcript tail ---------- */
-.claudian-work-order-modal-salvage-callout {
+.specorator-work-order-modal-salvage-callout {
   padding: 12px 14px;
   border: 1px solid color-mix(in srgb, var(--color-orange) 25%, transparent);
   border-radius: var(--radius-l);
@@ -865,7 +865,7 @@
   line-height: var(--line-height-relaxed);
 }
 
-.claudian-work-order-modal-tail-body {
+.specorator-work-order-modal-tail-body {
   font-family: var(--font-monospace);
   font-size: 0.85em;
   color: var(--text-muted);
@@ -876,13 +876,13 @@
 /* ---------- Failed Run ledger ----------
    A bare list (no card border/background), per the prototype: a three-column
    grid (dot | time | message) with top-aligned rows and hairline separators. */
-.claudian-work-order-modal-ledger {
+.specorator-work-order-modal-ledger {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.claudian-work-order-modal-ledger-entry {
+.specorator-work-order-modal-ledger-entry {
   display: grid;
   grid-template-columns: auto auto 1fr;
   align-items: start;
@@ -891,27 +891,27 @@
   font-size: var(--font-ui-small);
 }
 
-.claudian-work-order-modal-ledger-entry + .claudian-work-order-modal-ledger-entry {
+.specorator-work-order-modal-ledger-entry + .specorator-work-order-modal-ledger-entry {
   border-top: 1px solid var(--border-color);
 }
 
 /* 8px status dot, nudged down to sit on the first text line of the row. */
-.claudian-work-order-modal-ledger-dot {
+.specorator-work-order-modal-ledger-dot {
   width: 8px;
   height: 8px;
   margin-top: 6px;
   border-radius: 50%;
-  background: var(--claudian-wo-ledger-color, var(--text-muted));
+  background: var(--specorator-wo-ledger-color, var(--text-muted));
 }
 
-.claudian-work-order-modal-ledger-time {
+.specorator-work-order-modal-ledger-time {
   margin-top: 1px;
   font-family: var(--font-monospace);
   font-size: 0.85em;
   color: var(--text-faint);
 }
 
-.claudian-work-order-modal-ledger-msg {
+.specorator-work-order-modal-ledger-msg {
   min-width: 0;
   color: var(--text-normal);
   line-height: 1.5;
@@ -919,27 +919,27 @@
 }
 
 /* Ledger dot → status color contract (keyed off each entry's [status]). */
-.claudian-work-order-modal-ledger-dot--inbox { --claudian-wo-ledger-color: var(--color-base-60); }
-.claudian-work-order-modal-ledger-dot--ready { --claudian-wo-ledger-color: var(--color-blue); }
-.claudian-work-order-modal-ledger-dot--running { --claudian-wo-ledger-color: var(--color-yellow); }
-.claudian-work-order-modal-ledger-dot--needs_input { --claudian-wo-ledger-color: var(--color-blue); }
-.claudian-work-order-modal-ledger-dot--needs_approval { --claudian-wo-ledger-color: var(--color-purple); }
-.claudian-work-order-modal-ledger-dot--review { --claudian-wo-ledger-color: var(--color-blue); }
-.claudian-work-order-modal-ledger-dot--needs_handoff { --claudian-wo-ledger-color: var(--color-orange); }
-.claudian-work-order-modal-ledger-dot--needs_fix { --claudian-wo-ledger-color: var(--color-orange); }
-.claudian-work-order-modal-ledger-dot--done { --claudian-wo-ledger-color: var(--color-green); }
-.claudian-work-order-modal-ledger-dot--failed { --claudian-wo-ledger-color: var(--color-red); }
-.claudian-work-order-modal-ledger-dot--canceled { --claudian-wo-ledger-color: var(--color-base-60); }
+.specorator-work-order-modal-ledger-dot--inbox { --specorator-wo-ledger-color: var(--color-base-60); }
+.specorator-work-order-modal-ledger-dot--ready { --specorator-wo-ledger-color: var(--color-blue); }
+.specorator-work-order-modal-ledger-dot--running { --specorator-wo-ledger-color: var(--color-yellow); }
+.specorator-work-order-modal-ledger-dot--needs_input { --specorator-wo-ledger-color: var(--color-blue); }
+.specorator-work-order-modal-ledger-dot--needs_approval { --specorator-wo-ledger-color: var(--color-purple); }
+.specorator-work-order-modal-ledger-dot--review { --specorator-wo-ledger-color: var(--color-blue); }
+.specorator-work-order-modal-ledger-dot--needs_handoff { --specorator-wo-ledger-color: var(--color-orange); }
+.specorator-work-order-modal-ledger-dot--needs_fix { --specorator-wo-ledger-color: var(--color-orange); }
+.specorator-work-order-modal-ledger-dot--done { --specorator-wo-ledger-color: var(--color-green); }
+.specorator-work-order-modal-ledger-dot--failed { --specorator-wo-ledger-color: var(--color-red); }
+.specorator-work-order-modal-ledger-dot--canceled { --specorator-wo-ledger-color: var(--color-base-60); }
 
 /* Collapse the two-pane grid: sidebar drops below main, divider goes to top.
    Scoped under the modal class to match the base body rule's specificity (0-2-0)
    so this override still wins by source order. */
 @media (max-width: 720px) {
-  .claudian-work-order-modal .claudian-work-order-modal-body {
+  .specorator-work-order-modal .specorator-work-order-modal-body {
     grid-template-columns: 1fr;
   }
 
-  .claudian-work-order-modal-sidebar {
+  .specorator-work-order-modal-sidebar {
     border-left: none;
     border-top: 1px solid var(--border-color);
   }
@@ -950,7 +950,7 @@
    priority bars. Colors come from the visual token contract
    (status / priority maps) via Obsidian CSS variables only.
    ============================================================ */
-.claudian-work-order-modal-properties-head {
+.specorator-work-order-modal-properties-head {
   margin-bottom: 10px;
   padding: 0 6px;
   font-size: var(--font-ui-smaller);
@@ -960,7 +960,7 @@
   text-transform: uppercase;
 }
 
-.claudian-work-order-modal-prop-row {
+.specorator-work-order-modal-prop-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -970,7 +970,7 @@
   border-radius: var(--radius-m);
 }
 
-.claudian-work-order-modal-prop-label {
+.specorator-work-order-modal-prop-label {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -979,79 +979,79 @@
   color: var(--text-muted);
 }
 
-.claudian-work-order-modal-prop-icon {
+.specorator-work-order-modal-prop-icon {
   display: inline-flex;
   align-items: center;
   color: var(--text-faint);
 }
 
-.claudian-work-order-modal-prop-icon svg {
+.specorator-work-order-modal-prop-icon svg {
   width: 15px;
   height: 15px;
 }
 
-.claudian-work-order-modal-prop-value {
+.specorator-work-order-modal-prop-value {
   min-width: 0;
   font-size: var(--font-ui-small);
   color: var(--text-normal);
   text-align: right;
 }
 
-.claudian-work-order-modal-prop-inner {
+.specorator-work-order-modal-prop-inner {
   display: inline-flex;
   align-items: center;
   gap: 7px;
 }
 
-.claudian-work-order-modal-prop-placeholder {
+.specorator-work-order-modal-prop-placeholder {
   color: var(--text-faint);
 }
 
 /* ---------- Agent assignee value (persona avatar + name) ----------
-   The avatar itself (.claudian-agent-avatar) is styled in agent-board.css and
+   The avatar itself (.specorator-agent-avatar) is styled in agent-board.css and
    shared with the card; here we only lay out the static (non-editable) avatar +
    name pair and reserve the inline gap when the avatar leads the editable chip. */
-.claudian-work-order-modal-agent {
+.specorator-work-order-modal-agent {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-.claudian-work-order-modal-agent-name {
+.specorator-work-order-modal-agent-name {
   font-size: var(--font-ui-small);
   color: var(--text-normal);
 }
 
-.claudian-work-order-modal-prop-num {
+.specorator-work-order-modal-prop-num {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
-.claudian-work-order-modal-mono {
+.specorator-work-order-modal-mono {
   font-family: var(--font-monospace);
   font-size: 0.92em;
 }
 
-.claudian-work-order-modal-prop-link {
+.specorator-work-order-modal-prop-link {
   color: var(--text-accent);
   font-family: var(--font-monospace);
   font-size: 0.9em;
   cursor: pointer;
 }
 
-.claudian-work-order-modal-prop-link:hover {
+.specorator-work-order-modal-prop-link:hover {
   color: var(--text-accent-hover);
   text-decoration: underline;
 }
 
-.claudian-work-order-modal-properties-divider {
+.specorator-work-order-modal-properties-divider {
   height: 1px;
   margin: 10px 6px;
   background: var(--border-color);
 }
 
 /* ---------- Status pill (status → color contract) ---------- */
-.claudian-work-order-modal-status-pill {
+.specorator-work-order-modal-status-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1060,66 +1060,66 @@
   border-radius: var(--radius-full);
   font-size: var(--font-ui-smaller);
   font-weight: var(--font-medium);
-  color: var(--claudian-wo-status-color, var(--text-muted));
-  background: color-mix(in srgb, var(--claudian-wo-status-color, var(--text-muted)) 14%, transparent);
+  color: var(--specorator-wo-status-color, var(--text-muted));
+  background: color-mix(in srgb, var(--specorator-wo-status-color, var(--text-muted)) 14%, transparent);
 }
 
-.claudian-work-order-modal-status-dot {
+.specorator-work-order-modal-status-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--claudian-wo-status-color, var(--text-muted));
+  background: var(--specorator-wo-status-color, var(--text-muted));
 }
 
-.claudian-work-order-modal-status-pill--inbox { --claudian-wo-status-color: var(--color-base-60); }
-.claudian-work-order-modal-status-pill--ready { --claudian-wo-status-color: var(--color-blue); }
-.claudian-work-order-modal-status-pill--running { --claudian-wo-status-color: var(--color-yellow); }
-.claudian-work-order-modal-status-pill--needs_input { --claudian-wo-status-color: var(--color-blue); }
-.claudian-work-order-modal-status-pill--needs_approval { --claudian-wo-status-color: var(--color-purple); }
-.claudian-work-order-modal-status-pill--review { --claudian-wo-status-color: var(--color-blue); }
-.claudian-work-order-modal-status-pill--needs_handoff { --claudian-wo-status-color: var(--color-orange); }
-.claudian-work-order-modal-status-pill--needs_fix { --claudian-wo-status-color: var(--color-orange); }
-.claudian-work-order-modal-status-pill--done { --claudian-wo-status-color: var(--color-green); }
-.claudian-work-order-modal-status-pill--failed { --claudian-wo-status-color: var(--color-red); }
-.claudian-work-order-modal-status-pill--canceled { --claudian-wo-status-color: var(--color-base-60); }
+.specorator-work-order-modal-status-pill--inbox { --specorator-wo-status-color: var(--color-base-60); }
+.specorator-work-order-modal-status-pill--ready { --specorator-wo-status-color: var(--color-blue); }
+.specorator-work-order-modal-status-pill--running { --specorator-wo-status-color: var(--color-yellow); }
+.specorator-work-order-modal-status-pill--needs_input { --specorator-wo-status-color: var(--color-blue); }
+.specorator-work-order-modal-status-pill--needs_approval { --specorator-wo-status-color: var(--color-purple); }
+.specorator-work-order-modal-status-pill--review { --specorator-wo-status-color: var(--color-blue); }
+.specorator-work-order-modal-status-pill--needs_handoff { --specorator-wo-status-color: var(--color-orange); }
+.specorator-work-order-modal-status-pill--needs_fix { --specorator-wo-status-color: var(--color-orange); }
+.specorator-work-order-modal-status-pill--done { --specorator-wo-status-color: var(--color-green); }
+.specorator-work-order-modal-status-pill--failed { --specorator-wo-status-color: var(--color-red); }
+.specorator-work-order-modal-status-pill--canceled { --specorator-wo-status-color: var(--color-base-60); }
 
 /* ---------- Priority bars (priority → color contract) ---------- */
-.claudian-work-order-modal-priority {
-  color: var(--claudian-wo-priority-color, var(--text-muted));
+.specorator-work-order-modal-priority {
+  color: var(--specorator-wo-priority-color, var(--text-muted));
 }
 
-.claudian-work-order-modal-priority-label {
+.specorator-work-order-modal-priority-label {
   color: var(--text-normal);
 }
 
-.claudian-work-order-modal-priority-bars {
+.specorator-work-order-modal-priority-bars {
   display: inline-flex;
   align-items: flex-end;
   gap: 2px;
   height: 11px;
 }
 
-.claudian-work-order-modal-priority-bars i {
+.specorator-work-order-modal-priority-bars i {
   width: 3px;
   border-radius: 1px;
   background: var(--background-modifier-border);
 }
 
-.claudian-work-order-modal-priority-bars i.is-filled {
-  background: var(--claudian-wo-priority-color, var(--text-muted));
+.specorator-work-order-modal-priority-bars i.is-filled {
+  background: var(--specorator-wo-priority-color, var(--text-muted));
 }
 
-.claudian-work-order-modal-priority-bars i:nth-child(1) { height: 5px; }
-.claudian-work-order-modal-priority-bars i:nth-child(2) { height: 8px; }
-.claudian-work-order-modal-priority-bars i:nth-child(3) { height: 11px; }
+.specorator-work-order-modal-priority-bars i:nth-child(1) { height: 5px; }
+.specorator-work-order-modal-priority-bars i:nth-child(2) { height: 8px; }
+.specorator-work-order-modal-priority-bars i:nth-child(3) { height: 11px; }
 
-.claudian-work-order-modal-priority--0 { --claudian-wo-priority-color: var(--color-red); }
-.claudian-work-order-modal-priority--1 { --claudian-wo-priority-color: var(--color-orange); }
-.claudian-work-order-modal-priority--2 { --claudian-wo-priority-color: var(--color-yellow); }
-.claudian-work-order-modal-priority--3 { --claudian-wo-priority-color: var(--color-base-60); }
+.specorator-work-order-modal-priority--0 { --specorator-wo-priority-color: var(--color-red); }
+.specorator-work-order-modal-priority--1 { --specorator-wo-priority-color: var(--color-orange); }
+.specorator-work-order-modal-priority--2 { --specorator-wo-priority-color: var(--color-yellow); }
+.specorator-work-order-modal-priority--3 { --specorator-wo-priority-color: var(--color-base-60); }
 
 /* ---------- Editable value chip (shared helper) ---------- */
-.claudian-work-order-modal-chip {
+.specorator-work-order-modal-chip {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -1131,12 +1131,12 @@
   cursor: pointer;
 }
 
-.claudian-work-order-modal-chip:hover {
+.specorator-work-order-modal-chip:hover {
   background: var(--background-modifier-hover);
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .claudian-work-order-modal-chip {
+  .specorator-work-order-modal-chip {
     transition: background 0.15s ease, box-shadow 0.15s ease;
   }
 }
@@ -1145,40 +1145,40 @@
    outline is invisible — surface a real focus ring on the chip wrapper instead
    so keyboard users get a visible indicator (parity with the editable title +
    the rest of the app's :focus-visible rings). */
-.claudian-work-order-modal-chip:focus-within {
+.specorator-work-order-modal-chip:focus-within {
   background: var(--background-modifier-hover);
   box-shadow: 0 0 0 2px var(--color-accent-3, color-mix(in srgb, var(--color-accent) 40%, transparent));
 }
 
-.claudian-work-order-modal-chip-label {
+.specorator-work-order-modal-chip-label {
   font-size: var(--font-ui-small);
 }
 
 /* chip-value / chip-caret: hand-built chip elements used by the loop chip
    (renderLoopRow). They intentionally mirror chip-label / chip-chevron so
    both chip implementations read identically. */
-.claudian-work-order-modal-chip-value {
+.specorator-work-order-modal-chip-value {
   font-size: var(--font-ui-small);
 }
 
-.claudian-work-order-modal-chip-caret {
+.specorator-work-order-modal-chip-caret {
   display: inline-flex;
   align-items: center;
   color: var(--text-faint);
 }
 
-.claudian-work-order-modal-chip-caret svg {
+.specorator-work-order-modal-chip-caret svg {
   width: 13px;
   height: 13px;
 }
 
-.claudian-work-order-modal-chip-chevron {
+.specorator-work-order-modal-chip-chevron {
   display: inline-flex;
   align-items: center;
   color: var(--text-faint);
 }
 
-.claudian-work-order-modal-chip-chevron svg {
+.specorator-work-order-modal-chip-chevron svg {
   width: 13px;
   height: 13px;
 }
@@ -1186,7 +1186,7 @@
 /* Scoped under the modal class (0-2-0) so a theme's `.modal select` / `--input-*`
    form styling can't leak a visible border, background, or focus outline through
    the transparent picker. The chip wrapper owns the visuals + the focus ring. */
-.claudian-work-order-modal .claudian-work-order-modal-chip-select {
+.specorator-work-order-modal .specorator-work-order-modal-chip-select {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1212,12 +1212,12 @@
    out from the modal without opening the note. See
    ui/WorkOrderDetailModal.ts + ui/workOrderEditForm.ts.
    ============================================================ */
-.claudian-work-order-modal-edit-bar {
+.specorator-work-order-modal-edit-bar {
   display: flex;
   justify-content: flex-end;
 }
 
-.claudian-work-order-modal .claudian-work-order-modal-edit-button {
+.specorator-work-order-modal .specorator-work-order-modal-edit-button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1238,29 +1238,29 @@
   height: auto;
 }
 
-.claudian-work-order-modal .claudian-work-order-modal-edit-button:hover {
+.specorator-work-order-modal .specorator-work-order-modal-edit-button:hover {
   border-color: var(--border-color-hover);
   background: var(--interactive-hover);
   color: var(--text-normal);
 }
 
-.claudian-work-order-modal-edit-button-icon {
+.specorator-work-order-modal-edit-button-icon {
   display: inline-flex;
   align-items: center;
 }
 
-.claudian-work-order-modal-edit-button-icon svg {
+.specorator-work-order-modal-edit-button-icon svg {
   width: 14px;
   height: 14px;
 }
 
-.claudian-work-order-modal-edit-form {
+.specorator-work-order-modal-edit-form {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.claudian-work-order-modal .claudian-work-order-modal-edit-textarea {
+.specorator-work-order-modal .specorator-work-order-modal-edit-textarea {
   width: 100%;
   min-height: 84px;
   padding: 10px 12px;
@@ -1277,20 +1277,20 @@
 
 /* The Acceptance Criteria field is line-oriented (one "- [ ] " per line), so a
    monospace surface keeps the checklist markup readable while editing. */
-.claudian-work-order-modal-edit-form
-  .claudian-work-order-modal-section:nth-of-type(2)
-  .claudian-work-order-modal-edit-textarea {
+.specorator-work-order-modal-edit-form
+  .specorator-work-order-modal-section:nth-of-type(2)
+  .specorator-work-order-modal-edit-textarea {
   font-family: var(--font-monospace);
   font-size: var(--font-ui-small);
 }
 
-.claudian-work-order-modal .claudian-work-order-modal-edit-textarea:focus {
+.specorator-work-order-modal .specorator-work-order-modal-edit-textarea:focus {
   border-color: var(--interactive-accent);
   outline: none;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 30%, transparent);
 }
 
-.claudian-work-order-modal-edit-actions {
+.specorator-work-order-modal-edit-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;

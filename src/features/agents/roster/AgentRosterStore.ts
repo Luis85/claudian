@@ -1,9 +1,9 @@
-import type { ClaudianEventMap } from '../../../app/events/claudianEvents';
+import type { SpecoratorEventMap } from '../../../app/events/specoratorEvents';
 import type { EventBus } from '../../../core/events/EventBus';
 import type { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
 import type { RosterAgent } from './rosterTypes';
 
-export const ROSTER_DIR = '.claudian/agents';
+export const ROSTER_DIR = '.specorator/agents';
 
 function fileNameForId(id: string): string {
   const slug = id.startsWith('roster:') ? id.slice('roster:'.length) : id;
@@ -13,7 +13,7 @@ function fileNameForId(id: string): string {
 export class AgentRosterStore {
   constructor(
     private readonly adapter: VaultFileAdapter,
-    private readonly events?: EventBus<ClaudianEventMap>,
+    private readonly events?: EventBus<SpecoratorEventMap>,
     private readonly onError?: (path: string, error: unknown) => void,
   ) {}
 

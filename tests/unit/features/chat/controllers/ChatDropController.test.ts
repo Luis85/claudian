@@ -56,7 +56,7 @@ describe('ChatDropController — scaffolding', () => {
 
   beforeEach(() => {
     containerEl = createMockEl();
-    inputWrapperEl = containerEl.createDiv({ cls: 'claudian-input-wrapper' });
+    inputWrapperEl = containerEl.createDiv({ cls: 'specorator-input-wrapper' });
   });
 
   it('creates a drop overlay inside the input wrapper on init', () => {
@@ -65,7 +65,7 @@ describe('ChatDropController — scaffolding', () => {
     controller.init();
     expect(inputWrapperEl.children.length).toBeGreaterThan(0);
     const overlay = inputWrapperEl.children.find(
-      (c: any) => c.hasClass?.('claudian-drop-overlay')
+      (c: any) => c.hasClass?.('specorator-drop-overlay')
     );
     expect(overlay).toBeDefined();
   });
@@ -76,7 +76,7 @@ describe('ChatDropController — scaffolding', () => {
     controller.init();
     controller.destroy();
     const overlay = inputWrapperEl.children.find(
-      (c: any) => c.hasClass?.('claudian-drop-overlay')
+      (c: any) => c.hasClass?.('specorator-drop-overlay')
     );
     expect(overlay).toBeUndefined();
   });
@@ -117,7 +117,7 @@ describe('ChatDropController — overlay label', () => {
 
   beforeEach(() => {
     containerEl = createMockEl();
-    inputWrapperEl = containerEl.createDiv({ cls: 'claudian-input-wrapper' });
+    inputWrapperEl = containerEl.createDiv({ cls: 'specorator-input-wrapper' });
   });
 
   it('shows "Drop image" label when only OS image MIME is present', () => {
@@ -130,7 +130,7 @@ describe('ChatDropController — overlay label', () => {
         items: [],
       },
     });
-    const overlay = inputWrapperEl.children.find((c: any) => c.hasClass?.('claudian-drop-overlay'));
+    const overlay = inputWrapperEl.children.find((c: any) => c.hasClass?.('specorator-drop-overlay'));
     expect(overlay?.hasClass('visible')).toBe(true);
     expect(overlay?.textContent).toContain('Drop image');
   });
@@ -143,7 +143,7 @@ describe('ChatDropController — overlay label', () => {
     const controller = new ChatDropController(containerEl, deps);
     controller.init();
     dispatchDragEnter(inputWrapperEl, { types: [] });
-    const overlay = inputWrapperEl.children.find((c: any) => c.hasClass?.('claudian-drop-overlay'));
+    const overlay = inputWrapperEl.children.find((c: any) => c.hasClass?.('specorator-drop-overlay'));
     expect(overlay?.textContent).toContain('Drop into context');
   });
 
@@ -157,7 +157,7 @@ describe('ChatDropController — overlay label', () => {
         items: [],
       },
     });
-    const overlay = inputWrapperEl.children.find((c: any) => c.hasClass?.('claudian-drop-overlay'));
+    const overlay = inputWrapperEl.children.find((c: any) => c.hasClass?.('specorator-drop-overlay'));
     expect(overlay?.hasClass('visible')).toBe(true);
 
     // Simulate dragleave outside the wrapper rect
@@ -180,7 +180,7 @@ describe('ChatDropController — drop routing', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     containerEl = createMockEl();
-    inputWrapperEl = containerEl.createDiv({ cls: 'claudian-input-wrapper' });
+    inputWrapperEl = containerEl.createDiv({ cls: 'specorator-input-wrapper' });
   });
 
   it('routes Obsidian internal TFile drag to attachFileAsPill', async () => {

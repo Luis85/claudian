@@ -8,7 +8,7 @@ import type {
   WorkOrderActivitySummary,
 } from '../../../core/types/workOrderActivity';
 import { EMPTY_WORK_ORDER_ACTIVITY_SUMMARY } from '../../../core/types/workOrderActivity';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { revealWorkspaceLeaf } from '../../../utils/obsidianCompat';
 import type { RosterAgent } from '../../agents/roster/rosterTypes';
 import { TaskIndexer } from '../indexing/TaskIndexer';
@@ -38,7 +38,7 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
   private refreshGeneration = 0;
   private refreshTimer: number | null = null;
 
-  constructor(private readonly plugin: ClaudianPlugin, private readonly deps: WorkOrderActivityProviderDeps = {}) {}
+  constructor(private readonly plugin: SpecoratorPlugin, private readonly deps: WorkOrderActivityProviderDeps = {}) {}
 
   start(): void {
     const refresh = (): void => { void this.refresh(); };
@@ -54,7 +54,7 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
     void this.refresh();
   }
 
-  // Task bus events only cover runs Claudian drives. Work-order notes can also
+  // Task bus events only cover runs Specorator drives. Work-order notes can also
   // change through plain vault operations — manual status edits, deletes,
   // renames, external sync — which never emit a task event. Without this the
   // dropdown would keep a finished/deleted order pinned in the chat header until

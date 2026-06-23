@@ -2,7 +2,7 @@ import { getEnabledProviderForModel } from '../../../core/providers/modelRouting
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import { DEFAULT_CHAT_PROVIDER_ID } from '../../../core/providers/types';
 import { asSettingsBag } from '../../../core/types/settings';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import {
   applyProviderUIGating,
   cleanupTabRuntime,
@@ -19,7 +19,7 @@ import type { TabData } from './types';
  */
 export async function onProviderAvailabilityChanged(
   tab: TabData,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
 ): Promise<void> {
   if (tab.lifecycleState !== 'blank') return;
 

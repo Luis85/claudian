@@ -1,5 +1,5 @@
 /**
- * Claudian - Drop payload detection for chat drag-and-drop.
+ * Specorator - Drop payload detection for chat drag-and-drop.
  *
  * Pure function. Given a DataTransfer-like object and the Obsidian app
  * dragManager, classify the drop into Obsidian-internal vault items, OS image

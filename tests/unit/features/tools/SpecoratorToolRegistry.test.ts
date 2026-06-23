@@ -1,8 +1,8 @@
-// tests/unit/features/tools/ClaudianToolRegistry.test.ts
+// tests/unit/features/tools/SpecoratorToolRegistry.test.ts
 import { z } from 'zod';
 
 import type { VaultFileAdapter } from '@/core/storage/VaultFileAdapter';
-import { ClaudianToolRegistry, TOOLS_DIR } from '@/features/tools/ClaudianToolRegistry';
+import { SpecoratorToolRegistry, TOOLS_DIR } from '@/features/tools/SpecoratorToolRegistry';
 
 const TOOL_SRC = `
 module.exports.default = {
@@ -23,11 +23,11 @@ function makeAdapter(files: Record<string, string>, folders: Record<string, stri
   } as unknown as VaultFileAdapter;
 }
 
-describe('ClaudianToolRegistry', () => {
+describe('SpecoratorToolRegistry', () => {
   it('loads, validates, and exposes a tool with a json schema', async () => {
     const files = { [`${TOOLS_DIR}/echo/tool.ts`]: TOOL_SRC };
     const folders = { [TOOLS_DIR]: [`${TOOLS_DIR}/echo`] };
-    const registry = new ClaudianToolRegistry(makeAdapter(files, folders), {
+    const registry = new SpecoratorToolRegistry(makeAdapter(files, folders), {
       transpile: (src) => src, // already CJS in the fixture
       requireResolve: (id) => (id === 'zod' ? { z } : undefined),
     });
@@ -45,7 +45,7 @@ describe('ClaudianToolRegistry', () => {
   it('records an error for a tool whose default export lacks a manifest', async () => {
     const files = { [`${TOOLS_DIR}/broken/tool.ts`]: 'module.exports.default = {};' };
     const folders = { [TOOLS_DIR]: [`${TOOLS_DIR}/broken`] };
-    const registry = new ClaudianToolRegistry(makeAdapter(files, folders), {
+    const registry = new SpecoratorToolRegistry(makeAdapter(files, folders), {
       transpile: (src) => src,
       requireResolve: () => undefined,
     });
@@ -59,7 +59,7 @@ describe('ClaudianToolRegistry', () => {
     const src = TOOL_SRC.replace("name: 'echo'", "name: 'echo.bad name'");
     const files = { [`${TOOLS_DIR}/echo/tool.ts`]: src };
     const folders = { [TOOLS_DIR]: [`${TOOLS_DIR}/echo`] };
-    const registry = new ClaudianToolRegistry(makeAdapter(files, folders), {
+    const registry = new SpecoratorToolRegistry(makeAdapter(files, folders), {
       transpile: (s) => s,
       requireResolve: (id) => (id === 'zod' ? { z } : undefined),
     });
@@ -75,7 +75,7 @@ describe('ClaudianToolRegistry', () => {
       [`${TOOLS_DIR}/b/tool.ts`]: TOOL_SRC, // same manifest.name 'echo'
     };
     const folders = { [TOOLS_DIR]: [`${TOOLS_DIR}/a`, `${TOOLS_DIR}/b`] };
-    const registry = new ClaudianToolRegistry(makeAdapter(files, folders), {
+    const registry = new SpecoratorToolRegistry(makeAdapter(files, folders), {
       transpile: (s) => s,
       requireResolve: (id) => (id === 'zod' ? { z } : undefined),
     });
@@ -107,7 +107,7 @@ describe('ClaudianToolRegistry', () => {
         (p: string) => new Promise<string>((resolve) => setTimeout(() => resolve(files[p]), 0)),
       ),
     } as unknown as VaultFileAdapter;
-    const registry = new ClaudianToolRegistry(adapter, {
+    const registry = new SpecoratorToolRegistry(adapter, {
       transpile: (s) => s,
       requireResolve: (id) => (id === 'zod' ? { z } : undefined),
     });
@@ -142,7 +142,7 @@ describe('ClaudianToolRegistry', () => {
         return files[p];
       }),
     } as unknown as VaultFileAdapter;
-    const registry = new ClaudianToolRegistry(adapter, {
+    const registry = new SpecoratorToolRegistry(adapter, {
       transpile: (s) => s,
       requireResolve: (id) => (id === 'zod' ? { z } : undefined),
     });
@@ -165,7 +165,7 @@ describe('ClaudianToolRegistry', () => {
   });
 
   it('returns empty when the tools dir is absent', async () => {
-    const registry = new ClaudianToolRegistry(makeAdapter({}, {}), {
+    const registry = new SpecoratorToolRegistry(makeAdapter({}, {}), {
       transpile: (src) => src,
       requireResolve: () => undefined,
     });

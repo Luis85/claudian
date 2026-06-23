@@ -2,7 +2,7 @@
  * Report-only metrics helpers for the performance suite.
  *
  * These never assert — they print a readable table to the console and, when
- * CLAUDIAN_PERF_JSON points at a path, append a machine-readable record so
+ * SPECORATOR_PERF_JSON points at a path, append a machine-readable record so
  * runs can be diffed over time. The deterministic guard rails live in the
  * `.perf.test.ts` specs themselves; this module is purely the monitoring side.
  */
@@ -37,12 +37,12 @@ export function reportMetrics(label: string, metrics: PerfMetric[]): void {
   // is allowed in tests (no-console is scoped to src/).
   console.table(rows);
 
-  const jsonPath = process.env.CLAUDIAN_PERF_JSON;
+  const jsonPath = process.env.SPECORATOR_PERF_JSON;
   if (jsonPath) {
     const record = {
       label,
       timestamp: new Date().toISOString(),
-      gitSha: process.env.GITHUB_SHA ?? process.env.CLAUDIAN_GIT_SHA ?? null,
+      gitSha: process.env.GITHUB_SHA ?? process.env.SPECORATOR_GIT_SHA ?? null,
       metrics,
     };
     appendFileSync(jsonPath, `${JSON.stringify(record)}\n`);

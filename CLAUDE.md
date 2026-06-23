@@ -2,15 +2,15 @@
 
 ## Project Overview
 
-Claudian is an Obsidian plugin that embeds provider-backed chat runtimes in a sidebar and inline-edit flow. Claude is the default, full-feature provider. Codex, Opencode, and Cursor are opt-in and join the same conversation model through `Conversation.providerId` plus provider-owned `providerState`.
+Specorator is an Obsidian plugin that embeds provider-backed chat runtimes in a sidebar and inline-edit flow. Claude is the default, full-feature provider. Codex, Opencode, and Cursor are opt-in and join the same conversation model through `Conversation.providerId` plus provider-owned `providerState`.
 
 ## Architecture Status
 
-- Product status: Claudian is a multi-provider product hosting four chat backends.
+- Product status: Specorator is a multi-provider product hosting four chat backends.
   - **Claude** is the full-feature provider: send, stream, cancel, resume, history reload, fork, plan mode, image attachments, inline edit, `#` instruction mode, `/` commands, `$` skills, subagents, rewind, MCP management, and Claude plugin integration.
   - **Codex** supports send, stream, cancel, resume, history reload, fork, plan mode, image attachments, inline edit, `#` instruction mode, `$` skills, and subagents. Unsupported or gated surfaces are rewind, runtime-discovered provider commands, in-app MCP management, and Claude plugin integration.
   - **Opencode** runs via the Opencode CLI server and supports send, stream, cancel, resume, history reload, plan mode, image attachments, inline edit, `#` instruction mode, subagents, runtime-discovered slash commands, and Opencode-managed MCP. Plan turns route through Opencode's managed `plan` mode (toolbar toggle / Shift+Tab); when the turn produces assistant content, the runtime sets `planCompleted` and the shared post-plan approval card opens. Fork and rewind are gated.
-  - **Cursor** runs via the Cursor Agent CLI directly (`cursor-agent --output-format stream-json`, parsed as NDJSON) — not ACP — and supports send, stream, cancel, resume, history reload, plan mode, image attachments, and inline edit. AskUserQuestion is supported via an auto-resumed follow-up turn: the one-shot `--print` CLI auto-rejects the tool in-process (no bidirectional channel), so Claudian collects the answer, marks the tool block neutrally, and delivers the answer to the agent as the next `--resume` turn (`ChatTurnMetadata.autoFollowUpText` → `InputController` auto-send). Subagent definitions are first-class: discovered (flat, non-recursive — matching Cursor's own root-only discovery) from `.cursor/agents/` (vault), `~/.cursor/agents/` (global), and read-only `.claude/agents/` (Markdown) + `.codex/agents/` (TOML) compat roots; only the vault/global agents Cursor itself loads are @-mentionable via `CursorAgentMentionProvider` (built-in Explore/Bash/Browser and the read-only compat agents appear in settings but aren't mentionable — Cursor can't delegate to them by name, and only the name is sent), and writable agents are manageable in Cursor settings; live async subagent lifecycle awaits the ACP transport decision (see `docs/superpowers/specs/2026-06-11-cursor-acp-spike-and-subagent-parity-design.md`). Rewind and in-app MCP management are gated.
+  - **Cursor** runs via the Cursor Agent CLI directly (`cursor-agent --output-format stream-json`, parsed as NDJSON) — not ACP — and supports send, stream, cancel, resume, history reload, plan mode, image attachments, and inline edit. AskUserQuestion is supported via an auto-resumed follow-up turn: the one-shot `--print` CLI auto-rejects the tool in-process (no bidirectional channel), so Specorator collects the answer, marks the tool block neutrally, and delivers the answer to the agent as the next `--resume` turn (`ChatTurnMetadata.autoFollowUpText` → `InputController` auto-send). Subagent definitions are first-class: discovered (flat, non-recursive — matching Cursor's own root-only discovery) from `.cursor/agents/` (vault), `~/.cursor/agents/` (global), and read-only `.claude/agents/` (Markdown) + `.codex/agents/` (TOML) compat roots; only the vault/global agents Cursor itself loads are @-mentionable via `CursorAgentMentionProvider` (built-in Explore/Bash/Browser and the read-only compat agents appear in settings but aren't mentionable — Cursor can't delegate to them by name, and only the name is sent), and writable agents are manageable in Cursor settings; live async subagent lifecycle awaits the ACP transport decision (see `docs/superpowers/specs/2026-06-11-cursor-acp-spike-and-subagent-parity-design.md`). Rewind and in-app MCP management are gated.
 - App shell: `src/app/` owns shared settings defaults and plugin-level storage helpers. `src/core/` owns provider-neutral runtime, registry, tool, and type contracts plus the shared event bus and leveled logger.
 - Provider boundary: `src/core/runtime/` and `src/core/providers/` define the chat-facing seam. `ProviderRegistry` creates runtimes and provider-owned auxiliary services. `ProviderWorkspaceRegistry` owns workspace services such as command catalogs, agent mention providers, CLI resolution, MCP managers, and provider settings tabs.
 - Shared transport: `src/providers/acp/` packages the Agent Client Protocol JSON-RPC client, subprocess wrapper, session config, tool stream adapter, and update normalizer. Only Opencode builds its runtime on top of it. Cursor does not use ACP; it spawns the `cursor-agent` CLI directly and parses its `stream-json` NDJSON output through its own `cursorStreamMapper` and `cursorToolNormalization`.
@@ -47,7 +47,7 @@ non-blocking backlog) are catalogued in
 
 | Layer | Purpose | Details |
 |-------|---------|---------|
-| **app** | Shared defaults and plugin-level storage helpers | `defaultSettings`, `ClaudianSettingsStorage`, `SharedStorageService` |
+| **app** | Shared defaults and plugin-level storage helpers | `defaultSettings`, `SpecoratorSettingsStorage`, `SharedStorageService` |
 | **core** | Provider-neutral contracts and infrastructure | See [`src/core/CLAUDE.md`](src/core/CLAUDE.md). Includes `runtime/`, `providers/`, `auxiliary/`, `bootstrap/`, `commands/`, `context/`, `events/`, `logging/`, `mcp/`, `prompt/`, `security/`, `storage/`, `tools/`, `types/` |
 | **providers/acp** | Agent Client Protocol shared transport | JSON-RPC client, subprocess wrapper, session config, tool stream adapter, update normalizer |
 | **providers/claude** | Claude SDK adaptor | See [`src/providers/claude/CLAUDE.md`](src/providers/claude/CLAUDE.md) |
@@ -78,7 +78,7 @@ Tests mirror the `src/` layout under `tests/unit/` and `tests/integration/`.
 
 ```bash
 npm run test:perf                                   # run scaling guard rails + metrics
-CLAUDIAN_PERF_JSON=perf.jsonl npm run test:perf     # also append trend records
+SPECORATOR_PERF_JSON=perf.jsonl npm run test:perf     # also append trend records
 ```
 
 `tests/perf/*.perf.test.ts` run via `jest.perf.config.js`, separate from
@@ -107,15 +107,15 @@ Current coverage, by user-visible path:
 | Path | Contents |
 |------|----------|
 | `.claude/settings.json` | Claude Code-compatible project settings, permissions, and plugin overrides |
-| `.claudian/claudian-settings.json` | Shared Claudian app settings plus provider-specific configuration |
-| `.claude/mcp.json` | Claudian-managed MCP servers for Claude |
+| `.specorator/specorator-settings.json` | Shared Specorator app settings plus provider-specific configuration |
+| `.claude/mcp.json` | Specorator-managed MCP servers for Claude |
 | `.claude/commands/**/*.md` | Claude slash commands |
 | `.claude/skills/*/SKILL.md` | Claude skills |
 | `.claude/agents/*.md` | Claude vault agents |
-| `.claudian/sessions/*.meta.json` | Provider-neutral session metadata |
-| `.claudian/runs/<runId>/heartbeat.json` | Per-run sidecar heartbeat (`{ at, status, pauseReason? }`) — moved off the work-order note to avoid racing the agent's `Edit` tool; GC'd at terminal |
-| `.claudian/runs/<runId>/ledger.jsonl` | Per-run sidecar ledger (one `TaskLedgerEntry` per line) — snapshotted into the work-order note once at terminal |
-| loop folder (default `Agent Board/loops/*.md`) | Loop definitions (`type: claudian-loop`): reusable playbooks (Use when / Approach / Steps / Verify / Notes) attachable to a work order or template |
+| `.specorator/sessions/*.meta.json` | Provider-neutral session metadata |
+| `.specorator/runs/<runId>/heartbeat.json` | Per-run sidecar heartbeat (`{ at, status, pauseReason? }`) — moved off the work-order note to avoid racing the agent's `Edit` tool; GC'd at terminal |
+| `.specorator/runs/<runId>/ledger.jsonl` | Per-run sidecar ledger (one `TaskLedgerEntry` per line) — snapshotted into the work-order note once at terminal |
+| loop folder (default `Agent Board/loops/*.md`) | Loop definitions (`type: specorator-loop`): reusable playbooks (Use when / Approach / Steps / Verify / Notes) attachable to a work order or template |
 | `.codex/skills/*/SKILL.md` | Codex vault skills |
 | `.agents/skills/*/SKILL.md` | Alternate Codex vault skill root |
 | `.codex/agents/*.toml` | Codex vault subagent definitions |

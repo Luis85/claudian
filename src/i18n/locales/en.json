@@ -35,12 +35,12 @@
       "loading": "Loading conversation…"
     },
     "context": {
-      "fileNoTab": "Open Claudian chat and enable a provider before adding file context.",
-      "folderNoTab": "Open Claudian chat and enable a provider before adding folder context.",
+      "fileNoTab": "Open Specorator chat and enable a provider before adding file context.",
+      "folderNoTab": "Open Specorator chat and enable a provider before adding folder context.",
       "fileAttachFailed": "Could not add file to chat: {path}",
       "folderAttachFailed": "Could not add folder to chat: {path}",
-      "fileAdded": "Added {path} to Claudian chat",
-      "folderAdded": "Added {path}/ to Claudian chat"
+      "fileAdded": "Added {path} to Specorator chat",
+      "folderAdded": "Added {path}/ to Specorator chat"
     },
     "drop": {
       "image": "Drop image",
@@ -183,7 +183,7 @@
     "runtimeError": {
       "cliNotFound": {
         "title": "CLI not found",
-        "body": "Claudian couldn't find the provider's command-line tool. Set the correct path in settings, then try again.",
+        "body": "Specorator couldn't find the provider's command-line tool. Set the correct path in settings, then try again.",
         "openSettings": "Open settings"
       },
       "unauthenticated": {
@@ -325,7 +325,7 @@
     }
   },
   "settings": {
-    "title": "Claudian Settings",
+    "title": "Specorator Settings",
     "tabs": {
       "general": "General",
       "quickActions": "Quick Actions",
@@ -340,7 +340,7 @@
     "models": "Models",
     "experimental": "Experimental",
     "userName": {
-      "name": "What should Claudian call you?",
+      "name": "What should Specorator call you?",
       "desc": "Your name for personalized greetings (leave empty for generic greetings)"
     },
     "excludedTags": {
@@ -435,7 +435,7 @@
     },
     "hiddenSlashCommands": {
       "name": "Hidden Commands and Skills",
-      "desc": "Hide specific commands and skills from the dropdown. Useful for hiding Claude Code entries that are not relevant to Claudian. Enter names without the leading slash, one per line.",
+      "desc": "Hide specific commands and skills from the dropdown. Useful for hiding Claude Code entries that are not relevant to Specorator. Enter names without the leading slash, one per line.",
       "placeholder": "commit\nbuild\ntest"
     },
     "mcpServers": {
@@ -640,7 +640,7 @@
       "desc": "Show Write and Edit diffs expanded when they first appear."
     },
     "chatViewPlacement": {
-      "name": "Open Claudian in",
+      "name": "Open Specorator in",
       "desc": "Choose where the chat panel opens when it is created",
       "rightSidebar": "Right sidebar",
       "leftSidebar": "Left sidebar",
@@ -694,7 +694,7 @@
     "secretAdd": "Add secret variable",
     "secretNamePlaceholder": "VARIABLE_NAME",
     "secretAddButton": "Add",
-    "secretMissing": "Provider secret \"{name}\" isn’t set on this device — re-enter it in Claudian settings.",
+    "secretMissing": "Provider secret \"{name}\" isn’t set on this device — re-enter it in Specorator settings.",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."
@@ -814,7 +814,7 @@
     "create": {
       "noActiveNote": "Open a note to create a work order from it.",
       "noSelection": "Select text in a note to create a work order from it.",
-      "needsBrowserSelection": "Open Claudian chat and select text in a browser view first."
+      "needsBrowserSelection": "Open Specorator chat and select text in a browser view first."
     },
     "fromChat": {
       "nothingToCapture": "Nothing to capture from this message.",
@@ -1004,7 +1004,7 @@
         "toggleFailed": "Failed to toggle plugin: {error}",
         "listRefreshed": "Plugin list refreshed",
         "refreshFailed": "Failed to refresh plugins: {error}",
-        "malformedEntry": "Claudian: plugin \"{id}\" has malformed entry in installed_plugins.json (expected array, got {type})"
+        "malformedEntry": "Specorator: plugin \"{id}\" has malformed entry in installed_plugins.json (expected array, got {type})"
       },
       "task": {
         "resultRenderFailed": "Background task completed, but the result could not be rendered."

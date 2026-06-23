@@ -12,10 +12,10 @@ import { registerPluginCommands } from './app/commands/registerPluginCommands';
 import { registerWorkspaceMenus } from './app/commands/registerWorkspaceMenus';
 import { ConversationStore } from './app/conversations/ConversationStore';
 import { EnvironmentApplyService } from './app/environment/EnvironmentApplyService';
-import type { ClaudianEventMap } from './app/events/claudianEvents';
+import type { SpecoratorEventMap } from './app/events/specoratorEvents';
 import { PluginLifecycle } from './app/lifecycle/PluginLifecycle';
 import { projectRosterAgentsToProviders, removeProjectedAgent, type RosterProjectionResult, type RosterRemovalResult } from './app/rosterAgentProjection';
-import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
+import { DEFAULT_SPECORATOR_SETTINGS } from './app/settings/defaultSettings';
 import { SharedStorageService } from './app/storage/SharedStorageService';
 import { PluginViewActivator } from './app/views/PluginViewActivator';
 import type { SharedAppStorage } from './core/bootstrap/storage';
@@ -43,14 +43,14 @@ import { SecretStore } from './core/security/secretStore';
 import { VaultFileAdapter } from './core/storage/VaultFileAdapter';
 import type {
   ChatMessageAction,
-  ClaudianSettings,
+  SpecoratorSettings,
   Conversation,
   ConversationMeta,
   ConversationSnapshot,
 } from './core/types';
 import {
-  VIEW_TYPE_CLAUDIAN,
-  VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
+  VIEW_TYPE_SPECORATOR,
+  VIEW_TYPE_SPECORATOR_AGENT_BOARD,
 } from './core/types';
 import type { PluginContext } from './core/types/PluginContext';
 import { asSettingsBag, type EnvironmentScope, type SecretEnvVarRef } from './core/types/settings';
@@ -69,9 +69,9 @@ import {
 } from './features/agents/roster/resolveAgentProvider';
 import type { RosterAgent } from './features/agents/roster/rosterTypes';
 import { AgentRosterView, VIEW_TYPE_AGENT_ROSTER } from './features/agents/roster/view/AgentRosterView';
-import { ClaudianView } from './features/chat/ClaudianView';
+import { SpecoratorView } from './features/chat/SpecoratorView';
 import { sendFeedbackPrompt } from './features/chat/feedback/sendFeedbackPrompt';
-import { isClaudianView } from './features/chat/isClaudianView';
+import { isSpecoratorView } from './features/chat/isSpecoratorView';
 import type { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
 import { isCaptureEligible, openCaptureFromMessage } from './features/quickActions/captureFromMessage';
 import { QuickActionFavoritesCache } from './features/quickActions/QuickActionFavoritesCache';
@@ -79,7 +79,7 @@ import { QuickActionLastUsedStore } from './features/quickActions/quickActionLas
 import { QuickActionStorage } from './features/quickActions/QuickActionStorage';
 import { buildProviderRecords } from './features/quickActions/skills/buildProviderRecords';
 import { VaultSkillAggregator } from './features/quickActions/skills/VaultSkillAggregator';
-import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
+import { SpecoratorSettingTab } from './features/settings/SpecoratorSettings';
 import { SkillLibraryView, VIEW_TYPE_SKILL_LIBRARY } from './features/skills/view/SkillLibraryView';
 import { CommitOnAcceptCoordinator } from './features/tasks/commit/CommitOnAcceptCoordinator';
 import { CommitOnAcceptModal } from './features/tasks/commit/CommitOnAcceptModal';
@@ -92,9 +92,9 @@ import { TaskNoteStore } from './features/tasks/storage/TaskNoteStore';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
 import { LoopLibraryView, VIEW_TYPE_LOOP_LIBRARY } from './features/tasks/ui/LoopLibraryView';
 import { WorkOrderActivityProvider } from './features/tasks/ui/WorkOrderActivityProvider';
-import { ClaudianToolRegistry } from './features/tools/ClaudianToolRegistry';
-import { ClaudianHttpToolServer } from './features/tools/host/ClaudianHttpToolServer';
-import { buildClaudianToolMcpServer } from './features/tools/host/InProcessToolMcpServer';
+import { SpecoratorToolRegistry } from './features/tools/SpecoratorToolRegistry';
+import { SpecoratorHttpToolServer } from './features/tools/host/SpecoratorHttpToolServer';
+import { buildSpecoratorToolMcpServer } from './features/tools/host/InProcessToolMcpServer';
 import { getScopedTools, scopedToolKey } from './features/tools/scopedTools';
 import type { LoadedTool } from './features/tools/toolTypes';
 import { transpileToolSource } from './features/tools/transpile';
@@ -105,13 +105,13 @@ import type { BrowserSelectionContext } from './utils/browser';
 import { chatMessageText } from './utils/chatMessageText';
 import { getVaultPath } from './utils/path';
 
-export default class ClaudianPlugin extends Plugin implements PluginContext {
-  settings!: ClaudianSettings;
+export default class SpecoratorPlugin extends Plugin implements PluginContext {
+  settings!: SpecoratorSettings;
   /** SEC-A: keychain-backed secret store (Obsidian SecretStorage), set in onload. */
   secretStore!: SecretStore;
   /** SEC-A: secret ids already warned about as missing on this device (dedup). */
   private readonly warnedMissingSecretIds = new Set<string>();
-  readonly events = new EventBus<ClaudianEventMap>();
+  readonly events = new EventBus<SpecoratorEventMap>();
   readonly logger = new Logger({ enabled: false, level: 'warn' });
   /** Optional, registry-driven actions rendered in the chat user-message toolbar. */
   readonly chatMessageActions: ChatMessageAction[] = [];
@@ -125,12 +125,12 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   public quickActionLastUsedStore: QuickActionLastUsedStore | null = null;
   public vaultSkillAggregator: VaultSkillAggregator | null = null;
   public vaultFileAdapter!: VaultFileAdapter;
-  public toolRegistry!: ClaudianToolRegistry;
+  public toolRegistry!: SpecoratorToolRegistry;
   /** Shared plugin-lifetime store for roster agent definitions. Constructed in onload
    * after vaultFileAdapter; consumers must not build their own instance. */
   public agentRosterStore!: AgentRosterStore;
   public usageTracker: UsageTracker | null = null;
-  private httpToolServer: ClaudianHttpToolServer | null = null;
+  private httpToolServer: SpecoratorHttpToolServer | null = null;
   private lifecycle!: PluginLifecycle;
   private unloaded = true;
   private viewActivator!: PluginViewActivator;
@@ -138,7 +138,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   /** Plugin-level concurrency gate shared by every Agent Board queue runner. */
   queueSlotTracker!: QueueSlotTracker;
   /** Shared sidecar store for per-run heartbeat + ledger writes under
-   * `.claudian/runs/<runId>/`. Coordinators in different Agent Board panes
+   * `.specorator/runs/<runId>/`. Coordinators in different Agent Board panes
    * route through this single instance so cross-pane writes don't race. */
   runSidecarStore!: RunSidecarStore;
   /**
@@ -182,7 +182,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     this.viewActivator = new PluginViewActivator(this);
     this.envApply = new EnvironmentApplyService(this);
     this.queueSlotTracker = new QueueSlotTracker(this.settings.agentBoardQueueCap);
-    this.runSidecarStore = new RunSidecarStore(this.app.vault.adapter, '.claudian/runs');
+    this.runSidecarStore = new RunSidecarStore(this.app.vault.adapter, '.specorator/runs');
     this.workOrderActivity = new WorkOrderActivityProvider(this);
     this.workOrderActivity.start();
     this.register(() => {
@@ -191,8 +191,8 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     });
 
     this.registerView(
-      VIEW_TYPE_CLAUDIAN,
-      (leaf) => new ClaudianView(leaf, this)
+      VIEW_TYPE_SPECORATOR,
+      (leaf) => new SpecoratorView(leaf, this)
     );
 
     this.addRibbonIcon('bot', t('ribbon.openChat'), () => {
@@ -238,7 +238,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.commitOnAcceptCoordinator.start();
     }
     this.registerView(
-      VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
+      VIEW_TYPE_SPECORATOR_AGENT_BOARD,
       (leaf) => new AgentBoardView(leaf, this, taskExecutionSurface),
     );
 
@@ -262,7 +262,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
     const chatWorkOrderLinker = new ChatWorkOrderLinker(this);
 
-    // Registration order = left-to-right render order inside .claudian-text-actions
+    // Registration order = left-to-right render order inside .specorator-text-actions
     // (which itself sits left of the copy button). Visual order under an assistant
     // response: thumbs-up, thumbs-down, work-order, copy. The capture action below
     // targets user messages only (gated by isCaptureEligible).
@@ -317,28 +317,28 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     );
     this.quickActionFavoritesCache.start();
 
-    // Tool registry: discover/transpile/validate user-authored tools under .claudian/tools/.
+    // Tool registry: discover/transpile/validate user-authored tools under .specorator/tools/.
     this.vaultFileAdapter = new VaultFileAdapter(this.app);
     const rosterLog = this.logger.scope('agents');
     this.agentRosterStore = new AgentRosterStore(this.vaultFileAdapter, this.events,
       (path, error) => rosterLog.warn('skipped malformed roster file', path, error));
-    this.toolRegistry = new ClaudianToolRegistry(this.vaultFileAdapter, {
+    this.toolRegistry = new SpecoratorToolRegistry(this.vaultFileAdapter, {
       transpile: transpileToolSource,
       requireResolve: (id) => {
-        if (id === 'zod' || id === 'claudian/tools') return { z };
+        if (id === 'zod' || id === 'specorator/tools') return { z };
         const req = (window as { require?: (m: string) => unknown }).require;
         return req ? req(id) : undefined;
       },
     });
     await this.toolRegistry.load();
-    this.httpToolServer = new ClaudianHttpToolServer(
+    this.httpToolServer = new SpecoratorHttpToolServer(
       () => this.toolRegistry.list(),
       (signal) => ({ app: this.app, signal }),
     );
     await this.httpToolServer.start();
     this.registerEvent(
       this.app.vault.on('modify', (file) => {
-        if (file.path.startsWith('.claudian/tools/')) {
+        if (file.path.startsWith('.specorator/tools/')) {
           void this.toolRegistry.load().then(() => {
             this.events.emit('toolLibrary:changed');
             void this.httpToolServer?.rebuild();
@@ -368,7 +368,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     registerWorkspaceMenus(this);
 
 
-    this.addSettingTab(new ClaudianSettingTab(this.app, this));
+    this.addSettingTab(new SpecoratorSettingTab(this.app, this));
 
     // Heavy provider workspace initialization is deferred until the workspace
     // finishes restoring leaves. ProviderWorkspaceRegistry.initializeAll walks
@@ -460,27 +460,27 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
 
   /** The error-free user tools exposed to a conversation, scoped to a bound
    *  agent's grant when non-empty (empty/absent grant = all). */
-  private getScopedClaudianTools(grantedToolIds?: string[]): LoadedTool[] {
+  private getScopedSpecoratorTools(grantedToolIds?: string[]): LoadedTool[] {
     return this.toolRegistry ? getScopedTools(this.toolRegistry.list(), grantedToolIds) : [];
   }
 
-  getClaudianToolServer(grantedToolIds?: string[]): unknown {
-    const loaded = this.getScopedClaudianTools(grantedToolIds);
+  getSpecoratorToolServer(grantedToolIds?: string[]): unknown {
+    const loaded = this.getScopedSpecoratorTools(grantedToolIds);
     if (loaded.length === 0) return undefined;
-    return buildClaudianToolMcpServer(loaded, (signal) => ({
+    return buildSpecoratorToolMcpServer(loaded, (signal) => ({
       app: this.app,
       signal,
     }));
   }
 
   /**
-   * A stable fingerprint of the user tools the claudian server currently exposes
+   * A stable fingerprint of the user tools the specorator server currently exposes
    * for the given grant. Folded into the persistent-query MCP key so a
    * mid-session tool-grant edit OR a tool added/removed/errored in the registry
    * forces `setMcpServers` to re-apply the freshly-scoped server (the presence
    * flag alone would miss a contents change).
    */
-  getClaudianToolKey(grantedToolIds?: string[]): string {
+  getSpecoratorToolKey(grantedToolIds?: string[]): string {
     return scopedToolKey(this.toolRegistry?.list() ?? [], grantedToolIds);
   }
 
@@ -610,7 +610,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     return this.viewActivator.getTabSlotUsage();
   }
 
-  private async ensureViewOpen(): Promise<ClaudianView | null> {
+  private async ensureViewOpen(): Promise<SpecoratorView | null> {
     return this.viewActivator.ensureViewOpen();
   }
 
@@ -626,12 +626,12 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       repairViewsAfterDelete: (conversationId) => this.repairViewsAfterConversationDelete(conversationId),
       events: this.events,
     });
-    const { claudian } = await this.storage.initialize();
+    const { specorator } = await this.storage.initialize();
     this.lastKnownTabManagerState = await this.storage.getTabManagerState();
 
     this.settings = {
-      ...DEFAULT_CLAUDIAN_SETTINGS,
-      ...claudian,
+      ...DEFAULT_SPECORATOR_SETTINGS,
+      ...specorator,
     };
 
     // SEC-A: keychain-backed secret store. Requires Obsidian >= 1.11.5 (the
@@ -711,7 +711,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.settings,
     );
 
-    await this.storage.saveClaudianSettings(this.settings);
+    await this.storage.saveSpecoratorSettings(this.settings);
     // The queue cap is global, shared across every board's runner, so syncing it
     // here makes a settings change take effect live without a board refresh.
     this.queueSlotTracker?.setCap(this.settings.agentBoardQueueCap);
@@ -1028,17 +1028,17 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     await this.storage.setTabManagerState(state);
   }
 
-  getView(): ClaudianView | null {
-    const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN);
-    return leaves.map(leaf => leaf.view).find(isClaudianView) ?? null;
+  getView(): SpecoratorView | null {
+    const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_SPECORATOR);
+    return leaves.map(leaf => leaf.view).find(isSpecoratorView) ?? null;
   }
 
-  getAllViews(): ClaudianView[] {
-    const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN);
-    return leaves.map(leaf => leaf.view).filter(isClaudianView);
+  getAllViews(): SpecoratorView[] {
+    const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_SPECORATOR);
+    return leaves.map(leaf => leaf.view).filter(isSpecoratorView);
   }
 
-  findConversationAcrossViews(conversationId: string): { view: ClaudianView; tabId: string } | null {
+  findConversationAcrossViews(conversationId: string): { view: SpecoratorView; tabId: string } | null {
     for (const view of this.getAllViews()) {
       const tabManager = view.getTabManager();
       if (!tabManager) continue;

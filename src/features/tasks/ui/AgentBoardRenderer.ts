@@ -113,21 +113,21 @@ export class AgentBoardRenderer {
     this.cardActions.closePopover();
     this.cardRefs.clear();
     container.empty();
-    const root = container.createDiv({ cls: 'claudian-agent-board' });
+    const root = container.createDiv({ cls: 'specorator-agent-board' });
 
     const hasRunnable = state.layout.lanes.some((lane) =>
       lane.tasks.some((task) => isRunnableTaskStatus(task.frontmatter.status)),
     );
     const { free, slotsEl } = this.renderBoardToolbar(root, state, callbacks, hasRunnable);
     if (free <= 0) {
-      slotsEl.addClass('claudian-agent-board-slots--full');
+      slotsEl.addClass('specorator-agent-board-slots--full');
       root.createDiv({
-        cls: 'claudian-agent-board-hint',
+        cls: 'specorator-agent-board-hint',
         text: t('tasks.board.noFreeSlots'),
       });
     }
 
-    const lanesEl = root.createDiv({ cls: 'claudian-agent-board-lanes' });
+    const lanesEl = root.createDiv({ cls: 'specorator-agent-board-lanes' });
     for (const lane of state.layout.lanes) {
       this.renderLane(lanesEl, lane, callbacks);
     }
@@ -151,7 +151,7 @@ export class AgentBoardRenderer {
     const live = LIVE_STATUSES.has(status);
 
     this.applyStatusDot(refs.statusDot, status);
-    refs.card.className = `claudian-agent-board-card claudian-agent-board-card--${status}${live ? ' claudian-agent-board-card--live-actions' : ''}`;
+    refs.card.className = `specorator-agent-board-card specorator-agent-board-card--${status}${live ? ' specorator-agent-board-card--live-actions' : ''}`;
 
     // Rebuild the cluster for the new status. A patch may cross live/non-live or
     // change which primary/menu applies; rebuilding (rather than mutating in
@@ -205,14 +205,14 @@ export class AgentBoardRenderer {
     callbacks: AgentBoardRenderCallbacks,
     hasRunnable: boolean,
   ): { free: number; slotsEl: HTMLElement } {
-    const bar = root.createDiv({ cls: 'claudian-agent-board-toolbar' });
-    const actions = bar.createDiv({ cls: 'claudian-agent-board-toolbar-actions' });
-    const info = bar.createDiv({ cls: 'claudian-agent-board-toolbar-info' });
+    const bar = root.createDiv({ cls: 'specorator-agent-board-toolbar' });
+    const actions = bar.createDiv({ cls: 'specorator-agent-board-toolbar-actions' });
+    const info = bar.createDiv({ cls: 'specorator-agent-board-toolbar-info' });
 
     // Accent CTA. Shares the equalized button size with "Run next ready" via the
     // base toolbar-btn class; `mod-cta` keeps the accent fill.
     const addButton = actions.createEl('button', {
-      cls: 'claudian-agent-board-toolbar-btn mod-cta',
+      cls: 'specorator-agent-board-toolbar-btn mod-cta',
       text: t('tasks.board.addWorkOrderButton'),
     });
     addButton.addEventListener('click', () => callbacks.onAddWorkOrder());
@@ -220,9 +220,9 @@ export class AgentBoardRenderer {
     if (hasRunnable) {
       // Tool button (secondary surface) with a leading play icon.
       const runNextBtn = actions.createEl('button', {
-        cls: 'claudian-agent-board-toolbar-btn claudian-agent-board-toolbar-btn--tool',
+        cls: 'specorator-agent-board-toolbar-btn specorator-agent-board-toolbar-btn--tool',
       });
-      const icon = runNextBtn.createSpan({ cls: 'claudian-agent-board-toolbar-btn-icon' });
+      const icon = runNextBtn.createSpan({ cls: 'specorator-agent-board-toolbar-btn-icon' });
       icon.setAttribute('aria-hidden', 'true');
       icon.setAttribute('data-icon', 'play');
       setIcon(icon, 'play');
@@ -232,14 +232,14 @@ export class AgentBoardRenderer {
 
     if (state.queue) {
       // Divider separates the board actions from the Auto-run switch.
-      actions.createDiv({ cls: 'claudian-agent-board-toolbar-divider' });
+      actions.createDiv({ cls: 'specorator-agent-board-toolbar-divider' });
       this.renderAutoRunSwitch(actions, state.queue);
       this.renderQueueInfo(info, state.queue);
     }
 
     const free = Math.max(0, state.slots.max - state.slots.used);
     const slotsEl = info.createSpan({
-      cls: 'claudian-agent-board-slots',
+      cls: 'specorator-agent-board-slots',
       text: t('tasks.board.tabCount', { n: state.slots.used, m: state.slots.max, k: free }),
     });
     return { free, slotsEl };
@@ -256,7 +256,7 @@ export class AgentBoardRenderer {
   private renderAutoRunSwitch(parent: HTMLElement, state: QueueToolbarState): void {
     const on = !state.paused && !state.halted;
     const sw = parent.createEl('button', {
-      cls: `claudian-agent-board-toolbar-autorun claudian-agent-board-toolbar-autorun--${on ? 'on' : 'off'}`,
+      cls: `specorator-agent-board-toolbar-autorun specorator-agent-board-toolbar-autorun--${on ? 'on' : 'off'}`,
       attr: { type: 'button', role: 'switch' },
     });
     sw.setAttribute('aria-checked', on ? 'true' : 'false');
@@ -264,12 +264,12 @@ export class AgentBoardRenderer {
     sw.setAttribute('title', tooltip);
     sw.setAttribute('aria-label', tooltip);
 
-    const track = sw.createSpan({ cls: 'claudian-agent-board-toolbar-autorun-track' });
+    const track = sw.createSpan({ cls: 'specorator-agent-board-toolbar-autorun-track' });
     track.createSpan({
-      cls: `claudian-agent-board-toolbar-autorun-thumb${on ? ' claudian-agent-board-toolbar-autorun-thumb--on' : ''}`,
+      cls: `specorator-agent-board-toolbar-autorun-thumb${on ? ' specorator-agent-board-toolbar-autorun-thumb--on' : ''}`,
     });
     sw.createSpan({
-      cls: 'claudian-agent-board-toolbar-autorun-label',
+      cls: 'specorator-agent-board-toolbar-autorun-label',
       text: t('tasks.board.autoRun.label'),
     });
 
@@ -280,10 +280,10 @@ export class AgentBoardRenderer {
   }
 
   private renderQueueInfo(parent: HTMLElement, state: QueueToolbarState): void {
-    const active = parent.createSpan({ cls: 'claudian-agent-board-toolbar--queue-active-count' });
+    const active = parent.createSpan({ cls: 'specorator-agent-board-toolbar--queue-active-count' });
     // Soft-ring dot precedes the "N/M active" caption (the dot is the at-a-glance
     // live signal; the caption is the accessible count).
-    const dot = active.createSpan({ cls: 'claudian-agent-board-toolbar-active-dot' });
+    const dot = active.createSpan({ cls: 'specorator-agent-board-toolbar-active-dot' });
     dot.setAttribute('aria-hidden', 'true');
     active.createSpan({
       text: t('tasks.board.activeCount', { n: state.slotOccupied, m: state.slotCapacity }),
@@ -292,7 +292,7 @@ export class AgentBoardRenderer {
     // Halt/failure caption uses the historical "Queue" wording, now keyed.
     if (state.halted && state.haltReason) {
       parent.createSpan({
-        cls: 'claudian-agent-board-toolbar--queue-failure-count',
+        cls: 'specorator-agent-board-toolbar--queue-failure-count',
         text: t('tasks.board.queueHalted', { reason: state.haltReason }),
       });
       return;
@@ -300,7 +300,7 @@ export class AgentBoardRenderer {
 
     if (state.consecutiveFailures > 0) {
       parent.createSpan({
-        cls: 'claudian-agent-board-toolbar--queue-failure-count',
+        cls: 'specorator-agent-board-toolbar--queue-failure-count',
         text:
           state.consecutiveFailures === 1
             ? t('tasks.board.failureOne', { n: state.consecutiveFailures })
@@ -313,7 +313,7 @@ export class AgentBoardRenderer {
     host.empty();
     if (!state.reason) return;
     const chip = host.createDiv({
-      cls: 'claudian-agent-board-card-skip-chip',
+      cls: 'specorator-agent-board-card-skip-chip',
       text: t('tasks.board.queueSkipped', { reason: state.reason }),
     });
     chip.addEventListener('click', (event) => {
@@ -328,17 +328,17 @@ export class AgentBoardRenderer {
       return;
     }
 
-    const laneEl = parent.createDiv({ cls: 'claudian-agent-board-lane' });
-    const head = laneEl.createDiv({ cls: 'claudian-agent-board-lane-header' });
-    head.createSpan({ cls: 'claudian-agent-board-lane-title', text: lane.title });
-    const meta = head.createDiv({ cls: 'claudian-agent-board-lane-header-meta' });
-    meta.createSpan({ cls: 'claudian-agent-board-lane-count', text: String(lane.tasks.length) });
+    const laneEl = parent.createDiv({ cls: 'specorator-agent-board-lane' });
+    const head = laneEl.createDiv({ cls: 'specorator-agent-board-lane-header' });
+    head.createSpan({ cls: 'specorator-agent-board-lane-title', text: lane.title });
+    const meta = head.createDiv({ cls: 'specorator-agent-board-lane-header-meta' });
+    meta.createSpan({ cls: 'specorator-agent-board-lane-count', text: String(lane.tasks.length) });
     if (lane.collapsible) {
       // Real Lucide chevron (rendered via setIcon), matching the icon language
       // of every other card glyph. The accessible name comes from the keyed
       // aria-label below; the glyph is decorative (data-icon mirrors it for tests).
       const toggle = meta.createEl('button', {
-        cls: 'claudian-agent-board-lane-collapse-toggle',
+        cls: 'specorator-agent-board-lane-collapse-toggle',
       });
       toggle.setAttribute('aria-label', t('tasks.board.collapseLane'));
       toggle.setAttribute('data-icon', 'chevron-down');
@@ -370,7 +370,7 @@ export class AgentBoardRenderer {
 
   private renderAddWorkOrderRow(laneEl: HTMLElement, callbacks: AgentBoardRenderCallbacks): void {
     const addRow = laneEl.createEl('button', {
-      cls: 'claudian-agent-board-lane-add',
+      cls: 'specorator-agent-board-lane-add',
       text: t('tasks.board.addWorkOrder'),
     });
     addRow.addEventListener('click', (event) => {
@@ -385,7 +385,7 @@ export class AgentBoardRenderer {
     callbacks: AgentBoardRenderCallbacks,
   ): void {
     const strip = parent.createDiv({
-      cls: 'claudian-agent-board-lane claudian-agent-board-lane--collapsed',
+      cls: 'specorator-agent-board-lane specorator-agent-board-lane--collapsed',
     });
     strip.setAttribute('role', 'button');
     strip.setAttribute('aria-label', t('tasks.board.expandLane', { title: lane.title }));
@@ -396,16 +396,16 @@ export class AgentBoardRenderer {
     strip.setAttribute('tabindex', '0');
     // Leading Lucide chevron at the top of the strip (spec Board.jsx). Decorative
     // (the accessible name lives on the strip's aria-label); data-icon mirrors it.
-    const chevron = strip.createSpan({ cls: 'claudian-agent-board-lane-collapsed-chevron' });
+    const chevron = strip.createSpan({ cls: 'specorator-agent-board-lane-collapsed-chevron' });
     chevron.setAttribute('aria-hidden', 'true');
     chevron.setAttribute('data-icon', 'chevron-right');
     setIcon(chevron, 'chevron-right');
     strip.createSpan({
-      cls: 'claudian-agent-board-lane-title-vertical',
+      cls: 'specorator-agent-board-lane-title-vertical',
       text: lane.title,
     });
     strip.createSpan({
-      cls: 'claudian-agent-board-lane-count',
+      cls: 'specorator-agent-board-lane-count',
       text: String(lane.tasks.length),
     });
     const toggle = (): void => callbacks.onToggleLaneCollapse(lane.id);
@@ -419,14 +419,14 @@ export class AgentBoardRenderer {
   }
 
   private renderCriteria(laneEl: HTMLElement, lane: ResolvedLane): void {
-    const criteria = laneEl.createDiv({ cls: 'claudian-agent-board-lane-criteria' });
+    const criteria = laneEl.createDiv({ cls: 'specorator-agent-board-lane-criteria' });
     if (lane.definitionOfReady.length > 0) {
-      criteria.createDiv({ cls: 'claudian-agent-board-lane-criteria-label', text: t('tasks.board.readyWhen') });
+      criteria.createDiv({ cls: 'specorator-agent-board-lane-criteria-label', text: t('tasks.board.readyWhen') });
       const list = criteria.createEl('ul');
       for (const item of lane.definitionOfReady) list.createEl('li', { text: item });
     }
     if (lane.definitionOfDone.length > 0) {
-      criteria.createDiv({ cls: 'claudian-agent-board-lane-criteria-label', text: t('tasks.board.doneWhen') });
+      criteria.createDiv({ cls: 'specorator-agent-board-lane-criteria-label', text: t('tasks.board.doneWhen') });
       const list = criteria.createEl('ul');
       for (const item of lane.definitionOfDone) list.createEl('li', { text: item });
     }
@@ -438,13 +438,13 @@ export class AgentBoardRenderer {
     const card = parent.createDiv({
       // `--live-actions` keeps the title's right padding reserved so the
       // always-visible cluster on live cards never overlaps the title text.
-      cls: `claudian-agent-board-card claudian-agent-board-card--${status}${live ? ' claudian-agent-board-card--live-actions' : ''}`,
+      cls: `specorator-agent-board-card specorator-agent-board-card--${status}${live ? ' specorator-agent-board-card--live-actions' : ''}`,
     });
 
-    const titleRow = card.createDiv({ cls: 'claudian-agent-board-card-title-row' });
-    const statusDot = titleRow.createSpan({ cls: 'claudian-agent-board-card-status-dot' });
+    const titleRow = card.createDiv({ cls: 'specorator-agent-board-card-title-row' });
+    const statusDot = titleRow.createSpan({ cls: 'specorator-agent-board-card-status-dot' });
     this.applyStatusDot(statusDot, status);
-    titleRow.createDiv({ cls: 'claudian-agent-board-card-title', text: task.frontmatter.title });
+    titleRow.createDiv({ cls: 'specorator-agent-board-card-title', text: task.frontmatter.title });
 
     // Hover action cluster: floats over the card's top-right (absolute), so it
     // reserves no layout width — titles keep their full width. Always-visible on
@@ -465,11 +465,11 @@ export class AgentBoardRenderer {
       // Top-bordered live band: line 1 is a freshness dot + caption, line 2 is
       // the last ledger line. The dot + caption are stable child nodes so
       // `patchLiveStrip` can repaint them in place (no node churn on heartbeat).
-      const liveStrip = card.createDiv({ cls: 'claudian-agent-board-card-live-strip' });
-      liveStripMeta = liveStrip.createDiv({ cls: 'claudian-agent-board-card-live-strip--meta' });
-      liveStripMeta.createSpan({ cls: 'claudian-agent-board-card-live-strip--dot' });
-      liveStripMeta.createSpan({ cls: 'claudian-agent-board-card-live-strip--caption' });
-      liveStripLedger = liveStrip.createDiv({ cls: 'claudian-agent-board-card-live-strip--ledger' });
+      const liveStrip = card.createDiv({ cls: 'specorator-agent-board-card-live-strip' });
+      liveStripMeta = liveStrip.createDiv({ cls: 'specorator-agent-board-card-live-strip--meta' });
+      liveStripMeta.createSpan({ cls: 'specorator-agent-board-card-live-strip--dot' });
+      liveStripMeta.createSpan({ cls: 'specorator-agent-board-card-live-strip--caption' });
+      liveStripLedger = liveStrip.createDiv({ cls: 'specorator-agent-board-card-live-strip--ledger' });
       this.applyLiveStrip(liveStripMeta, liveStripLedger, this.seedLiveStrip(task));
     }
 
@@ -502,8 +502,8 @@ export class AgentBoardRenderer {
 
   /** Paints the title-row status dot's color + live-pulse class + a11y label. */
   private applyStatusDot(dot: HTMLElement, status: TaskStatus): void {
-    const live = LIVE_STATUSES.has(status) ? ' claudian-agent-board-card-status-dot--live' : '';
-    dot.className = `claudian-agent-board-card-status-dot claudian-agent-board-card-status-dot--${status}${live}`;
+    const live = LIVE_STATUSES.has(status) ? ' specorator-agent-board-card-status-dot--live' : '';
+    dot.className = `specorator-agent-board-card-status-dot specorator-agent-board-card-status-dot--${status}${live}`;
     const label = DEFAULT_LANE_TITLES[status];
     dot.setAttribute('aria-label', label);
     dot.setAttribute('title', label);
@@ -511,9 +511,9 @@ export class AgentBoardRenderer {
 
   /** Meta row: provider/model (truncated) on the left, priority bars + label on the right. */
   private renderMetaRow(card: HTMLElement, task: TaskSpec): void {
-    const meta = card.createDiv({ cls: 'claudian-agent-board-card-meta' });
+    const meta = card.createDiv({ cls: 'specorator-agent-board-card-meta' });
     meta.createSpan({
-      cls: 'claudian-agent-board-card-meta-engine',
+      cls: 'specorator-agent-board-card-meta-engine',
       text: `${task.frontmatter.provider ?? '—'} / ${task.frontmatter.model ?? '—'}`,
     });
     this.renderPriority(meta, task.frontmatter.priority);
@@ -528,15 +528,15 @@ export class AgentBoardRenderer {
       (PRIORITY_META as Record<string, { bars: number; modifier: string }>)[priority] ??
       PRIORITY_META['2 - normal'];
     const prio = parent.createSpan({
-      cls: `claudian-agent-board-card-priority claudian-agent-board-card-priority--${meta.modifier}`,
+      cls: `specorator-agent-board-card-priority specorator-agent-board-card-priority--${meta.modifier}`,
     });
-    const bars = prio.createSpan({ cls: 'claudian-agent-board-card-priority-bars' });
+    const bars = prio.createSpan({ cls: 'specorator-agent-board-card-priority-bars' });
     bars.setAttribute('aria-hidden', 'true');
     for (let i = 1; i <= PRIORITY_TOTAL_BARS; i++) {
       const filled = i <= meta.bars ? ' is-filled' : '';
-      bars.createSpan({ cls: `claudian-agent-board-card-priority-bar${filled}` });
+      bars.createSpan({ cls: `specorator-agent-board-card-priority-bar${filled}` });
     }
-    prio.createSpan({ cls: 'claudian-agent-board-card-priority-label', text: priority });
+    prio.createSpan({ cls: 'specorator-agent-board-card-priority-label', text: priority });
   }
 
   /** Avatar diameter (px) for the card footer assignee slot. */
@@ -554,25 +554,25 @@ export class AgentBoardRenderer {
     card: HTMLElement,
     task: TaskSpec,
   ): { footer: HTMLElement; assignee: HTMLElement } {
-    const footer = card.createDiv({ cls: 'claudian-agent-board-card-footer' });
+    const footer = card.createDiv({ cls: 'specorator-agent-board-card-footer' });
     const progress = parseAcceptanceProgress(task.sections.acceptanceCriteria);
     if (progress.total > 0) {
       const complete = progress.done >= progress.total;
       const progressEl = footer.createDiv({
-        cls: `claudian-agent-board-card-progress${complete ? ' is-complete' : ''}`,
+        cls: `specorator-agent-board-card-progress${complete ? ' is-complete' : ''}`,
       });
       progressEl.setAttribute('title', `${progress.done}/${progress.total}`);
-      const track = progressEl.createSpan({ cls: 'claudian-agent-board-card-progress-track' });
-      const fill = track.createSpan({ cls: 'claudian-agent-board-card-progress-fill' });
+      const track = progressEl.createSpan({ cls: 'specorator-agent-board-card-progress-track' });
+      const fill = track.createSpan({ cls: 'specorator-agent-board-card-progress-fill' });
       fill.style.width = `${(progress.done / progress.total) * 100}%`;
       progressEl.createSpan({
-        cls: 'claudian-agent-board-card-progress-count',
+        cls: 'specorator-agent-board-card-progress-count',
         text: `${progress.done}/${progress.total}`,
       });
     } else {
-      footer.createSpan({ cls: 'claudian-agent-board-card-footer-spacer' });
+      footer.createSpan({ cls: 'specorator-agent-board-card-footer-spacer' });
     }
-    const assignee = footer.createSpan({ cls: 'claudian-agent-board-card-assignee' });
+    const assignee = footer.createSpan({ cls: 'specorator-agent-board-card-assignee' });
     renderAgentAvatar(
       assignee,
       (this.callbacks?.resolvePersona ?? resolvePersona)(task.frontmatter.agent),
@@ -584,7 +584,7 @@ export class AgentBoardRenderer {
   private renderSkipChipFor(card: HTMLElement, task: TaskSpec, callbacks: AgentBoardRenderCallbacks): void {
     const skipReason = callbacks.getSkipReason?.(task) ?? null;
     if (!skipReason) return;
-    const chipHost = card.createDiv({ cls: 'claudian-agent-board-card-skip-host' });
+    const chipHost = card.createDiv({ cls: 'specorator-agent-board-card-skip-host' });
     this.renderSkipChip(chipHost, { reason: skipReason, onAck: () => callbacks.onAckSkip?.(task) });
   }
 
@@ -595,24 +595,24 @@ export class AgentBoardRenderer {
    * keeps the original visual structure without enabling Markdown.
    */
   private renderPromptText(parent: HTMLElement, prompt: string): void {
-    const host = parent.createDiv({ cls: 'claudian-agent-board-card-reply-prompt' });
+    const host = parent.createDiv({ cls: 'specorator-agent-board-card-reply-prompt' });
     const paragraphs = prompt.split(/\n{2,}/);
     if (paragraphs.length === 1) {
       // Single paragraph: still honor inline newlines via CSS pre-wrap class.
-      host.addClass('claudian-agent-board-card-reply-prompt--prewrap');
+      host.addClass('specorator-agent-board-card-reply-prompt--prewrap');
       host.setText(prompt);
       return;
     }
     for (const paragraph of paragraphs) {
       host.createDiv({
-        cls: 'claudian-agent-board-card-reply-prompt-paragraph',
+        cls: 'specorator-agent-board-card-reply-prompt-paragraph',
         text: paragraph,
       });
     }
   }
 
   private renderReplySurface(card: HTMLElement, task: TaskSpec, pause: AgentBoardPauseState | null): HTMLElement {
-    const reply = card.createDiv({ cls: 'claudian-agent-board-card-reply' });
+    const reply = card.createDiv({ cls: 'specorator-agent-board-card-reply' });
     // The card itself opens the detail view on click; keep reply interactions local.
     reply.addEventListener('click', (event) => event.stopPropagation());
 
@@ -620,7 +620,7 @@ export class AgentBoardRenderer {
       const question = pause?.question ?? task.frontmatter.pause_reason ?? t('tasks.board.card.reply.waitingForInput');
       this.renderPromptText(reply, question);
       const field = reply.createEl('input', {
-        cls: 'claudian-agent-board-card-reply--field',
+        cls: 'specorator-agent-board-card-reply--field',
         type: 'text',
         placeholder: t('tasks.board.card.reply.inputPlaceholder'),
       });
@@ -629,7 +629,7 @@ export class AgentBoardRenderer {
       // input cap but high enough for a real long-form reply.
       field.maxLength = REPLY_INPUT_MAX_LENGTH;
       if (pause?.defaultValue) field.value = pause.defaultValue;
-      const actions = reply.createDiv({ cls: 'claudian-agent-board-card-reply--actions' });
+      const actions = reply.createDiv({ cls: 'specorator-agent-board-card-reply--actions' });
       const submit = () => this.callbacks?.onReply?.(task, field.value);
       const send = actions.createEl('button', { cls: 'mod-cta', text: t('tasks.board.card.reply.send') });
       send.addEventListener('click', (event) => { event.stopPropagation(); submit(); });
@@ -643,17 +643,17 @@ export class AgentBoardRenderer {
       this.renderPromptText(reply, action);
       if (pause?.risk) {
         reply.createDiv({
-          cls: 'claudian-agent-board-card-reply-risk',
+          cls: 'specorator-agent-board-card-reply-risk',
           text: t('tasks.board.card.reply.risk', { risk: pause.risk }),
         });
       }
       const reason = reply.createEl('input', {
-        cls: 'claudian-agent-board-card-reply--field',
+        cls: 'specorator-agent-board-card-reply--field',
         type: 'text',
         placeholder: t('tasks.board.card.reply.rejectReasonPlaceholder'),
       });
       reason.maxLength = REPLY_INPUT_MAX_LENGTH;
-      const actions = reply.createDiv({ cls: 'claudian-agent-board-card-reply--actions' });
+      const actions = reply.createDiv({ cls: 'specorator-agent-board-card-reply--actions' });
       const approve = actions.createEl('button', { cls: 'mod-cta', text: t('tasks.board.card.reply.approve') });
       approve.addEventListener('click', (event) => { event.stopPropagation(); this.callbacks?.onApprove?.(task); });
       const reject = actions.createEl('button', { text: t('tasks.board.card.reply.reject') });
@@ -682,14 +682,14 @@ export class AgentBoardRenderer {
     // The freshness dot carries the tier color class; line 1's caption is the
     // elapsed + attempt counter. Both repaint the stable child nodes seeded in
     // `renderCard` so `patchLiveStrip` is an in-place update, not a rebuild.
-    const dot = metaEl.querySelector<HTMLElement>('.claudian-agent-board-card-live-strip--dot');
-    const caption = metaEl.querySelector<HTMLElement>('.claudian-agent-board-card-live-strip--caption');
+    const dot = metaEl.querySelector<HTMLElement>('.specorator-agent-board-card-live-strip--dot');
+    const caption = metaEl.querySelector<HTMLElement>('.specorator-agent-board-card-live-strip--caption');
     if (dot) {
       // Per-tier glyph + aria-label so color-blind users still get the freshness
       // signal (the glyph is the non-color cue). The bullet (●) is the basic
       // "live" indicator; tier escalates to a half/empty glyph for amber/red.
       const glyph = tier === 'green' ? '●' : tier === 'amber' ? '◐' : '◯';
-      dot.className = `claudian-agent-board-card-live-strip--dot claudian-stale-${tier}`;
+      dot.className = `specorator-agent-board-card-live-strip--dot specorator-stale-${tier}`;
       dot.setText(glyph);
       dot.setAttribute('aria-label', staleAriaLabel(tier, payload.heartbeatAgeMs));
     }
@@ -703,7 +703,7 @@ export class AgentBoardRenderer {
   }
 
   private renderErrors(parent: HTMLElement, errors: string[], invalidNotes: InvalidTaskNote[]): void {
-    const errorsEl = parent.createDiv({ cls: 'claudian-agent-board-errors' });
+    const errorsEl = parent.createDiv({ cls: 'specorator-agent-board-errors' });
     if (errors.length > 0) {
       errorsEl.createEl('h4', { text: t('tasks.board.boardNotices') });
       // Cap each error line at 300 chars so a long path/stack doesn't blow out

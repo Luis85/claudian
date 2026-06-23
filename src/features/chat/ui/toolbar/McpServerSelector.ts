@@ -14,14 +14,14 @@ export class McpServerSelector {
   private visible = true;
 
   constructor(parentEl: HTMLElement) {
-    this.container = parentEl.createDiv({ cls: 'claudian-mcp-selector' });
+    this.container = parentEl.createDiv({ cls: 'specorator-mcp-selector' });
     this.render();
   }
 
   setVisible(visible: boolean): void {
     this.visible = visible;
     if (!visible) {
-      this.container.addClass('claudian-hidden');
+      this.container.addClass('specorator-hidden');
     } else {
       this.updateDisplay();
     }
@@ -91,16 +91,16 @@ export class McpServerSelector {
   private render() {
     this.container.empty();
 
-    const iconWrapper = this.container.createDiv({ cls: 'claudian-mcp-selector-icon-wrapper' });
+    const iconWrapper = this.container.createDiv({ cls: 'specorator-mcp-selector-icon-wrapper' });
 
-    this.iconEl = iconWrapper.createDiv({ cls: 'claudian-mcp-selector-icon' });
+    this.iconEl = iconWrapper.createDiv({ cls: 'specorator-mcp-selector-icon' });
     appendMcpIcon(this.iconEl);
 
-    this.badgeEl = iconWrapper.createDiv({ cls: 'claudian-mcp-selector-badge' });
+    this.badgeEl = iconWrapper.createDiv({ cls: 'specorator-mcp-selector-badge' });
 
     this.updateDisplay();
 
-    this.dropdownEl = this.container.createDiv({ cls: 'claudian-mcp-selector-dropdown' });
+    this.dropdownEl = this.container.createDiv({ cls: 'specorator-mcp-selector-dropdown' });
     this.renderDropdown();
 
     // Re-render dropdown content on hover (CSS handles visibility)
@@ -115,17 +115,17 @@ export class McpServerSelector {
     this.dropdownEl.empty();
 
     // Header
-    const headerEl = this.dropdownEl.createDiv({ cls: 'claudian-mcp-selector-header' });
+    const headerEl = this.dropdownEl.createDiv({ cls: 'specorator-mcp-selector-header' });
     headerEl.setText('Mcp servers');
 
     // Server list
-    const listEl = this.dropdownEl.createDiv({ cls: 'claudian-mcp-selector-list' });
+    const listEl = this.dropdownEl.createDiv({ cls: 'specorator-mcp-selector-list' });
 
     const allServers = this.mcpManager?.getServers() || [];
     const servers = allServers.filter(s => s.enabled);
 
     if (servers.length === 0) {
-      const emptyEl = listEl.createDiv({ cls: 'claudian-mcp-selector-empty' });
+      const emptyEl = listEl.createDiv({ cls: 'specorator-mcp-selector-empty' });
       emptyEl.setText(allServers.length === 0 ? 'No MCP servers configured' : 'All MCP servers disabled');
       return;
     }
@@ -136,7 +136,7 @@ export class McpServerSelector {
   }
 
   private renderServerItem(listEl: HTMLElement, server: ManagedMcpServer) {
-    const itemEl = listEl.createDiv({ cls: 'claudian-mcp-selector-item' });
+    const itemEl = listEl.createDiv({ cls: 'specorator-mcp-selector-item' });
     itemEl.dataset.serverName = server.name;
 
     const isEnabled = this.enabledServers.has(server.name);
@@ -145,20 +145,20 @@ export class McpServerSelector {
     }
 
     // Checkbox
-    const checkEl = itemEl.createDiv({ cls: 'claudian-mcp-selector-check' });
+    const checkEl = itemEl.createDiv({ cls: 'specorator-mcp-selector-check' });
     if (isEnabled) {
       appendCheckIcon(checkEl);
     }
 
     // Info
-    const infoEl = itemEl.createDiv({ cls: 'claudian-mcp-selector-item-info' });
+    const infoEl = itemEl.createDiv({ cls: 'specorator-mcp-selector-item-info' });
 
-    const nameEl = infoEl.createSpan({ cls: 'claudian-mcp-selector-item-name' });
+    const nameEl = infoEl.createSpan({ cls: 'specorator-mcp-selector-item-name' });
     nameEl.setText(server.name);
 
     // Badges
     if (server.contextSaving) {
-      const csEl = infoEl.createSpan({ cls: 'claudian-mcp-selector-cs-badge' });
+      const csEl = infoEl.createSpan({ cls: 'specorator-mcp-selector-cs-badge' });
       csEl.setText('@');
       csEl.setAttribute('title', 'Context-saving: can also enable via @' + server.name);
     }
@@ -180,7 +180,7 @@ export class McpServerSelector {
 
     // Update item visually in-place (immediate feedback)
     const isEnabled = this.enabledServers.has(name);
-    const checkEl = itemEl.querySelector<HTMLElement>('.claudian-mcp-selector-check');
+    const checkEl = itemEl.querySelector<HTMLElement>('.specorator-mcp-selector-check');
 
     if (isEnabled) {
       itemEl.addClass('enabled');
@@ -203,10 +203,10 @@ export class McpServerSelector {
 
     // Show/hide container based on whether there are servers and visibility
     if (!hasServers || !this.visible) {
-      this.container.addClass('claudian-hidden');
+      this.container.addClass('specorator-hidden');
       return;
     }
-    this.container.removeClass('claudian-hidden');
+    this.container.removeClass('specorator-hidden');
 
     updateCountBadgeDisplay({
       iconEl: this.iconEl,

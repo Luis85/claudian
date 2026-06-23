@@ -6,7 +6,7 @@ import { LoopNoteStore } from '../../../../../src/features/tasks/loops/LoopNoteS
 const store = new LoopNoteStore();
 
 const VALID = `---
-type: claudian-loop
+type: specorator-loop
 schema_version: 1
 name: "Reproduce then fix"
 description: "Tight bug-fix loop."
@@ -49,7 +49,7 @@ describe('LoopNoteStore.parse', () => {
   });
 
   it('rejects a wrong type', () => {
-    const bad = VALID.replace('claudian-loop', 'something-else');
+    const bad = VALID.replace('specorator-loop', 'something-else');
     expect(() => store.parse('x.md', bad)).toThrow('Invalid loop type');
   });
 
@@ -60,7 +60,7 @@ describe('LoopNoteStore.parse', () => {
 
   it('tolerates missing optional sections', () => {
     const minimal = `---
-type: claudian-loop
+type: specorator-loop
 schema_version: 1
 name: "Only approach"
 ---
@@ -98,7 +98,7 @@ describe('LoopNoteStore.build', () => {
 });
 
 const VALID_LOOP = `---
-type: claudian-loop
+type: specorator-loop
 schema_version: 1
 name: "My Loop"
 ---
@@ -108,7 +108,7 @@ Do the thing.
 `;
 
 const WRONG_TYPE_LOOP = `---
-type: claudian-work-order
+type: specorator-work-order
 schema_version: 1
 ---
 body
@@ -117,7 +117,7 @@ body
 describe('LoopNoteStore.parse id fallback', () => {
   it('uses the file basename for both name and id when frontmatter has no name', () => {
     const noName = `---
-type: claudian-loop
+type: specorator-loop
 schema_version: 1
 ---
 ## Approach
@@ -194,7 +194,7 @@ describe('LoopNoteStore.save', () => {
     expect(path).toBe('Agent Board/loops/fix.md');
     expect(created).toHaveLength(1);
     expect(created[0].path).toBe('Agent Board/loops/fix.md');
-    expect(created[0].content).toContain('claudian-loop');
+    expect(created[0].content).toContain('specorator-loop');
     expect(folderCreated).toEqual(['Agent Board/loops']);
     expect(vault.modify).not.toHaveBeenCalled();
   });

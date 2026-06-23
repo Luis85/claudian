@@ -86,7 +86,7 @@ const EDITABLE_TITLE_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStatus>([
 
 // The detail modal is a singleton (one work order open at a time), so a stable
 // id is safe to use as the dialog's `aria-labelledby` target.
-const TITLE_ID = 'claudian-work-order-modal-title';
+const TITLE_ID = 'specorator-work-order-modal-title';
 
 /** Drop `undefined`-valued keys so a partial update merges cleanly into a snapshot. */
 function stripUndefined<T extends object>(value: T): Partial<T> {
@@ -114,7 +114,7 @@ export class WorkOrderDetailModal extends Modal {
 
   onOpen(): void {
     this.markdownComponent.load();
-    this.modalEl.addClass('claudian-work-order-modal');
+    this.modalEl.addClass('specorator-work-order-modal');
     // Size the modal through the variables Obsidian's own `.modal` rule consumes
     // so the height cap applies regardless of how the active theme out-specifies
     // a bare `.modal` selector. Writing them on modalEl is the most reliable
@@ -134,14 +134,14 @@ export class WorkOrderDetailModal extends Modal {
     // custom sticky layer, and we reuse the native chrome instead of duplicating
     // it. The body + footer live in the scrolling content.
     const header = this.titleEl;
-    header.addClass('claudian-work-order-modal-header');
+    header.addClass('specorator-work-order-modal-header');
     this.renderHeader(header);
 
-    this.contentEl.addClass('claudian-work-order-modal-content');
-    const body = this.contentEl.createDiv({ cls: 'claudian-work-order-modal-body' });
-    const main = body.createDiv({ cls: 'claudian-work-order-modal-main' });
-    const sidebar = body.createDiv({ cls: 'claudian-work-order-modal-sidebar' });
-    const footer = this.contentEl.createDiv({ cls: 'claudian-work-order-modal-footer' });
+    this.contentEl.addClass('specorator-work-order-modal-content');
+    const body = this.contentEl.createDiv({ cls: 'specorator-work-order-modal-body' });
+    const main = body.createDiv({ cls: 'specorator-work-order-modal-main' });
+    const sidebar = body.createDiv({ cls: 'specorator-work-order-modal-sidebar' });
+    const footer = this.contentEl.createDiv({ cls: 'specorator-work-order-modal-footer' });
 
     renderWorkOrderProperties(sidebar, this.task, this.callbacks);
 
@@ -204,12 +204,12 @@ export class WorkOrderDetailModal extends Modal {
    * edit mode — there is no separate Done button up here.
    */
   private renderEditToggle(parent: HTMLElement): void {
-    const bar = parent.createDiv({ cls: 'claudian-work-order-modal-edit-bar' });
+    const bar = parent.createDiv({ cls: 'specorator-work-order-modal-edit-bar' });
     const button = bar.createEl('button', {
-      cls: 'claudian-work-order-modal-edit-button',
+      cls: 'specorator-work-order-modal-edit-button',
       attr: { type: 'button' },
     });
-    const icon = button.createSpan({ cls: 'claudian-work-order-modal-edit-button-icon' });
+    const icon = button.createSpan({ cls: 'specorator-work-order-modal-edit-button-icon' });
     icon.setAttr('aria-hidden', 'true');
     icon.setAttr('data-icon', 'pencil');
     setIcon(icon, 'pencil');
@@ -233,7 +233,7 @@ export class WorkOrderDetailModal extends Modal {
    */
   private renderHeader(header: HTMLElement): void {
     const { status } = this.task.frontmatter;
-    header.addClass(`claudian-work-order-modal-header--${status}`);
+    header.addClass(`specorator-work-order-modal-header--${status}`);
 
     this.renderHeaderMeta(header);
     this.renderHeaderTitle(header);
@@ -249,10 +249,10 @@ export class WorkOrderDetailModal extends Modal {
    */
   private renderHeaderMeta(header: HTMLElement): void {
     const fm = this.task.frontmatter;
-    const meta = header.createDiv({ cls: 'claudian-work-order-modal-header-meta' });
+    const meta = header.createDiv({ cls: 'specorator-work-order-modal-header-meta' });
 
     const chip = meta.createSpan({
-      cls: 'claudian-work-order-modal-id-chip claudian-work-order-modal-mono',
+      cls: 'specorator-work-order-modal-id-chip specorator-work-order-modal-mono',
       text: fm.id,
     });
     chip.setAttr('title', fm.id);
@@ -261,8 +261,8 @@ export class WorkOrderDetailModal extends Modal {
     if (fm.status === 'running') {
       const started = formatRelativeTime(fm.started);
       if (started) {
-        const live = meta.createSpan({ cls: 'claudian-work-order-modal-header-live' });
-        live.createSpan({ cls: 'claudian-work-order-modal-live-dot' }).setAttr('aria-hidden', 'true');
+        const live = meta.createSpan({ cls: 'specorator-work-order-modal-header-live' });
+        live.createSpan({ cls: 'specorator-work-order-modal-live-dot' }).setAttr('aria-hidden', 'true');
         live.createSpan({ text: t('tasks.workOrderModal.startedAgo', { ago: started }) });
       }
       return;
@@ -272,7 +272,7 @@ export class WorkOrderDetailModal extends Modal {
       const finished = formatRelativeTime(fm.finished);
       if (finished) {
         meta.createSpan({
-          cls: 'claudian-work-order-modal-header-sub',
+          cls: 'specorator-work-order-modal-header-sub',
           text: t('tasks.workOrderModal.finishedAt', { ago: finished }),
         });
       }
@@ -292,7 +292,7 @@ export class WorkOrderDetailModal extends Modal {
     const original = task.frontmatter.title;
     const editable = EDITABLE_TITLE_STATUSES.has(task.frontmatter.status);
 
-    const title = header.createDiv({ cls: 'claudian-work-order-modal-title' });
+    const title = header.createDiv({ cls: 'specorator-work-order-modal-title' });
     title.setText(original);
     // The custom header replaces the native modal title, so expose the dialog's
     // accessible name through this element via `aria-labelledby`.
@@ -358,7 +358,7 @@ export class WorkOrderDetailModal extends Modal {
       icon: 'target',
       label: t('tasks.workOrderModal.sectionObjective'),
     });
-    const body = section.createDiv({ cls: 'claudian-work-order-modal-objective' });
+    const body = section.createDiv({ cls: 'specorator-work-order-modal-objective' });
     void MarkdownRenderer.render(
       this.app,
       this.task.sections.objective || '—',
@@ -382,7 +382,7 @@ export class WorkOrderDetailModal extends Modal {
     markdown: string,
   ): void {
     const { section } = renderSectionHeader(parent, { icon, label: t(labelKey) });
-    const body = section.createDiv({ cls: 'claudian-work-order-modal-objective' });
+    const body = section.createDiv({ cls: 'specorator-work-order-modal-objective' });
     void MarkdownRenderer.render(this.app, markdown || '—', body, this.task.path, this.markdownComponent);
   }
 
@@ -416,34 +416,34 @@ export class WorkOrderDetailModal extends Modal {
       if (markdown.trim().length === 0) {
         // The em-dash placeholder is decorative and supplied via CSS (::before
         // content), so no user-visible text literal lives in JS here.
-        section.createDiv({ cls: 'claudian-work-order-modal-checklist-empty' });
+        section.createDiv({ cls: 'specorator-work-order-modal-checklist-empty' });
       } else {
-        const prose = section.createDiv({ cls: 'claudian-work-order-modal-checklist-prose' });
+        const prose = section.createDiv({ cls: 'specorator-work-order-modal-checklist-prose' });
         void MarkdownRenderer.render(this.app, markdown, prose, this.task.path, this.markdownComponent);
       }
       return;
     }
 
-    const card = section.createDiv({ cls: 'claudian-work-order-modal-checklist' });
+    const card = section.createDiv({ cls: 'specorator-work-order-modal-checklist' });
     for (const item of items) {
-      const row = card.createDiv({ cls: 'claudian-work-order-modal-checklist-item' });
+      const row = card.createDiv({ cls: 'specorator-work-order-modal-checklist-item' });
       // Read-only checkbox semantics so assistive tech hears the checked state;
       // the visible box glyph below stays decorative (aria-hidden).
       row.setAttr('role', 'checkbox');
       row.setAttr('aria-checked', item.checked ? 'true' : 'false');
       row.setAttr('aria-disabled', 'true');
       if (item.checked) row.addClass('is-checked');
-      const box = row.createSpan({ cls: 'claudian-work-order-modal-checklist-box' });
+      const box = row.createSpan({ cls: 'specorator-work-order-modal-checklist-box' });
       box.setAttr('aria-hidden', 'true');
       if (item.checked) {
         // The white check glyph is the non-color cue carrying the checked signal.
-        const check = box.createSpan({ cls: 'claudian-work-order-modal-checklist-check' });
+        const check = box.createSpan({ cls: 'specorator-work-order-modal-checklist-check' });
         check.setAttr('data-icon', 'check');
         setIcon(check, 'check');
       }
       // Render the label as markdown so inline links / wikilinks / code stay
       // interactive, matching the full-markdown fallback used for non-pure sections.
-      const textEl = row.createDiv({ cls: 'claudian-work-order-modal-checklist-text' });
+      const textEl = row.createDiv({ cls: 'specorator-work-order-modal-checklist-text' });
       void MarkdownRenderer.render(this.app, item.text, textEl, this.task.path, this.markdownComponent);
     }
   }
@@ -466,7 +466,7 @@ export class WorkOrderDetailModal extends Modal {
     const ratio = total > 0 ? done / total : 0;
     const complete = total > 0 && done >= total;
 
-    const meter = parent.createDiv({ cls: 'claudian-work-order-modal-ring-meter' });
+    const meter = parent.createDiv({ cls: 'specorator-work-order-modal-ring-meter' });
 
     const svg = meter.createSvg('svg', {
       attr: { width: 22, height: 22, viewBox: '0 0 22 22' },
@@ -477,15 +477,15 @@ export class WorkOrderDetailModal extends Modal {
     // token — so never pass a joined string (or rely on array handling); set
     // each class individually. A joined-string cls here previously crashed
     // onOpen mid-render (no acceptance items, no activity, empty footer).
-    svg.addClass('claudian-work-order-modal-ring');
-    svg.addClass(`claudian-work-order-modal-ring--${status}`);
-    if (complete) svg.addClass('claudian-work-order-modal-ring--complete');
+    svg.addClass('specorator-work-order-modal-ring');
+    svg.addClass(`specorator-work-order-modal-ring--${status}`);
+    if (complete) svg.addClass('specorator-work-order-modal-ring--complete');
     svg.createSvg('circle', {
-      cls: 'claudian-work-order-modal-ring-track',
+      cls: 'specorator-work-order-modal-ring-track',
       attr: { cx: 11, cy: 11, r: radius, fill: 'none', 'stroke-width': 2.5 },
     });
     svg.createSvg('circle', {
-      cls: 'claudian-work-order-modal-ring-arc',
+      cls: 'specorator-work-order-modal-ring-arc',
       attr: {
         cx: 11,
         cy: 11,
@@ -500,7 +500,7 @@ export class WorkOrderDetailModal extends Modal {
     });
 
     meter.createSpan({
-      cls: 'claudian-work-order-modal-ring-count',
+      cls: 'specorator-work-order-modal-ring-count',
       text: `${done}/${total}`,
     });
   }
@@ -517,10 +517,10 @@ export class WorkOrderDetailModal extends Modal {
     const actions = this.footerActions();
 
     const left = parent.createDiv({
-      cls: 'claudian-work-order-modal-footer-group claudian-work-order-modal-footer-group--left',
+      cls: 'specorator-work-order-modal-footer-group specorator-work-order-modal-footer-group--left',
     });
     const right = parent.createDiv({
-      cls: 'claudian-work-order-modal-footer-group claudian-work-order-modal-footer-group--right',
+      cls: 'specorator-work-order-modal-footer-group specorator-work-order-modal-footer-group--right',
     });
 
     for (const action of actions) {
@@ -534,16 +534,16 @@ export class WorkOrderDetailModal extends Modal {
 
   private renderFooterButton(parent: HTMLElement, action: FooterAction): void {
     const button = parent.createEl('button', {
-      cls: `claudian-work-order-modal-action claudian-work-order-modal-action--${action.variant}`,
+      cls: `specorator-work-order-modal-action specorator-work-order-modal-action--${action.variant}`,
       attr: { type: 'button' },
     });
-    const icon = button.createSpan({ cls: 'claudian-work-order-modal-action-icon' });
+    const icon = button.createSpan({ cls: 'specorator-work-order-modal-action-icon' });
     icon.setAttr('aria-hidden', 'true');
     // The mock `setIcon` is a no-op; the data attribute records the icon intent
     // so tests can assert it (consistent with the rest of the modal).
     icon.setAttr('data-icon', action.icon);
     setIcon(icon, action.icon);
-    button.createSpan({ cls: 'claudian-work-order-modal-action-label', text: t(action.labelKey) });
+    button.createSpan({ cls: 'specorator-work-order-modal-action-label', text: t(action.labelKey) });
     button.addEventListener('click', () => {
       this.close();
       action.run();

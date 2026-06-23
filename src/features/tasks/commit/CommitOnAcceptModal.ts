@@ -31,7 +31,7 @@ export class CommitOnAcceptModal extends Modal {
   }
 
   onOpen(): void {
-    this.modalEl.addClass('claudian-commit-on-accept-modal');
+    this.modalEl.addClass('specorator-commit-on-accept-modal');
     this.titleEl.setText(t('tasks.commitOnAccept.title'));
 
     const filesLabel = this.options.dirtyCount === 1
@@ -40,29 +40,29 @@ export class CommitOnAcceptModal extends Modal {
     this.contentEl.createEl('p', { text: filesLabel });
 
     const checkboxWrap = this.contentEl.createEl('label', {
-      cls: 'claudian-commit-on-accept-dont-ask',
+      cls: 'specorator-commit-on-accept-dont-ask',
     });
     const checkbox = checkboxWrap.createEl('input', {
       type: 'checkbox',
-      attr: { 'data-claudian-commit-on-accept': 'dont-ask' },
+      attr: { 'data-specorator-commit-on-accept': 'dont-ask' },
     });
     checkboxWrap.createSpan({ text: ` ${t('tasks.commitOnAccept.dontAsk')}` });
     checkbox.addEventListener('change', () => {
       this.dontAskAgain = checkbox.checked;
     });
 
-    const buttons = this.contentEl.createDiv({ cls: 'claudian-commit-on-accept-buttons' });
+    const buttons = this.contentEl.createDiv({ cls: 'specorator-commit-on-accept-buttons' });
 
     const skipBtn = buttons.createEl('button', {
       text: t('tasks.commitOnAccept.skip'),
-      attr: { type: 'button', 'data-claudian-commit-on-accept': 'skip' },
+      attr: { type: 'button', 'data-specorator-commit-on-accept': 'skip' },
     });
     skipBtn.addEventListener('click', () => this.resolve({ confirmed: false, dontAskAgain: this.dontAskAgain }));
 
     const confirmBtn = buttons.createEl('button', {
       text: t('tasks.commitOnAccept.commitAndPush'),
       cls: 'mod-cta',
-      attr: { type: 'button', 'data-claudian-commit-on-accept': 'confirm' },
+      attr: { type: 'button', 'data-specorator-commit-on-accept': 'confirm' },
     });
     confirmBtn.addEventListener('click', () => this.resolve({ confirmed: true, dontAskAgain: this.dontAskAgain }));
   }

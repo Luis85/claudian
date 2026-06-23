@@ -77,11 +77,11 @@ describe('InlinePromptController', () => {
       const { controller, inputContainerEl } = setup();
       // Simulate a prompt having hidden the input container twice.
       (controller as never as { inputContainerHideDepth: number }).inputContainerHideDepth = 2;
-      inputContainerEl.addClass('claudian-hidden');
+      inputContainerEl.addClass('specorator-hidden');
 
       controller.dismissPendingApproval();
 
-      expect(inputContainerEl.hasClass('claudian-hidden')).toBe(false);
+      expect(inputContainerEl.hasClass('specorator-hidden')).toBe(false);
       expect((controller as never as { inputContainerHideDepth: number }).inputContainerHideDepth).toBe(0);
     });
   });

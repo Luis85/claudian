@@ -1,11 +1,11 @@
-import type { ClaudianSettings } from '../../../../../src/core/types/settings';
+import type { SpecoratorSettings } from '../../../../../src/core/types/settings';
 import { registerAllSettings } from '../../../../../src/features/settings/registry/registerAll';
 import {
   getSettingsRegistry,
   resetSettingsRegistryForTests,
 } from '../../../../../src/features/settings/registry/registry';
 
-function settings(allEnabled: boolean): ClaudianSettings {
+function settings(allEnabled: boolean): SpecoratorSettings {
   return {
     providerConfigs: {
       claude: { enabled: allEnabled },
@@ -13,7 +13,7 @@ function settings(allEnabled: boolean): ClaudianSettings {
       opencode: { enabled: allEnabled },
       cursor: { enabled: allEnabled },
     },
-  } as unknown as ClaudianSettings;
+  } as unknown as SpecoratorSettings;
 }
 
 describe('registerAllSettings', () => {

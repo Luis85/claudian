@@ -5,17 +5,17 @@
  * read as distinct rows. Mirrors the rhythm used by the instruction modal.
  */
 
-.claudian-commit-on-accept-modal {
+.specorator-commit-on-accept-modal {
   max-width: 460px;
 }
 
-.claudian-commit-on-accept-modal .modal-content > p {
+.specorator-commit-on-accept-modal .modal-content > p {
   margin: 0 0 18px;
   line-height: 1.5;
   color: var(--text-normal);
 }
 
-.claudian-commit-on-accept-dont-ask {
+.specorator-commit-on-accept-dont-ask {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -26,19 +26,19 @@
   user-select: none;
 }
 
-.claudian-commit-on-accept-dont-ask input[type='checkbox'] {
+.specorator-commit-on-accept-dont-ask input[type='checkbox'] {
   margin: 0;
   cursor: pointer;
 }
 
-.claudian-commit-on-accept-buttons {
+.specorator-commit-on-accept-buttons {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
   margin-top: 4px;
 }
 
-.claudian-commit-on-accept-buttons button {
+.specorator-commit-on-accept-buttons button {
   padding: 6px 14px;
   font-size: 13px;
 }

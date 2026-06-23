@@ -1,23 +1,23 @@
 /* File chip modifier accents */
-.claudian-file-chip--folder .claudian-file-chip-icon {
+.specorator-file-chip--folder .specorator-file-chip-icon {
   color: var(--text-accent);
 }
 
-.claudian-file-chip--current {
+.specorator-file-chip--current {
   border-color: var(--interactive-accent);
 }
 
-.claudian-file-chip--folder {
+.specorator-file-chip--folder {
   cursor: default;
 }
 
-.claudian-file-chip--file,
-.claudian-file-chip--current {
+.specorator-file-chip--file,
+.specorator-file-chip--current {
   cursor: pointer;
 }
 
 /* @ Mention dropdown */
-.claudian-mention-dropdown {
+.specorator-mention-dropdown {
   display: none;
   position: absolute;
   bottom: 100%;
@@ -35,21 +35,21 @@
   overflow-y: auto;
 }
 
-.claudian-mention-dropdown.visible {
+.specorator-mention-dropdown.visible {
   display: block;
 }
 
 /* Fixed positioning for inline editor */
-.claudian-mention-dropdown-fixed {
+.specorator-mention-dropdown-fixed {
   position: fixed;
-  bottom: var(--claudian-fixed-dropdown-bottom);
-  left: var(--claudian-fixed-dropdown-left);
+  bottom: var(--specorator-fixed-dropdown-bottom);
+  left: var(--specorator-fixed-dropdown-left);
   right: auto;
-  width: var(--claudian-fixed-dropdown-width);
+  width: var(--specorator-fixed-dropdown-width);
   z-index: 10001;
 }
 
-.claudian-mention-item {
+.specorator-mention-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -58,24 +58,24 @@
   transition: background 0.1s ease;
 }
 
-.claudian-mention-item:hover,
-.claudian-mention-item.selected {
+.specorator-mention-item:hover,
+.specorator-mention-item.selected {
   background: var(--background-modifier-hover);
 }
 
-.claudian-mention-icon {
+.specorator-mention-icon {
   display: flex;
   align-items: center;
   color: var(--text-muted);
   flex-shrink: 0;
 }
 
-.claudian-mention-icon svg {
+.specorator-mention-icon svg {
   width: 14px;
   height: 14px;
 }
 
-.claudian-mention-path {
+.specorator-mention-path {
   font-size: 13px;
   color: var(--text-normal);
   overflow: hidden;
@@ -83,7 +83,7 @@
   white-space: nowrap;
 }
 
-.claudian-mention-empty {
+.specorator-mention-empty {
   padding: 12px;
   text-align: center;
   color: var(--text-muted);
@@ -91,29 +91,29 @@
 }
 
 /* Scrollbar for mention dropdown */
-.claudian-mention-dropdown::-webkit-scrollbar {
+.specorator-mention-dropdown::-webkit-scrollbar {
   width: 6px;
 }
 
-.claudian-mention-dropdown::-webkit-scrollbar-track {
+.specorator-mention-dropdown::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.claudian-mention-dropdown::-webkit-scrollbar-thumb {
+.specorator-mention-dropdown::-webkit-scrollbar-thumb {
   background: var(--background-modifier-border);
   border-radius: 3px;
 }
 
 /* MCP items in @-mention dropdown */
-.claudian-mention-item.mcp-server .claudian-mention-icon {
+.specorator-mention-item.mcp-server .specorator-mention-icon {
   color: var(--interactive-accent);
 }
 
-.claudian-mention-item.vault-folder .claudian-mention-icon {
+.specorator-mention-item.vault-folder .specorator-mention-icon {
   color: var(--text-muted);
 }
 
-.claudian-mention-text {
+.specorator-mention-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -121,13 +121,13 @@
   flex: 1;
 }
 
-.claudian-mention-name {
+.specorator-mention-name {
   font-size: 13px;
   font-weight: 500;
   color: var(--interactive-accent);
 }
 
-.claudian-mention-desc {
+.specorator-mention-desc {
   font-size: 11px;
   color: var(--text-muted);
   overflow: hidden;
@@ -136,17 +136,17 @@
 }
 
 /* Context file items in @-mention dropdown */
-.claudian-mention-item.context-file .claudian-mention-icon {
-  color: var(--claudian-brand);
+.specorator-mention-item.context-file .specorator-mention-icon {
+  color: var(--specorator-brand);
 }
 
-.claudian-mention-item.context-file .claudian-mention-text {
+.specorator-mention-item.context-file .specorator-mention-text {
   flex-direction: row;
   overflow: hidden;
   white-space: nowrap;
 }
 
-.claudian-mention-item.context-file .claudian-mention-name-context {
+.specorator-mention-item.context-file .specorator-mention-name-context {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -154,35 +154,35 @@
 }
 
 /* Context folder filter items in @-mention dropdown */
-.claudian-mention-item.context-folder .claudian-mention-icon {
+.specorator-mention-item.context-folder .specorator-mention-icon {
   color: var(--text-muted);
 }
 
-.claudian-mention-name-folder {
+.specorator-mention-name-folder {
   color: var(--text-normal);
   font-weight: 500;
 }
 
-.claudian-mention-name-context {
+.specorator-mention-name-context {
   color: var(--text-normal);
 }
 
 /* Agent folder items in @-mention dropdown */
-.claudian-mention-item.agent-folder .claudian-mention-icon {
+.specorator-mention-item.agent-folder .specorator-mention-icon {
   color: var(--link-color);
 }
 
-.claudian-mention-name-agent-folder {
+.specorator-mention-name-agent-folder {
   color: var(--link-color);
   font-weight: 600;
 }
 
 /* Agent items in @-mention dropdown (inside @Agents/) */
-.claudian-mention-item.agent .claudian-mention-icon {
+.specorator-mention-item.agent .specorator-mention-icon {
   color: var(--link-color);
 }
 
-.claudian-mention-item.agent .claudian-mention-text {
+.specorator-mention-item.agent .specorator-mention-text {
   flex-direction: row;
   align-items: baseline;
   gap: 6px;
@@ -190,13 +190,13 @@
   white-space: nowrap;
 }
 
-.claudian-mention-item.agent .claudian-mention-name-agent {
+.specorator-mention-item.agent .specorator-mention-name-agent {
   color: var(--text-normal);
   font-size: 13px;
   flex-shrink: 0;
 }
 
-.claudian-mention-item.agent .claudian-mention-agent-desc {
+.specorator-mention-item.agent .specorator-mention-agent-desc {
   font-size: 11px;
   color: var(--text-muted);
   overflow: hidden;

@@ -33,7 +33,7 @@ export class QuickActionEditorModal extends Modal {
     this.setTitle(isEdit
       ? t('quickActions.editor.titleEdit')
       : t('quickActions.editor.titleAdd'));
-    this.modalEl.addClass('claudian-sp-modal');
+    this.modalEl.addClass('specorator-sp-modal');
 
     let name = this.existing?.name ?? this.seed?.name ?? '';
     let description = this.existing?.description ?? '';
@@ -68,7 +68,7 @@ export class QuickActionEditorModal extends Modal {
       .addTextArea((area) => {
         area.setValue(prompt).onChange((v) => { prompt = v; });
         area.inputEl.rows = 10;
-        area.inputEl.addClass('claudian-quick-action-prompt-input');
+        area.inputEl.addClass('specorator-quick-action-prompt-input');
       });
 
     new Setting(this.contentEl)

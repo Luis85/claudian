@@ -10,14 +10,14 @@ export class FirstRunBanner {
   render(): void {
     this.host.empty();
     this.rows = [];
-    const card = this.host.createDiv({ cls: 'claudian-first-run-banner' });
-    card.createEl('h3', { text: 'Welcome to Claudian — pick your providers' });
+    const card = this.host.createDiv({ cls: 'specorator-first-run-banner' });
+    card.createEl('h3', { text: 'Welcome to Specorator — pick your providers' });
     card.createEl('p', {
-      text: 'Claudian wraps coding agents inside Obsidian. Enable one or more to start.',
+      text: 'Specorator wraps coding agents inside Obsidian. Enable one or more to start.',
     });
     for (const id of ProviderRegistry.getRegisteredProviderIds()) {
       const name = ProviderRegistry.getProviderDisplayName(id);
-      const row = card.createDiv({ cls: 'claudian-first-run-row' });
+      const row = card.createDiv({ cls: 'specorator-first-run-row' });
       row.dataset.provider = id;
       const cb = row.createEl('input', {
         attr: { type: 'checkbox', 'aria-label': `Enable ${name}` },
@@ -30,7 +30,7 @@ export class FirstRunBanner {
       // eslint-disable-next-line obsidianmd/ui/sentence-case -- trailing fragment of "requires `cli` on path."
       text.createEl('span', { text: ' on path.' });
     }
-    const actions = card.createDiv({ cls: 'claudian-first-run-actions' });
+    const actions = card.createDiv({ cls: 'specorator-first-run-actions' });
     const enableBtn = actions.createEl('button', { text: 'Enable selected' });
     enableBtn.dataset.action = 'enable';
     enableBtn.onclick = () => { void this.handleEnable(); };

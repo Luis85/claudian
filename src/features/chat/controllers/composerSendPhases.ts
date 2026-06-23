@@ -122,7 +122,7 @@ export function beginStreamingTurnState(
   // Hide welcome message when sending first message
   const welcomeEl = ui.getWelcomeEl();
   if (welcomeEl) {
-    welcomeEl.addClass('claudian-hidden');
+    welcomeEl.addClass('specorator-hidden');
   }
 
   send.fileContextManager?.startSession();
@@ -220,10 +220,10 @@ export function bakeResponseDurationFooter(
   finalAssistantMsg.durationFlavorWord = flavorWord;
   // Add footer to live message in DOM
   if (state.currentContentEl) {
-    const footerEl = state.currentContentEl.createDiv({ cls: 'claudian-response-footer' });
+    const footerEl = state.currentContentEl.createDiv({ cls: 'specorator-response-footer' });
     footerEl.createSpan({
       text: `* ${flavorWord} for ${formatDurationMmSs(durationSeconds)}`,
-      cls: 'claudian-baked-duration',
+      cls: 'specorator-baked-duration',
     });
   }
 }

@@ -60,7 +60,7 @@ export function registerDiagnosticsTabFields(): void {
     type: {
       kind: 'button',
       label: 'Copy diagnostic logs',
-      // TODO Phase F: invoke command 'claudian:copy-diagnostic-logs' once SettingsCtx exposes plugin handle
+      // TODO Phase F: invoke command 'specorator:copy-diagnostic-logs' once SettingsCtx exposes plugin handle
       onClick: () => undefined,
     },
     default: null,
@@ -74,7 +74,7 @@ export function registerDiagnosticsTabFields(): void {
     type: {
       kind: 'button',
       label: 'Clear diagnostic logs',
-      // TODO Phase F: invoke command 'claudian:clear-diagnostic-logs' once SettingsCtx exposes plugin handle
+      // TODO Phase F: invoke command 'specorator:clear-diagnostic-logs' once SettingsCtx exposes plugin handle
       onClick: () => undefined,
     },
     default: null,

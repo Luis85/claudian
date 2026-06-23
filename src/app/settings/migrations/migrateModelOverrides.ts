@@ -1,13 +1,13 @@
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import type { ProviderCustomModel } from '../../../core/types/settings';
-import { asSettingsBag, type ClaudianSettings, type ProviderConfigMap } from '../../../core/types/settings';
+import { asSettingsBag, type SpecoratorSettings, type ProviderConfigMap } from '../../../core/types/settings';
 
-// Legacy maps lived as top-level fields on ClaudianSettings. F9 erases them
+// Legacy maps lived as top-level fields on SpecoratorSettings. F9 erases them
 // in favour of per-provider customModels rows tagged with source 'env'.
 // The function is pure and idempotent — after one run the legacy maps are
 // empty so subsequent runs produce identical output.
-export function migrateModelOverrides(settings: ClaudianSettings): ClaudianSettings {
+export function migrateModelOverrides(settings: SpecoratorSettings): SpecoratorSettings {
   const contextLimits = normalizeContextLimits(settings.customContextLimits);
   const aliases = normalizeAliases(settings.customModelAliases);
 
@@ -54,7 +54,7 @@ export function migrateModelOverrides(settings: ClaudianSettings): ClaudianSetti
   };
 }
 
-function ensureLegacyMapsCleared(settings: ClaudianSettings): ClaudianSettings {
+function ensureLegacyMapsCleared(settings: SpecoratorSettings): SpecoratorSettings {
   const contextEmpty = isEmptyRecord(settings.customContextLimits);
   const aliasesEmpty = isEmptyRecord(settings.customModelAliases);
   if (contextEmpty && aliasesEmpty) {
@@ -163,7 +163,7 @@ function containsModelIdCaseInsensitive(
 
 function resolveOwningProvider(
   modelId: string,
-  settings: ClaudianSettings,
+  settings: SpecoratorSettings,
 ): ProviderId | null {
   for (const providerId of ProviderRegistry.getRegisteredProviderIds()) {
     const uiConfig = ProviderRegistry.getChatUIConfig(providerId);

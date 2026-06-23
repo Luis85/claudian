@@ -1,6 +1,6 @@
 import type { ProviderSubagentLifecycleAdapter } from '../../../core/providers/types';
 import type { ChatMessage, ToolCallInfo } from '../../../core/types';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { createSubagentBlock, finalizeSubagentBlock, type SubagentState } from '../rendering/SubagentRenderer';
 import { appendToolCallToMessage, createRunningToolCall } from './toolCallAppend';
 
@@ -15,7 +15,7 @@ import { appendToolCallToMessage, createRunningToolCall } from './toolCallAppend
  * primitives arrive as `deps` callbacks.
  */
 export interface ProviderLifecycleSubagentCoordinatorDeps {
-  plugin: ClaudianPlugin;
+  plugin: SpecoratorPlugin;
   state: { currentContentEl: HTMLElement | null };
   findToolCall: (msg: ChatMessage, id: string) => ToolCallInfo | undefined;
   normalizeToolResultContent: (content: unknown) => string;

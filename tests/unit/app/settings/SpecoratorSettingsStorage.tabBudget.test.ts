@@ -1,4 +1,4 @@
-import { ClaudianSettingsStorage } from '@/app/settings/ClaudianSettingsStorage';
+import { SpecoratorSettingsStorage } from '@/app/settings/SpecoratorSettingsStorage';
 import type { VaultFileAdapter } from '@/core/storage/VaultFileAdapter';
 
 const mockAdapter = {
@@ -8,14 +8,14 @@ const mockAdapter = {
   delete: jest.fn(),
 } as unknown as jest.Mocked<VaultFileAdapter>;
 
-describe('ClaudianSettingsStorage.load tab-budget migration', () => {
-  let storage: ClaudianSettingsStorage;
+describe('SpecoratorSettingsStorage.load tab-budget migration', () => {
+  let storage: SpecoratorSettingsStorage;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockAdapter.exists.mockResolvedValue(true);
     mockAdapter.write.mockResolvedValue(undefined);
-    storage = new ClaudianSettingsStorage(mockAdapter);
+    storage = new SpecoratorSettingsStorage(mockAdapter);
   });
 
   it('upgrades legacy { maxTabs: 7 } to maxChatTabs: 7 on first load', async () => {

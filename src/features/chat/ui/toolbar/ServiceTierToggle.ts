@@ -11,15 +11,15 @@ export class ServiceTierToggle {
 
   constructor(parentEl: HTMLElement, callbacks: ToolbarCallbacks) {
     this.callbacks = callbacks;
-    this.container = parentEl.createDiv({ cls: 'claudian-service-tier-toggle' });
+    this.container = parentEl.createDiv({ cls: 'specorator-service-tier-toggle' });
     this.render();
   }
 
   private render() {
     this.container.empty();
 
-    this.buttonEl = this.container.createDiv({ cls: 'claudian-service-tier-button' });
-    this.iconEl = this.buttonEl.createSpan({ cls: 'claudian-service-tier-icon' });
+    this.buttonEl = this.container.createDiv({ cls: 'specorator-service-tier-button' });
+    this.iconEl = this.buttonEl.createSpan({ cls: 'specorator-service-tier-icon' });
     setIcon(this.iconEl, 'zap');
 
     this.updateDisplay();
@@ -39,11 +39,11 @@ export class ServiceTierToggle {
 
     const toggleConfig = this.getToggleConfig();
     if (!toggleConfig) {
-      this.container.addClass('claudian-hidden');
+      this.container.addClass('specorator-hidden');
       return;
     }
 
-    this.container.removeClass('claudian-hidden');
+    this.container.removeClass('specorator-hidden');
     const current = this.callbacks.getSettings().serviceTier;
     const isActive = current === toggleConfig.activeValue;
     if (isActive) {

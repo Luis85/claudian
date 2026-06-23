@@ -2,7 +2,7 @@ import { Notice, Setting } from 'obsidian';
 
 import { asSettingsBag } from '../../../core/types/settings';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { loadBoardConfig } from '../config/BoardConfigStore';
 import { type BoardConfig, type BoardLaneConfig,DEFAULT_BOARD_CONFIG } from '../config/boardConfigTypes';
 import { TASK_STATUSES } from '../model/taskStateMachine';
@@ -50,11 +50,11 @@ function computeStatusOccurrences(config: BoardConfig): Map<TaskStatus, StatusOc
   return map;
 }
 
-export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: ClaudianPlugin): void {
+export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: SpecoratorPlugin): void {
   const settings = asSettingsBag(plugin.settings);
   let config = cloneConfig(loadBoardConfig(settings).config);
 
-  const wrap = container.createDiv({ cls: 'claudian-lane-editor' });
+  const wrap = container.createDiv({ cls: 'specorator-lane-editor' });
 
   // `data-focus-key` is set on every interactive widget and read back after
   // `rerender()` to restore keyboard focus to the just-clicked checkbox or
@@ -115,7 +115,7 @@ export function renderAgentBoardLaneEditor(container: HTMLElement, plugin: Claud
     index: number,
     occurrences: Map<TaskStatus, StatusOccurrence[]>,
   ): void => {
-    const block = wrap.createDiv({ cls: 'claudian-lane-editor-lane' });
+    const block = wrap.createDiv({ cls: 'specorator-lane-editor-lane' });
     block.dataset.laneId = lane.id;
     renderLaneHeader(block, lane, index, ctx);
     renderCollapsibleRow(block, lane, ctx);
@@ -248,9 +248,9 @@ function renderLaneHeader(
 // `data-focus-key` on. Turning Collapsible OFF clears `collapsed` so the board
 // can't strand a non-collapsible lane in the collapsed strip variant.
 function renderCollapsibleRow(block: HTMLElement, lane: BoardLaneConfig, ctx: LaneEditorCtx): void {
-  const collapsibleRow = block.createDiv({ cls: 'claudian-lane-editor-collapsible' });
+  const collapsibleRow = block.createDiv({ cls: 'specorator-lane-editor-collapsible' });
   const collapsibleLabel = collapsibleRow.createEl('label', {
-    cls: 'claudian-lane-editor-collapsible-label',
+    cls: 'specorator-lane-editor-collapsible-label',
   });
   const collapsibleInput = collapsibleLabel.createEl('input', { type: 'checkbox' });
   collapsibleInput.dataset.focusKey = `lane:${lane.id}:collapsible`;
@@ -276,11 +276,11 @@ function renderLaneStatuses(
   occurrences: Map<TaskStatus, StatusOccurrence[]>,
   ctx: LaneEditorCtx,
 ): void {
-  const statusRow = block.createDiv({ cls: 'claudian-lane-editor-statuses' });
+  const statusRow = block.createDiv({ cls: 'specorator-lane-editor-statuses' });
   const conflicts: Array<{ status: TaskStatus; canonicalTitle: string }> = [];
 
   for (const status of TASK_STATUSES) {
-    const label = statusRow.createEl('label', { cls: 'claudian-lane-editor-status' });
+    const label = statusRow.createEl('label', { cls: 'specorator-lane-editor-status' });
     const checkbox = label.createEl('input', { type: 'checkbox' });
     checkbox.dataset.focusKey = `lane:${lane.id}:status:${status}`;
     const isChecked = lane.statuses.includes(status);
@@ -312,7 +312,7 @@ function renderLaneStatuses(
     if (isChecked && lane.visible) {
       const owners = occurrences.get(status) ?? [];
       if (owners.length > 1 && owners[0].laneIndex !== index) {
-        label.classList.add('claudian-lane-editor-status--duplicate');
+        label.classList.add('specorator-lane-editor-status--duplicate');
         label.setAttribute('title', t('tasks.laneEditor.routedTo', { title: owners[0].laneTitle }));
         conflicts.push({ status, canonicalTitle: owners[0].laneTitle });
       }
@@ -324,7 +324,7 @@ function renderLaneStatuses(
     // board actually routes to. `role="note"` keeps screen readers from
     // confusing it with the status checkboxes. A leading warning icon gives a
     // non-colour cue.
-    const hint = block.createDiv({ cls: 'claudian-lane-editor-status-hint' });
+    const hint = block.createDiv({ cls: 'specorator-lane-editor-status-hint' });
     hint.setAttribute('role', 'note');
     const summary = conflicts
       .map((entry) => t('tasks.laneEditor.routedSummaryItem', { status: entry.status, lane: entry.canonicalTitle }))

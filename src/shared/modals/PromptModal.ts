@@ -30,7 +30,7 @@ class PromptModal extends Modal {
 
   onOpen(): void {
     this.setTitle(this.title);
-    this.modalEl.addClass('claudian-prompt-modal');
+    this.modalEl.addClass('specorator-prompt-modal');
 
     new Setting(this.contentEl).addText((text) => {
       text.setPlaceholder(this.placeholder);

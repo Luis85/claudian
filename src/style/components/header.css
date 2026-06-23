@@ -1,5 +1,5 @@
 /* Header - stacked rows: title on top, agent chip + actions below */
-.claudian-header {
+.specorator-header {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -9,14 +9,14 @@
 }
 
 /* Row 1: logo + title (or logo + tab badges in header mode) */
-.claudian-header-title-row {
+.specorator-header-title-row {
   display: flex;
   align-items: center;
   min-width: 0;
 }
 
 /* Row 2: bound-agent chip (left) + actions slot (Git / cluster, right) */
-.claudian-header-meta-row {
+.specorator-header-meta-row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -24,7 +24,7 @@
 }
 
 /* Title slot: contains logo + title (or tabs in header mode) */
-.claudian-title-slot {
+.specorator-title-slot {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -33,14 +33,14 @@
 }
 
 /* Legacy class for backwards compatibility */
-.claudian-title {
+.specorator-title {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
 }
 
-.claudian-title-text {
+.specorator-title-text {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
@@ -50,14 +50,14 @@
   text-overflow: ellipsis;
 }
 
-.claudian-logo {
+.specorator-logo {
   display: flex;
   align-items: center;
-  color: var(--claudian-brand);
+  color: var(--specorator-brand);
 }
 
 /* Header actions (end side - always stays at end via margin-inline-start: auto) */
-.claudian-header-actions {
+.specorator-header-actions {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -65,16 +65,16 @@
   margin-inline-start: auto;
 }
 
-.claudian-header-actions-slot {
-  /* No margin-inline-start: auto here; it's set by the base .claudian-header-actions */
+.specorator-header-actions-slot {
+  /* No margin-inline-start: auto here; it's set by the base .specorator-header-actions */
 }
 
-.claudian-header .claudian-tab-bar-container {
+.specorator-header .specorator-tab-bar-container {
   display: flex;
   gap: 4px;
 }
 
-.claudian-header-btn {
+.specorator-header-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -83,16 +83,16 @@
   transition: color 0.15s ease;
 }
 
-.claudian-header-btn:hover {
+.specorator-header-btn:hover {
   color: var(--text-normal);
 }
 
-.claudian-header-btn svg {
+.specorator-header-btn svg {
   width: 16px;
   height: 16px;
 }
 
-.claudian-new-tab-btn svg {
+.specorator-new-tab-btn svg {
   width: 16.8px;
   height: 16.8px;
 }
@@ -100,11 +100,11 @@
 /* Bound-agent chip — sits in the second header row when a conversation is
    pinned to a roster agent. Hidden automatically when the slot element is empty
    (the meta row itself collapses via updateHeaderMetaRow). */
-.claudian-bound-agent-chip-slot:empty {
+.specorator-bound-agent-chip-slot:empty {
   display: none;
 }
 
-.claudian-bound-agent-chip {
+.specorator-bound-agent-chip {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -122,12 +122,12 @@
   min-width: 0;
 }
 
-.claudian-bound-agent-chip-avatar {
+.specorator-bound-agent-chip-avatar {
   display: flex;
   flex: 0 0 auto;
 }
 
-.claudian-bound-agent-chip-label {
+.specorator-bound-agent-chip-label {
   min-width: 0;
   font-weight: var(--font-medium);
   white-space: nowrap;

@@ -52,7 +52,7 @@ describe('FirstRunBanner', () => {
     const ctx = makeCtx();
     new FirstRunBanner(host, ctx as any).render();
     const ids = ProviderRegistry.getRegisteredProviderIds();
-    const rows = [...host.querySelectorAll<HTMLElement>('.claudian-first-run-row')];
+    const rows = [...host.querySelectorAll<HTMLElement>('.specorator-first-run-row')];
     expect(rows.map((row) => row.dataset.provider)).toEqual(ids);
   });
 

@@ -1,17 +1,17 @@
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { formatContextLimit, parseContextLimit, parseEnvironmentVariables } from '../../../utils/env';
 
 /**
  * Custom-model override editor (context-window limit + selector alias per
  * model id discovered from the active environment). Extracted from
- * `ClaudianSettings` so the legacy renderer, provider settings tabs, and the
+ * `SpecoratorSettings` so the legacy renderer, provider settings tabs, and the
  * settings-registry environment fields all mount the same implementation.
  */
 export function renderCustomContextLimits(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   container: HTMLElement,
   providerId?: ProviderId,
 ): void {
@@ -22,16 +22,16 @@ export function renderCustomContextLimits(
     return;
   }
 
-  const headerEl = container.createDiv({ cls: 'claudian-context-limits-header' });
+  const headerEl = container.createDiv({ cls: 'specorator-context-limits-header' });
   headerEl.createSpan({
     text: t('settings.customModelOverrides.name'),
-    cls: 'claudian-context-limits-label',
+    cls: 'specorator-context-limits-label',
   });
 
-  const descEl = container.createDiv({ cls: 'claudian-context-limits-desc' });
+  const descEl = container.createDiv({ cls: 'specorator-context-limits-desc' });
   descEl.setText(t('settings.customModelOverrides.desc'));
 
-  const listEl = container.createDiv({ cls: 'claudian-context-limits-list' });
+  const listEl = container.createDiv({ cls: 'specorator-context-limits-list' });
 
   for (const modelId of uniqueModelIds) {
     renderModelOverrideRow(plugin, listEl, modelId);
@@ -39,7 +39,7 @@ export function renderCustomContextLimits(
 }
 
 function collectCustomModelIds(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   providerId?: ProviderId,
 ): Set<string> {
   const uniqueModelIds = new Set<string>();
@@ -60,22 +60,22 @@ function collectCustomModelIds(
 }
 
 function renderModelOverrideRow(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   listEl: HTMLElement,
   modelId: string,
 ): void {
   const currentValue = plugin.settings.customContextLimits?.[modelId];
   const currentAlias = plugin.settings.customModelAliases?.[modelId] ?? '';
 
-  const itemEl = listEl.createDiv({ cls: 'claudian-context-limits-item' });
-  const nameEl = itemEl.createDiv({ cls: 'claudian-context-limits-model' });
+  const itemEl = listEl.createDiv({ cls: 'specorator-context-limits-item' });
+  const nameEl = itemEl.createDiv({ cls: 'specorator-context-limits-model' });
   nameEl.setText(modelId);
 
-  const inputWrapper = itemEl.createDiv({ cls: 'claudian-context-limits-input-wrapper' });
+  const inputWrapper = itemEl.createDiv({ cls: 'specorator-context-limits-input-wrapper' });
   const aliasInputEl = inputWrapper.createEl('input', {
     type: 'text',
     placeholder: t('settings.customModelAliases.placeholder'),
-    cls: 'claudian-context-alias-input',
+    cls: 'specorator-context-alias-input',
     value: currentAlias,
   });
   aliasInputEl.setAttribute('aria-label', `Alias for ${modelId}`);
@@ -84,12 +84,12 @@ function renderModelOverrideRow(
   const inputEl = inputWrapper.createEl('input', {
     type: 'text',
     placeholder: '200k',
-    cls: 'claudian-context-limits-input',
+    cls: 'specorator-context-limits-input',
     value: currentValue ? formatContextLimit(currentValue) : '',
   });
   inputEl.setAttribute('aria-label', `Context window for ${modelId}`);
 
-  const validationEl = inputWrapper.createDiv({ cls: 'claudian-context-limit-validation claudian-hidden' });
+  const validationEl = inputWrapper.createDiv({ cls: 'specorator-context-limit-validation specorator-hidden' });
 
   inputEl.addEventListener('input', () => {
     void saveModelContextLimit(plugin, modelId, inputEl, validationEl);
@@ -110,7 +110,7 @@ function renderModelOverrideRow(
 }
 
 async function saveModelAlias(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   modelId: string,
   aliasInputEl: HTMLInputElement,
 ): Promise<void> {
@@ -138,7 +138,7 @@ async function saveModelAlias(
 }
 
 async function saveModelContextLimit(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   modelId: string,
   inputEl: HTMLInputElement,
   validationEl: HTMLElement,
@@ -151,20 +151,20 @@ async function saveModelContextLimit(
 
   if (!trimmed) {
     delete plugin.settings.customContextLimits[modelId];
-    validationEl.toggleClass('claudian-hidden', true);
-    inputEl.classList.remove('claudian-input-error');
+    validationEl.toggleClass('specorator-hidden', true);
+    inputEl.classList.remove('specorator-input-error');
   } else {
     const parsed = parseContextLimit(trimmed);
     if (parsed === null) {
       validationEl.setText(t('settings.customContextLimits.invalid'));
-      validationEl.toggleClass('claudian-hidden', false);
-      inputEl.classList.add('claudian-input-error');
+      validationEl.toggleClass('specorator-hidden', false);
+      inputEl.classList.add('specorator-input-error');
       return;
     }
 
     plugin.settings.customContextLimits[modelId] = parsed;
-    validationEl.toggleClass('claudian-hidden', true);
-    inputEl.classList.remove('claudian-input-error');
+    validationEl.toggleClass('specorator-hidden', true);
+    inputEl.classList.remove('specorator-input-error');
   }
 
   await plugin.saveSettings();

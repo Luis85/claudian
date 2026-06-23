@@ -48,7 +48,7 @@ describe('OpencodeChatRuntime.formatRuntimeError', () => {
 // The full query → ensureReady path needs a live ACP subprocess, so we pin the
 // invariant at the narrowest threaded seam: prepareLaunchArtifacts must forward
 // the bound agent's grant into getHttpToolServerConfig so the managed
-// mcp.claudian config carries the scoped (per-grant) bearer token.
+// mcp.specorator config carries the scoped (per-grant) bearer token.
 describe('OpencodeChatRuntime.prepareLaunchArtifacts grant threading', () => {
   type PrepareLaunchArtifacts = (
     settings: unknown,
@@ -62,7 +62,7 @@ describe('OpencodeChatRuntime.prepareLaunchArtifacts grant threading', () => {
   });
 
   it('forwards the bound agent grant to getHttpToolServerConfig', async () => {
-    const grant = ['mcp__claudian__search_tasks'];
+    const grant = ['mcp__specorator__search_tasks'];
     const getHttpToolServerConfig = jest.fn().mockReturnValue({ url: 'http://127.0.0.1:1/mcp', headers: {} });
     const r = makeRuntime();
     r.plugin = { getHttpToolServerConfig };

@@ -1,194 +1,76 @@
-# Claudian
+# Specorator
 
-![GitHub stars](https://img.shields.io/github/stars/Luis85/claudian?style=social)
-![GitHub release](https://img.shields.io/github/v/release/Luis85/claudian)
-![License](https://img.shields.io/github/license/Luis85/claudian)
+> Plan the work, run it, review what came back, keep the record. All in your vault.
+
+![GitHub stars](https://img.shields.io/github/stars/Luis85/specorator?style=social)
+![GitHub release](https://img.shields.io/github/v/release/Luis85/specorator)
+![License](https://img.shields.io/github/license/Luis85/specorator)
 
 ![Preview](Preview.png)
 
-An Obsidian plugin that embeds AI coding agents (Claude Code, Codex, Opencode, Cursor Agent and more to come) in your vault. Your vault becomes the agent's working directory — file read/write, search, bash, and multi-step workflows all work out of the box.
+You're already using AI for serious work. Drafting emails. Planning trips. Comparing options. Reading the long report you don't want to read yourself. The conversations help, but the moment you close the tab, the work is gone. Tomorrow you start again from scratch.
 
-## Features & Usage
+**Specorator** brings that work inside your Obsidian vault. The drafts, plans, summaries, and edits land in notes you keep. Conversations are saved too, so you can pick one up tomorrow instead of starting fresh. It runs real provider-native agents — Claude Code, Codex, Opencode, Cursor Agent — with your vault as their working directory: file read/write, search, bash, and multi-step workflows all work out of the box.
 
-Open the chat sidebar from the ribbon icon or command palette. Select text and use the hotkey for inline edit. Everything works like your familiar coding agent — Claude Code, Codex, Opencode, or Cursor Agent — talk to the agent, and it reads, writes, edits, and searches files in your vault.
+## What it solves
 
-**Inline Edit** — Select text or start at the cursor position + hotkey to edit directly in notes with word-level diff preview.
+- Typing the same prompts every day. Save any prompt as a vault note and fire it from a one-tap picker.
+- Being locked into one tool's UI for one provider. Use whichever providers you have access to, in one workspace.
+- AI work scattering across thirty open tabs. A board tracks every handoff from inbox to done.
+- The agent quietly changing your notes. Preview every edit before it lands, or flip on YOLO mode when you trust the run.
 
-**Slash Commands & Skills** — Type `/` or `$` for reusable prompt templates or Skills from user- and vault-level scopes.
+## What's inside
 
-**`@mention`** - Type `@` to mention anything you want the agent to work with, vault files, subagents, MCP servers, or files in external directories.
+| Feature | What it is |
+| --- | --- |
+| [Co-Worker — Chat](docs/product/features/Co-Worker%20-%20Chat.md) | A workspace beside your notes that already knows what you're looking at and what you've highlighted. |
+| [Multi Provider Support](docs/product/features/Multi%20Provider%20Support.md) | Different engines for different jobs. Pick the one that fits the moment. |
+| [Quick Actions](docs/product/features/Quick%20Actions.md) | Your most-used prompts, one tap away. Stored as vault notes you own. |
+| [Agent Kanban Board](docs/product/features/Agent%20Kanban%20Board.md) | A board for things you have handed off. Inbox to done, never lost in chat history. |
 
-**Plan Mode** — Toggle via `Shift+Tab`. The agent explores and designs before implementing, then presents a plan for approval.
+Start in chat for fast foreground work, then move durable handoffs to the board when they need priority, acceptance criteria, background-style running, or review.
 
-**Instruction Mode (`#`)** — Refined custom instructions added from the chat input.
+Everyday surfaces:
 
-**MCP Servers** — Connect external tools via Model Context Protocol (stdio, SSE, HTTP). Claude manages vault MCP in-app; Opencode uses Opencode-managed MCP; Codex and Cursor use their own CLI-managed MCP configuration.
+- **Inline Edit** — Select text or start at the cursor + hotkey to edit directly in notes with word-level diff preview.
+- **Slash Commands & Skills** — Type `/` or `$` for reusable prompt templates or Skills from user- and vault-level scopes.
+- **`@mention`** — Type `@` to mention vault files, subagents, MCP servers, or files in external directories.
+- **Plan Mode** — Toggle via `Shift+Tab`. The agent explores and designs before implementing, then presents a plan for approval.
+- **Instruction Mode (`#`)** — Refined custom instructions added from the chat input.
+- **MCP Servers** — Connect external tools via Model Context Protocol (stdio, SSE, HTTP).
+- **Multi-Tab & Conversations** — Multiple chat tabs, conversation history, fork, resume, and compact.
 
-**Multi-Tab & Conversations** — Multiple chat tabs, conversation history, fork, resume, and compact.
+## What this is not
+
+- Not a code-only tool. The plugin is for anyone who works in notes — writers, planners, researchers, students, small-business owners, anyone keeping track of thinking in their vault.
+- Not a hosted service. Your notes live on your computer. No account is required.
+- Not a single-provider lock-in. Use whichever providers you have access to. If you only have one, that is fine.
+- Not magic. You decide the level of oversight. Preview every change before you accept it, or flip on YOLO mode and let the agent run on its own.
+- If you leave Specorator, your notes are still ordinary Markdown.
 
 ## Requirements
 
-- **Claude provider**: [Claude Code CLI](https://code.claude.com/docs/en/overview) installed (native install recommended). Claude subscription/API or compatible provider ([Openrouter](https://openrouter.ai/docs/guides/guides/claude-code-integration), [Kimi](https://platform.moonshot.ai/docs/guide/agent-support), etc.).
+- **Claude provider**: [Claude Code CLI](https://code.claude.com/docs/en/overview) installed (native install recommended). Claude subscription/API or a compatible provider.
 - **Optional providers**: [Codex CLI](https://github.com/openai/codex), [Opencode](https://opencode.ai/), [Cursor Agent CLI](https://docs.cursor.com/en/cli/overview).
-- Obsidian v1.7.2+
+- Obsidian v1.11.5+
 - Desktop only (macOS, Linux, Windows)
 
-## Installation
+## Install
 
-### From Obsidian Community Plugins (recommended)
+Install via the [Beta Reviewers Auto-update Tool (BRAT)](https://github.com/TfTHacker/obsidian42-brat):
 
-1. Open Obsidian → Settings → Community plugins → Browse
-2. Search for "Claudian" and click Install
-3. Enable the plugin
+1. Install BRAT from the Obsidian community-plugin directory.
+2. In BRAT, **Add Beta Plugin** → `Luis85/specorator`.
+3. Enable Specorator in Obsidian → Settings → Community plugins.
 
-Or install directly from the [community plugin page](https://community.obsidian.md/plugins/realclaudian).
+Submission to the official Obsidian community-plugin registry is planned once v1.0.x stabilises.
 
-### From GitHub Release
+Already installed? Open **Settings → Specorator** to point it at the providers you have, then open the chat sidebar from the ribbon or the command palette.
 
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/Luis85/claudian/releases/latest)
-2. Create a folder called `claudian` in your vault's plugins folder:
-   ```
-   /path/to/vault/.obsidian/plugins/claudian/
-   ```
-3. Copy the downloaded files into the `claudian` folder
-4. Enable the plugin in Obsidian:
-   - Settings → Community plugins → Enable "Claudian"
+## Where it's heading
 
-### From source (development)
+**Specorator v1.0.0** is today's feature set — Chat, Multi-Provider, Quick Actions, Agent Board — shipped as a standalone plugin. The post-1.0 roadmap layers an agent harness on top: terminal-free setup, one-click revert, a vault-aware assistant, and tap-to-configure workflows. The plan is the [Specorator Agent Harness PRD](docs/product/Specorator%20Agent%20Harness%20PRD.md).
 
-1. Clone this repository into your vault's plugins folder:
-   ```bash
-   cd /path/to/vault/.obsidian/plugins
-   git clone https://github.com/Luis85/claudian.git
-   cd claudian
-   ```
+## Origins
 
-2. Install dependencies and build:
-   ```bash
-   npm install
-   npm run build
-   ```
-
-3. Enable the plugin in Obsidian:
-   - Settings → Community plugins → Enable "Claudian"
-
-### Development
-
-```bash
-# Watch mode
-npm run dev
-
-# Production build
-npm run build
-
-# Build and copy into vault/.obsidian/plugins/<manifest id> for manual testing
-npm run test-build
-```
-
-## Privacy & Data Use
-
-- **Sent to API**: Your input, attached files, images, and tool call outputs. Default: Anthropic (Claude) or OpenAI (Codex); configurable via provider settings and environment variables.
-- **Local storage**: Claudian settings and session metadata in `vault/.claudian/`; Claude provider files in `vault/.claude/`; transcripts in `~/.claude/projects/` (Claude) and `~/.codex/sessions/` (Codex).
-- **Environment variables**: Provider subprocesses inherit the Obsidian process environment plus any variables you configure in Claudian. This is needed for CLI authentication, proxies, certificates, and PATH resolution.
-- **Secrets (API keys / tokens)**: Provider API keys and tokens are stored in Obsidian's keychain-backed **SecretStorage** (OS keychain, outside the vault), not in plaintext settings. The vault's `.claudian/claudian-settings.json` holds only a reference (the secret's name), never the value. Secret-shaped variables already typed into the environment fields are migrated into SecretStorage automatically. Requires Obsidian **1.11.5+** (where SecretStorage is encrypted at rest). Note the honest threat model: this keeps secrets out of synced/committed vault files and out of other OS users' reach (with a real keyring), but it does **not** isolate them from other Obsidian plugins or from processes running as you. Secrets are **device-local** — opening a synced vault on a new machine prompts you to re-enter them.
-- **Device-specific paths**: Per-device CLI paths use an opaque local key stored in browser local storage, not your system hostname.
-- **Background activity**: Claudian does not run telemetry beacons. UI polling timers read local Obsidian/editor selection state only. Network activity is limited to explicit provider runtime work, configured MCP endpoints, and provider SDK/CLI calls needed to answer your requests.
-
-## Troubleshooting
-
-### Claude CLI not found
-
-If you encounter `spawn claude ENOENT` or `Claude CLI not found`, the plugin can't auto-detect your Claude installation. Common with Node version managers (nvm, fnm, volta).
-
-**Solution**: Leave the setting empty first so Claudian can auto-detect Claude Code. If auto-detection fails, find your CLI path and set it in Settings → Advanced → Claude CLI path.
-
-| Platform | Command | Example Path |
-|----------|---------|--------------|
-| macOS/Linux | `which claude` | `/Users/you/.volta/bin/claude` |
-| Windows (native) | `where.exe claude` | `C:\Users\you\AppData\Local\Claude\claude.exe` |
-| Windows (npm) | `npm root -g` | `{root}\@anthropic-ai\claude-code\cli-wrapper.cjs` |
-
-> **Note**: On Windows, avoid `.cmd` and `.ps1` wrappers. Use `claude.exe` for native installs, or `cli-wrapper.cjs` for package-manager installs. `cli.js` is only a legacy fallback for older Claude Code npm packages.
-
-**Alternative**: Add your Node.js bin directory to PATH in Settings → Environment → Custom variables.
-
-### npm CLI and Node.js not in same directory
-
-If using npm-installed CLI, check if `claude` and `node` are in the same directory:
-```bash
-dirname $(which claude)
-dirname $(which node)
-```
-
-If different, GUI apps like Obsidian may not find Node.js.
-
-**Solutions**:
-1. Install native binary (recommended)
-2. Add Node.js path to Settings → Environment: `PATH=/path/to/node/bin`
-
-### Other providers
-
-Codex, Opencode, and Cursor support are live but features might be incomplete, and still need more testing across platforms and installation methods. If you have feature request or run into any bugs, please [submit a GitHub issue](https://github.com/Luis85/claudian/issues).
-
-## Architecture
-
-```
-src/
-├── main.ts                      # Plugin entry point
-├── app/                         # Shared defaults and plugin-level storage
-├── core/                        # Provider-neutral runtime, registry, and type contracts
-│   ├── runtime/                 # ChatRuntime interface and approval types
-│   ├── providers/               # Provider registry and workspace services
-│   ├── auxiliary/               # Shared provider auxiliary services
-│   ├── bootstrap/               # Plugin bootstrap wiring
-│   ├── security/                # Approval utilities
-│   └── ...                      # commands, mcp, prompt, storage, tools, types
-├── providers/
-│   ├── claude/                  # Claude SDK adaptor, prompt encoding, storage, MCP, plugins
-│   ├── codex/                   # Codex app-server adaptor, JSON-RPC transport, JSONL history
-│   ├── opencode/                # Opencode adaptor over ACP
-│   ├── cursor/                  # Cursor Agent adaptor over the cursor-agent stream-json CLI (not ACP), JSONL history hydration
-│   └── acp/                     # Agent Client Protocol shared transport
-├── features/
-│   ├── chat/                    # Sidebar chat: tabs, controllers, renderers
-│   ├── inline-edit/             # Inline edit modal and provider-backed edit services
-│   ├── tasks/                   # Agent Board work orders and run coordination
-│   ├── quickActions/            # Vault-defined quick actions
-│   └── settings/                # Settings shell with provider tabs
-├── shared/                      # Reusable UI components and modals
-├── i18n/                        # Internationalization (10 locales)
-├── types/                       # Shared ambient types
-├── utils/                       # Cross-cutting utilities
-└── style/                       # Modular CSS
-```
-
-## Roadmap
-
-- [x] 1M Opus and Sonnet models
-- [x] Codex provider integration
-- [x] Opencode support
-- [x] Cursor Agent support
-- [ ] More to come!
-
-## License
-
-Licensed under the [MIT License](LICENSE).
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=Luis85%2Fclaudian&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=Luis85/claudian&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=Luis85/claudian&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=Luis85/claudian&type=date&legend=top-left" />
- </picture>
-</a>
-
-## Acknowledgments
-
-- [Obsidian](https://obsidian.md) for the plugin API
-- [Anthropic](https://anthropic.com) for Claude and the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview)
-- [OpenAI](https://openai.com) for [Codex](https://github.com/openai/codex)
-- [Opencode](https://opencode.ai/)
-- [Cursor](https://cursor.com/) for the [Cursor Agent CLI](https://docs.cursor.com/en/cli/overview)
-
+Specorator combines two project lines: an evolved provider-native agent plugin that began as a fork of the original Claudian Obsidian plugin by Yishen Tu, and earlier Specorator work around spec-driven Obsidian workflows. See [CREDITS.md](CREDITS.md) for the full provenance and acknowledgements.

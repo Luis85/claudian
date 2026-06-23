@@ -1,6 +1,6 @@
 import type { ChatMessage } from '@/core/types';
 import { t } from '@/i18n/i18n';
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 
 export type FeedbackDirection = 'up' | 'down';
 
@@ -13,7 +13,7 @@ export type FeedbackDirection = 'up' | 'down';
  * dispatch. No persistence on the rated message.
  */
 export function sendFeedbackPrompt(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   _message: ChatMessage,
   conversationId: string | null,
   direction: FeedbackDirection,

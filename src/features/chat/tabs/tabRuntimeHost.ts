@@ -2,7 +2,7 @@ import type { RuntimeHost } from '../../../core/runtime/RuntimeHost';
 import type { AutoTurnResult } from '../../../core/runtime/types';
 import { TOOL_AGENT_OUTPUT } from '../../../core/tools/toolNames';
 import type { ChatMessage, StreamChunk } from '../../../core/types';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import {
   generateMessageId,
   getTabPermissionMode,
@@ -17,7 +17,7 @@ import type { TabData } from './types';
  * lazy-init or restart cycles never require host re-wiring. Members no-op (or
  * return the neutral answer) while their backing UI is not yet mounted.
  */
-export function createTabRuntimeHost(tab: TabData, plugin: ClaudianPlugin): RuntimeHost {
+export function createTabRuntimeHost(tab: TabData, plugin: SpecoratorPlugin): RuntimeHost {
   return {
     approval: async (toolName, input, description, options) =>
       await tab.controllers.inputController?.handleApprovalRequest(toolName, input, description, options)
@@ -136,7 +136,7 @@ async function renderAutoTriggeredTurn(tab: TabData, result: AutoTurnResult): Pr
   if (hasVisibleContent) {
     tab.state.addMessage(assistantMsg);
     const msgEl = tab.renderer?.addMessage?.(assistantMsg);
-    const contentEl = msgEl?.querySelector<HTMLElement>('.claudian-message-content');
+    const contentEl = msgEl?.querySelector<HTMLElement>('.specorator-message-content');
     if (contentEl) {
       if (!previousContentEl) {
         tab.state.toolCallElements.clear();

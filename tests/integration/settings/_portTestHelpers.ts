@@ -1,7 +1,7 @@
 /**
  * Shared test plumbing for the per-tab registry port integration tests.
  *
- * Each port test verifies that `ClaudianSettings.display()` mounts the
+ * Each port test verifies that `SpecoratorSettings.display()` mounts the
  * registry-driven section/field DOM for one tab. The mocks and stubs needed to
  * do that are nearly identical across all tabs, so they live here. Per-test
  * differences (which tab, whether it is provider-gated, the tab-content index)
@@ -13,7 +13,7 @@
  * resolve through the per-test mocks.
  */
 import { ProviderRegistry } from '../../../src/core/providers/ProviderRegistry';
-import { ClaudianSettingTab } from '../../../src/features/settings/ClaudianSettings';
+import { SpecoratorSettingTab } from '../../../src/features/settings/SpecoratorSettings';
 import {
   getSettingsRegistry,
   registerAllSettings,
@@ -37,7 +37,7 @@ export interface PortTestOptions {
    */
   registeredProviderIds?: string[];
   /**
-   * The index of `.claudian-settings-tab-content` that this tab's content
+   * The index of `.specorator-settings-tab-content` that this tab's content
    * should land at. Mirrors the shell's `tabIds` ordering:
    *   0: general
    *   1: agentBoard
@@ -85,7 +85,7 @@ export function createStubPlugin(opts: PortTestOptions): StubPlugin {
       providerConfigs,
       // General-shape defaults read synchronously by shared widgets (env
       // snippet manager, nav-mapping textarea, content fields). Mirrors
-      // DEFAULT_CLAUDIAN_SETTINGS so render-time reads never explode.
+      // DEFAULT_SPECORATOR_SETTINGS so render-time reads never explode.
       userName: '',
       systemPrompt: '',
       excludedTags: [],
@@ -165,7 +165,7 @@ export interface MountedShell {
 }
 
 /**
- * Mounts `ClaudianSettings.display()` and returns the relevant tab content
+ * Mounts `SpecoratorSettings.display()` and returns the relevant tab content
  * host. Also asserts the host exists so each caller doesn't need to repeat the
  * `expect(tabContent).toBeDefined()` boilerplate.
  */
@@ -173,7 +173,7 @@ export function mountSettingsShell(opts: PortTestOptions): MountedShell {
   configureProviderRegistryMock(opts);
 
   const plugin = createStubPlugin(opts);
-  const tab = new ClaudianSettingTab({} as never, plugin as never);
+  const tab = new SpecoratorSettingTab({} as never, plugin as never);
   (tab as unknown as { containerEl: HTMLElement }).containerEl =
     document.createElement('div');
   // The general tab's legacy private renderer is not the subject of these
@@ -187,7 +187,7 @@ export function mountSettingsShell(opts: PortTestOptions): MountedShell {
   const containerEl = (tab as unknown as { containerEl: HTMLElement })
     .containerEl;
   const tabContents = containerEl.querySelectorAll(
-    '.claudian-settings-tab-content',
+    '.specorator-settings-tab-content',
   );
   const tabContent = tabContents[opts.tabContentIndex] as
     | HTMLElement

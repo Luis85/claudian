@@ -34,7 +34,7 @@ function makeTask(id: string, status: TaskStatus): TaskSpec {
   return {
     path: `tasks/${id}.md`,
     frontmatter: {
-      type: 'claudian-work-order',
+      type: 'specorator-work-order',
       schema_version: 1,
       id,
       title: `Work order ${id}`,
@@ -173,7 +173,7 @@ describe('AgentBoard rendering scaling', () => {
 
       const ms = timeMs(() => renderer.render(container, state, callbacks));
 
-      const cards = container.querySelectorAll('.claudian-agent-board-card').length;
+      const cards = container.querySelectorAll('.specorator-agent-board-card').length;
       const nodes = countNodes(container);
       const listeners = countListeners(container);
       return {

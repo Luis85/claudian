@@ -58,7 +58,7 @@ describe('ConversationHistoryView', () => {
 
     expect(dropdown.children.length).toBe(2); // header + list
     const list = dropdown.children[1];
-    expect(list.hasClass('claudian-history-list')).toBe(true);
+    expect(list.hasClass('specorator-history-list')).toBe(true);
     expect(list.children.length).toBe(2);
   });
 
@@ -68,7 +68,7 @@ describe('ConversationHistoryView', () => {
     view.updateHistoryDropdown();
 
     const list = dropdown.children[1];
-    expect(list.children[0].hasClass('claudian-history-empty')).toBe(true);
+    expect(list.children[0].hasClass('specorator-history-empty')).toBe(true);
   });
 
   it('invokes onSelectConversation when a non-current row is clicked', async () => {
@@ -79,7 +79,7 @@ describe('ConversationHistoryView', () => {
 
     view.updateHistoryDropdown();
 
-    const content = dropdown.children[1].children[0].querySelector('.claudian-history-item-content');
+    const content = dropdown.children[1].children[0].querySelector('.specorator-history-item-content');
     const click = content!._eventListeners?.get('click');
     await click![0]({ stopPropagation: jest.fn(), preventDefault: jest.fn() });
     await flush();
@@ -96,7 +96,7 @@ describe('ConversationHistoryView', () => {
 
     view.updateHistoryDropdown();
 
-    const deleteBtn = dropdown.children[1].children[0].querySelector('.claudian-delete-btn');
+    const deleteBtn = dropdown.children[1].children[0].querySelector('.specorator-delete-btn');
     const click = deleteBtn!._eventListeners?.get('click');
     await click![0]({ stopPropagation: jest.fn() });
     await flush();
@@ -115,7 +115,7 @@ describe('ConversationHistoryView', () => {
 
     view.updateHistoryDropdown();
 
-    const deleteBtn = dropdown.children[1].children[1].querySelector('.claudian-delete-btn');
+    const deleteBtn = dropdown.children[1].children[1].querySelector('.specorator-delete-btn');
     const click = deleteBtn!._eventListeners?.get('click');
     await click![0]({ stopPropagation: jest.fn() });
     await flush();
@@ -134,7 +134,7 @@ describe('ConversationHistoryView', () => {
 
     view.renderHistoryDropdown(container as never, { onSelectConversation });
 
-    const content = container.children[1].children[0].querySelector('.claudian-history-item-content');
+    const content = container.children[1].children[0].querySelector('.specorator-history-item-content');
     const click = content!._eventListeners?.get('click');
     await click![0]({ stopPropagation: jest.fn(), preventDefault: jest.fn() });
     await flush();

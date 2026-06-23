@@ -6,22 +6,22 @@ describe('renderWorkOrderNeedsApprovalCard', () => {
   it('renders action, risk, and a "Reversible" chip when true', () => {
     const parent = createMockEl('div');
     renderWorkOrderNeedsApprovalCard(parent as unknown as HTMLElement, { action: 'rm -rf node_modules', risk: 'rebuild required', reversible: true });
-    const card = parent.querySelector('.claudian-work-order-needs-approval-card');
+    const card = parent.querySelector('.specorator-work-order-needs-approval-card');
     expect(card).not.toBeNull();
-    expect(card?.querySelector('.claudian-work-order-needs-approval-card-action')?.textContent).toBe('rm -rf node_modules');
-    const riskEl = card?.querySelector('.claudian-work-order-needs-approval-card-risk');
-    expect(riskEl?.querySelector('.claudian-work-order-needs-approval-card-label')?.textContent).toBe('Risk: ');
-    const chip = card?.querySelector('.claudian-work-order-needs-approval-card-reversible-chip');
+    expect(card?.querySelector('.specorator-work-order-needs-approval-card-action')?.textContent).toBe('rm -rf node_modules');
+    const riskEl = card?.querySelector('.specorator-work-order-needs-approval-card-risk');
+    expect(riskEl?.querySelector('.specorator-work-order-needs-approval-card-label')?.textContent).toBe('Risk: ');
+    const chip = card?.querySelector('.specorator-work-order-needs-approval-card-reversible-chip');
     expect(chip?.textContent).toBe('Reversible');
     expect(chip?.classList.contains('is-irreversible')).toBe(false);
-    expect(card?.querySelector('.claudian-work-order-needs-approval-card-title')?.textContent).toBe('Approval required');
+    expect(card?.querySelector('.specorator-work-order-needs-approval-card-title')?.textContent).toBe('Approval required');
     expect(riskEl?.textContent).toContain('rebuild required');
   });
 
   it('renders an "Irreversible" chip when reversible is false', () => {
     const parent = createMockEl('div');
     renderWorkOrderNeedsApprovalCard(parent as unknown as HTMLElement, { action: 'drop database', reversible: false });
-    const chip = parent.querySelector('.claudian-work-order-needs-approval-card-reversible-chip');
+    const chip = parent.querySelector('.specorator-work-order-needs-approval-card-reversible-chip');
     expect(chip?.textContent).toBe('Irreversible');
     expect(chip?.classList.contains('is-irreversible')).toBe(true);
   });
@@ -29,8 +29,8 @@ describe('renderWorkOrderNeedsApprovalCard', () => {
   it('omits the chip and risk when not provided', () => {
     const parent = createMockEl('div');
     renderWorkOrderNeedsApprovalCard(parent as unknown as HTMLElement, { action: 'deploy' });
-    expect(parent.querySelector('.claudian-work-order-needs-approval-card-reversible-chip')).toBeNull();
-    expect(parent.querySelector('.claudian-work-order-needs-approval-card-risk')).toBeNull();
+    expect(parent.querySelector('.specorator-work-order-needs-approval-card-reversible-chip')).toBeNull();
+    expect(parent.querySelector('.specorator-work-order-needs-approval-card-risk')).toBeNull();
   });
 
   it('renders risk row when reversible is false', () => {
@@ -40,8 +40,8 @@ describe('renderWorkOrderNeedsApprovalCard', () => {
       risk: 'data loss',
       reversible: false,
     });
-    const riskEl = parent.querySelector('.claudian-work-order-needs-approval-card-risk');
+    const riskEl = parent.querySelector('.specorator-work-order-needs-approval-card-risk');
     expect(riskEl).not.toBeNull();
-    expect(riskEl?.querySelector('.claudian-work-order-needs-approval-card-label')?.textContent).toBe('Risk: ');
+    expect(riskEl?.querySelector('.specorator-work-order-needs-approval-card-label')?.textContent).toBe('Risk: ');
   });
 });

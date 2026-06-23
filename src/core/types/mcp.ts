@@ -45,7 +45,7 @@ export interface ManagedMcpServer {
   /**
    * SEC-A Phase 3: secret auth-header values held in Obsidian SecretStorage.
    * Maps header name → secret id. The value never persists in `.claude/mcp.json`
-   * (only the id, in `_claudian` metadata); it is resolved in-plugin at launch.
+   * (only the id, in `_specorator` metadata); it is resolved in-plugin at launch.
    */
   secretHeaders?: Record<string, string>;
   /** SEC-A Phase 3: secret stdio env values in SecretStorage. Maps env var name → secret id. */
@@ -59,7 +59,7 @@ export interface McpConfigFile {
 
 /** Extended config file with app-owned server metadata. */
 export interface ManagedMcpConfigFile extends McpConfigFile {
-  _claudian?: {
+  _specorator?: {
     /** Per-server UI/runtime settings. */
     servers: Record<
       string,

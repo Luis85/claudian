@@ -1,4 +1,4 @@
-import type { ClaudianSettings } from '@/core/types/settings';
+import type { SpecoratorSettings } from '@/core/types/settings';
 import type { SettingsField } from '@/features/settings/registry/SettingsField';
 import { searchFields } from '@/features/settings/search/searchUtils';
 
@@ -14,8 +14,8 @@ function makeField(overrides: Partial<SettingsField> = {}): SettingsField {
   };
 }
 
-function makeSettings(): ClaudianSettings {
-  return { providerConfigs: {} } as unknown as ClaudianSettings;
+function makeSettings(): SpecoratorSettings {
+  return { providerConfigs: {} } as unknown as SpecoratorSettings;
 }
 
 describe('searchFields', () => {

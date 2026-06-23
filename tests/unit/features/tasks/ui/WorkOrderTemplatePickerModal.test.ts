@@ -208,9 +208,9 @@ describe('WorkOrderTemplatePickerModal — rendering (empty)', () => {
     modal.onOpen();
     await flushAsync();
 
-    expect(find(contentEl, 'claudian-wo-templates-intro')).toBeDefined();
-    expect(find(contentEl, 'claudian-wo-templates-list')).toBeDefined();
-    expect(find(contentEl, 'claudian-wo-templates-footer')).toBeDefined();
+    expect(find(contentEl, 'specorator-wo-templates-intro')).toBeDefined();
+    expect(find(contentEl, 'specorator-wo-templates-list')).toBeDefined();
+    expect(find(contentEl, 'specorator-wo-templates-footer')).toBeDefined();
   });
 
   it('renders a "blank" template row even when no templates exist', async () => {
@@ -219,8 +219,8 @@ describe('WorkOrderTemplatePickerModal — rendering (empty)', () => {
     modal.onOpen();
     await flushAsync();
 
-    const listEl = find(contentEl, 'claudian-wo-templates-list')!;
-    const blankRow = find(listEl, 'claudian-wo-templates-row--blank');
+    const listEl = find(contentEl, 'specorator-wo-templates-list')!;
+    const blankRow = find(listEl, 'specorator-wo-templates-row--blank');
     expect(blankRow).toBeDefined();
   });
 
@@ -230,7 +230,7 @@ describe('WorkOrderTemplatePickerModal — rendering (empty)', () => {
     modal.onOpen();
     await flushAsync();
 
-    const footerEl = find(contentEl, 'claudian-wo-templates-footer')!;
+    const footerEl = find(contentEl, 'specorator-wo-templates-footer')!;
     const buttons = findAll(footerEl, (el) => el.tag === 'button');
     expect(buttons.length).toBeGreaterThanOrEqual(1);
   });
@@ -266,8 +266,8 @@ describe('WorkOrderTemplatePickerModal — rendering (with templates)', () => {
     modal.onOpen();
     await flushAsync();
 
-    const listEl = find(contentEl, 'claudian-wo-templates-list')!;
-    const rows = findAll(listEl, (el) => el.classes.has('claudian-wo-templates-row'));
+    const listEl = find(contentEl, 'specorator-wo-templates-list')!;
+    const rows = findAll(listEl, (el) => el.classes.has('specorator-wo-templates-row'));
     // 1 blank + 2 template rows
     expect(rows.length).toBe(3);
   });
@@ -279,7 +279,7 @@ describe('WorkOrderTemplatePickerModal — rendering (with templates)', () => {
     modal.onOpen();
     await flushAsync();
 
-    const listEl = find(contentEl, 'claudian-wo-templates-list')!;
+    const listEl = find(contentEl, 'specorator-wo-templates-list')!;
     const strongs = findAll(listEl, (el) => el.tag === 'strong');
     const texts = strongs.map((el) => el.text);
     expect(texts).toContain('Bug Fix');
@@ -292,8 +292,8 @@ describe('WorkOrderTemplatePickerModal — rendering (with templates)', () => {
     modal.onOpen();
     await flushAsync();
 
-    const listEl = find(contentEl, 'claudian-wo-templates-list')!;
-    const descs = findAll(listEl, (el) => el.classes.has('claudian-wo-templates-desc'));
+    const listEl = find(contentEl, 'specorator-wo-templates-list')!;
+    const descs = findAll(listEl, (el) => el.classes.has('specorator-wo-templates-desc'));
     expect(descs.length).toBeGreaterThanOrEqual(1);
   });
 
@@ -304,7 +304,7 @@ describe('WorkOrderTemplatePickerModal — rendering (with templates)', () => {
     modal.onOpen();
     await flushAsync();
 
-    const actionsEl = find(contentEl, 'claudian-wo-templates-actions')!;
+    const actionsEl = find(contentEl, 'specorator-wo-templates-actions')!;
     expect(actionsEl).toBeDefined();
     const buttons = findAll(actionsEl, (el) => el.tag === 'button');
     expect(buttons.length).toBeGreaterThanOrEqual(2);
@@ -323,9 +323,9 @@ describe('WorkOrderTemplatePickerModal — choosing', () => {
     modal.onOpen();
     await flushAsync();
 
-    const listEl = find(contentEl, 'claudian-wo-templates-list')!;
-    const blankRow = find(listEl, 'claudian-wo-templates-row--blank')!;
-    const blankMain = find(blankRow, 'claudian-wo-templates-main')!;
+    const listEl = find(contentEl, 'specorator-wo-templates-list')!;
+    const blankRow = find(listEl, 'specorator-wo-templates-row--blank')!;
+    const blankMain = find(blankRow, 'specorator-wo-templates-main')!;
     blankMain.emit('click');
 
     expect(resolveResults).toHaveLength(1);
@@ -352,12 +352,12 @@ describe('WorkOrderTemplatePickerModal — choosing', () => {
     modal.onOpen();
     await flushAsync();
 
-    const listEl = find(contentEl, 'claudian-wo-templates-list')!;
+    const listEl = find(contentEl, 'specorator-wo-templates-list')!;
     // Find a non-blank row
     const templateRow = findAll(listEl, (el) =>
-      el.classes.has('claudian-wo-templates-row') && !el.classes.has('claudian-wo-templates-row--blank'),
+      el.classes.has('specorator-wo-templates-row') && !el.classes.has('specorator-wo-templates-row--blank'),
     )[0]!;
-    const templateMain = find(templateRow, 'claudian-wo-templates-main')!;
+    const templateMain = find(templateRow, 'specorator-wo-templates-main')!;
     templateMain.emit('click');
 
     expect(resolveResults).toHaveLength(1);
@@ -376,8 +376,8 @@ describe('WorkOrderTemplatePickerModal — choosing', () => {
     modal.onOpen();
     await flushAsync();
 
-    const listEl = find(contentEl, 'claudian-wo-templates-list')!;
-    const blankMain = find(find(listEl, 'claudian-wo-templates-row--blank')!, 'claudian-wo-templates-main')!;
+    const listEl = find(contentEl, 'specorator-wo-templates-list')!;
+    const blankMain = find(find(listEl, 'specorator-wo-templates-row--blank')!, 'specorator-wo-templates-main')!;
 
     blankMain.emit('click');
     blankMain.emit('click'); // second click should be ignored
@@ -419,8 +419,8 @@ describe('WorkOrderTemplatePickerModal — closing without choosing', () => {
     await flushAsync();
 
     // Choose blank first
-    const listEl = find(contentEl, 'claudian-wo-templates-list')!;
-    const blankMain = find(find(listEl, 'claudian-wo-templates-row--blank')!, 'claudian-wo-templates-main')!;
+    const listEl = find(contentEl, 'specorator-wo-templates-list')!;
+    const blankMain = find(find(listEl, 'specorator-wo-templates-row--blank')!, 'specorator-wo-templates-main')!;
     blankMain.emit('click');
 
     // Close — the setTimeout fires but chosen=true so no second resolve
@@ -451,7 +451,7 @@ describe('WorkOrderTemplatePickerModal — delete', () => {
     modal.onOpen();
     await flushAsync();
 
-    const actionsEl = find(contentEl, 'claudian-wo-templates-actions')!;
+    const actionsEl = find(contentEl, 'specorator-wo-templates-actions')!;
     const buttons = findAll(actionsEl, (el) => el.tag === 'button');
     // Second button in actions is delete
     const deleteBtn = buttons[1]!;
@@ -478,7 +478,7 @@ describe('WorkOrderTemplatePickerModal — delete', () => {
     modal.onOpen();
     await flushAsync();
 
-    const actionsEl = find(contentEl, 'claudian-wo-templates-actions')!;
+    const actionsEl = find(contentEl, 'specorator-wo-templates-actions')!;
     const buttons = findAll(actionsEl, (el) => el.tag === 'button');
     const deleteBtn = buttons[1]!;
     deleteBtn.emit('click');
@@ -510,7 +510,7 @@ describe('WorkOrderTemplatePickerModal — edit', () => {
     modal.onOpen();
     await flushAsync();
 
-    const actionsEl = find(contentEl, 'claudian-wo-templates-actions')!;
+    const actionsEl = find(contentEl, 'specorator-wo-templates-actions')!;
     const buttons = findAll(actionsEl, (el) => el.tag === 'button');
     // First button in actions is edit
     const editBtn = buttons[0]!;
@@ -535,7 +535,7 @@ describe('WorkOrderTemplatePickerModal — new template button', () => {
     modal.onOpen();
     await flushAsync();
 
-    const footerEl = find(contentEl, 'claudian-wo-templates-footer')!;
+    const footerEl = find(contentEl, 'specorator-wo-templates-footer')!;
     const footerButtons = findAll(footerEl, (el) => el.tag === 'button');
     footerButtons[0]!.emit('click');
 

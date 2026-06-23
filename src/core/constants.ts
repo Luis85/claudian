@@ -60,7 +60,7 @@ export const PRIVATE_SETTINGS_RENDER_DELAY_MS = 100;
  *
  * Obsidian does not emit a hotkey-changed event, so the panel polls.
  * 2000 ms is a felt-instant-on-save cadence with negligible CPU cost
- * (one map lookup per registered Claudian command). Used by
+ * (one map lookup per registered Specorator command). Used by
  * `features/settings/hotkeys/HotkeysSection.ts`.
  */
 export const HOTKEY_BINDING_POLL_INTERVAL_MS = 2000;

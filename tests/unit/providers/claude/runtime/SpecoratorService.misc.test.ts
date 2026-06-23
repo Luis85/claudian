@@ -7,11 +7,11 @@ import {
   collectChunks,
   type MockMcpServerManager,
   sdkMock,
-  setupClaudianServiceTest,
-} from './claudianServiceTestKit';
+  setupSpecoratorServiceTest,
+} from './specoratorServiceTestKit';
 
-describe('ClaudianService', () => {
-  const ctx = setupClaudianServiceTest();
+describe('SpecoratorService', () => {
+  const ctx = setupSpecoratorServiceTest();
   let service: typeof ctx.service;
   let mockPlugin: typeof ctx.mockPlugin;
   let mockMcpManager: MockMcpServerManager;

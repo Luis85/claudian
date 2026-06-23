@@ -7,7 +7,7 @@ import { getTabProviderId } from '@/features/chat/tabs/providerResolution';
 import type { TabManager } from '@/features/chat/tabs/TabManager';
 import type { TabData } from '@/features/chat/tabs/types';
 import { t } from '@/i18n/i18n';
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 
 import type { SkillTabEntry } from './types';
 
@@ -34,7 +34,7 @@ import type { SkillTabEntry } from './types';
  * for the same ordering rationale.
  */
 export async function runVaultSkill(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   entry: SkillTabEntry,
   file: TAbstractFile | null,
 ): Promise<void> {
@@ -86,7 +86,7 @@ export async function runVaultSkill(
 
 async function resolveTargetTab(
   tabManager: TabManager,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   targetProviderId: ProviderId,
 ): Promise<TabData | null> {
   const activeTab = tabManager.getActiveTab();

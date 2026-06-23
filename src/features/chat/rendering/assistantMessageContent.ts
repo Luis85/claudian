@@ -66,8 +66,8 @@ function renderContentBlock(
       renderToolUseBlock(host, msg, contentEl, block.toolId, renderedToolIds);
       return;
     case 'context_compacted': {
-      const boundaryEl = contentEl.createDiv({ cls: 'claudian-compact-boundary' });
-      boundaryEl.createSpan({ cls: 'claudian-compact-boundary-label', text: 'Conversation compacted' });
+      const boundaryEl = contentEl.createDiv({ cls: 'specorator-compact-boundary' });
+      boundaryEl.createSpan({ cls: 'specorator-compact-boundary-label', text: 'Conversation compacted' });
       return;
     }
     case 'runtime_error':
@@ -162,9 +162,9 @@ function renderDurationFooter(msg: ChatMessage, contentEl: HTMLElement): void {
   const hasCompactBoundary = msg.contentBlocks?.some(b => b.type === 'context_compacted');
   if (!msg.durationSeconds || msg.durationSeconds <= 0 || hasCompactBoundary) return;
   const flavorWord = msg.durationFlavorWord || 'Baked';
-  const footerEl = contentEl.createDiv({ cls: 'claudian-response-footer' });
+  const footerEl = contentEl.createDiv({ cls: 'specorator-response-footer' });
   footerEl.createSpan({
     text: `* ${flavorWord} for ${formatDurationMmSs(msg.durationSeconds)}`,
-    cls: 'claudian-baked-duration',
+    cls: 'specorator-baked-duration',
   });
 }

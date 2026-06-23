@@ -20,7 +20,7 @@ describe('OpencodeHistoryStore sqlite3 CLI fallback (#776)', () => {
 
   beforeEach(() => {
     mockSpawnSync.mockReset();
-    tmpRoot = mkdtempSync(path.join(os.tmpdir(), 'claudian-opencode-hydration-'));
+    tmpRoot = mkdtempSync(path.join(os.tmpdir(), 'specorator-opencode-hydration-'));
     dbPath = path.join(tmpRoot, 'opencode.db');
     writeFileSync(dbPath, '');
   });

@@ -115,7 +115,7 @@ describe('QuickActionsModal favorites', () => {
     modal.open();
     await flush();
 
-    const names = Array.from(modal['contentEl'].querySelectorAll('.claudian-quick-action-row strong'))
+    const names = Array.from(modal['contentEl'].querySelectorAll('.specorator-quick-action-row strong'))
       .map((el: any) => el.textContent);
     expect(names).toEqual(['A', 'B', 'Zebra']);
   });
@@ -136,7 +136,7 @@ describe('QuickActionsModal favorites', () => {
     modal.open();
     await flush();
 
-    const buttons = modal['contentEl'].querySelectorAll('.claudian-quick-action-favorite');
+    const buttons = modal['contentEl'].querySelectorAll('.specorator-quick-action-favorite');
     const bStar = buttons[1] as HTMLButtonElement;
     bStar.click();
     await flush();
@@ -162,7 +162,7 @@ describe('QuickActionsModal favorites', () => {
     modal.open();
     await flush();
 
-    const star = modal['contentEl'].querySelector('.claudian-quick-action-favorite') as HTMLButtonElement;
+    const star = modal['contentEl'].querySelector('.specorator-quick-action-favorite') as HTMLButtonElement;
     star.click();
     await flush();
 
@@ -189,7 +189,7 @@ describe('QuickActionsModal favorites', () => {
     modal.open();
     await flush();
 
-    const stars = modal['contentEl'].querySelectorAll('.claudian-quick-action-favorite');
+    const stars = modal['contentEl'].querySelectorAll('.specorator-quick-action-favorite');
     const newStar = stars[stars.length - 1] as HTMLButtonElement;
     newStar.click();
     await flush();
@@ -238,7 +238,7 @@ describe('QuickActionsModal favorites', () => {
     modal.open();
     await flush();
 
-    const star = modal['contentEl'].querySelector('.claudian-quick-action-favorite') as HTMLButtonElement;
+    const star = modal['contentEl'].querySelector('.specorator-quick-action-favorite') as HTMLButtonElement;
     star.click();
     await flush();
 
@@ -262,7 +262,7 @@ describe('QuickActionsModal favorites', () => {
     modal.open();
     await flush();
 
-    const star = modal['contentEl'].querySelector('.claudian-quick-action-favorite') as HTMLButtonElement;
+    const star = modal['contentEl'].querySelector('.specorator-quick-action-favorite') as HTMLButtonElement;
     star.click();
     await flush();
 
@@ -286,7 +286,7 @@ describe('QuickActionsModal favorites', () => {
     modal.open();
     await flush();
 
-    const star = modal['contentEl'].querySelector('.claudian-quick-action-favorite') as HTMLButtonElement;
+    const star = modal['contentEl'].querySelector('.specorator-quick-action-favorite') as HTMLButtonElement;
     star.click();
     await flush();
 
@@ -311,7 +311,7 @@ describe('QuickActionsModal favorites', () => {
     modal.open();
     await flush();
 
-    const star = modal['contentEl'].querySelector('.claudian-quick-action-favorite') as HTMLButtonElement;
+    const star = modal['contentEl'].querySelector('.specorator-quick-action-favorite') as HTMLButtonElement;
     star.click();
     await flush();
 
@@ -338,7 +338,7 @@ describe('QuickActionsModal favorites', () => {
     modal.open();
     await flush();
 
-    const stars = modal['contentEl'].querySelectorAll('.claudian-quick-action-favorite');
+    const stars = modal['contentEl'].querySelectorAll('.specorator-quick-action-favorite');
     const newStar = stars[stars.length - 1] as HTMLButtonElement;
     newStar.click();
     await flush();
@@ -364,7 +364,7 @@ describe('QuickActionsModal favorites', () => {
     await flush();
 
     const deleteButtons = Array.from(
-      modal['contentEl'].querySelectorAll('.claudian-quick-action-actions button'),
+      modal['contentEl'].querySelectorAll('.specorator-quick-action-actions button'),
     ).filter((b: any) => b.textContent === 'common.delete' || b.textContent === 'Delete');
     (deleteButtons[0] as HTMLButtonElement).click();
     await flush();
@@ -391,7 +391,7 @@ describe('QuickActionsModal favorites', () => {
     await flush();
 
     const deleteButtons = Array.from(
-      modal['contentEl'].querySelectorAll('.claudian-quick-action-actions button'),
+      modal['contentEl'].querySelectorAll('.specorator-quick-action-actions button'),
     ).filter((b: any) => b.textContent === 'common.delete' || b.textContent === 'Delete');
     (deleteButtons[0] as HTMLButtonElement).click();
     await flush();
@@ -438,7 +438,7 @@ describe('QuickActionsModal favorites', () => {
     await flush();
 
     const stars = Array.from(
-      modal['contentEl'].querySelectorAll('.claudian-quick-action-favorite'),
+      modal['contentEl'].querySelectorAll('.specorator-quick-action-favorite'),
     ) as HTMLButtonElement[];
     // F1..F4 are filled (4 stars), X and Y are outline (2 more). Click the
     // last two — X and Y.

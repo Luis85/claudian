@@ -4,7 +4,7 @@ import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import { asSettingsBag } from '../../../core/types/settings';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { renderEnvironmentSettingsSection } from '../../../shared/settings/EnvironmentSettingsSection';
 import { buildNavMappingText, parseNavMappings } from '../keyboardNavigation';
 import { renderCustomContextLimits } from './CustomContextLimits';
@@ -12,12 +12,12 @@ import { renderCustomContextLimits } from './CustomContextLimits';
 /**
  * Per-field mounts for the General settings tab whose change handlers carry
  * side effects beyond a settings write (view refreshes, runtime restarts,
- * structured parsing). Extracted from `ClaudianSettings.renderGeneralTab` so
+ * structured parsing). Extracted from `SpecoratorSettings.renderGeneralTab` so
  * the legacy renderer and the settings-registry field definitions mount the
  * SAME code — parity by shared implementation, not by reimplementation.
  */
 
-async function restartServiceForPromptChange(plugin: ClaudianPlugin): Promise<void> {
+async function restartServiceForPromptChange(plugin: SpecoratorPlugin): Promise<void> {
   const view = plugin.getView();
   const tabManager = view?.getTabManager();
   if (!tabManager) return;
@@ -37,7 +37,7 @@ async function restartServiceForPromptChange(plugin: ClaudianPlugin): Promise<vo
  * chat views, exactly like the legacy Providers section.
  */
 export function renderProviderEnableSetting(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   container: HTMLElement,
   providerId: ProviderId,
   refresh: () => void,
@@ -69,7 +69,7 @@ export function renderProviderEnableSetting(
 }
 
 export function renderTabBarPositionSetting(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   container: HTMLElement,
 ): void {
   new Setting(container)
@@ -92,7 +92,7 @@ export function renderTabBarPositionSetting(
 }
 
 export function renderMaxChatTabsSetting(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   container: HTMLElement,
 ): void {
   const maxChatTabsSetting = new Setting(container)
@@ -100,12 +100,12 @@ export function renderMaxChatTabsSetting(
     .setDesc(t('settings.maxChatTabs.desc'));
 
   const maxChatTabsWarningEl = container.createDiv({
-    cls: 'claudian-max-tabs-warning claudian-setting-validation claudian-setting-validation-warning claudian-hidden',
+    cls: 'specorator-max-tabs-warning specorator-setting-validation specorator-setting-validation-warning specorator-hidden',
   });
   maxChatTabsWarningEl.setText(t('settings.maxChatTabs.warning'));
 
   const updateMaxChatTabsWarning = (value: number): void => {
-    maxChatTabsWarningEl.toggleClass('claudian-hidden', value <= 5);
+    maxChatTabsWarningEl.toggleClass('specorator-hidden', value <= 5);
   };
 
   maxChatTabsSetting.addSlider((slider) => {
@@ -126,7 +126,7 @@ export function renderMaxChatTabsSetting(
 }
 
 export function renderShowAgentEditedFilesSetting(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   container: HTMLElement,
 ): void {
   new Setting(container)
@@ -149,7 +149,7 @@ export function renderShowAgentEditedFilesSetting(
 }
 
 export function renderUserNameSetting(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   container: HTMLElement,
 ): void {
   new Setting(container)
@@ -170,7 +170,7 @@ export function renderUserNameSetting(
 }
 
 export function renderSystemPromptSetting(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   container: HTMLElement,
 ): void {
   new Setting(container)
@@ -193,7 +193,7 @@ export function renderSystemPromptSetting(
 }
 
 export function renderExcludedTagsSetting(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   container: HTMLElement,
 ): void {
   new Setting(container)
@@ -216,7 +216,7 @@ export function renderExcludedTagsSetting(
 }
 
 export function renderMediaFolderSetting(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   container: HTMLElement,
 ): void {
   new Setting(container)
@@ -230,7 +230,7 @@ export function renderMediaFolderSetting(
           plugin.settings.mediaFolder = value.trim();
           await plugin.saveSettings();
         });
-      text.inputEl.addClass('claudian-settings-media-input');
+      text.inputEl.addClass('specorator-settings-media-input');
       text.inputEl.addEventListener('blur', () => {
         void restartServiceForPromptChange(plugin);
       });
@@ -238,7 +238,7 @@ export function renderMediaFolderSetting(
 }
 
 export function renderNavMappingsSetting(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   container: HTMLElement,
 ): void {
   new Setting(container)
@@ -303,7 +303,7 @@ export function renderNavMappingsSetting(
  * section walker already renders the heading row.
  */
 export function renderSharedEnvironmentSection(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   container: HTMLElement,
   heading?: string,
 ): void {

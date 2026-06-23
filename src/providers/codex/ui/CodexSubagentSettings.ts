@@ -108,7 +108,7 @@ class CodexSubagentModal extends Modal {
 
   onOpen() {
     this.setTitle(this.existing ? 'Edit Codex Subagent' : 'Add Codex Subagent');
-    this.modalEl.addClass('claudian-sp-modal');
+    this.modalEl.addClass('specorator-sp-modal');
 
     const { contentEl } = this;
 
@@ -131,10 +131,10 @@ class CodexSubagentModal extends Modal {
       });
 
     // Advanced options
-    const details = contentEl.createEl('details', { cls: 'claudian-sp-advanced-section' });
+    const details = contentEl.createEl('details', { cls: 'specorator-sp-advanced-section' });
     details.createEl('summary', {
       text: 'Advanced options',
-      cls: 'claudian-sp-advanced-summary',
+      cls: 'specorator-sp-advanced-summary',
     });
     if (
       this.existing?.model ||
@@ -190,7 +190,7 @@ class CodexSubagentModal extends Modal {
       .setDesc('Core instructions that define the agent\'s behavior');
 
     const instructionsArea = contentEl.createEl('textarea', {
-      cls: 'claudian-sp-content-area',
+      cls: 'specorator-sp-content-area',
       attr: {
         rows: '10',
         placeholder: 'Review code like an owner.\nPrioritize correctness, security, and missing test coverage.',
@@ -316,7 +316,7 @@ export class CodexSubagentSettings extends CodexVaultListSettings<CodexSubagentD
     });
 
     if (agent.model) {
-      headerRow.createSpan({ text: agent.model, cls: 'claudian-slash-item-badge' });
+      headerRow.createSpan({ text: agent.model, cls: 'specorator-slash-item-badge' });
     }
   }
 

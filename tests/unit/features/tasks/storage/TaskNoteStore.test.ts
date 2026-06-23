@@ -9,7 +9,7 @@ import {
 } from '../../../../../src/features/tasks/storage/TaskNoteStore';
 
 const VALID_NOTE = `---
-type: claudian-work-order
+type: specorator-work-order
 schema_version: 1
 id: task-1
 title: Build agent board
@@ -50,7 +50,7 @@ ${HANDOFF_END}
 Closing prose.
 `;
 const NOTE_WITH_FRONTMATTER_MARKERS = `---
-type: claudian-work-order
+type: specorator-work-order
 schema_version: 1
 id: task-1
 title: Build agent board
@@ -195,7 +195,7 @@ ${HANDOFF_END}`);
     // seam is the safer contract. Mirrors `writeLedgerSnapshot`'s behavior.
     const noMarkers =
       '---\n' +
-      'type: claudian-work-order\nschema_version: 1\nid: t\ntitle: t\nstatus: running\nupdated: x\n' +
+      'type: specorator-work-order\nschema_version: 1\nid: t\ntitle: t\nstatus: running\nupdated: x\n' +
       '---\n' +
       '## Objective\nx\n';
     expect(() => store.appendLedger(noMarkers, {
@@ -205,21 +205,21 @@ ${HANDOFF_END}`);
     })).toThrow(/Missing generated region markers/);
   });
 
-  it('rejects ledger messages containing Claudian marker strings', () => {
+  it('rejects ledger messages containing Specorator marker strings', () => {
     expect(() => store.appendLedger(VALID_NOTE, {
       timestamp: '2026-05-28T09:05:00.000Z',
       status: 'running',
-      message: 'Do not include <!-- claudian:run-ledger-start --> here.',
-    })).toThrow('Generated task region content cannot contain Claudian markers');
+      message: 'Do not include <!-- specorator:run-ledger-start --> here.',
+    })).toThrow('Generated task region content cannot contain Specorator markers');
   });
 
-  it('rejects handoff markdown containing Claudian marker strings', () => {
+  it('rejects handoff markdown containing Specorator marker strings', () => {
     expect(() => store.writeHandoff(
       VALID_NOTE,
       `Summary
 
-<!-- claudian:handoff-end -->`
-    )).toThrow('Generated task region content cannot contain Claudian markers');
+<!-- specorator:handoff-end -->`
+    )).toThrow('Generated task region content cannot contain Specorator markers');
   });
 
   it('accepts the structural field markers emitted by renderHandoffMarkdown', () => {
@@ -234,16 +234,16 @@ ${HANDOFF_END}`);
     expect(store.extractGeneratedRegion(written, HANDOFF_START, HANDOFF_END)).toBe(markdown);
   });
 
-  it('still rejects non-structural Claudian markers mixed with field markers', () => {
+  it('still rejects non-structural Specorator markers mixed with field markers', () => {
     const markdown = `${renderHandoffMarkdown({
       summary: 'S',
       verification: 'V',
       risks: 'R',
       nextAction: 'N',
-    })}\n<!-- claudian:handoff-end -->`;
+    })}\n<!-- specorator:handoff-end -->`;
 
     expect(() => store.writeHandoff(VALID_NOTE, markdown))
-      .toThrow('Generated task region content cannot contain Claudian markers');
+      .toThrow('Generated task region content cannot contain Specorator markers');
   });
 
   it('writes frontmatter fields, bumps updated, and preserves unknown keys and body', () => {
@@ -319,7 +319,7 @@ ${HANDOFF_END}`);
 
   it('does not rewrite a # heading inside a code fence when syncing the title', () => {
     const note = `---
-type: claudian-work-order
+type: specorator-work-order
 schema_version: 1
 id: t
 title: Old
@@ -341,16 +341,16 @@ attempts: 0
     expect(written).not.toContain('# Real Title');
   });
 
-  it('strips embedded Claudian region markers from a renamed title before writing the body H1', () => {
-    // A rename is arbitrary user input. If it carried a `<!-- claudian:… -->`
+  it('strips embedded Specorator region markers from a renamed title before writing the body H1', () => {
+    // A rename is arbitrary user input. If it carried a `<!-- specorator:… -->`
     // marker into the H1, that marker would shadow the real ledger/handoff
     // region markers (located by indexOf), corrupting those generated blocks.
-    const malicious = 'Hijack <!-- claudian:run-ledger-start --> ledger';
+    const malicious = 'Hijack <!-- specorator:run-ledger-start --> ledger';
     const written = store.writeFields(VALID_NOTE, { title: malicious }, '2026-06-01T00:00:00.000Z');
 
     // The body H1 must not carry the marker (the frontmatter title may keep it
     // verbatim — region lookups operate on the body only, so it is harmless there).
-    expect(written).not.toMatch(/#.*claudian:run-ledger-start/);
+    expect(written).not.toMatch(/#.*specorator:run-ledger-start/);
     expect(written).toContain('# Hijack  ledger');
 
     // The generated ledger region is still locatable and intact after the rename.
@@ -422,12 +422,12 @@ attempts: 0
       expect(store.extractGeneratedRegion(written, RUN_LEDGER_START, RUN_LEDGER_END)).toBe('- Existing generated entry.');
     });
 
-    it('strips embedded Claudian region markers from section content so generated regions stay locatable', () => {
+    it('strips embedded Specorator region markers from section content so generated regions stay locatable', () => {
       const malicious = `Sneak ${RUN_LEDGER_START} a marker`;
       const written = store.writeSections(VALID_NOTE, { objective: malicious }, '2026-06-01T00:00:00.000Z');
       // The objective body must not carry the marker that would shadow the real region.
       const parsed = store.parse('tasks/task-1.md', written);
-      expect(parsed.task.sections.objective).not.toContain('claudian:run-ledger-start');
+      expect(parsed.task.sections.objective).not.toContain('specorator:run-ledger-start');
       // The real generated ledger region is still intact and locatable.
       expect(store.extractGeneratedRegion(written, RUN_LEDGER_START, RUN_LEDGER_END)).toBe('- Existing generated entry.');
     });
@@ -435,7 +435,7 @@ attempts: 0
 
   describe('writeStatus heartbeat + pause_reason', () => {
     const baseNote = `---
-type: claudian-work-order
+type: specorator-work-order
 schema_version: 1
 id: t1
 title: T1
@@ -513,11 +513,11 @@ body`;
   describe('writeLedgerSnapshot', () => {
     const baseNote =
       '---\n' +
-      'type: claudian-work-order\nschema_version: 1\nid: t\ntitle: t\nstatus: running\nupdated: x\n' +
+      'type: specorator-work-order\nschema_version: 1\nid: t\ntitle: t\nstatus: running\nupdated: x\n' +
       '---\n' +
       '## Objective\nx\n## Acceptance Criteria\n- [ ] a\n## Context\nx\n## Constraints\nx\n' +
       `${RUN_LEDGER_START}\n- old line\n${RUN_LEDGER_END}\n` +
-      '<!-- claudian:handoff-start -->\n<!-- claudian:handoff-end -->\n';
+      '<!-- specorator:handoff-start -->\n<!-- specorator:handoff-end -->\n';
 
     it('replaces the run-ledger region with the provided snapshot in one write', () => {
       const next = store.writeLedgerSnapshot(baseNote, '- 2026-06-06T... [running] new line');
@@ -525,9 +525,9 @@ body`;
       expect(next).not.toContain('- old line');
     });
 
-    it('rejects snapshots that embed claudian markers', () => {
-      expect(() => store.writeLedgerSnapshot(baseNote, '<!-- claudian:run-ledger-start -->'))
-        .toThrow(/Generated task region content cannot contain Claudian markers/);
+    it('rejects snapshots that embed specorator markers', () => {
+      expect(() => store.writeLedgerSnapshot(baseNote, '<!-- specorator:run-ledger-start -->'))
+        .toThrow(/Generated task region content cannot contain Specorator markers/);
     });
 
     it('throws when the note is missing run-ledger markers', () => {
@@ -537,7 +537,7 @@ body`;
       // run still settles even when the snapshot can't land.
       const noMarkers =
         '---\n' +
-        'type: claudian-work-order\nschema_version: 1\nid: t\ntitle: t\nstatus: running\nupdated: x\n' +
+        'type: specorator-work-order\nschema_version: 1\nid: t\ntitle: t\nstatus: running\nupdated: x\n' +
         '---\n' +
         '## Objective\nx\n';
       expect(() => store.writeLedgerSnapshot(noMarkers, '- whatever'))
@@ -547,7 +547,7 @@ body`;
 
   describe('TaskNoteStore.writeFields loop', () => {
     const base = `---
-type: claudian-work-order
+type: specorator-work-order
 schema_version: 1
 id: task-1
 title: "T"
@@ -580,7 +580,7 @@ x
     const store = new TaskNoteStore();
 
     const noteWithContext = (contextBody: string): string => `---
-type: claudian-work-order
+type: specorator-work-order
 schema_version: 1
 id: task-1
 title: T
@@ -643,7 +643,7 @@ Keep it tidy.
 
     it('throws when the note has no Context section', () => {
       const noContext = `---
-type: claudian-work-order
+type: specorator-work-order
 schema_version: 1
 id: task-1
 title: T

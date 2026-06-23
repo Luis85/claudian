@@ -9,10 +9,10 @@ export interface ForkSource {
 }
 
 /** View type identifier for Obsidian. */
-export const VIEW_TYPE_CLAUDIAN = 'claudian-view';
+export const VIEW_TYPE_SPECORATOR = 'specorator-view';
 
 /** View type identifier for the optional Agent Board workspace. */
-export const VIEW_TYPE_CLAUDIAN_AGENT_BOARD = 'claudian-agent-board-view';
+export const VIEW_TYPE_SPECORATOR_AGENT_BOARD = 'specorator-agent-board-view';
 
 /** Supported image media types for attachments. */
 export type ImageMediaType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';

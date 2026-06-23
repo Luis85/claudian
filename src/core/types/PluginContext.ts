@@ -1,6 +1,6 @@
 import type { Plugin } from 'obsidian';
 
-import type { ClaudianEventMap } from '../../app/events/claudianEvents';
+import type { SpecoratorEventMap } from '../../app/events/specoratorEvents';
 import type { BrowserSelectionContext } from '../../utils/browser';
 import type { SharedAppStorage } from '../bootstrap/storage';
 import type { EventBus } from '../events/EventBus';
@@ -11,7 +11,7 @@ import type { ChatRuntime } from '../runtime/ChatRuntime';
 import type { SecretStore } from '../security/secretStore';
 import type {
   ChatMessageAction,
-  ClaudianSettings,
+  SpecoratorSettings,
   Conversation,
   ConversationMeta,
   ConversationSnapshot,
@@ -36,7 +36,7 @@ export interface ChatTabManagerHandle {
 
 /**
  * Narrow chat-view surface consumed by the provider boundary. The concrete
- * `ClaudianView` implements this so provider settings tabs and runtimes can
+ * `SpecoratorView` implements this so provider settings tabs and runtimes can
  * refresh UI and reach the tab manager without `core/` depending on the view.
  */
 export interface ChatViewHandle {
@@ -49,18 +49,18 @@ export interface ChatViewHandle {
 
 /**
  * Narrow plugin surface the provider-neutral core and provider adaptors depend
- * on, replacing the concrete `ClaudianPlugin` at the chat-facing boundary.
+ * on, replacing the concrete `SpecoratorPlugin` at the chat-facing boundary.
  *
- * `ClaudianPlugin implements PluginContext`, so real plugins pass everywhere
+ * `SpecoratorPlugin implements PluginContext`, so real plugins pass everywhere
  * this is required. Members mirror the concrete implementation exactly; the
- * interface adapts to `ClaudianPlugin`, never the reverse. Inverting the
+ * interface adapts to `SpecoratorPlugin`, never the reverse. Inverting the
  * dependency here keeps `core/` and `providers/` independent of `src/main`.
  */
 export interface PluginContext
   extends Pick<Plugin, 'app' | 'manifest' | 'loadData' | 'saveData'> {
-  settings: ClaudianSettings;
+  settings: SpecoratorSettings;
   storage: SharedAppStorage;
-  readonly events: EventBus<ClaudianEventMap>;
+  readonly events: EventBus<SpecoratorEventMap>;
   readonly logger: Logger;
   readonly chatMessageActions: ChatMessageAction[];
   gitStatusWatcher: { refresh(): Promise<void> } | null;
@@ -130,23 +130,23 @@ export interface PluginContext
   ): Promise<{ prompt?: string; model?: string; tools?: string[] } | null>;
 
   /**
-   * Returns an in-process Claudian user-tool MCP server built from the current
+   * Returns an in-process Specorator user-tool MCP server built from the current
    * tool registry, or `undefined` when no tools are loaded. The callback is
    * typed to return `unknown` to avoid a `core/` → `features/` import; the
    * Claude runtime casts through `unknown` when merging into `mcpServers`.
    *
    * When `grantedToolIds` is non-empty the server is scoped to only those
-   * capability ids (`mcp__claudian__*`) — used to project a bound roster agent's
+   * capability ids (`mcp__specorator__*`) — used to project a bound roster agent's
    * tool grant onto the conversation. An empty/absent list exposes all tools.
    */
-  getClaudianToolServer?: (grantedToolIds?: string[]) => unknown;
+  getSpecoratorToolServer?: (grantedToolIds?: string[]) => unknown;
 
   /**
-   * Stable fingerprint of the user tools the claudian server exposes for the
+   * Stable fingerprint of the user tools the specorator server exposes for the
    * given grant. The Claude runtime folds it into the persistent-query MCP key
    * so a mid-session grant edit / registry change re-applies the scoped server.
    */
-  getClaudianToolKey?: (grantedToolIds?: string[]) => string;
+  getSpecoratorToolKey?: (grantedToolIds?: string[]) => string;
 
   /**
    * Returns the URL and auth header for the in-process HTTP MCP tool server,

@@ -40,8 +40,8 @@ export class ImageContextManager {
     this.callbacks = callbacks;
 
     // Create image preview in previewContainerEl, before file indicator if present
-    const fileIndicator = this.previewContainerEl.querySelector('.claudian-file-indicator');
-    this.imagePreviewEl = this.previewContainerEl.createDiv({ cls: 'claudian-image-preview' });
+    const fileIndicator = this.previewContainerEl.querySelector('.specorator-file-indicator');
+    this.imagePreviewEl = this.previewContainerEl.createDiv({ cls: 'specorator-image-preview' });
     if (fileIndicator && fileIndicator.parentElement === this.previewContainerEl) {
       this.previewContainerEl.insertBefore(this.imagePreviewEl, fileIndicator);
     }
@@ -164,13 +164,13 @@ export class ImageContextManager {
     this.imagePreviewEl.empty();
 
     if (this.attachedImages.size === 0) {
-      this.imagePreviewEl.removeClass('claudian-visible-flex');
-      this.imagePreviewEl.addClass('claudian-hidden');
+      this.imagePreviewEl.removeClass('specorator-visible-flex');
+      this.imagePreviewEl.addClass('specorator-hidden');
       return;
     }
 
-    this.imagePreviewEl.addClass('claudian-visible-flex');
-    this.imagePreviewEl.removeClass('claudian-hidden');
+    this.imagePreviewEl.addClass('specorator-visible-flex');
+    this.imagePreviewEl.removeClass('specorator-hidden');
 
     for (const [id, image] of this.attachedImages) {
       this.renderImagePreview(id, image);
@@ -178,9 +178,9 @@ export class ImageContextManager {
   }
 
   private renderImagePreview(id: string, image: ImageAttachment) {
-    const previewEl = this.imagePreviewEl.createDiv({ cls: 'claudian-image-chip' });
+    const previewEl = this.imagePreviewEl.createDiv({ cls: 'specorator-image-chip' });
 
-    const thumbEl = previewEl.createDiv({ cls: 'claudian-image-thumb' });
+    const thumbEl = previewEl.createDiv({ cls: 'specorator-image-thumb' });
     thumbEl.createEl('img', {
       attr: {
         src: `data:${image.mediaType};base64,${image.data}`,
@@ -188,15 +188,15 @@ export class ImageContextManager {
       },
     });
 
-    const infoEl = previewEl.createDiv({ cls: 'claudian-image-info' });
-    const nameEl = infoEl.createSpan({ cls: 'claudian-image-name' });
+    const infoEl = previewEl.createDiv({ cls: 'specorator-image-info' });
+    const nameEl = infoEl.createSpan({ cls: 'specorator-image-name' });
     nameEl.setText(this.truncateName(image.name, 20));
     nameEl.setAttribute('title', image.name);
 
-    const sizeEl = infoEl.createSpan({ cls: 'claudian-image-size' });
+    const sizeEl = infoEl.createSpan({ cls: 'specorator-image-size' });
     sizeEl.setText(this.formatSize(image.size));
 
-    const removeEl = previewEl.createSpan({ cls: 'claudian-image-remove' });
+    const removeEl = previewEl.createSpan({ cls: 'specorator-image-remove' });
     removeEl.setText('\u00D7');
     removeEl.setAttribute('aria-label', 'Remove image');
 

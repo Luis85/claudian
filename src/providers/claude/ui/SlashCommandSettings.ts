@@ -49,7 +49,7 @@ export class SlashCommandModal extends Modal {
     const updateSkillOnlyFields = () => {
       if (!skillOnly.setting || !skillOnly.toggle) return;
       const isSkillType = state.selectedType === 'skill';
-      skillOnly.setting.settingEl.toggleClass('claudian-hidden', !isSkillType);
+      skillOnly.setting.settingEl.toggleClass('specorator-hidden', !isSkillType);
       if (!isSkillType) {
         state.disableUserInvocation = false;
         skillOnly.toggle.setValue(false);
@@ -99,8 +99,8 @@ export class SlashCommandModal extends Modal {
     state: SlashCommandFormState,
     skillOnly: { setting: Setting | null; toggle: ToggleComponent | null },
   ): void {
-    const details = contentEl.createEl('details', { cls: 'claudian-sp-advanced-section' });
-    details.createEl('summary', { text: 'Advanced options', cls: 'claudian-sp-advanced-summary' });
+    const details = contentEl.createEl('details', { cls: 'specorator-sp-advanced-section' });
+    details.createEl('summary', { text: 'Advanced options', cls: 'specorator-sp-advanced-summary' });
     if (shouldOpenAdvanced(this.existingEntry)) {
       details.open = true;
     }
@@ -157,7 +157,7 @@ export class SlashCommandModal extends Modal {
         toggle.setValue(state.contextValue === 'fork')
           .onChange(value => {
             state.contextValue = value ? 'fork' : '';
-            agentSetting.settingEl.toggleClass('claudian-hidden', !value);
+            agentSetting.settingEl.toggleClass('specorator-hidden', !value);
           });
       });
 
@@ -168,7 +168,7 @@ export class SlashCommandModal extends Modal {
         state.agentInput = text.inputEl;
         text.setValue(this.existingEntry?.agent || '').setPlaceholder('Code-reviewer');
       });
-    agentSetting.settingEl.toggleClass('claudian-hidden', state.contextValue !== 'fork');
+    agentSetting.settingEl.toggleClass('specorator-hidden', state.contextValue !== 'fork');
   }
 
   private buildPromptField(contentEl: HTMLElement, state: SlashCommandFormState): void {
@@ -177,7 +177,7 @@ export class SlashCommandModal extends Modal {
       .setDesc('Use $ARGUMENTS, $1, $2, @file, !`bash`');
 
     state.contentArea = contentEl.createEl('textarea', {
-      cls: 'claudian-sp-content-area',
+      cls: 'specorator-sp-content-area',
       attr: { rows: '10', placeholder: 'Review this code for:\n$ARGUMENTS\n\n@$1' },
     });
     state.contentArea.value = this.existingEntry
@@ -236,14 +236,14 @@ export class SlashCommandModal extends Modal {
     } as SlashCommandFormState;
 
     this.applyTitle(state.selectedType);
-    this.modalEl.addClass('claudian-sp-modal');
+    this.modalEl.addClass('specorator-sp-modal');
 
     const { contentEl } = this;
     this.buildPrimaryFields(contentEl, state);
     this.buildPromptField(contentEl, state);
 
     renderModalButtonRow(contentEl, {
-      cls: 'claudian-sp-modal-buttons',
+      cls: 'specorator-sp-modal-buttons',
       saveText: 'Save',
       onCancel: () => this.close(),
       onSave: () => { void this.submit(state); },
@@ -291,32 +291,32 @@ export class SlashCommandSettings {
 
   private renderUnavailable(): void {
     this.containerEl.empty();
-    const emptyEl = this.containerEl.createDiv({ cls: 'claudian-sp-empty-state' });
+    const emptyEl = this.containerEl.createDiv({ cls: 'specorator-sp-empty-state' });
     emptyEl.setText('Claude command catalog is unavailable.');
   }
 
   private render(): void {
     this.containerEl.empty();
 
-    const headerEl = this.containerEl.createDiv({ cls: 'claudian-sp-header' });
-    headerEl.createSpan({ text: t('settings.slashCommands.name'), cls: 'claudian-sp-label' });
+    const headerEl = this.containerEl.createDiv({ cls: 'specorator-sp-header' });
+    headerEl.createSpan({ text: t('settings.slashCommands.name'), cls: 'specorator-sp-label' });
 
-    const actionsEl = headerEl.createDiv({ cls: 'claudian-sp-header-actions' });
+    const actionsEl = headerEl.createDiv({ cls: 'specorator-sp-header-actions' });
 
     const addBtn = actionsEl.createEl('button', {
-      cls: 'claudian-settings-action-btn',
+      cls: 'specorator-settings-action-btn',
       attr: { 'aria-label': 'Add' },
     });
     setIcon(addBtn, 'plus');
     addBtn.addEventListener('click', () => this.openCommandModal(null));
 
     if (this.commands.length === 0) {
-      const emptyEl = this.containerEl.createDiv({ cls: 'claudian-sp-empty-state' });
+      const emptyEl = this.containerEl.createDiv({ cls: 'specorator-sp-empty-state' });
       emptyEl.setText('No commands or skills configured. Click + to create one.');
       return;
     }
 
-    const listEl = this.containerEl.createDiv({ cls: 'claudian-sp-list' });
+    const listEl = this.containerEl.createDiv({ cls: 'specorator-sp-list' });
 
     for (const cmd of this.commands) {
       this.renderCommandItem(listEl, cmd);
@@ -374,11 +374,11 @@ export class SlashCommandSettings {
     });
 
     if (isSkillEntry(cmd)) {
-      headerRow.createSpan({ text: 'skill', cls: 'claudian-slash-item-badge' });
+      headerRow.createSpan({ text: 'skill', cls: 'specorator-slash-item-badge' });
     }
 
     if (cmd.argumentHint) {
-      const hintEl = headerRow.createSpan({ cls: 'claudian-slash-item-hint' });
+      const hintEl = headerRow.createSpan({ cls: 'specorator-slash-item-hint' });
       hintEl.setText(cmd.argumentHint);
     }
   }

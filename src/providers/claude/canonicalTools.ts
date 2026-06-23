@@ -27,8 +27,8 @@ import {
  * Canonical tool names the Claude provider can emit.
  *
  * Claude routes through `@anthropic-ai/claude-agent-sdk`, whose native tool
- * vocabulary is already in Claudian's canonical form — no normalization map.
- * This set enumerates the SDK tools Claudian's UI is aware of (has icons,
+ * vocabulary is already in Specorator's canonical form — no normalization map.
+ * This set enumerates the SDK tools Specorator's UI is aware of (has icons,
  * dedicated renderers, or approval flows for). It backs
  * `ProviderRegistration.canonicalToolNames` so the seam can enumerate Claude
  * tools without a provider-id branch (ADR-0001 Phase 1).

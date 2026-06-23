@@ -12,8 +12,8 @@ export {
   type SessionMetadata,
   type StreamChunk,
   type UsageInfo,
-  VIEW_TYPE_CLAUDIAN,
-  VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
+  VIEW_TYPE_SPECORATOR,
+  VIEW_TYPE_SPECORATOR_AGENT_BOARD,
 } from './chat';
 export { type ProviderId } from './provider';
 
@@ -21,7 +21,7 @@ export { type ProviderId } from './provider';
 export {
   type ApprovalDecision,
   asSettingsBag,
-  type ClaudianSettings,
+  type SpecoratorSettings,
   type EnvironmentScope,
   type EnvSnippet,
   type HostnameCliPaths,

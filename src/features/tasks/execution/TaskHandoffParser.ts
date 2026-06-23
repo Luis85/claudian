@@ -5,20 +5,20 @@ export type TaskHandoffParseResult =
   | { ok: true; handoff: ParsedHandoff }
   | { ok: false; error: string };
 
-const HANDOFF_BLOCK_PATTERN = /<claudian_handoff>\s*([\s\S]*?)\s*<\/claudian_handoff>/;
+const HANDOFF_BLOCK_PATTERN = /<specorator_handoff>\s*([\s\S]*?)\s*<\/specorator_handoff>/;
 const REQUIRED_FIELDS = ['summary', 'verification', 'risks', 'next_action'] as const;
 
 // Mirrors TaskNoteStore's embedded-marker guard. A body carrying this prefix
 // could spoof the note's region or field markers, so reject it here and let the
 // run take the graceful needs_handoff path instead of failing the note write.
-const CLAUDIAN_MARKER_PREFIX = '<!-- claudian:';
+const SPECORATOR_MARKER_PREFIX = '<!-- specorator:';
 
 type HandoffField = typeof REQUIRED_FIELDS[number];
 
 export function parseTaskHandoff(content: string): TaskHandoffParseResult {
   const blockMatch = content.match(HANDOFF_BLOCK_PATTERN);
   if (!blockMatch) {
-    return { ok: false, error: 'Missing claudian_handoff block' };
+    return { ok: false, error: 'Missing specorator_handoff block' };
   }
 
   const fields = parseFields(blockMatch[1]);
@@ -27,8 +27,8 @@ export function parseTaskHandoff(content: string): TaskHandoffParseResult {
     if (!value) {
       return { ok: false, error: `Missing handoff field: ${field}` };
     }
-    if (value.includes(CLAUDIAN_MARKER_PREFIX)) {
-      return { ok: false, error: `Handoff field contains a reserved Claudian marker: ${field}` };
+    if (value.includes(SPECORATOR_MARKER_PREFIX)) {
+      return { ok: false, error: `Handoff field contains a reserved Specorator marker: ${field}` };
     }
   }
 

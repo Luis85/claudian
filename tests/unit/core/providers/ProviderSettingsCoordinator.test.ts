@@ -433,7 +433,7 @@ describe('ProviderSettingsCoordinator', () => {
         providerConfigs: {
           opencode: {
             enabled: true,
-            selectedMode: 'claudian-safe',
+            selectedMode: 'specorator-safe',
           },
         },
         model: 'haiku',

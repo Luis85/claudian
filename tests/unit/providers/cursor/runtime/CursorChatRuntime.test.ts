@@ -551,7 +551,7 @@ describe('CursorChatRuntime', () => {
   });
 
   it('scopes the HTTP tool server to the bound agent grant on the MCP-config write', async () => {
-    const grant = ['mcp__claudian__search_tasks'];
+    const grant = ['mcp__specorator__search_tasks'];
     const getHttpToolServerConfig = jest.fn().mockReturnValue({ url: 'http://127.0.0.1:1/mcp', headers: {} });
     const runtime = new CursorChatRuntime(
       createMockPlugin({ getHttpToolServerConfig }),

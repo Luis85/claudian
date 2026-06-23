@@ -1,5 +1,5 @@
 import type { ProviderId } from '../../../../core/providers/types';
-import type { ClaudianSettings } from '../../../../core/types/settings';
+import type { SpecoratorSettings } from '../../../../core/types/settings';
 import type { SettingsRegistry } from '../SettingsRegistry';
 
 export interface ProviderTabSpec {
@@ -10,7 +10,7 @@ export interface ProviderTabSpec {
 }
 
 export function isProviderEnabled(
-  settings: ClaudianSettings,
+  settings: SpecoratorSettings,
   providerId: ProviderId,
 ): boolean {
   const cfg = settings.providerConfigs?.[providerId] as { enabled?: boolean } | undefined;

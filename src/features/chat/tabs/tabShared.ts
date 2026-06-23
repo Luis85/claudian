@@ -11,7 +11,7 @@ import type {
 } from '../../../core/providers/types';
 import type { Conversation } from '../../../core/types';
 import { asSettingsBag } from '../../../core/types/settings';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { getTabProviderId } from './providerResolution';
 import type { TabData, TabProviderContext } from './types';
 
@@ -35,7 +35,7 @@ export type ProviderCatalogInfo = {
  * settings-provider's model, which may belong to a different provider.
  */
 export function resolveBlankTabModel(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   providerId?: ProviderId,
 ): string {
   const settings = asSettingsBag(plugin.settings);
@@ -52,7 +52,7 @@ export function resolveBlankTabModel(
 
 export function getTabCapabilities(
   tab: TabProviderContext,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   conversation?: Conversation | null,
 ): ProviderCapabilities {
   const providerId = getTabProviderId(tab, plugin, conversation);
@@ -65,7 +65,7 @@ export function getTabCapabilities(
 
 export function getTabChatUIConfig(
   tab: TabProviderContext,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   conversation?: Conversation | null,
 ): ProviderChatUIConfig {
   return ProviderRegistry.getChatUIConfig(getTabProviderId(tab, plugin, conversation));
@@ -73,7 +73,7 @@ export function getTabChatUIConfig(
 
 export function getTabSettingsSnapshot(
   tab: TabProviderContext,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
 ): TabProviderSettings {
   return ProviderSettingsCoordinator.getProviderSettingsSnapshot(
     plugin.settings,
@@ -83,7 +83,7 @@ export function getTabSettingsSnapshot(
 
 export function getTabPermissionMode(
   tab: TabProviderContext,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
 ): string {
   const permissionMode = getTabSettingsSnapshot(tab, plugin).permissionMode;
   return typeof permissionMode === 'string' && permissionMode
@@ -93,7 +93,7 @@ export function getTabPermissionMode(
 
 export function getTabHiddenCommands(
   tab: TabProviderContext,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   conversation?: Conversation | null,
 ): Set<string> {
   return getHiddenProviderCommandSet(
@@ -120,7 +120,7 @@ export function getProviderMcpManager(providerId: ProviderId) {
 
 export function syncSlashCommandDropdownForProvider(
   tab: TabData,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   getProviderCatalogConfig?: () => ProviderCatalogInfo,
   conversation?: Conversation | null,
 ): void {
@@ -143,7 +143,7 @@ export function syncSlashCommandDropdownForProvider(
 
 export async function updateTabProviderSettings(
   tab: TabProviderContext,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   update: (settings: TabProviderSettings) => void,
 ): Promise<TabProviderSettings> {
   const providerId = getTabProviderId(tab, plugin);
@@ -158,7 +158,7 @@ export async function updateTabProviderSettings(
   return snapshot;
 }
 
-export function refreshTabProviderUI(tab: TabData, plugin: ClaudianPlugin): void {
+export function refreshTabProviderUI(tab: TabData, plugin: SpecoratorPlugin): void {
   const capabilities = getTabCapabilities(tab, plugin);
   const permissionMode = getTabPermissionMode(tab, plugin);
   tab.ui.modelSelector?.updateDisplay();
@@ -170,7 +170,7 @@ export function refreshTabProviderUI(tab: TabData, plugin: ClaudianPlugin): void
   tab.ui.planModeToggle?.updateDisplay();
   tab.ui.serviceTierToggle?.updateDisplay();
   tab.dom.inputWrapper.toggleClass(
-    'claudian-input-plan-mode',
+    'specorator-input-plan-mode',
     permissionMode === 'plan' && capabilities.supportsPlanMode,
   );
 }
@@ -179,7 +179,7 @@ export function refreshTabProviderUI(tab: TabData, plugin: ClaudianPlugin): void
  * Hides or disables UI elements that the active provider does not support.
  * Called after toolbar initialization and on provider switches.
  */
-export function applyProviderUIGating(tab: TabData, plugin: ClaudianPlugin): void {
+export function applyProviderUIGating(tab: TabData, plugin: SpecoratorPlugin): void {
   const capabilities = getTabCapabilities(tab, plugin);
   const uiConfig = getTabChatUIConfig(tab, plugin);
   const mcpManager = capabilities.supportsMcpTools
@@ -208,7 +208,7 @@ export function applyProviderUIGating(tab: TabData, plugin: ClaudianPlugin): voi
 
 export function syncTabProviderServices(
   tab: TabData,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
 ): void {
   tab.services.instructionRefineService?.cancel();
   tab.services.instructionRefineService?.resetConversation();
@@ -218,7 +218,7 @@ export function syncTabProviderServices(
   );
 }
 
-export function ensureTitleGenerationService(tab: TabData, plugin: ClaudianPlugin): void {
+export function ensureTitleGenerationService(tab: TabData, plugin: SpecoratorPlugin): void {
   if (!tab.services.titleGenerationService) {
     tab.services.titleGenerationService = ProviderRegistry.createTitleGenerationService(plugin);
   }
@@ -260,7 +260,7 @@ export function generateMessageId(): string {
   return `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
-export function updatePlanModeUI(tab: TabData, plugin: ClaudianPlugin, mode: string): void {
+export function updatePlanModeUI(tab: TabData, plugin: SpecoratorPlugin, mode: string): void {
   const providerId = getTabProviderId(tab, plugin);
   const snapshot = getTabSettingsSnapshot(tab, plugin);
   const uiConfig = ProviderRegistry.getChatUIConfig(providerId);
@@ -278,7 +278,7 @@ export function updatePlanModeUI(tab: TabData, plugin: ClaudianPlugin, mode: str
   tab.ui.permissionToggle?.updateDisplay();
   tab.ui.planModeToggle?.updateDisplay();
   tab.dom.inputWrapper.toggleClass(
-    'claudian-input-plan-mode',
+    'specorator-input-plan-mode',
     mode === 'plan' && getTabCapabilities(tab, plugin).supportsPlanMode,
   );
 }

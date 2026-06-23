@@ -1,5 +1,5 @@
 /**
- * Claudian - WebSearch expanded-render decision helpers.
+ * Specorator - WebSearch expanded-render decision helpers.
  *
  * Extracted from ToolCallRenderer to keep `renderWebSearchExpanded` below the
  * complexity thresholds: the structured-data predicate and the parsed-links

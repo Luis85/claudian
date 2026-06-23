@@ -37,19 +37,19 @@ export class WorkOrderActivityDropdown {
     // Toggle hidden so the empty host stops contributing to the parent's
     // flexbox gap — otherwise a 12px gap on each side leaks ~24px between
     // sibling header buttons when no work-order activity exists.
-    this.hostEl.toggleClass('claudian-hidden', isEmpty);
+    this.hostEl.toggleClass('specorator-hidden', isEmpty);
     if (isEmpty) return;
-    const root = this.hostEl.createDiv({ cls: 'claudian-work-order-activity' });
-    const classes = ['claudian-header-btn', 'claudian-work-order-activity-toggle'];
-    if (summary.attentionCount > 0) classes.push('claudian-work-order-activity-toggle--attention');
+    const root = this.hostEl.createDiv({ cls: 'specorator-work-order-activity' });
+    const classes = ['specorator-header-btn', 'specorator-work-order-activity-toggle'];
+    if (summary.attentionCount > 0) classes.push('specorator-work-order-activity-toggle--attention');
     const toggle = root.createDiv({ cls: classes.join(' ') });
     toggle.setAttribute('role', 'button');
     toggle.setAttribute('tabindex', '0');
     toggle.setAttribute('aria-haspopup', 'menu');
     toggle.setAttribute('aria-expanded', this.open ? 'true' : 'false');
     toggle.setAttribute('aria-label', this.toggleLabel(summary));
-    setIcon(toggle.createSpan({ cls: 'claudian-work-order-activity-icon' }), 'clipboard-list');
-    toggle.createSpan({ cls: 'claudian-work-order-activity-count', text: String(this.entryCount(summary)) });
+    setIcon(toggle.createSpan({ cls: 'specorator-work-order-activity-icon' }), 'clipboard-list');
+    toggle.createSpan({ cls: 'specorator-work-order-activity-count', text: String(this.entryCount(summary)) });
     toggle.addEventListener('click', (event) => {
       event.stopPropagation();
       this.open = !this.open;
@@ -65,15 +65,15 @@ export class WorkOrderActivityDropdown {
   }
 
   private renderMenu(root: HTMLElement): void {
-    const menu = root.createDiv({ cls: 'claudian-work-order-activity-menu' });
+    const menu = root.createDiv({ cls: 'specorator-work-order-activity-menu' });
     menu.setAttribute('role', 'menu');
     for (const item of this.props.summary.items) {
-      const row = menu.createDiv({ cls: 'claudian-work-order-activity-item' });
+      const row = menu.createDiv({ cls: 'specorator-work-order-activity-item' });
       row.setAttribute('role', 'menuitem');
       row.setAttribute('tabindex', '0');
-      row.createSpan({ cls: 'claudian-work-order-activity-title', text: item.title });
-      row.createSpan({ cls: 'claudian-work-order-activity-status', text: t(item.labelKey) });
-      row.createSpan({ cls: 'claudian-work-order-activity-action', text: t(item.actionHintKey) });
+      row.createSpan({ cls: 'specorator-work-order-activity-title', text: item.title });
+      row.createSpan({ cls: 'specorator-work-order-activity-status', text: t(item.labelKey) });
+      row.createSpan({ cls: 'specorator-work-order-activity-action', text: t(item.actionHintKey) });
       row.addEventListener('click', () => {
         this.selectItem(item.id);
       });
@@ -85,12 +85,12 @@ export class WorkOrderActivityDropdown {
     }
     for (const tab of this.props.summary.closableTabs) {
       const row = menu.createDiv({
-        cls: 'claudian-work-order-activity-item claudian-work-order-activity-item--finished',
+        cls: 'specorator-work-order-activity-item specorator-work-order-activity-item--finished',
       });
       row.setAttribute('role', 'menuitem');
-      row.createSpan({ cls: 'claudian-work-order-activity-title', text: tab.title });
-      row.createSpan({ cls: 'claudian-work-order-activity-status', text: t('workOrderActivity.status.finished') });
-      const close = row.createSpan({ cls: 'claudian-work-order-activity-close' });
+      row.createSpan({ cls: 'specorator-work-order-activity-title', text: tab.title });
+      row.createSpan({ cls: 'specorator-work-order-activity-status', text: t('workOrderActivity.status.finished') });
+      const close = row.createSpan({ cls: 'specorator-work-order-activity-close' });
       close.setAttribute('role', 'button');
       close.setAttribute('tabindex', '0');
       close.setAttribute('aria-label', t('workOrderActivity.action.close'));

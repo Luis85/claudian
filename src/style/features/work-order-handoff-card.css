@@ -1,5 +1,5 @@
-.claudian-work-order-handoff-card {
-  /* Positioning context for card-anchored `.claudian-text-actions` (absolute). */
+.specorator-work-order-handoff-card {
+  /* Positioning context for card-anchored `.specorator-text-actions` (absolute). */
   position: relative;
   margin: 8px 0;
   padding: 8px;
@@ -9,7 +9,7 @@
   font-size: var(--font-ui-small);
 }
 
-.claudian-work-order-handoff-card-header {
+.specorator-work-order-handoff-card-header {
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -17,12 +17,12 @@
   outline: none;
 }
 
-.claudian-work-order-handoff-card-header:focus-visible {
+.specorator-work-order-handoff-card-header:focus-visible {
   box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
   border-radius: 6px;
 }
 
-.claudian-work-order-handoff-card-icon {
+.specorator-work-order-handoff-card-icon {
   display: inline-flex;
   color: var(--text-muted);
   width: 16px;
@@ -31,7 +31,7 @@
   flex: 0 0 auto;
 }
 
-.claudian-work-order-handoff-card-main {
+.specorator-work-order-handoff-card-main {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -39,33 +39,33 @@
   flex: 1 1 auto;
 }
 
-.claudian-work-order-handoff-card-title {
+.specorator-work-order-handoff-card-title {
   color: var(--text-normal);
   font-weight: 600;
 }
 
-.claudian-work-order-handoff-card-preview {
+.specorator-work-order-handoff-card-preview {
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.claudian-work-order-handoff-card-toggle {
+.specorator-work-order-handoff-card-toggle {
   color: var(--text-accent);
   font-size: var(--font-ui-smaller);
   white-space: nowrap;
   margin-top: 1px;
 }
 
-.claudian-work-order-handoff-card-chips {
+.specorator-work-order-handoff-card-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   margin-top: 6px;
 }
 
-.claudian-work-order-handoff-card-chip {
+.specorator-work-order-handoff-card-chip {
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--background-modifier-hover);
@@ -75,21 +75,21 @@
 
 /* The chips are a collapsed-state affordance; hide them once expanded so they
    do not duplicate the section headers (setupCollapsible adds `expanded`). */
-.claudian-work-order-handoff-card.expanded .claudian-work-order-handoff-card-chips {
+.specorator-work-order-handoff-card.expanded .specorator-work-order-handoff-card-chips {
   display: none;
 }
 
-.claudian-work-order-handoff-card-details {
+.specorator-work-order-handoff-card-details {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid var(--background-modifier-border);
 }
 
-.claudian-work-order-handoff-card-section + .claudian-work-order-handoff-card-section {
+.specorator-work-order-handoff-card-section + .specorator-work-order-handoff-card-section {
   margin-top: 10px;
 }
 
-.claudian-work-order-handoff-card-section-title {
+.specorator-work-order-handoff-card-section-title {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   font-weight: 600;
@@ -98,15 +98,15 @@
   margin-bottom: 3px;
 }
 
-.claudian-work-order-handoff-card-section-body {
+.specorator-work-order-handoff-card-section-body {
   color: var(--text-normal);
 }
 
-/* Handoff-only messages anchor `.claudian-text-actions` under the card instead
-   of a `.claudian-text-block`. That shared element is opacity:0 and is only
-   revealed by `.claudian-text-block:hover` in messages.css, so reveal it on card
+/* Handoff-only messages anchor `.specorator-text-actions` under the card instead
+   of a `.specorator-text-block`. That shared element is opacity:0 and is only
+   revealed by `.specorator-text-block:hover` in messages.css, so reveal it on card
    hover/focus here too — otherwise actions like "Create work order" stay hidden. */
-.claudian-work-order-handoff-card:hover .claudian-text-actions,
-.claudian-work-order-handoff-card:focus-within .claudian-text-actions {
+.specorator-work-order-handoff-card:hover .specorator-text-actions,
+.specorator-work-order-handoff-card:focus-within .specorator-text-actions {
   opacity: 1;
 }

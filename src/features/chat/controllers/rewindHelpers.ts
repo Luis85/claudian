@@ -1,5 +1,5 @@
 /**
- * Claudian - Rewind validation + notice-copy helpers.
+ * Specorator - Rewind validation + notice-copy helpers.
  *
  * Extracted from ConversationController.rewind to keep it below the complexity
  * thresholds. The message-structure validation and the mode-dependent notice

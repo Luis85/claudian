@@ -1,5 +1,5 @@
 /* Empty state shown when no chat provider is enabled */
-.claudian-empty-state {
+.specorator-empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -10,18 +10,18 @@
   text-align: center;
 }
 
-.claudian-empty-state-title {
+.specorator-empty-state-title {
   margin: 0;
   color: var(--text-normal);
 }
 
-.claudian-empty-state-message {
+.specorator-empty-state-message {
   margin: 0;
   max-width: 320px;
   color: var(--text-muted);
 }
 
-.claudian-empty-state-steps {
+.specorator-empty-state-steps {
   margin: 0;
   max-width: 320px;
   padding-left: 20px;
@@ -29,11 +29,11 @@
   color: var(--text-muted);
 }
 
-.claudian-empty-state-steps li {
+.specorator-empty-state-steps li {
   margin-bottom: 6px;
 }
 
-.claudian-empty-state-button {
+.specorator-empty-state-button {
   margin-top: 4px;
   cursor: pointer;
 }

@@ -1,5 +1,5 @@
 /**
- * Claudian - OS path classification for drag-and-drop into chat context.
+ * Specorator - OS path classification for drag-and-drop into chat context.
  *
  * Pure function. Given an absolute OS path plus the vault root and configured
  * external roots, decide whether the path belongs to the vault, to an external

@@ -21,9 +21,9 @@ function makeApp(externalContexts: string[] = []) {
 function bootTab(opts: { externalContexts?: string[] } = {}) {
   const externalContexts = opts.externalContexts ?? [];
   const container = createMockEl();
-  const inputContainerEl = container.createDiv({ cls: 'claudian-input-container' });
-  const inputWrapper = inputContainerEl.createDiv({ cls: 'claudian-input-wrapper' });
-  const contextRowEl = container.createDiv({ cls: 'claudian-context-row' });
+  const inputContainerEl = container.createDiv({ cls: 'specorator-input-container' });
+  const inputWrapper = inputContainerEl.createDiv({ cls: 'specorator-input-wrapper' });
+  const contextRowEl = container.createDiv({ cls: 'specorator-context-row' });
   const inputEl = createMockEl('textarea') as any;
   inputEl.value = '';
 

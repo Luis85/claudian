@@ -3,7 +3,7 @@ const os = require('os');
 const path = require('path');
 
 const jestPath = require.resolve('jest/bin/jest');
-const localStorageFile = path.join(os.tmpdir(), 'claudian-localstorage');
+const localStorageFile = path.join(os.tmpdir(), 'specorator-localstorage');
 const warningFlags = process.allowedNodeEnvironmentFlags?.has('--disable-warning=ExperimentalWarning')
   ? ['--disable-warning=ExperimentalWarning']
   : [];

@@ -5,7 +5,7 @@ import {
 } from '@/core/commands/commandHotkeyRegistry';
 import type { ChatTabExecutionSurface } from '@/features/tasks/execution/ChatTabExecutionSurface';
 import type { ChatWorkOrderLinker } from '@/features/tasks/execution/ChatWorkOrderLinker';
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 
 type AnyCommand = {
   id: string;
@@ -15,7 +15,7 @@ type AnyCommand = {
   checkCallback?: (checking: boolean) => boolean;
 };
 
-function createPlugin(): { plugin: ClaudianPlugin; commands: AnyCommand[] } {
+function createPlugin(): { plugin: SpecoratorPlugin; commands: AnyCommand[] } {
   const commands: AnyCommand[] = [];
   const plugin = {
     addCommand: jest.fn((cmd: AnyCommand) => {
@@ -30,7 +30,7 @@ function createPlugin(): { plugin: ClaudianPlugin; commands: AnyCommand[] } {
     },
     settings: { maxChatTabs: 3, agentBoardQueueCap: 1 },
     copyDiagnosticLogs: jest.fn(),
-  } as unknown as ClaudianPlugin;
+  } as unknown as SpecoratorPlugin;
   return { plugin, commands };
 }
 

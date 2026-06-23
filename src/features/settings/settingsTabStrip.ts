@@ -1,5 +1,5 @@
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
-import { asSettingsBag, type ClaudianSettings } from '../../core/types/settings';
+import { asSettingsBag, type SpecoratorSettings } from '../../core/types/settings';
 import { t } from '../../i18n/i18n';
 import type { TranslationKey } from '../../i18n/types';
 import {
@@ -20,7 +20,7 @@ const FIXED_TAB_IDS: readonly SettingsTabId[] = ['general', 'agentBoard', 'diagn
  * tabs followed by every enabled provider tab. Extracted so the strip ordering
  * lives in one place and `renderTabs` stays declarative.
  */
-export function computeTabIds(settings: ClaudianSettings): SettingsTabId[] {
+export function computeTabIds(settings: SpecoratorSettings): SettingsTabId[] {
   const providerTabs = ProviderRegistry.getEnabledProviderIds(asSettingsBag(settings));
   return [...FIXED_TAB_IDS, ...providerTabs];
 }
@@ -81,17 +81,17 @@ export function buildTabBar(
 ): void {
   for (const id of tabIds) {
     const button = tabBar.createEl('button', {
-      cls: `claudian-settings-tab${id === activeTab ? ' claudian-settings-tab--active' : ''}`,
+      cls: `specorator-settings-tab${id === activeTab ? ' specorator-settings-tab--active' : ''}`,
       attr: { 'data-tab-id': id },
       text: tabLabelFor(id),
     });
     button.addEventListener('click', () => {
       onActivate(id);
       for (const tabId of tabIds) {
-        tabButtons.get(tabId)?.toggleClass('claudian-settings-tab--active', tabId === id);
+        tabButtons.get(tabId)?.toggleClass('specorator-settings-tab--active', tabId === id);
         tabContents
           .get(tabId)
-          ?.toggleClass('claudian-settings-tab-content--active', tabId === id);
+          ?.toggleClass('specorator-settings-tab-content--active', tabId === id);
       }
     });
     tabButtons.set(id, button);
@@ -110,7 +110,7 @@ export function buildTabContents(
 ): void {
   for (const id of tabIds) {
     const content = containerEl.createDiv({
-      cls: `claudian-settings-tab-content${id === activeTab ? ' claudian-settings-tab-content--active' : ''}`,
+      cls: `specorator-settings-tab-content${id === activeTab ? ' specorator-settings-tab-content--active' : ''}`,
     });
     tabContents.set(id, content);
   }

@@ -20,7 +20,7 @@ describe('renderAgentAvatar', () => {
   it('renders a circular avatar chip carrying the persona name as title + aria-label', () => {
     const host = document.createElement('div');
     const avatar = renderAgentAvatar(host, STANDARD, 20);
-    expect(avatar.classList.contains('claudian-agent-avatar')).toBe(true);
+    expect(avatar.classList.contains('specorator-agent-avatar')).toBe(true);
     expect(avatar.getAttribute('title')).toBe('Standard');
     expect(avatar.getAttribute('aria-label')).toBe('Standard');
   });
@@ -52,7 +52,7 @@ describe('renderAgentAvatar', () => {
   it('renders a custom persona with its initials instead of an icon', () => {
     const host = document.createElement('div');
     const avatar = renderAgentAvatar(host, CUSTOM, 20);
-    expect(avatar.classList.contains('claudian-agent-avatar--initials')).toBe(true);
+    expect(avatar.classList.contains('specorator-agent-avatar--initials')).toBe(true);
     expect(avatar.textContent).toBe('RF');
     expect(avatar.getAttribute('data-icon')).toBeNull();
     expect(avatar.style.getPropertyValue('--agent-color')).toBe('var(--color-purple)');
@@ -61,7 +61,7 @@ describe('renderAgentAvatar', () => {
   it('appends the avatar to the provided parent', () => {
     const host = document.createElement('div');
     renderAgentAvatar(host, STANDARD, 20);
-    expect(host.querySelector('.claudian-agent-avatar')).not.toBeNull();
+    expect(host.querySelector('.specorator-agent-avatar')).not.toBeNull();
   });
 
   it('renders a non-builtin persona with icon: wrench using the icon glyph, not initials', () => {
@@ -77,13 +77,13 @@ describe('renderAgentAvatar', () => {
     expect(avatar.getAttribute('data-icon')).toBe('wrench');
     // icon takes precedence — no initials text
     expect(avatar.textContent).toBe('');
-    expect(avatar.classList.contains('claudian-agent-avatar--initials')).toBe(false);
+    expect(avatar.classList.contains('specorator-agent-avatar--initials')).toBe(false);
   });
 
   it('renders a non-builtin persona with only initials (no icon) using initials', () => {
     const host = document.createElement('div');
     const avatar = renderAgentAvatar(host, CUSTOM, 20);
-    expect(avatar.classList.contains('claudian-agent-avatar--initials')).toBe(true);
+    expect(avatar.classList.contains('specorator-agent-avatar--initials')).toBe(true);
     expect(avatar.textContent).toBe('RF');
     expect(avatar.getAttribute('data-icon')).toBeNull();
   });

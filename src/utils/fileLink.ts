@@ -1,5 +1,5 @@
 /**
- * Claudian - Vault file link utilities (provider-neutral).
+ * Specorator - Vault file link utilities (provider-neutral).
  *
  * One resolution + click path for chat markdown (wikilinks, Cursor inline paths)
  * and tool UI path chips. Only vault files that exist in Obsidian are linkable.
@@ -145,7 +145,7 @@ export function openVaultFileLink(app: App, rawTarget: string): void {
 
 /**
  * Marks an element clickable when `rawPath` resolves to a vault file.
- * Uses the same `claudian-file-link` + `data-href` contract as chat wikilinks.
+ * Uses the same `specorator-file-link` + `data-href` contract as chat wikilinks.
  */
 export function decorateVaultFileLink(app: App, el: HTMLElement, rawPath: string): void {
   const trimmed = rawPath.trim();
@@ -158,7 +158,7 @@ export function decorateVaultFileLink(app: App, el: HTMLElement, rawPath: string
     return;
   }
 
-  el.classList.add('claudian-file-link');
+  el.classList.add('specorator-file-link');
   el.dataset.href = openTarget;
   el.setAttr('role', 'link');
 }
@@ -290,7 +290,7 @@ function createWikilink(
   displayText: string
 ): HTMLElement {
   const link = ownerDocument.createElement('a');
-  link.className = 'claudian-file-link internal-link';
+  link.className = 'specorator-file-link internal-link';
   link.textContent = displayText;
   link.setAttribute('data-href', linkTarget);
   link.setAttribute('href', linkTarget);
@@ -306,7 +306,7 @@ function repairEmptyInternalLink(app: App, link: HTMLAnchorElement): void {
   const linkPath = extractLinkPathFromTarget(linkTarget);
   if (!linkPath || !vaultFileIsOpenable(app, linkPath)) return;
 
-  link.classList.add('claudian-file-link');
+  link.classList.add('specorator-file-link');
   if (!link.dataset.href) {
     link.setAttribute('data-href', linkTarget);
   }
@@ -316,7 +316,7 @@ function repairEmptyInternalLink(app: App, link: HTMLAnchorElement): void {
 /**
  * Registers a delegated click handler for file links on a container.
  * Should be called once on the messages container.
- * Handles both our custom .claudian-file-link and Obsidian's .internal-link.
+ * Handles both our custom .specorator-file-link and Obsidian's .internal-link.
  */
 export function registerFileLinkHandler(
   app: App,
@@ -326,7 +326,7 @@ export function registerFileLinkHandler(
   component.registerDomEvent(container, 'click', (event: MouseEvent) => {
     const target = event.target as HTMLElement;
     const link = target.closest(
-      'a.claudian-file-link, a.internal-link, [data-href].claudian-file-link',
+      'a.specorator-file-link, a.internal-link, [data-href].specorator-file-link',
     ) as HTMLElement | null;
 
     if (!link) {
@@ -430,7 +430,7 @@ export function processFileLinks(app: App, container: HTMLElement): void {
           return NodeFilter.FILTER_REJECT;
         }
 
-        if (parent.closest('pre, code, a, .claudian-file-link, .internal-link')) {
+        if (parent.closest('pre, code, a, .specorator-file-link, .internal-link')) {
           return NodeFilter.FILTER_REJECT;
         }
 

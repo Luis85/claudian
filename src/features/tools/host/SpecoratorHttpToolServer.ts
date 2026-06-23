@@ -1,4 +1,4 @@
-// src/features/tools/host/ClaudianHttpToolServer.ts
+// src/features/tools/host/SpecoratorHttpToolServer.ts
 import * as crypto from 'node:crypto';
 import * as http from 'node:http';
 
@@ -9,7 +9,7 @@ import { getScopedTools, scopedToolKey } from '../scopedTools';
 import type { LoadedTool, ToolHostContext } from '../toolTypes';
 import { makeBoundedToolCallback } from './toolInvocation';
 
-export const CLAUDIAN_HTTP_TOOL_SERVER_NAME = 'claudian';
+export const SPECORATOR_HTTP_TOOL_SERVER_NAME = 'specorator';
 
 // Bounded drain on rebuild: wait out in-flight tool calls before swapping the
 // MCP layer so a tool-file save mid-request doesn't abort the call. Ceiling
@@ -33,7 +33,7 @@ export function buildHttpMcpServer(
   ctxFactory: (signal: AbortSignal) => ToolHostContext,
 ): McpServer {
   const server = new McpServer({
-    name: CLAUDIAN_HTTP_TOOL_SERVER_NAME,
+    name: SPECORATOR_HTTP_TOOL_SERVER_NAME,
     version: '1.0.0',
   });
 
@@ -65,7 +65,7 @@ interface ScopedLayer {
 }
 
 /**
- * In-process Streamable-HTTP MCP server exposing Claudian user-tool handlers
+ * In-process Streamable-HTTP MCP server exposing Specorator user-tool handlers
  * with full Obsidian context. Providers (Opencode, Cursor) connect via the
  * loopback URL returned by `getConfig()`.
  *
@@ -80,7 +80,7 @@ interface ScopedLayer {
  * Security: loopback-only bind + per-grant bearer token. Each token is included
  * in the MCP config headers so only processes we spawn can use it.
  */
-export class ClaudianHttpToolServer {
+export class SpecoratorHttpToolServer {
   private config: HttpToolServerConfig | null = null;
   private httpServer: http.Server | null = null;
   // The default (all-tools) token; its grant is `undefined`. Aliased as

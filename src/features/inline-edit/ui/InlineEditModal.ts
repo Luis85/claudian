@@ -9,7 +9,7 @@ import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import { ProviderWorkspaceRegistry } from '../../../core/providers/ProviderWorkspaceRegistry';
 import { DEFAULT_CHAT_PROVIDER_ID, type InlineEditMode, type InlineEditService, type ProviderId } from '../../../core/providers/types';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { hideSelectionHighlight, showSelectionHighlight } from '../../../shared/components/SelectionHighlight';
 import { SlashCommandDropdown } from '../../../shared/components/SlashCommandDropdown';
 import { MentionDropdownController } from '../../../shared/mention/MentionDropdownController';
@@ -66,20 +66,20 @@ class DiffWidget extends WidgetType {
   toDOM(): HTMLElement {
     const ownerDocument = this.controller.getOwnerDocument();
     const span = ownerDocument.createElement('span');
-    span.className = 'claudian-inline-diff-replace';
+    span.className = 'specorator-inline-diff-replace';
     appendDiffOps(span, this.diffOps);
 
     const btns = ownerDocument.createElement('span');
-    btns.className = 'claudian-inline-diff-buttons';
+    btns.className = 'specorator-inline-diff-buttons';
 
     const rejectBtn = ownerDocument.createElement('button');
-    rejectBtn.className = 'claudian-inline-diff-btn reject';
+    rejectBtn.className = 'specorator-inline-diff-btn reject';
     rejectBtn.textContent = '✕';
     rejectBtn.title = 'Reject (esc)';
     rejectBtn.onclick = () => this.controller.reject();
 
     const acceptBtn = ownerDocument.createElement('button');
-    acceptBtn.className = 'claudian-inline-diff-btn accept';
+    acceptBtn.className = 'specorator-inline-diff-btn accept';
     acceptBtn.textContent = '✓';
     acceptBtn.title = 'Accept (enter)';
     acceptBtn.onclick = () => this.controller.accept();
@@ -140,7 +140,7 @@ export function buildInlineEditInputDecorations(options: {
   const lineStart = options.doc.lineAt(options.inputPos).from;
   return Decoration.set([
     Decoration.line({
-      class: 'claudian-inline-input-line',
+      class: 'specorator-inline-input-line',
     }).range(lineStart),
     Decoration.widget({
       widget: options.widget,
@@ -245,10 +245,10 @@ function appendDiffOps(container: HTMLElement, ops: DiffOp[]): void {
   for (const op of ops) {
     switch (op.type) {
       case 'delete':
-        container.createSpan({ cls: 'claudian-diff-del', text: op.text });
+        container.createSpan({ cls: 'specorator-diff-del', text: op.text });
         break;
       case 'insert':
-        container.createSpan({ cls: 'claudian-diff-ins', text: op.text });
+        container.createSpan({ cls: 'specorator-diff-ins', text: op.text });
         break;
       default:
         container.appendText(op.text);
@@ -277,7 +277,7 @@ export class InlineEditModal {
 
   constructor(
     private app: App,
-    private plugin: ClaudianPlugin,
+    private plugin: SpecoratorPlugin,
     private editor: Editor,
     private view: MarkdownView,
     private request: InlineEditRequest,
@@ -346,7 +346,7 @@ class InlineEditController {
 
   constructor(
     private app: App,
-    private plugin: ClaudianPlugin,
+    private plugin: SpecoratorPlugin,
     private editorView: EditorView,
     private editor: Editor,
     private request: InlineEditRequest,
@@ -484,26 +484,26 @@ class InlineEditController {
   createInputDOM(): HTMLElement {
     const ownerDocument = this.getOwnerDocument();
     const container = ownerDocument.createElement('div');
-    container.className = 'claudian-inline-input-container';
+    container.className = 'specorator-inline-input-container';
     this.containerEl = container;
 
     this.agentReplyEl = ownerDocument.createElement('div');
-    this.agentReplyEl.className = 'claudian-inline-agent-reply claudian-hidden';
+    this.agentReplyEl.className = 'specorator-inline-agent-reply specorator-hidden';
     container.appendChild(this.agentReplyEl);
 
     const inputWrap = ownerDocument.createElement('div');
-    inputWrap.className = 'claudian-inline-input-wrap';
+    inputWrap.className = 'specorator-inline-input-wrap';
     container.appendChild(inputWrap);
 
     this.inputEl = ownerDocument.createElement('input');
     this.inputEl.type = 'text';
-    this.inputEl.className = 'claudian-inline-input';
+    this.inputEl.className = 'specorator-inline-input';
     this.inputEl.placeholder = this.mode === 'cursor' ? 'Insert instructions...' : 'Edit instructions...';
     this.inputEl.spellcheck = false;
     inputWrap.appendChild(this.inputEl);
 
     this.spinnerEl = ownerDocument.createElement('div');
-    this.spinnerEl.className = 'claudian-inline-spinner claudian-hidden';
+    this.spinnerEl.className = 'specorator-inline-spinner specorator-hidden';
     inputWrap.appendChild(this.spinnerEl);
 
     const inlineCatalog = ProviderWorkspaceRegistry.getCommandCatalog(this.resolvedProviderId);
@@ -565,10 +565,10 @@ class InlineEditController {
   createPreviewDOM(markdown: string): HTMLElement {
     const ownerDocument = this.getOwnerDocument();
     const previewEl = ownerDocument.createElement('div');
-    previewEl.className = 'claudian-inline-markdown-preview';
+    previewEl.className = 'specorator-inline-markdown-preview';
 
     const bodyEl = ownerDocument.createElement('div');
-    bodyEl.className = 'claudian-inline-markdown-preview-body markdown-rendered';
+    bodyEl.className = 'specorator-inline-markdown-preview-body markdown-rendered';
     previewEl.appendChild(bodyEl);
 
     void this.renderMarkdownPreview(bodyEl, markdown);
@@ -611,7 +611,7 @@ class InlineEditController {
     this.removeSelectionListeners();
 
     this.inputEl.disabled = true;
-    this.spinnerEl.removeClass('claudian-hidden');
+    this.spinnerEl.removeClass('specorator-hidden');
 
     const contextFiles = this.resolveContextFilesFromMessage(userMessage);
 
@@ -641,7 +641,7 @@ class InlineEditController {
       }
     }
 
-    this.spinnerEl.addClass('claudian-hidden');
+    this.spinnerEl.addClass('specorator-hidden');
 
     if (result.success) {
       if (result.editedText !== undefined) {
@@ -671,7 +671,7 @@ class InlineEditController {
     const renderVersion = ++this.agentReplyRenderVersion;
     const renderedEl = this.getOwnerDocument().createElement('div');
 
-    replyEl.removeClass('claudian-hidden');
+    replyEl.removeClass('specorator-hidden');
     replyEl.empty();
     void this.renderMarkdownPreview(renderedEl, message).then(() => {
       if (renderVersion !== this.agentReplyRenderVersion || replyEl !== this.agentReplyEl) {

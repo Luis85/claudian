@@ -21,22 +21,22 @@ export class GitActionButton {
   private lastStatus: GitStatus | null = null;
 
   constructor(parentEl: HTMLElement, private readonly callbacks: GitActionCallbacks) {
-    this.containerEl = parentEl.createDiv({ cls: 'claudian-git-action' });
+    this.containerEl = parentEl.createDiv({ cls: 'specorator-git-action' });
     this.buttonEl = this.containerEl.createEl('button', {
-      cls: 'claudian-git-action-btn',
+      cls: 'specorator-git-action-btn',
       attr: {
         type: 'button',
         'aria-label': 'Commit and push changes',
       },
     });
 
-    const iconEl = this.buttonEl.createSpan({ cls: 'claudian-git-action-icon' });
+    const iconEl = this.buttonEl.createSpan({ cls: 'specorator-git-action-icon' });
     setIcon(iconEl, 'git-commit-horizontal');
     this.labelEl = this.buttonEl.createSpan({
-      cls: 'claudian-git-action-label',
+      cls: 'specorator-git-action-label',
       text: 'Commit & push',
     });
-    this.badgeEl = this.buttonEl.createSpan({ cls: 'claudian-git-action-badge' });
+    this.badgeEl = this.buttonEl.createSpan({ cls: 'specorator-git-action-badge' });
 
     this.buttonEl.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -53,7 +53,7 @@ export class GitActionButton {
 
   updateDisplay(): void {
     const visible = shouldShowGitButton(this.lastStatus, this.callbacks.isGitActionsEnabled());
-    this.containerEl.toggleClass('claudian-hidden', !visible);
+    this.containerEl.toggleClass('specorator-hidden', !visible);
     if (visible && this.lastStatus) {
       this.badgeEl.setText(String(this.lastStatus.dirtyCount));
       const count = this.lastStatus.dirtyCount;

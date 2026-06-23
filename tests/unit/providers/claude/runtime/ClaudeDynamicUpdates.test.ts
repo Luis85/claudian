@@ -57,23 +57,23 @@ describe('applyClaudeDynamicUpdates — bound-agent model precedence', () => {
   });
 });
 
-describe('applyClaudeDynamicUpdates — claudian tool server', () => {
-  it('includes the in-process claudian tool server in setMcpServers', async () => {
-    const server = { type: 'sdk', name: 'claudian', instance: {} };
-    const { deps, setMcpServers } = makeDeps({ getClaudianToolServer: () => server });
+describe('applyClaudeDynamicUpdates — specorator tool server', () => {
+  it('includes the in-process specorator tool server in setMcpServers', async () => {
+    const server = { type: 'sdk', name: 'specorator', instance: {} };
+    const { deps, setMcpServers } = makeDeps({ getSpecoratorToolServer: () => server });
 
     await applyClaudeDynamicUpdates(deps, undefined, undefined, false);
 
     expect(setMcpServers).toHaveBeenCalledTimes(1);
-    expect(setMcpServers.mock.calls[0][0]).toMatchObject({ claudian: server });
+    expect(setMcpServers.mock.calls[0][0]).toMatchObject({ specorator: server });
   });
 
-  it('omits the claudian key when no tool server is available', async () => {
-    const { deps, setMcpServers } = makeDeps({ getClaudianToolServer: () => undefined });
+  it('omits the specorator key when no tool server is available', async () => {
+    const { deps, setMcpServers } = makeDeps({ getSpecoratorToolServer: () => undefined });
 
     await applyClaudeDynamicUpdates(deps, undefined, undefined, false);
 
     expect(setMcpServers).toHaveBeenCalledTimes(1);
-    expect(setMcpServers.mock.calls[0][0]).not.toHaveProperty('claudian');
+    expect(setMcpServers.mock.calls[0][0]).not.toHaveProperty('specorator');
   });
 });

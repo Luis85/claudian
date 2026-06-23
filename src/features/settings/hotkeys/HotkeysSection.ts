@@ -22,29 +22,29 @@ export function renderHotkeysSection(
   });
 
   host.empty();
-  const container = host.createDiv({ cls: 'claudian-hotkeys-section' });
+  const container = host.createDiv({ cls: 'specorator-hotkeys-section' });
 
   const hotkeys = getCommandHotkeys();
 
   for (const hotkey of hotkeys) {
-    const row = container.createDiv({ cls: 'claudian-hotkey-row' });
+    const row = container.createDiv({ cls: 'specorator-hotkey-row' });
 
     // Command label
-    row.createSpan({ cls: 'claudian-hotkey-command-label', text: hotkey.label });
+    row.createSpan({ cls: 'specorator-hotkey-command-label', text: hotkey.label });
 
     // Binding display
     const bindingText = formatBoundHotkeys(ctx.plugin.app, hotkey.commandId) || 'Unbound';
     const bindingEl = row.createSpan({
-      cls: 'claudian-hotkey-binding-chip',
+      cls: 'specorator-hotkey-binding-chip',
       text: bindingText,
     });
     if (bindingText === 'Unbound') {
-      bindingEl.addClass('claudian-hotkey-binding-chip--unbound');
+      bindingEl.addClass('specorator-hotkey-binding-chip--unbound');
     }
 
     // Edit button
     const editBtn = row.createEl('button', {
-      cls: 'claudian-hotkey-edit-button',
+      cls: 'specorator-hotkey-edit-button',
       text: 'Edit',
     });
     editBtn.addEventListener('click', () => {

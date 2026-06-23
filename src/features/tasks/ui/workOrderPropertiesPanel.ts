@@ -70,9 +70,9 @@ export function renderWorkOrderProperties(
   const fm = task.frontmatter;
   const editable = fm.status !== 'running';
 
-  const panel = parent.createDiv({ cls: 'claudian-work-order-modal-properties' });
+  const panel = parent.createDiv({ cls: 'specorator-work-order-modal-properties' });
   panel.createDiv({
-    cls: 'claudian-work-order-modal-properties-head',
+    cls: 'specorator-work-order-modal-properties-head',
     text: t('tasks.workOrderModal.properties'),
   });
 
@@ -111,11 +111,11 @@ export function renderWorkOrderProperties(
     });
   } else {
     providerValue.createSpan({
-      cls: 'claudian-work-order-modal-prop-inner claudian-work-order-modal-mono',
+      cls: 'specorator-work-order-modal-prop-inner specorator-work-order-modal-mono',
       text: fm.provider ?? '—',
     });
     modelValue.createSpan({
-      cls: 'claudian-work-order-modal-prop-inner',
+      cls: 'specorator-work-order-modal-prop-inner',
       text: fm.model ?? '—',
     });
   }
@@ -137,18 +137,18 @@ export function renderWorkOrderProperties(
     renderPriorityBars(priorityValue, fm.priority);
   }
 
-  panel.createDiv({ cls: 'claudian-work-order-modal-properties-divider' });
+  panel.createDiv({ cls: 'specorator-work-order-modal-properties-divider' });
 
   addPropertyRow(panel, 'created', 'calendar', t('tasks.workOrderModal.fieldCreated')).value.createSpan({
-    cls: 'claudian-work-order-modal-prop-inner claudian-work-order-modal-prop-num',
+    cls: 'specorator-work-order-modal-prop-inner specorator-work-order-modal-prop-num',
     text: formatDateTime(fm.created),
   });
   addPropertyRow(panel, 'updated', 'clock', t('tasks.workOrderModal.fieldUpdated')).value.createSpan({
-    cls: 'claudian-work-order-modal-prop-inner claudian-work-order-modal-prop-num',
+    cls: 'specorator-work-order-modal-prop-inner specorator-work-order-modal-prop-num',
     text: formatDateTime(fm.updated),
   });
   addPropertyRow(panel, 'attempts', 'repeat', t('tasks.workOrderModal.fieldAttempts')).value.createSpan({
-    cls: 'claudian-work-order-modal-prop-inner claudian-work-order-modal-prop-num',
+    cls: 'specorator-work-order-modal-prop-inner specorator-work-order-modal-prop-num',
     text: String(fm.attempts),
   });
 
@@ -164,7 +164,7 @@ export function renderWorkOrderProperties(
       t('tasks.workOrderModal.fieldConversation'),
     ).value;
     const link = convValue.createEl('a', {
-      cls: 'claudian-work-order-modal-prop-link',
+      cls: 'specorator-work-order-modal-prop-link',
       text: fm.conversation_id,
       href: '#',
     });
@@ -199,14 +199,14 @@ function renderAgentRow(
   const persona = resolve(agentId);
 
   if (!editable) {
-    const wrap = parent.createSpan({ cls: 'claudian-work-order-modal-agent' });
+    const wrap = parent.createSpan({ cls: 'specorator-work-order-modal-agent' });
     renderAgentAvatar(wrap, persona, AGENT_AVATAR_SIZE);
     // For roster ids the label comes from getAgentOptions(); fall back to persona name.
     const isRosterId = agentId?.startsWith('roster:') ?? false;
     const rosterLabel = isRosterId
       ? callbacks.getAgentOptions().find((o) => o.value === agentId)?.label
       : undefined;
-    wrap.createSpan({ cls: 'claudian-work-order-modal-agent-name', text: rosterLabel ?? persona.name });
+    wrap.createSpan({ cls: 'specorator-work-order-modal-agent-name', text: rosterLabel ?? persona.name });
     return;
   }
 
@@ -223,7 +223,7 @@ function renderAgentRow(
 
   // Lead the chip with the selected persona's avatar (kept in sync on change).
   // Roster ids fall back to Standard persona avatar — no custom avatar in picker.
-  chip.el.addClass('claudian-work-order-modal-chip--agent');
+  chip.el.addClass('specorator-work-order-modal-chip--agent');
   let avatar = renderAgentAvatar(chip.el, persona, AGENT_AVATAR_SIZE);
   chip.el.insertBefore(avatar, chip.el.firstChild);
   chip.selectEl.addEventListener('change', () => {
@@ -250,15 +250,15 @@ function renderLoopRow(
   const loopName = callbacks.getLoopName?.(task.frontmatter.loop);
   const label = loopName ?? t('tasks.workOrderModal.loopNone');
   if (!editable) {
-    parent.createSpan({ cls: 'claudian-work-order-modal-loop', text: label });
+    parent.createSpan({ cls: 'specorator-work-order-modal-loop', text: label });
     return;
   }
-  const chip = parent.createSpan({ cls: 'claudian-work-order-modal-chip' });
-  chip.addClass('claudian-work-order-modal-chip--loop');
+  const chip = parent.createSpan({ cls: 'specorator-work-order-modal-chip' });
+  chip.addClass('specorator-work-order-modal-chip--loop');
   chip.setAttribute('role', 'button');
   chip.setAttribute('tabindex', '0');
-  const valueEl = chip.createSpan({ cls: 'claudian-work-order-modal-chip-value', text: label });
-  const caret = chip.createSpan({ cls: 'claudian-work-order-modal-chip-caret' });
+  const valueEl = chip.createSpan({ cls: 'specorator-work-order-modal-chip-value', text: label });
+  const caret = chip.createSpan({ cls: 'specorator-work-order-modal-chip-caret' });
   setIcon(caret, 'chevron-down');
   // The chip is custom (not a native <select>), so reflect the picked loop back
   // into its label after the picker persists. `onPickLoop` resolves to the new
@@ -287,40 +287,40 @@ function addPropertyRow(
   label: string,
 ): PropertyRow {
   const row = parent.createDiv({
-    cls: 'claudian-work-order-modal-prop-row',
+    cls: 'specorator-work-order-modal-prop-row',
     attr: { 'data-prop': key },
   });
-  const labelEl = row.createSpan({ cls: 'claudian-work-order-modal-prop-label' });
-  const iconEl = labelEl.createSpan({ cls: 'claudian-work-order-modal-prop-icon' });
+  const labelEl = row.createSpan({ cls: 'specorator-work-order-modal-prop-label' });
+  const iconEl = labelEl.createSpan({ cls: 'specorator-work-order-modal-prop-icon' });
   iconEl.setAttr('data-icon', icon);
   setIcon(iconEl, icon);
-  labelEl.createSpan({ cls: 'claudian-work-order-modal-prop-label-text', text: label });
-  const value = row.createSpan({ cls: 'claudian-work-order-modal-prop-value' });
+  labelEl.createSpan({ cls: 'specorator-work-order-modal-prop-label-text', text: label });
+  const value = row.createSpan({ cls: 'specorator-work-order-modal-prop-value' });
   return { el: row, value };
 }
 
 function renderStatusPill(parent: HTMLElement, status: TaskStatus): void {
   const pill = parent.createSpan({
-    cls: `claudian-work-order-modal-status-pill claudian-work-order-modal-status-pill--${status}`,
+    cls: `specorator-work-order-modal-status-pill specorator-work-order-modal-status-pill--${status}`,
   });
   // Tooltip carries the status name on hover (parity with the ID chip + the
   // assignee avatar); the inner dot stays decorative (color is the inner cue,
   // the label text is the non-color cue).
   pill.setAttr('title', status);
-  pill.createSpan({ cls: 'claudian-work-order-modal-status-dot' });
-  pill.createSpan({ cls: 'claudian-work-order-modal-status-label', text: status });
+  pill.createSpan({ cls: 'specorator-work-order-modal-status-dot' });
+  pill.createSpan({ cls: 'specorator-work-order-modal-status-label', text: status });
 }
 
 function renderPriorityBars(parent: HTMLElement, priority: TaskPriority): void {
   const wrap = parent.createSpan({
-    cls: `claudian-work-order-modal-prop-inner claudian-work-order-modal-priority claudian-work-order-modal-priority--${PRIORITY_LEVEL[priority]}`,
+    cls: `specorator-work-order-modal-prop-inner specorator-work-order-modal-priority specorator-work-order-modal-priority--${PRIORITY_LEVEL[priority]}`,
   });
-  const bars = wrap.createSpan({ cls: 'claudian-work-order-modal-priority-bars' });
+  const bars = wrap.createSpan({ cls: 'specorator-work-order-modal-priority-bars' });
   bars.setAttr('aria-hidden', 'true');
   const filled = PRIORITY_FILLED_BARS[priority];
   for (let i = 0; i < 3; i += 1) {
     const bar = bars.createEl('i');
     if (i < filled) bar.addClass('is-filled');
   }
-  wrap.createSpan({ cls: 'claudian-work-order-modal-priority-label', text: priority });
+  wrap.createSpan({ cls: 'specorator-work-order-modal-priority-label', text: priority });
 }

@@ -11,7 +11,7 @@ export class ThinkingBudgetSelector {
 
   constructor(parentEl: HTMLElement, callbacks: ToolbarCallbacks) {
     this.callbacks = callbacks;
-    this.container = parentEl.createDiv({ cls: 'claudian-thinking-selector' });
+    this.container = parentEl.createDiv({ cls: 'specorator-thinking-selector' });
     this.render();
   }
 
@@ -19,16 +19,16 @@ export class ThinkingBudgetSelector {
     this.container.empty();
 
     // Effort selector (for adaptive thinking models)
-    this.effortEl = this.container.createDiv({ cls: 'claudian-thinking-effort' });
-    const effortLabel = this.effortEl.createSpan({ cls: 'claudian-thinking-label-text' });
+    this.effortEl = this.container.createDiv({ cls: 'specorator-thinking-effort' });
+    const effortLabel = this.effortEl.createSpan({ cls: 'specorator-thinking-label-text' });
     effortLabel.setText('Effort:');
-    this.effortGearsEl = this.effortEl.createDiv({ cls: 'claudian-thinking-gears' });
+    this.effortGearsEl = this.effortEl.createDiv({ cls: 'specorator-thinking-gears' });
 
     // Legacy budget selector (for custom models)
-    this.budgetEl = this.container.createDiv({ cls: 'claudian-thinking-budget' });
-    const budgetLabel = this.budgetEl.createSpan({ cls: 'claudian-thinking-label-text' });
+    this.budgetEl = this.container.createDiv({ cls: 'specorator-thinking-budget' });
+    const budgetLabel = this.budgetEl.createSpan({ cls: 'specorator-thinking-label-text' });
     budgetLabel.setText('Thinking:');
-    this.budgetGearsEl = this.budgetEl.createDiv({ cls: 'claudian-thinking-gears' });
+    this.budgetGearsEl = this.budgetEl.createDiv({ cls: 'specorator-thinking-gears' });
 
     this.updateDisplay();
   }
@@ -44,13 +44,13 @@ export class ThinkingBudgetSelector {
     const options = uiConfig.getReasoningOptions(model, settings);
     const currentInfo = options.find(e => e.value === currentEffort);
 
-    const currentEl = this.effortGearsEl.createDiv({ cls: 'claudian-thinking-current' });
+    const currentEl = this.effortGearsEl.createDiv({ cls: 'specorator-thinking-current' });
     currentEl.setText(currentInfo?.label || options[0]?.label || 'High');
 
-    const optionsEl = this.effortGearsEl.createDiv({ cls: 'claudian-thinking-options' });
+    const optionsEl = this.effortGearsEl.createDiv({ cls: 'specorator-thinking-options' });
 
     for (const effort of [...options].reverse()) {
-      const gearEl = optionsEl.createDiv({ cls: 'claudian-thinking-gear' });
+      const gearEl = optionsEl.createDiv({ cls: 'specorator-thinking-gear' });
       gearEl.setText(effort.label);
 
       if (effort.value === currentEffort) {
@@ -78,13 +78,13 @@ export class ThinkingBudgetSelector {
     const options: ProviderReasoningOption[] = uiConfig.getReasoningOptions(model, settings);
     const currentBudgetInfo = options.find(b => b.value === currentBudget);
 
-    const currentEl = this.budgetGearsEl.createDiv({ cls: 'claudian-thinking-current' });
+    const currentEl = this.budgetGearsEl.createDiv({ cls: 'specorator-thinking-current' });
     currentEl.setText(currentBudgetInfo?.label || options[0]?.label || 'Off');
 
-    const optionsEl = this.budgetGearsEl.createDiv({ cls: 'claudian-thinking-options' });
+    const optionsEl = this.budgetGearsEl.createDiv({ cls: 'specorator-thinking-options' });
 
     for (const budget of [...options].reverse()) {
-      const gearEl = optionsEl.createDiv({ cls: 'claudian-thinking-gear' });
+      const gearEl = optionsEl.createDiv({ cls: 'specorator-thinking-gear' });
       gearEl.setText(budget.label);
       const tokens = budget.tokens ?? 0;
       gearEl.setAttribute('title', tokens > 0 ? `${tokens.toLocaleString('en-US')} tokens` : 'Disabled');
@@ -106,8 +106,8 @@ export class ThinkingBudgetSelector {
   updateDisplay() {
     const capabilities = this.callbacks.getCapabilities();
     if (capabilities.reasoningControl === 'none') {
-      this.effortEl?.addClass('claudian-hidden');
-      this.budgetEl?.addClass('claudian-hidden');
+      this.effortEl?.addClass('specorator-hidden');
+      this.budgetEl?.addClass('specorator-hidden');
       return;
     }
 
@@ -120,18 +120,18 @@ export class ThinkingBudgetSelector {
       || (options.length === 1 && options[0]?.value === defaultValue);
 
     if (shouldHide) {
-      this.effortEl?.addClass('claudian-hidden');
-      this.budgetEl?.addClass('claudian-hidden');
+      this.effortEl?.addClass('specorator-hidden');
+      this.budgetEl?.addClass('specorator-hidden');
       return;
     }
 
     const adaptive = uiConfig.isAdaptiveReasoningModel(model, settings);
 
     if (this.effortEl) {
-      this.effortEl.toggleClass('claudian-hidden', !adaptive);
+      this.effortEl.toggleClass('specorator-hidden', !adaptive);
     }
     if (this.budgetEl) {
-      this.budgetEl.toggleClass('claudian-hidden', adaptive);
+      this.budgetEl.toggleClass('specorator-hidden', adaptive);
     }
 
     if (adaptive) {

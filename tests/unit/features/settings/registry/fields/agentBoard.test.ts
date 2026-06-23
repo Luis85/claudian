@@ -279,7 +279,7 @@ describe('Agent Board tab registry fields', () => {
       const field = getField();
       const { ctx, onSpy, refresh } = makeCtx(['claude', 'codex']);
       // Attach host to the document so `host.isConnected` is true, matching
-      // production where ClaudianSettings.display() always mounts hosts. The
+      // production where SpecoratorSettings.display() always mounts hosts. The
       // production listener skips re-rendering when the host is detached, to
       // prevent wasted work on hosts that display() already discarded.
       const host = document.createElement('div');
@@ -293,7 +293,7 @@ describe('Agent Board tab registry fields', () => {
         const handler = onSpy.mock.calls[0][1] as () => void;
         handler();
 
-        // Fix 2: full ctx.refresh() (i.e. ClaudianSettings.display()) wiped the lane
+        // Fix 2: full ctx.refresh() (i.e. SpecoratorSettings.display()) wiped the lane
         // editor mid-event. The widget must only re-render its own host.
         expect(refresh).not.toHaveBeenCalled();
         expect((Setting as any).instances.length).toBeGreaterThan(settingsBefore);
@@ -304,7 +304,7 @@ describe('Agent Board tab registry fields', () => {
 
     it('skips re-rendering when the host has been detached (stale listener after display)', () => {
       // Regression guard for the `host.isConnected` defensive check: a listener
-      // that fires from a snapshotted handler set after ClaudianSettings.display()
+      // that fires from a snapshotted handler set after SpecoratorSettings.display()
       // has detached the old host must not re-render into the dead DOM.
       const field = getField();
       const { ctx, onSpy } = makeCtx(['claude', 'codex']);

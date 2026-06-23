@@ -1,4 +1,4 @@
-import type { ClaudianEventMap } from '../../../app/events/claudianEvents';
+import type { SpecoratorEventMap } from '../../../app/events/specoratorEvents';
 import type { EventBus } from '../../../core/events/EventBus';
 import type {
   ProviderCommandCatalog,
@@ -59,7 +59,7 @@ function entryToSlashCommand(entry: ProviderCommandEntry): SlashCommand {
   };
 }
 
-// SDK built-in skills that have no meaning inside Claudian
+// SDK built-in skills that have no meaning inside Specorator
 const BUILTIN_HIDDEN_COMMANDS = new Set([
   'context', 'cost', 'debug', 'extra-usage', 'heapdump', 'init',
   'insights', 'loop', 'schedule', 'security-review', 'simplify', 'update-config',
@@ -75,7 +75,7 @@ export class ClaudeCommandCatalog implements ProviderCommandCatalog {
     private commandStorage: SlashCommandStorage,
     private skillStorage: SkillStorage,
     private probe?: CommandProbe,
-    private eventBus?: EventBus<ClaudianEventMap>,
+    private eventBus?: EventBus<SpecoratorEventMap>,
   ) {}
 
   setRuntimeCommands(commands: SlashCommand[]): void {

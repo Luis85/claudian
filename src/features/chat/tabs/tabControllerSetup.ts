@@ -3,7 +3,7 @@ import { Notice } from 'obsidian';
 
 import { getEnabledProviderForModel } from '../../../core/providers/modelRouting';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { BrowserSelectionController } from '../controllers/BrowserSelectionController';
 import { CanvasSelectionController } from '../controllers/CanvasSelectionController';
 import { ConversationController } from '../controllers/ConversationController';
@@ -42,7 +42,7 @@ import type { TabData } from './types';
  */
 
 /**
- * Structural view of the host (`ClaudianView`) that owns pending hydration
+ * Structural view of the host (`SpecoratorView`) that owns pending hydration
  * failures. Declared locally to avoid importing the view type (circular import).
  */
 interface PendingHydrationErrorHost {
@@ -55,7 +55,7 @@ interface PendingHydrationErrorHost {
  */
 export function buildTabMessageRenderer(
   tab: TabData,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   component: Component,
   forkMessageCallback?: (userMessageId: string) => Promise<void>,
 ): void {
@@ -74,7 +74,7 @@ export function buildTabMessageRenderer(
 }
 
 /** Builds the editor/browser/canvas selection controllers. */
-export function buildTabSelectionControllers(tab: TabData, plugin: ClaudianPlugin): void {
+export function buildTabSelectionControllers(tab: TabData, plugin: SpecoratorPlugin): void {
   const { dom } = tab;
 
   tab.controllers.selectionController = new SelectionController(
@@ -108,7 +108,7 @@ export function buildTabSelectionControllers(tab: TabData, plugin: ClaudianPlugi
  * which must run after the controller exists (the callback forwards async
  * subagent state into it).
  */
-export function buildTabStreamController(tab: TabData, plugin: ClaudianPlugin): void {
+export function buildTabStreamController(tab: TabData, plugin: SpecoratorPlugin): void {
   const { dom, state, services, ui } = tab;
 
   // The orchestrator builds the renderer before this builder, so it is present.
@@ -146,7 +146,7 @@ export function buildTabStreamController(tab: TabData, plugin: ClaudianPlugin): 
 /** Builds the `ConversationController` (session switching, save, rewind, rebind). */
 export function buildTabConversationController(
   tab: TabData,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   component: Component,
   getProviderCatalogConfig?: () => ProviderCatalogInfo,
 ): void {
@@ -246,7 +246,7 @@ export function buildTabConversationController(
 /** Builds the `InputController` (text input, dispatch, post-plan approval). */
 export function buildTabInputController(
   tab: TabData,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   openConversation?: (conversationId: string) => Promise<void>,
   forkAllCallback?: () => Promise<void>,
 ): void {
@@ -357,7 +357,7 @@ export function buildTabInputController(
 }
 
 /** Builds the `NavigationController` and initializes it. */
-export function buildTabNavigationController(tab: TabData, plugin: ClaudianPlugin): void {
+export function buildTabNavigationController(tab: TabData, plugin: SpecoratorPlugin): void {
   const { dom, state, ui } = tab;
 
   tab.controllers.navigationController = new NavigationController({

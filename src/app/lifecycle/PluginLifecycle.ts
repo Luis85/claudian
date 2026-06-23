@@ -2,12 +2,12 @@ import { debounce } from 'obsidian';
 
 import { GitService } from '@/features/chat/services/GitService';
 import { GitStatusWatcher } from '@/features/chat/services/GitStatusWatcher';
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 import { getEnhancedPath } from '@/utils/env';
 import { getVaultPath } from '@/utils/path';
 
 export class PluginLifecycle {
-  constructor(private readonly plugin: ClaudianPlugin) {}
+  constructor(private readonly plugin: SpecoratorPlugin) {}
 
   installGitWatcher(): void {
     const vaultPath = getVaultPath(this.plugin.app);

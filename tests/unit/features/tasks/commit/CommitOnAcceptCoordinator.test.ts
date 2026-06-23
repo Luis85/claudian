@@ -21,7 +21,7 @@ function makeTask(over: Partial<TaskSpec['frontmatter']> = {}): TaskSpec {
   return {
     path: 'Agent Board/tasks/wo-1.md',
     frontmatter: {
-      type: 'claudian-work-order',
+      type: 'specorator-work-order',
       schema_version: 1,
       id: 'wo-1',
       title: 'Task A',

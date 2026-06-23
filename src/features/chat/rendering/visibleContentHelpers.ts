@@ -1,5 +1,5 @@
 /**
- * Claudian - message visibility predicates.
+ * Specorator - message visibility predicates.
  *
  * Extracted from MessageRenderer so `hasVisibleContent` stays below the
  * complexity thresholds: the per-block-type switch carries most of the

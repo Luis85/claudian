@@ -1,6 +1,6 @@
 import { PluginViewActivator } from '@/app/views/PluginViewActivator';
-import { VIEW_TYPE_CLAUDIAN } from '@/core/types';
-import type ClaudianPlugin from '@/main';
+import { VIEW_TYPE_SPECORATOR } from '@/core/types';
+import type SpecoratorPlugin from '@/main';
 
 function createPlugin(opts: {
   existingViewLeaves?: unknown[];
@@ -31,7 +31,7 @@ function createPlugin(opts: {
     app: {
       workspace: {
         getLeavesOfType: jest.fn((type: string) =>
-          type === VIEW_TYPE_CLAUDIAN ? leaves : [],
+          type === VIEW_TYPE_SPECORATOR ? leaves : [],
         ),
         getLeaf: jest.fn().mockReturnValue(newLeafTab),
         getLeftLeaf: jest.fn().mockReturnValue(newLeafTab),
@@ -51,7 +51,7 @@ function createPlugin(opts: {
     },
     chatTabReservations: { pending: opts.pendingReservations ?? 0 },
     activateView: jest.fn(),
-  } as unknown as ClaudianPlugin;
+  } as unknown as SpecoratorPlugin;
   return { plugin, newLeafTab };
 }
 
@@ -153,7 +153,7 @@ describe('PluginViewActivator.getTabSlotUsage (work-order budget)', () => {
     expect(activator.getTabSlotUsage()).toEqual({ used: 5, max: 5 });
   });
 
-  it('reports no free capacity while a Claudian leaf is mid-mount (no tab manager yet)', () => {
+  it('reports no free capacity while a Specorator leaf is mid-mount (no tab manager yet)', () => {
     const { plugin } = createPlugin({
       existingViewLeaves: [{}],
       lastKnownOpenTabCount: 0,

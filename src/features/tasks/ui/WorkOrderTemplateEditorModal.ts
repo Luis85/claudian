@@ -5,7 +5,7 @@ import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import { asSettingsBag } from '../../../core/types/settings';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import type { LucideIconPicker } from '../../../shared/components/LucideIconPicker';
 import { addIconPickerRow, addNameAndDescriptionRows } from '../../../shared/settings/nameDescriptionRows';
 import { LoopNoteStore } from '../loops/LoopNoteStore';
@@ -46,7 +46,7 @@ export class WorkOrderTemplateEditorModal extends Modal {
 
   constructor(
     app: App,
-    private readonly plugin: ClaudianPlugin,
+    private readonly plugin: SpecoratorPlugin,
     private readonly existing: WorkOrderTemplate | null,
     private readonly onSave: (payload: WorkOrderTemplateEditorPayload) => Promise<void>,
   ) {
@@ -56,7 +56,7 @@ export class WorkOrderTemplateEditorModal extends Modal {
   onOpen(): void {
     const isEdit = Boolean(this.existing);
     this.setTitle(isEdit ? t('tasks.templateEditor.titleEdit') : t('tasks.templateEditor.titleNew'));
-    this.modalEl.addClass('claudian-sp-modal', 'claudian-wo-template-editor-modal');
+    this.modalEl.addClass('specorator-sp-modal', 'specorator-wo-template-editor-modal');
 
     const form = this.initialForm();
 
@@ -147,9 +147,9 @@ export class WorkOrderTemplateEditorModal extends Modal {
       .addTextArea((area) => {
         area.setValue(form.body).onChange((v) => { form.body = v; });
         area.inputEl.rows = 12;
-        area.inputEl.addClass('claudian-wo-template-body-input');
+        area.inputEl.addClass('specorator-wo-template-body-input');
       });
-    bodySetting.settingEl.addClass('claudian-wo-template-body-setting');
+    bodySetting.settingEl.addClass('specorator-wo-template-body-setting');
 
     new Setting(this.contentEl)
       .addButton((btn) => {

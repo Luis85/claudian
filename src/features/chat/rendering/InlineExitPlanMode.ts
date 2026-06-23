@@ -42,9 +42,9 @@ export class InlineExitPlanMode {
   }
 
   render(): void {
-    this.rootEl = this.containerEl.createDiv({ cls: 'claudian-plan-approval-inline' });
+    this.rootEl = this.containerEl.createDiv({ cls: 'specorator-plan-approval-inline' });
 
-    const titleEl = this.rootEl.createDiv({ cls: 'claudian-plan-inline-title' });
+    const titleEl = this.rootEl.createDiv({ cls: 'specorator-plan-inline-title' });
     titleEl.setText('Plan complete');
 
     this.planContent = this.readPlanContent();
@@ -59,9 +59,9 @@ export class InlineExitPlanMode {
 
     const allowedPrompts = this.input.allowedPrompts as Array<{ tool: string; prompt: string }> | undefined;
     if (allowedPrompts && Array.isArray(allowedPrompts) && allowedPrompts.length > 0) {
-      const permEl = this.rootEl.createDiv({ cls: 'claudian-plan-permissions' });
-      permEl.createDiv({ text: 'Requested permissions:', cls: 'claudian-plan-permissions-label' });
-      const listEl = permEl.createEl('ul', { cls: 'claudian-plan-permissions-list' });
+      const permEl = this.rootEl.createDiv({ cls: 'specorator-plan-permissions' });
+      permEl.createDiv({ text: 'Requested permissions:', cls: 'specorator-plan-permissions-label' });
+      const listEl = permEl.createEl('ul', { cls: 'specorator-plan-permissions-list' });
       for (const perm of allowedPrompts) {
         listEl.createEl('li', { text: perm.prompt });
       }
@@ -91,9 +91,9 @@ export class InlineExitPlanMode {
       ],
       () => this.handleResolve(null),
     );
-    this.choices.render(this.rootEl.createDiv({ cls: 'claudian-ask-list' }));
+    this.choices.render(this.rootEl.createDiv({ cls: 'specorator-ask-list' }));
 
-    this.rootEl.createDiv({ text: CHOICE_CARD_HINTS_TEXT, cls: 'claudian-ask-hints' });
+    this.rootEl.createDiv({ text: CHOICE_CARD_HINTS_TEXT, cls: 'specorator-ask-hints' });
 
     this.disposeActivation = activateInlineCard({
       rootEl: this.rootEl,

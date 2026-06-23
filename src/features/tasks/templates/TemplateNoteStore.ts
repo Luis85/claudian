@@ -42,7 +42,7 @@ export class TemplateNoteStore {
     if (!parsed) {
       throw new Error('Missing YAML frontmatter');
     }
-    if (parsed.frontmatter.type !== 'claudian-work-order-template') {
+    if (parsed.frontmatter.type !== 'specorator-work-order-template') {
       throw new Error('Invalid template type');
     }
     if (parsed.frontmatter.schema_version !== 1) {
@@ -85,7 +85,7 @@ export class TemplateNoteStore {
   build(input: SaveTemplateInput): string {
     const lines: string[] = [
       '---',
-      'type: claudian-work-order-template',
+      'type: specorator-work-order-template',
       'schema_version: 1',
       `name: ${JSON.stringify(input.name)}`,
     ];

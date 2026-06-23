@@ -9,12 +9,12 @@ export function clearSearchAndShowTabs(
   resultsHost: HTMLElement,
 ): void {
   const searchInput = containerEl.querySelector(
-    '.claudian-settings-search-bar input[type="search"]',
+    '.specorator-settings-search-bar input[type="search"]',
   ) as HTMLInputElement;
   if (searchInput) {
     searchInput.value = '';
   }
 
-  tabBar.toggleClass('claudian-hidden', false);
-  resultsHost.toggleClass('claudian-hidden', true);
+  tabBar.toggleClass('specorator-hidden', false);
+  resultsHost.toggleClass('specorator-hidden', true);
 }

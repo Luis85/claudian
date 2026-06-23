@@ -1,4 +1,4 @@
-.claudian-mode-selector {
+.specorator-mode-selector {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -7,13 +7,13 @@
   padding-right: 8px;
 }
 
-.claudian-mode-label {
+.specorator-mode-label {
   font-size: 11px;
   color: var(--text-muted);
   min-width: 32px;
 }
 
-.claudian-mode-label.active {
-  color: var(--claudian-brand);
+.specorator-mode-label.active {
+  color: var(--specorator-brand);
   font-weight: 600;
 }

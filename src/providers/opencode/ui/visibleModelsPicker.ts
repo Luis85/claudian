@@ -205,7 +205,7 @@ function emptyCatalogText(
     return 'Could not load the OpenCode model catalog. Check the CLI path and login state, then expand this section again.';
   }
   if (enrichedCount === 0) {
-    return 'Start OpenCode once to load its model catalog. Claudian will then let you pick visible models.';
+    return 'Start OpenCode once to load its model catalog. Specorator will then let you pick visible models.';
   }
   return 'No models match your filter.';
 }
@@ -216,9 +216,9 @@ function renderCatalogRow(
   model: EnrichedOpencodeModel,
   isSelected: boolean,
 ): void {
-  const rowEl = listEl.createEl('label', { cls: 'claudian-opencode-model-picker-row' });
+  const rowEl = listEl.createEl('label', { cls: 'specorator-opencode-model-picker-row' });
   if (isSelected) {
-    rowEl.classList.add('claudian-opencode-model-picker-row--selected');
+    rowEl.classList.add('specorator-opencode-model-picker-row--selected');
   }
   rowEl.title = model.rawId;
 
@@ -237,31 +237,31 @@ function renderCatalogRow(
     })();
   });
 
-  const textEl = rowEl.createDiv({ cls: 'claudian-opencode-model-picker-row-text' });
+  const textEl = rowEl.createDiv({ cls: 'specorator-opencode-model-picker-row-text' });
 
-  const headerEl = textEl.createDiv({ cls: 'claudian-opencode-model-picker-row-header' });
+  const headerEl = textEl.createDiv({ cls: 'specorator-opencode-model-picker-row-header' });
   headerEl.createEl('span', {
-    cls: 'claudian-opencode-model-picker-row-name',
+    cls: 'specorator-opencode-model-picker-row-name',
     text: model.modelLabel,
   });
   const badgeEl = headerEl.createEl('span', {
-    cls: 'claudian-opencode-model-picker-row-badge',
+    cls: 'specorator-opencode-model-picker-row-badge',
     text: model.providerLabel,
   });
   if (!model.isAvailable) {
-    badgeEl.classList.add('claudian-opencode-model-picker-row-badge--unavailable');
+    badgeEl.classList.add('specorator-opencode-model-picker-row-badge--unavailable');
     badgeEl.setText('Unavailable');
     badgeEl.title = 'Configured model not currently reported by OpenCode';
   }
 
   textEl.createDiv({
-    cls: 'claudian-opencode-model-picker-row-meta',
+    cls: 'specorator-opencode-model-picker-row-meta',
     text: model.rawId,
   });
 
   if (model.description) {
     textEl.createDiv({
-      cls: 'claudian-opencode-model-picker-row-desc',
+      cls: 'specorator-opencode-model-picker-row-desc',
       text: model.description,
     });
   }
@@ -285,7 +285,7 @@ function renderSummary(view: OpencodeCatalogView): void {
 
   view.summaryEl.createSpan({ text: 'Visible: ' });
   view.summaryEl.createSpan({
-    cls: 'claudian-opencode-model-picker-summary-value',
+    cls: 'specorator-opencode-model-picker-summary-value',
     text: String(current.visibleModels.length),
   });
   view.summaryEl.createSpan({
@@ -341,7 +341,7 @@ function renderCatalogList(view: OpencodeCatalogView): void {
   const filtered = filterEnrichedModels(enriched, view.state);
 
   if (filtered.length === 0) {
-    const emptyEl = view.listEl.createDiv({ cls: 'claudian-opencode-model-picker-empty' });
+    const emptyEl = view.listEl.createDiv({ cls: 'specorator-opencode-model-picker-empty' });
     emptyEl.setText(emptyCatalogText(view.state, enriched.length));
     return;
   }
@@ -391,21 +391,21 @@ function buildCatalogDetails(pickerEl: HTMLElement, initiallyOpen: boolean): {
   catalogEl: HTMLDetailsElement;
   catalogSummaryCountEl: HTMLElement;
 } {
-  const catalogEl = pickerEl.createEl('details', { cls: 'claudian-opencode-model-picker-catalog' });
+  const catalogEl = pickerEl.createEl('details', { cls: 'specorator-opencode-model-picker-catalog' });
   catalogEl.open = initiallyOpen;
   const catalogSummaryEl = catalogEl.createEl('summary', {
-    cls: 'claudian-opencode-model-picker-catalog-summary',
+    cls: 'specorator-opencode-model-picker-catalog-summary',
   });
   catalogSummaryEl.createSpan({
-    cls: 'claudian-opencode-model-picker-catalog-caret',
+    cls: 'specorator-opencode-model-picker-catalog-caret',
     text: '▸',
   });
   catalogSummaryEl.createSpan({
-    cls: 'claudian-opencode-model-picker-catalog-title',
+    cls: 'specorator-opencode-model-picker-catalog-title',
     text: 'Browse models',
   });
   const catalogSummaryCountEl = catalogSummaryEl.createSpan({
-    cls: 'claudian-opencode-model-picker-catalog-count',
+    cls: 'specorator-opencode-model-picker-catalog-count',
   });
   return { catalogEl, catalogSummaryCountEl };
 }
@@ -417,23 +417,23 @@ export const mountOpencodeVisibleModelsPicker: ProviderSettingsWidgetMount = (ho
     .setName('Visible models')
     .setDesc('Choose which OpenCode models appear in the chat selector. Filter by provider or type to search. The current session model stays pinned even if it is not selected here.');
 
-  const pickerEl = host.createDiv({ cls: 'claudian-opencode-model-picker' });
-  const summaryEl = pickerEl.createDiv({ cls: 'claudian-opencode-model-picker-summary' });
+  const pickerEl = host.createDiv({ cls: 'specorator-opencode-model-picker' });
+  const summaryEl = pickerEl.createDiv({ cls: 'specorator-opencode-model-picker-summary' });
   const { catalogEl, catalogSummaryCountEl } = buildCatalogDetails(
     pickerEl,
     store.getSettings().visibleModels.length === 0,
   );
 
-  const controlsEl = catalogEl.createDiv({ cls: 'claudian-opencode-model-picker-controls' });
+  const controlsEl = catalogEl.createDiv({ cls: 'specorator-opencode-model-picker-controls' });
   const searchInput = controlsEl.createEl('input', {
-    cls: 'claudian-opencode-model-picker-search',
+    cls: 'specorator-opencode-model-picker-search',
     type: 'search',
   });
   searchInput.placeholder = 'Filter by model, provider, or ID…';
   const providerSelectEl = controlsEl.createEl('select', {
-    cls: 'claudian-opencode-model-picker-provider',
+    cls: 'specorator-opencode-model-picker-provider',
   });
-  const listEl = catalogEl.createDiv({ cls: 'claudian-opencode-model-picker-list' });
+  const listEl = catalogEl.createDiv({ cls: 'specorator-opencode-model-picker-list' });
 
   const view: OpencodeCatalogView = {
     store,

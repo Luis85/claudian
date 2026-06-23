@@ -9,7 +9,7 @@ All modal sites go through `openQuickActionsModal(plugin, { onRun, file? })`:
 | Site | File | `onRun` strategy | `file` |
 |------|------|------------------|--------|
 | File/folder context menu | `openContextMenuQuickAction.ts` | `runQuickAction` — resolves a tab and attaches the file as a pill | the right-clicked file |
-| Chat header toolbar | `ClaudianView.ts` `quickActionsBtn` | Sends prompt into the currently active tab | `null` |
+| Chat header toolbar | `SpecoratorView.ts` `quickActionsBtn` | Sends prompt into the currently active tab | `null` |
 | WO card right-click | `src/features/tasks/ui/workOrderContextMenu.ts` | `runQuickActionForFile` (favorites) / `openContextMenuQuickAction` (picker) | the WO note `TFile` |
 
 `openQuickActionsModal` owns the shared wiring: `QuickActionStorage` (`plugin.storage.getAdapter()`) and the Skills-tab `onRunSkill` callback that routes to `runVaultSkill`. The Skills-tab `aggregator` parameter is read from `plugin.vaultSkillAggregator` (the plugin-lifetime singleton — see [Skills Tab Caching](#skills-tab-caching)); a transient fallback aggregator is built only when the modal is opened before `completeDeferredOnload()` has run. Adding a third modal entry point means calling the helper — never reassembling the wiring inline.
@@ -39,7 +39,7 @@ The chat user-message toolbar exposes a "Capture as quick action" button via the
 ### Three-layer freshness model
 
 1. **In-memory per-provider TTL cache** (60 s default). `listAll()` and `listAllStreaming()` consult the cache before invoking `record.commandCatalog.listVaultEntries()`. `providerEnabled` and `providerDisplayName` are re-tagged from the current `ProviderRecord` on every read, so toggling a provider mid-session updates dimming immediately without invalidation.
-2. **Persistent disk index** at `.claudian/cache/skill-index.json`. Hydrated synchronously-via-async during `onload`, written debounced (1 s trailing) after every successful fetch. Skill bodies (`content`) are stripped at persist time — only metadata required for the picker is stored. Schema mismatch or malformed JSON is treated as a cold cache.
+2. **Persistent disk index** at `.specorator/cache/skill-index.json`. Hydrated synchronously-via-async during `onload`, written debounced (1 s trailing) after every successful fetch. Skill bodies (`content`) are stripped at persist time — only metadata required for the picker is stored. Schema mismatch or malformed JSON is treated as a cold cache.
 3. **EventBus `vaultSkill.changed`** emitted by `ClaudeCommandCatalog` and `CodexSkillCatalog` after in-app skill save/delete. The aggregator subscribes and invalidates the matching provider bucket.
 
 ### Why no vault file watcher

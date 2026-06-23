@@ -25,7 +25,7 @@ export function renderAgentAvatar(
   persona: AgentPersona,
   sizePx: number,
 ): HTMLElement {
-  const avatar = parent.createSpan({ cls: 'claudian-agent-avatar' });
+  const avatar = parent.createSpan({ cls: 'specorator-agent-avatar' });
   avatar.setCssProps({
     '--agent-color': persona.color,
     '--agent-avatar-size': `${sizePx}px`,
@@ -41,7 +41,7 @@ export function renderAgentAvatar(
     avatar.setAttr('data-icon', glyph);
     setIcon(avatar, glyph);
   } else if (persona.initials) {
-    avatar.addClass('claudian-agent-avatar--initials');
+    avatar.addClass('specorator-agent-avatar--initials');
     avatar.setText(persona.initials);
   } else {
     avatar.setAttr('data-icon', 'cpu');

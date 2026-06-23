@@ -16,7 +16,7 @@ The `initialize` handshake is mandatory and must include `{ experimentalApi: tru
 
 ### Live Streaming Uses Raw JSON-RPC
 
-Live turn output is streamed from `codex app-server` JSON-RPC notifications. `thread/start` and `thread/resume` request `experimentalRawEvents: true`, and `CodexNotificationRouter` projects both normalized item notifications and raw `rawResponseItem/completed` payloads into Claudian `StreamChunk`s.
+Live turn output is streamed from `codex app-server` JSON-RPC notifications. `thread/start` and `thread/resume` request `experimentalRawEvents: true`, and `CodexNotificationRouter` projects both normalized item notifications and raw `rawResponseItem/completed` payloads into Specorator `StreamChunk`s.
 
 **Why raw RPC owns live output**: polling the provider JSONL transcript during an active turn makes renderer work scale with total transcript size. Raw JSON-RPC preserves the provider-native `function_call`, `function_call_output`, `custom_tool_call`, and `custom_tool_call_output` payloads without rereading the transcript file.
 
@@ -64,7 +64,7 @@ A single session file may contain both legacy (`type: 'event'`) and modern (`typ
 
 ### Image Lifecycle
 
-Images are written to a temp directory (`os.tmpdir()/claudian-codex-images-{random}/`), passed as `{ type: 'localImage', path }` inputs, and cleaned up in the `query()` `finally` block.
+Images are written to a temp directory (`os.tmpdir()/specorator-codex-images-{random}/`), passed as `{ type: 'localImage', path }` inputs, and cleaned up in the `query()` `finally` block.
 
 ### `serverRequest/resolved`
 
@@ -73,6 +73,6 @@ The server can resolve approval/ask-user requests without waiting for client inp
 ## Gotchas
 
 - `CodexAuxQueryRunner` uses its own separate process + transport + thread — completely independent from the chat runtime
-- Codex omits `taskResultInterpreter` — Claudian's async agent task system (used for Claude) doesn't apply, so the registry substitutes the neutral `noAsyncTaskInterpreter`
+- Codex omits `taskResultInterpreter` — Specorator's async agent task system (used for Claude) doesn't apply, so the registry substitutes the neutral `noAsyncTaskInterpreter`
 - Session file paths may include a date prefix (`{date}-{threadId}.jsonl`) — `findCodexSessionFile` handles both patterns via DFS fallback
 - Codex is opt-in: `isEnabled()` defaults to `false`

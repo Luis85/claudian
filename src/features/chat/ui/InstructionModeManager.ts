@@ -22,7 +22,7 @@ export class InstructionModeManager {
     this.callbacks = callbacks;
     this.mode = new TriggerInputMode(inputEl, callbacks.getInputWrapper, {
       triggerKey: '#',
-      wrapperClass: 'claudian-input-instruction-mode',
+      wrapperClass: 'specorator-input-instruction-mode',
       activePlaceholder: INSTRUCTION_MODE_PLACEHOLDER,
     });
   }

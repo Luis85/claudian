@@ -30,7 +30,7 @@ export interface EnvSnippet {
 /**
  * SEC-A: a structured reference to a secret environment variable whose value is
  * held in Obsidian SecretStorage. Only this reference (never the value) is
- * persisted in `.claudian/claudian-settings.json`.
+ * persisted in `.specorator/specorator-settings.json`.
  */
 export interface SecretEnvVarRef {
   /** Environment scope the var applies to: `shared` or `provider:<id>`. */
@@ -79,7 +79,7 @@ export const CHAT_VIEW_PLACEMENTS = [
   'main-tab',
 ] as const;
 
-/** Workspace location used when opening the Claudian chat view. */
+/** Workspace location used when opening the Specorator chat view. */
 export type ChatViewPlacement = typeof CHAT_VIEW_PLACEMENTS[number];
 
 /** Result from instruction refinement agent query. */
@@ -120,13 +120,13 @@ export interface ProviderCustomModel {
 }
 
 /**
- * Application settings stored in .claudian/claudian-settings.json.
+ * Application settings stored in .specorator/specorator-settings.json.
  *
  * Provider-specific fields (model, thinkingBudget, effortLevel, serviceTier, etc.) use
  * `string` here.  The active provider casts internally when it needs
  * narrower types.
  */
-export interface ClaudianSettings {
+export interface SpecoratorSettings {
   // User preferences
   userName: string;
 
@@ -237,7 +237,7 @@ export interface ClaudianSettings {
 }
 
 /**
- * Views `ClaudianSettings` as an opaque string-keyed bag.
+ * Views `SpecoratorSettings` as an opaque string-keyed bag.
  *
  * This is the provider-UI-config seam: provider-owned code (chat UI configs,
  * settings reconcilers, auxiliary services, settings tabs) reads/writes its own
@@ -247,6 +247,6 @@ export interface ClaudianSettings {
  * cast here keeps that one structural escape hatch named, searchable, and the
  * lone sanctioned `as unknown as` cast (no `any`).
  */
-export function asSettingsBag(settings: ClaudianSettings): Record<string, unknown> {
+export function asSettingsBag(settings: SpecoratorSettings): Record<string, unknown> {
   return settings as unknown as Record<string, unknown>;
 }

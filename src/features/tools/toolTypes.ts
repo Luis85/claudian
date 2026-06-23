@@ -7,8 +7,8 @@ export interface ToolTextResult {
   isError?: boolean;
 }
 
-export interface ClaudianToolManifest {
-  name: string;                       // -> mcp__claudian__<name>
+export interface SpecoratorToolManifest {
+  name: string;                       // -> mcp__specorator__<name>
   description: string;
   input: z.ZodObject<z.ZodRawShape>;  // single schema -> validation + JSON schema
   // Reserved for a future result-validation pass; not yet consumed by the registry.
@@ -20,8 +20,8 @@ export interface ToolHostContext {
   signal: AbortSignal;
 }
 
-export interface ClaudianToolModule {
-  manifest: ClaudianToolManifest;
+export interface SpecoratorToolModule {
+  manifest: SpecoratorToolManifest;
   handler: (
     args: unknown,
     ctx: ToolHostContext,
@@ -30,7 +30,7 @@ export interface ClaudianToolModule {
 
 export interface LoadedTool {
   id: string;                          // tool directory name
-  module?: ClaudianToolModule;
+  module?: SpecoratorToolModule;
   jsonSchema?: Record<string, unknown>;
   error?: string;                      // transpile/eval/validation error, for the UI
 }

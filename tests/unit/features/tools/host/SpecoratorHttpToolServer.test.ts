@@ -1,4 +1,4 @@
-// tests/unit/features/tools/host/ClaudianHttpToolServer.test.ts
+// tests/unit/features/tools/host/SpecoratorHttpToolServer.test.ts
 
 // Mock the MCP SDK server modules so we can unit-test tool registration
 // without a real HTTP socket (mirrors InProcessToolMcpServer.test.ts pattern).
@@ -20,16 +20,16 @@ jest.mock('@modelcontextprotocol/sdk/server/streamableHttp.js', () => ({
 
 import { z } from 'zod';
 
-import type { HttpToolServerConfig } from '@/features/tools/host/ClaudianHttpToolServer';
-import { buildHttpMcpServer, ClaudianHttpToolServer } from '@/features/tools/host/ClaudianHttpToolServer';
+import type { HttpToolServerConfig } from '@/features/tools/host/SpecoratorHttpToolServer';
+import { buildHttpMcpServer, SpecoratorHttpToolServer } from '@/features/tools/host/SpecoratorHttpToolServer';
 import { scopedToolKey } from '@/features/tools/scopedTools';
-import type { ClaudianToolModule, LoadedTool, ToolHostContext } from '@/features/tools/toolTypes';
+import type { SpecoratorToolModule, LoadedTool, ToolHostContext } from '@/features/tools/toolTypes';
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function echoTool(handler: ClaudianToolModule['handler'] = async (a) => ({
+function echoTool(handler: SpecoratorToolModule['handler'] = async (a) => ({
   content: [{ type: 'text', text: String((a as { text: string }).text) }],
 })): LoadedTool {
   return {
@@ -79,7 +79,7 @@ describe('buildHttpMcpServer', () => {
     expect(result).toEqual({ content: [{ type: 'text', text: 'ok' }] });
   });
 
-  it('creates an McpServer named "claudian"', () => {
+  it('creates an McpServer named "specorator"', () => {
     const { McpServer } = jest.requireMock('@modelcontextprotocol/sdk/server/mcp.js') as {
       McpServer: jest.Mock;
     };
@@ -87,7 +87,7 @@ describe('buildHttpMcpServer', () => {
     buildHttpMcpServer([], () => ({ app: {} as never, signal: new AbortController().signal }));
 
     expect(McpServer).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'claudian' }),
+      expect.objectContaining({ name: 'specorator' }),
     );
   });
 
@@ -103,9 +103,9 @@ describe('buildHttpMcpServer', () => {
   });
 });
 
-describe('ClaudianHttpToolServer — bearer auth', () => {
+describe('SpecoratorHttpToolServer — bearer auth', () => {
   function makeServer() {
-    const server = new ClaudianHttpToolServer(
+    const server = new SpecoratorHttpToolServer(
       () => [],
       () => ({ app: {} as never, signal: new AbortController().signal }),
     );
@@ -156,7 +156,7 @@ describe('ClaudianHttpToolServer — bearer auth', () => {
   });
 });
 
-describe('ClaudianHttpToolServer — grant-scoped token registry', () => {
+describe('SpecoratorHttpToolServer — grant-scoped token registry', () => {
   function namedTool(name: string): LoadedTool {
     return {
       id: name,
@@ -168,13 +168,13 @@ describe('ClaudianHttpToolServer — grant-scoped token registry', () => {
     };
   }
 
-  // capability ids the grant list uses: mcp__claudian__<name>
-  const cap = (name: string): string => `mcp__claudian__${name}`;
+  // capability ids the grant list uses: mcp__specorator__<name>
+  const cap = (name: string): string => `mcp__specorator__${name}`;
 
   // A started-enough server: real config + httpServer injected so getConfig and
   // the lazy/eager builds run, without binding a real socket.
   async function makeStartedServer(loaded: LoadedTool[]) {
-    const server = new ClaudianHttpToolServer(
+    const server = new SpecoratorHttpToolServer(
       () => loaded,
       () => ({ app: {} as never, signal: new AbortController().signal }),
     );
@@ -212,12 +212,12 @@ describe('ClaudianHttpToolServer — grant-scoped token registry', () => {
   });
 
   it('returns null before start()', () => {
-    const server = new ClaudianHttpToolServer(
+    const server = new SpecoratorHttpToolServer(
       () => [],
       () => ({ app: {} as never, signal: new AbortController().signal }),
     );
     expect(server.getConfig()).toBeNull();
-    expect(server.getConfig(['mcp__claudian__alpha'])).toBeNull();
+    expect(server.getConfig(['mcp__specorator__alpha'])).toBeNull();
   });
 
   it('mints a non-default token for a grant and dedupes identical grants', async () => {
@@ -294,7 +294,7 @@ describe('ClaudianHttpToolServer — grant-scoped token registry', () => {
 
   it('rebuild() keeps a previously-issued grant token resolvable (no spurious 503)', async () => {
     let loaded = [namedTool('alpha'), namedTool('beta')];
-    const server = new ClaudianHttpToolServer(
+    const server = new SpecoratorHttpToolServer(
       () => loaded,
       () => ({ app: {} as never, signal: new AbortController().signal }),
     );
@@ -343,10 +343,10 @@ describe('ClaudianHttpToolServer — grant-scoped token registry', () => {
   });
 });
 
-describe('ClaudianHttpToolServer — in-flight drain on rebuild', () => {
+describe('SpecoratorHttpToolServer — in-flight drain on rebuild', () => {
   // Captures res.on listeners so tests can fire 'finish'/'close' deterministically.
   function makeServer() {
-    const server = new ClaudianHttpToolServer(
+    const server = new SpecoratorHttpToolServer(
       () => [],
       () => ({ app: {} as never, signal: new AbortController().signal }),
     );

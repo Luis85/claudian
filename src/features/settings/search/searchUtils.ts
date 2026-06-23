@@ -1,4 +1,4 @@
-import type { ClaudianSettings } from '../../../core/types/settings';
+import type { SpecoratorSettings } from '../../../core/types/settings';
 import type { SettingsField } from '../registry/SettingsField';
 
 /**
@@ -10,7 +10,7 @@ import type { SettingsField } from '../registry/SettingsField';
 export function searchFields(
   fields: SettingsField[],
   query: string,
-  settings?: ClaudianSettings,
+  settings?: SpecoratorSettings,
 ): SettingsField[] {
   if (!query.trim()) {
     return [];

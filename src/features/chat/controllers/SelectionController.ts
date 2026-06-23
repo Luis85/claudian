@@ -7,7 +7,7 @@ import { type EditorSelectionContext, getEditorView } from '../../../utils/edito
 import type { StoredSelection } from '../state/types';
 import { SelectionPollingController } from './selectionPollingBase';
 
-const HIGHLIGHT_KEY = 'claudian-selection';
+const HIGHLIGHT_KEY = 'specorator-selection';
 
 type CustomHighlightRegistry = {
   delete: (name: string) => boolean;
@@ -331,9 +331,9 @@ export class SelectionController extends SelectionPollingController {
     if (this.storedSelection) {
       const lineText = this.storedSelection.lineCount === 1 ? 'line' : 'lines';
       this.indicatorEl.textContent = `${this.storedSelection.lineCount} ${lineText} selected`;
-      this.indicatorEl.removeClass('claudian-hidden');
+      this.indicatorEl.removeClass('specorator-hidden');
     } else {
-      this.indicatorEl.addClass('claudian-hidden');
+      this.indicatorEl.addClass('specorator-hidden');
     }
     this.updateContextRowVisibility();
   }

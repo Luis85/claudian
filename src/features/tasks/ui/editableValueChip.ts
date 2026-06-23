@@ -46,14 +46,14 @@ export function renderEditableValueChip(
 ): EditableValueChipHandle {
   const { parent, onChange } = options;
 
-  const el = parent.createDiv({ cls: 'claudian-work-order-modal-chip' });
-  const labelEl = el.createSpan({ cls: 'claudian-work-order-modal-chip-label' });
-  const chevron = el.createSpan({ cls: 'claudian-work-order-modal-chip-chevron' });
+  const el = parent.createDiv({ cls: 'specorator-work-order-modal-chip' });
+  const labelEl = el.createSpan({ cls: 'specorator-work-order-modal-chip-label' });
+  const chevron = el.createSpan({ cls: 'specorator-work-order-modal-chip-chevron' });
   chevron.setAttr('aria-hidden', 'true');
   chevron.setAttr('data-icon', 'chevron-down');
   setIcon(chevron, 'chevron-down');
 
-  const selectEl = el.createEl('select', { cls: 'claudian-work-order-modal-chip-select' });
+  const selectEl = el.createEl('select', { cls: 'specorator-work-order-modal-chip-select' });
 
   const labelFor = (
     value: string,

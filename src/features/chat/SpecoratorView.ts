@@ -7,9 +7,9 @@ import { getHiddenProviderCommandSet } from '../../core/providers/commands/hidde
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from '../../core/providers/ProviderSettingsCoordinator';
 import { DEFAULT_CHAT_PROVIDER_ID, type ProviderId } from '../../core/providers/types';
-import { asSettingsBag, VIEW_TYPE_CLAUDIAN } from '../../core/types';
+import { asSettingsBag, VIEW_TYPE_SPECORATOR } from '../../core/types';
 import { t } from '../../i18n/i18n';
-import type ClaudianPlugin from '../../main';
+import type SpecoratorPlugin from '../../main';
 import { createProviderIconSvg } from '../../shared/icons';
 import {
   cancelScheduledAnimationFrame,
@@ -22,7 +22,7 @@ import { rosterAgentToPersona } from '../agents/personaRegistry';
 import { openQuickActionsModal } from '../quickActions/openQuickActionsModal';
 import { dispatchQuickActionToTab } from '../quickActions/runQuickActionForFile';
 import { resolveModelContextWindow } from '../settings/customModels/resolveModelContextWindow';
-import { ClaudianViewWorkOrderBridge } from './ClaudianViewWorkOrderBridge';
+import { SpecoratorViewWorkOrderBridge } from './SpecoratorViewWorkOrderBridge';
 import type { HistoryConversationOpenState } from './controllers/ConversationController';
 import {
   type HydrationFailedBannerPayload,
@@ -48,9 +48,9 @@ type LoadableView = {
   load: () => Promise<void> | void;
 };
 
-export class ClaudianView extends ItemView {
-  private plugin: ClaudianPlugin;
-  private _workOrderBridge: ClaudianViewWorkOrderBridge | null = null;
+export class SpecoratorView extends ItemView {
+  private plugin: SpecoratorPlugin;
+  private _workOrderBridge: SpecoratorViewWorkOrderBridge | null = null;
 
   // Tab management
   private tabManager: TabManager | null = null;
@@ -94,12 +94,12 @@ export class ClaudianView extends ItemView {
   // Debouncing for tab state persistence
   private pendingPersist: number | null = null;
 
-  constructor(leaf: WorkspaceLeaf, plugin: ClaudianPlugin) {
+  constructor(leaf: WorkspaceLeaf, plugin: SpecoratorPlugin) {
     super(leaf);
     this.plugin = plugin;
 
     // Hover Editor compatibility: Define load as an instance method that can't be
-    // overwritten by prototype patching. Hover Editor patches ClaudianView.prototype.load
+    // overwritten by prototype patching. Hover Editor patches SpecoratorView.prototype.load
     // after our class is defined, but instance methods take precedence over prototype methods.
     const prototype = Object.getPrototypeOf(this) as LoadableView;
     const originalLoad = prototype.load.bind(this) as () => Promise<void> | void;
@@ -122,11 +122,11 @@ export class ClaudianView extends ItemView {
   }
 
   getViewType(): string {
-    return VIEW_TYPE_CLAUDIAN;
+    return VIEW_TYPE_SPECORATOR;
   }
 
   getDisplayText(): string {
-    return 'Claudian';
+    return 'Specorator';
   }
 
   getIcon(): string {
@@ -171,7 +171,7 @@ export class ClaudianView extends ItemView {
       tab.ui.planModeToggle?.updateDisplay();
       tab.ui.serviceTierToggle?.updateDisplay();
       tab.dom.inputWrapper.toggleClass(
-        'claudian-input-plan-mode',
+        'specorator-input-plan-mode',
         providerSettings.permissionMode === 'plan' && capabilities.supportsPlanMode,
       );
     }
@@ -229,9 +229,9 @@ export class ClaudianView extends ItemView {
 
     this.viewContainerEl = container;
     this.viewContainerEl.empty();
-    this.viewContainerEl.addClass('claudian-container');
+    this.viewContainerEl.addClass('specorator-container');
 
-    const header = this.viewContainerEl.createDiv({ cls: 'claudian-header' });
+    const header = this.viewContainerEl.createDiv({ cls: 'specorator-header' });
     this.buildHeader(header);
 
     // View-lifecycle event handlers + keyboard scope. These null-guard the tab
@@ -261,7 +261,7 @@ export class ClaudianView extends ItemView {
     this.emptyStateEl = null;
 
     this.navRowContent = this.buildNavRowContent();
-    this.tabContentEl = this.viewContainerEl.createDiv({ cls: 'claudian-tab-content-container' });
+    this.tabContentEl = this.viewContainerEl.createDiv({ cls: 'specorator-tab-content-container' });
 
     this.tabManager = new TabManager(
       this.plugin,
@@ -317,7 +317,7 @@ export class ClaudianView extends ItemView {
     // Notify Agent Board queue the tab budget is now readable. During
     // restoreOrCreateTabs(), each createTab() fires chat:tabs-changed but
     // areTabsRestored() was still false, so getTabSlotUsage() reported full
-    // capacity via the hasClaudianLeaf fallback. Now that tabsRestored is true
+    // capacity via the hasSpecoratorLeaf fallback. Now that tabsRestored is true
     // the correct work-order count can be read; fire once so the queue
     // re-evaluates without waiting for the next manual tab create/close.
     this.plugin.events.emit('chat:tabs-changed', {
@@ -410,20 +410,20 @@ export class ClaudianView extends ItemView {
 
   /** Renders a configure-first placeholder when no chat provider is enabled. */
   private renderEmptyState(container: HTMLElement): void {
-    const emptyState = (this.emptyStateEl = container.createDiv({ cls: 'claudian-empty-state' }));
+    const emptyState = (this.emptyStateEl = container.createDiv({ cls: 'specorator-empty-state' }));
     emptyState.createEl('h3', {
-      cls: 'claudian-empty-state-title',
-      text: 'Welcome to Claudian',
+      cls: 'specorator-empty-state-title',
+      text: 'Welcome to Specorator',
     });
     emptyState.createEl('p', {
-      cls: 'claudian-empty-state-message',
-      text: 'Claudian runs a coding-agent CLI inside Obsidian — your vault is its workspace. Set up one provider to get started:',
+      cls: 'specorator-empty-state-message',
+      text: 'Specorator runs a coding-agent CLI inside Obsidian — your vault is its workspace. Set up one provider to get started:',
     });
 
-    const steps = emptyState.createEl('ol', { cls: 'claudian-empty-state-steps' });
+    const steps = emptyState.createEl('ol', { cls: 'specorator-empty-state-steps' });
     steps.createEl('li', {
       // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Claude Code" is a product name.
-      text: 'Open settings → Claudian → general and enable a provider (Claude Code, Cursor, Codex, or OpenCode).',
+      text: 'Open settings → Specorator → general and enable a provider (Claude Code, Cursor, Codex, or OpenCode).',
     });
     steps.createEl('li', {
       text: "In that provider's settings tab, set the path to its CLI (install the CLI first if you haven't).",
@@ -433,13 +433,13 @@ export class ClaudianView extends ItemView {
     });
 
     const button = emptyState.createEl('button', {
-      cls: 'claudian-empty-state-button mod-cta',
+      cls: 'specorator-empty-state-button mod-cta',
       text: 'Open settings',
     });
     button.addEventListener('click', () => this.openPluginSettings());
   }
 
-  /** Opens the Obsidian settings dialog focused on the Claudian plugin tab. */
+  /** Opens the Obsidian settings dialog focused on the Specorator plugin tab. */
   private openPluginSettings(): void {
     openPluginSettingsTab(this.app, this.plugin.manifest.id);
   }
@@ -448,23 +448,23 @@ export class ClaudianView extends ItemView {
     this.headerEl = header;
 
     // Row 1: title (logo + title text; tab badges mount here in header mode).
-    const titleRow = header.createDiv({ cls: 'claudian-header-title-row' });
-    this.titleSlotEl = titleRow.createDiv({ cls: 'claudian-title-slot' });
+    const titleRow = header.createDiv({ cls: 'specorator-header-title-row' });
+    this.titleSlotEl = titleRow.createDiv({ cls: 'specorator-title-slot' });
 
     // Logo (hidden when 2+ tabs) — populated by syncHeaderLogo()
-    this.logoEl = this.titleSlotEl.createSpan({ cls: 'claudian-logo' });
+    this.logoEl = this.titleSlotEl.createSpan({ cls: 'specorator-logo' });
     this.syncHeaderLogo(DEFAULT_CHAT_PROVIDER_ID);
 
     // Title text (hidden in header mode when 2+ tabs)
-    this.titleTextEl = this.titleSlotEl.createEl('h4', { text: 'Claudian', cls: 'claudian-title-text' });
+    this.titleTextEl = this.titleSlotEl.createEl('h4', { text: 'Specorator', cls: 'specorator-title-text' });
 
     // Row 2: bound-agent chip (left) + header actions (Git, and the action
     // cluster in header mode — right). Collapsed by updateHeaderMetaRow() when it
     // has neither a chip nor visible actions, so an unbound conversation with
     // nothing to commit shows only the title row.
-    this.headerMetaRowEl = header.createDiv({ cls: 'claudian-header-meta-row claudian-hidden' });
-    this.boundAgentChipSlotEl = this.headerMetaRowEl.createDiv({ cls: 'claudian-bound-agent-chip-slot' });
-    this.headerActionsEl = this.headerMetaRowEl.createDiv({ cls: 'claudian-header-actions claudian-header-actions-slot claudian-hidden' });
+    this.headerMetaRowEl = header.createDiv({ cls: 'specorator-header-meta-row specorator-hidden' });
+    this.boundAgentChipSlotEl = this.headerMetaRowEl.createDiv({ cls: 'specorator-bound-agent-chip-slot' });
+    this.headerActionsEl = this.headerMetaRowEl.createDiv({ cls: 'specorator-header-actions specorator-header-actions-slot specorator-hidden' });
 
     if (this.plugin.gitStatusWatcher) {
       this.gitActionButton = new GitActionButton(this.headerActionsEl, {
@@ -472,7 +472,7 @@ export class ClaudianView extends ItemView {
         isGitActionsEnabled: () => this.isActiveTabGitActionEnabled(),
         onGitCommit: () => this.sendGitCommitPromptToActiveTab(),
       });
-      this.headerActionsEl.removeClass('claudian-hidden');
+      this.headerActionsEl.removeClass('specorator-hidden');
     }
 
     this.updateHeaderMetaRow();
@@ -486,8 +486,8 @@ export class ClaudianView extends ItemView {
   private updateHeaderMetaRow(): void {
     if (!this.headerMetaRowEl) return;
     const hasChip = (this.boundAgentChipSlotEl?.childElementCount ?? 0) > 0;
-    const hasActions = this.headerActionsEl != null && !this.headerActionsEl.hasClass('claudian-hidden');
-    this.headerMetaRowEl.toggleClass('claudian-hidden', !hasChip && !hasActions);
+    const hasActions = this.headerActionsEl != null && !this.headerActionsEl.hasClass('specorator-hidden');
+    this.headerMetaRowEl.toggleClass('specorator-hidden', !hasChip && !hasActions);
   }
 
   /**
@@ -519,7 +519,7 @@ export class ClaudianView extends ItemView {
 
     // Tab badges (left side in nav row, or in title slot for header mode)
     this.tabBarContainerEl = activeDocument.createElement('div');
-    this.tabBarContainerEl.className = 'claudian-tab-bar-container';
+    this.tabBarContainerEl.className = 'specorator-tab-bar-container';
     this.tabBar = new TabBar(this.tabBarContainerEl, {
       onTabClick: (tabId) => this.handleTabClick(tabId),
       onTabClose: (tabId) => {
@@ -533,18 +533,18 @@ export class ClaudianView extends ItemView {
 
     // Header actions (right side)
     this.headerActionsContent = activeDocument.createElement('div');
-    this.headerActionsContent.className = 'claudian-header-actions';
+    this.headerActionsContent.className = 'specorator-header-actions';
 
     // Work-order activity slot (first) — mounts the WO dropdown when any
     // running / needs-input / finished work-order tab exists. Placed before
     // Quick Actions so the persistent button order stays stable; the dropdown
-    // toggles `claudian-hidden` when empty so flex gap collapses.
-    this.workOrderActivitySlotEl = this.headerActionsContent.createDiv({ cls: 'claudian-work-order-activity-slot' });
+    // toggles `specorator-hidden` when empty so flex gap collapses.
+    this.workOrderActivitySlotEl = this.headerActionsContent.createDiv({ cls: 'specorator-work-order-activity-slot' });
     this.mountWorkOrderActivityDropdown();
 
     // Quick actions button — opens the QuickActionsModal scoped to the active tab.
     // Lives above the textarea in nav row mode and at the top of the header in header mode.
-    const quickActionsBtn = this.headerActionsContent.createDiv({ cls: 'claudian-header-btn' });
+    const quickActionsBtn = this.headerActionsContent.createDiv({ cls: 'specorator-header-btn' });
     setIcon(quickActionsBtn, 'zap');
     quickActionsBtn.setAttribute('aria-label', t('quickActions.toolbar.ariaLabel'));
     quickActionsBtn.setAttribute('title', t('quickActions.toolbar.title'));
@@ -571,7 +571,7 @@ export class ClaudianView extends ItemView {
     });
 
     // New tab button (plus icon)
-    this.newTabButtonEl = this.headerActionsContent.createDiv({ cls: 'claudian-header-btn claudian-new-tab-btn' });
+    this.newTabButtonEl = this.headerActionsContent.createDiv({ cls: 'specorator-header-btn specorator-new-tab-btn' });
     setIcon(this.newTabButtonEl, 'square-plus');
     this.newTabButtonEl.setAttribute('aria-label', 'New tab');
     this.wireHeaderButton(this.newTabButtonEl, () => {
@@ -579,7 +579,7 @@ export class ClaudianView extends ItemView {
     });
 
     // New conversation button (square-pen icon - new conversation in current tab)
-    const newBtn = this.headerActionsContent.createDiv({ cls: 'claudian-header-btn' });
+    const newBtn = this.headerActionsContent.createDiv({ cls: 'specorator-header-btn' });
     setIcon(newBtn, 'square-pen');
     newBtn.setAttribute('aria-label', 'New conversation');
     this.wireHeaderButton(newBtn, () => {
@@ -590,15 +590,15 @@ export class ClaudianView extends ItemView {
     });
 
     // History dropdown
-    const historyContainer = this.headerActionsContent.createDiv({ cls: 'claudian-history-container' });
-    const historyBtn = historyContainer.createDiv({ cls: 'claudian-header-btn' });
+    const historyContainer = this.headerActionsContent.createDiv({ cls: 'specorator-history-container' });
+    const historyBtn = historyContainer.createDiv({ cls: 'specorator-header-btn' });
     setIcon(historyBtn, 'history');
     historyBtn.setAttribute('aria-label', 'Chat history');
     historyBtn.setAttribute('aria-haspopup', 'true');
     historyBtn.setAttribute('aria-expanded', 'false');
     this.historyBtn = historyBtn;
 
-    this.historyDropdown = historyContainer.createDiv({ cls: 'claudian-history-menu' });
+    this.historyDropdown = historyContainer.createDiv({ cls: 'specorator-history-menu' });
 
     // Stop the click from reaching the document-level outside-click closer.
     historyBtn.addEventListener('click', (e) => e.stopPropagation());
@@ -608,7 +608,7 @@ export class ClaudianView extends ItemView {
 
     // Create a wrapper div to hold the fragment (for input mode nav row)
     const wrapper = activeDocument.createElement('div');
-    wrapper.className = 'claudian-input-nav-content';
+    wrapper.className = 'specorator-input-nav-content';
     wrapper.appendChild(fragment);
     return wrapper;
   }
@@ -653,7 +653,7 @@ export class ClaudianView extends ItemView {
       }
       if (this.headerActionsEl) {
         this.headerActionsEl.appendChild(this.headerActionsContent);
-        this.headerActionsEl.removeClass('claudian-hidden');
+        this.headerActionsEl.removeClass('specorator-hidden');
       }
     } else {
       // Input mode: Both go to active tab's navRowEl via the wrapper
@@ -666,7 +666,7 @@ export class ClaudianView extends ItemView {
       }
       // Hide header actions slot when in input mode
       if (this.headerActionsEl) {
-        this.headerActionsEl.toggleClass('claudian-hidden', !this.gitActionButton);
+        this.headerActionsEl.toggleClass('specorator-hidden', !this.gitActionButton);
       }
     }
 
@@ -685,7 +685,7 @@ export class ClaudianView extends ItemView {
     const isHeaderMode = this.plugin.settings.tabBarPosition === 'header';
 
     // Update container class for CSS styling
-    this.viewContainerEl.toggleClass('claudian-container--header-mode', isHeaderMode);
+    this.viewContainerEl.toggleClass('specorator-container--header-mode', isHeaderMode);
 
     // Move nav content to appropriate location
     this.updateNavRowLocation();
@@ -736,9 +736,9 @@ export class ClaudianView extends ItemView {
    */
   // Lazily built so prototype-only test instances (which skip the constructor)
   // still resolve the bridge through the same callbacks the real view wires.
-  private get workOrderBridge(): ClaudianViewWorkOrderBridge {
+  private get workOrderBridge(): SpecoratorViewWorkOrderBridge {
     if (!this._workOrderBridge) {
-      this._workOrderBridge = new ClaudianViewWorkOrderBridge({
+      this._workOrderBridge = new SpecoratorViewWorkOrderBridge({
         getTabManager: () => this.tabManager,
         findConversationTab: (conversationId) => {
           const cross = this.plugin.findConversationAcrossViews(conversationId);
@@ -767,7 +767,7 @@ export class ClaudianView extends ItemView {
 
   /**
    * Routes a commit-and-push prompt into a work-order's chat. Delegates to
-   * {@link ClaudianViewWorkOrderBridge}; the cross-view conversation lookup is
+   * {@link SpecoratorViewWorkOrderBridge}; the cross-view conversation lookup is
    * supplied as a `findConversationTab` callback at construction.
    */
   injectCommitTurnForConversation(options: {
@@ -843,16 +843,16 @@ export class ClaudianView extends ItemView {
     const isHeaderMode = this.plugin.settings.tabBarPosition === 'header';
 
     // Hide tab badges when only 1 tab, show when 2+
-    this.tabBarContainerEl.toggleClass('claudian-hidden', !showTabBar);
+    this.tabBarContainerEl.toggleClass('specorator-hidden', !showTabBar);
 
     // In header mode, badges replace logo/title in the same location
     // In input mode, keep logo/title visible (badges are in nav row)
     const hideBranding = showTabBar && isHeaderMode;
     if (this.logoEl) {
-      this.logoEl.toggleClass('claudian-hidden', hideBranding);
+      this.logoEl.toggleClass('specorator-hidden', hideBranding);
     }
     if (this.titleTextEl) {
-      this.titleTextEl.toggleClass('claudian-hidden', hideBranding);
+      this.titleTextEl.toggleClass('specorator-hidden', hideBranding);
     }
 
     this.updateNewTabButtonVisibility();
@@ -862,7 +862,7 @@ export class ClaudianView extends ItemView {
     if (!this.newTabButtonEl || !this.tabManager) return;
 
     const canCreateTab = this.tabManager.canCreateTab();
-    this.newTabButtonEl.toggleClass('claudian-hidden', !canCreateTab);
+    this.newTabButtonEl.toggleClass('specorator-hidden', !canCreateTab);
     if (canCreateTab) {
       this.newTabButtonEl.removeAttribute('aria-disabled');
       this.newTabButtonEl.removeAttribute('aria-hidden');
@@ -884,11 +884,11 @@ export class ClaudianView extends ItemView {
 
   /**
    * UX-4 — surface the active session's title in the header instead of the
-   * static "Claudian" branding. The title was previously only visible by
+   * static "Specorator" branding. The title was previously only visible by
    * hovering the tab badge; users couldn't tell what conversation was open
    * at a glance.
    *
-   * Falls back to "Claudian" when no tab is active (empty state or tab
+   * Falls back to "Specorator" when no tab is active (empty state or tab
    * teardown). Tab-bar visibility logic (`updateLayoutForPosition`) still
    * decides whether the title element is shown at all — in header mode with
    * 2+ tabs the title hides because the badges replace it; this method only
@@ -897,7 +897,7 @@ export class ClaudianView extends ItemView {
   private syncHeaderTitle(): void {
     if (!this.titleTextEl) return;
     const activeTab = this.tabManager?.getActiveTab();
-    const title = activeTab ? getTabTitle(activeTab, this.plugin) : 'Claudian';
+    const title = activeTab ? getTabTitle(activeTab, this.plugin) : 'Specorator';
     this.titleTextEl.setText(title);
     this.titleTextEl.setAttribute('aria-label', title);
     this.titleTextEl.title = title;
@@ -924,19 +924,19 @@ export class ClaudianView extends ItemView {
 
     slot.empty();
     if (conversationId && agent) {
-      const chip = slot.createDiv({ cls: 'claudian-bound-agent-chip' });
+      const chip = slot.createDiv({ cls: 'specorator-bound-agent-chip' });
       const chattingWith = t('agentRoster.chattingWith', { name: agent.name });
       chip.setAttribute('title', `${chattingWith} — ${t('agentRoster.bindingHint')}`);
       // title is unreliable on non-interactive elements; mirror the core message
       // into aria-label so screen readers surface the binding consistently.
       chip.setAttribute('aria-label', chattingWith);
 
-      const avatarEl = chip.createDiv({ cls: 'claudian-bound-agent-chip-avatar' });
+      const avatarEl = chip.createDiv({ cls: 'specorator-bound-agent-chip-avatar' });
       // Avatar is decorative here; its own aria-label would duplicate the name.
       avatarEl.setAttribute('aria-hidden', 'true');
       renderAgentAvatar(avatarEl, rosterAgentToPersona(agent), 18);
 
-      chip.createSpan({ cls: 'claudian-bound-agent-chip-label', text: agent.name });
+      chip.createSpan({ cls: 'specorator-bound-agent-chip-label', text: agent.name });
     }
     this.updateHeaderMetaRow();
   }

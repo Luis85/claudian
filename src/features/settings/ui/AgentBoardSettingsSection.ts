@@ -5,7 +5,7 @@ import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import { asSettingsBag } from '../../../core/types/settings';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { resolveAgentBoardDefaultProvider } from '../../tasks/defaultProviderResolver';
 import { installPresetLoopsWithNotice } from '../../tasks/loops/installPresetLoops';
 import { installPresetTemplatesWithNotice } from '../../tasks/templates/installPresetTemplates';
@@ -22,7 +22,7 @@ export function resolveAgentBoardProvider(enabled: ProviderId[], stored: string)
 
 export function renderAgentBoardSettingsSection(
   container: HTMLElement,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
 ): void {
   const normalizeFolder = (value: string): string => (value || '').replace(/^\/+|\/+$/g, '');
 

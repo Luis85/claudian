@@ -19,7 +19,7 @@ import {
 import { renderQuickActionsSettingsTab } from '../../ui/QuickActionsSettingsTab';
 import { getSettingsRegistry } from '../registry';
 
-// Field definitions mirror the legacy `ClaudianSettings.renderGeneralTab`
+// Field definitions mirror the legacy `SpecoratorSettings.renderGeneralTab`
 // (the parity source of truth — see tests/integration/settings/generalPort).
 // Simple fields are native registry kinds with ids equal to their persisted
 // settings paths; fields whose change handlers carry side effects (view

@@ -132,7 +132,7 @@ export const mountClaudeSonnet1MToggle: ProviderSettingsWidgetMount = (host, con
 };
 
 export const mountClaudeSlashCommandsSection: ProviderSettingsWidgetMount = (host, context) => {
-  const slashCommandsDesc = host.createDiv({ cls: 'claudian-sp-settings-desc' });
+  const slashCommandsDesc = host.createDiv({ cls: 'specorator-sp-settings-desc' });
   const descP = slashCommandsDesc.createEl('p', { cls: 'setting-item-description' });
   descP.appendText(t('settings.slashCommands.desc') + ' ');
   descP.createEl('a', {
@@ -140,7 +140,7 @@ export const mountClaudeSlashCommandsSection: ProviderSettingsWidgetMount = (hos
     href: 'https://code.claude.com/docs/en/skills',
   });
 
-  const slashCommandsContainer = host.createDiv({ cls: 'claudian-slash-commands-container' });
+  const slashCommandsContainer = host.createDiv({ cls: 'specorator-slash-commands-container' });
   new SlashCommandSettings(
     slashCommandsContainer,
     context.plugin.app,
@@ -150,13 +150,13 @@ export const mountClaudeSlashCommandsSection: ProviderSettingsWidgetMount = (hos
 
 export const mountClaudeSubagentsSection: ProviderSettingsWidgetMount = (host, context) => {
   const claudeWorkspace = getClaudeWorkspaceServices();
-  const agentsDesc = host.createDiv({ cls: 'claudian-sp-settings-desc' });
+  const agentsDesc = host.createDiv({ cls: 'specorator-sp-settings-desc' });
   agentsDesc.createEl('p', {
     text: t('settings.subagents.desc'),
     cls: 'setting-item-description',
   });
 
-  const agentsContainer = host.createDiv({ cls: 'claudian-agents-container' });
+  const agentsContainer = host.createDiv({ cls: 'specorator-agents-container' });
   new AgentSettings(agentsContainer, {
     app: context.plugin.app,
     agentManager: claudeWorkspace.agentManager,
@@ -166,13 +166,13 @@ export const mountClaudeSubagentsSection: ProviderSettingsWidgetMount = (host, c
 
 export const mountClaudeMcpSection: ProviderSettingsWidgetMount = (host, context) => {
   const claudeWorkspace = getClaudeWorkspaceServices();
-  const mcpDesc = host.createDiv({ cls: 'claudian-mcp-settings-desc' });
+  const mcpDesc = host.createDiv({ cls: 'specorator-mcp-settings-desc' });
   mcpDesc.createEl('p', {
     text: t('settings.mcpServers.desc'),
     cls: 'setting-item-description',
   });
 
-  const mcpContainer = host.createDiv({ cls: 'claudian-mcp-container' });
+  const mcpContainer = host.createDiv({ cls: 'specorator-mcp-container' });
   new McpSettingsManager(mcpContainer, {
     app: context.plugin.app,
     mcpStorage: claudeWorkspace.mcpStorage,
@@ -190,13 +190,13 @@ export const mountClaudeMcpSection: ProviderSettingsWidgetMount = (host, context
 
 export const mountClaudePluginsSection: ProviderSettingsWidgetMount = (host, context) => {
   const claudeWorkspace = getClaudeWorkspaceServices();
-  const pluginsDesc = host.createDiv({ cls: 'claudian-plugin-settings-desc' });
+  const pluginsDesc = host.createDiv({ cls: 'specorator-plugin-settings-desc' });
   pluginsDesc.createEl('p', {
     text: t('settings.plugins.desc'),
     cls: 'setting-item-description',
   });
 
-  const pluginsContainer = host.createDiv({ cls: 'claudian-plugins-container' });
+  const pluginsContainer = host.createDiv({ cls: 'specorator-plugins-container' });
   new PluginSettingsManager(pluginsContainer, {
     pluginManager: claudeWorkspace.pluginManager,
     agentManager: claudeWorkspace.agentManager,
@@ -242,13 +242,13 @@ export const mountClaudeBangBashToggle: ProviderSettingsWidgetMount = (host, con
       toggle
         .setValue(claudeSettings.enableBangBash)
         .onChange(async (value) => {
-          bangBashValidationEl.toggleClass('claudian-hidden', true);
+          bangBashValidationEl.toggleClass('specorator-hidden', true);
           if (value) {
             const { findNodeExecutable, getEnhancedPath } = await import('../../../utils/env');
             const nodePath = findNodeExecutable(getEnhancedPath());
             if (!nodePath) {
               bangBashValidationEl.setText(t('settings.enableBangBash.validation.noNode'));
-              bangBashValidationEl.toggleClass('claudian-hidden', false);
+              bangBashValidationEl.toggleClass('specorator-hidden', false);
               toggle.setValue(false);
               return;
             }
@@ -259,7 +259,7 @@ export const mountClaudeBangBashToggle: ProviderSettingsWidgetMount = (host, con
     );
 
   const bangBashValidationEl = host.createDiv({
-    cls: 'claudian-bang-bash-validation claudian-setting-validation claudian-setting-validation-error claudian-hidden',
+    cls: 'specorator-bang-bash-validation specorator-setting-validation specorator-setting-validation-error specorator-hidden',
   });
 };
 

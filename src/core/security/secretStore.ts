@@ -2,7 +2,7 @@
  * SECURITY (SEC-A): keychain-backed storage for secret values.
  *
  * Provider API keys and MCP auth headers must not persist in cleartext inside
- * the syncable/committable vault files (`.claudian/claudian-settings.json`,
+ * the syncable/committable vault files (`.specorator/specorator-settings.json`,
  * `.claude/mcp.json`). This wraps Obsidian's `SecretStorage`, which encrypts
  * secrets at rest via the OS keychain (Electron `safeStorage`) since Obsidian
  * 1.11.5 — the plugin's `minAppVersion`. (1.11.4 introduced the API but stored

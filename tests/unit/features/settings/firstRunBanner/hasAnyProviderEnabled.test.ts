@@ -2,10 +2,10 @@
 import '../../../../../src/providers';
 
 import { ProviderRegistry } from '../../../../../src/core/providers/ProviderRegistry';
-import type { ClaudianSettings } from '../../../../../src/core/types/settings';
+import type { SpecoratorSettings } from '../../../../../src/core/types/settings';
 import { hasAnyProviderEnabled } from '../../../../../src/features/settings/firstRunBanner/hasAnyProviderEnabled';
 
-function s(c: boolean, x: boolean, o: boolean, u: boolean): ClaudianSettings {
+function s(c: boolean, x: boolean, o: boolean, u: boolean): SpecoratorSettings {
   return {
     providerConfigs: {
       claude: { enabled: c },
@@ -13,7 +13,7 @@ function s(c: boolean, x: boolean, o: boolean, u: boolean): ClaudianSettings {
       opencode: { enabled: o },
       cursor: { enabled: u },
     },
-  } as unknown as ClaudianSettings;
+  } as unknown as SpecoratorSettings;
 }
 
 describe('hasAnyProviderEnabled', () => {

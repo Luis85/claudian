@@ -3,10 +3,10 @@ import { Notice } from 'obsidian';
 
 import { createResponseHandler } from '@/providers/claude/runtime/types';
 
-import { setupClaudianServiceTest } from './claudianServiceTestKit';
+import { setupSpecoratorServiceTest } from './specoratorServiceTestKit';
 
-describe('ClaudianService', () => {
-  const ctx = setupClaudianServiceTest();
+describe('SpecoratorService', () => {
+  const ctx = setupSpecoratorServiceTest();
   let service: typeof ctx.service;
   let mockPlugin: typeof ctx.mockPlugin;
   let host: MockRuntimeHost;

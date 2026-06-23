@@ -11,7 +11,7 @@ interface PersistedShape {
 
 /**
  * Serializes the in-memory per-provider buckets to a JSON string for
- * `.claudian/cache/skill-index.json`. Skill bodies (`content`) are stripped
+ * `.specorator/cache/skill-index.json`. Skill bodies (`content`) are stripped
  * before write — they are large and the Skills tab only renders metadata.
  * `runVaultSkill` re-reads the actual `SKILL.md` at execution time anyway.
  */

@@ -18,7 +18,7 @@ export interface CursorHttpToolServerConfig {
 }
 
 /**
- * Merges `{ mcpServers.claudian: { url, headers } }` into an existing
+ * Merges `{ mcpServers.specorator: { url, headers } }` into an existing
  * `~/.cursor/mcp.json` object, preserving every other entry the user has
  * configured. When `serverConfig` is null the existing object is returned
  * unchanged (caller skips the write).
@@ -36,7 +36,7 @@ export function buildCursorMcpConfig(
     ...base,
     mcpServers: {
       ...(isPlainObject(base.mcpServers) ? base.mcpServers : {}),
-      claudian: {
+      specorator: {
         url: serverConfig.url,
         headers: serverConfig.headers,
       },
@@ -46,7 +46,7 @@ export function buildCursorMcpConfig(
 
 /**
  * Reads `~/.cursor/mcp.json` (tolerating missing or unparseable content),
- * merges the claudian entry via `buildCursorMcpConfig`, and writes the result
+ * merges the specorator entry via `buildCursorMcpConfig`, and writes the result
  * back. Creates `~/.cursor/` if absent. Skips entirely when `serverConfig` is
  * null.
  */

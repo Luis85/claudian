@@ -9,7 +9,7 @@ import type { McpServerManager } from '../../../core/mcp/McpServerManager';
 import type {
   ChatRuntimeQueryOptions,
 } from '../../../core/runtime/types';
-import type { ClaudianSettings, PermissionMode } from '../../../core/types/settings';
+import type { SpecoratorSettings, PermissionMode } from '../../../core/types/settings';
 import {
   resolveEffortLevel,
 } from '../types/models';
@@ -26,13 +26,13 @@ export interface ClaudeDynamicUpdateDeps {
   mutateCurrentConfig: (mutate: (config: PersistentQueryConfig) => void) => void;
   getVaultPath: () => string | null;
   getCliPath: () => string | null;
-  getScopedSettings: () => ClaudianSettings;
+  getScopedSettings: () => SpecoratorSettings;
   getPermissionMode: () => PermissionMode;
   resolveSDKPermissionMode: (mode: PermissionMode) => SDKPermissionMode;
   mcpManager: McpServerManager;
-  /** Optional in-process Claudian user-tool MCP server (Claude only). */
-  getClaudianToolServer?: () => unknown;
-  getClaudianToolKey?: () => string;
+  /** Optional in-process Specorator user-tool MCP server (Claude only). */
+  getSpecoratorToolServer?: () => unknown;
+  getSpecoratorToolKey?: () => string;
   buildPersistentQueryConfig: (
     vaultPath: string,
     cliPath: string,
@@ -122,7 +122,7 @@ async function updateEffortLevel(
   deps: ClaudeDynamicUpdateDeps,
   persistentQuery: Query,
   selectedModel: string,
-  settingsEffortLevel: ClaudianSettings['effortLevel'],
+  settingsEffortLevel: SpecoratorSettings['effortLevel'],
 ): Promise<void> {
   const effortLevel = resolveEffortLevel(selectedModel, settingsEffortLevel);
   const currentEffort = deps.getCurrentConfig()?.effortLevel ?? null;
@@ -188,14 +188,14 @@ async function updateMcpServers(
   const uiEnabledServers = queryOptions?.enabledMcpServers || new Set<string>();
   const combinedMentions = new Set([...mcpMentions, ...uiEnabledServers]);
   const mcpServers = deps.mcpManager.getActiveServers(combinedMentions);
-  // The in-process Claudian tool server (Claude only) is added after vetting —
+  // The in-process Specorator tool server (Claude only) is added after vetting —
   // it's an `sdk`-type server, not a URL-based one. Track its presence in the
   // key so toggling tools on/off re-applies (setMcpServers replaces the full set).
-  const claudianToolServer = deps.getClaudianToolServer?.();
+  const specoratorToolServer = deps.getSpecoratorToolServer?.();
   // Encode the scoped tool *contents* (not just presence) so a mid-session
   // grant edit or a tool added/removed/errored re-applies the server.
-  const claudianKey = claudianToolServer ? `|claudian:${deps.getClaudianToolKey?.() ?? ''}` : '';
-  const mcpServersKey = JSON.stringify(mcpServers) + claudianKey;
+  const specoratorKey = specoratorToolServer ? `|specorator:${deps.getSpecoratorToolKey?.() ?? ''}` : '';
+  const mcpServersKey = JSON.stringify(mcpServers) + specoratorKey;
 
   const currentConfig = deps.getCurrentConfig();
   if (!currentConfig || mcpServersKey === currentConfig.mcpServersKey) {
@@ -214,10 +214,10 @@ async function updateMcpServers(
   for (const [name, config] of Object.entries(vetted.safe)) {
     serverConfigs[name] = config;
   }
-  if (claudianToolServer) {
-    // Key matches CLAUDIAN_TOOL_SERVER_NAME in features/tools; kept as a literal
+  if (specoratorToolServer) {
+    // Key matches SPECORATOR_TOOL_SERVER_NAME in features/tools; kept as a literal
     // because providers must not import from the features layer.
-    serverConfigs['claudian'] = claudianToolServer as McpServerConfig;
+    serverConfigs['specorator'] = specoratorToolServer as McpServerConfig;
   }
 
   try {

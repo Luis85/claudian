@@ -79,7 +79,7 @@ export const mountOpencodeCliPathSetting: ProviderSettingsWidgetMount = (host, c
 };
 
 export const mountOpencodeHiddenCommandsSection: ProviderSettingsWidgetMount = (host, context) => {
-  const commandsDesc = host.createDiv({ cls: 'claudian-sp-settings-desc' });
+  const commandsDesc = host.createDiv({ cls: 'specorator-sp-settings-desc' });
   commandsDesc.createEl('p', {
     cls: 'setting-item-description',
     text: 'OpenCode can auto-detect vault-level Claude slash commands from .claude/commands/ and skills from .claude/skills/, .codex/skills/, and .agents/skills/. Manage those entries in the Claude or Codex settings tab. This setting only hides entries from the OpenCode dropdown.',
@@ -98,13 +98,13 @@ export const mountOpencodeSubagentsSection: ProviderSettingsWidgetMount = (host,
     return;
   }
 
-  const subagentsDesc = host.createDiv({ cls: 'claudian-sp-settings-desc' });
+  const subagentsDesc = host.createDiv({ cls: 'specorator-sp-settings-desc' });
   subagentsDesc.createEl('p', {
     cls: 'setting-item-description',
     text: 'Manage vault-level OpenCode subagents from .opencode/agent/ and legacy .opencode/agents/. New entries are saved as subagent-only files and appear in the @mention menu.',
   });
 
-  const subagentsContainer = host.createDiv({ cls: 'claudian-slash-commands-container' });
+  const subagentsContainer = host.createDiv({ cls: 'specorator-slash-commands-container' });
   new OpencodeAgentSettings(
     subagentsContainer,
     opencodeWorkspace.agentStorage,

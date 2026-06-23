@@ -27,7 +27,7 @@ class VaultTrustModal extends Modal {
 
   onOpen(): void {
     this.setTitle(t('security.vaultTrust.title'));
-    this.modalEl.addClass('claudian-confirm-modal');
+    this.modalEl.addClass('specorator-confirm-modal');
 
     this.contentEl.createEl('p', { text: t('security.vaultTrust.body') });
     this.contentEl.createEl('p', { text: t('security.vaultTrust.detail') });

@@ -40,9 +40,9 @@ export class InlinePlanApproval {
   }
 
   render(): void {
-    this.rootEl = this.containerEl.createDiv({ cls: 'claudian-plan-approval-inline' });
+    this.rootEl = this.containerEl.createDiv({ cls: 'specorator-plan-approval-inline' });
 
-    this.rootEl.createDiv({ cls: 'claudian-plan-inline-title', text: 'Plan complete' });
+    this.rootEl.createDiv({ cls: 'specorator-plan-inline-title', text: 'Plan complete' });
 
     const { content, error } = readPlanMarkdownFromArtifact(
       this.options.artifact,
@@ -76,9 +76,9 @@ export class InlinePlanApproval {
       ],
       () => this.handleResolve(null),
     );
-    this.choices.render(this.rootEl.createDiv({ cls: 'claudian-ask-list' }));
+    this.choices.render(this.rootEl.createDiv({ cls: 'specorator-ask-list' }));
 
-    this.rootEl.createDiv({ text: CHOICE_CARD_HINTS_TEXT, cls: 'claudian-ask-hints' });
+    this.rootEl.createDiv({ text: CHOICE_CARD_HINTS_TEXT, cls: 'specorator-ask-hints' });
 
     this.disposeActivation = activateInlineCard({
       rootEl: this.rootEl,

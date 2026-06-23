@@ -188,7 +188,7 @@ describe('QuickActionsModal tabs', () => {
 
   it('renders Quick Actions and Skills tabs with Quick Actions selected by default', async () => {
     const { modal } = await openModal();
-    const tabs = modal.contentEl.querySelectorAll('.claudian-quick-actions-tab');
+    const tabs = modal.contentEl.querySelectorAll('.specorator-quick-actions-tab');
     expect(tabs).toHaveLength(2);
     expect(tabs[0].classList.contains('is-active')).toBe(true);
     expect(tabs[0].textContent).toBe('quickActions.modal.tabs.quickActions');
@@ -200,7 +200,7 @@ describe('QuickActionsModal tabs', () => {
     const { modal } = await openModal({ aggregator });
 
     const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
+      '.specorator-quick-actions-tab',
     ) as NodeListOf<HTMLElement>;
     tabs[1].click();
     await new Promise((r) => setTimeout(r, 0));
@@ -214,7 +214,7 @@ describe('QuickActionsModal tabs', () => {
       (aggregator as unknown as { listAllStreaming: jest.Mock }).listAllStreaming,
     ).toHaveBeenCalled();
     const skillRow = modal.contentEl.querySelector(
-      '.claudian-quick-actions-skill-row:not(.is-skeleton)',
+      '.specorator-quick-actions-skill-row:not(.is-skeleton)',
     );
     expect(skillRow).not.toBeNull();
     expect(skillRow?.textContent).toContain('brainstorming');
@@ -234,13 +234,13 @@ describe('QuickActionsModal tabs', () => {
     const { modal } = await openModal({ aggregator });
 
     const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
+      '.specorator-quick-actions-tab',
     ) as NodeListOf<HTMLElement>;
     tabs[1].click();
     await new Promise((r) => setTimeout(r, 0));
 
     const headers = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-provider-header',
+      '.specorator-quick-actions-provider-header',
     );
     expect(Array.from(headers).map((h) => h.textContent)).toEqual(['Claude', 'Codex']);
   });
@@ -249,13 +249,13 @@ describe('QuickActionsModal tabs', () => {
     const aggregator = makeAggregator([makeSkill({ name: 'tdd' })]);
     const { modal, callbacks } = await openModal({ aggregator });
     const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
+      '.specorator-quick-actions-tab',
     ) as NodeListOf<HTMLElement>;
     tabs[1].click();
     await new Promise((r) => setTimeout(r, 0));
 
     const row = modal.contentEl.querySelector(
-      '.claudian-quick-actions-skill-row-main',
+      '.specorator-quick-actions-skill-row-main',
     ) as HTMLElement;
     row.click();
 
@@ -271,12 +271,12 @@ describe('QuickActionsModal tabs', () => {
     ]);
     const { modal } = await openModal({ aggregator });
     const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
+      '.specorator-quick-actions-tab',
     ) as NodeListOf<HTMLElement>;
     tabs[1].click();
     await new Promise((r) => setTimeout(r, 0));
 
-    const edit = modal.contentEl.querySelector('.claudian-quick-actions-skill-edit');
+    const edit = modal.contentEl.querySelector('.specorator-quick-actions-skill-edit');
     expect(edit).toBeNull();
   });
 
@@ -284,12 +284,12 @@ describe('QuickActionsModal tabs', () => {
     const aggregator = makeAggregator([makeSkill({ providerEnabled: false })]);
     const { modal } = await openModal({ aggregator });
     const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
+      '.specorator-quick-actions-tab',
     ) as NodeListOf<HTMLElement>;
     tabs[1].click();
     await new Promise((r) => setTimeout(r, 0));
 
-    const row = modal.contentEl.querySelector('.claudian-quick-actions-skill-row');
+    const row = modal.contentEl.querySelector('.specorator-quick-actions-skill-row');
     expect(row?.classList.contains('is-provider-disabled')).toBe(true);
   });
 
@@ -299,13 +299,13 @@ describe('QuickActionsModal tabs', () => {
     // design shows skeleton rows instead of an empty-state message.
     const { modal } = await openModal();
     const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
+      '.specorator-quick-actions-tab',
     ) as NodeListOf<HTMLElement>;
     tabs[1].click();
     await new Promise((r) => setTimeout(r, 0));
 
     const skeletonRows = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-skill-row.is-skeleton',
+      '.specorator-quick-actions-skill-row.is-skeleton',
     );
     expect(skeletonRows.length).toBeGreaterThan(0);
   });
@@ -314,12 +314,12 @@ describe('QuickActionsModal tabs', () => {
     const aggregator = makeAggregator([makeSkill({ name: 'tdd' })]);
     const { modal } = await openModal({ aggregator });
     const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
+      '.specorator-quick-actions-tab',
     ) as NodeListOf<HTMLElement>;
     tabs[1].click();
     await new Promise((r) => setTimeout(r, 0));
 
-    const edit = modal.contentEl.querySelector('.claudian-quick-actions-skill-edit');
+    const edit = modal.contentEl.querySelector('.specorator-quick-actions-skill-edit');
     expect(edit).not.toBeNull();
     expect(edit?.textContent).toContain('quickActions.skills.editInSettings');
   });
@@ -328,13 +328,13 @@ describe('QuickActionsModal tabs', () => {
     const aggregator = makeAggregator([makeSkill({ name: 'tdd' })]);
     const { modal, callbacks } = await openModal({ aggregator });
     const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
+      '.specorator-quick-actions-tab',
     ) as NodeListOf<HTMLElement>;
     tabs[1].click();
     await new Promise((r) => setTimeout(r, 0));
 
     const edit = modal.contentEl.querySelector(
-      '.claudian-quick-actions-skill-edit',
+      '.specorator-quick-actions-skill-edit',
     ) as HTMLButtonElement;
     expect(edit).not.toBeNull();
     edit.click();
@@ -352,13 +352,13 @@ describe('QuickActionsModal tabs', () => {
     const aggregator = makeAggregator([makeSkill({ providerEnabled: false })]);
     const { modal } = await openModal({ aggregator });
     const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
+      '.specorator-quick-actions-tab',
     ) as NodeListOf<HTMLElement>;
     tabs[1].click();
     await new Promise((r) => setTimeout(r, 0));
 
     const badge = modal.contentEl.querySelector(
-      '.claudian-quick-actions-skill-disabled-badge',
+      '.specorator-quick-actions-skill-disabled-badge',
     );
     expect(badge).not.toBeNull();
     expect(badge?.textContent).toContain('quickActions.skills.disabledBadge');
@@ -368,13 +368,13 @@ describe('QuickActionsModal tabs', () => {
     const aggregator = makeAggregator([makeSkill({ providerEnabled: false })]);
     const { modal, callbacks } = await openModal({ aggregator });
     const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
+      '.specorator-quick-actions-tab',
     ) as NodeListOf<HTMLElement>;
     tabs[1].click();
     await new Promise((r) => setTimeout(r, 0));
 
     const row = modal.contentEl.querySelector(
-      '.claudian-quick-actions-skill-row-main',
+      '.specorator-quick-actions-skill-row-main',
     ) as HTMLElement;
     row.click();
     expect(callbacks.onRunSkill).toHaveBeenCalledTimes(1);
@@ -387,18 +387,18 @@ describe('QuickActionsModal tabs', () => {
     ]);
     const { modal } = await openModal({ aggregator });
     const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
+      '.specorator-quick-actions-tab',
     ) as NodeListOf<HTMLElement>;
     tabs[1].click();
     await new Promise((r) => setTimeout(r, 0));
 
     const search = modal.contentEl.querySelector(
-      '.claudian-quick-actions-skill-list ~ * input, input[type=search]',
+      '.specorator-quick-actions-skill-list ~ * input, input[type=search]',
     ) as HTMLInputElement;
     search.value = 'tdd';
     search.dispatchEvent(new Event('input'));
 
-    const rows = modal.contentEl.querySelectorAll('.claudian-quick-actions-skill-row');
+    const rows = modal.contentEl.querySelectorAll('.specorator-quick-actions-skill-row');
     expect(rows).toHaveLength(1);
     expect(rows[0].textContent).toContain('tdd');
   });
@@ -416,7 +416,7 @@ describe('QuickActionsModal tabs', () => {
     ]);
     const { modal } = await openModal({ aggregator });
     const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
+      '.specorator-quick-actions-tab',
     ) as NodeListOf<HTMLElement>;
     tabs[1].click();
     await new Promise((r) => setTimeout(r, 0));
@@ -427,7 +427,7 @@ describe('QuickActionsModal tabs', () => {
     search.value = 'codex';
     search.dispatchEvent(new Event('input'));
 
-    const rows = modal.contentEl.querySelectorAll('.claudian-quick-actions-skill-row');
+    const rows = modal.contentEl.querySelectorAll('.specorator-quick-actions-skill-row');
     expect(rows).toHaveLength(1);
     expect(rows[0].textContent).toContain('b');
   });
@@ -436,7 +436,7 @@ describe('QuickActionsModal tabs', () => {
     const aggregator = makeAggregator([makeSkill({ name: 'tdd' })]);
     const { modal } = await openModal({ aggregator });
     const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
+      '.specorator-quick-actions-tab',
     ) as NodeListOf<HTMLElement>;
     tabs[1].click();
     await new Promise((r) => setTimeout(r, 0));
@@ -448,7 +448,7 @@ describe('QuickActionsModal tabs', () => {
     search.dispatchEvent(new Event('input'));
 
     const noResults = modal.contentEl.querySelector(
-      '.claudian-quick-actions-empty-results',
+      '.specorator-quick-actions-empty-results',
     );
     expect(noResults?.textContent).toContain('quickActions.skills.noResults');
   });
@@ -460,7 +460,7 @@ describe('QuickActionsModal tabs', () => {
     ]);
     const { modal, callbacks } = await openModal({ aggregator });
     const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
+      '.specorator-quick-actions-tab',
     ) as NodeListOf<HTMLElement>;
     tabs[1].click();
     await new Promise((r) => setTimeout(r, 0));
@@ -498,7 +498,7 @@ describe('QuickActionsModal tabs', () => {
     search.dispatchEvent(new Event('input'));
 
     const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
+      '.specorator-quick-actions-tab',
     ) as NodeListOf<HTMLElement>;
     tabs[1].click();
     await new Promise((r) => setTimeout(r, 0));
@@ -546,7 +546,7 @@ describe('QuickActionsModal tabs', () => {
 
     // Click Stats while the initial loadAll() is still pending.
     const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
+      '.specorator-quick-actions-tab',
     ) as NodeListOf<HTMLElement>;
     expect(tabs).toHaveLength(3);
     tabs[2].click();
@@ -581,7 +581,7 @@ describe('QuickActionsModal tabs', () => {
     expect((storage as unknown as { loadAll: jest.Mock }).loadAll).toHaveBeenCalledTimes(1);
 
     const tabs = modal.contentEl.querySelectorAll(
-      '.claudian-quick-actions-tab',
+      '.specorator-quick-actions-tab',
     ) as NodeListOf<HTMLElement>;
     tabs[2].click();
     await new Promise((r) => setTimeout(r, 0));

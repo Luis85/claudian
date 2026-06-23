@@ -129,7 +129,7 @@
     "runtimeError": {
       "cliNotFound": {
         "title": "CLI not found",
-        "body": "Claudian couldn't find the provider's command-line tool. Set the correct path in settings, then try again.",
+        "body": "Specorator couldn't find the provider's command-line tool. Set the correct path in settings, then try again.",
         "openSettings": "Open settings"
       },
       "unauthenticated": {
@@ -156,12 +156,12 @@
       "detailsLabel": "Details"
     },
     "context": {
-      "fileNoTab": "Open Claudian chat and enable a provider before adding file context.",
-      "folderNoTab": "Open Claudian chat and enable a provider before adding folder context.",
+      "fileNoTab": "Open Specorator chat and enable a provider before adding file context.",
+      "folderNoTab": "Open Specorator chat and enable a provider before adding folder context.",
       "fileAttachFailed": "Could not add file to chat: {path}",
       "folderAttachFailed": "Could not add folder to chat: {path}",
-      "fileAdded": "Added {path} to Claudian chat",
-      "folderAdded": "Added {path}/ to Claudian chat"
+      "fileAdded": "Added {path} to Specorator chat",
+      "folderAdded": "Added {path}/ to Specorator chat"
     },
     "drop": {
       "image": "Drop image",
@@ -211,7 +211,7 @@
     }
   },
   "settings": {
-    "title": "Настройки Claudian",
+    "title": "Настройки Specorator",
     "tabs": {
       "general": "Общие",
       "claude": "Claude",
@@ -226,7 +226,7 @@
     "models": "Модели",
     "experimental": "Экспериментальное",
     "userName": {
-      "name": "Как Claudian должен обращаться к вам?",
+      "name": "Как Specorator должен обращаться к вам?",
       "desc": "Ваше имя для персонализированных приветствий (оставьте пустым для общих приветствий)"
     },
     "excludedTags": {
@@ -321,7 +321,7 @@
     },
     "hiddenSlashCommands": {
       "name": "Скрытые команды и навыки",
-      "desc": "Скрыть определённые команды и навыки из выпадающего списка. Полезно для скрытия записей Claude Code, которые не актуальны для Claudian. Вводите имена без начального слэша, по одному на строку.",
+      "desc": "Скрыть определённые команды и навыки из выпадающего списка. Полезно для скрытия записей Claude Code, которые не актуальны для Specorator. Вводите имена без начального слэша, по одному на строку.",
       "placeholder": "commit\nbuild\ntest"
     },
     "mcpServers": {
@@ -487,7 +487,7 @@
       "desc": "Показывать diff для Write и Edit раскрытым при первом появлении."
     },
     "chatViewPlacement": {
-      "name": "Открывать Claudian в",
+      "name": "Открывать Specorator в",
       "desc": "Выберите, где открывается панель чата при создании",
       "rightSidebar": "Правая боковая панель",
       "leftSidebar": "Левая боковая панель",
@@ -737,7 +737,7 @@
         "toggleFailed": "Failed to toggle plugin: {error}",
         "listRefreshed": "Plugin list refreshed",
         "refreshFailed": "Failed to refresh plugins: {error}",
-        "malformedEntry": "Claudian: plugin \"{id}\" has malformed entry in installed_plugins.json (expected array, got {type})"
+        "malformedEntry": "Specorator: plugin \"{id}\" has malformed entry in installed_plugins.json (expected array, got {type})"
       },
       "task": {
         "resultRenderFailed": "Background task completed, but the result could not be rendered."
@@ -887,7 +887,7 @@
     "create": {
       "noActiveNote": "Open a note to create a work order from it.",
       "noSelection": "Select text in a note to create a work order from it.",
-      "needsBrowserSelection": "Open Claudian chat and select text in a browser view first."
+      "needsBrowserSelection": "Open Specorator chat and select text in a browser view first."
     },
     "fromChat": {
       "nothingToCapture": "Nothing to capture from this message.",
@@ -1029,7 +1029,7 @@
     "secretAdd": "Добавить секретную переменную",
     "secretNamePlaceholder": "VARIABLE_NAME",
     "secretAddButton": "Добавить",
-    "secretMissing": "Секрет провайдера «{name}» не задан на этом устройстве — введите его снова в настройках Claudian.",
+    "secretMissing": "Секрет провайдера «{name}» не задан на этом устройстве — введите его снова в настройках Specorator.",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."

@@ -10,7 +10,7 @@ export interface RosterAgent {
   name: string;
   description: string;        // routing blurb
   prompt: string;             // system prompt
-  tools: string[];            // granted capability ids (e.g. `mcp__claudian__search_tasks`, `Read`)
+  tools: string[];            // granted capability ids (e.g. `mcp__specorator__search_tasks`, `Read`)
   disallowedTools: string[];
   skills: string[];           // skill names from the skill catalog
   providerOverride?: ProviderId;

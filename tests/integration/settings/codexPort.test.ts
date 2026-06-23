@@ -222,7 +222,7 @@ describe('codex tab registry port', () => {
     await flush();
 
     const cliRow = fieldRow(host, 'providerConfigs.codex.cliPathsByHost');
-    expect(cliRow?.querySelector('.claudian-cli-path-validation')).not.toBeNull();
+    expect(cliRow?.querySelector('.specorator-cli-path-validation')).not.toBeNull();
     const cliText = componentFor(host, 'providerConfigs.codex.cliPathsByHost', 'text');
     // The widget picks a platform-specific example path; this suite also runs
     // on the windows-latest CI leg.
@@ -233,23 +233,23 @@ describe('codex tab registry port', () => {
     );
 
     const skillsRow = fieldRow(host, 'codex.skills');
-    const skillsContainer = skillsRow?.querySelector('.claudian-slash-commands-container');
+    const skillsContainer = skillsRow?.querySelector('.specorator-slash-commands-container');
     expect(skillsContainer).not.toBeNull();
     expect(skillsContainer?.childElementCount ?? 0).toBeGreaterThan(0);
 
     const subagentsRow = fieldRow(host, 'codex.subagents');
-    const subagentsContainer = subagentsRow?.querySelector('.claudian-slash-commands-container');
+    const subagentsContainer = subagentsRow?.querySelector('.specorator-slash-commands-container');
     expect(subagentsContainer).not.toBeNull();
     expect(subagentsContainer?.childElementCount ?? 0).toBeGreaterThan(0);
 
     const mcpRow = fieldRow(host, 'codex.mcpNotice');
-    expect(mcpRow?.querySelector('.claudian-mcp-settings-desc')?.textContent).toContain(
+    expect(mcpRow?.querySelector('.specorator-mcp-settings-desc')?.textContent).toContain(
       'Codex manages MCP servers via its own CLI',
     );
 
     const envRow = fieldRow(host, 'providerConfigs.codex.environmentVariables');
-    expect(envRow?.querySelector('.claudian-env-snippets-container')).not.toBeNull();
-    expect(envRow?.querySelector('.claudian-secret-env-vars')).not.toBeNull();
+    expect(envRow?.querySelector('.specorator-env-snippets-container')).not.toBeNull();
+    expect(envRow?.querySelector('.specorator-secret-env-vars')).not.toBeNull();
 
     const hidden = componentFor(host, 'hiddenProviderCommands.codex', 'textarea');
     expect(hidden?.props.value).toBe('analyze');

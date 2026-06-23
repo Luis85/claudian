@@ -11,7 +11,7 @@ import { DEFAULT_MCP_SERVER, getMcpServerType, isValidMcpServerConfig } from '..
 
 export const MCP_CONFIG_PATH = '.claude/mcp.json';
 
-/** Validate a `_claudian` secret-ref map (name → secret id), dropping bad entries. */
+/** Validate a `_specorator` secret-ref map (name → secret id), dropping bad entries. */
 function normalizeSecretRefs(value: unknown): Record<string, string> | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const refs: Record<string, string> = {};
@@ -50,7 +50,7 @@ function stripSecretKeys(server: ManagedMcpServer): McpServerConfig {
   return next;
 }
 
-interface ClaudianServerMeta {
+interface SpecoratorServerMeta {
   enabled?: boolean;
   contextSaving?: boolean;
   disabledTools?: string[];
@@ -67,8 +67,8 @@ interface ClaudianServerMeta {
  * across reloads while still defaulting unknown vault-sourced servers (no
  * metadata) to disabled.
  */
-function buildClaudianServerMeta(server: ManagedMcpServer): ClaudianServerMeta {
-  const meta: ClaudianServerMeta = { enabled: server.enabled };
+function buildSpecoratorServerMeta(server: ManagedMcpServer): SpecoratorServerMeta {
+  const meta: SpecoratorServerMeta = { enabled: server.enabled };
 
   if (server.contextSaving !== DEFAULT_MCP_SERVER.contextSaving) {
     meta.contextSaving = server.contextSaving;
@@ -93,36 +93,36 @@ function buildClaudianServerMeta(server: ManagedMcpServer): ClaudianServerMeta {
 }
 
 /**
- * Merge the freshly-built `_claudian.servers` map into the existing file's
- * `_claudian` namespace, preserving any other `_claudian.*` keys CC or future
- * Claudian versions may have written, and dropping `_claudian` entirely when no
+ * Merge the freshly-built `_specorator.servers` map into the existing file's
+ * `_specorator` namespace, preserving any other `_specorator.*` keys CC or future
+ * Specorator versions may have written, and dropping `_specorator` entirely when no
  * metadata remains.
  */
-function mergeClaudianNamespace(
+function mergeSpecoratorNamespace(
   file: Record<string, unknown>,
   existing: Record<string, unknown> | null,
-  claudianServers: Record<string, ClaudianServerMeta>,
+  specoratorServers: Record<string, SpecoratorServerMeta>,
 ): void {
-  const existingClaudian =
-    existing && typeof existing._claudian === 'object'
-      ? (existing._claudian as Record<string, unknown>)
+  const existingSpecorator =
+    existing && typeof existing._specorator === 'object'
+      ? (existing._specorator as Record<string, unknown>)
       : null;
 
-  if (Object.keys(claudianServers).length > 0) {
-    file._claudian = { ...(existingClaudian ?? {}), servers: claudianServers };
+  if (Object.keys(specoratorServers).length > 0) {
+    file._specorator = { ...(existingSpecorator ?? {}), servers: specoratorServers };
     return;
   }
-  if (existingClaudian) {
-    const rest = { ...existingClaudian };
+  if (existingSpecorator) {
+    const rest = { ...existingSpecorator };
     delete rest.servers;
     if (Object.keys(rest).length > 0) {
-      file._claudian = rest;
+      file._specorator = rest;
     } else {
-      delete file._claudian;
+      delete file._specorator;
     }
     return;
   }
-  delete file._claudian;
+  delete file._specorator;
 }
 
 export class McpStorage {
@@ -151,7 +151,7 @@ export class McpStorage {
         return [];
       }
 
-      const claudianMeta = file._claudian?.servers ?? {};
+      const specoratorMeta = file._specorator?.servers ?? {};
       const servers: ManagedMcpServer[] = [];
 
       for (const [name, config] of Object.entries(file.mcpServers)) {
@@ -159,9 +159,9 @@ export class McpStorage {
           continue;
         }
 
-        // SECURITY (SEC-3): A vault MCP server is enabled ONLY when its Claudian
+        // SECURITY (SEC-3): A vault MCP server is enabled ONLY when its Specorator
         // metadata explicitly sets `enabled: true`. The mere *presence* of a
-        // `_claudian.servers.<name>` entry is not trust — `_claudian` lives in the
+        // `_specorator.servers.<name>` entry is not trust — `_specorator` lives in the
         // same committable/syncable `.claude/mcp.json`, so an attacker could ship
         // empty/partial metadata to imply trust. Anything else (no metadata,
         // `{}`, `enabled` absent/false) defaults to DISABLED, so opening an
@@ -169,7 +169,7 @@ export class McpStorage {
         // round-trip because save() always writes the explicit `enabled` flag, and
         // the one-time grandfather migration writes `enabled: true` for pre-existing
         // servers.
-        const meta = claudianMeta[name] ?? {};
+        const meta = specoratorMeta[name] ?? {};
         const disabledTools = Array.isArray(meta.disabledTools)
           ? meta.disabledTools.filter((tool) => typeof tool === 'string')
           : undefined;
@@ -198,23 +198,23 @@ export class McpStorage {
 
   async save(servers: ManagedMcpServer[]): Promise<void> {
     const mcpServers: Record<string, McpServerConfig> = {};
-    const claudianServers: Record<string, ClaudianServerMeta> = {};
+    const specoratorServers: Record<string, SpecoratorServerMeta> = {};
 
     for (const server of servers) {
       // SEC-A Phase 3: never persist a secret-referenced header/env value as
       // plaintext, even if a caller left it on the config — strip those keys.
       mcpServers[server.name] = stripSecretKeys(server);
 
-      const meta = buildClaudianServerMeta(server);
+      const meta = buildSpecoratorServerMeta(server);
       if (Object.keys(meta).length > 0) {
-        claudianServers[server.name] = meta;
+        specoratorServers[server.name] = meta;
       }
     }
 
     const existing = await this.readExistingFile();
     const file: Record<string, unknown> = existing ? { ...existing } : {};
     file.mcpServers = mcpServers;
-    mergeClaudianNamespace(file, existing, claudianServers);
+    mergeSpecoratorNamespace(file, existing, specoratorServers);
 
     const content = JSON.stringify(file, null, 2);
     await this.adapter.write(MCP_CONFIG_PATH, content);
@@ -222,7 +222,7 @@ export class McpStorage {
 
   /**
    * One-time SEC-3 grandfather migration. Marks every server currently present
-   * in the vault `.claude/mcp.json` as user-trusted (enabled) by writing Claudian
+   * in the vault `.claude/mcp.json` as user-trusted (enabled) by writing Specorator
    * metadata, so a config that predates default-untrusted loading is not silently
    * disabled on upgrade. Only servers lacking metadata are touched; servers the
    * user already configured keep their explicit state.
@@ -248,7 +248,7 @@ export class McpStorage {
       return;
     }
 
-    const existingMeta = file._claudian?.servers ?? {};
+    const existingMeta = file._specorator?.servers ?? {};
     const servers: typeof existingMeta = { ...existingMeta };
     let changed = false;
 
@@ -265,7 +265,7 @@ export class McpStorage {
 
     const updated: ManagedMcpConfigFile = {
       ...file,
-      _claudian: { ...file._claudian, servers },
+      _specorator: { ...file._specorator, servers },
     };
     await this.adapter.write(MCP_CONFIG_PATH, JSON.stringify(updated, null, 2));
   }

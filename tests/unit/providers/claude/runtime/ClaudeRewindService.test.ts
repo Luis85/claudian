@@ -44,7 +44,7 @@ describe('createClaudeRewindBackup', () => {
   let workspace: string;
 
   beforeEach(() => {
-    workspace = mkdtempSync(path.join(os.tmpdir(), 'claudian-rewind-ws-'));
+    workspace = mkdtempSync(path.join(os.tmpdir(), 'specorator-rewind-ws-'));
   });
 
   afterEach(() => {
@@ -156,7 +156,7 @@ describe('createClaudeRewindBackup', () => {
 
     // Snapshot the set of dirs in os.tmpdir() matching the prefix before/after
     // to confirm cleanup deletes exactly one entry.
-    const prefix = 'claudian-rewind-';
+    const prefix = 'specorator-rewind-';
     const before = (await fsp.readdir(os.tmpdir())).filter((name) => name.startsWith(prefix));
 
     const backup = (await createClaudeRewindBackup([file], null)) as ClaudeRewindBackup;
@@ -173,7 +173,7 @@ describe('executeClaudeRewind', () => {
   let workspace: string;
 
   beforeEach(() => {
-    workspace = mkdtempSync(path.join(os.tmpdir(), 'claudian-rewind-exec-'));
+    workspace = mkdtempSync(path.join(os.tmpdir(), 'specorator-rewind-exec-'));
   });
 
   afterEach(() => {
@@ -317,7 +317,7 @@ describe('executeClaudeRewind', () => {
       const file = path.join(workspace, 'note.md');
       await fsp.writeFile(file, 'before', 'utf-8');
 
-      const prefix = 'claudian-rewind-';
+      const prefix = 'specorator-rewind-';
       const before = (await fsp.readdir(os.tmpdir())).filter((name) => name.startsWith(prefix));
 
       const rewindFiles = jest

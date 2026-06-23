@@ -58,7 +58,7 @@ function listCssFiles(dir, baseDir = dir) {
 
 async function build() {
   const moduleOrder = getModuleOrder();
-  const parts = ['/* Claudian Plugin Styles */\n/* Built from src/style/ modules */\n'];
+  const parts = ['/* Specorator Plugin Styles */\n/* Built from src/style/ modules */\n'];
   const missingFiles = [];
   const invalidImports = [];
   const normalizedImports = [];

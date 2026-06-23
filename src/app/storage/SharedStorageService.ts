@@ -3,12 +3,12 @@ import { Notice } from 'obsidian';
 
 import { SESSIONS_PATH, SessionStorage } from '../../core/bootstrap/SessionStorage';
 import type { SharedAppStorage } from '../../core/bootstrap/storage';
-import { CLAUDIAN_STORAGE_PATH } from '../../core/bootstrap/StoragePaths';
+import { SPECORATOR_STORAGE_PATH } from '../../core/bootstrap/StoragePaths';
 import { validateTabManagerState } from '../../core/bootstrap/tabManagerState';
 import type { AppTabManagerState } from '../../core/providers/types';
 import { VaultFileAdapter } from '../../core/storage/VaultFileAdapter';
 import { t } from '../../i18n/i18n';
-import { ClaudianSettingsStorage, type StoredClaudianSettings } from '../settings/ClaudianSettingsStorage';
+import { SpecoratorSettingsStorage, type StoredSpecoratorSettings } from '../settings/SpecoratorSettingsStorage';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -50,7 +50,7 @@ export async function readTabManagerState(
 }
 
 export class SharedStorageService implements SharedAppStorage {
-  readonly claudianSettings: ClaudianSettingsStorage;
+  readonly specoratorSettings: SpecoratorSettingsStorage;
   readonly sessions: SessionStorage;
 
   private adapter: VaultFileAdapter;
@@ -59,18 +59,18 @@ export class SharedStorageService implements SharedAppStorage {
   constructor(plugin: Plugin) {
     this.plugin = plugin;
     this.adapter = new VaultFileAdapter(plugin.app);
-    this.claudianSettings = new ClaudianSettingsStorage(this.adapter);
+    this.specoratorSettings = new SpecoratorSettingsStorage(this.adapter);
     this.sessions = new SessionStorage(this.adapter);
   }
 
-  async initialize(): Promise<{ claudian: Record<string, unknown> }> {
+  async initialize(): Promise<{ specorator: Record<string, unknown> }> {
     await this.ensureDirectories();
-    const claudian = await this.claudianSettings.load();
-    return { claudian };
+    const specorator = await this.specoratorSettings.load();
+    return { specorator };
   }
 
-  async saveClaudianSettings(settings: Record<string, unknown>): Promise<void> {
-    await this.claudianSettings.save(settings as StoredClaudianSettings);
+  async saveSpecoratorSettings(settings: Record<string, unknown>): Promise<void> {
+    await this.specoratorSettings.save(settings as StoredSpecoratorSettings);
   }
 
   async setTabManagerState(state: AppTabManagerState): Promise<void> {
@@ -86,7 +86,7 @@ export class SharedStorageService implements SharedAppStorage {
   }
 
   private async ensureDirectories(): Promise<void> {
-    await this.adapter.ensureFolder(CLAUDIAN_STORAGE_PATH);
+    await this.adapter.ensureFolder(SPECORATOR_STORAGE_PATH);
     await this.adapter.ensureFolder(SESSIONS_PATH);
   }
 }

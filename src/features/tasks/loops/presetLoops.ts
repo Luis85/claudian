@@ -3,7 +3,7 @@ import type { SaveLoopInput } from './loopTypes';
 /**
  * Starter loops curated and adapted from the Forward-Future loop library
  * (https://github.com/Forward-Future/loop-library). Each is a faithful port of a
- * published loop into Claudian's playbook schema; provider-specific details (e.g.
+ * published loop into Specorator's playbook schema; provider-specific details (e.g.
  * Codex `/goal`, scratch-file paths) are generalized. Installed on demand via the
  * Loop library view or the Agent Board settings, skipping any already present.
  */

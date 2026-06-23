@@ -3,9 +3,9 @@ import '@/providers';
 import { ProviderSettingsCoordinator } from '@/core/providers/ProviderSettingsCoordinator';
 import type { VaultFileAdapter } from '@/core/storage/VaultFileAdapter';
 import {
-  CLAUDIAN_SETTINGS_PATH,
-  ClaudianSettingsStorage,
-} from '@/providers/claude/storage/ClaudianSettingsStorage';
+  SPECORATOR_SETTINGS_PATH,
+  SpecoratorSettingsStorage,
+} from '@/providers/claude/storage/SpecoratorSettingsStorage';
 import { DEFAULT_SETTINGS } from '@/providers/claude/types/settings';
 
 
@@ -16,8 +16,8 @@ const mockAdapter = {
   delete: jest.fn(),
 } as unknown as jest.Mocked<VaultFileAdapter>;
 
-describe('ClaudianSettingsStorage', () => {
-  let storage: ClaudianSettingsStorage;
+describe('SpecoratorSettingsStorage', () => {
+  let storage: SpecoratorSettingsStorage;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -26,7 +26,7 @@ describe('ClaudianSettingsStorage', () => {
     mockAdapter.read.mockResolvedValue('{}');
     mockAdapter.write.mockResolvedValue(undefined);
     mockAdapter.delete.mockResolvedValue(undefined);
-    storage = new ClaudianSettingsStorage(mockAdapter);
+    storage = new SpecoratorSettingsStorage(mockAdapter);
   });
 
   describe('load', () => {
@@ -106,7 +106,7 @@ describe('ClaudianSettingsStorage', () => {
       await storage.save(settings);
 
       expect(mockAdapter.write).toHaveBeenCalledWith(
-        CLAUDIAN_SETTINGS_PATH,
+        SPECORATOR_SETTINGS_PATH,
         expect.any(String)
       );
       const writtenContent = JSON.parse(mockAdapter.write.mock.calls[0][1]);
@@ -125,13 +125,13 @@ describe('ClaudianSettingsStorage', () => {
   describe('exists', () => {
     it('should return true when the new file exists', async () => {
       mockAdapter.exists.mockImplementation(async (path: string) => (
-        path === CLAUDIAN_SETTINGS_PATH
+        path === SPECORATOR_SETTINGS_PATH
       ));
 
       const result = await storage.exists();
 
       expect(result).toBe(true);
-      expect(mockAdapter.exists).toHaveBeenCalledWith(CLAUDIAN_SETTINGS_PATH);
+      expect(mockAdapter.exists).toHaveBeenCalledWith(SPECORATOR_SETTINGS_PATH);
     });
 
     it('should return false when file does not exist', async () => {

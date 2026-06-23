@@ -128,15 +128,15 @@ interface WebSearchLink {
 }
 
 function appendToolLink(parent: HTMLElement, title: string, url: string): void {
-  const linkEl = parent.createEl('a', { cls: 'claudian-tool-link' });
+  const linkEl = parent.createEl('a', { cls: 'specorator-tool-link' });
   linkEl.setAttribute('href', url);
   linkEl.setAttribute('target', '_blank');
   linkEl.setAttribute('rel', 'noopener noreferrer');
 
-  const iconEl = linkEl.createSpan({ cls: 'claudian-tool-link-icon' });
+  const iconEl = linkEl.createSpan({ cls: 'specorator-tool-link-icon' });
   setIcon(iconEl, 'external-link');
 
-  linkEl.createSpan({ cls: 'claudian-tool-link-title', text: title });
+  linkEl.createSpan({ cls: 'specorator-tool-link-title', text: title });
 }
 
 function parseWebSearchResult(result: string): { links: WebSearchLink[]; summary: string } | null {
@@ -162,27 +162,27 @@ function renderWebSearchActionExpanded(container: HTMLElement, input: Record<str
     return false;
   }
 
-  const linesEl = container.createDiv({ cls: 'claudian-tool-lines' });
+  const linesEl = container.createDiv({ cls: 'specorator-tool-lines' });
 
   switch (data.actionType) {
     case 'open_page':
-      linesEl.createDiv({ cls: 'claudian-tool-line', text: 'Open page' });
+      linesEl.createDiv({ cls: 'specorator-tool-line', text: 'Open page' });
       if (data.url) {
         appendToolLink(linesEl, data.url, data.url);
       } else {
-        linesEl.createDiv({ cls: 'claudian-tool-line', text: 'URL unavailable' });
+        linesEl.createDiv({ cls: 'specorator-tool-line', text: 'URL unavailable' });
       }
       return true;
 
     case 'find_in_page':
-      linesEl.createDiv({ cls: 'claudian-tool-line', text: 'Find in page' });
+      linesEl.createDiv({ cls: 'specorator-tool-line', text: 'Find in page' });
       if (data.url) {
         appendToolLink(linesEl, data.url, data.url);
       } else {
-        linesEl.createDiv({ cls: 'claudian-tool-line', text: 'URL unavailable' });
+        linesEl.createDiv({ cls: 'specorator-tool-line', text: 'URL unavailable' });
       }
       if (data.pattern) {
-        linesEl.createDiv({ cls: 'claudian-tool-line', text: `Pattern: ${data.pattern}` });
+        linesEl.createDiv({ cls: 'specorator-tool-line', text: `Pattern: ${data.pattern}` });
       }
       return true;
 
@@ -190,17 +190,17 @@ function renderWebSearchActionExpanded(container: HTMLElement, input: Record<str
     default: {
       const primaryQuery = data.query || data.queries[0];
       linesEl.createDiv({
-        cls: 'claudian-tool-line',
+        cls: 'specorator-tool-line',
         text: primaryQuery ? `Query: ${primaryQuery}` : 'Search web',
       });
 
       const alternateQueries = data.queries.filter(query => query !== primaryQuery);
       for (const query of alternateQueries.slice(0, 4)) {
-        linesEl.createDiv({ cls: 'claudian-tool-line', text: `Alt query: ${query}` });
+        linesEl.createDiv({ cls: 'specorator-tool-line', text: `Alt query: ${query}` });
       }
       if (alternateQueries.length > 4) {
         linesEl.createDiv({
-          cls: 'claudian-tool-truncated',
+          cls: 'specorator-tool-truncated',
           text: `... ${alternateQueries.length - 4} more queries`,
         });
       }
@@ -213,10 +213,10 @@ function renderWebSearchParsedLinks(
   container: HTMLElement,
   parsed: { links: WebSearchLink[]; summary: string },
 ): void {
-  const linksEl = container.createDiv({ cls: 'claudian-tool-lines' });
+  const linksEl = container.createDiv({ cls: 'specorator-tool-lines' });
   for (const link of parsed.links) appendToolLink(linksEl, link.title, link.url);
   if (!parsed.summary) return;
-  const summaryEl = container.createDiv({ cls: 'claudian-tool-web-summary' });
+  const summaryEl = container.createDiv({ cls: 'specorator-tool-web-summary' });
   summaryEl.setText(parsed.summary.length > 800 ? parsed.summary.slice(0, 800) + '...' : parsed.summary);
 }
 
@@ -254,7 +254,7 @@ function renderWebSearchExpanded(
 
   if (renderWebSearchActionExpanded(container, input)) return;
 
-  container.createDiv({ cls: 'claudian-tool-empty', text: 'No result' });
+  container.createDiv({ cls: 'specorator-tool-empty', text: 'No result' });
 }
 
 function isFileSearchHeaderLine(line: string): boolean {
@@ -265,14 +265,14 @@ function isFileSearchHeaderLine(line: string): boolean {
 function renderFileSearchExpanded(app: App, container: HTMLElement, result: string): void {
   const lines = result.split(/\r?\n/).filter(line => line.trim());
   if (lines.length === 0) {
-    container.createDiv({ cls: 'claudian-tool-empty', text: 'No matches found' });
+    container.createDiv({ cls: 'specorator-tool-empty', text: 'No matches found' });
     return;
   }
 
-  const linesEl = container.createDiv({ cls: 'claudian-tool-lines' });
+  const linesEl = container.createDiv({ cls: 'specorator-tool-lines' });
   for (const line of lines) {
     const stripped = line.replace(/^\s*\d+→/, '').trim();
-    const lineEl = linesEl.createDiv({ cls: 'claudian-tool-line' });
+    const lineEl = linesEl.createDiv({ cls: 'specorator-tool-line' });
     if (!isFileSearchHeaderLine(stripped)) {
       lineEl.addClass('hoverable');
       lineEl.setText(stripped || ' ');
@@ -293,17 +293,17 @@ function renderLinesExpanded(
   const truncated = lines.length > maxLines;
   const displayLines = truncated ? lines.slice(0, maxLines) : lines;
 
-  const linesEl = container.createDiv({ cls: 'claudian-tool-lines' });
+  const linesEl = container.createDiv({ cls: 'specorator-tool-lines' });
   for (const line of displayLines) {
     const stripped = line.replace(/^\s*\d+→/, '');
-    const lineEl = linesEl.createDiv({ cls: 'claudian-tool-line' });
+    const lineEl = linesEl.createDiv({ cls: 'specorator-tool-line' });
     if (hoverable) lineEl.addClass('hoverable');
     lineEl.setText(stripped || ' ');
   }
 
   if (truncated) {
     linesEl.createDiv({
-      cls: 'claudian-tool-truncated',
+      cls: 'specorator-tool-truncated',
       text: `... ${lines.length - maxLines} more lines`,
     });
   }
@@ -328,8 +328,8 @@ function renderToolSearchExpanded(container: HTMLElement, result: string): void 
   }
 
   for (const name of toolNames) {
-    const lineEl = container.createDiv({ cls: 'claudian-tool-search-item' });
-    const iconEl = lineEl.createSpan({ cls: 'claudian-tool-search-icon' });
+    const lineEl = container.createDiv({ cls: 'specorator-tool-search-item' });
+    const iconEl = lineEl.createSpan({ cls: 'specorator-tool-search-icon' });
     setToolIcon(iconEl, name);
     lineEl.createSpan({ text: name });
   }
@@ -337,13 +337,13 @@ function renderToolSearchExpanded(container: HTMLElement, result: string): void 
 
 function renderWebFetchExpanded(container: HTMLElement, result: string): void {
   const maxChars = 500;
-  const linesEl = container.createDiv({ cls: 'claudian-tool-lines' });
-  const lineEl = linesEl.createDiv({ cls: 'claudian-tool-line claudian-tool-line-wrap' });
+  const linesEl = container.createDiv({ cls: 'specorator-tool-lines' });
+  const lineEl = linesEl.createDiv({ cls: 'specorator-tool-line specorator-tool-line-wrap' });
 
   if (result.length > maxChars) {
     lineEl.setText(result.slice(0, maxChars));
     linesEl.createDiv({
-      cls: 'claudian-tool-truncated',
+      cls: 'specorator-tool-truncated',
       text: `... ${result.length - maxChars} more characters`,
     });
   } else {
@@ -385,20 +385,20 @@ function renderApplyPatchDiffSections(
   fileDiffs: ReturnType<typeof parseApplyPatchDiffs>,
 ): void {
   for (const fileDiff of fileDiffs) {
-    const sectionEl = container.createDiv({ cls: 'claudian-tool-patch-section' });
+    const sectionEl = container.createDiv({ cls: 'specorator-tool-patch-section' });
 
     if (fileDiff.operation === 'delete' && fileDiff.diffLines.length === 0) {
-      sectionEl.createDiv({ cls: 'claudian-tool-empty', text: 'File deleted' });
+      sectionEl.createDiv({ cls: 'specorator-tool-empty', text: 'File deleted' });
       continue;
     }
 
     if (fileDiff.diffLines.length === 0) {
-      sectionEl.createDiv({ cls: 'claudian-tool-empty', text: 'No textual diff available' });
+      sectionEl.createDiv({ cls: 'specorator-tool-empty', text: 'No textual diff available' });
       continue;
     }
 
-    const diffRow = sectionEl.createDiv({ cls: 'claudian-write-edit-diff-row' });
-    const diffEl = diffRow.createDiv({ cls: 'claudian-write-edit-diff' });
+    const diffRow = sectionEl.createDiv({ cls: 'specorator-write-edit-diff-row' });
+    const diffEl = diffRow.createDiv({ cls: 'specorator-write-edit-diff' });
     renderDiffContent(diffEl, fileDiff.diffLines);
   }
 }
@@ -434,9 +434,9 @@ function renderAgentLifecycleExpanded(container: HTMLElement, result: string): v
   if (trimmed.startsWith('{')) {
     try {
       const parsed = JSON.parse(trimmed) as Record<string, unknown>;
-      const linesEl = container.createDiv({ cls: 'claudian-tool-lines' });
+      const linesEl = container.createDiv({ cls: 'specorator-tool-lines' });
       for (const [key, value] of Object.entries(parsed)) {
-        const lineEl = linesEl.createDiv({ cls: 'claudian-tool-line' });
+        const lineEl = linesEl.createDiv({ cls: 'specorator-tool-line' });
         const displayValue = formatToolDisplayValue(value);
         lineEl.setText(`${key}: ${displayValue}`);
       }
@@ -465,7 +465,7 @@ export function renderExpandedContent(
   input: Record<string, unknown> = {},
 ): void {
   if (!result && toolName !== TOOL_WEB_SEARCH && toolName !== TOOL_BASH && toolName !== TOOL_APPLY_PATCH) {
-    container.createDiv({ cls: 'claudian-tool-empty', text: 'No result' });
+    container.createDiv({ cls: 'specorator-tool-empty', text: 'No result' });
     return;
   }
 
@@ -528,7 +528,7 @@ function areAllTodosCompleted(input: Record<string, unknown>): boolean {
 }
 
 function resetStatusElement(statusEl: HTMLElement, statusClass: string, ariaLabel: string): void {
-  statusEl.className = 'claudian-tool-status';
+  statusEl.className = 'specorator-tool-status';
   statusEl.empty();
   statusEl.addClass(statusClass);
   statusEl.setAttribute('aria-label', ariaLabel);
@@ -562,7 +562,7 @@ function setApplyPatchHeaderRight(statusEl: HTMLElement, toolCall: ToolCallInfo)
     return;
   }
 
-  statusEl.className = 'claudian-tool-status claudian-write-edit-stats';
+  statusEl.className = 'specorator-tool-status specorator-write-edit-stats';
   statusEl.empty();
   statusEl.setAttribute('aria-label', getDiffStatsAriaLabel(stats));
   renderDiffStats(statusEl, stats);
@@ -582,12 +582,12 @@ export function renderTodoWriteResult(
   input: Record<string, unknown>
 ): void {
   container.empty();
-  container.addClass('claudian-todo-panel-content');
-  container.addClass('claudian-todo-list-container');
+  container.addClass('specorator-todo-panel-content');
+  container.addClass('specorator-todo-list-container');
 
   const todos = input.todos as TodoItem[] | undefined;
   if (!todos || !Array.isArray(todos)) {
-    const item = container.createSpan({ cls: 'claudian-tool-result-item' });
+    const item = container.createSpan({ cls: 'specorator-tool-result-item' });
     item.setText('Tasks updated');
     return;
   }
@@ -649,23 +649,23 @@ function createToolElementStructure(
   parentEl: HTMLElement,
   toolCall: ToolCallInfo,
 ): ToolElementStructure {
-  const toolEl = parentEl.createDiv({ cls: 'claudian-tool-call' });
+  const toolEl = parentEl.createDiv({ cls: 'specorator-tool-call' });
   if (toolCall.name === TOOL_BASH) {
-    toolEl.addClass('claudian-tool-call-bash');
+    toolEl.addClass('specorator-tool-call-bash');
   }
 
-  const header = toolEl.createDiv({ cls: 'claudian-tool-header' });
+  const header = toolEl.createDiv({ cls: 'specorator-tool-header' });
   header.setAttribute('tabindex', '0');
   header.setAttribute('role', 'button');
 
-  const iconEl = header.createSpan({ cls: 'claudian-tool-icon' });
+  const iconEl = header.createSpan({ cls: 'specorator-tool-icon' });
   iconEl.setAttribute('aria-hidden', 'true');
   setToolIcon(iconEl, toolCall.name);
 
-  const nameEl = header.createSpan({ cls: 'claudian-tool-name' });
+  const nameEl = header.createSpan({ cls: 'specorator-tool-name' });
   nameEl.setText(getToolName(toolCall.name, toolCall.input));
 
-  const summaryEl = header.createSpan({ cls: 'claudian-tool-summary' });
+  const summaryEl = header.createSpan({ cls: 'specorator-tool-summary' });
   summaryEl.setText(getToolSummary(toolCall.name, toolCall.input));
   decorateToolSummaryPath(app, summaryEl, toolCall.name, toolCall.input);
 
@@ -673,9 +673,9 @@ function createToolElementStructure(
     ? createCurrentTaskPreview(header, toolCall.input)
     : null;
 
-  const statusEl = header.createSpan({ cls: 'claudian-tool-status' });
+  const statusEl = header.createSpan({ cls: 'specorator-tool-status' });
 
-  const content = toolEl.createDiv({ cls: 'claudian-tool-content' });
+  const content = toolEl.createDiv({ cls: 'specorator-tool-content' });
 
   return { toolEl, header, iconEl, nameEl, summaryEl, statusEl, content, currentTaskEl };
 }
@@ -704,19 +704,19 @@ function renderAskUserQuestionResult(container: HTMLElement, toolCall: ToolCallI
   const answers = resolveAskUserAnswers(toolCall);
   if (!questions || !Array.isArray(questions) || !answers) return false;
 
-  const reviewEl = container.createDiv({ cls: 'claudian-ask-review' });
+  const reviewEl = container.createDiv({ cls: 'specorator-ask-review' });
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i];
     const answer = formatAnswer(
       (q.id ? answers[q.id] : undefined) ?? answers[q.question]
     );
-    const pairEl = reviewEl.createDiv({ cls: 'claudian-ask-review-pair' });
-    pairEl.createDiv({ text: `${i + 1}.`, cls: 'claudian-ask-review-num' });
-    const bodyEl = pairEl.createDiv({ cls: 'claudian-ask-review-body' });
-    bodyEl.createDiv({ text: q.question, cls: 'claudian-ask-review-q-text' });
+    const pairEl = reviewEl.createDiv({ cls: 'specorator-ask-review-pair' });
+    pairEl.createDiv({ text: `${i + 1}.`, cls: 'specorator-ask-review-num' });
+    const bodyEl = pairEl.createDiv({ cls: 'specorator-ask-review-body' });
+    bodyEl.createDiv({ text: q.question, cls: 'specorator-ask-review-q-text' });
     bodyEl.createDiv({
       text: answer || 'Not answered',
-      cls: answer ? 'claudian-ask-review-a-text' : 'claudian-ask-review-empty',
+      cls: answer ? 'specorator-ask-review-a-text' : 'specorator-ask-review-empty',
     });
   }
 
@@ -737,25 +737,25 @@ function renderAskUserQuestionFallback(container: HTMLElement, toolCall: ToolCal
 
   if (initialText || toolCall.result) {
     container.createDiv({
-      cls: 'claudian-ask-review-prompt',
+      cls: 'specorator-ask-review-prompt',
       text: initialText || toolCall.result || 'Waiting for answer...',
     });
   }
 
   for (let questionIndex = 0; questionIndex < questions.length; questionIndex++) {
     const question = questions[questionIndex];
-    const reviewEl = container.createDiv({ cls: 'claudian-ask-review' });
-    const pairEl = reviewEl.createDiv({ cls: 'claudian-ask-review-pair' });
-    pairEl.createDiv({ text: `${questionIndex + 1}.`, cls: 'claudian-ask-review-num' });
-    const bodyEl = pairEl.createDiv({ cls: 'claudian-ask-review-body' });
-    bodyEl.createDiv({ text: question.question, cls: 'claudian-ask-review-q-text' });
+    const reviewEl = container.createDiv({ cls: 'specorator-ask-review' });
+    const pairEl = reviewEl.createDiv({ cls: 'specorator-ask-review-pair' });
+    pairEl.createDiv({ text: `${questionIndex + 1}.`, cls: 'specorator-ask-review-num' });
+    const bodyEl = pairEl.createDiv({ cls: 'specorator-ask-review-body' });
+    bodyEl.createDiv({ text: question.question, cls: 'specorator-ask-review-q-text' });
 
     if (!Array.isArray(question.options) || question.options.length === 0) {
-      bodyEl.createDiv({ cls: 'claudian-ask-review-empty', text: 'No options recorded' });
+      bodyEl.createDiv({ cls: 'specorator-ask-review-empty', text: 'No options recorded' });
       continue;
     }
 
-    const listEl = bodyEl.createDiv({ cls: 'claudian-ask-list' });
+    const listEl = bodyEl.createDiv({ cls: 'specorator-ask-list' });
     question.options.forEach((option, optionIndex) => {
       renderAskUserQuestionOption(listEl, option, optionIndex, question.multiSelect === true);
     });
@@ -768,26 +768,26 @@ function renderAskUserQuestionOption(
   optionIndex: number,
   isMultiSelect: boolean,
 ): void {
-  const itemEl = parentEl.createDiv({ cls: 'claudian-ask-item is-disabled' });
+  const itemEl = parentEl.createDiv({ cls: 'specorator-ask-item is-disabled' });
 
   if (isMultiSelect) {
-    itemEl.createDiv({ cls: 'claudian-ask-check', text: '[ ] ' });
+    itemEl.createDiv({ cls: 'specorator-ask-check', text: '[ ] ' });
   } else {
-    itemEl.createDiv({ cls: 'claudian-ask-item-num', text: `${optionIndex + 1}. ` });
+    itemEl.createDiv({ cls: 'specorator-ask-item-num', text: `${optionIndex + 1}. ` });
   }
 
-  const contentEl = itemEl.createDiv({ cls: 'claudian-ask-item-content' });
-  const labelRowEl = contentEl.createDiv({ cls: 'claudian-ask-label-row' });
-  labelRowEl.createDiv({ cls: 'claudian-ask-item-label', text: option.label });
+  const contentEl = itemEl.createDiv({ cls: 'specorator-ask-item-content' });
+  const labelRowEl = contentEl.createDiv({ cls: 'specorator-ask-label-row' });
+  labelRowEl.createDiv({ cls: 'specorator-ask-item-label', text: option.label });
 
   if (option.description) {
-    contentEl.createDiv({ cls: 'claudian-ask-item-desc', text: option.description });
+    contentEl.createDiv({ cls: 'specorator-ask-item-desc', text: option.description });
   }
 }
 
 function contentFallback(container: HTMLElement, text: string): void {
-  const resultRow = container.createDiv({ cls: 'claudian-tool-result-row' });
-  const resultText = resultRow.createSpan({ cls: 'claudian-tool-result-text' });
+  const resultRow = container.createDiv({ cls: 'specorator-tool-result-row' });
+  const resultText = resultRow.createSpan({ cls: 'specorator-tool-result-text' });
   resultText.setText(text);
 }
 
@@ -799,7 +799,7 @@ function renderBashContent(
 ): void {
   const command = (input.command as string) || '';
   if (command) {
-    const cmdEl = container.createDiv({ cls: 'claudian-tool-bash-command' });
+    const cmdEl = container.createDiv({ cls: 'specorator-tool-bash-command' });
     cmdEl.setText(`$ ${command}`);
   }
   if (initialText) {
@@ -807,7 +807,7 @@ function renderBashContent(
   } else if (result) {
     renderLinesExpanded(container, result, 20);
   } else {
-    container.createDiv({ cls: 'claudian-tool-empty', text: 'No result' });
+    container.createDiv({ cls: 'specorator-tool-empty', text: 'No result' });
   }
 }
 
@@ -815,7 +815,7 @@ function createCurrentTaskPreview(
   header: HTMLElement,
   input: Record<string, unknown>
 ): HTMLElement {
-  const currentTaskEl = header.createSpan({ cls: 'claudian-tool-current' });
+  const currentTaskEl = header.createSpan({ cls: 'specorator-tool-current' });
   const currentTask = getCurrentTask(input);
   if (currentTask) {
     currentTaskEl.setText(currentTask.activeForm);
@@ -831,10 +831,10 @@ function createTodoToggleHandler(
   return (expanded: boolean) => {
     if (onExpandChange) onExpandChange(expanded);
     if (currentTaskEl) {
-      currentTaskEl.toggleClass('claudian-hidden', expanded);
+      currentTaskEl.toggleClass('specorator-hidden', expanded);
     }
     if (statusEl) {
-      statusEl.toggleClass('claudian-hidden', expanded);
+      statusEl.toggleClass('specorator-hidden', expanded);
     }
   };
 }
@@ -846,10 +846,10 @@ function renderToolContent(
   initialText?: string,
 ): void {
   if (toolCall.name === TOOL_TODO_WRITE) {
-    content.addClass('claudian-tool-content-todo');
+    content.addClass('specorator-tool-content-todo');
     renderTodoWriteResult(content, toolCall.input);
   } else if (toolCall.name === TOOL_ASK_USER_QUESTION) {
-    content.addClass('claudian-tool-content-ask');
+    content.addClass('specorator-tool-content-ask');
     if (initialText) {
       renderAskUserQuestionFallback(content, toolCall, 'Waiting for answer...');
     } else if (!renderAskUserQuestionResult(content, toolCall)) {
@@ -904,19 +904,19 @@ export function updateToolCallResult(
   if (!toolEl) return;
 
   if (toolCall.name === TOOL_TODO_WRITE) {
-    const statusEl = toolEl.querySelector('.claudian-tool-status') as HTMLElement;
+    const statusEl = toolEl.querySelector('.specorator-tool-status') as HTMLElement;
     if (statusEl) {
       setTodoWriteStatus(statusEl, toolCall.input);
     }
-    const content = toolEl.querySelector('.claudian-tool-content') as HTMLElement;
+    const content = toolEl.querySelector('.specorator-tool-content') as HTMLElement;
     if (content) {
       renderTodoWriteResult(content, toolCall.input);
     }
-    const nameEl = toolEl.querySelector('.claudian-tool-name') as HTMLElement;
+    const nameEl = toolEl.querySelector('.specorator-tool-name') as HTMLElement;
     if (nameEl) {
       nameEl.setText(getToolName(toolCall.name, toolCall.input));
     }
-    const currentTaskEl = toolEl.querySelector('.claudian-tool-current') as HTMLElement;
+    const currentTaskEl = toolEl.querySelector('.specorator-tool-current') as HTMLElement;
     if (currentTaskEl) {
       const currentTask = getCurrentTask(toolCall.input);
       currentTaskEl.setText(currentTask ? currentTask.activeForm : '');
@@ -924,15 +924,15 @@ export function updateToolCallResult(
     return;
   }
 
-  const statusEl = toolEl.querySelector('.claudian-tool-status') as HTMLElement;
+  const statusEl = toolEl.querySelector('.specorator-tool-status') as HTMLElement;
   if (statusEl) {
     setGenericToolHeaderRight(statusEl, toolCall);
   }
 
   if (toolCall.name === TOOL_ASK_USER_QUESTION) {
-    const content = toolEl.querySelector('.claudian-tool-content') as HTMLElement;
+    const content = toolEl.querySelector('.specorator-tool-content') as HTMLElement;
     if (content) {
-      content.addClass('claudian-tool-content-ask');
+      content.addClass('specorator-tool-content-ask');
       if (!renderAskUserQuestionResult(content, toolCall)) {
         renderAskUserQuestionFallback(content, toolCall);
       }
@@ -940,7 +940,7 @@ export function updateToolCallResult(
     return;
   }
 
-  const content = toolEl.querySelector('.claudian-tool-content') as HTMLElement;
+  const content = toolEl.querySelector('.specorator-tool-content') as HTMLElement;
   if (content) {
     content.empty();
     renderExpandedContent(app, content, toolCall.name, toolCall.result, toolCall.input);

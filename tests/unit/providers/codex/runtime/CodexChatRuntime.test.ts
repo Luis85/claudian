@@ -421,7 +421,7 @@ describe('CodexChatRuntime', () => {
       expect(mockTransportRequest).toHaveBeenCalledWith(
         'initialize',
         expect.objectContaining({
-          clientInfo: { name: 'claudian', version: '1.0.0' },
+          clientInfo: { name: 'specorator', version: '1.0.0' },
         }),
       );
       expect(mockTransportNotify).toHaveBeenCalledWith('initialized');

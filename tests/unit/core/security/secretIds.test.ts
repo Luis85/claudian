@@ -9,7 +9,7 @@ import {
 
 describe('secretIds — normalization', () => {
   it('normalizes ids to lowercase-alphanumeric-dashes', () => {
-    expect(normalizeSecretId('claudian-env-ANTHROPIC_API_KEY')).toBe('claudian-env-anthropic-api-key');
+    expect(normalizeSecretId('specorator-env-ANTHROPIC_API_KEY')).toBe('specorator-env-anthropic-api-key');
     expect(normalizeSecretId('  weird//name__here  ')).toBe('weird-name-here');
     expect(normalizeSecretId('!!!')).toBe('secret');
   });
@@ -17,12 +17,12 @@ describe('secretIds — normalization', () => {
 
 describe('secretIds — namespaced derivation', () => {
   it('derives namespaced, valid env ids', () => {
-    expect(migratedEnvSecretId('shared', 'ANTHROPIC_API_KEY')).toBe('claudian-env-shared-anthropic-api-key');
-    expect(migratedEnvSecretId('snippet-1', 'OPENAI_API_KEY')).toBe('claudian-env-snippet-1-openai-api-key');
+    expect(migratedEnvSecretId('shared', 'ANTHROPIC_API_KEY')).toBe('specorator-env-shared-anthropic-api-key');
+    expect(migratedEnvSecretId('snippet-1', 'OPENAI_API_KEY')).toBe('specorator-env-snippet-1-openai-api-key');
   });
 
   it('derives namespaced, valid MCP header ids', () => {
-    expect(migratedMcpHeaderSecretId('my-server', 'Authorization')).toBe('claudian-mcp-my-server-header-authorization');
+    expect(migratedMcpHeaderSecretId('my-server', 'Authorization')).toBe('specorator-mcp-my-server-header-authorization');
   });
 
   it('every derived id satisfies the SecretStorage id rule (lowercase alnum + dashes)', () => {
@@ -38,11 +38,11 @@ describe('secretIds — namespaced derivation', () => {
 describe('secretIds — collision-proofing', () => {
   it('suffixes colliding ids', () => {
     const used = new Set<string>();
-    const a = uniquifySecretId('claudian-env-shared-foo-token', used);
+    const a = uniquifySecretId('specorator-env-shared-foo-token', used);
     used.add(a);
-    const b = uniquifySecretId('claudian-env-shared-foo-token', used);
-    expect(a).toBe('claudian-env-shared-foo-token');
-    expect(b).toBe('claudian-env-shared-foo-token-2');
+    const b = uniquifySecretId('specorator-env-shared-foo-token', used);
+    expect(a).toBe('specorator-env-shared-foo-token');
+    expect(b).toBe('specorator-env-shared-foo-token-2');
   });
 });
 

@@ -1,6 +1,6 @@
 import type { TaskSpec } from '@/features/tasks/model/taskTypes';
 import { buildWorkOrderConversationBindings } from '@/features/tasks/ui/workOrderConversationBindings';
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 
 type PluginStub = {
   openConversation: jest.Mock;
@@ -15,15 +15,15 @@ function makePlugin(overrides: Partial<PluginStub> = {}): PluginStub {
   };
 }
 
-function asPlugin(stub: PluginStub): ClaudianPlugin {
-  return stub as unknown as ClaudianPlugin;
+function asPlugin(stub: PluginStub): SpecoratorPlugin {
+  return stub as unknown as SpecoratorPlugin;
 }
 
 function makeTask(conversationId?: string): TaskSpec {
   return {
     path: 'Agent Board/tasks/wo-1.md',
     frontmatter: {
-      type: 'claudian-work-order',
+      type: 'specorator-work-order',
       schema_version: 1,
       id: 'wo-1',
       title: 'WO 1',

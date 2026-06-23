@@ -1,7 +1,7 @@
 import { type App, Notice } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { LibraryEditorModal } from '../../../shared/modals/LibraryEditorModal';
 import { createModalCodeArea, librarySlug, renameLibraryItemDir, renderModalField, renderModalFooter, renderModalLabel, renderModalTextField } from '../../../utils/libraryView';
 import type { SkillLibraryRow } from '../skillLibraryRows';
@@ -19,7 +19,7 @@ export class SkillEditorModal extends LibraryEditorModal {
 
   constructor(
     app: App,
-    private readonly plugin: ClaudianPlugin,
+    private readonly plugin: SpecoratorPlugin,
     private row: SkillLibraryRow,
     private readonly onSaved: () => void,
   ) {
@@ -31,14 +31,14 @@ export class SkillEditorModal extends LibraryEditorModal {
   }
 
   protected async renderBody(root: HTMLElement): Promise<void> {
-    const meta = root.createDiv({ cls: 'claudian-library-modal-meta' });
+    const meta = root.createDiv({ cls: 'specorator-library-modal-meta' });
     renderModalField(meta, t('skillLibrary.provider'), this.row.providerDisplayName);
     if (this.row.description) {
-      meta.createDiv({ cls: 'claudian-library-modal-hint', text: this.row.description });
+      meta.createDiv({ cls: 'specorator-library-modal-hint', text: this.row.description });
     }
 
     if (!this.row.editable || !this.row.sourceFilePath) {
-      root.createDiv({ cls: 'claudian-library-modal-hint', text: t('skillLibrary.readonlyNotice') });
+      root.createDiv({ cls: 'specorator-library-modal-hint', text: t('skillLibrary.readonlyNotice') });
       renderModalFooter(root, { closeLabel: t('skillLibrary.close'), onClose: () => this.close() });
       return;
     }

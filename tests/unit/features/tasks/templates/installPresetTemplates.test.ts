@@ -48,7 +48,7 @@ describe('installPresetTemplates', () => {
     expect(parts.folders).toEqual(['Agent Board/templates']);
     for (const { path, content } of parts.created) {
       expect(path.startsWith('Agent Board/templates/')).toBe(true);
-      expect(content).toContain('type: claudian-work-order-template');
+      expect(content).toContain('type: specorator-work-order-template');
     }
   });
 

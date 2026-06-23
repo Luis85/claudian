@@ -19,7 +19,7 @@ import {
 import {
   createMockBrowserSelectionController,
   createMockCanvasSelectionController,
-  createMockClaudianService,
+  createMockSpecoratorService,
   createMockContextUsageMeter,
   createMockExternalContextSelector,
   createMockFileContextManager,
@@ -44,7 +44,7 @@ installMockResizeObserver();
 
 // Mock provider runtime used by ProviderRegistry
 jest.mock('@/providers/claude/runtime/ClaudeChatRuntime', () => ({
-  ClaudianService: jest.fn().mockImplementation(() => ({
+  SpecoratorService: jest.fn().mockImplementation(() => ({
     ensureReady: jest.fn().mockResolvedValue(true),
     cleanup: jest.fn(),
     isReady: jest.fn().mockReturnValue(false),
@@ -840,7 +840,7 @@ describe('Tab - Blank Tab Draft Model Change', () => {
     const tab = createTab(createMockOptions({ plugin }));
     initializeTabUI(tab, plugin);
 
-    const staleService = createMockClaudianService({ providerId: 'codex' });
+    const staleService = createMockSpecoratorService({ providerId: 'codex' });
     tab.service = staleService as any;
     tab.serviceInitialized = false;
 

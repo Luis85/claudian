@@ -523,10 +523,10 @@ describe('VaultSkillAggregator', () => {
     const agg = new VaultSkillAggregator(() => records, {
       ttlMs: 60_000,
       cacheAdapter: adapter as never,
-      cachePath: '.claudian/cache/skill-index.json',
+      cachePath: '.specorator/cache/skill-index.json',
     });
     await agg.hydrate();
-    expect(adapter.read).toHaveBeenCalledWith('.claudian/cache/skill-index.json');
+    expect(adapter.read).toHaveBeenCalledWith('.specorator/cache/skill-index.json');
     expect(agg.listCachedNow().map((e) => e.name)).toEqual(['hydrated']);
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -571,7 +571,7 @@ describe('VaultSkillAggregator', () => {
     const agg = new VaultSkillAggregator(() => records, {
       ttlMs: 60_000,
       cacheAdapter: adapter as never,
-      cachePath: '.claudian/cache/skill-index.json',
+      cachePath: '.specorator/cache/skill-index.json',
     });
     await agg.listAll();
     expect(adapter.write).not.toHaveBeenCalled();    // debounce pending
@@ -580,7 +580,7 @@ describe('VaultSkillAggregator', () => {
     await Promise.resolve();
     expect(adapter.write).toHaveBeenCalledTimes(1);
     const [path, body] = adapter.write.mock.calls[0];
-    expect(path).toBe('.claudian/cache/skill-index.json');
+    expect(path).toBe('.specorator/cache/skill-index.json');
     expect(JSON.parse(body).buckets.claude[0].name).toBe('a');
     jest.useRealTimers();
   });

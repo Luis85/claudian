@@ -31,7 +31,7 @@ export interface TaskRunCoordinatorDeps {
   appendLedger: (task: TaskSpec, runId: string, entry: TaskLedgerEntry) => Promise<void>;
   /**
    * Snapshots the sidecar ledger into the work-order note's
-   * `<!-- claudian:run-ledger-* -->` region. Called once on every terminal
+   * `<!-- specorator:run-ledger-* -->` region. Called once on every terminal
    * path (completed, failed, canceled, needs_handoff) after the terminal
    * status write and (when present) the handoff write.
    */

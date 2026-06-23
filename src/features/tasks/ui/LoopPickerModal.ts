@@ -2,7 +2,7 @@ import type { App } from 'obsidian';
 import { Modal, Notice, setIcon } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { LoopNoteStore } from '../loops/LoopNoteStore';
 import type { LoopDefinition } from '../loops/loopTypes';
 import { LoopEditorModal } from './LoopEditorModal';
@@ -23,7 +23,7 @@ export class LoopPickerModal extends Modal {
 
   constructor(
     app: App,
-    private readonly plugin: ClaudianPlugin,
+    private readonly plugin: SpecoratorPlugin,
     private readonly current: string | undefined,
     private readonly resolve: (result: LoopPickResult) => void,
   ) {
@@ -32,13 +32,13 @@ export class LoopPickerModal extends Modal {
 
   onOpen(): void {
     this.setTitle(t('tasks.loopPicker.title'));
-    this.modalEl.addClass('claudian-sp-modal', 'claudian-loops-modal');
+    this.modalEl.addClass('specorator-sp-modal', 'specorator-loops-modal');
 
-    const body = this.contentEl.createDiv({ cls: 'claudian-loops-body' });
+    const body = this.contentEl.createDiv({ cls: 'specorator-loops-body' });
     body.createEl('p', { text: t('tasks.loopPicker.lead') });
-    this.listEl = body.createDiv({ cls: 'claudian-loops-list' });
+    this.listEl = body.createDiv({ cls: 'specorator-loops-list' });
 
-    const footer = this.contentEl.createDiv({ cls: 'claudian-loops-footer' });
+    const footer = this.contentEl.createDiv({ cls: 'specorator-loops-footer' });
     footer
       .createEl('button', { cls: 'mod-cta', text: t('tasks.loopPicker.newLoop') })
       .addEventListener('click', () => this.openEditor(null));
@@ -69,15 +69,15 @@ export class LoopPickerModal extends Modal {
 
   private renderNoneRow(): void {
     if (!this.listEl) return;
-    const row = this.listEl.createDiv({ cls: 'claudian-loops-row claudian-loops-row--none' });
-    const main = row.createDiv({ cls: 'claudian-loops-main' });
+    const row = this.listEl.createDiv({ cls: 'specorator-loops-row specorator-loops-row--none' });
+    const main = row.createDiv({ cls: 'specorator-loops-main' });
 
-    const iconEl = main.createSpan({ cls: 'claudian-loops-icon' });
+    const iconEl = main.createSpan({ cls: 'specorator-loops-icon' });
     setIcon(iconEl, NONE_ICON);
 
-    const textCol = main.createDiv({ cls: 'claudian-loops-text' });
+    const textCol = main.createDiv({ cls: 'specorator-loops-text' });
     textCol.createEl('strong', { text: t('tasks.loopPicker.noneTitle') });
-    textCol.createDiv({ cls: 'claudian-loops-desc', text: t('tasks.loopPicker.noneDesc') });
+    textCol.createDiv({ cls: 'specorator-loops-desc', text: t('tasks.loopPicker.noneDesc') });
 
     if (!this.current) row.addClass('is-active');
     main.addEventListener('click', () => this.choose({ cancelled: false, loopId: '' }));
@@ -86,22 +86,22 @@ export class LoopPickerModal extends Modal {
   private renderLoopRow(loop: LoopDefinition): void {
     if (!this.listEl) return;
 
-    const row = this.listEl.createDiv({ cls: 'claudian-loops-row' });
+    const row = this.listEl.createDiv({ cls: 'specorator-loops-row' });
     if (loop.id === this.current) row.addClass('is-active');
 
-    const main = row.createDiv({ cls: 'claudian-loops-main' });
+    const main = row.createDiv({ cls: 'specorator-loops-main' });
 
-    const iconEl = main.createSpan({ cls: 'claudian-loops-icon' });
+    const iconEl = main.createSpan({ cls: 'specorator-loops-icon' });
     setIcon(iconEl, loop.icon || DEFAULT_LOOP_ICON);
 
-    const textCol = main.createDiv({ cls: 'claudian-loops-text' });
+    const textCol = main.createDiv({ cls: 'specorator-loops-text' });
     textCol.createEl('strong', { text: loop.name });
     if (loop.description) {
-      textCol.createDiv({ cls: 'claudian-loops-desc', text: loop.description });
+      textCol.createDiv({ cls: 'specorator-loops-desc', text: loop.description });
     }
     if (loop.useWhen) {
       textCol.createDiv({
-        cls: 'claudian-loops-usewhen',
+        cls: 'specorator-loops-usewhen',
         text: `${t('tasks.loopPicker.useWhenLabel')} ${loop.useWhen}`,
       });
     }
@@ -109,7 +109,7 @@ export class LoopPickerModal extends Modal {
     // Clicking a row selects the loop for the attaching work order.
     main.addEventListener('click', () => this.choose({ cancelled: false, loopId: loop.id }));
 
-    const actions = row.createDiv({ cls: 'claudian-loops-actions' });
+    const actions = row.createDiv({ cls: 'specorator-loops-actions' });
     actions.createEl('button', { text: t('tasks.loopPicker.edit') }).addEventListener('click', (event) => {
       event.stopPropagation();
       this.openEditor(loop);
@@ -144,7 +144,7 @@ export class LoopPickerModal extends Modal {
   }
 }
 
-export async function chooseLoop(plugin: ClaudianPlugin, current: string | undefined): Promise<LoopPickResult> {
+export async function chooseLoop(plugin: SpecoratorPlugin, current: string | undefined): Promise<LoopPickResult> {
   return new Promise<LoopPickResult>((resolve) => {
     new LoopPickerModal(plugin.app, plugin, current, resolve).open();
   });

@@ -1,6 +1,6 @@
 import type { TAbstractFile } from 'obsidian';
 
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 
 import { launchQuickAction } from './launchQuickAction';
 import { openQuickActionsModal } from './openQuickActionsModal';
@@ -12,7 +12,7 @@ import { openQuickActionsModal } from './openQuickActionsModal';
  * routing is owned by `openQuickActionsModal` and `runVaultSkill`.
  */
 export function openContextMenuQuickAction(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   file: TAbstractFile,
 ): void {
   openQuickActionsModal(plugin, {

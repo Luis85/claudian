@@ -4,7 +4,7 @@ import type { ProviderCapabilities } from '../../../core/providers/types';
 import type { ChatRewindMode } from '../../../core/runtime/types';
 import type { ChatMessage } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { renderMessageActionButton, wireCopyButton } from './messageActionButtons';
 import { eligibleMessageActions } from './messageActions';
 
@@ -21,7 +21,7 @@ function runRendererAction(action: () => Promise<void>): void {
  * that stay owned by the renderer's message lifecycle.
  */
 export interface MessageActionBarDeps {
-  readonly plugin: ClaudianPlugin;
+  readonly plugin: SpecoratorPlugin;
   getCapabilities(): ProviderCapabilities;
   rewindCallback?: (messageId: string, mode?: ChatRewindMode) => Promise<void>;
   forkCallback?: (messageId: string) => Promise<void>;
@@ -47,7 +47,7 @@ export class MessageActionBar {
    * @param markdown The original markdown content to copy
    */
   addTextCopyButton(textEl: HTMLElement, markdown: string): void {
-    const copyBtn = textEl.createSpan({ cls: 'claudian-text-copy-btn' });
+    const copyBtn = textEl.createSpan({ cls: 'specorator-text-copy-btn' });
     wireCopyButton(copyBtn, () => markdown);
   }
 
@@ -57,32 +57,32 @@ export class MessageActionBar {
     const msgEl = this.deps.getLiveMessageEl(msg.id);
     if (!msgEl) return;
 
-    if (this.deps.rewindCallback && !msgEl.querySelector('.claudian-message-rewind-btn')) {
+    if (this.deps.rewindCallback && !msgEl.querySelector('.specorator-message-rewind-btn')) {
       this.addRewindButton(msgEl, msg.id);
     }
-    if (this.deps.forkCallback && !msgEl.querySelector('.claudian-message-fork-btn')) {
+    if (this.deps.forkCallback && !msgEl.querySelector('.specorator-message-fork-btn')) {
       this.addForkButton(msgEl, msg.id);
     }
     this.cleanupLiveMessageEl(msg.id, msgEl);
   }
 
   private cleanupLiveMessageEl(msgId: string, msgEl: HTMLElement): void {
-    const needsRewind = this.deps.rewindCallback && !msgEl.querySelector('.claudian-message-rewind-btn');
-    const needsFork = this.deps.forkCallback && !msgEl.querySelector('.claudian-message-fork-btn');
+    const needsRewind = this.deps.rewindCallback && !msgEl.querySelector('.specorator-message-rewind-btn');
+    const needsFork = this.deps.forkCallback && !msgEl.querySelector('.specorator-message-fork-btn');
     if (!needsRewind && !needsFork) {
       this.deps.deleteLiveMessageEl(msgId);
     }
   }
 
   private getOrCreateActionsToolbar(msgEl: HTMLElement): HTMLElement {
-    const existing = msgEl.querySelector<HTMLElement>('.claudian-user-msg-actions');
+    const existing = msgEl.querySelector<HTMLElement>('.specorator-user-msg-actions');
     if (existing) return existing;
-    return msgEl.createDiv({ cls: 'claudian-user-msg-actions' });
+    return msgEl.createDiv({ cls: 'specorator-user-msg-actions' });
   }
 
   addUserCopyButton(msgEl: HTMLElement, content: string): void {
     const toolbar = this.getOrCreateActionsToolbar(msgEl);
-    const copyBtn = toolbar.createSpan({ cls: 'claudian-user-msg-copy-btn' });
+    const copyBtn = toolbar.createSpan({ cls: 'specorator-user-msg-copy-btn' });
     copyBtn.setAttribute('aria-label', 'Copy message');
     wireCopyButton(copyBtn, () => content);
   }
@@ -96,10 +96,10 @@ export class MessageActionBar {
 
   addRegisteredMessageActions(msgEl: HTMLElement, msg: ChatMessage): void {
     const toolbar = this.getOrCreateActionsToolbar(msgEl);
-    toolbar.querySelectorAll('.claudian-user-msg-action-btn').forEach((el) => el.remove());
+    toolbar.querySelectorAll('.specorator-user-msg-action-btn').forEach((el) => el.remove());
 
     for (const action of eligibleMessageActions(this.deps.plugin.chatMessageActions, msg)) {
-      renderMessageActionButton(toolbar, action, 'claudian-user-msg-action-btn', () => {
+      renderMessageActionButton(toolbar, action, 'specorator-user-msg-action-btn', () => {
         action.run(msg, this.deps.plugin.getActiveConversationSnapshot()?.id ?? null);
       });
     }
@@ -110,20 +110,20 @@ export class MessageActionBar {
    * inline beside the last text block's copy button so they share its hover affordance.
    */
   addAssistantMessageActions(msgEl: HTMLElement, msg: ChatMessage): void {
-    msgEl.querySelector('.claudian-text-actions')?.remove();
+    msgEl.querySelector('.specorator-text-actions')?.remove();
 
     const actions = eligibleMessageActions(this.deps.plugin.chatMessageActions, msg);
     if (actions.length === 0) return;
 
-    const textBlocks = msgEl.querySelectorAll('.claudian-text-block');
+    const textBlocks = msgEl.querySelectorAll('.specorator-text-block');
     // A protocol-card-only assistant message (handoff / progress / needs_input /
     // needs_approval) renders with no text block; fall back to the last
     // protocol card so actions stay reachable in work-order tabs.
     const protocolCardSelectors = [
-      '.claudian-work-order-handoff-card',
-      '.claudian-work-order-needs-approval-card',
-      '.claudian-work-order-needs-input-card',
-      '.claudian-work-order-progress-card',
+      '.specorator-work-order-handoff-card',
+      '.specorator-work-order-needs-approval-card',
+      '.specorator-work-order-needs-input-card',
+      '.specorator-work-order-progress-card',
     ];
     let cardAnchor: HTMLElement | null = null;
     for (const selector of protocolCardSelectors) {
@@ -138,9 +138,9 @@ export class MessageActionBar {
       : cardAnchor;
     if (!anchorEl) return;
 
-    const container = anchorEl.createDiv({ cls: 'claudian-text-actions' });
+    const container = anchorEl.createDiv({ cls: 'specorator-text-actions' });
     for (const action of actions) {
-      renderMessageActionButton(container, action, 'claudian-text-action-btn', () => {
+      renderMessageActionButton(container, action, 'specorator-text-action-btn', () => {
         action.run(msg, this.deps.plugin.getActiveConversationSnapshot()?.id ?? null);
       });
     }
@@ -149,7 +149,7 @@ export class MessageActionBar {
   addRewindButton(msgEl: HTMLElement, messageId: string): void {
     if (!this.deps.getCapabilities().supportsRewind) return;
     const toolbar = this.getOrCreateActionsToolbar(msgEl);
-    const btn = toolbar.createSpan({ cls: 'claudian-message-rewind-btn' });
+    const btn = toolbar.createSpan({ cls: 'specorator-message-rewind-btn' });
     if (toolbar.firstChild !== btn) toolbar.insertBefore(btn, toolbar.firstChild);
     setIcon(btn, 'rotate-ccw');
     btn.setAttribute('aria-label', t('chat.rewind.ariaLabel'));
@@ -190,7 +190,7 @@ export class MessageActionBar {
   addForkButton(msgEl: HTMLElement, messageId: string): void {
     if (!this.deps.getCapabilities().supportsFork) return;
     const toolbar = this.getOrCreateActionsToolbar(msgEl);
-    const btn = toolbar.createSpan({ cls: 'claudian-message-fork-btn' });
+    const btn = toolbar.createSpan({ cls: 'specorator-message-fork-btn' });
     if (toolbar.firstChild !== btn) toolbar.insertBefore(btn, toolbar.firstChild);
     setIcon(btn, 'git-fork');
     btn.setAttribute('aria-label', t('chat.fork.ariaLabel'));

@@ -44,7 +44,7 @@ describe('usage tracker end-to-end', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(adapter.files.get('.claudian/usage.json')).toBeDefined();
+    expect(adapter.files.get('.specorator/usage.json')).toBeDefined();
 
     // Simulate plugin reload: dispose, rebuild from disk.
     tracker.dispose();
@@ -70,13 +70,13 @@ describe('usage tracker end-to-end', () => {
 
     bus.emit('usage.recorded', { kind: 'quickAction', name: 'x' });
     await tracker.flush();
-    expect(JSON.parse(adapter.files.get('.claudian/usage.json')!).records[
+    expect(JSON.parse(adapter.files.get('.specorator/usage.json')!).records[
       serializeKey({ kind: 'quickAction', name: 'x' })
     ]).toBeDefined();
 
     bus.emit('usage.cleared');
     await tracker.flush();
-    expect(JSON.parse(adapter.files.get('.claudian/usage.json')!).records).toEqual({});
+    expect(JSON.parse(adapter.files.get('.specorator/usage.json')!).records).toEqual({});
     tracker.dispose();
   });
 });

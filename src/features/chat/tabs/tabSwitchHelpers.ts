@@ -1,5 +1,5 @@
 /**
- * Claudian - Tab-switch post-activation helpers.
+ * Specorator - Tab-switch post-activation helpers.
  *
  * Extracted from TabManager.switchToTab to keep it below the complexity
  * thresholds. The branch-heavy decision of what to do after a tab becomes
@@ -7,7 +7,7 @@
  * and depends only on tab state, so it lives here as a classifier.
  */
 
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { deactivateTab } from './Tab';
 import type { TabData, TabId } from './types';
 
@@ -53,7 +53,7 @@ export function classifyPostActivateAction(tab: TabData): PostActivateAction {
  * Pushes the latest persisted conversation snapshot into an already-loaded
  * tab's runtime. No-op when the conversation is missing from the cache.
  */
-export function passiveSyncTabConversation(plugin: ClaudianPlugin, tab: TabData): void {
+export function passiveSyncTabConversation(plugin: SpecoratorPlugin, tab: TabData): void {
   if (!tab.conversationId || !tab.service) return;
   const conversation = plugin.getConversationSync(tab.conversationId);
   if (!conversation) return;
@@ -67,7 +67,7 @@ export function passiveSyncTabConversation(plugin: ClaudianPlugin, tab: TabData)
 }
 
 /** Runs the post-activation action classified for `tab` (see {@link classifyPostActivateAction}). */
-export async function applyPostActivateAction(plugin: ClaudianPlugin, tab: TabData): Promise<void> {
+export async function applyPostActivateAction(plugin: SpecoratorPlugin, tab: TabData): Promise<void> {
   switch (classifyPostActivateAction(tab)) {
     case 'hydrate':
       await tab.controllers.conversationController?.switchTo(tab.conversationId!);

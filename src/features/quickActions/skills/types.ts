@@ -1,4 +1,4 @@
-import type { ClaudianEventMap } from '../../../app/events/claudianEvents';
+import type { SpecoratorEventMap } from '../../../app/events/specoratorEvents';
 import type { EventBus } from '../../../core/events/EventBus';
 import type { Logger } from '../../../core/logging/Logger';
 import type { ProviderCommandCatalog } from '../../../core/providers/commands/ProviderCommandCatalog';
@@ -70,10 +70,10 @@ export interface VaultSkillAggregatorOptions {
   /** Defaults to 60_000 ms. */
   ttlMs?: number;
   /** When supplied, aggregator subscribes to `vaultSkill.changed`. */
-  eventBus?: EventBus<ClaudianEventMap>;
+  eventBus?: EventBus<SpecoratorEventMap>;
   /** When supplied, aggregator hydrates from / persists to this adapter. */
   cacheAdapter?: VaultFileAdapter;
-  /** Defaults to `.claudian/cache/skill-index.json`. */
+  /** Defaults to `.specorator/cache/skill-index.json`. */
   cachePath?: string;
   /** Clock injection for deterministic tests. Defaults to `Date.now`. */
   nowMs?: () => number;
