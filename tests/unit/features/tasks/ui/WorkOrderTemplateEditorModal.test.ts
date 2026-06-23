@@ -353,6 +353,30 @@ describe('WorkOrderTemplateEditorModal — handleSave validation', () => {
     expect(payload.originalPath).toBe(existing.path);
   });
 
+  it('preserves the existing template agent in the save payload', async () => {
+    const existing = { ...makeExistingTemplate(), agent: 'roster:debugger' };
+    const onSave = jest.fn().mockResolvedValue(undefined);
+    const modal = new WorkOrderTemplateEditorModal(mockApp, makePlugin(), existing, onSave);
+    modal.onOpen();
+
+    await getSaveButton().clickHandler();
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0][0].agent).toBe('roster:debugger');
+  });
+
+  it('omits the agent from the payload when none is selected', async () => {
+    const onSave = jest.fn().mockResolvedValue(undefined);
+    const modal = new WorkOrderTemplateEditorModal(mockApp, makePlugin(), null, onSave);
+    modal.onOpen();
+
+    textComponents()[0]?.changeHandler('Template');
+    await getSaveButton().clickHandler();
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0][0].agent).toBeUndefined();
+  });
+
   it('originalPath is undefined when creating a new template', async () => {
     const onSave = jest.fn().mockResolvedValue(undefined);
     const modal = new WorkOrderTemplateEditorModal(mockApp, makePlugin(), null, onSave);

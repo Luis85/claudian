@@ -981,7 +981,18 @@
       "cancel": "Annuler",
       "loopName": "Default loop",
       "loopDesc": "Loop attached to every work order created from this template.",
-      "loopNone": "No loop"
+      "loopNone": "No loop",
+      "agentName": "Agent",
+      "agentDesc": "Optional roster agent assigned to work orders created from this template."
+    },
+    "addToWorkOrder": {
+      "title": "Add to work order",
+      "lead": "Pick a new or ready work order to add this file or folder to its context.",
+      "empty": "No new or ready work orders yet.",
+      "newWorkOrder": "New work order",
+      "added": "Added {name} to \"{title}\".",
+      "already": "{name} is already in the context of \"{title}\".",
+      "failed": "Could not add to work order: {error}"
     },
     "templatePicker": {
       "title": "Modèle d’ordre de travail",

@@ -7,7 +7,7 @@ import type { BrowserSelectionContext } from '../../../utils/browser';
 import { resolveAgentBoardDefaultModel } from '../defaultModelResolver';
 import { resolveAgentBoardDefaultProvider } from '../defaultProviderResolver';
 import type { TaskPriority, TaskSpec, TaskStatus } from '../model/taskTypes';
-import { HANDOFF_END, HANDOFF_START, RUN_LEDGER_END, RUN_LEDGER_START } from '../storage/TaskNoteStore';
+import { CONTEXT_PLACEHOLDER, HANDOFF_END, HANDOFF_START, RUN_LEDGER_END, RUN_LEDGER_START } from '../storage/TaskNoteStore';
 import type { WorkOrderTemplate } from '../templates/templateTypes';
 import {
   buildWorkOrderMarkdownForSeed,
@@ -52,6 +52,8 @@ interface FrontmatterArgs {
   model: string;
   conversationId?: string | null;
   loop?: string;
+  /** Roster agent id (`roster:<slug>`); omitted from the note when unset. */
+  agent?: string;
 }
 
 function workOrderFrontmatter(args: FrontmatterArgs): string {
@@ -59,6 +61,7 @@ function workOrderFrontmatter(args: FrontmatterArgs): string {
     ? `conversation_id: ${JSON.stringify(args.conversationId)}`
     : 'conversation_id:';
   const loopLine = args.loop ? `\nloop: ${JSON.stringify(args.loop)}` : '';
+  const agentLine = args.agent ? `\nagent: ${JSON.stringify(args.agent)}` : '';
   return `---
 type: claudian-work-order
 schema_version: 1
@@ -67,7 +70,7 @@ title: ${JSON.stringify(args.title)}
 status: ${args.status}
 priority: ${args.priority}
 created: ${args.timestamp}
-updated: ${args.timestamp}
+updated: ${args.timestamp}${agentLine}
 provider: ${args.provider}
 model: ${args.model}
 run_id:
@@ -100,7 +103,7 @@ function buildWorkOrderMarkdown(args: BuildWorkOrderArgs): string {
   const status = args.status ?? 'inbox';
   const priority = normalizePriority(args.priority);
 
-  let contextBody = '_Add the links, files, and scope the agent needs._';
+  let contextBody = CONTEXT_PLACEHOLDER;
   if (args.contextMarkdown && args.contextMarkdown.trim()) {
     contextBody = args.contextMarkdown.trim();
   } else if (args.sourcePath) {

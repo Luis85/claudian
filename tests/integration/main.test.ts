@@ -191,12 +191,14 @@ describe('ClaudianPlugin', () => {
         '<sep>',
         'Add file to Claudian chat',
         'Create work order',
+        'Add to work order',
         'Open Quick Actions',
         '<sep>',
       ]);
       expect(menuItem(menu, 1).icon).toBe('at-sign');
       expect(menuItem(menu, 2).icon).toBe('kanban-square');
-      expect(menuItem(menu, 3).icon).toBe('zap');
+      expect(menuItem(menu, 3).icon).toBe('list-plus');
+      expect(menuItem(menu, 4).icon).toBe('zap');
     });
 
     it('adds a folder menu item for TFolder with correct title and icon', async () => {
@@ -215,12 +217,14 @@ describe('ClaudianPlugin', () => {
         '<sep>',
         'Add folder to Claudian chat',
         'Create work order',
+        'Add to work order',
         'Open Quick Actions',
         '<sep>',
       ]);
       expect(menuItem(menu, 1).icon).toBe('folder');
       expect(menuItem(menu, 2).icon).toBe('kanban-square');
-      expect(menuItem(menu, 3).icon).toBe('zap');
+      expect(menuItem(menu, 3).icon).toBe('list-plus');
+      expect(menuItem(menu, 4).icon).toBe('zap');
     });
 
     it('adds the selected folder to the active chat from the file menu', async () => {

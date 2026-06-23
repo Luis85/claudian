@@ -154,6 +154,8 @@ export type TasksTranslationKey =
   | 'tasks.templateEditor.loopName'
   | 'tasks.templateEditor.loopDesc'
   | 'tasks.templateEditor.loopNone'
+  | 'tasks.templateEditor.agentName'
+  | 'tasks.templateEditor.agentDesc'
 
   // Tasks - Loop library (agent-loops Task 14)
   | 'tasks.loop.nameRequired'
@@ -202,6 +204,15 @@ export type TasksTranslationKey =
   | 'tasks.templatePicker.blankDesc'
   | 'tasks.templatePicker.edit'
   | 'tasks.templatePicker.delete'
+
+  // Tasks - Add to work order modal (file/folder right-click → existing work order context)
+  | 'tasks.addToWorkOrder.title'
+  | 'tasks.addToWorkOrder.lead'
+  | 'tasks.addToWorkOrder.empty'
+  | 'tasks.addToWorkOrder.newWorkOrder'
+  | 'tasks.addToWorkOrder.added'
+  | 'tasks.addToWorkOrder.already'
+  | 'tasks.addToWorkOrder.failed'
 
   // Tasks - Agent Board lane editor (redesign i18n sweep)
   | 'tasks.laneEditor.untitledLane'
