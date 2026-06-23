@@ -8,6 +8,7 @@ import { parseAcceptanceProgress } from '../model/acceptanceProgress';
 import type { TaskPriority, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderSectionHeader } from './sectionHeader';
 import { renderWorkOrderActivity } from './workOrderActivitySection';
+import { renderWorkOrderEditForm, type WorkOrderSectionUpdate } from './workOrderEditForm';
 import { type FooterAction, footerActionsForStatus } from './workOrderFooterActions';
 import { renderWorkOrderProperties } from './workOrderPropertiesPanel';
 
@@ -44,6 +45,13 @@ export interface WorkOrderDetailModalCallbacks {
   onMarkFailed?(task: TaskSpec): void;
   onArchive?(task: TaskSpec): void;
   onSaveFields?(task: TaskSpec, fields: WorkOrderFieldUpdate): void | Promise<void>;
+  /**
+   * Persist the editable body sections (Objective / Acceptance / Context /
+   * Constraints) collected from the modal's inline edit form. Wired only for the
+   * editable statuses (inbox / ready / needs_fix); absent when the surface is
+   * read-only.
+   */
+  onSaveSections?(task: TaskSpec, sections: WorkOrderSectionUpdate): void | Promise<void>;
   getProviderOptions(): WorkOrderOption[];
   getModelOptions(providerId: string): WorkOrderOption[];
   /**
@@ -80,8 +88,21 @@ const EDITABLE_TITLE_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStatus>([
 // id is safe to use as the dialog's `aria-labelledby` target.
 const TITLE_ID = 'claudian-work-order-modal-title';
 
+/** Drop `undefined`-valued keys so a partial update merges cleanly into a snapshot. */
+function stripUndefined<T extends object>(value: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, v]) => v !== undefined),
+  ) as Partial<T>;
+}
+
 export class WorkOrderDetailModal extends Modal {
   private readonly markdownComponent = new Component();
+
+  // Inline-edit state for the body sections. The header title + sidebar
+  // properties stay inline-editable in both modes; this toggle only swaps the
+  // main pane between the rendered sections and the textarea edit form.
+  private editing = false;
+  private mainEl: HTMLElement | null = null;
 
   constructor(
     app: App,
@@ -124,13 +145,8 @@ export class WorkOrderDetailModal extends Modal {
 
     renderWorkOrderProperties(sidebar, this.task, this.callbacks);
 
-    this.renderObjective(main);
-    this.renderAcceptance(main);
-    renderWorkOrderActivity(main, {
-      task: this.task,
-      app: this.app,
-      markdownComponent: this.markdownComponent,
-    });
+    this.mainEl = main;
+    this.renderMainPane();
 
     this.renderActions(footer);
   }
@@ -138,6 +154,75 @@ export class WorkOrderDetailModal extends Modal {
   onClose(): void {
     this.markdownComponent.unload();
     this.contentEl.empty();
+    this.mainEl = null;
+  }
+
+  /**
+   * Paints the scrolling main pane. In view mode it renders the read-only
+   * sections (Objective / Acceptance / Context / Constraints) plus the
+   * status-driven Activity block, leading with an Edit affordance for the
+   * editable statuses. In edit mode it swaps in the textarea form. Re-runs
+   * itself (clearing the pane first) on every Edit/Save/Cancel toggle.
+   */
+  private renderMainPane(): void {
+    const main = this.mainEl;
+    if (!main) return;
+    main.empty();
+
+    if (this.editing) {
+      renderWorkOrderEditForm(main, this.task, {
+        onSave: (sections) => void this.commitSections(sections),
+        onCancel: () => this.setEditing(false),
+      });
+      return;
+    }
+
+    if (this.isEditableStatus()) this.renderEditToggle(main);
+    this.renderObjective(main);
+    this.renderAcceptance(main);
+    this.renderProseSection(main, 'link', 'tasks.workOrderModal.sectionContext', this.task.sections.context);
+    this.renderProseSection(main, 'shield', 'tasks.workOrderModal.sectionConstraints', this.task.sections.constraints);
+    renderWorkOrderActivity(main, {
+      task: this.task,
+      app: this.app,
+      markdownComponent: this.markdownComponent,
+    });
+  }
+
+  private isEditableStatus(): boolean {
+    return EDITABLE_TITLE_STATUSES.has(this.task.frontmatter.status);
+  }
+
+  private setEditing(editing: boolean): void {
+    this.editing = editing;
+    this.renderMainPane();
+  }
+
+  /**
+   * "Edit" affordance pinned to the top of the main pane for the editable
+   * statuses. Saving stays inside the form (Save / Cancel), so this only enters
+   * edit mode — there is no separate Done button up here.
+   */
+  private renderEditToggle(parent: HTMLElement): void {
+    const bar = parent.createDiv({ cls: 'claudian-work-order-modal-edit-bar' });
+    const button = bar.createEl('button', {
+      cls: 'claudian-work-order-modal-edit-button',
+      attr: { type: 'button' },
+    });
+    const icon = button.createSpan({ cls: 'claudian-work-order-modal-edit-button-icon' });
+    icon.setAttr('aria-hidden', 'true');
+    icon.setAttr('data-icon', 'pencil');
+    setIcon(icon, 'pencil');
+    button.createSpan({ text: t('tasks.workOrderModal.actionEdit') });
+    button.addEventListener('click', () => this.setEditing(true));
+  }
+
+  private async commitSections(sections: WorkOrderSectionUpdate): Promise<void> {
+    await this.callbacks.onSaveSections?.(this.task, sections);
+    // Keep the in-memory snapshot current so the re-rendered view reflects the
+    // saved bodies (the modal holds its own copy; the board re-index is async).
+    this.task.sections = { ...this.task.sections, ...stripUndefined(sections) };
+    this.setEditing(false);
   }
 
   /**
@@ -281,6 +366,24 @@ export class WorkOrderDetailModal extends Modal {
       this.task.path,
       this.markdownComponent,
     );
+  }
+
+  /**
+   * Context + Constraints prose: rendered through `MarkdownRenderer` (links /
+   * wikilinks / code stay live), mirroring Objective. They round out the modal
+   * so the whole work order is readable — and, via the Edit toggle, fillable —
+   * without opening the note. An empty section shows the em-dash placeholder
+   * rather than collapsing, so the document structure stays visible.
+   */
+  private renderProseSection(
+    parent: HTMLElement,
+    icon: string,
+    labelKey: Parameters<typeof t>[0],
+    markdown: string,
+  ): void {
+    const { section } = renderSectionHeader(parent, { icon, label: t(labelKey) });
+    const body = section.createDiv({ cls: 'claudian-work-order-modal-objective' });
+    void MarkdownRenderer.render(this.app, markdown || '—', body, this.task.path, this.markdownComponent);
   }
 
   /**

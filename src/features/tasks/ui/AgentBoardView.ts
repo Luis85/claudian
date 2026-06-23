@@ -425,6 +425,7 @@ export class AgentBoardView extends ItemView {
       onMarkFailed: (target) => void this.transitionTask(target, 'failed', 'Marked failed: run produced no structured handoff.'),
       onArchive: (target) => void this.archiveTask(target),
       onSaveFields: (target, fields) => this.saveTaskFields(target, fields),
+      onSaveSections: (tk, s) => this.applyNoteChange(tk.path, (c) => this.noteStore.writeSections(c, s)),
       ...buildWorkOrderFieldOptions(settings, agents),
       getLoopName: (loopId) => (loopId ? this.loopNameCache.get(loopId) : undefined),
       onPickLoop: (target) => this.pickLoopForTask(target),
@@ -452,10 +453,9 @@ export class AgentBoardView extends ItemView {
   }
 
   private async saveTaskFields(task: TaskSpec, fields: WorkOrderFieldUpdate): Promise<void> {
-    // No explicit refresh: applyNoteChange goes through vault.process, which
-    // emits a `modify` event the onOpen handler already wires to a 100ms
-    // debounced refresh. Three field edits in quick succession (title +
-    // provider + model) collapse to one re-index instead of three.
+    // No explicit refresh: applyNoteChange goes through vault.process, whose
+    // `modify` event the onOpen handler debounces into a single re-index, so
+    // rapid edits collapse to one re-index. Section edits share this seam.
     await this.applyNoteChange(task.path, (content) => this.noteStore.writeFields(content, fields));
   }
 

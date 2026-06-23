@@ -948,7 +948,16 @@
       "actionSendToReview": "Send to review",
       "actionMarkFailed": "Mark failed",
       "actionReopen": "Reopen",
-      "actionArchive": "Archive"
+      "actionArchive": "Archive",
+      "sectionContext": "Context",
+      "sectionConstraints": "Constraints",
+      "actionEdit": "Edit",
+      "actionSaveSections": "Save",
+      "actionCancelEdit": "Cancel",
+      "editObjectivePlaceholder": "What should the agent accomplish?",
+      "editAcceptancePlaceholder": "Define what \"done\" means — one \"- [ ] \" item per line.",
+      "editContextPlaceholder": "Links, files, and scope the agent needs.",
+      "editConstraintsPlaceholder": "Guardrails the agent must respect."
     },
     "templateEditor": {
       "titleNew": "Novo modelo de ordem de trabalho",
