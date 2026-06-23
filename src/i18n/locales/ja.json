@@ -862,6 +862,10 @@
       "edit": "Edit",
       "delete": "Delete"
     },
+    "loopLibrary": {
+      "title": "Loop library",
+      "lead": "Browse, create, edit, or delete the loops in your library."
+    },
     "loopEditor": {
       "titleNew": "New loop",
       "titleEdit": "Edit loop",

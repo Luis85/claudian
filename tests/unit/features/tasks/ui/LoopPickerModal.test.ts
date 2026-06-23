@@ -1,6 +1,6 @@
 import { LoopNoteStore } from '../../../../../src/features/tasks/loops/LoopNoteStore';
 import type { LoopPickResult } from '../../../../../src/features/tasks/ui/LoopPickerModal';
-import { chooseLoop,LoopPickerModal } from '../../../../../src/features/tasks/ui/LoopPickerModal';
+import { chooseLoop, LoopPickerModal, openLoopLibrary } from '../../../../../src/features/tasks/ui/LoopPickerModal';
 
 // Build loop note markdown using LoopNoteStore.build so the content is realistic.
 const store = new LoopNoteStore();
@@ -482,5 +482,83 @@ describe('chooseLoop helper', () => {
     expect(result).toBeInstanceOf(Promise);
     // We cannot await it here without the modal being interacted with,
     // so just verify it's a Promise (smoke test).
+  });
+});
+
+describe('LoopPickerModal — manage mode', () => {
+  it('does not render a "No loop" row in manage mode', async () => {
+    const vault = makeVault({
+      'Agent Board/loops/alpha-loop.md': LOOP_A_CONTENT,
+    });
+    const plugin = makePlugin(vault);
+
+    const modal = new LoopPickerModal(mockApp, plugin, undefined, jest.fn(), 'manage');
+    const contentEl = installRecordingContent(modal);
+
+    modal.onOpen();
+    await flushAsync();
+
+    const listEl = find(contentEl, 'claudian-loops-list');
+    expect(listEl).toBeDefined();
+
+    const noneRows = findAll(listEl!, (el) => el.classes.has('claudian-loops-row--none'));
+    expect(noneRows).toHaveLength(0);
+  });
+
+  it('renders loop rows in manage mode', async () => {
+    const vault = makeVault({
+      'Agent Board/loops/alpha-loop.md': LOOP_A_CONTENT,
+    });
+    const plugin = makePlugin(vault);
+
+    const modal = new LoopPickerModal(mockApp, plugin, undefined, jest.fn(), 'manage');
+    const contentEl = installRecordingContent(modal);
+
+    modal.onOpen();
+    await flushAsync();
+
+    const listEl = find(contentEl, 'claudian-loops-list');
+    expect(listEl).toBeDefined();
+
+    const loopRows = findAll(
+      listEl!,
+      (el) => el.classes.has('claudian-loops-row') && !el.classes.has('claudian-loops-row--none'),
+    );
+    expect(loopRows.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('clicking a loop row in manage mode does NOT call the resolve callback with a loopId', async () => {
+    const vault = makeVault({
+      'Agent Board/loops/alpha-loop.md': LOOP_A_CONTENT,
+    });
+    const plugin = makePlugin(vault);
+
+    const resolve = jest.fn();
+    const modal = new LoopPickerModal(mockApp, plugin, undefined, resolve, 'manage');
+    const contentEl = installRecordingContent(modal);
+
+    modal.onOpen();
+    await flushAsync();
+
+    const listEl = find(contentEl, 'claudian-loops-list')!;
+    const loopRow = findAll(
+      listEl,
+      (el) => el.classes.has('claudian-loops-row') && !el.classes.has('claudian-loops-row--none'),
+    )[0];
+    const loopMain = find(loopRow, 'claudian-loops-main')!;
+    loopMain.emit('click');
+
+    // In manage mode, clicking the row opens the editor, not the resolve callback.
+    expect(resolve).not.toHaveBeenCalledWith(expect.objectContaining({ loopId: expect.any(String) }));
+  });
+});
+
+describe('openLoopLibrary helper', () => {
+  it('does not throw when called with a valid plugin', () => {
+    const vault = makeVault({});
+    const plugin = makePlugin(vault);
+
+    // openLoopLibrary is a thin wrapper — smoke-test that it doesn't throw.
+    expect(() => openLoopLibrary(plugin)).not.toThrow();
   });
 });

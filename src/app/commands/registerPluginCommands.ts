@@ -15,6 +15,7 @@ import {
   createWorkOrderFromSelectionInteractive,
   createWorkOrderInteractive,
 } from '@/features/tasks/ui/createWorkOrderInteractive';
+import { openLoopLibrary } from '@/features/tasks/ui/LoopPickerModal';
 import { t } from '@/i18n/i18n';
 import type ClaudianPlugin from '@/main';
 import { buildCursorContext } from '@/utils/editor';
@@ -104,6 +105,14 @@ function registerWorkOrderCommands(
     name: 'Install common work-order templates',
     callback: () => {
       void installPresetTemplatesWithNotice(plugin);
+    },
+  });
+
+  register({
+    id: 'open-loop-library',
+    name: 'Open loop library',
+    callback: () => {
+      openLoopLibrary(plugin);
     },
   });
 

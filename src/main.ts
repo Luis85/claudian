@@ -75,6 +75,7 @@ import { QueueSlotTracker } from './features/tasks/execution/QueueSlotTracker';
 import { RunSidecarStore } from './features/tasks/storage/RunSidecarStore';
 import { TaskNoteStore } from './features/tasks/storage/TaskNoteStore';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
+import { openLoopLibrary } from './features/tasks/ui/LoopPickerModal';
 import { WorkOrderActivityProvider } from './features/tasks/ui/WorkOrderActivityProvider';
 import { setLocale, t } from './i18n/i18n';
 import type { Locale } from './i18n/types';
@@ -214,10 +215,9 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
     );
 
     // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Board" is the product feature name.
-    this.addRibbonIcon('kanban-square', 'Open Agent Board', () => {
-      void this.activateAgentBoardView();
-    });
+    this.addRibbonIcon('kanban-square', 'Open Agent Board', () => void this.activateAgentBoardView());
 
+    this.addRibbonIcon('repeat', 'Open loop library', () => openLoopLibrary(this));
 
     const chatWorkOrderLinker = new ChatWorkOrderLinker(this);
 

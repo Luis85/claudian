@@ -6,6 +6,7 @@ import { asSettingsBag } from '../../../../core/types/settings';
 import { t } from '../../../../i18n/i18n';
 import { resolveAgentBoardDefaultModel } from '../../../tasks/defaultModelResolver';
 import { resolveAgentBoardDefaultProvider } from '../../../tasks/defaultProviderResolver';
+import { installPresetLoopsWithNotice } from '../../../tasks/loops/installPresetLoops';
 import { installPresetTemplatesWithNotice } from '../../../tasks/templates/installPresetTemplates';
 import { renderAgentBoardLaneEditor } from '../../../tasks/ui/AgentBoardLaneEditor';
 import { writePathInPlace } from '../path';
@@ -30,6 +31,11 @@ export function registerAgentBoardTabFields(): void {
     visible: () => true,
   });
 
+  registerAgentBoardSections(r);
+  registerAgentBoardFields(r);
+}
+
+function registerAgentBoardSections(r: ReturnType<typeof getSettingsRegistry>): void {
   r.registerSection({
     id: 'folders',
     tabId: 'agentBoard',
@@ -84,7 +90,9 @@ export function registerAgentBoardTabFields(): void {
     order: 35,
     description: 'Background runner that auto-picks Ready and Needs-fix cards.',
   });
+}
 
+function registerAgentBoardFields(r: ReturnType<typeof getSettingsRegistry>): void {
   r.registerField({
     id: 'agentBoardWorkOrderFolder',
     tabId: 'agentBoard',
@@ -105,6 +113,17 @@ export function registerAgentBoardTabFields(): void {
     type: { kind: 'folder', placeholder: 'Agent Board/templates' },
     default: 'Agent Board/templates',
     keywords: ['template', 'folder'],
+  });
+
+  r.registerField({
+    id: 'agentBoardLoopFolder',
+    tabId: 'agentBoard',
+    sectionId: 'folders',
+    label: 'Loop folder',
+    description: 'Folder where loop definitions live.',
+    type: { kind: 'folder', placeholder: 'Agent Board/loops' },
+    default: 'Agent Board/loops',
+    keywords: ['loop', 'library', 'folder'],
   });
 
   // Folder-collision warning — re-renders whenever folder settings change so it
@@ -231,6 +250,27 @@ export function registerAgentBoardTabFields(): void {
     },
     default: null,
     keywords: ['template', 'install', 'preset'],
+  });
+
+  r.registerField({
+    id: 'installCommonLoopsButton',
+    tabId: 'agentBoard',
+    sectionId: 'templates',
+    label: 'Common loops',
+    description: 'Install the starter set of loops (reproduce → fix → verify, characterize → refactor, research spike, test backfill). Re-running skips any whose filename already exists.',
+    type: {
+      kind: 'button',
+      label: 'Install common loops',
+      onClick: async (ctx) => {
+        try {
+          await installPresetLoopsWithNotice(ctx.plugin);
+        } catch (error) {
+          new Notice(t('settings.agentBoard.installFailed', { error: error instanceof Error ? error.message : String(error) }));
+        }
+      },
+    },
+    default: null,
+    keywords: ['loop', 'install', 'preset', 'library'],
   });
 }
 

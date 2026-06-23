@@ -26,16 +26,18 @@ export class LoopPickerModal extends Modal {
     private readonly plugin: ClaudianPlugin,
     private readonly current: string | undefined,
     private readonly resolve: (result: LoopPickResult) => void,
+    private readonly mode: 'attach' | 'manage' = 'attach',
   ) {
     super(app);
   }
 
   onOpen(): void {
-    this.setTitle(t('tasks.loopPicker.title'));
+    const manage = this.mode === 'manage';
+    this.setTitle(manage ? t('tasks.loopLibrary.title') : t('tasks.loopPicker.title'));
     this.modalEl.addClass('claudian-sp-modal', 'claudian-loops-modal');
 
     const body = this.contentEl.createDiv({ cls: 'claudian-loops-body' });
-    body.createEl('p', { text: t('tasks.loopPicker.lead') });
+    body.createEl('p', { text: manage ? t('tasks.loopLibrary.lead') : t('tasks.loopPicker.lead') });
     this.listEl = body.createDiv({ cls: 'claudian-loops-list' });
 
     const footer = this.contentEl.createDiv({ cls: 'claudian-loops-footer' });
@@ -63,7 +65,9 @@ export class LoopPickerModal extends Modal {
     if (!this.listEl) return;
     this.listEl.empty();
     const { loops } = await this.store.list(this.plugin.app.vault, this.folder());
-    this.renderNoneRow();
+    // Manage mode is a standalone library — there is no work order to detach
+    // from, so the "No loop" row is omitted.
+    if (this.mode !== 'manage') this.renderNoneRow();
     for (const loop of loops) this.renderLoopRow(loop);
   }
 
@@ -106,7 +110,13 @@ export class LoopPickerModal extends Modal {
       });
     }
 
-    main.addEventListener('click', () => this.choose({ cancelled: false, loopId: loop.id }));
+    // Attach mode: clicking a row selects the loop. Manage mode (library): there
+    // is nothing to select, so the row opens the editor instead.
+    main.addEventListener('click', () =>
+      this.mode === 'manage'
+        ? this.openEditor(loop)
+        : this.choose({ cancelled: false, loopId: loop.id }),
+    );
 
     const actions = row.createDiv({ cls: 'claudian-loops-actions' });
     actions.createEl('button', { text: t('tasks.loopPicker.edit') }).addEventListener('click', (event) => {
@@ -147,4 +157,9 @@ export async function chooseLoop(plugin: ClaudianPlugin, current: string | undef
   return new Promise<LoopPickResult>((resolve) => {
     new LoopPickerModal(plugin.app, plugin, current, resolve).open();
   });
+}
+
+/** Open the loop library as a standalone manager: browse, create, edit, delete. */
+export function openLoopLibrary(plugin: ClaudianPlugin): void {
+  new LoopPickerModal(plugin.app, plugin, undefined, () => undefined, 'manage').open();
 }

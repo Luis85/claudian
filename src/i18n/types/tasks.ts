@@ -161,6 +161,8 @@ export type TasksTranslationKey =
   | 'tasks.loopPicker.useWhenLabel'
   | 'tasks.loopPicker.edit'
   | 'tasks.loopPicker.delete'
+  | 'tasks.loopLibrary.title'
+  | 'tasks.loopLibrary.lead'
 
   // Tasks - Loop editor modal (agent-loops Task 14)
   | 'tasks.loopEditor.titleNew'
