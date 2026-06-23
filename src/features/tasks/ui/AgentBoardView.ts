@@ -427,7 +427,7 @@ export class AgentBoardView extends ItemView {
       onSaveFields: (target, fields) => this.saveTaskFields(target, fields),
       ...buildWorkOrderFieldOptions(settings, agents),
       getLoopName: (loopId) => (loopId ? this.loopNameCache.get(loopId) : undefined),
-      onPickLoop: (target) => void this.pickLoopForTask(target),
+      onPickLoop: (target) => this.pickLoopForTask(target),
     }).open();
   }
 
@@ -459,11 +459,12 @@ export class AgentBoardView extends ItemView {
     await this.applyNoteChange(task.path, (content) => this.noteStore.writeFields(content, fields));
   }
 
-  private async pickLoopForTask(task: TaskSpec): Promise<void> {
+  private async pickLoopForTask(task: TaskSpec): Promise<string | undefined> {
     const result = await chooseLoop(this.plugin, task.frontmatter.loop);
     // An empty loopId detaches the loop (handled by TaskNoteStore.writeFields).
-    if (result.cancelled || result.loopId === undefined) return;
+    if (result.cancelled || result.loopId === undefined) return undefined;
     await this.saveTaskFields(task, { loop: result.loopId });
+    return result.loopId;
   }
 
   private computeSlots(): { used: number; max: number } {

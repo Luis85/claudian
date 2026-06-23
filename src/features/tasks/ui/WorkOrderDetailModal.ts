@@ -46,8 +46,12 @@ export interface WorkOrderDetailModalCallbacks {
   onSaveFields?(task: TaskSpec, fields: WorkOrderFieldUpdate): void | Promise<void>;
   getProviderOptions(): WorkOrderOption[];
   getModelOptions(providerId: string): WorkOrderOption[];
-  /** Open the loop picker for this task and persist the choice. */
-  onPickLoop?(task: TaskSpec): void;
+  /**
+   * Open the loop picker for this task, persist the choice, and resolve to the
+   * new loop slug (`''` when detached) or `undefined` when cancelled — so the
+   * caller can update the (non-native) loop chip in place.
+   */
+  onPickLoop?(task: TaskSpec): Promise<string | undefined>;
   /** Resolve the task's attached loop slug to a display name (sync, best-effort). */
   getLoopName?(loopId: string | undefined): string | undefined;
   /**

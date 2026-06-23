@@ -257,10 +257,20 @@ function renderLoopRow(
   chip.addClass('claudian-work-order-modal-chip--loop');
   chip.setAttribute('role', 'button');
   chip.setAttribute('tabindex', '0');
-  chip.createSpan({ cls: 'claudian-work-order-modal-chip-value', text: label });
+  const valueEl = chip.createSpan({ cls: 'claudian-work-order-modal-chip-value', text: label });
   const caret = chip.createSpan({ cls: 'claudian-work-order-modal-chip-caret' });
   setIcon(caret, 'chevron-down');
-  const open = (): void => { callbacks.onPickLoop?.(task); };
+  // The chip is custom (not a native <select>), so reflect the picked loop back
+  // into its label after the picker persists. `onPickLoop` resolves to the new
+  // slug ('' when detached) or undefined when cancelled.
+  const open = (): void => {
+    void (async () => {
+      const picked = await callbacks.onPickLoop?.(task);
+      if (picked === undefined) return;
+      task.frontmatter.loop = picked || undefined;
+      valueEl.setText(callbacks.getLoopName?.(task.frontmatter.loop) ?? t('tasks.workOrderModal.loopNone'));
+    })();
+  };
   chip.addEventListener('click', open);
   chip.addEventListener('keydown', (evt: KeyboardEvent) => {
     if (evt.key === 'Enter' || evt.key === ' ') {

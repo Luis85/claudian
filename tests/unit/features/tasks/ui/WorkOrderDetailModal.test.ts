@@ -604,6 +604,43 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
     expect(onSaveFields).toHaveBeenCalledWith(task, { agent: 'standard' });
   });
 
+  it('updates the loop chip label in place after the picker resolves to a new loop', async () => {
+    const task = makeTask('t', 'inbox');
+    const onPickLoop = jest.fn().mockResolvedValue('repro');
+    const { sidebar } = openWith(task, richCallbacks({
+      onPickLoop,
+      getLoopName: (id) => (id === 'repro' ? 'Repro loop' : undefined),
+    }));
+    const value = find(findRow(sidebar, 'loop')!, 'claudian-work-order-modal-chip-value')!;
+    expect(value.text).toBe('No loop');
+
+    find(findRow(sidebar, 'loop')!, 'claudian-work-order-modal-chip--loop')!.emit('click');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onPickLoop).toHaveBeenCalledWith(task);
+    expect(value.text).toBe('Repro loop');
+    expect(task.frontmatter.loop).toBe('repro');
+  });
+
+  it('resets the loop chip to "No loop" when the picker detaches the loop', async () => {
+    const task = makeTask('t', 'inbox');
+    task.frontmatter.loop = 'repro';
+    const { sidebar } = openWith(task, richCallbacks({
+      onPickLoop: jest.fn().mockResolvedValue(''),
+      getLoopName: (id) => (id === 'repro' ? 'Repro loop' : undefined),
+    }));
+    const value = find(findRow(sidebar, 'loop')!, 'claudian-work-order-modal-chip-value')!;
+    expect(value.text).toBe('Repro loop');
+
+    find(findRow(sidebar, 'loop')!, 'claudian-work-order-modal-chip--loop')!.emit('click');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(value.text).toBe('No loop');
+    expect(task.frontmatter.loop).toBeUndefined();
+  });
+
   it('renders the Agent row as a static avatar + name (no chip) in a non-editable state', () => {
     const { sidebar } = openWith(makeTask('t', 'running'), richCallbacks());
     const agentRow = findRow(sidebar, 'agent')!;
