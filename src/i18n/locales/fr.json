@@ -1155,7 +1155,7 @@
     "deleteConfirm": "Delete the loop \"{name}\"?",
     "deleted": "Deleted {name}.",
     "useWhenLabel": "Use when:",
-    "actionFailed": "Loop library action failed: {error}"
+    "actionFailed": "Something went wrong — check the developer console."
   },
   "ribbon": {
     "openChat": "Open Co-Worker Chat",
