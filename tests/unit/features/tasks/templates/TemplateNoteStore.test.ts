@@ -220,6 +220,39 @@ describe('TemplateNoteStore.delete', () => {
   });
 });
 
+describe('TemplateNoteStore loop field', () => {
+  const store = new TemplateNoteStore();
+
+  it('round-trips a loop slug through build and parse', () => {
+    const md = store.build({ name: 'T', loop: 'reproduce-then-fix', body: '# T' });
+    expect(md).toContain('loop: "reproduce-then-fix"');
+    const parsed = store.parse('Agent Board/templates/t.md', md);
+    expect(parsed.loop).toBe('reproduce-then-fix');
+  });
+
+  it('omits loop when absent', () => {
+    const md = store.build({ name: 'T', body: '# T' });
+    expect(md).not.toContain('loop:');
+    expect(store.parse('Agent Board/templates/t.md', md).loop).toBeUndefined();
+  });
+});
+
+describe('TemplateNoteStore agent field', () => {
+  const store = new TemplateNoteStore();
+
+  it('round-trips an agent id through build and parse', () => {
+    const md = store.build({ name: 'T', agent: 'roster:feature-builder', body: '# T' });
+    expect(md).toContain('agent: "roster:feature-builder"');
+    expect(store.parse('Agent Board/templates/t.md', md).agent).toBe('roster:feature-builder');
+  });
+
+  it('omits agent when absent', () => {
+    const md = store.build({ name: 'T', body: '# T' });
+    expect(md).not.toContain('agent:');
+    expect(store.parse('Agent Board/templates/t.md', md).agent).toBeUndefined();
+  });
+});
+
 describe('TemplateNoteStore.list', () => {
   it('returns valid templates sorted by name and warns on bad notes', async () => {
     const byPath: Record<string, string> = {

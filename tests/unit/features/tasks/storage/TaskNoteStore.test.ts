@@ -1,5 +1,6 @@
 import { renderHandoffMarkdown } from '../../../../../src/features/tasks/model/handoffSections';
 import {
+  CONTEXT_PLACEHOLDER,
   HANDOFF_END,
   HANDOFF_START,
   RUN_LEDGER_END,
@@ -359,6 +360,79 @@ attempts: 0
     expect(ledger).toBe('- Existing generated entry.');
   });
 
+  describe('writeSections', () => {
+    it('replaces a single section body, bumps updated, and leaves siblings + generated regions intact', () => {
+      const written = store.writeSections(
+        VALID_NOTE,
+        { objective: 'Ship the whole slice now.' },
+        '2026-06-01T00:00:00.000Z',
+      );
+      const parsed = store.parse('tasks/task-1.md', written);
+
+      expect(parsed.task.sections.objective).toBe('Ship the whole slice now.');
+      // Sibling sections are untouched.
+      expect(parsed.task.sections.acceptanceCriteria).toBe('- Shows task cards.\n- Runs work orders.');
+      expect(parsed.task.sections.context).toBe('Use existing chat runtime.');
+      expect(parsed.task.sections.constraints).toBe('Do not touch unrelated files.');
+      // Generated regions survive verbatim.
+      expect(store.extractGeneratedRegion(written, RUN_LEDGER_START, RUN_LEDGER_END)).toBe('- Existing generated entry.');
+      expect(store.extractGeneratedRegion(written, HANDOFF_START, HANDOFF_END)).toBe('Old handoff.');
+      // Surrounding prose and the title H1 stay put.
+      expect(written).toContain('Intro prose that must stay.');
+      expect(written).toContain('Closing prose.');
+      expect(written).toContain('# Build agent board');
+      expect(parsed.task.frontmatter.updated).toBe('2026-06-01T00:00:00.000Z');
+      expect(parsed.task.frontmatter.custom_field).toBe('keep-me');
+    });
+
+    it('replaces all four editable sections in one write', () => {
+      const written = store.writeSections(
+        VALID_NOTE,
+        {
+          objective: 'New objective.',
+          acceptanceCriteria: '- [ ] New criterion.',
+          context: 'New context.',
+          constraints: '- New constraint.',
+        },
+        '2026-06-01T00:00:00.000Z',
+      );
+      const parsed = store.parse('tasks/task-1.md', written);
+      expect(parsed.task.sections.objective).toBe('New objective.');
+      expect(parsed.task.sections.acceptanceCriteria).toBe('- [ ] New criterion.');
+      expect(parsed.task.sections.context).toBe('New context.');
+      expect(parsed.task.sections.constraints).toBe('- New constraint.');
+      // The last editable section (Constraints) borders the generated regions:
+      // replacing it must not bleed into the Run Ledger.
+      expect(store.extractGeneratedRegion(written, RUN_LEDGER_START, RUN_LEDGER_END)).toBe('- Existing generated entry.');
+    });
+
+    it('leaves omitted sections unchanged (undefined keys are no-ops)', () => {
+      const written = store.writeSections(VALID_NOTE, { context: 'Only context.' }, '2026-06-01T00:00:00.000Z');
+      const parsed = store.parse('tasks/task-1.md', written);
+      expect(parsed.task.sections.context).toBe('Only context.');
+      expect(parsed.task.sections.objective).toBe('Ship the thin slice.');
+    });
+
+    it('writes an empty section body without dropping the heading', () => {
+      const written = store.writeSections(VALID_NOTE, { constraints: '' }, '2026-06-01T00:00:00.000Z');
+      const parsed = store.parse('tasks/task-1.md', written);
+      expect(parsed.task.sections.constraints).toBe('');
+      expect(written).toContain('## Constraints');
+      // The generated regions still resolve after an empty Constraints write.
+      expect(store.extractGeneratedRegion(written, RUN_LEDGER_START, RUN_LEDGER_END)).toBe('- Existing generated entry.');
+    });
+
+    it('strips embedded Claudian region markers from section content so generated regions stay locatable', () => {
+      const malicious = `Sneak ${RUN_LEDGER_START} a marker`;
+      const written = store.writeSections(VALID_NOTE, { objective: malicious }, '2026-06-01T00:00:00.000Z');
+      // The objective body must not carry the marker that would shadow the real region.
+      const parsed = store.parse('tasks/task-1.md', written);
+      expect(parsed.task.sections.objective).not.toContain('claudian:run-ledger-start');
+      // The real generated ledger region is still intact and locatable.
+      expect(store.extractGeneratedRegion(written, RUN_LEDGER_START, RUN_LEDGER_END)).toBe('- Existing generated entry.');
+    });
+  });
+
   describe('writeStatus heartbeat + pause_reason', () => {
     const baseNote = `---
 type: claudian-work-order
@@ -468,6 +542,123 @@ body`;
         '## Objective\nx\n';
       expect(() => store.writeLedgerSnapshot(noMarkers, '- whatever'))
         .toThrow(/Missing generated region markers/);
+    });
+  });
+
+  describe('TaskNoteStore.writeFields loop', () => {
+    const base = `---
+type: claudian-work-order
+schema_version: 1
+id: task-1
+title: "T"
+status: inbox
+priority: 2 - normal
+created: 2026-06-22
+updated: 2026-06-22
+attempts: 0
+---
+# T
+
+## Objective
+
+x
+`;
+
+    it('writes a loop slug', () => {
+      const out = store.writeFields(base, { loop: 'reproduce-then-fix' }, '2026-06-23');
+      expect(out).toContain('loop: reproduce-then-fix');
+    });
+
+    it('clears the loop when given an empty string', () => {
+      const withLoop = store.writeFields(base, { loop: 'reproduce-then-fix' }, '2026-06-23');
+      const cleared = store.writeFields(withLoop, { loop: '' }, '2026-06-24');
+      expect(cleared).not.toContain('loop:');
+    });
+  });
+
+  describe('appendContext', () => {
+    const store = new TaskNoteStore();
+
+    const noteWithContext = (contextBody: string): string => `---
+type: claudian-work-order
+schema_version: 1
+id: task-1
+title: T
+status: ready
+priority: 2 - normal
+created: 2026-06-23T08:00:00.000Z
+updated: 2026-06-23T08:00:00.000Z
+attempts: 0
+---
+# T
+
+## Objective
+Do it.
+
+## Context
+${contextBody}
+
+## Constraints
+Keep it tidy.
+`;
+
+    it('appends a reference as a bullet below existing context content', () => {
+      const result = store.appendContext(noteWithContext('Existing prose.'), '[[Notes/Foo]]');
+      expect(result.changed).toBe(true);
+      expect(store.parse('x.md', result.content).task.sections.context).toBe('Existing prose.\n- [[Notes/Foo]]');
+    });
+
+    it('replaces the untouched placeholder on the first add', () => {
+      const result = store.appendContext(noteWithContext(CONTEXT_PLACEHOLDER), '[[Notes/Foo]]');
+      expect(result.changed).toBe(true);
+      const context = store.parse('x.md', result.content).task.sections.context;
+      expect(context).toBe('- [[Notes/Foo]]');
+      expect(context).not.toContain(CONTEXT_PLACEHOLDER);
+    });
+
+    it('replaces an empty context section on the first add', () => {
+      const result = store.appendContext(noteWithContext(''), '`Notes/Sub`');
+      expect(result.changed).toBe(true);
+      expect(store.parse('x.md', result.content).task.sections.context).toBe('- `Notes/Sub`');
+    });
+
+    it('is a no-op when the reference is already present', () => {
+      const once = store.appendContext(noteWithContext(CONTEXT_PLACEHOLDER), '[[Notes/Foo]]');
+      const twice = store.appendContext(once.content, '[[Notes/Foo]]');
+      expect(twice.changed).toBe(false);
+      expect(twice.content).toBe(once.content);
+    });
+
+    it('dedupes against a reference embedded in seeded prose', () => {
+      const result = store.appendContext(noteWithContext('Source note: [[Notes/Foo]]'), '[[Notes/Foo]]');
+      expect(result.changed).toBe(false);
+    });
+
+    it('preserves sections that follow Context', () => {
+      const result = store.appendContext(noteWithContext('Existing prose.'), '[[Notes/Foo]]');
+      const parsed = store.parse('x.md', result.content);
+      expect(parsed.task.sections.constraints).toBe('Keep it tidy.');
+      expect(parsed.task.frontmatter.status).toBe('ready');
+    });
+
+    it('throws when the note has no Context section', () => {
+      const noContext = `---
+type: claudian-work-order
+schema_version: 1
+id: task-1
+title: T
+status: ready
+priority: 2 - normal
+created: 2026-06-23T08:00:00.000Z
+updated: 2026-06-23T08:00:00.000Z
+attempts: 0
+---
+# T
+
+## Objective
+Do it.
+`;
+      expect(() => store.appendContext(noContext, '[[Notes/Foo]]')).toThrow('Missing Context section');
     });
   });
 

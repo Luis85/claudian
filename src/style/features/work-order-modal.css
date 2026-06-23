@@ -1154,6 +1154,24 @@
   font-size: var(--font-ui-small);
 }
 
+/* chip-value / chip-caret: hand-built chip elements used by the loop chip
+   (renderLoopRow). They intentionally mirror chip-label / chip-chevron so
+   both chip implementations read identically. */
+.claudian-work-order-modal-chip-value {
+  font-size: var(--font-ui-small);
+}
+
+.claudian-work-order-modal-chip-caret {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-faint);
+}
+
+.claudian-work-order-modal-chip-caret svg {
+  width: 13px;
+  height: 13px;
+}
+
 .claudian-work-order-modal-chip-chevron {
   display: inline-flex;
   align-items: center;
@@ -1186,4 +1204,94 @@
   appearance: none;
   -webkit-appearance: none;
   box-shadow: none;
+}
+
+/* ============================================================
+   Inline edit (Agent Board): the Edit affordance + textarea
+   form that lets inbox/ready/needs_fix work orders be filled
+   out from the modal without opening the note. See
+   ui/WorkOrderDetailModal.ts + ui/workOrderEditForm.ts.
+   ============================================================ */
+.claudian-work-order-modal-edit-bar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.claudian-work-order-modal .claudian-work-order-modal-edit-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-m);
+  background: var(--interactive-normal);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+  line-height: 1.4;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  box-shadow: none;
+  font-family: inherit;
+  min-width: 0;
+  height: auto;
+}
+
+.claudian-work-order-modal .claudian-work-order-modal-edit-button:hover {
+  border-color: var(--border-color-hover);
+  background: var(--interactive-hover);
+  color: var(--text-normal);
+}
+
+.claudian-work-order-modal-edit-button-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.claudian-work-order-modal-edit-button-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.claudian-work-order-modal-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.claudian-work-order-modal .claudian-work-order-modal-edit-textarea {
+  width: 100%;
+  min-height: 84px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-family: var(--font-text);
+  font-size: var(--font-ui-medium);
+  line-height: var(--line-height-relaxed);
+  resize: vertical;
+  box-shadow: none;
+}
+
+/* The Acceptance Criteria field is line-oriented (one "- [ ] " per line), so a
+   monospace surface keeps the checklist markup readable while editing. */
+.claudian-work-order-modal-edit-form
+  .claudian-work-order-modal-section:nth-of-type(2)
+  .claudian-work-order-modal-edit-textarea {
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-small);
+}
+
+.claudian-work-order-modal .claudian-work-order-modal-edit-textarea:focus {
+  border-color: var(--interactive-accent);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 30%, transparent);
+}
+
+.claudian-work-order-modal-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }

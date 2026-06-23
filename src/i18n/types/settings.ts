@@ -10,6 +10,14 @@ export type SettingsTranslationKey =
   | 'settings.agentBoard.commonTemplatesEmpty'
   | 'settings.agentBoard.installFailed'
 
+  // Settings - Agent Board loop library (agent-loops Task 14)
+  | 'settings.agentBoard.commonLoops'
+  | 'settings.agentBoard.commonLoopsEmpty'
+  | 'settings.agentBoard.loopFolderName'
+  | 'settings.agentBoard.loopFolderDesc'
+  | 'settings.agentBoard.installLoopsName'
+  | 'settings.agentBoard.installLoopsDesc'
+
   // Settings - Section Headings
   | 'settings.title'
   | 'settings.display'

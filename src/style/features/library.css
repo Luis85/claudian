@@ -4,11 +4,12 @@
   padding: var(--size-4-4);
 }
 
-/* Hide Obsidian's per-view title bar on the three library views — the in-view
+/* Hide Obsidian's per-view title bar on the four library views — the in-view
    nav strip identifies the current view and navigates between them. */
 .workspace-leaf-content[data-type="claudian-agent-roster"] .view-header,
 .workspace-leaf-content[data-type="claudian-tool-library"] .view-header,
-.workspace-leaf-content[data-type="claudian-skill-library"] .view-header {
+.workspace-leaf-content[data-type="claudian-skill-library"] .view-header,
+.workspace-leaf-content[data-type="claudian-loop-library"] .view-header {
   display: none;
 }
 

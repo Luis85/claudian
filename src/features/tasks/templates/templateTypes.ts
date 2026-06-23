@@ -8,6 +8,9 @@ export interface WorkOrderTemplate {
   provider?: string;
   model?: string;
   priority?: TaskPriority;
+  loop?: string;
+  /** Roster agent id (`roster:<slug>`) assigned to work orders created from this template. */
+  agent?: string;
   body: string;
 }
 

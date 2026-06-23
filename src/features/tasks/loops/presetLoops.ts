@@ -1,0 +1,111 @@
+import type { SaveLoopInput } from './loopTypes';
+
+/**
+ * Starter loops curated and adapted from the Forward-Future loop library
+ * (https://github.com/Forward-Future/loop-library). Each is a faithful port of a
+ * published loop into Claudian's playbook schema; provider-specific details (e.g.
+ * Codex `/goal`, scratch-file paths) are generalized. Installed on demand via the
+ * Loop library view or the Agent Board settings, skipping any already present.
+ */
+export const PRESET_LOOPS: SaveLoopInput[] = [
+  {
+    name: 'Ticket to PR-ready',
+    description: 'Turn a loose ticket into a proven root cause and a minimal, review-ready patch.',
+    icon: 'git-pull-request',
+    useWhen: 'A real but loosely written ticket, bug report, or customer complaint needs to become a bounded engineering change with enough proof for a fast review.',
+    approach: 'Reproduce the failure in the smallest representative environment, prove the root cause, make the smallest credible fix, then rerun the original reproduction plus relevant regression tests and package it for review.',
+    steps: '1. State the expected and actual behavior, then reproduce the failure in the smallest representative environment.\n2. Trace the behavior to a root cause and confirm the causal link with evidence.\n3. Implement the smallest credible fix, avoiding unrelated cleanup or hidden refactors.\n4. Repeat the original reproduction, run relevant regression checks, and package the result for review.',
+    verify: 'The issue reproduces before the fix, no longer reproduces afterward, and relevant regression checks pass.',
+    notes: 'Match the proof to the failure: screenshots or recordings for UI issues, tests or logs for backend behavior.',
+  },
+  {
+    name: 'Architecture satisfaction',
+    description: 'Refactor toward a stated architecture, verifying and committing each checkpoint.',
+    icon: 'blocks',
+    useWhen: 'A deliberate architectural refactor where the destination can be stated in concrete terms and the current system can be tested after each meaningful change.',
+    approach: 'Refactor until the architecture reaches its stated target. After each significant step, live-test the system, run an independent review, and commit. Track progress in a scratch file.',
+    steps: '1. Write down the architectural target, constraints, and current risks before editing code.\n2. Make one significant, reviewable change at a time.\n3. Live-test the affected behavior and run an independent review after each significant step.\n4. Commit each verified checkpoint and update the progress file with decisions, blockers, and the next action.',
+    verify: 'The architecture is satisfactory and checks pass; each significant step was live-tested, reviewed, and committed.',
+    notes: 'Define what "satisfactory" means before starting — module boundaries, dependency direction, passing tests, and acceptable performance.',
+  },
+  {
+    name: '100% test coverage',
+    description: 'Drive a coverage gap to 100% with tests that assert real behavior.',
+    icon: 'shield-check',
+    useWhen: '100% coverage is an explicit project requirement and the repository has a trustworthy coverage command, clear exclusions, and a repeatable test suite.',
+    approach: 'Add tests until the suite reaches 100% coverage — asserting real outcomes and failure paths, not just executing lines.',
+    steps: '1. Run the complete test suite with coverage and save the baseline report.\n2. Prioritize uncovered branches and behavior by risk instead of file order.\n3. Add tests that assert meaningful outcomes, failure paths, and boundary conditions.\n4. Repeat until the full suite passes and the configured coverage report reaches 100%.',
+    verify: 'The full test suite passes at 100% coverage, using the project\'s coverage report as the source of truth.',
+    notes: 'Coverage measures which code ran, not whether the assertions are good. Avoid tests that execute lines without asserting behavior.',
+  },
+  {
+    name: 'Test-suite speed',
+    description: 'Make the test suite faster without weakening coverage or behavior.',
+    icon: 'gauge',
+    useWhen: 'Slow tests are delaying local feedback or CI and the project has stable commands for measuring runtime and coverage.',
+    approach: 'Optimize the test suite to run as quickly as possible without reducing coverage or changing behavior.',
+    steps: '1. Record the full-suite runtime, coverage, environment, worker settings, and a repeatable timing method.\n2. Profile the suite to find expensive setup, redundant work, poor isolation, unnecessary integration paths, or safe parallelization.\n3. Make one optimization at a time, then rerun the full suite and compare timing, coverage, and behavior.\n4. Stop at the agreed runtime target or diminishing-returns rule with all original checks still passing.',
+    verify: 'The suite is faster with no coverage or behavior regression, proven by repeatable timing and the full passing suite.',
+    notes: 'Define a runtime target or diminishing-returns rule before starting. Faster tests are not an improvement if they become flaky.',
+  },
+  {
+    name: 'Docs sweep',
+    description: 'Find documentation drift against the code and fix it behind a reviewable PR.',
+    icon: 'book-open',
+    useWhen: 'Implementation changes may have left READMEs, setup guides, API references, examples, or runbooks behind.',
+    approach: 'Review the codebase in full and make sure all documentation reflects the current implementation. Update stale documentation, verify the changes, then open a pull request.',
+    steps: '1. Review implementation changes since the last documentation pass.\n2. Compare the repository\'s documentation with the code, configuration, commands, and behavior that now ship.\n3. Update only stale material, then verify commands, links, and examples against the current repository.\n4. Run the relevant checks and open a pull request that explains the documentation drift and the fixes.',
+    verify: 'Documentation matches the current implementation, finished with a reviewable pull request.',
+    notes: 'Keep the scope tied to real implementation changes. Do not rewrite accurate documentation just to create activity.',
+  },
+  {
+    name: 'Propagation compliance',
+    description: 'Keep a changed value consistent across every copy in the project.',
+    icon: 'copy-check',
+    useWhen: 'After changing something that appears in several files — a version number, feature name, count, rule, setting, or identifier — and every copy must stay consistent.',
+    approach: 'List where the new value belongs and update it. Search the project for the old value and related forms, then fix real stale values while keeping intentional history, examples, migrations, or compatibility rules.',
+    steps: '1. List the files, documentation, settings, generated outputs, or operational notes expected to copy the changed value.\n2. Update the known copies, then search the whole project for the old value, old spelling, and other likely leftover forms.\n3. Decide whether each match is truly stale or intentionally preserved (history, example, migration, compatibility rule); fix only the stale matches.\n4. Repeat the searches until no stale match remains; if one returns for two rounds, stop and identify the generator restoring it.',
+    verify: 'No unintended copy of the old value remains — the final searches find only intentionally historical or required references, each with a recorded reason.',
+    notes: 'The exact files depend on the change. Watch for generated outputs and operational notes that quietly restore old values.',
+  },
+  {
+    name: 'Devil\'s advocate',
+    description: 'Adversarially review a consequential design before committing to it.',
+    icon: 'swords',
+    useWhen: 'Before committing to an architecture, interface, rollout plan, or other consequential design that benefits from structured adversarial review.',
+    approach: 'Have a critic argue that the design is wrong. Record each objection, its impact, and its status in a repository-local review log; the builder fixes or explicitly accepts each one with evidence.',
+    steps: '1. Write the design goals and acceptance criteria, then initialize a review log inside the repository and keep it out of commits.\n2. Have the critic present the strongest evidence-backed case against the current design and rank each objection by impact.\n3. Have the builder repair the weakness or document an explicit acceptance rationale, then verify against the stated criteria.\n4. Let the critic reopen weak answers and repeat until objections are closed with evidence or the loop reports a stalemate honestly.',
+    verify: 'No high-impact objection remains open — each is resolved or explicitly accepted with evidence, or the report truthfully records a stalemate.',
+    notes: 'Keep the critic independent where possible. Do not change the acceptance criteria mid-run just to close a difficult objection.',
+  },
+  {
+    name: 'Fresh clone',
+    description: 'Prove the README onboarding works in a clean environment from scratch.',
+    icon: 'package-check',
+    useWhen: 'You want to test whether a repository\'s onboarding instructions work in a clean environment without undocumented help.',
+    approach: 'Clone into a disposable environment and follow only the README to the documented ready state. When a step fails or assumes missing knowledge, record the gap, fix it, discard the environment, and start again.',
+    steps: '1. Create a disposable environment with no project dependencies or configuration carried over from another checkout.\n2. Fresh-clone the repository and follow only the README, recording every missing step, hidden assumption, and failure.\n3. Fix the smallest setup or documentation gap, discard the environment completely, and begin again.\n4. Repeat until one clean run reaches the documented ready state without intervention, then report the exact commands and the gaps closed.',
+    verify: 'A clean environment reaches the documented ready state using only the README, with no unstated dependency, configuration, or manual repair.',
+    notes: 'Use an isolated disposable environment and review the repository before running it. Never copy personal credentials into the test environment.',
+  },
+  {
+    name: 'Promise to proof',
+    description: 'Check that what the product claims matches what it actually does.',
+    icon: 'badge-check',
+    useWhen: 'What a product says it does may no longer match what it actually does across marketing, documentation, demos, support answers, or the live product.',
+    approach: 'List every customer-facing promise, compare each with current behavior and evidence, then fix the riskiest mismatch or narrow the public promise to what the product can prove.',
+    steps: '1. List the promises customers can see and rewrite each as a concrete expectation — a feature working, a limit honored, an answer being accurate.\n2. Compare each expectation with current behavior, code, tests, documentation, examples, or logs; do not guess.\n3. Rank mismatches by harm to customer trust, then fix the riskiest one or narrow the public promise to what the product can prove.\n4. Rerun the same check and repeat until no high-risk unsupported promise remains, progress is blocked, or the next action needs approval.',
+    verify: 'Every high-risk customer promise is supported, narrowed, or waiting on an explicit decision, each linked to current evidence.',
+    notes: 'Evidence can include live product behavior, tests, documentation, logs, screenshots, or reproducible examples.',
+  },
+  {
+    name: 'Goal Forge',
+    description: 'Turn a vague idea into a spec and an execution plan before a long autonomous run.',
+    icon: 'target',
+    useWhen: 'A rough coding idea is too vague to hand to an agent for a long autonomous run and you first need to settle scope, completion checks, safety boundaries, and required tools.',
+    approach: 'Interview the user, then write a SPEC (what to build, exclude, and consider, with measurable done-when checks) and a GOAL (the work plan, progress scorecard, quick and final checks, evidence, and approval boundaries) before starting the long run.',
+    steps: '1. Ask what the finished feature should do, what is out of scope, which edge cases matter, what could go wrong, and what evidence would prove completion; write those decisions in a SPEC file.\n2. Point out ambiguous requirements with concrete interpretations and have the user resolve product decisions instead of letting the agent silently choose.\n3. Write a GOAL file with the ordered work, a progress scorecard, quick checks for each iteration, slower final checks, approval boundaries, and required evidence.\n4. Confirm the tools, permissions, environment, and tests exist; stop as not-ready when anything essential is missing, and start the long run only after approval.',
+    verify: 'The planning files say what to build, how to judge it, and when to stop — every done-when check names observable evidence and the environment is ready.',
+    notes: 'Adapted from a Codex /goal workflow: the SPEC captures the product decision; the GOAL tells the agent how to execute and verify it.',
+  },
+];

@@ -11,6 +11,13 @@ export const HANDOFF_END = '<!-- claudian:handoff-end -->';
 
 const CLAUDIAN_MARKER_PREFIX = '<!-- claudian:';
 
+/**
+ * Default body of a freshly created work order's `## Context` section. Shared with
+ * the work-order builder so `appendContext` can recognise the untouched
+ * placeholder and replace it (rather than appending below it) on the first add.
+ */
+export const CONTEXT_PLACEHOLDER = '_Add the links, files, and scope the agent needs._';
+
 /** Statuses that mean the run has ended (run-finished metadata + heartbeat clear apply). */
 const RUN_ENDED_STATUSES: ReadonlySet<TaskStatus> = new Set([
   'review',
@@ -54,6 +61,19 @@ export interface WriteFieldsOptions {
   provider?: string;
   model?: string;
   priority?: TaskPriority;
+  /** Loop slug to attach; pass an empty string to detach. */
+  loop?: string;
+}
+
+/**
+ * Editable work-order body sections. Each value, when provided, replaces the
+ * body under the matching `## Heading`. Omitted keys are left untouched.
+ */
+export interface WriteSectionsOptions {
+  objective?: string;
+  acceptanceCriteria?: string;
+  context?: string;
+  constraints?: string;
 }
 
 const SECTION_HEADINGS = Object.freeze({
@@ -64,16 +84,22 @@ const SECTION_HEADINGS = Object.freeze({
 });
 
 /**
+ * Strip any Claudian generated-region marker (`<!-- claudian:… -->`) from
+ * arbitrary user input before it is written into the note body. Such a marker
+ * would shadow the real ledger/handoff region markers, which
+ * extract/replaceGeneratedRegion locate by `indexOf` — corrupting those blocks.
+ */
+function stripClaudianMarkers(text: string): string {
+  return text.replace(/<!--\s*claudian:[\s\S]*?-->/g, '');
+}
+
+/**
  * Replace the body's first level-1 ATX heading (the title `# …`) with the new
  * title, skipping fenced code blocks. Level-2+ headings (`## Objective`, …) and
  * notes without a title heading are left untouched.
  */
 function syncTitleHeading(body: string, title: string): string {
-  // A title is arbitrary user input (rename). Strip any Claudian generated-region
-  // marker (`<!-- claudian:… -->`) before writing it into the body H1: otherwise
-  // the marker would shadow the real ledger/handoff region markers, which
-  // extract/replaceGeneratedRegion locate by indexOf — corrupting those blocks.
-  const safeTitle = title.replace(/<!--\s*claudian:[\s\S]*?-->/g, '').trim();
+  const safeTitle = stripClaudianMarkers(title).trim();
   const lines = body.split('\n');
   let inFence = false;
   for (let i = 0; i < lines.length; i += 1) {
@@ -179,9 +205,90 @@ export class TaskNoteStore {
     if (fields.provider !== undefined) frontmatter.provider = fields.provider;
     if (fields.model !== undefined) frontmatter.model = fields.model;
     if (fields.priority !== undefined) frontmatter.priority = fields.priority;
+    if (fields.loop !== undefined) {
+      if (fields.loop) frontmatter.loop = fields.loop;
+      else delete frontmatter.loop;
+    }
     frontmatter.updated = timestamp;
 
     return this.withFrontmatter(frontmatter, body);
+  }
+
+  /**
+   * Replace one or more editable body sections in place (Objective, Acceptance
+   * Criteria, Context, Constraints) and bump `updated`. Lets the Agent Board's
+   * detail modal save the whole work order without opening the note. Omitted
+   * keys are no-ops; generated regions and surrounding prose are preserved.
+   */
+  writeSections(
+    content: string,
+    sections: WriteSectionsOptions,
+    timestamp: string = new Date().toISOString(),
+  ): string {
+    const parsed = this.parse('', content);
+    const frontmatter: Record<string, unknown> = { ...parsed.task.frontmatter };
+    let body = parsed.task.body;
+
+    if (sections.objective !== undefined) {
+      body = this.replaceSection(body, SECTION_HEADINGS.objective, sections.objective);
+    }
+    if (sections.acceptanceCriteria !== undefined) {
+      body = this.replaceSection(body, SECTION_HEADINGS.acceptanceCriteria, sections.acceptanceCriteria);
+    }
+    if (sections.context !== undefined) {
+      body = this.replaceSection(body, SECTION_HEADINGS.context, sections.context);
+    }
+    if (sections.constraints !== undefined) {
+      body = this.replaceSection(body, SECTION_HEADINGS.constraints, sections.constraints);
+    }
+    frontmatter.updated = timestamp;
+
+    return this.withFrontmatter(frontmatter, body);
+  }
+
+  /**
+   * Replace the body under a `## Heading` with new content, stopping at the next
+   * `##` heading (so the generated Run Ledger / Handoff regions are never
+   * touched). When the heading is absent the section is inserted just before the
+   * generated regions so a hand-trimmed note still round-trips an edit. Markers
+   * embedded in the content are scrubbed to keep the real regions locatable.
+   */
+  private replaceSection(body: string, heading: string, content: string): string {
+    const safeContent = stripClaudianMarkers(content).trim();
+    const lines = body.split(/\r?\n/);
+    const headingPattern = /^##\s+(.+?)\s*$/;
+
+    let start = -1;
+    let end = lines.length;
+    for (let i = 0; i < lines.length; i += 1) {
+      const match = lines[i].match(headingPattern);
+      if (!match) continue;
+      if (start === -1) {
+        if (match[1] === heading) start = i;
+        continue;
+      }
+      end = i;
+      break;
+    }
+
+    if (start === -1) {
+      return this.insertSectionBeforeGenerated(lines, heading, safeContent);
+    }
+
+    const block = safeContent.length > 0 ? ['', safeContent, ''] : [''];
+    return [...lines.slice(0, start + 1), ...block, ...lines.slice(end)].join('\n');
+  }
+
+  private insertSectionBeforeGenerated(lines: string[], heading: string, content: string): string {
+    let insertAt = lines.length;
+    for (let i = 0; i < lines.length; i += 1) {
+      if (/^##\s+Run Ledger\s*$/.test(lines[i]) || lines[i].includes(RUN_LEDGER_START)) {
+        insertAt = i;
+        break;
+      }
+    }
+    const block = content.length > 0 ? [`## ${heading}`, '', content, ''] : [`## ${heading}`, ''];
+    return [...lines.slice(0, insertAt), ...block, ...lines.slice(insertAt)].join('\n');
   }
 
   appendLedger(content: string, entry: TaskLedgerEntry): string {
@@ -211,6 +318,48 @@ export class TaskNoteStore {
     this.assertNoEmbeddedClaudianMarkers(scrubbed);
 
     return this.replaceGeneratedRegion(content, HANDOFF_START, HANDOFF_END, markdown.trim());
+  }
+
+  /**
+   * Append a reference (a wikilink or code-spanned path) as a bullet to the
+   * `## Context` section. The untouched placeholder is replaced on first add; an
+   * already-present reference is a no-op (`changed: false`) so repeated adds do
+   * not duplicate. Throws when the note has no `## Context` heading.
+   */
+  appendContext(content: string, reference: string): { content: string; changed: boolean } {
+    const { prefix, body } = this.splitFrontmatter(content);
+    const lines = body.split('\n');
+    const headingIndex = lines.findIndex(
+      (line) => /^##\s+(.+?)\s*$/.exec(line)?.[1] === SECTION_HEADINGS.context,
+    );
+    if (headingIndex === -1) {
+      throw new Error('Missing Context section');
+    }
+
+    let endIndex = lines.length;
+    for (let i = headingIndex + 1; i < lines.length; i += 1) {
+      if (/^##\s+/.test(lines[i])) {
+        endIndex = i;
+        break;
+      }
+    }
+
+    const sectionText = lines.slice(headingIndex + 1, endIndex).join('\n').trim();
+    if (sectionText.includes(reference)) {
+      return { content, changed: false };
+    }
+
+    const bullet = `- ${reference}`;
+    const isPlaceholder = sectionText === '' || sectionText === CONTEXT_PLACEHOLDER;
+    const nextSection = isPlaceholder ? bullet : `${sectionText}\n${bullet}`;
+    const rebuilt = [
+      ...lines.slice(0, headingIndex + 1),
+      '',
+      nextSection,
+      '',
+      ...lines.slice(endIndex),
+    ].join('\n');
+    return { content: `${prefix}${rebuilt}`, changed: true };
   }
 
   extractGeneratedRegion(content: string, start: string, end: string): string {

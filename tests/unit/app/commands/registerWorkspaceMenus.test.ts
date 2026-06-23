@@ -135,6 +135,7 @@ describe('registerWorkspaceMenus', () => {
       '<sep>',
       'Add file to Claudian chat',
       'Create work order',
+      'Add to work order',
       'Open Quick Actions',
       '<sep>',
     ]);
@@ -150,6 +151,7 @@ describe('registerWorkspaceMenus', () => {
       '<sep>',
       'Add folder to Claudian chat',
       'Create work order',
+      'Add to work order',
       'Open Quick Actions',
       '<sep>',
     ]);
@@ -194,6 +196,7 @@ describe('registerWorkspaceMenus', () => {
       '<sep>',
       'Add file to Claudian chat',
       'Create work order',
+      'Add to work order',
       'Open Quick Actions',
       '<sep>',
       'Refactor',
@@ -216,6 +219,7 @@ describe('registerWorkspaceMenus', () => {
       '<sep>',
       'Add folder to Claudian chat',
       'Create work order',
+      'Add to work order',
       'Open Quick Actions',
       '<sep>',
       'Refactor',
@@ -233,10 +237,10 @@ describe('registerWorkspaceMenus', () => {
     const { menu, items } = createMenu();
     fileMenu.handler!(menu, file);
 
-    // Layout: [<sep>, Add file, Create WO, Open Quick Actions, <sep>, Refactor, <sep>]
-    // Refactor sits at index 5 — favorites' leading separator pushes them one
-    // slot further than the legacy layout.
-    const favItem = items[5] as MenuItem;
+    // Layout: [<sep>, Add file, Create WO, Add to WO, Open Quick Actions, <sep>, Refactor, <sep>]
+    // Refactor sits at index 6 — favorites' leading separator plus the work-order
+    // items push them past the legacy layout.
+    const favItem = items[6] as MenuItem;
     const onClickCall = (favItem.onClick as jest.Mock).mock.calls[0]?.[0];
     expect(typeof onClickCall).toBe('function');
     onClickCall();
@@ -254,6 +258,7 @@ describe('registerWorkspaceMenus', () => {
       '<sep>',
       'Add file to Claudian chat',
       'Create work order',
+      'Add to work order',
       'Open Quick Actions',
       '<sep>',
     ]);

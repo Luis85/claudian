@@ -326,6 +326,7 @@ function makeCallbacks(): WorkOrderDetailModalCallbacks {
     onSendToReview: jest.fn(),
     onMarkFailed: jest.fn(),
     onSaveFields: jest.fn(),
+    onSaveSections: jest.fn(),
     getProviderOptions: () => [],
     getModelOptions: () => [],
     getAgentOptions: () => [],
@@ -544,12 +545,15 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
   });
 
   it('renders editable rows in the spec order (no Conversation without a link)', () => {
+    // Loop row was added between Model and Priority (Task 11); the order here
+    // is the canonical spec order for the properties sidebar.
     const { sidebar } = openWith(makeTask('t', 'inbox'), richCallbacks());
     expect(propRowKeys(sidebar)).toEqual([
       'status',
       'agent',
       'provider',
       'model',
+      'loop',
       'priority',
       'created',
       'updated',
@@ -599,6 +603,43 @@ describe('WorkOrderDetailModal — properties sidebar', () => {
     select.value = 'standard';
     select.emit('change');
     expect(onSaveFields).toHaveBeenCalledWith(task, { agent: 'standard' });
+  });
+
+  it('updates the loop chip label in place after the picker resolves to a new loop', async () => {
+    const task = makeTask('t', 'inbox');
+    const onPickLoop = jest.fn().mockResolvedValue('repro');
+    const { sidebar } = openWith(task, richCallbacks({
+      onPickLoop,
+      getLoopName: (id) => (id === 'repro' ? 'Repro loop' : undefined),
+    }));
+    const value = find(findRow(sidebar, 'loop')!, 'claudian-work-order-modal-chip-value')!;
+    expect(value.text).toBe('No loop');
+
+    find(findRow(sidebar, 'loop')!, 'claudian-work-order-modal-chip--loop')!.emit('click');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onPickLoop).toHaveBeenCalledWith(task);
+    expect(value.text).toBe('Repro loop');
+    expect(task.frontmatter.loop).toBe('repro');
+  });
+
+  it('resets the loop chip to "No loop" when the picker detaches the loop', async () => {
+    const task = makeTask('t', 'inbox');
+    task.frontmatter.loop = 'repro';
+    const { sidebar } = openWith(task, richCallbacks({
+      onPickLoop: jest.fn().mockResolvedValue(''),
+      getLoopName: (id) => (id === 'repro' ? 'Repro loop' : undefined),
+    }));
+    const value = find(findRow(sidebar, 'loop')!, 'claudian-work-order-modal-chip-value')!;
+    expect(value.text).toBe('Repro loop');
+
+    find(findRow(sidebar, 'loop')!, 'claudian-work-order-modal-chip--loop')!.emit('click');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(value.text).toBe('No loop');
+    expect(task.frontmatter.loop).toBeUndefined();
   });
 
   it('renders the Agent row as a static avatar + name (no chip) in a non-editable state', () => {
@@ -1701,5 +1742,147 @@ describe('WorkOrderDetailModal — header (title + meta)', () => {
     // Closing is handled by Obsidian's built-in modal close button; the header
     // must not render a duplicate custom one.
     expect(find(header, 'claudian-work-order-modal-close')).toBeUndefined();
+  });
+});
+
+describe('WorkOrderDetailModal — Context + Constraints sections', () => {
+  function openMain(task: TaskSpec): RecordingEl {
+    const modal = new WorkOrderDetailModal(mockApp, task, makeCallbacks());
+    const root = installRecordingContent(modal);
+    modal.onOpen();
+    return find(root, 'claudian-work-order-modal-main')!;
+  }
+
+  it('renders the Context section header with the link icon', () => {
+    const section = findSection(openMain(makeTask('t', 'inbox')), 'Context');
+    expect(section).toBeDefined();
+    expect(find(section!, 'claudian-work-order-modal-section-icon')!.attrs['data-icon']).toBe('link');
+  });
+
+  it('renders the Constraints section header with the shield icon', () => {
+    const section = findSection(openMain(makeTask('t', 'inbox')), 'Constraints');
+    expect(section).toBeDefined();
+    expect(find(section!, 'claudian-work-order-modal-section-icon')!.attrs['data-icon']).toBe('shield');
+  });
+
+  it('renders the Context + Constraints bodies through MarkdownRenderer', () => {
+    const task = makeTask('t', 'inbox');
+    task.sections.context = 'See [[the spec]].';
+    task.sections.constraints = '- No unrelated edits.';
+    openMain(task);
+    const calls = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
+    expect(calls.some((c) => c[1] === 'See [[the spec]].')).toBe(true);
+    expect(calls.some((c) => c[1] === '- No unrelated edits.')).toBe(true);
+  });
+
+  it('shows the em-dash placeholder when a prose section is empty (structure stays visible)', () => {
+    openMain(makeTask('t', 'inbox')); // empty context + constraints
+    const calls = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
+    expect(calls.filter((c) => c[1] === '—').length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('WorkOrderDetailModal — inline edit toggle', () => {
+  function open(
+    task: TaskSpec,
+    callbacks: WorkOrderDetailModalCallbacks = makeCallbacks(),
+  ): { modal: WorkOrderDetailModal; main: RecordingEl } {
+    const modal = new WorkOrderDetailModal(mockApp, task, callbacks);
+    const root = installRecordingContent(modal);
+    modal.onOpen();
+    return { modal, main: find(root, 'claudian-work-order-modal-main')! };
+  }
+
+  const editButton = (main: RecordingEl): RecordingEl | undefined =>
+    find(main, 'claudian-work-order-modal-edit-button');
+  const textareas = (main: RecordingEl): RecordingEl[] =>
+    findAll(main, (el) => el.tag === 'textarea');
+  const actionButton = (main: RecordingEl, label: string): RecordingEl | undefined =>
+    findAll(main, (el) => el.classes.has('claudian-work-order-modal-action')).find(
+      (btn) => find(btn, 'claudian-work-order-modal-action-label')?.text === label,
+    );
+
+  it.each(['inbox', 'ready', 'needs_fix'] as const)('shows the Edit affordance in %s', (status) => {
+    expect(editButton(open(makeTask('t', status)).main)).toBeDefined();
+  });
+
+  it.each(['running', 'review', 'done', 'failed'] as const)(
+    'hides the Edit affordance in %s',
+    (status) => {
+      expect(editButton(open(makeTask('t', status)).main)).toBeUndefined();
+    },
+  );
+
+  it('enters edit mode with one textarea per section seeded from the task', () => {
+    const task = makeTask('t', 'ready');
+    task.sections.objective = 'Obj body';
+    task.sections.acceptanceCriteria = '- [ ] crit';
+    task.sections.context = 'ctx';
+    task.sections.constraints = 'cons';
+    const { main } = open(task);
+
+    editButton(main)!.emit('click');
+    const areas = textareas(main);
+    expect(areas).toHaveLength(4);
+    expect(areas.map((a) => a.value)).toEqual(['Obj body', '- [ ] crit', 'ctx', 'cons']);
+    // The read-only Objective markdown body is gone while editing.
+    expect(findSection(main, 'Objective')).toBeDefined(); // header still labels the field
+    expect(find(main, 'claudian-work-order-modal-edit-form')).toBeDefined();
+  });
+
+  it('Save collects every textarea value (including cleared ones) and returns to view', async () => {
+    const onSaveSections = jest.fn().mockResolvedValue(undefined);
+    const task = makeTask('t', 'ready');
+    const { main } = open(task, { ...makeCallbacks(), onSaveSections });
+
+    editButton(main)!.emit('click');
+    const areas = textareas(main);
+    areas[0].value = 'New objective';
+    areas[1].value = '';
+    areas[2].value = 'New context';
+    areas[3].value = 'New constraints';
+    actionButton(main, 'Save')!.emit('click');
+
+    expect(onSaveSections).toHaveBeenCalledWith(task, {
+      objective: 'New objective',
+      acceptanceCriteria: '',
+      context: 'New context',
+      constraints: 'New constraints',
+    });
+    // The return-to-view re-render runs after the awaited persist resolves.
+    await Promise.resolve();
+    await Promise.resolve();
+    // Back to view mode: the form is gone, the Edit affordance is back.
+    expect(find(main, 'claudian-work-order-modal-edit-form')).toBeUndefined();
+    expect(editButton(main)).toBeDefined();
+  });
+
+  it('Save updates the in-memory snapshot so the re-rendered view shows new bodies', async () => {
+    const onSaveSections = jest.fn().mockResolvedValue(undefined);
+    const task = makeTask('t', 'ready');
+    const { main } = open(task, { ...makeCallbacks(), onSaveSections });
+
+    editButton(main)!.emit('click');
+    textareas(main)[2].value = 'Freshly typed context';
+    actionButton(main, 'Save')!.emit('click');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const calls = (MarkdownRenderer.render as jest.Mock).mock.calls as unknown[][];
+    expect(calls.some((c) => c[1] === 'Freshly typed context')).toBe(true);
+  });
+
+  it('Cancel returns to view without persisting', () => {
+    const onSaveSections = jest.fn();
+    const task = makeTask('t', 'ready');
+    const { main } = open(task, { ...makeCallbacks(), onSaveSections });
+
+    editButton(main)!.emit('click');
+    textareas(main)[0].value = 'discarded';
+    actionButton(main, 'Cancel')!.emit('click');
+
+    expect(onSaveSections).not.toHaveBeenCalled();
+    expect(find(main, 'claudian-work-order-modal-edit-form')).toBeUndefined();
+    expect(editButton(main)).toBeDefined();
   });
 });

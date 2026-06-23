@@ -7,6 +7,7 @@ import { asSettingsBag } from '../../../core/types/settings';
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { resolveAgentBoardDefaultProvider } from '../../tasks/defaultProviderResolver';
+import { installPresetLoopsWithNotice } from '../../tasks/loops/installPresetLoops';
 import { installPresetTemplatesWithNotice } from '../../tasks/templates/installPresetTemplates';
 import { renderAgentBoardLaneEditor } from '../../tasks/ui/AgentBoardLaneEditor';
 
@@ -87,6 +88,36 @@ export function renderAgentBoardSettingsSection(
         btn.setDisabled(true);
         try {
           await installPresetTemplatesWithNotice(plugin);
+        } catch (error) {
+          new Notice(t('settings.agentBoard.installFailed', { error: error instanceof Error ? error.message : String(error) }));
+        } finally {
+          btn.setDisabled(false);
+        }
+      });
+    });
+
+  new Setting(container)
+    .setName(t('settings.agentBoard.loopFolderName'))
+    .setDesc(t('settings.agentBoard.loopFolderDesc'))
+    .addText((text) =>
+      text
+        // eslint-disable-next-line obsidianmd/ui/sentence-case -- folder path, not prose.
+        .setPlaceholder('Agent Board/loops')
+        .setValue(plugin.settings.agentBoardLoopFolder)
+        .onChange(async (value) => {
+          plugin.settings.agentBoardLoopFolder = value.trim();
+          await plugin.saveSettings();
+        }),
+    );
+
+  new Setting(container)
+    .setName(t('settings.agentBoard.installLoopsName'))
+    .setDesc(t('settings.agentBoard.installLoopsDesc'))
+    .addButton((btn) => {
+      btn.setButtonText('Install').onClick(async () => {
+        btn.setDisabled(true);
+        try {
+          await installPresetLoopsWithNotice(plugin);
         } catch (error) {
           new Notice(t('settings.agentBoard.installFailed', { error: error instanceof Error ? error.message : String(error) }));
         } finally {

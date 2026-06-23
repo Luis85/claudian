@@ -27,6 +27,7 @@ import { selectNextReadyTask } from '../execution/selectNextReadyTask';
 import type { TaskExecutionSurface } from '../execution/TaskExecutionSurface';
 import { TaskRunCoordinator } from '../execution/TaskRunCoordinator';
 import { TaskIndexer } from '../indexing/TaskIndexer';
+import { LoopCatalog } from '../loops/LoopCatalog';
 import { canTransitionTaskStatus, isRunnableTaskStatus } from '../model/taskStateMachine';
 import type { TaskBoardModel, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
@@ -34,6 +35,7 @@ import { TaskNoteStore } from '../storage/TaskNoteStore';
 import { type AgentBoardPauseState, AgentBoardRenderer } from './AgentBoardRenderer';
 import { createWorkOrderInteractive } from './createWorkOrderInteractive';
 import { loadLatestTaskSpec } from './loadLatestTaskSpec';
+import { chooseLoop } from './LoopPickerModal';
 import { showWorkOrderContextMenu } from './WorkOrderContextMenu';
 import { buildWorkOrderConversationBindings } from './workOrderConversationBindings';
 import { WorkOrderDetailModal, type WorkOrderFieldUpdate } from './WorkOrderDetailModal';
@@ -52,6 +54,13 @@ export class AgentBoardView extends ItemView {
   private readonly noteStore = new TaskNoteStore();
   private readonly indexer = new TaskIndexer(this.noteStore);
   private readonly renderer = new AgentBoardRenderer();
+  // Resolves loop slugs attached to work orders via frontmatter `loop` field.
+  // Initialized in the constructor (after plugin is bound) because field
+  // initializers run before parameter properties are assigned.
+  private readonly loopCatalog: LoopCatalog;
+  // Slug → display-name cache populated on each refresh so the properties panel
+  // can resolve loop names synchronously without an async vault read per open.
+  private loopNameCache = new Map<string, string>();
   // Preloaded persona resolver for roster-agent avatars. Rebuilt lazily and
   // invalidated on `roster:changed` so renamed/recolored agents repaint.
   // Reloaded synchronously in refresh() so avatars are correct on first paint.
@@ -94,6 +103,12 @@ export class AgentBoardView extends ItemView {
     private readonly executionSurface: TaskExecutionSurface,
   ) {
     super(leaf);
+    // Reads the folder live via a getter so a settings change is picked up without
+    // reinstantiating. Must be set before the coordinator closure captures `this`.
+    this.loopCatalog = new LoopCatalog(
+      this.plugin.app.vault,
+      () => this.plugin.settings.agentBoardLoopFolder || 'Agent Board/loops',
+    );
     // One coordinator shared by manual runs and the queue runner so a single
     // in-flight set (`isActive`) prevents a card from running twice. Its deps
     // key off the task passed to `run()`, never a closure, so any task is safe.
@@ -128,8 +143,12 @@ export class AgentBoardView extends ItemView {
       finalizeLedgerToNote: (task, runId) => this.finalizeLedgerToNote(task, runId),
       writeHandoff: (task, markdown) =>
         this.applyNoteChange(task.path, (content) => this.noteStore.writeHandoff(content, markdown)),
-      renderPrompt: (task) =>
-        renderTaskPrompt(task, getLaneForStatus(this.config, task.frontmatter.status) ?? undefined),
+      renderPrompt: async (task) =>
+        renderTaskPrompt(
+          task,
+          getLaneForStatus(this.config, task.frontmatter.status) ?? undefined,
+          (await this.loopCatalog.resolveLoop(task.frontmatter.loop)) ?? undefined,
+        ),
       resolveAgentRunTarget: (agentId) => this.plugin.resolveAgentRunTarget(agentId),
     });
   }
@@ -246,6 +265,10 @@ export class AgentBoardView extends ItemView {
     this.config = config;
     const layout = resolveBoardLayout(config, this.model);
     this.layout = { ...layout, errors: [...errors, ...layout.errors] };
+    // Rebuild the slug→name cache so the modal's properties panel can resolve
+    // loop display names synchronously when opened (no async read at open time).
+    const loops = await this.loopCatalog.listLoops();
+    this.loopNameCache = new Map(loops.map((loop) => [loop.id, loop.name]));
     this.syncRunner();
     this.render();
   }
@@ -402,7 +425,10 @@ export class AgentBoardView extends ItemView {
       onMarkFailed: (target) => void this.transitionTask(target, 'failed', 'Marked failed: run produced no structured handoff.'),
       onArchive: (target) => void this.archiveTask(target),
       onSaveFields: (target, fields) => this.saveTaskFields(target, fields),
+      onSaveSections: (tk, s) => this.applyNoteChange(tk.path, (c) => this.noteStore.writeSections(c, s)),
       ...buildWorkOrderFieldOptions(settings, agents),
+      getLoopName: (loopId) => (loopId ? this.loopNameCache.get(loopId) : undefined),
+      onPickLoop: (target) => this.pickLoopForTask(target),
     }).open();
   }
 
@@ -427,11 +453,17 @@ export class AgentBoardView extends ItemView {
   }
 
   private async saveTaskFields(task: TaskSpec, fields: WorkOrderFieldUpdate): Promise<void> {
-    // No explicit refresh: applyNoteChange goes through vault.process, which
-    // emits a `modify` event the onOpen handler already wires to a 100ms
-    // debounced refresh. Three field edits in quick succession (title +
-    // provider + model) collapse to one re-index instead of three.
+    // No explicit refresh: applyNoteChange goes through vault.process, whose
+    // `modify` event the onOpen handler debounces into a single re-index, so
+    // rapid edits collapse to one re-index. Section edits share this seam.
     await this.applyNoteChange(task.path, (content) => this.noteStore.writeFields(content, fields));
+  }
+
+  private async pickLoopForTask(task: TaskSpec): Promise<string | undefined> {
+    const result = await chooseLoop(this.plugin, task.frontmatter.loop);
+    if (result.cancelled || result.loopId === undefined) return undefined;
+    await this.saveTaskFields(task, { loop: result.loopId });
+    return result.loopId;
   }
 
   private computeSlots(): { used: number; max: number } {
