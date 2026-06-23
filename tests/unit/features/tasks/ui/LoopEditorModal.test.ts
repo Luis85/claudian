@@ -8,8 +8,8 @@ jest.mock('../../../../../src/shared/components/LucideIconPicker', () => {
 
 import { Notice, Setting } from 'obsidian';
 
-import { LoopEditorModal } from '../../../../../src/features/tasks/ui/LoopEditorModal';
 import type { LoopDefinition } from '../../../../../src/features/tasks/loops/loopTypes';
+import { LoopEditorModal } from '../../../../../src/features/tasks/ui/LoopEditorModal';
 
 // The mock Setting tracks all instances in a static array.
 type MockSetting = InstanceType<typeof Setting> & {

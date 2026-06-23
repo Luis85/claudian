@@ -1,6 +1,6 @@
 import { LoopNoteStore } from '../../../../../src/features/tasks/loops/LoopNoteStore';
 import type { LoopPickResult } from '../../../../../src/features/tasks/ui/LoopPickerModal';
-import { LoopPickerModal, chooseLoop } from '../../../../../src/features/tasks/ui/LoopPickerModal';
+import { chooseLoop,LoopPickerModal } from '../../../../../src/features/tasks/ui/LoopPickerModal';
 
 // Build loop note markdown using LoopNoteStore.build so the content is realistic.
 const store = new LoopNoteStore();
@@ -182,13 +182,7 @@ describe('LoopPickerModal — rendering', () => {
     });
     const plugin = makePlugin(vault);
 
-    let resolveResult: LoopPickResult | undefined;
-    const modal = new LoopPickerModal(
-      mockApp,
-      plugin,
-      undefined,
-      (result) => { resolveResult = result; },
-    );
+    const modal = new LoopPickerModal(mockApp, plugin, undefined, jest.fn());
     const contentEl = installRecordingContent(modal);
 
     modal.onOpen();
@@ -395,26 +389,22 @@ describe('LoopPickerModal — choosing a loop', () => {
 });
 
 describe('LoopPickerModal — closing without choosing', () => {
-  it('resolves { cancelled: true } via the deferred setTimeout path', (done) => {
+  it('resolves { cancelled: true } via the deferred setTimeout path', async () => {
     const vault = makeVault({});
     const plugin = makePlugin(vault);
 
     jest.useFakeTimers();
 
-    const modal = new LoopPickerModal(
-      mockApp,
-      plugin,
-      undefined,
-      (result) => {
-        expect(result).toEqual({ cancelled: true });
-        jest.useRealTimers();
-        done();
-      },
-    );
-    installRecordingContent(modal);
-    modal.onOpen();
-    modal.onClose();
-    jest.runAllTimers();
+    const result = await new Promise<LoopPickResult>((resolve) => {
+      const modal = new LoopPickerModal(mockApp, plugin, undefined, resolve);
+      installRecordingContent(modal);
+      modal.onOpen();
+      modal.onClose();
+      jest.runAllTimers();
+    });
+    jest.useRealTimers();
+
+    expect(result).toEqual({ cancelled: true });
   });
 
   it('does not resolve cancelled if a choice was made before close', async () => {
@@ -464,7 +454,7 @@ describe('LoopPickerModal — onOpen/onClose lifecycle', () => {
     jest.useFakeTimers();
 
     const modal = new LoopPickerModal(mockApp, plugin, undefined, jest.fn());
-    const contentEl = installRecordingContent(modal);
+    installRecordingContent(modal);
     modal.onOpen();
     await flushAsync();
 
