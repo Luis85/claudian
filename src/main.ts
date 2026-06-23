@@ -90,7 +90,7 @@ import { QueueSlotTracker } from './features/tasks/execution/QueueSlotTracker';
 import { RunSidecarStore } from './features/tasks/storage/RunSidecarStore';
 import { TaskNoteStore } from './features/tasks/storage/TaskNoteStore';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
-import { openLoopLibrary } from './features/tasks/ui/LoopPickerModal';
+import { LoopLibraryView, VIEW_TYPE_LOOP_LIBRARY } from './features/tasks/ui/LoopLibraryView';
 import { WorkOrderActivityProvider } from './features/tasks/ui/WorkOrderActivityProvider';
 import { ClaudianToolRegistry } from './features/tools/ClaudianToolRegistry';
 import { ClaudianHttpToolServer } from './features/tools/host/ClaudianHttpToolServer';
@@ -246,16 +246,16 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       void this.activateAgentBoardView();
     });
 
-    this.addRibbonIcon('repeat', t('ribbon.openLoopLibrary'), () => openLoopLibrary(this));
-
     this.registerView(VIEW_TYPE_AGENT_ROSTER, (leaf) => new AgentRosterView(leaf, this));
     this.registerView(VIEW_TYPE_TOOL_LIBRARY, (leaf) => new ToolLibraryView(leaf, this));
     this.registerView(VIEW_TYPE_SKILL_LIBRARY, (leaf) => new SkillLibraryView(leaf, this));
+    this.registerView(VIEW_TYPE_LOOP_LIBRARY, (leaf) => new LoopLibraryView(leaf, this));
 
     const openView = (viewType: string) => this.openLeafView(viewType);
     this.addRibbonIcon('users', t('ribbon.openAgentRoster'), () => void openView(VIEW_TYPE_AGENT_ROSTER));
     this.addRibbonIcon('wrench', t('ribbon.openToolLibrary'), () => void openView(VIEW_TYPE_TOOL_LIBRARY));
     this.addRibbonIcon('book-open', t('ribbon.openSkillLibrary'), () => void openView(VIEW_TYPE_SKILL_LIBRARY));
+    this.addRibbonIcon('repeat', t('ribbon.openLoopLibrary'), () => void openView(VIEW_TYPE_LOOP_LIBRARY));
     this.addCommand({ id: 'open-agent-roster', name: t('commands.openAgentRoster'), callback: () => void openView(VIEW_TYPE_AGENT_ROSTER) });
     this.addCommand({ id: 'open-tool-library', name: t('commands.openToolLibrary'), callback: () => void openView(VIEW_TYPE_TOOL_LIBRARY) });
     this.addCommand({ id: 'open-skill-library', name: t('commands.openSkillLibrary'), callback: () => void openView(VIEW_TYPE_SKILL_LIBRARY) });

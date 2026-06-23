@@ -789,10 +789,6 @@
       "edit": "Edit",
       "delete": "Delete"
     },
-    "loopLibrary": {
-      "title": "Loop library",
-      "lead": "Browse, create, edit, or delete the loops in your library."
-    },
     "loopEditor": {
       "titleNew": "New loop",
       "titleEdit": "Edit loop",
@@ -1148,6 +1144,18 @@
     "nameField": "Name",
     "actionFailed": "Something went wrong — check the developer console.",
     "providerVault": "Vault"
+  },
+  "loopLibrary": {
+    "navLabel": "Loops",
+    "title": "Loop library",
+    "newLoop": "New loop",
+    "empty": "No loops yet. Create one to reuse a playbook across work orders.",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Delete the loop \"{name}\"?",
+    "deleted": "Deleted {name}.",
+    "useWhenLabel": "Use when:",
+    "actionFailed": "Loop library action failed: {error}"
   },
   "ribbon": {
     "openChat": "Open Co-Worker Chat",
