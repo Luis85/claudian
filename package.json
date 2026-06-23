@@ -1,7 +1,7 @@
 {
-  "name": "claudian",
-  "version": "3.5.0",
-  "description": "Claudian - Claude Code embedded in Obsidian sidebar",
+  "name": "specorator",
+  "version": "1.0.0",
+  "description": "Specorator — spec-driven agent workspace for Obsidian",
   "main": "main.js",
   "engines": {
     "node": ">=22"
@@ -31,14 +31,22 @@
     "version": "node scripts/sync-version.js && git add manifest.json"
   },
   "keywords": [
-    "claude-code",
+    "specorator",
     "obsidian",
     "obsidian-plugin",
-    "productivity",
-    "ide"
+    "agent",
+    "spec-driven",
+    "claude-code",
+    "codex",
+    "opencode",
+    "cursor"
   ],
-  "author": "Luis85",
+  "author": "Luis Mendez",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Luis85/specorator"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/jest": "^30.0.0",
