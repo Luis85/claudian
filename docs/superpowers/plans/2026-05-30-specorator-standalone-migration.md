@@ -1,6 +1,7 @@
 ---
 title: Specorator Standalone Migration (v1.0.0 rebrand)
 date: 2026-05-30
+refreshed: 2026-06-23
 status: open
 scope: brand/standalone migration — Claudian → Specorator v1.0.0 (packaging, not new capability)
 parent: "[[Specorator - Product Vision]]"
@@ -13,6 +14,17 @@ related:
 > **Connects to the harness roadmap.** This plan delivers **Specorator v1.0.0 — a brand/standalone rebrand of *today's* feature set** (chat, Agent Board, inline edit, Quick Actions), moved to `Luis85/specorator` with `.claudian/` → `.specorator/` storage. It is the **foundation/packaging release**; the agent-harness program (zero-terminal onboarding, undo, Vault MCP, RAG, Harness Library) ships *after* it as Specorator v1.x → v2 — see **[[Specorator Agent Harness PRD]]** (§12 roadmap). Four connections to carry forward: (1) the live manifest is **already at `minAppVersion` 1.11.5** (the SecretStorage floor the harness's in-app keys need) — Task 2's draft manifest below still shows `1.7.2` and must be updated to **preserve 1.11.5**; (2) doc paths moved under `docs/product/` since this plan was written (e.g. `docs/Specorator.md` → `docs/product/Specorator - Product Vision.md`, and feature wikilinks now live under `docs/product/features/`) — adjust the Task 19/20 references accordingly; (3) **the Orchestrator was removed 2026-06-06** (see [[Remove the Orchestrator feature]] and `docs/decisions/2026-06-06-remove-orchestrator-feature-design.md`) — references to renaming `[[Orchestrator]]` (Task 19) and bundling Orchestrator into the v1.0 release-notes feature list (Task 20b) must be struck; (4) **resolve the harness PRD's R6 before the no-import storage tasks.** This plan's locked "fresh start, no data import" (Task 6) and the smoke test that expects no `.claudian/` would, on an existing install, **silently reset users' settings, sessions, MCP config, and Quick Actions** — the PRD flags this as a trust risk (R6). Decide *first*: ship a one-time `.claudian/` → `.specorator/` import shim **or** an in-product "your previous data is under `.claudian/`" notice; do not ship a silent reset.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+> **Plan refresh — 2026-06-23.** Reconciled against the live tree before execution. Changes recorded here; affected tasks updated inline.
+>
+> - **R6 (storage) resolved → fresh start, no import (locked spec decision #3).** `.specorator/` starts empty; there is **no** `.claudian/` → `.specorator/` import shim and **no** in-product migration notice. Rationale: the plugin id changes (`claudian-cursor` → `specorator`), so an existing install keeps running against its own `.claudian/` data — nothing is destroyed; a user who switches simply starts clean. This unblocks Tasks 6–8 and the smoke test's "no `.claudian/`" expectation. The header bullet (4) warning is now closed.
+> - **manifest/package drift.** Live `manifest.json` is `id: claudian-cursor`, `name: Claudian (Cursor fork)`, `version: 3.5.0`, `author: Luis85`, `authorUrl: https://github.com/Luis85`, `minAppVersion: 1.11.5`. Live `package.json` is `name: claudian`, `version: 3.5.0`, **no `repository` block**. The Task 2/3 snapshots are stale; only the *target* values are normative — and **preserve `minAppVersion: 1.11.5`** (do not regress to `1.7.2`).
+> - **LICENSE.** Current file is `Copyright (c) 2025` with **no name**. Use `Copyright (c) 2025 Yishen Tu` + `Copyright (c) 2026 Luis Mendez` (existing-year preserved per spec §5.1; the plan's `2024` guess is superseded).
+> - **StoragePaths.ts already trimmed.** The `LEGACY_CLAUDIAN_SETTINGS_PATH` / `LEGACY_SESSIONS_PATH` constants Task 6 tells you to remove **no longer exist** — the live file is just `CLAUDIAN_STORAGE_PATH`, `CLAUDIAN_SETTINGS_PATH`, `SESSIONS_PATH`. Task 6 is a straight 3-constant rename.
+> - **Doc paths moved + Orchestrator removed.** Feature docs live under `docs/product/features/`; the live set is `Co-Worker - Chat`, `Multi Provider Support`, `Quick Actions`, `Agent Kanban Board`, `Agent Roster`, `RAG Layer - Ask your Vault`, `Workspace Isolation`. Orchestrator was removed 2026-06-06 — strike every Orchestrator reference (Task 19 link list, Task 20b release-notes feature list).
+> - **Rename scale (for sequencing).** Live tree carries ~173 `Claudian`-bearing TS files, ~1,612 `claudian-` TS hits, ~1,955 `claudian-` CSS hits, 125 `claudian-settings` literals. The mass-rename (Phase 5) and CSS pass (Phase 7) are the long poles.
+>
+> **Execution environments.** Phases 1–9 (the in-repo pre-flight rebrand: metadata, storage, symbol/string/CSS rename, README/docs, local verify) run anywhere with the repo + npm. Phases 10–12 (orphan force-push to `Luis85/specorator`, tag/release, legacy issue close-out, fork freeze, welcome issue) require an authenticated `gh` against `Luis85/specorator` and a clean Obsidian vault for the smoke test (Task 23) — they **cannot** run from the restricted cloud session and are executed locally by the maintainer.
 
 **Goal:** Migrate the `claudian-cursor` Obsidian plugin to a standalone Specorator v1.0.0 plugin published at `Luis85/specorator`, executing the locked decisions from `docs/superpowers/specs/2026-05-30-specorator-standalone-migration-design.md`.
 
@@ -85,19 +97,20 @@ Run:
 ```bash
 cat D:/Projects/claudian/manifest.json
 ```
-Confirm content matches:
+Live content at refresh (2026-06-23) — diff against the file, not this snapshot:
 ```json
 {
   "id": "claudian-cursor",
   "name": "Claudian (Cursor fork)",
-  "version": "3.3.0",
+  "version": "3.5.0",
   "minAppVersion": "1.11.5",
   "description": "Embeds Claude Code, Codex, and other coding agents as AI collaborators in your vault. Your vault becomes their working directory, giving them capabilities for file reads and writes, search, bash commands, and multi-step workflows.",
-  "author": "Yishen Tu",
-  "authorUrl": "https://github.com/YishenTu",
+  "author": "Luis85",
+  "authorUrl": "https://github.com/Luis85",
   "isDesktopOnly": true
 }
 ```
+Note: `author`/`authorUrl` are already on Luis85; the target sets the display name to `Luis Mendez`. `minAppVersion` is already `1.11.5` — preserve it.
 
 - [ ] **Step 2: Replace contents**
 
@@ -134,7 +147,7 @@ git -C D:/Projects/claudian commit -m "chore(brand): rewrite manifest.json for S
 
 Edit `D:/Projects/claudian/package.json`:
 - Change `"name": "claudian"` to `"name": "specorator"`.
-- Change `"version": "3.3.0"` to `"version": "1.0.0"`.
+- Change `"version": "3.5.0"` to `"version": "1.0.0"` (live version is `3.5.0`; the reset to `1.0.0` is deliberate).
 - Change `"description": "Claudian - Claude Code embedded in Obsidian sidebar"` to `"description": "Specorator — spec-driven agent workspace for Obsidian"`.
 - Change `"author": "Yishen Tu"` to `"author": "Luis Mendez"`.
 - Update `keywords` array to: `["specorator", "obsidian", "obsidian-plugin", "agent", "spec-driven", "claude-code", "codex", "opencode", "cursor"]`.
@@ -165,7 +178,7 @@ git -C D:/Projects/claudian commit -m "chore(brand): rewrite package.json for Sp
 
 - [ ] **Step 1: Read current LICENSE**
 
-Current content:
+Current content (confirmed live 2026-06-23):
 ```
 MIT License
 
@@ -173,7 +186,7 @@ Copyright (c) 2025
 
 Permission is hereby granted, ...
 ```
-The current copyright line lacks a name. Replace with both lines.
+The current copyright line lacks a name. Replace with both lines, preserving the existing `2025` year for the Yishen Tu attribution (per spec §5.1, existing-year is preserved).
 
 - [ ] **Step 2: Write the updated LICENSE**
 
@@ -181,7 +194,7 @@ Replace the entire file with:
 ```
 MIT License
 
-Copyright (c) 2024 Yishen Tu
+Copyright (c) 2025 Yishen Tu
 Copyright (c) 2026 Luis Mendez
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -203,7 +216,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-The 2024 year for the Yishen Tu line is a best-effort estimate for the original Claudian release. If the actual original year can be confirmed from upstream `https://github.com/YishenTu/claudian` history before commit, replace with the confirmed year.
+The `2025` year matches the existing LICENSE copyright line and is preserved as-is per spec §5.1. (If a more accurate original Claudian release year is later confirmed from upstream `https://github.com/YishenTu/claudian`, it can be corrected, but `2025` is the current on-disk value and is not a blocker.)
 
 - [ ] **Step 3: Commit**
 
@@ -269,14 +282,12 @@ git -C D:/Projects/claudian commit -m "docs(credits): add CREDITS.md with implem
 
 - [ ] **Step 1: Read current file**
 
-Current content:
+Current content (confirmed live 2026-06-23 — the `LEGACY_*` constants are already gone):
 ```typescript
 export const CLAUDIAN_STORAGE_PATH = '.claudian';
 
-export const LEGACY_CLAUDIAN_SETTINGS_PATH = '.claude/claudian-settings.json';
 export const CLAUDIAN_SETTINGS_PATH = `${CLAUDIAN_STORAGE_PATH}/claudian-settings.json`;
 
-export const LEGACY_SESSIONS_PATH = '.claude/sessions';
 export const SESSIONS_PATH = `${CLAUDIAN_STORAGE_PATH}/sessions`;
 ```
 
@@ -291,7 +302,7 @@ export const SPECORATOR_SETTINGS_PATH = `${SPECORATOR_STORAGE_PATH}/specorator-s
 export const SESSIONS_PATH = `${SPECORATOR_STORAGE_PATH}/sessions`;
 ```
 
-Note: per locked decision #3 (fresh start, no import), all `LEGACY_*` constants pointing at `.claude/` paths are dropped because v1.0 does not migrate data from older locations. If the legacy fallback is read elsewhere, treat those reads as dead code and remove them in Task 7.
+Note: per locked decision #3 (fresh start, no import) — **R6 resolved 2026-06-23 to this same fresh-start path** — `.specorator/` starts empty with no shim and no in-product notice. The `LEGACY_*` constants are already gone from the live file, so there is no fallback read to remove. This is a clean 3-constant rename: `CLAUDIAN_STORAGE_PATH` → `SPECORATOR_STORAGE_PATH`, `CLAUDIAN_SETTINGS_PATH` → `SPECORATOR_SETTINGS_PATH` (value `.specorator/specorator-settings.json`), `SESSIONS_PATH` retargeted under the new root.
 
 - [ ] **Step 3: Update consumers — find all imports**
 
@@ -849,7 +860,7 @@ Overwrite `D:/Projects/claudian/README.md` with content derived from `docs/produ
 
 1. Drop the YAML frontmatter block (`---` through `---` at the top of `docs/product/Specorator - Product Vision.md`).
 2. Convert the tagline (`tagline: "Plan the work, run it, review what came back, keep the record. All in your vault."`) into a subtitle line under the `# Specorator` heading.
-3. Replace every feature wikilink — `[[Co-Worker - Chat]]` (or `[[sidepanel-chat]]` if still present), `[[Multi Provider Support]]`, `[[Quick Actions]]`, `[[Agent Kanban Board]]` — with a relative markdown link to the file under `docs/product/features/`, e.g. `[Co-Worker — Chat](docs/product/features/Co-Worker%20-%20Chat.md)`. The Orchestrator was removed 2026-06-06, so it is intentionally absent from the v1.0 feature list.
+3. Replace every feature wikilink in the source narrative with a relative markdown link to the matching file under `docs/product/features/`, e.g. `[Co-Worker — Chat](docs/product/features/Co-Worker%20-%20Chat.md)`. The live `docs/product/features/` set at refresh (2026-06-23) is: `Co-Worker - Chat`, `Multi Provider Support`, `Quick Actions`, `Agent Kanban Board`, `Agent Roster`, `RAG Layer - Ask your Vault`, `Workspace Isolation`. Mirror whatever subset the `Specorator - Product Vision.md` source actually references; do not invent links to files that aren't there. The Orchestrator was removed 2026-06-06, so it is intentionally absent from the feature list.
 4. Add a new section after the intro:
    ```markdown
    ## Install
@@ -943,8 +954,7 @@ Obsidian community-plugin registry is planned once v1.0.x stabilises.
 
 See the [README](https://github.com/Luis85/specorator#readme) for the
 full overview. v1.0 ships the current provider-native chat, Agent Board
-work orders, inline edit, quick actions, and orchestrator under the
-Specorator identity.
+work orders, inline edit, and quick actions under the Specorator identity.
 
 ## Migration notes
 
