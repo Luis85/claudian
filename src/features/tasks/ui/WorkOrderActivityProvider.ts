@@ -17,6 +17,7 @@ import { TaskNoteStore } from '../storage/TaskNoteStore';
 import { buildWorkOrderActivitySummary } from './workOrderActivitySummary';
 import { buildWorkOrderConversationBindings } from './workOrderConversationBindings';
 import { WorkOrderDetailModal, type WorkOrderDetailModalCallbacks, type WorkOrderFieldUpdate } from './WorkOrderDetailModal';
+import type { WorkOrderSectionUpdate } from './workOrderEditForm';
 import { buildWorkOrderFieldOptions } from './workOrderFieldOptions';
 
 export interface WorkOrderActivityProviderDeps {
@@ -222,16 +223,25 @@ export class WorkOrderActivityProvider implements WorkOrderActivityProviderContr
       // editable title/provider/model/priority controls whose edits silently
       // no-op'd through the optional callback, losing user input on close.
       onSaveFields: (target, fields) => this.saveTaskFields(target, fields),
+      onSaveSections: (target, sections) => this.saveTaskSections(target, sections),
       ...buildWorkOrderFieldOptions(settings, agents),
     };
   }
 
-  private async saveTaskFields(task: TaskSpec, fields: WorkOrderFieldUpdate): Promise<void> {
+  private saveTaskFields(task: TaskSpec, fields: WorkOrderFieldUpdate): Promise<void> {
+    return this.processNote(task, (content) => this.noteStore.writeFields(content, fields));
+  }
+
+  private saveTaskSections(task: TaskSpec, sections: WorkOrderSectionUpdate): Promise<void> {
+    return this.processNote(task, (content) => this.noteStore.writeSections(content, sections));
+  }
+
+  // vault.process serializes concurrent transforms on the same note so edits
+  // from this dropdown cannot clobber a parallel run-coordinator write.
+  private async processNote(task: TaskSpec, transform: (content: string) => string): Promise<void> {
     const file = this.plugin.app.vault.getAbstractFileByPath(task.path);
     if (!(file instanceof TFile)) return;
-    // vault.process serializes concurrent transforms on the same note so
-    // edits from this dropdown cannot clobber a parallel run-coordinator write.
-    await this.plugin.app.vault.process(file, (content) => this.noteStore.writeFields(content, fields));
+    await this.plugin.app.vault.process(file, transform);
   }
 
   private async openNote(task: TaskSpec): Promise<void> {
