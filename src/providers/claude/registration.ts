@@ -1,4 +1,5 @@
 import type { ProviderRegistration } from '../../core/providers/types';
+import { serializeAgent } from '../../utils/agent';
 import { getClaudeWorkspaceServices } from './app/claudeWorkspaceAccess';
 import { InlineEditService as ClaudeInlineEditService } from './auxiliary/ClaudeInlineEditService';
 import { InstructionRefineService as ClaudeInstructionRefineService } from './auxiliary/ClaudeInstructionRefineService';
@@ -42,4 +43,15 @@ export const claudeProviderRegistration: ProviderRegistration = {
   createInlineEditService: (plugin) => new ClaudeInlineEditService(plugin),
   historyService: new ClaudeConversationHistoryService(),
   taskResultInterpreter: new ClaudeTaskResultInterpreter(),
+  projectRosterAgent: (input, slug) => ({
+    path: `.claude/agents/${slug}.md`,
+    content: serializeAgent({
+      id: `roster-${slug}`,
+      name: input.name,
+      description: input.description,
+      prompt: input.prompt,
+      skills: input.skills && input.skills.length > 0 ? input.skills : undefined,
+      source: 'vault',
+    }),
+  }),
 };

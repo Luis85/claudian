@@ -17,6 +17,8 @@ import {
   type ScheduledAnimationFrame,
 } from '../../utils/animationFrame';
 import { openPluginSettingsTab } from '../../utils/obsidianPrivateApi';
+import { renderAgentAvatar } from '../agents/agentAvatar';
+import { rosterAgentToPersona } from '../agents/personaRegistry';
 import { openQuickActionsModal } from '../quickActions/openQuickActionsModal';
 import { dispatchQuickActionToTab } from '../quickActions/runQuickActionForFile';
 import { resolveModelContextWindow } from '../settings/customModels/resolveModelContextWindow';
@@ -80,6 +82,11 @@ export class ClaudianView extends ItemView {
 
   // Header elements
   private historyDropdown: HTMLElement | null = null;
+  private historyBtn: HTMLElement | null = null;
+  private headerMetaRowEl: HTMLElement | null = null;
+  private boundAgentChipSlotEl: HTMLElement | null = null;
+  // Monotonic token so concurrent syncBoundAgentChip calls don't double-render.
+  private boundAgentChipGen = 0;
 
   // Debouncing for tab bar updates
   private pendingTabBarUpdate: ScheduledAnimationFrame | null = null;
@@ -276,6 +283,7 @@ export class ClaudianView extends ItemView {
           this.gitActionButton?.updateDisplay();
           this.persistTabState();
           this.syncProviderBrandColor();
+          void this.syncBoundAgentChip();
         },
         onTabClosed: () => {
           this.updateTabBar();
@@ -294,6 +302,7 @@ export class ClaudianView extends ItemView {
           this.gitActionButton?.updateDisplay();
           this.persistTabState();
           this.syncProviderBrandColor();
+          void this.syncBoundAgentChip();
         },
         onTabProviderChanged: () => {
           this.updateTabBar();
@@ -318,6 +327,7 @@ export class ClaudianView extends ItemView {
     });
     this.syncProviderBrandColor();
     this.syncHeaderTitle();
+    void this.syncBoundAgentChip();
     this.updateLayoutForPosition();
     this.tabManager?.primeProviderRuntime();
   }
@@ -351,6 +361,7 @@ export class ClaudianView extends ItemView {
     this.headerActionsContent = null;
     this.newTabButtonEl = null;
     this.historyDropdown = null;
+    this.boundAgentChipSlotEl?.empty();
     this.gitActionButton?.dispose();
     this.gitActionButton = null;
   }
@@ -436,8 +447,9 @@ export class ClaudianView extends ItemView {
   private buildHeader(header: HTMLElement) {
     this.headerEl = header;
 
-    // Title slot container (logo + title or tabs)
-    this.titleSlotEl = header.createDiv({ cls: 'claudian-title-slot' });
+    // Row 1: title (logo + title text; tab badges mount here in header mode).
+    const titleRow = header.createDiv({ cls: 'claudian-header-title-row' });
+    this.titleSlotEl = titleRow.createDiv({ cls: 'claudian-title-slot' });
 
     // Logo (hidden when 2+ tabs) — populated by syncHeaderLogo()
     this.logoEl = this.titleSlotEl.createSpan({ cls: 'claudian-logo' });
@@ -446,8 +458,13 @@ export class ClaudianView extends ItemView {
     // Title text (hidden in header mode when 2+ tabs)
     this.titleTextEl = this.titleSlotEl.createEl('h4', { text: 'Claudian', cls: 'claudian-title-text' });
 
-    // Header actions container (for header mode - initially hidden)
-    this.headerActionsEl = header.createDiv({ cls: 'claudian-header-actions claudian-header-actions-slot claudian-hidden' });
+    // Row 2: bound-agent chip (left) + header actions (Git, and the action
+    // cluster in header mode — right). Collapsed by updateHeaderMetaRow() when it
+    // has neither a chip nor visible actions, so an unbound conversation with
+    // nothing to commit shows only the title row.
+    this.headerMetaRowEl = header.createDiv({ cls: 'claudian-header-meta-row claudian-hidden' });
+    this.boundAgentChipSlotEl = this.headerMetaRowEl.createDiv({ cls: 'claudian-bound-agent-chip-slot' });
+    this.headerActionsEl = this.headerMetaRowEl.createDiv({ cls: 'claudian-header-actions claudian-header-actions-slot claudian-hidden' });
 
     if (this.plugin.gitStatusWatcher) {
       this.gitActionButton = new GitActionButton(this.headerActionsEl, {
@@ -457,6 +474,37 @@ export class ClaudianView extends ItemView {
       });
       this.headerActionsEl.removeClass('claudian-hidden');
     }
+
+    this.updateHeaderMetaRow();
+  }
+
+  /**
+   * Shows the second header row only when it carries content — a bound-agent
+   * chip and/or a visible actions slot (Git / the header-mode cluster) — so the
+   * row collapses cleanly for an unbound conversation with nothing to commit.
+   */
+  private updateHeaderMetaRow(): void {
+    if (!this.headerMetaRowEl) return;
+    const hasChip = (this.boundAgentChipSlotEl?.childElementCount ?? 0) > 0;
+    const hasActions = this.headerActionsEl != null && !this.headerActionsEl.hasClass('claudian-hidden');
+    this.headerMetaRowEl.toggleClass('claudian-hidden', !hasChip && !hasActions);
+  }
+
+  /**
+   * Makes a clickable header `<div>` keyboard-operable: routes both click and
+   * Enter/Space through one activation callback so the control is reachable by
+   * keyboard without duplicating behavior.
+   */
+  private wireHeaderButton(el: HTMLElement, onActivate: () => void): void {
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    el.addEventListener('click', () => onActivate());
+    el.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onActivate();
+      }
+    });
   }
 
   /**
@@ -505,7 +553,7 @@ export class ClaudianView extends ItemView {
     quickActionsBtn.addEventListener('mouseenter', () => {
       void this.plugin.vaultSkillAggregator?.listAllStreaming(() => {});
     });
-    quickActionsBtn.addEventListener('click', () => {
+    this.wireHeaderButton(quickActionsBtn, () => {
       const activeTab = this.tabManager?.getActiveTab();
       if (!activeTab) return;
       openQuickActionsModal(this.plugin, {
@@ -526,7 +574,7 @@ export class ClaudianView extends ItemView {
     this.newTabButtonEl = this.headerActionsContent.createDiv({ cls: 'claudian-header-btn claudian-new-tab-btn' });
     setIcon(this.newTabButtonEl, 'square-plus');
     this.newTabButtonEl.setAttribute('aria-label', 'New tab');
-    this.newTabButtonEl.addEventListener('click', () => {
+    this.wireHeaderButton(this.newTabButtonEl, () => {
       void this.createNewTab().catch(() => new Notice(t('chat.tab.createFailed')));
     });
 
@@ -534,7 +582,7 @@ export class ClaudianView extends ItemView {
     const newBtn = this.headerActionsContent.createDiv({ cls: 'claudian-header-btn' });
     setIcon(newBtn, 'square-pen');
     newBtn.setAttribute('aria-label', 'New conversation');
-    newBtn.addEventListener('click', () => {
+    this.wireHeaderButton(newBtn, () => {
       void (async () => {
         await this.tabManager?.createNewConversation();
         this.updateHistoryDropdown();
@@ -546,13 +594,15 @@ export class ClaudianView extends ItemView {
     const historyBtn = historyContainer.createDiv({ cls: 'claudian-header-btn' });
     setIcon(historyBtn, 'history');
     historyBtn.setAttribute('aria-label', 'Chat history');
+    historyBtn.setAttribute('aria-haspopup', 'true');
+    historyBtn.setAttribute('aria-expanded', 'false');
+    this.historyBtn = historyBtn;
 
     this.historyDropdown = historyContainer.createDiv({ cls: 'claudian-history-menu' });
 
-    historyBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.toggleHistoryDropdown();
-    });
+    // Stop the click from reaching the document-level outside-click closer.
+    historyBtn.addEventListener('click', (e) => e.stopPropagation());
+    this.wireHeaderButton(historyBtn, () => this.toggleHistoryDropdown());
 
     fragment.appendChild(this.headerActionsContent);
 
@@ -619,6 +669,10 @@ export class ClaudianView extends ItemView {
         this.headerActionsEl.toggleClass('claudian-hidden', !this.gitActionButton);
       }
     }
+
+    // The actions-slot visibility just changed; recompute the meta row so it
+    // collapses or shows alongside the chip.
+    this.updateHeaderMetaRow();
   }
 
   /**
@@ -706,6 +760,7 @@ export class ClaudianView extends ItemView {
     prompt: string;
     tabReservation?: ChatTabReservation;
     workOrderPath?: string;
+    boundAgentId?: string;
   }): Promise<TaskRunTabHandle | null> {
     return this.workOrderBridge.startTaskRunInFreshTab(options);
   }
@@ -848,6 +903,44 @@ export class ClaudianView extends ItemView {
     this.titleTextEl.title = title;
   }
 
+  /** Renders or clears the bound-agent chip below the header. */
+  private async syncBoundAgentChip(): Promise<void> {
+    const slot = this.boundAgentChipSlotEl;
+    if (!slot) return;
+
+    // Resolve everything BEFORE touching the DOM, guarded by a generation token.
+    // Two near-simultaneous calls (e.g. active-tab change + refresh on chat open)
+    // would otherwise each `empty()` then `await`, rendering two chips. Only the
+    // latest invocation past the awaits mutates the slot.
+    const gen = ++this.boundAgentChipGen;
+    const conversationId = this.tabManager?.getActiveTab()?.conversationId;
+    const conversation = conversationId
+      ? await this.plugin.getConversationById(conversationId)
+      : null;
+    const agent = conversation?.boundAgentId
+      ? await this.plugin.agentRosterStore?.get(conversation.boundAgentId)
+      : null;
+    if (gen !== this.boundAgentChipGen) return;
+
+    slot.empty();
+    if (conversationId && agent) {
+      const chip = slot.createDiv({ cls: 'claudian-bound-agent-chip' });
+      const chattingWith = t('agentRoster.chattingWith', { name: agent.name });
+      chip.setAttribute('title', `${chattingWith} — ${t('agentRoster.bindingHint')}`);
+      // title is unreliable on non-interactive elements; mirror the core message
+      // into aria-label so screen readers surface the binding consistently.
+      chip.setAttribute('aria-label', chattingWith);
+
+      const avatarEl = chip.createDiv({ cls: 'claudian-bound-agent-chip-avatar' });
+      // Avatar is decorative here; its own aria-label would duplicate the name.
+      avatarEl.setAttribute('aria-hidden', 'true');
+      renderAgentAvatar(avatarEl, rosterAgentToPersona(agent), 18);
+
+      chip.createSpan({ cls: 'claudian-bound-agent-chip-label', text: agent.name });
+    }
+    this.updateHeaderMetaRow();
+  }
+
   /**
    * Renders an inline error banner inside the conversation pane when history
    * hydration fails. Replaces the in-stream sentinel that Opencode used before
@@ -909,6 +1002,13 @@ export class ClaudianView extends ItemView {
       this.updateHistoryDropdown();
       this.historyDropdown.addClass('visible');
     }
+    this.historyBtn?.setAttribute('aria-expanded', String(!isVisible));
+  }
+
+  /** Closes the history dropdown and syncs the trigger's aria-expanded state. */
+  private closeHistoryDropdown(): void {
+    this.historyDropdown?.removeClass('visible');
+    this.historyBtn?.setAttribute('aria-expanded', 'false');
   }
 
   private updateHistoryDropdown(): void {
@@ -930,7 +1030,7 @@ export class ClaudianView extends ItemView {
 
   private async openHistoryConversation(conversationId: string): Promise<void> {
     await this.tabManager?.openConversation(conversationId);
-    this.historyDropdown?.removeClass('visible');
+    this.closeHistoryDropdown();
   }
 
   private async openHistoryConversationInNewTab(
@@ -941,7 +1041,7 @@ export class ClaudianView extends ItemView {
       preferNewTab: true,
       activate,
     });
-    this.historyDropdown?.removeClass('visible');
+    this.closeHistoryDropdown();
   }
 
   private getHistoryConversationOpenState(conversationId: string): HistoryConversationOpenState {
@@ -976,7 +1076,7 @@ export class ClaudianView extends ItemView {
 
     // Document-level click to close dropdowns
     this.registerDomEvent(activeDocument, 'click', () => {
-      this.historyDropdown?.removeClass('visible');
+      this.closeHistoryDropdown();
     });
 
     // View-level Shift+Tab to toggle plan mode (works from any focused element)

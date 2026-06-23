@@ -238,6 +238,33 @@ describe('ClaudianService', () => {
 
       expect(buildOptsSpy).not.toHaveBeenCalled();
     });
+
+    // Regression: a bound-agent cold-start must fold the bound prompt into the
+    // stored currentConfig.systemPromptKey so it matches the key implied by the
+    // actual query options. Otherwise needsRestart fires on every subsequent
+    // bound-agent turn, force-restarting the persistent query each time.
+    it('stores currentConfig whose systemPromptKey includes the bound-agent appendix', async () => {
+      const boundPrompt = 'You are a research subagent.';
+      (service as any).currentBoundAgentPrompt = boundPrompt;
+
+      await (service as any).startPersistentQuery('/mock/vault/path', '/usr/local/bin/claude');
+
+      const storedConfig = (service as any).currentConfig;
+      expect(storedConfig).toBeTruthy();
+
+      // Same bound prompt on the next turn -> no restart.
+      const sameBoundConfig = (service as any).buildPersistentQueryConfig(
+        '/mock/vault/path', '/usr/local/bin/claude', undefined, undefined, boundPrompt,
+      );
+      expect((service as any).needsRestart(sameBoundConfig)).toBe(false);
+
+      // No bound prompt -> key differs -> restart (proves the appendix is in the stored key).
+      const noBoundConfig = (service as any).buildPersistentQueryConfig(
+        '/mock/vault/path', '/usr/local/bin/claude', undefined, undefined, undefined,
+      );
+      expect(storedConfig.systemPromptKey).not.toBe(noBoundConfig.systemPromptKey);
+      expect((service as any).needsRestart(noBoundConfig)).toBe(true);
+    });
   });
 
 

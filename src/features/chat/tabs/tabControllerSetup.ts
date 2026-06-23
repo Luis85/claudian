@@ -333,6 +333,17 @@ export function buildTabInputController(
         return false;
       }
     },
+    // Roster agent binding: consumed once by `triggerTitleGeneration` on the
+    // first send, after which the tab clears the id so a rebind or
+    // new-conversation action doesn't carry a stale roster id. Parallel to
+    // `getWorkOrderPath` which guards the work-order note path similarly.
+    getBoundAgentId: () => {
+      const id = tab.boundAgentId;
+      // Consume-once: clear after the caller reads it so subsequent lazy
+      // conversation creates (new conversation, fork, etc.) don't inherit it.
+      tab.boundAgentId = null;
+      return id;
+    },
     openConversation,
     onForkAll: forkAllCallback ? () => forkAllCallback() : undefined,
     restorePrePlanPermissionModeIfNeeded: () => {

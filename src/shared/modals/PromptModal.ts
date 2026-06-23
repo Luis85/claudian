@@ -1,12 +1,16 @@
 import { type App, Modal, Setting } from 'obsidian';
 
+import { t } from '../../i18n/i18n';
+import { renderDialogButtons } from './dialogButtons';
+
 /**
  * Opens a small modal with a single text input and returns the trimmed value on
- * confirm, or `null` when the user dismisses without submitting.
+ * confirm, or `null` when the user dismisses without submitting. `confirmLabel`
+ * defaults to the localized "Confirm".
  */
-export function promptReason(app: App, title: string, placeholder = ''): Promise<string | null> {
+export function promptReason(app: App, title: string, placeholder = '', confirmLabel?: string): Promise<string | null> {
   return new Promise((resolve) => {
-    new PromptModal(app, title, resolve, placeholder).open();
+    new PromptModal(app, title, resolve, placeholder, confirmLabel ?? t('common.confirm')).open();
   });
 }
 
@@ -19,6 +23,7 @@ class PromptModal extends Modal {
     private readonly title: string,
     private readonly resolve: (value: string | null) => void,
     private readonly placeholder: string,
+    private readonly confirmLabel: string,
   ) {
     super(app);
   }
@@ -42,18 +47,15 @@ class PromptModal extends Modal {
       window.setTimeout(() => text.inputEl.focus(), 0);
     });
 
-    new Setting(this.contentEl)
-      .addButton((btn) => btn.setButtonText('Cancel').onClick(() => this.close()))
-      .addButton((btn) =>
-        btn
-          .setButtonText('Rework')
-          .setCta()
-          .onClick(() => {
-            this.resolved = true;
-            this.resolve(this.value.trim() || null);
-            this.close();
-          }),
-      );
+    renderDialogButtons(this.contentEl, {
+      confirmLabel: this.confirmLabel,
+      onCancel: () => this.close(),
+      onConfirm: () => {
+        this.resolved = true;
+        this.resolve(this.value.trim() || null);
+        this.close();
+      },
+    });
   }
 
   onClose(): void {

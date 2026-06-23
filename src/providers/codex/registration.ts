@@ -9,6 +9,7 @@ import { codexSubagentLifecycleAdapter } from './normalization/codexSubagentNorm
 import { CODEX_CANONICAL_TOOL_NAMES } from './normalization/codexToolNormalization';
 import { CodexChatRuntime } from './runtime/CodexChatRuntime';
 import { DEFAULT_CODEX_PROVIDER_SETTINGS, getCodexProviderSettings } from './settings';
+import { serializeSubagentToml } from './storage/CodexSubagentStorage';
 import { codexChatUIConfig } from './ui/CodexChatUIConfig';
 
 export const codexProviderRegistration: ProviderRegistration = {
@@ -29,4 +30,12 @@ export const codexProviderRegistration: ProviderRegistration = {
   createInlineEditService: (plugin) => new CodexInlineEditService(plugin),
   historyService: new CodexConversationHistoryService(),
   subagentLifecycleAdapter: codexSubagentLifecycleAdapter,
+  projectRosterAgent: (input, slug) => ({
+    path: `.codex/agents/${slug}.toml`,
+    content: serializeSubagentToml({
+      name: input.name,
+      description: input.description,
+      developerInstructions: input.prompt,
+    }),
+  }),
 };

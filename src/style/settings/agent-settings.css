@@ -1,2 +1,14 @@
 /* Agent Settings — all structural rules live in base.css .claudian-sp-* */
 /* This file is kept as a placeholder for future agent-specific overrides. */
+
+/* Agent Roster — card-level action row (Start chat button). */
+.claudian-roster-card-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.claudian-roster-card-actions button {
+  font-size: 12px;
+  padding: 2px 8px;
+}

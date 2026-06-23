@@ -73,6 +73,7 @@ export function resolveCursorQueryLaunch(params: {
     turn,
     conversationHistory,
     resumeSessionId: resumeId,
+    boundAgentPrompt: queryOptions?.boundAgentPrompt,
   });
   const { arg: promptArg, cleanup: cleanupPromptFile } = resolveCursorCliPromptArg(cliPrompt);
   const launch = resolveCursorLaunch(cli, [...flagArgs, promptArg]);

@@ -1,5 +1,9 @@
 import { t } from '../../i18n/i18n';
 import { type AgentPersona, STANDARD_PERSONA_ID } from './agentTypes';
+import type { RosterAgent } from './roster/rosterTypes';
+
+/** Resolves an `agent` frontmatter id to the persona used to render its avatar. */
+export type PersonaResolver = (id?: string) => AgentPersona;
 
 /**
  * The built-in Standard persona. Neutral color, no initials (rendered with the
@@ -34,4 +38,53 @@ export function listPersonas(): AgentPersona[] {
 export function resolvePersona(id?: string): AgentPersona {
   if (!id) return standardPersona();
   return listPersonas().find((persona) => persona.id === id) ?? standardPersona();
+}
+
+/**
+ * Projects a roster agent onto the persona shape so the board / modal can render
+ * its avatar. Uses the agent's own color + initials when present, otherwise
+ * derives a two-letter monogram from the name and a neutral color.
+ */
+export function rosterAgentToPersona(agent: RosterAgent): AgentPersona {
+  const derived = agent.name
+    .split(/\s+/)
+    .map((word) => word[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+  return {
+    id: agent.id,
+    name: agent.name,
+    color: agent.color || 'var(--color-base-70)',
+    initials: agent.initials?.trim() || derived || 'AG',
+    icon: agent.icon,
+    builtin: false,
+  };
+}
+
+/**
+ * Synchronous persona resolver built from an already-loaded roster list — no
+ * async race, so avatars are correct on the first paint. Callers await
+ * `store.list()` once and feed the result here.
+ */
+export function buildPersonaResolverFromAgents(agents: RosterAgent[]): PersonaResolver {
+  const map = new Map<string, AgentPersona>();
+  for (const agent of agents) map.set(agent.id, rosterAgentToPersona(agent));
+  return (id?: string) => (id && map.get(id)) || resolvePersona(id);
+}
+
+/**
+ * Builds the combined persona + roster-agent options for the agent picker from
+ * an already-loaded roster list. Callers preload the list (e.g. `await
+ * store.list()`) before opening the modal so the dropdown is populated on first
+ * render — an async preload would leave roster agents missing on open. Both
+ * personas and roster agents are labelled by their plain name.
+ */
+export function buildAgentOptions(
+  agents: RosterAgent[],
+): Array<{ value: string; label: string }> {
+  return [
+    ...listPersonas().map((p) => ({ value: p.id, label: p.name })),
+    ...agents.map((a) => ({ value: a.id, label: a.name })),
+  ];
 }

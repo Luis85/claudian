@@ -57,9 +57,15 @@ const DEFAULT_OPENCODE_MANAGED_AGENT_CONFIGS: readonly OpencodeManagedAgentConfi
   { id: OPENCODE_PLAN_MODE_ID },
 ];
 
+export interface HttpToolServerConfig {
+  url: string;
+  headers: Record<string, string>;
+}
+
 export interface PrepareOpencodeLaunchArtifactsParams {
   artifactsSubdir?: string;
   defaultAgentId?: string;
+  httpToolServerConfig?: HttpToolServerConfig | null;
   managedAgents?: readonly OpencodeManagedAgentConfig[];
   runtimeEnv: NodeJS.ProcessEnv;
   settings?: SystemPromptSettings;
@@ -97,6 +103,7 @@ export async function prepareOpencodeLaunchArtifacts(
       params.userName ?? params.settings?.userName,
       params.managedAgents,
       params.defaultAgentId,
+      params.httpToolServerConfig ?? null,
     ),
     null,
     2,
@@ -136,6 +143,7 @@ export function buildOpencodeManagedConfig(
   userName?: string,
   managedAgents: readonly OpencodeManagedAgentConfig[] = DEFAULT_OPENCODE_MANAGED_AGENT_CONFIGS,
   defaultAgentId?: string,
+  httpToolServerConfig?: HttpToolServerConfig | null,
 ): Record<string, unknown> {
   const config: Record<string, unknown> = {
     ...baseConfig,
@@ -172,6 +180,21 @@ export function buildOpencodeManagedConfig(
   const trimmedUserName = userName?.trim();
   if (trimmedUserName) {
     config.username = trimmedUserName;
+  }
+
+  // Wire the in-process HTTP MCP tool server when available. Opencode reads
+  // this as a remote MCP server; the URL and bearer token are refreshed every
+  // spawn via this pre-launch config write.
+  if (httpToolServerConfig) {
+    config.mcp = {
+      ...(isPlainObject(config.mcp) ? config.mcp : {}),
+      claudian: {
+        type: 'remote',
+        url: httpToolServerConfig.url,
+        headers: httpToolServerConfig.headers,
+        enabled: true,
+      },
+    };
   }
 
   return config;

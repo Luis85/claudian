@@ -1,14 +1,17 @@
 import type { AgentsTranslationKey } from './types/agents';
 import type { ChatTranslationKey } from './types/chat';
+import type { CommandsTranslationKey } from './types/commands';
 import type { CommonTranslationKey } from './types/common';
 import type { DiagnosticsTranslationKey } from './types/diagnostics';
 import type { EnvTranslationKey } from './types/env';
 import type { InlineEditTranslationKey } from './types/inlineEdit';
 import type { ProviderTranslationKey } from './types/provider';
 import type { QuickActionsTranslationKey } from './types/quickActions';
+import type { RibbonTranslationKey } from './types/ribbon';
 import type { SecurityTranslationKey } from './types/security';
 import type { SettingsTranslationKey } from './types/settings';
 import type { TasksTranslationKey } from './types/tasks';
+import type { ToolLibraryTranslationKey } from './types/toolLibrary';
 import type { WorkOrderActivityTranslationKey } from './types/workOrderActivity';
 
 export type Locale = 'en' | 'zh-CN' | 'zh-TW' | 'ja' | 'ko' | 'de' | 'fr' | 'es' | 'ru' | 'pt';
@@ -40,4 +43,7 @@ export type TranslationKey =
   | AgentsTranslationKey
   | WorkOrderActivityTranslationKey
   | QuickActionsTranslationKey
-  | SecurityTranslationKey;
+  | SecurityTranslationKey
+  | ToolLibraryTranslationKey
+  | RibbonTranslationKey
+  | CommandsTranslationKey;

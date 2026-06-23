@@ -575,7 +575,7 @@ export class AgentBoardRenderer {
     const assignee = footer.createSpan({ cls: 'claudian-agent-board-card-assignee' });
     renderAgentAvatar(
       assignee,
-      resolvePersona(task.frontmatter.agent),
+      (this.callbacks?.resolvePersona ?? resolvePersona)(task.frontmatter.agent),
       AgentBoardRenderer.ASSIGNEE_AVATAR_SIZE,
     );
     return { footer, assignee };

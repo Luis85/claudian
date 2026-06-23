@@ -9,6 +9,8 @@ import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { promptReason } from '../../../shared/modals/PromptModal';
+import { buildPersonaResolverFromAgents, type PersonaResolver } from '../../agents/personaRegistry';
+import type { RosterAgent } from '../../agents/roster/rosterTypes';
 import { archiveWorkOrder, deleteWorkOrder } from '../commands/taskCommands';
 import {
   getLaneForStatus,
@@ -37,6 +39,7 @@ import { chooseLoop } from './LoopPickerModal';
 import { showWorkOrderContextMenu } from './WorkOrderContextMenu';
 import { buildWorkOrderConversationBindings } from './workOrderConversationBindings';
 import { WorkOrderDetailModal, type WorkOrderFieldUpdate } from './WorkOrderDetailModal';
+import { buildWorkOrderFieldOptions } from './workOrderFieldOptions';
 
 // Orphan recovery uses the same stale window as RunSession's own stale check,
 // so a sidecar heartbeat newer than this is treated as a still-live writer.
@@ -58,6 +61,10 @@ export class AgentBoardView extends ItemView {
   // Slug → display-name cache populated on each refresh so the properties panel
   // can resolve loop names synchronously without an async vault read per open.
   private loopNameCache = new Map<string, string>();
+  // Preloaded persona resolver for roster-agent avatars. Rebuilt lazily and
+  // invalidated on `roster:changed` so renamed/recolored agents repaint.
+  // Reloaded synchronously in refresh() so avatars are correct on first paint.
+  private rosterAgents: RosterAgent[] = [];
   private model: TaskBoardModel = { tasks: [], invalidNotes: [] };
   private config: BoardConfig = loadBoardConfig({}).config;
   private layout: ResolvedBoardLayout = { lanes: [], errors: [] };
@@ -142,6 +149,7 @@ export class AgentBoardView extends ItemView {
           getLaneForStatus(this.config, task.frontmatter.status) ?? undefined,
           (await this.loopCatalog.resolveLoop(task.frontmatter.loop)) ?? undefined,
         ),
+      resolveAgentRunTarget: (agentId) => this.plugin.resolveAgentRunTarget(agentId),
     });
   }
 
@@ -177,6 +185,7 @@ export class AgentBoardView extends ItemView {
       this.runner?.tick();
     }));
     this.register(this.plugin.events.on('task:board-config-changed', () => void this.refresh()));
+    this.register(this.plugin.events.on('roster:changed', () => void this.refresh()));
 
     // Live-run visibility: patch cards in place from run events without a full
     // re-render, and tick the elapsed timer every second.
@@ -248,6 +257,9 @@ export class AgentBoardView extends ItemView {
 
   async refresh(): Promise<void> {
     const settings = asSettingsBag(this.plugin.settings);
+    // Preload roster agents so the persona resolver paints correct avatars on
+    // the synchronous render below (no async resolver race on first paint).
+    this.rosterAgents = (await this.plugin.agentRosterStore?.list()) ?? [];
     this.model = await this.indexer.indexVaultFolder(this.plugin.app.vault, this.folder);
     const { config, errors } = loadBoardConfig(settings);
     this.config = config;
@@ -302,6 +314,12 @@ export class AgentBoardView extends ItemView {
     this.render();
   }
 
+  // Synchronous persona resolver built from the roster list preloaded in
+  // refresh() — no async race, so avatars are correct on the first paint.
+  private getPersonaResolver(): PersonaResolver {
+    return buildPersonaResolverFromAgents(this.rosterAgents);
+  }
+
   private render(): void {
     // Preserve lane scroll position across full re-renders so interacting with a
     // card (which triggers refresh) doesn't jump the board back to the left.
@@ -322,7 +340,7 @@ export class AgentBoardView extends ItemView {
         queue: this.getQueueToolbarState(),
       },
       {
-        onOpenDetail: (task) => this.openDetail(task),
+        onOpenDetail: (task) => void this.openDetail(task),
         onRun: (task) => void this.runTask(task),
         onStop: (task) => this.stopTask(task),
         onAccept: (task) => void this.transitionTask(task, 'done', 'Accepted from review.'),
@@ -360,6 +378,7 @@ export class AgentBoardView extends ItemView {
         onCancelPaused: (task) => this.stopTask(task),
         onSendToReview: (task) => void this.transitionTask(task, 'review', 'Sent to review without a structured handoff.'),
         onMarkFailed: (task) => void this.transitionTask(task, 'failed', 'Marked failed: run produced no structured handoff.'),
+        resolvePersona: this.getPersonaResolver(),
       },
     );
 
@@ -388,8 +407,11 @@ export class AgentBoardView extends ItemView {
     };
   }
 
-  private openDetail(task: TaskSpec): void {
+  private async openDetail(task: TaskSpec): Promise<void> {
     const settings = asSettingsBag(this.plugin.settings);
+    // Preload the roster so the agent picker is populated on first render; an
+    // async preload would leave roster agents missing when the modal opens.
+    const agents = (await this.plugin.agentRosterStore?.list()) ?? [];
     new WorkOrderDetailModal(this.plugin.app, task, {
       onOpenNote: (target) => void this.openTask(target),
       ...buildWorkOrderConversationBindings(this.plugin),
@@ -403,12 +425,7 @@ export class AgentBoardView extends ItemView {
       onMarkFailed: (target) => void this.transitionTask(target, 'failed', 'Marked failed: run produced no structured handoff.'),
       onArchive: (target) => void this.archiveTask(target),
       onSaveFields: (target, fields) => this.saveTaskFields(target, fields),
-      getProviderOptions: () =>
-        ProviderRegistry.getEnabledProviderIds(settings).map((id) => ({ value: id, label: id })),
-      getModelOptions: (providerId) =>
-        ProviderRegistry.getRegisteredProviderIds().includes(providerId as ProviderId)
-          ? ProviderRegistry.getChatUIConfig(providerId as ProviderId).getModelOptions(settings)
-          : [],
+      ...buildWorkOrderFieldOptions(settings, agents),
       getLoopName: (loopId) => (loopId ? this.loopNameCache.get(loopId) : undefined),
       onPickLoop: (target) => void this.pickLoopForTask(target),
     }).open();
@@ -497,7 +514,7 @@ export class AgentBoardView extends ItemView {
     try {
       const content = await this.plugin.app.vault.read(created);
       const { task } = this.noteStore.parse(created.path, content);
-      this.openDetail(task);
+      void this.openDetail(task);
     } catch {
       // Best-effort: ignore a vault read or parse failure; the board already refreshed.
     }

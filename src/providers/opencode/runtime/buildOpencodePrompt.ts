@@ -27,9 +27,18 @@ export function buildOpencodePromptText(
 export function buildOpencodePromptBlocks(
   request: ChatTurnRequest,
   conversationHistory: ChatMessage[] = [],
+  boundAgentPrompt?: string,
 ): AcpContentBlock[] {
+  let promptText = buildOpencodePromptText(request, conversationHistory);
+
+  if (boundAgentPrompt) {
+    // Prepend the persona as a leading directive (re-sent per turn) so the model
+    // adopts the role before the user turn rather than as a trailing footnote.
+    promptText = `${boundAgentPrompt}\n\n---\n\n${promptText}`;
+  }
+
   const blocks: AcpContentBlock[] = [
-    { type: 'text', text: buildOpencodePromptText(request, conversationHistory) },
+    { type: 'text', text: promptText },
   ];
 
   for (const image of request.images ?? []) {

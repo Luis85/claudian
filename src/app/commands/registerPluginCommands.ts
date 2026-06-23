@@ -40,7 +40,7 @@ function createRegistrar(plugin: ClaudianPlugin): RegisterCommand {
 function registerViewCommands(plugin: ClaudianPlugin, register: RegisterCommand): void {
   register({
     id: 'open-view',
-    name: 'Open chat view',
+    name: t('commands.openView'),
     callback: () => {
       void plugin.activateView();
     },
@@ -48,7 +48,7 @@ function registerViewCommands(plugin: ClaudianPlugin, register: RegisterCommand)
 
   register({
     id: 'open-agent-board',
-    name: 'Open Agent Board',
+    name: t('commands.openAgentBoard'),
     callback: () => {
       void plugin.activateAgentBoardView();
     },
@@ -56,7 +56,7 @@ function registerViewCommands(plugin: ClaudianPlugin, register: RegisterCommand)
 
   register({
     id: 'run-next-ready-work-order',
-    name: 'Run next ready work order',
+    name: t('commands.runNextReadyWorkOrder'),
     callback: () => {
       void plugin.runNextReadyWorkOrder();
     },
@@ -70,7 +70,7 @@ function registerWorkOrderCommands(
 ): void {
   register({
     id: 'create-work-order',
-    name: 'Create work order',
+    name: t('commands.createWorkOrder'),
     callback: () => {
       void createWorkOrderInteractive(plugin);
     },
@@ -78,7 +78,7 @@ function registerWorkOrderCommands(
 
   register({
     id: 'create-work-order-from-current-note',
-    name: 'Create work order from current note',
+    name: t('commands.createWorkOrderFromCurrentNote'),
     callback: () => {
       void createWorkOrderFromCurrentNoteInteractive(plugin);
     },
@@ -86,7 +86,7 @@ function registerWorkOrderCommands(
 
   register({
     id: 'create-work-order-from-selection',
-    name: 'Create work order from selection',
+    name: t('commands.createWorkOrderFromSelection'),
     editorCallback: () => {
       void createWorkOrderFromSelectionInteractive(plugin);
     },
@@ -94,7 +94,7 @@ function registerWorkOrderCommands(
 
   register({
     id: 'create-work-order-template',
-    name: 'Create work-order template',
+    name: t('commands.createWorkOrderTemplate'),
     callback: () => {
       void createWorkOrderTemplate(plugin);
     },
@@ -102,7 +102,7 @@ function registerWorkOrderCommands(
 
   register({
     id: 'install-common-work-order-templates',
-    name: 'Install common work-order templates',
+    name: t('commands.installCommonWorkOrderTemplates'),
     callback: () => {
       void installPresetTemplatesWithNotice(plugin);
     },
@@ -110,7 +110,7 @@ function registerWorkOrderCommands(
 
   register({
     id: 'open-loop-library',
-    name: 'Open loop library',
+    name: t('commands.openLoopLibrary'),
     callback: () => {
       openLoopLibrary(plugin);
     },
@@ -118,7 +118,7 @@ function registerWorkOrderCommands(
 
   register({
     id: 'create-work-order-from-browser-selection',
-    name: 'Create work order from browser selection',
+    name: t('commands.createWorkOrderFromBrowserSelection'),
     callback: () => {
       void createWorkOrderFromBrowserSelection(plugin);
     },
@@ -126,7 +126,7 @@ function registerWorkOrderCommands(
 
   register({
     id: 'create-work-order-from-chat-conversation',
-    name: 'Create work order from current chat conversation',
+    name: t('commands.createWorkOrderFromChatConversation'),
     callback: () => {
       void chatWorkOrderLinker.promoteActiveConversationToWorkOrder();
     },
@@ -136,7 +136,7 @@ function registerWorkOrderCommands(
 function registerDiagnosticCommands(plugin: ClaudianPlugin, register: RegisterCommand): void {
   register({
     id: 'copy-diagnostic-logs',
-    name: 'Copy diagnostic logs',
+    name: t('commands.copyDiagnosticLogs'),
     callback: () => {
       void plugin.copyDiagnosticLogs();
     },
@@ -144,7 +144,7 @@ function registerDiagnosticCommands(plugin: ClaudianPlugin, register: RegisterCo
 
   register({
     id: 'clear-diagnostic-logs',
-    name: 'Clear diagnostic logs',
+    name: t('commands.clearDiagnosticLogs'),
     callback: () => {
       plugin.logger.clear();
       new Notice(t('diagnostics.logsCleared'));
@@ -155,7 +155,7 @@ function registerDiagnosticCommands(plugin: ClaudianPlugin, register: RegisterCo
 function registerInlineEditCommand(plugin: ClaudianPlugin, register: RegisterCommand): void {
   register({
     id: 'inline-edit',
-    name: 'Inline edit',
+    name: t('commands.inlineEdit'),
     editorCallback: async (editor: Editor, ctx: unknown) => {
       const view = ctx instanceof MarkdownView
         ? ctx
@@ -200,7 +200,7 @@ function registerInlineEditCommand(plugin: ClaudianPlugin, register: RegisterCom
 function registerTabCommands(plugin: ClaudianPlugin, register: RegisterCommand): void {
   register({
     id: 'new-tab',
-    name: 'New tab',
+    name: t('commands.newTab'),
     checkCallback: (checking: boolean) => {
       if (!plugin.canCreateNewTab()) return false;
       if (!checking) {
@@ -212,7 +212,7 @@ function registerTabCommands(plugin: ClaudianPlugin, register: RegisterCommand):
 
   register({
     id: 'new-session',
-    name: 'New session (in current tab)',
+    name: t('commands.newSession'),
     checkCallback: (checking: boolean) => {
       const view = plugin.getView();
       if (!view) return false;
@@ -230,7 +230,7 @@ function registerTabCommands(plugin: ClaudianPlugin, register: RegisterCommand):
 
   register({
     id: 'close-current-tab',
-    name: 'Close current tab',
+    name: t('commands.closeCurrentTab'),
     checkCallback: (checking: boolean) => {
       const view = plugin.getView();
       if (!view) return false;

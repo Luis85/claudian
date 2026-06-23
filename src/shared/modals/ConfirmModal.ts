@@ -1,6 +1,7 @@
-import { type App,Modal, Setting } from 'obsidian';
+import { type App,Modal } from 'obsidian';
 
 import { t } from '../../i18n/i18n';
+import { renderDialogButtons } from './dialogButtons';
 
 export function confirmDelete(app: App, message: string): Promise<boolean> {
   return new Promise(resolve => {
@@ -33,22 +34,16 @@ class ConfirmModal extends Modal {
 
     this.contentEl.createEl('p', { text: this.message });
 
-    new Setting(this.contentEl)
-      .addButton(btn =>
-        btn
-          .setButtonText(t('common.cancel'))
-          .onClick(() => this.close())
-      )
-      .addButton(btn =>
-        btn
-          .setButtonText(this.confirmText)
-          .setWarning()
-          .onClick(() => {
-            this.resolved = true;
-            this.resolve(true);
-            this.close();
-          })
-      );
+    renderDialogButtons(this.contentEl, {
+      confirmLabel: this.confirmText,
+      variant: 'warning',
+      onCancel: () => this.close(),
+      onConfirm: () => {
+        this.resolved = true;
+        this.resolve(true);
+        this.close();
+      },
+    });
   }
 
   onClose() {

@@ -6,6 +6,7 @@ import './providers';
 
 import type { TFile, TFolder } from 'obsidian';
 import { Notice, Plugin } from 'obsidian';
+import { z } from 'zod';
 
 import { registerPluginCommands } from './app/commands/registerPluginCommands';
 import { registerWorkspaceMenus } from './app/commands/registerWorkspaceMenus';
@@ -13,6 +14,7 @@ import { ConversationStore } from './app/conversations/ConversationStore';
 import { EnvironmentApplyService } from './app/environment/EnvironmentApplyService';
 import type { ClaudianEventMap } from './app/events/claudianEvents';
 import { PluginLifecycle } from './app/lifecycle/PluginLifecycle';
+import { projectRosterAgentsToProviders, removeProjectedAgent, type RosterProjectionResult, type RosterRemovalResult } from './app/rosterAgentProjection';
 import { DEFAULT_CLAUDIAN_SETTINGS } from './app/settings/defaultSettings';
 import { SharedStorageService } from './app/storage/SharedStorageService';
 import { PluginViewActivator } from './app/views/PluginViewActivator';
@@ -51,10 +53,22 @@ import {
   VIEW_TYPE_CLAUDIAN_AGENT_BOARD,
 } from './core/types';
 import type { PluginContext } from './core/types/PluginContext';
-import type { EnvironmentScope, SecretEnvVarRef } from './core/types/settings';
+import { asSettingsBag, type EnvironmentScope, type SecretEnvVarRef } from './core/types/settings';
 import type { UsageEventMap } from './core/usage/events';
 import { UsageStorage } from './core/usage/UsageStorage';
 import { UsageTracker } from './core/usage/UsageTracker';
+import { AgentRosterStore } from './features/agents/roster/AgentRosterStore';
+import {
+  type BoundAgentProjection,
+  formatBoundAgentPersona,
+  selectAgentSkills,
+} from './features/agents/roster/boundAgentPersona';
+import {
+  resolveAgentModelForProvider,
+  resolveAgentProvider,
+} from './features/agents/roster/resolveAgentProvider';
+import type { RosterAgent } from './features/agents/roster/rosterTypes';
+import { AgentRosterView, VIEW_TYPE_AGENT_ROSTER } from './features/agents/roster/view/AgentRosterView';
 import { ClaudianView } from './features/chat/ClaudianView';
 import { sendFeedbackPrompt } from './features/chat/feedback/sendFeedbackPrompt';
 import { isClaudianView } from './features/chat/isClaudianView';
@@ -66,6 +80,7 @@ import { QuickActionStorage } from './features/quickActions/QuickActionStorage';
 import { buildProviderRecords } from './features/quickActions/skills/buildProviderRecords';
 import { VaultSkillAggregator } from './features/quickActions/skills/VaultSkillAggregator';
 import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
+import { SkillLibraryView, VIEW_TYPE_SKILL_LIBRARY } from './features/skills/view/SkillLibraryView';
 import { CommitOnAcceptCoordinator } from './features/tasks/commit/CommitOnAcceptCoordinator';
 import { CommitOnAcceptModal } from './features/tasks/commit/CommitOnAcceptModal';
 import { ChatTabExecutionSurface } from './features/tasks/execution/ChatTabExecutionSurface';
@@ -77,6 +92,13 @@ import { TaskNoteStore } from './features/tasks/storage/TaskNoteStore';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
 import { openLoopLibrary } from './features/tasks/ui/LoopPickerModal';
 import { WorkOrderActivityProvider } from './features/tasks/ui/WorkOrderActivityProvider';
+import { ClaudianToolRegistry } from './features/tools/ClaudianToolRegistry';
+import { ClaudianHttpToolServer } from './features/tools/host/ClaudianHttpToolServer';
+import { buildClaudianToolMcpServer } from './features/tools/host/InProcessToolMcpServer';
+import { getScopedTools, scopedToolKey } from './features/tools/scopedTools';
+import type { LoadedTool } from './features/tools/toolTypes';
+import { transpileToolSource } from './features/tools/transpile';
+import { ToolLibraryView, VIEW_TYPE_TOOL_LIBRARY } from './features/tools/view/ToolLibraryView';
 import { setLocale, t } from './i18n/i18n';
 import type { Locale } from './i18n/types';
 import type { BrowserSelectionContext } from './utils/browser';
@@ -102,7 +124,13 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   public quickActionFavoritesCache: QuickActionFavoritesCache | null = null;
   public quickActionLastUsedStore: QuickActionLastUsedStore | null = null;
   public vaultSkillAggregator: VaultSkillAggregator | null = null;
+  public vaultFileAdapter!: VaultFileAdapter;
+  public toolRegistry!: ClaudianToolRegistry;
+  /** Shared plugin-lifetime store for roster agent definitions. Constructed in onload
+   * after vaultFileAdapter; consumers must not build their own instance. */
+  public agentRosterStore!: AgentRosterStore;
   public usageTracker: UsageTracker | null = null;
+  private httpToolServer: ClaudianHttpToolServer | null = null;
   private lifecycle!: PluginLifecycle;
   private unloaded = true;
   private viewActivator!: PluginViewActivator;
@@ -167,7 +195,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       (leaf) => new ClaudianView(leaf, this)
     );
 
-    this.addRibbonIcon('bot', 'Open Claudian', () => {
+    this.addRibbonIcon('bot', t('ribbon.openChat'), () => {
       void this.activateView();
     });
 
@@ -214,10 +242,23 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       (leaf) => new AgentBoardView(leaf, this, taskExecutionSurface),
     );
 
-    // eslint-disable-next-line obsidianmd/ui/sentence-case -- "Agent Board" is the product feature name.
-    this.addRibbonIcon('kanban-square', 'Open Agent Board', () => void this.activateAgentBoardView());
+    this.addRibbonIcon('kanban-square', t('ribbon.openAgentBoard'), () => {
+      void this.activateAgentBoardView();
+    });
 
-    this.addRibbonIcon('repeat', 'Open loop library', () => openLoopLibrary(this));
+    this.addRibbonIcon('repeat', t('ribbon.openLoopLibrary'), () => openLoopLibrary(this));
+
+    this.registerView(VIEW_TYPE_AGENT_ROSTER, (leaf) => new AgentRosterView(leaf, this));
+    this.registerView(VIEW_TYPE_TOOL_LIBRARY, (leaf) => new ToolLibraryView(leaf, this));
+    this.registerView(VIEW_TYPE_SKILL_LIBRARY, (leaf) => new SkillLibraryView(leaf, this));
+
+    const openView = (viewType: string) => this.openLeafView(viewType);
+    this.addRibbonIcon('users', t('ribbon.openAgentRoster'), () => void openView(VIEW_TYPE_AGENT_ROSTER));
+    this.addRibbonIcon('wrench', t('ribbon.openToolLibrary'), () => void openView(VIEW_TYPE_TOOL_LIBRARY));
+    this.addRibbonIcon('book-open', t('ribbon.openSkillLibrary'), () => void openView(VIEW_TYPE_SKILL_LIBRARY));
+    this.addCommand({ id: 'open-agent-roster', name: t('commands.openAgentRoster'), callback: () => void openView(VIEW_TYPE_AGENT_ROSTER) });
+    this.addCommand({ id: 'open-tool-library', name: t('commands.openToolLibrary'), callback: () => void openView(VIEW_TYPE_TOOL_LIBRARY) });
+    this.addCommand({ id: 'open-skill-library', name: t('commands.openSkillLibrary'), callback: () => void openView(VIEW_TYPE_SKILL_LIBRARY) });
 
     const chatWorkOrderLinker = new ChatWorkOrderLinker(this);
 
@@ -275,6 +316,36 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       () => this.settings.quickActionsFolder ?? 'Quick Actions',
     );
     this.quickActionFavoritesCache.start();
+
+    // Tool registry: discover/transpile/validate user-authored tools under .claudian/tools/.
+    this.vaultFileAdapter = new VaultFileAdapter(this.app);
+    const rosterLog = this.logger.scope('agents');
+    this.agentRosterStore = new AgentRosterStore(this.vaultFileAdapter, this.events,
+      (path, error) => rosterLog.warn('skipped malformed roster file', path, error));
+    this.toolRegistry = new ClaudianToolRegistry(this.vaultFileAdapter, {
+      transpile: transpileToolSource,
+      requireResolve: (id) => {
+        if (id === 'zod' || id === 'claudian/tools') return { z };
+        const req = (window as { require?: (m: string) => unknown }).require;
+        return req ? req(id) : undefined;
+      },
+    });
+    await this.toolRegistry.load();
+    this.httpToolServer = new ClaudianHttpToolServer(
+      () => this.toolRegistry.list(),
+      (signal) => ({ app: this.app, signal }),
+    );
+    await this.httpToolServer.start();
+    this.registerEvent(
+      this.app.vault.on('modify', (file) => {
+        if (file.path.startsWith('.claudian/tools/')) {
+          void this.toolRegistry.load().then(() => {
+            this.events.emit('toolLibrary:changed');
+            void this.httpToolServer?.rebuild();
+          });
+        }
+      }),
+    );
 
     // Usage tracker must subscribe to the bus BEFORE any entry point that
     // can emit `usage.recorded` is registered. The file/folder context menu
@@ -378,10 +449,106 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       this.quickActionLastUsedStore = null;
       await store.flush();
     }
+    if (this.httpToolServer) {
+      const server = this.httpToolServer;
+      this.httpToolServer = null;
+      await server.stop();
+    }
     this.lifecycle?.shutdownActiveRuntimes();
     void this.lifecycle?.persistOpenTabStates();
   }
 
+  /** The error-free user tools exposed to a conversation, scoped to a bound
+   *  agent's grant when non-empty (empty/absent grant = all). */
+  private getScopedClaudianTools(grantedToolIds?: string[]): LoadedTool[] {
+    return this.toolRegistry ? getScopedTools(this.toolRegistry.list(), grantedToolIds) : [];
+  }
+
+  getClaudianToolServer(grantedToolIds?: string[]): unknown {
+    const loaded = this.getScopedClaudianTools(grantedToolIds);
+    if (loaded.length === 0) return undefined;
+    return buildClaudianToolMcpServer(loaded, (signal) => ({
+      app: this.app,
+      signal,
+    }));
+  }
+
+  /**
+   * A stable fingerprint of the user tools the claudian server currently exposes
+   * for the given grant. Folded into the persistent-query MCP key so a
+   * mid-session tool-grant edit OR a tool added/removed/errored in the registry
+   * forces `setMcpServers` to re-apply the freshly-scoped server (the presence
+   * flag alone would miss a contents change).
+   */
+  getClaudianToolKey(grantedToolIds?: string[]): string {
+    return scopedToolKey(this.toolRegistry?.list() ?? [], grantedToolIds);
+  }
+
+  getHttpToolServerConfig(
+    grantedToolIds?: string[],
+  ): { url: string; headers: Record<string, string> } | null {
+    // A non-empty grant resolves a scoped, token-keyed layer; no/empty grant
+    // returns the default all-tools config (byte-identical to pre-scoping).
+    return this.httpToolServer?.getConfig(grantedToolIds) ?? null;
+  }
+
+  async resolveBoundAgent(
+    boundAgentId: string,
+    providerId?: ProviderId,
+  ): Promise<BoundAgentProjection | null> {
+    const agent = await this.agentRosterStore?.get(boundAgentId);
+    if (!agent) return null;
+    // Skills can't be runtime-scoped like tools (providers auto-discover every
+    // SKILL.md), so surface the granted ones as guidance baked into the prompt.
+    const catalog = (await this.vaultSkillAggregator?.listAll()) ?? [];
+    const skills = selectAgentSkills(
+      agent.skills,
+      catalog.map((e) => ({ name: e.name, description: e.description })),
+    );
+    // The agent's saved model is provider-specific. When the caller knows the
+    // conversation's provider, only forward the model if its selection targets
+    // that provider; otherwise drop it (undefined) so the conversation uses its
+    // own provider's default/selected model rather than a cross-provider id.
+    const model = providerId
+      ? resolveAgentModelForProvider(agent, providerId, undefined)
+      : agent.modelSelection?.modelId;
+    return {
+      // A forceful identity directive so providers without a system-prompt
+      // channel (Cursor) still adopt the persona instead of their built-in one.
+      prompt: formatBoundAgentPersona({ ...agent, skills }),
+      model,
+      tools: agent.tools,
+    };
+  }
+
+  /**
+   * Resolves the provider + model a work-order run should adopt from its assigned
+   * roster agent, mirroring how chat resolves an agent's provider: the agent's
+   * preferred provider (override → model's provider) wins only when enabled, else
+   * the active/default enabled provider; the model is the agent's selection, else
+   * that provider's configured default. Returns `null` when the id isn't a known
+   * roster agent so the run keeps its own frontmatter provider/model.
+   */
+  async resolveAgentRunTarget(
+    agentId: string,
+  ): Promise<{ providerId: ProviderId; model: string } | null> {
+    const agent = await this.agentRosterStore?.get(agentId);
+    if (!agent) return null;
+    const settings = asSettingsBag(this.settings);
+    const providerId = resolveAgentProvider(
+      agent,
+      (p) => ProviderRegistry.isEnabled(p, settings),
+      ProviderRegistry.resolveSettingsProviderId(settings),
+    );
+    // The agent's saved model is provider-specific, so it only applies when its
+    // selection targets the provider the run actually resolved to (which may be
+    // a fallback after the preferred provider was found disabled); otherwise use
+    // the resolved provider's configured default.
+    const providerDefaultModel =
+      ProviderSettingsCoordinator.getProviderSettingsSnapshot(this.settings, providerId).model;
+    const model = resolveAgentModelForProvider(agent, providerId, providerDefaultModel);
+    return { providerId, model: model ?? providerDefaultModel };
+  }
 
   async addFileToActiveChat(file: TFile): Promise<boolean> {
     const view = await this.ensureViewOpen();
@@ -703,7 +870,45 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
       return;
     }
     await this.activateView();
-    await this.getView()?.getTabManager()?.openConversation(conversationId, options);
+    const view = await this.ensureViewOpen();
+    await view?.getTabManager()?.openConversation(conversationId, options);
+  }
+
+  /**
+   * Publishes every roster agent into each enabled provider's native subagent
+   * folder (.claude/agents, .codex/agents, .cursor/agents, .opencode/agent) so
+   * the agents are @-mentionable as that provider's own subagents.
+   */
+  async syncRosterAgentsToProviders(): Promise<RosterProjectionResult> {
+    const agents = await this.agentRosterStore.list();
+    const enabled = ProviderRegistry.getEnabledProviderIds(asSettingsBag(this.settings));
+    const log = this.logger.scope('agents');
+    return projectRosterAgentsToProviders(agents, enabled, this.vaultFileAdapter,
+      (provider, name, error) => log.warn('roster agent projection failed', provider, name, error));
+  }
+
+  /**
+   * Removes an agent's projected provider files (.claude/agents, .codex/agents,
+   * .cursor/agents, .opencode/agent) when it's deleted from the roster. Uses all
+   * registered providers — not just enabled ones — so a provider disabled after a
+   * prior sync still gets its orphaned subagent file cleaned up.
+   */
+  async removeRosterAgentProjection(agent: RosterAgent): Promise<RosterRemovalResult> {
+    const providers = ProviderRegistry.getRegisteredProviderIds();
+    const log = this.logger.scope('agents');
+    return removeProjectedAgent(agent, providers, this.vaultFileAdapter,
+      (path, error) => log.warn('roster agent projection cleanup failed', path, error));
+  }
+
+  /** Reveals (or opens) a singleton workspace leaf for the given view type. */
+  async openLeafView(viewType: string): Promise<void> {
+    const { workspace } = this.app;
+    const existing = workspace.getLeavesOfType(viewType)[0];
+    const leaf = existing ?? workspace.getLeaf('tab');
+    if (!existing) {
+      await leaf.setViewState({ type: viewType, active: true });
+    }
+    workspace.revealLeaf(leaf);
   }
 
   getEnvironmentVariablesForScope(scope: EnvironmentScope): string {
@@ -778,6 +983,7 @@ export default class ClaudianPlugin extends Plugin implements PluginContext {
   createConversation(options?: {
     providerId?: ProviderId;
     sessionId?: string;
+    boundAgentId?: string;
   }): Promise<Conversation> {
     return this.conversationStore.createConversation(options);
   }

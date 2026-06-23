@@ -47,6 +47,12 @@ export class ClaudianViewWorkOrderBridge {
      * work-order note path to pass, so a normal (non-work-order) tab is fine.
      */
     workOrderPath?: string;
+    /**
+     * Roster agent id to bind to the run's conversation (e.g. `roster:foo`).
+     * Pinned onto the new tab so `InputController` passes it to
+     * `createConversation` at lazy-creation time. Undefined for non-roster runs.
+     */
+    boundAgentId?: string;
   }): Promise<TaskRunTabHandle | null> {
     const tabManager = this.deps.getTabManager();
     if (!tabManager) {
@@ -58,6 +64,7 @@ export class ClaudianViewWorkOrderBridge {
       providerId: options.providerId,
       model: options.model,
       workOrderPath: options.workOrderPath,
+      boundAgentId: options.boundAgentId,
     });
     // The tab now counts in the live tab count (or creation failed), so this
     // run no longer needs its pending reservation — release it before the turn

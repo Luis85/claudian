@@ -39,6 +39,30 @@ export class VaultFileAdapter {
     await this.app.vault.adapter.write(path, content);
   }
 
+  /**
+   * Writes via a temp file + rename so a crash mid-write can't truncate the
+   * target — either the old file or the fully-written new one survives. Used for
+   * small JSON config files (roster agents, session metadata).
+   */
+  async writeAtomic(path: string, content: string): Promise<void> {
+    const tmp = `${path}.tmp`;
+    await this.write(tmp, content);
+    try {
+      await this.app.vault.adapter.rename(tmp, path);
+    } catch {
+      // Some adapters won't overwrite on rename; remove the target then retry.
+      try {
+        await this.delete(path);
+        await this.app.vault.adapter.rename(tmp, path);
+      } catch (err) {
+        // The retry failed too — clean up the temp file so it can't accumulate
+        // or be mistaken for the target, then surface the original failure.
+        await this.delete(tmp);
+        throw err;
+      }
+    }
+  }
+
   async append(path: string, content: string): Promise<void> {
     await this.ensureParentFolder(path);
     this.writeQueue = this.writeQueue.then(async () => {

@@ -180,6 +180,12 @@ export class ClaudianService implements ChatRuntime {
   // Tracked configuration for detecting changes that require restart
   private currentConfig: PersistentQueryConfig | null = null;
 
+  // Bound-agent overrides threaded per-turn so the restarted persistent query
+  // picks them up from buildPersistentQueryOptions at startPersistentQuery time.
+  private currentBoundAgentPrompt: string | undefined;
+  private currentBoundAgentModel: string | undefined;
+  private currentBoundAgentTools: string[] | undefined;
+
   // Current allowed tools for canUseTool enforcement (null = no restriction)
   private currentAllowedTools: string[] | null = null;
 
@@ -437,7 +443,8 @@ export class ClaudianService implements ChatRuntime {
       closePersistentQuery: (reason, preserveHandlers) =>
         this.closePersistentQuery(reason, { preserveHandlers }),
       needsRestartForConfig: (vaultPath, cliPath, externalContextPaths) =>
-        this.needsRestart(this.buildPersistentQueryConfig(vaultPath, cliPath, externalContextPaths)),
+        // Include the bound-agent prompt so this unforced check matches the stored key.
+        this.needsRestart(this.buildPersistentQueryConfig(vaultPath, cliPath, externalContextPaths, undefined, this.currentBoundAgentPrompt)),
     };
   }
 
@@ -472,12 +479,10 @@ export class ClaudianService implements ChatRuntime {
 
     this.queryAbortController = new AbortController();
 
-    const config = this.buildPersistentQueryConfig(
-      vaultPath,
-      cliPath,
-      externalContextPaths,
-      modelOverride,
-    );
+    // Fold the bound-agent prompt into the stored config so its systemPromptKey
+    // matches the actual query options below; otherwise needsRestart fires every
+    // bound-agent turn (stored key lacks the appendix the recomputed key has).
+    const config = this.buildPersistentQueryConfig(vaultPath, cliPath, externalContextPaths, modelOverride, this.currentBoundAgentPrompt);
     this.currentConfig = config;
 
     const resumeAtMessageId = this.pendingResumeAt;
@@ -605,17 +610,22 @@ export class ClaudianService implements ChatRuntime {
    *   Pass the work-order model here so `currentConfig.model` accurately reflects
    *   the model the persistent query was started with, keeping applyDynamicUpdates
    *   correct for subsequent turns.
+   * @param boundAgentPrompt - Optional bound-agent system prompt appendix. Changes
+   *   to this value flip `systemPromptKey`, which `needsRestart` watches, so
+   *   binding or unbinding an agent mid-conversation restarts the persistent query.
    */
   private buildPersistentQueryConfig(
     vaultPath: string,
     cliPath: string,
     externalContextPaths?: string[],
     modelOverride?: string,
+    boundAgentPrompt?: string,
   ): PersistentQueryConfig {
     return QueryOptionsBuilder.buildPersistentQueryConfig(
       this.buildQueryOptionsContext(vaultPath, cliPath),
       externalContextPaths,
       modelOverride,
+      boundAgentPrompt,
     );
   }
 
@@ -641,6 +651,8 @@ export class ClaudianService implements ChatRuntime {
       enhancedPath,
       mcpManager: this.mcpManager,
       pluginManager: this.requirePluginManager(),
+      boundAgentPrompt: this.currentBoundAgentPrompt,
+      boundAgentModel: this.currentBoundAgentModel,
     };
   }
 
@@ -1345,6 +1357,12 @@ export class ClaudianService implements ChatRuntime {
       return;
     }
 
+    // Capture bound-agent state before applyDynamicUpdates so buildQueryOptionsContext
+    // sees the correct values when a restart is triggered inside maybeRestart.
+    this.currentBoundAgentPrompt = queryOptions?.boundAgentPrompt;
+    this.currentBoundAgentModel = queryOptions?.boundAgentModel;
+    this.currentBoundAgentTools = queryOptions?.boundAgentTools;
+
     await this.applyTurnToolRestrictions(queryOptions);
 
     // Check if applyDynamicUpdates triggered a restart that failed
@@ -1451,8 +1469,12 @@ export class ClaudianService implements ChatRuntime {
         getPermissionMode: () => this.getScopedSettings().permissionMode as PermissionMode,
         resolveSDKPermissionMode: (mode) => this.resolveSDKPermissionMode(mode),
         mcpManager: this.mcpManager,
-        buildPersistentQueryConfig: (vaultPath, cliPath, externalContextPaths) =>
-          this.buildPersistentQueryConfig(vaultPath, cliPath, externalContextPaths),
+        getClaudianToolServer: this.plugin.getClaudianToolServer
+          ? () => this.plugin.getClaudianToolServer!(this.currentBoundAgentTools)
+          : undefined,
+        getClaudianToolKey: () => this.plugin.getClaudianToolKey?.(this.currentBoundAgentTools) ?? '',
+        buildPersistentQueryConfig: (vaultPath, cliPath, externalContextPaths, boundAgentPrompt) =>
+          this.buildPersistentQueryConfig(vaultPath, cliPath, externalContextPaths, undefined, boundAgentPrompt),
         needsRestart: (newConfig) => this.needsRestart(newConfig),
         ensureReady: (options) => this.ensureReady(options),
         setCurrentExternalContextPaths: (paths) => {
@@ -1480,6 +1502,11 @@ export class ClaudianService implements ChatRuntime {
     queryOptions?: QueryOptions
   ): AsyncGenerator<StreamChunk> {
     this.resetTurnMetadata();
+    // Sync bound-agent state so buildQueryOptionsContext picks up the current values
+    // on the cold-start path (covers direct cold-starts and restarts from queryViaPersistent).
+    this.currentBoundAgentPrompt = queryOptions?.boundAgentPrompt;
+    this.currentBoundAgentModel = queryOptions?.boundAgentModel;
+    this.currentBoundAgentTools = queryOptions?.boundAgentTools;
     const selectedModel = queryOptions?.model || this.getScopedSettings().model;
 
     this.sessionManager.setPendingModel(selectedModel);
@@ -1549,6 +1576,9 @@ export class ClaudianService implements ChatRuntime {
       allowedTools: resolveColdStartAllowedTools(queryOptions?.allowedTools),
       hasEditorContext,
       externalContextPaths,
+      getClaudianToolServer: this.plugin.getClaudianToolServer
+        ? () => this.plugin.getClaudianToolServer!(this.currentBoundAgentTools)
+        : undefined,
     };
 
     return QueryOptionsBuilder.buildColdStartQueryOptions(ctx);
@@ -1656,6 +1686,11 @@ export class ClaudianService implements ChatRuntime {
     // Reset crash recovery for fresh start
     this.crashRecoveryAttempted = false;
 
+    // Clear bound-agent state so the next conversation starts without stale overrides
+    this.currentBoundAgentPrompt = undefined;
+    this.currentBoundAgentModel = undefined;
+    this.currentBoundAgentTools = undefined;
+
     this.sessionManager.reset();
   }
 
@@ -1733,6 +1768,11 @@ export class ClaudianService implements ChatRuntime {
     if (sessionChanged) {
       this.closePersistentQuery('session switch');
       this.crashRecoveryAttempted = false;
+      // Clear bound-agent state so the new conversation starts without stale overrides.
+      // The correct bound-agent values are threaded per-turn from queryOptions.
+      this.currentBoundAgentPrompt = undefined;
+      this.currentBoundAgentModel = undefined;
+      this.currentBoundAgentTools = undefined;
     }
 
     this.sessionManager.setSessionId(id, this.getScopedSettings().model);

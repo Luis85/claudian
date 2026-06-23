@@ -1,4 +1,5 @@
 import type { ChatTabReservation, ChatTabReservations } from '../../../core/chatTabReservations';
+import type { ProviderId } from '../../../core/providers/types';
 import type { TaskEventEmitter } from '../events';
 import type { TaskLedgerEntry, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderTaskPrompt } from '../prompt/TaskPromptRenderer';
@@ -60,6 +61,12 @@ export interface TaskRunCoordinatorDeps {
    * releases it once the tab is created.
    */
   reservations?: ChatTabReservations;
+  /**
+   * Resolves the provider + model a run should adopt from its assigned roster
+   * agent (`roster:` id). Used only when the work order itself omits provider or
+   * model, so an agent-only work order still launches on the agent's backend.
+   */
+  resolveAgentRunTarget?: (agentId: string) => Promise<{ providerId: string; model: string } | null>;
 }
 
 export type TaskRunResult =
@@ -96,8 +103,34 @@ export class TaskRunCoordinator {
     return this.activeRuns.has(taskId) || this.registry.has(taskId);
   }
 
+  /**
+   * Effective provider/model for a run: the frontmatter value, else (for an
+   * agent-only work order) the assigned roster agent's, mirroring chat binding.
+   */
+  private async resolveRunProviderModel(
+    task: TaskSpec,
+  ): Promise<{ provider?: ProviderId; model?: string }> {
+    let { provider, model } = task.frontmatter;
+    const agentId = task.frontmatter.agent;
+    if ((!provider || !model) && agentId?.startsWith('roster:') && this.deps.resolveAgentRunTarget) {
+      const target = await this.deps.resolveAgentRunTarget(agentId);
+      if (target) {
+        provider = provider ?? (target.providerId as ProviderId);
+        model = model ?? target.model;
+      }
+    }
+    return { provider, model };
+  }
+
   async run(task: TaskSpec, externalReservation?: ChatTabReservation): Promise<TaskRunResult> {
-    const { provider, model, id } = task.frontmatter;
+    const { id } = task.frontmatter;
+    let { provider, model } = task.frontmatter;
+    // Only the agent-adoption path (frontmatter missing provider/model) needs an
+    // async lookup; the common path stays synchronous so the reservation below
+    // still happens before run()'s first await — a contract other panes rely on.
+    if (!provider || !model) {
+      ({ provider, model } = await this.resolveRunProviderModel(task));
+    }
 
     if (!provider) return { ok: false, error: 'Work order is missing provider' };
     if (!model) return { ok: false, error: 'Work order is missing model' };
@@ -123,9 +156,18 @@ export class TaskRunCoordinator {
     const reservation = externalReservation ?? this.deps.reservations?.reserve();
     try {
       const prompt = await (this.deps.renderPrompt ?? renderTaskPrompt)(task);
+      // Thread the roster agent id through to the surface so the run's
+      // conversation is bound from creation. Non-roster / absent agent values
+      // are left as undefined (the existing persona field has no effect here).
+      const boundAgentId = task.frontmatter.agent?.startsWith('roster:')
+        ? task.frontmatter.agent
+        : undefined;
       const handle = await this.deps.executionSurface.startTaskRun(task, {
         prompt,
         tabReservation: reservation,
+        boundAgentId,
+        provider,
+        model,
       });
       if (!handle.runId) {
         const terminal = await handle.terminal;

@@ -13,6 +13,7 @@ import type { ClaudianSettings, PermissionMode } from '../../../core/types/setti
 import {
   resolveEffortLevel,
 } from '../types/models';
+import { QueryOptionsBuilder } from './ClaudeQueryOptionsBuilder';
 import type {
   ClaudeEnsureReadyOptions,
   ClosePersistentQueryOptions,
@@ -29,10 +30,14 @@ export interface ClaudeDynamicUpdateDeps {
   getPermissionMode: () => PermissionMode;
   resolveSDKPermissionMode: (mode: PermissionMode) => SDKPermissionMode;
   mcpManager: McpServerManager;
+  /** Optional in-process Claudian user-tool MCP server (Claude only). */
+  getClaudianToolServer?: () => unknown;
+  getClaudianToolKey?: () => string;
   buildPersistentQueryConfig: (
     vaultPath: string,
     cliPath: string,
     externalContextPaths?: string[],
+    boundAgentPrompt?: string,
   ) => PersistentQueryConfig;
   needsRestart: (newConfig: PersistentQueryConfig) => boolean;
   ensureReady: (options: ClaudeEnsureReadyOptions) => Promise<boolean>;
@@ -62,7 +67,14 @@ export async function applyClaudeDynamicUpdates(
   }
 
   const settings = deps.getScopedSettings();
-  const selectedModel = queryOptions?.model || settings.model;
+  // Match the options-builder precedence (explicit override > bound-agent model >
+  // settings) so a bound agent's model survives across persistent turns rather
+  // than reverting to the global default after the first (restart) turn.
+  const selectedModel = QueryOptionsBuilder.resolveEffectiveModel(
+    queryOptions?.model,
+    queryOptions?.boundAgentModel,
+    settings.model,
+  );
   const permissionMode = deps.getPermissionMode();
 
   // Each helper re-reads the live config so an earlier mutation is visible to
@@ -176,7 +188,14 @@ async function updateMcpServers(
   const uiEnabledServers = queryOptions?.enabledMcpServers || new Set<string>();
   const combinedMentions = new Set([...mcpMentions, ...uiEnabledServers]);
   const mcpServers = deps.mcpManager.getActiveServers(combinedMentions);
-  const mcpServersKey = JSON.stringify(mcpServers);
+  // The in-process Claudian tool server (Claude only) is added after vetting —
+  // it's an `sdk`-type server, not a URL-based one. Track its presence in the
+  // key so toggling tools on/off re-applies (setMcpServers replaces the full set).
+  const claudianToolServer = deps.getClaudianToolServer?.();
+  // Encode the scoped tool *contents* (not just presence) so a mid-session
+  // grant edit or a tool added/removed/errored re-applies the server.
+  const claudianKey = claudianToolServer ? `|claudian:${deps.getClaudianToolKey?.() ?? ''}` : '';
+  const mcpServersKey = JSON.stringify(mcpServers) + claudianKey;
 
   const currentConfig = deps.getCurrentConfig();
   if (!currentConfig || mcpServersKey === currentConfig.mcpServersKey) {
@@ -194,6 +213,11 @@ async function updateMcpServers(
   const serverConfigs: Record<string, McpServerConfig> = {};
   for (const [name, config] of Object.entries(vetted.safe)) {
     serverConfigs[name] = config;
+  }
+  if (claudianToolServer) {
+    // Key matches CLAUDIAN_TOOL_SERVER_NAME in features/tools; kept as a literal
+    // because providers must not import from the features layer.
+    serverConfigs['claudian'] = claudianToolServer as McpServerConfig;
   }
 
   try {
@@ -222,6 +246,7 @@ async function maybeRestart(
     context.vaultPath,
     context.cliPath,
     context.newExternalContextPaths,
+    queryOptions?.boundAgentPrompt,
   );
   if (!deps.needsRestart(newConfig)) {
     return;

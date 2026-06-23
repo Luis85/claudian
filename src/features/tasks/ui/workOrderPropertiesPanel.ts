@@ -3,7 +3,7 @@ import { setIcon } from 'obsidian';
 import { t } from '../../../i18n/i18n';
 import { formatDateTime } from '../../../utils/date';
 import { renderAgentAvatar } from '../../agents/agentAvatar';
-import { listPersonas, resolvePersona } from '../../agents/personaRegistry';
+import { resolvePersona } from '../../agents/personaRegistry';
 import type { TaskPriority, TaskSpec, TaskStatus } from '../model/taskTypes';
 import { renderEditableValueChip } from './editableValueChip';
 // Type-only import (no runtime edge — mirrors workOrderFooterActions.ts) so the
@@ -182,6 +182,11 @@ export function renderWorkOrderProperties(
  * keyboard-operable and visually matches Provider / Model / Priority) with the
  * resolved persona avatar prepended into the chip; selection persists through
  * `onSaveFields`. Non-editable states render a static avatar + persona name.
+ *
+ * When the stored id is a `roster:` id the chip shows the label supplied by
+ * `getAgentOptions()` (the agent's plain name); the avatar comes from the
+ * preloaded `callbacks.resolvePersona` (roster agent color + initials), falling
+ * back to Standard only when no resolver is supplied.
  */
 function renderAgentRow(
   parent: HTMLElement,
@@ -190,29 +195,39 @@ function renderAgentRow(
   task: TaskSpec,
   callbacks: WorkOrderDetailModalCallbacks,
 ): void {
-  const persona = resolvePersona(agentId);
+  const resolve = callbacks.resolvePersona ?? resolvePersona;
+  const persona = resolve(agentId);
 
   if (!editable) {
     const wrap = parent.createSpan({ cls: 'claudian-work-order-modal-agent' });
     renderAgentAvatar(wrap, persona, AGENT_AVATAR_SIZE);
-    wrap.createSpan({ cls: 'claudian-work-order-modal-agent-name', text: persona.name });
+    // For roster ids the label comes from getAgentOptions(); fall back to persona name.
+    const isRosterId = agentId?.startsWith('roster:') ?? false;
+    const rosterLabel = isRosterId
+      ? callbacks.getAgentOptions().find((o) => o.value === agentId)?.label
+      : undefined;
+    wrap.createSpan({ cls: 'claudian-work-order-modal-agent-name', text: rosterLabel ?? persona.name });
     return;
   }
 
-  const personas = listPersonas();
+  const agentOptions = callbacks.getAgentOptions();
+  // The currently selected value: prefer the raw agentId when it exists in options
+  // (covers roster ids like "roster:foo") so the chip shows the right entry.
+  const selectedValue = agentOptions.some((o) => o.value === agentId) ? (agentId ?? persona.id) : persona.id;
   const chip = renderEditableValueChip({
     parent,
-    value: persona.id,
-    options: personas.map((p) => ({ value: p.id, label: p.name })),
+    value: selectedValue,
+    options: agentOptions,
     onChange: (value) => void callbacks.onSaveFields?.(task, { agent: value }),
   });
 
   // Lead the chip with the selected persona's avatar (kept in sync on change).
+  // Roster ids fall back to Standard persona avatar — no custom avatar in picker.
   chip.el.addClass('claudian-work-order-modal-chip--agent');
   let avatar = renderAgentAvatar(chip.el, persona, AGENT_AVATAR_SIZE);
   chip.el.insertBefore(avatar, chip.el.firstChild);
   chip.selectEl.addEventListener('change', () => {
-    const next = resolvePersona(chip.selectEl.value);
+    const next = resolve(chip.selectEl.value);
     const replacement = renderAgentAvatar(chip.el, next, AGENT_AVATAR_SIZE);
     chip.el.insertBefore(replacement, chip.el.firstChild);
     avatar.remove();

@@ -30,6 +30,7 @@ function createMockSessions(metadata: SessionMetadata[] = []): MockSessions {
       lastResponseAt: conv.lastResponseAt,
       sessionId: conv.sessionId,
       providerState: conv.providerState,
+      boundAgentId: conv.boundAgentId,
     }) as unknown as SessionMetadata),
   };
 }
@@ -107,6 +108,17 @@ describe('ConversationStore', () => {
         second.id,
         first.id,
       ]);
+    });
+
+    it('persists boundAgentId when provided', async () => {
+      const { store, sessions } = createStore();
+
+      const conv = await store.createConversation({ boundAgentId: 'roster:researcher' });
+
+      expect(conv.boundAgentId).toBe('roster:researcher');
+      // metadata must carry the field so it survives reload
+      const savedMeta = sessions.saveMetadata.mock.calls[0][0];
+      expect(savedMeta).toMatchObject({ boundAgentId: 'roster:researcher' });
     });
   });
 
@@ -325,6 +337,23 @@ describe('ConversationStore', () => {
       await store.loadConversations();
 
       expect(store.getConversationSync('a')?.providerId).toBe(DEFAULT_CHAT_PROVIDER_ID);
+    });
+
+    it('loads boundAgentId from metadata on loadConversations', async () => {
+      const meta = {
+        id: 'conv-1',
+        providerId: 'claude' as const,
+        title: 'Test',
+        createdAt: 1000,
+        updatedAt: 1000,
+        sessionId: null,
+        boundAgentId: 'roster:researcher',
+      } as any;
+      const { store } = createStore({ sessions: createMockSessions([meta]) });
+
+      await store.loadConversations();
+
+      expect(store.getConversationSync('conv-1')?.boundAgentId).toBe('roster:researcher');
     });
   });
 

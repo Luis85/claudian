@@ -37,6 +37,8 @@ export interface QueryOptionsContext {
   enhancedPath: string;
   mcpManager: McpServerManager;
   pluginManager: AppPluginManager;
+  boundAgentPrompt?: string;
+  boundAgentModel?: string;
 }
 
 export interface PersistentQueryContext extends QueryOptionsContext {
@@ -68,6 +70,8 @@ export interface ColdStartQueryContext extends QueryOptionsContext {
   allowedTools?: string[];
   hasEditorContext: boolean;
   externalContextPaths?: string[];
+  /** Optional in-process Claudian user-tool MCP server (Claude only). */
+  getClaudianToolServer?: () => unknown;
 }
 
 export class QueryOptionsBuilder {
@@ -98,10 +102,19 @@ export class QueryOptionsBuilder {
     return false;
   }
 
+  static resolveEffectiveModel(
+    modelOverride: string | undefined,
+    boundAgentModel: string | undefined,
+    settingsModel: string,
+  ): string {
+    return modelOverride ?? boundAgentModel ?? settingsModel;
+  }
+
   static buildPersistentQueryConfig(
     ctx: QueryOptionsContext,
     externalContextPaths?: string[],
     modelOverride?: string,
+    boundAgentPrompt?: string,
   ): PersistentQueryConfig {
     const claudeSettings = getClaudeProviderSettings(ctx.settings);
     const systemPromptSettings: SystemPromptSettings = {
@@ -131,13 +144,19 @@ export class QueryOptionsBuilder {
     // Use the per-turn model override when present (e.g. work-order model).
     // Storing it here keeps currentConfig.model accurate so applyDynamicUpdates
     // correctly detects changes on subsequent turns.
-    const effectiveModel = modelOverride ?? ctx.settings.model;
+    const effectiveModel = QueryOptionsBuilder.resolveEffectiveModel(
+      modelOverride,
+      ctx.boundAgentModel,
+      ctx.settings.model,
+    );
     return {
       model: effectiveModel,
       effortLevel: resolveEffortLevel(effectiveModel, ctx.settings.effortLevel),
       permissionMode: ctx.settings.permissionMode,
       sdkPermissionMode,
-      systemPromptKey: computeSystemPromptKey(systemPromptSettings),
+      systemPromptKey: computeSystemPromptKey(systemPromptSettings, {
+        appendices: boundAgentPrompt ? [boundAgentPrompt] : undefined,
+      }),
       disallowedToolsKey,
       mcpServersKey: '', // Dynamic via setMcpServers, not tracked for restart
       pluginsKey,
@@ -152,7 +171,7 @@ export class QueryOptionsBuilder {
   static buildPersistentQueryOptions(ctx: PersistentQueryContext): Options {
     const { options, claudeSettings } = QueryOptionsBuilder.buildBaseOptions(
       ctx,
-      ctx.modelOverride ?? ctx.settings.model,
+      QueryOptionsBuilder.resolveEffectiveModel(ctx.modelOverride, ctx.boundAgentModel, ctx.settings.model),
       ctx.abortController,
     );
 
@@ -168,7 +187,7 @@ export class QueryOptionsBuilder {
       claudeSettings.safeMode,
       ctx.canUseTool,
     );
-    QueryOptionsBuilder.applyThinking(options, ctx.settings, ctx.modelOverride ?? ctx.settings.model);
+    QueryOptionsBuilder.applyThinking(options, ctx.settings, QueryOptionsBuilder.resolveEffectiveModel(ctx.modelOverride, ctx.boundAgentModel, ctx.settings.model));
     options.hooks = ctx.hooks;
 
     options.enableFileCheckpointing = true;
@@ -191,7 +210,11 @@ export class QueryOptionsBuilder {
   }
 
   static buildColdStartQueryOptions(ctx: ColdStartQueryContext): Options {
-    const selectedModel = ctx.modelOverride ?? ctx.settings.model;
+    const selectedModel = QueryOptionsBuilder.resolveEffectiveModel(
+      ctx.modelOverride,
+      ctx.boundAgentModel,
+      ctx.settings.model,
+    );
     const { options, claudeSettings } = QueryOptionsBuilder.buildBaseOptions(
       ctx,
       selectedModel,
@@ -201,10 +224,18 @@ export class QueryOptionsBuilder {
     const mcpMentions = ctx.mcpMentions || new Set<string>();
     const uiEnabledServers = ctx.enabledMcpServers || new Set<string>();
     const combinedMentions = new Set([...mcpMentions, ...uiEnabledServers]);
-    const mcpServers = ctx.mcpManager.getActiveServers(combinedMentions);
+    const mcpServers: Record<string, unknown> = {
+      ...ctx.mcpManager.getActiveServers(combinedMentions),
+    };
+    const claudianToolServer = ctx.getClaudianToolServer?.();
+    if (claudianToolServer) {
+      // Key must match CLAUDIAN_TOOL_SERVER_NAME in features/tools; kept as a
+      // literal because providers must not import from the features layer.
+      mcpServers['claudian'] = claudianToolServer;
+    }
 
     if (Object.keys(mcpServers).length > 0) {
-      options.mcpServers = mcpServers;
+      options.mcpServers = mcpServers as typeof options.mcpServers;
     }
 
     const disallowedMcpTools = ctx.mcpManager.getDisallowedMcpTools(combinedMentions);
@@ -221,7 +252,7 @@ export class QueryOptionsBuilder {
       ctx.canUseTool,
     );
     options.hooks = ctx.hooks;
-    QueryOptionsBuilder.applyThinking(options, ctx.settings, ctx.modelOverride ?? ctx.settings.model);
+    QueryOptionsBuilder.applyThinking(options, ctx.settings, selectedModel);
 
     if (ctx.allowedTools !== undefined && ctx.allowedTools.length > 0) {
       options.tools = ctx.allowedTools;
@@ -292,7 +323,9 @@ export class QueryOptionsBuilder {
     };
     const options: Options = {
       cwd: ctx.vaultPath,
-      systemPrompt: buildSystemPrompt(systemPromptSettings),
+      systemPrompt: buildSystemPrompt(systemPromptSettings, {
+        appendices: ctx.boundAgentPrompt ? [ctx.boundAgentPrompt] : undefined,
+      }),
       model,
       abortController,
       pathToClaudeCodeExecutable: ctx.cliPath,
