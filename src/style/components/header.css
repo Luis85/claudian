@@ -114,7 +114,10 @@
   border-radius: 999px;
   font-size: var(--font-ui-smaller);
   color: var(--text-normal);
-  max-width: 70%;
+  /* No max-width cap: the chip sits on its own meta row and shrinks (flex 0 1
+     auto + min-width 0) only when it would collide with the actions slot, so a
+     short agent name shows in full and only a genuinely over-long one ellipsizes
+     at the available edge. */
   flex: 0 1 auto;
   min-width: 0;
 }
