@@ -746,6 +746,33 @@ describe('QueryOptionsBuilder', () => {
       expect(options.mcpServers?.['test-server']).toBeDefined();
     });
 
+    it('merges the in-process claudian tool server when getClaudianToolServer returns one', () => {
+      const claudianServer = { type: 'sdk', name: 'claudian' };
+      const ctx = {
+        ...createMockContext(),
+        abortController: new AbortController(),
+        hooks: {},
+        getClaudianToolServer: () => claudianServer,
+        hasEditorContext: false,
+      };
+      const options = QueryOptionsBuilder.buildColdStartQueryOptions(ctx);
+
+      expect(options.mcpServers?.['claudian']).toBe(claudianServer);
+    });
+
+    it('omits the claudian server when getClaudianToolServer returns nothing', () => {
+      const ctx = {
+        ...createMockContext(),
+        abortController: new AbortController(),
+        hooks: {},
+        getClaudianToolServer: () => undefined,
+        hasEditorContext: false,
+      };
+      const options = QueryOptionsBuilder.buildColdStartQueryOptions(ctx);
+
+      expect(options.mcpServers?.['claudian']).toBeUndefined();
+    });
+
     it('uses model override when provided', () => {
       const ctx = {
         ...createMockContext({
@@ -859,6 +886,54 @@ describe('QueryOptionsBuilder', () => {
       });
 
       expect(options.agents).toBeUndefined();
+    });
+  });
+
+  describe('boundAgentPrompt in systemPromptKey', () => {
+    it('same prompt produces same key', () => {
+      const ctx = createMockContext();
+      const a = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, undefined);
+      const b = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, undefined);
+      expect(a.systemPromptKey).toBe(b.systemPromptKey);
+    });
+
+    it('different boundAgentPrompt produces different key', () => {
+      const ctx = createMockContext();
+      const a = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, undefined);
+      const b = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, 'You are a researcher.');
+      expect(a.systemPromptKey).not.toBe(b.systemPromptKey);
+    });
+
+    it('needsRestart when boundAgentPrompt changes', () => {
+      const ctx = createMockContext();
+      const a = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, undefined);
+      const b = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, 'New agent prompt.');
+      expect(QueryOptionsBuilder.needsRestart(a, b)).toBe(true);
+    });
+
+    it('no restart when boundAgentPrompt unchanged', () => {
+      const ctx = createMockContext();
+      const prompt = 'You are a researcher.';
+      const a = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, prompt);
+      const b = QueryOptionsBuilder.buildPersistentQueryConfig(ctx, [], undefined, prompt);
+      expect(QueryOptionsBuilder.needsRestart(a, b)).toBe(false);
+    });
+  });
+
+  describe('resolveEffectiveModel precedence', () => {
+    it('explicit model overrides boundAgentModel', () => {
+      expect(QueryOptionsBuilder.resolveEffectiveModel('explicit', 'agent-model', 'settings-model'))
+        .toBe('explicit');
+    });
+
+    it('boundAgentModel beats settings when no explicit override', () => {
+      expect(QueryOptionsBuilder.resolveEffectiveModel(undefined, 'agent-model', 'settings-model'))
+        .toBe('agent-model');
+    });
+
+    it('falls back to settings when no override or boundAgentModel', () => {
+      expect(QueryOptionsBuilder.resolveEffectiveModel(undefined, undefined, 'settings-model'))
+        .toBe('settings-model');
     });
   });
 

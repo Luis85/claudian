@@ -1,0 +1,323 @@
+/* Agent Roster view — list/dashboard + detail editor.
+   The list shell + cards reuse the shared `.claudian-library-*` scaffold (see
+   features/library.css); the roster only layers its own deltas (clickable card,
+   avatar slot, plain-text name button, role chips) on top. */
+
+.claudian-roster-detail {
+  padding: var(--size-4-4);
+}
+
+/* ── List / cards ── */
+/* The card is itself clickable (mouse open affordance) — the shared library
+   card isn't, so add the cursor + hover affordance here. */
+.claudian-roster-card {
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.claudian-roster-card:hover {
+  border-color: var(--interactive-accent);
+  background: var(--background-modifier-hover);
+}
+
+.claudian-roster-card-avatar {
+  flex: 0 0 auto;
+  display: flex;
+}
+
+/* The name is a real <button> (keyboard/SR open action) styled to read as plain
+   text — the whole card still opens on mouse click. */
+.claudian-roster-card-name {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  font-size: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.claudian-roster-card-desc {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.claudian-roster-card-caps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-1);
+  margin-top: var(--size-4-1);
+}
+
+.claudian-roster-chip {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  background: var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  padding: 0 var(--size-4-1);
+}
+
+.claudian-roster-chip-role {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+}
+
+/* ── Detail editor ── */
+.claudian-roster-detail-topbar {
+  margin-bottom: var(--size-4-2);
+}
+
+.claudian-roster-detail-head {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-3);
+  margin-bottom: var(--size-4-3);
+  padding: var(--size-4-3);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+}
+
+.claudian-roster-section {
+  margin: var(--size-4-4) 0 var(--size-4-1);
+  padding-bottom: var(--size-4-1);
+  border-bottom: 1px solid var(--background-modifier-border);
+  font-size: var(--font-ui-small);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.claudian-roster-detail-footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  margin-top: var(--size-4-4);
+  padding: var(--size-4-3) 0;
+  background: var(--background-primary);
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.claudian-roster-footer-spacer {
+  flex: 1 1 auto;
+}
+
+.claudian-roster-dirty {
+  display: none;
+  align-items: center;
+  gap: var(--size-4-1);
+  color: var(--text-warning, var(--text-muted));
+  font-size: var(--font-ui-smaller);
+}
+
+.claudian-roster-dirty.is-visible {
+  display: inline-flex;
+}
+
+.claudian-roster-dirty::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* ── Capability picker (shared Skills/Tools selector) ── */
+.claudian-cap-picker {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  margin-bottom: var(--size-4-3);
+}
+
+.claudian-cap-picker-header {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2) var(--size-4-3);
+  cursor: pointer;
+}
+
+.claudian-cap-picker-label {
+  font-weight: var(--font-semibold);
+}
+
+.claudian-cap-picker-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.claudian-cap-picker-caret {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.claudian-cap-picker-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-1);
+  padding: 0 var(--size-4-3) var(--size-4-2);
+}
+
+.claudian-cap-picker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  padding: var(--size-2-1) var(--size-4-2);
+  background: var(--background-modifier-hover);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
+
+/* Signal the whole chip is click-to-remove by warming the border on hover. */
+.claudian-cap-picker-chip:hover {
+  border-color: var(--text-error);
+}
+
+.claudian-cap-picker-chip-x::before {
+  content: '\00d7';
+  color: var(--text-muted);
+}
+
+.claudian-cap-picker-body {
+  padding: 0 var(--size-4-3) var(--size-4-2);
+}
+
+.claudian-cap-picker-search {
+  width: 100%;
+  margin-bottom: var(--size-4-2);
+}
+
+.claudian-cap-picker-list {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+}
+
+.claudian-cap-picker-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--size-4-2);
+  padding: var(--size-2-1) var(--size-4-1);
+  cursor: pointer;
+}
+
+.claudian-cap-picker-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.claudian-cap-picker-row-name {
+  font-size: var(--font-ui-small);
+}
+
+.claudian-cap-picker-row-desc {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.claudian-cap-picker-row-badge {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.claudian-cap-picker-empty {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  padding: var(--size-4-2) 0;
+}
+
+/* Caption under the Tools picker: flags that tool grants are scoped to the
+   bound-chat path only (synced provider subagents inherit default access). */
+.claudian-roster-tools-scope-hint {
+  margin-top: var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: var(--line-height-tight);
+}
+
+/* ── Detail editor: cards + profile header ── */
+.claudian-roster-card-section {
+  padding: var(--size-4-3);
+  margin-bottom: var(--size-4-3);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+}
+
+.claudian-roster-detail-headfields {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.claudian-roster-detail-name {
+  font-size: var(--font-ui-large);
+  font-weight: var(--font-semibold);
+}
+
+.claudian-roster-detail-name,
+.claudian-roster-detail-desc {
+  width: 100%;
+}
+
+.claudian-roster-appearance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+  align-items: center;
+}
+
+.claudian-roster-appearance-initials {
+  width: 4em;
+  text-align: center;
+}
+
+.claudian-roster-roles {
+  display: flex;
+  gap: var(--size-4-1);
+}
+
+.claudian-roster-role-chip {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  background: var(--background-modifier-border);
+  box-shadow: none;
+}
+
+.claudian-roster-role-chip.is-on {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+}
+
+.claudian-roster-model-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0 var(--size-4-4);
+}
+
+.claudian-roster-model-grid .setting-item {
+  border-top: none;
+  padding: var(--size-4-1) 0;
+}
+
+.claudian-roster-prompt-area {
+  width: 100%;
+  resize: vertical;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-small);
+}

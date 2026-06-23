@@ -490,6 +490,119 @@ describe('VaultFileAdapter', () => {
     });
   });
 
+  describe('writeAtomic', () => {
+    it('writes content to tmp then renames onto target', async () => {
+      const written: Record<string, string> = {};
+      const renamed: Array<[string, string]> = [];
+
+      mockAdapter.exists.mockResolvedValue(true); // parent folder exists
+      mockAdapter.write.mockImplementation((p: string, c: string) => {
+        written[p] = c;
+        return Promise.resolve();
+      });
+      mockAdapter.rename.mockImplementation((src: string, dst: string) => {
+        if (written[src] !== undefined) {
+          written[dst] = written[src];
+          delete written[src];
+        }
+        renamed.push([src, dst]);
+        return Promise.resolve();
+      });
+
+      await vaultAdapter.writeAtomic('folder/x.json', 'data');
+
+      // Final state: target has the data, tmp is gone
+      expect(written['folder/x.json']).toBe('data');
+      expect(written['folder/x.json.tmp']).toBeUndefined();
+      // Content was written to tmp before the rename
+      expect(renamed).toEqual([['folder/x.json.tmp', 'folder/x.json']]);
+    });
+
+    it('removes existing target and retries rename when first rename throws', async () => {
+      const written: Record<string, string> = {};
+      let renameCallCount = 0;
+
+      mockAdapter.exists.mockImplementation((p: string) => Promise.resolve(p === 'x.json'));
+      mockAdapter.write.mockImplementation((p: string, c: string) => {
+        written[p] = c;
+        return Promise.resolve();
+      });
+      mockAdapter.rename.mockImplementation((src: string, dst: string) => {
+        renameCallCount++;
+        if (renameCallCount === 1) {
+          // First rename fails (target already exists, adapter won't overwrite)
+          return Promise.reject(new Error('cannot overwrite'));
+        }
+        // Second rename succeeds
+        if (written[src] !== undefined) {
+          written[dst] = written[src];
+          delete written[src];
+        }
+        return Promise.resolve();
+      });
+      // delete calls remove on existing file
+      mockAdapter.remove.mockResolvedValue(undefined);
+
+      await vaultAdapter.writeAtomic('x.json', 'payload');
+
+      // Target received the data
+      expect(written['x.json']).toBe('payload');
+      // tmp is gone
+      expect(written['x.json.tmp']).toBeUndefined();
+      // delete was called on the target (exists=true triggered remove)
+      expect(mockAdapter.remove).toHaveBeenCalledWith('x.json');
+      // rename was called twice
+      expect(renameCallCount).toBe(2);
+    });
+
+    it('no leftover tmp file after successful atomic write', async () => {
+      const store: Record<string, string> = {};
+
+      mockAdapter.exists.mockResolvedValue(false); // folder doesn't exist initially
+      mockAdapter.mkdir.mockResolvedValue(undefined);
+      mockAdapter.write.mockImplementation((p: string, c: string) => {
+        store[p] = c;
+        return Promise.resolve();
+      });
+      mockAdapter.rename.mockImplementation((src: string, dst: string) => {
+        store[dst] = store[src];
+        delete store[src];
+        return Promise.resolve();
+      });
+
+      await vaultAdapter.writeAtomic('cfg/settings.json', '{"ok":true}');
+
+      const keys = Object.keys(store);
+      expect(keys).not.toContain('cfg/settings.json.tmp');
+      expect(store['cfg/settings.json']).toBe('{"ok":true}');
+    });
+
+    it('cleans up the tmp file and rethrows when the retry rename also fails', async () => {
+      const store: Record<string, string> = {};
+
+      // Target exists so the first rename is attempted and (per mock) fails.
+      mockAdapter.exists.mockImplementation((p: string) => Promise.resolve(p in store));
+      mockAdapter.write.mockImplementation((p: string, c: string) => {
+        store[p] = c;
+        return Promise.resolve();
+      });
+      // Pre-seed the target so delete() has something to remove.
+      store['x.json'] = 'old';
+      // Both renames fail (e.g. a locked target the adapter can't replace).
+      mockAdapter.rename.mockRejectedValue(new Error('rename failed'));
+      mockAdapter.remove.mockImplementation((p: string) => {
+        delete store[p];
+        return Promise.resolve();
+      });
+
+      await expect(vaultAdapter.writeAtomic('x.json', 'payload')).rejects.toThrow('rename failed');
+
+      // The orphan tmp file must be cleaned up rather than left behind.
+      expect(Object.keys(store)).not.toContain('x.json.tmp');
+      expect(mockAdapter.remove).toHaveBeenCalledWith('x.json.tmp');
+    });
+  });
+
   describe('stat', () => {
     it('returns file stats for existing file', async () => {
       mockAdapter.stat.mockResolvedValue({ mtime: 1234567890, size: 1024 });

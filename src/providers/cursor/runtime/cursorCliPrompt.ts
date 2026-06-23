@@ -20,17 +20,24 @@ export interface BuildCursorAgentPromptOptions {
   turn: PreparedChatTurn;
   conversationHistory?: ChatMessage[];
   resumeSessionId?: string | null;
+  boundAgentPrompt?: string;
 }
 
 /**
  * Cursor relies on `--resume` for multi-turn context. When that session id is
  * missing, rebuild prior turns into the prompt (OpenCode-style recovery).
+ *
+ * The bound agent persona is PREPENDED as a leading directive (Cursor's CLI has
+ * no system-prompt flag), so the model adopts the role before reading the user
+ * turn instead of treating it as a trailing footnote. Re-sent every turn because
+ * Cursor is one-shot per turn.
  */
 export function buildCursorAgentPrompt(options: BuildCursorAgentPromptOptions): string {
   const {
     turn,
     conversationHistory,
     resumeSessionId,
+    boundAgentPrompt,
   } = options;
 
   let prompt = turn.prompt;
@@ -43,6 +50,10 @@ export function buildCursorAgentPrompt(options: BuildCursorAgentPromptOptions): 
       turn.request.text,
       conversationHistory,
     );
+  }
+
+  if (boundAgentPrompt) {
+    prompt = `${boundAgentPrompt}\n\n---\n\n${prompt}`;
   }
 
   return prompt;

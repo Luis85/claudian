@@ -8,6 +8,21 @@ export interface TaskRunOptions {
    *  once the tab is created so the queue's free-tab gate stops counting it as
    *  pending. Absent for surfaces that don't open a fresh tab. */
   tabReservation?: ChatTabReservation;
+  /**
+   * Roster agent id to bind to the run's conversation (e.g. `roster:foo`).
+   * Set by `TaskRunCoordinator` when `task.frontmatter.agent` starts with
+   * `roster:`. The surface threads it through to `createConversation` so the
+   * conversation is bound from the first turn. Undefined for non-roster agents.
+   */
+  boundAgentId?: string;
+  /**
+   * Effective provider/model resolved by `TaskRunCoordinator` — the frontmatter
+   * value, else the assigned roster agent's. The surface prefers these over
+   * `task.frontmatter` so an agent-only work order (no explicit provider/model)
+   * still launches.
+   */
+  provider?: string;
+  model?: string;
 }
 
 export interface TaskRunTerminal {

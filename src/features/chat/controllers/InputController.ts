@@ -33,6 +33,7 @@ import type { BrowserSelectionContext } from '../../../utils/browser';
 import type { CanvasSelectionContext } from '../../../utils/canvas';
 import type { EditorSelectionContext } from '../../../utils/editor';
 import { appendMarkdownSnippet } from '../../../utils/markdown';
+import type { BoundAgentProjection } from '../../agents/roster/boundAgentPersona';
 import type { MessageRenderer } from '../rendering/MessageRenderer';
 import { persistPastedImages } from '../services/persistPastedImages';
 import type { SubagentManager } from '../services/SubagentManager';
@@ -99,6 +100,14 @@ export interface InputControllerDeps {
   getSubagentManager: () => SubagentManager;
   /** Tab-level provider fallback for blank tabs (derived from draft model). */
   getTabProviderId?: () => ProviderId;
+  /**
+   * Roster agent id to bind to the lazily-created conversation for this tab
+   * (e.g. `roster:foo`). Set for Agent Board task-run tabs whose work order
+   * assigned a roster agent; absent for normal chat tabs. Once consumed by
+   * `triggerTitleGeneration`, the tab clears it so subsequent rebinds don't
+   * carry the stale id.
+   */
+  getBoundAgentId?: () => string | null | undefined;
   /**
    * Tab-pinned model that should override the provider's global `settings.model`
    * on the next send. Returns the work-order's selected model for Agent Board
@@ -520,9 +529,10 @@ export class InputController {
     // Pass history WITHOUT current turn (userMsg + assistantMsg we just added)
     // This prevents duplication when rebuilding context for new sessions
     const previousMessages = state.messages.slice(0, -2);
-    const queryOptions: ChatRuntimeQueryOptions | undefined = ctx.tabModelOverride
-      ? { model: ctx.tabModelOverride }
-      : undefined;
+    const queryOptions: ChatRuntimeQueryOptions = await this.resolveTurnQueryOptions(
+      state.currentConversationId,
+      ctx.tabModelOverride,
+    );
     for await (const chunk of ctx.agentService.query(preparedTurn, previousMessages, queryOptions)) {
       if (state.streamGeneration !== ctx.streamGeneration) {
         wasInvalidated = true;
@@ -544,6 +554,52 @@ export class InputController {
     }
 
     return { wasInterrupted, wasInvalidated };
+  }
+
+  /**
+   * Builds per-turn ChatRuntimeQueryOptions, merging any bound-agent overrides
+   * (prompt and model) into the base tab-model-override options. The builder's
+   * precedence (explicit model > boundAgentModel > settings.model) ensures an
+   * explicit tab/work-order model is never clobbered by the agent binding.
+   */
+  private async resolveTurnQueryOptions(
+    conversationId: string | null,
+    tabModelOverride: string | null | undefined,
+  ): Promise<ChatRuntimeQueryOptions> {
+    const base: ChatRuntimeQueryOptions = tabModelOverride ? { model: tabModelOverride } : {};
+
+    if (!conversationId) {
+      return base;
+    }
+
+    const conversation = await this.deps.plugin.getConversationById(conversationId);
+    if (!conversation?.boundAgentId) {
+      return base;
+    }
+
+    // Pass the conversation's provider so the bound model is only folded in when
+    // the agent's saved model targets that provider; after a disabled-provider
+    // fallback the agent's cross-provider model id must not reach this runtime.
+    const projection: BoundAgentProjection | null | undefined = await this.deps.plugin.resolveBoundAgent?.(
+      conversation.boundAgentId,
+      conversation.providerId,
+    );
+    if (!projection) {
+      return base;
+    }
+
+    const boundAgentModel = projection.model || undefined;
+
+    return {
+      ...base,
+      // Fold the bound model into `model` so non-Claude runtimes that only read
+      // `queryOptions.model` (not `boundAgentModel`) receive it. Explicit
+      // tab/work-order override takes precedence; boundAgentModel is the fallback.
+      model: tabModelOverride ?? boundAgentModel,
+      boundAgentPrompt: projection.prompt || undefined,
+      boundAgentModel,
+      boundAgentTools: projection.tools && projection.tools.length > 0 ? projection.tools : undefined,
+    };
   }
 
   private async finalizeTurn(
@@ -967,11 +1023,14 @@ export class InputController {
 
     if (!state.currentConversationId) {
       const sessionId = this.getAgentService()?.getSessionId() ?? undefined;
+      const boundAgentId = this.deps.getBoundAgentId?.() ?? undefined;
       const conversation = await plugin.createConversation({
         providerId: this.getActiveProviderId(),
         sessionId,
+        boundAgentId,
       });
-      state.currentConversationId = conversation.id;    }
+      state.currentConversationId = conversation.id;
+    }
 
     // Find first user message by role (not by index)
     const firstUserMsg = state.messages.find(m => m.role === 'user');

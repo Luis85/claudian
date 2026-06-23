@@ -15,6 +15,7 @@ import {
   type ProviderSettingsReconciler,
   type ProviderSubagentLifecycleAdapter,
   type ProviderTaskResultInterpreter,
+  type RosterAgentProjection,
   type TitleGenerationCallback,
   type TitleGenerationService,
 } from './types';
@@ -162,6 +163,20 @@ export class ProviderRegistry {
 
   static getCliCommand(providerId: ProviderId): string {
     return this.getProviderRegistration(providerId).cliCommand;
+  }
+
+  /**
+   * Serializes a provider-neutral roster agent into the provider's native
+   * subagent file (path + content), or `null` when the provider has no subagent
+   * convention. Lets the app publish roster agents without importing provider
+   * internals.
+   */
+  static projectRosterAgent(
+    providerId: ProviderId,
+    input: RosterAgentProjection,
+    slug: string,
+  ): { path: string; content: string } | null {
+    return this.getProviderRegistration(providerId).projectRosterAgent?.(input, slug) ?? null;
   }
 
   static isEnabled(providerId: ProviderId, settings: Record<string, unknown>): boolean {

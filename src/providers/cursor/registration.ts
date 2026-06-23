@@ -9,6 +9,7 @@ import { CursorChatRuntime } from './runtime/CursorChatRuntime';
 import { CursorTaskResultInterpreter } from './runtime/CursorTaskResultInterpreter';
 import { CURSOR_CANONICAL_TOOL_NAMES } from './runtime/cursorToolNormalization';
 import { DEFAULT_CURSOR_PROVIDER_SETTINGS, getCursorProviderSettings } from './settings';
+import { serializeCursorAgentMarkdown } from './storage/CursorAgentStorage';
 import { cursorChatUIConfig } from './ui/CursorChatUIConfig';
 
 export const cursorProviderRegistration: ProviderRegistration = {
@@ -29,4 +30,13 @@ export const cursorProviderRegistration: ProviderRegistration = {
   createInlineEditService: (plugin) => new CursorInlineEditService(plugin),
   historyService: new CursorConversationHistoryService(),
   taskResultInterpreter: new CursorTaskResultInterpreter(),
+  projectRosterAgent: (input, slug) => ({
+    path: `.cursor/agents/${slug}.md`,
+    content: serializeCursorAgentMarkdown({
+      name: input.name,
+      description: input.description,
+      prompt: input.prompt,
+      source: 'vault',
+    }),
+  }),
 };

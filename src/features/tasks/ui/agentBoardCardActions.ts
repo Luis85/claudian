@@ -2,6 +2,7 @@ import { setIcon } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
 import type { TranslationKey } from '../../../i18n/types';
+import { type PersonaResolver } from '../../agents/personaRegistry';
 import type { TaskSpec, TaskStatus } from '../model/taskTypes';
 import { PortalPopover, type PortalPopoverItem } from './portalPopover';
 
@@ -38,6 +39,8 @@ export interface AgentBoardRenderCallbacks {
   onOpenConversation(task: TaskSpec): void;
   /** Whether the linked conversation still exists; gates "Open conversation". */
   canOpenConversation?(task: TaskSpec): boolean;
+  /** Resolves an `agent` id to the persona whose avatar the card footer renders. */
+  resolvePersona?: PersonaResolver;
 }
 
 /**

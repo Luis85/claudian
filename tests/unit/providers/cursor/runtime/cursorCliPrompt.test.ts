@@ -53,6 +53,46 @@ describe('buildCursorAgentPrompt', () => {
     expect(prompt).toContain('Assistant: first answer');
     expect(prompt).toContain('User: second question');
   });
+
+  it('prepends the bound agent persona as a leading directive when present', () => {
+    const prompt = buildCursorAgentPrompt({
+      turn: createTurn('do the thing'),
+      resumeSessionId: 'cursor-session-1',
+      boundAgentPrompt: 'You are a TypeScript expert.',
+    });
+
+    expect(prompt).toContain('do the thing');
+    // Persona leads; user turn follows after a delimiter.
+    expect(prompt.startsWith('You are a TypeScript expert.\n\n---\n\n')).toBe(true);
+    expect(prompt).toBe('You are a TypeScript expert.\n\n---\n\ndo the thing');
+  });
+
+  it('does not prepend a persona when boundAgentPrompt is absent', () => {
+    const prompt = buildCursorAgentPrompt({
+      turn: createTurn('do the thing'),
+      resumeSessionId: 'cursor-session-1',
+    });
+
+    expect(prompt).toBe('do the thing');
+    expect(prompt).not.toContain('---');
+  });
+
+  it('prepends the persona ahead of a rebuilt history (no resume)', () => {
+    const history: ChatMessage[] = [
+      { id: 'u1', role: 'user', content: 'prior', timestamp: 1 },
+      { id: 'a1', role: 'assistant', content: 'prior answer', timestamp: 2 },
+    ];
+
+    const prompt = buildCursorAgentPrompt({
+      turn: createTurn('next turn'),
+      conversationHistory: history,
+      resumeSessionId: null,
+      boundAgentPrompt: 'Be concise.',
+    });
+
+    expect(prompt).toContain('User: next turn');
+    expect(prompt.startsWith('Be concise.\n\n---\n\n')).toBe(true);
+  });
 });
 
 describe('resolveCursorCliPromptArg', () => {

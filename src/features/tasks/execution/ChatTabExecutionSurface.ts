@@ -22,7 +22,10 @@ export class ChatTabExecutionSurface implements TaskExecutionSurface {
   constructor(private readonly plugin: ClaudianPlugin) {}
 
   async startTaskRun(task: TaskSpec, options: TaskRunOptions): Promise<TaskRunHandle> {
-    const { provider, model } = task.frontmatter;
+    // Prefer the coordinator's resolved provider/model (frontmatter, else the
+    // assigned roster agent's) over the raw frontmatter.
+    const provider = options.provider ?? task.frontmatter.provider;
+    const model = options.model ?? task.frontmatter.model;
     if (!provider) return this.failed('Work order is missing provider');
     if (!model) return this.failed('Work order is missing model');
 
@@ -42,6 +45,7 @@ export class ChatTabExecutionSurface implements TaskExecutionSurface {
       prompt: options.prompt,
       tabReservation: options.tabReservation,
       workOrderPath: task.path,
+      boundAgentId: options.boundAgentId,
     });
     if (!handle) {
       return this.failed('Could not open a work-order tab (work-order tab limit reached).');

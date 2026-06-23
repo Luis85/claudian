@@ -64,6 +64,20 @@ export interface CreateChatRuntimeOptions {
  * Provider-owned workspace services (CLI resolution, commands, agents,
  * MCP, settings tabs) live behind `src/providers/<id>/app/`.
  */
+
+/**
+ * Provider-neutral roster agent shape handed to a provider so it can serialize
+ * the agent into its own native subagent file (path + content). Only identity +
+ * instructions are carried; tools/models stay the subagent's inherited defaults.
+ */
+export interface RosterAgentProjection {
+  name: string;
+  description: string;
+  prompt: string;
+  skills?: string[];
+  color?: string;
+}
+
 export interface ProviderRegistration {
   displayName: string;
   /** One-line product blurb for the first-run onboarding banner — rendered from the registry, not a hardcoded provider list (tech-debt 2026-06-07). */
@@ -100,6 +114,13 @@ export interface ProviderRegistration {
   /** Omitted by providers without async subagent tasks; the registry substitutes a neutral default. */
   taskResultInterpreter?: ProviderTaskResultInterpreter;
   subagentLifecycleAdapter?: ProviderSubagentLifecycleAdapter;
+  /**
+   * Serializes a provider-neutral roster agent into this provider's native
+   * subagent file (vault-relative `path` + `content`), or `null` when the
+   * provider has no subagent convention. Lets the app publish roster agents into
+   * each provider's folder without importing provider internals.
+   */
+  projectRosterAgent?: (input: RosterAgentProjection, slug: string) => { path: string; content: string } | null;
 }
 
 /**

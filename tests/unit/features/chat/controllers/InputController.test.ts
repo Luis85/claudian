@@ -1137,7 +1137,9 @@ describe('InputController - Message Queue', () => {
 
       const queryMock = (localDeps as any).mockAgentService.query as jest.Mock;
       const [, , queryOptions] = queryMock.mock.calls[0];
-      expect(queryOptions).toBeUndefined();
+      // queryOptions is always an object now (may contain bound-agent fields from
+      // the current conversation); verify model is absent, not that options is undefined.
+      expect(queryOptions?.model).toBeUndefined();
     });
 
     it('treats whitespace-only tab override as no override', async () => {
@@ -1155,7 +1157,174 @@ describe('InputController - Message Queue', () => {
 
       const queryMock = (localDeps as any).mockAgentService.query as jest.Mock;
       const [, , queryOptions] = queryMock.mock.calls[0];
-      expect(queryOptions).toBeUndefined();
+      // queryOptions is always an object now; verify model is absent.
+      expect(queryOptions?.model).toBeUndefined();
+    });
+  });
+
+  describe('resolveTurnQueryOptions - bound agent model fold', () => {
+    // When a conversation has a bound agent with a model, non-Claude runtimes
+    // need `queryOptions.model` set (they only read `model`, not
+    // `boundAgentModel`). Claude's resolveEffectiveModel also reads
+    // `boundAgentModel`, so the fold is transparent for Claude.
+    it('folds boundAgentModel into queryOptions.model when no tab override is set', async () => {
+      const localDeps = createSendableDeps({
+        getTabModelOverride: () => null,
+      });
+      (localDeps.plugin.getConversationById as jest.Mock).mockResolvedValue({
+        id: 'conv-1',
+        boundAgentId: 'agent-abc',
+      });
+      (localDeps.plugin as any).resolveBoundAgent = jest.fn().mockResolvedValue({
+        prompt: 'You are a Rust expert.',
+        model: 'opus',
+      });
+      (localDeps as any).mockAgentService.query = jest
+        .fn()
+        .mockImplementation(() => createMockStream([{ type: 'done' }]));
+      const localController = new InputController(localDeps);
+      const localInput = localDeps.getInputEl() as ReturnType<typeof createMockInputEl>;
+      localInput.value = 'Help me with Rust';
+
+      await localController.sendMessage();
+
+      const queryMock = (localDeps as any).mockAgentService.query as jest.Mock;
+      const [, , queryOptions] = queryMock.mock.calls[0];
+      expect(queryOptions.model).toBe('opus');
+      expect(queryOptions.boundAgentModel).toBe('opus');
+      expect(queryOptions.boundAgentPrompt).toBe('You are a Rust expert.');
+    });
+
+    it('threads the conversation provider into resolveBoundAgent so the model is gated', async () => {
+      // The model fold must be provider-aware: the controller passes the
+      // conversation's provider so main.ts can drop a cross-provider model id.
+      const localDeps = createSendableDeps({
+        getTabModelOverride: () => null,
+      });
+      (localDeps.plugin.getConversationById as jest.Mock).mockResolvedValue({
+        id: 'conv-1',
+        providerId: 'cursor',
+        boundAgentId: 'agent-abc',
+      });
+      const resolveBoundAgent = jest.fn().mockResolvedValue({
+        prompt: 'You are a Rust expert.',
+        // main.ts already gated this to the cursor default; the controller folds
+        // whatever it receives.
+        model: 'auto',
+      });
+      (localDeps.plugin as any).resolveBoundAgent = resolveBoundAgent;
+      (localDeps as any).mockAgentService.query = jest
+        .fn()
+        .mockImplementation(() => createMockStream([{ type: 'done' }]));
+      const localController = new InputController(localDeps);
+      (localDeps.getInputEl() as ReturnType<typeof createMockInputEl>).value = 'go';
+
+      await localController.sendMessage();
+
+      expect(resolveBoundAgent).toHaveBeenCalledWith('agent-abc', 'cursor');
+      const [, , queryOptions] = ((localDeps as any).mockAgentService.query as jest.Mock).mock.calls[0];
+      expect(queryOptions.model).toBe('auto');
+      expect(queryOptions.boundAgentModel).toBe('auto');
+    });
+
+    it('tab override takes precedence over boundAgentModel', async () => {
+      const localDeps = createSendableDeps({
+        getTabModelOverride: () => 'haiku',
+      });
+      (localDeps.plugin.getConversationById as jest.Mock).mockResolvedValue({
+        id: 'conv-1',
+        boundAgentId: 'agent-abc',
+      });
+      (localDeps.plugin as any).resolveBoundAgent = jest.fn().mockResolvedValue({
+        prompt: 'You are a Rust expert.',
+        model: 'opus',
+      });
+      (localDeps as any).mockAgentService.query = jest
+        .fn()
+        .mockImplementation(() => createMockStream([{ type: 'done' }]));
+      const localController = new InputController(localDeps);
+      const localInput = localDeps.getInputEl() as ReturnType<typeof createMockInputEl>;
+      localInput.value = 'Help me with Rust';
+
+      await localController.sendMessage();
+
+      const queryMock = (localDeps as any).mockAgentService.query as jest.Mock;
+      const [, , queryOptions] = queryMock.mock.calls[0];
+      // Explicit tab override wins; boundAgentModel is still threaded through
+      // for Claude's resolveEffectiveModel to consume.
+      expect(queryOptions.model).toBe('haiku');
+      expect(queryOptions.boundAgentModel).toBe('opus');
+    });
+
+    it('model is undefined when agent has no model and no tab override', async () => {
+      const localDeps = createSendableDeps({
+        getTabModelOverride: () => null,
+      });
+      (localDeps.plugin.getConversationById as jest.Mock).mockResolvedValue({
+        id: 'conv-1',
+        boundAgentId: 'agent-abc',
+      });
+      (localDeps.plugin as any).resolveBoundAgent = jest.fn().mockResolvedValue({
+        prompt: 'You are a Rust expert.',
+        model: '',
+      });
+      (localDeps as any).mockAgentService.query = jest
+        .fn()
+        .mockImplementation(() => createMockStream([{ type: 'done' }]));
+      const localController = new InputController(localDeps);
+      const localInput = localDeps.getInputEl() as ReturnType<typeof createMockInputEl>;
+      localInput.value = 'Help me with Rust';
+
+      await localController.sendMessage();
+
+      const queryMock = (localDeps as any).mockAgentService.query as jest.Mock;
+      const [, , queryOptions] = queryMock.mock.calls[0];
+      expect(queryOptions.model).toBeUndefined();
+      expect(queryOptions.boundAgentModel).toBeUndefined();
+    });
+
+    it('threads a non-empty bound-agent tool grant into boundAgentTools', async () => {
+      const localDeps = createSendableDeps({ getTabModelOverride: () => null });
+      (localDeps.plugin.getConversationById as jest.Mock).mockResolvedValue({
+        id: 'conv-1',
+        boundAgentId: 'agent-abc',
+      });
+      (localDeps.plugin as any).resolveBoundAgent = jest.fn().mockResolvedValue({
+        prompt: 'You are a Rust expert.',
+        tools: ['mcp__claudian__search_tasks'],
+      });
+      (localDeps as any).mockAgentService.query = jest
+        .fn()
+        .mockImplementation(() => createMockStream([{ type: 'done' }]));
+      const localController = new InputController(localDeps);
+      (localDeps.getInputEl() as ReturnType<typeof createMockInputEl>).value = 'go';
+
+      await localController.sendMessage();
+
+      const [, , queryOptions] = ((localDeps as any).mockAgentService.query as jest.Mock).mock.calls[0];
+      expect(queryOptions.boundAgentTools).toEqual(['mcp__claudian__search_tasks']);
+    });
+
+    it('omits boundAgentTools when the agent grants no tools (empty grant = all)', async () => {
+      const localDeps = createSendableDeps({ getTabModelOverride: () => null });
+      (localDeps.plugin.getConversationById as jest.Mock).mockResolvedValue({
+        id: 'conv-1',
+        boundAgentId: 'agent-abc',
+      });
+      (localDeps.plugin as any).resolveBoundAgent = jest.fn().mockResolvedValue({
+        prompt: 'You are a Rust expert.',
+        tools: [],
+      });
+      (localDeps as any).mockAgentService.query = jest
+        .fn()
+        .mockImplementation(() => createMockStream([{ type: 'done' }]));
+      const localController = new InputController(localDeps);
+      (localDeps.getInputEl() as ReturnType<typeof createMockInputEl>).value = 'go';
+
+      await localController.sendMessage();
+
+      const [, , queryOptions] = ((localDeps as any).mockAgentService.query as jest.Mock).mock.calls[0];
+      expect(queryOptions.boundAgentTools).toBeUndefined();
     });
   });
 

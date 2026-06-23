@@ -1,9 +1,26 @@
-/* Header - logo, title/tabs slot, and actions */
+/* Header - stacked rows: title on top, agent chip + actions below */
 .claudian-header {
   position: relative;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   padding: 0 12px 12px 12px;
+}
+
+/* Row 1: logo + title (or logo + tab badges in header mode) */
+.claudian-header-title-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* Row 2: bound-agent chip (left) + actions slot (Git / cluster, right) */
+.claudian-header-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 /* Title slot: contains logo + title (or tabs in header mode) */
@@ -27,6 +44,10 @@
   margin: 0;
   font-size: 14px;
   font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .claudian-logo {
@@ -75,3 +96,42 @@
   width: 16.8px;
   height: 16.8px;
 }
+
+/* Bound-agent chip — sits in the second header row when a conversation is
+   pinned to a roster agent. Hidden automatically when the slot element is empty
+   (the meta row itself collapses via updateHeaderMetaRow). */
+.claudian-bound-agent-chip-slot:empty {
+  display: none;
+}
+
+.claudian-bound-agent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 3px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-normal);
+  /* No max-width cap: the chip sits on its own meta row and shrinks (flex 0 1
+     auto + min-width 0) only when it would collide with the actions slot, so a
+     short agent name shows in full and only a genuinely over-long one ellipsizes
+     at the available edge. */
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.claudian-bound-agent-chip-avatar {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.claudian-bound-agent-chip-label {
+  min-width: 0;
+  font-weight: var(--font-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+

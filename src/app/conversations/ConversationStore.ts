@@ -78,6 +78,7 @@ export class ConversationStore {
           titleGenerationStatus: meta.titleGenerationStatus,
           resumeAtMessageId: meta.resumeAtMessageId,
           workOrderPath: meta.workOrderPath,
+          boundAgentId: meta.boundAgentId,
         } satisfies Conversation;
       })
       .sort((a, b) => (b.lastResponseAt ?? b.updatedAt) - (a.lastResponseAt ?? a.updatedAt));
@@ -111,6 +112,7 @@ export class ConversationStore {
   async createConversation(options?: {
     providerId?: ProviderId;
     sessionId?: string;
+    boundAgentId?: string;
   }): Promise<Conversation> {
     const providerId = options?.providerId ?? DEFAULT_CHAT_PROVIDER_ID;
     const sessionId = options?.sessionId;
@@ -123,6 +125,7 @@ export class ConversationStore {
       updatedAt: Date.now(),
       sessionId: sessionId ?? null,
       messages: [],
+      boundAgentId: options?.boundAgentId,
     };
 
     this.conversations.unshift(conversation);

@@ -1,0 +1,21 @@
+export type CommandsTranslationKey =
+  // Command-palette names (registerPluginCommands.ts + main.ts)
+  | 'commands.openView'
+  | 'commands.openAgentBoard'
+  | 'commands.runNextReadyWorkOrder'
+  | 'commands.createWorkOrder'
+  | 'commands.createWorkOrderFromCurrentNote'
+  | 'commands.createWorkOrderFromSelection'
+  | 'commands.createWorkOrderTemplate'
+  | 'commands.installCommonWorkOrderTemplates'
+  | 'commands.createWorkOrderFromBrowserSelection'
+  | 'commands.createWorkOrderFromChatConversation'
+  | 'commands.copyDiagnosticLogs'
+  | 'commands.clearDiagnosticLogs'
+  | 'commands.inlineEdit'
+  | 'commands.newTab'
+  | 'commands.newSession'
+  | 'commands.closeCurrentTab'
+  | 'commands.openAgentRoster'
+  | 'commands.openToolLibrary'
+  | 'commands.openSkillLibrary';

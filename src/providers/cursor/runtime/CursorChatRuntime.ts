@@ -20,6 +20,7 @@ import { encodeCursorTurn } from '../prompt/encodeCursorTurn';
 import { getCursorState, resolveCursorSessionId } from '../types';
 import { acquireCursorAgentSpawnLock } from './cursorAgentSpawnLock';
 import { buildCursorAnswerFollowUpPrompt } from './cursorAskUserQuestion';
+import { writeCursorMcpConfig } from './cursorMcpConfig';
 import { forceKillCursorProcessTree } from './cursorProcessKill';
 import {
   awaitCursorExitCode,
@@ -130,6 +131,21 @@ export class CursorChatRuntime implements ChatRuntime {
       queryOptions,
       resumeId,
     });
+
+    // Wire the in-process HTTP MCP tool server before spawn so cursor-agent can
+    // read ~/.cursor/mcp.json at startup. Written before the spawn lock because
+    // the lock guards ~/.cursor/cli-config.json contention, not mcp.json.
+    try {
+      // Scope the loopback tool server to the bound agent's granted tools when
+      // present: an empty/absent grant returns the byte-identical all-tools
+      // config. The write is per-turn, so this scopes per-conversation (modulo
+      // the global ~/.cursor/mcp.json race — Phase 2).
+      const httpCfg = this.plugin.getHttpToolServerConfig?.(queryOptions?.boundAgentTools) ?? null;
+      await writeCursorMcpConfig(httpCfg);
+    } catch (err) {
+      this.plugin.logger.scope('cursor.mcp').warn('Failed to write ~/.cursor/mcp.json', err);
+    }
+
     const releaseSpawnLock = await acquireCursorAgentSpawnLock();
     let chunkTracker: CursorQueryChunkTracker;
     try {

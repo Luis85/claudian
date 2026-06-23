@@ -85,4 +85,52 @@ describe('buildOpencodePromptBlocks', () => {
       { type: 'image', mimeType: 'image/png', data: 'base64-image' },
     ]);
   });
+
+  it('prepends the bound agent persona as a leading directive on the text block', () => {
+    const blocks = buildOpencodePromptBlocks(
+      { text: 'Summarize the vault' },
+      [],
+      'You are a knowledge management expert.',
+    );
+
+    expect(blocks[0].type).toBe('text');
+    const text = (blocks[0] as { type: 'text'; text: string }).text;
+    expect(text).toContain('Summarize the vault');
+    expect(text.startsWith('You are a knowledge management expert.\n\n---\n\n')).toBe(true);
+    expect(blocks).toHaveLength(1);
+  });
+
+  it('does not prepend a persona when boundAgentPrompt is absent', () => {
+    const blocks = buildOpencodePromptBlocks(
+      { text: 'List recent notes' },
+      [],
+    );
+
+    expect(blocks[0].type).toBe('text');
+    expect((blocks[0] as { type: 'text'; text: string }).text).not.toContain('---');
+    expect((blocks[0] as { type: 'text'; text: string }).text).toContain('List recent notes');
+  });
+
+  it('keeps the persona on the text block and images still follow', () => {
+    const blocks = buildOpencodePromptBlocks(
+      {
+        images: [{
+          data: 'img-data',
+          id: 'img-1',
+          mediaType: 'image/jpeg',
+          name: 'photo.jpg',
+          size: 456,
+          source: 'file',
+        }],
+        text: 'Describe the image',
+      },
+      [],
+      'You are a vision expert.',
+    );
+
+    expect(blocks).toHaveLength(2);
+    expect(blocks[0].type).toBe('text');
+    expect((blocks[0] as { type: 'text'; text: string }).text).toContain('You are a vision expert.');
+    expect(blocks[1].type).toBe('image');
+  });
 });

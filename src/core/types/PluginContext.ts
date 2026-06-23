@@ -100,6 +100,7 @@ export interface PluginContext
   createConversation(options?: {
     providerId?: ProviderId;
     sessionId?: string;
+    boundAgentId?: string;
   }): Promise<Conversation>;
   switchConversation(
     id: string,
@@ -113,6 +114,52 @@ export interface PluginContext
   getConversationList(): ConversationMeta[];
 
   persistTabManagerState(state: AppTabManagerState): Promise<void>;
+
+  /**
+   * Resolves a bound roster agent's chat projection (system prompt + model) by
+   * id, or `null` when unknown. The return shape is core-local so this contract
+   * needs no `core/` → `features/` import; the plugin implements it via its
+   * roster store. When `providerId` is supplied (the conversation's provider),
+   * the projected `model` is only the agent's saved model if that model targets
+   * the same provider — otherwise it is dropped so a cross-provider model id
+   * never reaches a runtime it doesn't belong to.
+   */
+  resolveBoundAgent?(
+    boundAgentId: string,
+    providerId?: ProviderId,
+  ): Promise<{ prompt?: string; model?: string; tools?: string[] } | null>;
+
+  /**
+   * Returns an in-process Claudian user-tool MCP server built from the current
+   * tool registry, or `undefined` when no tools are loaded. The callback is
+   * typed to return `unknown` to avoid a `core/` → `features/` import; the
+   * Claude runtime casts through `unknown` when merging into `mcpServers`.
+   *
+   * When `grantedToolIds` is non-empty the server is scoped to only those
+   * capability ids (`mcp__claudian__*`) — used to project a bound roster agent's
+   * tool grant onto the conversation. An empty/absent list exposes all tools.
+   */
+  getClaudianToolServer?: (grantedToolIds?: string[]) => unknown;
+
+  /**
+   * Stable fingerprint of the user tools the claudian server exposes for the
+   * given grant. The Claude runtime folds it into the persistent-query MCP key
+   * so a mid-session grant edit / registry change re-applies the scoped server.
+   */
+  getClaudianToolKey?: (grantedToolIds?: string[]) => string;
+
+  /**
+   * Returns the URL and auth header for the in-process HTTP MCP tool server,
+   * or `null` when unavailable. Plain-data shape so `core/` and `providers/`
+   * can consume it without importing `features/` types.
+   *
+   * When `grantedToolIds` is a non-empty bound-agent grant, the returned config
+   * carries a per-grant bearer token scoping the server to only those tools; an
+   * empty/absent grant returns the byte-identical all-tools default token.
+   */
+  getHttpToolServerConfig?(
+    grantedToolIds?: string[],
+  ): { url: string; headers: Record<string, string> } | null;
 
   getView(): ChatViewHandle | null;
   getAllViews(): ChatViewHandle[];
