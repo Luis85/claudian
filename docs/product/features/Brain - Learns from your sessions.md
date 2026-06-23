@@ -10,6 +10,7 @@ related:
   - "[[2026-06-22-feedback-signal-capture-design]]"
   - "[[2026-06-22-implicit-interaction-signal-capture-design]]"
   - "[[2026-06-22-brain-service-design]]"
+  - "[[2026-06-22-brain-scheduler-and-publishing-design]]"
   - "[[Co-Worker - Chat]]"
   - "[[Agent Kanban Board]]"
 tags: [feature, brain, memory, self-improvement, learning, local-first]
@@ -40,6 +41,8 @@ The Brain is **off until you turn it on**, and once on, it never saves anything 
 
 - **Consolidate a session:** turn a finished session into a short "what worked / what to avoid / decisions" note.
 - **Prime a session:** bring the relevant lessons into a new session so the assistant starts from what you've already learned.
+- **Consolidate on a schedule:** an optional scheduler prepares your knowledge in the background — at the end of a session, every so many sessions, or on a daily cadence — so lessons are always ready without you having to ask.
+- **Lessons agents can find:** consolidated lessons are published to a folder you choose, as a plain "Lessons Learned" note that delegated agents (including [[Agent Kanban Board]] work orders) read in their very first prompt — so a fresh agent starts already knowing your project's hard-won rules.
 - **Learns from your signals:** the thumbs up/down already in chat — plus implicit signals like retrying, rewinding, or copying a response — tell the Brain which turns were good and which missed.
 - **Verified, not flattering:** a lesson is only trusted when a positive signal is backed by an objective one (the code ran, the tests passed, the change stuck) — so the Brain learns correctness, not agreeableness.
 - **Propose, then approve:** every lesson is staged for your review before it's saved. Nothing is captured silently.
@@ -54,6 +57,8 @@ The UI describes state in product terms, not implementation jargon:
 - `3 lessons ready for review`
 - `Primed this session with 4 lessons from your past work`
 - `This lesson came from your session on June 21 — edit or remove it anytime`
+- `Lessons published to "Brain/Lessons Learned" — agents read it first`
+- `Next scheduled consolidation: tonight at 4:00`
 - `Some folders are excluded from the Brain`
 - `Distilling a lesson sends part of this session to your selected model`
 
@@ -82,9 +87,9 @@ The Brain builds directly on substrate the product already has — recorded sess
 
 Planned in stages:
 
-- **Consolidate & Recall (first):** manual consolidate + prime, with propose-and-approve review. Off by default.
-- **Assisted memory:** the Brain suggests lessons at the end of a session and surfaces relevant ones automatically when you start related work.
-- **Self-improving Brain:** reusable lessons grow into shareable patterns and skills, fade when stale, and the Brain tracks whether primed sessions actually did better.
+- **Consolidate & Recall (first):** manual consolidate + prime, with propose-and-approve review, and a published "Lessons Learned" note that Agent Board runs read in their first prompt. Off by default.
+- **Assisted memory:** a background scheduler consolidates on a cadence (session-end, every N sessions, or daily) and keeps the published lessons fresh; the Brain suggests lessons at the end of a session and surfaces relevant ones automatically when you start related work.
+- **Self-improving Brain:** reusable lessons grow into shareable patterns and skills, fade when stale, the Brain tracks whether primed sessions actually did better, and lessons can be published per-project and relevance-selected per work order.
 
 ## Success criteria
 

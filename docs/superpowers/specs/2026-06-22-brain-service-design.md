@@ -7,6 +7,7 @@ parent: "[[docs/research/2026-06-22-brain-feature-research]]"
 related:
   - "[[docs/superpowers/specs/2026-06-22-feedback-signal-capture-design]]"
   - "[[docs/superpowers/specs/2026-06-22-implicit-interaction-signal-capture-design]]"
+  - "[[docs/superpowers/specs/2026-06-22-brain-scheduler-and-publishing-design]]"
 ---
 
 # Brain service
@@ -164,11 +165,18 @@ signal (interrupt/copy) never gates a lesson on its own.
 
 ## Retrieval & injection
 
-- MVP: **manual** "Prime from Brain" command selects top-N lessons (lexical match on the user's
-  prompt + `helpful` rank, token-budgeted ~2–3K) and adds them as a trusted `'brain'`
-  `ContextSource`. Each injected lesson is **attributable** (carries its `id`/`src`).
-- v1: gated auto-injection on send; a derived local index for relevance.
-- Per-step relevance gating (ReasoningBank discipline) is a v1 refinement.
+Two delivery channels (the second is specced fully in the **scheduler & publishing** spec):
+
+- **Live chat (this spec):** MVP "Prime from Brain" command selects top-N lessons (lexical match
+  on the user's prompt + `helpful` rank, token-budgeted ~2–3K) and adds them as a trusted
+  `'brain'` `ContextSource`. Each injected lesson is **attributable** (carries its `id`/`src`).
+  v1: gated auto-injection on send + a derived local index; per-step relevance gating
+  (ReasoningBank discipline) is a v1 refinement.
+- **Headless agents & first-prompt discovery (scheduler spec):** a background **scheduler**
+  consolidates on a cadence and a **publisher** compiles approved lessons into a digest in a
+  **configurable folder**, delivered to delegated/headless agents in their *first prompt* via
+  `renderTaskPrompt` and (optionally) a managed `AGENTS.md`/`CLAUDE.md` pointer region. See
+  `docs/superpowers/specs/2026-06-22-brain-scheduler-and-publishing-design.md`.
 
 ## Privacy, consent & security
 
