@@ -47,7 +47,7 @@ The Brain is **off until you turn it on**, and once on, it never saves anything 
 - **Verified, not flattering:** a lesson is only trusted when a positive signal is backed by an objective one (the code ran, the tests passed, the change stuck) — so the Brain learns correctness, not agreeableness.
 - **Propose, then approve:** every lesson is staged for your review before it's saved. Nothing is captured silently.
 - **Provider-neutral memory:** lessons learned in one provider's sessions surface in all of them.
-- **Your files, your control:** lessons are Markdown notes you can open, edit, pin, or delete; stale lessons fade out over time.
+- **Your files, your control:** lessons live as Markdown notes in a visible `Brain` folder in your vault (you choose where) — open, edit, pin, or delete them like any note; stale lessons fade out over time. The Brain is never hidden from you.
 
 ## What users see
 
@@ -70,7 +70,7 @@ The Brain watches what you do, so trust is the precondition, not an afterthought
 
 - **Off by default.** It only starts after you opt in and see exactly what it reads (transcripts of completed sessions in allowed folders) and stores (distilled lessons — never raw transcripts).
 - **You approve every lesson** before it is saved, and every lesson injected into a session is attributable back to its source.
-- **Everything is a vault file** you can read, edit, and delete. One switch pauses the Brain; one switch wipes it.
+- **Everything is a visible vault file** in a `Brain` folder you can browse, read, edit, and delete — the Brain's knowledge is never hidden away. One switch pauses the Brain; one switch wipes it.
 - **Secrets stay out.** Proposed lessons are scanned and scrubbed before you ever see them, and excluded folders are never read.
 - **Honest about the model boundary.** Distilling a lesson sends session excerpts to your selected model — the same boundary as auto-titling already uses. A fully local model can be chosen for a no-network path.
 

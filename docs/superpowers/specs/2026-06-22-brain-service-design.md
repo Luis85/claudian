@@ -95,7 +95,7 @@ and is the single prerequisite that unblocks ad-hoc-chat learning.
                        │         task verification (handoff)            PendingLessons (staged)
                        │                                                     │ user approves/edits
                        ▼                                                     ▼
-                 (skip if neutral / low-confidence only)            BrainLessonStore  (.claudian/brain/*.md)
+                 (skip if neutral / low-confidence only)            BrainLessonStore  (visible Brain/*.md)
                                                                      append-delta, counters, decay
                                                                            │ retrieve (relevance + helpful-count, budgeted)
                                                                            ▼
@@ -116,11 +116,11 @@ render — so injection is provider-neutral with no per-provider prompt-builder 
 | `src/app/brain/OutcomeGate.ts` | **New.** Pure function: given a turn's signals + tool/runtime outcome + optional task verification, returns `{ eligible, polarity, reason }`. Encodes the §5.8 gate (positive **and** objective co-signal → "do" lesson; negative → "avoid + correction" lesson; else skip). Fully unit-testable, no I/O. |
 | `src/core/auxiliary/QueryBackedLessonDistillationService.ts` | **New.** Mirrors `QueryBackedInstructionRefineService`: wraps `AuxQueryRunner.query({ systemPrompt, model })`, routed by a configured `brain.distillModel` (defaults to the title-generation model). Input: gated turn excerpt + signal + outcome. Output: parsed candidate `BrainLesson[]`. |
 | `src/core/prompt/lessonDistill.ts` | **New.** `buildLessonDistillSystemPrompt()` + `parseLessonDistillResponse()` (mirrors `instructionRefine.ts`). Instructs the model to emit small, itemized, provenance-tagged lessons and to surface contrasting worked-vs-failed pairs (ExpeL/ReasoningBank shape). |
-| `src/app/brain/BrainLessonStore.ts` | **New.** Markdown-canonical store under `.claudian/brain/` (`lessons.md`, `facts.md`, `archive.md`). ACE discipline: `appendDelta` (append new bullet **or** deterministically bump a helpful/harmful counter — never LLM-rewrite); `read`; `latest`; `pruneAndArchive` (decay by last-accessed + counters). Each lesson is a markdown list item with frontmatter-ish inline fields. |
+| `src/app/brain/BrainLessonStore.ts` | **New.** Markdown-canonical store in a **visible, user-configurable vault folder** (`brain.folder`, default `Brain/`) — `lessons.md`, `facts.md`, `archive.md`. ACE discipline: `appendDelta` (append new bullet **or** deterministically bump a helpful/harmful counter — never LLM-rewrite); `read`; `latest`; `pruneAndArchive` (decay by last-accessed + counters). Each lesson is a markdown list item with frontmatter-ish inline fields. *(Visible-not-hidden is a product decision: the Brain's knowledge must be browsable/editable as ordinary vault notes — only the raw signal log stays in `.claudian/`.)* |
 | `src/app/brain/brainTypes.ts` | **New.** `BrainLesson { id; polarity; trigger; content; correction?; helpful; harmful; sourceMessageId; sourceConversationId; lastAccessed; createdAt }`; `PendingLesson`; `BrainSettings`. |
-| `src/app/brain/PendingLessonStore.ts` | **New.** `.claudian/brain/pending.md` (or in-memory + settings) holding staged candidates until the user approves/edits/rejects. |
+| `src/app/brain/PendingLessonStore.ts` | **New.** `<brain.folder>/Pending.md` (visible) holding staged candidates until the user approves/edits/rejects. |
 | `src/core/context/contextEnvelope.ts` | Add a `'brain'` `ContextSource` kind, trust-tagged **trusted** (user-owned), token-budgeted. The Brain supplies selected lessons here at turn build. |
-| `src/features/settings/registry/...` | **New** feature-flagged **Brain** settings tab: enable toggle (off by default), first-run consent, scope/exclude paths, distill model, **pending-lessons review** (approve/edit/reject), lesson list (edit/delete — they're just markdown), pause + wipe-all. |
+| `src/features/settings/registry/...` | **New** feature-flagged **Brain** settings tab: enable toggle (off by default), first-run consent, **`brain.folder` (visible vault folder, default `Brain/`)**, scope/exclude paths, distill model, **pending-lessons review** (approve/edit/reject), lesson list (edit/delete — they're just markdown), "Open Brain folder", pause + wipe-all. |
 | `src/main.ts` + commands | Construct `BrainService` when enabled; register commands **"Consolidate this session into the Brain"** and **"Prime this session from the Brain"** (the MVP manual path). |
 
 ## The outcome gate (the load-bearing logic)
@@ -144,7 +144,7 @@ signal (interrupt/copy) never gates a lesson on its own.
 
 ## Lesson store format (ACE-itemized, append-only)
 
-`.claudian/brain/lessons.md` — human-readable, git-diffable, hand-editable:
+`<brain.folder>/lessons.md` (default `Brain/lessons.md`, **visible in the vault**) — human-readable, git-diffable, hand-editable:
 
 ```markdown
 ## Strategies & insights
@@ -187,8 +187,11 @@ Two delivery channels (the second is specced fully in the **scheduler & publishi
   a fully-local distill model (Ollama via the configured runtime) is the privacy-max option.
 - **Secret-scan + redact every proposed lesson** before staging (reuse the `Logger` redaction
   substrate / `scrubString`); transcripts can contain keys. Confine all writes to
-  `.claudian/brain/`.
-- Everything is a visible, editable, deletable vault file; **pause** and **wipe-all** are
+  `brain.folder` (the visible Brain folder).
+- The Brain's lessons are **visible vault notes by design** (the differentiation moat: your
+  files, not a server's). Only the raw signal-capture log (`.claudian/feedback.jsonl`) stays
+  hidden — it's machine telemetry, not human knowledge. Everything is editable + deletable;
+  **pause** and **wipe-all** are
   one-switch. No silent capture, no invisible injection (every injected lesson is attributable).
 
 ## Edge cases & failure modes

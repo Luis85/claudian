@@ -88,7 +88,7 @@ lessons into the digest and writes it atomically (mirror `TaskNoteStore.replaceG
 
 | Setting | Default | Purpose |
 |---------|---------|---------|
-| `brain.publishFolder` | `Brain` (visible vault folder) | Where the digest lives. A **visible** default so users *and* agents can find it; `.claudian/brain` is an option for users who prefer it hidden. |
+| `brain.publishFolder` | `brain.folder` (visible, default `Brain/`) | Where the digest lives — defaults to the same **visible** Brain folder as the lesson store (product decision: the Brain stays visible to the user). Configurable, but not hidden under `.claudian/`. |
 | `brain.publishFileName` | `Lessons Learned.md` | The digest file name. |
 | `brain.agentsIntegration` | `pointer` | How provider-native agent files reference the digest: `off` / `pointer` / `inline` (below). |
 | `brain.injectIntoWorkOrders` | `true` | Whether `renderTaskPrompt` includes a lessons section. |
@@ -210,8 +210,9 @@ not import brain) — the Agent Board wiring at the app/view layer supplies it, 
 
 ## Open questions
 
-1. Default `publishFolder` visible (`Brain/`) vs hidden (`.claudian/brain/`)? Lean **visible** —
-   the whole point is agent + human discoverability.
+1. ~~Default `publishFolder` visible vs hidden?~~ **Resolved: visible.** The Brain stays visible
+   to the user — the lesson store *and* the digest live in the configurable `Brain/` folder;
+   only the raw signal log stays under `.claudian/`.
 2. Support editing a lesson *in the digest* and syncing back to the working store, or keep the
    digest strictly read-only/recompiled? Lean recompiled-only for MVP (single source of truth).
 3. Per-work-order relevance selection (only inject lessons matching the task) vs a global digest?
