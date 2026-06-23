@@ -10,6 +10,7 @@ cta_url: https://github.com/Luis85/specorator
 related:
   - "[[Co-Worker - Chat]]"
   - "[[Quick Actions]]"
+  - "[[Agent Loops]]"
 user_manual: "[[agent-board]]"
 image: "[[agent-board-overview.png]]"
 ---
@@ -65,6 +66,7 @@ A card might be "draft a thank-you letter to Aunt Maria", "summarize this twelve
 
 - [[Co-Worker - Chat]]: open a card as a co-worker session when you want to talk it through
 - [[Quick Actions]]: run a saved prompt on the active card to draft it, tidy it, or summarize it
+- [[Agent Loops]]: attach a reusable playbook to a card so each run follows the same disciplined steps
 
 ---
 
