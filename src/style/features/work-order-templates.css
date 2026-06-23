@@ -97,3 +97,112 @@
   width: 100%;
   font-family: var(--font-monospace);
 }
+
+/* ============================================================
+   Loop picker modal — mirrors the work-order template picker
+   (claudian-wo-templates-*) so the two pickers read identically.
+   ============================================================ */
+.claudian-loops-modal {
+  max-width: 560px;
+}
+
+.claudian-loops-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.claudian-loops-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.claudian-loops-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1em;
+  padding-top: 0.75em;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.claudian-loops-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 0.5em 0.75em;
+}
+
+/* "No loop" row uses a dashed border (mirrors the blank-template row). */
+.claudian-loops-row--none {
+  border-style: dashed;
+}
+
+.claudian-loops-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+  flex: 1;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.claudian-loops-main:hover {
+  color: var(--text-accent);
+}
+
+.claudian-loops-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Text column: name (strong), description, and use-when hint. */
+.claudian-loops-text {
+  min-width: 0;
+}
+
+.claudian-loops-desc {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+/* Secondary hint line — smaller and fainter than the description. */
+.claudian-loops-usewhen {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.claudian-loops-actions {
+  display: flex;
+  gap: 0.25em;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Loop editor modal — mirrors the work-order template editor
+   (claudian-wo-template-body-setting / claudian-wo-template-body-input).
+   ============================================================ */
+.claudian-loop-section-setting {
+  display: block;
+  border-top: 1px solid var(--background-modifier-border);
+  padding-top: 0.75em;
+}
+
+.claudian-loop-section-setting .setting-item-info {
+  margin-bottom: 0.5em;
+}
+
+.claudian-loop-section-setting .setting-item-control {
+  width: 100%;
+  justify-content: stretch;
+}
+
+.claudian-loop-section-input {
+  width: 100%;
+  font-family: var(--font-monospace);
+}

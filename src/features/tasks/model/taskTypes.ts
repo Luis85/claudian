@@ -33,6 +33,8 @@ export interface TaskFrontmatter {
   agent?: string;
   provider?: ProviderId;
   model?: string;
+  /** Optional attached loop slug; resolved through LoopCatalog at run time. */
+  loop?: string;
   run_id?: string | null;
   conversation_id?: string | null;
   sidepanel_tab_id?: string | null;

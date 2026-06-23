@@ -43,4 +43,16 @@ export type ToolLibraryTranslationKey =
   | 'skillLibrary.navLabel'
   | 'skillLibrary.nameField'
   | 'skillLibrary.providerVault'
-  | 'skillLibrary.actionFailed';
+  | 'skillLibrary.actionFailed'
+  // Loop Library
+  | 'loopLibrary.navLabel'
+  | 'loopLibrary.title'
+  | 'loopLibrary.newLoop'
+  | 'loopLibrary.installStarter'
+  | 'loopLibrary.empty'
+  | 'loopLibrary.edit'
+  | 'loopLibrary.delete'
+  | 'loopLibrary.deleteConfirm'
+  | 'loopLibrary.deleted'
+  | 'loopLibrary.useWhenLabel'
+  | 'loopLibrary.actionFailed';

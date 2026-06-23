@@ -115,6 +115,7 @@ Current coverage, by user-visible path:
 | `.claudian/sessions/*.meta.json` | Provider-neutral session metadata |
 | `.claudian/runs/<runId>/heartbeat.json` | Per-run sidecar heartbeat (`{ at, status, pauseReason? }`) — moved off the work-order note to avoid racing the agent's `Edit` tool; GC'd at terminal |
 | `.claudian/runs/<runId>/ledger.jsonl` | Per-run sidecar ledger (one `TaskLedgerEntry` per line) — snapshotted into the work-order note once at terminal |
+| loop folder (default `Agent Board/loops/*.md`) | Loop definitions (`type: claudian-loop`): reusable playbooks (Use when / Approach / Steps / Verify / Notes) attachable to a work order or template |
 | `.codex/skills/*/SKILL.md` | Codex vault skills |
 | `.agents/skills/*/SKILL.md` | Alternate Codex vault skill root |
 | `.codex/agents/*.toml` | Codex vault subagent definitions |

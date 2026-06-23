@@ -471,4 +471,35 @@ body`;
     });
   });
 
+  describe('TaskNoteStore.writeFields loop', () => {
+    const base = `---
+type: claudian-work-order
+schema_version: 1
+id: task-1
+title: "T"
+status: inbox
+priority: 2 - normal
+created: 2026-06-22
+updated: 2026-06-22
+attempts: 0
+---
+# T
+
+## Objective
+
+x
+`;
+
+    it('writes a loop slug', () => {
+      const out = store.writeFields(base, { loop: 'reproduce-then-fix' }, '2026-06-23');
+      expect(out).toContain('loop: reproduce-then-fix');
+    });
+
+    it('clears the loop when given an empty string', () => {
+      const withLoop = store.writeFields(base, { loop: 'reproduce-then-fix' }, '2026-06-23');
+      const cleared = store.writeFields(withLoop, { loop: '' }, '2026-06-24');
+      expect(cleared).not.toContain('loop:');
+    });
+  });
+
 });

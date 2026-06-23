@@ -54,6 +54,8 @@ export interface WriteFieldsOptions {
   provider?: string;
   model?: string;
   priority?: TaskPriority;
+  /** Loop slug to attach; pass an empty string to detach. */
+  loop?: string;
 }
 
 const SECTION_HEADINGS = Object.freeze({
@@ -179,6 +181,10 @@ export class TaskNoteStore {
     if (fields.provider !== undefined) frontmatter.provider = fields.provider;
     if (fields.model !== undefined) frontmatter.model = fields.model;
     if (fields.priority !== undefined) frontmatter.priority = fields.priority;
+    if (fields.loop !== undefined) {
+      if (fields.loop) frontmatter.loop = fields.loop;
+      else delete frontmatter.loop;
+    }
     frontmatter.updated = timestamp;
 
     return this.withFrontmatter(frontmatter, body);

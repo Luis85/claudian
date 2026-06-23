@@ -256,6 +256,26 @@ describe('buildWorkOrderFromTemplate', () => {
     expect(task.frontmatter.status).toBe('inbox');
     expect(task.frontmatter.priority).toBe('1 - high');
   });
+
+  it('emits loop: "<slug>" when a loop is supplied, and omits it when absent', () => {
+    const base = {
+      id: 'task-loop',
+      title: 'Loop test',
+      status: 'inbox' as const,
+      priority: '2 - normal' as const,
+      timestamp: '2026-06-22T10:00:00.000Z',
+      provider: 'claude',
+      model: 'sonnet',
+      conversationId: null,
+      body: '# Loop test\n\n## Objective\n\nDo the loop thing.',
+    };
+
+    const withLoop = buildWorkOrderFromTemplate({ ...base, loop: 'my-loop-slug' });
+    expect(withLoop).toContain('loop: "my-loop-slug"');
+
+    const withoutLoop = buildWorkOrderFromTemplate(base);
+    expect(withoutLoop).not.toContain('loop:');
+  });
 });
 
 describe('buildExampleTemplateMarkdown', () => {

@@ -43,6 +43,7 @@ const EXPECTED_COMMAND_IDS = [
   'create-work-order-from-selection',
   'create-work-order-template',
   'install-common-work-order-templates',
+  'open-loop-library',
   'create-work-order-from-browser-selection',
   'create-work-order-from-chat-conversation',
   'copy-diagnostic-logs',

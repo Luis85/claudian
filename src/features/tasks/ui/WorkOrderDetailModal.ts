@@ -18,6 +18,8 @@ export interface WorkOrderFieldUpdate {
   provider?: string;
   model?: string;
   priority?: TaskPriority;
+  /** Attached loop slug; empty string detaches. */
+  loop?: string;
 }
 
 export interface WorkOrderOption {
@@ -44,6 +46,14 @@ export interface WorkOrderDetailModalCallbacks {
   onSaveFields?(task: TaskSpec, fields: WorkOrderFieldUpdate): void | Promise<void>;
   getProviderOptions(): WorkOrderOption[];
   getModelOptions(providerId: string): WorkOrderOption[];
+  /**
+   * Open the loop picker for this task, persist the choice, and resolve to the
+   * new loop slug (`''` when detached) or `undefined` when cancelled — so the
+   * caller can update the (non-native) loop chip in place.
+   */
+  onPickLoop?(task: TaskSpec): Promise<string | undefined>;
+  /** Resolve the task's attached loop slug to a display name (sync, best-effort). */
+  getLoopName?(loopId: string | undefined): string | undefined;
   /**
    * Combined persona + roster agent options for the agent picker. Preloaded at
    * modal-open time by the caller so `renderAgentRow` stays synchronous.

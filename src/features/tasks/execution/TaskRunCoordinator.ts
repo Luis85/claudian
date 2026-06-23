@@ -37,7 +37,7 @@ export interface TaskRunCoordinatorDeps {
    */
   finalizeLedgerToNote: (task: TaskSpec, runId: string) => Promise<void>;
   writeHandoff: (task: TaskSpec, markdown: string) => Promise<void>;
-  renderPrompt?: (task: TaskSpec) => string;
+  renderPrompt?: (task: TaskSpec) => string | Promise<string>;
   heartbeatIntervalMs?: number;
   staleThresholdMs?: number;
   /**
@@ -155,7 +155,7 @@ export class TaskRunCoordinator {
     // created; the finally below is the safety net for paths that never open one.
     const reservation = externalReservation ?? this.deps.reservations?.reserve();
     try {
-      const prompt = (this.deps.renderPrompt ?? renderTaskPrompt)(task);
+      const prompt = await (this.deps.renderPrompt ?? renderTaskPrompt)(task);
       // Thread the roster agent id through to the surface so the run's
       // conversation is bound from creation. Non-roster / absent agent values
       // are left as undefined (the existing persona field has no effect here).
