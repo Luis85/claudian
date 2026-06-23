@@ -1,5 +1,6 @@
 import { renderHandoffMarkdown } from '../../../../../src/features/tasks/model/handoffSections';
 import {
+  CONTEXT_PLACEHOLDER,
   HANDOFF_END,
   HANDOFF_START,
   RUN_LEDGER_END,
@@ -499,6 +500,92 @@ x
       const withLoop = store.writeFields(base, { loop: 'reproduce-then-fix' }, '2026-06-23');
       const cleared = store.writeFields(withLoop, { loop: '' }, '2026-06-24');
       expect(cleared).not.toContain('loop:');
+    });
+  });
+
+  describe('appendContext', () => {
+    const store = new TaskNoteStore();
+
+    const noteWithContext = (contextBody: string): string => `---
+type: claudian-work-order
+schema_version: 1
+id: task-1
+title: T
+status: ready
+priority: 2 - normal
+created: 2026-06-23T08:00:00.000Z
+updated: 2026-06-23T08:00:00.000Z
+attempts: 0
+---
+# T
+
+## Objective
+Do it.
+
+## Context
+${contextBody}
+
+## Constraints
+Keep it tidy.
+`;
+
+    it('appends a reference as a bullet below existing context content', () => {
+      const result = store.appendContext(noteWithContext('Existing prose.'), '[[Notes/Foo]]');
+      expect(result.changed).toBe(true);
+      expect(store.parse('x.md', result.content).task.sections.context).toBe('Existing prose.\n- [[Notes/Foo]]');
+    });
+
+    it('replaces the untouched placeholder on the first add', () => {
+      const result = store.appendContext(noteWithContext(CONTEXT_PLACEHOLDER), '[[Notes/Foo]]');
+      expect(result.changed).toBe(true);
+      const context = store.parse('x.md', result.content).task.sections.context;
+      expect(context).toBe('- [[Notes/Foo]]');
+      expect(context).not.toContain(CONTEXT_PLACEHOLDER);
+    });
+
+    it('replaces an empty context section on the first add', () => {
+      const result = store.appendContext(noteWithContext(''), '`Notes/Sub`');
+      expect(result.changed).toBe(true);
+      expect(store.parse('x.md', result.content).task.sections.context).toBe('- `Notes/Sub`');
+    });
+
+    it('is a no-op when the reference is already present', () => {
+      const once = store.appendContext(noteWithContext(CONTEXT_PLACEHOLDER), '[[Notes/Foo]]');
+      const twice = store.appendContext(once.content, '[[Notes/Foo]]');
+      expect(twice.changed).toBe(false);
+      expect(twice.content).toBe(once.content);
+    });
+
+    it('dedupes against a reference embedded in seeded prose', () => {
+      const result = store.appendContext(noteWithContext('Source note: [[Notes/Foo]]'), '[[Notes/Foo]]');
+      expect(result.changed).toBe(false);
+    });
+
+    it('preserves sections that follow Context', () => {
+      const result = store.appendContext(noteWithContext('Existing prose.'), '[[Notes/Foo]]');
+      const parsed = store.parse('x.md', result.content);
+      expect(parsed.task.sections.constraints).toBe('Keep it tidy.');
+      expect(parsed.task.frontmatter.status).toBe('ready');
+    });
+
+    it('throws when the note has no Context section', () => {
+      const noContext = `---
+type: claudian-work-order
+schema_version: 1
+id: task-1
+title: T
+status: ready
+priority: 2 - normal
+created: 2026-06-23T08:00:00.000Z
+updated: 2026-06-23T08:00:00.000Z
+attempts: 0
+---
+# T
+
+## Objective
+Do it.
+`;
+      expect(() => store.appendContext(noContext, '[[Notes/Foo]]')).toThrow('Missing Context section');
     });
   });
 

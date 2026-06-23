@@ -11,6 +11,13 @@ export const HANDOFF_END = '<!-- claudian:handoff-end -->';
 
 const CLAUDIAN_MARKER_PREFIX = '<!-- claudian:';
 
+/**
+ * Default body of a freshly created work order's `## Context` section. Shared with
+ * the work-order builder so `appendContext` can recognise the untouched
+ * placeholder and replace it (rather than appending below it) on the first add.
+ */
+export const CONTEXT_PLACEHOLDER = '_Add the links, files, and scope the agent needs._';
+
 /** Statuses that mean the run has ended (run-finished metadata + heartbeat clear apply). */
 const RUN_ENDED_STATUSES: ReadonlySet<TaskStatus> = new Set([
   'review',
@@ -217,6 +224,48 @@ export class TaskNoteStore {
     this.assertNoEmbeddedClaudianMarkers(scrubbed);
 
     return this.replaceGeneratedRegion(content, HANDOFF_START, HANDOFF_END, markdown.trim());
+  }
+
+  /**
+   * Append a reference (a wikilink or code-spanned path) as a bullet to the
+   * `## Context` section. The untouched placeholder is replaced on first add; an
+   * already-present reference is a no-op (`changed: false`) so repeated adds do
+   * not duplicate. Throws when the note has no `## Context` heading.
+   */
+  appendContext(content: string, reference: string): { content: string; changed: boolean } {
+    const { prefix, body } = this.splitFrontmatter(content);
+    const lines = body.split('\n');
+    const headingIndex = lines.findIndex(
+      (line) => /^##\s+(.+?)\s*$/.exec(line)?.[1] === SECTION_HEADINGS.context,
+    );
+    if (headingIndex === -1) {
+      throw new Error('Missing Context section');
+    }
+
+    let endIndex = lines.length;
+    for (let i = headingIndex + 1; i < lines.length; i += 1) {
+      if (/^##\s+/.test(lines[i])) {
+        endIndex = i;
+        break;
+      }
+    }
+
+    const sectionText = lines.slice(headingIndex + 1, endIndex).join('\n').trim();
+    if (sectionText.includes(reference)) {
+      return { content, changed: false };
+    }
+
+    const bullet = `- ${reference}`;
+    const isPlaceholder = sectionText === '' || sectionText === CONTEXT_PLACEHOLDER;
+    const nextSection = isPlaceholder ? bullet : `${sectionText}\n${bullet}`;
+    const rebuilt = [
+      ...lines.slice(0, headingIndex + 1),
+      '',
+      nextSection,
+      '',
+      ...lines.slice(endIndex),
+    ].join('\n');
+    return { content: `${prefix}${rebuilt}`, changed: true };
   }
 
   extractGeneratedRegion(content: string, start: string, end: string): string {

@@ -32,6 +32,7 @@ export interface SaveTemplateInput {
   model?: string;
   priority?: TaskPriority;
   loop?: string;
+  agent?: string;
   body: string;
 }
 
@@ -60,6 +61,7 @@ export class TemplateNoteStore {
       model: extractString(parsed.frontmatter, 'model'),
       priority,
       loop: extractString(parsed.frontmatter, 'loop'),
+      agent: extractString(parsed.frontmatter, 'agent'),
       body: parsed.body.trim(),
     };
   }
@@ -93,6 +95,7 @@ export class TemplateNoteStore {
     if (input.model) lines.push(`model: ${JSON.stringify(input.model)}`);
     if (input.priority) lines.push(`priority: ${input.priority}`);
     if (input.loop) lines.push(`loop: ${JSON.stringify(input.loop)}`);
+    if (input.agent) lines.push(`agent: ${JSON.stringify(input.agent)}`);
     lines.push('---', '', input.body.trim(), '');
     return lines.join('\n');
   }

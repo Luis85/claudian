@@ -6,7 +6,32 @@ import {
 import { TaskNoteStore } from '../../../../../src/features/tasks/storage/TaskNoteStore';
 import { TemplateNoteStore } from '../../../../../src/features/tasks/templates/TemplateNoteStore';
 
-const { buildWorkOrderMarkdown, slugifyTitle } = __taskCommandTestUtils;
+const { buildWorkOrderMarkdown, buildWorkOrderFromTemplate, slugifyTitle } = __taskCommandTestUtils;
+
+describe('buildWorkOrderFromTemplate agent', () => {
+  const base = {
+    id: 'task-1',
+    title: 'Templated order',
+    status: 'inbox' as const,
+    priority: '2 - normal' as const,
+    timestamp: '2026-06-23T10:00:00.000Z',
+    provider: 'claude',
+    model: 'sonnet',
+    body: '# Templated order\n\n## Objective\nDo the thing.',
+  };
+
+  it('writes the agent frontmatter when the template assigns one', () => {
+    const md = buildWorkOrderFromTemplate({ ...base, agent: 'roster:debugger' });
+    expect(md).toContain('agent: "roster:debugger"');
+    expect(new TaskNoteStore().parse('x.md', md).task.frontmatter.agent).toBe('roster:debugger');
+  });
+
+  it('omits the agent frontmatter when the template has no agent', () => {
+    const md = buildWorkOrderFromTemplate(base);
+    expect(md).not.toContain('agent:');
+    expect(new TaskNoteStore().parse('x.md', md).task.frontmatter.agent).toBeUndefined();
+  });
+});
 
 describe('resolveArchiveFolder', () => {
   it('defaults to Agent Board/archive when unset', () => {
