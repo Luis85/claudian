@@ -461,7 +461,6 @@ export class AgentBoardView extends ItemView {
 
   private async pickLoopForTask(task: TaskSpec): Promise<string | undefined> {
     const result = await chooseLoop(this.plugin, task.frontmatter.loop);
-    // An empty loopId detaches the loop (handled by TaskNoteStore.writeFields).
     if (result.cancelled || result.loopId === undefined) return undefined;
     await this.saveTaskFields(task, { loop: result.loopId });
     return result.loopId;
