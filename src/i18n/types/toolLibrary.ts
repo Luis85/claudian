@@ -48,6 +48,7 @@ export type ToolLibraryTranslationKey =
   | 'loopLibrary.navLabel'
   | 'loopLibrary.title'
   | 'loopLibrary.newLoop'
+  | 'loopLibrary.installStarter'
   | 'loopLibrary.empty'
   | 'loopLibrary.edit'
   | 'loopLibrary.delete'

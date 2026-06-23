@@ -23,7 +23,7 @@ Use a loop when you have a repeatable shape of work — a bug-fix loop, a refact
 
 ---
 
-Loops live in a folder in your vault, just like your work orders and templates. Each loop is an ordinary Markdown note you can read, edit, sync, and share. Specorator ships a starter set you can install with one click, and you can write your own.
+Loops live in a folder in your vault, just like your work orders and templates. Each loop is an ordinary Markdown note you can read, edit, sync, and share. Specorator ships a starter set you can install with one click — curated and adapted from the [Forward-Future loop library](https://github.com/Forward-Future/loop-library) — and you can write your own.
 
 Attaching is one step. Open a work order, click the **Loop** chip, and pick a loop from the list — or set a **default loop** on a work-order template so every card made from that template starts with it already attached. From then on, when the card runs, the loop's approach, steps, and verify check fold into the instructions the assistant follows.
 

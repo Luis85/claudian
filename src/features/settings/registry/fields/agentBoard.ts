@@ -257,7 +257,7 @@ function registerAgentBoardFields(r: ReturnType<typeof getSettingsRegistry>): vo
     tabId: 'agentBoard',
     sectionId: 'templates',
     label: 'Common loops',
-    description: 'Install the starter set of loops (reproduce → fix → verify, characterize → refactor, research spike, test backfill). Re-running skips any whose filename already exists.',
+    description: 'Install a starter set of loops adapted from the Forward-Future loop library. Re-running skips any whose filename already exists.',
     type: {
       kind: 'button',
       label: 'Install common loops',

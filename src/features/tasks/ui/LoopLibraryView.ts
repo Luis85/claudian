@@ -6,6 +6,7 @@ import { renderLibraryNav } from '../../../shared/libraryNav';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { withErrorNotice } from '../../../shared/uiAction';
 import { createLibraryCard, renderLibraryEmptyState, renderLibraryLoading, renderLibraryShell } from '../../../utils/libraryView';
+import { installPresetLoopsWithNotice } from '../loops/installPresetLoops';
 import { LoopNoteStore } from '../loops/LoopNoteStore';
 import type { LoopDefinition } from '../loops/loopTypes';
 import { LoopEditorModal } from './LoopEditorModal';
@@ -36,6 +37,8 @@ export class LoopLibraryView extends ItemView {
       (c) => renderLibraryNav(c, this.plugin, VIEW_TYPE_LOOP_LIBRARY));
     const newBtn = actions.createEl('button', { cls: 'mod-cta', text: t('loopLibrary.newLoop') });
     newBtn.onclick = () => this.openEditorSafely(null);
+    const installBtn = actions.createEl('button', { text: t('loopLibrary.installStarter') });
+    installBtn.onclick = () => void withErrorNotice(() => this.installStarters(), t('loopLibrary.actionFailed'), (e) => this.fail(e));
 
     renderLibraryLoading(list, t('common.loading'));
     const { loops } = await this.store.list(this.plugin.app.vault, this.folder());
@@ -67,6 +70,11 @@ export class LoopLibraryView extends ItemView {
       const deleteBtn = cardActions.createEl('button', { cls: 'claudian-library-card-delete', text: t('loopLibrary.delete') });
       deleteBtn.onclick = () => void withErrorNotice(() => this.deleteLoop(loop), t('loopLibrary.actionFailed'), (e) => this.fail(e));
     }
+  }
+
+  private async installStarters(): Promise<void> {
+    await installPresetLoopsWithNotice(this.plugin);
+    await this.render();
   }
 
   private openEditorSafely(existing: LoopDefinition | null): void {

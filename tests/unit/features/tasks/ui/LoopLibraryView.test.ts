@@ -19,6 +19,11 @@ jest.mock('../../../../../src/shared/modals/ConfirmModal', () => ({
 const deleteMock = jest.fn();
 jest.spyOn(LoopNoteStore.prototype, 'delete').mockImplementation(async (...args) => deleteMock(...args));
 
+const installStarterMock = jest.fn();
+jest.mock('../../../../../src/features/tasks/loops/installPresetLoops', () => ({
+  installPresetLoopsWithNotice: (...args: unknown[]) => installStarterMock(...args),
+}));
+
 const store = new LoopNoteStore();
 const LOOP_A = store.build({
   name: 'Alpha Loop',
@@ -70,6 +75,8 @@ beforeEach(() => {
   openMock.mockClear();
   confirmMock.mockReset();
   deleteMock.mockReset();
+  installStarterMock.mockReset();
+  installStarterMock.mockResolvedValue(undefined);
 });
 
 describe('LoopLibraryView', () => {
@@ -90,8 +97,26 @@ describe('LoopLibraryView', () => {
     expect(contentEl.querySelector('.claudian-library-nav')).not.toBeNull();
     const navItems = contentEl.querySelectorAll('.claudian-library-nav-item');
     expect(navItems.length).toBe(4);
+    const headerButtons = Array.from(
+      contentEl.querySelectorAll('.claudian-library-header-actions button'),
+    ).map((b) => b.textContent);
+    expect(headerButtons).toEqual(['New loop', 'Install starter loops']);
     const newBtn = contentEl.querySelector('.claudian-library-header-actions .mod-cta');
     expect(newBtn?.textContent).toBe('New loop');
+  });
+
+  it('clicking Install starter loops installs the preset loops and re-renders', async () => {
+    const { view, contentEl } = makeView(makePlugin({}));
+    await view.onOpen();
+    await flush();
+
+    const installBtn = Array.from(contentEl.querySelectorAll('.claudian-library-header-actions button'))
+      .find((b) => b.textContent === 'Install starter loops') as HTMLButtonElement;
+    expect(installBtn).toBeDefined();
+    installBtn.click();
+    await flush();
+
+    expect(installStarterMock).toHaveBeenCalledTimes(1);
   });
 
   it('renders the empty state when there are no loops', async () => {

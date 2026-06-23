@@ -1149,6 +1149,7 @@
     "navLabel": "Loops",
     "title": "Loop library",
     "newLoop": "New loop",
+    "installStarter": "Install starter loops",
     "empty": "No loops yet. Create one to reuse a playbook across work orders.",
     "edit": "Edit",
     "delete": "Delete",
