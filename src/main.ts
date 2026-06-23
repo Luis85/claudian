@@ -43,10 +43,10 @@ import { SecretStore } from './core/security/secretStore';
 import { VaultFileAdapter } from './core/storage/VaultFileAdapter';
 import type {
   ChatMessageAction,
-  SpecoratorSettings,
   Conversation,
   ConversationMeta,
   ConversationSnapshot,
+  SpecoratorSettings,
 } from './core/types';
 import {
   VIEW_TYPE_SPECORATOR,
@@ -69,10 +69,10 @@ import {
 } from './features/agents/roster/resolveAgentProvider';
 import type { RosterAgent } from './features/agents/roster/rosterTypes';
 import { AgentRosterView, VIEW_TYPE_AGENT_ROSTER } from './features/agents/roster/view/AgentRosterView';
-import { SpecoratorView } from './features/chat/SpecoratorView';
 import { sendFeedbackPrompt } from './features/chat/feedback/sendFeedbackPrompt';
 import { isSpecoratorView } from './features/chat/isSpecoratorView';
 import type { GitStatusWatcher } from './features/chat/services/GitStatusWatcher';
+import { SpecoratorView } from './features/chat/SpecoratorView';
 import { isCaptureEligible, openCaptureFromMessage } from './features/quickActions/captureFromMessage';
 import { QuickActionFavoritesCache } from './features/quickActions/QuickActionFavoritesCache';
 import { QuickActionLastUsedStore } from './features/quickActions/quickActionLastUsedStore';
@@ -92,10 +92,10 @@ import { TaskNoteStore } from './features/tasks/storage/TaskNoteStore';
 import { AgentBoardView } from './features/tasks/ui/AgentBoardView';
 import { LoopLibraryView, VIEW_TYPE_LOOP_LIBRARY } from './features/tasks/ui/LoopLibraryView';
 import { WorkOrderActivityProvider } from './features/tasks/ui/WorkOrderActivityProvider';
-import { SpecoratorToolRegistry } from './features/tools/SpecoratorToolRegistry';
-import { SpecoratorHttpToolServer } from './features/tools/host/SpecoratorHttpToolServer';
 import { buildSpecoratorToolMcpServer } from './features/tools/host/InProcessToolMcpServer';
+import { SpecoratorHttpToolServer } from './features/tools/host/SpecoratorHttpToolServer';
 import { getScopedTools, scopedToolKey } from './features/tools/scopedTools';
+import { SpecoratorToolRegistry } from './features/tools/SpecoratorToolRegistry';
 import type { LoadedTool } from './features/tools/toolTypes';
 import { transpileToolSource } from './features/tools/transpile';
 import { ToolLibraryView, VIEW_TYPE_TOOL_LIBRARY } from './features/tools/view/ToolLibraryView';

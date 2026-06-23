@@ -10,11 +10,11 @@
 
 import '../../setup/obsidianDom';
 
-import { SpecoratorSettingTab } from '../../../src/features/settings/SpecoratorSettings';
 import {
   getSettingsRegistry,
   resetSettingsRegistryForTests,
 } from '../../../src/features/settings/registry';
+import { SpecoratorSettingTab } from '../../../src/features/settings/SpecoratorSettings';
 import { setLocale } from '../../../src/i18n/i18n';
 import {
   configureProviderRegistryMock,

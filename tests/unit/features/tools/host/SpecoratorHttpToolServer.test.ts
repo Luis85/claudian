@@ -23,7 +23,7 @@ import { z } from 'zod';
 import type { HttpToolServerConfig } from '@/features/tools/host/SpecoratorHttpToolServer';
 import { buildHttpMcpServer, SpecoratorHttpToolServer } from '@/features/tools/host/SpecoratorHttpToolServer';
 import { scopedToolKey } from '@/features/tools/scopedTools';
-import type { SpecoratorToolModule, LoadedTool, ToolHostContext } from '@/features/tools/toolTypes';
+import type { LoadedTool, SpecoratorToolModule, ToolHostContext } from '@/features/tools/toolTypes';
 
 beforeEach(() => {
   jest.clearAllMocks();

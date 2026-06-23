@@ -19,7 +19,6 @@ import {
 import {
   createMockBrowserSelectionController,
   createMockCanvasSelectionController,
-  createMockSpecoratorService,
   createMockContextUsageMeter,
   createMockExternalContextSelector,
   createMockFileContextManager,
@@ -35,6 +34,7 @@ import {
   createMockSelectionController,
   createMockServiceTierToggle,
   createMockSlashCommandDropdown,
+  createMockSpecoratorService,
   createMockStatusPanel,
   createMockThinkingBudgetSelector,
   installMockResizeObserver,

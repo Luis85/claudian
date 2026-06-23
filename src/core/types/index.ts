@@ -21,7 +21,6 @@ export { type ProviderId } from './provider';
 export {
   type ApprovalDecision,
   asSettingsBag,
-  type SpecoratorSettings,
   type EnvironmentScope,
   type EnvSnippet,
   type HostnameCliPaths,
@@ -29,6 +28,7 @@ export {
   type KeyboardNavigationSettings,
   type PermissionMode,
   type SlashCommand,
+  type SpecoratorSettings,
   type TabBarPosition,
 } from './settings';
 

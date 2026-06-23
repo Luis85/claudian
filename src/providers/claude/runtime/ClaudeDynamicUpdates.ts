@@ -9,7 +9,7 @@ import type { McpServerManager } from '../../../core/mcp/McpServerManager';
 import type {
   ChatRuntimeQueryOptions,
 } from '../../../core/runtime/types';
-import type { SpecoratorSettings, PermissionMode } from '../../../core/types/settings';
+import type { PermissionMode,SpecoratorSettings } from '../../../core/types/settings';
 import {
   resolveEffortLevel,
 } from '../types/models';

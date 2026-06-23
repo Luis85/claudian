@@ -1,7 +1,7 @@
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
 import type { ProviderCustomModel } from '../../../core/types/settings';
-import { asSettingsBag, type SpecoratorSettings, type ProviderConfigMap } from '../../../core/types/settings';
+import { asSettingsBag, type ProviderConfigMap,type SpecoratorSettings } from '../../../core/types/settings';
 
 // Legacy maps lived as top-level fields on SpecoratorSettings. F9 erases them
 // in favour of per-provider customModels rows tagged with source 'env'.

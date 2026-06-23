@@ -2,7 +2,7 @@
 import { z } from 'zod';
 
 import type { VaultFileAdapter } from '../../core/storage/VaultFileAdapter';
-import type { SpecoratorToolModule, LoadedTool } from './toolTypes';
+import type { LoadedTool,SpecoratorToolModule } from './toolTypes';
 
 export const TOOLS_DIR = '.specorator/tools';
 

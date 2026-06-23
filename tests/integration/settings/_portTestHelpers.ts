@@ -13,13 +13,13 @@
  * resolve through the per-test mocks.
  */
 import { ProviderRegistry } from '../../../src/core/providers/ProviderRegistry';
-import { SpecoratorSettingTab } from '../../../src/features/settings/SpecoratorSettings';
 import {
   getSettingsRegistry,
   registerAllSettings,
   renderTab,
   type SettingsCtx,
 } from '../../../src/features/settings/registry';
+import { SpecoratorSettingTab } from '../../../src/features/settings/SpecoratorSettings';
 
 export interface PortTestOptions {
   tabId: string;

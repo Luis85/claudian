@@ -12,7 +12,7 @@ import {
 } from '../../../core/prompt/mainAgent';
 import type { AppPluginManager } from '../../../core/providers/types';
 import { asSettingsBag } from '../../../core/types';
-import type { SpecoratorSettings, PermissionMode } from '../../../core/types/settings';
+import type { PermissionMode,SpecoratorSettings } from '../../../core/types/settings';
 import {
   type ClaudeSafeMode,
   getClaudeProviderSettings,

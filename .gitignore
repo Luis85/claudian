@@ -95,7 +95,7 @@ dev
 # Claude session config + worktrees (never commit these — worktrees show up as gitlinks)
 /.claude/worktrees/
 /.claude/worktrees/**
-/.claudian/
+/.specorator/
 /.specorator/
 /.worktrees/
 /.worktrees/**

@@ -9,7 +9,7 @@
  * env blob into the store and return the sanitized blob plus the new refs.
  */
 import { parseEnvironmentVariables, PLAINTEXT_OPT_OUT_MARKER } from '../../utils/env';
-import { isSpecoratorGeneratedSecretId, isSecretEnvKey, migratedEnvSecretId, SECRET_VALUE_PLACEHOLDER, uniquifySecretId } from '../security/secretIds';
+import { isSecretEnvKey, isSpecoratorGeneratedSecretId, migratedEnvSecretId, SECRET_VALUE_PLACEHOLDER, uniquifySecretId } from '../security/secretIds';
 import type { EnvironmentScope, SecretEnvVarRef } from '../types/settings';
 import {
   getProviderEnvironmentVariables,

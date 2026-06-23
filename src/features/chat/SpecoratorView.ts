@@ -22,12 +22,12 @@ import { rosterAgentToPersona } from '../agents/personaRegistry';
 import { openQuickActionsModal } from '../quickActions/openQuickActionsModal';
 import { dispatchQuickActionToTab } from '../quickActions/runQuickActionForFile';
 import { resolveModelContextWindow } from '../settings/customModels/resolveModelContextWindow';
-import { SpecoratorViewWorkOrderBridge } from './SpecoratorViewWorkOrderBridge';
 import type { HistoryConversationOpenState } from './controllers/ConversationController';
 import {
   type HydrationFailedBannerPayload,
   registerHydrationFailedSubscriber,
 } from './hydration/hydrationFailedSubscriber';
+import { SpecoratorViewWorkOrderBridge } from './SpecoratorViewWorkOrderBridge';
 import {
   getTabProviderId,
   getTabTitle,

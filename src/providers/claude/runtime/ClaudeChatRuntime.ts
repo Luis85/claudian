@@ -54,7 +54,7 @@ import type {
   ToolCallInfo,
 } from '../../../core/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
-import type { SpecoratorSettings, PermissionMode } from '../../../core/types/settings';
+import type { PermissionMode,SpecoratorSettings } from '../../../core/types/settings';
 import { t } from '../../../i18n/i18n';
 import { getEnhancedPath, getMissingNodeError } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';

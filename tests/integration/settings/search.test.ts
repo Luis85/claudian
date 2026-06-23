@@ -13,8 +13,8 @@
 import '../../setup/obsidianDom';
 
 import { ProviderRegistry } from '../../../src/core/providers/ProviderRegistry';
-import { SpecoratorSettingTab } from '../../../src/features/settings/SpecoratorSettings';
 import { resetSettingsRegistryForTests } from '../../../src/features/settings/registry';
+import { SpecoratorSettingTab } from '../../../src/features/settings/SpecoratorSettings';
 
 // Mock ProviderRegistry
 jest.mock('../../../src/core/providers/ProviderRegistry');

@@ -8,7 +8,7 @@ import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 
 import { buildSpecoratorToolMcpServer } from '@/features/tools/host/InProcessToolMcpServer';
-import type { SpecoratorToolModule, LoadedTool, ToolHostContext } from '@/features/tools/toolTypes';
+import type { LoadedTool, SpecoratorToolModule, ToolHostContext } from '@/features/tools/toolTypes';
 
 beforeEach(() => {
   jest.clearAllMocks();

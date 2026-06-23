@@ -11,10 +11,10 @@ import type { ChatRuntime } from '../runtime/ChatRuntime';
 import type { SecretStore } from '../security/secretStore';
 import type {
   ChatMessageAction,
-  SpecoratorSettings,
   Conversation,
   ConversationMeta,
   ConversationSnapshot,
+  SpecoratorSettings,
 } from './index';
 import type { ProviderId } from './provider';
 import type { EnvironmentScope, SecretEnvVarRef } from './settings';

@@ -1,9 +1,9 @@
 import {
-  SPECORATOR_TOOL_MCP_PREFIX,
   createRosterAgent,
   dedupeRosterId,
   rosterIdFromSlug,
   slugifyRosterName,
+  SPECORATOR_TOOL_MCP_PREFIX,
   toolCapabilityId,
 } from '@/features/agents/roster/rosterCapabilities';
 

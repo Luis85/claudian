@@ -1,4 +1,4 @@
-import type { SpecoratorSettings, HiddenProviderCommands } from '../../types/settings';
+import type { HiddenProviderCommands,SpecoratorSettings } from '../../types/settings';
 import type { ProviderId } from '../types';
 
 function normalizeHiddenCommandName(value: string): string {
