@@ -22,6 +22,7 @@ import {
   createMockBangBashModeManager,
   createMockBrowserSelectionController,
   createMockCanvasSelectionController,
+  createMockClaudeChatRuntime,
   createMockContextUsageMeter,
   createMockExternalContextSelector,
   createMockFileContextManager,
@@ -38,7 +39,6 @@ import {
   createMockSelectionController,
   createMockServiceTierToggle,
   createMockSlashCommandDropdown,
-  createMockSpecoratorService,
   createMockStatusPanel,
   createMockThinkingBudgetSelector,
   installMockResizeObserver,
@@ -48,7 +48,7 @@ installMockResizeObserver();
 
 // Mock provider runtime used by ProviderRegistry
 jest.mock('@/providers/claude/runtime/ClaudeChatRuntime', () => ({
-  SpecoratorService: jest.fn().mockImplementation(() => ({
+  ClaudeChatRuntime: jest.fn().mockImplementation(() => ({
     ensureReady: jest.fn().mockResolvedValue(true),
     cleanup: jest.fn(),
     isReady: jest.fn().mockReturnValue(false),
@@ -1795,10 +1795,10 @@ describe('Tab - Controller Configuration', () => {
 describe('Tab - First Send Binding', () => {
   it('derives provider from draft model on first send (Claude)', async () => {
     const mockEnsureReady = jest.fn().mockResolvedValue(true);
-    const runtimeModule = jest.requireMock('@/providers/claude/runtime/ClaudeChatRuntime') as { SpecoratorService: jest.Mock };
-    runtimeModule.SpecoratorService.mockImplementationOnce(() => createMockSpecoratorService({ ensureReady: mockEnsureReady }));
+    const runtimeModule = jest.requireMock('@/providers/claude/runtime/ClaudeChatRuntime') as { ClaudeChatRuntime: jest.Mock };
+    runtimeModule.ClaudeChatRuntime.mockImplementationOnce(() => createMockClaudeChatRuntime({ ensureReady: mockEnsureReady }));
     const createChatRuntimeSpy = jest.spyOn(ProviderRegistry, 'createChatRuntime')
-      .mockReturnValue(createMockSpecoratorService() as any);
+      .mockReturnValue(createMockClaudeChatRuntime() as any);
 
     const plugin = createMockPlugin();
     const tab = createTab(createMockOptions({ plugin }));
@@ -1817,7 +1817,7 @@ describe('Tab - First Send Binding', () => {
 
   it('derives provider from draft model on first send (Codex)', async () => {
     const createChatRuntimeSpy = jest.spyOn(ProviderRegistry, 'createChatRuntime')
-      .mockReturnValue(createMockSpecoratorService({ providerId: 'codex' }) as any);
+      .mockReturnValue(createMockClaudeChatRuntime({ providerId: 'codex' }) as any);
 
     const plugin = createMockPlugin();
     const tab = createTab(createMockOptions({ plugin }));

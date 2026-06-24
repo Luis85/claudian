@@ -154,7 +154,7 @@ interface ColdStartStreamState {
   usageState: ReturnType<typeof createTransformUsageState>;
 }
 
-export class SpecoratorService implements ChatRuntime {
+export class ClaudeChatRuntime implements ChatRuntime {
   readonly providerId = CLAUDE_PROVIDER_CAPABILITIES.providerId;
   private plugin: PluginContext;
   private agentManager: Pick<AppAgentManager, 'setBuiltinAgentNames'> | null;

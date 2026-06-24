@@ -1,10 +1,10 @@
 import * as sdkModule from '@anthropic-ai/claude-agent-sdk';
 import type { MockRuntimeHost } from '@test/helpers/runtimeHost';
 
-import { collectChunks, sdkMock, setupSpecoratorServiceTest } from './specoratorServiceTestKit';
+import { collectChunks, sdkMock, setupClaudeChatRuntimeTest } from './claudeChatRuntimeTestKit';
 
-describe('SpecoratorService', () => {
-  const ctx = setupSpecoratorServiceTest();
+describe('ClaudeChatRuntime', () => {
+  const ctx = setupClaudeChatRuntimeTest();
   let service: typeof ctx.service;
   let mockPlugin: typeof ctx.mockPlugin;
   let host: MockRuntimeHost;

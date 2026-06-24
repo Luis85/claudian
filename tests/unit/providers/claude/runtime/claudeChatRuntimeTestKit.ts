@@ -6,11 +6,11 @@ import { createMockRuntimeHost, type MockRuntimeHost } from '@test/helpers/runti
 import { Logger } from '@/core/logging/Logger';
 import type { McpServerManager } from '@/core/mcp/McpServerManager';
 import type SpecoratorPlugin from '@/main';
-import { SpecoratorService } from '@/providers/claude/runtime/ClaudeChatRuntime';
+import { ClaudeChatRuntime } from '@/providers/claude/runtime/ClaudeChatRuntime';
 
 /**
- * Shared fixtures for the SpecoratorService unit specs. The original monolithic
- * spec was split into per-surface sibling files (`SpecoratorService.*.test.ts`);
+ * Shared fixtures for the ClaudeChatRuntime unit specs. The original monolithic
+ * spec was split into per-surface sibling files (`ClaudeChatRuntime.*.test.ts`);
  * every sibling drives the same plugin/MCP/host doubles through this kit so the
  * setup stays in one place. No `jest.mock()` calls live here — the SDK and
  * obsidian modules are mapped to manual mocks via `moduleNameMapper`, so this
@@ -35,11 +35,11 @@ export async function collectChunks(gen: AsyncGenerator<any>): Promise<any[]> {
   return chunks;
 }
 
-export interface SpecoratorServiceTestContext {
+export interface ClaudeChatRuntimeTestContext {
   mockPlugin: Partial<SpecoratorPlugin>;
   mockMcpManager: MockMcpServerManager;
   host: MockRuntimeHost;
-  service: SpecoratorService;
+  service: ClaudeChatRuntime;
 }
 
 /**
@@ -49,8 +49,8 @@ export interface SpecoratorServiceTestContext {
  * hook is registered first, so the context is fresh by the time the alias
  * runs).
  */
-export function setupSpecoratorServiceTest(): SpecoratorServiceTestContext {
-  const ctx = {} as SpecoratorServiceTestContext;
+export function setupClaudeChatRuntimeTest(): ClaudeChatRuntimeTestContext {
+  const ctx = {} as ClaudeChatRuntimeTestContext;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -97,7 +97,7 @@ export function setupSpecoratorServiceTest(): SpecoratorServiceTestContext {
     } as unknown as MockMcpServerManager;
 
     ctx.host = createMockRuntimeHost();
-    ctx.service = new SpecoratorService(ctx.mockPlugin as SpecoratorPlugin, ctx.mockMcpManager, ctx.host);
+    ctx.service = new ClaudeChatRuntime(ctx.mockPlugin as SpecoratorPlugin, ctx.mockMcpManager, ctx.host);
   });
 
   return ctx;

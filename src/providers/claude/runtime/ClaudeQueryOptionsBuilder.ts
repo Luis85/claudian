@@ -88,7 +88,7 @@ export class QueryOptionsBuilder {
     if (currentConfig.settingSources !== newConfig.settingSources) return true;
     if (currentConfig.claudeCliPath !== newConfig.claudeCliPath) return true;
 
-    // Note: Permission mode is handled dynamically via setPermissionMode() in SpecoratorService.
+    // Note: Permission mode is handled dynamically via setPermissionMode() in ClaudeChatRuntime.
     // Since allowDangerouslySkipPermissions is always true, both directions work without restart.
 
     if (currentConfig.enableChrome !== newConfig.enableChrome) return true;

@@ -8,7 +8,7 @@ import { CLAUDE_CANONICAL_TOOL_NAMES } from './canonicalTools';
 import { CLAUDE_PROVIDER_CAPABILITIES } from './capabilities';
 import { claudeSettingsReconciler } from './env/ClaudeSettingsReconciler';
 import { ClaudeConversationHistoryService } from './history/ClaudeConversationHistoryService';
-import { SpecoratorService as ClaudeChatRuntime } from './runtime/ClaudeChatRuntime';
+import { ClaudeChatRuntime } from './runtime/ClaudeChatRuntime';
 import { ClaudeTaskResultInterpreter } from './runtime/ClaudeTaskResultInterpreter';
 import { DEFAULT_CLAUDE_PROVIDER_SETTINGS, getClaudeProviderSettings } from './settings';
 import { claudeChatUIConfig } from './ui/ClaudeChatUIConfig';

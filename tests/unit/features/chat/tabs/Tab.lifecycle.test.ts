@@ -22,6 +22,7 @@ import {
 import {
   createMockBrowserSelectionController,
   createMockCanvasSelectionController,
+  createMockClaudeChatRuntime,
   createMockContextUsageMeter,
   createMockExternalContextSelector,
   createMockFileContextManager,
@@ -38,7 +39,6 @@ import {
   createMockSelectionController,
   createMockServiceTierToggle,
   createMockSlashCommandDropdown,
-  createMockSpecoratorService,
   createMockStatusPanel,
   createMockThinkingBudgetSelector,
   installMockResizeObserver,
@@ -48,7 +48,7 @@ installMockResizeObserver();
 
 // Mock provider runtime used by ProviderRegistry
 jest.mock('@/providers/claude/runtime/ClaudeChatRuntime', () => ({
-  SpecoratorService: jest.fn().mockImplementation(() => ({
+  ClaudeChatRuntime: jest.fn().mockImplementation(() => ({
     ensureReady: jest.fn().mockResolvedValue(true),
     cleanup: jest.fn(),
     isReady: jest.fn().mockReturnValue(false),
@@ -459,7 +459,7 @@ describe('Tab - Service Initialization', () => {
       const options = createMockOptions();
       const tab = createTab(options);
       tab.serviceInitialized = true;
-      tab.service = createMockSpecoratorService() as any;
+      tab.service = createMockClaudeChatRuntime() as any;
 
       await initializeTabService(tab, options.plugin, options.mcpManager);
 
@@ -467,7 +467,7 @@ describe('Tab - Service Initialization', () => {
       expect(tab.service).toEqual(expect.objectContaining({ providerId: 'claude' }));
     });
 
-    it('should create SpecoratorService on first initialization', async () => {
+    it('should create ClaudeChatRuntime on first initialization', async () => {
       const options = createMockOptions();
       const tab = createTab(options);
 
@@ -479,7 +479,7 @@ describe('Tab - Service Initialization', () => {
 
     it('should create the runtime for the conversation provider', async () => {
       const createChatRuntimeSpy = jest.spyOn(ProviderRegistry, 'createChatRuntime');
-      const mockRuntime = createMockSpecoratorService({ providerId: 'codex' });
+      const mockRuntime = createMockClaudeChatRuntime({ providerId: 'codex' });
       createChatRuntimeSpy.mockReturnValue(mockRuntime as any);
 
       const conversation = {
@@ -511,8 +511,8 @@ describe('Tab - Service Initialization', () => {
 
     it('should recreate the runtime when the conversation provider changes', async () => {
       const createChatRuntimeSpy = jest.spyOn(ProviderRegistry, 'createChatRuntime');
-      const oldService = createMockSpecoratorService({ providerId: 'claude' });
-      const newService = createMockSpecoratorService({ providerId: 'codex' });
+      const oldService = createMockClaudeChatRuntime({ providerId: 'claude' });
+      const newService = createMockClaudeChatRuntime({ providerId: 'codex' });
       createChatRuntimeSpy.mockReturnValue(newService as any);
 
       const conversation = {
@@ -548,7 +548,7 @@ describe('Tab - Service Initialization', () => {
 
     it('awaits the outgoing runtime cleanup before constructing the replacement', async () => {
       const createChatRuntimeSpy = jest.spyOn(ProviderRegistry, 'createChatRuntime');
-      const newService = createMockSpecoratorService({ providerId: 'codex' });
+      const newService = createMockClaudeChatRuntime({ providerId: 'codex' });
       createChatRuntimeSpy.mockReturnValue(newService as any);
 
       // Old runtime cleanup blocks on a deferred promise that resolves only when
@@ -558,7 +558,7 @@ describe('Tab - Service Initialization', () => {
         releaseCleanup = resolve;
       });
       let cleanupResolved = false;
-      const oldService = createMockSpecoratorService({ providerId: 'claude' });
+      const oldService = createMockClaudeChatRuntime({ providerId: 'claude' });
       oldService.cleanup = jest.fn().mockReturnValue(
         cleanupGate.then(() => {
           cleanupResolved = true;
@@ -605,7 +605,7 @@ describe('Tab - Service Initialization', () => {
 
     it('awaits a fire-and-forget pending cleanup before constructing a replacement', async () => {
       const createChatRuntimeSpy = jest.spyOn(ProviderRegistry, 'createChatRuntime');
-      const newService = createMockSpecoratorService({ providerId: 'claude' });
+      const newService = createMockClaudeChatRuntime({ providerId: 'claude' });
       createChatRuntimeSpy.mockReturnValue(newService as any);
 
       let releaseCleanup!: () => void;
@@ -638,8 +638,8 @@ describe('Tab - Service Initialization', () => {
 
     it('should NOT call ensureReady for blank tabs (lazy start)', async () => {
       const mockEnsureReady = jest.fn().mockResolvedValue(true);
-      const runtimeModule = jest.requireMock('@/providers/claude/runtime/ClaudeChatRuntime') as { SpecoratorService: jest.Mock };
-      runtimeModule.SpecoratorService.mockImplementationOnce(() => createMockSpecoratorService({ ensureReady: mockEnsureReady }));
+      const runtimeModule = jest.requireMock('@/providers/claude/runtime/ClaudeChatRuntime') as { ClaudeChatRuntime: jest.Mock };
+      runtimeModule.ClaudeChatRuntime.mockImplementationOnce(() => createMockClaudeChatRuntime({ ensureReady: mockEnsureReady }));
 
       const options = createMockOptions();
       const tab = createTab(options);
@@ -654,8 +654,8 @@ describe('Tab - Service Initialization', () => {
 
     it('should sync existing conversations with saved external contexts', async () => {
       const mockSyncConversationState = jest.fn();
-      const runtimeModule = jest.requireMock('@/providers/claude/runtime/ClaudeChatRuntime') as { SpecoratorService: jest.Mock };
-      runtimeModule.SpecoratorService.mockImplementationOnce(() => createMockSpecoratorService({
+      const runtimeModule = jest.requireMock('@/providers/claude/runtime/ClaudeChatRuntime') as { ClaudeChatRuntime: jest.Mock };
+      runtimeModule.ClaudeChatRuntime.mockImplementationOnce(() => createMockClaudeChatRuntime({
         syncConversationState: mockSyncConversationState,
       }));
 
@@ -786,7 +786,7 @@ describe('Tab - Service Initialization', () => {
       tab.providerId = 'codex';
       tab.lifecycleState = 'blank';
 
-      const staleService = createMockSpecoratorService({ providerId: 'codex' });
+      const staleService = createMockClaudeChatRuntime({ providerId: 'codex' });
       tab.service = staleService as any;
       tab.serviceInitialized = true;
 
@@ -1053,7 +1053,7 @@ describe('Tab - Service Initialization', () => {
       initializeTabUI(tab, plugin);
       initializeTabControllers(tab, plugin, {} as any);
 
-      const staleService = createMockSpecoratorService({ providerId: 'codex' });
+      const staleService = createMockClaudeChatRuntime({ providerId: 'codex' });
       tab.lifecycleState = 'bound_active';
       tab.conversationId = 'conv-1';
       tab.providerId = 'codex';
@@ -1146,8 +1146,8 @@ describe('Tab - Destruction', () => {
       const unsubscribeFn = jest.fn();
       const mockOnReadyStateChange = jest.fn(() => unsubscribeFn);
 
-      const runtimeModule = jest.requireMock('@/providers/claude/runtime/ClaudeChatRuntime') as { SpecoratorService: jest.Mock };
-      runtimeModule.SpecoratorService.mockImplementationOnce(() => createMockSpecoratorService({ onReadyStateChange: mockOnReadyStateChange }));
+      const runtimeModule = jest.requireMock('@/providers/claude/runtime/ClaudeChatRuntime') as { ClaudeChatRuntime: jest.Mock };
+      runtimeModule.ClaudeChatRuntime.mockImplementationOnce(() => createMockClaudeChatRuntime({ onReadyStateChange: mockOnReadyStateChange }));
 
       const options = createMockOptions();
       const tab = createTab(options);
@@ -1246,7 +1246,7 @@ describe('Tab - Service Initialization Error Handling', () => {
 
     // Mark as already initialized
     tab.serviceInitialized = true;
-    const originalService = createMockSpecoratorService() as any;
+    const originalService = createMockClaudeChatRuntime() as any;
     tab.service = originalService;
 
     await initializeTabService(tab, options.plugin, options.mcpManager);

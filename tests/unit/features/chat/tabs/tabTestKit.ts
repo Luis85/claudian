@@ -96,7 +96,7 @@ export const createMockModeSelector = () => ({
   renderOptions: jest.fn(),
 });
 
-export const createMockSpecoratorService = (overrides?: {
+export const createMockClaudeChatRuntime = (overrides?: {
   ensureReady?: jest.Mock;
   syncConversationState?: jest.Mock;
   onReadyStateChange?: jest.Mock;

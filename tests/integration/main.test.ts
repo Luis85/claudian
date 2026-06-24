@@ -7,7 +7,7 @@ import { QuickActionFavoritesCache } from '@/features/quickActions/QuickActionFa
 import * as sdkSession from '@/providers/claude/history/ClaudeHistoryStore';
 import { DEFAULT_SETTINGS } from '@/providers/claude/types/settings';
 
-// Mock fs for SpecoratorService
+// Mock fs for ClaudeChatRuntime
 jest.mock('fs');
 
 // Now import the plugin after mocking
