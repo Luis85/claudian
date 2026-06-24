@@ -4,9 +4,9 @@ status: shipped
 type: user-install-guide
 parent: "[[Multi Provider Support]]"
 ---
-# Claudian — Install Opencode (Windows)
+# Specorator — Install Opencode (Windows)
 
-This manual walks Windows users through installing the **Opencode CLI**, the runtime Claudian drives when the Opencode provider is enabled. Claudian launches Opencode via `opencode acp`, so any working `opencode` install on `PATH` (or pointed at explicitly) is enough.
+This manual walks Windows users through installing the **Opencode CLI**, the runtime Specorator drives when the Opencode provider is enabled. Specorator launches Opencode via `opencode acp`, so any working `opencode` install on `PATH` (or pointed at explicitly) is enough.
 
 Opencode's upstream docs recommend WSL for the smoothest experience, but native Windows installs work for most flows. Pick one method below.
 
@@ -64,7 +64,7 @@ Inside your WSL distro:
 curl -fsSL https://opencode.ai/install | bash
 ```
 
-The script drops the Linux binary under `~/.opencode/bin/` and patches your shell init. Claudian on Windows currently launches the native binary directly; to drive a WSL-installed Opencode from Claudian, point the CLI path at a `wsl.exe` wrapper script or install natively as well.
+The script drops the Linux binary under `~/.opencode/bin/` and patches your shell init. Specorator on Windows currently launches the native binary directly; to drive a WSL-installed Opencode from Specorator, point the CLI path at a `wsl.exe` wrapper script or install natively as well.
 
 ---
 
@@ -95,11 +95,11 @@ Inside the TUI:
 3. Visit `opencode.ai/auth` in a browser, sign in, add billing, copy the API key.
 4. Paste the key back into the TUI when prompted.
 
-To use your own model provider keys instead (Anthropic, OpenAI, etc.), set the relevant env vars (e.g. `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) in **Settings → Claudian → Opencode → Environment Variables**. Opencode reads them from the spawned process environment.
+To use your own model provider keys instead (Anthropic, OpenAI, etc.), set the relevant env vars (e.g. `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) in **Settings → Specorator → Opencode → Environment Variables**. Opencode reads them from the spawned process environment.
 
 ---
 
-## Find the CLI path for Claudian
+## Find the CLI path for Specorator
 
 ```powershell
 (Get-Command opencode).Source
@@ -114,13 +114,13 @@ Typical results:
 | Chocolatey | `C:\ProgramData\chocolatey\bin\opencode.exe` |
 | Manual | wherever you unzipped it |
 
-Paste it into **Settings → Claudian → Opencode → CLI path** (or leave empty for auto-detect). Changing the path recycles every open Opencode chat tab.
+Paste it into **Settings → Specorator → Opencode → CLI path** (or leave empty for auto-detect). Changing the path recycles every open Opencode chat tab.
 
 ---
 
 ## Discover models
 
-After Claudian connects to Opencode, open the Opencode tab and expand **Browse models**. Opencode reports the full catalog it knows about (Anthropic, OpenAI, Google, xAI, etc., conditional on which provider keys are present). Tick the families you want surfaced in the chat picker.
+After Specorator connects to Opencode, open the Opencode tab and expand **Browse models**. Opencode reports the full catalog it knows about (Anthropic, OpenAI, Google, xAI, etc., conditional on which provider keys are present). Tick the families you want surfaced in the chat picker.
 
 If the catalog comes back empty, the Opencode tab shows a notice. Most common causes:
 
@@ -155,9 +155,9 @@ Subagents live under `.opencode/agent/` (legacy: `.opencode/agents/`). The Openc
 | Symptom | Fix |
 |---------|-----|
 | `opencode` not recognized | Open a new terminal so `PATH` reloads. Confirm with `(Get-Command opencode).Source`. |
-| Claudian shows no Opencode models | Sign in via `opencode` → `/connect`, or set provider API keys in the Opencode environment scope. |
+| Specorator shows no Opencode models | Sign in via `opencode` → `/connect`, or set provider API keys in the Opencode environment scope. |
 | Models picker stuck on **Browse models** loading | The CLI is unreachable. Re-check the CLI path and try `opencode --version` in a terminal. |
-| MCP servers missing | Opencode manages its own MCP. Configure them in Opencode's own config — Claudian does not edit them. |
+| MCP servers missing | Opencode manages its own MCP. Configure them in Opencode's own config — Specorator does not edit them. |
 | Subagents not appearing | The editor only renders when a vault workspace is detected. Make sure the vault folder is also a project root from Opencode's perspective. |
 | `OPENCODE_ENABLE_EXA=1` should be off | Remove that line from **Opencode → Environment Variables**. |
 
@@ -165,7 +165,7 @@ Subagents live under `.opencode/agent/` (legacy: `.opencode/agents/`). The Openc
 
 ## Next steps
 
-- Toggle **Enable Opencode** under **Settings → Claudian → General → Providers**.
+- Toggle **Enable Opencode** under **Settings → Specorator → General → Providers**.
 - Pick visible models in the Opencode tab — see [[settings]].
 - Plan mode runs as Opencode's managed `plan` mode (toggle it from the toolbar or Shift+Tab). When the plan turn produces assistant content, the runtime sets `planCompleted` and the shared inline approve / revise / cancel card opens — see [[plan-mode]]. Fork and rewind are gated. Image attachments, `#` instruction mode, subagents, runtime-discovered slash commands, and history reload are supported.
 - Start a chat tab and pick an Opencode model from the provider picker.

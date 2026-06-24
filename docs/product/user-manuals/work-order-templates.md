@@ -8,13 +8,13 @@ parent: "[[Agent Kanban Board]]"
 
 This manual covers **work-order templates**: reusable starting points you pick from when creating an Agent Board work order, so common task types are faster to prepare.
 
-A **template** is a Markdown note (`type: claudian-work-order-template`) that supplies a work order's body and optional defaults for provider, model, priority, and a picker **icon**. Templates live in their own folder and never appear on the board as work orders.
+A **template** is a Markdown note (`type: specorator-work-order-template`) that supplies a work order's body and optional defaults for provider, model, priority, and a picker **icon**. Templates live in their own folder and never appear on the board as work orders.
 
 ---
 
 ## Before you start
 
-Set this once in **Settings → Claudian → Agent Board**:
+Set this once in **Settings → Specorator → Agent Board**:
 
 | Setting | What it does | Default |
 |---------|--------------|---------|
@@ -34,7 +34,7 @@ Four ways, easiest first.
 Two equivalent surfaces — pick either:
 
 - Command palette → **Install common work-order templates**.
-- **Settings → Claudian → Agent Board → Common templates → Install**.
+- **Settings → Specorator → Agent Board → Common templates → Install**.
 
 Writes six presets — **Bug fix**, **Feature**, **Refactor**, **Research spike**, **Documentation**, **Test backfill** — into your **Template folder**. Idempotent: any preset whose filename already exists is skipped, so re-running won't clobber edits.
 
@@ -47,11 +47,11 @@ Edit and Delete buttons on each picker row open the same editor or move the note
 Command palette → **Create work-order template**. Writes a single example template into your **Template folder** and opens it. Edit it to taste.
 
 ### 4. Author one by hand
-Create a Markdown note in the **Template folder** with `type: claudian-work-order-template`. Anatomy:
+Create a Markdown note in the **Template folder** with `type: specorator-work-order-template`. Anatomy:
 
 ```markdown
 ---
-type: claudian-work-order-template
+type: specorator-work-order-template
 schema_version: 1
 name: Bug fix              # picker label (falls back to the filename)
 description: Fix a defect. # optional; shown as the picker's detail line
@@ -76,7 +76,7 @@ Fix the bug described below.
 - Do not modify unrelated files.
 ```
 
-Write only the human sections. Claudian appends the **Run Ledger** and **Result / Handoff** regions automatically when the work order is created — don't add them yourself.
+Write only the human sections. Specorator appends the **Run Ledger** and **Result / Handoff** regions automatically when the work order is created — don't add them yourself.
 
 > Keep the `## Objective`, `## Acceptance Criteria`, `## Context`, and `## Constraints` headings. The run prompt reads them by name; a template that drops one just produces an empty section.
 
@@ -104,9 +104,9 @@ When you create a work order from a template:
 
 - **Body** — the template body, with placeholders resolved.
 - **Provider / model / priority** — taken from the template's frontmatter when set and valid; otherwise the Agent Board **Default provider** / **Default model** (priority falls back to `normal`).
-- If the template names a provider that isn't enabled, or a model that provider doesn't own, Claudian falls back to the default and shows a notice.
+- If the template names a provider that isn't enabled, or a model that provider doesn't own, Specorator falls back to the default and shows a notice.
 - **Icon** — used only on the picker row; never written to the created work-order note.
-- Generated fields (`id`, `created`, `updated`, run fields) and the Run Ledger / Handoff regions are always written by Claudian.
+- Generated fields (`id`, `created`, `updated`, run fields) and the Run Ledger / Handoff regions are always written by Specorator.
 
 Templates do **not** set the initial status — that stays controlled by where you created the work order (the board's **Add work order** lands in `inbox`; the commands land in `ready`).
 

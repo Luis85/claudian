@@ -4,7 +4,7 @@ status: shipped
 type: user-manual
 parent: "[[sidepanel-chat]]"
 ---
-# Claudian — Plan mode
+# Specorator — Plan mode
 
 This manual covers **plan mode**: a per-tab toggle that asks the agent to draft a plan and *not* run write-side tools until you approve it. Each provider implements plan mode against its own runtime, so the same toggle gives you different guarantees and surfaces depending on which provider is active in the tab.
 
@@ -16,7 +16,7 @@ Plan mode is provider-native draft-before-run behavior inside normal chat.
 
 Plan mode is a per-conversation setting. There is nothing to install — the toggle appears on the input toolbar whenever the active provider declares `supportsPlanMode`. The button is hidden for providers that gate plan mode.
 
-If you flip plan mode mid-conversation, Claudian remembers the **previous permission mode** in the tab state and restores it after a successful approval (see [Approving or rejecting a plan](#approving-or-rejecting-a-plan)).
+If you flip plan mode mid-conversation, Specorator remembers the **previous permission mode** in the tab state and restores it after a successful approval (see [Approving or rejecting a plan](#approving-or-rejecting-a-plan)).
 
 ---
 
@@ -24,7 +24,7 @@ If you flip plan mode mid-conversation, Claudian remembers the **previous permis
 
 | Provider | Plan mode | Plan file directory | Notes |
 |----------|-----------|---------------------|-------|
-| **Claude** | Yes | `/.claude/plans/` | Driven by the SDK's `EnterPlanMode` / `ExitPlanMode` tools. The SDK auto-approves `EnterPlanMode`; Claudian detects it in the stream to sync the toolbar. `ExitPlanMode` triggers the inline approval card. |
+| **Claude** | Yes | `/.claude/plans/` | Driven by the SDK's `EnterPlanMode` / `ExitPlanMode` tools. The SDK auto-approves `EnterPlanMode`; Specorator detects it in the stream to sync the toolbar. `ExitPlanMode` triggers the inline approval card. |
 | **Codex** | Yes | (no fixed prefix) | Sent as `collaborationMode: { mode: 'plan' }` on `turn/start`. `approvalPolicy` becomes `on-request` and sandbox stays `workspace-write`. Approval card fires when the turn metadata reports `planCompleted` (set when both `isPlanTurn` and `sawPlanDelta` are true after the turn). |
 | **Cursor** | Yes | `.cursor/plans` | Passes `--mode plan` to `cursor-agent` and tracks the `CreatePlan` tool result. When that tool completes, the turn reports `planCompleted: true` and the shared approval card opens. |
 | **Opencode** | Yes | — | Routes plan turns through Opencode's managed `plan` mode (`OPENCODE_PLAN_MODE_ID`) via `setConfigOption({ configId: 'mode' })`. The runtime captures `isPlanTurn` after the mode is applied and tracks assistant content during the stream; when the prompt resolves with at least one assistant chunk, the turn reports `planCompleted: true` and the shared approval card opens. |
@@ -41,7 +41,7 @@ Three ways, all do the same thing — flip the active tab into plan mode and rem
 - **Shift+Tab** — a view-level keybind on the chat panel. Toggles plan mode for the active tab regardless of which element has focus. The handler checks `supportsPlanMode` first; on providers that gate plan mode, Shift+Tab does nothing.
 - **Click the `PLAN` label on the permission toggle** — when plan mode is on, the normal Normal/Yolo switch hides and the label flips to `PLAN` (`plan-active`). Clicking the plan-mode button again turns it off.
 
-When plan mode is active, the input wrapper picks up the `claudian-input-plan-mode` class — the input area gets a distinct plan-mode treatment from `src/style/features/plan-mode.css`.
+When plan mode is active, the input wrapper picks up the `specorator-input-plan-mode` class — the input area gets a distinct plan-mode treatment from `src/style/features/plan-mode.css`.
 
 ---
 
@@ -54,7 +54,7 @@ The same toggle drives different per-provider behavior at the moment the runtime
 - **Cursor** — `cursor-agent` is launched with `--mode plan --sandbox <enabled|disabled>`. The chunk tracker watches for a `CreatePlan` tool result; only then does the turn report `planCompleted`.
 - **Opencode** — the runtime calls `setConfigOption({ configId: 'mode', value: 'plan' })` before sending the prompt, captures `currentTurnIsPlan` from the session mode after the switch, and tracks `currentTurnSawAssistantContent` as agent message chunks arrive. When the prompt resolves successfully with at least one assistant chunk, `finalizePlanTurnMetadata` sets `planCompleted: true`.
 
-Across all four providers, plan mode is meant to keep the agent in a read-and-think loop. The runtime decides which tools are off-limits — Claudian does not enforce a tool allowlist of its own.
+Across all four providers, plan mode is meant to keep the agent in a read-and-think loop. The runtime decides which tools are off-limits — Specorator does not enforce a tool allowlist of its own.
 
 ---
 
@@ -73,7 +73,7 @@ The captured path lets the post-plan approval card load the actual plan file fro
 
 ## Approving or rejecting a plan
 
-When a plan turn completes, Claudian opens a provider-agnostic approval card inline below the response. It always shows the plan content first (from the captured plan file if available, otherwise from the turn metadata):
+When a plan turn completes, Specorator opens a provider-agnostic approval card inline below the response. It always shows the plan content first (from the captured plan file if available, otherwise from the turn metadata):
 
 - **Claude** uses `InlineExitPlanMode`, driven by the SDK's `ExitPlanMode` tool. The choices are:
   - `1. Approve (new session)` — defaults to the `Implement this plan:` prefix followed by the plan markdown. Closes the current turn, starts a fresh conversation, and auto-sends the plan as the first message.

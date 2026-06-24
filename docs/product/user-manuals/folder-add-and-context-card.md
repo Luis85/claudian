@@ -6,10 +6,10 @@ parent: "[[sidepanel-chat]]"
 ---
 # Add folders to chat & attached-context card
 
-This manual covers two related pieces of the Claudian chat **context** flow:
+This manual covers two related pieces of the Specorator chat **context** flow:
 
 1. **Adding a folder (or file) to chat from the file explorer's right-click menu** — the folder shows up as a pill above the chat input, the same way the `@` dropdown adds it.
-2. **The attached-context card** that Claudian renders inside every sent user message, summarizing the vault files and folders that message referenced.
+2. **The attached-context card** that Specorator renders inside every sent user message, summarizing the vault files and folders that message referenced.
 
 Both work for every provider (Claude, Codex, Opencode, Cursor) and persist across reloads — the card is derived from the message text, not from any extra stored field.
 
@@ -17,7 +17,7 @@ Both work for every provider (Claude, Codex, Opencode, Cursor) and persist acros
 
 ## Before you start
 
-There are no settings for this feature. Open the chat from the **ribbon** (`Open Claudian`, bot icon) or the command palette command **Open chat view**, then make sure a provider is enabled. Right-click on a folder or file in the file explorer is gated on having an active Claudian chat tab — without one, you get the notice *"Open Claudian chat and enable a provider before adding folder context."* (or *"… file context."*).
+There are no settings for this feature. Open the chat from the **ribbon** (`Open Specorator`, bot icon) or the command palette command **Open chat view**, then make sure a provider is enabled. Right-click on a folder or file in the file explorer is gated on having an active Specorator chat tab — without one, you get the notice *"Open Specorator chat and enable a provider before adding folder context."* (or *"… file context."*).
 
 For more on creating work orders from the same menu, see [[agent-board-chat-interop-and-capture]].
 
@@ -29,15 +29,15 @@ Right-click any folder or file in the file explorer:
 
 | Item | Icon | Action |
 |------|------|--------|
-| **Add folder to Claudian chat** | `folder` | Adds a folder pill for the right-clicked folder to the active chat tab. |
-| **Add file to Claudian chat** | `at-sign` | Adds a file pill for the right-clicked file to the active chat tab. |
+| **Add folder to Specorator chat** | `folder` | Adds a folder pill for the right-clicked folder to the active chat tab. |
+| **Add file to Specorator chat** | `at-sign` | Adds a file pill for the right-clicked file to the active chat tab. |
 
 Both items:
 
-- Open / activate the Claudian chat view if it isn't already.
+- Open / activate the Specorator chat view if it isn't already.
 - Add a **pill** (chip) to the input's pill row — no text is inserted into the textarea.
 - Focus the chat input.
-- Show a notice — *"Added `<path>/` to Claudian chat"* for folders, *"Added `<path>` to Claudian chat"* for files.
+- Show a notice — *"Added `<path>/` to Specorator chat"* for folders, *"Added `<path>` to Specorator chat"* for files.
 
 If the path can't be normalized (e.g. the vault root), the notice instead reads *"Could not add folder to chat: `<path>`"* or *"Could not add file to chat: `<path>`"* and nothing is added.
 
@@ -67,7 +67,7 @@ At send time, all file and folder pills (except the current note, which is sent 
 
 ## The attached-context card
 
-Every sent user message is scanned for `@`-mentions that resolve to a vault file or folder. When at least one resolves, Claudian renders an **Attached context** card above the message text:
+Every sent user message is scanned for `@`-mentions that resolve to a vault file or folder. When at least one resolves, Specorator renders an **Attached context** card above the message text:
 
 - **Header** — paperclip icon and the label `Attached context (N)` where N is the total file + folder count.
 - **One row per item** — file rows use the `file-text` icon and show the file's basename; folder rows use the `folder` icon and show the folder's basename with a trailing `/`. Hover any row for the full vault path.
@@ -88,7 +88,7 @@ The scanner walks the message text and, for each `@` at a mention boundary, trie
 ### When the card doesn't show
 
 - No `@`-mention in the message resolves to a vault entry.
-- The message is internal "rebuilt context" injected by Claudian (e.g. compact / resume context turns) — these never render a card.
+- The message is internal "rebuilt context" injected by Specorator (e.g. compact / resume context turns) — these never render a card.
 - For image-only user messages (no text), there's nothing to scan and no card.
 
 The card is **historical**: it reflects the message text as it was sent. Renaming or deleting a file after sending won't update past cards.
@@ -106,8 +106,8 @@ The card is **historical**: it reflects the message text as it was sent. Renamin
 
 ## Typical flow
 
-1. Right-click a folder in the file explorer → **Add folder to Claudian chat**. A folder pill appears above the input; the input is focused.
-2. Optionally add more pills via the `@` dropdown (file or folder) or right-click on a file → **Add file to Claudian chat**.
+1. Right-click a folder in the file explorer → **Add folder to Specorator chat**. A folder pill appears above the input; the input is focused.
+2. Optionally add more pills via the `@` dropdown (file or folder) or right-click on a file → **Add file to Specorator chat**.
 3. Type your prompt and send. The pill mentions are folded into the sent message as `@path` / `@path/`.
 4. The sent user bubble shows an **Attached context** card listing every resolved file and folder. Click a file row to jump to it.
 5. After sending, the file and folder pills clear automatically; the current-note pill stays. Add new pills for the next turn.

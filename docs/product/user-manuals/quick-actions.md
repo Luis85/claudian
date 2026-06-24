@@ -4,7 +4,7 @@ status: shipped
 type: user-manual
 parent: "[[Quick Actions]]"
 ---
-# Claudian — Quick actions
+# Specorator — Quick actions
 
 This manual covers **quick actions**: reusable one-tap prompts authored as vault notes and surfaced as a picker in the chat composer.
 
@@ -14,7 +14,7 @@ A **quick action** is a Markdown note that supplies a name, optional description
 
 ## Before you start
 
-Set this once in **Settings → Claudian → Quick Actions**:
+Set this once in **Settings → Specorator → Quick Actions**:
 
 | Setting | What it does | Default |
 |---------|--------------|---------|
@@ -111,7 +111,7 @@ Editing or deleting a quick action while the picker is open updates the list in 
 
 ## Running a quick action from chat
 
-Open a Claudian chat tab. The composer's input toolbar shows a **Quick actions** button (a `zap` Lucide icon, labelled *Quick actions*). Click it to open the picker.
+Open a Specorator chat tab. The composer's input toolbar shows a **Quick actions** button (a `zap` Lucide icon, labelled *Quick actions*). Click it to open the picker.
 
 The picker shows:
 
@@ -135,7 +135,7 @@ When the **Quick actions folder** is empty (or missing), the picker still opens.
 
 ## Typical flow
 
-1. Set **Settings → Claudian → Quick Actions → Quick actions folder** (or keep the default `Quick Actions`).
+1. Set **Settings → Specorator → Quick Actions → Quick actions folder** (or keep the default `Quick Actions`).
 2. Open a chat tab, click the toolbar's **Quick actions** (`zap`) button, then **Add action**.
 3. Fill in **Name**, an optional **Description** and **Icon**, and the **Prompt** body you want sent. Save.
 4. Next time you want it, open the picker and click the row — the prompt fires straight into the active chat.
@@ -176,7 +176,7 @@ The Agent Board also surfaces favorites and the picker via right-click on any wo
 
 ### Disabled providers
 
-A skill belonging to a provider you have disabled in settings is dimmed in the list and tagged with a small **disabled** badge. Clicking it shows a notice instead of sending — the provider must be enabled (Settings → Claudian → its tab) before the skill can run. The check happens at the moment you click, so toggling a provider while the picker is open is honored without reopening.
+A skill belonging to a provider you have disabled in settings is dimmed in the list and tagged with a small **disabled** badge. Clicking it shows a notice instead of sending — the provider must be enabled (Settings → Specorator → its tab) before the skill can run. The check happens at the moment you click, so toggling a provider while the picker is open is honored without reopening.
 
 ### Edit in settings
 
@@ -197,7 +197,7 @@ Every successful dispatch increments a counter and stamps a `lastUsedAt` timesta
 - **Quick actions** are counted by **filename stem** (no extension, no folder path). Renaming the YAML `name:` field keeps the same counter; renaming the underlying note breaks the chain and starts a new counter.
 - **Skills** are counted by `(providerId, name)`. The same skill name across two providers (for example `$deep-research` on Claude and Codex) keeps **separate** counters.
 
-The data is persisted to `.claudian/usage.json` with debounced writes (one second). A burst of dispatches collapses into a single write. The file is hidden inside the `.claudian/` config folder and is safe to delete if you want to reset the leaderboard from the vault side.
+The data is persisted to `.specorator/usage.json` with debounced writes (one second). A burst of dispatches collapses into a single write. The file is hidden inside the `.specorator/` config folder and is safe to delete if you want to reset the leaderboard from the vault side.
 
 ### Sections
 
@@ -217,7 +217,7 @@ A row that has never been dispatched reads `0 uses · never`.
 
 ### Clear all
 
-At the bottom of the Stats tab, a **Clear all usage** button wipes every counter. A confirmation modal asks you to confirm before the write hits disk. After confirmation the in-memory map empties, the Stats tab re-renders to its empty state, and the persisted `.claudian/usage.json` is rewritten on the next debounce.
+At the bottom of the Stats tab, a **Clear all usage** button wipes every counter. A confirmation modal asks you to confirm before the write hits disk. After confirmation the in-memory map empties, the Stats tab re-renders to its empty state, and the persisted `.specorator/usage.json` is rewritten on the next debounce.
 
 Clearing is global — there is no per-row reset. If you want to keep your existing counters and delete only one entry, delete the underlying quick-action note or skill file; the counter becomes an orphan and is hidden from all three Stats sections immediately, while the recorded count stays on disk in case the same name is recreated later.
 

@@ -1,7 +1,7 @@
 ---
 type: quick-action
-name: Claudian Design System
-description: Review or update Claudian UI against its CSS tokens, naming conventions, theme compatibility, and reusable style patterns.
+name: Specorator Design System
+description: Review or update Specorator UI against its CSS tokens, naming conventions, theme compatibility, and reusable style patterns.
 icon: swatch-book
 tags:
   - frontend
@@ -10,7 +10,7 @@ tags:
   - obsidian
 ---
 
-Use this action when a Claudian UI change needs design-system consistency, token cleanup, CSS refactoring, or a style audit.
+Use this action when a Specorator UI change needs design-system consistency, token cleanup, CSS refactoring, or a style audit.
 
 ## 1. Inspect the local design system
 
@@ -27,9 +27,9 @@ Summarize the existing pattern before recommending changes.
 
 Check the target files for:
 
-- Hardcoded colors that should use Obsidian or Claudian variables.
+- Hardcoded colors that should use Obsidian or Specorator variables.
 - Repeated spacing/radius/shadow values that should become a semantic variable.
-- Selectors missing the `.claudian-` prefix.
+- Selectors missing the `.specorator-` prefix.
 - CSS modules not imported by `src/style/index.css`.
 - One-off component patterns that duplicate existing modules.
 - Dark/light theme mismatches.

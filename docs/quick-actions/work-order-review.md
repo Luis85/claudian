@@ -19,7 +19,7 @@ Ask me for the work-order path if I did not pass one. Do **not** search the vaul
 
 ## 2. Gather context
 
-- Read the work-order: frontmatter (`type: claudian-work-order`, `schema_version: 1`, `id`, `title`, `status`, `started`, `finished`, …), `## Objective`, `## Acceptance Criteria`, `## Context`, `## Constraints`, the existing `## Run Ledger`, and any prior handoff between `<!-- claudian:handoff-start -->` and `<!-- claudian:handoff-end -->`.
+- Read the work-order: frontmatter (`type: specorator-work-order`, `schema_version: 1`, `id`, `title`, `status`, `started`, `finished`, …), `## Objective`, `## Acceptance Criteria`, `## Context`, `## Constraints`, the existing `## Run Ledger`, and any prior handoff between `<!-- specorator:handoff-start -->` and `<!-- specorator:handoff-end -->`.
 - Determine the diff produced by this work-order:
   - Prefer `git log --since="<started ISO>" --name-only` plus `git diff <started-commit>..HEAD` if traceable.
   - Otherwise `git diff main...HEAD` (or the configured base).
@@ -73,17 +73,17 @@ After edits, re-run `npm run typecheck && npm run lint && npm run test`. If anyt
 
 Use the work-order's native conventions exactly. **Do not write `status` directly** — the task state machine guards transitions (`running → review`, `review → done | needs_fix | canceled`). Recommend the next status inside the handoff block.
 
-**Do not write inside the `<!-- claudian:run-ledger-start -->` … `<!-- claudian:run-ledger-end -->` markers.** The plugin owns that region — per-step ledger entries live in `.claudian/runs/<runId>/ledger.jsonl` (sidecar) and the in-note region is written once at terminal as a snapshot. Manual writes inside the markers race the plugin's terminal write. Surface review activity through the handoff block instead (see below); the plugin will fold the terminal-snapshot ledger in automatically.
+**Do not write inside the `<!-- specorator:run-ledger-start -->` … `<!-- specorator:run-ledger-end -->` markers.** The plugin owns that region — per-step ledger entries live in `.specorator/runs/<runId>/ledger.jsonl` (sidecar) and the in-note region is written once at terminal as a snapshot. Manual writes inside the markers race the plugin's terminal write. Surface review activity through the handoff block instead (see below); the plugin will fold the terminal-snapshot ledger in automatically.
 
-**Replace the handoff region** content (between `<!-- claudian:handoff-start -->` and `<!-- claudian:handoff-end -->`) with a single `<claudian_handoff>` block — this is the format `TaskHandoffParser` expects:
+**Replace the handoff region** content (between `<!-- specorator:handoff-start -->` and `<!-- specorator:handoff-end -->`) with a single `<specorator_handoff>` block — this is the format `TaskHandoffParser` expects:
 
 ```
-<claudian_handoff>
+<specorator_handoff>
 summary: <one paragraph verdict — what was reviewed, top-line outcome, whether acceptance is met>
 verification: <exact commands run and their outcomes, e.g. "npm run typecheck → ok; npm run lint → 0 errors / 0 warnings; npm run test → 247/247 pass; npm run build → ok">
 risks: <remaining unfixed issues, adjacent-feature concerns, anything the reviewer is uncertain about>
 next_action: <recommended status transition and why, e.g. "review → done — all criteria met, polish applied" or "review → needs_fix — 2 blockers must be addressed first">
-</claudian_handoff>
+</specorator_handoff>
 ```
 
 **Long-form findings (optional)** — if the finding list is too rich for the handoff block, append a `## Review Findings` section after `## Constraints` and before the generated regions. The parser ignores unknown headings, so this is safe. Use a table:

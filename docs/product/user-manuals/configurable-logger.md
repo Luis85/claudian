@@ -4,17 +4,17 @@ status: shipped
 type: user-manual
 parent: "[[Specorator - Product Vision]]"
 ---
-# Claudian — Configurable logger
+# Specorator — Configurable logger
 
-This manual covers Claudian's **diagnostic logger**: a built-in, off-by-default capture of what the plugin is doing internally, so you can troubleshoot a problem or hand a maintainer a clean log when you file a bug report.
+This manual covers Specorator's **diagnostic logger**: a built-in, off-by-default capture of what the plugin is doing internally, so you can troubleshoot a problem or hand a maintainer a clean log when you file a bug report.
 
-The logger is silent unless you turn it on. When it's on, Claudian writes leveled, scoped entries to the developer console **and** to a bounded in-memory ring buffer (the last 500 entries). The buffer is the bit you actually share — copy it to your clipboard with one click or one command.
+The logger is silent unless you turn it on. When it's on, Specorator writes leveled, scoped entries to the developer console **and** to a bounded in-memory ring buffer (the last 500 entries). The buffer is the bit you actually share — copy it to your clipboard with one click or one command.
 
 ---
 
 ## Before you start
 
-The logger settings live in **Settings → Claudian → General → Diagnostics**.
+The logger settings live in **Settings → Specorator → General → Diagnostics**.
 
 | Setting | What it does | Default |
 |---------|--------------|---------|
@@ -60,7 +60,7 @@ Each line is prefixed with the scope in brackets:
 [cursor.workspace] model discovery failed  Error: timed out
 ```
 
-The scope tells you which part of Claudian emitted the entry — handy when filtering the console.
+The scope tells you which part of Specorator emitted the entry — handy when filtering the console.
 
 ### In-memory ring buffer
 
@@ -82,7 +82,7 @@ Fields, in order: ISO timestamp, level, `[scope]`, message, and (if any) a JSON-
 
 A short recipe that produces a clean, focused log you can paste into an issue.
 
-1. Open **Settings → Claudian → General → Diagnostics**.
+1. Open **Settings → Specorator → General → Diagnostics**.
 2. Click **Clear logs** (so the buffer only contains what's relevant).
 3. Set **Log level** to **Debug** and make sure **Enable logging** is on.
 4. Reproduce the problem once. Stay in the same Obsidian session.
@@ -104,7 +104,7 @@ When you're done, set the level back to **Warn** (or **Off**) so debug output st
 ## Typical flow
 
 1. Day to day: leave logging **off**. The plugin is a no-op for diagnostics — no cost, no captured entries.
-2. Hit a problem worth investigating: open **Settings → Claudian → General → Diagnostics**, turn **Enable logging** on, pick a level (start at **Warn**; go to **Debug** if you need detail), and reproduce.
+2. Hit a problem worth investigating: open **Settings → Specorator → General → Diagnostics**, turn **Enable logging** on, pick a level (start at **Warn**; go to **Debug** if you need detail), and reproduce.
 3. Watch the developer console for live output, or click **Copy logs** to capture the buffer.
 4. When you're done, click **Clear logs** and turn **Enable logging** back off.
 

@@ -1,7 +1,7 @@
 ---
 type: quick-action
 name: Frontend Performance UI
-description: Audit or improve Claudian frontend responsiveness for long chats, streaming updates, large tool output, and heavy UI states.
+description: Audit or improve Specorator frontend responsiveness for long chats, streaming updates, large tool output, and heavy UI states.
 icon: gauge
 tags:
   - frontend
@@ -10,7 +10,7 @@ tags:
   - ui
 ---
 
-Use this action when a Claudian UI change could affect rendering performance, input responsiveness, scroll behavior, streaming updates, or large conversation/tool-call displays.
+Use this action when a Specorator UI change could affect rendering performance, input responsiveness, scroll behavior, streaming updates, or large conversation/tool-call displays.
 
 ## 1. Identify the performance-sensitive path
 

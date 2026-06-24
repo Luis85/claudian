@@ -4,9 +4,9 @@ status: shipped
 type: user-manual
 parent: "[[Multi Provider Support]]"
 ---
-# Claudian — MCP Servers
+# Specorator — MCP Servers
 
-This manual covers Model Context Protocol (MCP) servers in Claudian: what they are, how to add them per provider, how to work with them in chat, and where the configuration lives on disk.
+This manual covers Model Context Protocol (MCP) servers in Specorator: what they are, how to add them per provider, how to work with them in chat, and where the configuration lives on disk.
 
 MCP servers extend a provider with additional tools (file search, GitHub APIs, browser drivers, vendor SDKs, vault graph queries, etc.). Once a server is connected and enabled, its tools become callable by the agent during a conversation.
 
@@ -16,12 +16,12 @@ MCP servers extend a provider with additional tools (file search, GitHub APIs, b
 
 | Provider | In-app management | Where servers are configured |
 |----------|-------------------|------------------------------|
-| **Claude** | Full UI in **Settings → Claude → MCP Servers** | `.claude/mcp.json` (Claudian-owned, CLI-compatible) |
-| **Codex** | Read-only notice only | Via the `codex mcp` CLI; Claudian picks up what Codex already knows about |
-| **Opencode** | Managed by the Opencode CLI | Opencode owns its MCP wiring; Claudian launches `opencode acp` and inherits the server set |
+| **Claude** | Full UI in **Settings → Claude → MCP Servers** | `.claude/mcp.json` (Specorator-owned, CLI-compatible) |
+| **Codex** | Read-only notice only | Via the `codex mcp` CLI; Specorator picks up what Codex already knows about |
+| **Opencode** | Managed by the Opencode CLI | Opencode owns its MCP wiring; Specorator launches `opencode acp` and inherits the server set |
 | **Cursor** | Not exposed | Cursor Agent CLI manages its own integrations |
 
-If you want a server visible to **all four providers**, you must register it in each provider's own configuration. Claudian does not bridge tools across providers.
+If you want a server visible to **all four providers**, you must register it in each provider's own configuration. Specorator does not bridge tools across providers.
 
 See [[settings]] for the full settings panel layout, [[install-claude]], [[install-codex]], [[install-opencode]], and [[install-cursor]] for CLI installation steps.
 
@@ -29,7 +29,7 @@ See [[settings]] for the full settings panel layout, [[install-claude]], [[insta
 
 ## MCP transports
 
-Claudian supports the three MCP transports defined by the protocol:
+Specorator supports the three MCP transports defined by the protocol:
 
 | Type | When to use | Required fields |
 |------|-------------|-----------------|
@@ -47,7 +47,7 @@ This is the main flow most users care about. The Claude provider exposes the ful
 
 ### Prerequisites
 
-1. Claude provider enabled in **Settings → Claudian → General → Providers**. See [[install-claude]].
+1. Claude provider enabled in **Settings → Specorator → General → Providers**. See [[install-claude]].
 2. The Claude tab visible in the settings panel.
 
 ### Open the MCP section
@@ -72,7 +72,7 @@ The modal asks for:
 |-------|-------|
 | **Server name** | Unique identifier. Allowed characters: letters, numbers, dots, hyphens, underscores (regex `^[a-zA-Z0-9._-]+$`). The name is what you will `@`-mention in chat (see *Context-saving mode* below). |
 | **Type** | `stdio`, `sse`, or `http`. Changing this re-renders the field block below. |
-| **Command** *(stdio)* | Full command with arguments on one line, e.g. `npx -y @modelcontextprotocol/server-filesystem /path/to/dir`. Claudian splits the first token as the command and the rest as args, with quote handling. |
+| **Command** *(stdio)* | Full command with arguments on one line, e.g. `npx -y @modelcontextprotocol/server-filesystem /path/to/dir`. Specorator splits the first token as the command and the rest as args, with quote handling. |
 | **Environment variables** *(stdio)* | `KEY=VALUE` per line. Lines starting with `#` and empty lines are ignored. |
 | **URL** *(http/sse)* | The remote endpoint, e.g. `https://mcp.example.com/sse`. |
 | **Headers** *(http/sse)* | `KEY=VALUE` per line. Typically used for `Authorization=Bearer …`. |
@@ -109,7 +109,7 @@ Copy any of these JSON shapes to your clipboard, then click `+` → **Import fro
    { "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path"] } }
    ```
 
-3. Single server config without a name (Claudian prompts you for one):
+3. Single server config without a name (Specorator prompts you for one):
 
    ```json
    { "command": "uvx", "args": ["mcp-server-time"] }
@@ -117,7 +117,7 @@ Copy any of these JSON shapes to your clipboard, then click `+` → **Import fro
 
 4. Multiple named servers, no wrapper — same as format 1 but flat.
 
-When one server is on the clipboard, the add modal opens pre-filled. When multiple servers are detected, Claudian imports them in bulk; invalid names are skipped and the notice tells you how many were added vs skipped.
+When one server is on the clipboard, the add modal opens pre-filled. When multiple servers are detected, Specorator imports them in bulk; invalid names are skipped and the notice tells you how many were added vs skipped.
 
 ### Edit, enable/disable, delete
 
@@ -136,7 +136,7 @@ Any save, toggle, or delete writes `.claude/mcp.json` and tells the Claude runti
 
 ## Verifying a server
 
-Click the ⚡ icon on a server row. Claudian opens a modal labelled **Verify: `<name>`** that:
+Click the ⚡ icon on a server row. Specorator opens a modal labelled **Verify: `<name>`** that:
 
 1. Spawns the server (stdio) or opens a transport connection (http/sse), with a 10-second timeout.
 2. Calls the MCP `tools/list` endpoint and renders each tool as a row.
@@ -153,7 +153,7 @@ Tools that fail to enumerate (e.g. servers that don't implement `tools/list`) sh
 | `Connection timeout (10s)` | stdio command never returned, or the URL is unreachable / behind a firewall. |
 | `spawn ENOENT` | The command in your config is not on `PATH`. Use an absolute path or set `PATH` in the shared environment (see [[settings]] → Environment). |
 | `401 / 403` | Missing or wrong `Authorization` header for an http/sse server. |
-| `Permission denied. Check .claude/ folder permissions.` | Claudian could not write `.claude/mcp.json`. Check vault filesystem permissions. |
+| `Permission denied. Check .claude/ folder permissions.` | Specorator could not write `.claude/mcp.json`. Check vault filesystem permissions. |
 | `Config file corrupted. Check .claude/mcp.json` | The JSON file was edited by hand and is no longer parseable. |
 
 ---
@@ -175,7 +175,7 @@ How the mention is detected:
 - Does not match if followed by `/` (that's the context-folder syntax) or by another alphanumeric/underscore/dash (avoids partial matches like `@github-actions` against `@github`).
 - Detection runs on the prompt text only; you do not see it in the rendered message.
 
-When Claudian forwards the prompt to the Claude SDK, every matched `@server` is rewritten to `@server MCP` so the model treats it as a tool-route hint. The original input shown in the UI is untouched.
+When Specorator forwards the prompt to the Claude SDK, every matched `@server` is rewritten to `@server MCP` so the model treats it as a tool-route hint. The original input shown in the UI is untouched.
 
 The same `@` mention also matches for the alias purpose of the `extractMentions` filter — meaning the server's tools become visible to that single turn, and the disabled-tool list of every other context-saving server is still enforced.
 
@@ -183,7 +183,7 @@ The same `@` mention also matches for the alias purpose of the `extractMentions`
 
 ## How storage works on disk
 
-For Claude, MCP servers live at `.claude/mcp.json` relative to the vault root. The file has two top-level keys that Claudian manages together:
+For Claude, MCP servers live at `.claude/mcp.json` relative to the vault root. The file has two top-level keys that Specorator manages together:
 
 ```json
 {
@@ -193,7 +193,7 @@ For Claude, MCP servers live at `.claude/mcp.json` relative to the vault root. T
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path"]
     }
   },
-  "_claudian": {
+  "_specorator": {
     "servers": {
       "filesystem": {
         "enabled": true,
@@ -209,13 +209,13 @@ For Claude, MCP servers live at `.claude/mcp.json` relative to the vault root. T
 | Namespace | Owner | Purpose |
 |-----------|-------|---------|
 | `mcpServers` | Claude Code CLI compatible | Read by the Claude CLI directly when it spawns. |
-| `_claudian.servers` | Claudian only | Stores `enabled`, `contextSaving`, `disabledTools`, and optional `description`. The Claude CLI ignores this key. |
+| `_specorator.servers` | Specorator only | Stores `enabled`, `contextSaving`, `disabledTools`, and optional `description`. The Claude CLI ignores this key. |
 
-This split exists so Claudian metadata does not pollute the CLI-compatible format, and so a hand-edited `.claude/mcp.json` can still drive both Claudian and the Claude CLI without reconciliation steps.
+This split exists so Specorator metadata does not pollute the CLI-compatible format, and so a hand-edited `.claude/mcp.json` can still drive both Specorator and the Claude CLI without reconciliation steps.
 
 ### Security model (default-untrusted)
 
-A vault MCP server is enabled **only when** its `_claudian.servers.<name>` metadata explicitly sets `enabled: true`. Anything else — missing metadata, empty metadata, or `enabled: false` — is treated as untrusted and is loaded **disabled**. Opening a vault you don't fully trust will not silently auto-spawn MCP processes.
+A vault MCP server is enabled **only when** its `_specorator.servers.<name>` metadata explicitly sets `enabled: true`. Anything else — missing metadata, empty metadata, or `enabled: false` — is treated as untrusted and is loaded **disabled**. Opening a vault you don't fully trust will not silently auto-spawn MCP processes.
 
 The first time you upgrade a vault that already had servers under `mcpServers`, a one-time grandfather migration writes `enabled: true` for every pre-existing server so your existing setup is preserved. After that, new servers synced into the vault from elsewhere must be enabled explicitly.
 
@@ -241,24 +241,24 @@ When the agent invokes a tool, it shows up in the conversation transcript as a t
 
 ### Codex
 
-Claudian's Codex tab shows a read-only notice in the MCP section: *MCP for Codex is managed by the `codex mcp` CLI, not in Claudian.* To add a server:
+Specorator's Codex tab shows a read-only notice in the MCP section: *MCP for Codex is managed by the `codex mcp` CLI, not in Specorator.* To add a server:
 
 ```bash
 codex mcp add <name> -- <command> [args...]
 codex mcp list
 ```
 
-Refer to the Codex CLI's own documentation for the full subcommand surface. Once registered there, Codex picks the server up on its next session start; Claudian launches `codex app-server` and inherits whatever MCP set Codex resolved.
+Refer to the Codex CLI's own documentation for the full subcommand surface. Once registered there, Codex picks the server up on its next session start; Specorator launches `codex app-server` and inherits whatever MCP set Codex resolved.
 
 ### Opencode
 
-Opencode manages MCP servers itself. Claudian's Opencode tab does not expose an MCP UI — the Opencode CLI's config (typically `~/.opencode/`) is the source of truth. Configure the server with the Opencode CLI, then enable the Opencode provider in **Settings → Claudian → General → Providers**.
+Opencode manages MCP servers itself. Specorator's Opencode tab does not expose an MCP UI — the Opencode CLI's config (typically `~/.opencode/`) is the source of truth. Configure the server with the Opencode CLI, then enable the Opencode provider in **Settings → Specorator → General → Providers**.
 
-When Opencode spawns the ACP server, its MCP catalog is announced to Claudian via the protocol's session events and surfaces in chat the same way Claude's tools do — but the lifecycle is owned by Opencode.
+When Opencode spawns the ACP server, its MCP catalog is announced to Specorator via the protocol's session events and surfaces in chat the same way Claude's tools do — but the lifecycle is owned by Opencode.
 
 ### Cursor
 
-Cursor MCP support is not surfaced in Claudian. The Cursor Agent CLI handles its own integrations. See Cursor's product documentation for MCP configuration; once configured there, Cursor sessions launched from Claudian inherit it.
+Cursor MCP support is not surfaced in Specorator. The Cursor Agent CLI handles its own integrations. See Cursor's product documentation for MCP configuration; once configured there, Cursor sessions launched from Specorator inherit it.
 
 ---
 
@@ -266,9 +266,9 @@ Cursor MCP support is not surfaced in Claudian. The Cursor Agent CLI handles its
 
 | Path / location | Notes |
 |-----------------|-------|
-| `.claude/mcp.json` | Claudian-managed MCP config for Claude (dual namespace). |
+| `.claude/mcp.json` | Specorator-managed MCP config for Claude (dual namespace). |
 | **Settings → Claude → MCP Servers** | Add, edit, enable/disable, verify, delete servers. |
-| **Settings → Claudian → General → Environment** | Shared `PATH` entries usable by every provider's stdio MCP. |
+| **Settings → Specorator → General → Environment** | Shared `PATH` entries usable by every provider's stdio MCP. |
 | **Settings → Claude → Environment** | Claude-scoped env vars; available to stdio MCP servers as part of the curated env. |
 | **Settings → Codex → MCP Servers** | Read-only notice pointing at the `codex mcp` CLI. |
 

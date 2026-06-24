@@ -4,9 +4,9 @@ status: shipped
 type: user-manual
 parent: "[[Specorator - Product Vision]]"
 ---
-# Claudian — Settings
+# Specorator — Settings
 
-This manual is the index for the Claudian settings panel. Each tab gets a section. Where a feature has its own manual, follow the cross-link instead of looking for the depth here.
+This manual is the index for the Specorator settings panel. Each tab gets a section. Where a feature has its own manual, follow the cross-link instead of looking for the depth here.
 
 Settings are scoped to a single Obsidian vault and stored in plain JSON files inside the vault (see [Where settings are stored](#where-settings-are-stored)). Switching vaults switches the whole configuration.
 
@@ -14,7 +14,7 @@ Settings are scoped to a single Obsidian vault and stored in plain JSON files in
 
 ## Opening settings
 
-Open Obsidian's settings (gear icon → **Settings**, or `Cmd/Ctrl+,`), scroll the left sidebar to **Community plugins**, and click **Claudian**.
+Open Obsidian's settings (gear icon → **Settings**, or `Cmd/Ctrl+,`), scroll the left sidebar to **Community plugins**, and click **Specorator**.
 
 The panel is organized as a tab bar at the top:
 
@@ -64,7 +64,7 @@ See [[quick-actions]] for the quick-action note format and how they show up in t
 |---------|--------------|---------|
 | **Tab bar position** | Where the chat tab bar sits — **Above input** or **In header**. | Above input |
 | **Maximum chat tabs** | Concurrent chat tabs allowed (3–10). Above 5 a warning appears about memory impact. | 3 |
-| **Open Claudian in** | Where the chat view opens — **Right sidebar**, **Left sidebar**, or **Main editor tab**. | Right sidebar |
+| **Open Specorator in** | Where the chat view opens — **Right sidebar**, **Left sidebar**, or **Main editor tab**. | Right sidebar |
 | **Auto-scroll during streaming** | Follow the latest streamed token. Off pins the scroll at the top. | On |
 | **Defer math rendering during streaming** | Show raw LaTeX while streaming, render KaTeX once each text block completes. | On |
 
@@ -79,12 +79,12 @@ See [[quick-actions]] for the quick-action note format and how they show up in t
 
 | Setting | What it does | Default |
 |---------|--------------|---------|
-| **What should Claudian call you?** | Name injected into the system prompt for personalized greetings. | Empty |
+| **What should Specorator call you?** | Name injected into the system prompt for personalized greetings. | Empty |
 | **Custom system prompt** | Appendix appended to the built-in system prompt. | Empty |
 | **Excluded tags** | One tag per line (no `#`). Notes with these tags do not auto-load as context. | Empty |
 | **Media folder** | Folder Claude looks in when a note embeds `![[image.jpg]]`. Empty means vault root. | Empty |
 
-Editing **What should Claudian call you?**, **Custom system prompt**, or **Media folder** triggers a session restart on blur so the new prompt takes effect on the next turn.
+Editing **What should Specorator call you?**, **Custom system prompt**, or **Media folder** triggers a session restart on blur so the new prompt takes effect on the next turn.
 
 ### Input
 
@@ -95,7 +95,7 @@ Editing **What should Claudian call you?**, **Custom system prompt**, or **Media
 
 ### Hotkeys
 
-A grid of read-only badges for the Claudian commands that support hotkeys — **Inline Edit**, **Open Chat**, **New Session**, **New Tab**, **Close Tab**. Clicking a row opens Obsidian's Hotkeys settings filtered to Claudian commands. Hotkeys themselves are bound in Obsidian's Hotkeys settings, not here.
+A grid of read-only badges for the Specorator commands that support hotkeys — **Inline Edit**, **Open Chat**, **New Session**, **New Tab**, **Close Tab**. Clicking a row opens Obsidian's Hotkeys settings filtered to Specorator commands. Hotkeys themselves are bound in Obsidian's Hotkeys settings, not here.
 
 ### Environment
 
@@ -113,7 +113,7 @@ A review warning surfaces when a key in the shared scope (e.g. `OPENAI_API_KEY`)
 
 Below the textarea, if any custom model ids are discovered from `*_MODEL` variables, **Custom model overrides** appears: per-model **Alias** (selector label) and context-window input (`200k`, `1m`, or a number 1000–10000000). See [[composer-context-pills]] for how the context window is surfaced in chat.
 
-For Codex (`gpt-5.2`, `gpt-5.3-codex`, `gpt-5.3-codex-spark`) and Cursor (Claude/Composer/Sonic/Grok/GPT/Gemini families) Claudian ships an exact-id catalog of known windows; a custom override here applies only to ids the catalog does not recognise.
+For Codex (`gpt-5.2`, `gpt-5.3-codex`, `gpt-5.3-codex-spark`) and Cursor (Claude/Composer/Sonic/Grok/GPT/Gemini families) Specorator ships an exact-id catalog of known windows; a custom override here applies only to ids the catalog does not recognise.
 
 ### Diagnostics
 
@@ -180,7 +180,7 @@ Vault subagents under `.claude/agents/*.md`. Each entry has a modal editor for n
 
 ### MCP Servers
 
-Manage Claudian-owned MCP servers stored in `.claude/mcp.json`. Each row supports enable/disable, edit, delete, and a test command. Servers with context-saving mode only activate when @-mentioned in chat.
+Manage Specorator-owned MCP servers stored in `.claude/mcp.json`. Each row supports enable/disable, edit, delete, and a test command. Servers with context-saving mode only activate when @-mentioned in chat.
 
 ### Claude Code Plugins
 
@@ -244,7 +244,7 @@ Manage vault subagents stored as `.codex/agents/*.toml`. Each TOML file defines 
 
 ### MCP Servers
 
-A read-only notice — Codex MCP is managed via the `codex mcp` CLI, not in Claudian. Servers configured there are picked up automatically.
+A read-only notice — Codex MCP is managed via the `codex mcp` CLI, not in Specorator. Servers configured there are picked up automatically.
 
 ### Environment
 
@@ -337,9 +337,9 @@ All paths are relative to your vault root unless noted.
 
 | Path | Owner | Contents |
 |------|-------|----------|
-| `.claudian/claudian-settings.json` | Claudian | Every setting on this page — general, agent board, and each provider's settings bag, plus `agentBoardConfig` for the lane editor. |
-| `.claude/settings.json` | Claude Code CLI (shared with Claudian) | Permission rules and enabled Claude Code plugins. Claudian merges with the CLI's own writes. |
-| `.claude/mcp.json` | Claudian-managed MCP for Claude | Servers in two namespaces — `mcpServers` (CLI-compatible) and `_claudian.servers` (Claudian metadata: enabled, contextSaving, disabledTools, description). |
+| `.specorator/specorator-settings.json` | Specorator | Every setting on this page — general, agent board, and each provider's settings bag, plus `agentBoardConfig` for the lane editor. |
+| `.claude/settings.json` | Claude Code CLI (shared with Specorator) | Permission rules and enabled Claude Code plugins. Specorator merges with the CLI's own writes. |
+| `.claude/mcp.json` | Specorator-managed MCP for Claude | Servers in two namespaces — `mcpServers` (CLI-compatible) and `_specorator.servers` (Specorator metadata: enabled, contextSaving, disabledTools, description). |
 | `.claude/commands/**/*.md` | Vault | Claude slash commands listed under **Claude → Commands and skills**. |
 | `.claude/skills/*/SKILL.md` | Vault | Claude skills listed under the same section. |
 | `.claude/agents/*.md` | Vault | Claude vault subagents. |
@@ -348,10 +348,10 @@ All paths are relative to your vault root unless noted.
 | `.opencode/agent/*`, `.opencode/agents/*` | Vault | Opencode subagents surfaced in **Opencode → Subagents**. |
 | `~/.claude/settings.json` | Claude Code CLI (user-level) | Loaded into Claude when **Load user Claude settings** is on. |
 | `~/.claude/plugins/**` | Claude Code CLI | Discovered as plugins in **Claude → Claude Code Plugins**. |
-| `~/.cursor/cli-config.json` | Cursor Agent CLI | Touched by Cursor itself; Claudian serializes spawns against it. |
+| `~/.cursor/cli-config.json` | Cursor Agent CLI | Touched by Cursor itself; Specorator serializes spawns against it. |
 | `~/.cursor/chats/<workspace>/<session>/` | Cursor Agent CLI | JSONL transcripts hydrated by the Cursor adaptor. |
 | `~/.claude/projects/<vault>/*.jsonl` | Claude Code CLI | Claude-native transcripts. |
 | `~/.codex/sessions/**/*.jsonl` | Codex CLI | Codex-native transcripts. |
-| `.claudian/sessions/*.meta.json` | Claudian | Provider-neutral session metadata. |
+| `.specorator/sessions/*.meta.json` | Specorator | Provider-neutral session metadata. |
 
-Settings are read and written only at `.claudian/claudian-settings.json`. There is no legacy file path; retired in-file fields are stripped on load (`DEPRECATED_SETTING_FIELDS`) rather than read from another location.
+Settings are read and written only at `.specorator/specorator-settings.json`. There is no legacy file path; retired in-file fields are stripped on load (`DEPRECATED_SETTING_FIELDS`) rather than read from another location.

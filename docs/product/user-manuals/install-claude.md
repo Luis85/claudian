@@ -4,11 +4,11 @@ status: shipped
 type: user-install-guide
 parent: "[[Multi Provider Support]]"
 ---
-# Claudian — Install Claude (Windows)
+# Specorator — Install Claude (Windows)
 
-This manual walks Windows users through installing the **Claude Code CLI**, the runtime Claudian drives when the Claude provider is enabled. Mac and Linux are not covered here.
+This manual walks Windows users through installing the **Claude Code CLI**, the runtime Specorator drives when the Claude provider is enabled. Mac and Linux are not covered here.
 
-Claudian does not bundle Claude Code. The CLI must already exist on your machine before the Claude provider can spawn a session. Once installed, point Claudian at it under **Settings → Claudian → Claude → Claude CLI path** (or leave empty to auto-detect from `PATH`). See [[settings]] for the Claude tab layout.
+Specorator does not bundle Claude Code. The CLI must already exist on your machine before the Claude provider can spawn a session. Once installed, point Specorator at it under **Settings → Specorator → Claude → Claude CLI path** (or leave empty to auto-detect from `PATH`). See [[settings]] for the Claude tab layout.
 
 ---
 
@@ -109,9 +109,9 @@ For Bedrock, Vertex, or Foundry auth, see Anthropic's [Authentication docs](http
 
 ---
 
-## Find the CLI path for Claudian
+## Find the CLI path for Specorator
 
-Claudian needs the path to register Claude as a provider. After install, find the absolute path:
+Specorator needs the path to register Claude as a provider. After install, find the absolute path:
 
 ```powershell
 (Get-Command claude).Source
@@ -124,11 +124,11 @@ Typical results:
 | Native installer | `C:\Users\<you>\.local\bin\claude.exe` |
 | WinGet | `C:\Users\<you>\AppData\Local\Microsoft\WinGet\Links\claude.exe` |
 | npm global | `C:\Users\<you>\AppData\Roaming\npm\claude.cmd` (with `cli-wrapper.cjs` sibling) |
-| WSL | inside the distro at `~/.local/bin/claude` — Claudian does not currently launch WSL Claude |
+| WSL | inside the distro at `~/.local/bin/claude` — Specorator does not currently launch WSL Claude |
 
-Paste the result into **Settings → Claudian → Claude → Claude CLI path**, or leave empty to let Claudian auto-detect from `PATH`.
+Paste the result into **Settings → Specorator → Claude → Claude CLI path**, or leave empty to let Specorator auto-detect from `PATH`.
 
-> On npm installs, prefer the `cli-wrapper.cjs` file next to `claude.cmd` if Claudian's auto-detect picks the wrapper. It avoids a CMD launch hop and survives `npm` updates better. See [[settings]].
+> On npm installs, prefer the `cli-wrapper.cjs` file next to `claude.cmd` if Specorator's auto-detect picks the wrapper. It avoids a CMD launch hop and survives `npm` updates better. See [[settings]].
 
 ---
 
@@ -150,7 +150,7 @@ To pin a channel, set `autoUpdatesChannel` to `"stable"` or `"latest"` in `~/.cl
 | Symptom | Fix |
 |---------|-----|
 | `claude` not recognized after install | Open a new terminal — `PATH` reload is per-shell. |
-| Claudian says CLI not found | Run `(Get-Command claude).Source` and paste the path into the Claude tab. |
+| Specorator says CLI not found | Run `(Get-Command claude).Source` and paste the path into the Claude tab. |
 | Auth loop in browser | Delete `%USERPROFILE%\.claude.json` and re-run `claude`. |
 | `Bash` tool errors with `bash not found` | Install [Git for Windows](https://git-scm.com/downloads/win), or set `CLAUDE_CODE_GIT_BASH_PATH` in `~/.claude/settings.json`. |
 | Search results empty | Native install ships ripgrep. On bespoke setups, set `USE_BUILTIN_RIPGREP=0` and install ripgrep system-wide. |
@@ -161,6 +161,6 @@ For deeper troubleshooting, run `claude doctor` and consult Anthropic's [trouble
 
 ## Next steps
 
-- Open **Settings → Claudian → General → Providers** and toggle **Enable Claude**.
+- Open **Settings → Specorator → General → Providers** and toggle **Enable Claude**.
 - Open the Claude tab and confirm the CLI path is detected. Set safety mode, custom models, MCP servers, and plugins as needed — see [[settings]].
 - Start a chat tab and pick a Claude model from the provider picker.

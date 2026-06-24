@@ -4,11 +4,11 @@ status: shipped
 type: user-manual
 parent: "[[sidepanel-chat]]"
 ---
-# Claudian — Git commit & push button
+# Specorator — Git commit & push button
 
 This manual covers the **Commit & push** button in the chat panel header: a one-click way to ask the active chat agent to stage, commit, and push your vault's uncommitted changes with a Conventional Commits message it writes itself.
 
-Claudian only detects whether the vault sits in a git repo and how many files have changed. All git work — `git status`, `git diff`, `git add`, `git commit`, `git push` — is performed by the active provider's chat agent through its own shell tool. The plugin never runs a mutation itself.
+Specorator only detects whether the vault sits in a git repo and how many files have changed. All git work — `git status`, `git diff`, `git add`, `git commit`, `git push` — is performed by the active provider's chat agent through its own shell tool. The plugin never runs a mutation itself.
 
 ---
 
@@ -19,12 +19,12 @@ There are no dedicated settings for this feature. It uses what's already in your
 | Requirement | What it means |
 |-------------|---------------|
 | **Vault is a git repo** | Your vault folder (or one of its ancestors) is initialized with `git init` and `git` is on `PATH`. |
-| **`git` executable resolvable** | Claudian probes with the enhanced provider `PATH`, so the same `git` your terminal sees should be found. |
+| **`git` executable resolvable** | Specorator probes with the enhanced provider `PATH`, so the same `git` your terminal sees should be found. |
 | **Working tree is dirty** | At least one tracked file is modified, staged, or untracked. A clean tree hides the button. |
 | **Active chat tab can run shell commands** | The button is enabled for every shipped provider (Claude, Codex, Opencode, Cursor). A provider may opt out via `ProviderChatUIConfig.isGitActionsEnabled`; none currently do. |
 | **Upstream branch (optional)** | If `git push` has nowhere to go, the agent commits anyway and reports that the push was skipped. |
 
-Open the chat panel from the ribbon (`Open Claudian`) or the command palette (**Open chat view**). The button lives in the **panel header** (right side, next to the new-tab and history controls), not inside any single chat tab.
+Open the chat panel from the ribbon (`Open Specorator`) or the command palette (**Open chat view**). The button lives in the **panel header** (right side, next to the new-tab and history controls), not inside any single chat tab.
 
 ---
 
@@ -63,15 +63,15 @@ Because it's a normal chat turn, you can read the agent's reasoning, see the pro
 
 ## How the count stays accurate
 
-Claudian polls `git status --porcelain` in the background and refreshes the badge whenever the result changes. Three triggers keep it fresh:
+Specorator polls `git status --porcelain` in the background and refreshes the badge whenever the result changes. Three triggers keep it fresh:
 
 - **Interval poll** — every ~7 seconds while at least one chat panel is open.
 - **Vault file events** — `modify`, `create`, `delete`, and `rename` events from Obsidian's vault, debounced to ~1.5 seconds so a burst of edits doesn't thrash the watcher.
 - **Turn complete** — after every agent turn finishes (so the button disappears as soon as the agent's own commit lands).
 
-A single shared watcher serves every chat panel and every tab; the per-panel button is only a subscriber. When no panel is subscribed, polling stops, so closed Claudian views cost nothing.
+A single shared watcher serves every chat panel and every tab; the per-panel button is only a subscriber. When no panel is subscribed, polling stops, so closed Specorator views cost nothing.
 
-If `git` errors (not a repo, not installed, transient failure), Claudian treats the vault as "not a repo" for that tick and the button stays hidden — no notice is shown.
+If `git` errors (not a repo, not installed, transient failure), Specorator treats the vault as "not a repo" for that tick and the button stays hidden — no notice is shown.
 
 ---
 

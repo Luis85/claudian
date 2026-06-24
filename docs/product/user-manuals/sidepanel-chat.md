@@ -4,7 +4,7 @@ status: shipped
 type: user-manual
 parent: "[[Co-Worker - Chat]]"
 ---
-# Claudian — Chat
+# Specorator — Chat
 
 This manual covers the **chat sidebar**: the workspace where you talk to a provider beside your notes. The sidebar opens on a hotkey, picks up the note you're on and any selected text, and saves every conversation as a Specorator session you can resume tomorrow.
 
@@ -17,7 +17,7 @@ For the high-level feature pitch see [[sidepanel-chat]]. For how attached files 
 - At least one provider enabled in **Settings → Specorator → General → Providers**. Each provider needs its CLI installed — see [[install-claude]], [[install-codex]], [[install-cursor]], or [[install-opencode]].
 - A hotkey bound to **Open Chat** in Obsidian's Hotkeys settings (optional but recommended). The default ribbon icon also opens the chat view.
 
-The chat view position is controlled by **Settings → Specorator → General → Display → Open Claudian in**: **Right sidebar** (default), **Left sidebar**, or **Main editor tab**.
+The chat view position is controlled by **Settings → Specorator → General → Display → Open Specorator in**: **Right sidebar** (default), **Left sidebar**, or **Main editor tab**.
 
 ---
 

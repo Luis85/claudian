@@ -4,7 +4,7 @@ status: shipped
 type: user-manual
 parent: "[[Agent Kanban Board]]"
 ---
-# Claudian — Agent Board configurable lanes
+# Specorator — Agent Board configurable lanes
 
 This manual covers how to customize the Agent Board's **lanes** (status columns): rename them, reorder them, add or remove them, hide them, change which statuses each lane shows, and attach per-lane **Definition of ready** / **Definition of done** notes that get injected into the run prompt.
 
@@ -16,9 +16,9 @@ The internal status set never changes — only how lanes group, label, and order
 
 ## Before you start
 
-The lane editor lives in **Settings → Claudian → Agent Board → Board lanes**, below the work-order folder, template folder, default provider, and default model controls.
+The lane editor lives in **Settings → Specorator → Agent Board → Board lanes**, below the work-order folder, template folder, default provider, and default model controls.
 
-Edits save on change. After every change Claudian writes `agentBoardConfig` into `.claudian/claudian-settings.json` and refreshes every open Agent Board view immediately — there is no Save button and no reload step.
+Edits save on change. After every change Specorator writes `agentBoardConfig` into `.specorator/specorator-settings.json` and refreshes every open Agent Board view immediately — there is no Save button and no reload step.
 
 > If the config in storage is structurally broken (two lanes sharing the same id, or a lane missing its id or title — see [How lane changes affect existing work orders](#how-lane-changes-affect-existing-work-orders)), the board falls back to the default ten lanes and shows a board notice. Your stored config is not deleted — fix the offending lane in the editor and the board returns to your layout. Soft issues such as the same status assigned to two lanes do not trigger the fallback; the lane editor flags the duplicate inline and the board surfaces a notice while continuing to use your layout.
 
@@ -65,7 +65,7 @@ All default lanes ship with empty Definition of ready / Definition of done. For 
 
 ## Editing lanes
 
-Open **Settings → Claudian → Agent Board → Board lanes**. Each lane appears as its own block with the controls below.
+Open **Settings → Specorator → Agent Board → Board lanes**. Each lane appears as its own block with the controls below.
 
 ### Rename a lane
 Type a new value into the lane's **Title** text input. The board column header updates as soon as the change is persisted.
@@ -106,7 +106,7 @@ A few specific cases:
 
 - **A work order's status has no visible lane** (lane hidden, lane removed, or status unchecked everywhere): the work order appears in an implicit **Unsorted** lane appended at the end of the board. A board notice reads *"Some work orders have a status with no visible lane and appear under 'Unsorted'."*
 - **You assign the same status to two visible lanes**: both lanes keep your edit so the board does not lose your in-progress layout. The lane editor highlights the duplicate checkbox in warning colour and shows an inline *"Routed to '…'"* hint naming the lane that actually owns routing (the first visible lane in the editor order). The board surfaces a notice like *"Status \"review\" is mapped to more than one lane."* Uncheck the duplicate from whichever lane you do not want to own the status to clear the warning, or drag the lane that should own it above the others. Hidden lanes do not participate in routing and never show the warning, even if they list the same status.
-- **You give two lanes the same id**: same fallback as the duplicate-status case, with a *"Lane id \"…\" is used by more than one lane."* notice. The editor generates fresh ids for new lanes, so this normally only happens if you hand-edit `agentBoardConfig` in `.claudian/claudian-settings.json`.
+- **You give two lanes the same id**: same fallback as the duplicate-status case, with a *"Lane id \"…\" is used by more than one lane."* notice. The editor generates fresh ids for new lanes, so this normally only happens if you hand-edit `agentBoardConfig` in `.specorator/specorator-settings.json`.
 - **A lane is missing a title or id**: same fallback, with a notice naming the offending lane.
 - **A lane references an unknown status string** (e.g. from a hand-edited config): the unknown status is dropped silently with a warning notice; the rest of the lane is kept.
 
@@ -116,7 +116,7 @@ The **Unsorted** lane only appears when it has work orders, never empty, and is 
 
 ## Typical flow
 
-1. Open **Settings → Claudian → Agent Board → Board lanes**.
+1. Open **Settings → Specorator → Agent Board → Board lanes**.
 2. Rename the lanes you actually use (e.g. **Inbox** → **Triage**, **Ready** → **Todo**).
 3. Collapse **Review** + **Needs fix** into a single lane titled **In review**: tick both statuses on the Review lane, then click **Remove lane** on the now-empty Needs fix block.
 4. Hide **Failed** and **Canceled** to keep the board focused on live work — work orders in those states will show in **Unsorted** when they exist.

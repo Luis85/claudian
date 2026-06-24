@@ -1,7 +1,7 @@
 ---
 type: quick-action
 name: Agent Experience UX
-description: Review or design Claudian agent interaction flows for trust, status clarity, recovery, approval, and human control.
+description: Review or design Specorator agent interaction flows for trust, status clarity, recovery, approval, and human control.
 icon: bot
 tags:
   - ux
@@ -10,7 +10,7 @@ tags:
   - product
 ---
 
-Use this action for UX work on Claudian's agent-facing surfaces: streaming responses, tool calls, plan mode, approvals, ask-user questions, subagents, Agent Board, run status, errors, retries, and provider-specific capability differences.
+Use this action for UX work on Specorator's agent-facing surfaces: streaming responses, tool calls, plan mode, approvals, ask-user questions, subagents, Agent Board, run status, errors, retries, and provider-specific capability differences.
 
 ## 1. Map the agent interaction
 

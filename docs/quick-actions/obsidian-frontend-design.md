@@ -1,7 +1,7 @@
 ---
 type: quick-action
 name: Obsidian Frontend Design
-description: Design or implement Claudian UI changes with Obsidian-native styling, strong visual direction, and no generic web-app assumptions.
+description: Design or implement Specorator UI changes with Obsidian-native styling, strong visual direction, and no generic web-app assumptions.
 icon: palette
 tags:
   - frontend
@@ -10,7 +10,7 @@ tags:
   - ui
 ---
 
-Use this action for Claudian frontend or web-design work: chat UI, input/composer surfaces, tool-call displays, settings screens, modals, tabs, Agent Board, or other Obsidian plugin UI.
+Use this action for Specorator frontend or web-design work: chat UI, input/composer surfaces, tool-call displays, settings screens, modals, tabs, Agent Board, or other Obsidian plugin UI.
 
 ## 1. Ground in project context
 
@@ -35,13 +35,13 @@ State the intended direction in 3-6 bullets before editing:
 
 Avoid generic AI-generated web aesthetics: marketing-page gradients, Tailwind/shadcn assumptions, oversized hero layouts, decorative effects that do not serve the plugin workflow, and CDN fonts.
 
-## 3. Design with Claudian constraints
+## 3. Design with Specorator constraints
 
 Follow these rules:
 
-- Use `.claudian-` prefixed classes for Claudian-owned selectors.
+- Use `.specorator-` prefixed classes for Specorator-owned selectors.
 - Use Obsidian CSS variables first: `--background-*`, `--text-*`, `--interactive-*`, `--font-*`, `--radius-*`.
-- Use existing Claudian tokens from `src/style/base/variables.css` before adding new ones.
+- Use existing Specorator tokens from `src/style/base/variables.css` before adding new ones.
 - Keep CSS modular and register new modules in `src/style/index.css`.
 - Prefer logical properties (`inline`, `block`, `inset-inline-*`) where directionality matters.
 - Design for both `body.theme-dark` and `body.theme-light`.
