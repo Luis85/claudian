@@ -1,3 +1,7 @@
+> **Frozen fork — superseded by [Specorator](https://github.com/Luis85/specorator).** This repository is no longer updated. New work, releases, and issue tracking happen in Specorator. Existing installations of `claudian-cursor` will continue to function but receive no further updates.
+
+---
+
 # Claudian
 
 ![GitHub stars](https://img.shields.io/github/stars/Luis85/claudian?style=social)
