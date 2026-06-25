@@ -99,6 +99,7 @@ dev
 /.specorator/
 /.worktrees/
 /.worktrees/**
+/.claudian
 
 # Throwaway agent notes, handoff files, and probe scripts (per CLAUDE.md)
 /.context/
